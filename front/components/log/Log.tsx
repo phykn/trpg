@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, ScrollView, Animated, Easing, Keyboard } from 'react-native';
-import { colors } from '@/design/tokens';
+import { View, Text, FlatList, Animated, Easing } from 'react-native';
+import { colors, spacing } from '@/design/tokens';
 import type { LogEntry } from '@/types/ui';
 import { LogItem } from './LogItem';
 
@@ -27,74 +27,53 @@ function Pulse({ color }: { color: string }) {
   );
 }
 
-export function Log({ log, rolling }: { log: LogEntry[]; rolling: boolean }) {
-  const ref = React.useRef<ScrollView>(null);
-  const itemYs = React.useRef<Map<number, number>>(new Map());
-  const prevLog = React.useRef<LogEntry[]>(log);
-  const pendingTopId = React.useRef<number | null>(null);
+function RollingIndicator() {
+  return (
+    <View className="flex-row items-center gap-2.5" style={{ paddingTop: spacing[5] }}>
+      <Pulse color={colors.accent.fg} />
+      <Text className="font-sans text-body text-accent-fg">
+        주사위를 굴리는 중…
+      </Text>
+    </View>
+  );
+}
 
-  // New player message pins to viewport top; otherwise follow bottom. Actual
-  // scroll happens after layout via onLayout / onContentSizeChange.
-  React.useEffect(() => {
-    const prev = prevLog.current;
-    prevLog.current = log;
-    const added = log.slice(prev.length);
-    const newPlayer = [...added].reverse().find((e) => e.kind === 'player');
-    if (!newPlayer) return;
+function Separator() {
+  return <View style={{ height: spacing[5] }} />;
+}
 
-    const y = itemYs.current.get(newPlayer.id);
-    if (y !== undefined) {
-      ref.current?.scrollTo({ y, animated: true });
-    } else {
-      pendingTopId.current = newPlayer.id;
-    }
-  }, [log]);
+export function Log({
+  log,
+  rolling,
+}: {
+  log: LogEntry[];
+  rolling: boolean;
+}) {
+  const ref = React.useRef<FlatList<LogEntry>>(null);
+  const [viewportH, setViewportH] = React.useState(0);
 
-  const onItemLayout = React.useCallback((id: number, y: number) => {
-    itemYs.current.set(id, y);
-    if (pendingTopId.current === id) {
-      ref.current?.scrollTo({ y, animated: true });
-      pendingTopId.current = null;
-    }
-  }, []);
-
-  const onContentSizeChange = React.useCallback(() => {
-    if (pendingTopId.current !== null) return;
-    ref.current?.scrollToEnd({ animated: true });
-  }, []);
-
-  React.useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', () => {
-      if (pendingTopId.current !== null) return;
-      ref.current?.scrollToEnd({ animated: true });
-    });
-    return () => show.remove();
-  }, []);
+  const onContentSizeChange = React.useCallback((_w: number, h: number) => {
+    const offset = Math.max(0, h - viewportH);
+    ref.current?.scrollToOffset({ offset, animated: false });
+  }, [viewportH]);
 
   return (
-    <ScrollView
+    <FlatList
       ref={ref}
+      style={{ flex: 1 }}
+      data={log}
+      keyExtractor={(e) => String(e.id)}
+      renderItem={({ item }) => <LogItem entry={item} />}
+      ItemSeparatorComponent={Separator}
+      ListFooterComponent={rolling ? <RollingIndicator /> : null}
+      onLayout={(ev) => setViewportH(ev.nativeEvent.layout.height)}
       onContentSizeChange={onContentSizeChange}
-      className="flex-1"
-      contentContainerClassName="px-5 pt-5 pb-2 gap-5"
+      contentContainerStyle={{
+        paddingHorizontal: spacing[5],
+        paddingTop: spacing[5],
+        paddingBottom: spacing[6],
+      }}
       showsVerticalScrollIndicator={false}
-    >
-      {log.map((e) => (
-        <View
-          key={e.id}
-          onLayout={(ev) => onItemLayout(e.id, ev.nativeEvent.layout.y)}
-        >
-          <LogItem entry={e} />
-        </View>
-      ))}
-      {rolling && (
-        <View className="flex-row items-center gap-2.5">
-          <Pulse color={colors.accent.fg} />
-          <Text className="font-sans text-body text-accent-fg">
-            주사위를 굴리는 중…
-          </Text>
-        </View>
-      )}
-    </ScrollView>
+    />
   );
 }
