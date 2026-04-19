@@ -84,14 +84,10 @@ export function buildPlaceSlot(place: Place): PanelSlot {
   };
 }
 
-type PanelFactory = (state: GameSnapshot) => PanelSlot;
-
-export const PANEL_FACTORIES: PanelFactory[] = [
-  (s) => buildSubjectSlot(s.subject),
-  (s) => buildQuestSlot(s.quest),
-  (s) => buildPlaceSlot(s.place),
-];
-
 export function buildPanelSlots(state: GameSnapshot): PanelSlot[] {
-  return PANEL_FACTORIES.map((f) => f(state));
+  return [
+    buildSubjectSlot(state.subject),
+    buildQuestSlot(state.quest),
+    buildPlaceSlot(state.place),
+  ];
 }
