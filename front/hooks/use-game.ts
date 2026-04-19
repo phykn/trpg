@@ -29,6 +29,7 @@ export function useGame() {
 
   const timers = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const aborts = React.useRef<Set<AbortController>>(new Set());
+  const rollingRef = React.useRef(false);
   React.useEffect(() => {
     const pendingTimers = timers.current;
     const pendingAborts = aborts.current;
@@ -95,6 +96,7 @@ export function useGame() {
         if (controller.signal.aborted) return;
         if (Math.random() < FOLLOWUP_CHANCE) {
           schedule(() => {
+            if (rollingRef.current) return;
             pushText('act', checkPrompt(PENDING_CHECK));
             setRollEnabled(true);
           }, CHECK_PROMPT_DELAY);
@@ -105,12 +107,14 @@ export function useGame() {
   const onRoll = () => {
     if (rolling || !rollEnabled) return;
     setRolling(true);
+    rollingRef.current = true;
     setRollEnabled(false);
     schedule(() => {
       const roll = rollD20();
       const result = resolveCheck(PENDING_CHECK, roll);
       pushRoll({ check: PENDING_CHECK.stat, dc: PENDING_CHECK.dc, roll, mod: PENDING_CHECK.mod, result });
       setRolling(false);
+      rollingRef.current = false;
       schedule(() => pushText('gm', rollFollowup(result)), ROLL_FOLLOWUP_DELAY);
     }, ROLL_DURATION);
   };
