@@ -33,7 +33,6 @@ export const INITIAL_HERO: Hero = {
 };
 
 export const INITIAL_SUBJECT: Subject = {
-  kind: 'monster',
   name: '그림자 고블린 두목',
   role: '몬스터',
   race: '고블린',

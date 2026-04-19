@@ -48,10 +48,7 @@ export type Hero = {
   companions: string[];
 };
 
-export type SubjectKind = 'monster' | 'npc' | 'merchant';
-
 export type Subject = {
-  kind: SubjectKind;
   name: string;
   role: string;
   race: string;
