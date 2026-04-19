@@ -29,11 +29,6 @@ export type Equipment = {
   acc2: EquipItem | null;
 };
 
-export type Memo = {
-  tag: string;
-  msg: string;
-};
-
 export type Hero = {
   name: string;
   race: string;
