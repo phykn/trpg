@@ -1,12 +1,12 @@
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from pathlib import Path
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 
 class LLMClient:
     def __init__(self, base_url: str, model: str = "local", api_key: str = "none"):
-        self._client = OpenAI(base_url=base_url, api_key=api_key)
+        self._client = AsyncOpenAI(base_url=base_url, api_key=api_key)
         self._model = model
 
     @staticmethod
@@ -32,19 +32,21 @@ class LLMClient:
             "extra_body": {"chat_template_kwargs": {"enable_thinking": think}},
         }
 
-    def stream(
+    async def stream(
         self, system: str | Path | None, query: str, think: bool = True
-    ) -> Iterator[dict]:
+    ) -> AsyncIterator[dict]:
         params = self._build(system, query, think)
-        for chunk in self._client.chat.completions.create(**params, stream=True):
+        stream = await self._client.chat.completions.create(**params, stream=True)
+        async for chunk in stream:
             delta = chunk.choices[0].delta
             extra = delta.model_extra or {}
             yield {"think": extra.get("reasoning_content"), "answer": delta.content}
 
-    def complete(
+    async def complete(
         self, system: str | Path | None, query: str, think: bool = True
     ) -> dict:
         params = self._build(system, query, think)
-        msg = self._client.chat.completions.create(**params).choices[0].message
+        response = await self._client.chat.completions.create(**params)
+        msg = response.choices[0].message
         extra = msg.model_extra or {}
         return {"think": extra.get("reasoning_content"), "answer": msg.content}
