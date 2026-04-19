@@ -1,0 +1,1 @@
+export { HeroPill } from './HeroPill';
