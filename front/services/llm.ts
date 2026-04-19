@@ -22,6 +22,17 @@ export async function streamChat(
 
   const decoder = new TextDecoder();
   let buffer = '';
+
+  const handlePayload = (payload: string): boolean => {
+    if (payload === '[DONE]') return true;
+    try {
+      onChunk(JSON.parse(payload) as ChatChunk);
+    } catch (e) {
+      console.warn('streamChat: malformed chunk skipped', e);
+    }
+    return false;
+  };
+
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -31,9 +42,10 @@ export async function streamChat(
     for (const raw of lines) {
       const line = raw.trim();
       if (!line.startsWith('data:')) continue;
-      const payload = line.slice(5).trim();
-      if (payload === '[DONE]') return;
-      onChunk(JSON.parse(payload) as ChatChunk);
+      if (handlePayload(line.slice(5).trim())) return;
     }
   }
+
+  const tail = buffer.trim();
+  if (tail.startsWith('data:')) handlePayload(tail.slice(5).trim());
 }
