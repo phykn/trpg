@@ -1,5 +1,5 @@
 import React from 'react';
-import { rollD20, resolveCheck } from '@/services';
+import { rollD20, resolveCheck, streamChat } from '@/services';
 import {
   INITIAL_HERO,
   INITIAL_SUBJECT,
@@ -10,8 +10,7 @@ import {
   rollFollowup,
   PENDING_CHECK,
 } from '@/debug';
-import { testStream } from '@/debug/llm-test';
-import type { LogEntry } from '@/types/domain';
+import type { LogEntry } from '@/types/ui';
 
 const CHECK_PROMPT_DELAY = 500;
 const ROLL_DURATION = 900;
@@ -54,9 +53,13 @@ export function useGame() {
     setLog((L) => [...L, { id: nextId.current++, kind: 'roll', ...data }]);
 
   const onSend = (text: string) => {
-    pushText('player', text);
+    const playerId = nextId.current++;
     const gmId = nextId.current++;
-    setLog((L) => [...L, { id: gmId, kind: 'gm', text: '' }]);
+    setLog((L) => [
+      ...L,
+      { id: playerId, kind: 'player', text },
+      { id: gmId, kind: 'gm', text: '' },
+    ]);
 
     const controller = new AbortController();
     aborts.current.add(controller);
@@ -68,8 +71,8 @@ export function useGame() {
         ),
       );
 
-    testStream(
-      { query: text, think: false },
+    streamChat(
+      { query: text },
       (chunk) => {
         if (chunk.answer) appendGm(chunk.answer);
       },

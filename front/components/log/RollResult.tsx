@@ -1,7 +1,7 @@
 import { View, Text } from 'react-native';
 import { colors } from '@/design/tokens';
 import { InlineNodes } from '@/components/ui';
-import type { LogEntry } from '@/types/domain';
+import type { LogEntry } from '@/types/ui';
 
 type RollEntry = Extract<LogEntry, { kind: 'roll' }>;
 
