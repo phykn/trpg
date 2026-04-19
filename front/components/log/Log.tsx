@@ -53,11 +53,11 @@ export function Log({
   const [viewportH, setViewportH] = React.useState(0);
   const initialized = React.useRef(false);
 
-  const onContentSizeChange = React.useCallback((_w: number, h: number) => {
+  const onContentSizeChange = (_w: number, h: number) => {
     const offset = Math.max(0, h - viewportH);
     ref.current?.scrollToOffset({ offset, animated: initialized.current });
     initialized.current = true;
-  }, [viewportH]);
+  };
 
   React.useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => {

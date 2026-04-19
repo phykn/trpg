@@ -41,17 +41,17 @@ export function useGame() {
     };
   }, []);
 
-  const schedule = React.useCallback((fn: () => void, ms: number) => {
+  const schedule = (fn: () => void, ms: number) => {
     const id = setTimeout(() => {
       timers.current.delete(id);
       fn();
     }, ms);
     timers.current.add(id);
-  }, []);
+  };
 
-  const onStop = React.useCallback(() => {
+  const onStop = () => {
     aborts.current.forEach((a) => a.abort());
-  }, []);
+  };
 
   const pushText = (kind: 'gm' | 'player' | 'act', text: string) =>
     setLog((L) => [...L, { id: nextId.current++, kind, text }]);
