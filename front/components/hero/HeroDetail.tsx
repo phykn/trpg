@@ -18,13 +18,13 @@ export function HeroDetail({ hero }: { hero: Hero }) {
         </LabeledRow>
 
         <LabeledRow label="특징">{`${hero.race} ${hero.class}`}</LabeledRow>
-        <LabeledRow label="기술">{joinOrDash(hero.skills ?? [])}</LabeledRow>
+        <LabeledRow label="기술">{joinOrDash(hero.skills)}</LabeledRow>
         <LabeledRow label="장비">{joinOrDash(equipped.map((it) => it.name))}</LabeledRow>
         <LabeledRow label="소지">
           {joinOrDash(carried.map((it) => (it.qty > 1 ? `${it.name} ×${it.qty}` : it.name)))}
         </LabeledRow>
-        <LabeledRow label="상태">{joinOrDash(hero.status ?? [])}</LabeledRow>
-        <LabeledRow label="동료">{joinOrDash(hero.companions ?? [])}</LabeledRow>
+        <LabeledRow label="상태">{joinOrDash(hero.status)}</LabeledRow>
+        <LabeledRow label="동료">{joinOrDash(hero.companions)}</LabeledRow>
       </ExpandGroup>
     </View>
   );
