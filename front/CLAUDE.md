@@ -4,7 +4,7 @@ Guidance for Claude Code working in this repo.
 
 ## Layout
 
-`front/` is the Expo app; the repo root holds only docs/meta. There is no backend yet — the data boundary is `services/`. Run all commands from this directory.
+`front/` is the Expo app; the repo root holds only docs/meta. There is no backend yet — the data boundary is `services/`; domain → UI mapping lives in `transformers/`. Run all commands from this directory.
 
 ## Commands
 
@@ -31,10 +31,11 @@ Single-screen Korean TRPG prototype. Tab bar is hidden; `app/(tabs)/index.tsx` m
 2. `components/Shell.tsx` — composition root. Owns `activeId`, `heroOpen`, `typing` local UI state; pulls game state from `useGame()` and builds panels via `buildPanelSlots(...)`.
 3. `components/{header,log,hero,composer,ui}/` — feature folders, each with a barrel `index.ts`. Import the folder, not individual files. `ui/` holds shared primitives.
 4. `hooks/use-game.ts` — single source of truth for `log` + `onSend` / `onRoll`. Async work goes through a `schedule()` helper that clears all timers on unmount.
-5. `services/` — **data boundary**. `services/index.ts` re-exports `rules` (game mechanics: `rollD20`, `resolveCheck`, `Check`) and `panels` (domain → `PanelSlot` builders, including `buildPanelSlots`). This barrel is the swap point for a real backend.
-6. `debug/` — **mock fixtures only**. Seed data (`INITIAL_*`), placeholder narrative (`fakeGMReply`, `checkPrompt`, `rollFollowup`), and the stand-in `PENDING_CHECK`. Consumed by `useGame()` to drive the prototype. Delete this folder when wiring a real backend.
-7. `types/` — `domain.ts` (game model from backend: `Hero`, `Subject`, `Quest`, `Place`, `Stats`, `RollResult`, ...), `ui.ts` (frontend rendering contracts: `LogEntry`, `Panel`, `PanelSlot`, `Tone`, ...), and `wire.ts` (backend wire formats: `ChatRequest`, `ChatChunk`, ...). `LogEntry` is a discriminated union over `kind: 'gm' | 'player' | 'act' | 'roll'` — extend the union and add a case in `components/log/LogItem.tsx`.
-8. `design/tokens.js` (+ `tokens.d.ts`) — **single source of truth for design tokens**: `colors`, `spacing`, `radius`, `fontFamily`, `fontSize`, `toneColor`. Consumed by `tailwind.config.js` (className utilities) and TS code that needs raw values. **Never hard-code colors or spacing in components** — use className or import from `@/design/tokens`. CJS (`.js`) because Tailwind config runs in Node; types come from the `.d.ts` sibling.
+5. `services/` — **data boundary**. `services/index.ts` re-exports `rules` (game mechanics: `rollD20`, `resolveCheck`, `Check`) and `llm` (backend streaming client). This barrel is the swap point for a real backend.
+6. `transformers/` — **domain → UI presenters**. `transformers/panels.ts` converts `domain` types into `PanelSlot` rendering contracts via `buildPanelSlots`. Pure mapping; no state, no IO.
+7. `debug/` — **mock fixtures only**. Seed data (`INITIAL_*`), placeholder narrative (`fakeGMReply`, `checkPrompt`, `rollFollowup`), and the stand-in `PENDING_CHECK`. Consumed by `useGame()` to drive the prototype. Delete this folder when wiring a real backend.
+8. `types/` — `domain.ts` (game model from backend: `Hero`, `Subject`, `Quest`, `Place`, `Stats`, `RollResult`, ...), `ui.ts` (frontend rendering contracts: `LogEntry`, `Panel`, `PanelSlot`, `Tone`, ...), and `wire.ts` (backend wire formats: `ChatRequest`, `ChatChunk`, ...). `LogEntry` is a discriminated union over `kind: 'gm' | 'player' | 'act' | 'roll'` — extend the union and add a case in `components/log/LogItem.tsx`.
+9. `design/tokens.js` (+ `tokens.d.ts`) — **single source of truth for design tokens**: `colors`, `spacing`, `radius`, `fontFamily`, `fontSize`, `toneColor`. Consumed by `tailwind.config.js` (className utilities) and TS code that needs raw values. **Never hard-code colors or spacing in components** — use className or import from `@/design/tokens`. CJS (`.js`) because Tailwind config runs in Node; types come from the `.d.ts` sibling.
 
 ## Conventions
 

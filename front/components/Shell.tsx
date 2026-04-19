@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Keyboard } from 'react-native';
 import { useGame } from '@/hooks/use-game';
-import { buildPanelSlots } from '@/services';
+import { buildPanelSlots } from '@/transformers';
 import { ContextCard } from './header';
 import { Log } from './log';
 import { HeroPill } from './hero';
