@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, FlatList, Animated, Easing } from 'react-native';
+import { View, Text, FlatList, Animated, Easing, Keyboard } from 'react-native';
 import { colors, spacing } from '@/design/tokens';
 import type { LogEntry } from '@/types/ui';
 import { LogItem } from './LogItem';
@@ -51,11 +51,20 @@ export function Log({
 }) {
   const ref = React.useRef<FlatList<LogEntry>>(null);
   const [viewportH, setViewportH] = React.useState(0);
+  const initialized = React.useRef(false);
 
   const onContentSizeChange = React.useCallback((_w: number, h: number) => {
     const offset = Math.max(0, h - viewportH);
-    ref.current?.scrollToOffset({ offset, animated: false });
+    ref.current?.scrollToOffset({ offset, animated: initialized.current });
+    initialized.current = true;
   }, [viewportH]);
+
+  React.useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', () => {
+      ref.current?.scrollToEnd({ animated: true });
+    });
+    return () => show.remove();
+  }, []);
 
   return (
     <FlatList
