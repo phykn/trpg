@@ -4,7 +4,7 @@ import type { LogEntry } from '@/types/ui';
 export const INITIAL_HERO: Hero = {
   name: '리아넬',
   race: '엘프',
-  class: '레인저',
+  job: '레인저',
   level: 7,
   exp: 1840, expMax: 2400,
   hp: 42, hpMax: 58,
@@ -37,7 +37,7 @@ export const INITIAL_SUBJECT: Subject = {
   name: '그림자 고블린 두목',
   role: '몬스터',
   race: '고블린',
-  class: '도적',
+  job: '도적',
   level: 9,
   hp: 65, hpMax: 80,
   trust: -55,

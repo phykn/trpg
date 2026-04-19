@@ -32,7 +32,7 @@ export type Equipment = {
 export type Hero = {
   name: string;
   race: string;
-  class: string;
+  job: string;
   level: number;
   exp: number;
   expMax: number;
@@ -52,7 +52,7 @@ export type Subject = {
   name: string;
   role: string;
   race: string;
-  class: string;
+  job: string;
   trust: number;
   known: string[];
   level: number;

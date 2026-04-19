@@ -21,7 +21,7 @@ export function buildSubjectSlot(subject: Subject | null): PanelSlot {
       : { short: '인물', label: '없음' },
     panel: subject ? {
       title: subject.name,
-      meta: `Lv ${subject.level} · ${subject.race} ${subject.class}`,
+      meta: `Lv ${subject.level} · ${subject.race} ${subject.job}`,
       barSplit: [
         { label: 'HP', value: subject.hp, max: subject.hpMax, tone: 'hp', display: `${subject.hp}/${subject.hpMax}` },
         {
