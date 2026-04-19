@@ -28,6 +28,6 @@ export declare const fontSize: Record<
   readonly [string, { lineHeight: string; letterSpacing: string }]
 >;
 
-export type Tone = 'hp' | 'mp' | 'exp' | 'accent' | 'good' | 'bad' | 'neutral';
+import type { Tone } from '@/types/ui';
 
 export declare const toneColor: Record<Tone, string>;
