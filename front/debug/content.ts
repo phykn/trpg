@@ -1,4 +1,4 @@
-import type { Check } from './rules';
+import type { Check } from '@/services';
 import type { RollResult } from '@/types/domain';
 
 const GM_TEMPLATES = [

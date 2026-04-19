@@ -1,4 +1,5 @@
 import React from 'react';
+import { rollD20, resolveCheck } from '@/services';
 import {
   INITIAL_HERO,
   INITIAL_SUBJECT,
@@ -6,12 +7,10 @@ import {
   INITIAL_PLACE,
   INITIAL_LOG,
   fakeGMReply,
-  rollD20,
-  resolveCheck,
   checkPrompt,
   rollFollowup,
   PENDING_CHECK,
-} from '@/services';
+} from '@/debug';
 import type { LogEntry } from '@/types/domain';
 
 const GM_REPLY_DELAY = 450;

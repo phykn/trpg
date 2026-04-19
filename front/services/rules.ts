@@ -6,8 +6,6 @@ export type Check = {
   mod: number;
 };
 
-export const PENDING_CHECK: Check = { stat: 'DEX', dc: 12, mod: 3 };
-
 export function rollD20(): number {
   return 1 + Math.floor(Math.random() * 20);
 }

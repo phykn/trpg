@@ -1,4 +1,5 @@
 import type { Hero, Subject, Quest, Place, LogEntry } from '@/types/domain';
+import type { Check } from '@/services';
 
 export const INITIAL_HERO: Hero = {
   name: '리아넬',
@@ -70,6 +71,8 @@ export const INITIAL_PLACE: Place = {
   features: ['석실 구조', '출구 3곳', '바위 엄폐물', '이끼빛 조명', '얕은 지하수 웅덩이', '천장의 균열'],
   surroundings: ['고블린 진지', '낡은 제단실', '지하 수로', '붕괴된 회랑', '박쥐 서식지', '버려진 광부 캠프'],
 };
+
+export const PENDING_CHECK: Check = { stat: 'DEX', dc: 12, mod: 3 };
 
 export const INITIAL_LOG: LogEntry[] = [
   { id: 1, kind: 'gm',    text: '축축한 동굴 안, 횃불 그림자가 벽을 따라 춤춘다.' },
