@@ -56,7 +56,7 @@ export const INITIAL_SUBJECT: Subject = {
 export const INITIAL_QUEST: Quest = {
   title: '바라드 숲의 실종자',
   giver: '마을 장로',
-  difficulty: { value: 3, max: 5, label: '중' },
+  difficulty: { value: 3, max: 7, label: '보통' },
   goals: ['실종자 네 명 수색', '장로의 증언 확보', '동굴 내부 조사', '고블린 진지 규모 확인'],
   conditions: ['기한 없음', '생존 필수', '비밀 유지', '민간인 피해 최소화'],
   rewards: { gold: 120, exp: 350 },
