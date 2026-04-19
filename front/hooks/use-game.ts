@@ -46,22 +46,18 @@ export function useGame() {
     timers.current.add(id);
   }, []);
 
-  const pushGM = (text: string) =>
-    setLog((L) => [...L, { id: nextId.current++, kind: 'gm', text }]);
-  const pushPlayer = (text: string) =>
-    setLog((L) => [...L, { id: nextId.current++, kind: 'player', text }]);
-  const pushAct = (text: string) =>
-    setLog((L) => [...L, { id: nextId.current++, kind: 'act', text }]);
+  const pushText = (kind: 'gm' | 'player' | 'act', text: string) =>
+    setLog((L) => [...L, { id: nextId.current++, kind, text }]);
   const pushRoll = (data: Omit<Extract<LogEntry, { kind: 'roll' }>, 'id' | 'kind'>) =>
     setLog((L) => [...L, { id: nextId.current++, kind: 'roll', ...data }]);
 
   const onSend = (text: string) => {
-    pushPlayer(text);
+    pushText('player', text);
     schedule(() => {
-      pushGM(fakeGMReply(text));
+      pushText('gm', fakeGMReply(text));
       if (Math.random() < FOLLOWUP_CHANCE) {
         schedule(() => {
-          pushAct(checkPrompt(PENDING_CHECK));
+          pushText('act', checkPrompt(PENDING_CHECK));
           setRollEnabled(true);
         }, CHECK_PROMPT_DELAY);
       }
@@ -77,7 +73,7 @@ export function useGame() {
       const result = resolveCheck(PENDING_CHECK, roll);
       pushRoll({ check: PENDING_CHECK.stat, dc: PENDING_CHECK.dc, roll, mod: PENDING_CHECK.mod, result });
       setRolling(false);
-      schedule(() => pushGM(rollFollowup(result)), ROLL_FOLLOWUP_DELAY);
+      schedule(() => pushText('gm', rollFollowup(result)), ROLL_FOLLOWUP_DELAY);
     }, ROLL_DURATION);
   };
 
