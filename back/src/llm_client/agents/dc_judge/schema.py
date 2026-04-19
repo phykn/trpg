@@ -15,8 +15,12 @@ class _StrictAction(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class SkipAction(_StrictAction):
-    action: Literal["skip"]
+class PassAction(_StrictAction):
+    action: Literal["pass"]
+
+
+class RejectAction(_StrictAction):
+    action: Literal["reject"]
 
 
 class CombatAction(_StrictAction):
@@ -37,7 +41,7 @@ class RollAction(_StrictAction):
 
 
 JudgeOutput = Annotated[
-    SkipAction | CombatAction | ClarifyAction | RollAction,
+    PassAction | RejectAction | CombatAction | ClarifyAction | RollAction,
     Field(discriminator="action"),
 ]
 
