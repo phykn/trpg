@@ -33,6 +33,12 @@ export async function streamChat(
     return false;
   };
 
+  const processLine = (raw: string): boolean => {
+    const line = raw.trim();
+    if (!line.startsWith('data:')) return false;
+    return handlePayload(line.slice(5).trim());
+  };
+
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -40,12 +46,9 @@ export async function streamChat(
     const lines = buffer.split('\n');
     buffer = lines.pop() ?? '';
     for (const raw of lines) {
-      const line = raw.trim();
-      if (!line.startsWith('data:')) continue;
-      if (handlePayload(line.slice(5).trim())) return;
+      if (processLine(raw)) return;
     }
   }
 
-  const tail = buffer.trim();
-  if (tail.startsWith('data:')) handlePayload(tail.slice(5).trim());
+  processLine(buffer);
 }
