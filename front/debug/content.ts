@@ -1,5 +1,4 @@
-import type { Check } from '@/services';
-import type { RollResult } from '@/types/domain';
+import type { Check, RollResult } from '@/types/domain';
 
 const GM_TEMPLATES = [
   '횃불이 흔들리며, 당신의 그림자가 벽에 길게 늘어진다.',

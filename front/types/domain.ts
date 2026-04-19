@@ -82,3 +82,9 @@ export type Place = {
 };
 
 export type RollResult = 'success' | 'fail';
+
+export type Check = {
+  stat: StatKey;
+  dc: number;
+  mod: number;
+};

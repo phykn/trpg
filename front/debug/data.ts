@@ -1,6 +1,5 @@
-import type { Hero, Subject, Quest, Place } from '@/types/domain';
+import type { Hero, Subject, Quest, Place, Check } from '@/types/domain';
 import type { LogEntry } from '@/types/ui';
-import type { Check } from '@/services';
 
 export const INITIAL_HERO: Hero = {
   name: '리아넬',

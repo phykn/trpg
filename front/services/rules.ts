@@ -1,10 +1,4 @@
-import type { StatKey, RollResult } from '@/types/domain';
-
-export type Check = {
-  stat: StatKey;
-  dc: number;
-  mod: number;
-};
+import type { Check, RollResult } from '@/types/domain';
 
 export function rollD20(): number {
   return 1 + Math.floor(Math.random() * 20);
