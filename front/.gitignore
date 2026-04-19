@@ -28,10 +28,22 @@ yarn-error.*
 
 # macOS
 .DS_Store
+Thumbs.db
 *.pem
 
-# local env files
-.env*.local
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# env files
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
 
 # typescript
 *.tsbuildinfo
@@ -41,3 +53,6 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Claude Code local
+.claude/settings.local.json
