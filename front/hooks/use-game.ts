@@ -6,14 +6,13 @@ import {
   INITIAL_QUEST,
   INITIAL_PLACE,
   INITIAL_LOG,
-  fakeGMReply,
   checkPrompt,
   rollFollowup,
   PENDING_CHECK,
 } from '@/debug';
+import { testStream } from '@/debug/llm-test';
 import type { LogEntry } from '@/types/domain';
 
-const GM_REPLY_DELAY = 450;
 const CHECK_PROMPT_DELAY = 500;
 const ROLL_DURATION = 900;
 const ROLL_FOLLOWUP_DELAY = 300;
@@ -29,11 +28,15 @@ export function useGame() {
   );
 
   const timers = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const aborts = React.useRef<Set<AbortController>>(new Set());
   React.useEffect(() => {
-    const pending = timers.current;
+    const pendingTimers = timers.current;
+    const pendingAborts = aborts.current;
     return () => {
-      pending.forEach(clearTimeout);
-      pending.clear();
+      pendingTimers.forEach(clearTimeout);
+      pendingTimers.clear();
+      pendingAborts.forEach((a) => a.abort());
+      pendingAborts.clear();
     };
   }, []);
 
@@ -52,15 +55,41 @@ export function useGame() {
 
   const onSend = (text: string) => {
     pushText('player', text);
-    schedule(() => {
-      pushText('gm', fakeGMReply(text));
-      if (Math.random() < FOLLOWUP_CHANCE) {
-        schedule(() => {
-          pushText('act', checkPrompt(PENDING_CHECK));
-          setRollEnabled(true);
-        }, CHECK_PROMPT_DELAY);
-      }
-    }, GM_REPLY_DELAY);
+    const gmId = nextId.current++;
+    setLog((L) => [...L, { id: gmId, kind: 'gm', text: '' }]);
+
+    const controller = new AbortController();
+    aborts.current.add(controller);
+
+    const appendGm = (delta: string) =>
+      setLog((L) =>
+        L.map((e) =>
+          e.id === gmId && e.kind === 'gm' ? { ...e, text: e.text + delta } : e,
+        ),
+      );
+
+    testStream(
+      { query: text, think: false },
+      (chunk) => {
+        if (chunk.answer) appendGm(chunk.answer);
+      },
+      controller.signal,
+    )
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return;
+        const msg = err instanceof Error ? err.message : String(err);
+        appendGm(`\n[연결 실패: ${msg}]`);
+      })
+      .finally(() => {
+        aborts.current.delete(controller);
+        if (controller.signal.aborted) return;
+        if (Math.random() < FOLLOWUP_CHANCE) {
+          schedule(() => {
+            pushText('act', checkPrompt(PENDING_CHECK));
+            setRollEnabled(true);
+          }, CHECK_PROMPT_DELAY);
+        }
+      });
   };
 
   const onRoll = () => {
