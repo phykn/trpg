@@ -8,6 +8,38 @@
 
 자연어 입력으로 한 턴이 굴러가고, 프론트 화면(Hero / Subject / Quest / Place / Log)이 실시간으로 갱신되는 백엔드를 완성한다. `legacy/docs/plan.md`의 구조를 계승하되 코드는 새로 작성하며, 전투·확장 서브시스템은 P2·P3로 미룬다.
 
+### 한눈에 보기
+
+```mermaid
+flowchart LR
+  subgraph Front
+    UI[Shell · Log · Panels]
+    Hook[use-game hook]
+  end
+  subgraph Back
+    API[FastAPI routes]
+    Pipe[pipeline<br/>judge · narrate · apply]
+    Onto[ontology<br/>target_view]
+    Dom[domain<br/>entities]
+    Map[mapping/to_front]
+    Store[(data/games/ID.json)]
+  end
+  LLM[llama.cpp<br/>OpenAI-compat]
+  Prof[(config/profiles)]
+
+  Hook -- POST /turn /roll<br/>GET /state --> API
+  API -- SSE events --> Hook
+  API --> Pipe
+  Pipe --> Onto
+  Pipe --> Dom
+  Pipe --> LLM
+  Pipe --> Map
+  Map --> API
+  Pipe --> Store
+  Store --> Pipe
+  Prof --> Pipe
+```
+
 ## 2. 범위
 
 ### 포함 (P1)
@@ -208,6 +240,31 @@ class PendingCheck:
     created_at: str               # ISO 8601
 ```
 
+### 5.1-b 내부↔프론트 매핑 개요
+
+```mermaid
+flowchart LR
+  subgraph 내부 도메인
+    C[Character<br/>player_id]
+    S[Character<br/>active_subject_id]
+    Q[Quest<br/>active_quest_id]
+    L[Location<br/>player.location_id]
+    TL[turn_log +<br/>log 이벤트]
+  end
+  subgraph front/types
+    H[Hero]
+    SB[Subject]
+    QS[Quest<br/>축약]
+    PL[Place]
+    LE[LogEntry]
+  end
+  C -- to_hero --> H
+  S -- to_subject --> SB
+  Q -- to_quest --> QS
+  L -- to_place --> PL
+  TL -- to_log_entry --> LE
+```
+
 ### 5.2 프론트 매핑
 
 `mapping/to_front.py`가 다음을 내놓는다.
@@ -259,16 +316,69 @@ data: {"type": "<event>", "data": {...}}\n\n
 
 ### 6.3 턴 라이프사이클
 
-```
-클라 → POST /turn { player_input }
-    백 ← SSE: log_entry(player, text)
-            judge { action, tier?, stat?, target? }
-            [skip / clarify 분기: narrate 또는 act 로그 → done]
-            [roll 분기: pending_check → stream close]
+#### 분기 개요
 
-[roll 분기일 때]
-클라 → POST /roll { dice }
-    백 ← SSE: log_entry(roll) → narrative_delta* → state_patch* → done
+```mermaid
+flowchart LR
+  A[/turn 수신] --> B[judge LLM]
+  B --> C{action?}
+  C -- skip --> D[narrate LLM 스트림]
+  D --> E[apply · state_patch]
+  E --> F[done]
+  C -- roll --> G[pending_check 저장 · 이벤트]
+  G --> H[stream close]
+  H --> R[/roll 수신]
+  R --> K[grade 판정]
+  K --> L[log_entry roll]
+  L --> M[narrate LLM 스트림]
+  M --> N[apply · state_patch]
+  N --> F
+  C -- clarify --> I[log_entry act 되물음]
+  I --> F
+  C -- combat --> J[error CombatNotSupported]
+```
+
+#### roll 분기 시퀀스 상세
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor P as 플레이어
+  participant F as 프론트
+  participant B as 백엔드
+  participant L as llama.cpp
+  participant S as store
+
+  P->>F: 자연어 입력
+  F->>B: POST /turn {player_input}
+  B->>S: load_game(id)
+  B->>B: build surroundings
+  B->>L: judge LLM
+  L-->>B: {action:"roll", tier, stat, target}
+  B-->>F: SSE log_entry(player)
+  B-->>F: SSE judge
+  B->>B: DC · mod · required_roll 계산
+  B->>S: save pending_check
+  B-->>F: SSE pending_check
+  B-->>F: stream close
+
+  F->>P: 주사위 버튼 활성
+  P->>F: 주사위 굴림
+  F->>B: POST /roll {dice}
+  B->>S: load_game(id)
+  B->>B: grade = dice + mod vs required_roll
+  B-->>F: SSE log_entry(roll)
+  B->>B: target_view (1-2홉)
+  B->>L: narrate LLM (stream)
+  loop 청크마다
+    L-->>B: narrative chunk
+    B-->>F: SSE narrative_delta
+  end
+  L-->>B: trailing JSON
+  B->>B: apply_changes (4종)
+  B-->>F: SSE state_patch
+  B->>S: save_game
+  B-->>F: SSE done
 ```
 
 - `/roll` 을 `pending_check` 없이 호출하면 `error: PendingCheckExpected`.
