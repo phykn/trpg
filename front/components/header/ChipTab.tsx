@@ -1,23 +1,23 @@
-import { View, Text, Pressable } from 'react-native';
-import { Theme, typeStyle } from '@/constants/theme';
-import type { PanelSlot } from '@/types/game';
+import { Text, Pressable } from 'react-native';
+import type { PanelSlot } from '@/types/ui';
 
 export function ChipTab({ chip, active, onPress }: {
-  chip: PanelSlot['chip']; active: boolean; onPress: () => void;
+  chip: PanelSlot['chip'];
+  active: boolean;
+  onPress: () => void;
 }) {
+  const bg = active ? 'bg-canvas-inset' : 'bg-transparent';
+  const fontWeight = active ? 'font-sans-semibold' : 'font-sans-medium';
+  const color = active ? 'text-fg-default' : 'text-fg-muted';
+
   return (
-    <Pressable onPress={onPress} style={{
-      flex: 1, minWidth: 0, height: 28, paddingHorizontal: Theme.space.sm,
-      backgroundColor: active ? Theme.bgElev : 'transparent',
-      borderRadius: Theme.radius.sm - 2,
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    }}>
-      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: chip.dot, flexShrink: 0 }} />
-      <Text numberOfLines={1} style={{
-        ...typeStyle('caption', { fontWeight: (active ? '600' : '500') as '600' | '500' }),
-        color: active ? Theme.text : Theme.textDim,
-        fontFamily: active ? Theme.fonts.sansSemibold : Theme.fonts.sansMedium,
-      }}>{chip.short}</Text>
+    <Pressable
+      onPress={onPress}
+      className={`flex-1 min-w-0 h-8 px-2 flex-row items-center justify-center gap-1.5 rounded-sm ${bg}`}
+    >
+      <Text numberOfLines={1} className={`text-caption ${fontWeight} ${color}`}>
+        {chip.short}
+      </Text>
     </Pressable>
   );
 }

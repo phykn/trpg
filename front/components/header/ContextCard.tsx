@@ -1,37 +1,38 @@
 import { View } from 'react-native';
-import { Theme } from '@/constants/theme';
-import { MenuButton } from './MenuButton';
+import { colors } from '@/design/tokens';
+import { CollapseButton } from './CollapseButton';
 import { ChipTab } from './ChipTab';
-import { ShareButton } from './ShareButton';
+import { MenuButton } from './MenuButton';
 import { PanelBody } from './PanelBody';
-import type { PanelSlot } from '@/types/game';
+import type { PanelSlot } from '@/types/ui';
 
-export function ContextCard({ slots, activeId, onSelect, onNewGame }: {
+export function ContextCard({ slots, activeId, onSelect, onCollapse }: {
   slots: PanelSlot[];
   activeId: string | null;
   onSelect: (id: string) => void;
-  onNewGame?: () => void;
+  onCollapse?: () => void;
 }) {
-  const activeSlot = slots.find(s => s.id === activeId) ?? null;
+  const activeSlot = slots.find((s) => s.id === activeId) ?? null;
   const panel = activeSlot?.panel ?? null;
 
   return (
-    <View style={{
-      marginHorizontal: Theme.space.lg,
-      backgroundColor: Theme.bgCard, borderWidth: 1, borderColor: Theme.border,
-      borderRadius: Theme.radius.md,
-    }}>
-      <View style={{
-        flexDirection: 'row', padding: 3, gap: 2, alignItems: 'center',
-        borderBottomWidth: panel ? 1 : 0, borderBottomColor: Theme.border,
-      }}>
-        <MenuButton onNewGame={onNewGame} />
-        <View style={{ flex: 1, flexDirection: 'row', gap: 2 }}>
-          {slots.map(s => (
-            <ChipTab key={s.id} chip={s.chip} active={s.id === activeId} onPress={() => onSelect(s.id)} />
+    <View className="mx-5 bg-canvas-subtle border border-border-default rounded-md">
+      <View
+        className="flex-row p-2 gap-0.5 items-center"
+        style={panel ? { borderBottomWidth: 1, borderBottomColor: colors.border.default } : undefined}
+      >
+        <CollapseButton onPress={onCollapse} />
+        <View className="flex-1 flex-row gap-0.5">
+          {slots.map((s) => (
+            <ChipTab
+              key={s.id}
+              chip={s.chip}
+              active={s.id === activeId}
+              onPress={() => onSelect(s.id)}
+            />
           ))}
         </View>
-        <ShareButton />
+        <MenuButton />
       </View>
       {panel && <PanelBody panel={panel} />}
     </View>

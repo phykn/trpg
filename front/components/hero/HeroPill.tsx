@@ -1,71 +1,87 @@
 import React from 'react';
-import { View, Text, Pressable, Animated } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
-import { Theme, typeStyle } from '@/constants/theme';
+import { View, Text, Pressable } from 'react-native';
+import { Bar } from '@/components/ui';
 import { HeroDetail } from './HeroDetail';
-import type { Hero } from '@/types/game';
+import { colors } from '@/design/tokens';
+import type { Hero } from '@/types/domain';
 
-function Stat({ label, value, valueColor = Theme.text }: {
-  label: string; value: string | number; valueColor?: string;
+type MeterTone = 'hp' | 'mp' | 'exp';
+
+const TONE_COLOR: Record<MeterTone, string> = {
+  hp: colors.hp.fg,
+  mp: colors.mp.fg,
+  exp: colors.exp.fg,
+};
+
+function Column({ top, bottom, paddingRight }: {
+  top: React.ReactNode;
+  bottom: React.ReactNode;
+  paddingRight?: number;
 }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
-      <Text style={{ ...typeStyle('caption'), color: Theme.textFaint, fontFamily: Theme.fonts.monoRegular }}>{label}</Text>
-      <Text style={{ ...typeStyle('caption'), color: valueColor, fontFamily: Theme.fonts.monoRegular, fontVariant: ['tabular-nums'] }}>{value}</Text>
+    <View className="flex-1 gap-1" style={{ paddingRight }}>
+      <View className="h-3.5 justify-center">{top}</View>
+      <View className="h-3.5 justify-center">{bottom}</View>
     </View>
   );
 }
 
-export function HeroPill({ hero, expanded, onToggle }: {
-  hero: Hero; expanded: boolean; onToggle: () => void;
-}) {
-  const rot = React.useRef(new Animated.Value(expanded ? 1 : 0)).current;
-  React.useEffect(() => {
-    Animated.timing(rot, { toValue: expanded ? 1 : 0, duration: 180, useNativeDriver: true }).start();
-  }, [expanded, rot]);
-  const rotate = rot.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
-
+function Identity({ name, level }: { name: string; level: number }) {
   return (
-    <View style={{ marginHorizontal: Theme.space.lg }}>
-      <Pressable onPress={onToggle} style={{
-        height: 34, backgroundColor: Theme.bgCard,
-        borderWidth: 1, borderColor: Theme.border,
-        borderRadius: Theme.radius.pill, paddingHorizontal: Theme.space.md,
-        flexDirection: 'row', alignItems: 'center', gap: Theme.space.md,
-      }}>
-        <Text numberOfLines={1} style={{
-          ...typeStyle('caption', { fontWeight: '600' as const }),
-          color: Theme.text, flexShrink: 0, maxWidth: '32%',
-          fontFamily: Theme.fonts.sansSemibold,
-        }}>{hero.name}</Text>
+    <Column
+      top={
+        <Text numberOfLines={1} className="font-sans-semibold text-caption text-fg-default">
+          {name}
+        </Text>
+      }
+      bottom={
+        <Text numberOfLines={1} className="font-sans-medium text-caption text-fg-muted">
+          Lv {level}
+        </Text>
+      }
+    />
+  );
+}
 
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: Theme.space.sm }}>
-          <Stat label="Lv" value={hero.level} />
-          <Stat label="HP" value={`${hero.hp}/${hero.hpMax}`} valueColor={Theme.hp} />
-          {hero.mp != null && (
-            <Stat label="MP" value={`${hero.mp}/${hero.mpMax}`} valueColor={Theme.mp} />
-          )}
+function Meter({ label, value, max, tone }: {
+  label: string; value: number; max: number; tone: MeterTone;
+}) {
+  const color = TONE_COLOR[tone];
+  return (
+    <Column
+      paddingRight={8}
+      top={
+        <View className="flex-row items-baseline justify-between">
+          <Text className="font-mono text-caption text-fg-subtle">{label}</Text>
+          <Text
+            numberOfLines={1}
+            className="font-mono text-caption"
+            style={{ color, fontVariant: ['tabular-nums'] }}
+          >
+            {value}/{max}
+          </Text>
         </View>
+      }
+      bottom={<Bar value={value} max={max} color={color} h={4} />}
+    />
+  );
+}
 
-        {hero.status?.length > 0 && (
-          <View style={{
-            flexDirection: 'row', alignItems: 'center', gap: 6,
-            paddingLeft: Theme.space.sm,
-            borderLeftWidth: 1, borderLeftColor: Theme.border,
-          }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: Theme.good }} />
-            <Text style={{
-              ...typeStyle('caption', { fontWeight: '500' as const }),
-              color: Theme.textDim, fontFamily: Theme.fonts.sansMedium,
-            }}>{hero.status.join(' · ')}</Text>
-          </View>
-        )}
-
-        <Animated.View style={{ transform: [{ rotate }] }}>
-          <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={Theme.textFaint} strokeWidth={2.2}>
-            <Path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-          </Svg>
-        </Animated.View>
+export function HeroPill({ hero, expanded, onToggle }: {
+  hero: Hero;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <View className="mx-5">
+      <Pressable
+        onPress={onToggle}
+        className="bg-canvas-subtle border border-border-default rounded-md py-2 px-3 flex-row items-center gap-3"
+      >
+        <Identity name={hero.name} level={hero.level} />
+        <Meter label="HP"  value={hero.hp}  max={hero.hpMax}  tone="hp" />
+        <Meter label="MP"  value={hero.mp}  max={hero.mpMax}  tone="mp" />
+        <Meter label="EXP" value={hero.exp} max={hero.expMax} tone="exp" />
       </Pressable>
 
       {expanded && <HeroDetail hero={hero} />}

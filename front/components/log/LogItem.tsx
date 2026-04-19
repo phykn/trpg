@@ -1,4 +1,4 @@
-import type { LogEntry } from '@/types/game';
+import type { LogEntry } from '@/types/domain';
 import { GMNarration } from './GMNarration';
 import { PlayerMessage } from './PlayerMessage';
 import { ActDivider } from './ActDivider';

@@ -1,54 +1,31 @@
-import { View, Text } from 'react-native';
-import { Theme, typeStyle } from '@/constants/theme';
-import { LabeledRow, InlineNodes } from '@/components/atoms';
-import type { Hero } from '@/types/game';
+import { View } from 'react-native';
+import { LabeledRow, InlineNodes, ExpandGroup } from '@/components/ui';
+import type { Hero, EquipItem } from '@/types/domain';
+
+const PLACEHOLDER = '—';
+const joinOrDash = (arr: string[]) => (arr.length > 0 ? arr.join(' · ') : PLACEHOLDER);
 
 export function HeroDetail({ hero }: { hero: Hero }) {
-  const equipped = (hero.inventory || []).filter(it => it.eq);
-  const carried  = (hero.inventory || []).filter(it => !it.eq);
-  const expPct = Math.min(100, (hero.exp / hero.expMax) * 100);
+  const equipped = Object.values(hero.equipment)
+    .filter((it): it is EquipItem => it !== null);
+  const carried = hero.inventory;
+
   return (
-    <View style={{
-      marginTop: Theme.space.sm,
-      paddingVertical: Theme.space.md, paddingHorizontal: Theme.space.md + 2,
-      backgroundColor: Theme.bgCard, borderWidth: 1, borderColor: Theme.border,
-      borderRadius: Theme.radius.md, minHeight: 148,
-      gap: Theme.space.sm + 2,
-    }}>
-      <LabeledRow label="경험" align="center">
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Theme.space.md }}>
-          <View style={{
-            flex: 1, height: 6, borderRadius: 3,
-            backgroundColor: `${Theme.exp}1A`, overflow: 'hidden',
-          }}>
-            <View style={{
-              position: 'absolute', top: 0, bottom: 0, left: 0,
-              width: `${expPct}%`,
-              backgroundColor: Theme.exp, borderRadius: 3,
-            }} />
-          </View>
-          <Text style={{
-            ...typeStyle('caption'),
-            color: Theme.text, fontFamily: Theme.fonts.monoRegular,
-            fontVariant: ['tabular-nums'],
-          }}>
-            {hero.exp}<Text style={{ color: Theme.textFaint }}>/{hero.expMax}</Text>
-          </Text>
-        </View>
-      </LabeledRow>
-
-      <LabeledRow label="능력" mono>
-        <InlineNodes entries={Object.entries(hero.stats) as [string, number][]} />
-      </LabeledRow>
-
-      {hero.skills?.length > 0 && <LabeledRow label="기술">{hero.skills.join(' · ')}</LabeledRow>}
-      {equipped.length > 0 && <LabeledRow label="장비">{equipped.map(it => it.n).join(' · ')}</LabeledRow>}
-      {carried.length > 0 && (
-        <LabeledRow label="소지">
-          {carried.map(it => it.q > 1 ? `${it.n} ×${it.q}` : it.n).join(' · ')}
+    <View className="mt-2 px-3.5 py-3 bg-canvas-subtle border border-border-default rounded-md gap-2.5">
+      <ExpandGroup>
+        <LabeledRow label="능력" mono>
+          <InlineNodes entries={Object.entries(hero.stats) as [string, number][]} />
         </LabeledRow>
-      )}
-      {hero.companions?.length > 0 && <LabeledRow label="동료">{hero.companions.join(' · ')}</LabeledRow>}
+
+        <LabeledRow label="특징">{`${hero.race} ${hero.class}`}</LabeledRow>
+        <LabeledRow label="기술">{joinOrDash(hero.skills ?? [])}</LabeledRow>
+        <LabeledRow label="장비">{joinOrDash(equipped.map((it) => it.name))}</LabeledRow>
+        <LabeledRow label="소지">
+          {joinOrDash(carried.map((it) => (it.qty > 1 ? `${it.name} ×${it.qty}` : it.name)))}
+        </LabeledRow>
+        <LabeledRow label="상태">{joinOrDash(hero.status ?? [])}</LabeledRow>
+        <LabeledRow label="동료">{joinOrDash(hero.companions ?? [])}</LabeledRow>
+      </ExpandGroup>
     </View>
   );
 }

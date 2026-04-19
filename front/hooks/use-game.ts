@@ -7,14 +7,44 @@ import {
   INITIAL_LOG,
   fakeGMReply,
   rollD20,
+  resolveCheck,
+  checkPrompt,
+  rollFollowup,
+  PENDING_CHECK,
 } from '@/services';
-import type { LogEntry } from '@/types/game';
+import type { LogEntry } from '@/types/domain';
+
+const GM_REPLY_DELAY = 450;
+const CHECK_PROMPT_DELAY = 500;
+const ROLL_DURATION = 900;
+const ROLL_FOLLOWUP_DELAY = 300;
+const FOLLOWUP_CHANCE = 0.5;
 
 export function useGame() {
   const [log, setLog] = React.useState<LogEntry[]>(INITIAL_LOG);
   const [rolling, setRolling] = React.useState(false);
   const [rollEnabled, setRollEnabled] = React.useState(true);
-  const nextId = React.useRef(INITIAL_LOG.length + 1);
+
+  const nextId = React.useRef(
+    INITIAL_LOG.reduce((m, e) => Math.max(m, e.id), 0) + 1,
+  );
+
+  const timers = React.useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  React.useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      pending.forEach(clearTimeout);
+      pending.clear();
+    };
+  }, []);
+
+  const schedule = React.useCallback((fn: () => void, ms: number) => {
+    const id = setTimeout(() => {
+      timers.current.delete(id);
+      fn();
+    }, ms);
+    timers.current.add(id);
+  }, []);
 
   const pushGM = (text: string) =>
     setLog((L) => [...L, { id: nextId.current++, kind: 'gm', text }]);
@@ -27,32 +57,28 @@ export function useGame() {
 
   const onSend = (text: string) => {
     pushPlayer(text);
-    setTimeout(() => {
+    schedule(() => {
       pushGM(fakeGMReply(text));
-      if (Math.random() < 0.5) {
-        setTimeout(() => {
-          pushAct('GM이 판정을 요청합니다 — DEX 체크');
+      if (Math.random() < FOLLOWUP_CHANCE) {
+        schedule(() => {
+          pushAct(checkPrompt(PENDING_CHECK));
           setRollEnabled(true);
-        }, 500);
+        }, CHECK_PROMPT_DELAY);
       }
-    }, 450);
+    }, GM_REPLY_DELAY);
   };
 
   const onRoll = () => {
     if (rolling || !rollEnabled) return;
     setRolling(true);
     setRollEnabled(false);
-    setTimeout(() => {
-      const r = rollD20(), bonus = 3, total = r + bonus, dc = 12;
-      const result: 'success' | 'fail' = total >= dc ? 'success' : 'fail';
-      pushRoll({ check: 'DEX', dc, roll: r, mod: bonus, result });
+    schedule(() => {
+      const roll = rollD20();
+      const result = resolveCheck(PENDING_CHECK, roll);
+      pushRoll({ check: PENDING_CHECK.stat, dc: PENDING_CHECK.dc, roll, mod: PENDING_CHECK.mod, result });
       setRolling(false);
-      setTimeout(() => {
-        pushGM(result === 'success'
-          ? '두목의 시선을 훌륭히 피했다. 기회가 왔다.'
-          : '발밑의 자갈이 굴렀다. 두목이 당신을 노려본다.');
-      }, 300);
-    }, 900);
+      schedule(() => pushGM(rollFollowup(result)), ROLL_FOLLOWUP_DELAY);
+    }, ROLL_DURATION);
   };
 
   return {

@@ -1,44 +1,48 @@
 import { View, Text } from 'react-native';
-import { Theme, typeStyle } from '@/constants/theme';
-import { StatRow, InlineNodes, LabeledRow } from '@/components/atoms';
-import type { Panel } from '@/types/game';
+import { StatRow, InlineParts, InlineNodes, LabeledRow, ExpandGroup } from '@/components/ui';
+import type { Panel } from '@/types/ui';
 
 export function PanelBody({ panel }: { panel: Panel }) {
   return (
-    <View style={{
-      paddingHorizontal: Theme.space.md + 2, paddingVertical: Theme.space.md,
-      minHeight: 164,
-      gap: Theme.space.sm + 2,
-    }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: Theme.space.sm, height: 22 }}>
-        <Text numberOfLines={1} style={{
-          fontFamily: Theme.fonts.serifMedium,
-          ...typeStyle('title'),
-          color: Theme.text, flex: 1,
-        }}>{panel.title}</Text>
+    <View className="px-3.5 py-3 gap-2.5" style={{ minHeight: 160 }}>
+      <View className="flex-row items-center gap-2" style={{ minHeight: 22 }}>
+        <View className="flex-1 min-w-0">
+          <Text numberOfLines={1} className="font-serif-medium text-title text-fg-default">
+            {panel.title}
+          </Text>
+        </View>
         {panel.meta && (
-          <Text style={{
-            ...typeStyle('caption'),
-            color: Theme.textDim, fontStyle: 'italic', flexShrink: 0,
-            fontFamily: Theme.fonts.sansRegular,
-          }}>{panel.meta}</Text>
+          <View className="flex-1 min-w-0">
+            <Text
+              numberOfLines={1}
+              className="font-sans text-caption text-fg-muted italic text-right"
+            >
+              {panel.meta}
+            </Text>
+          </View>
         )}
       </View>
 
       {panel.bar && <StatRow {...panel.bar} />}
       {panel.barSplit && (
-        <View style={{ flexDirection: 'row', gap: Theme.space.md + 2 }}>
-          {panel.barSplit.map((b, i) => (
-            <View key={i} style={{ flex: 1, minWidth: 0 }}><StatRow {...b} /></View>
+        <View className="flex-row gap-3.5">
+          {panel.barSplit.map((cell, i) => (
+            <View key={i} className="flex-1 min-w-0">
+              {'parts' in cell
+                ? <InlineParts label={cell.label} parts={cell.parts} />
+                : <StatRow {...cell} />}
+            </View>
           ))}
         </View>
       )}
 
-      {(panel.sections || []).map((section, si) => (
-        <LabeledRow key={si} label={section.label} mono={!!section.nodes}>
-          {section.nodes ? <InlineNodes entries={section.nodes} /> : section.text}
-        </LabeledRow>
-      ))}
+      <ExpandGroup>
+        {(panel.sections || []).map((section, si) => (
+          <LabeledRow key={si} label={section.label} mono={!!section.nodes}>
+            {section.nodes ? <InlineNodes entries={section.nodes} /> : section.text}
+          </LabeledRow>
+        ))}
+      </ExpandGroup>
     </View>
   );
 }

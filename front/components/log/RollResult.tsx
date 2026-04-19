@@ -1,55 +1,52 @@
-import React from 'react';
 import { View, Text } from 'react-native';
-import { Theme, typeStyle } from '@/constants/theme';
-import type { LogEntry } from '@/types/game';
+import { colors } from '@/design/tokens';
+import { InlineNodes } from '@/components/ui';
+import type { LogEntry } from '@/types/domain';
 
 type RollEntry = Extract<LogEntry, { kind: 'roll' }>;
 
-function Cell({ k, v, flex = 1 }: { k: string; v: React.ReactNode; flex?: number }) {
-  return (
-    <View style={{ flex, flexDirection: 'row', alignItems: 'baseline', gap: 5 }}>
-      <Text style={{
-        ...typeStyle('meta', { letterSpacing: 1.2, fontWeight: '600' as const }),
-        color: Theme.textFaint, fontFamily: Theme.fonts.monoSemibold, textTransform: 'uppercase',
-      }}>{k}</Text>
-      <Text style={{
-        ...typeStyle('caption', { fontWeight: '600' as const }),
-        color: Theme.text, fontFamily: Theme.fonts.monoSemibold, fontVariant: ['tabular-nums'],
-      }}>{v}</Text>
-    </View>
-  );
-}
-
 export function RollResult({ entry }: { entry: RollEntry }) {
   const pass = entry.result === 'success';
-  const color = pass ? Theme.good : Theme.bad;
+  const accent = pass ? colors.success.fg : colors.danger.fg;
   const total = entry.roll + entry.mod;
   const modStr = entry.mod >= 0 ? `+${entry.mod}` : `${entry.mod}`;
+  const colorClass = pass ? 'text-success-fg' : 'text-danger-fg';
+
+  const resultValue = (
+    <Text
+      numberOfLines={1}
+      className="font-mono-semibold text-panel"
+      style={{ fontVariant: ['tabular-nums'] }}
+    >
+      <Text className="text-fg-default">{total}</Text>
+      <Text className="text-fg-subtle"> ({entry.roll}{modStr})</Text>
+    </Text>
+  );
 
   return (
-    <View style={{
-      flexDirection: 'row', alignItems: 'center',
-      backgroundColor: Theme.bgCard,
-      borderWidth: 1, borderColor: Theme.border,
-      borderLeftWidth: 3, borderLeftColor: color,
-      borderRadius: Theme.radius.md,
-      paddingVertical: Theme.space.md + 2, paddingHorizontal: Theme.space.md,
-      gap: Theme.space.md,
-    }}>
-      <Text style={{
-        ...typeStyle('meta', { letterSpacing: 1.4, fontWeight: '700' as const }),
-        color, flexShrink: 0, textTransform: 'uppercase',
-        fontFamily: Theme.fonts.sansBold,
-      }}>{pass ? '성공' : '실패'}</Text>
-      <View style={{ width: 1, height: 14, backgroundColor: Theme.border }} />
-      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: Theme.space.md }}>
-        <Cell k="판정" v={entry.check} flex={1} />
-        <Cell k="난이도" v={entry.dc} flex={1} />
-        <Cell k="결과"
-          v={<><Text style={{ color: Theme.text }}>{entry.roll}</Text><Text style={{ color: Theme.textFaint }}>{modStr}</Text><Text>={total}</Text></>}
-          flex={2}
-        />
-      </View>
+    <View
+      className="flex-row items-center bg-canvas-subtle border border-border-default rounded-md py-2 px-3 gap-3"
+      style={{
+        minHeight: 32,
+        borderLeftWidth: 3,
+        borderLeftColor: accent,
+      }}
+    >
+      <Text
+        className={`font-sans-bold text-panel uppercase shrink-0 ${colorClass}`}
+        style={{ letterSpacing: 1.2 }}
+      >
+        {pass ? '성공' : '실패'}
+      </Text>
+      <View className="h-3.5 bg-border-default" style={{ width: 1 }} />
+      <InlineNodes
+        entries={[
+          ['판정', entry.check],
+          ['난이도', entry.dc],
+          ['결과', resultValue],
+        ]}
+        weights={[1, 1, 2]}
+      />
     </View>
   );
 }

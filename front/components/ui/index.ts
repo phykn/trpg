@@ -1,4 +1,7 @@
 export { Bar } from './Bar';
+export { Row } from './Row';
 export { StatRow } from './StatRow';
+export { InlineParts } from './InlineParts';
 export { InlineNodes } from './InlineNodes';
 export { LabeledRow } from './LabeledRow';
+export { ExpandGroup } from './ExpandGroup';

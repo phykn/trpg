@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Keyboard } from 'react-native';
-import { Theme } from '@/constants/theme';
 import { useGame } from '@/hooks/use-game';
-import { usePanels } from '@/hooks/use-panels';
+import { buildPanelSlots } from '@/services';
 import { ContextCard } from './header';
 import { Log } from './log';
 import { HeroPill } from './hero';
@@ -10,41 +9,46 @@ import { Composer } from './composer';
 
 export function Shell() {
   const { hero, subject, quest, place, log, rolling, rollEnabled, onSend, onRoll } = useGame();
-  const slots = usePanels(subject, quest, place);
+  const slots = buildPanelSlots({ subject, quest, place });
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>('person');
   const [heroOpen, setHeroOpen] = React.useState(false);
 
-  const prevTyping = React.useRef(typing);
   React.useEffect(() => {
-    if (typing && !prevTyping.current) setActiveId(null);
-    prevTyping.current = typing;
+    const show = Keyboard.addListener('keyboardDidShow', () => setTyping(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setTyping(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (typing) {
+      setActiveId(null);
+      setHeroOpen(false);
+    }
   }, [typing]);
 
   return (
-    <View style={{
-      flex: 1, backgroundColor: Theme.bg,
-      paddingVertical: Theme.space.md - 2,
-      gap: Theme.space.md - 2,
-    }}>
+    <View className="flex-1 bg-canvas-default py-2.5 gap-2.5">
       <ContextCard
         slots={slots}
         activeId={activeId}
-        onSelect={(id) => setActiveId(prev => (prev === id ? null : id))}
+        onSelect={(id) => setActiveId((prev) => (prev === id ? null : id))}
+        onCollapse={() => setActiveId(null)}
       />
 
       <Log log={log} rolling={rolling} />
 
-      <HeroPill hero={hero} expanded={heroOpen} onToggle={() => setHeroOpen(v => !v)} />
+      <HeroPill hero={hero} expanded={heroOpen} onToggle={() => setHeroOpen((v) => !v)} />
 
       <Composer
         onSend={onSend}
         onRoll={onRoll}
         rolling={rolling}
         focused={typing}
-        onFocus={() => setTyping(true)}
-        onBlur={() => { setTyping(false); Keyboard.dismiss(); }}
         rollEnabled={rollEnabled}
       />
     </View>
