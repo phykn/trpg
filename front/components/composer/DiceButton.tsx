@@ -32,7 +32,7 @@ export function DiceButton({ enabled, rolling, onPress }: {
   const strokeColor = active ? colors.accent.fg : colors.fg.subtle;
   const bgClass = active ? 'bg-accent-muted border-accent-fg' : 'bg-transparent border-border-default';
   const textClass = active ? 'text-accent-fg' : 'text-fg-subtle';
-  const fontClass = enabled ? 'font-sans-semibold' : 'font-sans-medium';
+  const fontClass = active ? 'font-sans-semibold' : 'font-sans-medium';
 
   return (
     <View>
