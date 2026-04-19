@@ -2,16 +2,10 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Bar } from '@/components/ui';
 import { HeroDetail } from './HeroDetail';
-import { colors } from '@/design/tokens';
+import { toneColor } from '@/design/tokens';
 import type { Hero } from '@/types/domain';
 
 type MeterTone = 'hp' | 'mp' | 'exp';
-
-const TONE_COLOR: Record<MeterTone, string> = {
-  hp: colors.hp.fg,
-  mp: colors.mp.fg,
-  exp: colors.exp.fg,
-};
 
 function Column({ top, bottom, paddingRight }: {
   top: React.ReactNode;
@@ -46,7 +40,7 @@ function Identity({ name, level }: { name: string; level: number }) {
 function Meter({ label, value, max, tone }: {
   label: string; value: number; max: number; tone: MeterTone;
 }) {
-  const color = TONE_COLOR[tone];
+  const color = toneColor[tone];
   return (
     <Column
       paddingRight={8}
