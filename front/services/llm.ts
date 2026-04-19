@@ -6,14 +6,15 @@ const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 if (!BASE_URL) throw new Error('EXPO_PUBLIC_API_URL is not set');
 
 export async function streamChat(
-  body: ChatRequest,
+  body: Omit<ChatRequest, 'think'>,
   onChunk: (chunk: ChatChunk) => void,
   signal?: AbortSignal,
 ): Promise<void> {
+  const payload: ChatRequest = { ...body, think: false };
   const res = await fetch(`${BASE_URL}/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
-    body: JSON.stringify({ ...body, think: false }),
+    body: JSON.stringify(payload),
     signal,
   });
   if (!res.ok) throw new Error(`stream failed: HTTP ${res.status}`);

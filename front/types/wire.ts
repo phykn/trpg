@@ -1,5 +1,6 @@
 export type ChatRequest = {
   query: string;
+  think: boolean;
 };
 
 export type ChatChunk = {
