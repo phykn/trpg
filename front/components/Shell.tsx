@@ -8,7 +8,7 @@ import { HeroPill } from './hero';
 import { Composer } from './composer';
 
 export function Shell() {
-  const { hero, subject, quest, place, log, rolling, rollEnabled, onSend, onRoll } = useGame();
+  const { hero, subject, quest, place, log, rolling, rollEnabled, streaming, onSend, onRoll, onStop } = useGame();
   const slots = buildPanelSlots({ subject, quest, place });
 
   const [typing, setTyping] = React.useState(false);
@@ -47,9 +47,11 @@ export function Shell() {
       <Composer
         onSend={onSend}
         onRoll={onRoll}
+        onStop={onStop}
         rolling={rolling}
         focused={typing}
         rollEnabled={rollEnabled}
+        streaming={streaming}
       />
     </View>
   );

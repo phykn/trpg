@@ -3,13 +3,16 @@ import { View, TextInput, Keyboard } from 'react-native';
 import { colors } from '@/design/tokens';
 import { DiceButton } from './DiceButton';
 import { SendButton } from './SendButton';
+import { StopButton } from './StopButton';
 
-export function Composer({ onSend, onRoll, rolling, focused, rollEnabled }: {
+export function Composer({ onSend, onRoll, onStop, rolling, focused, rollEnabled, streaming }: {
   onSend: (text: string) => void;
   onRoll: () => void;
+  onStop: () => void;
   rolling: boolean;
   focused: boolean;
   rollEnabled: boolean;
+  streaming: boolean;
 }) {
   const [input, setInput] = React.useState('');
 
@@ -52,8 +55,12 @@ export function Composer({ onSend, onRoll, rolling, focused, rollEnabled }: {
         style={{ paddingBottom: 6, maxHeight: 140 }}
       />
       <View className="flex-row items-center justify-end gap-2 px-1 pt-1">
-        <DiceButton enabled={rollEnabled} rolling={rolling} onPress={roll} />
-        <SendButton enabled={hasText} onPress={submit} />
+        <DiceButton enabled={rollEnabled && !streaming} rolling={rolling} onPress={roll} />
+        {streaming ? (
+          <StopButton onPress={onStop} />
+        ) : (
+          <SendButton enabled={hasText} onPress={submit} />
+        )}
       </View>
     </View>
   );

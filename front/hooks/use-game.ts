@@ -21,6 +21,7 @@ export function useGame() {
   const [log, setLog] = React.useState<LogEntry[]>(INITIAL_LOG);
   const [rolling, setRolling] = React.useState(false);
   const [rollEnabled, setRollEnabled] = React.useState(true);
+  const [streaming, setStreaming] = React.useState(false);
 
   const nextId = React.useRef(
     INITIAL_LOG.reduce((m, e) => Math.max(m, e.id), 0) + 1,
@@ -47,6 +48,10 @@ export function useGame() {
     timers.current.add(id);
   }, []);
 
+  const onStop = React.useCallback(() => {
+    aborts.current.forEach((a) => a.abort());
+  }, []);
+
   const pushText = (kind: 'gm' | 'player' | 'act', text: string) =>
     setLog((L) => [...L, { id: nextId.current++, kind, text }]);
   const pushRoll = (data: Omit<Extract<LogEntry, { kind: 'roll' }>, 'id' | 'kind'>) =>
@@ -63,6 +68,7 @@ export function useGame() {
 
     const controller = new AbortController();
     aborts.current.add(controller);
+    setStreaming(true);
 
     const appendGm = (delta: string) =>
       setLog((L) =>
@@ -85,6 +91,7 @@ export function useGame() {
       })
       .finally(() => {
         aborts.current.delete(controller);
+        setStreaming(false);
         if (controller.signal.aborted) return;
         if (Math.random() < FOLLOWUP_CHANCE) {
           schedule(() => {
@@ -116,7 +123,9 @@ export function useGame() {
     log,
     rolling,
     rollEnabled,
+    streaming,
     onSend,
     onRoll,
+    onStop,
   };
 }
