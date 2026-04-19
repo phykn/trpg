@@ -4,8 +4,6 @@ import { colors, toneColor } from '@/design/tokens';
 import { Row } from './Row';
 import type { DisplayPart } from '@/types/ui';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
 export function InlineParts({ label, parts }: { label: string; parts: DisplayPart[] }) {
   return (
     <Row label={label} labelAlign="right" gap="lg">
@@ -15,7 +13,7 @@ export function InlineParts({ label, parts }: { label: string; parts: DisplayPar
           return (
             <View key={i} className="flex-1 min-w-0 flex-row items-center gap-1">
               {p.icon ? (
-                <Ionicons name={p.icon as IoniconName} size={14} color={colors.fg.subtle} />
+                <Ionicons name={p.icon} size={14} color={colors.fg.subtle} />
               ) : p.label ? (
                 <Text
                   className="font-mono-semibold text-panel text-fg-subtle uppercase"

@@ -1,4 +1,8 @@
+import type { ComponentProps } from 'react';
+import type { Ionicons } from '@expo/vector-icons';
 import type { RollResult } from './domain';
+
+export type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
 export type Tone = 'hp' | 'mp' | 'exp' | 'accent' | 'good' | 'bad' | 'neutral';
 
@@ -27,7 +31,7 @@ export type BarDef = {
 
 export type DisplayPart = {
   label?: string;
-  icon?: string;
+  icon?: IoniconName;
   text: string;
   tone?: Tone;
 };
