@@ -105,7 +105,7 @@ export function useGame() {
   };
 
   const onRoll = () => {
-    if (rolling || !rollEnabled) return;
+    if (rolling || !rollEnabled || streaming) return;
     setRolling(true);
     rollingRef.current = true;
     setRollEnabled(false);
