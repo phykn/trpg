@@ -1,9 +1,6 @@
 import type { Subject, Quest, Place } from '@/types/domain';
 import type { PanelSlot } from '@/types/ui';
 
-const truncate = (s: string, n: number) =>
-  s && s.length > n ? s.slice(0, n - 1) + '…' : s;
-
 const periodOf = (h: number): string =>
   h < 5 ? '새벽' : h < 12 ? '오전' : h < 17 ? '오후' : h < 20 ? '저녁' : '밤';
 
@@ -17,8 +14,8 @@ export function buildSubjectSlot(subject: Subject | null): PanelSlot {
   return {
     id: 'person',
     chip: subject
-      ? { short: subject.role, label: truncate(subject.name, 10) }
-      : { short: '인물', label: '없음' },
+      ? { short: subject.role }
+      : { short: '인물' },
     panel: subject ? {
       title: subject.name,
       meta: `Lv ${subject.level} · ${subject.race} ${subject.job}`,
@@ -45,9 +42,7 @@ export function buildSubjectSlot(subject: Subject | null): PanelSlot {
 export function buildQuestSlot(quest: Quest | null): PanelSlot {
   return {
     id: 'quest',
-    chip: quest
-      ? { short: '퀘스트', label: truncate(quest.title, 10) }
-      : { short: '퀘스트', label: '없음' },
+    chip: { short: '퀘스트' },
     panel: quest ? {
       title: quest.title,
       meta: quest.giver,
@@ -70,7 +65,7 @@ export function buildQuestSlot(quest: Quest | null): PanelSlot {
 export function buildPlaceSlot(place: Place): PanelSlot {
   return {
     id: 'bg',
-    chip: { short: '장소', label: truncate(place.name, 10) },
+    chip: { short: '장소' },
     panel: {
       title: place.name,
       meta: place.date,

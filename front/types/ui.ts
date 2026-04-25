@@ -57,6 +57,6 @@ export type Panel = {
 
 export type PanelSlot = {
   id: string;
-  chip: { short: string; label: string };
+  chip: { short: string };
   panel: Panel | null;
 };
