@@ -10,8 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `backend/` — FastAPI + Pydantic v2 + OpenAI 호환 LLM. 게임 엔진. 자세한 가이드는 [backend/CLAUDE.md](./backend/CLAUDE.md).
 - `frontend/` — Expo (RN 0.81 / React 19) 단일 화면 앱. SSE 로 백엔드와 스트리밍. [frontend/CLAUDE.md](./frontend/CLAUDE.md).
-- `agency/` — 백엔드를 in-process 로 호출하는 LLM 에이전트 사무실. 현재는 QA 팀만. [agency/CLAUDE.md](./agency/CLAUDE.md).
+- `agency/` — LLM 에이전트 사무실. QA 팀 (in-process 게임 플레이) + Story 팀 (`scenarios/<name>/` 시드 작성). [agency/CLAUDE.md](./agency/CLAUDE.md).
 - `docs/` — 북극성 설계 노트 5장 (`01-overview` / `02-runtime` / `03-features` / `04-boundary` / `05-codemap`). 인덱스는 `docs/01-overview.md`.
+- `scenarios/<name>/` — 시나리오 시드. backend 의 `PROFILE_DIR` 가 가리키고 agency/story 가 새로 짓는 곳. 트리: `world.md`, `start.json`, `player_template.json`, `races/`, `characters/`, `locations/`, `items/`, `quests/`, `chapters/`.
 - `saves/` — gitignored. 게임당 디렉터리 (`games/<game_id>/...` + `.current`).
 
 venv·pyproject·requirements 는 루트 한 벌. 모든 파이썬 코드 (backend, agency, tests) 가 같은 `.venv/` 를 공유.

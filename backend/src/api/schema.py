@@ -49,6 +49,17 @@ class LevelUpRequest(BaseModel):
 class LevelUpResponse(BaseModel):
     game_id: str
     state: dict
+    skill_candidates: list[dict] = []  # §2.3 4단계 — LLM 추천 (실패 시 빈 리스트)
+
+
+class LearnSkillRequest(BaseModel):
+    index: int | None = None  # None 또는 범위 밖 = 거부 (다음 레벨업까지 보류)
+
+
+class LearnSkillResponse(BaseModel):
+    game_id: str
+    state: dict
+    learned_skill_id: str | None = None
 
 
 class EquipRequest(BaseModel):

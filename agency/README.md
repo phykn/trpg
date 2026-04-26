@@ -1,10 +1,11 @@
 # Agency — LLM 사무실
 
-게임 운영을 돕는 LLM 직원들이 팀 단위로 일하는 곳. 각 팀은 자기 디렉터리 안에 agent prompt, harness, 실행 결과를 들고 있고 백엔드 API 를 두드려 일한다. 현재는 **QA 팀** 만 입주해 있고, 앞으로 **스토리 팀** 이 합류할 예정.
+게임 운영을 돕는 LLM 직원들이 팀 단위로 일하는 곳. 각 팀은 자기 디렉터리 안에 agent prompt, harness, 실행 결과를 들고 있다.
 
 ```
 agency/
   qa/       # 게임을 플레이해보고 회귀를 잡는 검수팀
+  story/    # 시나리오 시드 (race / character / ... ) 를 새로 짓는 작가팀
 ```
 
 ## QA — AI 플레이어 기반 게임 테스트
@@ -96,3 +97,43 @@ agency/qa/runs/<timestamp>/
 - 실시간 가이드 역할이지 단정적 검수는 아님. reviewer LLM 의 판단도 검토 대상.
 - LLM 호출량이 많음 (turn 당 narrator 1 + player 1 + 마지막에 reviewer 1). 짧게 돌려서 빠르게 피드백 받는 식이 적합.
 - 비결정적. 같은 프롬프트라도 매번 다른 transcript. 회귀를 정밀하게 잡으려면 시나리오 모드 (입력 시퀀스 명시) 가 필요 — 추후 추가 가능.
+
+## Story — 시나리오 시드 작성
+
+repo 루트의 `scenarios/<name>/` 에 들어가는 시드 파일 (race, character, location, ...) 을 LLM 이 짓는 팀. 첫 단계는 race 한 개부터.
+
+### 구조
+
+```
+agency/story/
+  agents/
+    race_writer.md           # 새 종족 한 개 작성하는 작가
+  harness/
+    runner.py                # LLM 호출 + Pydantic 검증 + 자기교정 루프 (5회) + 디스크 쓰기
+  runs/                      # gitignored — 매 호출의 prompt·응답 로그
+  run_story.py               # CLI
+```
+
+### 동작 원리
+
+- backend 의 `LLMClient` 와 `domain/entities.py` 의 `Race` Pydantic 모델을 그대로 import.
+- 호출당 한 사이클: scenario 의 `world.md` + 기존 `races/*.json` 을 system 컨텍스트로 묶어 LLM 호출 → JSON 추출 → `Race.model_validate_json` + 추가 의미 검증 (`id` 가 ASCII snake_case 이고 기존과 안 겹침) → 실패 시 응답+에러를 messages 에 append → 최대 5회 재시도 (judge runner 와 같은 패턴).
+- 검증 통과 시 `scenarios/<scenario>/races/<id>.json` 에 `indent=2` 로 저장. 같은 파일이 이미 있으면 덮어쓰지 않고 에러.
+- 모든 messages 는 `agency/story/runs/<ts>/race_writer/messages.jsonl` 에 보존 (디버깅용).
+
+### 실행
+
+```bash
+.venv/bin/python agency/story/run_story.py race --scenario default --hint "달밤에만 활동하는 종족"
+
+# 힌트 없이 LLM 자체 판단
+.venv/bin/python agency/story/run_story.py race --scenario default
+```
+
+`backend/.env` 의 `BASE_URL` 만 살아 있으면 됨 (in-process consumer).
+
+### 한계
+
+- 한 번에 entity 한 개. race 외 (character / location / quest / chapter / 시나리오 한 벌) 는 후속.
+- `racial_skills` 는 항상 빈 리스트로 만든다 (기존 races 가 다 비어 있어서). skill 합성은 별도 단계.
+- 시나리오 디렉터리 자체를 새로 만드는 모드 없음 (기존 `<scenario>/` 안에 추가만).

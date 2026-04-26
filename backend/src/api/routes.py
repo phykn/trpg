@@ -14,6 +14,7 @@ from ..mapping.to_front import to_front_state
 from ..pipeline import inventory as inventory_engine
 from ..pipeline import skill as skill_engine
 from ..pipeline.growth import level_up
+from ..pipeline.skill_recommend import recommend_skill_candidates
 from ..pipeline.turn import run_intro, run_roll, run_turn
 from ..state.init import init_game
 from ..state.store import load_game, read_current_game_id, save_entity, save_meta
@@ -27,6 +28,8 @@ from .schema import (
     InitRequest,
     InitResponse,
     InventoryResponse,
+    LearnSkillRequest,
+    LearnSkillResponse,
     LevelUpRequest,
     LevelUpResponse,
     ProfileCard,
@@ -194,9 +197,53 @@ async def session_level_up(
         level_up(player, body.stat_up, body.stat_down)  # type: ignore[arg-type]
     except LevelUpInvalid as e:
         raise HTTPException(status_code=422, detail=str(e))
-    await save_entity(state, request.app.state.saves_dir, "characters", state.player_id)
-    await save_meta(state, request.app.state.saves_dir)
-    return LevelUpResponse(game_id=state.game_id, state=to_front_state(state))
+
+    # §2.3 4단계 — LLM 학습 후보 추천. 실패는 silent (후보 없이 응답).
+    try:
+        candidates = await recommend_skill_candidates(
+            request.app.state.llm, state
+        )
+        state.pending_skill_candidates = candidates
+    except Exception:
+        state.pending_skill_candidates = []
+
+    saves_dir = request.app.state.saves_dir
+    await save_entity(state, saves_dir, "characters", state.player_id)
+    await save_meta(state, saves_dir)
+    return LevelUpResponse(
+        game_id=state.game_id,
+        state=to_front_state(state),
+        skill_candidates=[s.model_dump() for s in state.pending_skill_candidates],
+    )
+
+
+@protected.post("/session/{game_id}/learn-skill", response_model=LearnSkillResponse)
+async def session_learn_skill(
+    request: Request, game_id: str, body: LearnSkillRequest
+) -> LearnSkillResponse:
+    try:
+        state = load_game(request.app.state.saves_dir, game_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="game not found")
+    player = state.characters[state.player_id]
+    candidates = list(state.pending_skill_candidates)
+    learned_id: str | None = None
+    if (
+        body.index is not None
+        and 0 <= body.index < len(candidates)
+    ):
+        chosen = candidates[body.index]
+        player.learned_skills.append(chosen)
+        learned_id = chosen.id
+    state.pending_skill_candidates = []
+    saves_dir = request.app.state.saves_dir
+    await save_entity(state, saves_dir, "characters", state.player_id)
+    await save_meta(state, saves_dir)
+    return LearnSkillResponse(
+        game_id=state.game_id,
+        state=to_front_state(state),
+        learned_skill_id=learned_id,
+    )
 
 
 @protected.post("/session/{game_id}/equip", response_model=InventoryResponse)

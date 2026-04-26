@@ -7,28 +7,27 @@
 ## 1. 모듈 구조
 
 ```
+scenarios/                       repo 루트 peer (backend·agency/story 공유). PROFILE_DIR 가 가리킴
+  default/
+    profile.json                 시나리오 메타: id, name, description (GET /profiles 응답 베이스)
+    world.md                     세계관·톤
+    start.json                   시작 장소·활성 퀘스트·활성 subject·world_time
+    player_template.json         플레이어 캐릭터 시드 (시작 위치·equipment·인벤토리만 사용. name·race_id·appearance·stats 는 init 요청값으로 덮어씀)
+    characters/*.json            NPC 시드
+    locations/*.json             장소 시드
+    quests/*.json                퀘스트 시드
+    items/*.json                 아이템 시드
+    races/*.json                 종족 시드 (id, name, description, racial_skills) — 캐릭터 생성 화면의 종족 목록
 backend/
   run_api.py                     FastAPI 진입점 (build_app, main)
   .env                           HOST, PORT, BASE_URL, BASIC_AUTH_USER, BASIC_AUTH_PASS, SAVES_DIR, PROFILE_DIR
-  config/
-    profiles/
-      default/
-        profile.json             시나리오 메타: id, name, description (GET /profiles 응답 베이스)
-        world.md                 세계관·톤
-        start.json               시작 장소·활성 퀘스트·활성 subject·world_time
-        player_template.json     플레이어 캐릭터 시드 (시작 위치·equipment·인벤토리만 사용. name·race_id·appearance·stats 는 init 요청값으로 덮어씀)
-        characters/*.json        NPC 시드
-        locations/*.json         장소 시드
-        quests/*.json            퀘스트 시드
-        items/*.json             아이템 시드
-        races/*.json             종족 시드 (id, name, description, racial_skills) — 캐릭터 생성 화면의 종족 목록
   data/
     .current                     마지막 game_id 한 줄 (GET /session/current 가 읽음)
     games/{game_id}.json         GameState 한 덩이 (엔티티 + 로그 + 메모리 + pending)
   src/
     rules.py                     DC·시간·소셜·메모리·로그·전투·사망·회복 수치 (P3 회복: encounter_chance / sleep_hours, 거래·성장은 P3 후속). frozen Pydantic — 변경 시도하면 에러.
     api/
-      routes.py                  /profiles, /session/current, /session/init, /session/{id}/state, /turn, /roll, /level-up, /equip, /unequip, /buy, /sell, /cast, /use
+      routes.py                  /profiles, /session/current, /session/init, /session/{id}/state, /turn, /roll, /level-up, /learn-skill, /equip, /unequip, /buy, /sell, /cast, /use
       schema.py                  네트워크로 주고받는 Pydantic 모델 (ProfileListResponse, InitRequest/Response, TurnRequest, RollRequest)
       sse.py                     이벤트를 텍스트로 직렬화, StreamingResponse 헬퍼
     pipeline/
@@ -41,7 +40,8 @@ backend/
       recovery.py                P3 §2.4 회복 (rest). 위험도 굴림으로 풀회복 vs 인카운터 분기, sleep_hours 만큼 world_time 점프, sleep_encounters 풀에서 enemy 선택
       growth.py                  P3 §2.3 성장 (level_up). xp_for_next_level 곡선, 페어 트레이드 (STR↔CHA·DEX↔WIS·CON↔INT), recalc_max_hp_mp, grant_xp, assert_pair_trade_invariant
       inventory.py               P3 §2.5 장비/거래 + §2.7 사용. equip/unequip (슬롯·요구치·two_handed), check_can_carry (STR × weight_per_strength), buy/sell (affinity 흥정 cap, trade_threshold), use (ConsumableEffect heal/damage/mp_restore/buff + on_use trigger 패스스루)
-      skill.py                   P3 §2.6 스킬 cast (S1 핵심). level/MP/range 검증, target self/single/area, grade_multipliers 보정, ActiveBuff 추가/tick. 의미 매칭·LLM 학습 후보 (S2/S3) 는 후속.
+      skill.py                   P3 §2.6 스킬 cast (S1+S3). level/MP/range 검증, target self/single/area, grade_multipliers 보정, ActiveBuff 추가/tick, build_skill_from_candidate (LLM 산출 + level 템플릿)
+      skill_recommend.py         P3 §2.3 4단계. level_up 직후 LLM 호출해 캐릭터 메모리·turn_log·recent_inputs 보고 스킬 후보 3개 산출. agents/skill_recommend/ 가 서사 부분, pipeline/skill 의 build_skill_from_candidate 가 수치 채움.
       quest.py                   P3 §2.8 진행. check_quests (이벤트 character_death/location_enter/item_use 매칭, single-fire), fail_triggers, locked→active 잠금 해제, 보상 자동 적용 (gold/exp/items → player), chapter.progress (required=true 만 카운트), chapter active→completed 전환
       turn.py                    `run_turn` / `run_roll` 흐름 지휘 (SSE 이벤트 방출). combat_state 살아있으면 combat 분기로 라우팅
     state/
@@ -65,6 +65,7 @@ backend/
           semantics.py           target 검증 등 후처리
           prompt.md              시스템 프롬프트
         # narrate/ 등 다른 에이전트도 같은 레이아웃
+        skill_recommend/         §2.3 4단계 — level_up 시 스킬 후보 3개 추천. 캐릭터 컨텍스트 → name/description/type/target/primary_stat/special_effect 산출. 수치는 pipeline/skill 이 템플릿으로 채움.
     mapping/
       to_front.py                to_hero / to_subject / to_quest / to_place / to_log_entry / to_front_state / to_profile_list
     errors.py                    DomainError + PendingCheckActive/Expected, JudgeMalformed, LLMUnavailable, PersistenceFailed, ProfileNotFound, RaceNotFound, LevelUpInvalid, InventoryInvalid, SkillInvalid

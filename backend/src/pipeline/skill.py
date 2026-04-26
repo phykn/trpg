@@ -1,19 +1,21 @@
 """스킬 cast — level/MP/사정거리 검증 + 효과 적용 (P3 §2.6).
 
 cast 파이프라인 (S1, 핵심): level 게이트 → MP 검증 → 사정거리 검증 → AoE 대상 자동 →
-grade 보정 → 데미지/회복/버프 적용. judge 의 의미 매칭 / racial_skills 자동 발동 /
-LLM 학습 후보 (§2.3 4단계) 는 후속.
+grade 보정 → 데미지/회복/버프 적용. S2: judge 의미 매칭. §2.3 4단계: LLM 학습 후보
+추천 (build_skill_from_candidate).
 
 데미지·회복 베이스: `power + primary_stat_modifier`. grade_multipliers 로 stage 별 보정.
 정확한 계수는 튜닝 노브 — `rules.skill.grade_multipliers` 에서.
 """
 from __future__ import annotations
 
+import re
 from typing import Literal
 
 from ..domain.entities import ActiveBuff, Character, Skill
 from ..domain.types import Grade
 from ..errors import SkillInvalid
+from ..llm_client.agents.skill_recommend import SkillCandidate
 from ..rules import RULES
 from ..state.models import GameState
 from .combat import stat_modifier
@@ -199,3 +201,88 @@ def tick_active_buffs(
     if removed > 0 and dirty is not None:
         dirty.add(("characters", character.id))
     return removed
+
+
+# --- 학습 후보 (§2.3 4단계) ----------------------------------------------------
+
+
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
+_HANGUL_TO_LATIN_PLACEHOLDER = "skill"
+
+
+def _slugify(name: str) -> str:
+    """한글 이름은 유의미한 ASCII 변환이 어려우니 placeholder. 영어가 섞여 있으면 그것만 추출."""
+    ascii_only = "".join(ch for ch in name if ord(ch) < 128)
+    base = _SLUG_RE.sub("_", ascii_only.lower()).strip("_")
+    return base or _HANGUL_TO_LATIN_PLACEHOLDER
+
+
+def _unique_skill_id(base: str, existing_ids: set[str]) -> str:
+    sid = base
+    n = 1
+    while sid in existing_ids:
+        n += 1
+        sid = f"{base}_{n}"
+    return sid
+
+
+def _template_for(skill_type: str, level: int) -> dict:
+    """type/level 기준 수치 템플릿. 정확한 계수는 P3 후속 튜닝."""
+    safe_level = max(0, level)
+    if skill_type == "attack":
+        return {
+            "power": 5 + safe_level * 2,
+            "mp_cost": 3 + safe_level,
+            "range": 5.0,
+            "duration": 0,
+        }
+    if skill_type == "heal":
+        return {
+            "power": 4 + safe_level * 2,
+            "mp_cost": 4 + safe_level,
+            "range": 5.0,
+            "duration": 0,
+        }
+    # buff / debuff
+    return {
+        "power": 0,
+        "mp_cost": 2 + safe_level,
+        "range": 5.0,
+        "duration": 3,
+    }
+
+
+def build_skill_from_candidate(
+    candidate: SkillCandidate,
+    level: int,
+    existing_ids: set[str],
+) -> Skill:
+    """LLM 산출 candidate + level → Skill 객체. 엔진 측 수치는 _template_for 가 채움."""
+    base = _slugify(candidate.name)
+    sid = _unique_skill_id(f"{base}_l{level}", existing_ids)
+    template = _template_for(candidate.type, level)
+    return Skill(
+        id=sid,
+        name=candidate.name,
+        description=candidate.description,
+        type=candidate.type,
+        target=candidate.target,
+        primary_stat=candidate.primary_stat,
+        special_effect=candidate.special_effect,
+        level=level,
+        power=template["power"],
+        mp_cost=template["mp_cost"],
+        range=template["range"],
+        duration=template["duration"],
+    )
+
+
+def existing_skill_ids(state: GameState) -> set[str]:
+    """충돌 회피용 — 기존 모든 character 의 racial+learned skill id 모음."""
+    ids: set[str] = set()
+    for c in state.characters.values():
+        for s in c.racial_skills:
+            ids.add(s.id)
+        for s in c.learned_skills:
+            ids.add(s.id)
+    return ids

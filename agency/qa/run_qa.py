@@ -139,7 +139,7 @@ async def main_async(args: argparse.Namespace) -> None:
     base_url = os.environ["BASE_URL"]
     llm = LLMClient(base_url=base_url, model="local")
 
-    profile_dir = (ROOT / "backend" / "config" / "profiles").resolve()
+    profile_dir = (ROOT / "scenarios").resolve()
 
     run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     run_root = ROOT / "agency" / "qa" / "runs" / run_id

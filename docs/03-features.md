@@ -203,7 +203,9 @@ P2 에 새 SSE 이벤트 3 종이 추가된다. P1 의 이벤트 집합 ([02-run
 
 캐릭터 강화의 단일 통로는 `level_up`. 레벨이 곧 게이트고, 레벨업 한 번이 스탯·HP/MP·스킬 권한의 동시 갱신을 일으킨다. 별도의 train / learn 엔드포인트는 두지 않는다 — 모든 강화 경로를 `level_up` 으로 통합.
 
-**현재 구현 상태**: 1·2·3 단계 (페어 트레이드 + HP/MP 재계산 + 게이트 해제) 는 `pipeline/growth.py` + `POST /session/{id}/level-up` endpoint 에 들어가 있다. 4 단계 (스킬 학습 후보 LLM 추천) 는 §2.6 스킬 시스템과 같은 작업.
+**현재 구현 상태**: 1·2·3·4 단계 모두 들어가 있다.
+- 1·2·3 단계: `pipeline/growth.py` + `POST /session/{id}/level-up` — 페어 트레이드 + HP/MP 재계산 + 게이트 해제 (cast 시점 검증으로 자연 해제).
+- 4 단계: `agents/skill_recommend/` + `pipeline/skill_recommend.py` — level_up 직후 LLM 호출해 후보 3 개 산출. LLM 이 name/description/type/target/primary_stat/special_effect 정하고 엔진이 id/level/template 수치 (mp_cost/power/range/duration) 를 채움. 후보는 `state.pending_skill_candidates` 에 박히고 `/level-up` 응답에 포함. `POST /session/{id}/learn-skill { index }` 로 1 개 선택 또는 거부 (다음 레벨업까지 보류). LLM 호출 실패는 silent fallback (빈 후보).
 
 - **레벨**: 0..20. 시작 0, 만렙 20 (레벨업 20 번 가능).
 - **시작 스탯**: 모든 스탯 = 10. 스탯 범위 0..20.
@@ -310,11 +312,12 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
 ### 2.6 스킬 시스템 [P3]
 
-**현재 구현 상태**: cast 핵심 (S1) + judge 의미 매칭 (S2) 까지 들어갔다.
+**현재 구현 상태**: cast 핵심 (S1) + judge 의미 매칭 (S2) + 학습 후보 (§2.3 4단계 / S3) 까지 들어갔다.
 - S1: `pipeline/skill.py` + `/cast` endpoint — level/MP/range 검증, target self/single/area, grade_multipliers 보정, ActiveBuff 추가/tick.
 - S2: judge prompt 가 `surroundings.learned_skills` (level/MP 통과한 것만 노출, racial 은 자동 매칭 대상에서 제외) 와 회피 통로 ("맨손으로/스킬 없이/그냥 평타") 를 보고 `CombatAction.skill_id` 를 박는다. turn.py 가 combat 분기에서 skill_id 가 있으면 plain attack 대신 cast 로 진행하고 GM 로그에 `「스킬명」 발동` 알림.
+- S3: `agents/skill_recommend/` + `pipeline/skill_recommend.py` — level_up 직후 LLM 호출해 캐릭터 컨텍스트(memories/turn_log/recent_inputs) 보고 후보 3개 산출. §2.3 4단계와 같은 코드.
 
-후속: LLM 학습 후보 3개 추천 (§2.3 4단계), racial_skills 의 명시 호출 매칭, cast 자체의 d20 굴림 / DC 통합.
+후속: racial_skills 의 명시 호출 매칭, cast 자체의 d20 굴림 / DC 통합.
 
 `Skill(id, name, description, level, type, target, primary_stat, special_effect, power, mp_cost, range, duration)`.
 

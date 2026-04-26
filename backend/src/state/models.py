@@ -9,6 +9,7 @@ from ..domain.entities import (
     Location,
     Quest,
     Race,
+    Skill,
 )
 from ..domain.memory import (
     DialoguePair,
@@ -39,6 +40,7 @@ class GameState(BaseModel):
     turn_count: int = 0
     pending_check: PendingCheck | None = None
     combat_state: CombatState | None = None
+    pending_skill_candidates: list[Skill] = []
 
     turn_log: list[TurnLogEntry] = []
     recent_dialogue: list[DialoguePair] = []

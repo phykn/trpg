@@ -74,7 +74,7 @@
 §1 표가 동작하려면 다음 백엔드 필드가 정의돼 있어야 한다. 자세한 스키마는 각 절 참고:
 
 - **Character.role: str** — 자유 문자열 ("몬스터", "마을 장로" 등). 프로필 config 에 박힌 값.
-- **Character.appearance: str** — 시간이 지나도 변하지 않는 외모 한 줄 (자유 텍스트). `Subject.known` 의 첫 줄. 새 게임 시 사용자가 캐릭터 생성 화면에서 한 칸에 자유롭게 적은 값. NPC 는 시드 (`config/profiles/{id}/characters/*.json`) 에 박힘. 태그 리스트 아님.
+- **Character.appearance: str** — 시간이 지나도 변하지 않는 외모 한 줄 (자유 텍스트). `Subject.known` 의 첫 줄. 새 게임 시 사용자가 캐릭터 생성 화면에서 한 칸에 자유롭게 적은 값. NPC 는 시드 (`scenarios/{id}/characters/*.json`) 에 박힘. 태그 리스트 아님.
 - **Character.status: list[str]** — 자유 문자열 상태 태그. narrator 가 `set` 으로 추가·제거.
 - **Character.relations: dict[str, int]** — affinity ([03-features.md](./03-features.md) §2.2). `Subject.trust` 가 여기서 옴.
 - **Location.connections: list[str]** — 인접 장소의 ID 리스트. `Place.surroundings` 산출에 씀.
@@ -83,7 +83,7 @@
 - **Quest.rewards: {gold, exp, items?[P3]}** — gold/exp 만 P1 노출.
 - **Place.period** — `world_time` 으로 백엔드가 계산 ([03-features.md](./03-features.md) §2.1).
 - **Memory.target_id: str | None** — 메모리가 어느 엔티티에 관한 것인지 가리키는 ID. `Subject.known` 산출이 player 의 `memories` 중 `target_id == subject_id` 인 항목만 골라 쓴다. narrator 의 `memory_links` 출력으로 채워짐 ([02-runtime.md](./02-runtime.md) §1.2, §7.1, §7.2).
-- **Race** — 종족 시드. 필드: `id: str`, `name: str`, `description: str`, `racial_skills: list[Skill]`. `GET /profiles` 응답의 race 카드에 `{id, name, description}` 만 노출 (skills 는 내부). 캐릭터 생성에서 사용자가 race 를 고르면 init 이 그 race 의 `racial_skills` 를 player 의 `racial_skills` 컬렉션에 그대로 부여 ([02-runtime.md](./02-runtime.md) §2.5). 시드는 `config/profiles/{id}/races/*.json`.
+- **Race** — 종족 시드. 필드: `id: str`, `name: str`, `description: str`, `racial_skills: list[Skill]`. `GET /profiles` 응답의 race 카드에 `{id, name, description}` 만 노출 (skills 는 내부). 캐릭터 생성에서 사용자가 race 를 고르면 init 이 그 race 의 `racial_skills` 를 player 의 `racial_skills` 컬렉션에 그대로 부여 ([02-runtime.md](./02-runtime.md) §2.5). 시드는 `scenarios/{id}/races/*.json`.
 
 ## 2. 외부 API
 
@@ -95,7 +95,8 @@
 | GET  | `/session/{id}/state` | — | `FrontState` |
 | POST | `/session/{id}/turn` | `{player_input: string}` | `text/event-stream` (SSE — 서버가 한 연결을 열어둔 채 이벤트를 계속 흘려주는 방식) |
 | POST | `/session/{id}/roll` | — (서버가 d20 굴림) | `text/event-stream` |
-| POST | `/session/{id}/level-up` | `{stat_up: "STR\|DEX\|CON\|INT\|WIS\|CHA", stat_down: "..."}` | `{game_id, state: FrontState}` (검증 실패 시 422) |
+| POST | `/session/{id}/level-up` | `{stat_up: "STR\|DEX\|CON\|INT\|WIS\|CHA", stat_down: "..."}` | `{game_id, state, skill_candidates: Skill[]}` — 페어 트레이드 + HP/MP 재계산 후 LLM 이 후보 3개 산출 (실패 시 빈 배열). 검증 실패 시 422 |
+| POST | `/session/{id}/learn-skill` | `{index: int \| null}` (null/범위 밖 = 거부) | `{game_id, state, learned_skill_id: string \| null}` |
 | POST | `/session/{id}/equip` | `{item_id, slot}` | `{game_id, state}` (슬롯·요구치 실패 시 422) |
 | POST | `/session/{id}/unequip` | `{slot}` | `{game_id, state}` |
 | POST | `/session/{id}/buy` | `{npc_id, item_id}` | `{game_id, state, price}` (affinity·골드·무게 실패 시 422) |
