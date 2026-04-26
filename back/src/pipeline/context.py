@@ -5,8 +5,14 @@ from ..rules import RULES
 from ..state.models import GameState
 
 
+# --- world layer -----------------------------------------------------------
+
+
 def build_world_layer(profile_dir: str, profile: str) -> str:
     return (Path(profile_dir) / profile / "world.md").read_text(encoding="utf-8")
+
+
+# --- session layer ---------------------------------------------------------
 
 
 def build_session_layer(state: GameState) -> dict:
@@ -43,6 +49,9 @@ def build_session_layer(state: GameState) -> dict:
     return {"chapter": chapter_data, "world_time": state.world_time}
 
 
+# --- history layer ---------------------------------------------------------
+
+
 def build_history_layer(state: GameState) -> str:
     dialogue_turns = {d.turn for d in state.recent_dialogue}
     summary_entries = [e for e in state.turn_log if e.turn not in dialogue_turns]
@@ -63,6 +72,9 @@ def build_history_layer(state: GameState) -> str:
         blocks.append("=== 최근 대화 ===\n" + "\n".join(items))
 
     return "\n\n".join(blocks)
+
+
+# --- surroundings layer ----------------------------------------------------
 
 
 def _state_tags(actor: Character, npc: Character) -> list[str]:

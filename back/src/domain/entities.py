@@ -6,6 +6,9 @@ from .memory import Memory
 from .types import StatKey, Tier
 
 
+# --- character building blocks ---------------------------------------------
+
+
 class Stats(BaseModel):
     STR: int = Field(default=10, ge=0, le=20)
     DEX: int = Field(default=10, ge=0, le=20)
@@ -36,6 +39,9 @@ class DeathSaveState(BaseModel):
     failures: int = 0
 
 
+# --- skills / buffs --------------------------------------------------------
+
+
 class Skill(BaseModel):
     id: str
     name: str
@@ -54,6 +60,9 @@ class Skill(BaseModel):
 class ActiveBuff(BaseModel):
     description: str
     duration: int
+
+
+# --- equipment / connection ------------------------------------------------
 
 
 class Equipment(BaseModel):
@@ -76,6 +85,9 @@ class Connection(BaseModel):
     difficulty: Tier | None = None
     key_item_id: str | None = None
     travel_min: int | None = None
+
+
+# --- items -----------------------------------------------------------------
 
 
 class WeaponEffect(BaseModel):
@@ -114,6 +126,9 @@ class Item(BaseModel):
     required: Stats | None = None
     consumable: bool = False
     on_use: str | None = None
+
+
+# --- race / character ------------------------------------------------------
 
 
 class Race(BaseModel):
@@ -170,6 +185,9 @@ class Character(BaseModel):
     companions: list[str] = []
 
 
+# --- location --------------------------------------------------------------
+
+
 class Location(BaseModel):
     id: str
     name: str
@@ -183,6 +201,9 @@ class Location(BaseModel):
     sleep_risk: Literal["safe", "risky", "dangerous"] = "safe"
     sleep_encounters: list[str] = []
     difficulty: Tier | None = None
+
+
+# --- quest / chapter / campaign --------------------------------------------
 
 
 class QuestTrigger(BaseModel):
