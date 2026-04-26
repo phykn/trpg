@@ -382,11 +382,12 @@ def test_scenario_npc_level_zero_rejected():
     assert any("NPC level=0" in m for m in msgs)
 
 
-def test_scenario_hostile_npc_no_weapon():
+def test_scenario_hostile_npc_unarmed_passes():
     s = _minimal_scenario()
     s.characters["npc1"].equipment = Equipment()
+    s.characters["npc1"].inventory_ids = []
     msgs = check.scenario(s)
-    assert any("no equipped weapon" in m for m in msgs)
+    assert not any("equipped weapon" in m for m in msgs)
 
 
 def test_scenario_active_quest_locked():

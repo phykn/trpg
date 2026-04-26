@@ -148,7 +148,7 @@ async def main_async(args: argparse.Namespace) -> None:
     rows: list[tuple[str, dict, Verdict]] = []
 
     for name in targets:
-        print(f"\n━━ {name} 시작 ━━", flush=True)
+        print(f"\n━━ {name} start ━━", flush=True)
         summary, verdict = await _run_single(
             agent_name=name,
             run_root=run_root,
@@ -173,19 +173,19 @@ async def main_async(args: argparse.Namespace) -> None:
         max_turns=args.turns,
         rows=rows,
     )
-    print(f"\n완료. 결과: {run_root}/index.md", flush=True)
+    print(f"\nDone. Results: {run_root}/index.md", flush=True)
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description="TRPG 게임 QA agent runner")
+    p = argparse.ArgumentParser(description="TRPG game QA agent runner")
     p.add_argument(
         "--agent",
         choices=[*AGENTS, "all"],
         default="all",
-        help="실행할 agent (기본: all)",
+        help="agent to run (default: all)",
     )
-    p.add_argument("--turns", type=int, default=15, help="최대 턴 수 (기본: 15)")
-    p.add_argument("--profile", default="default", help="프로필 이름 (기본: default)")
+    p.add_argument("--turns", type=int, default=15, help="max turns (default: 15)")
+    p.add_argument("--profile", default="default", help="profile name (default: default)")
     args = p.parse_args()
     asyncio.run(main_async(args))
 

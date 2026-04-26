@@ -99,7 +99,7 @@ export function NewGame({ onSubmit }: Props) {
   return (
     <ScrollView
       className="flex-1 bg-canvas-default"
-      contentContainerClassName="px-5 py-8 gap-7"
+      contentContainerClassName="px-5 py-6 gap-6"
       keyboardShouldPersistTaps="handled"
     >
       <View className="gap-1">

@@ -264,11 +264,17 @@ async def write_entity(
     force_id: str | None = None,
     extra_check: Callable[[BaseModel], None] | None = None,
     think: bool = True,
+    critic_prompt_path: Path | None = None,
+    decomp_summary: str = "",
 ) -> tuple[BaseModel, list[dict]]:
-    """Have the LLM produce one entity. On validation failure, self-correct up to `retries` times."""
+    """Have the LLM produce one entity. On validation failure, self-correct
+    up to `retries` times. After invariants pass, optionally run a single
+    critic pass (`critic_prompt_path`); on critic NG, retry the writer
+    once with the feedback. If the critic-retry result fails invariants,
+    keep the first one (critic is advisory)."""
     if kind not in SPECS:
         raise EntityWriterError(
-            f"알 수 없는 kind: {kind!r}. 가능한 값: {sorted(SPECS)}"
+            f"unknown kind: {kind!r}. valid values: {sorted(SPECS)}"
         )
     spec = SPECS[kind]
     base_path = agents_dir / "_base.md"
@@ -293,6 +299,8 @@ async def write_entity(
         {"role": "user", "content": user_msg},
     ]
     last_error: Exception | None = None
+    final_entity: BaseModel | None = None
+    final_answer: str | None = None
     for _ in range(retries + 1):
         result = await llm.chat(messages=messages, think=think)
         answer = (result["answer"] or "").strip()
@@ -303,7 +311,9 @@ async def write_entity(
             _check_entity_invariants(entity, scenario_dir)
             if extra_check is not None:
                 extra_check(entity)
-            return entity, messages + [{"role": "assistant", "content": answer}]
+            final_entity = entity
+            final_answer = answer
+            break
         except (ValidationError, EntityWriterError, json.JSONDecodeError) as e:
             last_error = e
             messages.append({"role": "assistant", "content": answer})
@@ -316,8 +326,48 @@ async def write_entity(
                     ),
                 }
             )
-    assert last_error is not None
-    raise last_error
+    if final_entity is None:
+        assert last_error is not None
+        raise last_error
+
+    messages.append({"role": "assistant", "content": final_answer})
+
+    if critic_prompt_path is not None:
+        from .critic import run_critic
+        world_md = (scenario_dir / "world.md").read_text(encoding="utf-8")
+        verdict = await run_critic(
+            entity_kind=kind,
+            entity_json=final_answer or "",
+            world_md=world_md,
+            decomp_summary=decomp_summary,
+            prompt_path=critic_prompt_path,
+            llm=llm,
+        )
+        if not verdict.ok:
+            messages.append(
+                {
+                    "role": "user",
+                    "content": (
+                        f"평가자 피드백:\n{verdict.feedback}\n"
+                        "위 피드백을 반영해 수정된 JSON 만 출력하라."
+                    ),
+                }
+            )
+            result = await llm.chat(messages=messages, think=think)
+            answer = (result["answer"] or "").strip()
+            try:
+                entity_v2 = spec.model.model_validate_json(answer)
+                _check_id(entity_v2, existing_ids, force_id=force_id)
+                spec.check_refs(entity_v2, refs)
+                _check_entity_invariants(entity_v2, scenario_dir)
+                if extra_check is not None:
+                    extra_check(entity_v2)
+                final_entity = entity_v2
+                messages.append({"role": "assistant", "content": answer})
+            except (ValidationError, EntityWriterError, json.JSONDecodeError):
+                pass
+
+    return final_entity, messages
 
 
 def write_entity_to_disk(entity: BaseModel, scenario_dir: Path, kind: str) -> Path:
@@ -326,7 +376,7 @@ def write_entity_to_disk(entity: BaseModel, scenario_dir: Path, kind: str) -> Pa
     eid: str = entity.id  # type: ignore[attr-defined]
     out_path = scenario_dir / spec.sub_dir / f"{eid}.json"
     if out_path.exists():
-        raise EntityWriterError(f"{out_path} 가 이미 존재함. 덮어쓰지 않음.")
+        raise EntityWriterError(f"{out_path} already exists. Will not overwrite.")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(entity.model_dump_json(indent=2), encoding="utf-8")
     return out_path

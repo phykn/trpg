@@ -50,7 +50,7 @@ async def _run_entity(args: argparse.Namespace) -> None:
     kind: str = args.kind
     scenario_dir = SCENARIOS_DIR / args.scenario
     if not scenario_dir.is_dir():
-        print(f"시나리오 없음: {scenario_dir}", file=sys.stderr)
+        print(f"scenario not found: {scenario_dir}", file=sys.stderr)
         sys.exit(2)
 
     base_url = os.environ["BASE_URL"]
@@ -69,8 +69,8 @@ async def _run_entity(args: argparse.Namespace) -> None:
         (run_dir / "error.txt").write_text(
             f"{type(e).__name__}: {e}\n", encoding="utf-8"
         )
-        print(f"실패: {type(e).__name__}: {e}", file=sys.stderr)
-        print(f"디버그 로그: {run_dir}", file=sys.stderr)
+        print(f"failed: {type(e).__name__}: {e}", file=sys.stderr)
+        print(f"debug log: {run_dir}", file=sys.stderr)
         sys.exit(1)
 
     with (run_dir / "messages.jsonl").open("w", encoding="utf-8") as f:
@@ -80,19 +80,19 @@ async def _run_entity(args: argparse.Namespace) -> None:
         entity.model_dump_json(indent=2), encoding="utf-8"
     )
     out_path = write_entity_to_disk(entity, scenario_dir, kind)
-    print(f"성공: {out_path}")
-    print(f"디버그 로그: {run_dir}")
+    print(f"success: {out_path}")
+    print(f"debug log: {run_dir}")
 
 
 async def _run_scenario(args: argparse.Namespace) -> None:
     scenario_dir = SCENARIOS_DIR / args.name
     prose_path = Path(args.prose).resolve()
     if not prose_path.is_file():
-        print(f"줄글 파일 없음: {prose_path}", file=sys.stderr)
+        print(f"prose file not found: {prose_path}", file=sys.stderr)
         sys.exit(2)
     if scenario_dir.exists():
         print(
-            f"시나리오 디렉터리 이미 존재: {scenario_dir} (덮어쓰지 않음)",
+            f"scenario directory already exists: {scenario_dir} (will not overwrite)",
             file=sys.stderr,
         )
         sys.exit(2)
@@ -115,42 +115,47 @@ async def _run_scenario(args: argparse.Namespace) -> None:
             llm=llm,
             on_step=step,
             run_dir=run_dir,
+            think=args.think,
         )
     except Exception as e:
         (run_dir / "error.txt").write_text(
             f"{type(e).__name__}: {e}\n", encoding="utf-8"
         )
-        print(f"실패: {type(e).__name__}: {e}", file=sys.stderr)
-        print(f"디버그 로그: {run_dir}", file=sys.stderr)
+        print(f"failed: {type(e).__name__}: {e}", file=sys.stderr)
+        print(f"debug log: {run_dir}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"성공: {result['scenario_dir']}")
-    print(f"entity 수: {result['counts']}")
-    print(f"디버그 로그: {run_dir}")
+    print(f"success: {result['scenario_dir']}")
+    print(f"entity count: {result['counts']}")
+    print(f"debug log: {run_dir}")
 
 
 def main() -> None:
     p = argparse.ArgumentParser(
-        description="Story 팀 — entity 단발 작성 또는 시나리오 한 벌 생성"
+        description="Story team — author one entity, or build a whole scenario"
     )
     sub = p.add_subparsers(dest="kind", required=True)
 
     for kind in SPECS:
-        sp = sub.add_parser(kind, help=f"새 {kind} 한 개 작성")
+        sp = sub.add_parser(kind, help=f"author one new {kind}")
         sp.add_argument(
-            "--scenario", default="default", help="대상 시나리오 디렉터리 이름"
+            "--scenario", default="default", help="target scenario directory name"
         )
         sp.add_argument(
-            "--hint", default="", help=f"새 {kind} 에 대한 한 줄 힌트 (옵션)"
+            "--hint", default="", help=f"one-line hint for the new {kind} (optional)"
         )
         sp.set_defaults(func=_run_entity)
 
     sp_scen = sub.add_parser(
-        "scenario", help="줄글 한 편으로 시나리오 한 벌 (world.md + 6 entity dir + 메타 3 파일) 생성"
+        "scenario", help="build a whole scenario from prose (world.md + 6 entity dirs + 3 meta files)"
     )
-    sp_scen.add_argument("--name", required=True, help="새 시나리오 디렉터리 이름")
+    sp_scen.add_argument("--name", required=True, help="new scenario directory name")
     sp_scen.add_argument(
-        "--prose", required=True, help="줄글 .md 파일 경로 (분해 입력)"
+        "--prose", required=True, help="path to prose .md file (decomposition input)"
+    )
+    sp_scen.add_argument(
+        "--no-think", dest="think", action="store_false", default=True,
+        help="disable LLM thinking (faster, lower quality)",
     )
     sp_scen.set_defaults(func=_run_scenario)
 

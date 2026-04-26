@@ -65,6 +65,18 @@ npx expo start -c   # clear Metro cache (after editing tokens / tailwind / babel
 npm run lint
 ```
 
+## Troubleshooting
+
+### `--host=tunnel` fails with `Cannot read properties of undefined (reading 'body')`
+
+The bundled `@expo/ngrok` cache gets into a bad state intermittently. Wipe it and reinstall:
+
+```bash
+rm -rf ~/.expo node_modules/@expo/ngrok
+npx expo install @expo/ngrok
+npx expo start --host=tunnel -c
+```
+
 ## Layout
 
 ```

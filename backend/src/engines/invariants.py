@@ -385,26 +385,18 @@ def _check_seed_character_extras(c: Character, items: dict[str, Item]) -> list[s
         skill_count = len(c.racial_skills) + len(c.learned_skills)
         if skill_count == 0:
             _v(out, where, "NPC has no skills (racial_skills + learned_skills empty)")
-        if c.combat_behavior is not None:
-            has_weapon = any(
-                item_id in items and isinstance(items[item_id].effects, WeaponEffect)
-                for _, item_id in c.equipment.equipped_items()
+        if c.combat_behavior is not None and c.disposition.aggressive < 70:
+            _v(
+                out,
+                where,
+                f"combat_behavior set but disposition.aggressive={c.disposition.aggressive} < 70",
             )
-            if not has_weapon:
-                _v(out, where, "NPC with combat_behavior has no equipped weapon")
-            if c.disposition.aggressive < 70:
-                _v(
-                    out,
-                    where,
-                    f"combat_behavior set but disposition.aggressive={c.disposition.aggressive} < 70",
-                )
-        else:
-            if c.disposition.aggressive >= 70:
-                _v(
-                    out,
-                    where,
-                    f"disposition.aggressive={c.disposition.aggressive} ≥ 70 but combat_behavior is None",
-                )
+        if c.combat_behavior is None and c.disposition.aggressive >= 70:
+            _v(
+                out,
+                where,
+                f"disposition.aggressive={c.disposition.aggressive} ≥ 70 but combat_behavior is None",
+            )
 
     return out
 

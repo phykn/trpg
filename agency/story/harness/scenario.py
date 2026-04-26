@@ -227,8 +227,11 @@ async def _write_step(
     llm: LLMClient,
     extra_check: Callable[[BaseModel], None] | None = None,
     think: bool = True,
+    run_dir: Path | None = None,
+    critic_prompt_path: Path | None = None,
+    decomp_summary: str = "",
 ) -> BaseModel:
-    entity, _msgs = await write_entity(
+    entity, msgs = await write_entity(
         kind=kind,
         scenario_dir=scenario_dir,
         agents_dir=agents_dir,
@@ -237,9 +240,54 @@ async def _write_step(
         force_id=forced_id,
         extra_check=extra_check,
         think=think,
+        critic_prompt_path=critic_prompt_path,
+        decomp_summary=decomp_summary,
     )
     write_entity_to_disk(entity, scenario_dir, kind)
+    if run_dir is not None:
+        msg_path = run_dir / f"entity_{kind}_{forced_id}.jsonl"
+        with msg_path.open("w", encoding="utf-8") as f:
+            for m in msgs:
+                f.write(json.dumps(m, ensure_ascii=False) + "\n")
     return entity
+
+
+def _make_decomp_summary(d: Decomposition) -> str:
+    """One-liner per entity, used as critic context."""
+    parts: list[str] = []
+    if d.races:
+        parts.append("races:")
+        for r in d.races:
+            parts.append(f"  - {r.id}: {r.role}")
+    if d.locations:
+        parts.append("locations:")
+        for loc in d.locations:
+            parts.append(f"  - {loc.id}: {loc.role}")
+    if d.items:
+        parts.append("items:")
+        for it in d.items:
+            owner = ""
+            if it.owner_character_id:
+                owner = f" (owner_character={it.owner_character_id})"
+            elif it.owner_location_id:
+                owner = f" (owner_location={it.owner_location_id})"
+            elif it.for_player_template:
+                owner = " (player start)"
+            parts.append(f"  - {it.id} [{it.kind}]: {it.role}{owner}")
+    if d.characters:
+        parts.append("characters:")
+        for c in d.characters:
+            tag = "enemy" if c.is_enemy else "friendly"
+            parts.append(f"  - {c.id} [{tag}, race={c.race_id}, loc={c.location_id}]: {c.role}")
+    if d.quests:
+        parts.append("quests:")
+        for q in d.quests:
+            parts.append(f"  - {q.id}: {q.role} (giver={q.giver_id}, trigger={q.trigger_kind}/{q.target_id})")
+    if d.chapters:
+        parts.append("chapters:")
+        for ch in d.chapters:
+            parts.append(f"  - {ch.id}: {ch.role}")
+    return "\n".join(parts)
 
 
 def _check_enemy_consistency(entity: BaseModel, expected_enemy: bool) -> None:
@@ -276,20 +324,23 @@ async def build_scenario(
     """
     if scenario_dir.exists():
         raise EntityWriterError(
-            f"{scenario_dir} 가 이미 존재함. 새 이름을 쓰거나 삭제 후 재시도."
+            f"{scenario_dir} already exists. Use a new name or delete it and retry."
         )
     scenario_dir.mkdir(parents=True)
+
+    critic_prompt = agents_dir / "_critic.md"
 
     def _step(msg: str) -> None:
         if on_step is not None:
             on_step(msg)
 
     # 1. decompose
-    _step("분해 단계")
+    _step("decompose step")
     prose = prose_path.read_text(encoding="utf-8")
     decomp, decomp_msgs = await decompose_prose(
         prose=prose, prompt_path=decompose_prompt_path, llm=llm, think=think,
     )
+    decomp_summary = _make_decomp_summary(decomp)
     if run_dir is not None:
         (run_dir / "decompose.json").write_text(
             decomp.model_dump_json(indent=2), encoding="utf-8"
@@ -310,6 +361,7 @@ async def build_scenario(
         await _write_step(
             kind="race", forced_id=r.id, hint=_hint_with_id(r.id, r.role),
             scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
+            run_dir=run_dir, critic_prompt_path=critic_prompt, decomp_summary=decomp_summary,
         )
     counts["race"] = len(decomp.races)
 
@@ -321,6 +373,7 @@ async def build_scenario(
             kind="item", forced_id=it.id,
             hint=_hint_with_id(it.id, it.role, extra),
             scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
+            run_dir=run_dir, critic_prompt_path=critic_prompt, decomp_summary=decomp_summary,
         )
     counts["item"] = len(decomp.items)
 
@@ -341,6 +394,7 @@ async def build_scenario(
             kind="location", forced_id=loc.id,
             hint=_hint_with_id(loc.id, loc.role, extra),
             scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
+            run_dir=run_dir, critic_prompt_path=critic_prompt, decomp_summary=decomp_summary,
         )
     counts["location"] = len(decomp.locations)
 
@@ -377,7 +431,8 @@ async def build_scenario(
             kind="character", forced_id=c.id,
             hint=_hint_with_id(c.id, c.role, extra),
             scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm,
-            extra_check=_check, think=think,
+            extra_check=_check, think=think, run_dir=run_dir,
+            critic_prompt_path=critic_prompt, decomp_summary=decomp_summary,
         )
     counts["character"] = len(decomp.characters)
 
@@ -395,6 +450,7 @@ async def build_scenario(
         await _write_step(
             kind="quest", forced_id=q.id, hint=_hint_with_id(q.id, q.role, extra),
             scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
+            run_dir=run_dir, critic_prompt_path=critic_prompt, decomp_summary=decomp_summary,
         )
     counts["quest"] = len(decomp.quests)
 
@@ -411,11 +467,12 @@ async def build_scenario(
         await _write_step(
             kind="chapter", forced_id=ch.id, hint=_hint_with_id(ch.id, ch.role, extra),
             scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
+            run_dir=run_dir, critic_prompt_path=critic_prompt, decomp_summary=decomp_summary,
         )
     counts["chapter"] = len(decomp.chapters)
 
     # 9. meta files (profile / start / player_template)
-    _step("메타 파일 (profile / start / player_template)")
+    _step("meta files (profile / start / player_template)")
     profile = {
         "id": scenario_dir.name,
         "name": decomp.profile_name,
@@ -446,11 +503,11 @@ async def build_scenario(
     )
 
     # 10. final scenario-level invariant sweep
-    _step("invariant 통합 검증")
+    _step("invariant sweep")
     violations = check.scenario(Scenario.from_dir(scenario_dir))
     if violations:
         raise EntityWriterError(
-            "scenario invariant 위반:\n" + "\n".join(violations)
+            "scenario invariant violation:\n" + "\n".join(violations)
         )
 
     return {

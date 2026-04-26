@@ -65,14 +65,39 @@
 
 예) level=5, CON=14, INT=10 → max_hp = (10+14) + 5×(5+14÷4) = 24 + 5×(5+3) = 64. max_mp = (5+10) + 5×(3+10÷4) = 15 + 5×(3+2) = 40.
 
-### Equipment — combat_behavior 박은 NPC 는 무기 장착
+### Equipment — 슬롯 매핑 (가이드)
 
 - `equipment` 슬롯은 `head/top/bottom/feet/leftHand/rightHand/acc1/acc2` 중 하나.
 - weapon → `leftHand` 또는 `rightHand`. armor → `head/top/bottom/feet`. consumable 은 equipment 에 못 박는다.
 - two-handed weapon 은 `leftHand` 와 `rightHand` 양쪽에 같은 id 를 박는다.
-- `combat_behavior` 가 박힌 NPC 는 `inventory_ids` 의 무기 1 개를 `equipment.rightHand` (또는 양손이면 양쪽) 에 박아라.
-- equipment 슬롯의 id 는 `inventory_ids` 안에도 있어야 한다.
-- 인벤 무게 합은 `STR × 10` kg 을 넘으면 안 된다 (carry capacity).
+- decorative item (effects=null) 은 `acc1`/`acc2` 슬롯.
+- equipment 슬롯의 id 는 `inventory_ids` 안에도 있어야 한다 (강제).
+- 인벤 무게 합은 `STR × 10` kg 을 넘으면 안 된다 (강제).
+- `inventory_ids` 의 item 은 컨셉에 맞으면 적절한 슬롯에 박아라 — 도적이 단검을 갖고 있으면 `rightHand` 에, 외투를 갖고 있으면 `top` 에. 자연스러움 우선, 강제 X.
+
+### 소지품 — 직업·세계관에 맞게 (가이드, 강제 X)
+
+`world.md` 의 시대·톤에 맞는 inventory + equipment 를 자연스럽게 갖추게 한다. 빈손·맨몸 NPC 가 어색해 보이면 직업·역할에 어울리는 소지품 1~3 개를 채워라.
+
+세계관 톤 매핑 — 분해기와 동일 (`_decompose.md`):
+
+| 세계관 | 의복(armor) | 무기 | personalization |
+|---|---|---|---|
+| 중세 판타지 | 천옷·가죽·갑주 | 검·활·도끼 | 약초·부적·룬·잠금쇠·지팡이 |
+| 동양 무협·삼국 | 도복·관복·갑옷 | 검·창·암기 | 죽간·인장·금화·서신 |
+| 근세 (조선·에도) | 한복·기모노 | 칼·총포 | 회중시계·인장·종이지폐·곰방대 |
+| 현대 | 셔츠·정장·청바지 | 권총·칼 | 스마트폰·지갑·신분증·열쇠·노트북 |
+| 사이버펑크 | 합성 의류·코트 | 권총·블레이드 | 단말기·해킹툴·암호 칩·임플란트 |
+| 포스트 아포칼립스 | 누더기·방한구 | 임시 무기·총 | 통조림·라디오·약병·낡은 사진 |
+
+직업·역할 매핑 — 위 톤 안에서:
+
+- 사회적 (상인·관료·외교관·정보꾼) → 신분 표식 + 호신구
+- 무력 (전사·병사·도적·우두머리) → 무기 1~2 + 방어구 (보스급은 풀세트 + 트로피)
+- 지식·치유 (현자·치료사·학자·노파) → 휴대 도구·약·자료
+- 정보·은밀 (첩자·도둑·암살자) → 잠입·해독 도구 + 작은 무기
+
+**짐승·괴수·자연적 적**: 옷·무기 inventory 비워도 OK. 자연 무기로 싸운다 (시스템 fallback).
 
 ### combat_behavior — 적대 NPC 에만
 
