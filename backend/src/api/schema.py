@@ -39,3 +39,13 @@ class InitResponse(BaseModel):
 
 class TurnRequest(BaseModel):
     player_input: str
+
+
+class LevelUpRequest(BaseModel):
+    stat_up: str
+    stat_down: str
+
+
+class LevelUpResponse(BaseModel):
+    game_id: str
+    state: dict

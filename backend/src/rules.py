@@ -56,6 +56,11 @@ class RecoveryConfig(_F):
     }
 
 
+class GrowthConfig(_F):
+    base_xp: int = 100  # 레벨 N → N+1 비용 = base_xp × N (선형)
+    max_level: int = 20
+
+
 class CarryConfig(_F):
     weight_per_strength: float = 10.0
 
@@ -105,6 +110,7 @@ class Rules(_F):
     combat: CombatConfig = CombatConfig()
     death: DeathConfig = DeathConfig()
     recovery: RecoveryConfig = RecoveryConfig()
+    growth: GrowthConfig = GrowthConfig()
 
 
 RULES = Rules()

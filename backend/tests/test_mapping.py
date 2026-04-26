@@ -120,6 +120,18 @@ def test_hero_basic_fields(fresh_state):
     assert h["stats"]["STR"] == 12
 
 
+def test_hero_exp_uses_xp_pool_and_curve(fresh_state):
+    """to_hero 의 exp/expMax 가 xp_pool 과 xp_for_next_level 에서 온다."""
+    from src.rules import RULES
+
+    state = _full_state(fresh_state)
+    state.characters["player_01"].xp_pool = 80
+    h = to_hero(state)
+    assert h["exp"] == 80
+    # level=2 → cost = base_xp × 2
+    assert h["expMax"] == RULES.growth.base_xp * 2
+
+
 def test_hero_equipment_eight_slots_with_names(fresh_state):
     h = to_hero(_full_state(fresh_state))
     assert set(h["equipment"].keys()) == {

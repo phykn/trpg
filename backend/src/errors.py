@@ -28,3 +28,9 @@ class ProfileNotFound(DomainError):
 
 class RaceNotFound(DomainError):
     pass
+
+
+class LevelUpInvalid(DomainError):
+    """level_up 요청이 페어 트레이드/캡/잔여 xp 등의 검증을 통과 못 함."""
+
+    pass

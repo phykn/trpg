@@ -3,17 +3,20 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from ..errors import ProfileNotFound, RaceNotFound
+from ..errors import LevelUpInvalid, ProfileNotFound, RaceNotFound
 from ..mapping.to_front import to_front_state
+from ..pipeline.growth import level_up
 from ..pipeline.turn import run_intro, run_roll, run_turn
 from ..state.init import init_game
-from ..state.store import load_game, read_current_game_id
+from ..state.store import load_game, read_current_game_id, save_entity, save_meta
 from .auth import require_basic_auth
 from .schema import (
     ChatRequest,
     ChatResponse,
     InitRequest,
     InitResponse,
+    LevelUpRequest,
+    LevelUpResponse,
     ProfileCard,
     TurnRequest,
 )
@@ -160,6 +163,24 @@ async def session_intro(request: Request, game_id: str):
             to_front_fn=to_front_state,
         )
     )
+
+
+@protected.post("/session/{game_id}/level-up", response_model=LevelUpResponse)
+async def session_level_up(
+    request: Request, game_id: str, body: LevelUpRequest
+) -> LevelUpResponse:
+    try:
+        state = load_game(request.app.state.saves_dir, game_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="game not found")
+    player = state.characters[state.player_id]
+    try:
+        level_up(player, body.stat_up, body.stat_down)  # type: ignore[arg-type]
+    except LevelUpInvalid as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    await save_entity(state, request.app.state.saves_dir, "characters", state.player_id)
+    await save_meta(state, request.app.state.saves_dir)
+    return LevelUpResponse(game_id=state.game_id, state=to_front_state(state))
 
 
 @protected.post("/debug/complete", response_model=ChatResponse)

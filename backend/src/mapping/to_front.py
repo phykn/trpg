@@ -8,6 +8,7 @@ from ..domain.entities import (
     Quest,
 )
 from ..pipeline.dc import tier_to_int
+from ..pipeline.growth import xp_for_next_level
 from ..state.models import GameState
 
 
@@ -55,8 +56,8 @@ def to_hero(state: GameState) -> dict:
         "race": _race_name(state, p.race_id),
         "job": p.job,
         "level": p.level,
-        "exp": 0,  # P3 — xp/level curve
-        "expMax": 0,
+        "exp": p.xp_pool,
+        "expMax": xp_for_next_level(p.level),
         "hp": p.hp,
         "hpMax": p.max_hp,
         "mp": p.mp,
