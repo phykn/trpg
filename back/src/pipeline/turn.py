@@ -155,6 +155,26 @@ async def _flush(state: GameState, data_dir: str, dirty: _Dirty) -> None:
     await save_meta(state, data_dir)
 
 
+def _commit_narrate(
+    state: GameState,
+    dirty: _Dirty,
+    final: NarrativeFinal,
+    *,
+    body: str,
+    target_for_log: str | None,
+    dialogue_input: str | None,
+) -> None:
+    """post-narrate 공통 마무리: state_changes 적용 → turn_log → (선택) dialogue
+    → memories → gm_log. dialogue_input=None 이면 dialogue 단계 생략 (intro)."""
+    apply_changes(state, final.output.state_changes, dirty.entities)
+    _push_turn_log(state, target_for_log, final.output.turn_summary, dirty)
+    if dialogue_input is not None:
+        _push_dialogue(state, dialogue_input, body, dirty)
+    write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
+    gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=body)
+    _push_log_entry(state, gm_log, dirty)
+
+
 async def _finalize(
     state: GameState,
     data_dir: str,
@@ -277,14 +297,10 @@ async def run_turn(
             final = item
     assert final is not None
 
-    apply_changes(state, final.output.state_changes, dirty.entities)
-    _push_turn_log(state, target_for_log, final.output.turn_summary, dirty)
-    _push_dialogue(state, player_input, body, dirty)
-    write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
-
-    gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=body)
-    _push_log_entry(state, gm_log, dirty)
-
+    _commit_narrate(
+        state, dirty, final,
+        body=body, target_for_log=target_for_log, dialogue_input=player_input,
+    )
     _advance_time(state)
 
     async for ev in _finalize(state, data_dir, dirty, to_front_fn):
@@ -323,12 +339,10 @@ async def run_intro(
             final = item
     assert final is not None
 
-    apply_changes(state, final.output.state_changes, dirty.entities)
-    _push_turn_log(state, None, final.output.turn_summary, dirty)
-    write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
-
-    gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=body)
-    _push_log_entry(state, gm_log, dirty)
+    _commit_narrate(
+        state, dirty, final,
+        body=body, target_for_log=None, dialogue_input=None,
+    )
 
     async for ev in _finalize(state, data_dir, dirty, to_front_fn):
         yield ev
@@ -392,13 +406,10 @@ async def run_roll(
             final = item
     assert final is not None
 
-    apply_changes(state, final.output.state_changes, dirty.entities)
-    _push_turn_log(state, pending.target, final.output.turn_summary, dirty)
-    _push_dialogue(state, pending.player_input, body, dirty)
-    write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
-
-    gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=body)
-    _push_log_entry(state, gm_log, dirty)
+    _commit_narrate(
+        state, dirty, final,
+        body=body, target_for_log=pending.target, dialogue_input=pending.player_input,
+    )
 
     state.pending_check = None
     _advance_time(state)

@@ -54,7 +54,9 @@ LLM 을 두 개로 쪼갠다.
 | `roll` | 주사위 필요 | 엔진이 DC 계산 → `pending_check` 저장 → 프론트 주사위 버튼 → `/roll` |
 | `combat` | 일반 전투 행동 | [P1 에러 반환] / [P2] 엔진이 자동 주사위 → 내러티브 |
 | `clarify` | 해석 불가 / 복합 행동 | 플레이어에게 되물음, 파이프라인 재시작 |
-| `reject` | 인-캐릭터 입력이 아님 — 시스템 공격(프롬프트 인젝션, 메타 질문), OOC 잡담, 무의미 입력 | 내러티브 에이전트에 surroundings + reject 가이드만 전달 → narrator 가 인-게임 표현("알 수 없는 힘에 막힌다" 등)으로 흡수. `state_changes=[]`, `memorable=false` 강제. turn_log·recent_dialogue 에는 일반 턴처럼 append — "흔적 안 남김" 은 게임 상태/NPC 기억 한정이고, narrator 컨텍스트는 OOC 시도까지 자연스럽게 이어쓰려면 보존이 필요 |
+| `reject` | 인-캐릭터 입력이 아님 — 시스템 공격(프롬프트 인젝션, 메타 질문), OOC 잡담, 무의미 입력 | 인-게임 표현으로 흡수 (아래 reject 처리 참고) |
+
+**reject 처리**: 내러티브 에이전트에 surroundings + reject 가이드만 전달 → narrator 가 인-게임 표현("알 수 없는 힘에 막힌다" 등)으로 흡수. `state_changes=[]`·`memorable=false` 강제. turn_log·recent_dialogue 에는 일반 턴처럼 append — "흔적 안 남김" 은 게임 상태/NPC 기억 한정이고, narrator 컨텍스트는 OOC 시도까지 자연스럽게 이어쓰려면 보존이 필요.
 
 **규칙**:
 - 매 턴 호출 (전투/비전투 무관)
