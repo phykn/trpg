@@ -27,8 +27,6 @@ const jsonHeaders = {
   'Content-Type': 'application/json',
 };
 
-// --- REST -------------------------------------------------------------------
-
 export async function listProfiles(): Promise<ProfileCard[]> {
   const res = await fetch(`${BASE_URL}/profiles`, { headers: baseHeaders });
   if (!res.ok) throw new Error(`listProfiles failed: HTTP ${res.status}`);
@@ -51,8 +49,6 @@ export async function initSession(body: InitRequest): Promise<SessionPayload> {
   if (!res.ok) throw new Error(`initSession failed: HTTP ${res.status}`);
   return (await res.json()) as SessionPayload;
 }
-
-// --- SSE --------------------------------------------------------------------
 
 async function streamSse(
   url: string,

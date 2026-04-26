@@ -171,8 +171,6 @@ export function NewGame({ onSubmit }: Props) {
   );
 }
 
-// --- 보조 컴포넌트 ---------------------------------------------------------
-
 function CenterMessage({ children }: { children: React.ReactNode }) {
   return (
     <View className="flex-1 bg-canvas-default items-center justify-center px-5 gap-2">
