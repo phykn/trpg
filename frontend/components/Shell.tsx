@@ -1,16 +1,10 @@
-import React from 'react';
-import { ActivityIndicator, Keyboard, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { colors } from '@/design/tokens';
 import { useGame } from '@/hooks/useGame';
-import { buildPanelSlots } from '@/presenters';
 
-import { CombatStrip } from './combat';
-import { Composer } from './composer';
-import { ContextCard } from './header';
-import { HeroPill } from './hero';
-import { Log } from './log';
 import { NewGame } from './NewGame';
+import { Playing } from './Playing';
 
 export function Shell() {
   const game = useGame();
@@ -44,63 +38,4 @@ export function Shell() {
   }
 
   return <Playing game={game} />;
-}
-
-type PlayingProps = { game: ReturnType<typeof useGame> };
-
-function Playing({ game }: PlayingProps) {
-  const { hero, subject, quest, place, combat, log, pending, streaming, onSend, onRoll, onStop } = game;
-
-  const [typing, setTyping] = React.useState(false);
-  const [activeId, setActiveId] = React.useState<string | null>('person');
-  const [heroOpen, setHeroOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', () => setTyping(true));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setTyping(false));
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
-
-  React.useEffect(() => {
-    if (typing) {
-      setActiveId(null);
-      setHeroOpen(false);
-    }
-  }, [typing]);
-
-  if (!hero) return null;
-
-  const slots = buildPanelSlots({ subject, quest, place });
-  const rollEnabled = pending !== null;
-  const rolling = rollEnabled && streaming;
-
-  return (
-    <View className="flex-1 bg-canvas-default py-2.5 gap-2.5">
-      <ContextCard
-        slots={slots}
-        activeId={activeId}
-        onSelect={(id) => setActiveId((prev) => (prev === id ? null : id))}
-        onCollapse={() => setActiveId(null)}
-      />
-
-      <Log log={log} rolling={rolling} />
-
-      <HeroPill hero={hero} expanded={heroOpen} onToggle={() => setHeroOpen((v) => !v)} />
-
-      {combat ? <CombatStrip combat={combat} /> : null}
-
-      <Composer
-        onSend={onSend}
-        onRoll={onRoll}
-        onStop={onStop}
-        rolling={rolling}
-        focused={typing}
-        rollEnabled={rollEnabled}
-        streaming={streaming}
-      />
-    </View>
-  );
 }
