@@ -38,13 +38,6 @@ def _inventory(state: GameState, ids: list[str]) -> list[dict]:
     ]
 
 
-def _stats_dict(stats) -> dict[str, int]:
-    return {
-        "STR": stats.STR, "DEX": stats.DEX, "CON": stats.CON,
-        "INT": stats.INT, "WIS": stats.WIS, "CHA": stats.CHA,
-    }
-
-
 def _companion_label(state: GameState, char_id: str) -> str:
     if char_id not in state.characters:
         return char_id
@@ -68,7 +61,7 @@ def to_hero(state: GameState) -> dict:
         "hpMax": p.max_hp,
         "mp": p.mp,
         "mpMax": p.max_mp,
-        "stats": _stats_dict(p.stats),
+        "stats": p.stats.model_dump(),
         "equipment": _equipment(state, p),
         "inventory": _inventory(state, p.inventory_ids),
         "status": list(p.status),
@@ -100,7 +93,7 @@ def to_subject(state: GameState) -> dict | None:
         "level": s.level,
         "hp": s.hp,
         "hpMax": s.max_hp,
-        "stats": _stats_dict(s.stats),
+        "stats": s.stats.model_dump(),
         "inventory": _inventory(state, s.inventory_ids),
     }
 
