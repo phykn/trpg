@@ -1,5 +1,6 @@
 from typing import Any
 
+from .._runner import AgentSemanticError
 from .schema import (
     BuyAction,
     CombatAction,
@@ -15,7 +16,7 @@ from .schema import (
 )
 
 
-class JudgeSemanticError(ValueError):
+class JudgeSemanticError(AgentSemanticError):
     pass
 
 
