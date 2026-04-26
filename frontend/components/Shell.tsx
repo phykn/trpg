@@ -2,8 +2,8 @@ import React from 'react';
 import { ActivityIndicator, Keyboard, Pressable, Text, View } from 'react-native';
 
 import { colors } from '@/design/tokens';
-import { useGame } from '@/hooks/use-game';
-import { buildPanelSlots } from '@/transformers';
+import { useGame } from '@/hooks/useGame';
+import { buildPanelSlots } from '@/presenters';
 
 import { CombatStrip } from './combat';
 import { Composer } from './composer';
