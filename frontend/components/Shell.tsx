@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { colors } from '@/design/tokens';
 import { useGame } from '@/hooks/useGame';
 
-import { NewGame } from './NewGame';
+import { NewGame } from './new-game';
 import { Playing } from './Playing';
 
 export function Shell() {

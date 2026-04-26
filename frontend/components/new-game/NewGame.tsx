@@ -5,13 +5,17 @@ import {
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
 import { colors } from '@/design/tokens';
 import { listProfiles } from '@/services';
 import type { InitRequest, ProfileCard, RaceCard } from '@/types/wire';
+
+import { CenterMessage } from './CenterMessage';
+import { Input } from './Input';
+import { Section } from './Section';
+import { SelectCard } from './SelectCard';
 
 type Props = {
   onSubmit: (body: InitRequest) => Promise<void>;
@@ -167,80 +171,5 @@ export function NewGame({ onSubmit }: Props) {
         </Text>
       </Pressable>
     </ScrollView>
-  );
-}
-
-function CenterMessage({ children }: { children: React.ReactNode }) {
-  return (
-    <View className="flex-1 bg-canvas-default items-center justify-center px-5 gap-2">
-      {children}
-    </View>
-  );
-}
-
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <View className="gap-2">
-      <Text
-        className="font-mono-semibold text-panel text-fg-subtle uppercase"
-        style={{ letterSpacing: 1.2 }}
-      >
-        {label}
-      </Text>
-      <View className="gap-2">{children}</View>
-    </View>
-  );
-}
-
-function SelectCard({
-  title,
-  description,
-  selected,
-  onPress,
-}: {
-  title: string;
-  description?: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  const bg = selected ? 'bg-accent-muted border-accent-fg' : 'bg-canvas-subtle border-border-default';
-  return (
-    <Pressable
-      onPress={onPress}
-      className={`px-4 py-3 rounded-md border ${bg}`}
-      style={{ borderWidth: 1.5 }}
-    >
-      <Text
-        className={`font-sans-semibold text-title ${
-          selected ? 'text-accent-fg' : 'text-fg-default'
-        }`}
-      >
-        {title}
-      </Text>
-      {description ? (
-        <Text className="font-sans text-body text-fg-muted mt-1">{description}</Text>
-      ) : null}
-    </Pressable>
-  );
-}
-
-function Input({
-  value,
-  onChangeText,
-  placeholder,
-}: {
-  value: string;
-  onChangeText: (v: string) => void;
-  placeholder: string;
-}) {
-  return (
-    <TextInput
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      placeholderTextColor={`${colors.fg.default}55`}
-      className="h-11 px-3 rounded-md bg-canvas-subtle border border-border-default font-sans text-body text-fg-default"
-      style={{ borderWidth: 1 }}
-    />
   );
 }
