@@ -25,7 +25,7 @@ from dotenv import load_dotenv  # noqa: E402
 
 load_dotenv(ROOT / "backend" / ".env")
 
-from src.llm_client.client import LLMClient  # noqa: E402
+from src.llm import LLMClient  # noqa: E402
 
 from agency.story.harness.runner import (  # noqa: E402
     SPECS,

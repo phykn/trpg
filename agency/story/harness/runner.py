@@ -9,7 +9,7 @@ from pathlib import Path
 from pydantic import BaseModel, ValidationError
 
 from src.domain.entities import Chapter, Character, Item, Location, Quest, Race
-from src.llm_client.client import LLMClient
+from src.llm import LLMClient
 
 ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]{1,30}$")
 
@@ -85,7 +85,7 @@ def _check_character_refs(ch: Character, refs: dict[str, set[str]]) -> None:
             )
 
 
-_TRIGGER_TARGET_KIND = {
+TRIGGER_TARGET_KIND = {
     "character_death": "character",
     "location_enter": "location",
     "item_use": "item",
@@ -99,11 +99,11 @@ def _check_quest_refs(q: Quest, refs: dict[str, set[str]]) -> None:
             f"quest.giver_id={q.giver_id!r} 가 시나리오 characters 에 없음."
         )
     for t in [*q.triggers, *q.fail_triggers]:
-        target_kind = _TRIGGER_TARGET_KIND.get(t.type)
+        target_kind = TRIGGER_TARGET_KIND.get(t.type)
         if target_kind is None:
             raise EntityWriterError(
                 f"quest trigger (id={t.id}) type={t.type!r} 알 수 없음. "
-                f"가능한 값: {sorted(_TRIGGER_TARGET_KIND)}"
+                f"가능한 값: {sorted(TRIGGER_TARGET_KIND)}"
             )
         pool = refs.get(target_kind, set())
         if t.target_id not in pool:

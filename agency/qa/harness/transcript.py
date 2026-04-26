@@ -1,54 +1,7 @@
+"""transcript.md / sse.jsonl 디스크 쓰기."""
+
 import json
 from pathlib import Path
-
-
-def format_state_summary(front_state: dict) -> str:
-    """front_state (mapping/to_front 출력) 를 player LLM 용 요약 텍스트로."""
-    lines: list[str] = []
-
-    place = front_state.get("place")
-    if place:
-        lines.append(
-            f"장소: {place['name']} ({place['date']} {place['period']} {place['hour']}시)"
-        )
-        if place.get("surroundings"):
-            lines.append(f"인접: {', '.join(place['surroundings'])}")
-        if place.get("features"):
-            lines.append(f"환경: {', '.join(place['features'])}")
-        if place.get("weather"):
-            lines.append(f"날씨: {', '.join(place['weather'])}")
-
-    hero = front_state.get("hero")
-    if hero:
-        lines.append(
-            f"나: {hero['name']} ({hero['race']}{' ' + hero['job'] if hero['job'] else ''}) "
-            f"HP {hero['hp']}/{hero['hpMax']}"
-        )
-        inv = hero.get("inventory") or []
-        if inv:
-            lines.append("인벤토리: " + ", ".join(f"{i['name']}×{i['qty']}" for i in inv))
-
-    subject = front_state.get("subject")
-    if subject:
-        lines.append(
-            f"눈앞 NPC: {subject['name']} ({subject.get('role') or '-'}) — 친밀도 {subject['trust']}"
-        )
-        known = subject.get("known") or []
-        if known:
-            lines.append("  아는 정보: " + " / ".join(known))
-
-    quest = front_state.get("quest")
-    if quest:
-        lines.append(f"진행 퀘스트: {quest['title']} — {quest.get('summary') or ''}")
-
-    return "\n".join(lines) or "(상황 정보 없음)"
-
-
-def last_gm_text(log_entries: list[dict]) -> str:
-    for e in reversed(log_entries):
-        if e.get("kind") == "gm":
-            return e.get("text", "")
-    return ""
 
 
 def write_sse_jsonl(path: Path, turn_no: int, kind: str, events: list[dict]) -> None:
@@ -69,14 +22,14 @@ def append_transcript_block(
     *,
     turn_no: int,
     kind: str,
-    player_input: str | None,
-    gm_body: str,
-    judge: dict | None,
-    pending: dict | None,
-    roll_log: dict | None,
-    error: dict | None,
+    player_input: str | None = None,
+    gm_body: str = "",
+    judge: dict | None = None,
+    pending: dict | None = None,
+    roll_log: dict | None = None,
+    error: Exception | dict | None = None,
 ) -> None:
-    """transcript.md 한 블록 append."""
+    """transcript.md 한 블록 append. error 는 Exception 또는 {code,message} dict."""
     path.parent.mkdir(parents=True, exist_ok=True)
     parts: list[str] = []
     header = f"## Turn {turn_no}"
@@ -101,8 +54,12 @@ def append_transcript_block(
         )
     if gm_body:
         parts.append(f"**GM**:\n\n{gm_body.strip()}")
-    if error:
-        parts.append(f"**ERROR**: `{error.get('code')}` — {error.get('message')}")
+    if error is not None:
+        if isinstance(error, Exception):
+            code, message = type(error).__name__, str(error)
+        else:
+            code, message = error.get("code"), error.get("message")
+        parts.append(f"**ERROR**: `{code}` — {message}")
 
     with path.open("a", encoding="utf-8") as f:
         f.write("\n\n".join(parts) + "\n\n---\n\n")

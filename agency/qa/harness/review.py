@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
-from src.llm_client.client import LLMClient
+from src.llm import LLMClient
 
 
 class Issue(BaseModel):

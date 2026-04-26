@@ -21,7 +21,7 @@ from dotenv import load_dotenv  # noqa: E402
 
 load_dotenv(ROOT / "backend" / ".env")
 
-from src.llm_client.client import LLMClient  # noqa: E402
+from src.llm import LLMClient  # noqa: E402
 
 from agency.qa.harness.agent import PlayerAgent  # noqa: E402
 from agency.qa.harness.review import (  # noqa: E402
@@ -35,12 +35,18 @@ from agency.qa.harness.runner import run_qa_session  # noqa: E402
 AGENTS = ["diplomat", "explorer", "provocateur"]
 
 
+# --- prompt paths ---------------------------------------------------------
+
+
 def _agent_prompt_path(name: str) -> Path:
     return ROOT / "agency" / "qa" / "agents" / f"{name}.md"
 
 
 def _reviewer_prompt_path() -> Path:
     return ROOT / "agency" / "qa" / "agents" / "reviewer.md"
+
+
+# --- index.md (run-level summary) ----------------------------------------
 
 
 def _write_index(

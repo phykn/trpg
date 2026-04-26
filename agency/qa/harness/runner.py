@@ -1,26 +1,30 @@
+"""한 agent QA 세션 — in-process FastAPI app 을 ASGI 로 호출하면서
+SSE 스트림을 transcript / sse.jsonl 로 기록."""
+
 import json
-from collections.abc import AsyncIterator
 from pathlib import Path
 
 from httpx import ASGITransport, AsyncClient
 
-from src.llm_client.client import LLMClient
-from src.state.store import load_game
+from src.llm import LLMClient
+from src.persistence.store import load_game
 
 from run_api import build_app
 
 from .agent import PlayerAgent
+from .state_view import format_state_summary, last_gm_text
 from .transcript import (
     append_transcript_block,
-    format_state_summary,
-    last_gm_text,
     write_sse_jsonl,
     write_transcript_header,
 )
 
 
+# --- SSE 헬퍼 -------------------------------------------------------------
+
+
 async def _drain_sse(response) -> tuple[str, list[dict]]:
-    """Drain an SSE response. Returns (gm_body_accumulated, all_events)."""
+    """SSE 응답 한 번 다 읽어 (gm_body, all_events) 반환."""
     body = ""
     events: list[dict] = []
     async for line in response.aiter_lines():
@@ -38,6 +42,9 @@ def _find(events: list[dict], event_type: str) -> dict | None:
         if ev["type"] == event_type:
             return ev["data"]
     return None
+
+
+# --- 메인 세션 러너 -------------------------------------------------------
 
 
 async def run_qa_session(
@@ -112,30 +119,15 @@ async def run_qa_session(
             if err:
                 error_count += 1
             append_transcript_block(
-                transcript_path,
-                turn_no=0,
-                kind="intro",
-                player_input=None,
-                gm_body=body,
-                judge=None,
-                pending=None,
-                roll_log=None,
-                error=err,
+                transcript_path, turn_no=0, kind="intro",
+                gm_body=body, error=err,
             )
             if body:
                 last_gm = body
         except Exception as e:  # noqa: BLE001
             error_count += 1
             append_transcript_block(
-                transcript_path,
-                turn_no=0,
-                kind="intro",
-                player_input=None,
-                gm_body="",
-                judge=None,
-                pending=None,
-                roll_log=None,
-                error={"code": type(e).__name__, "message": str(e)},
+                transcript_path, turn_no=0, kind="intro", error=e,
             )
 
         # main loop
@@ -148,10 +140,7 @@ async def run_qa_session(
             except Exception as e:  # noqa: BLE001
                 error_count += 1
                 append_transcript_block(
-                    transcript_path, turn_no=turn_no, kind="state-error",
-                    player_input=None, gm_body="", judge=None, pending=None,
-                    roll_log=None,
-                    error={"code": type(e).__name__, "message": str(e)},
+                    transcript_path, turn_no=turn_no, kind="state-error", error=e,
                 )
                 break
 
@@ -165,10 +154,7 @@ async def run_qa_session(
             except Exception as e:  # noqa: BLE001
                 error_count += 1
                 append_transcript_block(
-                    transcript_path, turn_no=turn_no, kind="agent-error",
-                    player_input=None, gm_body="", judge=None, pending=None,
-                    roll_log=None,
-                    error={"code": type(e).__name__, "message": str(e)},
+                    transcript_path, turn_no=turn_no, kind="agent-error", error=e,
                 )
                 break
 
@@ -184,9 +170,7 @@ async def run_qa_session(
                 error_count += 1
                 append_transcript_block(
                     transcript_path, turn_no=turn_no, kind="turn-error",
-                    player_input=player_input, gm_body="", judge=None,
-                    pending=None, roll_log=None,
-                    error={"code": type(e).__name__, "message": str(e)},
+                    player_input=player_input, error=e,
                 )
                 break
 
@@ -198,14 +182,9 @@ async def run_qa_session(
                 error_count += 1
 
             append_transcript_block(
-                transcript_path,
-                turn_no=turn_no, kind="turn",
-                player_input=player_input,
-                gm_body=body,
-                judge=judge,
-                pending=pending,
-                roll_log=None,
-                error=err,
+                transcript_path, turn_no=turn_no, kind="turn",
+                player_input=player_input, gm_body=body,
+                judge=judge, pending=pending, error=err,
             )
             agent.record(player_input, body)
             if body:
@@ -221,10 +200,7 @@ async def run_qa_session(
                 except Exception as e:  # noqa: BLE001
                     error_count += 1
                     append_transcript_block(
-                        transcript_path, turn_no=turn_no, kind="roll-error",
-                        player_input=None, gm_body="", judge=None, pending=None,
-                        roll_log=None,
-                        error={"code": type(e).__name__, "message": str(e)},
+                        transcript_path, turn_no=turn_no, kind="roll-error", error=e,
                     )
                     break
 
@@ -241,13 +217,8 @@ async def run_qa_session(
                     None,
                 )
                 append_transcript_block(
-                    transcript_path,
-                    turn_no=turn_no, kind="roll",
-                    player_input=None,
-                    gm_body=roll_body,
-                    judge=None, pending=None,
-                    roll_log=roll_log_ev,
-                    error=roll_err,
+                    transcript_path, turn_no=turn_no, kind="roll",
+                    gm_body=roll_body, roll_log=roll_log_ev, error=roll_err,
                 )
                 agent.record("(굴림)", roll_body)
                 if roll_body:

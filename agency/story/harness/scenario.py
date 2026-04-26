@@ -8,10 +8,11 @@ from typing import Literal
 from pydantic import BaseModel, ValidationError
 
 from src.domain.entities import Character
-from src.llm_client.client import LLMClient
+from src.llm import LLMClient
 
 from .runner import (
     ID_PATTERN,
+    TRIGGER_TARGET_KIND,
     EntityWriterError,
     write_entity,
     write_entity_to_disk,
@@ -79,13 +80,6 @@ class Decomposition(BaseModel):
 
 
 # --- 분해 일관성 검증 ----------------------------------------------------
-
-
-_TRIGGER_TARGET_KIND = {
-    "character_death": "character",
-    "location_enter": "location",
-    "item_use": "item",
-}
 
 
 def _check_decomp(d: Decomposition) -> None:
@@ -171,7 +165,7 @@ def _check_decomp(d: Decomposition) -> None:
         "item": item_ids,
     }
     for q in d.quests:
-        target_kind = _TRIGGER_TARGET_KIND[q.trigger_kind]
+        target_kind = TRIGGER_TARGET_KIND[q.trigger_kind]
         if q.target_id not in target_pools[target_kind]:
             raise EntityWriterError(
                 f"quest {q.id} trigger_kind={q.trigger_kind} target_id={q.target_id!r} "

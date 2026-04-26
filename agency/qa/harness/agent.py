@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.llm_client.client import LLMClient
+from src.llm import LLMClient
 
 
 class PlayerAgent:
