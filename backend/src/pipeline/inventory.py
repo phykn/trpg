@@ -313,3 +313,23 @@ def use(
             dirty.add(("characters", recipient.id))
 
     return result
+
+
+def use_with_quest_hook(
+    actor: Character,
+    item_id: str,
+    target: Character | None,
+    items: dict[str, Item],
+    state,
+    *,
+    dirty: set[tuple[str, str]] | None = None,
+) -> dict:
+    """use + quest item_use trigger 평가."""
+    from .quest import check_quests
+
+    result = use(actor, item_id, target, items, dirty=dirty)
+    # damage 로 적이 죽으면 character_death 도 함께 발화.
+    if result.get("dead"):
+        check_quests(state, "character_death", result["target"], dirty)
+    check_quests(state, "item_use", item_id, dirty)
+    return result

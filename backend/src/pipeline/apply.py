@@ -156,6 +156,8 @@ def _apply_move(
     c: MoveChange,
     dirty: set[tuple[str, str]] | None,
 ) -> None:
+    from .quest import check_quests  # 지연 import — 상호 layer 경계 안
+
     if c.target not in state.characters:
         raise _StateChangeError(f"unknown character: {c.target!r}")
     if c.destination not in state.locations:
@@ -163,6 +165,9 @@ def _apply_move(
     state.characters[c.target].location_id = c.destination
     if dirty is not None:
         dirty.add(("characters", c.target))
+    # quest hook — 플레이어 이동만 평가 (NPC 이동은 quest 트리거 대상 아님).
+    if c.target == state.player_id:
+        check_quests(state, "location_enter", c.destination, dirty)
 
 
 def _resolve_inventory(state: GameState, container_id: str) -> tuple[str, list[str]]:

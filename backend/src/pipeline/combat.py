@@ -425,7 +425,9 @@ def apply_attack_to_defender(
 
     반환: `{hp_before, hp_after, downed: bool, dying: bool, dead: bool, revived: bool}`.
     `nat_d20` 이 1 (critical_failure 데미지) 일 때 death_save 도중이면 실패 +crit_inc.
+    사망 시 quest character_death 트리거 평가.
     """
+    from .quest import check_quests  # 지연 import — pipeline 내부 cycle 회피
     defender = state.characters[defender_id]
     hp_before = defender.hp
     hp_after = max(0, defender.hp - damage)
@@ -455,6 +457,7 @@ def apply_attack_to_defender(
         if defender.death_saves.failures >= RULES.death.failures_to_die:
             _kill(defender)
             out["dead"] = True
+            check_quests(state, "character_death", defender_id, dirty)
         return out
 
     if hp_after > 0:
@@ -475,6 +478,7 @@ def apply_attack_to_defender(
     if RULES.death.instant_death or not is_player:
         _kill(defender)
         out["dead"] = True
+        check_quests(state, "character_death", defender_id, dirty)
         return out
 
     # player 가 죽지 않고 죽어가는 중.

@@ -42,6 +42,7 @@ backend/
       growth.py                  P3 §2.3 성장 (level_up). xp_for_next_level 곡선, 페어 트레이드 (STR↔CHA·DEX↔WIS·CON↔INT), recalc_max_hp_mp, grant_xp, assert_pair_trade_invariant
       inventory.py               P3 §2.5 장비/거래 + §2.7 사용. equip/unequip (슬롯·요구치·two_handed), check_can_carry (STR × weight_per_strength), buy/sell (affinity 흥정 cap, trade_threshold), use (ConsumableEffect heal/damage/mp_restore/buff + on_use trigger 패스스루)
       skill.py                   P3 §2.6 스킬 cast (S1 핵심). level/MP/range 검증, target self/single/area, grade_multipliers 보정, ActiveBuff 추가/tick. 의미 매칭·LLM 학습 후보 (S2/S3) 는 후속.
+      quest.py                   P3 §2.8 진행. check_quests (이벤트 character_death/location_enter/item_use 매칭, single-fire), fail_triggers, locked→active 잠금 해제, 보상 자동 적용 (gold/exp/items → player), chapter.progress (required=true 만 카운트), chapter active→completed 전환
       turn.py                    `run_turn` / `run_roll` 흐름 지휘 (SSE 이벤트 방출). combat_state 살아있으면 combat 분기로 라우팅
     state/
       store.py                   `load_game` / `save_game` (원자적 파일 I/O + 동시 쓰기 방지 Lock) + `.current` 읽기/쓰기

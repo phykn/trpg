@@ -320,7 +320,9 @@ async def session_use(
         raise HTTPException(status_code=422, detail=f"unknown target: {body.target_id}")
     dirty: set[tuple[str, str]] = set()
     try:
-        result = inventory_engine.use(player, body.item_id, target, state.items, dirty=dirty)
+        result = inventory_engine.use_with_quest_hook(
+            player, body.item_id, target, state.items, state, dirty=dirty
+        )
     except InventoryInvalid as e:
         raise HTTPException(status_code=422, detail=str(e))
     saves_dir = request.app.state.saves_dir
