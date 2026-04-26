@@ -61,6 +61,18 @@ class GrowthConfig(_F):
     max_level: int = 20
 
 
+class SkillConfig(_F):
+    """스킬 cast 효과 베이스. tier/grade 보정 계수는 후속 튜닝."""
+
+    grade_multipliers: dict[str, float] = {
+        "critical_success": 2.0,
+        "success": 1.0,
+        "partial_success": 0.5,
+        "failure": 0.0,
+        "critical_failure": 0.0,
+    }
+
+
 class CarryConfig(_F):
     weight_per_strength: float = 10.0
 
@@ -111,6 +123,7 @@ class Rules(_F):
     death: DeathConfig = DeathConfig()
     recovery: RecoveryConfig = RecoveryConfig()
     growth: GrowthConfig = GrowthConfig()
+    skill: SkillConfig = SkillConfig()
 
 
 RULES = Rules()

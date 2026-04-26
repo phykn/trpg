@@ -28,7 +28,7 @@ backend/
   src/
     rules.py                     DC·시간·소셜·메모리·로그·전투·사망·회복 수치 (P3 회복: encounter_chance / sleep_hours, 거래·성장은 P3 후속). frozen Pydantic — 변경 시도하면 에러.
     api/
-      routes.py                  /profiles, /session/current, /session/init, /session/{id}/state, /turn, /roll, /level-up, /equip, /unequip, /buy, /sell
+      routes.py                  /profiles, /session/current, /session/init, /session/{id}/state, /turn, /roll, /level-up, /equip, /unequip, /buy, /sell, /cast
       schema.py                  네트워크로 주고받는 Pydantic 모델 (ProfileListResponse, InitRequest/Response, TurnRequest, RollRequest)
       sse.py                     이벤트를 텍스트로 직렬화, StreamingResponse 헬퍼
     pipeline/
@@ -41,6 +41,7 @@ backend/
       recovery.py                P3 §2.4 회복 (rest). 위험도 굴림으로 풀회복 vs 인카운터 분기, sleep_hours 만큼 world_time 점프, sleep_encounters 풀에서 enemy 선택
       growth.py                  P3 §2.3 성장 (level_up). xp_for_next_level 곡선, 페어 트레이드 (STR↔CHA·DEX↔WIS·CON↔INT), recalc_max_hp_mp, grant_xp, assert_pair_trade_invariant
       inventory.py               P3 §2.5 장비/거래. equip/unequip (슬롯·요구치·two_handed), check_can_carry (STR × weight_per_strength), buy/sell (affinity 흥정 cap, trade_threshold), buy_price/sell_price
+      skill.py                   P3 §2.6 스킬 cast (S1 핵심). level/MP/range 검증, target self/single/area, grade_multipliers 보정, ActiveBuff 추가/tick. 의미 매칭·LLM 학습 후보 (S2/S3) 는 후속.
       turn.py                    `run_turn` / `run_roll` 흐름 지휘 (SSE 이벤트 방출). combat_state 살아있으면 combat 분기로 라우팅
     state/
       store.py                   `load_game` / `save_game` (원자적 파일 I/O + 동시 쓰기 방지 Lock) + `.current` 읽기/쓰기
@@ -65,7 +66,7 @@ backend/
         # narrate/ 등 다른 에이전트도 같은 레이아웃
     mapping/
       to_front.py                to_hero / to_subject / to_quest / to_place / to_log_entry / to_front_state / to_profile_list
-    errors.py                    DomainError + PendingCheckActive/Expected, JudgeMalformed, LLMUnavailable, PersistenceFailed, ProfileNotFound, RaceNotFound, LevelUpInvalid, InventoryInvalid
+    errors.py                    DomainError + PendingCheckActive/Expected, JudgeMalformed, LLMUnavailable, PersistenceFailed, ProfileNotFound, RaceNotFound, LevelUpInvalid, InventoryInvalid, SkillInvalid
 ```
 
 ## 2. 레이어 경계
@@ -88,5 +89,6 @@ backend/
   - `PersistenceFailed` — 저장 I/O 실패 (원자 교체 직전 또는 도중 오류).
   - `LevelUpInvalid` — `/level-up` 요청이 페어 트레이드 / 캡 / 잔여 xp 검증 실패. API 가 422 로 매핑.
   - `InventoryInvalid` — `/equip` `/unequip` `/buy` `/sell` 요청이 슬롯·요구치·무게·affinity·잔여 골드 검증 실패. API 가 422 로 매핑.
+  - `SkillInvalid` — `/cast` 요청이 레벨·MP·사정거리·소유 검증 실패. API 가 422 로 매핑.
 
 Pydantic 422 (요청 모양 검증), HTTP 404 (`game_id` 없음) 은 FastAPI 기본 처리로 가고 `DomainError` 가 아니다.

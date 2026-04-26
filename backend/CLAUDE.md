@@ -43,7 +43,7 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q               # LLM 살아 있을 때
 6. `state/` — `models.py` 가 `GameState` (단일 root container). `init.py` 가 profile seed + player 입력으로 새 `GameState` 빌드. `store.py` 가 atomic IO (`.tmp` + `os.replace`) + `.current` lifecycle.
 7. `domain/` — 순수 데이터 모양. `entities.py` (Character, Item, Location, Race, Quest, Chapter, Campaign), `memory.py` (Memory, PendingCheck, LogEntry union, TurnLogEntry, DialoguePair), `types.py` (StatKey, Tier, Grade, Intent, Action literal).
 8. `rules.py` — 단일 frozen `RULES` 인스턴스 (DC 티어, affinity delta, memory cap, log size, turn 당 시간, 전투·사망, 회복 (sleep_hours/encounter_chance)). 튜닝 노브는 여기, pipeline 코드에 흩뿌리지 말 것.
-9. `errors.py` — `DomainError` + 서브클래스 (PendingCheckActive, PendingCheckExpected, JudgeMalformed, LLMUnavailable, PersistenceFailed, ProfileNotFound, RaceNotFound, LevelUpInvalid, InventoryInvalid). 발견한 layer 가 raise, 응답을 만드는 boundary 가 catch.
+9. `errors.py` — `DomainError` + 서브클래스 (PendingCheckActive, PendingCheckExpected, JudgeMalformed, LLMUnavailable, PersistenceFailed, ProfileNotFound, RaceNotFound, LevelUpInvalid, InventoryInvalid, SkillInvalid). 발견한 layer 가 raise, 응답을 만드는 boundary 가 catch.
 
 ## Conventions
 

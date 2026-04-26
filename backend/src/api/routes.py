@@ -8,15 +8,19 @@ from ..errors import (
     LevelUpInvalid,
     ProfileNotFound,
     RaceNotFound,
+    SkillInvalid,
 )
 from ..mapping.to_front import to_front_state
 from ..pipeline import inventory as inventory_engine
+from ..pipeline import skill as skill_engine
 from ..pipeline.growth import level_up
 from ..pipeline.turn import run_intro, run_roll, run_turn
 from ..state.init import init_game
 from ..state.store import load_game, read_current_game_id, save_entity, save_meta
 from .auth import require_basic_auth
 from .schema import (
+    CastRequest,
+    CastResponse,
     ChatRequest,
     ChatResponse,
     EquipRequest,
@@ -273,6 +277,31 @@ async def session_sell(
     await save_entity(state, saves_dir, "characters", npc.id)
     await save_meta(state, saves_dir)
     return InventoryResponse(game_id=state.game_id, state=to_front_state(state), price=price)
+
+
+@protected.post("/session/{game_id}/cast", response_model=CastResponse)
+async def session_cast(
+    request: Request, game_id: str, body: CastRequest
+) -> CastResponse:
+    try:
+        state = load_game(request.app.state.saves_dir, game_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="game not found")
+    player = state.characters[state.player_id]
+    dirty: set[tuple[str, str]] = set()
+    try:
+        result = skill_engine.cast(
+            player, body.skill_id, state, body.targets, dirty=dirty
+        )
+    except SkillInvalid as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    saves_dir = request.app.state.saves_dir
+    for kind, eid in dirty:
+        await save_entity(state, saves_dir, kind, eid)
+    await save_meta(state, saves_dir)
+    return CastResponse(
+        game_id=state.game_id, state=to_front_state(state), result=result
+    )
 
 
 @protected.post("/debug/complete", response_model=ChatResponse)

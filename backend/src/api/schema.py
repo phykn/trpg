@@ -69,3 +69,14 @@ class InventoryResponse(BaseModel):
     game_id: str
     state: dict
     price: int | None = None  # buy/sell 시 적용 가격
+
+
+class CastRequest(BaseModel):
+    skill_id: str
+    targets: list[str] = []
+
+
+class CastResponse(BaseModel):
+    game_id: str
+    state: dict
+    result: dict

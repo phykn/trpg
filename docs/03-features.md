@@ -310,6 +310,8 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
 ### 2.6 스킬 시스템 [P3]
 
+**현재 구현 상태**: cast 핵심 (S1) 만 — `pipeline/skill.py` + `/cast` endpoint 로 level/MP/range 검증, target self/single/area, grade_multipliers 보정, ActiveBuff 추가/tick 동작. 의미 매칭 (judge 가 learned_skills 컨텍스트 받아 자동 발동), racial_skills 매칭 제외 룰, "맨손으로/스킬 없이" 회피 통로, LLM 학습 후보 3개 (§2.3 4단계) 는 후속.
+
 `Skill(id, name, description, level, type, target, primary_stat, special_effect, power, mp_cost, range, duration)`.
 
 **LLM/엔진 분담** (`level_up` 시 LLM 이 추천 후보 산출):
