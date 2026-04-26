@@ -51,6 +51,16 @@ class UseAction(_StrictAction):
     target_id: str | None = None
 
 
+class EquipAction(_StrictAction):
+    action: Literal["equip"]
+    item_id: str  # surroundings.inventory 의 weapon/armor
+
+
+class UnequipAction(_StrictAction):
+    action: Literal["unequip"]
+    item_id: str  # surroundings.equipment 안 어디에 박혀 있는 것
+
+
 JudgeOutput = Annotated[
     PassAction
     | RejectAction
@@ -58,7 +68,9 @@ JudgeOutput = Annotated[
     | ClarifyAction
     | RollAction
     | RestAction
-    | UseAction,
+    | UseAction
+    | EquipAction
+    | UnequipAction,
     Field(discriminator="action"),
 ]
 

@@ -1,7 +1,13 @@
 from collections import Counter
 from pathlib import Path
 
-from ..domain.entities import Character, ConsumableEffect
+from ..domain.entities import (
+    EQUIPMENT_SLOTS,
+    ArmorEffect,
+    Character,
+    ConsumableEffect,
+    WeaponEffect,
+)
 from ..rules import RULES
 from ..state.models import GameState
 
@@ -96,8 +102,15 @@ def _state_tags(actor: Character, npc: Character) -> list[str]:
 
 
 def _inventory_payload(state: GameState, actor: Character) -> list[dict]:
-    """judge use 매칭용. consumable / on_use 트리거 있는 아이템만 노출.
-    같은 item_id 끼리 묶어 qty 카운트. weapon/armor 는 use 대상 아니라 제외."""
+    """judge use/equip 매칭용. 모든 인벤 아이템 노출, kind 필드로 구분.
+    같은 item_id 끼리 묶어 qty 카운트.
+
+    kind:
+      consumable — use 대상
+      weapon / armor — equip 대상
+      trigger — on_use 만 있는 1회성 아이템 (use 대상)
+      misc — effects/on_use 없음. equip/use 모두 비대상 (장식 등)
+    """
     counts: Counter[str] = Counter(actor.inventory_ids)
     out: list[dict] = []
     for item_id, qty in counts.items():
@@ -105,16 +118,34 @@ def _inventory_payload(state: GameState, actor: Character) -> list[dict]:
         if item is None:
             continue
         eff = item.effects
-        is_consumable = isinstance(eff, ConsumableEffect)
-        has_on_use = bool(item.on_use)
-        if not is_consumable and not has_on_use:
-            continue
-        entry: dict = {"id": item_id, "name": item.name, "qty": qty}
-        if is_consumable:
+        if isinstance(eff, ConsumableEffect):
+            kind = "consumable"
+        elif isinstance(eff, WeaponEffect):
+            kind = "weapon"
+        elif isinstance(eff, ArmorEffect):
+            kind = "armor"
+        elif item.on_use:
+            kind = "trigger"
+        else:
+            kind = "misc"
+        entry: dict = {"id": item_id, "name": item.name, "qty": qty, "kind": kind}
+        if isinstance(eff, ConsumableEffect):
             entry["effect"] = eff.effect
         if item.description:
             entry["description"] = item.description
         out.append(entry)
+    return out
+
+
+def _equipment_payload(state: GameState, actor: Character) -> dict:
+    """현재 장착 상태 — 슬롯 → {id, name}. 빈 슬롯은 None."""
+    out: dict[str, dict | None] = {}
+    for slot in EQUIPMENT_SLOTS:
+        item_id = getattr(actor.equipment, slot)
+        if item_id and item_id in state.items:
+            out[slot] = {"id": item_id, "name": state.items[item_id].name}
+        else:
+            out[slot] = None
     return out
 
 
@@ -146,6 +177,7 @@ def build_surroundings(state: GameState, actor_id: str) -> dict:
             "entities": [],
             "learned_skills": [],
             "inventory": [],
+            "equipment": _equipment_payload(state, actor),
         }
     location = state.locations[actor.location_id]
 
@@ -201,4 +233,5 @@ def build_surroundings(state: GameState, actor_id: str) -> dict:
         "entities": entities,
         "learned_skills": _learned_skills_payload(actor),
         "inventory": _inventory_payload(state, actor),
+        "equipment": _equipment_payload(state, actor),
     }

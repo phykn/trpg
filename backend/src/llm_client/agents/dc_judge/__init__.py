@@ -2,12 +2,14 @@ from .runner import PROMPT_PATH, judge
 from .schema import (
     ClarifyAction,
     CombatAction,
+    EquipAction,
     JudgeInput,
     JudgeOutput,
     PassAction,
     RejectAction,
     RestAction,
     RollAction,
+    UnequipAction,
     UseAction,
     output_adapter,
 )
@@ -16,6 +18,7 @@ from .semantics import JudgeSemanticError, check_semantics, collect_valid_ids
 __all__ = [
     "ClarifyAction",
     "CombatAction",
+    "EquipAction",
     "JudgeInput",
     "JudgeOutput",
     "JudgeSemanticError",
@@ -24,6 +27,7 @@ __all__ = [
     "RejectAction",
     "RestAction",
     "RollAction",
+    "UnequipAction",
     "UseAction",
     "check_semantics",
     "collect_valid_ids",

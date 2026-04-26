@@ -34,7 +34,7 @@ LLM 을 두 개로 쪼갠다.
 **출력**:
 ```json
 {
-  "action": "pass" | "roll" | "combat" | "rest" | "use" | "clarify" | "reject",
+  "action": "pass" | "roll" | "combat" | "rest" | "use" | "equip" | "unequip" | "clarify" | "reject",
   "tier": "매우 쉬움" | "쉬움" | "보통" | "어려움" | "매우 어려움" | "전설" | "신화",
   "stat": "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA",
   "targets": ["<entity_id>", "<entity_id>"],
@@ -55,6 +55,8 @@ LLM 을 두 개로 쪼갠다.
 | `combat` | 일반 전투 행동 | [P2] 엔진이 `combat_state` 부팅·이니셔티브 굴림 → SSE `combat_start` → NPC 차례 자동 진행 → 다음 player 차례에서 멈춤. 라운드 본문은 LLM 안 부르고 엔진이 결정론으로 진행 (한국어 묘사 LLM 화는 후속) |
 | `rest` | 잠·야영 (긴 휴식) | [P3] 엔진이 location.sleep_risk 굴림 → 풀회복 (HP/MP max + world_time +sleep_hours) 또는 sleep_encounters 풀에서 적 뽑아 surprise=enemy 로 combat 부팅 ([03-features.md](./03-features.md) §2.4) |
 | `use` | 인벤 아이템 사용 (포션·연막탄·열쇠 등) | [P3] 엔진이 ConsumableEffect 분기 (heal/damage/mp_restore/buff) + on_use 트리거 + consumable 차감. 전투 중엔 한 차례 소비 ([03-features.md](./03-features.md) §2.7) |
+| `equip` | 무기·방어구 장착 | [P3] 엔진이 슬롯 자동 결정 (무기 = 빈 손 우선/dominant 폴백, 방어구 = 빈 슬롯). 전투 중 한 차례 소비 ([03-features.md](./03-features.md) §2.5) |
+| `unequip` | 장착 해제 | [P3] 엔진이 item_id 박힌 슬롯 찾아 비움. 양손 무기는 두 슬롯 모두. 전투 중 한 차례 소비 |
 | `clarify` | 해석 불가 / 복합 행동 | 플레이어에게 되물음, 파이프라인 재시작 |
 | `reject` | 인-캐릭터 입력이 아님 — 시스템 공격(프롬프트 인젝션, 메타 질문), OOC 잡담, 무의미 입력 | 인-게임 표현으로 흡수 (아래 reject 처리 참고) |
 
@@ -210,7 +212,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 
 | type | data | 시점 |
 |---|---|---|
-| `judge` | `{action, tier?, stat?, targets?, question?, item_id?, target_id?, skill_id?}` — `tier` 는 한글 라벨 string (§5.2 의 7단계 중 하나). 디스플레이용 `{value, max, label}` 객체 형식은 `pending_check` 에서 재가공. `action=pass|rest|use|clarify|reject` 면 판정이 일어나지 않으므로 `tier`/`stat` 는 부재 | judge LLM 직후. §2.3 의 재호출이 일어나도 최종(검증 통과) 결과 1회만 발사 |
+| `judge` | `{action, tier?, stat?, targets?, question?, item_id?, target_id?, skill_id?}` — `tier` 는 한글 라벨 string (§5.2 의 7단계 중 하나). 디스플레이용 `{value, max, label}` 객체 형식은 `pending_check` 에서 재가공. `action=pass|rest|use|equip|unequip|clarify|reject` 면 판정이 일어나지 않으므로 `tier`/`stat` 는 부재 | judge LLM 직후. §2.3 의 재호출이 일어나도 최종(검증 통과) 결과 1회만 발사 |
 | `pending_check` | `{dc, stat, mod, required_roll, tier, target}` — `tier` 는 §5.2 의 `{value:1..7, max:7, label}` 형식 | action=roll 확정. 직후 스트림 종료 |
 | `narrative_delta` | `{text}` | narrate LLM 청크마다 |
 | `state` | `{hero, subject, quest, place}` | apply 후 전체 슬롯 통짜 송신. 한 턴에 1회, 파이프라인 말미 |

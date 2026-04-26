@@ -24,10 +24,12 @@ from ..errors import (
 from ..llm_client.agents.dc_judge.schema import (
     ClarifyAction,
     CombatAction,
+    EquipAction,
     PassAction,
     RejectAction,
     RestAction,
     RollAction,
+    UnequipAction,
     UseAction,
 )
 from ..llm_client.agents.narrate import NarrativeDelta, NarrativeFinal
@@ -327,6 +329,57 @@ def _format_use_log(state: GameState, actor_id: str, result: dict) -> str:
         if on_use:
             head += f" ({on_use})"
     return head
+
+
+async def _emit_equip(
+    state: GameState,
+    actor_id: str,
+    item_id: str,
+    dirty: _Dirty,
+) -> AsyncIterator[dict]:
+    actor = state.characters[actor_id]
+    item = state.items.get(item_id)
+    item_name = item.name if item else item_id
+    try:
+        slot = inventory_engine.equip_auto(actor, item_id, state.items)
+    except InventoryInvalid as e:
+        text = f"{actor.name} — 장착 실패 ({e})."
+        gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+        _push_log_entry(state, gm_log, dirty)
+        yield {"type": "log_entry", "data": gm_log.model_dump()}
+        return
+    dirty.entities.add(("characters", actor_id))
+    text = f"{actor.name} — 「{item_name}」 장착 ({slot})"
+    gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+    _push_log_entry(state, gm_log, dirty)
+    yield {"type": "log_entry", "data": gm_log.model_dump()}
+
+
+async def _emit_unequip(
+    state: GameState,
+    actor_id: str,
+    item_id: str,
+    dirty: _Dirty,
+) -> AsyncIterator[dict]:
+    actor = state.characters[actor_id]
+    item = state.items.get(item_id)
+    item_name = item.name if item else item_id
+    try:
+        slot = inventory_engine.unequip_by_item(actor, item_id, state.items)
+    except InventoryInvalid as e:
+        text = f"{actor.name} — 해제 실패 ({e})."
+        gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+        _push_log_entry(state, gm_log, dirty)
+        yield {"type": "log_entry", "data": gm_log.model_dump()}
+        return
+    if slot is None:
+        text = f"{actor.name} — 「{item_name}」 은(는) 장착돼 있지 않다."
+    else:
+        text = f"{actor.name} — 「{item_name}」 해제 ({slot})"
+        dirty.entities.add(("characters", actor_id))
+    gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+    _push_log_entry(state, gm_log, dirty)
+    yield {"type": "log_entry", "data": gm_log.model_dump()}
 
 
 async def _emit_use(
@@ -629,6 +682,34 @@ async def _run_combat_player_turn(
             yield ev
         return
 
+    if isinstance(result, (EquipAction, UnequipAction)):
+        # 전투 중 장비 변경 — 한 차례 소비.
+        if isinstance(result, EquipAction):
+            async for ev in _emit_equip(state, state.player_id, result.item_id, dirty):
+                yield ev
+            action_label = "equip"
+        else:
+            async for ev in _emit_unequip(state, state.player_id, result.item_id, dirty):
+                yield ev
+            action_label = "unequip"
+        yield {
+            "type": "combat_turn",
+            "data": {
+                "actor": state.player_id,
+                "action": action_label,
+                "grade": "success",
+                "item_id": result.item_id,
+            },
+        }
+        combat_engine.advance_turn(state)
+        async for ev in _run_combat_npc_phase(state, dirty, rng):
+            yield ev
+        state.turn_count += 1
+        _advance_time(state)
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
     # RejectAction — 전투 안에서는 narrate 부르지 않고 짧은 거절. turn 안 늘림.
     assert isinstance(result, RejectAction)
     text = "그 발화는 무시된다."
@@ -872,6 +953,24 @@ async def run_turn(
         async for ev in _emit_use(
             state, state.player_id, result.item_id, result.target_id, dirty
         ):
+            yield ev
+        _advance_time(state)
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    if isinstance(result, EquipAction):
+        state.turn_count += 1
+        async for ev in _emit_equip(state, state.player_id, result.item_id, dirty):
+            yield ev
+        _advance_time(state)
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    if isinstance(result, UnequipAction):
+        state.turn_count += 1
+        async for ev in _emit_unequip(state, state.player_id, result.item_id, dirty):
             yield ev
         _advance_time(state)
         async for ev in _finalize(state, saves_dir, dirty, to_front_fn):

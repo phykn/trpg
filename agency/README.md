@@ -100,26 +100,46 @@ agency/qa/runs/<timestamp>/
 
 ## Story — 시나리오 시드 작성
 
-repo 루트의 `scenarios/<name>/` 에 들어가는 시드 파일 (race, character, location, ...) 을 LLM 이 짓는 팀. 첫 단계는 race 한 개부터.
+repo 루트의 `scenarios/<name>/` 에 들어가는 시드 파일을 LLM 이 짓는 팀. 현재는 entity 한 종류씩 단발 추가 (race / location / item / character / quest / chapter). 시나리오 한 벌 (줄글 → 디렉터리 통째) 은 후속 단계.
 
 ### 구조
 
 ```
 agency/story/
   agents/
-    race_writer.md           # 새 종족 한 개 작성하는 작가
+    _base.md         # 모든 fragment 위에 얹는 공통 규칙 (한국어, JSON-only, id 패턴)
+    race.md          # entity 별 도메인 규칙 (스키마·필수 필드·참조)
+    location.md
+    item.md
+    character.md
+    quest.md
+    chapter.md
   harness/
-    runner.py                # LLM 호출 + Pydantic 검증 + 자기교정 루프 (5회) + 디스크 쓰기
-  runs/                      # gitignored — 매 호출의 prompt·응답 로그
-  run_story.py               # CLI
+    runner.py        # generic write_entity(kind, ...) — LLM + Pydantic + 자기교정 5회 + 의미 검증 + 디스크 쓰기
+  runs/              # gitignored — 매 호출의 prompt·응답 로그
+  run_story.py       # CLI (race / location / item / character / quest / chapter subcommand)
 ```
 
 ### 동작 원리
 
-- backend 의 `LLMClient` 와 `domain/entities.py` 의 `Race` Pydantic 모델을 그대로 import.
-- 호출당 한 사이클: scenario 의 `world.md` + 기존 `races/*.json` 을 system 컨텍스트로 묶어 LLM 호출 → JSON 추출 → `Race.model_validate_json` + 추가 의미 검증 (`id` 가 ASCII snake_case 이고 기존과 안 겹침) → 실패 시 응답+에러를 messages 에 append → 최대 5회 재시도 (judge runner 와 같은 패턴).
-- 검증 통과 시 `scenarios/<scenario>/races/<id>.json` 에 `indent=2` 로 저장. 같은 파일이 이미 있으면 덮어쓰지 않고 에러.
-- 모든 messages 는 `agency/story/runs/<ts>/race_writer/messages.jsonl` 에 보존 (디버깅용).
+- backend 의 `LLMClient` 와 `domain/entities.py` 의 Pydantic 모델을 그대로 import.
+- `SPECS` 에 entity 종류별 (model · sub_dir · fragment · 참조 종류 · 의미 검증 함수) 매핑.
+- 호출당 한 사이클: `_base.md` + `<kind>.md` + scenario 의 `world.md` + 그 종류의 기존 instances + 참조 종류의 기존 instances 를 system 컨텍스트로 묶어 LLM 호출 → JSON 추출 → `<Model>.model_validate_json` + id 패턴 검증 + entity 별 참조 무결성 검증 (예: `character.race_id` 가 시나리오 `races/` 에 실재) → 실패 시 응답+에러를 messages 에 append → 최대 5회 자기교정 (judge runner 와 같은 패턴).
+- 검증 통과 시 `scenarios/<scenario>/<sub_dir>/<id>.json` 에 `indent=2` 로 저장. 같은 파일이 이미 있으면 덮어쓰지 않고 에러.
+- 모든 messages 는 `agency/story/runs/<ts>/<kind>_writer/messages.jsonl` 에 보존 (디버깅용).
+
+### 참조 무결성
+
+각 entity 의 의미 검증이 챙기는 ID 참조:
+
+| Kind | 검증되는 참조 |
+|---|---|
+| race | (없음) |
+| location | `connections[*].target_id` → 시나리오의 다른 location id (자기 자신 금지) |
+| item | (없음 — `required: Stats` 는 Pydantic 자동) |
+| character | `race_id` → races, `location_id` → locations, `inventory_ids[*]` → items, `equipment.<slot>` → items |
+| quest | `giver_id` → characters, `triggers[*].target_id` → type 따라 (character_death→characters, location_enter→locations, item_use→items), `prerequisite_ids[*]` → quests |
+| chapter | `quest_ids[*]` → quests |
 
 ### 실행
 
@@ -128,25 +148,29 @@ agency/story/
 **(가) 로컬 LLM (`run_story.py`)**
 
 ```bash
-.venv/bin/python agency/story/run_story.py race --scenario default --hint "달밤에만 활동하는 종족"
-
-# 힌트 없이 LLM 자체 판단
-.venv/bin/python agency/story/run_story.py race --scenario default
+.venv/bin/python agency/story/run_story.py race      --scenario default --hint "달밤에 활동하는 종족"
+.venv/bin/python agency/story/run_story.py character --scenario default --hint "은퇴한 노검사"
+.venv/bin/python agency/story/run_story.py item      --scenario default --hint "녹슨 단검"
+.venv/bin/python agency/story/run_story.py location  --scenario default
+.venv/bin/python agency/story/run_story.py quest     --scenario default
+.venv/bin/python agency/story/run_story.py chapter   --scenario default
 ```
 
 `backend/.env` 의 `BASE_URL` 만 살아 있으면 됨 (in-process consumer).
 
-**(나) Claude Code 슬래시 커맨드 (`/story-race`)**
+**(나) Claude Code 슬래시 커맨드 (`/story-write`)**
 
 ```
-/story-race default 달밤에 활동하는 종족
-/story-race default
+/story-write character default 은퇴한 노검사
+/story-write quest default
+/story-write race default 달밤에 활동하는 종족
 ```
 
-`.claude/commands/story-race.md` 가 본문. Claude (대화 중인 모델) 가 `world.md` + 기존 `races/*.json` 을 직접 읽고 race JSON 한 개를 `scenarios/<scenario>/races/<id>.json` 에 Write 한다. 별도 LLM 서버 불필요, runs/ 로그도 안 남김 (대화 transcript 가 곧 로그).
+`.claude/commands/story-write.md` 가 본문. Claude (대화 중인 모델) 가 `_base.md` + `<kind>.md` + `world.md` + 기존 instances 를 직접 Read 하고 entity JSON 한 개를 `scenarios/<scenario>/<sub_dir>/<id>.json` 에 Write 한다. 별도 LLM 서버 불필요, runs/ 로그도 안 남김 (대화 transcript 가 곧 로그).
 
 ### 한계
 
-- 한 번에 entity 한 개. race 외 (character / location / quest / chapter / 시나리오 한 벌) 는 후속.
-- `racial_skills` 는 항상 빈 리스트로 만든다 (기존 races 가 다 비어 있어서). skill 합성은 별도 단계.
+- 한 번에 entity 한 개. 시나리오 한 벌 (`world.md` + `start.json` + `player_template.json` + `profile.json` + 모든 entity) 을 줄글에서 자동 생성하는 모드는 후속 단계.
+- `racial_skills` 는 항상 빈 리스트 (skill 합성은 별도).
 - 시나리오 디렉터리 자체를 새로 만드는 모드 없음 (기존 `<scenario>/` 안에 추가만).
+- 게임 진행 중 런타임 entity 주입 (live save 에 새 NPC/item 등) 은 backend 쪽 일이라 미정.

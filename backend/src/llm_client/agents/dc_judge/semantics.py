@@ -1,6 +1,13 @@
 from typing import Any
 
-from .schema import CombatAction, JudgeOutput, RollAction, UseAction
+from .schema import (
+    CombatAction,
+    EquipAction,
+    JudgeOutput,
+    RollAction,
+    UnequipAction,
+    UseAction,
+)
 
 
 class JudgeSemanticError(ValueError):
@@ -41,16 +48,21 @@ def check_semantics(output: JudgeOutput, surroundings: dict[str, Any]) -> None:
                 f"Either pick one from the list or omit skill_id for a plain attack."
             )
     if isinstance(output, UseAction):
-        valid_items = {
-            i.get("id")
+        inv_items = {
+            i.get("id"): i.get("kind")
             for i in surroundings.get("inventory", []) or []
             if isinstance(i, dict)
         }
-        if output.item_id not in valid_items:
+        if output.item_id not in inv_items:
             raise JudgeSemanticError(
                 f"item_id {output.item_id!r} not in inventory. "
-                f"Valid items are: {sorted(i for i in valid_items if i)}. "
+                f"Valid items are: {sorted(i for i in inv_items if i)}. "
                 f"If the player referenced something they don't carry, action must be 'clarify'."
+            )
+        kind = inv_items[output.item_id]
+        if kind in ("weapon", "armor"):
+            raise JudgeSemanticError(
+                f"item {output.item_id!r} is a {kind} — use action='equip', not 'use'."
             )
         if output.target_id is not None:
             entity_ids = collect_valid_ids(surroundings)
@@ -58,3 +70,30 @@ def check_semantics(output: JudgeOutput, surroundings: dict[str, Any]) -> None:
                 raise JudgeSemanticError(
                     f"target_id {output.target_id!r} not in surroundings."
                 )
+
+    if isinstance(output, EquipAction):
+        inv_items = {
+            i.get("id"): i.get("kind")
+            for i in surroundings.get("inventory", []) or []
+            if isinstance(i, dict)
+        }
+        if output.item_id not in inv_items:
+            raise JudgeSemanticError(
+                f"equip item_id {output.item_id!r} not in inventory."
+            )
+        if inv_items[output.item_id] not in ("weapon", "armor"):
+            raise JudgeSemanticError(
+                f"item {output.item_id!r} is not equippable (weapon/armor only)."
+            )
+
+    if isinstance(output, UnequipAction):
+        eq = surroundings.get("equipment") or {}
+        equipped_ids: set[str] = set()
+        for v in eq.values():
+            if isinstance(v, dict) and isinstance(v.get("id"), str):
+                equipped_ids.add(v["id"])
+        if output.item_id not in equipped_ids:
+            raise JudgeSemanticError(
+                f"unequip item_id {output.item_id!r} not currently equipped. "
+                f"Equipped: {sorted(equipped_ids)}."
+            )

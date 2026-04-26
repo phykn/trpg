@@ -127,6 +127,56 @@ def equip(actor: Character, item_id: str, slot: Slot, items: dict[str, Item]) ->
     setattr(actor.equipment, slot, item_id)
 
 
+def auto_equip_slot(actor: Character, item: Item) -> Slot:
+    """판정자가 slot 을 안 박아 보낼 때 엔진이 결정.
+
+    무기: leftHand/rightHand 중 빈 손 우선, 둘 다 있으면 dominant_hand 측에 덮어씀.
+    방어구: head/top/bottom/feet 중 effects.target slot — 현재는 비어 있는 첫 슬롯 폴백
+        (ArmorEffect 자체가 어느 부위인지 모름이라 방어구 시드의 기본 slot 정책에 의존).
+    액세서리(effects=None): acc1 → acc2.
+    """
+    eff = item.effects
+    if isinstance(eff, WeaponEffect):
+        if actor.equipment.leftHand is None:
+            return "leftHand"
+        if actor.equipment.rightHand is None:
+            return "rightHand"
+        # 둘 다 차 있으면 dominant_hand 자리에 덮어씀.
+        return "rightHand" if actor.dominant_hand == "right" else "leftHand"
+    if isinstance(eff, ArmorEffect):
+        for slot in ("head", "top", "bottom", "feet"):
+            if getattr(actor.equipment, slot) is None:
+                return slot  # type: ignore[return-value]
+        return "head"
+    if eff is None:
+        if actor.equipment.acc1 is None:
+            return "acc1"
+        return "acc2"
+    raise InventoryInvalid(f"item {item.id} has no equippable effect")
+
+
+def equip_auto(
+    actor: Character, item_id: str, items: dict[str, Item]
+) -> Slot:
+    """엔진이 slot 자동 결정 후 equip. 결정된 slot 반환."""
+    if item_id not in items:
+        raise InventoryInvalid(f"unknown item: {item_id}")
+    slot = auto_equip_slot(actor, items[item_id])
+    equip(actor, item_id, slot, items)
+    return slot
+
+
+def unequip_by_item(
+    actor: Character, item_id: str, items: dict[str, Item]
+) -> Slot | None:
+    """item_id 가 박혀 있는 첫 슬롯 찾아 unequip. 없으면 None."""
+    for slot in EQUIPMENT_SLOTS:
+        if getattr(actor.equipment, slot) == item_id:
+            unequip(actor, slot, items)  # type: ignore[arg-type]
+            return slot  # type: ignore[return-value]
+    return None
+
+
 def unequip(actor: Character, slot: Slot, items: dict[str, Item]) -> None:
     """slot 의 아이템 해제. 양손 무기였으면 두 손 슬롯 모두 비움."""
     if slot not in EQUIPMENT_SLOTS:

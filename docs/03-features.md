@@ -274,7 +274,7 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
 ### 2.5 장비 / 인벤토리 / 거래 [P3]
 
-**현재 구현 상태**: `pipeline/inventory.py` + `/equip` `/unequip` `/buy` `/sell` endpoint 까지 들어가 있다. 자연어 통합·프론트 UI 는 후속.
+**현재 구현 상태**: `pipeline/inventory.py` + `/equip` `/unequip` `/buy` `/sell` endpoint + 자연어 equip/unequip 통합 (Phase 2). judge 가 `surroundings.inventory` (`kind: weapon|armor|...`) 와 `surroundings.equipment` (8 슬롯 → {id, name}) 보고 `EquipAction` / `UnequipAction` 박는다. 엔진이 slot 자동 결정 (무기=빈 손 우선, 방어구=빈 슬롯, 액세서리=acc1→acc2). buy/sell 자연어와 프론트 UI 는 후속.
 
 **장비 슬롯 (프론트 기준 8 종)**: `head / top / bottom / feet / leftHand / rightHand / acc1 / acc2`. `Equipment` 타입이 단일 소스이고, 각 슬롯은 `EquipItem | null`.
 

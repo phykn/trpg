@@ -158,6 +158,33 @@ async def test_rest_branch_classified_by_judge(client, env):
     assert player.mp == player.max_mp
 
 
+async def test_judge_matches_equip_for_weapon_in_inventory(client, env):
+    """판정자가 inventory.kind=weapon 아이템 입력을 equip 으로 분류."""
+    from src.domain.entities import Item, WeaponEffect
+
+    gs, profile_dir, saves_dir = env
+    gs.items["sword_01"] = Item(
+        id="sword_01",
+        name="강철 장검",
+        effects=WeaponEffect(type="weapon", weapon_dice="1d8"),
+    )
+    gs.characters["player_01"].inventory_ids = ["sword_01"]
+
+    events = await _collect_events(
+        run_turn(
+            client,
+            gs,
+            profile_dir,
+            saves_dir,
+            "강철 장검을 손에 든다.",
+            rng=random.Random(0),
+        )
+    )
+    judge_event = next(e for e in events if e["type"] == "judge")
+    assert judge_event["data"]["action"] == "equip"
+    assert judge_event["data"]["item_id"] == "sword_01"
+
+
 async def test_judge_matches_use_for_inventory_item(client, env):
     """판정자가 inventory 컨텍스트로 받아 자연어를 use 로 분류, item_id 박는지."""
     from src.domain.entities import ConsumableEffect, Item

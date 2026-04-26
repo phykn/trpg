@@ -85,10 +85,12 @@ def test_inventory_lists_consumable_items(fresh_state):
     assert inv[0]["effect"] == "heal"
 
 
-def test_inventory_excludes_weapons(fresh_state):
+def test_inventory_marks_weapons_as_equip_kind(fresh_state):
     state = _seed(fresh_state, give_potion=False, give_sword=True)
     s = build_surroundings(state, "player_01")
-    assert s["inventory"] == []
+    assert len(s["inventory"]) == 1
+    assert s["inventory"][0]["kind"] == "weapon"
+    # weapon 은 use 가 아니라 equip 매칭으로 가야 함
 
 
 def test_inventory_groups_qty(fresh_state):
