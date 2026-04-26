@@ -19,12 +19,10 @@ from ..agents.dc_judge.schema import (
     UnequipAction,
     UseAction,
 )
-from ..agents.narrate import NarrativeDelta, NarrativeFinal
 from ..domain.errors import JudgeMalformed, PendingCheckActive
 from ..domain.memory import PlayerLogEntry
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
-from ..engines.apply import apply_changes
 from ..llm.client import LLMClient
 from .actions import (
     emit_equip,
@@ -48,13 +46,10 @@ from .dirty import (
     finalize,
     next_log_id,
     push_act,
-    push_dialogue,
     push_log_entry,
-    push_turn_log,
 )
 from .judge import run_judge
-from .memory_writer import write_memories
-from .narrate import run_narrate
+from .narrate import consume_narrate, run_narrate
 from .rest import run_rest
 
 
@@ -242,29 +237,22 @@ async def _dispatch(
     targets_for_log = getattr(result, "targets", None)
     target_for_log = targets_for_log[0] if targets_for_log else None
 
-    body = ""
-    final: NarrativeFinal | None = None
-    async for item in run_narrate(
+    stream = run_narrate(
         client,
         state,
         profile_dir,
         player_input,
         judge_result=result.model_dump(),
         grade=None,
+    )
+    async for ev in consume_narrate(
+        state,
+        dirty,
+        stream,
+        target_for_log=target_for_log,
+        dialogue_input=player_input,
     ):
-        if isinstance(item, NarrativeDelta):
-            yield {"type": "narrative_delta", "data": {"text": item.text}}
-            body += item.text
-        else:
-            final = item
-    assert final is not None
-
-    apply_changes(state, final.output.state_changes, dirty.entities)
-    push_turn_log(state, target_for_log, final.output.turn_summary, dirty)
-    push_dialogue(state, player_input, body, dirty)
-    write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
-    gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=body)
-    push_log_entry(state, gm_log, dirty)
+        yield ev
 
     async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
         yield ev

@@ -14,6 +14,9 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from typing import Literal
 
+from pydantic import ValidationError
+
+from ..domain.errors import LLMUnavailable
 from ..rules import RULES
 from ..domain.state import GameState
 
@@ -78,9 +81,13 @@ async def attempt_rest(
             # Ambush right before sleep — time does not advance here (combat handles its own time).
             return "encounter", pool
         if summon is not None and location is not None:
+            # ValidationError = LLM produced bad output even after 5 retries.
+            # LLMUnavailable = transport wrap from agents/_runner.py.
+            # OSError/TimeoutError = bare transport failure (e.g. narrate stream).
+            # Programming bugs (TypeError, AttributeError, ...) propagate so they don't hide.
             try:
                 summoned_id = await summon(state, location.id)
-            except Exception:
+            except (ValidationError, LLMUnavailable, OSError, TimeoutError):
                 summoned_id = None
             if summoned_id is not None:
                 return "encounter", [summoned_id]

@@ -67,10 +67,9 @@ All text fields (`name`, `description`, `appearance`, `tone_hint`) in Korean.
 - Code fences (```` ```json ````)
 - Text/greeting outside the JSON
 - More than one JSON object
-- Stats that violate pair-trade
+- Stats that violate pair-trade (each pair must sum to exactly 20, including extremes like 0/20)
 - Inventing a `race_id` not in `available_races`
 - HP / MP / level / id fields (the engine fills those)
-- Empty pair-trade fields ("STR": 0 only when CHA = 20, etc. — match strictly)
 
 ## 5. Examples
 

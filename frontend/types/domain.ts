@@ -31,8 +31,7 @@ export type Equipment = {
 
 export type Hero = {
   name: string;
-  race: string;
-  job: string;
+  raceJob: string;
   level: number;
   exp: number;
   expMax: number;
@@ -51,8 +50,7 @@ export type Hero = {
 export type Subject = {
   name: string;
   role: string;
-  race: string;
-  job: string;
+  raceJob: string;
   trust: number;
   known: string[];
   level: number;
@@ -93,8 +91,7 @@ export type CombatEnemy = {
 
 export type CombatBadge = {
   round: number;
-  currentActor: string;
-  isPlayerTurn: boolean;
+  turnLabel: string;
   enemies: CombatEnemy[];
 };
 

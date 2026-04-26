@@ -25,7 +25,7 @@ backend/
       state.py                   GameState container (엔티티 dict + world_time + pending_check + combat_state + turn_log + recent_dialogue + log_entries + pending_skill_candidates + player_id)
       memory.py                  Memory, TurnLogEntry, DialoguePair, PendingCheck, LogEntry union (gm/player/act/roll)
       types.py                   StatKey, Tier, Grade, Intent
-      errors.py                  DomainError + PendingCheckActive/Expected, JudgeMalformed, LLMUnavailable, PersistenceFailed, ProfileNotFound, RaceNotFound, LevelUpInvalid, InventoryInvalid, SkillInvalid
+      errors.py                  DomainError + PendingCheckActive/Expected, JudgeMalformed, LLMUnavailable, PersistenceFailed, ProfileNotFound, RaceNotFound, ProfileMalformed, LevelUpInvalid, InventoryInvalid, SkillInvalid
 
     rules/                       Tunable knobs + pure dice/DC math
       config.py                  frozen RULES (DC tiers, social, memory, log, time, combat, death, recovery, growth, skill, carry, trade, flee). frozen Pydantic — 변경 시 에러
@@ -126,6 +126,9 @@ backend/
   - `JudgeMalformed` — judge LLM 출력 5회 연속 JSON 파싱 실패.
   - `LLMUnavailable` — LLM 연결 실패.
   - `PersistenceFailed` — 저장 I/O 실패.
+  - `ProfileNotFound` — `/session/init` 의 `profile` 디렉터리 없음. 422.
+  - `RaceNotFound` — `/session/init` 의 `race_id` 가 그 프로필 race 목록에 없음. 422.
+  - `ProfileMalformed` — 프로필 시드(`start.json` 등)가 자기 안에 없는 id를 가리킴. 422.
   - `LevelUpInvalid` — `/level-up` 페어 트레이드 / 캡 / 잔여 xp 검증 실패. 422.
   - `InventoryInvalid` — `/equip` `/unequip` `/buy` `/sell` 슬롯·요구치·무게·affinity·잔여 골드 검증 실패. 422.
   - `SkillInvalid` — `/cast` 레벨·MP·사정거리·소유 검증 실패. 422.

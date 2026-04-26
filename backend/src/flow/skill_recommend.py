@@ -55,6 +55,15 @@ def _build_input(state: GameState) -> SkillRecommendInput:
                 for m in p.memories
             ],
         },
+        existing_skills=[
+            {
+                "name": s.name,
+                "type": s.type,
+                "description": s.description,
+                "special_effect": s.special_effect,
+            }
+            for s in p.learned_skills
+        ],
         recent_turns=_recent_turn_summaries(state, _RECENT_TURNS_FOR_RECOMMEND),
         recent_inputs=_recent_inputs(state, _RECENT_INPUTS_FOR_RECOMMEND),
     )

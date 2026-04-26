@@ -118,7 +118,7 @@ LLM 을 두 개로 쪼갠다.
 
 - 단일 모델, 단일 `BASE_URL` (llama.cpp OpenAI-compat 서버). judge·narrate 모두 같은 클라이언트.
 - `src/llm/client.py` 가 `LLMClient` 노출.
-- 시스템 프롬프트는 `src/llm/prompts/judge.md`, `src/llm/prompts/narrate.md` 에서 로드.
+- 시스템 프롬프트는 각 에이전트 디렉터리의 `prompt.md` 에서 로드 (`src/agents/<agent>/prompt.md`, 예: `src/agents/dc_judge/prompt.md`, `src/agents/narrate/prompt.md`).
 
 ---
 
@@ -193,7 +193,7 @@ class PendingCheck:
 
 dc_judge runner 가 매 호출마다 두 단계 검증:
 
-1. **JSON 파싱** — `JudgeOutput` 스키마 검증 (`backend/src/llm_client/agents/dc_judge/schema.py`).
+1. **JSON 파싱** — `JudgeOutput` 스키마 검증 (`backend/src/agents/dc_judge/schema.py`).
 2. **semantic 검증** — `targets[]` 의 모든 ID 가 `state.characters | locations | items` 에 실제로 존재하는지 (LLM 은 종종 없는 ID 를 지어내는 환각이 있음).
 
 둘 중 어느 쪽이 실패해도 직전 응답 본문과 에러 메시지를 messages 에 append 해서 자기 교정 루프로 다시 호출 — 같은 실수를 반복하지 않게 LLM 컨텍스트에 실패 사유를 박아주는 것. 최대 5 회 재시도 (총 6 번 시도).
@@ -237,11 +237,11 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 
 **현재 세션 복원** (`GET /session/current`): `SAVES_DIR/.current` 가 가리키는 game_id 의 `FrontState` 반환. `.current` 가 없거나 가리키는 파일이 없으면 HTTP 404 — 프론트는 이 응답으로 새게임 화면 분기. 게임 목록·이어하기 화면은 P1 에 없음 (한 명·한 게임 흐름).
 
-**load** (`GET /session/{id}/state` 또는 `/turn` · `/roll` 진입): `SAVES_DIR/games/{id}.json` 을 읽어 Pydantic 으로 `GameState` 복원. 파일 없으면 HTTP 404.
+**load** (`GET /session/{id}/state` 또는 `/turn` · `/roll` 진입): `SAVES_DIR/games/{id}/` 디렉터리의 `meta.json` + 엔티티별 `<kind>/<id>.json` + `log.jsonl`/`history.jsonl`/`dialogue.jsonl` 꼬리(cap) 를 읽어 Pydantic 으로 `GameState` 복원. 디렉터리 없으면 HTTP 404.
 
-**save**: `apply_changes` 이후 파이프라인 말미에서 호출. 안전 쓰기 — `.tmp` 파일에 먼저 다 쓴 뒤 `os.replace` 로 한꺼번에 본 파일을 갈아끼운다. 쓰는 도중 죽어도 반쪽짜리 파일이 남지 않음. 프로세스 안에서 `asyncio.Lock` 하나로 동시 저장 요청을 한 줄 세워 순서대로 처리. 저장이 실패하면 메모리에 들고 있던 게임 상태를 직전 값으로 되돌리고 SSE `error: PersistenceFailed` 를 보낸다.
+**save**: `apply_changes` 이후 파이프라인 말미(`flow/dirty.flush`)에서 호출. 더티 추적 — 한 턴 동안 mutate 된 `(kind, id)` 만 다시 쓴다. jsonl(log/history/dialogue)은 append-only. 안전 쓰기 — `.tmp` 파일에 먼저 다 쓴 뒤 `os.replace` 로 한꺼번에 본 파일을 갈아끼운다. 쓰는 도중 죽어도 반쪽짜리 파일이 남지 않음. 순서: 엔티티 + jsonl 먼저, `meta.json` 마지막 — meta 가 commit point 이므로 중간 크래시는 다음 턴이 자연스럽게 흡수. 프로세스 안에서 `asyncio.Lock` 하나로 동시 저장 요청을 한 줄 세워 순서대로 처리. 저장이 실패하면 SSE `error: PersistenceFailed` 를 보내고 스트림을 닫는다 (메모리 롤백은 없음 — 다음 GET 이 디스크에서 다시 로드하면 복구).
 
-**인스턴스 단위 파일**: 게임 하나 = 파일 하나 (`SAVES_DIR/games/{game_id}.json`). 파일 이동·복사만으로 세션 이전 가능. 이유와 한계는 [01-overview.md](./01-overview.md) §3.11.
+**인스턴스 단위 디렉터리**: 게임 하나 = 디렉터리 하나 (`SAVES_DIR/games/{game_id}/`). 디렉터리 이동·복사만으로 세션 이전 가능. 이유와 한계는 [01-overview.md](./01-overview.md) §3.11.
 
 ---
 

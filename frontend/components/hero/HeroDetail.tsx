@@ -14,7 +14,7 @@ export function HeroDetail({ hero }: { hero: Hero }) {
           <InlineNodes entries={Object.entries(hero.stats) as [string, number][]} />
         </LabeledRow>
 
-        <LabeledRow label="특징">{`${hero.race} ${hero.job}`}</LabeledRow>
+        <LabeledRow label="특징">{hero.raceJob}</LabeledRow>
         <LabeledRow label="기술">{joinOrDash(hero.skills)}</LabeledRow>
         <LabeledRow label="장비">{joinOrDash(equipped.map((it) => it.name))}</LabeledRow>
         <LabeledRow label="소지">{joinInventoryOrDash(hero.inventory)}</LabeledRow>

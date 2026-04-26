@@ -8,7 +8,7 @@ Client for a Korean-language TRPG. Single-screen Expo (React Native) app. The ba
 - expo-router (file-based routing, `typedRoutes`)
 - NativeWind v4 (Tailwind for RN), with `design/tokens.js` as the single token source
 - TypeScript strict
-- Backend calls: `expo/fetch` for SSE streaming (`services/llm.ts`)
+- Backend calls: `expo/fetch` for SSE streaming (`services/api.ts`)
 
 ## Setup
 
@@ -70,10 +70,10 @@ npm run lint
 ```
 frontend/
   app/                # expo-router route shell (single screen — index.tsx mounts Shell)
-  components/         # screen pieces (header / log / hero / composer / ui + Shell + NewGame)
-  hooks/use-game.ts   # game-state hook (server calls + applying SSE events)
-  services/           # backend boundary (llm.ts: REST + SSE client)
-  transformers/       # domain → UI projection (panels.ts)
+  components/         # screen pieces (header / log / hero / composer / combat / ui + Shell + new-game)
+  hooks/useGame.ts    # game-state hook (server calls + applying SSE events). handleStreamEvent.ts is the pure SSE → state-setter dispatcher.
+  services/           # backend boundary (api.ts: REST + SSE client)
+  presenters/         # domain → UI projection (panels.ts) + format helpers (format.ts)
   types/              # domain (backend models), ui (render contracts), wire (SSE/REST payloads)
   design/tokens.js    # single design tokens source (imported by both Tailwind config and code)
 ```

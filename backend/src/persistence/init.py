@@ -16,9 +16,10 @@ from ..domain.entities import (
     Race,
     Stats,
 )
-from ..domain.errors import ProfileNotFound, RaceNotFound
+from ..domain.errors import ProfileMalformed, ProfileNotFound, RaceNotFound
 from ..domain.state import GameState
 from ..engines.growth import calc_max_hp, calc_max_mp
+from ..engines.invariants import Scenario, check
 from .store import (
     copy_seed_into_game,
     save_entity,
@@ -61,6 +62,13 @@ async def init_game(
     if not pdir.is_dir():
         raise ProfileNotFound(profile_name)
 
+    seed_violations = check.scenario(Scenario.from_dir(pdir))
+    if seed_violations:
+        raise ProfileMalformed(
+            f"profile {profile_name!r} invariant violations:\n"
+            + "\n".join(seed_violations)
+        )
+
     races = _scan_dir(pdir / "races", Race)
     if player.race_id not in races:
         raise RaceNotFound(player.race_id)
@@ -75,10 +83,16 @@ async def init_game(
     start = _read_json(pdir / "start.json")
     template = _read_json(pdir / "player_template.json")
 
+    # start.json / player_template integrity is already covered by
+    # `check.scenario(Scenario.from_dir(pdir))` above (start_location_id,
+    # active_subject_id alive + colocated, active_quest_id status, world_time
+    # ISO 8601, etc.). Anything that gets here is well-formed.
     player_id = template.get("id", "player_01")
     template_equipment = Equipment.model_validate(template.get("equipment", {}))
     template_inventory = list(template.get("inventory_ids", []))
     location_id = start["start_location_id"]
+    active_subject_id = start.get("active_subject_id")
+    active_quest_id = start.get("active_quest_id")
 
     stats = Stats()
     chosen_race = races[player.race_id]
@@ -113,8 +127,8 @@ async def init_game(
         chapters=chapters,
         campaigns=campaigns,
         player_id=player_id,
-        active_subject_id=start.get("active_subject_id"),
-        active_quest_id=start.get("active_quest_id"),
+        active_subject_id=active_subject_id,
+        active_quest_id=active_quest_id,
         world_time=start["world_time"],
     )
 

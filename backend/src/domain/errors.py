@@ -30,6 +30,12 @@ class RaceNotFound(DomainError):
     pass
 
 
+class ProfileMalformed(DomainError):
+    """Seed JSON in the profile points at ids that don't exist in the profile."""
+
+    pass
+
+
 class LevelUpInvalid(DomainError):
     """level_up request failed validation (pair-trade / cap / remaining xp etc.)."""
 

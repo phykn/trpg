@@ -1,7 +1,8 @@
 """Growth routes — level-up + learn-skill."""
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import ValidationError
 
-from ...domain.errors import LevelUpInvalid
+from ...domain.errors import LevelUpInvalid, LLMUnavailable
 from ...domain.state import GameState
 from ...engines.growth import level_up
 from ...flow.skill_recommend import recommend_skill_candidates
@@ -30,7 +31,7 @@ async def session_level_up(
     # §2.3 step 4 — LLM picks skill candidates. Failure is silent.
     try:
         state.pending_skill_candidates = await recommend_skill_candidates(llm, state)
-    except Exception:
+    except (ValidationError, LLMUnavailable, OSError, TimeoutError):
         state.pending_skill_candidates = []
 
     await save_entity(state, saves_dir, "characters", state.player_id)

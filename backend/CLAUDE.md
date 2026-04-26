@@ -59,7 +59,7 @@ Scale is `-100..+100`. With `social.friendly_threshold = 50`, a target at or abo
 ## Persistence
 
 - Per-game dir: `../saves/games/<game_id>/`.
-  - `meta.json` — singletons (`game_id, profile, player_id, world_time, turn_count, pending_check, active_*_id, next_log_id`). Rewritten every turn end as the commit point.
+  - `meta.json` — singletons (`game_id, profile, player_id, world_time, turn_count, pending_check, pending_skill_candidates, active_*_id, next_log_id`). Rewritten every turn end as the commit point.
   - `<kind>/<id>.json` for `kind ∈ {characters, items, locations, races, quests, chapters, campaigns}`. Only entities mutated this turn are rewritten.
   - `log.jsonl / history.jsonl / dialogue.jsonl` — append-only, one line per entry. No on-disk cap. In-memory caps (`RULES.log.display_turns`, `memory.turn_log_size`, `memory.recent_dialogue_turns`) only apply on tail-load and prompt assembly.
 - `init_game` copies `../scenarios/<profile>/`'s seed entity dirs verbatim into the game dir, then writes the new player character + meta.
@@ -76,7 +76,9 @@ Scale is `-100..+100`. With `social.friendly_threshold = 50`, a target at or abo
 
 ## Agent retry
 
-Each agent (judge, narrate, ...) runs a self-correction loop with `retries=5`. On `ValidationError` or semantic-check failure, the previous response and the error are appended to the message stream so the next attempt can correct itself. After 5 attempts, the loop raises by the last error type; flow code maps that to a domain error.
+Each agent (judge, ...) runs a self-correction loop with `retries=5`. On `ValidationError` or semantic-check failure, the previous response and the error are appended to the message stream so the next attempt can correct itself. After 5 attempts, the loop raises by the last error type; flow code maps that to a domain error.
+
+`narrate` is the exception. Body tokens stream to the client live, so a self-correction loop with appended error messages isn't possible — once a body delta has been sent the client can't take it back. It retries (up to 5×) only when the stream errors out before any body delta or yields zero body content; if any body delta has already been streamed, a later failure raises.
 
 ## state_changes
 
@@ -84,7 +86,7 @@ Five kinds only: `set / set_time / move / move_item / affinity`. Each has its ow
 
 ## SSE event shape
 
-`{"type": "...", "data": {...}}` per event. Types: `judge / pending_check / narrative_delta / log_entry / state / done / error`. **`done` is not auto-appended** — `run_turn`'s roll branch ends after `pending_check`, and the client treats stream-close as the signal.
+`{"type": "...", "data": {...}}` per event. Types: `judge / pending_check / narrative_delta / log_entry / state / combat_start / combat_turn / combat_end / done / error`. The three `combat_*` types come from `combat_phase.py`; the frontend currently ignores their payload (state + log_entry are authoritative for UI), but tests use them as observable signals. **`done` is not auto-appended** — `run_turn`'s roll branch ends after `pending_check`, and the client treats stream-close as the signal.
 
 ## Tests
 

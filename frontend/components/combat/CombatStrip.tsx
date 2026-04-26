@@ -3,13 +3,12 @@ import { Text, View } from 'react-native';
 import type { CombatBadge } from '@/types/domain';
 
 export function CombatStrip({ combat }: { combat: CombatBadge }) {
-  const turnLabel = combat.isPlayerTurn ? '내 차례' : `${combat.currentActor} 차례`;
   return (
     <View className="mx-5 mt-1 px-3 py-1.5 rounded-md bg-canvas-inset border border-danger-fg/40 flex-row items-center gap-3">
       <Text className="font-sans-medium text-caption text-danger-fg">전투</Text>
       <Text className="font-sans text-caption text-fg-muted">R{combat.round}</Text>
       <View className="w-px h-3 bg-border-default" />
-      <Text className="font-sans-medium text-caption text-fg-default">{turnLabel}</Text>
+      <Text className="font-sans-medium text-caption text-fg-default">{combat.turnLabel}</Text>
       {combat.enemies.length > 0 ? (
         <>
           <View className="w-px h-3 bg-border-default" />

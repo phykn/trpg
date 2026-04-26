@@ -21,6 +21,12 @@ def _race_name(state: GameState, race_id: str) -> str:
     return race.name if race else race_id
 
 
+def _race_job_label(state: GameState, char: Character) -> str:
+    """`<race> <job>` if the character has a job, otherwise just `<race>`."""
+    race = _race_name(state, char.race_id)
+    return f"{race} {char.job}" if char.job else race
+
+
 def _equipment(state: GameState, char: Character) -> dict:
     out: dict[str, dict | None] = {slot: None for slot in EQUIPMENT_SLOTS}
     for slot, item_id in char.equipment.equipped_items():
@@ -51,8 +57,7 @@ def to_hero(state: GameState) -> dict:
     skills = [s.name for s in p.racial_skills] + [s.name for s in p.learned_skills]
     return {
         "name": p.name,
-        "race": _race_name(state, p.race_id),
-        "job": p.job,
+        "raceJob": _race_job_label(state, p),
         "level": p.level,
         "exp": p.xp_pool,
         "expMax": xp_for_next_level(p.level),
@@ -85,8 +90,7 @@ def to_subject(state: GameState) -> dict | None:
     return {
         "name": s.name,
         "role": s.role,
-        "race": _race_name(state, s.race_id),
-        "job": s.job,
+        "raceJob": _race_job_label(state, s),
         "trust": s.relations.get(state.player_id, 0),
         "known": known,
         "level": s.level,
@@ -174,6 +178,8 @@ def to_combat(state: GameState) -> dict | None:
         return None
     current_id = cs.turn_order[cs.current_turn]
     current = state.characters.get(current_id)
+    actor_name = current.name if current else current_id
+    turn_label = "내 차례" if current_id == state.player_id else f"{actor_name} 차례"
     enemies = []
     for eid in cs.enemy_ids:
         e = state.characters.get(eid)
@@ -182,8 +188,7 @@ def to_combat(state: GameState) -> dict | None:
         enemies.append({"name": e.name, "hp": e.hp, "hpMax": e.max_hp, "alive": e.alive})
     return {
         "round": cs.round,
-        "currentActor": current.name if current else current_id,
-        "isPlayerTurn": current_id == state.player_id,
+        "turnLabel": turn_label,
         "enemies": enemies,
     }
 

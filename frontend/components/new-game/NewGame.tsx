@@ -86,6 +86,16 @@ export function NewGame({ onSubmit }: Props) {
     );
   }
 
+  if (profiles.length === 0) {
+    return (
+      <CenterMessage>
+        <Text className="font-sans text-body text-fg-muted">
+          선택 가능한 시나리오가 없습니다.
+        </Text>
+      </CenterMessage>
+    );
+  }
+
   return (
     <ScrollView
       className="flex-1 bg-canvas-default"

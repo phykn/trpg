@@ -175,6 +175,8 @@ def cast(
 
     grade=None → out-of-combat cast (multiplier 1.0). Once judge integration runs, the grade is supplied and used for adjustment.
     """
+    from .quest import check_quests  # deferred import — keeps engines/skill below engines/quest
+
     skill = find_skill(actor, skill_id)
     _validate_gate(actor, skill)
     targets = _resolve_targets(actor, skill, state, requested_targets)
@@ -184,12 +186,14 @@ def cast(
     multiplier = _grade_multiplier(grade)
 
     effects: list[dict] = []
+    killed_ids: list[str] = []
     for t in targets:
         per: dict = {"target": t.id, "kind": skill.type}
         if skill.type == "attack":
             per["damage"] = _apply_attack(skill, mod, t, multiplier)
             if not t.alive:
                 per["dead"] = True
+                killed_ids.append(t.id)
         elif skill.type == "heal":
             per["healed"] = _apply_heal(skill, mod, t, multiplier)
         elif skill.type in ("buff", "debuff"):
@@ -205,6 +209,9 @@ def cast(
     actor.mp -= skill.mp_cost
     if dirty is not None:
         dirty.add(("characters", actor.id))
+
+    for victim_id in killed_ids:
+        check_quests(state, "character_death", victim_id, dirty)
 
     return {
         "skill_id": skill.id,

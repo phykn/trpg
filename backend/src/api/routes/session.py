@@ -2,7 +2,7 @@
 (turn / roll / intro)."""
 from fastapi import APIRouter, Depends, HTTPException
 
-from ...domain.errors import ProfileNotFound, RaceNotFound
+from ...domain.errors import ProfileMalformed, ProfileNotFound, RaceNotFound
 from ...domain.state import GameState
 from ...flow.intro import run_intro
 from ...flow.roll import run_roll
@@ -44,6 +44,8 @@ async def session_init(
         raise HTTPException(status_code=422, detail=f"profile not found: {e}")
     except RaceNotFound as e:
         raise HTTPException(status_code=422, detail=f"race not found: {e}")
+    except ProfileMalformed as e:
+        raise HTTPException(status_code=422, detail=f"profile malformed: {e}")
     return InitResponse(game_id=state.game_id, state=to_front_state(state))
 
 

@@ -21,6 +21,7 @@ class SkillCandidate(BaseModel):
 
 class SkillRecommendInput(BaseModel):
     character: dict
+    existing_skills: list[dict]
     recent_turns: list[dict]
     recent_inputs: list[str]
 

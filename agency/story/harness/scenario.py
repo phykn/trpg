@@ -8,6 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, ValidationError
 
 from src.domain.entities import Character
+from src.engines.invariants import Scenario, check
 from src.llm import LLMClient
 
 from .runner import (
@@ -443,6 +444,14 @@ async def build_scenario(
     (scenario_dir / "player_template.json").write_text(
         json.dumps(player_template, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+
+    # 10. final scenario-level invariant sweep
+    _step("invariant 통합 검증")
+    violations = check.scenario(Scenario.from_dir(scenario_dir))
+    if violations:
+        raise EntityWriterError(
+            "scenario invariant 위반:\n" + "\n".join(violations)
+        )
 
     return {
         "scenario_dir": str(scenario_dir),

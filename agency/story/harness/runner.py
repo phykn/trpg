@@ -1,4 +1,10 @@
-"""Generic entity writer — LLM call + Pydantic validation + self-correction loop + disk write."""
+"""Generic entity writer — LLM call + Pydantic validation + self-correction loop + disk write.
+
+Entity-level rules (stat invariants, HP/MP formula, NPC skill, equipment slot
+matching, carry weight, etc.) live in `backend/src/engines/invariants.py`.
+This module only handles cross-ref between entity manifests during the
+incremental build (race_id ∈ races, etc.); the rest is dispatched to `check.X`.
+"""
 
 import json
 import re
@@ -9,6 +15,7 @@ from pathlib import Path
 from pydantic import BaseModel, ValidationError
 
 from src.domain.entities import Chapter, Character, Item, Location, Quest, Race
+from src.engines.invariants import check
 from src.llm import LLMClient
 
 ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]{1,30}$")
@@ -60,6 +67,9 @@ def _check_location_refs(loc: Location, refs: dict[str, set[str]]) -> None:
 
 
 def _check_character_refs(ch: Character, refs: dict[str, set[str]]) -> None:
+    """Manifest cross-ref only — race_id/location_id pool checks. Everything
+    else (stats, HP/MP, equipment slots, skills, carry, NPC seed extras) is
+    dispatched to `check.seed_character` in `write_entity`."""
     races = refs.get("race", set())
     if ch.race_id not in races:
         raise EntityWriterError(
@@ -72,17 +82,6 @@ def _check_character_refs(ch: Character, refs: dict[str, set[str]]) -> None:
             f"character.location_id={ch.location_id!r} 가 시나리오 locations 에 없음. "
             f"가능한 id: {sorted(locations)}"
         )
-    items = refs.get("item", set())
-    for iid in ch.inventory_ids:
-        if iid not in items:
-            raise EntityWriterError(
-                f"character.inventory_ids 의 {iid!r} 가 시나리오 items 에 없음."
-            )
-    for slot, iid in ch.equipment.model_dump().items():
-        if iid is not None and iid not in items:
-            raise EntityWriterError(
-                f"character.equipment.{slot}={iid!r} 가 시나리오 items 에 없음."
-            )
 
 
 TRIGGER_TARGET_KIND = {
@@ -212,6 +211,29 @@ def _collect_refs(scenario_dir: Path, spec: EntitySpec) -> dict[str, set[str]]:
     return refs
 
 
+def _items_pool(scenario_dir: Path) -> dict[str, Item]:
+    return {
+        e["id"]: Item.model_validate(e)
+        for e in _load_dir(scenario_dir, "items")
+    }
+
+
+def _check_entity_invariants(entity: BaseModel, scenario_dir: Path) -> None:
+    """Dispatch to backend.engines.invariants — all entity-level rules.
+
+    Cross-ref between manifests is already done by spec.check_refs above; this
+    runs the rule layer (stat invariants, HP/MP formula, NPC seed extras, etc).
+    """
+    if isinstance(entity, Character):
+        violations = check.seed_character(entity, _items_pool(scenario_dir))
+    elif isinstance(entity, Item):
+        violations = check.item(entity)
+    else:
+        return
+    if violations:
+        raise EntityWriterError("invariant 위반:\n" + "\n".join(violations))
+
+
 def _check_id(
     entity: BaseModel, existing: set[str], force_id: str | None = None
 ) -> None:
@@ -278,6 +300,7 @@ async def write_entity(
             entity = spec.model.model_validate_json(answer)
             _check_id(entity, existing_ids, force_id=force_id)
             spec.check_refs(entity, refs)
+            _check_entity_invariants(entity, scenario_dir)
             if extra_check is not None:
                 extra_check(entity)
             return entity, messages + [{"role": "assistant", "content": answer}]

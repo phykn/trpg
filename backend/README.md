@@ -57,7 +57,7 @@ dotenv loads `backend/.env` automatically and uvicorn binds to `HOST:PORT`.
 | POST | `/session/{id}/intro` | GM intro (SSE, fired once after init) |
 | POST | `/debug/complete` | One-shot LLM call for debugging |
 
-SSE event types: `judge / pending_check / narrative_delta / log_entry / state / done / error`. See `../docs/02-runtime.md` §2.4 for shapes.
+SSE event types: `judge / pending_check / narrative_delta / log_entry / state / combat_start / combat_turn / combat_end / done / error`. See `../docs/02-runtime.md` §2.4 for shapes.
 
 ## Tests
 

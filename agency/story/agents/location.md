@@ -23,4 +23,4 @@
 - 단발 호출(파이프라인이 아닌 단독 `/story-write location`) 일 때 `connections[*].target_id` 는 **이미 디스크에 만들어져 있는** location 의 id 만 가리킬 수 있다. 아직 없는 미래 id 를 박으면 검증에서 실패한다.
 - 양방향 연결은 강제하지 않음 (있어도 OK, 없어도 OK).
 - `item_ids` — 이 장소에 놓여 있는 item 의 id. 시나리오의 items 안에 실재해야 함. user 메시지에 "item_ids 에 정확히 [...] 를 박아라" 지시가 있으면 그대로 박는다. 없으면 빈 리스트.
-- `sleep_risk`, `sleep_encounters`, `hidden_items`, `hidden_connections`, `difficulty` 같은 P3 필드는 생략 (default).
+- `sleep_risk`, `sleep_encounters`, `hidden_items`, `hidden_connections`, `difficulty` 는 생략 (Pydantic default 로 충분).

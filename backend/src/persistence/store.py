@@ -13,6 +13,7 @@ from ..domain.entities import (
     Location,
     Quest,
     Race,
+    Skill,
 )
 from ..domain.memory import (
     DialoguePair,
@@ -125,6 +126,7 @@ class _Meta(BaseModel):
     world_time: str
     turn_count: int = 0
     pending_check: PendingCheck | None = None
+    pending_skill_candidates: list[Skill] = []
     next_log_id: int = 1
 
 
@@ -138,6 +140,7 @@ def _meta_from_state(state: GameState) -> _Meta:
         world_time=state.world_time,
         turn_count=state.turn_count,
         pending_check=state.pending_check,
+        pending_skill_candidates=list(state.pending_skill_candidates),
         next_log_id=state.next_log_id,
     )
 
@@ -288,6 +291,15 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
         DialoguePair,
     )
 
+    # next_log_id self-heal: a mid-flush crash can leave meta.json stale while
+    # log.jsonl already has new entries. Bumping past the largest id we've
+    # actually loaded prevents id collisions on the next turn.
+    next_log_id = meta.next_log_id
+    if log_entries:
+        max_disk_id = max(e.id for e in log_entries)
+        if max_disk_id >= next_log_id:
+            next_log_id = max_disk_id + 1
+
     return GameState(
         game_id=meta.game_id,
         profile=meta.profile,
@@ -297,7 +309,8 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
         world_time=meta.world_time,
         turn_count=meta.turn_count,
         pending_check=meta.pending_check,
-        next_log_id=meta.next_log_id,
+        pending_skill_candidates=meta.pending_skill_candidates,
+        next_log_id=next_log_id,
         turn_log=turn_log,
         recent_dialogue=recent_dialogue,
         log_entries=log_entries,

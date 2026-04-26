@@ -6,10 +6,13 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Literal
 
+from pydantic import ValidationError
+
 from ..agents.dc_judge.schema import RollAction
 from ..domain.errors import (
     InventoryInvalid,
     LevelUpInvalid,
+    LLMUnavailable,
     PersistenceFailed,
     SkillInvalid,
 )
@@ -19,6 +22,7 @@ from ..engines import combat as combat_engine
 from ..engines import inventory as inventory_engine
 from ..engines import skill as skill_engine
 from ..engines.growth import level_up as level_up_engine
+from ..engines.invariants import InvariantViolation, check
 from ..llm.client import LLMClient
 from ..mapping.to_front import pending_check_to_front
 from ..rules.dc import pick_dc, sigmoid_required_roll, social_bonus
@@ -195,6 +199,11 @@ async def emit_level_up(
     except LevelUpInvalid as e:
         yield push_gm(state, dirty, f"{actor.name} — 성장 실패 ({e}).")
         return
+    violations = check.character(actor)
+    if violations:
+        raise InvariantViolation(
+            "post-level_up invariant violation:\n" + "\n".join(violations)
+        )
     dirty.entities.add(("characters", actor_id))
     yield push_gm(
         state, dirty,
@@ -206,7 +215,7 @@ async def emit_level_up(
         return
     try:
         state.pending_skill_candidates = await recommend_skill_candidates(client, state)
-    except Exception:
+    except (ValidationError, LLMUnavailable, OSError, TimeoutError):
         state.pending_skill_candidates = []
     if state.pending_skill_candidates:
         names = ", ".join(f"「{s.name}」" for s in state.pending_skill_candidates)

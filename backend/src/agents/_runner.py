@@ -5,12 +5,14 @@ post-parse `verify` for semantic checks beyond schema). The loop calls the
 LLM, runs parse + verify, and on failure appends the bad answer + the error
 back as messages so the next attempt sees its own mistake.
 """
+import asyncio
 from collections.abc import Callable
 from pathlib import Path
 from typing import TypeVar
 
 from pydantic import ValidationError
 
+from ..domain.errors import LLMUnavailable
 from ..llm.client import LLMClient
 
 T = TypeVar("T")
@@ -44,6 +46,11 @@ async def run_with_retries(
 
     `correction_hint` is appended to the standard nudge — useful when the
     schema has an invariant the LLM tends to break (e.g. pair-trade).
+
+    Transport-level failures (network/socket/timeout) wrap to `LLMUnavailable`
+    so the API edge can surface them as `SSE error: LLMUnavailable` per the
+    boundary contract; self-correction retries don't help when the LLM is
+    unreachable.
     """
     messages: list[dict] = [
         {"role": "system", "content": system_prompt},
@@ -56,7 +63,10 @@ async def run_with_retries(
         f"Re-read the instructions{hint_clause} and output only the corrected JSON."
     )
     for _ in range(retries + 1):
-        result = await client.chat(messages=messages, think=False)
+        try:
+            result = await client.chat(messages=messages, think=False)
+        except (OSError, asyncio.TimeoutError) as e:
+            raise LLMUnavailable(str(e)) from e
         answer = result["answer"] or ""
         try:
             return parse(answer)

@@ -255,6 +255,34 @@ def test_attack_target_dies_when_hp_zeroes(fresh_state):
     assert result["effects"][0].get("dead") is True
 
 
+def test_attack_kill_fires_quest_character_death(fresh_state):
+    """Cast that kills a target must trigger the character_death quest hook,
+    matching the combat-damage and item-use code paths."""
+    from src.domain.entities import Quest, QuestRewards, QuestTrigger
+
+    skill = _attack_skill()
+    skill.power = 100
+    p = _player(skills=[skill])
+    e = _enemy()
+    state = _state(fresh_state, player_01=p, goblin_01=e)
+    fresh_state.player_id = "player_01"
+    fresh_state.quests["q1"] = Quest(
+        id="q1",
+        title="t",
+        giver_id="player_01",
+        difficulty="보통",
+        triggers=[QuestTrigger(id="a", name="처치", type="character_death", target_id="goblin_01")],
+        rewards=QuestRewards(gold=50, exp=100),
+        status="active",
+    )
+
+    skill_eng.cast(p, "fireball", state, ["goblin_01"])
+
+    assert state.quests["q1"].status == "completed"
+    assert p.gold == 50
+    assert p.xp_pool == 100
+
+
 def test_dirty_set_includes_actor_and_targets(fresh_state):
     p = _player(skills=[_attack_skill()])
     e = _enemy()

@@ -21,7 +21,7 @@ You receive a single JSON message:
 
 - `grade` is set only for `roll`. For `pass`/`reject`/`intro`, it is null.
 - `target_view` is null for `pass`, `reject`, `intro`.
-- `action` here is one of `pass`, `roll`, `reject`, `intro` only — `combat` and `clarify` are handled by the engine before narrator is called.
+- `action` here is one of `pass`, `roll`, `reject`, `intro` only. All other dc_judge actions (`combat`, `flee`, `rest`, `use`, `equip`, `unequip`, `level_up`, `learn_skill`, `buy`, `sell`, `clarify`) are resolved by the engine before narrator is called.
 - `action=intro` 는 게임 시작 첫 장면 한 번만. `player_input` 은 빈 문자열, `history` 도 비어 있음.
 
 ## 2. Output Format

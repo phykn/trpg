@@ -16,7 +16,7 @@ function buildSubjectSlot(subject: Subject | null): PanelSlot {
     panel: subject
       ? {
           title: subject.name,
-          meta: `Lv ${subject.level} · ${subject.race} ${subject.job}`,
+          meta: `Lv ${subject.level} · ${subject.raceJob}`,
           barSplit: [
             { label: 'HP', value: subject.hp, max: subject.hpMax, tone: 'hp', display: `${subject.hp}/${subject.hpMax}` },
             {

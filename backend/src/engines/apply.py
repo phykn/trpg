@@ -133,7 +133,10 @@ def _apply_set(
         raise _StateChangeError(f"unknown {c.entity} id: {c.id!r}")
     try:
         _set_dotted(container[c.id], c.field, c.value)
-    except (AttributeError, ValidationError) as e:
+    except (AttributeError, ValueError, ValidationError) as e:
+        # Pydantic v2 raises ValueError ("object has no field 'X'") for unknown
+        # fields under `extra='ignore'`. AttributeError covers nested .getattr
+        # failures, ValidationError covers type/range mismatches.
         raise _StateChangeError(f"failed to set {c.field!r}: {e}") from e
     if dirty is not None:
         dirty.add((c.entity, c.id))

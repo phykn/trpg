@@ -115,7 +115,7 @@ def _full_state(fresh_state):
 
 def test_hero_basic_fields(fresh_state):
     h = to_hero(_full_state(fresh_state))
-    assert h["name"] == "주인공" and h["race"] == "인간" and h["job"] == "도적"
+    assert h["name"] == "주인공" and h["raceJob"] == "인간 도적"
     assert h["hp"] == 18 and h["hpMax"] == 20
     assert h["stats"]["STR"] == 12
 
@@ -251,8 +251,7 @@ def test_to_combat_projects_round_actor_enemies(fresh_state):
     out = to_combat(fresh_state)
     assert out is not None
     assert out["round"] == 2
-    assert out["currentActor"] == "고블린"
-    assert out["isPlayerTurn"] is False
+    assert out["turnLabel"] == "고블린 차례"
     assert out["enemies"] == [
         {"name": "고블린", "hp": 8, "hpMax": 10, "alive": True}
     ]
@@ -266,4 +265,17 @@ def test_unknown_race_id_falls_back_to_id(fresh_state):
         stats=Stats(),
     )
     h = to_hero(fresh_state)
-    assert h["race"] == "unknown_race"
+    assert h["raceJob"] == "unknown_race"
+
+
+def test_hero_race_job_drops_trailing_space_when_job_empty(fresh_state):
+    fresh_state.races["human"] = Race(id="human", name="인간", description="x")
+    fresh_state.characters["player_01"] = Character(
+        id="player_01",
+        name="x",
+        race_id="human",
+        job="",
+        stats=Stats(),
+    )
+    h = to_hero(fresh_state)
+    assert h["raceJob"] == "인간"

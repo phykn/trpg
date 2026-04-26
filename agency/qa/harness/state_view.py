@@ -16,7 +16,7 @@ def format_state_summary(front_state: dict) -> str:
     hero = front_state.get("hero")
     if hero:
         lines.append(
-            f"나: {hero['name']} ({hero['race']}{' ' + hero['job'] if hero['job'] else ''}) "
+            f"나: {hero['name']} ({hero['raceJob']}) "
             f"HP {hero['hp']}/{hero['hpMax']}"
         )
         inv = hero.get("inventory") or []

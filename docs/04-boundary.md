@@ -10,7 +10,8 @@
 
 | 프론트 필드 | 백엔드 출처 | 변환 |
 |---|---|---|
-| `name`, `race`, `job`, `level` | 같은 이름의 필드 | 그대로 복사 |
+| `name`, `level` | 같은 이름의 필드 | 그대로 복사 |
+| `raceJob: str` | `race_id` + `job` | `races[race_id].name` 과 `job` 을 합쳐 `"<종족> <직업>"` 한 문자열로. `job` 이 빈 문자열이면 종족 이름만 (trailing space 없음). race 가 사라졌으면 race_id 그대로 |
 | `hp/hpMax`, `mp/mpMax` | 같은 이름의 필드 | 그대로 복사. 값은 엔진이 계산으로 갱신 — narrator 가 `set` 으로 못 건드림 |
 | `exp/expMax` | `xp_pool` + 레벨 곡선 [P3] | xp/level 시스템 자체가 P3 일정 ([03-features.md](./03-features.md) §2.3). P1 동안은 자리표시 0/0 만 노출 |
 | `stats` | `stats` | 장비·버프 미적용 기본값. 장비·버프를 더한 실효 수치는 백엔드 내부 계산용 |
@@ -24,7 +25,8 @@
 
 | 프론트 필드 | 백엔드 출처 | 변환 |
 |---|---|---|
-| `name`, `race`, `job`, `level` | 같은 이름의 필드 | 그대로 |
+| `name`, `level` | 같은 이름의 필드 | 그대로 |
+| `raceJob: str` | `race_id` + `job` | Hero.raceJob 와 동일 규칙 |
 | `hp/hpMax` | 같은 이름의 필드 | 그대로 |
 | `stats` | `stats` | 그대로 |
 | `inventory: [{name, qty}]` | `inventory_ids` | Hero 와 동일 |
@@ -104,9 +106,9 @@
 | POST | `/session/{id}/cast` | `{skill_id, targets: string[]}` | `{game_id, state, result: {effects[], multiplier, mp_cost}}` (레벨·MP·range 실패 시 422) |
 | POST | `/session/{id}/use` | `{item_id, target_id?}` | `{game_id, state, result: {kind, amount?, on_use?, consumed?}}` (소비 아이템 아닐 시 422) |
 
-`FrontState = {hero, subject, quest, place, combat, log}`. SSE `state` 이벤트 ([02-runtime.md](./02-runtime.md) §2.4) 는 `{hero, subject, quest, place, combat}` 5 슬롯만 — `log` 는 누적되는 흐름이라 `log_entry` 이벤트로 따로 흐름. **`FrontState.log` 영속본 cap 은 `rules.log.display_turns` (기본 20)** — `GET /session/{id}/state` 와 `GET /session/current` 모두 최근 20 턴치만 반환 ([02-runtime.md](./02-runtime.md) §6.2 디스플레이 로그 영속화).
+`FrontState = {hero, subject, quest, place, combat, log, pendingCheck}`. SSE `state` 이벤트 ([02-runtime.md](./02-runtime.md) §2.4) 는 같은 7 슬롯 묶음 — `log` 는 누적되는 흐름이라 `log_entry` 이벤트로도 따로 흐른다 (state 안에는 영속본 꼬리만). **`FrontState.log` 영속본 cap 은 `rules.log.display_turns` (기본 20)** — `GET /session/{id}/state` 와 `GET /session/current` 모두 최근 20 턴치만 반환 ([02-runtime.md](./02-runtime.md) §6.2 디스플레이 로그 영속화). `pendingCheck` 는 `state.pending_check` 가 활성일 때만 채워짐 — 앱이 굴림 도중에 닫혀도 다음 GET 으로 UI 가 복원된다.
 
-`combat` 슬롯 (P2) — 평시엔 `null`, 전투 활성 시 `{round, currentActor, isPlayerTurn, enemies: [{name, hp, hpMax, alive}]}`. 백엔드 `state.combat_state` 의 사영 — `turn_order`/`enemy_ids` 같은 내부 id 는 프론트로 안 나간다.
+`combat` 슬롯 (P2) — 평시엔 `null`, 전투 활성 시 `{round, turnLabel, enemies: [{name, hp, hpMax, alive}]}`. 백엔드 `state.combat_state` 의 사영 — `turn_order`/`enemy_ids` 같은 내부 id 는 프론트로 안 나가고, `turnLabel` 은 백엔드가 미리 한국어로 합성한다 (`"내 차례"` 또는 `"<actor_name> 차례"`). 
 
 세션 흐름 — 앱 시작 시 `GET /session/current` 시도 → 200 이면 진행 중 게임 복원, 404 면 `GET /profiles` 호출 → 프론트가 시나리오·종족 카드를 보여주고 사용자가 캐릭터 생성 → `POST /session/init` 호출 → 첫 턴. 게임 목록·이어하기 화면은 P1 에 없음 (한 명·한 게임 흐름).
 
@@ -127,5 +129,5 @@
 | narrate JSON 파싱 실패 | 본문은 보존, `state_changes=[]`, `memorable=False` 로 강등 |
 | narrate `state_change` 가 스키마 위반 | 그 항목만 버리고 `rejected[]` 에 기록, 나머지는 적용 |
 | LLM 자체가 연결 안 됨 | SSE `error: LLMUnavailable` 후 종료 |
-| 저장 실패 | SSE `error: PersistenceFailed`, in-memory 상태 롤백 |
+| 저장 실패 | SSE `error: PersistenceFailed` (메모리 롤백 없음 — 다음 GET 이 디스크에서 다시 로드하면 복구) |
 

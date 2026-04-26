@@ -6,6 +6,8 @@ from ..agents.narrate import (
     NarrativeFinal,
     stream_narrate,
 )
+from ..domain.memory import GMLogEntry
+from ..engines.apply import apply_changes
 from ..llm.client import LLMClient
 from ..ontology.graph import build_graph
 from ..ontology.target_view import build_target_view
@@ -16,6 +18,14 @@ from ..context import (
     build_surroundings,
     build_world_layer,
 )
+from .dirty import (
+    Dirty,
+    next_log_id,
+    push_dialogue,
+    push_log_entry,
+    push_turn_log,
+)
+from .memory_writer import write_memories
 
 
 async def run_narrate(
@@ -70,3 +80,39 @@ async def run_narrate(
             item.output.memory_links = {}
             item.output.importance = None
         yield item
+
+
+async def consume_narrate(
+    state: GameState,
+    dirty: Dirty,
+    stream: AsyncIterator[NarrativeDelta | NarrativeFinal],
+    *,
+    target_for_log: str | None,
+    dialogue_input: str | None,
+) -> AsyncIterator[dict]:
+    """Drive a `run_narrate` stream: emit `narrative_delta` SSE events as body
+    tokens arrive, then commit the post-narrate tail (state_changes, turn_log,
+    optional dialogue, memory writes, GM log line). The caller still owns the
+    `run_narrate` kwargs (judge_result, grade, target_id) and just hands us
+    the resulting iterator.
+
+    `dialogue_input=None` skips the dialogue push (used by intro, which has
+    no player utterance).
+    """
+    body = ""
+    final: NarrativeFinal | None = None
+    async for item in stream:
+        if isinstance(item, NarrativeDelta):
+            yield {"type": "narrative_delta", "data": {"text": item.text}}
+            body += item.text
+        else:
+            final = item
+    assert final is not None
+
+    apply_changes(state, final.output.state_changes, dirty.entities)
+    push_turn_log(state, target_for_log, final.output.turn_summary, dirty)
+    if dialogue_input is not None:
+        push_dialogue(state, dialogue_input, body, dirty)
+    write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
+    gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=body)
+    push_log_entry(state, gm_log, dirty)

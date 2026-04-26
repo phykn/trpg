@@ -286,3 +286,23 @@ def test_partial_success_keeps_valid_changes(state):
 def test_unknown_change_type_rejected(state):
     r = apply_changes(state, [{"type": "exotic_thing"}])
     assert r["applied"] == 0 and len(r["rejected"]) == 1
+
+
+def test_set_unknown_field_on_character_rejected(state):
+    """Pydantic v2 raises ValueError for unknown fields. _apply_set must
+    catch it and route to rejected[] like any other set failure."""
+    r = apply_changes(
+        state,
+        [
+            {
+                "type": "set",
+                "entity": "characters",
+                "id": "guard_01",
+                "field": "is_resting",  # not a Character field
+                "value": True,
+            }
+        ],
+    )
+    assert r["applied"] == 0
+    assert len(r["rejected"]) == 1
+    assert "is_resting" in r["rejected"][0]["reason"]

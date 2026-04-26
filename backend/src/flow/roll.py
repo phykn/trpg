@@ -3,12 +3,10 @@ in-flight combat."""
 import random
 from collections.abc import AsyncIterator
 
-from ..agents.narrate import NarrativeDelta, NarrativeFinal
 from ..domain.errors import PendingCheckExpected
-from ..domain.memory import GMLogEntry, RollLogEntry
+from ..domain.memory import RollLogEntry
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
-from ..engines.apply import apply_changes
 from ..llm.client import LLMClient
 from ..rules.dc import compute_grade
 from .combat_phase import run_combat_npc_phase
@@ -18,13 +16,10 @@ from .dirty import (
     advance_time,
     finalize,
     next_log_id,
-    push_dialogue,
     push_log_entry,
-    push_turn_log,
 )
 from .format import front_grade, label_for_target
-from .memory_writer import write_memories
-from .narrate import run_narrate
+from .narrate import consume_narrate, run_narrate
 
 
 async def run_roll(
@@ -68,9 +63,7 @@ async def run_roll(
         "stat": pending.stat,
         "targets": pending.targets,
     }
-    body = ""
-    final: NarrativeFinal | None = None
-    async for item in run_narrate(
+    stream = run_narrate(
         client,
         state,
         profile_dir,
@@ -78,20 +71,15 @@ async def run_roll(
         judge_result=judge_result,
         grade=grade,
         target_id=pending.target,
+    )
+    async for ev in consume_narrate(
+        state,
+        dirty,
+        stream,
+        target_for_log=pending.target,
+        dialogue_input=pending.player_input,
     ):
-        if isinstance(item, NarrativeDelta):
-            yield {"type": "narrative_delta", "data": {"text": item.text}}
-            body += item.text
-        else:
-            final = item
-    assert final is not None
-
-    apply_changes(state, final.output.state_changes, dirty.entities)
-    push_turn_log(state, pending.target, final.output.turn_summary, dirty)
-    push_dialogue(state, pending.player_input, body, dirty)
-    write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
-    gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=body)
-    push_log_entry(state, gm_log, dirty)
+        yield ev
 
     state.pending_check = None
     advance_time(state)
