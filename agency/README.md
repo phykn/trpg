@@ -1,78 +1,78 @@
-# Agency — LLM 사무실
+# Agency — LLM office
 
-게임 운영을 돕는 LLM 직원들이 팀 단위로 일하는 곳. 각 팀은 자기 디렉터리 안에 agent prompt, harness, 실행 결과를 들고 있다.
+Where the LLM staff that helps run the game works in teams. Each team owns its own directory holding agent prompts, the harness, and run output.
 
 ```
 agency/
-  run_qa.py     # QA 팀 CLI 엔트리
-  run_story.py  # Story 팀 CLI 엔트리
-  qa/           # 게임을 플레이해보고 회귀를 잡는 검수팀
-  story/        # 시나리오 시드 (race / character / ...) 를 새로 짓는 작가팀
+  run_qa.py     # QA team CLI entrypoint
+  run_story.py  # Story team CLI entrypoint
+  qa/           # The QA team — plays the game and catches regressions
+  story/        # The Story team — authors scenario seeds (race / character / ...)
 ```
 
-## QA — AI 플레이어 기반 게임 테스트
+## QA — game testing via AI players
 
-게임 QA 를 고용해서 플레이시키는 식으로 동작. 매 턴마다 LLM 이 다음 입력을 생성, 백엔드 API 를 두드리고 SSE 응답을 transcript 로 모은 뒤, 별도의 reviewer LLM 이 transcript 를 분석해 verdict 를 낸다.
+Works like hiring a QA tester to play the game. Each turn an LLM generates the next input, the harness hits the backend API and collects SSE events into a transcript, then a separate reviewer LLM analyses the transcript and emits a verdict.
 
-### 구조
+### Layout
 
 ```
-agency/run_qa.py        # CLI 엔트리
+agency/run_qa.py        # CLI entrypoint
 agency/qa/
   agents/
-    diplomat.md         # 사교가 — NPC 친밀도·대화 중심
-    explorer.md         # 탐험가 — 이동·관찰·인벤토리 중심
-    provocateur.md      # 도발자 — 엣지 케이스·judge 분기 트리거
-    reviewer.md         # 분석가 — transcript 읽고 verdict JSON 생성
+    diplomat.md         # Diplomat — focused on NPC affinity and dialogue
+    explorer.md         # Explorer — movement, observation, inventory
+    provocateur.md      # Provocateur — edge cases, judge-branch triggers
+    reviewer.md         # Analyst — reads the transcript and emits a verdict JSON
   harness/
-    agent.py            # PlayerAgent — system prompt + 매 턴 LLM 호출
-    state_view.py       # front_state → player-LLM 입력 텍스트
+    agent.py            # PlayerAgent — system prompt + per-turn LLM call
+    state_view.py       # front_state → input text for the player LLM
     transcript.py       # SSE → markdown / jsonl
-    review.py           # reviewer 호출 + Verdict 검증
-    runner.py           # 단일 agent 의 한 세션 실행
+    review.py           # reviewer call + Verdict validation
+    runner.py           # runs one session for a single agent
 
-# 실행 결과는 repo 루트의 reports/qa/<timestamp>/ 에 떨어짐 (gitignored)
+# Run output lands at the repo root under reports/qa/<timestamp>/ (gitignored)
 ```
 
-### 동작 원리
+### How it works
 
-- `httpx.AsyncClient(transport=ASGITransport(app))` 로 FastAPI app 을 in-process 호출. 포트·프로세스 없이 HTTP 표면 (auth/SSE/error) 그대로 통과.
-- LLM 은 외부 서버 (`BASE_URL`, e.g. llama.cpp) 그대로 사용.
-- 각 run 은 자체 `saves/` 디렉터리를 사용 (격리). production save 와 안 섞임.
-- 한 세션 흐름: `POST /session/init` → `POST /session/{id}/intro` (선택) → `(state 조회 → agent 가 다음 입력 결정 → POST /turn → pending_check 면 자동 POST /roll)` 반복.
+- `httpx.AsyncClient(transport=ASGITransport(app))` calls the FastAPI app in-process. No port, no separate process, but the HTTP surface (auth/SSE/error) still exercised end-to-end.
+- The LLM is the same external server you'd use otherwise (`BASE_URL`, e.g. llama.cpp).
+- Each run uses its own isolated `saves/` directory — never mixed with production saves.
+- Per-session flow: `POST /session/init` → `POST /session/{id}/intro` (optional) → `(read state → agent picks the next input → POST /turn → if pending_check, auto POST /roll)` repeated.
 
-### 실행
+### Run
 
 ```bash
-# 모든 agent 한 번씩 (기본 15턴)
+# every agent once (default 15 turns)
 .venv/bin/python agency/run_qa.py
 
-# 특정 agent
+# a specific agent
 .venv/bin/python agency/run_qa.py --agent diplomat --turns 20
 
-# 다른 프로필
+# a different profile
 .venv/bin/python agency/run_qa.py --agent all --profile other_world
 ```
 
-`.env` 는 `backend/.env` 를 자동 로드. `BASE_URL` 만 살아 있으면 됨.
+`.env` is auto-loaded from `backend/.env`. As long as `BASE_URL` is reachable, that's enough.
 
-### 출력
+### Output
 
 ```
 reports/qa/<timestamp>/
-  index.md                      # agent 비교 요약표 + high/medium 이슈 추출
+  index.md                      # cross-agent comparison table + extracted high/medium issues
   diplomat/
-    transcript.md               # 사람-읽기용 턴별 기록
-    sse.jsonl                   # raw SSE 이벤트 (재현·디버깅용)
-    final_state.json            # 끝난 시점의 GameState 전체
-    verdict.json                # 구조화된 평가 (코드 고칠 때 활용)
-    review.md                   # reviewer 의 사람-읽기용 코멘트
-    saves/                      # run 격리용 임시 save (재실행 시 새 디렉터리)
+    transcript.md               # human-readable per-turn record
+    sse.jsonl                   # raw SSE events (for replay/debugging)
+    final_state.json            # the full GameState at the end
+    verdict.json                # structured evaluation (consumed when fixing code)
+    review.md                   # reviewer's human-readable comments
+    saves/                      # per-run isolated saves (a fresh dir each run)
   explorer/...
   provocateur/...
 ```
 
-`verdict.json` 스키마:
+`verdict.json` schema:
 
 ```json
 {
@@ -92,67 +92,67 @@ reports/qa/<timestamp>/
 }
 ```
 
-### 코드 수정에 활용
+### Using the output to fix code
 
-새 변경 후 `run_qa.py` 한 번 돌려서 `index.md` 의 high/medium 이슈와 `verdict.json` 들을 확인. 회귀가 발견되면 evidence 에 적힌 턴 번호로 transcript 의 해당 부분을 보고 디버깅. 잘 동작하던 부분 (`wins`) 이 사라졌다면 회귀 신호.
+After a change, run `run_qa.py` once and review the high/medium issues in `index.md` plus the per-agent `verdict.json`. When a regression shows up, jump to the turn number cited in `evidence` and read that section of the transcript. If something that used to land in `wins` is gone, treat it as a regression signal.
 
-### 한계
+### Limits
 
-- 실시간 가이드 역할이지 단정적 검수는 아님. reviewer LLM 의 판단도 검토 대상.
-- LLM 호출량이 많음 (turn 당 narrator 1 + player 1 + 마지막에 reviewer 1). 짧게 돌려서 빠르게 피드백 받는 식이 적합.
-- 비결정적. 같은 프롬프트라도 매번 다른 transcript. 회귀를 정밀하게 잡으려면 시나리오 모드 (입력 시퀀스 명시) 가 필요 — 추후 추가 가능.
+- Real-time guidance, not authoritative QA. The reviewer LLM's judgment is itself subject to review.
+- LLM call volume is heavy (1 narrator + 1 player per turn, plus 1 reviewer at the end). Short runs and fast feedback work best.
+- Non-deterministic. Identical prompts produce different transcripts. Pinning regressions precisely needs a scenario mode (an explicit input sequence), not implemented yet.
 
-## Story — 시나리오 시드 작성
+## Story — scenario seed authoring
 
-repo 루트의 `scenarios/<name>/` 에 들어가는 시드 파일을 LLM 이 짓는 팀. 현재는 entity 한 종류씩 단발 추가 (race / location / item / character / quest / chapter). 시나리오 한 벌 (줄글 → 디렉터리 통째) 은 후속 단계.
+The team that LLM-writes the seed files in the repo-root `scenarios/<name>/`. Currently single-entity-at-a-time (race / location / item / character / quest / chapter). Whole-scenario builds (prose → entire directory) are a follow-up.
 
-### 구조
+### Layout
 
 ```
-agency/run_story.py    # CLI (entity / scenario subcommand)
+agency/run_story.py    # CLI (entity / scenario subcommands)
 agency/story/
   agents/
-    _base.md           # 모든 fragment 위에 얹는 공통 규칙 (한국어, JSON-only, id 패턴)
-    _decompose.md      # 줄글 → Decomposition 분해 prompt
-    race.md            # entity 별 도메인 규칙 (스키마·필수 필드·참조)
+    _base.md           # rules layered on top of every fragment (Korean only, JSON-only output, id pattern)
+    _decompose.md      # prose → Decomposition prompt
+    race.md            # per-entity domain rules (schema, required fields, references)
     location.md
     item.md
     character.md
     quest.md
     chapter.md
   harness/
-    runner.py          # generic write_entity(kind, ...) — LLM + Pydantic + 자기교정 5회 + 의미 검증 + 디스크 쓰기
-    scenario.py        # 줄글 한 편 → 시나리오 한 벌 빌드 파이프라인
+    runner.py          # generic write_entity(kind, ...) — LLM + Pydantic + 5-shot self-correction + semantic checks + disk write
+    scenario.py        # one prose document → full scenario build pipeline
 
-# 매 호출의 prompt·응답 로그는 repo 루트의 reports/story/<ts>/<kind>_writer/ 에 떨어짐 (gitignored)
+# Per-call prompt/response logs land at the repo root under reports/story/<ts>/<kind>_writer/ (gitignored)
 ```
 
-### 동작 원리
+### How it works
 
-- backend 의 `LLMClient` 와 `domain/entities.py` 의 Pydantic 모델을 그대로 import.
-- `SPECS` 에 entity 종류별 (model · sub_dir · fragment · 참조 종류 · 의미 검증 함수) 매핑.
-- 호출당 한 사이클: `_base.md` + `<kind>.md` + scenario 의 `world.md` + 그 종류의 기존 instances + 참조 종류의 기존 instances 를 system 컨텍스트로 묶어 LLM 호출 → JSON 추출 → `<Model>.model_validate_json` + id 패턴 검증 + entity 별 참조 무결성 검증 (예: `character.race_id` 가 시나리오 `races/` 에 실재) → 실패 시 응답+에러를 messages 에 append → 최대 5회 자기교정 (judge runner 와 같은 패턴).
-- 검증 통과 시 `scenarios/<scenario>/<sub_dir>/<id>.json` 에 `indent=2` 로 저장. 같은 파일이 이미 있으면 덮어쓰지 않고 에러.
-- 모든 messages 는 `reports/story/<ts>/<kind>_writer/messages.jsonl` 에 보존 (디버깅용).
+- Imports the backend's `LLMClient` and the Pydantic models in `domain/entities.py` directly.
+- `SPECS` maps each entity kind to (model · sub_dir · fragment · referenced kinds · semantic-check function).
+- One cycle per call: bundle `_base.md` + `<kind>.md` + the scenario's `world.md` + existing instances of that kind + existing instances of referenced kinds as system context, call the LLM, extract JSON, validate via `<Model>.model_validate_json` + id-pattern check + entity-specific reference-integrity check (e.g. `character.race_id` actually exists in the scenario's `races/`). On failure, append the response and the error to the messages and retry — up to 5 self-correction attempts (same shape as the judge runner).
+- On success, write `scenarios/<scenario>/<sub_dir>/<id>.json` with `indent=2`. If the file already exists, error out instead of overwriting.
+- Every messages exchange is preserved at `reports/story/<ts>/<kind>_writer/messages.jsonl` for debugging.
 
-### 참조 무결성
+### Reference integrity
 
-각 entity 의 의미 검증이 챙기는 ID 참조:
+The semantic check for each entity validates these ID references:
 
-| Kind | 검증되는 참조 |
+| Kind | Validated references |
 |---|---|
-| race | (없음) |
-| location | `connections[*].target_id` → 시나리오의 다른 location id (자기 자신 금지) |
-| item | (없음 — `required: Stats` 는 Pydantic 자동) |
+| race | (none) |
+| location | `connections[*].target_id` → other locations in the scenario (self-reference forbidden) |
+| item | (none — `required: Stats` is enforced by Pydantic) |
 | character | `race_id` → races, `location_id` → locations, `inventory_ids[*]` → items, `equipment.<slot>` → items |
-| quest | `giver_id` → characters, `triggers[*].target_id` → type 따라 (character_death→characters, location_enter→locations, item_use→items), `prerequisite_ids[*]` → quests |
+| quest | `giver_id` → characters, `triggers[*].target_id` → varies by type (character_death→characters, location_enter→locations, item_use→items), `prerequisite_ids[*]` → quests |
 | chapter | `quest_ids[*]` → quests |
 
-### 실행
+### Run
 
-두 트랙 — 자동화는 로컬 LLM, 한 번 똑똑하게 짓고 싶을 땐 Claude Code:
+Two tracks — the local LLM for automation, Claude Code when you want one careful build:
 
-**(가) 로컬 LLM (`run_story.py`)**
+**(a) Local LLM (`run_story.py`)**
 
 ```bash
 .venv/bin/python agency/run_story.py race      --scenario default --hint "달밤에 활동하는 종족"
@@ -163,9 +163,9 @@ agency/story/
 .venv/bin/python agency/run_story.py chapter   --scenario default
 ```
 
-`backend/.env` 의 `BASE_URL` 만 살아 있으면 됨 (in-process consumer).
+Only `BASE_URL` from `backend/.env` needs to be reachable (in-process consumer).
 
-**(나) Claude Code 슬래시 커맨드 (`/story-write`)**
+**(b) Claude Code slash command (`/story-write`)**
 
 ```
 /story-write character default 은퇴한 노검사
@@ -173,18 +173,18 @@ agency/story/
 /story-write race default 달밤에 활동하는 종족
 ```
 
-`.claude/commands/story-write.md` 가 본문. Claude (대화 중인 모델) 가 `_base.md` + `<kind>.md` + `world.md` + 기존 instances 를 직접 Read 하고 entity JSON 한 개를 `scenarios/<scenario>/<sub_dir>/<id>.json` 에 Write 한다. 별도 LLM 서버 불필요, `reports/` 로그도 안 남김 (대화 transcript 가 곧 로그).
+The body is `.claude/commands/story-write.md`. Claude (the model in the conversation) Reads `_base.md` + `<kind>.md` + `world.md` + existing instances directly and Writes one entity JSON to `scenarios/<scenario>/<sub_dir>/<id>.json`. No separate LLM server needed, and no `reports/` log left behind (the conversation transcript is the log).
 
-### 시나리오 한 벌 (`scenario` mode)
+### Whole scenario (`scenario` mode)
 
-줄글 한 편 (`<prose-path>.md`) 을 받아 시나리오 디렉터리 한 벌을 통째로 짓는다. 단계 파이프라인:
+Given one prose document (`<prose-path>.md`), build a complete scenario directory. Pipeline:
 
-1. **분해** — `_decompose.md` prompt 가 줄글을 받아 `Decomposition` (Pydantic) 한 개로 압축: `world_md` + 6 종류 entity 명단 (각 명단의 entry 가 `id` + `role` + 부가 hint) + `start_*` 셋 + profile 메타. 분해 자체도 자기교정 5회 + 일관성 검증 (id 패턴·중복·cross-ref).
-2. **world.md** — 분해의 `world_md` 본문을 디스크에 markdown 으로 저장.
-3. **race → location → item → character → quest → chapter** — 각 단계마다 분해 명단의 entry 마다 `write_entity` 를 호출. 단계 순서가 참조 의존성을 따라가서, 한 단계가 다음 단계의 컨텍스트가 됨.
-4. **메타 3 파일** — `profile.json` / `start.json` / `player_template.json`. 분해 결과로 직접 dict → JSON dump.
+1. **Decompose** — the `_decompose.md` prompt compresses the prose into one `Decomposition` (Pydantic): `world_md` + the 6 entity rosters (each entry has `id` + `role` + extra hints) + `start_*` triple + profile metadata. Decomposition itself runs 5-shot self-correction + consistency checks (id pattern, duplicates, cross-refs).
+2. **world.md** — write the decomposition's `world_md` body to disk as markdown.
+3. **race → location → item → character → quest → chapter** — at each stage, call `write_entity` for every entry in the corresponding roster. The stage order follows the reference dependencies, so each completed stage becomes context for the next.
+4. **Three meta files** — `profile.json` / `start.json` / `player_template.json`. Built directly from the decomposition as dicts and JSON-dumped.
 
-**id 강제 메커니즘** — 분해 단계에서 미리 정한 id 를 entity 단계가 따라야 한다. `write_entity(force_id=...)` 가 `_check_id` 안에서 LLM 이 박은 id 와 비교하고, 다르면 자기교정 루프가 작동해 다음 시도에 교정. `_base.md` 에도 "user 메시지의 id 강제 지시는 한 글자도 바꾸지 말 것" 명시.
+**id enforcement** — entity stages must use the ids decided during decomposition. `write_entity(force_id=...)` compares the LLM's id against `X` inside `_check_id` and raises an `EntityWriterError` on mismatch, kicking off the self-correction loop so the next attempt fixes it. `_base.md` also says "do not change a single character of the id forced via the user message".
 
 ```bash
 .venv/bin/python agency/run_story.py scenario \
@@ -192,16 +192,16 @@ agency/story/
   --prose path/to/prose.md
 ```
 
-Claude Code 트랙도 같은 단계를 본문으로 받음:
+The Claude Code track takes the same steps via:
 
 ```
 /story-scenario default_claude path/to/prose.md
 ```
 
-`.claude/commands/story-scenario.md` 가 본문. Claude (대화 중인 모델) 가 분해 → 단계별 Read/Write 를 직접 진행. 같은 줄글에서 두 트랙의 결과 (`scenarios/default_cli/` vs `scenarios/default_claude/`) 를 비교 가능.
+The body is `.claude/commands/story-scenario.md`. Claude (the model in the conversation) handles decomposition and the per-stage Read/Write directly. From the same prose you can compare the two tracks' results (`scenarios/default_cli/` vs `scenarios/default_claude/`).
 
-### 한계
+### Limits
 
-- `racial_skills` 는 항상 빈 리스트 (skill 합성은 별도).
-- chapter 는 현재 한 개 모드 (분해 명단의 모든 quest 가 첫 chapter 에 묶임).
-- 게임 진행 중 런타임 entity 주입 (live save 에 새 NPC/item 등) 은 backend 쪽 일이라 미정.
+- `racial_skills` is always an empty list (skill synthesis is separate).
+- Chapter is currently single-mode (every quest in the decomposition's roster goes into the first chapter).
+- Runtime entity injection during a game (adding a new NPC/item to a live save) belongs to the backend and isn't designed yet.

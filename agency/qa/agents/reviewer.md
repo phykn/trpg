@@ -40,3 +40,4 @@
 - **wins** 도 빠뜨리지 말 것 — 회귀 방지를 위해 잘 동작하는 부분도 기록.
 - **evidence** 는 transcript 의 실제 턴 번호와 짧은 인용으로 뒷받침. 추측 금지.
 - **summary** 는 "narrator 가 X 함" 보다 "narrator: turn 7-9 에 같은 환경 묘사 반복" 처럼 위치를 짚어주기.
+- **category** 는 위 7개 (`narrative`/`state`/`judge`/`memory`/`input`/`schema`/`기타`) 중 하나로만 적기. 어느 분류에도 안 맞으면 `"기타"` — 새 카테고리 만들지 말 것.

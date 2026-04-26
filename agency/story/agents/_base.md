@@ -7,7 +7,7 @@
 - **JSON 객체 한 개만** 출력한다. 다른 텍스트 일체 금지 — preamble, 설명, 코드펜스(```), 주석, trailing 줄바꿈 모두 금지.
 - 한국어 단일. 영문 음차 금지 (`"엘프"` OK, `"엘프(Elf)"` 안 됨, `"오크"` OK, `"오크 Ork"` 안 됨).
 - `id` 는 ASCII snake_case `^[a-z][a-z0-9_]{1,30}$`. 보통 영어 단어 + 짧은 숫자 suffix (예: `goblin_01`, `tavern_02`).
-- 기존 instance 의 id 와 절대 겹치지 않게.
+- 기존 instance 의 id 와 절대 겹치지 않게. id 충돌 검사는 같은 종류 안에서만 한다 — 다른 종류와 겹치는 것은 허용되지만 (예: race `human` 과 character `human_01`), 같은 종류 안에서는 unique 해야 한다.
 
 ## 컨텍스트
 

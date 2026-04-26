@@ -1,22 +1,22 @@
 # trpg-frontend
 
-한국어 TRPG 클라이언트. 한 화면짜리 Expo (React Native) 앱. 백엔드는 `../backend/`, Claude Code 가이드는 [CLAUDE.md](./CLAUDE.md).
+Client for a Korean-language TRPG. Single-screen Expo (React Native) app. The backend lives at `../backend/`; the Claude Code guide is in [CLAUDE.md](./CLAUDE.md).
 
-## 스택
+## Stack
 
 - Expo SDK 54 / React Native 0.81 / React 19 (New Architecture + React Compiler)
-- expo-router (파일 기반 라우팅, `typedRoutes`)
-- NativeWind v4 (RN 용 Tailwind), `design/tokens.js` 가 단일 토큰 소스
+- expo-router (file-based routing, `typedRoutes`)
+- NativeWind v4 (Tailwind for RN), with `design/tokens.js` as the single token source
 - TypeScript strict
-- 백엔드 호출: `expo/fetch` 로 SSE 스트리밍 (`services/llm.ts`)
+- Backend calls: `expo/fetch` for SSE streaming (`services/llm.ts`)
 
-## 셋업
+## Setup
 
 ```bash
 npm install
 ```
 
-`frontend/.env` 작성:
+Write `frontend/.env`:
 
 ```
 EXPO_PUBLIC_API_URL=<backend URL>
@@ -24,56 +24,56 @@ EXPO_PUBLIC_API_USER=<basic auth user>
 EXPO_PUBLIC_API_PASS=<basic auth pass>
 ```
 
-`<backend URL>` 은 LAN 주소 (`http://<windows-lan-ip>:8001`) 또는 Tailscale Funnel 도메인 (`https://<machine>.<tailnet>.ts.net`). 아래 테스트 모드와 짝.
+`<backend URL>` is either a LAN address (`http://<windows-lan-ip>:8001`) or a Tailscale Funnel domain (`https://<machine>.<tailnet>.ts.net`), depending on the test mode below.
 
-## 폰 테스트
+## Phone testing
 
-폰에 **Expo Go** 설치 (Play Store / App Store).
+Install **Expo Go** on the phone (Play Store / App Store).
 
-### LAN (같은 Wi-Fi)
+### LAN (same Wi-Fi)
 
-1. 백엔드가 `0.0.0.0:8001` 에 바인딩, Windows 방화벽이 8001 inbound 허용.
-2. 폰이 노트북과 같은 Wi-Fi.
-3. `frontend/` 에서:
+1. Backend bound to `0.0.0.0:8001`, with the Windows firewall allowing 8001 inbound.
+2. Phone on the same Wi-Fi as the laptop.
+3. From `frontend/`:
    ```bash
    npx expo start
    ```
-4. Android: Expo Go → "Scan QR code". iOS: 카메라 앱으로 QR 찍고 "Open in Expo Go" notification.
+4. Android: Expo Go → "Scan QR code". iOS: scan the QR with the Camera app, then tap the "Open in Expo Go" notification.
 
-### 외부망 (Tailscale Funnel)
+### Off-LAN (Tailscale Funnel)
 
-1. 백엔드는 `127.0.0.1:8001` 에 바인딩.
-2. Funnel 이 8001 프록시 중인지 확인:
+1. Backend bound to `127.0.0.1:8001`.
+2. Confirm the funnel is proxying 8001:
    ```bash
    tailscale funnel status
    ```
-   꺼져 있으면:
+   If it's off:
    ```bash
    sudo tailscale funnel --bg 8001
    ```
-3. `EXPO_PUBLIC_API_URL` 이 funnel 도메인과 일치.
-4. `frontend/` 에서:
+3. Make sure `EXPO_PUBLIC_API_URL` matches the funnel domain.
+4. From `frontend/`:
    ```bash
    npx expo start --host=tunnel -c
    ```
-5. Expo Go 로 QR 스캔 (LAN 4 단계와 동일).
+5. Scan the QR with Expo Go (same as step 4 of the LAN flow).
 
-## 기타 명령
+## Other commands
 
 ```bash
-npx expo start -c   # Metro 캐시 비우기 (tokens / tailwind / babel / metro config 수정 후)
+npx expo start -c   # clear Metro cache (after editing tokens / tailwind / babel / metro config)
 npm run lint
 ```
 
-## 구조
+## Layout
 
 ```
 frontend/
-  app/                # expo-router 라우트 셸 (단일 화면 — index.tsx 가 Shell 마운트)
-  components/         # 화면 구성 요소 (header / log / hero / composer / ui + Shell + NewGame)
-  hooks/use-game.ts   # 게임 상태 훅 (서버 호출 + SSE 이벤트 적용)
-  services/           # 백엔드 경계 (llm.ts: REST + SSE 클라이언트)
-  transformers/       # domain → UI 사영 (panels.ts)
-  types/              # domain (백엔드 모델), ui (렌더 계약), wire (SSE/REST 페이로드)
-  design/tokens.js    # 단일 디자인 토큰 (Tailwind config + 코드 양쪽이 import)
+  app/                # expo-router route shell (single screen — index.tsx mounts Shell)
+  components/         # screen pieces (header / log / hero / composer / ui + Shell + NewGame)
+  hooks/use-game.ts   # game-state hook (server calls + applying SSE events)
+  services/           # backend boundary (llm.ts: REST + SSE client)
+  transformers/       # domain → UI projection (panels.ts)
+  types/              # domain (backend models), ui (render contracts), wire (SSE/REST payloads)
+  design/tokens.js    # single design tokens source (imported by both Tailwind config and code)
 ```

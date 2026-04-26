@@ -19,6 +19,7 @@
 - 무기: `{"type":"weapon", "weapon_dice":"1d6"|"1d8"|"2d4"|..., "range": 1.5, "two_handed": false}`
 - 방어구: `{"type":"armor", "defense": <int 1~5>}`
 - 소모품: `{"type":"consumable", "effect":"heal"|"damage"|"mp_restore"|"buff", "amount":<int>, "description": <str|null>, "duration": <int|null>}`
+- 키 아이템 (`kind: "key"` 힌트 받았을 때): `consumable: true` + `effects: {"type":"consumable", "effect":"buff", "amount":0, "description":"<용도 한 줄>"}`. `on_use` 필드에 quest trigger 용 짧은 설명 (예: `"성문 자물쇠를 연다"`).
 
 ## 규칙
 

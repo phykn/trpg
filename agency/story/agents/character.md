@@ -31,6 +31,7 @@
 - `equipment` 의 슬롯 키는 정확히 `head, top, bottom, feet, leftHand, rightHand, acc1, acc2` 중 하나. 다른 키 금지.
 - 평범한 마을 NPC: `stats` 모두 10±, `hp/max_hp` 15~25, `disposition` 50± 근처, `combat_behavior` 생략.
 - 적대 몬스터: `aggressive` 70~100, `combat_behavior` 박기 (예: `{"attack_priority":"nearest", "flee_hp_percent":25}`), `stats` 종족 컨셉 따라.
+- `combat_behavior.attack_priority` 는 정확히 다음 5개 중 하나: `"nearest"` | `"lowest_hp"` | `"highest_threat"` | `"healer_first"` | `"random"`. 다른 문자열 금지.
 - `is_player`·`level`·`gold`·`xp_pool`·`learned_skills`·`active_buffs`·`memories` 등은 박지 말 것 (런타임이 채움).
 - `tone_hint` 는 짧고 구체 ("퉁명스러운 단답, 가끔 긴 한숨" 식).
 - 기존 character 와 이름·역할 중복 금지.

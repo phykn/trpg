@@ -23,7 +23,7 @@ You generate **one** enemy creature that ambushes the player while they sleep at
   "tone_hint": "<voice/sound hint, optional, ≤ 80 chars>",
   "race_id": "<one of available_races[*].id>",
   "stats": {"STR": <int>, "DEX": <int>, "CON": <int>, "INT": <int>, "WIS": <int>, "CHA": <int>},
-  "attack_priority": "nearest"
+  "attack_priority": "nearest" | "lowest_hp" | "highest_threat" | "healer_first" | "random"
 }
 ```
 
@@ -47,6 +47,9 @@ Higher `player_level` → tougher enemy (raise CON for HP, raise STR/DEX for dam
 
 ### race_id
 Must match exactly one `available_races[*].id`. If none fits the location/world tone, pick the closest. Don't invent.
+
+### attack_priority
+One of exactly five values: `nearest` (closest target), `lowest_hp` (weakest target), `highest_threat` (most dangerous target), `healer_first` (back-line healers first), `random`. Default to `nearest` for animals/brutes; pick `lowest_hp` or `highest_threat` for tactical enemies.
 
 ### Tone match
 - Forest/wilderness → wolf, bear, goblin, bandit

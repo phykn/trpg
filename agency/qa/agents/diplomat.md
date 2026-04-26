@@ -11,10 +11,14 @@
 
 ## 테스트 목표 (속으로만 의식)
 
-- NPC 친밀도(affinity) 가 행동에 자연스럽게 반응하는지
+- NPC 친밀도가 행동에 자연스럽게 반응하는지 (state_summary 의 `친밀도` 값)
 - 대화가 같은 답변을 반복하지 않는지
 - NPC 가 자기 성격(tone_hint, disposition) 을 유지하는지
 - memory 가 누적되어 다음 턴 narrator 가 기억하는지
+
+## 입력 컨텍스트
+
+매 턴 user 메시지에 `state_summary` + `last_gm` (직전 GM 응답) + 최근 흐름이 함께 들어옵니다. turn 0 직후의 `last_gm` 은 intro 텍스트이고, 직전 턴이 굴림(roll) 으로 끝났다면 `last_gm` 은 그 굴림 결과 묘사입니다. 같은 행동을 다시 입력할 필요 없이 그 결과를 받은 다음 행동을 고르세요.
 
 ## 출력 규칙
 

@@ -1,95 +1,95 @@
 # trpg-backend
 
-한국어 TRPG 엔진. FastAPI + Pydantic v2 + OpenAI 호환 LLM. 한 게임은 한 디렉터리 (`saves/games/<id>/`) 에 흩뿌린 JSON + JSONL 로 저장.
+Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in one directory (`saves/games/<id>/`) as a scatter of JSON + JSONL.
 
-설계 노트는 `../docs/01-overview.md`, 한 턴 내부 흐름은 `../docs/02-runtime.md`, 모듈 지도는 `../docs/05-codemap.md`. Claude Code 가이드는 [CLAUDE.md](./CLAUDE.md).
+Design notes start at `../docs/01-overview.md`; the per-turn flow is in `../docs/02-runtime.md`; the module map is in `../docs/05-codemap.md`. The Claude Code guide is [CLAUDE.md](./CLAUDE.md).
 
-## 스택
+## Stack
 
 - Python 3.12+, Pydantic v2, FastAPI, uvicorn, httpx, async/await
-- OpenAI 호환 LLM 서버 (예: llama.cpp) 를 `BASE_URL` 로 가리킴
-- 게임 상태는 파일 한 묶음 (`SAVES_DIR/games/<game_id>/`). DB 없음.
-- 단일 프로세스 (`asyncio.Lock` 으로 저장 직렬화)
+- OpenAI-compatible LLM server (e.g. llama.cpp) pointed at by `BASE_URL`
+- Game state is a pile of files (`SAVES_DIR/games/<game_id>/`). No DB.
+- Single process (writes serialized via `asyncio.Lock`)
 
-## 셋업
+## Setup
 
-venv·`pyproject.toml`·`requirements.txt` 는 repo 루트. 루트에서 한 번만:
+The venv, `pyproject.toml`, and `requirements.txt` live at the repo root. From the root, once:
 
 ```bash
 python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-`backend/.env` 작성 (필수, fallback 없음 — 누락 시 시작에서 KeyError):
+Write `backend/.env` (required, no fallbacks — missing keys raise `KeyError` at startup):
 
 ```
 HOST=0.0.0.0
 PORT=8001
-BASE_URL=http://localhost:8000/v1        # llama.cpp 등 OpenAI 호환 서버
+BASE_URL=http://localhost:8000/v1        # llama.cpp or another OpenAI-compatible server
 BASIC_AUTH_USER=<id>
 BASIC_AUTH_PASS=<pass>
-SAVES_DIR=../saves                       # repo 루트 peer 디렉터리
-PROFILE_DIR=../scenarios                 # repo 루트 peer 디렉터리
+SAVES_DIR=../saves                       # peer of the repo root
+PROFILE_DIR=../scenarios                 # peer of the repo root
 ```
 
-LLM 서버는 별도로 띄워야 함. 예: `llama-server -m <model.gguf> -c 8192 --port 8000`.
+The LLM server runs separately. Example: `llama-server -m <model.gguf> -c 8192 --port 8000`.
 
-## 실행
+## Run
 
 ```bash
-# backend/ 에서 (cwd 가 backend 여야 dotenv·상대경로가 맞음)
+# from backend/ (cwd must be backend/ so dotenv and relative paths resolve)
 ../.venv/bin/python run_api.py
 ```
 
-dotenv 가 자동으로 `backend/.env` 를 로드하고 uvicorn 이 `HOST:PORT` 에 바인딩.
+dotenv loads `backend/.env` automatically and uvicorn binds to `HOST:PORT`.
 
-### 라우트 (Basic Auth 필요)
+### Routes (Basic Auth required)
 
-| Method | Path | 용도 |
+| Method | Path | Purpose |
 |---|---|---|
-| GET  | `/health` | 헬스체크 (인증 불필요) |
-| GET  | `/profiles` | 시나리오 + 종족 카드 목록 |
-| GET  | `/session/current` | 마지막 game_id 의 FrontState (없으면 404) |
-| POST | `/session/init` | 새 게임 (profile + player) |
-| GET  | `/session/{id}/state` | FrontState 조회 |
-| POST | `/session/{id}/turn` | 한 턴 (SSE) |
-| POST | `/session/{id}/roll` | pending_check 굴림 (SSE) |
-| POST | `/session/{id}/intro` | GM 인트로 생성 (SSE, init 직후 1회) |
-| POST | `/debug/complete` | LLM 디버그용 단발 호출 |
+| GET  | `/health` | Health check (no auth) |
+| GET  | `/profiles` | Scenario + race card list |
+| GET  | `/session/current` | FrontState for the most recent game_id (404 if none) |
+| POST | `/session/init` | New game (profile + player) |
+| GET  | `/session/{id}/state` | Read FrontState |
+| POST | `/session/{id}/turn` | One turn (SSE) |
+| POST | `/session/{id}/roll` | Roll the pending_check (SSE) |
+| POST | `/session/{id}/intro` | GM intro (SSE, fired once after init) |
+| POST | `/debug/complete` | One-shot LLM call for debugging |
 
-SSE 이벤트: `judge / pending_check / narrative_delta / log_entry / state / done / error`. 자세한 모양은 `../docs/02-runtime.md` §2.4.
+SSE event types: `judge / pending_check / narrative_delta / log_entry / state / done / error`. See `../docs/02-runtime.md` §2.4 for shapes.
 
-## 테스트
+## Tests
 
 ```bash
-# repo 루트에서 (pyproject 의 testpaths=backend/tests 가 잡아줌)
-.venv/bin/python -m pytest -q                   # unit (live 스킵)
-RUN_LIVE=1 .venv/bin/python -m pytest -q        # LLM 살아 있어야 함
+# from repo root (pyproject pins testpaths=backend/tests)
+.venv/bin/python -m pytest -q                   # unit (live skipped)
+RUN_LIVE=1 .venv/bin/python -m pytest -q        # requires a live LLM
 ```
 
-`pytest-asyncio` 자동 모드. `live` 마커가 붙은 테스트는 `RUN_LIVE=1` 일 때만 실행 (`BASE_URL` 도달 가능해야 함).
+`pytest-asyncio` auto-mode. Tests marked `live` only run when `RUN_LIVE=1` (and `BASE_URL` is reachable).
 
-## 디렉터리
+## Layout
 
 ```
 backend/
-  run_api.py                       # 진입점
-  .env                             # 필수, gitignored
-  src/                             # 코드 (계층은 docs/05-codemap.md 참고)
+  run_api.py                       # entrypoint
+  .env                             # required, gitignored
+  src/                             # code (layer breakdown in docs/05-codemap.md)
   tests/                           # pytest
-  scripts/                         # 일회용 도구 (judge_stress 등)
-../scenarios/<profile>/            # 시나리오 시드 (world.md, start.json, races/, locations/, characters/, items/, quests/, chapters/, player_template.json). repo 루트 peer
-../saves/                          # 런타임 저장소 (gitignored)
-  .current                           # 마지막 game_id 한 줄
+  scripts/                         # one-off tools (judge_stress, etc.)
+../scenarios/<profile>/            # scenario seed (world.md, start.json, races/, locations/, characters/, items/, quests/, chapters/, player_template.json). Peer of the repo root
+../saves/                          # runtime store (gitignored)
+  .current                           # one-line pointer to the most recent game_id
   games/<game_id>/
-    meta.json                        # 싱글톤 필드 (player_id, world_time, pending_check, ...)
-    characters/<id>.json             # 엔티티별 한 파일
+    meta.json                        # singleton fields (player_id, world_time, pending_check, ...)
+    characters/<id>.json             # one file per entity
     items/<id>.json
     locations/<id>.json
     races/<id>.json                  # ...
-    log.jsonl                        # append-only 로그
-    history.jsonl                    # append-only 턴 요약
-    dialogue.jsonl                   # append-only 대사
+    log.jsonl                        # append-only log
+    history.jsonl                    # append-only turn summaries
+    dialogue.jsonl                   # append-only dialogue
 ```
 
-원자적 쓰기 (`.tmp` → `os.replace`) + `asyncio.Lock` 으로 동시 쓰기 차단.
+Atomic writes (`.tmp` → `os.replace`) plus `asyncio.Lock` keep concurrent writes from clobbering each other.
