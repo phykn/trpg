@@ -1,1 +1,3 @@
 data/
+qa/runs/
+__pycache__/
