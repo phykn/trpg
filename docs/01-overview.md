@@ -1,4 +1,4 @@
-# LLM TTRPG 엔진 설계 (back)
+# LLM TTRPG 엔진 설계 (backend)
 
 > 북극성 설계 노트. 시스템이 어떤 모양이고 왜 그렇게 잡았는지를 모아둔 곳. 할 일 목록이 아니라 들춰 보는 용도.
 
@@ -48,7 +48,7 @@ LLM 은 "무엇을 할까 / 어떻게 말할까" 만 고른다. 숫자, 상태, 
   - 프로필 목록 (`GET /profiles`) → 사용자가 시나리오 카드 중 하나 고름. P1 시드는 `config/profiles/default/` 한 벌만이지만, 디렉터리 스캔 방식이라 추후 시나리오를 폴더 추가만으로 확장 가능.
   - 캐릭터 생성 — 종족(목록 선택) + 외모(자유 텍스트 한 줄) + 이름. 스탯 6 개는 모두 10 으로 시작 (분배 화면 없음).
   - 골라진 race 의 racial_skills 자동 부여, max_HP/MP 는 [03-features.md](./03-features.md) §2.3 공식 (level 0).
-- 마지막 게임 자동 복원 (`GET /session/current`): `DATA_DIR/.current` 가 가리키는 game_id 의 `FrontState` 반환. 게임 목록·이어하기 화면 없음 — 한 명·한 게임 흐름.
+- 마지막 게임 자동 복원 (`GET /session/current`): `SAVES_DIR/.current` 가 가리키는 game_id 의 `FrontState` 반환. 게임 목록·이어하기 화면 없음 — 한 명·한 게임 흐름.
 - 기억·호감도·게임 안 시간 흐름은 최소한만 (등급·의도까지만 구현, 성향 보정은 P3 으로 미룸)
 - 집/사무실 네트워크 안에서만 (환경 변수 누락 시 즉시 멈춤, 아이디·비밀번호 보호)
 
@@ -208,7 +208,7 @@ DB 는 처음 세팅 부담이 크다. 파일 한 덩이로 가면:
 
 ### 3.13 왜 프론트로 보내는 데이터를 한 곳에서만 만드나?
 
-프론트 타입 (`front/types/domain.ts`) 은 **UI 에 보이는 필드만** 담는다. 안쪽 도메인은 `disposition` (성향), `tone_hint` (말투 힌트), `location_id`, `memories` (기억) 같은 힌트·계산용 필드를 많이 갖고 있다. 이게 마구 프론트로 새 나가면:
+프론트 타입 (`frontend/types/domain.ts`) 은 **UI 에 보이는 필드만** 담는다. 안쪽 도메인은 `disposition` (성향), `tone_hint` (말투 힌트), `location_id`, `memories` (기억) 같은 힌트·계산용 필드를 많이 갖고 있다. 이게 마구 프론트로 새 나가면:
 - 프론트가 안쪽 구조에 묶여서 바꾸기 어려워짐
 - 플레이어가 브라우저 개발자 도구로 "NPC 의 속마음 점수" 같은 걸 볼 수 있음 (게임 경험 망가짐)
 
@@ -233,7 +233,7 @@ DB 는 처음 세팅 부담이 크다. 파일 한 덩이로 가면:
 | `BASE_URL` | llama.cpp (로컬 LLM 서버) 주소 | `http://127.0.0.1:8080/v1` |
 | `BASIC_AUTH_USER` | 네트워크 보호용 접속 아이디 | `kn` |
 | `BASIC_AUTH_PASS` | 네트워크 보호용 접속 비밀번호 | (임의 문자열) |
-| `DATA_DIR` | GameState JSON 과 `.current` (마지막 game_id) 저장 위치 | `./data` |
+| `SAVES_DIR` | GameState JSON 과 `.current` (마지막 game_id) 저장 위치 | `./saves` |
 | `PROFILE_DIR` | 시나리오 시드 디렉터리. `GET /profiles` 가 이 아래를 스캔 | `./config/profiles` |
 
 프론트 쪽 `EXPO_PUBLIC_API_URL` 은 `http://{HOST}:{PORT}` 를 가리키고, 폰 테스트는 같은 네트워크 안 IP 를 쓴다 (외부 노출은 P3 까지 보류).

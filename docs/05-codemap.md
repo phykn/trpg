@@ -7,9 +7,9 @@
 ## 1. 모듈 구조
 
 ```
-back/
+backend/
   run_api.py                     FastAPI 진입점 (build_app, main)
-  .env                           HOST, PORT, BASE_URL, BASIC_AUTH_USER, BASIC_AUTH_PASS, DATA_DIR, PROFILE_DIR
+  .env                           HOST, PORT, BASE_URL, BASIC_AUTH_USER, BASIC_AUTH_PASS, SAVES_DIR, PROFILE_DIR
   config/
     profiles/
       default/

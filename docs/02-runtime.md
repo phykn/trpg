@@ -186,7 +186,7 @@ class PendingCheck:
 
 dc_judge runner 가 매 호출마다 두 단계 검증:
 
-1. **JSON 파싱** — `JudgeOutput` 스키마 검증 (`back/src/llm_client/agents/dc_judge/schema.py`).
+1. **JSON 파싱** — `JudgeOutput` 스키마 검증 (`backend/src/llm_client/agents/dc_judge/schema.py`).
 2. **semantic 검증** — `targets[]` 의 모든 ID 가 `state.characters | locations | items` 에 실제로 존재하는지 (LLM 은 종종 없는 ID 를 지어내는 환각이 있음).
 
 둘 중 어느 쪽이 실패해도 직전 응답 본문과 에러 메시지를 messages 에 append 해서 자기 교정 루프로 다시 호출 — 같은 실수를 반복하지 않게 LLM 컨텍스트에 실패 사유를 박아주는 것. 최대 5 회 재시도 (총 6 번 시도).
@@ -223,15 +223,15 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 - 요청 검증: `profile` 이 `PROFILE_DIR` 에 있는 디렉터리인지, `race_id` 가 그 프로필의 race 목록에 있는지. 누락·미스매치는 422.
 - 시드 로딩: `PROFILE_DIR/{profile}/` 의 `world.md`, `start.json`, `player_template.json`, `characters/`, `locations/`, `quests/`, `items/`, `races/` 를 읽어 초기 `GameState` 조립.
 - 플레이어 캐릭터 합성: `player_template.json` 의 시작 위치·equipment·인벤토리 시드는 그대로 쓰되, `name`·`race_id`·`appearance` 는 요청값으로 덮어쓰기. 스탯 6 개 (`STR/DEX/CON/INT/WIS/CHA`) 모두 10 으로 강제 (player_template 의 stats 는 무시). max_HP / max_MP 는 [03-features.md](./03-features.md) §2.3 의 공식 (level 0, CON 10 → max_HP 20, INT 10 → max_MP 15). race 의 `racial_skills` 자동 부여.
-- `uuid4` 로 `game_id` 할당, 최초 저장. `DATA_DIR/.current` 한 줄 텍스트 파일에 game_id 기록. `FrontState` 와 함께 반환.
+- `game_id` 는 시작 시각으로 할당 (`game_YYMMDD_HHMMSS`), 최초 저장. `SAVES_DIR/.current` 한 줄 텍스트 파일에 game_id 기록. `FrontState` 와 함께 반환.
 
-**현재 세션 복원** (`GET /session/current`): `DATA_DIR/.current` 가 가리키는 game_id 의 `FrontState` 반환. `.current` 가 없거나 가리키는 파일이 없으면 HTTP 404 — 프론트는 이 응답으로 새게임 화면 분기. 게임 목록·이어하기 화면은 P1 에 없음 (한 명·한 게임 흐름).
+**현재 세션 복원** (`GET /session/current`): `SAVES_DIR/.current` 가 가리키는 game_id 의 `FrontState` 반환. `.current` 가 없거나 가리키는 파일이 없으면 HTTP 404 — 프론트는 이 응답으로 새게임 화면 분기. 게임 목록·이어하기 화면은 P1 에 없음 (한 명·한 게임 흐름).
 
-**load** (`GET /session/{id}/state` 또는 `/turn` · `/roll` 진입): `DATA_DIR/games/{id}.json` 을 읽어 Pydantic 으로 `GameState` 복원. 파일 없으면 HTTP 404.
+**load** (`GET /session/{id}/state` 또는 `/turn` · `/roll` 진입): `SAVES_DIR/games/{id}.json` 을 읽어 Pydantic 으로 `GameState` 복원. 파일 없으면 HTTP 404.
 
 **save**: `apply_changes` 이후 파이프라인 말미에서 호출. 안전 쓰기 — `.tmp` 파일에 먼저 다 쓴 뒤 `os.replace` 로 한꺼번에 본 파일을 갈아끼운다. 쓰는 도중 죽어도 반쪽짜리 파일이 남지 않음. 프로세스 안에서 `asyncio.Lock` 하나로 동시 저장 요청을 한 줄 세워 순서대로 처리. 저장이 실패하면 메모리에 들고 있던 게임 상태를 직전 값으로 되돌리고 SSE `error: PersistenceFailed` 를 보낸다.
 
-**인스턴스 단위 파일**: 게임 하나 = 파일 하나 (`DATA_DIR/games/{game_id}.json`). 파일 이동·복사만으로 세션 이전 가능. 이유와 한계는 [01-overview.md](./01-overview.md) §3.11.
+**인스턴스 단위 파일**: 게임 하나 = 파일 하나 (`SAVES_DIR/games/{game_id}.json`). 파일 이동·복사만으로 세션 이전 가능. 이유와 한계는 [01-overview.md](./01-overview.md) §3.11.
 
 ---
 
