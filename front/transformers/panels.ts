@@ -1,13 +1,13 @@
 import type { Subject, Quest, Place } from '@/types/domain';
 import type { PanelSlot } from '@/types/ui';
 
-export type GameSnapshot = {
+type GameSnapshot = {
   subject: Subject | null;
   quest: Quest | null;
   place: Place | null;
 };
 
-export function buildSubjectSlot(subject: Subject | null): PanelSlot {
+function buildSubjectSlot(subject: Subject | null): PanelSlot {
   return {
     id: 'person',
     chip: subject
@@ -36,7 +36,7 @@ export function buildSubjectSlot(subject: Subject | null): PanelSlot {
   };
 }
 
-export function buildQuestSlot(quest: Quest | null): PanelSlot {
+function buildQuestSlot(quest: Quest | null): PanelSlot {
   return {
     id: 'quest',
     chip: { short: '퀘스트' },
@@ -59,7 +59,7 @@ export function buildQuestSlot(quest: Quest | null): PanelSlot {
   };
 }
 
-export function buildPlaceSlot(place: Place | null): PanelSlot {
+function buildPlaceSlot(place: Place | null): PanelSlot {
   return {
     id: 'bg',
     chip: { short: '장소' },
