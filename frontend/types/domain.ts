@@ -1,3 +1,5 @@
+import type { LogEntry } from './ui';
+
 export type Stats = {
   STR: number;
   DEX: number;
@@ -102,5 +104,5 @@ export type FrontState = {
   quest: Quest | null;
   place: Place | null;
   combat: CombatBadge | null;
-  log: import('./ui').LogEntry[];
+  log: LogEntry[];
 };

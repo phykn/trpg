@@ -30,7 +30,6 @@ export function NewGame({ onSubmit }: Props) {
   const [name, setName] = React.useState('');
   const [appearance, setAppearance] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
-  const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   const loadProfiles = React.useCallback(() => {
     setLoadError(null);
@@ -59,16 +58,10 @@ export function NewGame({ onSubmit }: Props) {
     if (!canSubmit || !profileId || !raceId) return;
     Keyboard.dismiss();
     setSubmitting(true);
-    setSubmitError(null);
-    try {
-      await onSubmit({
-        profile: profileId,
-        player: { name: trimmedName, race_id: raceId, appearance: trimmedAppearance },
-      });
-    } catch (e: unknown) {
-      setSubmitError(e instanceof Error ? e.message : String(e));
-      setSubmitting(false);
-    }
+    await onSubmit({
+      profile: profileId,
+      player: { name: trimmedName, race_id: raceId, appearance: trimmedAppearance },
+    });
   };
 
   if (loadError) {
@@ -150,10 +143,6 @@ export function NewGame({ onSubmit }: Props) {
           placeholder="한 줄로 외모를 묘사"
         />
       </Section>
-
-      {submitError && (
-        <Text className="font-sans text-body text-danger-fg">{submitError}</Text>
-      )}
 
       <Pressable
         onPress={submit}

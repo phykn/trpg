@@ -15,6 +15,8 @@ import { handleStreamEvent } from './handleStreamEvent';
 
 export type GameStatus = 'loading' | 'no-game' | 'ready' | 'error';
 
+export type Game = ReturnType<typeof useGame>;
+
 const STREAMING_GM_ID = -1;
 
 function mergeEntry(log: LogEntry[], entry: LogEntry): LogEntry[] {

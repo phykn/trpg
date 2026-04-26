@@ -26,8 +26,8 @@ export function PanelBody({ panel }: { panel: Panel }) {
       {panel.bar && <StatRow {...panel.bar} />}
       {panel.barSplit && (
         <View className="flex-row gap-3.5">
-          {panel.barSplit.map((cell, i) => (
-            <View key={i} className="flex-1 min-w-0">
+          {panel.barSplit.map((cell) => (
+            <View key={cell.label} className="flex-1 min-w-0">
               {'parts' in cell
                 ? <InlineParts label={cell.label} parts={cell.parts} />
                 : <StatRow {...cell} />}
@@ -37,8 +37,8 @@ export function PanelBody({ panel }: { panel: Panel }) {
       )}
 
       <ExpandGroup>
-        {(panel.sections || []).map((section, si) => (
-          <LabeledRow key={si} label={section.label} mono={!!section.nodes}>
+        {(panel.sections || []).map((section) => (
+          <LabeledRow key={section.label} label={section.label} mono={!!section.nodes}>
             {section.nodes ? <InlineNodes entries={section.nodes} /> : section.text}
           </LabeledRow>
         ))}

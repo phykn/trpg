@@ -1,7 +1,7 @@
 import type { Place, Quest, Subject } from '@/types/domain';
 import type { PanelSlot } from '@/types/ui';
 
-import { joinInventory, joinList } from './format';
+import { joinInventoryOrDash, joinOrDash } from './format';
 
 type GameSnapshot = {
   subject: Subject | null;
@@ -29,8 +29,8 @@ function buildSubjectSlot(subject: Subject | null): PanelSlot {
             },
           ],
           sections: [
-            { label: '특징', text: joinList(subject.known) },
-            { label: '소지', text: joinInventory(subject.inventory) },
+            { label: '특징', text: joinOrDash(subject.known) },
+            { label: '소지', text: joinInventoryOrDash(subject.inventory) },
             { label: '능력', nodes: Object.entries(subject.stats) as [string, number][] },
           ],
         }
@@ -57,8 +57,8 @@ function buildQuestSlot(quest: Quest | null): PanelSlot {
             },
           ],
           sections: [
-            { label: '목표', text: joinList(quest.goals) },
-            { label: '조건', text: joinList(quest.conditions) },
+            { label: '목표', text: joinOrDash(quest.goals) },
+            { label: '조건', text: joinOrDash(quest.conditions) },
             { label: '요약', text: quest.summary },
           ],
         }
@@ -76,9 +76,9 @@ function buildPlaceSlot(place: Place | null): PanelSlot {
           meta: place.date,
           bar: { label: '시간', value: place.hour, max: 24, tone: 'accent', display: `${place.hour}시 · ${place.period}` },
           sections: [
-            { label: '날씨', text: joinList(place.weather) },
-            { label: '특징', text: joinList(place.features) },
-            { label: '주변', text: joinList(place.surroundings) },
+            { label: '날씨', text: joinOrDash(place.weather) },
+            { label: '특징', text: joinOrDash(place.features) },
+            { label: '주변', text: joinOrDash(place.surroundings) },
           ],
         }
       : null,

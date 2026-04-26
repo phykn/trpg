@@ -1,7 +1,7 @@
 import React from 'react';
 import { Keyboard, View } from 'react-native';
 
-import { useGame } from '@/hooks/useGame';
+import type { Game } from '@/hooks/useGame';
 import { buildPanelSlots } from '@/presenters';
 
 import { CombatStrip } from './combat';
@@ -10,7 +10,7 @@ import { ContextCard } from './header';
 import { HeroPill } from './hero';
 import { Log } from './log';
 
-type Props = { game: ReturnType<typeof useGame> };
+type Props = { game: Game };
 
 export function Playing({ game }: Props) {
   const { hero, subject, quest, place, combat, log, pending, streaming, onSend, onRoll, onStop } = game;
