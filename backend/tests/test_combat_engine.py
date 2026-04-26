@@ -354,6 +354,28 @@ def test_pick_target_no_behavior_falls_back_to_first():
     assert pick_target(actor, pool, rng=random.Random(0)).id == "first"
 
 
+def test_pick_target_highest_threat_uses_damage_dealt():
+    """damage_dealt 가 큰 후보 우선 — 데이터 없으면 nearest 폴백."""
+    actor = _char("actor", behavior=CombatBehavior(attack_priority="highest_threat"))
+    pool = [actor, _char("a", hp=20), _char("b", hp=20), _char("c", hp=20)]
+    damage_dealt = {"a": 5, "b": 12, "c": 3}
+    assert pick_target(actor, pool, damage_dealt=damage_dealt).id == "b"
+
+
+def test_pick_target_highest_threat_no_damage_falls_back_to_nearest():
+    actor = _char("actor", behavior=CombatBehavior(attack_priority="highest_threat"))
+    pool = [actor, _char("first"), _char("second")]
+    assert pick_target(actor, pool, damage_dealt={}).id == "first"
+
+
+def test_pick_target_highest_threat_tiebreaker_lowest_hp():
+    """동률 데미지면 hp 낮은 쪽."""
+    actor = _char("actor", behavior=CombatBehavior(attack_priority="highest_threat"))
+    pool = [actor, _char("a", hp=20), _char("b", hp=5)]
+    damage_dealt = {"a": 10, "b": 10}
+    assert pick_target(actor, pool, damage_dealt=damage_dealt).id == "b"
+
+
 # --- flee ---------------------------------------------------------------------
 
 

@@ -36,11 +36,12 @@ backend/
       apply.py                   `state_changes` 검증·적용 + `rejected[]` 기록
       context.py                 surroundings / target_view / history 모아 묶음
       dc.py                      sigmoid DC, tier → DC, social_bonus, grade 계산
-      combat.py                  P2 전투 엔진 (LLM 미사용) + P3 §2.9 동반자 합류. 명중·데미지 (시그모이드 + dual-wield + crit) / 이니셔티브 / NPC AI 진영 기반 / flee / 사망·revive·death-save / character_death quest 훅 / combat_state 라이프사이클 / surprise 첫 라운드 skip / start_combat 의 양측 companions 자동 확장
-      recovery.py                P3 §2.4 회복 (rest). 위험도 굴림으로 풀회복 vs 인카운터 분기, sleep_hours 만큼 world_time 점프, sleep_encounters 풀에서 enemy 선택
+      combat.py                  P2 전투 엔진 (LLM 미사용) + P3 §2.9 동반자 합류. 명중·데미지 (시그모이드 + dual-wield + crit) / 이니셔티브 / NPC AI 진영 기반 (highest_threat 는 combat_state.damage_dealt 누적값 기준) / flee / 사망·revive·death-save / character_death quest 훅 / combat_state 라이프사이클 / surprise 첫 라운드 skip / start_combat 의 양측 companions 자동 확장
+      encounter.py               sleep_encounter 폴백 — encounter_summon agent 호출 → Character 등록. recovery 가 시드 풀 비었을 때 호출.
+      recovery.py                P3 §2.4 회복 (rest). 위험도 굴림으로 풀회복 vs 인카운터 분기, sleep_hours 만큼 world_time 점프, sleep_encounters 풀에서 enemy 선택. 풀이 비고 summon 콜백이 살아 있으면 LLM 즉석 적 생성 폴백 (pipeline/encounter)
       growth.py                  P3 §2.3 성장 (level_up). xp_for_next_level 곡선, 페어 트레이드 (STR↔CHA·DEX↔WIS·CON↔INT), recalc_max_hp_mp, grant_xp, assert_pair_trade_invariant
       inventory.py               P3 §2.5 장비/거래 + §2.7 사용. equip/unequip (슬롯·요구치·two_handed), check_can_carry (STR × weight_per_strength), buy/sell (affinity 흥정 cap, trade_threshold), use (ConsumableEffect heal/damage/mp_restore/buff + on_use trigger 패스스루)
-      skill.py                   P3 §2.6 스킬 cast (S1+S3). level/MP/range 검증, target self/single/area, grade_multipliers 보정, ActiveBuff 추가/tick, build_skill_from_candidate (LLM 산출 + level 템플릿)
+      skill.py                   P3 §2.6 스킬 cast (S1+S3). level/MP/range 검증, target self/single/area, grade_multipliers 보정, ActiveBuff 추가/tick, build_skill_from_candidate (LLM 산출 + level 템플릿). compute_cast_grade — attack/debuff 만 d20 굴림 (target defense 또는 WIS 저항), heal/buff/self 는 success 고정.
       skill_recommend.py         P3 §2.3 4단계. level_up 직후 LLM 호출해 캐릭터 메모리·turn_log·recent_inputs 보고 스킬 후보 3개 산출. agents/skill_recommend/ 가 서사 부분, pipeline/skill 의 build_skill_from_candidate 가 수치 채움.
       quest.py                   P3 §2.8 진행. check_quests (이벤트 character_death/location_enter/item_use 매칭, single-fire), fail_triggers, locked→active 잠금 해제, 보상 자동 적용 (gold/exp/items → player), chapter.progress (required=true 만 카운트), chapter active→completed 전환
       turn.py                    `run_turn` / `run_roll` 흐름 지휘 (SSE 이벤트 방출). combat_state 살아있으면 combat 분기로 라우팅
@@ -66,6 +67,7 @@ backend/
           prompt.md              시스템 프롬프트
         # narrate/ 등 다른 에이전트도 같은 레이아웃
         skill_recommend/         §2.3 4단계 — level_up 시 스킬 후보 3개 추천. 캐릭터 컨텍스트 → name/description/type/target/primary_stat/special_effect 산출. 수치는 pipeline/skill 이 템플릿으로 채움.
+        encounter_summon/        §2.4 폴백 — sleep_encounters 풀이 비었을 때 LLM 으로 적 한 마리 즉석 생성. 페어 트레이드 invariant 를 schema validator 가 강제.
     mapping/
       to_front.py                to_hero / to_subject / to_quest / to_place / to_log_entry / to_front_state / to_profile_list
     errors.py                    DomainError + PendingCheckActive/Expected, JudgeMalformed, LLMUnavailable, PersistenceFailed, ProfileNotFound, RaceNotFound, LevelUpInvalid, InventoryInvalid, SkillInvalid

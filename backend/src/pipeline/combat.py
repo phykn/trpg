@@ -241,11 +241,12 @@ def pick_target(
     actor: Character,
     candidates: list[Character],
     rng: random.Random | None = None,
+    damage_dealt: dict[str, int] | None = None,
 ) -> Character | None:
     """combat_behavior 에 따라 한 명 선택. None 이면 폴백 (단순 랜덤).
 
     `nearest` 의 거리 metric: 같은 location 안에서 정밀 위치 모델이 없어 turn_order 인덱스가 아닌 후보 리스트 등장 순서를 그대로 "가까운 순" 으로 본다.
-    `highest_threat` 는 P2 단계에선 nearest 폴백 — round-log 누적이 GameState 에 들어오는 P3 에서 정교화.
+    `highest_threat` 는 combat_state.damage_dealt 누적값을 보고 가장 많은 데미지를 입힌 적을 노린다 (없으면 nearest 폴백).
     """
     r = rng or random
     pool = _filter_alive_in_location(actor, candidates)
@@ -270,7 +271,11 @@ def pick_target(
             return min(healers, key=lambda c: (c.hp, c.id))
         return min(pool, key=lambda c: (c.hp, c.id))
     if mode == "highest_threat":
-        # P2: round-log 부재 — nearest 와 동일하게 폴백.
+        if damage_dealt:
+            scored = [(damage_dealt.get(c.id, 0), c) for c in pool]
+            best = max(scored, key=lambda t: (t[0], -t[1].hp))
+            if best[0] > 0:
+                return best[1]
         return pool[0]
     return pool[0]
 
@@ -577,4 +582,12 @@ def pick_npc_target(
     candidates = [
         state.characters[cid] for cid in targets_ids if cid in state.characters
     ]
-    return pick_target(actor, candidates, rng=rng)
+    return pick_target(actor, candidates, rng=rng, damage_dealt=cs.damage_dealt)
+
+
+def record_damage(state: GameState, attacker_id: str, damage: int) -> None:
+    """combat_state.damage_dealt 누적. highest_threat AI 가 본다."""
+    cs = state.combat_state
+    if cs is None or damage <= 0:
+        return
+    cs.damage_dealt[attacker_id] = cs.damage_dealt.get(attacker_id, 0) + damage

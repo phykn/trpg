@@ -9,6 +9,7 @@ grade 보정 → 데미지/회복/버프 적용. S2: judge 의미 매칭. §2.3 
 """
 from __future__ import annotations
 
+import random
 import re
 from typing import Literal
 
@@ -18,7 +19,8 @@ from ..errors import SkillInvalid
 from ..llm_client.agents.skill_recommend import SkillCandidate
 from ..rules import RULES
 from ..state.models import GameState
-from .combat import stat_modifier
+from .combat import enemy_defense, stat_modifier
+from .dc import compute_grade, sigmoid_required_roll
 
 CastTargets = list[str]
 
@@ -125,6 +127,39 @@ def _apply_buff(
 
 
 CastEffectKind = Literal["attack", "heal", "buff", "debuff"]
+
+
+def compute_cast_grade(
+    actor: Character,
+    skill: Skill,
+    state: GameState,
+    targets: CastTargets,
+    *,
+    rng: random.Random | None = None,
+) -> tuple[Grade, int, int]:
+    """attack/debuff 스킬은 d20 굴림으로 grade 결정. heal/buff/self 는 success.
+
+    반환: (grade, nat_d20, required_roll). 비-attack/debuff 면 (success, 0, 0).
+    attack: target.defense 기준. debuff: target.WIS 저항 (10 + WIS_mod).
+    """
+    if skill.type not in ("attack", "debuff") or not targets:
+        return ("success", 0, 0)
+    target_id = targets[0]
+    target = state.characters.get(target_id)
+    if target is None:
+        return ("success", 0, 0)
+    r = rng or random
+    stat_value = getattr(actor.stats, skill.primary_stat)
+    if skill.type == "attack":
+        defense = enemy_defense(target, state.items)
+    else:
+        defense = 10 + stat_modifier(target.stats.WIS)
+    nat = r.randint(1, 20)
+    mod = stat_modifier(stat_value)
+    total = nat + mod
+    required = sigmoid_required_roll(defense, stat_value)
+    grade = compute_grade(nat, total, required)
+    return (grade, nat, required)
 
 
 def cast(

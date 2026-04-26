@@ -48,11 +48,11 @@ def _seed_state(fresh_state, *, risk="safe", encounters=None):
     return fresh_state
 
 
-def test_full_recovery_in_safe_location(fresh_state):
+async def test_full_recovery_in_safe_location(fresh_state):
     state = _seed_state(fresh_state, risk="safe")
     before = state.world_time
 
-    outcome, enemies = recovery.attempt_rest(
+    outcome, enemies = await recovery.attempt_rest(
         state, "player_01", rng=_SeqRandom([0.99]), dirty=set()
     )
 
@@ -68,7 +68,7 @@ def test_full_recovery_in_safe_location(fresh_state):
     assert state.world_time == expected
 
 
-def test_dangerous_with_encounter_pool_triggers_combat_branch(fresh_state):
+async def test_dangerous_with_encounter_pool_triggers_combat_branch(fresh_state):
     enemy = Character(
         id="goblin_01",
         name="고블린",
@@ -84,7 +84,7 @@ def test_dangerous_with_encounter_pool_triggers_combat_branch(fresh_state):
     before_time = state.world_time
 
     # encounter_chance dangerous=0.6, rng.random()=0.1 → 발동
-    outcome, enemies = recovery.attempt_rest(
+    outcome, enemies = await recovery.attempt_rest(
         state, "player_01", rng=_SeqRandom([0.1]), dirty=set()
     )
 
@@ -95,12 +95,12 @@ def test_dangerous_with_encounter_pool_triggers_combat_branch(fresh_state):
     assert state.world_time == before_time
 
 
-def test_dangerous_without_encounter_falls_through_to_recovery(fresh_state):
+async def test_dangerous_without_encounter_falls_through_to_recovery(fresh_state):
     """encounter_chance > 0 이지만 random() 이 임계 위 → 풀회복."""
     state = _seed_state(fresh_state, risk="dangerous", encounters=["goblin_01"])
 
     # 0.99 > 0.6 → 인카운터 안 발동, 풀회복
-    outcome, enemies = recovery.attempt_rest(
+    outcome, enemies = await recovery.attempt_rest(
         state, "player_01", rng=_SeqRandom([0.99]), dirty=set()
     )
 
@@ -110,12 +110,12 @@ def test_dangerous_without_encounter_falls_through_to_recovery(fresh_state):
     assert actor.hp == actor.max_hp
 
 
-def test_risky_with_empty_pool_falls_back_to_recovery(fresh_state):
+async def test_risky_with_empty_pool_falls_back_to_recovery(fresh_state):
     """위험도 굴림 발동했지만 sleep_encounters 풀이 비어 있으면 풀회복 fallback."""
     state = _seed_state(fresh_state, risk="risky", encounters=[])
 
     # rng=0.0 (어떤 임계든 발동) → 풀이 비어서 풀회복으로 떨어짐
-    outcome, enemies = recovery.attempt_rest(
+    outcome, enemies = await recovery.attempt_rest(
         state, "player_01", rng=_SeqRandom([0.0]), dirty=set()
     )
 
@@ -123,7 +123,7 @@ def test_risky_with_empty_pool_falls_back_to_recovery(fresh_state):
     assert enemies == []
 
 
-def test_dead_enemy_is_filtered_from_pool(fresh_state):
+async def test_dead_enemy_is_filtered_from_pool(fresh_state):
     """sleep_encounters 안 캐릭터가 죽어 있으면 풀에서 빼고 fallback."""
     dead = Character(
         id="goblin_01",
@@ -138,7 +138,7 @@ def test_dead_enemy_is_filtered_from_pool(fresh_state):
     fresh_state.characters["goblin_01"] = dead
     state = _seed_state(fresh_state, risk="dangerous", encounters=["goblin_01"])
 
-    outcome, enemies = recovery.attempt_rest(
+    outcome, enemies = await recovery.attempt_rest(
         state, "player_01", rng=_SeqRandom([0.0]), dirty=set()
     )
 
@@ -146,16 +146,16 @@ def test_dead_enemy_is_filtered_from_pool(fresh_state):
     assert enemies == []
 
 
-def test_dirty_set_marks_actor_on_recovery(fresh_state):
+async def test_dirty_set_marks_actor_on_recovery(fresh_state):
     state = _seed_state(fresh_state, risk="safe")
     dirty: set[tuple[str, str]] = set()
 
-    recovery.attempt_rest(state, "player_01", rng=_SeqRandom([0.5]), dirty=dirty)
+    await recovery.attempt_rest(state, "player_01", rng=_SeqRandom([0.5]), dirty=dirty)
 
     assert ("characters", "player_01") in dirty
 
 
-def test_no_location_falls_back_to_recovery(fresh_state):
+async def test_no_location_falls_back_to_recovery(fresh_state):
     """location_id 없는 캐릭터는 위험도 알 수 없으니 풀회복."""
     actor = Character(
         id="player_01",
@@ -169,7 +169,7 @@ def test_no_location_falls_back_to_recovery(fresh_state):
     )
     fresh_state.characters["player_01"] = actor
 
-    outcome, enemies = recovery.attempt_rest(
+    outcome, enemies = await recovery.attempt_rest(
         fresh_state, "player_01", rng=_SeqRandom([0.01]), dirty=set()
     )
 

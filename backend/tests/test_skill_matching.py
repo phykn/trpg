@@ -84,29 +84,31 @@ def _seed_skill_state(fresh_state):
 def test_build_surroundings_includes_learned_skills(fresh_state):
     state = _seed_skill_state(fresh_state)
     s = build_surroundings(state, "player_01")
-    assert "learned_skills" in s
-    skills = s["learned_skills"]
+    assert "skills" in s
+    skills = s["skills"]
     assert len(skills) == 1
     assert skills[0]["id"] == "fireball"
     assert skills[0]["name"] == "화염구"
     assert skills[0]["type"] == "attack"
+    assert skills[0]["source"] == "learned"
 
 
 def test_build_surroundings_filters_skills_above_level(fresh_state):
     state = _seed_skill_state(fresh_state)
     state.characters["player_01"].level = 0  # 스킬 level=1 미달
     s = build_surroundings(state, "player_01")
-    assert s["learned_skills"] == []
+    assert s["skills"] == []
 
 
 def test_build_surroundings_filters_skills_when_mp_insufficient(fresh_state):
     state = _seed_skill_state(fresh_state)
     state.characters["player_01"].mp = 1  # mp_cost=4 미달
     s = build_surroundings(state, "player_01")
-    assert s["learned_skills"] == []
+    assert s["skills"] == []
 
 
-def test_build_surroundings_does_not_include_racial_skills(fresh_state):
+def test_build_surroundings_includes_racial_skills(fresh_state):
+    """racial 도 자동 매칭 후보 — source 필드로 구분."""
     state = _seed_skill_state(fresh_state)
     racial = Skill(
         id="bite",
@@ -118,9 +120,9 @@ def test_build_surroundings_does_not_include_racial_skills(fresh_state):
     )
     state.characters["player_01"].racial_skills = [racial]
     s = build_surroundings(state, "player_01")
-    ids = [sk["id"] for sk in s["learned_skills"]]
-    assert "bite" not in ids
-    assert "fireball" in ids
+    by_id = {sk["id"]: sk for sk in s["skills"]}
+    assert by_id["bite"]["source"] == "racial"
+    assert by_id["fireball"]["source"] == "learned"
 
 
 # --- combat 분기에서 skill cast --------------------------------------------

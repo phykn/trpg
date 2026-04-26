@@ -1,10 +1,15 @@
 from typing import Any
 
 from .schema import (
+    BuyAction,
     CombatAction,
     EquipAction,
+    FleeAction,
     JudgeOutput,
+    LearnSkillAction,
+    LevelUpAction,
     RollAction,
+    SellAction,
     UnequipAction,
     UseAction,
 )
@@ -38,15 +43,65 @@ def check_semantics(output: JudgeOutput, surroundings: dict[str, Any]) -> None:
     if isinstance(output, CombatAction) and output.skill_id is not None:
         valid_skills = {
             s.get("id")
-            for s in surroundings.get("learned_skills", []) or []
+            for s in surroundings.get("skills", []) or []
             if isinstance(s, dict)
         }
         if output.skill_id not in valid_skills:
             raise JudgeSemanticError(
-                f"skill_id {output.skill_id!r} not in learned_skills. "
+                f"skill_id {output.skill_id!r} not in skills. "
                 f"Valid skills are: {sorted(s for s in valid_skills if s)}. "
                 f"Either pick one from the list or omit skill_id for a plain attack."
             )
+    if isinstance(output, FleeAction):
+        if not surroundings.get("in_combat"):
+            raise JudgeSemanticError(
+                "flee only valid in combat. Outside combat, use 'pass' or 'roll' instead."
+            )
+    if isinstance(output, LevelUpAction):
+        growth = surroundings.get("growth") or {}
+        if not growth.get("can_level_up"):
+            raise JudgeSemanticError(
+                "level_up not currently available — xp not at threshold. Use 'pass' or 'clarify'."
+            )
+        # pair check (engine also enforces, but reject obvious mismatch early)
+        pairs = {("STR", "CHA"), ("CHA", "STR"), ("DEX", "WIS"), ("WIS", "DEX"), ("CON", "INT"), ("INT", "CON")}
+        if (output.stat_up, output.stat_down) not in pairs:
+            raise JudgeSemanticError(
+                f"invalid pair: {output.stat_up}↑/{output.stat_down}↓. Pairs are STR↔CHA, DEX↔WIS, CON↔INT."
+            )
+    if isinstance(output, LearnSkillAction):
+        candidates = surroundings.get("skill_candidates") or []
+        if not candidates:
+            raise JudgeSemanticError(
+                "no pending skill candidates. Use 'pass' or 'clarify'."
+            )
+        if output.index >= len(candidates):
+            raise JudgeSemanticError(
+                f"index {output.index} out of range; only {len(candidates)} candidates."
+            )
+    if isinstance(output, (BuyAction, SellAction)):
+        merchants = surroundings.get("merchants") or []
+        merchant = next(
+            (m for m in merchants if isinstance(m, dict) and m.get("id") == output.npc_id),
+            None,
+        )
+        if merchant is None:
+            raise JudgeSemanticError(
+                f"npc_id {output.npc_id!r} is not a trader here. "
+                f"Merchants: {sorted(m.get('id', '') for m in merchants if isinstance(m, dict))}."
+            )
+        if isinstance(output, BuyAction):
+            stock_ids = {i.get("id") for i in merchant.get("stock", []) if isinstance(i, dict)}
+            if output.item_id not in stock_ids:
+                raise JudgeSemanticError(
+                    f"item {output.item_id!r} not in {output.npc_id} stock. Available: {sorted(s for s in stock_ids if s)}."
+                )
+        else:
+            inv_ids = {i.get("id") for i in surroundings.get("inventory", []) if isinstance(i, dict)}
+            if output.item_id not in inv_ids:
+                raise JudgeSemanticError(
+                    f"sell item {output.item_id!r} not in player inventory."
+                )
     if isinstance(output, UseAction):
         inv_items = {
             i.get("id"): i.get("kind")

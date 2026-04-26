@@ -45,6 +45,7 @@ class CombatState(BaseModel):
     round: int = 1
     surprise: Literal["player", "enemy"] | None = None
     enemy_ids: list[str] = []
+    damage_dealt: dict[str, int] = {}  # actor_id → 누적 데미지 (highest_threat AI 용)
 
 
 # --- skills / buffs --------------------------------------------------------

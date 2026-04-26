@@ -25,7 +25,34 @@ class RejectAction(_StrictAction):
 class CombatAction(_StrictAction):
     action: Literal["combat"]
     targets: list[str] = Field(min_length=1)
-    skill_id: str | None = None  # learned_skills 의미 매칭 (§2.6 S2)
+    skill_id: str | None = None  # racial + learned 의미 매칭 (§2.6 S2)
+
+
+class FleeAction(_StrictAction):
+    action: Literal["flee"]
+
+
+class LevelUpAction(_StrictAction):
+    action: Literal["level_up"]
+    stat_up: StatKey
+    stat_down: StatKey
+
+
+class LearnSkillAction(_StrictAction):
+    action: Literal["learn_skill"]
+    index: int = Field(ge=0)
+
+
+class BuyAction(_StrictAction):
+    action: Literal["buy"]
+    npc_id: str
+    item_id: str
+
+
+class SellAction(_StrictAction):
+    action: Literal["sell"]
+    npc_id: str
+    item_id: str
 
 
 class ClarifyAction(_StrictAction):
@@ -65,12 +92,17 @@ JudgeOutput = Annotated[
     PassAction
     | RejectAction
     | CombatAction
+    | FleeAction
     | ClarifyAction
     | RollAction
     | RestAction
     | UseAction
     | EquipAction
-    | UnequipAction,
+    | UnequipAction
+    | LevelUpAction
+    | LearnSkillAction
+    | BuyAction
+    | SellAction,
     Field(discriminator="action"),
 ]
 

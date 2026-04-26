@@ -10,6 +10,7 @@ from ..domain.entities import (
 )
 from ..rules import RULES
 from ..state.models import GameState
+from .growth import can_afford_level_up, xp_for_next_level
 
 
 # --- world layer -----------------------------------------------------------
@@ -149,35 +150,114 @@ def _equipment_payload(state: GameState, actor: Character) -> dict:
     return out
 
 
-def _learned_skills_payload(actor: Character) -> list[dict]:
-    """judge 의미 매칭용. learned_skills 만 노출 — racial_skills 는 자동 매칭 대상이 아님."""
+def _skills_payload(actor: Character) -> list[dict]:
+    """judge 의미 매칭용. racial + learned 둘 다 노출, source 로 구분.
+    레벨·MP 게이트 통과한 것만."""
     out: list[dict] = []
-    for s in actor.learned_skills:
-        if s.level > actor.level or actor.mp < s.mp_cost:
-            continue  # 게이트·MP 미달이면 매칭 후보에서 제외 (silent 폴백 유도)
-        item: dict = {
-            "id": s.id,
+    for source, skills in (("racial", actor.racial_skills), ("learned", actor.learned_skills)):
+        for s in skills:
+            if s.level > actor.level or actor.mp < s.mp_cost:
+                continue
+            item: dict = {
+                "id": s.id,
+                "name": s.name,
+                "type": s.type,
+                "target": s.target,
+                "source": source,
+            }
+            if s.description:
+                item["description"] = s.description
+            if s.special_effect:
+                item["effect"] = s.special_effect
+            out.append(item)
+    return out
+
+
+def _growth_payload(actor: Character) -> dict:
+    return {
+        "level": actor.level,
+        "xp_pool": actor.xp_pool,
+        "xp_needed": xp_for_next_level(actor.level),
+        "can_level_up": can_afford_level_up(actor),
+    }
+
+
+def _skill_candidates_payload(state: GameState) -> list[dict]:
+    """state.pending_skill_candidates → judge 매칭용. 비어 있으면 빈 리스트."""
+    out: list[dict] = []
+    for s in state.pending_skill_candidates:
+        out.append({
             "name": s.name,
             "type": s.type,
             "target": s.target,
-        }
-        if s.description:
-            item["description"] = s.description
-        if s.special_effect:
-            item["effect"] = s.special_effect
-        out.append(item)
+            "primary_stat": s.primary_stat,
+            "description": s.description,
+        })
+    return out
+
+
+def _merchants_payload(state: GameState, actor: Character) -> list[dict]:
+    """같은 location 의 NPC 중 affinity ≥ trade_threshold + 인벤토리 보유 = 거래 대상.
+    각 entry: {id, name, gold, stock: [{id, name, price, kind}]}.
+    """
+    if actor.location_id is None:
+        return []
+    out: list[dict] = []
+    threshold = RULES.social.trade_threshold
+    for cid, npc in state.characters.items():
+        if cid == actor.id or npc.location_id != actor.location_id:
+            continue
+        if not npc.alive:
+            continue
+        if not npc.inventory_ids:
+            continue
+        aff = npc.relations.get(actor.id, 0)
+        if aff < threshold:
+            continue
+        stock: list[dict] = []
+        for iid in set(npc.inventory_ids):
+            item = state.items.get(iid)
+            if item is None:
+                continue
+            eff = item.effects
+            if isinstance(eff, ConsumableEffect):
+                kind = "consumable"
+            elif isinstance(eff, WeaponEffect):
+                kind = "weapon"
+            elif isinstance(eff, ArmorEffect):
+                kind = "armor"
+            else:
+                kind = "misc"
+            stock.append({
+                "id": iid,
+                "name": item.name,
+                "price": item.price,
+                "kind": kind,
+            })
+        if not stock:
+            continue
+        out.append({
+            "id": cid,
+            "name": npc.name,
+            "stock": stock,
+        })
     return out
 
 
 def build_surroundings(state: GameState, actor_id: str) -> dict:
     actor = state.characters[actor_id]
+    in_combat = state.combat_state is not None
     if not actor.location_id or actor.location_id not in state.locations:
         return {
             "location": None,
             "entities": [],
-            "learned_skills": [],
+            "skills": [],
             "inventory": [],
             "equipment": _equipment_payload(state, actor),
+            "in_combat": in_combat,
+            "growth": _growth_payload(actor),
+            "skill_candidates": _skill_candidates_payload(state),
+            "merchants": [],
         }
     location = state.locations[actor.location_id]
 
@@ -231,7 +311,11 @@ def build_surroundings(state: GameState, actor_id: str) -> dict:
     return {
         "location": location_data,
         "entities": entities,
-        "learned_skills": _learned_skills_payload(actor),
+        "skills": _skills_payload(actor),
         "inventory": _inventory_payload(state, actor),
         "equipment": _equipment_payload(state, actor),
+        "in_combat": in_combat,
+        "growth": _growth_payload(actor),
+        "skill_candidates": _skill_candidates_payload(state),
+        "merchants": _merchants_payload(state, actor),
     }

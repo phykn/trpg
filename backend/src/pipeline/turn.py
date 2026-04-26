@@ -22,13 +22,18 @@ from ..errors import (
     PersistenceFailed,
 )
 from ..llm_client.agents.dc_judge.schema import (
+    BuyAction,
     ClarifyAction,
     CombatAction,
     EquipAction,
+    FleeAction,
+    LearnSkillAction,
+    LevelUpAction,
     PassAction,
     RejectAction,
     RestAction,
     RollAction,
+    SellAction,
     UnequipAction,
     UseAction,
 )
@@ -43,16 +48,19 @@ from ..state.store import (
     save_entity,
     save_meta,
 )
-from ..errors import InventoryInvalid, SkillInvalid
+from ..errors import InventoryInvalid, LevelUpInvalid, SkillInvalid
 from .apply import apply_changes
 from . import combat as combat_engine
+from . import encounter as encounter_engine
 from . import inventory as inventory_engine
 from . import recovery as recovery_engine
 from . import skill as skill_engine
 from .dc import compute_grade, pick_dc, sigmoid_required_roll, social_bonus, tier_to_int
+from .growth import level_up as level_up_engine
 from .judge import run_judge
 from .memory_writer import write_memories
 from .narrate import run_narrate
+from .skill_recommend import recommend_skill_candidates
 
 ToFrontFn = Callable[[GameState], dict]
 
@@ -223,6 +231,7 @@ async def _emit_attack(
                 nat_d20=outcome.nat_d20,
                 dirty=dirty.entities,
             )
+            combat_engine.record_damage(state, attacker_id, outcome.damage)
         text = _format_attack_log(state, attacker_id, target_id, outcome, apply_result)
         gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
         _push_log_entry(state, gm_log, dirty)
@@ -242,11 +251,13 @@ async def _emit_attack(
             break
 
 
-def _format_skill_log(state: GameState, actor_id: str, cast_result: dict) -> str:
+def _format_skill_log(state: GameState, actor_id: str, cast_result: dict, grade: str = "success") -> str:
     """「스킬명」 발동 + 대상별 효과 한 줄."""
     actor_name = state.characters[actor_id].name
     skill_name = cast_result["skill_name"]
-    parts: list[str] = [f"{actor_name} — 「{skill_name}」 발동"]
+    grade_label = _GRADE_LABEL.get(grade, "")
+    head_grade = f" ({grade_label})" if grade_label and grade != "success" else ""
+    parts: list[str] = [f"{actor_name} — 「{skill_name}」 발동{head_grade}"]
     for eff in cast_result["effects"]:
         tid = eff["target"]
         tname = state.characters[tid].name if tid in state.characters else tid
@@ -271,12 +282,28 @@ async def _emit_skill_cast(
     skill_id: str,
     targets: list[str],
     dirty: _Dirty,
+    rng: random.Random | None = None,
 ) -> AsyncIterator[dict]:
-    """combat 중 skill cast — log_entry + combat_turn SSE 발행. 실패 시 에러 메시지만 흘리고 아무 효과 없음."""
+    """combat 중 skill cast — d20 grade 굴림 → cast 호출 → log_entry + combat_turn SSE.
+
+    attack/debuff 는 target defense / WIS 저항 vs actor primary_stat 굴림.
+    heal/buff/self 는 grade=success (multiplier 1.0).
+    """
     actor = state.characters[actor_id]
     try:
+        skill_obj = skill_engine.find_skill(actor, skill_id)
+    except SkillInvalid as e:
+        text = f"{actor.name} — 스킬 발동 실패 ({e})."
+        gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+        _push_log_entry(state, gm_log, dirty)
+        yield {"type": "log_entry", "data": gm_log.model_dump()}
+        return
+    grade, _nat, _req = skill_engine.compute_cast_grade(
+        actor, skill_obj, state, targets, rng=rng
+    )
+    try:
         cast_result = skill_engine.cast(
-            actor, skill_id, state, targets, dirty=dirty.entities
+            actor, skill_id, state, targets, grade=grade, dirty=dirty.entities
         )
     except SkillInvalid as e:
         text = f"{actor.name} — 스킬 발동 실패 ({e})."
@@ -284,7 +311,10 @@ async def _emit_skill_cast(
         _push_log_entry(state, gm_log, dirty)
         yield {"type": "log_entry", "data": gm_log.model_dump()}
         return
-    text = _format_skill_log(state, actor_id, cast_result)
+    for eff in cast_result["effects"]:
+        if eff.get("kind") == "attack":
+            combat_engine.record_damage(state, actor_id, int(eff.get("damage", 0)))
+    text = _format_skill_log(state, actor_id, cast_result, grade)
     gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
     _push_log_entry(state, gm_log, dirty)
     yield {"type": "log_entry", "data": gm_log.model_dump()}
@@ -293,7 +323,7 @@ async def _emit_skill_cast(
         "data": {
             "actor": actor_id,
             "action": "skill",
-            "grade": "success",
+            "grade": grade,
             "skill_id": cast_result["skill_id"],
             "skill_name": cast_result["skill_name"],
             "effects": cast_result["effects"],
@@ -403,6 +433,111 @@ async def _emit_use(
         yield {"type": "log_entry", "data": gm_log.model_dump()}
         return
     text = _format_use_log(state, actor_id, result)
+    gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+    _push_log_entry(state, gm_log, dirty)
+    yield {"type": "log_entry", "data": gm_log.model_dump()}
+
+
+async def _emit_level_up(
+    state: GameState,
+    actor_id: str,
+    stat_up: str,
+    stat_down: str,
+    client: LLMClient | None,
+    dirty: _Dirty,
+) -> AsyncIterator[dict]:
+    """level_up 적용 + 후보 추천 (silent fallback)."""
+    actor = state.characters[actor_id]
+    try:
+        level_up_engine(actor, stat_up, stat_down)  # type: ignore[arg-type]
+    except LevelUpInvalid as e:
+        text = f"{actor.name} — 성장 실패 ({e})."
+        gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+        _push_log_entry(state, gm_log, dirty)
+        yield {"type": "log_entry", "data": gm_log.model_dump()}
+        return
+    dirty.entities.add(("characters", actor_id))
+    text = (
+        f"{actor.name} — 레벨 {actor.level} 도달 "
+        f"({stat_up} ↑ / {stat_down} ↓, HP {actor.max_hp} / MP {actor.max_mp})"
+    )
+    gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+    _push_log_entry(state, gm_log, dirty)
+    yield {"type": "log_entry", "data": gm_log.model_dump()}
+    if client is None:
+        state.pending_skill_candidates = []
+        return
+    try:
+        candidates = await recommend_skill_candidates(client, state)
+        state.pending_skill_candidates = candidates
+    except Exception:
+        state.pending_skill_candidates = []
+    if state.pending_skill_candidates:
+        names = ", ".join(f"「{s.name}」" for s in state.pending_skill_candidates)
+        cand_text = f"새 스킬 후보: {names}"
+        cand_log = ActLogEntry(id=_next_log_id(state), kind="act", text=cand_text)
+        _push_log_entry(state, cand_log, dirty)
+        yield {"type": "log_entry", "data": cand_log.model_dump()}
+
+
+async def _emit_learn_skill(
+    state: GameState,
+    actor_id: str,
+    index: int,
+    dirty: _Dirty,
+) -> AsyncIterator[dict]:
+    actor = state.characters[actor_id]
+    candidates = list(state.pending_skill_candidates)
+    if not candidates or index < 0 or index >= len(candidates):
+        text = f"{actor.name} — 익힐 후보가 없거나 잘못된 선택."
+        gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+        _push_log_entry(state, gm_log, dirty)
+        yield {"type": "log_entry", "data": gm_log.model_dump()}
+        return
+    chosen = candidates[index]
+    actor.learned_skills.append(chosen)
+    state.pending_skill_candidates = []
+    dirty.entities.add(("characters", actor_id))
+    text = f"{actor.name} — 「{chosen.name}」 습득."
+    gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+    _push_log_entry(state, gm_log, dirty)
+    yield {"type": "log_entry", "data": gm_log.model_dump()}
+
+
+async def _emit_trade(
+    state: GameState,
+    actor_id: str,
+    npc_id: str,
+    item_id: str,
+    dirty: _Dirty,
+    *,
+    direction: Literal["buy", "sell"],
+) -> AsyncIterator[dict]:
+    player = state.characters[actor_id]
+    npc = state.characters.get(npc_id)
+    if npc is None:
+        text = f"{player.name} — 거래 상대를 찾을 수 없다."
+        gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+        _push_log_entry(state, gm_log, dirty)
+        yield {"type": "log_entry", "data": gm_log.model_dump()}
+        return
+    try:
+        if direction == "buy":
+            price = inventory_engine.buy(player, npc, item_id, state.items)
+        else:
+            price = inventory_engine.sell(player, npc, item_id, state.items)
+    except InventoryInvalid as e:
+        text = f"{player.name} — 거래 실패 ({e})."
+        gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+        _push_log_entry(state, gm_log, dirty)
+        yield {"type": "log_entry", "data": gm_log.model_dump()}
+        return
+    dirty.entities.add(("characters", actor_id))
+    dirty.entities.add(("characters", npc.id))
+    item = state.items.get(item_id)
+    iname = item.name if item else item_id
+    verb = "구매" if direction == "buy" else "판매"
+    text = f"{player.name} — {npc.name}에게 「{iname}」 {verb} ({price} 금)"
     gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
     _push_log_entry(state, gm_log, dirty)
     yield {"type": "log_entry", "data": gm_log.model_dump()}
@@ -597,7 +732,7 @@ async def _run_combat_player_turn(
             return
         if result.skill_id:
             async for ev in _emit_skill_cast(
-                state, state.player_id, result.skill_id, list(result.targets), dirty
+                state, state.player_id, result.skill_id, list(result.targets), dirty, rng=rng
             ):
                 yield ev
         else:
@@ -606,6 +741,41 @@ async def _run_combat_player_turn(
                 state, state.player_id, target_id, outcomes, dirty
             ):
                 yield ev
+        combat_engine.advance_turn(state)
+        async for ev in _run_combat_npc_phase(state, dirty, rng):
+            yield ev
+        state.turn_count += 1
+        _advance_time(state)
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    if isinstance(result, FleeAction):
+        ok, roll_total = combat_engine.try_flee(player, rng=rng)
+        if ok:
+            text = f"{player.name}이(가) 전투에서 도주했다 (굴림 {roll_total})."
+            gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+            _push_log_entry(state, gm_log, dirty)
+            yield {"type": "log_entry", "data": gm_log.model_dump()}
+            yield {
+                "type": "combat_turn",
+                "data": {"actor": state.player_id, "action": "flee", "grade": "success"},
+            }
+            yield {"type": "combat_end", "data": {"outcome": "fled"}}
+            combat_engine.end_combat(state)
+            state.turn_count += 1
+            _advance_time(state)
+            async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+                yield ev
+            return
+        text = f"{player.name}이(가) 도주를 시도했으나 실패했다 (굴림 {roll_total})."
+        gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+        _push_log_entry(state, gm_log, dirty)
+        yield {"type": "log_entry", "data": gm_log.model_dump()}
+        yield {
+            "type": "combat_turn",
+            "data": {"actor": state.player_id, "action": "flee", "grade": "failure"},
+        }
         combat_engine.advance_turn(state)
         async for ev in _run_combat_npc_phase(state, dirty, rng):
             yield ev
@@ -710,9 +880,12 @@ async def _run_combat_player_turn(
             yield ev
         return
 
-    # RejectAction — 전투 안에서는 narrate 부르지 않고 짧은 거절. turn 안 늘림.
-    assert isinstance(result, RejectAction)
-    text = "그 발화는 무시된다."
+    # RejectAction 또는 전투 중 부적합 액션 (level_up/learn_skill/buy/sell).
+    # 모두 짧게 거절, turn 안 늘림.
+    if isinstance(result, RejectAction):
+        text = "그 발화는 무시된다."
+    else:
+        text = "전투 중에는 그 행동을 할 수 없다."
     act_log = ActLogEntry(id=_next_log_id(state), kind="act", text=text)
     _push_log_entry(state, act_log, dirty)
     yield {"type": "log_entry", "data": act_log.model_dump()}
@@ -722,15 +895,33 @@ async def _run_combat_player_turn(
 
 async def _run_rest(
     state: GameState,
+    profile_dir: str,
     saves_dir: str,
     dirty: _Dirty,
     rng: random.Random | None,
     to_front_fn: ToFrontFn | None,
+    client: LLMClient | None = None,
 ) -> AsyncIterator[dict]:
-    """평시 rest 분기. 위험도 굴림으로 풀회복 vs 인카운터 분기."""
+    """평시 rest 분기. 위험도 굴림으로 풀회복 vs 인카운터 분기.
+
+    sleep_encounters 풀이 비어 있고 client 가 살아 있으면 LLM 으로 적 한 마리 즉석 생성.
+    """
     state.turn_count += 1
-    outcome, enemy_ids = recovery_engine.attempt_rest(
-        state, state.player_id, rng=rng, dirty=dirty.entities
+
+    summon_cb: recovery_engine.SummonCallable | None = None
+    if client is not None:
+        async def _summon(s: GameState, loc_id: str) -> str | None:
+            location = s.locations.get(loc_id)
+            if location is None:
+                return None
+            char = await encounter_engine.summon_encounter(
+                client, s, location, profile_dir, s.profile, dirty=dirty.entities
+            )
+            return char.id if char else None
+        summon_cb = _summon
+
+    outcome, enemy_ids = await recovery_engine.attempt_rest(
+        state, state.player_id, rng=rng, dirty=dirty.entities, summon=summon_cb
     )
     actor = state.characters[state.player_id]
 
@@ -918,7 +1109,7 @@ async def run_turn(
         # skill_id 가 매칭됐으면 player 첫 차례를 cast 로 즉시 소비.
         if result.skill_id and state.combat_state is not None:
             async for ev in _emit_skill_cast(
-                state, state.player_id, result.skill_id, list(result.targets), dirty
+                state, state.player_id, result.skill_id, list(result.targets), dirty, rng=rng
             ):
                 yield ev
             combat_engine.advance_turn(state)
@@ -944,7 +1135,9 @@ async def run_turn(
         return  # Wait for the /roll call — don't emit `done`.
 
     if isinstance(result, RestAction):
-        async for ev in _run_rest(state, saves_dir, dirty, rng, to_front_fn):
+        async for ev in _run_rest(
+            state, profile_dir, saves_dir, dirty, rng, to_front_fn, client=client
+        ):
             yield ev
         return
 
@@ -971,6 +1164,60 @@ async def run_turn(
     if isinstance(result, UnequipAction):
         state.turn_count += 1
         async for ev in _emit_unequip(state, state.player_id, result.item_id, dirty):
+            yield ev
+        _advance_time(state)
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    if isinstance(result, FleeAction):
+        # 평시 flee — 의미 없음, narrate 없이 짧은 안내만. turn 안 늘림.
+        text = "지금은 도망쳐 달아날 전투가 없다."
+        act_log = ActLogEntry(id=_next_log_id(state), kind="act", text=text)
+        _push_log_entry(state, act_log, dirty)
+        yield {"type": "log_entry", "data": act_log.model_dump()}
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    if isinstance(result, LevelUpAction):
+        state.turn_count += 1
+        async for ev in _emit_level_up(
+            state, state.player_id, result.stat_up, result.stat_down, client, dirty
+        ):
+            yield ev
+        _advance_time(state)
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    if isinstance(result, LearnSkillAction):
+        state.turn_count += 1
+        async for ev in _emit_learn_skill(
+            state, state.player_id, result.index, dirty
+        ):
+            yield ev
+        _advance_time(state)
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    if isinstance(result, BuyAction):
+        state.turn_count += 1
+        async for ev in _emit_trade(
+            state, state.player_id, result.npc_id, result.item_id, dirty, direction="buy"
+        ):
+            yield ev
+        _advance_time(state)
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    if isinstance(result, SellAction):
+        state.turn_count += 1
+        async for ev in _emit_trade(
+            state, state.player_id, result.npc_id, result.item_id, dirty, direction="sell"
+        ):
             yield ev
         _advance_time(state)
         async for ev in _finalize(state, saves_dir, dirty, to_front_fn):

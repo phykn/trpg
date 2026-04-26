@@ -292,6 +292,47 @@ def test_tick_active_buffs_returns_removed_count(fresh_state):
     assert removed == 1
 
 
+def test_compute_cast_grade_attack_uses_d20(fresh_state):
+    """attack 스킬은 d20+stat_mod vs target defense 굴려 grade 산출."""
+    import random as rng_mod
+
+    p = _player(skills=[_attack_skill()], stats=Stats(INT=14))
+    e = _enemy(hp=10)
+    state = _state(fresh_state, player_01=p, goblin_01=e)
+
+    # 결정론 — Random(0) 의 첫 randint(1,20) 값을 대조 대신, 단순히 grade in 5종 확인.
+    grade, nat, req = skill_eng.compute_cast_grade(
+        p, _attack_skill(), state, ["goblin_01"], rng=rng_mod.Random(0)
+    )
+    assert grade in ("critical_success", "success", "partial_success", "failure", "critical_failure")
+    assert 1 <= nat <= 20
+    assert req >= 1
+
+
+def test_compute_cast_grade_heal_returns_success(fresh_state):
+    """heal/buff/self 는 d20 굴리지 않고 success 고정 (multiplier 1.0)."""
+    p = _player(skills=[_heal_skill()])
+    state = _state(fresh_state, player_01=p)
+
+    grade, nat, req = skill_eng.compute_cast_grade(
+        p, _heal_skill(), state, ["player_01"], rng=None
+    )
+    assert grade == "success"
+    assert nat == 0
+    assert req == 0
+
+
+def test_cast_with_failure_grade_zeros_damage(fresh_state):
+    """compute_cast_grade 가 'failure' 면 cast(grade='failure') → 데미지 0."""
+    p = _player(skills=[_attack_skill()])
+    e = _enemy(hp=20)
+    state = _state(fresh_state, player_01=p, goblin_01=e)
+
+    result = skill_eng.cast(p, "fireball", state, ["goblin_01"], grade="failure")
+    assert result["effects"][0]["damage"] == 0
+    assert state.characters["goblin_01"].hp == 20
+
+
 def test_tick_active_buffs_no_op_on_empty():
     p = _player()
     assert skill_eng.tick_active_buffs(p) == 0
