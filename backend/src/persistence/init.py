@@ -16,8 +16,8 @@ from ..domain.entities import (
     Race,
     Stats,
 )
-from ..errors import ProfileNotFound, RaceNotFound
-from .models import GameState
+from ..domain.errors import ProfileNotFound, RaceNotFound
+from ..domain.state import GameState
 from .store import (
     copy_seed_into_game,
     save_entity,

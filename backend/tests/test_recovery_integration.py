@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from src.domain.entities import Character, CombatBehavior, Location, Stats
-from src.llm_client.agents.dc_judge.schema import RestAction
+from src.agents.dc_judge.schema import RestAction
 from src.pipeline import judge as judge_mod
 from src.pipeline import turn as turn_mod
 from src.pipeline.turn import run_turn

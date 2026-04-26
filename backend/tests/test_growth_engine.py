@@ -2,7 +2,7 @@
 import pytest
 
 from src.domain.entities import Character, Stats
-from src.errors import LevelUpInvalid
+from src.domain.errors import LevelUpInvalid
 from src.pipeline.growth import (
     PAIR_TRADE,
     assert_pair_trade_invariant,

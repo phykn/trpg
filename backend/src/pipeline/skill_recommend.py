@@ -7,13 +7,13 @@ special_effect) 을 정하고, 엔진이 id/level/template 수치를 채워 Skil
 from __future__ import annotations
 
 from ..domain.entities import Skill
-from ..llm_client.agents.skill_recommend import (
+from ..agents.skill_recommend import (
     SkillRecommendInput,
     skill_recommend,
 )
-from ..llm_client.client import LLMClient
+from ..llm.client import LLMClient
 from ..rules import RULES
-from ..state.models import GameState
+from ..domain.state import GameState
 from .skill import build_skill_from_candidate, existing_skill_ids
 
 

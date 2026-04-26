@@ -2,13 +2,13 @@ import os
 
 import pytest
 
-from src.llm_client.agents.narrate import (
+from src.agents.narrate import (
     NarrateInput,
     NarrativeDelta,
     NarrativeFinal,
     stream_narrate,
 )
-from src.llm_client.client import LLMClient
+from src.llm.client import LLMClient
 
 pytestmark = pytest.mark.live
 

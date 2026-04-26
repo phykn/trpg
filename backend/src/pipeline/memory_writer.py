@@ -1,7 +1,7 @@
 from ..domain.memory import Memory
-from ..llm_client.agents.narrate import NarrateOutput
+from ..agents.narrate import NarrateOutput
 from ..rules import RULES
-from ..state.models import GameState
+from ..domain.state import GameState
 
 
 def write_memories(

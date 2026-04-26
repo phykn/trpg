@@ -15,13 +15,13 @@ from ..domain.memory import (
     RollLogEntry,
     TurnLogEntry,
 )
-from ..errors import (
+from ..domain.errors import (
     JudgeMalformed,
     PendingCheckActive,
     PendingCheckExpected,
     PersistenceFailed,
 )
-from ..llm_client.agents.dc_judge.schema import (
+from ..agents.dc_judge.schema import (
     BuyAction,
     ClarifyAction,
     CombatAction,
@@ -37,25 +37,25 @@ from ..llm_client.agents.dc_judge.schema import (
     UnequipAction,
     UseAction,
 )
-from ..llm_client.agents.narrate import NarrativeDelta, NarrativeFinal
-from ..llm_client.client import LLMClient
+from ..agents.narrate import NarrativeDelta, NarrativeFinal
+from ..llm.client import LLMClient
 from ..rules import RULES
-from ..state.models import GameState
-from ..state.store import (
+from ..domain.state import GameState
+from ..persistence.store import (
     append_dialogue_entries,
     append_history_entries,
     append_log_entries,
     save_entity,
     save_meta,
 )
-from ..errors import InventoryInvalid, LevelUpInvalid, SkillInvalid
+from ..domain.errors import InventoryInvalid, LevelUpInvalid, SkillInvalid
 from .apply import apply_changes
 from . import combat as combat_engine
 from . import encounter as encounter_engine
 from . import inventory as inventory_engine
 from . import recovery as recovery_engine
 from . import skill as skill_engine
-from .dc import compute_grade, pick_dc, sigmoid_required_roll, social_bonus, tier_to_int
+from ..rules.dc import compute_grade, pick_dc, sigmoid_required_roll, social_bonus, tier_to_int
 from .growth import level_up as level_up_engine
 from .judge import run_judge
 from .memory_writer import write_memories

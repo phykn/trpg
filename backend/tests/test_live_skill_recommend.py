@@ -5,9 +5,9 @@ import pytest
 
 from src.domain.entities import Character, Stats
 from src.domain.memory import DialoguePair, Memory, TurnLogEntry
-from src.llm_client.client import LLMClient
+from src.llm.client import LLMClient
 from src.pipeline import skill_recommend as recommend_mod
-from src.state.models import GameState
+from src.domain.state import GameState
 
 pytestmark = pytest.mark.live
 

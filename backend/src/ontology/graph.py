@@ -2,7 +2,7 @@ from collections import defaultdict, deque
 from typing import NamedTuple
 
 from ..domain.entities import EQUIPMENT_SLOTS
-from ..state.models import GameState
+from ..domain.state import GameState
 
 
 class Edge(NamedTuple):

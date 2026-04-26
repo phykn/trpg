@@ -16,7 +16,7 @@ from ..domain.entities import (
     Item,
     WeaponEffect,
 )
-from ..errors import InventoryInvalid
+from ..domain.errors import InventoryInvalid
 from ..rules import RULES
 
 Slot = Literal[

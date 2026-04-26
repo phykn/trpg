@@ -11,7 +11,7 @@ from typing import Literal
 
 from ..domain.entities import Character
 from ..domain.types import StatKey
-from ..errors import LevelUpInvalid
+from ..domain.errors import LevelUpInvalid
 from ..rules import RULES
 
 # 페어: 정반대 (양방향). stat_up 키 → 깎아야 하는 stat.

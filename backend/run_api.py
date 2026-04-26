@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from src.api.routes import router
-from src.llm_client import LLMClient
+from src.llm import LLMClient
 
 
 def build_app(

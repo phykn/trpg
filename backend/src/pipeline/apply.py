@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
 from ..domain.types import Grade, Intent
 from ..rules import RULES
-from ..state.models import GameState
+from ..domain.state import GameState
 
 
 class SetChange(BaseModel):

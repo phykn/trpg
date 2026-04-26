@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from ..state.init import PlayerInput
+from ..persistence.init import PlayerInput
 
 
 class ChatRequest(BaseModel):

@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT))
 
 @pytest.fixture
 def fresh_state():
-    from src.state.models import GameState
+    from src.domain.state import GameState
 
     return GameState(
         game_id="t",

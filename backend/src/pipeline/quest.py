@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from ..domain.entities import Chapter, Quest
 from ..rules import RULES  # noqa: F401  (튜닝 노브가 추가될 때 사용)
-from ..state.models import GameState
+from ..domain.state import GameState
 
 DirtySet = set[tuple[str, str]] | None
 

@@ -5,14 +5,14 @@ import tempfile
 import pytest
 
 from src.domain.entities import Character, CombatBehavior, Equipment, Stats
-from src.llm_client.agents.dc_judge.schema import (
+from src.agents.dc_judge.schema import (
     CombatAction,
     PassAction,
 )
 from src.pipeline import judge as judge_mod
 from src.pipeline import turn as turn_mod
 from src.pipeline.turn import run_turn
-from src.state.models import GameState
+from src.domain.state import GameState
 
 
 @pytest.fixture

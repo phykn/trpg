@@ -4,7 +4,7 @@ from pydantic import ValidationError
 
 from src.domain.entities import Character, Skill, Stats
 from src.domain.memory import DialoguePair, Memory, TurnLogEntry
-from src.llm_client.agents.skill_recommend import (
+from src.agents.skill_recommend import (
     SkillCandidate,
     SkillRecommendOutput,
 )

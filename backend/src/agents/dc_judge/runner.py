@@ -2,7 +2,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from ...client import LLMClient
+from ...llm.client import LLMClient
 from .schema import JudgeInput, JudgeOutput, output_adapter
 from .semantics import JudgeSemanticError, check_semantics
 

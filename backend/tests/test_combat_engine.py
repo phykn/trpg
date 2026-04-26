@@ -446,7 +446,7 @@ from src.pipeline.combat import (
     start_combat,
     tick_death_save,
 )
-from src.state.models import GameState
+from src.domain.state import GameState
 
 
 def _state_with(

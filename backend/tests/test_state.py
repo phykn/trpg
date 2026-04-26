@@ -6,10 +6,10 @@ import pytest
 
 from src.domain.entities import Character, Stats
 from src.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
-from src.errors import PersistenceFailed, ProfileNotFound, RaceNotFound
-from src.state.init import PlayerInput, init_game
-from src.state.models import GameState
-from src.state.store import (
+from src.domain.errors import PersistenceFailed, ProfileNotFound, RaceNotFound
+from src.persistence.init import PlayerInput, init_game
+from src.domain.state import GameState
+from src.persistence.store import (
     append_dialogue_entries,
     append_history_entries,
     append_log_entries,

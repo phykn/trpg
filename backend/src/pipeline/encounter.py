@@ -8,13 +8,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..domain.entities import Character, CombatBehavior, Location, Stats
-from ..llm_client.agents.encounter_summon import (
+from ..agents.encounter_summon import (
     EncounterSummonInput,
     EncounterSummonOutput,
     encounter_summon,
 )
-from ..llm_client.client import LLMClient
-from ..state.models import GameState
+from ..llm.client import LLMClient
+from ..domain.state import GameState
 from .growth import calc_max_hp, calc_max_mp
 
 

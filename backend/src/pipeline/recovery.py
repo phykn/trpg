@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from typing import Literal
 
 from ..rules import RULES
-from ..state.models import GameState
+from ..domain.state import GameState
 
 RestOutcome = Literal["full_recovery", "encounter"]
 SummonCallable = Callable[[GameState, str], Awaitable[str | None]]

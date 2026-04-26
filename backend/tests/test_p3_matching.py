@@ -13,7 +13,7 @@ from src.domain.entities import (
     Stats,
     WeaponEffect,
 )
-from src.llm_client.agents.dc_judge.schema import (
+from src.agents.dc_judge.schema import (
     BuyAction,
     FleeAction,
     LearnSkillAction,

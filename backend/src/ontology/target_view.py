@@ -1,5 +1,5 @@
 from ..domain.entities import EQUIPMENT_SLOTS
-from ..state.models import GameState
+from ..domain.state import GameState
 from .graph import GameGraph
 
 

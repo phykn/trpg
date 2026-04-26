@@ -22,8 +22,8 @@ from ..domain.entities import (
 )
 from ..domain.types import Grade, StatKey
 from ..rules import RULES
-from ..state.models import GameState
-from .dc import compute_grade, sigmoid_required_roll
+from ..domain.state import GameState
+from ..rules.dc import compute_grade, sigmoid_required_roll
 
 
 # --- 공용 ---------------------------------------------------------------------

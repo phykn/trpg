@@ -3,13 +3,13 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from src.llm_client.agents.dc_judge.schema import (
+from src.agents.dc_judge.schema import (
     CombatAction,
     PassAction,
     RollAction,
     output_adapter,
 )
-from src.llm_client.agents.dc_judge.semantics import (
+from src.agents.dc_judge.semantics import (
     JudgeSemanticError,
     check_semantics,
     collect_valid_ids,

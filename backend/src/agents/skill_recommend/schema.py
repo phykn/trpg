@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ....domain.types import StatKey
+from ...domain.types import StatKey
 
 
 class SkillCandidate(BaseModel):

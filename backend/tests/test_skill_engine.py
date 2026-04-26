@@ -2,7 +2,7 @@
 import pytest
 
 from src.domain.entities import Character, Skill, Stats
-from src.errors import SkillInvalid
+from src.domain.errors import SkillInvalid
 from src.pipeline import skill as skill_eng
 from src.rules import RULES
 

@@ -1,15 +1,15 @@
 from pydantic import ValidationError
 
-from ..errors import JudgeMalformed
-from ..llm_client.agents.dc_judge import (
+from ..domain.errors import JudgeMalformed
+from ..agents.dc_judge import (
     JudgeInput,
     JudgeOutput,
     JudgeSemanticError,
     RollAction,
     judge,
 )
-from ..llm_client.client import LLMClient
-from ..state.models import GameState
+from ..llm.client import LLMClient
+from ..domain.state import GameState
 from .context import build_surroundings
 
 

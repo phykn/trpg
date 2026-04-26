@@ -6,9 +6,9 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-from src.llm_client import LLMClient
-from src.llm_client.agents import JudgeInput, judge
-from src.llm_client.agents.dc_judge import PROMPT_PATH
+from src.llm import LLMClient
+from src.agents import JudgeInput, judge
+from src.agents.dc_judge import PROMPT_PATH
 
 
 class CountingClient(LLMClient):

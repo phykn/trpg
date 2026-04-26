@@ -2,7 +2,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
-from ....domain.types import StatKey, Tier
+from ...domain.types import StatKey, Tier
 
 
 class JudgeInput(BaseModel):

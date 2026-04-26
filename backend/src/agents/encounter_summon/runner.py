@@ -2,7 +2,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from ...client import LLMClient
+from ...llm.client import LLMClient
 from .schema import EncounterSummonInput, EncounterSummonOutput
 
 PROMPT_PATH = Path(__file__).parent / "prompt.md"

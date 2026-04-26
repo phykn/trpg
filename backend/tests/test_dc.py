@@ -1,7 +1,7 @@
 import random
 
 from src.domain.entities import Character, Stats
-from src.pipeline.dc import (
+from src.rules.dc import (
     compute_grade,
     int_to_tier,
     pick_dc,

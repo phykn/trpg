@@ -3,7 +3,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from ..errors import (
+from ..domain.errors import (
     InventoryInvalid,
     LevelUpInvalid,
     ProfileNotFound,
@@ -16,8 +16,8 @@ from ..pipeline import skill as skill_engine
 from ..pipeline.growth import level_up
 from ..pipeline.skill_recommend import recommend_skill_candidates
 from ..pipeline.turn import run_intro, run_roll, run_turn
-from ..state.init import init_game
-from ..state.store import load_game, read_current_game_id, save_entity, save_meta
+from ..persistence.init import init_game
+from ..persistence.store import load_game, read_current_game_id, save_entity, save_meta
 from .auth import require_basic_auth
 from .schema import (
     CastRequest,

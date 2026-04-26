@@ -3,11 +3,11 @@ import os
 
 import pytest
 
-from src.llm_client.agents.encounter_summon import (
+from src.agents.encounter_summon import (
     EncounterSummonInput,
     encounter_summon,
 )
-from src.llm_client.client import LLMClient
+from src.llm.client import LLMClient
 
 pytestmark = pytest.mark.live
 

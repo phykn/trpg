@@ -15,12 +15,12 @@ from typing import Literal
 
 from ..domain.entities import ActiveBuff, Character, Skill
 from ..domain.types import Grade
-from ..errors import SkillInvalid
-from ..llm_client.agents.skill_recommend import SkillCandidate
+from ..domain.errors import SkillInvalid
+from ..agents.skill_recommend import SkillCandidate
 from ..rules import RULES
-from ..state.models import GameState
+from ..domain.state import GameState
 from .combat import enemy_defense, stat_modifier
-from .dc import compute_grade, sigmoid_required_roll
+from ..rules.dc import compute_grade, sigmoid_required_roll
 
 CastTargets = list[str]
 

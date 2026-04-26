@@ -13,7 +13,7 @@ from src.domain.entities import (
     Stats,
     WeaponEffect,
 )
-from src.llm_client.agents.dc_judge.schema import UseAction
+from src.agents.dc_judge.schema import UseAction
 from src.pipeline import judge as judge_mod
 from src.pipeline import turn as turn_mod
 from src.pipeline.context import build_surroundings

@@ -9,7 +9,7 @@ from ..domain.entities import (
     WeaponEffect,
 )
 from ..rules import RULES
-from ..state.models import GameState
+from ..domain.state import GameState
 from .growth import can_afford_level_up, xp_for_next_level
 
 

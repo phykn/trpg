@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-from ...client import LLMClient
+from ...llm.client import LLMClient
 from .parser import NarrativeDelta, NarrativeFinal, split_stream
 from .schema import NarrateInput
 

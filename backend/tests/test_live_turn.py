@@ -12,10 +12,10 @@ from src.domain.entities import (
     Race,
     Stats,
 )
-from src.errors import PendingCheckActive, PendingCheckExpected
-from src.llm_client.client import LLMClient
+from src.domain.errors import PendingCheckActive, PendingCheckExpected
+from src.llm.client import LLMClient
 from src.pipeline.turn import run_roll, run_turn
-from src.state.models import GameState
+from src.domain.state import GameState
 
 pytestmark = pytest.mark.live
 

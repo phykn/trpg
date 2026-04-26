@@ -2,15 +2,15 @@ import os
 
 import pytest
 
-from src.llm_client.agents.dc_judge import JudgeInput, judge
-from src.llm_client.agents.dc_judge.schema import (
+from src.agents.dc_judge import JudgeInput, judge
+from src.agents.dc_judge.schema import (
     ClarifyAction,
     CombatAction,
     PassAction,
     RejectAction,
     RollAction,
 )
-from src.llm_client.client import LLMClient
+from src.llm.client import LLMClient
 
 pytestmark = pytest.mark.live
 

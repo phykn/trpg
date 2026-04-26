@@ -1,15 +1,15 @@
 from collections.abc import AsyncIterator
 
-from ..llm_client.agents.narrate import (
+from ..agents.narrate import (
     NarrateInput,
     NarrativeDelta,
     NarrativeFinal,
     stream_narrate,
 )
-from ..llm_client.client import LLMClient
+from ..llm.client import LLMClient
 from ..ontology.graph import build_graph
 from ..ontology.target_view import build_target_view
-from ..state.models import GameState
+from ..domain.state import GameState
 from .context import (
     build_history_layer,
     build_session_layer,

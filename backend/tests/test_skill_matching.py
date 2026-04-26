@@ -11,7 +11,7 @@ from src.domain.entities import (
     Skill,
     Stats,
 )
-from src.llm_client.agents.dc_judge.schema import CombatAction
+from src.agents.dc_judge.schema import CombatAction
 from src.pipeline import judge as judge_mod
 from src.pipeline import turn as turn_mod
 from src.pipeline.context import build_surroundings

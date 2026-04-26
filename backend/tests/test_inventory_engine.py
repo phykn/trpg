@@ -9,7 +9,7 @@ from src.domain.entities import (
     Stats,
     WeaponEffect,
 )
-from src.errors import InventoryInvalid
+from src.domain.errors import InventoryInvalid
 from src.pipeline import inventory as inv
 from src.rules import RULES
 

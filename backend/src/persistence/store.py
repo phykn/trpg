@@ -20,9 +20,9 @@ from ..domain.memory import (
     PendingCheck,
     TurnLogEntry,
 )
-from ..errors import PersistenceFailed
+from ..domain.errors import PersistenceFailed
 from ..rules import RULES
-from .models import GameState
+from ..domain.state import GameState
 
 _save_lock = asyncio.Lock()
 
