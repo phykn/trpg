@@ -15,7 +15,6 @@ from ..domain.memory import (
     TurnLogEntry,
 )
 from ..errors import (
-    CombatNotSupported,
     JudgeMalformed,
     PendingCheckActive,
     PendingCheckExpected,
@@ -40,6 +39,7 @@ from ..state.store import (
     save_meta,
 )
 from .apply import apply_changes
+from . import combat as combat_engine
 from .dc import compute_grade, pick_dc, sigmoid_required_roll, social_bonus, tier_to_int
 from .judge import run_judge
 from .memory_writer import write_memories
@@ -150,6 +150,360 @@ def _format_roll_announce(
     )
 
 
+# --- combat helpers --------------------------------------------------------
+
+
+_GRADE_LABEL = {
+    "critical_success": "치명타",
+    "success": "명중",
+    "partial_success": "겨우 명중",
+    "failure": "빗나감",
+    "critical_failure": "대실패",
+}
+
+
+def _format_attack_log(
+    state: GameState,
+    attacker_id: str,
+    target_id: str,
+    outcome: combat_engine.AttackOutcome,
+    apply_result: dict | None,
+) -> str:
+    attacker = state.characters[attacker_id]
+    target = state.characters[target_id]
+    hand_label = "주 손" if outcome.hand == "main" else "보조 손"
+    grade_label = _GRADE_LABEL[outcome.grade]
+    head = f"{attacker.name} → {target.name} ({hand_label}, d20={outcome.nat_d20}): {grade_label}"
+    if outcome.damage > 0:
+        head += f" — {outcome.damage} 데미지"
+    if apply_result is None:
+        return head
+    if apply_result.get("revived"):
+        head += f" ({target.name} 부활 코인 사용, HP 회복)"
+    elif apply_result.get("dead"):
+        head += f" ({target.name} 쓰러짐)"
+    elif apply_result.get("dying"):
+        head += f" ({target.name} 의식 잃음)"
+    return head
+
+
+def _format_combat_end_text(outcome: str) -> str:
+    if outcome == "victory":
+        return "전투 종료 — 적을 모두 제압했다."
+    if outcome == "defeat":
+        return "전투 종료 — 쓰러졌다."
+    return "전투 종료 — 도주."
+
+
+async def _emit_attack(
+    state: GameState,
+    attacker_id: str,
+    target_id: str,
+    outcomes: list[combat_engine.AttackOutcome],
+    dirty: _Dirty,
+) -> AsyncIterator[dict]:
+    """attack outcomes 의 데미지 적용 + SSE/log 발행. 첫 데미지로 target 사망 시 두 번째 손은 묘사 안 함."""
+    target = state.characters[target_id]
+    for outcome in outcomes:
+        apply_result: dict | None = None
+        if outcome.damage > 0 and target.alive:
+            apply_result = combat_engine.apply_attack_to_defender(
+                state,
+                target_id,
+                outcome.damage,
+                nat_d20=outcome.nat_d20,
+                dirty=dirty.entities,
+            )
+        text = _format_attack_log(state, attacker_id, target_id, outcome, apply_result)
+        gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+        _push_log_entry(state, gm_log, dirty)
+        yield {"type": "log_entry", "data": gm_log.model_dump()}
+        yield {
+            "type": "combat_turn",
+            "data": {
+                "actor": attacker_id,
+                "action": "attack",
+                "grade": outcome.grade,
+                "damage": outcome.damage,
+                "target": target_id,
+                "hand": outcome.hand,
+            },
+        }
+        if not target.alive:
+            break
+
+
+async def _run_combat_npc_phase(
+    state: GameState,
+    dirty: _Dirty,
+    rng: random.Random | None,
+) -> AsyncIterator[dict]:
+    """현재 actor 가 player 가 될 때까지 NPC 차례 자동 진행. 종료 조건이면 combat_end 발행 후 정리."""
+    while True:
+        end = combat_engine.check_combat_end(state)
+        if end is not None:
+            text = _format_combat_end_text(end)
+            gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+            _push_log_entry(state, gm_log, dirty)
+            yield {"type": "log_entry", "data": gm_log.model_dump()}
+            yield {"type": "combat_end", "data": {"outcome": end}}
+            combat_engine.end_combat(state)
+            return
+
+        actor_id = combat_engine.current_actor_id(state)
+        if actor_id is None:
+            yield {"type": "combat_end", "data": {"outcome": "victory"}}
+            combat_engine.end_combat(state)
+            return
+        if actor_id == state.player_id:
+            return
+
+        actor = state.characters.get(actor_id)
+        if actor is None or not actor.alive:
+            combat_engine.advance_turn(state)
+            continue
+
+        # flee
+        if combat_engine.should_attempt_flee(actor, rng=rng):
+            ok, _roll = combat_engine.try_flee(actor, rng=rng)
+            if ok:
+                text = f"{actor.name}이(가) 전투에서 도주했다."
+                gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+                _push_log_entry(state, gm_log, dirty)
+                yield {"type": "log_entry", "data": gm_log.model_dump()}
+                yield {
+                    "type": "combat_turn",
+                    "data": {"actor": actor_id, "action": "flee", "grade": "success"},
+                }
+                combat_engine.remove_from_combat(state, actor_id)
+                continue
+            text = f"{actor.name}이(가) 도주를 시도했으나 실패했다."
+            gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+            _push_log_entry(state, gm_log, dirty)
+            yield {"type": "log_entry", "data": gm_log.model_dump()}
+            yield {
+                "type": "combat_turn",
+                "data": {"actor": actor_id, "action": "flee", "grade": "failure"},
+            }
+            combat_engine.advance_turn(state)
+            continue
+
+        # attack
+        target = combat_engine.pick_npc_target(state, actor_id, rng=rng)
+        if target is None:
+            combat_engine.advance_turn(state)
+            continue
+        outcomes = combat_engine.attack(actor, target, state.items, rng=rng)
+        async for ev in _emit_attack(state, actor_id, target.id, outcomes, dirty):
+            yield ev
+        combat_engine.advance_turn(state)
+
+
+async def _start_combat_and_run_npc_phase(
+    state: GameState,
+    enemy_ids: list[str],
+    dirty: _Dirty,
+    rng: random.Random | None,
+) -> AsyncIterator[dict]:
+    cs = combat_engine.start_combat(state, enemy_ids, rng=rng)
+    text = "전투 개시!"
+    gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+    _push_log_entry(state, gm_log, dirty)
+    yield {"type": "log_entry", "data": gm_log.model_dump()}
+    yield {
+        "type": "combat_start",
+        "data": {
+            "turn_order": list(cs.turn_order),
+            "round": cs.round,
+            "surprise": cs.surprise,
+            "enemy_ids": list(cs.enemy_ids),
+        },
+    }
+    async for ev in _run_combat_npc_phase(state, dirty, rng):
+        yield ev
+
+
+async def _run_combat_player_turn(
+    client: LLMClient,
+    state: GameState,
+    profile_dir: str,
+    saves_dir: str,
+    player_input: str,
+    dirty: _Dirty,
+    rng: random.Random | None,
+    to_front_fn: ToFrontFn | None,
+) -> AsyncIterator[dict]:
+    """player 차례에서 들어온 input 처리. combat_state 가 살아있을 때만 호출.
+
+    death_save 활성: input 무시하고 자동 d20 굴림.
+    그 외: judge → 분기.
+    """
+    player = state.characters[state.player_id]
+
+    # death-save 자동 진행
+    if player.death_saves is not None:
+        status, roll = combat_engine.tick_death_save(
+            state, state.player_id, rng=rng, dirty=dirty.entities
+        )
+        ds_grade = "success" if roll >= RULES.death.save_dc else "failure"
+        text = f"{player.name} 죽음 저항 (d20={roll}) — "
+        if status == "stable":
+            text += "안정화. 의식을 회복했다."
+        elif status == "dead":
+            text += "사망."
+        else:
+            ds = player.death_saves
+            if ds is None:
+                text += "성공/실패."  # shouldn't happen
+            else:
+                text += f"성공 {ds.successes}/3, 실패 {ds.failures}/3."
+        gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+        _push_log_entry(state, gm_log, dirty)
+        yield {"type": "log_entry", "data": gm_log.model_dump()}
+        yield {
+            "type": "combat_turn",
+            "data": {"actor": state.player_id, "action": "death_save", "grade": ds_grade},
+        }
+        if status != "dead":
+            combat_engine.advance_turn(state)
+        async for ev in _run_combat_npc_phase(state, dirty, rng):
+            yield ev
+        state.turn_count += 1
+        _advance_time(state)
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    # 정상 input → judge
+    try:
+        result = await run_judge(client, state, player_input)
+    except JudgeMalformed as e:
+        yield {"type": "error", "data": {"message": str(e), "code": "JudgeMalformed"}}
+        return
+
+    yield {"type": "judge", "data": result.model_dump()}
+
+    if isinstance(result, CombatAction):
+        target_id = result.targets[0]
+        target = state.characters.get(target_id)
+        if target is None or not target.alive:
+            text = "그 대상은 이미 무력화돼 있다."
+            gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+            _push_log_entry(state, gm_log, dirty)
+            yield {"type": "log_entry", "data": gm_log.model_dump()}
+            async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+                yield ev
+            return
+        outcomes = combat_engine.attack(player, target, state.items, rng=rng)
+        async for ev in _emit_attack(state, state.player_id, target_id, outcomes, dirty):
+            yield ev
+        combat_engine.advance_turn(state)
+        async for ev in _run_combat_npc_phase(state, dirty, rng):
+            yield ev
+        state.turn_count += 1
+        _advance_time(state)
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    if isinstance(result, RollAction):
+        # 환경 활용 — 평시 RollAction 분기와 동일 흐름. /roll 이 끝낼 때 NPC phase 자동 진행.
+        async for ev in _emit_roll_pending(state, saves_dir, player_input, result, dirty):
+            yield ev
+        return
+
+    if isinstance(result, PassAction):
+        text = f"{player.name}은(는) 자세를 가다듬으며 한 차례를 보낸다."
+        gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+        _push_log_entry(state, gm_log, dirty)
+        yield {"type": "log_entry", "data": gm_log.model_dump()}
+        yield {
+            "type": "combat_turn",
+            "data": {"actor": state.player_id, "action": "pass", "grade": "success"},
+        }
+        combat_engine.advance_turn(state)
+        async for ev in _run_combat_npc_phase(state, dirty, rng):
+            yield ev
+        state.turn_count += 1
+        _advance_time(state)
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    if isinstance(result, ClarifyAction):
+        # 평시와 동일 — turn 안 늘림, 다음 input 대기.
+        act_log = ActLogEntry(id=_next_log_id(state), kind="act", text=result.question)
+        _push_log_entry(state, act_log, dirty)
+        yield {"type": "log_entry", "data": act_log.model_dump()}
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    # RejectAction — 전투 안에서는 narrate 부르지 않고 짧은 거절. turn 안 늘림.
+    assert isinstance(result, RejectAction)
+    text = "그 발화는 무시된다."
+    act_log = ActLogEntry(id=_next_log_id(state), kind="act", text=text)
+    _push_log_entry(state, act_log, dirty)
+    yield {"type": "log_entry", "data": act_log.model_dump()}
+    async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+        yield ev
+
+
+async def _emit_roll_pending(
+    state: GameState,
+    saves_dir: str,
+    player_input: str,
+    result: RollAction,
+    dirty: _Dirty,
+) -> AsyncIterator[dict]:
+    """평시·전투 공용: pending_check 세팅 + flush + pending_check SSE."""
+    actor = state.characters[state.player_id]
+    target = _choose_bonus_target(actor, result.targets)
+    dc = pick_dc(result.tier)
+    stat_value = getattr(actor.stats, result.stat)
+    required_roll = sigmoid_required_roll(dc, stat_value)
+    mod = social_bonus(actor, target)
+    state.pending_check = PendingCheck(
+        player_input=player_input,
+        tier=result.tier,
+        stat=result.stat,
+        target=target,
+        targets=list(result.targets),
+        dc=dc,
+        mod=mod,
+        required_roll=required_roll,
+        reason=result.reason,
+        created_at=datetime.now(UTC).isoformat(),
+    )
+    announce = _format_roll_announce(state, result, target, mod, required_roll)
+    act_log = ActLogEntry(id=_next_log_id(state), kind="act", text=announce)
+    _push_log_entry(state, act_log, dirty)
+    yield {"type": "log_entry", "data": act_log.model_dump()}
+    try:
+        await _flush(state, saves_dir, dirty)
+    except PersistenceFailed as e:
+        yield {
+            "type": "error",
+            "data": {"message": str(e), "code": "PersistenceFailed"},
+        }
+        return
+    yield {
+        "type": "pending_check",
+        "data": {
+            "dc": dc,
+            "stat": result.stat,
+            "mod": mod,
+            "required_roll": required_roll,
+            "tier": {
+                "value": tier_to_int(result.tier),
+                "max": 7,
+                "label": result.tier,
+            },
+            "target": target,
+        },
+    }
+
+
 async def _flush(state: GameState, saves_dir: str, dirty: _Dirty) -> None:
     """Persist a turn's worth of changes. Order: entities + jsonls first,
     meta last (meta = commit point on partial-failure recovery).
@@ -213,6 +567,7 @@ async def run_turn(
     player_input: str,
     *,
     to_front_fn: ToFrontFn | None = None,
+    rng: random.Random | None = None,
 ) -> AsyncIterator[dict]:
     if state.pending_check is not None:
         raise PendingCheckActive(
@@ -228,6 +583,13 @@ async def run_turn(
     _push_log_entry(state, player_log, dirty)
     yield {"type": "log_entry", "data": player_log.model_dump()}
 
+    if state.combat_state is not None:
+        async for ev in _run_combat_player_turn(
+            client, state, profile_dir, saves_dir, player_input, dirty, rng, to_front_fn
+        ):
+            yield ev
+        return
+
     try:
         result = await run_judge(client, state, player_input)
     except JudgeMalformed as e:
@@ -237,7 +599,15 @@ async def run_turn(
     yield {"type": "judge", "data": result.model_dump()}
 
     if isinstance(result, CombatAction):
-        raise CombatNotSupported("combat is not implemented in P1")
+        state.turn_count += 1
+        async for ev in _start_combat_and_run_npc_phase(
+            state, list(result.targets), dirty, rng
+        ):
+            yield ev
+        _advance_time(state)
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
 
     if isinstance(result, ClarifyAction):
         act_log = ActLogEntry(id=_next_log_id(state), kind="act", text=result.question)
@@ -249,51 +619,8 @@ async def run_turn(
         return
 
     if isinstance(result, RollAction):
-        actor = state.characters[state.player_id]
-        target = _choose_bonus_target(actor, result.targets)
-        dc = pick_dc(result.tier)
-        stat_value = getattr(actor.stats, result.stat)
-        required_roll = sigmoid_required_roll(dc, stat_value)
-        mod = social_bonus(actor, target)
-        state.pending_check = PendingCheck(
-            player_input=player_input,
-            tier=result.tier,
-            stat=result.stat,
-            target=target,
-            targets=list(result.targets),
-            dc=dc,
-            mod=mod,
-            required_roll=required_roll,
-            reason=result.reason,
-            created_at=datetime.now(UTC).isoformat(),
-        )
-        announce = _format_roll_announce(state, result, target, mod, required_roll)
-        act_log = ActLogEntry(id=_next_log_id(state), kind="act", text=announce)
-        _push_log_entry(state, act_log, dirty)
-        yield {"type": "log_entry", "data": act_log.model_dump()}
-        try:
-            await _flush(state, saves_dir, dirty)
-        except PersistenceFailed as e:
-            yield {
-                "type": "error",
-                "data": {"message": str(e), "code": "PersistenceFailed"},
-            }
-            return
-        yield {
-            "type": "pending_check",
-            "data": {
-                "dc": dc,
-                "stat": result.stat,
-                "mod": mod,
-                "required_roll": required_roll,
-                "tier": {
-                    "value": tier_to_int(result.tier),
-                    "max": 7,
-                    "label": result.tier,
-                },
-                "target": target,
-            },
-        }
+        async for ev in _emit_roll_pending(state, saves_dir, player_input, result, dirty):
+            yield ev
         return  # Wait for the /roll call — don't emit `done`.
 
     # action == pass / reject — enter the narrator.
@@ -455,6 +782,12 @@ async def run_roll(
 
     state.pending_check = None
     _advance_time(state)
+
+    if state.combat_state is not None:
+        # 환경 활용 굴림은 player 의 한 차례를 소비. 다음 NPC 차례부터 자동.
+        combat_engine.advance_turn(state)
+        async for ev in _run_combat_npc_phase(state, dirty, rng):
+            yield ev
 
     async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
         yield ev

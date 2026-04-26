@@ -1,0 +1,8 @@
+{
+  "id": "dagger_01",
+  "name": "녹슨 단검",
+  "description": "녹이 슨 짧은 단검. 거친 가죽 손잡이.",
+  "weight": 0.8,
+  "price": 2,
+  "effects": {"type": "weapon", "weapon_dice": "1d4", "range": 1.5, "two_handed": false}
+}

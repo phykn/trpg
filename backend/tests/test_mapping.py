@@ -212,6 +212,40 @@ def test_no_internal_field_leakage(fresh_state):
         assert f not in front_json, f"내부 필드 누출: {f}"
 
 
+def test_to_combat_returns_none_when_no_combat_state(fresh_state):
+    fresh_state.characters["player_01"] = Character(
+        id="player_01", name="주인공", race_id="human", stats=Stats()
+    )
+    from src.mapping.to_front import to_combat
+    assert to_combat(fresh_state) is None
+
+
+def test_to_combat_projects_round_actor_enemies(fresh_state):
+    from src.domain.entities import CombatState
+    from src.mapping.to_front import to_combat
+
+    fresh_state.characters["player_01"] = Character(
+        id="player_01", name="주인공", race_id="human", is_player=True, stats=Stats()
+    )
+    fresh_state.characters["goblin_01"] = Character(
+        id="goblin_01", name="고블린", race_id="goblin", hp=8, max_hp=10, stats=Stats()
+    )
+    fresh_state.combat_state = CombatState(
+        turn_order=["player_01", "goblin_01"],
+        current_turn=1,
+        round=2,
+        enemy_ids=["goblin_01"],
+    )
+    out = to_combat(fresh_state)
+    assert out is not None
+    assert out["round"] == 2
+    assert out["currentActor"] == "고블린"
+    assert out["isPlayerTurn"] is False
+    assert out["enemies"] == [
+        {"name": "고블린", "hp": 8, "hpMax": 10, "alive": True}
+    ]
+
+
 def test_unknown_race_id_falls_back_to_id(fresh_state):
     fresh_state.characters["player_01"] = Character(
         id="player_01",

@@ -67,7 +67,6 @@ _CHAR_FORBIDDEN = frozenset(
         "xp_pool",
         "gold",
         "alive",
-        "in_combat",
         "death_saves",
         "revive_coins",
         "level",

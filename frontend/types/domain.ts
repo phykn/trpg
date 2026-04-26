@@ -82,10 +82,25 @@ export type Place = {
 
 export type RollResult = 'success' | 'partial' | 'fail';
 
+export type CombatEnemy = {
+  name: string;
+  hp: number;
+  hpMax: number;
+  alive: boolean;
+};
+
+export type CombatBadge = {
+  round: number;
+  currentActor: string;
+  isPlayerTurn: boolean;
+  enemies: CombatEnemy[];
+};
+
 export type FrontState = {
   hero: Hero;
   subject: Subject | null;
   quest: Quest | null;
   place: Place | null;
+  combat: CombatBadge | null;
   log: import('./ui').LogEntry[];
 };

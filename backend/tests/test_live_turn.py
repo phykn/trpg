@@ -5,7 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from src.domain.entities import Character, Location, Race, Stats
+from src.domain.entities import (
+    Character,
+    CombatBehavior,
+    Location,
+    Race,
+    Stats,
+)
 from src.errors import PendingCheckActive, PendingCheckExpected
 from src.llm_client.client import LLMClient
 from src.pipeline.turn import run_roll, run_turn
@@ -124,3 +130,40 @@ async def test_roll_without_pending_blocked(client, env):
     with pytest.raises(PendingCheckExpected):
         async for _ in run_roll(client, gs, profile_dir, saves_dir):
             pass
+
+
+async def test_combat_branch_boots_combat_state(client, env):
+    """판정자가 'combat' 으로 분류 → 엔진이 combat_state 부팅 + combat_start SSE 발행."""
+    gs, profile_dir, saves_dir = env
+    gs.races["goblin"] = Race(id="goblin", name="고블린", description="x")
+    gs.characters["goblin_01"] = Character(
+        id="goblin_01",
+        name="고블린",
+        race_id="goblin",
+        location_id="plaza_01",
+        stats=Stats(STR=8, DEX=14, CON=10, INT=8, WIS=8, CHA=6),
+        hp=12,
+        max_hp=12,
+        appearance="작은 체구의 고블린",
+        tone_hint="쉭쉭거림",
+        combat_behavior=CombatBehavior(attack_priority="nearest"),
+    )
+
+    events = await _collect_events(
+        run_turn(
+            client,
+            gs,
+            profile_dir,
+            saves_dir,
+            "고블린에게 칼을 휘둘러 공격한다.",
+            rng=random.Random(42),
+        )
+    )
+    types = [e["type"] for e in events]
+    judge_event = next(e for e in events if e["type"] == "judge")
+    # judge LLM 이 의도대로 combat 으로 분류해야 P2 라이프사이클 진입.
+    assert judge_event["data"]["action"] == "combat"
+    assert "combat_start" in types
+    cs_data = next(e["data"] for e in events if e["type"] == "combat_start")
+    assert "goblin_01" in cs_data["enemy_ids"]
+    assert types[-1] == "done"

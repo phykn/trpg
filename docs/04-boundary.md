@@ -96,20 +96,22 @@
 | POST | `/session/{id}/turn` | `{player_input: string}` | `text/event-stream` (SSE — 서버가 한 연결을 열어둔 채 이벤트를 계속 흘려주는 방식) |
 | POST | `/session/{id}/roll` | — (서버가 d20 굴림) | `text/event-stream` |
 
-`FrontState = {hero, subject, quest, place, log}`. SSE `state` 이벤트 ([02-runtime.md](./02-runtime.md) §2.4) 는 `{hero, subject, quest, place}` 4 슬롯만 — `log` 는 누적되는 흐름이라 `log_entry` 이벤트로 따로 흐름. **`FrontState.log` 영속본 cap 은 `rules.log.display_turns` (기본 20)** — `GET /session/{id}/state` 와 `GET /session/current` 모두 최근 20 턴치만 반환 ([02-runtime.md](./02-runtime.md) §6.2 디스플레이 로그 영속화).
+`FrontState = {hero, subject, quest, place, combat, log}`. SSE `state` 이벤트 ([02-runtime.md](./02-runtime.md) §2.4) 는 `{hero, subject, quest, place, combat}` 5 슬롯만 — `log` 는 누적되는 흐름이라 `log_entry` 이벤트로 따로 흐름. **`FrontState.log` 영속본 cap 은 `rules.log.display_turns` (기본 20)** — `GET /session/{id}/state` 와 `GET /session/current` 모두 최근 20 턴치만 반환 ([02-runtime.md](./02-runtime.md) §6.2 디스플레이 로그 영속화).
+
+`combat` 슬롯 (P2) — 평시엔 `null`, 전투 활성 시 `{round, currentActor, isPlayerTurn, enemies: [{name, hp, hpMax, alive}]}`. 백엔드 `state.combat_state` 의 사영 — `turn_order`/`enemy_ids` 같은 내부 id 는 프론트로 안 나간다.
 
 세션 흐름 — 앱 시작 시 `GET /session/current` 시도 → 200 이면 진행 중 게임 복원, 404 면 `GET /profiles` 호출 → 프론트가 시나리오·종족 카드를 보여주고 사용자가 캐릭터 생성 → `POST /session/init` 호출 → 첫 턴. 게임 목록·이어하기 화면은 P1 에 없음 (한 명·한 게임 흐름).
 
 **인증** — 위 6 개 endpoint 모두 HTTP Basic Auth 로 보호. `GET /profiles` 도 예외 아님 — 같은 LAN 안에서도 시나리오 메타 노출은 인증 뒤. `BASIC_AUTH_USER` / `BASIC_AUTH_PASS` env 누락 시 fail-fast ([01-overview.md](./01-overview.md) 환경 변수 부록).
 
-P1 에서는 빠지는 엔드포인트 — 장비·소비·캐스트·휴식·레벨업·거래는 전부 [P3] ([03-features.md](./03-features.md) §2.3-§2.7, [01-overview.md](./01-overview.md) §3.9). 전투 진입은 P1 에서 SSE `error: CombatNotSupported` 로 거절.
+P1 에서는 빠지는 엔드포인트 — 장비·소비·캐스트·휴식·레벨업·거래는 전부 [P3] ([03-features.md](./03-features.md) §2.3-§2.7, [01-overview.md](./01-overview.md) §3.9). 전투는 P2 부터 동작 — judge 가 `action="combat"` 반환하면 엔진이 `combat_state` 를 띄우고 라운드 루프 진입 ([03-features.md](./03-features.md) §1).
 
 ## 3. 에러 매핑
 
 | 상황 | 응답 |
 |---|---|
 | `game_id` 없음 | HTTP 404 `{detail: "game not found"}` (FastAPI 기본 형식) |
-| judge 가 `action="combat"` 반환 (P1 미구현) | SSE `error: CombatNotSupported` |
+| judge 가 `action="combat"` 반환 | P2: 엔진이 `combat_state` 부팅 후 SSE `combat_start` → 라운드 진행 |
 | `/turn` 진입 시 pending_check 가 이미 활성 | SSE `error: PendingCheckActive` |
 | `/roll` 진입 시 pending_check 가 비어 있음 | SSE `error: PendingCheckExpected` |
 | judge LLM 출력이 JSON 파싱 실패 | 5회까지 자기 교정 재시도 (직전 응답+에러를 messages 에 append) → 마지막에도 실패면 SSE `error: JudgeMalformed` ([02-runtime.md](./02-runtime.md) §2.3) |

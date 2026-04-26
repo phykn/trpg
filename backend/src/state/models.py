@@ -4,6 +4,7 @@ from ..domain.entities import (
     Campaign,
     Chapter,
     Character,
+    CombatState,
     Item,
     Location,
     Quest,
@@ -37,6 +38,7 @@ class GameState(BaseModel):
 
     turn_count: int = 0
     pending_check: PendingCheck | None = None
+    combat_state: CombatState | None = None
 
     turn_log: list[TurnLogEntry] = []
     recent_dialogue: list[DialoguePair] = []

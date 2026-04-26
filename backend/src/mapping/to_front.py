@@ -166,6 +166,29 @@ def to_place(state: GameState) -> dict | None:
     }
 
 
+# --- Combat ----------------------------------------------------------------
+
+
+def to_combat(state: GameState) -> dict | None:
+    cs = state.combat_state
+    if cs is None or not cs.turn_order:
+        return None
+    current_id = cs.turn_order[cs.current_turn]
+    current = state.characters.get(current_id)
+    enemies = []
+    for eid in cs.enemy_ids:
+        e = state.characters.get(eid)
+        if e is None:
+            continue
+        enemies.append({"name": e.name, "hp": e.hp, "hpMax": e.max_hp, "alive": e.alive})
+    return {
+        "round": cs.round,
+        "currentActor": current.name if current else current_id,
+        "isPlayerTurn": current_id == state.player_id,
+        "enemies": enemies,
+    }
+
+
 # --- Log -------------------------------------------------------------------
 
 
@@ -186,5 +209,6 @@ def to_front_state(state: GameState) -> dict:
         "subject": to_subject(state),
         "quest": to_quest(state),
         "place": to_place(state),
+        "combat": to_combat(state),
         "log": to_log(state),
     }

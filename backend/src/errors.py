@@ -2,10 +2,6 @@ class DomainError(Exception):
     """Base for all domain errors. The API layer maps these to HTTP/SSE responses."""
 
 
-class CombatNotSupported(DomainError):
-    pass
-
-
 class PendingCheckActive(DomainError):
     pass
 

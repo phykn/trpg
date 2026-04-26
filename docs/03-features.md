@@ -9,7 +9,7 @@
 
 ## 1. 전투 [P2]
 
-> P1 에서는 전투가 아예 동작하지 않는다 — 플레이어가 `{action: "combat"}` 으로 들어와도 엔진은 `SSE error(CombatNotSupported)` 로 끊는다. 아래는 P2 에서 켜질 설계.
+> P2 에서 전투가 켜진다. 플레이어가 `{action: "combat"}` 으로 들어오면 엔진이 `combat_state` 를 띄우고 라운드 루프로 진입. 라운드 본문은 LLM 안 부르고 결정론으로 진행, SSE `combat_start` / `combat_turn` / `combat_end` 로 진행 상황을 흘림. 한국어 묘사를 LLM 으로 살리는 것은 후속.
 
 ### 1.1 전투 DC 와 데미지
 

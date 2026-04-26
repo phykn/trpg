@@ -39,6 +39,14 @@ class DeathSaveState(BaseModel):
     failures: int = 0
 
 
+class CombatState(BaseModel):
+    turn_order: list[str] = []
+    current_turn: int = 0
+    round: int = 1
+    surprise: Literal["player", "enemy"] | None = None
+    enemy_ids: list[str] = []
+
+
 # --- skills / buffs --------------------------------------------------------
 
 
@@ -156,7 +164,6 @@ class Character(BaseModel):
     mp: int = 0
     max_mp: int = 0
     alive: bool = True
-    in_combat: bool = False
 
     location_id: str | None = None
     equipment: Equipment = Equipment()

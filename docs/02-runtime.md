@@ -52,7 +52,7 @@ LLM 을 두 개로 쪼갠다.
 |---|---|---|
 | `pass` | 판정 불필요한 인-캐릭터 행동 (이동, 인사, 정가 구매 등) | target_view 없이 바로 내러티브 |
 | `roll` | 주사위 필요 | 엔진이 DC 계산 → `pending_check` 저장 → 프론트 주사위 버튼 → `/roll` |
-| `combat` | 일반 전투 행동 | [P1 에러 반환] / [P2] 엔진이 자동 주사위 → 내러티브 |
+| `combat` | 일반 전투 행동 | [P2] 엔진이 `combat_state` 부팅·이니셔티브 굴림 → SSE `combat_start` → NPC 차례 자동 진행 → 다음 player 차례에서 멈춤. 라운드 본문은 LLM 안 부르고 엔진이 결정론으로 진행 (한국어 묘사 LLM 화는 후속) |
 | `clarify` | 해석 불가 / 복합 행동 | 플레이어에게 되물음, 파이프라인 재시작 |
 | `reject` | 인-캐릭터 입력이 아님 — 시스템 공격(프롬프트 인젝션, 메타 질문), OOC 잡담, 무의미 입력 | 인-게임 표현으로 흡수 (아래 reject 처리 참고) |
 
@@ -138,8 +138,11 @@ DC판정 에이전트 호출
   │             (프론트 주사위 버튼 활성 → 플레이어 주사위 → /roll 진입)
   │             /roll: grade 판정 → target_view 조립 → 내러티브 호출 → 후처리 ↓
   │
-  ├─ combat  → [P1] SSE error(CombatNotSupported) → 종료 (narrator 호출 없음)
-  │             [P2] 자동 주사위 → 내러티브 호출 → 후처리 ↓
+  ├─ combat  → [P2] 엔진: combat_state 부팅 (이니셔티브 굴림 + enemy_ids 박기)
+  │             → SSE combat_start → NPC 차례 자동 진행 (각 차례마다 SSE combat_turn)
+  │             → 종료 조건이면 SSE combat_end → done
+  │             → 살아있으면 player 차례 도달 시 done. 다음 /turn 에서 player 행동 처리.
+  │             (라운드 본문은 LLM 안 부르고 결정론, narrator 호출 없음)
   │
   ├─ pass    → target_view 없이 내러티브 호출 (surroundings 만) → 후처리 ↓
   │
@@ -209,7 +212,10 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 | `pending_check` | `{dc, stat, mod, required_roll, tier, target}` — `tier` 는 §5.2 의 `{value:1..7, max:7, label}` 형식 | action=roll 확정. 직후 스트림 종료 |
 | `narrative_delta` | `{text}` | narrate LLM 청크마다 |
 | `state` | `{hero, subject, quest, place}` | apply 후 전체 슬롯 통짜 송신. 한 턴에 1회, 파이프라인 말미 |
-| `log_entry` | `LogEntry` (`player | act | roll`) | 플레이어 입력, clarify 되물음, 주사위 결과. `gm` 은 `narrative_delta` 축적으로 생성되므로 이벤트 없음 (reject 도 narrator 가 서술하므로 `gm` 으로 흐름) |
+| `log_entry` | `LogEntry` (`player | act | roll | gm`) | 플레이어 입력, clarify 되물음, 주사위 결과, 그리고 P2 전투 라운드의 자체 발행 gm 텍스트. 평시 narrate 의 `gm` 은 `narrative_delta` 축적으로 만들어지므로 이벤트 없음 |
+| `combat_start` | `{turn_order, round, surprise, enemy_ids}` — P2 | judge 가 `action="combat"` 반환해 엔진이 `combat_state` 를 띄운 직후 |
+| `combat_turn` | `{actor, action: "attack"|"flee"|"pass"|"death_save", grade, damage?, target?, hand?}` — P2 | combat 라운드 안 한 actor 의 한 행동 직후. 다이스 굴림은 엔진이 결정 |
+| `combat_end` | `{outcome: "victory"|"defeat"|"fled"}` — P2 | 종료 조건 충족 직후. 다음 SSE `done` 이 따라옴 |
 | `done` | `{}` | 턴 종료 |
 | `error` | `{message, code?}` | 복구 불가 오류 |
 
@@ -535,7 +541,7 @@ if aff <= -social.friendly_threshold:  mod = -social.roll_bonus  # 적대: -bonu
   - `chapters`, `quests` — `summary` 와 `status` 만 ([03-features.md](./03-features.md) §2.8).
 - narrator 는 단순 스칼라 필드만 `set` 으로 바꿀 수 있다. 다음 세 묶음은 손댈 수 없다:
   - **list 필드** — character 의 `relations`, `inventory_ids`, `memories`, `racial_skills`, `learned_skills`, `companions`. 추가/제거의 부수효과가 커서 (예: `inventory_ids` 변경은 소지품 수를 흔든다) narrator 가 직접 만지면 일관성이 깨진다. 구조 변경은 백엔드 로직 [P3] 가 한다. quest 의 `triggers`/`conditions` 같은 list 도 같은 이유로 막히지만 — quest 는 위 매트릭스가 이미 `summary`/`status` 만 허용해 자동으로 제외된다.
-  - **엔진 전용 필드** — `HP/MP/exp/gold/alive/in_combat/death_saves` 등. 전투·레벨업·죽음 처리는 엔진이 독점하고, narrator 는 결과를 받아서 묘사만 한다 (수치를 결정할 권한이 없다).
+  - **엔진 전용 필드** — `HP/MP/exp/gold/alive/death_saves/revive_coins` 등. 전투·레벨업·죽음 처리는 엔진이 독점하고, narrator 는 결과를 받아서 묘사만 한다 (수치를 결정할 권한이 없다). 전투 진입/이탈 자체는 `state.combat_state` 의 turn_order 등재 여부로 표현 — 캐릭터에 별도 `in_combat` 플래그는 두지 않는다.
   - **`world_time`** — 일반 `set` 으로 못 만진다. 시간 점프가 필요할 때만 전용 `set_time` type 을 발행 ([03-features.md](./03-features.md) §2.1).
 - `set_time` 은 `world_time` 만 갱신하는 전용 type. 분 단위 가산은 엔진이 자동 처리하고, narrator 는 장면 전환·휴식·시간 비약 같은 절대 시각 점프에만 발행한다. 현재 `world_time` 보다 과거 ISO 는 `rejected[]` 로 reject (시간 역행 금지).
 - `affinity` 는 `grade × intent` (× `target.disposition` [P3]) 로 `rules.social` 기반 delta 를 엔진이 산출. narrator 는 숫자를 정하지 않는다 ([03-features.md](./03-features.md) §2.2). 복수 대상 시나리오(예: 두 경비병 동시 설득)에서는 entry 를 대상별로 하나씩 발행 — `target` 단일 필드라 한 entry = 한 대상.

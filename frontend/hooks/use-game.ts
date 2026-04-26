@@ -7,7 +7,7 @@ import {
   streamRoll,
   streamTurn,
 } from '@/services';
-import type { Hero, Place, Quest, Subject, FrontState } from '@/types/domain';
+import type { CombatBadge, Hero, Place, Quest, Subject, FrontState } from '@/types/domain';
 import type { LogEntry } from '@/types/ui';
 import type {
   InitRequest,
@@ -39,6 +39,7 @@ export function useGame() {
   const [log, setLog] = React.useState<LogEntry[]>([]);
 
   const [pending, setPending] = React.useState<PendingCheck | null>(null);
+  const [combat, setCombat] = React.useState<CombatBadge | null>(null);
   const [streaming, setStreaming] = React.useState(false);
   const [streamingText, setStreamingText] = React.useState('');
 
@@ -56,6 +57,7 @@ export function useGame() {
     setSubject(s.subject);
     setQuest(s.quest);
     setPlace(s.place);
+    setCombat(s.combat);
     setLog(s.log);
   }, []);
 
@@ -76,6 +78,14 @@ export function useGame() {
         case 'state':
           applyState(ev.data);
           setStreamingText('');
+          return;
+        case 'combat_start':
+        case 'combat_turn':
+          // 권위 source 는 SSE state — 라운드 끝에 한 번 갱신.
+          // 진행 중 한국어 흐름은 log_entry 가 채워줌.
+          return;
+        case 'combat_end':
+          setCombat(null);
           return;
         case 'done':
           return;
@@ -190,6 +200,7 @@ export function useGame() {
     subject,
     quest,
     place,
+    combat,
     log: displayLog,
     pending,
     streaming,

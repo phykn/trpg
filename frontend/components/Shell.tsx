@@ -5,6 +5,7 @@ import { colors } from '@/design/tokens';
 import { useGame } from '@/hooks/use-game';
 import { buildPanelSlots } from '@/transformers';
 
+import { CombatStrip } from './combat';
 import { Composer } from './composer';
 import { ContextCard } from './header';
 import { HeroPill } from './hero';
@@ -48,7 +49,7 @@ export function Shell() {
 type PlayingProps = { game: ReturnType<typeof useGame> };
 
 function Playing({ game }: PlayingProps) {
-  const { hero, subject, quest, place, log, pending, streaming, onSend, onRoll, onStop } = game;
+  const { hero, subject, quest, place, combat, log, pending, streaming, onSend, onRoll, onStop } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>('person');
@@ -88,6 +89,8 @@ function Playing({ game }: PlayingProps) {
       <Log log={log} rolling={rolling} />
 
       <HeroPill hero={hero} expanded={heroOpen} onToggle={() => setHeroOpen((v) => !v)} />
+
+      {combat ? <CombatStrip combat={combat} /> : null}
 
       <Composer
         onSend={onSend}

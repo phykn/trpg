@@ -57,8 +57,20 @@ class TradeConfig(_F):
     affinity_price_cap: float = 0.5
 
 
+class FleeConfig(_F):
+    dice: str = "1d20"
+    base_dc: int = 12
+    dex_modifier: bool = True
+
+
+class UnarmedConfig(_F):
+    damage: str = "1d4"
+    range_m: float = 1.5
+
+
 class CombatConfig(_F):
-    flee_base_dc: int = 12
+    flee: FleeConfig = FleeConfig()
+    unarmed: UnarmedConfig = UnarmedConfig()
 
 
 class DeathConfig(_F):
@@ -66,6 +78,11 @@ class DeathConfig(_F):
     revive_coins: int = 1
     revive_ratio: float = 0.5
     save_dc: int = 10
+    successes_to_stabilize: int = 3
+    failures_to_die: int = 3
+    damage_failure_inc: int = 1
+    crit_damage_failure_inc: int = 2
+    auto_revive_hp: int = 1
 
 
 class Rules(_F):

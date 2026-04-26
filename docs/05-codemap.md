@@ -37,11 +37,12 @@ backend/
       apply.py                   `state_changes` 검증·적용 + `rejected[]` 기록
       context.py                 surroundings / target_view / history 모아 묶음
       dc.py                      sigmoid DC, tier → DC, social_bonus, grade 계산
-      turn.py                    `run_turn` / `run_roll` 흐름 지휘 (SSE 이벤트 방출)
+      combat.py                  P2 전투 엔진 (LLM 미사용). 명중·데미지 (시그모이드 + dual-wield + crit) / 이니셔티브 / NPC AI / flee / 사망·revive·death-save / combat_state 라이프사이클
+      turn.py                    `run_turn` / `run_roll` 흐름 지휘 (SSE 이벤트 방출). combat_state 살아있으면 combat 분기로 라우팅
     state/
       store.py                   `load_game` / `save_game` (원자적 파일 I/O + 동시 쓰기 방지 Lock) + `.current` 읽기/쓰기
       init.py                    프로필 + 캐릭터 생성 요청 → 초기 GameState
-      models.py                  GameState 컨테이너 (엔티티 dict + world_time + pending_check + turn_log + recent_dialogue + log_entries + active_subject_id + active_quest_id + player_id)
+      models.py                  GameState 컨테이너 (엔티티 dict + world_time + pending_check + combat_state + turn_log + recent_dialogue + log_entries + active_subject_id + active_quest_id + player_id)
     ontology/
       graph.py                   구조 관계·의미 관계·config 관계 — 그래프 엣지 종류
       target_view.py             target 노드에서 1~2 단계 떨어진 이웃까지 훑기
@@ -61,7 +62,7 @@ backend/
         # narrate/ 등 다른 에이전트도 같은 레이아웃
     mapping/
       to_front.py                to_hero / to_subject / to_quest / to_place / to_log_entry / to_front_state / to_profile_list
-    errors.py                    DomainError, CombatNotSupported, PendingCheckExpected, ...
+    errors.py                    DomainError + PendingCheckActive/Expected, JudgeMalformed, LLMUnavailable, PersistenceFailed, ProfileNotFound, RaceNotFound
 ```
 
 ## 2. 레이어 경계
@@ -77,7 +78,6 @@ backend/
 `src/errors.py` 의 예외 계층. 파이프라인은 `DomainError` 하위 클래스만 던지고, API 레이어가 그걸 HTTP/SSE 응답으로 매핑한다 ([04-boundary.md](./04-boundary.md) §3 표).
 
 - `DomainError` — 모든 도메인 에러의 기반 클래스.
-  - `CombatNotSupported` — judge 가 `action="combat"` 을 반환했을 때 P1 이 던짐 ([03-features.md](./03-features.md) §1 의 미구현 구간).
   - `PendingCheckActive` — `/turn` 진입 시 `pending_check` 가 이미 설정돼 있을 때.
   - `PendingCheckExpected` — `/roll` 진입 시 `pending_check` 가 비어 있을 때.
   - `JudgeMalformed` — judge LLM 출력이 2번 연속 JSON 파싱 실패.
