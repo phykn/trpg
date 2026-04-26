@@ -7,13 +7,11 @@ import {
   streamRoll,
   streamTurn,
 } from '@/services';
-import type { CombatBadge, Hero, Place, Quest, Subject, FrontState } from '@/types/domain';
+import type { CombatBadge, FrontState, Hero, Place, Quest, Subject } from '@/types/domain';
 import type { LogEntry } from '@/types/ui';
-import type {
-  InitRequest,
-  PendingCheck,
-  StreamEvent,
-} from '@/types/wire';
+import type { InitRequest, PendingCheck, StreamEvent } from '@/types/wire';
+
+import { handleStreamEvent } from './handleStreamEvent';
 
 export type GameStatus = 'loading' | 'no-game' | 'ready' | 'error';
 
@@ -62,38 +60,16 @@ export function useGame() {
   }, []);
 
   const handleEvent = React.useCallback(
-    (ev: StreamEvent) => {
-      switch (ev.type) {
-        case 'judge':
-          return;
-        case 'pending_check':
-          setPending(ev.data);
-          return;
-        case 'narrative_delta':
-          setStreamingText((t) => t + ev.data.text);
-          return;
-        case 'log_entry':
-          setLog((L) => mergeEntry(L, ev.data));
-          return;
-        case 'state':
-          applyState(ev.data);
-          setStreamingText('');
-          return;
-        case 'combat_start':
-        case 'combat_turn':
-          // 권위 source 는 SSE state — 라운드 끝에 한 번 갱신.
-          // 진행 중 한국어 흐름은 log_entry 가 채워줌.
-          return;
-        case 'combat_end':
-          setCombat(null);
-          return;
-        case 'done':
-          return;
-        case 'error':
-          setErrorMessage(ev.data.message);
-          return;
-      }
-    },
+    (ev: StreamEvent) =>
+      handleStreamEvent(ev, {
+        setPending,
+        appendStreamingText: (t) => setStreamingText((cur) => cur + t),
+        clearStreamingText: () => setStreamingText(''),
+        upsertLogEntry: (entry) => setLog((L) => mergeEntry(L, entry)),
+        applyState,
+        clearCombat: () => setCombat(null),
+        setErrorMessage,
+      }),
     [applyState],
   );
 
@@ -178,10 +154,7 @@ export function useGame() {
 
   const onRoll = React.useCallback(() => {
     if (!gameId || !pending) return;
-    void runStream(
-      (signal) => streamRoll(gameId, handleEvent, signal),
-      { clearPending: true },
-    );
+    void runStream((signal) => streamRoll(gameId, handleEvent, signal), { clearPending: true });
   }, [gameId, pending, handleEvent, runStream]);
 
   const onStop = React.useCallback(() => {
