@@ -7,8 +7,6 @@ export type Stats = {
   CHA: number;
 };
 
-export type StatKey = keyof Stats;
-
 export type InventoryItem = {
   name: string;
   qty: number;
