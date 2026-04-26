@@ -82,7 +82,7 @@ export type Place = {
   surroundings: string[];
 };
 
-export type RollResult = 'success' | 'fail';
+export type RollResult = 'success' | 'partial' | 'fail';
 
 export type FrontState = {
   hero: Hero;

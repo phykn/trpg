@@ -58,6 +58,16 @@ def test_log_entry_discriminator():
     assert isinstance(roll, RollLogEntry) and roll.roll == 12
 
 
+def test_roll_log_accepts_three_results():
+    from pydantic import TypeAdapter, ValidationError
+    ad = TypeAdapter(LogEntry)
+    base = {"id": 1, "kind": "roll", "check": "x", "dc": 10, "roll": 11, "mod": 0}
+    for r in ("success", "partial", "fail"):
+        ad.validate_python({**base, "result": r})
+    with pytest.raises(ValidationError):
+        ad.validate_python({**base, "result": "critical"})
+
+
 def test_skill_enums():
     Skill(id="s", name="x", type="buff", target="self", primary_stat="DEX")
     with pytest.raises(ValidationError):

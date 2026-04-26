@@ -59,3 +59,11 @@ async def test_deltas_yielded_progressively():
     body_text = "".join(d.text for d in deltas)
     assert body_text == "첫 문장. 두 번째. 끝.\n"
     assert len(deltas) >= 2
+
+
+async def test_body_unescapes_json_style_escapes():
+    items = await _collect(split_stream(_feed(
+        '경비병이 \\"안녕\\"이라 말한다.\\n다시 본다.\n---JSON---\n{}'
+    )))
+    finals = [i for i in items if isinstance(i, NarrativeFinal)]
+    assert finals[0].body == '경비병이 "안녕"이라 말한다.\n다시 본다.\n'

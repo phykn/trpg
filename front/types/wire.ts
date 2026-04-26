@@ -72,7 +72,7 @@ export type WireLogEntry =
       dc: number;
       roll: number;
       mod: number;
-      result: 'success' | 'fail';
+      result: 'success' | 'partial' | 'fail';
     };
 
 // --- SSE 이벤트 union ------------------------------------------------------

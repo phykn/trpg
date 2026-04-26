@@ -5,12 +5,16 @@ import type { LogEntry } from '@/types/ui';
 
 type RollEntry = Extract<LogEntry, { kind: 'roll' }>;
 
+const TONE = {
+  success: { color: colors.success.fg, label: '성공', cls: 'text-success-fg' },
+  partial: { color: colors.exp.fg,     label: '절반', cls: 'text-exp-fg'     },
+  fail:    { color: colors.danger.fg,  label: '실패', cls: 'text-danger-fg'  },
+} as const;
+
 export function RollResult({ entry }: { entry: RollEntry }) {
-  const pass = entry.result === 'success';
-  const accent = pass ? colors.success.fg : colors.danger.fg;
+  const tone = TONE[entry.result];
   const total = entry.roll + entry.mod;
   const modStr = entry.mod >= 0 ? `+${entry.mod}` : `${entry.mod}`;
-  const colorClass = pass ? 'text-success-fg' : 'text-danger-fg';
 
   const resultValue = (
     <Text
@@ -29,14 +33,14 @@ export function RollResult({ entry }: { entry: RollEntry }) {
       style={{
         minHeight: 32,
         borderLeftWidth: 3,
-        borderLeftColor: accent,
+        borderLeftColor: tone.color,
       }}
     >
       <Text
-        className={`font-sans-bold text-panel uppercase shrink-0 ${colorClass}`}
+        className={`font-sans-bold text-panel uppercase shrink-0 ${tone.cls}`}
         style={{ letterSpacing: 1.2 }}
       >
-        {pass ? '성공' : '실패'}
+        {tone.label}
       </Text>
       <View className="h-3.5 bg-border-default" style={{ width: 1 }} />
       <InlineNodes

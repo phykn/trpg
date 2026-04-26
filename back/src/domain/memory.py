@@ -63,7 +63,7 @@ class RollLogEntry(BaseModel):
     dc: int
     roll: int
     mod: int
-    result: Literal["success", "fail"]
+    result: Literal["success", "partial", "fail"]
 
 
 LogEntry = Annotated[

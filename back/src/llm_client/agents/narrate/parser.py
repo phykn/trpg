@@ -20,6 +20,21 @@ class NarrativeFinal:
     output: NarrateOutput
 
 
+def _clean_body(body: str) -> str:
+    """LLM 이 본문에 의도치 않게 박아둔 JSON-style escape 정제.
+
+    `\\"` → `"`, `\\n` → 실제 줄바꿈, `\\\\` → `\\`.
+    prompt 에서 금지하지만 보조 안전망.
+    """
+    return (
+        body
+        .replace('\\"', '"')
+        .replace("\\'", "'")
+        .replace("\\n", "\n")
+        .replace("\\t", "\t")
+    )
+
+
 def _parse_output(json_text: str) -> NarrateOutput:
     json_text = json_text.strip()
     if not json_text:
@@ -72,4 +87,4 @@ async def split_stream(
         body = full[:sep_idx]
         json_text = full[sep_idx + len(SEPARATOR):]
 
-    yield NarrativeFinal(body=body, output=_parse_output(json_text))
+    yield NarrativeFinal(body=_clean_body(body), output=_parse_output(json_text))

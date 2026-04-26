@@ -84,7 +84,11 @@ def _choose_bonus_target(actor: Character, targets: list[str]) -> str:
 
 
 def _front_grade(grade: str) -> str:
-    return "success" if grade in ("critical_success", "success", "partial_success") else "fail"
+    if grade in ("critical_success", "success"):
+        return "success"
+    if grade == "partial_success":
+        return "partial"
+    return "fail"
 
 
 def _label_for_target(state: GameState, target_id: str) -> str:
