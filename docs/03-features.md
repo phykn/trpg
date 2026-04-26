@@ -425,6 +425,8 @@ P1 은 narrator 가 `{type: "set", entity: "quests|chapters", id, field: "status
 
 ### 2.9 동반자 (Companions, pocket-monster 방식) [P3]
 
+**현재 구현 상태**: `pipeline/apply._apply_move` 가 patron 이동 시 companions 의 `location_id` 도 같이 옮기고, `pipeline/combat.start_combat` 가 양측 companions 를 turn_order 에 자동 합류한다. `pipeline/combat.pick_npc_target` 는 진영 (player 측 vs enemy 측) 기준으로 적 후보를 그러모음. 동반자 1인칭 대사·반응은 narrator 서술로만 (별도 AI 없음, docs 명세 그대로).
+
 `Character.companions: list[str]` — patron (이 동반자를 거느린 캐릭터) 이 "주머니에 넣고 다니는" 부하 캐릭터 ID 목록.
 
 - **위치 동기화**: 동반자의 위치는 patron 의 `location_id` 를 따른다 (`effective_location()` 이 반환). 동반자 본인의 `location_id` 필드는 사용하지 않는다 — 둘이 어긋날 일이 없게 위치를 한 군데서만 본다.

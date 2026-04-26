@@ -37,7 +37,7 @@ backend/
       apply.py                   `state_changes` 검증·적용 + `rejected[]` 기록
       context.py                 surroundings / target_view / history 모아 묶음
       dc.py                      sigmoid DC, tier → DC, social_bonus, grade 계산
-      combat.py                  P2 전투 엔진 (LLM 미사용). 명중·데미지 (시그모이드 + dual-wield + crit) / 이니셔티브 / NPC AI / flee / 사망·revive·death-save / combat_state 라이프사이클 / surprise 첫 라운드 skip
+      combat.py                  P2 전투 엔진 (LLM 미사용) + P3 §2.9 동반자 합류. 명중·데미지 (시그모이드 + dual-wield + crit) / 이니셔티브 / NPC AI 진영 기반 / flee / 사망·revive·death-save / character_death quest 훅 / combat_state 라이프사이클 / surprise 첫 라운드 skip / start_combat 의 양측 companions 자동 확장
       recovery.py                P3 §2.4 회복 (rest). 위험도 굴림으로 풀회복 vs 인카운터 분기, sleep_hours 만큼 world_time 점프, sleep_encounters 풀에서 enemy 선택
       growth.py                  P3 §2.3 성장 (level_up). xp_for_next_level 곡선, 페어 트레이드 (STR↔CHA·DEX↔WIS·CON↔INT), recalc_max_hp_mp, grant_xp, assert_pair_trade_invariant
       inventory.py               P3 §2.5 장비/거래 + §2.7 사용. equip/unequip (슬롯·요구치·two_handed), check_can_carry (STR × weight_per_strength), buy/sell (affinity 흥정 cap, trade_threshold), use (ConsumableEffect heal/damage/mp_restore/buff + on_use trigger 패스스루)

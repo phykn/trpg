@@ -330,13 +330,26 @@ def start_combat(
     rng: random.Random | None = None,
     surprise: Literal["player", "enemy"] | None = None,
 ) -> CombatState:
-    """combat_state 부팅. 참가자 = player + enemy_ids, 이니셔티브 굴려 정렬.
+    """combat_state 부팅. 참가자 = player + 양측 companions + enemy_ids, 이니셔티브 굴려 정렬.
 
     state.combat_state 에 직접 박아 반환. surprise='enemy' 면 첫 라운드 player 가 행동
-    못 함 (잠 자다 습격 같은 케이스).
+    못 함 (잠 자다 습격 같은 케이스). companions 는 patron 과 같이 자동 합류 (§2.9).
     """
-    participants_ids = [state.player_id, *enemy_ids]
-    participants = [state.characters[pid] for pid in participants_ids]
+    raw: list[str] = [state.player_id]
+    if state.player_id in state.characters:
+        raw.extend(state.characters[state.player_id].companions)
+    for eid in enemy_ids:
+        raw.append(eid)
+        if eid in state.characters:
+            raw.extend(state.characters[eid].companions)
+    seen: set[str] = set()
+    unique: list[str] = []
+    for cid in raw:
+        if cid in seen or cid not in state.characters:
+            continue
+        seen.add(cid)
+        unique.append(cid)
+    participants = [state.characters[pid] for pid in unique]
     order = roll_initiative(participants, rng=rng)
     cs = CombatState(
         turn_order=order,
@@ -541,17 +554,27 @@ def pick_npc_target(
     actor_id: str,
     rng: random.Random | None = None,
 ) -> Character | None:
-    """combat_state 안 actor 의 적 후보를 그러모아 pick_target 에 위임.
+    """combat_state 안 actor 의 적 후보를 진영 기준으로 그러모아 pick_target 에 위임.
 
-    적은 cs.enemy_ids 의 보수 — actor 가 enemy_ids 안이면 player 가 적, actor 가 player 면 enemy_ids 가 적.
+    같은 patron 끼리 아군 (§2.9). actor 가 player 측 (player 또는 player.companions) 이면
+    적은 enemy 측, 아니면 적은 player 측.
     """
     cs = state.combat_state
     if cs is None:
         return None
     actor = state.characters[actor_id]
-    if actor_id == state.player_id:
-        candidates_ids = list(cs.enemy_ids)
-    else:
-        candidates_ids = [state.player_id]
-    candidates = [state.characters[cid] for cid in candidates_ids if cid in state.characters]
+
+    player_side: set[str] = {state.player_id}
+    if state.player_id in state.characters:
+        player_side.update(state.characters[state.player_id].companions)
+
+    enemy_side: set[str] = set(cs.enemy_ids)
+    for eid in cs.enemy_ids:
+        if eid in state.characters:
+            enemy_side.update(state.characters[eid].companions)
+
+    targets_ids = enemy_side if actor_id in player_side else player_side
+    candidates = [
+        state.characters[cid] for cid in targets_ids if cid in state.characters
+    ]
     return pick_target(actor, candidates, rng=rng)

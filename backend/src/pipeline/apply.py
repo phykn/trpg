@@ -165,6 +165,12 @@ def _apply_move(
     state.characters[c.target].location_id = c.destination
     if dirty is not None:
         dirty.add(("characters", c.target))
+    # 동반자 (P3 §2.9) — patron 위치를 따라 같이 이동.
+    for cid in state.characters[c.target].companions:
+        if cid in state.characters:
+            state.characters[cid].location_id = c.destination
+            if dirty is not None:
+                dirty.add(("characters", cid))
     # quest hook — 플레이어 이동만 평가 (NPC 이동은 quest 트리거 대상 아님).
     if c.target == state.player_id:
         check_quests(state, "location_enter", c.destination, dirty)
