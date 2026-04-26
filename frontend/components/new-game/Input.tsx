@@ -15,7 +15,7 @@ export function Input({ value, onChangeText, placeholder }: Props) {
       onChangeText={onChangeText}
       placeholder={placeholder}
       placeholderTextColor={`${colors.fg.default}55`}
-      className="h-11 px-3 rounded-md bg-canvas-subtle border border-border-default font-sans text-body text-fg-default"
+      className="h-10 px-3 rounded-md bg-canvas-subtle border border-border-default font-sans text-body text-fg-default"
       style={{ borderWidth: 1 }}
     />
   );

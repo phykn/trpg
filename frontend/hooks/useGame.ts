@@ -159,6 +159,11 @@ export function useGame() {
     aborts.current.forEach((a) => a.abort());
   }, []);
 
+  const goToNewGame = React.useCallback(() => {
+    aborts.current.forEach((a) => a.abort());
+    setStatus('no-game');
+  }, []);
+
   const displayLog = React.useMemo<LogEntry[]>(() => {
     if (!streamingText) return log;
     return [...log, { id: STREAMING_GM_ID, kind: 'gm', text: streamingText }];
@@ -179,6 +184,7 @@ export function useGame() {
     onRoll,
     onStop,
     startNewGame,
+    goToNewGame,
     refresh,
   };
 }

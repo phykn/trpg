@@ -66,6 +66,12 @@ export function Log({
     return () => show.remove();
   }, []);
 
+  React.useEffect(() => {
+    if (initialized.current && viewportH > 0) {
+      ref.current?.scrollToEnd({ animated: false });
+    }
+  }, [viewportH]);
+
   return (
     <FlatList
       ref={ref}

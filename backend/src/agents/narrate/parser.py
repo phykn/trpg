@@ -34,6 +34,17 @@ def _clean_body(body: str) -> str:
     )
 
 
+def _split_trailing_backslashes(s: str) -> tuple[str, str]:
+    """Return (safe, hold) where `hold` is a trailing run of backslashes —
+    a `\\` straddling a stream chunk boundary would escape whatever arrives
+    next, so we hold it back until the next token.
+    """
+    i = len(s)
+    while i > 0 and s[i - 1] == "\\":
+        i -= 1
+    return s[:i], s[i:]
+
+
 def _parse_output(json_text: str) -> NarrateOutput:
     json_text = json_text.strip()
     if not json_text:
@@ -67,19 +78,22 @@ async def split_stream(
         if idx >= 0:
             body_remaining = full[yielded:idx]
             if body_remaining:
-                yield NarrativeDelta(text=body_remaining)
+                yield NarrativeDelta(text=_clean_body(body_remaining))
             yielded = idx
             sep_idx = idx
         else:
             safe_end = max(yielded, len(full) - len(SEPARATOR) + 1)
             if safe_end > yielded:
-                yield NarrativeDelta(text=full[yielded:safe_end])
-                yielded = safe_end
+                chunk = full[yielded:safe_end]
+                safe_chunk, _hold = _split_trailing_backslashes(chunk)
+                if safe_chunk:
+                    yield NarrativeDelta(text=_clean_body(safe_chunk))
+                    yielded += len(safe_chunk)
 
     full = "".join(parts)
     if sep_idx == -1:
         if yielded < len(full):
-            yield NarrativeDelta(text=full[yielded:])
+            yield NarrativeDelta(text=_clean_body(full[yielded:]))
         body = full
         json_text = ""
     else:

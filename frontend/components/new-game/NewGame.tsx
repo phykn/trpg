@@ -157,7 +157,7 @@ export function NewGame({ onSubmit }: Props) {
       <Pressable
         onPress={submit}
         disabled={!canSubmit}
-        className={`h-12 rounded-md items-center justify-center ${
+        className={`h-10 rounded-md items-center justify-center ${
           canSubmit ? 'bg-accent-fg' : 'bg-canvas-inset border border-border-default'
         }`}
       >

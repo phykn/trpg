@@ -99,12 +99,10 @@ async def consume_narrate(
     `dialogue_input=None` skips the dialogue push (used by intro, which has
     no player utterance).
     """
-    body = ""
     final: NarrativeFinal | None = None
     async for item in stream:
         if isinstance(item, NarrativeDelta):
             yield {"type": "narrative_delta", "data": {"text": item.text}}
-            body += item.text
         else:
             final = item
     assert final is not None
@@ -112,7 +110,7 @@ async def consume_narrate(
     apply_changes(state, final.output.state_changes, dirty.entities)
     push_turn_log(state, target_for_log, final.output.turn_summary, dirty)
     if dialogue_input is not None:
-        push_dialogue(state, dialogue_input, body, dirty)
+        push_dialogue(state, dialogue_input, final.body, dirty)
     write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
-    gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=body)
+    gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=final.body)
     push_log_entry(state, gm_log, dirty)

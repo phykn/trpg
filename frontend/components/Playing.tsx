@@ -13,7 +13,7 @@ import { Log } from './log';
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, log, pending, streaming, onSend, onRoll, onStop } = game;
+  const { hero, subject, quest, place, combat, log, pending, streaming, onSend, onRoll, onStop, goToNewGame } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>('person');
@@ -48,6 +48,7 @@ export function Playing({ game }: Props) {
         activeId={activeId}
         onSelect={(id) => setActiveId((prev) => (prev === id ? null : id))}
         onCollapse={() => setActiveId(null)}
+        onNewGame={goToNewGame}
       />
 
       <Log log={log} rolling={rolling} />
