@@ -39,7 +39,7 @@ def test_memory_target_id_optional():
 def test_pending_check_required_roll_bounds():
     base = dict(
         player_input="x", tier="보통", stat="CHA", target="g", targets=["g"],
-        dc=10, mod=0, created_at="2026-04-26",
+        dc=10, mod=0, reason="설득", created_at="2026-04-26",
     )
     PendingCheck(required_roll=20, **base)
     with pytest.raises(ValidationError):

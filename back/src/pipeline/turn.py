@@ -97,6 +97,21 @@ def _label_for_target(state: GameState, target_id: str) -> str:
     return target_id
 
 
+def _format_roll_announce(
+    state: GameState,
+    result: RollAction,
+    target: str,
+    mod: int,
+    required_roll: int,
+) -> str:
+    target_name = _label_for_target(state, target)
+    mod_str = f", +{mod}" if mod > 0 else f", {mod}" if mod < 0 else ""
+    return (
+        f"{result.reason} — {target_name}에게 {result.stat} 판정 "
+        f"({result.tier}{mod_str}, {required_roll}+ 필요)"
+    )
+
+
 # --- /turn -----------------------------------------------------------------
 
 
@@ -162,8 +177,13 @@ async def run_turn(
             dc=dc,
             mod=mod,
             required_roll=required_roll,
+            reason=result.reason,
             created_at=datetime.now(UTC).isoformat(),
         )
+        announce = _format_roll_announce(state, result, target, mod, required_roll)
+        act_log = ActLogEntry(id=_next_log_id(state), kind="act", text=announce)
+        _push_log_entry(state, act_log)
+        yield {"type": "log_entry", "data": act_log.model_dump()}
         try:
             await save_game(state, data_dir)
         except PersistenceFailed as e:
@@ -245,7 +265,8 @@ async def run_roll(
     total = dice + pending.mod
     grade = compute_grade(dice, total, pending.required_roll)
 
-    check_label = _label_for_target(state, pending.target)
+    target_name = _label_for_target(state, pending.target)
+    check_label = f"{pending.stat} · {pending.reason} (→ {target_name})"
     roll_log = RollLogEntry(
         id=_next_log_id(state),
         kind="roll",

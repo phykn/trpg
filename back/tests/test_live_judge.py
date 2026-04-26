@@ -56,3 +56,4 @@ async def test_judge_roll_emits_korean_tier_and_targets(client, surroundings):
     assert isinstance(result, RollAction)
     assert result.tier in ("매우 쉬움", "쉬움", "보통", "어려움", "매우 어려움", "전설", "신화")
     assert result.targets == ["guard_01"]
+    assert result.reason and len(result.reason) >= 4

@@ -34,6 +34,7 @@ class PendingCheck(BaseModel):
     dc: int
     mod: int
     required_roll: int = Field(ge=1, le=20)
+    reason: str
     created_at: str
 
 

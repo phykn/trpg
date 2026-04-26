@@ -37,6 +37,7 @@ class RollAction(_StrictAction):
     tier: Tier
     stat: StatKey
     targets: list[str] = Field(min_length=1)
+    reason: str = Field(min_length=1, max_length=80)
 
 
 JudgeOutput = Annotated[
