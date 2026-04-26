@@ -54,7 +54,7 @@ backend/
     domain/
       entities.py                Character, Race, Location, Item, Quest, QuestTrigger, QuestRewards, Connection, Equipment, Stats
       memory.py                  Memory, TurnLogEntry, DialoguePair, PendingCheck, LogEntry (gm/player/act/roll union)
-      types.py                   StatKey, Tier, Grade, Intent, Action enum (pass / roll / combat / rest / clarify / reject)
+      types.py                   StatKey, Tier, Grade, Intent, Action enum (pass / roll / combat / rest / use / clarify / reject)
     llm_client/                  LLMClient (OpenAI 호환 스트리밍) + 에이전트 묶음
       __init__.py                LLMClient export
       client.py                  스트리밍 클라이언트 본체

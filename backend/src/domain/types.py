@@ -27,4 +27,4 @@ Grade = Literal[
 Intent = Literal["friendly", "hostile", "deceptive"]
 
 
-Action = Literal["pass", "roll", "combat", "rest", "clarify", "reject"]
+Action = Literal["pass", "roll", "combat", "rest", "use", "clarify", "reject"]

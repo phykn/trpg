@@ -1,6 +1,6 @@
 from typing import Any
 
-from .schema import CombatAction, JudgeOutput, RollAction
+from .schema import CombatAction, JudgeOutput, RollAction, UseAction
 
 
 class JudgeSemanticError(ValueError):
@@ -40,3 +40,21 @@ def check_semantics(output: JudgeOutput, surroundings: dict[str, Any]) -> None:
                 f"Valid skills are: {sorted(s for s in valid_skills if s)}. "
                 f"Either pick one from the list or omit skill_id for a plain attack."
             )
+    if isinstance(output, UseAction):
+        valid_items = {
+            i.get("id")
+            for i in surroundings.get("inventory", []) or []
+            if isinstance(i, dict)
+        }
+        if output.item_id not in valid_items:
+            raise JudgeSemanticError(
+                f"item_id {output.item_id!r} not in inventory. "
+                f"Valid items are: {sorted(i for i in valid_items if i)}. "
+                f"If the player referenced something they don't carry, action must be 'clarify'."
+            )
+        if output.target_id is not None:
+            entity_ids = collect_valid_ids(surroundings)
+            if output.target_id not in entity_ids:
+                raise JudgeSemanticError(
+                    f"target_id {output.target_id!r} not in surroundings."
+                )

@@ -123,6 +123,10 @@ agency/story/
 
 ### 실행
 
+두 트랙 — 자동화는 로컬 LLM, 한 번 똑똑하게 짓고 싶을 땐 Claude Code:
+
+**(가) 로컬 LLM (`run_story.py`)**
+
 ```bash
 .venv/bin/python agency/story/run_story.py race --scenario default --hint "달밤에만 활동하는 종족"
 
@@ -131,6 +135,15 @@ agency/story/
 ```
 
 `backend/.env` 의 `BASE_URL` 만 살아 있으면 됨 (in-process consumer).
+
+**(나) Claude Code 슬래시 커맨드 (`/story-race`)**
+
+```
+/story-race default 달밤에 활동하는 종족
+/story-race default
+```
+
+`.claude/commands/story-race.md` 가 본문. Claude (대화 중인 모델) 가 `world.md` + 기존 `races/*.json` 을 직접 읽고 race JSON 한 개를 `scenarios/<scenario>/races/<id>.json` 에 Write 한다. 별도 LLM 서버 불필요, runs/ 로그도 안 남김 (대화 transcript 가 곧 로그).
 
 ### 한계
 

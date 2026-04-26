@@ -45,8 +45,20 @@ class RestAction(_StrictAction):
     action: Literal["rest"]
 
 
+class UseAction(_StrictAction):
+    action: Literal["use"]
+    item_id: str  # surroundings.inventory 의 id
+    target_id: str | None = None
+
+
 JudgeOutput = Annotated[
-    PassAction | RejectAction | CombatAction | ClarifyAction | RollAction | RestAction,
+    PassAction
+    | RejectAction
+    | CombatAction
+    | ClarifyAction
+    | RollAction
+    | RestAction
+    | UseAction,
     Field(discriminator="action"),
 ]
 

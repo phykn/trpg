@@ -28,6 +28,7 @@ from ..llm_client.agents.dc_judge.schema import (
     RejectAction,
     RestAction,
     RollAction,
+    UseAction,
 )
 from ..llm_client.agents.narrate import NarrativeDelta, NarrativeFinal
 from ..llm_client.client import LLMClient
@@ -40,9 +41,10 @@ from ..state.store import (
     save_entity,
     save_meta,
 )
-from ..errors import SkillInvalid
+from ..errors import InventoryInvalid, SkillInvalid
 from .apply import apply_changes
 from . import combat as combat_engine
+from . import inventory as inventory_engine
 from . import recovery as recovery_engine
 from . import skill as skill_engine
 from .dc import compute_grade, pick_dc, sigmoid_required_roll, social_bonus, tier_to_int
@@ -297,6 +299,62 @@ async def _emit_skill_cast(
     }
 
 
+def _format_use_log(state: GameState, actor_id: str, result: dict) -> str:
+    actor = state.characters.get(actor_id)
+    actor_name = actor.name if actor else actor_id
+    item_id = result.get("item_id")
+    item = state.items.get(item_id) if item_id else None
+    item_name = item.name if item else (item_id or "아이템")
+    kind = result.get("kind")
+    head = f"{actor_name} — 「{item_name}」 사용"
+    if kind == "heal":
+        head += f" ({result.get('amount', 0)} 회복)"
+    elif kind == "damage":
+        target_id = result.get("target")
+        tname = (
+            state.characters[target_id].name
+            if target_id and target_id in state.characters
+            else target_id or ""
+        )
+        tail = f" ({tname} 쓰러짐)" if result.get("dead") else ""
+        head += f" ({tname}에게 {result.get('amount', 0)} 데미지{tail})"
+    elif kind == "mp_restore":
+        head += f" ({result.get('amount', 0)} MP 회복)"
+    elif kind == "buff":
+        head += f" ({result.get('description', '')}, {result.get('duration', 0)} 턴)"
+    elif kind == "trigger":
+        on_use = result.get("on_use")
+        if on_use:
+            head += f" ({on_use})"
+    return head
+
+
+async def _emit_use(
+    state: GameState,
+    actor_id: str,
+    item_id: str,
+    target_id: str | None,
+    dirty: _Dirty,
+) -> AsyncIterator[dict]:
+    """use_with_quest_hook 호출 + log/SSE. 검증 실패 시 메시지 한 줄."""
+    actor = state.characters[actor_id]
+    target = state.characters.get(target_id) if target_id else None
+    try:
+        result = inventory_engine.use_with_quest_hook(
+            actor, item_id, target, state.items, state, dirty=dirty.entities
+        )
+    except InventoryInvalid as e:
+        text = f"{actor.name} — 아이템 사용 실패 ({e})."
+        gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+        _push_log_entry(state, gm_log, dirty)
+        yield {"type": "log_entry", "data": gm_log.model_dump()}
+        return
+    text = _format_use_log(state, actor_id, result)
+    gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+    _push_log_entry(state, gm_log, dirty)
+    yield {"type": "log_entry", "data": gm_log.model_dump()}
+
+
 async def _run_combat_npc_phase(
     state: GameState,
     dirty: _Dirty,
@@ -547,6 +605,30 @@ async def _run_combat_player_turn(
             yield ev
         return
 
+    if isinstance(result, UseAction):
+        # 전투 중 use — 한 차례 소비. 효과는 같은 함수.
+        async for ev in _emit_use(
+            state, state.player_id, result.item_id, result.target_id, dirty
+        ):
+            yield ev
+        yield {
+            "type": "combat_turn",
+            "data": {
+                "actor": state.player_id,
+                "action": "use",
+                "grade": "success",
+                "item_id": result.item_id,
+            },
+        }
+        combat_engine.advance_turn(state)
+        async for ev in _run_combat_npc_phase(state, dirty, rng):
+            yield ev
+        state.turn_count += 1
+        _advance_time(state)
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
     # RejectAction — 전투 안에서는 narrate 부르지 않고 짧은 거절. turn 안 늘림.
     assert isinstance(result, RejectAction)
     text = "그 발화는 무시된다."
@@ -782,6 +864,17 @@ async def run_turn(
 
     if isinstance(result, RestAction):
         async for ev in _run_rest(state, saves_dir, dirty, rng, to_front_fn):
+            yield ev
+        return
+
+    if isinstance(result, UseAction):
+        state.turn_count += 1
+        async for ev in _emit_use(
+            state, state.player_id, result.item_id, result.target_id, dirty
+        ):
+            yield ev
+        _advance_time(state)
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
 

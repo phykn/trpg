@@ -1,6 +1,7 @@
+from collections import Counter
 from pathlib import Path
 
-from ..domain.entities import Character
+from ..domain.entities import Character, ConsumableEffect
 from ..rules import RULES
 from ..state.models import GameState
 
@@ -94,6 +95,29 @@ def _state_tags(actor: Character, npc: Character) -> list[str]:
     return tags
 
 
+def _inventory_payload(state: GameState, actor: Character) -> list[dict]:
+    """judge use 매칭용. consumable / on_use 트리거 있는 아이템만 노출.
+    같은 item_id 끼리 묶어 qty 카운트. weapon/armor 는 use 대상 아니라 제외."""
+    counts: Counter[str] = Counter(actor.inventory_ids)
+    out: list[dict] = []
+    for item_id, qty in counts.items():
+        item = state.items.get(item_id)
+        if item is None:
+            continue
+        eff = item.effects
+        is_consumable = isinstance(eff, ConsumableEffect)
+        has_on_use = bool(item.on_use)
+        if not is_consumable and not has_on_use:
+            continue
+        entry: dict = {"id": item_id, "name": item.name, "qty": qty}
+        if is_consumable:
+            entry["effect"] = eff.effect
+        if item.description:
+            entry["description"] = item.description
+        out.append(entry)
+    return out
+
+
 def _learned_skills_payload(actor: Character) -> list[dict]:
     """judge 의미 매칭용. learned_skills 만 노출 — racial_skills 는 자동 매칭 대상이 아님."""
     out: list[dict] = []
@@ -117,7 +141,12 @@ def _learned_skills_payload(actor: Character) -> list[dict]:
 def build_surroundings(state: GameState, actor_id: str) -> dict:
     actor = state.characters[actor_id]
     if not actor.location_id or actor.location_id not in state.locations:
-        return {"location": None, "entities": [], "learned_skills": []}
+        return {
+            "location": None,
+            "entities": [],
+            "learned_skills": [],
+            "inventory": [],
+        }
     location = state.locations[actor.location_id]
 
     entities: list[dict] = [{"id": actor_id, "name": actor.name, "type": "player"}]
@@ -171,4 +200,5 @@ def build_surroundings(state: GameState, actor_id: str) -> dict:
         "location": location_data,
         "entities": entities,
         "learned_skills": _learned_skills_payload(actor),
+        "inventory": _inventory_payload(state, actor),
     }

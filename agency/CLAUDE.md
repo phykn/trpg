@@ -30,6 +30,15 @@ QA 의 각 run 은 `runs/<timestamp>/<agent>/saves/` 를 자체 `SAVES_DIR` 로 
 
 QA 와 달리 story 팀은 `scenarios/<scenario>/` (PROFILE_DIR 가 가리키는 곳) 에 결과 파일을 바로 떨군다 — 다음 새 게임이 그 시드를 그대로 쓰는 게 목적이므로. 단 같은 `id.json` 이 이미 있으면 덮어쓰지 않고 에러로 멈춘다 (`harness/runner.py` 의 `write_race_to_disk`). LLM 주고받음 로그는 `agency/story/runs/<ts>/<agent>/` 에 따로 보존.
 
+### Story 팀은 두 트랙을 가짐
+
+같은 prompt 규칙을 두 진입점이 공유:
+
+- `agency/story/run_story.py race --scenario <s>` — 로컬 LLM (BASE_URL) 호출. 자동화·반복용. `harness/runner.py` 가 자기교정 5회.
+- `/story-race <s> [hint]` — `.claude/commands/story-race.md`. Claude Code 가 직접 Read/Write. 한 번 더 똑똑하게 짓고 싶을 때.
+
+규칙 (id 패턴, 한국어 강제, racial_skills 빈 리스트, 톤 일치) 이 어긋나면 두 곳 다 같이 갱신. 한쪽만 고치면 같은 시나리오에 톤 다른 race 가 들어가게 됨.
+
 ### 새 agent 추가
 
 1. `agency/qa/agents/<name>.md` — system prompt 한 장. 어떤 성향인지 / 무엇을 위주로 할지 명시.

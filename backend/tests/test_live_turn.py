@@ -158,6 +158,35 @@ async def test_rest_branch_classified_by_judge(client, env):
     assert player.mp == player.max_mp
 
 
+async def test_judge_matches_use_for_inventory_item(client, env):
+    """판정자가 inventory 컨텍스트로 받아 자연어를 use 로 분류, item_id 박는지."""
+    from src.domain.entities import ConsumableEffect, Item
+
+    gs, profile_dir, saves_dir = env
+    gs.items["herb_01"] = Item(
+        id="herb_01",
+        name="치유 약초",
+        consumable=True,
+        effects=ConsumableEffect(type="consumable", effect="heal", amount=8),
+    )
+    gs.characters["player_01"].inventory_ids = ["herb_01"]
+    gs.characters["player_01"].hp = 10  # 상처난 상태
+
+    events = await _collect_events(
+        run_turn(
+            client,
+            gs,
+            profile_dir,
+            saves_dir,
+            "약초를 먹어 상처를 치유한다.",
+            rng=random.Random(0),
+        )
+    )
+    judge_event = next(e for e in events if e["type"] == "judge")
+    assert judge_event["data"]["action"] == "use"
+    assert judge_event["data"]["item_id"] == "herb_01"
+
+
 async def test_judge_matches_learned_skill_in_combat(client, env):
     """판정자가 learned_skills 컨텍스트로 받아 combat 입력에 skill_id 박는지 확인."""
     from src.domain.entities import Race, Skill

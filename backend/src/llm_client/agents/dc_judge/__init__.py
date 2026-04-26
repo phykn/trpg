@@ -6,7 +6,9 @@ from .schema import (
     JudgeOutput,
     PassAction,
     RejectAction,
+    RestAction,
     RollAction,
+    UseAction,
     output_adapter,
 )
 from .semantics import JudgeSemanticError, check_semantics, collect_valid_ids
@@ -20,7 +22,9 @@ __all__ = [
     "PROMPT_PATH",
     "PassAction",
     "RejectAction",
+    "RestAction",
     "RollAction",
+    "UseAction",
     "check_semantics",
     "collect_valid_ids",
     "judge",
