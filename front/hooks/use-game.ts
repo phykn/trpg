@@ -19,6 +19,8 @@ export type GameStatus = 'loading' | 'no-game' | 'ready' | 'error';
 
 const STREAMING_GM_ID = -1;
 
+// --- 헬퍼 -----------------------------------------------------------------
+
 function mergeEntry(log: LogEntry[], entry: LogEntry): LogEntry[] {
   const idx = log.findIndex((e) => e.id === entry.id);
   if (idx === -1) return [...log, entry];
@@ -27,7 +29,10 @@ function mergeEntry(log: LogEntry[], entry: LogEntry): LogEntry[] {
   return next;
 }
 
+// --- 훅 -------------------------------------------------------------------
+
 export function useGame() {
+  // --- 상태 ---------------------------------------------------------------
   const [status, setStatus] = React.useState<GameStatus>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
@@ -50,6 +55,8 @@ export function useGame() {
       pendingAborts.clear();
     };
   }, []);
+
+  // --- 스트림 이벤트 처리 -------------------------------------------------
 
   const applyState = React.useCallback((s: FrontState) => {
     setHero(s.hero);
@@ -110,6 +117,8 @@ export function useGame() {
     [streaming],
   );
 
+  // --- 세션 진입 / 새 게임 ------------------------------------------------
+
   const refresh = React.useCallback(async () => {
     setStatus('loading');
     setErrorMessage(null);
@@ -155,6 +164,8 @@ export function useGame() {
     [applyState, handleEvent, runStream],
   );
 
+  // --- 플레이어 액션 ------------------------------------------------------
+
   const onSend = React.useCallback(
     (text: string) => {
       const trimmed = text.trim();
@@ -178,6 +189,8 @@ export function useGame() {
   const onStop = React.useCallback(() => {
     aborts.current.forEach((a) => a.abort());
   }, []);
+
+  // --- 파생 / 반환 --------------------------------------------------------
 
   const displayLog = React.useMemo<LogEntry[]>(() => {
     if (!streamingText) return log;
