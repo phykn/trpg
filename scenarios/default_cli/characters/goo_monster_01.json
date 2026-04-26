@@ -1,27 +1,27 @@
 {
-  "id": "sea_beast_01",
-  "name": "심해 거미",
-  "description": "불안한 항구의 절벽 길을 배회하는 위험한 존재. 인간이나 다른 생명체에 대해 극도의 경계심을 보인다.",
-  "appearance": "칠흑 같은 외골격을 지닌 거대한 해양 생물로, 날카로운 집게발을 가지고 있다.",
+  "id": "goo_monster_01",
+  "name": "절벽 해갑",
+  "description": "난파선에서 유출된 이상 변이의 결과물. 절벽 길목을 사냥터로 삼으며, 먹잇감을 향해 무섭게 기어 올라온다.",
+  "appearance": "거대하고 단단한 갑각을 지녔으며, 바닷물이 뒤섞인 듯한 기이한 색을 띠고 있다.",
   "is_player": false,
-  "role": "좌초선에서 나온 게 형태의 괴생명체 (적대적)",
-  "race_id": "mutant_sea_beast",
-  "job": "괴생명체",
+  "role": "절벽 길목을 지키는 게 모양의 괴생명체",
+  "race_id": "mutant",
+  "job": "절벽 괴물",
   "level": 0,
   "stats": {
-    "STR": 18,
-    "DEX": 13,
+    "STR": 16,
+    "DEX": 14,
     "CON": 18,
     "INT": 5,
     "WIS": 8,
-    "CHA": 4
+    "CHA": 3
   },
-  "hp": 65,
-  "max_hp": 65,
+  "hp": 45,
+  "max_hp": 45,
   "mp": 0,
   "max_mp": 0,
   "alive": true,
-  "location_id": "cliff_path",
+  "location_id": "clifftop_path",
   "equipment": {
     "head": null,
     "top": null,
@@ -38,10 +38,10 @@
   "disposition": {
     "lawful": 10,
     "moral": 5,
-    "aggressive": 100
+    "aggressive": 95
   },
   "relations": {},
-  "tone_hint": "낮고 으르렁거리는 듯한 소리만 낸다.",
+  "tone_hint": "낮고 둔탁한 마찰음, 먹잇감을 포식할 때 으르렁거리는 듯한 소리.",
   "hints": [],
   "racial_skills": [],
   "learned_skills": [],
@@ -50,7 +50,7 @@
   "memories": [],
   "combat_behavior": {
     "attack_priority": "nearest",
-    "flee_hp_percent": 20,
+    "flee_hp_percent": 15,
     "nearest_weight": 70,
     "random_weight": 30
   },

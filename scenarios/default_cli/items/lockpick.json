@@ -1,0 +1,11 @@
+{
+  "id": "lockpick",
+  "name": "자물쇠 따개",
+  "description": "고장 난 낡은 자물쇠를 조용히 열 수 있는 섬세한 도구입니다.",
+  "weight": 0.5,
+  "price": 25,
+  "effects": null,
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

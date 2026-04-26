@@ -1,27 +1,27 @@
 {
   "id": "kasim_01",
   "name": "카심",
-  "description": "고립된 마을에서도 약재를 팔며 생계를 유지한다. 외부인들에게 필요한 약초에 대한 지식을 제공할 수 있다.",
-  "appearance": "지팡이에 의지하는, 허름하지만 친절한 인상.",
+  "description": "이름 모를 곳을 떠돌며 잡다한 물품과 약품을 판다. 그는 항구의 구석구석에서 벌어지는 소문과 진실을 거래하는 데 능숙하다.",
+  "appearance": "세월의 흔적이 짙게 묻은 낡은 옷차림. 날카롭고 관찰력 있는 눈빛을 지녔다.",
   "is_player": false,
-  "role": "항구의 약초를 파는 행상인",
-  "race_id": "mutant_sea_beast",
-  "job": "약초상",
+  "role": "정보원 및 잡화 상인",
+  "race_id": "human",
+  "job": "행상인",
   "level": 0,
   "stats": {
     "STR": 10,
-    "DEX": 10,
-    "CON": 12,
-    "INT": 14,
-    "WIS": 15,
-    "CHA": 12
+    "DEX": 11,
+    "CON": 11,
+    "INT": 12,
+    "WIS": 10,
+    "CHA": 13
   },
-  "hp": 22,
-  "max_hp": 22,
+  "hp": 20,
+  "max_hp": 20,
   "mp": 0,
   "max_mp": 0,
   "alive": true,
-  "location_id": "erena_port",
+  "location_id": "anchor_tavern",
   "equipment": {
     "head": null,
     "top": null,
@@ -32,16 +32,18 @@
     "acc1": null,
     "acc2": null
   },
-  "inventory_ids": [],
+  "inventory_ids": [
+    "lockpick"
+  ],
   "gold": 0,
   "xp_pool": 0,
   "disposition": {
     "lawful": 65,
-    "moral": 75,
+    "moral": 70,
     "aggressive": 10
   },
   "relations": {},
-  "tone_hint": "걱정스러운 듯 온화한 말투, 지식이 풍부함.",
+  "tone_hint": "재빨리 정보를 흘리며, 거래할 때만 희미하게 웃는다.",
   "hints": [],
   "racial_skills": [],
   "learned_skills": [],

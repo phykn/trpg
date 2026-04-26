@@ -1,23 +1,23 @@
 {
-  "id": "ship_guard_01",
-  "name": "선박 경비병",
-  "description": "화물선의 생존을 위해 남아있는 존재. 외부인을 위험 요소로 간주하며 격렬하게 방어한다.",
-  "appearance": "거칠게 단련된 근육질의 모습, 어두운 바닷물빛 피부.",
+  "id": "guard_01",
+  "name": "조지",
+  "description": "난파된 선체 안을 지키며 고립된 상황 속에서 필사적으로 생존하려는 경비병이다. 낯선 이들을 강한 의심으로 대한다.",
+  "appearance": "낡고 해진 제복과 바다 소금기로 거칠어진 얼굴. 피로와 경계심이 뒤섞여있다.",
   "is_player": false,
-  "role": "좌초된 화물선에 남아 외부인을 경계하는 경비병",
-  "race_id": "mutant_sea_beast",
+  "role": "좌초선에서 살아남은 경계병",
+  "race_id": "human",
   "job": "경비병",
   "level": 0,
   "stats": {
-    "STR": 16,
+    "STR": 13,
     "DEX": 12,
-    "CON": 16,
-    "INT": 8,
-    "WIS": 10,
-    "CHA": 6
+    "CON": 14,
+    "INT": 10,
+    "WIS": 11,
+    "CHA": 8
   },
-  "hp": 40,
-  "max_hp": 40,
+  "hp": 30,
+  "max_hp": 30,
   "mp": 0,
   "max_mp": 0,
   "alive": true,
@@ -37,11 +37,11 @@
   "xp_pool": 0,
   "disposition": {
     "lawful": 30,
-    "moral": 20,
-    "aggressive": 90
+    "moral": 40,
+    "aggressive": 85
   },
   "relations": {},
-  "tone_hint": "으르렁거리며 거친 위협을 가함.",
+  "tone_hint": "날카롭고 경계하는 말투, 숨소리마저 거친다.",
   "hints": [],
   "racial_skills": [],
   "learned_skills": [],
@@ -50,7 +50,7 @@
   "memories": [],
   "combat_behavior": {
     "attack_priority": "nearest",
-    "flee_hp_percent": 15,
+    "flee_hp_percent": 25,
     "nearest_weight": 70,
     "random_weight": 30
   },

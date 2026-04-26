@@ -1,17 +1,18 @@
 {
   "id": "wrecked_ship",
-  "name": "좌초된 화물선",
-  "description": "부두에 박힌 채 웅크린 화물선이다. 선실 곳곳에 파손된 흔적이 보이며, 미스터리한 실종 사건의 단서들이 흩어져 있다.",
+  "name": "침몰 화물선",
+  "description": "파도에 천천히 흔들리는 낡고 거대한 화물선. 난파된 선체 안에는 잊힌 배와 위험한 비밀이 숨겨져 있습니다.",
   "tags": [
     "outdoor",
-    "dungeon",
-    "ship"
+    "wilderness"
   ],
-  "item_ids": [],
+  "item_ids": [
+    "brass_key"
+  ],
   "hidden_items": [],
   "connections": [
     {
-      "target_id": "erena_port",
+      "target_id": "clifftop_path",
       "difficulty": null,
       "key_item_id": null,
       "travel_min": null

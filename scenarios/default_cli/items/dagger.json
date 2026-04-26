@@ -1,0 +1,16 @@
+{
+  "id": "dagger",
+  "name": "항구의 단검",
+  "description": "",
+  "weight": 1.0,
+  "price": 50,
+  "effects": {
+    "type": "weapon",
+    "weapon_dice": "1d6",
+    "range": 1.5,
+    "two_handed": false
+  },
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

@@ -1,10 +1,9 @@
 {
   "id": "ch1",
-  "title": "등불을 찾아라",
-  "summary": "실종된 등대지기의 행방을 쫓아 항구 마을의 비밀스러운 지하 통로로 진입하며 사건의 실마리를 찾는다.",
+  "title": "안개 속의 실종",
+  "summary": "항구 마을에서 의뢰를 받아 사라진 등대지기 베르토의 행방을 추적하며 미스터리한 사건의 실마리를 찾는다.",
   "quest_ids": [
-    "q_find_bertho",
-    "q_retrieve_key"
+    "q_find_berta"
   ],
   "status": "active",
   "required": true,

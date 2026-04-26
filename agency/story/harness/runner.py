@@ -36,6 +36,7 @@ class EntitySpec:
 
 def _check_location_refs(loc: Location, refs: dict[str, set[str]]) -> None:
     location_ids = refs.get("location", set())
+    item_ids = refs.get("item", set())
     for c in loc.connections:
         if c.target_id == loc.id:
             raise EntityWriterError(
@@ -45,6 +46,16 @@ def _check_location_refs(loc: Location, refs: dict[str, set[str]]) -> None:
             raise EntityWriterError(
                 f"location.connections.target_id={c.target_id!r} 가 시나리오 locations 에 없음. "
                 f"가능한 id: {sorted(location_ids)}"
+            )
+    for iid in loc.item_ids:
+        if iid not in item_ids:
+            raise EntityWriterError(
+                f"location.item_ids 의 {iid!r} 가 시나리오 items 에 없음."
+            )
+    for iid in loc.hidden_items:
+        if iid not in item_ids:
+            raise EntityWriterError(
+                f"location.hidden_items 의 {iid!r} 가 시나리오 items 에 없음."
             )
 
 
@@ -123,7 +134,7 @@ SPECS: dict[str, EntitySpec] = {
     ),
     "location": EntitySpec(
         kind="location", model=Location, sub_dir="locations", fragment="location.md",
-        ref_kinds=("location",), check_refs=_check_location_refs,
+        ref_kinds=("location", "item"), check_refs=_check_location_refs,
     ),
     "item": EntitySpec(
         kind="item", model=Item, sub_dir="items", fragment="item.md",
@@ -229,6 +240,8 @@ async def write_entity(
     llm: LLMClient,
     retries: int = 5,
     force_id: str | None = None,
+    extra_check: Callable[[BaseModel], None] | None = None,
+    think: bool = True,
 ) -> tuple[BaseModel, list[dict]]:
     """LLM 으로 entity 한 개 생성. 검증 실패 시 자기교정 루프 (retries 회)."""
     if kind not in SPECS:
@@ -259,12 +272,14 @@ async def write_entity(
     ]
     last_error: Exception | None = None
     for _ in range(retries + 1):
-        result = await llm.chat(messages=messages, think=False)
+        result = await llm.chat(messages=messages, think=think)
         answer = (result["answer"] or "").strip()
         try:
             entity = spec.model.model_validate_json(answer)
             _check_id(entity, existing_ids, force_id=force_id)
             spec.check_refs(entity, refs)
+            if extra_check is not None:
+                extra_check(entity)
             return entity, messages + [{"role": "assistant", "content": answer}]
         except (ValidationError, EntityWriterError, json.JSONDecodeError) as e:
             last_error = e

@@ -7,6 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ValidationError
 
+from src.domain.entities import Character
 from src.llm_client.client import LLMClient
 
 from .runner import (
@@ -34,6 +35,9 @@ class DecItem(BaseModel):
     id: str
     kind: Literal["weapon", "armor", "consumable", "key"]
     role: str
+    owner_character_id: str | None = None
+    owner_location_id: str | None = None
+    for_player_template: bool = False
 
 
 class DecCharacter(BaseModel):
@@ -41,6 +45,7 @@ class DecCharacter(BaseModel):
     role: str
     is_enemy: bool = False
     location_id: str
+    race_id: str
 
 
 class DecQuest(BaseModel):
@@ -121,13 +126,18 @@ def _check_decomp(d: Decomposition) -> None:
             f"start_quest_id={d.start_quest_id!r} 가 quests 명단에 없음."
         )
 
-    # character.location_id 가 locations 안에 실재
+    # character.location_id / race_id 가 명단 안에 실재
     char_by_id = {c.id: c for c in d.characters}
     for c in d.characters:
         if c.location_id not in loc_ids:
             raise EntityWriterError(
                 f"character {c.id} location_id={c.location_id!r} 가 locations 명단에 없음. "
                 f"가능한 id: {sorted(loc_ids)}"
+            )
+        if c.race_id not in race_ids:
+            raise EntityWriterError(
+                f"character {c.id} race_id={c.race_id!r} 가 races 명단에 없음. "
+                f"가능한 id: {sorted(race_ids)}"
             )
 
     # start_subject 가 start_location 에 있어야 함
@@ -138,6 +148,22 @@ def _check_decomp(d: Decomposition) -> None:
             f"start_location_id={d.start_location_id!r} 와 다름. "
             "게임 시작 시 active subject 는 시작 위치에 있어야 한다."
         )
+
+    # item owner 검증
+    for it in d.items:
+        if it.owner_character_id is not None and it.owner_character_id not in char_ids:
+            raise EntityWriterError(
+                f"item {it.id} owner_character_id={it.owner_character_id!r} 가 characters 명단에 없음."
+            )
+        if it.owner_location_id is not None and it.owner_location_id not in loc_ids:
+            raise EntityWriterError(
+                f"item {it.id} owner_location_id={it.owner_location_id!r} 가 locations 명단에 없음."
+            )
+        if it.owner_character_id is not None and it.owner_location_id is not None:
+            raise EntityWriterError(
+                f"item {it.id} 의 owner_character_id 와 owner_location_id 가 모두 있음. "
+                "둘 중 하나만 (또는 for_player_template=true 면 둘 다 비워둘 수 있음)."
+            )
 
     target_pools = {
         "character": char_ids,
@@ -162,10 +188,6 @@ def _check_decomp(d: Decomposition) -> None:
                 "의뢰자는 비적대여야 한다."
             )
 
-    # race_ids 사용 안 했지만 미래 검증용 (character.race_id 가 race 명단에 있는지 등)
-    _ = race_ids
-
-
 # --- 분해 단계 ----------------------------------------------------------
 
 
@@ -175,6 +197,7 @@ async def decompose_prose(
     prompt_path: Path,
     llm: LLMClient,
     retries: int = 5,
+    think: bool = True,
 ) -> tuple[Decomposition, list[dict]]:
     """줄글 → Decomposition. 자기교정 5회 루프."""
     system = prompt_path.read_text(encoding="utf-8")
@@ -184,7 +207,7 @@ async def decompose_prose(
     ]
     last_error: Exception | None = None
     for _ in range(retries + 1):
-        result = await llm.chat(messages=messages, think=False)
+        result = await llm.chat(messages=messages, think=think)
         answer = (result["answer"] or "").strip()
         try:
             d = Decomposition.model_validate_json(answer)
@@ -222,6 +245,8 @@ async def _write_step(
     scenario_dir: Path,
     agents_dir: Path,
     llm: LLMClient,
+    extra_check: Callable[[BaseModel], None] | None = None,
+    think: bool = True,
 ) -> BaseModel:
     entity, _msgs = await write_entity(
         kind=kind,
@@ -230,9 +255,27 @@ async def _write_step(
         hint=hint,
         llm=llm,
         force_id=forced_id,
+        extra_check=extra_check,
+        think=think,
     )
     write_entity_to_disk(entity, scenario_dir, kind)
     return entity
+
+
+def _check_enemy_consistency(entity: BaseModel, expected_enemy: bool) -> None:
+    if not isinstance(entity, Character):
+        return
+    has_combat = entity.combat_behavior is not None
+    if expected_enemy and not has_combat:
+        raise EntityWriterError(
+            f"character {entity.id} 가 적대 (is_enemy=true) 로 분해됐으나 combat_behavior 가 없음. "
+            "적대 character 는 combat_behavior 를 박아라 ({{attack_priority, flee_hp_percent}})."
+        )
+    if not expected_enemy and has_combat:
+        raise EntityWriterError(
+            f"character {entity.id} 가 비적대 (is_enemy=false) 로 분해됐으나 combat_behavior 가 박혀 있음. "
+            "비적대 character 의 combat_behavior 는 비워라 (필드 자체를 생략)."
+        )
 
 
 async def build_scenario(
@@ -244,6 +287,7 @@ async def build_scenario(
     llm: LLMClient,
     on_step: Callable[[str], None] | None = None,
     run_dir: Path | None = None,
+    think: bool = True,
 ) -> dict:
     """줄글 한 편 → 시나리오 디렉터리 한 벌.
 
@@ -264,7 +308,7 @@ async def build_scenario(
     _step("분해 단계")
     prose = prose_path.read_text(encoding="utf-8")
     decomp, decomp_msgs = await decompose_prose(
-        prose=prose, prompt_path=decompose_prompt_path, llm=llm,
+        prose=prose, prompt_path=decompose_prompt_path, llm=llm, think=think,
     )
     if run_dir is not None:
         (run_dir / "decompose.json").write_text(
@@ -285,42 +329,75 @@ async def build_scenario(
     for r in decomp.races:
         await _write_step(
             kind="race", forced_id=r.id, hint=_hint_with_id(r.id, r.role),
-            scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm,
+            scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
         )
     counts["race"] = len(decomp.races)
 
-    # 4. locations
-    _step(f"location × {len(decomp.locations)}")
-    for loc in decomp.locations:
-        await _write_step(
-            kind="location", forced_id=loc.id, hint=_hint_with_id(loc.id, loc.role),
-            scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm,
-        )
-    counts["location"] = len(decomp.locations)
-
-    # 5. items
+    # 4. items (location 보다 먼저 — location.item_ids·character.inventory_ids 가 item 을 가리킴)
     _step(f"item × {len(decomp.items)}")
     for it in decomp.items:
         extra = f"분류: {it.kind} ('{it.kind}' 의 effects 모양 사용)."
         await _write_step(
             kind="item", forced_id=it.id,
             hint=_hint_with_id(it.id, it.role, extra),
-            scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm,
+            scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
         )
     counts["item"] = len(decomp.items)
 
-    # 6. characters
+    # 5. locations — owner_location_id 로 매칭되는 item 들을 item_ids 에 박음
+    _step(f"location × {len(decomp.locations)}")
+    items_by_loc: dict[str, list[str]] = {}
+    for it in decomp.items:
+        if it.owner_location_id:
+            items_by_loc.setdefault(it.owner_location_id, []).append(it.id)
+    for loc in decomp.locations:
+        loc_items = items_by_loc.get(loc.id, [])
+        if loc_items:
+            items_repr = "[" + ", ".join(repr(i) for i in loc_items) + "]"
+            extra = f"item_ids 에 정확히 {items_repr} 를 박아라."
+        else:
+            extra = "item_ids 는 빈 리스트 또는 생략."
+        await _write_step(
+            kind="location", forced_id=loc.id,
+            hint=_hint_with_id(loc.id, loc.role, extra),
+            scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
+        )
+    counts["location"] = len(decomp.locations)
+
+    # 6. characters — race_id, location_id, inventory_ids 강제
     _step(f"character × {len(decomp.characters)}")
+    items_by_char: dict[str, list[str]] = {}
+    for it in decomp.items:
+        if it.owner_character_id:
+            items_by_char.setdefault(it.owner_character_id, []).append(it.id)
     for c in decomp.characters:
-        flag = "적대 (combat_behavior 박을 것)" if c.is_enemy else "비적대"
+        flag = (
+            "적대 — combat_behavior 를 박아라 ({attack_priority, flee_hp_percent})"
+            if c.is_enemy
+            else "비적대 — combat_behavior 는 박지 말 것 (필드 자체 생략)"
+        )
+        char_items = items_by_char.get(c.id, [])
+        if char_items:
+            inv_repr = "[" + ", ".join(repr(i) for i in char_items) + "]"
+            inv_clause = f" inventory_ids 에 정확히 {inv_repr} 를 박을 것."
+        else:
+            inv_clause = " inventory_ids 는 빈 리스트 또는 생략."
         extra = (
             f"적대 여부: {flag}. "
+            f"race_id 를 정확히 '{c.race_id}' 로 박을 것. "
             f"location_id 를 정확히 '{c.location_id}' 로 박을 것."
+            f"{inv_clause}"
         )
+        expected_enemy = c.is_enemy
+
+        def _check(entity: BaseModel, ee: bool = expected_enemy) -> None:
+            _check_enemy_consistency(entity, ee)
+
         await _write_step(
             kind="character", forced_id=c.id,
             hint=_hint_with_id(c.id, c.role, extra),
             scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm,
+            extra_check=_check, think=think,
         )
     counts["character"] = len(decomp.characters)
 
@@ -337,7 +414,7 @@ async def build_scenario(
         )
         await _write_step(
             kind="quest", forced_id=q.id, hint=_hint_with_id(q.id, q.role, extra),
-            scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm,
+            scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
         )
     counts["quest"] = len(decomp.quests)
 
@@ -353,7 +430,7 @@ async def build_scenario(
         )
         await _write_step(
             kind="chapter", forced_id=ch.id, hint=_hint_with_id(ch.id, ch.role, extra),
-            scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm,
+            scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
         )
     counts["chapter"] = len(decomp.chapters)
 
@@ -378,10 +455,11 @@ async def build_scenario(
         json.dumps(start, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
+    player_inv = [it.id for it in decomp.items if it.for_player_template]
     player_template = {
         "id": "player_01",
         "equipment": {},
-        "inventory_ids": [],
+        "inventory_ids": player_inv,
     }
     (scenario_dir / "player_template.json").write_text(
         json.dumps(player_template, ensure_ascii=False, indent=2), encoding="utf-8"

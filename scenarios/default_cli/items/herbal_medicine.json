@@ -1,0 +1,17 @@
+{
+  "id": "herbal_medicine",
+  "name": "약초 치료제",
+  "description": "가벼운 상처를 치유할 수 있는 기본적인 약초입니다.",
+  "weight": 0.2,
+  "price": 15,
+  "effects": {
+    "type": "consumable",
+    "effect": "heal",
+    "amount": 25,
+    "description": null,
+    "duration": null
+  },
+  "required": null,
+  "consumable": true,
+  "on_use": null
+}

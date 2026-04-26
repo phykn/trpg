@@ -1,7 +1,7 @@
 {
-  "id": "cliff_path",
+  "id": "clifftop_path",
   "name": "절벽 길",
-  "description": "항구 마을과 부두를 잇는, 좁고 험준하며 불안정한 절벽 위 길이다.",
+  "description": "낡고 위험천만한 절벽을 따라 난 좁은 길. 닻 항구 선술집에서 부두로 이어지며, 안개가 자욱하게 드리워져 위협적인 분위기를 풍깁니다.",
   "tags": [
     "outdoor",
     "wilderness"
@@ -10,7 +10,7 @@
   "hidden_items": [],
   "connections": [
     {
-      "target_id": "erena_port",
+      "target_id": "anchor_tavern",
       "difficulty": null,
       "key_item_id": null,
       "travel_min": null
