@@ -1,13 +1,10 @@
 import type { Subject, Quest, Place } from '@/types/domain';
 import type { PanelSlot } from '@/types/ui';
 
-const periodOf = (h: number): string =>
-  h < 5 ? '새벽' : h < 12 ? '오전' : h < 17 ? '오후' : h < 20 ? '저녁' : '밤';
-
 export type GameSnapshot = {
   subject: Subject | null;
   quest: Quest | null;
-  place: Place;
+  place: Place | null;
 };
 
 export function buildSubjectSlot(subject: Subject | null): PanelSlot {
@@ -56,26 +53,26 @@ export function buildQuestSlot(quest: Quest | null): PanelSlot {
       sections: [
         { label: '목표', text: quest.goals.join(' · ') },
         { label: '조건', text: quest.conditions.join(' · ') },
-        { label: '메모', text: quest.memo },
+        { label: '요약', text: quest.summary },
       ],
     } : null,
   };
 }
 
-export function buildPlaceSlot(place: Place): PanelSlot {
+export function buildPlaceSlot(place: Place | null): PanelSlot {
   return {
     id: 'bg',
     chip: { short: '장소' },
-    panel: {
+    panel: place ? {
       title: place.name,
       meta: place.date,
-      bar: { label: '시간', value: place.hour, max: 24, tone: 'accent', display: `${place.hour}시 · ${periodOf(place.hour)}` },
+      bar: { label: '시간', value: place.hour, max: 24, tone: 'accent', display: `${place.hour}시 · ${place.period}` },
       sections: [
         { label: '날씨', text: place.weather.join(' · ') },
         { label: '특징', text: place.features.join(' · ') },
         { label: '주변', text: place.surroundings.join(' · ') },
       ],
-    },
+    } : null,
   };
 }
 

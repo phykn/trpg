@@ -1,20 +1,72 @@
 import { fetch } from 'expo/fetch';
 
-import type { ChatChunk, ChatRequest } from '@/types/wire';
+import type {
+  InitRequest,
+  ProfileCard,
+  SessionPayload,
+  StreamEvent,
+  TurnRequest,
+} from '@/types/wire';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 if (!BASE_URL) throw new Error('EXPO_PUBLIC_API_URL is not set');
 
-export async function streamChat(
-  body: Omit<ChatRequest, 'think'>,
-  onChunk: (chunk: ChatChunk) => void,
+const API_USER = process.env.EXPO_PUBLIC_API_USER;
+if (!API_USER) throw new Error('EXPO_PUBLIC_API_USER is not set');
+
+const API_PASS = process.env.EXPO_PUBLIC_API_PASS;
+if (!API_PASS) throw new Error('EXPO_PUBLIC_API_PASS is not set');
+
+const AUTH_HEADER = `Basic ${btoa(`${API_USER}:${API_PASS}`)}`;
+
+const baseHeaders = {
+  Authorization: AUTH_HEADER,
+};
+const jsonHeaders = {
+  ...baseHeaders,
+  'Content-Type': 'application/json',
+};
+
+// --- REST -------------------------------------------------------------------
+
+export async function listProfiles(): Promise<ProfileCard[]> {
+  const res = await fetch(`${BASE_URL}/profiles`, { headers: baseHeaders });
+  if (!res.ok) throw new Error(`listProfiles failed: HTTP ${res.status}`);
+  return (await res.json()) as ProfileCard[];
+}
+
+export async function getCurrentSession(): Promise<SessionPayload | null> {
+  const res = await fetch(`${BASE_URL}/session/current`, { headers: baseHeaders });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`getCurrentSession failed: HTTP ${res.status}`);
+  return (await res.json()) as SessionPayload;
+}
+
+export async function initSession(body: InitRequest): Promise<SessionPayload> {
+  const res = await fetch(`${BASE_URL}/session/init`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`initSession failed: HTTP ${res.status}`);
+  return (await res.json()) as SessionPayload;
+}
+
+// --- SSE --------------------------------------------------------------------
+
+async function streamSse(
+  url: string,
+  init: { method: 'POST'; body?: string },
+  onEvent: (ev: StreamEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const payload: ChatRequest = { ...body, think: false };
-  const res = await fetch(`${BASE_URL}/stream`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
-    body: JSON.stringify(payload),
+  const res = await fetch(url, {
+    method: init.method,
+    headers: {
+      ...jsonHeaders,
+      Accept: 'text/event-stream',
+    },
+    body: init.body,
     signal,
   });
   if (!res.ok) throw new Error(`stream failed: HTTP ${res.status}`);
@@ -24,20 +76,16 @@ export async function streamChat(
   const decoder = new TextDecoder();
   let buffer = '';
 
-  const handlePayload = (payload: string): boolean => {
-    if (payload === '[DONE]') return true;
-    try {
-      onChunk(JSON.parse(payload) as ChatChunk);
-    } catch (e) {
-      console.warn('streamChat: malformed chunk skipped', e);
-    }
-    return false;
-  };
-
-  const processLine = (raw: string): boolean => {
+  const handleLine = (raw: string) => {
     const line = raw.trim();
-    if (!line.startsWith('data:')) return false;
-    return handlePayload(line.slice(5).trim());
+    if (!line.startsWith('data:')) return;
+    const payload = line.slice(5).trim();
+    if (!payload) return;
+    try {
+      onEvent(JSON.parse(payload) as StreamEvent);
+    } catch (e) {
+      console.warn('streamSse: malformed chunk skipped', e);
+    }
   };
 
   while (true) {
@@ -46,10 +94,34 @@ export async function streamChat(
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split('\n');
     buffer = lines.pop() ?? '';
-    for (const raw of lines) {
-      if (processLine(raw)) return;
-    }
+    for (const raw of lines) handleLine(raw);
   }
+  if (buffer) handleLine(buffer);
+}
 
-  processLine(buffer);
+export function streamTurn(
+  gameId: string,
+  body: TurnRequest,
+  onEvent: (ev: StreamEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  return streamSse(
+    `${BASE_URL}/session/${gameId}/turn`,
+    { method: 'POST', body: JSON.stringify(body) },
+    onEvent,
+    signal,
+  );
+}
+
+export function streamRoll(
+  gameId: string,
+  onEvent: (ev: StreamEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  return streamSse(
+    `${BASE_URL}/session/${gameId}/roll`,
+    { method: 'POST', body: '{}' },
+    onEvent,
+    signal,
+  );
 }

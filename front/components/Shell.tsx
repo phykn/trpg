@@ -1,15 +1,54 @@
 import React from 'react';
-import { View, Keyboard } from 'react-native';
+import { ActivityIndicator, Keyboard, Pressable, Text, View } from 'react-native';
+
+import { colors } from '@/design/tokens';
 import { useGame } from '@/hooks/use-game';
 import { buildPanelSlots } from '@/transformers';
-import { ContextCard } from './header';
-import { Log } from './log';
-import { HeroPill } from './hero';
+
 import { Composer } from './composer';
+import { ContextCard } from './header';
+import { HeroPill } from './hero';
+import { Log } from './log';
+import { NewGame } from './NewGame';
 
 export function Shell() {
-  const { hero, subject, quest, place, log, rolling, rollEnabled, streaming, onSend, onRoll, onStop } = useGame();
-  const slots = buildPanelSlots({ subject, quest, place });
+  const game = useGame();
+
+  if (game.status === 'loading') {
+    return (
+      <View className="flex-1 bg-canvas-default items-center justify-center">
+        <ActivityIndicator color={colors.accent.fg} />
+      </View>
+    );
+  }
+
+  if (game.status === 'error') {
+    return (
+      <View className="flex-1 bg-canvas-default items-center justify-center px-5 gap-3">
+        <Text className="font-sans text-body text-danger-fg text-center">
+          {game.errorMessage ?? '알 수 없는 오류'}
+        </Text>
+        <Pressable
+          onPress={game.refresh}
+          className="px-4 h-9 rounded-md bg-canvas-inset border border-border-default items-center justify-center"
+        >
+          <Text className="font-sans-medium text-body text-fg-default">다시 시도</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (game.status === 'no-game') {
+    return <NewGame onSubmit={game.startNewGame} />;
+  }
+
+  return <Playing game={game} />;
+}
+
+type PlayingProps = { game: ReturnType<typeof useGame> };
+
+function Playing({ game }: PlayingProps) {
+  const { hero, subject, quest, place, log, pending, streaming, onSend, onRoll, onStop } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>('person');
@@ -30,6 +69,13 @@ export function Shell() {
       setHeroOpen(false);
     }
   }, [typing]);
+
+  // status === 'ready' 라면 hero 는 항상 set 되어 있지만 TS narrowing 위해 guard.
+  if (!hero) return null;
+
+  const slots = buildPanelSlots({ subject, quest, place });
+  const rollEnabled = pending !== null;
+  const rolling = rollEnabled && streaming;
 
   return (
     <View className="flex-1 bg-canvas-default py-2.5 gap-2.5">

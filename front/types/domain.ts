@@ -69,13 +69,14 @@ export type Quest = {
   goals: string[];
   conditions: string[];
   rewards: { gold: number; exp: number };
-  memo: string;
+  summary: string;
 };
 
 export type Place = {
   name: string;
   date: string;
   hour: number;
+  period: string;
   weather: string[];
   features: string[];
   surroundings: string[];
@@ -83,8 +84,10 @@ export type Place = {
 
 export type RollResult = 'success' | 'fail';
 
-export type Check = {
-  stat: StatKey;
-  dc: number;
-  mod: number;
+export type FrontState = {
+  hero: Hero;
+  subject: Subject | null;
+  quest: Quest | null;
+  place: Place | null;
+  log: import('./ui').LogEntry[];
 };
