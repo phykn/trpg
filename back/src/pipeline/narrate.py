@@ -66,7 +66,7 @@ async def run_narrate(
             item.output.state_changes = []
             item.output.memorable = False
             item.output.memory_targets = []
-            item.output.memory = None
+            item.output.memory = {}
             item.output.memory_links = {}
             item.output.importance = None
         yield item
