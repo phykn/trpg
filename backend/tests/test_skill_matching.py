@@ -12,10 +12,10 @@ from src.domain.entities import (
     Stats,
 )
 from src.agents.dc_judge.schema import CombatAction
-from src.pipeline import judge as judge_mod
-from src.pipeline import turn as turn_mod
-from src.pipeline.context import build_surroundings
-from src.pipeline.turn import run_turn
+from src.flow import judge as judge_mod
+from src.flow import turn as turn_mod
+from src.context import build_surroundings
+from src.flow.turn import run_turn
 
 
 @pytest.fixture
@@ -194,7 +194,7 @@ async def test_combat_during_combat_with_skill_id(
     fresh_state, tmp_data, monkeypatch
 ):
     """이미 combat_state 활성 + 플레이어 차례에 skill_id 매칭."""
-    from src.pipeline import combat as combat_engine
+    from src.engines import combat as combat_engine
 
     state = _seed_skill_state(fresh_state)
     combat_engine.start_combat(state, ["goblin_01"], rng=random.Random(0))

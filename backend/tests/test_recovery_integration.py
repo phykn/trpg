@@ -7,9 +7,9 @@ import pytest
 
 from src.domain.entities import Character, CombatBehavior, Location, Stats
 from src.agents.dc_judge.schema import RestAction
-from src.pipeline import judge as judge_mod
-from src.pipeline import turn as turn_mod
-from src.pipeline.turn import run_turn
+from src.flow import judge as judge_mod
+from src.flow import turn as turn_mod
+from src.flow.turn import run_turn
 from src.rules import RULES
 
 
@@ -190,7 +190,7 @@ async def test_rest_dangerous_with_low_random_forces_encounter(
 
 async def test_rest_blocked_during_combat(fresh_state, tmp_data, monkeypatch):
     """combat_state 활성 중 rest 시도 → 거절 메시지, 회복 안 일어남."""
-    from src.pipeline import combat as combat_engine
+    from src.engines import combat as combat_engine
 
     _seed_player(fresh_state, hp=4)
     fresh_state.characters["goblin_01"] = Character(

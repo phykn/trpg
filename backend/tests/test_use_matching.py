@@ -14,10 +14,10 @@ from src.domain.entities import (
     WeaponEffect,
 )
 from src.agents.dc_judge.schema import UseAction
-from src.pipeline import judge as judge_mod
-from src.pipeline import turn as turn_mod
-from src.pipeline.context import build_surroundings
-from src.pipeline.turn import run_turn
+from src.flow import judge as judge_mod
+from src.flow import turn as turn_mod
+from src.context import build_surroundings
+from src.flow.turn import run_turn
 
 
 @pytest.fixture
@@ -138,7 +138,7 @@ async def test_use_action_consumes_item_and_heals(fresh_state, tmp_data, monkeyp
 
 
 async def test_combat_use_consumes_player_turn(fresh_state, tmp_data, monkeypatch):
-    from src.pipeline import combat as combat_engine
+    from src.engines import combat as combat_engine
 
     state = _seed(fresh_state, hp=5)
     state.characters["goblin_01"] = Character(

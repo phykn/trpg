@@ -10,7 +10,7 @@ from ..agents.dc_judge import (
 )
 from ..llm.client import LLMClient
 from ..domain.state import GameState
-from .context import build_surroundings
+from ..context import build_surroundings
 
 
 async def run_judge(

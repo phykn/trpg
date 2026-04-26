@@ -10,8 +10,8 @@ from src.agents.encounter_summon import (
     EncounterStats,
     EncounterSummonOutput,
 )
-from src.pipeline import encounter as encounter_engine
-from src.pipeline import recovery
+from src.flow import encounter as encounter_engine
+from src.engines import recovery
 
 
 @pytest.fixture

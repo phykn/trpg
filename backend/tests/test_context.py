@@ -11,7 +11,7 @@ from src.domain.entities import (
     Stats,
 )
 from src.domain.memory import DialoguePair, TurnLogEntry
-from src.pipeline.context import (
+from src.context import (
     build_history_layer,
     build_session_layer,
     build_surroundings,

@@ -14,7 +14,7 @@ from ..agents.skill_recommend import (
 from ..llm.client import LLMClient
 from ..rules import RULES
 from ..domain.state import GameState
-from .skill import build_skill_from_candidate, existing_skill_ids
+from ..engines.skill import build_skill_from_candidate, existing_skill_ids
 
 
 _RECENT_TURNS_FOR_RECOMMEND = 10

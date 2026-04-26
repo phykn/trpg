@@ -1,6 +1,6 @@
 """퀘스트 자동 트리거·보상·챕터 진행 — character_death / location_enter / item_use."""
 from src.domain.entities import Chapter, Character, Quest, QuestRewards, QuestTrigger, Stats
-from src.pipeline import quest as q
+from src.engines import quest as q
 
 
 def _player(**kw):

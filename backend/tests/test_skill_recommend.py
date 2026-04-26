@@ -8,8 +8,8 @@ from src.agents.skill_recommend import (
     SkillCandidate,
     SkillRecommendOutput,
 )
-from src.pipeline import skill as skill_eng
-from src.pipeline import skill_recommend as recommend_mod
+from src.engines import skill as skill_eng
+from src.flow import skill_recommend as recommend_mod
 
 
 # --- schema ---------------------------------------------------------------

@@ -9,7 +9,7 @@ from src.domain.entities import (
     QuestTrigger,
     Stats,
 )
-from src.pipeline.apply import apply_changes
+from src.engines.apply import apply_changes
 
 
 @pytest.fixture

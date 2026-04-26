@@ -49,14 +49,14 @@ from ..persistence.store import (
     save_meta,
 )
 from ..domain.errors import InventoryInvalid, LevelUpInvalid, SkillInvalid
-from .apply import apply_changes
-from . import combat as combat_engine
-from . import encounter as encounter_engine
-from . import inventory as inventory_engine
-from . import recovery as recovery_engine
-from . import skill as skill_engine
+from ..engines.apply import apply_changes
+from ..engines import combat as combat_engine
+from ..engines import inventory as inventory_engine
+from ..engines import recovery as recovery_engine
+from ..engines import skill as skill_engine
+from ..engines.growth import level_up as level_up_engine
 from ..rules.dc import compute_grade, pick_dc, sigmoid_required_roll, social_bonus, tier_to_int
-from .growth import level_up as level_up_engine
+from . import encounter as encounter_engine
 from .judge import run_judge
 from .memory_writer import write_memories
 from .narrate import run_narrate

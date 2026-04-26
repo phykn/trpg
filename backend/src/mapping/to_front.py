@@ -8,7 +8,7 @@ from ..domain.entities import (
     Quest,
 )
 from ..rules.dc import tier_to_int
-from ..pipeline.growth import xp_for_next_level
+from ..engines.growth import xp_for_next_level
 from ..domain.state import GameState
 
 

@@ -2,8 +2,8 @@
 import random
 
 from src.domain.entities import Character, CombatBehavior, Stats
-from src.pipeline import combat as combat_eng
-from src.pipeline.apply import apply_changes
+from src.engines import combat as combat_eng
+from src.engines.apply import apply_changes
 
 
 def _player(**kw):

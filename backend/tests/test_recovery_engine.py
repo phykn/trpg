@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 
 from src.domain.entities import Character, Location, Stats
-from src.pipeline import recovery
+from src.engines import recovery
 from src.rules import RULES
 
 

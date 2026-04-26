@@ -15,7 +15,7 @@ from ..agents.encounter_summon import (
 )
 from ..llm.client import LLMClient
 from ..domain.state import GameState
-from .growth import calc_max_hp, calc_max_mp
+from ..engines.growth import calc_max_hp, calc_max_mp
 
 
 def _build_input(

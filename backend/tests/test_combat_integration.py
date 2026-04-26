@@ -9,9 +9,9 @@ from src.agents.dc_judge.schema import (
     CombatAction,
     PassAction,
 )
-from src.pipeline import judge as judge_mod
-from src.pipeline import turn as turn_mod
-from src.pipeline.turn import run_turn
+from src.flow import judge as judge_mod
+from src.flow import turn as turn_mod
+from src.flow.turn import run_turn
 from src.domain.state import GameState
 
 
@@ -87,7 +87,7 @@ async def test_combat_start_and_npc_round_progress(combat_state, tmp_data, monke
 async def test_combat_player_attack_advances_round(combat_state, tmp_data, monkeypatch):
     """combat_state 활성 + player 차례. CombatAction 으로 공격 → 데미지 적용."""
     # 사전 부팅
-    from src.pipeline import combat as combat_engine
+    from src.engines import combat as combat_engine
     combat_engine.start_combat(combat_state, ["goblin_01"], rng=random.Random(0))
     # player 차례에 멈추도록 turn_order 조정
     combat_state.combat_state.turn_order = ["player_01", "goblin_01"]
@@ -112,7 +112,7 @@ async def test_combat_player_attack_advances_round(combat_state, tmp_data, monke
 
 
 async def test_combat_pass_action_consumes_player_turn(combat_state, tmp_data, monkeypatch):
-    from src.pipeline import combat as combat_engine
+    from src.engines import combat as combat_engine
     combat_engine.start_combat(combat_state, ["goblin_01"], rng=random.Random(0))
     combat_state.combat_state.turn_order = ["player_01", "goblin_01"]
     combat_state.combat_state.current_turn = 0
@@ -141,7 +141,7 @@ async def test_combat_ends_when_enemy_dies_from_player_attack(
     combat_state, tmp_data, monkeypatch
 ):
     """goblin hp 를 1 로 줄여 한 방에 죽도록 → combat_end victory 발행."""
-    from src.pipeline import combat as combat_engine
+    from src.engines import combat as combat_engine
     combat_state.characters["goblin_01"].hp = 1
     combat_state.characters["goblin_01"].max_hp = 1
     combat_engine.start_combat(combat_state, ["goblin_01"], rng=random.Random(0))

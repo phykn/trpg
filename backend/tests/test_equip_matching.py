@@ -14,10 +14,10 @@ from src.domain.entities import (
     WeaponEffect,
 )
 from src.agents.dc_judge.schema import EquipAction, UnequipAction
-from src.pipeline import judge as judge_mod
-from src.pipeline import turn as turn_mod
-from src.pipeline.context import build_surroundings
-from src.pipeline.turn import run_turn
+from src.flow import judge as judge_mod
+from src.flow import turn as turn_mod
+from src.context import build_surroundings
+from src.flow.turn import run_turn
 
 
 @pytest.fixture

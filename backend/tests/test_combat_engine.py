@@ -13,7 +13,7 @@ from src.domain.entities import (
     Stats,
     WeaponEffect,
 )
-from src.pipeline.combat import (
+from src.engines.combat import (
     AttackOutcome,
     attack,
     enemy_defense,
@@ -122,7 +122,7 @@ def test_primary_stat_by_range():
 
 def primary_stat_for_weapon_for_range(r: float) -> str:
     """convenience for the table check above — wraps the engine helper."""
-    from src.pipeline.combat import _Weapon
+    from src.engines.combat import _Weapon
     return primary_stat_for_weapon(_Weapon(item_id="x", dice="1d4", range_m=r, two_handed=False))
 
 
@@ -435,7 +435,7 @@ def test_attack_outcome_shape():
 
 
 from src.domain.entities import CombatState, DeathSaveState
-from src.pipeline.combat import (
+from src.engines.combat import (
     advance_turn,
     apply_attack_to_defender,
     check_combat_end,
