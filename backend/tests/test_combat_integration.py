@@ -10,6 +10,7 @@ from src.agents.dc_judge.schema import (
     PassAction,
 )
 from src.flow import judge as judge_mod
+from src.flow import combat_phase as combat_phase_mod
 from src.flow import turn as turn_mod
 from src.flow.turn import run_turn
 from src.domain.state import GameState
@@ -55,6 +56,7 @@ def _judge_returns(monkeypatch, action_obj):
         return action_obj
     monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
+    monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
 
 
 async def _collect(it):

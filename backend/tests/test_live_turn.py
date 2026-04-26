@@ -14,7 +14,8 @@ from src.domain.entities import (
 )
 from src.domain.errors import PendingCheckActive, PendingCheckExpected
 from src.llm.client import LLMClient
-from src.flow.turn import run_roll, run_turn
+from src.flow.roll import run_roll
+from src.flow.turn import run_turn
 from src.domain.state import GameState
 
 pytestmark = pytest.mark.live

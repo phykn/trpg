@@ -8,6 +8,7 @@ import pytest
 from src.domain.entities import Character, CombatBehavior, Location, Stats
 from src.agents.dc_judge.schema import RestAction
 from src.flow import judge as judge_mod
+from src.flow import combat_phase as combat_phase_mod
 from src.flow import turn as turn_mod
 from src.flow.turn import run_turn
 from src.rules import RULES
@@ -24,6 +25,7 @@ def _judge_returns_rest(monkeypatch):
         return RestAction(action="rest")
     monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
+    monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
 
 
 def _seed_player(state, *, hp=4, mp=2):
