@@ -32,6 +32,7 @@ from agency.story.harness.runner import (  # noqa: E402
     write_entity,
     write_entity_to_disk,
 )
+from agency.story.harness.scenario import build_scenario  # noqa: E402
 
 SCENARIOS_DIR = ROOT / "scenarios"
 AGENTS_DIR = ROOT / "agency" / "story" / "agents"
@@ -82,11 +83,57 @@ async def _run_entity(args: argparse.Namespace) -> None:
     print(f"디버그 로그: {run_dir}")
 
 
+async def _run_scenario(args: argparse.Namespace) -> None:
+    scenario_dir = SCENARIOS_DIR / args.name
+    prose_path = Path(args.prose).resolve()
+    if not prose_path.is_file():
+        print(f"줄글 파일 없음: {prose_path}", file=sys.stderr)
+        sys.exit(2)
+    if scenario_dir.exists():
+        print(
+            f"시나리오 디렉터리 이미 존재: {scenario_dir} (덮어쓰지 않음)",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    base_url = os.environ["BASE_URL"]
+    llm = LLMClient(base_url=base_url, model="local")
+
+    run_dir = _new_run_dir("scenario")
+    decompose_prompt = AGENTS_DIR / "_decompose.md"
+
+    def step(msg: str) -> None:
+        print(f"  · {msg}", flush=True)
+
+    try:
+        result = await build_scenario(
+            prose_path=prose_path,
+            scenario_dir=scenario_dir,
+            decompose_prompt_path=decompose_prompt,
+            agents_dir=AGENTS_DIR,
+            llm=llm,
+            on_step=step,
+            run_dir=run_dir,
+        )
+    except Exception as e:
+        (run_dir / "error.txt").write_text(
+            f"{type(e).__name__}: {e}\n", encoding="utf-8"
+        )
+        print(f"실패: {type(e).__name__}: {e}", file=sys.stderr)
+        print(f"디버그 로그: {run_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"성공: {result['scenario_dir']}")
+    print(f"entity 수: {result['counts']}")
+    print(f"디버그 로그: {run_dir}")
+
+
 def main() -> None:
     p = argparse.ArgumentParser(
-        description="Story 팀 — 시나리오 entity 한 개 작성"
+        description="Story 팀 — entity 단발 작성 또는 시나리오 한 벌 생성"
     )
     sub = p.add_subparsers(dest="kind", required=True)
+
     for kind in SPECS:
         sp = sub.add_parser(kind, help=f"새 {kind} 한 개 작성")
         sp.add_argument(
@@ -96,6 +143,15 @@ def main() -> None:
             "--hint", default="", help=f"새 {kind} 에 대한 한 줄 힌트 (옵션)"
         )
         sp.set_defaults(func=_run_entity)
+
+    sp_scen = sub.add_parser(
+        "scenario", help="줄글 한 편으로 시나리오 한 벌 (world.md + 6 entity dir + 메타 3 파일) 생성"
+    )
+    sp_scen.add_argument("--name", required=True, help="새 시나리오 디렉터리 이름")
+    sp_scen.add_argument(
+        "--prose", required=True, help="줄글 .md 파일 경로 (분해 입력)"
+    )
+    sp_scen.set_defaults(func=_run_scenario)
 
     args = p.parse_args()
     asyncio.run(args.func(args))

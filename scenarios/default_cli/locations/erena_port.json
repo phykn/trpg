@@ -1,0 +1,20 @@
+{
+  "id": "erena_port",
+  "name": "에레나 항구",
+  "description": "끊임없이 안개에 휩싸인 절벽 위의 무역 항구 마을이다. 유일한 빛인 등대마저 꺼진 채, 마을 전체에 짙은 침묵과 불안감이 감돌고 있다.",
+  "tags": [
+    "outdoor",
+    "town",
+    "port"
+  ],
+  "item_ids": [],
+  "hidden_items": [],
+  "connections": [],
+  "hidden_connections": [],
+  "weather": [
+    "안개"
+  ],
+  "sleep_risk": "safe",
+  "sleep_encounters": [],
+  "difficulty": null
+}

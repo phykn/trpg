@@ -1,0 +1,63 @@
+{
+  "id": "siria_01",
+  "name": "시리아",
+  "description": "항구의 유일한 안식처인 '닻과 머그'를 운영하는 인물. 겉으로는 조용하나, 마을의 비밀을 알고 있어 외부인에게 극도로 신중하다.",
+  "appearance": "항해꾼의 흔적이 밴 투박한 옷차림에 깊은 피로가 엿보인다. (변이체의 흔적이 희미하게 남아있음)",
+  "is_player": false,
+  "role": "외지인을 경계하는 항구의 주인",
+  "race_id": "mutant_sea_beast",
+  "job": "술집 주인",
+  "level": 0,
+  "stats": {
+    "STR": 10,
+    "DEX": 10,
+    "CON": 12,
+    "INT": 11,
+    "WIS": 13,
+    "CHA": 10
+  },
+  "hp": 20,
+  "max_hp": 20,
+  "mp": 0,
+  "max_mp": 0,
+  "alive": true,
+  "location_id": "anchor_and_mug",
+  "equipment": {
+    "head": null,
+    "top": null,
+    "bottom": null,
+    "feet": null,
+    "leftHand": null,
+    "rightHand": null,
+    "acc1": null,
+    "acc2": null
+  },
+  "inventory_ids": [
+    "brass_key"
+  ],
+  "gold": 0,
+  "xp_pool": 0,
+  "disposition": {
+    "lawful": 70,
+    "moral": 60,
+    "aggressive": 20
+  },
+  "relations": {},
+  "tone_hint": "나지막하지만 단호한 어조, 경계심이 서려 있음.",
+  "hints": [],
+  "racial_skills": [],
+  "learned_skills": [],
+  "status": [],
+  "active_buffs": [],
+  "memories": [],
+  "combat_behavior": {
+    "attack_priority": null,
+    "flee_hp_percent": null,
+    "nearest_weight": 70,
+    "random_weight": 30
+  },
+  "death_saves": null,
+  "revive_coins": 0,
+  "dominant_hand": "right",
+  "companions": []
+}

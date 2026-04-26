@@ -1,0 +1,15 @@
+{
+  "id": "ch1",
+  "title": "등불을 찾아라",
+  "summary": "실종된 등대지기의 행방을 쫓아 항구 마을의 비밀스러운 지하 통로로 진입하며 사건의 실마리를 찾는다.",
+  "quest_ids": [
+    "q_find_bertho",
+    "q_retrieve_key"
+  ],
+  "status": "active",
+  "required": true,
+  "progress": {
+    "done": 0,
+    "total": 0
+  }
+}

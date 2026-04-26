@@ -34,10 +34,31 @@ QA 와 달리 story 팀은 `scenarios/<scenario>/` (PROFILE_DIR 가 가리키는
 
 같은 prompt 규칙을 두 진입점이 공유:
 
-- `agency/story/run_story.py race --scenario <s>` — 로컬 LLM (BASE_URL) 호출. 자동화·반복용. `harness/runner.py` 가 자기교정 5회.
-- `/story-race <s> [hint]` — `.claude/commands/story-race.md`. Claude Code 가 직접 Read/Write. 한 번 더 똑똑하게 짓고 싶을 때.
+- `agency/story/run_story.py <kind> --scenario <s>` — 로컬 LLM (BASE_URL) 호출. 자동화·반복용. `harness/runner.py` 의 generic `write_entity` 가 자기교정 5회 + 참조 무결성 검증.
+- `/story-write <kind> <s> [hint]` — `.claude/commands/story-write.md`. Claude Code 가 `_base.md` + `<kind>.md` + 시나리오 컨텍스트를 직접 Read 하고 결과 파일 Write. 한 번 더 똑똑하게 짓고 싶을 때.
 
-규칙 (id 패턴, 한국어 강제, racial_skills 빈 리스트, 톤 일치) 이 어긋나면 두 곳 다 같이 갱신. 한쪽만 고치면 같은 시나리오에 톤 다른 race 가 들어가게 됨.
+`<kind>` ∈ `{race, location, item, character, quest, chapter}`.
+
+### Fragment 추가법
+
+새 entity 종류 (현재 6 외에) 를 늘리려면:
+
+1. `agency/story/agents/<kind>.md` — 스키마·필수 필드·참조 규칙. 다른 fragment 와 비슷한 길이 (1-2 화면).
+2. `agency/story/harness/runner.py` 의 `SPECS` 에 한 줄 (model · sub_dir · fragment · ref_kinds · check_refs).
+3. 참조 검증 함수가 새로 필요하면 `_check_<kind>_refs` 작성. 단순 id 충돌·패턴은 generic 이 챙김.
+4. `_base.md` 는 entity 무관 공통 규칙 (한국어 강제, JSON-only, id 패턴, id 강제 hint 따르기) — 여기 손 댈 필요 없음.
+
+CLI subparser 와 슬래시 커맨드는 `SPECS` 만 갱신하면 자동으로 새 kind 노출.
+
+규칙이 어긋나면 두 트랙 모두 같이 갱신. 한쪽만 고치면 같은 시나리오에 톤 다른 entity 가 들어가게 됨.
+
+### Scenario mode 의 id 강제
+
+`run_story.py scenario --name <new>` (또는 `/story-scenario`) 는 분해 단계에서 미리 정한 id 들을 entity 단계가 정확히 따라야 한다. `write_entity(force_id=X)` 가 `_check_id` 안에서 LLM 응답의 id 와 비교, 다르면 `EntityWriterError` 를 자기교정 루프에 던져 다음 시도에 교정시킴. 분해와 entity 단계가 id 가 갈리면 cross-reference (start_location_id / quest target_id / chapter quest_ids) 가 다 깨지기 때문. 단순 entity (`/story-write race ...`) 는 force_id 없이 LLM 자유 — 그럴 땐 id 충돌만 검증.
+
+### Scenario sources 위치
+
+줄글 입력은 `agency/story/sources/<name>.md` 에 보관. story 팀이 실험할 줄글이 누적되는 곳. 시나리오 디렉터리 이름과 같은 이름 (`default.md` → `scenarios/default_cli/`, `default_claude/`) 으로 가는 게 비교에 편함.
 
 ### 새 agent 추가
 

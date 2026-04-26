@@ -1,0 +1,61 @@
+{
+  "id": "ship_guard_01",
+  "name": "선박 경비병",
+  "description": "화물선의 생존을 위해 남아있는 존재. 외부인을 위험 요소로 간주하며 격렬하게 방어한다.",
+  "appearance": "거칠게 단련된 근육질의 모습, 어두운 바닷물빛 피부.",
+  "is_player": false,
+  "role": "좌초된 화물선에 남아 외부인을 경계하는 경비병",
+  "race_id": "mutant_sea_beast",
+  "job": "경비병",
+  "level": 0,
+  "stats": {
+    "STR": 16,
+    "DEX": 12,
+    "CON": 16,
+    "INT": 8,
+    "WIS": 10,
+    "CHA": 6
+  },
+  "hp": 40,
+  "max_hp": 40,
+  "mp": 0,
+  "max_mp": 0,
+  "alive": true,
+  "location_id": "wrecked_ship",
+  "equipment": {
+    "head": null,
+    "top": null,
+    "bottom": null,
+    "feet": null,
+    "leftHand": null,
+    "rightHand": null,
+    "acc1": null,
+    "acc2": null
+  },
+  "inventory_ids": [],
+  "gold": 0,
+  "xp_pool": 0,
+  "disposition": {
+    "lawful": 30,
+    "moral": 20,
+    "aggressive": 90
+  },
+  "relations": {},
+  "tone_hint": "으르렁거리며 거친 위협을 가함.",
+  "hints": [],
+  "racial_skills": [],
+  "learned_skills": [],
+  "status": [],
+  "active_buffs": [],
+  "memories": [],
+  "combat_behavior": {
+    "attack_priority": "nearest",
+    "flee_hp_percent": 15,
+    "nearest_weight": 70,
+    "random_weight": 30
+  },
+  "death_saves": null,
+  "revive_coins": 0,
+  "dominant_hand": "right",
+  "companions": []
+}

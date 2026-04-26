@@ -168,9 +168,33 @@ agency/story/
 
 `.claude/commands/story-write.md` 가 본문. Claude (대화 중인 모델) 가 `_base.md` + `<kind>.md` + `world.md` + 기존 instances 를 직접 Read 하고 entity JSON 한 개를 `scenarios/<scenario>/<sub_dir>/<id>.json` 에 Write 한다. 별도 LLM 서버 불필요, runs/ 로그도 안 남김 (대화 transcript 가 곧 로그).
 
+### 시나리오 한 벌 (`scenario` mode)
+
+줄글 한 편 (`agency/story/sources/<name>.md`) 을 받아 시나리오 디렉터리 한 벌을 통째로 짓는다. 단계 파이프라인:
+
+1. **분해** — `_decompose.md` prompt 가 줄글을 받아 `Decomposition` (Pydantic) 한 개로 압축: `world_md` + 6 종류 entity 명단 (각 명단의 entry 가 `id` + `role` + 부가 hint) + `start_*` 셋 + profile 메타. 분해 자체도 자기교정 5회 + 일관성 검증 (id 패턴·중복·cross-ref).
+2. **world.md** — 분해의 `world_md` 본문을 디스크에 markdown 으로 저장.
+3. **race → location → item → character → quest → chapter** — 각 단계마다 분해 명단의 entry 마다 `write_entity` 를 호출. 단계 순서가 참조 의존성을 따라가서, 한 단계가 다음 단계의 컨텍스트가 됨.
+4. **메타 3 파일** — `profile.json` / `start.json` / `player_template.json`. 분해 결과로 직접 dict → JSON dump.
+
+**id 강제 메커니즘** — 분해 단계에서 미리 정한 id 를 entity 단계가 따라야 한다. `write_entity(force_id=...)` 가 `_check_id` 안에서 LLM 이 박은 id 와 비교하고, 다르면 자기교정 루프가 작동해 다음 시도에 교정. `_base.md` 에도 "user 메시지의 id 강제 지시는 한 글자도 바꾸지 말 것" 명시.
+
+```bash
+.venv/bin/python agency/story/run_story.py scenario \
+  --name default_cli \
+  --prose agency/story/sources/default.md
+```
+
+Claude Code 트랙도 같은 단계를 본문으로 받음:
+
+```
+/story-scenario default_claude agency/story/sources/default.md
+```
+
+`.claude/commands/story-scenario.md` 가 본문. Claude (대화 중인 모델) 가 분해 → 단계별 Read/Write 를 직접 진행. 같은 줄글에서 두 트랙의 결과 (`scenarios/default_cli/` vs `scenarios/default_claude/`) 를 비교 가능.
+
 ### 한계
 
-- 한 번에 entity 한 개. 시나리오 한 벌 (`world.md` + `start.json` + `player_template.json` + `profile.json` + 모든 entity) 을 줄글에서 자동 생성하는 모드는 후속 단계.
 - `racial_skills` 는 항상 빈 리스트 (skill 합성은 별도).
-- 시나리오 디렉터리 자체를 새로 만드는 모드 없음 (기존 `<scenario>/` 안에 추가만).
+- chapter 는 현재 한 개 모드 (분해 명단의 모든 quest 가 첫 chapter 에 묶임).
 - 게임 진행 중 런타임 entity 주입 (live save 에 새 NPC/item 등) 은 backend 쪽 일이라 미정.

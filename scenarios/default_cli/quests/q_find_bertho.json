@@ -1,0 +1,30 @@
+{
+  "id": "q_find_bertho",
+  "title": "실종된 등대지기 찾기",
+  "summary": "항구 주인 시리아로부터 실종된 등대지기를 찾아달라는 의뢰를 받음.",
+  "giver_id": "siria_01",
+  "difficulty": "보통",
+  "prerequisite_ids": [],
+  "triggers": [
+    {
+      "id": "sb_death",
+      "name": "심해 거미 사살",
+      "type": "character_death",
+      "target_id": "sea_beast_01"
+    }
+  ],
+  "conditions": [
+    "",
+    "등대지기 버토의 생존 여부가 불분명함."
+  ],
+  "fail_triggers": [],
+  "rewards": {
+    "gold": 150,
+    "exp": 100,
+    "items": []
+  },
+  "status": "active",
+  "required": true,
+  "triggers_met": [],
+  "fail_triggers_met": []
+}

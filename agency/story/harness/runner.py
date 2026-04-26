@@ -201,11 +201,18 @@ def _collect_refs(scenario_dir: Path, spec: EntitySpec) -> dict[str, set[str]]:
     return refs
 
 
-def _check_id(entity: BaseModel, existing: set[str]) -> None:
+def _check_id(
+    entity: BaseModel, existing: set[str], force_id: str | None = None
+) -> None:
     eid: str = entity.id  # type: ignore[attr-defined]
     if not ID_PATTERN.match(eid):
         raise EntityWriterError(
             f"id={eid!r} 가 패턴에 안 맞음. ASCII snake_case ([a-z][a-z0-9_]{{1,30}}) 필요."
+        )
+    if force_id is not None and eid != force_id:
+        raise EntityWriterError(
+            f"id={eid!r} 가 강제된 id={force_id!r} 와 다름. "
+            f"hint 의 id 지시를 정확히 따라야 한다 — 한 글자도 바꾸지 말 것."
         )
     if eid in existing:
         raise EntityWriterError(
@@ -221,6 +228,7 @@ async def write_entity(
     hint: str,
     llm: LLMClient,
     retries: int = 5,
+    force_id: str | None = None,
 ) -> tuple[BaseModel, list[dict]]:
     """LLM 으로 entity 한 개 생성. 검증 실패 시 자기교정 루프 (retries 회)."""
     if kind not in SPECS:
@@ -255,7 +263,7 @@ async def write_entity(
         answer = (result["answer"] or "").strip()
         try:
             entity = spec.model.model_validate_json(answer)
-            _check_id(entity, existing_ids)
+            _check_id(entity, existing_ids, force_id=force_id)
             spec.check_refs(entity, refs)
             return entity, messages + [{"role": "assistant", "content": answer}]
         except (ValidationError, EntityWriterError, json.JSONDecodeError) as e:

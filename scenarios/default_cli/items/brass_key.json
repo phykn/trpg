@@ -1,0 +1,11 @@
+{
+  "id": "brass_key",
+  "name": "황동 열쇠",
+  "description": "등대 지하 통로를 여는 황동 열쇠입니다.",
+  "weight": 0.1,
+  "price": 10,
+  "effects": null,
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

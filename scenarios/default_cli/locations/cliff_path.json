@@ -1,0 +1,26 @@
+{
+  "id": "cliff_path",
+  "name": "절벽 길",
+  "description": "항구 마을과 부두를 잇는, 좁고 험준하며 불안정한 절벽 위 길이다.",
+  "tags": [
+    "outdoor",
+    "wilderness"
+  ],
+  "item_ids": [],
+  "hidden_items": [],
+  "connections": [
+    {
+      "target_id": "erena_port",
+      "difficulty": null,
+      "key_item_id": null,
+      "travel_min": null
+    }
+  ],
+  "hidden_connections": [],
+  "weather": [
+    "안개"
+  ],
+  "sleep_risk": "safe",
+  "sleep_encounters": [],
+  "difficulty": null
+}

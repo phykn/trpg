@@ -1,0 +1,27 @@
+{
+  "id": "wrecked_ship",
+  "name": "좌초된 화물선",
+  "description": "부두에 박힌 채 웅크린 화물선이다. 선실 곳곳에 파손된 흔적이 보이며, 미스터리한 실종 사건의 단서들이 흩어져 있다.",
+  "tags": [
+    "outdoor",
+    "dungeon",
+    "ship"
+  ],
+  "item_ids": [],
+  "hidden_items": [],
+  "connections": [
+    {
+      "target_id": "erena_port",
+      "difficulty": null,
+      "key_item_id": null,
+      "travel_min": null
+    }
+  ],
+  "hidden_connections": [],
+  "weather": [
+    "안개"
+  ],
+  "sleep_risk": "safe",
+  "sleep_encounters": [],
+  "difficulty": null
+}
