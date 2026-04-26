@@ -1,4 +1,5 @@
 import type { FrontState } from './domain';
+import type { LogEntry } from './ui';
 
 export type RaceCard = {
   id: string;
@@ -49,20 +50,6 @@ export type PendingCheck = {
   target: string;
 };
 
-export type WireLogEntry =
-  | { id: number; kind: 'gm'; text: string }
-  | { id: number; kind: 'player'; text: string }
-  | { id: number; kind: 'act'; text: string }
-  | {
-      id: number;
-      kind: 'roll';
-      check: string;
-      dc: number;
-      roll: number;
-      mod: number;
-      result: 'success' | 'partial' | 'fail';
-    };
-
 export type CombatHand = 'main' | 'off';
 
 export type CombatActionKind = 'attack' | 'flee' | 'pass' | 'death_save';
@@ -91,7 +78,7 @@ export type StreamEvent =
   | { type: 'judge'; data: JudgeAction }
   | { type: 'pending_check'; data: PendingCheck }
   | { type: 'narrative_delta'; data: { text: string } }
-  | { type: 'log_entry'; data: WireLogEntry }
+  | { type: 'log_entry'; data: LogEntry }
   | { type: 'state'; data: FrontState }
   | { type: 'combat_start'; data: CombatStartData }
   | { type: 'combat_turn'; data: CombatTurnData }
