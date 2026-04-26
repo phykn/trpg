@@ -31,15 +31,18 @@ def _equipment(state: GameState, char: Character) -> dict:
 
 
 def _inventory(state: GameState, ids: list[str]) -> list[dict]:
-    counts = Counter(ids)
-    result: list[dict] = []
-    seen: set[str] = set()
-    for item_id in ids:
-        if item_id in seen or item_id not in state.items:
-            continue
-        seen.add(item_id)
-        result.append({"name": state.items[item_id].name, "qty": counts[item_id]})
-    return result
+    return [
+        {"name": state.items[item_id].name, "qty": qty}
+        for item_id, qty in Counter(ids).items()
+        if item_id in state.items
+    ]
+
+
+def _stats_dict(stats) -> dict[str, int]:
+    return {
+        "STR": stats.STR, "DEX": stats.DEX, "CON": stats.CON,
+        "INT": stats.INT, "WIS": stats.WIS, "CHA": stats.CHA,
+    }
 
 
 def _companion_label(state: GameState, char_id: str) -> str:
@@ -65,10 +68,7 @@ def to_hero(state: GameState) -> dict:
         "hpMax": p.max_hp,
         "mp": p.mp,
         "mpMax": p.max_mp,
-        "stats": {
-            "STR": p.stats.STR, "DEX": p.stats.DEX, "CON": p.stats.CON,
-            "INT": p.stats.INT, "WIS": p.stats.WIS, "CHA": p.stats.CHA,
-        },
+        "stats": _stats_dict(p.stats),
         "equipment": _equipment(state, p),
         "inventory": _inventory(state, p.inventory_ids),
         "status": list(p.status),
@@ -100,10 +100,7 @@ def to_subject(state: GameState) -> dict | None:
         "level": s.level,
         "hp": s.hp,
         "hpMax": s.max_hp,
-        "stats": {
-            "STR": s.stats.STR, "DEX": s.stats.DEX, "CON": s.stats.CON,
-            "INT": s.stats.INT, "WIS": s.stats.WIS, "CHA": s.stats.CHA,
-        },
+        "stats": _stats_dict(s.stats),
         "inventory": _inventory(state, s.inventory_ids),
     }
 
