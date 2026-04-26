@@ -109,11 +109,24 @@ def _format_roll_announce(
     required_roll: int,
 ) -> str:
     target_name = _label_for_target(state, target)
-    mod_str = f", +{mod}" if mod > 0 else f", {mod}" if mod < 0 else ""
+    mod_str = f", {mod:+d}" if mod else ""
     return (
         f"{result.reason} — {target_name}에게 {result.stat} 판정 "
         f"({result.tier}{mod_str}, {required_roll}+ 필요)"
     )
+
+
+async def _finalize(
+    state: GameState, data_dir: str, to_front_fn: ToFrontFn | None,
+) -> AsyncIterator[dict]:
+    try:
+        await save_game(state, data_dir)
+    except PersistenceFailed as e:
+        yield {"type": "error", "data": {"message": str(e), "code": "PersistenceFailed"}}
+        return
+    if to_front_fn:
+        yield {"type": "state", "data": to_front_fn(state)}
+    yield {"type": "done", "data": {}}
 
 
 # --- /turn -----------------------------------------------------------------
@@ -155,14 +168,8 @@ async def run_turn(
         _push_log_entry(state, act_log)
         yield {"type": "log_entry", "data": act_log.model_dump()}
         # turn_count·시간·turn_log 모두 변경 안 함 — 다음 /turn 에서 재시작
-        try:
-            await save_game(state, data_dir)
-        except PersistenceFailed as e:
-            yield {"type": "error", "data": {"message": str(e), "code": "PersistenceFailed"}}
-            return
-        if to_front_fn:
-            yield {"type": "state", "data": to_front_fn(state)}
-        yield {"type": "done", "data": {}}
+        async for ev in _finalize(state, data_dir, to_front_fn):
+            yield ev
         return
 
     if isinstance(result, RollAction):
@@ -236,14 +243,8 @@ async def run_turn(
 
     _advance_time(state)
 
-    try:
-        await save_game(state, data_dir)
-    except PersistenceFailed as e:
-        yield {"type": "error", "data": {"message": str(e), "code": "PersistenceFailed"}}
-        return
-    if to_front_fn:
-        yield {"type": "state", "data": to_front_fn(state)}
-    yield {"type": "done", "data": {}}
+    async for ev in _finalize(state, data_dir, to_front_fn):
+        yield ev
 
 
 # --- /intro ----------------------------------------------------------------
@@ -284,14 +285,8 @@ async def run_intro(
     gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=body)
     _push_log_entry(state, gm_log)
 
-    try:
-        await save_game(state, data_dir)
-    except PersistenceFailed as e:
-        yield {"type": "error", "data": {"message": str(e), "code": "PersistenceFailed"}}
-        return
-    if to_front_fn:
-        yield {"type": "state", "data": to_front_fn(state)}
-    yield {"type": "done", "data": {}}
+    async for ev in _finalize(state, data_dir, to_front_fn):
+        yield ev
 
 
 # --- /roll -----------------------------------------------------------------
@@ -362,11 +357,5 @@ async def run_roll(
     state.pending_check = None
     _advance_time(state)
 
-    try:
-        await save_game(state, data_dir)
-    except PersistenceFailed as e:
-        yield {"type": "error", "data": {"message": str(e), "code": "PersistenceFailed"}}
-        return
-    if to_front_fn:
-        yield {"type": "state", "data": to_front_fn(state)}
-    yield {"type": "done", "data": {}}
+    async for ev in _finalize(state, data_dir, to_front_fn):
+        yield ev
