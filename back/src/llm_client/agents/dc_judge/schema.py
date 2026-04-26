@@ -2,8 +2,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
-Tier = Literal["easy", "normal", "hard"]
-Stat = Literal["STR", "DEX", "CON", "INT", "WIS", "CHA"]
+from ....domain.types import StatKey, Tier
 
 
 class JudgeInput(BaseModel):
@@ -36,7 +35,7 @@ class ClarifyAction(_StrictAction):
 class RollAction(_StrictAction):
     action: Literal["roll"]
     tier: Tier
-    stat: Stat
+    stat: StatKey
     targets: list[str] = Field(min_length=1)
 
 

@@ -7,8 +7,6 @@ from .schema import (
     PassAction,
     RejectAction,
     RollAction,
-    Stat,
-    Tier,
     output_adapter,
 )
 from .semantics import JudgeSemanticError, check_semantics, collect_valid_ids
@@ -23,8 +21,6 @@ __all__ = [
     "PassAction",
     "RejectAction",
     "RollAction",
-    "Stat",
-    "Tier",
     "check_semantics",
     "collect_valid_ids",
     "judge",

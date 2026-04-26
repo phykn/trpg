@@ -9,6 +9,13 @@ from .dc_judge import (
     RollAction,
     judge,
 )
+from .narrate import (
+    NarrateInput,
+    NarrateOutput,
+    NarrativeDelta,
+    NarrativeFinal,
+    stream_narrate,
+)
 
 __all__ = [
     "ClarifyAction",
@@ -16,8 +23,13 @@ __all__ = [
     "JudgeInput",
     "JudgeOutput",
     "JudgeSemanticError",
+    "NarrateInput",
+    "NarrateOutput",
+    "NarrativeDelta",
+    "NarrativeFinal",
     "PassAction",
     "RejectAction",
     "RollAction",
     "judge",
+    "stream_narrate",
 ]

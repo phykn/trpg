@@ -1,0 +1,71 @@
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, Field
+
+from .types import StatKey, Tier
+
+
+class Memory(BaseModel):
+    content: str
+    importance: int = Field(ge=1, le=3)
+    turn: int
+    target_id: str | None = None
+
+
+class TurnLogEntry(BaseModel):
+    turn: int
+    target: str | None = None
+    summary: str
+
+
+class DialoguePair(BaseModel):
+    turn: int
+    player: str
+    narrator: str
+
+
+class PendingCheck(BaseModel):
+    player_input: str
+    action: Literal["roll"] = "roll"
+    tier: Tier
+    stat: StatKey
+    target: str
+    targets: list[str]
+    dc: int
+    mod: int
+    required_roll: int = Field(ge=1, le=20)
+    created_at: str
+
+
+class GMLogEntry(BaseModel):
+    id: int
+    kind: Literal["gm"]
+    text: str
+
+
+class PlayerLogEntry(BaseModel):
+    id: int
+    kind: Literal["player"]
+    text: str
+
+
+class ActLogEntry(BaseModel):
+    id: int
+    kind: Literal["act"]
+    text: str
+
+
+class RollLogEntry(BaseModel):
+    id: int
+    kind: Literal["roll"]
+    check: str
+    dc: int
+    roll: int
+    mod: int
+    result: Literal["success", "fail"]
+
+
+LogEntry = Annotated[
+    GMLogEntry | PlayerLogEntry | ActLogEntry | RollLogEntry,
+    Field(discriminator="kind"),
+]

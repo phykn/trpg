@@ -1,0 +1,1 @@
+{"id": "herb_01", "name": "약초", "consumable": true, "effects": {"type": "consumable", "effect": "heal", "amount": 5}}

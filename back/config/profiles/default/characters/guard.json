@@ -1,0 +1,1 @@
+{"id": "guard_01", "name": "경비병", "race_id": "human", "job": "경비", "role": "마을 경비병", "appearance": "갑옷을 입은 중년 남성, 왼쪽 눈에 흉터", "tone_hint": "격식체, 신중", "location_id": "plaza_01", "max_hp": 20, "hp": 20}

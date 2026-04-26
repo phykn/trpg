@@ -1,0 +1,7 @@
+{
+  "id": "gate_01",
+  "name": "마을 성문",
+  "description": "두꺼운 떡갈나무 성문. 경비병이 늘 한 명 서 있다.",
+  "tags": ["outdoor", "town"],
+  "connections": [{"target_id": "plaza_01"}]
+}

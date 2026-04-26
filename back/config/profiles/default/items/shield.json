@@ -1,0 +1,8 @@
+{
+  "id": "shield_01",
+  "name": "낡은 방패",
+  "description": "오랜 사용으로 가장자리가 찌그러진 둥근 방패.",
+  "weight": 3.0,
+  "price": 8,
+  "effects": {"type": "armor", "defense": 1}
+}

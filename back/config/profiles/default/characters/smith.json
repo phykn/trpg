@@ -1,0 +1,14 @@
+{
+  "id": "smith_01",
+  "name": "군나르",
+  "race_id": "dwarf",
+  "job": "대장장이",
+  "role": "마을 대장장이",
+  "appearance": "굵은 팔뚝과 그을음 묻은 가죽 앞치마, 붉은 수염을 짧게 다듬은 드워프",
+  "description": "마을의 무기와 농기구를 도맡아 다루는 외골수 대장장이. 손이 거칠지만 일은 정확하다.",
+  "tone_hint": "퉁명스러운 단답, 가끔 긴 한숨",
+  "location_id": "smithy_01",
+  "max_hp": 22,
+  "hp": 22,
+  "inventory_ids": ["hammer_01"]
+}

@@ -1,0 +1,8 @@
+{
+  "id": "ch1",
+  "title": "고블린 침공",
+  "summary": "마을 광장의 고블린 정찰병을 처치하고, 대장장이의 무기 제작을 돕는다. 마을은 본격적인 침공에 대비하고 있다.",
+  "quest_ids": ["q_scout", "q_smith"],
+  "status": "active",
+  "required": true
+}

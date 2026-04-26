@@ -1,0 +1,12 @@
+{
+  "id": "plaza_01",
+  "name": "마을 광장",
+  "description": "돌이 깔린 마을 광장. 한가운데 작은 분수가 물을 뿜는다.",
+  "tags": ["outdoor", "town"],
+  "weather": ["맑음"],
+  "connections": [
+    {"target_id": "gate_01"},
+    {"target_id": "smithy_01"},
+    {"target_id": "tavern_01"}
+  ]
+}
