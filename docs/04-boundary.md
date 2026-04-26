@@ -96,6 +96,10 @@
 | POST | `/session/{id}/turn` | `{player_input: string}` | `text/event-stream` (SSE — 서버가 한 연결을 열어둔 채 이벤트를 계속 흘려주는 방식) |
 | POST | `/session/{id}/roll` | — (서버가 d20 굴림) | `text/event-stream` |
 | POST | `/session/{id}/level-up` | `{stat_up: "STR\|DEX\|CON\|INT\|WIS\|CHA", stat_down: "..."}` | `{game_id, state: FrontState}` (검증 실패 시 422) |
+| POST | `/session/{id}/equip` | `{item_id, slot}` | `{game_id, state}` (슬롯·요구치 실패 시 422) |
+| POST | `/session/{id}/unequip` | `{slot}` | `{game_id, state}` |
+| POST | `/session/{id}/buy` | `{npc_id, item_id}` | `{game_id, state, price}` (affinity·골드·무게 실패 시 422) |
+| POST | `/session/{id}/sell` | `{npc_id, item_id}` | `{game_id, state, price}` (장착 중·affinity 실패 시 422) |
 
 `FrontState = {hero, subject, quest, place, combat, log}`. SSE `state` 이벤트 ([02-runtime.md](./02-runtime.md) §2.4) 는 `{hero, subject, quest, place, combat}` 5 슬롯만 — `log` 는 누적되는 흐름이라 `log_entry` 이벤트로 따로 흐름. **`FrontState.log` 영속본 cap 은 `rules.log.display_turns` (기본 20)** — `GET /session/{id}/state` 와 `GET /session/current` 모두 최근 20 턴치만 반환 ([02-runtime.md](./02-runtime.md) §6.2 디스플레이 로그 영속화).
 
@@ -105,7 +109,7 @@
 
 **인증** — 위 6 개 endpoint 모두 HTTP Basic Auth 로 보호. `GET /profiles` 도 예외 아님 — 같은 LAN 안에서도 시나리오 메타 노출은 인증 뒤. `BASIC_AUTH_USER` / `BASIC_AUTH_PASS` env 누락 시 fail-fast ([01-overview.md](./01-overview.md) 환경 변수 부록).
 
-P1 에서는 빠지는 엔드포인트 — 장비·소비·캐스트·거래는 전부 [P3] ([03-features.md](./03-features.md) §2.5-§2.7, [01-overview.md](./01-overview.md) §3.9). 전투는 P2 부터 동작 — judge 가 `action="combat"` 반환하면 엔진이 `combat_state` 를 띄우고 라운드 루프 진입 ([03-features.md](./03-features.md) §1). 휴식은 P3 §2.4 부터 — 자연어가 `action="rest"` 로 분류되면 `/turn` 안에서 회복·인카운터를 처리하므로 별도 endpoint 없음. 레벨업은 P3 §2.3 부터 — `POST /session/{id}/level-up { stat_up, stat_down }` 명시 호출 (자동 트리거 안 함).
+P1 에서는 빠지는 엔드포인트 — 소비·캐스트는 [P3] ([03-features.md](./03-features.md) §2.6-§2.7, [01-overview.md](./01-overview.md) §3.9). 전투는 P2 부터 동작 — judge 가 `action="combat"` 반환하면 엔진이 `combat_state` 를 띄우고 라운드 루프 진입 ([03-features.md](./03-features.md) §1). 휴식은 P3 §2.4 부터 — 자연어가 `action="rest"` 로 분류되면 `/turn` 안에서 회복·인카운터를 처리하므로 별도 endpoint 없음. 레벨업은 P3 §2.3 부터 — `POST /session/{id}/level-up { stat_up, stat_down }` 명시 호출 (자동 트리거 안 함). 장비·거래는 P3 §2.5 부터 — `/equip` `/unequip` `/buy` `/sell` 명시 호출. 자연어 통합·UI 는 후속.
 
 ## 3. 에러 매핑
 

@@ -1,1 +1,6 @@
-{"id": "elf", "name": "엘프", "description": "장수하는 종족. 지혜와 민첩이 뛰어나다.", "racial_skills": []}
+{
+  "id": "elf",
+  "name": "엘프",
+  "description": "장수하는 종족. 지혜와 민첩이 뛰어나다.",
+  "racial_skills": []
+}

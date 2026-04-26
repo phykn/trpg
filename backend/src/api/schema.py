@@ -49,3 +49,23 @@ class LevelUpRequest(BaseModel):
 class LevelUpResponse(BaseModel):
     game_id: str
     state: dict
+
+
+class EquipRequest(BaseModel):
+    item_id: str
+    slot: str
+
+
+class UnequipRequest(BaseModel):
+    slot: str
+
+
+class TradeRequest(BaseModel):
+    npc_id: str
+    item_id: str
+
+
+class InventoryResponse(BaseModel):
+    game_id: str
+    state: dict
+    price: int | None = None  # buy/sell 시 적용 가격

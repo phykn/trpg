@@ -10,10 +10,25 @@
   "location_id": "gate_01",
   "max_hp": 12,
   "hp": 12,
-  "disposition": {"lawful": 20, "moral": 20, "aggressive": 80},
-  "stats": {"STR": 8, "DEX": 14, "CON": 10, "INT": 8, "WIS": 8, "CHA": 6},
-  "inventory_ids": ["dagger_01"],
-  "equipment": {"rightHand": "dagger_01"},
+  "disposition": {
+    "lawful": 20,
+    "moral": 20,
+    "aggressive": 80
+  },
+  "stats": {
+    "STR": 8,
+    "DEX": 14,
+    "CON": 10,
+    "INT": 8,
+    "WIS": 8,
+    "CHA": 6
+  },
+  "inventory_ids": [
+    "dagger_01"
+  ],
+  "equipment": {
+    "rightHand": "dagger_01"
+  },
   "combat_behavior": {
     "attack_priority": "nearest",
     "flee_hp_percent": 25

@@ -4,5 +4,10 @@
   "description": "묵직한 쇠망치. 무기로도 쓸 수 있다.",
   "weight": 3.5,
   "price": 6,
-  "effects": {"type": "weapon", "weapon_dice": "1d6", "range": 1.5, "two_handed": false}
+  "effects": {
+    "type": "weapon",
+    "weapon_dice": "1d6",
+    "range": 1.5,
+    "two_handed": false
+  }
 }

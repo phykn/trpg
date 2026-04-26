@@ -1,1 +1,23 @@
-{"id": "q_scout", "title": "광장의 정찰병", "summary": "마을 장로의 의뢰. 광장에 잠입한 고블린 정찰병을 처치하라.", "giver_id": "guard_01", "difficulty": "보통", "triggers": [{"id": "kill_scout", "name": "정찰병 처치", "type": "character_death", "target_id": "goblin_01"}], "conditions": ["민간인 피해 최소화"], "rewards": {"gold": 50, "exp": 100}, "status": "active"}
+{
+  "id": "q_scout",
+  "title": "광장의 정찰병",
+  "summary": "마을 장로의 의뢰. 광장에 잠입한 고블린 정찰병을 처치하라.",
+  "giver_id": "guard_01",
+  "difficulty": "보통",
+  "triggers": [
+    {
+      "id": "kill_scout",
+      "name": "정찰병 처치",
+      "type": "character_death",
+      "target_id": "goblin_01"
+    }
+  ],
+  "conditions": [
+    "민간인 피해 최소화"
+  ],
+  "rewards": {
+    "gold": 50,
+    "exp": 100
+  },
+  "status": "active"
+}

@@ -272,6 +272,8 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
 ### 2.5 장비 / 인벤토리 / 거래 [P3]
 
+**현재 구현 상태**: `pipeline/inventory.py` + `/equip` `/unequip` `/buy` `/sell` endpoint 까지 들어가 있다. 자연어 통합·프론트 UI 는 후속.
+
 **장비 슬롯 (프론트 기준 8 종)**: `head / top / bottom / feet / leftHand / rightHand / acc1 / acc2`. `Equipment` 타입이 단일 소스이고, 각 슬롯은 `EquipItem | null`.
 
 - `equip` / `unequip` 엔드포인트. 아이템의 `required` (Stats) 가 미충족이면 장착 거부.

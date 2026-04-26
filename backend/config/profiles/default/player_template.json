@@ -1,1 +1,9 @@
-{"id": "player_01", "equipment": {"leftHand": "sword_01"}, "inventory_ids": ["herb_01"]}
+{
+  "id": "player_01",
+  "equipment": {
+    "leftHand": "sword_01"
+  },
+  "inventory_ids": [
+    "herb_01"
+  ]
+}

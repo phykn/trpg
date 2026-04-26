@@ -2,7 +2,14 @@
   "id": "smithy_01",
   "name": "군나르의 대장간",
   "description": "광장 한쪽에 자리잡은 작은 대장간. 화로의 열기가 문틈으로 새어 나온다.",
-  "tags": ["indoor", "town"],
+  "tags": [
+    "indoor",
+    "town"
+  ],
   "weather": [],
-  "connections": [{"target_id": "plaza_01"}]
+  "connections": [
+    {
+      "target_id": "plaza_01"
+    }
+  ]
 }

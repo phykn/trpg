@@ -10,5 +10,7 @@
   "location_id": "smithy_01",
   "max_hp": 22,
   "hp": 22,
-  "inventory_ids": ["hammer_01"]
+  "inventory_ids": [
+    "hammer_01"
+  ]
 }
