@@ -45,7 +45,7 @@ LLM 은 "무엇을 할까 / 어떻게 말할까" 만 고른다. 숫자, 상태, 
   - `done`: 턴 끝
   - `error`: 처리 중 오류
 - 새 게임 흐름:
-  - 프로필 목록 (`GET /profiles`) → 사용자가 시나리오 카드 중 하나 고름. P1 시드는 `config/profiles/default/` 한 벌만이지만, 디렉터리 스캔 방식이라 추후 시나리오를 폴더 추가만으로 확장 가능.
+  - 프로필 목록 (`GET /profiles`) → 사용자가 시나리오 카드 중 하나 고름. P1 시드는 `scenarios/default/` 한 벌만이지만, 디렉터리 스캔 방식이라 추후 시나리오를 폴더 추가만으로 확장 가능.
   - 캐릭터 생성 — 종족(목록 선택) + 외모(자유 텍스트 한 줄) + 이름. 스탯 6 개는 모두 10 으로 시작 (분배 화면 없음).
   - 골라진 race 의 racial_skills 자동 부여, max_HP/MP 는 [03-features.md](./03-features.md) §2.3 공식 (level 0).
 - 마지막 게임 자동 복원 (`GET /session/current`): `SAVES_DIR/.current` 가 가리키는 game_id 의 `FrontState` 반환. 게임 목록·이어하기 화면 없음 — 한 명·한 게임 흐름.
@@ -234,7 +234,7 @@ DB 는 처음 세팅 부담이 크다. 파일 한 덩이로 가면:
 | `BASIC_AUTH_USER` | 네트워크 보호용 접속 아이디 | `kn` |
 | `BASIC_AUTH_PASS` | 네트워크 보호용 접속 비밀번호 | (임의 문자열) |
 | `SAVES_DIR` | GameState JSON 과 `.current` (마지막 game_id) 저장 위치 | `./saves` |
-| `PROFILE_DIR` | 시나리오 시드 디렉터리. `GET /profiles` 가 이 아래를 스캔 | `./config/profiles` |
+| `PROFILE_DIR` | 시나리오 시드 디렉터리. `GET /profiles` 가 이 아래를 스캔. repo 루트의 `scenarios/` (backend 와 agency/story 가 공유) | `../scenarios` |
 
 프론트 쪽 `EXPO_PUBLIC_API_URL` 은 `http://{HOST}:{PORT}` 를 가리키고, 폰 테스트는 같은 네트워크 안 IP 를 쓴다 (외부 노출은 P3 까지 보류).
 

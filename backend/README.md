@@ -29,7 +29,7 @@ BASE_URL=http://localhost:8000/v1        # llama.cpp 등 OpenAI 호환 서버
 BASIC_AUTH_USER=<id>
 BASIC_AUTH_PASS=<pass>
 SAVES_DIR=../saves                       # repo 루트 peer 디렉터리
-PROFILE_DIR=./config/profiles
+PROFILE_DIR=../scenarios                 # repo 루트 peer 디렉터리
 ```
 
 LLM 서버는 별도로 띄워야 함. 예: `llama-server -m <model.gguf> -c 8192 --port 8000`.
@@ -75,10 +75,10 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q        # LLM 살아 있어야 함
 backend/
   run_api.py                       # 진입점
   .env                             # 필수, gitignored
-  config/profiles/<profile>/       # 시나리오 시드 (world.md, start.json, races/, locations/, characters/, items/, quests/, chapters/, player_template.json)
   src/                             # 코드 (계층은 docs/05-codemap.md 참고)
   tests/                           # pytest
   scripts/                         # 일회용 도구 (judge_stress 등)
+../scenarios/<profile>/            # 시나리오 시드 (world.md, start.json, races/, locations/, characters/, items/, quests/, chapters/, player_template.json). repo 루트 peer
 ../saves/                          # 런타임 저장소 (gitignored)
   .current                           # 마지막 game_id 한 줄
   games/<game_id>/

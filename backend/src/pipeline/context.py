@@ -94,10 +94,30 @@ def _state_tags(actor: Character, npc: Character) -> list[str]:
     return tags
 
 
+def _learned_skills_payload(actor: Character) -> list[dict]:
+    """judge 의미 매칭용. learned_skills 만 노출 — racial_skills 는 자동 매칭 대상이 아님."""
+    out: list[dict] = []
+    for s in actor.learned_skills:
+        if s.level > actor.level or actor.mp < s.mp_cost:
+            continue  # 게이트·MP 미달이면 매칭 후보에서 제외 (silent 폴백 유도)
+        item: dict = {
+            "id": s.id,
+            "name": s.name,
+            "type": s.type,
+            "target": s.target,
+        }
+        if s.description:
+            item["description"] = s.description
+        if s.special_effect:
+            item["effect"] = s.special_effect
+        out.append(item)
+    return out
+
+
 def build_surroundings(state: GameState, actor_id: str) -> dict:
     actor = state.characters[actor_id]
     if not actor.location_id or actor.location_id not in state.locations:
-        return {"location": None, "entities": []}
+        return {"location": None, "entities": [], "learned_skills": []}
     location = state.locations[actor.location_id]
 
     entities: list[dict] = [{"id": actor_id, "name": actor.name, "type": "player"}]
@@ -147,4 +167,8 @@ def build_surroundings(state: GameState, actor_id: str) -> dict:
     if location.difficulty:
         location_data["difficulty"] = location.difficulty
 
-    return {"location": location_data, "entities": entities}
+    return {
+        "location": location_data,
+        "entities": entities,
+        "learned_skills": _learned_skills_payload(actor),
+    }

@@ -8,7 +8,7 @@
 
 - `src/` — 애플리케이션 코드 (Architecture 참고).
 - `tests/` — pytest (`asyncio_mode=auto`, `live` 마커는 LLM 도달 가능할 때만).
-- `config/profiles/<profile>/` — 게임 시드 (`world.md`, `start.json`, `player_template.json`, `races/`, `locations/`, `items/`, `characters/`, `quests/`, `chapters/`).
+- `../scenarios/<profile>/` — 게임 시드 (`world.md`, `start.json`, `player_template.json`, `races/`, `locations/`, `items/`, `characters/`, `quests/`, `chapters/`). repo 루트의 `saves/` 와 peer. `backend` 와 `agency/story` 가 공유.
 - `../saves/` — 런타임 저장소 (repo 루트, `backend/` 의 peer). gitignored. 게임당 layout: `games/<game_id>/{meta.json, characters/<id>.json, items/<id>.json, ..., log.jsonl, history.jsonl, dialogue.jsonl}`.
 - `run_api.py` — 진입점. env 읽고 FastAPI app 만들어 uvicorn 으로 띄움.
 - `.env` — 필수 (fallback 없음, 누락 시 KeyError).
@@ -71,7 +71,7 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q               # LLM 살아 있을 때
   - `meta.json` — 싱글톤 필드 (game_id, profile, player_id, world_time, turn_count, pending_check, active_*_id, next_log_id). 매 턴 끝마다 다시 쓰기 (commit point).
   - `<kind>/<id>.json` for each `kind` in `characters / items / locations / races / quests / chapters / campaigns`. 이 턴에 변경된 entity 만 다시 쓰기.
   - `log.jsonl`, `history.jsonl`, `dialogue.jsonl` — append-only one-line-per-entry. 디스크는 cap 없음. in-memory cap (`RULES.log.display_turns` / `memory.turn_log_size` / `memory.recent_dialogue_turns`) 은 tail load / prompt 공급 시에만 적용.
-- `init_game` 이 `config/profiles/<profile>/` 의 seed entity 디렉터리를 game dir 로 verbatim 복사한 뒤 새 player character + meta 작성.
+- `init_game` 이 `../scenarios/<profile>/` 의 seed entity 디렉터리를 game dir 로 verbatim 복사한 뒤 새 player character + meta 작성.
 - Dirty tracking: `pipeline.turn._Dirty` 가 `(kind, id)` 쌍 (apply_changes / write_memories 에서) + 새 log/history/dialogue entry 누적. `_finalize` 가 flush — entity + jsonl append 먼저, meta 마지막.
 - `saves/.current` 가 최신 `game_id` 한 줄. `GET /session/current` 가 읽음.
 - Log entry 는 monotonic id (`GameState.next_log_id`). 프론트는 `log_entry` SSE 와 `state.log` 둘 다 도착했을 때 id 로 dedupe.

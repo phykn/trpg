@@ -40,9 +40,11 @@ from ..state.store import (
     save_entity,
     save_meta,
 )
+from ..errors import SkillInvalid
 from .apply import apply_changes
 from . import combat as combat_engine
 from . import recovery as recovery_engine
+from . import skill as skill_engine
 from .dc import compute_grade, pick_dc, sigmoid_required_roll, social_bonus, tier_to_int
 from .judge import run_judge
 from .memory_writer import write_memories
@@ -236,6 +238,65 @@ async def _emit_attack(
             break
 
 
+def _format_skill_log(state: GameState, actor_id: str, cast_result: dict) -> str:
+    """「스킬명」 발동 + 대상별 효과 한 줄."""
+    actor_name = state.characters[actor_id].name
+    skill_name = cast_result["skill_name"]
+    parts: list[str] = [f"{actor_name} — 「{skill_name}」 발동"]
+    for eff in cast_result["effects"]:
+        tid = eff["target"]
+        tname = state.characters[tid].name if tid in state.characters else tid
+        kind = eff["kind"]
+        if kind == "attack":
+            dmg = eff.get("damage", 0)
+            tail = f" ({tname} 쓰러짐)" if eff.get("dead") else ""
+            parts.append(f"{tname} {dmg} 데미지{tail}")
+        elif kind == "heal":
+            parts.append(f"{tname} {eff.get('healed', 0)} 회복")
+        elif kind in ("buff", "debuff"):
+            buff = eff.get("buff", {})
+            parts.append(
+                f"{tname} 효과 부여 ({buff.get('description', '')}, {buff.get('duration', 0)} 턴)"
+            )
+    return " — ".join(parts)
+
+
+async def _emit_skill_cast(
+    state: GameState,
+    actor_id: str,
+    skill_id: str,
+    targets: list[str],
+    dirty: _Dirty,
+) -> AsyncIterator[dict]:
+    """combat 중 skill cast — log_entry + combat_turn SSE 발행. 실패 시 에러 메시지만 흘리고 아무 효과 없음."""
+    actor = state.characters[actor_id]
+    try:
+        cast_result = skill_engine.cast(
+            actor, skill_id, state, targets, dirty=dirty.entities
+        )
+    except SkillInvalid as e:
+        text = f"{actor.name} — 스킬 발동 실패 ({e})."
+        gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+        _push_log_entry(state, gm_log, dirty)
+        yield {"type": "log_entry", "data": gm_log.model_dump()}
+        return
+    text = _format_skill_log(state, actor_id, cast_result)
+    gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+    _push_log_entry(state, gm_log, dirty)
+    yield {"type": "log_entry", "data": gm_log.model_dump()}
+    yield {
+        "type": "combat_turn",
+        "data": {
+            "actor": actor_id,
+            "action": "skill",
+            "grade": "success",
+            "skill_id": cast_result["skill_id"],
+            "skill_name": cast_result["skill_name"],
+            "effects": cast_result["effects"],
+        },
+    }
+
+
 async def _run_combat_npc_phase(
     state: GameState,
     dirty: _Dirty,
@@ -423,9 +484,17 @@ async def _run_combat_player_turn(
             async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
                 yield ev
             return
-        outcomes = combat_engine.attack(player, target, state.items, rng=rng)
-        async for ev in _emit_attack(state, state.player_id, target_id, outcomes, dirty):
-            yield ev
+        if result.skill_id:
+            async for ev in _emit_skill_cast(
+                state, state.player_id, result.skill_id, list(result.targets), dirty
+            ):
+                yield ev
+        else:
+            outcomes = combat_engine.attack(player, target, state.items, rng=rng)
+            async for ev in _emit_attack(
+                state, state.player_id, target_id, outcomes, dirty
+            ):
+                yield ev
         combat_engine.advance_turn(state)
         async for ev in _run_combat_npc_phase(state, dirty, rng):
             yield ev
@@ -683,6 +752,15 @@ async def run_turn(
             state, list(result.targets), dirty, rng
         ):
             yield ev
+        # skill_id 가 매칭됐으면 player 첫 차례를 cast 로 즉시 소비.
+        if result.skill_id and state.combat_state is not None:
+            async for ev in _emit_skill_cast(
+                state, state.player_id, result.skill_id, list(result.targets), dirty
+            ):
+                yield ev
+            combat_engine.advance_turn(state)
+            async for ev in _run_combat_npc_phase(state, dirty, rng):
+                yield ev
         _advance_time(state)
         async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
             yield ev

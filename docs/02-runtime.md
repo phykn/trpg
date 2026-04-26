@@ -223,8 +223,8 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 ### 2.5 세션 생명주기
 
 **프로필 목록** (`GET /profiles`): `PROFILE_DIR/` 아래 각 프로필 디렉터리를 스캔해 `[{id, name, description, races: [{id, name, description}]}]` 반환. 프론트 새게임 화면이 이 목록을 카드로 보여주고 사용자가 하나 골라서 시작.
-- 프로필 메타(`id, name, description`)는 `config/profiles/{id}/profile.json` 한 파일에 박힘. `id` 는 디렉터리 이름과 같아야 (스캐너가 디렉터리명으로 찾고 검증).
-- race 목록은 `config/profiles/{id}/races/*.json` 의 각 파일에서 `{id, name, description}` 만 추려서 응답에 포함 (`racial_skills` 는 내부 전용, 프론트로 안 나감).
+- 프로필 메타(`id, name, description`)는 `scenarios/{id}/profile.json` 한 파일에 박힘. `id` 는 디렉터리 이름과 같아야 (스캐너가 디렉터리명으로 찾고 검증).
+- race 목록은 `scenarios/{id}/races/*.json` 의 각 파일에서 `{id, name, description}` 만 추려서 응답에 포함 (`racial_skills` 는 내부 전용, 프론트로 안 나감).
 
 **init** (`POST /session/init {profile, player: {name, race_id, appearance}}`):
 - 요청 검증: `profile` 이 `PROFILE_DIR` 에 있는 디렉터리인지, `race_id` 가 그 프로필의 race 목록에 있는지. 누락·미스매치는 422.
@@ -248,7 +248,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 
 ### 3.1 월드 레이어 (거의 불변)
 
-게임 세계관, 톤, 시대, 기본 규칙. 프로필별 `world.md` (`config/profiles/{name}/world.md`). 시스템 프롬프트에 고정.
+게임 세계관, 톤, 시대, 기본 규칙. 프로필별 `world.md` (`scenarios/{name}/world.md`). 시스템 프롬프트에 고정.
 
 ```markdown
 # 세계관
@@ -291,7 +291,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 
 필드 의미:
 
-- **`summary`** — "지금까지 진행한 것의 한 줄 요약" (동적). 정적 의뢰 내용이 아니라 챕터/퀘스트가 *어디까지 왔는지* 의 서사적 상태. narrator 가 의미 있는 진행이 있을 때 `{type: "set", entity: "chapters|quests", id, field: "summary", value: "..."}` 로 갱신 (§6.1). 초기값은 시드 config (`config/profiles/{name}/quests/*.json`, `chapters/*.json`) 에 박힘 — 보통 "[수락] 마을 장로가 광장의 정찰병 처치를 의뢰" 같은 한 줄.
+- **`summary`** — "지금까지 진행한 것의 한 줄 요약" (동적). 정적 의뢰 내용이 아니라 챕터/퀘스트가 *어디까지 왔는지* 의 서사적 상태. narrator 가 의미 있는 진행이 있을 때 `{type: "set", entity: "chapters|quests", id, field: "summary", value: "..."}` 로 갱신 (§6.1). 초기값은 시나리오 시드 (`scenarios/{name}/quests/*.json`, `chapters/*.json`) 에 박힘 — 보통 "[수락] 마을 장로가 광장의 정찰병 처치를 의뢰" 같은 한 줄.
 - **`goals`** — 아직 충족 안 된 트리거 이름들 (`pending only`). 끝난 트리거는 빠짐. narrator 에게 "지금 남은 단계가 무엇인지" 직접 알림. 출처: `quest.triggers[i].name where !triggers_met[i]`.
 - **`conditions`** — 자유 텍스트 제약 ("기한 없음", "민간인 피해 최소화"). narrator 가 매 턴 톤에 반영. quest 모델의 `conditions` 그대로.
 - **`giver`** — 의뢰자 이름 (캐릭터 ID 가 아닌 표시명). narrator 의 회상 서술 ("장로의 의뢰가 떠올랐다") 에 사용. 출처: `characters[quest.giver_id].name`.

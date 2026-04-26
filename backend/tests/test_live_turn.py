@@ -158,6 +158,53 @@ async def test_rest_branch_classified_by_judge(client, env):
     assert player.mp == player.max_mp
 
 
+async def test_judge_matches_learned_skill_in_combat(client, env):
+    """판정자가 learned_skills 컨텍스트로 받아 combat 입력에 skill_id 박는지 확인."""
+    from src.domain.entities import Race, Skill
+
+    gs, profile_dir, saves_dir = env
+    gs.races["goblin"] = Race(id="goblin", name="고블린", description="x")
+    gs.characters["goblin_01"] = Character(
+        id="goblin_01",
+        name="고블린",
+        race_id="goblin",
+        location_id="plaza_01",
+        stats=Stats(),
+        hp=12,
+        max_hp=12,
+        appearance="작은 체구",
+        combat_behavior=CombatBehavior(attack_priority="nearest"),
+    )
+    gs.characters["player_01"].learned_skills = [
+        Skill(
+            id="fireball",
+            name="화염구",
+            description="불꽃을 모아 한 번에 던지는 공격 마법",
+            type="attack",
+            target="single",
+            primary_stat="INT",
+            power=12,
+            mp_cost=4,
+            level=0,
+        )
+    ]
+
+    events = await _collect_events(
+        run_turn(
+            client,
+            gs,
+            profile_dir,
+            saves_dir,
+            "고블린에게 화염구를 던진다.",
+            rng=random.Random(0),
+        )
+    )
+    judge_event = next(e for e in events if e["type"] == "judge")
+    assert judge_event["data"]["action"] == "combat"
+    # skill_id 가 박혔어야
+    assert judge_event["data"].get("skill_id") == "fireball"
+
+
 async def test_combat_branch_boots_combat_state(client, env):
     """판정자가 'combat' 으로 분류 → 엔진이 combat_state 부팅 + combat_start SSE 발행."""
     gs, profile_dir, saves_dir = env

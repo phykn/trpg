@@ -25,6 +25,7 @@ class RejectAction(_StrictAction):
 class CombatAction(_StrictAction):
     action: Literal["combat"]
     targets: list[str] = Field(min_length=1)
+    skill_id: str | None = None  # learned_skills 의미 매칭 (§2.6 S2)
 
 
 class ClarifyAction(_StrictAction):
