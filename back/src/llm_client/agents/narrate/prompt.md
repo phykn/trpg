@@ -33,7 +33,7 @@ You receive a single JSON message:
   "state_changes": [...],
   "memorable": true|false,
   "memory_targets": [...],
-  "memory": "..." | null,
+  "memory": {"<entity_id>": "<그 시점 한 줄>"} | {},
   "memory_links": {"<entity_id>": "<target_id>"} | {},
   "importance": 1|2|3 | null
 }
@@ -72,7 +72,7 @@ You receive a single JSON message:
 - "현기증이 일어 그 말을 잊는다."
 - "주변이 잠시 흐릿해진다."
 
-**reject 강제**: `state_changes=[]`, `memorable=false`, `memory_targets=[]`, `memory=null`, `memory_links={}`, `importance=null`. 게임 상태에 흔적 없음.
+**reject 강제**: `state_changes=[]`, `memorable=false`, `memory_targets=[]`, `memory={}`, `memory_links={}`, `importance=null`. 게임 상태에 흔적 없음.
 
 ## 5. state_changes (5 종)
 
@@ -107,13 +107,55 @@ narrator 가 발행 가능한 type:
 
 ## 6. 메모리 시스템
 
-`memorable=true` 로 표시하면 엔진이 `memory_targets` 의 각 entity 의 `memories[]` 에 `memory` 한 줄을 추가한다.
+`memorable=true` 로 표시하면 엔진이 `memory_targets` 의 각 entity 의 `memories[]` 에 `memory[entity_id]` 한 줄을 추가한다.
 
-- `memory_targets`: 누가 이 사건을 기억할지 명시. NPC + player 인 경우가 대부분.
-- `memory`: 한 줄 기억 내용 (객관적 사실 + 인상). 예: "플레이어가 뇌물을 줘서 통과시켜줌".
-- `importance`: 1 (사소) / 2 (보통) / 3 (중요).
-- `memory_links`: 각 entity 의 기억이 누구를 향한 것인지 매핑 (`{entity_id: target_id}`). 1:1 케이스면 양방향, 1 명짜리면 비워두기. 빠진 entity 의 기억은 `target_id=None` 으로 박혀 Subject 화면에서 안 나옴.
+### 필드
+
+- `memory_targets`: 이 사건을 기억할 entity id 목록. **관련 당사자 모두 포함** (player 가 NPC 와 상호작용하면 양쪽 다).
+- `memory`: `{entity_id: "그 entity 시점의 한 줄"}` 매핑. **각 entity 시점에 맞게 다른 텍스트**로 작성. `memory_targets` 의 모든 id 가 키로 들어가야 함.
+- `importance`: 1 (사소) / 2 (보통) / 3 (중요·장면을 좌우).
+- `memory_links`: 각 entity 의 기억이 누구를 향한 것인지 매핑 (`{entity_id: target_id}`). 빠진 entity 의 기억은 Subject 화면에서 안 나옴.
+
+### 시점 일관성 (필수)
+
+- **player 의 memory 는 1인칭** ("내가 …", "나는 …"). 자기를 3인칭("플레이어가 …") 으로 적지 마라.
+- **NPC 의 memory 는 그 NPC 시점** — player 를 지칭할 때 "그", "낯선 자", 또는 친밀하면 이름.
+- 같은 사건이라도 두 시점은 다른 정보 강조 (NPC 는 자기가 받은 인상, player 는 자기가 한 행동).
+
+GOOD:
+```
+"memory": {
+  "guard_01": "낯선 자가 동전을 내밀며 통과를 요구함, 내키지 않지만 받음",
+  "player_01": "내가 경비병에게 뇌물을 줘 통과함"
+}
+```
+BAD (양쪽이 같은 3인칭):
+```
+"memory": {
+  "guard_01": "플레이어가 뇌물을 줘서 통과함",
+  "player_01": "플레이어가 뇌물을 줘서 통과함"
+}
+```
+
+### 사실 충실성 (격상 해석 금지)
+
+- `player_input` 과 직전 narrative 에 **드러난 사실만** 기록. 추측·확장·격상 금지.
+- 예: 입력 "1000골드 줘 나 전문가임" → "보수를 1000골드로 흥정하려 함" (○) / "임무에 본격 개입" (✗)
+- 인상·감정은 시점 entity 가 직접 느낄 만한 범위만.
+
+### `memorable` 판단 (조심)
+
+`true` 로 박을 만한 사건은 **장면이나 관계를 바꾼 것** 뿐:
+- 의뢰 수락/거절, 약속, 위협, 호의, 비밀 누설, 첫 만남의 인상, 큰 거래, 결정적 발견.
+
+다음은 `memorable=false`:
+- 인사, 짧은 안부, 평범한 둘러보기, 모호한 답("음…", "글쎄"), 같은 주제 반복 발화.
+- `memorable=false` 면 `memory={}`, `memory_targets=[]`, `memory_links={}`, `importance=null`.
+
+### 비는 대상
+
 - `memory_targets` 가 비면 엔진이 `memorable=false` 로 강등.
+- `memory[entity_id]` 가 빠지거나 빈 문자열이면 그 entity 만 skip (다른 entity 는 적용).
 
 ## 7. 출력 예시
 
@@ -129,7 +171,10 @@ narrator 가 발행 가능한 type:
   ],
   "memorable": true,
   "memory_targets": ["guard_01", "player_01"],
-  "memory": "플레이어가 뇌물을 줘서 통과시켜줌",
+  "memory": {
+    "guard_01": "낯선 자가 동전 주머니를 내밀어 통과시킴, 내키지 않게 받음",
+    "player_01": "내가 경비병에게 뇌물을 줘서 통과함"
+  },
   "importance": 2,
   "memory_links": {"guard_01": "player_01", "player_01": "guard_01"}
 }
@@ -145,7 +190,7 @@ narrator 가 발행 가능한 type:
   "state_changes": [],
   "memorable": false,
   "memory_targets": [],
-  "memory": null,
+  "memory": {},
   "memory_links": {},
   "importance": null
 }
@@ -161,7 +206,7 @@ narrator 가 발행 가능한 type:
   "state_changes": [],
   "memorable": false,
   "memory_targets": [],
-  "memory": null,
+  "memory": {},
   "memory_links": {},
   "importance": null
 }

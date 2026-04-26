@@ -21,8 +21,11 @@ def write_memories(state: GameState, output: NarrateOutput, turn: int) -> int:
         memories = _get_memories(state, entity_id)
         if memories is None:
             continue
+        content = output.memory.get(entity_id)
+        if not content:
+            continue
         memories.append(Memory(
-            content=output.memory,
+            content=content,
             importance=importance,
             turn=turn,
             target_id=output.memory_links.get(entity_id),

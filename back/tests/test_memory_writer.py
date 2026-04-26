@@ -13,7 +13,7 @@ def _state_with_two_chars(fresh_state):
 
 def test_memorable_false_skips(fresh_state):
     s = _state_with_two_chars(fresh_state)
-    n = write_memories(s, NarrateOutput(memorable=False, memory="x"), turn=1)
+    n = write_memories(s, NarrateOutput(memorable=False, memory={"g": "x"}), turn=1)
     assert n == 0
     assert s.characters["g"].memories == []
 
@@ -23,22 +23,47 @@ def test_memory_links_target_id_per_entity(fresh_state):
     n = write_memories(s, NarrateOutput(
         memorable=True,
         memory_targets=["g", "p"],
-        memory="뇌물",
+        memory={"g": "낯선 자가 뇌물", "p": "내가 경비병에게 뇌물"},
         importance=2,
         memory_links={"g": "p", "p": "g"},
     ), turn=17)
     assert n == 2
+    assert s.characters["g"].memories[0].content == "낯선 자가 뇌물"
     assert s.characters["g"].memories[0].target_id == "p"
+    assert s.characters["p"].memories[0].content == "내가 경비병에게 뇌물"
     assert s.characters["p"].memories[0].target_id == "g"
 
 
 def test_memory_links_missing_entity_target_id_none(fresh_state):
     s = _state_with_two_chars(fresh_state)
     write_memories(s, NarrateOutput(
-        memorable=True, memory_targets=["g"], memory="혼자", importance=1,
+        memorable=True, memory_targets=["g"], memory={"g": "혼자"}, importance=1,
         memory_links={},
     ), turn=18)
     assert s.characters["g"].memories[-1].target_id is None
+
+
+def test_entity_without_memory_text_is_skipped(fresh_state):
+    s = _state_with_two_chars(fresh_state)
+    n = write_memories(s, NarrateOutput(
+        memorable=True, memory_targets=["g", "p"],
+        memory={"g": "G 시점만"},  # p 키 없음
+        importance=1,
+    ), turn=20)
+    assert n == 1
+    assert s.characters["g"].memories[0].content == "G 시점만"
+    assert s.characters["p"].memories == []
+
+
+def test_empty_memory_text_skipped(fresh_state):
+    s = _state_with_two_chars(fresh_state)
+    n = write_memories(s, NarrateOutput(
+        memorable=True, memory_targets=["g", "p"],
+        memory={"g": "G", "p": ""},  # p 빈 문자열
+        importance=1,
+    ), turn=21)
+    assert n == 1
+    assert s.characters["p"].memories == []
 
 
 def test_cap_evicts_lowest_importance_then_oldest_turn(fresh_state):
@@ -50,7 +75,7 @@ def test_cap_evicts_lowest_importance_then_oldest_turn(fresh_state):
     s.characters["g"].memories.append(Memory(content="중요", importance=3, turn=cap))
 
     write_memories(s, NarrateOutput(
-        memorable=True, memory_targets=["g"], memory="새것", importance=2, memory_links={},
+        memorable=True, memory_targets=["g"], memory={"g": "새것"}, importance=2, memory_links={},
     ), turn=cap + 1)
 
     assert len(s.characters["g"].memories) == cap
@@ -63,6 +88,6 @@ def test_cap_evicts_lowest_importance_then_oldest_turn(fresh_state):
 def test_unknown_entity_id_silently_skipped(fresh_state):
     s = _state_with_two_chars(fresh_state)
     n = write_memories(s, NarrateOutput(
-        memorable=True, memory_targets=["ghost"], memory="x", importance=1,
+        memorable=True, memory_targets=["ghost"], memory={"ghost": "x"}, importance=1,
     ), turn=99)
     assert n == 0

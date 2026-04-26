@@ -28,6 +28,6 @@ class NarrateOutput(BaseModel):
     state_changes: list[dict[str, Any]] = []
     memorable: bool = False
     memory_targets: list[str] = []
-    memory: str | None = None
+    memory: dict[str, str] = {}
     memory_links: dict[str, str | None] = {}
     importance: int | None = Field(default=None, ge=1, le=3)
