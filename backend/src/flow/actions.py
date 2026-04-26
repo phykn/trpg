@@ -13,15 +13,16 @@ from ..domain.errors import (
     PersistenceFailed,
     SkillInvalid,
 )
-from ..domain.memory import ActLogEntry, GMLogEntry, PendingCheck
+from ..domain.memory import PendingCheck
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..engines import inventory as inventory_engine
 from ..engines import skill as skill_engine
 from ..engines.growth import level_up as level_up_engine
 from ..llm.client import LLMClient
-from ..rules.dc import pick_dc, sigmoid_required_roll, social_bonus, tier_to_int
-from .dirty import Dirty, flush, next_log_id, push_log_entry
+from ..mapping.to_front import pending_check_to_front
+from ..rules.dc import pick_dc, sigmoid_required_roll, social_bonus
+from .dirty import Dirty, flush, next_log_id, push_act, push_gm
 from .format import (
     format_attack_log,
     format_roll_announce,
@@ -29,18 +30,6 @@ from .format import (
     format_use_log,
 )
 from .skill_recommend import recommend_skill_candidates
-
-
-def _push_gm(state: GameState, dirty: Dirty, text: str) -> dict:
-    log = GMLogEntry(id=next_log_id(state), kind="gm", text=text)
-    push_log_entry(state, log, dirty)
-    return {"type": "log_entry", "data": log.model_dump()}
-
-
-def _push_act(state: GameState, dirty: Dirty, text: str) -> dict:
-    log = ActLogEntry(id=next_log_id(state), kind="act", text=text)
-    push_log_entry(state, log, dirty)
-    return {"type": "log_entry", "data": log.model_dump()}
 
 
 # --- attack / skill cast ---------------------------------------------------
@@ -68,7 +57,7 @@ async def emit_attack(
             )
             combat_engine.record_damage(state, attacker_id, outcome.damage)
         text = format_attack_log(state, attacker_id, target_id, outcome, apply_result)
-        yield _push_gm(state, dirty, text)
+        yield push_gm(state, dirty, text)
         yield {
             "type": "combat_turn",
             "data": {
@@ -98,7 +87,7 @@ async def emit_skill_cast(
     try:
         skill_obj = skill_engine.find_skill(actor, skill_id)
     except SkillInvalid as e:
-        yield _push_gm(state, dirty, f"{actor.name} — 스킬 발동 실패 ({e}).")
+        yield push_gm(state, dirty, f"{actor.name} — 스킬 발동 실패 ({e}).")
         return
     grade, _nat, _req = skill_engine.compute_cast_grade(
         actor, skill_obj, state, targets, rng=rng
@@ -108,12 +97,12 @@ async def emit_skill_cast(
             actor, skill_id, state, targets, grade=grade, dirty=dirty.entities
         )
     except SkillInvalid as e:
-        yield _push_gm(state, dirty, f"{actor.name} — 스킬 발동 실패 ({e}).")
+        yield push_gm(state, dirty, f"{actor.name} — 스킬 발동 실패 ({e}).")
         return
     for eff in cast_result["effects"]:
         if eff.get("kind") == "attack":
             combat_engine.record_damage(state, actor_id, int(eff.get("damage", 0)))
-    yield _push_gm(state, dirty, format_skill_log(state, actor_id, cast_result, grade))
+    yield push_gm(state, dirty, format_skill_log(state, actor_id, cast_result, grade))
     yield {
         "type": "combat_turn",
         "data": {
@@ -142,10 +131,10 @@ async def emit_equip(
     try:
         slot = inventory_engine.equip_auto(actor, item_id, state.items)
     except InventoryInvalid as e:
-        yield _push_gm(state, dirty, f"{actor.name} — 장착 실패 ({e}).")
+        yield push_gm(state, dirty, f"{actor.name} — 장착 실패 ({e}).")
         return
     dirty.entities.add(("characters", actor_id))
-    yield _push_gm(state, dirty, f"{actor.name} — 「{item_name}」 장착 ({slot})")
+    yield push_gm(state, dirty, f"{actor.name} — 「{item_name}」 장착 ({slot})")
 
 
 async def emit_unequip(
@@ -160,14 +149,14 @@ async def emit_unequip(
     try:
         slot = inventory_engine.unequip_by_item(actor, item_id, state.items)
     except InventoryInvalid as e:
-        yield _push_gm(state, dirty, f"{actor.name} — 해제 실패 ({e}).")
+        yield push_gm(state, dirty, f"{actor.name} — 해제 실패 ({e}).")
         return
     if slot is None:
         text = f"{actor.name} — 「{item_name}」 은(는) 장착돼 있지 않다."
     else:
         text = f"{actor.name} — 「{item_name}」 해제 ({slot})"
         dirty.entities.add(("characters", actor_id))
-    yield _push_gm(state, dirty, text)
+    yield push_gm(state, dirty, text)
 
 
 async def emit_use(
@@ -184,9 +173,9 @@ async def emit_use(
             actor, item_id, target, state.items, state, dirty=dirty.entities
         )
     except InventoryInvalid as e:
-        yield _push_gm(state, dirty, f"{actor.name} — 아이템 사용 실패 ({e}).")
+        yield push_gm(state, dirty, f"{actor.name} — 아이템 사용 실패 ({e}).")
         return
-    yield _push_gm(state, dirty, format_use_log(state, actor_id, result))
+    yield push_gm(state, dirty, format_use_log(state, actor_id, result))
 
 
 # --- growth / trade --------------------------------------------------------
@@ -204,10 +193,10 @@ async def emit_level_up(
     try:
         level_up_engine(actor, stat_up, stat_down)  # type: ignore[arg-type]
     except LevelUpInvalid as e:
-        yield _push_gm(state, dirty, f"{actor.name} — 성장 실패 ({e}).")
+        yield push_gm(state, dirty, f"{actor.name} — 성장 실패 ({e}).")
         return
     dirty.entities.add(("characters", actor_id))
-    yield _push_gm(
+    yield push_gm(
         state, dirty,
         f"{actor.name} — 레벨 {actor.level} 도달 "
         f"({stat_up} ↑ / {stat_down} ↓, HP {actor.max_hp} / MP {actor.max_mp})",
@@ -221,7 +210,7 @@ async def emit_level_up(
         state.pending_skill_candidates = []
     if state.pending_skill_candidates:
         names = ", ".join(f"「{s.name}」" for s in state.pending_skill_candidates)
-        yield _push_act(state, dirty, f"새 스킬 후보: {names}")
+        yield push_act(state, dirty, f"새 스킬 후보: {names}")
 
 
 async def emit_learn_skill(
@@ -233,13 +222,13 @@ async def emit_learn_skill(
     actor = state.characters[actor_id]
     candidates = list(state.pending_skill_candidates)
     if not candidates or index < 0 or index >= len(candidates):
-        yield _push_gm(state, dirty, f"{actor.name} — 익힐 후보가 없거나 잘못된 선택.")
+        yield push_gm(state, dirty, f"{actor.name} — 익힐 후보가 없거나 잘못된 선택.")
         return
     chosen = candidates[index]
     actor.learned_skills.append(chosen)
     state.pending_skill_candidates = []
     dirty.entities.add(("characters", actor_id))
-    yield _push_gm(state, dirty, f"{actor.name} — 「{chosen.name}」 습득.")
+    yield push_gm(state, dirty, f"{actor.name} — 「{chosen.name}」 습득.")
 
 
 async def emit_trade(
@@ -254,7 +243,7 @@ async def emit_trade(
     player = state.characters[actor_id]
     npc = state.characters.get(npc_id)
     if npc is None:
-        yield _push_gm(state, dirty, f"{player.name} — 거래 상대를 찾을 수 없다.")
+        yield push_gm(state, dirty, f"{player.name} — 거래 상대를 찾을 수 없다.")
         return
     try:
         if direction == "buy":
@@ -262,14 +251,14 @@ async def emit_trade(
         else:
             price = inventory_engine.sell(player, npc, item_id, state.items)
     except InventoryInvalid as e:
-        yield _push_gm(state, dirty, f"{player.name} — 거래 실패 ({e}).")
+        yield push_gm(state, dirty, f"{player.name} — 거래 실패 ({e}).")
         return
     dirty.entities.add(("characters", actor_id))
     dirty.entities.add(("characters", npc.id))
     item = state.items.get(item_id)
     iname = item.name if item else item_id
     verb = "구매" if direction == "buy" else "판매"
-    yield _push_gm(
+    yield push_gm(
         state, dirty,
         f"{player.name} — {npc.name}에게 「{iname}」 {verb} ({price} 금)",
     )
@@ -305,7 +294,7 @@ async def emit_roll_pending(
         reason=result.reason,
         created_at=datetime.now(UTC).isoformat(),
     )
-    yield _push_act(
+    yield push_act(
         state, dirty,
         format_roll_announce(state, result, target, mod, required_roll),
     )
@@ -319,16 +308,5 @@ async def emit_roll_pending(
         return
     yield {
         "type": "pending_check",
-        "data": {
-            "dc": dc,
-            "stat": result.stat,
-            "mod": mod,
-            "required_roll": required_roll,
-            "tier": {
-                "value": tier_to_int(result.tier),
-                "max": 7,
-                "label": result.tier,
-            },
-            "target": target,
-        },
+        "data": pending_check_to_front(state.pending_check),
     }

@@ -1,5 +1,7 @@
-import type { FrontState } from './domain';
+import type { FrontState, PendingCheck } from './domain';
 import type { LogEntry } from './ui';
+
+export type { PendingCheck };
 
 export type RaceCard = {
   id: string;
@@ -40,15 +42,6 @@ export type JudgeAction =
   | { action: 'clarify'; question: string }
   | { action: 'combat'; targets: string[] }
   | { action: 'roll'; tier: string; stat: string; targets: string[] };
-
-export type PendingCheck = {
-  dc: number;
-  stat: string;
-  mod: number;
-  required_roll: number;
-  tier: { value: number; max: number; label: string };
-  target: string;
-};
 
 export type CombatHand = 'main' | 'off';
 

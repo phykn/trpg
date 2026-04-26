@@ -98,6 +98,15 @@ export type CombatBadge = {
   enemies: CombatEnemy[];
 };
 
+export type PendingCheck = {
+  dc: number;
+  stat: string;
+  mod: number;
+  required_roll: number;
+  tier: { value: number; max: number; label: string };
+  target: string;
+};
+
 export type FrontState = {
   hero: Hero;
   subject: Subject | null;
@@ -105,4 +114,5 @@ export type FrontState = {
   place: Place | null;
   combat: CombatBadge | null;
   log: LogEntry[];
+  pendingCheck: PendingCheck | null;
 };

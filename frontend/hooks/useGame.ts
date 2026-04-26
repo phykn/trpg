@@ -59,6 +59,7 @@ export function useGame() {
     setPlace(s.place);
     setCombat(s.combat);
     setLog(s.log);
+    setPending(s.pendingCheck);
   }, []);
 
   const handleEvent = React.useCallback(
@@ -76,7 +77,7 @@ export function useGame() {
   );
 
   const runStream = React.useCallback(
-    async (call: (signal: AbortSignal) => Promise<void>, opts: { clearPending: boolean }) => {
+    async (call: (signal: AbortSignal) => Promise<void>) => {
       if (streaming) return;
       const controller = new AbortController();
       aborts.current.add(controller);
@@ -91,7 +92,6 @@ export function useGame() {
         aborts.current.delete(controller);
         setStreaming(false);
         setStreamingText('');
-        if (opts.clearPending) setPending(null);
       }
     },
     [streaming],
@@ -130,10 +130,7 @@ export function useGame() {
         setPending(null);
         setStreamingText('');
         setStatus('ready');
-        await runStream(
-          (signal) => streamIntro(payload.game_id, handleEvent, signal),
-          { clearPending: false },
-        );
+        await runStream((signal) => streamIntro(payload.game_id, handleEvent, signal));
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : String(err));
         setStatus('error');
@@ -146,9 +143,8 @@ export function useGame() {
     (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || !gameId || pending) return;
-      void runStream(
-        (signal) => streamTurn(gameId, { player_input: trimmed }, handleEvent, signal),
-        { clearPending: false },
+      void runStream((signal) =>
+        streamTurn(gameId, { player_input: trimmed }, handleEvent, signal),
       );
     },
     [gameId, pending, handleEvent, runStream],
@@ -156,7 +152,7 @@ export function useGame() {
 
   const onRoll = React.useCallback(() => {
     if (!gameId || !pending) return;
-    void runStream((signal) => streamRoll(gameId, handleEvent, signal), { clearPending: true });
+    void runStream((signal) => streamRoll(gameId, handleEvent, signal));
   }, [gameId, pending, handleEvent, runStream]);
 
   const onStop = React.useCallback(() => {

@@ -7,7 +7,8 @@ from ..domain.entities import (
     Location,
     Quest,
 )
-from ..rules.dc import tier_to_int
+from ..domain.memory import PendingCheck
+from ..domain.types import tier_to_int
 from ..engines.growth import xp_for_next_level
 from ..domain.state import GameState
 
@@ -21,13 +22,10 @@ def _race_name(state: GameState, race_id: str) -> str:
 
 
 def _equipment(state: GameState, char: Character) -> dict:
-    out: dict[str, dict | None] = {}
-    for slot in EQUIPMENT_SLOTS:
-        item_id = getattr(char.equipment, slot)
-        if item_id and item_id in state.items:
+    out: dict[str, dict | None] = {slot: None for slot in EQUIPMENT_SLOTS}
+    for slot, item_id in char.equipment.equipped_items():
+        if item_id in state.items:
             out[slot] = {"name": state.items[item_id].name}
-        else:
-            out[slot] = None
     return out
 
 
@@ -193,12 +191,46 @@ def to_combat(state: GameState) -> dict | None:
 # --- Log -------------------------------------------------------------------
 
 
-def to_log_entry(entry) -> dict:
-    return entry.model_dump()
-
-
 def to_log(state: GameState) -> list[dict]:
-    return [to_log_entry(e) for e in state.log_entries]
+    return [e.model_dump() for e in state.log_entries]
+
+
+# --- PendingCheck ----------------------------------------------------------
+
+
+def pending_check_to_front(pending: PendingCheck) -> dict:
+    return {
+        "dc": pending.dc,
+        "stat": pending.stat,
+        "mod": pending.mod,
+        "required_roll": pending.required_roll,
+        "tier": {
+            "value": tier_to_int(pending.tier),
+            "max": 7,
+            "label": pending.tier,
+        },
+        "target": pending.target,
+    }
+
+
+def to_pending_check(state: GameState) -> dict | None:
+    if state.pending_check is None:
+        return None
+    return pending_check_to_front(state.pending_check)
+
+
+# --- 합성 한국어 문자열 (flow 가 GM 라인으로 push) -------------------------
+
+
+def rest_completed_text(actor_name: str, hours: int) -> str:
+    return (
+        f"{actor_name}은(는) 자리를 잡고 잠을 청한다. "
+        f"{hours}시간 후 푹 쉬고 일어나, HP/MP 가 모두 회복됐다."
+    )
+
+
+def rest_ambush_text(actor_name: str) -> str:
+    return f"{actor_name}이(가) 잠들기 직전 적의 습격을 받는다."
 
 
 # --- FrontState ------------------------------------------------------------
@@ -212,4 +244,5 @@ def to_front_state(state: GameState) -> dict:
         "place": to_place(state),
         "combat": to_combat(state),
         "log": to_log(state),
+        "pendingCheck": to_pending_check(state),
     }
