@@ -4,10 +4,16 @@ from ..rules import RULES
 from ..state.models import GameState
 
 
-def write_memories(state: GameState, output: NarrateOutput, turn: int) -> int:
+def write_memories(
+    state: GameState,
+    output: NarrateOutput,
+    turn: int,
+    dirty: set[tuple[str, str]] | None = None,
+) -> int:
     """memorable=true 일 때 각 entity 의 memories[] 에 한 줄 append.
 
     cap 도달 시 importance 낮은 항목 → 같으면 turn 작은 항목부터 evict.
+    `dirty` 가 주어지면 실제로 memories 에 변동이 생긴 character 를 추가.
     Returns: 실제 추가된 memory 수 (cap evict 후에도 살아남은 것 기준).
     """
     if not output.memorable or not output.memory or not output.memory_targets:
@@ -36,6 +42,8 @@ def write_memories(state: GameState, output: NarrateOutput, turn: int) -> int:
                 key=lambda i: (memories[i].importance, memories[i].turn),
             )
             memories.pop(evict_idx)
+        if dirty is not None:
+            dirty.add(("characters", entity_id))
         written += 1
     return written
 

@@ -9,7 +9,7 @@ Guidance for Claude Code working in this directory.
 - `src/` — application code (see Architecture below).
 - `tests/` — pytest suite (`asyncio_mode=auto`, marker `live` for tests that hit the local LLM).
 - `config/profiles/<profile>/` — game seeds (world.md, start.json, player_template.json, races/, locations/, items/, characters/, quests/, chapters/).
-- `data/` — runtime save dir (`games/<game_id>.json` + `.current`). Gitignored.
+- `../data/` — runtime save dir (repo root, peer of `back/`). Gitignored. Layout per game: `games/<game_id>/{meta.json, characters/<id>.json, items/<id>.json, ..., log.jsonl, history.jsonl, dialogue.jsonl}`.
 - `run_api.py` — entry point. Reads env, builds FastAPI app, runs uvicorn.
 - `.env` — required (no fallbacks; missing keys raise KeyError).
 
@@ -66,10 +66,16 @@ Range `-100..+100` (legacy 0..100 is gone). `social.friendly_threshold = 50` tri
 
 ### Persistence
 
-- Single root `GameState` per game, saved as `data/games/<game_id>.json` via `_atomic_write` (write `.tmp`, `os.replace`).
+- Per-game directory: `../data/games/<game_id>/`. Layout:
+  - `meta.json` — singleton fields (game_id, profile, player_id, world_time, turn_count, pending_check, active_*_id, next_log_id). Always rewritten at end of turn (commit point).
+  - `<kind>/<id>.json` for each `kind` in `characters / items / locations / races / quests / chapters / campaigns`. Only entities mutated this turn are rewritten.
+  - `log.jsonl`, `history.jsonl`, `dialogue.jsonl` — append-only one-line-per-entry. Disk has no cap; the in-memory caps (`RULES.log.display_turns` / `memory.turn_log_size` / `memory.recent_dialogue_turns`) only apply when loading the tail or feeding the prompt.
+- `init_game` copies the seed entity dirs from `config/profiles/<profile>/` into the game dir verbatim, then writes the new player character + meta.
+- Dirty tracking: `pipeline.turn._Dirty` accumulates `(kind, id)` pairs (from `apply_changes` and `write_memories`) plus the new log/history/dialogue entries; `_finalize` flushes them — entities + jsonl appends first, meta last.
 - `data/.current` holds the latest `game_id`; `GET /session/current` reads it.
-- `log_entries` is cap 20 (rolling); `recent_dialogue` cap 10; `turn_log` cap 50; per-entity `memories` cap from `RULES.memory.cap`.
 - Log entries carry monotonic ids (`GameState.next_log_id`). Frontend can dedupe by id when both `log_entry` SSE events and `state.log` arrive.
+- Per-entity `memories` cap is from `RULES.memory.cap`, applied at write time inside the entity model (so the cap travels with the entity file).
+- Single-process save lock (`asyncio.Lock` in `state/store.py`) serializes file writes within a process; horizontal scaling is out of scope for P1. Crash mid-flush leaves entity/jsonl writes committed but `meta.json` stale, recoverable by replaying the next turn.
 
 ### Memory writes (post-turn)
 

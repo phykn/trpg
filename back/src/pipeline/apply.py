@@ -104,7 +104,9 @@ def _set_dotted(obj: Any, dotted_field: str, value: Any) -> None:
     setattr(obj, parts[-1], value)
 
 
-def _apply_set(state: GameState, c: SetChange) -> None:
+def _apply_set(
+    state: GameState, c: SetChange, dirty: set[tuple[str, str]] | None,
+) -> None:
     reason = _check_set_permission(c.entity, c.field)
     if reason:
         raise _StateChangeError(reason)
@@ -115,9 +117,13 @@ def _apply_set(state: GameState, c: SetChange) -> None:
         _set_dotted(container[c.id], c.field, c.value)
     except (AttributeError, ValidationError) as e:
         raise _StateChangeError(f"failed to set {c.field!r}: {e}") from e
+    if dirty is not None:
+        dirty.add((c.entity, c.id))
 
 
-def _apply_set_time(state: GameState, c: SetTimeChange) -> None:
+def _apply_set_time(
+    state: GameState, c: SetTimeChange, dirty: set[tuple[str, str]] | None,
+) -> None:
     if c.value < state.world_time:
         raise _StateChangeError(
             f"set_time {c.value!r} < current {state.world_time!r} (시간 역행 금지)"
@@ -125,31 +131,41 @@ def _apply_set_time(state: GameState, c: SetTimeChange) -> None:
     state.world_time = c.value
 
 
-def _apply_move(state: GameState, c: MoveChange) -> None:
+def _apply_move(
+    state: GameState, c: MoveChange, dirty: set[tuple[str, str]] | None,
+) -> None:
     if c.target not in state.characters:
         raise _StateChangeError(f"unknown character: {c.target!r}")
     if c.destination not in state.locations:
         raise _StateChangeError(f"unknown location: {c.destination!r}")
     state.characters[c.target].location_id = c.destination
+    if dirty is not None:
+        dirty.add(("characters", c.target))
 
 
-def _resolve_inventory(state: GameState, container_id: str) -> list[str]:
+def _resolve_inventory(state: GameState, container_id: str) -> tuple[str, list[str]]:
+    """Return (kind, inventory list) for a container id."""
     if container_id in state.characters:
-        return state.characters[container_id].inventory_ids
+        return "characters", state.characters[container_id].inventory_ids
     if container_id in state.locations:
-        return state.locations[container_id].item_ids
+        return "locations", state.locations[container_id].item_ids
     raise _StateChangeError(f"unknown container: {container_id!r}")
 
 
-def _apply_move_item(state: GameState, c: MoveItemChange) -> None:
+def _apply_move_item(
+    state: GameState, c: MoveItemChange, dirty: set[tuple[str, str]] | None,
+) -> None:
     if c.item not in state.items:
         raise _StateChangeError(f"unknown item: {c.item!r}")
-    src = _resolve_inventory(state, c.from_)
-    dst = _resolve_inventory(state, c.to)
+    src_kind, src = _resolve_inventory(state, c.from_)
+    dst_kind, dst = _resolve_inventory(state, c.to)
     if c.item not in src:
         raise _StateChangeError(f"item {c.item!r} not in {c.from_!r}")
     src.remove(c.item)
     dst.append(c.item)
+    if dirty is not None:
+        dirty.add((src_kind, c.from_))
+        dirty.add((dst_kind, c.to))
 
 
 def _affinity_delta(grade: Grade, intent: Intent) -> int:
@@ -169,13 +185,17 @@ def _affinity_delta(grade: Grade, intent: Intent) -> int:
     return base
 
 
-def _apply_affinity(state: GameState, c: AffinityChange) -> None:
+def _apply_affinity(
+    state: GameState, c: AffinityChange, dirty: set[tuple[str, str]] | None,
+) -> None:
     if c.actor not in state.characters:
         raise _StateChangeError(f"unknown actor: {c.actor!r}")
     actor = state.characters[c.actor]
     delta = _affinity_delta(c.grade, c.intent)
     current = actor.relations.get(c.target, 0)
     actor.relations[c.target] = max(-100, min(100, current + delta))
+    if dirty is not None:
+        dirty.add(("characters", c.actor))
 
 
 _HANDLERS = {
@@ -198,7 +218,14 @@ def _format_validation_error(exc: ValidationError) -> str:
     return "; ".join(parts)
 
 
-def apply_changes(state: GameState, raw_changes: list[dict]) -> dict:
+def apply_changes(
+    state: GameState,
+    raw_changes: list[dict],
+    dirty: set[tuple[str, str]] | None = None,
+) -> dict:
+    """Apply state_changes to `state`. If `dirty` is provided, populate it
+    with `(entity_kind, entity_id)` tuples for every change that successfully
+    mutates an entity file. `set_time` only touches meta, not entities."""
     applied = 0
     rejected: list[dict] = []
     for idx, raw in enumerate(raw_changes):
@@ -210,7 +237,7 @@ def apply_changes(state: GameState, raw_changes: list[dict]) -> dict:
             )
             continue
         try:
-            _HANDLERS[change.type](state, change)
+            _HANDLERS[change.type](state, change, dirty)
             applied += 1
         except _StateChangeError as e:
             rejected.append({"index": idx, "change": raw, "reason": str(e)})

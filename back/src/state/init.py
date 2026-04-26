@@ -18,7 +18,12 @@ from ..domain.entities import (
 )
 from ..errors import ProfileNotFound, RaceNotFound
 from .models import GameState
-from .store import save_game, write_current_game_id
+from .store import (
+    copy_seed_into_game,
+    save_entity,
+    save_meta,
+    write_current_game_id,
+)
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -120,6 +125,9 @@ async def init_game(
         world_time=start["world_time"],
     )
 
-    await save_game(state, data_dir)
+    copy_seed_into_game(profile_dir, profile_name, data_dir, state.game_id)
+    # 시드에 없는 player character 만 추가로 영속.
+    await save_entity(state, data_dir, "characters", player_id)
+    await save_meta(state, data_dir)
     await write_current_game_id(data_dir, state.game_id)
     return state

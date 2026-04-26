@@ -1,5 +1,6 @@
 import random
 from collections.abc import AsyncIterator, Callable
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
 from ..domain.entities import Character
@@ -7,6 +8,7 @@ from ..domain.memory import (
     ActLogEntry,
     DialoguePair,
     GMLogEntry,
+    LogEntry,
     PendingCheck,
     PlayerLogEntry,
     RollLogEntry,
@@ -30,7 +32,13 @@ from ..llm_client.agents.narrate import NarrativeDelta, NarrativeFinal
 from ..llm_client.client import LLMClient
 from ..rules import RULES
 from ..state.models import GameState
-from ..state.store import save_game
+from ..state.store import (
+    append_dialogue_entries,
+    append_history_entries,
+    append_log_entries,
+    save_entity,
+    save_meta,
+)
 from .apply import apply_changes
 from .dc import compute_grade, pick_dc, sigmoid_required_roll, social_bonus, tier_to_int
 from .judge import run_judge
@@ -41,6 +49,20 @@ ToFrontFn = Callable[[GameState], dict]
 
 
 # --- helpers ---------------------------------------------------------------
+
+
+@dataclass
+class _Dirty:
+    """Persistence work accumulated during one turn.
+
+    `entities`: (kind, id) pairs whose JSON file must be rewritten.
+    `log/history/dialogue`: new entries to append to their respective jsonl.
+    Meta is always saved at finalize, no flag needed.
+    """
+    entities: set[tuple[str, str]] = field(default_factory=set)
+    log: list[LogEntry] = field(default_factory=list)
+    history: list[TurnLogEntry] = field(default_factory=list)
+    dialogue: list[DialoguePair] = field(default_factory=list)
 
 
 def _trim(items: list, cap: int) -> None:
@@ -60,23 +82,28 @@ def _next_log_id(state: GameState) -> int:
     return nid
 
 
-def _push_log_entry(state: GameState, entry) -> None:
+def _push_log_entry(state: GameState, entry, dirty: _Dirty) -> None:
     state.log_entries.append(entry)
     _trim(state.log_entries, RULES.log.display_turns)
+    dirty.log.append(entry)
 
 
-def _push_turn_log(state: GameState, target: str | None, summary: str) -> None:
-    state.turn_log.append(
-        TurnLogEntry(turn=state.turn_count, target=target, summary=summary)
-    )
+def _push_turn_log(
+    state: GameState, target: str | None, summary: str, dirty: _Dirty,
+) -> None:
+    entry = TurnLogEntry(turn=state.turn_count, target=target, summary=summary)
+    state.turn_log.append(entry)
     _trim(state.turn_log, RULES.memory.turn_log_size)
+    dirty.history.append(entry)
 
 
-def _push_dialogue(state: GameState, player: str, narrator: str) -> None:
-    state.recent_dialogue.append(
-        DialoguePair(turn=state.turn_count, player=player, narrator=narrator)
-    )
+def _push_dialogue(
+    state: GameState, player: str, narrator: str, dirty: _Dirty,
+) -> None:
+    entry = DialoguePair(turn=state.turn_count, player=player, narrator=narrator)
+    state.recent_dialogue.append(entry)
     _trim(state.recent_dialogue, RULES.memory.recent_dialogue_turns)
+    dirty.dialogue.append(entry)
 
 
 def _choose_bonus_target(actor: Character, targets: list[str]) -> str:
@@ -116,11 +143,26 @@ def _format_roll_announce(
     )
 
 
+async def _flush(state: GameState, data_dir: str, dirty: _Dirty) -> None:
+    """Persist a turn's worth of changes. Order: entities + jsonls first,
+    meta last (meta = commit point on partial-failure recovery).
+    """
+    for kind, eid in dirty.entities:
+        await save_entity(state, data_dir, kind, eid)
+    await append_log_entries(data_dir, state.game_id, dirty.log)
+    await append_history_entries(data_dir, state.game_id, dirty.history)
+    await append_dialogue_entries(data_dir, state.game_id, dirty.dialogue)
+    await save_meta(state, data_dir)
+
+
 async def _finalize(
-    state: GameState, data_dir: str, to_front_fn: ToFrontFn | None,
+    state: GameState,
+    data_dir: str,
+    dirty: _Dirty,
+    to_front_fn: ToFrontFn | None,
 ) -> AsyncIterator[dict]:
     try:
-        await save_game(state, data_dir)
+        await _flush(state, data_dir, dirty)
     except PersistenceFailed as e:
         yield {"type": "error", "data": {"message": str(e), "code": "PersistenceFailed"}}
         return
@@ -144,9 +186,11 @@ async def run_turn(
     if state.pending_check is not None:
         raise PendingCheckActive("a pending_check is already active; call /roll instead")
 
+    dirty = _Dirty()
+
     # player log entry — 입력 자체는 모든 분기에서 영속
     player_log = PlayerLogEntry(id=_next_log_id(state), kind="player", text=player_input)
-    _push_log_entry(state, player_log)
+    _push_log_entry(state, player_log, dirty)
     yield {"type": "log_entry", "data": player_log.model_dump()}
 
     # judge
@@ -165,10 +209,10 @@ async def run_turn(
 
     if isinstance(result, ClarifyAction):
         act_log = ActLogEntry(id=_next_log_id(state), kind="act", text=result.question)
-        _push_log_entry(state, act_log)
+        _push_log_entry(state, act_log, dirty)
         yield {"type": "log_entry", "data": act_log.model_dump()}
         # turn_count·시간·turn_log 모두 변경 안 함 — 다음 /turn 에서 재시작
-        async for ev in _finalize(state, data_dir, to_front_fn):
+        async for ev in _finalize(state, data_dir, dirty, to_front_fn):
             yield ev
         return
 
@@ -193,10 +237,10 @@ async def run_turn(
         )
         announce = _format_roll_announce(state, result, target, mod, required_roll)
         act_log = ActLogEntry(id=_next_log_id(state), kind="act", text=announce)
-        _push_log_entry(state, act_log)
+        _push_log_entry(state, act_log, dirty)
         yield {"type": "log_entry", "data": act_log.model_dump()}
         try:
-            await save_game(state, data_dir)
+            await _flush(state, data_dir, dirty)
         except PersistenceFailed as e:
             yield {"type": "error", "data": {"message": str(e), "code": "PersistenceFailed"}}
             return
@@ -233,17 +277,17 @@ async def run_turn(
             final = item
     assert final is not None
 
-    apply_changes(state, final.output.state_changes)
-    _push_turn_log(state, target_for_log, final.output.turn_summary)
-    _push_dialogue(state, player_input, body)
-    write_memories(state, final.output, turn=state.turn_count)
+    apply_changes(state, final.output.state_changes, dirty.entities)
+    _push_turn_log(state, target_for_log, final.output.turn_summary, dirty)
+    _push_dialogue(state, player_input, body, dirty)
+    write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
 
     gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=body)
-    _push_log_entry(state, gm_log)
+    _push_log_entry(state, gm_log, dirty)
 
     _advance_time(state)
 
-    async for ev in _finalize(state, data_dir, to_front_fn):
+    async for ev in _finalize(state, data_dir, dirty, to_front_fn):
         yield ev
 
 
@@ -263,6 +307,7 @@ async def run_intro(
     judge 를 거치지 않고 narrate 만 호출. player_input 은 비어 있음.
     turn_count·world_time 은 진행하지 않음 (장면 도입은 한 호흡이 0턴).
     """
+    dirty = _Dirty()
     judge_result = {"action": "intro"}
     body = ""
     final: NarrativeFinal | None = None
@@ -278,14 +323,14 @@ async def run_intro(
             final = item
     assert final is not None
 
-    apply_changes(state, final.output.state_changes)
-    _push_turn_log(state, None, final.output.turn_summary)
-    write_memories(state, final.output, turn=state.turn_count)
+    apply_changes(state, final.output.state_changes, dirty.entities)
+    _push_turn_log(state, None, final.output.turn_summary, dirty)
+    write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
 
     gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=body)
-    _push_log_entry(state, gm_log)
+    _push_log_entry(state, gm_log, dirty)
 
-    async for ev in _finalize(state, data_dir, to_front_fn):
+    async for ev in _finalize(state, data_dir, dirty, to_front_fn):
         yield ev
 
 
@@ -304,6 +349,7 @@ async def run_roll(
     if state.pending_check is None:
         raise PendingCheckExpected("no pending_check; call /turn first")
 
+    dirty = _Dirty()
     pending = state.pending_check
     state.turn_count += 1
 
@@ -323,7 +369,7 @@ async def run_roll(
         mod=pending.mod,
         result=_front_grade(grade),
     )
-    _push_log_entry(state, roll_log)
+    _push_log_entry(state, roll_log, dirty)
     yield {"type": "log_entry", "data": roll_log.model_dump()}
 
     judge_result = {
@@ -346,16 +392,16 @@ async def run_roll(
             final = item
     assert final is not None
 
-    apply_changes(state, final.output.state_changes)
-    _push_turn_log(state, pending.target, final.output.turn_summary)
-    _push_dialogue(state, pending.player_input, body)
-    write_memories(state, final.output, turn=state.turn_count)
+    apply_changes(state, final.output.state_changes, dirty.entities)
+    _push_turn_log(state, pending.target, final.output.turn_summary, dirty)
+    _push_dialogue(state, pending.player_input, body, dirty)
+    write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
 
     gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=body)
-    _push_log_entry(state, gm_log)
+    _push_log_entry(state, gm_log, dirty)
 
     state.pending_check = None
     _advance_time(state)
 
-    async for ev in _finalize(state, data_dir, to_front_fn):
+    async for ev in _finalize(state, data_dir, dirty, to_front_fn):
         yield ev

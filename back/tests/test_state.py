@@ -5,14 +5,18 @@ from pathlib import Path
 import pytest
 
 from src.domain.entities import Character, Stats
-from src.domain.memory import GMLogEntry
+from src.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
 from src.errors import PersistenceFailed, ProfileNotFound, RaceNotFound
 from src.state.init import PlayerInput, init_game
 from src.state.models import GameState
 from src.state.store import (
+    append_dialogue_entries,
+    append_history_entries,
+    append_log_entries,
     load_game,
     read_current_game_id,
-    save_game,
+    save_full,
+    save_meta,
     write_current_game_id,
 )
 
@@ -32,13 +36,48 @@ def test_game_state_round_trip(fresh_state):
     assert restored.log_entries[0].kind == "gm"
 
 
-async def test_atomic_save_and_load(fresh_state, tmp_data):
-    await save_game(fresh_state, tmp_data)
-    p = Path(tmp_data) / "games" / f"{fresh_state.game_id}.json"
-    assert p.exists()
-    assert not p.with_suffix(".json.tmp").exists()
+async def test_save_full_creates_directory_layout(fresh_state, tmp_data):
+    fresh_state.characters["p"] = Character(id="p", name="x", race_id="human", stats=Stats())
+    await save_full(fresh_state, tmp_data)
+    gdir = Path(tmp_data) / "games" / fresh_state.game_id
+    assert (gdir / "meta.json").exists()
+    assert (gdir / "characters" / "p.json").exists()
+    # 빈 종류는 디렉토리만 있을 수도 / 없을 수도 — 핵심은 파일이 안 만들어지는 것
+    assert not (gdir / "items").exists() or not list((gdir / "items").glob("*.json"))
+
+
+async def test_save_load_round_trip_through_disk(fresh_state, tmp_data):
+    fresh_state.characters["p"] = Character(id="p", name="주", race_id="human", stats=Stats())
+    fresh_state.log_entries.append(GMLogEntry(id=1, kind="gm", text="처음"))
+    fresh_state.turn_log.append(TurnLogEntry(turn=1, summary="요약"))
+    fresh_state.recent_dialogue.append(DialoguePair(turn=1, player="p", narrator="n"))
+    fresh_state.next_log_id = 2
+
+    await save_full(fresh_state, tmp_data)
+    await append_log_entries(tmp_data, fresh_state.game_id, fresh_state.log_entries)
+    await append_history_entries(tmp_data, fresh_state.game_id, fresh_state.turn_log)
+    await append_dialogue_entries(tmp_data, fresh_state.game_id, fresh_state.recent_dialogue)
+
     loaded = load_game(tmp_data, fresh_state.game_id)
     assert loaded.game_id == fresh_state.game_id
+    assert loaded.characters["p"].name == "주"
+    assert loaded.next_log_id == 2
+    assert loaded.log_entries[0].kind == "gm"
+    assert loaded.log_entries[0].text == "처음"
+    assert loaded.turn_log[0].summary == "요약"
+    assert loaded.recent_dialogue[0].player == "p"
+
+
+async def test_jsonl_appends_are_cumulative(fresh_state, tmp_data):
+    await save_full(fresh_state, tmp_data)
+    await append_log_entries(tmp_data, fresh_state.game_id, [
+        GMLogEntry(id=1, kind="gm", text="첫번째"),
+    ])
+    await append_log_entries(tmp_data, fresh_state.game_id, [
+        GMLogEntry(id=2, kind="gm", text="두번째"),
+    ])
+    loaded = load_game(tmp_data, fresh_state.game_id)
+    assert [e.text for e in loaded.log_entries] == ["첫번째", "두번째"]
 
 
 def test_load_missing_raises_filenotfound(tmp_data):
@@ -48,7 +87,7 @@ def test_load_missing_raises_filenotfound(tmp_data):
 
 async def test_save_to_unwritable_path_raises_persistence_failed(fresh_state):
     with pytest.raises(PersistenceFailed):
-        await save_game(fresh_state, "/proc/no_such_writable")
+        await save_meta(fresh_state, "/proc/no_such_writable")
 
 
 async def test_current_game_id_lifecycle(tmp_data):
@@ -91,6 +130,18 @@ async def test_init_game_happy_path(tmp_data):
     assert p.name == "테스터" and p.race_id == "human"
     assert p.stats.STR == 10 and p.max_hp == 20  # level 0 공식
     assert read_current_game_id(data_dir) == state.game_id
+
+    # 시드가 게임 폴더에 복사됐는지
+    gdir = Path(data_dir) / "games" / state.game_id
+    assert (gdir / "meta.json").exists()
+    assert (gdir / "characters" / "player_01.json").exists()
+    assert (gdir / "races" / "human.json").exists()
+    assert (gdir / "locations" / "plaza.json").exists()
+
+    # 다시 로드해서 round-trip 확인
+    reloaded = load_game(data_dir, state.game_id)
+    assert reloaded.characters["player_01"].name == "테스터"
+    assert reloaded.locations["plaza_01"].name == "광장"
 
 
 async def test_init_game_unknown_profile(tmp_data):

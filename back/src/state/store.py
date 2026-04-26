@@ -1,25 +1,77 @@
 import asyncio
 import os
+import shutil
 from pathlib import Path
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
+from ..domain.entities import (
+    Campaign,
+    Chapter,
+    Character,
+    Item,
+    Location,
+    Quest,
+    Race,
+)
+from ..domain.memory import (
+    DialoguePair,
+    LogEntry,
+    PendingCheck,
+    TurnLogEntry,
+)
 from ..errors import PersistenceFailed
+from ..rules import RULES
 from .models import GameState
 
 _save_lock = asyncio.Lock()
 
 
-def _games_dir(data_dir: str) -> Path:
-    return Path(data_dir) / "games"
+# --- entity kind registry --------------------------------------------------
+
+_ENTITY_MODELS: dict[str, type[BaseModel]] = {
+    "characters": Character,
+    "items": Item,
+    "locations": Location,
+    "races": Race,
+    "quests": Quest,
+    "chapters": Chapter,
+    "campaigns": Campaign,
+}
 
 
-def _game_path(data_dir: str, game_id: str) -> Path:
-    return _games_dir(data_dir) / f"{game_id}.json"
+# --- paths -----------------------------------------------------------------
+
+
+def _game_dir(data_dir: str, game_id: str) -> Path:
+    return Path(data_dir) / "games" / game_id
+
+
+def _meta_path(data_dir: str, game_id: str) -> Path:
+    return _game_dir(data_dir, game_id) / "meta.json"
+
+
+def _entity_path(data_dir: str, game_id: str, kind: str, entity_id: str) -> Path:
+    return _game_dir(data_dir, game_id) / kind / f"{entity_id}.json"
+
+
+def _log_path(data_dir: str, game_id: str) -> Path:
+    return _game_dir(data_dir, game_id) / "log.jsonl"
+
+
+def _history_path(data_dir: str, game_id: str) -> Path:
+    return _game_dir(data_dir, game_id) / "history.jsonl"
+
+
+def _dialogue_path(data_dir: str, game_id: str) -> Path:
+    return _game_dir(data_dir, game_id) / "dialogue.jsonl"
 
 
 def _current_path(data_dir: str) -> Path:
     return Path(data_dir) / ".current"
+
+
+# --- IO primitives ---------------------------------------------------------
 
 
 def _atomic_write(path: Path, data: str) -> None:
@@ -37,25 +89,227 @@ def _atomic_write(path: Path, data: str) -> None:
         raise PersistenceFailed(str(e)) from e
 
 
-def load_game(data_dir: str, game_id: str) -> GameState:
-    path = _game_path(data_dir, game_id)
+def _append_jsonl(path: Path, lines: list[str]) -> None:
+    if not lines:
+        return
     try:
-        data = path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        raise
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as f:
+            for line in lines:
+                f.write(line + "\n")
     except OSError as e:
         raise PersistenceFailed(str(e)) from e
+
+
+def _read_jsonl_tail(path: Path, cap: int) -> list[str]:
+    """Read last `cap` non-empty lines from a jsonl file. Missing file → []."""
     try:
-        return GameState.model_validate_json(data)
-    except ValidationError as e:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return []
+    except OSError as e:
         raise PersistenceFailed(str(e)) from e
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    return lines[-cap:] if cap > 0 else lines
 
 
-async def save_game(state: GameState, data_dir: str) -> None:
-    payload = state.model_dump_json(indent=2)
-    path = _game_path(data_dir, state.game_id)
+# --- meta schema -----------------------------------------------------------
+
+
+class _Meta(BaseModel):
+    game_id: str
+    profile: str
+    player_id: str
+    active_subject_id: str | None = None
+    active_quest_id: str | None = None
+    world_time: str
+    turn_count: int = 0
+    pending_check: PendingCheck | None = None
+    next_log_id: int = 1
+
+
+def _meta_from_state(state: GameState) -> _Meta:
+    return _Meta(
+        game_id=state.game_id,
+        profile=state.profile,
+        player_id=state.player_id,
+        active_subject_id=state.active_subject_id,
+        active_quest_id=state.active_quest_id,
+        world_time=state.world_time,
+        turn_count=state.turn_count,
+        pending_check=state.pending_check,
+        next_log_id=state.next_log_id,
+    )
+
+
+# --- save (granular) -------------------------------------------------------
+
+
+async def save_meta(state: GameState, data_dir: str) -> None:
+    payload = _meta_from_state(state).model_dump_json(indent=2)
+    path = _meta_path(data_dir, state.game_id)
     async with _save_lock:
         await asyncio.to_thread(_atomic_write, path, payload)
+
+
+async def save_entity(
+    state: GameState, data_dir: str, kind: str, entity_id: str
+) -> None:
+    container = getattr(state, kind)
+    if entity_id not in container:
+        raise PersistenceFailed(f"unknown {kind} id: {entity_id!r}")
+    payload = container[entity_id].model_dump_json(indent=2)
+    path = _entity_path(data_dir, state.game_id, kind, entity_id)
+    async with _save_lock:
+        await asyncio.to_thread(_atomic_write, path, payload)
+
+
+async def append_log_entries(
+    data_dir: str, game_id: str, entries: list[LogEntry]
+) -> None:
+    if not entries:
+        return
+    lines = [e.model_dump_json() for e in entries]
+    path = _log_path(data_dir, game_id)
+    async with _save_lock:
+        await asyncio.to_thread(_append_jsonl, path, lines)
+
+
+async def append_history_entries(
+    data_dir: str, game_id: str, entries: list[TurnLogEntry]
+) -> None:
+    if not entries:
+        return
+    lines = [e.model_dump_json() for e in entries]
+    path = _history_path(data_dir, game_id)
+    async with _save_lock:
+        await asyncio.to_thread(_append_jsonl, path, lines)
+
+
+async def append_dialogue_entries(
+    data_dir: str, game_id: str, entries: list[DialoguePair]
+) -> None:
+    if not entries:
+        return
+    lines = [e.model_dump_json() for e in entries]
+    path = _dialogue_path(data_dir, game_id)
+    async with _save_lock:
+        await asyncio.to_thread(_append_jsonl, path, lines)
+
+
+# --- save (bulk: initial / fallback) ---------------------------------------
+
+
+async def save_full(state: GameState, data_dir: str) -> None:
+    """Persist every entity + meta. Used on game init.
+
+    Does NOT create log.jsonl / history.jsonl / dialogue.jsonl — those are
+    created lazily on first append.
+    """
+    gdir = _game_dir(data_dir, state.game_id)
+    gdir.mkdir(parents=True, exist_ok=True)
+    await save_meta(state, data_dir)
+    for kind in _ENTITY_MODELS:
+        for entity_id in getattr(state, kind):
+            await save_entity(state, data_dir, kind, entity_id)
+
+
+# --- load ------------------------------------------------------------------
+
+
+def _scan_entity_dir(
+    data_dir: str, game_id: str, kind: str, model_cls: type[BaseModel]
+) -> dict:
+    dir_ = _game_dir(data_dir, game_id) / kind
+    result: dict[str, BaseModel] = {}
+    if not dir_.is_dir():
+        return result
+    for f in sorted(dir_.glob("*.json")):
+        try:
+            obj = model_cls.model_validate_json(f.read_text(encoding="utf-8"))
+        except (ValidationError, OSError) as e:
+            raise PersistenceFailed(f"{f}: {e}") from e
+        result[obj.id] = obj  # type: ignore[attr-defined]
+    return result
+
+
+def _load_jsonl_tail(
+    path: Path, cap: int, model_cls: type[BaseModel]
+) -> list:
+    lines = _read_jsonl_tail(path, cap)
+    out: list = []
+    for line in lines:
+        try:
+            out.append(model_cls.model_validate_json(line))
+        except ValidationError as e:
+            raise PersistenceFailed(f"{path}: {e}") from e
+    return out
+
+
+def _load_log_tail(path: Path, cap: int) -> list[LogEntry]:
+    """LogEntry is a discriminated union — validate via TypeAdapter."""
+    from pydantic import TypeAdapter
+
+    lines = _read_jsonl_tail(path, cap)
+    adapter: TypeAdapter[LogEntry] = TypeAdapter(LogEntry)
+    out: list[LogEntry] = []
+    for line in lines:
+        try:
+            out.append(adapter.validate_json(line))
+        except ValidationError as e:
+            raise PersistenceFailed(f"{path}: {e}") from e
+    return out
+
+
+def load_game(data_dir: str, game_id: str) -> GameState:
+    gdir = _game_dir(data_dir, game_id)
+    if not gdir.is_dir():
+        raise FileNotFoundError(str(gdir))
+
+    meta_path = _meta_path(data_dir, game_id)
+    try:
+        meta = _Meta.model_validate_json(meta_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise FileNotFoundError(str(meta_path))
+    except (ValidationError, OSError) as e:
+        raise PersistenceFailed(str(e)) from e
+
+    entities: dict[str, dict] = {}
+    for kind, model_cls in _ENTITY_MODELS.items():
+        entities[kind] = _scan_entity_dir(data_dir, game_id, kind, model_cls)
+
+    log_entries = _load_log_tail(
+        _log_path(data_dir, game_id), RULES.log.display_turns
+    )
+    turn_log = _load_jsonl_tail(
+        _history_path(data_dir, game_id),
+        RULES.memory.turn_log_size,
+        TurnLogEntry,
+    )
+    recent_dialogue = _load_jsonl_tail(
+        _dialogue_path(data_dir, game_id),
+        RULES.memory.recent_dialogue_turns,
+        DialoguePair,
+    )
+
+    return GameState(
+        game_id=meta.game_id,
+        profile=meta.profile,
+        player_id=meta.player_id,
+        active_subject_id=meta.active_subject_id,
+        active_quest_id=meta.active_quest_id,
+        world_time=meta.world_time,
+        turn_count=meta.turn_count,
+        pending_check=meta.pending_check,
+        next_log_id=meta.next_log_id,
+        turn_log=turn_log,
+        recent_dialogue=recent_dialogue,
+        log_entries=log_entries,
+        **entities,
+    )
+
+
+# --- .current pointer ------------------------------------------------------
 
 
 def read_current_game_id(data_dir: str) -> str | None:
@@ -73,3 +327,27 @@ async def write_current_game_id(data_dir: str, game_id: str) -> None:
     path = _current_path(data_dir)
     async with _save_lock:
         await asyncio.to_thread(_atomic_write, path, game_id)
+
+
+# --- seed copy (for init_game) --------------------------------------------
+
+
+def copy_seed_into_game(profile_dir: str, profile: str, data_dir: str, game_id: str) -> None:
+    """Copy seed entity directories from profile into the game's save dir.
+
+    Skipped: world.md, start.json, player_template.json, profile.json — those
+    stay read-only in the profile.
+    """
+    src_root = Path(profile_dir) / profile
+    if not src_root.is_dir():
+        raise PersistenceFailed(f"profile dir not found: {src_root}")
+    dst_root = _game_dir(data_dir, game_id)
+    dst_root.mkdir(parents=True, exist_ok=True)
+    for kind in _ENTITY_MODELS:
+        src = src_root / kind
+        if not src.is_dir():
+            continue
+        dst = dst_root / kind
+        dst.mkdir(parents=True, exist_ok=True)
+        for f in src.glob("*.json"):
+            shutil.copy2(f, dst / f.name)
