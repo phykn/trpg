@@ -1,11 +1,9 @@
-"""transcript.md / sse.jsonl 디스크 쓰기."""
-
 import json
 from pathlib import Path
 
 
 def write_sse_jsonl(path: Path, turn_no: int, kind: str, events: list[dict]) -> None:
-    """sse.jsonl 에 turn 별 이벤트들을 한 줄씩 append. kind = 'turn' | 'roll' | 'intro'."""
+    """Append per-turn events to sse.jsonl. `kind` ∈ {'turn', 'roll', 'intro'}."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as f:
         for ev in events:
@@ -29,7 +27,7 @@ def append_transcript_block(
     roll_log: dict | None = None,
     error: Exception | dict | None = None,
 ) -> None:
-    """transcript.md 한 블록 append. error 는 Exception 또는 {code,message} dict."""
+    """Append one block to transcript.md. `error` is either an Exception or a {code, message} dict."""
     path.parent.mkdir(parents=True, exist_ok=True)
     parts: list[str] = []
     header = f"## Turn {turn_no}"

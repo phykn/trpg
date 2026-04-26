@@ -1,7 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
-from src.domain.entities import CombatBehavior, CombatState, DeathSaveState
+from src.domain.entities import CombatBehavior, DeathSaveState
+from src.domain.state import CombatState
 from src.rules import RULES
 
 

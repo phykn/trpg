@@ -31,7 +31,7 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q          # LLM 살아 있을 때만 (BA
 cd backend && ../.venv/bin/python run_api.py
 
 # QA 에이전트 한 바퀴
-.venv/bin/python agency/qa/run_qa.py --agent diplomat --turns 20
+.venv/bin/python agency/run_qa.py --agent diplomat --turns 20
 
 # frontend (별도 venv 무관, npm)
 cd frontend && npx expo start
@@ -46,7 +46,7 @@ cd frontend && npx expo start
 - **표시 데이터는 백엔드가 만들어서 보냄.** 한국어 날짜·기간·합성 문자열·조건부 라벨 등 변환은 `backend/src/mapping/to_front.py` 한 곳에서 끝내고, 프론트는 그대로 표시. 프론트 타입은 UI 가 렌더하는 필드만 담는다.
 - **LLM agent retry = 5회 자기교정 루프.** judge / narrate 등은 `ValidationError` / 의미 검증 실패 시 직전 응답+에러를 message stream 에 append → 다음 시도가 스스로 교정. 5회 후 마지막 에러 종류로 raise.
 - **Stats key = ASCII 약어** (`STR/DEX/CON/INT/WIS/CHA`). judge stat enum 도 같은 키.
-- **save 디렉터리 격리.** production save 는 루트의 `saves/`. agency QA run 은 `agency/qa/runs/<ts>/<agent>/saves/` 자체 분리 — 절대 `../saves/` 가리키게 바꾸지 말 것.
+- **save 디렉터리 격리.** production save 는 루트의 `saves/`. agency QA run 은 루트의 `reports/qa/<ts>/<agent>/saves/` 자체 분리 — 절대 production `saves/` 를 가리키게 바꾸지 말 것.
 
 ## Stack
 

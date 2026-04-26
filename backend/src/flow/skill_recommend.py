@@ -1,8 +1,9 @@
-"""§2.3 4단계 — LLM 으로 스킬 학습 후보 3개 산출.
+"""§2.3 step 4 — produce 3 LLM-suggested skill learn-candidates.
 
-level_up 직후 호출. 컨텍스트는 character.memories + 최근 N 턴 turn_log + 최근 N 턴
-플레이어 입력 원문. LLM 이 서사 부분 (name/description/type/target/primary_stat/
-special_effect) 을 정하고, 엔진이 id/level/template 수치를 채워 Skill 객체 생성.
+Called right after level_up. Context = character.memories + recent N turns of turn_log +
+recent N turns of raw player input. The LLM decides the narrative fields
+(name/description/type/target/primary_stat/special_effect) and the engine fills in
+id/level and template numerics to build the Skill object.
 """
 from __future__ import annotations
 
@@ -22,7 +23,7 @@ _RECENT_INPUTS_FOR_RECOMMEND = 5
 
 
 def _recent_inputs(state: GameState, n: int) -> list[str]:
-    """recent_dialogue 의 player 발화를 최근 N 개. (이미 cap 이 RULES.memory.recent_dialogue_turns)."""
+    """Latest N player utterances from recent_dialogue (already capped at RULES.memory.recent_dialogue_turns)."""
     items = state.recent_dialogue[-n:] if n else []
     return [d.player for d in items if d.player]
 
@@ -63,9 +64,9 @@ async def recommend_skill_candidates(
     client: LLMClient,
     state: GameState,
 ) -> list[Skill]:
-    """LLM 호출 → Skill 객체 3개. 호출 실패는 예외 그대로 raise (호출자가 silent fallback 결정).
+    """LLM call → 3 Skill objects. Re-raises call failures (the caller decides any silent fallback).
 
-    부산물 없음 — state 를 직접 만지지 않는다 (호출자가 pending_skill_candidates 박음).
+    No side effects — does not touch state directly (the caller writes pending_skill_candidates).
     """
     payload = _build_input(state)
     output = await skill_recommend(client, payload)
@@ -74,6 +75,6 @@ async def recommend_skill_candidates(
     skills: list[Skill] = []
     for c in output.candidates:
         s = build_skill_from_candidate(c, level, existing)
-        existing.add(s.id)  # 같은 산출 묶음 안 중복 방지
+        existing.add(s.id)  # prevent duplicates within the same recommendation batch
         skills.append(s)
     return skills

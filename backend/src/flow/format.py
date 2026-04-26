@@ -4,7 +4,6 @@ Pure functions — no state mutation, no SSE, no I/O. Anything that returns a
 string for a log entry lives here.
 """
 from ..agents.dc_judge.schema import RollAction
-from ..domain.entities import Character
 from ..domain.state import GameState
 from ..engines.combat import AttackOutcome
 
@@ -24,10 +23,6 @@ def front_grade(grade: str) -> str:
     if grade == "partial_success":
         return "partial"
     return "fail"
-
-
-def choose_bonus_target(actor: Character, targets: list[str]) -> str:
-    return min(targets, key=lambda t: actor.relations.get(t, 0))
 
 
 def label_for_target(state: GameState, target_id: str) -> str:

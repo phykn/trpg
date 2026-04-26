@@ -3,6 +3,9 @@ from pydantic import BaseModel
 from ..persistence.init import PlayerInput
 
 
+# --- debug ----------------------------------------------------------------
+
+
 class ChatRequest(BaseModel):
     system: str | None = None
     query: str
@@ -12,6 +15,9 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     think: str | None = None
     answer: str | None = None
+
+
+# --- profiles -------------------------------------------------------------
 
 
 class RaceCard(BaseModel):
@@ -25,6 +31,9 @@ class ProfileCard(BaseModel):
     name: str
     description: str = ""
     races: list[RaceCard] = []
+
+
+# --- session (init / turn) ------------------------------------------------
 
 
 class InitRequest(BaseModel):
@@ -41,6 +50,9 @@ class TurnRequest(BaseModel):
     player_input: str
 
 
+# --- growth (level-up / learn-skill) --------------------------------------
+
+
 class LevelUpRequest(BaseModel):
     stat_up: str
     stat_down: str
@@ -49,17 +61,20 @@ class LevelUpRequest(BaseModel):
 class LevelUpResponse(BaseModel):
     game_id: str
     state: dict
-    skill_candidates: list[dict] = []  # §2.3 4단계 — LLM 추천 (실패 시 빈 리스트)
+    skill_candidates: list[dict] = []  # §2.3 step 4 — LLM recommendations (empty list on failure)
 
 
 class LearnSkillRequest(BaseModel):
-    index: int | None = None  # None 또는 범위 밖 = 거부 (다음 레벨업까지 보류)
+    index: int | None = None  # None or out-of-range = decline (defer to next level-up)
 
 
 class LearnSkillResponse(BaseModel):
     game_id: str
     state: dict
     learned_skill_id: str | None = None
+
+
+# --- inventory (equip / unequip / trade / cast / use) ---------------------
 
 
 class EquipRequest(BaseModel):
@@ -79,7 +94,7 @@ class TradeRequest(BaseModel):
 class InventoryResponse(BaseModel):
     game_id: str
     state: dict
-    price: int | None = None  # buy/sell 시 적용 가격
+    price: int | None = None  # price applied at buy/sell time
 
 
 class CastRequest(BaseModel):

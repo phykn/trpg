@@ -1,4 +1,4 @@
-"""§judge equip/unequip — surroundings.equipment 노출 + turn 분기."""
+"""§judge equip/unequip — surroundings.equipment exposure + turn branching."""
 import random
 import tempfile
 
@@ -87,7 +87,7 @@ def test_inventory_kind_distinguishes_weapon_armor(fresh_state):
     assert by_id["helm"]["kind"] == "armor"
 
 
-# --- equip 분기 -----------------------------------------------------------
+# --- equip branch ---------------------------------------------------------
 
 
 async def test_equip_weapon_auto_picks_empty_hand(fresh_state, tmp_data, monkeypatch):
@@ -105,7 +105,7 @@ async def test_equip_weapon_auto_picks_empty_hand(fresh_state, tmp_data, monkeyp
     )
     assert events[-1]["type"] == "done"
     p = state.characters["player_01"]
-    assert p.equipment.leftHand == "sword"  # 첫 빈 손
+    assert p.equipment.leftHand == "sword"  # first empty hand
     assert state.turn_count == 1
 
 
@@ -126,7 +126,7 @@ async def test_equip_armor_picks_first_empty_slot(fresh_state, tmp_data, monkeyp
     assert p.equipment.head == "helm"
 
 
-# --- unequip 분기 ---------------------------------------------------------
+# --- unequip branch -------------------------------------------------------
 
 
 async def test_unequip_finds_slot_by_item(fresh_state, tmp_data, monkeypatch):
@@ -144,5 +144,5 @@ async def test_unequip_finds_slot_by_item(fresh_state, tmp_data, monkeypatch):
     )
     p = state.characters["player_01"]
     assert p.equipment.leftHand is None
-    # 인벤토리에는 그대로
+    # still in inventory
     assert "sword" in p.inventory_ids

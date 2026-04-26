@@ -1,4 +1,4 @@
-"""§2.3 4단계 — skill_recommend agent + build_skill_from_candidate + endpoint flow."""
+"""§2.3 step 4 — skill_recommend agent + build_skill_from_candidate + endpoint flow."""
 import pytest
 from pydantic import ValidationError
 
@@ -42,7 +42,7 @@ def test_candidate_rejects_extra_fields():
                 "target": "single",
                 "primary_stat": "STR",
                 "special_effect": "z",
-                "power": 99,  # 엔진 전용 — LLM 이 박으면 거부
+                "power": 99,  # engine-only — must be rejected if LLM provides it
             }
         )
 
@@ -53,7 +53,7 @@ def test_candidate_rejects_invalid_enum():
             {
                 "name": "x",
                 "description": "y",
-                "type": "magic",  # 미정의 타입
+                "type": "magic",  # undefined type
                 "target": "single",
                 "primary_stat": "STR",
                 "special_effect": "z",
@@ -106,7 +106,7 @@ def test_build_skill_unique_id_avoids_collision():
 
 def test_build_skill_dedupes_within_batch():
     c1 = _candidate()
-    c2 = _candidate()  # 같은 이름
+    c2 = _candidate()  # same name
     existing: set[str] = set()
     s1 = skill_eng.build_skill_from_candidate(c1, 3, existing)
     existing.add(s1.id)
@@ -131,7 +131,7 @@ def test_existing_skill_ids_collects_from_all_chars(fresh_state):
     assert ids == {"r1", "l1"}
 
 
-# --- input 빌드 -----------------------------------------------------------
+# --- input build ----------------------------------------------------------
 
 
 def _seed_player(fresh_state):
@@ -191,10 +191,10 @@ async def test_recommend_returns_three_skills_with_engine_numerics(fresh_state):
     fake = _FakeLLM(cands)
     skills = await recommend_mod.recommend_skill_candidates(fake, state)
     assert len(skills) == 3
-    # level=3 이라 attack power 가 5+3*2=11
+    # level=3 → attack power = 5+3*2 = 11
     attack = [s for s in skills if s.type == "attack"]
     assert all(s.level == 3 for s in skills)
     assert all(s.power > 0 for s in attack)
-    # id 충돌 없음
+    # no id collisions
     ids = {s.id for s in skills}
     assert len(ids) == 3

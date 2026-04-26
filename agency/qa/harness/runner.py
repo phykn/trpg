@@ -1,5 +1,5 @@
-"""한 agent QA 세션 — in-process FastAPI app 을 ASGI 로 호출하면서
-SSE 스트림을 transcript / sse.jsonl 로 기록."""
+"""One agent's QA session — drives the FastAPI app in-process via ASGI
+and records each SSE stream into transcript / sse.jsonl."""
 
 import json
 from pathlib import Path
@@ -20,11 +20,8 @@ from .transcript import (
 )
 
 
-# --- SSE 헬퍼 -------------------------------------------------------------
-
-
 async def _drain_sse(response) -> tuple[str, list[dict]]:
-    """SSE 응답 한 번 다 읽어 (gm_body, all_events) 반환."""
+    """Drain one SSE response. Returns (gm_body, all_events)."""
     body = ""
     events: list[dict] = []
     async for line in response.aiter_lines():
@@ -44,9 +41,6 @@ def _find(events: list[dict], event_type: str) -> dict | None:
     return None
 
 
-# --- 메인 세션 러너 -------------------------------------------------------
-
-
 async def run_qa_session(
     *,
     agent: PlayerAgent,
@@ -57,9 +51,9 @@ async def run_qa_session(
     llm: LLMClient,
     run_id: str,
 ) -> dict:
-    """단일 agent 의 QA run.
+    """Run one agent's QA session.
 
-    Returns: 요약 dict (game_id, turn_count, error_count, transcript path 등).
+    Returns a summary dict: game_id, turn_count, error_count, and the transcript / sse / final-state paths.
     """
     saves_dir = run_dir / "saves"
     saves_dir.mkdir(parents=True, exist_ok=True)
@@ -86,7 +80,6 @@ async def run_qa_session(
         auth=("qa", "qa"),
         timeout=120.0,
     ) as client:
-        # init
         init_resp = await client.post(
             "/session/init",
             json={
@@ -110,7 +103,7 @@ async def run_qa_session(
             max_turns=max_turns,
         )
 
-        # intro (선택적, 실패해도 continue)
+        # intro is optional — swallow failures and continue
         try:
             async with client.stream("POST", f"/session/{game_id}/intro") as r:
                 body, events = await _drain_sse(r)
@@ -130,9 +123,7 @@ async def run_qa_session(
                 transcript_path, turn_no=0, kind="intro", error=e,
             )
 
-        # main loop
         for turn_no in range(1, max_turns + 1):
-            # 현재 상태 조회
             try:
                 state_resp = await client.get(f"/session/{game_id}/state")
                 state_resp.raise_for_status()
@@ -148,7 +139,6 @@ async def run_qa_session(
             if not last_gm:
                 last_gm = last_gm_text(front.get("log") or [])
 
-            # agent 가 다음 입력 결정
             try:
                 player_input = await agent.next_input(state_summary, last_gm)
             except Exception as e:  # noqa: BLE001
@@ -158,7 +148,6 @@ async def run_qa_session(
                 )
                 break
 
-            # /turn
             try:
                 async with client.stream(
                     "POST",
@@ -190,7 +179,7 @@ async def run_qa_session(
             if body:
                 last_gm = body
 
-            # pending_check → 자동 /roll
+            # pending_check → auto /roll
             if pending:
                 try:
                     async with client.stream(
@@ -227,10 +216,9 @@ async def run_qa_session(
             completed_turns = turn_no
 
             if err:
-                # error 발생 시 즉시 중단 — 더 진행해도 의미 없음
+                # stop on error — continuing would be meaningless
                 break
 
-        # final state 저장
         try:
             state = load_game(str(saves_dir), game_id)
             final_state_path.write_text(

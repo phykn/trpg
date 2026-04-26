@@ -1,4 +1,4 @@
-"""동반자 시스템 (P3 §2.9) — 위치 동기화 + combat 합류 + 진영 기반 적 식별."""
+"""Companion system (P3 §2.9) — location sync + combat join + faction-based enemy targeting."""
 import random
 
 from src.domain.entities import Character, CombatBehavior, Stats
@@ -38,7 +38,7 @@ def _npc(cid, **kw):
     return n
 
 
-# --- 위치 동기화 ----------------------------------------------------------
+# --- Location sync --------------------------------------------------------
 
 
 def test_apply_move_drags_companions(fresh_state):
@@ -59,11 +59,11 @@ def test_apply_move_drags_companions(fresh_state):
     )
     assert result["applied"] == 1
     assert p.location_id == "gate_01"
-    assert pet.location_id == "gate_01"  # 동반자 따라옴
+    assert pet.location_id == "gate_01"  # companion follows
     assert ("characters", "pet_01") in dirty
 
 
-# --- combat 자동 합류 -----------------------------------------------------
+# --- Auto-join in combat --------------------------------------------------
 
 
 def test_start_combat_auto_includes_player_companions(fresh_state):
@@ -74,7 +74,7 @@ def test_start_combat_auto_includes_player_companions(fresh_state):
 
     cs = combat_eng.start_combat(fresh_state, ["goblin_01"], rng=random.Random(0))
     assert set(cs.turn_order) == {"player_01", "pet_01", "goblin_01"}
-    # enemy_ids 는 명시한 그대로 — 동반자 안 들어감
+    # enemy_ids stays as supplied — companions do not enter it
     assert cs.enemy_ids == ["goblin_01"]
 
 
@@ -94,16 +94,16 @@ def test_start_combat_dedupes_repeats(fresh_state):
     p = _player(companions=["pet_01"])
     pet = _npc("pet_01")
     fresh_state.characters.update({"player_01": p, "pet_01": pet})
-    # pet 이 enemy 로도 명시 (이상한 케이스지만 dedupe 검증)
+    # pet is also listed as an enemy (weird case, but verifies dedupe)
     cs = combat_eng.start_combat(fresh_state, ["pet_01"], rng=random.Random(0))
     assert cs.turn_order.count("pet_01") == 1
 
 
-# --- 진영 기반 적 식별 ----------------------------------------------------
+# --- Faction-based enemy targeting ----------------------------------------
 
 
 def test_player_companion_targets_enemy_side(fresh_state):
-    """플레이어 동반자가 npc_target 으로 enemy 를 고른다 (player 가 아닌)."""
+    """A player's companion targets an enemy via npc_target (not the player)."""
     p = _player(companions=["pet_01"])
     pet = _npc("pet_01", combat_behavior=CombatBehavior(attack_priority="nearest"))
     enemy = _npc("goblin_01")
@@ -112,11 +112,11 @@ def test_player_companion_targets_enemy_side(fresh_state):
 
     target = combat_eng.pick_npc_target(fresh_state, "pet_01", rng=random.Random(0))
     assert target is not None
-    assert target.id == "goblin_01"  # 같은 patron (player) 인 player 는 안 침
+    assert target.id == "goblin_01"  # does not hit the player (same patron)
 
 
 def test_enemy_companion_targets_player_side(fresh_state):
-    """적 동반자가 player 또는 player.companion 을 고른다."""
+    """An enemy's companion targets the player or one of player.companions."""
     p = _player(companions=["pet_01"])
     pet = _npc("pet_01")
     boss = _npc("boss_01", companions=["minion_01"])
@@ -137,4 +137,4 @@ def test_enemy_companion_targets_player_side(fresh_state):
         fresh_state, "minion_01", rng=random.Random(0)
     )
     assert target is not None
-    assert target.id in {"player_01", "pet_01"}  # 같은 patron (boss) 인 boss 는 안 침
+    assert target.id in {"player_01", "pet_01"}  # does not hit boss (same patron)

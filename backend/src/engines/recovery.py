@@ -1,12 +1,12 @@
 """Long rest at the current location.
 
-자연 회복 없음 — HP/MP 는 잠을 자야 회복된다 (docs/03-features.md §2.4).
-attempt_rest 가 위험도 굴림으로 인카운터 vs 풀회복을 가른다. 풀회복이면 HP/MP 를 max 로
-올리고 world_time 을 sleep_hours 만큼 진행. 인카운터면 enemy_ids 를 반환하고
-호출자가 combat 부팅까지 책임 (turn.py).
+No passive recovery — HP/MP heal only by sleeping (docs/03-features.md §2.4).
+attempt_rest splits encounter vs full recovery via a risk roll. Full recovery restores
+HP/MP to max and advances world_time by sleep_hours. On encounter it returns enemy_ids;
+the caller (turn.py) is responsible for booting combat.
 
-시드 sleep_encounters 풀이 비어 있고 LLM summon 콜백이 주어지면 즉석 적 1마리를 생성
-한다 (P3 §2.4 폴백).
+If the seeded sleep_encounters pool is empty and an LLM summon callback is supplied, an
+ad-hoc enemy is summoned (P3 §2.4 fallback).
 """
 
 import random
@@ -17,9 +17,8 @@ from typing import Literal
 from ..rules import RULES
 from ..domain.state import GameState
 
-RestOutcome = Literal["full_recovery", "encounter"]
 SummonCallable = Callable[[GameState, str], Awaitable[str | None]]
-"""(state, location_id) → 등록된 character_id 또는 None. None 이면 폴백 풀회복."""
+"""(state, location_id) → registered character_id or None. None falls back to full recovery."""
 
 
 def _advance_sleep(state: GameState) -> None:
@@ -47,17 +46,18 @@ async def attempt_rest(
     rng: random.Random | None = None,
     dirty: set[tuple[str, str]] | None = None,
     summon: SummonCallable | None = None,
-) -> tuple[RestOutcome, list[str]]:
-    """위험도 굴림으로 인카운터 vs 풀회복.
+) -> tuple[Literal["full_recovery", "encounter"], list[str]]:
+    """Resolve encounter vs full recovery via a risk roll.
 
-    인카운터 발동 + sleep_encounters 풀이 비어 있으면 `summon` 콜백으로 LLM 즉석 적
-    생성을 시도. summon=None 또는 실패 시 풀회복 폴백 — 잠을 깨지 않는 다행한 밤.
-    encounter 반환 시 enemy_ids 는 모두 state.characters 에 등록된 상태.
+    When the encounter triggers and the sleep_encounters pool is empty, attempt an
+    LLM-summoned enemy via the `summon` callback. summon=None or failure falls back to
+    full recovery — a peaceful night that nothing wakes you from.
+    On encounter return, every enemy_id is already registered in state.characters.
     """
     rng_obj = rng or random
     actor = state.characters[actor_id]
     if actor.location_id is None:
-        # 무국적 캐릭터 — 그냥 풀회복 + 시간 점프.
+        # Stateless character — just full recovery and a time jump.
         _advance_sleep(state)
         _full_recover(state, actor_id, dirty)
         return "full_recovery", []
@@ -75,7 +75,7 @@ async def attempt_rest(
                 if eid in state.characters and state.characters[eid].alive
             ]
         if pool:
-            # 잠들기 직전 습격 — 시간은 흐르지 않는다 (combat 이 자체 시간 가산).
+            # Ambush right before sleep — time does not advance here (combat handles its own time).
             return "encounter", pool
         if summon is not None and location is not None:
             try:

@@ -1,7 +1,7 @@
-"""전투 엔진 코어 — LLM 호출 없는 순수 룰.
+"""Combat engine core — pure rules, no LLM calls.
 
-호출자 (pipeline/turn.py) 가 라운드 진행을 지휘하고, 이 모듈은 한 번의 명중·데미지·AI 결정·flee 시도 같은 결정론적 단위를 노출한다.
-공식 출처: docs/03-features.md §1.1-§1.6.
+The caller (pipeline/turn.py) drives round progression; this module exposes deterministic units like a single attack roll, damage, AI decision, or flee attempt.
+Spec source: docs/03-features.md §1.1-§1.6.
 """
 from __future__ import annotations
 
@@ -12,25 +12,24 @@ from typing import Literal
 from pydantic import BaseModel
 
 from ..domain.entities import (
+    ARMOR_SLOTS,
     ArmorEffect,
     Character,
     CombatBehavior,
-    CombatState,
     DeathSaveState,
     Item,
     WeaponEffect,
 )
 from ..domain.types import Grade, StatKey
 from ..rules import RULES
-from ..domain.state import GameState
+from ..domain.state import CombatState, GameState
 from ..rules.dc import compute_grade, sigmoid_required_roll
 
 
-# --- 공용 ---------------------------------------------------------------------
+# --- Common ------------------------------------------------------------------
 
 
 _DICE_RE = re.compile(r"^\s*(\d+)d(\d+)\s*([+-]\s*\d+)?\s*$")
-_ARMOR_SLOTS: tuple[str, ...] = ("head", "top", "bottom", "feet")
 
 
 def stat_modifier(stat_value: int) -> int:
@@ -38,19 +37,8 @@ def stat_modifier(stat_value: int) -> int:
     return (stat_value - 10) // 2
 
 
-def roll_dice(spec: str, rng: random.Random | None = None) -> int:
-    """`1d8`, `2d6+3`, `1d4-1` 형식 굴려 합 반환."""
-    m = _DICE_RE.match(spec)
-    if not m:
-        raise ValueError(f"invalid dice spec: {spec!r}")
-    n, sides = int(m.group(1)), int(m.group(2))
-    bonus = int(m.group(3).replace(" ", "")) if m.group(3) else 0
-    r = rng or random
-    return sum(r.randint(1, sides) for _ in range(n)) + bonus
-
-
-def _dice_count_and_sides(spec: str) -> tuple[int, int, int]:
-    """spec → (n, sides, bonus). 크리티컬 데미지 굴림 (다이스 두 번 + bonus 한 번) 용."""
+def _parse_dice(spec: str) -> tuple[int, int, int]:
+    """`1d8`, `2d6+3`, `1d4-1` → (n, sides, bonus)."""
     m = _DICE_RE.match(spec)
     if not m:
         raise ValueError(f"invalid dice spec: {spec!r}")
@@ -59,11 +47,18 @@ def _dice_count_and_sides(spec: str) -> tuple[int, int, int]:
     return n, sides, bonus
 
 
-# --- 무기·방어 사영 -----------------------------------------------------------
+def roll_dice(spec: str, rng: random.Random | None = None) -> int:
+    """Roll the spec and return the sum."""
+    n, sides, bonus = _parse_dice(spec)
+    r = rng or random
+    return sum(r.randint(1, sides) for _ in range(n)) + bonus
+
+
+# --- Weapon / defense projection ---------------------------------------------
 
 
 class _Weapon(BaseModel):
-    """공격 굴림 1 회를 위한 무기 사영 — 실제 Item 또는 unarmed 폴백."""
+    """Weapon projection for one attack roll — a real Item or the unarmed fallback."""
     item_id: str | None  # None = unarmed
     dice: str
     range_m: float
@@ -76,7 +71,7 @@ def _unarmed_weapon() -> _Weapon:
 
 
 def _weapon_for_slot(slot_id: str | None, items: dict[str, Item]) -> _Weapon | None:
-    """장비 슬롯 → 무기 사영. 비어 있거나 무기 아니면 None."""
+    """Equipment slot → weapon projection. None if empty or non-weapon."""
     if slot_id is None:
         return None
     item = items.get(slot_id)
@@ -94,14 +89,14 @@ def _weapon_for_slot(slot_id: str | None, items: dict[str, Item]) -> _Weapon | N
 
 
 def primary_stat_for_weapon(weapon: _Weapon) -> StatKey:
-    """1.5m 이하 근접 → STR, 초과 → DEX."""
+    """Melee within 1.5 m → STR, beyond → DEX."""
     return "STR" if weapon.range_m <= RULES.combat.unarmed.range_m else "DEX"
 
 
 def enemy_defense(defender: Character, items: dict[str, Item]) -> int:
-    """기준 10 + 4 슬롯 (head/top/bottom/feet) 의 ArmorEffect.defense 합."""
+    """Base 10 + sum of ArmorEffect.defense across the 4 slots (head/top/bottom/feet)."""
     total = 10
-    for slot in _ARMOR_SLOTS:
+    for slot in ARMOR_SLOTS:
         slot_id = getattr(defender.equipment, slot)
         if slot_id is None:
             continue
@@ -113,11 +108,11 @@ def enemy_defense(defender: Character, items: dict[str, Item]) -> int:
     return total
 
 
-# --- 명중·데미지 --------------------------------------------------------------
+# --- Hit / damage ------------------------------------------------------------
 
 
 class AttackOutcome(BaseModel):
-    """한 번의 공격 굴림 결과 — dual-wield 면 2 개가 발행된다."""
+    """Result of one attack roll — dual-wield emits two of these."""
     hand: Literal["main", "off"]
     weapon_id: str | None
     primary_stat: StatKey
@@ -130,14 +125,14 @@ class AttackOutcome(BaseModel):
 
 
 def _resolve_hands(attacker: Character, items: dict[str, Item]) -> list[tuple[Literal["main", "off"], _Weapon]]:
-    """장비된 양손을 (hand, weapon) 시퀀스로. 양손 무기 한 자루 → 1 항목, dual-wield → 2 항목, 빈손 → unarmed 1 항목."""
+    """Equipped hands as a (hand, weapon) sequence. Two-handed weapon → 1 item, dual-wield → 2, empty hands → unarmed 1 item."""
     dom = attacker.dominant_hand  # "left" | "right"
     main_slot = "leftHand" if dom == "left" else "rightHand"
     off_slot = "rightHand" if dom == "left" else "leftHand"
     main_w = _weapon_for_slot(getattr(attacker.equipment, main_slot), items)
     off_w = _weapon_for_slot(getattr(attacker.equipment, off_slot), items)
 
-    # 양손 무기는 한 슬롯에만 들고 있어도 두 슬롯 점거 — 명중도 한 번.
+    # A two-handed weapon held in one slot still occupies both slots — only one attack roll.
     if main_w is not None and main_w.two_handed:
         return [("main", main_w)]
     if off_w is not None and off_w.two_handed:
@@ -154,16 +149,16 @@ def _resolve_hands(attacker: Character, items: dict[str, Item]) -> list[tuple[Li
 
 
 def _damage_for_grade(weapon: _Weapon, mod: int, grade: Grade, hand: Literal["main", "off"], rng: random.Random) -> int:
-    """grade·hand 별 데미지. 보조 손은 mod 없음, 크리는 다이스 두 번 + mod 한 번."""
+    """Damage by grade and hand. Off-hand gets no mod; crit rolls dice twice but adds mod once."""
     if grade in ("failure", "critical_failure"):
         return 0
-    n, sides, bonus = _dice_count_and_sides(weapon.dice)
+    n, sides, bonus = _parse_dice(weapon.dice)
     base = sum(rng.randint(1, sides) for _ in range(n)) + bonus
     if grade == "critical_success":
         crit = sum(rng.randint(1, sides) for _ in range(n))
         base += crit
     if hand == "off":
-        return max(0, base)  # 보조 손은 mod 안 더함
+        return max(0, base)  # off-hand does not add mod
     return max(0, base + mod)
 
 
@@ -173,7 +168,7 @@ def attack(
     items: dict[str, Item],
     rng: random.Random | None = None,
 ) -> list[AttackOutcome]:
-    """한 차례의 공격 — 들고 있는 무기 구성에 따라 1~2 회 굴림."""
+    """One attack action — 1 or 2 rolls depending on weapon configuration."""
     r = rng or random
     defense = enemy_defense(defender, items)
     hands = _resolve_hands(attacker, items)
@@ -203,16 +198,16 @@ def attack(
     return outcomes
 
 
-# --- 이니셔티브 ---------------------------------------------------------------
+# --- Initiative --------------------------------------------------------------
 
 
 def roll_initiative(
     participants: list[Character],
     rng: random.Random | None = None,
 ) -> list[str]:
-    """모든 참가자 d20 + DEX_mod 굴려 내림차순 정렬한 id 리스트.
+    """List of ids sorted descending by d20 + DEX_mod across all participants.
 
-    동률은 DEX 원값 → id 알파벳 순으로 안정적 tiebreak.
+    Ties are broken stably by raw DEX → id alphabetical.
     """
     r = rng or random
     rolled: list[tuple[int, int, str]] = []
@@ -243,10 +238,10 @@ def pick_target(
     rng: random.Random | None = None,
     damage_dealt: dict[str, int] | None = None,
 ) -> Character | None:
-    """combat_behavior 에 따라 한 명 선택. None 이면 폴백 (단순 랜덤).
+    """Pick one target according to combat_behavior. Falls back to a simple random pick when None.
 
-    `nearest` 의 거리 metric: 같은 location 안에서 정밀 위치 모델이 없어 turn_order 인덱스가 아닌 후보 리스트 등장 순서를 그대로 "가까운 순" 으로 본다.
-    `highest_threat` 는 combat_state.damage_dealt 누적값을 보고 가장 많은 데미지를 입힌 적을 노린다 (없으면 nearest 폴백).
+    `nearest` distance metric: there is no fine-grained position model within a location, so we treat the candidate list's appearance order (not turn_order index) as "nearest first".
+    `highest_threat` reads combat_state.damage_dealt and targets the enemy that has dealt the most damage (falls back to nearest if there is no record).
     """
     r = rng or random
     pool = _filter_alive_in_location(actor, candidates)
@@ -255,7 +250,7 @@ def pick_target(
 
     behavior = actor.combat_behavior
     if behavior is None or behavior.attack_priority is None:
-        # 가중치 합산 모드. nearest = 첫 후보, random = 그 외.
+        # Weighted-sum mode. nearest = first candidate, random = anything else.
         return _weighted_pick(pool, behavior, r)
 
     mode = behavior.attack_priority
@@ -302,7 +297,7 @@ def _weighted_pick(
 
 
 def should_attempt_flee(actor: Character, rng: random.Random | None = None) -> bool:
-    """flee_hp_percent 임계 미만이면 `clamp((임계 - 현재HP%) * 2, 0, 100)` 확률로 시도."""
+    """Below the flee_hp_percent threshold, try with probability `clamp((threshold - current HP%) * 2, 0, 100)`."""
     behavior = actor.combat_behavior
     if behavior is None or behavior.flee_hp_percent is None:
         return False
@@ -317,7 +312,7 @@ def should_attempt_flee(actor: Character, rng: random.Random | None = None) -> b
 
 
 def try_flee(actor: Character, rng: random.Random | None = None) -> tuple[bool, int]:
-    """flee 굴림 한 번. 반환: (성공 여부, 굴림 합)."""
+    """One flee roll. Returns (success, roll total)."""
     f = RULES.combat.flee
     r = rng or random
     roll = roll_dice(f.dice, r)
@@ -326,7 +321,7 @@ def try_flee(actor: Character, rng: random.Random | None = None) -> tuple[bool, 
     return (roll >= f.base_dc, roll)
 
 
-# --- 라이프사이클 -------------------------------------------------------------
+# --- Lifecycle ---------------------------------------------------------------
 
 
 def start_combat(
@@ -335,10 +330,11 @@ def start_combat(
     rng: random.Random | None = None,
     surprise: Literal["player", "enemy"] | None = None,
 ) -> CombatState:
-    """combat_state 부팅. 참가자 = player + 양측 companions + enemy_ids, 이니셔티브 굴려 정렬.
+    """Boot combat_state. Participants = player + companions on both sides + enemy_ids, sorted by initiative.
 
-    state.combat_state 에 직접 박아 반환. surprise='enemy' 면 첫 라운드 player 가 행동
-    못 함 (잠 자다 습격 같은 케이스). companions 는 patron 과 같이 자동 합류 (§2.9).
+    Stamps the result directly onto state.combat_state. surprise='enemy' means the player
+    cannot act in the first round (e.g. ambush during sleep). Companions auto-join with
+    their patron (§2.9).
     """
     raw: list[str] = [state.player_id]
     if state.player_id in state.characters:
@@ -347,13 +343,7 @@ def start_combat(
         raw.append(eid)
         if eid in state.characters:
             raw.extend(state.characters[eid].companions)
-    seen: set[str] = set()
-    unique: list[str] = []
-    for cid in raw:
-        if cid in seen or cid not in state.characters:
-            continue
-        seen.add(cid)
-        unique.append(cid)
+    unique = [cid for cid in dict.fromkeys(raw) if cid in state.characters]
     participants = [state.characters[pid] for pid in unique]
     order = roll_initiative(participants, rng=rng)
     cs = CombatState(
@@ -379,7 +369,7 @@ def current_actor_id(state: GameState) -> str | None:
 
 
 def advance_turn(state: GameState) -> None:
-    """current_turn 다음 인덱스로. 한 바퀴 돌면 round +1."""
+    """Advance current_turn to the next index. Round increments after a full loop."""
     cs = state.combat_state
     if cs is None or not cs.turn_order:
         return
@@ -390,7 +380,7 @@ def advance_turn(state: GameState) -> None:
 
 
 def remove_from_combat(state: GameState, actor_id: str) -> None:
-    """actor_id 를 turn_order 에서 제거. 도주·사망 시 호출. enemy_ids 에서도 제거."""
+    """Remove actor_id from turn_order. Called on flee/death. Also removed from enemy_ids."""
     cs = state.combat_state
     if cs is None or actor_id not in cs.turn_order:
         return
@@ -398,7 +388,7 @@ def remove_from_combat(state: GameState, actor_id: str) -> None:
     cs.turn_order.remove(actor_id)
     if actor_id in cs.enemy_ids:
         cs.enemy_ids.remove(actor_id)
-    # current_turn 보정: 제거된 위치 이전이면 1 감소, 같으면 그 자리에서 다음 행위자가 들어옴.
+    # current_turn adjustment: if the removed slot was earlier, decrement by 1; if equal, the next actor steps into the same slot.
     if idx < cs.current_turn:
         cs.current_turn -= 1
     if cs.turn_order and cs.current_turn >= len(cs.turn_order):
@@ -406,12 +396,11 @@ def remove_from_combat(state: GameState, actor_id: str) -> None:
         cs.round += 1
 
 
-def check_combat_end(state: GameState) -> Literal["victory", "defeat", "fled"] | None:
-    """종료 조건 검사.
+def check_combat_end(state: GameState) -> Literal["victory", "defeat"] | None:
+    """Check end conditions — enemies wiped/fled = victory, player dead = defeat.
 
-    - 적 측 (`enemy_ids`) 이 모두 dead/도주 → victory
-    - player 가 dead → defeat
-    - 적이 모두 도주 (사망이 아닌 turn_order 제거) → fled (P2: 도주만 따로 구분 안 하고 victory 와 동일하게 처리해도 무방하지만 docs 따라 보존)
+    Fleeing removes the enemy from enemy_ids, so an empty enemies_alive list resolves to victory.
+    flow/combat_phase yields a separate "fled" outcome, so we do not distinguish it here.
     """
     cs = state.combat_state
     if cs is None:
@@ -423,12 +412,12 @@ def check_combat_end(state: GameState) -> Literal["victory", "defeat", "fled"] |
     enemies = [state.characters.get(eid) for eid in cs.enemy_ids]
     enemies_alive = [e for e in enemies if e is not None and e.alive]
     if not enemies_alive:
-        # 적 전멸. 단 enemy_ids 에서 도주로 제거된 경우는 alive=True 이지만 enemy_ids 에 없음.
+        # Enemies wiped out. Note: actors removed from enemy_ids via flee are alive=True but no longer in enemy_ids.
         return "victory"
     return None
 
 
-# --- 데미지 적용 / 사망 처리 --------------------------------------------------
+# --- Damage application / death handling -------------------------------------
 
 
 def apply_attack_to_defender(
@@ -439,13 +428,13 @@ def apply_attack_to_defender(
     nat_d20: int | None = None,
     dirty: set[tuple[str, str]] | None = None,
 ) -> dict:
-    """damage 만큼 hp 깎고 사망/death-save 분기.
+    """Subtract damage from hp and route to death / death-save branches.
 
-    반환: `{hp_before, hp_after, downed: bool, dying: bool, dead: bool, revived: bool}`.
-    `nat_d20` 이 1 (critical_failure 데미지) 일 때 death_save 도중이면 실패 +crit_inc.
-    사망 시 quest character_death 트리거 평가.
+    Returns: `{hp_before, hp_after, downed: bool, dying: bool, dead: bool, revived: bool}`.
+    When `nat_d20` is 1 (critical_failure damage) during a death save, failures += crit_inc.
+    On death, the quest character_death trigger is evaluated.
     """
-    from .quest import check_quests  # 지연 import — pipeline 내부 cycle 회피
+    from .quest import check_quests  # deferred import — avoid cycle within pipeline layer
     defender = state.characters[defender_id]
     hp_before = defender.hp
     hp_after = max(0, defender.hp - damage)
@@ -462,7 +451,7 @@ def apply_attack_to_defender(
         "revived": False,
     }
 
-    # death-save 도중 추가 데미지: 실패 카운트 증가. 사망 임계 도달 시 즉시 사망.
+    # Extra damage while in death-save: bump failure count. Hitting the death threshold kills immediately.
     if defender.death_saves is not None:
         inc = (
             RULES.death.crit_damage_failure_inc
@@ -481,7 +470,7 @@ def apply_attack_to_defender(
     if hp_after > 0:
         return out
 
-    # hp 0 으로 다운된 첫 순간.
+    # First moment of being downed at hp 0.
     out["downed"] = True
     is_player = defender.is_player
 
@@ -499,7 +488,7 @@ def apply_attack_to_defender(
         check_quests(state, "character_death", defender_id, dirty)
         return out
 
-    # player 가 죽지 않고 죽어가는 중.
+    # Player not dead yet — dying state.
     defender.death_saves = DeathSaveState()
     out["dying"] = True
     return out
@@ -518,12 +507,12 @@ def tick_death_save(
     rng: random.Random | None = None,
     dirty: set[tuple[str, str]] | None = None,
 ) -> tuple[Literal["progress", "stable", "dead"], int]:
-    """death_save 1 회. 반환: (상태, d20 굴림값).
+    """One death_save tick. Returns (status, d20 roll).
 
     - d20 ≥ save_dc → success +1
     - d20 < save_dc → failure +1
-    - 성공 = successes_to_stabilize → stable (hp=auto_revive_hp, death_saves=None)
-    - 실패 = failures_to_die → dead (alive=False)
+    - successes = successes_to_stabilize → stable (hp=auto_revive_hp, death_saves=None)
+    - failures = failures_to_die → dead (alive=False)
     """
     actor = state.characters[actor_id]
     if actor.death_saves is None:
@@ -551,7 +540,7 @@ def tick_death_save(
     return ("progress", roll)
 
 
-# --- AI 후보 선택 헬퍼 --------------------------------------------------------
+# --- AI candidate selection helpers ------------------------------------------
 
 
 def pick_npc_target(
@@ -559,10 +548,10 @@ def pick_npc_target(
     actor_id: str,
     rng: random.Random | None = None,
 ) -> Character | None:
-    """combat_state 안 actor 의 적 후보를 진영 기준으로 그러모아 pick_target 에 위임.
+    """Collect the actor's enemy candidates by faction within combat_state and delegate to pick_target.
 
-    같은 patron 끼리 아군 (§2.9). actor 가 player 측 (player 또는 player.companions) 이면
-    적은 enemy 측, 아니면 적은 player 측.
+    Companions of the same patron are allies (§2.9). If the actor is on the player side
+    (player or player.companions), the enemy side is the targets; otherwise the player side is.
     """
     cs = state.combat_state
     if cs is None:
@@ -586,7 +575,7 @@ def pick_npc_target(
 
 
 def record_damage(state: GameState, attacker_id: str, damage: int) -> None:
-    """combat_state.damage_dealt 누적. highest_threat AI 가 본다."""
+    """Accumulate into combat_state.damage_dealt. Read by highest_threat AI."""
     cs = state.combat_state
     if cs is None or damage <= 0:
         return

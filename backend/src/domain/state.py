@@ -1,10 +1,11 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 from ..domain.entities import (
     Campaign,
     Chapter,
     Character,
-    CombatState,
     Item,
     Location,
     Quest,
@@ -17,6 +18,15 @@ from ..domain.memory import (
     PendingCheck,
     TurnLogEntry,
 )
+
+
+class CombatState(BaseModel):
+    turn_order: list[str] = []
+    current_turn: int = 0
+    round: int = 1
+    surprise: Literal["player", "enemy"] | None = None
+    enemy_ids: list[str] = []
+    damage_dealt: dict[str, int] = {}  # actor_id → cumulative damage (for highest_threat AI)
 
 
 class GameState(BaseModel):

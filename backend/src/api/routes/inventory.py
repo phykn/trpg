@@ -27,6 +27,20 @@ async def _save_player(state: GameState, saves_dir: str) -> None:
     await save_meta(state, saves_dir)
 
 
+async def _save_trade(state: GameState, saves_dir: str, npc_id: str) -> None:
+    await save_entity(state, saves_dir, "characters", state.player_id)
+    await save_entity(state, saves_dir, "characters", npc_id)
+    await save_meta(state, saves_dir)
+
+
+async def _save_dirty(
+    state: GameState, saves_dir: str, dirty: set[tuple[str, str]]
+) -> None:
+    for kind, eid in dirty:
+        await save_entity(state, saves_dir, kind, eid)
+    await save_meta(state, saves_dir)
+
+
 @router.post("/session/{game_id}/equip", response_model=InventoryResponse)
 async def session_equip(
     body: EquipRequest,
@@ -71,9 +85,7 @@ async def session_buy(
         price = inventory_engine.buy(player, npc, body.item_id, state.items)
     except InventoryInvalid as e:
         raise HTTPException(status_code=422, detail=str(e))
-    await save_entity(state, saves_dir, "characters", state.player_id)
-    await save_entity(state, saves_dir, "characters", npc.id)
-    await save_meta(state, saves_dir)
+    await _save_trade(state, saves_dir, npc.id)
     return InventoryResponse(
         game_id=state.game_id, state=to_front_state(state), price=price
     )
@@ -93,9 +105,7 @@ async def session_sell(
         price = inventory_engine.sell(player, npc, body.item_id, state.items)
     except InventoryInvalid as e:
         raise HTTPException(status_code=422, detail=str(e))
-    await save_entity(state, saves_dir, "characters", state.player_id)
-    await save_entity(state, saves_dir, "characters", npc.id)
-    await save_meta(state, saves_dir)
+    await _save_trade(state, saves_dir, npc.id)
     return InventoryResponse(
         game_id=state.game_id, state=to_front_state(state), price=price
     )
@@ -115,9 +125,7 @@ async def session_cast(
         )
     except SkillInvalid as e:
         raise HTTPException(status_code=422, detail=str(e))
-    for kind, eid in dirty:
-        await save_entity(state, saves_dir, kind, eid)
-    await save_meta(state, saves_dir)
+    await _save_dirty(state, saves_dir, dirty)
     return CastResponse(
         game_id=state.game_id, state=to_front_state(state), result=result
     )
@@ -140,9 +148,7 @@ async def session_use(
         )
     except InventoryInvalid as e:
         raise HTTPException(status_code=422, detail=str(e))
-    for kind, eid in dirty:
-        await save_entity(state, saves_dir, kind, eid)
-    await save_meta(state, saves_dir)
+    await _save_dirty(state, saves_dir, dirty)
     return UseResponse(
         game_id=state.game_id, state=to_front_state(state), result=result
     )

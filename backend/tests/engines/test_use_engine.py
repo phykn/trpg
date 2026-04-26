@@ -1,4 +1,4 @@
-"""아이템 사용 (use) — heal/damage/mp_restore/buff + on_use + consumable 차감."""
+"""Item use — heal/damage/mp_restore/buff + on_use + consumable decrement."""
 import pytest
 
 from src.domain.entities import (
@@ -199,10 +199,10 @@ def test_use_quest_key_includes_on_use_in_result():
     assert res["kind"] == "trigger"
     assert res["on_use"] == "open_ancient_door"
     assert res.get("consumed") is None  # consumable=False
-    assert "quest_key" in p.inventory_ids  # 그대로 남음
+    assert "quest_key" in p.inventory_ids  # still in inventory
 
 
-# --- 검증 -----------------------------------------------------------------
+# --- Validation -----------------------------------------------------------
 
 
 def test_use_rejects_weapon():

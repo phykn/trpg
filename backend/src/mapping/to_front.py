@@ -219,7 +219,7 @@ def to_pending_check(state: GameState) -> dict | None:
     return pending_check_to_front(state.pending_check)
 
 
-# --- 합성 한국어 문자열 (flow 가 GM 라인으로 push) -------------------------
+# --- Composed Korean strings (flow pushes these as GM lines) ---------------
 
 
 def rest_completed_text(actor_name: str, hours: int) -> str:

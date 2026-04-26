@@ -25,7 +25,7 @@ class RejectAction(_StrictAction):
 class CombatAction(_StrictAction):
     action: Literal["combat"]
     targets: list[str] = Field(min_length=1)
-    skill_id: str | None = None  # racial + learned 의미 매칭 (§2.6 S2)
+    skill_id: str | None = None  # semantic match against racial + learned (§2.6 S2)
 
 
 class FleeAction(_StrictAction):
@@ -74,18 +74,18 @@ class RestAction(_StrictAction):
 
 class UseAction(_StrictAction):
     action: Literal["use"]
-    item_id: str  # surroundings.inventory 의 id
+    item_id: str  # id from surroundings.inventory
     target_id: str | None = None
 
 
 class EquipAction(_StrictAction):
     action: Literal["equip"]
-    item_id: str  # surroundings.inventory 의 weapon/armor
+    item_id: str  # weapon/armor in surroundings.inventory
 
 
 class UnequipAction(_StrictAction):
     action: Literal["unequip"]
-    item_id: str  # surroundings.equipment 안 어디에 박혀 있는 것
+    item_id: str  # whichever slot it currently occupies in surroundings.equipment
 
 
 JudgeOutput = Annotated[

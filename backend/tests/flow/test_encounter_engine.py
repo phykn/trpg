@@ -1,4 +1,4 @@
-"""§2.4 폴백 — sleep_encounters 풀 비었을 때 LLM 즉석 적 생성. agent mock."""
+"""§2.4 fallback — LLM-summoned enemy when the sleep_encounters pool is empty. Agent mocked."""
 import tempfile
 from pathlib import Path
 
@@ -75,12 +75,12 @@ async def test_summon_registers_character_with_pair_trade(fresh_state, tmp_profi
     assert char.id in state.characters
     assert char.location_id == "forest_01"
     assert char.race_id == "wolf"
-    # pair-trade 확인
+    # pair-trade verification
     s = char.stats
     assert s.STR + s.CHA == 20
     assert s.DEX + s.WIS == 20
     assert s.CON + s.INT == 20
-    # HP/MP 가 max 로 부팅
+    # HP/MP boot at max
     assert char.hp == char.max_hp
     assert char.mp == char.max_mp
 
@@ -101,11 +101,11 @@ async def test_summon_unknown_race_returns_none(fresh_state, tmp_profile, monkey
     assert char is None
 
 
-# --- recovery + summon 통합 ------------------------------------------------
+# --- recovery + summon integration ----------------------------------------
 
 
 async def test_recovery_uses_summon_when_pool_empty(fresh_state, tmp_profile, monkeypatch):
-    """sleep_encounters 비었지만 summon 콜백 → encounter."""
+    """Empty sleep_encounters with a summon callback → encounter."""
     state = _seed_state(fresh_state)
 
     async def summon(s, loc_id):
@@ -119,7 +119,7 @@ async def test_recovery_uses_summon_when_pool_empty(fresh_state, tmp_profile, mo
 
     class _AlwaysEncounter:
         def random(self):
-            return 0.0  # encounter_chance > 0 이면 무조건 발동
+            return 0.0  # any encounter_chance > 0 always triggers
 
     outcome, enemies = await recovery.attempt_rest(
         state, "player_01", rng=_AlwaysEncounter(), dirty=set(), summon=summon
@@ -130,7 +130,7 @@ async def test_recovery_uses_summon_when_pool_empty(fresh_state, tmp_profile, mo
 
 
 async def test_recovery_falls_back_when_summon_fails(fresh_state, tmp_profile, monkeypatch):
-    """summon 이 None 반환 → 풀회복 폴백."""
+    """summon returns None → fall back to full recovery."""
     state = _seed_state(fresh_state)
 
     async def summon(s, loc_id):

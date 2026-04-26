@@ -1,4 +1,4 @@
-"""스킬 cast — 검증·효과 적용·grade 보정·ActiveBuff tick (§2.6 S1 핵심)."""
+"""Skill cast — validation, effects, grade adjustment, ActiveBuff tick (§2.6 S1 core)."""
 import pytest
 
 from src.domain.entities import Character, Skill, Stats
@@ -127,7 +127,7 @@ def test_cast_heal_caps_at_max_hp(fresh_state):
     fresh_state.player_id = "player_01"
 
     result = skill_eng.cast(p, "heal_01", state, ["ally_01"])
-    # power 8 — 그러나 max 20 까지만
+    # power 8 — but capped at max 20
     assert result["effects"][0]["healed"] == 2
     assert ally.hp == 20
 
@@ -172,7 +172,7 @@ def test_cast_area_hits_all_other_alive_in_location(fresh_state):
 
     result = skill_eng.cast(p, "firestorm", state, [])
     targets = {e["target"] for e in result["effects"]}
-    assert targets == {"g1", "g2"}  # 다른 location, 죽은 적 제외
+    assert targets == {"g1", "g2"}  # excludes other-location and dead enemies
 
 
 def test_cast_rejects_when_level_too_low(fresh_state):
@@ -270,14 +270,14 @@ def test_tick_active_buffs_decrements_and_removes_expired(fresh_state):
     state = _state(fresh_state, player_01=p)
     skill_eng.cast(p, "bless", state, [])  # duration=3
     skill_eng.cast(p, "bless", state, [])  # +1 buff stack, duration=3
-    p.mp = 20  # reset mp 충분히
+    p.mp = 20  # plenty of mp to reset
     assert all(b.duration == 3 for b in p.active_buffs)
 
     skill_eng.tick_active_buffs(p)
     assert all(b.duration == 2 for b in p.active_buffs)
     skill_eng.tick_active_buffs(p)
     skill_eng.tick_active_buffs(p)
-    # 3 tick 후 duration=0, 제거됨
+    # After 3 ticks duration=0, buff removed
     assert p.active_buffs == []
 
 
@@ -287,20 +287,20 @@ def test_tick_active_buffs_returns_removed_count(fresh_state):
     skill_eng.cast(p, "bless", state, [])  # duration 3
     skill_eng.tick_active_buffs(p)
     skill_eng.tick_active_buffs(p)
-    # 마지막 tick 에서 제거
+    # Removed on the final tick
     removed = skill_eng.tick_active_buffs(p)
     assert removed == 1
 
 
 def test_compute_cast_grade_attack_uses_d20(fresh_state):
-    """attack 스킬은 d20+stat_mod vs target defense 굴려 grade 산출."""
+    """Attack skills resolve grade via d20+stat_mod vs target defense."""
     import random as rng_mod
 
     p = _player(skills=[_attack_skill()], stats=Stats(INT=14))
     e = _enemy(hp=10)
     state = _state(fresh_state, player_01=p, goblin_01=e)
 
-    # 결정론 — Random(0) 의 첫 randint(1,20) 값을 대조 대신, 단순히 grade in 5종 확인.
+    # Deterministic — instead of asserting Random(0)'s first randint(1,20), just verify grade is in the 5-way set.
     grade, nat, req = skill_eng.compute_cast_grade(
         p, _attack_skill(), state, ["goblin_01"], rng=rng_mod.Random(0)
     )
@@ -310,7 +310,7 @@ def test_compute_cast_grade_attack_uses_d20(fresh_state):
 
 
 def test_compute_cast_grade_heal_returns_success(fresh_state):
-    """heal/buff/self 는 d20 굴리지 않고 success 고정 (multiplier 1.0)."""
+    """heal/buff/self skip the d20 roll and pin to success (multiplier 1.0)."""
     p = _player(skills=[_heal_skill()])
     state = _state(fresh_state, player_01=p)
 
@@ -323,7 +323,7 @@ def test_compute_cast_grade_heal_returns_success(fresh_state):
 
 
 def test_cast_with_failure_grade_zeros_damage(fresh_state):
-    """compute_cast_grade 가 'failure' 면 cast(grade='failure') → 데미지 0."""
+    """When compute_cast_grade returns 'failure', cast(grade='failure') deals 0 damage."""
     p = _player(skills=[_attack_skill()])
     e = _enemy(hp=20)
     state = _state(fresh_state, player_01=p, goblin_01=e)

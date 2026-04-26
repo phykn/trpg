@@ -1,7 +1,6 @@
-from collections import defaultdict, deque
+from collections import defaultdict
 from typing import NamedTuple
 
-from ..domain.entities import EQUIPMENT_SLOTS
 from ..domain.state import GameState
 
 
@@ -9,7 +8,6 @@ class Edge(NamedTuple):
     type: str
     from_id: str
     to_id: str
-    attrs: dict | None = None
 
 
 class GameGraph:
@@ -20,15 +18,9 @@ class GameGraph:
     def add_node(self, node_id: str, entity_type: str) -> None:
         self._node_types[node_id] = entity_type
 
-    def add_edge(
-        self,
-        from_id: str,
-        to_id: str,
-        edge_type: str,
-        attrs: dict | None = None,
-    ) -> None:
+    def add_edge(self, from_id: str, to_id: str, edge_type: str) -> None:
         self._out[from_id].append(
-            Edge(type=edge_type, from_id=from_id, to_id=to_id, attrs=attrs)
+            Edge(type=edge_type, from_id=from_id, to_id=to_id)
         )
 
     def get_edges(self, from_id: str, edge_type: str | None = None) -> list[Edge]:
@@ -39,43 +31,6 @@ class GameGraph:
 
     def get_node_type(self, node_id: str) -> str | None:
         return self._node_types.get(node_id)
-
-    def neighbors(
-        self,
-        node_id: str,
-        depth: int = 1,
-        edge_types: list[str] | None = None,
-    ) -> dict[str, list[Edge]]:
-        """BFS up to `depth` hops. Returns {neighbor_id: path_edges_from_root}."""
-        parent_edge: dict[str, Edge] = {}
-        parent_of: dict[str, str] = {}
-        visited: set[str] = {node_id}
-        queue: deque[tuple[str, int]] = deque([(node_id, 0)])
-
-        while queue:
-            current, d = queue.popleft()
-            if d >= depth:
-                continue
-            for edge in self._out.get(current, []):
-                if edge_types is not None and edge.type not in edge_types:
-                    continue
-                neighbor = edge.to_id
-                if neighbor not in visited:
-                    visited.add(neighbor)
-                    parent_edge[neighbor] = edge
-                    parent_of[neighbor] = current
-                    queue.append((neighbor, d + 1))
-
-        result: dict[str, list[Edge]] = {}
-        for neighbor in parent_edge:
-            path: list[Edge] = []
-            cur = neighbor
-            while cur in parent_edge:
-                path.append(parent_edge[cur])
-                cur = parent_of[cur]
-            path.reverse()
-            result[neighbor] = path
-        return result
 
 
 def build_graph(state: GameState) -> GameGraph:
@@ -98,10 +53,8 @@ def _build_character_edges(g: GameGraph, state: GameState) -> None:
     for cid, char in state.characters.items():
         if char.location_id:
             g.add_edge(cid, char.location_id, "located_at")
-        for slot in EQUIPMENT_SLOTS:
-            item_id = getattr(char.equipment, slot)
-            if item_id:
-                g.add_edge(cid, item_id, "equips", attrs={"slot": slot})
+        for _, item_id in char.equipment.equipped_items():
+            g.add_edge(cid, item_id, "equips")
         for item_id in char.inventory_ids:
             if item_id:
                 g.add_edge(cid, item_id, "carries")

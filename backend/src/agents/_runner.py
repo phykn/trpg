@@ -23,9 +23,10 @@ class AgentSemanticError(Exception):
     """
 
 
-def read_prompt(file: str) -> str:
-    """Load a sibling prompt.md given the agent's __file__."""
-    return (Path(file).parent / "prompt.md").read_text(encoding="utf-8")
+def read_prompt(file: str) -> tuple[Path, str]:
+    """Load a sibling prompt.md given the agent's __file__. Returns (path, text)."""
+    path = Path(file).parent / "prompt.md"
+    return path, path.read_text(encoding="utf-8")
 
 
 async def run_with_retries(
@@ -49,16 +50,11 @@ async def run_with_retries(
         {"role": "user", "content": user_payload},
     ]
     last_error: Exception | None = None
+    hint_clause = f" ({correction_hint})" if correction_hint else ""
     nudge = (
         "Your previous response failed validation: {error}. "
-        "Re-read the instructions and output only the corrected JSON."
+        f"Re-read the instructions{hint_clause} and output only the corrected JSON."
     )
-    if correction_hint:
-        nudge = (
-            "Your previous response failed validation: {error}. "
-            f"Re-read the instructions ({correction_hint}) "
-            "and output only the corrected JSON."
-        )
     for _ in range(retries + 1):
         result = await client.chat(messages=messages, think=False)
         answer = result["answer"] or ""

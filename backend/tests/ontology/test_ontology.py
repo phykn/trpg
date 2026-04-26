@@ -74,14 +74,6 @@ def test_graph_edges(fresh_state):
     assert any(e.to_id == "q1" for e in g.get_edges("sword_01", "reward_of"))
 
 
-def test_bfs_depth(fresh_state):
-    g = build_graph(_seed(fresh_state))
-    n1 = g.neighbors("guard_01", depth=1)
-    assert "plaza_01" in n1 and "q1" in n1
-    n2 = g.neighbors("guard_01", depth=2)
-    assert "gate_01" in n2  # plaza → gate
-
-
 def test_target_view_npc(fresh_state):
     state = _seed(fresh_state)
     g = build_graph(state)

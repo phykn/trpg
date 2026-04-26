@@ -1,4 +1,4 @@
-"""§flee/level_up/learn_skill/buy/sell — 자연어 통합. judge mock 으로 분기 검증."""
+"""§flee/level_up/learn_skill/buy/sell — natural-language integration. Branches verified via judge mocks."""
 import random
 import tempfile
 
@@ -66,11 +66,11 @@ def _seed_player(fresh_state, **overrides):
     return fresh_state
 
 
-# --- flee 자연어 ----------------------------------------------------------
+# --- flee natural language ------------------------------------------------
 
 
 async def test_flee_in_combat_succeeds_ends_combat(fresh_state, tmp_data, monkeypatch):
-    """flee 성공 시 combat_end (outcome=fled) + combat_state 정리."""
+    """On flee success: combat_end (outcome=fled) + combat_state cleared."""
     state = _seed_player(fresh_state)
     enemy = Character(
         id="goblin_01", name="고블린", race_id="human", stats=Stats(),
@@ -81,7 +81,7 @@ async def test_flee_in_combat_succeeds_ends_combat(fresh_state, tmp_data, monkey
     state.combat_state.turn_order = ["player_01", "goblin_01"]
     state.combat_state.current_turn = 0
 
-    # try_flee 가 항상 성공하도록 RULES.combat.flee.base_dc 보다 무조건 큰 굴림.
+    # Force try_flee to always pass with a roll above RULES.combat.flee.base_dc.
     monkeypatch.setattr(combat_engine, "try_flee", lambda actor, rng=None: (True, 30))
     _judge_returns(monkeypatch, FleeAction(action="flee"))
 
@@ -97,7 +97,7 @@ async def test_flee_in_combat_succeeds_ends_combat(fresh_state, tmp_data, monkey
 
 
 async def test_flee_in_combat_fails_npc_phase_runs(fresh_state, tmp_data, monkeypatch):
-    """flee 실패 시 turn 소비 + NPC 차례 진행 + combat 유지."""
+    """On flee failure: turn consumed + NPC turn proceeds + combat continues."""
     state = _seed_player(fresh_state)
     enemy = Character(
         id="goblin_01", name="고블린", race_id="human", stats=Stats(),
@@ -120,11 +120,11 @@ async def test_flee_in_combat_fails_npc_phase_runs(fresh_state, tmp_data, monkey
         if e["type"] == "combat_turn" and e["data"].get("action") == "flee"
     ]
     assert flee_evs and flee_evs[0]["data"]["grade"] == "failure"
-    assert state.combat_state is not None  # 전투 안 끝남
+    assert state.combat_state is not None  # combat still ongoing
 
 
 async def test_flee_outside_combat_no_op(fresh_state, tmp_data, monkeypatch):
-    """평시 flee → 짧은 act log + turn 안 늘림."""
+    """Out-of-combat flee → short act log + turn not advanced."""
     state = _seed_player(fresh_state)
     _judge_returns(monkeypatch, FleeAction(action="flee"))
 
@@ -140,7 +140,7 @@ async def test_flee_outside_combat_no_op(fresh_state, tmp_data, monkeypatch):
     assert any("전투" in e["data"]["text"] for e in act_evs)
 
 
-# --- level_up 자연어 ------------------------------------------------------
+# --- level_up natural language --------------------------------------------
 
 
 async def test_level_up_natural_language_applies_pair_trade(fresh_state, tmp_data, monkeypatch):
@@ -163,7 +163,7 @@ async def test_level_up_natural_language_applies_pair_trade(fresh_state, tmp_dat
 
 
 async def test_level_up_invalid_pair_logs_error(fresh_state, tmp_data, monkeypatch):
-    """xp 모자라면 level_up 실패 로그 + turn 소비. 캐릭터 stat 그대로."""
+    """Insufficient xp: level_up logs failure + turn consumed. Character stats unchanged."""
     state = _seed_player(fresh_state, xp_pool=0, level=0)
     _judge_returns(monkeypatch, LevelUpAction(action="level_up", stat_up="STR", stat_down="CHA"))
 
@@ -176,7 +176,7 @@ async def test_level_up_invalid_pair_logs_error(fresh_state, tmp_data, monkeypat
     assert p.stats.STR == 10
 
 
-# --- learn_skill 자연어 ---------------------------------------------------
+# --- learn_skill natural language -----------------------------------------
 
 
 async def test_learn_skill_appends_to_learned(fresh_state, tmp_data, monkeypatch):
@@ -200,7 +200,7 @@ async def test_learn_skill_appends_to_learned(fresh_state, tmp_data, monkeypatch
 
 
 async def test_learn_skill_invalid_index_logs_error(fresh_state, tmp_data, monkeypatch):
-    """후보 비어 있는데 learn_skill 입력 → 짧은 거절."""
+    """learn_skill input with empty candidates → short rejection."""
     state = _seed_player(fresh_state)
     state.pending_skill_candidates = []
     _judge_returns(monkeypatch, LearnSkillAction(action="learn_skill", index=0))
@@ -213,7 +213,7 @@ async def test_learn_skill_invalid_index_logs_error(fresh_state, tmp_data, monke
     assert p.learned_skills == []
 
 
-# --- buy/sell 자연어 ------------------------------------------------------
+# --- buy/sell natural language --------------------------------------------
 
 
 def _seed_merchant(state, merchant_inv=None):
@@ -231,7 +231,7 @@ def _seed_merchant(state, merchant_inv=None):
         hp=20, max_hp=20,
         inventory_ids=list(merchant_inv or ["shield_01"]),
         gold=200,
-        relations={"player_01": 50},  # trade_threshold 통과
+        relations={"player_01": 50},  # passes trade_threshold
     )
     state.characters["smith_01"] = smith
     return state
@@ -250,7 +250,7 @@ async def test_buy_natural_language(fresh_state, tmp_data, monkeypatch):
     smith = state.characters["smith_01"]
     assert "shield_01" in p.inventory_ids
     assert "shield_01" not in smith.inventory_ids
-    assert p.gold < 100  # 골드 차감
+    assert p.gold < 100  # gold deducted
 
 
 async def test_sell_natural_language(fresh_state, tmp_data, monkeypatch):
@@ -266,14 +266,14 @@ async def test_sell_natural_language(fresh_state, tmp_data, monkeypatch):
     smith = state.characters["smith_01"]
     assert "ore_01" not in p.inventory_ids
     assert "ore_01" in smith.inventory_ids
-    assert p.gold > 50  # 골드 입금
+    assert p.gold > 50  # gold received
 
 
 async def test_buy_low_affinity_rejected(fresh_state, tmp_data, monkeypatch):
-    """affinity < trade_threshold → 거래 실패 로그. 인벤 변동 없음."""
+    """affinity < trade_threshold → trade-failure log; inventory unchanged."""
     state = _seed_player(fresh_state, gold=100)
     _seed_merchant(state)
-    state.characters["smith_01"].relations = {"player_01": -20}  # threshold 미달
+    state.characters["smith_01"].relations = {"player_01": -20}  # below threshold
     _judge_returns(monkeypatch, BuyAction(action="buy", npc_id="smith_01", item_id="shield_01"))
 
     await _collect(

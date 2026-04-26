@@ -1,4 +1,4 @@
-"""§2.3 4단계 — 실제 LLM 으로 스킬 후보 산출 검증."""
+"""§2.3 step 4 — verify skill candidate generation against a real LLM."""
 import os
 
 import pytest
@@ -50,10 +50,10 @@ async def test_live_recommend_returns_three_thematic_candidates(client):
 
     skills = await recommend_mod.recommend_skill_candidates(client, state)
     assert len(skills) == 3
-    # 모든 후보가 level=2 로 박혀야
+    # Every candidate must be stamped with level=2
     assert all(s.level == 2 for s in skills)
-    # type/target/primary_stat 가 enum 안 있는지 (스키마 수준에서 이미 검증됨)
+    # type/target/primary_stat fall inside the enum (schema also enforces this)
     assert all(s.type in {"attack", "heal", "buff", "debuff"} for s in skills)
     assert all(s.target in {"self", "single", "area"} for s in skills)
-    # 이름·설명 비어있지 않음
+    # name and description are non-empty
     assert all(s.name and s.description and s.special_effect for s in skills)

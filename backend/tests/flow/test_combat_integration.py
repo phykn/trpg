@@ -1,4 +1,4 @@
-"""S3 — turn.run_turn 의 combat 라우팅 integration. judge 만 모킹, LLM 안 부름."""
+"""S3 — turn.run_turn combat-routing integration. Only judge is mocked; no LLM call."""
 import random
 import tempfile
 
@@ -24,7 +24,7 @@ def tmp_data():
 
 @pytest.fixture
 def combat_state(fresh_state, tmp_data):
-    """player + goblin (둘 다 plaza_01) 가 같이 있는 GameState. saves_dir 는 tmp_data."""
+    """GameState with player + goblin both in plaza_01. saves_dir is tmp_data."""
     player = Character(
         id="player_01",
         name="주인공",
@@ -47,7 +47,7 @@ def combat_state(fresh_state, tmp_data):
     )
     fresh_state.characters["player_01"] = player
     fresh_state.characters["goblin_01"] = goblin
-    # save_full 이 game dir 을 만들도록 살짝 우회: 직접 디렉터리 prep 보다 turn flow 가 _flush 부를 때 처음 만들게 해도 OK.
+    # Mild workaround so save_full creates the game dir on demand: rather than prepping the directory manually, let turn flow create it on first _flush.
     return fresh_state
 
 
@@ -64,12 +64,12 @@ async def _collect(it):
 
 
 async def test_combat_start_and_npc_round_progress(combat_state, tmp_data, monkeypatch):
-    """player 의 첫 'combat' 입력 → combat_start, goblin 차례 한 번, player 차례에서 멈춤."""
+    """First 'combat' input from the player → combat_start, one goblin turn, then stops on the player's turn."""
     _judge_returns(monkeypatch, CombatAction(action="combat", targets=["goblin_01"]))
-    rng = random.Random(123)  # 결정론
+    rng = random.Random(123)  # deterministic
     events = await _collect(
         run_turn(
-            client=None,  # judge 모킹돼 안 씀
+            client=None,  # judge is mocked, so the client is unused
             state=combat_state,
             profile_dir="<unused>",
             saves_dir=tmp_data,
@@ -87,11 +87,11 @@ async def test_combat_start_and_npc_round_progress(combat_state, tmp_data, monke
 
 
 async def test_combat_player_attack_advances_round(combat_state, tmp_data, monkeypatch):
-    """combat_state 활성 + player 차례. CombatAction 으로 공격 → 데미지 적용."""
-    # 사전 부팅
+    """combat_state active and on the player's turn. CombatAction → damage applied."""
+    # boot combat first
     from src.engines import combat as combat_engine
     combat_engine.start_combat(combat_state, ["goblin_01"], rng=random.Random(0))
-    # player 차례에 멈추도록 turn_order 조정
+    # adjust turn_order so the run stops on the player's turn
     combat_state.combat_state.turn_order = ["player_01", "goblin_01"]
     combat_state.combat_state.current_turn = 0
 
@@ -108,7 +108,7 @@ async def test_combat_player_attack_advances_round(combat_state, tmp_data, monke
             rng=rng,
         )
     )
-    # goblin 이 데미지를 받았거나 죽었거나
+    # goblin took damage or died
     g = combat_state.characters["goblin_01"]
     assert g.hp < goblin_hp_before or not g.alive
 
@@ -132,17 +132,17 @@ async def test_combat_pass_action_consumes_player_turn(combat_state, tmp_data, m
             rng=rng,
         )
     )
-    # pass + npc 1 회 → 라운드가 적어도 1 증가했어야 (player 까지 다시 돌아오려면 한 바퀴)
+    # pass + 1 npc turn → round should advance by at least 1 (one full loop back to the player)
     assert combat_state.combat_state is None or combat_state.combat_state.round >= round_before
     types = [e["type"] for e in events]
-    # pass 도 combat_turn 이벤트로 기록
+    # pass is also recorded as a combat_turn event
     assert "combat_turn" in types
 
 
 async def test_combat_ends_when_enemy_dies_from_player_attack(
     combat_state, tmp_data, monkeypatch
 ):
-    """goblin hp 를 1 로 줄여 한 방에 죽도록 → combat_end victory 발행."""
+    """Drop goblin hp to 1 so it dies in one hit → combat_end victory emitted."""
     from src.engines import combat as combat_engine
     combat_state.characters["goblin_01"].hp = 1
     combat_state.characters["goblin_01"].max_hp = 1
@@ -151,7 +151,7 @@ async def test_combat_ends_when_enemy_dies_from_player_attack(
     combat_state.combat_state.current_turn = 0
 
     _judge_returns(monkeypatch, CombatAction(action="combat", targets=["goblin_01"]))
-    # 명중 + 데미지 보장: STR 14 (mod +2) + sword 1d8 + nat 15 → 1 이상 데미지 거의 확실
+    # Hit + damage virtually guaranteed: STR 14 (mod +2) + sword 1d8 + nat 15 → damage ≥ 1
     rng = random.Random(99)
     events = await _collect(
         run_turn(

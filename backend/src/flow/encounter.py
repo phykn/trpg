@@ -1,7 +1,8 @@
-"""sleep_encounter LLM 즉석 적 생성 (P3 §2.4 폴백).
+"""sleep_encounter — LLM ad-hoc enemy summoning (P3 §2.4 fallback).
 
-`encounter_summon` agent 를 호출해 페어 트레이드 invariant 를 따르는 한 마리를 만들고
-GameState.characters 에 박아 넣는다. 시드 풀이 비어 있을 때 recovery 가 호출.
+Calls the `encounter_summon` agent to produce one character that obeys the pair-trade
+invariant and registers it into GameState.characters. Invoked by recovery when the seed
+pool is empty.
 """
 from __future__ import annotations
 
@@ -48,7 +49,7 @@ def _build_input(
 
 
 def _next_id(state: GameState, base: str) -> str:
-    """충돌 없는 character id 생성."""
+    """Generate a non-colliding character id."""
     n = 1
     while f"{base}_{n:02d}" in state.characters:
         n += 1
@@ -99,7 +100,7 @@ async def summon_encounter(
     *,
     dirty: set[tuple[str, str]] | None = None,
 ) -> Character | None:
-    """LLM 으로 적 한 마리 생성·등록. race_id 가 가용 race 에 없으면 None."""
+    """Summon one enemy via LLM and register it. Returns None if race_id is not in available races."""
     input_ = _build_input(state, location, profile_dir, profile)
     out = await encounter_summon(client, input_)
     if out.race_id not in state.races:

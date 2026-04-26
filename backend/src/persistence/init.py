@@ -18,6 +18,7 @@ from ..domain.entities import (
 )
 from ..domain.errors import ProfileNotFound, RaceNotFound
 from ..domain.state import GameState
+from ..engines.growth import calc_max_hp, calc_max_mp
 from .store import (
     copy_seed_into_game,
     save_entity,
@@ -48,14 +49,6 @@ def _scan_dir(dirpath: Path, model_cls: Type[T]) -> dict[str, T]:
         # Race, Chapter, Campaign). The Pydantic schema enforces it.
         result[obj.id] = obj  # type: ignore[attr-defined]
     return result
-
-
-def _compute_max_hp(con: int, level: int) -> int:
-    return (10 + con) + level * (5 + con // 4)
-
-
-def _compute_max_mp(int_stat: int, level: int) -> int:
-    return (5 + int_stat) + level * (3 + int_stat // 4)
 
 
 async def init_game(
@@ -102,8 +95,8 @@ async def init_game(
         inventory_ids=template_inventory,
         racial_skills=[s.model_copy() for s in chosen_race.racial_skills],
     )
-    player_char.max_hp = _compute_max_hp(stats.CON, player_char.level)
-    player_char.max_mp = _compute_max_mp(stats.INT, player_char.level)
+    player_char.max_hp = calc_max_hp(player_char.level, stats.CON)
+    player_char.max_mp = calc_max_mp(player_char.level, stats.INT)
     player_char.hp = player_char.max_hp
     player_char.mp = player_char.max_mp
 

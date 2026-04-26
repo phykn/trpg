@@ -1,5 +1,6 @@
 from typing import Any
 
+from ...domain.types import STAT_PAIRS
 from .._runner import AgentSemanticError
 from .schema import (
     BuyAction,
@@ -14,6 +15,22 @@ from .schema import (
     UnequipAction,
     UseAction,
 )
+
+
+def _inventory_kinds(surroundings: dict[str, Any]) -> dict[str, str]:
+    return {
+        i.get("id"): i.get("kind")
+        for i in surroundings.get("inventory") or []
+        if isinstance(i, dict)
+    }
+
+
+def _equipped_ids(surroundings: dict[str, Any]) -> set[str]:
+    out: set[str] = set()
+    for v in (surroundings.get("equipment") or {}).values():
+        if isinstance(v, dict) and isinstance(v.get("id"), str):
+            out.add(v["id"])
+    return out
 
 
 class JudgeSemanticError(AgentSemanticError):
@@ -65,8 +82,7 @@ def check_semantics(output: JudgeOutput, surroundings: dict[str, Any]) -> None:
                 "level_up not currently available — xp not at threshold. Use 'pass' or 'clarify'."
             )
         # pair check (engine also enforces, but reject obvious mismatch early)
-        pairs = {("STR", "CHA"), ("CHA", "STR"), ("DEX", "WIS"), ("WIS", "DEX"), ("CON", "INT"), ("INT", "CON")}
-        if (output.stat_up, output.stat_down) not in pairs:
+        if STAT_PAIRS.get(output.stat_up) != output.stat_down:
             raise JudgeSemanticError(
                 f"invalid pair: {output.stat_up}↑/{output.stat_down}↓. Pairs are STR↔CHA, DEX↔WIS, CON↔INT."
             )
@@ -104,11 +120,7 @@ def check_semantics(output: JudgeOutput, surroundings: dict[str, Any]) -> None:
                     f"sell item {output.item_id!r} not in player inventory."
                 )
     if isinstance(output, UseAction):
-        inv_items = {
-            i.get("id"): i.get("kind")
-            for i in surroundings.get("inventory", []) or []
-            if isinstance(i, dict)
-        }
+        inv_items = _inventory_kinds(surroundings)
         if output.item_id not in inv_items:
             raise JudgeSemanticError(
                 f"item_id {output.item_id!r} not in inventory. "
@@ -128,11 +140,7 @@ def check_semantics(output: JudgeOutput, surroundings: dict[str, Any]) -> None:
                 )
 
     if isinstance(output, EquipAction):
-        inv_items = {
-            i.get("id"): i.get("kind")
-            for i in surroundings.get("inventory", []) or []
-            if isinstance(i, dict)
-        }
+        inv_items = _inventory_kinds(surroundings)
         if output.item_id not in inv_items:
             raise JudgeSemanticError(
                 f"equip item_id {output.item_id!r} not in inventory."
@@ -143,11 +151,7 @@ def check_semantics(output: JudgeOutput, surroundings: dict[str, Any]) -> None:
             )
 
     if isinstance(output, UnequipAction):
-        eq = surroundings.get("equipment") or {}
-        equipped_ids: set[str] = set()
-        for v in eq.values():
-            if isinstance(v, dict) and isinstance(v.get("id"), str):
-                equipped_ids.add(v["id"])
+        equipped_ids = _equipped_ids(surroundings)
         if output.item_id not in equipped_ids:
             raise JudgeSemanticError(
                 f"unequip item_id {output.item_id!r} not currently equipped. "

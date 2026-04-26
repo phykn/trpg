@@ -1,5 +1,4 @@
 from collections.abc import AsyncIterator
-from pathlib import Path
 
 from openai import AsyncOpenAI
 
@@ -9,26 +8,8 @@ class LLMClient:
         self._client = AsyncOpenAI(base_url=base_url, api_key=api_key)
         self._model = model
 
-    @staticmethod
-    def _resolve_system(system: str | Path | None) -> str | None:
-        if system is None:
-            return None
-        if isinstance(system, Path):
-            return system.read_text(encoding="utf-8")
-        s = system.strip()
-        if s.endswith(".md") and Path(s).is_file():
-            return Path(s).read_text(encoding="utf-8")
-        return system
-
-    def _single_turn(self, system: str | Path | None, query: str) -> list[dict]:
-        messages: list[dict] = []
-        sys_text = self._resolve_system(system)
-        if sys_text:
-            messages.append({"role": "system", "content": sys_text})
-        messages.append({"role": "user", "content": query})
-        return messages
-
     def _params(self, messages: list[dict], think: bool) -> dict:
+        # `extra_body.chat_template_kwargs.enable_thinking` toggles thinking on llama.cpp / Qwen.
         return {
             "model": self._model,
             "messages": messages,
@@ -51,14 +32,3 @@ class LLMClient:
             delta = chunk.choices[0].delta
             extra = delta.model_extra or {}
             yield {"think": extra.get("reasoning_content"), "answer": delta.content}
-
-    async def complete(
-        self, system: str | Path | None, query: str, think: bool = True
-    ) -> dict:
-        return await self.chat(self._single_turn(system, query), think)
-
-    async def stream(
-        self, system: str | Path | None, query: str, think: bool = True
-    ) -> AsyncIterator[dict]:
-        async for chunk in self.chat_stream(self._single_turn(system, query), think):
-            yield chunk

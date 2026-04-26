@@ -146,7 +146,7 @@ def _apply_set_time(
 ) -> None:
     if c.value < state.world_time:
         raise _StateChangeError(
-            f"set_time {c.value!r} < current {state.world_time!r} (시간 역행 금지)"
+            f"set_time {c.value!r} < current {state.world_time!r} (no time travel)"
         )
     state.world_time = c.value
 
@@ -156,7 +156,7 @@ def _apply_move(
     c: MoveChange,
     dirty: set[tuple[str, str]] | None,
 ) -> None:
-    from .quest import check_quests  # 지연 import — 상호 layer 경계 안
+    from .quest import check_quests  # deferred import — keeps the cross-layer boundary clean
 
     if c.target not in state.characters:
         raise _StateChangeError(f"unknown character: {c.target!r}")
@@ -165,13 +165,13 @@ def _apply_move(
     state.characters[c.target].location_id = c.destination
     if dirty is not None:
         dirty.add(("characters", c.target))
-    # 동반자 (P3 §2.9) — patron 위치를 따라 같이 이동.
+    # Companions (P3 §2.9) — move with the patron.
     for cid in state.characters[c.target].companions:
         if cid in state.characters:
             state.characters[cid].location_id = c.destination
             if dirty is not None:
                 dirty.add(("characters", cid))
-    # quest hook — 플레이어 이동만 평가 (NPC 이동은 quest 트리거 대상 아님).
+    # quest hook — only the player move is evaluated (NPC moves are not quest triggers).
     if c.target == state.player_id:
         check_quests(state, "location_enter", c.destination, dirty)
 

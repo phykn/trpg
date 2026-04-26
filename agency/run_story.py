@@ -1,12 +1,13 @@
-"""Story 팀 — 시나리오 entity 한 개 작성 CLI.
+"""Story team CLI — author one scenario entity, or build a whole scenario from prose.
 
-Usage (repo root 어디서나):
-    python agency/story/run_story.py race      --scenario default --hint "달밤에 활동하는 종족"
-    python agency/story/run_story.py character --scenario default --hint "은퇴한 노검사"
-    python agency/story/run_story.py item      --scenario default --hint "녹슨 단검"
-    python agency/story/run_story.py location  --scenario default
-    python agency/story/run_story.py quest     --scenario default
-    python agency/story/run_story.py chapter   --scenario default
+Usage (run from anywhere, repo root included):
+    python agency/run_story.py race      --scenario default --hint "달밤에 활동하는 종족"
+    python agency/run_story.py character --scenario default --hint "은퇴한 노검사"
+    python agency/run_story.py item      --scenario default --hint "녹슨 단검"
+    python agency/run_story.py location  --scenario default
+    python agency/run_story.py quest     --scenario default
+    python agency/run_story.py chapter   --scenario default
+    python agency/run_story.py scenario  --name <new> --prose path/to/prose.md
 """
 
 import argparse
@@ -17,7 +18,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 sys.path.insert(0, str(ROOT))
 
@@ -40,7 +41,7 @@ AGENTS_DIR = ROOT / "agency" / "story" / "agents"
 
 def _new_run_dir(kind: str) -> Path:
     run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
-    run_dir = ROOT / "agency" / "story" / "runs" / run_id / f"{kind}_writer"
+    run_dir = ROOT / "reports" / "story" / run_id / f"{kind}_writer"
     run_dir.mkdir(parents=True, exist_ok=True)
     return run_dir
 

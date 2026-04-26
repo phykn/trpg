@@ -1,11 +1,11 @@
-"""sleep_encounter 시 시드 풀이 비어 있을 때 즉석 생성할 적 한 마리 (P3 §2.4)."""
+"""On-the-fly enemy synthesis when the seed pool is empty during sleep_encounter (P3 §2.4)."""
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class EncounterStats(BaseModel):
-    """페어 트레이드 invariant: STR+CHA = 20, DEX+WIS = 20, CON+INT = 20."""
+    """Pair-trade invariant: STR+CHA = 20, DEX+WIS = 20, CON+INT = 20."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -34,7 +34,7 @@ class EncounterStats(BaseModel):
 
 
 class EncounterSummonInput(BaseModel):
-    """LLM 입력. world 톤 + location 분위기 + player level + 가용 race 목록."""
+    """LLM input: world tone + location mood + player level + available race list."""
 
     world: str
     location: dict

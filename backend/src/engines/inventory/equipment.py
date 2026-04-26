@@ -3,29 +3,21 @@ auto-slot heuristic for the natural-language equip path."""
 from typing import Literal
 
 from ...domain.entities import (
+    ARMOR_SLOTS,
     EQUIPMENT_SLOTS,
+    HAND_SLOTS,
     ArmorEffect,
     Character,
     ConsumableEffect,
     Item,
     WeaponEffect,
+    slot_kind,
 )
 from ...domain.errors import InventoryInvalid
 
 Slot = Literal[
     "head", "top", "bottom", "feet", "leftHand", "rightHand", "acc1", "acc2"
 ]
-
-_HAND_SLOTS = ("leftHand", "rightHand")
-_ARMOR_SLOTS = ("head", "top", "bottom", "feet")
-
-
-def _slot_kind(slot: Slot) -> str:
-    if slot in _HAND_SLOTS:
-        return "hand"
-    if slot in _ARMOR_SLOTS:
-        return "armor"
-    return "acc"
 
 
 def _required_stats_met(actor: Character, item: Item) -> bool:
@@ -41,7 +33,7 @@ def _validate_slot_for_item(slot: Slot, item: Item) -> None:
     if slot not in EQUIPMENT_SLOTS:
         raise InventoryInvalid(f"unknown slot: {slot}")
     eff = item.effects
-    kind = _slot_kind(slot)
+    kind = slot_kind(slot)
     if isinstance(eff, WeaponEffect):
         if kind != "hand":
             raise InventoryInvalid(f"weapon must go in leftHand or rightHand, got {slot}")
@@ -79,7 +71,7 @@ def equip(actor: Character, item_id: str, slot: Slot, items: dict[str, Item]) ->
         return
 
     # If the other hand holds a two-handed weapon, drop it first.
-    if slot in _HAND_SLOTS:
+    if slot in HAND_SLOTS:
         other = "rightHand" if slot == "leftHand" else "leftHand"
         other_id = getattr(actor.equipment, other)
         if other_id and other_id in items:
@@ -104,7 +96,7 @@ def auto_equip_slot(actor: Character, item: Item) -> Slot:
             return "rightHand"
         return "rightHand" if actor.dominant_hand == "right" else "leftHand"
     if isinstance(eff, ArmorEffect):
-        for slot in ("head", "top", "bottom", "feet"):
+        for slot in ARMOR_SLOTS:
             if getattr(actor.equipment, slot) is None:
                 return slot  # type: ignore[return-value]
         return "head"
@@ -144,8 +136,8 @@ def unequip_by_item(
     actor: Character, item_id: str, items: dict[str, Item]
 ) -> Slot | None:
     """Find which slot holds item_id and unequip it. None if nowhere."""
-    for slot in EQUIPMENT_SLOTS:
-        if getattr(actor.equipment, slot) == item_id:
+    for slot, eq_id in actor.equipment.equipped_items():
+        if eq_id == item_id:
             unequip(actor, slot, items)  # type: ignore[arg-type]
             return slot  # type: ignore[return-value]
     return None

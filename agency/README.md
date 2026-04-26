@@ -4,8 +4,10 @@
 
 ```
 agency/
-  qa/       # 게임을 플레이해보고 회귀를 잡는 검수팀
-  story/    # 시나리오 시드 (race / character / ... ) 를 새로 짓는 작가팀
+  run_qa.py     # QA 팀 CLI 엔트리
+  run_story.py  # Story 팀 CLI 엔트리
+  qa/           # 게임을 플레이해보고 회귀를 잡는 검수팀
+  story/        # 시나리오 시드 (race / character / ...) 를 새로 짓는 작가팀
 ```
 
 ## QA — AI 플레이어 기반 게임 테스트
@@ -15,19 +17,21 @@ agency/
 ### 구조
 
 ```
+agency/run_qa.py        # CLI 엔트리
 agency/qa/
   agents/
-    diplomat.md       # 사교가 — NPC 친밀도·대화 중심
-    explorer.md       # 탐험가 — 이동·관찰·인벤토리 중심
-    provocateur.md    # 도발자 — 엣지 케이스·judge 분기 트리거
-    reviewer.md       # 분석가 — transcript 읽고 verdict JSON 생성
+    diplomat.md         # 사교가 — NPC 친밀도·대화 중심
+    explorer.md         # 탐험가 — 이동·관찰·인벤토리 중심
+    provocateur.md      # 도발자 — 엣지 케이스·judge 분기 트리거
+    reviewer.md         # 분석가 — transcript 읽고 verdict JSON 생성
   harness/
-    agent.py          # PlayerAgent — system prompt + 매 턴 LLM 호출
-    transcript.py     # SSE / state → markdown / jsonl
-    review.py         # reviewer 호출 + Verdict 검증
-    runner.py         # 단일 agent 의 한 세션 실행
-  runs/               # gitignored, 실행 결과
-  run_qa.py           # CLI 엔트리
+    agent.py            # PlayerAgent — system prompt + 매 턴 LLM 호출
+    state_view.py       # front_state → player-LLM 입력 텍스트
+    transcript.py       # SSE → markdown / jsonl
+    review.py           # reviewer 호출 + Verdict 검증
+    runner.py           # 단일 agent 의 한 세션 실행
+
+# 실행 결과는 repo 루트의 reports/qa/<timestamp>/ 에 떨어짐 (gitignored)
 ```
 
 ### 동작 원리
@@ -41,13 +45,13 @@ agency/qa/
 
 ```bash
 # 모든 agent 한 번씩 (기본 15턴)
-.venv/bin/python agency/qa/run_qa.py
+.venv/bin/python agency/run_qa.py
 
 # 특정 agent
-.venv/bin/python agency/qa/run_qa.py --agent diplomat --turns 20
+.venv/bin/python agency/run_qa.py --agent diplomat --turns 20
 
 # 다른 프로필
-.venv/bin/python agency/qa/run_qa.py --agent all --profile other_world
+.venv/bin/python agency/run_qa.py --agent all --profile other_world
 ```
 
 `.env` 는 `backend/.env` 를 자동 로드. `BASE_URL` 만 살아 있으면 됨.
@@ -55,7 +59,7 @@ agency/qa/
 ### 출력
 
 ```
-agency/qa/runs/<timestamp>/
+reports/qa/<timestamp>/
   index.md                      # agent 비교 요약표 + high/medium 이슈 추출
   diplomat/
     transcript.md               # 사람-읽기용 턴별 기록
@@ -105,19 +109,22 @@ repo 루트의 `scenarios/<name>/` 에 들어가는 시드 파일을 LLM 이 짓
 ### 구조
 
 ```
+agency/run_story.py    # CLI (entity / scenario subcommand)
 agency/story/
   agents/
-    _base.md         # 모든 fragment 위에 얹는 공통 규칙 (한국어, JSON-only, id 패턴)
-    race.md          # entity 별 도메인 규칙 (스키마·필수 필드·참조)
+    _base.md           # 모든 fragment 위에 얹는 공통 규칙 (한국어, JSON-only, id 패턴)
+    _decompose.md      # 줄글 → Decomposition 분해 prompt
+    race.md            # entity 별 도메인 규칙 (스키마·필수 필드·참조)
     location.md
     item.md
     character.md
     quest.md
     chapter.md
   harness/
-    runner.py        # generic write_entity(kind, ...) — LLM + Pydantic + 자기교정 5회 + 의미 검증 + 디스크 쓰기
-  runs/              # gitignored — 매 호출의 prompt·응답 로그
-  run_story.py       # CLI (race / location / item / character / quest / chapter subcommand)
+    runner.py          # generic write_entity(kind, ...) — LLM + Pydantic + 자기교정 5회 + 의미 검증 + 디스크 쓰기
+    scenario.py        # 줄글 한 편 → 시나리오 한 벌 빌드 파이프라인
+
+# 매 호출의 prompt·응답 로그는 repo 루트의 reports/story/<ts>/<kind>_writer/ 에 떨어짐 (gitignored)
 ```
 
 ### 동작 원리
@@ -126,7 +133,7 @@ agency/story/
 - `SPECS` 에 entity 종류별 (model · sub_dir · fragment · 참조 종류 · 의미 검증 함수) 매핑.
 - 호출당 한 사이클: `_base.md` + `<kind>.md` + scenario 의 `world.md` + 그 종류의 기존 instances + 참조 종류의 기존 instances 를 system 컨텍스트로 묶어 LLM 호출 → JSON 추출 → `<Model>.model_validate_json` + id 패턴 검증 + entity 별 참조 무결성 검증 (예: `character.race_id` 가 시나리오 `races/` 에 실재) → 실패 시 응답+에러를 messages 에 append → 최대 5회 자기교정 (judge runner 와 같은 패턴).
 - 검증 통과 시 `scenarios/<scenario>/<sub_dir>/<id>.json` 에 `indent=2` 로 저장. 같은 파일이 이미 있으면 덮어쓰지 않고 에러.
-- 모든 messages 는 `agency/story/runs/<ts>/<kind>_writer/messages.jsonl` 에 보존 (디버깅용).
+- 모든 messages 는 `reports/story/<ts>/<kind>_writer/messages.jsonl` 에 보존 (디버깅용).
 
 ### 참조 무결성
 
@@ -148,12 +155,12 @@ agency/story/
 **(가) 로컬 LLM (`run_story.py`)**
 
 ```bash
-.venv/bin/python agency/story/run_story.py race      --scenario default --hint "달밤에 활동하는 종족"
-.venv/bin/python agency/story/run_story.py character --scenario default --hint "은퇴한 노검사"
-.venv/bin/python agency/story/run_story.py item      --scenario default --hint "녹슨 단검"
-.venv/bin/python agency/story/run_story.py location  --scenario default
-.venv/bin/python agency/story/run_story.py quest     --scenario default
-.venv/bin/python agency/story/run_story.py chapter   --scenario default
+.venv/bin/python agency/run_story.py race      --scenario default --hint "달밤에 활동하는 종족"
+.venv/bin/python agency/run_story.py character --scenario default --hint "은퇴한 노검사"
+.venv/bin/python agency/run_story.py item      --scenario default --hint "녹슨 단검"
+.venv/bin/python agency/run_story.py location  --scenario default
+.venv/bin/python agency/run_story.py quest     --scenario default
+.venv/bin/python agency/run_story.py chapter   --scenario default
 ```
 
 `backend/.env` 의 `BASE_URL` 만 살아 있으면 됨 (in-process consumer).
@@ -166,11 +173,11 @@ agency/story/
 /story-write race default 달밤에 활동하는 종족
 ```
 
-`.claude/commands/story-write.md` 가 본문. Claude (대화 중인 모델) 가 `_base.md` + `<kind>.md` + `world.md` + 기존 instances 를 직접 Read 하고 entity JSON 한 개를 `scenarios/<scenario>/<sub_dir>/<id>.json` 에 Write 한다. 별도 LLM 서버 불필요, runs/ 로그도 안 남김 (대화 transcript 가 곧 로그).
+`.claude/commands/story-write.md` 가 본문. Claude (대화 중인 모델) 가 `_base.md` + `<kind>.md` + `world.md` + 기존 instances 를 직접 Read 하고 entity JSON 한 개를 `scenarios/<scenario>/<sub_dir>/<id>.json` 에 Write 한다. 별도 LLM 서버 불필요, `reports/` 로그도 안 남김 (대화 transcript 가 곧 로그).
 
 ### 시나리오 한 벌 (`scenario` mode)
 
-줄글 한 편 (`agency/story/sources/<name>.md`) 을 받아 시나리오 디렉터리 한 벌을 통째로 짓는다. 단계 파이프라인:
+줄글 한 편 (`<prose-path>.md`) 을 받아 시나리오 디렉터리 한 벌을 통째로 짓는다. 단계 파이프라인:
 
 1. **분해** — `_decompose.md` prompt 가 줄글을 받아 `Decomposition` (Pydantic) 한 개로 압축: `world_md` + 6 종류 entity 명단 (각 명단의 entry 가 `id` + `role` + 부가 hint) + `start_*` 셋 + profile 메타. 분해 자체도 자기교정 5회 + 일관성 검증 (id 패턴·중복·cross-ref).
 2. **world.md** — 분해의 `world_md` 본문을 디스크에 markdown 으로 저장.
@@ -180,15 +187,15 @@ agency/story/
 **id 강제 메커니즘** — 분해 단계에서 미리 정한 id 를 entity 단계가 따라야 한다. `write_entity(force_id=...)` 가 `_check_id` 안에서 LLM 이 박은 id 와 비교하고, 다르면 자기교정 루프가 작동해 다음 시도에 교정. `_base.md` 에도 "user 메시지의 id 강제 지시는 한 글자도 바꾸지 말 것" 명시.
 
 ```bash
-.venv/bin/python agency/story/run_story.py scenario \
+.venv/bin/python agency/run_story.py scenario \
   --name default_cli \
-  --prose agency/story/sources/default.md
+  --prose path/to/prose.md
 ```
 
 Claude Code 트랙도 같은 단계를 본문으로 받음:
 
 ```
-/story-scenario default_claude agency/story/sources/default.md
+/story-scenario default_claude path/to/prose.md
 ```
 
 `.claude/commands/story-scenario.md` 가 본문. Claude (대화 중인 모델) 가 분해 → 단계별 Read/Write 를 직접 진행. 같은 줄글에서 두 트랙의 결과 (`scenarios/default_cli/` vs `scenarios/default_claude/`) 를 비교 가능.

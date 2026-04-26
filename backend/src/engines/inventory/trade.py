@@ -1,5 +1,5 @@
 """Buy / sell with affinity-based pricing (P3 §2.5)."""
-from ...domain.entities import EQUIPMENT_SLOTS, Character, Item
+from ...domain.entities import Character, Item
 from ...domain.errors import InventoryInvalid
 from ...rules import RULES
 from .carry import check_can_carry
@@ -59,8 +59,8 @@ def sell(player: Character, npc: Character, item_id: str, items: dict[str, Item]
         raise InventoryInvalid(f"unknown item: {item_id}")
     if item_id not in player.inventory_ids:
         raise InventoryInvalid(f"player has no such item: {item_id}")
-    for s in EQUIPMENT_SLOTS:
-        if getattr(player.equipment, s) == item_id:
+    for _, eq_id in player.equipment.equipped_items():
+        if eq_id == item_id:
             raise InventoryInvalid(f"can't sell equipped item: {item_id}")
     price = sell_price(items[item_id], player, npc)
     if npc.gold < price:

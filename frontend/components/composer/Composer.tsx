@@ -15,11 +15,12 @@ export function Composer({ onSend, onRoll, onStop, rolling, focused, rollEnabled
   streaming: boolean;
 }) {
   const [input, setInput] = React.useState('');
+  const trimmed = input.trim();
+  const hasText = trimmed.length > 0;
 
   const submit = () => {
-    const t = input.trim();
-    if (!t) return;
-    onSend(t);
+    if (!hasText) return;
+    onSend(trimmed);
     setInput('');
     Keyboard.dismiss();
   };
@@ -27,7 +28,6 @@ export function Composer({ onSend, onRoll, onStop, rolling, focused, rollEnabled
     onRoll();
     Keyboard.dismiss();
   };
-  const hasText = input.trim().length > 0;
 
   const borderClass = focused ? 'border-accent-fg' : 'border-border-default';
 

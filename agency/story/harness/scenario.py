@@ -1,4 +1,4 @@
-"""줄글 → 시나리오 한 벌 — 분해 단계 + 단계 파이프라인."""
+"""Prose → a full scenario — decomposition step plus a per-kind pipeline."""
 
 import json
 from collections.abc import Callable
@@ -17,9 +17,6 @@ from .runner import (
     write_entity,
     write_entity_to_disk,
 )
-
-
-# --- 분해 스키마 ----------------------------------------------------------
 
 
 class DecRace(BaseModel):
@@ -79,12 +76,7 @@ class Decomposition(BaseModel):
     start_quest_id: str
 
 
-# --- 분해 일관성 검증 ----------------------------------------------------
-
-
 def _check_decomp(d: Decomposition) -> None:
-    """분해 결과의 id 패턴·중복·cross-ref 검증."""
-
     def _check_ids(items: list, kind: str) -> set[str]:
         seen: set[str] = set()
         for item in items:
@@ -120,7 +112,7 @@ def _check_decomp(d: Decomposition) -> None:
             f"start_quest_id={d.start_quest_id!r} 가 quests 명단에 없음."
         )
 
-    # character.location_id / race_id 가 명단 안에 실재
+    # character.location_id / race_id must point inside the manifest
     char_by_id = {c.id: c for c in d.characters}
     for c in d.characters:
         if c.location_id not in loc_ids:
@@ -134,7 +126,7 @@ def _check_decomp(d: Decomposition) -> None:
                 f"가능한 id: {sorted(race_ids)}"
             )
 
-    # start_subject 가 start_location 에 있어야 함
+    # active subject must start at the start location
     start_subject_loc = char_by_id[d.start_subject_id].location_id
     if start_subject_loc != d.start_location_id:
         raise EntityWriterError(
@@ -143,7 +135,6 @@ def _check_decomp(d: Decomposition) -> None:
             "게임 시작 시 active subject 는 시작 위치에 있어야 한다."
         )
 
-    # item owner 검증
     for it in d.items:
         if it.owner_character_id is not None and it.owner_character_id not in char_ids:
             raise EntityWriterError(
@@ -182,9 +173,6 @@ def _check_decomp(d: Decomposition) -> None:
                 "의뢰자는 비적대여야 한다."
             )
 
-# --- 분해 단계 ----------------------------------------------------------
-
-
 async def decompose_prose(
     *,
     prose: str,
@@ -193,7 +181,7 @@ async def decompose_prose(
     retries: int = 5,
     think: bool = True,
 ) -> tuple[Decomposition, list[dict]]:
-    """줄글 → Decomposition. 자기교정 5회 루프."""
+    """Prose → Decomposition. Same self-correction loop as write_entity."""
     system = prompt_path.read_text(encoding="utf-8")
     messages: list[dict] = [
         {"role": "system", "content": system},
@@ -221,9 +209,6 @@ async def decompose_prose(
             )
     assert last_error is not None
     raise last_error
-
-
-# --- 단계 파이프라인 ---------------------------------------------------
 
 
 def _hint_with_id(forced_id: str, role: str, extra: str = "") -> str:
@@ -283,10 +268,10 @@ async def build_scenario(
     run_dir: Path | None = None,
     think: bool = True,
 ) -> dict:
-    """줄글 한 편 → 시나리오 디렉터리 한 벌.
+    """One prose file → a complete scenario directory.
 
-    출력: world.md + 6 entity 디렉터리 + profile.json + start.json + player_template.json.
-    `scenario_dir` 가 이미 있으면 에러 (덮어쓰지 않음).
+    Output: world.md + 6 entity directories + profile.json + start.json + player_template.json.
+    Aborts if `scenario_dir` already exists (no overwrite).
     """
     if scenario_dir.exists():
         raise EntityWriterError(
@@ -298,7 +283,7 @@ async def build_scenario(
         if on_step is not None:
             on_step(msg)
 
-    # 1. 분해
+    # 1. decompose
     _step("분해 단계")
     prose = prose_path.read_text(encoding="utf-8")
     decomp, decomp_msgs = await decompose_prose(
@@ -314,7 +299,7 @@ async def build_scenario(
 
     counts: dict[str, int] = {}
 
-    # 2. world.md (markdown 자유 텍스트)
+    # 2. world.md (free-form markdown)
     _step("world.md")
     (scenario_dir / "world.md").write_text(decomp.world_md, encoding="utf-8")
 
@@ -327,7 +312,7 @@ async def build_scenario(
         )
     counts["race"] = len(decomp.races)
 
-    # 4. items (location 보다 먼저 — location.item_ids·character.inventory_ids 가 item 을 가리킴)
+    # 4. items (before locations — location.item_ids and character.inventory_ids reference item ids)
     _step(f"item × {len(decomp.items)}")
     for it in decomp.items:
         extra = f"분류: {it.kind} ('{it.kind}' 의 effects 모양 사용)."
@@ -338,7 +323,7 @@ async def build_scenario(
         )
     counts["item"] = len(decomp.items)
 
-    # 5. locations — owner_location_id 로 매칭되는 item 들을 item_ids 에 박음
+    # 5. locations — items whose owner_location_id matches go into item_ids
     _step(f"location × {len(decomp.locations)}")
     items_by_loc: dict[str, list[str]] = {}
     for it in decomp.items:
@@ -358,7 +343,7 @@ async def build_scenario(
         )
     counts["location"] = len(decomp.locations)
 
-    # 6. characters — race_id, location_id, inventory_ids 강제
+    # 6. characters — race_id, location_id, inventory_ids all forced
     _step(f"character × {len(decomp.characters)}")
     items_by_char: dict[str, list[str]] = {}
     for it in decomp.items:
@@ -412,7 +397,7 @@ async def build_scenario(
         )
     counts["quest"] = len(decomp.quests)
 
-    # 8. chapters — 모든 quest 를 첫 chapter 에 묶음
+    # 8. chapters — every quest gets bundled into the first chapter
     _step(f"chapter × {len(decomp.chapters)}")
     quest_id_list = [q.id for q in decomp.quests]
     quest_ids_repr = "[" + ", ".join(repr(qid) for qid in quest_id_list) + "]"
@@ -428,7 +413,7 @@ async def build_scenario(
         )
     counts["chapter"] = len(decomp.chapters)
 
-    # 9. 메타 파일 3개
+    # 9. meta files (profile / start / player_template)
     _step("메타 파일 (profile / start / player_template)")
     profile = {
         "id": scenario_dir.name,

@@ -1,4 +1,4 @@
-"""recovery.attempt_rest — 풀회복/인카운터 분기 결정론 테스트."""
+"""recovery.attempt_rest — deterministic tests for the full-recovery / encounter branch."""
 from datetime import datetime, timedelta
 
 from src.domain.entities import Character, Location, Stats
@@ -7,7 +7,7 @@ from src.rules import RULES
 
 
 class _SeqRandom:
-    """random.Random 대체 — random() 결과를 순서대로 반환."""
+    """random.Random stand-in — returns the supplied random() values in order."""
 
     def __init__(self, sequence):
         self._seq = list(sequence)
@@ -19,7 +19,7 @@ class _SeqRandom:
         return v
 
     def randint(self, a, b):
-        # encounter 굴림에는 안 쓰지만 다른 호출 대비.
+        # Not used by the encounter roll, but kept for other call sites.
         v = self._seq[self._i]
         self._i += 1
         return a + int(v * (b - a + 1))
@@ -61,7 +61,7 @@ async def test_full_recovery_in_safe_location(fresh_state):
     actor = state.characters["player_01"]
     assert actor.hp == actor.max_hp
     assert actor.mp == actor.max_mp
-    # world_time 이 sleep_hours 만큼 진행
+    # world_time advances by sleep_hours
     expected = (
         datetime.fromisoformat(before) + timedelta(hours=RULES.time.sleep_hours)
     ).isoformat()
@@ -83,23 +83,23 @@ async def test_dangerous_with_encounter_pool_triggers_combat_branch(fresh_state)
     before_hp = state.characters["player_01"].hp
     before_time = state.world_time
 
-    # encounter_chance dangerous=0.6, rng.random()=0.1 → 발동
+    # encounter_chance dangerous=0.6, rng.random()=0.1 → triggers
     outcome, enemies = await recovery.attempt_rest(
         state, "player_01", rng=_SeqRandom([0.1]), dirty=set()
     )
 
     assert outcome == "encounter"
     assert enemies == ["goblin_01"]
-    # 회복 안 됨, 시간도 안 흐름 (combat 이 자체 가산)
+    # No healing, no time advance (combat handles its own time)
     assert state.characters["player_01"].hp == before_hp
     assert state.world_time == before_time
 
 
 async def test_dangerous_without_encounter_falls_through_to_recovery(fresh_state):
-    """encounter_chance > 0 이지만 random() 이 임계 위 → 풀회복."""
+    """encounter_chance > 0 but random() above threshold → full recovery."""
     state = _seed_state(fresh_state, risk="dangerous", encounters=["goblin_01"])
 
-    # 0.99 > 0.6 → 인카운터 안 발동, 풀회복
+    # 0.99 > 0.6 → no encounter, full recovery
     outcome, enemies = await recovery.attempt_rest(
         state, "player_01", rng=_SeqRandom([0.99]), dirty=set()
     )
@@ -111,10 +111,10 @@ async def test_dangerous_without_encounter_falls_through_to_recovery(fresh_state
 
 
 async def test_risky_with_empty_pool_falls_back_to_recovery(fresh_state):
-    """위험도 굴림 발동했지만 sleep_encounters 풀이 비어 있으면 풀회복 fallback."""
+    """Risk roll triggers but sleep_encounters pool is empty → fall back to full recovery."""
     state = _seed_state(fresh_state, risk="risky", encounters=[])
 
-    # rng=0.0 (어떤 임계든 발동) → 풀이 비어서 풀회복으로 떨어짐
+    # rng=0.0 (always triggers) → empty pool falls through to full recovery
     outcome, enemies = await recovery.attempt_rest(
         state, "player_01", rng=_SeqRandom([0.0]), dirty=set()
     )
@@ -124,7 +124,7 @@ async def test_risky_with_empty_pool_falls_back_to_recovery(fresh_state):
 
 
 async def test_dead_enemy_is_filtered_from_pool(fresh_state):
-    """sleep_encounters 안 캐릭터가 죽어 있으면 풀에서 빼고 fallback."""
+    """If a character in sleep_encounters is dead, drop them from the pool and fall back."""
     dead = Character(
         id="goblin_01",
         name="고블린",
@@ -156,7 +156,7 @@ async def test_dirty_set_marks_actor_on_recovery(fresh_state):
 
 
 async def test_no_location_falls_back_to_recovery(fresh_state):
-    """location_id 없는 캐릭터는 위험도 알 수 없으니 풀회복."""
+    """A character with no location_id has no known risk, so they full-recover."""
     actor = Character(
         id="player_01",
         name="주",

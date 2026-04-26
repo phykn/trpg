@@ -134,9 +134,9 @@ async def test_roll_without_pending_blocked(client, env):
 
 
 async def test_rest_branch_classified_by_judge(client, env):
-    """판정자가 '잠을 잔다' 를 'rest' 로 분류 → 회복 분기 진입, HP/MP 풀회복."""
+    """The judge classifies '잠을 잔다' as 'rest' → enters recovery branch, HP/MP restored."""
     gs, profile_dir, saves_dir = env
-    # 광장은 default safe — 풀회복 보장.
+    # The plaza is default-safe → full recovery is guaranteed.
     player = gs.characters["player_01"]
     player.hp = 4
     player.mp = 2
@@ -160,7 +160,7 @@ async def test_rest_branch_classified_by_judge(client, env):
 
 
 async def test_judge_matches_equip_for_weapon_in_inventory(client, env):
-    """판정자가 inventory.kind=weapon 아이템 입력을 equip 으로 분류."""
+    """The judge classifies an inventory.kind=weapon input as equip."""
     from src.domain.entities import Item, WeaponEffect
 
     gs, profile_dir, saves_dir = env
@@ -187,7 +187,7 @@ async def test_judge_matches_equip_for_weapon_in_inventory(client, env):
 
 
 async def test_judge_matches_use_for_inventory_item(client, env):
-    """판정자가 inventory 컨텍스트로 받아 자연어를 use 로 분류, item_id 박는지."""
+    """With inventory in context, the judge classifies natural language as use and stamps item_id."""
     from src.domain.entities import ConsumableEffect, Item
 
     gs, profile_dir, saves_dir = env
@@ -198,7 +198,7 @@ async def test_judge_matches_use_for_inventory_item(client, env):
         effects=ConsumableEffect(type="consumable", effect="heal", amount=8),
     )
     gs.characters["player_01"].inventory_ids = ["herb_01"]
-    gs.characters["player_01"].hp = 10  # 상처난 상태
+    gs.characters["player_01"].hp = 10  # wounded
 
     events = await _collect_events(
         run_turn(
@@ -216,7 +216,7 @@ async def test_judge_matches_use_for_inventory_item(client, env):
 
 
 async def test_judge_matches_learned_skill_in_combat(client, env):
-    """판정자가 learned_skills 컨텍스트로 받아 combat 입력에 skill_id 박는지 확인."""
+    """With learned_skills in context, verify the judge stamps skill_id on combat input."""
     from src.domain.entities import Race, Skill
 
     gs, profile_dir, saves_dir = env
@@ -258,12 +258,12 @@ async def test_judge_matches_learned_skill_in_combat(client, env):
     )
     judge_event = next(e for e in events if e["type"] == "judge")
     assert judge_event["data"]["action"] == "combat"
-    # skill_id 가 박혔어야
+    # skill_id should be stamped
     assert judge_event["data"].get("skill_id") == "fireball"
 
 
 async def test_combat_branch_boots_combat_state(client, env):
-    """판정자가 'combat' 으로 분류 → 엔진이 combat_state 부팅 + combat_start SSE 발행."""
+    """The judge classifies as 'combat' → engine boots combat_state + emits combat_start SSE."""
     gs, profile_dir, saves_dir = env
     gs.races["goblin"] = Race(id="goblin", name="고블린", description="x")
     gs.characters["goblin_01"] = Character(
@@ -291,7 +291,7 @@ async def test_combat_branch_boots_combat_state(client, env):
     )
     types = [e["type"] for e in events]
     judge_event = next(e for e in events if e["type"] == "judge")
-    # judge LLM 이 의도대로 combat 으로 분류해야 P2 라이프사이클 진입.
+    # The judge LLM must classify as combat for P2 lifecycle entry.
     assert judge_event["data"]["action"] == "combat"
     assert "combat_start" in types
     cs_data = next(e["data"] for e in events if e["type"] == "combat_start")

@@ -5,12 +5,8 @@ class _F(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class SigmoidDC(_F):
-    k: float = 0.5
-
-
 class DifficultyClass(_F):
-    sigmoid: SigmoidDC = SigmoidDC()
+    sigmoid_k: float = 0.5
     critical_hit_threshold: int = 20
     critical_miss_threshold: int = 1
     tier_dc_ranges: dict[str, tuple[int, int]] = {
@@ -57,12 +53,12 @@ class RecoveryConfig(_F):
 
 
 class GrowthConfig(_F):
-    base_xp: int = 100  # 레벨 N → N+1 비용 = base_xp × N (선형)
+    base_xp: int = 100  # cost from level N → N+1 = base_xp × N (linear)
     max_level: int = 20
 
 
 class SkillConfig(_F):
-    """스킬 cast 효과 베이스. tier/grade 보정 계수는 후속 튜닝."""
+    """Skill cast effect base. tier/grade adjustment coefficients are tuning knobs."""
 
     grade_multipliers: dict[str, float] = {
         "critical_success": 2.0,

@@ -1,4 +1,4 @@
-"""S2 — 전투 엔진 코어 단위 테스트. LLM 호출 없음, 결정론 RNG."""
+"""S2 — combat engine core unit tests. No LLM calls, deterministic RNG."""
 import random
 
 import pytest
@@ -27,11 +27,11 @@ from src.engines.combat import (
 )
 
 
-# --- 결정론 RNG 헬퍼 ----------------------------------------------------------
+# --- Deterministic RNG helpers -----------------------------------------------
 
 
 class _SeqRandom(random.Random):
-    """정해진 시퀀스를 순서대로 반환하는 randint stub. 다른 메서드 (choice 등) 도 super 가 살아있어 동작."""
+    """randint stub returning a fixed sequence in order. Other methods (choice, etc.) still work via super()."""
 
     def __init__(self, seq, *, seed=0):
         super().__init__(seed)
@@ -85,7 +85,7 @@ def _char(
     )
 
 
-# --- 단위 helper --------------------------------------------------------------
+# --- Unit helpers ------------------------------------------------------------
 
 
 def test_stat_modifier_dnd5e_table():
@@ -100,13 +100,13 @@ def test_stat_modifier_dnd5e_table():
 
 def test_roll_dice_specs():
     rng = random.Random(42)
-    # 1d1 → 항상 1
+    # 1d1 → always 1
     assert roll_dice("1d1", rng) == 1
-    # 2d1+3 → 항상 5
+    # 2d1+3 → always 5
     assert roll_dice("2d1+3", rng) == 5
-    # 1d1-1 → 항상 0
+    # 1d1-1 → always 0
     assert roll_dice("1d1-1", rng) == 0
-    # 형식 오류
+    # malformed spec
     with pytest.raises(ValueError):
         roll_dice("d8", rng)
     with pytest.raises(ValueError):
@@ -131,8 +131,8 @@ def test_enemy_defense_sums_armor_slots_only():
         "helm": _arm_item("helm", defense=2),
         "boots": _arm_item("boots", defense=1),
         "shield": _arm_item("shield", defense=3),
-        "ring": Item(id="ring", name="ring"),  # 효과 없음
-        "sword": _wpn_item("sword"),  # 손에 들어 있어도 무기는 방어 합산 X
+        "ring": Item(id="ring", name="ring"),  # no effect
+        "sword": _wpn_item("sword"),  # weapons do not contribute to defense even when held
     }
     defender = _char(
         "d",
@@ -140,8 +140,8 @@ def test_enemy_defense_sums_armor_slots_only():
     )
     assert enemy_defense(defender, items) == 10 + 2 + 1  # helm + boots only
 
-    # acc1/leftHand 는 4 슬롯 외 — defense 안 더함.
-    # shield 가 leftHand 에 있어도 방어 합산은 head/top/bottom/feet 만.
+    # acc1/leftHand are outside the 4 armor slots — they do not add defense.
+    # Even with a shield in leftHand, defense sums only head/top/bottom/feet.
     defender2 = _char("d2", equipment=Equipment(leftHand="shield"))
     assert enemy_defense(defender2, items) == 10
 
@@ -150,10 +150,10 @@ def test_enemy_defense_sums_armor_slots_only():
 
 
 def test_attack_unarmed_no_weapon_uses_str_and_1d4():
-    """무기 없는 빈손 → STR 기반 + 1d4 데미지. nat=15 명중, dice=3."""
+    """Empty hands with no weapon → STR-based + 1d4 damage. nat=15 hits, dice=3."""
     attacker = _char("a", str_=14)  # STR mod = +2
     defender = _char("d")
-    # randint 시퀀스: [nat_d20=15, damage_d4=3]
+    # randint sequence: [nat_d20=15, damage_d4=3]
     rng = _SeqRandom([15, 3])
     outs = attack(attacker, defender, items={}, rng=rng)
     assert len(outs) == 1
@@ -168,11 +168,11 @@ def test_attack_unarmed_no_weapon_uses_str_and_1d4():
 
 
 def test_attack_critical_doubles_dice_keeps_mod_once():
-    """nat 20 → critical_success, damage = (n+n) dice + mod 한 번."""
+    """nat 20 → critical_success, damage = (n+n) dice + mod (added once)."""
     attacker = _char("a", str_=14, equipment=Equipment(rightHand="sword_01"))
     defender = _char("d")
     items = {"sword_01": _wpn_item("sword_01", dice="1d8")}
-    # nat=20, 첫 d8=4, 크리 추가 d8=7. 데미지 = 4+7+2 = 13.
+    # nat=20, first d8=4, crit extra d8=7. damage = 4+7+2 = 13.
     rng = _SeqRandom([20, 4, 7])
     [o] = attack(attacker, defender, items, rng=rng)
     assert o.grade == "critical_success"
@@ -190,7 +190,7 @@ def test_attack_natural_one_is_critical_failure_zero_damage():
 
 
 def test_attack_dual_wield_off_hand_loses_modifier():
-    """주 손은 mod 더함, 보조 손은 mod 빼고 dice 만."""
+    """Main hand adds mod, off-hand drops the mod and rolls dice only."""
     attacker = _char(
         "a",
         str_=14,  # mod +2
@@ -203,7 +203,7 @@ def test_attack_dual_wield_off_hand_loses_modifier():
         "off": _wpn_item("off", dice="1d6"),
     }
     # main: nat=15, d6=4 → damage = 4 + 2 = 6
-    # off:  nat=12, d6=3 → damage = 3 (mod 없음)
+    # off:  nat=12, d6=3 → damage = 3 (no mod)
     rng = _SeqRandom([15, 4, 12, 3])
     outs = attack(attacker, defender, items, rng=rng)
     assert [o.hand for o in outs] == ["main", "off"]
@@ -234,7 +234,7 @@ def test_attack_ranged_weapon_uses_dex():
 
 
 def test_attack_armor_raises_required_roll():
-    """방어구가 두꺼우면 같은 nat 으로도 grade 가 갈릴 수 있다."""
+    """Heavier armor can split grade outcomes for the same nat."""
     attacker = _char("a", str_=10)  # mod 0
     light = _char("d_light")
     heavy = _char(
@@ -250,7 +250,7 @@ def test_attack_armor_raises_required_roll():
     # defense_light = 10, defense_heavy = 22.
     # required_roll(10, 10, k=0.5) = round(20/(1+1)) = 10
     # required_roll(22, 10, k=0.5) = round(20/(1+e^-6)) ≈ 20
-    # nat=11 → 10 cleared 면 partial 또는 success, 22 면 fail.
+    # nat=11 → clears 10 (partial or success), but fails against 22.
     rng_light = _SeqRandom([11, 4])
     rng_heavy = _SeqRandom([11])  # miss → no damage roll
     [ol] = attack(attacker, light, items, rng=rng_light)
@@ -261,7 +261,7 @@ def test_attack_armor_raises_required_roll():
     assert oh.damage == 0
 
 
-# --- 이니셔티브 ----------------------------------------------------------------
+# --- Initiative --------------------------------------------------------------
 
 
 def test_initiative_sorts_descending_by_d20_plus_dex_mod():
@@ -271,14 +271,14 @@ def test_initiative_sorts_descending_by_d20_plus_dex_mod():
     rng = _SeqRandom([10, 12, 8])  # a:10, b:16, c:10
     order = roll_initiative([a, b, c], rng=rng)
     # b: 12+4=16, a: 10+0=10, c: 8+2=10
-    # tiebreak: DEX 원값 큰 쪽 먼저 → c(14) before a(10)
+    # tiebreak: higher raw DEX first → c(14) before a(10)
     assert order == ["b", "c", "a"]
 
 
 def test_initiative_id_alphabetical_tiebreak_when_dex_equal():
     a = _char("alpha", dex=10)
     b = _char("beta", dex=10)
-    rng = _SeqRandom([10, 10])  # 둘 다 10
+    rng = _SeqRandom([10, 10])  # both 10
     order = roll_initiative([a, b], rng=rng)
     assert order == ["alpha", "beta"]
 
@@ -355,7 +355,7 @@ def test_pick_target_no_behavior_falls_back_to_first():
 
 
 def test_pick_target_highest_threat_uses_damage_dealt():
-    """damage_dealt 가 큰 후보 우선 — 데이터 없으면 nearest 폴백."""
+    """Pick the candidate with the highest damage_dealt — fall back to nearest when no data."""
     actor = _char("actor", behavior=CombatBehavior(attack_priority="highest_threat"))
     pool = [actor, _char("a", hp=20), _char("b", hp=20), _char("c", hp=20)]
     damage_dealt = {"a": 5, "b": 12, "c": 3}
@@ -369,7 +369,7 @@ def test_pick_target_highest_threat_no_damage_falls_back_to_nearest():
 
 
 def test_pick_target_highest_threat_tiebreaker_lowest_hp():
-    """동률 데미지면 hp 낮은 쪽."""
+    """Tied damage breaks toward the lower-hp candidate."""
     actor = _char("actor", behavior=CombatBehavior(attack_priority="highest_threat"))
     pool = [actor, _char("a", hp=20), _char("b", hp=5)]
     damage_dealt = {"a": 10, "b": 10}
@@ -386,7 +386,7 @@ def test_should_attempt_flee_above_threshold_returns_false():
 
 def test_should_attempt_flee_below_threshold_uses_probability():
     # hp 10/20 = 50%, threshold 60% → diff 10 → prob 20%.
-    # _SeqRandom 으로 randint(1,100) 첫 호출 ≤ 20 이면 True.
+    # If the first randint(1,100) call from _SeqRandom returns ≤ 20, expect True.
     actor = _char("a", hp=10, max_hp=20, behavior=CombatBehavior(flee_hp_percent=60))
     assert should_attempt_flee(actor, rng=_SeqRandom([15])) is True
     assert should_attempt_flee(actor, rng=_SeqRandom([21])) is False
@@ -431,10 +431,11 @@ def test_attack_outcome_shape():
     assert o.grade == "partial_success"
 
 
-# --- 라이프사이클 -------------------------------------------------------------
+# --- Lifecycle ---------------------------------------------------------------
 
 
-from src.domain.entities import CombatState, DeathSaveState
+from src.domain.entities import DeathSaveState
+from src.domain.state import CombatState
 from src.engines.combat import (
     advance_turn,
     apply_attack_to_defender,
@@ -498,7 +499,7 @@ def test_current_actor_and_advance_turn_wraps_round():
     assert current_actor_id(state) == "g1"
     advance_turn(state)
     assert current_actor_id(state) == "g2"
-    advance_turn(state)  # 한 바퀴 → round +1
+    advance_turn(state)  # full loop → round +1
     assert current_actor_id(state) == "p"
     assert state.combat_state.round == 2
 
@@ -509,10 +510,10 @@ def test_remove_from_combat_corrects_current_turn():
     g2 = _char("g2")
     state = _state_with(p, g1, g2, player_id="p")
     state.combat_state = CombatState(turn_order=["p", "g1", "g2"], current_turn=2, enemy_ids=["g1", "g2"])
-    remove_from_combat(state, "g1")  # 현재 turn(2) 의 앞 인덱스(1) 제거
+    remove_from_combat(state, "g1")  # remove index 1 (before current turn 2)
     assert state.combat_state.turn_order == ["p", "g2"]
     assert state.combat_state.enemy_ids == ["g2"]
-    assert state.combat_state.current_turn == 1  # g2 가 새 위치 1 — 같은 사람을 가리킴
+    assert state.combat_state.current_turn == 1  # g2 is now at index 1, same actor
 
 
 def test_apply_attack_to_defender_npc_dies_on_zero_hp():
@@ -555,7 +556,7 @@ def test_extra_damage_during_death_save_increments_failures():
     p.death_saves = DeathSaveState(successes=1, failures=1)
     state = _state_with(p, _char("g"), player_id="p")
     out = apply_attack_to_defender(state, "p", damage=3, nat_d20=1)  # crit fail
-    # 일반은 +1, crit 은 +2 — nat_d20=1 이라 +2 → failures 1+2=3 → 사망
+    # Normal hit +1, crit +2 — nat_d20=1 so +2 → failures 1+2=3 → death
     assert out["dead"] is True
     assert p.alive is False
 

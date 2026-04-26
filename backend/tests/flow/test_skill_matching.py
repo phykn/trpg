@@ -1,4 +1,4 @@
-"""§2.6 S2 — judge 의미 매칭 통합. judge 가 skill_id 박아 보내는 케이스를 mock."""
+"""§2.6 S2 — judge semantic-matching integration. Mocks the case where judge supplies skill_id."""
 import random
 import tempfile
 
@@ -80,7 +80,7 @@ def _seed_skill_state(fresh_state):
     return fresh_state
 
 
-# --- surroundings 노출 ----------------------------------------------------
+# --- surroundings exposure ------------------------------------------------
 
 
 def test_build_surroundings_includes_learned_skills(fresh_state):
@@ -97,20 +97,20 @@ def test_build_surroundings_includes_learned_skills(fresh_state):
 
 def test_build_surroundings_filters_skills_above_level(fresh_state):
     state = _seed_skill_state(fresh_state)
-    state.characters["player_01"].level = 0  # 스킬 level=1 미달
+    state.characters["player_01"].level = 0  # below the skill's level=1
     s = build_surroundings(state, "player_01")
     assert s["skills"] == []
 
 
 def test_build_surroundings_filters_skills_when_mp_insufficient(fresh_state):
     state = _seed_skill_state(fresh_state)
-    state.characters["player_01"].mp = 1  # mp_cost=4 미달
+    state.characters["player_01"].mp = 1  # below mp_cost=4
     s = build_surroundings(state, "player_01")
     assert s["skills"] == []
 
 
 def test_build_surroundings_includes_racial_skills(fresh_state):
-    """racial 도 자동 매칭 후보 — source 필드로 구분."""
+    """Racial skills are also auto-matched candidates — distinguished by the source field."""
     state = _seed_skill_state(fresh_state)
     racial = Skill(
         id="bite",
@@ -127,13 +127,13 @@ def test_build_surroundings_includes_racial_skills(fresh_state):
     assert by_id["fireball"]["source"] == "learned"
 
 
-# --- combat 분기에서 skill cast --------------------------------------------
+# --- skill cast in the combat branch --------------------------------------
 
 
 async def test_combat_with_skill_id_triggers_cast_at_combat_start(
     fresh_state, tmp_data, monkeypatch
 ):
-    """평시 → judge 가 combat + skill_id 반환 → start_combat 후 첫 차례 cast."""
+    """Out-of-combat → judge returns combat + skill_id → cast on the first turn after start_combat."""
     state = _seed_skill_state(fresh_state)
     _judge_returns(
         monkeypatch,
@@ -158,7 +158,7 @@ async def test_combat_with_skill_id_triggers_cast_at_combat_start(
     ]
     assert len(skill_events) >= 1
     assert skill_events[0]["data"]["skill_id"] == "fireball"
-    # 데미지가 들어갔거나 (effects 안), MP 가 깎였어야
+    # Either damage landed (in effects) or MP was deducted
     p = state.characters["player_01"]
     assert p.mp == 15 - 4
     g = state.characters["goblin_01"]
@@ -168,7 +168,7 @@ async def test_combat_with_skill_id_triggers_cast_at_combat_start(
 async def test_combat_without_skill_id_runs_plain_attack(
     fresh_state, tmp_data, monkeypatch
 ):
-    """skill_id 없으면 기존 평타 분기."""
+    """Without skill_id, fall through to the regular attack branch."""
     state = _seed_skill_state(fresh_state)
     _judge_returns(
         monkeypatch, CombatAction(action="combat", targets=["goblin_01"])
@@ -186,16 +186,16 @@ async def test_combat_without_skill_id_runs_plain_attack(
     types_actions = [
         e["data"].get("action") for e in events if e["type"] == "combat_turn"
     ]
-    # skill 액션 안 나와야
+    # No skill action should appear
     assert "skill" not in types_actions
-    # MP 그대로
+    # MP unchanged
     assert state.characters["player_01"].mp == 15
 
 
 async def test_combat_during_combat_with_skill_id(
     fresh_state, tmp_data, monkeypatch
 ):
-    """이미 combat_state 활성 + 플레이어 차례에 skill_id 매칭."""
+    """combat_state already active and on the player's turn — skill_id matches."""
     from src.engines import combat as combat_engine
 
     state = _seed_skill_state(fresh_state)

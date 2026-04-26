@@ -3,7 +3,7 @@ import os
 import shutil
 from pathlib import Path
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from ..domain.entities import (
     Campaign,
@@ -233,30 +233,28 @@ def _scan_entity_dir(
     return result
 
 
-def _load_jsonl_tail(path: Path, cap: int, model_cls: type[BaseModel]) -> list:
+def _load_jsonl_tail(
+    path: Path,
+    cap: int,
+    validator: TypeAdapter | type[BaseModel],
+) -> list:
+    """If validator is a BaseModel use model_validate_json; if TypeAdapter use validate_json."""
     lines = _read_jsonl_tail(path, cap)
+    parse = (
+        validator.validate_json
+        if isinstance(validator, TypeAdapter)
+        else validator.model_validate_json
+    )
     out: list = []
     for line in lines:
         try:
-            out.append(model_cls.model_validate_json(line))
+            out.append(parse(line))
         except ValidationError as e:
             raise PersistenceFailed(f"{path}: {e}") from e
     return out
 
 
-def _load_log_tail(path: Path, cap: int) -> list[LogEntry]:
-    """LogEntry is a discriminated union — validate via TypeAdapter."""
-    from pydantic import TypeAdapter
-
-    lines = _read_jsonl_tail(path, cap)
-    adapter: TypeAdapter[LogEntry] = TypeAdapter(LogEntry)
-    out: list[LogEntry] = []
-    for line in lines:
-        try:
-            out.append(adapter.validate_json(line))
-        except ValidationError as e:
-            raise PersistenceFailed(f"{path}: {e}") from e
-    return out
+_LOG_ADAPTER: TypeAdapter[LogEntry] = TypeAdapter(LogEntry)
 
 
 def load_game(saves_dir: str, game_id: str) -> GameState:
@@ -276,7 +274,9 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
     for kind, model_cls in _ENTITY_MODELS.items():
         entities[kind] = _scan_entity_dir(saves_dir, game_id, kind, model_cls)
 
-    log_entries = _load_log_tail(_log_path(saves_dir, game_id), RULES.log.display_turns)
+    log_entries = _load_jsonl_tail(
+        _log_path(saves_dir, game_id), RULES.log.display_turns, _LOG_ADAPTER
+    )
     turn_log = _load_jsonl_tail(
         _history_path(saves_dir, game_id),
         RULES.memory.turn_log_size,

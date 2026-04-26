@@ -6,8 +6,8 @@ from ...domain.types import StatKey
 
 
 class SkillCandidate(BaseModel):
-    """LLM 이 산출하는 스킬 후보 — 서사 부분만. 수치 (mp_cost/power/range/duration) 와
-    id/level 은 엔진이 템플릿으로 채움."""
+    """LLM-produced skill candidate — narrative fields only. Numeric fields
+    (mp_cost/power/range/duration) and id/level are filled by engine templates."""
 
     model_config = ConfigDict(extra="forbid")
 

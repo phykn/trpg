@@ -22,10 +22,8 @@ class Verdict(BaseModel):
 
 
 def _strip_code_fence(text: str) -> str:
-    """LLM 이 ```json ... ``` 로 감싸는 경우 제거."""
     text = text.strip()
     if text.startswith("```"):
-        # 첫 줄 (```json 또는 ```) 과 마지막 ``` 제거
         lines = text.splitlines()
         if lines[0].startswith("```"):
             lines = lines[1:]
@@ -44,9 +42,9 @@ async def review_session(
     llm: LLMClient,
     retries: int = 3,
 ) -> tuple[Verdict, str]:
-    """transcript + final_state 를 reviewer LLM 에 넘겨 Verdict 받기.
+    """Send transcript + final_state to the reviewer LLM and parse a Verdict.
 
-    Returns: (Verdict, raw_text). raw_text 는 review.md 작성에 그대로 사용.
+    Returns (Verdict, raw_text). raw_text is reused verbatim when writing review.md.
     """
     transcript = transcript_path.read_text(encoding="utf-8")
     final_state = final_state_path.read_text(encoding="utf-8")
@@ -83,7 +81,7 @@ async def review_session(
                     "스키마에 맞는 JSON 한 객체만 다시 출력. 코드펜스·설명 금지."
                 ),
             })
-    # 모두 실패 → 최소 verdict 로 fallback
+    # all retries failed — fall back to a minimal verdict
     fallback = Verdict(
         verdict="warn",
         issues=[
@@ -99,32 +97,31 @@ async def review_session(
 
 
 def write_review_md(path: Path, agent_name: str, verdict: Verdict, raw: str) -> None:
-    """사람-읽기용 review.md."""
     parts: list[str] = []
     parts.append(f"# Review — {agent_name}")
     parts.append(f"**Verdict**: `{verdict.verdict.upper()}`")
 
     if verdict.wins:
-        parts.append("## 잘된 점")
+        parts.append("## Wins")
         for w in verdict.wins:
             parts.append(f"- {w}")
 
     if verdict.issues:
-        parts.append("## 이슈")
+        parts.append("## Issues")
         for issue in verdict.issues:
             head = f"- **[{issue.severity}/{issue.category}]** {issue.summary}"
             parts.append(head)
             for ev in issue.evidence:
-                parts.append(f"  - 근거: {ev}")
+                parts.append(f"  - evidence: {ev}")
 
     if verdict.questions:
-        parts.append("## 의문점")
+        parts.append("## Open questions")
         for q in verdict.questions:
             parts.append(f"- {q}")
 
     if raw:
         parts.append("---")
-        parts.append("## 원본 reviewer 응답")
+        parts.append("## Raw reviewer response")
         parts.append("```")
         parts.append(raw)
         parts.append("```")

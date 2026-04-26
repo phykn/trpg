@@ -31,18 +31,18 @@ class RaceNotFound(DomainError):
 
 
 class LevelUpInvalid(DomainError):
-    """level_up 요청이 페어 트레이드/캡/잔여 xp 등의 검증을 통과 못 함."""
+    """level_up request failed validation (pair-trade / cap / remaining xp etc.)."""
 
     pass
 
 
 class InventoryInvalid(DomainError):
-    """장비/거래 요청이 슬롯/요구치/무게/affinity/잔여 골드 검증 통과 못 함."""
+    """equip/trade request failed validation (slot / requirements / weight / affinity / gold)."""
 
     pass
 
 
 class SkillInvalid(DomainError):
-    """cast 요청이 레벨·MP·사정거리·소유 검증 통과 못 함."""
+    """cast request failed validation (level / MP / range / ownership)."""
 
     pass

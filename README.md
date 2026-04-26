@@ -1,44 +1,45 @@
 # trpg
 
-한국어 TRPG. LLM 이 이야기·난이도 판정을 맡고, 엔진이 상태·규칙·시간을 다룬다.
+Korean-language TRPG. The LLM handles narrative and difficulty judgment; the engine handles state, rules, and time.
 
 ```
 trpg/
-  backend/    FastAPI + Pydantic v2 + OpenAI 호환 LLM. 게임 엔진. → backend/README.md
-  frontend/   Expo (React Native) 단일 화면 클라이언트. → frontend/README.md
-  agency/     백엔드를 in-process 호출하는 LLM 직원 사무실 (현재 QA 팀). → agency/README.md
-  docs/       설계 노트 (01-overview / 02-runtime / 03-features / 04-boundary / 05-codemap)
-  saves/      런타임 게임 저장소 (gitignored)
+  backend/    FastAPI + Pydantic v2 + OpenAI-compatible LLM. Game engine. → backend/README.md
+  frontend/   Expo (React Native) single-screen client. → frontend/README.md
+  agency/     LLM-staffed office that drives the backend in-process (QA + Story teams). → agency/README.md
+  scenarios/  Seed packs (one dir per profile). Shared by backend and agency/story.
+  docs/       Design notes (01-overview / 02-runtime / 03-features / 04-boundary / 05-codemap)
+  saves/      Runtime game store (gitignored)
 ```
 
-자세한 셋업·실행은 각 하위 README, 설계 의도는 `docs/01-overview.md` 부터.
+Setup and run details are in each sub-README; design intent starts at `docs/01-overview.md`.
 
-## 빠른 시작
+## Quick start
 
-LLM 서버 (예: llama.cpp) 가 어딘가에서 돌고 있어야 함.
+An LLM server (e.g. llama.cpp) must be running somewhere reachable.
 
 ```bash
-# 루트에서 (한 번만)
+# from repo root, once
 python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 
-# backend/.env 작성 후
+# fill out backend/.env, then
 cd backend && ../.venv/bin/python run_api.py
 
-# 다른 터미널에서, frontend/.env 작성 후
+# in another terminal, fill out frontend/.env, then
 cd frontend && npm install && npx expo start
 ```
 
-env 변수는 fail-fast — 누락 시 즉시 throw. 사양은 각 하위 README.
+env vars are fail-fast — anything missing throws at startup.
 
-## 테스트
+## Tests
 
 ```bash
-# 루트에서
+# from repo root
 .venv/bin/python -m pytest -q                  # unit
-RUN_LIVE=1 .venv/bin/python -m pytest -q       # LLM 도달 가능할 때만
+RUN_LIVE=1 .venv/bin/python -m pytest -q       # only when the LLM server is reachable
 ```
 
-## 스택
+## Stack
 
-Python 3.12+ · Pydantic v2 · FastAPI · async/await · OpenAI 호환 LLM · Expo SDK 54 / RN 0.81 / React 19 · NativeWind v4 · expo-router. DB 없음 — 게임 상태는 entity 별 JSON + append-only JSONL (`saves/games/<game_id>/`).
+Python 3.12+ · Pydantic v2 · FastAPI · async/await · OpenAI-compatible LLM · Expo SDK 54 / RN 0.81 / React 19 · NativeWind v4 · expo-router. No DB — game state is per-entity JSON plus append-only JSONL under `saves/games/<game_id>/`.

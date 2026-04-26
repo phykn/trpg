@@ -1,4 +1,4 @@
-"""turn.run_turn 의 rest 라우팅 — judge mock, recovery 엔진 + combat 부팅 통합."""
+"""turn.run_turn rest routing — judge mocked; integrates the recovery engine + combat boot."""
 import random
 import tempfile
 from datetime import datetime, timedelta
@@ -85,7 +85,7 @@ async def test_rest_in_safe_location_full_recovery(fresh_state, tmp_data, monkey
 async def test_rest_in_dangerous_location_triggers_encounter(
     fresh_state, tmp_data, monkeypatch
 ):
-    _seed_player(fresh_state, hp=20)  # 풀체력으로 시작 (회복 안 일어나는 거 보려고)
+    _seed_player(fresh_state, hp=20)  # full HP at start (so we can see recovery does not happen)
     fresh_state.locations["plaza_01"] = Location(
         id="plaza_01",
         name="동굴",
@@ -104,9 +104,9 @@ async def test_rest_in_dangerous_location_triggers_encounter(
     )
 
     _judge_returns_rest(monkeypatch)
-    # rng.random() 의 첫 호출이 encounter 굴림 — 0 으로 강제 발동.
-    # Random(seed) 는 seed 별로 random() 값이 결정론. 인카운터 발동시키는 seed 는?
-    # 간단하게 monkeypatch.setattr 로 random.random 을 모킹하지 말고, 임의 seed 로 시도.
+    # The first rng.random() call is the encounter roll — force trigger with 0.
+    # Random(seed) is deterministic per seed. Which seed triggers the encounter?
+    # Rather than monkeypatch random.random, just try an arbitrary seed.
     rng = random.Random(0)
     events = await _collect(
         run_turn(
@@ -120,15 +120,15 @@ async def test_rest_in_dangerous_location_triggers_encounter(
     )
 
     types = [e["type"] for e in events]
-    # dangerous=0.6, Random(0).random() ≈ 0.844 → encounter 안 발동. 다른 seed 필요.
-    # 발동되든 안 되든 한 시나리오는 검증되니, encounter 가 안 떠도 OK.
+    # dangerous=0.6, Random(0).random() ≈ 0.844 → no encounter. Would need a different seed.
+    # Either branch is a valid scenario, so a non-encounter outcome is fine too.
     if "combat_start" in types:
         assert fresh_state.combat_state is not None
         cs = fresh_state.combat_state
         assert "goblin_01" in cs.enemy_ids
         assert cs.surprise == "enemy"
     else:
-        # encounter 안 떴으면 풀회복.
+        # No encounter → full recovery.
         actor = fresh_state.characters["player_01"]
         assert actor.hp == actor.max_hp
 
@@ -136,7 +136,7 @@ async def test_rest_in_dangerous_location_triggers_encounter(
 async def test_rest_dangerous_with_low_random_forces_encounter(
     fresh_state, tmp_data, monkeypatch
 ):
-    """recovery.random.random() 을 0.0 으로 패치 — dangerous 면 무조건 발동."""
+    """Patch recovery.random.random() to 0.0 — always triggers when dangerous."""
     _seed_player(fresh_state, hp=20)
     fresh_state.locations["plaza_01"] = Location(
         id="plaza_01",
@@ -156,7 +156,7 @@ async def test_rest_dangerous_with_low_random_forces_encounter(
     )
 
     class _ForceLow:
-        """recovery 에 넘기는 rng — random() 0 만 반환, randint 는 random 위임."""
+        """rng passed to recovery — random() always returns 0; randint defers to random."""
 
         def random(self):
             return 0.0
@@ -182,7 +182,7 @@ async def test_rest_dangerous_with_low_random_forces_encounter(
     cs = fresh_state.combat_state
     assert cs.surprise == "enemy"
     assert "goblin_01" in cs.enemy_ids
-    # 첫 라운드 player skip 이벤트
+    # First-round player skip event
     skip_events = [
         e for e in events
         if e["type"] == "combat_turn" and e["data"].get("action") == "skip"
@@ -191,7 +191,7 @@ async def test_rest_dangerous_with_low_random_forces_encounter(
 
 
 async def test_rest_blocked_during_combat(fresh_state, tmp_data, monkeypatch):
-    """combat_state 활성 중 rest 시도 → 거절 메시지, 회복 안 일어남."""
+    """Attempting rest with combat_state active → rejection message, no recovery."""
     from src.engines import combat as combat_engine
 
     _seed_player(fresh_state, hp=4)
@@ -223,4 +223,4 @@ async def test_rest_blocked_during_combat(fresh_state, tmp_data, monkeypatch):
     )
 
     actor = fresh_state.characters["player_01"]
-    assert actor.hp == 4  # 회복 안 됨
+    assert actor.hp == 4  # no recovery

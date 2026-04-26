@@ -21,7 +21,7 @@ from ..agents.dc_judge.schema import (
 )
 from ..agents.narrate import NarrativeDelta, NarrativeFinal
 from ..domain.errors import JudgeMalformed, PendingCheckActive
-from ..domain.memory import ActLogEntry, GMLogEntry, PlayerLogEntry
+from ..domain.memory import PlayerLogEntry
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..engines.apply import apply_changes
@@ -47,6 +47,7 @@ from .dirty import (
     advance_time,
     finalize,
     next_log_id,
+    push_act,
     push_dialogue,
     push_log_entry,
     push_turn_log,
@@ -55,12 +56,6 @@ from .judge import run_judge
 from .memory_writer import write_memories
 from .narrate import run_narrate
 from .rest import run_rest
-
-
-def _push_act(state: GameState, dirty: Dirty, text: str) -> dict:
-    log = ActLogEntry(id=next_log_id(state), kind="act", text=text)
-    push_log_entry(state, log, dirty)
-    return {"type": "log_entry", "data": log.model_dump()}
 
 
 async def run_turn(
@@ -153,7 +148,7 @@ async def _dispatch(
         return
 
     if isinstance(result, ClarifyAction):
-        yield _push_act(state, dirty, result.question)
+        yield push_act(state, dirty, result.question)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -198,7 +193,7 @@ async def _dispatch(
 
     if isinstance(result, FleeAction):
         # Out-of-combat flee — short message, no turn bump.
-        yield _push_act(state, dirty, "지금은 도망쳐 달아날 전투가 없다.")
+        yield push_act(state, dirty, "지금은 도망쳐 달아날 전투가 없다.")
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return

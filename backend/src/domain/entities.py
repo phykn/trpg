@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -39,15 +40,6 @@ class DeathSaveState(BaseModel):
     failures: int = 0
 
 
-class CombatState(BaseModel):
-    turn_order: list[str] = []
-    current_turn: int = 0
-    round: int = 1
-    surprise: Literal["player", "enemy"] | None = None
-    enemy_ids: list[str] = []
-    damage_dealt: dict[str, int] = {}  # actor_id → 누적 데미지 (highest_threat AI 용)
-
-
 # --- skills / buffs --------------------------------------------------------
 
 
@@ -85,8 +77,28 @@ class Equipment(BaseModel):
     acc1: str | None = None
     acc2: str | None = None
 
+    def equipped_items(self) -> Iterator[tuple[str, str]]:
+        """Iterate (slot, item_id) for filled slots only."""
+        for slot in EQUIPMENT_SLOTS:
+            item_id = getattr(self, slot)
+            if item_id:
+                yield slot, item_id
+
 
 EQUIPMENT_SLOTS: tuple[str, ...] = tuple(Equipment.model_fields.keys())
+HAND_SLOTS: tuple[str, ...] = ("leftHand", "rightHand")
+ARMOR_SLOTS: tuple[str, ...] = ("head", "top", "bottom", "feet")
+ACCESSORY_SLOTS: tuple[str, ...] = ("acc1", "acc2")
+
+
+def slot_kind(slot: str) -> Literal["hand", "armor", "acc"] | None:
+    if slot in HAND_SLOTS:
+        return "hand"
+    if slot in ARMOR_SLOTS:
+        return "armor"
+    if slot in ACCESSORY_SLOTS:
+        return "acc"
+    return None
 
 
 class Connection(BaseModel):

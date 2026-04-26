@@ -1,35 +1,23 @@
-"""성장 (level_up + 페어 트레이드 + xp 곡선).
+"""Growth (level_up + pair-trade + xp curve).
 
 docs/03-features.md §2.3.
 
-페어 트레이드 불변식: 캐릭터의 stat 합 = 60 (시작), 페어 합 = 20/20/20 영구. NPC 시드든
-LLM 즉석 캐릭터든 모두 따른다.
+Pair-trade invariant: a character's total stats = 60 (initial), with pair sums permanently
+20/20/20. Holds for both seeded NPCs and LLM-summoned characters.
 """
 from __future__ import annotations
 
-from typing import Literal
-
 from ..domain.entities import Character
-from ..domain.types import StatKey
+from ..domain.types import STAT_PAIRS, StatKey
 from ..domain.errors import LevelUpInvalid
 from ..rules import RULES
 
-# 페어: 정반대 (양방향). stat_up 키 → 깎아야 하는 stat.
-PAIR_TRADE: dict[StatKey, StatKey] = {
-    "STR": "CHA",
-    "CHA": "STR",
-    "DEX": "WIS",
-    "WIS": "DEX",
-    "CON": "INT",
-    "INT": "CON",
-}
-
 
 def xp_for_next_level(level: int) -> int:
-    """레벨 N → N+1 비용 = base_xp × N (선형). level=0 은 base_xp 1배."""
+    """Cost from level N → N+1 = base_xp × N (linear). level=0 costs 1× base_xp."""
     if level >= RULES.growth.max_level:
         return 0
-    n = max(level, 1)  # 0→1 은 base_xp × 1, 1→2 는 ×1, 2→3 은 ×2, ...
+    n = max(level, 1)  # 0→1 is base_xp × 1, 1→2 is ×1, 2→3 is ×2, ...
     return RULES.growth.base_xp * n
 
 
@@ -42,7 +30,7 @@ def calc_max_mp(level: int, int_: int) -> int:
 
 
 def recalc_max_hp_mp(character: Character) -> None:
-    """현재 level/CON/INT 로 max 재계산. 현재값이 새 max 보다 크면 clamp."""
+    """Recompute max from current level/CON/INT. Clamps current values down to the new max if they exceed it."""
     new_max_hp = calc_max_hp(character.level, character.stats.CON)
     new_max_mp = calc_max_mp(character.level, character.stats.INT)
     character.max_hp = new_max_hp
@@ -64,9 +52,9 @@ def level_up(
     stat_up: StatKey,
     stat_down: StatKey,
 ) -> None:
-    """xp 차감 + 레벨 +1 + 페어 트레이드 + HP/MP max 재계산.
+    """Deduct xp, level +1, apply pair-trade, recompute HP/MP max.
 
-    검증 실패 시 LevelUpInvalid raise. 부분 적용 안 함 (xp 도 안 깎음).
+    Raises LevelUpInvalid on validation failure. No partial application (xp is not debited).
     """
     if character.level >= RULES.growth.max_level:
         raise LevelUpInvalid(f"already at max level {RULES.growth.max_level}")
@@ -77,7 +65,7 @@ def level_up(
             f"not enough xp: have {character.xp_pool}, need {cost}"
         )
 
-    expected_down = PAIR_TRADE.get(stat_up)
+    expected_down = STAT_PAIRS.get(stat_up)
     if expected_down is None:
         raise LevelUpInvalid(f"invalid stat_up: {stat_up}")
     if stat_down != expected_down:
@@ -100,9 +88,10 @@ def level_up(
 
 
 def assert_pair_trade_invariant(character: Character) -> None:
-    """STR+CHA = 20, DEX+WIS = 20, CON+INT = 20 검증.
+    """Verify STR+CHA = 20, DEX+WIS = 20, CON+INT = 20.
 
-    LLM 즉석 캐릭터 등록 시 호출. 시드 검증·테스트 도구. 실패 시 ValueError.
+    Called when registering an LLM-summoned character. Also used for seed validation and
+    in tests. Raises ValueError on failure.
     """
     s = character.stats
     if s.STR + s.CHA != 20:
@@ -125,13 +114,9 @@ def grant_xp(
     *,
     dirty: set[tuple[str, str]] | None = None,
 ) -> None:
-    """xp_pool 에 가산. 자동 레벨업은 안 함 (docs §2.3 — 명시적 endpoint 호출)."""
+    """Add to xp_pool. No automatic level-up (docs §2.3 — explicit endpoint call required)."""
     if amount < 0:
         raise ValueError(f"xp grant must be non-negative, got {amount}")
     character.xp_pool += amount
     if dirty is not None:
         dirty.add(("characters", character.id))
-
-
-# Re-export for type-narrowing in tests / endpoints.
-StatLiteral = Literal["STR", "DEX", "CON", "INT", "WIS", "CHA"]

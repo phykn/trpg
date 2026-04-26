@@ -1,4 +1,4 @@
-"""LLM live — encounter_summon agent 가 페어 트레이드를 따르는 적을 산출하는지."""
+"""LLM live — verify encounter_summon agent produces a pair-trade-compliant enemy."""
 import os
 
 import pytest
@@ -36,12 +36,12 @@ async def test_summon_forest_wolf(client):
         ],
     )
     out = await encounter_summon(client, input_)
-    # 페어 트레이드는 schema validator 가 강제 — 산출 자체가 invariant.
+    # The schema validator enforces pair-trade — the output itself is invariant.
     s = out.stats
     assert s.STR + s.CHA == 20
     assert s.DEX + s.WIS == 20
     assert s.CON + s.INT == 20
-    # race_id 는 가용 풀 안.
+    # race_id stays inside the available pool.
     assert out.race_id in ("wolf", "human")
-    # 한국어 출력.
+    # Korean output.
     assert any("가" <= ch <= "힣" for ch in out.name)

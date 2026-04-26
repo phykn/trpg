@@ -1,8 +1,7 @@
 import { View } from 'react-native';
 import { colors } from '@/design/tokens';
-import { CollapseButton } from './CollapseButton';
 import { ChipTab } from './ChipTab';
-import { MenuButton } from './MenuButton';
+import { IconButton, ICON_PATH } from './IconButton';
 import { PanelBody } from './PanelBody';
 import type { PanelSlot } from '@/types/ui';
 
@@ -21,7 +20,7 @@ export function ContextCard({ slots, activeId, onSelect, onCollapse }: {
         className="flex-row p-2 gap-0.5 items-center"
         style={panel ? { borderBottomWidth: 1, borderBottomColor: colors.border.default } : undefined}
       >
-        <CollapseButton onPress={onCollapse} />
+        <IconButton d={ICON_PATH.chevronUp} onPress={onCollapse} />
         <View className="flex-1 flex-row gap-0.5">
           {slots.map((s) => (
             <ChipTab
@@ -32,7 +31,7 @@ export function ContextCard({ slots, activeId, onSelect, onCollapse }: {
             />
           ))}
         </View>
-        <MenuButton />
+        <IconButton d={ICON_PATH.menu} />
       </View>
       {panel && <PanelBody panel={panel} />}
     </View>

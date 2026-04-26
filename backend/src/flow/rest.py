@@ -6,18 +6,11 @@ from collections.abc import AsyncIterator
 from ..domain.state import GameState
 from ..engines import recovery as recovery_engine
 from ..llm.client import LLMClient
+from ..mapping.to_front import rest_ambush_text, rest_completed_text
 from ..rules import RULES
 from . import encounter as encounter_engine
 from .combat_phase import start_combat_and_run_npc_phase
-from .dirty import Dirty, ToFrontFn, advance_time, finalize, next_log_id, push_log_entry
-
-from ..domain.memory import GMLogEntry
-
-
-def _push_gm(state: GameState, dirty: Dirty, text: str) -> dict:
-    log = GMLogEntry(id=next_log_id(state), kind="gm", text=text)
-    push_log_entry(state, log, dirty)
-    return {"type": "log_entry", "data": log.model_dump()}
+from .dirty import Dirty, ToFrontFn, advance_time, finalize, push_gm
 
 
 async def run_rest(
@@ -49,7 +42,7 @@ async def run_rest(
     actor = state.characters[state.player_id]
 
     if outcome == "encounter":
-        yield _push_gm(state, dirty, f"{actor.name}이(가) 잠들기 직전 적의 습격을 받는다.")
+        yield push_gm(state, dirty, rest_ambush_text(actor.name))
         async for ev in start_combat_and_run_npc_phase(
             state, enemy_ids, dirty, rng, surprise="enemy"
         ):
@@ -59,11 +52,6 @@ async def run_rest(
             yield ev
         return
 
-    hours = RULES.time.sleep_hours
-    yield _push_gm(
-        state, dirty,
-        f"{actor.name}은(는) 자리를 잡고 잠을 청한다. "
-        f"{hours}시간 후 푹 쉬고 일어나, HP/MP 가 모두 회복됐다.",
-    )
+    yield push_gm(state, dirty, rest_completed_text(actor.name, RULES.time.sleep_hours))
     async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev

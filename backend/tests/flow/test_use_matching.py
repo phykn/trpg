@@ -1,4 +1,4 @@
-"""§judge use action — surroundings 노출 + 평시·전투 turn 분기."""
+"""§judge use action — surroundings exposure + out-of-combat / combat turn branching."""
 import random
 import tempfile
 
@@ -92,7 +92,7 @@ def test_inventory_marks_weapons_as_equip_kind(fresh_state):
     s = build_surroundings(state, "player_01")
     assert len(s["inventory"]) == 1
     assert s["inventory"][0]["kind"] == "weapon"
-    # weapon 은 use 가 아니라 equip 매칭으로 가야 함
+    # weapons should match equip, not use
 
 
 def test_inventory_groups_qty(fresh_state):
@@ -113,7 +113,7 @@ def test_inventory_includes_quest_key_with_on_use(fresh_state):
     assert any(i["id"] == "quest_key" for i in s["inventory"])
 
 
-# --- 평시 use 분기 --------------------------------------------------------
+# --- Out-of-combat use branch ---------------------------------------------
 
 
 async def test_use_action_consumes_item_and_heals(fresh_state, tmp_data, monkeypatch):
@@ -131,12 +131,12 @@ async def test_use_action_consumes_item_and_heals(fresh_state, tmp_data, monkeyp
     )
     assert events[-1]["type"] == "done"
     assert state.characters["player_01"].hp == 18  # heal 8
-    # consumable=True 라 인벤에서 차감
+    # consumable=True so it is decremented from inventory
     assert state.characters["player_01"].inventory_ids == []
     assert state.turn_count == 1
 
 
-# --- 전투 중 use 분기 -----------------------------------------------------
+# --- In-combat use branch -------------------------------------------------
 
 
 async def test_combat_use_consumes_player_turn(fresh_state, tmp_data, monkeypatch):
@@ -174,6 +174,6 @@ async def test_combat_use_consumes_player_turn(fresh_state, tmp_data, monkeypatc
         if e["type"] == "combat_turn" and e["data"].get("action") == "use"
     ]
     assert use_evs
-    # 회복 적용 + 인벤 차감
-    assert state.characters["player_01"].hp >= 5  # 그리고 npc 가 깎을 수도 있음
+    # Heal applied + inventory decremented
+    assert state.characters["player_01"].hp >= 5  # the NPC may also have hit back
     assert "potion" not in state.characters["player_01"].inventory_ids

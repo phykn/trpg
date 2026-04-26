@@ -1,11 +1,12 @@
 from collections.abc import AsyncIterator
-from pathlib import Path
 
+from .._runner import read_prompt
 from ...llm.client import LLMClient
 from .parser import NarrativeDelta, NarrativeFinal, split_stream
 from .schema import NarrateInput
 
-PROMPT_PATH = Path(__file__).parent / "prompt.md"
+# narrate is stream-only — no 5-retry self-correction loop, just stream once and finish.
+PROMPT_PATH, _PROMPT = read_prompt(__file__)
 
 
 async def stream_narrate(
@@ -13,7 +14,7 @@ async def stream_narrate(
     input_: NarrateInput,
 ) -> AsyncIterator[NarrativeDelta | NarrativeFinal]:
     messages = [
-        {"role": "system", "content": PROMPT_PATH.read_text(encoding="utf-8")},
+        {"role": "system", "content": _PROMPT},
         {"role": "user", "content": input_.model_dump_json()},
     ]
 

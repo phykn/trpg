@@ -8,7 +8,9 @@ from datetime import datetime, timedelta
 
 from ..domain.errors import PersistenceFailed
 from ..domain.memory import (
+    ActLogEntry,
     DialoguePair,
+    GMLogEntry,
     LogEntry,
     TurnLogEntry,
 )
@@ -61,6 +63,20 @@ def push_log_entry(state: GameState, entry: LogEntry, dirty: Dirty) -> None:
     state.log_entries.append(entry)
     _trim(state.log_entries, RULES.log.display_turns)
     dirty.log.append(entry)
+
+
+def push_gm(state: GameState, dirty: Dirty, text: str) -> dict:
+    """Push one GM line and return the SSE log_entry payload."""
+    log = GMLogEntry(id=next_log_id(state), kind="gm", text=text)
+    push_log_entry(state, log, dirty)
+    return {"type": "log_entry", "data": log.model_dump()}
+
+
+def push_act(state: GameState, dirty: Dirty, text: str) -> dict:
+    """Push one player-action line and return the SSE log_entry payload."""
+    log = ActLogEntry(id=next_log_id(state), kind="act", text=text)
+    push_log_entry(state, log, dirty)
+    return {"type": "log_entry", "data": log.model_dump()}
 
 
 def push_turn_log(

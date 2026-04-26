@@ -148,7 +148,7 @@ def test_set_time_forward_and_reject_backward(state):
     assert r["applied"] == 1 and state.world_time == "0812-04-29T06:00:00"
     r = apply_changes(state, [{"type": "set_time", "value": "0812-04-28T00:00:00"}])
     assert r["applied"] == 0
-    assert "역행" in r["rejected"][0]["reason"]
+    assert "no time travel" in r["rejected"][0]["reason"]
 
 
 def test_move_valid_and_unknown(state):

@@ -1,4 +1,3 @@
-from ..domain.entities import EQUIPMENT_SLOTS
 from ..domain.state import GameState
 from .graph import GameGraph
 
@@ -30,9 +29,8 @@ def _build_npc_view(
     actor = state.characters[actor_id]
 
     equipped: dict[str, str] = {}
-    for slot in EQUIPMENT_SLOTS:
-        item_id = getattr(npc.equipment, slot)
-        if item_id and item_id in state.items:
+    for slot, item_id in npc.equipment.equipped_items():
+        if item_id in state.items:
             equipped[slot] = state.items[item_id].name
 
     inventory: list[dict] = []

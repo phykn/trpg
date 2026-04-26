@@ -4,7 +4,7 @@ from src.llm import LLMClient
 
 
 class PlayerAgent:
-    """QA 플레이어. system prompt = 성향, 매 턴 LLM 한 번 호출해 다음 입력 한 줄 생성."""
+    """QA player. The system prompt encodes a persona; one LLM call per turn yields the next single-line input."""
 
     def __init__(self, name: str, prompt_path: Path, llm: LLMClient):
         self.name = name
@@ -36,7 +36,7 @@ class PlayerAgent:
             think=False,
         )
         text = (result["answer"] or "").strip()
-        # LLM 이 따옴표·머리표를 붙이는 경우 정제
+        # strip quotes / leading labels the LLM sometimes adds
         text = text.strip('"').strip("'").strip()
         for prefix in ("다음 행동:", "행동:", "플레이어:", "나:", "주인공:"):
             if text.startswith(prefix):

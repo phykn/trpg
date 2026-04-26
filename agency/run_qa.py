@@ -1,8 +1,8 @@
-"""QA 실행 CLI.
+"""QA runner CLI.
 
-Usage (repo root 또는 어디서나):
-    python agency/qa/run_qa.py --agent diplomat --turns 15
-    python agency/qa/run_qa.py --agent all --turns 20 --profile default
+Usage (run from anywhere, repo root included):
+    python agency/run_qa.py --agent diplomat --turns 15
+    python agency/run_qa.py --agent all --turns 20 --profile default
 """
 
 import argparse
@@ -12,8 +12,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-# backend/src 의 모듈을 import 할 수 있도록 + run_api.py 도 import 가능
+ROOT = Path(__file__).resolve().parents[1]
+# expose backend/src and the top-level run_api module to imports
 sys.path.insert(0, str(ROOT / "backend"))
 sys.path.insert(0, str(ROOT))
 
@@ -35,18 +35,12 @@ from agency.qa.harness.runner import run_qa_session  # noqa: E402
 AGENTS = ["diplomat", "explorer", "provocateur"]
 
 
-# --- prompt paths ---------------------------------------------------------
-
-
 def _agent_prompt_path(name: str) -> Path:
     return ROOT / "agency" / "qa" / "agents" / f"{name}.md"
 
 
 def _reviewer_prompt_path() -> Path:
     return ROOT / "agency" / "qa" / "agents" / "reviewer.md"
-
-
-# --- index.md (run-level summary) ----------------------------------------
 
 
 def _write_index(
@@ -57,7 +51,6 @@ def _write_index(
     max_turns: int,
     rows: list[tuple[str, dict, Verdict]],
 ) -> None:
-    """run/index.md — agent 별 결과 요약."""
     parts: list[str] = []
     parts.append(f"# QA Run `{run_id}`")
     parts.append(f"- profile: `{profile}`")
@@ -80,7 +73,7 @@ def _write_index(
         )
 
     parts.append("")
-    parts.append("## 즉시 확인 필요 (high)")
+    parts.append("## High — investigate immediately")
     any_high = False
     for name, _summary, verdict in rows:
         for issue in verdict.issues:
@@ -88,10 +81,10 @@ def _write_index(
                 any_high = True
                 parts.append(f"- **{name}** [{issue.category}] {issue.summary}")
     if not any_high:
-        parts.append("- (없음)")
+        parts.append("- (none)")
 
     parts.append("")
-    parts.append("## 권장 점검 (medium)")
+    parts.append("## Medium — recommended review")
     any_med = False
     for name, _summary, verdict in rows:
         for issue in verdict.issues:
@@ -99,7 +92,7 @@ def _write_index(
                 any_med = True
                 parts.append(f"- **{name}** [{issue.category}] {issue.summary}")
     if not any_med:
-        parts.append("- (없음)")
+        parts.append("- (none)")
 
     index_path.write_text("\n".join(parts) + "\n", encoding="utf-8")
 
@@ -148,7 +141,7 @@ async def main_async(args: argparse.Namespace) -> None:
     profile_dir = (ROOT / "scenarios").resolve()
 
     run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
-    run_root = ROOT / "agency" / "qa" / "runs" / run_id
+    run_root = ROOT / "reports" / "qa" / run_id
     run_root.mkdir(parents=True, exist_ok=True)
 
     targets = AGENTS if args.agent == "all" else [args.agent]

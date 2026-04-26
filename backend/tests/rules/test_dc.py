@@ -1,13 +1,12 @@
 import random
 
 from src.domain.entities import Character, Stats
+from src.domain.types import int_to_tier, tier_to_int
 from src.rules.dc import (
     compute_grade,
-    int_to_tier,
     pick_dc,
     sigmoid_required_roll,
     social_bonus,
-    tier_to_int,
 )
 from src.rules import RULES
 

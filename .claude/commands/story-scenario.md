@@ -11,13 +11,13 @@ allowed-tools: Read, Glob, Write, Bash
 ## 0. 인자 파싱
 
 `$ARGUMENTS` 의 첫 토큰 = `<new_scenario_name>` (예: `default_claude`).
-두 번째 토큰 = `<prose-path>` (예: `agency/story/sources/default.md`).
+두 번째 토큰 = `<prose-path>` (예: `path/to/prose.md`).
 
 `<new_scenario_name>` 또는 `<prose-path>` 가 비어 있으면 멈추고 사용법 보고:
 
 ```
 사용법: /story-scenario <new_scenario_name> <prose-path>
-  예: /story-scenario default_claude agency/story/sources/default.md
+  예: /story-scenario default_claude path/to/prose.md
 ```
 
 `scenarios/<new_scenario_name>/` 가 이미 존재하면 멈추고 보고 (덮어쓰지 않음).

@@ -1,4 +1,4 @@
-"""장비 / 인벤토리 / 거래 — equip/unequip + carry + buy/sell + 흥정 가격."""
+"""Equipment / inventory / trade — equip/unequip + carry + buy/sell + bargain price."""
 import pytest
 
 from src.domain.entities import (
@@ -150,14 +150,14 @@ def test_equip_one_handed_displaces_two_handed():
     items = _items()
     inv.equip(p, "greatsword", "rightHand", items)
     inv.equip(p, "sword", "leftHand", items)
-    # greatsword 사라지고 sword 만 남음
+    # greatsword is displaced and only sword remains
     assert p.equipment.leftHand == "sword"
     assert p.equipment.rightHand is None
 
 
 def test_equip_required_stats_check():
     p = _player(inventory_ids=["strong_sword"])
-    p.stats.STR = 10  # 요구치 STR=15 미달
+    p.stats.STR = 10  # below the required STR=15
     with pytest.raises(InventoryInvalid, match="required"):
         inv.equip(p, "strong_sword", "leftHand", _items())
 
@@ -189,7 +189,7 @@ def test_unequip_clears_slot():
     inv.equip(p, "sword", "leftHand", items)
     inv.unequip(p, "leftHand", items)
     assert p.equipment.leftHand is None
-    # 인벤토리에는 그대로 남음
+    # still in inventory
     assert "sword" in p.inventory_ids
 
 
@@ -197,14 +197,14 @@ def test_unequip_two_handed_clears_both_slots():
     p = _player(inventory_ids=["greatsword"])
     items = _items()
     inv.equip(p, "greatsword", "leftHand", items)
-    inv.unequip(p, "rightHand", items)  # 어느 손이든 해제
+    inv.unequip(p, "rightHand", items)  # either hand unequips
     assert p.equipment.leftHand is None
     assert p.equipment.rightHand is None
 
 
 def test_unequip_idempotent_on_empty_slot():
     p = _player()
-    inv.unequip(p, "head", _items())  # raise 안 함
+    inv.unequip(p, "head", _items())  # does not raise
 
 
 # --- trade pricing --------------------------------------------------------
@@ -220,7 +220,7 @@ def test_buy_price_at_zero_affinity_is_base():
 def test_buy_price_with_positive_affinity_discount():
     items = _items()
     p = _player()
-    n = _npc(relations={"player_01": 30})  # discount = 0.3 (cap 0.5 미만)
+    n = _npc(relations={"player_01": 30})  # discount = 0.3 (below the 0.5 cap)
     assert inv.buy_price(items["sword"], n, p) == round(50 * 0.7)
 
 

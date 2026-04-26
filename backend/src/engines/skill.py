@@ -1,11 +1,11 @@
-"""스킬 cast — level/MP/사정거리 검증 + 효과 적용 (P3 §2.6).
+"""Skill cast — level/MP/range validation + effect application (P3 §2.6).
 
-cast 파이프라인 (S1, 핵심): level 게이트 → MP 검증 → 사정거리 검증 → AoE 대상 자동 →
-grade 보정 → 데미지/회복/버프 적용. S2: judge 의미 매칭. §2.3 4단계: LLM 학습 후보
-추천 (build_skill_from_candidate).
+Cast pipeline (S1, core): level gate → MP check → range check → AoE auto-target →
+grade adjustment → damage/heal/buff. S2: judge semantic matching. §2.3 step 4: LLM
+learn-candidate recommendation (build_skill_from_candidate).
 
-데미지·회복 베이스: `power + primary_stat_modifier`. grade_multipliers 로 stage 별 보정.
-정확한 계수는 튜닝 노브 — `rules.skill.grade_multipliers` 에서.
+Damage/heal base: `power + primary_stat_modifier`. grade_multipliers tunes per stage.
+Exact coefficients are a tuning knob — see `rules.skill.grade_multipliers`.
 """
 from __future__ import annotations
 
@@ -56,7 +56,7 @@ def _resolve_targets(
     state: GameState,
     requested: CastTargets,
 ) -> list[Character]:
-    """target 종류별 대상 캐릭터 리스트 반환. AoE 면 자동 확장."""
+    """Return target characters by target kind. AoE auto-expands."""
     if skill.target == "self":
         return [actor]
 
@@ -68,7 +68,7 @@ def _resolve_targets(
             raise SkillInvalid(f"unknown target: {tid}")
         return [state.characters[tid]]
 
-    # area: 같은 location 의 살아있는 캐릭터 전원 (자기 자신 제외).
+    # area: every living character in the same location (excluding the actor).
     if actor.location_id is None:
         raise SkillInvalid("area skill requires actor location")
     return [
@@ -79,7 +79,7 @@ def _resolve_targets(
 
 
 def _validate_range(actor: Character, skill: Skill, targets: list[Character]) -> None:
-    """현재 룰 — 다른 location 의 대상은 사거리 밖. 같은 location 안에서는 사거리 통과."""
+    """Current rule — targets in other locations are out of range; same-location targets always pass."""
     for t in targets:
         if t.id == actor.id:
             continue
@@ -137,10 +137,10 @@ def compute_cast_grade(
     *,
     rng: random.Random | None = None,
 ) -> tuple[Grade, int, int]:
-    """attack/debuff 스킬은 d20 굴림으로 grade 결정. heal/buff/self 는 success.
+    """attack/debuff skills resolve grade via a d20 roll. heal/buff/self are auto-success.
 
-    반환: (grade, nat_d20, required_roll). 비-attack/debuff 면 (success, 0, 0).
-    attack: target.defense 기준. debuff: target.WIS 저항 (10 + WIS_mod).
+    Returns (grade, nat_d20, required_roll). Non-attack/debuff returns (success, 0, 0).
+    attack: against target.defense. debuff: against target.WIS resistance (10 + WIS_mod).
     """
     if skill.type not in ("attack", "debuff") or not targets:
         return ("success", 0, 0)
@@ -171,9 +171,9 @@ def cast(
     grade: Grade | None = None,
     dirty: set[tuple[str, str]] | None = None,
 ) -> dict:
-    """skill_id 를 cast. 검증 통과 시 효과 적용, 결과 dict 반환.
+    """Cast skill_id. On validation pass, apply effects and return a result dict.
 
-    grade=None → 평시 cast (multiplier 1.0). judge 통합 시 grade 가 들어와 보정 적용.
+    grade=None → out-of-combat cast (multiplier 1.0). Once judge integration runs, the grade is supplied and used for adjustment.
     """
     skill = find_skill(actor, skill_id)
     _validate_gate(actor, skill)
@@ -221,7 +221,7 @@ def tick_active_buffs(
     *,
     dirty: set[tuple[str, str]] | None = None,
 ) -> int:
-    """매 턴 종료 시 호출. duration -1, 0 이 되면 제거. 제거된 버프 수 반환."""
+    """Called at each turn end. duration -1; remove on 0. Returns the count of removed buffs."""
     if not character.active_buffs:
         return 0
     surviving: list[ActiveBuff] = []
@@ -238,18 +238,17 @@ def tick_active_buffs(
     return removed
 
 
-# --- 학습 후보 (§2.3 4단계) ----------------------------------------------------
+# --- Learn candidates (§2.3 step 4) ------------------------------------------
 
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
-_HANGUL_TO_LATIN_PLACEHOLDER = "skill"
 
 
 def _slugify(name: str) -> str:
-    """한글 이름은 유의미한 ASCII 변환이 어려우니 placeholder. 영어가 섞여 있으면 그것만 추출."""
+    """Non-ASCII names cannot be meaningfully transliterated, so fall back to 'skill'."""
     ascii_only = "".join(ch for ch in name if ord(ch) < 128)
     base = _SLUG_RE.sub("_", ascii_only.lower()).strip("_")
-    return base or _HANGUL_TO_LATIN_PLACEHOLDER
+    return base or "skill"
 
 
 def _unique_skill_id(base: str, existing_ids: set[str]) -> str:
@@ -262,7 +261,7 @@ def _unique_skill_id(base: str, existing_ids: set[str]) -> str:
 
 
 def _template_for(skill_type: str, level: int) -> dict:
-    """type/level 기준 수치 템플릿. 정확한 계수는 P3 후속 튜닝."""
+    """Numeric template by type and level. Exact coefficients are a P3 tuning knob."""
     safe_level = max(0, level)
     if skill_type == "attack":
         return {
@@ -292,7 +291,7 @@ def build_skill_from_candidate(
     level: int,
     existing_ids: set[str],
 ) -> Skill:
-    """LLM 산출 candidate + level → Skill 객체. 엔진 측 수치는 _template_for 가 채움."""
+    """LLM-produced candidate + level → Skill object. Engine-side numerics come from _template_for."""
     base = _slugify(candidate.name)
     sid = _unique_skill_id(f"{base}_l{level}", existing_ids)
     template = _template_for(candidate.type, level)
@@ -313,7 +312,7 @@ def build_skill_from_candidate(
 
 
 def existing_skill_ids(state: GameState) -> set[str]:
-    """충돌 회피용 — 기존 모든 character 의 racial+learned skill id 모음."""
+    """For collision avoidance — collect every existing character's racial + learned skill ids."""
     ids: set[str] = set()
     for c in state.characters.values():
         for s in c.racial_skills:

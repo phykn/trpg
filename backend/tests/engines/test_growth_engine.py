@@ -1,10 +1,10 @@
-"""성장 엔진 — xp 곡선, level_up 페어 트레이드, HP/MP 재계산, 불변식 검증."""
+"""Growth engine — xp curve, level_up pair-trade, HP/MP recompute, invariant checks."""
 import pytest
 
 from src.domain.entities import Character, Stats
 from src.domain.errors import LevelUpInvalid
+from src.domain.types import STAT_PAIRS
 from src.engines.growth import (
-    PAIR_TRADE,
     assert_pair_trade_invariant,
     calc_max_hp,
     calc_max_mp,
@@ -47,7 +47,7 @@ def test_xp_curve_linear():
     assert xp_for_next_level(1) == base
     assert xp_for_next_level(2) == base * 2
     assert xp_for_next_level(5) == base * 5
-    assert xp_for_next_level(RULES.growth.max_level) == 0  # 만렙은 0
+    assert xp_for_next_level(RULES.growth.max_level) == 0  # max level → 0
 
 
 def test_can_afford_level_up_threshold():
@@ -65,7 +65,7 @@ def test_level_up_pair_trade_str_cha():
     assert p.level == 1
     assert p.stats.STR == 11
     assert p.stats.CHA == 9
-    # 페어 합 유지
+    # pair sum preserved
     assert p.stats.STR + p.stats.CHA == 20
     assert p.xp_pool == 1000 - RULES.growth.base_xp
 
@@ -73,24 +73,24 @@ def test_level_up_pair_trade_str_cha():
 def test_level_up_recalculates_max_hp_when_con_changes():
     p = _player(level=0)
     p.xp_pool = 1000
-    # CON 을 깎으면 max_hp 즉시 줄어든다.
+    # Reducing CON shrinks max_hp immediately.
     level_up(p, "INT", "CON")
     expected = calc_max_hp(p.level, p.stats.CON)
     assert p.max_hp == expected
-    # hp 가 새 max 보다 크면 clamp
+    # hp is clamped if it exceeds the new max
     assert p.hp <= p.max_hp
 
 
 def test_recalc_clamps_current_hp_mp_when_max_drops():
-    """현재 hp/mp 가 새 max 보다 크면 max 로 clamp."""
+    """If current hp/mp exceed the new max, they clamp down."""
     p = _player(level=5, stats=Stats(CON=14, INT=14))  # max_hp ~ 60
     p.hp = p.max_hp
     p.mp = p.max_mp
-    # 페어 트레이드 적용 후처럼 stat 강제 변경
+    # Force-mutate stats as if pair-trade was applied.
     p.stats.CON = 4
     p.stats.INT = 4
     recalc_max_hp_mp(p)
-    assert p.hp == p.max_hp  # 새 max 로 clamp
+    assert p.hp == p.max_hp  # clamped to new max
     assert p.mp == p.max_mp
 
 
@@ -98,14 +98,14 @@ def test_level_up_rejects_wrong_pair():
     p = _player(level=0)
     p.xp_pool = 1000
     with pytest.raises(LevelUpInvalid):
-        level_up(p, "STR", "DEX")  # STR 의 페어는 CHA
+        level_up(p, "STR", "DEX")  # STR's pair is CHA
 
 
 def test_level_up_rejects_when_stat_at_cap():
     p = _player(level=0, stats=Stats(STR=20, CHA=0))
     p.xp_pool = 1000
     with pytest.raises(LevelUpInvalid):
-        level_up(p, "STR", "CHA")  # STR 이미 20
+        level_up(p, "STR", "CHA")  # STR already at 20
 
 
 def test_level_up_rejects_when_pair_at_zero():
@@ -140,7 +140,7 @@ def test_level_up_does_not_modify_state_on_failure():
 
 def test_pair_trade_invariant_holds_for_default_stats():
     p = _player(level=0, stats=Stats())
-    assert_pair_trade_invariant(p)  # 기본값은 모두 10 → 합 20
+    assert_pair_trade_invariant(p)  # defaults are all 10 → sum 20
 
 
 def test_pair_trade_invariant_holds_after_level_up():
@@ -151,7 +151,7 @@ def test_pair_trade_invariant_holds_after_level_up():
 
 
 def test_pair_trade_invariant_violated_for_random_stats():
-    p = _player(stats=Stats(STR=14, CHA=14))  # 합 28
+    p = _player(stats=Stats(STR=14, CHA=14))  # sum 28
     with pytest.raises(ValueError, match="STR.*CHA"):
         assert_pair_trade_invariant(p)
 
@@ -171,14 +171,14 @@ def test_grant_xp_rejects_negative():
 
 
 def test_pair_trade_table_is_symmetric():
-    """STR↔CHA, DEX↔WIS, CON↔INT — 양방향."""
-    for a, b in PAIR_TRADE.items():
-        assert PAIR_TRADE[b] == a
+    """STR↔CHA, DEX↔WIS, CON↔INT — bidirectional."""
+    for a, b in STAT_PAIRS.items():
+        assert STAT_PAIRS[b] == a
 
 
 def test_recalc_max_hp_mp_uses_current_level_and_stats():
     p = _player(level=3, stats=Stats(CON=12, INT=8))
-    p.max_hp = 0  # 거짓 초기값
+    p.max_hp = 0  # bogus seed value
     p.max_mp = 0
     recalc_max_hp_mp(p)
     assert p.max_hp == calc_max_hp(3, 12)

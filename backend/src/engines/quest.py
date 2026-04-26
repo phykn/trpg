@@ -1,26 +1,26 @@
-"""퀘스트 자동 트리거·보상 적용·챕터 진행 (P3 §2.8).
+"""Quest auto-trigger / reward application / chapter progression (P3 §2.8).
 
-이벤트 (`event_type`, `target_id`) 가 들어오면 active quest 들의 triggers/fail_triggers 를
-순회하며 매칭. triggers 가 모두 충족되면 `completed` 로 전환 + 보상 적용. fail_triggers 가
-하나라도 충족되면 `failed`. 상태가 바뀐 quest 가 다른 quest 의 prerequisite_ids 에 들어
-있으면 `locked → active` 잠금 해제. chapter.progress 는 required=true 인 quest 만 카운트.
+When an event (`event_type`, `target_id`) arrives, scan triggers/fail_triggers of all
+active quests for matches. All triggers met → transition to `completed` and apply rewards.
+Any fail_trigger met → `failed`. If a quest whose status changed is in another quest's
+prerequisite_ids, unlock that quest (`locked → active`). chapter.progress only counts
+required=true quests.
 
-이벤트 종류 (자유 문자열, 시드가 정함):
-- "character_death" — combat 또는 use(damage) 로 적 처치
-- "location_enter" — apply_move 가 location 변경
-- "item_use" — use endpoint 가 아이템 사용
+Event types (free-form strings, defined by the seed):
+- "character_death" — enemy killed via combat or use(damage)
+- "location_enter" — apply_move changed the location
+- "item_use" — item used through the use endpoint
 """
 from __future__ import annotations
 
-from ..domain.entities import Chapter, Quest
-from ..rules import RULES  # noqa: F401  (튜닝 노브가 추가될 때 사용)
+from ..domain.entities import Quest
 from ..domain.state import GameState
 
 DirtySet = set[tuple[str, str]] | None
 
 
 def _ensure_runtime_fields(quest: Quest) -> None:
-    """triggers_met / fail_triggers_met 의 길이를 triggers 길이와 맞춤."""
+    """Align lengths of triggers_met / fail_triggers_met with their trigger lists."""
     if len(quest.triggers_met) != len(quest.triggers):
         quest.triggers_met = [False] * len(quest.triggers)
     if len(quest.fail_triggers_met) != len(quest.fail_triggers):
@@ -28,7 +28,7 @@ def _ensure_runtime_fields(quest: Quest) -> None:
 
 
 def _apply_rewards(state: GameState, quest: Quest, dirty: DirtySet) -> None:
-    """quest.rewards → 플레이어. P1·P2 단일 플레이어 전제."""
+    """quest.rewards → player. Assumes single-player (P1, P2)."""
     actor = state.characters.get(state.player_id)
     if actor is None:
         return
@@ -41,7 +41,7 @@ def _apply_rewards(state: GameState, quest: Quest, dirty: DirtySet) -> None:
 
 
 def _maybe_unlock_dependents(state: GameState, dirty: DirtySet) -> None:
-    """다른 quest 의 prerequisite_ids 가 모두 completed 면 locked → active."""
+    """If all prerequisite_ids of another quest are completed, flip locked → active."""
     for q in state.quests.values():
         if q.status != "locked":
             continue
@@ -59,7 +59,7 @@ def _maybe_unlock_dependents(state: GameState, dirty: DirtySet) -> None:
 
 
 def update_chapter_progress(state: GameState, dirty: DirtySet = None) -> None:
-    """모든 chapter 의 progress 재계산. required=true 인 quest 만 카운트."""
+    """Recompute progress for every chapter. Only required=true quests count."""
     for ch in state.chapters.values():
         required_quests = [
             state.quests[qid]
@@ -76,7 +76,7 @@ def update_chapter_progress(state: GameState, dirty: DirtySet = None) -> None:
 
 
 def _maybe_advance_chapters(state: GameState, dirty: DirtySet) -> None:
-    """chapter 의 required quest 가 모두 completed 면 active → completed."""
+    """If all required quests of a chapter are completed, flip active → completed."""
     for ch in state.chapters.values():
         if ch.status != "active":
             continue
@@ -92,10 +92,10 @@ def check_quests(
     target_id: str | None,
     dirty: DirtySet = None,
 ) -> list[str]:
-    """이벤트로 quest 평가. 상태가 바뀐 quest id 리스트 반환.
+    """Evaluate quests against an event. Returns the list of quest ids whose status changed.
 
-    같은 trigger 가 두 번 발화돼도 single-fire — `triggers_met[i]` 가 True 가 된 뒤로는
-    재평가 시 무시 (docs §2.8 단일 충족 모델).
+    Same trigger firing twice is single-fire — once `triggers_met[i]` flips True it is
+    ignored on re-evaluation (docs §2.8 single-satisfaction model).
     """
     changed: list[str] = []
     for q in state.quests.values():
@@ -122,7 +122,7 @@ def check_quests(
         if not any_change:
             continue
 
-        # 상태 전환: fail 우선 (한 trigger 만 발동돼도 fail).
+        # State transition: fail wins (any single fail_trigger flips the quest to failed).
         if any(q.fail_triggers_met):
             q.status = "failed"
             changed.append(q.id)

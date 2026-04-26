@@ -121,7 +121,7 @@ def test_hero_basic_fields(fresh_state):
 
 
 def test_hero_exp_uses_xp_pool_and_curve(fresh_state):
-    """to_hero 의 exp/expMax 가 xp_pool 과 xp_for_next_level 에서 온다."""
+    """to_hero's exp/expMax are sourced from xp_pool and xp_for_next_level."""
     from src.rules import RULES
 
     state = _full_state(fresh_state)
@@ -233,7 +233,7 @@ def test_to_combat_returns_none_when_no_combat_state(fresh_state):
 
 
 def test_to_combat_projects_round_actor_enemies(fresh_state):
-    from src.domain.entities import CombatState
+    from src.domain.state import CombatState
     from src.mapping.to_front import to_combat
 
     fresh_state.characters["player_01"] = Character(

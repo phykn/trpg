@@ -5,33 +5,14 @@ from ..domain.entities import Character
 from ..domain.types import Grade, Tier
 from ..rules import RULES
 
-_TIER_ORDER: tuple[Tier, ...] = (
-    "매우 쉬움",
-    "쉬움",
-    "보통",
-    "어려움",
-    "매우 어려움",
-    "전설",
-    "신화",
-)
-
-
-def tier_to_int(tier: Tier) -> int:
-    return _TIER_ORDER.index(tier) + 1
-
-
-def int_to_tier(value: int) -> Tier:
-    return _TIER_ORDER[value - 1]
-
 
 def pick_dc(tier: Tier, rng: random.Random | None = None) -> int:
     lo, hi = RULES.difficulty_class.tier_dc_ranges[tier]
     return (rng or random).randint(lo, hi)
 
 
-def sigmoid_required_roll(dc: int, stat: int, k: float | None = None) -> int:
-    if k is None:
-        k = RULES.difficulty_class.sigmoid.k
+def sigmoid_required_roll(dc: int, stat: int) -> int:
+    k = RULES.difficulty_class.sigmoid_k
     raw = 20 / (1 + math.exp(-k * (dc - stat)))
     return max(1, min(20, round(raw)))
 

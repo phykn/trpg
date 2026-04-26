@@ -1,8 +1,4 @@
-"""front_state → player-LLM 입력용 텍스트. PlayerAgent 가 매 턴 호출."""
-
-
 def format_state_summary(front_state: dict) -> str:
-    """front_state (mapping/to_front 출력) 를 player LLM 용 요약 텍스트로."""
     lines: list[str] = []
 
     place = front_state.get("place")

@@ -11,11 +11,15 @@ from ..domain.entities import (
     ArmorEffect,
     Character,
     ConsumableEffect,
+    Location,
     WeaponEffect,
 )
 from ..domain.state import GameState
 from ..engines.growth import can_afford_level_up, xp_for_next_level
 from ..rules import RULES
+
+
+# --- Common helpers (NPC state tags / item kind classification) --------------
 
 
 def _state_tags(actor: Character, npc: Character) -> list[str]:
@@ -46,6 +50,9 @@ def _item_kind(item) -> str:
     return "misc"
 
 
+# --- Inventory / equipment / skills / growth (actor-centric) -----------------
+
+
 def _inventory_payload(state: GameState, actor: Character) -> list[dict]:
     counts: Counter[str] = Counter(actor.inventory_ids)
     out: list[dict] = []
@@ -68,13 +75,10 @@ def _inventory_payload(state: GameState, actor: Character) -> list[dict]:
 
 
 def _equipment_payload(state: GameState, actor: Character) -> dict:
-    out: dict[str, dict | None] = {}
-    for slot in EQUIPMENT_SLOTS:
-        item_id = getattr(actor.equipment, slot)
-        if item_id and item_id in state.items:
+    out: dict[str, dict | None] = {slot: None for slot in EQUIPMENT_SLOTS}
+    for slot, item_id in actor.equipment.equipped_items():
+        if item_id in state.items:
             out[slot] = {"id": item_id, "name": state.items[item_id].name}
-        else:
-            out[slot] = None
     return out
 
 
@@ -121,6 +125,9 @@ def _skill_candidates_payload(state: GameState) -> list[dict]:
     ]
 
 
+# --- Location / nearby NPCs/items/connections / merchants (location-centric) -
+
+
 def _merchants_payload(state: GameState, actor: Character) -> list[dict]:
     """Same-location NPCs whose affinity passes the trade threshold and who carry stock."""
     if actor.location_id is None:
@@ -150,7 +157,9 @@ def _merchants_payload(state: GameState, actor: Character) -> list[dict]:
     return out
 
 
-def _entities_payload(state: GameState, actor_id: str, actor: Character, location) -> list[dict]:
+def _entities_payload(
+    state: GameState, actor_id: str, actor: Character, location: Location
+) -> list[dict]:
     entities: list[dict] = [{"id": actor_id, "name": actor.name, "type": "player"}]
     for cid, char in state.characters.items():
         if cid == actor_id or char.location_id != actor.location_id:
@@ -181,7 +190,7 @@ def _entities_payload(state: GameState, actor_id: str, actor: Character, locatio
     return entities
 
 
-def _location_payload(location) -> dict:
+def _location_payload(location: Location) -> dict:
     out: dict = {
         "id": location.id,
         "name": location.name,
@@ -194,6 +203,9 @@ def _location_payload(location) -> dict:
     if location.difficulty:
         out["difficulty"] = location.difficulty
     return out
+
+
+# --- Entry point (the dict the judge sees) -----------------------------------
 
 
 def build_surroundings(state: GameState, actor_id: str) -> dict:

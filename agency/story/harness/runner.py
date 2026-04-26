@@ -1,4 +1,4 @@
-"""Generic entity writer — LLM 호출 + Pydantic 검증 + 자기교정 루프 + 디스크 쓰기."""
+"""Generic entity writer — LLM call + Pydantic validation + self-correction loop + disk write."""
 
 import json
 import re
@@ -15,7 +15,7 @@ ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]{1,30}$")
 
 
 class EntityWriterError(Exception):
-    """semantic 검증 / 디스크 충돌 에러."""
+    """Raised on semantic-validation failures or on-disk conflicts."""
 
 
 def _noop_check(entity: BaseModel, refs: dict[str, set[str]]) -> None:
@@ -243,7 +243,7 @@ async def write_entity(
     extra_check: Callable[[BaseModel], None] | None = None,
     think: bool = True,
 ) -> tuple[BaseModel, list[dict]]:
-    """LLM 으로 entity 한 개 생성. 검증 실패 시 자기교정 루프 (retries 회)."""
+    """Have the LLM produce one entity. On validation failure, self-correct up to `retries` times."""
     if kind not in SPECS:
         raise EntityWriterError(
             f"알 수 없는 kind: {kind!r}. 가능한 값: {sorted(SPECS)}"
@@ -298,7 +298,7 @@ async def write_entity(
 
 
 def write_entity_to_disk(entity: BaseModel, scenario_dir: Path, kind: str) -> Path:
-    """scenarios/<scenario>/<sub_dir>/<id>.json 으로 저장. 이미 있으면 EntityWriterError."""
+    """Write to scenarios/<scenario>/<sub_dir>/<id>.json. Raises EntityWriterError if the file already exists (no overwrite)."""
     spec = SPECS[kind]
     eid: str = entity.id  # type: ignore[attr-defined]
     out_path = scenario_dir / spec.sub_dir / f"{eid}.json"

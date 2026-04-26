@@ -1,4 +1,4 @@
-"""퀘스트 자동 트리거·보상·챕터 진행 — character_death / location_enter / item_use."""
+"""Quest auto-triggers, rewards, chapter progression — character_death / location_enter / item_use."""
 from src.domain.entities import Chapter, Character, Quest, QuestRewards, QuestTrigger, Stats
 from src.engines import quest as q
 
@@ -48,7 +48,7 @@ def _state(fresh_state, *, quests=None, chapters=None):
     return fresh_state
 
 
-# --- 단일 trigger -----------------------------------------------------------
+# --- Single trigger ---------------------------------------------------------
 
 
 def test_single_trigger_completes_quest_and_applies_rewards(fresh_state):
@@ -98,11 +98,11 @@ def test_inactive_quest_skipped(fresh_state):
         ],
     )
     q.check_quests(state, "character_death", "goblin_01")
-    # locked 상태라 평가 안 함
+    # locked → not evaluated
     assert state.quests["q1"].status == "locked"
 
 
-# --- 복수 trigger AND -----------------------------------------------------
+# --- Multiple triggers (AND) ----------------------------------------------
 
 
 def test_multiple_triggers_require_all(fresh_state):
@@ -140,7 +140,7 @@ def test_same_trigger_event_fires_once(fresh_state):
     )
     q.check_quests(state, "character_death", "goblin_01")
     assert state.characters["player_01"].gold == 10
-    # 같은 이벤트 두 번 — 보상 중복 가산 안 됨
+    # Same event twice — rewards must not stack
     q.check_quests(state, "character_death", "goblin_01")
     assert state.characters["player_01"].gold == 10
 
@@ -163,7 +163,7 @@ def test_completing_quest_unlocks_dependents(fresh_state):
     )
     q.check_quests(state, "character_death", "goblin_01")
     assert state.quests["q1"].status == "completed"
-    assert state.quests["q2"].status == "active"  # 잠금 해제
+    assert state.quests["q2"].status == "active"  # unlocked
 
 
 # --- fail trigger ---------------------------------------------------------
@@ -184,7 +184,7 @@ def test_fail_trigger_marks_quest_failed(fresh_state):
     q.check_quests(state, "character_death", "civilian_01")
     qq = state.quests["q1"]
     assert qq.status == "failed"
-    # 보상 적용 안 됨
+    # Rewards not applied
     assert state.characters["player_01"].gold == 0
 
 
@@ -208,7 +208,7 @@ def test_chapter_progress_counts_required_only(fresh_state):
     )
     q.check_quests(state, "character_death", "goblin_01")
     ch = state.chapters["ch1"]
-    assert ch.progress.total == 1  # required=true 만
+    assert ch.progress.total == 1  # required=true only
     assert ch.progress.done == 1
 
 
@@ -222,18 +222,18 @@ def test_chapter_advances_when_all_required_complete(fresh_state):
     assert state.chapters["ch1"].status == "completed"
 
 
-# --- runtime field 정합 ---------------------------------------------------
+# --- Runtime field consistency --------------------------------------------
 
 
 def test_seed_quest_with_empty_triggers_met_gets_initialized(fresh_state):
-    """시드 quest 가 triggers_met=[] 로 들어올 수 있는데, 첫 평가에서 길이 맞춤."""
+    """Seed quests may arrive with triggers_met=[]; first evaluation aligns the length."""
     state = _state(
         fresh_state,
         quests=[
             _quest("q1", triggers=[_trig("a", "character_death", "g1")]),
         ],
     )
-    state.quests["q1"].triggers_met = []  # 시드 빈 상태
+    state.quests["q1"].triggers_met = []  # bare seed state
     q.check_quests(state, "character_death", "g1")
     qq = state.quests["q1"]
     assert qq.triggers_met == [True]
