@@ -229,3 +229,87 @@ def sell(
     player.gold += price
     npc.gold -= price
     return price
+
+
+# --- use ------------------------------------------------------------------
+
+
+def use(
+    actor: Character,
+    item_id: str,
+    target: Character | None,
+    items: dict[str, Item],
+    *,
+    dirty: set[tuple[str, str]] | None = None,
+) -> dict:
+    """ConsumableEffect 처리. target=None 이면 actor 자신.
+
+    consumable=True 인 아이템은 사용 후 인벤토리에서 1 개 차감. WeaponEffect/ArmorEffect
+    아이템은 use 대상 아님. on_use 트리거 (자유 텍스트 또는 trigger id) 는 결과에 그대로
+    실어 보냄 — quest trigger 평가는 §2.8 의 check_quests 에서 처리.
+    """
+    if item_id not in items:
+        raise InventoryInvalid(f"unknown item: {item_id}")
+    if item_id not in actor.inventory_ids:
+        raise InventoryInvalid(f"item not in inventory: {item_id}")
+    item = items[item_id]
+    eff = item.effects
+    if eff is not None and not isinstance(eff, ConsumableEffect):
+        raise InventoryInvalid(f"item {item_id} is not consumable")
+
+    recipient = target or actor
+    result: dict = {"item_id": item_id, "actor": actor.id, "target": recipient.id}
+
+    if eff is None:
+        # on_use 자유 텍스트만 있는 1 회성 아이템 (열쇠 등). 효과 없음.
+        result["kind"] = "trigger"
+    elif eff.effect == "heal":
+        amount = eff.amount
+        new_hp = min(recipient.max_hp, recipient.hp + amount)
+        actual = new_hp - recipient.hp
+        recipient.hp = new_hp
+        result["kind"] = "heal"
+        result["amount"] = actual
+    elif eff.effect == "damage":
+        if target is None:
+            raise InventoryInvalid(f"damage item requires target: {item_id}")
+        recipient.hp = max(0, recipient.hp - eff.amount)
+        if recipient.hp == 0:
+            recipient.alive = False
+        result["kind"] = "damage"
+        result["amount"] = eff.amount
+        if not recipient.alive:
+            result["dead"] = True
+    elif eff.effect == "mp_restore":
+        new_mp = min(recipient.max_mp, recipient.mp + eff.amount)
+        actual = new_mp - recipient.mp
+        recipient.mp = new_mp
+        result["kind"] = "mp_restore"
+        result["amount"] = actual
+    elif eff.effect == "buff":
+        from ..domain.entities import ActiveBuff
+
+        description = eff.description or item.name
+        duration = eff.duration or 0
+        recipient.active_buffs.append(
+            ActiveBuff(description=description, duration=duration)
+        )
+        result["kind"] = "buff"
+        result["description"] = description
+        result["duration"] = duration
+    else:
+        raise InventoryInvalid(f"unsupported consumable effect: {eff.effect}")
+
+    if item.on_use:
+        result["on_use"] = item.on_use
+
+    if item.consumable:
+        actor.inventory_ids.remove(item_id)
+        result["consumed"] = True
+
+    if dirty is not None:
+        dirty.add(("characters", actor.id))
+        if recipient.id != actor.id:
+            dirty.add(("characters", recipient.id))
+
+    return result

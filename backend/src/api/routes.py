@@ -33,6 +33,8 @@ from .schema import (
     TradeRequest,
     TurnRequest,
     UnequipRequest,
+    UseRequest,
+    UseResponse,
 )
 from .sse import streaming_response
 
@@ -300,6 +302,32 @@ async def session_cast(
         await save_entity(state, saves_dir, kind, eid)
     await save_meta(state, saves_dir)
     return CastResponse(
+        game_id=state.game_id, state=to_front_state(state), result=result
+    )
+
+
+@protected.post("/session/{game_id}/use", response_model=UseResponse)
+async def session_use(
+    request: Request, game_id: str, body: UseRequest
+) -> UseResponse:
+    try:
+        state = load_game(request.app.state.saves_dir, game_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="game not found")
+    player = state.characters[state.player_id]
+    target = state.characters.get(body.target_id) if body.target_id else None
+    if body.target_id and target is None:
+        raise HTTPException(status_code=422, detail=f"unknown target: {body.target_id}")
+    dirty: set[tuple[str, str]] = set()
+    try:
+        result = inventory_engine.use(player, body.item_id, target, state.items, dirty=dirty)
+    except InventoryInvalid as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    saves_dir = request.app.state.saves_dir
+    for kind, eid in dirty:
+        await save_entity(state, saves_dir, kind, eid)
+    await save_meta(state, saves_dir)
+    return UseResponse(
         game_id=state.game_id, state=to_front_state(state), result=result
     )
 

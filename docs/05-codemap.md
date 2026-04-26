@@ -28,7 +28,7 @@ backend/
   src/
     rules.py                     DC·시간·소셜·메모리·로그·전투·사망·회복 수치 (P3 회복: encounter_chance / sleep_hours, 거래·성장은 P3 후속). frozen Pydantic — 변경 시도하면 에러.
     api/
-      routes.py                  /profiles, /session/current, /session/init, /session/{id}/state, /turn, /roll, /level-up, /equip, /unequip, /buy, /sell, /cast
+      routes.py                  /profiles, /session/current, /session/init, /session/{id}/state, /turn, /roll, /level-up, /equip, /unequip, /buy, /sell, /cast, /use
       schema.py                  네트워크로 주고받는 Pydantic 모델 (ProfileListResponse, InitRequest/Response, TurnRequest, RollRequest)
       sse.py                     이벤트를 텍스트로 직렬화, StreamingResponse 헬퍼
     pipeline/
@@ -40,7 +40,7 @@ backend/
       combat.py                  P2 전투 엔진 (LLM 미사용). 명중·데미지 (시그모이드 + dual-wield + crit) / 이니셔티브 / NPC AI / flee / 사망·revive·death-save / combat_state 라이프사이클 / surprise 첫 라운드 skip
       recovery.py                P3 §2.4 회복 (rest). 위험도 굴림으로 풀회복 vs 인카운터 분기, sleep_hours 만큼 world_time 점프, sleep_encounters 풀에서 enemy 선택
       growth.py                  P3 §2.3 성장 (level_up). xp_for_next_level 곡선, 페어 트레이드 (STR↔CHA·DEX↔WIS·CON↔INT), recalc_max_hp_mp, grant_xp, assert_pair_trade_invariant
-      inventory.py               P3 §2.5 장비/거래. equip/unequip (슬롯·요구치·two_handed), check_can_carry (STR × weight_per_strength), buy/sell (affinity 흥정 cap, trade_threshold), buy_price/sell_price
+      inventory.py               P3 §2.5 장비/거래 + §2.7 사용. equip/unequip (슬롯·요구치·two_handed), check_can_carry (STR × weight_per_strength), buy/sell (affinity 흥정 cap, trade_threshold), use (ConsumableEffect heal/damage/mp_restore/buff + on_use trigger 패스스루)
       skill.py                   P3 §2.6 스킬 cast (S1 핵심). level/MP/range 검증, target self/single/area, grade_multipliers 보정, ActiveBuff 추가/tick. 의미 매칭·LLM 학습 후보 (S2/S3) 는 후속.
       turn.py                    `run_turn` / `run_roll` 흐름 지휘 (SSE 이벤트 방출). combat_state 살아있으면 combat 분기로 라우팅
     state/

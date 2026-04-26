@@ -80,3 +80,14 @@ class CastResponse(BaseModel):
     game_id: str
     state: dict
     result: dict
+
+
+class UseRequest(BaseModel):
+    item_id: str
+    target_id: str | None = None
+
+
+class UseResponse(BaseModel):
+    game_id: str
+    state: dict
+    result: dict
