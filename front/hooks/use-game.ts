@@ -3,6 +3,7 @@ import React from 'react';
 import {
   getCurrentSession,
   initSession,
+  streamIntro,
   streamRoll,
   streamTurn,
 } from '@/services';
@@ -58,6 +59,57 @@ export function useGame() {
     setLog(s.log);
   }, []);
 
+  const handleEvent = React.useCallback(
+    (ev: StreamEvent) => {
+      switch (ev.type) {
+        case 'judge':
+          // 디버그용 — UI 영향 없음
+          return;
+        case 'pending_check':
+          setPending(ev.data);
+          return;
+        case 'narrative_delta':
+          setStreamingText((t) => t + ev.data.text);
+          return;
+        case 'log_entry':
+          setLog((L) => mergeEntry(L, ev.data));
+          return;
+        case 'state':
+          applyState(ev.data);
+          setStreamingText('');
+          return;
+        case 'done':
+          return;
+        case 'error':
+          setErrorMessage(ev.data.message);
+          return;
+      }
+    },
+    [applyState],
+  );
+
+  const runStream = React.useCallback(
+    async (call: (signal: AbortSignal) => Promise<void>, opts: { clearPending: boolean }) => {
+      if (streaming) return;
+      const controller = new AbortController();
+      aborts.current.add(controller);
+      setStreaming(true);
+      setErrorMessage(null);
+      try {
+        await call(controller.signal);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setErrorMessage(err instanceof Error ? err.message : String(err));
+      } finally {
+        aborts.current.delete(controller);
+        setStreaming(false);
+        setStreamingText('');
+        if (opts.clearPending) setPending(null);
+      }
+    },
+    [streaming],
+  );
+
   const refresh = React.useCallback(async () => {
     setStatus('loading');
     setErrorMessage(null);
@@ -91,63 +143,16 @@ export function useGame() {
         setPending(null);
         setStreamingText('');
         setStatus('ready');
+        await runStream(
+          (signal) => streamIntro(payload.game_id, handleEvent, signal),
+          { clearPending: false },
+        );
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : String(err));
         setStatus('error');
       }
     },
-    [applyState],
-  );
-
-  const handleEvent = React.useCallback(
-    (ev: StreamEvent) => {
-      switch (ev.type) {
-        case 'judge':
-          // 디버그용 — UI 영향 없음
-          return;
-        case 'pending_check':
-          setPending(ev.data);
-          return;
-        case 'narrative_delta':
-          setStreamingText((t) => t + ev.data.text);
-          return;
-        case 'log_entry':
-          setLog((L) => mergeEntry(L, ev.data));
-          return;
-        case 'state':
-          applyState(ev.data);
-          setStreamingText('');
-          return;
-        case 'done':
-          return;
-        case 'error':
-          setErrorMessage(ev.data.message);
-          return;
-      }
-    },
-    [applyState],
-  );
-
-  const runStream = React.useCallback(
-    async (call: (signal: AbortSignal) => Promise<void>, opts: { clearPending: boolean }) => {
-      if (!gameId || streaming) return;
-      const controller = new AbortController();
-      aborts.current.add(controller);
-      setStreaming(true);
-      setErrorMessage(null);
-      try {
-        await call(controller.signal);
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        setErrorMessage(err instanceof Error ? err.message : String(err));
-      } finally {
-        aborts.current.delete(controller);
-        setStreaming(false);
-        setStreamingText('');
-        if (opts.clearPending) setPending(null);
-      }
-    },
-    [gameId, streaming],
+    [applyState, handleEvent, runStream],
   );
 
   const onSend = React.useCallback(

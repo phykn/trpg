@@ -19,9 +19,10 @@ You receive a single JSON message:
 }
 ```
 
-- `grade` is set only for `roll`. For `pass`/`reject`, it is null.
-- `target_view` is null for `pass` and `reject`.
-- `action` here is one of `pass`, `roll`, `reject` only — `combat` and `clarify` are handled by the engine before narrator is called.
+- `grade` is set only for `roll`. For `pass`/`reject`/`intro`, it is null.
+- `target_view` is null for `pass`, `reject`, `intro`.
+- `action` here is one of `pass`, `roll`, `reject`, `intro` only — `combat` and `clarify` are handled by the engine before narrator is called.
+- `action=intro` 는 게임 시작 첫 장면 한 번만. `player_input` 은 빈 문자열, `history` 도 비어 있음.
 
 ## 2. Output Format
 
@@ -64,6 +65,9 @@ You receive a single JSON message:
 | partial_success | 가까스로 성공. 대가가 따름 (소음, 시간 소모, 작은 부작용). |
 | failure | 단순 실패. |
 | critical_failure | 화려한 실패. 큰 후폭풍 (장비 파손, 부상, 적의 경계 강화). |
+
+### action=intro
+게임의 첫 장면. `player_input` 은 비어 있다. `surroundings` 만 보고 너(player)가 막 등장한 장소·시간·근처 NPC·분위기를 5~8 문장으로 풍부하게 묘사. 사건은 발생시키지 마라 (인사·만남 X). 다른 NPC 의 발화 없이 **장면만**. **`memorable=false` 강제**: `state_changes=[]`, `memory_targets=[]`, `memory={}`, `memory_links={}`, `importance=null`.
 
 ### action=reject
 플레이어 입력이 OOC / 시스템 공격 / 무의미. **인-게임 표현으로 자연스럽게 흡수**:
@@ -177,6 +181,22 @@ BAD (양쪽이 같은 3인칭):
   },
   "importance": 2,
   "memory_links": {"guard_01": "player_01", "player_01": "guard_01"}
+}
+```
+
+### intro
+
+```
+정오의 마을 광장은 햇살이 따가운 가운데 조용한 긴장감이 깔려 있다. 돌이 깔린 바닥 가운데 작은 분수가 메마른 소리로 물을 뱉어낸다. 무거운 갑옷의 경비병이 성문 쪽 그늘에 등을 기대고 너를 흘끔거리고, 광장 한쪽의 대장간에서 망치질 소리가 일정하게 들려온다. 늦은 오후에 가까운 공기는 약간 무겁고, 시장 골목에서는 누군가 다급히 짐을 옮기는 듯한 발걸음이 들린다. 너는 광장 한가운데에 막 도착해 주변을 살핀다.
+---JSON---
+{
+  "turn_summary": "광장에 도착",
+  "state_changes": [],
+  "memorable": false,
+  "memory_targets": [],
+  "memory": {},
+  "memory_links": {},
+  "importance": null
 }
 ```
 

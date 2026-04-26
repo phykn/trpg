@@ -242,6 +242,54 @@ async def run_turn(
     yield {"type": "done", "data": {}}
 
 
+# --- /intro ----------------------------------------------------------------
+
+
+async def run_intro(
+    client: LLMClient,
+    state: GameState,
+    profile_dir: str,
+    data_dir: str,
+    *,
+    to_front_fn: ToFrontFn | None = None,
+) -> AsyncIterator[dict]:
+    """게임 시작 직후 한 번만 호출되는 첫 GM intro.
+
+    judge 를 거치지 않고 narrate 만 호출. player_input 은 비어 있음.
+    turn_count·world_time 은 진행하지 않음 (장면 도입은 한 호흡이 0턴).
+    """
+    judge_result = {"action": "intro"}
+    body = ""
+    final: NarrativeFinal | None = None
+    async for item in run_narrate(
+        client, state, profile_dir, "",
+        judge_result=judge_result,
+        grade=None,
+    ):
+        if isinstance(item, NarrativeDelta):
+            yield {"type": "narrative_delta", "data": {"text": item.text}}
+            body += item.text
+        else:
+            final = item
+    assert final is not None
+
+    apply_changes(state, final.output.state_changes)
+    _push_turn_log(state, None, final.output.turn_summary)
+    write_memories(state, final.output, turn=state.turn_count)
+
+    gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=body)
+    _push_log_entry(state, gm_log)
+
+    try:
+        await save_game(state, data_dir)
+    except PersistenceFailed as e:
+        yield {"type": "error", "data": {"message": str(e), "code": "PersistenceFailed"}}
+        return
+    if to_front_fn:
+        yield {"type": "state", "data": to_front_fn(state)}
+    yield {"type": "done", "data": {}}
+
+
 # --- /roll -----------------------------------------------------------------
 
 

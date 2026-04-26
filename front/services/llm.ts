@@ -125,3 +125,16 @@ export function streamRoll(
     signal,
   );
 }
+
+export function streamIntro(
+  gameId: string,
+  onEvent: (ev: StreamEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  return streamSse(
+    `${BASE_URL}/session/${gameId}/intro`,
+    { method: 'POST', body: '{}' },
+    onEvent,
+    signal,
+  );
+}

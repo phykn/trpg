@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from ..errors import ProfileNotFound, RaceNotFound
 from ..mapping.to_front import to_front_state
-from ..pipeline.turn import run_roll, run_turn
+from ..pipeline.turn import run_intro, run_roll, run_turn
 from ..state.init import init_game
 from ..state.store import load_game, read_current_game_id
 from .auth import require_basic_auth
@@ -129,6 +129,21 @@ async def session_roll(request: Request, game_id: str):
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     return streaming_response(run_roll(
+        request.app.state.llm,
+        state,
+        request.app.state.profile_dir,
+        request.app.state.data_dir,
+        to_front_fn=to_front_state,
+    ))
+
+
+@protected.post("/session/{game_id}/intro")
+async def session_intro(request: Request, game_id: str):
+    try:
+        state = load_game(request.app.state.data_dir, game_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="game not found")
+    return streaming_response(run_intro(
         request.app.state.llm,
         state,
         request.app.state.profile_dir,
