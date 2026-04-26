@@ -328,10 +328,12 @@ def start_combat(
     state: GameState,
     enemy_ids: list[str],
     rng: random.Random | None = None,
+    surprise: Literal["player", "enemy"] | None = None,
 ) -> CombatState:
     """combat_state 부팅. 참가자 = player + enemy_ids, 이니셔티브 굴려 정렬.
 
-    state.combat_state 에 직접 박아 반환.
+    state.combat_state 에 직접 박아 반환. surprise='enemy' 면 첫 라운드 player 가 행동
+    못 함 (잠 자다 습격 같은 케이스).
     """
     participants_ids = [state.player_id, *enemy_ids]
     participants = [state.characters[pid] for pid in participants_ids]
@@ -340,7 +342,7 @@ def start_combat(
         turn_order=order,
         current_turn=0,
         round=1,
-        surprise=None,
+        surprise=surprise,
         enemy_ids=list(enemy_ids),
     )
     state.combat_state = cs

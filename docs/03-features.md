@@ -240,7 +240,7 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
 **자연 회복 없음** — HP/MP 는 시간이 흘러도 자동으로 차지 않는다. 잠을 자야만 회복. 깎인 자원이 시간만으로 안 메워지니까 휴식 장소·타이밍 선택이 자원 사이클의 핵심이 된다.
 
-**`rest(location_id)` endpoint** — 그 장소에서 잠을 잠. 잠 시간 = `rules.time.sleep_hours` (기본 8). 그 시간만큼 `world_time` 진행 (§2.1). 인카운터 없으면 HP/MP 둘 다 max 로 **풀회복** — 부분 휴식이나 시간당 비례 회복 같은 중간 단계는 없다.
+**자연어 트리거** — 별도 endpoint 가 아니라 judge 가 자연어 입력을 `{action: "rest"}` 로 분류한다 ("잠을 잔다" / "야영한다" / "눈을 붙인다" 류). 짧은 휴식 ("한숨 돌린다") 은 여전히 `pass`. `/turn` 이 rest 분기로 빠지면 잠 시간 = `rules.time.sleep_hours` (기본 8) 만큼 `world_time` 진행 (§2.1). 인카운터 없으면 HP/MP 둘 다 max 로 **풀회복** — 부분 휴식이나 시간당 비례 회복 같은 중간 단계는 없다.
 
 **장소별 위험도** — `Location.sleep_risk: Literal["safe", "risky", "dangerous"]`:
 
@@ -258,15 +258,15 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 - `surprise="enemy"` 로 전투 시작 (§1.2). 플레이어는 첫 라운드 행동 불가.
 - 적 결정: `Location.sleep_encounters: list[character_id]` 풀이 우선. 풀이 비어있으면 narrator 가 LLM 즉석 생성.
 
-**LLM 즉석 적 산출 분담** (풀이 비었을 때, §2.6 스킬 추천과 같은 패턴 — LLM 은 분류만, 엔진은 수치):
+**LLM 즉석 적 산출 분담** (풀이 비었을 때, §2.6 스킬 추천과 같은 패턴 — LLM 은 분류만, 엔진은 수치) **— 후속 단계, 현 구현은 풀 비어있으면 풀회복으로 fallback**:
 
 - LLM 이 정함: `name`, `description`, `race` (또는 `appearance` 한 줄), `role`, `disposition`, `special_traits`. 장소 컨텍스트 (지형·시간·이전 사건) 를 보고 결정 — 숲 → 늑대, 동굴 → 박쥐, 도시 뒷골목 → 도적.
 - 엔진이 정함: `id`; `level` (장소 위험도 매핑 — risky 는 플레이어 level ±2, dangerous 는 ±4 같은 식. 결과는 `max(0, ...)` 로 clamp — 시작 level=0 부근에서 음수 방지); HP/MP (§2.3 공식); stats (**페어 트레이드 불변식 — STR+CHA=20, DEX+WIS=20, CON+INT=20** 강제, 합 60 은 자동, 컨셉에 맞춰 분포 — 트롤 = STR 18 / CHA 2, DEX 6 / WIS 14, CON 16 / INT 4 같은 식); `combat_behavior` 디폴트.
 - 새 character 는 `create` state_change 로 `state.characters` 에 등록 (§6.1 의 내부 전용 타입).
 
-**P1 폴백** — "휴식한다" 같은 자연어는 `{action: "pass"}` + narrator 의 `set_time` 으로 **시간 점프만** 반영된다. HP/MP 는 엔진 전용 필드라 narrator 가 직접 못 건드려서 **회복은 안 됨**. P3 에서 정식 endpoint 가 노출되며 그때 회복·인카운터가 함께 일어난다.
+**전투 중 rest 거절** — combat_state 가 살아 있으면 "전투 중에는 잠들 수 없다" 한 줄로 거절. judge prompt 가 1차 차단, turn.py 가 2차 방어.
 
-코드 위치는 P3 작업 시 `src/pipeline/growth/` 에서 분리 검토 (회복은 자원 사이클, 성장은 영구 능력 변경 — 메커닉 성격이 다름).
+코드 위치 — `src/pipeline/recovery.py` 에 회복 룰, `pipeline/turn.py` 의 `_run_rest` 가 라우팅. (성장 §2.3 도입 시 `src/pipeline/growth/` 별도 분리 검토 — 회복은 자원 사이클, 성장은 영구 능력 변경.)
 
 ### 2.5 장비 / 인벤토리 / 거래 [P3]
 

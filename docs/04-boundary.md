@@ -104,7 +104,7 @@
 
 **인증** — 위 6 개 endpoint 모두 HTTP Basic Auth 로 보호. `GET /profiles` 도 예외 아님 — 같은 LAN 안에서도 시나리오 메타 노출은 인증 뒤. `BASIC_AUTH_USER` / `BASIC_AUTH_PASS` env 누락 시 fail-fast ([01-overview.md](./01-overview.md) 환경 변수 부록).
 
-P1 에서는 빠지는 엔드포인트 — 장비·소비·캐스트·휴식·레벨업·거래는 전부 [P3] ([03-features.md](./03-features.md) §2.3-§2.7, [01-overview.md](./01-overview.md) §3.9). 전투는 P2 부터 동작 — judge 가 `action="combat"` 반환하면 엔진이 `combat_state` 를 띄우고 라운드 루프 진입 ([03-features.md](./03-features.md) §1).
+P1 에서는 빠지는 엔드포인트 — 장비·소비·캐스트·레벨업·거래는 전부 [P3] ([03-features.md](./03-features.md) §2.3-§2.7, [01-overview.md](./01-overview.md) §3.9). 전투는 P2 부터 동작 — judge 가 `action="combat"` 반환하면 엔진이 `combat_state` 를 띄우고 라운드 루프 진입 ([03-features.md](./03-features.md) §1). 휴식은 P3 §2.4 부터 — 자연어가 `action="rest"` 로 분류되면 `/turn` 안에서 회복·인카운터를 처리하므로 별도 endpoint 없음.
 
 ## 3. 에러 매핑
 

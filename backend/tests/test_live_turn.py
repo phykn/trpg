@@ -132,6 +132,32 @@ async def test_roll_without_pending_blocked(client, env):
             pass
 
 
+async def test_rest_branch_classified_by_judge(client, env):
+    """판정자가 '잠을 잔다' 를 'rest' 로 분류 → 회복 분기 진입, HP/MP 풀회복."""
+    gs, profile_dir, saves_dir = env
+    # 광장은 default safe — 풀회복 보장.
+    player = gs.characters["player_01"]
+    player.hp = 4
+    player.mp = 2
+
+    events = await _collect_events(
+        run_turn(
+            client,
+            gs,
+            profile_dir,
+            saves_dir,
+            "여기서 잠을 청한다.",
+            rng=random.Random(1),
+        )
+    )
+    types = [e["type"] for e in events]
+    judge_event = next(e for e in events if e["type"] == "judge")
+    assert judge_event["data"]["action"] == "rest"
+    assert types[-1] == "done"
+    assert player.hp == player.max_hp
+    assert player.mp == player.max_mp
+
+
 async def test_combat_branch_boots_combat_state(client, env):
     """판정자가 'combat' 으로 분류 → 엔진이 combat_state 부팅 + combat_start SSE 발행."""
     gs, profile_dir, saves_dir = env

@@ -40,8 +40,12 @@ class RollAction(_StrictAction):
     reason: str = Field(min_length=1, max_length=80)
 
 
+class RestAction(_StrictAction):
+    action: Literal["rest"]
+
+
 JudgeOutput = Annotated[
-    PassAction | RejectAction | CombatAction | ClarifyAction | RollAction,
+    PassAction | RejectAction | CombatAction | ClarifyAction | RollAction | RestAction,
     Field(discriminator="action"),
 ]
 

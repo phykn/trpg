@@ -2,6 +2,7 @@ import random
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import Literal
 
 from ..domain.entities import Character
 from ..domain.memory import (
@@ -25,6 +26,7 @@ from ..llm_client.agents.dc_judge.schema import (
     CombatAction,
     PassAction,
     RejectAction,
+    RestAction,
     RollAction,
 )
 from ..llm_client.agents.narrate import NarrativeDelta, NarrativeFinal
@@ -40,6 +42,7 @@ from ..state.store import (
 )
 from .apply import apply_changes
 from . import combat as combat_engine
+from . import recovery as recovery_engine
 from .dc import compute_grade, pick_dc, sigmoid_required_roll, social_bonus, tier_to_int
 from .judge import run_judge
 from .memory_writer import write_memories
@@ -255,6 +258,31 @@ async def _run_combat_npc_phase(
             yield {"type": "combat_end", "data": {"outcome": "victory"}}
             combat_engine.end_combat(state)
             return
+
+        # 첫 라운드 기습 대상은 행동 불가 (docs §1.2). player 차례여도 자동 skip.
+        cs = state.combat_state
+        if cs is not None and cs.round == 1 and cs.surprise is not None:
+            is_player = actor_id == state.player_id
+            skip = (cs.surprise == "enemy" and is_player) or (
+                cs.surprise == "player" and not is_player
+            )
+            if skip:
+                actor_name = (
+                    state.characters[actor_id].name
+                    if actor_id in state.characters
+                    else actor_id
+                )
+                text = f"{actor_name}은(는) 기습당해 첫 라운드 행동하지 못한다."
+                gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+                _push_log_entry(state, gm_log, dirty)
+                yield {"type": "log_entry", "data": gm_log.model_dump()}
+                yield {
+                    "type": "combat_turn",
+                    "data": {"actor": actor_id, "action": "skip", "grade": "success"},
+                }
+                combat_engine.advance_turn(state)
+                continue
+
         if actor_id == state.player_id:
             return
 
@@ -304,8 +332,9 @@ async def _start_combat_and_run_npc_phase(
     enemy_ids: list[str],
     dirty: _Dirty,
     rng: random.Random | None,
+    surprise: Literal["player", "enemy"] | None = None,
 ) -> AsyncIterator[dict]:
-    cs = combat_engine.start_combat(state, enemy_ids, rng=rng)
+    cs = combat_engine.start_combat(state, enemy_ids, rng=rng, surprise=surprise)
     text = "전투 개시!"
     gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
     _push_log_entry(state, gm_log, dirty)
@@ -439,12 +468,62 @@ async def _run_combat_player_turn(
             yield ev
         return
 
+    if isinstance(result, RestAction):
+        # 전투 중엔 잠 못 잠. judge prompt 가 막아줄 일이지만 방어.
+        text = "전투 중에는 잠들 수 없다."
+        act_log = ActLogEntry(id=_next_log_id(state), kind="act", text=text)
+        _push_log_entry(state, act_log, dirty)
+        yield {"type": "log_entry", "data": act_log.model_dump()}
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
     # RejectAction — 전투 안에서는 narrate 부르지 않고 짧은 거절. turn 안 늘림.
     assert isinstance(result, RejectAction)
     text = "그 발화는 무시된다."
     act_log = ActLogEntry(id=_next_log_id(state), kind="act", text=text)
     _push_log_entry(state, act_log, dirty)
     yield {"type": "log_entry", "data": act_log.model_dump()}
+    async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+        yield ev
+
+
+async def _run_rest(
+    state: GameState,
+    saves_dir: str,
+    dirty: _Dirty,
+    rng: random.Random | None,
+    to_front_fn: ToFrontFn | None,
+) -> AsyncIterator[dict]:
+    """평시 rest 분기. 위험도 굴림으로 풀회복 vs 인카운터 분기."""
+    state.turn_count += 1
+    outcome, enemy_ids = recovery_engine.attempt_rest(
+        state, state.player_id, rng=rng, dirty=dirty.entities
+    )
+    actor = state.characters[state.player_id]
+
+    if outcome == "encounter":
+        text = f"{actor.name}이(가) 잠들기 직전 적의 습격을 받는다."
+        gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+        _push_log_entry(state, gm_log, dirty)
+        yield {"type": "log_entry", "data": gm_log.model_dump()}
+        async for ev in _start_combat_and_run_npc_phase(
+            state, enemy_ids, dirty, rng, surprise="enemy"
+        ):
+            yield ev
+        _advance_time(state)
+        async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    hours = RULES.time.sleep_hours
+    text = (
+        f"{actor.name}은(는) 자리를 잡고 잠을 청한다. "
+        f"{hours}시간 후 푹 쉬고 일어나, HP/MP 가 모두 회복됐다."
+    )
+    gm_log = GMLogEntry(id=_next_log_id(state), kind="gm", text=text)
+    _push_log_entry(state, gm_log, dirty)
+    yield {"type": "log_entry", "data": gm_log.model_dump()}
     async for ev in _finalize(state, saves_dir, dirty, to_front_fn):
         yield ev
 
@@ -622,6 +701,11 @@ async def run_turn(
         async for ev in _emit_roll_pending(state, saves_dir, player_input, result, dirty):
             yield ev
         return  # Wait for the /roll call — don't emit `done`.
+
+    if isinstance(result, RestAction):
+        async for ev in _run_rest(state, saves_dir, dirty, rng, to_front_fn):
+            yield ev
+        return
 
     # action == pass / reject — enter the narrator.
     assert isinstance(result, (PassAction, RejectAction))

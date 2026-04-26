@@ -45,6 +45,15 @@ class LogConfig(_F):
 
 class TimeConfig(_F):
     turn_min: int = 1
+    sleep_hours: int = 8
+
+
+class RecoveryConfig(_F):
+    encounter_chance: dict[str, float] = {
+        "safe": 0.0,
+        "risky": 0.25,
+        "dangerous": 0.6,
+    }
 
 
 class CarryConfig(_F):
@@ -95,6 +104,7 @@ class Rules(_F):
     trade: TradeConfig = TradeConfig()
     combat: CombatConfig = CombatConfig()
     death: DeathConfig = DeathConfig()
+    recovery: RecoveryConfig = RecoveryConfig()
 
 
 RULES = Rules()

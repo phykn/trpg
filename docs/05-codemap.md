@@ -26,7 +26,7 @@ backend/
     .current                     마지막 game_id 한 줄 (GET /session/current 가 읽음)
     games/{game_id}.json         GameState 한 덩이 (엔티티 + 로그 + 메모리 + pending)
   src/
-    rules.py                     DC·시간·소셜·메모리·로그 수치 (P1 은 DC·소셜·메모리·로그만, 전투·거래·성장은 P2·P3). frozen Pydantic — 변경 시도하면 에러.
+    rules.py                     DC·시간·소셜·메모리·로그·전투·사망·회복 수치 (P3 회복: encounter_chance / sleep_hours, 거래·성장은 P3 후속). frozen Pydantic — 변경 시도하면 에러.
     api/
       routes.py                  /profiles, /session/current, /session/init, /session/{id}/state, /turn, /roll
       schema.py                  네트워크로 주고받는 Pydantic 모델 (ProfileListResponse, InitRequest/Response, TurnRequest, RollRequest)
@@ -37,7 +37,8 @@ backend/
       apply.py                   `state_changes` 검증·적용 + `rejected[]` 기록
       context.py                 surroundings / target_view / history 모아 묶음
       dc.py                      sigmoid DC, tier → DC, social_bonus, grade 계산
-      combat.py                  P2 전투 엔진 (LLM 미사용). 명중·데미지 (시그모이드 + dual-wield + crit) / 이니셔티브 / NPC AI / flee / 사망·revive·death-save / combat_state 라이프사이클
+      combat.py                  P2 전투 엔진 (LLM 미사용). 명중·데미지 (시그모이드 + dual-wield + crit) / 이니셔티브 / NPC AI / flee / 사망·revive·death-save / combat_state 라이프사이클 / surprise 첫 라운드 skip
+      recovery.py                P3 §2.4 회복 (rest). 위험도 굴림으로 풀회복 vs 인카운터 분기, sleep_hours 만큼 world_time 점프, sleep_encounters 풀에서 enemy 선택
       turn.py                    `run_turn` / `run_roll` 흐름 지휘 (SSE 이벤트 방출). combat_state 살아있으면 combat 분기로 라우팅
     state/
       store.py                   `load_game` / `save_game` (원자적 파일 I/O + 동시 쓰기 방지 Lock) + `.current` 읽기/쓰기
@@ -49,7 +50,7 @@ backend/
     domain/
       entities.py                Character, Race, Location, Item, Quest, QuestTrigger, QuestRewards, Connection, Equipment, Stats
       memory.py                  Memory, TurnLogEntry, DialoguePair, PendingCheck, LogEntry (gm/player/act/roll union)
-      types.py                   StatKey, Tier, Grade, Intent, Action enum
+      types.py                   StatKey, Tier, Grade, Intent, Action enum (pass / roll / combat / rest / clarify / reject)
     llm_client/                  LLMClient (OpenAI 호환 스트리밍) + 에이전트 묶음
       __init__.py                LLMClient export
       client.py                  스트리밍 클라이언트 본체
