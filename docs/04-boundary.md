@@ -6,7 +6,7 @@
 
 프론트엔드는 백엔드가 준 데이터를 **있는 그대로 화면에 그리기만** 한다. 날짜 한국어 변환 ("812년 4월 28일"), 여러 값을 한 줄로 합치기 ("이름 (종족 직업)"), 조건에 따라 라벨 바꾸기 같은 가공은 전부 백엔드에서 끝낸 뒤 보낸다.
 
-#### Hero — `characters[player_id]`
+### Hero — `characters[player_id]`
 
 | 프론트 필드 | 백엔드 출처 | 변환 |
 |---|---|---|
@@ -20,7 +20,7 @@
 | `skills: list[str]` | `racial_skills + learned_skills` ([03-features.md](./03-features.md) §2.6) | 두 리스트를 합친 뒤 각 스킬에서 `name` 만 추출 |
 | `companions: list[str]` | `companions: list[char_id]` ([03-features.md](./03-features.md) §2.9) | 각 char_id 의 캐릭터를 찾아 `"이름 (종족 직업)"` 으로 조립. `job` 이 빈 문자열이면 `"이름 (종족)"` — 괄호 안 공백·trailing space 없음 |
 
-#### Subject — `characters[active_subject_id]`
+### Subject — `characters[active_subject_id]`
 
 | 프론트 필드 | 백엔드 출처 | 변환 |
 |---|---|---|
@@ -32,7 +32,7 @@
 | `trust: int` | `relations.get(player_id, 0)` | -100..+100, 기본 0 (중립). 방향은 **subject → player** (subject 가 player 를 어떻게 느끼는가) |
 | `known: list[str]` | `appearance` (한 줄) + player 의 `memories` 중 `target_id == subject_id` 인 항목들 | 첫 줄 = subject 의 외모 한 줄 (subject.appearance), 그 아래 = player 가 그 subject 에 대해 들고 있는 기억 한 줄씩 ([02-runtime.md](./02-runtime.md) §7). 메모리 항목이 0개면 외모 한 줄만 나감. |
 
-#### Quest — `quests[active_quest_id]`
+### Quest — `quests[active_quest_id]`
 
 | 프론트 필드 | 백엔드 출처 | 변환 |
 |---|---|---|
@@ -43,7 +43,7 @@
 | `conditions: list[str]` | `conditions: list[str]` | 자유 문자열 제약 그대로. Hero.status 와 달리 narrator 가 `set` 으로 못 건드림 ([02-runtime.md](./02-runtime.md) §6.1) |
 | `rewards: {gold, exp}` | `rewards.gold`, `rewards.exp` | 그대로. `rewards.items` 는 [P3] 추가 |
 
-#### Place — `locations[characters[player_id].location_id]`
+### Place — `locations[characters[player_id].location_id]`
 
 | 프론트 필드 | 백엔드 출처 | 변환 |
 |---|---|---|
@@ -53,7 +53,7 @@
 | `period: str` | `world_time` 으로 백엔드가 계산 | "새벽/오전/오후/저녁/밤" 중 하나 |
 | `surroundings: list[str]` | 인접 location 들의 `name` (`connections` 으로 연결됨) | 인접 장소 이름만 |
 
-#### LogEntry — SSE `log_entry` 이벤트 + `narrative_delta` 누적
+### LogEntry — SSE `log_entry` 이벤트 + `narrative_delta` 누적
 
 프론트가 보는 4종 — `kind` 필드로 어떤 모양인지 구분되는 4 가지 중 하나. SSE `log_entry` 이벤트로 흘러오는 건 `player | act | roll` 3종이고, `gm` 은 `narrative_delta` (이야기 본문이 조각조각 흘러오는 이벤트) 를 클라이언트가 누적해서 만든다 ([02-runtime.md](./02-runtime.md) §2.4).
 
@@ -62,16 +62,16 @@
 - `act` — clarify 되묻기, 시스템 알림 등 (서버 발행)
 - `roll` — 주사위 결과 (서버 발행). `result: 'success' | 'fail'` 는 5단계 grade 를 3:2 로 줄임 — `critical_success | success | partial_success` → `success`, 나머지 → `fail` ([02-runtime.md](./02-runtime.md) §5.3)
 
-#### 내부 전용 (프론트로 안 나감)
+### 내부 전용 (프론트로 안 나감)
 
 `disposition`, `tone_hint`, `memories`, `location_id`, `relations`, `combat_behavior`, `triggers`, `inventory_ids`, `racial_skills`/`learned_skills`, `effective_*` 스탯, `ActiveBuff`, `xp_pool`, `death_saves` 등.
 
 - `triggers` — QuestTrigger 의 `id`/`type`/`target_id` 는 내부 전용. 프론트엔 `name` 만 `goals[]` 로 나감.
 - `racial_skills`/`learned_skills` — 두 리스트를 합쳐 `name` 만 빼서 Hero.skills 로 나감.
 
-#### 위 매핑이 의존하는 신설 필드
+### 위 매핑이 의존하는 신설 필드
 
-§1.1 표가 동작하려면 다음 백엔드 필드가 정의돼 있어야 한다. 자세한 스키마는 각 절 참고:
+§1 표가 동작하려면 다음 백엔드 필드가 정의돼 있어야 한다. 자세한 스키마는 각 절 참고:
 
 - **Character.role: str** — 자유 문자열 ("몬스터", "마을 장로" 등). 프로필 config 에 박힌 값.
 - **Character.appearance: str** — 시간이 지나도 변하지 않는 외모 한 줄 (자유 텍스트). `Subject.known` 의 첫 줄. 새 게임 시 사용자가 캐릭터 생성 화면에서 한 칸에 자유롭게 적은 값. NPC 는 시드 (`config/profiles/{id}/characters/*.json`) 에 박힘. 태그 리스트 아님.
@@ -100,9 +100,9 @@
 
 세션 흐름 — 앱 시작 시 `GET /session/current` 시도 → 200 이면 진행 중 게임 복원, 404 면 `GET /profiles` 호출 → 프론트가 시나리오·종족 카드를 보여주고 사용자가 캐릭터 생성 → `POST /session/init` 호출 → 첫 턴. 게임 목록·이어하기 화면은 P1 에 없음 (한 명·한 게임 흐름).
 
-**인증** — 위 6 개 endpoint 모두 HTTP Basic Auth 로 보호. `GET /profiles` 도 예외 아님 — 같은 LAN 안에서도 시나리오 메타 노출은 인증 뒤. `BASIC_AUTH_USER` / `BASIC_AUTH_PASS` env 누락 시 fail-fast ([01-plan.md](./01-plan.md) 환경 변수 부록).
+**인증** — 위 6 개 endpoint 모두 HTTP Basic Auth 로 보호. `GET /profiles` 도 예외 아님 — 같은 LAN 안에서도 시나리오 메타 노출은 인증 뒤. `BASIC_AUTH_USER` / `BASIC_AUTH_PASS` env 누락 시 fail-fast ([01-overview.md](./01-overview.md) 환경 변수 부록).
 
-P1 에서는 빠지는 엔드포인트 — 장비·소비·캐스트·휴식·레벨업·거래는 전부 [P3] ([03-features.md](./03-features.md) §2.3-§2.7, [01-plan.md](./01-plan.md) §3.9). 전투 진입은 P1 에서 SSE `error: CombatNotSupported` 로 거절.
+P1 에서는 빠지는 엔드포인트 — 장비·소비·캐스트·휴식·레벨업·거래는 전부 [P3] ([03-features.md](./03-features.md) §2.3-§2.7, [01-overview.md](./01-overview.md) §3.9). 전투 진입은 P1 에서 SSE `error: CombatNotSupported` 로 거절.
 
 ## 3. 에러 매핑
 

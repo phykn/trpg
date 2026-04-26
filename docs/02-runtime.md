@@ -1,6 +1,6 @@
 # 런타임 메커닉 (§1-§7)
 
-> 한 턴이 어떻게 흐르고, 엔진과 에이전트가 그 사이 무엇을 주고받는지. 인덱스·Phase 범위는 [01-plan.md](./01-plan.md). 다른 그룹은 [03-features.md](./03-features.md) (§1-§2 전투·확장), [04-boundary.md](./04-boundary.md) (§1-§2 프론트·코드맵).
+> 한 턴이 어떻게 흐르고, 엔진과 에이전트가 그 사이 무엇을 주고받는지. 인덱스·Phase 범위는 [01-overview.md](./01-overview.md). 다른 그룹은 [03-features.md](./03-features.md) (§1-§2 전투·확장), [04-boundary.md](./04-boundary.md) (프론트 경계), [05-codemap.md](./05-codemap.md) (백엔드 코드 지도).
 
 위에서 아래로 읽으면 다음 순서:
 
@@ -21,7 +21,7 @@ LLM 을 두 개로 쪼갠다.
 - **DC판정** — "어떤 종류의 행동인가, 얼마나 어려운가" 만 분류한다. 짧은 JSON 출력.
 - **내러티브** — "그래서 어떻게 됐는지" 를 서술한다. 긴 한국어 출력.
 
-왜 둘로 나누나: 한 LLM 에게 분류 + 서술을 같이 시키면 둘 다 어설프게 한다. 출력 형식·프롬프트 길이·실패 모드가 정반대라 같은 모델 한 호출로 합치기 어렵다. 자세한 이유는 [01-plan.md](./01-plan.md) §1.
+왜 둘로 나누나: 한 LLM 에게 분류 + 서술을 같이 시키면 둘 다 어설프게 한다. 출력 형식·프롬프트 길이·실패 모드가 정반대라 같은 모델 한 호출로 합치기 어렵다. 자세한 이유는 [01-overview.md](./01-overview.md) §1.
 
 ### 1.1 DC판정 에이전트
 
@@ -62,7 +62,7 @@ LLM 을 두 개로 쪼갠다.
 - 매 턴 호출 (전투/비전투 무관)
 - 명시적 대상 없으면 현재 location 이 기본값
 - `stat` 은 행동의 성격으로 결정 (DC판정은 플레이어 수치를 안 봄)
-- **히스토리·세션·월드 레이어를 받지 않는다**. 오직 현재 장면(`surroundings`) 만으로 판정. 장기 맥락·과거 턴 요약·엔티티 메모리는 내러티브 전용 (§3, [01-plan.md](./01-plan.md) §3.12).
+- **히스토리·세션·월드 레이어를 받지 않는다**. 오직 현재 장면(`surroundings`) 만으로 판정. 장기 맥락·과거 턴 요약·엔티티 메모리는 내러티브 전용 (§3, [01-overview.md](./01-overview.md) §3.12).
 
 ### 1.2 내러티브 에이전트
 
@@ -102,7 +102,7 @@ LLM 을 두 개로 쪼갠다.
 - `memory_targets`: 기억을 저장할 엔티티 ID 목록 (복수 가능)
 - `memory`: 저장할 기억 내용 (`memorable=true` 일 때 필수). `memory_targets` 가 비면 엔진이 `memorable=false` 로 강등하고 저장 안 함.
 - `importance`: 기억 중요도 (1: 사소, 2: 보통, 3: 중요)
-- `memory_links`: 각 entity 의 기억이 누구를 향한 것인지 매핑 (`{entity_id: target_id}`). `memory_targets` 의 entity 마다 한 줄. 여기 빠진 entity 의 기억은 `target_id=None` 으로 박혀 Subject.known 산출 ([04-boundary.md](./04-boundary.md) §1.1) 에서 자연스럽게 빠진다. 1명짜리 memory_targets (예: 플레이어 혼자 깨달음) 는 보통 비워둠. 자동 추론 안 함 — 1:1·다대다 모두 narrator 가 명시.
+- `memory_links`: 각 entity 의 기억이 누구를 향한 것인지 매핑 (`{entity_id: target_id}`). `memory_targets` 의 entity 마다 한 줄. 여기 빠진 entity 의 기억은 `target_id=None` 으로 박혀 Subject.known 산출 ([04-boundary.md](./04-boundary.md) §1) 에서 자연스럽게 빠진다. 1명짜리 memory_targets (예: 플레이어 혼자 깨달음) 는 보통 비워둠. 자동 추론 안 함 — 1:1·다대다 모두 narrator 가 명시.
 
 **서술 규율**:
 - 수치/확률/DC 를 본문에 노출하지 않음 ("설득을 시도한다" ○, "DC 15 설득" ✗)
@@ -160,7 +160,7 @@ reject 전용 추가 단계 (후처리 직전):
 
 `roll` 분기는 **한 턴을 두 HTTP 호출로 쪼갠다** (`/turn` → `/roll`).
 
-왜 쪼개나: 플레이어가 "주사위 굴리기" 버튼을 누르는 시점이 LLM 응답 사이에 끼어 있다. 한 호출로 끝내려면 서버가 사용자 입력을 기다리며 스트림을 열어둬야 해서 구조가 복잡해진다. 그냥 두 호출로 끊는 게 단순하다. 자세한 이유는 [01-plan.md](./01-plan.md) §3.10.
+왜 쪼개나: 플레이어가 "주사위 굴리기" 버튼을 누르는 시점이 LLM 응답 사이에 끼어 있다. 한 호출로 끝내려면 서버가 사용자 입력을 기다리며 스트림을 열어둬야 해서 구조가 복잡해진다. 그냥 두 호출로 끊는 게 단순하다. 자세한 이유는 [01-overview.md](./01-overview.md) §3.10.
 
 - `/turn` 이 `{action: "roll"}` 로 끝나면 엔진은 `PendingCheck` 를 `GameState` 에 저장하고 스트림을 닫는다. 내러티브는 아직 돌지 않음.
 - 프론트는 `pending_check` 이벤트로 받은 `{dc, stat, mod, required_roll, tier, target}` 을 UI 에 띄우고, 플레이어가 버튼을 누르면 **본문 없이** `/roll` 호출. 주사위 눈은 서버가 굴린다 (서버 권위 — 클라이언트가 dice 값을 보내지 않음).
@@ -192,7 +192,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 둘 중 어느 쪽이 실패해도 직전 응답 본문과 에러 메시지를 messages 에 append 해서 자기 교정 루프로 다시 호출 — 같은 실수를 반복하지 않게 LLM 컨텍스트에 실패 사유를 박아주는 것. 최대 5 회 재시도 (총 6 번 시도).
 
 5 회 후에도 통과 못하면 마지막 에러 종류로 분기:
-- 마지막이 JSON 파싱 실패 → `JudgeMalformed` 예외 raise ([04-boundary.md](./04-boundary.md) §1.3 → SSE `error: JudgeMalformed`).
+- 마지막이 JSON 파싱 실패 → `JudgeMalformed` 예외 raise ([04-boundary.md](./04-boundary.md) §3 → SSE `error: JudgeMalformed`).
 - 마지막이 semantic 실패 → 폴백: 현재 플레이어가 있는 장소 하나로 (`targets=[location_id]`, `target=location_id`). 예외 안 던짐, 일반 진행 계속.
 
 검증 통과 시 PendingCheck 채우는 규칙:
@@ -231,7 +231,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 
 **save**: `apply_changes` 이후 파이프라인 말미에서 호출. 안전 쓰기 — `.tmp` 파일에 먼저 다 쓴 뒤 `os.replace` 로 한꺼번에 본 파일을 갈아끼운다. 쓰는 도중 죽어도 반쪽짜리 파일이 남지 않음. 프로세스 안에서 `asyncio.Lock` 하나로 동시 저장 요청을 한 줄 세워 순서대로 처리. 저장이 실패하면 메모리에 들고 있던 게임 상태를 직전 값으로 되돌리고 SSE `error: PersistenceFailed` 를 보낸다.
 
-**인스턴스 단위 파일**: 게임 하나 = 파일 하나 (`DATA_DIR/games/{game_id}.json`). 파일 이동·복사만으로 세션 이전 가능. 이유와 한계는 [01-plan.md](./01-plan.md) §3.11.
+**인스턴스 단위 파일**: 게임 하나 = 파일 하나 (`DATA_DIR/games/{game_id}.json`). 파일 이동·복사만으로 세션 이전 가능. 이유와 한계는 [01-overview.md](./01-overview.md) §3.11.
 
 ---
 
@@ -297,7 +297,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 - **progress 숫자 안 보냄** — `{done, total}` 같은 숫자는 본문에 녹이기 어렵다 ("0/1" 을 어떻게 묘사하나). narrator 가 진행 상태를 알 필요는 `summary` + `goals` (pending only) 로 충족된다. progress 자체는 프론트 표시·엔진 트리거 평가에서만 사용.
 - **`active_*` prefix 없음 / `status` 필드 노출 안 함** — 어차피 활성인 것만 들어가므로 잉여 (`status` 필드 자체는 모델에 있고 narrator 가 `set` 으로 갱신함; session_layer 노출에서만 생략).
 - **`chapter.quests[]` 위계** — 퀘스트는 항상 챕터에 속하므로 묶음. P3 의 Campaign 도 동일 패턴 (`campaign.chapters[]`).
-- **`world_time` 은 ISO 8601 (`T` 포함)** — 다른 문서의 시간 필드와 일관 ([03-features.md](./03-features.md) §2.1, [04-boundary.md](./04-boundary.md) §1.1).
+- **`world_time` 은 ISO 8601 (`T` 포함)** — 다른 문서의 시간 필드와 일관 ([03-features.md](./03-features.md) §2.1, [04-boundary.md](./04-boundary.md) §1).
 
 모델 정의와 progress 계산은 [03-features.md](./03-features.md) §2.8.
 
@@ -377,7 +377,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 
 **pass 일 때**: target_view 를 조립하지 않음. 내러티브는 surroundings 만으로 서술.
 
-**reject 일 때**: target_view 없음, surroundings 만 + reject 가이드. narrator 는 플레이어 입력을 인-게임 표현(예: "알 수 없는 힘에 막힌다", "현기증이 일어 그 생각을 잊는다")으로 흡수. `state_changes` 비우기·`memorable=false` 강제는 §1.1 표 참조.
+**reject 일 때**: target_view 없음, surroundings 만 + reject 가이드. narrator 는 플레이어 입력을 인-게임 표현(예: "알 수 없는 힘에 막힌다", "현기증이 일어 그 생각을 잊는다")으로 흡수. `state_changes` 비우기·`memorable=false` 강제는 §1.1 참조.
 
 ---
 
@@ -461,7 +461,7 @@ required_roll = round(20 / (1 + e^(-k(DC - player_stat))))   # [1, 20] clamp
 Tier = Literal["매우 쉬움", "쉬움", "보통", "어려움", "매우 어려움", "전설", "신화"]
 ```
 
-백엔드는 라벨을 정수 tier (1..7) 와 1:1 매핑하고, 프론트 노출 시 `{value: int(1..7), max: 7, label: str}` 형식으로 보냄 ([04-boundary.md](./04-boundary.md) §1.1).
+백엔드는 라벨을 정수 tier (1..7) 와 1:1 매핑하고, 프론트 노출 시 `{value: int(1..7), max: 7, label: str}` 형식으로 보냄 ([04-boundary.md](./04-boundary.md) §1).
 
 
 | tier | label | DC 범위 |
@@ -570,7 +570,7 @@ class Memory:
     content: str            # "플레이어가 뇌물을 줘서 통과시켜줌"
     importance: int         # 1: 사소, 2: 보통, 3: 중요
     turn: int               # 기록된 턴 번호
-    target_id: str | None   # 이 기억이 향한 entity (NPC/장소/아이템) ID. narrator 의 memory_links (§1.2) 로 채움. None 이면 Subject.known 산출 ([04-boundary.md](./04-boundary.md) §1.1) 에서 빠짐.
+    target_id: str | None   # 이 기억이 향한 entity (NPC/장소/아이템) ID. narrator 의 memory_links (§1.2) 로 채움. None 이면 Subject.known 산출 ([04-boundary.md](./04-boundary.md) §1) 에서 빠짐.
 ```
 
 ### 7.2 저장

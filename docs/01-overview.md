@@ -214,7 +214,7 @@ DB 는 처음 세팅 부담이 크다. 파일 한 덩이로 가면:
 
 → `mapping/to_front.py` 한 곳에서만 프론트로 보낼 데이터를 만든다. 다른 어떤 길로도 안쪽 필드가 SSE/REST 응답에 실리면 안 된다. 이건 테스트로 강제 (`test_internal_fields_not_leaked`).
 
-→ [04-boundary.md](./04-boundary.md) §1.1 (외부 노출 / 안쪽 전용 분리)
+→ [04-boundary.md](./04-boundary.md) §1 (외부 노출 / 안쪽 전용 분리)
 
 ### 3.14 왜 모순된 기억을 덮어쓰지 않나?
 

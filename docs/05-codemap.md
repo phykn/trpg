@@ -74,7 +74,7 @@ back/
 
 ## 3. 오류 계층
 
-`src/errors.py` 의 예외 계층. 파이프라인은 `DomainError` 하위 클래스만 던지고, API 레이어가 그걸 HTTP/SSE 응답으로 매핑한다 ([04-boundary.md](./04-boundary.md) §1.3 표).
+`src/errors.py` 의 예외 계층. 파이프라인은 `DomainError` 하위 클래스만 던지고, API 레이어가 그걸 HTTP/SSE 응답으로 매핑한다 ([04-boundary.md](./04-boundary.md) §3 표).
 
 - `DomainError` — 모든 도메인 에러의 기반 클래스.
   - `CombatNotSupported` — judge 가 `action="combat"` 을 반환했을 때 P1 이 던짐 ([03-features.md](./03-features.md) §1 의 미구현 구간).

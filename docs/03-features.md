@@ -1,9 +1,9 @@
 # 기능 확장 (§1-§2)
 
 > 기본 런타임 ([02-runtime.md](./02-runtime.md) §1-§7) 위에 얹히는 시스템들. 전투, 시간, 호감도, 성장, 회복, 장비/거래, 스킬, 사용, 진행, 동반자.
-> 인덱스는 [01-plan.md](./01-plan.md). 런타임 메커닉은 [02-runtime.md](./02-runtime.md), 프론트 경계·코드맵은 [04-boundary.md](./04-boundary.md).
+> 인덱스는 [01-overview.md](./01-overview.md). 런타임 메커닉은 [02-runtime.md](./02-runtime.md), 프론트 경계는 [04-boundary.md](./04-boundary.md), 백엔드 코드 지도는 [05-codemap.md](./05-codemap.md).
 
-이 문서는 두 묶음을 다룬다. **§1 전투** 는 P2 부터 켜진다. **§2 확장 시스템** 은 9 개로 — 이 중 월드 시간과 호감도는 P1 부터 최소 형태로 들어가고 (호감도는 P3 에서 완성), 나머지 7 개는 P3 에서 추가. Phase 별 범위는 [01-plan.md](./01-plan.md) §2 참고.
+이 문서는 두 묶음을 다룬다. **§1 전투** 는 P2 부터 켜진다. **§2 확장 시스템** 은 9 개로 — 이 중 월드 시간과 호감도는 P1 부터 최소 형태로 들어가고 (호감도는 P3 에서 완성), 나머지 7 개는 P3 에서 추가. Phase 별 범위는 [01-overview.md](./01-overview.md) §2 참고.
 
 ---
 
@@ -407,7 +407,7 @@ QuestRewards(
 - `status`: `locked → active → completed | failed`.
 - `apply_changes` 이후 `check_quests()` 가 관련 트리거로 재평가. quest 가 완료/실패되면 `maybe_check_chapters()` 가 상위 챕터의 전환 가능성을 본다.
 - **보상 자동 적용** — `quest.status` 가 `"completed"` 로 바뀌는 시점에 엔진이 `rewards.gold` → `actor.gold`, `rewards.exp` → `actor.xp_pool`, `rewards.items` → `actor.inventory_ids` 를 가산. 여기서 `actor` = **퀘스트를 수령한 플레이어 캐릭터** (P1·P2 단일 플레이어 전제). 동반자나 NPC 는 보상 대상이 아니다. narrator 는 서술에서 "보상을 받았다" 정도만 흘리면 충분 — 구체 수치를 본문에 명시할 필요 없음. `QuestRewards.exp` 는 `actor.xp_pool` 에 적립되는 같은 자원 — §2.3 의 "xp" 표기와 동일물이다 (시드는 reward 측에서 `exp`, 캐릭터 자원 필드명은 `xp_pool`).
-- 프론트 노출 ([04-boundary.md](./04-boundary.md) §1.1): `goals[]` 는 `triggers.map(t => t.name)`, `conditions[]` 는 자유 텍스트 그대로, `difficulty` 는 `{value: 1..7, max: 7, label}` 로 변환, `rewards` 는 `{gold, exp}` 만.
+- 프론트 노출 ([04-boundary.md](./04-boundary.md) §1): `goals[]` 는 `triggers.map(t => t.name)`, `conditions[]` 는 자유 텍스트 그대로, `difficulty` 는 `{value: 1..7, max: 7, label}` 로 변환, `rewards` 는 `{gold, exp}` 만.
 
 `chapter.progress` 의 `done` / `total` 은 챕터의 quest 중 **`required=true` 인 것만** 카운트한다 (선택 퀘스트는 분모·분자 모두에서 제외). 프론트 표시와 엔진 트리거 평가에서만 사용 — 세션 레이어 ([02-runtime.md](./02-runtime.md) §3.2) 에는 싣지 않는다 (narrator 는 `summary` + `goals` 로 진행을 본다).
 
