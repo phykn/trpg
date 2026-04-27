@@ -1,4 +1,5 @@
-import { View, Text } from 'react-native';
+import React from 'react';
+import { Animated, Easing, View, Text } from 'react-native';
 import { colors } from '@/design/tokens';
 import { InlineNodes } from '@/components/ui';
 import type { LogEntry } from '@/types/ui';
@@ -16,6 +17,25 @@ export function RollResult({ entry }: { entry: RollEntry }) {
   const total = entry.roll + entry.mod;
   const modStr = entry.mod >= 0 ? `+${entry.mod}` : `${entry.mod}`;
 
+  const scale = React.useRef(new Animated.Value(1.04)).current;
+  const opacity = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [scale, opacity]);
+
   const resultValue = (
     <Text
       numberOfLines={1}
@@ -28,29 +48,31 @@ export function RollResult({ entry }: { entry: RollEntry }) {
   );
 
   return (
-    <View
-      className="flex-row items-center bg-canvas-subtle border border-border-default rounded-md py-2 px-3 gap-3"
-      style={{
-        minHeight: 32,
-        borderLeftWidth: 3,
-        borderLeftColor: tone.color,
-      }}
-    >
-      <Text
-        className={`font-sans-bold text-panel uppercase shrink-0 ${tone.cls}`}
-        style={{ letterSpacing: 1.2 }}
+    <Animated.View style={{ transform: [{ scale }], opacity }}>
+      <View
+        className="flex-row items-center bg-canvas-subtle border border-border-default rounded-md py-2 px-3 gap-3"
+        style={{
+          minHeight: 32,
+          borderLeftWidth: 3,
+          borderLeftColor: tone.color,
+        }}
       >
-        {tone.label}
-      </Text>
-      <View className="h-3.5 bg-border-default" style={{ width: 1 }} />
-      <InlineNodes
-        entries={[
-          ['판정', entry.check],
-          ['난이도', entry.dc],
-          ['결과', resultValue],
-        ]}
-        weights={[1, 1, 2]}
-      />
-    </View>
+        <Text
+          className={`font-sans-bold text-panel uppercase shrink-0 ${tone.cls}`}
+          style={{ letterSpacing: 1.2 }}
+        >
+          {tone.label}
+        </Text>
+        <View className="h-3.5 bg-border-default" style={{ width: 1 }} />
+        <InlineNodes
+          entries={[
+            ['판정', entry.check],
+            ['난이도', entry.dc],
+            ['결과', resultValue],
+          ]}
+          weights={[1, 1, 2]}
+        />
+      </View>
+    </Animated.View>
   );
 }
