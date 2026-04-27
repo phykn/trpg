@@ -1,6 +1,6 @@
 # 런타임 메커닉 (§1-§7)
 
-> 한 턴이 어떻게 흐르고, 엔진과 에이전트가 그 사이 무엇을 주고받는지. 인덱스·Phase 범위는 [01-overview.md](./01-overview.md). 다른 그룹은 [03-features.md](./03-features.md) (§1-§2 전투·확장), [04-boundary.md](./04-boundary.md) (프론트 경계), [05-codemap.md](./05-codemap.md) (백엔드 코드 지도).
+> 한 턴이 어떻게 흐르고, 엔진과 에이전트가 그 사이 무엇을 주고받는지. 룰 sim (DC, 등급, affinity, memory cap 등) 의 *왜* 는 [01-overview.md](./01-overview.md) §3.17 — 룰은 narrator 의 거짓말 발판이라는 메타-thesis. 인덱스·Phase 범위도 [01-overview.md](./01-overview.md). 다른 그룹은 [03-features.md](./03-features.md) (§1-§2 전투·확장), [04-boundary.md](./04-boundary.md) (프론트 경계), [05-codemap.md](./05-codemap.md) (백엔드 코드 지도).
 
 위에서 아래로 읽으면 다음 순서:
 
