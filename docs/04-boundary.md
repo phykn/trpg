@@ -30,7 +30,7 @@
 | `hp/hpMax` | 같은 이름의 필드 | 그대로 |
 | `stats` | `stats` | 그대로 |
 | `inventory: [{name, qty}]` | `inventory_ids` | Hero 와 동일 |
-| `role: str` | `role: str` (프로필 config 에 박힌 값) | 자유 문자열. 그대로 |
+| `role: str` | `role: str` (프로필 config 에 들어 있는 값) | 자유 문자열. 그대로 |
 | `trust: int` | `relations.get(player_id, 0)` | -100..+100, 기본 0 (중립). 방향은 **subject → player** (subject 가 player 를 어떻게 느끼는가) |
 | `known: list[str]` | `appearance` (한 줄) + player 의 `memories` 중 `target_id == subject_id` 인 항목들 | 첫 줄 = subject 의 외모 한 줄 (subject.appearance), 그 아래 = player 가 그 subject 에 대해 들고 있는 기억 한 줄씩 ([02-runtime.md](./02-runtime.md) §7). 메모리 항목이 0개면 외모 한 줄만 나감. |
 
@@ -75,8 +75,8 @@
 
 §1 표가 동작하려면 다음 백엔드 필드가 정의돼 있어야 한다. 자세한 스키마는 각 절 참고:
 
-- **Character.role: str** — 자유 문자열 ("몬스터", "마을 장로" 등). 프로필 config 에 박힌 값.
-- **Character.appearance: str** — 시간이 지나도 변하지 않는 외모 한 줄 (자유 텍스트). `Subject.known` 의 첫 줄. 새 게임 시 사용자가 캐릭터 생성 화면에서 한 칸에 자유롭게 적은 값. NPC 는 시드 (`scenarios/{id}/characters/*.json`) 에 박힘. 태그 리스트 아님.
+- **Character.role: str** — 자유 문자열 ("몬스터", "마을 장로" 등). 프로필 config 에 들어 있는 값.
+- **Character.appearance: str** — 시간이 지나도 변하지 않는 외모 한 줄 (자유 텍스트). `Subject.known` 의 첫 줄. 새 게임 시 사용자가 캐릭터 생성 화면에서 한 칸에 자유롭게 적은 값. NPC 는 시드 (`scenarios/{id}/characters/*.json`) 에 들어 있음. 태그 리스트 아님.
 - **Character.status: list[str]** — 자유 문자열 상태 태그. narrator 가 `set` 으로 추가·제거.
 - **Character.relations: dict[str, int]** — affinity ([03-features.md](./03-features.md) §2.2). `Subject.trust` 가 여기서 옴.
 - **Location.connections: list[str]** — 인접 장소의 ID 리스트. `Place.surroundings` 산출에 씀.

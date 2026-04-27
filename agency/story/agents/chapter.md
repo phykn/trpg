@@ -17,5 +17,5 @@
 
 - `quest_ids` — **시나리오의 quests 안에 존재**하는 id 들. 보통 2~5 개.
 - 시작 챕터는 `status: "active"`, 다음 챕터는 `"locked"`.
-- `progress` 필드는 박지 말 것 (런타임이 채움).
+- `progress` 필드는 적지 말 것 (런타임이 채움).
 - `required: true` 인 챕터는 메인 줄거리, `false` 는 사이드.

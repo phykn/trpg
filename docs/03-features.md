@@ -113,7 +113,7 @@ LLM 을 쓰지 않는 확률 기반 규칙 엔진. 각 NPC 의 행동은 `combat
 
 `rules.combat.death` 가 사망 처리 룰을 모은다.
 
-- `instant_death: bool = False` — True 면 HP 가 0 이 되는 순간 즉시 사망. NPC·몬스터는 보통 이게 True 로 박혀있고, 플레이어는 `revive_coins` 가 먼저 동작한다.
+- `instant_death: bool = False` — True 면 HP 가 0 이 되는 순간 즉시 사망. NPC·몬스터는 보통 이게 True 로 설정되어 있고, 플레이어는 `revive_coins` 가 먼저 동작한다.
 - `revive_coins: int = 0` — 플레이어 전용 목숨 토큰. 0 보다 크면 HP 가 0 이 돼도 토큰 1 개를 깎고 `max_hp * revive_ratio` (기본 0.5) 만큼 회복하면서 즉시 부활. 토큰을 다 쓴 다음에야 dying / dead 상태로 넘어간다.
 - 토큰이 없고 `instant_death=False` 면 HP ≤ 0 일 때 death save 단계 진입 — `death_saves={successes, failures}` 카운터가 할당된다.
 - 매 턴 `d20 ≥ save_dc` (기본 10) 이면 성공, 미만이면 실패. 성공 3 회 → 안정화 (HP=1 로 복귀). 실패 3 회 → 사망. death save 도중 새 데미지를 맞으면 실패 카운트 +1, critical_failure 면 +2.
@@ -140,7 +140,7 @@ P2 에 새 SSE 이벤트 3 종이 추가된다. P1 의 이벤트 집합 ([02-run
 
 ### 2.1 월드 시간 (World Time)
 
-게임 세계의 현재 시각은 `state.world_time` (ISO 8601 문자열) 한 군데에 박혀 있다.
+게임 세계의 현재 시각은 `state.world_time` (ISO 8601 문자열) 한 군데에 들어 있다.
 
 **엔진 가산** — 시간을 흐르게 만드는 주체:
 
@@ -150,12 +150,12 @@ P2 에 새 SSE 이벤트 3 종이 추가된다. P1 의 이벤트 집합 ([02-run
   - `explore_action_min`: 탐험·조사의 기본 소요
   - `explore_critical_fail_min`: critical_failure 일 때 추가로 까먹는 시간
   - `travel_per_connection_min`: location 간 기본 이동 비용
-  - `Connection.travel_min` 이 따로 박혀 있는 엣지는 기본값 대신 그 값을 사용 (per-edge override)
+  - `Connection.travel_min` 이 따로 지정된 엣지는 기본값 대신 그 값을 사용 (per-edge override)
 
 **narrator 의 시간 점프 (`set_time`)**: 분 단위 산수는 엔진이 독점하지만, 장면 전환·휴식·시간 비약 ("다음 날 아침이 밝았다") 처럼 절대 시각으로 점프해야 할 상황엔 narrator 가 `{type: "set_time", value: "<ISO>"}` state_change 를 발행할 수 있다 ([02-runtime.md](./02-runtime.md) §6.1). 같은 턴 안에서 엔진이 먼저 가산한 뒤 narrator 의 set_time 이 후행으로 덮어쓴다. 가드 3 종:
 
 - 현재 `world_time` 보다 과거 ISO 는 `rejected[]` 로 reject (시간 역행 금지).
-- `world_time` 외의 단일 필드는 set_time 으로 못 박는다 — 일반 `set` 경로와 분리된 전용 type.
+- `world_time` 외의 단일 필드는 set_time 으로 갱신할 수 없다 — 일반 `set` 경로와 분리된 전용 type.
 - HP/MP 같은 엔진 전용 수치는 narrator 가 여전히 못 만진다. 즉 **시간만 점프하고 회복은 안 됨** — P1 의 "휴식한다" 는 §2.4 의 폴백을 그대로 따른다 (실제 회복은 P3 rest 엔드포인트).
 
 **캘린더** 는 그레고리력 그대로. 월별 일수, 윤년, 23:59 → 다음 날 00:00 모두 ISO 8601 표준. 연도 라벨만 게임 세계 기준 ("812년") 이고, 별도 가상 캘린더는 도입하지 않는다.
@@ -205,7 +205,7 @@ P2 에 새 SSE 이벤트 3 종이 추가된다. P1 의 이벤트 집합 ([02-run
 
 **현재 구현 상태**: 1·2·3·4 단계 모두 들어가 있다.
 - 1·2·3 단계: `engines/growth.py` + `api/routes/growth.py` (`POST /session/{id}/level-up`) — 페어 트레이드 + HP/MP 재계산 + 게이트 해제 (cast 시점 검증으로 자연 해제).
-- 4 단계: `agents/skill_recommend/` + `flow/skill_recommend.py` — level_up 직후 LLM 호출해 후보 3 개 산출. LLM 이 name/description/type/target/primary_stat/special_effect 정하고 엔진이 id/level/template 수치 (mp_cost/power/range/duration) 를 채움. 후보는 `state.pending_skill_candidates` 에 박히고 `/level-up` 응답에 포함. `POST /session/{id}/learn-skill { index }` 로 1 개 선택 또는 거부 (다음 레벨업까지 보류). LLM 호출 실패는 silent fallback (빈 후보).
+- 4 단계: `agents/skill_recommend/` + `flow/skill_recommend.py` — level_up 직후 LLM 호출해 후보 3 개 산출. LLM 이 name/description/type/target/primary_stat/special_effect 정하고 엔진이 id/level/template 수치 (mp_cost/power/range/duration) 를 채움. 후보는 `state.pending_skill_candidates` 에 저장되고 `/level-up` 응답에 포함. `POST /session/{id}/learn-skill { index }` 로 1 개 선택 또는 거부 (다음 레벨업까지 보류). LLM 호출 실패는 silent fallback (빈 후보).
 
 - **레벨**: 0..20. 시작 0, 만렙 20 (레벨업 20 번 가능).
 - **시작 스탯**: 모든 스탯 = 10. 스탯 범위 0..20.
@@ -274,7 +274,7 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
 ### 2.5 장비 / 인벤토리 / 거래 [P3]
 
-**현재 구현 상태**: `engines/inventory/` (carry/equipment/trade/use 분리) + `api/routes/inventory.py` (`/equip` `/unequip` `/buy` `/sell` endpoint) + 자연어 equip/unequip 통합 (Phase 2). judge 가 `surroundings.inventory` (`kind: weapon|armor|...`) 와 `surroundings.equipment` (8 슬롯 → {id, name}) 보고 `EquipAction` / `UnequipAction` 박는다. 엔진이 slot 자동 결정 (무기=빈 손 우선, 방어구=빈 슬롯, 액세서리=acc1→acc2). buy/sell 자연어와 프론트 UI 는 후속.
+**현재 구현 상태**: `engines/inventory/` (carry/equipment/trade/use 분리) + `api/routes/inventory.py` (`/equip` `/unequip` `/buy` `/sell` endpoint) + 자연어 equip/unequip 통합 (Phase 2). judge 가 `surroundings.inventory` (`kind: weapon|armor|...`) 와 `surroundings.equipment` (8 슬롯 → {id, name}) 보고 `EquipAction` / `UnequipAction` 을 발행한다. 엔진이 slot 자동 결정 (무기=빈 손 우선, 방어구=빈 슬롯, 액세서리=acc1→acc2). buy/sell 자연어와 프론트 UI 는 후속.
 
 **장비 슬롯 (프론트 기준 8 종)**: `head / top / bottom / feet / leftHand / rightHand / acc1 / acc2`. `Equipment` 타입이 단일 소스이고, 각 슬롯은 `EquipItem | null`.
 
@@ -314,7 +314,7 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
 **현재 구현 상태**: cast 핵심 (S1) + judge 의미 매칭 (S2) + 학습 후보 (§2.3 4단계 / S3) 까지 들어갔다.
 - S1: `engines/skill.py` + `api/routes/inventory.py` (`/cast` endpoint) — level/MP/range 검증, target self/single/area, grade_multipliers 보정, ActiveBuff 추가/tick. attack/debuff 만 d20 굴림으로 grade 결정 (`compute_cast_grade`); heal/buff/self 는 자동 success.
-- S2: judge prompt 가 `surroundings.skills` (racial + learned 두 컬렉션을 합친 뒤 level/MP 통과한 것만 노출, `source: "racial"|"learned"` 로 구분) 와 회피 통로 ("맨손으로/스킬 없이/그냥 평타") 를 보고 `CombatAction.skill_id` 를 박는다. turn.py 가 combat 분기에서 skill_id 가 있으면 plain attack 대신 cast 로 진행하고 GM 로그에 `「스킬명」 발동` 알림. racial·learned 모두 자동 매칭 대상.
+- S2: judge prompt 가 `surroundings.skills` (racial + learned 두 컬렉션을 합친 뒤 level/MP 통과한 것만 노출, `source: "racial"|"learned"` 로 구분) 와 회피 통로 ("맨손으로/스킬 없이/그냥 평타") 를 보고 `CombatAction.skill_id` 를 채운다. turn.py 가 combat 분기에서 skill_id 가 있으면 plain attack 대신 cast 로 진행하고 GM 로그에 `「스킬명」 발동` 알림. racial·learned 모두 자동 매칭 대상.
 - S3: `agents/skill_recommend/` + `flow/skill_recommend.py` — level_up 직후 LLM 호출해 캐릭터 컨텍스트(memories/turn_log/recent_inputs) 보고 후보 3개 산출. §2.3 4단계와 같은 코드.
 
 `Skill(id, name, description, level, type, target, primary_stat, special_effect, power, mp_cost, range, duration)`.
@@ -340,10 +340,10 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
 **보유 분류**:
 
-- `racial_skills` (종족 기본 — 시드에 박힘, 보통 `level=0`) / `learned_skills` (LLM 추천으로 습득) 두 컬렉션으로 분리 저장. `all_skills()` 로 병합 조회.
+- `racial_skills` (종족 기본 — 시드에 들어 있음, 보통 `level=0`) / `learned_skills` (LLM 추천으로 습득) 두 컬렉션으로 분리 저장. `all_skills()` 로 병합 조회.
 - 일반 공격·점프 같은 보편 행동은 스킬 목록에 안 들어간다 — 엔진 기본 동사로 따로 처리.
 
-**의미 매칭 발동** — cast 는 플레이어 입력에 스킬 이름이 정확히 안 박혀 있어도 일어날 수 있다. judge 가 캐릭터의 `racial_skills` + `learned_skills` 를 합쳐서 컨텍스트로 받고, 입력의 의도와 의미적으로 부합하는 스킬을 매칭한다 (예: "조용히 다가가 등에 칼" → 「그림자 보행」). 두 컬렉션 모두 자동 매칭 대상이고, 출력에는 `source: "racial"|"learned"` 가 붙어 어느 쪽인지 구분된다.
+**의미 매칭 발동** — cast 는 플레이어 입력에 스킬 이름이 정확히 들어 있지 않아도 일어날 수 있다. judge 가 캐릭터의 `racial_skills` + `learned_skills` 를 합쳐서 컨텍스트로 받고, 입력의 의도와 의미적으로 부합하는 스킬을 매칭한다 (예: "조용히 다가가 등에 칼" → 「그림자 보행」). 두 컬렉션 모두 자동 매칭 대상이고, 출력에는 `source: "racial"|"learned"` 가 붙어 어느 쪽인지 구분된다.
 
 - **회피**: "맨손으로" / "스킬 없이" / "그냥 평타" 같은 표현이 보이면 매칭 시도 안 함 — 플레이어가 의도적으로 스킬을 끄는 통로.
 - **알림 필수**: 매칭 발동 시 본문이나 `log_entry` 에 "「스킬명」 발동" 표시. 자동 매칭이 일어났을 때 투명성을 보장하는 장치.
@@ -383,7 +383,7 @@ Chapter(
     quest_ids: list[str],
     status: Literal["locked", "active", "completed"],
     required: bool,                   # chapter.progress 카운트 대상 여부
-    # 런타임 파생 필드 (시드 JSON 에 박지 않음, 엔진이 매 턴 계산)
+    # 런타임 파생 필드 (시드 JSON 에 넣지 않음, 엔진이 매 턴 계산)
     progress: {done: int, total: int} = {done: 0, total: 0},  # required=true 퀘스트 중 completed 수 / 전체 수. 프론트 표시·엔진 트리거 평가용 ([02-runtime.md](./02-runtime.md) §3.2 - 세션 레이어엔 안 실음)
 )
 
@@ -399,7 +399,7 @@ Quest(
     rewards: QuestRewards,
     status: Literal["locked", "active", "completed", "failed"],
     required: bool,
-    # 런타임 필드 (시드 JSON 에 박지 않음, 엔진이 갱신)
+    # 런타임 필드 (시드 JSON 에 넣지 않음, 엔진이 갱신)
     triggers_met: list[bool] = [],         # triggers 와 같은 길이. apply_changes 후 check_quests 가 토글
     fail_triggers_met: list[bool] = [],    # fail_triggers 와 같은 길이
 )

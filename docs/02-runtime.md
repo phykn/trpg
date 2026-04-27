@@ -9,7 +9,7 @@
 3. **§3 컨텍스트 레이어** — 에이전트에 무엇을 보여주나
 4. **§4 온톨로지** — 그 컨텍스트가 어떤 그래프로 조립되나
 5. **§5 DC 시스템** — 판정 수치 계산
-6. **§6 상태 업데이트** — 결정이 어떻게 게임 상태에 박히나
+6. **§6 상태 업데이트** — 결정이 어떻게 게임 상태에 반영되나
 7. **§7 메모리 시스템** — 무엇이 다음 턴까지 남나
 
 ---
@@ -56,7 +56,7 @@ LLM 을 두 개로 쪼갠다.
 | `rest` | 잠·야영 (긴 휴식) | [P3] 엔진이 location.sleep_risk 굴림 → 풀회복 (HP/MP max + world_time +sleep_hours) 또는 sleep_encounters 풀에서 적 뽑아 surprise=enemy 로 combat 부팅 ([03-features.md](./03-features.md) §2.4) |
 | `use` | 인벤 아이템 사용 (포션·연막탄·열쇠 등) | [P3] 엔진이 ConsumableEffect 분기 (heal/damage/mp_restore/buff) + on_use 트리거 + consumable 차감. 전투 중엔 한 차례 소비 ([03-features.md](./03-features.md) §2.7) |
 | `equip` | 무기·방어구 장착 | [P3] 엔진이 슬롯 자동 결정 (무기 = 빈 손 우선/dominant 폴백, 방어구 = 빈 슬롯). 전투 중 한 차례 소비 ([03-features.md](./03-features.md) §2.5) |
-| `unequip` | 장착 해제 | [P3] 엔진이 item_id 박힌 슬롯 찾아 비움. 양손 무기는 두 슬롯 모두. 전투 중 한 차례 소비 |
+| `unequip` | 장착 해제 | [P3] 엔진이 item_id 가 들어 있는 슬롯 찾아 비움. 양손 무기는 두 슬롯 모두. 전투 중 한 차례 소비 |
 | `clarify` | 해석 불가 / 복합 행동 | 플레이어에게 되물음, 파이프라인 재시작 |
 | `reject` | 인-캐릭터 입력이 아님 — 시스템 공격(프롬프트 인젝션, 메타 질문), OOC 잡담, 무의미 입력 | 인-게임 표현으로 흡수 (아래 reject 처리 참고) |
 
@@ -106,7 +106,7 @@ LLM 을 두 개로 쪼갠다.
 - `memory_targets`: 기억을 저장할 엔티티 ID 목록 (복수 가능)
 - `memory`: 저장할 기억 내용 (`memorable=true` 일 때 필수). `memory_targets` 가 비면 엔진이 `memorable=false` 로 강등하고 저장 안 함.
 - `importance`: 기억 중요도 (1: 사소, 2: 보통, 3: 중요)
-- `memory_links`: 각 entity 의 기억이 누구를 향한 것인지 매핑 (`{entity_id: target_id}`). `memory_targets` 의 entity 마다 한 줄. 여기 빠진 entity 의 기억은 `target_id=None` 으로 박혀 Subject.known 산출 ([04-boundary.md](./04-boundary.md) §1) 에서 자연스럽게 빠진다. 1명짜리 memory_targets (예: 플레이어 혼자 깨달음) 는 보통 비워둠. 자동 추론 안 함 — 1:1·다대다 모두 narrator 가 명시.
+- `memory_links`: 각 entity 의 기억이 누구를 향한 것인지 매핑 (`{entity_id: target_id}`). `memory_targets` 의 entity 마다 한 줄. 여기 빠진 entity 의 기억은 `target_id=None` 으로 들어가 Subject.known 산출 ([04-boundary.md](./04-boundary.md) §1) 에서 자연스럽게 빠진다. 1명짜리 memory_targets (예: 플레이어 혼자 깨달음) 는 보통 비워둠. 자동 추론 안 함 — 1:1·다대다 모두 narrator 가 명시.
 
 **서술 규율**:
 - 수치/확률/DC 를 본문에 노출하지 않음 ("설득을 시도한다" ○, "DC 15 설득" ✗)
@@ -142,7 +142,7 @@ DC판정 에이전트 호출
   │             (프론트 주사위 버튼 활성 → 플레이어 주사위 → /roll 진입)
   │             /roll: grade 판정 → target_view 조립 → 내러티브 호출 → 후처리 ↓
   │
-  ├─ combat  → [P2] 엔진: combat_state 부팅 (이니셔티브 굴림 + enemy_ids 박기)
+  ├─ combat  → [P2] 엔진: combat_state 부팅 (이니셔티브 굴림 + enemy_ids 채움)
   │             → SSE combat_start → NPC 차례 자동 진행 (각 차례마다 SSE combat_turn)
   │             → 종료 조건이면 SSE combat_end → done
   │             → 살아있으면 player 차례 도달 시 done. 다음 /turn 에서 player 행동 처리.
@@ -196,7 +196,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 1. **JSON 파싱** — `JudgeOutput` 스키마 검증 (`backend/src/agents/dc_judge/schema.py`).
 2. **semantic 검증** — `targets[]` 의 모든 ID 가 `state.characters | locations | items` 에 실제로 존재하는지 (LLM 은 종종 없는 ID 를 지어내는 환각이 있음).
 
-둘 중 어느 쪽이 실패해도 직전 응답 본문과 에러 메시지를 messages 에 append 해서 자기 교정 루프로 다시 호출 — 같은 실수를 반복하지 않게 LLM 컨텍스트에 실패 사유를 박아주는 것. 최대 5 회 재시도 (총 6 번 시도).
+둘 중 어느 쪽이 실패해도 직전 응답 본문과 에러 메시지를 messages 에 append 해서 자기 교정 루프로 다시 호출 — 같은 실수를 반복하지 않게 LLM 컨텍스트에 실패 사유를 남겨주는 것. 최대 5 회 재시도 (총 6 번 시도).
 
 5 회 후에도 통과 못하면 마지막 에러 종류로 분기:
 - 마지막이 JSON 파싱 실패 → `JudgeMalformed` 예외 raise ([04-boundary.md](./04-boundary.md) §3 → SSE `error: JudgeMalformed`).
@@ -226,7 +226,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 ### 2.5 세션 생명주기
 
 **프로필 목록** (`GET /profiles`): `PROFILE_DIR/` 아래 각 프로필 디렉터리를 스캔해 `[{id, name, description, races: [{id, name, description}]}]` 반환. 프론트 새게임 화면이 이 목록을 카드로 보여주고 사용자가 하나 골라서 시작.
-- 프로필 메타(`id, name, description`)는 `scenarios/{id}/profile.json` 한 파일에 박힘. `id` 는 디렉터리 이름과 같아야 (스캐너가 디렉터리명으로 찾고 검증).
+- 프로필 메타(`id, name, description`)는 `scenarios/{id}/profile.json` 한 파일에 들어 있음. `id` 는 디렉터리 이름과 같아야 (스캐너가 디렉터리명으로 찾고 검증).
 - race 목록은 `scenarios/{id}/races/*.json` 의 각 파일에서 `{id, name, description}` 만 추려서 응답에 포함 (`racial_skills` 는 내부 전용, 프론트로 안 나감).
 
 **init** (`POST /session/init {profile, player: {name, race_id, appearance}}`):
@@ -247,7 +247,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 
 ## 3. 컨텍스트 레이어
 
-내러티브 에이전트에 전달되는 컨텍스트는 4개 레이어. 위에서 아래로 갈수록 자주 바뀐다 — 맨 위 월드 레이어는 게임 한 판 내내 거의 그대로 두고, 맨 아래 장면 레이어는 매 턴 새로 조립한다. 안 바뀌는 건 시스템 프롬프트에 박아 캐싱하고, 자주 바뀌는 건 매번 다시 만든다.
+내러티브 에이전트에 전달되는 컨텍스트는 4개 레이어. 위에서 아래로 갈수록 자주 바뀐다 — 맨 위 월드 레이어는 게임 한 판 내내 거의 그대로 두고, 맨 아래 장면 레이어는 매 턴 새로 조립한다. 안 바뀌는 건 시스템 프롬프트에 고정해 캐싱하고, 자주 바뀌는 건 매번 다시 만든다.
 
 ### 3.1 월드 레이어 (거의 불변)
 
@@ -294,7 +294,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 
 필드 의미:
 
-- **`summary`** — "지금까지 진행한 것의 한 줄 요약" (동적). 정적 의뢰 내용이 아니라 챕터/퀘스트가 *어디까지 왔는지* 의 서사적 상태. narrator 가 의미 있는 진행이 있을 때 `{type: "set", entity: "chapters|quests", id, field: "summary", value: "..."}` 로 갱신 (§6.1). 초기값은 시나리오 시드 (`scenarios/{name}/quests/*.json`, `chapters/*.json`) 에 박힘 — 보통 "[수락] 마을 장로가 광장의 정찰병 처치를 의뢰" 같은 한 줄.
+- **`summary`** — "지금까지 진행한 것의 한 줄 요약" (동적). 정적 의뢰 내용이 아니라 챕터/퀘스트가 *어디까지 왔는지* 의 서사적 상태. narrator 가 의미 있는 진행이 있을 때 `{type: "set", entity: "chapters|quests", id, field: "summary", value: "..."}` 로 갱신 (§6.1). 초기값은 시나리오 시드 (`scenarios/{name}/quests/*.json`, `chapters/*.json`) 에 들어 있음 — 보통 "[수락] 마을 장로가 광장의 정찰병 처치를 의뢰" 같은 한 줄.
 - **`goals`** — 아직 충족 안 된 트리거 이름들 (`pending only`). 끝난 트리거는 빠짐. narrator 에게 "지금 남은 단계가 무엇인지" 직접 알림. 출처: `quest.triggers[i].name where !triggers_met[i]`.
 - **`conditions`** — 자유 텍스트 제약 ("기한 없음", "민간인 피해 최소화"). narrator 가 매 턴 톤에 반영. quest 모델의 `conditions` 그대로.
 - **`giver`** — 의뢰자 이름 (캐릭터 ID 가 아닌 표시명). narrator 의 회상 서술 ("장로의 의뢰가 떠올랐다") 에 사용. 출처: `characters[quest.giver_id].name`.
@@ -318,7 +318,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 **턴 로그 (`turn_log`, 이전 요약)**: 전체 턴의 한 줄 요약을 롤링 보관. 상한은 `rules.memory.turn_log_size` (기본 50), 초과 시 오래된 항목부터 drop. 최근 대화에 포함된 턴은 이 블록에서 제외 (중복 방지).
 
 ```json
-// 저장: narrator 의 turn_summary + 엔진이 메타로 함께 박는 target (`pending_check.target`, 없으면 `judge_result.targets[0]`, 둘 다 없으면 생략) — 메모리 연관·필터링용 [P3]
+// 저장: narrator 의 turn_summary + 엔진이 메타로 함께 넣는 target (`pending_check.target`, 없으면 `judge_result.targets[0]`, 둘 다 없으면 생략) — 메모리 연관·필터링용 [P3]
 {"turn": 17, "target": "goblin_scout", "turn_summary": "정찰병 처치 → 광장 고블린 1/1 완료"}
 
 // 전달 (먼저 등장, 시간 오름차순)
@@ -513,7 +513,7 @@ mod = 0
 if aff >=  social.friendly_threshold:  mod =  social.roll_bonus  # 친밀: +bonus
 if aff <= -social.friendly_threshold:  mod = -social.roll_bonus  # 적대: -bonus
 # 그 사이(중립)는 mod = 0
-# 이 mod 가 PendingCheck.mod 에 박히고, /roll 에서 total = dice + mod 로 합산 (§5.3)
+# 이 mod 가 PendingCheck.mod 에 들어가고, /roll 에서 total = dice + mod 로 합산 (§5.3)
 # Location 폴백 시 relations 에 location_id 가 없어 .get 이 0 으로 떨어진다 — 의도된 0(중립) 보정. 대상이 모호한 판정에는 affinity 보너스를 주지 않겠다는 결정.
 ```
 
@@ -523,7 +523,7 @@ if aff <= -social.friendly_threshold:  mod = -social.roll_bonus  # 적대: -bonu
 
 ## 6. 상태 업데이트
 
-내러티브 에이전트가 출력에 실어 보내는 `state_changes` 가 어떻게 게임 상태로 박히고, 무엇이 프론트로 흘러가는지.
+내러티브 에이전트가 출력에 실어 보내는 `state_changes` 가 어떻게 게임 상태로 반영되고, 무엇이 프론트로 흘러가는지.
 
 ### 6.1 state_changes 형식
 

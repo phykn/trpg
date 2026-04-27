@@ -32,11 +32,11 @@
 - `triggers` 는 보통 1~3 개. 모두 충족돼야 quest 가 completed 로 전환.
 - `fail_triggers` 도 같은 모양 (실패 조건). 보통 생략.
 - 기존 quest 와 의도 중복 금지.
-- `triggers_met` / `fail_triggers_met` 같은 런타임 필드는 박지 말 것.
+- `triggers_met` / `fail_triggers_met` 같은 런타임 필드는 적지 말 것.
 
 ## 보상 (rewards)
 
-`difficulty` 와 균형 맞춰 박는다:
+`difficulty` 와 균형 맞춰 지정한다:
 
 | difficulty | exp | gold |
 |---|---|---|

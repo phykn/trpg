@@ -20,7 +20,7 @@
   "mp": <max_mp 와 같은 값>,
   "stats": {"STR":<0-20>, "DEX":<0-20>, "CON":<0-20>, "INT":<0-20>, "WIS":<0-20>, "CHA":<0-20>},
   "disposition": {"lawful":<0-100>, "moral":<0-100>, "aggressive":<0-100>},
-  "xp_reward": <int — hostile NPC 만 박는다, 아래 규칙 참조>,
+  "xp_reward": <int — hostile NPC 만 지정한다, 아래 규칙 참조>,
   "inventory_ids": ["<item id>", ...],
   "equipment": {"<slot>": "<item id>"},
   "combat_behavior": {"attack_priority": "...", "flee_hp_percent": <int>},
@@ -45,7 +45,7 @@
 
 총합 항상 60. 기본값 10/10/10/10/10/10 (= 페어 20×3). 컨셉에 따라 페어 안에서 트레이드: 강한 적 → STR 14 / CHA 6, 둔한 거구 → DEX 6 / WIS 14, 영리한 약골 → CON 6 / INT 14. 페어 합 20 유지.
 
-### Level 과 HP / MP — 공식대로 박기
+### Level 과 HP / MP — 공식대로 채우기
 
 - `level` 은 컨셉에 맞게: 평민·노파 1, 일반 병사·도적 3~5, 정예·우두머리 6~10, 고대 괴수·보스 10~15.
 - `max_hp = (10 + CON) + level × (5 + CON ÷ 4)`
@@ -57,12 +57,12 @@
 ### Equipment — 슬롯 매핑 (가이드)
 
 - `equipment` 슬롯은 `head/top/bottom/feet/leftHand/rightHand/acc1/acc2` 중 하나.
-- weapon → `leftHand` 또는 `rightHand`. armor → `head/top/bottom/feet`. consumable 은 equipment 에 못 박는다.
-- two-handed weapon 은 `leftHand` 와 `rightHand` 양쪽에 같은 id 를 박는다.
+- weapon → `leftHand` 또는 `rightHand`. armor → `head/top/bottom/feet`. consumable 은 equipment 에 넣을 수 없다.
+- two-handed weapon 은 `leftHand` 와 `rightHand` 양쪽에 같은 id 를 넣는다.
 - decorative item (effects=null) 은 `acc1`/`acc2` 슬롯.
 - equipment 슬롯의 id 는 `inventory_ids` 안에도 있어야 한다 (강제).
 - 인벤 무게 합은 `STR × 10` kg 을 넘으면 안 된다 (강제).
-- `inventory_ids` 의 item 은 컨셉에 맞으면 적절한 슬롯에 박아라 — 도적이 단검을 갖고 있으면 `rightHand` 에, 외투를 갖고 있으면 `top` 에. 자연스러움 우선, 강제 X.
+- `inventory_ids` 의 item 은 컨셉에 맞으면 적절한 슬롯에 넣어라 — 도적이 단검을 갖고 있으면 `rightHand` 에, 외투를 갖고 있으면 `top` 에. 자연스러움 우선, 강제 X.
 
 ### 소지품 — 직업·세계관에 맞게 (가이드, 강제 X)
 
@@ -90,9 +90,9 @@
 
 ### combat_behavior — 적대 NPC 에만
 
-- 적대 NPC: `aggressive` 70~100 + `combat_behavior` 박기 (예: `{"attack_priority":"nearest", "flee_hp_percent":25}`).
+- 적대 NPC: `aggressive` 70~100 + `combat_behavior` 지정 (예: `{"attack_priority":"nearest", "flee_hp_percent":25}`).
 - `attack_priority` 는 정확히 5 개 중 하나: `"nearest"` | `"lowest_hp"` | `"highest_threat"` | `"healer_first"` | `"random"`.
-- 비적대 NPC 는 `aggressive` 70 미만 + `combat_behavior` 박지 말 것.
+- 비적대 NPC 는 `aggressive` 70 미만 + `combat_behavior` 비울 것.
 
 ### xp_reward — 적대 NPC 에만
 
@@ -108,17 +108,17 @@
 
 플레이어 레벨업 비용 = `100 × current_level` (linear). level 0 → 1 = 100. xp_reward 는 한 번의 킬로 1~2 레벨 이상 점프하지 않게.
 
-### Skill — id 만 박는다 (스킬 본체는 별도 단계)
+### Skill — id 만 적는다 (스킬 본체는 별도 단계)
 
 - 주인공은 빈 채로 시작해 게임 중에 배우지만, 시드 NPC 는 race · job 에 어울리는 `learned_skill_ids` 1~3 개를 갖고 등장.
-- 이 단계에서는 **id 만** 박고 (예: `["drill_strike", "guard_focus"]`), 실제 Skill JSON 은 별도 `skill` 단계에서 만든다.
-- `racial_skill_ids` 는 보통 race 가 정한 racial skill 의 id 가 그대로 들어가지만, 시드 NPC 가 race 외 추가 racial skill 을 가져야 할 경우만 직접 박는다 (대부분 비워두면 race 의 기본값이 자동 상속).
+- 이 단계에서는 **id 만** 적고 (예: `["drill_strike", "guard_focus"]`), 실제 Skill JSON 은 별도 `skill` 단계에서 만든다.
+- `racial_skill_ids` 는 보통 race 가 정한 racial skill 의 id 가 그대로 들어가지만, 시드 NPC 가 race 외 추가 racial skill 을 가져야 할 경우만 직접 적는다 (대부분 비워두면 race 의 기본값이 자동 상속).
 - 컨셉 매핑 예) 도적·전사: STR/DEX 기반 attack · 마법사: INT 기반 attack/buff · 노인·정보꾼: WIS 기반 buff/debuff · 거대 몬스터: STR/CON 기반 area attack.
 - 같은 시나리오 안의 다른 캐릭터가 같은 skill 을 공유해도 OK — id 는 유일하지만 참조는 여러 명이 가능.
 
 ### 그 밖에
 
-- `is_player`·`gold`·`xp_pool`·`active_buffs`·`memories` 등은 박지 말 것 (런타임이 채움). `xp_reward` 는 예외 — 시드 단계에서 박는 게 맞다 (hostile NPC 한정).
+- `is_player`·`gold`·`xp_pool`·`active_buffs`·`memories` 등은 비워둘 것 (런타임이 채움). `xp_reward` 는 예외 — 시드 단계에서 적어두는 게 맞다 (hostile NPC 한정).
 - `tone_hint` 는 짧고 구체 ("퉁명스러운 단답, 가끔 긴 한숨" 식).
 - 기존 character 와 이름·역할 중복 금지.
 
