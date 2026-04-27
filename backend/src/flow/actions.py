@@ -26,6 +26,7 @@ from ..engines.growth import (
     level_up as level_up_engine,
 )
 from ..engines.invariants import InvariantViolation, check
+from ..engines.quest import check_quests
 from ..llm.client import LLMClient
 from ..mapping.to_front import pending_check_to_front
 from ..rules.dc import pick_dc, sigmoid_required_roll, social_bonus
@@ -197,12 +198,15 @@ async def emit_use(
     actor = state.characters[actor_id]
     target = state.characters.get(target_id) if target_id else None
     try:
-        result = inventory_engine.use_with_quest_hook(
-            actor, item_id, target, state.items, state, dirty=dirty.entities
+        result = inventory_engine.use(
+            actor, item_id, target, state.items, dirty=dirty.entities
         )
     except InventoryInvalid as e:
         yield push_gm(state, dirty, f"{actor.name} — 아이템 사용 실패 ({humanize_engine_error(e)}).")
         return
+    if result.get("dead"):
+        check_quests(state, "character_death", result["target"], dirty.entities)
+    check_quests(state, "item_use", item_id, dirty.entities)
     yield push_gm(state, dirty, format_use_log(state, actor_id, result))
     if target is not None:
         item = state.items.get(item_id)

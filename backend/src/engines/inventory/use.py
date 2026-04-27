@@ -107,23 +107,3 @@ def use(
             dirty.add(("characters", recipient.id))
 
     return result
-
-
-def use_with_quest_hook(
-    actor: Character,
-    item_id: str,
-    target: Character | None,
-    items: dict[str, Item],
-    state,
-    *,
-    dirty: set[tuple[str, str]] | None = None,
-) -> dict:
-    """use + quest item_use trigger evaluation, plus character_death if the
-    item killed someone."""
-    from ..quest import check_quests
-
-    result = use(actor, item_id, target, items, dirty=dirty)
-    if result.get("dead"):
-        check_quests(state, "character_death", result["target"], dirty)
-    check_quests(state, "item_use", item_id, dirty)
-    return result

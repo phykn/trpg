@@ -9,7 +9,7 @@ from .equipment import (
     unequip_by_item,
 )
 from .trade import buy, buy_price, sell, sell_price
-from .use import use, use_with_quest_hook
+from .use import use
 
 __all__ = [
     "Slot",
@@ -26,5 +26,4 @@ __all__ = [
     "unequip",
     "unequip_by_item",
     "use",
-    "use_with_quest_hook",
 ]
