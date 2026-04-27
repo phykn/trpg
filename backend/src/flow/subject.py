@@ -15,7 +15,6 @@ from ..agents.dc_judge.schema import (
     SellAction,
     SummonCombatAction,
 )
-from ..context.surroundings import recent_npc_id
 from ..domain.state import GameState
 
 
@@ -62,7 +61,7 @@ def refresh_active_subject(state: GameState, result) -> None:
                     break
 
     if candidate is None:
-        candidate = recent_npc_id(state, state.player_id)
+        candidate = state.recent_npc_id(state.player_id)
 
     if candidate is not None and candidate != state.active_subject_id:
         state.active_subject_id = candidate

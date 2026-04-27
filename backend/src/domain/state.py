@@ -66,3 +66,25 @@ class GameState(BaseModel):
 
     log_entries: list[LogEntry] = []
     next_log_id: int = 1
+
+    def recent_npc_id(self, actor_id: str) -> str | None:
+        """Most recently addressed NPC at this location — anchors pronoun /
+        follow-up inputs ('한 번만 더 말해봐', '그래서?') to the same NPC
+        instead of letting the judge drift to a different same-location
+        character. Returns None if no recent target exists or it isn't an
+        alive same-location NPC."""
+        if not self.turn_log:
+            return None
+        actor = self.characters.get(actor_id)
+        actor_loc = actor.location_id if actor is not None else None
+        for entry in reversed(self.turn_log):
+            tid = entry.target
+            if tid is None or tid == actor_id:
+                continue
+            npc = self.characters.get(tid)
+            if npc is None or not npc.alive:
+                continue
+            if actor_loc is not None and npc.location_id != actor_loc:
+                continue
+            return tid
+        return None
