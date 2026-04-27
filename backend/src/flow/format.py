@@ -28,16 +28,6 @@ def front_grade(grade: str) -> str:
     return "fail"
 
 
-def label_for_target(state: GameState, target_id: str) -> str:
-    if target_id in state.characters:
-        return state.characters[target_id].name
-    if target_id in state.locations:
-        return state.locations[target_id].name
-    if target_id in state.items:
-        return state.items[target_id].name
-    return target_id
-
-
 # --- Engine-error → Korean GM phrase ---------------------------------------
 
 
@@ -103,7 +93,14 @@ def format_roll_announce(
     target: str,
     dc: int,
 ) -> str:
-    target_name = label_for_target(state, target)
+    if target in state.characters:
+        target_name = state.characters[target].name
+    elif target in state.locations:
+        target_name = state.locations[target].name
+    elif target in state.items:
+        target_name = state.items[target].name
+    else:
+        target_name = target
     return (
         f"{result.reason}\n"
         f"{target_name}에게 {result.stat} 판정 (난이도 {dc})"
