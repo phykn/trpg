@@ -1,8 +1,6 @@
 import type { FrontState, PendingCheck } from './domain';
 import type { LogEntry } from './ui';
 
-export type { PendingCheck };
-
 export type RaceCard = {
   id: string;
   name: string;

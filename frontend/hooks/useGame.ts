@@ -7,9 +7,17 @@ import {
   streamRoll,
   streamTurn,
 } from '@/services';
-import type { CombatBadge, FrontState, Hero, Place, Quest, Subject } from '@/types/domain';
+import type {
+  CombatBadge,
+  FrontState,
+  Hero,
+  PendingCheck,
+  Place,
+  Quest,
+  Subject,
+} from '@/types/domain';
 import type { LogEntry } from '@/types/ui';
-import type { InitRequest, PendingCheck, StreamEvent } from '@/types/wire';
+import type { InitRequest, StreamEvent } from '@/types/wire';
 
 import { handleStreamEvent } from './handleStreamEvent';
 
