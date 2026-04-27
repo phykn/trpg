@@ -118,7 +118,7 @@ def _growth_payload(actor: Character) -> dict:
     }
 
 
-def _recent_npc_id(state: GameState, actor_id: str) -> str | None:
+def recent_npc_id(state: GameState, actor_id: str) -> str | None:
     """Most recently addressed NPC at this location — anchors pronoun /
     follow-up inputs ('한 번만 더 말해봐', '그래서?') to the same NPC instead
     of letting the judge drift to a different same-location character.
@@ -246,7 +246,7 @@ def build_surroundings(state: GameState, actor_id: str) -> dict:
         "in_combat": in_combat,
         "growth": _growth_payload(actor),
         "skill_candidates": _skill_candidates_payload(state),
-        "recent_npc": _recent_npc_id(state, actor_id),
+        "recent_npc": recent_npc_id(state, actor_id),
     }
     if not actor.location_id or actor.location_id not in state.locations:
         return {
