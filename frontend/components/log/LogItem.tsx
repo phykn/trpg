@@ -1,5 +1,6 @@
 import { Text, View } from 'react-native';
 
+import { colors, spacing } from '@/design/tokens';
 import type { LogEntry } from '@/types/ui';
 
 import { RollResult } from './RollResult';
@@ -18,16 +19,33 @@ export function LogItem({ entry }: { entry: LogEntry }) {
 }
 
 function GMNarration({ text }: { text: string }) {
-  return <Text className="font-serif text-lead text-fg-default">{text}</Text>;
+  return (
+    <View
+      style={{
+        borderLeftWidth: 2,
+        borderLeftColor: colors.accent.fg,
+        paddingLeft: spacing[3],
+      }}
+    >
+      <Text className="font-serif text-lead text-fg-default">{text}</Text>
+    </View>
+  );
 }
 
 function PlayerMessage({ text }: { text: string }) {
   return (
-    <View
-      className="self-end py-2.5 px-3.5 bg-accent-muted rounded-md"
-      style={{ maxWidth: '82%', borderBottomRightRadius: 6 }}
-    >
-      <Text className="font-mono-medium text-title text-accent-fg">{text}</Text>
+    <View className="self-end" style={{ maxWidth: '82%' }}>
+      <View
+        style={{
+          borderRightWidth: 2,
+          borderRightColor: colors.fg.muted,
+          paddingRight: spacing[3],
+        }}
+      >
+        <Text className="font-mono-medium text-title text-fg-default text-right">
+          {text}
+        </Text>
+      </View>
     </View>
   );
 }
