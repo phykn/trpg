@@ -15,7 +15,7 @@ from pathlib import Path
 from pydantic import BaseModel, ValidationError
 
 from src.domain.entities import Chapter, Character, Item, Location, Quest, Race, Skill
-from src.engines.invariants import check
+from src.engines.invariants import check_item, check_seed_character
 from src.llm import LLMClient
 
 # --- types & errors --------------------------------------------------------
@@ -73,7 +73,7 @@ def _check_location_refs(loc: Location, refs: dict[str, set[str]]) -> None:
 def _check_character_refs(ch: Character, refs: dict[str, set[str]]) -> None:
     """Manifest cross-ref only — race_id/location_id/skill_ids pool checks.
     Other rules (stats, HP/MP, equipment slots, carry, NPC seed extras) are
-    dispatched to `check.seed_character` in `write_entity`."""
+    dispatched to `check_seed_character` in `write_entity`."""
     races = refs.get("race", set())
     if ch.race_id not in races:
         raise EntityWriterError(
@@ -261,11 +261,11 @@ def _check_entity_invariants(entity: BaseModel, scenario_dir: Path) -> None:
     runs the rule layer (stat invariants, HP/MP formula, NPC seed extras, etc).
     """
     if isinstance(entity, Character):
-        violations = check.seed_character(
+        violations = check_seed_character(
             entity, _items_pool(scenario_dir), _skills_pool(scenario_dir)
         )
     elif isinstance(entity, Item):
-        violations = check.item(entity)
+        violations = check_item(entity)
     else:
         return
     if violations:

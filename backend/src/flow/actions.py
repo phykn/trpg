@@ -25,7 +25,7 @@ from ..engines.growth import (
     award_kill_xp,
     level_up as level_up_engine,
 )
-from ..engines.invariants import InvariantViolation, check
+from ..engines.invariants import InvariantViolation, check_character
 from ..engines.quest import check_quests
 from ..llm.client import LLMClient
 from ..mapping.to_front import pending_check_to_front
@@ -232,7 +232,7 @@ async def emit_level_up(
     except LevelUpInvalid as e:
         yield push_gm(state, dirty, f"{actor.name} — 성장 실패 ({humanize_engine_error(e)}).")
         return
-    violations = check.character(actor)
+    violations = check_character(actor)
     if violations:
         raise InvariantViolation(
             "post-level_up invariant violation:\n" + "\n".join(violations)

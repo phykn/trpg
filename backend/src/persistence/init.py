@@ -20,7 +20,7 @@ from ..domain.entities import (
 from ..domain.errors import ProfileMalformed, ProfileNotFound, RaceNotFound
 from ..domain.state import GameState
 from ..engines.growth import calc_max_hp, calc_max_mp
-from ..engines.invariants import Scenario, check
+from ..engines.invariants import Scenario, check_scenario
 from .store import (
     copy_seed_into_game,
     save_entity,
@@ -63,7 +63,7 @@ async def init_game(
     if not pdir.is_dir():
         raise ProfileNotFound(profile_name)
 
-    seed_violations = check.scenario(Scenario.from_dir(pdir))
+    seed_violations = check_scenario(Scenario.from_dir(pdir))
     if seed_violations:
         raise ProfileMalformed(
             f"profile {profile_name!r} invariant violations:\n"
@@ -86,7 +86,7 @@ async def init_game(
     template = _read_json(pdir / "player_template.json")
 
     # start.json / player_template integrity is already covered by
-    # `check.scenario(Scenario.from_dir(pdir))` above (start_location_id,
+    # `check_scenario(Scenario.from_dir(pdir))` above (start_location_id,
     # active_subject_id alive + colocated, active_quest_id status, world_time
     # ISO 8601, etc.). Anything that gets here is well-formed.
     player_id = template.get("id", "player_01")

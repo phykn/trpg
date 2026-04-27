@@ -8,7 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, ValidationError
 
 from src.domain.entities import Character
-from src.engines.invariants import Scenario, check
+from src.engines.invariants import Scenario, check_scenario
 from src.llm import LLMClient
 
 from .runner import (
@@ -527,7 +527,7 @@ async def build_scenario(
 
     # 10. final scenario-level invariant sweep
     _step("invariant sweep")
-    violations = check.scenario(Scenario.from_dir(scenario_dir))
+    violations = check_scenario(Scenario.from_dir(scenario_dir))
     if violations:
         raise EntityWriterError(
             "scenario invariant violation:\n" + "\n".join(violations)

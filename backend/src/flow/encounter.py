@@ -17,7 +17,7 @@ from ..agents.encounter_summon import (
 from ..llm.client import LLMClient
 from ..domain.state import GameState
 from ..engines.growth import calc_max_hp, calc_max_mp
-from ..engines.invariants import InvariantViolation, check
+from ..engines.invariants import InvariantViolation, check_character
 
 
 def _build_input(
@@ -109,7 +109,7 @@ async def summon_encounter(
     if out.race_id not in state.races:
         return None
     char = _make_character(state, out, location.id)
-    violations = check.character(char)
+    violations = check_character(char)
     if violations:
         raise InvariantViolation(
             "summoned character invariant violation:\n" + "\n".join(violations)

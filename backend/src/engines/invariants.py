@@ -1,20 +1,21 @@
 """Game-rule invariants — one place, one entry point per scope.
 
-Every check.X function returns list[str] — empty means OK, otherwise each
+Every check_X function returns list[str] — empty means OK, otherwise each
 entry is a one-line violation message. The format is meant to be fed back
 to the LLM verbatim as self-correction feedback:
 
     [<entity_kind>/<id>] <field>: <expected> vs <got>
 
-Public API (everything else is private):
-    check.stats(stats)              -> list[str]
-    check.character(c)              -> list[str]
-    check.item(item)                -> list[str]
-    check.inventory(c, items_pool)  -> list[str]
-    check.skills(c)                 -> list[str]
-    check.scenario(scenario)        -> list[str]
-    check.state(state)              -> list[str]
-    check.quest_graph(scenario)     -> list[str]
+Public API:
+    check_stats(stats)              -> list[str]
+    check_character(c)              -> list[str]
+    check_seed_character(c, items)  -> list[str]
+    check_item(item)                -> list[str]
+    check_inventory(c, items_pool)  -> list[str]
+    check_skills(c, skill_pool)     -> list[str]
+    check_scenario(scenario)        -> list[str]
+    check_state(state)              -> list[str]
+    check_quest_graph(scenario)     -> list[str]
 
     Scenario (dataclass)
     Scenario.from_dir(path)
@@ -55,7 +56,7 @@ from .inventory.carry import carry_capacity, current_weight
 class InvariantViolation(ValueError):
     """Single error type. Callers wanting raise semantics:
 
-        violations = check.character(c)
+        violations = check_character(c)
         if violations:
             raise InvariantViolation('\\n'.join(violations))
     """
@@ -78,7 +79,7 @@ class Scenario:
     """Seed bundle (or runtime state projection) — every entity dict + meta.
 
     runtime=True relaxes seed-only rules (hp == max_hp, NPC level >= 1, etc.)
-    so check.state can reuse the same machinery.
+    so check_state can reuse the same machinery.
     """
 
     races: dict[str, Race] = field(default_factory=dict)
@@ -154,10 +155,10 @@ def _v(out: list[str], where: str, msg: str) -> None:
     out.append(f"[{where}] {msg}")
 
 
-# --- check.stats -----------------------------------------------------------
+# --- check_stats -----------------------------------------------------------
 
 
-def _check_stats(stats: Stats) -> list[str]:
+def check_stats(stats: Stats) -> list[str]:
     """Pair-trade: STR+CHA = DEX+WIS = CON+INT = 20."""
     out: list[str] = []
     p1 = stats.STR + stats.CHA
@@ -172,15 +173,15 @@ def _check_stats(stats: Stats) -> list[str]:
     return out
 
 
-# --- check.character (stateless) -------------------------------------------
+# --- check_character (stateless) -------------------------------------------
 
 
-def _check_character(c: Character) -> list[str]:
+def check_character(c: Character) -> list[str]:
     """Stateless rules — no items pool / scenario context needed."""
     where = f"characters/{c.id}"
     out: list[str] = []
 
-    for v in _check_stats(c.stats):
+    for v in check_stats(c.stats):
         _v(out, where, v)
 
     expected_hp = calc_max_hp(c.level, c.stats.CON)
@@ -234,10 +235,10 @@ def _check_character(c: Character) -> list[str]:
     return out
 
 
-# --- check.skills (skill ↔ type ↔ duration) --------------------------------
+# --- check_skills (skill ↔ type ↔ duration) --------------------------------
 
 
-def _check_skills(c: Character, skills_pool: dict[str, Skill]) -> list[str]:
+def check_skills(c: Character, skills_pool: dict[str, Skill]) -> list[str]:
     where = f"characters/{c.id}"
     out: list[str] = []
     for sid in (*c.racial_skill_ids, *c.learned_skill_ids):
@@ -266,10 +267,10 @@ def _check_skills(c: Character, skills_pool: dict[str, Skill]) -> list[str]:
     return out
 
 
-# --- check.item ------------------------------------------------------------
+# --- check_item ------------------------------------------------------------
 
 
-def _check_item(item: Item) -> list[str]:
+def check_item(item: Item) -> list[str]:
     where = f"items/{item.id}"
     out: list[str] = []
     if item.weight < 0:
@@ -299,10 +300,10 @@ def _check_item(item: Item) -> list[str]:
     return out
 
 
-# --- check.inventory (character ↔ items pool) ------------------------------
+# --- check_inventory (character ↔ items pool) ------------------------------
 
 
-def _check_inventory(c: Character, items: dict[str, Item]) -> list[str]:
+def check_inventory(c: Character, items: dict[str, Item]) -> list[str]:
     where = f"characters/{c.id}"
     out: list[str] = []
 
@@ -405,7 +406,7 @@ def _check_seed_only_rules(c: Character, items: dict[str, Item]) -> list[str]:
     return out
 
 
-# --- check.quest_graph -----------------------------------------------------
+# --- check_quest_graph -----------------------------------------------------
 
 
 _TRIGGER_POOL_NAME = {
@@ -415,20 +416,24 @@ _TRIGGER_POOL_NAME = {
 }
 
 
-def _check_quest_graph(s: Scenario) -> list[str]:
+def _check_quest_prerequisite_status(s: Scenario) -> list[str]:
+    """Active quests must have all prerequisites completed."""
     out: list[str] = []
-
     for qid, q in s.quests.items():
-        where = f"quests/{qid}"
-        if q.status == "active":
-            for pid in q.prerequisite_ids:
-                if pid in s.quests and s.quests[pid].status != "completed":
-                    _v(
-                        out,
-                        where,
-                        f"status='active' but prerequisite {pid!r} status='{s.quests[pid].status}' (must be 'completed')",
-                    )
+        if q.status != "active":
+            continue
+        for pid in q.prerequisite_ids:
+            if pid in s.quests and s.quests[pid].status != "completed":
+                _v(
+                    out,
+                    f"quests/{qid}",
+                    f"status='active' but prerequisite {pid!r} status='{s.quests[pid].status}' (must be 'completed')",
+                )
+    return out
 
+
+def _check_quest_prerequisite_cycles(s: Scenario) -> list[str]:
+    """Reject any cycle in the quest prerequisite_ids DAG."""
     visited: set[str] = set()
     on_stack: set[str] = set()
     cycle_path: list[str] = []
@@ -451,6 +456,7 @@ def _check_quest_graph(s: Scenario) -> list[str]:
         path.pop()
         return False
 
+    out: list[str] = []
     for qid in s.quests:
         if qid in visited:
             continue
@@ -461,8 +467,11 @@ def _check_quest_graph(s: Scenario) -> list[str]:
                 f"quest prerequisite cycle: {' → '.join(cycle_path)}",
             )
             break
-
     return out
+
+
+def check_quest_graph(s: Scenario) -> list[str]:
+    return _check_quest_prerequisite_status(s) + _check_quest_prerequisite_cycles(s)
 
 
 # --- per-entity cross-ref helpers (used by scenario / state) ---------------
@@ -653,19 +662,19 @@ def _check_player_template(s: Scenario) -> list[str]:
     return out
 
 
-# --- check.scenario / check.state ------------------------------------------
+# --- check_scenario / check_state ------------------------------------------
 
 
-def _check_scenario(s: Scenario) -> list[str]:
+def check_scenario(s: Scenario) -> list[str]:
     out: list[str] = []
 
     for item in s.items.values():
-        out.extend(_check_item(item))
+        out.extend(check_item(item))
 
     for c in s.characters.values():
-        out.extend(_check_character(c))
-        out.extend(_check_inventory(c, s.items))
-        out.extend(_check_skills(c, s.skills))
+        out.extend(check_character(c))
+        out.extend(check_inventory(c, s.items))
+        out.extend(check_skills(c, s.skills))
         out.extend(_check_character_cross_ref(c, s))
         if not s.runtime:
             out.extend(_check_seed_only_rules(c, s.items))
@@ -684,7 +693,7 @@ def _check_scenario(s: Scenario) -> list[str]:
     for ch in s.chapters.values():
         out.extend(_check_chapter_cross_ref(ch, s))
 
-    out.extend(_check_quest_graph(s))
+    out.extend(check_quest_graph(s))
 
     if not s.runtime:
         out.extend(_check_start_json(s))
@@ -693,14 +702,14 @@ def _check_scenario(s: Scenario) -> list[str]:
     return out
 
 
-def _check_state(state: Any) -> list[str]:
-    return _check_scenario(Scenario.from_state(state))
+def check_state(state: Any) -> list[str]:
+    return check_scenario(Scenario.from_state(state))
 
 
 # --- public namespace ------------------------------------------------------
 
 
-def _check_seed_character(
+def check_seed_character(
     c: Character,
     items_pool: dict[str, Item],
     skills_pool: dict[str, Skill],
@@ -712,28 +721,10 @@ def _check_seed_character(
     hostile NPC weapon, etc.)
     """
     out: list[str] = []
-    out.extend(_check_character(c))
-    out.extend(_check_inventory(c, items_pool))
-    out.extend(_check_skills(c, skills_pool))
+    out.extend(check_character(c))
+    out.extend(check_inventory(c, items_pool))
+    out.extend(check_skills(c, skills_pool))
     out.extend(_check_seed_only_rules(c, items_pool))
     return out
 
 
-class check:  # noqa: N801 — used as a namespace, not instantiated
-    """Static namespace. Call check.character / check.scenario / etc."""
-
-    def __init__(self, *_args: object, **_kwargs: object) -> None:
-        raise TypeError(
-            "Call check.character / check.item / check.inventory / check.skills / "
-            "check.scenario / check.state / check.quest_graph / check.stats explicitly."
-        )
-
-    stats = staticmethod(_check_stats)
-    character = staticmethod(_check_character)
-    seed_character = staticmethod(_check_seed_character)
-    item = staticmethod(_check_item)
-    inventory = staticmethod(_check_inventory)
-    skills = staticmethod(_check_skills)
-    scenario = staticmethod(_check_scenario)
-    state = staticmethod(_check_state)
-    quest_graph = staticmethod(_check_quest_graph)

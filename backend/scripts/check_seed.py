@@ -9,7 +9,7 @@ fed back to the LLM verbatim during story-team self-correction loops.
 import sys
 from pathlib import Path
 
-from src.engines.invariants import Scenario, check
+from src.engines.invariants import Scenario, check_scenario
 
 
 def main(argv: list[str]) -> int:
@@ -21,7 +21,7 @@ def main(argv: list[str]) -> int:
         print(f"not a directory: {scenario_dir}", file=sys.stderr)
         return 2
 
-    violations = check.scenario(Scenario.from_dir(scenario_dir))
+    violations = check_scenario(Scenario.from_dir(scenario_dir))
     if not violations:
         print(f"OK: {scenario_dir} ({len(violations)} violations)")
         return 0
