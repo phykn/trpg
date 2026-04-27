@@ -28,7 +28,7 @@ from .dirty import (
     push_gm,
     push_log_entry,
 )
-from .format import front_grade
+from .format import format_combat_end_text, front_grade
 from .narrate import consume_narrate, run_narrate
 
 
@@ -83,38 +83,29 @@ async def _resolve_combat_roll(
             yield {"type": "narrative_delta", "data": {"text": chunk}}
         body = "".join(body_chunks).strip()
         if body:
-            from .dirty import push_gm
             yield push_gm(state, dirty, body)
 
     # Outcome bookkeeping: death-save arming if player went down,
     # combat_end semantic flag.
     player = state.characters[state.player_id]
     if not player.alive:
-        from .format import format_combat_end_text
-        from .dirty import push_gm
         yield push_gm(state, dirty, format_combat_end_text("defeat"))
         yield {"type": "combat_end", "data": {"outcome": "defeat"}}
     elif player.death_saves is not None:
-        from .dirty import push_gm
         yield push_gm(
             state, dirty,
             "쓰러져 의식을 잃어가고 있다 — 죽음 굴림을 시작한다.",
         )
         yield {"type": "combat_end", "data": {"outcome": "downed"}}
         arm_death_save_pending(state)
-        # Re-arm dice prompt
         yield {
             "type": "pending_check",
             "data": pending_check_to_front(state.pending_check),
         }
     elif killed:
-        from .dirty import push_gm
-        from .format import format_combat_end_text
         yield push_gm(state, dirty, format_combat_end_text("victory"))
         yield {"type": "combat_end", "data": {"outcome": "victory"}}
     else:
-        # Failure but player not downed — enemies survived, fight broken off
-        from .dirty import push_gm
         yield push_gm(state, dirty, "전투가 흩어진다 — 적은 살아 있다.")
         yield {"type": "combat_end", "data": {"outcome": "broken_off"}}
 
