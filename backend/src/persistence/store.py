@@ -23,7 +23,7 @@ from ..domain.memory import (
 )
 from ..domain.errors import PersistenceFailed
 from ..rules import RULES
-from ..domain.state import GameState
+from ..domain.state import CombatState, GameState
 
 _save_lock = asyncio.Lock()
 
@@ -127,6 +127,7 @@ class _Meta(BaseModel):
     turn_count: int = 0
     pending_check: PendingCheck | None = None
     pending_skill_candidates: list[Skill] = []
+    combat_state: CombatState | None = None
     next_log_id: int = 1
 
 
@@ -141,6 +142,7 @@ def _meta_from_state(state: GameState) -> _Meta:
         turn_count=state.turn_count,
         pending_check=state.pending_check,
         pending_skill_candidates=list(state.pending_skill_candidates),
+        combat_state=state.combat_state,
         next_log_id=state.next_log_id,
     )
 
@@ -310,6 +312,7 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
         turn_count=meta.turn_count,
         pending_check=meta.pending_check,
         pending_skill_candidates=meta.pending_skill_candidates,
+        combat_state=meta.combat_state,
         next_log_id=next_log_id,
         turn_log=turn_log,
         recent_dialogue=recent_dialogue,

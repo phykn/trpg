@@ -126,7 +126,9 @@ async def _dispatch(
     if isinstance(result, CombatAction):
         invalid_targets = [
             t for t in result.targets
-            if t not in state.characters or not state.characters[t].alive
+            if t == state.player_id
+            or t not in state.characters
+            or not state.characters[t].alive
         ]
         if invalid_targets:
             yield push_act(state, dirty, "공격할 수 있는 대상이 없다.")

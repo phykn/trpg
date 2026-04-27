@@ -59,7 +59,7 @@ Scale is `-100..+100`. With `social.friendly_threshold = 50`, a target at or abo
 ## Persistence
 
 - Per-game dir: `../saves/games/<game_id>/`.
-  - `meta.json` — singletons (`game_id, profile, player_id, world_time, turn_count, pending_check, pending_skill_candidates, active_*_id, next_log_id`). Rewritten every turn end as the commit point.
+  - `meta.json` — singletons (`game_id, profile, player_id, world_time, turn_count, pending_check, pending_skill_candidates, combat_state, active_*_id, next_log_id`). Rewritten every turn end as the commit point. `combat_state` must round-trip through meta — without it, `/turn` reloads as combat-cleared and the engine restarts the fight every turn.
   - `<kind>/<id>.json` for `kind ∈ {characters, items, locations, races, quests, chapters, campaigns}`. Only entities mutated this turn are rewritten.
   - `log.jsonl / history.jsonl / dialogue.jsonl` — append-only, one line per entry. No on-disk cap. In-memory caps (`RULES.log.display_turns`, `memory.turn_log_size`, `memory.recent_dialogue_turns`) only apply on tail-load and prompt assembly.
 - `init_game` copies `../scenarios/<profile>/`'s seed entity dirs verbatim into the game dir, then writes the new player character + meta.

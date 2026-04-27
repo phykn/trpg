@@ -61,7 +61,11 @@ Single-entity calls (e.g. `/story-write race ...`) leave the id free — only id
 
 ### Long runs
 
-`--agent all` chains nine playthroughs back-to-back and typically runs for an hour or more. Default launch pattern: start the script via Bash `run_in_background` with stdout redirected to a logfile, then attach a persistent Monitor that `tail -F`s the log and filters for per-agent boundaries (`━━`, `→`, `Done`) plus failure signatures (`Error`, `Traceback`). Each agent's verdict then lands as a chat notification while the run keeps going. Single-agent runs (`--agent <name>`) are short enough to stay in the foreground.
+`--agent all` chains nine playthroughs back-to-back and typically runs for an hour or more. Default launch pattern: start the script via Bash `run_in_background` with stdout redirected to a logfile, then attach a persistent Monitor that `tail -F`s the log and filters for per-agent boundaries (`━━`, `→`, `Done`) plus failure signatures (`Error`, `Traceback`). Each agent's completion lands as a chat notification while the run keeps going. Single-agent runs (`--agent <name>`) are short enough to stay in the foreground.
+
+### Reviewing a run
+
+There is no automated reviewer. Each run drops `transcript.md` (human-readable), `sse.jsonl` (raw event stream including every judge decision), and `final_state.json` per agent under `reports/qa/<ts>/<agent>/`, plus a top-level `index.md` listing turn counts and error counts. Claude Code reads those files in chat directly and writes the review there — that avoids the local LLM hallucinating evidence that wasn't in the transcript.
 
 ### Adding a new agent
 
@@ -69,10 +73,6 @@ Single-entity calls (e.g. `/story-write race ...`) leave the id free — only id
 2. Add the name to the `AGENTS` list in `agency/run_qa.py`.
 
 `PlayerAgent` uses the prompt verbatim as the system message; each turn it appends `state_summary` + `last_gm` + the recent flow as the user message (`harness/agent.py`).
-
-### Verdict schema is a contract
-
-The `Verdict` Pydantic model in `harness/review.py` is consumed by external tooling (`index.md` generation, future dashboards). Adding fields is fine; renaming or retyping existing fields needs its own migration PR.
 
 ## Adding a new team
 

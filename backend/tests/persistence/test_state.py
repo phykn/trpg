@@ -76,6 +76,26 @@ async def test_save_load_round_trip_through_disk(fresh_state, tmp_data):
     assert loaded.recent_dialogue[0].player == "p"
 
 
+async def test_combat_state_survives_meta_round_trip(fresh_state, tmp_data):
+    # Regression: meta.json used to skip combat_state, so each /turn request
+    # reloaded as combat-cleared and the engine restarted the fight every turn,
+    # never letting the player land more than the opening hit.
+    from src.domain.state import CombatState
+    fresh_state.combat_state = CombatState(
+        round=2,
+        turn_order=("player_01", "goblin_01"),
+        current_turn=1,
+        enemy_ids=("goblin_01",),
+    )
+    await save_full(fresh_state, tmp_data)
+    loaded = load_game(tmp_data, fresh_state.game_id)
+    assert loaded.combat_state is not None
+    assert loaded.combat_state.round == 2
+    assert tuple(loaded.combat_state.turn_order) == ("player_01", "goblin_01")
+    assert loaded.combat_state.current_turn == 1
+    assert tuple(loaded.combat_state.enemy_ids) == ("goblin_01",)
+
+
 async def test_jsonl_appends_are_cumulative(fresh_state, tmp_data):
     await save_full(fresh_state, tmp_data)
     await append_log_entries(

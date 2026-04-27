@@ -113,6 +113,33 @@ async def test_combat_with_invalid_target_does_not_consume_turn(
     assert combat_state.turn_count == turn_before
 
 
+async def test_combat_with_self_target_does_not_consume_turn(
+    combat_state, tmp_data, monkeypatch
+):
+    # Regression: judge sometimes returned `targets=['player_01']` (the player
+    # attacking themselves). The dispatcher used to start combat with the
+    # player as the only enemy, which then ended immediately — turn_count went
+    # up but nothing else moved.
+    _judge_returns(
+        monkeypatch, CombatAction(action="combat", targets=["player_01"])
+    )
+    turn_before = combat_state.turn_count
+    events = await _collect(
+        run_turn(
+            client=None,
+            state=combat_state,
+            profile_dir="<unused>",
+            saves_dir=tmp_data,
+            player_input="자신을 베어버린다",
+            rng=random.Random(1),
+        )
+    )
+    types = [e["type"] for e in events]
+    assert "combat_start" not in types
+    assert combat_state.combat_state is None
+    assert combat_state.turn_count == turn_before
+
+
 async def test_combat_player_attack_advances_round(combat_state, tmp_data, monkeypatch):
     """combat_state active and on the player's turn. CombatAction → damage applied."""
     # boot combat first

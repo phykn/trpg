@@ -210,8 +210,8 @@ async def _handle_combat_action(
     player = state.characters[state.player_id]
     target_id = result.targets[0]
     target = state.characters.get(target_id)
-    if target is None or not target.alive:
-        yield push_gm(state, dirty, "그 대상은 이미 무력화돼 있다.")
+    if target_id == state.player_id or target is None or not target.alive:
+        yield push_gm(state, dirty, "그 대상은 공격할 수 없다.")
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return

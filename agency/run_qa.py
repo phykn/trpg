@@ -2,7 +2,11 @@
 
 Usage (run from anywhere, repo root included):
     python agency/run_qa.py --agent diplomat --turns 15
-    python agency/run_qa.py --agent all --turns 20 --profile default
+    python agency/run_qa.py --agent all --turns 20 --profile redcliff
+
+The runner only produces transcripts (transcript.md, sse.jsonl, final_state.json
+under reports/qa/<ts>/<agent>/). There is no automated reviewer — Claude Code
+reads those files in chat and writes the review there.
 """
 
 import argparse
@@ -24,12 +28,6 @@ load_dotenv(ROOT / "backend" / ".env")
 from src.llm import LLMClient  # noqa: E402
 
 from agency.qa.harness.agent import PlayerAgent  # noqa: E402
-from agency.qa.harness.review import (  # noqa: E402
-    Verdict,
-    review_session,
-    write_review_md,
-    write_verdict_json,
-)
 from agency.qa.harness.runner import run_qa_session  # noqa: E402
 
 AGENTS = [
@@ -49,61 +47,31 @@ def _agent_prompt_path(name: str) -> Path:
     return ROOT / "agency" / "qa" / "agents" / f"{name}.md"
 
 
-def _reviewer_prompt_path() -> Path:
-    return ROOT / "agency" / "qa" / "agents" / "reviewer.md"
-
-
 def _write_index(
     index_path: Path,
     *,
     run_id: str,
     profile: str,
     max_turns: int,
-    rows: list[tuple[str, dict, Verdict]],
+    rows: list[tuple[str, dict]],
 ) -> None:
     parts: list[str] = []
     parts.append(f"# QA Run `{run_id}`")
     parts.append(f"- profile: `{profile}`")
     parts.append(f"- max_turns: {max_turns}")
     parts.append("")
-    parts.append("| agent | verdict | turns | wins | issues (severity) | errors |")
-    parts.append("|-------|---------|-------|------|--------------------|--------|")
-    for name, summary, verdict in rows:
-        sev_count = {"low": 0, "medium": 0, "high": 0}
-        for issue in verdict.issues:
-            sev_count[issue.severity] += 1
-        sev_str = f"L{sev_count['low']} / M{sev_count['medium']} / H{sev_count['high']}"
+    parts.append("| agent | turns | errors | transcript |")
+    parts.append("|-------|-------|--------|------------|")
+    for name, summary in rows:
         parts.append(
-            f"| [{name}](./{name}/review.md) "
-            f"| **{verdict.verdict.upper()}** "
+            f"| {name} "
             f"| {summary['turn_count']} "
-            f"| {len(verdict.wins)} "
-            f"| {len(verdict.issues)} ({sev_str}) "
-            f"| {summary['error_count']} |"
+            f"| {summary['error_count']} "
+            f"| [transcript.md](./{name}/transcript.md) · "
+            f"[sse.jsonl](./{name}/sse.jsonl) · "
+            f"[final_state.json](./{name}/final_state.json) |"
         )
-
     parts.append("")
-    parts.append("## High — investigate immediately")
-    any_high = False
-    for name, _summary, verdict in rows:
-        for issue in verdict.issues:
-            if issue.severity == "high":
-                any_high = True
-                parts.append(f"- **{name}** [{issue.category}] {issue.summary}")
-    if not any_high:
-        parts.append("- (none)")
-
-    parts.append("")
-    parts.append("## Medium — recommended review")
-    any_med = False
-    for name, _summary, verdict in rows:
-        for issue in verdict.issues:
-            if issue.severity == "medium":
-                any_med = True
-                parts.append(f"- **{name}** [{issue.category}] {issue.summary}")
-    if not any_med:
-        parts.append("- (none)")
-
     index_path.write_text("\n".join(parts) + "\n", encoding="utf-8")
 
 
@@ -116,14 +84,14 @@ async def _run_single(
     profile_dir: Path,
     llm: LLMClient,
     run_id: str,
-) -> tuple[dict, Verdict]:
+) -> dict:
     agent = PlayerAgent(
         name=agent_name,
         prompt_path=_agent_prompt_path(agent_name),
         llm=llm,
     )
     run_dir = run_root / agent_name
-    summary = await run_qa_session(
+    return await run_qa_session(
         agent=agent,
         profile=profile,
         max_turns=max_turns,
@@ -132,16 +100,6 @@ async def _run_single(
         llm=llm,
         run_id=run_id,
     )
-    verdict, raw = await review_session(
-        agent_name=agent_name,
-        transcript_path=Path(summary["transcript_path"]),
-        final_state_path=Path(summary["final_state_path"]),
-        reviewer_prompt_path=_reviewer_prompt_path(),
-        llm=llm,
-    )
-    write_verdict_json(run_dir / "verdict.json", agent_name, run_id, verdict)
-    write_review_md(run_dir / "review.md", agent_name, verdict, raw)
-    return summary, verdict
 
 
 async def main_async(args: argparse.Namespace) -> None:
@@ -155,11 +113,11 @@ async def main_async(args: argparse.Namespace) -> None:
     run_root.mkdir(parents=True, exist_ok=True)
 
     targets = AGENTS if args.agent == "all" else [args.agent]
-    rows: list[tuple[str, dict, Verdict]] = []
+    rows: list[tuple[str, dict]] = []
 
     for name in targets:
         print(f"\n━━ {name} start ━━", flush=True)
-        summary, verdict = await _run_single(
+        summary = await _run_single(
             agent_name=name,
             run_root=run_root,
             profile=args.profile,
@@ -169,12 +127,10 @@ async def main_async(args: argparse.Namespace) -> None:
             run_id=run_id,
         )
         print(
-            f"  → {verdict.verdict.upper()} "
-            f"(turns={summary['turn_count']}, errors={summary['error_count']}, "
-            f"wins={len(verdict.wins)}, issues={len(verdict.issues)})",
+            f"  → done (turns={summary['turn_count']}, errors={summary['error_count']})",
             flush=True,
         )
-        rows.append((name, summary, verdict))
+        rows.append((name, summary))
 
     _write_index(
         run_root / "index.md",
