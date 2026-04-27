@@ -5,6 +5,59 @@ from ...domain.entities import ActiveBuff, Character, ConsumableEffect, Item
 from ...domain.errors import InventoryInvalid
 
 
+# --- per-effect handlers ---------------------------------------------------
+
+
+def _heal(item_id, item, eff, target, recipient, result) -> None:
+    if recipient.hp >= recipient.max_hp:
+        raise InventoryInvalid(f"hp already full: cannot use heal item {item_id}")
+    new_hp = min(recipient.max_hp, recipient.hp + eff.amount)
+    result["kind"] = "heal"
+    result["amount"] = new_hp - recipient.hp
+    recipient.hp = new_hp
+
+
+def _damage(item_id, item, eff, target, recipient, result) -> None:
+    if target is None:
+        raise InventoryInvalid(f"damage item requires target: {item_id}")
+    recipient.hp = max(0, recipient.hp - eff.amount)
+    if recipient.hp == 0:
+        recipient.alive = False
+    result["kind"] = "damage"
+    result["amount"] = eff.amount
+    if not recipient.alive:
+        result["dead"] = True
+
+
+def _mp_restore(item_id, item, eff, target, recipient, result) -> None:
+    if recipient.mp >= recipient.max_mp:
+        raise InventoryInvalid(f"mp already full: cannot use mp item {item_id}")
+    new_mp = min(recipient.max_mp, recipient.mp + eff.amount)
+    result["kind"] = "mp_restore"
+    result["amount"] = new_mp - recipient.mp
+    recipient.mp = new_mp
+
+
+def _buff(item_id, item, eff, target, recipient, result) -> None:
+    description = eff.description or item.name
+    duration = eff.duration or 0
+    recipient.active_buffs.append(ActiveBuff(description=description, duration=duration))
+    result["kind"] = "buff"
+    result["description"] = description
+    result["duration"] = duration
+
+
+_EFFECT_HANDLERS = {
+    "heal": _heal,
+    "damage": _damage,
+    "mp_restore": _mp_restore,
+    "buff": _buff,
+}
+
+
+# --- entry points ----------------------------------------------------------
+
+
 def use(
     actor: Character,
     item_id: str,
@@ -35,41 +88,11 @@ def use(
     if eff is None:
         # Trigger-only item (e.g. ancient key) — no numeric effect.
         result["kind"] = "trigger"
-    elif eff.effect == "heal":
-        if recipient.hp >= recipient.max_hp:
-            raise InventoryInvalid(f"hp already full: cannot use heal item {item_id}")
-        new_hp = min(recipient.max_hp, recipient.hp + eff.amount)
-        result["kind"] = "heal"
-        result["amount"] = new_hp - recipient.hp
-        recipient.hp = new_hp
-    elif eff.effect == "damage":
-        if target is None:
-            raise InventoryInvalid(f"damage item requires target: {item_id}")
-        recipient.hp = max(0, recipient.hp - eff.amount)
-        if recipient.hp == 0:
-            recipient.alive = False
-        result["kind"] = "damage"
-        result["amount"] = eff.amount
-        if not recipient.alive:
-            result["dead"] = True
-    elif eff.effect == "mp_restore":
-        if recipient.mp >= recipient.max_mp:
-            raise InventoryInvalid(f"mp already full: cannot use mp item {item_id}")
-        new_mp = min(recipient.max_mp, recipient.mp + eff.amount)
-        result["kind"] = "mp_restore"
-        result["amount"] = new_mp - recipient.mp
-        recipient.mp = new_mp
-    elif eff.effect == "buff":
-        description = eff.description or item.name
-        duration = eff.duration or 0
-        recipient.active_buffs.append(
-            ActiveBuff(description=description, duration=duration)
-        )
-        result["kind"] = "buff"
-        result["description"] = description
-        result["duration"] = duration
     else:
-        raise InventoryInvalid(f"unsupported consumable effect: {eff.effect}")
+        handler = _EFFECT_HANDLERS.get(eff.effect)
+        if handler is None:
+            raise InventoryInvalid(f"unsupported consumable effect: {eff.effect}")
+        handler(item_id, item, eff, target, recipient, result)
 
     if item.on_use:
         result["on_use"] = item.on_use
