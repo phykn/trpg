@@ -7,21 +7,164 @@ from ..domain.errors import PendingCheckExpected
 from ..domain.memory import RollLogEntry
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
-from ..engines.growth import can_afford_level_up, grant_roll_xp
+from ..engines.growth import grant_roll_xp
 from ..llm.client import LLMClient
+from ..mapping.to_front import pending_check_to_front
+from ..rules.config import RULES
 from ..rules.dc import compute_grade
+from .cinematic import (
+    apply_combat_outcome,
+    arm_death_save_pending,
+    build_oneshot_narrate_input,
+)
+from ..agents.combat_narrate import stream_combat_narrate
 from .combat_phase import run_combat_npc_phase
 from .dirty import (
     Dirty,
     ToFrontFn,
     advance_time,
     finalize,
-    maybe_push_levelup_hint,
     next_log_id,
+    push_gm,
     push_log_entry,
 )
 from .format import front_grade
 from .narrate import consume_narrate, run_narrate
+
+
+async def _resolve_combat_roll(
+    client: LLMClient,
+    state: GameState,
+    profile_dir: str,
+    dirty: Dirty,
+    dice: int,
+    pending,
+) -> AsyncIterator[dict]:
+    """One-roll combat resolution. The d20 + STR vs DC produces a grade,
+    grade drives mechanical outcome (kills/HP/XP), and combat_narrate
+    streams a 5-10 sentence cinematic of the entire fight."""
+    state.turn_count_increment_done = False  # marker only — caller handled
+    player = state.characters[state.player_id]
+    stat_value = getattr(player.stats, pending.stat)
+    required_roll = sigmoid_required_roll(pending.dc, stat_value)
+    total = dice + pending.mod
+    grade = compute_grade(dice, total, required_roll)
+
+    roll_log = RollLogEntry(
+        id=next_log_id(state),
+        kind="roll",
+        check=pending.stat,
+        dc=pending.dc,
+        roll=dice,
+        mod=pending.mod,
+        result=front_grade(grade),
+    )
+    push_log_entry(state, roll_log, dirty)
+    yield {"type": "log_entry", "data": roll_log.model_dump()}
+
+    grant_roll_xp(state, grade, dirty=dirty.entities)
+
+    # Apply mechanical outcome — kill enemies / damage player / award XP
+    target_ids = list(pending.targets)
+    player_damage, killed = apply_combat_outcome(state, target_ids, grade, dirty)
+
+    # Stream the cinematic scene
+    if client is not None:
+        narrate_input = build_oneshot_narrate_input(
+            state, profile_dir,
+            player_input=pending.player_input,
+            target_ids=target_ids,
+            grade=grade,
+            player_damage=player_damage,
+            killed_enemy_ids=killed,
+        )
+        body_chunks: list[str] = []
+        async for chunk in stream_combat_narrate(client, narrate_input):
+            body_chunks.append(chunk)
+            yield {"type": "narrative_delta", "data": {"text": chunk}}
+        body = "".join(body_chunks).strip()
+        if body:
+            from .dirty import push_gm
+            yield push_gm(state, dirty, body)
+
+    # Outcome bookkeeping: death-save arming if player went down,
+    # combat_end semantic flag.
+    player = state.characters[state.player_id]
+    if not player.alive:
+        from .format import format_combat_end_text
+        from .dirty import push_gm
+        yield push_gm(state, dirty, format_combat_end_text("defeat"))
+        yield {"type": "combat_end", "data": {"outcome": "defeat"}}
+    elif player.death_saves is not None:
+        from .dirty import push_gm
+        yield push_gm(
+            state, dirty,
+            "쓰러져 의식을 잃어가고 있다 — 죽음 굴림을 시작한다.",
+        )
+        yield {"type": "combat_end", "data": {"outcome": "downed"}}
+        arm_death_save_pending(state)
+        # Re-arm dice prompt
+        yield {
+            "type": "pending_check",
+            "data": pending_check_to_front(state.pending_check),
+        }
+    elif killed:
+        from .dirty import push_gm
+        from .format import format_combat_end_text
+        yield push_gm(state, dirty, format_combat_end_text("victory"))
+        yield {"type": "combat_end", "data": {"outcome": "victory"}}
+    else:
+        # Failure but player not downed — enemies survived, fight broken off
+        from .dirty import push_gm
+        yield push_gm(state, dirty, "전투가 흩어진다 — 적은 살아 있다.")
+        yield {"type": "combat_end", "data": {"outcome": "broken_off"}}
+
+
+async def _resolve_death_save(
+    state: GameState,
+    dirty: Dirty,
+    dice: int,
+) -> AsyncIterator[dict]:
+    """Tick one death save with the player's d20. Re-arms `pending_check`
+    on progress; clears it on stable/dead. Pushes a roll log + a short
+    narrative gm line so the player sees the outcome."""
+    player = state.characters[state.player_id]
+    status, _ = combat_engine.tick_death_save(
+        state, state.player_id, d20=dice, dirty=dirty.entities,
+    )
+    grade = "success" if dice >= RULES.death.save_dc else "failure"
+    roll_log = RollLogEntry(
+        id=next_log_id(state),
+        kind="roll",
+        check="DEATH",
+        dc=RULES.death.save_dc,
+        roll=dice,
+        mod=0,
+        result=front_grade(grade if status != "dead" else "critical_failure"),
+    )
+    push_log_entry(state, roll_log, dirty)
+    yield {"type": "log_entry", "data": roll_log.model_dump()}
+
+    if status == "stable":
+        state.pending_check = None
+        yield push_gm(state, dirty, f"{player.name}이(가) 의식을 회복했다.")
+    elif status == "dead":
+        state.pending_check = None
+        yield push_gm(state, dirty, f"{player.name}이(가) 사망했다.")
+    else:
+        # progress — re-arm the dice prompt
+        arm_death_save_pending(state)
+        ds = player.death_saves
+        if ds is not None:
+            yield push_gm(
+                state, dirty,
+                f"죽음 굴림 — 성공 {ds.successes}/{RULES.death.successes_to_stabilize}, "
+                f"실패 {ds.failures}/{RULES.death.failures_to_die}.",
+            )
+        yield {
+            "type": "pending_check",
+            "data": pending_check_to_front(state.pending_check),
+        }
 
 
 async def run_roll(
@@ -42,6 +185,26 @@ async def run_roll(
 
     rng_obj = rng or random
     dice = rng_obj.randint(1, 20)
+
+    if pending.kind == "death_save":
+        async for ev in _resolve_death_save(state, dirty, dice):
+            yield ev
+        advance_time(state)
+        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    if pending.kind == "combat_roll":
+        async for ev in _resolve_combat_roll(
+            client, state, profile_dir, dirty, dice, pending,
+        ):
+            yield ev
+        state.pending_check = None
+        advance_time(state)
+        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
     total = dice + pending.mod
     grade = compute_grade(dice, total, pending.required_roll)
 
@@ -57,11 +220,7 @@ async def run_roll(
     push_log_entry(state, roll_log, dirty)
     yield {"type": "log_entry", "data": roll_log.model_dump()}
 
-    pre_can_level = can_afford_level_up(state.characters[state.player_id])
     grant_roll_xp(state, grade, dirty=dirty.entities)
-    levelup_hint = maybe_push_levelup_hint(state, dirty, was_able=pre_can_level)
-    if levelup_hint:
-        yield levelup_hint
 
     judge_result = {
         "action": "roll",

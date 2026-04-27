@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator
 
 from ..agents.dc_judge.schema import (
     BuyAction,
-    ClarifyAction,
+    ChainAction,
     CombatAction,
     EquipAction,
     FleeAction,
@@ -16,6 +16,7 @@ from ..agents.dc_judge.schema import (
     RestAction,
     RollAction,
     SellAction,
+    SummonCombatAction,
     UnequipAction,
     UseAction,
 )
@@ -34,11 +35,13 @@ from .actions import (
     emit_unequip,
     emit_use,
 )
+from .cinematic import arm_combat_roll_pending
 from .combat_phase import (
     run_combat_npc_phase,
     run_combat_player_turn,
     start_combat_and_run_npc_phase,
 )
+from .encounter import summon_encounter
 from .dirty import (
     Dirty,
     ToFrontFn,
@@ -46,11 +49,14 @@ from .dirty import (
     finalize,
     next_log_id,
     push_act,
+    push_gm,
     push_log_entry,
+    push_turn_log,
 )
 from .judge import run_judge
 from .narrate import consume_narrate, run_narrate
 from .rest import run_rest
+from .subject import refresh_active_subject
 
 
 async def run_turn(
@@ -100,6 +106,8 @@ async def run_turn(
 
     yield {"type": "judge", "data": result.model_dump()}
 
+    refresh_active_subject(state, result)
+
     async for ev in _dispatch(
         client, state, profile_dir, saves_dir, player_input, dirty, rng, to_front_fn, result
     ):
@@ -121,6 +129,47 @@ async def _bump_and_finalize(
         yield ev
 
 
+async def _emit_chain_engine_part(
+    client: LLMClient,
+    state: GameState,
+    dirty: Dirty,
+    part,
+) -> AsyncIterator[dict]:
+    """Emit one engine part of a ChainAction. No turn bump or finalize —
+    the chain dispatcher does those once at the end."""
+    if isinstance(part, UseAction):
+        async for ev in emit_use(
+            state, state.player_id, part.item_id, part.target_id, dirty
+        ):
+            yield ev
+    elif isinstance(part, EquipAction):
+        async for ev in emit_equip(state, state.player_id, part.item_id, dirty):
+            yield ev
+    elif isinstance(part, UnequipAction):
+        async for ev in emit_unequip(state, state.player_id, part.item_id, dirty):
+            yield ev
+    elif isinstance(part, BuyAction):
+        async for ev in emit_trade(
+            state, state.player_id, part.npc_id, part.item_id, dirty, direction="buy"
+        ):
+            yield ev
+    elif isinstance(part, SellAction):
+        async for ev in emit_trade(
+            state, state.player_id, part.npc_id, part.item_id, dirty, direction="sell"
+        ):
+            yield ev
+    elif isinstance(part, LevelUpAction):
+        async for ev in emit_level_up(
+            state, state.player_id, part.stat_up, part.stat_down, client, dirty
+        ):
+            yield ev
+    elif isinstance(part, LearnSkillAction):
+        async for ev in emit_learn_skill(state, state.player_id, part.index, dirty):
+            yield ev
+    if getattr(part, "tail_intent", None):
+        yield push_gm(state, dirty, part.tail_intent)
+
+
 async def _dispatch(
     client: LLMClient,
     state: GameState,
@@ -132,9 +181,6 @@ async def _dispatch(
     to_front_fn: ToFrontFn | None,
     result,
 ) -> AsyncIterator[dict]:
-    if not isinstance(result, ClarifyAction):
-        state.clarify_streak = 0
-
     if isinstance(result, CombatAction):
         actor_loc = state.characters[state.player_id].location_id
         invalid_targets = [
@@ -149,38 +195,50 @@ async def _dispatch(
             async for ev in finalize(state, saves_dir, dirty, to_front_fn):
                 yield ev
             return
-        state.turn_count += 1
-        async for ev in start_combat_and_run_npc_phase(
-            state, list(result.targets), dirty, rng
-        ):
-            yield ev
-        # If the input matched a skill, spend the player's first turn on cast.
-        if result.skill_id and state.combat_state is not None:
-            async for ev in emit_skill_cast(
-                state, state.player_id, result.skill_id, list(result.targets), dirty, rng=rng
-            ):
-                yield ev
-            combat_engine.advance_turn(state)
-            async for ev in run_combat_npc_phase(state, dirty, rng):
-                yield ev
-        async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
+        arm_combat_roll_pending(
+            state,
+            target_ids=list(result.targets),
+            player_input=player_input,
+            skill_id=result.skill_id,
+        )
+        from ..mapping.to_front import pending_check_to_front
+        yield {
+            "type": "pending_check",
+            "data": pending_check_to_front(state.pending_check),
+        }
+        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
 
-    if isinstance(result, ClarifyAction):
-        state.clarify_streak += 1
-        if state.clarify_streak >= 3:
-            yield push_act(
-                state,
-                dirty,
-                "이번 시도는 어떤 행동인지 잡히지 않아 흐릿하게 지나간다. 한 가지 행동을 구체적으로 정해 다시 시도하라.",
-            )
-            state.clarify_streak = 0
-            state.turn_count += 1
-            async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
+    if isinstance(result, SummonCombatAction):
+        actor = state.characters[state.player_id]
+        location = state.locations.get(actor.location_id) if actor.location_id else None
+        summoned = None
+        if location is not None and client is not None:
+            try:
+                summoned = await summon_encounter(
+                    client, state, location, profile_dir, state.profile,
+                    dirty=dirty.entities, requested_role=result.role,
+                )
+            except Exception:
+                summoned = None
+        if summoned is None:
+            yield push_act(state, dirty, "허공을 가르지만 적은 보이지 않는다.")
+            async for ev in finalize(state, saves_dir, dirty, to_front_fn):
                 yield ev
             return
-        yield push_act(state, dirty, result.question)
+        state.active_subject_id = summoned.id
+        arm_combat_roll_pending(
+            state,
+            target_ids=[summoned.id],
+            player_input=player_input,
+            skill_id=result.skill_id,
+        )
+        from ..mapping.to_front import pending_check_to_front
+        yield {
+            "type": "pending_check",
+            "data": pending_check_to_front(state.pending_check),
+        }
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -203,6 +261,8 @@ async def _dispatch(
             state, state.player_id, result.item_id, result.target_id, dirty
         ):
             yield ev
+        if result.tail_intent:
+            yield push_gm(state, dirty, result.tail_intent)
         async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -211,6 +271,8 @@ async def _dispatch(
         state.turn_count += 1
         async for ev in emit_equip(state, state.player_id, result.item_id, dirty):
             yield ev
+        if result.tail_intent:
+            yield push_gm(state, dirty, result.tail_intent)
         async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -219,6 +281,8 @@ async def _dispatch(
         state.turn_count += 1
         async for ev in emit_unequip(state, state.player_id, result.item_id, dirty):
             yield ev
+        if result.tail_intent:
+            yield push_gm(state, dirty, result.tail_intent)
         async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -236,6 +300,8 @@ async def _dispatch(
             state, state.player_id, result.stat_up, result.stat_down, client, dirty
         ):
             yield ev
+        if result.tail_intent:
+            yield push_gm(state, dirty, result.tail_intent)
         async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -244,6 +310,8 @@ async def _dispatch(
         state.turn_count += 1
         async for ev in emit_learn_skill(state, state.player_id, result.index, dirty):
             yield ev
+        if result.tail_intent:
+            yield push_gm(state, dirty, result.tail_intent)
         async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -254,6 +322,8 @@ async def _dispatch(
             state, state.player_id, result.npc_id, result.item_id, dirty, direction="buy"
         ):
             yield ev
+        if result.tail_intent:
+            yield push_gm(state, dirty, result.tail_intent)
         async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -264,6 +334,34 @@ async def _dispatch(
             state, state.player_id, result.npc_id, result.item_id, dirty, direction="sell"
         ):
             yield ev
+        if result.tail_intent:
+            yield push_gm(state, dirty, result.tail_intent)
+        async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    if isinstance(result, ChainAction):
+        state.turn_count += 1
+        last_pass: PassAction | None = None
+        for part in result.parts:
+            if isinstance(part, PassAction):
+                last_pass = part
+                continue
+            async for ev in _emit_chain_engine_part(client, state, dirty, part):
+                yield ev
+        if last_pass is not None:
+            target_for_log = last_pass.targets[0] if last_pass.targets else None
+            stream = run_narrate(
+                client, state, profile_dir, player_input,
+                judge_result=last_pass.model_dump(),
+                grade=None,
+            )
+            async for ev in consume_narrate(
+                state, dirty, stream,
+                target_for_log=target_for_log,
+                dialogue_input=player_input,
+            ):
+                yield ev
         async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return

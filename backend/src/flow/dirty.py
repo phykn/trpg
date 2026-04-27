@@ -15,7 +15,6 @@ from ..domain.memory import (
     TurnLogEntry,
 )
 from ..domain.state import GameState
-from ..engines.growth import can_afford_level_up
 from ..persistence.store import (
     append_dialogue_entries,
     append_history_entries,
@@ -78,30 +77,6 @@ def push_act(state: GameState, dirty: Dirty, text: str) -> dict:
     log = ActLogEntry(id=next_log_id(state), kind="act", text=text)
     push_log_entry(state, log, dirty)
     return {"type": "log_entry", "data": log.model_dump()}
-
-
-def maybe_push_levelup_hint(
-    state: GameState,
-    dirty: Dirty,
-    *,
-    was_able: bool,
-) -> dict | None:
-    """If the player just crossed the level-up xp threshold (was_able=False
-    pre-grant, can_afford=True post-grant), push a one-liner GM hint and
-    return the SSE payload. Otherwise None.
-    """
-    if was_able:
-        return None
-    player = state.characters.get(state.player_id)
-    if player is None:
-        return None
-    if not can_afford_level_up(player):
-        return None
-    return push_gm(
-        state,
-        dirty,
-        "이제 레벨업이 가능하다. '성장한다' 같은 표현으로 시도해 보라.",
-    )
 
 
 def push_turn_log(

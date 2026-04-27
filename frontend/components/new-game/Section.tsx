@@ -5,7 +5,7 @@ export function Section({ label, children }: { label: string; children: React.Re
   return (
     <View className="gap-2.5">
       <Text
-        className="font-mono-semibold text-panel text-fg-subtle uppercase"
+        className="font-sans-semibold text-panel text-fg-subtle"
         style={{ letterSpacing: 1.2 }}
       >
         {label}

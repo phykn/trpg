@@ -25,6 +25,7 @@ def _build_input(
     location: Location,
     profile_dir: str,
     profile: str,
+    requested_role: str | None,
 ) -> EncounterSummonInput:
     world_path = Path(profile_dir) / profile / "world.md"
     world_text = world_path.read_text(encoding="utf-8") if world_path.exists() else ""
@@ -46,6 +47,7 @@ def _build_input(
         },
         player_level=player_level,
         available_races=races,
+        requested_role=requested_role,
     )
 
 
@@ -100,9 +102,10 @@ async def summon_encounter(
     profile: str,
     *,
     dirty: set[tuple[str, str]] | None = None,
+    requested_role: str | None = None,
 ) -> Character | None:
     """Summon one enemy via LLM and register it. Returns None if race_id is not in available races."""
-    input_ = _build_input(state, location, profile_dir, profile)
+    input_ = _build_input(state, location, profile_dir, profile, requested_role)
     out = await encounter_summon(client, input_)
     if out.race_id not in state.races:
         return None

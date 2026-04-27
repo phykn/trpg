@@ -86,6 +86,19 @@ def _maybe_advance_chapters(state: GameState, dirty: DirtySet) -> None:
                 dirty.add(("chapters", ch.id))
 
 
+def _refresh_active_quest_id(state: GameState) -> None:
+    """If active_quest_id no longer points to an active quest, switch to any
+    other active one (insertion order). The seed pins an opening quest; once
+    it completes/fails, the panel should follow whatever's still in play."""
+    current = state.active_quest_id
+    if current and current in state.quests and state.quests[current].status == "active":
+        return
+    state.active_quest_id = next(
+        (qid for qid, q in state.quests.items() if q.status == "active"),
+        None,
+    )
+
+
 def check_quests(
     state: GameState,
     event_type: str,
@@ -137,4 +150,5 @@ def check_quests(
         _maybe_unlock_dependents(state, dirty)
     update_chapter_progress(state, dirty)
     _maybe_advance_chapters(state, dirty)
+    _refresh_active_quest_id(state)
     return changed

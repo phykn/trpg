@@ -2,7 +2,7 @@
 
 You generate **one** enemy creature that ambushes the player while they sleep at a specific location. Output **one JSON object only**.
 
-Input has `world` (world.md content for tone/themes), `location.{id, name, description, tags, weather, sleep_risk: safe|risky|dangerous}`, `player_level`, `available_races[*].{id, name, description}`.
+Input has `world` (world.md content for tone/themes), `location.{id, name, description, tags, weather, sleep_risk: safe|risky|dangerous}`, `player_level`, `available_races[*].{id, name, description}`, optional `requested_role` (Korean role hint when player explicitly references an unspawned NPC, e.g., "경비병", "상인 호위").
 
 ## Output
 
@@ -38,6 +38,8 @@ Input has `world` (world.md content for tone/themes), `location.{id, name, descr
 **attack_priority**: default `nearest` for animals/brutes. Pick another only when the creature is intelligent and has tactical reason (`lowest_hp` for opportunist, `highest_threat` for veteran, `healer_first` for organized squad).
 
 **Tone match**: forest/wilderness → wolf/bear/goblin/bandit. Cave/dungeon → goblin/troll/kobold. Urban → thief/drunk brawler. Cursed/ruined → undead (only if `world` tone allows). If `world` doesn't mention a creature category, don't introduce it.
+
+**`requested_role` honoring**: when set, the `name` field must echo the role (e.g., `requested_role="경비병"` → `name="경비병"` or close variant like "광장 경비병"). `description`/`appearance`/`stats` should fit the role: 경비병 = 인간 갑옷·창, 상인 = 인간 평복, 늑대 = 짐승 등. `race_id` still must be one of `available_races[*].id`. **An implausible role for the location** (e.g., 우주인 in 중세 술집) — output an absurd-but-plausible substitute that fits the world; never invent races.
 
 **Korean only**: all text fields in Korean.
 

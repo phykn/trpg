@@ -4,7 +4,7 @@ import type { Panel } from '@/types/ui';
 
 export function PanelBody({ panel }: { panel: Panel }) {
   return (
-    <View className="px-3.5 py-3 gap-2.5" style={{ minHeight: 160 }}>
+    <View className="px-4 py-3 gap-2.5" style={{ minHeight: 160 }}>
       <View className="flex-row items-center gap-2" style={{ minHeight: 22 }}>
         <View className="flex-1 min-w-0">
           <Text numberOfLines={1} className="font-serif-medium text-title text-fg-default">
@@ -25,7 +25,7 @@ export function PanelBody({ panel }: { panel: Panel }) {
 
       {panel.bar && <StatRow {...panel.bar} />}
       {panel.barSplit && (
-        <View className="flex-row gap-3.5">
+        <View className="flex-row gap-4">
           {panel.barSplit.map((cell) => (
             <View key={cell.label} className="flex-1 min-w-0">
               {'parts' in cell

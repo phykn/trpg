@@ -7,7 +7,6 @@ from collections.abc import AsyncIterator
 from typing import Literal
 
 from ..agents.dc_judge.schema import (
-    ClarifyAction,
     CombatAction,
     EquipAction,
     FleeAction,
@@ -31,9 +30,10 @@ from .actions import (
     emit_unequip,
     emit_use,
 )
-from .dirty import Dirty, ToFrontFn, advance_time, finalize, push_act, push_gm
+from .dirty import Dirty, ToFrontFn, advance_time, finalize, push_act, push_gm, push_turn_log
 from .format import format_combat_end_text
 from .judge import run_judge
+from .subject import refresh_active_subject
 
 
 # --- NPC phase -------------------------------------------------------------
@@ -144,6 +144,12 @@ async def start_combat_and_run_npc_phase(
                 "enemy_ids": list(cs.enemy_ids),
             },
         }
+        if enemy_ids:
+            first_enemy = state.characters.get(enemy_ids[0])
+            if first_enemy is not None:
+                push_turn_log(
+                    state, first_enemy.id, f"{first_enemy.name}와 전투 개시", dirty
+                )
     async for ev in run_combat_npc_phase(state, dirty, rng):
         yield ev
 
@@ -354,6 +360,8 @@ async def run_combat_player_turn(
 
     yield {"type": "judge", "data": result.model_dump()}
 
+    refresh_active_subject(state, result)
+
     if isinstance(result, CombatAction):
         async for ev in _handle_combat_action(state, saves_dir, dirty, rng, to_front_fn, result):
             yield ev
@@ -381,12 +389,6 @@ async def run_combat_player_turn(
         }
         combat_engine.advance_turn(state)
         async for ev in _flush_player_turn(state, saves_dir, dirty, rng, to_front_fn):
-            yield ev
-        return
-
-    if isinstance(result, ClarifyAction):
-        yield push_act(state, dirty, result.question)
-        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
 

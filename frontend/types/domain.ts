@@ -35,6 +35,7 @@ export type Hero = {
   level: number;
   exp: number;
   expMax: number;
+  canLevelUp: boolean;
   hp: number;
   hpMax: number;
   mp: number;

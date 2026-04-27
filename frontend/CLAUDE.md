@@ -28,7 +28,7 @@ Single-screen Korean-language TRPG. The tab bar is hidden, and `app/(tabs)/index
 
 **Layers (top → bottom):**
 
-1. `app/` — route shell. `_layout.tsx` loads Google Fonts (Inter / Source Serif 4 / Geist Mono) and gates rendering until they're ready. `(tabs)/index.tsx` mounts `<Shell />`.
+1. `app/` — route shell. `_layout.tsx` loads Google Fonts (Noto Serif KR for all Korean prose / labels / titles, Geist Mono for ASCII numerics and stat keys) and gates rendering until they're ready. `(tabs)/index.tsx` mounts `<Shell />`.
 2. `components/Shell.tsx` — composition root. Branches on `useGame()`'s `status` between `loading / no-game / error / ready`. The game screen is delegated to `Playing`.
 3. `components/Playing.tsx` — the game screen, mounted when `status === 'ready'`. Owns local UI state (`activeId / heroOpen / typing`); panels are composed via `buildPanelSlots(...)`.
 4. `components/new-game/` — exposed when `status === 'no-game'`. `NewGame.tsx` calls `GET /profiles`, renders scenario/race cards plus name/appearance inputs, and calls `useGame().startNewGame(body)`. Internal helpers (`Section`, `SelectCard`, `Input`, `CenterMessage`) live in the same folder.

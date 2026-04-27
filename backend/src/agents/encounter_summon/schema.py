@@ -34,12 +34,19 @@ class EncounterStats(BaseModel):
 
 
 class EncounterSummonInput(BaseModel):
-    """LLM input: world tone + location mood + player level + available race list."""
+    """LLM input: world tone + location mood + player level + available race list.
+
+    `requested_role` is an optional Korean hint (e.g., "경비병", "용병") that
+    pins the summoned character's name and concept when the player explicitly
+    references a not-yet-instanced NPC. When unset, the agent generates a
+    location-appropriate generic enemy.
+    """
 
     world: str
     location: dict
     player_level: int
     available_races: list[dict]
+    requested_role: str | None = None
 
 
 class EncounterSummonOutput(BaseModel):

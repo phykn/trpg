@@ -1,9 +1,12 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
+
+import { shadow } from '@/design/tokens';
+import type { PanelSlot } from '@/types/ui';
+
 import { ChipTab } from './ChipTab';
 import { IconButton, ICON_PATH } from './IconButton';
 import { PanelBody } from './PanelBody';
-import type { PanelSlot } from '@/types/ui';
 
 export function ContextCard({ slots, activeId, onSelect, onCollapse, onNewGame }: {
   slots: PanelSlot[];
@@ -18,9 +21,12 @@ export function ContextCard({ slots, activeId, onSelect, onCollapse, onNewGame }
 
   return (
     <View className="mx-5" style={{ zIndex: 10 }}>
-      <View className="bg-canvas-subtle border border-border-default rounded-md flex-row p-2 gap-0.5 items-center">
+      <View
+        className="bg-canvas-subtle border border-border-default rounded-md flex-row p-2 gap-1 items-center"
+        style={shadow.paper}
+      >
         <IconButton d={ICON_PATH.chevronUp} onPress={onCollapse} />
-        <View className="flex-1 flex-row gap-0.5">
+        <View className="flex-1 flex-row gap-1">
           {slots.map((s) => (
             <ChipTab
               key={s.id}
@@ -35,7 +41,7 @@ export function ContextCard({ slots, activeId, onSelect, onCollapse, onNewGame }
       {panel && (
         <View
           className="bg-canvas-subtle border border-border-default rounded-md"
-          style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4 }}
+          style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, ...shadow.floating }}
         >
           <PanelBody panel={panel} />
         </View>
@@ -43,7 +49,7 @@ export function ContextCard({ slots, activeId, onSelect, onCollapse, onNewGame }
       {menuOpen && (
         <View
           className="bg-canvas-subtle border border-border-default rounded-md"
-          style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, minWidth: 140, zIndex: 20 }}
+          style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, minWidth: 140, zIndex: 20, ...shadow.floating }}
         >
           <Pressable
             onPress={() => {

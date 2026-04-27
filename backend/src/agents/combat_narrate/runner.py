@@ -1,0 +1,50 @@
+"""combat_narrate streams Korean prose for one combat round. No JSON tail —
+just body tokens until the model stops. Treated like narrate (no append-error
+self-correction loop, since body has already streamed)."""
+import asyncio
+from collections.abc import AsyncIterator
+
+from .._runner import read_prompt
+from ...domain.errors import LLMUnavailable
+from ...llm.client import LLMClient
+from .schema import CombatNarrateInput
+
+PROMPT_PATH, _PROMPT = read_prompt(__file__)
+
+_MAX_RETRIES = 3
+
+
+async def stream_combat_narrate(
+    client: LLMClient,
+    input_: CombatNarrateInput,
+) -> AsyncIterator[str]:
+    """Stream Korean prose tokens. Retries up to 3× on transport failure
+    BEFORE any body has streamed; once a token has gone out, a later
+    transport error raises (the client can't take back what was shown)."""
+    messages = [
+        {"role": "system", "content": _PROMPT},
+        {"role": "user", "content": input_.model_dump_json()},
+    ]
+
+    for attempt in range(_MAX_RETRIES + 1):
+        body_streamed = False
+        try:
+            async for chunk in client.chat_stream(
+                messages, think=False, agent="combat_narrate"
+            ):
+                text = chunk.get("answer")
+                if text:
+                    body_streamed = True
+                    yield text
+        except (OSError, asyncio.TimeoutError) as e:
+            if body_streamed or attempt == _MAX_RETRIES:
+                raise LLMUnavailable(str(e)) from e
+            continue
+        except Exception:
+            if body_streamed or attempt == _MAX_RETRIES:
+                raise
+            continue
+        if body_streamed:
+            return
+        if attempt == _MAX_RETRIES:
+            return

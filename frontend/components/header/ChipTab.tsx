@@ -1,5 +1,5 @@
-import { Text, Pressable, View } from 'react-native';
-import { colors } from '@/design/tokens';
+import { Pressable, Text } from 'react-native';
+
 import type { PanelSlot } from '@/types/ui';
 
 export function ChipTab({ chip, active, onPress }: {
@@ -7,9 +7,9 @@ export function ChipTab({ chip, active, onPress }: {
   active: boolean;
   onPress: () => void;
 }) {
-  const bg = active ? 'bg-canvas-inset' : 'bg-transparent';
+  const bg = active ? 'bg-accent-muted' : 'bg-transparent active:bg-canvas-inset';
   const fontWeight = active ? 'font-sans-semibold' : 'font-sans-medium';
-  const color = active ? 'text-fg-default' : 'text-fg-muted';
+  const color = active ? 'text-accent-fg' : 'text-fg-muted';
 
   return (
     <Pressable
@@ -19,18 +19,6 @@ export function ChipTab({ chip, active, onPress }: {
       <Text numberOfLines={1} className={`text-caption ${fontWeight} ${color}`}>
         {chip.short}
       </Text>
-      {active && (
-        <View
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 8,
-            right: 8,
-            height: 2,
-            backgroundColor: colors.accent.fg,
-          }}
-        />
-      )}
     </Pressable>
   );
 }

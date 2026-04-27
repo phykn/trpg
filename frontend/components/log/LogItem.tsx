@@ -1,6 +1,7 @@
-import { Text, View } from 'react-native';
+import { Animated, Text, View } from 'react-native';
 
-import { colors, spacing } from '@/design/tokens';
+import { colors, shadow, spacing } from '@/design/tokens';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import type { LogEntry } from '@/types/ui';
 
 import { RollResult } from './RollResult';
@@ -19,6 +20,7 @@ export function LogItem({ entry }: { entry: LogEntry }) {
 }
 
 function GMNarration({ text }: { text: string }) {
+  const paragraphs = text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
   return (
     <View
       style={{
@@ -27,7 +29,15 @@ function GMNarration({ text }: { text: string }) {
         paddingLeft: spacing[3],
       }}
     >
-      <Text className="font-serif text-lead text-fg-default">{text}</Text>
+      {paragraphs.map((p, i) => (
+        <Text
+          key={i}
+          className="font-serif text-narration text-fg-default"
+          style={{ marginTop: i === 0 ? 0 : spacing[3] }}
+        >
+          {p}
+        </Text>
+      ))}
     </View>
   );
 }
@@ -41,7 +51,7 @@ function PlayerMessage({ text }: { text: string }) {
         paddingRight: spacing[3],
       }}
     >
-      <Text className="font-mono-medium text-title text-fg-default text-right">
+      <Text className="font-sans-medium text-lead text-fg-default text-right">
         {text}
       </Text>
     </View>
@@ -49,9 +59,23 @@ function PlayerMessage({ text }: { text: string }) {
 }
 
 function ActDivider({ text }: { text: string }) {
+  const { scale, opacity } = useEntryAnimation();
   return (
-    <Text className="font-mono text-body text-fg-subtle italic text-center px-5">
-      — {text} —
-    </Text>
+    <Animated.View style={{ transform: [{ scale }], opacity }}>
+      <View
+        className="bg-canvas-subtle border border-border-default rounded-md px-3 py-2.5 flex-row items-start gap-2"
+        style={{ borderLeftWidth: 2, borderLeftColor: colors.accent.fg, ...shadow.paper }}
+      >
+        <Text
+          className="font-sans-bold text-caption text-accent-fg"
+          style={{ lineHeight: 20 }}
+        >
+          ◆
+        </Text>
+        <Text className="font-sans-medium text-body text-fg-default flex-1">
+          {text}
+        </Text>
+      </View>
+    </Animated.View>
   );
 }

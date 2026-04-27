@@ -99,7 +99,7 @@ async def test_combat_state_survives_meta_round_trip(fresh_state, tmp_data):
 async def test_meta_json_on_disk_includes_per_turn_fields(fresh_state, tmp_data):
     # The round-trip test above passes even if save and load are jointly
     # buggy (both omit a field). This one reads the raw JSON to confirm the
-    # fields actually land on disk — covers combat_state and clarify_streak.
+    # fields actually land on disk — covers combat_state.
     from src.domain.state import CombatState
     fresh_state.combat_state = CombatState(
         round=1,
@@ -107,13 +107,11 @@ async def test_meta_json_on_disk_includes_per_turn_fields(fresh_state, tmp_data)
         current_turn=0,
         enemy_ids=(),
     )
-    fresh_state.clarify_streak = 2
     await save_meta(fresh_state, tmp_data)
     meta_path = Path(tmp_data) / "games" / fresh_state.game_id / "meta.json"
     payload = json.loads(meta_path.read_text(encoding="utf-8"))
     assert payload.get("combat_state") is not None
     assert payload["combat_state"]["round"] == 1
-    assert payload["clarify_streak"] == 2
 
 
 async def test_jsonl_appends_are_cumulative(fresh_state, tmp_data):

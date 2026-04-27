@@ -67,10 +67,20 @@ export function NewGame({ onSubmit }: Props) {
   if (loadError) {
     return (
       <CenterMessage>
-        <Text className="font-sans text-body text-danger-fg mb-3">{loadError}</Text>
+        <View className="items-center gap-1">
+          <Text
+            className="font-sans-semibold text-meta text-danger-fg"
+            style={{ letterSpacing: 1.2 }}
+          >
+            오류
+          </Text>
+          <Text className="font-sans text-body text-fg-default text-center">
+            {loadError}
+          </Text>
+        </View>
         <Pressable
           onPress={loadProfiles}
-          className="px-4 h-9 rounded-md bg-canvas-inset border border-border-default items-center justify-center"
+          className="px-4 h-9 mt-2 rounded-md bg-canvas-inset border border-border-default items-center justify-center active:bg-border-default"
         >
           <Text className="font-sans-medium text-body text-fg-default">다시 시도</Text>
         </Pressable>
@@ -102,8 +112,18 @@ export function NewGame({ onSubmit }: Props) {
       contentContainerClassName="px-5 py-6 gap-6"
       keyboardShouldPersistTaps="handled"
     >
-      <View className="gap-1">
-        <Text className="font-serif-medium text-lead text-fg-default">새 게임</Text>
+      <View className="gap-2">
+        <View className="flex-row items-center gap-2.5">
+          <Text
+            className="font-sans-semibold text-meta text-accent-fg"
+            style={{ letterSpacing: 1.2 }}
+          >
+            캐릭터 생성
+          </Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default }} />
+          <Text style={{ color: colors.accent.fg, fontSize: 10 }}>◇</Text>
+        </View>
+        <Text className="font-serif-medium text-narration text-fg-default">새 게임</Text>
         <Text className="font-sans text-body text-fg-muted">
           세계관과 종족을 고르고, 이름·외모를 채우면 시작합니다.
         </Text>
@@ -158,7 +178,7 @@ export function NewGame({ onSubmit }: Props) {
         onPress={submit}
         disabled={!canSubmit}
         className={`h-10 rounded-md items-center justify-center ${
-          canSubmit ? 'bg-accent-fg' : 'bg-canvas-inset border border-border-default'
+          canSubmit ? 'bg-accent-fg active:opacity-80' : 'bg-canvas-inset border border-border-default'
         }`}
       >
         <Text

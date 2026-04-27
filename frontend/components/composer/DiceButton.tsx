@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors } from '@/design/tokens';
+
+import { colors, shadow } from '@/design/tokens';
 
 const HINT_DURATION = 1400;
 
@@ -41,8 +42,11 @@ export function DiceButton({ enabled, rolling, onPress }: {
           className="absolute items-center z-10"
           style={{ bottom: 38, left: -120, right: -120 }}
         >
-          <View className="bg-fg-default px-2.5 py-1 rounded-sm">
-            <Text className="font-sans-medium text-caption text-fg-on-emphasis">
+          <View
+            className="bg-canvas-subtle border border-border-default px-3 py-1.5 rounded-md"
+            style={shadow.floating}
+          >
+            <Text className="font-sans-medium text-caption text-fg-default">
               아직은 때가 아닙니다.
             </Text>
           </View>
@@ -50,7 +54,7 @@ export function DiceButton({ enabled, rolling, onPress }: {
       )}
       <Pressable
         onPress={handlePress}
-        className={`flex-row items-center gap-1.5 h-8 px-3 rounded-full border ${bgClass}`}
+        className={`flex-row items-center gap-1.5 h-8 px-3 rounded-full border ${bgClass} active:opacity-80`}
         style={{ opacity: disabled ? 0.55 : 1 }}
       >
         <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">

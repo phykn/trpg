@@ -13,7 +13,7 @@ export function InlineParts({ label, parts }: { label: string; parts: DisplayPar
             <View key={i} className="flex-1 min-w-0 flex-row items-center gap-1">
               {p.label && (
                 <Text
-                  className="font-mono-semibold text-panel text-fg-subtle uppercase"
+                  className="font-sans-semibold text-panel text-fg-subtle"
                   style={{ letterSpacing: 1.2 }}
                 >
                   {p.label}

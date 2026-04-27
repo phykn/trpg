@@ -20,6 +20,8 @@ from .runner import (
 )
 
 
+# --- decomposition schema --------------------------------------------------
+
 class DecRace(BaseModel):
     id: str
     role: str
@@ -76,6 +78,8 @@ class Decomposition(BaseModel):
     start_subject_id: str
     start_quest_id: str
 
+
+# --- decomposer ------------------------------------------------------------
 
 def _check_decomp(d: Decomposition) -> None:
     def _check_ids(items: list, kind: str) -> set[str]:
@@ -212,6 +216,8 @@ async def decompose_prose(
     raise last_error
 
 
+# --- pipeline helpers ------------------------------------------------------
+
 def _hint_with_id(forced_id: str, role: str, extra: str = "") -> str:
     base = f"id 를 정확히 '{forced_id}' 로 박을 것. 역할: {role}."
     return f"{base} {extra}".strip()
@@ -315,6 +321,8 @@ def _check_enemy_consistency(entity: BaseModel, expected_enemy: bool) -> None:
             "비적대 character 는 xp_reward 를 0 으로 두거나 생략하라 (런타임 기본값 0)."
         )
 
+
+# --- pipeline --------------------------------------------------------------
 
 async def build_scenario(
     *,

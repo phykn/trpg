@@ -60,9 +60,9 @@ export function Playing({ game }: Props) {
         onPickSuggestion={setInput}
       />
 
-      <HeroPill hero={hero} expanded={heroOpen} onToggle={() => setHeroOpen((v) => !v)} />
-
       {combat ? <CombatStrip combat={combat} /> : null}
+
+      <HeroPill hero={hero} expanded={heroOpen} onToggle={() => setHeroOpen((v) => !v)} />
 
       <Composer
         input={input}

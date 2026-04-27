@@ -132,10 +132,12 @@ def test_build_surroundings_includes_racial_skills(fresh_state):
 # --- skill cast in the combat branch --------------------------------------
 
 
-async def test_combat_with_skill_id_triggers_cast_at_combat_start(
+async def test_combat_with_skill_id_arms_pending_with_skill_in_reason(
     fresh_state, tmp_data, monkeypatch
 ):
-    """Out-of-combat → judge returns combat + skill_id → cast on the first turn after start_combat."""
+    """One-roll combat: skill_id is preserved in pending.reason so the
+    /roll resolution can read it back. (Currently skill effects are not yet
+    differentiated from basic combat — that's a follow-up.)"""
     state = _seed_skill_state(fresh_state)
     _judge_returns(
         monkeypatch,
@@ -153,24 +155,17 @@ async def test_combat_with_skill_id_triggers_cast_at_combat_start(
     )
 
     types = [e["type"] for e in events]
-    assert "combat_start" in types
-    skill_events = [
-        e for e in events
-        if e["type"] == "combat_turn" and e["data"].get("action") == "skill"
-    ]
-    assert len(skill_events) >= 1
-    assert skill_events[0]["data"]["skill_id"] == "fireball"
-    # Either damage landed (in effects) or MP was deducted
-    p = state.characters["player_01"]
-    assert p.mp == 15 - 4
-    g = state.characters["goblin_01"]
-    assert g.hp < 15
+    assert "pending_check" in types
+    assert state.pending_check is not None
+    assert state.pending_check.kind == "combat_roll"
+    assert state.pending_check.reason == "fireball"
 
 
-async def test_combat_without_skill_id_runs_plain_attack(
+async def test_combat_without_skill_id_arms_pending(
     fresh_state, tmp_data, monkeypatch
 ):
-    """Without skill_id, fall through to the regular attack branch."""
+    """Without skill_id, the same combat_roll pending arms; reason falls
+    back to the default '전투 굴림' label."""
     state = _seed_skill_state(fresh_state)
     _judge_returns(
         monkeypatch, CombatAction(action="combat", targets=["goblin_01"])
@@ -185,12 +180,12 @@ async def test_combat_without_skill_id_runs_plain_attack(
             rng=random.Random(0),
         )
     )
-    types_actions = [
-        e["data"].get("action") for e in events if e["type"] == "combat_turn"
-    ]
-    # No skill action should appear
-    assert "skill" not in types_actions
-    # MP unchanged
+    types = [e["type"] for e in events]
+    assert "pending_check" in types
+    assert state.pending_check is not None
+    assert state.pending_check.kind == "combat_roll"
+    # MP not touched until /roll resolves — and even then current one-roll
+    # path doesn't differentiate skill cost from basic combat.
     assert state.characters["player_01"].mp == 15
 
 

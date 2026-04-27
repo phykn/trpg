@@ -1,29 +1,68 @@
-import { Text, View } from 'react-native';
+import { Animated, Text, View } from 'react-native';
 
+import { Bar } from '@/components/ui';
+import { colors, shadow, toneColor } from '@/design/tokens';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import type { CombatBadge } from '@/types/domain';
 
 export function CombatStrip({ combat }: { combat: CombatBadge }) {
+  const { scale, opacity } = useEntryAnimation();
   return (
-    <View className="mx-5 mt-1 px-3 py-1.5 rounded-md bg-canvas-inset border border-danger-fg/40 flex-row items-center gap-3">
-      <Text className="font-sans-medium text-caption text-danger-fg">전투</Text>
-      <Text className="font-sans text-caption text-fg-muted">R{combat.round}</Text>
-      <View className="w-px h-3 bg-border-default" />
-      <Text className="font-sans-medium text-caption text-fg-default">{combat.turnLabel}</Text>
-      {combat.enemies.length > 0 ? (
-        <>
-          <View className="w-px h-3 bg-border-default" />
-          <View className="flex-1 flex-row flex-wrap gap-x-3 gap-y-0.5">
+    <Animated.View
+      className="mx-5 mt-1"
+      style={{ transform: [{ scale }], opacity }}
+    >
+      <View
+        className="px-4 py-3 rounded-md bg-canvas-subtle border border-border-default gap-2"
+        style={{ borderLeftWidth: 2, borderLeftColor: colors.danger.fg, ...shadow.paper }}
+      >
+        <View className="flex-row items-center gap-2">
+          <Text
+            className="font-sans-bold text-caption text-danger-fg uppercase"
+            style={{ letterSpacing: 1.2 }}
+          >
+            전투
+          </Text>
+          <Text className="font-mono text-caption text-fg-subtle">·</Text>
+          <Text
+            className="font-mono text-caption text-fg-muted"
+            style={{ fontVariant: ['tabular-nums'] }}
+          >
+            R{combat.round}
+          </Text>
+          <Text className="font-mono text-caption text-fg-subtle">·</Text>
+          <Text
+            className="font-sans-medium text-caption text-fg-default flex-1"
+            numberOfLines={1}
+          >
+            {combat.turnLabel}
+          </Text>
+        </View>
+        {combat.enemies.length > 0 && (
+          <View className="gap-1">
             {combat.enemies.map((e, i) => (
-              <Text
-                key={`${e.name}-${i}`}
-                className={`font-sans text-caption ${e.alive ? 'text-fg-muted' : 'text-fg-subtle line-through'}`}
-              >
-                {e.name} {e.hp}/{e.hpMax}
-              </Text>
+              <View key={`${e.name}-${i}`} className="flex-row items-center gap-2">
+                <Text
+                  numberOfLines={1}
+                  className={`font-sans-medium text-caption ${e.alive ? 'text-fg-default' : 'text-fg-subtle line-through'}`}
+                  style={{ maxWidth: 120, flexShrink: 1 }}
+                >
+                  {e.name}
+                </Text>
+                <View className="flex-1">
+                  <Bar value={e.hp} max={e.hpMax} color={toneColor.hp} h={4} />
+                </View>
+                <Text
+                  className="font-mono text-caption text-fg-muted"
+                  style={{ fontVariant: ['tabular-nums'], minWidth: 44, textAlign: 'right' }}
+                >
+                  {e.hp}/{e.hpMax}
+                </Text>
+              </View>
             ))}
           </View>
-        </>
-      ) : null}
-    </View>
+        )}
+      </View>
+    </Animated.View>
   );
 }

@@ -129,7 +129,6 @@ class _Meta(BaseModel):
     pending_check: PendingCheck | None = None
     pending_skill_candidates: list[Skill] = []
     combat_state: CombatState | None = None
-    clarify_streak: int = 0
     next_log_id: int = 1
 
 
@@ -143,7 +142,6 @@ def _meta_from_state(state: GameState) -> _Meta:
         world_time=state.world_time,
         turn_count=state.turn_count,
         pending_check=state.pending_check,
-        clarify_streak=state.clarify_streak,
         pending_skill_candidates=list(state.pending_skill_candidates),
         combat_state=state.combat_state,
         next_log_id=state.next_log_id,
@@ -316,7 +314,6 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
         pending_check=meta.pending_check,
         pending_skill_candidates=meta.pending_skill_candidates,
         combat_state=meta.combat_state,
-        clarify_streak=meta.clarify_streak,
         next_log_id=next_log_id,
         turn_log=turn_log,
         recent_dialogue=recent_dialogue,

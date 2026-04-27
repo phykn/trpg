@@ -11,7 +11,7 @@ export function IconButton({ d, onPress }: { d: string; onPress?: () => void }) 
   return (
     <Pressable
       onPress={onPress}
-      className="w-8 h-8 rounded-sm items-center justify-center shrink-0"
+      className="w-8 h-8 rounded-sm items-center justify-center shrink-0 active:bg-canvas-inset"
     >
       <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
         stroke={colors.fg.muted} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">

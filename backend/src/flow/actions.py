@@ -23,7 +23,6 @@ from ..engines import inventory as inventory_engine
 from ..engines import skill as skill_engine
 from ..engines.growth import (
     award_kill_xp,
-    can_afford_level_up,
     level_up as level_up_engine,
 )
 from ..engines.invariants import InvariantViolation, check
@@ -33,10 +32,10 @@ from ..rules.dc import pick_dc, sigmoid_required_roll, social_bonus
 from .dirty import (
     Dirty,
     flush,
-    maybe_push_levelup_hint,
     next_log_id,
     push_act,
     push_gm,
+    push_turn_log,
 )
 from .format import (
     format_attack_log,
@@ -86,12 +85,10 @@ async def emit_attack(
             },
         }
         if not target.alive:
-            pre_can_level = can_afford_level_up(state.characters[state.player_id])
             award_kill_xp(state, attacker_id, target_id, dirty=dirty.entities)
-            hint = maybe_push_levelup_hint(state, dirty, was_able=pre_can_level)
-            if hint:
-                yield hint
             break
+    if attacker_id == state.player_id:
+        push_turn_log(state, target_id, f"{target.name}을 공격", dirty)
 
 
 async def emit_skill_cast(
@@ -124,11 +121,7 @@ async def emit_skill_cast(
         if eff.get("kind") == "attack":
             combat_engine.record_damage(state, actor_id, int(eff.get("damage", 0)))
             if eff.get("dead"):
-                pre_can_level = can_afford_level_up(state.characters[state.player_id])
                 award_kill_xp(state, actor_id, eff["target"], dirty=dirty.entities)
-                hint = maybe_push_levelup_hint(state, dirty, was_able=pre_can_level)
-                if hint:
-                    yield hint
     yield push_gm(state, dirty, format_skill_log(state, actor_id, cast_result, grade))
     yield {
         "type": "combat_turn",
@@ -141,6 +134,14 @@ async def emit_skill_cast(
             "effects": cast_result["effects"],
         },
     }
+    if actor_id == state.player_id and targets:
+        first_t = state.characters.get(targets[0])
+        if first_t is not None and first_t.id != actor_id:
+            push_turn_log(
+                state, first_t.id,
+                f"「{cast_result['skill_name']}」 → {first_t.name}",
+                dirty,
+            )
 
 
 # --- equip / unequip / use -------------------------------------------------
@@ -203,6 +204,10 @@ async def emit_use(
         yield push_gm(state, dirty, f"{actor.name} — 아이템 사용 실패 ({humanize_engine_error(e)}).")
         return
     yield push_gm(state, dirty, format_use_log(state, actor_id, result))
+    if target is not None:
+        item = state.items.get(item_id)
+        iname = item.name if item else item_id
+        push_turn_log(state, target.id, f"{iname}을 {target.name}에게 사용", dirty)
 
 
 # --- growth / trade --------------------------------------------------------
@@ -296,6 +301,7 @@ async def emit_trade(
         state, dirty,
         f"{player.name} — {npc.name}에게 「{iname}」 {verb} ({price} 금)",
     )
+    push_turn_log(state, npc.id, f"{npc.name}에게 「{iname}」 {verb}", dirty)
 
 
 # --- pending roll ----------------------------------------------------------

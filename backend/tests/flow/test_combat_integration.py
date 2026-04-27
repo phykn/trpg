@@ -63,13 +63,16 @@ async def _collect(it):
     return [ev async for ev in it]
 
 
-async def test_combat_start_and_npc_round_progress(combat_state, tmp_data, monkeypatch):
-    """First 'combat' input from the player → combat_start, one goblin turn, then stops on the player's turn."""
+async def test_combat_arms_one_roll_pending(
+    combat_state, tmp_data, monkeypatch
+):
+    """A fresh combat input arms a `combat_roll` pending_check — combat is
+    resolved as a single d20 roll on /roll, not round-by-round on /turn."""
     _judge_returns(monkeypatch, CombatAction(action="combat", targets=["goblin_01"]))
-    rng = random.Random(123)  # deterministic
+    rng = random.Random(123)
     events = await _collect(
         run_turn(
-            client=None,  # judge is mocked, so the client is unused
+            client=None,
             state=combat_state,
             profile_dir="<unused>",
             saves_dir=tmp_data,
@@ -79,11 +82,12 @@ async def test_combat_start_and_npc_round_progress(combat_state, tmp_data, monke
     )
 
     types = [e["type"] for e in events]
-    assert "combat_start" in types
-    assert combat_state.combat_state is not None
-    cs = combat_state.combat_state
-    assert set(cs.turn_order) == {"player_01", "goblin_01"}
-    assert cs.enemy_ids == ["goblin_01"]
+    assert "pending_check" in types
+    assert combat_state.pending_check is not None
+    assert combat_state.pending_check.kind == "combat_roll"
+    assert combat_state.pending_check.targets == ["goblin_01"]
+    # combat_state should NOT be set — one-roll combat uses pending only.
+    assert combat_state.combat_state is None
 
 
 async def test_combat_with_invalid_target_does_not_consume_turn(

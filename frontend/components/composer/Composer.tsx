@@ -6,7 +6,9 @@ import {
   type NativeSyntheticEvent,
   type TextInputSubmitEditingEventData,
 } from 'react-native';
-import { colors } from '@/design/tokens';
+
+import { colors, shadow } from '@/design/tokens';
+
 import { DiceButton } from './DiceButton';
 import { SendButton } from './SendButton';
 import { StopButton } from './StopButton';
@@ -62,14 +64,8 @@ export function Composer({ input, setInput, onSend, onRoll, onStop, rolling, foc
 
   return (
     <View
-      className={`mx-5 mt-1.5 bg-canvas-subtle rounded-xl p-2 ${borderClass}`}
-      style={{
-        borderWidth: 1.5,
-        shadowColor: colors.accent.fg,
-        shadowOpacity: focused ? 0.15 : 0,
-        shadowRadius: focused ? 8 : 0,
-        shadowOffset: { width: 0, height: 0 },
-      }}
+      className={`mx-5 mt-1.5 bg-canvas-subtle rounded-md p-2 border ${borderClass}`}
+      style={shadow.paper}
     >
       <TextInput
         value={input}

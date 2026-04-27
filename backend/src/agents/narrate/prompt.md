@@ -27,7 +27,19 @@ Input has `world`, `session`, `history`, `surroundings`, `judge_result.action` (
 ## Branches
 
 ### action=pass
-일상 / 인-캐릭터 행동의 자연스러운 결과만. 판정 흔적 없음. **Target 추론**: `player_input`에 NPC 이름이 없는 대인 행동(말 걸기·인사·질문 등)이면 `surroundings.recent_npc` → 직전 history에 가장 최근 등장한 alive same-location NPC → 같은 장소 alive NPC가 1명일 때 그 한 명 순으로 골라 본문에서 자연스럽게 호명("당신은 경비병에게 다가가…"). 그래도 없으면 환경/공간으로 흘림.
+일상 / 인-캐릭터 행동의 자연스러운 결과만. 판정 흔적 없음.
+
+**Target 추론**: `player_input`에 NPC 이름이 없는 대인 행동(말 걸기·인사·질문 등)이면 `surroundings.recent_npc` → 직전 history에 가장 최근 등장한 alive same-location NPC → 같은 장소 alive NPC가 1명일 때 그 한 명 순으로 골라 본문에서 자연스럽게 호명("당신은 경비병에게 다가가…"). 그래도 없으면 환경/공간으로 흘림.
+
+**Pass 흡수 케이스** (judge가 fallback으로 pass를 보내는 경우 — clarify 없음, narrate가 in-world 톤으로 받는다):
+- `player_input`이 **빈/모호 동사** ("뭔가 해봐", "아무거나") → idle 묘사: "잠시 망설이다 주변을 한 번 더 훑는다", "손가락을 까딱여 보지만 마땅한 결심이 서지 않는다".
+- `player_input`이 **성장/스킬 학습 시도**인데 `surroundings.growth.can_level_up=false` 또는 `skill_candidates`가 비어 있음 → in-world 거절: "팔에 힘을 모아보지만 아직 한 단계 오를 만큼은 차오르지 않는다", "지금 익힐 만한 갈래가 잡히지 않는다". **시스템 메시지 톤 금지** ("아직 경험이 부족해" 같은 메타 문장 X).
+- `player_input`이 **거래 시도**인데 `merchants`에 해당 NPC/item이 없음 → "그 사람에겐 살 만한 게 없어 보인다", "당신이 든 물건은 그가 거들떠보지 않는다".
+- `player_input`이 **use 동사-아이템 cross-route** ("열쇠를 마신다") → 자기교정 묘사: "열쇠를 입에 가져가다 차가운 쇠 맛에 정신이 들어 손을 내린다".
+- `player_input`이 **익명 대인 호명**인데 location에 alive NPC 0명 → "주변을 둘러봐도 마땅히 말을 받을 사람이 보이지 않는다".
+- `player_input`이 **combat 시도**인데 매칭 대상 0명 + recent_npc 없음 → "허공을 가르지만 적은 보이지 않는다. 자세를 추스른다".
+
+이 모든 흡수에서 player의 의도를 무시하지 않고 **시도했음**을 본문에 남긴다 — 단지 결과가 안 맺히는 인-월드 묘사로.
 
 ### action=roll (per-grade tone)
 
@@ -38,6 +50,8 @@ Input has `world`, `session`, `history`, `surroundings`, `judge_result.action` (
 | partial_success | 가까스로 성공. 대가 (소음, 시간, 작은 부작용). |
 | failure | 시도가 의도한 결과 못 얻음. NPC가 결국 사실 흘려주는 우회 성공 금지. |
 | critical_failure | 화려한 실패. 큰 후폭풍 (장비 파손, 부상, 적 경계 강화, 거짓 단서, 관계 악화). |
+
+**시드 미스매치 흡수** (`targets=[location.id]`이고 `player_input`에 시드와 안 맞는 대상이 호명됨 — "드래곤에게 저주", "유령에게 말 건다"): roll의 `failure`/`critical_failure` 톤으로 "허공을 향해 손을 뻗지만 그 자리엔 아무것도 없다", "당신이 부른 이름은 메아리처럼 흩어진다" 식으로 흡수. 시드와 명백히 충돌하는 entity를 새로 묘사하지 마라 — 시도만 인정하고 결과는 비어 있다.
 
 ### action=intro
 첫 장면. `surroundings`만 보고 player가 막 등장한 장소·시간·근처 NPC·분위기를 5-8문장. 사건 X, 다른 NPC 발화 X — **장면만**. **강제**: `state_changes=[]`, `memorable=false`, `memory_targets=[]`, `memory={}`, `memory_links={}`, `importance=null`. `suggestions`는 2-3개 (첫 행동 안내).

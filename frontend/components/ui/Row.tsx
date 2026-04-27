@@ -4,14 +4,13 @@ import { View, Text } from 'react-native';
 type Props = {
   label: string;
   labelAlign?: 'left' | 'right';
-  gap?: 'sm' | 'md' | 'lg';
+  gap?: 'md' | 'lg';
   trailing?: React.ReactNode;
   children: React.ReactNode;
   variableHeight?: boolean;
 };
 
 const GAP_CLASS = {
-  sm: 'gap-2',
   md: 'gap-3',
   lg: 'gap-4',
 } as const;
@@ -31,7 +30,7 @@ export function Row({
   return (
     <View className={`flex-row ${GAP_CLASS[gap]} ${alignClass} ${heightClass} min-w-0`}>
       <Text
-        className={`font-mono-semibold text-panel text-fg-subtle uppercase shrink-0 ${labelAlignClass}`}
+        className={`font-sans-semibold text-panel text-fg-subtle shrink-0 ${labelAlignClass}`}
         style={{ minWidth: 42, letterSpacing: 1.2 }}
       >
         {label}

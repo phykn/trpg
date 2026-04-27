@@ -13,9 +13,9 @@
 
 const colors = {
   canvas: {
-    default: '#F5F1EB',
+    default: '#EEE6D6',
     subtle: '#FBF8F3',
-    inset: '#ECE6DC',
+    inset: '#E0D5C0',
   },
   fg: {
     default: '#2D2A26',
@@ -24,7 +24,7 @@ const colors = {
     'on-emphasis': '#FBF8F3',
   },
   border: {
-    default: '#E0D8CB',
+    default: '#D6CCBA',
   },
   accent: {
     fg: '#C96442',
@@ -63,25 +63,29 @@ const radius = {
   full: 9999,
 };
 
+// Two-family system: NotoSerifKR for all Korean prose / labels / titles,
+// GeistMono for ASCII numerics and stat keys only. `serif*` aliases stay
+// for callsites that already lean on the narration name.
 const fontFamily = {
-  sans: ['Inter_400Regular'],
-  'sans-medium': ['Inter_500Medium'],
-  'sans-semibold': ['Inter_600SemiBold'],
-  'sans-bold': ['Inter_700Bold'],
-  serif: ['SourceSerif4_400Regular'],
-  'serif-medium': ['SourceSerif4_500Medium'],
+  sans: ['NotoSerifKR_400Regular'],
+  'sans-medium': ['NotoSerifKR_500Medium'],
+  'sans-semibold': ['NotoSerifKR_600SemiBold'],
+  'sans-bold': ['NotoSerifKR_700Bold'],
+  serif: ['NotoSerifKR_400Regular'],
+  'serif-medium': ['NotoSerifKR_500Medium'],
   mono: ['GeistMono_400Regular'],
   'mono-medium': ['GeistMono_500Medium'],
   'mono-semibold': ['GeistMono_600SemiBold'],
 };
 
 const fontSize = {
-  meta:    ['10px', { lineHeight: '12px', letterSpacing: '1.2px' }],
-  caption: ['11px', { lineHeight: '14px', letterSpacing: '0.3px' }],
-  panel:   ['12px', { lineHeight: '18px', letterSpacing: '0px' }],
-  body:    ['13px', { lineHeight: '20px', letterSpacing: '0px' }],
-  title:   ['15px', { lineHeight: '21px', letterSpacing: '-0.1px' }],
-  lead:    ['17px', { lineHeight: '29px', letterSpacing: '-0.2px' }],
+  meta:      ['10px', { lineHeight: '12px', letterSpacing: '1.2px' }],
+  caption:   ['11px', { lineHeight: '14px', letterSpacing: '0.3px' }],
+  panel:     ['12px', { lineHeight: '18px', letterSpacing: '0px' }],
+  body:      ['13px', { lineHeight: '20px', letterSpacing: '0px' }],
+  title:     ['15px', { lineHeight: '21px', letterSpacing: '-0.1px' }],
+  lead:      ['17px', { lineHeight: '29px', letterSpacing: '-0.2px' }],
+  narration: ['20px', { lineHeight: '34px', letterSpacing: '-0.3px' }],
 };
 
 const toneColor = {
@@ -94,4 +98,21 @@ const toneColor = {
   neutral: colors.fg.subtle,
 };
 
-module.exports = { colors, spacing, radius, fontFamily, fontSize, toneColor };
+const shadow = {
+  floating: {
+    shadowColor: colors.fg.default,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  paper: {
+    shadowColor: colors.fg.default,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+};
+
+module.exports = { colors, spacing, radius, fontFamily, fontSize, toneColor, shadow };

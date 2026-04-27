@@ -31,3 +31,16 @@ export declare const fontSize: Record<
 import type { Tone } from '@/types/ui';
 
 export declare const toneColor: Record<Tone, string>;
+
+type ShadowDef = {
+  shadowColor: string;
+  shadowOpacity: number;
+  shadowRadius: number;
+  shadowOffset: { width: number; height: number };
+  elevation: number;
+};
+
+export declare const shadow: {
+  floating: ShadowDef;
+  paper: ShadowDef;
+};

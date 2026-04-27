@@ -4,7 +4,6 @@ import pytest
 
 from src.agents.dc_judge import JudgeInput, judge
 from src.agents.dc_judge.schema import (
-    ClarifyAction,
     CombatAction,
     PassAction,
     RejectAction,
@@ -42,8 +41,8 @@ def surroundings():
         ("아 씨발 짜증나", RejectAction),
         ("경비병 설득해서 통과시켜달라고 해", RollAction),
         ("고블린에게 활을 쏜다", CombatAction),
-        ("뭔가 해봐", ClarifyAction),
-        ("드래곤에게 저주를 건다", ClarifyAction),
+        ("뭔가 해봐", PassAction),
+        ("드래곤에게 저주를 건다", RollAction),
     ],
 )
 async def test_judge_classifies(client, surroundings, text, expected):

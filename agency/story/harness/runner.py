@@ -18,6 +18,8 @@ from src.domain.entities import Chapter, Character, Item, Location, Quest, Race,
 from src.engines.invariants import check
 from src.llm import LLMClient
 
+# --- types & errors --------------------------------------------------------
+
 ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]{1,30}$")
 
 
@@ -40,6 +42,8 @@ class EntitySpec:
         default=_noop_check
     )
 
+
+# --- manifest cross-ref checks --------------------------------------------
 
 def _check_location_refs(loc: Location, refs: dict[str, set[str]]) -> None:
     location_ids = refs.get("location", set())
@@ -143,6 +147,8 @@ def _check_chapter_refs(ch: Chapter, refs: dict[str, set[str]]) -> None:
             )
 
 
+# --- spec table ------------------------------------------------------------
+
 SPECS: dict[str, EntitySpec] = {
     "race": EntitySpec(
         kind="race", model=Race, sub_dir="races", fragment="race.md",
@@ -174,6 +180,8 @@ SPECS: dict[str, EntitySpec] = {
     ),
 }
 
+
+# --- build helpers ---------------------------------------------------------
 
 def _load_dir(scenario_dir: Path, sub_dir: str) -> list[dict]:
     d = scenario_dir / sub_dir
@@ -282,6 +290,8 @@ def _check_id(
             f"id={eid!r} 가 기존과 겹침. 기존: {sorted(existing)}"
         )
 
+
+# --- entry points ----------------------------------------------------------
 
 async def write_entity(
     *,

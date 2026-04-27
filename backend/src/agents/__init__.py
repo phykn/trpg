@@ -1,5 +1,4 @@
 from .dc_judge import (
-    ClarifyAction,
     CombatAction,
     JudgeInput,
     JudgeOutput,
@@ -18,7 +17,6 @@ from .narrate import (
 )
 
 __all__ = [
-    "ClarifyAction",
     "CombatAction",
     "JudgeInput",
     "JudgeOutput",

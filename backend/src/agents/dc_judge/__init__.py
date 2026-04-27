@@ -1,6 +1,5 @@
 from .runner import PROMPT_PATH, judge
 from .schema import (
-    ClarifyAction,
     CombatAction,
     EquipAction,
     JudgeInput,
@@ -16,7 +15,6 @@ from .schema import (
 from .semantics import JudgeSemanticError, check_semantics, collect_valid_ids
 
 __all__ = [
-    "ClarifyAction",
     "CombatAction",
     "EquipAction",
     "JudgeInput",

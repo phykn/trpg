@@ -5,17 +5,12 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  useFonts as useInter,
-} from '@expo-google-fonts/inter';
-import {
-  SourceSerif4_400Regular,
-  SourceSerif4_500Medium,
+  NotoSerifKR_400Regular,
+  NotoSerifKR_500Medium,
+  NotoSerifKR_600SemiBold,
+  NotoSerifKR_700Bold,
   useFonts as useSerif,
-} from '@expo-google-fonts/source-serif-4';
+} from '@expo-google-fonts/noto-serif-kr';
 import {
   GeistMono_400Regular,
   GeistMono_500Medium,
@@ -28,11 +23,15 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  const [interLoaded] = useInter({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
-  const [serifLoaded] = useSerif({ SourceSerif4_400Regular, SourceSerif4_500Medium });
-  const [monoLoaded]  = useMono({ GeistMono_400Regular, GeistMono_500Medium, GeistMono_600SemiBold });
+  const [serifLoaded] = useSerif({
+    NotoSerifKR_400Regular,
+    NotoSerifKR_500Medium,
+    NotoSerifKR_600SemiBold,
+    NotoSerifKR_700Bold,
+  });
+  const [monoLoaded] = useMono({ GeistMono_400Regular, GeistMono_500Medium, GeistMono_600SemiBold });
 
-  if (!interLoaded || !serifLoaded || !monoLoaded) return null;
+  if (!serifLoaded || !monoLoaded) return null;
 
   return (
     <ThemeProvider value={DefaultTheme}>

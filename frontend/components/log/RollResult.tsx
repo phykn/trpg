@@ -1,7 +1,7 @@
-import React from 'react';
-import { Animated, Easing, View, Text } from 'react-native';
-import { colors } from '@/design/tokens';
-import { InlineNodes } from '@/components/ui';
+import { Animated, Text, View } from 'react-native';
+
+import { colors, shadow } from '@/design/tokens';
+import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import type { LogEntry } from '@/types/ui';
 
 type RollEntry = Extract<LogEntry, { kind: 'roll' }>;
@@ -17,61 +17,72 @@ export function RollResult({ entry }: { entry: RollEntry }) {
   const total = entry.roll + entry.mod;
   const modStr = entry.mod >= 0 ? `+${entry.mod}` : `${entry.mod}`;
 
-  const scale = React.useRef(new Animated.Value(1.04)).current;
-  const opacity = React.useRef(new Animated.Value(0)).current;
-
-  React.useEffect(() => {
-    Animated.parallel([
-      Animated.timing(scale, {
-        toValue: 1,
-        duration: 220,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [scale, opacity]);
-
-  const resultValue = (
-    <Text
-      numberOfLines={1}
-      className="font-mono-semibold text-panel"
-      style={{ fontVariant: ['tabular-nums'] }}
-    >
-      <Text className="text-fg-default">{total}</Text>
-      <Text className="text-fg-subtle"> ({entry.roll}{modStr})</Text>
-    </Text>
-  );
+  const { scale, opacity } = useEntryAnimation();
 
   return (
     <Animated.View style={{ transform: [{ scale }], opacity }}>
       <View
-        className="flex-row items-center bg-canvas-subtle border border-border-default rounded-md py-2 px-3 gap-3"
-        style={{
-          minHeight: 32,
-          borderLeftWidth: 3,
-          borderLeftColor: tone.color,
-        }}
+        className="bg-canvas-subtle border border-border-default rounded-md px-3 py-2.5"
+        style={{ borderLeftWidth: 2, borderLeftColor: tone.color, ...shadow.paper }}
       >
-        <Text
-          className={`font-sans-bold text-panel uppercase shrink-0 ${tone.cls}`}
-          style={{ letterSpacing: 1.2 }}
-        >
-          {tone.label}
-        </Text>
-        <View className="h-3.5 bg-border-default" style={{ width: 1 }} />
-        <InlineNodes
-          entries={[
-            ['판정', entry.check],
-            ['난이도', entry.dc],
-            ['결과', resultValue],
-          ]}
-          weights={[1, 1, 2]}
-        />
+        <View className="flex-row items-baseline flex-wrap" style={{ gap: 6 }}>
+          <View
+            className="px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: `${tone.color}26` }}
+          >
+            <Text
+              className={`font-sans-bold text-caption uppercase ${tone.cls}`}
+              style={{ letterSpacing: 1.2 }}
+            >
+              {tone.label}
+            </Text>
+          </View>
+          <Text
+            className="font-sans-semibold text-panel text-fg-subtle"
+            style={{ letterSpacing: 1.2 }}
+            numberOfLines={1}
+          >
+            {entry.check}
+          </Text>
+          <Text className="font-mono text-panel text-fg-subtle">·</Text>
+          <View className="flex-row items-baseline gap-1.5">
+            <Text
+              className="font-sans-semibold text-panel text-fg-subtle"
+              style={{ letterSpacing: 1.2 }}
+            >
+              주사위
+            </Text>
+            <Text
+              className="font-mono-semibold text-panel text-fg-default"
+              style={{ fontVariant: ['tabular-nums'] }}
+            >
+              {entry.roll}
+            </Text>
+            {entry.mod !== 0 && (
+              <Text
+                className="font-mono text-panel text-fg-muted"
+                style={{ fontVariant: ['tabular-nums'] }}
+              >
+                {modStr} = {total}
+              </Text>
+            )}
+          </View>
+          <Text className="font-mono text-panel text-fg-subtle">·</Text>
+          <View className="flex-row items-baseline gap-1.5">
+            <Text
+              className="font-sans-semibold text-panel text-fg-subtle"
+              style={{ letterSpacing: 1.2 }}
+            >
+              난이도
+            </Text>
+            <Text
+              className="font-mono text-panel text-fg-muted"
+              style={{ fontVariant: ['tabular-nums'] }}
+            >
+              {entry.dc}
+            </Text>
+          </View>
+        </View>
       </View>
     </Animated.View>
   );

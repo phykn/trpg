@@ -39,7 +39,15 @@ function RollingIndicator() {
 }
 
 function Separator() {
-  return <View style={{ height: spacing[5] }} />;
+  return (
+    <View
+      style={{ height: spacing[5], alignItems: 'center', justifyContent: 'center' }}
+    >
+      <Text style={{ color: colors.fg.subtle, fontSize: 9, letterSpacing: 5 }}>
+        · · ·
+      </Text>
+    </View>
+  );
 }
 
 function TypingDot({ delay }: { delay: number }) {
@@ -110,17 +118,16 @@ function SuggestionChips({
   onPick: (text: string) => void;
 }) {
   return (
-    <View
-      className="items-start"
-      style={{ paddingTop: spacing[3], gap: spacing[1.5] }}
-    >
+    <View style={{ paddingTop: spacing[3], gap: spacing[1.5] }}>
       {items.map((text, i) => (
         <Pressable
           key={`${i}-${text}`}
           onPress={() => onPick(text)}
-          className="px-3 py-1 rounded-full bg-accent-muted border border-border-default active:opacity-60"
+          className="px-3 py-1.5 rounded-full bg-accent-muted border border-border-default active:opacity-60"
         >
-          <Text className="font-sans text-caption text-fg-default">{text}</Text>
+          <Text className="font-sans text-title text-fg-default text-center">
+            {text}
+          </Text>
         </Pressable>
       ))}
     </View>

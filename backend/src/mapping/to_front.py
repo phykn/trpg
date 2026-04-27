@@ -9,7 +9,7 @@ from ..domain.entities import (
 )
 from ..domain.memory import PendingCheck
 from ..domain.types import tier_to_int
-from ..engines.growth import xp_for_next_level
+from ..engines.growth import can_afford_level_up, xp_for_next_level
 from ..domain.state import GameState
 
 
@@ -64,6 +64,7 @@ def to_hero(state: GameState) -> dict:
         "level": p.level,
         "exp": p.xp_pool,
         "expMax": xp_for_next_level(p.level),
+        "canLevelUp": can_afford_level_up(p),
         "hp": p.hp,
         "hpMax": p.max_hp,
         "mp": p.mp,
@@ -208,6 +209,7 @@ def to_log(state: GameState) -> list[dict]:
 
 def pending_check_to_front(pending: PendingCheck) -> dict:
     return {
+        "kind": pending.kind,
         "dc": pending.dc,
         "stat": pending.stat,
         "mod": pending.mod,
@@ -245,6 +247,7 @@ def rest_ambush_text(actor_name: str) -> str:
 
 
 def to_front_state(state: GameState) -> dict:
+    player = state.characters.get(state.player_id)
     return {
         "hero": to_hero(state),
         "subject": to_subject(state),
@@ -253,4 +256,8 @@ def to_front_state(state: GameState) -> dict:
         "combat": to_combat(state),
         "log": to_log(state),
         "pendingCheck": to_pending_check(state),
+        "gameOver": player is not None and not player.alive,
+        "playerDowned": (
+            player is not None and player.alive and player.death_saves is not None
+        ),
     }

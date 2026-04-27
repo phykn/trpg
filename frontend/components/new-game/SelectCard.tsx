@@ -1,5 +1,7 @@
 import { Pressable, Text } from 'react-native';
 
+import { colors } from '@/design/tokens';
+
 type Props = {
   title: string;
   description?: string;
@@ -8,15 +10,16 @@ type Props = {
 };
 
 export function SelectCard({ title, description, selected, onPress }: Props) {
-  const bg = selected ? 'bg-accent-muted border-accent-fg' : 'bg-canvas-subtle border-border-default';
+  const bg = selected ? 'bg-accent-muted' : 'bg-canvas-subtle active:bg-canvas-inset';
+  const borderClass = selected ? 'border-accent-fg' : 'border-border-default';
   return (
     <Pressable
       onPress={onPress}
-      className={`px-4 py-3 rounded-md border ${bg}`}
-      style={{ borderWidth: 1.5 }}
+      className={`px-4 py-3 rounded-md border ${borderClass} ${bg}`}
+      style={selected ? { borderLeftWidth: 2, borderLeftColor: colors.accent.fg } : undefined}
     >
       <Text
-        className={`font-sans-semibold text-title ${
+        className={`font-serif-medium text-title ${
           selected ? 'text-accent-fg' : 'text-fg-default'
         }`}
       >

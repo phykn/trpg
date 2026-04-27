@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 
 import { ExpandGroup, InlineNodes, LabeledRow } from '@/components/ui';
+import { shadow } from '@/design/tokens';
 import { joinInventoryOrDash, joinOrDash } from '@/presenters';
 import type { EquipItem, Hero } from '@/types/domain';
 
@@ -8,7 +9,10 @@ export function HeroDetail({ hero }: { hero: Hero }) {
   const equipped = Object.values(hero.equipment).filter((it): it is EquipItem => it !== null);
 
   return (
-    <View className="mt-2 px-3.5 py-3 bg-canvas-subtle border border-border-default rounded-md gap-2.5">
+    <View
+      className="mt-2 px-4 py-3 bg-canvas-subtle border border-border-default rounded-md gap-2.5"
+      style={shadow.paper}
+    >
       <ExpandGroup>
         <LabeledRow label="능력" mono>
           <InlineNodes entries={Object.entries(hero.stats) as [string, number][]} />

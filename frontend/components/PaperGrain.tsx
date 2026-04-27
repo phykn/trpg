@@ -3,8 +3,8 @@ import Svg, { Defs, Pattern, Rect, Circle } from 'react-native-svg';
 
 import { colors } from '@/design/tokens';
 
-const TILE = 120;
-const DOTS_PER_TILE = 56;
+const TILE = 140;
+const DOTS_PER_TILE = 110;
 const SEED = 42;
 
 function makeDots() {
@@ -18,8 +18,8 @@ function makeDots() {
   return Array.from({ length: DOTS_PER_TILE }, () => ({
     cx: next() * TILE,
     cy: next() * TILE,
-    r: 0.35 + next() * 0.55,
-    o: 0.18 + next() * 0.45,
+    r: 0.35 + next() * 0.7,
+    o: 0.22 + next() * 0.55,
   }));
 }
 
@@ -48,7 +48,7 @@ export function PaperGrain() {
                 cy={d.cy}
                 r={d.r}
                 fill={colors.fg.default}
-                opacity={d.o * 0.07}
+                opacity={d.o * 0.13}
               />
             ))}
           </Pattern>
