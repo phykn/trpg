@@ -47,7 +47,7 @@ async def run_rest(
             state, enemy_ids, dirty, rng, surprise="enemy"
         ):
             yield ev
-        advance_time(state)
+        advance_time(state, dirty)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return

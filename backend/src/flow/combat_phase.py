@@ -181,7 +181,7 @@ async def _flush_player_turn(
     async for ev in run_combat_npc_phase(state, dirty, rng):
         yield ev
     state.turn_count += 1
-    advance_time(state)
+    advance_time(state, dirty)
     async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev
 
@@ -272,7 +272,7 @@ async def _handle_flee(
         yield {"type": "combat_end", "data": {"outcome": "fled"}}
         combat_engine.end_combat(state)
         state.turn_count += 1
-        advance_time(state)
+        advance_time(state, dirty)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return

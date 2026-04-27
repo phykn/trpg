@@ -47,10 +47,18 @@ def _trim(items: list, cap: int) -> None:
         items.pop(0)
 
 
-def advance_time(state: GameState) -> None:
+def advance_time(state: GameState, dirty: "Dirty | None" = None) -> None:
+    """One turn boundary: bump world_time by RULES.time.turn_min and tick
+    every character's active buffs (duration -1, drop on 0)."""
+    from ..engines.skill import tick_active_buffs
+
     dt = datetime.fromisoformat(state.world_time)
     dt += timedelta(minutes=RULES.time.turn_min)
     state.world_time = dt.isoformat()
+
+    entity_dirty = dirty.entities if dirty is not None else None
+    for character in state.characters.values():
+        tick_active_buffs(character, dirty=entity_dirty)
 
 
 def next_log_id(state: GameState) -> int:

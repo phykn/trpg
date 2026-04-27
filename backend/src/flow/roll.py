@@ -179,7 +179,7 @@ async def run_roll(
     if pending.kind == "death_save":
         async for ev in _resolve_death_save(state, dirty, dice):
             yield ev
-        advance_time(state)
+        advance_time(state, dirty)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -190,7 +190,7 @@ async def run_roll(
         ):
             yield ev
         state.pending_check = None
-        advance_time(state)
+        advance_time(state, dirty)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -237,7 +237,7 @@ async def run_roll(
         yield ev
 
     state.pending_check = None
-    advance_time(state)
+    advance_time(state, dirty)
 
     if state.combat_state is not None:
         # Environment rolls cost the player one combat turn — NPC phase resumes.
