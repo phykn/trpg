@@ -113,20 +113,29 @@ def format_attack_log(
     target = state.characters[target_id]
     hand_label = "주 손" if outcome.hand == "main" else "보조 손"
     grade_label = GRADE_LABEL[outcome.grade]
-    head = (
-        f"{attacker.name} → {target.name} "
-        f"({hand_label}, d20={outcome.nat_d20}): {grade_label}"
-    )
     if outcome.damage > 0:
-        head += f" — {outcome.damage} 데미지"
+        head = (
+            f"{attacker.name}이(가) {hand_label}으로 {target.name}에게 "
+            f"{outcome.damage} 피해를 입혔다 ({grade_label}, 굴림 {outcome.nat_d20})."
+        )
+    elif outcome.grade == "critical_failure":
+        head = (
+            f"{attacker.name}이(가) {hand_label}으로 공격하다 "
+            f"{grade_label}했다 (굴림 {outcome.nat_d20})."
+        )
+    else:
+        head = (
+            f"{attacker.name}이(가) {hand_label}으로 {target.name}을(를) "
+            f"노렸으나 빗나갔다 (굴림 {outcome.nat_d20})."
+        )
     if apply_result is None:
         return head
     if apply_result.get("revived"):
-        head += f" ({target.name} 부활 코인 사용, HP 회복)"
-    elif apply_result.get("dead"):
-        head += f" ({target.name} 쓰러짐)"
-    elif apply_result.get("dying"):
-        head += f" ({target.name} 의식 잃음)"
+        return f"{head} {target.name}이(가) 부활 코인을 사용해 HP를 회복했다."
+    if apply_result.get("dead"):
+        return f"{head} {target.name}이(가) 쓰러졌다."
+    if apply_result.get("dying"):
+        return f"{head} {target.name}이(가) 의식을 잃었다."
     return head
 
 

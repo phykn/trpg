@@ -129,17 +129,21 @@ async def start_combat_and_run_npc_phase(
     rng: random.Random | None,
     surprise: Literal["player", "enemy"] | None = None,
 ) -> AsyncIterator[dict]:
-    cs = combat_engine.start_combat(state, enemy_ids, rng=rng, surprise=surprise)
-    yield push_gm(state, dirty, "전투 개시!")
-    yield {
-        "type": "combat_start",
-        "data": {
-            "turn_order": list(cs.turn_order),
-            "round": cs.round,
-            "surprise": cs.surprise,
-            "enemy_ids": list(cs.enemy_ids),
-        },
-    }
+    # Defensive: if combat_state somehow survived (or didn't get cleared) into
+    # this call, skip re-init so the log doesn't get a duplicate "전투 개시!"
+    # line and the engine doesn't reset round/turn_order on the active fight.
+    if state.combat_state is None:
+        cs = combat_engine.start_combat(state, enemy_ids, rng=rng, surprise=surprise)
+        yield push_gm(state, dirty, "전투 개시!")
+        yield {
+            "type": "combat_start",
+            "data": {
+                "turn_order": list(cs.turn_order),
+                "round": cs.round,
+                "surprise": cs.surprise,
+                "enemy_ids": list(cs.enemy_ids),
+            },
+        }
     async for ev in run_combat_npc_phase(state, dirty, rng):
         yield ev
 

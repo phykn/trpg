@@ -193,6 +193,37 @@ async def test_combat_pass_action_consumes_player_turn(combat_state, tmp_data, m
     assert "combat_turn" in types
 
 
+async def test_start_combat_is_idempotent_when_already_in_combat(
+    combat_state, tmp_data, monkeypatch
+):
+    # Defensive: if combat_state somehow survived into start_combat_and_run_npc_phase
+    # (e.g. an old persistence regression), the function must not log
+    # "전투 개시!" a second time or reset round/turn_order on the active fight.
+    from src.engines import combat as combat_engine
+    from src.flow.combat_phase import start_combat_and_run_npc_phase
+    from src.flow.dirty import Dirty
+
+    combat_engine.start_combat(combat_state, ["goblin_01"], rng=random.Random(0))
+    combat_state.combat_state.turn_order = ["player_01", "goblin_01"]
+    combat_state.combat_state.current_turn = 0
+    round_before = combat_state.combat_state.round
+    log_len_before = len(combat_state.log_entries)
+
+    dirty = Dirty()
+    events = await _collect(
+        start_combat_and_run_npc_phase(
+            combat_state, ["goblin_01"], dirty, rng=random.Random(1)
+        )
+    )
+
+    types = [e["type"] for e in events]
+    assert "combat_start" not in types
+    assert combat_state.combat_state is not None
+    assert combat_state.combat_state.round == round_before
+    new_logs = combat_state.log_entries[log_len_before:]
+    assert all(e.text != "전투 개시!" for e in new_logs)
+
+
 async def test_combat_ends_when_enemy_dies_from_player_attack(
     combat_state, tmp_data, monkeypatch
 ):
