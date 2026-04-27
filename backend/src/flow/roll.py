@@ -11,7 +11,7 @@ from ..engines.growth import grant_roll_xp
 from ..llm.client import LLMClient
 from ..mapping.to_front import pending_check_to_front
 from ..rules.config import RULES
-from ..rules.dc import compute_grade
+from ..rules.dc import compute_grade, sigmoid_required_roll
 from .cinematic import (
     apply_combat_outcome,
     arm_death_save_pending,
@@ -43,7 +43,6 @@ async def _resolve_combat_roll(
     """One-roll combat resolution. The d20 + STR vs DC produces a grade,
     grade drives mechanical outcome (kills/HP/XP), and combat_narrate
     streams a 5-10 sentence cinematic of the entire fight."""
-    state.turn_count_increment_done = False  # marker only — caller handled
     player = state.characters[state.player_id]
     stat_value = getattr(player.stats, pending.stat)
     required_roll = sigmoid_required_roll(pending.dc, stat_value)
