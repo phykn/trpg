@@ -54,8 +54,10 @@ async def session_learn_skill(
     learned_id: str | None = None
     if body.index is not None and 0 <= body.index < len(candidates):
         chosen = candidates[body.index]
-        player.learned_skills.append(chosen)
+        state.skills[chosen.id] = chosen
+        player.learned_skill_ids.append(chosen.id)
         learned_id = chosen.id
+        await save_entity(state, saves_dir, "skills", chosen.id)
     state.pending_skill_candidates = []
     await save_entity(state, saves_dir, "characters", state.player_id)
     await save_meta(state, saves_dir)

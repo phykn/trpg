@@ -156,7 +156,7 @@ class Race(BaseModel):
     id: str
     name: str
     description: str
-    racial_skills: list[Skill] = []
+    racial_skill_ids: list[str] = []
 
 
 class Character(BaseModel):
@@ -183,14 +183,15 @@ class Character(BaseModel):
     inventory_ids: list[str] = []
     gold: int = 0
     xp_pool: int = 0
+    xp_reward: int = 0  # xp granted to the killer when this character dies. 0 = no reward.
 
     disposition: Disposition = Disposition()
     relations: dict[str, int] = {}
     tone_hint: str = ""
     hints: list[str] = []
 
-    racial_skills: list[Skill] = []
-    learned_skills: list[Skill] = []
+    racial_skill_ids: list[str] = []
+    learned_skill_ids: list[str] = []
 
     status: list[str] = []
     active_buffs: list[ActiveBuff] = []

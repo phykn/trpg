@@ -14,6 +14,7 @@ from ..domain.entities import (
     Location,
     Quest,
     Race,
+    Skill as SkillModel,
     Stats,
 )
 from ..domain.errors import ProfileMalformed, ProfileNotFound, RaceNotFound
@@ -75,6 +76,7 @@ async def init_game(
 
     locations = _scan_dir(pdir / "locations", Location)
     items = _scan_dir(pdir / "items", Item)
+    skills = _scan_dir(pdir / "skills", SkillModel)
     npcs = _scan_dir(pdir / "characters", Character)
     quests = _scan_dir(pdir / "quests", Quest)
     chapters = _scan_dir(pdir / "chapters", Chapter)
@@ -107,7 +109,8 @@ async def init_game(
         location_id=location_id,
         equipment=template_equipment,
         inventory_ids=template_inventory,
-        racial_skills=[s.model_copy() for s in chosen_race.racial_skills],
+        gold=int(template.get("gold", 0)),
+        racial_skill_ids=list(chosen_race.racial_skill_ids),
     )
     player_char.max_hp = calc_max_hp(player_char.level, stats.CON)
     player_char.max_mp = calc_max_mp(player_char.level, stats.INT)
@@ -123,6 +126,7 @@ async def init_game(
         items=items,
         locations=locations,
         races=races,
+        skills=skills,
         quests=quests,
         chapters=chapters,
         campaigns=campaigns,

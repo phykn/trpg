@@ -37,6 +37,7 @@ class GameState(BaseModel):
     items: dict[str, Item] = {}
     locations: dict[str, Location] = {}
     races: dict[str, Race] = {}
+    skills: dict[str, Skill] = {}
     quests: dict[str, Quest] = {}
     chapters: dict[str, Chapter] = {}
     campaigns: dict[str, Campaign] = {}
@@ -51,6 +52,7 @@ class GameState(BaseModel):
     pending_check: PendingCheck | None = None
     combat_state: CombatState | None = None
     pending_skill_candidates: list[Skill] = []
+    clarify_streak: int = 0
 
     turn_log: list[TurnLogEntry] = []
     recent_dialogue: list[DialoguePair] = []

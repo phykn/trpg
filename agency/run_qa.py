@@ -90,6 +90,7 @@ async def _run_single(
         name=agent_name,
         prompt_path=_agent_prompt_path(agent_name),
         llm=llm,
+        max_turns=max_turns,
     )
     run_dir = run_root / agent_name
     return await run_qa_session(

@@ -40,6 +40,7 @@ from ..domain.entities import (
     Location,
     Quest,
     Race,
+    Skill,
     Stats,
     WeaponEffect,
     slot_kind,
@@ -75,6 +76,7 @@ class Scenario:
     races: dict[str, Race] = field(default_factory=dict)
     locations: dict[str, Location] = field(default_factory=dict)
     items: dict[str, Item] = field(default_factory=dict)
+    skills: dict[str, Skill] = field(default_factory=dict)
     characters: dict[str, Character] = field(default_factory=dict)
     quests: dict[str, Quest] = field(default_factory=dict)
     chapters: dict[str, Chapter] = field(default_factory=dict)
@@ -106,6 +108,7 @@ class Scenario:
             races=_load("races", Race),
             locations=_load("locations", Location),
             items=_load("items", Item),
+            skills=_load("skills", Skill),
             characters=_load("characters", Character),
             quests=_load("quests", Quest),
             chapters=_load("chapters", Chapter),
@@ -121,6 +124,7 @@ class Scenario:
             races=dict(state.races),
             locations=dict(state.locations),
             items=dict(state.items),
+            skills=dict(state.skills),
             characters=dict(state.characters),
             quests=dict(state.quests),
             chapters=dict(state.chapters),
@@ -197,16 +201,10 @@ def _check_character(c: Character) -> list[str]:
         _v(out, where, f"alive=False but hp={c.hp} (must be 0)")
 
     seen_skill_ids: set[str] = set()
-    for s in (*c.racial_skills, *c.learned_skills):
-        if s.id in seen_skill_ids:
-            _v(out, where, f"skill id={s.id!r} duplicated within character")
-        seen_skill_ids.add(s.id)
-        if s.level > c.level:
-            _v(
-                out,
-                where,
-                f"skill {s.id!r}.level={s.level} > character.level={c.level}",
-            )
+    for sid in (*c.racial_skill_ids, *c.learned_skill_ids):
+        if sid in seen_skill_ids:
+            _v(out, where, f"skill id={sid!r} duplicated within character")
+        seen_skill_ids.add(sid)
 
     seen_inv: set[str] = set()
     for iid in c.inventory_ids:
@@ -231,10 +229,20 @@ def _check_character(c: Character) -> list[str]:
 # --- check.skills (skill ↔ type ↔ duration) --------------------------------
 
 
-def _check_skills(c: Character) -> list[str]:
+def _check_skills(c: Character, skills_pool: dict[str, Skill]) -> list[str]:
     where = f"characters/{c.id}"
     out: list[str] = []
-    for s in (*c.racial_skills, *c.learned_skills):
+    for sid in (*c.racial_skill_ids, *c.learned_skill_ids):
+        s = skills_pool.get(sid)
+        if s is None:
+            _v(out, where, f"skill_id={sid!r} not in skills pool")
+            continue
+        if s.level > c.level:
+            _v(
+                out,
+                where,
+                f"skill {s.id!r}.level={s.level} > character.level={c.level}",
+            )
         if s.type in ("attack", "heal") and s.duration != 0:
             _v(
                 out,
@@ -382,9 +390,9 @@ def _check_seed_character_extras(c: Character, items: dict[str, Item]) -> list[s
     if not c.is_player:
         if c.level < 1:
             _v(out, where, f"NPC level={c.level} (must be ≥ 1)")
-        skill_count = len(c.racial_skills) + len(c.learned_skills)
+        skill_count = len(c.racial_skill_ids) + len(c.learned_skill_ids)
         if skill_count == 0:
-            _v(out, where, "NPC has no skills (racial_skills + learned_skills empty)")
+            _v(out, where, "NPC has no skills (racial_skill_ids + learned_skill_ids empty)")
         if c.combat_behavior is not None and c.disposition.aggressive < 70:
             _v(
                 out,
@@ -396,6 +404,12 @@ def _check_seed_character_extras(c: Character, items: dict[str, Item]) -> list[s
                 out,
                 where,
                 f"disposition.aggressive={c.disposition.aggressive} ≥ 70 but combat_behavior is None",
+            )
+        if c.combat_behavior is not None and c.xp_reward <= 0:
+            _v(
+                out,
+                where,
+                f"hostile NPC xp_reward={c.xp_reward} (must be > 0 — killing a hostile must reward xp)",
             )
 
     return out
@@ -672,10 +686,15 @@ def _check_scenario(s: Scenario) -> list[str]:
     for c in s.characters.values():
         out.extend(_check_character(c))
         out.extend(_check_inventory(c, s.items))
-        out.extend(_check_skills(c))
+        out.extend(_check_skills(c, s.skills))
         out.extend(_check_character_cross_ref(c, s))
         if not s.runtime:
             out.extend(_check_seed_character_extras(c, s.items))
+
+    for r in s.races.values():
+        for sid in r.racial_skill_ids:
+            if sid not in s.skills:
+                _v(out, f"races/{r.id}", f"racial_skill_id={sid!r} not in skills pool")
 
     for loc in s.locations.values():
         out.extend(_check_location_cross_ref(loc, s))
@@ -710,16 +729,21 @@ def check(*_args: Any, **_kwargs: Any) -> list[str]:
     )
 
 
-def _check_seed_character(c: Character, items_pool: dict[str, Item]) -> list[str]:
+def _check_seed_character(
+    c: Character,
+    items_pool: dict[str, Item],
+    skills_pool: dict[str, Skill],
+) -> list[str]:
     """Per-character bundle for the story team's incremental build step.
 
-    character (stateless) + inventory (cross-ref to items_pool) + skills +
-    seed-only extras (full HP/MP, NPC level >= 1, hostile NPC weapon, etc.)
+    character (stateless) + inventory (cross-ref to items_pool) + skills
+    (cross-ref to skills_pool) + seed-only extras (full HP/MP, NPC level >= 1,
+    hostile NPC weapon, etc.)
     """
     out: list[str] = []
     out.extend(_check_character(c))
     out.extend(_check_inventory(c, items_pool))
-    out.extend(_check_skills(c))
+    out.extend(_check_skills(c, skills_pool))
     out.extend(_check_seed_character_extras(c, items_pool))
     return out
 

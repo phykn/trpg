@@ -21,8 +21,14 @@ from .transcript import (
 
 
 async def _drain_sse(response) -> tuple[str, list[dict]]:
-    """Drain one SSE response. Returns (gm_body, all_events)."""
+    """Drain one SSE response. Returns (gm_body, all_events).
+
+    Body comes from narrative_delta when narrate ran; if narrate was skipped
+    (combat/rest/use), fall back to the gm log_entry text so the transcript
+    isn't blank.
+    """
     body = ""
+    gm_logs: list[str] = []
     events: list[dict] = []
     async for line in response.aiter_lines():
         if not line.startswith("data: "):
@@ -31,6 +37,12 @@ async def _drain_sse(response) -> tuple[str, list[dict]]:
         events.append(ev)
         if ev["type"] == "narrative_delta":
             body += ev["data"]["text"]
+        elif ev["type"] == "log_entry" and ev["data"].get("kind") == "gm":
+            text = ev["data"].get("text") or ""
+            if text:
+                gm_logs.append(text)
+    if not body and gm_logs:
+        body = "\n".join(gm_logs)
     return body, events
 
 
@@ -140,7 +152,7 @@ async def run_qa_session(
                 last_gm = last_gm_text(front.get("log") or [])
 
             try:
-                player_input = await agent.next_input(state_summary, last_gm)
+                player_input = await agent.next_input(state_summary, last_gm, turn_no=turn_no)
             except Exception as e:  # noqa: BLE001
                 error_count += 1
                 append_transcript_block(

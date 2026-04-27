@@ -59,13 +59,52 @@ Single-entity calls (e.g. `/story-write race ...`) leave the id free — only id
 
 ## QA team
 
-### Long runs
+### Running a full QA pass — playbook
 
-`--agent all` chains nine playthroughs back-to-back and typically runs for an hour or more. Default launch pattern: start the script via Bash `run_in_background` with stdout redirected to a logfile, then attach a persistent Monitor that `tail -F`s the log and filters for per-agent boundaries (`━━`, `→`, `Done`) plus failure signatures (`Error`, `Traceback`). Each agent's completion lands as a chat notification while the run keeps going. Single-agent runs (`--agent <name>`) are short enough to stay in the foreground.
+This is the reproducible recipe Claude Code should follow whenever the user asks to "run QA" or "test the QA team". Single-agent runs (`--agent <name>`) are short enough to stay in the foreground; everything below is for `--agent all`.
 
-### Reviewing a run
+**1. Launch in background, attach a persistent Monitor.**
 
-There is no automated reviewer. Each run drops `transcript.md` (human-readable), `sse.jsonl` (raw event stream including every judge decision), and `final_state.json` per agent under `reports/qa/<ts>/<agent>/`, plus a top-level `index.md` listing turn counts and error counts. Claude Code reads those files in chat directly and writes the review there — that avoids the local LLM hallucinating evidence that wasn't in the transcript.
+The runner takes 1–2 hours for ten agents at 15 turns each, so it must run in background. Output goes to `/tmp/qa_run.log`; the Monitor `tail -F`s that file with a tight grep filter, so each agent's boundary lines arrive as chat notifications without flooding context.
+
+```
+# Bash with run_in_background=true:
+rm -f /tmp/qa_run.log && .venv/bin/python agency/run_qa.py \
+  --agent all --turns 15 --profile redcliff > /tmp/qa_run.log 2>&1
+
+# Monitor (persistent=true, timeout_ms=3600000):
+tail -F /tmp/qa_run.log 2>/dev/null | grep --line-buffered -E \
+  "━━|→|Done\.|Error|Traceback|FAILED|HTTPError|ConnectionError|PersistenceFailed"
+```
+
+The agent emits `━━ <name> start ━━` then `→ done (turns=…, errors=…)` per agent, and `Done. Results: …/index.md` at the end. After the background task's completion notification fires, `TaskStop` the Monitor.
+
+**2. Read the artifacts directly.** Per agent under `reports/qa/<ts>/<agent>/`:
+
+- `transcript.md` — turn-by-turn human-readable log.
+- `sse.jsonl` — raw event stream, one JSON object per line. Useful patterns:
+  - judge action distribution: `python3 -c "import json; [print(ev['turn'], ev['data']) for line in open(p) if (ev:=json.loads(line)) and ev['type']=='judge']"` (replace `p`).
+  - combat lifecycle: grep for `combat_start` / `combat_end` event types — repeated `combat_start` on consecutive turns is a red flag (combat state not persisting).
+  - errors: events with `"type":"error"` carry `code` and `message`.
+- `final_state.json` — full GameState dump. Check `turn_count`, `combat_state`, `player_01.hp/location_id/inventory_ids`, NPC `memories[]`.
+- top-level `index.md` — turn counts, error counts, transcript links per agent.
+
+**3. Write the review in chat.** No LLM reviewer — Claude Code reads the files and writes the review directly (the local model hallucinates turn numbers and miscalls `clarify` a state desync, which is why we removed it).
+
+Per agent: one verdict, 1–3 wins, 1–3 issues with severity + turn-numbered evidence. Then a cross-agent summary that calls out repeated patterns — same persistence error in two agents, same narrative repeat in three — those are the worth-fixing ones.
+
+**Verdict grading:**
+
+- **PASS** — no error events, transcript reads naturally, final state matches the transcript's last explicit action.
+- **WARN** — narrative-quality issue, mild state/narrative mismatch, but the run completed without errors.
+- **FAIL** — error event mid-run (e.g. `PersistenceFailed`, `JudgeMalformed`), or final state actively contradicts the transcript at high confidence.
+
+**Reviewer pitfalls (don't repeat):**
+
+- `state.turn_count` is *not* the player-input count. `clarify`, `pending_check`, and rejected combat actions don't bump it. Don't flag the gap as desync.
+- A `failure`/`critical_failure` roll where the GM still hands over information *is* a real issue (see `narrate/prompt.md`'s grade table) — flag it as narrative.
+- `combat_state` should persist across turns. If `sse.jsonl` shows `combat_start` on consecutive turns with the same enemies, the engine is restarting combat every turn — that's a real persistence bug, not a reviewer artifact.
+- Self-target combat (`targets=[player_id]`) should already be rejected upstream; if it slips through, that's a regression.
 
 ### Adding a new agent
 

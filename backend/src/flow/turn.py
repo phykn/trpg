@@ -123,6 +123,9 @@ async def _dispatch(
     to_front_fn: ToFrontFn | None,
     result,
 ) -> AsyncIterator[dict]:
+    if not isinstance(result, ClarifyAction):
+        state.clarify_streak = 0
+
     if isinstance(result, CombatAction):
         invalid_targets = [
             t for t in result.targets
@@ -154,6 +157,18 @@ async def _dispatch(
         return
 
     if isinstance(result, ClarifyAction):
+        state.clarify_streak += 1
+        if state.clarify_streak >= 3:
+            yield push_act(
+                state,
+                dirty,
+                "이번 시도는 어떤 행동인지 잡히지 않아 흐릿하게 지나간다. 한 가지 행동을 구체적으로 정해 다시 시도하라.",
+            )
+            state.clarify_streak = 0
+            state.turn_count += 1
+            async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
+                yield ev
+            return
         yield push_act(state, dirty, result.question)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev

@@ -195,7 +195,8 @@ async def test_learn_skill_appends_to_learned(fresh_state, tmp_data, monkeypatch
                  saves_dir=tmp_data, player_input="화염 쪽을 익힌다")
     )
     p = state.characters["player_01"]
-    assert any(s.id == "fireball_l1" for s in p.learned_skills)
+    assert "fireball_l1" in p.learned_skill_ids
+    assert "fireball_l1" in state.skills
     assert state.pending_skill_candidates == []
 
 
@@ -210,7 +211,7 @@ async def test_learn_skill_invalid_index_logs_error(fresh_state, tmp_data, monke
                  saves_dir=tmp_data, player_input="첫 번째를 익힌다")
     )
     p = state.characters["player_01"]
-    assert p.learned_skills == []
+    assert p.learned_skill_ids == []
 
 
 # --- buy/sell natural language --------------------------------------------

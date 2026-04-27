@@ -33,6 +33,7 @@ def _char(
     combat: CombatBehavior | None = None,
     location_id: str | None = None,
     race_id: str = "human",
+    xp_reward: int = 0,
 ) -> Character:
     s = stats or Stats()
     c = Character(
@@ -45,15 +46,20 @@ def _char(
         location_id=location_id,
         equipment=equipment or Equipment(),
         inventory_ids=inventory or [],
-        learned_skills=skills or [],
+        learned_skill_ids=[sk.id for sk in (skills or [])],
         disposition=Disposition(aggressive=aggressive),
         combat_behavior=combat,
+        xp_reward=xp_reward,
     )
     c.max_hp = calc_max_hp(level, s.CON)
     c.max_mp = calc_max_mp(level, s.INT)
     c.hp = c.max_hp
     c.mp = c.max_mp
     return c
+
+
+def _skill_pool(*skills: Skill) -> dict[str, Skill]:
+    return {s.id: s for s in skills}
 
 
 def _basic_skill(sid: str = "skl", **kw) -> Skill:
@@ -108,13 +114,16 @@ def test_character_alive_false_with_positive_hp():
 
 
 def test_character_skill_level_above_owner_level():
-    c = _char(level=2, skills=[_basic_skill(level=5)])
-    msgs = check.character(c)
+    skill = _basic_skill(level=5)
+    c = _char(level=2, skills=[skill])
+    msgs = check.skills(c, _skill_pool(skill))
     assert any("level=5" in m and "level=2" in m for m in msgs)
 
 
 def test_character_duplicate_skill_id():
-    c = _char(skills=[_basic_skill("a"), _basic_skill("a", type="heal")])
+    skill1 = _basic_skill("a")
+    c = _char(skills=[skill1])
+    c.learned_skill_ids.append("a")  # duplicate id
     msgs = check.character(c)
     assert any("duplicated" in m for m in msgs)
 
@@ -245,20 +254,23 @@ def test_inventory_id_not_in_pool():
 
 
 def test_skills_attack_with_duration():
-    c = _char(skills=[_basic_skill(type="attack", duration=3)])
-    msgs = check.skills(c)
+    skill = _basic_skill(type="attack", duration=3)
+    c = _char(skills=[skill])
+    msgs = check.skills(c, _skill_pool(skill))
     assert any("type='attack'" in m and "got 3" in m for m in msgs)
 
 
 def test_skills_buff_with_zero_duration():
-    c = _char(skills=[_basic_skill(type="buff", duration=0)])
-    msgs = check.skills(c)
+    skill = _basic_skill(type="buff", duration=0)
+    c = _char(skills=[skill])
+    msgs = check.skills(c, _skill_pool(skill))
     assert any("type='buff'" in m and "got 0" in m for m in msgs)
 
 
 def test_skills_buff_with_positive_duration_passes():
-    c = _char(skills=[_basic_skill(type="buff", duration=3)])
-    assert check.skills(c) == []
+    skill = _basic_skill(type="buff", duration=3)
+    c = _char(skills=[skill])
+    assert check.skills(c, _skill_pool(skill)) == []
 
 
 # --- check.quest_graph ----------------------------------------------------
@@ -314,11 +326,13 @@ def _minimal_scenario(**overrides) -> Scenario:
     inn = type("L", (), {})  # placeholder — use actual Location below
     from src.domain.entities import Chapter, Location
     location = Location(id="inn", name="inn")
+    slash_skill = _basic_skill("slash", level=1)
     npc = _char(
         cid="npc1", level=2, race_id="human", location_id="inn",
         inventory=["sword"], equipment=Equipment(rightHand="sword"),
-        skills=[_basic_skill("slash", level=1)],
+        skills=[slash_skill],
         aggressive=80, combat=CombatBehavior(attack_priority="nearest", flee_hp_percent=20),
+        xp_reward=80,
     )
     quest = Quest(
         id="q1", title="t", giver_id="npc1", difficulty="보통", status="active",
@@ -329,6 +343,7 @@ def _minimal_scenario(**overrides) -> Scenario:
         races={"human": Race(id="human", name="human", description="d")},
         locations={"inn": location},
         items={"sword": sword},
+        skills={"slash": slash_skill},
         characters={"npc1": npc},
         quests={"q1": quest},
         chapters={"ch1": chapter},

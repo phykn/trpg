@@ -20,23 +20,12 @@
   "mp": <max_mp 와 같은 값>,
   "stats": {"STR":<0-20>, "DEX":<0-20>, "CON":<0-20>, "INT":<0-20>, "WIS":<0-20>, "CHA":<0-20>},
   "disposition": {"lawful":<0-100>, "moral":<0-100>, "aggressive":<0-100>},
+  "xp_reward": <int — hostile NPC 만 박는다, 아래 규칙 참조>,
   "inventory_ids": ["<item id>", ...],
   "equipment": {"<slot>": "<item id>"},
   "combat_behavior": {"attack_priority": "...", "flee_hp_percent": <int>},
-  "learned_skills": [
-    {
-      "id": "<ASCII snake_case>",
-      "name": "<한국어 짧은 명사구>",
-      "description": "<짧은 한국어 한 줄>",
-      "level": <int — character.level 이하>,
-      "type": "attack" | "heal" | "buff" | "debuff",
-      "target": "self" | "single" | "area",
-      "primary_stat": "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA",
-      "power": <int>,
-      "mp_cost": <int>,
-      "duration": <int — type 에 따라 다름, 아래 룰>
-    }
-  ]
+  "racial_skill_ids": ["<skill id>", ...],
+  "learned_skill_ids": ["<skill id>", ...]
 }
 ```
 
@@ -105,19 +94,31 @@
 - `attack_priority` 는 정확히 5 개 중 하나: `"nearest"` | `"lowest_hp"` | `"highest_threat"` | `"healer_first"` | `"random"`.
 - 비적대 NPC 는 `aggressive` 70 미만 + `combat_behavior` 박지 말 것.
 
-### Skill — NPC / 몬스터는 기본 스킬 1~3 개
+### xp_reward — 적대 NPC 에만
 
-- 주인공은 빈 채로 시작해 게임 중에 배우지만, 시드 NPC 는 race · job 에 어울리는 `learned_skills` 1~3 개를 갖고 등장.
-- 각 skill `level` 은 **character.level 이하**. 소유자가 못 쓰는 스킬을 박으면 안 된다.
-- skill `id` 는 같은 character 안에서 유일.
-- `duration` 은 type 에 따라:
-  - `attack` / `heal` → `0` (지속 시간 없음, 즉시 적용)
-  - `buff` / `debuff` → `> 0` (지속 턴 수)
+플레이어가 이 NPC 를 죽였을 때 받을 xp. 비적대 NPC 는 0 (생략 = 0).
+
+| character.level | 권장 xp_reward |
+|---|---|
+| 1 (잡몹·들쥐·소도둑) | 40~80 |
+| 2~3 (정예 도적·경비) | 100~200 |
+| 4~5 (소대장·정예 마법사) | 250~400 |
+| 6~10 (보스급 우두머리) | 500~1000 |
+| 11~15 (전설급) | 1500+ |
+
+플레이어 레벨업 비용 = `100 × current_level` (linear). level 0 → 1 = 100. xp_reward 는 한 번의 킬로 1~2 레벨 이상 점프하지 않게.
+
+### Skill — id 만 박는다 (스킬 본체는 별도 단계)
+
+- 주인공은 빈 채로 시작해 게임 중에 배우지만, 시드 NPC 는 race · job 에 어울리는 `learned_skill_ids` 1~3 개를 갖고 등장.
+- 이 단계에서는 **id 만** 박고 (예: `["drill_strike", "guard_focus"]`), 실제 Skill JSON 은 별도 `skill` 단계에서 만든다.
+- `racial_skill_ids` 는 보통 race 가 정한 racial skill 의 id 가 그대로 들어가지만, 시드 NPC 가 race 외 추가 racial skill 을 가져야 할 경우만 직접 박는다 (대부분 비워두면 race 의 기본값이 자동 상속).
 - 컨셉 매핑 예) 도적·전사: STR/DEX 기반 attack · 마법사: INT 기반 attack/buff · 노인·정보꾼: WIS 기반 buff/debuff · 거대 몬스터: STR/CON 기반 area attack.
+- 같은 시나리오 안의 다른 캐릭터가 같은 skill 을 공유해도 OK — id 는 유일하지만 참조는 여러 명이 가능.
 
 ### 그 밖에
 
-- `is_player`·`gold`·`xp_pool`·`active_buffs`·`memories` 등은 박지 말 것 (런타임이 채움).
+- `is_player`·`gold`·`xp_pool`·`active_buffs`·`memories` 등은 박지 말 것 (런타임이 채움). `xp_reward` 는 예외 — 시드 단계에서 박는 게 맞다 (hostile NPC 한정).
 - `tone_hint` 는 짧고 구체 ("퉁명스러운 단답, 가끔 긴 한숨" 식).
 - 기존 character 와 이름·역할 중복 금지.
 

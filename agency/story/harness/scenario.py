@@ -304,6 +304,16 @@ def _check_enemy_consistency(entity: BaseModel, expected_enemy: bool) -> None:
             f"character {entity.id} 가 비적대 (is_enemy=false) 로 분해됐으나 combat_behavior 가 박혀 있음. "
             "비적대 character 의 combat_behavior 는 비워라 (필드 자체를 생략)."
         )
+    if expected_enemy and entity.xp_reward <= 0:
+        raise EntityWriterError(
+            f"character {entity.id} 가 적대 (is_enemy=true) 로 분해됐으나 xp_reward={entity.xp_reward} 임. "
+            "적대 character 는 xp_reward 를 양수로 박아라 (level 기준 가이드: level 1 → 40~80, level 3 → 100~200, level 5+ → 250+)."
+        )
+    if not expected_enemy and entity.xp_reward > 0:
+        raise EntityWriterError(
+            f"character {entity.id} 가 비적대 (is_enemy=false) 로 분해됐으나 xp_reward={entity.xp_reward} 임. "
+            "비적대 character 는 xp_reward 를 0 으로 두거나 생략하라 (런타임 기본값 0)."
+        )
 
 
 async def build_scenario(
@@ -405,11 +415,16 @@ async def build_scenario(
         if it.owner_character_id:
             items_by_char.setdefault(it.owner_character_id, []).append(it.id)
     for c in decomp.characters:
-        flag = (
-            "적대 — combat_behavior 를 박아라 ({attack_priority, flee_hp_percent})"
-            if c.is_enemy
-            else "비적대 — combat_behavior 는 박지 말 것 (필드 자체 생략)"
-        )
+        if c.is_enemy:
+            flag = (
+                "적대 — combat_behavior 를 박아라 ({attack_priority, flee_hp_percent}). "
+                "xp_reward 도 양수로 박아라 (level 1 → 40~80, level 3 → 100~200, level 5+ → 250+)."
+            )
+        else:
+            flag = (
+                "비적대 — combat_behavior 는 박지 말 것 (필드 자체 생략). "
+                "xp_reward 는 0 또는 생략."
+            )
         char_items = items_by_char.get(c.id, [])
         if char_items:
             inv_repr = "[" + ", ".join(repr(i) for i in char_items) + "]"

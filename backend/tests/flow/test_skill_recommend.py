@@ -115,17 +115,19 @@ def test_build_skill_dedupes_within_batch():
 
 
 def test_existing_skill_ids_collects_from_all_chars(fresh_state):
+    fresh_state.skills["r1"] = Skill(
+        id="r1", name="x", type="attack", target="single", primary_stat="STR"
+    )
+    fresh_state.skills["l1"] = Skill(
+        id="l1", name="y", type="heal", target="self", primary_stat="WIS"
+    )
     fresh_state.characters["a"] = Character(
         id="a",
         name="A",
         race_id="x",
         stats=Stats(),
-        racial_skills=[
-            Skill(id="r1", name="x", type="attack", target="single", primary_stat="STR")
-        ],
-        learned_skills=[
-            Skill(id="l1", name="y", type="heal", target="self", primary_stat="WIS")
-        ],
+        racial_skill_ids=["r1"],
+        learned_skill_ids=["l1"],
     )
     ids = skill_eng.existing_skill_ids(fresh_state)
     assert ids == {"r1", "l1"}

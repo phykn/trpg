@@ -8,9 +8,13 @@ Pair-trade invariant: a character's total stats = 60 (initial), with pair sums p
 from __future__ import annotations
 
 from ..domain.entities import Character
+from ..domain.state import GameState
 from ..domain.types import STAT_PAIRS, StatKey
 from ..domain.errors import LevelUpInvalid
 from ..rules import RULES
+
+
+# --- xp curve --------------------------------------------------------------
 
 
 def xp_for_next_level(level: int) -> int:
@@ -39,6 +43,9 @@ def recalc_max_hp_mp(character: Character) -> None:
         character.hp = new_max_hp
     if character.mp > new_max_mp:
         character.mp = new_max_mp
+
+
+# --- Level-up + pair-trade -------------------------------------------------
 
 
 def can_afford_level_up(character: Character) -> bool:
@@ -108,6 +115,9 @@ def assert_pair_trade_invariant(character: Character) -> None:
         )
 
 
+# --- xp grants -------------------------------------------------------------
+
+
 def grant_xp(
     character: Character,
     amount: int,
@@ -120,3 +130,48 @@ def grant_xp(
     character.xp_pool += amount
     if dirty is not None:
         dirty.add(("characters", character.id))
+
+
+def xp_for_grade(grade: str) -> int:
+    """Per-roll xp award by grade (RULES.growth.roll_xp). Unknown grade → 0."""
+    return RULES.growth.roll_xp.get(grade, 0)
+
+
+def grant_roll_xp(
+    state: GameState,
+    grade: str,
+    *,
+    dirty: set[tuple[str, str]] | None = None,
+) -> int:
+    """Award per-grade roll xp to the player. Returns the amount granted."""
+    amount = xp_for_grade(grade)
+    if amount <= 0:
+        return 0
+    player = state.characters.get(state.player_id)
+    if player is None:
+        return 0
+    grant_xp(player, amount, dirty=dirty)
+    return amount
+
+
+def award_kill_xp(
+    state: GameState,
+    killer_id: str,
+    victim_id: str,
+    *,
+    dirty: set[tuple[str, str]] | None = None,
+) -> int:
+    """When `killer_id` lands the killing blow on `victim_id`, transfer
+    `victim.xp_reward` to the killer's xp_pool. Returns the amount granted.
+    Non-player killers and zero-reward victims are no-ops."""
+    if killer_id != state.player_id:
+        return 0
+    victim = state.characters.get(victim_id)
+    killer = state.characters.get(killer_id)
+    if victim is None or killer is None:
+        return 0
+    amount = victim.xp_reward
+    if amount <= 0:
+        return 0
+    grant_xp(killer, amount, dirty=dirty)
+    return amount

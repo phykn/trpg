@@ -18,6 +18,7 @@ from ..domain.entities import (
     CombatBehavior,
     DeathSaveState,
     Item,
+    Skill,
     WeaponEffect,
 )
 from ..domain.types import Grade, StatKey
@@ -221,9 +222,10 @@ def roll_initiative(
 # --- NPC AI -------------------------------------------------------------------
 
 
-def _has_heal_skill(c: Character) -> bool:
-    for s in (*c.racial_skills, *c.learned_skills):
-        if s.type == "heal":
+def _has_heal_skill(c: Character, skills_pool: dict[str, Skill]) -> bool:
+    for sid in (*c.racial_skill_ids, *c.learned_skill_ids):
+        s = skills_pool.get(sid)
+        if s is not None and s.type == "heal":
             return True
     return False
 
@@ -235,6 +237,7 @@ def _filter_alive_in_location(actor: Character, candidates: list[Character]) -> 
 def pick_target(
     actor: Character,
     candidates: list[Character],
+    skills_pool: dict[str, Skill] | None = None,
     rng: random.Random | None = None,
     damage_dealt: dict[str, int] | None = None,
 ) -> Character | None:
@@ -261,7 +264,8 @@ def pick_target(
     if mode == "random":
         return r.choice(pool)
     if mode == "healer_first":
-        healers = [c for c in pool if _has_heal_skill(c)]
+        skill_pool = skills_pool or {}
+        healers = [c for c in pool if _has_heal_skill(c, skill_pool)]
         if healers:
             return min(healers, key=lambda c: (c.hp, c.id))
         return min(pool, key=lambda c: (c.hp, c.id))
@@ -571,7 +575,9 @@ def pick_npc_target(
     candidates = [
         state.characters[cid] for cid in targets_ids if cid in state.characters
     ]
-    return pick_target(actor, candidates, rng=rng, damage_dealt=cs.damage_dealt)
+    return pick_target(
+        actor, candidates, state.skills, rng=rng, damage_dealt=cs.damage_dealt
+    )
 
 
 def record_damage(state: GameState, attacker_id: str, damage: int) -> None:

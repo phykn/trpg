@@ -7,6 +7,7 @@ from ..domain.errors import PendingCheckExpected
 from ..domain.memory import RollLogEntry
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
+from ..engines.growth import can_afford_level_up, grant_roll_xp
 from ..llm.client import LLMClient
 from ..rules.dc import compute_grade
 from .combat_phase import run_combat_npc_phase
@@ -15,6 +16,7 @@ from .dirty import (
     ToFrontFn,
     advance_time,
     finalize,
+    maybe_push_levelup_hint,
     next_log_id,
     push_log_entry,
 )
@@ -56,6 +58,12 @@ async def run_roll(
     )
     push_log_entry(state, roll_log, dirty)
     yield {"type": "log_entry", "data": roll_log.model_dump()}
+
+    pre_can_level = can_afford_level_up(state.characters[state.player_id])
+    grant_roll_xp(state, grade, dirty=dirty.entities)
+    levelup_hint = maybe_push_levelup_hint(state, dirty, was_able=pre_can_level)
+    if levelup_hint:
+        yield levelup_hint
 
     judge_result = {
         "action": "roll",

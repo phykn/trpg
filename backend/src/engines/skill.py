@@ -25,20 +25,17 @@ from ..rules.dc import compute_grade, sigmoid_required_roll
 CastTargets = list[str]
 
 
-def _all_skills(actor: Character) -> dict[str, Skill]:
-    out: dict[str, Skill] = {}
-    for s in actor.racial_skills:
-        out[s.id] = s
-    for s in actor.learned_skills:
-        out[s.id] = s
-    return out
+def actor_skill_ids(actor: Character) -> set[str]:
+    return set(actor.racial_skill_ids) | set(actor.learned_skill_ids)
 
 
-def find_skill(actor: Character, skill_id: str) -> Skill:
-    skills = _all_skills(actor)
-    if skill_id not in skills:
+def find_skill(actor: Character, skill_id: str, state: GameState) -> Skill:
+    if skill_id not in actor_skill_ids(actor):
         raise SkillInvalid(f"actor has no such skill: {skill_id}")
-    return skills[skill_id]
+    skill = state.skills.get(skill_id)
+    if skill is None:
+        raise SkillInvalid(f"skill_id {skill_id!r} not in skills pool")
+    return skill
 
 
 def _validate_gate(actor: Character, skill: Skill) -> None:
@@ -177,7 +174,7 @@ def cast(
     """
     from .quest import check_quests  # deferred import — keeps engines/skill below engines/quest
 
-    skill = find_skill(actor, skill_id)
+    skill = find_skill(actor, skill_id, state)
     _validate_gate(actor, skill)
     targets = _resolve_targets(actor, skill, state, requested_targets)
     _validate_range(actor, skill, targets)
@@ -319,11 +316,5 @@ def build_skill_from_candidate(
 
 
 def existing_skill_ids(state: GameState) -> set[str]:
-    """For collision avoidance — collect every existing character's racial + learned skill ids."""
-    ids: set[str] = set()
-    for c in state.characters.values():
-        for s in c.racial_skills:
-            ids.add(s.id)
-        for s in c.learned_skills:
-            ids.add(s.id)
-    return ids
+    """For collision avoidance — every skill id currently in the pool."""
+    return set(state.skills.keys())

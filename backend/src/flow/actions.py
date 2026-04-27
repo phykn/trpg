@@ -21,17 +21,29 @@ from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..engines import inventory as inventory_engine
 from ..engines import skill as skill_engine
-from ..engines.growth import level_up as level_up_engine
+from ..engines.growth import (
+    award_kill_xp,
+    can_afford_level_up,
+    level_up as level_up_engine,
+)
 from ..engines.invariants import InvariantViolation, check
 from ..llm.client import LLMClient
 from ..mapping.to_front import pending_check_to_front
 from ..rules.dc import pick_dc, sigmoid_required_roll, social_bonus
-from .dirty import Dirty, flush, next_log_id, push_act, push_gm
+from .dirty import (
+    Dirty,
+    flush,
+    maybe_push_levelup_hint,
+    next_log_id,
+    push_act,
+    push_gm,
+)
 from .format import (
     format_attack_log,
     format_roll_announce,
     format_skill_log,
     format_use_log,
+    humanize_engine_error,
 )
 from .skill_recommend import recommend_skill_candidates
 
@@ -74,6 +86,11 @@ async def emit_attack(
             },
         }
         if not target.alive:
+            pre_can_level = can_afford_level_up(state.characters[state.player_id])
+            award_kill_xp(state, attacker_id, target_id, dirty=dirty.entities)
+            hint = maybe_push_levelup_hint(state, dirty, was_able=pre_can_level)
+            if hint:
+                yield hint
             break
 
 
@@ -89,9 +106,9 @@ async def emit_skill_cast(
     resist. heal/buff/self stay at success."""
     actor = state.characters[actor_id]
     try:
-        skill_obj = skill_engine.find_skill(actor, skill_id)
+        skill_obj = skill_engine.find_skill(actor, skill_id, state)
     except SkillInvalid as e:
-        yield push_gm(state, dirty, f"{actor.name} — 스킬 발동 실패 ({e}).")
+        yield push_gm(state, dirty, f"{actor.name} — 스킬 발동 실패 ({humanize_engine_error(e)}).")
         return
     grade, _nat, _req = skill_engine.compute_cast_grade(
         actor, skill_obj, state, targets, rng=rng
@@ -101,11 +118,17 @@ async def emit_skill_cast(
             actor, skill_id, state, targets, grade=grade, dirty=dirty.entities
         )
     except SkillInvalid as e:
-        yield push_gm(state, dirty, f"{actor.name} — 스킬 발동 실패 ({e}).")
+        yield push_gm(state, dirty, f"{actor.name} — 스킬 발동 실패 ({humanize_engine_error(e)}).")
         return
     for eff in cast_result["effects"]:
         if eff.get("kind") == "attack":
             combat_engine.record_damage(state, actor_id, int(eff.get("damage", 0)))
+            if eff.get("dead"):
+                pre_can_level = can_afford_level_up(state.characters[state.player_id])
+                award_kill_xp(state, actor_id, eff["target"], dirty=dirty.entities)
+                hint = maybe_push_levelup_hint(state, dirty, was_able=pre_can_level)
+                if hint:
+                    yield hint
     yield push_gm(state, dirty, format_skill_log(state, actor_id, cast_result, grade))
     yield {
         "type": "combat_turn",
@@ -135,7 +158,7 @@ async def emit_equip(
     try:
         slot = inventory_engine.equip_auto(actor, item_id, state.items)
     except InventoryInvalid as e:
-        yield push_gm(state, dirty, f"{actor.name} — 장착 실패 ({e}).")
+        yield push_gm(state, dirty, f"{actor.name} — 장착 실패 ({humanize_engine_error(e)}).")
         return
     dirty.entities.add(("characters", actor_id))
     yield push_gm(state, dirty, f"{actor.name} — 「{item_name}」 장착 ({slot})")
@@ -153,7 +176,7 @@ async def emit_unequip(
     try:
         slot = inventory_engine.unequip_by_item(actor, item_id, state.items)
     except InventoryInvalid as e:
-        yield push_gm(state, dirty, f"{actor.name} — 해제 실패 ({e}).")
+        yield push_gm(state, dirty, f"{actor.name} — 해제 실패 ({humanize_engine_error(e)}).")
         return
     if slot is None:
         text = f"{actor.name} — 「{item_name}」 은(는) 장착돼 있지 않다."
@@ -177,7 +200,7 @@ async def emit_use(
             actor, item_id, target, state.items, state, dirty=dirty.entities
         )
     except InventoryInvalid as e:
-        yield push_gm(state, dirty, f"{actor.name} — 아이템 사용 실패 ({e}).")
+        yield push_gm(state, dirty, f"{actor.name} — 아이템 사용 실패 ({humanize_engine_error(e)}).")
         return
     yield push_gm(state, dirty, format_use_log(state, actor_id, result))
 
@@ -197,7 +220,7 @@ async def emit_level_up(
     try:
         level_up_engine(actor, stat_up, stat_down)  # type: ignore[arg-type]
     except LevelUpInvalid as e:
-        yield push_gm(state, dirty, f"{actor.name} — 성장 실패 ({e}).")
+        yield push_gm(state, dirty, f"{actor.name} — 성장 실패 ({humanize_engine_error(e)}).")
         return
     violations = check.character(actor)
     if violations:
@@ -234,9 +257,11 @@ async def emit_learn_skill(
         yield push_gm(state, dirty, f"{actor.name} — 익힐 후보가 없거나 잘못된 선택.")
         return
     chosen = candidates[index]
-    actor.learned_skills.append(chosen)
+    state.skills[chosen.id] = chosen
+    actor.learned_skill_ids.append(chosen.id)
     state.pending_skill_candidates = []
     dirty.entities.add(("characters", actor_id))
+    dirty.entities.add(("skills", chosen.id))
     yield push_gm(state, dirty, f"{actor.name} — 「{chosen.name}」 습득.")
 
 
@@ -260,7 +285,7 @@ async def emit_trade(
         else:
             price = inventory_engine.sell(player, npc, item_id, state.items)
     except InventoryInvalid as e:
-        yield push_gm(state, dirty, f"{player.name} — 거래 실패 ({e}).")
+        yield push_gm(state, dirty, f"{player.name} — 거래 실패 ({humanize_engine_error(e)}).")
         return
     dirty.entities.add(("characters", actor_id))
     dirty.entities.add(("characters", npc.id))

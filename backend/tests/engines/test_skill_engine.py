@@ -19,10 +19,11 @@ def _player(skills=None, racial=None, **kw):
         max_hp=20,
         mp=20,
         max_mp=20,
-        learned_skills=skills or [],
-        racial_skills=racial or [],
+        learned_skill_ids=[s.id for s in (skills or [])],
+        racial_skill_ids=[s.id for s in (racial or [])],
         location_id="plaza_01",
     )
+    p._pending_skills = list(skills or []) + list(racial or [])  # consumed by _state
     for k, v in kw.items():
         setattr(p, k, v)
     return p
@@ -91,6 +92,8 @@ def _buff_skill(**kw):
 def _state(fresh_state, **chars):
     for cid, c in chars.items():
         fresh_state.characters[cid] = c
+        for s in getattr(c, "_pending_skills", []) or []:
+            fresh_state.skills[s.id] = s
     return fresh_state
 
 
@@ -217,8 +220,9 @@ def test_find_skill_includes_racial_and_learned(fresh_state):
     )
     learned = _attack_skill()
     p = _player(skills=[learned], racial=[racial])
-    assert skill_eng.find_skill(p, "bite").name == "물기"
-    assert skill_eng.find_skill(p, "fireball").name == "화염구"
+    state = _state(fresh_state, player_01=p)
+    assert skill_eng.find_skill(p, "bite", state).name == "물기"
+    assert skill_eng.find_skill(p, "fireball", state).name == "화염구"
 
 
 def test_grade_multiplier_applied(fresh_state):

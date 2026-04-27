@@ -62,8 +62,9 @@ def _seed_skill_state(fresh_state):
         mp=15,
         max_mp=15,
         location_id="plaza_01",
-        learned_skills=[skill],
+        learned_skill_ids=[skill.id],
     )
+    fresh_state.skills[skill.id] = skill
     g = Character(
         id="goblin_01",
         name="고블린",
@@ -120,7 +121,8 @@ def test_build_surroundings_includes_racial_skills(fresh_state):
         primary_stat="STR",
         level=0,
     )
-    state.characters["player_01"].racial_skills = [racial]
+    state.skills[racial.id] = racial
+    state.characters["player_01"].racial_skill_ids = [racial.id]
     s = build_surroundings(state, "player_01")
     by_id = {sk["id"]: sk for sk in s["skills"]}
     assert by_id["bite"]["source"] == "racial"

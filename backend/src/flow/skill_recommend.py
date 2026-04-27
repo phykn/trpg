@@ -62,7 +62,8 @@ def _build_input(state: GameState) -> SkillRecommendInput:
                 "description": s.description,
                 "special_effect": s.special_effect,
             }
-            for s in p.learned_skills
+            for sid in p.learned_skill_ids
+            if (s := state.skills.get(sid)) is not None
         ],
         recent_turns=_recent_turn_summaries(state, _RECENT_TURNS_FOR_RECOMMEND),
         recent_inputs=_recent_inputs(state, _RECENT_INPUTS_FOR_RECOMMEND),

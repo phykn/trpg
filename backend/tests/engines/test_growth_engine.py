@@ -4,14 +4,18 @@ import pytest
 from src.domain.entities import Character, Stats
 from src.domain.errors import LevelUpInvalid
 from src.domain.types import STAT_PAIRS
+from src.domain.state import GameState
 from src.engines.growth import (
     assert_pair_trade_invariant,
+    award_kill_xp,
     calc_max_hp,
     calc_max_mp,
     can_afford_level_up,
+    grant_roll_xp,
     grant_xp,
     level_up,
     recalc_max_hp_mp,
+    xp_for_grade,
     xp_for_next_level,
 )
 from src.rules import RULES
@@ -183,3 +187,78 @@ def test_recalc_max_hp_mp_uses_current_level_and_stats():
     recalc_max_hp_mp(p)
     assert p.max_hp == calc_max_hp(3, 12)
     assert p.max_mp == calc_max_mp(3, 8)
+
+
+def test_xp_for_grade_lookup():
+    assert xp_for_grade("critical_success") == RULES.growth.roll_xp["critical_success"]
+    assert xp_for_grade("success") == RULES.growth.roll_xp["success"]
+    assert xp_for_grade("failure") == 0
+    assert xp_for_grade("nonsense") == 0
+
+
+def test_grant_roll_xp_awards_to_player():
+    p = _player()
+    state = GameState(game_id="t", profile="t", player_id="player_01", world_time="0812-04-28T12:00:00")
+    state.characters["player_01"] = p
+    dirty: set[tuple[str, str]] = set()
+    amount = grant_roll_xp(state, "success", dirty=dirty)
+    assert amount == RULES.growth.roll_xp["success"]
+    assert p.xp_pool == amount
+    assert ("characters", "player_01") in dirty
+
+
+def test_grant_roll_xp_zero_for_failure():
+    p = _player()
+    state = GameState(game_id="t", profile="t", player_id="player_01", world_time="0812-04-28T12:00:00")
+    state.characters["player_01"] = p
+    amount = grant_roll_xp(state, "failure")
+    assert amount == 0
+    assert p.xp_pool == 0
+
+
+def test_award_kill_xp_player_killer():
+    p = _player()
+    enemy = _player(level=0)
+    enemy.id = "rat_01"
+    enemy.is_player = False
+    enemy.xp_reward = 30
+    state = GameState(game_id="t", profile="t", player_id="player_01", world_time="0812-04-28T12:00:00")
+    state.characters["player_01"] = p
+    state.characters["rat_01"] = enemy
+    dirty: set[tuple[str, str]] = set()
+    amount = award_kill_xp(state, "player_01", "rat_01", dirty=dirty)
+    assert amount == 30
+    assert p.xp_pool == 30
+    assert ("characters", "player_01") in dirty
+
+
+def test_award_kill_xp_no_op_for_npc_killer():
+    """NPC-on-NPC kills don't create xp out of thin air."""
+    enemy = _player()
+    enemy.id = "rat_01"
+    enemy.is_player = False
+    enemy.xp_reward = 30
+    npc = _player()
+    npc.id = "ma_zhong"
+    npc.is_player = False
+    state = GameState(game_id="t", profile="t", player_id="player_01", world_time="0812-04-28T12:00:00")
+    state.characters["rat_01"] = enemy
+    state.characters["ma_zhong"] = npc
+    state.characters["player_01"] = _player()
+    amount = award_kill_xp(state, "ma_zhong", "rat_01")
+    assert amount == 0
+    assert npc.xp_pool == 0
+
+
+def test_award_kill_xp_zero_reward_skipped():
+    p = _player()
+    npc = _player()
+    npc.id = "old_owner"
+    npc.is_player = False
+    npc.xp_reward = 0
+    state = GameState(game_id="t", profile="t", player_id="player_01", world_time="0812-04-28T12:00:00")
+    state.characters["player_01"] = p
+    state.characters["old_owner"] = npc
+    amount = award_kill_xp(state, "player_01", "old_owner")
+    assert amount == 0
+    assert p.xp_pool == 0

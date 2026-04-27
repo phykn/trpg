@@ -54,7 +54,10 @@ def _companion_label(state: GameState, char_id: str) -> str:
 
 def to_hero(state: GameState) -> dict:
     p = state.characters[state.player_id]
-    skills = [s.name for s in p.racial_skills] + [s.name for s in p.learned_skills]
+    skill_ids = (*p.racial_skill_ids, *p.learned_skill_ids)
+    skills = [
+        state.skills[sid].name for sid in skill_ids if sid in state.skills
+    ]
     return {
         "name": p.name,
         "raceJob": _race_job_label(state, p),

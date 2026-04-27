@@ -82,10 +82,16 @@ def _equipment_payload(state: GameState, actor: Character) -> dict:
     return out
 
 
-def _skills_payload(actor: Character) -> list[dict]:
+def _skills_payload(state: GameState, actor: Character) -> list[dict]:
     out: list[dict] = []
-    for source, skills in (("racial", actor.racial_skills), ("learned", actor.learned_skills)):
-        for s in skills:
+    for source, ids in (
+        ("racial", actor.racial_skill_ids),
+        ("learned", actor.learned_skill_ids),
+    ):
+        for sid in ids:
+            s = state.skills.get(sid)
+            if s is None:
+                continue
             if s.level > actor.level or actor.mp < s.mp_cost:
                 continue
             item: dict = {
@@ -231,7 +237,7 @@ def build_surroundings(state: GameState, actor_id: str) -> dict:
         **base,
         "location": _location_payload(location),
         "entities": _entities_payload(state, actor_id, actor, location),
-        "skills": _skills_payload(actor),
+        "skills": _skills_payload(state, actor),
         "inventory": _inventory_payload(state, actor),
         "merchants": _merchants_payload(state, actor),
     }

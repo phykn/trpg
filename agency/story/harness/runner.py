@@ -14,7 +14,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ValidationError
 
-from src.domain.entities import Chapter, Character, Item, Location, Quest, Race
+from src.domain.entities import Chapter, Character, Item, Location, Quest, Race, Skill
 from src.engines.invariants import check
 from src.llm import LLMClient
 
@@ -67,8 +67,8 @@ def _check_location_refs(loc: Location, refs: dict[str, set[str]]) -> None:
 
 
 def _check_character_refs(ch: Character, refs: dict[str, set[str]]) -> None:
-    """Manifest cross-ref only — race_id/location_id pool checks. Everything
-    else (stats, HP/MP, equipment slots, skills, carry, NPC seed extras) is
+    """Manifest cross-ref only — race_id/location_id/skill_ids pool checks.
+    Other rules (stats, HP/MP, equipment slots, carry, NPC seed extras) are
     dispatched to `check.seed_character` in `write_entity`."""
     races = refs.get("race", set())
     if ch.race_id not in races:
@@ -82,6 +82,22 @@ def _check_character_refs(ch: Character, refs: dict[str, set[str]]) -> None:
             f"character.location_id={ch.location_id!r} 가 시나리오 locations 에 없음. "
             f"가능한 id: {sorted(locations)}"
         )
+    skills = refs.get("skill", set())
+    for sid in (*ch.racial_skill_ids, *ch.learned_skill_ids):
+        if sid not in skills:
+            raise EntityWriterError(
+                f"character.skill_id={sid!r} 가 시나리오 skills 에 없음. "
+                f"먼저 그 skill 을 만들어야 한다."
+            )
+
+
+def _check_race_refs(r: Race, refs: dict[str, set[str]]) -> None:
+    skills = refs.get("skill", set())
+    for sid in r.racial_skill_ids:
+        if sid not in skills:
+            raise EntityWriterError(
+                f"race.racial_skill_id={sid!r} 가 시나리오 skills 에 없음."
+            )
 
 
 TRIGGER_TARGET_KIND = {
@@ -130,17 +146,22 @@ def _check_chapter_refs(ch: Chapter, refs: dict[str, set[str]]) -> None:
 SPECS: dict[str, EntitySpec] = {
     "race": EntitySpec(
         kind="race", model=Race, sub_dir="races", fragment="race.md",
+        ref_kinds=("skill",), check_refs=_check_race_refs,
     ),
     "location": EntitySpec(
         kind="location", model=Location, sub_dir="locations", fragment="location.md",
         ref_kinds=("location", "item"), check_refs=_check_location_refs,
+    ),
+    "skill": EntitySpec(
+        kind="skill", model=Skill, sub_dir="skills", fragment="skill.md",
     ),
     "item": EntitySpec(
         kind="item", model=Item, sub_dir="items", fragment="item.md",
     ),
     "character": EntitySpec(
         kind="character", model=Character, sub_dir="characters", fragment="character.md",
-        ref_kinds=("race", "location", "item"), check_refs=_check_character_refs,
+        ref_kinds=("race", "location", "item", "skill"),
+        check_refs=_check_character_refs,
     ),
     "quest": EntitySpec(
         kind="quest", model=Quest, sub_dir="quests", fragment="quest.md",
@@ -218,6 +239,13 @@ def _items_pool(scenario_dir: Path) -> dict[str, Item]:
     }
 
 
+def _skills_pool(scenario_dir: Path) -> dict[str, Skill]:
+    return {
+        e["id"]: Skill.model_validate(e)
+        for e in _load_dir(scenario_dir, "skills")
+    }
+
+
 def _check_entity_invariants(entity: BaseModel, scenario_dir: Path) -> None:
     """Dispatch to backend.engines.invariants — all entity-level rules.
 
@@ -225,7 +253,9 @@ def _check_entity_invariants(entity: BaseModel, scenario_dir: Path) -> None:
     runs the rule layer (stat invariants, HP/MP formula, NPC seed extras, etc).
     """
     if isinstance(entity, Character):
-        violations = check.seed_character(entity, _items_pool(scenario_dir))
+        violations = check.seed_character(
+            entity, _items_pool(scenario_dir), _skills_pool(scenario_dir)
+        )
     elif isinstance(entity, Item):
         violations = check.item(entity)
     else:

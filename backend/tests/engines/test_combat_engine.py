@@ -81,7 +81,7 @@ def _char(
         equipment=equipment or Equipment(),
         combat_behavior=behavior,
         dominant_hand=dominant,  # type: ignore[arg-type]
-        learned_skills=skills or [],
+        learned_skill_ids=[s.id for s in (skills or [])],
     )
 
 
@@ -320,7 +320,7 @@ def test_pick_target_healer_first_prefers_heal_skill_holder():
     tank = _char("tank", hp=10)
     actor = _char("actor", behavior=CombatBehavior(attack_priority="healer_first"))
     pool = [actor, tank, healer]
-    assert pick_target(actor, pool).id == "doc"
+    assert pick_target(actor, pool, {"heal_01": healer_skill}).id == "doc"
 
 
 def test_pick_target_healer_first_falls_back_to_lowest_hp_when_no_healer():

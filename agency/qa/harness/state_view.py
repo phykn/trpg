@@ -15,13 +15,24 @@ def format_state_summary(front_state: dict) -> str:
 
     hero = front_state.get("hero")
     if hero:
+        can_level = hero["exp"] >= hero["expMax"] and hero["expMax"] > 0
+        level_hint = " — 레벨업 가능" if can_level else ""
         lines.append(
-            f"나: {hero['name']} ({hero['raceJob']}) "
-            f"HP {hero['hp']}/{hero['hpMax']}"
+            f"나: {hero['name']} ({hero['raceJob']}) Lv {hero['level']} "
+            f"HP {hero['hp']}/{hero['hpMax']} "
+            f"MP {hero['mp']}/{hero['mpMax']} "
+            f"xp {hero['exp']}/{hero['expMax']}{level_hint}"
         )
+        skills = hero.get("skills") or []
+        if skills:
+            lines.append("사용 가능한 스킬: " + ", ".join(skills))
+        else:
+            lines.append("사용 가능한 스킬: (없음)")
         inv = hero.get("inventory") or []
         if inv:
             lines.append("인벤토리: " + ", ".join(f"{i['name']}×{i['qty']}" for i in inv))
+        else:
+            lines.append("인벤토리: (비어 있음)")
 
     subject = front_state.get("subject")
     if subject:
@@ -31,6 +42,12 @@ def format_state_summary(front_state: dict) -> str:
         known = subject.get("known") or []
         if known:
             lines.append("  아는 정보: " + " / ".join(known))
+        sub_inv = subject.get("inventory") or []
+        if sub_inv:
+            lines.append(
+                "  NPC 가 가진 물건: "
+                + ", ".join(f"{i['name']}×{i['qty']}" for i in sub_inv)
+            )
 
     quest = front_state.get("quest")
     if quest:

@@ -55,6 +55,15 @@ class RecoveryConfig(_F):
 class GrowthConfig(_F):
     base_xp: int = 100  # cost from level N → N+1 = base_xp × N (linear)
     max_level: int = 20
+    # Per-grade xp the player earns from a successful skill check.
+    # Encourages learning by trying things; failure stays free.
+    roll_xp: dict[str, int] = {
+        "critical_success": 25,
+        "success": 8,
+        "partial_success": 3,
+        "failure": 0,
+        "critical_failure": 0,
+    }
 
 
 class SkillConfig(_F):
