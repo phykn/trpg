@@ -330,7 +330,7 @@ async def emit_roll_pending(
     )
     yield push_act(
         state, dirty,
-        format_roll_announce(state, result, target, mod, required_roll),
+        format_roll_announce(state, result, target, dc),
     )
     try:
         await flush(state, saves_dir, dirty)

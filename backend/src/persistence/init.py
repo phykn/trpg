@@ -110,6 +110,7 @@ async def init_game(
         equipment=template_equipment,
         inventory_ids=template_inventory,
         gold=int(template.get("gold", 0)),
+        xp_pool=int(template.get("xp_pool", 0)),
         racial_skill_ids=list(chosen_race.racial_skill_ids),
     )
     player_char.max_hp = calc_max_hp(player_char.level, stats.CON)

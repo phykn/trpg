@@ -93,14 +93,12 @@ def format_roll_announce(
     state: GameState,
     result: RollAction,
     target: str,
-    mod: int,
-    required_roll: int,
+    dc: int,
 ) -> str:
     target_name = label_for_target(state, target)
-    mod_str = f", {mod:+d}" if mod else ""
     return (
         f"{result.reason} — {target_name}에게 {result.stat} 판정 "
-        f"({result.tier}{mod_str}, {required_roll}+ 필요)"
+        f"(난이도 {dc})"
     )
 
 

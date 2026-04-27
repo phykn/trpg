@@ -76,6 +76,15 @@ async def run_turn(
     push_log_entry(state, player_log, dirty)
     yield {"type": "log_entry", "data": player_log.model_dump()}
 
+    if not state.characters[state.player_id].alive:
+        yield push_act(
+            state, dirty,
+            "쓰러진 채로는 더 이상 행동할 수 없다.",
+        )
+        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
     if state.combat_state is not None:
         async for ev in run_combat_player_turn(
             client, state, profile_dir, saves_dir, player_input, dirty, rng, to_front_fn

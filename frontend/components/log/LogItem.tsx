@@ -34,9 +34,10 @@ function GMNarration({ text }: { text: string }) {
 
 function PlayerMessage({ text }: { text: string }) {
   return (
-    <View className="self-end" style={{ maxWidth: '82%' }}>
+    <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
       <View
         style={{
+          maxWidth: '82%',
           borderRightWidth: 2,
           borderRightColor: colors.fg.muted,
           paddingRight: spacing[3],
