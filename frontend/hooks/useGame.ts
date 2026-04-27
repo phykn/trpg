@@ -174,7 +174,7 @@ export function useGame() {
     return [...log, { id: STREAMING_GM_ID, kind: 'gm', text: streamingText }];
   }, [log, streamingText]);
 
-  const awaitingNarration = streaming && !pending && streamingText.length === 0;
+  const awaitingNarration = streaming && !pending;
 
   return {
     status,
