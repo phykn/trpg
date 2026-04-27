@@ -8,18 +8,18 @@ from ...domain.errors import InventoryInvalid
 # --- per-effect handlers ---------------------------------------------------
 
 
-def _heal(item_id, item, eff, target, recipient, result) -> None:
+def _heal(item, eff, target, recipient, result) -> None:
     if recipient.hp >= recipient.max_hp:
-        raise InventoryInvalid(f"hp already full: cannot use heal item {item_id}")
+        raise InventoryInvalid(f"hp already full: cannot use heal item {item.id}")
     new_hp = min(recipient.max_hp, recipient.hp + eff.amount)
     result["kind"] = "heal"
     result["amount"] = new_hp - recipient.hp
     recipient.hp = new_hp
 
 
-def _damage(item_id, item, eff, target, recipient, result) -> None:
+def _damage(item, eff, target, recipient, result) -> None:
     if target is None:
-        raise InventoryInvalid(f"damage item requires target: {item_id}")
+        raise InventoryInvalid(f"damage item requires target: {item.id}")
     recipient.hp = max(0, recipient.hp - eff.amount)
     if recipient.hp == 0:
         recipient.alive = False
@@ -29,16 +29,16 @@ def _damage(item_id, item, eff, target, recipient, result) -> None:
         result["dead"] = True
 
 
-def _mp_restore(item_id, item, eff, target, recipient, result) -> None:
+def _mp_restore(item, eff, target, recipient, result) -> None:
     if recipient.mp >= recipient.max_mp:
-        raise InventoryInvalid(f"mp already full: cannot use mp item {item_id}")
+        raise InventoryInvalid(f"mp already full: cannot use mp item {item.id}")
     new_mp = min(recipient.max_mp, recipient.mp + eff.amount)
     result["kind"] = "mp_restore"
     result["amount"] = new_mp - recipient.mp
     recipient.mp = new_mp
 
 
-def _buff(item_id, item, eff, target, recipient, result) -> None:
+def _buff(item, eff, target, recipient, result) -> None:
     description = eff.description or item.name
     duration = eff.duration or 0
     recipient.active_buffs.append(ActiveBuff(description=description, duration=duration))
@@ -92,7 +92,7 @@ def use(
         handler = _EFFECT_HANDLERS.get(eff.effect)
         if handler is None:
             raise InventoryInvalid(f"unsupported consumable effect: {eff.effect}")
-        handler(item_id, item, eff, target, recipient, result)
+        handler(item, eff, target, recipient, result)
 
     if item.on_use:
         result["on_use"] = item.on_use
