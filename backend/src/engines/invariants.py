@@ -48,6 +48,7 @@ from ..domain.entities import (
 )
 from ..rules import RULES
 from .growth import calc_max_hp, calc_max_mp
+from .inventory.carry import carry_capacity, current_weight
 
 
 class InvariantViolation(ValueError):
@@ -351,8 +352,8 @@ def _check_inventory(c: Character, items: dict[str, Item]) -> list[str]:
             )
             break
 
-    cap = RULES.carry.weight_per_strength * c.stats.STR
-    total = sum(items[i].weight for i in c.inventory_ids if i in items)
+    cap = carry_capacity(c)
+    total = current_weight(c, items)
     if total > cap:
         _v(
             out,
