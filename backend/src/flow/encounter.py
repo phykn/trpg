@@ -51,8 +51,8 @@ def _build_input(
     )
 
 
-def _next_id(state: GameState, base: str) -> str:
-    """Generate a non-colliding character id."""
+def _unique_character_id(state: GameState, base: str) -> str:
+    """`<base>_NN` two-digit suffix not already in state.characters."""
     n = 1
     while f"{base}_{n:02d}" in state.characters:
         n += 1
@@ -64,7 +64,7 @@ def _make_character(
     out: EncounterSummonOutput,
     location_id: str,
 ) -> Character:
-    cid = _next_id(state, f"summoned_{out.race_id}")
+    cid = _unique_character_id(state, f"summoned_{out.race_id}")
     stats = Stats(
         STR=out.stats.STR,
         DEX=out.stats.DEX,

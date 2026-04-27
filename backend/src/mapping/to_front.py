@@ -47,9 +47,7 @@ def _companion_label(state: GameState, char_id: str) -> str:
     if char_id not in state.characters:
         return char_id
     c = state.characters[char_id]
-    race_name = _race_name(state, c.race_id)
-    inner = f"{race_name} {c.job}".strip() if c.job else race_name
-    return f"{c.name} ({inner})"
+    return f"{c.name} ({_race_job_label(state, c)})"
 
 
 def to_hero(state: GameState) -> dict:

@@ -2,9 +2,10 @@ import os
 
 import pytest
 
-from src.agents.dc_judge import JudgeInput, judge
+from src.agents.dc_judge import judge
 from src.agents.dc_judge.schema import (
     CombatAction,
+    JudgeInput,
     PassAction,
     RejectAction,
     RollAction,
