@@ -20,11 +20,22 @@ DirtySet = set[tuple[str, str]] | None
 
 
 def _ensure_runtime_fields(quest: Quest) -> None:
-    """Align lengths of triggers_met / fail_triggers_met with their trigger lists."""
-    if len(quest.triggers_met) != len(quest.triggers):
-        quest.triggers_met = [False] * len(quest.triggers)
-    if len(quest.fail_triggers_met) != len(quest.fail_triggers):
-        quest.fail_triggers_met = [False] * len(quest.fail_triggers)
+    """Align lengths of triggers_met / fail_triggers_met with their trigger lists.
+    Preserves the existing prefix when triggers grew — a seed change that adds
+    a new trigger mid-game must not wipe progress already accumulated against
+    the old triggers."""
+    quest.triggers_met = _resize_keeping_prefix(quest.triggers_met, len(quest.triggers))
+    quest.fail_triggers_met = _resize_keeping_prefix(
+        quest.fail_triggers_met, len(quest.fail_triggers)
+    )
+
+
+def _resize_keeping_prefix(flags: list[bool], target_len: int) -> list[bool]:
+    if len(flags) == target_len:
+        return flags
+    if len(flags) > target_len:
+        return flags[:target_len]
+    return flags + [False] * (target_len - len(flags))
 
 
 def _apply_rewards(state: GameState, quest: Quest, dirty: DirtySet) -> None:

@@ -240,6 +240,31 @@ def test_seed_quest_with_empty_triggers_met_gets_initialized(fresh_state):
     assert qq.status == "completed"
 
 
+def test_appended_trigger_preserves_existing_progress(fresh_state):
+    """Regression: when a seed change adds a new trigger to an in-flight quest,
+    the existing satisfied triggers must not be reset to all-False. The earlier
+    implementation overwrote `triggers_met` with `[False] * n` on any length
+    mismatch, silently losing player progress."""
+    state = _state(
+        fresh_state,
+        quests=[
+            _quest(
+                "q1",
+                triggers=[
+                    _trig("a", "character_death", "g1"),
+                    _trig("b", "character_death", "g2"),
+                    _trig("c", "character_death", "g3"),  # new trigger added later
+                ],
+            ),
+        ],
+    )
+    # Simulate state loaded from disk where the third trigger didn't exist yet.
+    state.quests["q1"].triggers_met = [True, False]
+    # Fire an unrelated event so check_quests runs alignment.
+    q.check_quests(state, "character_death", "unrelated_npc")
+    assert state.quests["q1"].triggers_met == [True, False, False]
+
+
 def test_rewards_include_items(fresh_state):
     state = _state(
         fresh_state,
