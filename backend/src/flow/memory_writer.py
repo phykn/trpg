@@ -24,9 +24,9 @@ def write_memories(
     written = 0
 
     for entity_id in output.memory_targets:
-        memories = _get_memories(state, entity_id)
-        if memories is None:
+        if entity_id not in state.characters:
             continue
+        memories = state.characters[entity_id].memories
         content = output.memory.get(entity_id)
         if not content:
             continue
@@ -48,9 +48,3 @@ def write_memories(
             dirty.add(("characters", entity_id))
         written += 1
     return written
-
-
-def _get_memories(state: GameState, entity_id: str) -> list[Memory] | None:
-    if entity_id in state.characters:
-        return state.characters[entity_id].memories
-    return None
