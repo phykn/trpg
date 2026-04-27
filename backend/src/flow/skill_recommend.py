@@ -18,10 +18,6 @@ from ..domain.state import GameState
 from ..engines.skill import build_skill_from_candidate, existing_skill_ids
 
 
-_RECENT_TURNS_FOR_RECOMMEND = 10
-_RECENT_INPUTS_FOR_RECOMMEND = 5
-
-
 def _recent_inputs(state: GameState, n: int) -> list[str]:
     """Latest N player utterances from recent_dialogue (already capped at RULES.memory.recent_dialogue_turns)."""
     items = state.recent_dialogue[-n:] if n else []
@@ -61,8 +57,8 @@ def _build_input(state: GameState) -> SkillRecommendInput:
             for sid in p.learned_skill_ids
             if (s := state.skills.get(sid)) is not None
         ],
-        recent_turns=_recent_turn_summaries(state, _RECENT_TURNS_FOR_RECOMMEND),
-        recent_inputs=_recent_inputs(state, _RECENT_INPUTS_FOR_RECOMMEND),
+        recent_turns=_recent_turn_summaries(state, RULES.skill.recommend_recent_turns),
+        recent_inputs=_recent_inputs(state, RULES.skill.recommend_recent_inputs),
     )
 
 

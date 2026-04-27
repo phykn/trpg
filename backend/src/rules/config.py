@@ -76,6 +76,9 @@ class SkillConfig(_F):
         "failure": 0.0,
         "critical_failure": 0.0,
     }
+    # §2.3 step 4 — context window for the LLM skill-recommend prompt.
+    recommend_recent_turns: int = 10
+    recommend_recent_inputs: int = 5
 
 
 class CarryConfig(_F):
