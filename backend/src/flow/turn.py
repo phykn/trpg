@@ -1,7 +1,7 @@
 """/turn — single entry that logs the input, then dispatches to combat or
 non-combat handlers based on `state.combat_state`."""
 import random
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 
 from ..agents.dc_judge.schema import (
     BuyAction,
@@ -23,24 +23,19 @@ from ..agents.dc_judge.schema import (
 from ..domain.errors import JudgeMalformed, PendingCheckActive
 from ..domain.memory import PlayerLogEntry
 from ..domain.state import GameState
-from ..engines import combat as combat_engine
 from ..llm.client import LLMClient
+from ..mapping.to_front import pending_check_to_front
 from .actions import (
     emit_equip,
     emit_learn_skill,
     emit_level_up,
     emit_roll_pending,
-    emit_skill_cast,
     emit_trade,
     emit_unequip,
     emit_use,
 )
 from .cinematic import arm_combat_roll_pending
-from .combat_phase import (
-    run_combat_npc_phase,
-    run_combat_player_turn,
-    start_combat_and_run_npc_phase,
-)
+from .combat_phase import run_combat_player_turn
 from .encounter import summon_encounter
 from .dirty import (
     Dirty,
@@ -51,7 +46,6 @@ from .dirty import (
     push_act,
     push_gm,
     push_log_entry,
-    push_turn_log,
 )
 from .judge import run_judge
 from .narrate import consume_narrate, run_narrate
@@ -129,6 +123,57 @@ async def _bump_and_finalize(
         yield ev
 
 
+# Each entry takes (client, state, dirty, action) and returns an event iterator
+# for the engine action. Combat/Summon/Roll/Rest aren't here — they have
+# bespoke pre/post handling and stay in `_dispatch`.
+EmitFactory = Callable[[LLMClient, GameState, Dirty, object], AsyncIterator[dict]]
+_ONE_STEP_EMITS: dict[type, EmitFactory] = {
+    UseAction: lambda c, s, d, a: emit_use(s, s.player_id, a.item_id, a.target_id, d),
+    EquipAction: lambda c, s, d, a: emit_equip(s, s.player_id, a.item_id, d),
+    UnequipAction: lambda c, s, d, a: emit_unequip(s, s.player_id, a.item_id, d),
+    LevelUpAction: lambda c, s, d, a: emit_level_up(s, s.player_id, a.stat_up, a.stat_down, c, d),
+    LearnSkillAction: lambda c, s, d, a: emit_learn_skill(s, s.player_id, a.index, d),
+    BuyAction: lambda c, s, d, a: emit_trade(s, s.player_id, a.npc_id, a.item_id, d, direction="buy"),
+    SellAction: lambda c, s, d, a: emit_trade(s, s.player_id, a.npc_id, a.item_id, d, direction="sell"),
+}
+
+
+async def _run_one_step_action(
+    client: LLMClient,
+    state: GameState,
+    saves_dir: str,
+    dirty: Dirty,
+    to_front_fn: ToFrontFn | None,
+    result,
+    emit_factory: EmitFactory,
+) -> AsyncIterator[dict]:
+    """turn_count++ → run the engine emit → push tail_intent → finalize.
+    The seven one-step actions all follow this template."""
+    state.turn_count += 1
+    async for ev in emit_factory(client, state, dirty, result):
+        yield ev
+    if getattr(result, "tail_intent", None):
+        yield push_gm(state, dirty, result.tail_intent)
+    async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
+        yield ev
+
+
+async def _arm_pending_and_finalize(
+    state: GameState,
+    saves_dir: str,
+    dirty: Dirty,
+    to_front_fn: ToFrontFn | None,
+) -> AsyncIterator[dict]:
+    """Emit the freshly-armed pending_check then finalize. Shared by the
+    combat-roll and summon-then-combat-roll arming paths."""
+    yield {
+        "type": "pending_check",
+        "data": pending_check_to_front(state.pending_check),
+    }
+    async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+        yield ev
+
+
 async def _emit_chain_engine_part(
     client: LLMClient,
     state: GameState,
@@ -136,35 +181,11 @@ async def _emit_chain_engine_part(
     part,
 ) -> AsyncIterator[dict]:
     """Emit one engine part of a ChainAction. No turn bump or finalize —
-    the chain dispatcher does those once at the end."""
-    if isinstance(part, UseAction):
-        async for ev in emit_use(
-            state, state.player_id, part.item_id, part.target_id, dirty
-        ):
-            yield ev
-    elif isinstance(part, EquipAction):
-        async for ev in emit_equip(state, state.player_id, part.item_id, dirty):
-            yield ev
-    elif isinstance(part, UnequipAction):
-        async for ev in emit_unequip(state, state.player_id, part.item_id, dirty):
-            yield ev
-    elif isinstance(part, BuyAction):
-        async for ev in emit_trade(
-            state, state.player_id, part.npc_id, part.item_id, dirty, direction="buy"
-        ):
-            yield ev
-    elif isinstance(part, SellAction):
-        async for ev in emit_trade(
-            state, state.player_id, part.npc_id, part.item_id, dirty, direction="sell"
-        ):
-            yield ev
-    elif isinstance(part, LevelUpAction):
-        async for ev in emit_level_up(
-            state, state.player_id, part.stat_up, part.stat_down, client, dirty
-        ):
-            yield ev
-    elif isinstance(part, LearnSkillAction):
-        async for ev in emit_learn_skill(state, state.player_id, part.index, dirty):
+    the chain dispatcher does those once at the end. Reuses the same
+    `_ONE_STEP_EMITS` table the top-level dispatch uses."""
+    emit_factory = _ONE_STEP_EMITS.get(type(part))
+    if emit_factory is not None:
+        async for ev in emit_factory(client, state, dirty, part):
             yield ev
     if getattr(part, "tail_intent", None):
         yield push_gm(state, dirty, part.tail_intent)
@@ -201,12 +222,7 @@ async def _dispatch(
             player_input=player_input,
             skill_id=result.skill_id,
         )
-        from ..mapping.to_front import pending_check_to_front
-        yield {
-            "type": "pending_check",
-            "data": pending_check_to_front(state.pending_check),
-        }
-        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+        async for ev in _arm_pending_and_finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
 
@@ -234,12 +250,7 @@ async def _dispatch(
             player_input=player_input,
             skill_id=result.skill_id,
         )
-        from ..mapping.to_front import pending_check_to_front
-        yield {
-            "type": "pending_check",
-            "data": pending_check_to_front(state.pending_check),
-        }
-        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+        async for ev in _arm_pending_and_finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
 
@@ -255,38 +266,6 @@ async def _dispatch(
             yield ev
         return
 
-    if isinstance(result, UseAction):
-        state.turn_count += 1
-        async for ev in emit_use(
-            state, state.player_id, result.item_id, result.target_id, dirty
-        ):
-            yield ev
-        if result.tail_intent:
-            yield push_gm(state, dirty, result.tail_intent)
-        async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
-            yield ev
-        return
-
-    if isinstance(result, EquipAction):
-        state.turn_count += 1
-        async for ev in emit_equip(state, state.player_id, result.item_id, dirty):
-            yield ev
-        if result.tail_intent:
-            yield push_gm(state, dirty, result.tail_intent)
-        async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
-            yield ev
-        return
-
-    if isinstance(result, UnequipAction):
-        state.turn_count += 1
-        async for ev in emit_unequip(state, state.player_id, result.item_id, dirty):
-            yield ev
-        if result.tail_intent:
-            yield push_gm(state, dirty, result.tail_intent)
-        async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
-            yield ev
-        return
-
     if isinstance(result, FleeAction):
         # Out-of-combat flee — short message, no turn bump.
         yield push_act(state, dirty, "지금은 도망쳐 달아날 전투가 없다.")
@@ -294,49 +273,11 @@ async def _dispatch(
             yield ev
         return
 
-    if isinstance(result, LevelUpAction):
-        state.turn_count += 1
-        async for ev in emit_level_up(
-            state, state.player_id, result.stat_up, result.stat_down, client, dirty
+    emit_factory = _ONE_STEP_EMITS.get(type(result))
+    if emit_factory is not None:
+        async for ev in _run_one_step_action(
+            client, state, saves_dir, dirty, to_front_fn, result, emit_factory
         ):
-            yield ev
-        if result.tail_intent:
-            yield push_gm(state, dirty, result.tail_intent)
-        async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
-            yield ev
-        return
-
-    if isinstance(result, LearnSkillAction):
-        state.turn_count += 1
-        async for ev in emit_learn_skill(state, state.player_id, result.index, dirty):
-            yield ev
-        if result.tail_intent:
-            yield push_gm(state, dirty, result.tail_intent)
-        async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
-            yield ev
-        return
-
-    if isinstance(result, BuyAction):
-        state.turn_count += 1
-        async for ev in emit_trade(
-            state, state.player_id, result.npc_id, result.item_id, dirty, direction="buy"
-        ):
-            yield ev
-        if result.tail_intent:
-            yield push_gm(state, dirty, result.tail_intent)
-        async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
-            yield ev
-        return
-
-    if isinstance(result, SellAction):
-        state.turn_count += 1
-        async for ev in emit_trade(
-            state, state.player_id, result.npc_id, result.item_id, dirty, direction="sell"
-        ):
-            yield ev
-        if result.tail_intent:
-            yield push_gm(state, dirty, result.tail_intent)
-        async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
 
