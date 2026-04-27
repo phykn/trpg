@@ -30,6 +30,7 @@ from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..engines.growth import award_kill_xp
 from ..rules.config import RULES
+from ..rules.dc import tier_mid_dc
 from .dirty import Dirty
 
 
@@ -89,18 +90,6 @@ def _pick_combat_tier(num_enemies: int) -> str:
     return "매우 어려움"
 
 
-# Cheap deterministic mid-range DC per tier (avoid randomness so tests stay stable).
-_TIER_TO_DC: dict[str, int] = {
-    "매우 쉬움": 3,
-    "쉬움": 5,
-    "보통": 8,
-    "어려움": 12,
-    "매우 어려움": 15,
-    "전설": 18,
-    "신화": 19,
-}
-
-
 def arm_combat_roll_pending(
     state: GameState,
     *,
@@ -115,7 +104,7 @@ def arm_combat_roll_pending(
     and apply the outcome.
     """
     tier = _pick_combat_tier(len(target_ids))
-    dc = _TIER_TO_DC.get(tier, 8)
+    dc = tier_mid_dc(tier)
     primary = target_ids[0] if target_ids else state.player_id
     state.pending_check = PendingCheck(
         player_input=player_input,

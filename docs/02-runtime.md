@@ -185,20 +185,24 @@ reject 전용 추가 단계 (후처리 직전):
 
 ### 2.2 두 단계 턴 (pending_check)
 
-`roll` 분기는 **한 턴을 두 HTTP 호출로 쪼갠다** (`/turn` → `/roll`).
+주사위 버튼이 필요한 분기 (`roll`, `combat`, `summon_combat`, `flee`, death save) 는 **한 턴을 두 HTTP 호출로 쪼갠다** (`/turn` → `/roll`).
 
 왜 쪼개나: 플레이어가 "주사위 굴리기" 버튼을 누르는 시점이 LLM 응답 사이에 끼어 있다. 한 호출로 끝내려면 서버가 사용자 입력을 기다리며 스트림을 열어둬야 해서 구조가 복잡해진다. 그냥 두 호출로 끊는 게 단순하다. 자세한 이유는 [01-overview.md](./01-overview.md) §3.10.
 
-- `/turn` 이 `{action: "roll"}` 로 끝나면 엔진은 `PendingCheck` 를 `GameState` 에 저장하고 스트림을 닫는다. 내러티브는 아직 돌지 않음.
-- 프론트는 `pending_check` 이벤트로 받은 `{dc, stat, mod, required_roll, tier, target}` 을 UI 에 띄우고, 플레이어가 버튼을 누르면 **본문 없이** `/roll` 호출. 주사위 눈은 서버가 굴린다 (서버 권위 — 클라이언트가 dice 값을 보내지 않음).
-- `/roll` 은 `PendingCheck` 를 읽어 d20 을 굴리고 `grade` 를 계산한 뒤 내러티브를 돌리고 `pending_check = None` 으로 지운다.
-- `/turn` 을 `pending_check` 가 활성인 채로 호출하면 `error: PendingCheckActive`. `/roll` 을 `pending_check` 없이 호출하면 `error: PendingCheckExpected`. P1 은 재시도/취소 엔드포인트 없음.
+- `/turn` 이 주사위 액션으로 끝나면 엔진은 `PendingCheck` 를 `GameState` 에 저장하고 스트림을 닫는다. 내러티브는 아직 돌지 않음.
+- 프론트는 `pending_check` 이벤트로 받은 `{kind, dc, stat, mod, required_roll, tier, target, reason}` 을 UI 에 띄우고, 플레이어가 버튼을 누르면 **본문 없이** `/roll` 호출. 주사위 눈은 서버가 굴린다 (서버 권위 — 클라이언트가 dice 값을 보내지 않음).
+- `/roll` 은 `PendingCheck.kind` 로 분기:
+  - `kind="stat"`: 일반 d20 굴림 → grade 계산 → 내러티브 호출 → `pending_check = None`.
+  - `kind="combat_roll"`: 한 방 시네마틱 전투 — 등급 매핑으로 기계적 결과 적용 후 `combat_narrate` 가 5–10 문장 풀어 씀 ([03-features.md](./03-features.md) §1).
+  - `kind="death_save"`: HP 0 으로 쓰러진 상태에서의 회복 굴림. 성공 3 회면 안정화 (HP=1), 실패 3 회면 사망 ([03-features.md](./03-features.md) §1.7).
+- `/turn` 을 `pending_check` 가 활성인 채로 호출하면 `error: PendingCheckActive`. `/roll` 을 `pending_check` 없이 호출하면 `error: PendingCheckExpected`.
 - **프론트 입력 가드**: `pending_check` 활성 동안 텍스트 전송 버튼은 비활성화. 주사위 버튼만 활성. 백엔드 가드(`PendingCheckActive`)와 이중 방어.
 
 ```python
 class PendingCheck:
     player_input: str
-    action: Literal['roll']
+    action: Literal["roll"] = "roll"
+    kind: Literal["stat", "death_save", "combat_roll"] = "stat"
     tier: Tier
     stat: StatKey
     target: str
@@ -206,7 +210,8 @@ class PendingCheck:
     dc: int               # tier 범위에서 균등 샘플링 (§5.2)
     mod: int              # social_bonus
     required_roll: int    # sigmoid 결과 (1..20)
-    created_at: str       # ISO 8601. 디버깅·로그용 (P1 에선 소비처 없음)
+    reason: str           # judge 가 RollAction.reason 으로 받은 사유 (UI 표시·로그용)
+    created_at: str       # ISO 8601
 ```
 
 ### 2.3 judge 출력 검증과 재시도
@@ -232,15 +237,15 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 
 | type | data | 시점 |
 |---|---|---|
-| `judge` | `{action, tier?, stat?, targets?, question?, item_id?, target_id?, skill_id?}` — `tier` 는 한글 라벨 string (§5.2 의 7단계 중 하나). 디스플레이용 `{value, max, label}` 객체 형식은 `pending_check` 에서 재가공. `action=pass|rest|use|equip|unequip|clarify|reject` 면 판정이 일어나지 않으므로 `tier`/`stat` 는 부재 | judge LLM 직후. §2.3 의 재호출이 일어나도 최종(검증 통과) 결과 1회만 발사 |
-| `pending_check` | `{dc, stat, mod, required_roll, tier, target}` — `tier` 는 §5.2 의 `{value:1..7, max:7, label}` 형식 | action=roll 확정. 직후 스트림 종료 |
-| `narrative_delta` | `{text}` | narrate LLM 청크마다 |
+| `judge` | 액션별로 다른 필드 (§1.1 표). `action` 은 항상 존재, 액션마다 `tier` / `stat` / `targets` / `item_id` / `npc_id` / `skill_id` / `tail_intent` / `reason` 등이 선택적으로 채워짐 | judge LLM 직후. §2.3 의 재호출이 일어나도 최종(검증 통과) 결과 1회만 발사 |
+| `pending_check` | `{kind, dc, stat, mod, required_roll, tier, target, reason}` — `kind` 는 `"stat" \| "death_save" \| "combat_roll"`. `tier` 는 §5.2 의 `{value:1..7, max:7, label}` 형식 | 주사위 버튼이 필요한 액션 (roll/combat/summon_combat/flee/death save) 확정. 직후 스트림 종료 |
+| `narrative_delta` | `{text}` | narrate / combat_narrate / intro LLM 청크마다 |
 | `suggestions` | `{items: string[]}` — 0~3 개 한국어 행동 후보 | narrate 본문이 끝나고 메타 JSON 파싱된 직후. `state` 보다 먼저. 빈 배열도 매 턴 발사 (이전 턴 칩을 비워야 함) |
-| `state` | `{hero, subject, quest, place}` | apply 후 전체 슬롯 통짜 송신. 한 턴에 1회, 파이프라인 말미 |
-| `log_entry` | `LogEntry` (`player | act | roll | gm`) | 플레이어 입력, clarify 되물음, 주사위 결과, 그리고 P2 전투 라운드의 자체 발행 gm 텍스트. 평시 narrate 의 `gm` 은 `narrative_delta` 축적으로 만들어지므로 이벤트 없음 |
-| `combat_start` | `{turn_order, round, surprise, enemy_ids}` — P2 | judge 가 `action="combat"` 반환해 엔진이 `combat_state` 를 띄운 직후 |
-| `combat_turn` | `{actor, action: "attack"|"flee"|"pass"|"death_save", grade, damage?, target?, hand?}` — P2 | combat 라운드 안 한 actor 의 한 행동 직후. 다이스 굴림은 엔진이 결정 |
-| `combat_end` | `{outcome: "victory"|"defeat"|"fled"}` — P2 | 종료 조건 충족 직후. 다음 SSE `done` 이 따라옴 |
+| `state` | `FrontState` (`{hero, subject, quest, place, combat, log, pendingCheck}`) | apply 후 7 슬롯 통짜 송신. 한 턴에 1회, 파이프라인 말미. 자세한 모양은 [04-boundary.md](./04-boundary.md) §1 |
+| `log_entry` | `LogEntry` (`player \| act \| roll \| gm`) | 플레이어 입력, 시스템 알림, 주사위 결과, 시네마틱 전투의 자체 발행 gm 텍스트. 평시 narrate 의 `gm` 은 `narrative_delta` 축적으로 만들어지므로 이벤트 없음 |
+| `combat_start` | `{turn_order, round, surprise, enemy_ids}` | judge 가 `action="combat"` / `action="summon_combat"` 반환해 엔진이 `combat_state` 를 띄운 직후 |
+| `combat_turn` | `{actor, action: "attack"\|"skill"\|"miss"\|"pass"\|"flee"\|"death_save", grade?, damage?, target?, skill_name?}` | 시네마틱 안에서 한 actor 의 한 행동 직후. UI 는 보통 무시하고 `state` 와 `log_entry` 를 권위로 봄 (테스트가 관찰 가능 신호로 사용) |
+| `combat_end` | `{outcome: "victory" \| "defeat" \| "fled" \| "downed" \| "broken_off"}` | 종료 조건 충족 직후. `downed` = 플레이어가 HP 0 으로 쓰러져 death save 단계 진입, `broken_off` = 도주 성공 또는 전투가 흐름상 끊김. 다음 SSE `done` 이 따라옴 |
 | `done` | `{}` | 턴 종료 |
 | `error` | `{message, code?}` | 복구 불가 오류 |
 
@@ -348,7 +353,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 [턴 18] — 덩치에 계속 공격, 돌파 실패
 ```
 
-**최근 대화 (`recent_dialogue`)**: 최근 N턴의 `(player_input, narrative)` 원문 쌍. narrate 가 돈 모든 분기에서 append — `/turn` 의 pass·reject, `/roll` 의 narrate 완료. clarify 와 combat-P1-error 는 narrate 가 안 돌아 append 안 함. 상한은 `rules.memory.recent_dialogue_turns` (기본 10), 초과 시 오래된 항목부터 drop.
+**최근 대화 (`recent_dialogue`)**: 최근 N턴의 `(player_input, narrative)` 원문 쌍. narrate 또는 combat_narrate 가 돈 모든 분기에서 append — `/turn` 의 pass·reject, `/roll` 의 stat/combat/death-save 해소. 주사위 버튼만 누르고 narrate 가 끝까지 안 돈 분기 (예: 에러 종료) 는 append 안 함. 상한은 `rules.memory.recent_dialogue_turns` (기본 10), 초과 시 오래된 항목부터 drop.
 
 ```
 === 최근 대화 ===
@@ -582,7 +587,7 @@ if aff <= -social.friendly_threshold:  mod = -social.roll_bonus  # 적대: -bonu
 
 ### 6.2 프론트 반영
 
-`apply_changes` 후 엔진은 `mapping/to_front.py` 로 **4 슬롯 전체** (Hero / Subject / Quest / Place) 를 다시 JSON 으로 만들어 `state` 이벤트로 보낸다. 바뀐 부분만 보내는 게 아니라 한 턴에 한 번 통째로 — 프론트는 받은 값으로 그대로 덮어쓴다. 파이프라인 말미에서 단 한 번 발사. Log 는 별도 `log_entry` 이벤트로 쌓인다. [04-boundary.md](./04-boundary.md) §1.
+`apply_changes` 후 엔진은 `mapping/to_front.py:to_front_state` 로 **7 슬롯 전체** (`hero / subject / quest / place / combat / log / pendingCheck`) 를 다시 JSON 으로 만들어 `state` 이벤트로 보낸다. 바뀐 부분만 보내는 게 아니라 한 턴에 한 번 통째로 — 프론트는 받은 값으로 그대로 덮어쓴다. 파이프라인 말미에서 단 한 번 발사. Log 는 별도 `log_entry` 이벤트로도 쌓이고, `state.log` 는 영속본 꼬리. [04-boundary.md](./04-boundary.md) §1.
 
 **디스플레이 로그 영속화**: SSE `log_entry` 와 누적된 `narrative_delta` (gm 본문 한 덩이) 는 매 턴 끝에 `GameState.log_entries: list[LogEntry]` 에도 append 된다. 상한 `rules.log.display_turns` (기본 20), 초과 시 가장 오래된 항목부터 evict. `GET /session/{id}/state` (§2.5) 와 `GET /session/current` 가 응답할 때 이 영속본을 `FrontState.log` 로 그대로 반환 — reload 시 최근 20 턴치 채팅이 화면에 복원된다. LLM 컨텍스트용 `recent_dialogue` 와 turn 단위 요약 `turn_log` (둘 다 §3.3) 와는 별개 cap.
 

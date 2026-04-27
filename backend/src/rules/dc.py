@@ -11,6 +11,14 @@ def pick_dc(tier: Tier, rng: random.Random | None = None) -> int:
     return (rng or random).randint(lo, hi)
 
 
+def tier_mid_dc(tier: Tier) -> int:
+    """Deterministic mid-range DC for a tier. Used when the call site needs
+    a stable DC without threading rng (e.g. arming a pending_check whose
+    actual roll target gets recomputed in /roll)."""
+    lo, hi = RULES.difficulty_class.tier_dc_ranges[tier]
+    return (lo + hi) // 2
+
+
 def sigmoid_required_roll(dc: int, stat: int) -> int:
     k = RULES.difficulty_class.sigmoid_k
     raw = 20 / (1 + math.exp(-k * (dc - stat)))
