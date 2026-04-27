@@ -1,8 +1,9 @@
-"""sleep_encounter — LLM ad-hoc enemy summoning (P3 §2.4 fallback).
+"""LLM ad-hoc enemy summoning.
 
 Calls the `encounter_summon` agent to produce one character that obeys the pair-trade
-invariant and registers it into GameState.characters. Invoked by recovery when the seed
-pool is empty.
+invariant and registers it into GameState.characters. Two callers:
+- /turn's SummonCombatAction branch (player casts a summon-and-attack).
+- recovery's sleep_encounters fallback when the seed pool is empty (P3 §2.4).
 """
 from __future__ import annotations
 
