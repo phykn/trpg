@@ -1,7 +1,6 @@
 import random
 
 from src.domain.entities import Character, Stats
-from src.domain.types import int_to_tier, tier_to_int
 from src.rules.dc import (
     compute_grade,
     pick_dc,
@@ -9,11 +8,6 @@ from src.rules.dc import (
     social_bonus,
 )
 from src.rules import RULES
-
-
-def test_tier_int_round_trip():
-    for value in range(1, 8):
-        assert tier_to_int(int_to_tier(value)) == value
 
 
 def test_pick_dc_within_range_excludes_bounds():

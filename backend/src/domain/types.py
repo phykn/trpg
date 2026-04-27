@@ -41,10 +41,6 @@ def tier_to_int(tier: Tier) -> int:
     return _TIER_ORDER.index(tier) + 1
 
 
-def int_to_tier(value: int) -> Tier:
-    return _TIER_ORDER[value - 1]
-
-
 Grade = Literal[
     "critical_success",
     "success",

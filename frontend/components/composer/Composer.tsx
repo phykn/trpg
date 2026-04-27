@@ -24,10 +24,6 @@ export function Composer({ input, setInput, onSend, onRoll, onStop, rolling, foc
   rollEnabled: boolean;
   streaming: boolean;
 }) {
-  // Mirror `input` into a ref so the keyboard-submit handler below can read
-  // the latest text without waiting for React state to flush. handleChange
-  // writes the ref synchronously; the effect catches parent-driven updates
-  // (e.g. suggestion picks).
   const inputRef = React.useRef(input);
   React.useEffect(() => { inputRef.current = input; }, [input]);
 
@@ -50,10 +46,8 @@ export function Composer({ input, setInput, onSend, onRoll, onStop, rolling, foc
 
   const submit = () => sendText(inputRef.current);
 
-  // Keyboard "send" key. On Android Hangul IME, e.nativeEvent.text can
-  // arrive pre-composition while onChangeText fires later with the final
-  // composed text. Defer one tick and pick whichever string is longer
-  // so the final character isn't dropped.
+  // Android Hangul IME fires SubmitEditing pre-composition; defer one tick
+  // and take whichever of nativeEvent.text / inputRef is longer.
   const onNativeSubmit = (
     e: NativeSyntheticEvent<TextInputSubmitEditingEventData>,
   ) => {

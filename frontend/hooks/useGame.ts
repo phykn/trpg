@@ -177,7 +177,6 @@ export function useGame() {
     setStatus('no-game');
   }, []);
 
-  // --- derived ---
   const displayLog = React.useMemo<LogEntry[]>(() => {
     if (!streamingText) return log;
     return [...log, { id: STREAMING_GM_ID, kind: 'gm', text: streamingText }];
