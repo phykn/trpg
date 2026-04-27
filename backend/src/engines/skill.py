@@ -228,15 +228,11 @@ def tick_active_buffs(
     """Called at each turn end. duration -1; remove on 0. Returns the count of removed buffs."""
     if not character.active_buffs:
         return 0
-    surviving: list[ActiveBuff] = []
-    removed = 0
+    before = len(character.active_buffs)
     for b in character.active_buffs:
-        new_d = b.duration - 1
-        if new_d > 0:
-            surviving.append(ActiveBuff(description=b.description, duration=new_d))
-        else:
-            removed += 1
-    character.active_buffs = surviving
+        b.duration -= 1
+    character.active_buffs = [b for b in character.active_buffs if b.duration > 0]
+    removed = before - len(character.active_buffs)
     if removed > 0 and dirty is not None:
         dirty.add(("characters", character.id))
     return removed
