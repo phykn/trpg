@@ -65,6 +65,24 @@ async def test_deltas_yielded_progressively():
     assert len(deltas) >= 2
 
 
+async def test_suggestions_field_round_trips():
+    json_payload = (
+        '{"turn_summary": "광장 도착", '
+        '"suggestions": ["광장 상인에게 다가간다", "골목으로 향한다"]}'
+    )
+    items = await _collect(split_stream(_feed(f"본문.\n---JSON---\n{json_payload}")))
+    finals = [i for i in items if isinstance(i, NarrativeFinal)]
+    assert finals[0].output.suggestions == ["광장 상인에게 다가간다", "골목으로 향한다"]
+
+
+async def test_suggestions_default_empty_when_omitted():
+    items = await _collect(
+        split_stream(_feed('본문.\n---JSON---\n{"turn_summary": "x"}'))
+    )
+    finals = [i for i in items if isinstance(i, NarrativeFinal)]
+    assert finals[0].output.suggestions == []
+
+
 async def test_body_unescapes_json_style_escapes():
     items = await _collect(
         split_stream(

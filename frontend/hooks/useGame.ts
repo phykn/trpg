@@ -42,6 +42,7 @@ export function useGame() {
   const [combat, setCombat] = React.useState<CombatBadge | null>(null);
   const [streaming, setStreaming] = React.useState(false);
   const [streamingText, setStreamingText] = React.useState('');
+  const [suggestions, setSuggestions] = React.useState<string[]>([]);
 
   const aborts = React.useRef<Set<AbortController>>(new Set());
   React.useEffect(() => {
@@ -66,11 +67,13 @@ export function useGame() {
     (ev: StreamEvent) =>
       handleStreamEvent(ev, {
         setPending,
+        clearPending: () => setPending(null),
         appendStreamingText: (t) => setStreamingText((cur) => cur + t),
         clearStreamingText: () => setStreamingText(''),
         upsertLogEntry: (entry) => setLog((L) => mergeEntry(L, entry)),
         applyState,
         clearCombat: () => setCombat(null),
+        setSuggestions,
         setErrorMessage,
       }),
     [applyState],
@@ -83,6 +86,7 @@ export function useGame() {
       aborts.current.add(controller);
       setStreaming(true);
       setErrorMessage(null);
+      setSuggestions([]);
       try {
         await call(controller.signal);
       } catch (err) {
@@ -129,6 +133,7 @@ export function useGame() {
         applyState(payload.state);
         setPending(null);
         setStreamingText('');
+        setSuggestions([]);
         setStatus('ready');
         await runStream((signal) => streamIntro(payload.game_id, handleEvent, signal));
       } catch (err) {
@@ -180,6 +185,7 @@ export function useGame() {
     log: displayLog,
     pending,
     streaming,
+    suggestions,
     onSend,
     onRoll,
     onStop,

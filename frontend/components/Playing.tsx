@@ -13,11 +13,12 @@ import { Log } from './log';
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, log, pending, streaming, onSend, onRoll, onStop, goToNewGame } = game;
+  const { hero, subject, quest, place, combat, log, pending, streaming, suggestions, onSend, onRoll, onStop, goToNewGame } = game;
 
   const [typing, setTyping] = React.useState(false);
-  const [activeId, setActiveId] = React.useState<string | null>('person');
+  const [activeId, setActiveId] = React.useState<string | null>(null);
   const [heroOpen, setHeroOpen] = React.useState(false);
+  const [input, setInput] = React.useState('');
 
   React.useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => setTyping(true));
@@ -51,13 +52,20 @@ export function Playing({ game }: Props) {
         onNewGame={goToNewGame}
       />
 
-      <Log log={log} rolling={rolling} />
+      <Log
+        log={log}
+        rolling={rolling}
+        suggestions={!streaming && !pending ? suggestions : []}
+        onPickSuggestion={setInput}
+      />
 
       <HeroPill hero={hero} expanded={heroOpen} onToggle={() => setHeroOpen((v) => !v)} />
 
       {combat ? <CombatStrip combat={combat} /> : null}
 
       <Composer
+        input={input}
+        setInput={setInput}
         onSend={onSend}
         onRoll={onRoll}
         onStop={onStop}

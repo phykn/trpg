@@ -86,7 +86,7 @@ Five kinds only: `set / set_time / move / move_item / affinity`. Each has its ow
 
 ## SSE event shape
 
-`{"type": "...", "data": {...}}` per event. Types: `judge / pending_check / narrative_delta / log_entry / state / combat_start / combat_turn / combat_end / done / error`. The three `combat_*` types come from `combat_phase.py`; the frontend currently ignores their payload (state + log_entry are authoritative for UI), but tests use them as observable signals. **`done` is not auto-appended** — `run_turn`'s roll branch ends after `pending_check`, and the client treats stream-close as the signal.
+`{"type": "...", "data": {...}}` per event. Types: `judge / pending_check / narrative_delta / suggestions / log_entry / state / combat_start / combat_turn / combat_end / done / error`. The three `combat_*` types come from `combat_phase.py`; the frontend currently ignores their payload (state + log_entry are authoritative for UI), but tests use them as observable signals. **`done` is not auto-appended** — `run_turn`'s roll branch ends after `pending_check`, and the client treats stream-close as the signal.
 
 ## Tests
 

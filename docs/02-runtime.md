@@ -215,6 +215,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 | `judge` | `{action, tier?, stat?, targets?, question?, item_id?, target_id?, skill_id?}` — `tier` 는 한글 라벨 string (§5.2 의 7단계 중 하나). 디스플레이용 `{value, max, label}` 객체 형식은 `pending_check` 에서 재가공. `action=pass|rest|use|equip|unequip|clarify|reject` 면 판정이 일어나지 않으므로 `tier`/`stat` 는 부재 | judge LLM 직후. §2.3 의 재호출이 일어나도 최종(검증 통과) 결과 1회만 발사 |
 | `pending_check` | `{dc, stat, mod, required_roll, tier, target}` — `tier` 는 §5.2 의 `{value:1..7, max:7, label}` 형식 | action=roll 확정. 직후 스트림 종료 |
 | `narrative_delta` | `{text}` | narrate LLM 청크마다 |
+| `suggestions` | `{items: string[]}` — 0~3 개 한국어 행동 후보 | narrate 본문이 끝나고 메타 JSON 파싱된 직후. `state` 보다 먼저. 빈 배열도 매 턴 발사 (이전 턴 칩을 비워야 함) |
 | `state` | `{hero, subject, quest, place}` | apply 후 전체 슬롯 통짜 송신. 한 턴에 1회, 파이프라인 말미 |
 | `log_entry` | `LogEntry` (`player | act | roll | gm`) | 플레이어 입력, clarify 되물음, 주사위 결과, 그리고 P2 전투 라운드의 자체 발행 gm 텍스트. 평시 narrate 의 `gm` 은 `narrative_delta` 축적으로 만들어지므로 이벤트 없음 |
 | `combat_start` | `{turn_order, round, surprise, enemy_ids}` — P2 | judge 가 `action="combat"` 반환해 엔진이 `combat_state` 를 띄운 직후 |

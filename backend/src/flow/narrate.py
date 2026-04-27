@@ -72,14 +72,38 @@ async def run_narrate(
     )
 
     async for item in stream_narrate(client, input_):
-        if isinstance(item, NarrativeFinal) and action == "reject":
-            item.output.state_changes = []
-            item.output.memorable = False
-            item.output.memory_targets = []
-            item.output.memory = {}
-            item.output.memory_links = {}
-            item.output.importance = None
+        if isinstance(item, NarrativeFinal):
+            if action == "reject":
+                item.output.state_changes = []
+                item.output.memorable = False
+                item.output.memory_targets = []
+                item.output.memory = {}
+                item.output.memory_links = {}
+                item.output.importance = None
+                item.output.suggestions = []
+            elif action == "pass":
+                # Narrator must not relocate the player on a "stand still"-style
+                # action — survivor t8 produced a player move on a "잠시 숨을 고른다"
+                # input. Strip player-relocation changes; leave NPC moves alone.
+                item.output.state_changes = [
+                    c for c in item.output.state_changes
+                    if not _is_player_relocation(c, state.player_id)
+                ]
         yield item
+
+
+def _is_player_relocation(change: dict, player_id: str) -> bool:
+    t = change.get("type")
+    if t == "move" and change.get("target") == player_id:
+        return True
+    if (
+        t == "set"
+        and change.get("entity") == "characters"
+        and change.get("id") == player_id
+        and change.get("field") == "location_id"
+    ):
+        return True
+    return False
 
 
 async def consume_narrate(
@@ -106,6 +130,8 @@ async def consume_narrate(
         else:
             final = item
     assert final is not None
+
+    yield {"type": "suggestions", "data": {"items": list(final.output.suggestions)}}
 
     apply_changes(state, final.output.state_changes, dirty.entities)
     push_turn_log(state, target_for_log, final.output.turn_summary, dirty)

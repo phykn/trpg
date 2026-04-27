@@ -31,6 +31,30 @@ def read_prompt(file: str) -> tuple[Path, str]:
     return path, path.read_text(encoding="utf-8")
 
 
+# Bad answers occasionally include long thinking-text dumps before the JSON;
+# appending them verbatim grew the retry stream past the model's ctx window
+# (caster/provocateur/scout t4-t7 all hit "Context size exceeded"). The model
+# only needs to see enough of its prior output to correct itself, not the
+# entire dump.
+_MAX_RETRY_ANSWER_CHARS = 1500
+
+
+def _format_retry_error(e: Exception) -> str:
+    """Strip Pydantic's `input_value=...` echo from retry feedback.
+
+    str(ValidationError) embeds the offending input alongside every field
+    error, which duplicates the assistant's prior answer (already in the
+    message stream) and can add 1–2KB per retry. Keep loc/msg/type only.
+    """
+    if isinstance(e, ValidationError):
+        lines = []
+        for err in e.errors(include_url=False):
+            loc = ".".join(str(p) for p in err.get("loc", ()))
+            lines.append(f"- {loc}: {err.get('msg', '')} [{err.get('type', '')}]")
+        return f"{e.error_count()} validation errors\n" + "\n".join(lines)
+    return str(e)
+
+
 async def run_with_retries(
     client: LLMClient,
     *,
@@ -73,7 +97,10 @@ async def run_with_retries(
             return parse(answer)
         except (ValidationError, AgentSemanticError) as e:
             last_error = e
-            messages.append({"role": "assistant", "content": answer})
-            messages.append({"role": "user", "content": nudge.format(error=e)})
+            truncated = answer[:_MAX_RETRY_ANSWER_CHARS]
+            if len(answer) > _MAX_RETRY_ANSWER_CHARS:
+                truncated += f"\n... (truncated, original {len(answer)} chars)"
+            messages.append({"role": "assistant", "content": truncated})
+            messages.append({"role": "user", "content": nudge.format(error=_format_retry_error(e))})
     assert last_error is not None
     raise last_error

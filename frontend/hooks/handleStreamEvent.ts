@@ -4,11 +4,13 @@ import type { PendingCheck, StreamEvent } from '@/types/wire';
 
 export type StreamHandlers = {
   setPending: (p: PendingCheck) => void;
+  clearPending: () => void;
   appendStreamingText: (t: string) => void;
   clearStreamingText: () => void;
   upsertLogEntry: (e: LogEntry) => void;
   applyState: (s: FrontState) => void;
   clearCombat: () => void;
+  setSuggestions: (items: string[]) => void;
   setErrorMessage: (m: string) => void;
 };
 
@@ -22,8 +24,15 @@ export function handleStreamEvent(ev: StreamEvent, h: StreamHandlers): void {
     case 'narrative_delta':
       h.appendStreamingText(ev.data.text);
       return;
+    case 'suggestions':
+      h.setSuggestions(ev.data.items);
+      return;
     case 'log_entry':
       h.upsertLogEntry(ev.data);
+      // Roll resolved → clear pending so the rolling indicator drops as soon
+      // as the dice number lands, instead of lingering through the entire GM
+      // narration that follows.
+      if (ev.data.kind === 'roll') h.clearPending();
       return;
     case 'state':
       h.applyState(ev.data);

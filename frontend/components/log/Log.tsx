@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, FlatList, Animated, Easing, Keyboard } from 'react-native';
+import { View, Text, Pressable, FlatList, Animated, Easing, Keyboard } from 'react-native';
 import { colors, spacing } from '@/design/tokens';
 import type { LogEntry } from '@/types/ui';
 import { LogItem } from './LogItem';
@@ -42,12 +42,41 @@ function Separator() {
   return <View style={{ height: spacing[5] }} />;
 }
 
+function SuggestionChips({
+  items,
+  onPick,
+}: {
+  items: string[];
+  onPick: (text: string) => void;
+}) {
+  return (
+    <View
+      className="items-start"
+      style={{ paddingTop: spacing[3], gap: spacing[1.5] }}
+    >
+      {items.map((text, i) => (
+        <Pressable
+          key={`${i}-${text}`}
+          onPress={() => onPick(text)}
+          className="px-3 py-1 rounded-full bg-accent-muted border border-border-default active:opacity-60"
+        >
+          <Text className="font-sans text-caption text-fg-default">{text}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 export function Log({
   log,
   rolling,
+  suggestions,
+  onPickSuggestion,
 }: {
   log: LogEntry[];
   rolling: boolean;
+  suggestions: string[];
+  onPickSuggestion: (text: string) => void;
 }) {
   const ref = React.useRef<FlatList<LogEntry>>(null);
   const [viewportH, setViewportH] = React.useState(0);
@@ -80,7 +109,13 @@ export function Log({
       keyExtractor={(e) => String(e.id)}
       renderItem={({ item }) => <LogItem entry={item} />}
       ItemSeparatorComponent={Separator}
-      ListFooterComponent={rolling ? <RollingIndicator /> : null}
+      ListFooterComponent={
+        rolling
+          ? <RollingIndicator />
+          : suggestions.length > 0
+          ? <SuggestionChips items={suggestions} onPick={onPickSuggestion} />
+          : null
+      }
       onLayout={(ev) => setViewportH(ev.nativeEvent.layout.height)}
       onContentSizeChange={onContentSizeChange}
       contentContainerStyle={{

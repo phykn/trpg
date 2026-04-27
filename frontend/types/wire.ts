@@ -71,6 +71,7 @@ export type StreamEvent =
   | { type: 'judge'; data: JudgeAction }
   | { type: 'pending_check'; data: PendingCheck }
   | { type: 'narrative_delta'; data: { text: string } }
+  | { type: 'suggestions'; data: { items: string[] } }
   | { type: 'log_entry'; data: LogEntry }
   | { type: 'state'; data: FrontState }
   | { type: 'combat_start'; data: CombatStartData }

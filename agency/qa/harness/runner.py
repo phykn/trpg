@@ -37,7 +37,9 @@ async def _drain_sse(response) -> tuple[str, list[dict]]:
         events.append(ev)
         if ev["type"] == "narrative_delta":
             body += ev["data"]["text"]
-        elif ev["type"] == "log_entry" and ev["data"].get("kind") == "gm":
+        elif ev["type"] == "log_entry" and ev["data"].get("kind") in ("gm", "act"):
+            # `act` covers clarify-question, "공격할 수 있는 대상이 없다", etc. —
+            # short engine-side messages the player would otherwise miss.
             text = ev["data"].get("text") or ""
             if text:
                 gm_logs.append(text)

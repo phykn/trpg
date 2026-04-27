@@ -20,7 +20,7 @@ from .dirty import (
     next_log_id,
     push_log_entry,
 )
-from .format import front_grade, label_for_target
+from .format import front_grade
 from .narrate import consume_narrate, run_narrate
 
 
@@ -45,12 +45,10 @@ async def run_roll(
     total = dice + pending.mod
     grade = compute_grade(dice, total, pending.required_roll)
 
-    target_name = label_for_target(state, pending.target)
-    check_label = f"{pending.stat} · {pending.reason} (→ {target_name})"
     roll_log = RollLogEntry(
         id=next_log_id(state),
         kind="roll",
-        check=check_label,
+        check=pending.stat,
         dc=pending.dc,
         roll=dice,
         mod=pending.mod,

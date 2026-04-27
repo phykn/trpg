@@ -1,11 +1,19 @@
 import React from 'react';
-import { View, TextInput, Keyboard } from 'react-native';
+import {
+  View,
+  TextInput,
+  Keyboard,
+  type NativeSyntheticEvent,
+  type TextInputSubmitEditingEventData,
+} from 'react-native';
 import { colors } from '@/design/tokens';
 import { DiceButton } from './DiceButton';
 import { SendButton } from './SendButton';
 import { StopButton } from './StopButton';
 
-export function Composer({ onSend, onRoll, onStop, rolling, focused, rollEnabled, streaming }: {
+export function Composer({ input, setInput, onSend, onRoll, onStop, rolling, focused, rollEnabled, streaming }: {
+  input: string;
+  setInput: (text: string) => void;
   onSend: (text: string) => void;
   onRoll: () => void;
   onStop: () => void;
@@ -14,15 +22,36 @@ export function Composer({ onSend, onRoll, onStop, rolling, focused, rollEnabled
   rollEnabled: boolean;
   streaming: boolean;
 }) {
-  const [input, setInput] = React.useState('');
+  const inputRef = React.useRef(input);
+  React.useEffect(() => { inputRef.current = input; }, [input]);
+
+  const handleChange = (t: string) => {
+    inputRef.current = t;
+    setInput(t);
+  };
+
   const trimmed = input.trim();
   const hasText = trimmed.length > 0;
 
-  const submit = () => {
-    if (!hasText) return;
-    onSend(trimmed);
+  const sendText = (raw: string) => {
+    const text = raw.trim();
+    if (!text) return;
+    onSend(text);
+    inputRef.current = '';
     setInput('');
     Keyboard.dismiss();
+  };
+
+  const submit = () => sendText(inputRef.current);
+
+  const onNativeSubmit = (
+    e: NativeSyntheticEvent<TextInputSubmitEditingEventData>,
+  ) => {
+    const fromEvent = e.nativeEvent.text ?? '';
+    setTimeout(() => {
+      const fromRef = inputRef.current ?? '';
+      sendText(fromRef.length > fromEvent.length ? fromRef : fromEvent);
+    }, 0);
   };
   const roll = () => {
     onRoll();
@@ -44,8 +73,8 @@ export function Composer({ onSend, onRoll, onStop, rolling, focused, rollEnabled
     >
       <TextInput
         value={input}
-        onChangeText={setInput}
-        onSubmitEditing={submit}
+        onChangeText={handleChange}
+        onSubmitEditing={onNativeSubmit}
         placeholder="무엇을 하시겠습니까?"
         placeholderTextColor={`${colors.fg.default}55`}
         returnKeyType="send"
