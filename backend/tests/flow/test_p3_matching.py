@@ -15,9 +15,11 @@ from src.domain.entities import (
 )
 from src.agents.dc_judge.schema import (
     BuyAction,
+    ClarifyAction,
     FleeAction,
     LearnSkillAction,
     LevelUpAction,
+    PassAction,
     SellAction,
 )
 from src.engines import combat as combat_engine
@@ -351,3 +353,103 @@ def test_surroundings_in_combat_flag(fresh_state):
     combat_engine.start_combat(state, ["goblin_01"])
     s = build_surroundings(state, "player_01")
     assert s["in_combat"] is True
+
+
+# --- clarify-streak guard --------------------------------------------------
+
+
+async def test_clarify_streak_third_consecutive_emits_threshold_message(
+    fresh_state, tmp_data, monkeypatch
+):
+    """3 consecutive ClarifyAction returns must trigger the threshold act-log
+    and reset the streak. The first 2 emit the question; the 3rd swaps to the
+    "흐릿하게 지나간다" message and bumps turn_count.
+    """
+    state = _seed_player(fresh_state)
+    _judge_returns(monkeypatch, ClarifyAction(action="clarify", question="뭐 할래?"))
+
+    # 1st: streak 0→1, question echoed, turn_count NOT bumped.
+    pre_turn = state.turn_count
+    events = await _collect(
+        run_turn(client=None, state=state, profile_dir="<unused>",
+                 saves_dir=tmp_data, player_input="음...")
+    )
+    act_texts = [
+        e["data"]["text"]
+        for e in events
+        if e["type"] == "log_entry" and e["data"].get("kind") == "act"
+    ]
+    assert state.clarify_streak == 1
+    assert state.turn_count == pre_turn  # clarify doesn't bump
+    assert any("뭐 할래?" in t for t in act_texts)
+    assert not any("흐릿하게" in t for t in act_texts)
+
+    # 2nd: streak 1→2, still question.
+    events = await _collect(
+        run_turn(client=None, state=state, profile_dir="<unused>",
+                 saves_dir=tmp_data, player_input="글쎄...")
+    )
+    assert state.clarify_streak == 2
+    act_texts = [
+        e["data"]["text"]
+        for e in events
+        if e["type"] == "log_entry" and e["data"].get("kind") == "act"
+    ]
+    assert any("뭐 할래?" in t for t in act_texts)
+    assert not any("흐릿하게" in t for t in act_texts)
+
+    # 3rd: streak 2→3 ≥ threshold → threshold message, reset to 0, bump turn_count.
+    pre_turn = state.turn_count
+    events = await _collect(
+        run_turn(client=None, state=state, profile_dir="<unused>",
+                 saves_dir=tmp_data, player_input="...")
+    )
+    act_texts = [
+        e["data"]["text"]
+        for e in events
+        if e["type"] == "log_entry" and e["data"].get("kind") == "act"
+    ]
+    assert state.clarify_streak == 0  # reset
+    assert state.turn_count == pre_turn + 1  # bumped
+    assert any("흐릿하게" in t for t in act_texts)
+    assert not any("뭐 할래?" in t for t in act_texts)
+
+
+async def test_clarify_streak_resets_on_non_clarify_action(
+    fresh_state, tmp_data, monkeypatch
+):
+    """Any non-clarify action mid-streak resets the counter."""
+    state = _seed_player(fresh_state)
+
+    # 2 clarifies first.
+    _judge_returns(monkeypatch, ClarifyAction(action="clarify", question="뭐?"))
+    await _collect(run_turn(client=None, state=state, profile_dir="<unused>",
+                            saves_dir=tmp_data, player_input="..."))
+    await _collect(run_turn(client=None, state=state, profile_dir="<unused>",
+                            saves_dir=tmp_data, player_input="..."))
+    assert state.clarify_streak == 2
+
+    # Then a pass — streak resets.
+    _judge_returns(monkeypatch, PassAction(action="pass"))
+
+    # The pass branch reaches the narrator, which we don't want to call live.
+    # Stub run_narrate to yield nothing.
+    from src.flow import narrate as narrate_mod
+
+    async def fake_narrate(*args, **kwargs):
+        if False:
+            yield  # make this an async generator
+
+    monkeypatch.setattr(narrate_mod, "run_narrate", fake_narrate)
+    monkeypatch.setattr(turn_mod, "run_narrate", fake_narrate)
+
+    async def fake_consume(state, dirty, stream, **kwargs):
+        if False:
+            yield  # async generator stub
+
+    monkeypatch.setattr(narrate_mod, "consume_narrate", fake_consume)
+    monkeypatch.setattr(turn_mod, "consume_narrate", fake_consume)
+
+    await _collect(run_turn(client=None, state=state, profile_dir="<unused>",
+                            saves_dir=tmp_data, player_input="둘러본다"))
+    assert state.clarify_streak == 0

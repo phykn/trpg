@@ -36,6 +36,8 @@ def use(
         # Trigger-only item (e.g. ancient key) — no numeric effect.
         result["kind"] = "trigger"
     elif eff.effect == "heal":
+        if recipient.hp >= recipient.max_hp:
+            raise InventoryInvalid(f"hp already full: cannot use heal item {item_id}")
         new_hp = min(recipient.max_hp, recipient.hp + eff.amount)
         result["kind"] = "heal"
         result["amount"] = new_hp - recipient.hp
@@ -51,6 +53,8 @@ def use(
         if not recipient.alive:
             result["dead"] = True
     elif eff.effect == "mp_restore":
+        if recipient.mp >= recipient.max_mp:
+            raise InventoryInvalid(f"mp already full: cannot use mp item {item_id}")
         new_mp = min(recipient.max_mp, recipient.mp + eff.amount)
         result["kind"] = "mp_restore"
         result["amount"] = new_mp - recipient.mp

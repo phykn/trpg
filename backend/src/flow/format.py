@@ -42,6 +42,8 @@ def label_for_target(state: GameState, target_id: str) -> str:
 
 
 _ERROR_PHRASES: list[tuple[str, str]] = [
+    ("hp already full", "이미 체력이 가득해 회복약을 쓸 필요가 없다"),
+    ("mp already full", "이미 마력이 가득해 마력 음료를 쓸 필요가 없다"),
     ("affinity too low to trade", "친밀도가 부족해 거래가 안 된다"),
     ("can't sell equipped item", "장착 중인 물건은 팔 수 없다 (먼저 해제하라)"),
     ("npc has not enough gold", "상대의 소지금이 부족하다"),

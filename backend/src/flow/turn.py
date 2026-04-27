@@ -127,11 +127,13 @@ async def _dispatch(
         state.clarify_streak = 0
 
     if isinstance(result, CombatAction):
+        actor_loc = state.characters[state.player_id].location_id
         invalid_targets = [
             t for t in result.targets
             if t == state.player_id
             or t not in state.characters
             or not state.characters[t].alive
+            or state.characters[t].location_id != actor_loc
         ]
         if invalid_targets:
             yield push_act(state, dirty, "공격할 수 있는 대상이 없다.")

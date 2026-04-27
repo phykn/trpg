@@ -118,6 +118,30 @@ def _growth_payload(actor: Character) -> dict:
     }
 
 
+def _recent_npc_id(state: GameState, actor_id: str) -> str | None:
+    """Most recently addressed NPC at this location — anchors pronoun /
+    follow-up inputs ('한 번만 더 말해봐', '그래서?') to the same NPC instead
+    of letting the judge drift to a different same-location character.
+    Returns None if no recent target exists or it isn't an alive same-location
+    NPC.
+    """
+    if not state.turn_log:
+        return None
+    actor = state.characters.get(actor_id)
+    actor_loc = actor.location_id if actor is not None else None
+    for entry in reversed(state.turn_log):
+        tid = entry.target
+        if tid is None or tid == actor_id:
+            continue
+        npc = state.characters.get(tid)
+        if npc is None or not npc.alive:
+            continue
+        if actor_loc is not None and npc.location_id != actor_loc:
+            continue
+        return tid
+    return None
+
+
 def _skill_candidates_payload(state: GameState) -> list[dict]:
     return [
         {
@@ -222,6 +246,7 @@ def build_surroundings(state: GameState, actor_id: str) -> dict:
         "in_combat": in_combat,
         "growth": _growth_payload(actor),
         "skill_candidates": _skill_candidates_payload(state),
+        "recent_npc": _recent_npc_id(state, actor_id),
     }
     if not actor.location_id or actor.location_id not in state.locations:
         return {
