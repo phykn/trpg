@@ -22,6 +22,7 @@ type Props = {
 };
 
 export function NewGame({ onSubmit }: Props) {
+  // --- state ---
   const [profiles, setProfiles] = React.useState<ProfileCard[] | null>(null);
   const [loadError, setLoadError] = React.useState<string | null>(null);
 
@@ -31,6 +32,7 @@ export function NewGame({ onSubmit }: Props) {
   const [appearance, setAppearance] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
 
+  // --- profile loading ---
   const loadProfiles = React.useCallback(() => {
     setLoadError(null);
     setProfiles(null);
@@ -46,6 +48,7 @@ export function NewGame({ onSubmit }: Props) {
 
   React.useEffect(loadProfiles, [loadProfiles]);
 
+  // --- form derivations ---
   const selectedProfile = profiles?.find((p) => p.id === profileId) ?? null;
   const races = selectedProfile?.races ?? [];
 
@@ -64,6 +67,7 @@ export function NewGame({ onSubmit }: Props) {
     });
   };
 
+  // --- gating renders ---
   if (loadError) {
     return (
       <CenterMessage>
@@ -106,6 +110,7 @@ export function NewGame({ onSubmit }: Props) {
     );
   }
 
+  // --- form ---
   return (
     <ScrollView
       className="flex-1 bg-canvas-default"
