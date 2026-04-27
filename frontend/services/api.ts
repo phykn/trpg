@@ -116,7 +116,7 @@ export function streamRoll(
 ): Promise<void> {
   return streamSse(
     `${BASE_URL}/session/${gameId}/roll`,
-    { method: 'POST', body: '{}' },
+    { method: 'POST' },
     onEvent,
     signal,
   );
@@ -129,7 +129,7 @@ export function streamIntro(
 ): Promise<void> {
   return streamSse(
     `${BASE_URL}/session/${gameId}/intro`,
-    { method: 'POST', body: '{}' },
+    { method: 'POST' },
     onEvent,
     signal,
   );
