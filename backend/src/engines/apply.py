@@ -117,7 +117,19 @@ def _set_dotted(obj: Any, dotted_field: str, value: Any) -> None:
     parts = dotted_field.split(".")
     for part in parts[:-1]:
         obj = getattr(obj, part)
-    setattr(obj, parts[-1], value)
+    field_name = parts[-1]
+    fields = getattr(type(obj), "model_fields", None)
+    if fields is None or field_name not in fields:
+        raise AttributeError(
+            f"{type(obj).__name__!r} has no field {field_name!r}"
+        )
+    # Pydantic's default setattr skips type validation, so a bad value
+    # (e.g. a str where a list[str] is expected, or None on a non-nullable
+    # field) survives until the next read and surfaces as PersistenceFailed.
+    # Validate against the declared annotation up front so apply_changes can
+    # reject the change cleanly instead.
+    coerced = TypeAdapter(fields[field_name].annotation).validate_python(value)
+    setattr(obj, field_name, coerced)
 
 
 def _apply_set(

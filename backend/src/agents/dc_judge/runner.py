@@ -18,4 +18,5 @@ async def judge(client: LLMClient, input_: JudgeInput, retries: int = 5) -> Judg
         user_payload=input_.model_dump_json(),
         parse=parse,
         retries=retries,
+        agent="dc_judge",
     )

@@ -41,3 +41,5 @@
 - **evidence** 는 transcript 의 실제 턴 번호와 짧은 인용으로 뒷받침. 추측 금지.
 - **summary** 는 "narrator 가 X 함" 보다 "narrator: turn 7-9 에 같은 환경 묘사 반복" 처럼 위치를 짚어주기.
 - **category** 는 위 7개 (`narrative`/`state`/`judge`/`memory`/`input`/`schema`/`기타`) 중 하나로만 적기. 어느 분류에도 안 맞으면 `"기타"` — 새 카테고리 만들지 말 것.
+- **state 사실 확인은 transcript 끝까지 읽고 판단하라.** 중간 턴의 이동·획득·관계 변화만 보고 "최종 state 가 잘못됐다"고 단정하지 마라. 플레이어는 한 게임 안에서 여러 location 을 거칠 수 있고, `clarify`·`pending_check` 같은 비-시간 차감 액션은 `turn_count` 를 안 올린다. `state.turn_count` 는 player input 횟수가 아니라 실제로 시간을 소비한 행동의 수이므로, transcript 마지막 turn 번호와 직접 비교해 "동기화 안 됐다"고 단정하지 마라. 최종 state 의 위치·소지품·HP 가 transcript 의 **마지막 명시적 행동**과 일치하는지를 봐라.
+- **judge 의 `clarify` / `reject` 는 의도된 정상 분기다.** 모호한 입력에 clarify 가 떨어졌다는 것 자체는 issue 가 아니다 — clarify 의 GM 묘사 품질이 떨어질 때만 issue 로 잡되 `severity` 는 `low`, `category` 는 `narrative` 로 분류해라. 시스템이 입력을 거절·되묻는 것을 "처리 미흡" 으로 보지 마라.

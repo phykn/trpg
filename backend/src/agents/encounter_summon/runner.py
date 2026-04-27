@@ -18,4 +18,5 @@ async def encounter_summon(
         parse=EncounterSummonOutput.model_validate_json,
         retries=retries,
         correction_hint="especially pair-trade",
+        agent="encounter_summon",
     )

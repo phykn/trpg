@@ -124,6 +124,15 @@ async def _dispatch(
     result,
 ) -> AsyncIterator[dict]:
     if isinstance(result, CombatAction):
+        invalid_targets = [
+            t for t in result.targets
+            if t not in state.characters or not state.characters[t].alive
+        ]
+        if invalid_targets:
+            yield push_act(state, dirty, "공격할 수 있는 대상이 없다.")
+            async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+                yield ev
+            return
         state.turn_count += 1
         async for ev in start_combat_and_run_npc_phase(
             state, list(result.targets), dirty, rng

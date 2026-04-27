@@ -76,6 +76,35 @@ def test_set_scalar_and_dotted(state):
     assert state.characters["guard_01"].disposition.aggressive == 80
 
 
+def test_set_rejects_wrong_type_before_persist(state):
+    # Regression: judge produced `Character.status = 'muddy_foot'` (str instead
+    # of list[str]) and the bad value survived setattr only to blow up at the
+    # next persistence read as PersistenceFailed. Now the type is validated up
+    # front and the change is rejected without touching the entity.
+    r = apply_changes(
+        state,
+        [
+            {
+                "type": "set",
+                "entity": "characters",
+                "id": "guard_01",
+                "field": "status",
+                "value": "muddy_foot",
+            },
+            {
+                "type": "set",
+                "entity": "locations",
+                "id": "plaza_01",
+                "field": "description",
+                "value": None,
+            },
+        ],
+    )
+    assert r["applied"] == 0 and len(r["rejected"]) == 2
+    assert state.characters["guard_01"].status == []
+    assert state.locations["plaza_01"].description == ""
+
+
 def test_set_engine_owned_field_rejected(state):
     r = apply_changes(
         state,

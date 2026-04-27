@@ -59,6 +59,10 @@ Single-entity calls (e.g. `/story-write race ...`) leave the id free — only id
 
 ## QA team
 
+### Long runs
+
+`--agent all` chains nine playthroughs back-to-back and typically runs for an hour or more. Default launch pattern: start the script via Bash `run_in_background` with stdout redirected to a logfile, then attach a persistent Monitor that `tail -F`s the log and filters for per-agent boundaries (`━━`, `→`, `Done`) plus failure signatures (`Error`, `Traceback`). Each agent's verdict then lands as a chat notification while the run keeps going. Single-agent runs (`--agent <name>`) are short enough to stay in the foreground.
+
 ### Adding a new agent
 
 1. `agency/qa/agents/<name>.md` — one page of system prompt: what kind of personality, what kind of behavior to focus on.

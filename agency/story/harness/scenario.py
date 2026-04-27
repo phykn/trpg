@@ -190,7 +190,7 @@ async def decompose_prose(
     ]
     last_error: Exception | None = None
     for _ in range(retries + 1):
-        result = await llm.chat(messages=messages, think=think)
+        result = await llm.chat(messages=messages, think=think, agent="story_decompose")
         answer = (result["answer"] or "").strip()
         try:
             d = Decomposition.model_validate_json(answer)

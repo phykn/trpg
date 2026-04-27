@@ -54,7 +54,7 @@ async def _run_entity(args: argparse.Namespace) -> None:
         sys.exit(2)
 
     base_url = os.environ["BASE_URL"]
-    llm = LLMClient(base_url=base_url, model="local")
+    llm = LLMClient(base_url=base_url, model="local", log_dir=ROOT / "logs")
 
     run_dir = _new_run_dir(kind)
     try:
@@ -98,7 +98,7 @@ async def _run_scenario(args: argparse.Namespace) -> None:
         sys.exit(2)
 
     base_url = os.environ["BASE_URL"]
-    llm = LLMClient(base_url=base_url, model="local")
+    llm = LLMClient(base_url=base_url, model="local", log_dir=ROOT / "logs")
 
     run_dir = _new_run_dir("scenario")
     decompose_prompt = AGENTS_DIR / "_decompose.md"

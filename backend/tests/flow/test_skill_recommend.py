@@ -176,7 +176,7 @@ class _FakeLLM:
     def __init__(self, candidates):
         self.candidates = candidates
 
-    async def chat(self, messages, think=False):
+    async def chat(self, messages, think=False, agent=None):
         body = SkillRecommendOutput(candidates=self.candidates).model_dump_json()
         return {"answer": body, "think": ""}
 

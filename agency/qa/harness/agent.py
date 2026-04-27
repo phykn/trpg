@@ -34,6 +34,7 @@ class PlayerAgent:
                 {"role": "user", "content": user_msg},
             ],
             think=False,
+            agent=f"qa_player_{self.name}",
         )
         text = (result["answer"] or "").strip()
         # strip quotes / leading labels the LLM sometimes adds

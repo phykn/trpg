@@ -50,7 +50,9 @@ async def run_critic(
         {"role": "user", "content": user},
     ]
     for _ in range(parse_retries + 1):
-        result = await llm.chat(messages=messages, think=False)
+        result = await llm.chat(
+            messages=messages, think=False, agent=f"story_critic_{entity_kind}"
+        )
         answer = (result["answer"] or "").strip()
         try:
             return CriticOutput.model_validate_json(answer)

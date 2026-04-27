@@ -28,7 +28,7 @@ async def stream_narrate(
     ]
 
     async def tokens() -> AsyncIterator[str]:
-        async for chunk in client.chat_stream(messages, think=False):
+        async for chunk in client.chat_stream(messages, think=False, agent="narrate"):
             text = chunk.get("answer")
             if text:
                 yield text

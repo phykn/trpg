@@ -86,6 +86,33 @@ async def test_combat_start_and_npc_round_progress(combat_state, tmp_data, monke
     assert cs.enemy_ids == ["goblin_01"]
 
 
+async def test_combat_with_invalid_target_does_not_consume_turn(
+    combat_state, tmp_data, monkeypatch
+):
+    # Regression: judge sometimes returned target=<location_id> (e.g. "swamp")
+    # for a "rush into the fog" input. The dispatcher used to forward it to
+    # start_combat, leaving combat_state in a half-broken shape. Now the
+    # dispatcher rejects unknown / dead targets without consuming the turn.
+    _judge_returns(
+        monkeypatch, CombatAction(action="combat", targets=["unknown_id"])
+    )
+    turn_before = combat_state.turn_count
+    events = await _collect(
+        run_turn(
+            client=None,
+            state=combat_state,
+            profile_dir="<unused>",
+            saves_dir=tmp_data,
+            player_input="안개 속으로 검을 휘두른다",
+            rng=random.Random(1),
+        )
+    )
+    types = [e["type"] for e in events]
+    assert "combat_start" not in types
+    assert combat_state.combat_state is None
+    assert combat_state.turn_count == turn_before
+
+
 async def test_combat_player_attack_advances_round(combat_state, tmp_data, monkeypatch):
     """combat_state active and on the player's turn. CombatAction → damage applied."""
     # boot combat first

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import uvicorn
 from dotenv import load_dotenv
@@ -6,6 +7,8 @@ from fastapi import FastAPI
 
 from src.api.routes import router
 from src.llm import LLMClient
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def build_app(
@@ -36,7 +39,12 @@ def main() -> None:
     saves_dir = os.environ["SAVES_DIR"]
     profile_dir = os.environ["PROFILE_DIR"]
 
-    llm = LLMClient(base_url=base_url, model="local", api_key="none")
+    llm = LLMClient(
+        base_url=base_url,
+        model="local",
+        api_key="none",
+        log_dir=REPO_ROOT / "logs",
+    )
     app = build_app(
         llm=llm,
         basic_auth_user=basic_auth_user,

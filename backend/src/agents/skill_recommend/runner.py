@@ -16,4 +16,5 @@ async def skill_recommend(
         user_payload=input_.model_dump_json(),
         parse=SkillRecommendOutput.model_validate_json,
         retries=retries,
+        agent="skill_recommend",
     )

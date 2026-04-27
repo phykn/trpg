@@ -301,8 +301,9 @@ async def write_entity(
     last_error: Exception | None = None
     final_entity: BaseModel | None = None
     final_answer: str | None = None
+    agent_tag = f"story_write_{kind}"
     for _ in range(retries + 1):
-        result = await llm.chat(messages=messages, think=think)
+        result = await llm.chat(messages=messages, think=think, agent=agent_tag)
         answer = (result["answer"] or "").strip()
         try:
             entity = spec.model.model_validate_json(answer)
@@ -353,7 +354,7 @@ async def write_entity(
                     ),
                 }
             )
-            result = await llm.chat(messages=messages, think=think)
+            result = await llm.chat(messages=messages, think=think, agent=agent_tag)
             answer = (result["answer"] or "").strip()
             try:
                 entity_v2 = spec.model.model_validate_json(answer)

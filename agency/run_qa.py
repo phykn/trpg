@@ -32,7 +32,17 @@ from agency.qa.harness.review import (  # noqa: E402
 )
 from agency.qa.harness.runner import run_qa_session  # noqa: E402
 
-AGENTS = ["diplomat", "explorer", "provocateur"]
+AGENTS = [
+    "diplomat",
+    "explorer",
+    "provocateur",
+    "combatant",
+    "quartermaster",
+    "caster",
+    "survivor",
+    "questor",
+    "griefer",
+]
 
 
 def _agent_prompt_path(name: str) -> Path:
@@ -136,7 +146,7 @@ async def _run_single(
 
 async def main_async(args: argparse.Namespace) -> None:
     base_url = os.environ["BASE_URL"]
-    llm = LLMClient(base_url=base_url, model="local")
+    llm = LLMClient(base_url=base_url, model="local", log_dir=ROOT / "logs")
 
     profile_dir = (ROOT / "scenarios").resolve()
 

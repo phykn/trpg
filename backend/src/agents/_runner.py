@@ -39,6 +39,7 @@ async def run_with_retries(
     parse: Callable[[str], T],
     retries: int = 5,
     correction_hint: str = "",
+    agent: str | None = None,
 ) -> T:
     """Call the LLM, parse the answer, and on failure feed the error back as
     a correction prompt up to `retries` times. `parse` raises ValidationError
@@ -64,7 +65,7 @@ async def run_with_retries(
     )
     for _ in range(retries + 1):
         try:
-            result = await client.chat(messages=messages, think=False)
+            result = await client.chat(messages=messages, think=False, agent=agent)
         except (OSError, asyncio.TimeoutError) as e:
             raise LLMUnavailable(str(e)) from e
         answer = result["answer"] or ""
