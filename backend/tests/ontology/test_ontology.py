@@ -70,7 +70,6 @@ def test_graph_edges(fresh_state):
     assert any(e.to_id == "gate_01" for e in g.get_edges("plaza_01", "connects_to"))
     assert any(e.to_id == "gate_01" for e in g.get_edges("key_01", "unlocks"))
     assert any(e.to_id == "q1" for e in g.get_edges("guard_01", "gives_quest"))
-    assert any(e.to_id == "q1" for e in g.get_edges("goblin_01", "kill_target_of"))
     assert any(e.to_id == "q1" for e in g.get_edges("sword_01", "reward_of"))
 
 

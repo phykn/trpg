@@ -76,8 +76,6 @@ def _build_quest_edges(g: GameGraph, state: GameState) -> None:
         for trig in quest.triggers:
             if trig.target_id:
                 g.add_edge(trig.target_id, qid, "required_by")
-                if trig.type == "character_death":
-                    g.add_edge(trig.target_id, qid, "kill_target_of")
         for item_id in quest.rewards.items:
             if item_id:
                 g.add_edge(item_id, qid, "reward_of")
