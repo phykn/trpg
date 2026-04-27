@@ -7,8 +7,7 @@ invariant and registers it into GameState.characters. Two callers:
 """
 from __future__ import annotations
 
-from pathlib import Path
-
+from ..context.layers import build_world_layer
 from ..domain.entities import Character, CombatBehavior, Location, Stats
 from ..agents.encounter_summon import (
     EncounterSummonInput,
@@ -28,8 +27,7 @@ def _build_input(
     profile: str,
     requested_role: str | None,
 ) -> EncounterSummonInput:
-    world_path = Path(profile_dir) / profile / "world.md"
-    world_text = world_path.read_text(encoding="utf-8") if world_path.exists() else ""
+    world_text = build_world_layer(profile_dir, profile, missing_ok=True)
     races = [
         {"id": r.id, "name": r.name, "description": r.description}
         for r in state.races.values()

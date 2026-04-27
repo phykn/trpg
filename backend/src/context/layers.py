@@ -4,8 +4,16 @@ from pathlib import Path
 from ..domain.state import GameState
 
 
-def build_world_layer(profile_dir: str, profile: str) -> str:
-    return (Path(profile_dir) / profile / "world.md").read_text(encoding="utf-8")
+def build_world_layer(
+    profile_dir: str, profile: str, *, missing_ok: bool = False
+) -> str:
+    """Read <profile>/world.md. Strict by default — set missing_ok=True for
+    callers (combat_oneshot narrate input, encounter summon) that should
+    fall back to an empty string."""
+    p = Path(profile_dir) / profile / "world.md"
+    if missing_ok and not p.exists():
+        return ""
+    return p.read_text(encoding="utf-8")
 
 
 def build_session_layer(state: GameState) -> dict:

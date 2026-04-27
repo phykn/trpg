@@ -17,13 +17,13 @@ since both are "press the button to roll".
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from pathlib import Path
 
 from ..agents.combat_narrate import (
     CombatNarrateInput,
     CombatRoundEvent,
     CombatStateSnapshot,
 )
+from ..context.layers import build_world_layer
 from ..domain.entities import Character
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
@@ -51,13 +51,6 @@ def _location_payload(state: GameState) -> dict:
         "tags": list(loc.tags),
         "weather": loc.weather,
     }
-
-
-def _world_text(profile_dir: str, profile: str) -> str:
-    p = Path(profile_dir) / profile / "world.md"
-    if p.exists():
-        return p.read_text(encoding="utf-8")
-    return ""
 
 
 # --- Pending-check arming --------------------------------------------------
@@ -198,7 +191,7 @@ def build_oneshot_narrate_input(
     `is_first_round=True, is_final_round=True` round so the existing
     combat_narrate prompt (round-shaped) writes the whole fight in one beat."""
     player = state.characters[state.player_id]
-    world = _world_text(profile_dir, state.profile)
+    world = build_world_layer(profile_dir, state.profile, missing_ok=True)
     location = _location_payload(state)
 
     enemy_names = []
