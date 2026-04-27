@@ -13,7 +13,7 @@ import { Log } from './log';
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, log, pending, streaming, suggestions, onSend, onRoll, onStop, goToNewGame } = game;
+  const { hero, subject, quest, place, combat, log, pending, streaming, awaitingNarration, suggestions, onSend, onRoll, onStop, goToNewGame } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -55,6 +55,7 @@ export function Playing({ game }: Props) {
       <Log
         log={log}
         rolling={rolling}
+        typing={awaitingNarration}
         suggestions={!streaming && !pending ? suggestions : []}
         onPickSuggestion={setInput}
       />

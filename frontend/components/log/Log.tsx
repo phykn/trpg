@@ -42,6 +42,67 @@ function Separator() {
   return <View style={{ height: spacing[5] }} />;
 }
 
+function TypingDot({ delay }: { delay: number }) {
+  const v = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    const cycle = Animated.sequence([
+      Animated.timing(v, {
+        toValue: -4,
+        duration: 320,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(v, {
+        toValue: 0,
+        duration: 320,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.delay(240),
+    ]);
+    const loop = Animated.loop(cycle);
+    const start = setTimeout(() => loop.start(), delay);
+    return () => {
+      clearTimeout(start);
+      loop.stop();
+    };
+  }, [v, delay]);
+  return (
+    <Animated.View
+      style={{
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: colors.fg.muted,
+        transform: [{ translateY: v }],
+      }}
+    />
+  );
+}
+
+function TypingDots() {
+  return (
+    <View style={{ paddingTop: spacing[5] }}>
+      <View
+        style={{
+          borderLeftWidth: 2,
+          borderLeftColor: colors.accent.fg,
+          paddingLeft: spacing[3],
+        }}
+      >
+        <View
+          className="flex-row items-center"
+          style={{ gap: spacing[1.5], height: 18 }}
+        >
+          <TypingDot delay={0} />
+          <TypingDot delay={120} />
+          <TypingDot delay={240} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function SuggestionChips({
   items,
   onPick,
@@ -70,11 +131,13 @@ function SuggestionChips({
 export function Log({
   log,
   rolling,
+  typing,
   suggestions,
   onPickSuggestion,
 }: {
   log: LogEntry[];
   rolling: boolean;
+  typing: boolean;
   suggestions: string[];
   onPickSuggestion: (text: string) => void;
 }) {
@@ -112,6 +175,8 @@ export function Log({
       ListFooterComponent={
         rolling
           ? <RollingIndicator />
+          : typing
+          ? <TypingDots />
           : suggestions.length > 0
           ? <SuggestionChips items={suggestions} onPick={onPickSuggestion} />
           : null
