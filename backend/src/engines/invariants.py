@@ -718,15 +718,7 @@ def _check_state(state: Any) -> list[str]:
     return _check_scenario(Scenario.from_state(state))
 
 
-# --- public dispatcher -----------------------------------------------------
-
-
-def check(*_args: Any, **_kwargs: Any) -> list[str]:
-    """Use the explicit form: check.character / check.scenario / etc."""
-    raise TypeError(
-        "Call check.character / check.item / check.inventory / check.skills / "
-        "check.scenario / check.state / check.quest_graph / check.stats explicitly."
-    )
+# --- public namespace ------------------------------------------------------
 
 
 def _check_seed_character(
@@ -748,12 +740,21 @@ def _check_seed_character(
     return out
 
 
-check.stats = _check_stats              # type: ignore[attr-defined]
-check.character = _check_character      # type: ignore[attr-defined]
-check.seed_character = _check_seed_character  # type: ignore[attr-defined]
-check.item = _check_item                # type: ignore[attr-defined]
-check.inventory = _check_inventory      # type: ignore[attr-defined]
-check.skills = _check_skills            # type: ignore[attr-defined]
-check.scenario = _check_scenario        # type: ignore[attr-defined]
-check.state = _check_state              # type: ignore[attr-defined]
-check.quest_graph = _check_quest_graph  # type: ignore[attr-defined]
+class check:  # noqa: N801 — used as a namespace, not instantiated
+    """Static namespace. Call check.character / check.scenario / etc."""
+
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
+        raise TypeError(
+            "Call check.character / check.item / check.inventory / check.skills / "
+            "check.scenario / check.state / check.quest_graph / check.stats explicitly."
+        )
+
+    stats = staticmethod(_check_stats)
+    character = staticmethod(_check_character)
+    seed_character = staticmethod(_check_seed_character)
+    item = staticmethod(_check_item)
+    inventory = staticmethod(_check_inventory)
+    skills = staticmethod(_check_skills)
+    scenario = staticmethod(_check_scenario)
+    state = staticmethod(_check_state)
+    quest_graph = staticmethod(_check_quest_graph)
