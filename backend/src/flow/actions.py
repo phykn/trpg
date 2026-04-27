@@ -199,13 +199,11 @@ async def emit_use(
     target = state.characters.get(target_id) if target_id else None
     try:
         result = inventory_engine.use(
-            actor, item_id, target, state.items, dirty=dirty.entities
+            actor, item_id, target, state, dirty=dirty.entities
         )
     except InventoryInvalid as e:
         yield push_gm(state, dirty, f"{actor.name} — 아이템 사용 실패 ({humanize_engine_error(e)}).")
         return
-    if result.get("dead"):
-        check_quests(state, "character_death", result["target"], dirty.entities)
     check_quests(state, "item_use", item_id, dirty.entities)
     yield push_gm(state, dirty, format_use_log(state, actor_id, result))
     if target is not None:

@@ -1,44 +1,48 @@
 """Item activation — heal/damage/mp_restore/buff consumables and on_use
-trigger pass-through. The quest-hook variant evaluates `item_use` and
-`character_death` triggers after the effect lands."""
+trigger pass-through. Damage routes through combat.apply_attack_to_defender
+so death-saves and revive_coins behave the same as melee/skill damage."""
 from ...domain.entities import ActiveBuff, Character, ConsumableEffect, Item
 from ...domain.errors import InventoryInvalid
+from ...domain.state import GameState
+from ..combat import apply_attack_to_defender
 
 
 # --- per-effect handlers ---------------------------------------------------
 
 
-def _heal(item, eff, target, recipient, result) -> None:
+def _heal(eff, recipient, result, **_) -> None:
     if recipient.hp >= recipient.max_hp:
-        raise InventoryInvalid(f"hp already full: cannot use heal item {item.id}")
+        raise InventoryInvalid(f"hp already full: cannot use heal item {result['item_id']}")
     new_hp = min(recipient.max_hp, recipient.hp + eff.amount)
     result["kind"] = "heal"
     result["amount"] = new_hp - recipient.hp
     recipient.hp = new_hp
 
 
-def _damage(item, eff, target, recipient, result) -> None:
+def _damage(eff, target, recipient, result, *, state, dirty, **_) -> None:
     if target is None:
-        raise InventoryInvalid(f"damage item requires target: {item.id}")
-    recipient.hp = max(0, recipient.hp - eff.amount)
-    if recipient.hp == 0:
-        recipient.alive = False
+        raise InventoryInvalid(f"damage item requires target: {result['item_id']}")
+    out = apply_attack_to_defender(state, recipient.id, eff.amount, dirty=dirty)
     result["kind"] = "damage"
     result["amount"] = eff.amount
-    if not recipient.alive:
+    if out.get("dead"):
         result["dead"] = True
+    elif out.get("dying"):
+        result["dying"] = True
+    elif out.get("revived"):
+        result["revived"] = True
 
 
-def _mp_restore(item, eff, target, recipient, result) -> None:
+def _mp_restore(eff, recipient, result, **_) -> None:
     if recipient.mp >= recipient.max_mp:
-        raise InventoryInvalid(f"mp already full: cannot use mp item {item.id}")
+        raise InventoryInvalid(f"mp already full: cannot use mp item {result['item_id']}")
     new_mp = min(recipient.max_mp, recipient.mp + eff.amount)
     result["kind"] = "mp_restore"
     result["amount"] = new_mp - recipient.mp
     recipient.mp = new_mp
 
 
-def _buff(item, eff, target, recipient, result) -> None:
+def _buff(item, eff, recipient, result, **_) -> None:
     description = eff.description or item.name
     duration = eff.duration or 0
     recipient.active_buffs.append(ActiveBuff(description=description, duration=duration))
@@ -62,7 +66,7 @@ def use(
     actor: Character,
     item_id: str,
     target: Character | None,
-    items: dict[str, Item],
+    state: GameState,
     *,
     dirty: set[tuple[str, str]] | None = None,
 ) -> dict:
@@ -73,6 +77,7 @@ def use(
     `on_use` (free text or trigger id) rides along on the result; quest
     evaluation happens in engines.quest.check_quests.
     """
+    items = state.items
     if item_id not in items:
         raise InventoryInvalid(f"unknown item: {item_id}")
     if item_id not in actor.inventory_ids:
@@ -92,7 +97,10 @@ def use(
         handler = _EFFECT_HANDLERS.get(eff.effect)
         if handler is None:
             raise InventoryInvalid(f"unsupported consumable effect: {eff.effect}")
-        handler(item, eff, target, recipient, result)
+        handler(
+            item=item, eff=eff, target=target, recipient=recipient, result=result,
+            state=state, dirty=dirty,
+        )
 
     if item.on_use:
         result["on_use"] = item.on_use

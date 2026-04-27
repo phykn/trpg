@@ -31,34 +31,37 @@ LLM 을 두 개로 쪼갠다.
 - `player_input`: 플레이어 원문 텍스트
 - `surroundings`: 현재 장소 + 주변 엔티티 상태 태그 (§3.4.1)
 
-**출력**:
+**출력**: 액션마다 필요한 필드가 다른 discriminated union (`action` 필드로 분기). 공통 출발점은 다음과 같고, 액션별 추가 필드는 아래 표.
+
 ```json
 {
-  "action": "pass" | "roll" | "combat" | "rest" | "use" | "equip" | "unequip" | "clarify" | "reject",
-  "tier": "매우 쉬움" | "쉬움" | "보통" | "어려움" | "매우 어려움" | "전설" | "신화",
-  "stat": "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA",
-  "targets": ["<entity_id>", "<entity_id>"],
-  "question": "되물을 내용 (clarify 일 때만)"
+  "action": "pass | reject | combat | summon_combat | flee | roll | rest | use | equip | unequip | buy | sell | level_up | learn_skill | chain"
 }
 ```
 
-`action` 만 항상 존재. `tier`/`stat`/`targets` 는 `roll | combat` 일 때만, `question` 은 `clarify` 일 때만 채워진다 (pass/reject 는 모두 부재).
+15 종. 옛 `clarify` 액션은 삭제 — judge 는 절대 되묻지 않는다 (TRPG 의 forward motion 원칙). 모호한 입력은 fallback default 로 떨어뜨리고 narrator 가 흡수. compound 입력은 액션마다 붙는 `tail_intent: str | None` 필드 (예: "검을 들고 사과한다" → 주 액션 + tail_intent="사과한다") 또는 `chain` 액션이 처리.
 
 `targets` 는 판정 대상 ID 배열. 단일 대상이면 길이 1, 복수 대상(예: 두 경비병 동시 설득)이면 엔진이 actor 의 affinity 가 가장 낮은 대상을 기준으로 `social_bonus` 를 계산한다.
 
 **action 유형**:
 
-| action | 의미 | 다음 단계 |
-|---|---|---|
-| `pass` | 판정 불필요한 인-캐릭터 행동 (이동, 인사, 정가 구매 등) | target_view 없이 바로 내러티브 |
-| `roll` | 주사위 필요 | 엔진이 DC 계산 → `pending_check` 저장 → 프론트 주사위 버튼 → `/roll` |
-| `combat` | 일반 전투 행동 | [P2] 엔진이 `combat_state` 부팅·이니셔티브 굴림 → SSE `combat_start` → NPC 차례 자동 진행 → 다음 player 차례에서 멈춤. 라운드 본문은 LLM 안 부르고 엔진이 결정론으로 진행 (한국어 묘사 LLM 화는 후속) |
-| `rest` | 잠·야영 (긴 휴식) | [P3] 엔진이 location.sleep_risk 굴림 → 풀회복 (HP/MP max + world_time +sleep_hours) 또는 sleep_encounters 풀에서 적 뽑아 surprise=enemy 로 combat 부팅 ([03-features.md](./03-features.md) §2.4) |
-| `use` | 인벤 아이템 사용 (포션·연막탄·열쇠 등) | [P3] 엔진이 ConsumableEffect 분기 (heal/damage/mp_restore/buff) + on_use 트리거 + consumable 차감. 전투 중엔 한 차례 소비 ([03-features.md](./03-features.md) §2.7) |
-| `equip` | 무기·방어구 장착 | [P3] 엔진이 슬롯 자동 결정 (무기 = 빈 손 우선/dominant 폴백, 방어구 = 빈 슬롯). 전투 중 한 차례 소비 ([03-features.md](./03-features.md) §2.5) |
-| `unequip` | 장착 해제 | [P3] 엔진이 item_id 가 들어 있는 슬롯 찾아 비움. 양손 무기는 두 슬롯 모두. 전투 중 한 차례 소비 |
-| `clarify` | 해석 불가 / 복합 행동 | 플레이어에게 되물음, 파이프라인 재시작 |
-| `reject` | 인-캐릭터 입력이 아님 — 시스템 공격(프롬프트 인젝션, 메타 질문), OOC 잡담, 무의미 입력 | 인-게임 표현으로 흡수 (아래 reject 처리 참고) |
+| action | 추가 필드 | 의미 | 다음 단계 |
+|---|---|---|---|
+| `pass` | `targets[]` | 판정 불필요한 인-캐릭터 행동 (이동, 인사, 정가 구매 등) | target_view 없이 바로 내러티브 |
+| `reject` | — | 인-캐릭터 입력이 아님 (프롬프트 인젝션, OOC 잡담, 무의미) | 인-게임 표현으로 흡수 (아래 reject 처리) |
+| `roll` | `tier`, `stat`, `targets[]`, `reason` | 주사위 필요한 일반 행동 | 엔진이 DC 계산 → `PendingCheck(kind="stat")` 저장 → 프론트 주사위 버튼 → `/roll` |
+| `combat` | `targets[]`, `skill_id?` | 일반 전투 행동 ("고블린을 친다") | 엔진이 `PendingCheck(kind="combat_roll")` 무장 → 프론트 주사위 버튼 → `/roll` 한 번에 시네마틱 전투 해결 ([03-features.md](./03-features.md) §1) |
+| `summon_combat` | `role`, `skill_id?` | 같은 location 에 있을 법한데 entity 로 시드된 적이 없을 때 ("뒷골목에서 도적이 튀어나온다") | 엔진이 즉석 적 1 마리 spawn 후 combat 분기로 진행 |
+| `flee` | — | 전투에서 빠짐 | 엔진이 `PendingCheck(kind="combat_roll")` 무장 (도주도 같은 dice button) |
+| `rest` | — | 잠·야영 (긴 휴식) | [P3] location.sleep_risk 굴림 → 풀회복 또는 적 spawn → surprise=enemy 로 combat 부팅 ([03-features.md](./03-features.md) §2.4) |
+| `use` | `item_id`, `target_id?`, `tail_intent?` | 인벤 아이템 사용 (포션·연막탄·열쇠 등) | [P3] ConsumableEffect 분기 (heal/damage/mp_restore/buff) + on_use 트리거 + consumable 차감 ([03-features.md](./03-features.md) §2.7) |
+| `equip` | `item_id`, `tail_intent?` | 무기·방어구 장착 | [P3] 엔진이 슬롯 자동 결정 ([03-features.md](./03-features.md) §2.5) |
+| `unequip` | `item_id`, `tail_intent?` | 장착 해제 | [P3] item_id 가 든 슬롯 찾아 비움. 양손 무기는 두 슬롯 모두 |
+| `buy` | `npc_id`, `item_id`, `tail_intent?` | 거래 — 사기 | [P3] affinity 게이트 + 가격 산정 + 무게 검증 |
+| `sell` | `npc_id`, `item_id`, `tail_intent?` | 거래 — 팔기 | [P3] 같은 검증 |
+| `level_up` | `stat_up`, `stat_down`, `tail_intent?` | 페어 트레이드 레벨업 | [P3] 스탯 ±1 + HP/MP 재계산 + skill_recommend 호출 ([03-features.md](./03-features.md) §2.3) |
+| `learn_skill` | `index`, `tail_intent?` | level_up 후 제시된 후보 중 하나 학습 (또는 거부) | [P3] |
+| `chain` | `parts[]` (2–4 개) | 복합 입력 ("약초 먹고 검 든다") | parts 를 sequential 로 dispatch. turn_count 와 finalize 는 끝에 한 번. 마지막 `pass` 가 있으면 narrate 한 번 돌아 톤 살림 |
 
 **reject 처리**: 내러티브 에이전트에 surroundings + reject 가이드만 전달 → narrator 가 인-게임 표현("알 수 없는 힘에 막힌다" 등)으로 흡수. `state_changes=[]`·`memorable=false` 강제. turn_log·recent_dialogue 에는 일반 턴처럼 append — "흔적 안 남김" 은 게임 상태/NPC 기억 한정이고, narrator 컨텍스트는 OOC 시도까지 자연스럽게 이어쓰려면 보존이 필요.
 
@@ -67,6 +70,7 @@ LLM 을 두 개로 쪼갠다.
 - 명시적 대상 없으면 현재 location 이 기본값
 - `stat` 은 행동의 성격으로 결정 (DC판정은 플레이어 수치를 안 봄)
 - **히스토리·세션·월드 레이어를 받지 않는다**. 오직 현재 장면(`surroundings`) 만으로 판정. 장기 맥락·과거 턴 요약·엔티티 메모리는 내러티브 전용 (§3, [01-overview.md](./01-overview.md) §3.12).
+- **judge 는 절대 되묻지 않는다**. 모호한 입력에 대해 `clarify` 같은 액션을 발행하는 통로는 없음. 검증 통과 못 한 targets 는 location 폴백 (§2.3) 으로 떨어지고, 입력의 모호함은 narrator 가 자연스럽게 흡수한다.
 
 ### 1.2 내러티브 에이전트
 
@@ -135,22 +139,38 @@ LLM 을 두 개로 쪼갠다.
   ↓
 DC판정 에이전트 호출
   │
-  ├─ clarify → SSE log_entry(act, question) → done. 다음 /turn 에서 재시작 (narrator 호출 없음)
+  ├─ pass         → target_view 없이 내러티브 호출 (surroundings 만) → 후처리 ↓
   │
-  ├─ roll    → 엔진: target 검증 → DC·mod·required_roll 계산
-  │             → pending_check 저장 → SSE pending_check → 스트림 종료
-  │             (프론트 주사위 버튼 활성 → 플레이어 주사위 → /roll 진입)
-  │             /roll: grade 판정 → target_view 조립 → 내러티브 호출 → 후처리 ↓
+  ├─ reject       → target_view 없이 내러티브 호출 (surroundings + reject 가이드) → 후처리 ↓
   │
-  ├─ combat  → [P2] 엔진: combat_state 부팅 (이니셔티브 굴림 + enemy_ids 채움)
-  │             → SSE combat_start → NPC 차례 자동 진행 (각 차례마다 SSE combat_turn)
-  │             → 종료 조건이면 SSE combat_end → done
-  │             → 살아있으면 player 차례 도달 시 done. 다음 /turn 에서 player 행동 처리.
-  │             (라운드 본문은 LLM 안 부르고 결정론, narrator 호출 없음)
+  ├─ roll         → 엔진: target 검증 → DC·mod·required_roll 계산
+  │                  → PendingCheck(kind="stat") 저장 → SSE pending_check → 스트림 종료
+  │                  (프론트 주사위 버튼 → 플레이어 굴림 → /roll 진입)
+  │                  /roll: grade 판정 → target_view 조립 → 내러티브 호출 → 후처리 ↓
   │
-  ├─ pass    → target_view 없이 내러티브 호출 (surroundings 만) → 후처리 ↓
+  ├─ combat /     → 엔진: target 검증 (필요 시 즉석 적 spawn for summon_combat)
+  │  summon_combat   → PendingCheck(kind="combat_roll") 저장 → SSE pending_check → 스트림 종료
+  │                   (프론트 주사위 버튼 → 플레이어 굴림 → /roll 진입)
+  │                   /roll: 한 d20 + STR 으로 grade 판정 → 등급에 따라 사살/HP 데미지/XP 적용
+  │                   → combat_narrate 가 5–10 문장 시네마틱 스트리밍
+  │                   → combat_state 정리 + outcome 결정 (victory/defeat/fled/downed/broken_off)
+  │                   → SSE combat_end → 후처리 ↓
   │
-  └─ reject  → target_view 없이 내러티브 호출 (surroundings + reject 가이드) → 후처리 ↓
+  ├─ flee         → PendingCheck(kind="combat_roll") 저장 (도주도 같은 dice button)
+  │                  → /roll 에서 처리, 성공 시 outcome="broken_off"
+  │
+  ├─ rest         → [P3] 엔진: location.sleep_risk 굴림
+  │                   → 풀회복 + world_time +sleep_hours, 또는 인카운터로 combat 부팅
+  │                   → 후처리 ↓
+  │
+  ├─ use / equip /  → [P3] 엔진이 그 자리에서 처리 (REST 엔드포인트 없음)
+  │  unequip /        검증 실패는 InventoryInvalid 등 DomainError → format.py 가
+  │  buy / sell /     한국어 한 줄로 변환해 GM log_entry 로 흘림 (HTTP 422 안 일어남)
+  │  level_up /       → 후처리 ↓
+  │  learn_skill
+  │
+  └─ chain        → parts[] 를 순서대로 dispatch (turn_count 와 finalize 는 끝에 한 번).
+                     마지막 part 가 pass 면 narrate 한 번 돌아 톤 살림 → 후처리 ↓
 
 reject 전용 추가 단계 (후처리 직전):
   엔진이 narrator 출력의 state_changes 를 비우고 memorable=false 로 강제

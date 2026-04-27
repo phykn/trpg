@@ -20,7 +20,7 @@ from ..domain.errors import SkillInvalid
 from ..agents.skill_recommend import SkillCandidate
 from ..rules import RULES
 from ..domain.state import GameState
-from .combat import enemy_defense, stat_modifier
+from .combat import apply_attack_to_defender, enemy_defense, stat_modifier
 from ..rules.dc import compute_grade, sigmoid_required_roll
 
 CastTargets = list[str]
@@ -91,14 +91,21 @@ def _grade_multiplier(grade: Grade | None) -> float:
 
 
 def _apply_attack(
-    skill: Skill, mod: int, target: Character, multiplier: float
-) -> int:
+    skill: Skill,
+    mod: int,
+    target: Character,
+    multiplier: float,
+    state: GameState,
+    dirty: set[tuple[str, str]] | None,
+) -> dict:
+    """Route skill damage through the same death-save / revive-coin pipeline
+    as melee attacks. Returns the apply_attack_to_defender result with the
+    computed `damage` merged in."""
     base = max(0, skill.power + mod)
     damage = max(0, round(base * multiplier))
-    target.hp = max(0, target.hp - damage)
-    if target.hp == 0:
-        target.alive = False
-    return damage
+    out = apply_attack_to_defender(state, target.id, damage, dirty=dirty)
+    out["damage"] = damage
+    return out
 
 
 def _apply_heal(
@@ -170,8 +177,6 @@ def cast(
 
     grade=None → out-of-combat cast (multiplier 1.0). Once judge integration runs, the grade is supplied and used for adjustment.
     """
-    from .quest import check_quests  # deferred import — keeps engines/skill below engines/quest
-
     skill = find_skill(actor, skill_id, state)
     _validate_gate(actor, skill)
     targets = _resolve_targets(actor, skill, state, requested_targets)
@@ -181,32 +186,34 @@ def cast(
     multiplier = _grade_multiplier(grade)
 
     effects: list[dict] = []
-    killed_ids: list[str] = []
     for t in targets:
         per: dict = {"target": t.id, "kind": skill.type}
         if skill.type == "attack":
-            per["damage"] = _apply_attack(skill, mod, t, multiplier)
-            if not t.alive:
+            atk = _apply_attack(skill, mod, t, multiplier, state, dirty)
+            per["damage"] = atk["damage"]
+            if atk.get("dead"):
                 per["dead"] = True
-                killed_ids.append(t.id)
+            elif atk.get("dying"):
+                per["dying"] = True
+            elif atk.get("revived"):
+                per["revived"] = True
         elif skill.type == "heal":
             per["healed"] = _apply_heal(skill, mod, t, multiplier)
+            if dirty is not None:
+                dirty.add(("characters", t.id))
         elif skill.type in ("buff", "debuff"):
             buff = _apply_buff(skill, t)
             per["buff"] = {
                 "description": buff.description,
                 "duration": buff.duration,
             }
+            if dirty is not None:
+                dirty.add(("characters", t.id))
         effects.append(per)
-        if dirty is not None:
-            dirty.add(("characters", t.id))
 
     actor.mp -= skill.mp_cost
     if dirty is not None:
         dirty.add(("characters", actor.id))
-
-    for victim_id in killed_ids:
-        check_quests(state, "character_death", victim_id, dirty)
 
     return {
         "skill_id": skill.id,

@@ -10,7 +10,22 @@ from src.domain.entities import (
     WeaponEffect,
 )
 from src.domain.errors import InventoryInvalid
+from src.domain.state import GameState
 from src.engines import inventory as inv
+
+
+def _state(*characters: Character, items: dict | None = None) -> GameState:
+    s = GameState(
+        game_id="t",
+        profile="default",
+        player_id=characters[0].id if characters else "player_01",
+        world_time="0812-04-28T12:00:00",
+    )
+    for c in characters:
+        s.characters[c.id] = c
+    if items:
+        s.items.update(items)
+    return s
 
 
 def _player(**kw):
@@ -108,8 +123,8 @@ def _weapon():
 
 def test_use_heal_potion_increases_hp_and_consumes_item():
     p = _player(inventory_ids=["potion_heal"])
-    items = {"potion_heal": _heal_potion()}
-    res = inv.use(p, "potion_heal", None, items)
+    s = _state(p, items={"potion_heal": _heal_potion()})
+    res = inv.use(p, "potion_heal", None, s)
     assert p.hp == 18
     assert res["kind"] == "heal"
     assert res["amount"] == 8
@@ -120,8 +135,8 @@ def test_use_heal_potion_increases_hp_and_consumes_item():
 def test_use_heal_caps_at_max_hp():
     p = _player(inventory_ids=["potion_heal", "potion_heal"])
     p.hp = 18
-    items = {"potion_heal": _heal_potion()}
-    res = inv.use(p, "potion_heal", None, items)
+    s = _state(p, items={"potion_heal": _heal_potion()})
+    res = inv.use(p, "potion_heal", None, s)
     assert p.hp == 20
     assert res["amount"] == 2
 
@@ -131,16 +146,16 @@ def test_use_heal_caps_at_max_hp():
 
 def test_use_damage_requires_target():
     p = _player(inventory_ids=["bomb"])
-    items = {"bomb": _damage_potion()}
+    s = _state(p, items={"bomb": _damage_potion()})
     with pytest.raises(InventoryInvalid, match="target"):
-        inv.use(p, "bomb", None, items)
+        inv.use(p, "bomb", None, s)
 
 
 def test_use_damage_applies_to_target():
     p = _player(inventory_ids=["bomb"])
     enemy = _other(id="goblin_01", hp=15, max_hp=15)
-    items = {"bomb": _damage_potion()}
-    res = inv.use(p, "bomb", enemy, items)
+    s = _state(p, enemy, items={"bomb": _damage_potion()})
+    res = inv.use(p, "bomb", enemy, s)
     assert enemy.hp == 3
     assert res["amount"] == 12
 
@@ -148,11 +163,37 @@ def test_use_damage_applies_to_target():
 def test_use_damage_kills_target_when_hp_zeroes():
     p = _player(inventory_ids=["bomb"])
     enemy = _other(hp=5)
-    items = {"bomb": _damage_potion()}
-    res = inv.use(p, "bomb", enemy, items)
+    s = _state(p, enemy, items={"bomb": _damage_potion()})
+    res = inv.use(p, "bomb", enemy, s)
     assert enemy.hp == 0
     assert not enemy.alive
     assert res.get("dead") is True
+
+
+def test_use_damage_on_player_arms_death_save_instead_of_killing():
+    # Regression for F-eng-07: a damage item that drops the player to 0 HP
+    # should arm death_saves (or burn a revive_coin), not flip alive=False
+    # the way melee damage routed through apply_attack_to_defender does.
+    attacker = _other(id="enemy_01", inventory_ids=["bomb"])
+    victim = _player(hp=5, revive_coins=0)
+    s = _state(victim, attacker, items={"bomb": _damage_potion()})
+    res = inv.use(attacker, "bomb", victim, s)
+    assert victim.hp == 0
+    assert victim.alive  # still alive — in death-save state
+    assert victim.death_saves is not None
+    assert res.get("dying") is True
+
+
+def test_use_damage_on_player_consumes_revive_coin():
+    attacker = _other(id="enemy_01", inventory_ids=["bomb"])
+    victim = _player(hp=5, max_hp=20, revive_coins=1)
+    s = _state(victim, attacker, items={"bomb": _damage_potion()})
+    res = inv.use(attacker, "bomb", victim, s)
+    assert victim.alive
+    assert victim.revive_coins == 0
+    assert victim.death_saves is None
+    assert victim.hp > 0  # revived to revive_ratio of max_hp
+    assert res.get("revived") is True
 
 
 # --- mp_restore -----------------------------------------------------------
@@ -160,8 +201,8 @@ def test_use_damage_kills_target_when_hp_zeroes():
 
 def test_use_mp_potion_increases_mp():
     p = _player(inventory_ids=["mana_potion"])
-    items = {"mana_potion": _mp_potion()}
-    res = inv.use(p, "mana_potion", None, items)
+    s = _state(p, items={"mana_potion": _mp_potion()})
+    res = inv.use(p, "mana_potion", None, s)
     assert p.mp == 10
     assert res["kind"] == "mp_restore"
 
@@ -169,8 +210,8 @@ def test_use_mp_potion_increases_mp():
 def test_use_mp_caps_at_max_mp():
     p = _player(inventory_ids=["mana_potion"])
     p.mp = 14
-    items = {"mana_potion": _mp_potion()}
-    res = inv.use(p, "mana_potion", None, items)
+    s = _state(p, items={"mana_potion": _mp_potion()})
+    res = inv.use(p, "mana_potion", None, s)
     assert p.mp == 15
     assert res["amount"] == 1
 
@@ -180,8 +221,8 @@ def test_use_mp_caps_at_max_mp():
 
 def test_use_buff_scroll_appends_active_buff():
     p = _player(inventory_ids=["strength_scroll"])
-    items = {"strength_scroll": _buff_scroll()}
-    res = inv.use(p, "strength_scroll", None, items)
+    s = _state(p, items={"strength_scroll": _buff_scroll()})
+    res = inv.use(p, "strength_scroll", None, s)
     assert len(p.active_buffs) == 1
     b = p.active_buffs[0]
     assert b.description == "근력 일시 강화"
@@ -194,8 +235,8 @@ def test_use_buff_scroll_appends_active_buff():
 
 def test_use_quest_key_includes_on_use_in_result():
     p = _player(inventory_ids=["quest_key"])
-    items = {"quest_key": _key()}
-    res = inv.use(p, "quest_key", None, items)
+    s = _state(p, items={"quest_key": _key()})
+    res = inv.use(p, "quest_key", None, s)
     assert res["kind"] == "trigger"
     assert res["on_use"] == "open_ancient_door"
     assert res.get("consumed") is None  # consumable=False
@@ -207,37 +248,38 @@ def test_use_quest_key_includes_on_use_in_result():
 
 def test_use_rejects_weapon():
     p = _player(inventory_ids=["sword"])
-    items = {"sword": _weapon()}
+    s = _state(p, items={"sword": _weapon()})
     with pytest.raises(InventoryInvalid, match="not consumable"):
-        inv.use(p, "sword", None, items)
+        inv.use(p, "sword", None, s)
 
 
 def test_use_rejects_unknown_item():
     p = _player()
+    s = _state(p)
     with pytest.raises(InventoryInvalid):
-        inv.use(p, "missing", None, {})
+        inv.use(p, "missing", None, s)
 
 
 def test_use_rejects_item_not_in_inventory():
     p = _player()
-    items = {"potion_heal": _heal_potion()}
+    s = _state(p, items={"potion_heal": _heal_potion()})
     with pytest.raises(InventoryInvalid, match="not in inventory"):
-        inv.use(p, "potion_heal", None, items)
+        inv.use(p, "potion_heal", None, s)
 
 
 def test_use_dirty_set_includes_actor_and_target():
     p = _player(inventory_ids=["bomb"])
     enemy = _other()
-    items = {"bomb": _damage_potion()}
+    s = _state(p, enemy, items={"bomb": _damage_potion()})
     dirty: set[tuple[str, str]] = set()
-    inv.use(p, "bomb", enemy, items, dirty=dirty)
+    inv.use(p, "bomb", enemy, s, dirty=dirty)
     assert ("characters", "player_01") in dirty
     assert ("characters", "ally_01") in dirty
 
 
 def test_use_self_target_does_not_double_dirty_self():
     p = _player(inventory_ids=["potion_heal"])
-    items = {"potion_heal": _heal_potion()}
+    s = _state(p, items={"potion_heal": _heal_potion()})
     dirty: set[tuple[str, str]] = set()
-    inv.use(p, "potion_heal", None, items, dirty=dirty)
+    inv.use(p, "potion_heal", None, s, dirty=dirty)
     assert dirty == {("characters", "player_01")}

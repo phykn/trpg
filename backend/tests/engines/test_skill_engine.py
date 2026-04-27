@@ -297,6 +297,29 @@ def test_dirty_set_includes_actor_and_targets(fresh_state):
     assert ("characters", "goblin_01") in dirty
 
 
+def test_attack_on_player_arms_death_save_instead_of_killing(fresh_state):
+    # Regression for F-eng-07: skill damage that drops the player to 0 HP
+    # must arm death_saves the same way melee damage does, not flip alive
+    # straight to False.
+    skill = _attack_skill()
+    skill.power = 100
+    attacker = _enemy(eid="goblin_01")
+    victim = _player(skills=[skill], hp=10, max_hp=20, revive_coins=0)
+    victim.id = "player_01"
+    state = _state(fresh_state, player_01=victim, goblin_01=attacker)
+    fresh_state.player_id = "player_01"
+
+    # Have the goblin cast the same attack skill at the player.
+    attacker.learned_skill_ids = ["fireball"]
+    attacker.mp = 50
+    state.skills["fireball"] = skill
+    result = skill_eng.cast(attacker, "fireball", state, ["player_01"])
+    assert victim.hp == 0
+    assert victim.alive  # in death-save state
+    assert victim.death_saves is not None
+    assert result["effects"][0].get("dying") is True
+
+
 def test_tick_active_buffs_decrements_and_removes_expired(fresh_state):
     p = _player(skills=[_buff_skill()])
     state = _state(fresh_state, player_01=p)
