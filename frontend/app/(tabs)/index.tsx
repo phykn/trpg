@@ -1,6 +1,7 @@
 import React from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Keyboard, View } from 'react-native';
+import { PaperGrain } from '@/components/PaperGrain';
 import { Shell } from '@/components/Shell';
 
 export default function HomeScreen() {
@@ -23,6 +24,7 @@ export default function HomeScreen() {
     >
       <View className="flex-1" style={{ paddingBottom: kb > 0 ? kb + insets.bottom : 0 }}>
         <Shell />
+        <PaperGrain />
       </View>
     </SafeAreaView>
   );
