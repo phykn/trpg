@@ -61,7 +61,7 @@
 
 - `gm` — `narrative_delta` 를 모아 만든 이야기 본문 한 덩이 (SSE 이벤트로는 안 옴)
 - `player` — 플레이어가 친 입력을 그대로 되돌려 보냄 (서버 발행)
-- `act` — clarify 되묻기, 시스템 알림 등 (서버 발행)
+- `act` — 시스템 알림, 검증 실패 GM 메시지 등 (서버 발행)
 - `roll` — 주사위 결과 (서버 발행). `result: 'success' | 'fail'` 는 5단계 grade 를 3:2 로 줄임 — `critical_success | success | partial_success` → `success`, 나머지 → `fail` ([02-runtime.md](./02-runtime.md) §5.3)
 
 ### 내부 전용 (프론트로 안 나감)
