@@ -24,24 +24,6 @@ SummonCallable = Callable[[GameState, str], Awaitable[str | None]]
 """(state, location_id) → registered character_id or None. None falls back to full recovery."""
 
 
-def _advance_sleep(state: GameState) -> None:
-    dt = datetime.fromisoformat(state.world_time)
-    dt += timedelta(hours=RULES.time.sleep_hours)
-    state.world_time = dt.isoformat()
-
-
-def _full_recover(
-    state: GameState,
-    actor_id: str,
-    dirty: set[tuple[str, str]] | None,
-) -> None:
-    actor = state.characters[actor_id]
-    actor.hp = actor.max_hp
-    actor.mp = actor.max_mp
-    if dirty is not None:
-        dirty.add(("characters", actor_id))
-
-
 async def attempt_rest(
     state: GameState,
     actor_id: str,
@@ -59,10 +41,17 @@ async def attempt_rest(
     """
     rng_obj = rng or random
     actor = state.characters[actor_id]
+
+    def full_recover() -> None:
+        dt = datetime.fromisoformat(state.world_time)
+        state.world_time = (dt + timedelta(hours=RULES.time.sleep_hours)).isoformat()
+        actor.hp = actor.max_hp
+        actor.mp = actor.max_mp
+        if dirty is not None:
+            dirty.add(("characters", actor_id))
+
     if actor.location_id is None:
-        # Stateless character — just full recovery and a time jump.
-        _advance_sleep(state)
-        _full_recover(state, actor_id, dirty)
+        full_recover()
         return "full_recovery", []
 
     location = state.locations.get(actor.location_id)
@@ -92,6 +81,5 @@ async def attempt_rest(
             if summoned_id is not None:
                 return "encounter", [summoned_id]
 
-    _advance_sleep(state)
-    _full_recover(state, actor_id, dirty)
+    full_recover()
     return "full_recovery", []
