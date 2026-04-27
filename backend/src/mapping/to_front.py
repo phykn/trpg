@@ -132,8 +132,7 @@ def to_quest(state: GameState) -> dict | None:
 # --- Place -----------------------------------------------------------------
 
 
-def _korean_date(world_time: str) -> str:
-    dt = datetime.fromisoformat(world_time)
+def _korean_date(dt: datetime) -> str:
     return f"{dt.year}년 {dt.month}월 {dt.day}일"
 
 
@@ -162,7 +161,7 @@ def to_place(state: GameState) -> dict | None:
     ]
     return {
         "name": loc.name,
-        "date": _korean_date(state.world_time),
+        "date": _korean_date(dt),
         "hour": dt.hour,
         "period": _period(dt.hour),
         "weather": list(loc.weather),
