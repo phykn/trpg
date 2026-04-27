@@ -24,18 +24,10 @@ def _ensure_runtime_fields(quest: Quest) -> None:
     Preserves the existing prefix when triggers grew — a seed change that adds
     a new trigger mid-game must not wipe progress already accumulated against
     the old triggers."""
-    quest.triggers_met = _resize_keeping_prefix(quest.triggers_met, len(quest.triggers))
-    quest.fail_triggers_met = _resize_keeping_prefix(
-        quest.fail_triggers_met, len(quest.fail_triggers)
-    )
-
-
-def _resize_keeping_prefix(flags: list[bool], target_len: int) -> list[bool]:
-    if len(flags) == target_len:
-        return flags
-    if len(flags) > target_len:
-        return flags[:target_len]
-    return flags + [False] * (target_len - len(flags))
+    n = len(quest.triggers)
+    quest.triggers_met = quest.triggers_met[:n] + [False] * max(0, n - len(quest.triggers_met))
+    m = len(quest.fail_triggers)
+    quest.fail_triggers_met = quest.fail_triggers_met[:m] + [False] * max(0, m - len(quest.fail_triggers_met))
 
 
 def _apply_rewards(state: GameState, quest: Quest, dirty: DirtySet) -> None:

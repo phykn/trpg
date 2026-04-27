@@ -101,14 +101,6 @@ def auto_equip_slot(actor: Character, item: Item) -> Slot:
     raise InventoryInvalid(f"item {item.id} has no equippable effect")
 
 
-def equip_auto(actor: Character, item_id: str, items: dict[str, Item]) -> Slot:
-    if item_id not in items:
-        raise InventoryInvalid(f"unknown item: {item_id}")
-    slot = auto_equip_slot(actor, items[item_id])
-    equip(actor, item_id, slot, items)
-    return slot
-
-
 def unequip(actor: Character, slot: Slot, items: dict[str, Item]) -> None:
     """Empty a slot. Two-handed weapons clear both hand slots."""
     if slot not in EQUIPMENT_SLOTS:

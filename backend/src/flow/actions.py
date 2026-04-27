@@ -158,7 +158,10 @@ async def emit_equip(
     item = state.items.get(item_id)
     item_name = item.name if item else item_id
     try:
-        slot = inventory_engine.equip_auto(actor, item_id, state.items)
+        if item is None:
+            raise InventoryInvalid(f"unknown item: {item_id}")
+        slot = inventory_engine.auto_equip_slot(actor, item)
+        inventory_engine.equip(actor, item_id, slot, state.items)
     except InventoryInvalid as e:
         yield push_gm(state, dirty, f"{actor.name} — 장착 실패 ({humanize_engine_error(e)}).")
         return

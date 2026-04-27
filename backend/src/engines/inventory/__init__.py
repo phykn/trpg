@@ -4,7 +4,6 @@ from .equipment import (
     Slot,
     auto_equip_slot,
     equip,
-    equip_auto,
     unequip,
     unequip_by_item,
 )
@@ -20,7 +19,6 @@ __all__ = [
     "check_can_carry",
     "current_weight",
     "equip",
-    "equip_auto",
     "sell",
     "sell_price",
     "unequip",

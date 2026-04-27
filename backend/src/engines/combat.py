@@ -254,7 +254,16 @@ def pick_target(
     behavior = actor.combat_behavior
     if behavior is None or behavior.attack_priority is None:
         # Weighted-sum mode. nearest = first candidate, random = anything else.
-        return _weighted_pick(pool, behavior, r)
+        if behavior is None or len(pool) == 1:
+            return pool[0]
+        nw = max(0, behavior.nearest_weight)
+        rw = max(0, behavior.random_weight)
+        total = nw + rw
+        if total == 0:
+            return pool[0]
+        if r.randint(1, total) <= nw:
+            return pool[0]
+        return r.choice(pool)
 
     mode = behavior.attack_priority
     if mode == "nearest":
@@ -277,24 +286,6 @@ def pick_target(
                 return best[1]
         return pool[0]
     return pool[0]
-
-
-def _weighted_pick(
-    pool: list[Character],
-    behavior: CombatBehavior | None,
-    rng: random.Random,
-) -> Character:
-    if behavior is None or len(pool) == 1:
-        return pool[0]
-    nw = max(0, behavior.nearest_weight)
-    rw = max(0, behavior.random_weight)
-    total = nw + rw
-    if total == 0:
-        return pool[0]
-    pick = rng.randint(1, total)
-    if pick <= nw:
-        return pool[0]
-    return rng.choice(pool)
 
 
 # --- flee ---------------------------------------------------------------------
