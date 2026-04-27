@@ -36,6 +36,7 @@ function mergeEntry(log: LogEntry[], entry: LogEntry): LogEntry[] {
 }
 
 export function useGame() {
+  // --- state ---
   const [status, setStatus] = React.useState<GameStatus>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
@@ -52,6 +53,7 @@ export function useGame() {
   const [streamingText, setStreamingText] = React.useState('');
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
 
+  // --- abort controllers (cancelled together on unmount) ---
   const aborts = React.useRef<Set<AbortController>>(new Set());
   React.useEffect(() => {
     const pendingAborts = aborts.current;
@@ -61,6 +63,7 @@ export function useGame() {
     };
   }, []);
 
+  // --- state setters fed by SSE events ---
   const applyState = React.useCallback((s: FrontState) => {
     setHero(s.hero);
     setSubject(s.subject);
@@ -87,6 +90,7 @@ export function useGame() {
     [applyState],
   );
 
+  // --- stream lifecycle ---
   const runStream = React.useCallback(
     async (call: (signal: AbortSignal) => Promise<void>) => {
       if (streaming) return;
@@ -109,6 +113,7 @@ export function useGame() {
     [streaming],
   );
 
+  // --- session lifecycle (load / start) ---
   const refresh = React.useCallback(async () => {
     setStatus('loading');
     setErrorMessage(null);
@@ -152,6 +157,7 @@ export function useGame() {
     [applyState, handleEvent, runStream],
   );
 
+  // --- input handlers ---
   const onSend = React.useCallback(
     (text: string) => {
       const trimmed = text.trim();
@@ -177,6 +183,7 @@ export function useGame() {
     setStatus('no-game');
   }, []);
 
+  // --- derived ---
   const displayLog = React.useMemo<LogEntry[]>(() => {
     if (!streamingText) return log;
     return [...log, { id: STREAMING_GM_ID, kind: 'gm', text: streamingText }];
