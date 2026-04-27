@@ -289,55 +289,29 @@ async def _handle_flee(
         yield ev
 
 
-async def _handle_use_in_combat(
+async def _handle_passive_in_combat(
     state: GameState,
     saves_dir: str,
     dirty: Dirty,
     rng: random.Random | None,
     to_front_fn: ToFrontFn | None,
-    result: UseAction,
+    *,
+    emit: AsyncIterator[dict],
+    action_label: str,
+    item_id: str,
 ) -> AsyncIterator[dict]:
-    async for ev in emit_use(
-        state, state.player_id, result.item_id, result.target_id, dirty
-    ):
+    """Shared shape for non-attack player actions in combat (use, equip,
+    unequip). The engine action runs, a combat_turn event signals the
+    action consumed the player turn, NPC phase follows."""
+    async for ev in emit:
         yield ev
-    yield {
-        "type": "combat_turn",
-        "data": {
-            "actor": state.player_id,
-            "action": "use",
-            "grade": "success",
-            "item_id": result.item_id,
-        },
-    }
-    combat_engine.advance_turn(state)
-    async for ev in _flush_player_turn(state, saves_dir, dirty, rng, to_front_fn):
-        yield ev
-
-
-async def _handle_equip_in_combat(
-    state: GameState,
-    saves_dir: str,
-    dirty: Dirty,
-    rng: random.Random | None,
-    to_front_fn: ToFrontFn | None,
-    result: EquipAction | UnequipAction,
-) -> AsyncIterator[dict]:
-    if isinstance(result, EquipAction):
-        async for ev in emit_equip(state, state.player_id, result.item_id, dirty):
-            yield ev
-        action_label = "equip"
-    else:
-        async for ev in emit_unequip(state, state.player_id, result.item_id, dirty):
-            yield ev
-        action_label = "unequip"
     yield {
         "type": "combat_turn",
         "data": {
             "actor": state.player_id,
             "action": action_label,
             "grade": "success",
-            "item_id": result.item_id,
+            "item_id": item_id,
         },
     }
     combat_engine.advance_turn(state)
@@ -411,15 +385,25 @@ async def run_combat_player_turn(
         return
 
     if isinstance(result, UseAction):
-        async for ev in _handle_use_in_combat(
-            state, saves_dir, dirty, rng, to_front_fn, result
+        async for ev in _handle_passive_in_combat(
+            state, saves_dir, dirty, rng, to_front_fn,
+            emit=emit_use(state, state.player_id, result.item_id, result.target_id, dirty),
+            action_label="use",
+            item_id=result.item_id,
         ):
             yield ev
         return
 
     if isinstance(result, (EquipAction, UnequipAction)):
-        async for ev in _handle_equip_in_combat(
-            state, saves_dir, dirty, rng, to_front_fn, result
+        if isinstance(result, EquipAction):
+            emit = emit_equip(state, state.player_id, result.item_id, dirty)
+            label = "equip"
+        else:
+            emit = emit_unequip(state, state.player_id, result.item_id, dirty)
+            label = "unequip"
+        async for ev in _handle_passive_in_combat(
+            state, saves_dir, dirty, rng, to_front_fn,
+            emit=emit, action_label=label, item_id=result.item_id,
         ):
             yield ev
         return

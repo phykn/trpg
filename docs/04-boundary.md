@@ -89,43 +89,42 @@
 
 ## 2. 외부 API
 
+모든 게임 행동은 `POST /turn` 의 자연어 입력 한 통로에 모인다 — judge 가 입력을 보고 액션 종류 (장비·거래·레벨업·스킬·아이템 사용 등) 를 분류한다. 옛 메타 액션 REST 엔드포인트 (`/level-up`, `/learn-skill`, `/equip`, `/unequip`, `/buy`, `/sell`, `/cast`, `/use`) 는 폐기. 결정 이유는 [01-overview.md](./01-overview.md) §3.16.
+
 | 메서드 | 경로 | 바디 | 응답 |
 |---|---|---|---|
 | GET  | `/profiles` | — | `[{id, name, description, races: [{id, name, description}]}]` |
-| GET  | `/session/current` | — | `FrontState` (없으면 HTTP 404 — 프론트는 새게임 화면으로 분기) |
+| GET  | `/session/current` | — | `{game_id, state: FrontState}` (없으면 HTTP 404 — 프론트는 새게임 화면으로 분기) |
 | POST | `/session/init` | `{profile: string, player: {name: string, race_id: string, appearance: string}}` | `{game_id, state: FrontState}` |
-| GET  | `/session/{id}/state` | — | `FrontState` |
+| GET  | `/session/{id}/state` | — | `{game_id, state: FrontState}` |
 | POST | `/session/{id}/turn` | `{player_input: string}` | `text/event-stream` (SSE — 서버가 한 연결을 열어둔 채 이벤트를 계속 흘려주는 방식) |
-| POST | `/session/{id}/roll` | — (서버가 d20 굴림) | `text/event-stream` |
-| POST | `/session/{id}/level-up` | `{stat_up: "STR\|DEX\|CON\|INT\|WIS\|CHA", stat_down: "..."}` | `{game_id, state, skill_candidates: Skill[]}` — 페어 트레이드 + HP/MP 재계산 후 LLM 이 후보 3개 산출 (실패 시 빈 배열). 검증 실패 시 422 |
-| POST | `/session/{id}/learn-skill` | `{index: int \| null}` (null/범위 밖 = 거부) | `{game_id, state, learned_skill_id: string \| null}` |
-| POST | `/session/{id}/equip` | `{item_id, slot}` | `{game_id, state}` (슬롯·요구치 실패 시 422) |
-| POST | `/session/{id}/unequip` | `{slot}` | `{game_id, state}` |
-| POST | `/session/{id}/buy` | `{npc_id, item_id}` | `{game_id, state, price}` (affinity·골드·무게 실패 시 422) |
-| POST | `/session/{id}/sell` | `{npc_id, item_id}` | `{game_id, state, price}` (장착 중·affinity 실패 시 422) |
-| POST | `/session/{id}/cast` | `{skill_id, targets: string[]}` | `{game_id, state, result: {effects[], multiplier, mp_cost}}` (레벨·MP·range 실패 시 422) |
-| POST | `/session/{id}/use` | `{item_id, target_id?}` | `{game_id, state, result: {kind, amount?, on_use?, consumed?}}` (소비 아이템 아닐 시 422) |
+| POST | `/session/{id}/roll` | — (서버가 d20 굴림) | `text/event-stream`. `state.pending_check.kind` 에 따라 일반 stat / 시네마틱 전투 (combat_roll) / death save 분기 ([02-runtime.md](./02-runtime.md) §2.2) |
+| POST | `/session/{id}/intro` | — | `text/event-stream`. 게임 시작 직후 첫 GM narration 한 번. judge 안 부르고 `flow/intro.py` 가 narrate 만 호출 |
 
 `FrontState = {hero, subject, quest, place, combat, log, pendingCheck}`. SSE `state` 이벤트 ([02-runtime.md](./02-runtime.md) §2.4) 는 같은 7 슬롯 묶음 — `log` 는 누적되는 흐름이라 `log_entry` 이벤트로도 따로 흐른다 (state 안에는 영속본 꼬리만). **`FrontState.log` 영속본 cap 은 `rules.log.display_turns` (기본 20)** — `GET /session/{id}/state` 와 `GET /session/current` 모두 최근 20 턴치만 반환 ([02-runtime.md](./02-runtime.md) §6.2 디스플레이 로그 영속화). `pendingCheck` 는 `state.pending_check` 가 활성일 때만 채워짐 — 앱이 굴림 도중에 닫혀도 다음 GET 으로 UI 가 복원된다.
 
-`combat` 슬롯 (P2) — 평시엔 `null`, 전투 활성 시 `{round, turnLabel, enemies: [{name, hp, hpMax, alive}]}`. 백엔드 `state.combat_state` 의 사영 — `turn_order`/`enemy_ids` 같은 내부 id 는 프론트로 안 나가고, `turnLabel` 은 백엔드가 미리 한국어로 합성한다 (`"내 차례"` 또는 `"<actor_name> 차례"`). 
+`combat` 슬롯 — 평시엔 `null`, 전투 활성 시 `{round, turnLabel, enemies: [{name, hp, hpMax, alive}]}`. 백엔드 `state.combat_state` 의 사영 — `turn_order`/`enemy_ids` 같은 내부 id 는 프론트로 안 나가고, `turnLabel` 은 백엔드가 미리 한국어로 합성한다 (`"내 차례"` 또는 `"<actor_name> 차례"`). 시네마틱 전투는 한 번의 `/roll` 안에서 끝나기 때문에 `combat` 슬롯이 활성으로 보이는 시간은 `pending_check.kind="combat_roll"` 이 떠 있는 동안이 짧게 — UI 는 보통 주사위 버튼 화면에서 한 번 보고, 시네마틱이 끝나면 `null` 로 비워진다.
 
-세션 흐름 — 앱 시작 시 `GET /session/current` 시도 → 200 이면 진행 중 게임 복원, 404 면 `GET /profiles` 호출 → 프론트가 시나리오·종족 카드를 보여주고 사용자가 캐릭터 생성 → `POST /session/init` 호출 → 첫 턴. 게임 목록·이어하기 화면은 P1 에 없음 (한 명·한 게임 흐름).
+세션 흐름 — 앱 시작 시 `GET /session/current` 시도 → 200 이면 진행 중 게임 복원, 404 면 `GET /profiles` 호출 → 프론트가 시나리오·종족 카드를 보여주고 사용자가 캐릭터 생성 → `POST /session/init` 호출 → `POST /session/{id}/intro` 로 시작 GM narration → 이후 `/turn` 으로 진행. 게임 목록·이어하기 화면은 P1 에 없음 (한 명·한 게임 흐름).
 
-**인증** — 위 6 개 endpoint 모두 HTTP Basic Auth 로 보호. `GET /profiles` 도 예외 아님 — 같은 LAN 안에서도 시나리오 메타 노출은 인증 뒤. `BASIC_AUTH_USER` / `BASIC_AUTH_PASS` env 누락 시 fail-fast ([01-overview.md](./01-overview.md) 환경 변수 부록).
+**인증** — `/health` 를 제외한 모든 endpoint 가 HTTP Basic Auth 로 보호. `GET /profiles` 도 예외 아님 — 같은 LAN 안에서도 시나리오 메타 노출은 인증 뒤. `BASIC_AUTH_USER` / `BASIC_AUTH_PASS` env 누락 시 fail-fast ([01-overview.md](./01-overview.md) 환경 변수 부록).
 
-전투는 P2 부터 동작 — judge 가 `action="combat"` 반환하면 엔진이 `combat_state` 를 띄우고 라운드 루프 진입 ([03-features.md](./03-features.md) §1). 휴식은 P3 §2.4 부터 — 자연어가 `action="rest"` 로 분류되면 `/turn` 안에서 회복·인카운터를 처리하므로 별도 endpoint 없음. 레벨업은 P3 §2.3 부터 — `POST /session/{id}/level-up { stat_up, stat_down }` 명시 호출 (자동 트리거 안 함). 장비·거래는 P3 §2.5 부터 — `/equip` `/unequip` `/buy` `/sell` 명시 호출. 스킬 cast 는 P3 §2.6 (S1) 부터 — `/cast { skill_id, targets }` 명시 호출. 자연어 의미 매칭과 LLM 학습 후보(§2.3 4단계)는 후속. 아이템 사용은 P3 §2.7 부터 — `/use { item_id, target_id? }` 명시 호출. 자연어 통합·UI 는 후속.
+**액션 처리 위치** — judge 가 분류한 액션은 `flow/turn.py` 의 액션 분기에서 그 자리에서 엔진을 호출. 옛 명시적 endpoint 가 던지던 422 (`LevelUpInvalid` / `InventoryInvalid` / `SkillInvalid`) 는 이제 HTTP 응답이 아니라 인-게임 로그로 흡수된다 — 검증 실패 시 `format.py` 가 영문 에러 메시지를 한국어 한 줄로 변환해 GM `log_entry` 로 흘림 ("그 검은 손에 들 수 없는 무게다" 같은 식).
+
+전투는 [03-features.md](./03-features.md) §1 의 한 방 시네마틱. 휴식은 P3 §2.4. 레벨업은 P3 §2.3. 장비·거래는 P3 §2.5. 스킬 cast 는 P3 §2.6. 아이템 사용은 P3 §2.7. 모두 자연어 입력 → judge 분류 경로.
 
 ## 3. 에러 매핑
 
 | 상황 | 응답 |
 |---|---|
 | `game_id` 없음 | HTTP 404 `{detail: "game not found"}` (FastAPI 기본 형식) |
-| judge 가 `action="combat"` 반환 | P2: 엔진이 `combat_state` 부팅 후 SSE `combat_start` → 라운드 진행 |
+| `/session/init` 의 `profile` / `race_id` 검증 실패 | HTTP 422 (`ProfileNotFound` / `RaceNotFound` / `ProfileMalformed`) |
+| judge 가 `action="combat"` / `summon_combat` / `flee` 반환 | 엔진이 `PendingCheck(kind="combat_roll")` 무장 → SSE `combat_start` + `pending_check` → 다음 `/roll` 이 시네마틱 전투 해결 ([03-features.md](./03-features.md) §1) |
 | `/turn` 진입 시 pending_check 가 이미 활성 | SSE `error: PendingCheckActive` |
 | `/roll` 진입 시 pending_check 가 비어 있음 | SSE `error: PendingCheckExpected` |
 | judge LLM 출력이 JSON 파싱 실패 | 5회까지 자기 교정 재시도 (직전 응답+에러를 messages 에 append) → 마지막에도 실패면 SSE `error: JudgeMalformed` ([02-runtime.md](./02-runtime.md) §2.3) |
 | judge 의 target 검증 (semantic) 실패 | 5회까지 자기 교정 재시도 → 마지막에도 실패면 현재 location 으로 fallback (에러 아님). JSON 실패와 같은 retry 카운터 공유 |
+| 액션 검증 실패 (`LevelUpInvalid` / `InventoryInvalid` / `SkillInvalid`) | HTTP 응답 아님 — `flow/actions.py` 가 catch 해서 `format.py` 가 한국어 한 줄로 변환 후 GM `log_entry` 로 발행. 턴 자체는 정상 종료 |
 | narrate JSON 파싱 실패 | 본문은 보존, `state_changes=[]`, `memorable=False` 로 강등 |
 | narrate `state_change` 가 스키마 위반 | 그 항목만 버리고 `rejected[]` 에 기록, 나머지는 적용 |
 | LLM 자체가 연결 안 됨 | SSE `error: LLMUnavailable` 후 종료 |
