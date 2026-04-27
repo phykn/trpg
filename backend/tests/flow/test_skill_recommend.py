@@ -114,6 +114,22 @@ def test_build_skill_dedupes_within_batch():
     assert s1.id != s2.id
 
 
+def test_build_skill_distinct_korean_names_get_distinct_base_ids():
+    # Regression: an earlier _slugify dropped all non-ASCII chars and fell back
+    # to the literal "skill", so every Korean candidate produced base="skill".
+    # Distinct names must yield distinct base ids — the suffix counter is for
+    # actual collisions, not a substitute for missing slugification.
+    c1 = _candidate(name="화염구")
+    c2 = _candidate(name="얼음창")
+    existing: set[str] = set()
+    s1 = skill_eng.build_skill_from_candidate(c1, 3, existing)
+    s2 = skill_eng.build_skill_from_candidate(c2, 3, existing)
+    # Strip the level suffix to compare the name-derived part only.
+    base1 = s1.id.rsplit("_l", 1)[0]
+    base2 = s2.id.rsplit("_l", 1)[0]
+    assert base1 != base2
+
+
 def test_existing_skill_ids_collects_from_all_chars(fresh_state):
     fresh_state.skills["r1"] = Skill(
         id="r1", name="x", type="attack", target="single", primary_stat="STR"

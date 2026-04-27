@@ -9,6 +9,7 @@ Exact coefficients are a tuning knob — see `rules.skill.grade_multipliers`.
 """
 from __future__ import annotations
 
+import hashlib
 import random
 import re
 from typing import Literal
@@ -245,10 +246,16 @@ _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
 
 def _slugify(name: str) -> str:
-    """Non-ASCII names cannot be meaningfully transliterated, so fall back to 'skill'."""
+    """Stable, name-derived id. ASCII names get the obvious slug. Non-ASCII
+    names (Korean is the dominant case in this project) collapse to a single
+    base under the ASCII filter, so hash the raw input to keep distinct names
+    distinct on disk."""
     ascii_only = "".join(ch for ch in name if ord(ch) < 128)
     base = _SLUG_RE.sub("_", ascii_only.lower()).strip("_")
-    return base or "skill"
+    if base:
+        return base
+    digest = hashlib.sha1(name.encode("utf-8")).hexdigest()[:8]
+    return f"skill_{digest}"
 
 
 def _unique_skill_id(base: str, existing_ids: set[str]) -> str:
