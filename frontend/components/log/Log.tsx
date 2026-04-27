@@ -82,22 +82,21 @@ function TypingDot({ delay }: { delay: number }) {
 
 function TypingDots() {
   return (
-    <View style={{ paddingTop: spacing[5] }}>
+    <View
+      style={{
+        borderLeftWidth: 2,
+        borderLeftColor: colors.accent.fg,
+        paddingLeft: spacing[3],
+        paddingVertical: spacing[2],
+      }}
+    >
       <View
-        style={{
-          borderLeftWidth: 2,
-          borderLeftColor: colors.accent.fg,
-          paddingLeft: spacing[3],
-        }}
+        className="flex-row items-center"
+        style={{ gap: spacing[1.5], height: 12 }}
       >
-        <View
-          className="flex-row items-center"
-          style={{ gap: spacing[1.5], height: 18 }}
-        >
-          <TypingDot delay={0} />
-          <TypingDot delay={120} />
-          <TypingDot delay={240} />
-        </View>
+        <TypingDot delay={0} />
+        <TypingDot delay={120} />
+        <TypingDot delay={240} />
       </View>
     </View>
   );
@@ -112,8 +111,8 @@ function SuggestionChips({
 }) {
   return (
     <View
-      className="flex-row flex-wrap"
-      style={{ paddingTop: spacing[3], gap: spacing[2] }}
+      className="items-start"
+      style={{ paddingTop: spacing[3], gap: spacing[1.5] }}
     >
       {items.map((text, i) => (
         <Pressable
