@@ -32,10 +32,8 @@ from pathlib import Path
 from typing import Any
 
 from ..domain.entities import (
-    ArmorEffect,
     Chapter,
     Character,
-    ConsumableEffect,
     Item,
     Location,
     Quest,
@@ -43,6 +41,9 @@ from ..domain.entities import (
     Skill,
     Stats,
     WeaponEffect,
+    ArmorEffect,
+    ConsumableEffect,
+    required_slot_kind,
     slot_kind,
 )
 from ..rules import RULES
@@ -60,6 +61,12 @@ class InvariantViolation(ValueError):
 
 _DICE_RE = re.compile(r"^\s*\d+d\d+\s*([+-]\s*\d+)?\s*$")
 _STAT_KEYS = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
+
+_SLOT_MISMATCH_HINT = {
+    "hand": "weapon, must be in leftHand or rightHand",
+    "armor": "armor, must be in head/top/bottom/feet",
+    "acc": "decorative (no effect), must be in acc1/acc2",
+}
 
 
 # --- Scenario container ----------------------------------------------------
@@ -307,34 +314,16 @@ def _check_inventory(c: Character, items: dict[str, Item]) -> list[str]:
             _v(out, where, f"equipment.{slot}={item_id!r} not in items pool")
             continue
         item = items[item_id]
-        eff = item.effects
-        kind = slot_kind(slot)
-        if isinstance(eff, WeaponEffect):
-            if kind != "hand":
-                _v(
-                    out,
-                    where,
-                    f"equipment.{slot}={item_id!r} is weapon, must be in leftHand or rightHand",
-                )
-        elif isinstance(eff, ArmorEffect):
-            if kind != "armor":
-                _v(
-                    out,
-                    where,
-                    f"equipment.{slot}={item_id!r} is armor, must be in head/top/bottom/feet",
-                )
-        elif isinstance(eff, ConsumableEffect):
+        required = required_slot_kind(item)
+        actual = slot_kind(slot)
+        if required == "none":
             _v(
                 out,
                 where,
                 f"equipment.{slot}={item_id!r} is consumable, cannot be equipped",
             )
-        elif eff is None and kind != "acc":
-            _v(
-                out,
-                where,
-                f"equipment.{slot}={item_id!r} is decorative (no effect), must be in acc1/acc2",
-            )
+        elif required != actual:
+            _v(out, where, f"equipment.{slot}={item_id!r} is {_SLOT_MISMATCH_HINT[required]}")
 
         req = item.required
         if req is not None:
@@ -648,27 +637,16 @@ def _check_player_template(s: Scenario) -> list[str]:
         if item_id not in s.items:
             _v(out, where, f"equipment.{slot}={item_id!r} not in items")
             continue
-        eff = s.items[item_id].effects
-        kind = slot_kind(slot)
-        if kind is None:
+        item = s.items[item_id]
+        actual = slot_kind(slot)
+        if actual is None:
             _v(out, where, f"equipment.{slot}: unknown slot")
             continue
-        if isinstance(eff, WeaponEffect) and kind != "hand":
-            _v(
-                out,
-                where,
-                f"equipment.{slot}={item_id!r} is weapon, must be in leftHand/rightHand",
-            )
-        elif isinstance(eff, ArmorEffect) and kind != "armor":
-            _v(
-                out,
-                where,
-                f"equipment.{slot}={item_id!r} is armor, must be in head/top/bottom/feet",
-            )
-        elif isinstance(eff, ConsumableEffect):
+        required = required_slot_kind(item)
+        if required == "none":
             _v(out, where, f"equipment.{slot}={item_id!r} is consumable, cannot be equipped")
-        elif eff is None and kind != "acc":
-            _v(out, where, f"equipment.{slot}={item_id!r} is decorative, must be in acc1/acc2")
+        elif required != actual:
+            _v(out, where, f"equipment.{slot}={item_id!r} is {_SLOT_MISMATCH_HINT[required]}")
         if item_id not in pt_inv:
             _v(out, where, f"equipment.{slot}={item_id!r} not in inventory_ids")
     return out

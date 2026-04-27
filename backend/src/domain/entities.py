@@ -149,6 +149,18 @@ class Item(BaseModel):
     on_use: str | None = None
 
 
+def required_slot_kind(item: Item) -> Literal["hand", "armor", "acc", "none"]:
+    """Slot kind this item must occupy. 'none' = consumable, never equippable."""
+    eff = item.effects
+    if isinstance(eff, WeaponEffect):
+        return "hand"
+    if isinstance(eff, ArmorEffect):
+        return "armor"
+    if isinstance(eff, ConsumableEffect):
+        return "none"
+    return "acc"
+
+
 # --- race / character ------------------------------------------------------
 
 

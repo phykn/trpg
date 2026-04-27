@@ -6,11 +6,10 @@ from ...domain.entities import (
     ARMOR_SLOTS,
     EQUIPMENT_SLOTS,
     HAND_SLOTS,
-    ArmorEffect,
     Character,
-    ConsumableEffect,
     Item,
     WeaponEffect,
+    required_slot_kind,
     slot_kind,
 )
 from ...domain.errors import InventoryInvalid
@@ -32,21 +31,16 @@ def _required_stats_met(actor: Character, item: Item) -> bool:
 def _validate_slot_for_item(slot: Slot, item: Item) -> None:
     if slot not in EQUIPMENT_SLOTS:
         raise InventoryInvalid(f"unknown slot: {slot}")
-    eff = item.effects
-    kind = slot_kind(slot)
-    if isinstance(eff, WeaponEffect):
-        if kind != "hand":
-            raise InventoryInvalid(f"weapon must go in leftHand or rightHand, got {slot}")
-    elif isinstance(eff, ArmorEffect):
-        if kind != "armor":
-            raise InventoryInvalid(f"armor must go in head/top/bottom/feet, got {slot}")
-    elif isinstance(eff, ConsumableEffect):
+    required = required_slot_kind(item)
+    if required == "none":
         raise InventoryInvalid("consumable items can't be equipped")
-    elif kind == "acc":
-        # Decorative items (effects=None) only fit in accessory slots.
-        pass
-    else:
-        raise InventoryInvalid(f"item {item.id} has no equippable effect for slot {slot}")
+    actual = slot_kind(slot)
+    if required != actual:
+        if required == "hand":
+            raise InventoryInvalid(f"weapon must go in leftHand or rightHand, got {slot}")
+        if required == "armor":
+            raise InventoryInvalid(f"armor must go in head/top/bottom/feet, got {slot}")
+        raise InventoryInvalid(f"decorative item must go in acc1/acc2, got {slot}")
 
 
 def equip(actor: Character, item_id: str, slot: Slot, items: dict[str, Item]) -> None:
@@ -88,19 +82,19 @@ def auto_equip_slot(actor: Character, item: Item) -> Slot:
     armor: first empty head/top/bottom/feet (seed item decides which it really fits).
     accessory (effects=None): acc1 then acc2.
     """
-    eff = item.effects
-    if isinstance(eff, WeaponEffect):
+    required = required_slot_kind(item)
+    if required == "hand":
         if actor.equipment.leftHand is None:
             return "leftHand"
         if actor.equipment.rightHand is None:
             return "rightHand"
         return "rightHand" if actor.dominant_hand == "right" else "leftHand"
-    if isinstance(eff, ArmorEffect):
+    if required == "armor":
         for slot in ARMOR_SLOTS:
             if getattr(actor.equipment, slot) is None:
                 return slot  # type: ignore[return-value]
         return "head"
-    if eff is None:
+    if required == "acc":
         if actor.equipment.acc1 is None:
             return "acc1"
         return "acc2"
