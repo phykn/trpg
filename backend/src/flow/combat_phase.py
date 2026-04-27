@@ -39,6 +39,37 @@ from .subject import refresh_active_subject
 # --- NPC phase -------------------------------------------------------------
 
 
+async def _handle_surprise_skip(
+    state: GameState, dirty: Dirty, actor_id: str
+) -> AsyncIterator[dict]:
+    """First-round surprise — yield the skip GM line + combat_turn event,
+    advance the turn. Caller decides whether the skip applies."""
+    actor_name = (
+        state.characters[actor_id].name
+        if actor_id in state.characters
+        else actor_id
+    )
+    yield push_gm(
+        state, dirty,
+        f"{actor_name}은(는) 기습당해 첫 라운드 행동하지 못한다.",
+    )
+    yield {
+        "type": "combat_turn",
+        "data": {"actor": actor_id, "action": "skip", "grade": "success"},
+    }
+    combat_engine.advance_turn(state)
+
+
+def _is_surprise_skip(state: GameState, actor_id: str) -> bool:
+    cs = state.combat_state
+    if cs is None or cs.round != 1 or cs.surprise is None:
+        return False
+    is_player = actor_id == state.player_id
+    return (cs.surprise == "enemy" and is_player) or (
+        cs.surprise == "player" and not is_player
+    )
+
+
 async def run_combat_npc_phase(
     state: GameState,
     dirty: Dirty,
@@ -60,29 +91,10 @@ async def run_combat_npc_phase(
             combat_engine.end_combat(state)
             return
 
-        # First-round surprise — surprised side skips, even the player.
-        cs = state.combat_state
-        if cs is not None and cs.round == 1 and cs.surprise is not None:
-            is_player = actor_id == state.player_id
-            skip = (cs.surprise == "enemy" and is_player) or (
-                cs.surprise == "player" and not is_player
-            )
-            if skip:
-                actor_name = (
-                    state.characters[actor_id].name
-                    if actor_id in state.characters
-                    else actor_id
-                )
-                yield push_gm(
-                    state, dirty,
-                    f"{actor_name}은(는) 기습당해 첫 라운드 행동하지 못한다.",
-                )
-                yield {
-                    "type": "combat_turn",
-                    "data": {"actor": actor_id, "action": "skip", "grade": "success"},
-                }
-                combat_engine.advance_turn(state)
-                continue
+        if _is_surprise_skip(state, actor_id):
+            async for ev in _handle_surprise_skip(state, dirty, actor_id):
+                yield ev
+            continue
 
         if actor_id == state.player_id:
             return
