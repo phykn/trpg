@@ -1,4 +1,4 @@
-from .runner import PROMPT_PATH, skill_recommend
+from .runner import skill_recommend
 from .schema import (
     SkillCandidate,
     SkillRecommendInput,
@@ -6,7 +6,6 @@ from .schema import (
 )
 
 __all__ = [
-    "PROMPT_PATH",
     "SkillCandidate",
     "SkillRecommendInput",
     "SkillRecommendOutput",

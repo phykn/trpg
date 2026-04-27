@@ -1,5 +1,5 @@
 from .parser import SEPARATOR, NarrativeDelta, NarrativeFinal, split_stream
-from .runner import PROMPT_PATH, stream_narrate
+from .runner import stream_narrate
 from .schema import NarrateInput, NarrateOutput
 
 __all__ = [
@@ -7,7 +7,6 @@ __all__ = [
     "NarrateOutput",
     "NarrativeDelta",
     "NarrativeFinal",
-    "PROMPT_PATH",
     "SEPARATOR",
     "split_stream",
     "stream_narrate",

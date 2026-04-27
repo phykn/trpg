@@ -1,4 +1,4 @@
-from .runner import PROMPT_PATH, encounter_summon
+from .runner import encounter_summon
 from .schema import (
     EncounterStats,
     EncounterSummonInput,
@@ -6,7 +6,6 @@ from .schema import (
 )
 
 __all__ = [
-    "PROMPT_PATH",
     "EncounterStats",
     "EncounterSummonInput",
     "EncounterSummonOutput",
