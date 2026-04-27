@@ -30,7 +30,7 @@ from ..rules.dc import compute_grade, sigmoid_required_roll
 # --- Common ------------------------------------------------------------------
 
 
-_DICE_RE = re.compile(r"^\s*(\d+)d(\d+)\s*([+-]\s*\d+)?\s*$")
+DICE_RE = re.compile(r"^\s*(\d+)d(\d+)\s*([+-]\s*\d+)?\s*$")
 
 
 def stat_modifier(stat_value: int) -> int:
@@ -40,7 +40,7 @@ def stat_modifier(stat_value: int) -> int:
 
 def _parse_dice(spec: str) -> tuple[int, int, int]:
     """`1d8`, `2d6+3`, `1d4-1` → (n, sides, bonus)."""
-    m = _DICE_RE.match(spec)
+    m = DICE_RE.match(spec)
     if not m:
         raise ValueError(f"invalid dice spec: {spec!r}")
     n, sides = int(m.group(1)), int(m.group(2))

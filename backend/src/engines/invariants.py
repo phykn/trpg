@@ -47,6 +47,7 @@ from ..domain.entities import (
     slot_kind,
 )
 from ..rules import RULES
+from .combat import DICE_RE
 from .growth import calc_max_hp, calc_max_mp
 from .inventory.carry import carry_capacity, current_weight
 
@@ -60,7 +61,6 @@ class InvariantViolation(ValueError):
     """
 
 
-_DICE_RE = re.compile(r"^\s*\d+d\d+\s*([+-]\s*\d+)?\s*$")
 _STAT_KEYS = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
 
 _SLOT_MISMATCH_HINT = {
@@ -278,7 +278,7 @@ def _check_item(item: Item) -> list[str]:
         _v(out, where, f"price={item.price} (must be ≥ 0)")
     eff = item.effects
     if isinstance(eff, WeaponEffect):
-        if not _DICE_RE.match(eff.weapon_dice):
+        if not DICE_RE.match(eff.weapon_dice):
             _v(
                 out,
                 where,
