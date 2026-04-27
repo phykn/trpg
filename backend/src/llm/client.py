@@ -44,6 +44,32 @@ class LLMClient:
             encoding="utf-8",
         )
 
+    def _log_query(
+        self, base: Path | None, mode: str, agent: str | None, messages: list[dict], think: bool
+    ) -> None:
+        if base is None:
+            return
+        self._write_json(base.with_name(base.name + "_query.json"), {
+            "agent": agent,
+            "mode": mode,
+            "model": self._model,
+            "think": think,
+            "messages": messages,
+        })
+
+    def _log_answer(
+        self, base: Path | None, mode: str, agent: str | None, payload: dict, think: bool
+    ) -> None:
+        if base is None:
+            return
+        self._write_json(base.with_name(base.name + "_answer.json"), {
+            "agent": agent,
+            "mode": mode,
+            "model": self._model,
+            "think": think,
+            **payload,
+        })
+
     async def chat(
         self,
         messages: list[dict],
@@ -51,27 +77,13 @@ class LLMClient:
         agent: str | None = None,
     ) -> dict:
         base = self._log_basename(agent)
-        if base is not None:
-            self._write_json(base.with_name(base.name + "_query.json"), {
-                "agent": agent,
-                "mode": "chat",
-                "model": self._model,
-                "think": think,
-                "messages": messages,
-            })
+        self._log_query(base, "chat", agent, messages, think)
         params = self._params(messages, think)
         response = await self._client.chat.completions.create(**params)
         msg = response.choices[0].message
         extra = msg.model_extra or {}
         result = {"think": extra.get("reasoning_content"), "answer": msg.content}
-        if base is not None:
-            self._write_json(base.with_name(base.name + "_answer.json"), {
-                "agent": agent,
-                "mode": "chat",
-                "model": self._model,
-                "think": think,
-                "response": result,
-            })
+        self._log_answer(base, "chat", agent, {"response": result}, think)
         return result
 
     async def chat_stream(
@@ -81,14 +93,7 @@ class LLMClient:
         agent: str | None = None,
     ) -> AsyncIterator[dict]:
         base = self._log_basename(agent)
-        if base is not None:
-            self._write_json(base.with_name(base.name + "_query.json"), {
-                "agent": agent,
-                "mode": "stream",
-                "model": self._model,
-                "think": think,
-                "messages": messages,
-            })
+        self._log_query(base, "stream", agent, messages, think)
         params = self._params(messages, think)
         stream = await self._client.chat.completions.create(**params, stream=True)
         chunks: list[dict] = []
@@ -106,15 +111,10 @@ class LLMClient:
                     accum_answer.append(item["answer"])
                 yield item
         finally:
-            if base is not None:
-                self._write_json(base.with_name(base.name + "_answer.json"), {
-                    "agent": agent,
-                    "mode": "stream",
-                    "model": self._model,
-                    "think": think,
-                    "chunks": chunks,
-                    "accumulated": {
-                        "think": "".join(accum_think) or None,
-                        "answer": "".join(accum_answer) or None,
-                    },
-                })
+            self._log_answer(base, "stream", agent, {
+                "chunks": chunks,
+                "accumulated": {
+                    "think": "".join(accum_think) or None,
+                    "answer": "".join(accum_answer) or None,
+                },
+            }, think)
