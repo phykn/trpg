@@ -26,12 +26,9 @@ from ..rules.dc import compute_grade, sigmoid_required_roll
 CastTargets = list[str]
 
 
-def actor_skill_ids(actor: Character) -> set[str]:
-    return set(actor.racial_skill_ids) | set(actor.learned_skill_ids)
-
-
 def find_skill(actor: Character, skill_id: str, state: GameState) -> Skill:
-    if skill_id not in actor_skill_ids(actor):
+    known = set(actor.racial_skill_ids) | set(actor.learned_skill_ids)
+    if skill_id not in known:
         raise SkillInvalid(f"actor has no such skill: {skill_id}")
     skill = state.skills.get(skill_id)
     if skill is None:

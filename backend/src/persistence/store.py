@@ -103,18 +103,6 @@ def _append_jsonl(path: Path, lines: list[str]) -> None:
         raise PersistenceFailed(str(e)) from e
 
 
-def _read_jsonl_tail(path: Path, cap: int) -> list[str]:
-    """Read last `cap` non-empty lines from a jsonl file. Missing file → []."""
-    try:
-        text = path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return []
-    except OSError as e:
-        raise PersistenceFailed(str(e)) from e
-    lines = [ln for ln in text.splitlines() if ln.strip()]
-    return lines[-cap:] if cap > 0 else lines
-
-
 # --- meta schema -----------------------------------------------------------
 
 
@@ -245,7 +233,14 @@ def _load_jsonl_tail(
     validator: TypeAdapter | type[BaseModel],
 ) -> list:
     """If validator is a BaseModel use model_validate_json; if TypeAdapter use validate_json."""
-    lines = _read_jsonl_tail(path, cap)
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        text = ""
+    except OSError as e:
+        raise PersistenceFailed(str(e)) from e
+    raw_lines = [ln for ln in text.splitlines() if ln.strip()]
+    lines = raw_lines[-cap:] if cap > 0 else raw_lines
     parse = (
         validator.validate_json
         if isinstance(validator, TypeAdapter)
