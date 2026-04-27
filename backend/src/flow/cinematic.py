@@ -30,13 +30,10 @@ from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..engines.growth import award_kill_xp
 from ..rules.config import RULES
+from .dirty import Dirty
 
 
 # --- Snapshots / context for combat_narrate --------------------------------
-
-
-def _snapshot(name: str, hp: int, max_hp: int, alive: bool) -> CombatStateSnapshot:
-    return CombatStateSnapshot(name=name, hp=hp, max_hp=max_hp, alive=alive)
 
 
 def _location_payload(state: GameState) -> dict:
@@ -92,17 +89,16 @@ def _pick_combat_tier(num_enemies: int) -> str:
     return "매우 어려움"
 
 
-def _pick_combat_dc(tier: str) -> int:
-    # Cheap deterministic mid-range pick (avoid randomness so tests stay stable).
-    return {
-        "매우 쉬움": 3,
-        "쉬움": 5,
-        "보통": 8,
-        "어려움": 12,
-        "매우 어려움": 15,
-        "전설": 18,
-        "신화": 19,
-    }.get(tier, 8)
+# Cheap deterministic mid-range DC per tier (avoid randomness so tests stay stable).
+_TIER_TO_DC: dict[str, int] = {
+    "매우 쉬움": 3,
+    "쉬움": 5,
+    "보통": 8,
+    "어려움": 12,
+    "매우 어려움": 15,
+    "전설": 18,
+    "신화": 19,
+}
 
 
 def arm_combat_roll_pending(
@@ -119,7 +115,7 @@ def arm_combat_roll_pending(
     and apply the outcome.
     """
     tier = _pick_combat_tier(len(target_ids))
-    dc = _pick_combat_dc(tier)
+    dc = _TIER_TO_DC.get(tier, 8)
     primary = target_ids[0] if target_ids else state.player_id
     state.pending_check = PendingCheck(
         player_input=player_input,
@@ -167,8 +163,6 @@ def apply_combat_outcome(
     - critical_failure → enemies survive at full HP, player drops to 0
       (death-saves trigger).
     """
-    from .dirty import Dirty as _D  # noqa: F401  (avoid circular at module import)
-
     player = state.characters[state.player_id]
     player_dmg_pct, kill_enemies = _OUTCOME_TABLE.get(grade, _OUTCOME_TABLE["partial_success"])
 
@@ -225,7 +219,7 @@ def build_oneshot_narrate_input(
         if ch is None:
             continue
         enemy_names.append(ch.name)
-        enemy_snaps.append(_snapshot(ch.name, ch.hp, ch.max_hp, ch.alive))
+        enemy_snaps.append(CombatStateSnapshot(name=ch.name, hp=ch.hp, max_hp=ch.max_hp, alive=ch.alive))
 
     events: list[CombatRoundEvent] = []
     won = grade in ("critical_success", "success", "partial_success")
@@ -258,16 +252,10 @@ def build_oneshot_narrate_input(
         round_no=1,
         is_first_round=True,
         is_final_round=True,
-        player=_snapshot(player.name, player.hp, player.max_hp, player.alive),
+        player=CombatStateSnapshot(name=player.name, hp=player.hp, max_hp=player.max_hp, alive=player.alive),
         enemies=enemy_snaps,
         events=events,
         history_summary="",
     )
 
 
-# --- Re-exports kept for backward import compat -----------------------------
-
-
-# `Dirty` is referenced via type annotations on apply_combat_outcome; flow
-# code already imports Dirty from .dirty directly.
-from .dirty import Dirty  # noqa: E402,F401
