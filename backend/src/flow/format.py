@@ -41,7 +41,12 @@ def label_for_target(state: GameState, target_id: str) -> str:
 # --- Engine-error → Korean GM phrase ---------------------------------------
 
 
-_ERROR_PHRASES: list[tuple[str, str]] = [
+# Substring → Korean phrase. Order in this literal is for readability;
+# `_ERROR_PHRASES_SORTED` below scans longest-needle-first so a more specific
+# match (e.g. "npc has not enough gold") always wins over a shorter prefix
+# of itself ("not enough gold"). Add new entries here without worrying about
+# position — the sort handles precedence.
+_ERROR_PHRASES_RAW: list[tuple[str, str]] = [
     ("hp already full", "이미 체력이 가득해 회복약을 쓸 필요가 없다"),
     ("mp already full", "이미 마력이 가득해 마력 음료를 쓸 필요가 없다"),
     ("affinity too low to trade", "친밀도가 부족해 거래가 안 된다"),
@@ -71,6 +76,10 @@ _ERROR_PHRASES: list[tuple[str, str]] = [
     ("not in skills pool", "그런 스킬은 시나리오에 없다"),
 ]
 
+_ERROR_PHRASES_SORTED: list[tuple[str, str]] = sorted(
+    _ERROR_PHRASES_RAW, key=lambda kv: len(kv[0]), reverse=True
+)
+
 
 def humanize_engine_error(err: Exception) -> str:
     """Translate engine-raised English error strings (InventoryInvalid /
@@ -78,9 +87,8 @@ def humanize_engine_error(err: Exception) -> str:
     safe to surface as GM text. Falls back to a generic phrase if no
     pattern matches — never expose the raw English to the player.
     """
-    msg = str(err)
-    low = msg.lower()
-    for needle, korean in _ERROR_PHRASES:
+    low = str(err).lower()
+    for needle, korean in _ERROR_PHRASES_SORTED:
         if needle.lower() in low:
             return korean
     return "지금은 그 행동이 통하지 않는다"
