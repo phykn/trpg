@@ -111,18 +111,6 @@ async def run_turn(
 # --- non-combat dispatch ---------------------------------------------------
 
 
-async def _bump_and_finalize(
-    state: GameState,
-    saves_dir: str,
-    dirty: Dirty,
-    to_front_fn: ToFrontFn | None,
-) -> AsyncIterator[dict]:
-    """Common tail for one-step actions that consume a turn (use/equip/level_up/etc)."""
-    advance_time(state)
-    async for ev in finalize(state, saves_dir, dirty, to_front_fn):
-        yield ev
-
-
 # Each entry takes (client, state, dirty, action) and returns an event iterator
 # for the engine action. Combat/Summon/Roll/Rest aren't here — they have
 # bespoke pre/post handling and stay in `_dispatch`.
@@ -154,7 +142,8 @@ async def _run_one_step_action(
         yield ev
     if getattr(result, "tail_intent", None):
         yield push_gm(state, dirty, result.tail_intent)
-    async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
+    advance_time(state)
+    async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev
 
 
@@ -303,7 +292,8 @@ async def _dispatch(
                 dialogue_input=player_input,
             ):
                 yield ev
-        async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
+        advance_time(state)
+        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
 
@@ -330,5 +320,6 @@ async def _dispatch(
     ):
         yield ev
 
-    async for ev in _bump_and_finalize(state, saves_dir, dirty, to_front_fn):
+    advance_time(state)
+    async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev
