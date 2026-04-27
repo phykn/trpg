@@ -34,19 +34,16 @@ function GMNarration({ text }: { text: string }) {
 
 function PlayerMessage({ text }: { text: string }) {
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-      <View
-        style={{
-          maxWidth: '82%',
-          borderRightWidth: 2,
-          borderRightColor: colors.fg.muted,
-          paddingRight: spacing[3],
-        }}
-      >
-        <Text className="font-mono-medium text-title text-fg-default text-right">
-          {text}
-        </Text>
-      </View>
+    <View
+      style={{
+        borderRightWidth: 2,
+        borderRightColor: colors.fg.muted,
+        paddingRight: spacing[3],
+      }}
+    >
+      <Text className="font-mono-medium text-title text-fg-default text-right">
+        {text}
+      </Text>
     </View>
   );
 }

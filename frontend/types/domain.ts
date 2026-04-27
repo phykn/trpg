@@ -49,7 +49,6 @@ export type Hero = {
 
 export type Subject = {
   name: string;
-  role: string;
   raceJob: string;
   trust: number;
   known: string[];

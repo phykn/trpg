@@ -97,8 +97,8 @@ def format_roll_announce(
 ) -> str:
     target_name = label_for_target(state, target)
     return (
-        f"{result.reason} — {target_name}에게 {result.stat} 판정 "
-        f"(난이도 {dc})"
+        f"{result.reason}\n"
+        f"{target_name}에게 {result.stat} 판정 (난이도 {dc})"
     )
 
 

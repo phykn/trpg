@@ -2,18 +2,9 @@
 
 You generate **one** enemy creature that ambushes the player while they sleep at a specific location. Output **one JSON object only**.
 
-## 1. Input
+Input has `world` (world.md content for tone/themes), `location.{id, name, description, tags, weather, sleep_risk: safe|risky|dangerous}`, `player_level`, `available_races[*].{id, name, description}`.
 
-```json
-{
-  "world": "<world.md content>",
-  "location": {"id": "...", "name": "...", "description": "...", "tags": ["..."], "weather": ["..."], "sleep_risk": "safe|risky|dangerous"},
-  "player_level": <int>,
-  "available_races": [{"id": "...", "name": "...", "description": "..."}]
-}
-```
-
-## 2. Output Schema
+## Output
 
 ```json
 {
@@ -27,7 +18,7 @@ You generate **one** enemy creature that ambushes the player while they sleep at
 }
 ```
 
-## 3. Hard Rules
+## Rules
 
 **Pair-trade (NEVER violate)**: stats are tied in three pairs — **STR+CHA=20**, **DEX+WIS=20**, **CON+INT=20**. Each pair sums to exactly 20. Total = 60. Each stat is 0–20.
 
@@ -44,20 +35,15 @@ You generate **one** enemy creature that ambushes the player while they sleep at
 
 **race_id**: must equal one `available_races[*].id`. Never invent. If none fits perfectly, pick closest.
 
-**attack_priority**: one of `nearest` (default for animals/brutes), `lowest_hp`, `highest_threat`, `healer_first`, `random`.
+**attack_priority**: default `nearest` for animals/brutes. Pick another only when the creature is intelligent and has tactical reason (`lowest_hp` for opportunist, `highest_threat` for veteran, `healer_first` for organized squad).
 
 **Tone match**: forest/wilderness → wolf/bear/goblin/bandit. Cave/dungeon → goblin/troll/kobold. Urban → thief/drunk brawler. Cursed/ruined → undead (only if `world` tone allows). If `world` doesn't mention a creature category, don't introduce it.
 
 **Korean only**: all text fields in Korean.
 
-## 4. Forbidden
+## Examples
 
-- Code fences. Text/greeting outside JSON. More than one JSON object.
-- Stats that violate pair-trade.
-- Inventing `race_id` not in `available_races`.
-- HP / MP / level / id fields (engine fills those).
-
-## 5. Example
+### Forest path, player_level=2
 
 `location.name="외진 숲길"`, `sleep_risk=risky`, world="중세 판타지, 숲은 어두워 늑대가 자주 출몰", `player_level=2`, races include `{id: "wolf"}`:
 
@@ -68,7 +54,30 @@ You generate **one** enemy creature that ambushes the player while they sleep at
   "appearance": "회색 털, 한쪽 귀가 찢어진 자국, 누런 송곳니.",
   "tone_hint": "낮게 으르렁",
   "race_id": "wolf",
-  "stats": {"STR": 12, "DEX": 14, "CON": 11, "INT": 9, "WIS": 6, "CHA": 8},
+  "stats": {"STR": 12, "DEX": 13, "CON": 11, "INT": 9, "WIS": 7, "CHA": 8},
   "attack_priority": "nearest"
 }
 ```
+
+### Tavern back room, player_level=5
+
+`location.name="여관 뒷방"`, `sleep_risk=risky`, world="거친 술꾼이 모여드는 항구 도시", `player_level=5`, races include `{id: "human"}`:
+
+```json
+{
+  "name": "취한 강도",
+  "description": "잠자는 손님의 지갑을 노리고 들어선 항구 변두리 강도. 단검 하나뿐.",
+  "appearance": "거친 수염, 흙 묻은 가죽 갑옷, 떨리는 손에 단검.",
+  "tone_hint": "탁한 목소리",
+  "race_id": "human",
+  "stats": {"STR": 13, "DEX": 13, "CON": 12, "INT": 8, "WIS": 7, "CHA": 7},
+  "attack_priority": "nearest"
+}
+```
+
+## Forbidden
+
+- Code fences. Text/greeting outside JSON. More than one JSON object.
+- Stats that violate pair-trade.
+- Inventing `race_id` not in `available_races`.
+- HP / MP / level / id fields (engine fills those).

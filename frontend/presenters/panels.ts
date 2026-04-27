@@ -12,7 +12,7 @@ type GameSnapshot = {
 function buildSubjectSlot(subject: Subject | null): PanelSlot {
   return {
     id: 'person',
-    chip: subject ? { short: subject.role } : { short: '인물' },
+    chip: { short: '대상' },
     panel: subject
       ? {
           title: subject.name,
