@@ -116,6 +116,14 @@ class DeathConfig(_F):
     auto_revive_hp: int = 1
 
 
+class LLMConfig(_F):
+    # Per-call timeout. A stalled LLM otherwise hangs the whole turn under the
+    # OpenAI client's default (~10 minutes). Streaming uses a longer ceiling
+    # because narrate-style outputs can legitimately run a couple of minutes.
+    chat_timeout_s: float = 60.0
+    stream_timeout_s: float = 180.0
+
+
 class Rules(_F):
     difficulty_class: DifficultyClass = DifficultyClass()
     social: Social = Social()
@@ -129,6 +137,7 @@ class Rules(_F):
     recovery: RecoveryConfig = RecoveryConfig()
     growth: GrowthConfig = GrowthConfig()
     skill: SkillConfig = SkillConfig()
+    llm: LLMConfig = LLMConfig()
 
 
 RULES = Rules()

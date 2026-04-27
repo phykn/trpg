@@ -5,6 +5,8 @@ from pathlib import Path
 
 from openai import AsyncOpenAI
 
+from ..rules.config import RULES
+
 
 class LLMClient:
     def __init__(
@@ -14,7 +16,19 @@ class LLMClient:
         api_key: str = "none",
         log_dir: Path | None = None,
     ):
-        self._client = AsyncOpenAI(base_url=base_url, api_key=api_key)
+        # Bound chat() and chat_stream() so a stalled LLM raises TimeoutError
+        # instead of hanging the whole turn (the OpenAI client's default is
+        # roughly 10 minutes — far too long for a per-turn interaction).
+        self._client = AsyncOpenAI(
+            base_url=base_url,
+            api_key=api_key,
+            timeout=RULES.llm.chat_timeout_s,
+        )
+        self._stream_client = AsyncOpenAI(
+            base_url=base_url,
+            api_key=api_key,
+            timeout=RULES.llm.stream_timeout_s,
+        )
         self._model = model
         self._log_dir = log_dir
 
@@ -95,7 +109,7 @@ class LLMClient:
         base = self._log_basename(agent)
         self._log_query(base, "stream", agent, messages, think)
         params = self._params(messages, think)
-        stream = await self._client.chat.completions.create(**params, stream=True)
+        stream = await self._stream_client.chat.completions.create(**params, stream=True)
         chunks: list[dict] = []
         accum_think: list[str] = []
         accum_answer: list[str] = []
