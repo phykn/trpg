@@ -15,10 +15,25 @@ from src.persistence.store import (
     append_log_entries,
     load_game,
     read_current_game_id,
-    save_full,
+    save_entity,
     save_meta,
     write_current_game_id,
 )
+
+_ENTITY_KINDS = (
+    "characters", "items", "locations", "races",
+    "quests", "chapters", "campaigns", "skills",
+)
+
+
+async def _save_full(state: GameState, saves_dir: str) -> None:
+    """Test helper: persist every entity + meta in one shot. Production
+    code uses granular save_meta / save_entity through dirty tracking."""
+    Path(saves_dir, "games", state.game_id).mkdir(parents=True, exist_ok=True)
+    await save_meta(state, saves_dir)
+    for kind in _ENTITY_KINDS:
+        for entity_id in getattr(state, kind):
+            await save_entity(state, saves_dir, kind, entity_id)
 
 
 @pytest.fixture
@@ -42,7 +57,7 @@ async def test_save_full_creates_directory_layout(fresh_state, tmp_data):
     fresh_state.characters["p"] = Character(
         id="p", name="x", race_id="human", stats=Stats()
     )
-    await save_full(fresh_state, tmp_data)
+    await _save_full(fresh_state, tmp_data)
     gdir = Path(tmp_data) / "games" / fresh_state.game_id
     assert (gdir / "meta.json").exists()
     assert (gdir / "characters" / "p.json").exists()
@@ -59,7 +74,7 @@ async def test_save_load_round_trip_through_disk(fresh_state, tmp_data):
     fresh_state.recent_dialogue.append(DialoguePair(turn=1, player="p", narrator="n"))
     fresh_state.next_log_id = 2
 
-    await save_full(fresh_state, tmp_data)
+    await _save_full(fresh_state, tmp_data)
     await append_log_entries(tmp_data, fresh_state.game_id, fresh_state.log_entries)
     await append_history_entries(tmp_data, fresh_state.game_id, fresh_state.turn_log)
     await append_dialogue_entries(
@@ -87,7 +102,7 @@ async def test_combat_state_survives_meta_round_trip(fresh_state, tmp_data):
         current_turn=1,
         enemy_ids=("goblin_01",),
     )
-    await save_full(fresh_state, tmp_data)
+    await _save_full(fresh_state, tmp_data)
     loaded = load_game(tmp_data, fresh_state.game_id)
     assert loaded.combat_state is not None
     assert loaded.combat_state.round == 2
@@ -115,7 +130,7 @@ async def test_meta_json_on_disk_includes_per_turn_fields(fresh_state, tmp_data)
 
 
 async def test_jsonl_appends_are_cumulative(fresh_state, tmp_data):
-    await save_full(fresh_state, tmp_data)
+    await _save_full(fresh_state, tmp_data)
     await append_log_entries(
         tmp_data,
         fresh_state.game_id,

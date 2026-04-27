@@ -194,20 +194,6 @@ async def append_dialogue_entries(
 # --- save (bulk: initial / fallback) ---------------------------------------
 
 
-async def save_full(state: GameState, saves_dir: str) -> None:
-    """Persist every entity + meta. Used on game init.
-
-    Does NOT create log.jsonl / history.jsonl / dialogue.jsonl — those are
-    created lazily on first append.
-    """
-    gdir = _game_dir(saves_dir, state.game_id)
-    gdir.mkdir(parents=True, exist_ok=True)
-    await save_meta(state, saves_dir)
-    for kind in _ENTITY_MODELS:
-        for entity_id in getattr(state, kind):
-            await save_entity(state, saves_dir, kind, entity_id)
-
-
 # --- load ------------------------------------------------------------------
 
 
