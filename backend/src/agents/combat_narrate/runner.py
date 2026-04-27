@@ -11,16 +11,17 @@ from .schema import CombatNarrateInput
 
 PROMPT_PATH, _PROMPT = read_prompt(__file__)
 
-_MAX_RETRIES = 3
+_MAX_RETRIES = 5
 
 
 async def stream_combat_narrate(
     client: LLMClient,
     input_: CombatNarrateInput,
 ) -> AsyncIterator[str]:
-    """Stream Korean prose tokens. Retries up to 3× on transport failure
+    """Stream Korean prose tokens. Retries up to 5× on stream-transport failure
     BEFORE any body has streamed; once a token has gone out, a later
-    transport error raises (the client can't take back what was shown)."""
+    transport error raises (the client can't take back what was shown).
+    Non-transport exceptions always raise (programming bugs shouldn't hide)."""
     messages = [
         {"role": "system", "content": _PROMPT},
         {"role": "user", "content": input_.model_dump_json()},
@@ -39,10 +40,6 @@ async def stream_combat_narrate(
         except (OSError, asyncio.TimeoutError) as e:
             if body_streamed or attempt == _MAX_RETRIES:
                 raise LLMUnavailable(str(e)) from e
-            continue
-        except Exception:
-            if body_streamed or attempt == _MAX_RETRIES:
-                raise
             continue
         if body_streamed:
             return

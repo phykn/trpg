@@ -48,10 +48,6 @@ async def stream_narrate(
             if body_streamed or attempt == _MAX_RETRIES:
                 raise LLMUnavailable(str(e)) from e
             continue
-        except Exception:
-            if body_streamed or attempt == _MAX_RETRIES:
-                raise
-            continue
 
         # split_stream invariant: no exception ⇒ exactly one NarrativeFinal yielded.
         if body_streamed:
