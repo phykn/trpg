@@ -22,17 +22,6 @@ from ..schema import (
 router = APIRouter()
 
 
-async def _save_player(state: GameState, saves_dir: str) -> None:
-    await save_entity(state, saves_dir, "characters", state.player_id)
-    await save_meta(state, saves_dir)
-
-
-async def _save_trade(state: GameState, saves_dir: str, npc_id: str) -> None:
-    await save_entity(state, saves_dir, "characters", state.player_id)
-    await save_entity(state, saves_dir, "characters", npc_id)
-    await save_meta(state, saves_dir)
-
-
 async def _save_dirty(
     state: GameState, saves_dir: str, dirty: set[tuple[str, str]]
 ) -> None:
@@ -52,7 +41,7 @@ async def session_equip(
         inventory_engine.equip(player, body.item_id, body.slot, state.items)  # type: ignore[arg-type]
     except InventoryInvalid as e:
         raise HTTPException(status_code=422, detail=str(e))
-    await _save_player(state, saves_dir)
+    await _save_dirty(state, saves_dir, {("characters", state.player_id)})
     return InventoryResponse(game_id=state.game_id, state=to_front_state(state))
 
 
@@ -67,7 +56,7 @@ async def session_unequip(
         inventory_engine.unequip(player, body.slot, state.items)  # type: ignore[arg-type]
     except InventoryInvalid as e:
         raise HTTPException(status_code=422, detail=str(e))
-    await _save_player(state, saves_dir)
+    await _save_dirty(state, saves_dir, {("characters", state.player_id)})
     return InventoryResponse(game_id=state.game_id, state=to_front_state(state))
 
 
@@ -85,7 +74,7 @@ async def session_buy(
         price = inventory_engine.buy(player, npc, body.item_id, state.items)
     except InventoryInvalid as e:
         raise HTTPException(status_code=422, detail=str(e))
-    await _save_trade(state, saves_dir, npc.id)
+    await _save_dirty(state, saves_dir, {("characters", state.player_id), ("characters", npc.id)})
     return InventoryResponse(
         game_id=state.game_id, state=to_front_state(state), price=price
     )
@@ -105,7 +94,7 @@ async def session_sell(
         price = inventory_engine.sell(player, npc, body.item_id, state.items)
     except InventoryInvalid as e:
         raise HTTPException(status_code=422, detail=str(e))
-    await _save_trade(state, saves_dir, npc.id)
+    await _save_dirty(state, saves_dir, {("characters", state.player_id), ("characters", npc.id)})
     return InventoryResponse(
         game_id=state.game_id, state=to_front_state(state), price=price
     )
