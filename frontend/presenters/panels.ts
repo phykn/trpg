@@ -51,8 +51,8 @@ function buildQuestSlot(quest: Quest | null): PanelSlot {
             {
               label: '보상',
               parts: [
-                { icon: 'wallet', text: `${quest.rewards.gold}`, tone: 'accent' },
-                { icon: 'star', text: `${quest.rewards.exp}`, tone: 'exp' },
+                { label: '금', text: `${quest.rewards.gold}`, tone: 'accent' },
+                { label: '경', text: `${quest.rewards.exp}`, tone: 'exp' },
               ],
             },
           ],
