@@ -12,7 +12,7 @@ from ..llm.client import LLMClient
 from ..mapping.to_front import pending_check_to_front
 from ..rules.config import RULES
 from ..rules.dc import compute_grade, sigmoid_required_roll
-from .cinematic import (
+from .combat_oneshot import (
     apply_combat_outcome,
     arm_death_save_pending,
     build_oneshot_narrate_input,

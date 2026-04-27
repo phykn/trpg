@@ -4,8 +4,6 @@ import { colors, spacing } from '@/design/tokens';
 import type { LogEntry } from '@/types/ui';
 import { LogItem } from './LogItem';
 
-// --- footer states (rolling / typing / suggestions / separator) ---
-
 function Pulse({ color }: { color: string }) {
   const anim = React.useRef(new Animated.Value(1)).current;
   React.useEffect(() => {
@@ -135,8 +133,6 @@ function SuggestionChips({
     </View>
   );
 }
-
-// --- main list ---
 
 export function Log({
   log,

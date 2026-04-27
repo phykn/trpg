@@ -34,7 +34,7 @@ from .actions import (
     emit_unequip,
     emit_use,
 )
-from .cinematic import arm_combat_roll_pending
+from .combat_oneshot import arm_combat_roll_pending
 from .combat_phase import run_combat_player_turn
 from .encounter import summon_encounter
 from .dirty import (
