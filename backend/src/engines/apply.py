@@ -1,3 +1,7 @@
+"""state_changes — five mutation kinds (set, set_time, move, move_item,
+affinity) the LLM emits as part of NarrateOutput. Each kind has its own
+permission matrix; forbidden fields drop silently per change, the rest of
+the batch still applies. Time may not run backwards."""
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
@@ -5,6 +9,9 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 from ..domain.types import Grade, Intent
 from ..rules import RULES
 from ..domain.state import GameState
+
+
+# --- change models ---------------------------------------------------------
 
 
 class SetChange(BaseModel):
@@ -48,6 +55,9 @@ StateChange = Annotated[
 ]
 
 _state_change_adapter = TypeAdapter(StateChange)
+
+
+# --- permission matrix -----------------------------------------------------
 
 
 _CHAR_FORBIDDEN = frozenset(
@@ -112,6 +122,9 @@ def _check_set_permission(entity: str, field: str) -> str | None:
 
 class _StateChangeError(ValueError):
     pass
+
+
+# --- per-kind handlers -----------------------------------------------------
 
 
 def _set_dotted(obj: Any, dotted_field: str, value: Any) -> None:
@@ -249,6 +262,9 @@ def _apply_affinity(
     actor.relations[c.target] = max(-100, min(100, current + delta))
     if dirty is not None:
         dirty.add(("characters", c.actor))
+
+
+# --- public dispatch -------------------------------------------------------
 
 
 _HANDLERS = {
