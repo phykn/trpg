@@ -13,6 +13,7 @@
 - 첫 턴은 `state_summary` 의 quest/chapter 진행 요약을 읽고 다음 단계 식별.
 - giver NPC 가 같은 장소에 있으면 인사·의뢰 확인 → 트리거 향해 이동.
 - 트리거 충족 후엔 giver 에게 보고, 보상 받고 다음 퀘스트로.
+- 한 퀘스트 클리어 후 곧장 `state_summary` 의 chapter 진행을 보고, prereq 가 풀린 다음 퀘스트로 넘어갑니다 — chapter 경계 전환을 의도적으로 두드립니다.
 
 ## 테스트 목표 (속으로만 의식)
 

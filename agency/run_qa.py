@@ -33,6 +33,7 @@ from agency.qa.harness.runner import run_qa_session  # noqa: E402
 AGENTS = [
     "diplomat",
     "explorer",
+    "scout",
     "provocateur",
     "combatant",
     "quartermaster",
