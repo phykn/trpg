@@ -13,7 +13,7 @@ from .schema import NarrateInput
 # nothing usable came out: a stream-transport error or an empty body. Once a
 # body delta has actually been sent, a later transport failure raises rather
 # than retrying (would cause the client to see two bodies).
-PROMPT_PATH, _PROMPT = read_prompt(__file__)
+_PROMPT = read_prompt(__file__)
 
 _MAX_RETRIES = 5
 

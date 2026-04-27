@@ -11,8 +11,8 @@ from src.agents.dc_judge.schema import (
 )
 from src.agents.dc_judge.semantics import (
     JudgeSemanticError,
+    _surroundings_target_ids,
     check_semantics,
-    collect_valid_ids,
 )
 
 
@@ -110,12 +110,12 @@ def test_pass_action_no_extras():
         )
 
 
-def test_collect_valid_ids():
+def test_surroundings_target_ids():
     sur = {
         "location": {"id": "tavern"},
         "entities": [{"id": "g"}, {"id": "i"}],
     }
-    assert collect_valid_ids(sur) == {"tavern", "g", "i"}
+    assert _surroundings_target_ids(sur) == {"tavern", "g", "i"}
 
 
 def test_semantic_check_passes_when_targets_in_surroundings():

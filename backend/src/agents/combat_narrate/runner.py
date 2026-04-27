@@ -9,7 +9,7 @@ from ...domain.errors import LLMUnavailable
 from ...llm.client import LLMClient
 from .schema import CombatNarrateInput
 
-PROMPT_PATH, _PROMPT = read_prompt(__file__)
+_PROMPT = read_prompt(__file__)
 
 _MAX_RETRIES = 5
 

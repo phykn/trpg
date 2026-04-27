@@ -2,7 +2,7 @@ from .._runner import read_prompt, run_with_retries
 from ...llm.client import LLMClient
 from .schema import EncounterSummonInput, EncounterSummonOutput
 
-PROMPT_PATH, _PROMPT = read_prompt(__file__)
+_PROMPT = read_prompt(__file__)
 
 
 async def encounter_summon(

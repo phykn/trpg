@@ -18,10 +18,9 @@ from ..llm.client import LLMClient
 T = TypeVar("T")
 
 
-def read_prompt(file: str) -> tuple[Path, str]:
-    """Load a sibling prompt.md given the agent's __file__. Returns (path, text)."""
-    path = Path(file).parent / "prompt.md"
-    return path, path.read_text(encoding="utf-8")
+def read_prompt(file: str) -> str:
+    """Load a sibling prompt.md given the agent's __file__."""
+    return (Path(file).parent / "prompt.md").read_text(encoding="utf-8")
 
 
 # Bad answers occasionally include long thinking-text dumps before the JSON;

@@ -35,7 +35,7 @@ def _equipped_ids(surroundings: dict[str, Any]) -> set[str]:
     return out
 
 
-def collect_valid_ids(surroundings: dict[str, Any]) -> set[str]:
+def _surroundings_target_ids(surroundings: dict[str, Any]) -> set[str]:
     ids: set[str] = set()
     loc = surroundings.get("location")
     if isinstance(loc, dict) and isinstance(loc.get("id"), str):
@@ -65,7 +65,7 @@ def _find_merchant(npc_id: str, surroundings: dict[str, Any]) -> dict:
 
 
 def _check_targets(output, surroundings: dict[str, Any]) -> None:
-    valid = collect_valid_ids(surroundings)
+    valid = _surroundings_target_ids(surroundings)
     bad = [t for t in output.targets if t not in valid]
     if bad:
         raise JudgeSemanticError(
@@ -159,7 +159,7 @@ def _check_use(output: UseAction, surroundings: dict[str, Any]) -> None:
             f"item {output.item_id!r} is a {kind} — use action='equip', not 'use'."
         )
     if output.target_id is not None:
-        entity_ids = collect_valid_ids(surroundings)
+        entity_ids = _surroundings_target_ids(surroundings)
         if output.target_id not in entity_ids:
             raise JudgeSemanticError(f"target_id {output.target_id!r} not in surroundings.")
 
