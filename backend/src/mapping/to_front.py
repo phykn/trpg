@@ -245,7 +245,6 @@ def rest_ambush_text(actor_name: str) -> str:
 
 
 def to_front_state(state: GameState) -> dict:
-    player = state.characters.get(state.player_id)
     return {
         "hero": to_hero(state),
         "subject": to_subject(state),
@@ -254,8 +253,4 @@ def to_front_state(state: GameState) -> dict:
         "combat": to_combat(state),
         "log": to_log(state),
         "pendingCheck": to_pending_check(state),
-        "gameOver": player is not None and not player.alive,
-        "playerDowned": (
-            player is not None and player.alive and player.death_saves is not None
-        ),
     }
