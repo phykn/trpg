@@ -51,8 +51,8 @@ function SuggestionChips({
 }) {
   return (
     <View
-      className="items-start"
-      style={{ paddingTop: spacing[3], gap: spacing[1.5] }}
+      className="flex-row flex-wrap"
+      style={{ paddingTop: spacing[3], gap: spacing[2] }}
     >
       {items.map((text, i) => (
         <Pressable
