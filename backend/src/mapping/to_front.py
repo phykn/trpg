@@ -16,14 +16,10 @@ from ..domain.state import GameState
 # --- Hero ------------------------------------------------------------------
 
 
-def _race_name(state: GameState, race_id: str) -> str:
-    race = state.races.get(race_id)
-    return race.name if race else race_id
-
-
 def _race_job_label(state: GameState, char: Character) -> str:
     """`<race> <job>` if the character has a job, otherwise just `<race>`."""
-    race = _race_name(state, char.race_id)
+    r = state.races.get(char.race_id)
+    race = r.name if r else char.race_id
     return f"{race} {char.job}" if char.job else race
 
 
@@ -197,10 +193,6 @@ def to_combat(state: GameState) -> dict | None:
 # --- Log -------------------------------------------------------------------
 
 
-def to_log(state: GameState) -> list[dict]:
-    return [e.model_dump() for e in state.log_entries]
-
-
 # --- PendingCheck ----------------------------------------------------------
 
 
@@ -218,12 +210,6 @@ def pending_check_to_front(pending: PendingCheck) -> dict:
         },
         "target": pending.target,
     }
-
-
-def to_pending_check(state: GameState) -> dict | None:
-    if state.pending_check is None:
-        return None
-    return pending_check_to_front(state.pending_check)
 
 
 # --- Composed Korean strings (flow pushes these as GM lines) ---------------
@@ -244,12 +230,13 @@ def rest_ambush_text(actor_name: str) -> str:
 
 
 def to_front_state(state: GameState) -> dict:
+    pending = state.pending_check
     return {
         "hero": to_hero(state),
         "subject": to_subject(state),
         "quest": to_quest(state),
         "place": to_place(state),
         "combat": to_combat(state),
-        "log": to_log(state),
-        "pendingCheck": to_pending_check(state),
+        "log": [e.model_dump() for e in state.log_entries],
+        "pendingCheck": pending_check_to_front(pending) if pending else None,
     }

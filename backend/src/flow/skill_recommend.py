@@ -33,17 +33,13 @@ def _recent_turn_summaries(state: GameState, n: int) -> list[dict]:
     return [{"turn": e.turn, "summary": e.summary} for e in items]
 
 
-def _race_name(state: GameState, race_id: str) -> str:
-    race = state.races.get(race_id)
-    return race.name if race else race_id
-
-
 def _build_input(state: GameState) -> SkillRecommendInput:
     p = state.characters[state.player_id]
+    race = state.races.get(p.race_id)
     return SkillRecommendInput(
         character={
             "name": p.name,
-            "race": _race_name(state, p.race_id),
+            "race": race.name if race else p.race_id,
             "job": p.job,
             "level": p.level,
             "memories": [
