@@ -18,13 +18,6 @@ from ..llm.client import LLMClient
 T = TypeVar("T")
 
 
-class AgentSemanticError(Exception):
-    """Catch-all base for post-parse semantic failures (e.g. JudgeSemanticError).
-
-    Subclasses get treated like ValidationError by the retry loop.
-    """
-
-
 def read_prompt(file: str) -> tuple[Path, str]:
     """Load a sibling prompt.md given the agent's __file__. Returns (path, text)."""
     path = Path(file).parent / "prompt.md"
@@ -61,13 +54,14 @@ async def run_with_retries(
     system_prompt: str,
     user_payload: str,
     parse: Callable[[str], T],
+    retry_on: tuple[type[BaseException], ...] = (ValidationError,),
     retries: int = 5,
     correction_hint: str = "",
     agent: str | None = None,
 ) -> T:
     """Call the LLM, parse the answer, and on failure feed the error back as
-    a correction prompt up to `retries` times. `parse` raises ValidationError
-    or AgentSemanticError for retryable failures; anything else propagates.
+    a correction prompt up to `retries` times. `parse` raises one of
+    `retry_on` for retryable failures; anything else propagates.
 
     `correction_hint` is appended to the standard nudge — useful when the
     schema has an invariant the LLM tends to break (e.g. pair-trade).
@@ -95,7 +89,7 @@ async def run_with_retries(
         answer = result["answer"] or ""
         try:
             return parse(answer)
-        except (ValidationError, AgentSemanticError) as e:
+        except retry_on as e:
             last_error = e
             truncated = answer[:_MAX_RETRY_ANSWER_CHARS]
             if len(answer) > _MAX_RETRY_ANSWER_CHARS:

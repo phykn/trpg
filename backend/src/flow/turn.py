@@ -163,23 +163,6 @@ async def _arm_pending_and_finalize(
         yield ev
 
 
-async def _emit_chain_engine_part(
-    client: LLMClient,
-    state: GameState,
-    dirty: Dirty,
-    part,
-) -> AsyncIterator[dict]:
-    """Emit one engine part of a ChainAction. No turn bump or finalize —
-    the chain dispatcher does those once at the end. Reuses the same
-    `_ONE_STEP_EMITS` table the top-level dispatch uses."""
-    emit_factory = _ONE_STEP_EMITS.get(type(part))
-    if emit_factory is not None:
-        async for ev in emit_factory(client, state, dirty, part):
-            yield ev
-    if getattr(part, "tail_intent", None):
-        yield push_gm(state, dirty, part.tail_intent)
-
-
 async def _dispatch(
     client: LLMClient,
     state: GameState,
@@ -277,8 +260,12 @@ async def _dispatch(
             if isinstance(part, PassAction):
                 last_pass = part
                 continue
-            async for ev in _emit_chain_engine_part(client, state, dirty, part):
-                yield ev
+            emit_factory = _ONE_STEP_EMITS.get(type(part))
+            if emit_factory is not None:
+                async for ev in emit_factory(client, state, dirty, part):
+                    yield ev
+            if getattr(part, "tail_intent", None):
+                yield push_gm(state, dirty, part.tail_intent)
         if last_pass is not None:
             target_for_log = last_pass.targets[0] if last_pass.targets else None
             stream = run_narrate(

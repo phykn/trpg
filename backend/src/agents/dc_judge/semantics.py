@@ -1,7 +1,6 @@
 from typing import Any, Callable
 
 from ...domain.types import STAT_PAIRS
-from .._runner import AgentSemanticError
 from .schema import (
     BuyAction,
     CombatAction,
@@ -47,7 +46,7 @@ def collect_valid_ids(surroundings: dict[str, Any]) -> set[str]:
     return ids
 
 
-class JudgeSemanticError(AgentSemanticError):
+class JudgeSemanticError(Exception):
     pass
 
 
