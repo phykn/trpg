@@ -10,6 +10,12 @@ def build_target_view(
 ) -> dict | None:
     node_type = graph.get_node_type(target_id)
     if node_type == "character":
+        # Dead NPCs would otherwise expose full disposition/memories/inventory
+        # to narrate as if they were alive — return None so narrate falls back
+        # to surroundings (where the corpse appears in `corpses`).
+        npc = state.characters.get(target_id)
+        if npc is not None and not npc.alive:
+            return None
         return _build_npc_view(state, graph, target_id, actor_id)
     if node_type == "location":
         return _build_location_view(state, graph, target_id)

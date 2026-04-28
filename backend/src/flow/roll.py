@@ -8,7 +8,7 @@ from ..domain.memory import RollLogEntry
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..engines.growth import grant_roll_xp
-from ..llm.client import LLMClient
+from ..llm.client import LLMClient, set_llm_session_if_unset
 from ..mapping.to_front import pending_check_to_front
 from ..rules.config import RULES
 from ..rules.dc import compute_grade, sigmoid_required_roll
@@ -25,6 +25,7 @@ from .dirty import (
     advance_time,
     finalize,
     next_log_id,
+    push_act,
     push_gm,
     push_log_entry,
 )
@@ -89,10 +90,10 @@ async def _resolve_combat_roll(
     # combat_end semantic flag.
     player = state.characters[state.player_id]
     if not player.alive:
-        yield push_gm(state, dirty, format_combat_end_text("defeat"))
+        yield push_act(state, dirty, format_combat_end_text("defeat"))
         yield {"type": "combat_end", "data": {"outcome": "defeat"}}
     elif player.death_saves is not None:
-        yield push_gm(
+        yield push_act(
             state, dirty,
             "쓰러져 의식을 잃어가고 있다 — 죽음 굴림을 시작한다.",
         )
@@ -103,10 +104,10 @@ async def _resolve_combat_roll(
             "data": pending_check_to_front(state.pending_check),
         }
     elif killed:
-        yield push_gm(state, dirty, format_combat_end_text("victory"))
+        yield push_act(state, dirty, format_combat_end_text("victory"))
         yield {"type": "combat_end", "data": {"outcome": "victory"}}
     else:
-        yield push_gm(state, dirty, "전투가 흩어진다 — 적은 살아 있다.")
+        yield push_act(state, dirty, "전투가 흩어진다 — 적은 살아 있다.")
         yield {"type": "combat_end", "data": {"outcome": "broken_off"}}
 
 
@@ -137,16 +138,16 @@ async def _resolve_death_save(
 
     if status == "stable":
         state.pending_check = None
-        yield push_gm(state, dirty, f"{player.name}이(가) 의식을 회복했다.")
+        yield push_act(state, dirty, f"{player.name}이(가) 의식을 회복했다.")
     elif status == "dead":
         state.pending_check = None
-        yield push_gm(state, dirty, f"{player.name}이(가) 사망했다.")
+        yield push_act(state, dirty, f"{player.name}이(가) 사망했다.")
     else:
         # progress — re-arm the dice prompt
         arm_death_save_pending(state)
         ds = player.death_saves
         if ds is not None:
-            yield push_gm(
+            yield push_act(
                 state, dirty,
                 f"죽음 굴림 — 성공 {ds.successes}/{RULES.death.successes_to_stabilize}, "
                 f"실패 {ds.failures}/{RULES.death.failures_to_die}.",
@@ -166,6 +167,7 @@ async def run_roll(
     to_front_fn: ToFrontFn | None = None,
     rng: random.Random | None = None,
 ) -> AsyncIterator[dict]:
+    set_llm_session_if_unset(state.game_id)
     if state.pending_check is None:
         raise PendingCheckExpected("no pending_check; call /turn first")
 

@@ -35,7 +35,6 @@ from .dirty import (
     flush,
     next_log_id,
     push_act,
-    push_gm,
     push_turn_log,
 )
 from .format import (
@@ -73,7 +72,7 @@ async def emit_attack(
             )
             combat_engine.record_damage(state, attacker_id, outcome.damage)
         text = format_attack_log(state, attacker_id, target_id, outcome, apply_result)
-        yield push_gm(state, dirty, text)
+        yield push_act(state, dirty, text)
         yield {
             "type": "combat_turn",
             "data": {
@@ -106,7 +105,7 @@ async def emit_skill_cast(
     try:
         skill_obj = skill_engine.find_skill(actor, skill_id, state)
     except SkillInvalid as e:
-        yield push_gm(state, dirty, f"{actor.name} — 스킬 발동 실패 ({humanize_engine_error(e)}).")
+        yield push_act(state, dirty, f"{actor.name}이(가) 스킬을 발동하려 했지만, {humanize_engine_error(e)}.")
         return
     grade, _nat, _req = skill_engine.compute_cast_grade(
         actor, skill_obj, state, targets, rng=rng
@@ -116,14 +115,14 @@ async def emit_skill_cast(
             actor, skill_id, state, targets, grade=grade, dirty=dirty.entities
         )
     except SkillInvalid as e:
-        yield push_gm(state, dirty, f"{actor.name} — 스킬 발동 실패 ({humanize_engine_error(e)}).")
+        yield push_act(state, dirty, f"{actor.name}이(가) 스킬을 발동하려 했지만, {humanize_engine_error(e)}.")
         return
     for eff in cast_result["effects"]:
         if eff.get("kind") == "attack":
             combat_engine.record_damage(state, actor_id, int(eff.get("damage", 0)))
             if eff.get("dead"):
                 award_kill_xp(state, actor_id, eff["target"], dirty=dirty.entities)
-    yield push_gm(state, dirty, format_skill_log(state, actor_id, cast_result, grade))
+    yield push_act(state, dirty, format_skill_log(state, actor_id, cast_result, grade))
     yield {
         "type": "combat_turn",
         "data": {
@@ -163,10 +162,10 @@ async def emit_equip(
         slot = inventory_engine.auto_equip_slot(actor, item)
         inventory_engine.equip(actor, item_id, slot, state.items)
     except InventoryInvalid as e:
-        yield push_gm(state, dirty, f"{actor.name} — 장착 실패 ({humanize_engine_error(e)}).")
+        yield push_act(state, dirty, f"{actor.name}이(가) 「{item_name}」을(를) 차려 했지만, {humanize_engine_error(e)}.")
         return
     dirty.entities.add(("characters", actor_id))
-    yield push_gm(state, dirty, f"{actor.name} — 「{item_name}」 장착 ({slot})")
+    yield push_act(state, dirty, f"{actor.name}이(가) 「{item_name}」을(를) 차렸다.")
 
 
 async def emit_unequip(
@@ -181,14 +180,14 @@ async def emit_unequip(
     try:
         slot = inventory_engine.unequip_by_item(actor, item_id, state.items)
     except InventoryInvalid as e:
-        yield push_gm(state, dirty, f"{actor.name} — 해제 실패 ({humanize_engine_error(e)}).")
+        yield push_act(state, dirty, f"{actor.name}이(가) 「{item_name}」을(를) 풀려 했지만, {humanize_engine_error(e)}.")
         return
     if slot is None:
-        text = f"{actor.name} — 「{item_name}」 은(는) 장착돼 있지 않다."
+        text = f"{actor.name}은(는) 「{item_name}」을(를) 차고 있지 않다."
     else:
-        text = f"{actor.name} — 「{item_name}」 해제 ({slot})"
+        text = f"{actor.name}이(가) 「{item_name}」을(를) 풀었다."
         dirty.entities.add(("characters", actor_id))
-    yield push_gm(state, dirty, text)
+    yield push_act(state, dirty, text)
 
 
 async def emit_use(
@@ -205,10 +204,12 @@ async def emit_use(
             actor, item_id, target, state, dirty=dirty.entities
         )
     except InventoryInvalid as e:
-        yield push_gm(state, dirty, f"{actor.name} — 아이템 사용 실패 ({humanize_engine_error(e)}).")
+        item = state.items.get(item_id)
+        item_name = item.name if item else item_id
+        yield push_act(state, dirty, f"{actor.name}이(가) 「{item_name}」을(를) 쓰려 했지만, {humanize_engine_error(e)}.")
         return
     check_quests(state, "item_use", item_id, dirty.entities)
-    yield push_gm(state, dirty, format_use_log(state, actor_id, result))
+    yield push_act(state, dirty, format_use_log(state, actor_id, result))
     if target is not None:
         item = state.items.get(item_id)
         iname = item.name if item else item_id
@@ -230,7 +231,7 @@ async def emit_level_up(
     try:
         level_up_engine(actor, stat_up, stat_down)  # type: ignore[arg-type]
     except LevelUpInvalid as e:
-        yield push_gm(state, dirty, f"{actor.name} — 성장 실패 ({humanize_engine_error(e)}).")
+        yield push_act(state, dirty, f"{actor.name}이(가) 한 단계 오르려 했지만, {humanize_engine_error(e)}.")
         return
     violations = check_character(actor)
     if violations:
@@ -238,10 +239,10 @@ async def emit_level_up(
             "post-level_up invariant violation:\n" + "\n".join(violations)
         )
     dirty.entities.add(("characters", actor_id))
-    yield push_gm(
+    yield push_act(
         state, dirty,
-        f"{actor.name} — 레벨 {actor.level} 도달 "
-        f"({stat_up} ↑ / {stat_down} ↓, HP {actor.max_hp} / MP {actor.max_mp})",
+        f"{actor.name}이(가) 한 단계 올라 레벨 {actor.level}이(가) 됐다 "
+        f"({stat_up} ↑ / {stat_down} ↓, HP {actor.max_hp} / MP {actor.max_mp}).",
     )
     if client is None:
         state.pending_skill_candidates = []
@@ -264,7 +265,7 @@ async def emit_learn_skill(
     actor = state.characters[actor_id]
     candidates = list(state.pending_skill_candidates)
     if not candidates or index < 0 or index >= len(candidates):
-        yield push_gm(state, dirty, f"{actor.name} — 익힐 후보가 없거나 잘못된 선택.")
+        yield push_act(state, dirty, f"{actor.name}이(가) 익힐 만한 갈래를 잡지 못했다.")
         return
     chosen = candidates[index]
     state.skills[chosen.id] = chosen
@@ -272,7 +273,7 @@ async def emit_learn_skill(
     state.pending_skill_candidates = []
     dirty.entities.add(("characters", actor_id))
     dirty.entities.add(("skills", chosen.id))
-    yield push_gm(state, dirty, f"{actor.name} — 「{chosen.name}」 습득.")
+    yield push_act(state, dirty, f"{actor.name}이(가) 「{chosen.name}」을(를) 익혔다.")
 
 
 async def emit_trade(
@@ -287,7 +288,7 @@ async def emit_trade(
     player = state.characters[actor_id]
     npc = state.characters.get(npc_id)
     if npc is None:
-        yield push_gm(state, dirty, f"{player.name} — 거래 상대를 찾을 수 없다.")
+        yield push_act(state, dirty, f"{player.name}이(가) 거래할 상대를 찾지 못했다.")
         return
     try:
         if direction == "buy":
@@ -295,18 +296,18 @@ async def emit_trade(
         else:
             price = inventory_engine.sell(player, npc, item_id, state.items)
     except InventoryInvalid as e:
-        yield push_gm(state, dirty, f"{player.name} — 거래 실패 ({humanize_engine_error(e)}).")
+        yield push_act(state, dirty, f"{player.name}이(가) 거래를 시도했지만, {humanize_engine_error(e)}.")
         return
     dirty.entities.add(("characters", actor_id))
     dirty.entities.add(("characters", npc.id))
     item = state.items.get(item_id)
     iname = item.name if item else item_id
-    verb = "구매" if direction == "buy" else "판매"
-    yield push_gm(
-        state, dirty,
-        f"{player.name} — {npc.name}에게 「{iname}」 {verb} ({price} 금)",
-    )
-    push_turn_log(state, npc.id, f"{npc.name}에게 「{iname}」 {verb}", dirty)
+    if direction == "buy":
+        text = f"{player.name}이(가) {npc.name}에게서 「{iname}」을(를) {price} 금에 사 갔다."
+    else:
+        text = f"{player.name}이(가) {npc.name}에게 「{iname}」을(를) {price} 금에 넘겼다."
+    yield push_act(state, dirty, text)
+    push_turn_log(state, npc.id, f"{npc.name}에게 「{iname}」 {'구매' if direction == 'buy' else '판매'}", dirty)
 
 
 # --- pending roll ----------------------------------------------------------

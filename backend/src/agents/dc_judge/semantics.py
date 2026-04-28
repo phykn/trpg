@@ -9,6 +9,7 @@ from .schema import (
     JudgeOutput,
     LearnSkillAction,
     LevelUpAction,
+    PassAction,
     RollAction,
     SellAction,
     UnequipAction,
@@ -186,7 +187,15 @@ def _check_unequip(output: UnequipAction, surroundings: dict[str, Any]) -> None:
 # --- dispatch --------------------------------------------------------------
 
 
+def _check_pass(output: PassAction, surroundings: dict[str, Any]) -> None:
+    # `targets` is optional on pass, but if filled it must reference a real
+    # entity — otherwise placeholders like ['unknown'] / ['?'] / ['<loc_id>']
+    # silently flow through to narrate's target_view.
+    _check_targets(output, surroundings)
+
+
 _CHECKS: dict[type, Callable[[Any, dict[str, Any]], None]] = {
+    PassAction: _check_pass,
     CombatAction: _check_combat,
     RollAction: _check_roll,
     FleeAction: _check_flee,

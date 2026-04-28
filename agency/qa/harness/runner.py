@@ -6,7 +6,7 @@ from pathlib import Path
 
 from httpx import ASGITransport, AsyncClient
 
-from src.llm import LLMClient
+from src.llm import LLMClient, set_llm_session
 from src.persistence.store import load_game
 
 from run_api import build_app
@@ -69,6 +69,7 @@ async def run_qa_session(
 
     Returns a summary dict: game_id, turn_count, error_count, and the transcript / sse / final-state paths.
     """
+    set_llm_session(f"qa-{run_id}-{agent.name}")
     saves_dir = run_dir / "saves"
     saves_dir.mkdir(parents=True, exist_ok=True)
     transcript_path = run_dir / "transcript.md"

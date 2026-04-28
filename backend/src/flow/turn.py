@@ -23,7 +23,7 @@ from ..agents.dc_judge.schema import (
 from ..domain.errors import JudgeMalformed, PendingCheckActive
 from ..domain.memory import PlayerLogEntry
 from ..domain.state import GameState
-from ..llm.client import LLMClient
+from ..llm.client import LLMClient, set_llm_session_if_unset
 from ..mapping.to_front import pending_check_to_front
 from .actions import (
     emit_equip,
@@ -44,7 +44,6 @@ from .dirty import (
     finalize,
     next_log_id,
     push_act,
-    push_gm,
     push_log_entry,
 )
 from .judge import run_judge
@@ -63,6 +62,7 @@ async def run_turn(
     to_front_fn: ToFrontFn | None = None,
     rng: random.Random | None = None,
 ) -> AsyncIterator[dict]:
+    set_llm_session_if_unset(state.game_id)
     if state.pending_check is not None:
         raise PendingCheckActive(
             "a pending_check is already active; call /roll instead"
@@ -141,7 +141,7 @@ async def _run_one_step_action(
     async for ev in emit_factory(client, state, dirty, result):
         yield ev
     if getattr(result, "tail_intent", None):
-        yield push_gm(state, dirty, result.tail_intent)
+        yield push_act(state, dirty, result.tail_intent)
     advance_time(state, dirty)
     async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev
@@ -265,7 +265,7 @@ async def _dispatch(
                 async for ev in emit_factory(client, state, dirty, part):
                     yield ev
             if getattr(part, "tail_intent", None):
-                yield push_gm(state, dirty, part.tail_intent)
+                yield push_act(state, dirty, part.tail_intent)
         if last_pass is not None:
             target_for_log = last_pass.targets[0] if last_pass.targets else None
             stream = run_narrate(

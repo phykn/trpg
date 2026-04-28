@@ -26,7 +26,7 @@ from dotenv import load_dotenv  # noqa: E402
 
 load_dotenv(ROOT / "backend" / ".env")
 
-from src.llm import LLMClient  # noqa: E402
+from src.llm import LLMClient, set_llm_session  # noqa: E402
 
 from agency.story.harness.runner import (  # noqa: E402
     SPECS,
@@ -57,6 +57,7 @@ async def _run_entity(args: argparse.Namespace) -> None:
     llm = LLMClient(base_url=base_url, model="local", log_dir=ROOT / "logs")
 
     run_dir = _new_run_dir(kind)
+    set_llm_session(f"story-{args.scenario}-{kind}-{run_dir.parent.name}")
     try:
         entity, messages = await write_entity(
             kind=kind,
@@ -98,9 +99,13 @@ async def _run_scenario(args: argparse.Namespace) -> None:
         sys.exit(2)
 
     base_url = os.environ["BASE_URL"]
-    llm = LLMClient(base_url=base_url, model="local", log_dir=ROOT / "logs")
+    llm = LLMClient(
+        base_url=base_url, model="local", log_dir=ROOT / "logs",
+        chat_timeout_s=600.0,
+    )
 
     run_dir = _new_run_dir("scenario")
+    set_llm_session(f"story-scenario-{args.name}-{run_dir.parent.name}")
     decompose_prompt = AGENTS_DIR / "_decompose.md"
 
     def step(msg: str) -> None:

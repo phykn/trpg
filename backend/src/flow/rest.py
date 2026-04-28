@@ -10,7 +10,7 @@ from ..mapping.to_front import rest_ambush_text, rest_completed_text
 from ..rules import RULES
 from . import encounter as encounter_engine
 from .combat_phase import start_combat_and_run_npc_phase
-from .dirty import Dirty, ToFrontFn, advance_time, finalize, push_gm
+from .dirty import Dirty, ToFrontFn, advance_time, finalize, push_act
 
 
 async def run_rest(
@@ -42,7 +42,7 @@ async def run_rest(
     actor = state.characters[state.player_id]
 
     if outcome == "encounter":
-        yield push_gm(state, dirty, rest_ambush_text(actor.name))
+        yield push_act(state, dirty, rest_ambush_text(actor.name))
         async for ev in start_combat_and_run_npc_phase(
             state, enemy_ids, dirty, rng, surprise="enemy"
         ):
@@ -52,6 +52,6 @@ async def run_rest(
             yield ev
         return
 
-    yield push_gm(state, dirty, rest_completed_text(actor.name, RULES.time.sleep_hours))
+    yield push_act(state, dirty, rest_completed_text(actor.name, RULES.time.sleep_hours))
     async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev

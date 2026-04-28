@@ -15,7 +15,7 @@ from pathlib import Path
 from pydantic import BaseModel, ValidationError
 
 from src.domain.entities import Chapter, Character, Item, Location, Quest, Race, Skill
-from src.engines.invariants import check_item, check_seed_character
+from src.engines.invariants import check_character, check_item, check_seed_character
 from src.llm import LLMClient
 
 # --- types & errors --------------------------------------------------------
@@ -254,16 +254,25 @@ def _skills_pool(scenario_dir: Path) -> dict[str, Skill]:
     }
 
 
-def _check_entity_invariants(entity: BaseModel, scenario_dir: Path) -> None:
+def _check_entity_invariants(
+    entity: BaseModel, scenario_dir: Path, *, skeleton: bool = False
+) -> None:
     """Dispatch to backend.engines.invariants — all entity-level rules.
 
     Cross-ref between manifests is already done by spec.check_refs above; this
     runs the rule layer (stat invariants, HP/MP formula, NPC seed extras, etc).
+
+    skeleton=True: only stateless rules (pair-trade, HP/MP formula). The
+    items/skills pool isn't yet on disk, and character.inventory_ids /
+    skill_ids are intentionally empty — pool-based checks would false-fire.
     """
     if isinstance(entity, Character):
-        violations = check_seed_character(
-            entity, _items_pool(scenario_dir), _skills_pool(scenario_dir)
-        )
+        if skeleton:
+            violations = check_character(entity)
+        else:
+            violations = check_seed_character(
+                entity, _items_pool(scenario_dir), _skills_pool(scenario_dir)
+            )
     elif isinstance(entity, Item):
         violations = check_item(entity)
     else:
@@ -306,6 +315,7 @@ async def write_entity(
     think: bool = True,
     critic_prompt_path: Path | None = None,
     decomp_summary: str = "",
+    skeleton: bool = False,
 ) -> tuple[BaseModel, list[dict]]:
     """Have the LLM produce one entity. On validation failure, self-correct
     up to `retries` times. After invariants pass, optionally run a single
@@ -349,7 +359,7 @@ async def write_entity(
             entity = spec.model.model_validate_json(answer)
             _check_id(entity, existing_ids, force_id=force_id)
             spec.check_refs(entity, refs)
-            _check_entity_invariants(entity, scenario_dir)
+            _check_entity_invariants(entity, scenario_dir, skeleton=skeleton)
             if extra_check is not None:
                 extra_check(entity)
             final_entity = entity
@@ -400,7 +410,7 @@ async def write_entity(
                 entity_v2 = spec.model.model_validate_json(answer)
                 _check_id(entity_v2, existing_ids, force_id=force_id)
                 spec.check_refs(entity_v2, refs)
-                _check_entity_invariants(entity_v2, scenario_dir)
+                _check_entity_invariants(entity_v2, scenario_dir, skeleton=skeleton)
                 if extra_check is not None:
                     extra_check(entity_v2)
                 final_entity = entity_v2

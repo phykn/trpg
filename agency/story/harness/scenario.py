@@ -7,7 +7,13 @@ from typing import Literal
 
 from pydantic import BaseModel, ValidationError
 
-from src.domain.entities import Character
+from src.domain.entities import (
+    ArmorEffect,
+    Character,
+    Connection,
+    Item,
+    WeaponEffect,
+)
 from src.engines.invariants import Scenario, check_scenario
 from src.llm import LLMClient
 
@@ -25,11 +31,13 @@ from .runner import (
 class DecRace(BaseModel):
     id: str
     role: str
+    racial_skill_ids: list[str] = []
 
 
 class DecLocation(BaseModel):
     id: str
     role: str
+    connection_ids: list[str] = []
 
 
 class DecItem(BaseModel):
@@ -41,12 +49,20 @@ class DecItem(BaseModel):
     for_player_template: bool = False
 
 
+class DecSkill(BaseModel):
+    id: str
+    role: str
+    primary_stat: Literal["STR", "DEX", "CON", "INT", "WIS", "CHA"]
+    type: Literal["attack", "heal", "buff", "debuff"]
+
+
 class DecCharacter(BaseModel):
     id: str
     role: str
     is_enemy: bool = False
     location_id: str
     race_id: str
+    learned_skill_ids: list[str] = []
 
 
 class DecQuest(BaseModel):
@@ -69,6 +85,7 @@ class Decomposition(BaseModel):
     profile_name: str
     profile_description: str
     races: list[DecRace]
+    skills: list[DecSkill] = []
     locations: list[DecLocation]
     items: list[DecItem]
     characters: list[DecCharacter]
@@ -80,6 +97,17 @@ class Decomposition(BaseModel):
 
 
 # --- decomposer ------------------------------------------------------------
+
+def _normalize_decomp(d: Decomposition) -> None:
+    """Auto-correct deterministic data conflicts the LLM keeps producing.
+
+    Items with both owner_character_id and owner_location_id set: the LLM
+    sometimes redundantly fills the location of the NPC owner. NPC inventory
+    is the more specific signal, so drop owner_location_id."""
+    for it in d.items:
+        if it.owner_character_id is not None and it.owner_location_id is not None:
+            it.owner_location_id = None
+
 
 def _check_decomp(d: Decomposition) -> None:
     def _check_ids(items: list, kind: str) -> set[str]:
@@ -95,6 +123,7 @@ def _check_decomp(d: Decomposition) -> None:
         return seen
 
     race_ids = _check_ids(d.races, "race")
+    skill_ids = _check_ids(d.skills, "skill")
     loc_ids = _check_ids(d.locations, "location")
     item_ids = _check_ids(d.items, "item")
     char_ids = _check_ids(d.characters, "character")
@@ -103,6 +132,49 @@ def _check_decomp(d: Decomposition) -> None:
 
     if not d.chapters:
         raise EntityWriterError("chapters 가 비어 있음. 최소 1 개 필요.")
+    # Locations must form a connected map reachable from start_location_id —
+    # otherwise the player can never visit some quest targets.
+    loc_by_id = {loc.id: loc for loc in d.locations}
+    for loc in d.locations:
+        seen_targets: set[str] = set()
+        for tid in loc.connection_ids:
+            if tid == loc.id:
+                raise EntityWriterError(
+                    f"location {loc.id} connection_ids 가 자기 자신을 가리킴. 자기-루프 금지."
+                )
+            if tid not in loc_by_id:
+                raise EntityWriterError(
+                    f"location {loc.id} connection_id={tid!r} 가 locations 명단에 없음. "
+                    f"가능한 id: {sorted(loc_by_id)}"
+                )
+            if tid in seen_targets:
+                raise EntityWriterError(
+                    f"location {loc.id} connection_ids 에 {tid!r} 가 중복."
+                )
+            seen_targets.add(tid)
+    if d.locations:
+        # BFS over the undirected projection of connection_ids — both directions
+        # count for reachability since attach makes connections symmetric.
+        adj: dict[str, set[str]] = {loc.id: set() for loc in d.locations}
+        for loc in d.locations:
+            for tid in loc.connection_ids:
+                adj[loc.id].add(tid)
+                adj[tid].add(loc.id)
+        if d.start_location_id in adj:
+            visited: set[str] = {d.start_location_id}
+            stack = [d.start_location_id]
+            while stack:
+                cur = stack.pop()
+                for nb in adj[cur]:
+                    if nb not in visited:
+                        visited.add(nb)
+                        stack.append(nb)
+            unreachable = [lid for lid in adj if lid not in visited]
+            if unreachable:
+                raise EntityWriterError(
+                    f"start_location_id={d.start_location_id!r} 에서 도달 불가능한 locations: "
+                    f"{sorted(unreachable)}. 모든 location 이 connection_ids 를 통해 시작점에서 닿아야 한다."
+                )
     if d.start_location_id not in loc_ids:
         raise EntityWriterError(
             f"start_location_id={d.start_location_id!r} 가 locations 명단에 없음. "
@@ -117,8 +189,27 @@ def _check_decomp(d: Decomposition) -> None:
             f"start_quest_id={d.start_quest_id!r} 가 quests 명단에 없음."
         )
 
-    # character.location_id / race_id must point inside the manifest
+    # race.racial_skill_ids must reference declared skills, and every race
+    # must declare ≥1 racial so plain villagers (with empty learned) still
+    # satisfy the seed-only "NPC must have ≥1 skill" invariant.
+    for r in d.races:
+        if not r.racial_skill_ids:
+            raise EntityWriterError(
+                f"race {r.id} 의 racial_skill_ids 가 비어 있음. "
+                "모든 race 는 racial 1 개 이상이 필요하다 (인간은 'barter' 같은 일상 능력, "
+                "짐승은 'natural_armor' 같은 자연 무기). 모든 NPC 가 race 의 racial 을 자동 상속하므로 "
+                "이게 있어야 평민도 skill 수 ≥ 1 을 만족한다."
+            )
+        for sid in r.racial_skill_ids:
+            if sid not in skill_ids:
+                raise EntityWriterError(
+                    f"race {r.id} racial_skill_id={sid!r} 가 skills 명단에 없음. "
+                    f"가능한 id: {sorted(skill_ids)}"
+                )
+
+    # character.location_id / race_id / learned_skill_ids must point inside the manifest
     char_by_id = {c.id: c for c in d.characters}
+    race_by_id = {r.id: r for r in d.races}
     for c in d.characters:
         if c.location_id not in loc_ids:
             raise EntityWriterError(
@@ -130,6 +221,22 @@ def _check_decomp(d: Decomposition) -> None:
                 f"character {c.id} race_id={c.race_id!r} 가 races 명단에 없음. "
                 f"가능한 id: {sorted(race_ids)}"
             )
+        for sid in c.learned_skill_ids:
+            if sid not in skill_ids:
+                raise EntityWriterError(
+                    f"character {c.id} learned_skill_id={sid!r} 가 skills 명단에 없음. "
+                    f"가능한 id: {sorted(skill_ids)}"
+                )
+        # learned must not overlap with the inherited racial pool — character
+        # would end up holding the same skill id twice (duplicate violation).
+        racial_pool = set(race_by_id[c.race_id].racial_skill_ids)
+        for sid in c.learned_skill_ids:
+            if sid in racial_pool:
+                raise EntityWriterError(
+                    f"character {c.id} learned_skill_id={sid!r} 가 race={c.race_id} 의 "
+                    f"racial_skill_ids 에 이미 들어 있음. character 는 race 의 racial 을 자동 "
+                    "상속하므로 learned 에 같은 id 를 또 박으면 중복이 된다 — 다른 skill id 로 바꿔라."
+                )
 
     # active subject must start at the start location
     start_subject_loc = char_by_id[d.start_subject_id].location_id
@@ -154,6 +261,32 @@ def _check_decomp(d: Decomposition) -> None:
                 f"item {it.id} 의 owner_character_id 와 owner_location_id 가 모두 있음. "
                 "둘 중 하나만 (또는 for_player_template=true 면 둘 다 비워둘 수 있음)."
             )
+
+    # Each humanoid character must own ≥1 armor item; combatants also a weapon.
+    items_by_owner: dict[str, list[DecItem]] = {}
+    for it in d.items:
+        if it.owner_character_id:
+            items_by_owner.setdefault(it.owner_character_id, []).append(it)
+    beast_races = {r.id for r in d.races if any(
+        kw in r.role for kw in ("짐승", "괴수", "괴생명체", "짐승형", "야수")
+    )}
+    for c in d.characters:
+        if c.race_id in beast_races:
+            continue
+        owned = items_by_owner.get(c.id, [])
+        has_armor = any(it.kind == "armor" for it in owned)
+        if not has_armor:
+            raise EntityWriterError(
+                f"character {c.id} (race={c.race_id}) 가 owned armor item 이 없음. "
+                "items 명단에 kind='armor' + owner_character_id 인 옷을 1 개 넣어라."
+            )
+        if c.is_enemy:
+            has_weapon = any(it.kind == "weapon" for it in owned)
+            if not has_weapon:
+                raise EntityWriterError(
+                    f"character {c.id} 가 적대 (is_enemy=true) 인데 owned weapon item 이 없음. "
+                    "items 명단에 kind='weapon' + owner_character_id 인 무기를 1 개 넣어라."
+                )
 
     target_pools = {
         "character": char_ids,
@@ -198,6 +331,7 @@ async def decompose_prose(
         answer = (result["answer"] or "").strip()
         try:
             d = Decomposition.model_validate_json(answer)
+            _normalize_decomp(d)
             _check_decomp(d)
             return d, messages + [{"role": "assistant", "content": answer}]
         except (ValidationError, EntityWriterError, json.JSONDecodeError) as e:
@@ -236,6 +370,7 @@ async def _write_step(
     run_dir: Path | None = None,
     critic_prompt_path: Path | None = None,
     decomp_summary: str = "",
+    skeleton: bool = False,
 ) -> BaseModel:
     entity, msgs = await write_entity(
         kind=kind,
@@ -248,6 +383,7 @@ async def _write_step(
         think=think,
         critic_prompt_path=critic_prompt_path,
         decomp_summary=decomp_summary,
+        skeleton=skeleton,
     )
     write_entity_to_disk(entity, scenario_dir, kind)
     if run_dir is not None:
@@ -264,11 +400,20 @@ def _make_decomp_summary(d: Decomposition) -> str:
     if d.races:
         parts.append("races:")
         for r in d.races:
-            parts.append(f"  - {r.id}: {r.role}")
+            extra = f" (racial_skills={r.racial_skill_ids})" if r.racial_skill_ids else ""
+            parts.append(f"  - {r.id}: {r.role}{extra}")
+    if d.skills:
+        parts.append("skills:")
+        for s in d.skills:
+            parts.append(f"  - {s.id} [{s.type}, {s.primary_stat}]: {s.role}")
     if d.locations:
         parts.append("locations:")
         for loc in d.locations:
-            parts.append(f"  - {loc.id}: {loc.role}")
+            conn = (
+                f" (connects: {', '.join(loc.connection_ids)})"
+                if loc.connection_ids else ""
+            )
+            parts.append(f"  - {loc.id}: {loc.role}{conn}")
     if d.items:
         parts.append("items:")
         for it in d.items:
@@ -284,7 +429,10 @@ def _make_decomp_summary(d: Decomposition) -> str:
         parts.append("characters:")
         for c in d.characters:
             tag = "enemy" if c.is_enemy else "friendly"
-            parts.append(f"  - {c.id} [{tag}, race={c.race_id}, loc={c.location_id}]: {c.role}")
+            extra = f" (learned={c.learned_skill_ids})" if c.learned_skill_ids else ""
+            parts.append(
+                f"  - {c.id} [{tag}, race={c.race_id}, loc={c.location_id}]: {c.role}{extra}"
+            )
     if d.quests:
         parts.append("quests:")
         for q in d.quests:
@@ -294,6 +442,117 @@ def _make_decomp_summary(d: Decomposition) -> str:
         for ch in d.chapters:
             parts.append(f"  - {ch.id}: {ch.role}")
     return "\n".join(parts)
+
+
+def _attach_step(scenario_dir: Path, decomp: "Decomposition") -> None:
+    """Final patch pass — fills cross-refs that were left empty in the
+    skeleton writes. Pure data transform, no LLM.
+
+    - race.racial_skill_ids ← decomp
+    - location.item_ids ← items with matching owner_location_id
+    - character.racial_skill_ids ← inherited from race
+    - character.learned_skill_ids ← decomp
+    - character.inventory_ids ← items owned by this character
+    - character.equipment ← inferred from inventory:
+      - Armor → `top` (single slot — first armor wins)
+      - One-handed weapon → dominant hand
+      - Two-handed weapon → both hands
+    """
+    races_dir = scenario_dir / "races"
+    items_dir = scenario_dir / "items"
+    chars_dir = scenario_dir / "characters"
+    locs_dir = scenario_dir / "locations"
+    if not (races_dir.exists() and chars_dir.exists()):
+        return
+
+    # Patch races first so character racial inheritance reads the final list.
+    decomp_race = {r.id: r for r in decomp.races}
+    for path in races_dir.glob("*.json"):
+        race = json.loads(path.read_text(encoding="utf-8"))
+        dr = decomp_race.get(race["id"])
+        if dr is None:
+            continue
+        race["racial_skill_ids"] = list(dr.racial_skill_ids)
+        path.write_text(
+            json.dumps(race, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+    items: dict[str, Item] = {}
+    if items_dir.exists():
+        for path in items_dir.glob("*.json"):
+            items[path.stem] = Item.model_validate_json(path.read_text(encoding="utf-8"))
+
+    # Location patches: item_ids (from item.owner_location_id) and connections
+    # (symmetric closure of decomp's connection_ids — undirected graph).
+    if locs_dir.exists():
+        items_by_loc: dict[str, list[str]] = {}
+        for it_decomp in decomp.items:
+            if it_decomp.owner_location_id and it_decomp.id in items:
+                items_by_loc.setdefault(it_decomp.owner_location_id, []).append(it_decomp.id)
+        adj: dict[str, set[str]] = {loc.id: set() for loc in decomp.locations}
+        for loc_dec in decomp.locations:
+            for tid in loc_dec.connection_ids:
+                adj.setdefault(loc_dec.id, set()).add(tid)
+                adj.setdefault(tid, set()).add(loc_dec.id)
+        for path in locs_dir.glob("*.json"):
+            loc = json.loads(path.read_text(encoding="utf-8"))
+            loc["item_ids"] = items_by_loc.get(loc["id"], [])
+            loc["connections"] = [
+                Connection(target_id=tid).model_dump()
+                for tid in sorted(adj.get(loc["id"], set()))
+            ]
+            path.write_text(
+                json.dumps(loc, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+
+    items_by_owner: dict[str, list[Item]] = {}
+    for c in decomp.characters:
+        items_by_owner.setdefault(c.id, [])
+    for it_decomp in decomp.items:
+        owner = it_decomp.owner_character_id
+        if owner and it_decomp.id in items:
+            items_by_owner.setdefault(owner, []).append(items[it_decomp.id])
+
+    decomp_char = {c.id: c for c in decomp.characters}
+    for char_path in chars_dir.glob("*.json"):
+        char = Character.model_validate_json(char_path.read_text(encoding="utf-8"))
+        dc = decomp_char.get(char.id)
+        race_skills = decomp_race[dc.race_id].racial_skill_ids if dc else []
+        if dc is not None:
+            char.racial_skill_ids = list(race_skills)
+            char.learned_skill_ids = list(dc.learned_skill_ids)
+        owned = items_by_owner.get(char.id, [])
+        char.inventory_ids = [it.id for it in owned]
+        for it in owned:
+            eff = it.effects
+            if isinstance(eff, WeaponEffect):
+                if eff.two_handed:
+                    char.equipment.leftHand = it.id
+                    char.equipment.rightHand = it.id
+                elif char.dominant_hand == "left":
+                    char.equipment.leftHand = char.equipment.leftHand or it.id
+                else:
+                    char.equipment.rightHand = char.equipment.rightHand or it.id
+            elif isinstance(eff, ArmorEffect):
+                if char.equipment.top is None:
+                    char.equipment.top = it.id
+        char_path.write_text(
+            char.model_dump_json(indent=2), encoding="utf-8"
+        )
+
+
+def _check_item_no_required(entity: BaseModel) -> None:
+    """Seed items must leave `required` empty — Stats defaults every missing
+    field to 10, so a partial constraint silently expands into a full one and
+    blocks the owner whose stats include any sub-10 value."""
+    if not isinstance(entity, Item):
+        return
+    if entity.required is not None:
+        raise EntityWriterError(
+            f"item {entity.id} 에 required 가 박혀 있음. 시드 단계 item 은 항상 required=null. "
+            "Pydantic 의 Stats 는 비어 있는 stat 을 자동으로 10 으로 채우기 때문에 "
+            "부분 객체로 보여도 owner 의 sub-10 stat 과 충돌해 invariant 가 잡는다."
+        )
 
 
 def _check_enemy_consistency(entity: BaseModel, expected_enemy: bool) -> None:
@@ -373,55 +632,38 @@ async def build_scenario(
     _step("world.md")
     (scenario_dir / "world.md").write_text(decomp.world_md, encoding="utf-8")
 
-    # 3. races
+    # 3. races — skeleton; racial_skill_ids stays empty until the attach pass
+    # so the skill writer can see actual race + character profiles on disk.
     _step(f"race × {len(decomp.races)}")
     for r in decomp.races:
         await _write_step(
-            kind="race", forced_id=r.id, hint=_hint_with_id(r.id, r.role),
+            kind="race", forced_id=r.id,
+            hint=_hint_with_id(r.id, r.role, "racial_skill_ids 는 [] 로 둘 것 (다음 단계에서 자동 채워진다)."),
             scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
             run_dir=run_dir, critic_prompt_path=critic_prompt, decomp_summary=decomp_summary,
+            skeleton=True,
         )
     counts["race"] = len(decomp.races)
 
-    # 4. items (before locations — location.item_ids and character.inventory_ids reference item ids)
-    _step(f"item × {len(decomp.items)}")
-    for it in decomp.items:
-        extra = f"분류: {it.kind} ('{it.kind}' 의 effects 모양 사용)."
-        await _write_step(
-            kind="item", forced_id=it.id,
-            hint=_hint_with_id(it.id, it.role, extra),
-            scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
-            run_dir=run_dir, critic_prompt_path=critic_prompt, decomp_summary=decomp_summary,
-        )
-    counts["item"] = len(decomp.items)
-
-    # 5. locations — items whose owner_location_id matches go into item_ids
+    # 4. locations — skeleton; item_ids and connections stay empty until the
+    # attach pass fills them programmatically.
     _step(f"location × {len(decomp.locations)}")
-    items_by_loc: dict[str, list[str]] = {}
-    for it in decomp.items:
-        if it.owner_location_id:
-            items_by_loc.setdefault(it.owner_location_id, []).append(it.id)
     for loc in decomp.locations:
-        loc_items = items_by_loc.get(loc.id, [])
-        if loc_items:
-            items_repr = "[" + ", ".join(repr(i) for i in loc_items) + "]"
-            extra = f"item_ids 에 정확히 {items_repr} 를 박아라."
-        else:
-            extra = "item_ids 는 빈 리스트 또는 생략."
         await _write_step(
             kind="location", forced_id=loc.id,
-            hint=_hint_with_id(loc.id, loc.role, extra),
+            hint=_hint_with_id(
+                loc.id, loc.role,
+                "item_ids 와 connections 는 모두 [] 로 둘 것 (다음 단계에서 자동 채워진다).",
+            ),
             scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
             run_dir=run_dir, critic_prompt_path=critic_prompt, decomp_summary=decomp_summary,
+            skeleton=True,
         )
     counts["location"] = len(decomp.locations)
 
-    # 6. characters — race_id, location_id, inventory_ids all forced
+    # 5. characters — skeleton. inventory/equipment/skill_ids stay empty
+    # until the attach pass (after items + skills are on disk).
     _step(f"character × {len(decomp.characters)}")
-    items_by_char: dict[str, list[str]] = {}
-    for it in decomp.items:
-        if it.owner_character_id:
-            items_by_char.setdefault(it.owner_character_id, []).append(it.id)
     for c in decomp.characters:
         if c.is_enemy:
             flag = (
@@ -433,17 +675,12 @@ async def build_scenario(
                 "비적대 — combat_behavior 는 박지 말 것 (필드 자체 생략). "
                 "xp_reward 는 0 또는 생략."
             )
-        char_items = items_by_char.get(c.id, [])
-        if char_items:
-            inv_repr = "[" + ", ".join(repr(i) for i in char_items) + "]"
-            inv_clause = f" inventory_ids 에 정확히 {inv_repr} 를 박을 것."
-        else:
-            inv_clause = " inventory_ids 는 빈 리스트 또는 생략."
         extra = (
             f"적대 여부: {flag}. "
             f"race_id 를 정확히 '{c.race_id}' 로 박을 것. "
-            f"location_id 를 정확히 '{c.location_id}' 로 박을 것."
-            f"{inv_clause}"
+            f"location_id 를 정확히 '{c.location_id}' 로 박을 것. "
+            "inventory_ids, equipment, racial_skill_ids, learned_skill_ids 는 모두 비워둘 것 "
+            "— 다음 단계에서 자동으로 채워진다."
         )
         expected_enemy = c.is_enemy
 
@@ -456,8 +693,116 @@ async def build_scenario(
             scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm,
             extra_check=_check, think=think, run_dir=run_dir,
             critic_prompt_path=critic_prompt, decomp_summary=decomp_summary,
+            skeleton=True,
         )
     counts["character"] = len(decomp.characters)
+
+    # 6. skills — race + character skeletons are on disk; pass each skill's
+    # owners (race / character) so the writer can tailor name, description,
+    # and special_effect to that owner's profile.
+    _step(f"skill × {len(decomp.skills)}")
+    skill_owners: dict[str, list[str]] = {}
+    for r in decomp.races:
+        for sid in r.racial_skill_ids:
+            skill_owners.setdefault(sid, []).append(f"race:{r.id}")
+    for c in decomp.characters:
+        for sid in c.learned_skill_ids:
+            skill_owners.setdefault(sid, []).append(f"character:{c.id}")
+    for s in decomp.skills:
+        owner_blurbs: list[str] = []
+        is_racial = False
+        char_owner_levels: list[int] = []
+        for owner_ref in skill_owners.get(s.id, []):
+            kind, oid = owner_ref.split(":", 1)
+            path = scenario_dir / ("races" if kind == "race" else "characters") / f"{oid}.json"
+            if not path.exists():
+                continue
+            owner = json.loads(path.read_text(encoding="utf-8"))
+            if kind == "race":
+                is_racial = True
+                owner_blurbs.append(
+                    f"race {oid}: name='{owner['name']}', description='{owner['description']}'"
+                )
+            else:
+                lvl = owner.get("level")
+                if isinstance(lvl, int):
+                    char_owner_levels.append(lvl)
+                owner_blurbs.append(
+                    f"character {oid}: name='{owner['name']}', "
+                    f"job='{owner.get('job','')}', level={lvl if lvl is not None else '?'}, "
+                    f"role='{owner.get('role','')}'"
+                )
+        # Racial wins: any race owner forces level=1 (the racial level pin).
+        # Otherwise the skill must fit the lowest-level character that learned it.
+        if is_racial:
+            forced_level = 1
+            level_reason = "race 가 owner 인 racial skill — level 은 항상 1."
+        elif char_owner_levels:
+            forced_level = min(char_owner_levels)
+            level_reason = (
+                f"character owner 의 최저 level={forced_level} 이하여야 한다 "
+                "(invariant: skill.level ≤ character.level)."
+            )
+        else:
+            forced_level = 1
+            level_reason = "owner 미상 — level 1 로 둘 것."
+        extra = (
+            f"primary_stat 을 정확히 '{s.primary_stat}' 로, "
+            f"type 을 정확히 '{s.type}' 로, "
+            f"level 을 정확히 {forced_level} 로 박아라. {level_reason}"
+        )
+        if owner_blurbs:
+            extra += (
+                f" 이 스킬을 쓰는 owner: {'; '.join(owner_blurbs)}. "
+                "owner 의 직업·레벨·세계관에 어울리는 이름·description·special_effect 로."
+            )
+
+        def _check_skill_level(entity: BaseModel, fl: int = forced_level) -> None:
+            level = getattr(entity, "level", None)
+            if level != fl:
+                raise EntityWriterError(
+                    f"skill {entity.id} level={level} ≠ 강제 level={fl}. "
+                    "힌트의 level 지시를 정확히 따라야 invariant (skill.level ≤ character.level) 을 통과한다."
+                )
+
+        await _write_step(
+            kind="skill", forced_id=s.id,
+            hint=_hint_with_id(s.id, s.role, extra),
+            scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
+            extra_check=_check_skill_level,
+            run_dir=run_dir, critic_prompt_path=critic_prompt, decomp_summary=decomp_summary,
+        )
+    counts["skill"] = len(decomp.skills)
+
+    # 7. items — characters already on disk; load each item's owner profile
+    # so the writer tailors armor/weapon to that character's job and level.
+    _step(f"item × {len(decomp.items)}")
+    char_by_id_decomp = {c.id: c for c in decomp.characters}
+    for it in decomp.items:
+        extra = f"분류: {it.kind} ('{it.kind}' 의 effects 모양 사용)."
+        if it.owner_character_id and it.owner_character_id in char_by_id_decomp:
+            owner_path = scenario_dir / "characters" / f"{it.owner_character_id}.json"
+            if owner_path.exists():
+                owner = json.loads(owner_path.read_text(encoding="utf-8"))
+                extra += (
+                    f" 소유자 character: id='{owner['id']}', name='{owner.get('name','')}', "
+                    f"job='{owner.get('job','')}', level={owner.get('level','?')}, "
+                    f"role='{owner.get('role','')}'. "
+                    "이 character 의 직업·레벨·세계관에 어울리는 디테일로 작성하라."
+                )
+        await _write_step(
+            kind="item", forced_id=it.id,
+            hint=_hint_with_id(it.id, it.role, extra),
+            scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
+            extra_check=_check_item_no_required,
+            run_dir=run_dir, critic_prompt_path=critic_prompt, decomp_summary=decomp_summary,
+        )
+    counts["item"] = len(decomp.items)
+
+    # 8. attach — patch race / character / location cross-refs that were
+    # left empty in skeleton writes. Pure data transform, no LLM.
+    _step("attach skills + equipment")
+    _attach_step(scenario_dir, decomp)
 
     # 7. quests
     _step(f"quest × {len(decomp.quests)}")

@@ -30,7 +30,7 @@ from .actions import (
     emit_unequip,
     emit_use,
 )
-from .dirty import Dirty, ToFrontFn, advance_time, finalize, push_act, push_gm, push_turn_log
+from .dirty import Dirty, ToFrontFn, advance_time, finalize, push_act, push_turn_log
 from .format import format_combat_end_text
 from .judge import run_judge
 from .subject import refresh_active_subject
@@ -49,7 +49,7 @@ async def _handle_surprise_skip(
         if actor_id in state.characters
         else actor_id
     )
-    yield push_gm(
+    yield push_act(
         state, dirty,
         f"{actor_name}은(는) 기습당해 첫 라운드 행동하지 못한다.",
     )
@@ -80,7 +80,7 @@ async def run_combat_npc_phase(
     while True:
         end = combat_engine.check_combat_end(state)
         if end is not None:
-            yield push_gm(state, dirty, format_combat_end_text(end))
+            yield push_act(state, dirty, format_combat_end_text(end))
             yield {"type": "combat_end", "data": {"outcome": end}}
             combat_engine.end_combat(state)
             return
@@ -108,14 +108,14 @@ async def run_combat_npc_phase(
         if combat_engine.should_attempt_flee(actor, rng=rng):
             ok, _roll = combat_engine.try_flee(actor, rng=rng)
             if ok:
-                yield push_gm(state, dirty, f"{actor.name}이(가) 전투에서 도주했다.")
+                yield push_act(state, dirty, f"{actor.name}이(가) 전투에서 도주했다.")
                 yield {
                     "type": "combat_turn",
                     "data": {"actor": actor_id, "action": "flee", "grade": "success"},
                 }
                 combat_engine.remove_from_combat(state, actor_id)
                 continue
-            yield push_gm(state, dirty, f"{actor.name}이(가) 도주를 시도했으나 실패했다.")
+            yield push_act(state, dirty, f"{actor.name}이(가) 도주를 시도했으나 실패했다.")
             yield {
                 "type": "combat_turn",
                 "data": {"actor": actor_id, "action": "flee", "grade": "failure"},
@@ -146,7 +146,7 @@ async def start_combat_and_run_npc_phase(
     # line and the engine doesn't reset round/turn_order on the active fight.
     if state.combat_state is None:
         cs = combat_engine.start_combat(state, enemy_ids, rng=rng, surprise=surprise)
-        yield push_gm(state, dirty, "전투 개시!")
+        yield push_act(state, dirty, "전투 개시!")
         yield {
             "type": "combat_start",
             "data": {
@@ -210,7 +210,7 @@ async def _handle_death_save(
             if ds is not None
             else "성공/실패."
         )
-    yield push_gm(state, dirty, text)
+    yield push_act(state, dirty, text)
     yield {
         "type": "combat_turn",
         "data": {"actor": state.player_id, "action": "death_save", "grade": ds_grade},
@@ -233,7 +233,7 @@ async def _handle_combat_action(
     target_id = result.targets[0]
     target = state.characters.get(target_id)
     if target_id == state.player_id or target is None or not target.alive:
-        yield push_gm(state, dirty, "그 대상은 공격할 수 없다.")
+        yield push_act(state, dirty, "그 대상은 공격할 수 없다.")
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -261,7 +261,7 @@ async def _handle_flee(
     player = state.characters[state.player_id]
     ok, roll_total = combat_engine.try_flee(player, rng=rng)
     if ok:
-        yield push_gm(
+        yield push_act(
             state, dirty,
             f"{player.name}이(가) 전투에서 도주했다 (굴림 {roll_total}).",
         )
@@ -276,7 +276,7 @@ async def _handle_flee(
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
-    yield push_gm(
+    yield push_act(
         state, dirty,
         f"{player.name}이(가) 도주를 시도했으나 실패했다 (굴림 {roll_total}).",
     )
@@ -365,7 +365,7 @@ async def run_combat_player_turn(
         return
 
     if isinstance(result, PassAction):
-        yield push_gm(
+        yield push_act(
             state, dirty,
             f"{player.name}은(는) 자세를 가다듬으며 한 차례를 보낸다.",
         )

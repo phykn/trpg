@@ -32,6 +32,16 @@ def refresh_active_subject(state: GameState, result) -> None:
     narrate-path actions (pass/reject) we fall back to recent_npc, which
     captures whoever the previous narrate turn was about.
     """
+    # If the current subject just died, drop it first so a turn that produces
+    # no fresh engagement signal (idle pass) doesn't keep the corpse pinned in
+    # the Subject panel — which is where the player picks up the dead-NPC name
+    # to mention again on the next turn.
+    cur = state.active_subject_id
+    if cur is not None:
+        cur_ch = state.characters.get(cur)
+        if cur_ch is None or not cur_ch.alive:
+            state.active_subject_id = None
+
     candidate: str | None = None
 
     if isinstance(result, (CombatAction, RollAction, PassAction)):

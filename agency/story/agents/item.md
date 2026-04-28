@@ -25,6 +25,6 @@
 
 - 무기·방어구는 `consumable: false` (또는 생략), 소모품은 `consumable: true` + `effects.type:"consumable"`.
 - `weapon_dice` 는 `<숫자>d<숫자>` 형식 (예: `1d6`, `2d4`).
-- `required` (사용 요구 능력치) 필드는 강한 무기·방어구에만 지정한다 — `{"STR": <int>}` 같은 Stats 부분 객체. 보통 생략.
+- `required` (사용 요구 능력치) 필드는 **시드 단계에서는 절대 채우지 말 것 — 항상 `null` (또는 생략)**. Stats 부분 객체로 보이지만 Pydantic 이 비어 있는 stat 도 `10` 으로 자동 채우기 때문에, owner 의 stat 이 10 미만이면 invariant 가 잘못 잡는다. 게임 중 강한 무기 가공 단계에서나 채워질 필드.
 - `on_use` 는 quest trigger 용 자유 텍스트. 보통 생략.
 - 기존 item 과 컨셉 중복 금지.

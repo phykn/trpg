@@ -158,7 +158,7 @@ async def test_level_up_natural_language_applies_pair_trade(fresh_state, tmp_dat
     assert p.stats.CHA == 9
     log_texts = [
         e["data"]["text"] for e in events
-        if e["type"] == "log_entry" and e["data"].get("kind") == "gm"
+        if e["type"] == "log_entry" and e["data"].get("kind") == "act"
     ]
     assert any("레벨 1" in t for t in log_texts)
 

@@ -82,13 +82,11 @@ async def run_narrate(
                 item.output.importance = None
                 item.output.suggestions = []
             elif action == "pass":
-                # Narrator must not relocate the player on a "stand still"-style
-                # action — survivor t8 produced a player move on a "잠시 숨을 고른다"
-                # input. Strip player-relocation changes; leave NPC moves alone.
-                item.output.state_changes = [
-                    c for c in item.output.state_changes
-                    if not _is_player_relocation(c, state.player_id)
-                ]
+                item.output.state_changes = _reconcile_player_move(
+                    item.output.state_changes,
+                    judge_result,
+                    state,
+                )
         yield item
 
 
@@ -104,6 +102,52 @@ def _is_player_relocation(change: dict, player_id: str) -> bool:
     ):
         return True
     return False
+
+
+def _expected_destination(judge_result: dict, state: GameState) -> str | None:
+    """When judge picks `pass targets=[loc_id]` and that loc differs from the
+    player's current location, that's the player's movement intent. Returns
+    the destination loc id or None."""
+    targets = judge_result.get("targets") or []
+    if not targets:
+        return None
+    first = targets[0]
+    if first not in state.locations:
+        return None
+    player = state.characters.get(state.player_id)
+    if player is None or player.location_id == first:
+        return None
+    return first
+
+
+def _reconcile_player_move(
+    changes: list[dict], judge_result: dict, state: GameState
+) -> list[dict]:
+    """Resolve narrate's player-relocation output against judge's intent.
+
+    - No movement intent (no location target) → strip any player relocations
+      narrate emitted (e.g., '잠시 숨을 고른다' shouldn't move the player).
+    - Movement intent → keep player moves only if they match the expected
+      destination, drop hallucinated moves to other locations, and auto-inject
+      a `move` change if narrate forgot to emit one (the bug where prose
+      reads '여관에 들어선다' but state stays at town_square)."""
+    expected = _expected_destination(judge_result, state)
+    player_id = state.player_id
+    if expected is None:
+        return [c for c in changes if not _is_player_relocation(c, player_id)]
+    kept: list[dict] = []
+    has_match = False
+    for c in changes:
+        if not _is_player_relocation(c, player_id):
+            kept.append(c)
+            continue
+        dest = c.get("destination") if c.get("type") == "move" else c.get("value")
+        if dest == expected:
+            kept.append(c)
+            has_match = True
+    if not has_match:
+        kept.append({"type": "move", "target": player_id, "destination": expected})
+    return kept
 
 
 async def consume_narrate(

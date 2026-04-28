@@ -196,6 +196,21 @@ def _entities_payload(
     return entities
 
 
+def _corpses_payload(state: GameState, actor: Character) -> list[dict]:
+    """Same-location dead NPCs. Surfaced separately from `entities` so judge
+    semantics doesn't accept them as combat/buy/sell targets, but narrate
+    sees them and won't resurrect them as a generic passerby (the bug where
+    a killed NPC kept walking up to the player and giving quest hooks)."""
+    out: list[dict] = []
+    for cid, char in state.characters.items():
+        if cid == actor.id or char.location_id != actor.location_id:
+            continue
+        if char.alive:
+            continue
+        out.append({"id": cid, "name": char.name})
+    return out
+
+
 def _location_payload(location: Location) -> dict:
     out: dict = {
         "id": location.id,
@@ -229,6 +244,7 @@ def build_surroundings(state: GameState, actor_id: str) -> dict:
             **base,
             "location": None,
             "entities": [],
+            "corpses": [],
             "skills": [],
             "inventory": [],
             "merchants": [],
@@ -238,6 +254,7 @@ def build_surroundings(state: GameState, actor_id: str) -> dict:
         **base,
         "location": _location_payload(location),
         "entities": _entities_payload(state, actor_id, actor, location),
+        "corpses": _corpses_payload(state, actor),
         "skills": _skills_payload(state, actor),
         "inventory": _inventory_payload(state, actor),
         "merchants": _merchants_payload(state, actor),
