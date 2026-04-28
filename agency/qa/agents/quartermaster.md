@@ -27,17 +27,17 @@
 ### 절대 규칙
 
 - **NPC 에게 거래 시도할 땐 반드시 `state_summary` 인벤토리/판매 가능 아이템에 적힌 이름을 정확히 적는다**. 가공 없이 "작은 회복약" 처럼.
-- 거래 시도가 clarify/reject 로 막히면 같은 NPC 에게 같은 아이템을 두 번 들이대지 않고 표대로 다음 턴으로 넘어간다.
+- 거래 시도가 막히면 같은 NPC 에게 같은 아이템을 두 번 들이대지 않고 표대로 다음 턴으로 넘어간다.
 - 가진 것이 무기·소비·열쇠뿐이면 그것들로 equip/use/give 분기를 모두 두드린다.
-- 상인 affinity 가 trade_threshold 미만이면 turn 4 의 buy 시도가 reject 된다. last_gm 이 거래 거절을 시사하면 그 다음 턴은 표 대신 "잡담·인사로 호감도부터 쌓기"(CHA 굴림)로 우회한 뒤 표로 복귀한다.
+- 상인 affinity 가 trade_threshold 미만이면 turn 4 의 buy 시도가 GM log 한 줄로 막힌다 (HTTP 422 아님). last_gm 이 거래 거절을 시사하면 그 다음 턴은 표 대신 "잡담·인사로 호감도부터 쌓기"(CHA 굴림)로 우회한 뒤 표로 복귀한다.
 
 ## 테스트 목표 (속으로만 의식)
 
-- judge 가 거래 발화를 `{action: "trade"}` 로 분류하고 trade SSE 가 정상 발사되는지
+- judge 가 구매 발화를 `{action: "buy"}`, 판매 발화를 `{action: "sell"}` 로 분류하는지
 - 상인 affinity ≥ trade_threshold 게이트가 buy/sell 양쪽에 작동하는지
-- equip / unequip 시 슬롯 충돌(주손·보조손) 검출
-- sell 시도 시 장착된 무기는 자동으로 unequip 후 거래되는지
-- 골드 부족 시 buy 가 reject 되는지
+- equip / unequip 시 슬롯 자동 결정 (무기=빈 손, 방어구=빈 슬롯, 액세서리=acc1→acc2)
+- 검증 실패가 HTTP 응답이 아니라 한국어 GM `log_entry` 한 줄로 흡수되는지 (`InventoryInvalid` 한국어 매핑)
+- 골드 부족·무게 초과·affinity 게이트 미달 모두 GM log 한 줄로 막히는지
 
 ## 입력 컨텍스트
 

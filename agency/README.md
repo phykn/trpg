@@ -12,23 +12,28 @@ agency/
 
 ## QA — game testing via AI players
 
-Works like hiring a QA tester to play the game. Each turn an LLM generates the next input, the harness hits the backend API and collects SSE events into a transcript, then a separate reviewer LLM analyses the transcript and emits a verdict.
+Works like hiring a QA tester to play the game. Each turn an LLM generates the next input, the harness hits the backend API in-process via ASGI, and collects SSE events into a transcript. There is no LLM reviewer — Claude Code reads the transcripts in chat and writes the review there (the local model hallucinates turn numbers and misclassifies normal pending_check waits as desyncs, so we removed it).
 
 ### Layout
 
 ```
 agency/run_qa.py        # CLI entrypoint
 agency/qa/
-  agents/
-    diplomat.md         # Diplomat — focused on NPC affinity and dialogue
-    explorer.md         # Explorer — movement, observation, inventory
-    provocateur.md      # Provocateur — edge cases, judge-branch triggers
-    reviewer.md         # Analyst — reads the transcript and emits a verdict JSON
+  agents/               # 10 personas, one .md per agent
+    diplomat.md         # NPC affinity / dialogue
+    explorer.md         # movement / observation / inventory
+    scout.md            # 6-stat coverage rotation
+    provocateur.md      # judge-branch edges (reject / fallback / chain / summon_combat)
+    combatant.md        # one-shot cinematic combat loop
+    quartermaster.md    # equip / buy / sell / use
+    caster.md           # skill semantic-match + level_up + learn_skill
+    survivor.md         # rest / sleep_risk / encounter
+    questor.md          # quest triggers / chapter progress / rewards
+    griefer.md          # repeated-stat-abuse → affinity / memory loop
   harness/
     agent.py            # PlayerAgent — system prompt + per-turn LLM call
     state_view.py       # front_state → input text for the player LLM
     transcript.py       # SSE → markdown / jsonl
-    review.py           # reviewer call + Verdict validation
     runner.py           # runs one session for a single agent
 
 # Run output lands at the repo root under reports/qa/<timestamp>/ (gitignored)
@@ -44,67 +49,45 @@ agency/qa/
 ### Run
 
 ```bash
-# every agent once (default 15 turns)
+# every agent once (default 15 turns) against the `default` profile
 .venv/bin/python agency/run_qa.py
 
 # a specific agent
 .venv/bin/python agency/run_qa.py --agent diplomat --turns 20
 
 # a different profile
-.venv/bin/python agency/run_qa.py --agent all --profile other_world
+.venv/bin/python agency/run_qa.py --agent all --profile <scenario_id>
 ```
 
-`.env` is auto-loaded from `backend/.env`. As long as `BASE_URL` is reachable, that's enough.
+`.env` is auto-loaded from `backend/.env`. As long as `BASE_URL` is reachable, that's enough. `--profile` defaults to `default` — make sure `scenarios/default/` exists, or pass `--profile <name>` to point at another seed.
 
 ### Output
 
 ```
 reports/qa/<timestamp>/
-  index.md                      # cross-agent comparison table + extracted high/medium issues
+  index.md                      # per-agent turn count + error count + transcript links
   diplomat/
     transcript.md               # human-readable per-turn record
     sse.jsonl                   # raw SSE events (for replay/debugging)
     final_state.json            # the full GameState at the end
-    verdict.json                # structured evaluation (consumed when fixing code)
-    review.md                   # reviewer's human-readable comments
     saves/                      # per-run isolated saves (a fresh dir each run)
   explorer/...
   provocateur/...
 ```
 
-`verdict.json` schema:
-
-```json
-{
-  "agent": "diplomat",
-  "run_id": "...",
-  "verdict": "pass" | "warn" | "fail",
-  "wins": ["..."],
-  "issues": [
-    {
-      "severity": "low" | "medium" | "high",
-      "category": "narrative" | "state" | "judge" | "memory" | "input" | "schema" | "기타",
-      "summary": "...",
-      "evidence": ["턴 N: ..."]
-    }
-  ],
-  "questions": ["..."]
-}
-```
-
 ### Using the output to fix code
 
-After a change, run `run_qa.py` once and review the high/medium issues in `index.md` plus the per-agent `verdict.json`. When a regression shows up, jump to the turn number cited in `evidence` and read that section of the transcript. If something that used to land in `wins` is gone, treat it as a regression signal.
+After a change, run `run_qa.py` and read the artifacts in chat. Per agent: one verdict (PASS / WARN / FAIL), 1–3 wins, 1–3 issues with severity + turn-numbered evidence. Then a cross-agent summary that calls out repeated patterns. The full playbook (background launch, Monitor filter, verdict grading, reviewer pitfalls) is in [agency/CLAUDE.md](./CLAUDE.md).
 
 ### Limits
 
-- Real-time guidance, not authoritative QA. The reviewer LLM's judgment is itself subject to review.
-- LLM call volume is heavy (1 narrator + 1 player per turn, plus 1 reviewer at the end). Short runs and fast feedback work best.
+- Real-time guidance, not authoritative QA. Reviews are written by Claude Code in chat — they're a summary of the artifacts, not a separate verification pass.
+- LLM call volume is heavy (1 player per turn + the backend's own judge / narrate / combat_narrate / encounter_summon / skill_recommend calls). Short runs and fast feedback work best.
 - Non-deterministic. Identical prompts produce different transcripts. Pinning regressions precisely needs a scenario mode (an explicit input sequence), not implemented yet.
 
 ## Story — scenario seed authoring
 
-The team that LLM-writes the seed files in the repo-root `scenarios/<name>/`. Currently single-entity-at-a-time (race / location / item / character / quest / chapter). Whole-scenario builds (prose → entire directory) are a follow-up.
+The team that LLM-writes the seed files in the repo-root `scenarios/<name>/`. Two entry points share one set of prompt rules — single-entity (`/story-write`, `run_story.py <kind>`) for one careful build, and whole-scenario (`/story-scenario`, `run_story.py scenario`) for a prose document → full directory build.
 
 ### Layout
 
@@ -113,15 +96,18 @@ agency/run_story.py    # CLI (entity / scenario subcommands)
 agency/story/
   agents/
     _base.md           # rules layered on top of every fragment (Korean only, JSON-only output, id pattern)
-    _decompose.md      # prose → Decomposition prompt
+    _decompose.md      # prose → Decomposition prompt (used in scenario mode)
+    _critic.md         # post-write critic — coherence with world.md / role / other entities
     race.md            # per-entity domain rules (schema, required fields, references)
     location.md
     item.md
     character.md
+    skill.md
     quest.md
     chapter.md
   harness/
-    runner.py          # generic write_entity(kind, ...) — LLM + Pydantic + 5-shot self-correction + semantic checks + disk write
+    runner.py          # generic write_entity(kind, ...) — LLM + Pydantic + 5-shot self-correction + invariants + cross-ref + disk write + optional one critic pass
+    critic.py          # critic LLM call + CriticOutput parsing (advisory; advisory failure → one writer retry)
     scenario.py        # one prose document → full scenario build pipeline
 
 # Per-call prompt/response logs land at the repo root under reports/story/<ts>/<kind>_writer/ (gitignored)
@@ -130,22 +116,24 @@ agency/story/
 ### How it works
 
 - Imports the backend's `LLMClient` and the Pydantic models in `domain/entities.py` directly.
-- `SPECS` maps each entity kind to (model · sub_dir · fragment · referenced kinds · semantic-check function).
-- One cycle per call: bundle `_base.md` + `<kind>.md` + the scenario's `world.md` + existing instances of that kind + existing instances of referenced kinds as system context, call the LLM, extract JSON, validate via `<Model>.model_validate_json` + id-pattern check + entity-specific reference-integrity check (e.g. `character.race_id` actually exists in the scenario's `races/`). On failure, append the response and the error to the messages and retry — up to 5 self-correction attempts (same shape as the judge runner).
+- `SPECS` maps each entity kind (race / skill / location / item / character / quest / chapter) to (model · sub_dir · fragment · referenced kinds · cross-ref check function).
+- One cycle per call: bundle `_base.md` + `<kind>.md` + the scenario's `world.md` + existing instances of that kind + existing instances of referenced kinds as system context, call the LLM, extract JSON, validate via `<Model>.model_validate_json` + id-pattern check + entity-specific cross-ref check (e.g. `character.race_id` actually exists in the scenario's `races/`) + entity-level invariants from `backend/src/engines/invariants.py` (stat pair-trade, HP/MP formula, slot-effect matching, etc.). On failure, append the response and the error to the messages and retry — up to 5 self-correction attempts (same shape as the judge runner).
+- After invariants pass, the optional critic (`agents/_critic.md`) runs once with `think=False` for a coherence read (role / tone / world.md fit). If the critic returns `ok=false`, the writer retries once with the feedback. Critic is advisory — if the retry result fails invariants, the original is kept.
 - On success, write `scenarios/<scenario>/<sub_dir>/<id>.json` with `indent=2`. If the file already exists, error out instead of overwriting.
 - Every messages exchange is preserved at `reports/story/<ts>/<kind>_writer/messages.jsonl` for debugging.
 
 ### Reference integrity
 
-The semantic check for each entity validates these ID references:
+The cross-ref check for each entity validates these ID references against other manifests in the same scenario:
 
 | Kind | Validated references |
 |---|---|
-| race | (none) |
-| location | `connections[*].target_id` → other locations in the scenario (self-reference forbidden) |
-| item | (none — `required: Stats` is enforced by Pydantic) |
-| character | `race_id` → races, `location_id` → locations, `inventory_ids[*]` → items, `equipment.<slot>` → items |
-| quest | `giver_id` → characters, `triggers[*].target_id` → varies by type (character_death→characters, location_enter→locations, item_use→items), `prerequisite_ids[*]` → quests |
+| race | `racial_skill_ids[*]` → skills |
+| skill | (none — schema-only validation) |
+| location | `connections[*].target_id` → other locations in the scenario (self-reference forbidden), `item_ids[*]` and `hidden_items[*]` → items |
+| item | (none — `required: Stats` and effect shapes are enforced by Pydantic) |
+| character | `race_id` → races, `location_id` → locations, `racial_skill_ids[*]` and `learned_skill_ids[*]` → skills (other invariants — pair-trade, HP/MP, slot-effect matching, carry weight — come from `backend.engines.invariants.check_seed_character`) |
+| quest | `giver_id` → characters, `triggers[*]` and `fail_triggers[*]` `.target_id` → varies by type (character_death→characters, location_enter→locations, item_use→items), `prerequisite_ids[*]` → quests |
 | chapter | `quest_ids[*]` → quests |
 
 ### Run
@@ -155,12 +143,13 @@ Two tracks — the local LLM for automation, Claude Code when you want one caref
 **(a) Local LLM (`run_story.py`)**
 
 ```bash
-.venv/bin/python agency/run_story.py race      --scenario default --hint "달밤에 활동하는 종족"
-.venv/bin/python agency/run_story.py character --scenario default --hint "은퇴한 노검사"
-.venv/bin/python agency/run_story.py item      --scenario default --hint "녹슨 단검"
-.venv/bin/python agency/run_story.py location  --scenario default
-.venv/bin/python agency/run_story.py quest     --scenario default
-.venv/bin/python agency/run_story.py chapter   --scenario default
+.venv/bin/python agency/run_story.py race      --scenario <name> --hint "달밤에 활동하는 종족"
+.venv/bin/python agency/run_story.py skill     --scenario <name> --hint "그림자 보행"
+.venv/bin/python agency/run_story.py character --scenario <name> --hint "은퇴한 노검사"
+.venv/bin/python agency/run_story.py item      --scenario <name> --hint "녹슨 단검"
+.venv/bin/python agency/run_story.py location  --scenario <name>
+.venv/bin/python agency/run_story.py quest     --scenario <name>
+.venv/bin/python agency/run_story.py chapter   --scenario <name>
 ```
 
 Only `BASE_URL` from `backend/.env` needs to be reachable (in-process consumer).
@@ -168,9 +157,9 @@ Only `BASE_URL` from `backend/.env` needs to be reachable (in-process consumer).
 **(b) Claude Code slash command (`/story-write`)**
 
 ```
-/story-write character default 은퇴한 노검사
-/story-write quest default
-/story-write race default 달밤에 활동하는 종족
+/story-write character <name> 은퇴한 노검사
+/story-write quest <name>
+/story-write race <name> 달밤에 활동하는 종족
 ```
 
 The body is `.claude/commands/story-write.md`. Claude (the model in the conversation) Reads `_base.md` + `<kind>.md` + `world.md` + existing instances directly and Writes one entity JSON to `scenarios/<scenario>/<sub_dir>/<id>.json`. No separate LLM server needed, and no `reports/` log left behind (the conversation transcript is the log).
@@ -179,29 +168,30 @@ The body is `.claude/commands/story-write.md`. Claude (the model in the conversa
 
 Given one prose document (`<prose-path>.md`), build a complete scenario directory. Pipeline:
 
-1. **Decompose** — the `_decompose.md` prompt compresses the prose into one `Decomposition` (Pydantic): `world_md` + the 6 entity rosters (each entry has `id` + `role` + extra hints) + `start_*` triple + profile metadata. Decomposition itself runs 5-shot self-correction + consistency checks (id pattern, duplicates, cross-refs).
+1. **Decompose** — the `_decompose.md` prompt compresses the prose into one `Decomposition` (Pydantic): `world_md` + the entity rosters (each entry has `id` + `role` + extra hints) + `start_*` triple + profile metadata. Decomposition itself runs 5-shot self-correction + consistency checks (id pattern, duplicates, cross-refs, start-subject location alignment, hostile-giver rejection).
 2. **world.md** — write the decomposition's `world_md` body to disk as markdown.
-3. **race → location → item → character → quest → chapter** — at each stage, call `write_entity` for every entry in the corresponding roster. The stage order follows the reference dependencies, so each completed stage becomes context for the next.
-4. **Three meta files** — `profile.json` / `start.json` / `player_template.json`. Built directly from the decomposition as dicts and JSON-dumped.
+3. **race → item → location → character → quest → chapter** — at each stage, call `write_entity` for every entry in the corresponding roster. The stage order follows the reference dependencies, so each completed stage becomes context for the next. Item-on-character / item-on-location ownership and per-character `is_enemy` consistency (combat_behavior + xp_reward) are enforced through hint clauses + an `extra_check`. Each step optionally runs the critic (advisory).
+4. **Meta files** — `profile.json` / `start.json` / `player_template.json` (with `for_player_template` items folded into `inventory_ids`).
+5. **Final invariant sweep** — `engines/invariants.check_scenario` over the assembled directory; any violation aborts the build.
 
 **id enforcement** — entity stages must use the ids decided during decomposition. `write_entity(force_id=...)` compares the LLM's id against `X` inside `_check_id` and raises an `EntityWriterError` on mismatch, kicking off the self-correction loop so the next attempt fixes it. `_base.md` also says "do not change a single character of the id forced via the user message".
 
 ```bash
 .venv/bin/python agency/run_story.py scenario \
-  --name default_cli \
+  --name <name> \
   --prose path/to/prose.md
 ```
 
 The Claude Code track takes the same steps via:
 
 ```
-/story-scenario default_claude path/to/prose.md
+/story-scenario <name> path/to/prose.md
 ```
 
-The body is `.claude/commands/story-scenario.md`. Claude (the model in the conversation) handles decomposition and the per-stage Read/Write directly. From the same prose you can compare the two tracks' results (`scenarios/default_cli/` vs `scenarios/default_claude/`).
+The body is `.claude/commands/story-scenario.md`. Claude (the model in the conversation) handles decomposition and the per-stage Read/Write directly. From the same prose you can compare the two tracks' results.
 
 ### Limits
 
-- `racial_skills` is always an empty list (skill synthesis is separate).
+- The decomposition schema doesn't include a `skills` roster — characters built through the scenario pipeline keep `racial_skill_ids` / `learned_skill_ids` empty unless you author skills separately via `/story-write skill` and then add them to the character JSON by hand.
 - Chapter is currently single-mode (every quest in the decomposition's roster goes into the first chapter).
 - Runtime entity injection during a game (adding a new NPC/item to a live save) belongs to the backend and isn't designed yet.
