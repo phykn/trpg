@@ -87,7 +87,7 @@ def _validate_range(actor: Character, skill: Skill, targets: list[Character]) ->
 def _grade_multiplier(grade: Grade | None) -> float:
     if grade is None:
         return 1.0
-    return RULES.skill.grade_multipliers.get(grade, 1.0)
+    return RULES.skill.grade_multipliers[grade]
 
 
 def _apply_attack(

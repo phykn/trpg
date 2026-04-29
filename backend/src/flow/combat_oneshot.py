@@ -27,6 +27,7 @@ from ..context.layers import build_world_layer
 from ..domain.entities import Character
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
+from ..domain.types import Grade
 from ..engines import combat as combat_engine
 from ..engines.growth import award_kill_xp
 from ..rules.config import RULES
@@ -121,7 +122,7 @@ def arm_combat_roll_pending(
 
 
 # grade → (player damage as % of max_hp, kill enemies, xp granted)
-_OUTCOME_TABLE: dict[str, tuple[float, bool]] = {
+_OUTCOME_TABLE: dict[Grade, tuple[float, bool]] = {
     "critical_success": (0.0, True),
     "success": (0.10, True),
     "partial_success": (0.30, True),
@@ -133,7 +134,7 @@ _OUTCOME_TABLE: dict[str, tuple[float, bool]] = {
 def apply_combat_outcome(
     state: GameState,
     target_ids: list[str],
-    grade: str,
+    grade: Grade,
     dirty: Dirty,
 ) -> tuple[int, list[str]]:
     """Apply mechanical effects of a one-roll combat. Returns
@@ -146,7 +147,7 @@ def apply_combat_outcome(
       (death-saves trigger).
     """
     player = state.characters[state.player_id]
-    player_dmg_pct, kill_enemies = _OUTCOME_TABLE.get(grade, _OUTCOME_TABLE["partial_success"])
+    player_dmg_pct, kill_enemies = _OUTCOME_TABLE[grade]
 
     killed: list[str] = []
     for tid in target_ids:
