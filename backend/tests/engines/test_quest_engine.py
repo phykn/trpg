@@ -222,6 +222,50 @@ def test_chapter_advances_when_all_required_complete(fresh_state):
     assert state.chapters["ch1"].status == "completed"
 
 
+# --- chapter prereq unlock ------------------------------------------------
+
+
+def test_completing_chapter_unlocks_dependent_chapter(fresh_state):
+    state = _state(
+        fresh_state,
+        quests=[_quest("q1", triggers=[_trig("a", "character_death", "g1")])],
+        chapters=[
+            Chapter(id="ch1", title="t1", quest_ids=["q1"], status="active"),
+            Chapter(
+                id="ch2",
+                title="t2",
+                quest_ids=[],
+                prerequisite_ids=["ch1"],
+                status="locked",
+            ),
+        ],
+    )
+    q.check_quests(state, "character_death", "g1")
+    assert state.chapters["ch1"].status == "completed"
+    assert state.chapters["ch2"].status == "active"
+
+
+def test_chapter_with_uncompleted_prereq_stays_locked(fresh_state):
+    state = _state(
+        fresh_state,
+        quests=[_quest("q1", triggers=[_trig("a", "character_death", "g1")])],
+        chapters=[
+            Chapter(id="ch1", title="t1", quest_ids=["q1"], status="active"),
+            Chapter(
+                id="ch2",
+                title="t2",
+                quest_ids=[],
+                prerequisite_ids=["ch1", "ch3"],
+                status="locked",
+            ),
+            Chapter(id="ch3", title="t3", quest_ids=[], status="locked"),
+        ],
+    )
+    q.check_quests(state, "character_death", "g1")
+    # ch1 done but ch3 still locked → ch2 stays locked
+    assert state.chapters["ch2"].status == "locked"
+
+
 # --- Runtime field consistency --------------------------------------------
 
 

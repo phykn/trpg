@@ -106,7 +106,6 @@ async def _run_scenario(args: argparse.Namespace) -> None:
 
     run_dir = _new_run_dir("scenario")
     set_llm_session(f"story-scenario-{args.name}-{run_dir.parent.name}")
-    decompose_prompt = AGENTS_DIR / "_decompose.md"
 
     def step(msg: str) -> None:
         print(f"  · {msg}", flush=True)
@@ -115,7 +114,6 @@ async def _run_scenario(args: argparse.Namespace) -> None:
         result = await build_scenario(
             prose_path=prose_path,
             scenario_dir=scenario_dir,
-            decompose_prompt_path=decompose_prompt,
             agents_dir=AGENTS_DIR,
             llm=llm,
             on_step=step,

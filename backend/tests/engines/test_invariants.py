@@ -2,6 +2,7 @@
 
 from src.domain.entities import (
     ArmorEffect,
+    Chapter,
     Character,
     CombatBehavior,
     ConsumableEffect,
@@ -19,6 +20,7 @@ from src.domain.entities import (
 from src.engines.growth import calc_max_hp, calc_max_mp
 from src.engines.invariants import (
     Scenario,
+    check_chapter_graph,
     check_character,
     check_inventory,
     check_item,
@@ -121,6 +123,30 @@ def test_character_alive_false_with_positive_hp():
     c.hp = 10
     msgs = check_character(c)
     assert any("alive=False" in m for m in msgs)
+
+
+def test_seed_dead_character_passes_full_pool_rule():
+    """alive=False seed corpses (e.g. quest backstory: 'found dead in the cave')
+    must seed with hp/mp=0; the seed-only full-pool rule applies only to living
+    NPCs. Otherwise the writer can't represent characters who start dead."""
+    from src.engines.invariants import check_seed_character
+
+    c = _char(skills=[_basic_skill()])
+    c.alive = False
+    c.hp = 0
+    c.mp = 0
+    msgs = check_seed_character(c, items_pool={}, skills_pool=_skill_pool(_basic_skill()))
+    assert not any("seed hp" in m or "seed mp" in m for m in msgs)
+
+
+def test_seed_living_character_with_low_hp_still_flagged():
+    """Living NPCs must still seed at full hp/mp — relaxation only covers alive=False."""
+    from src.engines.invariants import check_seed_character
+
+    c = _char(skills=[_basic_skill()])
+    c.hp = c.max_hp - 1  # alive=True (default), but hp not full
+    msgs = check_seed_character(c, items_pool={}, skills_pool=_skill_pool(_basic_skill()))
+    assert any("seed hp" in m for m in msgs)
 
 
 def test_character_skill_level_above_owner_level():
@@ -323,6 +349,47 @@ def test_quest_graph_active_with_completed_prereq_passes():
         }
     )
     assert check_quest_graph(s) == []
+
+
+# --- check_chapter_graph --------------------------------------------------
+
+
+def _chapter(cid: str, status: str = "locked", prereq: list[str] | None = None) -> Chapter:
+    return Chapter(
+        id=cid, title=cid, prerequisite_ids=prereq or [], status=status,
+    )
+
+
+def test_chapter_graph_active_with_uncompleted_prereq():
+    s = Scenario(
+        chapters={
+            "a": _chapter("a", "active"),
+            "b": _chapter("b", "active", prereq=["a"]),
+        }
+    )
+    msgs = check_chapter_graph(s)
+    assert any("status='active'" in m and "'a'" in m for m in msgs)
+
+
+def test_chapter_graph_cycle():
+    s = Scenario(
+        chapters={
+            "a": _chapter("a", "locked", prereq=["b"]),
+            "b": _chapter("b", "locked", prereq=["a"]),
+        }
+    )
+    msgs = check_chapter_graph(s)
+    assert any("cycle" in m for m in msgs)
+
+
+def test_chapter_graph_active_with_completed_prereq_passes():
+    s = Scenario(
+        chapters={
+            "a": _chapter("a", "completed"),
+            "b": _chapter("b", "active", prereq=["a"]),
+        }
+    )
+    assert check_chapter_graph(s) == []
 
 
 # --- check_scenario (integration) -----------------------------------------

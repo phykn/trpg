@@ -3,8 +3,9 @@
 When an event (`event_type`, `target_id`) arrives, scan triggers/fail_triggers of all
 active quests for matches. All triggers met → transition to `completed` and apply rewards.
 Any fail_trigger met → `failed`. If a quest whose status changed is in another quest's
-prerequisite_ids, unlock that quest (`locked → active`). chapter.progress only counts
-required=true quests.
+prerequisite_ids, unlock that quest (`locked → active`). When a chapter's required quests
+all complete, the chapter flips to `completed`; any chapter whose prerequisite chapters are
+all completed then flips `locked → active`. chapter.progress only counts required=true quests.
 
 Event types (free-form strings, defined by the seed):
 - "character_death" — enemy killed via combat or use(damage)
@@ -89,6 +90,22 @@ def _maybe_advance_chapters(state: GameState, dirty: DirtySet) -> None:
                 dirty.add(("chapters", ch.id))
 
 
+def _maybe_unlock_chapters(state: GameState, dirty: DirtySet) -> None:
+    """If all prerequisite_ids of a locked chapter are completed, flip locked → active."""
+    for ch in state.chapters.values():
+        if ch.status != "locked":
+            continue
+        if not ch.prerequisite_ids:
+            continue
+        if all(
+            pid in state.chapters and state.chapters[pid].status == "completed"
+            for pid in ch.prerequisite_ids
+        ):
+            ch.status = "active"
+            if dirty is not None:
+                dirty.add(("chapters", ch.id))
+
+
 def _refresh_active_quest_id(state: GameState) -> None:
     """If active_quest_id no longer points to an active quest, switch to any
     other active one (insertion order). The seed pins an opening quest; once
@@ -153,5 +170,6 @@ def check_quests(
         _maybe_unlock_dependents(state, dirty)
     update_chapter_progress(state, dirty)
     _maybe_advance_chapters(state, dirty)
+    _maybe_unlock_chapters(state, dirty)
     _refresh_active_quest_id(state)
     return changed

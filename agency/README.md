@@ -87,7 +87,7 @@ After a change, run `run_qa.py` and read the artifacts in chat. Per agent: one v
 
 ## Story — scenario seed authoring
 
-The team that LLM-writes the seed files in the repo-root `scenarios/<name>/`. Two entry points share one set of prompt rules — single-entity (`/story-write`, `run_story.py <kind>`) for one careful build, and whole-scenario (`/story-scenario`, `run_story.py scenario`) for a prose document → full directory build.
+The team that LLM-writes the seed files in the repo-root `scenarios/<name>/`. Two CLI subcommands share one set of prompt rules — `run_story.py <kind>` for one entity at a time, and `run_story.py scenario` for a prose document → full directory build.
 
 ### Layout
 
@@ -95,9 +95,11 @@ The team that LLM-writes the seed files in the repo-root `scenarios/<name>/`. Tw
 agency/run_story.py    # CLI (entity / scenario subcommands)
 agency/story/
   agents/
-    _base.md           # rules layered on top of every fragment (Korean only, JSON-only output, id pattern)
-    _decompose.md      # prose → Decomposition prompt (used in scenario mode)
-    _critic.md         # post-write critic — coherence with world.md / role / other entities
+    _base.md             # rules layered on top of every fragment (Korean only, JSON-only output, id pattern)
+    _decompose_setup.md  # prose → setup phase (world / races / skills / locations / start_location)
+    _decompose_cast.md   # setup + prose → cast phase (characters / items / start_subject)
+    _decompose_arc.md    # setup + cast + prose → arc phase (quests / chapters / start_quest)
+    _critic.md           # post-write critic — coherence with world.md / role / other entities
     race.md            # per-entity domain rules (schema, required fields, references)
     location.md
     item.md
@@ -134,13 +136,9 @@ The cross-ref check for each entity validates these ID references against other 
 | item | (none — `required: Stats` and effect shapes are enforced by Pydantic) |
 | character | `race_id` → races, `location_id` → locations, `racial_skill_ids[*]` and `learned_skill_ids[*]` → skills (other invariants — pair-trade, HP/MP, slot-effect matching, carry weight — come from `backend.engines.invariants.check_seed_character`) |
 | quest | `giver_id` → characters, `triggers[*]` and `fail_triggers[*]` `.target_id` → varies by type (character_death→characters, location_enter→locations, item_use→items), `prerequisite_ids[*]` → quests |
-| chapter | `quest_ids[*]` → quests |
+| chapter | `quest_ids[*]` → quests, `prerequisite_ids[*]` → other chapters (DAG, no cycles) |
 
 ### Run
-
-Two tracks — the local LLM for automation, Claude Code when you want one careful build:
-
-**(a) Local LLM (`run_story.py`)**
 
 ```bash
 .venv/bin/python agency/run_story.py race      --scenario <name> --hint "달밤에 활동하는 종족"
@@ -154,21 +152,15 @@ Two tracks — the local LLM for automation, Claude Code when you want one caref
 
 Only `BASE_URL` from `backend/.env` needs to be reachable (in-process consumer).
 
-**(b) Claude Code slash command (`/story-write`)**
-
-```
-/story-write character <name> 은퇴한 노검사
-/story-write quest <name>
-/story-write race <name> 달밤에 활동하는 종족
-```
-
-The body is `.claude/commands/story-write.md`. Claude (the model in the conversation) Reads `_base.md` + `<kind>.md` + `world.md` + existing instances directly and Writes one entity JSON to `scenarios/<scenario>/<sub_dir>/<id>.json`. No separate LLM server needed, and no `reports/` log left behind (the conversation transcript is the log).
-
 ### Whole scenario (`scenario` mode)
 
 Given one prose document (`<prose-path>.md`), build a complete scenario directory. Pipeline:
 
-1. **Decompose** — the `_decompose.md` prompt compresses the prose into one `Decomposition` (Pydantic): `world_md` + the entity rosters (each entry has `id` + `role` + extra hints) + `start_*` triple + profile metadata. Decomposition itself runs 5-shot self-correction + consistency checks (id pattern, duplicates, cross-refs, start-subject location alignment, hostile-giver rejection).
+1. **Decompose (3 sequential phases)** — single decompose was splitting the LLM's attention across too many decisions and hitting the server ctx ceiling on retries. So it runs three smaller calls, each with its own fragment, Pydantic model, and self-correction loop:
+   - **Phase A (setup)** — `_decompose_setup.md` → `DecomSetup` (world / profile / races / skills / locations / start_location_id). `_check_setup` validates the location graph, BFS reachability, and racial-skill pool.
+   - **Phase B (cast)** — `_decompose_cast.md` (system context: phase A JSON) → `DecomCast` (characters / items / start_subject_id). `_check_cast` validates cross-refs to phase A, item ownership, and the humanoid-armor / enemy-weapon presence rule.
+   - **Phase C (arc)** — `_decompose_arc.md` (system context: phase A + B JSON) → `DecomArc` (quests / chapters / start_quest_id). `_check_arc` validates quest target/giver rules, prereq DAGs (quests + chapters, no cycles), chapter quest partition, and the opening-chapter rules.
+   - The three phases compose into the final `Decomposition`; `_check_decomp` runs all three checks again as a paranoia step.
 2. **world.md** — write the decomposition's `world_md` body to disk as markdown.
 3. **race → item → location → character → quest → chapter** — at each stage, call `write_entity` for every entry in the corresponding roster. The stage order follows the reference dependencies, so each completed stage becomes context for the next. Item-on-character / item-on-location ownership and per-character `is_enemy` consistency (combat_behavior + xp_reward) are enforced through hint clauses + an `extra_check`. Each step optionally runs the critic (advisory).
 4. **Meta files** — `profile.json` / `start.json` / `player_template.json` (with `for_player_template` items folded into `inventory_ids`).
@@ -182,16 +174,6 @@ Given one prose document (`<prose-path>.md`), build a complete scenario director
   --prose path/to/prose.md
 ```
 
-The Claude Code track takes the same steps via:
-
-```
-/story-scenario <name> path/to/prose.md
-```
-
-The body is `.claude/commands/story-scenario.md`. Claude (the model in the conversation) handles decomposition and the per-stage Read/Write directly. From the same prose you can compare the two tracks' results.
-
 ### Limits
 
-- The decomposition schema doesn't include a `skills` roster — characters built through the scenario pipeline keep `racial_skill_ids` / `learned_skill_ids` empty unless you author skills separately via `/story-write skill` and then add them to the character JSON by hand.
-- Chapter is currently single-mode (every quest in the decomposition's roster goes into the first chapter).
 - Runtime entity injection during a game (adding a new NPC/item to a live save) belongs to the backend and isn't designed yet.

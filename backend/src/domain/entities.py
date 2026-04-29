@@ -280,6 +280,7 @@ class Chapter(BaseModel):
     title: str
     summary: str = ""
     quest_ids: list[str] = []
+    prerequisite_ids: list[str] = []
     status: Literal["locked", "active", "completed"] = "locked"
     required: bool = True
     progress: ChapterProgress = ChapterProgress()

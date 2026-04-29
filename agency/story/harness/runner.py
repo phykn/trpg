@@ -23,6 +23,22 @@ from src.llm import LLMClient
 ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]{1,30}$")
 
 
+def strip_code_fences(text: str) -> str:
+    """Strip leading/trailing ```...``` fences if present. Smaller local models
+    sometimes emit fenced JSON despite explicit "no fences" instructions; the
+    pipeline normalizes the response shape rather than relying on prompt
+    discipline."""
+    s = text.strip()
+    if not s.startswith("```"):
+        return s
+    lines = s.splitlines()
+    if lines[0].lstrip("`").strip().lower() in ("", "json"):
+        lines = lines[1:]
+    if lines and lines[-1].strip() == "```":
+        lines = lines[:-1]
+    return "\n".join(lines).strip()
+
+
 class EntityWriterError(Exception):
     """Raised on semantic-validation failures or on-disk conflicts."""
 
@@ -352,9 +368,10 @@ async def write_entity(
     final_entity: BaseModel | None = None
     final_answer: str | None = None
     agent_tag = f"story_write_{kind}"
+    base_len = len(messages)  # system + initial hint; retries trim back to this.
     for _ in range(retries + 1):
         result = await llm.chat(messages=messages, think=think, agent=agent_tag)
-        answer = (result["answer"] or "").strip()
+        answer = strip_code_fences(result["answer"] or "")
         try:
             entity = spec.model.model_validate_json(answer)
             _check_id(entity, existing_ids, force_id=force_id)
@@ -367,6 +384,10 @@ async def write_entity(
             break
         except (ValidationError, EntityWriterError, json.JSONDecodeError) as e:
             last_error = e
+            # Roll back to base + only the latest assistant attempt + error so the
+            # retry context stays bounded — without this the prior attempts pile
+            # up and the cumulative input can exceed the server ctx window.
+            messages = messages[:base_len]
             messages.append({"role": "assistant", "content": answer})
             messages.append(
                 {
@@ -405,7 +426,7 @@ async def write_entity(
                 }
             )
             result = await llm.chat(messages=messages, think=think, agent=agent_tag)
-            answer = (result["answer"] or "").strip()
+            answer = strip_code_fences(result["answer"] or "")
             try:
                 entity_v2 = spec.model.model_validate_json(answer)
                 _check_id(entity_v2, existing_ids, force_id=force_id)

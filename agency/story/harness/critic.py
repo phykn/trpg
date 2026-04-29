@@ -16,6 +16,8 @@ from pydantic import BaseModel, ValidationError
 
 from src.llm import LLMClient
 
+from .runner import strip_code_fences
+
 
 class CriticOutput(BaseModel):
     ok: bool
@@ -53,7 +55,7 @@ async def run_critic(
         result = await llm.chat(
             messages=messages, think=False, agent=f"story_critic_{entity_kind}"
         )
-        answer = (result["answer"] or "").strip()
+        answer = strip_code_fences(result["answer"] or "")
         try:
             return CriticOutput.model_validate_json(answer)
         except (ValidationError, ValueError):

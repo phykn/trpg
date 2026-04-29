@@ -16,6 +16,7 @@ Public API:
     check_scenario(scenario)        -> list[str]
     check_state(state)              -> list[str]
     check_quest_graph(scenario)     -> list[str]
+    check_chapter_graph(scenario)   -> list[str]
 
     Scenario (dataclass)
     Scenario.from_dir(path)
@@ -373,10 +374,15 @@ def _check_seed_only_rules(c: Character, items: dict[str, Item]) -> list[str]:
     where = f"characters/{c.id}"
     out: list[str] = []
 
-    if c.hp != c.max_hp:
-        _v(out, where, f"seed hp={c.hp} ≠ max_hp={c.max_hp} (must start at full)")
-    if c.mp != c.max_mp:
-        _v(out, where, f"seed mp={c.mp} ≠ max_mp={c.max_mp} (must start at full)")
+    # Full-pool start applies only to living NPCs. Seed corpses (alive=False —
+    # quest backstory like "found dead in the cave") legitimately seed with
+    # hp/mp=0; the alive↔hp consistency rule above (`check_character`) already
+    # forces those zeros, so this line would otherwise contradict it.
+    if c.alive:
+        if c.hp != c.max_hp:
+            _v(out, where, f"seed hp={c.hp} ≠ max_hp={c.max_hp} (must start at full)")
+        if c.mp != c.max_mp:
+            _v(out, where, f"seed mp={c.mp} ≠ max_mp={c.max_mp} (must start at full)")
 
     if not c.is_player:
         if c.level < 1:
@@ -472,6 +478,64 @@ def _check_quest_prerequisite_cycles(s: Scenario) -> list[str]:
 
 def check_quest_graph(s: Scenario) -> list[str]:
     return _check_quest_prerequisite_status(s) + _check_quest_prerequisite_cycles(s)
+
+
+def _check_chapter_prerequisite_status(s: Scenario) -> list[str]:
+    """Active chapters must have all prerequisite chapters completed."""
+    out: list[str] = []
+    for cid, ch in s.chapters.items():
+        if ch.status != "active":
+            continue
+        for pid in ch.prerequisite_ids:
+            if pid in s.chapters and s.chapters[pid].status != "completed":
+                _v(
+                    out,
+                    f"chapters/{cid}",
+                    f"status='active' but prerequisite {pid!r} status='{s.chapters[pid].status}' (must be 'completed')",
+                )
+    return out
+
+
+def _check_chapter_prerequisite_cycles(s: Scenario) -> list[str]:
+    """Reject any cycle in the chapter prerequisite_ids DAG."""
+    visited: set[str] = set()
+    on_stack: set[str] = set()
+    cycle_path: list[str] = []
+
+    def _dfs(cid: str, path: list[str]) -> bool:
+        if cid in on_stack:
+            cycle_path.extend(path[path.index(cid):] + [cid])
+            return True
+        if cid in visited:
+            return False
+        visited.add(cid)
+        on_stack.add(cid)
+        path.append(cid)
+        ch = s.chapters.get(cid)
+        if ch is not None:
+            for pid in ch.prerequisite_ids:
+                if _dfs(pid, path):
+                    return True
+        on_stack.remove(cid)
+        path.pop()
+        return False
+
+    out: list[str] = []
+    for cid in s.chapters:
+        if cid in visited:
+            continue
+        if _dfs(cid, []):
+            _v(
+                out,
+                "scenario",
+                f"chapter prerequisite cycle: {' → '.join(cycle_path)}",
+            )
+            break
+    return out
+
+
+def check_chapter_graph(s: Scenario) -> list[str]:
+    return _check_chapter_prerequisite_status(s) + _check_chapter_prerequisite_cycles(s)
 
 
 # --- per-entity cross-ref helpers (used by scenario / state) ---------------
@@ -578,6 +642,15 @@ def _check_chapter_cross_ref(ch: Chapter, s: Scenario) -> list[str]:
         seen_qid.add(qid)
         if qid not in s.quests:
             _v(out, where, f"quest_ids: {qid!r} not in quests")
+    seen_pid: set[str] = set()
+    for pid in ch.prerequisite_ids:
+        if pid == ch.id:
+            _v(out, where, f"prerequisite_ids: {pid!r} points to self")
+        if pid in seen_pid:
+            _v(out, where, f"prerequisite_ids: {pid!r} duplicated")
+        seen_pid.add(pid)
+        if pid not in s.chapters:
+            _v(out, where, f"prerequisite_ids: {pid!r} not in chapters")
     return out
 
 
@@ -694,6 +767,7 @@ def check_scenario(s: Scenario) -> list[str]:
         out.extend(_check_chapter_cross_ref(ch, s))
 
     out.extend(check_quest_graph(s))
+    out.extend(check_chapter_graph(s))
 
     if not s.runtime:
         out.extend(_check_start_json(s))

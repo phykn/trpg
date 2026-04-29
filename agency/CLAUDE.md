@@ -29,16 +29,14 @@ Agent prompts (`agents/*.md`), transcripts, READMEs — all Korean, same rule as
 
 ## Story team
 
-### Two tracks
+### Entry points
 
-The same prompt rules are shared by two entry points:
+All story-team work runs through the local LLM via `agency/run_story.py`:
 
-- `agency/run_story.py <kind> --scenario <s>` — calls the local LLM (`BASE_URL`). For automation and repetition. The generic `write_entity` in `harness/runner.py` does 5 self-correction retries plus reference-integrity checks.
-- `/story-write <kind> <s> [hint]` — backed by `.claude/commands/story-write.md`. Claude Code reads `_base.md` + `<kind>.md` + scenario context directly and writes the output file itself. Use when you want a more careful single build.
+- `run_story.py <kind> --scenario <s>` — author one entity. The generic `write_entity` in `harness/runner.py` does 5 self-correction retries plus reference-integrity checks.
+- `run_story.py scenario --name <new> --prose <path>` — full prose → scenario build. Decompose runs as **three sequential phases** (setup / cast / arc) — each phase is its own LLM call with a focused fragment (`_decompose_setup.md` etc.) and Pydantic model, so retries don't re-do the whole decomposition and per-call output stays well under the server ctx ceiling. Phases compose into one `Decomposition` and feed the per-kind pipeline.
 
-`<kind>` ∈ `{race, skill, location, item, character, quest, chapter}`.
-
-When a rule changes, update both tracks together. Updating one alone drifts the same scenario into mixed-tone entities.
+`<kind>` ∈ `{race, skill, location, item, character, quest, chapter}`. The CLI subparser picks up new kinds from `SPECS` automatically.
 
 ### Adding a new entity kind
 
@@ -49,13 +47,11 @@ To extend beyond the current 7 kinds:
 3. If a new reference-validation function is needed, write `_check_<kind>_refs`. Plain id-collision and pattern checks are already handled by the generic path.
 4. `_base.md` covers entity-agnostic rules (Korean-only, JSON-only output, id pattern, "honor any forced-id hint") — no edits needed there.
 
-The CLI subparser and slash command pick up new kinds from `SPECS` automatically.
-
 ### id enforcement in scenario mode
 
-`run_story.py scenario --name <new>` (and `/story-scenario`) pre-decides every entity id during the decomposition step, and entity steps must match. `write_entity(force_id=X)` compares the LLM's id against `X` inside `_check_id`; on mismatch it raises `EntityWriterError` into the self-correction loop, which forces the next attempt to fix it. This is what keeps cross-references (`start_location_id`, quest `target_id`, chapter `quest_ids`) intact between the decomposition and entity steps.
+`run_story.py scenario --name <new>` pre-decides every entity id during the decomposition step, and entity steps must match. `write_entity(force_id=X)` compares the LLM's id against `X` inside `_check_id`; on mismatch it raises `EntityWriterError` into the self-correction loop, which forces the next attempt to fix it. This is what keeps cross-references (`start_location_id`, quest `target_id`, chapter `quest_ids`) intact between the decomposition and entity steps.
 
-Single-entity calls (e.g. `/story-write race ...`) leave the id free — only id collisions are checked.
+Single-entity calls (e.g. `run_story.py race ...`) leave the id free — only id collisions are checked.
 
 ## QA team
 

@@ -27,8 +27,8 @@
   - `character_death` → characters 안의 id (보통 적)
   - `location_enter` → locations 안의 id
   - `item_use` → items 안의 id
-- `prerequisite_ids` — 다른 quest 의 id (해당 quest 가 끝나야 잠금 해제). 보통 생략.
-- 시작부터 활성인 quest 는 `status: "active"`, 후속·잠금은 `"locked"`.
+- `prerequisite_ids` — 다른 quest 의 id. 그 quest 들이 모두 `completed` 가 되어야 이 quest 가 `locked → active` 로 풀린다. 한 chapter 안에서 시작 quest (prereq 비어 있음) 외의 quest 들은 prereq 를 통해 이어져야 자연스럽게 풀린다.
+- `status` 는 `prerequisite_ids` 가 비어 있으면 `"active"`, 아니면 `"locked"` — 힌트의 status 지시를 그대로 따른다.
 - `triggers` 는 보통 1~3 개. 모두 충족돼야 quest 가 completed 로 전환.
 - `fail_triggers` 도 같은 모양 (실패 조건). 보통 생략.
 - 기존 quest 와 의도 중복 금지.
