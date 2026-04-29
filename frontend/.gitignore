@@ -25,3 +25,6 @@ expo-env.d.ts
 
 # Claude Code local
 .claude/settings.local.json
+
+# Cloudflare Workers (wrangler) deploy scratch
+.wrangler/
