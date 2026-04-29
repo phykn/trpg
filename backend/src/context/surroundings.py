@@ -8,18 +8,17 @@ from collections import Counter
 
 from ..domain.entities import (
     EQUIPMENT_SLOTS,
-    ArmorEffect,
     Character,
     ConsumableEffect,
     Location,
-    WeaponEffect,
+    item_kind,
 )
 from ..domain.state import GameState
 from ..engines.growth import can_afford_level_up, xp_for_next_level
 from ..rules import RULES
 
 
-# --- Common helpers (NPC state tags / item kind classification) --------------
+# --- Common helpers (NPC state tags) -----------------------------------------
 
 
 def _state_tags(actor: Character, npc: Character) -> list[str]:
@@ -37,19 +36,6 @@ def _state_tags(actor: Character, npc: Character) -> list[str]:
     return tags
 
 
-def _item_kind(item) -> str:
-    eff = item.effects
-    if isinstance(eff, ConsumableEffect):
-        return "consumable"
-    if isinstance(eff, WeaponEffect):
-        return "weapon"
-    if isinstance(eff, ArmorEffect):
-        return "armor"
-    if item.on_use:
-        return "trigger"
-    return "misc"
-
-
 # --- Inventory / equipment / skills / growth (actor-centric) -----------------
 
 
@@ -64,7 +50,7 @@ def _inventory_payload(state: GameState, actor: Character) -> list[dict]:
             "id": item_id,
             "name": item.name,
             "qty": qty,
-            "kind": _item_kind(item),
+            "kind": item_kind(item),
         }
         if isinstance(item.effects, ConsumableEffect):
             entry["effect"] = item.effects.effect
@@ -156,7 +142,7 @@ def _merchants_payload(state: GameState, actor: Character) -> list[dict]:
                 "id": iid,
                 "name": item.name,
                 "price": item.price,
-                "kind": _item_kind(item),
+                "kind": item_kind(item),
             })
         if stock:
             out.append({"id": cid, "name": npc.name, "stock": stock})

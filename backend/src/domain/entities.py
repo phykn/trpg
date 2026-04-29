@@ -160,6 +160,25 @@ def required_slot_kind(item: Item) -> Literal["hand", "armor", "acc", "none"]:
     return "acc"
 
 
+def item_kind(
+    item: Item,
+) -> Literal["weapon", "armor", "consumable", "trigger", "misc"]:
+    """High-level classification used by judge prompts and judge semantics.
+    Lives next to required_slot_kind because the choice depends on the
+    same Item.effects discriminator and the two kind vocabularies must
+    agree to keep judge validation consistent."""
+    eff = item.effects
+    if isinstance(eff, ConsumableEffect):
+        return "consumable"
+    if isinstance(eff, WeaponEffect):
+        return "weapon"
+    if isinstance(eff, ArmorEffect):
+        return "armor"
+    if item.on_use:
+        return "trigger"
+    return "misc"
+
+
 # --- race / character ------------------------------------------------------
 
 

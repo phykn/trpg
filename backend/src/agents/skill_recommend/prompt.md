@@ -10,7 +10,7 @@ Input has `character.{name, race, job, level, memories[*].{content, importance: 
 
 ## Output
 
-Pick **exactly three** plausible skill candidates. Variety matters — three carbon-copy attacks is a bad set. Three different `type` values is the safest variety; if the character's track strongly suggests one `type` (e.g. pure mage = all `attack`), keep the `type` but vary `target` (`single` vs `area` vs `self`) and `primary_stat` so each candidate plays differently. Three identical `type` + `target` + `primary_stat` is never acceptable.
+Pick **exactly three** plausible skill candidates. Variety matters — three carbon-copy attacks is a bad set. Three different `type` values is the safest variety; if the character's track strongly suggests one `type` (e.g. pure mage = all `attack`), keep the `type` but vary `target` (`single` vs `area` vs `self`) and `primary_stat` so each candidate plays differently.
 
 ```json
 {
@@ -30,7 +30,6 @@ Pick **exactly three** plausible skill candidates. Variety matters — three car
 
 ## Rules
 
-- **Three candidates, no more, no less.**
 - Korean names that sound like skill names (`「그림자 보행」`, `「화염구」`, `「단단한 살갗」`), not generic verbs.
 - `description` is plain Korean lore (what the skill is). `special_effect` is the flavorful one-liner the runtime feeds judge as cast context (e.g. `"불꽃을 휘감아 적의 갑옷을 녹임"`). Two different fields — don't paraphrase the same sentence twice.
 - `primary_stat` matches flavor: physical → STR/DEX, magic damage → INT, healing/buff → WIS, social debuff → CHA.

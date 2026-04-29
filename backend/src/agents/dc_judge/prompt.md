@@ -25,7 +25,7 @@ Input fields (in `surroundings`): `location`, `entities` (player/npc/item/connec
 | 10 | buy | `{"action":"buy","npc_id":"<id>","item_id":"<id>"}` | Merchant + listed price + item in their `stock`. |
 | 11 | sell | `{"action":"sell","npc_id":"<id>","item_id":"<id>"}` | Merchant + item in `inventory` + not equipped. |
 | 12 | roll | `{"action":"roll","tier":"<KR>","stat":"<STAT>","targets":["<id>"],"reason":"<KR>"}` | Active resistance: persuade, lie, intimidate, haggle, sneak, pick lock, climb, search. |
-| 13 | pass | `{"action":"pass","targets":["<id>"]}` (targets optional) | Valid in-character action — no check needed (greeting, casual look, idle, **NPC에게 다가가기·말 걸기**), or **fallback for unresolved input** (vague verb, blocked engine condition, target/scene mismatch). NPC를 향한 행동이면 `targets`에 그 id 박기 (§ targets rule). narrate가 in-world로 흡수. |
+| 13 | pass | `{"action":"pass","targets":["<id>"]}` (targets optional) | Valid in-character action — no check needed (greeting, casual look, idle, **NPC에게 다가가기·말 걸기**), or **fallback for unresolved input** (vague verb, blocked engine condition, target/scene mismatch). NPC를 향한 행동이면 `targets`에 그 id 넣기 (§ targets rule). narrate가 in-world로 흡수. |
 | 14 | chain | `{"action":"chain","parts":[<sub-action>, <sub-action>, ...]}` | Compound 입력에서 **두 이상의 engine 분기**가 모두 실제로 일어나야 할 때 ("약초 먹고 검을 든다" = use+equip, "검 들고 광장 상인에게 다가간다" = equip+pass). parts는 2~4개. 각 part는 `use`/`equip`/`unequip`/`buy`/`sell`/`level_up`/`learn_skill`/`pass` 중 하나 (combat·rest·flee·roll·reject·summon_combat은 chain 금지 — phase 충돌). 같은 분기 내 chain("뒤져서 연다" = 단일 roll)은 chain 아니라 단일 action 그대로. |
 
 **clarify 없음.** 모호함 만나면 절대 되묻지 않는다 — 합리적 default + narrate 안전망. 구체 fallback은 § Fallback rules.
@@ -66,7 +66,7 @@ semantics 검증이 backstop으로 friendly NPC·location id·player·item을 co
 
 **Anti-anchor check.** `보통`을 찍기 전에 *어떤* friction factor를 셌는지 확인. 위 5개 중 하나도 명시할 수 없으면 `쉬움`으로 내려라. "그냥 보통일 것 같다"는 이유로 padding 하면 tier 분포가 mode-collapse 되어 downstream 튜닝이 깨진다.
 
-**targets** (`pass`/`roll`/`combat` 모두 동일 규칙으로 채움 — 결정된 NPC id가 있으면 박는다):
+**targets** (`pass`/`roll`/`combat` 모두 동일 규칙으로 채움 — 결정된 NPC id가 있으면 넣는다):
 1. id explicitly named in input.
 2. Multiple → all.
 3. No name + **대인 행동**(말 걸기·인사·질문·부탁·따라가기·거래 시도 등) → `recent_npc` 우선 → 없으면 직전 history에서 마지막 언급된 alive same-location NPC → 그래도 없으면 alive NPC가 1명일 때 그 한 명. Pronoun/follow-up은 추가 hint일 뿐 필수 아님.

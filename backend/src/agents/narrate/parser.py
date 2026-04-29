@@ -34,10 +34,13 @@ def _clean_body(body: str) -> str:
     )
 
 
-def _split_trailing_backslashes(s: str) -> tuple[str, str]:
+def _split_trailing_backslash_run(s: str) -> tuple[str, str]:
     """Return (safe, hold) where `hold` is a trailing run of backslashes —
     a `\\` straddling a stream chunk boundary would escape whatever arrives
-    next, so we hold it back until the next token.
+    next, so we hold it back until the next token. Only protects the
+    \\\\-pair case; a lone `\\` followed by `n`/`t`/`"` across a boundary
+    is not held back (those are still cleaned via _clean_body once the
+    full pair lands in the same chunk).
     """
     i = len(s)
     while i > 0 and s[i - 1] == "\\":
@@ -85,7 +88,7 @@ async def split_stream(
             safe_end = max(yielded, len(full) - len(SEPARATOR) + 1)
             if safe_end > yielded:
                 chunk = full[yielded:safe_end]
-                safe_chunk, _hold = _split_trailing_backslashes(chunk)
+                safe_chunk, _hold = _split_trailing_backslash_run(chunk)
                 if safe_chunk:
                     yield NarrativeDelta(text=_clean_body(safe_chunk))
                     yielded += len(safe_chunk)
