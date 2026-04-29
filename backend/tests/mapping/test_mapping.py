@@ -158,6 +158,15 @@ def test_hero_companion_label_when_job_empty(fresh_state):
     assert h["companions"] == ["펭 (고블린)"]
 
 
+def test_hero_companion_skips_missing_id(fresh_state):
+    state = _full_state(fresh_state)
+    state.characters[state.player_id].companions.append("ghost_id")
+    h = to_hero(state)
+    # Missing companion ids must not leak into the Korean UI as raw ids.
+    assert all("ghost_id" not in label for label in h["companions"])
+    assert h["companions"] == ["펭 (고블린)"]
+
+
 def test_subject_known_filters_by_target_id(fresh_state):
     s = to_subject(_full_state(fresh_state))
     # appearance + only memories targeting this NPC

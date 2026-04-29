@@ -39,9 +39,12 @@ def _inventory(state: GameState, ids: list[str]) -> list[dict]:
     ]
 
 
-def _companion_label(state: GameState, char_id: str) -> str:
+def _companion_label(state: GameState, char_id: str) -> str | None:
+    """Returns the Korean label for a companion or None if the id no longer
+    resolves (e.g. the companion died and was removed). Caller filters None
+    so a stray technical id never reaches the UI."""
     if char_id not in state.characters:
-        return char_id
+        return None
     c = state.characters[char_id]
     return f"{c.name} ({_race_job_label(state, c)})"
 
@@ -68,7 +71,11 @@ def to_hero(state: GameState) -> dict:
         "inventory": _inventory(state, p.inventory_ids),
         "status": list(p.status),
         "skills": skills,
-        "companions": [_companion_label(state, cid) for cid in p.companions],
+        "companions": [
+            label
+            for cid in p.companions
+            if (label := _companion_label(state, cid)) is not None
+        ],
     }
 
 
