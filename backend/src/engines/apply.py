@@ -102,6 +102,12 @@ _LOC_FORBIDDEN = frozenset(
 
 _CHAPTER_QUEST_ALLOWED = frozenset({"summary", "status"})
 
+_FORBIDDEN_BY_ENTITY: dict[str, frozenset[str]] = {
+    "characters": _CHAR_FORBIDDEN,
+    "items": _ITEM_FORBIDDEN,
+    "locations": _LOC_FORBIDDEN,
+}
+
 
 def _check_set_permission(entity: str, field: str) -> str | None:
     top = field.split(".", 1)[0]
@@ -109,13 +115,7 @@ def _check_set_permission(entity: str, field: str) -> str | None:
         if top not in _CHAPTER_QUEST_ALLOWED:
             return f"narrator can only set 'summary' or 'status' on {entity}"
         return None
-    forbidden_map = {
-        "characters": _CHAR_FORBIDDEN,
-        "items": _ITEM_FORBIDDEN,
-        "locations": _LOC_FORBIDDEN,
-    }
-    forbidden = forbidden_map[entity]
-    if top in forbidden:
+    if top in _FORBIDDEN_BY_ENTITY[entity]:
         return f"field {field!r} on {entity!r} is engine-owned"
     return None
 
