@@ -74,13 +74,7 @@ async def run_narrate(
     async for item in stream_narrate(client, input_):
         if isinstance(item, NarrativeFinal):
             if action == "reject":
-                item.output.state_changes = []
-                item.output.memorable = False
-                item.output.memory_targets = []
-                item.output.memory = {}
-                item.output.memory_links = {}
-                item.output.importance = None
-                item.output.suggestions = []
+                _sterilize_for_reject(item.output)
             elif action == "pass":
                 item.output.state_changes = _reconcile_player_move(
                     item.output.state_changes,
@@ -88,6 +82,19 @@ async def run_narrate(
                     state,
                 )
         yield item
+
+
+def _sterilize_for_reject(output) -> None:
+    """Reject path must produce zero side effects: empty state_changes, no
+    memory, no suggestions. The narrate prompt also tells the LLM to do
+    this, but we don't trust the LLM here — engine-side enforcement."""
+    output.state_changes = []
+    output.memorable = False
+    output.memory_targets = []
+    output.memory = {}
+    output.memory_links = {}
+    output.importance = None
+    output.suggestions = []
 
 
 def _is_player_relocation(change: dict, player_id: str) -> bool:

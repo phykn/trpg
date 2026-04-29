@@ -33,7 +33,6 @@ from ..rules.dc import pick_dc, sigmoid_required_roll, social_bonus
 from .dirty import (
     Dirty,
     flush,
-    next_log_id,
     push_act,
     push_turn_log,
 )

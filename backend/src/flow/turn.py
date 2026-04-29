@@ -287,8 +287,10 @@ async def _dispatch(
     # action == pass / reject — narrator path.
     assert isinstance(result, (PassAction, RejectAction))
     state.turn_count += 1
-    targets_for_log = getattr(result, "targets", None)
-    target_for_log = targets_for_log[0] if targets_for_log else None
+    if isinstance(result, PassAction):
+        target_for_log = result.targets[0] if result.targets else None
+    else:
+        target_for_log = None
 
     stream = run_narrate(
         client,
