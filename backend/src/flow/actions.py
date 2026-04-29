@@ -39,7 +39,6 @@ from .dirty import (
 from .error_phrases import humanize_engine_error
 from .format import (
     format_attack_log,
-    format_roll_announce,
     format_skill_log,
     format_use_log,
 )
@@ -312,6 +311,26 @@ async def emit_trade(
 # --- pending roll ----------------------------------------------------------
 
 
+def _format_roll_announce(
+    state: GameState,
+    result: RollAction,
+    target: str,
+    dc: int,
+) -> str:
+    if target in state.characters:
+        target_name = state.characters[target].name
+    elif target in state.locations:
+        target_name = state.locations[target].name
+    elif target in state.items:
+        target_name = state.items[target].name
+    else:
+        target_name = target
+    return (
+        f"{result.reason}\n"
+        f"{target_name}에게 {result.stat} 판정 (난이도 {dc})"
+    )
+
+
 async def emit_roll_pending(
     state: GameState,
     saves_dir: str,
@@ -341,7 +360,7 @@ async def emit_roll_pending(
     )
     yield push_act(
         state, dirty,
-        format_roll_announce(state, result, target, dc),
+        _format_roll_announce(state, result, target, dc),
     )
     try:
         await flush(state, saves_dir, dirty)

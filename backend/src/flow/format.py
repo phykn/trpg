@@ -3,7 +3,6 @@
 Pure functions — no state mutation, no SSE, no I/O. Anything that returns a
 string for a log entry lives here.
 """
-from ..agents.dc_judge.schema import RollAction
 from ..domain.state import GameState
 from ..engines.combat import AttackOutcome
 
@@ -29,26 +28,6 @@ def front_grade(grade: str) -> str:
 
 
 # --- GM log line builders --------------------------------------------------
-
-
-def format_roll_announce(
-    state: GameState,
-    result: RollAction,
-    target: str,
-    dc: int,
-) -> str:
-    if target in state.characters:
-        target_name = state.characters[target].name
-    elif target in state.locations:
-        target_name = state.locations[target].name
-    elif target in state.items:
-        target_name = state.items[target].name
-    else:
-        target_name = target
-    return (
-        f"{result.reason}\n"
-        f"{target_name}에게 {result.stat} 판정 (난이도 {dc})"
-    )
 
 
 def format_attack_log(
