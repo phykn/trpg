@@ -5,7 +5,7 @@ contains "not enough gold"). Without explicit ordering, the shorter prefix
 could match first and surface the wrong Korean line. The implementation now
 scans longest-needle-first; this test pins that contract.
 """
-from src.flow.format import humanize_engine_error
+from src.flow.error_phrases import humanize_engine_error
 
 
 def test_npc_gold_takes_priority_over_player_gold():

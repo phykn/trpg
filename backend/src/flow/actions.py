@@ -37,12 +37,12 @@ from .dirty import (
     push_act,
     push_turn_log,
 )
+from .error_phrases import humanize_engine_error
 from .format import (
     format_attack_log,
     format_roll_announce,
     format_skill_log,
     format_use_log,
-    humanize_engine_error,
 )
 from .skill_recommend import recommend_skill_candidates
 
