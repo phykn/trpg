@@ -33,10 +33,33 @@ export async function listProfiles(): Promise<ProfileCard[]> {
   return (await res.json()) as ProfileCard[];
 }
 
-export async function getCurrentSession(): Promise<SessionPayload | null> {
-  const res = await fetch(`${BASE_URL}/session/current`, { headers: baseHeaders });
+// Persist the active game_id locally so the user resumes their own game on
+// reload. Going through the backend's `/session/current` pointer would mix
+// users — that pointer is global to the saves dir, so any user's `init`
+// overwrites every other user's "last game".
+const STORAGE_KEY = 'trpg.current_game_id';
+
+function getStorage(): Storage | null {
+  if (typeof window === 'undefined') return null;
+  return window.localStorage ?? null;
+}
+
+export function loadStoredGameId(): string | null {
+  return getStorage()?.getItem(STORAGE_KEY) ?? null;
+}
+
+export function storeGameId(gameId: string): void {
+  getStorage()?.setItem(STORAGE_KEY, gameId);
+}
+
+export function clearStoredGameId(): void {
+  getStorage()?.removeItem(STORAGE_KEY);
+}
+
+export async function getSessionById(gameId: string): Promise<SessionPayload | null> {
+  const res = await fetch(`${BASE_URL}/session/${gameId}/state`, { headers: baseHeaders });
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`getCurrentSession failed: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`getSessionById failed: HTTP ${res.status}`);
   return (await res.json()) as SessionPayload;
 }
 

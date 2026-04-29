@@ -1,8 +1,11 @@
 import React from 'react';
 
 import {
-  getCurrentSession,
+  clearStoredGameId,
+  getSessionById,
   initSession,
+  loadStoredGameId,
+  storeGameId,
   streamIntro,
   streamRoll,
   streamTurn,
@@ -113,8 +116,16 @@ export function useGame() {
     setStatus('loading');
     setErrorMessage(null);
     try {
-      const payload = await getCurrentSession();
+      const stored = loadStoredGameId();
+      if (!stored) {
+        setStatus('no-game');
+        return;
+      }
+      const payload = await getSessionById(stored);
       if (!payload) {
+        // Stored id no longer exists on the server (game deleted, saves wiped,
+        // user moved between deployments). Drop the stale pointer.
+        clearStoredGameId();
         setStatus('no-game');
         return;
       }
@@ -137,6 +148,7 @@ export function useGame() {
       setErrorMessage(null);
       try {
         const payload = await initSession(body);
+        storeGameId(payload.game_id);
         setGameId(payload.game_id);
         applyState(payload.state);
         setPending(null);
@@ -174,6 +186,8 @@ export function useGame() {
 
   const goToNewGame = React.useCallback(() => {
     aborts.current.forEach((a) => a.abort());
+    clearStoredGameId();
+    setGameId(null);
     setStatus('no-game');
   }, []);
 
