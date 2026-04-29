@@ -58,6 +58,25 @@ Install **Expo Go** on the phone (Play Store / App Store).
    ```
 5. Scan the QR with Expo Go (same as step 4 of the LAN flow).
 
+## Public web deploy
+
+Static export to Cloudflare Workers (project: `trpg`). Anyone with the URL can open the app in a browser without running a dev server, provided the backend on the host PC is reachable via Tailscale Funnel and the deploy URL is listed in backend `CORS_ORIGINS`.
+
+First time only:
+
+```bash
+npm install -g wrangler
+wrangler login
+```
+
+Each deploy:
+
+```bash
+npx expo export -p web && wrangler deploy
+```
+
+`EXPO_PUBLIC_API_USER` / `EXPO_PUBLIC_API_PASS` are baked into the static bundle and visible to anyone who opens devtools on the public site. Use demo credentials and rotate after the demo.
+
 ## Other commands
 
 ```bash
