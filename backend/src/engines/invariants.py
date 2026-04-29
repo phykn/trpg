@@ -14,7 +14,6 @@ Public API:
     check_inventory(c, items_pool)  -> list[str]
     check_skills(c, skill_pool)     -> list[str]
     check_scenario(scenario)        -> list[str]
-    check_state(state)              -> list[str]
     check_quest_graph(scenario)     -> list[str]
     check_chapter_graph(scenario)   -> list[str]
 
@@ -422,120 +421,74 @@ _TRIGGER_POOL_NAME = {
 }
 
 
-def _check_quest_prerequisite_status(s: Scenario) -> list[str]:
-    """Active quests must have all prerequisites completed."""
+def _check_prereq_status(
+    items: dict, where_prefix: str, kind_label: str
+) -> list[str]:
+    """Active items must have all prerequisites completed."""
     out: list[str] = []
-    for qid, q in s.quests.items():
-        if q.status != "active":
+    for iid, item in items.items():
+        if item.status != "active":
             continue
-        for pid in q.prerequisite_ids:
-            if pid in s.quests and s.quests[pid].status != "completed":
+        for pid in item.prerequisite_ids:
+            if pid in items and items[pid].status != "completed":
                 _v(
                     out,
-                    f"quests/{qid}",
-                    f"status='active' but prerequisite {pid!r} status='{s.quests[pid].status}' (must be 'completed')",
+                    f"{where_prefix}/{iid}",
+                    f"status='active' but prerequisite {pid!r} status='{items[pid].status}' (must be 'completed')",
                 )
     return out
 
 
-def _check_quest_prerequisite_cycles(s: Scenario) -> list[str]:
-    """Reject any cycle in the quest prerequisite_ids DAG."""
+def _check_prereq_cycles(items: dict, kind_label: str) -> list[str]:
+    """Reject any cycle in the prerequisite_ids DAG."""
     visited: set[str] = set()
     on_stack: set[str] = set()
     cycle_path: list[str] = []
 
-    def _dfs(qid: str, path: list[str]) -> bool:
-        if qid in on_stack:
-            cycle_path.extend(path[path.index(qid):] + [qid])
+    def _dfs(iid: str, path: list[str]) -> bool:
+        if iid in on_stack:
+            cycle_path.extend(path[path.index(iid):] + [iid])
             return True
-        if qid in visited:
+        if iid in visited:
             return False
-        visited.add(qid)
-        on_stack.add(qid)
-        path.append(qid)
-        q = s.quests.get(qid)
-        if q is not None:
-            for pid in q.prerequisite_ids:
+        visited.add(iid)
+        on_stack.add(iid)
+        path.append(iid)
+        item = items.get(iid)
+        if item is not None:
+            for pid in item.prerequisite_ids:
                 if _dfs(pid, path):
                     return True
-        on_stack.remove(qid)
+        on_stack.remove(iid)
         path.pop()
         return False
 
     out: list[str] = []
-    for qid in s.quests:
-        if qid in visited:
+    for iid in items:
+        if iid in visited:
             continue
-        if _dfs(qid, []):
+        if _dfs(iid, []):
             _v(
                 out,
                 "scenario",
-                f"quest prerequisite cycle: {' → '.join(cycle_path)}",
+                f"{kind_label} prerequisite cycle: {' → '.join(cycle_path)}",
             )
             break
     return out
 
 
 def check_quest_graph(s: Scenario) -> list[str]:
-    return _check_quest_prerequisite_status(s) + _check_quest_prerequisite_cycles(s)
-
-
-def _check_chapter_prerequisite_status(s: Scenario) -> list[str]:
-    """Active chapters must have all prerequisite chapters completed."""
-    out: list[str] = []
-    for cid, ch in s.chapters.items():
-        if ch.status != "active":
-            continue
-        for pid in ch.prerequisite_ids:
-            if pid in s.chapters and s.chapters[pid].status != "completed":
-                _v(
-                    out,
-                    f"chapters/{cid}",
-                    f"status='active' but prerequisite {pid!r} status='{s.chapters[pid].status}' (must be 'completed')",
-                )
-    return out
-
-
-def _check_chapter_prerequisite_cycles(s: Scenario) -> list[str]:
-    """Reject any cycle in the chapter prerequisite_ids DAG."""
-    visited: set[str] = set()
-    on_stack: set[str] = set()
-    cycle_path: list[str] = []
-
-    def _dfs(cid: str, path: list[str]) -> bool:
-        if cid in on_stack:
-            cycle_path.extend(path[path.index(cid):] + [cid])
-            return True
-        if cid in visited:
-            return False
-        visited.add(cid)
-        on_stack.add(cid)
-        path.append(cid)
-        ch = s.chapters.get(cid)
-        if ch is not None:
-            for pid in ch.prerequisite_ids:
-                if _dfs(pid, path):
-                    return True
-        on_stack.remove(cid)
-        path.pop()
-        return False
-
-    out: list[str] = []
-    for cid in s.chapters:
-        if cid in visited:
-            continue
-        if _dfs(cid, []):
-            _v(
-                out,
-                "scenario",
-                f"chapter prerequisite cycle: {' → '.join(cycle_path)}",
-            )
-            break
-    return out
+    return (
+        _check_prereq_status(s.quests, "quests", "quest")
+        + _check_prereq_cycles(s.quests, "quest")
+    )
 
 
 def check_chapter_graph(s: Scenario) -> list[str]:
-    return _check_chapter_prerequisite_status(s) + _check_chapter_prerequisite_cycles(s)
+    return (
+        _check_prereq_status(s.chapters, "chapters", "chapter")
+        + _check_prereq_cycles(s.chapters, "chapter")
+    )
 
 
 # --- per-entity cross-ref helpers (used by scenario / state) ---------------
@@ -735,7 +688,7 @@ def _check_player_template(s: Scenario) -> list[str]:
     return out
 
 
-# --- check_scenario / check_state ------------------------------------------
+# --- check_scenario --------------------------------------------------------
 
 
 def check_scenario(s: Scenario) -> list[str]:
@@ -774,10 +727,6 @@ def check_scenario(s: Scenario) -> list[str]:
         out.extend(_check_player_template(s))
 
     return out
-
-
-def check_state(state: Any) -> list[str]:
-    return check_scenario(Scenario.from_state(state))
 
 
 # --- public namespace ------------------------------------------------------

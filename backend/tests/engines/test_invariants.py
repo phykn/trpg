@@ -27,7 +27,6 @@ from src.engines.invariants import (
     check_quest_graph,
     check_scenario,
     check_skills,
-    check_state,
     check_stats,
 )
 
@@ -511,7 +510,7 @@ def test_state_allows_partial_hp(fresh_state):
     fresh_state.active_quest_id = "q1"
     # Damage taken — runtime state, not seed
     fresh_state.characters["npc1"].hp = 5
-    msgs = check_state(fresh_state)
+    msgs = check_scenario(Scenario.from_state(fresh_state))
     # No "seed hp" violation; max_hp formula still holds
     assert not any("seed hp" in m for m in msgs)
 
