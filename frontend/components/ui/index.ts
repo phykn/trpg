@@ -5,3 +5,5 @@ export { InlineParts } from './InlineParts';
 export { InlineNodes } from './InlineNodes';
 export { LabeledRow } from './LabeledRow';
 export { ExpandGroup } from './ExpandGroup';
+export { CenterMessage } from './CenterMessage';
+export { ErrorState } from './ErrorState';

@@ -51,16 +51,16 @@ function Separator() {
 }
 
 function TypingDot({ delay }: { delay: number }) {
-  const v = React.useRef(new Animated.Value(0)).current;
+  const anim = React.useRef(new Animated.Value(0)).current;
   React.useEffect(() => {
     const cycle = Animated.sequence([
-      Animated.timing(v, {
+      Animated.timing(anim, {
         toValue: -4,
         duration: 320,
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
-      Animated.timing(v, {
+      Animated.timing(anim, {
         toValue: 0,
         duration: 320,
         easing: Easing.in(Easing.quad),
@@ -74,7 +74,7 @@ function TypingDot({ delay }: { delay: number }) {
       clearTimeout(start);
       loop.stop();
     };
-  }, [v, delay]);
+  }, [anim, delay]);
   return (
     <Animated.View
       style={{
@@ -82,7 +82,7 @@ function TypingDot({ delay }: { delay: number }) {
         height: 6,
         borderRadius: 3,
         backgroundColor: colors.fg.muted,
-        transform: [{ translateY: v }],
+        transform: [{ translateY: anim }],
       }}
     />
   );

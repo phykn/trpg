@@ -8,11 +8,11 @@ import {
   View,
 } from 'react-native';
 
+import { CenterMessage, ErrorState } from '@/components/ui';
 import { colors } from '@/design/tokens';
 import { listProfiles } from '@/services';
 import type { InitRequest, ProfileCard, RaceCard } from '@/types/wire';
 
-import { CenterMessage } from './CenterMessage';
 import { Input } from './Input';
 import { Section } from './Section';
 import { SelectCard } from './SelectCard';
@@ -65,27 +65,7 @@ export function NewGame({ onSubmit }: Props) {
   };
 
   if (loadError) {
-    return (
-      <CenterMessage>
-        <View className="items-center gap-1">
-          <Text
-            className="font-sans-semibold text-meta text-danger-fg"
-            style={{ letterSpacing: 1.2 }}
-          >
-            오류
-          </Text>
-          <Text className="font-sans text-body text-fg-default text-center">
-            {loadError}
-          </Text>
-        </View>
-        <Pressable
-          onPress={loadProfiles}
-          className="px-4 h-9 mt-2 rounded-md bg-canvas-inset border border-border-default items-center justify-center active:bg-border-default"
-        >
-          <Text className="font-sans-medium text-body text-fg-default">다시 시도</Text>
-        </Pressable>
-      </CenterMessage>
-    );
+    return <ErrorState message={loadError} onRetry={loadProfiles} />;
   }
 
   if (!profiles) {
