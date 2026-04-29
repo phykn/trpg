@@ -17,7 +17,7 @@ from ..agents.dc_judge.schema import (
     UnequipAction,
     UseAction,
 )
-from ..domain.errors import JudgeMalformed
+from ..domain.errors import CombatStateInvalid, JudgeMalformed
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..llm.client import LLMClient
@@ -142,27 +142,34 @@ async def start_combat_and_run_npc_phase(
     rng: random.Random | None,
     surprise: Literal["player", "enemy"] | None = None,
 ) -> AsyncIterator[dict]:
-    # Defensive: if combat_state somehow survived (or didn't get cleared) into
-    # this call, skip re-init so the log doesn't get a duplicate "전투 개시!"
-    # line and the engine doesn't reset round/turn_order on the active fight.
-    if state.combat_state is None:
-        cs = combat_engine.start_combat(state, enemy_ids, rng=rng, surprise=surprise)
-        yield push_act(state, dirty, "전투 개시!")
-        yield {
-            "type": "combat_start",
-            "data": {
-                "turn_order": list(cs.turn_order),
-                "round": cs.round,
-                "surprise": cs.surprise,
-                "enemy_ids": list(cs.enemy_ids),
-            },
-        }
-        if enemy_ids:
-            first_enemy = state.characters.get(enemy_ids[0])
-            if first_enemy is not None:
-                push_turn_log(
-                    state, first_enemy.id, f"{first_enemy.name}와 전투 개시", dirty
-                )
+    # /turn routes through run_combat_player_turn whenever combat_state is
+    # set, so we should never reach this with a live combat already pinned.
+    # If we do, that's a state-machine bug (something forgot to call
+    # end_combat); silently re-using stale combat_state with brand-new
+    # enemy_ids would mask it.
+    if state.combat_state is not None:
+        raise CombatStateInvalid(
+            "start_combat called while combat_state is already set "
+            f"(stale enemy_ids={list(state.combat_state.enemy_ids)}, "
+            f"new enemy_ids={enemy_ids})"
+        )
+    cs = combat_engine.start_combat(state, enemy_ids, rng=rng, surprise=surprise)
+    yield push_act(state, dirty, "전투 개시!")
+    yield {
+        "type": "combat_start",
+        "data": {
+            "turn_order": list(cs.turn_order),
+            "round": cs.round,
+            "surprise": cs.surprise,
+            "enemy_ids": list(cs.enemy_ids),
+        },
+    }
+    if enemy_ids:
+        first_enemy = state.characters.get(enemy_ids[0])
+        if first_enemy is not None:
+            push_turn_log(
+                state, first_enemy.id, f"{first_enemy.name}와 전투 개시", dirty
+            )
     async for ev in run_combat_npc_phase(state, dirty, rng):
         yield ev
 

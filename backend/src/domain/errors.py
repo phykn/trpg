@@ -52,3 +52,10 @@ class SkillInvalid(DomainError):
     """cast request failed validation (level / MP / range / ownership)."""
 
     pass
+
+
+class CombatStateInvalid(DomainError):
+    """Tried to enter combat while combat_state is already set, or any other
+    state-machine inconsistency around combat lifecycle."""
+
+    pass
