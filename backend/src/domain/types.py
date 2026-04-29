@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, get_args
 
 
 StatKey = Literal["STR", "DEX", "CON", "INT", "WIS", "CHA"]
@@ -26,15 +26,7 @@ Tier = Literal[
 ]
 
 
-_TIER_ORDER: tuple[Tier, ...] = (
-    "매우 쉬움",
-    "쉬움",
-    "보통",
-    "어려움",
-    "매우 어려움",
-    "전설",
-    "신화",
-)
+_TIER_ORDER: tuple[str, ...] = get_args(Tier)
 
 
 def tier_to_int(tier: Tier) -> int:

@@ -105,7 +105,6 @@ class Connection(BaseModel):
     target_id: str
     difficulty: Tier | None = None
     key_item_id: str | None = None
-    travel_min: int | None = None
 
 
 # --- items -----------------------------------------------------------------

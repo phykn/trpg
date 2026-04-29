@@ -34,7 +34,6 @@ class CombatState(BaseModel):
     player_skill_id: str | None = None
     player_skill_used: bool = False
     player_intent: str = ""
-    narrate_history: str = ""
 
 
 class GameState(BaseModel):
