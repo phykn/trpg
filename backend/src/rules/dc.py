@@ -3,7 +3,7 @@ import random
 
 from ..domain.entities import Character
 from ..domain.types import Grade, Tier
-from ..rules import RULES
+from .config import RULES
 
 
 def pick_dc(tier: Tier, rng: random.Random | None = None) -> int:

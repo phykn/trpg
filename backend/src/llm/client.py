@@ -16,7 +16,7 @@ from ..rules.config import RULES
 _SESSION_ID: ContextVar[str | None] = ContextVar("llm_session_id", default=None)
 
 
-def set_llm_session(session_id: str | None) -> None:
+def set_llm_session(session_id: str) -> None:
     _SESSION_ID.set(session_id)
 
 

@@ -191,9 +191,6 @@ async def append_dialogue_entries(
         await asyncio.to_thread(_append_jsonl, path, lines)
 
 
-# --- save (bulk: initial / fallback) ---------------------------------------
-
-
 # --- load ------------------------------------------------------------------
 
 
