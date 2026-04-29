@@ -24,6 +24,15 @@ from .schema import (
 # --- helpers ---------------------------------------------------------------
 
 
+def _check_chain(output: ChainAction, surroundings: dict[str, Any]) -> None:
+    """Recurse into chain parts so nested actions face the same checks the
+    standalone form does. Without this, a chain like
+    [UseAction(item_id="ghost"), PassAction] slips past judge validation
+    and surfaces as the engine's worse InventoryInvalid."""
+    for part in output.parts:
+        _CHECKS[type(part)](part, surroundings)
+
+
 def _inventory_kinds(surroundings: dict[str, Any]) -> dict[str, str]:
     return {
         i.get("id"): i.get("kind")
@@ -251,7 +260,7 @@ _CHECKS: dict[type, Callable[[Any, dict[str, Any]], None]] = {
     RejectAction: _noop,
     SummonCombatAction: _noop,
     RestAction: _noop,
-    ChainAction: _noop,
+    ChainAction: _check_chain,
 }
 
 

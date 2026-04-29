@@ -230,3 +230,29 @@ def test_combat_rejects_item_as_target():
     }
     with pytest.raises(JudgeSemanticError, match="only NPCs"):
         check_semantics(_combat_action("shrine_stone"), sur)
+
+
+def test_chain_recurses_into_parts():
+    # Standalone use of a non-existent item is rejected by check_semantics —
+    # the same id wrapped in ChainAction.parts must be rejected too. Without
+    # recursion, a chain like ["사용 ghost", "지나간다"] would slip past
+    # judge-side validation and surface as the engine's worse "InventoryInvalid".
+    sur = {
+        "location": {"id": "village_square"},
+        "entities": [{"id": "village_square"}],
+        "inventory": [],
+    }
+    chain = output_adapter.validate_json(
+        json.dumps(
+            {
+                "action": "chain",
+                "parts": [
+                    {"action": "use", "item_id": "ghost"},
+                    {"action": "pass"},
+                ],
+            },
+            ensure_ascii=False,
+        )
+    )
+    with pytest.raises(JudgeSemanticError):
+        check_semantics(chain, sur)
