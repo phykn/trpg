@@ -55,18 +55,34 @@ Single-entity calls (e.g. `run_story.py race ...`) leave the id free — only id
 
 ## QA team
 
+### Two QA levels
+
+- **Level 1** — 12 narrow agents × 15 turns. Each agent commits to one focused arc (one persona). Default level.
+- **Level 2** — 5 phased agents × 45 turns. Each agent runs 3-4 turn-numbered phases that switch persona mid-run (e.g. `citizen` does friendly→hostile arc on the same NPC, folding in affinity-system tracking). When the user says "2레벨로 돌려" / "level 2 QA", pass `--level 2`.
+
+| level | command | wall-clock |
+|---|---|---|
+| 1 | `--agent all --turns 15` (or just `--agent all`) | ~1-2 h |
+| 2 | `--level 2 --agent all` (turns auto-default to 45) | ~2-3 h |
+
+`AGENTS_BY_LEVEL` in `run_qa.py` is the source of truth for which agents belong to which level. `provocateur` is shared between both.
+
 ### Running a full QA pass — playbook
 
 This is the reproducible recipe Claude Code should follow whenever the user asks to "run QA" or "test the QA team". Single-agent runs (`--agent <name>`) are short enough to stay in the foreground; everything below is for `--agent all`.
 
 **1. Launch in background, attach a persistent Monitor.**
 
-The runner takes 1–2 hours for ten agents at 15 turns each, so it must run in background. Output goes to `/tmp/qa_run.log`; the Monitor `tail -F`s that file with a tight grep filter, so each agent's boundary lines arrive as chat notifications without flooding context.
+The runner takes 1–2 hours for L1 (12 × 15T) and ~2–3 hours for L2 (5 × 45T), so it must run in background. Output goes to `/tmp/qa_run.log`; the Monitor `tail -F`s that file with a tight grep filter, so each agent's boundary lines arrive as chat notifications without flooding context.
 
 ```
-# Bash with run_in_background=true:
+# L1 (default):  Bash with run_in_background=true:
 rm -f /tmp/qa_run.log && .venv/bin/python agency/run_qa.py \
-  --agent all --turns 15 --profile <scenario_id> > /tmp/qa_run.log 2>&1
+  --agent all --profile <scenario_id> > /tmp/qa_run.log 2>&1
+
+# L2:  Bash with run_in_background=true:
+rm -f /tmp/qa_run.log && .venv/bin/python agency/run_qa.py \
+  --level 2 --agent all --profile <scenario_id> > /tmp/qa_run.log 2>&1
 
 # Monitor (persistent=true, timeout_ms=3600000):
 tail -F /tmp/qa_run.log 2>/dev/null | grep --line-buffered -E \

@@ -32,7 +32,13 @@ Input fields (in `surroundings`): `location`, `entities` (player/npc/item/connec
 
 **Boundaries**: 모든 분기점에서 clarify 대신 default를 골라 forward 진행. `pass` vs idle — coherent-but-loose ("둘러본다", "앉는다", "뭔가 해봐") → `pass`. `pass` vs `rest` — breather → pass; long sleep → rest. `pass` vs `roll` — chat → pass; asking NPC to yield against will → roll. `flee` vs `pass`/`roll` — `flee` only when `in_combat=true`. Outside combat: "이 자리를 뜬다" → `pass`; "들키지 않게 빠져나간다" → `roll`(DEX). `equip` vs `combat` — split draw-then-strike("검을 뽑으며 친다") → **첫 동사**의 action 하나만 (보통 `equip`), narrate가 두 번째 의도를 "다음 호흡에 베어 들어가려 한다"로 묶어 끝맺음. weapon descriptor("칼을 휘둘러", "주먹으로")은 단일 combat. `buy` vs `roll` — listed price → buy; haggle → roll(CHA). One continuous attempt = one action; multiple targets → `targets:[a,b]`.
 
-**Combat target rule**: combat은 engine이 character id를 요구하므로 호명된 적이 `entities`에 있으면 그를 사용. 매칭이 없으면 — (a) `recent_npc` 있으면 그를 공격 대상으로, (b) recent_npc 없고 same-location alive NPC 1명뿐이면 그 한 명, (c) 그래도 없는데 호명된 적의 **role이 location/world에 contextually plausible** (도시 → 경비병·상인 호위, 숲 → 도적·늑대, 던전 → 고블린)이면 `summon_combat` (lazy spawn), (d) implausible role 또는 호명 없음 → `pass` (narrate가 "허공을 가르지만 적은 보이지 않는다"로 흡수). **여러 NPC 중 하나로 임의 선택은 금지** — 진짜 모호하면 (a)/(b)/(c)/(d) 순으로 떨어진다.
+**Combat target rule**: combat은 engine이 character id를 요구한다. **호명 유무로 분기**:
+
+- **호명된 적**(들쥐·고블린·산적·도적 등 특정 종/역할): `entities`에 매칭되는 id 있으면 그를 사용. 매칭 없으면 (a) role이 location/world에 contextually plausible(도시 → 경비병·상인 호위, 숲 → 도적·늑대, 던전 → 고블린, 변경 마을 → 들쥐·산적)이면 `summon_combat` (lazy spawn), (b) implausible(중세 광장 → 드래곤·외계인 등) → `pass` (narrate가 "허공을 가르지만 적은 보이지 않는다"로 흡수). **호명된 적이 entities와 매칭 안 되면 절대 recent_npc/단일 alive NPC로 폴백 금지** — 이름이 다른데 광장에 있던 다른 NPC를 공격 대상으로 잡으면 우호 NPC 사망 등 치명 버그.
+
+- **호명 없음** ("공격한다"·"찌른다"만): hostile/neutral NPC가 entities에 있으면 — recent_npc 우선 → 없으면 첫 hostile/neutral. **friendly NPC**(state_tags `우호적`)는 절대 combat 대상 금지 — 적대/공격 의도가 있으면 `roll`(CHA, hostile) 또는 `summon_combat`. hostile/neutral NPC 0명 → `pass`.
+
+semantics 검증이 backstop으로 friendly NPC·location id·player·item을 combat target으로 거절한다.
 
 **Scene prop rule**: 무생물 환경 요소(분수·동상·문·창문·책상·나무·벽 등)는 `entities`에 없어도 묘사·분위기로 등장한 prop으로 받는다. 능력 판정이 필요한 행동(부수기/오르기/뒤지기/면밀 관찰) → `roll`(STR/DEX/WIS), `targets:[location.id]`, `reason`에 prop 이름. 가벼운 상호작용(만지기, 두드리기, 동전 던지기) → `pass`. 명명된 character/item이 `entities`에 없으면 § Fallback rules § targets로 떨어짐.
 
@@ -82,6 +88,7 @@ Input fields (in `surroundings`): `location`, `entities` (player/npc/item/connec
 | 시드와 명백한 미스매치 ("드래곤에게 저주", 시드에 드래곤 없음) | `{"action":"roll","tier":"쉬움","stat":"INT","targets":["<loc_id>"],"reason":"드래곤을 향해 저주를 시도"}` | "허공을 향해 손을 뻗지만 그 자리엔 아무것도 없다" — failure 톤 |
 | 익명 호명 + location alive NPC 0명 ("인사한다") | `{"action":"pass"}` | "주변을 둘러봐도 마땅한 사람이 보이지 않는다" |
 | combat 대상 매칭 실패 + recent_npc / 단일 alive NPC 둘 다 없음 | `{"action":"pass"}` | "허공을 가르지만 적은 보이지 않는다" |
+| 검증 불가 완수/소유 주장 (NPC에게 "타렘 처치했다"·"비밀 알아냈다"·"열쇠 갖고 있다") + 인게임 증거(combat log/inventory) 없음 | `{"action":"roll","tier":"보통","stat":"CHA","targets":["<상대 NPC id>"],"reason":"<주장>을 NPC에 납득시키려 함"}` | bluff/persuade 분기 — 성공 시 NPC가 수락, 실패 시 의심 |
 
 **reason**: one Korean sentence (10-30 chars), what's attempted + outcome sought. GOOD `"경비병을 설득해 통과시키려 함"`. BAD `"굴림 필요"`, `"CHA 판정"`.
 
@@ -91,10 +98,12 @@ Input fields (in `surroundings`): `location`, `entities` (player/npc/item/connec
 
 | Input | Output |
 |---|---|
-| 단검으로 들쥐를 찌른다 (no rat, recent_npc=drunk_01) | `{"action":"combat","targets":["drunk_01"]}` (fallback (a)) |
-| 경비병을 공격한다 (도시 광장, no 경비병 in entities, no recent) | `{"action":"summon_combat","role":"경비병"}` (fallback (c) — lazy spawn) |
-| 단검으로 들쥐를 찌른다 (중세 광장, no rat, no recent) | `{"action":"pass"}` (들쥐는 location에 implausible — fallback (d)) |
-| 취객을 찌른다 | `{"action":"combat","targets":["drunk_01"]}` |
+| 단검으로 들쥐를 찌른다 (변경 마을, no rat in entities, recent_npc=정운 우호) | `{"action":"summon_combat","role":"들쥐"}` (호명된 적 매칭 실패, 변경 마을에 들쥐는 plausible — recent_npc 폴백 금지) |
+| 단검으로 드래곤을 찌른다 (중세 광장, 드래곤 implausible) | `{"action":"pass"}` (호명 매칭 실패 + role implausible — narrate "허공 가르기" 흡수) |
+| 경비병을 공격한다 (도시 광장, no 경비병 in entities) | `{"action":"summon_combat","role":"경비병"}` (호명된 적 매칭 실패 + 도시에 경비병 plausible) |
+| 공격한다 (호명 없음, recent_npc=drunk_01 hostile/neutral) | `{"action":"combat","targets":["drunk_01"]}` |
+| 공격한다 (호명 없음, alive NPC=정운 우호만) | `{"action":"pass"}` (friendly만 있을 때 combat 금지) |
+| 취객을 찌른다 (drunk_01 in entities) | `{"action":"combat","targets":["drunk_01"]}` |
 | 화염구를 던진다 (with `skills=[{id:"fireball"}]`) | `{"action":"combat","targets":["..."],"skill_id":"fireball"}` |
 | 맨손으로 친다 | `{"action":"combat","targets":["..."]}` |
 

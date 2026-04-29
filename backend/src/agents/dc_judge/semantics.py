@@ -79,8 +79,48 @@ def _check_targets(output, surroundings: dict[str, Any]) -> None:
 # --- per-action checks -----------------------------------------------------
 
 
+def _entities_by_id(surroundings: dict[str, Any]) -> dict[str, dict]:
+    return {
+        e["id"]: e
+        for e in surroundings.get("entities") or []
+        if isinstance(e, dict) and isinstance(e.get("id"), str)
+    }
+
+
+def _is_friendly(entity: dict) -> bool:
+    return any("우호적" in t for t in entity.get("state_tags") or [])
+
+
 def _check_combat(output: CombatAction, surroundings: dict[str, Any]) -> None:
     _check_targets(output, surroundings)
+    by_id = _entities_by_id(surroundings)
+    hostile_npcs = sorted(
+        eid
+        for eid, e in by_id.items()
+        if e.get("type") == "npc" and not _is_friendly(e)
+    )
+    for tid in output.targets:
+        ent = by_id.get(tid)
+        if ent is None:
+            raise JudgeSemanticError(
+                f"combat target {tid!r} is not an NPC entity (it's a location/item/connection). "
+                f"Combat targets must be hostile/neutral living NPCs in the same location. "
+                f"Hostile/neutral NPCs here: {hostile_npcs}. "
+                f"If no real adversary is present, use 'summon_combat' or 'pass'."
+            )
+        ent_type = ent.get("type")
+        if ent_type != "npc":
+            raise JudgeSemanticError(
+                f"combat target {tid!r} has type={ent_type!r}; only NPCs are valid combat targets. "
+                f"Hostile/neutral NPCs here: {hostile_npcs}."
+            )
+        if _is_friendly(ent):
+            raise JudgeSemanticError(
+                f"combat target {tid!r} is a friendly NPC ({ent.get('state_tags')}). "
+                f"Use action='roll' (CHA, hostile intent) for confrontation, "
+                f"or 'summon_combat' to bring in a real adversary. "
+                f"Hostile/neutral NPCs here: {hostile_npcs}."
+            )
     if output.skill_id is None:
         return
     valid_skills = {

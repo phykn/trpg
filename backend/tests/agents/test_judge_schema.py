@@ -151,3 +151,82 @@ def test_semantic_check_rejects_hallucinated_target():
     )
     with pytest.raises(JudgeSemanticError):
         check_semantics(bad, sur)
+
+
+def _combat_action(target: str) -> CombatAction:
+    return output_adapter.validate_json(
+        json.dumps({"action": "combat", "targets": [target]}, ensure_ascii=False)
+    )
+
+
+def test_combat_rejects_friendly_npc_target():
+    sur = {
+        "location": {"id": "village_square"},
+        "entities": [
+            {"id": "player_01", "name": "p", "type": "player"},
+            {
+                "id": "gyeryun_chief",
+                "name": "정운",
+                "type": "npc",
+                "state_tags": ["우호적(affinity 60)"],
+            },
+        ],
+    }
+    with pytest.raises(JudgeSemanticError, match="friendly"):
+        check_semantics(_combat_action("gyeryun_chief"), sur)
+
+
+def test_combat_rejects_location_as_target():
+    sur = {
+        "location": {"id": "village_square"},
+        "entities": [{"id": "bandit_01", "name": "산적", "type": "npc"}],
+    }
+    with pytest.raises(JudgeSemanticError, match="not an NPC entity"):
+        check_semantics(_combat_action("village_square"), sur)
+
+
+def test_combat_rejects_player_self_target():
+    sur = {
+        "location": {"id": "village_square"},
+        "entities": [
+            {"id": "player_01", "name": "p", "type": "player"},
+            {"id": "bandit_01", "name": "산적", "type": "npc"},
+        ],
+    }
+    with pytest.raises(JudgeSemanticError, match="only NPCs"):
+        check_semantics(_combat_action("player_01"), sur)
+
+
+def test_combat_accepts_neutral_npc_target():
+    sur = {
+        "location": {"id": "village_square"},
+        "entities": [{"id": "bandit_01", "name": "산적", "type": "npc"}],
+    }
+    check_semantics(_combat_action("bandit_01"), sur)
+
+
+def test_combat_accepts_hostile_npc_target():
+    sur = {
+        "location": {"id": "village_square"},
+        "entities": [
+            {
+                "id": "bandit_01",
+                "name": "산적",
+                "type": "npc",
+                "state_tags": ["경계중(affinity -60)"],
+            }
+        ],
+    }
+    check_semantics(_combat_action("bandit_01"), sur)
+
+
+def test_combat_rejects_item_as_target():
+    sur = {
+        "location": {"id": "village_square"},
+        "entities": [
+            {"id": "shrine_stone", "name": "돌탁자", "type": "item"},
+            {"id": "bandit_01", "name": "산적", "type": "npc"},
+        ],
+    }
+    with pytest.raises(JudgeSemanticError, match="only NPCs"):
+        check_semantics(_combat_action("shrine_stone"), sur)
