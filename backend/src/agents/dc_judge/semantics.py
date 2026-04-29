@@ -3,6 +3,7 @@ from typing import Any, Callable
 from ...domain.types import STAT_PAIRS
 from .schema import (
     BuyAction,
+    ChainAction,
     CombatAction,
     EquipAction,
     FleeAction,
@@ -10,8 +11,11 @@ from .schema import (
     LearnSkillAction,
     LevelUpAction,
     PassAction,
+    RejectAction,
+    RestAction,
     RollAction,
     SellAction,
+    SummonCombatAction,
     UnequipAction,
     UseAction,
 )
@@ -66,6 +70,10 @@ def _find_merchant(npc_id: str, surroundings: dict[str, Any]) -> dict:
 
 
 def _check_targets(output, surroundings: dict[str, Any]) -> None:
+    """Reject any target id that's not a real entity in surroundings.
+    `targets` is optional on PassAction (default []) but if filled it must
+    still resolve — placeholders like ['unknown'] / ['?'] silently flow
+    through to narrate's target_view otherwise."""
     valid = _surroundings_target_ids(surroundings)
     bad = [t for t in output.targets if t not in valid]
     if bad:
@@ -134,10 +142,6 @@ def _check_combat(output: CombatAction, surroundings: dict[str, Any]) -> None:
             f"Valid skills are: {sorted(s for s in valid_skills if s)}. "
             f"Either pick one from the list or omit skill_id for a plain attack."
         )
-
-
-def _check_roll(output: RollAction, surroundings: dict[str, Any]) -> None:
-    _check_targets(output, surroundings)
 
 
 def _check_flee(output: FleeAction, surroundings: dict[str, Any]) -> None:
@@ -227,17 +231,15 @@ def _check_unequip(output: UnequipAction, surroundings: dict[str, Any]) -> None:
 # --- dispatch --------------------------------------------------------------
 
 
-def _check_pass(output: PassAction, surroundings: dict[str, Any]) -> None:
-    # `targets` is optional on pass, but if filled it must reference a real
-    # entity — otherwise placeholders like ['unknown'] / ['?'] / ['<loc_id>']
-    # silently flow through to narrate's target_view.
-    _check_targets(output, surroundings)
+def _noop(output: Any, surroundings: dict[str, Any]) -> None:
+    """Action types whose schema validation alone is enough — no
+    surroundings-based check applies."""
 
 
 _CHECKS: dict[type, Callable[[Any, dict[str, Any]], None]] = {
-    PassAction: _check_pass,
+    PassAction: _check_targets,
+    RollAction: _check_targets,
     CombatAction: _check_combat,
-    RollAction: _check_roll,
     FleeAction: _check_flee,
     LevelUpAction: _check_level_up,
     LearnSkillAction: _check_learn_skill,
@@ -246,10 +248,12 @@ _CHECKS: dict[type, Callable[[Any, dict[str, Any]], None]] = {
     UseAction: _check_use,
     EquipAction: _check_equip,
     UnequipAction: _check_unequip,
+    RejectAction: _noop,
+    SummonCombatAction: _noop,
+    RestAction: _noop,
+    ChainAction: _noop,
 }
 
 
 def check_semantics(output: JudgeOutput, surroundings: dict[str, Any]) -> None:
-    check = _CHECKS.get(type(output))
-    if check is not None:
-        check(output, surroundings)
+    _CHECKS[type(output)](output, surroundings)
