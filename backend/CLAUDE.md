@@ -44,7 +44,7 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q     # add live tests; needs BASE_URL re
 - Pydantic models *are* the schema. Every state file round-trips through `GameState.model_validate_json(...)`. Don't hand-munge JSON.
 - `LLMClient.chat_stream` is the streaming primitive; agents wrap it with their schema and retry loop.
 - One process, one save lock (`asyncio.Lock` in `persistence/store.py`). Horizontal scaling is out of scope.
-- Required env vars: `HOST PORT BASE_URL BASIC_AUTH_USER BASIC_AUTH_PASS SAVES_DIR PROFILE_DIR`. Missing any → `KeyError` at startup. No silent defaults.
+- Required env vars: `HOST PORT BASE_URL BASIC_AUTH_USER BASIC_AUTH_PASS SAVES_DIR PROFILE_DIR CORS_ORIGINS`. Missing any → `KeyError` at startup. No silent defaults. `CORS_ORIGINS` is a comma-separated list of exact origins (scheme + host) the web frontend may load from.
 
 ## Stats / tiers / grades
 

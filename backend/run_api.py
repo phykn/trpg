@@ -4,6 +4,7 @@ from pathlib import Path
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routes import router
 from src.llm import LLMClient
@@ -17,8 +18,16 @@ def build_app(
     basic_auth_pass: str,
     saves_dir: str,
     profile_dir: str,
+    cors_origins: list[str],
 ) -> FastAPI:
     app = FastAPI(title="TRPG Backend API")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "Accept"],
+    )
     app.state.llm = llm
     app.state.basic_auth_user = basic_auth_user
     app.state.basic_auth_pass = basic_auth_pass
@@ -38,6 +47,7 @@ def main() -> None:
     basic_auth_pass = os.environ["BASIC_AUTH_PASS"]
     saves_dir = os.environ["SAVES_DIR"]
     profile_dir = os.environ["PROFILE_DIR"]
+    cors_origins = [s.strip() for s in os.environ["CORS_ORIGINS"].split(",") if s.strip()]
 
     llm = LLMClient(
         base_url=base_url,
@@ -51,6 +61,7 @@ def main() -> None:
         basic_auth_pass=basic_auth_pass,
         saves_dir=saves_dir,
         profile_dir=profile_dir,
+        cors_origins=cors_origins,
     )
     uvicorn.run(app, host=host, port=port)
 
