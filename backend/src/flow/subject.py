@@ -25,6 +25,20 @@ def _is_active_npc(state: GameState, cid: str) -> bool:
     return ch is not None and ch.alive
 
 
+def _candidate_from_action(state: GameState, action) -> str | None:
+    """Per-action subject candidate. Returns the NPC id this action engages,
+    or None if the action doesn't carry an engagement signal."""
+    if isinstance(action, (CombatAction, RollAction, PassAction)):
+        for tid in action.targets:
+            if _is_active_npc(state, tid):
+                return tid
+        return None
+    if isinstance(action, (BuyAction, SellAction)):
+        if _is_active_npc(state, action.npc_id):
+            return action.npc_id
+    return None
+
+
 def refresh_active_subject(state: GameState, result) -> None:
     """Update active_subject_id to whoever the player is engaging this turn.
 
@@ -42,33 +56,19 @@ def refresh_active_subject(state: GameState, result) -> None:
         if cur_ch is None or not cur_ch.alive:
             state.active_subject_id = None
 
-    candidate: str | None = None
-
-    if isinstance(result, (CombatAction, RollAction, PassAction)):
-        for tid in result.targets:
-            if _is_active_npc(state, tid):
-                candidate = tid
-                break
-    elif isinstance(result, (BuyAction, SellAction)):
-        if _is_active_npc(state, result.npc_id):
-            candidate = result.npc_id
-    elif isinstance(result, SummonCombatAction):
+    if isinstance(result, SummonCombatAction):
         # active_subject will be set when the summoned character is registered.
         return
-    elif isinstance(result, ChainAction):
+
+    candidate: str | None = None
+    if isinstance(result, ChainAction):
         # Walk parts in reverse; first NPC-engaging part wins.
         for part in reversed(result.parts):
-            if isinstance(part, PassAction):
-                for tid in part.targets:
-                    if _is_active_npc(state, tid):
-                        candidate = tid
-                        break
-                if candidate is not None:
-                    break
-            elif isinstance(part, (BuyAction, SellAction)):
-                if _is_active_npc(state, part.npc_id):
-                    candidate = part.npc_id
-                    break
+            candidate = _candidate_from_action(state, part)
+            if candidate is not None:
+                break
+    else:
+        candidate = _candidate_from_action(state, result)
 
     if candidate is None:
         candidate = state.recent_npc_id(state.player_id)
