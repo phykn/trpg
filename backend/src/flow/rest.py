@@ -10,7 +10,8 @@ from ..mapping.to_front import rest_ambush_text, rest_completed_text
 from ..rules import RULES
 from . import encounter as encounter_engine
 from .combat_phase import start_combat_and_run_npc_phase
-from .dirty import Dirty, ToFrontFn, advance_time, finalize, push_act
+from .clock import advance_time
+from .dirty import Dirty, ToFrontFn, finalize, push_act
 
 
 async def run_rest(

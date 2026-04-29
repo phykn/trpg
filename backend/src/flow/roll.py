@@ -19,10 +19,10 @@ from .combat_oneshot import (
 )
 from ..agents.combat_narrate import stream_combat_narrate
 from .combat_phase import run_combat_npc_phase
+from .clock import advance_time
 from .dirty import (
     Dirty,
     ToFrontFn,
-    advance_time,
     finalize,
     next_log_id,
     push_act,

@@ -30,7 +30,8 @@ from .actions import (
     emit_unequip,
     emit_use,
 )
-from .dirty import Dirty, ToFrontFn, advance_time, finalize, push_act, push_turn_log
+from .clock import advance_time
+from .dirty import Dirty, ToFrontFn, finalize, push_act, push_turn_log
 from .format import format_combat_end_text
 from .judge import run_judge
 from .subject import refresh_active_subject

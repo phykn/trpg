@@ -37,10 +37,10 @@ from .actions import (
 from .combat_oneshot import arm_combat_roll_pending
 from .combat_phase import run_combat_player_turn
 from .encounter import summon_encounter
+from .clock import advance_time
 from .dirty import (
     Dirty,
     ToFrontFn,
-    advance_time,
     finalize,
     next_log_id,
     push_act,

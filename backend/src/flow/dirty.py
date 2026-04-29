@@ -1,10 +1,10 @@
-"""Per-turn dirty tracking, log push helpers, time/id bookkeeping, and the
-flush + finalize tail. Every flow module pushes through these helpers so
-persistence and SSE shape stay consistent.
+"""Per-turn dirty tracking, log push helpers, and the flush + finalize
+tail. Every flow module pushes through these helpers so persistence
+and SSE shape stay consistent. (`advance_time` lives next door in
+flow/clock.py — turn-boundary semantics, not dirty bookkeeping.)
 """
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
 
 from ..domain.errors import PersistenceFailed
 from ..domain.memory import (
@@ -45,20 +45,6 @@ class Dirty:
 def _trim(items: list, cap: int) -> None:
     while len(items) > cap:
         items.pop(0)
-
-
-def advance_time(state: GameState, dirty: "Dirty | None" = None) -> None:
-    """One turn boundary: bump world_time by RULES.time.turn_min and tick
-    every character's active buffs (duration -1, drop on 0)."""
-    from ..engines.skill import tick_active_buffs
-
-    dt = datetime.fromisoformat(state.world_time)
-    dt += timedelta(minutes=RULES.time.turn_min)
-    state.world_time = dt.isoformat()
-
-    entity_dirty = dirty.entities if dirty is not None else None
-    for character in state.characters.values():
-        tick_active_buffs(character, dirty=entity_dirty)
 
 
 def next_log_id(state: GameState) -> int:
