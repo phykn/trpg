@@ -39,21 +39,20 @@ def format_attack_log(
 ) -> str:
     attacker = state.characters[attacker_id]
     target = state.characters[target_id]
-    hand_label = "주 손" if outcome.hand == "main" else "보조 손"
     grade_label = GRADE_LABEL[outcome.grade]
     if outcome.damage > 0:
         head = (
-            f"{attacker.name}이(가) {hand_label}으로 {target.name}에게 "
+            f"{attacker.name}이(가) {target.name}에게 "
             f"{outcome.damage} 피해를 입혔다 ({grade_label}, 굴림 {outcome.nat_d20})."
         )
     elif outcome.grade == "critical_failure":
         head = (
-            f"{attacker.name}이(가) {hand_label}으로 공격하다 "
+            f"{attacker.name}이(가) 공격을 시도하다 "
             f"{grade_label}했다 (굴림 {outcome.nat_d20})."
         )
     else:
         head = (
-            f"{attacker.name}이(가) {hand_label}으로 {target.name}을(를) "
+            f"{attacker.name}이(가) {target.name}을(를) "
             f"노렸으나 빗나갔다 (굴림 {outcome.nat_d20})."
         )
     if apply_result is None:

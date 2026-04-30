@@ -170,9 +170,9 @@ def test_character_inventory_duplicate():
 
 
 def test_character_equipment_not_in_inventory():
-    c = _char(inventory=[], equipment=Equipment(rightHand="sword"))
+    c = _char(inventory=[], equipment=Equipment(weapon="sword"))
     msgs = check_character(c)
-    assert any("rightHand" in m and "sword" in m and "not in inventory" in m for m in msgs)
+    assert any("weapon" in m and "sword" in m and "not in inventory" in m for m in msgs)
 
 
 def test_character_negative_gold():
@@ -221,44 +221,31 @@ def test_item_armor_negative_defense():
 # --- check_inventory ------------------------------------------------------
 
 
-def test_inventory_armor_in_hand_slot():
+def test_inventory_armor_in_weapon_slot():
     armor = Item(id="hat", name="hat", effects=ArmorEffect(type="armor", defense=2))
-    c = _char(inventory=["hat"], equipment=Equipment(rightHand="hat"))
+    c = _char(inventory=["hat"], equipment=Equipment(weapon="hat"))
     msgs = check_inventory(c, {"hat": armor})
-    assert any("is armor" in m and "head/top/bottom/feet" in m for m in msgs)
+    assert any("defense item" in m for m in msgs)
+
+
+def test_inventory_armor_in_accessory_slot_passes():
+    armor = Item(id="ring", name="ring", effects=ArmorEffect(type="armor", defense=1))
+    c = _char(inventory=["ring"], equipment=Equipment(accessory="ring"))
+    assert check_inventory(c, {"ring": armor}) == []
 
 
 def test_inventory_weapon_in_armor_slot():
     sword = Item(id="sw", name="sw", effects=WeaponEffect(type="weapon", weapon_dice="1d6"))
-    c = _char(inventory=["sw"], equipment=Equipment(top="sw"))
+    c = _char(inventory=["sw"], equipment=Equipment(armor="sw"))
     msgs = check_inventory(c, {"sw": sword})
-    assert any("is weapon" in m and "leftHand" in m for m in msgs)
+    assert any("weapon" in m and "weapon slot" in m for m in msgs)
 
 
 def test_inventory_consumable_equipped():
     potion = Item(id="p", name="p", effects=ConsumableEffect(type="consumable", effect="heal", amount=10))
-    c = _char(inventory=["p"], equipment=Equipment(rightHand="p"))
+    c = _char(inventory=["p"], equipment=Equipment(weapon="p"))
     msgs = check_inventory(c, {"p": potion})
     assert any("consumable" in m and "cannot be equipped" in m for m in msgs)
-
-
-def test_inventory_two_handed_in_one_slot_only():
-    greatsword = Item(
-        id="gs", name="gs",
-        effects=WeaponEffect(type="weapon", weapon_dice="2d6", two_handed=True),
-    )
-    c = _char(inventory=["gs"], equipment=Equipment(rightHand="gs"))
-    msgs = check_inventory(c, {"gs": greatsword})
-    assert any("two-handed" in m for m in msgs)
-
-
-def test_inventory_two_handed_both_slots_passes():
-    greatsword = Item(
-        id="gs", name="gs",
-        effects=WeaponEffect(type="weapon", weapon_dice="2d6", two_handed=True),
-    )
-    c = _char(inventory=["gs"], equipment=Equipment(leftHand="gs", rightHand="gs"))
-    assert check_inventory(c, {"gs": greatsword}) == []
 
 
 def test_inventory_required_stat_not_met():
@@ -267,7 +254,7 @@ def test_inventory_required_stat_not_met():
         effects=WeaponEffect(type="weapon", weapon_dice="1d8"),
         required=Stats(STR=18),
     )
-    c = _char(stats=Stats(STR=10, CHA=10), inventory=["h"], equipment=Equipment(rightHand="h"))
+    c = _char(stats=Stats(STR=10, CHA=10), inventory=["h"], equipment=Equipment(weapon="h"))
     msgs = check_inventory(c, {"h": heavy})
     assert any("STR≥18" in m and "STR=10" in m for m in msgs)
 
@@ -405,7 +392,7 @@ def _minimal_scenario(**overrides) -> Scenario:
     slash_skill = _basic_skill("slash", level=1)
     npc = _char(
         cid="npc1", level=2, race_id="human", location_id="inn",
-        inventory=["sword"], equipment=Equipment(rightHand="sword"),
+        inventory=["sword"], equipment=Equipment(weapon="sword"),
         skills=[slash_skill],
         aggressive=80, combat=CombatBehavior(attack_priority="nearest", flee_hp_percent=20),
         xp_reward=80,

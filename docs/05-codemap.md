@@ -41,7 +41,7 @@ server/
       invariants.py              check.stats / check.character / check.scenario / check.state / check.quest_graph / Scenario dataclass — 시드·런타임 검증. LLM self-correction feedback 으로 재활용 가능한 한 줄 메시지 형식
       inventory/                 P3 §2.5 / §2.7 — 모듈 분할
         carry.py                 carry_capacity (STR × weight_per_strength), check_can_carry
-        equipment.py             equip / unequip / equip_auto (slot 자동 결정) / two_handed 처리
+        equipment.py             equip / unequip / auto_equip_slot (3슬롯: weapon/armor/accessory)
         trade.py                 buy / sell / 흥정 가격 (affinity_price_per_point × cap)
         use.py                   use (ConsumableEffect heal/damage/mp_restore/buff + on_use trigger + quest 훅)
 

@@ -207,33 +207,21 @@ def _attach_step(scenario_dir: Path, decomp: Decomposition) -> None:
             char.learned_skill_ids = list(dc.learned_skill_ids)
         owned = items_by_owner.get(char.id, [])
         char.inventory_ids = [it.id for it in owned]
-        # Multi-slot equipment: armors fill top → head → bottom → feet (in that
-        # priority order — multiple armor items spread across the body instead
-        # of all piling into top). Decorative items (effects=None) fill acc1 →
-        # acc2. Weapons go to dominant hand or both hands if two-handed.
-        armor_slots = ("top", "head", "bottom", "feet")
-        acc_slots = ("acc1", "acc2")
+        # Three-slot equipment: weapon → weapon, ArmorEffect → armor (or
+        # accessory if armor already taken — e.g. a shield alongside body
+        # armor), decorative (effects=None) → accessory.
         for it in owned:
             eff = it.effects
             if isinstance(eff, WeaponEffect):
-                if eff.two_handed:
-                    char.equipment.leftHand = it.id
-                    char.equipment.rightHand = it.id
-                elif char.dominant_hand == "left":
-                    char.equipment.leftHand = char.equipment.leftHand or it.id
-                else:
-                    char.equipment.rightHand = char.equipment.rightHand or it.id
+                char.equipment.weapon = char.equipment.weapon or it.id
             elif isinstance(eff, ArmorEffect):
-                for slot in armor_slots:
-                    if getattr(char.equipment, slot) is None:
-                        setattr(char.equipment, slot, it.id)
-                        break
+                if char.equipment.armor is None:
+                    char.equipment.armor = it.id
+                elif char.equipment.accessory is None:
+                    char.equipment.accessory = it.id
             elif eff is None:
-                # Decorative / personalization item — go to first empty acc slot.
-                for slot in acc_slots:
-                    if getattr(char.equipment, slot) is None:
-                        setattr(char.equipment, slot, it.id)
-                        break
+                if char.equipment.accessory is None:
+                    char.equipment.accessory = it.id
         char_path.write_text(
             char.model_dump_json(indent=2), encoding="utf-8"
         )

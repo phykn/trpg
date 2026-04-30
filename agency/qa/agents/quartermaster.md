@@ -35,7 +35,7 @@
 
 - judge 가 구매 발화를 `{action: "buy"}`, 판매 발화를 `{action: "sell"}` 로 분류하는지
 - 상인 affinity ≥ trade_threshold 게이트가 buy/sell 양쪽에 작동하는지
-- equip / unequip 시 슬롯 자동 결정 (무기=빈 손, 방어구=빈 슬롯, 액세서리=acc1→acc2)
+- equip / unequip 시 슬롯 자동 결정 (무기=weapon, 갑옷=armor 우선·차오르면 accessory, 장식=accessory)
 - 검증 실패가 HTTP 응답이 아니라 한국어 GM `log_entry` 한 줄로 흡수되는지 (`InventoryInvalid` 한국어 매핑)
 - 골드 부족·무게 초과·affinity 게이트 미달 모두 GM log 한 줄로 막히는지
 

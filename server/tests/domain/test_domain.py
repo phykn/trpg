@@ -20,19 +20,10 @@ def test_stats_defaults_and_bounds():
 
 
 def test_equipment_slot_order():
-    assert EQUIPMENT_SLOTS == (
-        "head",
-        "top",
-        "bottom",
-        "feet",
-        "leftHand",
-        "rightHand",
-        "acc1",
-        "acc2",
-    )
-    e = Equipment(leftHand="sword_01")
-    assert e.leftHand == "sword_01"
-    assert e.head is None
+    assert EQUIPMENT_SLOTS == ("weapon", "armor", "accessory")
+    e = Equipment(weapon="sword_01")
+    assert e.weapon == "sword_01"
+    assert e.armor is None
 
 
 def test_memory_target_id_optional():

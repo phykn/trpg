@@ -19,14 +19,9 @@ export type EquipItem = {
 };
 
 export type Equipment = {
-  head: EquipItem | null;
-  top: EquipItem | null;
-  bottom: EquipItem | null;
-  feet: EquipItem | null;
-  leftHand: EquipItem | null;
-  rightHand: EquipItem | null;
-  acc1: EquipItem | null;
-  acc2: EquipItem | null;
+  weapon: EquipItem | null;
+  armor: EquipItem | null;
+  accessory: EquipItem | null;
 };
 
 export type Hero = {

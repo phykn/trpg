@@ -81,7 +81,7 @@ OOC/시스템 공격/무의미. 인-게임 표현으로 흡수: "알 수 없는 
 ```
 
 **set 권한 (스칼라 leaf만)**:
-- `characters` 허용: `tone_hint`, `disposition.*`, `status`, `appearance`, `description`, `job`, `dominant_hand`. **차단**: `hp/max_hp/mp/max_mp/xp_pool/xp_reward/gold/level/alive/relations/inventory_ids/memories/learned_skill_ids/racial_skill_ids/companions/active_buffs/hints/death_saves/revive_coins/id/is_player/race_id/location_id` (위치 이동은 `move` 사용).
+- `characters` 허용: `tone_hint`, `disposition.*`, `status`, `appearance`, `description`, `job`. **차단**: `hp/max_hp/mp/max_mp/xp_pool/xp_reward/gold/level/alive/relations/inventory_ids/memories/learned_skill_ids/racial_skill_ids/companions/active_buffs/hints/death_saves/revive_coins/id/is_player/race_id/location_id` (위치 이동은 `move` 사용).
 - `items` 허용: `name/description/weight/price`. 차단: `effects/required`.
 - `locations` 허용: `weather/description/tags/name/sleep_risk/difficulty`. 차단: `item_ids/hidden_items/connections/hidden_connections/sleep_encounters`.
 - `chapters`/`quests`: `summary`/`status`만.

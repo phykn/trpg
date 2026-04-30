@@ -52,39 +52,35 @@ async def emit_attack(
     state: GameState,
     attacker_id: str,
     target_id: str,
-    outcomes: list[combat_engine.AttackOutcome],
+    outcome: combat_engine.AttackOutcome,
     dirty: Dirty,
 ) -> AsyncIterator[dict]:
-    """Apply attack outcomes + emit SSE/log. If first hit kills the target,
-    skip the second swing's narration."""
+    """Apply the attack outcome and emit SSE/log."""
     target = state.characters[target_id]
-    for outcome in outcomes:
-        apply_result: dict | None = None
-        if outcome.damage > 0 and target.alive:
-            apply_result = combat_engine.apply_attack_to_defender(
-                state,
-                target_id,
-                outcome.damage,
-                nat_d20=outcome.nat_d20,
-                dirty=dirty.entities,
-            )
-            combat_engine.record_damage(state, attacker_id, outcome.damage)
-        text = format_attack_log(state, attacker_id, target_id, outcome, apply_result)
-        yield push_act(state, dirty, text)
-        yield {
-            "type": "combat_turn",
-            "data": {
-                "actor": attacker_id,
-                "action": "attack",
-                "grade": outcome.grade,
-                "damage": outcome.damage,
-                "target": target_id,
-                "hand": outcome.hand,
-            },
-        }
-        if not target.alive:
-            award_kill_xp(state, attacker_id, target_id, dirty=dirty.entities)
-            break
+    apply_result: dict | None = None
+    if outcome.damage > 0 and target.alive:
+        apply_result = combat_engine.apply_attack_to_defender(
+            state,
+            target_id,
+            outcome.damage,
+            nat_d20=outcome.nat_d20,
+            dirty=dirty.entities,
+        )
+        combat_engine.record_damage(state, attacker_id, outcome.damage)
+    text = format_attack_log(state, attacker_id, target_id, outcome, apply_result)
+    yield push_act(state, dirty, text)
+    yield {
+        "type": "combat_turn",
+        "data": {
+            "actor": attacker_id,
+            "action": "attack",
+            "grade": outcome.grade,
+            "damage": outcome.damage,
+            "target": target_id,
+        },
+    }
+    if not target.alive:
+        award_kill_xp(state, attacker_id, target_id, dirty=dirty.entities)
     if attacker_id == state.player_id:
         push_turn_log(state, target_id, f"{target.name}을 공격", dirty)
 

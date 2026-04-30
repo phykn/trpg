@@ -56,13 +56,12 @@
 
 ### Equipment — 슬롯 매핑 (가이드)
 
-- `equipment` 슬롯은 `head/top/bottom/feet/leftHand/rightHand/acc1/acc2` 중 하나.
-- weapon → `leftHand` 또는 `rightHand`. armor → `head/top/bottom/feet`. consumable 은 equipment 에 넣을 수 없다.
-- two-handed weapon 은 `leftHand` 와 `rightHand` 양쪽에 같은 id 를 넣는다.
-- decorative item (effects=null) 은 `acc1`/`acc2` 슬롯.
+- `equipment` 슬롯은 `weapon / armor / accessory` 3 개.
+- weapon → `weapon`. armor (ArmorEffect) → `armor` 슬롯, 두 번째 방어 효과 물건(방패·정수 +1 같은 링)은 `accessory` 슬롯에 넣어도 된다. consumable 은 equipment 에 넣을 수 없다.
+- decorative item (effects=null) 은 `accessory` 슬롯.
 - equipment 슬롯의 id 는 `inventory_ids` 안에도 있어야 한다 (강제).
 - 인벤 무게 합은 `STR × 10` kg 을 넘으면 안 된다 (강제).
-- `inventory_ids` 의 item 은 컨셉에 맞으면 적절한 슬롯에 넣어라 — 도적이 단검을 갖고 있으면 `rightHand` 에, 외투를 갖고 있으면 `top` 에. 자연스러움 우선, 강제 X.
+- `inventory_ids` 의 item 은 컨셉에 맞으면 적절한 슬롯에 넣어라 — 도적이 단검을 갖고 있으면 `weapon` 에, 외투를 갖고 있으면 `armor` 에, 부적·반지는 `accessory` 에. 자연스러움 우선, 강제 X.
 
 ### 소지품 — 직업·세계관에 맞게 (가이드, 강제 X)
 

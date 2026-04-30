@@ -15,7 +15,7 @@
 | `hp/hpMax`, `mp/mpMax` | 같은 이름의 필드 | 그대로 복사. 값은 엔진이 계산으로 갱신 — narrator 가 `set` 으로 못 건드림 |
 | `exp/expMax` | `xp_pool` + 레벨 곡선 [P3] | xp/level 시스템 자체가 P3 일정 ([03-features.md](./03-features.md) §2.3). P1 동안은 자리표시 0/0 만 노출 |
 | `stats` | `stats` | 장비·버프 미적용 기본값. 장비·버프를 더한 실효 수치는 백엔드 내부 계산용 |
-| `equipment` (8슬롯: `head/top/bottom/feet/leftHand/rightHand/acc1/acc2`) | `equipment` 같은 키 | 슬롯에 든 item_id 로 `items[id].name` 을 찾아 `{name}` 만 노출. 빈 슬롯은 `null` (키 8개는 항상 존재) ([03-features.md](./03-features.md) §2.5) |
+| `equipment` (3슬롯: `weapon/armor/accessory`) | `equipment` 같은 키 | 슬롯에 든 item_id 로 `items[id].name` 을 찾아 `{name}` 만 노출. 빈 슬롯은 `null` (키 3개는 항상 존재) ([03-features.md](./03-features.md) §2.5) |
 | `inventory: [{name, qty}]` | `inventory_ids: list[str]` | 같은 item_id 끼리 묶어 개수를 세고, `items[id].name` 으로 이름을 찾아 `[{name, qty}]` 모양으로 ([03-features.md](./03-features.md) §2.5) |
 | `status: list[str]` | `status: list[str]` | 정해진 목록 없는 자유 문자열 태그. narrator 가 `set` 으로 추가/제거 ([02-runtime.md](./02-runtime.md) §6.1) |
 | `skills: list[str]` | `racial_skills + learned_skills` ([03-features.md](./03-features.md) §2.6) | 두 리스트를 합친 뒤 각 스킬에서 `name` 만 추출 |

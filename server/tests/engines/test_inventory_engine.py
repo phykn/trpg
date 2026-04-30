@@ -56,7 +56,7 @@ def _items() -> dict[str, Item]:
             name="대검",
             weight=6.0,
             price=80,
-            effects=WeaponEffect(type="weapon", weapon_dice="2d6", two_handed=True),
+            effects=WeaponEffect(type="weapon", weapon_dice="2d6"),
         ),
         "helm": Item(
             id="helm",
@@ -106,78 +106,73 @@ def test_check_can_carry_rejects_overweight():
 # --- equip ----------------------------------------------------------------
 
 
-def test_equip_weapon_in_hand_slot():
+def test_equip_weapon_in_weapon_slot():
     p = _player(inventory_ids=["sword"])
     items = _items()
-    inv.equip(p, "sword", "leftHand", items)
-    assert p.equipment.leftHand == "sword"
-    assert p.equipment.rightHand is None
+    inv.equip(p, "sword", "weapon", items)
+    assert p.equipment.weapon == "sword"
+    assert p.equipment.armor is None
 
 
 def test_equip_weapon_in_armor_slot_rejected():
     p = _player(inventory_ids=["sword"])
     with pytest.raises(InventoryInvalid, match="weapon must"):
-        inv.equip(p, "sword", "head", _items())
+        inv.equip(p, "sword", "armor", _items())
 
 
 def test_equip_armor_in_armor_slot():
     p = _player(inventory_ids=["helm"])
-    inv.equip(p, "helm", "head", _items())
-    assert p.equipment.head == "helm"
+    inv.equip(p, "helm", "armor", _items())
+    assert p.equipment.armor == "helm"
 
 
-def test_equip_armor_in_hand_rejected():
+def test_equip_armor_in_accessory_slot_allowed():
     p = _player(inventory_ids=["helm"])
-    with pytest.raises(InventoryInvalid, match="armor must"):
-        inv.equip(p, "helm", "leftHand", _items())
+    inv.equip(p, "helm", "accessory", _items())
+    assert p.equipment.accessory == "helm"
+
+
+def test_equip_armor_in_weapon_slot_rejected():
+    p = _player(inventory_ids=["helm"])
+    with pytest.raises(InventoryInvalid, match="defense item"):
+        inv.equip(p, "helm", "weapon", _items())
 
 
 def test_equip_consumable_rejected():
     p = _player(inventory_ids=["potion"])
     with pytest.raises(InventoryInvalid, match="consumable"):
-        inv.equip(p, "potion", "leftHand", _items())
-
-
-def test_equip_two_handed_fills_both_hand_slots():
-    p = _player(inventory_ids=["greatsword"])
-    inv.equip(p, "greatsword", "rightHand", _items())
-    assert p.equipment.leftHand == "greatsword"
-    assert p.equipment.rightHand == "greatsword"
-
-
-def test_equip_one_handed_displaces_two_handed():
-    p = _player(inventory_ids=["greatsword", "sword"])
-    items = _items()
-    inv.equip(p, "greatsword", "rightHand", items)
-    inv.equip(p, "sword", "leftHand", items)
-    # greatsword is displaced and only sword remains
-    assert p.equipment.leftHand == "sword"
-    assert p.equipment.rightHand is None
+        inv.equip(p, "potion", "weapon", _items())
 
 
 def test_equip_required_stats_check():
     p = _player(inventory_ids=["strong_sword"])
     p.stats.STR = 10  # below the required STR=15
     with pytest.raises(InventoryInvalid, match="required"):
-        inv.equip(p, "strong_sword", "leftHand", _items())
+        inv.equip(p, "strong_sword", "weapon", _items())
 
 
 def test_equip_required_stats_passes_when_met():
     p = _player(inventory_ids=["strong_sword"], stats=Stats(STR=15))
-    inv.equip(p, "strong_sword", "leftHand", _items())
-    assert p.equipment.leftHand == "strong_sword"
+    inv.equip(p, "strong_sword", "weapon", _items())
+    assert p.equipment.weapon == "strong_sword"
 
 
 def test_equip_unknown_item_rejected():
     p = _player(inventory_ids=[])
     with pytest.raises(InventoryInvalid, match="not in inventory"):
-        inv.equip(p, "sword", "leftHand", _items())
+        inv.equip(p, "sword", "weapon", _items())
 
 
 def test_equip_acc_slot_accepts_plain_item():
     p = _player(inventory_ids=["ring"])
-    inv.equip(p, "ring", "acc1", _items())
-    assert p.equipment.acc1 == "ring"
+    inv.equip(p, "ring", "accessory", _items())
+    assert p.equipment.accessory == "ring"
+
+
+def test_equip_plain_accessory_in_armor_slot_rejected():
+    p = _player(inventory_ids=["ring"])
+    with pytest.raises(InventoryInvalid, match="decorative"):
+        inv.equip(p, "ring", "armor", _items())
 
 
 # --- unequip --------------------------------------------------------------
@@ -186,25 +181,16 @@ def test_equip_acc_slot_accepts_plain_item():
 def test_unequip_clears_slot():
     p = _player(inventory_ids=["sword"])
     items = _items()
-    inv.equip(p, "sword", "leftHand", items)
-    inv.unequip(p, "leftHand", items)
-    assert p.equipment.leftHand is None
+    inv.equip(p, "sword", "weapon", items)
+    inv.unequip(p, "weapon", items)
+    assert p.equipment.weapon is None
     # still in inventory
     assert "sword" in p.inventory_ids
 
 
-def test_unequip_two_handed_clears_both_slots():
-    p = _player(inventory_ids=["greatsword"])
-    items = _items()
-    inv.equip(p, "greatsword", "leftHand", items)
-    inv.unequip(p, "rightHand", items)  # either hand unequips
-    assert p.equipment.leftHand is None
-    assert p.equipment.rightHand is None
-
-
 def test_unequip_idempotent_on_empty_slot():
     p = _player()
-    inv.unequip(p, "head", _items())  # does not raise
+    inv.unequip(p, "armor", _items())  # does not raise
 
 
 # --- trade pricing --------------------------------------------------------
@@ -311,6 +297,6 @@ def test_sell_rejects_equipped_item():
     items = _items()
     p = _player(inventory_ids=["sword"])
     n = _npc(relations={"player_01": 0})
-    inv.equip(p, "sword", "leftHand", items)
+    inv.equip(p, "sword", "weapon", items)
     with pytest.raises(InventoryInvalid, match="equipped"):
         inv.sell(p, n, "sword", items)

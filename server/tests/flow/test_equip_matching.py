@@ -39,7 +39,7 @@ async def _collect(it):
     return [ev async for ev in it]
 
 
-def _seed(fresh_state, *, equipped_left=None):
+def _seed(fresh_state, *, equipped_weapon=None):
     items = {
         "sword": Item(
             id="sword",
@@ -60,7 +60,7 @@ def _seed(fresh_state, *, equipped_left=None):
         stats=Stats(),
         location_id="plaza_01",
         inventory_ids=["sword", "helm"],
-        equipment=Equipment(leftHand=equipped_left) if equipped_left else Equipment(),
+        equipment=Equipment(weapon=equipped_weapon) if equipped_weapon else Equipment(),
     )
     fresh_state.characters["player_01"] = p
     fresh_state.items = items
@@ -72,11 +72,11 @@ def _seed(fresh_state, *, equipped_left=None):
 
 
 def test_equipment_payload_exposes_id_and_name(fresh_state):
-    state = _seed(fresh_state, equipped_left="sword")
+    state = _seed(fresh_state, equipped_weapon="sword")
     s = build_surroundings(state, "player_01")
     eq = s["equipment"]
-    assert eq["leftHand"] == {"id": "sword", "name": "검"}
-    assert eq["head"] is None
+    assert eq["weapon"] == {"id": "sword", "name": "검"}
+    assert eq["armor"] is None
 
 
 def test_inventory_kind_distinguishes_weapon_armor(fresh_state):
@@ -90,7 +90,7 @@ def test_inventory_kind_distinguishes_weapon_armor(fresh_state):
 # --- equip branch ---------------------------------------------------------
 
 
-async def test_equip_weapon_auto_picks_empty_hand(fresh_state, tmp_data, monkeypatch):
+async def test_equip_weapon_lands_in_weapon_slot(fresh_state, tmp_data, monkeypatch):
     state = _seed(fresh_state)
     _judge_returns(monkeypatch, EquipAction(action="equip", item_id="sword"))
     events = await _collect(
@@ -105,11 +105,11 @@ async def test_equip_weapon_auto_picks_empty_hand(fresh_state, tmp_data, monkeyp
     )
     assert events[-1]["type"] == "done"
     p = state.characters["player_01"]
-    assert p.equipment.leftHand == "sword"  # first empty hand
+    assert p.equipment.weapon == "sword"
     assert state.turn_count == 1
 
 
-async def test_equip_armor_picks_first_empty_slot(fresh_state, tmp_data, monkeypatch):
+async def test_equip_armor_picks_armor_slot_first(fresh_state, tmp_data, monkeypatch):
     state = _seed(fresh_state)
     _judge_returns(monkeypatch, EquipAction(action="equip", item_id="helm"))
     await _collect(
@@ -123,14 +123,14 @@ async def test_equip_armor_picks_first_empty_slot(fresh_state, tmp_data, monkeyp
         )
     )
     p = state.characters["player_01"]
-    assert p.equipment.head == "helm"
+    assert p.equipment.armor == "helm"
 
 
 # --- unequip branch -------------------------------------------------------
 
 
 async def test_unequip_finds_slot_by_item(fresh_state, tmp_data, monkeypatch):
-    state = _seed(fresh_state, equipped_left="sword")
+    state = _seed(fresh_state, equipped_weapon="sword")
     _judge_returns(monkeypatch, UnequipAction(action="unequip", item_id="sword"))
     await _collect(
         run_turn(
@@ -143,6 +143,6 @@ async def test_unequip_finds_slot_by_item(fresh_state, tmp_data, monkeypatch):
         )
     )
     p = state.characters["player_01"]
-    assert p.equipment.leftHand is None
+    assert p.equipment.weapon is None
     # still in inventory
     assert "sword" in p.inventory_ids

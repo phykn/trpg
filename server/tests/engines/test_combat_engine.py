@@ -45,11 +45,11 @@ class _SeqRandom(random.Random):
         return v
 
 
-def _wpn_item(id_: str, dice: str = "1d8", range_m: float = 1.5, two_handed: bool = False) -> Item:
+def _wpn_item(id_: str, dice: str = "1d8", range_m: float = 1.5) -> Item:
     return Item(
         id=id_,
         name=id_,
-        effects=WeaponEffect(type="weapon", weapon_dice=dice, range=range_m, two_handed=two_handed),
+        effects=WeaponEffect(type="weapon", weapon_dice=dice, range=range_m),
     )
 
 
@@ -67,7 +67,6 @@ def _char(
     location: str | None = "loc_01",
     equipment: Equipment | None = None,
     behavior: CombatBehavior | None = None,
-    dominant: str = "right",
     skills: list[Skill] | None = None,
 ) -> Character:
     return Character(
@@ -80,7 +79,6 @@ def _char(
         location_id=location,
         equipment=equipment or Equipment(),
         combat_behavior=behavior,
-        dominant_hand=dominant,  # type: ignore[arg-type]
         learned_skill_ids=[s.id for s in (skills or [])],
     )
 
@@ -123,26 +121,24 @@ def test_primary_stat_by_range():
 def primary_stat_for_weapon_for_range(r: float) -> str:
     """convenience for the table check above — wraps the engine helper."""
     from src.engines.combat import _Weapon
-    return primary_stat_for_weapon(_Weapon(item_id="x", dice="1d4", range_m=r, two_handed=False))
+    return primary_stat_for_weapon(_Weapon(item_id="x", dice="1d4", range_m=r))
 
 
-def test_enemy_defense_sums_armor_slots_only():
+def test_enemy_defense_sums_armor_and_accessory_slots():
     items = {
-        "helm": _arm_item("helm", defense=2),
-        "boots": _arm_item("boots", defense=1),
+        "armor": _arm_item("armor", defense=2),
         "shield": _arm_item("shield", defense=3),
         "ring": Item(id="ring", name="ring"),  # no effect
-        "sword": _wpn_item("sword"),  # weapons do not contribute to defense even when held
+        "sword": _wpn_item("sword"),  # weapons do not contribute to defense
     }
     defender = _char(
         "d",
-        equipment=Equipment(head="helm", feet="boots", leftHand="sword", acc1="ring"),
+        equipment=Equipment(armor="armor", accessory="shield", weapon="sword"),
     )
-    assert enemy_defense(defender, items) == 10 + 2 + 1  # helm + boots only
+    assert enemy_defense(defender, items) == 10 + 2 + 3  # armor + shield
 
-    # acc1/leftHand are outside the 4 armor slots — they do not add defense.
-    # Even with a shield in leftHand, defense sums only head/top/bottom/feet.
-    defender2 = _char("d2", equipment=Equipment(leftHand="shield"))
+    # Plain ring has no effect — defense unchanged.
+    defender2 = _char("d2", equipment=Equipment(accessory="ring"))
     assert enemy_defense(defender2, items) == 10
 
 
@@ -155,9 +151,7 @@ def test_attack_unarmed_no_weapon_uses_str_and_1d4():
     defender = _char("d")
     # randint sequence: [nat_d20=15, damage_d4=3]
     rng = _SeqRandom([15, 3])
-    outs = attack(attacker, defender, items={}, rng=rng)
-    assert len(outs) == 1
-    o = outs[0]
+    o = attack(attacker, defender, items={}, rng=rng)
     assert o.weapon_id is None
     assert o.primary_stat == "STR"
     assert o.nat_d20 == 15
@@ -169,65 +163,32 @@ def test_attack_unarmed_no_weapon_uses_str_and_1d4():
 
 def test_attack_critical_doubles_dice_keeps_mod_once():
     """nat 20 → critical_success, damage = (n+n) dice + mod (added once)."""
-    attacker = _char("a", str_=14, equipment=Equipment(rightHand="sword_01"))
+    attacker = _char("a", str_=14, equipment=Equipment(weapon="sword_01"))
     defender = _char("d")
     items = {"sword_01": _wpn_item("sword_01", dice="1d8")}
     # nat=20, first d8=4, crit extra d8=7. damage = 4+7+2 = 13.
     rng = _SeqRandom([20, 4, 7])
-    [o] = attack(attacker, defender, items, rng=rng)
+    o = attack(attacker, defender, items, rng=rng)
     assert o.grade == "critical_success"
     assert o.damage == 13
 
 
 def test_attack_natural_one_is_critical_failure_zero_damage():
-    attacker = _char("a", str_=14, equipment=Equipment(rightHand="sword_01"))
+    attacker = _char("a", str_=14, equipment=Equipment(weapon="sword_01"))
     defender = _char("d")
     items = {"sword_01": _wpn_item("sword_01")}
     rng = _SeqRandom([1])
-    [o] = attack(attacker, defender, items, rng=rng)
+    o = attack(attacker, defender, items, rng=rng)
     assert o.grade == "critical_failure"
     assert o.damage == 0
 
 
-def test_attack_dual_wield_off_hand_loses_modifier():
-    """Main hand adds mod, off-hand drops the mod and rolls dice only."""
-    attacker = _char(
-        "a",
-        str_=14,  # mod +2
-        equipment=Equipment(rightHand="main", leftHand="off"),
-        dominant="right",
-    )
-    defender = _char("d")
-    items = {
-        "main": _wpn_item("main", dice="1d6"),
-        "off": _wpn_item("off", dice="1d6"),
-    }
-    # main: nat=15, d6=4 → damage = 4 + 2 = 6
-    # off:  nat=12, d6=3 → damage = 3 (no mod)
-    rng = _SeqRandom([15, 4, 12, 3])
-    outs = attack(attacker, defender, items, rng=rng)
-    assert [o.hand for o in outs] == ["main", "off"]
-    assert outs[0].damage == 6
-    assert outs[1].damage == 3
-
-
-def test_attack_two_handed_weapon_one_swing_only():
-    attacker = _char("a", str_=12, equipment=Equipment(rightHand="great"))
-    defender = _char("d")
-    items = {"great": _wpn_item("great", dice="2d6", two_handed=True)}
-    rng = _SeqRandom([15, 4, 5])
-    outs = attack(attacker, defender, items, rng=rng)
-    assert len(outs) == 1
-    assert outs[0].weapon_id == "great"
-    assert outs[0].damage == 4 + 5 + 1  # 2d6 + STR mod (+1 from STR=12)
-
-
 def test_attack_ranged_weapon_uses_dex():
-    attacker = _char("a", str_=8, dex=16, equipment=Equipment(rightHand="bow"))  # STR mod -1, DEX mod +3
+    attacker = _char("a", str_=8, dex=16, equipment=Equipment(weapon="bow"))  # STR mod -1, DEX mod +3
     defender = _char("d")
     items = {"bow": _wpn_item("bow", dice="1d8", range_m=20.0)}
     rng = _SeqRandom([15, 5])
-    [o] = attack(attacker, defender, items, rng=rng)
+    o = attack(attacker, defender, items, rng=rng)
     assert o.primary_stat == "DEX"
     assert o.mod == 3
     assert o.damage == 5 + 3
@@ -239,13 +200,11 @@ def test_attack_armor_raises_required_roll():
     light = _char("d_light")
     heavy = _char(
         "d_heavy",
-        equipment=Equipment(head="h", top="t", bottom="b", feet="f"),
+        equipment=Equipment(armor="armor", accessory="shield"),
     )
     items = {
-        "h": _arm_item("h", 3),
-        "t": _arm_item("t", 3),
-        "b": _arm_item("b", 3),
-        "f": _arm_item("f", 3),
+        "armor": _arm_item("armor", 6),
+        "shield": _arm_item("shield", 6),
     }
     # defense_light = 10, defense_heavy = 22.
     # required_roll(10, 10, k=0.5) = round(20/(1+1)) = 10
@@ -253,8 +212,8 @@ def test_attack_armor_raises_required_roll():
     # nat=11 → clears 10 (partial or success), but fails against 22.
     rng_light = _SeqRandom([11, 4])
     rng_heavy = _SeqRandom([11])  # miss → no damage roll
-    [ol] = attack(attacker, light, items, rng=rng_light)
-    [oh] = attack(attacker, heavy, items, rng=rng_heavy)
+    ol = attack(attacker, light, items, rng=rng_light)
+    oh = attack(attacker, heavy, items, rng=rng_heavy)
     assert ol.required_roll < oh.required_roll
     assert ol.grade in ("success", "partial_success")
     assert oh.grade == "failure"
@@ -417,7 +376,6 @@ def test_try_flee_fails_when_below_dc():
 
 def test_attack_outcome_shape():
     o = AttackOutcome(
-        hand="main",
         weapon_id=None,
         primary_stat="STR",
         nat_d20=10,

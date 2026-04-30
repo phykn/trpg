@@ -12,7 +12,6 @@ from typing import Literal
 from pydantic import BaseModel
 
 from ..domain.entities import (
-    ARMOR_SLOTS,
     ArmorEffect,
     Character,
     CombatBehavior,
@@ -63,30 +62,23 @@ class _Weapon(BaseModel):
     item_id: str | None  # None = unarmed
     dice: str
     range_m: float
-    two_handed: bool
 
 
 def _unarmed_weapon() -> _Weapon:
     u = RULES.combat.unarmed
-    return _Weapon(item_id=None, dice=u.damage, range_m=u.range_m, two_handed=False)
+    return _Weapon(item_id=None, dice=u.damage, range_m=u.range_m)
 
 
-def _weapon_for_slot(slot_id: str | None, items: dict[str, Item]) -> _Weapon | None:
-    """Equipment slot → weapon projection. None if empty or non-weapon."""
+def _weapon_for_actor(attacker: Character, items: dict[str, Item]) -> _Weapon:
+    """Equipped weapon projection, or unarmed fallback."""
+    slot_id = attacker.equipment.weapon
     if slot_id is None:
-        return None
+        return _unarmed_weapon()
     item = items.get(slot_id)
-    if item is None or item.effects is None:
-        return None
-    if not isinstance(item.effects, WeaponEffect):
-        return None
+    if item is None or not isinstance(item.effects, WeaponEffect):
+        return _unarmed_weapon()
     eff = item.effects
-    return _Weapon(
-        item_id=item.id,
-        dice=eff.weapon_dice,
-        range_m=eff.range,
-        two_handed=eff.two_handed,
-    )
+    return _Weapon(item_id=item.id, dice=eff.weapon_dice, range_m=eff.range)
 
 
 def primary_stat_for_weapon(weapon: _Weapon) -> StatKey:
@@ -95,14 +87,12 @@ def primary_stat_for_weapon(weapon: _Weapon) -> StatKey:
 
 
 def enemy_defense(defender: Character, items: dict[str, Item]) -> int:
-    """Base 10 + sum of ArmorEffect.defense across the 4 slots (head/top/bottom/feet)."""
+    """Base 10 + sum of ArmorEffect.defense across armor and accessory
+    slots — shields and defense rings count alongside body armor."""
     total = 10
-    for slot in ARMOR_SLOTS:
-        slot_id = getattr(defender.equipment, slot)
-        if slot_id is None:
-            continue
+    for _, slot_id in defender.equipment.equipped_items():
         item = items.get(slot_id)
-        if item is None or item.effects is None:
+        if item is None:
             continue
         if isinstance(item.effects, ArmorEffect):
             total += item.effects.defense
@@ -113,8 +103,7 @@ def enemy_defense(defender: Character, items: dict[str, Item]) -> int:
 
 
 class AttackOutcome(BaseModel):
-    """Result of one attack roll — dual-wield emits two of these."""
-    hand: Literal["main", "off"]
+    """Result of one attack roll — one per attack action."""
     weapon_id: str | None
     primary_stat: StatKey
     nat_d20: int
@@ -125,32 +114,8 @@ class AttackOutcome(BaseModel):
     damage: int
 
 
-def _resolve_hands(attacker: Character, items: dict[str, Item]) -> list[tuple[Literal["main", "off"], _Weapon]]:
-    """Equipped hands as a (hand, weapon) sequence. Two-handed weapon → 1 item, dual-wield → 2, empty hands → unarmed 1 item."""
-    dom = attacker.dominant_hand  # "left" | "right"
-    main_slot = "leftHand" if dom == "left" else "rightHand"
-    off_slot = "rightHand" if dom == "left" else "leftHand"
-    main_w = _weapon_for_slot(getattr(attacker.equipment, main_slot), items)
-    off_w = _weapon_for_slot(getattr(attacker.equipment, off_slot), items)
-
-    # A two-handed weapon held in one slot still occupies both slots — only one attack roll.
-    if main_w is not None and main_w.two_handed:
-        return [("main", main_w)]
-    if off_w is not None and off_w.two_handed:
-        return [("main", off_w)]
-
-    if main_w is None and off_w is None:
-        return [("main", _unarmed_weapon())]
-    if main_w is not None and off_w is None:
-        return [("main", main_w)]
-    if main_w is None and off_w is not None:
-        return [("main", off_w)]
-    # dual-wield
-    return [("main", main_w), ("off", off_w)]  # type: ignore[list-item]
-
-
-def _damage_for_grade(weapon: _Weapon, mod: int, grade: Grade, hand: Literal["main", "off"], rng: random.Random) -> int:
-    """Damage by grade and hand. Off-hand gets no mod; crit rolls dice twice but adds mod once."""
+def _damage_for_grade(weapon: _Weapon, mod: int, grade: Grade, rng: random.Random) -> int:
+    """Damage by grade. Crit rolls dice twice but adds mod once."""
     if grade in ("failure", "critical_failure"):
         return 0
     n, sides, bonus = _parse_dice(weapon.dice)
@@ -158,8 +123,6 @@ def _damage_for_grade(weapon: _Weapon, mod: int, grade: Grade, hand: Literal["ma
     if grade == "critical_success":
         crit = sum(rng.randint(1, sides) for _ in range(n))
         base += crit
-    if hand == "off":
-        return max(0, base)  # off-hand does not add mod
     return max(0, base + mod)
 
 
@@ -168,35 +131,29 @@ def attack(
     defender: Character,
     items: dict[str, Item],
     rng: random.Random | None = None,
-) -> list[AttackOutcome]:
-    """One attack action — 1 or 2 rolls depending on weapon configuration."""
+) -> AttackOutcome:
+    """One attack action — single roll against defender."""
     r = rng or random
     defense = enemy_defense(defender, items)
-    hands = _resolve_hands(attacker, items)
-    outcomes: list[AttackOutcome] = []
-    for hand, weapon in hands:
-        stat_key = primary_stat_for_weapon(weapon)
-        stat_value = getattr(attacker.stats, stat_key)
-        mod = stat_modifier(stat_value)
-        nat = r.randint(1, 20)
-        total = nat + mod
-        req = sigmoid_required_roll(defense, stat_value)
-        grade = compute_grade(nat, total, req)
-        damage = _damage_for_grade(weapon, mod, grade, hand, r)
-        outcomes.append(
-            AttackOutcome(
-                hand=hand,
-                weapon_id=weapon.item_id,
-                primary_stat=stat_key,
-                nat_d20=nat,
-                mod=mod,
-                total=total,
-                required_roll=req,
-                grade=grade,
-                damage=damage,
-            )
-        )
-    return outcomes
+    weapon = _weapon_for_actor(attacker, items)
+    stat_key = primary_stat_for_weapon(weapon)
+    stat_value = getattr(attacker.stats, stat_key)
+    mod = stat_modifier(stat_value)
+    nat = r.randint(1, 20)
+    total = nat + mod
+    req = sigmoid_required_roll(defense, stat_value)
+    grade = compute_grade(nat, total, req)
+    damage = _damage_for_grade(weapon, mod, grade, r)
+    return AttackOutcome(
+        weapon_id=weapon.item_id,
+        primary_stat=stat_key,
+        nat_d20=nat,
+        mod=mod,
+        total=total,
+        required_roll=req,
+        grade=grade,
+        damage=damage,
+    )
 
 
 # --- Initiative --------------------------------------------------------------

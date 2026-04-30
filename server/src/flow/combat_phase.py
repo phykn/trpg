@@ -129,8 +129,8 @@ async def run_combat_npc_phase(
         if target is None:
             combat_engine.advance_turn(state)
             continue
-        outcomes = combat_engine.attack(actor, target, state.items, rng=rng)
-        async for ev in emit_attack(state, actor_id, target.id, outcomes, dirty):
+        outcome = combat_engine.attack(actor, target, state.items, rng=rng)
+        async for ev in emit_attack(state, actor_id, target.id, outcome, dirty):
             yield ev
         combat_engine.advance_turn(state)
 
@@ -251,8 +251,8 @@ async def _handle_combat_action(
         ):
             yield ev
     else:
-        outcomes = combat_engine.attack(player, target, state.items, rng=rng)
-        async for ev in emit_attack(state, state.player_id, target_id, outcomes, dirty):
+        outcome = combat_engine.attack(player, target, state.items, rng=rng)
+        async for ev in emit_attack(state, state.player_id, target_id, outcome, dirty):
             yield ev
     combat_engine.advance_turn(state)
     async for ev in _flush_player_turn(state, saves_dir, dirty, rng, to_front_fn):

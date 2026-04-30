@@ -55,7 +55,7 @@ def _full_state(fresh_state):
         mp=15,
         max_mp=15,
         location_id="plaza_01",
-        equipment=Equipment(leftHand="sword_01"),
+        equipment=Equipment(weapon="sword_01"),
         inventory_ids=["herb_01", "herb_01"],
         status=["굶주림"],
         memories=[
@@ -132,20 +132,11 @@ def test_hero_exp_uses_xp_pool_and_curve(fresh_state):
     assert h["expMax"] == RULES.growth.base_xp * 2
 
 
-def test_hero_equipment_eight_slots_with_names(fresh_state):
+def test_hero_equipment_three_slots_with_names(fresh_state):
     h = to_hero(_full_state(fresh_state))
-    assert set(h["equipment"].keys()) == {
-        "head",
-        "top",
-        "bottom",
-        "feet",
-        "leftHand",
-        "rightHand",
-        "acc1",
-        "acc2",
-    }
-    assert h["equipment"]["leftHand"] == {"name": "검"}
-    assert h["equipment"]["head"] is None
+    assert set(h["equipment"].keys()) == {"weapon", "armor", "accessory"}
+    assert h["equipment"]["weapon"] == {"name": "검"}
+    assert h["equipment"]["armor"] is None
 
 
 def test_hero_inventory_grouped(fresh_state):

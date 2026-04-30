@@ -256,13 +256,14 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
 ### 2.5 장비 / 인벤토리 / 거래 [P3]
 
-**현재 구현 상태**: `engines/inventory/` (carry/equipment/trade/use 분리) + 자연어 통합. judge 가 `surroundings.inventory` (`kind: weapon|armor|...`) 와 `surroundings.equipment` (8 슬롯 → {id, name}) 보고 `EquipAction` / `UnequipAction` / `BuyAction` / `SellAction` 을 발행하면 `flow/turn.py` 의 액션 분기가 그 자리에서 엔진을 호출. 옛 `/equip` `/unequip` `/buy` `/sell` REST 엔드포인트는 폐기 — 모든 장비·거래는 자연어로 들어온다 ("철검을 든다", "여관 주인에게 사과 5개 사겠다"). 엔진이 slot 자동 결정 (무기=빈 손 우선, 방어구=빈 슬롯, 액세서리=acc1→acc2).
+**현재 구현 상태**: `engines/inventory/` (carry/equipment/trade/use 분리) + 자연어 통합. judge 가 `surroundings.inventory` (`kind: weapon|armor|...`) 와 `surroundings.equipment` (3 슬롯 → {id, name}) 보고 `EquipAction` / `UnequipAction` / `BuyAction` / `SellAction` 을 발행하면 `flow/turn.py` 의 액션 분기가 그 자리에서 엔진을 호출. 옛 `/equip` `/unequip` `/buy` `/sell` REST 엔드포인트는 폐기 — 모든 장비·거래는 자연어로 들어온다 ("철검을 든다", "여관 주인에게 사과 5개 사겠다"). 엔진이 slot 자동 결정 (무기=weapon, ArmorEffect 는 armor 우선·차오르면 accessory, 장식품=accessory).
 
-**장비 슬롯 (프론트 기준 8 종)**: `head / top / bottom / feet / leftHand / rightHand / acc1 / acc2`. `Equipment` 타입이 단일 소스이고, 각 슬롯은 `EquipItem | null`.
+**장비 슬롯 (3 종)**: `weapon / armor / accessory`. `Equipment` 타입이 단일 소스이고, 각 슬롯은 `EquipItem | null`.
 
 - judge 의 `equip` / `unequip` 액션이 그 자리에서 처리. 아이템의 `required` (Stats) 가 미충족이면 `InventoryInvalid` → `format.py` 가 한국어 한 줄로 변환해 GM log 로 흘림 (HTTP 422 안 일어남).
-- `Item.effects` 가 `WeaponEffect` 면 무기, `ArmorEffect` 면 방어구.
-- **무기 슬롯**: `leftHand` / `rightHand` 어느 쪽이든 무기 장착 가능. 양손에 다 들면 두 손 모두 공격에 사용 (off-hand mod 페널티는 §1.1). 양손 무기 (two-handed) 는 한 아이템이 두 슬롯을 모두 차지.
+- `Item.effects` 가 `WeaponEffect` 면 무기, `ArmorEffect` 면 방어 효과 물건 (갑옷·방패·정수 +1 같은 링).
+- **무기 슬롯**: `weapon` 한 자리. 한 캐릭터당 무기는 한 자루 — 양손/이도류 구분은 다루지 않는다.
+- **악세사리 슬롯**: `accessory` 한 자리. ArmorEffect 도 들어올 수 있어서 방패는 갑옷 위에 추가로 장착 가능 — 전투 산식은 armor + accessory 의 `defense` 를 모두 합산한다.
 - **weapon_dice 표준표** (D&D 5e PHB 기반, 시드 작성 가이드라인):
 
   | 분류                  | 예시                                | dice  |

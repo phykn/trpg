@@ -68,14 +68,9 @@ class ActiveBuff(BaseModel):
 
 class Equipment(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    head: str | None = None
-    top: str | None = None
-    bottom: str | None = None
-    feet: str | None = None
-    leftHand: str | None = None
-    rightHand: str | None = None
-    acc1: str | None = None
-    acc2: str | None = None
+    weapon: str | None = None
+    armor: str | None = None
+    accessory: str | None = None
 
     def equipped_items(self) -> Iterator[tuple[str, str]]:
         """Iterate (slot, item_id) for filled slots only."""
@@ -86,19 +81,6 @@ class Equipment(BaseModel):
 
 
 EQUIPMENT_SLOTS: tuple[str, ...] = tuple(Equipment.model_fields.keys())
-HAND_SLOTS: tuple[str, ...] = ("leftHand", "rightHand")
-ARMOR_SLOTS: tuple[str, ...] = ("head", "top", "bottom", "feet")
-ACCESSORY_SLOTS: tuple[str, ...] = ("acc1", "acc2")
-
-
-def slot_kind(slot: str) -> Literal["hand", "armor", "acc"] | None:
-    if slot in HAND_SLOTS:
-        return "hand"
-    if slot in ARMOR_SLOTS:
-        return "armor"
-    if slot in ACCESSORY_SLOTS:
-        return "acc"
-    return None
 
 
 class Connection(BaseModel):
@@ -114,7 +96,6 @@ class WeaponEffect(BaseModel):
     type: Literal["weapon"]
     weapon_dice: str
     range: float = 1.5
-    two_handed: bool = False
 
 
 class ArmorEffect(BaseModel):
@@ -148,25 +129,34 @@ class Item(BaseModel):
     on_use: str | None = None
 
 
-def required_slot_kind(item: Item) -> Literal["hand", "armor", "acc", "none"]:
-    """Slot kind this item must occupy. 'none' = consumable, never equippable."""
+EquipSlot = Literal["weapon", "armor", "accessory"]
+
+
+def allowed_slots(item: Item) -> tuple[EquipSlot, ...]:
+    """Slots this item can occupy. Empty tuple = consumable, never equippable.
+
+    ArmorEffect items (defense bonus) live in either the armor slot
+    (clothing) or the accessory slot (shields, defense rings) — both are
+    legal so the engine sums defense across both. Plain accessories
+    (effects=None, e.g. signets) are accessory-only.
+    """
     eff = item.effects
     if isinstance(eff, WeaponEffect):
-        return "hand"
+        return ("weapon",)
     if isinstance(eff, ArmorEffect):
-        return "armor"
+        return ("armor", "accessory")
     if isinstance(eff, ConsumableEffect):
-        return "none"
-    return "acc"
+        return ()
+    return ("accessory",)
 
 
 def item_kind(
     item: Item,
 ) -> Literal["weapon", "armor", "consumable", "trigger", "misc"]:
     """High-level classification used by judge prompts and judge semantics.
-    Lives next to required_slot_kind because the choice depends on the
-    same Item.effects discriminator and the two kind vocabularies must
-    agree to keep judge validation consistent."""
+    Lives next to allowed_slots because the choice depends on the same
+    Item.effects discriminator and the two kind vocabularies must agree
+    to keep judge validation consistent."""
     eff = item.effects
     if isinstance(eff, ConsumableEffect):
         return "consumable"
@@ -231,7 +221,6 @@ class Character(BaseModel):
     combat_behavior: CombatBehavior | None = None
     death_saves: DeathSaveState | None = None
     revive_coins: int = 0
-    dominant_hand: Literal["left", "right"] = "right"
 
     companions: list[str] = []
 

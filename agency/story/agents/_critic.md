@@ -46,7 +46,7 @@ entity 종류: character. world.md: 동양 무협·삼국. entity:
 ```
 
 ```json
-{"ok": false, "feedback": "강도패 두목인데 inventory 에 약초만 있고 무기가 없다. 도적·우두머리는 검·암기 같은 무기를 inventory_ids 에 추가하고 equipment.rightHand 에 장착시키는 게 자연스럽다. 가벼운 갑옷이나 가죽 보호구도 있으면 좋다."}
+{"ok": false, "feedback": "강도패 두목인데 inventory 에 약초만 있고 무기가 없다. 도적·우두머리는 검·암기 같은 무기를 inventory_ids 에 추가하고 equipment.weapon 에 장착시키는 게 자연스럽다. 가벼운 갑옷이나 가죽 보호구도 있으면 좋다."}
 ```
 
 ### Case 2 (OK)
