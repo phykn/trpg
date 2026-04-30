@@ -318,6 +318,26 @@ def _check_id(
 
 # --- entry points ----------------------------------------------------------
 
+def _validate_entity_response(
+    answer: str,
+    *,
+    spec: EntitySpec,
+    existing_ids: set[str],
+    force_id: str | None,
+    refs: dict[str, set[str]],
+    scenario_dir: Path,
+    extra_check: Callable[[BaseModel], None] | None,
+    skeleton: bool,
+) -> BaseModel:
+    entity = spec.model.model_validate_json(answer)
+    _check_id(entity, existing_ids, force_id=force_id)
+    spec.check_refs(entity, refs)
+    _check_entity_invariants(entity, scenario_dir, skeleton=skeleton)
+    if extra_check is not None:
+        extra_check(entity)
+    return entity
+
+
 async def write_entity(
     *,
     kind: str,
@@ -369,17 +389,24 @@ async def write_entity(
     final_answer: str | None = None
     agent_tag = f"story_write_{kind}"
     base_len = len(messages)  # system + initial hint; retries trim back to this.
+
+    def _validate(answer: str) -> BaseModel:
+        return _validate_entity_response(
+            answer,
+            spec=spec,
+            existing_ids=existing_ids,
+            force_id=force_id,
+            refs=refs,
+            scenario_dir=scenario_dir,
+            extra_check=extra_check,
+            skeleton=skeleton,
+        )
+
     for _ in range(retries + 1):
         result = await llm.chat(messages=messages, think=think, agent=agent_tag)
         answer = strip_code_fences(result["answer"] or "")
         try:
-            entity = spec.model.model_validate_json(answer)
-            _check_id(entity, existing_ids, force_id=force_id)
-            spec.check_refs(entity, refs)
-            _check_entity_invariants(entity, scenario_dir, skeleton=skeleton)
-            if extra_check is not None:
-                extra_check(entity)
-            final_entity = entity
+            final_entity = _validate(answer)
             final_answer = answer
             break
         except (ValidationError, EntityWriterError, json.JSONDecodeError) as e:
@@ -428,13 +455,7 @@ async def write_entity(
             result = await llm.chat(messages=messages, think=think, agent=agent_tag)
             answer = strip_code_fences(result["answer"] or "")
             try:
-                entity_v2 = spec.model.model_validate_json(answer)
-                _check_id(entity_v2, existing_ids, force_id=force_id)
-                spec.check_refs(entity_v2, refs)
-                _check_entity_invariants(entity_v2, scenario_dir, skeleton=skeleton)
-                if extra_check is not None:
-                    extra_check(entity_v2)
-                final_entity = entity_v2
+                final_entity = _validate(answer)
                 messages.append({"role": "assistant", "content": answer})
             except (ValidationError, EntityWriterError, json.JSONDecodeError):
                 pass
