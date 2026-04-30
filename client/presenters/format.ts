@@ -10,7 +10,3 @@ export function formatInventoryItem({ name, qty }: InventoryItem): string {
 export function joinOrDash(items: string[]): string {
   return items.length > 0 ? items.join(SEP) : DASH;
 }
-
-export function joinInventoryOrDash(items: InventoryItem[]): string {
-  return items.length > 0 ? items.map(formatInventoryItem).join(SEP) : DASH;
-}

@@ -1,7 +1,7 @@
 import type { EquipItem, Hero, Place, Quest, Subject } from '@/types/domain';
 import type { PanelSlot, Tone } from '@/types/ui';
 
-import { joinInventoryOrDash, joinOrDash } from './format';
+import { formatInventoryItem, joinOrDash } from './format';
 
 const TIER_TONE: Record<string, Tone | undefined> = {
   '매우 쉬움': 'neutral',
@@ -35,7 +35,7 @@ function buildHeroSlot(hero: Hero): PanelSlot {
       sections: [
         { label: '능력', nodes: hero.stats.map((s): [string, number] => [s.label, s.value]) },
         { label: '장비', text: joinOrDash(equipped.map((it) => it.name)) },
-        { label: '소지', text: joinInventoryOrDash(hero.inventory) },
+        { label: '소지', text: joinOrDash(hero.inventory.map(formatInventoryItem)) },
         { label: '기술', text: joinOrDash(hero.skills) },
         { label: '특징', text: joinOrDash(hero.status) },
         { label: '동료', text: joinOrDash(hero.companions) },
@@ -67,7 +67,7 @@ function buildSubjectSlot(subject: Subject | null): PanelSlot {
       sections: [
         { label: '능력', nodes: subject.stats.map((s): [string, number] => [s.label, s.value]) },
         { label: '장비', text: joinOrDash(equipped.map((it) => it.name)) },
-        { label: '소지', text: joinInventoryOrDash(subject.inventory) },
+        { label: '소지', text: joinOrDash(subject.inventory.map(formatInventoryItem)) },
         { label: '기술', text: joinOrDash(subject.skills) },
         { label: '특징', text: joinOrDash(subject.known), clampLines: 2 },
       ],
