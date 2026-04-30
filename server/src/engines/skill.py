@@ -87,6 +87,10 @@ def _grade_multiplier(grade: Grade | None) -> float:
     return RULES.skill.grade_multipliers[grade]
 
 
+def _skill_output(skill: Skill, mod: int, multiplier: float) -> int:
+    return max(0, round(max(0, skill.power + mod) * multiplier))
+
+
 def _apply_attack(
     skill: Skill,
     mod: int,
@@ -98,8 +102,7 @@ def _apply_attack(
     """Route skill damage through the same death-save / revive-coin pipeline
     as melee attacks. Returns the apply_attack_to_defender result with the
     computed `damage` merged in."""
-    base = max(0, skill.power + mod)
-    damage = max(0, round(base * multiplier))
+    damage = _skill_output(skill, mod, multiplier)
     out = apply_attack_to_defender(state, target.id, damage, dirty=dirty)
     out["damage"] = damage
     return out
@@ -108,8 +111,7 @@ def _apply_attack(
 def _apply_heal(
     skill: Skill, mod: int, target: Character, multiplier: float
 ) -> int:
-    base = max(0, skill.power + mod)
-    healed = max(0, round(base * multiplier))
+    healed = _skill_output(skill, mod, multiplier)
     new_hp = min(target.max_hp, target.hp + healed)
     actual = new_hp - target.hp
     target.hp = new_hp

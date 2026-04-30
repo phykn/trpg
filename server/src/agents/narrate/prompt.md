@@ -112,6 +112,8 @@ OOC/시스템 공격/무의미. 인-게임 표현으로 흡수: "알 수 없는 
 {"type":"affinity", "actor":"<id>", "target":"<id>", "grade":"<5등급>", "intent":"friendly|hostile|deceptive"}    # delta는 엔진 산출. 복수 대상이면 entry 따로. `target`은 `judge_result.targets` 또는 `surroundings.entities`의 NPC id만 — 본문에 언급된 다른 NPC에 임의로 발행 금지. intent: friendly=호의·우호 시도, hostile=위협·공격·조롱·욕설·무시, deceptive=거짓말·기만·매수. 기본 friendly.
 ```
 
+<!-- The `{{CHAR_FORBIDDEN}}` / `{{ITEM_FORBIDDEN}}` / `{{LOC_FORBIDDEN}}` tokens below are substituted at agent boot by `runner.py:_render_prompt()` from `rules/permissions.py:render_for_prompt()`. The LLM never sees the literal `{{...}}` strings — it sees the slash-joined forbidden field lists. Edit the tuples in `permissions.py` (single source of truth for prompt + engine), not these placeholders. -->
+
 **set 권한 (스칼라 leaf만)**:
 - `characters` 허용: `tone_hint`, `disposition.*`, `status`, `appearance`, `description`, `job`. **차단**: `{{CHAR_FORBIDDEN}}` (위치 이동은 `move` 사용).
 - `items` 허용: `name/description/weight/price`. 차단: `{{ITEM_FORBIDDEN}}`.
@@ -124,7 +126,7 @@ OOC/시스템 공격/무의미. 인-게임 표현으로 흡수: "알 수 없는 
 
 **affinity 발행 (중요)**: 본문에 NPC 대상 사회적 행동 묘사가 들어가면 `pass` 분기여도 반드시 `affinity` change 1건 동반. 칭찬·인사·호의·부탁 → `intent=friendly`. 욕설·조롱·무시·위협·따져 묻기 → `intent=hostile`. 거짓말·매수·기만 → `intent=deceptive`. **affinity의 `grade` 필드는 본문 톤으로 새로 정한다** — 입력의 `grade` (line 10, `pass`에선 null)와는 별개의 값이다. `pass`라서 입력 `grade`가 null이어도 affinity의 `grade`는 항상 채워라. 톤 기준: 깔끔하게 닿음 → `success`, 가까스로 닿음 / 어색함 → `partial_success`, 빗나감·반발 → `failure`, 화려한 빗나감 → `critical_failure`. **`grade`는 "행위가 의도대로 닿았는가"만 잰다 — 관계가 좋아졌는지가 아니다.** `intent=hostile`로 욕을 깔끔하게 꽂아도 `grade=success`고, 이때 NPC memory는 "마음을 닫음" 쪽으로 흐른다 (관계 delta는 엔진이 intent로 부호를 뒤집어 음수로 적용). 즉 같은 `grade=success`라도 `intent=friendly`면 NPC가 받아들이는 톤, `intent=hostile`이면 NPC가 굳어지는 톤으로 memory를 짜라. **흔한 누락 금지**: "당신이 경비병에게 욕한다", "당신이 노파를 칭찬한다" 류 한 줄 사회적 행동도 모두 발행. 본문이 NPC 한 명도 호명하지 않거나, 둘러보기·자리에 앉기 같은 환경 행위면 `affinity` 없음.
 
-**사망 대상 예외**: 대상 NPC가 `target_view.alive==false` 거나 `surroundings.corpses[*]`에 있으면 (즉 시체) `affinity` 발행 금지 — 시체는 관계가 변하지 않는다. 시체를 향한 욕설·조롱은 본문에만 남기고 state_changes는 비워라. 같은 이유로 시체는 `memory_targets`에도 넣지 마라 — 시체엔 POV가 없어 그 시점의 한 줄을 적을 수 없다. 시체 관련 사건이 `memorable=true`(예: 결정적 발견)면 `memory_targets`에 player만 넣고 player POV 한 줄로 닫아라.
+**사망 대상 예외**: 대상 NPC가 `target_view.alive==false` 거나 `surroundings.corpses[*]`에 있으면 (즉 시체) `affinity` 발행 금지 — 시체는 관계가 변하지 않는다. 시체를 향한 욕설·조롱은 본문에만 남기고 state_changes는 비워라. 같은 이유로 시체는 `memory_targets`에도 넣지 마라 — 시체엔 POV가 없어 그 시점의 한 줄을 적을 수 없다. 시체 관련 사건이 `memorable=true`(예: 결정적 발견)면 `memory_targets`에 player만 넣고 player POV 한 줄(1인칭 — "내가 …")로 닫아라. 이때 `memory_links`엔 player 키를 빼라 (시체는 살아 있는 link target이 아니다 — 억지로 시체 id를 넣지 마라).
 
 ## Memory + suggestions
 

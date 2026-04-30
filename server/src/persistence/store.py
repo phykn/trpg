@@ -70,10 +70,6 @@ def _dialogue_path(saves_dir: str, game_id: str) -> Path:
     return _game_dir(saves_dir, game_id) / "dialogue.jsonl"
 
 
-def _current_path(saves_dir: str) -> Path:
-    return Path(saves_dir) / ".current"
-
-
 # --- IO primitives ---------------------------------------------------------
 
 
@@ -295,26 +291,6 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
         log_entries=log_entries,
         **entities,
     )
-
-
-# --- .current pointer ------------------------------------------------------
-
-
-def read_current_game_id(saves_dir: str) -> str | None:
-    path = _current_path(saves_dir)
-    try:
-        text = path.read_text(encoding="utf-8").strip()
-    except FileNotFoundError:
-        return None
-    except OSError as e:
-        raise PersistenceFailed(str(e)) from e
-    return text or None
-
-
-async def write_current_game_id(saves_dir: str, game_id: str) -> None:
-    path = _current_path(saves_dir)
-    async with _save_lock:
-        await asyncio.to_thread(_atomic_write, path, game_id)
 
 
 # --- seed copy (for init_game) --------------------------------------------

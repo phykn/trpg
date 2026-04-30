@@ -25,7 +25,6 @@ from .store import (
     copy_seed_into_game,
     save_entity,
     save_meta,
-    write_current_game_id,
 )
 
 T = TypeVar("T", bound=BaseModel)
@@ -140,5 +139,4 @@ async def init_game(
     # Persist the player character separately — it isn't part of the seed.
     await save_entity(state, saves_dir, "characters", player_id)
     await save_meta(state, saves_dir)
-    await write_current_game_id(saves_dir, state.game_id)
     return state

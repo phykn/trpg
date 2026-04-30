@@ -14,10 +14,8 @@ from src.persistence.store import (
     append_history_entries,
     append_log_entries,
     load_game,
-    read_current_game_id,
     save_entity,
     save_meta,
-    write_current_game_id,
 )
 
 _ENTITY_KINDS = (
