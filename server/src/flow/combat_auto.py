@@ -95,6 +95,42 @@ def _turn_event(
     }
 
 
+def _emit_round_event(
+    events: list[CombatRoundEvent],
+    turn_events: list[dict],
+    *,
+    actor: Character,
+    action_label: str,
+    round_no: int,
+    target_id: str | None = None,
+    target_name: str | None = None,
+    grade: str | None = None,
+    damage: int = 0,
+    killed: bool = False,
+    skill_name: str | None = None,
+    skill_id: str | None = None,
+) -> None:
+    events.append(CombatRoundEvent(
+        round_no=round_no, actor=actor.name,
+        action=action_label,
+        target=target_name,
+        grade=grade,
+        damage=damage,
+        killed=killed,
+        skill_name=skill_name,
+    ))
+    turn_events.append(_turn_event(
+        actor.id, action_label,
+        target_id=target_id,
+        grade=grade,
+        damage=damage,
+        killed=killed,
+        skill_name=skill_name,
+        skill_id=skill_id,
+        round_no=round_no,
+    ))
+
+
 def _snapshot(c: Character) -> CombatStateSnapshot:
     return CombatStateSnapshot(name=c.name, hp=c.hp, max_hp=c.max_hp, alive=c.alive)
 
@@ -202,26 +238,7 @@ def _resolve_player_turn(
     targets = _alive_player_targets(state, player, action.targets)
 
     def _add(action_label: str, **kwargs):
-        ev = CombatRoundEvent(
-            round_no=round_no, actor=player.name,
-            action=action_label,
-            target=kwargs.get("target_name"),
-            grade=kwargs.get("grade"),
-            damage=kwargs.get("damage", 0),
-            killed=kwargs.get("killed", False),
-            skill_name=kwargs.get("skill_name"),
-        )
-        events.append(ev)
-        turn_events.append(_turn_event(
-            player.id, action_label,
-            target_id=kwargs.get("target_id"),
-            grade=kwargs.get("grade"),
-            damage=kwargs.get("damage", 0),
-            killed=kwargs.get("killed", False),
-            skill_name=kwargs.get("skill_name"),
-            skill_id=kwargs.get("skill_id"),
-            round_no=round_no,
-        ))
+        _emit_round_event(events, turn_events, actor=player, action_label=action_label, round_no=round_no, **kwargs)
 
     if action.kind == "pass":
         _add("pass")
@@ -282,22 +299,7 @@ def _resolve_npc_turn(
     turn_events: list[dict] = []
 
     def _add(action_label: str, **kwargs):
-        events.append(CombatRoundEvent(
-            round_no=round_no, actor=actor.name,
-            action=action_label,
-            target=kwargs.get("target_name"),
-            grade=kwargs.get("grade"),
-            damage=kwargs.get("damage", 0),
-            killed=kwargs.get("killed", False),
-        ))
-        turn_events.append(_turn_event(
-            actor.id, action_label,
-            target_id=kwargs.get("target_id"),
-            grade=kwargs.get("grade"),
-            damage=kwargs.get("damage", 0),
-            killed=kwargs.get("killed", False),
-            round_no=round_no,
-        ))
+        _emit_round_event(events, turn_events, actor=actor, action_label=action_label, round_no=round_no, **kwargs)
 
     if combat_engine.should_attempt_flee(actor, rng=rng):
         ok, _ = combat_engine.try_flee(actor, rng=rng)
