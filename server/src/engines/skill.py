@@ -12,7 +12,6 @@ from __future__ import annotations
 import hashlib
 import random
 import re
-from typing import Literal
 
 from ..domain.entities import ActiveBuff, Character, Skill
 from ..domain.types import Grade
@@ -126,9 +125,6 @@ def _apply_buff(
     buff = ActiveBuff(description=description, duration=skill.duration)
     target.active_buffs.append(buff)
     return buff
-
-
-CastEffectKind = Literal["attack", "heal", "buff", "debuff"]
 
 
 def compute_cast_grade(

@@ -1,7 +1,7 @@
 """Item activation — heal/damage/mp_restore/buff consumables and on_use
 trigger pass-through. Damage routes through combat.apply_attack_to_defender
 so death-saves and revive_coins behave the same as melee/skill damage."""
-from ...domain.entities import ActiveBuff, Character, ConsumableEffect, Item
+from ...domain.entities import ActiveBuff, Character, ConsumableEffect
 from ...domain.errors import InventoryInvalid
 from ...domain.state import GameState
 from ..combat import apply_attack_to_defender

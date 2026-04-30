@@ -173,7 +173,7 @@ async def emit_unequip(
     item = state.items.get(item_id)
     item_name = item.name if item else item_id
     try:
-        slot = inventory_engine.unequip_by_item(actor, item_id, state.items)
+        slot = inventory_engine.unequip_by_item(actor, item_id)
     except InventoryInvalid as e:
         yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 「{item_name}」{eul_reul(item_name)} 해제하려 했지만 {humanize_engine_error(e)}.")
         return

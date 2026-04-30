@@ -29,7 +29,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, get_args
 
 from ..domain.entities import (
     EQUIPMENT_SLOTS,
@@ -46,6 +46,7 @@ from ..domain.entities import (
     ConsumableEffect,
     allowed_slots,
 )
+from ..domain.types import StatKey
 from ..rules import RULES
 from .combat import DICE_RE
 from .growth import calc_max_hp, calc_max_mp
@@ -61,7 +62,7 @@ class InvariantViolation(ValueError):
     """
 
 
-_STAT_KEYS = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
+_STAT_KEYS: tuple[str, ...] = get_args(StatKey)
 
 
 def _slot_mismatch_hint(allowed: tuple[str, ...]) -> str:

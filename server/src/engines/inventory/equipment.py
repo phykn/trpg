@@ -1,5 +1,7 @@
 """Equip / unequip (P3 §2.5). Slot validation and a small auto-slot
 heuristic for the natural-language equip path."""
+from typing import get_args
+
 from ...domain.entities import (
     ArmorEffect,
     Character,
@@ -8,6 +10,7 @@ from ...domain.entities import (
     allowed_slots,
 )
 from ...domain.errors import InventoryInvalid
+from ...domain.types import StatKey
 
 Slot = EquipSlot
 
@@ -15,7 +18,7 @@ Slot = EquipSlot
 def _required_stats_met(actor: Character, item: Item) -> bool:
     if item.required is None:
         return True
-    for k in ("STR", "DEX", "CON", "INT", "WIS", "CHA"):
+    for k in get_args(StatKey):
         if getattr(actor.stats, k) < getattr(item.required, k):
             return False
     return True
@@ -67,17 +70,15 @@ def auto_equip_slot(actor: Character, item: Item) -> Slot:
     return "accessory"
 
 
-def unequip(actor: Character, slot: Slot, items: dict[str, Item]) -> None:
+def unequip(actor: Character, slot: Slot) -> None:
     """Empty a slot. Idempotent."""
     setattr(actor.equipment, slot, None)
 
 
-def unequip_by_item(
-    actor: Character, item_id: str, items: dict[str, Item]
-) -> Slot | None:
+def unequip_by_item(actor: Character, item_id: str) -> Slot | None:
     """Find which slot holds item_id and unequip it. None if nowhere."""
     for slot, eq_id in actor.equipment.equipped_items():
         if eq_id == item_id:
-            unequip(actor, slot, items)  # type: ignore[arg-type]
+            unequip(actor, slot)  # type: ignore[arg-type]
             return slot  # type: ignore[return-value]
     return None

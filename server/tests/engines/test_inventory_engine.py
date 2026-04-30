@@ -182,7 +182,7 @@ def test_unequip_clears_slot():
     p = _player(inventory_ids=["sword"])
     items = _items()
     inv.equip(p, "sword", "weapon", items)
-    inv.unequip(p, "weapon", items)
+    inv.unequip(p, "weapon")
     assert p.equipment.weapon is None
     # still in inventory
     assert "sword" in p.inventory_ids
@@ -190,7 +190,7 @@ def test_unequip_clears_slot():
 
 def test_unequip_idempotent_on_empty_slot():
     p = _player()
-    inv.unequip(p, "armor", _items())  # does not raise
+    inv.unequip(p, "armor")  # does not raise
 
 
 # --- trade pricing --------------------------------------------------------
