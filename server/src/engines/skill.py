@@ -13,14 +13,13 @@ import hashlib
 import random
 import re
 
-from ..domain.entities import ActiveBuff, Character, Skill
+from ..domain.entities import ActiveBuff, Character, Skill, SkillCandidate
 from ..domain.types import Grade
 from ..domain.errors import SkillInvalid
-from ..agents.skill_recommend import SkillCandidate
 from ..rules import RULES
 from ..domain.state import GameState
 from .combat import apply_attack_to_defender, enemy_defense, stat_modifier
-from ..rules.dc import compute_grade, sigmoid_required_roll
+from ..rules.dc import compute_grade, compute_required_roll
 
 CastTargets = list[str]
 
@@ -155,7 +154,7 @@ def compute_cast_grade(
     nat = r.randint(1, 20)
     mod = stat_modifier(stat_value)
     total = nat + mod
-    required = sigmoid_required_roll(defense, stat_value)
+    required = compute_required_roll(defense, stat_value)
     grade = compute_grade(nat, total, required)
     return (grade, nat, required)
 

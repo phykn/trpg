@@ -44,6 +44,15 @@ def _race_job_label(state: GameState, char: Character) -> str:
     return f"{race} {char.job}" if char.job else race
 
 
+def _gender_label(char: Character) -> str:
+    """Korean label for display, empty for non-sexed entities."""
+    if char.gender == "male":
+        return "남성"
+    if char.gender == "female":
+        return "여성"
+    return ""
+
+
 def _equipment(state: GameState, char: Character) -> dict:
     out: dict[str, dict | None] = {slot: None for slot in EQUIPMENT_SLOTS}
     for slot, item_id in char.equipment.equipped_items():
@@ -87,6 +96,7 @@ def to_hero(state: GameState) -> dict:
     return {
         "name": p.name,
         "raceJob": _race_job_label(state, p),
+        "gender": _gender_label(p),
         "level": p.level,
         "exp": p.xp_pool,
         "expMax": xp_for_next_level(p.level),
@@ -132,6 +142,7 @@ def to_subject(state: GameState) -> dict | None:
         "name": s.name,
         "role": s.role,
         "raceJob": _race_job_label(state, s),
+        "gender": _gender_label(s),
         "trust": s.relations.get(state.player_id, 0),
         "known": known,
         "level": s.level,
@@ -191,7 +202,9 @@ def to_place(state: GameState) -> dict | None:
         blurb = "죽음" if not c.alive else (c.appearance or c.description)
         targets.append({
             "name": c.name,
-            "role": c.role,
+            "level": c.level,
+            "raceJob": _race_job_label(state, c),
+            "gender": _gender_label(c),
             "blurb": blurb,
             "trust": c.relations.get(state.player_id, 0),
         })

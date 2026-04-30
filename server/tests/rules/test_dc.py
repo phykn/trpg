@@ -3,8 +3,8 @@ import random
 from src.domain.entities import Character, Stats
 from src.rules.dc import (
     compute_grade,
+    compute_required_roll,
     pick_dc,
-    sigmoid_required_roll,
     social_bonus,
 )
 from src.rules import RULES
@@ -20,22 +20,24 @@ def test_pick_dc_within_range_excludes_bounds():
             assert 1 < dc < 20
 
 
-def test_sigmoid_balance_point():
-    # stat == dc → required = 10
-    assert sigmoid_required_roll(dc=10, stat=10) == 10
+def test_required_roll_stat_ten_is_neutral():
+    # Stat 10/11 → mod 0 → required == DC across the range.
+    for dc in (2, 7, 10, 13, 18):
+        assert compute_required_roll(dc=dc, stat=10) == dc
+        assert compute_required_roll(dc=dc, stat=11) == dc
 
 
-def test_sigmoid_clamps_to_one_or_twenty():
-    assert sigmoid_required_roll(dc=5, stat=15) == 1
-    assert sigmoid_required_roll(dc=15, stat=5) == 20
+def test_required_roll_dnd5e_modifier_applied():
+    # required = DC - stat_mod. floor((stat-10)/2): 12→+1, 14→+2, 8→-1, 6→-2.
+    assert compute_required_roll(dc=15, stat=12) == 14
+    assert compute_required_roll(dc=15, stat=14) == 13
+    assert compute_required_roll(dc=15, stat=8) == 16
+    assert compute_required_roll(dc=15, stat=6) == 17
 
 
-def test_sigmoid_monotonic():
-    prev = sigmoid_required_roll(dc=10, stat=10)
-    for d in range(11, 16):
-        cur = sigmoid_required_roll(dc=d, stat=10)
-        assert cur >= prev
-        prev = cur
+def test_required_roll_clamps_to_one_or_twenty():
+    assert compute_required_roll(dc=5, stat=20) == 1   # 5 - 5 = 0 → clamp 1
+    assert compute_required_roll(dc=19, stat=0) == 20  # 19 - (-5) = 24 → clamp 20
 
 
 def test_social_bonus_thresholds():

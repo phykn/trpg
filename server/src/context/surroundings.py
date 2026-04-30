@@ -121,15 +121,22 @@ def _skill_candidates_payload(state: GameState) -> list[dict]:
 
 
 def _merchants_payload(state: GameState, actor: Character) -> list[dict]:
-    """Same-location NPCs whose affinity passes the trade threshold and who carry stock."""
+    """Same-location NPCs whose affinity passes the trade threshold and who carry stock.
+    Hostile seeds (bandits, beasts) are excluded by `hostile_aggressive_threshold`
+    even when their relations[player] is still at the empty-dict default of 0,
+    so a freshly-encountered bandit doesn't surface as a merchant just because
+    they carry weapons."""
     if actor.location_id is None:
         return []
     out: list[dict] = []
     threshold = RULES.social.trade_threshold
+    aggressive_cutoff = RULES.social.hostile_aggressive_threshold
     for cid, npc in state.characters.items():
         if cid == actor.id or npc.location_id != actor.location_id:
             continue
         if not npc.alive or not npc.inventory_ids:
+            continue
+        if npc.disposition.aggressive >= aggressive_cutoff:
             continue
         if npc.relations.get(actor.id, 0) < threshold:
             continue

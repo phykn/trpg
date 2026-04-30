@@ -72,3 +72,31 @@ def refresh_active_subject(state: GameState, result) -> None:
 
     if candidate is not None and candidate != state.active_subject_id:
         state.active_subject_id = candidate
+
+
+def reconcile_subject_after_move(state: GameState) -> None:
+    """Re-pick the subject after the player relocates.
+
+    `refresh_active_subject` runs before `apply_intended_move`, so for travel
+    turns it sees the old location and leaves the pin on the previous NPC.
+    Once the player has actually moved, the pin is at the wrong location:
+    drop it and prefer a same-location NPC — recent_npc_id (most recently
+    addressed there) first, else the first alive resident, else clear.
+    """
+    cur = state.active_subject_id
+    if cur is None:
+        return
+    subj = state.characters.get(cur)
+    player = state.characters[state.player_id]
+    if subj is not None and subj.location_id == player.location_id:
+        return
+
+    candidate = state.recent_npc_id(state.player_id)
+    if candidate is None:
+        for cid, c in state.characters.items():
+            if cid == state.player_id or not c.alive:
+                continue
+            if c.location_id == player.location_id:
+                candidate = cid
+                break
+    state.active_subject_id = candidate

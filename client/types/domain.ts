@@ -25,6 +25,7 @@ export type Equipment = {
 export type Hero = {
   name: string;
   raceJob: string;
+  gender: string;
   level: number;
   exp: number;
   expMax: number;
@@ -44,6 +45,7 @@ export type Hero = {
 export type Subject = {
   name: string;
   raceJob: string;
+  gender: string;
   trust: number;
   known: string[];
   level: number;
@@ -73,7 +75,9 @@ export type PlaceSurrounding = {
 
 export type PlaceTarget = {
   name: string;
-  role: string;
+  level: number;
+  raceJob: string;
+  gender: string;
   blurb: string;
   trust: number;
 };

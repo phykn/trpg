@@ -91,6 +91,21 @@ def push_turn_log(
     dirty.history.append(entry)
 
 
+def register_kill(state: GameState, victim_id: str, dirty: Dirty) -> None:
+    """Single entry point for death side-effects in flow layer.
+
+    The engine's `_kill` only flips `alive=False`; death is observable to
+    narrate only via `turn_log.target` (off-screen corpse recovery in
+    `_corpses_payload`). Every code path that downs an NPC must call this so
+    the death signal survives the player walking away from the body — the
+    shared cause of "dead NPC keeps speaking" regressions.
+    """
+    char = state.characters.get(victim_id)
+    name = char.name if char is not None else victim_id
+    push_turn_log(state, victim_id, f"{name} 사망", dirty)
+    dirty.entities.add(("characters", victim_id))
+
+
 def push_dialogue(
     state: GameState,
     player: str,

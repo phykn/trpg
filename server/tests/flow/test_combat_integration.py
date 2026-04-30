@@ -144,6 +144,36 @@ async def test_combat_with_self_target_does_not_consume_turn(
     assert combat_state.turn_count == turn_before
 
 
+async def test_combat_player_attack_drops_affinity_bidirectional(combat_state, tmp_data, monkeypatch):
+    """Attacking an NPC must drop affinity on both sides — combat never reaches
+    narrate, so without the engine-side hook trade/social_bonus would still
+    treat the target as neutral. Regression for the hole where attacks left
+    relations untouched."""
+    from src.engines import combat as combat_engine
+    from src.rules import RULES
+
+    combat_engine.start_combat(combat_state, ["goblin_01"], rng=random.Random(0))
+    combat_state.combat_state.turn_order = ["player_01", "goblin_01"]
+    combat_state.combat_state.current_turn = 0
+    combat_state.characters["player_01"].relations["goblin_01"] = 0
+    combat_state.characters["goblin_01"].relations["player_01"] = 0
+
+    _judge_returns(monkeypatch, CombatAction(action="combat", targets=["goblin_01"]))
+    await _collect(
+        run_turn(
+            client=None,
+            state=combat_state,
+            profile_dir="<unused>",
+            saves_dir=tmp_data,
+            player_input="공격",
+            rng=random.Random(7),
+        )
+    )
+    drop = RULES.social.combat_affinity_drop
+    assert combat_state.characters["player_01"].relations["goblin_01"] <= -drop
+    assert combat_state.characters["goblin_01"].relations["player_01"] <= -drop
+
+
 async def test_combat_player_attack_advances_round(combat_state, tmp_data, monkeypatch):
     """combat_state active and on the player's turn. CombatAction → damage applied."""
     # boot combat first

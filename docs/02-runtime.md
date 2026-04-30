@@ -208,7 +208,7 @@ class PendingCheck:
     targets: list[str]    # judge 원본 배열. 단일 대상이어도 [id] 로 채움. 폴백(§2.3 step 3) 도 [location_id] 로 채워 None 경로 없음
     dc: int               # tier 범위에서 균등 샘플링 (§5.2)
     mod: int              # social_bonus
-    required_roll: int    # sigmoid 결과 (1..20)
+    required_roll: int    # DC - stat_modifier, [1, 20] clamp
     reason: str           # judge 가 RollAction.reason 으로 받은 사유. combat/death-save 분기에서는 placeholder 가 들어가고 프론트로는 null 로 노출
     created_at: str       # ISO 8601
 ```
@@ -482,16 +482,17 @@ Connection(
 
 `{action: "roll"}` 분기에서 엔진이 굴리기 전에 계산하는 수치.
 
-### 5.1 시그모이드 DC
+### 5.1 DC vs 스탯
 
 ```
-required_roll = round(20 / (1 + e^(-k(DC - player_stat))))   # [1, 20] clamp
+stat_modifier = floor((stat - 10) / 2)                       # D&D 5e
+required_roll = max(1, min(20, DC - stat_modifier))           # [1, 20] clamp
 ```
 
-왜 시그모이드(S자 곡선)인가: 단순히 `DC - stat` 으로 빼면 어려운 행동은 0%, 쉬운 행동은 100% 가 되어 굴릴 의미가 없다. S자 곡선에 통과시키면 양 끝이 부드럽게 깎여 — 쉬운 행동도 약간은 실패하고, 어려운 행동도 약간은 성공한다 (k=0.5 일 때 곡선이 1·20 에 닿지 않고 한두 칸 안쪽에서 꺾인다). `k` 는 곡선의 가파름.
+D&D 5e 스타일의 단순 보정. 능력치 10/11 은 mod 0 — `required_roll == DC` 라 어떤 보정도 없다. 12/13 은 +1, 14/15 는 +2, 8/9 는 -1, ... 형태로 점당 0~1 칸 어긋난다. `compute_grade` 가 `total > required_roll` 이면 success, `==` 이면 partial_success 로 묶고, 자연 1·20 은 등급에 상관없이 critical 로 처리.
 
-- d20 기반. 플레이어가 `required_roll` 이상을 굴리면 성공.
-- `DC` 와 `player_stat` 은 모두 정수 스탯값. `k` (기본 0.5) 는 점당 가파름 — `rules.difficulty_class.sigmoid` config.
+- d20 기반. 플레이어가 `required_roll` 보다 크게 굴리면 success, 같으면 partial_success.
+- `DC` 와 `stat` 은 모두 정수.
 
 ### 5.2 Tier 라벨 / Tier → DC 매핑
 

@@ -308,6 +308,21 @@ def test_surroundings_hides_merchants_below_threshold(fresh_state):
     assert s["merchants"] == []
 
 
+def test_surroundings_hides_hostile_npcs_with_inventory(fresh_state):
+    """Hostile seeds (bandits, beasts) must not surface as merchants on first
+    sight. Without the disposition.aggressive gate, the empty-dict default of
+    relations[player]=0 satisfies the trade_threshold and the bandit's
+    weapons would be listed for sale."""
+    from src.domain.entities import Disposition
+    state = _seed_player(fresh_state)
+    _seed_merchant(state)
+    state.characters["smith_01"].disposition = Disposition(
+        lawful=30, moral=25, aggressive=85
+    )
+    s = build_surroundings(state, "player_01")
+    assert s["merchants"] == []
+
+
 # --- growth payload (surroundings) -----------------------------------------
 
 

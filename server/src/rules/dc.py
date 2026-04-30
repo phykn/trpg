@@ -1,4 +1,3 @@
-import math
 import random
 
 from ..domain.entities import Character
@@ -19,10 +18,11 @@ def tier_mid_dc(tier: Tier) -> int:
     return (lo + hi) // 2
 
 
-def sigmoid_required_roll(dc: int, stat: int) -> int:
-    k = RULES.difficulty_class.sigmoid_k
-    raw = 20 / (1 + math.exp(-k * (dc - stat)))
-    return max(1, min(20, round(raw)))
+def compute_required_roll(dc: int, stat: int) -> int:
+    """D&D 5e: required = DC - stat_modifier, where stat_modifier = floor((stat-10)/2).
+    Stat 10/11 → required = DC (no shift). Clamped to [1, 20]."""
+    mod = (stat - 10) // 2
+    return max(1, min(20, dc - mod))
 
 
 def social_bonus(actor: Character, target_id: str) -> int:

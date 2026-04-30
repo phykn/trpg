@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
 from ..domain.types import Grade, Intent
 from ..rules import RULES
+from ..rules.permissions import CHAPTER_QUEST_ALLOWED, FORBIDDEN_BY_ENTITY
 from ..domain.state import GameState
 
 
@@ -52,64 +53,17 @@ _state_change_adapter = TypeAdapter(StateChange)
 
 
 # --- permission matrix -----------------------------------------------------
-
-
-_CHAR_FORBIDDEN = frozenset(
-    {
-        "relations",
-        "inventory_ids",
-        "memories",
-        "racial_skill_ids",
-        "learned_skill_ids",
-        "companions",
-        "active_buffs",
-        "hints",
-        "hp",
-        "max_hp",
-        "mp",
-        "max_mp",
-        "xp_pool",
-        "xp_reward",
-        "gold",
-        "alive",
-        "death_saves",
-        "revive_coins",
-        "level",
-        "id",
-        "is_player",
-        "race_id",
-    }
-)
-
-_ITEM_FORBIDDEN = frozenset({"id", "effects", "required"})
-
-_LOC_FORBIDDEN = frozenset(
-    {
-        "id",
-        "item_ids",
-        "hidden_items",
-        "hidden_connections",
-        "connections",
-        "sleep_encounters",
-    }
-)
-
-_CHAPTER_QUEST_ALLOWED = frozenset({"summary", "status"})
-
-_FORBIDDEN_BY_ENTITY: dict[str, frozenset[str]] = {
-    "characters": _CHAR_FORBIDDEN,
-    "items": _ITEM_FORBIDDEN,
-    "locations": _LOC_FORBIDDEN,
-}
+# The forbidden frozensets live in `rules/permissions.py` so the narrate
+# prompt can render the same lists at load time — see that module.
 
 
 def _check_set_permission(entity: str, field: str) -> str | None:
     top = field.split(".", 1)[0]
     if entity in ("chapters", "quests"):
-        if top not in _CHAPTER_QUEST_ALLOWED:
+        if top not in CHAPTER_QUEST_ALLOWED:
             return f"narrator can only set 'summary' or 'status' on {entity}"
         return None
-    if top in _FORBIDDEN_BY_ENTITY[entity]:
+    if top in FORBIDDEN_BY_ENTITY[entity]:
         return f"field {field!r} on {entity!r} is engine-owned"
     return None
 
@@ -244,6 +198,37 @@ def _apply_affinity(
     actor.relations[c.target] = max(-100, min(100, current + delta))
     if dirty is not None:
         dirty.add(("characters", c.actor))
+
+
+def apply_combat_affinity_drop(
+    state: GameState,
+    attacker_id: str,
+    target_id: str,
+    dirty: set[tuple[str, str]] | None = None,
+) -> None:
+    """Bidirectional affinity drop applied per offensive combat action.
+
+    Combat is dispatched by combat_phase / actions, never by narrate, so the
+    LLM-emitted `affinity` change kind never fires here. Without this hook,
+    attacking an NPC would leave both `npc.relations[player]` (which gates
+    trade and merchant access) and `player.relations[npc]` (which feeds the
+    social_bonus) unchanged. We deduct on both sides so a hostile act flips
+    the relationship symmetrically.
+
+    Self-targeting (e.g. self-buff that the caller mistakenly funnels here)
+    is a no-op. Missing characters are silently skipped — combat may have
+    just removed the target."""
+    if attacker_id == target_id:
+        return
+    delta = RULES.social.combat_affinity_drop
+    for a, b in ((attacker_id, target_id), (target_id, attacker_id)):
+        char = state.characters.get(a)
+        if char is None:
+            continue
+        current = char.relations.get(b, 0)
+        char.relations[b] = max(-100, min(100, current - delta))
+        if dirty is not None:
+            dirty.add(("characters", a))
 
 
 # --- public dispatch -------------------------------------------------------

@@ -206,10 +206,9 @@ def test_attack_armor_raises_required_roll():
         "armor": _arm_item("armor", 6),
         "shield": _arm_item("shield", 6),
     }
-    # defense_light = 10, defense_heavy = 22.
-    # required_roll(10, 10, k=0.5) = round(20/(1+1)) = 10
-    # required_roll(22, 10, k=0.5) = round(20/(1+e^-6)) ≈ 20
-    # nat=11 → clears 10 (partial or success), but fails against 22.
+    # defense_light = 10, defense_heavy = 22. STR 10 → mod 0.
+    # required_light = 10 - 0 = 10. required_heavy = 22 - 0 → clamp 20.
+    # nat=11 → clears 10 (success), but 11 < 20 → fails against heavy.
     rng_light = _SeqRandom([11, 4])
     rng_heavy = _SeqRandom([11])  # miss → no damage roll
     ol = attack(attacker, light, items, rng=rng_light)

@@ -57,6 +57,7 @@ class EncounterSummonOutput(BaseModel):
     appearance: str = Field(min_length=1, max_length=120)
     tone_hint: str = Field(default="", max_length=80)
     race_id: str
+    gender: Literal["male", "female", "none"] = "none"
     stats: EncounterStats
     attack_priority: Literal[
         "nearest", "lowest_hp", "highest_threat", "healer_first", "random"

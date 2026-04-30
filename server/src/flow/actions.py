@@ -21,6 +21,7 @@ from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..engines import inventory as inventory_engine
 from ..engines import skill as skill_engine
+from ..engines.apply import apply_combat_affinity_drop
 from ..engines.growth import (
     award_kill_xp,
     level_up as level_up_engine,
@@ -30,12 +31,13 @@ from ..engines.quest import check_quests
 from ..llm.client import LLMClient
 from ..mapping.josa import eul_reul, eun_neun, i_ga
 from ..mapping.to_front import pending_check_to_front
-from ..rules.dc import pick_dc, sigmoid_required_roll, social_bonus
+from ..rules.dc import compute_required_roll, pick_dc, social_bonus
 from .dirty import (
     Dirty,
     flush,
     push_act,
     push_turn_log,
+    register_kill,
 )
 from .error_phrases import humanize_engine_error
 from .format import (
@@ -68,6 +70,7 @@ async def emit_attack(
             dirty=dirty.entities,
         )
         combat_engine.record_damage(state, attacker_id, outcome.damage)
+    apply_combat_affinity_drop(state, attacker_id, target_id, dirty=dirty.entities)
     text = format_attack_log(state, attacker_id, target_id, outcome, apply_result)
     yield push_act(state, dirty, text)
     yield {
@@ -82,7 +85,8 @@ async def emit_attack(
     }
     if not target.alive:
         award_kill_xp(state, attacker_id, target_id, dirty=dirty.entities)
-    if attacker_id == state.player_id:
+        register_kill(state, target_id, dirty)
+    elif attacker_id == state.player_id:
         push_turn_log(state, target_id, f"{target.name}{eul_reul(target.name)} 공격", dirty)
 
 
@@ -117,6 +121,10 @@ async def emit_skill_cast(
             combat_engine.record_damage(state, actor_id, int(eff.get("damage", 0)))
             if eff.get("dead"):
                 award_kill_xp(state, actor_id, eff["target"], dirty=dirty.entities)
+                register_kill(state, eff["target"], dirty)
+    if skill_obj.type in ("attack", "debuff"):
+        for tid in targets:
+            apply_combat_affinity_drop(state, actor_id, tid, dirty=dirty.entities)
     yield push_act(state, dirty, format_skill_log(state, actor_id, cast_result, grade))
     yield {
         "type": "combat_turn",
@@ -236,7 +244,7 @@ async def emit_level_up(
     dirty.entities.add(("characters", actor_id))
     yield push_act(
         state, dirty,
-        f"{actor.name}{i_ga(actor.name)} 레벨업했다 "
+        f"{actor.name}의 레벨이 올랐습니다 "
         f"(레벨 {actor.level}, {stat_up} ↑ / {stat_down} ↓, HP {actor.max_hp} / MP {actor.max_mp}).",
     )
     if client is None:
@@ -321,7 +329,7 @@ async def emit_roll_pending(
     target = min(result.targets, key=lambda t: actor.relations.get(t, 0))
     dc = pick_dc(result.tier)
     stat_value = getattr(actor.stats, result.stat)
-    required_roll = sigmoid_required_roll(dc, stat_value)
+    required_roll = compute_required_roll(dc, stat_value)
     mod = social_bonus(actor, target)
     state.pending_check = PendingCheck(
         player_input=player_input,

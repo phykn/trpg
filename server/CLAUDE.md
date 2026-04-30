@@ -62,6 +62,12 @@ The canonical user-facing term for skills is **기술**. The dc_judge prompt acc
 
 Scale is `-100..+100`. With `social.friendly_threshold = 50`, a target at or above the threshold gives the actor `+social.roll_bonus = 2`. Post-roll delta = `affinity_<grade>`, mirrored onto `intent`: hostile flips the sign; deceptive zeroes the success branch and doubles the failure one.
 
+Two paths feed `relations`:
+- **Narrate** emits an `affinity` state_change for social acts (praise, insult, bribe, threaten, deceive). One actor → target update per change. The narrate prompt now requires emission for verbal social acts even on the `pass` branch — `intent` picks `friendly | hostile | deceptive`, `grade` is read off the prose tone.
+- **Engine** deducts `social.combat_affinity_drop` bidirectionally inside `emit_attack` and `emit_skill_cast` (offensive types only) — combat never reaches narrate, so without this hook attacks would leave `npc.relations[player]` (which gates trade) and `player.relations[npc]` (which feeds `social_bonus`) untouched.
+
+Trade gating: `_merchants_payload` filters out NPCs whose `disposition.aggressive >= social.hostile_aggressive_threshold` regardless of `relations[player]`. Without it, a hostile seed (bandit, wolf) carrying equipment in its inventory would surface as a merchant on first sight, since `relations[player]` defaults to 0 — which satisfies `trade_threshold = 0`.
+
 ## Persistence
 
 - Per-game dir: `../saves/games/<game_id>/`.

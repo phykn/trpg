@@ -27,6 +27,7 @@ export function NewGame({ onSubmit }: Props) {
 
   const [profileId, setProfileId] = React.useState<string | null>(null);
   const [raceId, setRaceId] = React.useState<string | null>(null);
+  const [gender, setGender] = React.useState<'male' | 'female' | null>(null);
   const [name, setName] = React.useState('주인공');
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -52,15 +53,15 @@ export function NewGame({ onSubmit }: Props) {
   const races = selectedProfile?.races ?? [];
 
   const trimmedName = name.trim();
-  const canSubmit = !!profileId && !!raceId && !!trimmedName && !submitting;
+  const canSubmit = !!profileId && !!raceId && !!gender && !!trimmedName && !submitting;
 
   const submit = async () => {
-    if (!canSubmit || !profileId || !raceId) return;
+    if (!canSubmit || !profileId || !raceId || !gender) return;
     Keyboard.dismiss();
     setSubmitting(true);
     await onSubmit({
       profile: profileId,
-      player: { name: trimmedName, race_id: raceId },
+      player: { name: trimmedName, race_id: raceId, gender },
     });
   };
 
@@ -127,6 +128,25 @@ export function NewGame({ onSubmit }: Props) {
 
       <Section label="이름">
         <Input value={name} onChangeText={setName} placeholder="등장인물의 이름" />
+      </Section>
+
+      <Section label="성별">
+        <View className="flex-row gap-2">
+          <View className="flex-1">
+            <SelectCard
+              title="남성"
+              selected={gender === 'male'}
+              onPress={() => setGender('male')}
+            />
+          </View>
+          <View className="flex-1">
+            <SelectCard
+              title="여성"
+              selected={gender === 'female'}
+              onPress={() => setGender('female')}
+            />
+          </View>
+        </View>
       </Section>
 
       <Section label="세계관">

@@ -7,6 +7,7 @@
   "id": "<ASCII snake_case, e.g. smith_01, goblin_02>",
   "name": "<Korean>",
   "race_id": "<id from races/>",
+  "gender": "male" | "female" | "none",
   "job": "<short Korean, e.g. 대장장이 / 정찰병 / 마을 장로>",
   "role": "<one-line backstory>",
   "appearance": "<one-line appearance>",
@@ -32,6 +33,7 @@
 ## Rules
 
 - `race_id` — **must exist in the scenario's races**.
+- `gender` — `male` / `female` for humanoid (people, named NPCs). `none` for beasts, monsters, or anything where biological sex isn't part of the encounter. When unsure, prefer `none`.
 - `location_id` — must exist in the scenario's locations (or be `null`).
 - Every value in `inventory_ids` and the `equipment` slots must exist in the scenario's items.
 

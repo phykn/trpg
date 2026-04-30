@@ -1,6 +1,6 @@
 """Regression: /roll on a `combat_roll` pending check must run end-to-end.
 
-The combat_roll arm of `_resolve_combat_roll` reaches `sigmoid_required_roll`
+The combat_roll arm of `_resolve_combat_roll` reaches `compute_required_roll`
 through `compute_grade`'s third arg. A previous version forgot to import
 that name from `..rules.dc` — the live combat path then NameError'd the
 moment a pending combat roll resolved. No end-to-end test exercised the arm,
@@ -77,3 +77,25 @@ async def test_combat_roll_resolves_without_nameerror(combat_roll_state, tmp_dat
     types = [e["type"] for e in events]
     assert "log_entry" in types  # the d20 roll was recorded
     assert combat_roll_state.pending_check is None  # combat_roll cleared after resolution
+
+
+async def test_one_roll_kill_records_victim_in_turn_log(combat_roll_state, tmp_data):
+    """One-roll combat kills must push victim id to turn_log so corpses survive
+    the player walking off-screen. Without this, _corpses_payload's off_screen
+    branch never fires for one-roll kills and narrate hallucinates the dead
+    NPC speaking again from recent_dialogue."""
+    async for _ in run_roll(
+        client=None,
+        state=combat_roll_state,
+        profile_dir="<unused>",
+        saves_dir=tmp_data,
+        rng=random.Random(5),  # first d20 = 20 (critical_success → kill all)
+    ):
+        pass
+
+    goblin = combat_roll_state.characters["goblin_01"]
+    assert not goblin.alive  # precondition for the regression
+    victim_targets = [e.target for e in combat_roll_state.turn_log]
+    assert "goblin_01" in victim_targets, (
+        f"turn_log missing dead NPC id; got targets={victim_targets!r}"
+    )

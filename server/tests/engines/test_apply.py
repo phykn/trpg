@@ -9,7 +9,8 @@ from src.domain.entities import (
     QuestTrigger,
     Stats,
 )
-from src.engines.apply import apply_changes
+from src.engines.apply import apply_changes, apply_combat_affinity_drop
+from src.rules import RULES
 
 
 @pytest.fixture
@@ -277,6 +278,37 @@ def test_affinity_grade_intent_matrix(state):
         ],
     )
     assert state.characters["player_01"].relations["guard_01"] == 100
+
+
+def test_combat_affinity_drop_bidirectional(state):
+    """Combat actions never reach narrate; the engine deducts on both sides
+    (attacker→target, target→attacker) so trade blocks (npc→player) and
+    social_bonus (player→npc) both react to a hostile act."""
+    drop = RULES.social.combat_affinity_drop
+    apply_combat_affinity_drop(state, "player_01", "guard_01")
+    assert state.characters["player_01"].relations["guard_01"] == -drop
+    assert state.characters["guard_01"].relations["player_01"] == -drop
+
+
+def test_combat_affinity_drop_clamps_at_floor(state):
+    state.characters["player_01"].relations["guard_01"] = -95
+    state.characters["guard_01"].relations["player_01"] = -95
+    apply_combat_affinity_drop(state, "player_01", "guard_01")
+    assert state.characters["player_01"].relations["guard_01"] == -100
+    assert state.characters["guard_01"].relations["player_01"] == -100
+
+
+def test_combat_affinity_drop_self_target_noop(state):
+    """Self-buff funneled here by mistake must not deduct affinity-to-self."""
+    apply_combat_affinity_drop(state, "player_01", "player_01")
+    assert state.characters["player_01"].relations.get("player_01", 0) == 0
+
+
+def test_combat_affinity_drop_marks_dirty(state):
+    dirty: set[tuple[str, str]] = set()
+    apply_combat_affinity_drop(state, "player_01", "guard_01", dirty=dirty)
+    assert ("characters", "player_01") in dirty
+    assert ("characters", "guard_01") in dirty
 
 
 def test_partial_success_keeps_valid_changes(state):

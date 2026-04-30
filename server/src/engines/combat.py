@@ -23,7 +23,7 @@ from ..domain.entities import (
 from ..domain.types import Grade, StatKey
 from ..rules import RULES
 from ..domain.state import CombatState, GameState
-from ..rules.dc import compute_grade, sigmoid_required_roll
+from ..rules.dc import compute_grade, compute_required_roll
 
 
 # --- Common ------------------------------------------------------------------
@@ -141,7 +141,7 @@ def attack(
     mod = stat_modifier(stat_value)
     nat = r.randint(1, 20)
     total = nat + mod
-    req = sigmoid_required_roll(defense, stat_value)
+    req = compute_required_roll(defense, stat_value)
     grade = compute_grade(nat, total, req)
     damage = _damage_for_grade(weapon, mod, grade, r)
     return AttackOutcome(

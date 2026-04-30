@@ -20,10 +20,10 @@
 
 ```
 enemy_defense = 10 + Σ(armor_effect.defense for slot in 방어 슬롯)
-required_roll = round(20 / (1 + e^(-k(enemy_defense - player_stat))))
+required_roll = max(1, min(20, enemy_defense - stat_modifier(player_stat)))
 ```
 
-- 적의 방어도 합 + 공격자 스탯의 차이를 시그모이드로 눌러 굴려야 할 d20 값을 정한다. 계수 `k` 는 [02-runtime.md](./02-runtime.md) §5.1 의 `rules.difficulty_class.sigmoid` 에서 튜닝.
+- 적의 방어도에서 공격자의 stat_modifier 만큼 빼서 굴려야 할 d20 값을 정한다 — D&D 5e 식 단순 보정. 자세한 식은 [02-runtime.md](./02-runtime.md) §5.1.
 - 굴림 결과 등급 (critical_success / success / partial_success / failure / critical_failure) 이 **기계적 결과** (몇 명을 사살하는지, 플레이어가 얼마나 다치는지, XP 가 얼마 들어오는지, downed 상태로 떨어지는지) 를 결정.
 - 어떤 스탯을 쓸지는 무기로 갈린다 — 사거리 1.5m 이하 근접 무기는 STR, 그보다 멀면 DEX.
 - 무기 없는 맨손은 `UNARMED_DAMAGE="1d4"`, `UNARMED_RANGE=1.5` 폴백.

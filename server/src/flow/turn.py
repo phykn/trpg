@@ -49,7 +49,7 @@ from .dirty import (
 from .judge import run_judge
 from .narrate import apply_intended_move, consume_narrate, run_narrate
 from .rest import run_rest
-from .subject import refresh_active_subject
+from .subject import reconcile_subject_after_move, refresh_active_subject
 
 
 async def run_turn(
@@ -311,6 +311,7 @@ async def _stream_narrate_tail(
     if isinstance(action, PassAction):
         target_for_log = action.targets[0] if action.targets else None
         apply_intended_move(state, action.model_dump(), dirty.entities)
+        reconcile_subject_after_move(state)
     else:
         target_for_log = None
 

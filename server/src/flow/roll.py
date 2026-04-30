@@ -30,6 +30,7 @@ from .dirty import (
     push_act,
     push_gm,
     push_log_entry,
+    register_kill,
 )
 from .format import (
     format_combat_end_text,
@@ -159,6 +160,7 @@ async def _resolve_death_save(
         yield push_act(state, dirty, f"{player.name}{i_ga(player.name)} 의식을 되찾았습니다.")
     elif status == "dead":
         state.pending_check = None
+        register_kill(state, state.player_id, dirty)
         yield push_act(state, dirty, f"{player.name}{i_ga(player.name)} 숨을 거두었습니다.")
     else:
         # progress — re-arm the dice prompt

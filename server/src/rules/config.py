@@ -6,7 +6,6 @@ class _F(BaseModel):
 
 
 class DifficultyClass(_F):
-    sigmoid_k: float = 0.5
     critical_hit_threshold: int = 20
     critical_miss_threshold: int = 1
     tier_dc_ranges: dict[str, tuple[int, int]] = {
@@ -27,6 +26,17 @@ class Social(_F):
     affinity_failure: int = -3
     affinity_critical: int = 10
     trade_threshold: int = 0
+    # Engine-side bidirectional affinity drop applied per attack / offensive
+    # skill cast. Combat actions never reach narrate, so the LLM can't emit
+    # the matching `affinity` change — the engine deducts it directly on both
+    # sides (attacker→target, target→attacker), clamped at -100.
+    combat_affinity_drop: int = 20
+    # Disposition.aggressive at or above this blocks the NPC from appearing
+    # as a merchant regardless of `relations[player]`. Without this, hostile
+    # seeds (bandits with aggressive=85, wolves with 90) that happen to carry
+    # equipment in their inventory would surface as merchants on first sight,
+    # because the default empty `relations` dict reads as a neutral 0.
+    hostile_aggressive_threshold: int = 70
 
 
 class MemoryConfig(_F):

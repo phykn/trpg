@@ -32,8 +32,8 @@ from ..domain.types import Grade
 from ..engines import combat as combat_engine
 from ..engines.growth import award_kill_xp
 from ..rules.config import RULES
-from ..rules.dc import sigmoid_required_roll, tier_mid_dc
-from .dirty import Dirty
+from ..rules.dc import compute_required_roll, tier_mid_dc
+from .dirty import Dirty, register_kill
 
 
 # --- Outcome report --------------------------------------------------------
@@ -126,7 +126,7 @@ def arm_combat_roll_pending(
     dc = tier_mid_dc(tier)
     primary = target_ids[0] if target_ids else state.player_id
     actor = state.characters[state.player_id]
-    required_roll = sigmoid_required_roll(dc, getattr(actor.stats, "STR"))
+    required_roll = compute_required_roll(dc, getattr(actor.stats, "STR"))
     state.pending_check = PendingCheck(
         player_input=player_input,
         kind="combat_roll",
@@ -188,6 +188,8 @@ def apply_combat_outcome(
                 state, tid, damage, dirty=dirty.entities,
             )
             killed = not enemy.alive
+            if killed:
+                register_kill(state, tid, dirty)
             xp = (
                 award_kill_xp(state, state.player_id, tid, dirty=dirty.entities)
                 if killed else 0
@@ -213,6 +215,8 @@ def apply_combat_outcome(
         combat_engine.apply_attack_to_defender(
             state, player.id, player_damage, dirty=dirty.entities,
         )
+        if not player.alive:
+            register_kill(state, player.id, dirty)
     report.player_damage = player_damage
     report.player_hp_after = player.hp
     report.player_max_hp = player.max_hp

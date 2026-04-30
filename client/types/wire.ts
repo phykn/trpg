@@ -17,6 +17,7 @@ export type ProfileCard = {
 export type PlayerInput = {
   name: string;
   race_id: string;
+  gender: 'male' | 'female';
 };
 
 export type InitRequest = {

@@ -208,14 +208,14 @@ async def test_init_game_happy_path(tmp_data):
     _write_minimal_seed(profile_dir)
     state = await init_game(
         "default",
-        PlayerInput(name="테스터", race_id="human"),
+        PlayerInput(name="테스터", race_id="human", gender="female"),
         saves_dir,
         str(profile_dir),
     )
     assert state.profile == "default"
     assert state.player_id == "player_01"
     p = state.characters["player_01"]
-    assert p.name == "테스터" and p.race_id == "human"
+    assert p.name == "테스터" and p.race_id == "human" and p.gender == "female"
     assert p.stats.STR == 10 and p.max_hp == 20  # level 0 formula
     assert read_current_game_id(saves_dir) == state.game_id
 
@@ -238,7 +238,7 @@ async def test_init_game_unknown_profile(tmp_data):
     with pytest.raises(ProfileNotFound):
         await init_game(
             "missing",
-            PlayerInput(name="x", race_id="human"),
+            PlayerInput(name="x", race_id="human", gender="male"),
             tmp_data,
             str(profile_dir),
         )
@@ -250,7 +250,7 @@ async def test_init_game_unknown_race(tmp_data):
     with pytest.raises(RaceNotFound):
         await init_game(
             "default",
-            PlayerInput(name="x", race_id="dragon"),
+            PlayerInput(name="x", race_id="dragon", gender="male"),
             tmp_data,
             str(profile_dir),
         )

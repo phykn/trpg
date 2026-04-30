@@ -66,6 +66,7 @@ def _build_npc_view(
             "name": npc.name,
             "description": npc.description or None,
             "appearance": npc.appearance or None,
+            "gender": npc.gender if npc.gender != "none" else None,
             "tone_hint": npc.tone_hint or None,
             "disposition": {
                 "lawful": npc.disposition.lawful,

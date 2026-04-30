@@ -82,6 +82,7 @@ def _make_character(
         appearance=out.appearance,
         tone_hint=out.tone_hint,
         race_id=out.race_id,
+        gender=out.gender,
         location_id=location_id,
         stats=stats,
         level=level,

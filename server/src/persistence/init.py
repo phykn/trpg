@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Type, TypeVar
+from typing import Literal, Type, TypeVar
 
 from pydantic import BaseModel
 
@@ -34,6 +34,7 @@ T = TypeVar("T", bound=BaseModel)
 class PlayerInput(BaseModel):
     name: str
     race_id: str
+    gender: Literal["male", "female"]
 
 
 def _read_json(path: Path) -> dict:
@@ -103,6 +104,7 @@ async def init_game(
         name=player.name,
         is_player=True,
         race_id=player.race_id,
+        gender=player.gender,
         stats=stats,
         location_id=location_id,
         equipment=template_equipment,

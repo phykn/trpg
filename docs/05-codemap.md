@@ -30,11 +30,11 @@ server/
 
     rules/                       Tunable knobs + pure dice/DC math
       config.py                  frozen RULES (DC tiers, social, memory, log, time, combat, death, recovery, growth, skill, carry, trade, flee). frozen Pydantic — 변경 시 에러
-      dc.py                      sigmoid_required_roll, tier_to_int, pick_dc, compute_grade, social_bonus
+      dc.py                      compute_required_roll, tier_to_int, pick_dc, compute_grade, social_bonus
 
     engines/                     Pure logic — no LLM, no disk I/O
       apply.py                   `state_changes` (set / move / move_item / affinity) 검증·적용 + rejected[] 기록 + character_death/location_enter quest 훅
-      combat.py                  apply_attack_to_defender / 명중·데미지 (sigmoid + crit) / 이니셔티브 / NPC AI (highest_threat 는 combat_state.damage_dealt 누적값) / flee / 사망·revive·death-save / character_death quest 훅 / combat_state 라이프사이클 / surprise / start_combat 양측 companions 자동 합류
+      combat.py                  apply_attack_to_defender / 명중·데미지 (D&D 5e mod + crit) / 이니셔티브 / NPC AI (highest_threat 는 combat_state.damage_dealt 누적값) / flee / 사망·revive·death-save / character_death quest 훅 / combat_state 라이프사이클 / surprise / start_combat 양측 companions 자동 합류
       growth.py                  level_up, xp_for_next_level, recalc_max_hp_mp, grant_xp, award_kill_xp, assert_pair_trade_invariant — 페어 트레이드 (STR↔CHA·DEX↔WIS·CON↔INT)
       skill.py                   cast (level/MP/range 검증, target self/single/area, grade_multipliers), tick_active_buffs, build_skill_from_candidate, compute_cast_grade, existing_skill_ids — attack/debuff 만 d20 굴림
       quest.py                   check_quests (character_death/location_enter/item_use single-fire), fail_triggers, locked→active, gold/exp/items 보상, chapter.progress

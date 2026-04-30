@@ -63,6 +63,24 @@ class ActiveBuff(BaseModel):
     duration: int
 
 
+class SkillCandidate(BaseModel):
+    """LLM-produced learn-candidate (§2.3 step 4) — narrative fields only.
+    Numeric fields (mp_cost / power / range / duration) and id / level are
+    filled by `engines/skill.build_skill_from_candidate`. Lives in domain so
+    `engines/skill` can build a `Skill` from it without importing from
+    `agents/`.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=20)
+    description: str = Field(min_length=1, max_length=120)
+    type: Literal["attack", "heal", "buff", "debuff"]
+    target: Literal["self", "single", "area"]
+    primary_stat: StatKey
+    special_effect: str = Field(min_length=1, max_length=120)
+
+
 # --- equipment / connection ------------------------------------------------
 
 
@@ -188,6 +206,7 @@ class Character(BaseModel):
     role: str = ""
     race_id: str
     job: str = ""
+    gender: Literal["male", "female", "none"] = "none"
     level: int = Field(default=0, ge=0, le=20)
 
     stats: Stats = Stats()

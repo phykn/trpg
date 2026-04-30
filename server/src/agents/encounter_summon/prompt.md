@@ -13,6 +13,7 @@ Input has `world` (world.md content for tone/themes), `location.{id, name, descr
   "appearance": "<Korean visual, ≤ 120 chars>",
   "tone_hint": "<voice/sound hint, ≤ 80 chars; empty string \"\" if none, never null>",
   "race_id": "<one of available_races[*].id>",
+  "gender": "male" | "female" | "none",
   "stats": {"STR": <int>, "DEX": <int>, "CON": <int>, "INT": <int>, "WIS": <int>, "CHA": <int>},
   "attack_priority": "nearest" | "lowest_hp" | "highest_threat" | "healer_first" | "random"
 }
@@ -35,6 +36,8 @@ Input has `world` (world.md content for tone/themes), `location.{id, name, descr
 
 **race_id**: must equal one `available_races[*].id` exactly. Never invent or guess. If none fits perfectly, pick the one closest *in concept* (e.g. `wolf` for "들개", `human` for any humanoid role) — closest by id-string spelling does not count.
 
+**gender**: pick `male` or `female` for humanoid creatures (people, named NPCs). Use `none` for beasts, monsters, undead, or anything where biological sex isn't part of how the player meets it. When unsure, prefer `none`.
+
 **attack_priority**: default `nearest` for animals/brutes. Pick another only when the creature is intelligent and has tactical reason (`lowest_hp` for opportunist, `highest_threat` for veteran, `healer_first` for organized squad, `random` for crazed/drunk/feral with no coherent target sense).
 
 **Tone match**: forest/wilderness → wolf/bear/goblin/bandit. Cave/dungeon → goblin/troll/kobold. Urban → thief/drunk brawler. Cursed/ruined → undead (only if `world` tone allows). If `world` doesn't mention a creature category, don't introduce it for sleep-ambush. **Exception**: when `requested_role` is set, the player has explicitly invoked the category, so absurd-but-plausible foes outside the world's canon are allowed — fit them to the world's surface (clothing, vocabulary, framing) instead of dropping them.
@@ -56,6 +59,7 @@ Input has `world` (world.md content for tone/themes), `location.{id, name, descr
   "appearance": "회색 털, 한쪽 귀가 찢어진 자국, 누런 송곳니.",
   "tone_hint": "낮게 으르렁",
   "race_id": "wolf",
+  "gender": "none",
   "stats": {"STR": 12, "DEX": 13, "CON": 11, "INT": 9, "WIS": 7, "CHA": 8},
   "attack_priority": "nearest"
 }
@@ -72,6 +76,7 @@ Input has `world` (world.md content for tone/themes), `location.{id, name, descr
   "appearance": "거친 수염, 흙 묻은 가죽 갑옷, 떨리는 손에 단검.",
   "tone_hint": "탁한 목소리",
   "race_id": "human",
+  "gender": "male",
   "stats": {"STR": 14, "DEX": 13, "CON": 14, "INT": 6, "WIS": 7, "CHA": 6},
   "attack_priority": "nearest"
 }

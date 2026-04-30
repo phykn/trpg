@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from .._runner import read_prompt
 from ...domain.errors import LLMUnavailable
 from ...llm.client import LLMClient
+from ...rules.permissions import render_for_prompt
 from .parser import NarrativeDelta, NarrativeFinal, split_stream
 from .schema import NarrateInput
 
@@ -13,7 +14,19 @@ from .schema import NarrateInput
 # nothing usable came out: a stream-transport error or an empty body. Once a
 # body delta has actually been sent, a later transport failure raises rather
 # than retrying (would cause the client to see two bodies).
-_PROMPT = read_prompt(__file__)
+
+
+def _render_prompt() -> str:
+    """Substitute `{{CHAR_FORBIDDEN}}` / `{{ITEM_FORBIDDEN}}` / `{{LOC_FORBIDDEN}}`
+    in prompt.md from the engine's permission matrix so the prompt and
+    `engines/apply.py` can't drift."""
+    text = read_prompt(__file__)
+    for key, value in render_for_prompt().items():
+        text = text.replace("{{" + key + "}}", value)
+    return text
+
+
+_PROMPT = _render_prompt()
 
 _MAX_RETRIES = 5
 

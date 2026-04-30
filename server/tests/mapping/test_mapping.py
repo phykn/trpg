@@ -45,6 +45,7 @@ def _full_state(fresh_state):
         id="player_01",
         name="주인공",
         race_id="human",
+        gender="male",
         job="도적",
         level=2,
         stats=Stats(STR=12, DEX=14, CON=10, INT=10, WIS=11, CHA=13),
@@ -70,6 +71,7 @@ def _full_state(fresh_state):
         id="guard_01",
         name="경비병",
         race_id="human",
+        gender="male",
         job="경비",
         role="마을 경비병",
         appearance="갑옷의 중년",
@@ -114,6 +116,7 @@ def _full_state(fresh_state):
 def test_hero_basic_fields(fresh_state):
     h = to_hero(_full_state(fresh_state))
     assert h["name"] == "주인공" and h["raceJob"] == "인간 도적"
+    assert h["gender"] == "남성"
     assert h["hp"] == 18 and h["hpMax"] == 20
     assert h["stats"][0] == {"label": "근력", "value": 12}
 
@@ -161,6 +164,7 @@ def test_subject_known_filters_by_target_id(fresh_state):
     # appearance + only memories targeting this NPC
     assert s["known"] == ["갑옷의 중년", "뇌물 줘서 통과"]
     assert s["trust"] == 30  # subject → player
+    assert s["gender"] == "남성"
 
 
 def test_subject_dead_known_marked_as_death(fresh_state):
@@ -212,12 +216,19 @@ def test_place_surroundings_carry_blurb_and_difficulty(fresh_state):
     ]
 
 
-def test_place_targets_carry_role_blurb_trust(fresh_state):
+def test_place_targets_carry_meta_blurb_trust(fresh_state):
     state = _full_state(fresh_state)
     state.characters["guard_01"].location_id = "plaza_01"
     p = to_place(state)
     assert p["targets"] == [
-        {"name": "경비병", "role": "마을 경비병", "blurb": "갑옷의 중년", "trust": 30}
+        {
+            "name": "경비병",
+            "level": 0,
+            "raceJob": "인간 경비",
+            "gender": "남성",
+            "blurb": "갑옷의 중년",
+            "trust": 30,
+        }
     ]
 
 
@@ -228,7 +239,14 @@ def test_place_targets_dead_blurb_marked_as_death(fresh_state):
     state.characters["guard_01"].hp = 0
     p = to_place(state)
     assert p["targets"] == [
-        {"name": "경비병", "role": "마을 경비병", "blurb": "죽음", "trust": 30}
+        {
+            "name": "경비병",
+            "level": 0,
+            "raceJob": "인간 경비",
+            "gender": "남성",
+            "blurb": "죽음",
+            "trust": 30,
+        }
     ]
 
 

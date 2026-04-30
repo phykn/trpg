@@ -20,6 +20,12 @@ type GameSnapshot = {
   place: Place | null;
 };
 
+function characterMeta(level: number, raceJob: string, gender: string): string {
+  const parts = [`Lv ${level}`, raceJob];
+  if (gender) parts.push(gender);
+  return parts.join(' · ');
+}
+
 function buildHeroSlot(hero: Hero): PanelSlot {
   const equipped = Object.values(hero.equipment).filter((it): it is EquipItem => it !== null);
   return {
@@ -27,7 +33,7 @@ function buildHeroSlot(hero: Hero): PanelSlot {
     chip: { short: hero.name, dot: hero.canLevelUp },
     panel: {
       title: hero.name,
-      meta: `Lv ${hero.level} · ${hero.raceJob}`,
+      meta: characterMeta(hero.level, hero.raceJob, hero.gender),
       barSplit: [
         { label: 'HP', value: hero.hp, max: hero.hpMax, tone: 'hp', display: `${hero.hp}/${hero.hpMax}` },
         { label: 'MP', value: hero.mp, max: hero.mpMax, tone: 'mp', display: `${hero.mp}/${hero.mpMax}` },
@@ -52,7 +58,7 @@ function buildSubjectSlot(subject: Subject | null): PanelSlot {
     chip: { short: '대상' },
     panel: {
       title: subject.name,
-      meta: `Lv ${subject.level} · ${subject.raceJob}`,
+      meta: characterMeta(subject.level, subject.raceJob, subject.gender),
       barSplit: [
         { label: 'HP', value: subject.hp, max: subject.hpMax, tone: 'hp', display: `${subject.hp}/${subject.hpMax}` },
         {
@@ -136,7 +142,7 @@ function buildPlaceSlot(place: Place | null): PanelSlot {
                 intent: `${t.name}에게 이동`,
                 confirm: {
                   title: t.name,
-                  subtitle: t.role || undefined,
+                  subtitle: characterMeta(t.level, t.raceJob, t.gender),
                   blurb: t.blurb || undefined,
                   trust: t.trust !== 0 ? t.trust : undefined,
                   confirmLabel: '이동',

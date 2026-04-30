@@ -53,11 +53,19 @@ def build_session_layer(state: GameState) -> dict:
     return {"chapter": chapter_data, "day_phase": day_phase(state.turn_count)}
 
 
-def build_history_layer(state: GameState) -> str:
+def build_history_layer(
+    state: GameState, corpses: list[dict] | None = None
+) -> str:
     dialogue_turns = {d.turn for d in state.recent_dialogue}
     summary_entries = [e for e in state.turn_log if e.turn not in dialogue_turns]
 
     blocks: list[str] = []
+
+    if corpses:
+        lines = ["=== 사망 — 다시 등장시키거나 발화시키지 말 것 ==="]
+        for c in corpses:
+            lines.append(f"- {c['name']} (생전 발화가 아래 대화에 남아 있을 수 있으나 더 이상 말하지 않습니다)")
+        blocks.append("\n".join(lines))
 
     if summary_entries:
         lines = ["=== 이전 요약 ==="]

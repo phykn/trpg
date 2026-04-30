@@ -202,6 +202,29 @@ def test_history_layer_dedupes_dialogue_turns(fresh_state):
     assert "플레이어: p" in h
 
 
+def test_history_layer_prepends_corpse_block_before_dialogue(fresh_state):
+    """Dead NPCs whose name still appears in recent_dialogue prose must be
+    flagged as dead in a block that the model reads before the dialogue
+    excerpts — otherwise rich live-speech context drowns the death signal."""
+    fresh_state.recent_dialogue = [
+        DialoguePair(turn=5, player="안녕", narrator="노파가 미소 짓습니다."),
+    ]
+    h = build_history_layer(fresh_state, corpses=[{"id": "hag", "name": "노파"}])
+    assert "사망" in h
+    assert "노파" in h
+    corpse_idx = h.index("사망")
+    dialogue_idx = h.index("최근 대화")
+    assert corpse_idx < dialogue_idx  # corpse signal lands before dialogue prose
+
+
+def test_history_layer_omits_corpse_block_when_empty(fresh_state):
+    fresh_state.recent_dialogue = [
+        DialoguePair(turn=1, player="p", narrator="n"),
+    ]
+    h = build_history_layer(fresh_state, corpses=[])
+    assert "사망" not in h
+
+
 def test_world_layer_reads_md():
     with tempfile.TemporaryDirectory() as tmp:
         pdir = Path(tmp) / "default"
