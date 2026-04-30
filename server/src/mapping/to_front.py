@@ -41,7 +41,7 @@ def _race_job_label(state: GameState, char: Character) -> str:
     """`<race> <job>` if the character has a job, otherwise just `<race>`."""
     r = state.races.get(char.race_id)
     race = r.name if r else char.race_id
-    return f"{race} {char.job}" if char.job else race
+    return f"{race} · {char.job}" if char.job else race
 
 
 def _gender_label(char: Character) -> str:
