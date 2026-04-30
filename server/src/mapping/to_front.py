@@ -119,8 +119,11 @@ def to_subject(state: GameState) -> dict | None:
         return None
     s = state.characters[sid]
     player = state.characters[state.player_id]
-    known = [s.appearance] if s.appearance else []
-    known += [m.content for m in player.memories if m.target_id == sid]
+    if not s.alive:
+        known = ["죽음"]
+    else:
+        known = [s.appearance] if s.appearance else []
+        known += [m.content for m in player.memories if m.target_id == sid]
     skill_ids = (*s.racial_skill_ids, *s.learned_skill_ids)
     skills = [
         state.skills[sid_].name for sid_ in skill_ids if sid_ in state.skills
@@ -156,11 +159,7 @@ def to_quest(state: GameState) -> dict | None:
         "title": q.title,
         "summary": q.summary,
         "giver": giver.name if giver else q.giver_id,
-        "difficulty": {
-            "value": tier_to_int(q.difficulty),
-            "max": 7,
-            "label": q.difficulty,
-        },
+        "difficulty": q.difficulty,
         "goals": [t.name for t in q.triggers],
         "conditions": list(q.conditions),
         "rewards": {"gold": q.rewards.gold, "exp": q.rewards.exp},
@@ -187,12 +186,13 @@ def to_place(state: GameState) -> dict | None:
         })
     targets = []
     for cid, c in state.characters.items():
-        if cid == state.player_id or c.location_id != p.location_id or not c.alive:
+        if cid == state.player_id or c.location_id != p.location_id:
             continue
+        blurb = "죽음" if not c.alive else (c.appearance or c.description)
         targets.append({
             "name": c.name,
             "role": c.role,
-            "blurb": c.appearance or c.description,
+            "blurb": blurb,
             "trust": c.relations.get(state.player_id, 0),
         })
     return {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, View, Text, Pressable } from 'react-native';
 import { StatRow, InlineParts, InlineNodes, LabeledRow, Row, ExpandGroup } from '@/components/ui';
+import { toneColor } from '@/design/tokens';
 import type { Panel, PanelAction, PanelActions } from '@/types/ui';
 
 function ActionScroller({ group, onAction }: {
@@ -48,7 +49,8 @@ export function PanelBody({ panel, onAction }: { panel: Panel; onAction?: (actio
           <View className="flex-1 min-w-0">
             <Text
               numberOfLines={1}
-              className="font-sans text-caption text-fg-muted italic text-right"
+              className={`font-sans text-caption italic text-right ${panel.metaTone ? 'font-sans-semibold' : 'text-fg-muted'}`}
+              style={panel.metaTone ? { color: toneColor[panel.metaTone] } : undefined}
             >
               {panel.meta}
             </Text>

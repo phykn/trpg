@@ -60,6 +60,7 @@ export type PanelActions = {
 export type Panel = {
   title: string;
   meta?: string;
+  metaTone?: Tone;
   bar?: BarDef;
   barSplit?: (BarDef | PartsCell)[];
   sections?: PanelSection[];

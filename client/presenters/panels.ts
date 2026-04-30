@@ -1,7 +1,17 @@
 import type { EquipItem, Hero, Place, Quest, Subject } from '@/types/domain';
-import type { PanelSlot } from '@/types/ui';
+import type { PanelSlot, Tone } from '@/types/ui';
 
 import { joinInventoryOrDash, joinOrDash } from './format';
+
+const TIER_TONE: Record<string, Tone | undefined> = {
+  '매우 쉬움': 'neutral',
+  '쉬움': 'good',
+  '보통': undefined,
+  '어려움': 'exp',
+  '매우 어려움': 'accent',
+  '전설': 'bad',
+  '신화': 'bad',
+};
 
 type GameSnapshot = {
   hero: Hero;
@@ -72,18 +82,11 @@ function buildQuestSlot(quest: Quest | null): PanelSlot {
     panel: quest
       ? {
           title: quest.title,
-          meta: quest.giver,
-          barSplit: [
-            { label: '난이도', value: quest.difficulty.value, max: quest.difficulty.max, tone: 'bad', display: quest.difficulty.label },
-            {
-              label: '보상',
-              parts: [
-                { label: '금', text: `${quest.rewards.gold}`, tone: 'accent' },
-                { label: '경', text: `${quest.rewards.exp}`, tone: 'exp' },
-              ],
-            },
-          ],
+          meta: quest.difficulty,
+          metaTone: TIER_TONE[quest.difficulty],
           sections: [
+            { label: '의뢰', text: quest.giver },
+            { label: '보상', nodes: [['GOLD', quest.rewards.gold], ['EXP', quest.rewards.exp]] },
             { label: '목표', text: joinOrDash(quest.goals) },
             { label: '조건', text: joinOrDash(quest.conditions) },
             { label: '요약', text: quest.summary, clampLines: 3 },
@@ -108,7 +111,7 @@ function buildPlaceSlot(place: Place | null): PanelSlot {
     panel: place
       ? {
           title: place.name,
-          meta: joinOrDash(place.weather),
+          meta: place.weather.length > 0 ? place.weather.join(' · ') : undefined,
           sections: [
             { label: '모습', text: place.description || '—', clampLines: 3 },
           ],

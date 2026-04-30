@@ -58,7 +58,7 @@ export function Composer({ input, setInput, onSend, onStop, focused, streaming }
 
   return (
     <View
-      className={`mx-5 mt-1.5 bg-canvas-subtle rounded-md p-2 border ${borderClass}`}
+      className={`mx-5 mt-1.5 bg-canvas-subtle rounded-md p-2 border flex-row items-end gap-2 ${borderClass}`}
       style={shadow.paper}
     >
       <TextInput
@@ -70,16 +70,15 @@ export function Composer({ input, setInput, onSend, onStop, focused, streaming }
         returnKeyType="send"
         multiline
         submitBehavior="blurAndSubmit"
-        className="font-sans text-title px-2 pt-2 text-fg-default"
-        style={{ paddingBottom: 6, maxHeight: 140 }}
+        textAlignVertical="center"
+        className="flex-1 font-sans text-title px-2 text-fg-default"
+        style={{ paddingTop: 6, paddingBottom: 6, minHeight: 32, maxHeight: 140 }}
       />
-      <View className="flex-row items-center justify-end gap-2 px-1 pt-1">
-        {streaming ? (
-          <StopButton onPress={onStop} />
-        ) : (
-          <SendButton enabled={hasText} onPress={submit} />
-        )}
-      </View>
+      {streaming ? (
+        <StopButton onPress={onStop} />
+      ) : (
+        <SendButton enabled={hasText} onPress={submit} />
+      )}
     </View>
   );
 }

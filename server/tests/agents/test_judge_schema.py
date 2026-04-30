@@ -232,6 +232,63 @@ def test_combat_rejects_item_as_target():
         check_semantics(_combat_action("shrine_stone"), sur)
 
 
+def test_pass_accepts_corpse_id_target():
+    """Addressing a corpse routes through pass + target_view (dead-marker).
+    Without this, the corpse rule had to use targets=[] which left narrate
+    with no explicit identity to anchor — the LLM degraded to alive-NPC-0
+    fallback ('받을 사람이 보이지 않는다') instead of corpse-tone prose."""
+    sur = {
+        "location": {"id": "plaza_01"},
+        "entities": [{"id": "player_01", "name": "p", "type": "player"}],
+        "corpses": [{"id": "old_woman_01", "name": "노파"}],
+    }
+    p = output_adapter.validate_json(
+        json.dumps(
+            {"action": "pass", "targets": ["old_woman_01"]}, ensure_ascii=False
+        )
+    )
+    check_semantics(p, sur)
+
+
+def test_pass_rejects_corpse_id_when_not_present():
+    sur = {
+        "location": {"id": "plaza_01"},
+        "entities": [{"id": "player_01", "name": "p", "type": "player"}],
+        "corpses": [],
+    }
+    p = output_adapter.validate_json(
+        json.dumps(
+            {"action": "pass", "targets": ["ghost_id"]}, ensure_ascii=False
+        )
+    )
+    with pytest.raises(JudgeSemanticError):
+        check_semantics(p, sur)
+
+
+def test_roll_still_rejects_corpse_id_target():
+    """Corpse ids only unlock for pass. roll/combat/buy/sell on a corpse stays
+    forbidden — you cannot persuade or fight the dead."""
+    sur = {
+        "location": {"id": "plaza_01"},
+        "entities": [{"id": "player_01", "name": "p", "type": "player"}],
+        "corpses": [{"id": "old_woman_01", "name": "노파"}],
+    }
+    r = output_adapter.validate_json(
+        json.dumps(
+            {
+                "action": "roll",
+                "tier": "보통",
+                "stat": "CHA",
+                "targets": ["old_woman_01"],
+                "reason": "설득",
+            },
+            ensure_ascii=False,
+        )
+    )
+    with pytest.raises(JudgeSemanticError):
+        check_semantics(r, sur)
+
+
 def test_chain_recurses_into_parts():
     # Standalone use of a non-existent item is rejected by check_semantics —
     # the same id wrapped in ChainAction.parts must be rejected too. Without

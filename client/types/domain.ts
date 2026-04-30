@@ -58,7 +58,7 @@ export type Subject = {
 export type Quest = {
   title: string;
   giver: string;
-  difficulty: { value: number; max: number; label: string };
+  difficulty: string;
   goals: string[];
   conditions: string[];
   rewards: { gold: number; exp: number };

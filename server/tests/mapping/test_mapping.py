@@ -163,9 +163,17 @@ def test_subject_known_filters_by_target_id(fresh_state):
     assert s["trust"] == 30  # subject → player
 
 
-def test_quest_difficulty_object(fresh_state):
+def test_subject_dead_known_marked_as_death(fresh_state):
+    state = _full_state(fresh_state)
+    state.characters["guard_01"].alive = False
+    state.characters["guard_01"].hp = 0
+    s = to_subject(state)
+    assert s["known"] == ["죽음"]
+
+
+def test_quest_difficulty_label(fresh_state):
     q = to_quest(_full_state(fresh_state))
-    assert q["difficulty"] == {"value": 4, "max": 7, "label": "어려움"}
+    assert q["difficulty"] == "어려움"
     assert q["goals"] == ["처치", "보고"]
     assert q["giver"] == "경비병"
 
@@ -210,6 +218,17 @@ def test_place_targets_carry_role_blurb_trust(fresh_state):
     p = to_place(state)
     assert p["targets"] == [
         {"name": "경비병", "role": "마을 경비병", "blurb": "갑옷의 중년", "trust": 30}
+    ]
+
+
+def test_place_targets_dead_blurb_marked_as_death(fresh_state):
+    state = _full_state(fresh_state)
+    state.characters["guard_01"].location_id = "plaza_01"
+    state.characters["guard_01"].alive = False
+    state.characters["guard_01"].hp = 0
+    p = to_place(state)
+    assert p["targets"] == [
+        {"name": "경비병", "role": "마을 경비병", "blurb": "죽음", "trust": 30}
     ]
 
 

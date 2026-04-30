@@ -21,8 +21,7 @@ from ..domain.state import GameState
 def _is_active_npc(state: GameState, cid: str) -> bool:
     if cid == state.player_id:
         return False
-    ch = state.characters.get(cid)
-    return ch is not None and ch.alive
+    return cid in state.characters
 
 
 def _candidate_from_action(state: GameState, action) -> str | None:
@@ -46,15 +45,13 @@ def refresh_active_subject(state: GameState, result) -> None:
     narrate-path actions (pass/reject) we fall back to recent_npc, which
     captures whoever the previous narrate turn was about.
     """
-    # If the current subject just died, drop it first so a turn that produces
-    # no fresh engagement signal (idle pass) doesn't keep the corpse pinned in
-    # the Subject panel — which is where the player picks up the dead-NPC name
-    # to mention again on the next turn.
+    # Only drop the pinned subject if the character was deleted from state
+    # (shouldn't happen in current flow, but defensive). Death itself keeps
+    # the pin — the Subject panel renders it as 죽음 so the player still has
+    # the corpse's identity on screen.
     cur = state.active_subject_id
-    if cur is not None:
-        cur_ch = state.characters.get(cur)
-        if cur_ch is None or not cur_ch.alive:
-            state.active_subject_id = None
+    if cur is not None and cur not in state.characters:
+        state.active_subject_id = None
 
     if isinstance(result, SummonCombatAction):
         # active_subject will be set when the summoned character is registered.
