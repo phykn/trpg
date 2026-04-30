@@ -1,21 +1,21 @@
 # Race fragment
 
-## 스키마
+## Schema
 
 ```json
 {
   "id": "<ASCII snake_case>",
-  "name": "<한국어 종족명>",
-  "description": "<한국어 한두 문장>",
+  "name": "<Korean race name>",
+  "description": "<Korean, one or two sentences>",
   "racial_skill_ids": ["<skill id>", ...]
 }
 ```
 
-## 규칙
+## Rules
 
-- `name` — "인간" / "엘프" / "드워프" 식 한 단어 또는 짧은 명사구.
-- `description` — 한두 문장. 종족의 신체·기질·역할 (예: "땅 밑 산에서 자란 단단한 종족. 망치질과 광맥에 능하다.").
-- `racial_skill_ids` — 0~2 개. 이 race 의 모든 캐릭터가 공유하는 타고난 능력의 id 들.
-  - **인간** 같은 평범한 종족은 비워라 (`[]`).
-  - **드래곤·엘프·드워프** 같은 컨셉이 분명한 종족은 1~2 개 지정한다 — id 는 별도 `skill` 단계에서 만들어질 Skill 의 id 와 일치해야 한다.
-- 기존 race 와 의미·역할이 중복되면 안 된다 (이미 "장수하는 지혜의 종족" 이 있으면 비슷한 컨셉 X).
+- `name` — a single Korean word or short noun phrase, e.g. "인간" / "엘프" / "드워프".
+- `description` — one or two Korean sentences covering the race's body, temperament, and role (e.g., "땅 밑 산에서 자란 단단한 종족. 망치질과 광맥에 능하다.").
+- `racial_skill_ids` — 0 to 2 ids. The innate skills shared by every character of this race.
+  - For ordinary races (e.g., humans), leave it empty (`[]`).
+  - For races with a clear concept (dragons, elves, dwarves, etc.), specify 1 or 2 ids — they must match the ids of Skills authored in the separate `skill` step.
+- Do not duplicate the meaning or role of an existing race (e.g., if "long-lived sage race" already exists, do not author another with the same concept).
