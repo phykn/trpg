@@ -44,6 +44,18 @@ from .format import format_use_log
 from .skill_recommend import recommend_skill_candidates
 
 
+# --- helpers ---------------------------------------------------------------
+
+
+def _item_name(state: GameState, item_id: str) -> str:
+    item = state.items.get(item_id)
+    return item.name if item else item_id
+
+
+def _fail_text(actor_name: str, attempt: str, e: Exception) -> str:
+    return f"{actor_name}{i_ga(actor_name)} {attempt} {humanize_engine_error(e)}."
+
+
 # --- silent combat effect helpers (used by auto-combat sim) ----------------
 
 
@@ -149,7 +161,7 @@ async def emit_equip(
         slot = inventory_engine.auto_equip_slot(actor, item)
         inventory_engine.equip(actor, item_id, slot, state.items)
     except InventoryInvalid as e:
-        yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 「{item_name}」{eul_reul(item_name)} 장비하려 했지만 {humanize_engine_error(e)}.")
+        yield push_act(state, dirty, _fail_text(actor.name, f"「{item_name}」{eul_reul(item_name)} 장비하려 했지만", e))
         return
     dirty.entities.add(("characters", actor_id))
     yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 「{item_name}」{eul_reul(item_name)} 장비했습니다.")
@@ -162,12 +174,11 @@ async def emit_unequip(
     dirty: Dirty,
 ) -> AsyncIterator[dict]:
     actor = state.characters[actor_id]
-    item = state.items.get(item_id)
-    item_name = item.name if item else item_id
+    item_name = _item_name(state, item_id)
     try:
         slot = inventory_engine.unequip_by_item(actor, item_id)
     except InventoryInvalid as e:
-        yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 「{item_name}」{eul_reul(item_name)} 해제하려 했지만 {humanize_engine_error(e)}.")
+        yield push_act(state, dirty, _fail_text(actor.name, f"「{item_name}」{eul_reul(item_name)} 해제하려 했지만", e))
         return
     if slot is None:
         text = f"{actor.name}{eun_neun(actor.name)} 「{item_name}」{eul_reul(item_name)} 장비하고 있지 않습니다."
@@ -191,16 +202,14 @@ async def emit_use(
             actor, item_id, target, state, dirty=dirty.entities
         )
     except InventoryInvalid as e:
-        item = state.items.get(item_id)
-        item_name = item.name if item else item_id
-        yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 「{item_name}」{eul_reul(item_name)} 쓰려 했지만 {humanize_engine_error(e)}.")
+        item_name = _item_name(state, item_id)
+        yield push_act(state, dirty, _fail_text(actor.name, f"「{item_name}」{eul_reul(item_name)} 쓰려 했지만", e))
         return
     check_quests(state, "item_use", item_id, dirty.entities)
     yield push_act(state, dirty, format_use_log(state, actor_id, result))
     if target is not None:
-        item = state.items.get(item_id)
-        iname = item.name if item else item_id
-        push_turn_log(state, target.id, f"{iname}{eul_reul(iname)} {target.name}에게 사용", dirty)
+        item_name = _item_name(state, item_id)
+        push_turn_log(state, target.id, f"{item_name}{eul_reul(item_name)} {target.name}에게 사용", dirty)
 
 
 # --- growth / trade --------------------------------------------------------
@@ -218,7 +227,7 @@ async def emit_level_up(
     try:
         level_up_engine(actor, stat_up, stat_down)  # type: ignore[arg-type]
     except LevelUpInvalid as e:
-        yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 레벨업하려 했지만 {humanize_engine_error(e)}.")
+        yield push_act(state, dirty, _fail_text(actor.name, "레벨업하려 했지만", e))
         return
     violations = check_character(actor)
     if violations:
@@ -283,18 +292,17 @@ async def emit_trade(
         else:
             price = inventory_engine.sell(player, npc, item_id, state.items)
     except InventoryInvalid as e:
-        yield push_act(state, dirty, f"{player.name}{i_ga(player.name)} 거래를 시도했지만 {humanize_engine_error(e)}.")
+        yield push_act(state, dirty, _fail_text(player.name, "거래를 시도했지만", e))
         return
     dirty.entities.add(("characters", actor_id))
     dirty.entities.add(("characters", npc.id))
-    item = state.items.get(item_id)
-    iname = item.name if item else item_id
+    item_name = _item_name(state, item_id)
     if direction == "buy":
-        text = f"{player.name}{i_ga(player.name)} {npc.name}에게서 「{iname}」{eul_reul(iname)} {price} 금화에 샀습니다."
+        text = f"{player.name}{i_ga(player.name)} {npc.name}에게서 「{item_name}」{eul_reul(item_name)} {price} 금화에 샀습니다."
     else:
-        text = f"{player.name}{i_ga(player.name)} {npc.name}에게 「{iname}」{eul_reul(iname)} {price} 금화에 팔았습니다."
+        text = f"{player.name}{i_ga(player.name)} {npc.name}에게 「{item_name}」{eul_reul(item_name)} {price} 금화에 팔았습니다."
     yield push_act(state, dirty, text)
-    push_turn_log(state, npc.id, f"{npc.name}에게 「{iname}」 {'구매' if direction == 'buy' else '판매'}", dirty)
+    push_turn_log(state, npc.id, f"{npc.name}에게 「{item_name}」 {'구매' if direction == 'buy' else '판매'}", dirty)
 
 
 # --- pending roll ----------------------------------------------------------
