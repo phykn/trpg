@@ -404,9 +404,7 @@ _TRIGGER_POOL_NAME = {
 }
 
 
-def _check_prereq_status(
-    items: dict, where_prefix: str, kind_label: str
-) -> list[str]:
+def _check_prereq_status(items: dict, where_prefix: str) -> list[str]:
     """Active items must have all prerequisites completed."""
     out: list[str] = []
     for iid, item in items.items():
@@ -462,14 +460,14 @@ def _check_prereq_cycles(items: dict, kind_label: str) -> list[str]:
 
 def check_quest_graph(s: Scenario) -> list[str]:
     return (
-        _check_prereq_status(s.quests, "quests", "quest")
+        _check_prereq_status(s.quests, "quests")
         + _check_prereq_cycles(s.quests, "quest")
     )
 
 
 def check_chapter_graph(s: Scenario) -> list[str]:
     return (
-        _check_prereq_status(s.chapters, "chapters", "chapter")
+        _check_prereq_status(s.chapters, "chapters")
         + _check_prereq_cycles(s.chapters, "chapter")
     )
 
