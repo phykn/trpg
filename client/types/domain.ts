@@ -108,16 +108,16 @@ export type CombatBadge = {
 };
 
 export type PendingCheck = {
-  kind: 'stat' | 'death_save' | 'combat_roll';
+  kind: 'stat';
   dc: number;
   stat: string;
   stat_label: string;
-  stat_value: number | null;
+  stat_value: number;
   mod: number;
   required_roll: number;
   tier: { value: number; max: number; label: string };
   target: string;
-  reason: string | null;
+  reason: string;
 };
 
 export type FrontState = {

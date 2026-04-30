@@ -26,7 +26,7 @@ class DialoguePair(BaseModel):
 
 class PendingCheck(BaseModel):
     player_input: str
-    kind: Literal["stat", "death_save", "combat_roll"] = "stat"
+    kind: Literal["stat"] = "stat"
     tier: Tier
     stat: StatKey
     target: str

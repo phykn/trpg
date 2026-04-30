@@ -98,7 +98,8 @@ async def test_flee_in_combat_succeeds_ends_combat(fresh_state, tmp_data, monkey
 
 
 async def test_flee_in_combat_fails_npc_phase_runs(fresh_state, tmp_data, monkeypatch):
-    """On flee failure: turn consumed + NPC turn proceeds + combat continues."""
+    """On flee failure: turn consumed, the auto-sim continues with the player
+    falling back to basic attacks, and a flee combat_turn event is recorded."""
     state = _seed_player(fresh_state)
     enemy = Character(
         id="goblin_01", name="고블린", race_id="human", stats=Stats(),
@@ -121,7 +122,14 @@ async def test_flee_in_combat_fails_npc_phase_runs(fresh_state, tmp_data, monkey
         if e["type"] == "combat_turn" and e["data"].get("action") == "flee"
     ]
     assert flee_evs and flee_evs[0]["data"]["grade"] == "failure"
-    assert state.combat_state is not None  # combat still ongoing
+    # NPC took at least one turn — at minimum a non-flee combat_turn event from
+    # the goblin should appear in the trace.
+    npc_evs = [
+        e for e in events
+        if e["type"] == "combat_turn"
+        and e["data"].get("actor") == "goblin_01"
+    ]
+    assert npc_evs
 
 
 async def test_flee_outside_combat_no_op(fresh_state, tmp_data, monkeypatch):

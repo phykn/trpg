@@ -27,7 +27,7 @@ export function NewGame({ onSubmit }: Props) {
 
   const [profileId, setProfileId] = React.useState<string | null>(null);
   const [raceId, setRaceId] = React.useState<string | null>(null);
-  const [gender, setGender] = React.useState<'male' | 'female' | null>(null);
+  const [gender, setGender] = React.useState<'male' | 'female'>('male');
   const [name, setName] = React.useState('주인공');
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -53,10 +53,10 @@ export function NewGame({ onSubmit }: Props) {
   const races = selectedProfile?.races ?? [];
 
   const trimmedName = name.trim();
-  const canSubmit = !!profileId && !!raceId && !!gender && !!trimmedName && !submitting;
+  const canSubmit = !!profileId && !!raceId && !!trimmedName && !submitting;
 
   const submit = async () => {
-    if (!canSubmit || !profileId || !raceId || !gender) return;
+    if (!canSubmit || !profileId || !raceId) return;
     Keyboard.dismiss();
     setSubmitting(true);
     await onSubmit({
@@ -137,6 +137,7 @@ export function NewGame({ onSubmit }: Props) {
               title="남성"
               selected={gender === 'male'}
               onPress={() => setGender('male')}
+              dense
             />
           </View>
           <View className="flex-1">
@@ -144,6 +145,7 @@ export function NewGame({ onSubmit }: Props) {
               title="여성"
               selected={gender === 'female'}
               onPress={() => setGender('female')}
+              dense
             />
           </View>
         </View>

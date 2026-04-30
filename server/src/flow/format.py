@@ -4,20 +4,9 @@ Pure functions — no state mutation, no SSE, no I/O. Anything that returns a
 string for a log entry lives here.
 """
 from ..domain.state import GameState
-from ..engines.combat import AttackOutcome
-from ..mapping.josa import eul_reul, i_ga
 
 
-# --- Labels and grade helpers ----------------------------------------------
-
-
-GRADE_LABEL: dict[str, str] = {
-    "critical_success": "치명타",
-    "success": "명중",
-    "partial_success": "겨우 명중",
-    "failure": "빗나감",
-    "critical_failure": "대실패",
-}
+# --- Grade helpers ----------------------------------------------------------
 
 
 def front_grade(grade: str) -> str:
@@ -28,45 +17,6 @@ def front_grade(grade: str) -> str:
     return "fail"
 
 
-# --- GM log line builders --------------------------------------------------
-
-
-def format_attack_log(
-    state: GameState,
-    attacker_id: str,
-    target_id: str,
-    outcome: AttackOutcome,
-    apply_result: dict | None,
-) -> str:
-    attacker = state.characters[attacker_id]
-    target = state.characters[target_id]
-    grade_label = GRADE_LABEL[outcome.grade]
-    if outcome.damage > 0:
-        head = (
-            f"{attacker.name}{i_ga(attacker.name)} {target.name}에게 "
-            f"{outcome.damage} 피해를 입혔습니다 ({grade_label}, 굴림 {outcome.nat_d20})."
-        )
-    elif outcome.grade == "critical_failure":
-        head = (
-            f"{attacker.name}{i_ga(attacker.name)} 공격을 시도했으나 "
-            f"크게 빗나갔습니다 (대실패, 굴림 {outcome.nat_d20})."
-        )
-    else:
-        head = (
-            f"{attacker.name}{i_ga(attacker.name)} {target.name}{eul_reul(target.name)} "
-            f"노렸으나 빗나갔습니다 (굴림 {outcome.nat_d20})."
-        )
-    if apply_result is None:
-        return head
-    if apply_result.get("revived"):
-        return f"{head} {target.name}{i_ga(target.name)} 부활 코인을 써서 HP를 회복했습니다."
-    if apply_result.get("dead"):
-        return f"{head} {target.name}{i_ga(target.name)} 쓰러졌습니다."
-    if apply_result.get("dying"):
-        return f"{head} {target.name}{i_ga(target.name)} 의식을 잃었습니다."
-    return head
-
-
 def format_combat_end_text(outcome: str) -> str:
     if outcome == "victory":
         return "전투 종료 — 적을 모두 제압했습니다."
@@ -75,34 +25,7 @@ def format_combat_end_text(outcome: str) -> str:
     return "전투 종료 — 도주."
 
 
-def format_skill_log(
-    state: GameState,
-    actor_id: str,
-    cast_result: dict,
-    grade: str = "success",
-) -> str:
-    actor_name = state.characters[actor_id].name
-    skill_name = cast_result["skill_name"]
-    grade_label = GRADE_LABEL.get(grade, "")
-    head_grade = f" ({grade_label})" if grade_label and grade != "success" else ""
-    parts: list[str] = [f"{actor_name} — 「{skill_name}」 발동{head_grade}"]
-    for eff in cast_result["effects"]:
-        tid = eff["target"]
-        tname = state.characters[tid].name if tid in state.characters else tid
-        kind = eff["kind"]
-        if kind == "attack":
-            dmg = eff.get("damage", 0)
-            tail = f" ({tname} 쓰러짐)" if eff.get("dead") else ""
-            parts.append(f"{tname} {dmg} 데미지{tail}")
-        elif kind == "heal":
-            parts.append(f"{tname} {eff.get('healed', 0)} 회복")
-        elif kind in ("buff", "debuff"):
-            buff = eff.get("buff", {})
-            parts.append(
-                f"{tname} 효과 부여 "
-                f"({buff.get('description', '')}, {buff.get('duration', 0)} 턴)"
-            )
-    return " — ".join(parts)
+# --- GM log line builders --------------------------------------------------
 
 
 def format_use_log(state: GameState, actor_id: str, result: dict) -> str:

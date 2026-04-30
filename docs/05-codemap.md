@@ -65,16 +65,16 @@ server/
     flow/                        한 턴의 orchestration. SSE 이벤트 발행
       dirty.py                   Dirty 컨테이너 (entities/log/history/dialogue) + push_log_entry / push_turn_log / push_dialogue / next_log_id / flush / finalize
       clock.py                   tick_turn_buffs — 턴 경계에서 active_buff duration -1 (시계 산수는 없고 buff tick 만). 옛 이름 advance_turn → tick_turn_buffs
-      format.py                  로그 줄 builders (format_attack_log / format_skill_log / format_use_log / format_combat_end_text) + GRADE_LABEL / front_grade. 시네마틱 후행 정산은 combat_oneshot.format_combat_outcome_text 가 자체 발행 ([03-features.md](./03-features.md) §1.6)
+      format.py                  로그 줄 builders (format_use_log / format_combat_end_text) + front_grade. 시네마틱 후행 정산은 combat_auto.format_outcome_summary 가 자체 발행 ([03-features.md](./03-features.md) §1.2)
       error_phrases.py           humanize_engine_error — 영문 엔진 에러 (`InventoryInvalid` / `LevelUpInvalid` / `SkillInvalid` 등) 를 한국어 한 줄 GM phrase 로 번역. 단일 substring 테이블, 폴백 `"지금은 그 행동이 통하지 않는다"`
-      actions.py                 emit_attack / emit_skill_cast / emit_use / emit_equip / emit_unequip / emit_level_up / emit_learn_skill / emit_trade / emit_roll_pending. 엔진 검증 실패 (DomainError) 를 catch 해서 humanize_engine_error 로 한국어 한 줄 변환 후 GM log 로 흘림
+      actions.py                 apply_attack_action / apply_skill_action (combat_auto sim 용 silent 헬퍼 — 부수효과만 적용, SSE/log 없음) + emit_use / emit_equip / emit_unequip / emit_level_up / emit_learn_skill / emit_trade / emit_roll_pending. 엔진 검증 실패 (DomainError) 를 catch 해서 humanize_engine_error 로 한국어 한 줄 변환 후 GM log 로 흘림
       subject.py                 refresh_active_subject — combat / roll / trade / 최근 대화 NPC 로 active_subject_id 동기화. corpse-aware: 죽은 NPC 도 pin 으로 살아남아 narrate anchor 유지
-      combat_oneshot.py          arm_combat_roll_pending / 한 방 시네마틱 전투 해결 ([03-features.md](./03-features.md) §1) / format_combat_outcome_text — combat_narrate 호출, 등급 → 결과 매핑 (사살·HP 데미지·XP·downed) + 시네마틱 본문 뒤로 적별 데미지·잔여 HP·처치 XP·플레이어 피해·굴림 XP 정산을 GM 로그로 후행 발행
-      combat_phase.py            start_combat_and_run_npc_phase / surprise 첫 라운드 처리 / death-save 분기. 시네마틱과 협업하는 부수 단계 (전투 진입·종료 SSE 발사 등). engines/combat 의 advance_turn 은 NPC 라운드용 별도 함수 — flow/clock 의 tick_turn_buffs 와 다름
+      combat_auto.py             run_auto_combat — 자동 사이클 (terminal outcome 까지 결판, HARD_CAP=50 안전장치) 시뮬: PlayerAction 매 라운드 반복 + NPC pick_npc_target AI + flee/death-save 자동 처리. AutoCombatResult 에 events + turn_events + outcome (victory/defeat/fled/downed) + per-enemy hit + player damage. build_narrate_input / format_outcome_summary 로 cinematic input + numeric act_line 산출. cap 파라미터는 ambush (cap=1) 전용 ([03-features.md](./03-features.md) §1)
+      combat_phase.py            run_combat_player_turn (in-combat /turn dispatch) + start_combat_and_drive_auto (rest ambush + /turn CombatAction 진입) + _drive_auto_combat (sim → cinematic stream → numeric → combat_end SSE). 자동 모드 전용 — manual round 분기는 없음
       rest.py                    run_rest — recovery 호출 + summon 콜백 wiring
-      turn.py                    run_turn 입구 — combat 활성이면 combat_phase 로 라우팅, 아니면 15개 action 분기 (chain 은 sequential dispatch)
+      turn.py                    run_turn 입구 — combat 활성이면 combat_phase.run_combat_player_turn 로 라우팅, 아니면 15개 action 분기 (chain 은 sequential dispatch). CombatAction/SummonCombatAction 은 _enter_combat_and_finalize 로 자동 사이클 진입
       intro.py                   run_intro — 게임 시작 시 첫 GM narration. judge 안 부르고 narrate 만
-      roll.py                    run_roll — pending_check.kind 분기 (stat / combat_roll / death_save) 해소 후 SSE 발사
+      roll.py                    run_roll — stat 굴림 해소 후 SSE 발사. 전투 중이면 굴림 후 자동 사이클 cap=1 로 NPC 1 라운드 추가 진행
       judge.py                   run_judge wrapper — JudgeMalformed / JudgeSemanticError → location roll 폴백
       narrate.py                 run_narrate wrapper — context layers + ontology target_view 합성
       memory_writer.py           narrate output.memory + memory_links → 캐릭터 memory 누적

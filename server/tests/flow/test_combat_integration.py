@@ -1,10 +1,14 @@
-"""S3 — turn.run_turn combat-routing integration. Only judge is mocked; no LLM call."""
+"""S3 — turn.run_turn combat-routing integration. Auto-mode only.
+
+A CombatAction triggers start_combat + an auto-sim cycle inside the same
+/turn — there is no `pending_check` dice button. Only judge is mocked; no
+LLM call (client=None skips the cinematic narrate stream)."""
 import random
 import tempfile
 
 import pytest
 
-from src.domain.entities import Character, CombatBehavior, Equipment, Stats
+from src.domain.entities import Character, CombatBehavior, Stats
 from src.agents.dc_judge.schema import (
     CombatAction,
     PassAction,
@@ -13,7 +17,6 @@ from src.flow import judge as judge_mod
 from src.flow import combat_phase as combat_phase_mod
 from src.flow import turn as turn_mod
 from src.flow.turn import run_turn
-from src.domain.state import GameState
 
 
 @pytest.fixture
@@ -47,7 +50,6 @@ def combat_state(fresh_state, tmp_data):
     )
     fresh_state.characters["player_01"] = player
     fresh_state.characters["goblin_01"] = goblin
-    # Mild workaround so save_full creates the game dir on demand: rather than prepping the directory manually, let turn flow create it on first _flush.
     return fresh_state
 
 
@@ -63,11 +65,10 @@ async def _collect(it):
     return [ev async for ev in it]
 
 
-async def test_combat_arms_one_roll_pending(
+async def test_combat_starts_and_runs_auto_sim(
     combat_state, tmp_data, monkeypatch
 ):
-    """A fresh combat input arms a `combat_roll` pending_check — combat is
-    resolved as a single d20 roll on /roll, not round-by-round on /turn."""
+    """A fresh combat input triggers combat_start + auto-sim — no pending_check."""
     _judge_returns(monkeypatch, CombatAction(action="combat", targets=["goblin_01"]))
     rng = random.Random(123)
     events = await _collect(
@@ -82,12 +83,11 @@ async def test_combat_arms_one_roll_pending(
     )
 
     types = [e["type"] for e in events]
-    assert "pending_check" in types
-    assert combat_state.pending_check is not None
-    assert combat_state.pending_check.kind == "combat_roll"
-    assert combat_state.pending_check.targets == ["goblin_01"]
-    # combat_state should NOT be set — one-roll combat uses pending only.
-    assert combat_state.combat_state is None
+    assert "combat_start" in types
+    assert combat_state.pending_check is None
+    # Goblin took some damage or died
+    g = combat_state.characters["goblin_01"]
+    assert g.hp < 8 or not g.alive
 
 
 async def test_combat_with_invalid_target_does_not_consume_turn(
@@ -144,17 +144,15 @@ async def test_combat_with_self_target_does_not_consume_turn(
     assert combat_state.turn_count == turn_before
 
 
-async def test_combat_player_attack_drops_affinity_bidirectional(combat_state, tmp_data, monkeypatch):
+async def test_combat_player_attack_drops_affinity_bidirectional(
+    combat_state, tmp_data, monkeypatch
+):
     """Attacking an NPC must drop affinity on both sides — combat never reaches
     narrate, so without the engine-side hook trade/social_bonus would still
     treat the target as neutral. Regression for the hole where attacks left
     relations untouched."""
-    from src.engines import combat as combat_engine
     from src.rules import RULES
 
-    combat_engine.start_combat(combat_state, ["goblin_01"], rng=random.Random(0))
-    combat_state.combat_state.turn_order = ["player_01", "goblin_01"]
-    combat_state.combat_state.current_turn = 0
     combat_state.characters["player_01"].relations["goblin_01"] = 0
     combat_state.characters["goblin_01"].relations["player_01"] = 0
 
@@ -174,39 +172,16 @@ async def test_combat_player_attack_drops_affinity_bidirectional(combat_state, t
     assert combat_state.characters["goblin_01"].relations["player_01"] <= -drop
 
 
-async def test_combat_player_attack_advances_round(combat_state, tmp_data, monkeypatch):
-    """combat_state active and on the player's turn. CombatAction → damage applied."""
-    # boot combat first
-    from src.engines import combat as combat_engine
-    combat_engine.start_combat(combat_state, ["goblin_01"], rng=random.Random(0))
-    # adjust turn_order so the run stops on the player's turn
-    combat_state.combat_state.turn_order = ["player_01", "goblin_01"]
-    combat_state.combat_state.current_turn = 0
-
-    _judge_returns(monkeypatch, CombatAction(action="combat", targets=["goblin_01"]))
-    rng = random.Random(7)
-    goblin_hp_before = combat_state.characters["goblin_01"].hp
-    await _collect(
-        run_turn(
-            client=None,
-            state=combat_state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
-            player_input="공격",
-            rng=rng,
-        )
-    )
-    # goblin took damage or died
-    g = combat_state.characters["goblin_01"]
-    assert g.hp < goblin_hp_before or not g.alive
-
-
-async def test_combat_pass_action_consumes_player_turn(combat_state, tmp_data, monkeypatch):
+async def test_combat_pass_action_runs_auto_sim_round(
+    combat_state, tmp_data, monkeypatch
+):
+    """In-combat PassAction → auto-sim runs at least one round (player passes,
+    NPC takes its turn). combat_state ends up either cleared (decisive
+    outcome) or still set with rounds advanced."""
     from src.engines import combat as combat_engine
     combat_engine.start_combat(combat_state, ["goblin_01"], rng=random.Random(0))
     combat_state.combat_state.turn_order = ["player_01", "goblin_01"]
     combat_state.combat_state.current_turn = 0
-    round_before = combat_state.combat_state.round
 
     _judge_returns(monkeypatch, PassAction(action="pass"))
     rng = random.Random(2)
@@ -220,25 +195,24 @@ async def test_combat_pass_action_consumes_player_turn(combat_state, tmp_data, m
             rng=rng,
         )
     )
-    # pass + 1 npc turn → round should advance by at least 1 (one full loop back to the player)
-    assert combat_state.combat_state is None or combat_state.combat_state.round >= round_before
+    # Numeric outcome summary is pushed regardless of cinematic
     types = [e["type"] for e in events]
-    # pass is also recorded as a combat_turn event
-    assert "combat_turn" in types
+    assert "log_entry" in types  # judge log + player log + maybe summary act_line
 
 
 async def test_start_combat_raises_when_already_in_combat(
     combat_state, tmp_data, monkeypatch
 ):
     # /turn routes through run_combat_player_turn whenever combat_state is
-    # set, so reaching start_combat_and_run_npc_phase with a live combat
+    # set, so reaching start_combat_and_drive_auto with a live combat
     # already pinned means the state machine is broken (some path forgot to
     # call end_combat). Fail loud — silently re-using the stale combat_state
     # with brand-new enemy_ids would mask the bug.
     import pytest
     from src.domain.errors import CombatStateInvalid
     from src.engines import combat as combat_engine
-    from src.flow.combat_phase import start_combat_and_run_npc_phase
+    from src.flow.combat_auto import PlayerAction
+    from src.flow.combat_phase import start_combat_and_drive_auto
     from src.flow.dirty import Dirty
 
     combat_engine.start_combat(combat_state, ["goblin_01"], rng=random.Random(0))
@@ -248,8 +222,10 @@ async def test_start_combat_raises_when_already_in_combat(
     dirty = Dirty()
     with pytest.raises(CombatStateInvalid):
         await _collect(
-            start_combat_and_run_npc_phase(
-                combat_state, ["goblin_01"], dirty, rng=random.Random(1)
+            start_combat_and_drive_auto(
+                client=None, state=combat_state, profile_dir="<unused>",
+                enemy_ids=["goblin_01"], dirty=dirty, rng=random.Random(1),
+                player_input="공격", player_action=PlayerAction(kind="attack", targets=["goblin_01"]),
             )
         )
 
@@ -257,16 +233,12 @@ async def test_start_combat_raises_when_already_in_combat(
 async def test_combat_ends_when_enemy_dies_from_player_attack(
     combat_state, tmp_data, monkeypatch
 ):
-    """Drop goblin hp to 1 so it dies in one hit → combat_end victory emitted."""
-    from src.engines import combat as combat_engine
+    """Drop goblin hp to 1 so it dies in one hit → combat_end victory emitted
+    and combat_state cleared."""
     combat_state.characters["goblin_01"].hp = 1
     combat_state.characters["goblin_01"].max_hp = 1
-    combat_engine.start_combat(combat_state, ["goblin_01"], rng=random.Random(0))
-    combat_state.combat_state.turn_order = ["player_01", "goblin_01"]
-    combat_state.combat_state.current_turn = 0
 
     _judge_returns(monkeypatch, CombatAction(action="combat", targets=["goblin_01"]))
-    # Hit + damage virtually guaranteed: STR 14 (mod +2) + sword 1d8 + nat 15 → damage ≥ 1
     rng = random.Random(99)
     events = await _collect(
         run_turn(

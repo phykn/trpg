@@ -168,12 +168,12 @@ async def test_combat_use_consumes_player_turn(fresh_state, tmp_data, monkeypatc
             rng=random.Random(0),
         )
     )
-    types = [e["type"] for e in events]
     use_evs = [
         e for e in events
         if e["type"] == "combat_turn" and e["data"].get("action") == "use"
     ]
     assert use_evs
-    # Heal applied + inventory decremented
-    assert state.characters["player_01"].hp >= 5  # the NPC may also have hit back
+    # Auto-cycle ran to terminal outcome → combat_state cleared.
+    assert state.combat_state is None
+    # Potion consumed (heal effect applied even though NPC kept hitting back).
     assert "potion" not in state.characters["player_01"].inventory_ids

@@ -251,23 +251,15 @@ def to_combat(state: GameState) -> dict | None:
 
 def pending_check_to_front(state: GameState, pending: PendingCheck) -> dict:
     """`stat_label` is the Korean stat name (built here so the client doesn't
-    re-derive it). `stat_value` is the player's score on that stat — null for
-    death saves where the stat field is set to a placeholder (CON) and
-    irrelevant to display. `reason` is shown verbatim above the dice strip;
-    only the stat-roll branch carries a player-readable Korean phrase
-    (death_save uses the placeholder "죽음 굴림", combat_roll stuffs a
-    skill_id), so we surface it for stat only and null the rest."""
-    if pending.kind == "death_save":
-        stat_value = None
-    else:
-        actor = state.characters[state.player_id]
-        stat_value = getattr(actor.stats, pending.stat)
+    re-derive it). `stat_value` is the player's current score on that stat.
+    `reason` is shown verbatim above the dice strip."""
+    actor = state.characters[state.player_id]
     return {
         "kind": pending.kind,
         "dc": pending.dc,
         "stat": pending.stat,
         "stat_label": stat_label(pending.stat),
-        "stat_value": stat_value,
+        "stat_value": getattr(actor.stats, pending.stat),
         "mod": pending.mod,
         "required_roll": pending.required_roll,
         "tier": {
@@ -276,7 +268,7 @@ def pending_check_to_front(state: GameState, pending: PendingCheck) -> dict:
             "label": pending.tier,
         },
         "target": pending.target,
-        "reason": pending.reason if pending.kind == "stat" else None,
+        "reason": pending.reason,
     }
 
 

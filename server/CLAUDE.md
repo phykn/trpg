@@ -9,7 +9,7 @@ User-facing setup is in [README.md](./README.md); design intent starts at `../do
 ```
 src/
   api/         FastAPI surface — routes/, auth.py, sse.py, schema.py, deps.py. Glue only, no business logic.
-  flow/        Turn orchestration. turn.py / roll.py / intro.py are the entrypoints (each yields an AsyncIterator[dict] of SSE events). The rest are helpers: combat_oneshot, combat_phase, encounter, rest, judge, narrate, memory_writer, actions, subject, dirty, format, skill_recommend.
+  flow/        Turn orchestration. turn.py / roll.py / intro.py are the entrypoints (each yields an AsyncIterator[dict] of SSE events). The rest are helpers: combat_auto, combat_phase, encounter, rest, judge, narrate, memory_writer, actions, subject, dirty, format, skill_recommend.
   agents/      LLM agents — one dir per agent (dc_judge, narrate, combat_narrate, encounter_summon, skill_recommend), each with prompt.md / schema.py / runner.py. _runner.py is the shared retry-and-self-correct loop.
   llm/         OpenAI-compatible transport (client.py). Agents wrap chat_stream with their own schemas.
   engines/     Pure rule engines: apply (state_changes), combat, growth, inventory/, quest, recovery, skill, invariants. No LLM, no IO.
@@ -54,7 +54,7 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q     # add live tests; needs BASE_URL re
 
 ## Prose voice
 
-All player-facing Korean text — narrate / combat_narrate bodies, the deterministic `잠시 정적이 흐릅니다` fallback in `flow/narrate.py`, every engine-side log line built in `flow/format.py` · `flow/error_phrases.py` · `flow/actions.py` · `flow/combat_phase.py` · `flow/turn.py` · `flow/roll.py` · `mapping/to_front.py` — uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings. Plain `-다` form has been retired from output. The narrate prompt also bans the `박-` root in any form (active, passive, nominal, or physical sense — see `agents/narrate/prompt.md`).
+All player-facing Korean text — narrate / combat_narrate bodies, the deterministic `잠시 정적이 흐릅니다` fallback in `flow/narrate.py`, every engine-side log line built in `flow/format.py` · `flow/error_phrases.py` · `flow/actions.py` · `flow/combat_phase.py` · `flow/turn.py` · `flow/roll.py` · `mapping/to_front.py` — uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings. Plain `-다` form has been retired from output.
 
 The canonical user-facing term for skills is **기술**. The dc_judge prompt accepts `스킬` as a synonym from player input, but every other prompt and engine string says `기술`. Code identifiers and the `skills/` entity directory keep the English `skill`.
 

@@ -18,6 +18,7 @@ from ..context import (
     build_session_layer,
     build_surroundings,
     build_world_layer,
+    redact_dead_quotes,
 )
 from .dirty import (
     Dirty,
@@ -228,6 +229,15 @@ async def consume_narrate(
         body = "잠시 정적이 흐릅니다."
         yield {"type": "narrative_delta", "data": {"text": body}}
 
+    # Strip any direct-quote block attributed to a dead NPC before persisting.
+    # Streaming has already emitted the unredacted body to the client, but the
+    # `state` event at finalize clears the streaming buffer and the log_entry
+    # below carries the redacted text — so the user-visible record and what
+    # next turn's history layer reads are both clean. Without this, a single
+    # LLM slip ("X가 말합니다. 「…」" where X is dead) compounds: it lands in
+    # recent_dialogue and the next narrate call mimics the pattern.
+    body = redact_dead_quotes(body, _dead_names_in_scope(state))
+
     yield {"type": "suggestions", "data": {"items": list(final.output.suggestions)}}
 
     apply_changes(state, final.output.state_changes, dirty.entities)
@@ -237,3 +247,33 @@ async def consume_narrate(
     write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
     gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=body)
     push_log_entry(state, gm_log, dirty)
+
+
+def _dead_names_in_scope(state: GameState) -> list[str]:
+    """Names of dead NPCs the narrate prompt can see — same scope as
+    `_corpses_payload`: same-location bodies plus history-referenced
+    off-screen ones via `turn_log.target`. Used by `consume_narrate` to
+    decide which names trigger quote redaction in the persisted body.
+    """
+    actor = state.characters.get(state.player_id)
+    if actor is None:
+        return []
+    seen: set[str] = set()
+    names: list[str] = []
+    for cid, ch in state.characters.items():
+        if cid == actor.id or ch.alive:
+            continue
+        if ch.location_id != actor.location_id:
+            continue
+        names.append(ch.name)
+        seen.add(cid)
+    for entry in state.turn_log:
+        tid = entry.target
+        if tid is None or tid == actor.id or tid in seen:
+            continue
+        ch = state.characters.get(tid)
+        if ch is None or ch.alive:
+            continue
+        names.append(ch.name)
+        seen.add(tid)
+    return names

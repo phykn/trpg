@@ -8,7 +8,8 @@ from ..engines import recovery as recovery_engine
 from ..llm.client import LLMClient
 from ..mapping.to_front import rest_ambush_text, rest_completed_text
 from . import encounter as encounter_engine
-from .combat_phase import start_combat_and_run_npc_phase
+from .combat_auto import PlayerAction
+from .combat_phase import start_combat_and_drive_auto
 from .clock import tick_turn_buffs
 from .dirty import Dirty, ToFrontFn, finalize, push_act
 
@@ -43,8 +44,12 @@ async def run_rest(
 
     if outcome == "encounter":
         yield push_act(state, dirty, rest_ambush_text(actor.name))
-        async for ev in start_combat_and_run_npc_phase(
-            state, enemy_ids, dirty, rng, surprise="enemy"
+        async for ev in start_combat_and_drive_auto(
+            client, state, profile_dir, enemy_ids, dirty, rng,
+            player_input="잠들기 직전 적의 습격에 대비합니다",
+            player_action=PlayerAction(kind="pass"),
+            surprise="enemy",
+            cap=1,
         ):
             yield ev
         tick_turn_buffs(state, dirty)

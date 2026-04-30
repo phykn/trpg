@@ -10,106 +10,74 @@
 
 ## 1. 전투 [P2]
 
-> 전투는 **한 d20 굴림으로 끝내는 시네마틱**이다. 라운드를 돌리지 않는다. 플레이어가 `{action: "combat"}` (또는 `summon_combat`/`flee`) 로 들어오면 엔진이 `PendingCheck(kind="combat_roll")` 을 무장하고 스트림을 닫는다. 프론트가 주사위 버튼을 띄우고 플레이어가 누르면 `/roll` 한 번에 전투 전체가 해결되며, `combat_narrate` 에이전트가 5–10 문장 시네마틱으로 결과를 풀어 쓴다.
+> 전투는 **자동 시뮬 한 사이클**로 진행된다. 플레이어가 `{action: "combat"}` (또는 `summon_combat` / `flee` / `pass`) 으로 들어오면 엔진이 `combat_state` 를 띄우고 그 자리에서 결판이 날 때까지 라운드를 자동으로 돌린다 — 양쪽 모두 자동, 플레이어는 첫 입력의 행동 (skill 또는 평타) 을 매 라운드 반복하고 NPC 는 `combat_behavior` AI 가 결정. 사이클이 끝나면 `combat_narrate` 에이전트가 events 전체를 받아 3–5 문장 시네마틱으로 풀어 쓴다. 플레이어가 매 라운드마다 끊고 입력하는 manual round 모드는 없고, 사이클이 도중에 멈추는 일도 없다 — 무조건 terminal outcome (victory / defeat / fled / downed) 까지 간다.
 >
-> 라운드 루프 (이니셔티브로 행동 순서 정하고 매 라운드 명중·데미지를 따로 굴리는 방식) 는 한 전투가 너무 늘어져 페이스가 끊겼다. 한 방으로 합치고 LLM 이 등급별 톤으로 살리는 쪽으로 정리. 다만 한 d20 굴림은 남겨 둔다 — 굴림이 outcome 을 *먼저* 잡아주지 않으면 모든 전투가 비슷한 무게로 흐르고 wish fulfillment 가 된다. 자세한 결정 이유는 [01-overview.md](./01-overview.md) §3.15, 룰을 두는 메타-thesis 는 §3.17.
+> 사이클 도중 플레이어가 0 HP 가 되면 `engines/combat.tick_death_save` 가 같은 sim 안에서 stable / dead 까지 자동 굴려 결판낸다 — dice 버튼은 더 이상 등장하지 않는다. `combat_auto.HARD_CAP` (기본 50) 은 코드 안전장치 — 양쪽이 결판을 못 내는 stalemate 가 길게 이어지면 `fled` 로 강제 종료해 상태 머신이 깔끔히 닫히게 한다. 실제 전투에서 발동할 일은 거의 없음.
+>
+> 라운드 루프를 돌리되 한 입력 = 한 사이클로 묶고 cinematic 을 모아 출력하는 게 핵심 — 무기 dice·스탯·기술·적 AI 같은 룰의 깊이를 살리면서도 플레이어가 매 라운드 끊기지 않는 페이스를 만든다. 자세한 결정 이유는 [01-overview.md](./01-overview.md) §3.15, 룰을 두는 메타-thesis 는 §3.17.
 
-### 1.1 한 방 굴림 — DC 와 등급
+### 1.1 자동 사이클 — 라운드 시뮬
 
-`/roll` 이 `kind="combat_roll"` PendingCheck 를 만나면 한 d20 + STR (또는 DEX) 만 굴린다.
+`flow/combat_auto.run_auto_combat` 가 양쪽 라운드를 모두 돌린다.
 
-```
-enemy_defense = 10 + Σ(armor_effect.defense for slot in 방어 슬롯)
-required_roll = max(1, min(20, enemy_defense - stat_modifier(player_stat)))
-```
+- **이니셔티브**: `roll_initiative` 로 d20 + DEX_mod 를 굴려 `turn_order` 결정. 매 라운드 같은 순서로 진행.
+- **공격 굴림**: 라운드별 actor 마다 `engines/combat.attack` 이 d20 + stat_modifier vs `enemy_defense` 로 명중·등급 결정. weapon dice + stat_mod 로 데미지. 어떤 스탯을 쓸지는 무기로 갈림 — 사거리 1.5m 이하 근접 무기는 STR, 그보다 멀면 DEX. 무기 없는 맨손은 `UNARMED_DAMAGE="1d4"`, `UNARMED_RANGE=1.5` 폴백.
+- **방어도**: `enemy_defense = 10 + Σ(armor_effect.defense for slot in 방어 슬롯)`. 합산 슬롯은 `head / top / bottom / feet` 4 개 + accessory (방패·방어 링).
+- **range 단위는 미터 (실수)**. 같은 location 안의 추상적 거리. 다른 location 의 적은 사거리 밖이라 combat 액션 자체가 막힘. 같은 단위가 §2.6 기술 cast 의 사정거리 검증에도 쓰임.
+- **플레이어 행동 반복**: 첫 입력의 행동 (`PlayerAction.kind ∈ {attack, skill, pass, flee}`) 을 매 라운드 반복. skill cast 는 매 라운드 MP/level 검증을 통과하면 그 skill 로, 부족하면 평타로 폴백. `pass` / `flee` 는 라운드 1 만 적용되고 라운드 2+ 는 평타로 폴백. `use` / `equip` / `unequip` 같은 passive 액션은 라운드 1 에 한 번 실행되고 라운드 2+ 는 평타로 진행 (사이클 자체는 결판까지 감).
+- **NPC AI**: `pick_npc_target` 가 `combat_behavior.attack_priority` (`nearest` / `lowest_hp` / `highest_threat` / `healer_first` / `random`) 와 가중치 모드 (`nearest_weight`, `random_weight`) 로 타겟 선택. `highest_threat` 의 위협 지표는 `combat_state.damage_dealt` 누적값. NPC 도 `should_attempt_flee` / `try_flee` 로 자체 도주 가능.
+- **종료 조건**: `check_combat_end` 가 매 actor 행동 후 victory (적 전원 처치/도주) / defeat (플레이어 사망) 검사. 모든 사이클은 terminal outcome 까지 간다 — 도중에 멈추지 않는다.
 
-- 적의 방어도에서 공격자의 stat_modifier 만큼 빼서 굴려야 할 d20 값을 정한다 — D&D 5e 식 단순 보정. 자세한 식은 [02-runtime.md](./02-runtime.md) §5.1.
-- 굴림 결과 등급 (critical_success / success / partial_success / failure / critical_failure) 이 **기계적 결과** (몇 명을 사살하는지, 플레이어가 얼마나 다치는지, XP 가 얼마 들어오는지, downed 상태로 떨어지는지) 를 결정.
-- 어떤 스탯을 쓸지는 무기로 갈린다 — 사거리 1.5m 이하 근접 무기는 STR, 그보다 멀면 DEX.
-- 무기 없는 맨손은 `UNARMED_DAMAGE="1d4"`, `UNARMED_RANGE=1.5` 폴백.
-- **range 단위는 미터 (실수)**. 같은 location 안의 추상적 거리이고 격자·hex 같은 정밀한 위치 모델은 없다. 다른 location 의 적은 무조건 사거리 밖이라 combat 액션 자체가 막힘. 같은 단위가 §2.6 기술 cast 의 사정거리 검증에도 그대로 쓰인다.
-- 방어도를 합산하는 슬롯은 `head / top / bottom / feet` 4 개. 각 슬롯의 ArmorEffect.defense 를 더한다 (§2.5).
+### 1.2 outcome 결정
 
-라운드 단위 데미지 분포·이니셔티브 같은 정밀도는 포기. 정확도보다 흐름이 중요하다는 결정.
-
-### 1.2 등급 → 결과 매핑
-
-엔진이 한 굴림의 등급을 보고 결과를 산출한다 (`engines/combat.py`). 정확한 계수는 코드 권위:
-
-| grade | 대략의 결과 |
-|---|---|
-| critical_success | 적 전원 사살에 가까움. 플레이어 무피해. 추가 XP. |
-| success | 주 타겟 사살, 잡몹 일부 정리. 플레이어 가벼운 데미지. |
-| partial_success | 주 타겟에 큰 데미지, 사살은 못 함. 플레이어도 데미지. |
-| failure | 적이 살아남고 플레이어가 큰 데미지. HP 0 이면 downed 진입. |
-| critical_failure | 플레이어 즉시 downed 또는 사망. |
-
-(**다회차 굴림이 없으니 옛 양손 공격 / 보조 손 페널티 / 라운드 단위 critical 데미지 같은 D&D 5e 룰은 적용되지 않는다**. 무기 데미지·dual-wield 정보는 등급 → 결과 매핑 안에서 LLM 시네마틱이 활용하는 컨텍스트로만 남음.)
-
-### 1.3 전투 상태 (`combat_state`)
-
-전투가 시작되면 엔진이 메모리에 띄운다. 시네마틱이 한 방에 끝나도 `combat_state` 는 그동안 살아 있어야 한다 — outcome 결정과 SSE `combat_end` 발사용.
-
-```python
-class CombatState:
-    turn_order: list[str]                 # 시드용 (이니셔티브). 시네마틱은 라운드 루프를 안 돌리므로 표면적 의미만
-    current_turn: int = 0
-    round: int = 1
-    surprise: Literal["player", "enemy"] | None = None
-    enemy_ids: list[str]
-    damage_dealt: dict[str, int]          # actor_id → 누적 데미지 (highest_threat AI 용)
-    # 시네마틱 전투 동안 라운드 사이로 보존되는 플레이어 의도 / narrate 컨텍스트
-    player_target_id: str | None = None
-    player_skill_id: str | None = None
-    player_skill_used: bool = False
-    player_intent: str = ""
-    narrate_history: str = ""
-```
-
-종료 시점에 엔진이 `combat_state` 를 지운다.
-
-### 1.4 NPC AI (시드 / 동반자 합류용)
-
-라운드 루프가 없어진 만큼 NPC AI 의 비중도 줄었다. 다만 다음 두 용도로는 살아 있다:
-
-- **동반자 합류** (`engines/combat.start_combat`): 양측 participants 의 companions 를 자동으로 turn_order 에 합류. 진영 (player 측 vs enemy 측) 결정에도 affinity 가 쓰임.
-- **시네마틱 안의 누구를 누가 노렸는지** 결정 (`pick_npc_target`): `combat_behavior` 의 `attack_priority` (`nearest` / `lowest_hp` / `highest_threat` / `healer_first` / `random`) 와 가중치 모드 (`nearest_weight`, `random_weight`) 가 그대로 쓰임. `highest_threat` 의 위협 지표는 `combat_state.damage_dealt` 누적값.
-
-옛 라운드 단위 NPC AI 의 도주·flee 메커닉도 시네마틱 안에서 등급 → outcome 매핑으로 흡수됐다. 룰 자체 (`rules.combat.flee` 의 `dice / base_dc / dex_modifier`) 는 그대로 남아 있고, 플레이어 `flee` 액션이 그 룰로 한 d20 을 굴려 broken_off 결과를 결정한다.
-
-### 1.5 플레이어 사망 / Death Save
-
-`rules.combat.death` 가 사망 처리 룰을 모은다.
-
-- `instant_death: bool = False` — True 면 HP 가 0 이 되는 순간 즉시 사망. NPC·몬스터는 보통 이게 True 로 설정되어 있고, 플레이어는 `revive_coins` 가 먼저 동작한다.
-- `revive_coins: int = 0` — 플레이어 전용 목숨 토큰. 0 보다 크면 HP 가 0 이 돼도 토큰 1 개를 깎고 `max_hp * revive_ratio` (기본 0.5) 만큼 회복하면서 즉시 부활. 토큰을 다 쓴 다음에야 dying / dead 상태로 넘어간다.
-- 토큰이 없고 `instant_death=False` 면 시네마틱이 끝났을 때 플레이어 HP ≤ 0 이면 **`combat_end.outcome="downed"`** 로 발사하고 `death_saves={successes, failures}` 카운터를 할당.
-- 다음 `/turn` 들에서 엔진이 자동으로 `PendingCheck(kind="death_save")` 을 무장 — 프론트의 같은 주사위 버튼을 누르면 `/roll` 이 d20 을 굴리고 `≥ save_dc` (기본 10) 면 성공, 미만이면 실패. 성공 3 회 → 안정화 (HP=1). 실패 3 회 → 사망. 도중에 새 데미지가 들어오면 실패 카운트 +1, critical_failure 면 +2.
-- D&D 5e 의 **nat-20 자동 1HP 회복** (death save 굴림이 자연 20 이면 즉시 살아남) 은 도입하지 않는다. 부활 통로는 `revive_coins` 토큰으로 일원화.
-
-### 1.6 전투 종료 — outcome
-
-시네마틱 끝의 `combat_end.outcome` 은 5 종:
+자동 사이클의 마지막 outcome 은 4 종:
 
 | outcome | 의미 |
 |---|---|
-| `victory` | 적 전원 무력화. |
-| `defeat` | 플레이어가 즉시 사망 처리 (revive_coins 0 + critical_failure 등). |
-| `fled` | 플레이어가 `flee` 액션으로 무사히 빠져나옴. |
-| `downed` | 플레이어 HP 0, death save 단계 진입. 다음 `/turn` 부터 자동 `PendingCheck(kind="death_save")`. |
-| `broken_off` | 도주 / 흐름 단절로 전투가 깔끔히 끝나지 않은 상태 (적이 그냥 자리를 떠났거나 환경적 이유). |
+| `victory` | 적 전원 무력화 또는 도주. |
+| `defeat` | 플레이어 사망 (death_save dead 포함). |
+| `fled` | 플레이어 `flee` 시도 성공 (또는 HARD_CAP 안전장치 발동). |
+| `downed` | 플레이어 0 HP → death_save 자동 굴림 → stable. HP=1 로 회복 후 사이클 종료. |
 
-**outcome breakdown (수치 후행)**: 시네마틱 본문 뒤로 엔진이 한 덩이의 GM 로그 (`flow/combat_oneshot.format_combat_outcome_text`) 를 따로 발행한다 — 적별 데미지·잔여 HP·처치 XP, 플레이어가 받은 피해, 굴림 XP 같은 정량 결과. narrator 가 본문에서 수치를 노출하지 못하는 §1 의 서술 규율을 보완하는 정직한 후행 정산. 프론트는 `gm` 톤 메시지로 그대로 받아 본문 아래에 붙인다.
+모든 outcome 은 `combat_state` 를 정리하고 SSE `combat_end` 를 발사한다.
 
-### 1.7 SSE 신호
+**outcome breakdown (수치 후행)**: 시네마틱 본문 뒤로 엔진이 한 덩이의 act 로그 (`combat_auto.format_outcome_summary`) 를 따로 발행한다 — 적별 누적 데미지·잔여 HP·처치 여부, 플레이어가 받은 누적 피해. narrator 가 본문에서 수치를 노출하지 못하는 서술 규율을 보완하는 정직한 후행 정산. 프론트는 `act` 톤 메시지로 그대로 받아 본문 아래에 붙인다.
 
-`combat_*` 3 종은 [02-runtime.md](./02-runtime.md) §2.4 표에 통합. 옛 라운드 단위 의미는 다음과 같이 바뀜:
+### 1.3 전투 상태 (`combat_state`)
 
-- `combat_start`: 전투 진입 알림. `{turn_order, round, surprise, enemy_ids}` — `turn_order` 와 `round` 는 시드값 표면. UI 에 "전투 시작" 배지를 띄울 신호.
-- `combat_turn`: 시네마틱 안에서 한 actor 의 한 행동 상세 (어디로 누가 어떻게 등). `{actor, action, grade?, damage?, target?, skill_name?}`. UI 는 보통 무시 — 정확한 상태는 `state` 와 `log_entry` 에 실린다. 테스트가 관찰 가능 신호로 사용.
-- `combat_end`: §1.6 의 5 종 outcome.
+전투가 시작되면 엔진이 메모리에 띄우고 사이클 끝에 항상 정리한다. 다음 `/turn` 에는 항상 평시 상태에서 시작한다.
 
-라운드 단위 굴림이 없으므로 `combat_turn` 이 시간 순서대로 매 라운드 발사되는 게 아니라, 한 시네마틱 안의 사건들을 순차로 흘리는 정도로 생각하면 된다.
+```python
+class CombatState:
+    turn_order: list[str]                 # 이니셔티브 순서 (d20 + DEX_mod)
+    current_turn: int = 0
+    round: int = 1                        # 사이클 안에서만 의미
+    surprise: Literal["player", "enemy"] | None = None
+    enemy_ids: list[str]
+    damage_dealt: dict[str, int]          # actor_id → 누적 데미지 (highest_threat AI 용)
+```
+
+### 1.4 플레이어 사망 / Death Save
+
+`rules.combat.death` 가 사망 처리 룰을 모은다.
+
+- `instant_death: bool = False` — True 면 HP 가 0 이 되는 순간 즉시 사망. NPC·몬스터는 보통 이게 True, 플레이어는 `revive_coins` 가 먼저 동작.
+- `revive_coins: int = 0` — 플레이어 전용 목숨 토큰. 0 보다 크면 HP 가 0 이 돼도 토큰 1 개를 깎고 `max_hp * revive_ratio` (기본 0.5) 만큼 회복하며 즉시 부활. 토큰을 다 쓴 다음에야 dying / dead 단계로 넘어간다.
+- 토큰이 없고 `instant_death=False` 면 자동 사이클 안에서 `tick_death_save` 가 stable / dead 까지 d20 을 자동 굴린다 — `≥ save_dc` (기본 10) 면 성공, 미만이면 실패. 성공 3 회 → 안정화 (HP=1, outcome=downed). 실패 3 회 → 사망 (outcome=defeat). 도중에 새 데미지가 들어오면 실패 카운트 +1, critical_failure 면 +2.
+- D&D 5e 의 **nat-20 자동 1HP 회복** 은 도입하지 않는다. 부활 통로는 `revive_coins` 토큰으로 일원화.
+- dice 버튼은 더 이상 death save 용으로도 등장하지 않는다 — 모두 sim 안에서 자동 처리.
+
+### 1.5 ambush (수면 중 기습)
+
+수면 중 인카운터 (§2.4) 는 자동 모드의 유일한 예외 — `surprise=enemy` 로 `combat_state` 를 띄우고 `cap=1` 로 1 라운드만 돈다 (player surprise pass, NPC 만 행동). 그 후 `combat_state` 는 보존된 채 플레이어가 깨어나서 다음 입력으로 사이클을 이어 받는다. 일반 전투는 항상 결판까지 가지만, ambush 는 player 가 의식 없이 깨어나기 직전이라 입력 기회를 한 번 주기 위한 의도된 단절.
+
+### 1.6 SSE 신호
+
+`combat_*` 3 종은 [02-runtime.md](./02-runtime.md) §2.4 표에 통합:
+
+- `combat_start`: 전투 진입 알림. `{turn_order, round, surprise, enemy_ids}` — UI 에 "전투 시작" 배지를 띄울 신호.
+- `combat_turn`: 자동 사이클 안에서 한 actor 의 한 행동 상세. `{actor, action ∈ {attack|skill|miss|pass|flee|use|equip|unequip}, grade?, damage?, killed?, target?, skill_name?, skill_id?, round?}`. UI 는 보통 무시 — 정확한 상태는 `state` 와 `log_entry` 에 실린다. 테스트가 관찰 가능 신호로 사용.
+- `combat_end`: §1.2 의 4 종 outcome 모두 발사. 사이클은 항상 terminal 로 끝난다.
 
 ---
 
@@ -139,7 +107,7 @@ class CombatState:
 
 **시간이 흐르는 경로** — `state.turn_count` 를 늘리는 곳:
 
-- 매 턴 종료 시 `flow/turn.py / roll.py / combat_phase.py / rest.py` 가 진입부에서 `turn_count += 1`. 일반 액션은 1 턴 = 1 phase-tick.
+- 매 턴 종료 시 `flow/turn.py / roll.py / combat_phase.py / rest.py` 가 `turn_count += 1`. 일반 액션은 1 턴 = 1 phase-tick. 자동 전투 사이클도 한 입력 = 1 phase-tick (사이클 안에서 라운드를 N번 돌아도 phase 는 1 만 흐름).
 - 수면(§2.4) 만 점프형: `engines/recovery.py` 의 full recovery 가 `state.turn_count = next_dawn_turn(state.turn_count)` 로 다음 새벽 boundary 까지 한 번에 이동.
 
 **narrator 와의 경계**: state_change 에 `set_time` 같은 타입은 없다. narrator 는 시간을 직접 만지지 못하고, 분위기 묘사 (`session.day_phase`) 만 입력으로 받는다. 시간 비약 ("다음 날 아침") 은 휴식(`rest`) 액션을 통해서만 실제로 발생한다.
@@ -285,7 +253,7 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
 ### 2.6 기술 시스템 [P3]
 
-**현재 구현 상태**: cast 핵심 (S1) + judge 의미 매칭 (S2) + 학습 후보 (§2.3 4단계 / S3) 까지 들어갔고 자연어 통합. judge 가 `combat` 액션의 `skill_id` 필드 (또는 의미 매칭, S2) 로 어느 기술을 쓸지 결정하고, `flow/combat_oneshot.py` 의 시네마틱 안에서 `engines/skill.py:cast` 가 호출된다. 옛 `POST /cast` REST 엔드포인트는 폐기.
+**현재 구현 상태**: cast 핵심 (S1) + judge 의미 매칭 (S2) + 학습 후보 (§2.3 4단계 / S3) 까지 들어갔고 자연어 통합. judge 가 `combat` 액션의 `skill_id` 필드 (또는 의미 매칭, S2) 로 어느 기술을 쓸지 결정하고, `flow/combat_auto.py` 의 자동 사이클 안에서 `engines/skill.py:cast` 가 매 라운드 호출된다 (MP/level 부족 시 평타 폴백). 옛 `POST /cast` REST 엔드포인트는 폐기.
 - S1: `engines/skill.py` 가 level/MP/range 검증, target self/single/area, grade_multipliers 보정, ActiveBuff 추가/tick 을 담당. attack/debuff 만 d20 굴림으로 grade 결정 (`compute_cast_grade`); heal/buff/self 는 자동 success.
 - S2: judge prompt 가 `surroundings.skills` (racial + learned 두 컬렉션을 합친 뒤 level/MP 통과한 것만 노출, `source: "racial"|"learned"` 로 구분) 와 회피 통로 ("맨손으로/기술 없이/그냥 평타") 를 보고 `CombatAction.skill_id` 를 채운다. turn.py 가 combat 분기에서 skill_id 가 있으면 plain attack 대신 cast 로 진행하고 GM 로그에 `「기술명」 발동` 알림. racial·learned 모두 자동 매칭 대상.
 - S3: `agents/skill_recommend/` + `flow/skill_recommend.py` — level_up 직후 LLM 호출해 캐릭터 컨텍스트(memories/turn_log/recent_inputs) 보고 후보 3개 산출. §2.3 4단계와 같은 코드.

@@ -1,3 +1,4 @@
+import { useAudioPlayer } from 'expo-audio';
 import React from 'react';
 import { Keyboard, Pressable, View } from 'react-native';
 
@@ -12,6 +13,8 @@ import { HeroStrip } from './hero';
 import { Log } from './log';
 import { ConfirmDialog } from './ui';
 
+const BGM_SOURCE = require('../assets/audio/bgm.mp3');
+
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
@@ -22,6 +25,18 @@ export function Playing({ game }: Props) {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [input, setInput] = React.useState('');
   const [pendingAction, setPendingAction] = React.useState<PanelAction | null>(null);
+  const [bgmOn, setBgmOn] = React.useState(false);
+
+  const bgm = useAudioPlayer(BGM_SOURCE);
+  React.useEffect(() => {
+    bgm.loop = true;
+  }, [bgm]);
+
+  const toggleBgm = () => {
+    if (bgmOn) bgm.pause();
+    else bgm.play();
+    setBgmOn((v) => !v);
+  };
 
   const runAction = (action: PanelAction) => {
     setActiveId(null);
@@ -60,10 +75,11 @@ export function Playing({ game }: Props) {
         slots={slots}
         activeId={activeId}
         menuOpen={menuOpen}
+        bgmOn={bgmOn}
         onSelect={(id) => setActiveId((prev) => (prev === id ? null : id))}
-        onCollapse={() => setActiveId(null)}
         onMenuToggle={() => setMenuOpen((v) => !v)}
         onMenuClose={() => setMenuOpen(false)}
+        onBgmToggle={toggleBgm}
         onNewGame={goToNewGame}
         onAction={(action) => {
           if (action.confirm) {

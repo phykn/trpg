@@ -50,9 +50,9 @@ LLM 을 두 개로 쪼갠다.
 | `pass` | `targets[]` | 판정 불필요한 인-캐릭터 행동 (이동, 인사, 정가 구매 등). `targets` 에 `surroundings.corpses` 의 id 가 들어오면 시체 호명 — narrate 가 `target_view` 의 `alive==false` 신호로 시체 톤으로 흡수 | target_view 없이 바로 내러티브 |
 | `reject` | — | 인-캐릭터 입력이 아님 (프롬프트 인젝션, OOC 잡담, 무의미) | 인-게임 표현으로 흡수 (아래 reject 처리) |
 | `roll` | `tier`, `stat`, `targets[]`, `reason` | 주사위 필요한 일반 행동 | 엔진이 DC 계산 → `PendingCheck(kind="stat")` 저장 → 프론트 주사위 버튼 → `/roll` |
-| `combat` | `targets[]`, `skill_id?` | 일반 전투 행동 ("고블린을 친다") | 엔진이 `PendingCheck(kind="combat_roll")` 무장 → 프론트 주사위 버튼 → `/roll` 한 번에 시네마틱 전투 해결 ([03-features.md](./03-features.md) §1) |
+| `combat` | `targets[]`, `skill_id?` | 일반 전투 행동 ("고블린을 친다") | 엔진이 `combat_state` 띄우고 자동 사이클 (라운드 N개) 실행 → `combat_narrate` 가 events 전체를 5–10 문장 시네마틱으로 풀어 씀 ([03-features.md](./03-features.md) §1) |
 | `summon_combat` | `role`, `skill_id?` | 같은 location 에 있을 법한데 entity 로 시드된 적이 없을 때 ("뒷골목에서 도적이 튀어나온다") | 엔진이 즉석 적 1 마리 spawn 후 combat 분기로 진행 |
-| `flee` | — | 전투에서 빠짐 | 엔진이 `PendingCheck(kind="combat_roll")` 무장 (도주도 같은 dice button) |
+| `flee` | — | 전투에서 빠짐 | 자동 사이클 안에서 1 회 flee 시도 처리, 실패 시 사이클이 평타로 라운드 진행 |
 | `rest` | — | 잠·야영 (긴 휴식) | [P3] location.sleep_risk 굴림 → 풀회복 또는 적 spawn → surprise=enemy 로 combat 부팅 ([03-features.md](./03-features.md) §2.4) |
 | `use` | `item_id`, `target_id?`, `tail_intent?` | 인벤 아이템 사용 (포션·연막탄·열쇠 등) | [P3] ConsumableEffect 분기 (heal/damage/mp_restore/buff) + on_use 트리거 + consumable 차감 ([03-features.md](./03-features.md) §2.7) |
 | `equip` | `item_id`, `tail_intent?` | 무기·방어구 장착 | [P3] 엔진이 슬롯 자동 결정 ([03-features.md](./03-features.md) §2.5) |
@@ -149,15 +149,15 @@ DC판정 에이전트 호출
   │                  /roll: grade 판정 → target_view 조립 → 내러티브 호출 → 후처리 ↓
   │
   ├─ combat /     → 엔진: target 검증 (필요 시 즉석 적 spawn for summon_combat)
-  │  summon_combat   → PendingCheck(kind="combat_roll") 저장 → SSE pending_check → 스트림 종료
-  │                   (프론트 주사위 버튼 → 플레이어 굴림 → /roll 진입)
-  │                   /roll: 한 d20 + STR 으로 grade 판정 → 등급에 따라 사살/HP 데미지/XP 적용
-  │                   → combat_narrate 가 5–10 문장 시네마틱 스트리밍
-  │                   → combat_state 정리 + outcome 결정 (victory/defeat/fled/downed/broken_off)
-  │                   → SSE combat_end → 후처리 ↓
+  │  summon_combat   → combat_state 부팅 → flow/combat_auto.run_auto_combat 호출
+  │                   → 매 라운드 양쪽 자동 (player 는 입력 행동 반복, NPC 는 pick_npc_target AI)
+  │                   → terminal outcome (victory/defeat/fled/downed) 까지 결판
+  │                   → combat_narrate 가 events 전체를 3–5 문장 시네마틱 스트리밍
+  │                   → numeric summary act_line + SSE combat_end + combat_state 정리
+  │                   → 후처리 ↓
   │
-  ├─ flee         → PendingCheck(kind="combat_roll") 저장 (도주도 같은 dice button)
-  │                  → /roll 에서 처리, 성공 시 outcome="broken_off"
+  ├─ flee         → 전투 외: "지금은 도망칠 전투가 없습니다" 한 줄
+  │                  전투 중: 자동 사이클의 player 행동을 flee 로 — 성공 시 outcome=fled, 실패 시 평타 폴백
   │
   ├─ rest         → [P3] 엔진: location.sleep_risk 굴림
   │                   → 풀회복 + turn_count 를 다음 새벽 boundary 로 점프, 또는 인카운터로 combat 부팅
@@ -185,23 +185,20 @@ reject 전용 추가 단계 (후처리 직전):
 
 ### 2.2 두 단계 턴 (pending_check)
 
-주사위 버튼이 필요한 분기 (`roll`, `combat`, `summon_combat`, `flee`, death save) 는 **한 턴을 두 HTTP 호출로 쪼갠다** (`/turn` → `/roll`).
+stat 굴림이 필요한 분기 (`roll`) 는 **한 턴을 두 HTTP 호출로 쪼갠다** (`/turn` → `/roll`). combat / summon_combat / flee / death_save 는 모두 자동 처리되므로 더 이상 dice 버튼을 띄우지 않는다.
 
 왜 쪼개나: 플레이어가 "주사위 굴리기" 버튼을 누르는 시점이 LLM 응답 사이에 끼어 있다. 한 호출로 끝내려면 서버가 사용자 입력을 기다리며 스트림을 열어둬야 해서 구조가 복잡해진다. 그냥 두 호출로 끊는 게 단순하다. 자세한 이유는 [01-overview.md](./01-overview.md) §3.10.
 
-- `/turn` 이 주사위 액션으로 끝나면 엔진은 `PendingCheck` 를 `GameState` 에 저장하고 스트림을 닫는다. 내러티브는 아직 돌지 않음.
+- `/turn` 이 `RollAction` 으로 끝나면 엔진은 `PendingCheck(kind="stat")` 을 `GameState` 에 저장하고 스트림을 닫는다. 내러티브는 아직 돌지 않음.
 - 프론트는 `pending_check` 이벤트로 받은 `{kind, dc, stat, mod, required_roll, tier, target, reason}` 을 UI 에 띄우고, 플레이어가 버튼을 누르면 **본문 없이** `/roll` 호출. 주사위 눈은 서버가 굴린다 (서버 권위 — 클라이언트가 dice 값을 보내지 않음).
-- `/roll` 은 `PendingCheck.kind` 로 분기:
-  - `kind="stat"`: 일반 d20 굴림 → grade 계산 → 내러티브 호출 → `pending_check = None`.
-  - `kind="combat_roll"`: 한 방 시네마틱 전투 — 등급 매핑으로 기계적 결과 적용 후 `combat_narrate` 가 5–10 문장 풀어 씀 ([03-features.md](./03-features.md) §1).
-  - `kind="death_save"`: HP 0 으로 쓰러진 상태에서의 회복 굴림. 성공 3 회면 안정화 (HP=1), 실패 3 회면 사망 ([03-features.md](./03-features.md) §1.7).
+- `/roll`: 일반 d20 굴림 → grade 계산 → 내러티브 호출 → `pending_check = None`. 전투 중 환경 굴림이었다면 굴림 후 자동 사이클 cap=1 로 NPC 1 라운드 추가 진행.
 - `/turn` 을 `pending_check` 가 활성인 채로 호출하면 `error: PendingCheckActive`. `/roll` 을 `pending_check` 없이 호출하면 `error: PendingCheckExpected`.
 - **프론트 입력 가드**: `pending_check` 활성 동안 텍스트 전송 버튼은 비활성화. 주사위 버튼만 활성. 백엔드 가드(`PendingCheckActive`)와 이중 방어.
 
 ```python
 class PendingCheck:
     player_input: str
-    kind: Literal["stat", "death_save", "combat_roll"] = "stat"
+    kind: Literal["stat"] = "stat"
     tier: Tier
     stat: StatKey
     target: str
@@ -209,7 +206,7 @@ class PendingCheck:
     dc: int               # tier 범위에서 균등 샘플링 (§5.2)
     mod: int              # social_bonus
     required_roll: int    # DC - stat_modifier, [1, 20] clamp
-    reason: str           # judge 가 RollAction.reason 으로 받은 사유. combat/death-save 분기에서는 placeholder 가 들어가고 프론트로는 null 로 노출
+    reason: str           # judge 가 RollAction.reason 으로 받은 사유
     created_at: str       # ISO 8601
 ```
 
@@ -239,14 +236,14 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 | type | data | 시점 |
 |---|---|---|
 | `judge` | 액션별로 다른 필드 (§1.1 표). `action` 은 항상 존재, 액션마다 `tier` / `stat` / `targets` / `item_id` / `npc_id` / `skill_id` / `tail_intent` / `reason` 등이 선택적으로 채워짐 | judge LLM 직후. §2.3 의 재호출이 일어나도 최종(검증 통과) 결과 1회만 발사 |
-| `pending_check` | `{kind, dc, stat, stat_label, stat_value, mod, required_roll, tier, target, reason}` — `kind` 는 `"stat" \| "death_save" \| "combat_roll"`. `stat_label` 은 `stat` 의 한국어 라벨 (`"근력"` 등), `stat_value` 는 그 스탯의 플레이어 점수 (death-save 분기에선 `null`). `tier` 는 §5.2 의 `{value:1..7, max:7, label}` 형식. `reason` 은 `kind="stat"` 만 채우고 나머지 분기는 `null` | 주사위 버튼이 필요한 액션 (roll/combat/summon_combat/flee/death save) 확정. 직후 스트림 종료 |
+| `pending_check` | `{kind, dc, stat, stat_label, stat_value, mod, required_roll, tier, target, reason}` — `kind` 는 항상 `"stat"`. `stat_label` 은 `stat` 의 한국어 라벨 (`"근력"` 등), `stat_value` 는 그 스탯의 플레이어 점수. `tier` 는 §5.2 의 `{value:1..7, max:7, label}` 형식. `reason` 은 judge `RollAction.reason` 의 자유 텍스트 | `RollAction` 확정. 직후 스트림 종료 |
 | `narrative_delta` | `{text}` | narrate / combat_narrate / intro LLM 청크마다 |
 | `suggestions` | `{items: string[]}` — 0~3 개 한국어 행동 후보 | narrate 본문이 끝나고 메타 JSON 파싱된 직후. `state` 보다 먼저. 빈 배열도 매 턴 발사 (이전 턴 칩을 비워야 함) |
 | `state` | `FrontState` (`{hero, subject, quest, place, combat, log, pendingCheck}`) | apply 후 7 슬롯 통짜 송신. 한 턴에 1회, 파이프라인 말미. 자세한 모양은 [04-boundary.md](./04-boundary.md) §1 |
 | `log_entry` | `LogEntry` (`player \| act \| roll \| gm`) | 플레이어 입력, 시스템 알림, 주사위 결과, 시네마틱 전투의 자체 발행 gm 텍스트. 평시 narrate 의 `gm` 은 `narrative_delta` 축적으로 만들어지므로 이벤트 없음 |
 | `combat_start` | `{turn_order, round, surprise, enemy_ids}` | judge 가 `action="combat"` / `action="summon_combat"` 반환해 엔진이 `combat_state` 를 띄운 직후 |
-| `combat_turn` | `{actor, action: "attack"\|"skill"\|"miss"\|"pass"\|"flee"\|"death_save", grade?, damage?, target?, skill_name?}` | 시네마틱 안에서 한 actor 의 한 행동 직후. UI 는 보통 무시하고 `state` 와 `log_entry` 를 권위로 봄 (테스트가 관찰 가능 신호로 사용) |
-| `combat_end` | `{outcome: "victory" \| "defeat" \| "fled" \| "downed" \| "broken_off"}` | 종료 조건 충족 직후. `downed` = 플레이어가 HP 0 으로 쓰러져 death save 단계 진입, `broken_off` = 도주 성공 또는 전투가 흐름상 끊김. 다음 SSE `done` 이 따라옴 |
+| `combat_turn` | `{actor, action: "attack"\|"skill"\|"miss"\|"pass"\|"flee"\|"use"\|"equip"\|"unequip", grade?, damage?, target?, skill_name?, skill_id?, killed?, round?}` | 자동 사이클 안에서 한 actor 의 한 행동 직후 (라운드 단위로 발사). UI 는 보통 무시하고 `state` 와 `log_entry` 를 권위로 봄 (테스트가 관찰 가능 신호로 사용) |
+| `combat_end` | `{outcome: "victory" \| "defeat" \| "fled" \| "downed"}` | 자동 사이클 종료 직후 발사. 사이클은 항상 terminal outcome 까지 가므로 모든 사이클 끝에 한 번씩 나옴. 다음 SSE `done` 이 따라옴 |
 | `done` | `{}` | 턴 종료 |
 | `error` | `{message, code?}` | 복구 불가 오류 |
 

@@ -40,25 +40,23 @@ from .dirty import (
     register_kill,
 )
 from .error_phrases import humanize_engine_error
-from .format import (
-    format_attack_log,
-    format_skill_log,
-    format_use_log,
-)
+from .format import format_use_log
 from .skill_recommend import recommend_skill_candidates
 
 
-# --- attack / skill cast ---------------------------------------------------
+# --- silent combat effect helpers (used by auto-combat sim) ----------------
 
 
-async def emit_attack(
+def apply_attack_action(
     state: GameState,
     attacker_id: str,
     target_id: str,
     outcome: combat_engine.AttackOutcome,
     dirty: Dirty,
-) -> AsyncIterator[dict]:
-    """Apply the attack outcome and emit SSE/log."""
+) -> dict:
+    """Silent attack effect: damage routing → affinity drop → kill XP.
+    No SSE, no log_entry, no push_act. Returns the apply_attack_to_defender
+    result (or a no-op dict when no damage was applied) plus a `killed` flag."""
     target = state.characters[target_id]
     apply_result: dict | None = None
     if outcome.damage > 0 and target.alive:
@@ -71,72 +69,52 @@ async def emit_attack(
         )
         combat_engine.record_damage(state, attacker_id, outcome.damage)
     apply_combat_affinity_drop(state, attacker_id, target_id, dirty=dirty.entities)
-    text = format_attack_log(state, attacker_id, target_id, outcome, apply_result)
-    yield push_act(state, dirty, text)
-    yield {
-        "type": "combat_turn",
-        "data": {
-            "actor": attacker_id,
-            "action": "attack",
-            "grade": outcome.grade,
-            "damage": outcome.damage,
-            "target": target_id,
-        },
-    }
-    if not target.alive:
+    killed = not target.alive
+    if killed:
         award_kill_xp(state, attacker_id, target_id, dirty=dirty.entities)
         register_kill(state, target_id, dirty)
     elif attacker_id == state.player_id:
         push_turn_log(state, target_id, f"{target.name}{eul_reul(target.name)} 공격", dirty)
+    return {
+        "apply_result": apply_result or {
+            "hp_before": target.hp, "hp_after": target.hp,
+            "downed": False, "dying": False, "dead": False, "revived": False,
+        },
+        "killed": killed,
+    }
 
 
-async def emit_skill_cast(
+def apply_skill_action(
     state: GameState,
     actor_id: str,
     skill_id: str,
     targets: list[str],
     dirty: Dirty,
     rng: random.Random | None = None,
-) -> AsyncIterator[dict]:
-    """In-combat skill cast. attack/debuff roll d20 vs target defense / WIS
-    resist. heal/buff/self stay at success."""
+) -> dict:
+    """Silent skill cast: validate, roll grade, apply effects, route kills.
+    No SSE, no log_entry, no push_act. Raises SkillInvalid on validation
+    failure. Returns the cast_result dict augmented with `grade`,
+    `skill_type`, and `killed_ids`."""
     actor = state.characters[actor_id]
-    try:
-        skill_obj = skill_engine.find_skill(actor, skill_id, state)
-    except SkillInvalid as e:
-        yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 기술을 발동하려 했지만 {humanize_engine_error(e)}.")
-        return
+    skill_obj = skill_engine.find_skill(actor, skill_id, state)
     grade, _nat, _req = skill_engine.compute_cast_grade(
         actor, skill_obj, state, targets, rng=rng
     )
-    try:
-        cast_result = skill_engine.cast(
-            actor, skill_id, state, targets, grade=grade, dirty=dirty.entities
-        )
-    except SkillInvalid as e:
-        yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 기술을 발동하려 했지만 {humanize_engine_error(e)}.")
-        return
+    cast_result = skill_engine.cast(
+        actor, skill_id, state, targets, grade=grade, dirty=dirty.entities
+    )
+    killed_ids: list[str] = []
     for eff in cast_result["effects"]:
         if eff.get("kind") == "attack":
             combat_engine.record_damage(state, actor_id, int(eff.get("damage", 0)))
             if eff.get("dead"):
                 award_kill_xp(state, actor_id, eff["target"], dirty=dirty.entities)
                 register_kill(state, eff["target"], dirty)
+                killed_ids.append(eff["target"])
     if skill_obj.type in ("attack", "debuff"):
         for tid in targets:
             apply_combat_affinity_drop(state, actor_id, tid, dirty=dirty.entities)
-    yield push_act(state, dirty, format_skill_log(state, actor_id, cast_result, grade))
-    yield {
-        "type": "combat_turn",
-        "data": {
-            "actor": actor_id,
-            "action": "skill",
-            "grade": grade,
-            "skill_id": cast_result["skill_id"],
-            "skill_name": cast_result["skill_name"],
-            "effects": cast_result["effects"],
-        },
-    }
     if actor_id == state.player_id and targets:
         first_t = state.characters.get(targets[0])
         if first_t is not None and first_t.id != actor_id:
@@ -145,6 +123,12 @@ async def emit_skill_cast(
                 f"「{cast_result['skill_name']}」 → {first_t.name}",
                 dirty,
             )
+    return {
+        **cast_result,
+        "grade": grade,
+        "skill_type": skill_obj.type,
+        "killed_ids": killed_ids,
+    }
 
 
 # --- equip / unequip / use -------------------------------------------------

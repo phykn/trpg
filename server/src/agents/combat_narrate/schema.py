@@ -1,18 +1,24 @@
-"""Schema for combat_narrate — one round's structured trace fed to the LLM
-to produce a 1-2 sentence cinematic blurb."""
+"""Schema for combat_narrate — fight-shaped trace.
+
+The auto-combat sim runs the entire fight (or up to the round cap) in one
+shot, accumulates per-round events, and hands the whole trace to this agent.
+The agent streams a single 5-10 sentence Korean cinematic that walks the
+reader through every round in order.
+"""
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class CombatRoundEvent(BaseModel):
-    """One actor's action this round (attack / skill / miss / pass / kill)."""
+    """One actor's action in a specific round."""
 
     model_config = ConfigDict(extra="forbid")
 
+    round_no: int = Field(ge=1)
     actor: str  # Korean name
     target: str | None = None
-    action: Literal["attack", "skill", "pass", "miss"]
+    action: Literal["attack", "skill", "pass", "miss", "flee"]
     skill_name: str | None = None
     damage: int = 0
     grade: Literal[
@@ -22,7 +28,7 @@ class CombatRoundEvent(BaseModel):
 
 
 class CombatStateSnapshot(BaseModel):
-    """Per-actor HP snapshot at the start of this round."""
+    """Per-actor HP snapshot — used for fight start and end."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -32,16 +38,25 @@ class CombatStateSnapshot(BaseModel):
     alive: bool
 
 
+CombatOutcome = Literal[
+    "victory",   # all enemies down or fled
+    "defeat",    # player dead
+    "downed",    # player hit 0 HP, death-save resolved this fight (auto)
+    "fled",      # player flee succeeded (or hard-cap safety fallback)
+]
+
+
 class CombatNarrateInput(BaseModel):
-    """Per-round narration input. The agent streams 1-2 Korean sentences."""
+    """Whole-fight narration input. The agent streams 5-10 Korean sentences
+    that cover every round in order."""
 
     world: str
     location: dict
-    player_intent: str  # the original player_input that started this fight
-    round_no: int
-    is_first_round: bool
-    is_final_round: bool  # combat ends this round (all enemies dead or player down)
-    player: CombatStateSnapshot
-    enemies: list[CombatStateSnapshot]
+    player_intent: str  # the original player_input that drove this fight
+    rounds_run: int = Field(ge=1)
+    outcome: CombatOutcome
+    player_start: CombatStateSnapshot
+    player_end: CombatStateSnapshot
+    enemies_start: list[CombatStateSnapshot]
+    enemies_end: list[CombatStateSnapshot]
     events: list[CombatRoundEvent]
-    history_summary: str = Field(default="", max_length=400)

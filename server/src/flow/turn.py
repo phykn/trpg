@@ -24,7 +24,6 @@ from ..domain.errors import JudgeMalformed, PendingCheckActive
 from ..domain.memory import PlayerLogEntry
 from ..domain.state import GameState
 from ..llm.client import LLMClient, set_llm_session_if_unset
-from ..mapping.to_front import pending_check_to_front
 from .actions import (
     emit_equip,
     emit_learn_skill,
@@ -34,8 +33,11 @@ from .actions import (
     emit_unequip,
     emit_use,
 )
-from .combat_oneshot import arm_combat_roll_pending
-from .combat_phase import run_combat_player_turn
+from .combat_auto import PlayerAction
+from .combat_phase import (
+    run_combat_player_turn,
+    start_combat_and_drive_auto,
+)
 from .encounter import summon_encounter
 from .clock import tick_turn_buffs
 from .dirty import (
@@ -147,20 +149,33 @@ async def _run_one_step_action(
         yield ev
 
 
-async def _arm_pending_and_finalize(
+async def _enter_combat_and_finalize(
+    client: LLMClient,
     state: GameState,
+    profile_dir: str,
     saves_dir: str,
     dirty: Dirty,
+    rng: random.Random | None,
     to_front_fn: ToFrontFn | None,
+    *,
+    player_input: str,
+    enemy_ids: list[str],
+    skill_id: str | None,
 ) -> AsyncIterator[dict]:
-    """Emit the freshly-armed pending_check then finalize. Shared by the
-    combat-roll and summon-then-combat-roll arming paths. The RollPrompt
-    card on the client renders all the same data that an act-line would,
-    so we don't push one here."""
-    yield {
-        "type": "pending_check",
-        "data": pending_check_to_front(state, state.pending_check),
-    }
+    """Start a fresh fight and run one auto-combat sim cycle, then finalize.
+    Shared by CombatAction and SummonCombatAction entries."""
+    player_action = PlayerAction(
+        kind="skill" if skill_id else "attack",
+        skill_id=skill_id,
+        targets=list(enemy_ids),
+    )
+    async for ev in start_combat_and_drive_auto(
+        client, state, profile_dir, enemy_ids, dirty, rng,
+        player_input=player_input, player_action=player_action,
+    ):
+        yield ev
+    state.turn_count += 1
+    tick_turn_buffs(state, dirty)
     async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev
 
@@ -190,13 +205,12 @@ async def _dispatch(
             async for ev in finalize(state, saves_dir, dirty, to_front_fn):
                 yield ev
             return
-        arm_combat_roll_pending(
-            state,
-            target_ids=list(result.targets),
+        async for ev in _enter_combat_and_finalize(
+            client, state, profile_dir, saves_dir, dirty, rng, to_front_fn,
             player_input=player_input,
+            enemy_ids=list(result.targets),
             skill_id=result.skill_id,
-        )
-        async for ev in _arm_pending_and_finalize(state, saves_dir, dirty, to_front_fn):
+        ):
             yield ev
         return
 
@@ -218,13 +232,12 @@ async def _dispatch(
                 yield ev
             return
         state.active_subject_id = summoned.id
-        arm_combat_roll_pending(
-            state,
-            target_ids=[summoned.id],
+        async for ev in _enter_combat_and_finalize(
+            client, state, profile_dir, saves_dir, dirty, rng, to_front_fn,
             player_input=player_input,
+            enemy_ids=[summoned.id],
             skill_id=result.skill_id,
-        )
-        async for ev in _arm_pending_and_finalize(state, saves_dir, dirty, to_front_fn):
+        ):
             yield ev
         return
 

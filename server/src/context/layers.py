@@ -5,12 +5,61 @@ from ..domain.clock import day_phase
 from ..domain.state import GameState
 
 
+_QUOTE_OPEN_TO_CLOSE = {"「": "」", "『": "』"}
+_REDACT_PRE_WINDOW = 30
+
+
+def redact_dead_quotes(text: str, dead_names: list[str]) -> str:
+    """Strip Korean direct-quote blocks attributed to dead NPCs.
+
+    For each `「` / `『` opener in `text`, if any of `dead_names` appears as
+    a substring within the 30 chars preceding the opener, the entire quote
+    block (opener through matching closer) is replaced with `…`. Names are
+    matched as substrings so trailing particles (가/이/은/는/께서) don't
+    affect detection.
+
+    Two callers — same single root cause:
+    - `build_history_layer` → strips them from `recent_dialogue` so the
+      narrate LLM doesn't see resurrected speech as an in-context pattern
+      to mimic. The corpse "사망" header alone hasn't been enough: when the
+      same NPC's quotes are inline in `=== 최근 대화 ===` the LLM follows
+      the pattern.
+    - `consume_narrate` → strips them from the post-LLM body before
+      persisting to log_entry / dialogue / turn_log so a one-off slip
+      doesn't compound across turns.
+    """
+    if not dead_names or not text:
+        return text
+    out: list[str] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        close = _QUOTE_OPEN_TO_CLOSE.get(ch)
+        if close is None:
+            out.append(ch)
+            i += 1
+            continue
+        close_idx = text.find(close, i + 1)
+        if close_idx == -1:
+            # Unmatched opener — leave the rest as-is rather than swallow it.
+            out.append(text[i:])
+            break
+        window = text[max(0, i - _REDACT_PRE_WINDOW):i]
+        if any(name and name in window for name in dead_names):
+            out.append("…")
+        else:
+            out.append(text[i:close_idx + 1])
+        i = close_idx + 1
+    return "".join(out)
+
+
 def build_world_layer(
     profile_dir: str, profile: str, *, missing_ok: bool = False
 ) -> str:
     """Read <profile>/world.md. Strict by default — set missing_ok=True for
-    callers (combat_oneshot narrate input, encounter summon) that should
-    fall back to an empty string."""
+    callers (combat_auto narrate input, encounter summon) that should fall
+    back to an empty string."""
     p = Path(profile_dir) / profile / "world.md"
     if missing_ok and not p.exists():
         return ""
@@ -61,6 +110,11 @@ def build_history_layer(
 
     blocks: list[str] = []
 
+    dead_names = [
+        c["name"] for c in (corpses or [])
+        if isinstance(c, dict) and c.get("name")
+    ]
+
     if corpses:
         lines = ["=== 사망 — 다시 등장시키거나 발화시키지 말 것 ==="]
         for c in corpses:
@@ -75,7 +129,7 @@ def build_history_layer(
 
     if state.recent_dialogue:
         items = [
-            f"[턴 {d.turn}]\n  플레이어: {d.player}\n  서술자: {d.narrator}"
+            f"[턴 {d.turn}]\n  플레이어: {d.player}\n  서술자: {redact_dead_quotes(d.narrator, dead_names)}"
             for d in state.recent_dialogue
         ]
         blocks.append("=== 최근 대화 ===\n" + "\n".join(items))

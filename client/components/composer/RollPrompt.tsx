@@ -45,7 +45,7 @@ export function RollPrompt({
   const statBonus = pending.dc - pending.required_roll;
   const dice = Array.from({ length: 20 }, (_, i) => i + 1);
 
-  const showStat = pending.stat_value !== null && statBonus !== 0;
+  const showStat = statBonus !== 0;
   const showMod = pending.mod !== 0;
 
   return (

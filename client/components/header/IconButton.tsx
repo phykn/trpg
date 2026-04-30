@@ -3,8 +3,9 @@ import Svg, { Path } from 'react-native-svg';
 import { colors } from '@/design/tokens';
 
 export const ICON_PATH = {
-  chevronUp: 'M6 15l6-6 6 6',
   menu: 'M5 7h14M5 12h14M5 17h14',
+  volumeOn: 'M11 5L6 9H2v6h4l5 4V5z M15.54 8.46a5 5 0 0 1 0 7.07 M19.07 4.93a10 10 0 0 1 0 14.14',
+  volumeOff: 'M11 5L6 9H2v6h4l5 4V5z M22 9l-6 6 M16 9l6 6',
 } as const;
 
 export function IconButton({ d, onPress }: { d: string; onPress?: () => void }) {

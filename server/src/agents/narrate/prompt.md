@@ -106,6 +106,8 @@ OOC/시스템 공격/무의미. 인-게임 표현으로 흡수: "알 수 없는 
 - `locations` 허용: `weather/description/tags/name/sleep_risk/difficulty`. 차단: `{{LOC_FORBIDDEN}}`.
 - `chapters`/`quests`: `summary`/`status`만.
 
+**quest 자연 수락 (필수)**: `target_view.quests`에 `status:"locked"`인 항목이 있고 — 그 NPC가 본문에서 의뢰를 꺼내고 player가 받아들이는 흐름으로 닫히면 (수락 명시·동의 반응·"하겠다" 류) 같은 턴에 `{"type":"set","entity":"quests","id":"<target_view.quests의 locked id>","field":"status","value":"active"}` 발행. player가 거절·회피하면 발행 안 함. 의뢰 본론 안 꺼낸 인사·잡담만이면 발행 안 함. `target_view.quests`에 locked가 없으면 발행하지 마라 — quest id 추정·발명 금지.
+
 차단 필드 set은 그 항목만 reject, 나머지 적용.
 
 **affinity 발행 (중요)**: 본문에 NPC 대상 사회적 행동 묘사가 들어가면 `pass` 분기여도 반드시 `affinity` change 1건 동반. 칭찬·인사·호의·부탁 → `intent=friendly`. 욕설·조롱·무시·위협·따져 묻기 → `intent=hostile`. 거짓말·매수·기만 → `intent=deceptive`. `grade`는 본문 톤으로 결정 — 깔끔하게 닿음 → `success`, 가까스로 닿음 / 어색함 → `partial_success`, 빗나감·반발 → `failure`, 화려한 빗나감 → `critical_failure`. **흔한 누락 금지**: "당신이 경비병에게 욕한다", "당신이 노파를 칭찬한다", "당신이 산적을 비웃는다" 류 한 줄 사회적 행동도 모두 발행. 본문이 NPC 한 명도 호명하지 않거나, 둘러보기·자리에 앉기 같은 환경 행위면 `affinity` 없음.

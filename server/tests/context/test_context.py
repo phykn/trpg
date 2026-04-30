@@ -225,6 +225,40 @@ def test_history_layer_omits_corpse_block_when_empty(fresh_state):
     assert "사망" not in h
 
 
+def test_history_layer_redacts_dead_npc_quotes_in_dialogue(fresh_state):
+    """Direct-quote blocks attributed to a now-dead NPC inside `recent_dialogue`
+    must be stripped before the prompt sees them. The "사망" header alone hasn't
+    been enough — the LLM picks up the quote pattern from the inline narrator
+    text and resurrects the speaker. With the redaction the model still sees
+    the surrounding context (so it can write corpse-tone prose) but no longer
+    has the speech to mimic."""
+    fresh_state.recent_dialogue = [
+        DialoguePair(
+            turn=4,
+            player="노파에게 인사한다",
+            narrator="노파가 고개를 들어 봅니다. 「오랜만이오, 젊은이.」 손이 살짝 떨립니다.",
+        ),
+    ]
+    h = build_history_layer(fresh_state, corpses=[{"id": "hag", "name": "노파"}])
+    assert "「오랜만이오, 젊은이.」" not in h
+    assert "노파가 고개를 들어 봅니다." in h  # surrounding prose kept
+    assert "…" in h
+
+
+def test_history_layer_keeps_live_npc_quotes(fresh_state):
+    """Live NPCs (not in corpses) keep their dialogue intact — redaction is
+    scoped to dead names only."""
+    fresh_state.recent_dialogue = [
+        DialoguePair(
+            turn=4,
+            player="상인에게 흥정한다",
+            narrator="상인이 미소 짓습니다. 「오늘 좋은 물건이 있소.」",
+        ),
+    ]
+    h = build_history_layer(fresh_state, corpses=[{"id": "hag", "name": "노파"}])
+    assert "「오늘 좋은 물건이 있소.」" in h
+
+
 def test_world_layer_reads_md():
     with tempfile.TemporaryDirectory() as tmp:
         pdir = Path(tmp) / "default"

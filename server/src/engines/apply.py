@@ -114,6 +114,13 @@ def _apply_set(
         raise _StateChangeError(f"failed to set {c.field!r}: {e}") from e
     if dirty is not None:
         dirty.add((c.entity, c.id))
+    # Narrate flips quest.status to drive natural acceptance (locked → active when an
+    # NPC offers a quest in dialogue). check_quests is the only other path that touches
+    # active_quest_id, so without this hook the panel keeps pointing at the previous
+    # quest (or stays None on a fresh game).
+    if c.entity == "quests" and c.field == "status":
+        from .quest import _refresh_active_quest_id
+        _refresh_active_quest_id(state)
 
 
 def _apply_move(

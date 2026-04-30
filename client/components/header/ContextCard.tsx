@@ -10,14 +10,15 @@ import { PanelBody } from './PanelBody';
 
 const FLOAT_BUFFER = 480;
 
-export function ContextCard({ slots, activeId, menuOpen, onSelect, onCollapse, onMenuToggle, onMenuClose, onNewGame, onAction }: {
+export function ContextCard({ slots, activeId, menuOpen, bgmOn, onSelect, onMenuToggle, onMenuClose, onBgmToggle, onNewGame, onAction }: {
   slots: PanelSlot[];
   activeId: string | null;
   menuOpen: boolean;
+  bgmOn: boolean;
   onSelect: (id: string) => void;
-  onCollapse?: () => void;
   onMenuToggle: () => void;
   onMenuClose: () => void;
+  onBgmToggle: () => void;
   onNewGame?: () => void;
   onAction?: (action: PanelAction) => void;
 }) {
@@ -53,7 +54,7 @@ export function ContextCard({ slots, activeId, menuOpen, onSelect, onCollapse, o
         className="bg-canvas-subtle border border-border-default rounded-md flex-row p-2 gap-1 items-center"
         style={shadow.paper}
       >
-        <IconButton d={ICON_PATH.chevronUp} onPress={onCollapse} />
+        <IconButton d={bgmOn ? ICON_PATH.volumeOn : ICON_PATH.volumeOff} onPress={onBgmToggle} />
         <View className="flex-1 flex-row gap-1">
           {slots.map((s) => (
             <ChipTab

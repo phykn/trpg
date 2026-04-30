@@ -1,11 +1,21 @@
-"""Combat-phase orchestration. Drives NPC turns automatically, dispatches the
-player's chosen action mid-combat, and bridges to /roll when the player
-reaches for the environment.
+"""Combat dispatch — auto-mode only.
+
+A combat turn (whether opening a fight from out-of-combat or continuing one
+already in progress) runs the same shape: judge → distil player input into a
+PlayerAction → boot combat_state if needed → run_auto_combat → stream
+combat_narrate cinematic → push numeric summary → emit combat_end if
+terminal.
+
+Manual round-by-round play is gone. The cap inside run_auto_combat decides
+when to stop and hand control back to the player.
 """
+from __future__ import annotations
+
 import random
 from collections.abc import AsyncIterator
 from typing import Literal
 
+from ..agents.combat_narrate import stream_combat_narrate
 from ..agents.dc_judge.schema import (
     CombatAction,
     EquipAction,
@@ -21,133 +31,92 @@ from ..domain.errors import CombatStateInvalid, JudgeMalformed
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..llm.client import LLMClient
-from ..mapping.josa import eun_neun, gwa_wa, i_ga
-from ..rules import RULES
+from ..mapping.josa import gwa_wa
 from .actions import (
-    emit_attack,
     emit_equip,
     emit_roll_pending,
-    emit_skill_cast,
     emit_unequip,
     emit_use,
 )
 from .clock import tick_turn_buffs
-from .dirty import Dirty, ToFrontFn, finalize, push_act, push_turn_log
+from .combat_auto import (
+    PlayerAction,
+    build_narrate_input,
+    format_outcome_summary,
+    run_auto_combat,
+)
+from .dirty import Dirty, ToFrontFn, finalize, push_act, push_gm, push_turn_log
 from .format import format_combat_end_text
 from .judge import run_judge
 from .subject import refresh_active_subject
 
 
-# --- NPC phase -------------------------------------------------------------
+# --- entry: drive one auto-combat sim + cinematic + numeric ---------------
 
 
-async def _handle_surprise_skip(
-    state: GameState, dirty: Dirty, actor_id: str
-) -> AsyncIterator[dict]:
-    """First-round surprise — yield the skip GM line + combat_turn event,
-    advance the turn. Caller decides whether the skip applies."""
-    actor_name = (
-        state.characters[actor_id].name
-        if actor_id in state.characters
-        else actor_id
-    )
-    yield push_act(
-        state, dirty,
-        f"{actor_name}{eun_neun(actor_name)} 기습당해 첫 라운드를 놓쳤습니다.",
-    )
-    yield {
-        "type": "combat_turn",
-        "data": {"actor": actor_id, "action": "skip", "grade": "success"},
-    }
-    combat_engine.advance_turn(state)
-
-
-def _is_surprise_skip(state: GameState, actor_id: str) -> bool:
-    cs = state.combat_state
-    if cs is None or cs.round != 1 or cs.surprise is None:
-        return False
-    is_player = actor_id == state.player_id
-    return (cs.surprise == "enemy" and is_player) or (
-        cs.surprise == "player" and not is_player
-    )
-
-
-async def run_combat_npc_phase(
+async def _drive_auto_combat(
+    client: LLMClient | None,
     state: GameState,
+    profile_dir: str,
     dirty: Dirty,
+    *,
+    player_input: str,
+    player_action: PlayerAction,
     rng: random.Random | None,
+    cap: int | None = None,
 ) -> AsyncIterator[dict]:
-    """Auto-run NPC turns until the current actor is the player, or combat
-    ends. On end, emits combat_end + clears combat_state."""
-    while True:
-        end = combat_engine.check_combat_end(state)
-        if end is not None:
-            yield push_act(state, dirty, format_combat_end_text(end))
-            yield {"type": "combat_end", "data": {"outcome": end}}
-            combat_engine.end_combat(state)
-            return
+    """Run the auto-combat sim, stream the cinematic, push numeric summary
+    and combat_end. Caller must have already set combat_state."""
+    if state.combat_state is None:
+        raise CombatStateInvalid("_drive_auto_combat called without combat_state")
 
-        actor_id = combat_engine.current_actor_id(state)
-        if actor_id is None:
-            yield {"type": "combat_end", "data": {"outcome": "victory"}}
-            combat_engine.end_combat(state)
-            return
+    kwargs = {"player_action": player_action, "rng": rng}
+    if cap is not None:
+        kwargs["cap"] = cap
+    result = run_auto_combat(state, dirty, **kwargs)
 
-        if _is_surprise_skip(state, actor_id):
-            async for ev in _handle_surprise_skip(state, dirty, actor_id):
-                yield ev
-            continue
+    for tev in result.turn_events:
+        yield {"type": "combat_turn", "data": tev}
 
-        if actor_id == state.player_id:
-            return
+    if client is not None:
+        narrate_input = build_narrate_input(
+            state, profile_dir,
+            player_input=player_input, result=result,
+        )
+        body_chunks: list[str] = []
+        async for chunk in stream_combat_narrate(client, narrate_input):
+            body_chunks.append(chunk)
+            yield {"type": "narrative_delta", "data": {"text": chunk}}
+        body = "".join(body_chunks).strip()
+        if body:
+            yield push_gm(state, dirty, body)
 
-        actor = state.characters.get(actor_id)
-        if actor is None or not actor.alive:
-            combat_engine.advance_turn(state)
-            continue
+    summary = format_outcome_summary(result)
+    if summary:
+        yield push_act(state, dirty, summary)
 
-        # NPC flee
-        if combat_engine.should_attempt_flee(actor, rng=rng):
-            ok, _roll = combat_engine.try_flee(actor, rng=rng)
-            if ok:
-                yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 전투에서 도주했습니다.")
-                yield {
-                    "type": "combat_turn",
-                    "data": {"actor": actor_id, "action": "flee", "grade": "success"},
-                }
-                combat_engine.remove_from_combat(state, actor_id)
-                continue
-            yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 도주를 시도했으나 실패했습니다.")
-            yield {
-                "type": "combat_turn",
-                "data": {"actor": actor_id, "action": "flee", "grade": "failure"},
-            }
-            combat_engine.advance_turn(state)
-            continue
-
-        # NPC attack
-        target = combat_engine.pick_npc_target(state, actor_id, rng=rng)
-        if target is None:
-            combat_engine.advance_turn(state)
-            continue
-        outcome = combat_engine.attack(actor, target, state.items, rng=rng)
-        async for ev in emit_attack(state, actor_id, target.id, outcome, dirty):
-            yield ev
-        combat_engine.advance_turn(state)
+    end_label: Literal["victory", "defeat", "fled"]
+    end_label = "defeat" if result.outcome == "downed" else result.outcome
+    yield push_act(state, dirty, format_combat_end_text(end_label))
+    yield {"type": "combat_end", "data": {"outcome": result.outcome}}
 
 
-async def start_combat_and_run_npc_phase(
+async def start_combat_and_drive_auto(
+    client: LLMClient | None,
     state: GameState,
+    profile_dir: str,
     enemy_ids: list[str],
     dirty: Dirty,
     rng: random.Random | None,
+    *,
+    player_input: str,
+    player_action: PlayerAction,
     surprise: Literal["player", "enemy"] | None = None,
+    cap: int | None = None,
 ) -> AsyncIterator[dict]:
-    # /turn routes through run_combat_player_turn whenever combat_state is
-    # set, so we should never reach this with a live combat already pinned.
-    # If we do, that's a state-machine bug (something forgot to call
-    # end_combat); silently re-using stale combat_state with brand-new
-    # enemy_ids would mask it.
+    """Open a fresh fight (no existing combat_state) and run one auto-sim.
+    Used by /turn's CombatAction / SummonCombatAction entry and by rest's
+    ambush branch."""
     if state.combat_state is not None:
         raise CombatStateInvalid(
             "start_combat called while combat_state is already set "
@@ -173,161 +142,72 @@ async def start_combat_and_run_npc_phase(
                 f"{first_enemy.name}{gwa_wa(first_enemy.name)} 전투 개시",
                 dirty,
             )
-    async for ev in run_combat_npc_phase(state, dirty, rng):
+
+    async for ev in _drive_auto_combat(
+        client, state, profile_dir, dirty,
+        player_input=player_input, player_action=player_action,
+        rng=rng, cap=cap,
+    ):
         yield ev
 
 
-# --- player turn while in combat ------------------------------------------
+# --- judge action → PlayerAction --------------------------------------------
 
 
-async def _flush_player_turn(
-    state: GameState,
-    saves_dir: str,
-    dirty: Dirty,
-    rng: random.Random | None,
-    to_front_fn: ToFrontFn | None,
-) -> AsyncIterator[dict]:
-    """Common tail after the player's combat action: NPC phase → bump turn →
-    advance time → finalize."""
-    async for ev in run_combat_npc_phase(state, dirty, rng):
-        yield ev
-    state.turn_count += 1
-    tick_turn_buffs(state, dirty)
-    async for ev in finalize(state, saves_dir, dirty, to_front_fn):
-        yield ev
-
-
-async def _handle_death_save(
-    state: GameState,
-    saves_dir: str,
-    dirty: Dirty,
-    rng: random.Random | None,
-    to_front_fn: ToFrontFn | None,
-) -> AsyncIterator[dict]:
-    player = state.characters[state.player_id]
-    status, roll = combat_engine.tick_death_save(
-        state, state.player_id, rng=rng, dirty=dirty.entities
-    )
-    ds_grade = "success" if roll >= RULES.death.save_dc else "failure"
-    text = f"{player.name} 죽음 굴림 (d20={roll}) — "
-    if status == "stable":
-        text += "안정화 — 의식을 되찾았습니다."
-    elif status == "dead":
-        text += "숨을 거두었습니다."
-    else:
-        ds = player.death_saves
-        text += (
-            f"성공 {ds.successes}/3, 실패 {ds.failures}/3."
-            if ds is not None
-            else "성공/실패."
+def _judge_to_player_action(result, state: GameState) -> PlayerAction | None:
+    """Distil a judge action into a PlayerAction for the auto-sim. Returns
+    None if the action is not allowed in combat (rest, level_up, etc.)."""
+    if isinstance(result, CombatAction):
+        return PlayerAction(
+            kind="skill" if result.skill_id else "attack",
+            skill_id=result.skill_id,
+            targets=list(result.targets),
         )
-    yield push_act(state, dirty, text)
-    yield {
-        "type": "combat_turn",
-        "data": {"actor": state.player_id, "action": "death_save", "grade": ds_grade},
-    }
-    if status != "dead":
-        combat_engine.advance_turn(state)
-    async for ev in _flush_player_turn(state, saves_dir, dirty, rng, to_front_fn):
-        yield ev
+    if isinstance(result, FleeAction):
+        return PlayerAction(kind="flee")
+    if isinstance(result, PassAction):
+        return PlayerAction(kind="pass")
+    if isinstance(result, (UseAction, EquipAction, UnequipAction)):
+        return PlayerAction(kind="pass")
+    return None
 
 
-async def _handle_combat_action(
+# --- in-combat player turn (state.combat_state already set) ---------------
+
+
+async def _passive_pre_emit(
     state: GameState,
-    saves_dir: str,
     dirty: Dirty,
-    rng: random.Random | None,
-    to_front_fn: ToFrontFn | None,
-    result: CombatAction,
+    result,
 ) -> AsyncIterator[dict]:
-    player = state.characters[state.player_id]
-    target_id = result.targets[0]
-    target = state.characters.get(target_id)
-    if target_id == state.player_id or target is None or not target.alive:
-        yield push_act(state, dirty, "그 대상은 공격할 수 없습니다.")
-        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+    """For UseAction / EquipAction / UnequipAction inside combat: apply the
+    item engine action before the auto-sim sees a `pass` round, so the
+    cinematic narrates a fight where the player consumed/swapped this turn.
+    Emits a combat_turn event so the client can attribute the round to the
+    item interaction, mirroring the round events the auto-sim produces."""
+    label: str
+    if isinstance(result, UseAction):
+        async for ev in emit_use(state, state.player_id, result.item_id, result.target_id, dirty):
             yield ev
-        return
-    if result.skill_id:
-        async for ev in emit_skill_cast(
-            state, state.player_id, result.skill_id, list(result.targets), dirty, rng=rng
-        ):
+        label = "use"
+    elif isinstance(result, EquipAction):
+        async for ev in emit_equip(state, state.player_id, result.item_id, dirty):
             yield ev
+        label = "equip"
+    elif isinstance(result, UnequipAction):
+        async for ev in emit_unequip(state, state.player_id, result.item_id, dirty):
+            yield ev
+        label = "unequip"
     else:
-        outcome = combat_engine.attack(player, target, state.items, rng=rng)
-        async for ev in emit_attack(state, state.player_id, target_id, outcome, dirty):
-            yield ev
-    combat_engine.advance_turn(state)
-    async for ev in _flush_player_turn(state, saves_dir, dirty, rng, to_front_fn):
-        yield ev
-
-
-async def _handle_flee(
-    state: GameState,
-    saves_dir: str,
-    dirty: Dirty,
-    rng: random.Random | None,
-    to_front_fn: ToFrontFn | None,
-) -> AsyncIterator[dict]:
-    player = state.characters[state.player_id]
-    ok, roll_total = combat_engine.try_flee(player, rng=rng)
-    if ok:
-        yield push_act(
-            state, dirty,
-            f"{player.name}{i_ga(player.name)} 전투에서 도주했다 (굴림 {roll_total}).",
-        )
-        yield {
-            "type": "combat_turn",
-            "data": {"actor": state.player_id, "action": "flee", "grade": "success"},
-        }
-        yield {"type": "combat_end", "data": {"outcome": "fled"}}
-        combat_engine.end_combat(state)
-        state.turn_count += 1
-        tick_turn_buffs(state, dirty)
-        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
-            yield ev
         return
-    yield push_act(
-        state, dirty,
-        f"{player.name}{i_ga(player.name)} 도주를 시도했으나 실패했다 (굴림 {roll_total}).",
-    )
-    yield {
-        "type": "combat_turn",
-        "data": {"actor": state.player_id, "action": "flee", "grade": "failure"},
-    }
-    combat_engine.advance_turn(state)
-    async for ev in _flush_player_turn(state, saves_dir, dirty, rng, to_front_fn):
-        yield ev
-
-
-async def _handle_passive_in_combat(
-    state: GameState,
-    saves_dir: str,
-    dirty: Dirty,
-    rng: random.Random | None,
-    to_front_fn: ToFrontFn | None,
-    *,
-    emit: AsyncIterator[dict],
-    action_label: str,
-    item_id: str,
-) -> AsyncIterator[dict]:
-    """Shared shape for non-attack player actions in combat (use, equip,
-    unequip). The engine action runs, a combat_turn event signals the
-    action consumed the player turn, NPC phase follows."""
-    async for ev in emit:
-        yield ev
     yield {
         "type": "combat_turn",
         "data": {
             "actor": state.player_id,
-            "action": action_label,
-            "grade": "success",
-            "item_id": item_id,
+            "action": label,
+            "item_id": result.item_id,
         },
     }
-    combat_engine.advance_turn(state)
-    async for ev in _flush_player_turn(state, saves_dir, dirty, rng, to_front_fn):
-        yield ev
 
 
 async def run_combat_player_turn(
@@ -340,15 +220,9 @@ async def run_combat_player_turn(
     rng: random.Random | None,
     to_front_fn: ToFrontFn | None,
 ) -> AsyncIterator[dict]:
-    """Dispatch the player's mid-combat turn. death_save bypasses judge —
-    everything else goes through judge → branch."""
-    player = state.characters[state.player_id]
-
-    if player.death_saves is not None:
-        async for ev in _handle_death_save(state, saves_dir, dirty, rng, to_front_fn):
-            yield ev
-        return
-
+    """One in-combat /turn step. Always runs an auto-sim cycle (cap rounds
+    or until terminal). The `ongoing` outcome leaves combat_state in place
+    so the next /turn picks up where this one left off."""
     try:
         result = await run_judge(client, state, player_input)
     except JudgeMalformed as e:
@@ -356,38 +230,7 @@ async def run_combat_player_turn(
         return
 
     yield {"type": "judge", "data": result.model_dump()}
-
     refresh_active_subject(state, result)
-
-    if isinstance(result, CombatAction):
-        async for ev in _handle_combat_action(state, saves_dir, dirty, rng, to_front_fn, result):
-            yield ev
-        return
-
-    if isinstance(result, FleeAction):
-        async for ev in _handle_flee(state, saves_dir, dirty, rng, to_front_fn):
-            yield ev
-        return
-
-    if isinstance(result, RollAction):
-        # Environment roll — same shape as out-of-combat. /roll resumes NPC phase.
-        async for ev in emit_roll_pending(state, saves_dir, player_input, result, dirty):
-            yield ev
-        return
-
-    if isinstance(result, PassAction):
-        yield push_act(
-            state, dirty,
-            f"{player.name}{eun_neun(player.name)} 자세를 가다듬으며 한 차례를 보냈습니다.",
-        )
-        yield {
-            "type": "combat_turn",
-            "data": {"actor": state.player_id, "action": "pass", "grade": "success"},
-        }
-        combat_engine.advance_turn(state)
-        async for ev in _flush_player_turn(state, saves_dir, dirty, rng, to_front_fn):
-            yield ev
-        return
 
     if isinstance(result, RestAction):
         yield push_act(state, dirty, "전투 중에는 잠들 수 없습니다.")
@@ -395,35 +238,54 @@ async def run_combat_player_turn(
             yield ev
         return
 
-    if isinstance(result, UseAction):
-        async for ev in _handle_passive_in_combat(
-            state, saves_dir, dirty, rng, to_front_fn,
-            emit=emit_use(state, state.player_id, result.item_id, result.target_id, dirty),
-            action_label="use",
-            item_id=result.item_id,
-        ):
+    if isinstance(result, RollAction):
+        async for ev in emit_roll_pending(state, saves_dir, player_input, result, dirty):
             yield ev
         return
 
-    if isinstance(result, (EquipAction, UnequipAction)):
-        if isinstance(result, EquipAction):
-            emit = emit_equip(state, state.player_id, result.item_id, dirty)
-            label = "equip"
-        else:
-            emit = emit_unequip(state, state.player_id, result.item_id, dirty)
-            label = "unequip"
-        async for ev in _handle_passive_in_combat(
-            state, saves_dir, dirty, rng, to_front_fn,
-            emit=emit, action_label=label, item_id=result.item_id,
-        ):
-            yield ev
-        return
-
-    # Reject in combat, or any growth/trade action that doesn't belong here.
     if isinstance(result, RejectAction):
-        text = "그 말은 받아들여지지 않습니다."
-    else:
-        text = "전투 중에는 그 행동을 할 수 없습니다."
-    yield push_act(state, dirty, text)
+        yield push_act(state, dirty, "그 말은 받아들여지지 않습니다.")
+        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    player_action = _judge_to_player_action(result, state)
+    if player_action is None:
+        yield push_act(state, dirty, "전투 중에는 그 행동을 할 수 없습니다.")
+        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+            yield ev
+        return
+
+    if isinstance(result, CombatAction):
+        actor_loc = state.characters[state.player_id].location_id
+        invalid = [
+            t for t in result.targets
+            if t == state.player_id
+            or t not in state.characters
+            or not state.characters[t].alive
+            or state.characters[t].location_id != actor_loc
+        ]
+        if invalid:
+            yield push_act(state, dirty, "공격할 수 있는 대상이 없습니다.")
+            async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+                yield ev
+            return
+
+    # Passive in-combat actions emit their engine effect first; the auto-sim
+    # then runs to terminal outcome with the player falling back to attack
+    # from round 2 onwards.
+    if isinstance(result, (UseAction, EquipAction, UnequipAction)):
+        async for ev in _passive_pre_emit(state, dirty, result):
+            yield ev
+
+    async for ev in _drive_auto_combat(
+        client, state, profile_dir, dirty,
+        player_input=player_input, player_action=player_action,
+        rng=rng,
+    ):
+        yield ev
+
+    state.turn_count += 1
+    tick_turn_buffs(state, dirty)
     async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev
