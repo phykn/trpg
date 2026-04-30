@@ -8,16 +8,13 @@ export function ConfirmDialog({ info, onConfirm, onCancel }: {
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const trustClass =
+  const trust =
     info.trust === undefined
       ? null
-      : info.trust > 0
-      ? 'text-success-fg'
-      : 'text-danger-fg';
-  const trustText =
-    info.trust === undefined
-      ? null
-      : `호감도 ${info.trust > 0 ? '+' : ''}${info.trust}`;
+      : {
+          cls: info.trust > 0 ? 'text-success-fg' : 'text-danger-fg',
+          text: `호감도 ${info.trust > 0 ? '+' : ''}${info.trust}`,
+        };
 
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onCancel}>
@@ -39,9 +36,9 @@ export function ConfirmDialog({ info, onConfirm, onCancel }: {
               >
                 {info.title}
               </Text>
-              {trustText && (
-                <Text className={`font-mono text-caption ${trustClass}`}>
-                  {trustText}
+              {trust && (
+                <Text className={`font-mono text-caption ${trust.cls}`}>
+                  {trust.text}
                 </Text>
               )}
             </View>
