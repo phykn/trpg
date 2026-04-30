@@ -269,24 +269,8 @@ async def _dispatch(
             if getattr(part, "tail_intent", None):
                 yield push_act(state, dirty, part.tail_intent)
         if last_pass is not None:
-
-            target_for_log = last_pass.targets[0] if last_pass.targets else None
-            # Pre-apply the player's relocation (if judge intent says so) and
-            # emit panels before narrate streams. The narrate prompt then sees
-            # the destination's surroundings and writes "arrived" prose instead
-            # of "transit" prose; the client's pill updates immediately.
-            apply_intended_move(state, last_pass.model_dump(), dirty.entities)
-            if to_front_fn is not None:
-                yield {"type": "state", "data": to_front_fn(state)}
-            stream = run_narrate(
-                client, state, profile_dir, player_input,
-                judge_result=last_pass.model_dump(),
-                grade=None,
-            )
-            async for ev in consume_narrate(
-                state, dirty, stream,
-                target_for_log=target_for_log,
-                dialogue_input=player_input,
+            async for ev in _stream_narrate_tail(
+                client, state, profile_dir, player_input, dirty, to_front_fn, last_pass,
             ):
                 yield ev
         tick_turn_buffs(state, dirty)
@@ -297,40 +281,50 @@ async def _dispatch(
     # action == pass / reject — narrator path.
     assert isinstance(result, (PassAction, RejectAction))
     state.turn_count += 1
-    if isinstance(result, PassAction):
-        target_for_log = result.targets[0] if result.targets else None
-        # Pre-apply the player's relocation (if judge intent says so) before
-        # narrate streams. The narrate prompt then sees the destination's
-        # surroundings and writes "arrived" prose; the client's pill updates
-        # immediately on the state event below. Reject path skips this — it
-        # has no movement intent.
-        apply_intended_move(state, result.model_dump(), dirty.entities)
+    async for ev in _stream_narrate_tail(
+        client, state, profile_dir, player_input, dirty, to_front_fn, result,
+    ):
+        yield ev
+    tick_turn_buffs(state, dirty)
+    async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+        yield ev
+
+
+# --- shared narrate tail ---------------------------------------------------
+
+
+async def _stream_narrate_tail(
+    client: LLMClient,
+    state: GameState,
+    profile_dir: str,
+    player_input: str,
+    dirty: Dirty,
+    to_front_fn: ToFrontFn | None,
+    action: "PassAction | RejectAction",
+) -> AsyncIterator[dict]:
+    """Pre-apply movement (PassAction only), emit a panels state event, then
+    drive run_narrate / consume_narrate. Used by both the ChainAction last_pass
+    branch and the bottom PassAction/RejectAction tail — pre-narrate state
+    emission lets the destination's surroundings appear in the prompt while
+    the client's pill updates immediately. RejectAction has no movement intent
+    so it skips apply_intended_move."""
+    if isinstance(action, PassAction):
+        target_for_log = action.targets[0] if action.targets else None
+        apply_intended_move(state, action.model_dump(), dirty.entities)
     else:
         target_for_log = None
 
-    # Emit panels before narrate streams so subject refresh and (for pass) the
-    # pre-applied move show up immediately instead of waiting for the
-    # post-narrate finalize.
     if to_front_fn is not None:
         yield {"type": "state", "data": to_front_fn(state)}
 
     stream = run_narrate(
-        client,
-        state,
-        profile_dir,
-        player_input,
-        judge_result=result.model_dump(),
+        client, state, profile_dir, player_input,
+        judge_result=action.model_dump(),
         grade=None,
     )
     async for ev in consume_narrate(
-        state,
-        dirty,
-        stream,
+        state, dirty, stream,
         target_for_log=target_for_log,
         dialogue_input=player_input,
     ):
-        yield ev
-
-    tick_turn_buffs(state, dirty)
-    async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev
