@@ -49,7 +49,6 @@ dotenv loads `server/.env` automatically and uvicorn binds to `HOST:PORT`.
 |---|---|---|
 | GET  | `/health` | Health check (no auth) |
 | GET  | `/profiles` | Scenario + race card list |
-| GET  | `/session/current` | FrontState for the most recent game_id (404 if none) |
 | POST | `/session/init` | New game (profile + player) |
 | GET  | `/session/{id}/state` | Read FrontState |
 | POST | `/session/{id}/turn` | One turn (SSE) |
@@ -80,7 +79,6 @@ server/
   scripts/                         # one-off tools (judge_stress, etc.)
 ../scenarios/<profile>/            # scenario seed (world.md, start.json, races/, locations/, characters/, items/, quests/, chapters/, player_template.json). Peer of the repo root
 ../saves/                          # runtime store (gitignored)
-  .current                           # one-line pointer to the most recent game_id
   games/<game_id>/
     meta.json                        # singleton fields (player_id, turn_count, pending_check, ...)
     characters/<id>.json             # one file per entity

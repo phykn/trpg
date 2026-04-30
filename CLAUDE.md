@@ -13,7 +13,7 @@ Korean-language TRPG. Three pieces in one bundle:
 - `agency/` — LLM agent office. QA team (in-process game playthroughs) + Story team (writes seeds into `scenarios/<name>/`). [agency/CLAUDE.md](./agency/CLAUDE.md).
 - `docs/` — North-star design notes in 5 chapters (`01-overview` / `02-runtime` / `03-features` / `04-boundary` / `05-codemap`). Index is `docs/01-overview.md`.
 - `scenarios/<name>/` — scenario seeds. The server's `PROFILE_DIR` points here, and agency/story builds new ones here. Tree: `profile.json`, `world.md`, `start.json`, `player_template.json`, `races/`, `characters/`, `locations/`, `items/`, `quests/`, `chapters/`, `skills/`.
-- `saves/` — gitignored. One directory per game (`games/<game_id>/...` + `.current`).
+- `saves/` — gitignored. One directory per game (`games/<game_id>/...`).
 
 The venv, pyproject, and requirements are a single set at the repo root. All Python code (server, agency, tests) shares the same `.venv/`.
 

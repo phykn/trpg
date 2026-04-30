@@ -16,7 +16,7 @@ src/
   ontology/    Derived views over GameState. graph.py builds typed-edge relations (located_at, equips, carries, connects_to, unlocks, gives_quest, kill_target_of, reward_of); target_view.py summarises one entity for prompts.
   context/     Prompt-facing context builders (surroundings, layered context).
   mapping/     to_front.py — GameState → flat dict the client renders. Korean dates, durations, composed strings, conditional labels are all built here.
-  persistence/ init.py builds a new GameState from a profile + player input. store.py does atomic IO (.tmp + os.replace) and the .current pointer.
+  persistence/ init.py builds a new GameState from a profile + player input. store.py does atomic IO (.tmp + os.replace).
   domain/      Pure data shapes. entities.py (Character, Item, Location, Race, Skill, Quest, Chapter, Campaign), memory.py (Memory, PendingCheck, LogEntry union, TurnLogEntry, DialoguePair), state.py (GameState, CombatState), types.py (StatKey, Tier, Grade, Intent, Action), errors.py (DomainError + subclasses).
   rules/       config.py exposes the frozen RULES singleton (DC, social, memory, log, time, recovery, growth, skill, carry, trade, flee, combat, death). dc.py has roll math.
 tests/         pytest, asyncio_mode=auto, live marker for LLM-required tests.
@@ -26,7 +26,7 @@ run_api.py     Entrypoint — loads env, builds the FastAPI app, runs uvicorn.
 
 Layer rule: upper depends on lower, never the reverse. The dependency direction goes api → flow → agents/engines → llm/ontology/context/mapping → persistence → domain/rules.
 
-`../scenarios/<profile>/` is the seed source (`world.md`, `start.json`, `player_template.json`, `profile.json`, plus `races/ characters/ items/ locations/ quests/ chapters/`); shared with `agency/story`. `../saves/` is the runtime store, gitignored. Per-game layout: `games/<game_id>/{meta.json, characters/<id>.json, items/<id>.json, ..., log.jsonl, history.jsonl, dialogue.jsonl}`. `../saves/.current` holds the most recent `game_id` for `GET /session/current`.
+`../scenarios/<profile>/` is the seed source (`world.md`, `start.json`, `player_template.json`, `profile.json`, plus `races/ characters/ items/ locations/ quests/ chapters/`); shared with `agency/story`. `../saves/` is the runtime store, gitignored. Per-game layout: `games/<game_id>/{meta.json, characters/<id>.json, items/<id>.json, ..., log.jsonl, history.jsonl, dialogue.jsonl}`. The active `game_id` is held by the client (browser localStorage), so a single server can host multiple users without one user's `init` clobbering another's "last game" pointer.
 
 ## Commands
 

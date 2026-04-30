@@ -34,9 +34,8 @@ export async function listProfiles(): Promise<ProfileCard[]> {
 }
 
 // Persist the active game_id locally so the user resumes their own game on
-// reload. Going through the server's `/session/current` pointer would mix
-// users — that pointer is global to the saves dir, so any user's `init`
-// overwrites every other user's "last game".
+// reload. Each browser owns its own pointer — the server has no per-user
+// "last game" notion, so two users on the same server don't collide.
 const STORAGE_KEY = 'trpg.current_game_id';
 
 function getStorage(): Storage | null {

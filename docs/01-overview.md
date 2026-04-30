@@ -53,7 +53,7 @@ LLM 은 "무엇을 할까 / 어떻게 말할까" 만 고른다. 숫자, 상태, 
   - 프로필 목록 (`GET /profiles`) → 사용자가 시나리오 카드 중 하나 고름. P1 시드는 `scenarios/default/` 한 벌만이지만, 디렉터리 스캔 방식이라 추후 시나리오를 폴더 추가만으로 확장 가능.
   - 캐릭터 생성 — 종족(목록 선택) + 이름. 스탯 6 개는 모두 10 으로 시작 (분배 화면 없음). `appearance` 는 NPC 시드에만 들어가고 플레이어 입력 받지 않음.
   - 골라진 race 의 racial_skills 자동 부여, max_HP/MP 는 [03-features.md](./03-features.md) §2.3 공식 (level 0).
-- 마지막 게임 자동 복원 (`GET /session/current`): `SAVES_DIR/.current` 가 가리키는 game_id 의 `FrontState` 반환. 게임 목록·이어하기 화면 없음 — 한 명·한 게임 흐름.
+- 마지막 게임 자동 복원: 클라이언트가 `localStorage` 에 보관해 둔 game_id 로 `GET /session/{id}/state` 를 불러 `FrontState` 복원. 게임 목록·이어하기 화면 없음 — 사용자 한 명당 한 게임 흐름. 서버는 "최근 게임" 포인터를 따로 들고 있지 않아 한 서버에 여러 사용자가 붙어도 서로의 마지막 게임을 덮어쓰지 않는다.
 - 기억·호감도·게임 안 시간 흐름은 최소한만 (등급·의도까지만 구현, 성향 보정은 P3 으로 미룸)
 - 집/사무실 네트워크 안에서만 (환경 변수 누락 시 즉시 멈춤, 아이디·비밀번호 보호)
 
@@ -284,7 +284,7 @@ dice 버튼은 `pending_check.kind="stat"` (일반 환경 굴림) 에만 등장.
 | `BASE_URL` | llama.cpp (로컬 LLM 서버) 주소 | `http://127.0.0.1:8080/v1` |
 | `BASIC_AUTH_USER` | 네트워크 보호용 접속 아이디 | `kn` |
 | `BASIC_AUTH_PASS` | 네트워크 보호용 접속 비밀번호 | (임의 문자열) |
-| `SAVES_DIR` | GameState JSON 과 `.current` (마지막 game_id) 저장 위치 | `./saves` |
+| `SAVES_DIR` | GameState JSON 저장 위치 | `./saves` |
 | `PROFILE_DIR` | 시나리오 시드 디렉터리. `GET /profiles` 가 이 아래를 스캔. repo 루트의 `scenarios/` (server 와 agency/story 가 공유) | `../scenarios` |
 
 프론트 쪽 `EXPO_PUBLIC_API_URL` 은 `http://{HOST}:{PORT}` 를 가리키고, 폰 테스트는 같은 네트워크 안 IP 를 쓴다 (외부 노출은 P3 까지 보류).

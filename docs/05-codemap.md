@@ -82,7 +82,7 @@ server/
       skill_recommend.py         recommend_skill_candidates — skill_recommend agent 호출 → engines/skill 의 build_skill_from_candidate 로 수치 채움
 
     persistence/                 Disk I/O
-      store.py                   load_game / save_meta / save_entity / append_*_entries (atomic .tmp + os.replace + asyncio.Lock) + .current 읽기/쓰기
+      store.py                   load_game / save_meta / save_entity / append_*_entries (atomic .tmp + os.replace + asyncio.Lock)
       init.py                    프로필 + 캐릭터 생성 요청 → 초기 GameState
 
     mapping/
@@ -101,10 +101,10 @@ server/
         __init__.py              router — health 만 public, 나머지는 Basic Auth 게이트
         health.py                /health
         profiles.py              /profiles + 시드 스캔
-        session.py               /session/current /session/init /session/{id}/state /turn /roll /intro
+        session.py               /session/init /session/{id}/state /turn /roll /intro
         debug.py                 /debug/complete
 
-  data/ (= ../saves/)            게임당 디렉터리 (`games/<game_id>/...`) + `.current`
+  data/ (= ../saves/)            게임당 디렉터리 (`games/<game_id>/...`). 활성 game_id 는 클라이언트 localStorage 가 보관 — 서버는 "최근 게임" 포인터를 따로 두지 않음
 ```
 
 옛 `routes/growth.py` (`/level-up`, `/learn-skill`) 와 `routes/inventory.py` (`/equip`, `/unequip`, `/buy`, `/sell`, `/cast`, `/use`) 는 폐기. 모든 게임 행동은 `/turn` 의 자연어 한 통로에 모이고 judge 가 분류한다 ([01-overview.md](./01-overview.md) §3.16).

@@ -257,9 +257,9 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 - 요청 검증: `profile` 이 `PROFILE_DIR` 에 있는 디렉터리인지, `race_id` 가 그 프로필의 race 목록에 있는지. 누락·미스매치는 422.
 - 시드 로딩: `PROFILE_DIR/{profile}/` 의 `world.md`, `start.json`, `player_template.json`, `characters/`, `locations/`, `quests/`, `items/`, `races/`, `skills/`, `chapters/`, `campaigns/` 를 읽어 초기 `GameState` 조립.
 - 플레이어 캐릭터 합성: `player_template.json` 의 시작 위치·equipment·인벤토리 시드는 그대로 쓰되, `name`·`race_id` 는 요청값으로 덮어쓰기. 스탯 6 개 (`STR/DEX/CON/INT/WIS/CHA`) 모두 10 으로 강제 (player_template 의 stats 는 무시). max_HP / max_MP 는 [03-features.md](./03-features.md) §2.3 의 공식 (level 0, CON 10 → max_HP 20, INT 10 → max_MP 15). race 의 `racial_skills` 자동 부여. `appearance` 는 플레이어 입력으로 받지 않음 — NPC 시드 전용 필드.
-- `game_id` 는 시작 시각으로 할당 (`game_YYMMDD_HHMMSS`), 최초 저장. `SAVES_DIR/.current` 한 줄 텍스트 파일에 game_id 기록. `FrontState` 와 함께 반환.
+- `game_id` 는 시작 시각으로 할당 (`game_YYMMDD_HHMMSS`), 최초 저장. `FrontState` 와 함께 반환. 클라이언트가 응답의 `game_id` 를 `localStorage` 에 보관해 다음 부팅 때 자기 게임을 다시 열어준다.
 
-**현재 세션 복원** (`GET /session/current`): `SAVES_DIR/.current` 가 가리키는 game_id 의 `FrontState` 반환. `.current` 가 없거나 가리키는 파일이 없으면 HTTP 404 — 프론트는 이 응답으로 새게임 화면 분기. 게임 목록·이어하기 화면은 P1 에 없음 (한 명·한 게임 흐름).
+**현재 세션 복원**: 클라이언트는 `localStorage` 에 저장된 game_id 로 `GET /session/{id}/state` 를 호출. id 가 없으면 새게임 화면, 디렉터리가 없으면 (게임 삭제됐거나 saves 폐기) 포인터를 비우고 새게임 화면. 서버가 "최근 게임" 을 추적하지 않으므로 한 서버에 여러 사용자가 붙어도 서로의 마지막 게임을 덮어쓰지 않는다. 게임 목록·이어하기 화면은 P1 에 없음 (사용자 한 명당 한 게임 흐름).
 
 **load** (`GET /session/{id}/state` 또는 `/turn` · `/roll` 진입): `SAVES_DIR/games/{id}/` 디렉터리의 `meta.json` + 엔티티별 `<kind>/<id>.json` + `log.jsonl`/`history.jsonl`/`dialogue.jsonl` 꼬리(cap) 를 읽어 Pydantic 으로 `GameState` 복원. 디렉터리 없으면 HTTP 404.
 
@@ -589,7 +589,7 @@ if aff <= -social.friendly_threshold:  mod = -social.roll_bonus  # 적대: -bonu
 
 `apply_changes` 후 엔진은 `mapping/to_front.py:to_front_state` 로 **7 슬롯 전체** (`hero / subject / quest / place / combat / log / pendingCheck`) 를 다시 JSON 으로 만들어 `state` 이벤트로 보낸다. 바뀐 부분만 보내는 게 아니라 한 턴에 한 번 통째로 — 프론트는 받은 값으로 그대로 덮어쓴다. 파이프라인 말미에서 단 한 번 발사. Log 는 별도 `log_entry` 이벤트로도 쌓이고, `state.log` 는 영속본 꼬리. [04-boundary.md](./04-boundary.md) §1.
 
-**디스플레이 로그 영속화**: SSE `log_entry` 와 누적된 `narrative_delta` (gm 본문 한 덩이) 는 매 턴 끝에 `GameState.log_entries: list[LogEntry]` 에도 append 된다. 상한 `rules.log.display_turns` (기본 20), 초과 시 가장 오래된 항목부터 evict. `GET /session/{id}/state` (§2.5) 와 `GET /session/current` 가 응답할 때 이 영속본을 `FrontState.log` 로 그대로 반환 — reload 시 최근 20 턴치 채팅이 화면에 복원된다. LLM 컨텍스트용 `recent_dialogue` 와 turn 단위 요약 `turn_log` (둘 다 §3.3) 와는 별개 cap.
+**디스플레이 로그 영속화**: SSE `log_entry` 와 누적된 `narrative_delta` (gm 본문 한 덩이) 는 매 턴 끝에 `GameState.log_entries: list[LogEntry]` 에도 append 된다. 상한 `rules.log.display_turns` (기본 20), 초과 시 가장 오래된 항목부터 evict. `GET /session/{id}/state` (§2.5) 가 응답할 때 이 영속본을 `FrontState.log` 로 그대로 반환 — reload 시 최근 20 턴치 채팅이 화면에 복원된다. LLM 컨텍스트용 `recent_dialogue` 와 turn 단위 요약 `turn_log` (둘 다 §3.3) 와는 별개 cap.
 
 ---
 

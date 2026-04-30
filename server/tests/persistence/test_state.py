@@ -157,12 +157,6 @@ async def test_save_to_unwritable_path_raises_persistence_failed(fresh_state):
         await save_meta(fresh_state, "/proc/no_such_writable")
 
 
-async def test_current_game_id_lifecycle(tmp_data):
-    assert read_current_game_id(tmp_data) is None
-    await write_current_game_id(tmp_data, "abc-123")
-    assert read_current_game_id(tmp_data) == "abc-123"
-
-
 def _write_minimal_seed(profile_dir: Path) -> None:
     pdir = profile_dir / "default"
     pdir.mkdir(parents=True)
@@ -215,7 +209,6 @@ async def test_init_game_happy_path(tmp_data):
     p = state.characters["player_01"]
     assert p.name == "테스터" and p.race_id == "human" and p.gender == "female"
     assert p.stats.STR == 10 and p.max_hp == 20  # level 0 formula
-    assert read_current_game_id(saves_dir) == state.game_id
 
     # Seed files were copied into the game folder.
     gdir = Path(saves_dir) / "games" / state.game_id
