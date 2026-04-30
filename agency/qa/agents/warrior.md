@@ -19,7 +19,7 @@
 | 2-3 | 현재 location 의 중립/적대 NPC (우호 태그 없음) 확인. 없으면 인접 location 으로 이동. |
 | 4 | 적이 entities 에 있으면 호명해 공격. 없으면 시드 plausible 한 적 호명 (변경 마을 → 들쥐·산적). |
 | 5 | (자동 `/roll`) outcome 확인 |
-| 6 | victory 면 새 적 찾아 이동. 다른 outcome 이면 페이즈 A 마무리 후 페이즈 B 로 진입. |
+| 6 | victory 면 새 적 찾아 이동. 다른 outcome 이면 우선 회복·이동으로 흘리고, 페이즈 경계(15→16) 까지는 victory 한 번을 더 노린다. |
 | 7-9 | 두 번째 적 찾기 + 공격 |
 | 10 | (자동 `/roll`) |
 | 11-13 | 세 번째 적 찾기 + 공격 |
@@ -51,7 +51,7 @@
 | 30 | 또 공격 — HP 0 까지 밀어붙임 |
 | 31 | (자동 death_save) |
 | 32 | revive_coins 사용 흐름 또는 downed 확정 |
-| 33-34 | downed 후 narrate 흡수 확인 |
+| 33-34 | (자동 death_save — 입력 불필요. revive_coins 가 다 떨어졌으면 그대로 굴러간다.) |
 | 35 | 페이즈 C 마무리 |
 
 ### 페이즈 D — non-combat flee fallback + 마지막 (36-45턴)
@@ -61,8 +61,12 @@
 | 36 | **우호 NPC 만 있는 location 으로 이동** — 안전한 곳 |
 | 37 | (`in_combat=false` 상태에서) flee 호명 — "이 자리에서 도망친다" — pass 흡수 확인 |
 | 38 | 다음 적이 있는 location 으로 이동 |
-| 39-41 | 마지막 전투 시리즈 — 적 호명해 공격 |
-| 42-44 | (자동 `/roll` + outcome) |
+| 39 | 첫 마지막 전투 — 적 호명해 공격 (combat 트리거) |
+| 40 | (자동 `/roll`) outcome 확인 |
+| 41 | victory 면 새 적 호명, 다른 outcome 이면 회복·이동 |
+| 42 | 둘째 마지막 전투 — combat 트리거 |
+| 43 | (자동 `/roll`) outcome |
+| 44 | 셋째 combat 또는 정리 (한 combat = 트리거 한 턴 + 자동 roll 한 턴 = 두 턴 cadence) |
 | 45 | 마지막 — 도망 안 침 |
 
 ### 절대 규칙

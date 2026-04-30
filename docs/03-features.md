@@ -1,6 +1,6 @@
 # 기능 확장 (§1-§2)
 
-> 기본 런타임 ([02-runtime.md](./02-runtime.md) §1-§7) 위에 얹히는 시스템들. 전투, 시간, 호감도, 성장, 회복, 장비/거래, 스킬, 사용, 진행, 동반자.
+> 기본 런타임 ([02-runtime.md](./02-runtime.md) §1-§7) 위에 얹히는 시스템들. 전투, 시간, 호감도, 성장, 회복, 장비/거래, 기술, 사용, 진행, 동반자.
 > 이 모든 룰의 *왜* 는 [01-overview.md](./01-overview.md) §3.17 — 룰은 인터랙티브 노블의 *현실감 발판* (narrator 가 거짓말 못 하게 잡는 physics) 이지 게임플레이 콘텐츠가 아니라는 메타-thesis 가 깔려 있다.
 > 인덱스는 [01-overview.md](./01-overview.md). 런타임 메커닉은 [02-runtime.md](./02-runtime.md), 프론트 경계는 [04-boundary.md](./04-boundary.md), 백엔드 코드 지도는 [05-codemap.md](./05-codemap.md).
 
@@ -27,7 +27,7 @@ required_roll = round(20 / (1 + e^(-k(enemy_defense - player_stat))))
 - 굴림 결과 등급 (critical_success / success / partial_success / failure / critical_failure) 이 **기계적 결과** (몇 명을 사살하는지, 플레이어가 얼마나 다치는지, XP 가 얼마 들어오는지, downed 상태로 떨어지는지) 를 결정.
 - 어떤 스탯을 쓸지는 무기로 갈린다 — 사거리 1.5m 이하 근접 무기는 STR, 그보다 멀면 DEX.
 - 무기 없는 맨손은 `UNARMED_DAMAGE="1d4"`, `UNARMED_RANGE=1.5` 폴백.
-- **range 단위는 미터 (실수)**. 같은 location 안의 추상적 거리이고 격자·hex 같은 정밀한 위치 모델은 없다. 다른 location 의 적은 무조건 사거리 밖이라 combat 액션 자체가 막힘. 같은 단위가 §2.6 스킬 cast 의 사정거리 검증에도 그대로 쓰인다.
+- **range 단위는 미터 (실수)**. 같은 location 안의 추상적 거리이고 격자·hex 같은 정밀한 위치 모델은 없다. 다른 location 의 적은 무조건 사거리 밖이라 combat 액션 자체가 막힘. 같은 단위가 §2.6 기술 cast 의 사정거리 검증에도 그대로 쓰인다.
 - 방어도를 합산하는 슬롯은 `head / top / bottom / feet` 4 개. 각 슬롯의 ArmorEffect.defense 를 더한다 (§2.5).
 
 라운드 단위 데미지 분포·이니셔티브 같은 정밀도는 포기. 정확도보다 흐름이 중요하다는 결정.
@@ -119,7 +119,7 @@ class CombatState:
 
 1. **기반** — 시간, 호감도. 다른 시스템들이 참조하는 척도.
 2. **캐릭터 자원** — 성장 (영구 스탯·레벨), 회복 (HP/MP 사이클).
-3. **장착·행동** — 장비/거래, 스킬, 사용 (소비 아이템).
+3. **장착·행동** — 장비/거래, 기술, 사용 (소비 아이템).
 4. **메타** — 진행 (퀘스트), 동반자.
 
 ### 2.1 월드 시간 (World Time)
@@ -173,11 +173,11 @@ class CombatState:
 
 ### 2.3 성장 (Growth) [P3]
 
-캐릭터 강화의 단일 통로는 `level_up`. 레벨이 곧 게이트고, 레벨업 한 번이 스탯·HP/MP·스킬 권한의 동시 갱신을 일으킨다. 별도의 train / learn 엔드포인트는 두지 않는다 — 모든 강화 경로를 `level_up` 으로 통합.
+캐릭터 강화의 단일 통로는 `level_up`. 레벨이 곧 게이트고, 레벨업 한 번이 스탯·HP/MP·기술 권한의 동시 갱신을 일으킨다. 별도의 train / learn 엔드포인트는 두지 않는다 — 모든 강화 경로를 `level_up` 으로 통합.
 
 **현재 구현 상태**: 1·2·3·4 단계 모두 들어가 있고, 자연어로 한 통로에 모임 — judge 가 입력을 보고 `level_up { stat_up, stat_down }` / `learn_skill { index }` 액션으로 분류하면 `flow/turn.py` 의 액션 분기에서 처리. 옛 `POST /level-up` / `POST /learn-skill` REST 엔드포인트는 폐기.
 - 1·2·3 단계: `engines/growth.py` 가 페어 트레이드 + HP/MP 재계산 + 게이트 해제 (cast 시점 검증으로 자연 해제) 를 담당.
-- 4 단계: `agents/skill_recommend/` + `flow/skill_recommend.py` — level_up 직후 LLM 호출해 후보 3 개 산출. LLM 이 name/description/type/target/primary_stat/special_effect 정하고 엔진이 id/level/template 수치 (mp_cost/power/range/duration) 를 채움. 후보는 `state.pending_skill_candidates` 에 저장. 다음 턴에 플레이어가 자연어로 "첫 번째 스킬을 배운다" 같이 적으면 judge 가 `learn_skill { index }` 로 분류해 1 개 선택 또는 거부 (다음 레벨업까지 보류). LLM 호출 실패는 silent fallback (빈 후보).
+- 4 단계: `agents/skill_recommend/` + `flow/skill_recommend.py` — level_up 직후 LLM 호출해 후보 3 개 산출. LLM 이 name/description/type/target/primary_stat/special_effect 정하고 엔진이 id/level/template 수치 (mp_cost/power/range/duration) 를 채움. 후보는 `state.pending_skill_candidates` 에 저장. 다음 턴에 플레이어가 자연어로 "첫 번째 기술을 배운다" 같이 적으면 judge 가 `learn_skill { index }` 로 분류해 1 개 선택 또는 거부 (다음 레벨업까지 보류). LLM 호출 실패는 silent fallback (빈 후보).
 
 - **레벨**: 0..20. 시작 0, 만렙 20 (레벨업 20 번 가능).
 - **시작 스탯**: 모든 스탯 = 10. 스탯 범위 0..20.
@@ -204,11 +204,11 @@ class CombatState:
 
    레벨 0 시작값 (모든 스탯 10): `max_HP = 20`, `max_MP = 15`.
 
-3. **스킬 사용 게이트 해제** — 캐릭터 레벨이 오르면 `learned_skills` 안의 스킬 중 `skill.level ≤ character.level` 인 것이 사용 가능 상태로 전환 (§2.6).
+3. **기술 사용 게이트 해제** — 캐릭터 레벨이 오르면 `learned_skills` 안의 기술 중 `skill.level ≤ character.level` 인 것이 사용 가능 상태로 전환 (§2.6).
 
-4. **스킬 학습 후보 제시** — LLM 이 캐릭터 과거를 보고 후보 **3 개** 산출. 플레이어가 1 개 골라 `learned_skills[]` 에 추가하거나 거부 (다음 레벨업까지 보류). 별도 endpoint·자원 비용 없음. 입력 신호와 LLM/엔진 분담은 §2.6.
+4. **기술 학습 후보 제시** — LLM 이 캐릭터 과거를 보고 후보 **3 개** 산출. 플레이어가 1 개 골라 `learned_skills[]` 에 추가하거나 거부 (다음 레벨업까지 보류). 별도 endpoint·자원 비용 없음. 입력 신호와 LLM/엔진 분담은 §2.6.
 
-**NPC 도 같은 룰** — 모든 캐릭터가 **페어 트레이드 불변식**을 따른다: `STR+CHA = 20`, `DEX+WIS = 20`, `CON+INT = 20` (자연 귀결로 stat 합 = 60). 즉 NPC 의 강함은 stat 합이 아니라 **level → HP/MP + 스킬 조합 + 분포 편향** 으로 표현. boss 도 페어 합 20/20/20 을 유지하되 극단적 분포 (예: STR 20 / CHA 0, CON 19 / INT 1, DEX 4 / WIS 16) 로 압도감을 만든다. 시드 NPC 든 LLM 즉석 NPC (§2.4) 든 모두 이 룰.
+**NPC 도 같은 룰** — 모든 캐릭터가 **페어 트레이드 불변식**을 따른다: `STR+CHA = 20`, `DEX+WIS = 20`, `CON+INT = 20` (자연 귀결로 stat 합 = 60). 즉 NPC 의 강함은 stat 합이 아니라 **level → HP/MP + 기술 조합 + 분포 편향** 으로 표현. boss 도 페어 합 20/20/20 을 유지하되 극단적 분포 (예: STR 20 / CHA 0, CON 19 / INT 1, DEX 4 / WIS 16) 로 압도감을 만든다. 시드 NPC 든 LLM 즉석 NPC (§2.4) 든 모두 이 룰.
 
 P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
@@ -234,7 +234,7 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 - `surprise="enemy"` 로 전투 시작 (§1.2). 플레이어는 첫 라운드 행동 불가.
 - 적 결정: `Location.sleep_encounters: list[character_id]` 풀이 우선. 풀이 비어있으면 narrator 가 LLM 즉석 생성.
 
-**LLM 즉석 적 산출 분담** (풀이 비었을 때, §2.6 스킬 추천과 같은 패턴 — LLM 은 분류만, 엔진은 수치) — `flow/encounter.py:summon_encounter` + `agents/encounter_summon` 으로 구현됨. `flow/rest.py` 가 `summon_cb` 로 wire-in 하고, encounter_summon agent 가 페어 트레이드 invariant 까지 schema validator 로 강제:
+**LLM 즉석 적 산출 분담** (풀이 비었을 때, §2.6 기술 추천과 같은 패턴 — LLM 은 분류만, 엔진은 수치) — `flow/encounter.py:summon_encounter` + `agents/encounter_summon` 으로 구현됨. `flow/rest.py` 가 `summon_cb` 로 wire-in 하고, encounter_summon agent 가 페어 트레이드 invariant 까지 schema validator 로 강제:
 
 - LLM 이 정함: `name`, `description`, `race` (또는 `appearance` 한 줄), `role`, `disposition`, `special_traits`. 장소 컨텍스트 (지형·시간·이전 사건) 를 보고 결정 — 숲 → 늑대, 동굴 → 박쥐, 도시 뒷골목 → 도적.
 - 엔진이 정함: `id`; `level` (장소 위험도 매핑 — risky 는 플레이어 level ±2, dangerous 는 ±4 같은 식. 결과는 `max(0, ...)` 로 clamp — 시작 level=0 부근에서 음수 방지); HP/MP (§2.3 공식); stats (**페어 트레이드 불변식 — STR+CHA=20, DEX+WIS=20, CON+INT=20** 강제, 합 60 은 자동, 컨셉에 맞춰 분포 — 트롤 = STR 18 / CHA 2, DEX 6 / WIS 14, CON 16 / INT 4 같은 식); `combat_behavior` 디폴트.
@@ -277,17 +277,17 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
 **거래** (affinity 게이트는 `rules.social.*`, 가격 산식은 `rules.trade.*`):
 
-- `buy`: `rules.social.trade_threshold` (기본 0 — affinity ≥ 0 이면 거래 가능) 통과 → 골드·무게 검증 → affinity 할인 적용 후 이전.
+- `buy`: `rules.social.trade_threshold` (기본 0 — affinity ≥ 0 이면 거래 가능) 통과 → 금화·무게 검증 → affinity 할인 적용 후 이전.
 - `sell`: 가격 × `rules.trade.sell_ratio` (기본 0.5) × affinity 보너스.
 - **흥정**: `rules.trade.affinity_price_per_point` (기본 0.01) × affinity 가 할인/보너스 비율 ([-100, +100] 스케일, 0 중립). 절대값은 `rules.trade.affinity_price_cap` (기본 0.5) 로 clamp — 즉 affinity 20 → 20% 할인, 50 → 50% 할인 (캡), 100 도 50% 할인 (캡 동일), -50 → 50% 가산. `affinity_price_per_point=0` 으로 끄면 고정 가격.
 
 프론트 `Subject.inventory: InventoryItem{name, qty}[]` 는 내부 `inventory_ids` 를 같은 `item_id` 끼리 묶어 개수를 세서 만든다.
 
-### 2.6 스킬 시스템 [P3]
+### 2.6 기술 시스템 [P3]
 
-**현재 구현 상태**: cast 핵심 (S1) + judge 의미 매칭 (S2) + 학습 후보 (§2.3 4단계 / S3) 까지 들어갔고 자연어 통합. judge 가 `combat` 액션의 `skill_id` 필드 (또는 의미 매칭, S2) 로 어느 스킬을 쓸지 결정하고, `flow/combat_oneshot.py` 의 시네마틱 안에서 `engines/skill.py:cast` 가 호출된다. 옛 `POST /cast` REST 엔드포인트는 폐기.
+**현재 구현 상태**: cast 핵심 (S1) + judge 의미 매칭 (S2) + 학습 후보 (§2.3 4단계 / S3) 까지 들어갔고 자연어 통합. judge 가 `combat` 액션의 `skill_id` 필드 (또는 의미 매칭, S2) 로 어느 기술을 쓸지 결정하고, `flow/combat_oneshot.py` 의 시네마틱 안에서 `engines/skill.py:cast` 가 호출된다. 옛 `POST /cast` REST 엔드포인트는 폐기.
 - S1: `engines/skill.py` 가 level/MP/range 검증, target self/single/area, grade_multipliers 보정, ActiveBuff 추가/tick 을 담당. attack/debuff 만 d20 굴림으로 grade 결정 (`compute_cast_grade`); heal/buff/self 는 자동 success.
-- S2: judge prompt 가 `surroundings.skills` (racial + learned 두 컬렉션을 합친 뒤 level/MP 통과한 것만 노출, `source: "racial"|"learned"` 로 구분) 와 회피 통로 ("맨손으로/스킬 없이/그냥 평타") 를 보고 `CombatAction.skill_id` 를 채운다. turn.py 가 combat 분기에서 skill_id 가 있으면 plain attack 대신 cast 로 진행하고 GM 로그에 `「스킬명」 발동` 알림. racial·learned 모두 자동 매칭 대상.
+- S2: judge prompt 가 `surroundings.skills` (racial + learned 두 컬렉션을 합친 뒤 level/MP 통과한 것만 노출, `source: "racial"|"learned"` 로 구분) 와 회피 통로 ("맨손으로/기술 없이/그냥 평타") 를 보고 `CombatAction.skill_id` 를 채운다. turn.py 가 combat 분기에서 skill_id 가 있으면 plain attack 대신 cast 로 진행하고 GM 로그에 `「기술명」 발동` 알림. racial·learned 모두 자동 매칭 대상.
 - S3: `agents/skill_recommend/` + `flow/skill_recommend.py` — level_up 직후 LLM 호출해 캐릭터 컨텍스트(memories/turn_log/recent_inputs) 보고 후보 3개 산출. §2.3 4단계와 같은 코드.
 
 `Skill(id, name, description, level, type, target, primary_stat, special_effect, power, mp_cost, range, duration)`.
@@ -308,23 +308,23 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 - `level: int` (0..20) — 사용 요구 캐릭터 레벨. `racial_skills` 는 `level=0` (종족 기본, 시작부터 사용), `learned_skills` 는 `level≥1`. `cast` 시 `character.level ≥ skill.level` 검증 (§2.3 게이트 해제).
 - `type`: attack / heal / buff / debuff.
 - `target`: self / single / area.
-- `primary_stat: Stat` — 그 스킬 `power` 가 기반하는 스탯.
+- `primary_stat: Stat` — 그 기술 `power` 가 기반하는 스탯.
 - `special_effect: str` — LLM 이 자유 텍스트로 적은 묘사 ("불꽃을 휘감아 적의 갑옷을 녹임"). cast 시 judge 가 컨텍스트로 받아 **DC tier/grade 보정** (§2.2 호감도와 같은 패턴 — LLM 은 분류만, 엔진은 수치).
 
 **보유 분류**:
 
 - `racial_skills` (종족 기본 — 시드에 들어 있음, 보통 `level=0`) / `learned_skills` (LLM 추천으로 습득) 두 컬렉션으로 분리 저장. `all_skills()` 로 병합 조회.
-- 일반 공격·점프 같은 보편 행동은 스킬 목록에 안 들어간다 — 엔진 기본 동사로 따로 처리.
+- 일반 공격·점프 같은 보편 행동은 기술 목록에 안 들어간다 — 엔진 기본 동사로 따로 처리.
 
-**의미 매칭 발동** — cast 는 플레이어 입력에 스킬 이름이 정확히 들어 있지 않아도 일어날 수 있다. judge 가 캐릭터의 `racial_skills` + `learned_skills` 를 합쳐서 컨텍스트로 받고, 입력의 의도와 의미적으로 부합하는 스킬을 매칭한다 (예: "조용히 다가가 등에 칼" → 「그림자 보행」). 두 컬렉션 모두 자동 매칭 대상이고, 출력에는 `source: "racial"|"learned"` 가 붙어 어느 쪽인지 구분된다.
+**의미 매칭 발동** — cast 는 플레이어 입력에 기술 이름이 정확히 들어 있지 않아도 일어날 수 있다. judge 가 캐릭터의 `racial_skills` + `learned_skills` 를 합쳐서 컨텍스트로 받고, 입력의 의도와 의미적으로 부합하는 기술을 매칭한다 (예: "조용히 다가가 등에 칼" → 「그림자 보행」). 두 컬렉션 모두 자동 매칭 대상이고, 출력에는 `source: "racial"|"learned"` 가 붙어 어느 쪽인지 구분된다.
 
-- **회피**: "맨손으로" / "스킬 없이" / "그냥 평타" 같은 표현이 보이면 매칭 시도 안 함 — 플레이어가 의도적으로 스킬을 끄는 통로.
-- **알림 필수**: 매칭 발동 시 본문이나 `log_entry` 에 "「스킬명」 발동" 표시. 자동 매칭이 일어났을 때 투명성을 보장하는 장치.
+- **회피**: "맨손으로" / "기술 없이" / "그냥 평타" 같은 표현이 보이면 매칭 시도 안 함 — 플레이어가 의도적으로 기술을 끄는 통로.
+- **알림 필수**: 매칭 발동 시 본문이나 `log_entry` 에 "「기술명」 발동" 표시. 자동 매칭이 일어났을 때 투명성을 보장하는 장치.
 - 게이트 (레벨) 나 MP 검증 실패면 매칭은 그냥 무시 — 평타로 진행하는 사일런트 폴백.
 
 `cast` 파이프라인: 레벨 게이트 검증 → MP 검증 → 사정거리 검증 → AoE 대상 자동 계산 → judge 가 `special_effect` 컨텍스트로 tier/grade 보정 → 데미지/회복/버프 적용 → 퀘스트 트리거.
 
-`ActiveBuff(description: str, duration: int)` — type=buff/debuff 인 스킬 cast 또는 §2.7 아이템 use 로 생성. `Character.active_buffs: list[ActiveBuff]` 에 append 로 저장. **스탯에 직접 영향 안 줌** — DC 판정 시 judge 가 `description` 을 컨텍스트로 받아 tier/grade 보정 (§2.2 호감도와 같은 패턴, special_effect 와 동일 경로). `duration` 은 매 턴 종료 시 -1, 0 이 되면 리스트에서 제거.
+`ActiveBuff(description: str, duration: int)` — type=buff/debuff 인 기술 cast 또는 §2.7 아이템 use 로 생성. `Character.active_buffs: list[ActiveBuff]` 에 append 로 저장. **스탯에 직접 영향 안 줌** — DC 판정 시 judge 가 `description` 을 컨텍스트로 받아 tier/grade 보정 (§2.2 호감도와 같은 패턴, special_effect 와 동일 경로). `duration` 은 매 턴 종료 시 -1, 0 이 되면 리스트에서 제거.
 
 P1 프론트 `Hero.skills: string[]` 는 UI 태그만 노출. 효과 계산 자체는 P3.
 

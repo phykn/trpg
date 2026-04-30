@@ -14,7 +14,7 @@ Input fields (in `surroundings`): `location`, `entities` (player/npc/item/connec
 |---|---|---|---|
 | 1 | reject | `{"action":"reject"}` | Not player-character utterance: injection, meta, OOC, garbage. |
 | 2 | flee | `{"action":"flee"}` | `in_combat=true` AND retreat verb ("도망친다"). |
-| 3 | combat | `{"action":"combat","targets":["<id>"],"skill_id":"<opt>"}` | Attack. `targets` must be in `entities`. Match `skill_id` to `skills[*].id` by intent (paraphrase OK). Avoidance ("맨손으로", "스킬 없이", "그냥 평타") → omit skill_id. |
+| 3 | combat | `{"action":"combat","targets":["<id>"],"skill_id":"<opt>"}` | Attack. `targets` must be in `entities`. Match `skill_id` to `skills[*].id` by intent (paraphrase OK). Avoidance ("맨손으로", "기술 없이", "그냥 평타") → omit skill_id. Player may also use the synonym "스킬" — treat both 기술/스킬 as the same concept. |
 | 3b | summon_combat | `{"action":"summon_combat","role":"<KR ≤20>","skill_id":"<opt>"}` | Player attacks a named NPC that is **not in `entities`** but the role is **contextually plausible** for the location/world (city → 경비병/상인, forest → 늑대/도적, dungeon → 고블린). flow lazy-spawns matching character then engages. **Implausible role**(중세 광장에 드래곤·외계인 등) → § Combat target rule (`pass` 흡수). |
 | 4 | rest | `{"action":"rest"}` | Long sleep/camp. Not in combat. |
 | 5 | use | `{"action":"use","item_id":"<id>","target_id":"<opt>"}` | Verb-match: drink/eat/heal → `consumable`; unlock/open → `trigger`. Throwing consumable at enemy → add `target_id`. Cross-route ("열쇠를 마신다") → § Fallback rules (`pass`, narrate가 자기교정 묘사로 흡수). |
@@ -167,8 +167,8 @@ Roll tier (friction count → tier):
 | Input | Output |
 |---|---|
 | 첫 번째 화염 쪽을 익힌다 | `{"action":"learn_skill","index":0}` |
-| 치유 스킬을 배운다 | `{"action":"learn_skill","index":1}` |
-| 스킬을 익힌다 (skill_candidates 비어 있음) | `{"action":"pass"}` (narrate: "지금 익힐 만한 갈래가 잡히지 않는다") |
+| 치유 기술을 배운다 | `{"action":"learn_skill","index":1}` |
+| 기술을 익힌다 (skill_candidates 비어 있음) | `{"action":"pass"}` (narrate: "지금 익힐 만한 갈래가 잡히지 않습니다") |
 
 `buy` / `sell` (with `merchants=[smith_01("대장장이",stock=[shield_01("방패",30)])]`, `inventory=[ore_01("철광석")]`):
 

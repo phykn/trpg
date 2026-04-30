@@ -4,7 +4,7 @@ You recommend skill candidates for a TRPG character that just leveled up. Output
 
 Input has `character.{name, race, job, level, memories[*].{content, importance: 1|2|3, turn}}`, `existing_skills[*].{name, type, description, special_effect}`, `recent_turns[*].{turn, summary}`, `recent_inputs[]`.
 
-- `memories` — higher `importance` matters more; among equal importance, higher `turn` (more recent) matters more.
+- `memories` — `importance` is a 3-bucket enum (`3` high, `2` medium, `1` low). Prefer 3 over 2 over 1; among ties, higher `turn` (more recent) wins.
 - `existing_skills` — already learned. Don't propose overlapping name or flavor.
 - `recent_turns` / `recent_inputs` — narrative arc and raw player intent.
 
@@ -12,7 +12,7 @@ Input has `character.{name, race, job, level, memories[*].{content, importance: 
 
 Pick **exactly three** plausible skill candidates. The JSON below shows one entry's shape; the array must contain three such entries.
 
-Variety matters. Three different `type` values is the safest variety; if the character's track strongly suggests one `type` (e.g. pure mage = all `attack`), keep the `type` but vary `target` (`single` vs `area` vs `self`) and `primary_stat` so each candidate plays differently.
+Variety matters. Default: three different `type` values — the safest variety. Exception: if the character's track points to one `type` only (every `recent_inputs` entry and every `importance: 3` memory aligns, e.g. pure mage = all `attack`), keep the `type` but vary `target` and/or `primary_stat` so that no two candidates share both axes — each candidate occupies a distinct tactical role.
 
 ```json
 {
@@ -33,10 +33,18 @@ Variety matters. Three different `type` values is the safest variety; if the cha
 
 - Korean names that sound like skill names (e.g. 그림자 보행, 화염구, 단단한 살갗), not generic verbs.
 - `description` is plain Korean lore (what the skill is). `special_effect` is the flavorful one-liner the runtime feeds judge as cast context (e.g. `"불꽃을 휘감아 적의 갑옷을 녹임"`). Two different fields — don't paraphrase the same sentence twice.
-- `primary_stat` matches flavor: physical → STR/DEX, endurance/toughness/grit → CON, magic damage → INT, healing/buff → WIS, social debuff → CHA, control/sensory debuff (smoke, blind, area) → INT/WIS.
+- `primary_stat` matches flavor:
+  - physical (incl. weapon coated in elemental flavor — delivery mechanism wins) → STR/DEX
+  - endurance / toughness / grit → CON
+  - magic damage → INT
+  - healing / protective buff → WIS
+  - mobility / stealth buff → DEX
+  - perception / warding buff → WIS
+  - presence / charm / intimidation (`attack` or `buff` only) → CHA
+  - social debuff → CHA
+  - control / sensory debuff (smoke / blind / fog flavor) → INT/WIS
 - Match character's track: stealth memories → stealth skill; fire magic inputs → fire; bandaging → heal.
-- Don't duplicate `existing_skills` — same name or near-identical flavor (e.g. another single-target fire bolt when one exists). Prefer a fresh angle.
-- ASCII enums (`type`, `target`, `primary_stat`) stay English. Korean inside `name`/`description`/`special_effect`.
+- Don't duplicate `existing_skills` — same name, or same `type` + `target` + similar primary effect (both restore HP, both deal fire damage, both grant stealth) counts as near-identical even if the wording differs. Prefer a fresh angle.
 
 ## Examples
 
@@ -72,6 +80,20 @@ Valid output — three different `type`, all match the character's stealth + fir
 ```
 
 왜 valid: (a) `type` 셋 다 다름 (`buff/attack/debuff`) — variety. (b) 각 후보가 character 메모리·입력에 anchor — stealth(그림자 발걸음), fire+stealth 융합(불꽃 단도), area control(연막 폭발). (c) `existing_skills`의 `heal`과 겹치지 않음. (d) `name` / `description` / `special_effect` 셋이 같은 문장의 paraphrase가 아님 — 각각 다른 정보(이름·정체·시전 시 묘사).
+
+또는 (single-track variation) — 만약 character가 순수 화염 마법사라 `recent_inputs`·메모리가 전부 `attack`만 가리킨다면, `type`은 셋 다 `attack`으로 두고 `target` / `primary_stat`을 다르게 굴려 variety를 잡는다:
+
+```json
+{
+  "candidates": [
+    {"name": "화염 화살", "description": "손끝에서 한 줄기 불을 쏘아 적을 꿰뚫는다.", "type": "attack", "target": "single", "primary_stat": "INT", "special_effect": "공기를 가르는 불꽃 자국이 길게 남음"},
+    {"name": "불꽃 폭풍", "description": "한 구역 위에 회오리치는 불기둥을 불러내 휩쓴다.", "type": "attack", "target": "area", "primary_stat": "INT", "special_effect": "땅바닥의 풀과 천이 한꺼번에 그을며 매운 연기가 번짐"},
+    {"name": "달궈진 손길", "description": "주먹에 불기를 머금어 한 차례 정통으로 후려친다.", "type": "attack", "target": "single", "primary_stat": "STR", "special_effect": "주먹이 닿은 자리에 손바닥 모양 그을음이 새겨짐"}
+  ]
+}
+```
+
+세 후보 모두 `attack`이지만 `target`(single/area/single)과 `primary_stat`(INT/INT/STR) 조합이 달라 plays differently — 원거리 단일타, 광역 제압, 근접 마법-격투 융합.
 
 ## Forbidden
 

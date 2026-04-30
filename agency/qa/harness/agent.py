@@ -33,7 +33,7 @@ class PlayerAgent:
             "=== Priority guards (override the persona's '진행 순서' table) ===\n"
             "If either trigger below is on, ignore the persona's '진행 순서' table and emit that action as this turn's input. Once the trigger clears, return to the table.\n"
             "1. **Level-up trigger**: if the '나' line shows '레벨업 가능', this turn's input must be a one-liner like '성장한다' / '더 강해진다' / '더 똑똑해진다' / 'STR 을 올리고 CHA 를 내린다'. Even if the persona has its own flavor, this one turn must be a growth attempt (return to the schedule next turn).\n"
-            "2. **Skill-candidate trigger**: if the previous GM output mentions options like '익힐 수 있는 스킬' / 'skill_candidates' / '몇 번' / '첫째·둘째·셋째', this turn's input must pick a candidate index, e.g. '첫 번째를 익힌다' / '치유 쪽을 배운다'.\n\n"
+            "2. **Skill-candidate trigger**: if the previous GM output mentions options like '익힐 수 있는 기술' / 'skill_candidates' / '몇 번' / '첫째·둘째·셋째', this turn's input must pick a candidate index, e.g. '첫 번째를 익힌다' / '치유 쪽을 배운다'.\n\n"
             "=== Previous narrator output ===\n"
             f"{last_gm or '(none)'}\n\n"
             "=== Recent flow ===\n"

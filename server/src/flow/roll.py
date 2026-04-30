@@ -109,7 +109,7 @@ async def _resolve_combat_roll(
     elif player.death_saves is not None:
         yield push_act(
             state, dirty,
-            "쓰러져 의식을 잃어가고 있다 — 죽음 굴림을 시작한다.",
+            "당신은 쓰러져 의식을 잃어갑니다 — 죽음 굴림을 시작합니다.",
         )
         yield {"type": "combat_end", "data": {"outcome": "downed"}}
         arm_death_save_pending(state)
@@ -122,7 +122,7 @@ async def _resolve_combat_roll(
         yield {"type": "combat_end", "data": {"outcome": "victory"}}
         state.pending_check = None
     else:
-        yield push_act(state, dirty, "전투가 흩어진다 — 적은 살아 있다.")
+        yield push_act(state, dirty, "전투가 멈췄습니다 — 적은 살아 있습니다.")
         yield {"type": "combat_end", "data": {"outcome": "broken_off"}}
         state.pending_check = None
 
@@ -156,10 +156,10 @@ async def _resolve_death_save(
 
     if status == "stable":
         state.pending_check = None
-        yield push_act(state, dirty, f"{player.name}{i_ga(player.name)} 의식을 회복했다.")
+        yield push_act(state, dirty, f"{player.name}{i_ga(player.name)} 의식을 되찾았습니다.")
     elif status == "dead":
         state.pending_check = None
-        yield push_act(state, dirty, f"{player.name}{i_ga(player.name)} 사망했다.")
+        yield push_act(state, dirty, f"{player.name}{i_ga(player.name)} 숨을 거두었습니다.")
     else:
         # progress — re-arm the dice prompt
         arm_death_save_pending(state)

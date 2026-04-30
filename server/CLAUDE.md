@@ -52,6 +52,12 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q     # add live tests; needs BASE_URL re
 - Tiers are seven Korean labels: `매우 쉬움 / 쉬움 / 보통 / 어려움 / 매우 어려움 / 전설 / 신화`. No English aliases.
 - Internal grade is five-way (`critical_success / success / partial_success / failure / critical_failure`). The client's `RollLogEntry.result` collapses to `success | partial | fail`.
 
+## Prose voice
+
+All player-facing Korean text — narrate / combat_narrate bodies, the deterministic `잠시 정적이 흐릅니다` fallback in `flow/narrate.py`, every engine-side log line built in `flow/format.py` · `flow/error_phrases.py` · `flow/actions.py` · `flow/combat_phase.py` · `flow/turn.py` · `flow/roll.py` · `mapping/to_front.py` — uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings. Plain `-다` form has been retired from output. The narrate prompt also bans the `박-` root in any form (active, passive, nominal, or physical sense — see `agents/narrate/prompt.md`).
+
+The canonical user-facing term for skills is **기술**. The dc_judge prompt accepts `스킬` as a synonym from player input, but every other prompt and engine string says `기술`. Code identifiers and the `skills/` entity directory keep the English `skill`.
+
 ## Affinity
 
 Scale is `-100..+100`. With `social.friendly_threshold = 50`, a target at or above the threshold gives the actor `+social.roll_bonus = 2`. Post-roll delta = `affinity_<grade>`, mirrored onto `intent`: hostile flips the sign; deceptive zeroes the success branch and doubles the failure one.

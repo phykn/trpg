@@ -57,12 +57,12 @@ Single-entity calls (e.g. `run_story.py race ...`) leave the id free — only id
 
 ### Two QA levels
 
-- **Level 1** — 12 narrow agents × 15 turns. Each agent commits to one focused arc (one persona). Default level.
+- **Level 1** — 10 narrow agents × 15 turns. Each agent commits to one focused arc (one persona). Default level.
 - **Level 2** — 5 phased agents × 45 turns. Each agent runs 3-4 turn-numbered phases that switch persona mid-run (e.g. `citizen` does friendly→hostile arc on the same NPC, folding in affinity-system tracking). When the user says "2레벨로 돌려" / "level 2 QA", pass `--level 2`.
 
 | level | command | wall-clock |
 |---|---|---|
-| 1 | `--agent all --turns 15` (or just `--agent all`) | ~1-2 h |
+| 1 | `--agent all --turns 15` (or just `--agent all`) | ~1 h |
 | 2 | `--level 2 --agent all` (turns auto-default to 45) | ~2-3 h |
 
 `AGENTS_BY_LEVEL` in `run_qa.py` is the source of truth for which agents belong to which level. `provocateur` is shared between both.
@@ -73,7 +73,7 @@ This is the reproducible recipe Claude Code should follow whenever the user asks
 
 **1. Launch in background, attach a persistent Monitor.**
 
-The runner takes 1–2 hours for L1 (12 × 15T) and ~2–3 hours for L2 (5 × 45T), so it must run in background. Output goes to `/tmp/qa_run.log`; the Monitor `tail -F`s that file with a tight grep filter, so each agent's boundary lines arrive as chat notifications without flooding context.
+The runner takes ~1 hour for L1 (10 × 15T) and ~2–3 hours for L2 (5 × 45T), so it must run in background. Output goes to `/tmp/qa_run.log`; the Monitor `tail -F`s that file with a tight grep filter, so each agent's boundary lines arrive as chat notifications without flooding context.
 
 ```
 # L1 (default):  Bash with run_in_background=true:

@@ -219,12 +219,12 @@ async def consume_narrate(
     # body after retries, or the stream short-circuited without a final),
     # the narrator must still say something. Otherwise the turn looks broken
     # — typing dots vanish and no GM line lands. Fall back to a deterministic
-    # "잠시 정적이 흐른다" and stream it as a delta so the client sees it.
+    # "잠시 정적이 흐릅니다" and stream it as a delta so the client sees it.
     if final is None:
         final = NarrativeFinal(body="", output=NarrateOutput())
     body = final.body.strip()
     if not body:
-        body = "잠시 정적이 흐른다."
+        body = "잠시 정적이 흐릅니다."
         yield {"type": "narrative_delta", "data": {"text": body}}
 
     yield {"type": "suggestions", "data": {"items": list(final.output.suggestions)}}

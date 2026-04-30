@@ -100,7 +100,7 @@ async def emit_skill_cast(
     try:
         skill_obj = skill_engine.find_skill(actor, skill_id, state)
     except SkillInvalid as e:
-        yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 스킬을 발동하려 했지만 {humanize_engine_error(e)}.")
+        yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 기술을 발동하려 했지만 {humanize_engine_error(e)}.")
         return
     grade, _nat, _req = skill_engine.compute_cast_grade(
         actor, skill_obj, state, targets, rng=rng
@@ -110,7 +110,7 @@ async def emit_skill_cast(
             actor, skill_id, state, targets, grade=grade, dirty=dirty.entities
         )
     except SkillInvalid as e:
-        yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 스킬을 발동하려 했지만 {humanize_engine_error(e)}.")
+        yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 기술을 발동하려 했지만 {humanize_engine_error(e)}.")
         return
     for eff in cast_result["effects"]:
         if eff.get("kind") == "attack":
@@ -160,7 +160,7 @@ async def emit_equip(
         yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 「{item_name}」{eul_reul(item_name)} 장비하려 했지만 {humanize_engine_error(e)}.")
         return
     dirty.entities.add(("characters", actor_id))
-    yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 「{item_name}」{eul_reul(item_name)} 장비했다.")
+    yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 「{item_name}」{eul_reul(item_name)} 장비했습니다.")
 
 
 async def emit_unequip(
@@ -178,9 +178,9 @@ async def emit_unequip(
         yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 「{item_name}」{eul_reul(item_name)} 해제하려 했지만 {humanize_engine_error(e)}.")
         return
     if slot is None:
-        text = f"{actor.name}{eun_neun(actor.name)} 「{item_name}」{eul_reul(item_name)} 장비하고 있지 않다."
+        text = f"{actor.name}{eun_neun(actor.name)} 「{item_name}」{eul_reul(item_name)} 장비하고 있지 않습니다."
     else:
-        text = f"{actor.name}{i_ga(actor.name)} 「{item_name}」{eul_reul(item_name)} 해제했다."
+        text = f"{actor.name}{i_ga(actor.name)} 「{item_name}」{eul_reul(item_name)} 해제했습니다."
         dirty.entities.add(("characters", actor_id))
     yield push_act(state, dirty, text)
 
@@ -248,7 +248,7 @@ async def emit_level_up(
         state.pending_skill_candidates = []
     if state.pending_skill_candidates:
         names = ", ".join(f"「{s.name}」" for s in state.pending_skill_candidates)
-        yield push_act(state, dirty, f"새 스킬 후보: {names}")
+        yield push_act(state, dirty, f"새 기술 후보: {names}")
 
 
 async def emit_learn_skill(
@@ -260,7 +260,7 @@ async def emit_learn_skill(
     actor = state.characters[actor_id]
     candidates = list(state.pending_skill_candidates)
     if not candidates or index < 0 or index >= len(candidates):
-        yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 익힐 만한 스킬을 찾지 못했다.")
+        yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 익힐 만한 기술을 찾지 못했습니다.")
         return
     chosen = candidates[index]
     state.skills[chosen.id] = chosen
@@ -268,7 +268,7 @@ async def emit_learn_skill(
     state.pending_skill_candidates = []
     dirty.entities.add(("characters", actor_id))
     dirty.entities.add(("skills", chosen.id))
-    yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 「{chosen.name}」{eul_reul(chosen.name)} 익혔다.")
+    yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 「{chosen.name}」{eul_reul(chosen.name)} 익혔습니다.")
 
 
 async def emit_trade(
@@ -283,7 +283,7 @@ async def emit_trade(
     player = state.characters[actor_id]
     npc = state.characters.get(npc_id)
     if npc is None:
-        yield push_act(state, dirty, f"{player.name}{i_ga(player.name)} 거래할 상대를 찾지 못했다.")
+        yield push_act(state, dirty, f"{player.name}{i_ga(player.name)} 거래할 상대를 찾지 못했습니다.")
         return
     try:
         if direction == "buy":
@@ -298,9 +298,9 @@ async def emit_trade(
     item = state.items.get(item_id)
     iname = item.name if item else item_id
     if direction == "buy":
-        text = f"{player.name}{i_ga(player.name)} {npc.name}에게서 「{iname}」{eul_reul(iname)} {price}금에 샀다."
+        text = f"{player.name}{i_ga(player.name)} {npc.name}에게서 「{iname}」{eul_reul(iname)} {price} 금화에 샀습니다."
     else:
-        text = f"{player.name}{i_ga(player.name)} {npc.name}에게 「{iname}」{eul_reul(iname)} {price}금에 팔았다."
+        text = f"{player.name}{i_ga(player.name)} {npc.name}에게 「{iname}」{eul_reul(iname)} {price} 금화에 팔았습니다."
     yield push_act(state, dirty, text)
     push_turn_log(state, npc.id, f"{npc.name}에게 「{iname}」 {'구매' if direction == 'buy' else '판매'}", dirty)
 

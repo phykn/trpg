@@ -51,7 +51,7 @@ server/
       dc_judge/                  DC 판정 + 액션 분류 (15종 union, [02-runtime.md](./02-runtime.md) §1.1). prompt.md / schema.py / semantics.py / runner.py
       narrate/                   일반 서사 스트리밍. parser.py 가 본문 조각 + 끝 JSON 분리
       combat_narrate/            한 방 시네마틱 전투 서술 ([03-features.md](./03-features.md) §1). schema.py / runner.py / prompt.md. CombatNarrateInput / CombatRoundEvent / CombatStateSnapshot 으로 등급·이벤트·HP 스냅샷을 받아 5–10 문장 시네마틱 스트리밍
-      skill_recommend/           §2.3 4단계 — level_up 직후 스킬 후보 3개. 수치는 engines/skill 이 템플릿으로 채움
+      skill_recommend/           §2.3 4단계 — level_up 직후 기술 후보 3개. 수치는 engines/skill 이 템플릿으로 채움
       encounter_summon/          §2.4 폴백 — sleep_encounters 풀이 비었을 때 LLM 으로 적 한 마리. 페어 트레이드 invariant 는 schema validator 가 강제
 
     ontology/                    derived view (구조·의미·config 관계 그래프)
@@ -144,7 +144,7 @@ server/
 
 액션 검증 (인-게임 GM log 로 흡수, HTTP 응답 영향 없음):
 - `LevelUpInvalid` — `level_up` 페어 트레이드 / 캡 / 잔여 xp 검증 실패. `engines/growth.py` 가 발행, `flow/actions.py:emit_level_up` 이 catch.
-- `InventoryInvalid` — `equip` / `unequip` / `buy` / `sell` 슬롯·요구치·무게·affinity·잔여 골드 검증 실패. `engines/inventory/` 가 발행, `flow/actions.py:emit_equip` / `emit_unequip` / `emit_trade` 등이 catch.
-- `SkillInvalid` — 스킬 `cast` 레벨·MP·사정거리·소유 검증 실패. `engines/skill.py` 가 발행, `flow/actions.py:emit_skill_cast` 가 catch.
+- `InventoryInvalid` — `equip` / `unequip` / `buy` / `sell` 슬롯·요구치·무게·affinity·잔여 금화 검증 실패. `engines/inventory/` 가 발행, `flow/actions.py:emit_equip` / `emit_unequip` / `emit_trade` 등이 catch.
+- `SkillInvalid` — 기술 `cast` 레벨·MP·사정거리·소유 검증 실패. `engines/skill.py` 가 발행, `flow/actions.py:emit_skill_cast` 가 catch.
 
 Pydantic 422 (요청 모양 검증), HTTP 404 (`game_id` 없음) 은 FastAPI 기본 처리로 가고 `DomainError` 가 아니다.

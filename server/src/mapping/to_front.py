@@ -12,7 +12,7 @@ from ..domain.memory import PendingCheck
 from ..domain.types import tier_to_int
 from ..engines.growth import can_afford_level_up, xp_for_next_level
 from ..domain.state import GameState
-from .josa import eun_neun, i_ga
+from .josa import eun_neun
 
 
 # --- Hero ------------------------------------------------------------------
@@ -272,13 +272,13 @@ def pending_check_to_front(state: GameState, pending: PendingCheck) -> dict:
 
 def rest_completed_text(actor_name: str) -> str:
     return (
-        f"{actor_name}{eun_neun(actor_name)} 자리를 잡고 잠을 청한다. "
-        f"새벽이 밝아오자 푹 쉬고 일어나 HP/MP가 모두 회복됐다."
+        f"{actor_name}{eun_neun(actor_name)} 자리를 잡고 잠을 청했습니다. "
+        f"새벽이 밝아오자 푹 쉬고 일어났습니다. HP/MP가 모두 회복됐습니다."
     )
 
 
 def rest_ambush_text(actor_name: str) -> str:
-    return f"{actor_name}{i_ga(actor_name)} 잠들기 직전 적의 습격을 받는다."
+    return f"{actor_name}{eun_neun(actor_name)} 잠들기 직전 적의 습격을 받았습니다."
 
 
 # --- FrontState ------------------------------------------------------------

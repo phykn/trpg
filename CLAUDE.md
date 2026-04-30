@@ -41,7 +41,7 @@ cd client && npx expo start
 
 Apply repo-wide. When a sub-CLAUDE.md repeats the same rule, the sub version is just more specific — not in conflict.
 
-- **Korean only.** Every piece of text that reaches the user (LLM prompts, logs, NPC lines, error messages, agent prompts) is in Korean. No localization layer. The old `LocalizedText{ko,en}` is gone.
+- **Korean only.** Every piece of text that reaches the user (LLM prompts, logs, NPC lines, error messages, agent prompts) is in Korean. No localization layer. The old `LocalizedText{ko,en}` is gone. In-game prose and engine-side log lines use **2인칭 존댓말 합니다체** — `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings — and avoid the `박-` root entirely. The user-facing skill term is **기술** (`스킬` survives only as a synonym in the dc_judge prompt). Code text — server/agency/test source, validation error messages, structural prompts — stays English.
 - **env is fail-fast.** No `??` defaults, no silent defaults. Missing keys throw at startup. Applies to both `server/.env` and `client/.env`.
 - **Display data is built on the server and shipped over.** Korean dates, durations, composed strings, conditional labels — all built in `server/src/mapping/to_front.py` and rendered as-is on the client. Client types only carry the fields the UI renders.
 - **LLM agent retry = 5-shot self-correction loop.** judge and friends append the previous response + error to the message stream on `ValidationError` or semantic-check failure, so the next attempt corrects itself. After 5 attempts, the loop raises by the last error type. **narrate is an exception**: body tokens stream to the client live, so it retries (up to 5×) only on stream-transport errors or an empty body — once any body delta has been sent, a later failure raises.

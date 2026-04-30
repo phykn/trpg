@@ -44,34 +44,34 @@ def format_attack_log(
     if outcome.damage > 0:
         head = (
             f"{attacker.name}{i_ga(attacker.name)} {target.name}에게 "
-            f"{outcome.damage} 피해를 입혔다 ({grade_label}, 굴림 {outcome.nat_d20})."
+            f"{outcome.damage} 피해를 입혔습니다 ({grade_label}, 굴림 {outcome.nat_d20})."
         )
     elif outcome.grade == "critical_failure":
         head = (
-            f"{attacker.name}{i_ga(attacker.name)} 공격을 시도했지만 "
-            f"대실패했다 (굴림 {outcome.nat_d20})."
+            f"{attacker.name}{i_ga(attacker.name)} 공격을 시도했으나 "
+            f"크게 빗나갔습니다 (대실패, 굴림 {outcome.nat_d20})."
         )
     else:
         head = (
             f"{attacker.name}{i_ga(attacker.name)} {target.name}{eul_reul(target.name)} "
-            f"노렸으나 빗나갔다 (굴림 {outcome.nat_d20})."
+            f"노렸으나 빗나갔습니다 (굴림 {outcome.nat_d20})."
         )
     if apply_result is None:
         return head
     if apply_result.get("revived"):
-        return f"{head} {target.name}{i_ga(target.name)} 부활 코인을 사용해 HP를 회복했다."
+        return f"{head} {target.name}{i_ga(target.name)} 부활 코인을 써서 HP를 회복했습니다."
     if apply_result.get("dead"):
-        return f"{head} {target.name}{i_ga(target.name)} 쓰러졌다."
+        return f"{head} {target.name}{i_ga(target.name)} 쓰러졌습니다."
     if apply_result.get("dying"):
-        return f"{head} {target.name}{i_ga(target.name)} 의식을 잃었다."
+        return f"{head} {target.name}{i_ga(target.name)} 의식을 잃었습니다."
     return head
 
 
 def format_combat_end_text(outcome: str) -> str:
     if outcome == "victory":
-        return "전투 종료 — 적을 모두 제압했다."
+        return "전투 종료 — 적을 모두 제압했습니다."
     if outcome == "defeat":
-        return "전투 종료 — 쓰러졌다."
+        return "전투 종료 — 당신은 쓰러졌습니다."
     return "전투 종료 — 도주."
 
 

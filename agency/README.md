@@ -19,20 +19,18 @@ Works like hiring a QA tester to play the game. Each turn an LLM generates the n
 ```
 agency/run_qa.py        # CLI entrypoint
 agency/qa/
-  agents/               # 16 personas, one .md per agent — split across 2 levels (provocateur is shared)
-    # Level 1 (12 narrow personas, 15T default — `--level 1`, the default)
+  agents/               # 14 personas, one .md per agent — split across 2 levels (provocateur is shared)
+    # Level 1 (10 narrow personas, 15T default — `--level 1`, the default)
     diplomat.md         # NPC affinity / dialogue
-    explorer.md         # movement / observation / inventory
     scout.md            # 6-stat coverage rotation
     provocateur.md      # judge-branch edges (reject / fallback / chain / summon_combat)
     combatant.md        # one-shot cinematic combat loop
     quartermaster.md    # equip / buy / sell / use
-    caster.md           # skill semantic-match + level_up + learn_skill
+    caster.md           # skill semantic-match in combat + MP-shortage fallback
     survivor.md         # rest / sleep_risk / encounter
     questor.md          # quest triggers / chapter progress / rewards
     griefer.md          # repeated-stat-abuse → affinity / memory loop
     fleer.md            # flee / in_combat gating
-    searcher.md         # location search / hidden_items / hidden_connections
     # Level 2 (5 phased personas, 45T default — `--level 2`)
     wayfarer.md         # cross-location travel arc
     warrior.md          # extended combat arc
@@ -81,7 +79,7 @@ reports/qa/<timestamp>/
     sse.jsonl                   # raw SSE events (for replay/debugging)
     final_state.json            # the full GameState at the end
     saves/                      # per-run isolated saves (a fresh dir each run)
-  explorer/...
+  scout/...
   provocateur/...
 ```
 

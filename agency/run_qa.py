@@ -2,11 +2,11 @@
 
 Usage (run from anywhere, repo root included):
     python agency/run_qa.py --agent diplomat --turns 15           # level 1, single agent
-    python agency/run_qa.py --agent all --profile <id>            # level 1 (default), 12 narrow agents x 15T
+    python agency/run_qa.py --agent all --profile <id>            # level 1 (default), 10 narrow agents x 15T
     python agency/run_qa.py --level 2 --agent all --profile <id>  # level 2, 5 phased agents x 45T
 
 Two agent sets:
-- L1 (12 narrow personas, 15 turns) — one focused arc per agent. Default.
+- L1 (10 narrow personas, 15 turns) — one focused arc per agent. Default.
 - L2 (5 phased personas, 45 turns) — each agent runs 3-4 phases that shift persona.
   citizen folds in the affinity-tracking arc (friendly→hostile on the same NPC).
 
@@ -39,7 +39,6 @@ from agency.qa.harness.runner import run_qa_session  # noqa: E402
 AGENTS_BY_LEVEL: dict[int, list[str]] = {
     1: [
         "diplomat",
-        "explorer",
         "scout",
         "provocateur",
         "combatant",
@@ -49,7 +48,6 @@ AGENTS_BY_LEVEL: dict[int, list[str]] = {
         "questor",
         "griefer",
         "fleer",
-        "searcher",
     ],
     2: [
         "wayfarer",
@@ -184,7 +182,7 @@ def main() -> None:
         type=int,
         choices=[1, 2],
         default=1,
-        help="agent set: 1 = 12 narrow personas (15T default), 2 = 5 phased personas (45T default)",
+        help="agent set: 1 = 10 narrow personas (15T default), 2 = 5 phased personas (45T default)",
     )
     p.add_argument(
         "--agent",

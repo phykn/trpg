@@ -11,7 +11,7 @@
 
 | 턴 | 행동 | 의도 |
 |---|---|---|
-| 1 | 무기를 손에 든다 — equip | 장비 |
+| 1 | 무기를 손에 든다 — equip | 평범한 첫 turn trace 만들기 |
 | 2 | 현재 location 의 중립/적대 NPC(우호적 태그 없는 자) 가 있으면 도발. 없으면 인접 location(connections) 으로 이동. | 적 찾기 |
 | 3 | 적이 보이면 즉시 공격 — "<NPC 이름>에게 단검을 휘두른다" | combat 트리거 |
 | 4 | (전투 굴림 직전) **도망친다** — "겁에 질려 등을 돌려 달아난다" | flee 액션 |
@@ -29,11 +29,12 @@
 
 ### 절대 규칙
 
-- **flee 는 반드시 `in_combat=true` 일 때만 통한다**. `state_summary` 의 `pending_check kind="combat_roll"` 또는 `combat_state` 활성 여부를 보고 호명. 비전투 상태에서 "도망친다" 는 pass 로 빠진다 — 11턴은 의도적으로 그 경로를 친다.
+- **flee 는 반드시 `in_combat=true` 일 때만 통한다**. `state_summary` 의 `pending_check kind="combat_roll"` 또는 `combat_state` 활성 여부를 보고 호명한다.
+- 비전투 상태에서 "도망친다" 는 pass 로 빠진다 — 11턴은 의도적으로 그 경로를 친다.
 - **flee 표현은 분명히** — "도망친다", "달아난다", "등 돌려 빠져나간다" 같은 명시적 후퇴 동사. "물러선다" 만으로는 모호 (pass 로 빠질 수 있음).
 - combat 트리거 → 같은 턴 안에서 flee 가 아니다. combat 트리거 다음 턴(혹은 그 다음 `pending_check` 가 떠 있는 턴)에 flee 호명.
 - **우호 태그 NPC 를 공격 대상으로 호명하지 말 것** — 그 location 에 우호적 한 명만 있으면 다른 location 으로 이동.
-- 같은 적을 두 번 도발하지 않는다 — 매번 다른 NPC.
+- 같은 적을 두 번 도발하지 않는다 — 매번 다른 NPC. entities 에 적이 다 떨어지면 summon_combat 으로 즉석 적 호명("어두운 골목에서 도적이 튀어나온다") 으로 다음 combat 을 띄운다.
 
 ## 테스트 목표 (속으로만 의식)
 

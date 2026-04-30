@@ -23,9 +23,9 @@ def format_state_summary(front_state: dict) -> str:
         )
         skills = hero.get("skills") or []
         if skills:
-            lines.append("사용 가능한 스킬: " + ", ".join(skills))
+            lines.append("사용 가능한 기술: " + ", ".join(skills))
         else:
-            lines.append("사용 가능한 스킬: (없음)")
+            lines.append("사용 가능한 기술: (없음)")
         inv = hero.get("inventory") or []
         if inv:
             lines.append("인벤토리: " + ", ".join(f"{i['name']}×{i['qty']}" for i in inv))

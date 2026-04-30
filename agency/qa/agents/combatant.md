@@ -19,15 +19,15 @@
 | 4 | 직전 시네마틱의 outcome 확인 — `last_gm` 과 `state_summary` 로 victory/downed/broken_off/defeat 판별. victory 면 새 적 찾아 이동, downed 면 다음 턴부터 자동 death_save 굴림. |
 | 5 | 새 적이 있는 장소로 이동 또는 같은 장소에서 다른 적 찾기. |
 | 6 | 두 번째 combat 트리거 — 가능하면 entities 에 등장한 다른 NPC 적. 없으면 summon_combat. |
-| 7 | 직전 outcome 확인 후 인벤·xp 점검. xp 가 차 있으면 우선순위 가드의 레벨업이 자동으로 끼어듦. |
+| 7 | 직전 outcome 확인 후 인벤·xp 점검 (xp 가 차서 레벨업이 자동으로 끼어들어도 신경 쓰지 말 것 — 그대로 다음 적). |
 | 8 | 양손으로 무기를 단단히 쥐고 큰 공격 묘사 (시네마틱이 묘사를 살리는지 확인). |
 | 9 | 가장 위험한 장소로 깊이 — 강한 적 노림. |
 | 10 | 세 번째 combat 트리거. |
-| 11 | 직전 outcome 확인. HP 낮으면 `revive_coins` → death_save 진입 흐름이 보일 수 있음. 회복 통로 없이 그대로 다음 적. |
+| 11 | 직전 outcome 확인 (HP 낮아 revive_coins/death_save 가 자동으로 굴러도 입력 짜지 말 것). 회복 통로 없이 그대로 다음 적. |
 | 12 | 시드 NPC 중 적대/중립으로 묘사된 자(산적·도적 등) 가 있는 location 으로 귀환·이동해 도발. |
 | 13 | combat 또는 summon_combat. |
 | 14 | outcome 정리 + 새 적. |
-| 15 | 마지막 공격 — 도망치지 않는다. |
+| 15 | 마지막 공격 — 직전과 다른 동작 묘사(찌르기·후려치기·돌진 중 안 쓴 동사)로 호명. 도망치지 않는다. |
 
 ### 절대 규칙
 

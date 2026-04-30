@@ -79,7 +79,7 @@ async def run_turn(
     if not state.characters[state.player_id].alive:
         yield push_act(
             state, dirty,
-            "쓰러진 채로는 더 이상 행동할 수 없다.",
+            "쓰러진 채로는 더 이상 움직이지 못합니다.",
         )
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
@@ -186,7 +186,7 @@ async def _dispatch(
             or state.characters[t].location_id != actor_loc
         ]
         if invalid_targets:
-            yield push_act(state, dirty, "공격할 수 있는 대상이 없다.")
+            yield push_act(state, dirty, "공격할 수 있는 대상이 없습니다.")
             async for ev in finalize(state, saves_dir, dirty, to_front_fn):
                 yield ev
             return
@@ -213,7 +213,7 @@ async def _dispatch(
             except Exception:
                 summoned = None
         if summoned is None:
-            yield push_act(state, dirty, "허공을 가르지만 적은 보이지 않는다.")
+            yield push_act(state, dirty, "허공을 가르지만 적은 보이지 않습니다.")
             async for ev in finalize(state, saves_dir, dirty, to_front_fn):
                 yield ev
             return
@@ -242,7 +242,7 @@ async def _dispatch(
 
     if isinstance(result, FleeAction):
         # Out-of-combat flee — short message, no turn bump.
-        yield push_act(state, dirty, "지금은 도망칠 전투가 없다.")
+        yield push_act(state, dirty, "지금은 도망칠 전투가 없습니다.")
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return

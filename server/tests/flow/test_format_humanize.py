@@ -10,14 +10,14 @@ from src.flow.error_phrases import humanize_engine_error
 
 def test_npc_gold_takes_priority_over_player_gold():
     err = ValueError("npc has not enough gold")
-    assert humanize_engine_error(err) == "상대의 소지금이 부족하다"
+    assert humanize_engine_error(err) == "상대의 금화가 부족합니다"
 
 
 def test_player_gold_still_matches_when_alone():
     err = ValueError("not enough gold")
-    assert humanize_engine_error(err) == "금화가 부족하다"
+    assert humanize_engine_error(err) == "금화가 부족합니다"
 
 
 def test_unknown_message_falls_back():
     err = ValueError("totally unmapped engine error")
-    assert humanize_engine_error(err) == "지금은 그 행동이 통하지 않는다"
+    assert humanize_engine_error(err) == "지금은 그 행동이 통하지 않습니다"

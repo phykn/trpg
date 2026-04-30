@@ -114,7 +114,7 @@ LLM 을 두 개로 쪼갠다.
 
 **서술 규율**:
 - 수치/확률/DC 를 본문에 노출하지 않음 ("설득을 시도한다" ○, "DC 15 설득" ✗)
-- HP·데미지·XP·골드는 엔진이 이미 적용. 본문에서 숫자로 다시 제시하지 않음.
+- HP·데미지·XP·금화는 엔진이 이미 적용. 본문에서 숫자로 다시 제시하지 않음.
 - NPC 의 말투·대사는 `target_view` 의 `tone_hint`, `disposition` 을 따름.
 - `state_changes` 타입은 `set | move | move_item | affinity` 4종만. 이 4종이 아니거나 형식이 어긋난 항목은 `apply_changes` 가 `rejected[]` 로 따로 빼두고 적용하지 않는다.
 
@@ -385,7 +385,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 - 주변 NPC: 이름 + 상태 태그 (예: "경계중(affinity -25)", "우호적(affinity 70)") — 어떤 affinity 값이 어떤 라벨이 되는지(매핑 규칙)는 §7.4
 - 주변 오브젝트 + 상태 태그 (예: "문: 잠김", "상자: 함정")
 - 인접 장소 이름
-- 장비/스킬/인벤/성장(`growth.can_level_up`)/`skill_candidates`/`merchants` — actor 중심 판정 보조
+- 장비/기술/인벤/성장(`growth.can_level_up`)/`skill_candidates`/`merchants` — actor 중심 판정 보조
 - `corpses` — 같은 location 의 시체 + history 에 등장한 다른 location 의 시체(`off_screen=true`). target/combat/buy/sell 대상이 아님이라 entities 와 분리해 노출. judge 가 호명을 `pass(targets=[corpse_id])` 로 받아 narrate 가 시체 톤으로 흡수.
 - `recent_npc` — 직전 turn 까지 가장 최근에 말 건 같은 location alive NPC id. 호명 없는 대인 행동의 default target.
 
