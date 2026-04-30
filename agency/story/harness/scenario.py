@@ -32,6 +32,16 @@ from .runner import (
 
 # --- pipeline helpers ------------------------------------------------------
 
+def _write_json(path: Path, obj) -> None:
+    path.write_text(
+        json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+def _repr_id_list(ids: list[str]) -> str:
+    return "[" + ", ".join(repr(x) for x in ids) + "]"
+
+
 def _hint_with_id(forced_id: str, role: str, extra: str = "") -> str:
     base = f"id 를 정확히 '{forced_id}' 로 박을 것. 역할: {role}."
     return f"{base} {extra}".strip()
@@ -157,9 +167,7 @@ def _attach_step(scenario_dir: Path, decomp: Decomposition) -> None:
         if dr is None:
             continue
         race["racial_skill_ids"] = list(dr.racial_skill_ids)
-        path.write_text(
-            json.dumps(race, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        _write_json(path, race)
 
     items: dict[str, Item] = {}
     if items_dir.exists():
@@ -185,9 +193,7 @@ def _attach_step(scenario_dir: Path, decomp: Decomposition) -> None:
                 Connection(target_id=tid).model_dump()
                 for tid in sorted(adj.get(loc["id"], set()))
             ]
-            path.write_text(
-                json.dumps(loc, ensure_ascii=False, indent=2), encoding="utf-8"
-            )
+            _write_json(path, loc)
 
     items_by_owner: dict[str, list[Item]] = {}
     for c in decomp.characters:
@@ -495,7 +501,7 @@ async def build_scenario(
     _step(f"quest × {len(decomp.quests)}")
     for q in decomp.quests:
         status = "active" if not q.prerequisite_ids else "locked"
-        prereq_repr = "[" + ", ".join(repr(pid) for pid in q.prerequisite_ids) + "]"
+        prereq_repr = _repr_id_list(q.prerequisite_ids)
         extra = (
             f"title 은 '{q.title}'. "
             f"giver_id 를 정확히 '{q.giver_id}' 로 박을 것. "
@@ -517,8 +523,8 @@ async def build_scenario(
     _step(f"chapter × {len(decomp.chapters)}")
     for ch in decomp.chapters:
         status = "active" if not ch.prerequisite_ids else "locked"
-        ch_quest_repr = "[" + ", ".join(repr(qid) for qid in ch.quest_ids) + "]"
-        ch_prereq_repr = "[" + ", ".join(repr(pid) for pid in ch.prerequisite_ids) + "]"
+        ch_quest_repr = _repr_id_list(ch.quest_ids)
+        ch_prereq_repr = _repr_id_list(ch.prerequisite_ids)
         extra = (
             f"title 은 '{ch.title}'. "
             f"quest_ids 에 정확히 {ch_quest_repr} 를 박아라. "
@@ -539,9 +545,7 @@ async def build_scenario(
         "name": decomp.profile_name,
         "description": decomp.profile_description,
     }
-    (scenario_dir / "profile.json").write_text(
-        json.dumps(profile, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    _write_json(scenario_dir / "profile.json", profile)
 
     start = {
         "start_location_id": decomp.start_location_id,
@@ -549,9 +553,7 @@ async def build_scenario(
         "active_quest_id": decomp.start_quest_id,
         "world_time": "0001-01-01T09:00:00",
     }
-    (scenario_dir / "start.json").write_text(
-        json.dumps(start, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    _write_json(scenario_dir / "start.json", start)
 
     player_inv = [it.id for it in decomp.items if it.for_player_template]
     player_template = {
@@ -559,9 +561,7 @@ async def build_scenario(
         "equipment": {},
         "inventory_ids": player_inv,
     }
-    (scenario_dir / "player_template.json").write_text(
-        json.dumps(player_template, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    _write_json(scenario_dir / "player_template.json", player_template)
 
     # 12. final scenario-level invariant sweep
     _step("invariant sweep")
