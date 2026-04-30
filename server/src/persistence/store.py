@@ -1,6 +1,7 @@
 import asyncio
 import os
 import shutil
+from collections.abc import Callable
 from pathlib import Path
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
@@ -211,9 +212,11 @@ def _scan_entity_dir(
 def _load_jsonl_tail(
     path: Path,
     cap: int,
-    validator: TypeAdapter | type[BaseModel],
+    parse: Callable[[str | bytes], object],
 ) -> list:
-    """If validator is a BaseModel use model_validate_json; if TypeAdapter use validate_json."""
+    """parse is the bound `validate_json` / `model_validate_json` from the
+    caller's TypeAdapter or BaseModel — caller already knows which it has,
+    so no isinstance dispatch here."""
     try:
         text = path.read_text(encoding="utf-8")
     except FileNotFoundError:
@@ -222,11 +225,6 @@ def _load_jsonl_tail(
         raise PersistenceFailed(str(e)) from e
     raw_lines = [ln for ln in text.splitlines() if ln.strip()]
     lines = raw_lines[-cap:] if cap > 0 else raw_lines
-    parse = (
-        validator.validate_json
-        if isinstance(validator, TypeAdapter)
-        else validator.model_validate_json
-    )
     out: list = []
     for line in lines:
         try:
@@ -257,17 +255,19 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
         entities[kind] = _scan_entity_dir(saves_dir, game_id, kind, model_cls)
 
     log_entries = _load_jsonl_tail(
-        _log_path(saves_dir, game_id), RULES.log.display_turns, _LOG_ADAPTER
+        _log_path(saves_dir, game_id),
+        RULES.log.display_turns,
+        _LOG_ADAPTER.validate_json,
     )
     turn_log = _load_jsonl_tail(
         _history_path(saves_dir, game_id),
         RULES.memory.turn_log_size,
-        TurnLogEntry,
+        TurnLogEntry.model_validate_json,
     )
     recent_dialogue = _load_jsonl_tail(
         _dialogue_path(saves_dir, game_id),
         RULES.memory.recent_dialogue_turns,
-        DialoguePair,
+        DialoguePair.model_validate_json,
     )
 
     # next_log_id self-heal: a mid-flush crash can leave meta.json stale while
