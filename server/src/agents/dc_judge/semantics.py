@@ -11,11 +11,8 @@ from .schema import (
     LearnSkillAction,
     LevelUpAction,
     PassAction,
-    RejectAction,
-    RestAction,
     RollAction,
     SellAction,
-    SummonCombatAction,
     UnequipAction,
     UseAction,
 )
@@ -30,7 +27,7 @@ def _check_chain(output: ChainAction, surroundings: dict[str, Any]) -> None:
     [UseAction(item_id="ghost"), PassAction] slips past judge validation
     and surfaces as the engine's worse InventoryInvalid."""
     for part in output.parts:
-        _CHECKS[type(part)](part, surroundings)
+        check_semantics(part, surroundings)
 
 
 def _inventory_kinds(surroundings: dict[str, Any]) -> dict[str, str]:
@@ -49,7 +46,9 @@ def _equipped_ids(surroundings: dict[str, Any]) -> set[str]:
     return out
 
 
-def _surroundings_target_ids(surroundings: dict[str, Any]) -> set[str]:
+def _surroundings_target_ids(
+    surroundings: dict[str, Any], *, include_corpses: bool = False
+) -> set[str]:
     ids: set[str] = set()
     loc = surroundings.get("location")
     if isinstance(loc, dict) and isinstance(loc.get("id"), str):
@@ -57,6 +56,10 @@ def _surroundings_target_ids(surroundings: dict[str, Any]) -> set[str]:
     for ent in surroundings.get("entities", []) or []:
         if isinstance(ent, dict) and isinstance(ent.get("id"), str):
             ids.add(ent["id"])
+    if include_corpses:
+        for corpse in surroundings.get("corpses", []) or []:
+            if isinstance(corpse, dict) and isinstance(corpse.get("id"), str):
+                ids.add(corpse["id"])
     return ids
 
 
@@ -90,6 +93,28 @@ def _check_targets(output, surroundings: dict[str, Any]) -> None:
             f"targets contains ids not in surroundings: {bad}. "
             f"Valid ids are: {sorted(valid)}. "
             f"If the player referenced something not present, action must be 'clarify'."
+        )
+
+
+def _check_pass_targets(output: PassAction, surroundings: dict[str, Any]) -> None:
+    """Pass-specific target check — accepts corpse ids in addition to live
+    entities and the location. Addressing a corpse routes through pass +
+    target_view (dead-marker) so narrate has an explicit identity to anchor
+    the corpse-tone prose, instead of guessing from `surroundings.corpses`
+    plus prose alone (which silently degrades to the empty-body fallback)."""
+    valid = _surroundings_target_ids(surroundings, include_corpses=True)
+    bad = [t for t in output.targets if t not in valid]
+    if bad:
+        corpse_ids = sorted(
+            c.get("id", "")
+            for c in surroundings.get("corpses") or []
+            if isinstance(c, dict)
+        )
+        raise JudgeSemanticError(
+            f"pass targets contains ids not in surroundings: {bad}. "
+            f"Valid ids are: {sorted(valid)} "
+            f"(corpses: {corpse_ids}). "
+            f"If the player referenced something not present, use 'reject'."
         )
 
 
@@ -240,13 +265,11 @@ def _check_unequip(output: UnequipAction, surroundings: dict[str, Any]) -> None:
 # --- dispatch --------------------------------------------------------------
 
 
-def _noop(output: Any, surroundings: dict[str, Any]) -> None:
-    """Action types whose schema validation alone is enough — no
-    surroundings-based check applies."""
-
-
+# RejectAction / SummonCombatAction / RestAction have no surroundings-based
+# check — schema validation alone is enough; check_semantics's .get() returns
+# None for them and we exit cleanly.
 _CHECKS: dict[type, Callable[[Any, dict[str, Any]], None]] = {
-    PassAction: _check_targets,
+    PassAction: _check_pass_targets,
     RollAction: _check_targets,
     CombatAction: _check_combat,
     FleeAction: _check_flee,
@@ -257,12 +280,11 @@ _CHECKS: dict[type, Callable[[Any, dict[str, Any]], None]] = {
     UseAction: _check_use,
     EquipAction: _check_equip,
     UnequipAction: _check_unequip,
-    RejectAction: _noop,
-    SummonCombatAction: _noop,
-    RestAction: _noop,
     ChainAction: _check_chain,
 }
 
 
 def check_semantics(output: JudgeOutput, surroundings: dict[str, Any]) -> None:
-    _CHECKS[type(output)](output, surroundings)
+    check = _CHECKS.get(type(output))
+    if check is not None:
+        check(output, surroundings)
