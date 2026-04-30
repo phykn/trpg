@@ -174,10 +174,31 @@ def test_quest_difficulty_object(fresh_state):
 
 def test_place_korean_date_and_period(fresh_state):
     p = to_place(_full_state(fresh_state))
-    assert p["date"] == "812년 4월 28일"
-    assert p["hour"] == 14
-    assert p["period"] == "오후"
-    assert p["surroundings"] == ["성문"]
+    assert p["dateTime"] == "812년 4월 28일 오후 2시"
+    assert p["surroundings"] == [
+        {"name": "성문", "blurb": "", "difficulty": None}
+    ]
+
+
+def test_place_surroundings_carry_blurb_and_difficulty(fresh_state):
+    state = _full_state(fresh_state)
+    state.locations["gate_01"].description = "닫힌 성문"
+    state.locations["plaza_01"].connections = [
+        Connection(target_id="gate_01", difficulty="어려움")
+    ]
+    p = to_place(state)
+    assert p["surroundings"] == [
+        {"name": "성문", "blurb": "닫힌 성문", "difficulty": "어려움"}
+    ]
+
+
+def test_place_targets_carry_role_blurb_trust(fresh_state):
+    state = _full_state(fresh_state)
+    state.characters["guard_01"].location_id = "plaza_01"
+    p = to_place(state)
+    assert p["targets"] == [
+        {"name": "경비병", "role": "마을 경비병", "blurb": "갑옷의 중년", "trust": 30}
+    ]
 
 
 def test_period_boundaries():

@@ -42,12 +42,28 @@ export type PanelSection = {
   nodes?: [string, string | number][];
 };
 
+export type ConfirmInfo = {
+  title: string;
+  subtitle?: string;
+  blurb?: string;
+  trust?: number;
+  confirmLabel?: string;
+};
+
+export type PanelAction = { label: string; intent: string; confirm?: ConfirmInfo };
+
+export type PanelActions = {
+  label: string;
+  items: PanelAction[];
+};
+
 export type Panel = {
   title: string;
   meta?: string;
   bar?: BarDef;
   barSplit?: (BarDef | PartsCell)[];
   sections?: PanelSection[];
+  actions?: PanelActions[];
 };
 
 export type PanelSlot = {

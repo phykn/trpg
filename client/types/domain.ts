@@ -65,14 +65,26 @@ export type Quest = {
   summary: string;
 };
 
+export type PlaceSurrounding = {
+  name: string;
+  blurb: string;
+  difficulty: string | null;
+};
+
+export type PlaceTarget = {
+  name: string;
+  role: string;
+  blurb: string;
+  trust: number;
+};
+
 export type Place = {
   name: string;
-  date: string;
-  hour: number;
-  period: string;
+  dateTime: string;
   weather: string[];
   features: string[];
-  surroundings: string[];
+  surroundings: PlaceSurrounding[];
+  targets: PlaceTarget[];
 };
 
 export type RollResult = 'success' | 'partial' | 'fail';

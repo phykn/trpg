@@ -66,19 +66,51 @@ function buildQuestSlot(quest: Quest | null): PanelSlot {
   };
 }
 
+function moveIntent(name: string): string {
+  const last = name.charCodeAt(name.length - 1);
+  if (last < 0xac00 || last > 0xd7a3) return `${name}로 이동`;
+  const final = (last - 0xac00) % 28;
+  if (final === 0 || final === 8) return `${name}로 이동`;
+  return `${name}으로 이동`;
+}
+
 function buildPlaceSlot(place: Place | null): PanelSlot {
   return {
     id: 'bg',
-    chip: { short: '장소' },
+    chip: { short: '이동' },
     panel: place
       ? {
           title: place.name,
-          meta: place.date,
-          bar: { label: '시간', value: place.hour, max: 24, tone: 'accent', display: `${place.hour}시 · ${place.period}` },
-          sections: [
-            { label: '날씨', text: joinOrDash(place.weather) },
-            { label: '특징', text: joinOrDash(place.features) },
-            { label: '주변', text: joinOrDash(place.surroundings) },
+          meta: joinOrDash(place.weather),
+          sections: [{ label: '시간', text: place.dateTime }],
+          actions: [
+            {
+              label: '장소',
+              items: place.surroundings.map((s) => ({
+                label: s.name,
+                intent: moveIntent(s.name),
+                confirm: {
+                  title: s.name,
+                  subtitle: s.difficulty ? `이동 난이도: ${s.difficulty}` : undefined,
+                  blurb: s.blurb || undefined,
+                  confirmLabel: '이동',
+                },
+              })),
+            },
+            {
+              label: '대상',
+              items: place.targets.map((t) => ({
+                label: t.name,
+                intent: `${t.name}에게 이동`,
+                confirm: {
+                  title: t.name,
+                  subtitle: t.role || undefined,
+                  blurb: t.blurb || undefined,
+                  trust: t.trust !== 0 ? t.trust : undefined,
+                  confirmLabel: '이동',
+                },
+              })),
+            },
           ],
         }
       : null,
@@ -87,8 +119,8 @@ function buildPlaceSlot(place: Place | null): PanelSlot {
 
 export function buildPanelSlots(state: GameSnapshot): PanelSlot[] {
   return [
+    buildPlaceSlot(state.place),
     buildSubjectSlot(state.subject),
     buildQuestSlot(state.quest),
-    buildPlaceSlot(state.place),
   ];
 }

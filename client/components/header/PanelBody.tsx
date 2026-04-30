@@ -1,8 +1,41 @@
-import { View, Text } from 'react-native';
-import { StatRow, InlineParts, InlineNodes, LabeledRow, ExpandGroup } from '@/components/ui';
-import type { Panel } from '@/types/ui';
+import React from 'react';
+import { ScrollView, View, Text, Pressable } from 'react-native';
+import { StatRow, InlineParts, InlineNodes, LabeledRow, Row, ExpandGroup } from '@/components/ui';
+import type { Panel, PanelAction, PanelActions } from '@/types/ui';
 
-export function PanelBody({ panel }: { panel: Panel }) {
+function ActionScroller({ group, onAction }: {
+  group: PanelActions;
+  onAction?: (action: PanelAction) => void;
+}) {
+  const [width, setWidth] = React.useState(0);
+  return (
+    <View
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      style={{ flex: 1, minWidth: 0 }}
+    >
+      {width > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ width }}
+          contentContainerStyle={{ flexDirection: 'row', gap: 6, paddingRight: 8 }}
+        >
+          {group.items.map((it) => (
+            <Pressable
+              key={it.label}
+              onPress={() => onAction?.(it)}
+              className="px-2 py-1 rounded-sm border border-border-default bg-canvas-default active:bg-canvas-inset"
+            >
+              <Text className="font-sans text-panel text-fg-default">{it.label}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+export function PanelBody({ panel, onAction }: { panel: Panel; onAction?: (action: PanelAction) => void }) {
   return (
     <View className="px-4 py-3 gap-2.5" style={{ minHeight: 160 }}>
       <View className="flex-row items-center gap-2" style={{ minHeight: 22 }}>
@@ -43,6 +76,16 @@ export function PanelBody({ panel }: { panel: Panel }) {
           </LabeledRow>
         ))}
       </ExpandGroup>
+
+      {(panel.actions || []).map((group) =>
+        group.items.length > 0 ? (
+          <Row key={group.label} label={group.label} variableHeight>
+            <ActionScroller group={group} onAction={onAction} />
+          </Row>
+        ) : (
+          <LabeledRow key={group.label} label={group.label}>—</LabeledRow>
+        ),
+      )}
     </View>
   );
 }

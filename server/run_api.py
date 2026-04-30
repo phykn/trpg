@@ -37,11 +37,9 @@ def build_app(
     return app
 
 
-def main() -> None:
+def create_app() -> FastAPI:
     load_dotenv()
 
-    host = os.environ["HOST"]
-    port = int(os.environ["PORT"])
     base_url = os.environ["BASE_URL"]
     basic_auth_user = os.environ["BASIC_AUTH_USER"]
     basic_auth_pass = os.environ["BASIC_AUTH_PASS"]
@@ -55,7 +53,7 @@ def main() -> None:
         api_key="none",
         log_dir=REPO_ROOT / "logs",
     )
-    app = build_app(
+    return build_app(
         llm=llm,
         basic_auth_user=basic_auth_user,
         basic_auth_pass=basic_auth_pass,
@@ -63,7 +61,25 @@ def main() -> None:
         profile_dir=profile_dir,
         cors_origins=cors_origins,
     )
-    uvicorn.run(app, host=host, port=port)
+
+
+def main() -> None:
+    load_dotenv()
+    host = os.environ["HOST"]
+    port = int(os.environ["PORT"])
+    reload = bool(os.environ.get("RELOAD"))
+
+    if reload:
+        uvicorn.run(
+            "run_api:create_app",
+            host=host,
+            port=port,
+            factory=True,
+            reload=True,
+            reload_dirs=[str(Path(__file__).resolve().parent / "src")],
+        )
+    else:
+        uvicorn.run(create_app(), host=host, port=port)
 
 
 if __name__ == "__main__":

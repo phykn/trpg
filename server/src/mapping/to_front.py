@@ -151,25 +151,47 @@ def _period(hour: int) -> str:
     return "밤"
 
 
+def _hour12(hour: int) -> int:
+    if hour == 0:
+        return 12
+    if hour > 12:
+        return hour - 12
+    return hour
+
+
 def to_place(state: GameState) -> dict | None:
     p = state.characters[state.player_id]
     if p.location_id is None or p.location_id not in state.locations:
         return None
     loc: Location = state.locations[p.location_id]
     dt = datetime.fromisoformat(state.world_time)
-    surroundings = [
-        state.locations[c.target_id].name
-        for c in loc.connections
-        if c.target_id in state.locations
-    ]
+    surroundings = []
+    for c in loc.connections:
+        if c.target_id not in state.locations:
+            continue
+        target = state.locations[c.target_id]
+        surroundings.append({
+            "name": target.name,
+            "blurb": target.description,
+            "difficulty": c.difficulty,
+        })
+    targets = []
+    for cid, c in state.characters.items():
+        if cid == state.player_id or c.location_id != p.location_id or not c.alive:
+            continue
+        targets.append({
+            "name": c.name,
+            "role": c.role,
+            "blurb": c.appearance or c.description,
+            "trust": c.relations.get(state.player_id, 0),
+        })
     return {
         "name": loc.name,
-        "date": _korean_date(dt),
-        "hour": dt.hour,
-        "period": _period(dt.hour),
+        "dateTime": f"{_korean_date(dt)} {_period(dt.hour)} {_hour12(dt.hour)}시",
         "weather": list(loc.weather),
         "features": list(loc.tags),
         "surroundings": surroundings,
+        "targets": targets,
     }
 
 

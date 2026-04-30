@@ -1,27 +1,55 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { PanResponder, Pressable, Text, View } from 'react-native';
 
 import { shadow } from '@/design/tokens';
-import type { PanelSlot } from '@/types/ui';
+import type { PanelAction, PanelSlot } from '@/types/ui';
 
 import { ChipTab } from './ChipTab';
 import { IconButton, ICON_PATH } from './IconButton';
 import { PanelBody } from './PanelBody';
 
-export function ContextCard({ slots, activeId, onSelect, onCollapse, onNewGame }: {
+const FLOAT_BUFFER = 480;
+
+export function ContextCard({ slots, activeId, menuOpen, onSelect, onCollapse, onMenuToggle, onMenuClose, onNewGame, onAction }: {
   slots: PanelSlot[];
   activeId: string | null;
+  menuOpen: boolean;
   onSelect: (id: string) => void;
   onCollapse?: () => void;
+  onMenuToggle: () => void;
+  onMenuClose: () => void;
   onNewGame?: () => void;
+  onAction?: (action: PanelAction) => void;
 }) {
   const activeSlot = slots.find((s) => s.id === activeId) ?? null;
   const panel = activeSlot?.panel ?? null;
-  const [menuOpen, setMenuOpen] = React.useState(false);
+  const [chipBarHeight, setChipBarHeight] = React.useState(48);
+  const floating = panel || menuOpen;
+
+  const panResponder = React.useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 8 || Math.abs(g.dy) > 8,
+        onPanResponderTerminationRequest: () => false,
+        onPanResponderMove: () => {},
+        onPanResponderRelease: () => {},
+        onPanResponderTerminate: () => {},
+      }),
+    [],
+  );
 
   return (
-    <View className="mx-5" style={{ zIndex: 10 }}>
+    <View
+      className="mx-5"
+      pointerEvents="box-none"
+      style={[
+        { zIndex: 10 },
+        floating ? { paddingBottom: FLOAT_BUFFER, marginBottom: -FLOAT_BUFFER } : null,
+      ]}
+    >
       <View
+        onLayout={(e) => setChipBarHeight(e.nativeEvent.layout.height)}
         className="bg-canvas-subtle border border-border-default rounded-md flex-row p-2 gap-1 items-center"
         style={shadow.paper}
       >
@@ -36,24 +64,39 @@ export function ContextCard({ slots, activeId, onSelect, onCollapse, onNewGame }
             />
           ))}
         </View>
-        <IconButton d={ICON_PATH.menu} onPress={() => setMenuOpen((v) => !v)} />
+        <IconButton d={ICON_PATH.menu} onPress={onMenuToggle} />
       </View>
       {panel && (
         <View
-          className="bg-canvas-subtle border border-border-default rounded-md"
-          style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, ...shadow.floating }}
+          className="bg-canvas-subtle border border-border-default rounded-md overflow-hidden"
+          style={{
+            position: 'absolute',
+            top: chipBarHeight + 4,
+            left: 0,
+            right: 0,
+            maxHeight: FLOAT_BUFFER,
+            ...shadow.floating,
+          }}
+          {...panResponder.panHandlers}
         >
-          <PanelBody panel={panel} />
+          <PanelBody panel={panel} onAction={onAction} />
         </View>
       )}
       {menuOpen && (
         <View
           className="bg-canvas-subtle border border-border-default rounded-md"
-          style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, minWidth: 140, zIndex: 20, ...shadow.floating }}
+          style={{
+            position: 'absolute',
+            top: chipBarHeight + 4,
+            right: 0,
+            minWidth: 140,
+            zIndex: 20,
+            ...shadow.floating,
+          }}
         >
           <Pressable
             onPress={() => {
-              setMenuOpen(false);
+              onMenuClose();
               onNewGame?.();
             }}
             className="px-3 py-2.5"
