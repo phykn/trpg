@@ -371,17 +371,18 @@ def _check_seed_only_rules(c: Character, items: dict[str, Item]) -> list[str]:
         skill_count = len(c.racial_skill_ids) + len(c.learned_skill_ids)
         if skill_count == 0:
             _v(out, where, "NPC has no skills (racial_skill_ids + learned_skill_ids empty)")
-        if c.combat_behavior is not None and c.disposition.aggressive < 70:
+        threshold = RULES.social.hostile_aggressive_threshold
+        if c.combat_behavior is not None and c.disposition.aggressive < threshold:
             _v(
                 out,
                 where,
-                f"combat_behavior set but disposition.aggressive={c.disposition.aggressive} < 70",
+                f"combat_behavior set but disposition.aggressive={c.disposition.aggressive} < {threshold}",
             )
-        if c.combat_behavior is None and c.disposition.aggressive >= 70:
+        if c.combat_behavior is None and c.disposition.aggressive >= threshold:
             _v(
                 out,
                 where,
-                f"disposition.aggressive={c.disposition.aggressive} ≥ 70 but combat_behavior is None",
+                f"disposition.aggressive={c.disposition.aggressive} ≥ {threshold} but combat_behavior is None",
             )
         if c.combat_behavior is not None and c.xp_reward <= 0:
             _v(
