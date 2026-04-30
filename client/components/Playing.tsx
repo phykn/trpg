@@ -8,7 +8,7 @@ import type { PanelAction } from '@/types/ui';
 import { CombatStrip } from './combat';
 import { Composer } from './composer';
 import { ContextCard } from './header';
-import { HeroPill } from './hero';
+import { HeroStrip } from './hero';
 import { Log } from './log';
 import { ConfirmDialog } from './ui';
 
@@ -20,7 +20,6 @@ export function Playing({ game }: Props) {
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [menuOpen, setMenuOpen] = React.useState(false);
-  const [heroOpen, setHeroOpen] = React.useState(false);
   const [input, setInput] = React.useState('');
   const [pendingAction, setPendingAction] = React.useState<PanelAction | null>(null);
 
@@ -47,13 +46,12 @@ export function Playing({ game }: Props) {
     if (typing) {
       setActiveId(null);
       setMenuOpen(false);
-      setHeroOpen(false);
     }
   }, [typing]);
 
   if (!hero) return null;
 
-  const slots = buildPanelSlots({ subject, quest, place });
+  const slots = buildPanelSlots({ hero, subject, quest, place });
   const rollEnabled = pending !== null;
   const rolling = rollEnabled && streaming;
 
@@ -96,6 +94,8 @@ export function Playing({ game }: Props) {
         />
       )}
 
+      <HeroStrip hero={hero} onPress={() => setActiveId((prev) => (prev === 'hero' ? null : 'hero'))} />
+
       <Log
         log={log}
         rolling={rolling}
@@ -105,10 +105,6 @@ export function Playing({ game }: Props) {
       />
 
       {combat ? <CombatStrip combat={combat} /> : null}
-
-      <View style={{ zIndex: 11 }}>
-        <HeroPill hero={hero} expanded={heroOpen} onToggle={() => setHeroOpen((v) => !v)} />
-      </View>
 
       <Composer
         input={input}

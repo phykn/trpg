@@ -1,1 +1,1 @@
-export { HeroPill } from './HeroPill';
+export { HeroStrip } from './HeroStrip';
