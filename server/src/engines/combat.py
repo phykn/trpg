@@ -180,7 +180,7 @@ def roll_initiative(
 
 
 def _has_heal_skill(c: Character, skills_pool: dict[str, Skill]) -> bool:
-    for sid in (*c.racial_skill_ids, *c.learned_skill_ids):
+    for sid in c.known_skill_ids:
         s = skills_pool.get(sid)
         if s is not None and s.type == "heal":
             return True

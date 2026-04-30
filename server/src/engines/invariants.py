@@ -213,7 +213,7 @@ def check_character(c: Character) -> list[str]:
         _v(out, where, f"alive=False but hp={c.hp} (must be 0)")
 
     seen_skill_ids: set[str] = set()
-    for sid in (*c.racial_skill_ids, *c.learned_skill_ids):
+    for sid in c.known_skill_ids:
         if sid in seen_skill_ids:
             _v(out, where, f"skill id={sid!r} duplicated within character")
         seen_skill_ids.add(sid)
@@ -244,7 +244,7 @@ def check_character(c: Character) -> list[str]:
 def check_skills(c: Character, skills_pool: dict[str, Skill]) -> list[str]:
     where = f"characters/{c.id}"
     out: list[str] = []
-    for sid in (*c.racial_skill_ids, *c.learned_skill_ids):
+    for sid in c.known_skill_ids:
         s = skills_pool.get(sid)
         if s is None:
             _v(out, where, f"skill_id={sid!r} not in skills pool")

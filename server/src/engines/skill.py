@@ -25,8 +25,7 @@ CastTargets = list[str]
 
 
 def find_skill(actor: Character, skill_id: str, state: GameState) -> Skill:
-    known = set(actor.racial_skill_ids) | set(actor.learned_skill_ids)
-    if skill_id not in known:
+    if skill_id not in actor.known_skill_ids:
         raise SkillInvalid(f"actor has no such skill: {skill_id}")
     skill = state.skills.get(skill_id)
     if skill is None:

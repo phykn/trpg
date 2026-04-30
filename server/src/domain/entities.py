@@ -243,6 +243,10 @@ class Character(BaseModel):
 
     companions: list[str] = []
 
+    @property
+    def known_skill_ids(self) -> tuple[str, ...]:
+        return (*self.racial_skill_ids, *self.learned_skill_ids)
+
 
 # --- location --------------------------------------------------------------
 

@@ -87,12 +87,13 @@ def _companion_label(state: GameState, char_id: str) -> str | None:
     return f"{c.name} ({_race_job_label(state, c)})"
 
 
+def _skill_names(state: GameState, char: Character) -> list[str]:
+    return [state.skills[sid].name for sid in char.known_skill_ids if sid in state.skills]
+
+
 def to_hero(state: GameState) -> dict:
     p = state.characters[state.player_id]
-    skill_ids = (*p.racial_skill_ids, *p.learned_skill_ids)
-    skills = [
-        state.skills[sid].name for sid in skill_ids if sid in state.skills
-    ]
+    skills = _skill_names(state, p)
     return {
         "name": p.name,
         "raceJob": _race_job_label(state, p),
@@ -134,10 +135,7 @@ def to_subject(state: GameState) -> dict | None:
     else:
         known = [s.appearance] if s.appearance else []
         known += [m.content for m in player.memories if m.target_id == sid]
-    skill_ids = (*s.racial_skill_ids, *s.learned_skill_ids)
-    skills = [
-        state.skills[sid_].name for sid_ in skill_ids if sid_ in state.skills
-    ]
+    skills = _skill_names(state, s)
     return {
         "name": s.name,
         "role": s.role,
