@@ -9,7 +9,7 @@ from ..llm.client import LLMClient
 from ..mapping.to_front import rest_ambush_text, rest_completed_text
 from . import encounter as encounter_engine
 from .combat_phase import start_combat_and_run_npc_phase
-from .clock import advance_turn
+from .clock import tick_turn_buffs
 from .dirty import Dirty, ToFrontFn, finalize, push_act
 
 
@@ -47,7 +47,7 @@ async def run_rest(
             state, enemy_ids, dirty, rng, surprise="enemy"
         ):
             yield ev
-        advance_turn(state, dirty)
+        tick_turn_buffs(state, dirty)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return

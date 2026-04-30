@@ -37,7 +37,7 @@ from .actions import (
 from .combat_oneshot import arm_combat_roll_pending
 from .combat_phase import run_combat_player_turn
 from .encounter import summon_encounter
-from .clock import advance_turn
+from .clock import tick_turn_buffs
 from .dirty import (
     Dirty,
     ToFrontFn,
@@ -142,7 +142,7 @@ async def _run_one_step_action(
         yield ev
     if getattr(result, "tail_intent", None):
         yield push_act(state, dirty, result.tail_intent)
-    advance_turn(state, dirty)
+    tick_turn_buffs(state, dirty)
     async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev
 
@@ -269,6 +269,7 @@ async def _dispatch(
             if getattr(part, "tail_intent", None):
                 yield push_act(state, dirty, part.tail_intent)
         if last_pass is not None:
+
             target_for_log = last_pass.targets[0] if last_pass.targets else None
             # Pre-apply the player's relocation (if judge intent says so) and
             # emit panels before narrate streams. The narrate prompt then sees
@@ -288,7 +289,7 @@ async def _dispatch(
                 dialogue_input=player_input,
             ):
                 yield ev
-        advance_turn(state, dirty)
+        tick_turn_buffs(state, dirty)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -330,6 +331,6 @@ async def _dispatch(
     ):
         yield ev
 
-    advance_turn(state, dirty)
+    tick_turn_buffs(state, dirty)
     async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev

@@ -20,7 +20,7 @@ from .combat_oneshot import (
 )
 from ..agents.combat_narrate import stream_combat_narrate
 from .combat_phase import run_combat_npc_phase
-from .clock import advance_turn
+from .clock import tick_turn_buffs
 from .dirty import (
     Dirty,
     ToFrontFn,
@@ -202,7 +202,7 @@ async def run_roll(
     if pending.kind == "death_save":
         async for ev in _resolve_death_save(state, dirty, dice):
             yield ev
-        advance_turn(state, dirty)
+        tick_turn_buffs(state, dirty)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -212,7 +212,7 @@ async def run_roll(
             client, state, profile_dir, dirty, dice, pending,
         ):
             yield ev
-        advance_turn(state, dirty)
+        tick_turn_buffs(state, dirty)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -258,7 +258,7 @@ async def run_roll(
         yield ev
 
     state.pending_check = None
-    advance_turn(state, dirty)
+    tick_turn_buffs(state, dirty)
 
     if state.combat_state is not None:
         # Environment rolls cost the player one combat turn — NPC phase resumes.

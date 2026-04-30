@@ -31,7 +31,7 @@ from .actions import (
     emit_unequip,
     emit_use,
 )
-from .clock import advance_turn
+from .clock import tick_turn_buffs
 from .dirty import Dirty, ToFrontFn, finalize, push_act, push_turn_log
 from .format import format_combat_end_text
 from .judge import run_judge
@@ -192,7 +192,7 @@ async def _flush_player_turn(
     async for ev in run_combat_npc_phase(state, dirty, rng):
         yield ev
     state.turn_count += 1
-    advance_turn(state, dirty)
+    tick_turn_buffs(state, dirty)
     async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev
 
@@ -283,7 +283,7 @@ async def _handle_flee(
         yield {"type": "combat_end", "data": {"outcome": "fled"}}
         combat_engine.end_combat(state)
         state.turn_count += 1
-        advance_turn(state, dirty)
+        tick_turn_buffs(state, dirty)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
