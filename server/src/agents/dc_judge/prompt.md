@@ -30,7 +30,7 @@ Input fields (in `surroundings`): `location`, `entities` (player/npc/item/connec
 
 **clarify 없음.** 모호함 만나면 절대 되묻지 않는다 — 합리적 default + narrate 안전망. 구체 fallback은 § Fallback rules.
 
-**Boundaries**: 모든 분기점에서 clarify 대신 default를 골라 forward 진행. `pass` vs idle — coherent-but-loose ("둘러본다", "앉는다", "뭔가 해봐") → `pass`. `pass` vs `rest` — breather → pass; long sleep → rest. `pass` vs `roll` — chat → pass; asking NPC to yield against will → roll. `flee` vs `pass`/`roll` — `flee` only when `in_combat=true`. Outside combat: "이 자리를 뜬다" → `pass`; "들키지 않게 빠져나간다" → `roll`(DEX). `equip` vs `combat` — split draw-then-strike("검을 뽑으며 친다") → **첫 동사**의 action 하나만 (보통 `equip`), narrate가 두 번째 의도를 "다음 호흡에 베어 들어가려 한다"로 묶어 끝맺음. weapon descriptor("칼을 휘둘러", "주먹으로")은 단일 combat. `buy` vs `roll` — listed price → buy; haggle → roll(CHA). One continuous attempt = one action; multiple targets → `targets:[a,b]`.
+**Boundaries**: 모든 분기점에서 clarify 대신 default를 골라 forward 진행. `pass` vs idle — coherent-but-loose ("둘러본다", "앉는다", "뭔가 해봐") → `pass`. `pass` vs `rest` — breather → pass; long sleep → rest. `pass` vs `roll` — chat → pass; asking NPC to yield against will → roll. `flee` vs `pass`/`roll` — `flee` only when `in_combat=true`. Outside combat: "이 자리를 뜬다" → `pass`; "들키지 않게 빠져나간다" → `roll`(DEX). `equip` vs `combat` — draw verb 포함("검을 뽑으며 친다", "검을 들고 친다", "검을 쥐고 벤다") → **첫 동사**의 action 하나만 (보통 `equip`), narrate가 두 번째 의도를 "다음 호흡에 베어 들어가려 한다"로 묶어 끝맺음. draw verb 없음·weapon descriptor only("칼을 휘둘러", "주먹으로", "단검으로 찌른다")은 단일 combat. `buy` vs `roll` — listed price → buy; haggle → roll(CHA). One continuous attempt = one action; multiple targets → `targets:[a,b]`.
 
 **Combat target rule**: combat은 engine이 character id를 요구한다. **호명 유무로 분기**:
 
@@ -70,7 +70,7 @@ semantics 검증이 backstop으로 friendly NPC·location id·player·item을 co
 1. id explicitly named in input.
 2. Multiple → all.
 3. No name + **대인 행동**(말 걸기·인사·질문·부탁·따라가기·거래 시도 등) → `recent_npc` 우선 → 없으면 직전 history에서 마지막 언급된 alive same-location NPC → 그래도 없으면 alive NPC가 1명일 때 그 한 명. Pronoun/follow-up은 추가 hint일 뿐 필수 아님.
-4. No name + 환경 대상 행동 + `roll` → `[location.id]`. `combat` w/ no name → § Combat target rule (recent_npc fallback).
+4. No name + 환경 대상 행동 + `roll` → `[location.id]`. `combat` w/ no name → § Combat target rule (hostile/neutral only).
 5. `pass`의 `targets`는 optional이지만 **위 1~3에서 NPC를 골랐으면 반드시 채운다** — client 패널이 player가 마주하는 대상을 따라가려면 필요. 진짜 target 없는 일상 행동("자리에 앉는다", "둘러본다")만 `targets:[]`.
 
 **Named-NPC anchoring (loose)**: input names NPC by name/role/job/외모("훈련사", "대장장이", "여관 주인", "노파", "할머니") → `entities[*]`의 `name`·`description`·`job`·`state_tags` 중 **어느 하나라도** 부분 일치하면 매칭. 동의어("할머니"≈"노파", "전사"≈"용병", "주인"≈"여관 주인") 허용. 매칭 1명이면 그를 사용. 매칭 **2명 이상**이면 `recent_npc` 우선 → 없으면 첫 매칭. 매칭 **0명**이면 § Fallback rules로 떨어짐.
@@ -158,6 +158,7 @@ Roll tier (friction count → tier):
 |---|---|
 | 근육을 단련해 한 단계 오른다 | `{"action":"level_up","stat_up":"STR","stat_down":"CHA"}` |
 | 더 민첩해진다 | `{"action":"level_up","stat_up":"DEX","stat_down":"WIS"}` |
+| 마음을 가다듬어 한 단계 오른다 | `{"action":"level_up","stat_up":"WIS","stat_down":"DEX"}` |
 | 이제 성장한다 (no hint) | `{"action":"level_up","stat_up":"STR","stat_down":"CHA"}` |
 | 성장한다 (can_level_up=false) | `{"action":"pass"}` (narrate: "팔에 힘을 모아보지만 아직 한 단계 오를 만큼은 차오르지 않는다") |
 

@@ -3,11 +3,9 @@ def format_state_summary(front_state: dict) -> str:
 
     place = front_state.get("place")
     if place:
-        lines.append(
-            f"장소: {place['name']} ({place['date']} {place['period']} {place['hour']}시)"
-        )
+        lines.append(f"장소: {place['name']} ({place['dayPhase']})")
         if place.get("surroundings"):
-            lines.append(f"인접: {', '.join(place['surroundings'])}")
+            lines.append("인접: " + ", ".join(s["name"] for s in place["surroundings"]))
         if place.get("features"):
             lines.append(f"환경: {', '.join(place['features'])}")
         if place.get("weather"):

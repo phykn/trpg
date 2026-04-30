@@ -150,7 +150,7 @@ def main() -> None:
         sp.set_defaults(func=_run_entity)
 
     sp_scen = sub.add_parser(
-        "scenario", help="build a whole scenario from prose (world.md + 6 entity dirs + 3 meta files)"
+        "scenario", help="build a whole scenario from prose (world.md + 7 entity dirs + 3 meta files)"
     )
     sp_scen.add_argument("--name", required=True, help="new scenario directory name")
     sp_scen.add_argument(

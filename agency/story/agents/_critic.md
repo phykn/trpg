@@ -54,7 +54,7 @@ Entity kind: character. world.md: East-Asian wuxia, Three Kingdoms. Entity:
 Entity kind: character. world.md: East-Asian wuxia, Three Kingdoms. Entity:
 ```json
 {"id": "zhou_mu", "name": "주모", "job": "여관 주인", "stats": {...},
- "inventory_ids": ["bronze_key", "herb_pouch"], "equipment": {"top": "linen_robe"},
+ "inventory_ids": ["bronze_key", "herb_pouch"], "equipment": {"armor": "linen_robe"},
  "learned_skills": [...]}
 ```
 

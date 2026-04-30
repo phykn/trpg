@@ -60,16 +60,17 @@ server/
 
     context/                     Prompt input builders
       layers.py                  build_world_layer / build_session_layer / build_history_layer (narrate 용)
-      surroundings.py            build_surroundings (judge 용) — location, entities, equipment, skills (racial+learned), inventory, growth, skill_candidates, merchants, in_combat
+      surroundings.py            build_surroundings (judge 용) — location, entities, corpses, equipment, skills (racial+learned), inventory, growth, skill_candidates, merchants, recent_npc, in_combat. corpses 는 같은 location 시체 + history 에 등장한 off-screen 시체 둘 다 묶음 ([02-runtime.md](./02-runtime.md) §3.4.1)
 
     flow/                        한 턴의 orchestration. SSE 이벤트 발행
       dirty.py                   Dirty 컨테이너 (entities/log/history/dialogue) + push_log_entry / push_turn_log / push_dialogue / next_log_id / flush / finalize
-      clock.py                   advance_turn — 턴 경계에서 active_buff duration -1 (시계 산수는 없고 buff tick 만)
-      format.py                  로그 줄 builders (format_attack_log / format_skill_log / format_use_log / format_combat_end_text / format_roll_announce) + GRADE_LABEL / front_grade / choose_bonus_target. 영문 엔진 에러 (`InventoryInvalid` / `LevelUpInvalid` / `SkillInvalid` 등) 를 한국어 한 줄로 번역하는 매핑도 여기
-      actions.py                 emit_attack / emit_skill_cast / emit_use / emit_equip / emit_unequip / emit_level_up / emit_learn_skill / emit_trade / emit_roll_pending. 엔진 검증 실패 (DomainError) 를 catch 해서 GM log 로 흘림
-      subject.py                 refresh_active_subject — combat / roll / trade / 최근 대화 NPC 로 active_subject_id 동기화
-      combat_oneshot.py          arm_combat_roll_pending / 한 방 시네마틱 전투 해결 ([03-features.md](./03-features.md) §1). combat_narrate 호출, 등급 → 결과 매핑 (사살·HP 데미지·XP·downed)
-      combat_phase.py            start_combat_and_run_npc_phase / surprise 첫 라운드 처리 / death-save 분기. 시네마틱과 협업하는 부수 단계 (전투 진입·종료 SSE 발사 등)
+      clock.py                   tick_turn_buffs — 턴 경계에서 active_buff duration -1 (시계 산수는 없고 buff tick 만). 옛 이름 advance_turn → tick_turn_buffs
+      format.py                  로그 줄 builders (format_attack_log / format_skill_log / format_use_log / format_combat_end_text) + GRADE_LABEL / front_grade. 시네마틱 후행 정산은 combat_oneshot.format_combat_outcome_text 가 자체 발행 ([03-features.md](./03-features.md) §1.6)
+      error_phrases.py           humanize_engine_error — 영문 엔진 에러 (`InventoryInvalid` / `LevelUpInvalid` / `SkillInvalid` 등) 를 한국어 한 줄 GM phrase 로 번역. 단일 substring 테이블, 폴백 `"지금은 그 행동이 통하지 않는다"`
+      actions.py                 emit_attack / emit_skill_cast / emit_use / emit_equip / emit_unequip / emit_level_up / emit_learn_skill / emit_trade / emit_roll_pending. 엔진 검증 실패 (DomainError) 를 catch 해서 humanize_engine_error 로 한국어 한 줄 변환 후 GM log 로 흘림
+      subject.py                 refresh_active_subject — combat / roll / trade / 최근 대화 NPC 로 active_subject_id 동기화. corpse-aware: 죽은 NPC 도 pin 으로 살아남아 narrate anchor 유지
+      combat_oneshot.py          arm_combat_roll_pending / 한 방 시네마틱 전투 해결 ([03-features.md](./03-features.md) §1) / format_combat_outcome_text — combat_narrate 호출, 등급 → 결과 매핑 (사살·HP 데미지·XP·downed) + 시네마틱 본문 뒤로 적별 데미지·잔여 HP·처치 XP·플레이어 피해·굴림 XP 정산을 GM 로그로 후행 발행
+      combat_phase.py            start_combat_and_run_npc_phase / surprise 첫 라운드 처리 / death-save 분기. 시네마틱과 협업하는 부수 단계 (전투 진입·종료 SSE 발사 등). engines/combat 의 advance_turn 은 NPC 라운드용 별도 함수 — flow/clock 의 tick_turn_buffs 와 다름
       rest.py                    run_rest — recovery 호출 + summon 콜백 wiring
       turn.py                    run_turn 입구 — combat 활성이면 combat_phase 로 라우팅, 아니면 15개 action 분기 (chain 은 sequential dispatch)
       intro.py                   run_intro — 게임 시작 시 첫 GM narration. judge 안 부르고 narrate 만
@@ -85,7 +86,8 @@ server/
       init.py                    프로필 + 캐릭터 생성 요청 → 초기 GameState
 
     mapping/
-      to_front.py                to_front_state — GameState → 프론트가 기대하는 flat dict (한국어 날짜·합성 문자열 여기서 끝)
+      to_front.py                to_front_state — GameState → 프론트가 기대하는 flat dict (합성 문자열·corpse-aware subject·pending_check wire 가공 모두 여기서 끝)
+      josa.py                    한국어 조사 선택 헬퍼 — i_ga / eun_neun / eul_reul / gwa_wa. 받침(jongseong) 유무로 이/가, 은/는, 을/를, 와/과 가름. flow/format·to_front 의 한 줄 GM phrase 조립에 쓰임
 
     llm/
       client.py                  OpenAI 호환 스트리밍 LLMClient

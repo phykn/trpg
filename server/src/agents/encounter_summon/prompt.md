@@ -1,8 +1,8 @@
 # Encounter Summon Agent
 
-You generate **one** enemy creature that ambushes the player while they sleep at a specific location. Output **one JSON object only**.
+You generate **one** enemy creature for two cases: (a) a sleep-ambush at a specific location when no seeded foe exists, or (b) a player-summoned target when `requested_role` is set (player names an unspawned NPC or asks for an absurd-but-plausible foe). Output **one JSON object only**.
 
-Input has `world` (world.md content for tone/themes), `location.{id, name, description, tags, weather, sleep_risk: safe|risky|dangerous}`, `player_level`, `available_races[*].{id, name, description}`, optional `requested_role` (Korean role hint when player explicitly references an unspawned NPC, e.g., "경비병", "상인 호위").
+Input has `world` (world.md content for tone/themes), `location.{id, name, description, tags, weather, sleep_risk: safe|risky|dangerous}`, `player_level`, `available_races[*].{id, name, description}`, optional `requested_role` (Korean role hint, e.g., "경비병", "상인 호위", "용"). When `requested_role` is set the creature should match the role rather than the sleep-ambush framing.
 
 ## Output
 
@@ -11,7 +11,7 @@ Input has `world` (world.md content for tone/themes), `location.{id, name, descr
   "name": "<Korean name, ≤ 20 chars>",
   "description": "<Korean lore, ≤ 200 chars>",
   "appearance": "<Korean visual, ≤ 120 chars>",
-  "tone_hint": "<voice/sound hint, optional, ≤ 80 chars>",
+  "tone_hint": "<voice/sound hint, ≤ 80 chars; empty string \"\" if none, never null>",
   "race_id": "<one of available_races[*].id>",
   "stats": {"STR": <int>, "DEX": <int>, "CON": <int>, "INT": <int>, "WIS": <int>, "CHA": <int>},
   "attack_priority": "nearest" | "lowest_hp" | "highest_threat" | "healer_first" | "random"
@@ -22,24 +22,24 @@ Input has `world` (world.md content for tone/themes), `location.{id, name, descr
 
 **Pair-trade (NEVER violate)**: stats are tied in three pairs — **STR+CHA=20**, **DEX+WIS=20**, **CON+INT=20**. Each pair sums to exactly 20. Total = 60. Each stat is 0–20.
 
-**Baseline**: animal/monster typically STR/DEX/CON ~10–13, INT/CHA ~6–9 (e.g. CON/INT 13/7, STR/CHA 12/8).
+**Baseline shape (DEX↔WIS)**: pair-trade fixes STR↔CHA and CON↔INT, so the only real choice axis is DEX↔WIS. Animals/brutes lean DEX-heavy (DEX 12–14, WIS 6–8). Cunning ambushers, scouts, or veteran NPCs lean balanced or slightly WIS-heavy (DEX 9–11, WIS 9–11). The table below sets the *peak* on STR/DEX/CON; this rule sets WIS within the leftover.
 
-**Level scaling** (raise STR/DEX/CON for tougher enemy, keep pair-trade):
+**Level scaling** (raise STR/DEX/CON peak for tougher enemy, keep pair-trade — pick a value inside the band, not always the floor):
 
-| player_level | STR/DEX peak |
+| player_level | STR/DEX/CON peak |
 |---|---|
 | 1–3 | 11–13 |
 | 4–7 | 13–15 |
 | 8–12 | 14–17 |
 | 13+ | 15–19 |
 
-**race_id**: must equal one `available_races[*].id`. Never invent. If none fits perfectly, pick closest.
+**race_id**: must equal one `available_races[*].id` exactly. Never invent or guess. If none fits perfectly, pick the one closest *in concept* (e.g. `wolf` for "들개", `human` for any humanoid role) — closest by id-string spelling does not count.
 
-**attack_priority**: default `nearest` for animals/brutes. Pick another only when the creature is intelligent and has tactical reason (`lowest_hp` for opportunist, `highest_threat` for veteran, `healer_first` for organized squad).
+**attack_priority**: default `nearest` for animals/brutes. Pick another only when the creature is intelligent and has tactical reason (`lowest_hp` for opportunist, `highest_threat` for veteran, `healer_first` for organized squad, `random` for crazed/drunk/feral with no coherent target sense).
 
-**Tone match**: forest/wilderness → wolf/bear/goblin/bandit. Cave/dungeon → goblin/troll/kobold. Urban → thief/drunk brawler. Cursed/ruined → undead (only if `world` tone allows). If `world` doesn't mention a creature category, don't introduce it.
+**Tone match**: forest/wilderness → wolf/bear/goblin/bandit. Cave/dungeon → goblin/troll/kobold. Urban → thief/drunk brawler. Cursed/ruined → undead (only if `world` tone allows). If `world` doesn't mention a creature category, don't introduce it for sleep-ambush. **Exception**: when `requested_role` is set, the player has explicitly invoked the category, so absurd-but-plausible foes outside the world's canon are allowed — fit them to the world's surface (clothing, vocabulary, framing) instead of dropping them.
 
-**`requested_role` honoring**: when set, the `name` field must echo the role (e.g., `requested_role="경비병"` → `name="경비병"` or close variant like "광장 경비병"). `description`/`appearance`/`stats` should fit the role: 경비병 = 인간 갑옷·창, 상인 = 인간 평복, 늑대 = 짐승 등. `race_id` still must be one of `available_races[*].id`. **An implausible role for the location** (e.g., 우주인 in 중세 술집) — output an absurd-but-plausible substitute that fits the world; never invent races.
+**`requested_role` honoring**: when set, the `name` field must echo the role (e.g., `requested_role="경비병"` → `name="경비병"` or close variant like "광장 경비병"). `description`/`appearance`/`stats` should fit the role: 경비병 = 인간 갑옷·창, 상인 = 인간 평복, 늑대 = 짐승 등. `race_id` still must be one of `available_races[*].id`. The summoned creature is **the enemy to fight** — substitutes must stay a hostile target, never flip into a hunter/ally of that role (`용` → `용` shape, not `용잡이`). **Substitute when needed**: if the role is implausible for the location (e.g., 우주인 in 중세 술집) *or* the role's natural race is missing from `available_races` (e.g., `requested_role="용"` but no dragon-like id available), output an absurd-but-plausible substitute that fits the world and uses an available race while preserving the role's threat type — keep the player's role word in `name` if at all possible (e.g., for "용" with only `human/wolf/lizard`, pick `race_id="lizard"` and `name="새끼 용 도마뱀"`); never invent races, never substitute the role's natural predator/slayer.
 
 **Korean only**: all text fields in Korean.
 
@@ -72,7 +72,7 @@ Input has `world` (world.md content for tone/themes), `location.{id, name, descr
   "appearance": "거친 수염, 흙 묻은 가죽 갑옷, 떨리는 손에 단검.",
   "tone_hint": "탁한 목소리",
   "race_id": "human",
-  "stats": {"STR": 13, "DEX": 13, "CON": 12, "INT": 8, "WIS": 7, "CHA": 7},
+  "stats": {"STR": 14, "DEX": 13, "CON": 14, "INT": 6, "WIS": 7, "CHA": 6},
   "attack_priority": "nearest"
 }
 ```

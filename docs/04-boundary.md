@@ -13,7 +13,8 @@
 | `name`, `level` | 같은 이름의 필드 | 그대로 복사 |
 | `raceJob: str` | `race_id` + `job` | `races[race_id].name` 과 `job` 을 합쳐 `"<종족> <직업>"` 한 문자열로. `job` 이 빈 문자열이면 종족 이름만 (trailing space 없음). race 가 사라졌으면 race_id 그대로 |
 | `hp/hpMax`, `mp/mpMax` | 같은 이름의 필드 | 그대로 복사. 값은 엔진이 계산으로 갱신 — narrator 가 `set` 으로 못 건드림 |
-| `exp/expMax` | `xp_pool` + 레벨 곡선 [P3] | xp/level 시스템 자체가 P3 일정 ([03-features.md](./03-features.md) §2.3). P1 동안은 자리표시 0/0 만 노출 |
+| `exp/expMax` | `xp_pool` + `xp_for_next_level(level)` | 레벨업 곡선은 [03-features.md](./03-features.md) §2.3 의 `base_xp × N` |
+| `canLevelUp: bool` | `engines/growth.can_afford_level_up(player)` | xp_pool 이 다음 레벨 임계 도달 + 레벨이 cap 미만일 때 true. 프론트가 레벨업 버튼/힌트 노출 결정에 사용 |
 | `stats: [{label, value}]` | `stats` (STR/DEX/CON/INT/WIS/CHA) | ASCII 키를 한국어 라벨로 변환해 고정 순서 배열로 — `[{label:"근력", value}, {label:"민첩", ...}, "건강", "지능", "지혜", "매력"]`. 장비·버프 미적용 기본값. 장비·버프를 더한 실효 수치는 백엔드 내부 계산용 |
 | `equipment` (3슬롯: `weapon/armor/accessory`) | `equipment` 같은 키 | 슬롯에 든 item_id 로 `items[id].name` 을 찾아 `{name}` 만 노출. 빈 슬롯은 `null` (키 3개는 항상 존재) ([03-features.md](./03-features.md) §2.5) |
 | `inventory: [{name, qty}]` | `inventory_ids: list[str]` | 같은 item_id 끼리 묶어 개수를 세고, `items[id].name` 으로 이름을 찾아 `[{name, qty}]` 모양으로. **장비 슬롯에 장착된 item_id 는 슬롯당 1 개씩 차감** (invariant 상 장착 아이템은 inventory_ids 에도 존재해 중복 노출 방지) ([03-features.md](./03-features.md) §2.5) |
@@ -22,6 +23,8 @@
 | `companions: list[str]` | `companions: list[char_id]` ([03-features.md](./03-features.md) §2.9) | 각 char_id 의 캐릭터를 찾아 `"이름 (종족 직업)"` 으로 조립. `job` 이 빈 문자열이면 `"이름 (종족)"` — 괄호 안 공백·trailing space 없음 |
 
 ### Subject — `characters[active_subject_id]`
+
+active_subject_id 는 죽은 NPC 도 가리킬 수 있다 — subject pin 이 사망 시점에 사라지지 않고 corpse-aware 로 살아남아, narrate 가 죽은 정체성을 anchor 로 잡고 회상·시체 묘사를 잇는다. corpse 일 때 `known` 한 줄 (`["죽음"]`) 만 채워지고 나머지 수치는 사망 직전 상태 그대로 노출.
 
 | 프론트 필드 | 백엔드 출처 | 변환 |
 |---|---|---|
@@ -34,7 +37,7 @@
 | `skills: list[str]` | `racial_skills + learned_skills` | Hero 와 동일 |
 | `role: str` | `role: str` (프로필 config 에 들어 있는 값) | 자유 문자열. 그대로 |
 | `trust: int` | `relations.get(player_id, 0)` | -100..+100, 기본 0 (중립). 방향은 **subject → player** (subject 가 player 를 어떻게 느끼는가) |
-| `known: list[str]` | `appearance` (한 줄) + player 의 `memories` 중 `target_id == subject_id` 인 항목들 | 첫 줄 = subject 의 외모 한 줄 (subject.appearance), 그 아래 = player 가 그 subject 에 대해 들고 있는 기억 한 줄씩 ([02-runtime.md](./02-runtime.md) §7). 메모리 항목이 0개면 외모 한 줄만 나감. |
+| `known: list[str]` | `appearance` (한 줄) + player 의 `memories` 중 `target_id == subject_id` 인 항목들 | 살아 있을 때: 첫 줄 = subject 의 외모 한 줄 (subject.appearance), 그 아래 = player 가 그 subject 에 대해 들고 있는 기억 한 줄씩 ([02-runtime.md](./02-runtime.md) §7). 메모리 항목이 0개면 외모 한 줄만 나감. **죽어 있을 때**: `["죽음"]` 단일 항목 (외모·메모리 무시) — 시체 톤을 패널이 한 줄로 표시. |
 
 ### Quest — `quests[active_quest_id]`
 
@@ -42,7 +45,7 @@
 |---|---|---|
 | `title`, `summary` | 같은 이름의 필드 | 그대로 |
 | `giver: str` | `giver_id` | id 로 캐릭터를 찾아 `name` 만 노출 |
-| `difficulty: {value, max, label}` | tier 정수 ([02-runtime.md](./02-runtime.md) §4.3) | 백엔드가 7단계로 만들어 보냄: `value=tier(1..7)`, `max=7`, `label=한글명` |
+| `difficulty: str` | `Quest.difficulty` (Tier — 7단계 한글 라벨, [02-runtime.md](./02-runtime.md) §4.3) | 라벨 문자열 그대로 (`"보통"`, `"어려움"`, `"전설"` 등). 패널이 tone-colored meta line 으로 표시. 옛 `{value, max, label}` 진행도 객체는 폐기 — 퀘스트 progress 는 패널의 `goals[]` 줄로 충분하고, difficulty 자체는 단순 라벨이라 더 잘게 쪼개지 않음. |
 | `goals: list[str]` | `triggers: list[QuestTrigger]` ([03-features.md](./03-features.md) §2.8) | 모든 트리거의 `name` 만 추출. **필터 없음** (narrator 용 session_layer 의 pending-only `goals` 와는 다름, [02-runtime.md](./02-runtime.md) §3.2) |
 | `conditions: list[str]` | `conditions: list[str]` | 자유 문자열 제약 그대로. Hero.status 와 달리 narrator 가 `set` 으로 못 건드림 ([02-runtime.md](./02-runtime.md) §6.1) |
 | `rewards: {gold, exp}` | `rewards.gold`, `rewards.exp` | 그대로. `rewards.items` 는 [P3] 추가 |
@@ -51,9 +54,12 @@
 
 | 프론트 필드 | 백엔드 출처 | 변환 |
 |---|---|---|
-| `name`, `weather`, `features` | 같은 이름의 필드 | 그대로 |
+| `name`, `weather` | 같은 이름의 필드 | 그대로 |
+| `description: str` | `Location.description` | 장소 설명 한 줄. 패널 본문 lead. |
+| `features: list[str]` | `Location.tags` | 장소 태그 그대로 |
 | `dayPhase: str` | `state.turn_count` 에서 백엔드가 파생 (`domain/clock.py:day_phase`) | "새벽/오전/오후/밤" 중 하나. 분/시 단위 시계는 없음 ([03-features.md](./03-features.md) §2.1) |
-| `surroundings: list[str]` | 인접 location 들의 `name` (`connections` 으로 연결됨) | 인접 장소 이름만 |
+| `surroundings: PlaceSurrounding[]` | `Location.connections` 의 각 엣지 | `{name, blurb, difficulty}`. `name`/`blurb` 는 인접 location 의 `name`/`description`, `difficulty` 는 Connection 의 자물쇠/통과 난이도 라벨 (없으면 `null`). 패널이 actionable surrounding row 로 표시 — 클릭하면 이동 의도 발화. |
+| `targets: PlaceTarget[]` | 같은 location 에 있는 player 외 캐릭터 | `{name, role, blurb, trust}`. `blurb` = 살아 있으면 `appearance` (없으면 `description`), 죽어 있으면 `"죽음"`. `trust` = `relations.get(player_id, 0)`. 시체도 포함 — 패널이 corpse 톤으로 흐림 처리. |
 
 ### LogEntry — SSE `log_entry` 이벤트 + `narrative_delta` 누적
 
@@ -62,7 +68,7 @@
 - `gm` — `narrative_delta` 를 모아 만든 이야기 본문 한 덩이 (SSE 이벤트로는 안 옴)
 - `player` — 플레이어가 친 입력을 그대로 되돌려 보냄 (서버 발행)
 - `act` — 시스템 알림, 검증 실패 GM 메시지 등 (서버 발행)
-- `roll` — 주사위 결과 (서버 발행). `result: 'success' | 'fail'` 는 5단계 grade 를 3:2 로 줄임 — `critical_success | success | partial_success` → `success`, 나머지 → `fail` ([02-runtime.md](./02-runtime.md) §5.3)
+- `roll` — 주사위 결과 (서버 발행). `{check, roll, margin, result}`. `roll` 은 d20 원본 값, `margin = total - required_roll` (음수면 미달, 양수면 초과). 옛 `dc`/`mod` 분리 노출은 폐기 — UI 가 한 숫자(`margin`) 로 성공·실패 거리를 보여주는 게 직관적이라 한 줄로 합침. `result: 'success' | 'partial' | 'fail'` 는 5단계 grade 를 3-state 로 묶음 — `critical_success | success` → `success`, `partial_success` → `partial`, `failure | critical_failure` → `fail` ([02-runtime.md](./02-runtime.md) §5.3, `flow/format.py:front_grade`)
 
 ### 내부 전용 (프론트로 안 나감)
 
@@ -76,14 +82,16 @@
 §1 표가 동작하려면 다음 백엔드 필드가 정의돼 있어야 한다. 자세한 스키마는 각 절 참고:
 
 - **Character.role: str** — 자유 문자열 ("몬스터", "마을 장로" 등). 프로필 config 에 들어 있는 값.
-- **Character.appearance: str** — 시간이 지나도 변하지 않는 외모 한 줄 (자유 텍스트). `Subject.known` 의 첫 줄. 새 게임 시 사용자가 캐릭터 생성 화면에서 한 칸에 자유롭게 적은 값. NPC 는 시드 (`scenarios/{id}/characters/*.json`) 에 들어 있음. 태그 리스트 아님.
+- **Character.appearance: str** — 시간이 지나도 변하지 않는 외모 한 줄 (자유 텍스트). `Subject.known` 첫 줄·`Place.targets[].blurb` 출처. NPC 는 시드 (`scenarios/{id}/characters/*.json`) 에 들어 있고, 플레이어는 입력으로 받지 않으므로 빈 문자열 — `Subject` 패널은 player 가 active subject 일 일이 없어 무관. 태그 리스트 아님.
 - **Character.status: list[str]** — 자유 문자열 상태 태그. narrator 가 `set` 으로 추가·제거.
 - **Character.relations: dict[str, int]** — affinity ([03-features.md](./03-features.md) §2.2). `Subject.trust` 가 여기서 옴.
 - **Location.connections: list[str]** — 인접 장소의 ID 리스트. `Place.surroundings` 산출에 씀.
 - **Quest.triggers: list[QuestTrigger]** — 자동 발동 트리거 ([03-features.md](./03-features.md) §2.8). 각 트리거는 `id`, `name`, `type`, `target_id` 를 가짐. `Quest.goals` 는 여기서 `name` 만 뽑은 것.
 - **Quest.conditions: list[str]** — 자유 문자열 제약 ([03-features.md](./03-features.md) §2.8). 프론트로 그대로 나감.
 - **Quest.rewards: {gold, exp, items?[P3]}** — gold/exp 만 P1 노출.
+- **Quest.difficulty: Tier** — 7단계 한글 라벨 ([02-runtime.md](./02-runtime.md) §4.3, [03-features.md](./03-features.md) §2.8). 라벨 그대로 프론트에 노출.
 - **Place.dayPhase** — `state.turn_count` 에서 백엔드가 파생 ([03-features.md](./03-features.md) §2.1).
+- **Place.targets/surroundings** — `to_front_state` 가 같은 location 의 alive·dead 캐릭터를 `targets[]`, 인접 location (`Connection`) 을 `surroundings[]` 로 사영. 시체는 `targets` 에 `blurb="죽음"` 으로 노출.
 - **Memory.target_id: str | None** — 메모리가 어느 엔티티에 관한 것인지 가리키는 ID. `Subject.known` 산출이 player 의 `memories` 중 `target_id == subject_id` 인 항목만 골라 쓴다. narrator 의 `memory_links` 출력으로 채워짐 ([02-runtime.md](./02-runtime.md) §1.2, §7.1, §7.2).
 - **Race** — 종족 시드. 필드: `id: str`, `name: str`, `description: str`, `racial_skills: list[Skill]`. `GET /profiles` 응답의 race 카드에 `{id, name, description}` 만 노출 (skills 는 내부). 캐릭터 생성에서 사용자가 race 를 고르면 init 이 그 race 의 `racial_skills` 를 player 의 `racial_skills` 컬렉션에 그대로 부여 ([02-runtime.md](./02-runtime.md) §2.5). 시드는 `scenarios/{id}/races/*.json`.
 
@@ -95,13 +103,15 @@
 |---|---|---|---|
 | GET  | `/profiles` | — | `[{id, name, description, races: [{id, name, description}]}]` |
 | GET  | `/session/current` | — | `{game_id, state: FrontState}` (없으면 HTTP 404 — 프론트는 새게임 화면으로 분기) |
-| POST | `/session/init` | `{profile: string, player: {name: string, race_id: string, appearance: string}}` | `{game_id, state: FrontState}` |
+| POST | `/session/init` | `{profile: string, player: {name: string, race_id: string}}` | `{game_id, state: FrontState}` |
 | GET  | `/session/{id}/state` | — | `{game_id, state: FrontState}` |
 | POST | `/session/{id}/turn` | `{player_input: string}` | `text/event-stream` (SSE — 서버가 한 연결을 열어둔 채 이벤트를 계속 흘려주는 방식) |
 | POST | `/session/{id}/roll` | — (서버가 d20 굴림) | `text/event-stream`. `state.pending_check.kind` 에 따라 일반 stat / 시네마틱 전투 (combat_roll) / death save 분기 ([02-runtime.md](./02-runtime.md) §2.2) |
 | POST | `/session/{id}/intro` | — | `text/event-stream`. 게임 시작 직후 첫 GM narration 한 번. judge 안 부르고 `flow/intro.py` 가 narrate 만 호출 |
 
 `FrontState = {hero, subject, quest, place, combat, log, pendingCheck}`. SSE `state` 이벤트 ([02-runtime.md](./02-runtime.md) §2.4) 는 같은 7 슬롯 묶음 — `log` 는 누적되는 흐름이라 `log_entry` 이벤트로도 따로 흐른다 (state 안에는 영속본 꼬리만). **`FrontState.log` 영속본 cap 은 `rules.log.display_turns` (기본 20)** — `GET /session/{id}/state` 와 `GET /session/current` 모두 최근 20 턴치만 반환 ([02-runtime.md](./02-runtime.md) §6.2 디스플레이 로그 영속화). `pendingCheck` 는 `state.pending_check` 가 활성일 때만 채워짐 — 앱이 굴림 도중에 닫혀도 다음 GET 으로 UI 가 복원된다.
+
+`pendingCheck` 모양 — `{kind, dc, stat, stat_label, stat_value, mod, required_roll, tier:{value,max,label}, target, reason}`. `stat_label` 은 stat 의 한국어 라벨, `stat_value` 는 그 스탯의 플레이어 점수 (death-save 분기는 `null`). `reason` 은 `kind="stat"` 만 채우고 combat/death-save 분기는 `null` — 프론트 RollPrompt 가 dice strip 위에 표시.
 
 `combat` 슬롯 — 평시엔 `null`, 전투 활성 시 `{round, turnLabel, enemies: [{name, hp, hpMax, alive}]}`. 백엔드 `state.combat_state` 의 사영 — `turn_order`/`enemy_ids` 같은 내부 id 는 프론트로 안 나가고, `turnLabel` 은 백엔드가 미리 한국어로 합성한다 (`"내 차례"` 또는 `"<actor_name> 차례"`). 시네마틱 전투는 한 번의 `/roll` 안에서 끝나기 때문에 `combat` 슬롯이 활성으로 보이는 시간은 `pending_check.kind="combat_roll"` 이 떠 있는 동안이 짧게 — UI 는 보통 주사위 버튼 화면에서 한 번 보고, 시네마틱이 끝나면 `null` 로 비워진다.
 

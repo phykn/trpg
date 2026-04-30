@@ -47,7 +47,7 @@ LLM 을 두 개로 쪼갠다.
 
 | action | 추가 필드 | 의미 | 다음 단계 |
 |---|---|---|---|
-| `pass` | `targets[]` | 판정 불필요한 인-캐릭터 행동 (이동, 인사, 정가 구매 등) | target_view 없이 바로 내러티브 |
+| `pass` | `targets[]` | 판정 불필요한 인-캐릭터 행동 (이동, 인사, 정가 구매 등). `targets` 에 `surroundings.corpses` 의 id 가 들어오면 시체 호명 — narrate 가 `target_view` 의 `alive==false` 신호로 시체 톤으로 흡수 | target_view 없이 바로 내러티브 |
 | `reject` | — | 인-캐릭터 입력이 아님 (프롬프트 인젝션, OOC 잡담, 무의미) | 인-게임 표현으로 흡수 (아래 reject 처리) |
 | `roll` | `tier`, `stat`, `targets[]`, `reason` | 주사위 필요한 일반 행동 | 엔진이 DC 계산 → `PendingCheck(kind="stat")` 저장 → 프론트 주사위 버튼 → `/roll` |
 | `combat` | `targets[]`, `skill_id?` | 일반 전투 행동 ("고블린을 친다") | 엔진이 `PendingCheck(kind="combat_roll")` 무장 → 프론트 주사위 버튼 → `/roll` 한 번에 시네마틱 전투 해결 ([03-features.md](./03-features.md) §1) |
@@ -201,7 +201,6 @@ reject 전용 추가 단계 (후처리 직전):
 ```python
 class PendingCheck:
     player_input: str
-    action: Literal["roll"] = "roll"
     kind: Literal["stat", "death_save", "combat_roll"] = "stat"
     tier: Tier
     stat: StatKey
@@ -210,9 +209,11 @@ class PendingCheck:
     dc: int               # tier 범위에서 균등 샘플링 (§5.2)
     mod: int              # social_bonus
     required_roll: int    # sigmoid 결과 (1..20)
-    reason: str           # judge 가 RollAction.reason 으로 받은 사유 (UI 표시·로그용)
+    reason: str           # judge 가 RollAction.reason 으로 받은 사유. combat/death-save 분기에서는 placeholder 가 들어가고 프론트로는 null 로 노출
     created_at: str       # ISO 8601
 ```
+
+`mapping/to_front.py:pending_check_to_front` 가 위 구조를 프론트 wire 형태 (`stat_label`, `stat_value`, `reason`, `tier={value,max,label}` 등) 로 가공해 SSE `pending_check` 이벤트에 싣는다 ([04-boundary.md](./04-boundary.md) §1).
 
 ### 2.3 judge 출력 검증과 재시도
 
@@ -238,7 +239,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 | type | data | 시점 |
 |---|---|---|
 | `judge` | 액션별로 다른 필드 (§1.1 표). `action` 은 항상 존재, 액션마다 `tier` / `stat` / `targets` / `item_id` / `npc_id` / `skill_id` / `tail_intent` / `reason` 등이 선택적으로 채워짐 | judge LLM 직후. §2.3 의 재호출이 일어나도 최종(검증 통과) 결과 1회만 발사 |
-| `pending_check` | `{kind, dc, stat, mod, required_roll, tier, target, reason}` — `kind` 는 `"stat" \| "death_save" \| "combat_roll"`. `tier` 는 §5.2 의 `{value:1..7, max:7, label}` 형식 | 주사위 버튼이 필요한 액션 (roll/combat/summon_combat/flee/death save) 확정. 직후 스트림 종료 |
+| `pending_check` | `{kind, dc, stat, stat_label, stat_value, mod, required_roll, tier, target, reason}` — `kind` 는 `"stat" \| "death_save" \| "combat_roll"`. `stat_label` 은 `stat` 의 한국어 라벨 (`"근력"` 등), `stat_value` 는 그 스탯의 플레이어 점수 (death-save 분기에선 `null`). `tier` 는 §5.2 의 `{value:1..7, max:7, label}` 형식. `reason` 은 `kind="stat"` 만 채우고 나머지 분기는 `null` | 주사위 버튼이 필요한 액션 (roll/combat/summon_combat/flee/death save) 확정. 직후 스트림 종료 |
 | `narrative_delta` | `{text}` | narrate / combat_narrate / intro LLM 청크마다 |
 | `suggestions` | `{items: string[]}` — 0~3 개 한국어 행동 후보 | narrate 본문이 끝나고 메타 JSON 파싱된 직후. `state` 보다 먼저. 빈 배열도 매 턴 발사 (이전 턴 칩을 비워야 함) |
 | `state` | `FrontState` (`{hero, subject, quest, place, combat, log, pendingCheck}`) | apply 후 7 슬롯 통짜 송신. 한 턴에 1회, 파이프라인 말미. 자세한 모양은 [04-boundary.md](./04-boundary.md) §1 |
@@ -255,10 +256,10 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 - 프로필 메타(`id, name, description`)는 `scenarios/{id}/profile.json` 한 파일에 들어 있음. `id` 는 디렉터리 이름과 같아야 (스캐너가 디렉터리명으로 찾고 검증).
 - race 목록은 `scenarios/{id}/races/*.json` 의 각 파일에서 `{id, name, description}` 만 추려서 응답에 포함 (`racial_skills` 는 내부 전용, 프론트로 안 나감).
 
-**init** (`POST /session/init {profile, player: {name, race_id, appearance}}`):
+**init** (`POST /session/init {profile, player: {name, race_id}}`):
 - 요청 검증: `profile` 이 `PROFILE_DIR` 에 있는 디렉터리인지, `race_id` 가 그 프로필의 race 목록에 있는지. 누락·미스매치는 422.
-- 시드 로딩: `PROFILE_DIR/{profile}/` 의 `world.md`, `start.json`, `player_template.json`, `characters/`, `locations/`, `quests/`, `items/`, `races/` 를 읽어 초기 `GameState` 조립.
-- 플레이어 캐릭터 합성: `player_template.json` 의 시작 위치·equipment·인벤토리 시드는 그대로 쓰되, `name`·`race_id`·`appearance` 는 요청값으로 덮어쓰기. 스탯 6 개 (`STR/DEX/CON/INT/WIS/CHA`) 모두 10 으로 강제 (player_template 의 stats 는 무시). max_HP / max_MP 는 [03-features.md](./03-features.md) §2.3 의 공식 (level 0, CON 10 → max_HP 20, INT 10 → max_MP 15). race 의 `racial_skills` 자동 부여.
+- 시드 로딩: `PROFILE_DIR/{profile}/` 의 `world.md`, `start.json`, `player_template.json`, `characters/`, `locations/`, `quests/`, `items/`, `races/`, `skills/`, `chapters/`, `campaigns/` 를 읽어 초기 `GameState` 조립.
+- 플레이어 캐릭터 합성: `player_template.json` 의 시작 위치·equipment·인벤토리 시드는 그대로 쓰되, `name`·`race_id` 는 요청값으로 덮어쓰기. 스탯 6 개 (`STR/DEX/CON/INT/WIS/CHA`) 모두 10 으로 강제 (player_template 의 stats 는 무시). max_HP / max_MP 는 [03-features.md](./03-features.md) §2.3 의 공식 (level 0, CON 10 → max_HP 20, INT 10 → max_MP 15). race 의 `racial_skills` 자동 부여. `appearance` 는 플레이어 입력으로 받지 않음 — NPC 시드 전용 필드.
 - `game_id` 는 시작 시각으로 할당 (`game_YYMMDD_HHMMSS`), 최초 저장. `SAVES_DIR/.current` 한 줄 텍스트 파일에 game_id 기록. `FrontState` 와 함께 반환.
 
 **현재 세션 복원** (`GET /session/current`): `SAVES_DIR/.current` 가 가리키는 game_id 의 `FrontState` 반환. `.current` 가 없거나 가리키는 파일이 없으면 HTTP 404 — 프론트는 이 응답으로 새게임 화면 분기. 게임 목록·이어하기 화면은 P1 에 없음 (한 명·한 게임 흐름).
@@ -384,6 +385,9 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 - 주변 NPC: 이름 + 상태 태그 (예: "경계중(affinity -25)", "우호적(affinity 70)") — 어떤 affinity 값이 어떤 라벨이 되는지(매핑 규칙)는 §7.4
 - 주변 오브젝트 + 상태 태그 (예: "문: 잠김", "상자: 함정")
 - 인접 장소 이름
+- 장비/스킬/인벤/성장(`growth.can_level_up`)/`skill_candidates`/`merchants` — actor 중심 판정 보조
+- `corpses` — 같은 location 의 시체 + history 에 등장한 다른 location 의 시체(`off_screen=true`). target/combat/buy/sell 대상이 아님이라 entities 와 분리해 노출. judge 가 호명을 `pass(targets=[corpse_id])` 로 받아 narrate 가 시체 톤으로 흡수.
+- `recent_npc` — 직전 turn 까지 가장 최근에 말 건 같은 location alive NPC id. 호명 없는 대인 행동의 default target.
 
 #### 3.4.2 target_view (내러티브용)
 
@@ -497,7 +501,7 @@ required_roll = round(20 / (1 + e^(-k(DC - player_stat))))   # [1, 20] clamp
 Tier = Literal["매우 쉬움", "쉬움", "보통", "어려움", "매우 어려움", "전설", "신화"]
 ```
 
-백엔드는 라벨을 정수 tier (1..7) 와 1:1 매핑하고, 프론트 노출 시 `{value: int(1..7), max: 7, label: str}` 형식으로 보냄 ([04-boundary.md](./04-boundary.md) §1).
+백엔드는 라벨을 정수 tier (1..7) 와 1:1 매핑하고, SSE `pending_check` 의 `tier` 필드만 `{value: int(1..7), max: 7, label: str}` 형식으로 보낸다 — 굴림 UI 가 progress bar 로 난이도를 시각화하기 때문. 그 외 자리(`Quest.difficulty` 등)는 라벨 문자열 그대로 ([04-boundary.md](./04-boundary.md) §1).
 
 
 | tier | label | DC 범위 |

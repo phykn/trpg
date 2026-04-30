@@ -147,10 +147,10 @@ def _attach_step(scenario_dir: Path, decomp: Decomposition) -> None:
     - character.racial_skill_ids ← inherited from race
     - character.learned_skill_ids ← decomp
     - character.inventory_ids ← items owned by this character
-    - character.equipment ← inferred from inventory:
-      - Armor → `top` (single slot — first armor wins)
-      - One-handed weapon → dominant hand
-      - Two-handed weapon → both hands
+    - character.equipment ← inferred from inventory (3 slots: weapon/armor/accessory):
+      - WeaponEffect → `weapon` (first wins)
+      - ArmorEffect → `armor`, overflow into `accessory` if armor taken
+      - effects=None (decorative) → `accessory`
     """
     races_dir = scenario_dir / "races"
     items_dir = scenario_dir / "items"

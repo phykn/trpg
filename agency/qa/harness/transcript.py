@@ -47,7 +47,7 @@ def append_transcript_block(
     if roll_log:
         parts.append(
             f"**판정 결과**: {roll_log['check']} → "
-            f"주사위 {roll_log['roll']} (mod {roll_log['mod']:+d}, DC {roll_log['dc']}) "
+            f"주사위 {roll_log['roll']} (margin {roll_log['margin']:+d}) "
             f"= **{roll_log['result']}**"
         )
     if gm_body:

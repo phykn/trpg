@@ -19,7 +19,8 @@ Works like hiring a QA tester to play the game. Each turn an LLM generates the n
 ```
 agency/run_qa.py        # CLI entrypoint
 agency/qa/
-  agents/               # 10 personas, one .md per agent
+  agents/               # 16 personas, one .md per agent — split across 2 levels (provocateur is shared)
+    # Level 1 (12 narrow personas, 15T default — `--level 1`, the default)
     diplomat.md         # NPC affinity / dialogue
     explorer.md         # movement / observation / inventory
     scout.md            # 6-stat coverage rotation
@@ -30,6 +31,13 @@ agency/qa/
     survivor.md         # rest / sleep_risk / encounter
     questor.md          # quest triggers / chapter progress / rewards
     griefer.md          # repeated-stat-abuse → affinity / memory loop
+    fleer.md            # flee / in_combat gating
+    searcher.md         # location search / hidden_items / hidden_connections
+    # Level 2 (5 phased personas, 45T default — `--level 2`)
+    wayfarer.md         # cross-location travel arc
+    warrior.md          # extended combat arc
+    citizen.md          # friendly→hostile affinity arc on the same NPC
+    artisan.md          # craft / level_up / learn_skill arc
   harness/
     agent.py            # PlayerAgent — system prompt + per-turn LLM call
     state_view.py       # front_state → input text for the player LLM
@@ -38,6 +46,8 @@ agency/qa/
 
 # Run output lands at the repo root under reports/qa/<timestamp>/ (gitignored)
 ```
+
+`AGENTS_BY_LEVEL` in `run_qa.py` is the source of truth for membership. See [agency/CLAUDE.md](./CLAUDE.md) for the full L1/L2 playbook.
 
 ### How it works
 

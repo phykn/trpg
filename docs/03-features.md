@@ -99,6 +99,8 @@ class CombatState:
 | `downed` | 플레이어 HP 0, death save 단계 진입. 다음 `/turn` 부터 자동 `PendingCheck(kind="death_save")`. |
 | `broken_off` | 도주 / 흐름 단절로 전투가 깔끔히 끝나지 않은 상태 (적이 그냥 자리를 떠났거나 환경적 이유). |
 
+**outcome breakdown (수치 후행)**: 시네마틱 본문 뒤로 엔진이 한 덩이의 GM 로그 (`flow/combat_oneshot.format_combat_outcome_text`) 를 따로 발행한다 — 적별 데미지·잔여 HP·처치 XP, 플레이어가 받은 피해, 굴림 XP 같은 정량 결과. narrator 가 본문에서 수치를 노출하지 못하는 §1 의 서술 규율을 보완하는 정직한 후행 정산. 프론트는 `gm` 톤 메시지로 그대로 받아 본문 아래에 붙인다.
+
 ### 1.7 SSE 신호
 
 `combat_*` 3 종은 [02-runtime.md](./02-runtime.md) §2.4 표에 통합. 옛 라운드 단위 의미는 다음과 같이 바뀜:
@@ -393,7 +395,7 @@ QuestRewards(
 - `status`: `locked → active → completed | failed`.
 - `apply_changes` 이후 `check_quests()` 가 관련 트리거로 재평가. quest 가 완료/실패되면 `maybe_check_chapters()` 가 상위 챕터의 전환 가능성을 본다.
 - **보상 자동 적용** — `quest.status` 가 `"completed"` 로 바뀌는 시점에 엔진이 `rewards.gold` → `actor.gold`, `rewards.exp` → `actor.xp_pool`, `rewards.items` → `actor.inventory_ids` 를 가산. 여기서 `actor` = **퀘스트를 수령한 플레이어 캐릭터** (P1·P2 단일 플레이어 전제). 동반자나 NPC 는 보상 대상이 아니다. narrator 는 서술에서 "보상을 받았다" 정도만 흘리면 충분 — 구체 수치를 본문에 명시할 필요 없음. `QuestRewards.exp` 는 `actor.xp_pool` 에 적립되는 같은 자원 — §2.3 의 "xp" 표기와 동일물이다 (시드는 reward 측에서 `exp`, 캐릭터 자원 필드명은 `xp_pool`).
-- 프론트 노출 ([04-boundary.md](./04-boundary.md) §1): `goals[]` 는 `triggers.map(t => t.name)`, `conditions[]` 는 자유 텍스트 그대로, `difficulty` 는 `{value: 1..7, max: 7, label}` 로 변환, `rewards` 는 `{gold, exp}` 만.
+- 프론트 노출 ([04-boundary.md](./04-boundary.md) §1): `goals[]` 는 `triggers.map(t => t.name)`, `conditions[]` 는 자유 텍스트 그대로, `difficulty` 는 Tier 라벨 문자열 그대로 (옛 `{value, max, label}` 객체 변환은 폐기), `rewards` 는 `{gold, exp}` 만.
 
 `chapter.progress` 의 `done` / `total` 은 챕터의 quest 중 **`required=true` 인 것만** 카운트한다 (선택 퀘스트는 분모·분자 모두에서 제외). 프론트 표시와 엔진 트리거 평가에서만 사용 — 세션 레이어 ([02-runtime.md](./02-runtime.md) §3.2) 에는 싣지 않는다 (narrator 는 `summary` + `goals` 로 진행을 본다).
 
