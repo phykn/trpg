@@ -47,6 +47,7 @@ export function Playing({ game }: Props) {
     if (typing) {
       setActiveId(null);
       setMenuOpen(false);
+      setHeroOpen(false);
     }
   }, [typing]);
 
@@ -105,7 +106,9 @@ export function Playing({ game }: Props) {
 
       {combat ? <CombatStrip combat={combat} /> : null}
 
-      <HeroPill hero={hero} expanded={heroOpen} onToggle={() => setHeroOpen((v) => !v)} />
+      <View style={{ zIndex: 11 }}>
+        <HeroPill hero={hero} expanded={heroOpen} onToggle={() => setHeroOpen((v) => !v)} />
+      </View>
 
       <Composer
         input={input}
