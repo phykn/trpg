@@ -33,6 +33,9 @@ from .format import format_combat_end_text, front_grade
 from .narrate import consume_narrate, run_narrate
 
 
+# --- combat-roll resolution ------------------------------------------------
+
+
 async def _resolve_combat_roll(
     client: LLMClient,
     state: GameState,
@@ -111,6 +114,9 @@ async def _resolve_combat_roll(
         yield {"type": "combat_end", "data": {"outcome": "broken_off"}}
 
 
+# --- death-save resolution -------------------------------------------------
+
+
 async def _resolve_death_save(
     state: GameState,
     dirty: Dirty,
@@ -156,6 +162,9 @@ async def _resolve_death_save(
             "type": "pending_check",
             "data": pending_check_to_front(state.pending_check),
         }
+
+
+# --- run_roll dispatcher ---------------------------------------------------
 
 
 async def run_roll(

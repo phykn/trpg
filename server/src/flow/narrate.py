@@ -28,6 +28,9 @@ from .dirty import (
 from .memory_writer import write_memories
 
 
+# --- run_narrate -----------------------------------------------------------
+
+
 async def run_narrate(
     client: LLMClient,
     state: GameState,
@@ -84,6 +87,9 @@ async def run_narrate(
         yield item
 
 
+# --- reject sterilizer -----------------------------------------------------
+
+
 def _sterilize_for_reject(output) -> None:
     """Reject path must produce zero side effects: empty state_changes, no
     memory, no suggestions. The narrate prompt also tells the LLM to do
@@ -95,6 +101,9 @@ def _sterilize_for_reject(output) -> None:
     output.memory_links = {}
     output.importance = None
     output.suggestions = []
+
+
+# --- player-move reconcile (pass action) -----------------------------------
 
 
 def _is_player_relocation(change: dict, player_id: str) -> bool:
@@ -155,6 +164,9 @@ def _reconcile_player_move(
     if not has_match:
         kept.append({"type": "move", "target": player_id, "destination": expected})
     return kept
+
+
+# --- consume_narrate -------------------------------------------------------
 
 
 async def consume_narrate(
