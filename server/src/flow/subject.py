@@ -4,7 +4,7 @@ NPC the player is currently engaging with.
 The seed pins an initial subject (e.g., the quest-giver in the opening scene),
 but once gameplay starts the panel should follow the player's focus: combat
 target, roll target, trade partner, or recent dialogue NPC. Without this,
-the seed value sticks forever and the frontend shows the wrong character.
+the seed value sticks forever and the client shows the wrong character.
 """
 from ..agents.dc_judge.schema import (
     BuyAction,

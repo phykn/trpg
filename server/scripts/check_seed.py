@@ -1,7 +1,7 @@
 """CLI — run scenario invariants on a seed directory.
 
 Usage (cwd: repo root):
-    .venv/bin/python -m backend.scripts.check_seed scenarios/redcliff
+    .venv/bin/python -m server.scripts.check_seed scenarios/redcliff
 
 Exit code 0 if no violations; 1 otherwise. Each violation is one line, format
 fed back to the LLM verbatim during story-team self-correction loops.
@@ -14,7 +14,7 @@ from src.engines.invariants import Scenario, check_scenario
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        print("usage: python -m backend.scripts.check_seed <scenario_dir>", file=sys.stderr)
+        print("usage: python -m server.scripts.check_seed <scenario_dir>", file=sys.stderr)
         return 2
     scenario_dir = Path(argv[1])
     if not scenario_dir.is_dir():

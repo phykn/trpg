@@ -8,19 +8,19 @@ Read this when working under `agency/`. For usage, see [README.md](./README.md).
 - `agency/story/` — scenario-seed authoring team. Output goes to `scenarios/<name>/` at the repo root.
 - A new team adds its own `agents/` + `harness/` directories; its entry point `run_<team>.py` sits directly under `agency/`. Run output lands under `reports/<team>/<ts>/` at the repo root.
 
-`agency` is an in-process consumer of `backend`. It imports `backend/src/...` and `backend/run_api.py` directly, so any PR that changes backend code should also verify import paths and signatures still hold here.
+`agency` is an in-process consumer of `server`. It imports `server/src/...` and `server/run_api.py` directly, so any PR that changes server code should also verify import paths and signatures still hold here.
 
 ## Run environment
 
 - The Python venv is the repo root's `.venv` — there is no agency-local venv.
-- `run_qa.py` auto-loads `backend/.env`. No separate `.env` under `agency/`.
+- `run_qa.py` auto-loads `server/.env`. No separate `.env` under `agency/`.
 - Only `BASE_URL` is required. `BASIC_AUTH_USER` / `BASIC_AUTH_PASS` are overwritten with dummy values (`"qa"` / `"qa"`) by the harness, since calls run in-process.
 
 ## Conventions
 
 ### Korean-only text
 
-Agent prompts (`agents/*.md`), transcripts, READMEs — all Korean, same rule as the backend.
+Agent prompts (`agents/*.md`), transcripts, READMEs — all Korean, same rule as the server.
 
 ### Output locations
 
@@ -127,7 +127,7 @@ Per agent: one verdict, 1–3 wins, 1–3 issues with severity + turn-numbered e
 
 ## Adding a new team
 
-Mirror the layout under `agency/<team>/`: an `agents/` + `harness/` pair, plus an entry point at `agency/run_<team>.py`. If the team needs the backend FastAPI app, reuse the in-process pattern (`build_app` + `httpx.ASGITransport`, the QA way). If it only needs to author seeds, `LLMClient` + Pydantic validation is enough (the Story way). Drop run output under `reports/<team>/<ts>/` — the repo-root `.gitignore`'s `reports/` rule already covers it.
+Mirror the layout under `agency/<team>/`: an `agents/` + `harness/` pair, plus an entry point at `agency/run_<team>.py`. If the team needs the server FastAPI app, reuse the in-process pattern (`build_app` + `httpx.ASGITransport`, the QA way). If it only needs to author seeds, `LLMClient` + Pydantic validation is enough (the Story way). Drop run output under `reports/<team>/<ts>/` — the repo-root `.gitignore`'s `reports/` rule already covers it.
 
 ## Limits
 

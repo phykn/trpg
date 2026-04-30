@@ -218,7 +218,7 @@ class PendingCheck:
 
 dc_judge runner 가 매 호출마다 두 단계 검증:
 
-1. **JSON 파싱** — `JudgeOutput` 스키마 검증 (`backend/src/agents/dc_judge/schema.py`).
+1. **JSON 파싱** — `JudgeOutput` 스키마 검증 (`server/src/agents/dc_judge/schema.py`).
 2. **semantic 검증** — `targets[]` 의 모든 ID 가 `state.characters | locations | items` 에 실제로 존재하는지 (LLM 은 종종 없는 ID 를 지어내는 환각이 있음).
 
 둘 중 어느 쪽이 실패해도 직전 응답 본문과 에러 메시지를 messages 에 append 해서 자기 교정 루프로 다시 호출 — 같은 실수를 반복하지 않게 LLM 컨텍스트에 실패 사유를 남겨주는 것. 최대 5 회 재시도 (총 6 번 시도).

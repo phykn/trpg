@@ -1,4 +1,4 @@
-# trpg-backend
+# trpg-server
 
 Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in one directory (`saves/games/<id>/`) as a scatter of JSON + JSONL.
 
@@ -20,7 +20,7 @@ python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-Write `backend/.env` (required, no fallbacks — missing keys raise `KeyError` at startup):
+Write `server/.env` (required, no fallbacks — missing keys raise `KeyError` at startup):
 
 ```
 HOST=0.0.0.0
@@ -37,11 +37,11 @@ The LLM server runs separately. Example: `llama-server -m <model.gguf> -c 8192 -
 ## Run
 
 ```bash
-# from backend/ (cwd must be backend/ so dotenv and relative paths resolve)
+# from server/ (cwd must be server/ so dotenv and relative paths resolve)
 ../.venv/bin/python run_api.py
 ```
 
-dotenv loads `backend/.env` automatically and uvicorn binds to `HOST:PORT`.
+dotenv loads `server/.env` automatically and uvicorn binds to `HOST:PORT`.
 
 ### Routes (Basic Auth required)
 
@@ -62,7 +62,7 @@ SSE event types: `judge / pending_check / narrative_delta / log_entry / state / 
 ## Tests
 
 ```bash
-# from repo root (pyproject pins testpaths=backend/tests)
+# from repo root (pyproject pins testpaths=server/tests)
 .venv/bin/python -m pytest -q                   # unit (live skipped)
 RUN_LIVE=1 .venv/bin/python -m pytest -q        # requires a live LLM
 ```
@@ -72,7 +72,7 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q        # requires a live LLM
 ## Layout
 
 ```
-backend/
+server/
   run_api.py                       # entrypoint
   .env                             # required, gitignored
   src/                             # code (layer breakdown in docs/05-codemap.md)

@@ -4,7 +4,7 @@ User-facing setup is in [README.md](./README.md); design intent starts at `../do
 
 ## Layout
 
-`backend/` is the FastAPI service. The venv, pyproject, and requirements live at the repo root. Run pytest from the root; run `run_api.py` from `backend/` so dotenv resolves `backend/.env` and src imports work.
+`server/` is the FastAPI service. The venv, pyproject, and requirements live at the repo root. Run pytest from the root; run `run_api.py` from `server/` so dotenv resolves `server/.env` and src imports work.
 
 ```
 src/
@@ -15,7 +15,7 @@ src/
   engines/     Pure rule engines: apply (state_changes), combat, growth, inventory/, quest, recovery, skill, invariants. No LLM, no IO.
   ontology/    Derived views over GameState. graph.py builds typed-edge relations (located_at, equips, carries, connects_to, unlocks, gives_quest, kill_target_of, reward_of); target_view.py summarises one entity for prompts.
   context/     Prompt-facing context builders (surroundings, layered context).
-  mapping/     to_front.py — GameState → flat dict the frontend renders. Korean dates, durations, composed strings, conditional labels are all built here.
+  mapping/     to_front.py — GameState → flat dict the client renders. Korean dates, durations, composed strings, conditional labels are all built here.
   persistence/ init.py builds a new GameState from a profile + player input. store.py does atomic IO (.tmp + os.replace) and the .current pointer.
   domain/      Pure data shapes. entities.py (Character, Item, Location, Race, Skill, Quest, Chapter, Campaign), memory.py (Memory, PendingCheck, LogEntry union, TurnLogEntry, DialoguePair), state.py (GameState, CombatState), types.py (StatKey, Tier, Grade, Intent, Action), errors.py (DomainError + subclasses).
   rules/       config.py exposes the frozen RULES singleton (DC, social, memory, log, time, recovery, growth, skill, carry, trade, flee, combat, death). dc.py has roll math.
@@ -32,11 +32,11 @@ Layer rule: upper depends on lower, never the reverse. The dependency direction 
 
 ```bash
 # from repo root
-.venv/bin/python -m pytest -q                # unit (live skipped). pyproject pins testpaths=backend/tests.
+.venv/bin/python -m pytest -q                # unit (live skipped). pyproject pins testpaths=server/tests.
 RUN_LIVE=1 .venv/bin/python -m pytest -q     # add live tests; needs BASE_URL reachable.
 
-# from backend/
-../.venv/bin/python run_api.py               # cwd must be backend/ so dotenv reads backend/.env.
+# from server/
+../.venv/bin/python run_api.py               # cwd must be server/ so dotenv reads server/.env.
 ```
 
 ## Stack and env
@@ -44,13 +44,13 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q     # add live tests; needs BASE_URL re
 - Pydantic models *are* the schema. Every state file round-trips through `GameState.model_validate_json(...)`. Don't hand-munge JSON.
 - `LLMClient.chat_stream` is the streaming primitive; agents wrap it with their schema and retry loop.
 - One process, one save lock (`asyncio.Lock` in `persistence/store.py`). Horizontal scaling is out of scope.
-- Required env vars: `HOST PORT BASE_URL BASIC_AUTH_USER BASIC_AUTH_PASS SAVES_DIR PROFILE_DIR CORS_ORIGINS`. Missing any → `KeyError` at startup. No silent defaults. `CORS_ORIGINS` is a comma-separated list of exact origins (scheme + host) the web frontend may load from.
+- Required env vars: `HOST PORT BASE_URL BASIC_AUTH_USER BASIC_AUTH_PASS SAVES_DIR PROFILE_DIR CORS_ORIGINS`. Missing any → `KeyError` at startup. No silent defaults. `CORS_ORIGINS` is a comma-separated list of exact origins (scheme + host) the web client may load from.
 
 ## Stats / tiers / grades
 
 - Stat keys are ASCII abbreviations: `STR / DEX / CON / INT / WIS / CHA`. The judge's `stat` enum uses the same keys.
 - Tiers are seven Korean labels: `매우 쉬움 / 쉬움 / 보통 / 어려움 / 매우 어려움 / 전설 / 신화`. No English aliases.
-- Internal grade is five-way (`critical_success / success / partial_success / failure / critical_failure`). The frontend's `RollLogEntry.result` collapses to `success | partial | fail`.
+- Internal grade is five-way (`critical_success / success / partial_success / failure / critical_failure`). The client's `RollLogEntry.result` collapses to `success | partial | fail`.
 
 ## Affinity
 
@@ -65,7 +65,7 @@ Scale is `-100..+100`. With `social.friendly_threshold = 50`, a target at or abo
 - `init_game` copies `../scenarios/<profile>/`'s seed entity dirs verbatim into the game dir, then writes the new player character + meta.
 - Dirty tracking: `flow/dirty.py` collects `(kind, id)` writes plus appended log/history/dialogue entries. Finalize flushes entity files and jsonl appends first, `meta.json` last — a crash mid-flush leaves entity/jsonl committed and only `meta.json` stale, recoverable next turn.
 - Per-entity `memories` cap is `RULES.memory.cap`, applied at write time inside the entity model so the cap travels with the file.
-- Log entries get a monotonic id (`GameState.next_log_id`); the frontend dedupes between `log_entry` SSE and `state.log` by id.
+- Log entries get a monotonic id (`GameState.next_log_id`); the client dedupes between `log_entry` SSE and `state.log` by id.
 
 ## Memory writes (post-turn)
 
@@ -86,7 +86,7 @@ Five kinds only: `set / set_time / move / move_item / affinity`. Each has its ow
 
 ## SSE event shape
 
-`{"type": "...", "data": {...}}` per event. Types: `judge / pending_check / narrative_delta / suggestions / log_entry / state / combat_start / combat_turn / combat_end / done / error`. The three `combat_*` types come from `combat_phase.py`; the frontend currently ignores their payload (state + log_entry are authoritative for UI), but tests use them as observable signals. **`done` is not auto-appended** — `run_turn`'s roll branch ends after `pending_check`, and the client treats stream-close as the signal.
+`{"type": "...", "data": {...}}` per event. Types: `judge / pending_check / narrative_delta / suggestions / log_entry / state / combat_start / combat_turn / combat_end / done / error`. The three `combat_*` types come from `combat_phase.py`; the client currently ignores their payload (state + log_entry are authoritative for UI), but tests use them as observable signals. **`done` is not auto-appended** — `run_turn`'s roll branch ends after `pending_check`, and the client treats stream-close as the signal.
 
 ## Tests
 

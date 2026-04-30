@@ -19,12 +19,12 @@ from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "backend"))
+sys.path.insert(0, str(ROOT / "server"))
 sys.path.insert(0, str(ROOT))
 
 from dotenv import load_dotenv  # noqa: E402
 
-load_dotenv(ROOT / "backend" / ".env")
+load_dotenv(ROOT / "server" / ".env")
 
 from src.llm import LLMClient, set_llm_session  # noqa: E402
 

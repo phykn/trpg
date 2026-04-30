@@ -1,7 +1,7 @@
 """Generic entity writer — LLM call + Pydantic validation + self-correction loop + disk write.
 
 Entity-level rules (stat invariants, HP/MP formula, NPC skill, equipment slot
-matching, carry weight, etc.) live in `backend/src/engines/invariants.py`.
+matching, carry weight, etc.) live in `server/src/engines/invariants.py`.
 This module only handles cross-ref between entity manifests during the
 incremental build (race_id ∈ races, etc.); the rest is dispatched to `check.X`.
 """
@@ -273,7 +273,7 @@ def _skills_pool(scenario_dir: Path) -> dict[str, Skill]:
 def _check_entity_invariants(
     entity: BaseModel, scenario_dir: Path, *, skeleton: bool = False
 ) -> None:
-    """Dispatch to backend.engines.invariants — all entity-level rules.
+    """Dispatch to server.engines.invariants — all entity-level rules.
 
     Cross-ref between manifests is already done by spec.check_refs above; this
     runs the rule layer (stat invariants, HP/MP formula, NPC seed extras, etc).

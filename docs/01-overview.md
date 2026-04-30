@@ -1,4 +1,4 @@
-# LLM 인터랙티브 노블 엔진 (backend)
+# LLM 인터랙티브 노블 엔진 (server)
 
 > 룰이 받쳐주는 한국어 인터랙티브 노블. 북극성 설계 노트 — 시스템이 어떤 모양이고 왜 그렇게 잡았는지를 모아둔 곳. 할 일 목록이 아니라 들춰 보는 용도.
 
@@ -215,7 +215,7 @@ DB 는 처음 세팅 부담이 크다. 파일 한 덩이로 가면:
 
 ### 3.13 왜 프론트로 보내는 데이터를 한 곳에서만 만드나?
 
-프론트 타입 (`frontend/types/domain.ts`) 은 **UI 에 보이는 필드만** 담는다. 안쪽 도메인은 `disposition` (성향), `tone_hint` (말투 힌트), `location_id`, `memories` (기억) 같은 힌트·계산용 필드를 많이 갖고 있다. 이게 마구 프론트로 새 나가면:
+프론트 타입 (`client/types/domain.ts`) 은 **UI 에 보이는 필드만** 담는다. 안쪽 도메인은 `disposition` (성향), `tone_hint` (말투 힌트), `location_id`, `memories` (기억) 같은 힌트·계산용 필드를 많이 갖고 있다. 이게 마구 프론트로 새 나가면:
 - 프론트가 안쪽 구조에 묶여서 바꾸기 어려워짐
 - 플레이어가 브라우저 개발자 도구로 "NPC 의 속마음 점수" 같은 걸 볼 수 있음 (게임 경험 망가짐)
 
@@ -283,7 +283,7 @@ DB 는 처음 세팅 부담이 크다. 파일 한 덩이로 가면:
 | `BASIC_AUTH_USER` | 네트워크 보호용 접속 아이디 | `kn` |
 | `BASIC_AUTH_PASS` | 네트워크 보호용 접속 비밀번호 | (임의 문자열) |
 | `SAVES_DIR` | GameState JSON 과 `.current` (마지막 game_id) 저장 위치 | `./saves` |
-| `PROFILE_DIR` | 시나리오 시드 디렉터리. `GET /profiles` 가 이 아래를 스캔. repo 루트의 `scenarios/` (backend 와 agency/story 가 공유) | `../scenarios` |
+| `PROFILE_DIR` | 시나리오 시드 디렉터리. `GET /profiles` 가 이 아래를 스캔. repo 루트의 `scenarios/` (server 와 agency/story 가 공유) | `../scenarios` |
 
 프론트 쪽 `EXPO_PUBLIC_API_URL` 은 `http://{HOST}:{PORT}` 를 가리키고, 폰 테스트는 같은 네트워크 안 IP 를 쓴다 (외부 노출은 P3 까지 보류).
 

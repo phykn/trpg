@@ -12,7 +12,7 @@ agency/
 
 ## QA — game testing via AI players
 
-Works like hiring a QA tester to play the game. Each turn an LLM generates the next input, the harness hits the backend API in-process via ASGI, and collects SSE events into a transcript. There is no LLM reviewer — Claude Code reads the transcripts in chat and writes the review there (the local model hallucinates turn numbers and misclassifies normal pending_check waits as desyncs, so we removed it).
+Works like hiring a QA tester to play the game. Each turn an LLM generates the next input, the harness hits the server API in-process via ASGI, and collects SSE events into a transcript. There is no LLM reviewer — Claude Code reads the transcripts in chat and writes the review there (the local model hallucinates turn numbers and misclassifies normal pending_check waits as desyncs, so we removed it).
 
 ### Layout
 
@@ -59,7 +59,7 @@ agency/qa/
 .venv/bin/python agency/run_qa.py --agent all --profile <scenario_id>
 ```
 
-`.env` is auto-loaded from `backend/.env`. As long as `BASE_URL` is reachable, that's enough. `--profile` defaults to `default` — make sure `scenarios/default/` exists, or pass `--profile <name>` to point at another seed.
+`.env` is auto-loaded from `server/.env`. As long as `BASE_URL` is reachable, that's enough. `--profile` defaults to `default` — make sure `scenarios/default/` exists, or pass `--profile <name>` to point at another seed.
 
 ### Output
 
@@ -82,7 +82,7 @@ After a change, run `run_qa.py` and read the artifacts in chat. Per agent: one v
 ### Limits
 
 - Real-time guidance, not authoritative QA. Reviews are written by Claude Code in chat — they're a summary of the artifacts, not a separate verification pass.
-- LLM call volume is heavy (1 player per turn + the backend's own judge / narrate / combat_narrate / encounter_summon / skill_recommend calls). Short runs and fast feedback work best.
+- LLM call volume is heavy (1 player per turn + the server's own judge / narrate / combat_narrate / encounter_summon / skill_recommend calls). Short runs and fast feedback work best.
 - Non-deterministic. Identical prompts produce different transcripts. Pinning regressions precisely needs a scenario mode (an explicit input sequence), not implemented yet.
 
 ## Story — scenario seed authoring
@@ -117,9 +117,9 @@ agency/story/
 
 ### How it works
 
-- Imports the backend's `LLMClient` and the Pydantic models in `domain/entities.py` directly.
+- Imports the server's `LLMClient` and the Pydantic models in `domain/entities.py` directly.
 - `SPECS` maps each entity kind (race / skill / location / item / character / quest / chapter) to (model · sub_dir · fragment · referenced kinds · cross-ref check function).
-- One cycle per call: bundle `_base.md` + `<kind>.md` + the scenario's `world.md` + existing instances of that kind + existing instances of referenced kinds as system context, call the LLM, extract JSON, validate via `<Model>.model_validate_json` + id-pattern check + entity-specific cross-ref check (e.g. `character.race_id` actually exists in the scenario's `races/`) + entity-level invariants from `backend/src/engines/invariants.py` (stat pair-trade, HP/MP formula, slot-effect matching, etc.). On failure, append the response and the error to the messages and retry — up to 5 self-correction attempts (same shape as the judge runner).
+- One cycle per call: bundle `_base.md` + `<kind>.md` + the scenario's `world.md` + existing instances of that kind + existing instances of referenced kinds as system context, call the LLM, extract JSON, validate via `<Model>.model_validate_json` + id-pattern check + entity-specific cross-ref check (e.g. `character.race_id` actually exists in the scenario's `races/`) + entity-level invariants from `server/src/engines/invariants.py` (stat pair-trade, HP/MP formula, slot-effect matching, etc.). On failure, append the response and the error to the messages and retry — up to 5 self-correction attempts (same shape as the judge runner).
 - After invariants pass, the optional critic (`agents/_critic.md`) runs once with `think=False` for a coherence read (role / tone / world.md fit). If the critic returns `ok=false`, the writer retries once with the feedback. Critic is advisory — if the retry result fails invariants, the original is kept.
 - On success, write `scenarios/<scenario>/<sub_dir>/<id>.json` with `indent=2`. If the file already exists, error out instead of overwriting.
 - Every messages exchange is preserved at `reports/story/<ts>/<kind>_writer/messages.jsonl` for debugging.
@@ -134,7 +134,7 @@ The cross-ref check for each entity validates these ID references against other 
 | skill | (none — schema-only validation) |
 | location | `connections[*].target_id` → other locations in the scenario (self-reference forbidden), `item_ids[*]` and `hidden_items[*]` → items |
 | item | (none — `required: Stats` and effect shapes are enforced by Pydantic) |
-| character | `race_id` → races, `location_id` → locations, `racial_skill_ids[*]` and `learned_skill_ids[*]` → skills (other invariants — pair-trade, HP/MP, slot-effect matching, carry weight — come from `backend.engines.invariants.check_seed_character`) |
+| character | `race_id` → races, `location_id` → locations, `racial_skill_ids[*]` and `learned_skill_ids[*]` → skills (other invariants — pair-trade, HP/MP, slot-effect matching, carry weight — come from `server.engines.invariants.check_seed_character`) |
 | quest | `giver_id` → characters, `triggers[*]` and `fail_triggers[*]` `.target_id` → varies by type (character_death→characters, location_enter→locations, item_use→items), `prerequisite_ids[*]` → quests |
 | chapter | `quest_ids[*]` → quests, `prerequisite_ids[*]` → other chapters (DAG, no cycles) |
 
@@ -150,7 +150,7 @@ The cross-ref check for each entity validates these ID references against other 
 .venv/bin/python agency/run_story.py chapter   --scenario <name>
 ```
 
-Only `BASE_URL` from `backend/.env` needs to be reachable (in-process consumer).
+Only `BASE_URL` from `server/.env` needs to be reachable (in-process consumer).
 
 ### Whole scenario (`scenario` mode)
 
@@ -176,4 +176,4 @@ Given one prose document (`<prose-path>.md`), build a complete scenario director
 
 ### Limits
 
-- Runtime entity injection during a game (adding a new NPC/item to a live save) belongs to the backend and isn't designed yet.
+- Runtime entity injection during a game (adding a new NPC/item to a live save) belongs to the server and isn't designed yet.

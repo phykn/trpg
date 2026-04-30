@@ -1,6 +1,6 @@
-# trpg-frontend
+# trpg-client
 
-Client for a Korean-language TRPG. Single-screen Expo (React Native) app. The backend lives at `../backend/`; the Claude Code guide is in [CLAUDE.md](./CLAUDE.md).
+Client for a Korean-language TRPG. Single-screen Expo (React Native) app. The server lives at `../server/`; the Claude Code guide is in [CLAUDE.md](./CLAUDE.md).
 
 ## Stack
 
@@ -8,7 +8,7 @@ Client for a Korean-language TRPG. Single-screen Expo (React Native) app. The ba
 - expo-router (file-based routing, `typedRoutes`)
 - NativeWind v4 (Tailwind for RN), with `design/tokens.js` as the single token source
 - TypeScript strict
-- Backend calls: `expo/fetch` for SSE streaming (`services/api.ts`)
+- Server calls: `expo/fetch` for SSE streaming (`services/api.ts`)
 
 ## Setup
 
@@ -16,15 +16,15 @@ Client for a Korean-language TRPG. Single-screen Expo (React Native) app. The ba
 npm install
 ```
 
-Write `frontend/.env`:
+Write `client/.env`:
 
 ```
-EXPO_PUBLIC_API_URL=<backend URL>
+EXPO_PUBLIC_API_URL=<server URL>
 EXPO_PUBLIC_API_USER=<basic auth user>
 EXPO_PUBLIC_API_PASS=<basic auth pass>
 ```
 
-`<backend URL>` is either a LAN address (`http://<windows-lan-ip>:8001`) or a Tailscale Funnel domain (`https://<machine>.<tailnet>.ts.net`), depending on the test mode below.
+`<server URL>` is either a LAN address (`http://<windows-lan-ip>:8001`) or a Tailscale Funnel domain (`https://<machine>.<tailnet>.ts.net`), depending on the test mode below.
 
 ## Phone testing
 
@@ -32,9 +32,9 @@ Install **Expo Go** on the phone (Play Store / App Store).
 
 ### LAN (same Wi-Fi)
 
-1. Backend bound to `0.0.0.0:8001`, with the Windows firewall allowing 8001 inbound.
+1. Server bound to `0.0.0.0:8001`, with the Windows firewall allowing 8001 inbound.
 2. Phone on the same Wi-Fi as the laptop.
-3. From `frontend/`:
+3. From `client/`:
    ```bash
    npx expo start
    ```
@@ -42,7 +42,7 @@ Install **Expo Go** on the phone (Play Store / App Store).
 
 ### Off-LAN (Tailscale Funnel)
 
-1. Backend bound to `127.0.0.1:8001`.
+1. Server bound to `127.0.0.1:8001`.
 2. Confirm the funnel is proxying 8001:
    ```bash
    tailscale funnel status
@@ -52,7 +52,7 @@ Install **Expo Go** on the phone (Play Store / App Store).
    sudo tailscale funnel --bg 8001
    ```
 3. Make sure `EXPO_PUBLIC_API_URL` matches the funnel domain.
-4. From `frontend/`:
+4. From `client/`:
    ```bash
    npx expo start --host=tunnel -c
    ```
@@ -60,7 +60,7 @@ Install **Expo Go** on the phone (Play Store / App Store).
 
 ## Public web deploy
 
-Static export to Cloudflare Workers (project: `trpg`). Anyone with the URL can open the app in a browser without running a dev server, provided the backend on the host PC is reachable via Tailscale Funnel and the deploy URL is listed in backend `CORS_ORIGINS`.
+Static export to Cloudflare Workers (project: `trpg`). Anyone with the URL can open the app in a browser without running a dev server, provided the server on the host PC is reachable via Tailscale Funnel and the deploy URL is listed in server `CORS_ORIGINS`.
 
 First time only:
 
@@ -99,12 +99,12 @@ npx expo start --host=tunnel -c
 ## Layout
 
 ```
-frontend/
+client/
   app/                # expo-router route shell (single screen — index.tsx mounts Shell)
   components/         # screen pieces (header / log / hero / composer / combat / ui + Shell + new-game)
   hooks/useGame.ts    # game-state hook (server calls + applying SSE events). handleStreamEvent.ts is the pure SSE → state-setter dispatcher.
-  services/           # backend boundary (api.ts: REST + SSE client)
+  services/           # server boundary (api.ts: REST + SSE client)
   presenters/         # domain → UI projection (panels.ts) + format helpers (format.ts)
-  types/              # domain (backend models), ui (render contracts), wire (SSE/REST payloads)
+  types/              # domain (server models), ui (render contracts), wire (SSE/REST payloads)
   design/tokens.js    # single design tokens source (imported by both Tailwind config and code)
 ```

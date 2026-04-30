@@ -1,7 +1,7 @@
 """Critic agent — one think=False pass over a freshly written entity.
 
 Pure semantic / tone evaluator. Hard rules (pair-trade, HP/MP formula, slot
-matching, etc.) are already enforced by `backend.engines.invariants`; the
+matching, etc.) are already enforced by `server.engines.invariants`; the
 critic complements that with judgement on coherence with `world.md`, role,
 and the rest of the manifest.
 

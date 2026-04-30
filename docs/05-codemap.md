@@ -5,7 +5,7 @@
 ## 1. 모듈 구조
 
 ```
-scenarios/                       repo 루트 peer (backend·agency/story 공유). PROFILE_DIR 가 가리킴
+scenarios/                       repo 루트 peer (server·agency/story 공유). PROFILE_DIR 가 가리킴
   default_cli/
     profile.json                 시나리오 메타: id, name, description (GET /profiles 응답 베이스)
     world.md                     세계관·톤
@@ -16,7 +16,7 @@ scenarios/                       repo 루트 peer (backend·agency/story 공유)
     quests/*.json                퀘스트 시드
     items/*.json                 아이템 시드
     races/*.json                 종족 시드
-backend/
+server/
   run_api.py                     FastAPI 진입점 (build_app, main)
   .env                           HOST, PORT, BASE_URL, BASIC_AUTH_USER, BASIC_AUTH_PASS, SAVES_DIR, PROFILE_DIR
   src/

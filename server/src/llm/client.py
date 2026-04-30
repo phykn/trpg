@@ -9,8 +9,8 @@ from openai import AsyncOpenAI
 from ..rules.config import RULES
 
 # Tag subsequent LLM calls so logs land under `<log_dir>/<session_id>/<agent>/`.
-# Outermost callers — QA runner per agent, story runner per scenario, the backend
-# flow per game — set this once. `set_llm_session_if_unset` lets the backend
+# Outermost callers — QA runner per agent, story runner per scenario, the server
+# flow per game — set this once. `set_llm_session_if_unset` lets the server
 # defer to an outer tag (e.g. QA's "qa-diplomat") instead of clobbering it with
 # the in-process game_id.
 _SESSION_ID: ContextVar[str | None] = ContextVar("llm_session_id", default=None)

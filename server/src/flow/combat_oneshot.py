@@ -2,7 +2,7 @@
 
 Combat in this game is a **single d20 check** rather than round-by-round
 mechanics. Player declares intent ("고블린을 친다") → judge classifies as
-CombatAction → flow arms `pending_check kind="combat_roll"` → frontend
+CombatAction → flow arms `pending_check kind="combat_roll"` → client
 shows the dice button → player clicks → /roll resolves the whole fight in
 one beat:
 
@@ -58,7 +58,7 @@ def _location_payload(state: GameState) -> dict:
 
 
 def arm_death_save_pending(state: GameState) -> None:
-    """Set a pending_check that the frontend renders as a dice button. /roll
+    """Set a pending_check that the client renders as a dice button. /roll
     will branch on `kind="death_save"` and feed the d20 to tick_death_save."""
     state.pending_check = PendingCheck(
         player_input="죽음 굴림",

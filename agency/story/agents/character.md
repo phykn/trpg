@@ -124,4 +124,4 @@
 
 ## 검증
 
-작성된 character 는 빌드 단계에서 `backend/src/engines/invariants.py` 의 `check.seed_character` 로 자동 검증된다. 룰 어기면 위반 메시지가 self-correction 루프로 돌아온다 — 한 번에 모든 위반이 보고되니 그에 맞춰 모두 고쳐라.
+작성된 character 는 빌드 단계에서 `server/src/engines/invariants.py` 의 `check.seed_character` 로 자동 검증된다. 룰 어기면 위반 메시지가 self-correction 루프로 돌아온다 — 한 번에 모든 위반이 보고되니 그에 맞춰 모두 고쳐라.

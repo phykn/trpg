@@ -20,7 +20,7 @@ def build_app(
     profile_dir: str,
     cors_origins: list[str],
 ) -> FastAPI:
-    app = FastAPI(title="TRPG Backend API")
+    app = FastAPI(title="TRPG Server API")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,

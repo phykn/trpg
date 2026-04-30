@@ -4,10 +4,10 @@ Korean-language TRPG. The LLM handles narrative and difficulty judgment; the eng
 
 ```
 trpg/
-  backend/    FastAPI + Pydantic v2 + OpenAI-compatible LLM. Game engine. → backend/README.md
-  frontend/   Expo (React Native) single-screen client. → frontend/README.md
-  agency/     LLM-staffed office that drives the backend in-process (QA + Story teams). → agency/README.md
-  scenarios/  Seed packs (one dir per profile). Shared by backend and agency/story.
+  server/    FastAPI + Pydantic v2 + OpenAI-compatible LLM. Game engine. → server/README.md
+  client/   Expo (React Native) single-screen client. → client/README.md
+  agency/     LLM-staffed office that drives the server in-process (QA + Story teams). → agency/README.md
+  scenarios/  Seed packs (one dir per profile). Shared by server and agency/story.
   docs/       Design notes (01-overview / 02-runtime / 03-features / 04-boundary / 05-codemap)
   saves/      Runtime game store (gitignored)
 ```
@@ -23,11 +23,11 @@ An LLM server (e.g. llama.cpp) must be running somewhere reachable.
 python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 
-# fill out backend/.env, then
-cd backend && ../.venv/bin/python run_api.py
+# fill out server/.env, then
+cd server && ../.venv/bin/python run_api.py
 
-# in another terminal, fill out frontend/.env, then
-cd frontend && npm install && npx expo start
+# in another terminal, fill out client/.env, then
+cd client && npm install && npx expo start
 ```
 
 env vars are fail-fast — anything missing throws at startup.
