@@ -67,22 +67,22 @@ def _check_location_refs(loc: Location, refs: dict[str, set[str]]) -> None:
     for c in loc.connections:
         if c.target_id == loc.id:
             raise EntityWriterError(
-                f"location.connections 가 자기 자신({loc.id}) 을 가리킴"
+                f"location.connections points at itself ({loc.id})."
             )
         if c.target_id not in location_ids:
             raise EntityWriterError(
-                f"location.connections.target_id={c.target_id!r} 가 시나리오 locations 에 없음. "
-                f"가능한 id: {sorted(location_ids)}"
+                f"location.connections.target_id={c.target_id!r} not found in scenario locations. "
+                f"Valid ids: {sorted(location_ids)}"
             )
     for iid in loc.item_ids:
         if iid not in item_ids:
             raise EntityWriterError(
-                f"location.item_ids 의 {iid!r} 가 시나리오 items 에 없음."
+                f"location.item_ids entry {iid!r} not found in scenario items."
             )
     for iid in loc.hidden_items:
         if iid not in item_ids:
             raise EntityWriterError(
-                f"location.hidden_items 의 {iid!r} 가 시나리오 items 에 없음."
+                f"location.hidden_items entry {iid!r} not found in scenario items."
             )
 
 
@@ -93,21 +93,21 @@ def _check_character_refs(ch: Character, refs: dict[str, set[str]]) -> None:
     races = refs.get("race", set())
     if ch.race_id not in races:
         raise EntityWriterError(
-            f"character.race_id={ch.race_id!r} 가 시나리오 races 에 없음. "
-            f"가능한 id: {sorted(races)}"
+            f"character.race_id={ch.race_id!r} not found in scenario races. "
+            f"Valid ids: {sorted(races)}"
         )
     locations = refs.get("location", set())
     if ch.location_id is not None and ch.location_id not in locations:
         raise EntityWriterError(
-            f"character.location_id={ch.location_id!r} 가 시나리오 locations 에 없음. "
-            f"가능한 id: {sorted(locations)}"
+            f"character.location_id={ch.location_id!r} not found in scenario locations. "
+            f"Valid ids: {sorted(locations)}"
         )
     skills = refs.get("skill", set())
     for sid in (*ch.racial_skill_ids, *ch.learned_skill_ids):
         if sid not in skills:
             raise EntityWriterError(
-                f"character.skill_id={sid!r} 가 시나리오 skills 에 없음. "
-                f"먼저 그 skill 을 만들어야 한다."
+                f"character.skill_id={sid!r} not found in scenario skills. "
+                "Create that skill first."
             )
 
 
@@ -116,7 +116,7 @@ def _check_race_refs(r: Race, refs: dict[str, set[str]]) -> None:
     for sid in r.racial_skill_ids:
         if sid not in skills:
             raise EntityWriterError(
-                f"race.racial_skill_id={sid!r} 가 시나리오 skills 에 없음."
+                f"race.racial_skill_id={sid!r} not found in scenario skills."
             )
 
 
@@ -131,26 +131,26 @@ def _check_quest_refs(q: Quest, refs: dict[str, set[str]]) -> None:
     characters = refs.get("character", set())
     if q.giver_id not in characters:
         raise EntityWriterError(
-            f"quest.giver_id={q.giver_id!r} 가 시나리오 characters 에 없음."
+            f"quest.giver_id={q.giver_id!r} not found in scenario characters."
         )
     for t in [*q.triggers, *q.fail_triggers]:
         target_kind = TRIGGER_TARGET_KIND.get(t.type)
         if target_kind is None:
             raise EntityWriterError(
-                f"quest trigger (id={t.id}) type={t.type!r} 알 수 없음. "
-                f"가능한 값: {sorted(TRIGGER_TARGET_KIND)}"
+                f"quest trigger (id={t.id}) type={t.type!r} unknown. "
+                f"Valid values: {sorted(TRIGGER_TARGET_KIND)}"
             )
         pool = refs.get(target_kind, set())
         if t.target_id not in pool:
             raise EntityWriterError(
-                f"quest trigger (id={t.id}) target_id={t.target_id!r} 가 "
-                f"{target_kind} 풀에 없음."
+                f"quest trigger (id={t.id}) target_id={t.target_id!r} not found in the "
+                f"{target_kind} pool."
             )
     quests = refs.get("quest", set())
     for pid in q.prerequisite_ids:
         if pid not in quests:
             raise EntityWriterError(
-                f"quest.prerequisite_ids 의 {pid!r} 가 시나리오 quests 에 없음."
+                f"quest.prerequisite_ids entry {pid!r} not found in scenario quests."
             )
 
 
@@ -159,7 +159,7 @@ def _check_chapter_refs(ch: Chapter, refs: dict[str, set[str]]) -> None:
     for qid in ch.quest_ids:
         if qid not in quests:
             raise EntityWriterError(
-                f"chapter.quest_ids 의 {qid!r} 가 시나리오 quests 에 없음."
+                f"chapter.quest_ids entry {qid!r} not found in scenario quests."
             )
 
 
@@ -222,11 +222,11 @@ def _build_system(
         "",
         "---",
         "",
-        "## 시나리오 world.md",
+        "## scenario world.md",
         "",
         (scenario_dir / "world.md").read_text(encoding="utf-8"),
         "",
-        f"## 기존 {spec.kind} 목록 (JSON)",
+        f"## existing {spec.kind} list (JSON)",
         "",
         json.dumps(_load_dir(scenario_dir, spec.sub_dir), ensure_ascii=False, indent=2),
     ]
@@ -235,7 +235,7 @@ def _build_system(
             continue
         ref_spec = SPECS[ref_kind]
         parts.append("")
-        parts.append(f"## 참조용 {ref_kind} 목록 (JSON)")
+        parts.append(f"## reference {ref_kind} list (JSON)")
         parts.append("")
         parts.append(
             json.dumps(
@@ -294,7 +294,7 @@ def _check_entity_invariants(
     else:
         return
     if violations:
-        raise EntityWriterError("invariant 위반:\n" + "\n".join(violations))
+        raise EntityWriterError("invariant violation:\n" + "\n".join(violations))
 
 
 def _check_id(
@@ -303,16 +303,16 @@ def _check_id(
     eid: str = entity.id  # type: ignore[attr-defined]
     if not ID_PATTERN.match(eid):
         raise EntityWriterError(
-            f"id={eid!r} 가 패턴에 안 맞음. ASCII snake_case ([a-z][a-z0-9_]{{1,30}}) 필요."
+            f"id={eid!r} does not match the required pattern. ASCII snake_case ([a-z][a-z0-9_]{{1,30}}) required."
         )
     if force_id is not None and eid != force_id:
         raise EntityWriterError(
-            f"id={eid!r} 가 강제된 id={force_id!r} 와 다름. "
-            f"hint 의 id 지시를 정확히 따라야 한다 — 한 글자도 바꾸지 말 것."
+            f"id={eid!r} differs from the forced id={force_id!r}. "
+            "Follow the hint's id directive exactly — do not change a single character."
         )
     if eid in existing:
         raise EntityWriterError(
-            f"id={eid!r} 가 기존과 겹침. 기존: {sorted(existing)}"
+            f"id={eid!r} collides with existing ids. Existing: {sorted(existing)}"
         )
 
 
@@ -358,7 +358,7 @@ async def write_entity(
     user_msg = (
         hint.strip()
         if hint
-        else f"(힌트 없음 — 자체 판단으로 {spec.kind} 한 개 만들기.)"
+        else f"(No hint — author one {spec.kind} using your own judgment.)"
     )
     messages: list[dict] = [
         {"role": "system", "content": system},
@@ -393,8 +393,8 @@ async def write_entity(
                 {
                     "role": "user",
                     "content": (
-                        f"이전 응답이 검증에 실패했다: {e}. "
-                        "규칙을 다시 읽고 수정된 JSON 만 출력하라."
+                        f"The previous response failed validation: {e}. "
+                        "Re-read the rules and output the corrected JSON only."
                     ),
                 }
             )
@@ -420,8 +420,8 @@ async def write_entity(
                 {
                     "role": "user",
                     "content": (
-                        f"평가자 피드백:\n{verdict.feedback}\n"
-                        "위 피드백을 반영해 수정된 JSON 만 출력하라."
+                        f"Critic feedback:\n{verdict.feedback}\n"
+                        "Apply the feedback above and output the corrected JSON only."
                     ),
                 }
             )

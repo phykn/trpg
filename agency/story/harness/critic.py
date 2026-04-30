@@ -42,10 +42,10 @@ async def run_critic(
     """
     system = prompt_path.read_text(encoding="utf-8")
     user = (
-        f"## entity 종류\n{entity_kind}\n\n"
-        f"## 시나리오 world.md\n{world_md}\n\n"
-        f"## 시나리오 명단 요약\n{decomp_summary}\n\n"
-        f"## 작성된 entity JSON\n{entity_json}\n"
+        f"## entity kind\n{entity_kind}\n\n"
+        f"## scenario world.md\n{world_md}\n\n"
+        f"## scenario roster summary\n{decomp_summary}\n\n"
+        f"## authored entity JSON\n{entity_json}\n"
     )
     messages: list[dict] = [
         {"role": "system", "content": system},
@@ -62,6 +62,6 @@ async def run_critic(
             messages.append({"role": "assistant", "content": answer})
             messages.append({
                 "role": "user",
-                "content": "출력이 유효한 JSON 이 아니다. ok·feedback 두 키만 가진 JSON 객체 한 개만 출력하라.",
+                "content": "Output was not valid JSON. Output exactly one JSON object containing only the two keys `ok` and `feedback`.",
             })
     return CriticOutput(ok=True, feedback="")

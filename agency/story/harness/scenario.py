@@ -43,7 +43,7 @@ def _repr_id_list(ids: list[str]) -> str:
 
 
 def _hint_with_id(forced_id: str, role: str, extra: str = "") -> str:
-    base = f"id 를 정확히 '{forced_id}' 로 박을 것. 역할: {role}."
+    base = f"Set id exactly to '{forced_id}'. Role: {role}."
     return f"{base} {extra}".strip()
 
 
@@ -241,9 +241,9 @@ def _check_item_no_required(entity: BaseModel) -> None:
         return
     if entity.required is not None:
         raise EntityWriterError(
-            f"item {entity.id} 에 required 가 박혀 있음. 시드 단계 item 은 항상 required=null. "
-            "Pydantic 의 Stats 는 비어 있는 stat 을 자동으로 10 으로 채우기 때문에 "
-            "부분 객체로 보여도 owner 의 sub-10 stat 과 충돌해 invariant 가 잡는다."
+            f"item {entity.id} has `required` set. Seed-stage items must always have required=null. "
+            "Pydantic's Stats fills missing fields with 10, so even a partial object expands "
+            "into a full constraint that conflicts with any sub-10 stat on the owner and trips invariants."
         )
 
 
@@ -253,23 +253,23 @@ def _check_enemy_consistency(entity: BaseModel, expected_enemy: bool) -> None:
     has_combat = entity.combat_behavior is not None
     if expected_enemy and not has_combat:
         raise EntityWriterError(
-            f"character {entity.id} 가 적대 (is_enemy=true) 로 분해됐으나 combat_behavior 가 없음. "
-            "적대 character 는 combat_behavior 를 박아라 ({{attack_priority, flee_hp_percent}})."
+            f"character {entity.id} was decomposed as hostile (is_enemy=true) but has no combat_behavior. "
+            "Hostile characters must include combat_behavior ({attack_priority, flee_hp_percent})."
         )
     if not expected_enemy and has_combat:
         raise EntityWriterError(
-            f"character {entity.id} 가 비적대 (is_enemy=false) 로 분해됐으나 combat_behavior 가 박혀 있음. "
-            "비적대 character 의 combat_behavior 는 비워라 (필드 자체를 생략)."
+            f"character {entity.id} was decomposed as non-hostile (is_enemy=false) but has combat_behavior set. "
+            "Non-hostile characters must leave combat_behavior empty (omit the field)."
         )
     if expected_enemy and entity.xp_reward <= 0:
         raise EntityWriterError(
-            f"character {entity.id} 가 적대 (is_enemy=true) 로 분해됐으나 xp_reward={entity.xp_reward} 임. "
-            "적대 character 는 xp_reward 를 양수로 박아라 (level 기준 가이드: level 1 → 40~80, level 3 → 100~200, level 5+ → 250+)."
+            f"character {entity.id} was decomposed as hostile (is_enemy=true) but xp_reward={entity.xp_reward}. "
+            "Hostile characters must set xp_reward to a positive value (guide by level: level 1 → 40~80, level 3 → 100~200, level 5+ → 250+)."
         )
     if not expected_enemy and entity.xp_reward > 0:
         raise EntityWriterError(
-            f"character {entity.id} 가 비적대 (is_enemy=false) 로 분해됐으나 xp_reward={entity.xp_reward} 임. "
-            "비적대 character 는 xp_reward 를 0 으로 두거나 생략하라 (런타임 기본값 0)."
+            f"character {entity.id} was decomposed as non-hostile (is_enemy=false) but xp_reward={entity.xp_reward}. "
+            "Non-hostile characters must set xp_reward to 0 or omit it (runtime default 0)."
         )
 
 
@@ -329,7 +329,7 @@ async def build_scenario(
     for r in decomp.races:
         await _write_step(
             kind="race", forced_id=r.id,
-            hint=_hint_with_id(r.id, r.role, "racial_skill_ids 는 [] 로 둘 것 (다음 단계에서 자동 채워진다)."),
+            hint=_hint_with_id(r.id, r.role, "Leave racial_skill_ids as [] (filled automatically in a later step)."),
             scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
             run_dir=run_dir, critic_prompt_path=critic_prompt, decomp_summary=decomp_summary,
             skeleton=True,
@@ -344,7 +344,7 @@ async def build_scenario(
             kind="location", forced_id=loc.id,
             hint=_hint_with_id(
                 loc.id, loc.role,
-                "item_ids 와 connections 는 모두 [] 로 둘 것 (다음 단계에서 자동 채워진다).",
+                "Leave both item_ids and connections as [] (filled automatically in a later step).",
             ),
             scenario_dir=scenario_dir, agents_dir=agents_dir, llm=llm, think=think,
             run_dir=run_dir, critic_prompt_path=critic_prompt, decomp_summary=decomp_summary,
@@ -358,20 +358,20 @@ async def build_scenario(
     for c in decomp.characters:
         if c.is_enemy:
             flag = (
-                "적대 — combat_behavior 를 박아라 ({attack_priority, flee_hp_percent}). "
-                "xp_reward 도 양수로 박아라 (level 1 → 40~80, level 3 → 100~200, level 5+ → 250+)."
+                "Hostile — set combat_behavior ({attack_priority, flee_hp_percent}). "
+                "Set xp_reward to a positive value (level 1 → 40~80, level 3 → 100~200, level 5+ → 250+)."
             )
         else:
             flag = (
-                "비적대 — combat_behavior 는 박지 말 것 (필드 자체 생략). "
-                "xp_reward 는 0 또는 생략."
+                "Non-hostile — do not set combat_behavior (omit the field). "
+                "xp_reward must be 0 or omitted."
             )
         extra = (
-            f"적대 여부: {flag}. "
-            f"race_id 를 정확히 '{c.race_id}' 로 박을 것. "
-            f"location_id 를 정확히 '{c.location_id}' 로 박을 것. "
-            "inventory_ids, equipment, racial_skill_ids, learned_skill_ids 는 모두 비워둘 것 "
-            "— 다음 단계에서 자동으로 채워진다."
+            f"Hostility: {flag}. "
+            f"Set race_id exactly to '{c.race_id}'. "
+            f"Set location_id exactly to '{c.location_id}'. "
+            "Leave inventory_ids, equipment, racial_skill_ids, and learned_skill_ids all empty "
+            "— they are filled automatically in a later step."
         )
         expected_enemy = c.is_enemy
 
@@ -427,33 +427,33 @@ async def build_scenario(
         # Otherwise the skill must fit the lowest-level character that learned it.
         if is_racial:
             forced_level = 1
-            level_reason = "race 가 owner 인 racial skill — level 은 항상 1."
+            level_reason = "Racial skill (race owner) — level must always be 1."
         elif char_owner_levels:
             forced_level = min(char_owner_levels)
             level_reason = (
-                f"character owner 의 최저 level={forced_level} 이하여야 한다 "
+                f"Must be ≤ the lowest character-owner level ({forced_level}) "
                 "(invariant: skill.level ≤ character.level)."
             )
         else:
             forced_level = 1
-            level_reason = "owner 미상 — level 1 로 둘 것."
+            level_reason = "Owner unknown — set level to 1."
         extra = (
-            f"primary_stat 을 정확히 '{s.primary_stat}' 로, "
-            f"type 을 정확히 '{s.type}' 로, "
-            f"level 을 정확히 {forced_level} 로 박아라. {level_reason}"
+            f"Set primary_stat exactly to '{s.primary_stat}', "
+            f"type exactly to '{s.type}', "
+            f"and level exactly to {forced_level}. {level_reason}"
         )
         if owner_blurbs:
             extra += (
-                f" 이 스킬을 쓰는 owner: {'; '.join(owner_blurbs)}. "
-                "owner 의 직업·레벨·세계관에 어울리는 이름·description·special_effect 로."
+                f" Owners of this skill: {'; '.join(owner_blurbs)}. "
+                "Tailor name, description, and special_effect to the owner's job, level, and world setting."
             )
 
         def _check_skill_level(entity: BaseModel, fl: int = forced_level) -> None:
             level = getattr(entity, "level", None)
             if level != fl:
                 raise EntityWriterError(
-                    f"skill {entity.id} level={level} ≠ 강제 level={fl}. "
-                    "힌트의 level 지시를 정확히 따라야 invariant (skill.level ≤ character.level) 을 통과한다."
+                    f"skill {entity.id} level={level} ≠ required level={fl}. "
+                    "Follow the hint's level directive exactly so the invariant (skill.level ≤ character.level) holds."
                 )
 
         await _write_step(
@@ -470,16 +470,16 @@ async def build_scenario(
     _step(f"item × {len(decomp.items)}")
     char_by_id_decomp = {c.id: c for c in decomp.characters}
     for it in decomp.items:
-        extra = f"분류: {it.kind} ('{it.kind}' 의 effects 모양 사용)."
+        extra = f"Kind: {it.kind} (use the effects shape for '{it.kind}')."
         if it.owner_character_id and it.owner_character_id in char_by_id_decomp:
             owner_path = scenario_dir / "characters" / f"{it.owner_character_id}.json"
             if owner_path.exists():
                 owner = json.loads(owner_path.read_text(encoding="utf-8"))
                 extra += (
-                    f" 소유자 character: id='{owner['id']}', name='{owner.get('name','')}', "
+                    f" Owner character: id='{owner['id']}', name='{owner.get('name','')}', "
                     f"job='{owner.get('job','')}', level={owner.get('level','?')}, "
                     f"role='{owner.get('role','')}'. "
-                    "이 character 의 직업·레벨·세계관에 어울리는 디테일로 작성하라."
+                    "Tailor details to this character's job, level, and world setting."
                 )
         await _write_step(
             kind="item", forced_id=it.id,
@@ -503,12 +503,12 @@ async def build_scenario(
         status = "active" if not q.prerequisite_ids else "locked"
         prereq_repr = _repr_id_list(q.prerequisite_ids)
         extra = (
-            f"title 은 '{q.title}'. "
-            f"giver_id 를 정확히 '{q.giver_id}' 로 박을 것. "
-            f"triggers 에 type='{q.trigger_kind}', target_id='{q.target_id}' 인 trigger 한 개를 박아라. "
-            f"prerequisite_ids 에 정확히 {prereq_repr} 를 박아라. "
-            f"status 는 '{status}'. "
-            f"required 는 {str(q.required).lower()}."
+            f"title is '{q.title}'. "
+            f"Set giver_id exactly to '{q.giver_id}'. "
+            f"Set triggers to a single trigger with type='{q.trigger_kind}' and target_id='{q.target_id}'. "
+            f"Set prerequisite_ids exactly to {prereq_repr}. "
+            f"status is '{status}'. "
+            f"required is {str(q.required).lower()}."
         )
         await _write_step(
             kind="quest", forced_id=q.id, hint=_hint_with_id(q.id, q.role, extra),
@@ -526,10 +526,10 @@ async def build_scenario(
         ch_quest_repr = _repr_id_list(ch.quest_ids)
         ch_prereq_repr = _repr_id_list(ch.prerequisite_ids)
         extra = (
-            f"title 은 '{ch.title}'. "
-            f"quest_ids 에 정확히 {ch_quest_repr} 를 박아라. "
-            f"prerequisite_ids 에 정확히 {ch_prereq_repr} 를 박아라. "
-            f"status 는 '{status}'."
+            f"title is '{ch.title}'. "
+            f"Set quest_ids exactly to {ch_quest_repr}. "
+            f"Set prerequisite_ids exactly to {ch_prereq_repr}. "
+            f"status is '{status}'."
         )
         await _write_step(
             kind="chapter", forced_id=ch.id, hint=_hint_with_id(ch.id, ch.role, extra),

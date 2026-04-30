@@ -180,7 +180,7 @@ def _check_no_cycle(
         cyc = _dfs(nid, [])
         if cyc is not None:
             raise EntityWriterError(
-                f"{kind} prerequisite_ids 에 cycle 이 있음: {' → '.join(cyc)}"
+                f"{kind} prerequisite_ids has a cycle: {' → '.join(cyc)}"
             )
 
 
@@ -201,10 +201,10 @@ def _check_ids(items: list, kind: str) -> set[str]:
     for item in items:
         if not ID_PATTERN.match(item.id):
             raise EntityWriterError(
-                f"{kind} id={item.id!r} 가 패턴에 안 맞음 (^[a-z][a-z0-9_]{{1,30}}$)."
+                f"{kind} id={item.id!r} does not match the required pattern (^[a-z][a-z0-9_]{{1,30}}$)."
             )
         if item.id in seen:
-            raise EntityWriterError(f"{kind} id={item.id!r} 중복.")
+            raise EntityWriterError(f"{kind} id={item.id!r} is duplicated.")
         seen.add(item.id)
     return seen
 
@@ -222,16 +222,16 @@ def _check_setup(s: DecomSetup) -> None:
         for tid in loc.connection_ids:
             if tid == loc.id:
                 raise EntityWriterError(
-                    f"location {loc.id} connection_ids 가 자기 자신을 가리킴. 자기-루프 금지."
+                    f"location {loc.id} connection_ids points at itself. Self-loops are forbidden."
                 )
             if tid not in loc_by_id:
                 raise EntityWriterError(
-                    f"location {loc.id} connection_id={tid!r} 가 locations 명단에 없음. "
-                    f"가능한 id: {sorted(loc_by_id)}"
+                    f"location {loc.id} connection_id={tid!r} not found in the locations roster. "
+                    f"Valid ids: {sorted(loc_by_id)}"
                 )
             if tid in seen_targets:
                 raise EntityWriterError(
-                    f"location {loc.id} connection_ids 에 {tid!r} 가 중복."
+                    f"location {loc.id} connection_ids has duplicate entry {tid!r}."
                 )
             seen_targets.add(tid)
     if s.locations:
@@ -254,13 +254,13 @@ def _check_setup(s: DecomSetup) -> None:
             unreachable = [lid for lid in adj if lid not in visited]
             if unreachable:
                 raise EntityWriterError(
-                    f"start_location_id={s.start_location_id!r} 에서 도달 불가능한 locations: "
-                    f"{sorted(unreachable)}. 모든 location 이 connection_ids 를 통해 시작점에서 닿아야 한다."
+                    f"locations unreachable from start_location_id={s.start_location_id!r}: "
+                    f"{sorted(unreachable)}. Every location must be reachable from the start via connection_ids."
                 )
     if s.start_location_id not in loc_ids:
         raise EntityWriterError(
-            f"start_location_id={s.start_location_id!r} 가 locations 명단에 없음. "
-            f"가능한 id: {sorted(loc_ids)}"
+            f"start_location_id={s.start_location_id!r} not found in the locations roster. "
+            f"Valid ids: {sorted(loc_ids)}"
         )
 
     # race.racial_skill_ids must reference declared skills, and every race
@@ -269,16 +269,16 @@ def _check_setup(s: DecomSetup) -> None:
     for r in s.races:
         if not r.racial_skill_ids:
             raise EntityWriterError(
-                f"race {r.id} 의 racial_skill_ids 가 비어 있음. "
-                "모든 race 는 racial 1 개 이상이 필요하다 (인간은 'barter' 같은 일상 능력, "
-                "짐승은 'natural_armor' 같은 자연 무기). 모든 NPC 가 race 의 racial 을 자동 상속하므로 "
-                "이게 있어야 평민도 skill 수 ≥ 1 을 만족한다."
+                f"race {r.id} has empty racial_skill_ids. "
+                "Every race needs at least one racial skill (humans get an everyday ability like 'barter'; "
+                "beasts get a natural weapon like 'natural_armor'). Since every NPC inherits its race's "
+                "racials automatically, this is what lets even commoners satisfy the seed-only invariant 'NPC must have ≥1 skill'."
             )
         for sid in r.racial_skill_ids:
             if sid not in skill_ids:
                 raise EntityWriterError(
-                    f"race {r.id} racial_skill_id={sid!r} 가 skills 명단에 없음. "
-                    f"가능한 id: {sorted(skill_ids)}"
+                    f"race {r.id} racial_skill_id={sid!r} not found in the skills roster. "
+                    f"Valid ids: {sorted(skill_ids)}"
                 )
 
 
@@ -295,55 +295,55 @@ def _check_cast(s: DecomSetup, c: DecomCast) -> None:
     for ch in c.characters:
         if ch.location_id not in loc_ids:
             raise EntityWriterError(
-                f"character {ch.id} location_id={ch.location_id!r} 가 locations 명단에 없음. "
-                f"가능한 id: {sorted(loc_ids)}"
+                f"character {ch.id} location_id={ch.location_id!r} not found in the locations roster. "
+                f"Valid ids: {sorted(loc_ids)}"
             )
         if ch.race_id not in race_ids:
             raise EntityWriterError(
-                f"character {ch.id} race_id={ch.race_id!r} 가 races 명단에 없음. "
-                f"가능한 id: {sorted(race_ids)}"
+                f"character {ch.id} race_id={ch.race_id!r} not found in the races roster. "
+                f"Valid ids: {sorted(race_ids)}"
             )
         for sid in ch.learned_skill_ids:
             if sid not in skill_ids:
                 raise EntityWriterError(
-                    f"character {ch.id} learned_skill_id={sid!r} 가 skills 명단에 없음. "
-                    f"가능한 id: {sorted(skill_ids)}"
+                    f"character {ch.id} learned_skill_id={sid!r} not found in the skills roster. "
+                    f"Valid ids: {sorted(skill_ids)}"
                 )
         racial_pool = set(race_by_id[ch.race_id].racial_skill_ids)
         for sid in ch.learned_skill_ids:
             if sid in racial_pool:
                 raise EntityWriterError(
-                    f"character {ch.id} learned_skill_id={sid!r} 가 race={ch.race_id} 의 "
-                    f"racial_skill_ids 에 이미 들어 있음. character 는 race 의 racial 을 자동 "
-                    "상속하므로 learned 에 같은 id 를 또 박으면 중복이 된다 — 다른 skill id 로 바꿔라."
+                    f"character {ch.id} learned_skill_id={sid!r} is already in race={ch.race_id}'s "
+                    "racial_skill_ids. Characters auto-inherit their race's racials, so listing the same id "
+                    "in `learned` causes a duplicate — pick a different skill id."
                 )
 
     # active subject must start at the start location
     if c.start_subject_id not in char_ids:
         raise EntityWriterError(
-            f"start_subject_id={c.start_subject_id!r} 가 characters 명단에 없음."
+            f"start_subject_id={c.start_subject_id!r} not found in the characters roster."
         )
     start_subject_loc = char_by_id[c.start_subject_id].location_id
     if start_subject_loc != s.start_location_id:
         raise EntityWriterError(
-            f"start_subject_id={c.start_subject_id!r} 의 location_id={start_subject_loc!r} 가 "
-            f"start_location_id={s.start_location_id!r} 와 다름. "
-            "게임 시작 시 active subject 는 시작 위치에 있어야 한다."
+            f"start_subject_id={c.start_subject_id!r} has location_id={start_subject_loc!r}, which "
+            f"differs from start_location_id={s.start_location_id!r}. "
+            "The active subject must start at the start location."
         )
 
     for it in c.items:
         if it.owner_character_id is not None and it.owner_character_id not in char_ids:
             raise EntityWriterError(
-                f"item {it.id} owner_character_id={it.owner_character_id!r} 가 characters 명단에 없음."
+                f"item {it.id} owner_character_id={it.owner_character_id!r} not found in the characters roster."
             )
         if it.owner_location_id is not None and it.owner_location_id not in loc_ids:
             raise EntityWriterError(
-                f"item {it.id} owner_location_id={it.owner_location_id!r} 가 locations 명단에 없음."
+                f"item {it.id} owner_location_id={it.owner_location_id!r} not found in the locations roster."
             )
         if it.owner_character_id is not None and it.owner_location_id is not None:
             raise EntityWriterError(
-                f"item {it.id} 의 owner_character_id 와 owner_location_id 가 모두 있음. "
-                "둘 중 하나만 (또는 for_player_template=true 면 둘 다 비워둘 수 있음)."
+                f"item {it.id} has both owner_character_id and owner_location_id set. "
+                "Use exactly one (or leave both empty if for_player_template=true)."
             )
 
     # Each humanoid character must own ≥1 armor item; combatants also a weapon.
@@ -355,8 +355,8 @@ def _check_cast(s: DecomSetup, c: DecomCast) -> None:
         if it.owner_character_id:
             items_by_owner.setdefault(it.owner_character_id, []).append(it)
     # Race-level is_humanoid is the authoritative humanoid flag — keyword
-    # matching on `role` was too brittle (LLM uses "포식자/생물/추적자" instead
-    # of the dictionary words "짐승/괴수").
+    # matching on `role` was too brittle (the LLM writes things like "포식자/
+    # 생물/추적자" instead of the dictionary words "짐승/괴수" we'd match on).
     beast_races = {r.id for r in s.races if not r.is_humanoid}
     missing_armor: list[str] = []
     missing_weapon: list[str] = []
@@ -372,13 +372,13 @@ def _check_cast(s: DecomSetup, c: DecomCast) -> None:
         lines: list[str] = []
         if missing_armor:
             lines.append(
-                f"다음 인간형 character 들이 owned armor item 이 없음: {missing_armor}. "
-                "items 명단에 각각 kind='armor' + owner_character_id 인 옷을 1 개씩 추가하라."
+                f"The following humanoid characters have no owned armor item: {missing_armor}. "
+                "Add one item with kind='armor' and owner_character_id set, for each, to the items roster."
             )
         if missing_weapon:
             lines.append(
-                f"다음 적대 character 들이 owned weapon item 이 없음: {missing_weapon}. "
-                "items 명단에 각각 kind='weapon' + owner_character_id 인 무기를 1 개씩 추가하라."
+                f"The following hostile characters have no owned weapon item: {missing_weapon}. "
+                "Add one item with kind='weapon' and owner_character_id set, for each, to the items roster."
             )
         raise EntityWriterError("\n".join(lines))
 
@@ -393,7 +393,7 @@ def _check_arc(s: DecomSetup, c: DecomCast, a: DecomArc) -> None:
     quest_ids = _check_ids(a.quests, "quest")
     chapter_ids = _check_ids(a.chapters, "chapter")
     if not a.chapters:
-        raise EntityWriterError("chapters 가 비어 있음. 최소 1 개 필요.")
+        raise EntityWriterError("chapters is empty. At least 1 required.")
 
     target_pools = {
         "character": char_ids,
@@ -405,25 +405,25 @@ def _check_arc(s: DecomSetup, c: DecomCast, a: DecomArc) -> None:
         if q.target_id not in target_pools[target_kind]:
             raise EntityWriterError(
                 f"quest {q.id} trigger_kind={q.trigger_kind} target_id={q.target_id!r} "
-                f"가 {target_kind} 명단에 없음."
+                f"not found in the {target_kind} roster."
             )
         if q.giver_id not in char_ids:
             raise EntityWriterError(
-                f"quest {q.id} giver_id={q.giver_id!r} 가 characters 명단에 없음."
+                f"quest {q.id} giver_id={q.giver_id!r} not found in the characters roster."
             )
         giver = char_by_id[q.giver_id]
         if giver.is_enemy:
             raise EntityWriterError(
-                f"quest {q.id} giver_id={q.giver_id!r} 가 적대 character (is_enemy=true) 임. "
-                "의뢰자는 비적대여야 한다."
+                f"quest {q.id} giver_id={q.giver_id!r} is a hostile character (is_enemy=true). "
+                "Quest givers must be non-hostile."
             )
         if q.trigger_kind == "character_death":
             target_char = char_by_id.get(q.target_id)
             if target_char is not None and not target_char.is_enemy:
                 raise EntityWriterError(
-                    f"quest {q.id} 의 character_death trigger target_id={q.target_id!r} 가 "
-                    "비적대 character 임. 죽음 trigger 는 적대 character (is_enemy=true) 만 가리킬 수 있다 "
-                    "(비적대 NPC 는 정상 플레이에서 죽지 않으므로 quest 가 영원히 미완료가 된다)."
+                    f"quest {q.id}'s character_death trigger target_id={q.target_id!r} is a "
+                    "non-hostile character. Death triggers may only point at hostile characters (is_enemy=true) "
+                    "(non-hostile NPCs do not die in normal play, so the quest would stay incomplete forever)."
                 )
 
     # Quest prerequisite_ids — must point inside quests, no self-loop, no cycles.
@@ -433,16 +433,16 @@ def _check_arc(s: DecomSetup, c: DecomCast, a: DecomArc) -> None:
         for pid in q.prerequisite_ids:
             if pid == q.id:
                 raise EntityWriterError(
-                    f"quest {q.id} prerequisite_ids 가 자기 자신을 가리킴. 자기-루프 금지."
+                    f"quest {q.id} prerequisite_ids points at itself. Self-loops are forbidden."
                 )
             if pid in seen_pid:
                 raise EntityWriterError(
-                    f"quest {q.id} prerequisite_ids 에 {pid!r} 가 중복."
+                    f"quest {q.id} prerequisite_ids has duplicate entry {pid!r}."
                 )
             seen_pid.add(pid)
             if pid not in quest_ids:
                 raise EntityWriterError(
-                    f"quest {q.id} prerequisite_ids 의 {pid!r} 가 quests 명단에 없음."
+                    f"quest {q.id} prerequisite_ids entry {pid!r} not found in the quests roster."
                 )
     _check_no_cycle(
         nodes=quest_ids,
@@ -457,19 +457,19 @@ def _check_arc(s: DecomSetup, c: DecomCast, a: DecomArc) -> None:
         for qid in ch.quest_ids:
             if qid not in quest_ids:
                 raise EntityWriterError(
-                    f"chapter {ch.id} quest_ids 의 {qid!r} 가 quests 명단에 없음."
+                    f"chapter {ch.id} quest_ids entry {qid!r} not found in the quests roster."
                 )
             if qid in quest_to_chapter:
                 raise EntityWriterError(
-                    f"quest {qid!r} 가 두 chapter ({quest_to_chapter[qid]}, {ch.id}) 에 동시에 들어가 있음. "
-                    "한 quest 는 정확히 한 chapter 에만 속해야 한다."
+                    f"quest {qid!r} appears in two chapters ({quest_to_chapter[qid]}, {ch.id}). "
+                    "A quest must belong to exactly one chapter."
                 )
             quest_to_chapter[qid] = ch.id
     unassigned = sorted(quest_ids - quest_to_chapter.keys())
     if unassigned:
         raise EntityWriterError(
-            f"quest {unassigned} 가 어떤 chapter 에도 안 속해 있음. "
-            "각 chapter 의 quest_ids 에 모든 quest 를 빠짐없이 분배하라."
+            f"quests {unassigned} are not in any chapter. "
+            "Distribute every quest across the chapters' quest_ids without omission."
         )
 
     # Chapter prerequisite_ids — same shape as quest, plus opening-chapter rule.
@@ -478,16 +478,16 @@ def _check_arc(s: DecomSetup, c: DecomCast, a: DecomArc) -> None:
         for pid in ch.prerequisite_ids:
             if pid == ch.id:
                 raise EntityWriterError(
-                    f"chapter {ch.id} prerequisite_ids 가 자기 자신을 가리킴. 자기-루프 금지."
+                    f"chapter {ch.id} prerequisite_ids points at itself. Self-loops are forbidden."
                 )
             if pid in seen_pid:
                 raise EntityWriterError(
-                    f"chapter {ch.id} prerequisite_ids 에 {pid!r} 가 중복."
+                    f"chapter {ch.id} prerequisite_ids has duplicate entry {pid!r}."
                 )
             seen_pid.add(pid)
             if pid not in chapter_ids:
                 raise EntityWriterError(
-                    f"chapter {ch.id} prerequisite_ids 의 {pid!r} 가 chapters 명단에 없음."
+                    f"chapter {ch.id} prerequisite_ids entry {pid!r} not found in the chapters roster."
                 )
     _check_no_cycle(
         nodes=chapter_ids,
@@ -497,36 +497,36 @@ def _check_arc(s: DecomSetup, c: DecomCast, a: DecomArc) -> None:
 
     if a.start_quest_id not in quest_ids:
         raise EntityWriterError(
-            f"start_quest_id={a.start_quest_id!r} 가 quests 명단에 없음."
+            f"start_quest_id={a.start_quest_id!r} not found in the quests roster."
         )
     opening_chapter_id = quest_to_chapter[a.start_quest_id]
     opening_chapter = next(ch for ch in a.chapters if ch.id == opening_chapter_id)
     if opening_chapter.prerequisite_ids:
         raise EntityWriterError(
-            f"chapter {opening_chapter.id} 가 start_quest_id={a.start_quest_id!r} 를 갖고 있는데 "
-            f"prerequisite_ids={opening_chapter.prerequisite_ids} 가 비어 있지 않음. "
-            "시작 chapter 는 prereq 가 없어야 한다 (게임 시작 시 active 로 진입해야 하므로)."
+            f"chapter {opening_chapter.id} owns start_quest_id={a.start_quest_id!r} but "
+            f"prerequisite_ids={opening_chapter.prerequisite_ids} is non-empty. "
+            "The opening chapter must have no prereqs (it has to enter active at game start)."
         )
 
     start_q = quest_by_id[a.start_quest_id]
     if start_q.prerequisite_ids:
         raise EntityWriterError(
-            f"start_quest_id={a.start_quest_id!r} 의 prerequisite_ids={start_q.prerequisite_ids} 가 "
-            "비어 있지 않음. 시작 quest 는 prereq 가 없어야 한다."
+            f"start_quest_id={a.start_quest_id!r} has prerequisite_ids={start_q.prerequisite_ids} non-empty. "
+            "The start quest must have no prereqs."
         )
     if not start_q.required:
         raise EntityWriterError(
-            f"start_quest_id={a.start_quest_id!r} 의 required=false 임. 시작 quest 는 "
-            "required=true 여야 한다 (그래야 chapter 진행도에 카운트되어 ch1 이 정상 종료된다)."
+            f"start_quest_id={a.start_quest_id!r} has required=false. The start quest must be "
+            "required=true (so it counts toward chapter progress and ch1 can complete normally)."
         )
     for qid in opening_chapter.quest_ids:
         if qid == a.start_quest_id:
             continue
         if not quest_by_id[qid].prerequisite_ids:
             raise EntityWriterError(
-                f"quest {qid!r} 가 opening chapter ({opening_chapter.id}) 안에 있지만 "
-                "prerequisite_ids 가 비어 있음. 시작 chapter 의 비-시작 quest 는 prereq 를 통해 "
-                "플레이 도중에 자연스럽게 풀려야 한다 (게임 시작부터 모두 active 로 보이면 안 된다)."
+                f"quest {qid!r} sits inside the opening chapter ({opening_chapter.id}) but has empty "
+                "prerequisite_ids. Non-start quests in the opening chapter must unlock organically through "
+                "prereqs during play (they must not all show as active from game start)."
             )
 
 
@@ -578,10 +578,10 @@ async def _decompose_phase(
         system_parts.append("")
         system_parts.append("---")
         system_parts.append("")
-        system_parts.append("## 이전 phase 에서 결정된 entity 명단")
+        system_parts.append("## entity rosters decided in earlier phases")
         system_parts.append("")
         system_parts.append(
-            "아래 JSON 의 id 와 명단을 그대로 참조하라. 새로 만들지 말고 기존 풀에서 골라라."
+            "Use the ids and rosters in the JSON below verbatim. Do not invent new ones — pick from the existing pool."
         )
         system_parts.append("")
         system_parts.append(prior_context)
@@ -606,8 +606,8 @@ async def _decompose_phase(
                 {
                     "role": "user",
                     "content": (
-                        f"이전 응답이 검증에 실패했다: {e}. "
-                        "규칙을 다시 읽고 수정된 JSON 만 출력하라."
+                        f"The previous response failed validation: {e}. "
+                        "Re-read the rules and output the corrected JSON only."
                     ),
                 }
             )
