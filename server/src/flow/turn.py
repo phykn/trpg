@@ -37,7 +37,7 @@ from .actions import (
 from .combat_oneshot import arm_combat_roll_pending
 from .combat_phase import run_combat_player_turn
 from .encounter import summon_encounter
-from .clock import advance_time
+from .clock import advance_turn
 from .dirty import (
     Dirty,
     ToFrontFn,
@@ -47,7 +47,7 @@ from .dirty import (
     push_log_entry,
 )
 from .judge import run_judge
-from .narrate import consume_narrate, run_narrate
+from .narrate import apply_intended_move, consume_narrate, run_narrate
 from .rest import run_rest
 from .subject import refresh_active_subject
 
@@ -142,7 +142,7 @@ async def _run_one_step_action(
         yield ev
     if getattr(result, "tail_intent", None):
         yield push_act(state, dirty, result.tail_intent)
-    advance_time(state, dirty)
+    advance_turn(state, dirty)
     async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev
 
@@ -154,10 +154,12 @@ async def _arm_pending_and_finalize(
     to_front_fn: ToFrontFn | None,
 ) -> AsyncIterator[dict]:
     """Emit the freshly-armed pending_check then finalize. Shared by the
-    combat-roll and summon-then-combat-roll arming paths."""
+    combat-roll and summon-then-combat-roll arming paths. The RollPrompt
+    card on the client renders all the same data that an act-line would,
+    so we don't push one here."""
     yield {
         "type": "pending_check",
-        "data": pending_check_to_front(state.pending_check),
+        "data": pending_check_to_front(state, state.pending_check),
     }
     async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev
@@ -240,7 +242,7 @@ async def _dispatch(
 
     if isinstance(result, FleeAction):
         # Out-of-combat flee — short message, no turn bump.
-        yield push_act(state, dirty, "지금은 도망쳐 달아날 전투가 없다.")
+        yield push_act(state, dirty, "지금은 도망칠 전투가 없다.")
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -268,6 +270,13 @@ async def _dispatch(
                 yield push_act(state, dirty, part.tail_intent)
         if last_pass is not None:
             target_for_log = last_pass.targets[0] if last_pass.targets else None
+            # Pre-apply the player's relocation (if judge intent says so) and
+            # emit panels before narrate streams. The narrate prompt then sees
+            # the destination's surroundings and writes "arrived" prose instead
+            # of "transit" prose; the client's pill updates immediately.
+            apply_intended_move(state, last_pass.model_dump(), dirty.entities)
+            if to_front_fn is not None:
+                yield {"type": "state", "data": to_front_fn(state)}
             stream = run_narrate(
                 client, state, profile_dir, player_input,
                 judge_result=last_pass.model_dump(),
@@ -279,7 +288,7 @@ async def _dispatch(
                 dialogue_input=player_input,
             ):
                 yield ev
-        advance_time(state, dirty)
+        advance_turn(state, dirty)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -289,8 +298,20 @@ async def _dispatch(
     state.turn_count += 1
     if isinstance(result, PassAction):
         target_for_log = result.targets[0] if result.targets else None
+        # Pre-apply the player's relocation (if judge intent says so) before
+        # narrate streams. The narrate prompt then sees the destination's
+        # surroundings and writes "arrived" prose; the client's pill updates
+        # immediately on the state event below. Reject path skips this — it
+        # has no movement intent.
+        apply_intended_move(state, result.model_dump(), dirty.entities)
     else:
         target_for_log = None
+
+    # Emit panels before narrate streams so subject refresh and (for pass) the
+    # pre-applied move show up immediately instead of waiting for the
+    # post-narrate finalize.
+    if to_front_fn is not None:
+        yield {"type": "state", "data": to_front_fn(state)}
 
     stream = run_narrate(
         client,
@@ -309,6 +330,6 @@ async def _dispatch(
     ):
         yield ev
 
-    advance_time(state, dirty)
+    advance_turn(state, dirty)
     async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev

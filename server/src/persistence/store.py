@@ -112,7 +112,6 @@ class _Meta(BaseModel):
     player_id: str
     active_subject_id: str | None = None
     active_quest_id: str | None = None
-    world_time: str
     turn_count: int = 0
     pending_check: PendingCheck | None = None
     pending_skill_candidates: list[Skill] = []
@@ -127,7 +126,6 @@ def _meta_from_state(state: GameState) -> _Meta:
         player_id=state.player_id,
         active_subject_id=state.active_subject_id,
         active_quest_id=state.active_quest_id,
-        world_time=state.world_time,
         turn_count=state.turn_count,
         pending_check=state.pending_check,
         pending_skill_candidates=list(state.pending_skill_candidates),
@@ -287,7 +285,6 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
         player_id=meta.player_id,
         active_subject_id=meta.active_subject_id,
         active_quest_id=meta.active_quest_id,
-        world_time=meta.world_time,
         turn_count=meta.turn_count,
         pending_check=meta.pending_check,
         pending_skill_candidates=meta.pending_skill_candidates,

@@ -183,17 +183,39 @@ def _entities_payload(
 
 
 def _corpses_payload(state: GameState, actor: Character) -> list[dict]:
-    """Same-location dead NPCs. Surfaced separately from `entities` so judge
-    semantics doesn't accept them as combat/buy/sell targets, but narrate
-    sees them and won't resurrect them as a generic passerby (the bug where
-    a killed NPC kept walking up to the player and giving quest hooks)."""
+    """Dead NPCs surfaced for narrate so it doesn't revive them. Two sources:
+
+    - same-location: visible as a body in the scene.
+    - history-referenced (any location, marked `off_screen=true`): id appears
+      in recent `turn_log.target`, so the player may still address them by
+      name from somewhere else. Without this, narrate loses the death
+      signal the moment the player walks away and hallucinates the dead
+      NPC speaking again from `recent_dialogue` text.
+
+    Surfaced separately from `entities` so judge semantics doesn't accept
+    them as combat/buy/sell targets.
+    """
     out: list[dict] = []
+    seen: set[str] = set()
     for cid, char in state.characters.items():
         if cid == actor.id or char.location_id != actor.location_id:
             continue
         if char.alive:
             continue
         out.append({"id": cid, "name": char.name})
+        seen.add(cid)
+    # turn_log's structured `target` field is the only way to recover ids
+    # from history without fuzzy-matching narrator prose. recent_dialogue
+    # text mentions names but not ids.
+    for entry in state.turn_log:
+        tid = entry.target
+        if tid is None or tid == actor.id or tid in seen:
+            continue
+        ch = state.characters.get(tid)
+        if ch is None or ch.alive:
+            continue
+        out.append({"id": tid, "name": ch.name, "off_screen": True})
+        seen.add(tid)
     return out
 
 

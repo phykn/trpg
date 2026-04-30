@@ -170,12 +170,7 @@ def _write_minimal_seed(profile_dir: Path) -> None:
     pdir.mkdir(parents=True)
     (pdir / "world.md").write_text("world", encoding="utf-8")
     (pdir / "start.json").write_text(
-        json.dumps(
-            {
-                "start_location_id": "plaza_01",
-                "world_time": "0812-04-28T12:00:00",
-            }
-        ),
+        json.dumps({"start_location_id": "plaza_01"}),
         encoding="utf-8",
     )
     (pdir / "player_template.json").write_text(
@@ -213,7 +208,7 @@ async def test_init_game_happy_path(tmp_data):
     _write_minimal_seed(profile_dir)
     state = await init_game(
         "default",
-        PlayerInput(name="테스터", race_id="human", appearance="외형"),
+        PlayerInput(name="테스터", race_id="human"),
         saves_dir,
         str(profile_dir),
     )
@@ -243,7 +238,7 @@ async def test_init_game_unknown_profile(tmp_data):
     with pytest.raises(ProfileNotFound):
         await init_game(
             "missing",
-            PlayerInput(name="x", race_id="human", appearance="y"),
+            PlayerInput(name="x", race_id="human"),
             tmp_data,
             str(profile_dir),
         )
@@ -255,7 +250,7 @@ async def test_init_game_unknown_race(tmp_data):
     with pytest.raises(RaceNotFound):
         await init_game(
             "default",
-            PlayerInput(name="x", race_id="dragon", appearance="y"),
+            PlayerInput(name="x", race_id="dragon"),
             tmp_data,
             str(profile_dir),
         )

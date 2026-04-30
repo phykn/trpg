@@ -10,12 +10,21 @@ def build_target_view(
 ) -> dict | None:
     node_type = graph.get_node_type(target_id)
     if node_type == "character":
-        # Dead NPCs would otherwise expose full disposition/memories/inventory
-        # to narrate as if they were alive — return None so narrate falls back
-        # to surroundings (where the corpse appears in `corpses`).
+        # Dead NPCs return a minimal dead-marker payload — name + alive=false.
+        # We don't expose memories/disposition/inventory (no live persona to
+        # render), but narrate still needs the explicit "this target is dead"
+        # signal so it won't revive them as a passerby. This is the
+        # belt-and-suspenders pair to surroundings.corpses: corpses covers
+        # "player mentions a dead NPC by name", target_view covers "judge
+        # routed targets=[corpse_id] past the Corpse rule".
         npc = state.characters.get(target_id)
         if npc is not None and not npc.alive:
-            return None
+            return {
+                "type": "npc",
+                "id": target_id,
+                "name": npc.name,
+                "alive": False,
+            }
         return _build_npc_view(state, graph, target_id, actor_id)
     if node_type == "location":
         return _build_location_view(state, graph, target_id)

@@ -60,9 +60,8 @@ class RollLogEntry(BaseModel):
     id: int
     kind: Literal["roll"]
     check: str
-    dc: int
     roll: int
-    mod: int
+    margin: int
     result: Literal["success", "partial", "fail"]
 
 

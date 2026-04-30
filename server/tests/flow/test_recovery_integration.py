@@ -1,17 +1,16 @@
 """turn.run_turn rest routing — judge mocked; integrates the recovery engine + combat boot."""
 import random
 import tempfile
-from datetime import datetime, timedelta
 
 import pytest
 
+from src.domain.clock import next_dawn_turn
 from src.domain.entities import Character, CombatBehavior, Location, Stats
 from src.agents.dc_judge.schema import RestAction
 from src.flow import judge as judge_mod
 from src.flow import combat_phase as combat_phase_mod
 from src.flow import turn as turn_mod
 from src.flow.turn import run_turn
-from src.rules import RULES
 
 
 @pytest.fixture
@@ -52,7 +51,6 @@ async def test_rest_in_safe_location_full_recovery(fresh_state, tmp_data, monkey
     fresh_state.locations["plaza_01"] = Location(
         id="plaza_01", name="광장", sleep_risk="safe"
     )
-    before_time = fresh_state.world_time
 
     _judge_returns_rest(monkeypatch)
     events = await _collect(
@@ -74,12 +72,9 @@ async def test_rest_in_safe_location_full_recovery(fresh_state, tmp_data, monkey
     actor = fresh_state.characters["player_01"]
     assert actor.hp == actor.max_hp
     assert actor.mp == actor.max_mp
-    expected_time = (
-        datetime.fromisoformat(before_time)
-        + timedelta(hours=RULES.time.sleep_hours)
-    ).isoformat()
-    assert fresh_state.world_time == expected_time
-    assert fresh_state.turn_count == 1
+    # Rest jumps turn_count to next dawn boundary (next multiple of 40).
+    # run_rest first bumps turn_count by 1 (0 → 1), then attempt_rest jumps to 40.
+    assert fresh_state.turn_count == next_dawn_turn(1)
 
 
 async def test_rest_in_dangerous_location_triggers_encounter(

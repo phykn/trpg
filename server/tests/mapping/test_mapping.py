@@ -15,7 +15,6 @@ from src.domain.entities import (
 )
 from src.domain.memory import GMLogEntry, Memory, RollLogEntry
 from src.mapping.to_front import (
-    _period,
     to_front_state,
     to_hero,
     to_place,
@@ -28,7 +27,6 @@ def _full_state(fresh_state):
     s = fresh_state
     s.active_subject_id = "guard_01"
     s.active_quest_id = "q1"
-    s.world_time = "0812-04-28T14:30:00"
     s.races["human"] = Race(id="human", name="인간", description="x")
     s.races["goblin"] = Race(id="goblin", name="고블린", description="x")
     s.locations["plaza_01"] = Location(
@@ -107,7 +105,7 @@ def _full_state(fresh_state):
     s.log_entries = [
         GMLogEntry(id=1, kind="gm", text="x"),
         RollLogEntry(
-            id=2, kind="roll", check="x", dc=10, roll=14, mod=2, result="success"
+            id=2, kind="roll", check="x", roll=14, margin=8, result="success",
         ),
     ]
     return s
@@ -172,12 +170,26 @@ def test_quest_difficulty_object(fresh_state):
     assert q["giver"] == "경비병"
 
 
-def test_place_korean_date_and_period(fresh_state):
+def test_place_day_phase_default_dawn(fresh_state):
+    """turn_count 0 → 새벽 (start of day cycle)."""
     p = to_place(_full_state(fresh_state))
-    assert p["dateTime"] == "812년 4월 28일 오후 2시"
+    assert p["dayPhase"] == "새벽"
     assert p["surroundings"] == [
         {"name": "성문", "blurb": "", "difficulty": None}
     ]
+
+
+def test_place_day_phase_advances_with_turn_count(fresh_state):
+    """4 phases × 10 turns each: 새벽 / 오전 / 오후 / 밤 → repeat."""
+    state = _full_state(fresh_state)
+    state.turn_count = 15
+    assert to_place(state)["dayPhase"] == "오전"
+    state.turn_count = 25
+    assert to_place(state)["dayPhase"] == "오후"
+    state.turn_count = 35
+    assert to_place(state)["dayPhase"] == "밤"
+    state.turn_count = 40
+    assert to_place(state)["dayPhase"] == "새벽"
 
 
 def test_place_surroundings_carry_blurb_and_difficulty(fresh_state):
@@ -199,12 +211,6 @@ def test_place_targets_carry_role_blurb_trust(fresh_state):
     assert p["targets"] == [
         {"name": "경비병", "role": "마을 경비병", "blurb": "갑옷의 중년", "trust": 30}
     ]
-
-
-def test_period_boundaries():
-    assert _period(5) == "새벽" and _period(7) == "오전"
-    assert _period(12) == "오후" and _period(18) == "저녁"
-    assert _period(21) == "밤" and _period(0) == "밤" and _period(4) == "밤"
 
 
 def test_inactive_slots_return_none(fresh_state):

@@ -28,7 +28,6 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -145,7 +144,6 @@ class Scenario:
                 "start_location_id": player.location_id if player else None,
                 "active_subject_id": state.active_subject_id,
                 "active_quest_id": state.active_quest_id,
-                "world_time": state.world_time,
             },
             player_template={},
             runtime=True,
@@ -597,7 +595,6 @@ def _check_start_json(s: Scenario) -> list[str]:
     sl = s.start.get("start_location_id")
     ss = s.start.get("active_subject_id")
     sq = s.start.get("active_quest_id")
-    wt = s.start.get("world_time")
 
     if sl is not None and sl not in s.locations:
         _v(out, where, f"start_location_id={sl!r} not in locations")
@@ -625,12 +622,6 @@ def _check_start_json(s: Scenario) -> list[str]:
                 where,
                 f"active_quest_id={sq!r} status='{s.quests[sq].status}' (must be 'active')",
             )
-
-    if isinstance(wt, str):
-        try:
-            datetime.fromisoformat(wt)
-        except ValueError:
-            _v(out, where, f"world_time={wt!r} not a valid ISO 8601 datetime")
 
     return out
 

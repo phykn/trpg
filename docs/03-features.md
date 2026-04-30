@@ -122,41 +122,29 @@ class CombatState:
 
 ### 2.1 월드 시간 (World Time)
 
-게임 세계의 현재 시각은 `state.world_time` (ISO 8601 문자열) 한 군데에 들어 있다.
+분/시 단위 시계는 없다. 게임 세계의 시간 변수는 `state.turn_count` 단 하나이고, `domain/clock.py:day_phase` 가 거기서 `새벽 / 오전 / 오후 / 밤` 4 phase 를 파생한다.
 
-**엔진 가산** — 시간을 흐르게 만드는 주체:
+**구조** — phase 당 `RULES.time.phase_turns` (기본 10) 턴 × 4 phase = **40 턴이 1 일 사이클**.
 
-- **P1** 은 단순. 턴당 +1 분.
-- **P3** 은 액션 종류별로 분 단위 (`rules.time.cost`):
-  - `combat_turn_min`: 전투 1 턴이 차지하는 시간
-  - `explore_action_min`: 탐험·조사의 기본 소요
-  - `explore_critical_fail_min`: critical_failure 일 때 추가로 까먹는 시간
-  - `travel_per_connection_min`: location 간 기본 이동 비용
-  - `Connection.travel_min` 이 따로 지정된 엣지는 기본값 대신 그 값을 사용 (per-edge override)
-
-**narrator 의 시간 점프 (`set_time`)**: 분 단위 산수는 엔진이 독점하지만, 장면 전환·휴식·시간 비약 ("다음 날 아침이 밝았다") 처럼 절대 시각으로 점프해야 할 상황엔 narrator 가 `{type: "set_time", value: "<ISO>"}` state_change 를 발행할 수 있다 ([02-runtime.md](./02-runtime.md) §6.1). 같은 턴 안에서 엔진이 먼저 가산한 뒤 narrator 의 set_time 이 후행으로 덮어쓴다. 가드 3 종:
-
-- 현재 `world_time` 보다 과거 ISO 는 `rejected[]` 로 reject (시간 역행 금지).
-- `world_time` 외의 단일 필드는 set_time 으로 갱신할 수 없다 — 일반 `set` 경로와 분리된 전용 type.
-- HP/MP 같은 엔진 전용 수치는 narrator 가 여전히 못 만진다. 즉 **시간만 점프하고 회복은 안 됨** — P1 의 "휴식한다" 는 §2.4 의 폴백을 그대로 따른다 (실제 회복은 P3 rest 엔드포인트).
-
-**캘린더** 는 그레고리력 그대로. 월별 일수, 윤년, 23:59 → 다음 날 00:00 모두 ISO 8601 표준. 연도 라벨만 게임 세계 기준 ("812년") 이고, 별도 가상 캘린더는 도입하지 않는다.
-
-**프론트 산출** (`mapping/to_front.py` 가 `world_time` 을 파싱):
-
-- `Place.date` — "812년 4월 28일" 한국어 포맷.
-- `Place.hour` — 0..23 정수.
-- `Place.period` — `rules.time.period_thresholds` 로 hour 를 매핑한 라벨. 구간은 모두 반-개구간 `[start, end)` (경계 시각은 다음 period 에 속함 — 예: 07:00 은 "오전", 12:00 은 "오후"). 기본값:
-
-  | period | hour `[start, end)` |
+  | turn_count % 40 | day_phase |
   |---|---|
-  | 새벽 | 05–07 |
-  | 오전 | 07–12 |
-  | 오후 | 12–18 |
-  | 저녁 | 18–21 |
-  | 밤   | 21–05 |
+  | 0–9 | 새벽 |
+  | 10–19 | 오전 |
+  | 20–29 | 오후 |
+  | 30–39 | 밤 |
 
-  자정을 가로지르는 "밤" 은 `start > end` 표기 — mapping 이 이를 인지해 `hour ≥ 21 or hour < 5` 로 매칭 (동일한 반-개구간 규칙).
+게임 시작 직후 (turn 0) 는 항상 "새벽" 이다.
+
+**시간이 흐르는 경로** — `state.turn_count` 를 늘리는 곳:
+
+- 매 턴 종료 시 `flow/turn.py / roll.py / combat_phase.py / rest.py` 가 진입부에서 `turn_count += 1`. 일반 액션은 1 턴 = 1 phase-tick.
+- 수면(§2.4) 만 점프형: `engines/recovery.py` 의 full recovery 가 `state.turn_count = next_dawn_turn(state.turn_count)` 로 다음 새벽 boundary 까지 한 번에 이동.
+
+**narrator 와의 경계**: state_change 에 `set_time` 같은 타입은 없다. narrator 는 시간을 직접 만지지 못하고, 분위기 묘사 (`session.day_phase`) 만 입력으로 받는다. 시간 비약 ("다음 날 아침") 은 휴식(`rest`) 액션을 통해서만 실제로 발생한다.
+
+**프론트 산출** (`mapping/to_front.py`):
+
+- `Place.dayPhase` — 현재 `day_phase` 한국어 라벨 그대로. 분/시는 클라이언트로 보내지 않는다.
 
 프론트는 가공 없이 그대로 표시.
 
@@ -226,7 +214,7 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
 **자연 회복 없음** — HP/MP 는 시간이 흘러도 자동으로 차지 않는다. 잠을 자야만 회복. 깎인 자원이 시간만으로 안 메워지니까 휴식 장소·타이밍 선택이 자원 사이클의 핵심이 된다.
 
-**자연어 트리거** — 별도 endpoint 가 아니라 judge 가 자연어 입력을 `{action: "rest"}` 로 분류한다 ("잠을 잔다" / "야영한다" / "눈을 붙인다" 류). 짧은 휴식 ("한숨 돌린다") 은 여전히 `pass`. `/turn` 이 rest 분기로 빠지면 잠 시간 = `rules.time.sleep_hours` (기본 8) 만큼 `world_time` 진행 (§2.1). 인카운터 없으면 HP/MP 둘 다 max 로 **풀회복** — 부분 휴식이나 시간당 비례 회복 같은 중간 단계는 없다.
+**자연어 트리거** — 별도 endpoint 가 아니라 judge 가 자연어 입력을 `{action: "rest"}` 로 분류한다 ("잠을 잔다" / "야영한다" / "눈을 붙인다" 류). 짧은 휴식 ("한숨 돌린다") 은 여전히 `pass`. `/turn` 이 rest 분기로 빠지면 `state.turn_count` 가 다음 새벽 boundary 로 점프 (§2.1). 인카운터 없으면 HP/MP 둘 다 max 로 **풀회복** — 부분 휴식이나 시간당 비례 회복 같은 중간 단계는 없다.
 
 **장소별 위험도** — `Location.sleep_risk: Literal["safe", "risky", "dangerous"]`:
 

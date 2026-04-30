@@ -82,7 +82,7 @@ server/
 ../saves/                          # runtime store (gitignored)
   .current                           # one-line pointer to the most recent game_id
   games/<game_id>/
-    meta.json                        # singleton fields (player_id, world_time, pending_check, ...)
+    meta.json                        # singleton fields (player_id, turn_count, pending_check, ...)
     characters/<id>.json             # one file per entity
     items/<id>.json
     locations/<id>.json

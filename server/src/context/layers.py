@@ -1,6 +1,7 @@
 """Narrate prompt input — world / session / history layers."""
 from pathlib import Path
 
+from ..domain.clock import day_phase
 from ..domain.state import GameState
 
 
@@ -49,7 +50,7 @@ def build_session_layer(state: GameState) -> dict:
             "summary": active_chapter.summary,
             "quests": active_quests,
         }
-    return {"chapter": chapter_data, "world_time": state.world_time}
+    return {"chapter": chapter_data, "day_phase": day_phase(state.turn_count)}
 
 
 def build_history_layer(state: GameState) -> str:

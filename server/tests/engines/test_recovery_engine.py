@@ -1,9 +1,7 @@
 """recovery.attempt_rest — deterministic tests for the full-recovery / encounter branch."""
-from datetime import datetime, timedelta
-
+from src.domain.clock import next_dawn_turn
 from src.domain.entities import Character, Location, Stats
 from src.engines import recovery
-from src.rules import RULES
 
 
 class _SeqRandom:
@@ -50,7 +48,7 @@ def _seed_state(fresh_state, *, risk="safe", encounters=None):
 
 async def test_full_recovery_in_safe_location(fresh_state):
     state = _seed_state(fresh_state, risk="safe")
-    before = state.world_time
+    before_turn = state.turn_count
 
     outcome, enemies = await recovery.attempt_rest(
         state, "player_01", rng=_SeqRandom([0.99]), dirty=set()
@@ -61,11 +59,8 @@ async def test_full_recovery_in_safe_location(fresh_state):
     actor = state.characters["player_01"]
     assert actor.hp == actor.max_hp
     assert actor.mp == actor.max_mp
-    # world_time advances by sleep_hours
-    expected = (
-        datetime.fromisoformat(before) + timedelta(hours=RULES.time.sleep_hours)
-    ).isoformat()
-    assert state.world_time == expected
+    # turn_count jumps to next dawn boundary
+    assert state.turn_count == next_dawn_turn(before_turn)
 
 
 async def test_dangerous_with_encounter_pool_triggers_combat_branch(fresh_state):
@@ -81,7 +76,7 @@ async def test_dangerous_with_encounter_pool_triggers_combat_branch(fresh_state)
     fresh_state.characters["goblin_01"] = enemy
     state = _seed_state(fresh_state, risk="dangerous", encounters=["goblin_01"])
     before_hp = state.characters["player_01"].hp
-    before_time = state.world_time
+    before_turn = state.turn_count
 
     # encounter_chance dangerous=0.6, rng.random()=0.1 → triggers
     outcome, enemies = await recovery.attempt_rest(
@@ -90,9 +85,9 @@ async def test_dangerous_with_encounter_pool_triggers_combat_branch(fresh_state)
 
     assert outcome == "encounter"
     assert enemies == ["goblin_01"]
-    # No healing, no time advance (combat handles its own time)
+    # No healing, no turn advance (combat handles its own clock)
     assert state.characters["player_01"].hp == before_hp
-    assert state.world_time == before_time
+    assert state.turn_count == before_turn
 
 
 async def test_dangerous_without_encounter_falls_through_to_recovery(fresh_state):

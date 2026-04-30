@@ -9,7 +9,7 @@ scenarios/                       repo 루트 peer (server·agency/story 공유).
   default_cli/
     profile.json                 시나리오 메타: id, name, description (GET /profiles 응답 베이스)
     world.md                     세계관·톤
-    start.json                   시작 장소·활성 퀘스트·world_time
+    start.json                   시작 장소·활성 퀘스트
     player_template.json         플레이어 캐릭터 시드
     characters/*.json            NPC 시드
     locations/*.json             장소 시드
@@ -22,7 +22,8 @@ server/
   src/
     domain/                      Pure data shapes — no logic, no I/O
       entities.py                Character, Race, Location, Item, Quest, QuestTrigger, QuestRewards, Connection, Equipment, Stats, Skill, ActiveBuff, CombatBehavior, CombatState, DeathSaveState
-      state.py                   GameState container (엔티티 dict + world_time + pending_check + combat_state + turn_log + recent_dialogue + log_entries + pending_skill_candidates + player_id)
+      state.py                   GameState container (엔티티 dict + turn_count + pending_check + combat_state + turn_log + recent_dialogue + log_entries + pending_skill_candidates + player_id)
+      clock.py                   day_phase(turn_count) → 새벽/오전/오후/밤; next_dawn_turn(turn_count) → 다음 새벽 boundary 까지 점프 (수면 회복용)
       memory.py                  Memory, TurnLogEntry, DialoguePair, PendingCheck, LogEntry union (gm/player/act/roll)
       types.py                   StatKey, Tier, Grade, Intent
       errors.py                  DomainError + PendingCheckActive/Expected, JudgeMalformed, LLMUnavailable, PersistenceFailed, ProfileNotFound, RaceNotFound, ProfileMalformed, LevelUpInvalid, InventoryInvalid, SkillInvalid
@@ -32,12 +33,12 @@ server/
       dc.py                      sigmoid_required_roll, tier_to_int, pick_dc, compute_grade, social_bonus
 
     engines/                     Pure logic — no LLM, no disk I/O
-      apply.py                   `state_changes` (set / set_time / move / move_item / affinity) 검증·적용 + rejected[] 기록 + character_death/location_enter quest 훅
+      apply.py                   `state_changes` (set / move / move_item / affinity) 검증·적용 + rejected[] 기록 + character_death/location_enter quest 훅
       combat.py                  apply_attack_to_defender / 명중·데미지 (sigmoid + crit) / 이니셔티브 / NPC AI (highest_threat 는 combat_state.damage_dealt 누적값) / flee / 사망·revive·death-save / character_death quest 훅 / combat_state 라이프사이클 / surprise / start_combat 양측 companions 자동 합류
       growth.py                  level_up, xp_for_next_level, recalc_max_hp_mp, grant_xp, award_kill_xp, assert_pair_trade_invariant — 페어 트레이드 (STR↔CHA·DEX↔WIS·CON↔INT)
       skill.py                   cast (level/MP/range 검증, target self/single/area, grade_multipliers), tick_active_buffs, build_skill_from_candidate, compute_cast_grade, existing_skill_ids — attack/debuff 만 d20 굴림
       quest.py                   check_quests (character_death/location_enter/item_use single-fire), fail_triggers, locked→active, gold/exp/items 보상, chapter.progress
-      recovery.py                attempt_rest — 위험도 굴림으로 풀회복 vs 인카운터, sleep_hours world_time 점프, summon 콜백으로 LLM 즉석 적 폴백
+      recovery.py                attempt_rest — 위험도 굴림으로 풀회복 vs 인카운터, turn_count 를 next_dawn_turn 으로 점프, summon 콜백으로 LLM 즉석 적 폴백
       invariants.py              check.stats / check.character / check.scenario / check.state / check.quest_graph / Scenario dataclass — 시드·런타임 검증. LLM self-correction feedback 으로 재활용 가능한 한 줄 메시지 형식
       inventory/                 P3 §2.5 / §2.7 — 모듈 분할
         carry.py                 carry_capacity (STR × weight_per_strength), check_can_carry
@@ -62,7 +63,8 @@ server/
       surroundings.py            build_surroundings (judge 용) — location, entities, equipment, skills (racial+learned), inventory, growth, skill_candidates, merchants, in_combat
 
     flow/                        한 턴의 orchestration. SSE 이벤트 발행
-      dirty.py                   Dirty 컨테이너 (entities/log/history/dialogue) + push_log_entry / push_turn_log / push_dialogue / advance_time / next_log_id / flush / finalize
+      dirty.py                   Dirty 컨테이너 (entities/log/history/dialogue) + push_log_entry / push_turn_log / push_dialogue / next_log_id / flush / finalize
+      clock.py                   advance_turn — 턴 경계에서 active_buff duration -1 (시계 산수는 없고 buff tick 만)
       format.py                  로그 줄 builders (format_attack_log / format_skill_log / format_use_log / format_combat_end_text / format_roll_announce) + GRADE_LABEL / front_grade / choose_bonus_target. 영문 엔진 에러 (`InventoryInvalid` / `LevelUpInvalid` / `SkillInvalid` 등) 를 한국어 한 줄로 번역하는 매핑도 여기
       actions.py                 emit_attack / emit_skill_cast / emit_use / emit_equip / emit_unequip / emit_level_up / emit_learn_skill / emit_trade / emit_roll_pending. 엔진 검증 실패 (DomainError) 를 catch 해서 GM log 로 흘림
       subject.py                 refresh_active_subject — combat / roll / trade / 최근 대화 NPC 로 active_subject_id 동기화

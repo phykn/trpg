@@ -12,11 +12,16 @@ const TONE = {
   fail:    { color: colors.danger.fg,  label: '실패', cls: 'text-danger-fg'  },
 } as const;
 
+function marginText(entry: RollEntry): string | null {
+  if (entry.roll === 20 || entry.roll === 1) return null;
+  if (entry.margin > 0) return `+${entry.margin} 초과`;
+  if (entry.margin < 0) return `${-entry.margin} 부족`;
+  return null;
+}
+
 export function RollResult({ entry }: { entry: RollEntry }) {
   const tone = TONE[entry.result];
-  const total = entry.roll + entry.mod;
-  const modStr = entry.mod >= 0 ? `+${entry.mod}` : `${entry.mod}`;
-
+  const margin = marginText(entry);
   const { scale, opacity } = useEntryAnimation();
 
   return (
@@ -25,7 +30,7 @@ export function RollResult({ entry }: { entry: RollEntry }) {
         className="bg-canvas-subtle border border-border-default rounded-md px-3 py-2.5"
         style={{ borderLeftWidth: 2, borderLeftColor: tone.color, ...shadow.paper }}
       >
-        <View className="flex-row items-baseline flex-wrap" style={{ gap: 6 }}>
+        <View className="flex-row items-baseline" style={{ gap: 8 }}>
           <View
             className="px-2 py-0.5 rounded-full"
             style={{ backgroundColor: `${tone.color}26` }}
@@ -45,43 +50,29 @@ export function RollResult({ entry }: { entry: RollEntry }) {
             {entry.check}
           </Text>
           <Text className="font-mono text-panel text-fg-subtle">·</Text>
-          <View className="flex-row items-baseline gap-1.5">
-            <Text
-              className="font-sans-semibold text-panel text-fg-subtle"
-              style={{ letterSpacing: 1.2 }}
-            >
-              주사위
-            </Text>
-            <Text
-              className="font-mono-semibold text-panel text-fg-default"
-              style={{ fontVariant: ['tabular-nums'] }}
-            >
-              {entry.roll}
-            </Text>
-            {entry.mod !== 0 && (
+          <Text
+            className="font-sans-semibold text-panel text-fg-subtle"
+            style={{ letterSpacing: 1.2 }}
+          >
+            주사위
+          </Text>
+          <Text
+            className="font-mono-semibold text-panel text-fg-default"
+            style={{ fontVariant: ['tabular-nums'] }}
+          >
+            {entry.roll}
+          </Text>
+          {margin !== null && (
+            <>
+              <Text className="font-mono text-panel text-fg-subtle">·</Text>
               <Text
-                className="font-mono text-panel text-fg-muted"
+                className={`font-mono text-caption ${tone.cls}`}
                 style={{ fontVariant: ['tabular-nums'] }}
               >
-                {modStr} = {total}
+                {margin}
               </Text>
-            )}
-          </View>
-          <Text className="font-mono text-panel text-fg-subtle">·</Text>
-          <View className="flex-row items-baseline gap-1.5">
-            <Text
-              className="font-sans-semibold text-panel text-fg-subtle"
-              style={{ letterSpacing: 1.2 }}
-            >
-              난이도
-            </Text>
-            <Text
-              className="font-mono text-panel text-fg-muted"
-              style={{ fontVariant: ['tabular-nums'] }}
-            >
-              {entry.dc}
-            </Text>
-          </View>
+            </>
+          )}
         </View>
       </View>
     </Animated.View>

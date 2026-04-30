@@ -39,7 +39,6 @@ def env():
             game_id="t",
             profile="default",
             player_id="player_01",
-            world_time="0812-04-28T14:00:00",
         )
         gs.races["human"] = Race(id="human", name="인간", description="x")
         gs.locations["plaza_01"] = Location(id="plaza_01", name="광장")

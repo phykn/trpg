@@ -172,14 +172,6 @@ def test_set_chapter_quest_only_summary_or_status(state):
     assert r["applied"] == 2 and len(r["rejected"]) == 2
 
 
-def test_set_time_forward_and_reject_backward(state):
-    r = apply_changes(state, [{"type": "set_time", "value": "0812-04-29T06:00:00"}])
-    assert r["applied"] == 1 and state.world_time == "0812-04-29T06:00:00"
-    r = apply_changes(state, [{"type": "set_time", "value": "0812-04-28T00:00:00"}])
-    assert r["applied"] == 0
-    assert "no time travel" in r["rejected"][0]["reason"]
-
-
 def test_move_valid_and_unknown(state):
     r = apply_changes(
         state, [{"type": "move", "target": "player_01", "destination": "gate_01"}]
@@ -305,10 +297,10 @@ def test_partial_success_keeps_valid_changes(state):
                 "field": "hp",
                 "value": 0,
             },
-            {"type": "set_time", "value": "0812-04-29T00:00:00"},
+            {"type": "exotic_thing"},
         ],
     )
-    assert r["applied"] == 2 and len(r["rejected"]) == 1
+    assert r["applied"] == 1 and len(r["rejected"]) == 2
     assert state.characters["guard_01"].tone_hint == "x"
 
 

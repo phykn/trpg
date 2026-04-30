@@ -19,7 +19,7 @@
 - 이동(move) state_change 가 정상 적용되는지 (state.place 가 갱신)
 - 아이템 줍기/내려놓기(move_item) 가 동작하는지
 - 새 장소의 surroundings/connection 이 narrator 출력에 반영되는지
-- 시간 진행(world_time) 이 자연스럽게 누적되는지
+- 일과 흐름(day_phase: 새벽/오전/오후/밤) 이 턴 누적에 따라 자연스럽게 바뀌는지
 
 ## 입력 컨텍스트
 

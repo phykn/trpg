@@ -34,7 +34,6 @@ T = TypeVar("T", bound=BaseModel)
 class PlayerInput(BaseModel):
     name: str
     race_id: str
-    appearance: str
 
 
 def _read_json(path: Path) -> dict:
@@ -87,8 +86,8 @@ async def init_game(
 
     # start.json / player_template integrity is already covered by
     # `check_scenario(Scenario.from_dir(pdir))` above (start_location_id,
-    # active_subject_id alive + colocated, active_quest_id status, world_time
-    # ISO 8601, etc.). Anything that gets here is well-formed.
+    # active_subject_id alive + colocated, active_quest_id status, etc.).
+    # Anything that gets here is well-formed.
     player_id = template.get("id", "player_01")
     template_equipment = Equipment.model_validate(template.get("equipment", {}))
     template_inventory = list(template.get("inventory_ids", []))
@@ -102,7 +101,6 @@ async def init_game(
     player_char = Character(
         id=player_id,
         name=player.name,
-        appearance=player.appearance,
         is_player=True,
         race_id=player.race_id,
         stats=stats,
@@ -134,7 +132,6 @@ async def init_game(
         player_id=player_id,
         active_subject_id=active_subject_id,
         active_quest_id=active_quest_id,
-        world_time=start["world_time"],
     )
 
     copy_seed_into_game(profile_dir, profile_name, saves_dir, state.game_id)

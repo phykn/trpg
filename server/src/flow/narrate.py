@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator
 
 from ..agents.narrate import (
     NarrateInput,
+    NarrateOutput,
     NarrativeDelta,
     NarrativeFinal,
     stream_narrate,
@@ -43,8 +44,11 @@ async def run_narrate(
     """Yields NarrativeDelta tokens, then a final NarrativeFinal.
 
     target_view assembly:
-    - action='roll': use `target_id` if given, else first of judge_result.targets.
-    - action='pass' / 'reject': no target_view (surroundings only).
+    - action='roll' / 'pass': use `target_id` if given, else first of
+      judge_result.targets. pass picks up target_view too because dialogue
+      turns ('말 건다', '인사한다') route here and narrate needs the NPC's
+      memories/tone_hint/disposition to stay tonally consistent.
+    - action='reject': no target_view (surroundings only).
 
     reject post-processing: forces empty state_changes / memorable=false on the
     final NarrateOutput (engine-side enforcement; narrator is *also* told to do
@@ -53,7 +57,7 @@ async def run_narrate(
     action = judge_result.get("action")
 
     target_view = None
-    if action == "roll":
+    if action in ("roll", "pass"):
         chosen = target_id
         if chosen is None:
             targets = judge_result.get("targets") or []
@@ -136,6 +140,24 @@ def _expected_destination(judge_result: dict, state: GameState) -> str | None:
     return first
 
 
+def apply_intended_move(
+    state: GameState, judge_result: dict, dirty_entities: set
+) -> None:
+    """Pre-apply the player's relocation before narrate streams, so panels and
+    the narrate prompt's surroundings both treat the destination as already
+    reached. After this runs, `_reconcile_player_move` becomes a no-op for the
+    move (player.location_id == expected → returns None), and any leftover
+    relocation deltas narrate still emits get stripped by the same path."""
+    expected = _expected_destination(judge_result, state)
+    if expected is None:
+        return
+    apply_changes(
+        state,
+        [{"type": "move", "target": state.player_id, "destination": expected}],
+        dirty_entities,
+    )
+
+
 def _reconcile_player_move(
     changes: list[dict], judge_result: dict, state: GameState
 ) -> list[dict]:
@@ -192,14 +214,25 @@ async def consume_narrate(
             yield {"type": "narrative_delta", "data": {"text": item.text}}
         else:
             final = item
-    assert final is not None
+
+    # Narrate guarantee: even when the LLM produces nothing usable (empty
+    # body after retries, or the stream short-circuited without a final),
+    # the narrator must still say something. Otherwise the turn looks broken
+    # — typing dots vanish and no GM line lands. Fall back to a deterministic
+    # "잠시 정적이 흐른다" and stream it as a delta so the client sees it.
+    if final is None:
+        final = NarrativeFinal(body="", output=NarrateOutput())
+    body = final.body.strip()
+    if not body:
+        body = "잠시 정적이 흐른다."
+        yield {"type": "narrative_delta", "data": {"text": body}}
 
     yield {"type": "suggestions", "data": {"items": list(final.output.suggestions)}}
 
     apply_changes(state, final.output.state_changes, dirty.entities)
     push_turn_log(state, target_for_log, final.output.turn_summary, dirty)
     if dialogue_input is not None:
-        push_dialogue(state, dialogue_input, final.body, dirty)
+        push_dialogue(state, dialogue_input, body, dirty)
     write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
-    gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=final.body)
+    gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=body)
     push_log_entry(state, gm_log, dirty)

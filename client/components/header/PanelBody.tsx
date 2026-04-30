@@ -71,7 +71,12 @@ export function PanelBody({ panel, onAction }: { panel: Panel; onAction?: (actio
 
       <ExpandGroup>
         {(panel.sections || []).map((section) => (
-          <LabeledRow key={section.label} label={section.label} mono={!!section.nodes}>
+          <LabeledRow
+            key={section.label}
+            label={section.label}
+            mono={!!section.nodes}
+            clampLines={section.clampLines}
+          >
             {section.nodes ? <InlineNodes entries={section.nodes} /> : section.text}
           </LabeledRow>
         ))}

@@ -5,6 +5,8 @@ string for a log entry lives here.
 """
 from ..domain.state import GameState
 from ..engines.combat import AttackOutcome
+from ..mapping.josa import eul_reul, i_ga
+from .combat_oneshot import CombatOutcomeReport
 
 
 # --- Labels and grade helpers ----------------------------------------------
@@ -42,28 +44,56 @@ def format_attack_log(
     grade_label = GRADE_LABEL[outcome.grade]
     if outcome.damage > 0:
         head = (
-            f"{attacker.name}이(가) {target.name}에게 "
+            f"{attacker.name}{i_ga(attacker.name)} {target.name}에게 "
             f"{outcome.damage} 피해를 입혔다 ({grade_label}, 굴림 {outcome.nat_d20})."
         )
     elif outcome.grade == "critical_failure":
         head = (
-            f"{attacker.name}이(가) 공격을 시도하다 "
-            f"{grade_label}했다 (굴림 {outcome.nat_d20})."
+            f"{attacker.name}{i_ga(attacker.name)} 공격을 시도했지만 "
+            f"대실패했다 (굴림 {outcome.nat_d20})."
         )
     else:
         head = (
-            f"{attacker.name}이(가) {target.name}을(를) "
+            f"{attacker.name}{i_ga(attacker.name)} {target.name}{eul_reul(target.name)} "
             f"노렸으나 빗나갔다 (굴림 {outcome.nat_d20})."
         )
     if apply_result is None:
         return head
     if apply_result.get("revived"):
-        return f"{head} {target.name}이(가) 부활 코인을 사용해 HP를 회복했다."
+        return f"{head} {target.name}{i_ga(target.name)} 부활 코인을 사용해 HP를 회복했다."
     if apply_result.get("dead"):
-        return f"{head} {target.name}이(가) 쓰러졌다."
+        return f"{head} {target.name}{i_ga(target.name)} 쓰러졌다."
     if apply_result.get("dying"):
-        return f"{head} {target.name}이(가) 의식을 잃었다."
+        return f"{head} {target.name}{i_ga(target.name)} 의식을 잃었다."
     return head
+
+
+def format_combat_outcome_text(
+    report: CombatOutcomeReport, roll_xp: int
+) -> str | None:
+    """Numeric breakdown rendered as one act-line after the cinematic body —
+    per-enemy damage / HP / kill XP, the player's hit, and any per-roll XP
+    earned. Returns None when there is nothing to report (e.g. no enemies
+    registered, no damage, no XP)."""
+    lines: list[str] = []
+    for h in report.enemy_hits:
+        if h.killed:
+            tail = f" — 쓰러짐 (+{h.xp} XP)" if h.xp > 0 else " — 쓰러짐"
+            lines.append(f"{h.name} {h.damage} 피해{tail}")
+        else:
+            lines.append(
+                f"{h.name} {h.damage} 피해 (HP {h.hp_after}/{h.max_hp})"
+            )
+    if report.player_damage > 0:
+        lines.append(
+            f"피격 {report.player_damage} 피해 "
+            f"(HP {report.player_hp_after}/{report.player_max_hp})"
+        )
+    if roll_xp > 0:
+        lines.append(f"굴림 경험치 +{roll_xp}")
+    if not lines:
+        return None
+    return "전투 결과\n" + "\n".join(lines)
 
 
 def format_combat_end_text(outcome: str) -> str:

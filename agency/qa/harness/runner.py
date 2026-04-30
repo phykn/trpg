@@ -102,7 +102,6 @@ async def run_qa_session(
                 "player": {
                     "name": f"QA-{agent.name}",
                     "race_id": "human",
-                    "appearance": "QA 테스터, 평범한 차림",
                 },
             },
         )

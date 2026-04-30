@@ -59,7 +59,7 @@ function buildSubjectSlot(subject: Subject | null): PanelSlot {
         { label: '장비', text: joinOrDash(equipped.map((it) => it.name)) },
         { label: '소지', text: joinInventoryOrDash(subject.inventory) },
         { label: '기술', text: joinOrDash(subject.skills) },
-        { label: '특징', text: joinOrDash(subject.known) },
+        { label: '특징', text: joinOrDash(subject.known), clampLines: 2 },
       ],
     },
   };
@@ -86,7 +86,7 @@ function buildQuestSlot(quest: Quest | null): PanelSlot {
           sections: [
             { label: '목표', text: joinOrDash(quest.goals) },
             { label: '조건', text: joinOrDash(quest.conditions) },
-            { label: '요약', text: quest.summary },
+            { label: '요약', text: quest.summary, clampLines: 3 },
           ],
         }
       : null,
@@ -109,7 +109,9 @@ function buildPlaceSlot(place: Place | null): PanelSlot {
       ? {
           title: place.name,
           meta: joinOrDash(place.weather),
-          sections: [{ label: '시간', text: place.dateTime }],
+          sections: [
+            { label: '모습', text: place.description || '—', clampLines: 3 },
+          ],
           actions: [
             {
               label: '장소',

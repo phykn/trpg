@@ -9,19 +9,15 @@ import {
 
 import { colors, shadow } from '@/design/tokens';
 
-import { DiceButton } from './DiceButton';
 import { SendButton } from './SendButton';
 import { StopButton } from './StopButton';
 
-export function Composer({ input, setInput, onSend, onRoll, onStop, rolling, focused, rollEnabled, streaming }: {
+export function Composer({ input, setInput, onSend, onStop, focused, streaming }: {
   input: string;
   setInput: (text: string) => void;
   onSend: (text: string) => void;
-  onRoll: () => void;
   onStop: () => void;
-  rolling: boolean;
   focused: boolean;
-  rollEnabled: boolean;
   streaming: boolean;
 }) {
   const inputRef = React.useRef(input);
@@ -57,10 +53,6 @@ export function Composer({ input, setInput, onSend, onRoll, onStop, rolling, foc
       sendText(fromRef.length > fromEvent.length ? fromRef : fromEvent);
     }, 0);
   };
-  const roll = () => {
-    onRoll();
-    Keyboard.dismiss();
-  };
 
   const borderClass = focused ? 'border-accent-fg' : 'border-border-default';
 
@@ -82,7 +74,6 @@ export function Composer({ input, setInput, onSend, onRoll, onStop, rolling, foc
         style={{ paddingBottom: 6, maxHeight: 140 }}
       />
       <View className="flex-row items-center justify-end gap-2 px-1 pt-1">
-        <DiceButton enabled={rollEnabled && !streaming} rolling={rolling} onPress={roll} />
         {streaming ? (
           <StopButton onPress={onStop} />
         ) : (

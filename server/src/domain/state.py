@@ -53,8 +53,6 @@ class GameState(BaseModel):
     active_subject_id: str | None = None
     active_quest_id: str | None = None
 
-    world_time: str
-
     turn_count: int = 0
     pending_check: PendingCheck | None = None
     combat_state: CombatState | None = None

@@ -28,7 +28,6 @@ export function NewGame({ onSubmit }: Props) {
   const [profileId, setProfileId] = React.useState<string | null>(null);
   const [raceId, setRaceId] = React.useState<string | null>(null);
   const [name, setName] = React.useState('주인공');
-  const [appearance, setAppearance] = React.useState('평범함');
   const [submitting, setSubmitting] = React.useState(false);
 
   const loadProfiles = React.useCallback(() => {
@@ -53,9 +52,7 @@ export function NewGame({ onSubmit }: Props) {
   const races = selectedProfile?.races ?? [];
 
   const trimmedName = name.trim();
-  const trimmedAppearance = appearance.trim();
-  const canSubmit =
-    !!profileId && !!raceId && !!trimmedName && !!trimmedAppearance && !submitting;
+  const canSubmit = !!profileId && !!raceId && !!trimmedName && !submitting;
 
   const submit = async () => {
     if (!canSubmit || !profileId || !raceId) return;
@@ -63,7 +60,7 @@ export function NewGame({ onSubmit }: Props) {
     setSubmitting(true);
     await onSubmit({
       profile: profileId,
-      player: { name: trimmedName, race_id: raceId, appearance: trimmedAppearance },
+      player: { name: trimmedName, race_id: raceId },
     });
   };
 
@@ -108,7 +105,7 @@ export function NewGame({ onSubmit }: Props) {
         </View>
         <Text className="font-serif-medium text-narration text-fg-default">새 게임</Text>
         <Text className="font-sans text-body text-fg-muted">
-          세계관과 종족을 고르고, 이름·외모를 채우면 시작합니다.
+          이름을 정하고, 세계관과 종족을 고르면 시작합니다.
         </Text>
       </View>
 
@@ -127,6 +124,10 @@ export function NewGame({ onSubmit }: Props) {
           {submitting ? '생성 중…' : '시작'}
         </Text>
       </Pressable>
+
+      <Section label="이름">
+        <Input value={name} onChangeText={setName} placeholder="등장인물의 이름" />
+      </Section>
 
       <Section label="세계관">
         {profiles.map((p) => (
@@ -160,18 +161,6 @@ export function NewGame({ onSubmit }: Props) {
           )}
         </Section>
       )}
-
-      <Section label="이름">
-        <Input value={name} onChangeText={setName} placeholder="등장인물의 이름" />
-      </Section>
-
-      <Section label="외모">
-        <Input
-          value={appearance}
-          onChangeText={setAppearance}
-          placeholder="한 줄로 외모를 묘사"
-        />
-      </Section>
     </ScrollView>
   );
 }

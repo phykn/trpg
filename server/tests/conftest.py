@@ -16,7 +16,6 @@ def fresh_state():
         game_id="t",
         profile="default",
         player_id="player_01",
-        world_time="0812-04-28T12:00:00",
     )
 
 

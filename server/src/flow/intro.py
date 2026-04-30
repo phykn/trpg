@@ -16,7 +16,7 @@ async def run_intro(
     to_front_fn: ToFrontFn | None = None,
 ) -> AsyncIterator[dict]:
     """First GM intro, called once right after game start. Skips judge and
-    only calls narrate. turn_count and world_time stay at zero."""
+    only calls narrate. turn_count stays at zero (= day_phase '새벽')."""
     set_llm_session_if_unset(state.game_id)
     dirty = Dirty()
     stream = run_narrate(

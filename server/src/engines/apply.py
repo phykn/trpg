@@ -1,7 +1,6 @@
-"""state_changes — five mutation kinds (set, set_time, move, move_item,
-affinity) the LLM emits as part of NarrateOutput. Each kind has its own
-permission matrix; forbidden fields drop silently per change, the rest of
-the batch still applies. Time may not run backwards."""
+"""state_changes — four mutation kinds (set, move, move_item, affinity) the
+LLM emits as part of NarrateOutput. Each kind has its own permission matrix;
+forbidden fields drop silently per change, the rest of the batch still applies."""
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
@@ -20,11 +19,6 @@ class SetChange(BaseModel):
     id: str
     field: str
     value: Any = None
-
-
-class SetTimeChange(BaseModel):
-    type: Literal["set_time"]
-    value: str  # ISO 8601
 
 
 class MoveChange(BaseModel):
@@ -50,7 +44,7 @@ class AffinityChange(BaseModel):
 
 
 StateChange = Annotated[
-    SetChange | SetTimeChange | MoveChange | MoveItemChange | AffinityChange,
+    SetChange | MoveChange | MoveItemChange | AffinityChange,
     Field(discriminator="type"),
 ]
 
@@ -168,18 +162,6 @@ def _apply_set(
         dirty.add((c.entity, c.id))
 
 
-def _apply_set_time(
-    state: GameState,
-    c: SetTimeChange,
-    dirty: set[tuple[str, str]] | None,
-) -> None:
-    if c.value < state.world_time:
-        raise _StateChangeError(
-            f"set_time {c.value!r} < current {state.world_time!r} (no time travel)"
-        )
-    state.world_time = c.value
-
-
 def _apply_move(
     state: GameState,
     c: MoveChange,
@@ -269,7 +251,6 @@ def _apply_affinity(
 
 _HANDLERS = {
     "set": _apply_set,
-    "set_time": _apply_set_time,
     "move": _apply_move,
     "move_item": _apply_move_item,
     "affinity": _apply_affinity,
@@ -291,7 +272,7 @@ def apply_changes(
 ) -> dict:
     """Apply state_changes to `state`. If `dirty` is provided, populate it
     with `(entity_kind, entity_id)` tuples for every change that successfully
-    mutates an entity file. `set_time` only touches meta, not entities."""
+    mutates an entity file."""
     applied = 0
     rejected: list[dict] = []
     for idx, raw in enumerate(raw_changes):
@@ -307,4 +288,4 @@ def apply_changes(
             applied += 1
         except _StateChangeError as e:
             rejected.append({"index": idx, "change": raw, "reason": str(e)})
-    return {"applied": applied, "rejected": rejected, "world_time": state.world_time}
+    return {"applied": applied, "rejected": rejected}

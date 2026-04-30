@@ -19,7 +19,6 @@ def _state(*characters: Character, items: dict | None = None) -> GameState:
         game_id="t",
         profile="default",
         player_id=characters[0].id if characters else "player_01",
-        world_time="0812-04-28T12:00:00",
     )
     for c in characters:
         s.characters[c.id] = c

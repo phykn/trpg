@@ -10,9 +10,8 @@ export type LogEntry =
       id: number;
       kind: 'roll';
       check: string;
-      dc: number;
       roll: number;
-      mod: number;
+      margin: number;
       result: RollResult;
     };
 
@@ -40,6 +39,7 @@ export type PanelSection = {
   label: string;
   text?: string;
   nodes?: [string, string | number][];
+  clampLines?: number;
 };
 
 export type ConfirmInfo = {

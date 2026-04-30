@@ -80,7 +80,8 @@ export type PlaceTarget = {
 
 export type Place = {
   name: string;
-  dateTime: string;
+  description: string;
+  dayPhase: string;
   weather: string[];
   features: string[];
   surroundings: PlaceSurrounding[];
@@ -103,12 +104,16 @@ export type CombatBadge = {
 };
 
 export type PendingCheck = {
+  kind: 'stat' | 'death_save' | 'combat_roll';
   dc: number;
   stat: string;
+  stat_label: string;
+  stat_value: number | null;
   mod: number;
   required_roll: number;
   tier: { value: number; max: number; label: string };
   target: string;
+  reason: string | null;
 };
 
 export type FrontState = {

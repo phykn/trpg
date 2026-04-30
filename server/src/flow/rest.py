@@ -7,10 +7,9 @@ from ..domain.state import GameState
 from ..engines import recovery as recovery_engine
 from ..llm.client import LLMClient
 from ..mapping.to_front import rest_ambush_text, rest_completed_text
-from ..rules import RULES
 from . import encounter as encounter_engine
 from .combat_phase import start_combat_and_run_npc_phase
-from .clock import advance_time
+from .clock import advance_turn
 from .dirty import Dirty, ToFrontFn, finalize, push_act
 
 
@@ -48,11 +47,11 @@ async def run_rest(
             state, enemy_ids, dirty, rng, surprise="enemy"
         ):
             yield ev
-        advance_time(state, dirty)
+        advance_turn(state, dirty)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
 
-    yield push_act(state, dirty, rest_completed_text(actor.name, RULES.time.sleep_hours))
+    yield push_act(state, dirty, rest_completed_text(actor.name))
     async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev

@@ -16,6 +16,7 @@ since both are "press the button to roll".
 """
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from ..agents.combat_narrate import (
@@ -31,8 +32,32 @@ from ..domain.types import Grade
 from ..engines import combat as combat_engine
 from ..engines.growth import award_kill_xp
 from ..rules.config import RULES
-from ..rules.dc import tier_mid_dc
+from ..rules.dc import sigmoid_required_roll, tier_mid_dc
 from .dirty import Dirty
+
+
+# --- Outcome report --------------------------------------------------------
+
+
+@dataclass
+class EnemyHit:
+    """Per-enemy slice of a one-roll combat result. Used by the outcome
+    formatter to render the post-cinematic numeric breakdown."""
+    id: str
+    name: str
+    damage: int
+    hp_after: int
+    max_hp: int
+    killed: bool
+    xp: int
+
+
+@dataclass
+class CombatOutcomeReport:
+    enemy_hits: list[EnemyHit] = field(default_factory=list)
+    player_damage: int = 0
+    player_hp_after: int = 0
+    player_max_hp: int = 0
 
 
 # --- Snapshots / context for combat_narrate --------------------------------
@@ -100,6 +125,8 @@ def arm_combat_roll_pending(
     tier = _pick_combat_tier(len(target_ids))
     dc = tier_mid_dc(tier)
     primary = target_ids[0] if target_ids else state.player_id
+    actor = state.characters[state.player_id]
+    required_roll = sigmoid_required_roll(dc, getattr(actor.stats, "STR"))
     state.pending_check = PendingCheck(
         player_input=player_input,
         kind="combat_roll",
@@ -109,10 +136,7 @@ def arm_combat_roll_pending(
         targets=list(target_ids),
         dc=dc,
         mod=0,
-        # required_roll is filled by the standard sigmoid-from-DC math in
-        # /roll. We seed it with `dc` here (a safe lower bound) so the
-        # schema validates; /roll recomputes from stat vs DC.
-        required_roll=dc,
+        required_roll=required_roll,
         reason=skill_id or "전투 굴림",
         created_at=datetime.now(UTC).isoformat(),
     )
@@ -136,9 +160,11 @@ def apply_combat_outcome(
     target_ids: list[str],
     grade: Grade,
     dirty: Dirty,
-) -> tuple[int, list[str]]:
-    """Apply mechanical effects of a one-roll combat. Returns
-    `(player_damage_dealt_to_self, killed_enemy_ids)`.
+) -> CombatOutcomeReport:
+    """Apply mechanical effects of a one-roll combat and return a per-enemy
+    breakdown plus the player's hit. The returned report drives the numeric
+    post-cinematic act-line so the player can see the actual damage / HP /
+    kill XP behind the prose.
 
     - critical_success / success / partial_success → kill all enemies, take
       a grade-scaled chunk of HP. XP is awarded per kill.
@@ -149,7 +175,7 @@ def apply_combat_outcome(
     player = state.characters[state.player_id]
     player_dmg_pct, kill_enemies = _OUTCOME_TABLE[grade]
 
-    killed: list[str] = []
+    report = CombatOutcomeReport()
     for tid in target_ids:
         if tid not in state.characters:
             continue
@@ -161,21 +187,36 @@ def apply_combat_outcome(
             combat_engine.apply_attack_to_defender(
                 state, tid, damage, dirty=dirty.entities,
             )
-            if not enemy.alive:
+            killed = not enemy.alive
+            xp = (
                 award_kill_xp(state, state.player_id, tid, dirty=dirty.entities)
-                killed.append(tid)
+                if killed else 0
+            )
+            report.enemy_hits.append(EnemyHit(
+                id=tid, name=enemy.name, damage=damage,
+                hp_after=enemy.hp, max_hp=enemy.max_hp,
+                killed=killed, xp=xp,
+            ))
         else:
             damage = max(1, enemy.hp // 2)
             combat_engine.apply_attack_to_defender(
                 state, tid, damage, dirty=dirty.entities,
             )
+            report.enemy_hits.append(EnemyHit(
+                id=tid, name=enemy.name, damage=damage,
+                hp_after=enemy.hp, max_hp=enemy.max_hp,
+                killed=False, xp=0,
+            ))
 
     player_damage = int(round(player.max_hp * player_dmg_pct))
     if player_damage > 0:
         combat_engine.apply_attack_to_defender(
             state, player.id, player_damage, dirty=dirty.entities,
         )
-    return player_damage, killed
+    report.player_damage = player_damage
+    report.player_hp_after = player.hp
+    report.player_max_hp = player.max_hp
+    return report
 
 
 def build_oneshot_narrate_input(

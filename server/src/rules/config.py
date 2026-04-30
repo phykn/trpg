@@ -40,8 +40,7 @@ class LogConfig(_F):
 
 
 class TimeConfig(_F):
-    turn_min: int = 1
-    sleep_hours: int = 8
+    phase_turns: int = 10  # turns per day-phase; 4 phases × phase_turns = full day cycle
 
 
 class RecoveryConfig(_F):

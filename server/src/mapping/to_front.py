@@ -1,6 +1,6 @@
 from collections import Counter
-from datetime import datetime
 
+from ..domain.clock import day_phase
 from ..domain.entities import (
     EQUIPMENT_SLOTS,
     Character,
@@ -12,6 +12,7 @@ from ..domain.memory import PendingCheck
 from ..domain.types import tier_to_int
 from ..engines.growth import can_afford_level_up, xp_for_next_level
 from ..domain.state import GameState
+from .josa import eun_neun, i_ga
 
 
 # --- Hero ------------------------------------------------------------------
@@ -25,6 +26,11 @@ _STAT_LABELS: tuple[tuple[str, str], ...] = (
     ("WIS", "지혜"),
     ("CHA", "매력"),
 )
+_STAT_LABEL_BY_KEY: dict[str, str] = dict(_STAT_LABELS)
+
+
+def stat_label(stat: str) -> str:
+    return _STAT_LABEL_BY_KEY.get(stat, stat)
 
 
 def _stats(stats: Stats) -> list[dict]:
@@ -164,36 +170,11 @@ def to_quest(state: GameState) -> dict | None:
 # --- Place -----------------------------------------------------------------
 
 
-def _korean_date(dt: datetime) -> str:
-    return f"{dt.year}년 {dt.month}월 {dt.day}일"
-
-
-def _period(hour: int) -> str:
-    if 5 <= hour < 7:
-        return "새벽"
-    if 7 <= hour < 12:
-        return "오전"
-    if 12 <= hour < 18:
-        return "오후"
-    if 18 <= hour < 21:
-        return "저녁"
-    return "밤"
-
-
-def _hour12(hour: int) -> int:
-    if hour == 0:
-        return 12
-    if hour > 12:
-        return hour - 12
-    return hour
-
-
 def to_place(state: GameState) -> dict | None:
     p = state.characters[state.player_id]
     if p.location_id is None or p.location_id not in state.locations:
         return None
     loc: Location = state.locations[p.location_id]
-    dt = datetime.fromisoformat(state.world_time)
     surroundings = []
     for c in loc.connections:
         if c.target_id not in state.locations:
@@ -216,7 +197,8 @@ def to_place(state: GameState) -> dict | None:
         })
     return {
         "name": loc.name,
-        "dateTime": f"{_korean_date(dt)} {_period(dt.hour)} {_hour12(dt.hour)}시",
+        "description": loc.description,
+        "dayPhase": day_phase(state.turn_count),
         "weather": list(loc.weather),
         "features": list(loc.tags),
         "surroundings": surroundings,
@@ -254,11 +236,25 @@ def to_combat(state: GameState) -> dict | None:
 # --- PendingCheck ----------------------------------------------------------
 
 
-def pending_check_to_front(pending: PendingCheck) -> dict:
+def pending_check_to_front(state: GameState, pending: PendingCheck) -> dict:
+    """`stat_label` is the Korean stat name (built here so the client doesn't
+    re-derive it). `stat_value` is the player's score on that stat — null for
+    death saves where the stat field is set to a placeholder (CON) and
+    irrelevant to display. `reason` is shown verbatim above the dice strip;
+    only the stat-roll branch carries a player-readable Korean phrase
+    (death_save uses the placeholder "죽음 굴림", combat_roll stuffs a
+    skill_id), so we surface it for stat only and null the rest."""
+    if pending.kind == "death_save":
+        stat_value = None
+    else:
+        actor = state.characters[state.player_id]
+        stat_value = getattr(actor.stats, pending.stat)
     return {
         "kind": pending.kind,
         "dc": pending.dc,
         "stat": pending.stat,
+        "stat_label": stat_label(pending.stat),
+        "stat_value": stat_value,
         "mod": pending.mod,
         "required_roll": pending.required_roll,
         "tier": {
@@ -267,21 +263,22 @@ def pending_check_to_front(pending: PendingCheck) -> dict:
             "label": pending.tier,
         },
         "target": pending.target,
+        "reason": pending.reason if pending.kind == "stat" else None,
     }
 
 
 # --- Composed Korean strings (flow pushes these as GM lines) ---------------
 
 
-def rest_completed_text(actor_name: str, hours: int) -> str:
+def rest_completed_text(actor_name: str) -> str:
     return (
-        f"{actor_name}은(는) 자리를 잡고 잠을 청한다. "
-        f"{hours}시간 후 푹 쉬고 일어나, HP/MP 가 모두 회복됐다."
+        f"{actor_name}{eun_neun(actor_name)} 자리를 잡고 잠을 청한다. "
+        f"새벽이 밝아오자 푹 쉬고 일어나 HP/MP가 모두 회복됐다."
     )
 
 
 def rest_ambush_text(actor_name: str) -> str:
-    return f"{actor_name}이(가) 잠들기 직전 적의 습격을 받는다."
+    return f"{actor_name}{i_ga(actor_name)} 잠들기 직전 적의 습격을 받는다."
 
 
 # --- FrontState ------------------------------------------------------------
@@ -296,5 +293,5 @@ def to_front_state(state: GameState) -> dict:
         "place": to_place(state),
         "combat": to_combat(state),
         "log": [e.model_dump() for e in state.log_entries],
-        "pendingCheck": pending_check_to_front(pending) if pending else None,
+        "pendingCheck": pending_check_to_front(state, pending) if pending else None,
     }

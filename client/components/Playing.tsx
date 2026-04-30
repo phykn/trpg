@@ -6,7 +6,7 @@ import { buildPanelSlots } from '@/presenters';
 import type { PanelAction } from '@/types/ui';
 
 import { CombatStrip } from './combat';
-import { Composer } from './composer';
+import { Composer, RollPrompt } from './composer';
 import { ContextCard } from './header';
 import { HeroStrip } from './hero';
 import { Log } from './log';
@@ -52,8 +52,7 @@ export function Playing({ game }: Props) {
   if (!hero) return null;
 
   const slots = buildPanelSlots({ hero, subject, quest, place });
-  const rollEnabled = pending !== null;
-  const rolling = rollEnabled && streaming;
+  const rolling = pending !== null && streaming;
 
   return (
     <View className="flex-1 bg-canvas-default py-2.5 gap-2.5">
@@ -106,15 +105,14 @@ export function Playing({ game }: Props) {
 
       {combat ? <CombatStrip combat={combat} /> : null}
 
+      {pending ? <RollPrompt pending={pending} onRoll={onRoll} rolling={rolling} /> : null}
+
       <Composer
         input={input}
         setInput={setInput}
         onSend={onSend}
-        onRoll={onRoll}
         onStop={onStop}
-        rolling={rolling}
         focused={typing}
-        rollEnabled={rollEnabled}
         streaming={streaming}
       />
     </View>

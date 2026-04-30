@@ -9,9 +9,10 @@ from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..engines.growth import grant_roll_xp
 from ..llm.client import LLMClient, set_llm_session_if_unset
-from ..mapping.to_front import pending_check_to_front
+from ..mapping.josa import i_ga
+from ..mapping.to_front import pending_check_to_front, stat_label
 from ..rules.config import RULES
-from ..rules.dc import compute_grade, sigmoid_required_roll
+from ..rules.dc import compute_grade
 from .combat_oneshot import (
     apply_combat_outcome,
     arm_death_save_pending,
@@ -19,7 +20,7 @@ from .combat_oneshot import (
 )
 from ..agents.combat_narrate import stream_combat_narrate
 from .combat_phase import run_combat_npc_phase
-from .clock import advance_time
+from .clock import advance_turn
 from .dirty import (
     Dirty,
     ToFrontFn,
@@ -29,7 +30,11 @@ from .dirty import (
     push_gm,
     push_log_entry,
 )
-from .format import format_combat_end_text, front_grade
+from .format import (
+    format_combat_end_text,
+    format_combat_outcome_text,
+    front_grade,
+)
 from .narrate import consume_narrate, run_narrate
 
 
@@ -47,29 +52,26 @@ async def _resolve_combat_roll(
     """One-roll combat resolution. The d20 + STR vs DC produces a grade,
     grade drives mechanical outcome (kills/HP/XP), and combat_narrate
     streams a 5-10 sentence cinematic of the entire fight."""
-    player = state.characters[state.player_id]
-    stat_value = getattr(player.stats, pending.stat)
-    required_roll = sigmoid_required_roll(pending.dc, stat_value)
     total = dice + pending.mod
-    grade = compute_grade(dice, total, required_roll)
+    grade = compute_grade(dice, total, pending.required_roll)
 
     roll_log = RollLogEntry(
         id=next_log_id(state),
         kind="roll",
-        check=pending.stat,
-        dc=pending.dc,
+        check=stat_label(pending.stat),
         roll=dice,
-        mod=pending.mod,
+        margin=total - pending.required_roll,
         result=front_grade(grade),
     )
     push_log_entry(state, roll_log, dirty)
     yield {"type": "log_entry", "data": roll_log.model_dump()}
 
-    grant_roll_xp(state, grade, dirty=dirty.entities)
+    roll_xp = grant_roll_xp(state, grade, dirty=dirty.entities)
 
     # Apply mechanical outcome — kill enemies / damage player / award XP
     target_ids = list(pending.targets)
-    player_damage, killed = apply_combat_outcome(state, target_ids, grade, dirty)
+    report = apply_combat_outcome(state, target_ids, grade, dirty)
+    killed = [h.id for h in report.enemy_hits if h.killed]
 
     # Stream the cinematic scene
     if client is not None:
@@ -78,7 +80,7 @@ async def _resolve_combat_roll(
             player_input=pending.player_input,
             target_ids=target_ids,
             grade=grade,
-            player_damage=player_damage,
+            player_damage=report.player_damage,
             killed_enemy_ids=killed,
         )
         body_chunks: list[str] = []
@@ -89,12 +91,21 @@ async def _resolve_combat_roll(
         if body:
             yield push_gm(state, dirty, body)
 
+    # Numeric outcome breakdown — pushed after the cinematic so the prose
+    # lands first and the player can then read off the actual damage/HP/XP.
+    outcome_text = format_combat_outcome_text(report, roll_xp)
+    if outcome_text:
+        yield push_act(state, dirty, outcome_text)
+
     # Outcome bookkeeping: death-save arming if player went down,
-    # combat_end semantic flag.
+    # combat_end semantic flag. Clear the combat_roll pending here for
+    # terminal outcomes; for "downed" we replace it with a death_save
+    # pending instead, which the caller must NOT overwrite.
     player = state.characters[state.player_id]
     if not player.alive:
         yield push_act(state, dirty, format_combat_end_text("defeat"))
         yield {"type": "combat_end", "data": {"outcome": "defeat"}}
+        state.pending_check = None
     elif player.death_saves is not None:
         yield push_act(
             state, dirty,
@@ -104,14 +115,16 @@ async def _resolve_combat_roll(
         arm_death_save_pending(state)
         yield {
             "type": "pending_check",
-            "data": pending_check_to_front(state.pending_check),
+            "data": pending_check_to_front(state, state.pending_check),
         }
     elif killed:
         yield push_act(state, dirty, format_combat_end_text("victory"))
         yield {"type": "combat_end", "data": {"outcome": "victory"}}
+        state.pending_check = None
     else:
         yield push_act(state, dirty, "전투가 흩어진다 — 적은 살아 있다.")
         yield {"type": "combat_end", "data": {"outcome": "broken_off"}}
+        state.pending_check = None
 
 
 # --- death-save resolution -------------------------------------------------
@@ -133,10 +146,9 @@ async def _resolve_death_save(
     roll_log = RollLogEntry(
         id=next_log_id(state),
         kind="roll",
-        check="DEATH",
-        dc=RULES.death.save_dc,
+        check="죽음 굴림",
         roll=dice,
-        mod=0,
+        margin=dice - RULES.death.save_dc,
         result=front_grade(grade if status != "dead" else "critical_failure"),
     )
     push_log_entry(state, roll_log, dirty)
@@ -144,10 +156,10 @@ async def _resolve_death_save(
 
     if status == "stable":
         state.pending_check = None
-        yield push_act(state, dirty, f"{player.name}이(가) 의식을 회복했다.")
+        yield push_act(state, dirty, f"{player.name}{i_ga(player.name)} 의식을 회복했다.")
     elif status == "dead":
         state.pending_check = None
-        yield push_act(state, dirty, f"{player.name}이(가) 사망했다.")
+        yield push_act(state, dirty, f"{player.name}{i_ga(player.name)} 사망했다.")
     else:
         # progress — re-arm the dice prompt
         arm_death_save_pending(state)
@@ -160,7 +172,7 @@ async def _resolve_death_save(
             )
         yield {
             "type": "pending_check",
-            "data": pending_check_to_front(state.pending_check),
+            "data": pending_check_to_front(state, state.pending_check),
         }
 
 
@@ -190,7 +202,7 @@ async def run_roll(
     if pending.kind == "death_save":
         async for ev in _resolve_death_save(state, dirty, dice):
             yield ev
-        advance_time(state, dirty)
+        advance_turn(state, dirty)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -200,8 +212,7 @@ async def run_roll(
             client, state, profile_dir, dirty, dice, pending,
         ):
             yield ev
-        state.pending_check = None
-        advance_time(state, dirty)
+        advance_turn(state, dirty)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
@@ -212,10 +223,9 @@ async def run_roll(
     roll_log = RollLogEntry(
         id=next_log_id(state),
         kind="roll",
-        check=pending.stat,
-        dc=pending.dc,
+        check=stat_label(pending.stat),
         roll=dice,
-        mod=pending.mod,
+        margin=total - pending.required_roll,
         result=front_grade(grade),
     )
     push_log_entry(state, roll_log, dirty)
@@ -248,7 +258,7 @@ async def run_roll(
         yield ev
 
     state.pending_check = None
-    advance_time(state, dirty)
+    advance_turn(state, dirty)
 
     if state.combat_state is not None:
         # Environment rolls cost the player one combat turn — NPC phase resumes.

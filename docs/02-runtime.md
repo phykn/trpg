@@ -81,7 +81,7 @@ LLM 을 두 개로 쪼갠다.
 - `judge_result`: DC판정 에이전트 출력
 - `grade`: 주사위 결과 등급 (roll/combat 일 때만, §5.3)
 - `world_layer`: 세계관 (§3.1)
-- `session_layer`: 챕터/퀘스트 진행 상태 (§3.2). `chapter.{title, summary, quests[]}` + `quests[].{title, summary, giver, goals, conditions}` + `world_time`. progress 숫자는 안 보냄. [P3 에서 Campaign 추가]
+- `session_layer`: 챕터/퀘스트 진행 상태 (§3.2). `chapter.{title, summary, quests[]}` + `quests[].{title, summary, giver, goals, conditions}` + `day_phase` (새벽/오전/오후/밤). progress 숫자는 안 보냄. [P3 에서 Campaign 추가]
 - `history_layer`: 최근 N턴 대화 + 이전 턴 요약 (§3.3)
 - `target_view`: 대상 엔티티 기준 그래프 1-2홉 (§3.4.2). pass·reject 면 surroundings 만 (target_view 없음). reject 일 땐 추가로 reject 가이드(인-게임 방식으로 막으라는 지시)가 system 프롬프트에 합쳐짐.
 
@@ -116,7 +116,7 @@ LLM 을 두 개로 쪼갠다.
 - 수치/확률/DC 를 본문에 노출하지 않음 ("설득을 시도한다" ○, "DC 15 설득" ✗)
 - HP·데미지·XP·골드는 엔진이 이미 적용. 본문에서 숫자로 다시 제시하지 않음.
 - NPC 의 말투·대사는 `target_view` 의 `tone_hint`, `disposition` 을 따름.
-- `state_changes` 타입은 `set | set_time | move | move_item | affinity` 5종만. 이 5종이 아니거나 형식이 어긋난 항목은 `apply_changes` 가 `rejected[]` 로 따로 빼두고 적용하지 않는다.
+- `state_changes` 타입은 `set | move | move_item | affinity` 4종만. 이 4종이 아니거나 형식이 어긋난 항목은 `apply_changes` 가 `rejected[]` 로 따로 빼두고 적용하지 않는다.
 
 ### 1.3 LLM 런타임
 
@@ -160,7 +160,7 @@ DC판정 에이전트 호출
   │                  → /roll 에서 처리, 성공 시 outcome="broken_off"
   │
   ├─ rest         → [P3] 엔진: location.sleep_risk 굴림
-  │                   → 풀회복 + world_time +sleep_hours, 또는 인카운터로 combat 부팅
+  │                   → 풀회복 + turn_count 를 다음 새벽 boundary 로 점프, 또는 인카운터로 combat 부팅
   │                   → 후처리 ↓
   │
   ├─ use / equip /  → [P3] 엔진이 그 자리에서 처리 (REST 엔드포인트 없음)
@@ -314,7 +314,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
       }
     ]
   },
-  "world_time": "812-04-28T14:00:00"
+  "day_phase": "오후"
 }
 ```
 
@@ -325,7 +325,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 - **`conditions`** — 자유 텍스트 제약 ("기한 없음", "민간인 피해 최소화"). narrator 가 매 턴 톤에 반영. quest 모델의 `conditions` 그대로.
 - **`giver`** — 의뢰자 이름 (캐릭터 ID 가 아닌 표시명). narrator 의 회상 서술 ("장로의 의뢰가 떠올랐다") 에 사용. 출처: `characters[quest.giver_id].name`.
 - **`title`** — 식별자.
-- **`world_time`** — 현재 게임 내 시각. session_layer 가 narrator 에게 "지금 시각" 을 넘기는 유일한 경로. 형식 정의는 아래 구조 결정 항목.
+- **`day_phase`** — 현재 일과 시간대 (`새벽 / 오전 / 오후 / 밤`). session_layer 가 narrator 에게 "지금이 언제쯤인지" 를 넘기는 유일한 경로. `state.turn_count` 에서 파생되며 분/시 단위 시계는 따로 없다.
 
 구조 결정:
 
@@ -333,7 +333,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 - **progress 숫자 안 보냄** — `{done, total}` 같은 숫자는 본문에 녹이기 어렵다 ("0/1" 을 어떻게 묘사하나). narrator 가 진행 상태를 알 필요는 `summary` + `goals` (pending only) 로 충족된다. progress 자체는 프론트 표시·엔진 트리거 평가에서만 사용.
 - **`active_*` prefix 없음 / `status` 필드 노출 안 함** — 어차피 활성인 것만 들어가므로 잉여 (`status` 필드 자체는 모델에 있고 narrator 가 `set` 으로 갱신함; session_layer 노출에서만 생략).
 - **`chapter.quests[]` 위계** — 퀘스트는 항상 챕터에 속하므로 묶음. P3 의 Campaign 도 동일 패턴 (`campaign.chapters[]`).
-- **`world_time` 은 ISO 8601 (`T` 포함)** — 다른 문서의 시간 필드와 일관 ([03-features.md](./03-features.md) §2.1, [04-boundary.md](./04-boundary.md) §1).
+- **`day_phase` 는 라벨 그대로** — 분/시 단위 시계가 없으므로 narrator·프론트 모두 `새벽 / 오전 / 오후 / 밤` 4 값만 본다 ([03-features.md](./03-features.md) §2.1, [04-boundary.md](./04-boundary.md) §1).
 
 모델 정의와 progress 계산은 [03-features.md](./03-features.md) §2.8.
 
@@ -553,12 +553,11 @@ if aff <= -social.friendly_threshold:  mod = -social.roll_bonus  # 적대: -bonu
 
 ### 6.1 state_changes 형식
 
-내러티브 에이전트가 발행할 수 있는 타입은 **5종** (`Literal["set","set_time","move","move_item","affinity"]`):
+내러티브 에이전트가 발행할 수 있는 타입은 **4종** (`Literal["set","move","move_item","affinity"]`):
 
 ```json
 [
   {"type": "set",       "entity": "characters", "id": "guard_01", "field": "disposition.aggressive", "value": 80},
-  {"type": "set_time",  "value":  "812-04-29T06:00:00"},
   {"type": "move",      "target": "player_01",  "destination": "plaza_01"},
   {"type": "move_item", "item":   "iron_key",   "from": "chest_01", "to": "player_01"},
   {"type": "affinity",  "actor":  "player_01",  "target": "guard_01", "grade": "success", "intent": "friendly"}
@@ -566,18 +565,17 @@ if aff <= -social.friendly_threshold:  mod = -social.roll_bonus  # 적대: -bonu
 ```
 
 - `set` 권한 매트릭스 — entity 별로 narrator 가 만질 수 있는 field 가 다르다:
-  - `characters` — 스칼라 + 점 표기 (`disposition.{lawful, aggressive, moral}`, `tone_hint`, `status` 등). list/엔진 전용/`world_time` 은 아래 묶음으로 제외.
+  - `characters` — 스칼라 + 점 표기 (`disposition.{lawful, aggressive, moral}`, `tone_hint`, `status` 등). list/엔진 전용은 아래 묶음으로 제외.
   - `items`, `locations` — 스칼라만 (`weather`, `status` 등).
   - `chapters`, `quests` — `summary` 와 `status` 만 ([03-features.md](./03-features.md) §2.8).
-- narrator 는 단순 스칼라 필드만 `set` 으로 바꿀 수 있다. 다음 세 묶음은 손댈 수 없다:
+- narrator 는 단순 스칼라 필드만 `set` 으로 바꿀 수 있다. 다음 두 묶음은 손댈 수 없다:
   - **list 필드** — character 의 `relations`, `inventory_ids`, `memories`, `racial_skills`, `learned_skills`, `companions`. 추가/제거의 부수효과가 커서 (예: `inventory_ids` 변경은 소지품 수를 흔든다) narrator 가 직접 만지면 일관성이 깨진다. 구조 변경은 백엔드 로직 [P3] 가 한다. quest 의 `triggers`/`conditions` 같은 list 도 같은 이유로 막히지만 — quest 는 위 매트릭스가 이미 `summary`/`status` 만 허용해 자동으로 제외된다.
   - **엔진 전용 필드** — `HP/MP/exp/gold/alive/death_saves/revive_coins` 등. 전투·레벨업·죽음 처리는 엔진이 독점하고, narrator 는 결과를 받아서 묘사만 한다 (수치를 결정할 권한이 없다). 전투 진입/이탈 자체는 `state.combat_state` 의 turn_order 등재 여부로 표현 — 캐릭터에 별도 `in_combat` 플래그는 두지 않는다.
-  - **`world_time`** — 일반 `set` 으로 못 만진다. 시간 점프가 필요할 때만 전용 `set_time` type 을 발행 ([03-features.md](./03-features.md) §2.1).
-- `set_time` 은 `world_time` 만 갱신하는 전용 type. 분 단위 가산은 엔진이 자동 처리하고, narrator 는 장면 전환·휴식·시간 비약 같은 절대 시각 점프에만 발행한다. 현재 `world_time` 보다 과거 ISO 는 `rejected[]` 로 reject (시간 역행 금지).
+- **시간 점프는 별도 타입이 없다** — narrator 는 시간을 직접 만지지 못한다. `state.turn_count` 는 엔진이 매 턴 진입 시 1 씩 늘리고, 휴식 액션만 `next_dawn_turn` 으로 점프한다 ([03-features.md](./03-features.md) §2.1).
 - `affinity` 는 `grade × intent` (× `target.disposition` [P3]) 로 `rules.social` 기반 delta 를 엔진이 산출. narrator 는 숫자를 정하지 않는다 ([03-features.md](./03-features.md) §2.2). 복수 대상 시나리오(예: 두 경비병 동시 설득)에서는 entry 를 대상별로 하나씩 발행 — `target` 단일 필드라 한 entry = 한 대상.
 - `move` / `move_item` / `affinity` 적용 시 엔진이 자동으로 **퀘스트 트리거** 실행 (`location_enter`, `item_use`, `character_death`) [P3].
 
-**형식 검사와 `rejected[]`**: `apply_changes` 는 narrator 가 보낸 변경 목록을 Pydantic 의 5종 union 스키마로 한 항목씩 검사한다. 형식이 어긋난 항목 — 잘못된 필드 이름, 모르는 type, narrator 가 못 만지는 엔진 전용 필드를 `set` 한 경우 등 — 은 그 항목만 `rejected[]` 에 따로 담고, 나머지 유효한 변경은 그대로 적용한다. 반환: `{applied, rejected, world_time, created_ids?, quest_updates?, chapter_updates?}`. 파이프라인은 `rejected[]` 를 로그에 남기기만 하고 narrator 를 다시 부르지 않는다 [P3 에서 재호출 루프 검토].
+**형식 검사와 `rejected[]`**: `apply_changes` 는 narrator 가 보낸 변경 목록을 Pydantic 의 4종 union 스키마로 한 항목씩 검사한다. 형식이 어긋난 항목 — 잘못된 필드 이름, 모르는 type, narrator 가 못 만지는 엔진 전용 필드를 `set` 한 경우 등 — 은 그 항목만 `rejected[]` 에 따로 담고, 나머지 유효한 변경은 그대로 적용한다. 반환: `{applied, rejected, created_ids?, quest_updates?, chapter_updates?}`. 파이프라인은 `rejected[]` 를 로그에 남기기만 하고 narrator 를 다시 부르지 않는다 [P3 에서 재호출 루프 검토].
 
 **내부 전용 타입** (엔진/CLI 만 사용, narrator 는 발행 금지):
 - `{"type": "death", "target": "<id>"}` — 캐릭터 사망 처리 + 시체/드랍/퀘스트 연쇄. [P2]

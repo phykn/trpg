@@ -52,9 +52,7 @@
 | 프론트 필드 | 백엔드 출처 | 변환 |
 |---|---|---|
 | `name`, `weather`, `features` | 같은 이름의 필드 | 그대로 |
-| `date: str` | `world_time` (ISO 8601 형식 문자열, 예: `"0812-04-28T..."`) | 한국어 표기로 ("812년 4월 28일") |
-| `hour: int` | `world_time` 의 시 부분 | 0..23 정수만 추출 |
-| `period: str` | `world_time` 으로 백엔드가 계산 | "새벽/오전/오후/저녁/밤" 중 하나 |
+| `dayPhase: str` | `state.turn_count` 에서 백엔드가 파생 (`domain/clock.py:day_phase`) | "새벽/오전/오후/밤" 중 하나. 분/시 단위 시계는 없음 ([03-features.md](./03-features.md) §2.1) |
 | `surroundings: list[str]` | 인접 location 들의 `name` (`connections` 으로 연결됨) | 인접 장소 이름만 |
 
 ### LogEntry — SSE `log_entry` 이벤트 + `narrative_delta` 누적
@@ -85,7 +83,7 @@
 - **Quest.triggers: list[QuestTrigger]** — 자동 발동 트리거 ([03-features.md](./03-features.md) §2.8). 각 트리거는 `id`, `name`, `type`, `target_id` 를 가짐. `Quest.goals` 는 여기서 `name` 만 뽑은 것.
 - **Quest.conditions: list[str]** — 자유 문자열 제약 ([03-features.md](./03-features.md) §2.8). 프론트로 그대로 나감.
 - **Quest.rewards: {gold, exp, items?[P3]}** — gold/exp 만 P1 노출.
-- **Place.period** — `world_time` 으로 백엔드가 계산 ([03-features.md](./03-features.md) §2.1).
+- **Place.dayPhase** — `state.turn_count` 에서 백엔드가 파생 ([03-features.md](./03-features.md) §2.1).
 - **Memory.target_id: str | None** — 메모리가 어느 엔티티에 관한 것인지 가리키는 ID. `Subject.known` 산출이 player 의 `memories` 중 `target_id == subject_id` 인 항목만 골라 쓴다. narrator 의 `memory_links` 출력으로 채워짐 ([02-runtime.md](./02-runtime.md) §1.2, §7.1, §7.2).
 - **Race** — 종족 시드. 필드: `id: str`, `name: str`, `description: str`, `racial_skills: list[Skill]`. `GET /profiles` 응답의 race 카드에 `{id, name, description}` 만 노출 (skills 는 내부). 캐릭터 생성에서 사용자가 race 를 고르면 init 이 그 race 의 `racial_skills` 를 player 의 `racial_skills` 컬렉션에 그대로 부여 ([02-runtime.md](./02-runtime.md) §2.5). 시드는 `scenarios/{id}/races/*.json`.
 

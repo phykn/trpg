@@ -414,7 +414,6 @@ def _minimal_scenario(**overrides) -> Scenario:
             "start_location_id": "inn",
             "active_subject_id": "npc1",
             "active_quest_id": "q1",
-            "world_time": "0001-01-01T09:00:00",
         },
         player_template={"id": "player_01", "equipment": {}, "inventory_ids": []},
     )

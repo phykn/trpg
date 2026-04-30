@@ -21,6 +21,7 @@ from ..domain.errors import CombatStateInvalid, JudgeMalformed
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..llm.client import LLMClient
+from ..mapping.josa import eun_neun, gwa_wa, i_ga
 from ..rules import RULES
 from .actions import (
     emit_attack,
@@ -30,7 +31,7 @@ from .actions import (
     emit_unequip,
     emit_use,
 )
-from .clock import advance_time
+from .clock import advance_turn
 from .dirty import Dirty, ToFrontFn, finalize, push_act, push_turn_log
 from .format import format_combat_end_text
 from .judge import run_judge
@@ -52,7 +53,7 @@ async def _handle_surprise_skip(
     )
     yield push_act(
         state, dirty,
-        f"{actor_name}은(는) 기습당해 첫 라운드 행동하지 못한다.",
+        f"{actor_name}{eun_neun(actor_name)} 기습당해 첫 라운드 행동하지 못한다.",
     )
     yield {
         "type": "combat_turn",
@@ -109,14 +110,14 @@ async def run_combat_npc_phase(
         if combat_engine.should_attempt_flee(actor, rng=rng):
             ok, _roll = combat_engine.try_flee(actor, rng=rng)
             if ok:
-                yield push_act(state, dirty, f"{actor.name}이(가) 전투에서 도주했다.")
+                yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 전투에서 도주했다.")
                 yield {
                     "type": "combat_turn",
                     "data": {"actor": actor_id, "action": "flee", "grade": "success"},
                 }
                 combat_engine.remove_from_combat(state, actor_id)
                 continue
-            yield push_act(state, dirty, f"{actor.name}이(가) 도주를 시도했으나 실패했다.")
+            yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 도주를 시도했으나 실패했다.")
             yield {
                 "type": "combat_turn",
                 "data": {"actor": actor_id, "action": "flee", "grade": "failure"},
@@ -168,7 +169,9 @@ async def start_combat_and_run_npc_phase(
         first_enemy = state.characters.get(enemy_ids[0])
         if first_enemy is not None:
             push_turn_log(
-                state, first_enemy.id, f"{first_enemy.name}와 전투 개시", dirty
+                state, first_enemy.id,
+                f"{first_enemy.name}{gwa_wa(first_enemy.name)} 전투 개시",
+                dirty,
             )
     async for ev in run_combat_npc_phase(state, dirty, rng):
         yield ev
@@ -189,7 +192,7 @@ async def _flush_player_turn(
     async for ev in run_combat_npc_phase(state, dirty, rng):
         yield ev
     state.turn_count += 1
-    advance_time(state, dirty)
+    advance_turn(state, dirty)
     async for ev in finalize(state, saves_dir, dirty, to_front_fn):
         yield ev
 
@@ -206,9 +209,9 @@ async def _handle_death_save(
         state, state.player_id, rng=rng, dirty=dirty.entities
     )
     ds_grade = "success" if roll >= RULES.death.save_dc else "failure"
-    text = f"{player.name} 죽음 저항 (d20={roll}) — "
+    text = f"{player.name} 죽음 굴림 (d20={roll}) — "
     if status == "stable":
-        text += "안정화. 의식을 회복했다."
+        text += "안정화 — 의식을 회복했다."
     elif status == "dead":
         text += "사망."
     else:
@@ -271,7 +274,7 @@ async def _handle_flee(
     if ok:
         yield push_act(
             state, dirty,
-            f"{player.name}이(가) 전투에서 도주했다 (굴림 {roll_total}).",
+            f"{player.name}{i_ga(player.name)} 전투에서 도주했다 (굴림 {roll_total}).",
         )
         yield {
             "type": "combat_turn",
@@ -280,13 +283,13 @@ async def _handle_flee(
         yield {"type": "combat_end", "data": {"outcome": "fled"}}
         combat_engine.end_combat(state)
         state.turn_count += 1
-        advance_time(state, dirty)
+        advance_turn(state, dirty)
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
     yield push_act(
         state, dirty,
-        f"{player.name}이(가) 도주를 시도했으나 실패했다 (굴림 {roll_total}).",
+        f"{player.name}{i_ga(player.name)} 도주를 시도했으나 실패했다 (굴림 {roll_total}).",
     )
     yield {
         "type": "combat_turn",
@@ -375,7 +378,7 @@ async def run_combat_player_turn(
     if isinstance(result, PassAction):
         yield push_act(
             state, dirty,
-            f"{player.name}은(는) 자세를 가다듬으며 한 차례를 보낸다.",
+            f"{player.name}{eun_neun(player.name)} 자세를 가다듬으며 한 차례를 보낸다.",
         )
         yield {
             "type": "combat_turn",
@@ -418,7 +421,7 @@ async def run_combat_player_turn(
 
     # Reject in combat, or any growth/trade action that doesn't belong here.
     if isinstance(result, RejectAction):
-        text = "그 발화는 무시된다."
+        text = "그 말은 무시된다."
     else:
         text = "전투 중에는 그 행동을 할 수 없다."
     yield push_act(state, dirty, text)

@@ -551,7 +551,6 @@ async def build_scenario(
         "start_location_id": decomp.start_location_id,
         "active_subject_id": decomp.start_subject_id,
         "active_quest_id": decomp.start_quest_id,
-        "world_time": "0001-01-01T09:00:00",
     }
     _write_json(scenario_dir / "start.json", start)
 

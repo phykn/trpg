@@ -59,7 +59,7 @@ Scale is `-100..+100`. With `social.friendly_threshold = 50`, a target at or abo
 ## Persistence
 
 - Per-game dir: `../saves/games/<game_id>/`.
-  - `meta.json` — singletons (`game_id, profile, player_id, world_time, turn_count, pending_check, pending_skill_candidates, combat_state, active_*_id, next_log_id`). Rewritten every turn end as the commit point. `combat_state` must round-trip through meta — without it, `/turn` reloads as combat-cleared and the engine restarts the fight every turn.
+  - `meta.json` — singletons (`game_id, profile, player_id, turn_count, pending_check, pending_skill_candidates, combat_state, active_*_id, next_log_id`). Rewritten every turn end as the commit point. `combat_state` must round-trip through meta — without it, `/turn` reloads as combat-cleared and the engine restarts the fight every turn.
   - `<kind>/<id>.json` for `kind ∈ {characters, items, locations, races, skills, quests, chapters, campaigns}`. Only entities mutated this turn are rewritten.
   - `log.jsonl / history.jsonl / dialogue.jsonl` — append-only, one line per entry. No on-disk cap. In-memory caps (`RULES.log.display_turns`, `memory.turn_log_size`, `memory.recent_dialogue_turns`) only apply on tail-load and prompt assembly.
 - `init_game` copies `../scenarios/<profile>/`'s seed entity dirs verbatim into the game dir, then writes the new player character + meta.
@@ -82,7 +82,11 @@ Each agent (judge, ...) runs a self-correction loop with `retries=5`. On `Valida
 
 ## state_changes
 
-Five kinds only: `set / set_time / move / move_item / affinity`. Each has its own permission matrix in `engines/apply.py`. Forbidden `set` fields are silently dropped per change; the rest of the batch still applies. Time may not run backwards.
+Four kinds only: `set / move / move_item / affinity`. Each has its own permission matrix in `engines/apply.py`. Forbidden `set` fields are silently dropped per change; the rest of the batch still applies.
+
+## Time
+
+There is no minute/hour clock. `state.turn_count` is the sole time variable; `domain/clock.py:day_phase` derives one of `새벽 / 오전 / 오후 / 밤` from it (4 phases × `RULES.time.phase_turns = 10` turns each = 40-turn day cycle). Sleep recovery (`engines/recovery.py`) jumps `turn_count` to the next 새벽 boundary via `next_dawn_turn`. The narrate prompt sees the current phase only — no absolute date or hour exists.
 
 ## SSE event shape
 

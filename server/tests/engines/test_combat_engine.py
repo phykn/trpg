@@ -417,7 +417,6 @@ def _state_with(
         game_id="g",
         profile="default",
         player_id=player_id,
-        world_time="0812-01-01T00:00:00",
         characters={c.id: c for c in chars},
         items=items or {},
     )

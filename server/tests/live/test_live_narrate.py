@@ -34,7 +34,7 @@ async def _collect(stream):
 async def test_narrate_roll_success(client):
     input_ = NarrateInput(
         world="중세 판타지",
-        session={"chapter": None, "world_time": "0812-04-28T14:00:00"},
+        session={"chapter": None, "day_phase": "오후"},
         history="",
         target_view={
             "type": "npc",
@@ -69,7 +69,7 @@ async def test_narrate_reject_engine_forces_clean_output(client):
     pipeline/narrate.py adds a stronger engine-level enforcement on top."""
     input_ = NarrateInput(
         world="중세 판타지",
-        session={"chapter": None, "world_time": "0812-04-28T14:00:00"},
+        session={"chapter": None, "day_phase": "오후"},
         history="",
         target_view=None,
         surroundings={

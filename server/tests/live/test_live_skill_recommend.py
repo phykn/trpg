@@ -23,7 +23,6 @@ async def test_live_recommend_returns_three_thematic_candidates(client):
         game_id="t",
         profile="default",
         player_id="player_01",
-        world_time="0812-04-28T14:00:00",
     )
     state.characters["player_01"] = Character(
         id="player_01",

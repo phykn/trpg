@@ -179,7 +179,7 @@ def test_xp_for_grade_lookup():
 
 def test_grant_roll_xp_awards_to_player():
     p = _player()
-    state = GameState(game_id="t", profile="t", player_id="player_01", world_time="0812-04-28T12:00:00")
+    state = GameState(game_id="t", profile="t", player_id="player_01")
     state.characters["player_01"] = p
     dirty: set[tuple[str, str]] = set()
     amount = grant_roll_xp(state, "success", dirty=dirty)
@@ -190,7 +190,7 @@ def test_grant_roll_xp_awards_to_player():
 
 def test_grant_roll_xp_zero_for_failure():
     p = _player()
-    state = GameState(game_id="t", profile="t", player_id="player_01", world_time="0812-04-28T12:00:00")
+    state = GameState(game_id="t", profile="t", player_id="player_01")
     state.characters["player_01"] = p
     amount = grant_roll_xp(state, "failure")
     assert amount == 0
@@ -203,7 +203,7 @@ def test_award_kill_xp_player_killer():
     enemy.id = "rat_01"
     enemy.is_player = False
     enemy.xp_reward = 30
-    state = GameState(game_id="t", profile="t", player_id="player_01", world_time="0812-04-28T12:00:00")
+    state = GameState(game_id="t", profile="t", player_id="player_01")
     state.characters["player_01"] = p
     state.characters["rat_01"] = enemy
     dirty: set[tuple[str, str]] = set()
@@ -222,7 +222,7 @@ def test_award_kill_xp_no_op_for_npc_killer():
     npc = _player()
     npc.id = "ma_zhong"
     npc.is_player = False
-    state = GameState(game_id="t", profile="t", player_id="player_01", world_time="0812-04-28T12:00:00")
+    state = GameState(game_id="t", profile="t", player_id="player_01")
     state.characters["rat_01"] = enemy
     state.characters["ma_zhong"] = npc
     state.characters["player_01"] = _player()
@@ -237,7 +237,7 @@ def test_award_kill_xp_zero_reward_skipped():
     npc.id = "old_owner"
     npc.is_player = False
     npc.xp_reward = 0
-    state = GameState(game_id="t", profile="t", player_id="player_01", world_time="0812-04-28T12:00:00")
+    state = GameState(game_id="t", profile="t", player_id="player_01")
     state.characters["player_01"] = p
     state.characters["old_owner"] = npc
     amount = award_kill_xp(state, "player_01", "old_owner")

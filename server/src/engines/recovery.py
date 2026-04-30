@@ -2,8 +2,8 @@
 
 No passive recovery — HP/MP heal only by sleeping (docs/03-features.md §2.4).
 attempt_rest splits encounter vs full recovery via a risk roll. Full recovery restores
-HP/MP to max and advances world_time by sleep_hours. On encounter it returns enemy_ids;
-the caller (turn.py) is responsible for booting combat.
+HP/MP to max and jumps `state.turn_count` forward to the next 새벽 boundary. On encounter
+it returns enemy_ids; the caller (turn.py) is responsible for booting combat.
 
 If the seeded sleep_encounters pool is empty and an LLM summon callback is supplied, an
 ad-hoc enemy is summoned (P3 §2.4 fallback).
@@ -11,14 +11,14 @@ ad-hoc enemy is summoned (P3 §2.4 fallback).
 
 import random
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta
 from typing import Literal
 
 from pydantic import ValidationError
 
+from ..domain.clock import next_dawn_turn
 from ..domain.errors import LLMUnavailable
-from ..rules import RULES
 from ..domain.state import GameState
+from ..rules import RULES
 
 SummonCallable = Callable[[GameState, str], Awaitable[str | None]]
 """(state, location_id) → registered character_id or None. None falls back to full recovery."""
@@ -43,8 +43,7 @@ async def attempt_rest(
     actor = state.characters[actor_id]
 
     def full_recover() -> None:
-        dt = datetime.fromisoformat(state.world_time)
-        state.world_time = (dt + timedelta(hours=RULES.time.sleep_hours)).isoformat()
+        state.turn_count = next_dawn_turn(state.turn_count)
         actor.hp = actor.max_hp
         actor.mp = actor.max_mp
         if dirty is not None:

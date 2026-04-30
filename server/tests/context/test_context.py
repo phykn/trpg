@@ -84,6 +84,68 @@ def test_surroundings_includes_player_and_filters_dead_or_far(fresh_state):
     )
 
 
+def test_corpses_same_location_and_history_referenced(fresh_state):
+    """Corpses payload covers two cases:
+    - same-location dead NPC (no off_screen flag)
+    - dead NPC referenced in turn_log from elsewhere (off_screen=true)
+    """
+    fresh_state.locations["plaza_01"] = Location(id="plaza_01", name="광장")
+    fresh_state.locations["gate_01"] = Location(id="gate_01", name="성문")
+    fresh_state.characters["player_01"] = Character(
+        id="player_01", name="주", race_id="human", stats=Stats(),
+        location_id="gate_01",  # player walked away from plaza
+    )
+    fresh_state.characters["here_corpse"] = Character(
+        id="here_corpse", name="여기시체", race_id="human", stats=Stats(),
+        location_id="gate_01", alive=False,
+    )
+    fresh_state.characters["plaza_corpse"] = Character(
+        id="plaza_corpse", name="광장노파", race_id="human", stats=Stats(),
+        location_id="plaza_01", alive=False,
+    )
+    fresh_state.characters["plaza_alive"] = Character(
+        id="plaza_alive", name="광장상인", race_id="human", stats=Stats(),
+        location_id="plaza_01",
+    )
+    fresh_state.turn_log = [
+        TurnLogEntry(turn=1, target="plaza_corpse", summary="노파와 대화"),
+        TurnLogEntry(turn=2, target="plaza_alive", summary="상인과 대화"),
+        TurnLogEntry(turn=3, target="plaza_corpse", summary="노파 사망"),
+    ]
+
+    sur = build_surroundings(fresh_state, "player_01")
+    by_id = {c["id"]: c for c in sur["corpses"]}
+    # same-location corpse — no off_screen flag
+    assert "here_corpse" in by_id
+    assert "off_screen" not in by_id["here_corpse"]
+    # history-referenced dead NPC at different location — off_screen=true
+    assert "plaza_corpse" in by_id and by_id["plaza_corpse"]["off_screen"] is True
+    # alive NPC in turn_log must NOT be in corpses
+    assert "plaza_alive" not in by_id
+
+
+def test_corpses_dedupes_same_location_with_history(fresh_state):
+    """A dead NPC at the same location as the player and also in turn_log
+    should appear once, without the off_screen flag (same-location wins)."""
+    fresh_state.locations["plaza_01"] = Location(id="plaza_01", name="광장")
+    fresh_state.characters["player_01"] = Character(
+        id="player_01", name="주", race_id="human", stats=Stats(),
+        location_id="plaza_01",
+    )
+    fresh_state.characters["here_corpse"] = Character(
+        id="here_corpse", name="시체", race_id="human", stats=Stats(),
+        location_id="plaza_01", alive=False,
+    )
+    fresh_state.turn_log = [
+        TurnLogEntry(turn=1, target="here_corpse", summary="대화"),
+    ]
+
+    sur = build_surroundings(fresh_state, "player_01")
+    matches = [c for c in sur["corpses"] if c["id"] == "here_corpse"]
+    assert len(matches) == 1
+    assert "off_screen" not in matches[0]
+
+
 def test_session_layer_active_only_pending_goals(fresh_state):
     fresh_state.chapters["ch1"] = Chapter(
         id="ch1",
