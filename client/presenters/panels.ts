@@ -21,14 +21,13 @@ function buildHeroSlot(hero: Hero): PanelSlot {
       barSplit: [
         { label: 'HP', value: hero.hp, max: hero.hpMax, tone: 'hp', display: `${hero.hp}/${hero.hpMax}` },
         { label: 'MP', value: hero.mp, max: hero.mpMax, tone: 'mp', display: `${hero.mp}/${hero.mpMax}` },
-        { label: 'EXP', value: hero.exp, max: hero.expMax, tone: 'exp', display: `${hero.exp}/${hero.expMax}` },
       ],
       sections: [
-        { label: '능력', nodes: Object.entries(hero.stats) as [string, number][] },
-        { label: '기술', text: joinOrDash(hero.skills) },
+        { label: '능력', nodes: hero.stats.map((s): [string, number] => [s.label, s.value]) },
         { label: '장비', text: joinOrDash(equipped.map((it) => it.name)) },
         { label: '소지', text: joinInventoryOrDash(hero.inventory) },
-        { label: '상태', text: joinOrDash(hero.status) },
+        { label: '기술', text: joinOrDash(hero.skills) },
+        { label: '특징', text: joinOrDash(hero.status) },
         { label: '동료', text: joinOrDash(hero.companions) },
       ],
     },
@@ -36,31 +35,33 @@ function buildHeroSlot(hero: Hero): PanelSlot {
 }
 
 function buildSubjectSlot(subject: Subject | null): PanelSlot {
+  if (!subject) return { id: 'person', chip: { short: '대상' }, panel: null };
+  const equipped = Object.values(subject.equipment).filter((it): it is EquipItem => it !== null);
   return {
     id: 'person',
     chip: { short: '대상' },
-    panel: subject
-      ? {
-          title: subject.name,
-          meta: `Lv ${subject.level} · ${subject.raceJob}`,
-          barSplit: [
-            { label: 'HP', value: subject.hp, max: subject.hpMax, tone: 'hp', display: `${subject.hp}/${subject.hpMax}` },
-            {
-              label: '호감도',
-              value: subject.trust,
-              max: 100,
-              tone: subject.trust >= 0 ? 'good' : 'bad',
-              display: subject.trust > 0 ? `+${subject.trust}` : `${subject.trust}`,
-              signed: true,
-            },
-          ],
-          sections: [
-            { label: '특징', text: joinOrDash(subject.known) },
-            { label: '소지', text: joinInventoryOrDash(subject.inventory) },
-            { label: '능력', nodes: Object.entries(subject.stats) as [string, number][] },
-          ],
-        }
-      : null,
+    panel: {
+      title: subject.name,
+      meta: `Lv ${subject.level} · ${subject.raceJob}`,
+      barSplit: [
+        { label: 'HP', value: subject.hp, max: subject.hpMax, tone: 'hp', display: `${subject.hp}/${subject.hpMax}` },
+        {
+          label: '호감도',
+          value: subject.trust,
+          max: 100,
+          tone: subject.trust >= 0 ? 'good' : 'bad',
+          display: subject.trust > 0 ? `+${subject.trust}` : `${subject.trust}`,
+          signed: true,
+        },
+      ],
+      sections: [
+        { label: '능력', nodes: subject.stats.map((s): [string, number] => [s.label, s.value]) },
+        { label: '장비', text: joinOrDash(equipped.map((it) => it.name)) },
+        { label: '소지', text: joinInventoryOrDash(subject.inventory) },
+        { label: '기술', text: joinOrDash(subject.skills) },
+        { label: '특징', text: joinOrDash(subject.known) },
+      ],
+    },
   };
 }
 

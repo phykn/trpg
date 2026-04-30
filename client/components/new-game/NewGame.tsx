@@ -27,8 +27,8 @@ export function NewGame({ onSubmit }: Props) {
 
   const [profileId, setProfileId] = React.useState<string | null>(null);
   const [raceId, setRaceId] = React.useState<string | null>(null);
-  const [name, setName] = React.useState('');
-  const [appearance, setAppearance] = React.useState('');
+  const [name, setName] = React.useState('주인공');
+  const [appearance, setAppearance] = React.useState('평범함');
   const [submitting, setSubmitting] = React.useState(false);
 
   const loadProfiles = React.useCallback(() => {
@@ -37,7 +37,10 @@ export function NewGame({ onSubmit }: Props) {
     listProfiles()
       .then((list) => {
         setProfiles(list);
-        if (list.length === 1) setProfileId(list[0].id);
+        if (list.length === 1) {
+          setProfileId(list[0].id);
+          setRaceId(list[0].races[0]?.id ?? null);
+        }
       })
       .catch((e: unknown) => {
         setLoadError(e instanceof Error ? e.message : String(e));
@@ -109,6 +112,22 @@ export function NewGame({ onSubmit }: Props) {
         </Text>
       </View>
 
+      <Pressable
+        onPress={submit}
+        disabled={!canSubmit}
+        className={`h-10 rounded-md items-center justify-center ${
+          canSubmit ? 'bg-accent-fg active:opacity-80' : 'bg-canvas-inset border border-border-default'
+        }`}
+      >
+        <Text
+          className={`font-sans-semibold text-title ${
+            canSubmit ? 'text-fg-on-emphasis' : 'text-fg-subtle'
+          }`}
+        >
+          {submitting ? '생성 중…' : '시작'}
+        </Text>
+      </Pressable>
+
       <Section label="세계관">
         {profiles.map((p) => (
           <SelectCard
@@ -118,7 +137,7 @@ export function NewGame({ onSubmit }: Props) {
             selected={profileId === p.id}
             onPress={() => {
               setProfileId(p.id);
-              setRaceId(null);
+              setRaceId(p.races[0]?.id ?? null);
             }}
           />
         ))}
@@ -153,22 +172,6 @@ export function NewGame({ onSubmit }: Props) {
           placeholder="한 줄로 외모를 묘사"
         />
       </Section>
-
-      <Pressable
-        onPress={submit}
-        disabled={!canSubmit}
-        className={`h-10 rounded-md items-center justify-center ${
-          canSubmit ? 'bg-accent-fg active:opacity-80' : 'bg-canvas-inset border border-border-default'
-        }`}
-      >
-        <Text
-          className={`font-sans-semibold text-title ${
-            canSubmit ? 'text-fg-on-emphasis' : 'text-fg-subtle'
-          }`}
-        >
-          {submitting ? '생성 중…' : '시작'}
-        </Text>
-      </Pressable>
     </ScrollView>
   );
 }

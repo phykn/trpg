@@ -1,13 +1,11 @@
 import type { LogEntry } from './ui';
 
-export type Stats = {
-  STR: number;
-  DEX: number;
-  CON: number;
-  INT: number;
-  WIS: number;
-  CHA: number;
+export type Stat = {
+  label: string;
+  value: number;
 };
+
+export type Stats = Stat[];
 
 export type InventoryItem = {
   name: string;
@@ -52,7 +50,9 @@ export type Subject = {
   hp: number;
   hpMax: number;
   stats: Stats;
+  equipment: Equipment;
   inventory: InventoryItem[];
+  skills: string[];
 };
 
 export type Quest = {

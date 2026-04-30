@@ -6,6 +6,7 @@ from ..domain.entities import (
     Character,
     Location,
     Quest,
+    Stats,
 )
 from ..domain.memory import PendingCheck
 from ..domain.types import tier_to_int
@@ -14,6 +15,20 @@ from ..domain.state import GameState
 
 
 # --- Hero ------------------------------------------------------------------
+
+
+_STAT_LABELS: tuple[tuple[str, str], ...] = (
+    ("STR", "근력"),
+    ("DEX", "민첩"),
+    ("CON", "건강"),
+    ("INT", "지능"),
+    ("WIS", "지혜"),
+    ("CHA", "매력"),
+)
+
+
+def _stats(stats: Stats) -> list[dict]:
+    return [{"label": label, "value": getattr(stats, key)} for key, label in _STAT_LABELS]
 
 
 def _race_job_label(state: GameState, char: Character) -> str:
@@ -31,10 +46,18 @@ def _equipment(state: GameState, char: Character) -> dict:
     return out
 
 
-def _inventory(state: GameState, ids: list[str]) -> list[dict]:
+def _inventory(state: GameState, char: Character) -> list[dict]:
+    """Inventory shown to the player, with currently-equipped items subtracted.
+    Invariant: each equipped item_id is also present in inventory_ids — so we
+    decrement once per equipped slot to avoid duplicate display."""
+    counts = Counter(char.inventory_ids)
+    for _, item_id in char.equipment.equipped_items():
+        counts[item_id] -= 1
+        if counts[item_id] <= 0:
+            del counts[item_id]
     return [
         {"name": state.items[item_id].name, "qty": qty}
-        for item_id, qty in Counter(ids).items()
+        for item_id, qty in counts.items()
         if item_id in state.items
     ]
 
@@ -66,9 +89,9 @@ def to_hero(state: GameState) -> dict:
         "hpMax": p.max_hp,
         "mp": p.mp,
         "mpMax": p.max_mp,
-        "stats": p.stats.model_dump(),
+        "stats": _stats(p.stats),
         "equipment": _equipment(state, p),
-        "inventory": _inventory(state, p.inventory_ids),
+        "inventory": _inventory(state, p),
         "status": list(p.status),
         "skills": skills,
         "companions": [
@@ -92,6 +115,10 @@ def to_subject(state: GameState) -> dict | None:
     player = state.characters[state.player_id]
     known = [s.appearance] if s.appearance else []
     known += [m.content for m in player.memories if m.target_id == sid]
+    skill_ids = (*s.racial_skill_ids, *s.learned_skill_ids)
+    skills = [
+        state.skills[sid_].name for sid_ in skill_ids if sid_ in state.skills
+    ]
     return {
         "name": s.name,
         "role": s.role,
@@ -101,8 +128,10 @@ def to_subject(state: GameState) -> dict | None:
         "level": s.level,
         "hp": s.hp,
         "hpMax": s.max_hp,
-        "stats": s.stats.model_dump(),
-        "inventory": _inventory(state, s.inventory_ids),
+        "stats": _stats(s.stats),
+        "equipment": _equipment(state, s),
+        "inventory": _inventory(state, s),
+        "skills": skills,
     }
 
 

@@ -14,9 +14,9 @@
 | `raceJob: str` | `race_id` + `job` | `races[race_id].name` 과 `job` 을 합쳐 `"<종족> <직업>"` 한 문자열로. `job` 이 빈 문자열이면 종족 이름만 (trailing space 없음). race 가 사라졌으면 race_id 그대로 |
 | `hp/hpMax`, `mp/mpMax` | 같은 이름의 필드 | 그대로 복사. 값은 엔진이 계산으로 갱신 — narrator 가 `set` 으로 못 건드림 |
 | `exp/expMax` | `xp_pool` + 레벨 곡선 [P3] | xp/level 시스템 자체가 P3 일정 ([03-features.md](./03-features.md) §2.3). P1 동안은 자리표시 0/0 만 노출 |
-| `stats` | `stats` | 장비·버프 미적용 기본값. 장비·버프를 더한 실효 수치는 백엔드 내부 계산용 |
+| `stats: [{label, value}]` | `stats` (STR/DEX/CON/INT/WIS/CHA) | ASCII 키를 한국어 라벨로 변환해 고정 순서 배열로 — `[{label:"근력", value}, {label:"민첩", ...}, "건강", "지능", "지혜", "매력"]`. 장비·버프 미적용 기본값. 장비·버프를 더한 실효 수치는 백엔드 내부 계산용 |
 | `equipment` (3슬롯: `weapon/armor/accessory`) | `equipment` 같은 키 | 슬롯에 든 item_id 로 `items[id].name` 을 찾아 `{name}` 만 노출. 빈 슬롯은 `null` (키 3개는 항상 존재) ([03-features.md](./03-features.md) §2.5) |
-| `inventory: [{name, qty}]` | `inventory_ids: list[str]` | 같은 item_id 끼리 묶어 개수를 세고, `items[id].name` 으로 이름을 찾아 `[{name, qty}]` 모양으로 ([03-features.md](./03-features.md) §2.5) |
+| `inventory: [{name, qty}]` | `inventory_ids: list[str]` | 같은 item_id 끼리 묶어 개수를 세고, `items[id].name` 으로 이름을 찾아 `[{name, qty}]` 모양으로. **장비 슬롯에 장착된 item_id 는 슬롯당 1 개씩 차감** (invariant 상 장착 아이템은 inventory_ids 에도 존재해 중복 노출 방지) ([03-features.md](./03-features.md) §2.5) |
 | `status: list[str]` | `status: list[str]` | 정해진 목록 없는 자유 문자열 태그. narrator 가 `set` 으로 추가/제거 ([02-runtime.md](./02-runtime.md) §6.1) |
 | `skills: list[str]` | `racial_skills + learned_skills` ([03-features.md](./03-features.md) §2.6) | 두 리스트를 합친 뒤 각 스킬에서 `name` 만 추출 |
 | `companions: list[str]` | `companions: list[char_id]` ([03-features.md](./03-features.md) §2.9) | 각 char_id 의 캐릭터를 찾아 `"이름 (종족 직업)"` 으로 조립. `job` 이 빈 문자열이면 `"이름 (종족)"` — 괄호 안 공백·trailing space 없음 |
@@ -28,8 +28,10 @@
 | `name`, `level` | 같은 이름의 필드 | 그대로 |
 | `raceJob: str` | `race_id` + `job` | Hero.raceJob 와 동일 규칙 |
 | `hp/hpMax` | 같은 이름의 필드 | 그대로 |
-| `stats` | `stats` | 그대로 |
+| `stats: [{label, value}]` | `stats` | Hero 와 동일 |
+| `equipment` (3슬롯: `weapon/armor/accessory`) | `equipment` 같은 키 | Hero 와 동일 |
 | `inventory: [{name, qty}]` | `inventory_ids` | Hero 와 동일 |
+| `skills: list[str]` | `racial_skills + learned_skills` | Hero 와 동일 |
 | `role: str` | `role: str` (프로필 config 에 들어 있는 값) | 자유 문자열. 그대로 |
 | `trust: int` | `relations.get(player_id, 0)` | -100..+100, 기본 0 (중립). 방향은 **subject → player** (subject 가 player 를 어떻게 느끼는가) |
 | `known: list[str]` | `appearance` (한 줄) + player 의 `memories` 중 `target_id == subject_id` 인 항목들 | 첫 줄 = subject 의 외모 한 줄 (subject.appearance), 그 아래 = player 가 그 subject 에 대해 들고 있는 기억 한 줄씩 ([02-runtime.md](./02-runtime.md) §7). 메모리 항목이 0개면 외모 한 줄만 나감. |

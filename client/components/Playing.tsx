@@ -94,14 +94,14 @@ export function Playing({ game }: Props) {
         />
       )}
 
-      <HeroStrip hero={hero} onPress={() => setActiveId((prev) => (prev === 'hero' ? null : 'hero'))} />
+      <HeroStrip hero={hero} />
 
       <Log
         log={log}
         rolling={rolling}
         typing={awaitingNarration}
         suggestions={!streaming && !pending ? suggestions : []}
-        onPickSuggestion={setInput}
+        onPickSuggestion={onSend}
       />
 
       {combat ? <CombatStrip combat={combat} /> : null}

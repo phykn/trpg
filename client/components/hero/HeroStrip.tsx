@@ -1,4 +1,4 @@
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Bar } from '@/components/ui';
 import { toneColor } from '@/design/tokens';
@@ -30,12 +30,12 @@ function Meter({ label, value, max, tone }: {
   );
 }
 
-export function HeroStrip({ hero, onPress }: { hero: Hero; onPress: () => void }) {
+export function HeroStrip({ hero }: { hero: Hero }) {
   return (
-    <Pressable onPress={onPress} className="mx-5 px-3 py-1 flex-row gap-4">
+    <View className="mx-5 px-3 py-1 flex-row gap-4">
       <Meter label="HP" value={hero.hp} max={hero.hpMax} tone="hp" />
       <Meter label="MP" value={hero.mp} max={hero.mpMax} tone="mp" />
       <Meter label="EXP" value={hero.exp} max={hero.expMax} tone="exp" />
-    </Pressable>
+    </View>
   );
 }

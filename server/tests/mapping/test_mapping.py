@@ -117,7 +117,7 @@ def test_hero_basic_fields(fresh_state):
     h = to_hero(_full_state(fresh_state))
     assert h["name"] == "주인공" and h["raceJob"] == "인간 도적"
     assert h["hp"] == 18 and h["hpMax"] == 20
-    assert h["stats"]["STR"] == 12
+    assert h["stats"][0] == {"label": "근력", "value": 12}
 
 
 def test_hero_exp_uses_xp_pool_and_curve(fresh_state):
