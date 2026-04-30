@@ -94,27 +94,6 @@ def level_up(
     recalc_max_hp_mp(character)
 
 
-def assert_pair_trade_invariant(character: Character) -> None:
-    """Verify STR+CHA = 20, DEX+WIS = 20, CON+INT = 20.
-
-    Called when registering an LLM-summoned character. Also used for seed validation and
-    in tests. Raises ValueError on failure.
-    """
-    s = character.stats
-    if s.STR + s.CHA != 20:
-        raise ValueError(
-            f"pair-trade invariant violated: STR({s.STR}) + CHA({s.CHA}) != 20"
-        )
-    if s.DEX + s.WIS != 20:
-        raise ValueError(
-            f"pair-trade invariant violated: DEX({s.DEX}) + WIS({s.WIS}) != 20"
-        )
-    if s.CON + s.INT != 20:
-        raise ValueError(
-            f"pair-trade invariant violated: CON({s.CON}) + INT({s.INT}) != 20"
-        )
-
-
 # --- xp grants -------------------------------------------------------------
 
 

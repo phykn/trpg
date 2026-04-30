@@ -6,7 +6,6 @@ from src.domain.errors import LevelUpInvalid
 from src.domain.types import STAT_PAIRS
 from src.domain.state import GameState
 from src.engines.growth import (
-    assert_pair_trade_invariant,
     award_kill_xp,
     calc_max_hp,
     calc_max_mp,
@@ -140,24 +139,6 @@ def test_level_up_does_not_modify_state_on_failure():
     with pytest.raises(LevelUpInvalid):
         level_up(p, "STR", "CHA")
     assert p.model_dump_json() == snapshot
-
-
-def test_pair_trade_invariant_holds_for_default_stats():
-    p = _player(level=0, stats=Stats())
-    assert_pair_trade_invariant(p)  # defaults are all 10 → sum 20
-
-
-def test_pair_trade_invariant_holds_after_level_up():
-    p = _player(level=0)
-    p.xp_pool = 1000
-    level_up(p, "DEX", "WIS")
-    assert_pair_trade_invariant(p)
-
-
-def test_pair_trade_invariant_violated_for_random_stats():
-    p = _player(stats=Stats(STR=14, CHA=14))  # sum 28
-    with pytest.raises(ValueError, match="STR.*CHA"):
-        assert_pair_trade_invariant(p)
 
 
 def test_grant_xp_appends_to_pool_and_dirty():
