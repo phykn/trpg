@@ -18,6 +18,7 @@ from ..domain.entities import Character
 from ..domain.errors import SkillInvalid
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
+from ..ontology.player_view import build_player_view
 from .actions import apply_attack_action, apply_skill_action
 from .dirty import Dirty, register_kill
 
@@ -96,6 +97,31 @@ def _turn_event(
 
 def _snapshot(c: Character) -> CombatStateSnapshot:
     return CombatStateSnapshot(name=c.name, hp=c.hp, max_hp=c.max_hp, alive=c.alive)
+
+
+def _enemy_snapshot(state: GameState, enemy_id: str) -> CombatStateSnapshot:
+    """Enemy variant — adds race / appearance / description / gender so the
+    cinematic can reflect each foe's seed identity instead of defaulting to
+    the bare name. Player identity travels in CombatNarrateInput.player_view,
+    so _snapshot stays bare for player_start/player_end.
+    """
+    c = state.characters[enemy_id]
+    race = state.races.get(c.race_id)
+    race_payload: dict | None = None
+    if race is not None:
+        race_payload = {"name": race.name}
+        if race.description:
+            race_payload["description"] = race.description
+    return CombatStateSnapshot(
+        name=c.name,
+        hp=c.hp,
+        max_hp=c.max_hp,
+        alive=c.alive,
+        race=race_payload,
+        appearance=c.appearance or None,
+        description=c.description or None,
+        gender=c.gender if c.gender != "none" else None,
+    )
 
 
 def _location_payload(state: GameState) -> dict:
@@ -334,7 +360,7 @@ def run_auto_combat(
     player = state.characters[state.player_id]
     enemy_ids_at_start = list(cs.enemy_ids)
     enemy_starts = [
-        _snapshot(state.characters[eid])
+        _enemy_snapshot(state, eid)
         for eid in enemy_ids_at_start if eid in state.characters
     ]
     player_start = _snapshot(player)
@@ -472,13 +498,14 @@ def build_narrate_input(
     player = state.characters[state.player_id]
     world = build_world_layer(profile_dir, state.profile, missing_ok=True)
     enemies_end = [
-        _snapshot(state.characters[h.id])
+        _enemy_snapshot(state, h.id)
         for h in result.enemy_hits
         if h.id in state.characters
     ]
     return CombatNarrateInput(
         world=world,
         location=_location_payload(state),
+        player_view=build_player_view(state),
         player_intent=player_input,
         rounds_run=result.rounds_run,
         outcome=result.outcome,

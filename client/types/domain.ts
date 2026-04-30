@@ -1,4 +1,6 @@
-import type { LogEntry } from './ui';
+import type { LogEntry, Tone } from './ui';
+
+export type RiskBadge = { label: string; tone: Tone };
 
 export type Stat = {
   label: string;
@@ -71,6 +73,7 @@ export type PlaceSurrounding = {
   name: string;
   blurb: string;
   difficulty: string | null;
+  risk: RiskBadge;
 };
 
 export type PlaceTarget = {
@@ -90,6 +93,7 @@ export type Place = {
   features: string[];
   surroundings: PlaceSurrounding[];
   targets: PlaceTarget[];
+  risk: RiskBadge;
 };
 
 export type RollResult = 'success' | 'partial' | 'fail';

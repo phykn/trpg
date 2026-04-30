@@ -6,52 +6,124 @@ from ..domain.state import GameState
 
 
 _QUOTE_OPEN_TO_CLOSE = {"「": "」", "『": "』"}
-_REDACT_PRE_WINDOW = 30
+_SUBJECT_JOSA = ("가", "이", "은", "는", "께서")
+_PRONOUN_SUBJECTS = ("그가", "그는", "그녀가", "그녀는")
 
 
 def redact_dead_quotes(text: str, dead_names: list[str]) -> str:
     """Strip Korean direct-quote blocks attributed to dead NPCs.
 
-    For each `「` / `『` opener in `text`, if any of `dead_names` appears as
-    a substring within the 30 chars preceding the opener, the entire quote
-    block (opener through matching closer) is replaced with `…`. Names are
-    matched as substrings so trailing particles (가/이/은/는/께서) don't
-    affect detection.
+    Walks `text` once, tracking the most recent named subject as state.
+    Each `「` / `『` block inherits whoever was last marked as the speaker;
+    if that speaker is in `dead_names`, the block is replaced with `…`.
+
+    Subject classification at every position:
+    - `<dead_name>{가|이|은|는|께서}` → speaker = dead.
+    - `당신{가|이|은|는|께서}` → speaker = player (alive, resets dead).
+    - `그(가|는)` / `그녀(가|는)` → continuation pronoun, doesn't change
+      the recorded speaker. This is what catches `에드릭은 ... 「Q1」 그는
+      ... 「Q2」` — the pronoun keeps Edrik as the attributed speaker for
+      Q2 even though his name doesn't reappear in the immediate window.
+    - any other `<hangul>+{subject_josa}` → resets to "not dead". A live
+      NPC, a scene object (`안개가`, `분수는`), or 당신 all break the
+      dead-subject inheritance the safe way (under-redact, never falsely
+      redact a live speaker).
+    - object / dative markers (`을/를/에/에게/한테/와/과/의 …`) don't
+      participate — `노인을 떠올린다. 「잘 지내시오.」` correctly keeps the
+      quote because the dead name only appears as the player's mental
+      object, not as a subject.
+
+    Earlier window-scan version missed the common pattern where the LLM
+    introduces a corpse with a subject marker, opens a quote, then opens
+    a second quote a few sentences later anchored only by the pronoun
+    `그는`. Stateful walk handles that without an arbitrarily wide window.
 
     Two callers — same single root cause:
-    - `build_history_layer` → strips them from `recent_dialogue` so the
-      narrate LLM doesn't see resurrected speech as an in-context pattern
-      to mimic. The corpse "사망" header alone hasn't been enough: when the
-      same NPC's quotes are inline in `=== 최근 대화 ===` the LLM follows
-      the pattern.
-    - `consume_narrate` → strips them from the post-LLM body before
-      persisting to log_entry / dialogue / turn_log so a one-off slip
-      doesn't compound across turns.
+    - `build_history_layer` → strips from `recent_dialogue` so the LLM
+      doesn't see resurrected speech as an in-context pattern to mimic.
+    - `consume_narrate` → strips from the post-LLM body before persisting
+      to log_entry / dialogue / turn_log so a one-off slip doesn't
+      compound across turns.
     """
     if not dead_names or not text:
         return text
+    name_set = {n for n in dead_names if n}
     out: list[str] = []
     i = 0
     n = len(text)
+    speaker_is_dead = False
     while i < n:
         ch = text[i]
         close = _QUOTE_OPEN_TO_CLOSE.get(ch)
-        if close is None:
-            out.append(ch)
-            i += 1
+        if close is not None:
+            close_idx = text.find(close, i + 1)
+            if close_idx == -1:
+                # Unmatched opener — leave the rest as-is.
+                out.append(text[i:])
+                break
+            if speaker_is_dead:
+                out.append("…")
+            else:
+                out.append(text[i:close_idx + 1])
+            i = close_idx + 1
             continue
-        close_idx = text.find(close, i + 1)
-        if close_idx == -1:
-            # Unmatched opener — leave the rest as-is rather than swallow it.
-            out.append(text[i:])
-            break
-        window = text[max(0, i - _REDACT_PRE_WINDOW):i]
-        if any(name and name in window for name in dead_names):
-            out.append("…")
-        else:
-            out.append(text[i:close_idx + 1])
-        i = close_idx + 1
+
+        kind, length = _classify_subject_at(text, i, name_set)
+        if kind == "dead":
+            speaker_is_dead = True
+            out.append(text[i:i + length])
+            i += length
+            continue
+        if kind == "alive":
+            speaker_is_dead = False
+            out.append(text[i:i + length])
+            i += length
+            continue
+        if kind == "pronoun":
+            # Continuation — don't change `speaker_is_dead`.
+            out.append(text[i:i + length])
+            i += length
+            continue
+
+        out.append(ch)
+        i += 1
     return "".join(out)
+
+
+def _classify_subject_at(
+    text: str, i: int, dead_names: set[str]
+) -> tuple[str | None, int]:
+    """Return (kind, length) for a subject pattern starting at `text[i]`,
+    or (None, 0) if no subject pattern starts here.
+
+    kind ∈ {'dead', 'alive', 'pronoun'} — see `redact_dead_quotes`.
+    """
+    # 1. Dead-name + subject josa (most specific).
+    for name in dead_names:
+        for josa in _SUBJECT_JOSA:
+            pat = name + josa
+            if text.startswith(pat, i):
+                return "dead", len(pat)
+    # 2. 당신 (player) + subject josa.
+    for josa in _SUBJECT_JOSA:
+        pat = "당신" + josa
+        if text.startswith(pat, i):
+            return "alive", len(pat)
+    # 3. 그/그녀 + 가/는 — continuation pronoun.
+    for pat in _PRONOUN_SUBJECTS:
+        if text.startswith(pat, i):
+            return "pronoun", len(pat)
+    # 4. Generic <hangul>+ + subject josa — any other subject. Reset to
+    #    "not dead". We don't track who exactly; we only care that a new
+    #    subject has taken over from the previous dead one.
+    j = i
+    while j < len(text) and "가" <= text[j] <= "힣":
+        j += 1
+    if j > i and j < len(text):
+        for josa in _SUBJECT_JOSA:
+            if text.startswith(josa, j):
+                return "alive", j - i + len(josa)
+    return None, 0
 
 
 def build_world_layer(

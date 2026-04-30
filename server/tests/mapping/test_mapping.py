@@ -187,7 +187,12 @@ def test_place_day_phase_default_dawn(fresh_state):
     p = to_place(_full_state(fresh_state))
     assert p["dayPhase"] == "새벽"
     assert p["surroundings"] == [
-        {"name": "성문", "blurb": "", "difficulty": None}
+        {
+            "name": "성문",
+            "blurb": "",
+            "difficulty": None,
+            "risk": {"label": "안전", "tone": "good"},
+        }
     ]
 
 
@@ -212,7 +217,12 @@ def test_place_surroundings_carry_blurb_and_difficulty(fresh_state):
     ]
     p = to_place(state)
     assert p["surroundings"] == [
-        {"name": "성문", "blurb": "닫힌 성문", "difficulty": "어려움"}
+        {
+            "name": "성문",
+            "blurb": "닫힌 성문",
+            "difficulty": "어려움",
+            "risk": {"label": "안전", "tone": "good"},
+        }
     ]
 
 

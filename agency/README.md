@@ -19,23 +19,16 @@ Works like hiring a QA tester to play the game. Each turn an LLM generates the n
 ```
 agency/run_qa.py        # CLI entrypoint
 agency/qa/
-  agents/               # 14 personas, one .md per agent — split across 2 levels (provocateur is shared)
-    # Level 1 (10 narrow personas, 15T default — `--level 1`, the default)
-    diplomat.md         # NPC affinity / dialogue
-    scout.md            # 6-stat coverage rotation
-    provocateur.md      # judge-branch edges (reject / fallback / chain / summon_combat)
-    combatant.md        # one-shot cinematic combat loop
-    quartermaster.md    # equip / buy / sell / use
-    caster.md           # skill semantic-match in combat + MP-shortage fallback
-    survivor.md         # rest / sleep_risk / encounter
-    questor.md          # quest triggers / chapter progress / rewards
-    griefer.md          # repeated-stat-abuse → affinity / memory loop
-    fleer.md            # flee / in_combat gating
-    # Level 2 (5 phased personas, 45T default — `--level 2`)
-    wayfarer.md         # cross-location travel arc
-    warrior.md          # extended combat arc
-    citizen.md          # friendly→hostile affinity arc on the same NPC
-    artisan.md          # craft / level_up / learn_skill arc
+  agents/               # 9 phased personas, one .md per agent (25 turns each)
+    socialite.md        # 친교 → 의뢰·bluff → 적대전환·집착 (호감도 라이프사이클 + combat 가드)
+    fighter.md          # victory → broken_off/flee → downed/death_save → non-combat flee 폴백
+    shopkeeper.md       # 인벤·거래·장비 → 성장·휴식·기술 학습 → 가드 (장착 중 sell·만피 use·affinity)
+    scout.md            # 6 stat 강제 순환 → 환경 prop 수색 (hidden_items / hidden_connections)
+    caster.md           # skill 의미 매칭 다양화 → MP·회피 표현 평타 폴백 → 회복 사이클
+    survivor.md         # rest 분기 (safe → risky → dangerous, sleep_encounter)
+    questor.md          # 첫 퀘스트 완료 → 둘째 퀘스트·fail_trigger → 검증 불가 주장·chapter 경계
+    provocateur.md      # judge 15종 분기 fuzz (reject·chain·tail_intent·semantic 폴백)
+    mourner.md          # 친교·살해 → 시체 호명·시신 검사 혼합 → off-screen 호명 (시체 발화 회귀)
   harness/
     agent.py            # PlayerAgent — system prompt + per-turn LLM call
     state_view.py       # front_state → input text for the player LLM
@@ -45,7 +38,7 @@ agency/qa/
 # Run output lands at the repo root under reports/qa/<timestamp>/ (gitignored)
 ```
 
-`AGENTS_BY_LEVEL` in `run_qa.py` is the source of truth for membership. See [agency/CLAUDE.md](./CLAUDE.md) for the full L1/L2 playbook.
+`AGENTS` in `run_qa.py` is the source of truth for membership. See [agency/CLAUDE.md](./CLAUDE.md) for the full playbook.
 
 ### How it works
 
@@ -57,11 +50,11 @@ agency/qa/
 ### Run
 
 ```bash
-# every agent once (default 15 turns) against the `default` profile
+# every agent once (default 25 turns) against the `default` profile
 .venv/bin/python agency/run_qa.py
 
 # a specific agent
-.venv/bin/python agency/run_qa.py --agent diplomat --turns 20
+.venv/bin/python agency/run_qa.py --agent socialite --turns 25
 
 # a different profile
 .venv/bin/python agency/run_qa.py --agent all --profile <scenario_id>
@@ -74,13 +67,13 @@ agency/qa/
 ```
 reports/qa/<timestamp>/
   index.md                      # per-agent turn count + error count + transcript links
-  diplomat/
+  socialite/
     transcript.md               # human-readable per-turn record
     sse.jsonl                   # raw SSE events (for replay/debugging)
     final_state.json            # the full GameState at the end
     saves/                      # per-run isolated saves (a fresh dir each run)
+  fighter/...
   scout/...
-  provocateur/...
 ```
 
 ### Using the output to fix code

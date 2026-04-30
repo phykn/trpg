@@ -1,5 +1,5 @@
 import type { EquipItem, Hero, Place, Quest, Subject } from '@/types/domain';
-import type { PanelSlot, Tone } from '@/types/ui';
+import type { MetaSegment, PanelSlot, Tone } from '@/types/ui';
 
 import { formatInventoryItem, joinOrDash } from './format';
 
@@ -26,6 +26,10 @@ function characterMeta(level: number, raceJob: string, gender: string): string {
   return parts.join(' · ');
 }
 
+function plainMeta(text: string): MetaSegment[] {
+  return [{ text }];
+}
+
 function buildHeroSlot(hero: Hero): PanelSlot {
   const equipped = Object.values(hero.equipment).filter((it): it is EquipItem => it !== null);
   return {
@@ -33,7 +37,7 @@ function buildHeroSlot(hero: Hero): PanelSlot {
     chip: { short: hero.name, dot: hero.canLevelUp },
     panel: {
       title: hero.name,
-      meta: characterMeta(hero.level, hero.raceJob, hero.gender),
+      meta: plainMeta(characterMeta(hero.level, hero.raceJob, hero.gender)),
       barSplit: [
         { label: 'HP', value: hero.hp, max: hero.hpMax, tone: 'hp', display: `${hero.hp}/${hero.hpMax}` },
         { label: 'MP', value: hero.mp, max: hero.mpMax, tone: 'mp', display: `${hero.mp}/${hero.mpMax}` },
@@ -51,14 +55,33 @@ function buildHeroSlot(hero: Hero): PanelSlot {
 }
 
 function buildSubjectSlot(subject: Subject | null): PanelSlot {
-  if (!subject) return { id: 'person', chip: { short: '대상' }, panel: null };
+  if (!subject) {
+    return {
+      id: 'person',
+      chip: { short: '대상' },
+      panel: {
+        title: '—',
+        barSplit: [
+          { label: 'HP', value: 0, max: 0, tone: 'hp', display: '—' },
+          { label: '호감도', value: 0, max: 100, tone: 'good', display: '—', signed: true },
+        ],
+        sections: [
+          { label: '능력', text: '—' },
+          { label: '장비', text: '—' },
+          { label: '소지', text: '—' },
+          { label: '기술', text: '—' },
+          { label: '특징', text: '—', clampLines: 2 },
+        ],
+      },
+    };
+  }
   const equipped = Object.values(subject.equipment).filter((it): it is EquipItem => it !== null);
   return {
     id: 'person',
     chip: { short: '대상' },
     panel: {
       title: subject.name,
-      meta: characterMeta(subject.level, subject.raceJob, subject.gender),
+      meta: plainMeta(characterMeta(subject.level, subject.raceJob, subject.gender)),
       barSplit: [
         { label: 'HP', value: subject.hp, max: subject.hpMax, tone: 'hp', display: `${subject.hp}/${subject.hpMax}` },
         {
@@ -82,23 +105,36 @@ function buildSubjectSlot(subject: Subject | null): PanelSlot {
 }
 
 function buildQuestSlot(quest: Quest | null): PanelSlot {
+  if (!quest) {
+    return {
+      id: 'quest',
+      chip: { short: '퀘스트' },
+      panel: {
+        title: '—',
+        sections: [
+          { label: '의뢰', text: '—' },
+          { label: '보상', text: '—' },
+          { label: '목표', text: '—' },
+          { label: '조건', text: '—' },
+          { label: '요약', text: '—', clampLines: 3 },
+        ],
+      },
+    };
+  }
   return {
     id: 'quest',
     chip: { short: '퀘스트' },
-    panel: quest
-      ? {
-          title: quest.title,
-          meta: quest.difficulty,
-          metaTone: TIER_TONE[quest.difficulty],
-          sections: [
-            { label: '의뢰', text: quest.giver },
-            { label: '보상', nodes: [['GOLD', quest.rewards.gold], ['EXP', quest.rewards.exp]] },
-            { label: '목표', text: joinOrDash(quest.goals) },
-            { label: '조건', text: joinOrDash(quest.conditions) },
-            { label: '요약', text: quest.summary, clampLines: 3 },
-          ],
-        }
-      : null,
+    panel: {
+      title: quest.title,
+      meta: [{ text: quest.difficulty, tone: TIER_TONE[quest.difficulty] }],
+      sections: [
+        { label: '의뢰', text: quest.giver },
+        { label: '보상', nodes: [['GOLD', quest.rewards.gold], ['EXP', quest.rewards.exp]] },
+        { label: '목표', text: joinOrDash(quest.goals) },
+        { label: '조건', text: joinOrDash(quest.conditions) },
+        { label: '요약', text: quest.summary, clampLines: 3 },
+      ],
+    },
   };
 }
 
@@ -111,47 +147,66 @@ function moveIntent(name: string): string {
 }
 
 function buildPlaceSlot(place: Place | null): PanelSlot {
+  if (!place) {
+    return {
+      id: 'bg',
+      chip: { short: '이동' },
+      panel: {
+        title: '—',
+        sections: [
+          { label: '모습', text: '—', clampLines: 3 },
+        ],
+        actions: [
+          { label: '장소', items: [] },
+          { label: '대상', items: [] },
+        ],
+      },
+    };
+  }
+  const metaPrefix = place.weather.length > 0 ? `${place.weather.join(' · ')} · ` : '';
   return {
     id: 'bg',
     chip: { short: '이동' },
-    panel: place
-      ? {
-          title: place.name,
-          meta: place.weather.length > 0 ? place.weather.join(' · ') : undefined,
-          sections: [
-            { label: '모습', text: place.description || '—', clampLines: 3 },
-          ],
-          actions: [
-            {
-              label: '장소',
-              items: place.surroundings.map((s) => ({
-                label: s.name,
-                intent: moveIntent(s.name),
-                confirm: {
-                  title: s.name,
-                  subtitle: s.difficulty ? `이동 난이도: ${s.difficulty}` : undefined,
-                  blurb: s.blurb || undefined,
-                  confirmLabel: '이동',
-                },
-              })),
+    panel: {
+      title: place.name,
+      meta: [
+        ...(metaPrefix ? [{ text: metaPrefix }] : []),
+        { text: place.risk.label, tone: place.risk.tone },
+      ],
+      sections: [
+        { label: '모습', text: place.description || '—', clampLines: 3 },
+      ],
+      actions: [
+        {
+          label: '장소',
+          items: place.surroundings.map((s) => ({
+            label: s.name,
+            intent: moveIntent(s.name),
+            confirm: {
+              title: s.name,
+              subtitle: s.difficulty ? `이동 난이도: ${s.difficulty}` : undefined,
+              blurb: s.blurb || undefined,
+              risk: s.risk,
+              confirmLabel: '이동',
             },
-            {
-              label: '대상',
-              items: place.targets.map((t) => ({
-                label: t.name,
-                intent: `${t.name}에게 이동`,
-                confirm: {
-                  title: t.name,
-                  subtitle: characterMeta(t.level, t.raceJob, t.gender),
-                  blurb: t.blurb || undefined,
-                  trust: t.trust !== 0 ? t.trust : undefined,
-                  confirmLabel: '이동',
-                },
-              })),
+          })),
+        },
+        {
+          label: '대상',
+          items: place.targets.map((t) => ({
+            label: t.name,
+            intent: `${t.name}에게 이동`,
+            confirm: {
+              title: t.name,
+              subtitle: characterMeta(t.level, t.raceJob, t.gender),
+              blurb: t.blurb || undefined,
+              trust: t.trust !== 0 ? t.trust : undefined,
+              confirmLabel: '이동',
             },
-          ],
-        }
-      : null,
+          })),
+        },
+      ],
+    },
   };
 }
 

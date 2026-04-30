@@ -25,9 +25,9 @@ function ActionScroller({ group, onAction }: {
             <Pressable
               key={it.label}
               onPress={() => onAction?.(it)}
-              className="px-2 py-1 rounded-sm border border-border-default bg-canvas-default active:bg-canvas-inset"
+              className="shrink-0 px-2 py-1 rounded-sm border border-border-default bg-canvas-default active:bg-canvas-inset"
             >
-              <Text className="font-sans text-panel text-fg-default">{it.label}</Text>
+              <Text numberOfLines={1} className="font-sans text-panel text-fg-default">{it.label}</Text>
             </Pressable>
           ))}
         </ScrollView>
@@ -45,14 +45,25 @@ export function PanelBody({ panel, onAction }: { panel: Panel; onAction?: (actio
             {panel.title}
           </Text>
         </View>
-        {panel.meta && (
+        {panel.meta && panel.meta.length > 0 && (
           <View className="flex-1 min-w-0">
             <Text
               numberOfLines={1}
-              className={`font-sans text-caption italic text-right ${panel.metaTone ? 'font-sans-semibold' : 'text-fg-muted'}`}
-              style={panel.metaTone ? { color: toneColor[panel.metaTone] } : undefined}
+              className="font-sans text-caption italic text-right text-fg-muted"
             >
-              {panel.meta}
+              {panel.meta.map((seg, i) =>
+                seg.tone ? (
+                  <Text
+                    key={i}
+                    className="font-sans-semibold"
+                    style={{ color: toneColor[seg.tone] }}
+                  >
+                    {seg.text}
+                  </Text>
+                ) : (
+                  <Text key={i}>{seg.text}</Text>
+                ),
+              )}
             </Text>
           </View>
         )}

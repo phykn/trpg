@@ -82,6 +82,7 @@ async def run_qa_session(
         basic_auth_pass="qa",
         saves_dir=str(saves_dir),
         profile_dir=str(profile_dir),
+        cors_origins=[],  # in-process via ASGITransport — no real cross-origin clients
     )
 
     error_count = 0

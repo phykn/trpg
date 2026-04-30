@@ -1,3 +1,4 @@
+import re
 from collections.abc import AsyncIterator
 
 from ..agents.narrate import (
@@ -11,6 +12,7 @@ from ..domain.memory import GMLogEntry
 from ..engines.apply import apply_changes
 from ..llm.client import LLMClient
 from ..ontology.graph import build_graph
+from ..ontology.player_view import build_player_view
 from ..ontology.target_view import build_target_view
 from ..domain.state import GameState
 from ..context import (
@@ -73,6 +75,7 @@ async def run_narrate(
         world=build_world_layer(profile_dir, state.profile),
         session=build_session_layer(state),
         history=build_history_layer(state, surroundings.get("corpses", [])),
+        player_view=build_player_view(state),
         target_view=target_view,
         surroundings=surroundings,
         judge_result=judge_result,
@@ -91,6 +94,27 @@ async def run_narrate(
                     state,
                 )
         yield item
+
+
+# --- entity-id leak guard --------------------------------------------------
+
+# Engine ids are lowercase ASCII with at least one underscore (`q_chief_request`,
+# `edrik_chief`, `healing_potion_01`). Korean text never matches this shape, so
+# any token matching it inside a player-facing suggestion is a prompt slip.
+_ID_TOKEN = re.compile(r"\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b")
+_PAREN_ID = re.compile(r"\s*[\(\[（［][^\(\[\)\]）］]*[a-z][a-z0-9]*(?:_[a-z0-9]+)+[^\(\[\)\]）］]*[\)\]）］]")
+
+
+def _strip_id_leaks(suggestions: list[str]) -> list[str]:
+    """Remove parenthetical id glosses ('촌장의 부탁 (q_chief_request)') and drop
+    any suggestion still carrying a bare id token after the strip."""
+    cleaned: list[str] = []
+    for s in suggestions:
+        stripped = _PAREN_ID.sub("", s).strip()
+        if not stripped or _ID_TOKEN.search(stripped):
+            continue
+        cleaned.append(stripped)
+    return cleaned
 
 
 # --- reject sterilizer -----------------------------------------------------
@@ -238,6 +262,7 @@ async def consume_narrate(
     # recent_dialogue and the next narrate call mimics the pattern.
     body = redact_dead_quotes(body, _dead_names_in_scope(state))
 
+    final.output.suggestions = _strip_id_leaks(final.output.suggestions)
     yield {"type": "suggestions", "data": {"items": list(final.output.suggestions)}}
 
     apply_changes(state, final.output.state_changes, dirty.entities)

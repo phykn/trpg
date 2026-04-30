@@ -1,6 +1,6 @@
 import { Modal, Pressable, Text, View } from 'react-native';
 
-import { shadow } from '@/design/tokens';
+import { shadow, toneColor } from '@/design/tokens';
 import type { ConfirmInfo } from '@/types/ui';
 
 export function ConfirmDialog({ info, onConfirm, onCancel }: {
@@ -36,11 +36,18 @@ export function ConfirmDialog({ info, onConfirm, onCancel }: {
               >
                 {info.title}
               </Text>
-              {trust && (
+              {trust ? (
                 <Text className={`font-mono text-caption ${trust.cls}`}>
                   {trust.text}
                 </Text>
-              )}
+              ) : info.risk ? (
+                <Text
+                  className="font-sans-semibold text-caption"
+                  style={{ color: toneColor[info.risk.tone] }}
+                >
+                  {info.risk.label}
+                </Text>
+              ) : null}
             </View>
             {info.subtitle && (
               <Text className="font-sans italic text-caption text-fg-muted">

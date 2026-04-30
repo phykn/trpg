@@ -7,6 +7,7 @@ class NarrateInput(BaseModel):
     world: str
     session: dict[str, Any]
     history: str
+    player_view: dict[str, Any]
     target_view: dict[str, Any] | None = None
     surroundings: dict[str, Any]
     judge_result: dict[str, Any]

@@ -5,7 +5,7 @@ shot, accumulates per-round events, and hands the whole trace to this agent.
 The agent streams a single 5-10 sentence Korean cinematic that walks the
 reader through every round in order.
 """
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,7 +28,14 @@ class CombatRoundEvent(BaseModel):
 
 
 class CombatStateSnapshot(BaseModel):
-    """Per-actor HP snapshot — used for fight start and end."""
+    """Per-actor HP snapshot — used for fight start and end.
+
+    Identity fields (race / appearance / description / gender) are populated
+    only for enemies via _enemy_snapshot in combat_auto.py — the player's
+    identity travels in CombatNarrateInput.player_view, so duplicating it on
+    player_start/player_end would be noise. Enemies have no equivalent
+    side-channel, so their identity rides on the snapshot itself.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -36,6 +43,10 @@ class CombatStateSnapshot(BaseModel):
     hp: int
     max_hp: int
     alive: bool
+    race: dict[str, Any] | None = None
+    appearance: str | None = None
+    description: str | None = None
+    gender: str | None = None
 
 
 CombatOutcome = Literal[
@@ -52,6 +63,7 @@ class CombatNarrateInput(BaseModel):
 
     world: str
     location: dict
+    player_view: dict[str, Any]
     player_intent: str  # the original player_input that drove this fight
     rounds_run: int = Field(ge=1)
     outcome: CombatOutcome

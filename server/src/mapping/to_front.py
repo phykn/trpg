@@ -180,6 +180,13 @@ def to_quest(state: GameState) -> dict | None:
 # --- Place -----------------------------------------------------------------
 
 
+_RISK_PAYLOAD: dict[str, dict] = {
+    "safe": {"label": "안전", "tone": "good"},
+    "risky": {"label": "주의", "tone": "neutral"},
+    "dangerous": {"label": "위험", "tone": "bad"},
+}
+
+
 def to_place(state: GameState) -> dict | None:
     p = state.characters[state.player_id]
     if p.location_id is None or p.location_id not in state.locations:
@@ -194,6 +201,7 @@ def to_place(state: GameState) -> dict | None:
             "name": target.name,
             "blurb": target.description,
             "difficulty": c.difficulty,
+            "risk": _RISK_PAYLOAD[target.sleep_risk],
         })
     targets = []
     for cid, c in state.characters.items():
@@ -216,6 +224,7 @@ def to_place(state: GameState) -> dict | None:
         "features": list(loc.tags),
         "surroundings": surroundings,
         "targets": targets,
+        "risk": _RISK_PAYLOAD[loc.sleep_risk],
     }
 
 

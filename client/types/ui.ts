@@ -47,8 +47,11 @@ export type ConfirmInfo = {
   subtitle?: string;
   blurb?: string;
   trust?: number;
+  risk?: { label: string; tone: Tone };
   confirmLabel?: string;
 };
+
+export type MetaSegment = { text: string; tone?: Tone };
 
 export type PanelAction = { label: string; intent: string; confirm?: ConfirmInfo };
 
@@ -59,8 +62,7 @@ export type PanelActions = {
 
 export type Panel = {
   title: string;
-  meta?: string;
-  metaTone?: Tone;
+  meta?: MetaSegment[];
   bar?: BarDef;
   barSplit?: (BarDef | PartsCell)[];
   sections?: PanelSection[];

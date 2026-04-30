@@ -306,6 +306,9 @@ async def _dispatch(
 # --- shared narrate tail ---------------------------------------------------
 
 
+_CORPSE_BYPASS_BODY = "죽은 자는 말이 없습니다."
+
+
 async def _stream_narrate_tail(
     client: LLMClient,
     state: GameState,
@@ -320,11 +323,33 @@ async def _stream_narrate_tail(
     branch and the bottom PassAction/RejectAction tail — pre-narrate state
     emission lets the destination's surroundings appear in the prompt while
     the client's pill updates immediately. RejectAction has no movement intent
-    so it skips apply_intended_move."""
+    so it skips apply_intended_move.
+
+    Corpse bypass: when a PassAction targets a dead character, narrate is
+    skipped entirely and a deterministic single-line body is emitted. No LLM
+    in the loop = no chance of resurrected speech, regardless of how the
+    model would have phrased it (`「…」`, indirect report, pronoun chain,
+    ambient mention — all moot). Quote-redaction in `consume_narrate` /
+    `build_history_layer` stays as a 2nd line for the case where the corpse
+    is in the scene but the action targets a live NPC and the LLM still
+    tries to put words in the dead one's mouth.
+    """
     if isinstance(action, PassAction):
         target_for_log = action.targets[0] if action.targets else None
         apply_intended_move(state, action.model_dump(), dirty.entities)
         reconcile_subject_after_move(state)
+
+        dead = next(
+            (state.characters[t] for t in action.targets
+             if t in state.characters and not state.characters[t].alive),
+            None,
+        )
+        if dead is not None:
+            async for ev in _emit_corpse_bypass(
+                state, dirty, player_input, dead, target_for_log, to_front_fn,
+            ):
+                yield ev
+            return
     else:
         target_for_log = None
 
@@ -342,3 +367,31 @@ async def _stream_narrate_tail(
         dialogue_input=player_input,
     ):
         yield ev
+
+
+async def _emit_corpse_bypass(
+    state: GameState,
+    dirty: Dirty,
+    player_input: str,
+    dead: "Character",
+    target_for_log: str | None,
+    to_front_fn: ToFrontFn | None,
+) -> AsyncIterator[dict]:
+    """Skip narrate entirely for a dead-target pass: emit panel state, stream
+    one deterministic narrative_delta, push the per-turn tail (turn_log /
+    dialogue / GM log_entry). Mirrors `consume_narrate`'s persistence steps
+    but with no LLM call and no state_changes."""
+    from ..domain.memory import GMLogEntry  # local import to avoid cycle
+    from .dirty import next_log_id, push_dialogue, push_log_entry, push_turn_log
+
+    if to_front_fn is not None:
+        yield {"type": "state", "data": to_front_fn(state)}
+
+    body = _CORPSE_BYPASS_BODY
+    yield {"type": "narrative_delta", "data": {"text": body}}
+    yield {"type": "suggestions", "data": {"items": []}}
+
+    push_turn_log(state, target_for_log, f"{dead.name}의 시신과 마주함", dirty)
+    push_dialogue(state, player_input, body, dirty)
+    gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=body)
+    push_log_entry(state, gm_log, dirty)
