@@ -350,7 +350,7 @@ def check_inventory(c: Character, items: dict[str, Item]) -> list[str]:
 # --- seed-only character extras --------------------------------------------
 
 
-def _check_seed_only_rules(c: Character, items: dict[str, Item]) -> list[str]:
+def _check_seed_only_rules(c: Character) -> list[str]:
     """Extra rules at seed time only — relaxed for runtime state."""
     where = f"characters/{c.id}"
     out: list[str] = []
@@ -674,7 +674,7 @@ def check_scenario(s: Scenario) -> list[str]:
         out.extend(check_skills(c, s.skills))
         out.extend(_check_character_cross_ref(c, s))
         if not s.runtime:
-            out.extend(_check_seed_only_rules(c, s.items))
+            out.extend(_check_seed_only_rules(c))
 
     for r in s.races.values():
         for sid in r.racial_skill_ids:
@@ -718,7 +718,7 @@ def check_seed_character(
     out.extend(check_character(c))
     out.extend(check_inventory(c, items_pool))
     out.extend(check_skills(c, skills_pool))
-    out.extend(_check_seed_only_rules(c, items_pool))
+    out.extend(_check_seed_only_rules(c))
     return out
 
 

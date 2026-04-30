@@ -1,4 +1,4 @@
-"""Session lifecycle — current/init/state and the streaming entries
+"""Session lifecycle — init/state and the streaming entries
 (turn / roll / intro)."""
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -10,26 +10,11 @@ from ...flow.turn import run_turn
 from ...llm.client import LLMClient
 from ...mapping.to_front import to_front_state
 from ...persistence.init import init_game
-from ...persistence.store import load_game, read_current_game_id
 from ..deps import get_llm, get_profile_dir, get_saves_dir, get_state
 from ..schema import InitRequest, InitResponse, TurnRequest
 from ..sse import streaming_response
 
 router = APIRouter()
-
-
-@router.get("/session/current")
-async def get_current_session(
-    saves_dir: str = Depends(get_saves_dir),
-) -> dict:
-    game_id = read_current_game_id(saves_dir)
-    if not game_id:
-        raise HTTPException(status_code=404, detail="no current game")
-    try:
-        state = load_game(saves_dir, game_id)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="current game file missing")
-    return {"game_id": state.game_id, "state": to_front_state(state)}
 
 
 @router.post("/session/init", response_model=InitResponse)
