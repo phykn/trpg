@@ -145,7 +145,7 @@ def arm_combat_roll_pending(
 # --- One-roll combat outcome -----------------------------------------------
 
 
-# grade → (player damage as % of max_hp, kill enemies, xp granted)
+# grade → (player damage as % of max_hp, kill all enemies)
 _OUTCOME_TABLE: dict[Grade, tuple[float, bool]] = {
     "critical_success": (0.0, True),
     "success": (0.10, True),
@@ -217,6 +217,34 @@ def apply_combat_outcome(
     report.player_hp_after = player.hp
     report.player_max_hp = player.max_hp
     return report
+
+
+def format_combat_outcome_text(
+    report: CombatOutcomeReport, roll_xp: int
+) -> str | None:
+    """Numeric breakdown rendered as one act-line after the cinematic body —
+    per-enemy damage / HP / kill XP, the player's hit, and any per-roll XP
+    earned. Returns None when there is nothing to report (e.g. no enemies
+    registered, no damage, no XP)."""
+    lines: list[str] = []
+    for h in report.enemy_hits:
+        if h.killed:
+            tail = f" — 쓰러짐 (+{h.xp} XP)" if h.xp > 0 else " — 쓰러짐"
+            lines.append(f"{h.name} {h.damage} 피해{tail}")
+        else:
+            lines.append(
+                f"{h.name} {h.damage} 피해 (HP {h.hp_after}/{h.max_hp})"
+            )
+    if report.player_damage > 0:
+        lines.append(
+            f"피격 {report.player_damage} 피해 "
+            f"(HP {report.player_hp_after}/{report.player_max_hp})"
+        )
+    if roll_xp > 0:
+        lines.append(f"굴림 경험치 +{roll_xp}")
+    if not lines:
+        return None
+    return "전투 결과\n" + "\n".join(lines)
 
 
 def build_oneshot_narrate_input(

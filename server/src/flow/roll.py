@@ -17,6 +17,7 @@ from .combat_oneshot import (
     apply_combat_outcome,
     arm_death_save_pending,
     build_oneshot_narrate_input,
+    format_combat_outcome_text,
 )
 from ..agents.combat_narrate import stream_combat_narrate
 from .combat_phase import run_combat_npc_phase
@@ -32,7 +33,6 @@ from .dirty import (
 )
 from .format import (
     format_combat_end_text,
-    format_combat_outcome_text,
     front_grade,
 )
 from .narrate import consume_narrate, run_narrate

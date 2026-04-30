@@ -6,7 +6,6 @@ string for a log entry lives here.
 from ..domain.state import GameState
 from ..engines.combat import AttackOutcome
 from ..mapping.josa import eul_reul, i_ga
-from .combat_oneshot import CombatOutcomeReport
 
 
 # --- Labels and grade helpers ----------------------------------------------
@@ -66,34 +65,6 @@ def format_attack_log(
     if apply_result.get("dying"):
         return f"{head} {target.name}{i_ga(target.name)} 의식을 잃었다."
     return head
-
-
-def format_combat_outcome_text(
-    report: CombatOutcomeReport, roll_xp: int
-) -> str | None:
-    """Numeric breakdown rendered as one act-line after the cinematic body —
-    per-enemy damage / HP / kill XP, the player's hit, and any per-roll XP
-    earned. Returns None when there is nothing to report (e.g. no enemies
-    registered, no damage, no XP)."""
-    lines: list[str] = []
-    for h in report.enemy_hits:
-        if h.killed:
-            tail = f" — 쓰러짐 (+{h.xp} XP)" if h.xp > 0 else " — 쓰러짐"
-            lines.append(f"{h.name} {h.damage} 피해{tail}")
-        else:
-            lines.append(
-                f"{h.name} {h.damage} 피해 (HP {h.hp_after}/{h.max_hp})"
-            )
-    if report.player_damage > 0:
-        lines.append(
-            f"피격 {report.player_damage} 피해 "
-            f"(HP {report.player_hp_after}/{report.player_max_hp})"
-        )
-    if roll_xp > 0:
-        lines.append(f"굴림 경험치 +{roll_xp}")
-    if not lines:
-        return None
-    return "전투 결과\n" + "\n".join(lines)
 
 
 def format_combat_end_text(outcome: str) -> str:
