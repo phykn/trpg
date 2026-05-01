@@ -132,13 +132,13 @@ def _classify_subject_at(
     return None, 0
 
 
-def build_world_layer(
+async def build_world_layer(
     scenario_repo: "ScenarioRepo", profile: str, *, missing_ok: bool = False
 ) -> str:
     """Read <profile>/world.md via the ScenarioRepo. Strict by default — set
     missing_ok=True for callers (combat_auto narrate input, encounter summon)
     that should fall back to an empty string."""
-    return scenario_repo.read_world_md(profile, missing_ok=missing_ok)
+    return await scenario_repo.read_world_md(profile, missing_ok=missing_ok)
 
 
 def build_session_layer(state: GameState, graph: GameGraph | None = None) -> dict:

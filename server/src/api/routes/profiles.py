@@ -13,4 +13,4 @@ router = APIRouter()
 async def list_profiles(
     scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> list[dict]:
-    return scenario_repo.list_profiles()
+    return await scenario_repo.list_profiles()

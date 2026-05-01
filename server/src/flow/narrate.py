@@ -83,7 +83,7 @@ async def run_narrate(
 
     surroundings = build_surroundings(state, state.player_id, graph, grade=grade)
     input_ = NarrateInput(
-        world=build_world_layer(scenario_repo, state.profile),
+        world=await build_world_layer(scenario_repo, state.profile),
         session=build_session_layer(state),
         history=build_history_layer(state, surroundings.get("corpses", [])),
         player_view=build_player_view(state),

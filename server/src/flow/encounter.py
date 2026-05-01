@@ -22,14 +22,14 @@ from ..engines.invariants import InvariantViolation, check_character
 from ..persistence.repo import ScenarioRepo
 
 
-def _build_input(
+async def _build_input(
     state: GameState,
     location: Location,
     scenario_repo: ScenarioRepo,
     profile: str,
     requested_role: str | None,
 ) -> EncounterSummonInput:
-    world_text = build_world_layer(scenario_repo, profile, missing_ok=True)
+    world_text = await build_world_layer(scenario_repo, profile, missing_ok=True)
     races = [
         {"id": r.id, "name": r.name, "description": r.description}
         for r in state.races.values()
@@ -107,7 +107,7 @@ async def summon_encounter(
     requested_role: str | None = None,
 ) -> Character | None:
     """Summon one enemy via LLM and register it. Returns None if race_id is not in available races."""
-    input_ = _build_input(state, location, scenario_repo, profile, requested_role)
+    input_ = await _build_input(state, location, scenario_repo, profile, requested_role)
     out = await encounter_summon(client, input_)
     if out.race_id not in state.races:
         return None

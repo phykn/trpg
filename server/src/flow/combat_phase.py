@@ -72,7 +72,7 @@ async def emit_combat_cinematic_and_end(
     Shared tail of one auto-combat sim — used by _drive_auto_combat (in-combat
     /turn) and roll._resume_auto_combat (post-roll combat resume)."""
     if client is not None:
-        narrate_input = build_narrate_input(
+        narrate_input = await build_narrate_input(
             state,
             scenario_repo,
             player_input=player_input,

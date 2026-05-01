@@ -569,7 +569,7 @@ def run_auto_combat(
     )
 
 
-def build_narrate_input(
+async def build_narrate_input(
     state: GameState,
     scenario_repo: ScenarioRepo,
     *,
@@ -577,7 +577,7 @@ def build_narrate_input(
     result: AutoCombatResult,
 ) -> CombatNarrateInput:
     player = state.characters[state.player_id]
-    world = build_world_layer(scenario_repo, state.profile, missing_ok=True)
+    world = await build_world_layer(scenario_repo, state.profile, missing_ok=True)
     enemies_end = [
         _enemy_snapshot(state, h.id)
         for h in result.enemy_hits

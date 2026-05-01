@@ -345,10 +345,12 @@ def test_history_layer_keeps_live_npc_quotes(fresh_state):
     assert "「오늘 좋은 물건이 있소.」" in h
 
 
-def test_world_layer_reads_md():
+async def test_world_layer_reads_md():
     with tempfile.TemporaryDirectory() as tmp:
         pdir = Path(tmp) / "default"
         pdir.mkdir()
         (pdir / "world.md").write_text("# world\n중세", encoding="utf-8")
-        text = build_world_layer(LocalFsScenarioRepo(profile_dir=tmp), "default")
+        text = await build_world_layer(
+            LocalFsScenarioRepo(profile_dir=tmp), "default"
+        )
         assert "중세" in text

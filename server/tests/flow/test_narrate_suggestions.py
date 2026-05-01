@@ -88,7 +88,10 @@ async def test_run_narrate_reject_blanks_suggestions(fresh_state, monkeypatch):
     monkeypatch.setattr(narrate_agent, "stream_narrate", fake_stream_narrate)
     monkeypatch.setattr(narrate_flow, "stream_narrate", fake_stream_narrate)
 
-    monkeypatch.setattr(narrate_flow, "build_world_layer", lambda *_: "")
+    async def _empty_world(*_a, **_k):
+        return ""
+
+    monkeypatch.setattr(narrate_flow, "build_world_layer", _empty_world)
     monkeypatch.setattr(narrate_flow, "build_session_layer", lambda *_: {})
     monkeypatch.setattr(narrate_flow, "build_history_layer", lambda *_: "")
     monkeypatch.setattr(narrate_flow, "build_surroundings", lambda *_a, **_k: {})

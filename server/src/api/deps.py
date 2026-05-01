@@ -20,11 +20,11 @@ def get_llm(request: Request) -> LLMClient:
     return request.app.state.llm
 
 
-def get_state(
+async def get_state(
     game_id: str,
     save_repo: SaveRepo = Depends(get_save_repo),
 ) -> GameState:
     try:
-        return save_repo.load_game(game_id)
+        return await save_repo.load_game(game_id)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")

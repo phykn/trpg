@@ -3,6 +3,11 @@
 These wrap the existing module-level functions in `store.py` and the
 file-reading code that lived inline in `init.py` / `context/layers.py` /
 `api/routes/profiles.py`. Behavior matches the pre-seam code 1:1.
+
+All methods are `async` to match the Protocol — internal IO stays sync since
+local file reads are fast and there's a single dev process; we don't
+`asyncio.to_thread` them. The async signature is what lets the Supabase
+adapter use real network IO without forcing two Protocols.
 """
 
 import json
@@ -48,16 +53,16 @@ class LocalFsSaveRepo:
     ) -> None:
         await store.append_dialogue_entries(self.saves_dir, game_id, entries)
 
-    def load_game(self, game_id: str) -> GameState:
+    async def load_game(self, game_id: str) -> GameState:
         return store.load_game(self.saves_dir, game_id)
 
-    def copy_seed_into_game(
+    async def copy_seed_into_game(
         self, scenario_repo: ScenarioRepo, profile: str, game_id: str
     ) -> None:
         # ScenarioRepo's local_profile_path returns the on-disk root for
         # local-fs scenarios. store.copy_seed_into_game still wants a string
         # (profile_dir, profile) pair, so we recover the parent dir here.
-        profile_path = scenario_repo.local_profile_path(profile)
+        profile_path = await scenario_repo.local_profile_path(profile)
         store.copy_seed_into_game(
             str(profile_path.parent), profile, self.saves_dir, game_id
         )
@@ -72,10 +77,10 @@ class LocalFsScenarioRepo:
     def _root(self, profile: str) -> Path:
         return Path(self.profile_dir) / profile
 
-    def profile_exists(self, profile: str) -> bool:
+    async def profile_exists(self, profile: str) -> bool:
         return self._root(profile).is_dir()
 
-    def list_profiles(self) -> list[dict]:
+    async def list_profiles(self) -> list[dict]:
         pdir = Path(self.profile_dir)
         out: list[dict] = []
         if not pdir.is_dir():
@@ -107,23 +112,23 @@ class LocalFsScenarioRepo:
             )
         return out
 
-    def read_world_md(self, profile: str, *, missing_ok: bool = False) -> str:
+    async def read_world_md(self, profile: str, *, missing_ok: bool = False) -> str:
         p = self._root(profile) / "world.md"
         if missing_ok and not p.exists():
             return ""
         return p.read_text(encoding="utf-8")
 
-    def read_start_json(self, profile: str) -> dict:
+    async def read_start_json(self, profile: str) -> dict:
         return json.loads(
             (self._root(profile) / "start.json").read_text(encoding="utf-8")
         )
 
-    def read_player_template(self, profile: str) -> dict:
+    async def read_player_template(self, profile: str) -> dict:
         return json.loads(
             (self._root(profile) / "player_template.json").read_text(encoding="utf-8")
         )
 
-    def load_seed_entities(
+    async def load_seed_entities(
         self, profile: str, kind: str, model_cls: Type[T]
     ) -> dict[str, T]:
         dirpath = self._root(profile) / kind
@@ -137,5 +142,5 @@ class LocalFsScenarioRepo:
             result[obj.id] = obj  # type: ignore[attr-defined]
         return result
 
-    def local_profile_path(self, profile: str) -> Path:
+    async def local_profile_path(self, profile: str) -> Path:
         return self._root(profile)

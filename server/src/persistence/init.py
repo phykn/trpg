@@ -1,4 +1,5 @@
-from datetime import datetime
+import secrets
+from datetime import datetime, timezone
 from typing import Literal
 
 from pydantic import BaseModel
@@ -34,10 +35,10 @@ async def init_game(
     save_repo: SaveRepo,
     scenario_repo: ScenarioRepo,
 ) -> GameState:
-    if not scenario_repo.profile_exists(profile_name):
+    if not await scenario_repo.profile_exists(profile_name):
         raise ProfileNotFound(profile_name)
 
-    pdir = scenario_repo.local_profile_path(profile_name)
+    pdir = await scenario_repo.local_profile_path(profile_name)
     seed_violations = check_scenario(Scenario.from_dir(pdir))
     if seed_violations:
         raise ProfileMalformed(
@@ -45,20 +46,20 @@ async def init_game(
             + "\n".join(seed_violations)
         )
 
-    races = scenario_repo.load_seed_entities(profile_name, "races", Race)
+    races = await scenario_repo.load_seed_entities(profile_name, "races", Race)
     if player.race_id not in races:
         raise RaceNotFound(player.race_id)
 
-    locations = scenario_repo.load_seed_entities(profile_name, "locations", Location)
-    items = scenario_repo.load_seed_entities(profile_name, "items", Item)
-    skills = scenario_repo.load_seed_entities(profile_name, "skills", SkillModel)
-    npcs = scenario_repo.load_seed_entities(profile_name, "characters", Character)
-    quests = scenario_repo.load_seed_entities(profile_name, "quests", Quest)
-    chapters = scenario_repo.load_seed_entities(profile_name, "chapters", Chapter)
-    campaigns = scenario_repo.load_seed_entities(profile_name, "campaigns", Campaign)
+    locations = await scenario_repo.load_seed_entities(profile_name, "locations", Location)
+    items = await scenario_repo.load_seed_entities(profile_name, "items", Item)
+    skills = await scenario_repo.load_seed_entities(profile_name, "skills", SkillModel)
+    npcs = await scenario_repo.load_seed_entities(profile_name, "characters", Character)
+    quests = await scenario_repo.load_seed_entities(profile_name, "quests", Quest)
+    chapters = await scenario_repo.load_seed_entities(profile_name, "chapters", Chapter)
+    campaigns = await scenario_repo.load_seed_entities(profile_name, "campaigns", Campaign)
 
-    start = scenario_repo.read_start_json(profile_name)
-    template = scenario_repo.read_player_template(profile_name)
+    start = await scenario_repo.read_start_json(profile_name)
+    template = await scenario_repo.read_player_template(profile_name)
 
     # start.json / player_template integrity is already covered by
     # `check_scenario(Scenario.from_dir(pdir))` above (start_location_id,
@@ -96,7 +97,10 @@ async def init_game(
     characters: dict[str, Character] = {**npcs, player_id: player_char}
 
     state = GameState(
-        game_id=datetime.now().strftime("game_%y%m%d_%H%M%S"),
+        game_id=(
+            datetime.now(timezone.utc).strftime("game_%y%m%d_%H%M%S_")
+            + secrets.token_hex(3)
+        ),
         profile=profile_name,
         characters=characters,
         items=items,
@@ -111,7 +115,7 @@ async def init_game(
         active_quest_id=active_quest_id,
     )
 
-    save_repo.copy_seed_into_game(scenario_repo, profile_name, state.game_id)
+    await save_repo.copy_seed_into_game(scenario_repo, profile_name, state.game_id)
     # Persist the player character separately — it isn't part of the seed.
     await save_repo.save_entity(state, "characters", player_id)
     await save_repo.save_meta(state)
