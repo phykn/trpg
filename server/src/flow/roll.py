@@ -97,7 +97,7 @@ async def run_roll(
         "stat": pending.stat,
         "targets": pending.targets,
     }
-    graph = build_graph(state)
+    graph = state.graph()
     stream = run_narrate(
         client,
         state,

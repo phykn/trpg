@@ -13,6 +13,17 @@ from ..domain.types import tier_to_int
 from ..engines.growth import can_afford_level_up, xp_for_next_level
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph, build_graph
+from ..ontology.queries import (
+    companions_of,
+    connections_of,
+    equipment_of,
+    giver_of,
+    inhabitants_of,
+    inventory_of,
+    known_skills_of,
+    location_of,
+    race_of,
+)
 from .josa import eun_neun
 
 
@@ -43,12 +54,11 @@ def _stats(stats: Stats) -> list[dict]:
 def _race_label(state: GameState, graph: GameGraph, char_id: str) -> str:
     """Race name resolved via the `belongs_to_race` edge — falls back to the
     raw race id when the relation points at a missing race entity."""
-    for edge in graph.get_edges(char_id, "belongs_to_race"):
-        race = state.races.get(edge.to_id)
-        if race is not None:
-            return race.name
-        return edge.to_id
-    return ""
+    race_id = race_of(graph, char_id)
+    if race_id is None:
+        return ""
+    race = state.races.get(race_id)
+    return race.name if race is not None else race_id
 
 
 def _race_job_label(state: GameState, graph: GameGraph, char: Character) -> str:
@@ -68,7 +78,7 @@ def _gender_label(char: Character) -> str:
 
 def _equipment(state: GameState, graph: GameGraph, char_id: str) -> dict:
     out: dict[str, dict | None] = {slot: None for slot in EQUIPMENT_SLOTS}
-    for edge in graph.get_edges(char_id, "equips"):
+    for edge in equipment_of(graph, char_id):
         slot = (edge.attrs or {}).get("slot")
         if slot is None or slot not in out:
             continue
@@ -83,8 +93,8 @@ def _inventory(state: GameState, graph: GameGraph, char_id: str) -> list[dict]:
     """Inventory shown to the player, with currently-equipped items subtracted.
     Invariant: each equipped item_id is also present in inventory_ids — so we
     decrement once per equipped slot to avoid duplicate display."""
-    counts: Counter[str] = Counter(e.to_id for e in graph.get_edges(char_id, "carries"))
-    for edge in graph.get_edges(char_id, "equips"):
+    counts: Counter[str] = Counter(inventory_of(graph, char_id))
+    for edge in equipment_of(graph, char_id):
         item_id = edge.to_id
         counts[item_id] -= 1
         if counts[item_id] <= 0:
@@ -109,7 +119,7 @@ def _companion_label(state: GameState, graph: GameGraph, char_id: str) -> str | 
 def _skill_names(state: GameState, graph: GameGraph, char_id: str) -> list[str]:
     out: list[str] = []
     seen: set[str] = set()
-    for edge in graph.get_edges(char_id, "knows_skill"):
+    for edge in known_skills_of(graph, char_id):
         sid = edge.to_id
         if sid in seen:
             continue
@@ -123,7 +133,7 @@ def _skill_names(state: GameState, graph: GameGraph, char_id: str) -> list[str]:
 
 def to_hero(state: GameState, graph: GameGraph | None = None) -> dict:
     if graph is None:
-        graph = build_graph(state)
+        graph = state.graph()
     p = state.characters[state.player_id]
     skills = _skill_names(state, graph, p.id)
     return {
@@ -145,8 +155,8 @@ def to_hero(state: GameState, graph: GameGraph | None = None) -> dict:
         "skills": skills,
         "companions": [
             label
-            for edge in graph.get_edges(p.id, "has_companion")
-            if (label := _companion_label(state, graph, edge.to_id)) is not None
+            for cid in companions_of(graph, p.id)
+            if (label := _companion_label(state, graph, cid)) is not None
         ],
     }
 
@@ -156,7 +166,7 @@ def to_hero(state: GameState, graph: GameGraph | None = None) -> dict:
 
 def to_subject(state: GameState, graph: GameGraph | None = None) -> dict | None:
     if graph is None:
-        graph = build_graph(state)
+        graph = state.graph()
     if state.active_subject_id is None:
         return None
     sid = state.active_subject_id
@@ -192,7 +202,7 @@ def to_subject(state: GameState, graph: GameGraph | None = None) -> dict | None:
 
 def to_quest(state: GameState, graph: GameGraph | None = None) -> dict | None:
     if graph is None:
-        graph = build_graph(state)
+        graph = state.graph()
     if state.active_quest_id is None:
         return None
     qid = state.active_quest_id
@@ -200,13 +210,10 @@ def to_quest(state: GameState, graph: GameGraph | None = None) -> dict | None:
         return None
     q: Quest = state.quests[qid]
     giver_name = qid  # fallback to id
-    for edge in graph.get_in_edges(qid, "gives_quest"):
-        giver = state.characters.get(edge.from_id)
-        if giver is not None:
-            giver_name = giver.name
-        else:
-            giver_name = edge.from_id
-        break
+    giver_id = giver_of(graph, qid)
+    if giver_id is not None:
+        giver = state.characters.get(giver_id)
+        giver_name = giver.name if giver is not None else giver_id
     # quest.triggers' display name is a per-trigger label — that's an
     # entity attribute on the trigger object (no relational scan), so read
     # the goals straight from the trigger names.
@@ -234,14 +241,14 @@ _RISK_PAYLOAD: dict[str, dict] = {
 
 def to_place(state: GameState, graph: GameGraph | None = None) -> dict | None:
     if graph is None:
-        graph = build_graph(state)
+        graph = state.graph()
     p = state.characters[state.player_id]
     player_loc_id = p.location_id
     if player_loc_id is None or player_loc_id not in state.locations:
         return None
     loc: Location = state.locations[player_loc_id]
     surroundings = []
-    for edge in graph.get_edges(player_loc_id, "connects_to"):
+    for edge in connections_of(graph, player_loc_id):
         target_id = edge.to_id
         target = state.locations.get(target_id)
         if target is None:
@@ -256,8 +263,7 @@ def to_place(state: GameState, graph: GameGraph | None = None) -> dict | None:
             }
         )
     targets = []
-    for edge in graph.get_in_edges(player_loc_id, "located_at"):
-        cid = edge.from_id
+    for cid in inhabitants_of(graph, player_loc_id):
         if cid == state.player_id:
             continue
         c = state.characters.get(cid)
@@ -360,7 +366,7 @@ def to_front_state(state: GameState, graph: GameGraph | None = None) -> dict:
     SSOT — flow finalize passes the turn-end graph; tests/api glue can omit
     and we'll build internally."""
     if graph is None:
-        graph = build_graph(state)
+        graph = state.graph()
     pending = state.pending_check
     return {
         "hero": to_hero(state, graph),
@@ -452,7 +458,7 @@ def _graph_reachable_location_ids(
     queue = [start_location_id]
     while queue:
         location_id = queue.pop(0)
-        for edge in graph.get_edges(location_id, "connects_to"):
+        for edge in connections_of(graph, location_id):
             target_id = edge.to_id
             if target_id not in state.locations or target_id in seen:
                 continue
@@ -470,12 +476,14 @@ def _graph_visible_character_ids(
     visible = {player.id}
     if state.active_subject_id in state.characters:
         visible.add(state.active_subject_id)
-    visible.update(cid for cid in player.companions if cid in state.characters)
+    visible.update(
+        cid for cid in companions_of(graph, player.id) if cid in state.characters
+    )
 
     if player.location_id is not None:
-        for edge in graph.get_in_edges(player.location_id, "located_at"):
-            if edge.from_id in state.characters:
-                visible.add(edge.from_id)
+        for cid in inhabitants_of(graph, player.location_id):
+            if cid in state.characters:
+                visible.add(cid)
 
     return visible
 
@@ -489,7 +497,7 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
     not become a spoiler dump of every scenario entity.
     """
     if graph is None:
-        graph = build_graph(state)
+        graph = state.graph()
 
     nodes: dict[str, dict] = {}
     edges: dict[str, dict] = {}
@@ -560,15 +568,15 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
     add_edge(state.player_id, state.active_quest_id, "진행 중")
 
     for location_id in visible_location_ids:
-        for edge in graph.get_edges(location_id, "connects_to"):
+        for edge in connections_of(graph, location_id):
             add_edge(location_id, edge.to_id, "이동")
 
     for character_id in visible_character_ids:
         if character_id == state.player_id:
             continue
-        for edge in graph.get_edges(character_id, "located_at"):
-            if edge.to_id == player_location_id:
-                add_edge(character_id, edge.to_id, "등장")
+        loc_id = location_of(graph, character_id)
+        if loc_id == player_location_id:
+            add_edge(character_id, loc_id, "등장")
 
     for quest_id in quest_ids:
         quest = state.quests[quest_id]

@@ -13,6 +13,22 @@ edge ids to names so narrate doesn't see bare ids in `unlocks` /
 from ..domain.state import GameState
 from ..domain.types import is_secret_masked_grade
 from .graph import GameGraph
+from .queries import (
+    container_of,
+    equipment_of,
+    giver_of,
+    inventory_of,
+    items_in,
+    kill_targets_of,
+    locations_unlocked_by,
+    quests_given_by,
+    quests_killing,
+    quests_requiring,
+    quests_rewarding,
+    race_of,
+    reward_items_of,
+    trigger_targets_of,
+)
 
 
 def build_target_view(
@@ -104,21 +120,21 @@ def _quest_payload(
 
     kill_set: set[str] = set()
     kill_targets: list[dict] = []
-    for e in graph.get_in_edges(qid, "kill_target_of"):
-        nb = _resolve_neighbor(state, graph, e.from_id)
+    for cid in kill_targets_of(graph, qid):
+        nb = _resolve_neighbor(state, graph, cid)
         if nb is None:
             continue
-        kill_set.add(e.from_id)
+        kill_set.add(cid)
         kill_targets.append({"id": nb["id"], "name": nb["name"]})
     if kill_targets:
         out["kill_targets"] = kill_targets
 
     triggers: list[dict] = []
-    for e in graph.get_in_edges(qid, "required_by"):
-        if e.from_id in kill_set:
+    for tid in trigger_targets_of(graph, qid):
+        if tid in kill_set:
             # Already surfaced as a kill_target — don't duplicate.
             continue
-        nb = _resolve_neighbor(state, graph, e.from_id)
+        nb = _resolve_neighbor(state, graph, tid)
         if nb is not None:
             triggers.append(nb)
     if triggers:
@@ -129,19 +145,19 @@ def _quest_payload(
     # would have given on success.
     if not masked:
         rewards: list[dict] = []
-        for e in graph.get_in_edges(qid, "reward_of"):
-            item = state.items.get(e.from_id)
+        for iid in reward_items_of(graph, qid):
+            item = state.items.get(iid)
             if item is not None:
-                rewards.append({"id": e.from_id, "name": item.name})
+                rewards.append({"id": iid, "name": item.name})
         if rewards:
             out["rewards"] = rewards
 
     if include_giver:
-        for e in graph.get_in_edges(qid, "gives_quest"):
-            giver = state.characters.get(e.from_id)
+        gid = giver_of(graph, qid)
+        if gid is not None:
+            giver = state.characters.get(gid)
             if giver is not None:
-                out["giver"] = {"id": e.from_id, "name": giver.name}
-                break
+                out["giver"] = {"id": gid, "name": giver.name}
 
     return out
 
@@ -159,16 +175,16 @@ def _build_npc_view(
     # Race: relation through graph (belongs_to_race), then attribute lookup
     # for the race's display name/description.
     race_payload = None
-    for edge in graph.get_edges(target_id, "belongs_to_race"):
-        race = state.races.get(edge.to_id)
+    race_id = race_of(graph, target_id)
+    if race_id is not None:
+        race = state.races.get(race_id)
         if race is not None:
             race_payload = _omit_none(
                 {"name": race.name, "description": race.description or None}
             )
-            break
 
     equipped: dict[str, str] = {}
-    for edge in graph.get_edges(target_id, "equips"):
+    for edge in equipment_of(graph, target_id):
         slot = (edge.attrs or {}).get("slot")
         if slot is None:
             continue
@@ -179,8 +195,7 @@ def _build_npc_view(
 
     inventory: list[dict] = []
     inv_seen: set[str] = set()
-    for edge in graph.get_edges(target_id, "carries"):
-        iid = edge.to_id
+    for iid in inventory_of(graph, target_id):
         if iid in inv_seen:
             continue
         item = state.items.get(iid)
@@ -191,9 +206,9 @@ def _build_npc_view(
 
     # Quests this NPC gives — 2-hop into kill_targets / triggers / rewards.
     quests_given: list[dict] = []
-    for edge in graph.get_edges(target_id, "gives_quest"):
+    for qid in quests_given_by(graph, target_id):
         payload = _quest_payload(
-            state, graph, edge.to_id, include_giver=False, masked=masked
+            state, graph, qid, include_giver=False, masked=masked
         )
         if payload is not None:
             quests_given.append(payload)
@@ -203,16 +218,16 @@ def _build_npc_view(
     # the LLM doesn't conflate "this NPC offers a job" with "this NPC IS the
     # job."
     quests_kill_target: list[dict] = []
-    for edge in graph.get_edges(target_id, "kill_target_of"):
-        q = state.quests.get(edge.to_id)
+    for qid in quests_killing(graph, target_id):
+        q = state.quests.get(qid)
         if q is None:
             continue
         item: dict = {"id": q.id, "title": q.title, "status": q.status}
-        for ge in graph.get_in_edges(edge.to_id, "gives_quest"):
-            giver = state.characters.get(ge.from_id)
+        gid = giver_of(graph, qid)
+        if gid is not None:
+            giver = state.characters.get(gid)
             if giver is not None:
-                item["giver"] = {"id": ge.from_id, "name": giver.name}
-                break
+                item["giver"] = {"id": gid, "name": giver.name}
         quests_kill_target.append(item)
 
     # Inner-state slots blocked at the data layer when narrate is rendering a
@@ -256,17 +271,17 @@ def _build_location_view(
     loc = state.locations[target_id]
 
     items: list[dict] = []
-    for edge in graph.get_in_edges(target_id, "located_in"):
-        item = state.items.get(edge.from_id)
+    for iid in items_in(graph, target_id):
+        item = state.items.get(iid)
         if item is not None:
-            items.append({"id": edge.from_id, "name": item.name})
+            items.append({"id": iid, "name": item.name})
 
     # Quests that require entering this location — 2-hop adds the giver so
     # narrate can phrase "이 장소에 가야 하는 이유는 X 영감의 부탁이오".
     quests: list[dict] = []
-    for edge in graph.get_edges(target_id, "required_by"):
+    for qid in quests_requiring(graph, target_id):
         payload = _quest_payload(
-            state, graph, edge.to_id, include_giver=True, masked=masked
+            state, graph, qid, include_giver=True, masked=masked
         )
         if payload is not None:
             quests.append(payload)
@@ -290,22 +305,23 @@ def _build_item_view(state: GameState, graph: GameGraph, target_id: str) -> dict
     item = state.items[target_id]
 
     unlocks: list[dict] = []
-    for edge in graph.get_edges(target_id, "unlocks"):
-        loc = state.locations.get(edge.to_id)
+    for lid in locations_unlocked_by(graph, target_id):
+        loc = state.locations.get(lid)
         if loc is not None:
-            unlocks.append({"id": edge.to_id, "name": loc.name})
+            unlocks.append({"id": lid, "name": loc.name})
 
     reward_of: list[dict] = []
-    for edge in graph.get_edges(target_id, "reward_of"):
-        q = state.quests.get(edge.to_id)
+    for qid in quests_rewarding(graph, target_id):
+        q = state.quests.get(qid)
         if q is not None:
-            reward_of.append({"id": edge.to_id, "title": q.title})
+            reward_of.append({"id": qid, "title": q.title})
 
     located_in: list[dict] = []
-    for edge in graph.get_edges(target_id, "located_in"):
-        loc = state.locations.get(edge.to_id)
+    container_id = container_of(graph, target_id)
+    if container_id is not None:
+        loc = state.locations.get(container_id)
         if loc is not None:
-            located_in.append({"id": edge.to_id, "name": loc.name})
+            located_in.append({"id": container_id, "name": loc.name})
 
     return _omit_none(
         {

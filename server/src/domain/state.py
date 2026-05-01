@@ -1,6 +1,6 @@
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 
 from ..domain.entities import (
     Campaign,
@@ -18,6 +18,9 @@ from ..domain.memory import (
     PendingCheck,
     TurnLogEntry,
 )
+
+if TYPE_CHECKING:
+    from ..ontology.graph import GameGraph
 
 
 class CombatState(BaseModel):
@@ -72,6 +75,28 @@ class GameState(BaseModel):
 
     log_entries: list[LogEntry] = []
     next_log_id: int = 1
+
+    # Lazy graph cache. Built on first `graph()` call, invalidated by callers
+    # in flow after relation-touching writes (CLAUDE.md: layer rule). Held as
+    # a Pydantic PrivateAttr so it doesn't round-trip through model_dump_json.
+    _graph_cache: "GameGraph | None" = PrivateAttr(default=None)
+
+    def graph(self) -> "GameGraph":
+        """Cached relational graph. Reuses the cached build until
+        `invalidate_graph()` is called. Read-only callers can use this freely;
+        callers that just mutated a relation field must invalidate first."""
+        if self._graph_cache is None:
+            from ..ontology.graph import build_graph
+            self._graph_cache = build_graph(self)
+        return self._graph_cache
+
+    def invalidate_graph(self) -> None:
+        """Drop the cached graph so the next `graph()` rebuilds. Call after
+        any write that touches a relation field (location_id, inventory_ids,
+        equipment, racial/learned_skill_ids, race_id, companions,
+        quest.giver_id/triggers/rewards.items, location.connections/item_ids,
+        chapter.quest_ids)."""
+        self._graph_cache = None
 
     def recent_npc_id(self, actor_id: str) -> str | None:
         """Most recently addressed NPC at this location — anchors pronoun /

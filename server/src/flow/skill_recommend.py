@@ -15,6 +15,7 @@ from ..agents.skill_recommend import (
 )
 from ..llm.client import LLMClient
 from ..ontology.graph import build_graph
+from ..ontology.queries import known_skills_of, race_of
 from ..rules import RULES
 from ..domain.state import GameState
 from ..engines.skill import build_skill_from_candidate, existing_skill_ids
@@ -33,16 +34,16 @@ def _recent_turn_summaries(state: GameState, n: int) -> list[dict]:
 
 def _build_input(state: GameState) -> SkillRecommendInput:
     p = state.characters[state.player_id]
-    graph = build_graph(state)
+    graph = state.graph()
     # Race name via graph relation; fall back to raw race id when no Race
     # entity is registered for the player's race_id.
+    race_id = race_of(graph, p.id)
     race_name = p.race_id
-    for edge in graph.get_edges(p.id, "belongs_to_race"):
-        race = state.races.get(edge.to_id)
-        race_name = race.name if race is not None else edge.to_id
-        break
+    if race_id is not None:
+        race = state.races.get(race_id)
+        race_name = race.name if race is not None else race_id
     learned_skills: list[dict] = []
-    for edge in graph.get_edges(p.id, "knows_skill"):
+    for edge in known_skills_of(graph, p.id):
         if (edge.attrs or {}).get("source") != "learned":
             continue
         s = state.skills.get(edge.to_id)

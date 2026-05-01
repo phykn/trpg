@@ -13,6 +13,7 @@ from ..engines.apply import apply_changes
 from ..llm.client import LLMClient
 from ..ontology.graph import GameGraph, build_graph
 from ..ontology.player_view import build_player_view
+from ..ontology.queries import inhabitants_of
 from ..ontology.target_view import build_target_view
 from ..persistence.repo import ScenarioRepo
 from ..domain.state import GameState
@@ -254,7 +255,7 @@ async def consume_narrate(
     no player utterance).
     """
     if graph is None:
-        graph = build_graph(state)
+        graph = state.graph()
     final: NarrativeFinal | None = None
     async for item in stream:
         if isinstance(item, NarrativeDelta):
@@ -302,14 +303,13 @@ def _dead_names_in_scope(state: GameState, graph: GameGraph | None = None) -> li
     decide which names trigger quote redaction in the persisted body.
     """
     if graph is None:
-        graph = build_graph(state)
+        graph = state.graph()
     actor = state.characters.get(state.player_id)
     if actor is None or actor.location_id is None:
         return []
     seen: set[str] = set()
     names: list[str] = []
-    for edge in graph.get_in_edges(actor.location_id, "located_at"):
-        cid = edge.from_id
+    for cid in inhabitants_of(graph, actor.location_id):
         if cid == actor.id:
             continue
         ch = state.characters.get(cid)

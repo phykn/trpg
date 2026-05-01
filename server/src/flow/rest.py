@@ -51,7 +51,8 @@ async def run_rest(
         yield push_act(state, dirty, rest_ambush_text(actor.name))
         # attempt_rest may have spawned an enemy; build graph fresh so the
         # new located_at edge is visible to the combat path's downstream reads.
-        graph = build_graph(state)
+        state.invalidate_graph()
+        graph = state.graph()
         async for ev in start_combat_and_drive_auto(
             client,
             state,

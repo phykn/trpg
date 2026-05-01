@@ -21,6 +21,15 @@ from ..domain.state import GameState
 from ..domain.types import is_secret_masked_grade
 from ..engines.growth import can_afford_level_up
 from ..ontology.graph import GameGraph, build_graph
+from ..ontology.queries import (
+    connections_of,
+    equipment_of,
+    inhabitants_of,
+    inventory_of,
+    items_in,
+    known_skills_of,
+    quests_given_by,
+)
 from ..rules import RULES
 
 
@@ -55,8 +64,7 @@ def _inventory_payload(
 ) -> list[dict]:
     seen: set[str] = set()
     out: list[dict] = []
-    for edge in graph.get_edges(actor.id, "carries"):
-        item_id = edge.to_id
+    for item_id in inventory_of(graph, actor.id):
         if item_id in seen:
             continue
         item = state.items.get(item_id)
@@ -75,7 +83,7 @@ def _inventory_payload(
 
 def _equipment_payload(state: GameState, actor: Character, graph: GameGraph) -> dict:
     out: dict[str, dict | None] = {slot: None for slot in EQUIPMENT_SLOTS}
-    for edge in graph.get_edges(actor.id, "equips"):
+    for edge in equipment_of(graph, actor.id):
         item_id = edge.to_id
         slot = (edge.attrs or {}).get("slot")
         if slot is None or slot not in out:
@@ -89,7 +97,7 @@ def _equipment_payload(state: GameState, actor: Character, graph: GameGraph) -> 
 
 def _skills_payload(state: GameState, actor: Character, graph: GameGraph) -> list[dict]:
     out: list[dict] = []
-    for edge in graph.get_edges(actor.id, "knows_skill"):
+    for edge in known_skills_of(graph, actor.id):
         s = state.skills.get(edge.to_id)
         if s is None:
             continue
@@ -140,8 +148,7 @@ def _merchants_payload(
     out: list[dict] = []
     threshold = RULES.social.trade_threshold
     aggressive_cutoff = RULES.social.hostile_aggressive_threshold
-    for edge in graph.get_in_edges(actor.location_id, "located_at"):
-        cid = edge.from_id
+    for cid in inhabitants_of(graph, actor.location_id):
         if cid == actor.id:
             continue
         npc = state.characters.get(cid)
@@ -153,8 +160,7 @@ def _merchants_payload(
             continue
         stock_seen: set[str] = set()
         stock: list[dict] = []
-        for carry in graph.get_edges(cid, "carries"):
-            iid = carry.to_id
+        for iid in inventory_of(graph, cid):
             if iid in stock_seen:
                 continue
             item = state.items.get(iid)
@@ -198,11 +204,11 @@ def _npc_roles(
         npc.disposition.aggressive < aggressive_cutoff
         and npc.relations.get(actor.id, 0) >= threshold
     ):
-        for edge in graph.get_edges(npc.id, "carries"):
-            if state.items.get(edge.to_id) is not None:
+        for iid in inventory_of(graph, npc.id):
+            if state.items.get(iid) is not None:
                 roles.append("merchant")
                 break
-    if any(True for _ in graph.get_edges(npc.id, "gives_quest")):
+    if quests_given_by(graph, npc.id):
         roles.append("quest_giver")
     return roles
 
@@ -217,8 +223,7 @@ def _entities_payload(
     masked: bool = False,
 ) -> list[dict]:
     entities: list[dict] = [{"id": actor_id, "name": actor.name, "type": "player"}]
-    for edge in graph.get_in_edges(location.id, "located_at"):
-        cid = edge.from_id
+    for cid in inhabitants_of(graph, location.id):
         if cid == actor_id:
             continue
         char = state.characters.get(cid)
@@ -232,13 +237,12 @@ def _entities_payload(
         if tags:
             entry["state_tags"] = tags
         entities.append(entry)
-    for edge in graph.get_in_edges(location.id, "located_in"):
-        item_id = edge.from_id
+    for item_id in items_in(graph, location.id):
         item = state.items.get(item_id)
         if item is None:
             continue
         entities.append({"id": item_id, "name": item.name, "type": "item"})
-    for edge in graph.get_edges(location.id, "connects_to"):
+    for edge in connections_of(graph, location.id):
         target_id = edge.to_id
         target_loc = state.locations.get(target_id)
         if target_loc is None:
@@ -275,8 +279,7 @@ def _corpses_payload(
         return []
     out: list[dict] = []
     seen: set[str] = set()
-    for edge in graph.get_in_edges(actor.location_id, "located_at"):
-        cid = edge.from_id
+    for cid in inhabitants_of(graph, actor.location_id):
         if cid == actor.id:
             continue
         char = state.characters.get(cid)
@@ -333,7 +336,7 @@ def build_surroundings(
     can't read the NPC's true disposition off a sidebar.
     """
     if graph is None:
-        graph = build_graph(state)
+        graph = state.graph()
     masked = is_secret_masked_grade(grade)
     actor = state.characters[actor_id]
     in_combat = state.combat_state is not None

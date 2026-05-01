@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from ..domain.clock import day_phase
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph, build_graph
+from ..ontology.queries import quests_in_chapter
 
 if TYPE_CHECKING:
     from ..persistence.repo import ScenarioRepo
@@ -150,10 +151,10 @@ def build_session_layer(state: GameState, graph: GameGraph | None = None) -> dic
     )
     if active_chapter:
         if graph is None:
-            graph = build_graph(state)
+            graph = state.graph()
         active_quests = []
-        for edge in graph.get_in_edges(active_chapter.id, "member_of_chapter"):
-            q = state.quests.get(edge.from_id)
+        for qid in quests_in_chapter(graph, active_chapter.id):
+            q = state.quests.get(qid)
             if q is None or q.status != "active":
                 continue
             active_quests.append(

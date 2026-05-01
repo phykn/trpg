@@ -98,7 +98,7 @@ async def run_turn(
     previous_phase_signal = state.previous_phase_signal
     state.previous_phase_signal = None
 
-    graph = build_graph(state)
+    graph = state.graph()
 
     if state.combat_state is not None:
         async for ev in run_combat_player_turn(
@@ -286,7 +286,8 @@ async def _dispatch(
         state.active_subject_id = summoned.id
         # summon_encounter mutated state — rebuild graph so the new NPC's
         # located_at edge is visible to anything downstream.
-        graph = build_graph(state)
+        state.invalidate_graph()
+        graph = state.graph()
         async for ev in _enter_combat_and_finalize(
             client,
             state,
@@ -360,7 +361,8 @@ async def _dispatch(
         if last_pass is not None:
             # chain parts mutated state via emit_*; rebuild graph before narrate
             # reads relations through it.
-            graph = build_graph(state)
+            state.invalidate_graph()
+            graph = state.graph()
             async for ev in _stream_narrate_tail(
                 client,
                 state,
@@ -444,7 +446,8 @@ async def _stream_narrate_tail(
         apply_intended_move(state, action.model_dump(), dirty.entities)
         reconcile_subject_after_move(state)
         if state.characters[state.player_id].location_id != prev_loc:
-            graph = build_graph(state)
+            state.invalidate_graph()
+            graph = state.graph()
 
         dead = next(
             (

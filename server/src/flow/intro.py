@@ -22,7 +22,7 @@ async def run_intro(
     only calls narrate. turn_count stays at zero (= day_phase '새벽')."""
     set_llm_session_if_unset(state.game_id)
     dirty = Dirty()
-    graph = build_graph(state)
+    graph = state.graph()
     stream = run_narrate(
         client,
         state,
