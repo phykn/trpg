@@ -16,6 +16,7 @@ from src.context import (
     build_surroundings,
     build_world_layer,
 )
+from src.persistence.local_fs import LocalFsScenarioRepo
 
 
 def test_surroundings_includes_player_and_filters_dead_or_far(fresh_state):
@@ -349,5 +350,5 @@ def test_world_layer_reads_md():
         pdir = Path(tmp) / "default"
         pdir.mkdir()
         (pdir / "world.md").write_text("# world\n중세", encoding="utf-8")
-        text = build_world_layer(tmp, "default")
+        text = build_world_layer(LocalFsScenarioRepo(profile_dir=tmp), "default")
         assert "중세" in text

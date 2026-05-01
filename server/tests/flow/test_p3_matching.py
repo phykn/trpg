@@ -23,6 +23,7 @@ from src.agents.dc_judge.schema import (
     SellAction,
 )
 from src.engines import combat as combat_engine
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow import judge as judge_mod
 from src.flow import combat_phase as combat_phase_mod
 from src.flow import turn as turn_mod
@@ -100,8 +101,8 @@ async def test_flee_in_combat_succeeds_ends_combat(fresh_state, tmp_data, monkey
         run_turn(
             client=None,
             state=state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="도망친다",
         )
     )
@@ -136,8 +137,8 @@ async def test_flee_in_combat_fails_npc_phase_runs(fresh_state, tmp_data, monkey
         run_turn(
             client=None,
             state=state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="도망친다",
             rng=random.Random(0),
         )
@@ -167,8 +168,8 @@ async def test_flee_outside_combat_no_op(fresh_state, tmp_data, monkeypatch):
         run_turn(
             client=None,
             state=state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="도망친다",
         )
     )
@@ -194,8 +195,8 @@ async def test_level_up_natural_language_applies_pair_trade(
         run_turn(
             client=None,
             state=state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="근육을 단련해 한 단계 오른다",
         )
     )
@@ -222,8 +223,8 @@ async def test_level_up_invalid_pair_logs_error(fresh_state, tmp_data, monkeypat
         run_turn(
             client=None,
             state=state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="성장한다",
         )
     )
@@ -256,8 +257,8 @@ async def test_learn_skill_appends_to_learned(fresh_state, tmp_data, monkeypatch
         run_turn(
             client=None,
             state=state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="화염 쪽을 익힌다",
         )
     )
@@ -277,8 +278,8 @@ async def test_learn_skill_invalid_index_logs_error(fresh_state, tmp_data, monke
         run_turn(
             client=None,
             state=state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="첫 번째를 익힌다",
         )
     )
@@ -327,8 +328,8 @@ async def test_buy_natural_language(fresh_state, tmp_data, monkeypatch):
         run_turn(
             client=None,
             state=state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="방패를 산다",
         )
     )
@@ -350,8 +351,8 @@ async def test_sell_natural_language(fresh_state, tmp_data, monkeypatch):
         run_turn(
             client=None,
             state=state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="철광석을 판다",
         )
     )
@@ -375,8 +376,8 @@ async def test_buy_low_affinity_rejected(fresh_state, tmp_data, monkeypatch):
         run_turn(
             client=None,
             state=state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="방패를 산다",
         )
     )

@@ -14,6 +14,7 @@ from ..llm.client import LLMClient
 from ..ontology.graph import GameGraph, build_graph
 from ..ontology.player_view import build_player_view
 from ..ontology.target_view import build_target_view
+from ..persistence.repo import ScenarioRepo
 from ..domain.state import GameState
 from ..context import (
     build_history_layer,
@@ -38,7 +39,7 @@ from .memory_writer import write_memories
 async def run_narrate(
     client: LLMClient,
     state: GameState,
-    profile_dir: str,
+    scenario_repo: ScenarioRepo,
     player_input: str,
     judge_result: dict,
     *,
@@ -81,7 +82,7 @@ async def run_narrate(
 
     surroundings = build_surroundings(state, state.player_id, graph, grade=grade)
     input_ = NarrateInput(
-        world=build_world_layer(profile_dir, state.profile),
+        world=build_world_layer(scenario_repo, state.profile),
         session=build_session_layer(state),
         history=build_history_layer(state, surroundings.get("corpses", [])),
         player_view=build_player_view(state),

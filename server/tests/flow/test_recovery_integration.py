@@ -6,12 +6,19 @@ import tempfile
 import pytest
 
 from src.domain.clock import next_dawn_turn
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.domain.entities import Character, CombatBehavior, Location, Stats
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.agents.dc_judge.schema import RestAction
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow import judge as judge_mod
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow import combat_phase as combat_phase_mod
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow import turn as turn_mod
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow.turn import run_turn
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
 @pytest.fixture
@@ -59,8 +66,8 @@ async def test_rest_in_safe_location_full_recovery(fresh_state, tmp_data, monkey
         run_turn(
             client=None,
             state=fresh_state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="여기서 잠을 잔다",
             rng=random.Random(7),
         )
@@ -111,8 +118,8 @@ async def test_rest_in_dangerous_location_triggers_encounter(
         run_turn(
             client=None,
             state=fresh_state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="여기서 잠을 청한다",
             rng=rng,
         )
@@ -168,8 +175,8 @@ async def test_rest_dangerous_with_low_random_forces_encounter(
         run_turn(
             client=None,
             state=fresh_state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="잠을 잔다",
             rng=_ForceLow(),
         )
@@ -219,8 +226,8 @@ async def test_rest_blocked_during_combat(fresh_state, tmp_data, monkeypatch):
         run_turn(
             client=None,
             state=fresh_state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="잠을 잔다",
             rng=random.Random(7),
         )

@@ -19,16 +19,17 @@ from ..llm.client import LLMClient
 from ..domain.state import GameState
 from ..engines.growth import calc_max_hp, calc_max_mp
 from ..engines.invariants import InvariantViolation, check_character
+from ..persistence.repo import ScenarioRepo
 
 
 def _build_input(
     state: GameState,
     location: Location,
-    profile_dir: str,
+    scenario_repo: ScenarioRepo,
     profile: str,
     requested_role: str | None,
 ) -> EncounterSummonInput:
-    world_text = build_world_layer(profile_dir, profile, missing_ok=True)
+    world_text = build_world_layer(scenario_repo, profile, missing_ok=True)
     races = [
         {"id": r.id, "name": r.name, "description": r.description}
         for r in state.races.values()
@@ -99,14 +100,14 @@ async def summon_encounter(
     client: LLMClient,
     state: GameState,
     location: Location,
-    profile_dir: str,
+    scenario_repo: ScenarioRepo,
     profile: str,
     *,
     dirty: set[tuple[str, str]] | None = None,
     requested_role: str | None = None,
 ) -> Character | None:
     """Summon one enemy via LLM and register it. Returns None if race_id is not in available races."""
-    input_ = _build_input(state, location, profile_dir, profile, requested_role)
+    input_ = _build_input(state, location, scenario_repo, profile, requested_role)
     out = await encounter_summon(client, input_)
     if out.race_id not in state.races:
         return None

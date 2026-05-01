@@ -5,9 +5,13 @@ import tempfile
 import pytest
 
 from src.domain.entities import Character, Stats
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow import judge as judge_mod
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow import turn as turn_mod
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow.turn import run_turn
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
 @pytest.fixture
@@ -54,8 +58,8 @@ async def test_dead_player_turn_short_circuits(
         run_turn(
             client=None,
             state=dead_player_state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="회복약을 마신다",
         )
     )

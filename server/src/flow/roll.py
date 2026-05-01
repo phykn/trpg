@@ -10,6 +10,7 @@ from ..domain.state import GameState
 from ..engines.growth import grant_roll_xp
 from ..llm.client import LLMClient, set_llm_session_if_unset
 from ..ontology.graph import build_graph
+from ..persistence.repo import SaveRepo, ScenarioRepo
 from ..rules.dc import compute_grade
 from .clock import tick_turn_buffs
 from .combat_auto import PlayerAction, run_auto_combat
@@ -30,7 +31,7 @@ from ..mapping.to_front import stat_label
 async def _resume_auto_combat(
     client: LLMClient,
     state: GameState,
-    profile_dir: str,
+    scenario_repo: ScenarioRepo,
     dirty: Dirty,
     rng: random.Random | None,
 ) -> AsyncIterator[dict]:
@@ -46,7 +47,7 @@ async def _resume_auto_combat(
     async for ev in emit_combat_cinematic_and_end(
         client,
         state,
-        profile_dir,
+        scenario_repo,
         dirty,
         player_input="환경 굴림 후 한 박자 쉬며 적의 움직임을 살핍니다",
         result=result,
@@ -57,8 +58,8 @@ async def _resume_auto_combat(
 async def run_roll(
     client: LLMClient,
     state: GameState,
-    profile_dir: str,
-    saves_dir: str,
+    scenario_repo: ScenarioRepo,
+    save_repo: SaveRepo,
     *,
     to_front_fn: ToFrontFn | None = None,
     rng: random.Random | None = None,
@@ -100,7 +101,7 @@ async def run_roll(
     stream = run_narrate(
         client,
         state,
-        profile_dir,
+        scenario_repo,
         pending.player_input,
         judge_result=judge_result,
         graph=graph,
@@ -121,8 +122,8 @@ async def run_roll(
     tick_turn_buffs(state, dirty)
 
     if state.combat_state is not None:
-        async for ev in _resume_auto_combat(client, state, profile_dir, dirty, rng):
+        async for ev in _resume_auto_combat(client, state, scenario_repo, dirty, rng):
             yield ev
 
-    async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+    async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev

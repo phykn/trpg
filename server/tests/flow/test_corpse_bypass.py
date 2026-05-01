@@ -15,6 +15,7 @@ from src.agents.dc_judge.schema import (
     UseAction,
 )
 from src.domain.entities import Character, Location, Stats
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow import turn as turn_mod
 from src.flow.turn import _CORPSE_BYPASS_BODY, run_turn
 
@@ -80,8 +81,8 @@ async def test_pass_with_dead_target_bypasses_narrate(
         run_turn(
             client=None,
             state=state_with_corpse,
-            profile_dir="<unused>",
-            saves_dir=tmp_saves,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_saves)),
             player_input="에드릭에게 묻는다",
         )
     )
@@ -140,8 +141,8 @@ async def test_pass_with_alive_target_still_runs_narrate(
         run_turn(
             client=None,
             state=state_with_corpse,
-            profile_dir="<unused>",
-            saves_dir=tmp_saves,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_saves)),
             player_input="상인에게 인사한다",
         )
     )
@@ -187,8 +188,8 @@ async def test_chain_with_dead_target_in_last_pass_bypasses(
         run_turn(
             client=None,
             state=state_with_corpse,
-            profile_dir="<unused>",
-            saves_dir=tmp_saves,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_saves)),
             player_input="단검을 챙기고 에드릭에게 묻는다",
         )
     )
@@ -222,8 +223,8 @@ async def test_corpse_bypass_pushes_turn_log_with_dead_id(
         run_turn(
             client=None,
             state=state_with_corpse,
-            profile_dir="<unused>",
-            saves_dir=tmp_saves,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_saves)),
             player_input="에드릭에게 사과한다",
         )
     )

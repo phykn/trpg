@@ -4,6 +4,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from run_api import build_app
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -20,12 +21,14 @@ class _MockLLM:
 
 
 def _build_app(tmp_path):
+    saves_dir = str(tmp_path)
+    profile_dir = str(PROFILE_DIR)
     return build_app(
         llm=_MockLLM(),
         basic_auth_user="t",
         basic_auth_pass="t",
-        saves_dir=str(tmp_path),
-        profile_dir=str(PROFILE_DIR),
+        save_repo=LocalFsSaveRepo(saves_dir=saves_dir),
+        scenario_repo=LocalFsScenarioRepo(profile_dir=profile_dir),
         cors_origins=[],
     )
 

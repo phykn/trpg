@@ -17,6 +17,7 @@ from src.llm.client import LLMClient
 from src.flow.roll import run_roll
 from src.flow.turn import run_turn
 from src.domain.state import GameState
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 pytestmark = pytest.mark.live
 
@@ -62,7 +63,11 @@ def env():
             appearance="갑옷",
             tone_hint="격식체",
         )
-        yield gs, str(profile_dir), str(saves_dir)
+        yield (
+            gs,
+            LocalFsScenarioRepo(profile_dir=str(profile_dir)),
+            LocalFsSaveRepo(saves_dir=str(saves_dir)),
+        )
 
 
 async def _collect_events(gen):
@@ -70,13 +75,13 @@ async def _collect_events(gen):
 
 
 async def test_pass_branch_full_flow(client, env):
-    gs, profile_dir, saves_dir = env
+    gs, scenario_repo, save_repo = env
     events = await _collect_events(
         run_turn(
             client,
             gs,
-            profile_dir,
-            saves_dir,
+            scenario_repo,
+            save_repo,
             "주변을 둘러본다.",
         )
     )
@@ -90,13 +95,13 @@ async def test_pass_branch_full_flow(client, env):
 
 
 async def test_roll_branch_pauses_then_resumes(client, env):
-    gs, profile_dir, saves_dir = env
+    gs, scenario_repo, save_repo = env
     events = await _collect_events(
         run_turn(
             client,
             gs,
-            profile_dir,
-            saves_dir,
+            scenario_repo,
+            save_repo,
             "경비병에게 동전을 쥐여주며 통과시켜달라고 한다.",
         )
     )
@@ -105,7 +110,7 @@ async def test_roll_branch_pauses_then_resumes(client, env):
 
     # /turn is blocked while a pending_check is active.
     with pytest.raises(PendingCheckActive):
-        async for _ in run_turn(client, gs, profile_dir, saves_dir, "..."):
+        async for _ in run_turn(client, gs, scenario_repo, save_repo, "..."):
             pass
 
     # Resolve via /roll.
@@ -113,8 +118,8 @@ async def test_roll_branch_pauses_then_resumes(client, env):
         run_roll(
             client,
             gs,
-            profile_dir,
-            saves_dir,
+            scenario_repo,
+            save_repo,
             rng=random.Random(7),
         )
     )
@@ -126,15 +131,15 @@ async def test_roll_branch_pauses_then_resumes(client, env):
 
 
 async def test_roll_without_pending_blocked(client, env):
-    gs, profile_dir, saves_dir = env
+    gs, scenario_repo, save_repo = env
     with pytest.raises(PendingCheckExpected):
-        async for _ in run_roll(client, gs, profile_dir, saves_dir):
+        async for _ in run_roll(client, gs, scenario_repo, save_repo):
             pass
 
 
 async def test_rest_branch_classified_by_judge(client, env):
     """The judge classifies '잠을 잔다' as 'rest' → enters recovery branch, HP/MP restored."""
-    gs, profile_dir, saves_dir = env
+    gs, scenario_repo, save_repo = env
     # The plaza is default-safe → full recovery is guaranteed.
     player = gs.characters["player_01"]
     player.hp = 4
@@ -144,8 +149,8 @@ async def test_rest_branch_classified_by_judge(client, env):
         run_turn(
             client,
             gs,
-            profile_dir,
-            saves_dir,
+            scenario_repo,
+            save_repo,
             "여기서 잠을 청한다.",
             rng=random.Random(1),
         )
@@ -162,7 +167,7 @@ async def test_judge_matches_equip_for_weapon_in_inventory(client, env):
     """The judge classifies an inventory.kind=weapon input as equip."""
     from src.domain.entities import Item, WeaponEffect
 
-    gs, profile_dir, saves_dir = env
+    gs, scenario_repo, save_repo = env
     gs.items["sword_01"] = Item(
         id="sword_01",
         name="강철 장검",
@@ -174,8 +179,8 @@ async def test_judge_matches_equip_for_weapon_in_inventory(client, env):
         run_turn(
             client,
             gs,
-            profile_dir,
-            saves_dir,
+            scenario_repo,
+            save_repo,
             "강철 장검을 손에 든다.",
             rng=random.Random(0),
         )
@@ -189,7 +194,7 @@ async def test_judge_matches_use_for_inventory_item(client, env):
     """With inventory in context, the judge classifies natural language as use and stamps item_id."""
     from src.domain.entities import ConsumableEffect, Item
 
-    gs, profile_dir, saves_dir = env
+    gs, scenario_repo, save_repo = env
     gs.items["herb_01"] = Item(
         id="herb_01",
         name="치유 약초",
@@ -203,8 +208,8 @@ async def test_judge_matches_use_for_inventory_item(client, env):
         run_turn(
             client,
             gs,
-            profile_dir,
-            saves_dir,
+            scenario_repo,
+            save_repo,
             "약초를 먹어 상처를 치유한다.",
             rng=random.Random(0),
         )
@@ -218,7 +223,7 @@ async def test_judge_matches_learned_skill_in_combat(client, env):
     """With learned_skills in context, verify the judge stamps skill_id on combat input."""
     from src.domain.entities import Race, Skill
 
-    gs, profile_dir, saves_dir = env
+    gs, scenario_repo, save_repo = env
     gs.races["goblin"] = Race(id="goblin", name="고블린", description="x")
     gs.characters["goblin_01"] = Character(
         id="goblin_01",
@@ -249,8 +254,8 @@ async def test_judge_matches_learned_skill_in_combat(client, env):
         run_turn(
             client,
             gs,
-            profile_dir,
-            saves_dir,
+            scenario_repo,
+            save_repo,
             "고블린에게 화염구를 던진다.",
             rng=random.Random(0),
         )
@@ -263,7 +268,7 @@ async def test_judge_matches_learned_skill_in_combat(client, env):
 
 async def test_combat_branch_boots_combat_state(client, env):
     """The judge classifies as 'combat' → engine boots combat_state + emits combat_start SSE."""
-    gs, profile_dir, saves_dir = env
+    gs, scenario_repo, save_repo = env
     gs.races["goblin"] = Race(id="goblin", name="고블린", description="x")
     gs.characters["goblin_01"] = Character(
         id="goblin_01",
@@ -282,8 +287,8 @@ async def test_combat_branch_boots_combat_state(client, env):
         run_turn(
             client,
             gs,
-            profile_dir,
-            saves_dir,
+            scenario_repo,
+            save_repo,
             "고블린에게 칼을 휘둘러 공격한다.",
             rng=random.Random(42),
         )

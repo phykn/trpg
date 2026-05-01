@@ -15,6 +15,7 @@ from src.domain.entities import (
     WeaponEffect,
 )
 from src.agents.dc_judge.schema import UseAction
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow import judge as judge_mod
 from src.flow import combat_phase as combat_phase_mod
 from src.flow import turn as turn_mod
@@ -128,8 +129,8 @@ async def test_use_action_consumes_item_and_heals(fresh_state, tmp_data, monkeyp
         run_turn(
             client=None,
             state=state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="물약을 마신다",
             rng=random.Random(0),
         )
@@ -167,8 +168,8 @@ async def test_combat_use_consumes_player_turn(fresh_state, tmp_data, monkeypatc
         run_turn(
             client=None,
             state=state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="물약 마심",
             rng=random.Random(0),
         )

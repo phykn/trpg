@@ -8,6 +8,7 @@ from src.domain.entities import Character, Stats
 from src.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
 from src.domain.errors import PersistenceFailed, ProfileNotFound, RaceNotFound
 from src.persistence.init import PlayerInput, init_game
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.domain.state import GameState
 from src.persistence.store import (
     append_dialogue_entries,
@@ -209,8 +210,8 @@ async def test_init_game_happy_path(tmp_data):
     state = await init_game(
         "default",
         PlayerInput(name="테스터", race_id="human", gender="female"),
-        saves_dir,
-        str(profile_dir),
+        LocalFsSaveRepo(saves_dir=saves_dir),
+        LocalFsScenarioRepo(profile_dir=str(profile_dir)),
     )
     assert state.profile == "default"
     assert state.player_id == "player_01"
@@ -238,8 +239,8 @@ async def test_init_game_unknown_profile(tmp_data):
         await init_game(
             "missing",
             PlayerInput(name="x", race_id="human", gender="male"),
-            tmp_data,
-            str(profile_dir),
+            LocalFsSaveRepo(saves_dir=tmp_data),
+            LocalFsScenarioRepo(profile_dir=str(profile_dir)),
         )
 
 
@@ -250,6 +251,6 @@ async def test_init_game_unknown_race(tmp_data):
         await init_game(
             "default",
             PlayerInput(name="x", race_id="dragon", gender="male"),
-            tmp_data,
-            str(profile_dir),
+            LocalFsSaveRepo(saves_dir=tmp_data),
+            LocalFsScenarioRepo(profile_dir=str(profile_dir)),
         )

@@ -15,6 +15,7 @@ from src.domain.entities import (
     WeaponEffect,
 )
 from src.agents.dc_judge.schema import EquipAction, UnequipAction
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow import judge as judge_mod
 from src.flow import combat_phase as combat_phase_mod
 from src.flow import turn as turn_mod
@@ -99,8 +100,8 @@ async def test_equip_weapon_lands_in_weapon_slot(fresh_state, tmp_data, monkeypa
         run_turn(
             client=None,
             state=state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="검을 든다",
             rng=random.Random(0),
         )
@@ -118,8 +119,8 @@ async def test_equip_armor_picks_armor_slot_first(fresh_state, tmp_data, monkeyp
         run_turn(
             client=None,
             state=state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="투구를 쓴다",
             rng=random.Random(0),
         )
@@ -138,8 +139,8 @@ async def test_unequip_finds_slot_by_item(fresh_state, tmp_data, monkeypatch):
         run_turn(
             client=None,
             state=state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="검을 칼집에 넣는다",
             rng=random.Random(0),
         )

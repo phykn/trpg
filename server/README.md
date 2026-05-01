@@ -20,7 +20,7 @@ python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-Write `server/.env` (required, no fallbacks — missing keys raise `KeyError` at startup):
+Write `server/.env.dev` (required for local dev — `APP_ENV=release` switches to `.env.release` for prod; no fallbacks, missing keys raise `KeyError` at startup):
 
 ```
 HOST=0.0.0.0
@@ -41,7 +41,7 @@ The LLM server runs separately. Example: `llama-server -m <model.gguf> -c 8192 -
 ../.venv/bin/python run_api.py
 ```
 
-dotenv loads `server/.env` automatically and uvicorn binds to `HOST:PORT`.
+dotenv loads `server/.env.<APP_ENV>` (default `dev`) automatically and uvicorn binds to `HOST:PORT`.
 
 ### Routes (Basic Auth required)
 
@@ -73,7 +73,7 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q        # requires a live LLM
 ```
 server/
   run_api.py                       # entrypoint
-  .env                             # required, gitignored
+  .env.dev                         # required for local dev (.env.release for prod), gitignored
   src/                             # code (layer breakdown in docs/05-codemap.md)
   tests/                           # pytest
   scripts/                         # one-off tools (judge_stress, etc.)

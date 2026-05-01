@@ -5,15 +5,15 @@ from fastapi import Depends, HTTPException, Request
 
 from ..domain.state import GameState
 from ..llm.client import LLMClient
-from ..persistence.store import load_game
+from ..persistence.repo import SaveRepo, ScenarioRepo
 
 
-def get_saves_dir(request: Request) -> str:
-    return request.app.state.saves_dir
+def get_save_repo(request: Request) -> SaveRepo:
+    return request.app.state.save_repo
 
 
-def get_profile_dir(request: Request) -> str:
-    return request.app.state.profile_dir
+def get_scenario_repo(request: Request) -> ScenarioRepo:
+    return request.app.state.scenario_repo
 
 
 def get_llm(request: Request) -> LLMClient:
@@ -22,9 +22,9 @@ def get_llm(request: Request) -> LLMClient:
 
 def get_state(
     game_id: str,
-    saves_dir: str = Depends(get_saves_dir),
+    save_repo: SaveRepo = Depends(get_save_repo),
 ) -> GameState:
     try:
-        return load_game(saves_dir, game_id)
+        return save_repo.load_game(game_id)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")

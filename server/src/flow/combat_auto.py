@@ -21,6 +21,7 @@ from ..domain.errors import SkillInvalid
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..ontology.player_view import build_player_view
+from ..persistence.repo import ScenarioRepo
 from .actions import apply_attack_action, apply_skill_action
 from .dirty import Dirty, register_kill
 
@@ -563,13 +564,13 @@ def run_auto_combat(
 
 def build_narrate_input(
     state: GameState,
-    profile_dir: str,
+    scenario_repo: ScenarioRepo,
     *,
     player_input: str,
     result: AutoCombatResult,
 ) -> CombatNarrateInput:
     player = state.characters[state.player_id]
-    world = build_world_layer(profile_dir, state.profile, missing_ok=True)
+    world = build_world_layer(scenario_repo, state.profile, missing_ok=True)
     enemies_end = [
         _enemy_snapshot(state, h.id)
         for h in result.enemy_hits

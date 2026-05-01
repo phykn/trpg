@@ -4,7 +4,7 @@ User-facing setup is in [README.md](./README.md).
 
 ## Layout
 
-`server/` is the FastAPI service. The venv, pyproject, and requirements live at the repo root. Run pytest from the root; run `run_api.py` from `server/` so dotenv resolves `server/.env` and src imports work.
+`server/` is the FastAPI service. The venv, pyproject, and requirements live at the repo root. Run pytest from the root; run `run_api.py` from `server/` so dotenv resolves `server/.env.<APP_ENV>` and src imports work.
 
 ```
 src/
@@ -16,12 +16,12 @@ src/
   ontology/    Derived view of GameState — the relational source of truth. graph.py builds typed-edge relations over nodes {character, item, location, quest, skill, race, chapter}: located_at, located_in, equips (attrs.slot), carries, connects_to (attrs.difficulty/key_item_id), unlocks, gives_quest, required_by, kill_target_of, reward_of, belongs_to_race, knows_skill (attrs.source = racial|learned), racial_skill_of, member_of_chapter. Both directions are indexed — `get_edges(from_id, type?)` and `get_in_edges(to_id, type?)`. target_view.py traverses 2 hops: NPC view follows gives_quest into each quest's kill targets / triggers / rewards (and flags the NPC itself as a kill target if any quest names it); location view follows required_by into each quest's giver + targets + rewards; item view resolves unlocks / reward_of / located_in to names. player_view.py mirrors the shape for the active player so narrate / combat_narrate can reflect race/appearance/gender.
   context/     Prompt-facing context builders (surroundings, layered context).
   mapping/     to_front.py — GameState → flat dict the client renders. Korean dates, durations, composed strings, conditional labels are all built here.
-  persistence/ init.py builds a new GameState from a profile + player input. store.py does atomic IO (.tmp + os.replace).
+  persistence/ init.py builds a new GameState from a profile + player input. store.py does atomic IO (.tmp + os.replace) and is now an internal helper called only by local_fs.py. repo.py defines `SaveRepo` / `ScenarioRepo` Protocols; local_fs.py implements them for dev (delegates to store.py); supabase.py is the release stub (Phase 2 — raises at __init__). factory.py picks one by `APP_ENV`. App startup wires repos onto `app.state.save_repo` / `app.state.scenario_repo`. All flow / context / api / persistence.init code threads `save_repo`/`scenario_repo` instances — no `saves_dir`/`profile_dir` strings remain in flow.
   domain/      Pure data shapes. entities.py (Character, Item, Location, Race, Skill, Quest, Chapter, Campaign), memory.py (Memory, PendingCheck, LogEntry union, TurnLogEntry, DialoguePair), state.py (GameState, CombatState), types.py (StatKey, Tier, Grade, Intent, Action), errors.py (DomainError + subclasses).
   rules/       config.py exposes the frozen RULES singleton (DC, social, memory, log, time, recovery, growth, skill, carry, trade, flee, combat, death). dc.py has roll math.
 tests/         pytest, asyncio_mode=auto, live marker for LLM-required tests.
 run_api.py     Entrypoint — loads env, builds the FastAPI app, runs uvicorn.
-.env           Global config + LLM_ROUTE_* (required). Provider blocks live in .env.local / .env.google. No fallbacks; missing keys raise at startup.
+.env.dev       Global config + LLM_ROUTE_* (required) for local dev. .env.release is the prod counterpart (not committed; created at deploy time). Provider blocks live in .env.llama_cpp / .env.google. No fallbacks; missing keys raise at startup.
 ```
 
 Layer rule: upper depends on lower, never the reverse. The dependency direction goes api → flow → agents/engines → llm/ontology/context/mapping → persistence → domain/rules.
@@ -45,7 +45,7 @@ CI grep enforces this — see `scripts/check_relational_ssot.sh`.
 RUN_LIVE=1 .venv/bin/python -m pytest -q     # add live tests; needs BASE_URL reachable.
 
 # from server/
-../.venv/bin/python run_api.py               # cwd must be server/ so dotenv reads server/.env.
+../.venv/bin/python run_api.py               # cwd must be server/ so dotenv reads server/.env.<APP_ENV> (default 'dev').
 ```
 
 ## Stack and env
@@ -53,8 +53,8 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q     # add live tests; needs BASE_URL re
 - Pydantic models *are* the schema. Every state file round-trips through `GameState.model_validate_json(...)`. Don't hand-munge JSON.
 - `LLMClient.chat_stream` is the streaming primitive; agents wrap it with their schema and retry loop.
 - One process, one save lock (`asyncio.Lock` in `persistence/store.py`). Horizontal scaling is out of scope.
-- Env files load in order via `run_api.py:_load_env`: `.env` → `.env.local` → `.env.google`. `.env` carries `HOST PORT BASIC_AUTH_USER BASIC_AUTH_PASS SAVES_DIR PROFILE_DIR CORS_ORIGINS` and `LLM_ROUTE_DEFAULT` (required) plus optional `LLM_ROUTE_<AGENT>`. Each provider file declares `LLM_<NAME>_BASE_URL`, `LLM_<NAME>_API_KEYS` (comma-separated, rotated round-robin per call), and at least one of `LLM_<NAME>_THINK_OFF / _THINK_OPT / _THINK_ON` listing the provider's model names — the three lists must be disjoint and together name every model the provider serves. Missing required keys → `KeyError` at startup. No silent defaults. `CORS_ORIGINS` is a comma-separated list of exact origins (scheme + host) the web client may load from. Agency runners and live tests still read `BASE_URL` directly via `LLMClient.from_single`.
-- LLM routing — each `LLM_ROUTE_<AGENT> = <provider>/<model>` resolves to an `LLMProfile` keyed by lowercased agent name. Calls whose `agent=` matches a route (`dc_judge`, `narrate`, `combat_narrate`, `encounter_summon`, `skill_recommend`) go there; everything else falls back to `default`. The model's THINK_* category drives per-call thinking behavior — `OFF` sends no `extra_body` and yields `result["think"] = None`; `OPT` honors the caller's `think` flag via `extra_body.chat_template_kwargs.enable_thinking` (Qwen/llama.cpp) or `extra_body.reasoning_effort=medium` (Gemini, detected from `googleapis.com` in `base_url`); `ON` always thinks, and Gemma-4-style inline `<thought>...</thought>` at the head of the answer is auto-routed to the think channel by `_ThoughtSplitter` in both `chat` and `chat_stream`.
+- Env files load in order via `run_api.py:_load_env`: `.env.<APP_ENV>` (default `dev`, raises `FileNotFoundError` if missing) → `.env.llama_cpp` → `.env.google`. `APP_ENV=release` switches to `.env.release` for prod deploys. `.env.<env>` carries `HOST PORT BASIC_AUTH_USER BASIC_AUTH_PASS SAVES_DIR PROFILE_DIR CORS_ORIGINS` and `LLM_ROUTE_DEFAULT` (required) plus optional `LLM_ROUTE_<AGENT>`. Each provider file declares `LLM_<NAME>_BASE_URL`, `LLM_<NAME>_API_KEYS` (comma-separated, rotated round-robin per call), and at least one of `LLM_<NAME>_THINK_OFF / _THINK_OPT / _THINK_ON` listing the provider's model names — the three lists must be disjoint and together name every model the provider serves. Optional `LLM_<NAME>_NO_SYSTEM` lists models that reject `role: system` (Gemma via the Gemini OpenAI-compat endpoint returns "Developer instruction is not enabled"); for those models `LLMClient` folds the system prompt into the first user message. Listed names must appear in one of the THINK_* lists. Missing required keys → `KeyError` at startup. No silent defaults. `CORS_ORIGINS` is a comma-separated list of exact origins (scheme + host) the web client may load from. Agency runners and live tests still read `BASE_URL` directly via `LLMClient.from_single`.
+- LLM routing — each `LLM_ROUTE_<AGENT> = <provider>/<model>` resolves to an `LLMProfile` keyed by lowercased agent name. Calls whose `agent=` matches a route (`dc_judge`, `narrate`, `combat_narrate`, `encounter_summon`, `skill_recommend`) go there; everything else falls back to `default`. The model's THINK_* category drives per-call thinking behavior — `OFF` sends no `extra_body` and yields `result["think"] = None`; `OPT` honors the caller's `think` flag (default off) via `extra_body.chat_template_kwargs.enable_thinking` (llama.cpp) or `extra_body.reasoning_effort=medium` (Gemini 3.x, detected from `googleapis.com` in `base_url`); `OPT_ON` is the inverse (default on, opt out via `extra_body.reasoning_effort=minimal` on Gemini) — Gemma 4 via Gemini lives here because it accepts only `minimal` to disable; `ON` always thinks. Provider-style logic lives in `src/llm/llama_cpp.py` and `src/llm/gemini.py`; `client.py` only dispatches. Inline `<thought>...</thought>` at the head of the answer (Gemma 4) is auto-routed to the think channel by `gemini.ThoughtSplitter` in both `chat` and `chat_stream` whenever the model is actively thinking — always under `ON`, conditionally under `OPT_ON`.
 
 ## Stats / tiers / grades
 

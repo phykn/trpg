@@ -10,9 +10,13 @@ import tempfile
 import pytest
 
 from src.agents.dc_judge.schema import PassAction
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.domain.entities import Character, Location, Stats
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow import turn as turn_mod
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow.turn import run_turn
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
 @pytest.fixture
@@ -65,8 +69,8 @@ async def test_signal_passed_to_narrate_and_cleared(
         run_turn(
             client=None,
             state=state_with_signal,
-            profile_dir="<unused>",
-            saves_dir=tmp_saves,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_saves)),
             player_input="둘러본다",
         )
     )
@@ -103,8 +107,8 @@ async def test_signal_cleared_even_when_combat_branch_runs(
         run_turn(
             client=None,
             state=state_with_signal,
-            profile_dir="<unused>",
-            saves_dir=tmp_saves,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_saves)),
             player_input="공격",
         )
     )
@@ -149,8 +153,8 @@ async def test_no_signal_passes_none(
         run_turn(
             client=None,
             state=fresh_state,
-            profile_dir="<unused>",
-            saves_dir=tmp_saves,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_saves)),
             player_input="둘러본다",
         )
     )

@@ -27,6 +27,7 @@ from ..domain.memory import PlayerLogEntry
 from ..domain.state import GameState
 from ..llm.client import LLMClient, set_llm_session_if_unset
 from ..ontology.graph import GameGraph, build_graph
+from ..persistence.repo import SaveRepo, ScenarioRepo
 from .actions import (
     emit_equip,
     emit_learn_skill,
@@ -61,8 +62,8 @@ from .subject import reconcile_subject_after_move, refresh_active_subject
 async def run_turn(
     client: LLMClient,
     state: GameState,
-    profile_dir: str,
-    saves_dir: str,
+    scenario_repo: ScenarioRepo,
+    save_repo: SaveRepo,
     player_input: str,
     *,
     to_front_fn: ToFrontFn | None = None,
@@ -86,7 +87,7 @@ async def run_turn(
             dirty,
             "당신의 이야기가 여기서 끝납니다.",
         )
-        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+        async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
 
@@ -103,8 +104,8 @@ async def run_turn(
         async for ev in run_combat_player_turn(
             client,
             state,
-            profile_dir,
-            saves_dir,
+            scenario_repo,
+            save_repo,
             player_input,
             dirty,
             rng,
@@ -127,8 +128,8 @@ async def run_turn(
     async for ev in _dispatch(
         client,
         state,
-        profile_dir,
-        saves_dir,
+        scenario_repo,
+        save_repo,
         player_input,
         dirty,
         rng,
@@ -167,7 +168,7 @@ _ONE_STEP_EMITS: dict[type, EmitFactory] = {
 async def _run_one_step_action(
     client: LLMClient,
     state: GameState,
-    saves_dir: str,
+    save_repo: SaveRepo,
     dirty: Dirty,
     to_front_fn: ToFrontFn | None,
     result,
@@ -181,15 +182,15 @@ async def _run_one_step_action(
     if getattr(result, "tail_intent", None):
         yield push_act(state, dirty, result.tail_intent)
     tick_turn_buffs(state, dirty)
-    async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+    async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
 
 
 async def _enter_combat_and_finalize(
     client: LLMClient,
     state: GameState,
-    profile_dir: str,
-    saves_dir: str,
+    scenario_repo: ScenarioRepo,
+    save_repo: SaveRepo,
     dirty: Dirty,
     rng: random.Random | None,
     to_front_fn: ToFrontFn | None,
@@ -209,7 +210,7 @@ async def _enter_combat_and_finalize(
     async for ev in start_combat_and_drive_auto(
         client,
         state,
-        profile_dir,
+        scenario_repo,
         enemy_ids,
         dirty,
         rng,
@@ -220,15 +221,15 @@ async def _enter_combat_and_finalize(
         yield ev
     state.turn_count += 1
     tick_turn_buffs(state, dirty)
-    async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+    async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
 
 
 async def _dispatch(
     client: LLMClient,
     state: GameState,
-    profile_dir: str,
-    saves_dir: str,
+    scenario_repo: ScenarioRepo,
+    save_repo: SaveRepo,
     player_input: str,
     dirty: Dirty,
     rng: random.Random | None,
@@ -241,14 +242,14 @@ async def _dispatch(
     if isinstance(result, CombatAction):
         if has_invalid_combat_targets(state, result.targets):
             yield push_act(state, dirty, "공격할 수 있는 대상이 없습니다.")
-            async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+            async for ev in finalize(state, save_repo, dirty, to_front_fn):
                 yield ev
             return
         async for ev in _enter_combat_and_finalize(
             client,
             state,
-            profile_dir,
-            saves_dir,
+            scenario_repo,
+            save_repo,
             dirty,
             rng,
             to_front_fn,
@@ -270,7 +271,7 @@ async def _dispatch(
                     client,
                     state,
                     location,
-                    profile_dir,
+                    scenario_repo,
                     state.profile,
                     dirty=dirty.entities,
                     requested_role=result.role,
@@ -279,7 +280,7 @@ async def _dispatch(
                 summoned = None
         if summoned is None:
             yield push_act(state, dirty, "허공을 가르지만 적은 보이지 않습니다.")
-            async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+            async for ev in finalize(state, save_repo, dirty, to_front_fn):
                 yield ev
             return
         state.active_subject_id = summoned.id
@@ -289,8 +290,8 @@ async def _dispatch(
         async for ev in _enter_combat_and_finalize(
             client,
             state,
-            profile_dir,
-            saves_dir,
+            scenario_repo,
+            save_repo,
             dirty,
             rng,
             to_front_fn,
@@ -304,14 +305,14 @@ async def _dispatch(
 
     if isinstance(result, RollAction):
         async for ev in emit_roll_pending(
-            state, saves_dir, player_input, result, dirty
+            state, save_repo, player_input, result, dirty
         ):
             yield ev
         return  # /roll resumes the flow.
 
     if isinstance(result, RestAction):
         async for ev in run_rest(
-            state, profile_dir, saves_dir, dirty, rng, to_front_fn, client=client
+            state, scenario_repo, save_repo, dirty, rng, to_front_fn, client=client
         ):
             yield ev
         return
@@ -319,14 +320,14 @@ async def _dispatch(
     if isinstance(result, FleeAction):
         # Out-of-combat flee — short message, no turn bump.
         yield push_act(state, dirty, "지금은 도망칠 전투가 없습니다.")
-        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+        async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
 
     emit_factory = _ONE_STEP_EMITS.get(type(result))
     if emit_factory is not None:
         async for ev in _run_one_step_action(
-            client, state, saves_dir, dirty, to_front_fn, result, emit_factory
+            client, state, save_repo, dirty, to_front_fn, result, emit_factory
         ):
             yield ev
         return
@@ -363,7 +364,7 @@ async def _dispatch(
             async for ev in _stream_narrate_tail(
                 client,
                 state,
-                profile_dir,
+                scenario_repo,
                 player_input,
                 dirty,
                 to_front_fn,
@@ -374,7 +375,7 @@ async def _dispatch(
             ):
                 yield ev
         tick_turn_buffs(state, dirty)
-        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+        async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
 
@@ -384,7 +385,7 @@ async def _dispatch(
     async for ev in _stream_narrate_tail(
         client,
         state,
-        profile_dir,
+        scenario_repo,
         player_input,
         dirty,
         to_front_fn,
@@ -394,7 +395,7 @@ async def _dispatch(
     ):
         yield ev
     tick_turn_buffs(state, dirty)
-    async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+    async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
 
 
@@ -407,7 +408,7 @@ _CORPSE_BYPASS_BODY = "죽은 자는 말이 없습니다."
 async def _stream_narrate_tail(
     client: LLMClient,
     state: GameState,
-    profile_dir: str,
+    scenario_repo: ScenarioRepo,
     player_input: str,
     dirty: Dirty,
     to_front_fn: ToFrontFn | None,
@@ -473,7 +474,7 @@ async def _stream_narrate_tail(
     stream = run_narrate(
         client,
         state,
-        profile_dir,
+        scenario_repo,
         player_input,
         judge_result=action.model_dump(),
         graph=graph,

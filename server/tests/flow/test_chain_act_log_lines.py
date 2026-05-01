@@ -25,6 +25,7 @@ from src.domain.entities import (
     Stats,
 )
 from src.flow import turn as turn_mod
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow.turn import run_turn
 
 
@@ -98,8 +99,8 @@ async def test_chain_passes_skipped_heal_notice_into_narrate(
         run_turn(
             client=None,
             state=state_full_hp_with_heal,
-            profile_dir="<unused>",
-            saves_dir=tmp_saves,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_saves)),
             player_input="약초 먹고 단검 든다",
         )
     )
@@ -140,8 +141,8 @@ async def test_non_chain_pass_passes_empty_act_log_lines(
         run_turn(
             client=None,
             state=state_full_hp_with_heal,
-            profile_dir="<unused>",
-            saves_dir=tmp_saves,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_saves)),
             player_input="잠시 둘러본다",
         )
     )

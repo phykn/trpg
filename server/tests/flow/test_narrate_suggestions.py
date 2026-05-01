@@ -9,6 +9,7 @@ from src.agents.narrate import NarrativeDelta, NarrativeFinal
 from src.agents.narrate.schema import NarrateOutput
 from src.flow.dirty import Dirty
 from src.flow.narrate import consume_narrate
+from src.persistence.local_fs import LocalFsScenarioRepo
 
 
 async def _stream(*items) -> AsyncIterator[NarrativeDelta | NarrativeFinal]:
@@ -102,7 +103,7 @@ async def test_run_narrate_reject_blanks_suggestions(fresh_state, monkeypatch):
     async for it in narrate_flow.run_narrate(
         client=None,
         state=fresh_state,
-        profile_dir="<unused>",
+        scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
         player_input="ooc",
         judge_result={"action": "reject"},
         graph=GameGraph(),

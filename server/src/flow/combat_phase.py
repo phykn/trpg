@@ -34,6 +34,7 @@ from ..engines import combat as combat_engine
 from ..llm.client import LLMClient
 from ..mapping.josa import gwa_wa
 from ..ontology.graph import GameGraph
+from ..persistence.repo import SaveRepo, ScenarioRepo
 from .actions import (
     emit_equip,
     emit_roll_pending,
@@ -60,7 +61,7 @@ from .subject import refresh_active_subject
 async def emit_combat_cinematic_and_end(
     client: LLMClient | None,
     state: GameState,
-    profile_dir: str,
+    scenario_repo: ScenarioRepo,
     dirty: Dirty,
     *,
     player_input: str,
@@ -72,7 +73,7 @@ async def emit_combat_cinematic_and_end(
     if client is not None:
         narrate_input = build_narrate_input(
             state,
-            profile_dir,
+            scenario_repo,
             player_input=player_input,
             result=result,
         )
@@ -97,7 +98,7 @@ async def emit_combat_cinematic_and_end(
 async def _drive_auto_combat(
     client: LLMClient | None,
     state: GameState,
-    profile_dir: str,
+    scenario_repo: ScenarioRepo,
     dirty: Dirty,
     *,
     player_input: str,
@@ -122,7 +123,7 @@ async def _drive_auto_combat(
     async for ev in emit_combat_cinematic_and_end(
         client,
         state,
-        profile_dir,
+        scenario_repo,
         dirty,
         player_input=player_input,
         result=result,
@@ -133,7 +134,7 @@ async def _drive_auto_combat(
 async def start_combat_and_drive_auto(
     client: LLMClient | None,
     state: GameState,
-    profile_dir: str,
+    scenario_repo: ScenarioRepo,
     enemy_ids: list[str],
     dirty: Dirty,
     rng: random.Random | None,
@@ -177,7 +178,7 @@ async def start_combat_and_drive_auto(
     async for ev in _drive_auto_combat(
         client,
         state,
-        profile_dir,
+        scenario_repo,
         dirty,
         player_input=player_input,
         player_action=player_action,
@@ -270,8 +271,8 @@ async def _passive_pre_emit(
 async def run_combat_player_turn(
     client: LLMClient,
     state: GameState,
-    profile_dir: str,
-    saves_dir: str,
+    scenario_repo: ScenarioRepo,
+    save_repo: SaveRepo,
     player_input: str,
     dirty: Dirty,
     rng: random.Random | None,
@@ -293,34 +294,34 @@ async def run_combat_player_turn(
 
     if isinstance(result, RestAction):
         yield push_act(state, dirty, "전투 중에는 잠들 수 없습니다.")
-        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+        async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
 
     if isinstance(result, RollAction):
         async for ev in emit_roll_pending(
-            state, saves_dir, player_input, result, dirty
+            state, save_repo, player_input, result, dirty
         ):
             yield ev
         return
 
     if isinstance(result, RejectAction):
         yield push_act(state, dirty, "그 말은 받아들여지지 않습니다.")
-        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+        async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
 
     player_action = _judge_to_player_action(result, state)
     if player_action is None:
         yield push_act(state, dirty, "전투 중에는 그 행동을 할 수 없습니다.")
-        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+        async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
 
     if isinstance(result, CombatAction):
         if has_invalid_combat_targets(state, result.targets):
             yield push_act(state, dirty, "공격할 수 있는 대상이 없습니다.")
-            async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+            async for ev in finalize(state, save_repo, dirty, to_front_fn):
                 yield ev
             return
 
@@ -334,7 +335,7 @@ async def run_combat_player_turn(
     async for ev in _drive_auto_combat(
         client,
         state,
-        profile_dir,
+        scenario_repo,
         dirty,
         player_input=player_input,
         player_action=player_action,
@@ -345,5 +346,5 @@ async def run_combat_player_turn(
 
     state.turn_count += 1
     tick_turn_buffs(state, dirty)
-    async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+    async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev

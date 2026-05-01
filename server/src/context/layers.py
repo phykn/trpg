@@ -1,10 +1,13 @@
 """Narrate prompt input — world / session / history layers."""
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ..domain.clock import day_phase
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph, build_graph
+
+if TYPE_CHECKING:
+    from ..persistence.repo import ScenarioRepo
 
 
 _QUOTE_OPEN_TO_CLOSE = {"「": "」", "『": "』"}
@@ -129,15 +132,12 @@ def _classify_subject_at(
 
 
 def build_world_layer(
-    profile_dir: str, profile: str, *, missing_ok: bool = False
+    scenario_repo: "ScenarioRepo", profile: str, *, missing_ok: bool = False
 ) -> str:
-    """Read <profile>/world.md. Strict by default — set missing_ok=True for
-    callers (combat_auto narrate input, encounter summon) that should fall
-    back to an empty string."""
-    p = Path(profile_dir) / profile / "world.md"
-    if missing_ok and not p.exists():
-        return ""
-    return p.read_text(encoding="utf-8")
+    """Read <profile>/world.md via the ScenarioRepo. Strict by default — set
+    missing_ok=True for callers (combat_auto narrate input, encounter summon)
+    that should fall back to an empty string."""
+    return scenario_repo.read_world_md(profile, missing_ok=missing_ok)
 
 
 def build_session_layer(state: GameState, graph: GameGraph | None = None) -> dict:

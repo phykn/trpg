@@ -13,6 +13,7 @@ from src.agents.encounter_summon import (
 )
 from src.flow import encounter as encounter_engine
 from src.engines import recovery
+from src.persistence.local_fs import LocalFsScenarioRepo
 
 
 @pytest.fixture
@@ -80,7 +81,7 @@ async def test_summon_registers_character_with_pair_trade(
         client=None,
         state=state,
         location=state.locations["forest_01"],
-        profile_dir=tmp_profile,
+        scenario_repo=LocalFsScenarioRepo(profile_dir=tmp_profile),
         profile="default",
     )
     assert char is not None
@@ -112,7 +113,7 @@ async def test_summon_unknown_race_returns_none(fresh_state, tmp_profile, monkey
         client=None,
         state=state,
         location=state.locations["forest_01"],
-        profile_dir=tmp_profile,
+        scenario_repo=LocalFsScenarioRepo(profile_dir=tmp_profile),
         profile="default",
     )
     assert char is None

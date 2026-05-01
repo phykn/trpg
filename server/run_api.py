@@ -8,15 +8,21 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routes import router
 from src.llm import LLMClient
+from src.persistence.factory import build_save_repo, build_scenario_repo
+from src.persistence.repo import SaveRepo, ScenarioRepo
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SERVER_DIR = Path(__file__).resolve().parent
 
 
 def _load_env() -> None:
-    """Load .env (global + routes), then provider blocks from .env.local/.google."""
-    load_dotenv(SERVER_DIR / ".env")
-    load_dotenv(SERVER_DIR / ".env.local")
+    """Load .env.<APP_ENV> (default 'dev'), then provider blocks."""
+    app_env = os.environ.get("APP_ENV", "dev")
+    env_path = SERVER_DIR / f".env.{app_env}"
+    if not env_path.is_file():
+        raise FileNotFoundError(f"env file not found: {env_path}")
+    load_dotenv(env_path)
+    load_dotenv(SERVER_DIR / ".env.llama_cpp")
     load_dotenv(SERVER_DIR / ".env.google")
 
 
@@ -24,8 +30,8 @@ def build_app(
     llm: LLMClient,
     basic_auth_user: str,
     basic_auth_pass: str,
-    saves_dir: str,
-    profile_dir: str,
+    save_repo: SaveRepo,
+    scenario_repo: ScenarioRepo,
     cors_origins: list[str],
 ) -> FastAPI:
     app = FastAPI(title="TRPG Server API")
@@ -39,8 +45,8 @@ def build_app(
     app.state.llm = llm
     app.state.basic_auth_user = basic_auth_user
     app.state.basic_auth_pass = basic_auth_pass
-    app.state.saves_dir = saves_dir
-    app.state.profile_dir = profile_dir
+    app.state.save_repo = save_repo
+    app.state.scenario_repo = scenario_repo
     app.include_router(router)
     return app
 
@@ -50,19 +56,22 @@ def create_app() -> FastAPI:
 
     basic_auth_user = os.environ["BASIC_AUTH_USER"]
     basic_auth_pass = os.environ["BASIC_AUTH_PASS"]
-    saves_dir = os.environ["SAVES_DIR"]
-    profile_dir = os.environ["PROFILE_DIR"]
     cors_origins = [
         s.strip() for s in os.environ["CORS_ORIGINS"].split(",") if s.strip()
     ]
+
+    # Build repo adapters via factory — APP_ENV=release fails fast here
+    # because the Supabase stubs raise at __init__ until Phase 2.
+    save_repo = build_save_repo()
+    scenario_repo = build_scenario_repo()
 
     llm = LLMClient.from_env(log_dir=REPO_ROOT / "logs")
     return build_app(
         llm=llm,
         basic_auth_user=basic_auth_user,
         basic_auth_pass=basic_auth_pass,
-        saves_dir=saves_dir,
-        profile_dir=profile_dir,
+        save_repo=save_repo,
+        scenario_repo=scenario_repo,
         cors_origins=cors_origins,
     )
 

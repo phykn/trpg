@@ -10,6 +10,7 @@ import tempfile
 import pytest
 
 from src.domain.entities import Character, CombatBehavior, Stats
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.agents.dc_judge.schema import (
     CombatAction,
     PassAction,
@@ -75,8 +76,8 @@ async def test_combat_starts_and_runs_auto_sim(combat_state, tmp_data, monkeypat
         run_turn(
             client=None,
             state=combat_state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="고블린을 공격한다",
             rng=rng,
         )
@@ -103,8 +104,8 @@ async def test_combat_with_invalid_target_does_not_consume_turn(
         run_turn(
             client=None,
             state=combat_state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="안개 속으로 검을 휘두른다",
             rng=random.Random(1),
         )
@@ -128,8 +129,8 @@ async def test_combat_with_self_target_does_not_consume_turn(
         run_turn(
             client=None,
             state=combat_state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="자신을 베어버린다",
             rng=random.Random(1),
         )
@@ -157,8 +158,8 @@ async def test_combat_player_attack_drops_affinity_bidirectional(
         run_turn(
             client=None,
             state=combat_state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="공격",
             rng=random.Random(7),
         )
@@ -186,8 +187,8 @@ async def test_combat_pass_action_runs_auto_sim_round(
         run_turn(
             client=None,
             state=combat_state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="대기",
             rng=rng,
         )
@@ -223,7 +224,7 @@ async def test_start_combat_raises_when_already_in_combat(
             start_combat_and_drive_auto(
                 client=None,
                 state=combat_state,
-                profile_dir="<unused>",
+                scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
                 enemy_ids=["goblin_01"],
                 dirty=dirty,
                 rng=random.Random(1),
@@ -248,8 +249,8 @@ async def test_combat_ends_when_enemy_dies_from_player_attack(
         run_turn(
             client=None,
             state=combat_state,
-            profile_dir="<unused>",
-            saves_dir=tmp_data,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="공격",
             rng=rng,
         )

@@ -11,7 +11,8 @@ from ...flow.turn import run_turn
 from ...llm.client import LLMClient, set_think_override
 from ...mapping.to_front import to_front_state, to_story_graph
 from ...persistence.init import init_game
-from ..deps import get_llm, get_profile_dir, get_saves_dir, get_state
+from ...persistence.repo import SaveRepo, ScenarioRepo
+from ..deps import get_llm, get_save_repo, get_scenario_repo, get_state
 from ..schema import (
     InitRequest,
     InitResponse,
@@ -27,11 +28,11 @@ router = APIRouter()
 @router.post("/session/init", response_model=InitResponse)
 async def session_init(
     body: InitRequest,
-    saves_dir: str = Depends(get_saves_dir),
-    profile_dir: str = Depends(get_profile_dir),
+    save_repo: SaveRepo = Depends(get_save_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> InitResponse:
     try:
-        state = await init_game(body.profile, body.player, saves_dir, profile_dir)
+        state = await init_game(body.profile, body.player, save_repo, scenario_repo)
     except ProfileNotFound as e:
         raise HTTPException(status_code=422, detail=f"profile not found: {e}")
     except RaceNotFound as e:
@@ -56,16 +57,16 @@ async def session_turn(
     body: TurnRequest,
     state: GameState = Depends(get_state),
     llm: LLMClient = Depends(get_llm),
-    saves_dir: str = Depends(get_saves_dir),
-    profile_dir: str = Depends(get_profile_dir),
+    save_repo: SaveRepo = Depends(get_save_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ):
     set_think_override(body.think)
     return streaming_response(
         run_turn(
             llm,
             state,
-            profile_dir,
-            saves_dir,
+            scenario_repo,
+            save_repo,
             body.player_input,
             to_front_fn=to_front_state,
         )
@@ -77,16 +78,16 @@ async def session_roll(
     body: RollRequest,
     state: GameState = Depends(get_state),
     llm: LLMClient = Depends(get_llm),
-    saves_dir: str = Depends(get_saves_dir),
-    profile_dir: str = Depends(get_profile_dir),
+    save_repo: SaveRepo = Depends(get_save_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ):
     set_think_override(body.think)
     return streaming_response(
         run_roll(
             llm,
             state,
-            profile_dir,
-            saves_dir,
+            scenario_repo,
+            save_repo,
             to_front_fn=to_front_state,
         )
     )
@@ -96,15 +97,15 @@ async def session_roll(
 async def session_intro(
     state: GameState = Depends(get_state),
     llm: LLMClient = Depends(get_llm),
-    saves_dir: str = Depends(get_saves_dir),
-    profile_dir: str = Depends(get_profile_dir),
+    save_repo: SaveRepo = Depends(get_save_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ):
     return streaming_response(
         run_intro(
             llm,
             state,
-            profile_dir,
-            saves_dir,
+            scenario_repo,
+            save_repo,
             to_front_fn=to_front_state,
         )
     )

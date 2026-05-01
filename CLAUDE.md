@@ -49,3 +49,14 @@ Apply repo-wide. When a sub-CLAUDE.md repeats the same rule, the sub version is 
 - An OpenAI-compatible LLM server pointed at by `BASE_URL` (currently llama.cpp).
 - Single process + `asyncio.Lock` to serialize file writes. No DB — game state is per-entity JSON plus append-only JSONL.
 - Expo SDK 54 / RN 0.81 / React 19, NativeWind v4, expo-router with typedRoutes, `expo/fetch` for SSE streaming (standard `fetch` doesn't support SSE body streaming on RN).
+
+## Planned production stack
+
+The local setup above is dev-only. Intended hosted deployment is **Supabase + FastAPI + React Native (Expo) + Cloudflare**:
+
+- **Supabase (Postgres)** replaces local `saves/` JSON. Per-entity files → rows (start with JSONB mirror — `entities(game_id, kind, id, data jsonb)`); `log.jsonl / history.jsonl / dialogue.jsonl` → append-only tables keyed by `(game_id, seq)`.
+- **Cloudflare Workers (Python beta)** hosts the FastAPI app — Workers runtime has built-in ASGI. Cloudflare Containers is the fallback if Worker limits bite (SSE buffering, 100s idle timeout on Free/Pro, package whitelist).
+- **Expo (React Native)** client unchanged; web export likely on Cloudflare Pages.
+- **Hosted LLM** (Gemini already wired in `server/src/llm/gemini.py`) — local llama.cpp isn't reachable from a deployed Worker, so the prod `LLM_ROUTE_*` must point at a hosted provider.
+
+Not built yet — but new code should keep persistence and locking swappable: `asyncio.Lock` for save serialization won't survive multi-isolate deploys (move to DB-level locks like `SELECT ... FOR UPDATE`), and file writes in `persistence/store.py` should stay behind an interface so the storage layer can be replaced without touching `flow/` or `engines/`.

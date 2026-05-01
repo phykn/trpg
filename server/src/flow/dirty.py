@@ -16,13 +16,7 @@ from ..domain.memory import (
     TurnLogEntry,
 )
 from ..domain.state import GameState
-from ..persistence.store import (
-    append_dialogue_entries,
-    append_history_entries,
-    append_log_entries,
-    save_entity,
-    save_meta,
-)
+from ..persistence.repo import SaveRepo
 from ..rules import RULES
 
 ToFrontFn = Callable[[GameState], dict]
@@ -122,26 +116,26 @@ def push_dialogue(
 # --- Flush + finalize ------------------------------------------------------
 
 
-async def flush(state: GameState, saves_dir: str, dirty: Dirty) -> None:
+async def flush(state: GameState, save_repo: SaveRepo, dirty: Dirty) -> None:
     """Persist a turn's worth of changes. Order: entities + jsonls first,
     meta last (meta = commit point on partial-failure recovery).
     """
     for kind, eid in dirty.entities:
-        await save_entity(state, saves_dir, kind, eid)
-    await append_log_entries(saves_dir, state.game_id, dirty.log)
-    await append_history_entries(saves_dir, state.game_id, dirty.history)
-    await append_dialogue_entries(saves_dir, state.game_id, dirty.dialogue)
-    await save_meta(state, saves_dir)
+        await save_repo.save_entity(state, kind, eid)
+    await save_repo.append_log_entries(state.game_id, dirty.log)
+    await save_repo.append_history_entries(state.game_id, dirty.history)
+    await save_repo.append_dialogue_entries(state.game_id, dirty.dialogue)
+    await save_repo.save_meta(state)
 
 
 async def finalize(
     state: GameState,
-    saves_dir: str,
+    save_repo: SaveRepo,
     dirty: Dirty,
     to_front_fn: ToFrontFn | None,
 ) -> AsyncIterator[dict]:
     try:
-        await flush(state, saves_dir, dirty)
+        await flush(state, save_repo, dirty)
     except PersistenceFailed as e:
         yield {
             "type": "error",

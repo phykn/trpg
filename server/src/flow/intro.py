@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator
 from ..domain.state import GameState
 from ..llm.client import LLMClient, set_llm_session_if_unset
 from ..ontology.graph import build_graph
+from ..persistence.repo import SaveRepo, ScenarioRepo
 from .dirty import Dirty, ToFrontFn, finalize
 from .narrate import consume_narrate, run_narrate
 
@@ -12,8 +13,8 @@ from .narrate import consume_narrate, run_narrate
 async def run_intro(
     client: LLMClient,
     state: GameState,
-    profile_dir: str,
-    saves_dir: str,
+    scenario_repo: ScenarioRepo,
+    save_repo: SaveRepo,
     *,
     to_front_fn: ToFrontFn | None = None,
 ) -> AsyncIterator[dict]:
@@ -25,7 +26,7 @@ async def run_intro(
     stream = run_narrate(
         client,
         state,
-        profile_dir,
+        scenario_repo,
         "",
         judge_result={"action": "intro"},
         graph=graph,
@@ -41,5 +42,5 @@ async def run_intro(
     ):
         yield ev
 
-    async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+    async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev

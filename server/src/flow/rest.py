@@ -9,6 +9,7 @@ from ..engines import recovery as recovery_engine
 from ..llm.client import LLMClient
 from ..mapping.to_front import rest_ambush_text, rest_completed_text
 from ..ontology.graph import build_graph
+from ..persistence.repo import SaveRepo, ScenarioRepo
 from . import encounter as encounter_engine
 from .combat_auto import PlayerAction
 from .combat_phase import start_combat_and_drive_auto
@@ -18,8 +19,8 @@ from .dirty import Dirty, ToFrontFn, finalize, push_act
 
 async def run_rest(
     state: GameState,
-    profile_dir: str,
-    saves_dir: str,
+    scenario_repo: ScenarioRepo,
+    save_repo: SaveRepo,
     dirty: Dirty,
     rng: random.Random | None,
     to_front_fn: ToFrontFn | None,
@@ -35,7 +36,7 @@ async def run_rest(
             if location is None:
                 return None
             char = await encounter_engine.summon_encounter(
-                client, s, location, profile_dir, s.profile, dirty=dirty.entities
+                client, s, location, scenario_repo, s.profile, dirty=dirty.entities
             )
             return char.id if char else None
 
@@ -54,7 +55,7 @@ async def run_rest(
         async for ev in start_combat_and_drive_auto(
             client,
             state,
-            profile_dir,
+            scenario_repo,
             enemy_ids,
             dirty,
             rng,
@@ -66,10 +67,10 @@ async def run_rest(
         ):
             yield ev
         tick_turn_buffs(state, dirty)
-        async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+        async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
 
     yield push_act(state, dirty, rest_completed_text(actor.name))
-    async for ev in finalize(state, saves_dir, dirty, to_front_fn):
+    async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev

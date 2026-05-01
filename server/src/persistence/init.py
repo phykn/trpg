@@ -1,7 +1,5 @@
-import json
 from datetime import datetime
-from pathlib import Path
-from typing import Literal, Type, TypeVar
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -21,13 +19,7 @@ from ..domain.errors import ProfileMalformed, ProfileNotFound, RaceNotFound
 from ..domain.state import GameState
 from ..engines.growth import calc_max_hp, calc_max_mp
 from ..engines.invariants import Scenario, check_scenario
-from .store import (
-    copy_seed_into_game,
-    save_entity,
-    save_meta,
-)
-
-T = TypeVar("T", bound=BaseModel)
+from .repo import SaveRepo, ScenarioRepo
 
 
 class PlayerInput(BaseModel):
@@ -36,32 +28,16 @@ class PlayerInput(BaseModel):
     gender: Literal["male", "female"]
 
 
-def _read_json(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def _scan_dir(dirpath: Path, model_cls: Type[T]) -> dict[str, T]:
-    result: dict[str, T] = {}
-    if not dirpath.is_dir():
-        return result
-    for f in sorted(dirpath.glob("*.json")):
-        obj = model_cls.model_validate(_read_json(f))
-        # All seed models have an `id` attribute (Character, Item, Location, Quest,
-        # Race, Chapter, Campaign). The Pydantic schema enforces it.
-        result[obj.id] = obj  # type: ignore[attr-defined]
-    return result
-
-
 async def init_game(
     profile_name: str,
     player: PlayerInput,
-    saves_dir: str,
-    profile_dir: str,
+    save_repo: SaveRepo,
+    scenario_repo: ScenarioRepo,
 ) -> GameState:
-    pdir = Path(profile_dir) / profile_name
-    if not pdir.is_dir():
+    if not scenario_repo.profile_exists(profile_name):
         raise ProfileNotFound(profile_name)
 
+    pdir = scenario_repo.local_profile_path(profile_name)
     seed_violations = check_scenario(Scenario.from_dir(pdir))
     if seed_violations:
         raise ProfileMalformed(
@@ -69,20 +45,20 @@ async def init_game(
             + "\n".join(seed_violations)
         )
 
-    races = _scan_dir(pdir / "races", Race)
+    races = scenario_repo.load_seed_entities(profile_name, "races", Race)
     if player.race_id not in races:
         raise RaceNotFound(player.race_id)
 
-    locations = _scan_dir(pdir / "locations", Location)
-    items = _scan_dir(pdir / "items", Item)
-    skills = _scan_dir(pdir / "skills", SkillModel)
-    npcs = _scan_dir(pdir / "characters", Character)
-    quests = _scan_dir(pdir / "quests", Quest)
-    chapters = _scan_dir(pdir / "chapters", Chapter)
-    campaigns = _scan_dir(pdir / "campaigns", Campaign)
+    locations = scenario_repo.load_seed_entities(profile_name, "locations", Location)
+    items = scenario_repo.load_seed_entities(profile_name, "items", Item)
+    skills = scenario_repo.load_seed_entities(profile_name, "skills", SkillModel)
+    npcs = scenario_repo.load_seed_entities(profile_name, "characters", Character)
+    quests = scenario_repo.load_seed_entities(profile_name, "quests", Quest)
+    chapters = scenario_repo.load_seed_entities(profile_name, "chapters", Chapter)
+    campaigns = scenario_repo.load_seed_entities(profile_name, "campaigns", Campaign)
 
-    start = _read_json(pdir / "start.json")
-    template = _read_json(pdir / "player_template.json")
+    start = scenario_repo.read_start_json(profile_name)
+    template = scenario_repo.read_player_template(profile_name)
 
     # start.json / player_template integrity is already covered by
     # `check_scenario(Scenario.from_dir(pdir))` above (start_location_id,
@@ -135,8 +111,8 @@ async def init_game(
         active_quest_id=active_quest_id,
     )
 
-    copy_seed_into_game(profile_dir, profile_name, saves_dir, state.game_id)
+    save_repo.copy_seed_into_game(scenario_repo, profile_name, state.game_id)
     # Persist the player character separately — it isn't part of the seed.
-    await save_entity(state, saves_dir, "characters", player_id)
-    await save_meta(state, saves_dir)
+    await save_repo.save_entity(state, "characters", player_id)
+    await save_repo.save_meta(state)
     return state

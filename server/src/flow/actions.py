@@ -31,6 +31,7 @@ from ..engines.quest import check_quests
 from ..llm.client import LLMClient
 from ..mapping.josa import eul_reul, eun_neun, i_ga
 from ..mapping.to_front import pending_check_to_front
+from ..persistence.repo import SaveRepo
 from ..rules.dc import compute_required_roll, pick_dc, social_bonus
 from .dirty import (
     Dirty,
@@ -365,7 +366,7 @@ async def emit_trade(
 
 async def emit_roll_pending(
     state: GameState,
-    saves_dir: str,
+    save_repo: SaveRepo,
     player_input: str,
     result: RollAction,
     dirty: Dirty,
@@ -391,7 +392,7 @@ async def emit_roll_pending(
         created_at=datetime.now(UTC).isoformat(),
     )
     try:
-        await flush(state, saves_dir, dirty)
+        await flush(state, save_repo, dirty)
     except PersistenceFailed as e:
         yield {
             "type": "error",
