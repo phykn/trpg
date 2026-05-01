@@ -36,7 +36,7 @@ def test_required_roll_dnd5e_modifier_applied():
 
 
 def test_required_roll_clamps_to_one_or_twenty():
-    assert compute_required_roll(dc=5, stat=20) == 1   # 5 - 5 = 0 → clamp 1
+    assert compute_required_roll(dc=5, stat=20) == 1  # 5 - 5 = 0 → clamp 1
     assert compute_required_roll(dc=19, stat=0) == 20  # 19 - (-5) = 24 → clamp 20
 
 

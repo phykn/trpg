@@ -23,6 +23,7 @@ Public API:
 
     InvariantViolation (ValueError subclass)
 """
+
 from __future__ import annotations
 
 import json
@@ -55,9 +56,9 @@ from .inventory.carry import carry_capacity, current_weight
 class InvariantViolation(ValueError):
     """Single error type. Callers wanting raise semantics:
 
-        violations = check_character(c)
-        if violations:
-            raise InvariantViolation('\\n'.join(violations))
+    violations = check_character(c)
+    if violations:
+        raise InvariantViolation('\\n'.join(violations))
     """
 
 
@@ -320,7 +321,11 @@ def check_inventory(c: Character, items: dict[str, Item]) -> list[str]:
         item = items[item_id]
         allowed = allowed_slots(item)
         if slot not in allowed:
-            _v(out, where, f"equipment.{slot}={item_id!r} is {_slot_mismatch_hint(allowed)}")
+            _v(
+                out,
+                where,
+                f"equipment.{slot}={item_id!r} is {_slot_mismatch_hint(allowed)}",
+            )
 
         req = item.required
         if req is not None:
@@ -369,7 +374,11 @@ def _check_seed_only_rules(c: Character) -> list[str]:
             _v(out, where, f"NPC level={c.level} (must be ≥ 1)")
         skill_count = len(c.racial_skill_ids) + len(c.learned_skill_ids)
         if skill_count == 0:
-            _v(out, where, "NPC has no skills (racial_skill_ids + learned_skill_ids empty)")
+            _v(
+                out,
+                where,
+                "NPC has no skills (racial_skill_ids + learned_skill_ids empty)",
+            )
         threshold = RULES.social.hostile_aggressive_threshold
         if c.combat_behavior is not None and c.disposition.aggressive < threshold:
             _v(
@@ -427,7 +436,7 @@ def _check_prereq_cycles(items: dict, kind_label: str) -> list[str]:
 
     def _dfs(iid: str, path: list[str]) -> bool:
         if iid in on_stack:
-            cycle_path.extend(path[path.index(iid):] + [iid])
+            cycle_path.extend(path[path.index(iid) :] + [iid])
             return True
         if iid in visited:
             return False
@@ -458,16 +467,14 @@ def _check_prereq_cycles(items: dict, kind_label: str) -> list[str]:
 
 
 def check_quest_graph(s: Scenario) -> list[str]:
-    return (
-        _check_prereq_status(s.quests, "quests")
-        + _check_prereq_cycles(s.quests, "quest")
+    return _check_prereq_status(s.quests, "quests") + _check_prereq_cycles(
+        s.quests, "quest"
     )
 
 
 def check_chapter_graph(s: Scenario) -> list[str]:
-    return (
-        _check_prereq_status(s.chapters, "chapters")
-        + _check_prereq_cycles(s.chapters, "chapter")
+    return _check_prereq_status(s.chapters, "chapters") + _check_prereq_cycles(
+        s.chapters, "chapter"
     )
 
 
@@ -652,7 +659,11 @@ def _check_player_template(s: Scenario) -> list[str]:
         item = s.items[item_id]
         allowed = allowed_slots(item)
         if slot not in allowed:
-            _v(out, where, f"equipment.{slot}={item_id!r} is {_slot_mismatch_hint(allowed)}")
+            _v(
+                out,
+                where,
+                f"equipment.{slot}={item_id!r} is {_slot_mismatch_hint(allowed)}",
+            )
         if item_id not in pt_inv:
             _v(out, where, f"equipment.{slot}={item_id!r} not in inventory_ids")
     return out
@@ -719,5 +730,3 @@ def check_seed_character(
     out.extend(check_skills(c, skills_pool))
     out.extend(_check_seed_only_rules(c))
     return out
-
-

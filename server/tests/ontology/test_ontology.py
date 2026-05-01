@@ -156,22 +156,33 @@ def _seed_phase1(state):
         learned_skill_ids=["fireball"],
     )
     state.characters["goblin_01"] = Character(
-        id="goblin_01", name="고블린", race_id="human", stats=Stats(),
+        id="goblin_01",
+        name="고블린",
+        race_id="human",
+        stats=Stats(),
         location_id="gate_01",
     )
     state.quests["q_kill"] = Quest(
-        id="q_kill", title="고블린 처치",
-        giver_id="player_01", difficulty="보통",
-        triggers=[QuestTrigger(
-            id="t1", name="처치", type="character_death", target_id="goblin_01"
-        )],
+        id="q_kill",
+        title="고블린 처치",
+        giver_id="player_01",
+        difficulty="보통",
+        triggers=[
+            QuestTrigger(
+                id="t1", name="처치", type="character_death", target_id="goblin_01"
+            )
+        ],
     )
     state.quests["q_visit"] = Quest(
-        id="q_visit", title="성문에 도착",
-        giver_id="player_01", difficulty="쉬움",
-        triggers=[QuestTrigger(
-            id="t2", name="도착", type="location_enter", target_id="gate_01"
-        )],
+        id="q_visit",
+        title="성문에 도착",
+        giver_id="player_01",
+        difficulty="쉬움",
+        triggers=[
+            QuestTrigger(
+                id="t2", name="도착", type="location_enter", target_id="gate_01"
+            )
+        ],
     )
     state.chapters["ch1"] = Chapter(
         id="ch1", title="1장", quest_ids=["q_kill", "q_visit"]
@@ -267,20 +278,31 @@ def _seed_phase4(state):
     state.items["sword_01"] = Item(id="sword_01", name="대장의 검")
     state.items["key_01"] = Item(id="key_01", name="고대의 열쇠")
     state.characters["player_01"] = Character(
-        id="player_01", name="주", race_id="human", stats=Stats(),
+        id="player_01",
+        name="주",
+        race_id="human",
+        stats=Stats(),
         location_id="plaza_01",
     )
     state.characters["chief_01"] = Character(
-        id="chief_01", name="에드릭 촌장", race_id="human", stats=Stats(),
+        id="chief_01",
+        name="에드릭 촌장",
+        race_id="human",
+        stats=Stats(),
         location_id="plaza_01",
     )
     state.characters["goblin_01"] = Character(
-        id="goblin_01", name="고블린 두목", race_id="human", stats=Stats(),
+        id="goblin_01",
+        name="고블린 두목",
+        race_id="human",
+        stats=Stats(),
         location_id="ruins_01",
     )
     state.quests["q_chief"] = Quest(
-        id="q_chief", title="촌장의 부탁",
-        giver_id="chief_01", difficulty="보통",
+        id="q_chief",
+        title="촌장의 부탁",
+        giver_id="chief_01",
+        difficulty="보통",
         triggers=[
             QuestTrigger(
                 id="t1", name="처치", type="character_death", target_id="goblin_01"

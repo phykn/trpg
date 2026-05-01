@@ -5,6 +5,7 @@ invariant and registers it into GameState.characters. Two callers:
 - /turn's SummonCombatAction branch (player casts a summon-and-attack).
 - recovery's sleep_encounters fallback when the seed pool is empty (P3 §2.4).
 """
+
 from __future__ import annotations
 
 from ..context.layers import build_world_layer

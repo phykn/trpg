@@ -1,4 +1,5 @@
 """Equipment / inventory / trade — equip/unequip + carry + buy/sell + bargain price."""
+
 import pytest
 
 from src.domain.entities import (

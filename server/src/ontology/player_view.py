@@ -7,6 +7,7 @@ defaulting to a human-shaped narrator. Stats / hp / equipment stay out:
 narrate prompt forbids numeric leakage and equipment is already in
 surroundings.
 """
+
 from ..domain.state import GameState
 
 

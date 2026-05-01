@@ -243,9 +243,7 @@ def test_pass_accepts_corpse_id_target():
         "corpses": [{"id": "old_woman_01", "name": "노파"}],
     }
     p = output_adapter.validate_json(
-        json.dumps(
-            {"action": "pass", "targets": ["old_woman_01"]}, ensure_ascii=False
-        )
+        json.dumps({"action": "pass", "targets": ["old_woman_01"]}, ensure_ascii=False)
     )
     check_semantics(p, sur)
 
@@ -257,9 +255,7 @@ def test_pass_rejects_corpse_id_when_not_present():
         "corpses": [],
     }
     p = output_adapter.validate_json(
-        json.dumps(
-            {"action": "pass", "targets": ["ghost_id"]}, ensure_ascii=False
-        )
+        json.dumps({"action": "pass", "targets": ["ghost_id"]}, ensure_ascii=False)
     )
     with pytest.raises(JudgeSemanticError):
         check_semantics(p, sur)

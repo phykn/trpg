@@ -19,8 +19,14 @@ from src.persistence.store import (
 )
 
 _ENTITY_KINDS = (
-    "characters", "items", "locations", "races",
-    "quests", "chapters", "campaigns", "skills",
+    "characters",
+    "items",
+    "locations",
+    "races",
+    "quests",
+    "chapters",
+    "campaigns",
+    "skills",
 )
 
 
@@ -94,6 +100,7 @@ async def test_combat_state_survives_meta_round_trip(fresh_state, tmp_data):
     # reloaded as combat-cleared and the engine restarted the fight every turn,
     # never letting the player land more than the opening hit.
     from src.domain.state import CombatState
+
     fresh_state.combat_state = CombatState(
         round=2,
         turn_order=("player_01", "goblin_01"),
@@ -114,6 +121,7 @@ async def test_meta_json_on_disk_includes_per_turn_fields(fresh_state, tmp_data)
     # buggy (both omit a field). This one reads the raw JSON to confirm the
     # fields actually land on disk — covers combat_state.
     from src.domain.state import CombatState
+
     fresh_state.combat_state = CombatState(
         round=1,
         turn_order=("player_01",),

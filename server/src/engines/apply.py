@@ -1,6 +1,7 @@
 """state_changes — four mutation kinds (set, move, move_item, affinity) the
 LLM emits as part of NarrateOutput. Each kind has its own permission matrix;
 forbidden fields drop silently per change, the rest of the batch still applies."""
+
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
@@ -82,9 +83,7 @@ def _set_dotted(obj: Any, dotted_field: str, value: Any) -> None:
     field_name = parts[-1]
     fields = getattr(type(obj), "model_fields", None)
     if fields is None or field_name not in fields:
-        raise AttributeError(
-            f"{type(obj).__name__!r} has no field {field_name!r}"
-        )
+        raise AttributeError(f"{type(obj).__name__!r} has no field {field_name!r}")
     # Pydantic's default setattr skips type validation, so a bad value
     # (e.g. a str where a list[str] is expected, or None on a non-nullable
     # field) survives until the next read and surfaces as PersistenceFailed.
@@ -120,6 +119,7 @@ def _apply_set(
     # quest (or stays None on a fresh game).
     if c.entity == "quests" and c.field == "status":
         from .quest import _refresh_active_quest_id
+
         _refresh_active_quest_id(state)
 
 
@@ -128,7 +128,9 @@ def _apply_move(
     c: MoveChange,
     dirty: set[tuple[str, str]] | None,
 ) -> None:
-    from .quest import check_quests  # deferred import — keeps the cross-layer boundary clean
+    from .quest import (
+        check_quests,
+    )  # deferred import — keeps the cross-layer boundary clean
 
     if c.target not in state.characters:
         raise _StateChangeError(f"unknown character: {c.target!r}")

@@ -3,6 +3,7 @@
 The caller (pipeline/turn.py) drives round progression; this module exposes deterministic units like a single attack roll, damage, AI decision, or flee attempt.
 Spec source: docs/03-features.md §1.1-§1.6.
 """
+
 from __future__ import annotations
 
 import random
@@ -58,6 +59,7 @@ def roll_dice(spec: str, rng: random.Random | None = None) -> int:
 
 class _Weapon(BaseModel):
     """Weapon projection for one attack roll — a real Item or the unarmed fallback."""
+
     item_id: str | None  # None = unarmed
     dice: str
     range_m: float
@@ -103,6 +105,7 @@ def enemy_defense(defender: Character, items: dict[str, Item]) -> int:
 
 class AttackOutcome(BaseModel):
     """Result of one attack roll — one per attack action."""
+
     weapon_id: str | None
     primary_stat: StatKey
     nat_d20: int
@@ -113,7 +116,9 @@ class AttackOutcome(BaseModel):
     damage: int
 
 
-def _damage_for_grade(weapon: _Weapon, mod: int, grade: Grade, rng: random.Random) -> int:
+def _damage_for_grade(
+    weapon: _Weapon, mod: int, grade: Grade, rng: random.Random
+) -> int:
     """Damage by grade. Crit rolls dice twice but adds mod once."""
     if grade in ("failure", "critical_failure"):
         return 0
@@ -186,8 +191,14 @@ def _has_heal_skill(c: Character, skills_pool: dict[str, Skill]) -> bool:
     return False
 
 
-def _filter_alive_in_location(actor: Character, candidates: list[Character]) -> list[Character]:
-    return [c for c in candidates if c.alive and c.id != actor.id and c.location_id == actor.location_id]
+def _filter_alive_in_location(
+    actor: Character, candidates: list[Character]
+) -> list[Character]:
+    return [
+        c
+        for c in candidates
+        if c.alive and c.id != actor.id and c.location_id == actor.location_id
+    ]
 
 
 def pick_target(
@@ -385,7 +396,10 @@ def apply_attack_to_defender(
     When `nat_d20` is 1 (critical_failure damage) during a death save, failures += crit_inc.
     On death, the quest character_death trigger is evaluated.
     """
-    from .quest import check_quests  # deferred import — avoid cycle within pipeline layer
+    from .quest import (
+        check_quests,
+    )  # deferred import — avoid cycle within pipeline layer
+
     defender = state.characters[defender_id]
     hp_before = defender.hp
     hp_after = max(0, defender.hp - damage)

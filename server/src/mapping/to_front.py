@@ -35,7 +35,9 @@ def stat_label(stat: str) -> str:
 
 
 def _stats(stats: Stats) -> list[dict]:
-    return [{"label": label, "value": getattr(stats, key)} for key, label in _STAT_LABELS]
+    return [
+        {"label": label, "value": getattr(stats, key)} for key, label in _STAT_LABELS
+    ]
 
 
 def _race_label(state: GameState, graph: GameGraph, char_id: str) -> str:
@@ -81,9 +83,7 @@ def _inventory(state: GameState, graph: GameGraph, char_id: str) -> list[dict]:
     """Inventory shown to the player, with currently-equipped items subtracted.
     Invariant: each equipped item_id is also present in inventory_ids — so we
     decrement once per equipped slot to avoid duplicate display."""
-    counts: Counter[str] = Counter(
-        e.to_id for e in graph.get_edges(char_id, "carries")
-    )
+    counts: Counter[str] = Counter(e.to_id for e in graph.get_edges(char_id, "carries"))
     for edge in graph.get_edges(char_id, "equips"):
         item_id = edge.to_id
         counts[item_id] -= 1
@@ -96,9 +96,7 @@ def _inventory(state: GameState, graph: GameGraph, char_id: str) -> list[dict]:
     ]
 
 
-def _companion_label(
-    state: GameState, graph: GameGraph, char_id: str
-) -> str | None:
+def _companion_label(state: GameState, graph: GameGraph, char_id: str) -> str | None:
     """Returns the Korean label for a companion or None if the id no longer
     resolves (e.g. the companion died and was removed). Caller filters None
     so a stray technical id never reaches the UI."""
@@ -249,12 +247,14 @@ def to_place(state: GameState, graph: GameGraph | None = None) -> dict | None:
         if target is None:
             continue
         attrs = edge.attrs or {}
-        surroundings.append({
-            "name": target.name,
-            "blurb": target.description,
-            "difficulty": attrs.get("difficulty"),
-            "risk": _RISK_PAYLOAD[target.sleep_risk],
-        })
+        surroundings.append(
+            {
+                "name": target.name,
+                "blurb": target.description,
+                "difficulty": attrs.get("difficulty"),
+                "risk": _RISK_PAYLOAD[target.sleep_risk],
+            }
+        )
     targets = []
     for edge in graph.get_in_edges(player_loc_id, "located_at"):
         cid = edge.from_id
@@ -264,14 +264,16 @@ def to_place(state: GameState, graph: GameGraph | None = None) -> dict | None:
         if c is None:
             continue
         blurb = "죽음" if not c.alive else (c.appearance or c.description)
-        targets.append({
-            "name": c.name,
-            "level": c.level,
-            "raceJob": _race_job_label(state, graph, c),
-            "gender": _gender_label(c),
-            "blurb": blurb,
-            "trust": c.relations.get(state.player_id, 0),
-        })
+        targets.append(
+            {
+                "name": c.name,
+                "level": c.level,
+                "raceJob": _race_job_label(state, graph, c),
+                "gender": _gender_label(c),
+                "blurb": blurb,
+                "trust": c.relations.get(state.player_id, 0),
+            }
+        )
     return {
         "name": loc.name,
         "description": loc.description,
@@ -300,7 +302,9 @@ def to_combat(state: GameState) -> dict | None:
         e = state.characters.get(eid)
         if e is None:
             continue
-        enemies.append({"name": e.name, "hp": e.hp, "hpMax": e.max_hp, "alive": e.alive})
+        enemies.append(
+            {"name": e.name, "hp": e.hp, "hpMax": e.max_hp, "alive": e.alive}
+        )
     return {
         "round": cs.round,
         "turnLabel": turn_label,

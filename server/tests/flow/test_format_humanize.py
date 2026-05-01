@@ -5,6 +5,7 @@ contains "not enough gold"). Without explicit ordering, the shorter prefix
 could match first and surface the wrong Korean line. The implementation now
 scans longest-needle-first; this test pins that contract.
 """
+
 from src.flow.error_phrases import humanize_engine_error
 
 

@@ -75,8 +75,15 @@ def _skill_pool(*skills: Skill) -> dict[str, Skill]:
 
 def _basic_skill(sid: str = "skl", **kw) -> Skill:
     base = dict(
-        id=sid, name=sid, type="attack", target="single",
-        primary_stat="STR", power=5, mp_cost=0, level=1, duration=0,
+        id=sid,
+        name=sid,
+        type="attack",
+        target="single",
+        primary_stat="STR",
+        power=5,
+        mp_cost=0,
+        level=1,
+        duration=0,
     )
     base.update(kw)
     return Skill(**base)
@@ -134,7 +141,9 @@ def test_seed_dead_character_passes_full_pool_rule():
     c.alive = False
     c.hp = 0
     c.mp = 0
-    msgs = check_seed_character(c, items_pool={}, skills_pool=_skill_pool(_basic_skill()))
+    msgs = check_seed_character(
+        c, items_pool={}, skills_pool=_skill_pool(_basic_skill())
+    )
     assert not any("seed hp" in m or "seed mp" in m for m in msgs)
 
 
@@ -144,7 +153,9 @@ def test_seed_living_character_with_low_hp_still_flagged():
 
     c = _char(skills=[_basic_skill()])
     c.hp = c.max_hp - 1  # alive=True (default), but hp not full
-    msgs = check_seed_character(c, items_pool={}, skills_pool=_skill_pool(_basic_skill()))
+    msgs = check_seed_character(
+        c, items_pool={}, skills_pool=_skill_pool(_basic_skill())
+    )
     assert any("seed hp" in m for m in msgs)
 
 
@@ -196,7 +207,8 @@ def test_item_negative_weight():
 
 def test_item_weapon_dice_invalid():
     weapon = Item(
-        id="i", name="i",
+        id="i",
+        name="i",
         effects=WeaponEffect(type="weapon", weapon_dice="oops"),
     )
     msgs = check_item(weapon)
@@ -206,7 +218,8 @@ def test_item_weapon_dice_invalid():
 def test_item_weapon_dice_valid_forms():
     for spec in ("1d6", "2d4", "1d8+2", "1d4-1", " 2d10 + 3 "):
         weapon = Item(
-            id="i", name="i",
+            id="i",
+            name="i",
             effects=WeaponEffect(type="weapon", weapon_dice=spec),
         )
         assert check_item(weapon) == [], f"failed for {spec!r}"
@@ -235,14 +248,20 @@ def test_inventory_armor_in_accessory_slot_passes():
 
 
 def test_inventory_weapon_in_armor_slot():
-    sword = Item(id="sw", name="sw", effects=WeaponEffect(type="weapon", weapon_dice="1d6"))
+    sword = Item(
+        id="sw", name="sw", effects=WeaponEffect(type="weapon", weapon_dice="1d6")
+    )
     c = _char(inventory=["sw"], equipment=Equipment(armor="sw"))
     msgs = check_inventory(c, {"sw": sword})
     assert any("weapon" in m and "weapon slot" in m for m in msgs)
 
 
 def test_inventory_consumable_equipped():
-    potion = Item(id="p", name="p", effects=ConsumableEffect(type="consumable", effect="heal", amount=10))
+    potion = Item(
+        id="p",
+        name="p",
+        effects=ConsumableEffect(type="consumable", effect="heal", amount=10),
+    )
     c = _char(inventory=["p"], equipment=Equipment(weapon="p"))
     msgs = check_inventory(c, {"p": potion})
     assert any("consumable" in m and "cannot be equipped" in m for m in msgs)
@@ -250,11 +269,14 @@ def test_inventory_consumable_equipped():
 
 def test_inventory_required_stat_not_met():
     heavy = Item(
-        id="h", name="h",
+        id="h",
+        name="h",
         effects=WeaponEffect(type="weapon", weapon_dice="1d8"),
         required=Stats(STR=18),
     )
-    c = _char(stats=Stats(STR=10, CHA=10), inventory=["h"], equipment=Equipment(weapon="h"))
+    c = _char(
+        stats=Stats(STR=10, CHA=10), inventory=["h"], equipment=Equipment(weapon="h")
+    )
     msgs = check_inventory(c, {"h": heavy})
     assert any("STR≥18" in m and "STR=10" in m for m in msgs)
 
@@ -269,7 +291,9 @@ def test_inventory_carry_capacity_exceeded():
 def test_inventory_id_not_in_pool():
     c = _char(inventory=["ghost"])
     msgs = check_inventory(c, {})
-    assert any("inventory_ids" in m and "ghost" in m and "not in items" in m for m in msgs)
+    assert any(
+        "inventory_ids" in m and "ghost" in m and "not in items" in m for m in msgs
+    )
 
 
 # --- check_skills ---------------------------------------------------------
@@ -300,8 +324,12 @@ def test_skills_buff_with_positive_duration_passes():
 
 def _quest(qid: str, status: str = "active", prereq: list[str] | None = None) -> Quest:
     return Quest(
-        id=qid, title=qid, giver_id="anyone", difficulty="보통",
-        prerequisite_ids=prereq or [], status=status,
+        id=qid,
+        title=qid,
+        giver_id="anyone",
+        difficulty="보통",
+        prerequisite_ids=prereq or [],
+        status=status,
     )
 
 
@@ -340,9 +368,14 @@ def test_quest_graph_active_with_completed_prereq_passes():
 # --- check_chapter_graph --------------------------------------------------
 
 
-def _chapter(cid: str, status: str = "locked", prereq: list[str] | None = None) -> Chapter:
+def _chapter(
+    cid: str, status: str = "locked", prereq: list[str] | None = None
+) -> Chapter:
     return Chapter(
-        id=cid, title=cid, prerequisite_ids=prereq or [], status=status,
+        id=cid,
+        title=cid,
+        prerequisite_ids=prereq or [],
+        status=status,
     )
 
 
@@ -383,23 +416,37 @@ def test_chapter_graph_active_with_completed_prereq_passes():
 
 def _minimal_scenario(**overrides) -> Scenario:
     sword = Item(
-        id="sword", name="sword", weight=1.0,
+        id="sword",
+        name="sword",
+        weight=1.0,
         effects=WeaponEffect(type="weapon", weapon_dice="1d6"),
     )
     inn = type("L", (), {})  # placeholder — use actual Location below
     from src.domain.entities import Chapter, Location
+
     location = Location(id="inn", name="inn")
     slash_skill = _basic_skill("slash", level=1)
     npc = _char(
-        cid="npc1", level=2, race_id="human", location_id="inn",
-        inventory=["sword"], equipment=Equipment(weapon="sword"),
+        cid="npc1",
+        level=2,
+        race_id="human",
+        location_id="inn",
+        inventory=["sword"],
+        equipment=Equipment(weapon="sword"),
         skills=[slash_skill],
-        aggressive=80, combat=CombatBehavior(attack_priority="nearest", flee_hp_percent=20),
+        aggressive=80,
+        combat=CombatBehavior(attack_priority="nearest", flee_hp_percent=20),
         xp_reward=80,
     )
     quest = Quest(
-        id="q1", title="t", giver_id="npc1", difficulty="보통", status="active",
-        triggers=[QuestTrigger(id="t1", name="t1", type="character_death", target_id="npc1")],
+        id="q1",
+        title="t",
+        giver_id="npc1",
+        difficulty="보통",
+        status="active",
+        triggers=[
+            QuestTrigger(id="t1", name="t1", type="character_death", target_id="npc1")
+        ],
     )
     chapter = Chapter(id="ch1", title="c", quest_ids=["q1"], status="active")
     base = Scenario(
@@ -499,5 +546,3 @@ def test_state_allows_partial_hp(fresh_state):
     msgs = check_scenario(Scenario.from_state(fresh_state))
     # No "seed hp" violation; max_hp formula still holds
     assert not any("seed hp" in m for m in msgs)
-
-

@@ -1,5 +1,6 @@
 """Session lifecycle — init/state and the streaming entries
 (turn / roll / intro)."""
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from ...domain.errors import ProfileMalformed, ProfileNotFound, RaceNotFound
@@ -49,7 +50,11 @@ async def session_turn(
 ):
     return streaming_response(
         run_turn(
-            llm, state, profile_dir, saves_dir, body.player_input,
+            llm,
+            state,
+            profile_dir,
+            saves_dir,
+            body.player_input,
             to_front_fn=to_front_state,
         )
     )
@@ -64,7 +69,11 @@ async def session_roll(
 ):
     return streaming_response(
         run_roll(
-            llm, state, profile_dir, saves_dir, to_front_fn=to_front_state,
+            llm,
+            state,
+            profile_dir,
+            saves_dir,
+            to_front_fn=to_front_state,
         )
     )
 
@@ -78,6 +87,10 @@ async def session_intro(
 ):
     return streaming_response(
         run_intro(
-            llm, state, profile_dir, saves_dir, to_front_fn=to_front_state,
+            llm,
+            state,
+            profile_dir,
+            saves_dir,
+            to_front_fn=to_front_state,
         )
     )

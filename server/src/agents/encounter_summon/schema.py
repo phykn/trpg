@@ -1,4 +1,5 @@
 """On-the-fly enemy synthesis when the seed pool is empty during sleep_encounter (P3 §2.4)."""
+
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator

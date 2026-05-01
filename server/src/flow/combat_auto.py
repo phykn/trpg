@@ -2,6 +2,7 @@
 mutates GameState, and produces the trace plus snapshots that the caller hands
 to combat_narrate for one cinematic body and to format_outcome_summary for the
 numeric act-line that follows."""
+
 from __future__ import annotations
 
 import random
@@ -41,6 +42,7 @@ class PlayerAction:
       - "pass": defend / brace — round 1 only; round 2+ falls back to attack
       - "flee": player attempts to flee
     """
+
     kind: str
     skill_id: str | None = None
     targets: list[str] = field(default_factory=list)
@@ -71,7 +73,9 @@ class AutoCombatResult:
 
 
 def _turn_event(
-    actor_id: str, action: str, *,
+    actor_id: str,
+    action: str,
+    *,
     target_id: str | None = None,
     grade: str | None = None,
     damage: int = 0,
@@ -111,24 +115,30 @@ def _emit_round_event(
     skill_name: str | None = None,
     skill_id: str | None = None,
 ) -> None:
-    events.append(CombatRoundEvent(
-        round_no=round_no, actor=actor.name,
-        action=action_label,
-        target=target_name,
-        grade=grade,
-        killed=killed,
-        skill_name=skill_name,
-    ))
-    turn_events.append(_turn_event(
-        actor.id, action_label,
-        target_id=target_id,
-        grade=grade,
-        damage=damage,
-        killed=killed,
-        skill_name=skill_name,
-        skill_id=skill_id,
-        round_no=round_no,
-    ))
+    events.append(
+        CombatRoundEvent(
+            round_no=round_no,
+            actor=actor.name,
+            action=action_label,
+            target=target_name,
+            grade=grade,
+            killed=killed,
+            skill_name=skill_name,
+        )
+    )
+    turn_events.append(
+        _turn_event(
+            actor.id,
+            action_label,
+            target_id=target_id,
+            grade=grade,
+            damage=damage,
+            killed=killed,
+            skill_name=skill_name,
+            skill_id=skill_id,
+            round_no=round_no,
+        )
+    )
 
 
 def _player_snapshot(c: Character) -> PlayerNarrateSnapshot:
@@ -203,11 +213,14 @@ def _player_round_action(
     return PlayerAction(kind="attack", targets=list(base.targets))
 
 
-def _alive_player_targets(state: GameState, player: Character, requested: list[str]) -> list[str]:
+def _alive_player_targets(
+    state: GameState, player: Character, requested: list[str]
+) -> list[str]:
     """Filter requested targets to alive enemies in the player's location.
     Falls back to combat_state.enemy_ids when none of the requested are valid."""
     in_loc = [
-        tid for tid in requested
+        tid
+        for tid in requested
         if tid in state.characters
         and state.characters[tid].alive
         and state.characters[tid].location_id == player.location_id
@@ -218,7 +231,8 @@ def _alive_player_targets(state: GameState, player: Character, requested: list[s
     if cs is None:
         return []
     return [
-        eid for eid in cs.enemy_ids
+        eid
+        for eid in cs.enemy_ids
         if eid in state.characters and state.characters[eid].alive
     ]
 
@@ -236,7 +250,14 @@ def _resolve_player_turn(
     targets = _alive_player_targets(state, player, action.targets)
 
     def _add(action_label: str, **kwargs):
-        _emit_round_event(events, turn_events, actor=player, action_label=action_label, round_no=round_no, **kwargs)
+        _emit_round_event(
+            events,
+            turn_events,
+            actor=player,
+            action_label=action_label,
+            round_no=round_no,
+            **kwargs,
+        )
 
     if action.kind == "pass":
         _add("pass")
@@ -256,15 +277,22 @@ def _resolve_player_turn(
     if action.kind == "skill" and action.skill_id:
         try:
             cast = apply_skill_action(
-                state, player.id, action.skill_id, targets[:1], dirty, rng=rng,
+                state,
+                player.id,
+                action.skill_id,
+                targets[:1],
+                dirty,
+                rng=rng,
             )
             for eff in cast["effects"]:
                 tid = eff.get("target")
                 target = state.characters.get(tid) if tid else None
                 _add(
                     "skill",
-                    target_id=tid, target_name=target.name if target else None,
-                    skill_name=cast["skill_name"], skill_id=cast["skill_id"],
+                    target_id=tid,
+                    target_name=target.name if target else None,
+                    skill_name=cast["skill_name"],
+                    skill_id=cast["skill_id"],
                     damage=int(eff.get("damage", 0)),
                     grade=cast["grade"],
                     killed=tid in cast["killed_ids"],
@@ -279,8 +307,10 @@ def _resolve_player_turn(
     apply_result = apply_attack_action(state, player.id, target_id, outcome, dirty)
     _add(
         "attack" if outcome.damage > 0 else "miss",
-        target_id=target_id, target_name=target.name,
-        damage=outcome.damage, grade=outcome.grade,
+        target_id=target_id,
+        target_name=target.name,
+        damage=outcome.damage,
+        grade=outcome.grade,
         killed=apply_result["killed"],
     )
     return events, turn_events
@@ -297,7 +327,14 @@ def _resolve_npc_turn(
     turn_events: list[dict] = []
 
     def _add(action_label: str, **kwargs):
-        _emit_round_event(events, turn_events, actor=actor, action_label=action_label, round_no=round_no, **kwargs)
+        _emit_round_event(
+            events,
+            turn_events,
+            actor=actor,
+            action_label=action_label,
+            round_no=round_no,
+            **kwargs,
+        )
 
     if combat_engine.should_attempt_flee(actor, rng=rng):
         ok, _ = combat_engine.try_flee(actor, rng=rng)
@@ -314,20 +351,27 @@ def _resolve_npc_turn(
     apply_result = apply_attack_action(state, actor.id, target.id, outcome, dirty)
     _add(
         "attack" if outcome.damage > 0 else "miss",
-        target_id=target.id, target_name=target.name,
-        damage=outcome.damage, grade=outcome.grade,
+        target_id=target.id,
+        target_name=target.name,
+        damage=outcome.damage,
+        grade=outcome.grade,
         killed=apply_result["killed"],
     )
     return events, turn_events
 
 
 def _auto_resolve_death_save(
-    state: GameState, dirty: Dirty, rng: random.Random,
+    state: GameState,
+    dirty: Dirty,
+    rng: random.Random,
 ) -> str:
     """Roll death-saves until stable or dead. Returns 'stable' | 'dead'."""
     while True:
         status, _ = combat_engine.tick_death_save(
-            state, state.player_id, rng=rng, dirty=dirty.entities,
+            state,
+            state.player_id,
+            rng=rng,
+            dirty=dirty.entities,
         )
         if status == "stable":
             return "stable"
@@ -361,14 +405,16 @@ def run_auto_combat(
     enemy_ids_at_start = list(cs.enemy_ids)
     enemy_starts = [
         _enemy_snapshot(state, eid)
-        for eid in enemy_ids_at_start if eid in state.characters
+        for eid in enemy_ids_at_start
+        if eid in state.characters
     ]
     # Capture starting HPs before any round mutates state. The LLM-side
     # snapshot doesn't carry hp (numeric leak), so engine damage calc tracks
     # it here independently.
     enemy_starting_hp: dict[str, int] = {
         eid: state.characters[eid].hp
-        for eid in enemy_ids_at_start if eid in state.characters
+        for eid in enemy_ids_at_start
+        if eid in state.characters
     }
     player_start = _player_snapshot(player)
     player_hp_before = player.hp
@@ -398,12 +444,20 @@ def run_auto_combat(
                 continue
 
             if _is_surprise_skip(state, actor_id):
-                events.append(CombatRoundEvent(
-                    round_no=cur_round, actor=actor.name, action="pass",
-                ))
-                turn_events.append(_turn_event(
-                    actor_id, "pass", round_no=cur_round,
-                ))
+                events.append(
+                    CombatRoundEvent(
+                        round_no=cur_round,
+                        actor=actor.name,
+                        action="pass",
+                    )
+                )
+                turn_events.append(
+                    _turn_event(
+                        actor_id,
+                        "pass",
+                        round_no=cur_round,
+                    )
+                )
                 continue
 
             if actor_id == state.player_id:
@@ -471,10 +525,16 @@ def run_auto_combat(
             continue
         start_hp = enemy_starting_hp.get(eid, ch.hp)
         dmg = max(0, start_hp - ch.hp)
-        enemy_hits.append(EnemyHit(
-            id=eid, name=ch.name, damage_total=dmg,
-            hp_after=ch.hp, max_hp=ch.max_hp, killed=not ch.alive,
-        ))
+        enemy_hits.append(
+            EnemyHit(
+                id=eid,
+                name=ch.name,
+                damage_total=dmg,
+                hp_after=ch.hp,
+                max_hp=ch.max_hp,
+                killed=not ch.alive,
+            )
+        )
 
     player_damage_total = max(0, player_hp_before - player.hp)
 

@@ -107,7 +107,9 @@ async def run_narrate(
 # `edrik_chief`, `healing_potion_01`). Korean text never matches this shape, so
 # any token matching it inside a player-facing suggestion is a prompt slip.
 _ID_TOKEN = re.compile(r"\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b")
-_PAREN_ID = re.compile(r"\s*[\(\[（［][^\(\[\)\]）］]*[a-z][a-z0-9]*(?:_[a-z0-9]+)+[^\(\[\)\]）］]*[\)\]）］]")
+_PAREN_ID = re.compile(
+    r"\s*[\(\[（［][^\(\[\)\]）］]*[a-z][a-z0-9]*(?:_[a-z0-9]+)+[^\(\[\)\]）］]*[\)\]）］]"
+)
 
 
 def _strip_id_leaks(suggestions: list[str]) -> list[str]:
@@ -286,9 +288,7 @@ async def consume_narrate(
     push_log_entry(state, gm_log, dirty)
 
 
-def _dead_names_in_scope(
-    state: GameState, graph: GameGraph | None = None
-) -> list[str]:
+def _dead_names_in_scope(state: GameState, graph: GameGraph | None = None) -> list[str]:
     """Names of dead NPCs the narrate prompt can see — same scope as
     `_corpses_payload`: same-location bodies plus history-referenced
     off-screen ones via `turn_log.target`. Used by `consume_narrate` to

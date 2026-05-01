@@ -3,6 +3,7 @@
 A CombatAction triggers start_combat + an auto-sim cycle inside the same
 /turn — there is no `pending_check` dice button. Only judge is mocked; no
 LLM call (client=None skips the cinematic narrate stream)."""
+
 import random
 import tempfile
 
@@ -56,6 +57,7 @@ def combat_state(fresh_state, tmp_data):
 def _judge_returns(monkeypatch, action_obj):
     async def fake_judge(client, state, player_input, **kwargs):
         return action_obj
+
     monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
     monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
@@ -65,9 +67,7 @@ async def _collect(it):
     return [ev async for ev in it]
 
 
-async def test_combat_starts_and_runs_auto_sim(
-    combat_state, tmp_data, monkeypatch
-):
+async def test_combat_starts_and_runs_auto_sim(combat_state, tmp_data, monkeypatch):
     """A fresh combat input triggers combat_start + auto-sim — no pending_check."""
     _judge_returns(monkeypatch, CombatAction(action="combat", targets=["goblin_01"]))
     rng = random.Random(123)
@@ -97,9 +97,7 @@ async def test_combat_with_invalid_target_does_not_consume_turn(
     # for a "rush into the fog" input. The dispatcher used to forward it to
     # start_combat, leaving combat_state in a half-broken shape. Now the
     # dispatcher rejects unknown / dead targets without consuming the turn.
-    _judge_returns(
-        monkeypatch, CombatAction(action="combat", targets=["unknown_id"])
-    )
+    _judge_returns(monkeypatch, CombatAction(action="combat", targets=["unknown_id"]))
     turn_before = combat_state.turn_count
     events = await _collect(
         run_turn(
@@ -124,9 +122,7 @@ async def test_combat_with_self_target_does_not_consume_turn(
     # attacking themselves). The dispatcher used to start combat with the
     # player as the only enemy, which then ended immediately — turn_count went
     # up but nothing else moved.
-    _judge_returns(
-        monkeypatch, CombatAction(action="combat", targets=["player_01"])
-    )
+    _judge_returns(monkeypatch, CombatAction(action="combat", targets=["player_01"]))
     turn_before = combat_state.turn_count
     events = await _collect(
         run_turn(
@@ -179,6 +175,7 @@ async def test_combat_pass_action_runs_auto_sim_round(
     NPC takes its turn). combat_state ends up either cleared (decisive
     outcome) or still set with rounds advanced."""
     from src.engines import combat as combat_engine
+
     combat_engine.start_combat(combat_state, ["goblin_01"], rng=random.Random(0))
     combat_state.combat_state.turn_order = ["player_01", "goblin_01"]
     combat_state.combat_state.current_turn = 0
@@ -224,9 +221,14 @@ async def test_start_combat_raises_when_already_in_combat(
     with pytest.raises(CombatStateInvalid):
         await _collect(
             start_combat_and_drive_auto(
-                client=None, state=combat_state, profile_dir="<unused>",
-                enemy_ids=["goblin_01"], dirty=dirty, rng=random.Random(1),
-                player_input="공격", player_action=PlayerAction(kind="attack", targets=["goblin_01"]),
+                client=None,
+                state=combat_state,
+                profile_dir="<unused>",
+                enemy_ids=["goblin_01"],
+                dirty=dirty,
+                rng=random.Random(1),
+                player_input="공격",
+                player_action=PlayerAction(kind="attack", targets=["goblin_01"]),
                 graph=build_graph(combat_state),
             )
         )

@@ -1,4 +1,5 @@
 """GM intro — scene-zero narration. No judge, no turn bump."""
+
 from collections.abc import AsyncIterator
 
 from ..domain.state import GameState

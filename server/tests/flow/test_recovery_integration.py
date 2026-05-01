@@ -1,4 +1,5 @@
 """turn.run_turn rest routing — judge mocked; integrates the recovery engine + combat boot."""
+
 import random
 import tempfile
 
@@ -22,6 +23,7 @@ def tmp_data():
 def _judge_returns_rest(monkeypatch):
     async def fake_judge(client, state, player_input, **kwargs):
         return RestAction(action="rest")
+
     monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
     monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
@@ -80,7 +82,9 @@ async def test_rest_in_safe_location_full_recovery(fresh_state, tmp_data, monkey
 async def test_rest_in_dangerous_location_triggers_encounter(
     fresh_state, tmp_data, monkeypatch
 ):
-    _seed_player(fresh_state, hp=20)  # full HP at start (so we can see recovery does not happen)
+    _seed_player(
+        fresh_state, hp=20
+    )  # full HP at start (so we can see recovery does not happen)
     fresh_state.locations["plaza_01"] = Location(
         id="plaza_01",
         name="동굴",
@@ -181,7 +185,8 @@ async def test_rest_dangerous_with_low_random_forces_encounter(
         assert "goblin_01" in cs.enemy_ids
     # First-round player passes (surprise) — surfaced as a combat_turn event
     pass_events = [
-        e for e in events
+        e
+        for e in events
         if e["type"] == "combat_turn"
         and e["data"].get("actor") == "player_01"
         and e["data"].get("action") == "pass"

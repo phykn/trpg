@@ -6,7 +6,6 @@ one-line Korean phrase safe to surface as GM text. Pulled out of
 flow/format.py so the format module stays focused on log-line builders.
 """
 
-
 # Substring → Korean phrase. Order in this literal is for readability;
 # `_ERROR_PHRASES_SORTED` below scans longest-needle-first so a more specific
 # match (e.g. "npc has not enough gold") always wins over a shorter prefix
@@ -16,7 +15,10 @@ _ERROR_PHRASES_RAW: list[tuple[str, str]] = [
     ("hp already full", "이미 체력이 가득해 회복약을 쓸 필요가 없습니다"),
     ("mp already full", "이미 마력이 가득해 마력 음료를 쓸 필요가 없습니다"),
     ("affinity too low to trade", "친밀도가 부족해 거래가 되지 않습니다"),
-    ("can't sell equipped item", "장착 중인 물건은 팔 수 없습니다 (먼저 해제하셔야 합니다)"),
+    (
+        "can't sell equipped item",
+        "장착 중인 물건은 팔 수 없습니다 (먼저 해제하셔야 합니다)",
+    ),
     ("npc has not enough gold", "상대의 금화가 부족합니다"),
     ("not enough gold", "금화가 부족합니다"),
     ("npc has no such item", "그쪽은 그 물건을 가지고 있지 않습니다"),
@@ -28,8 +30,14 @@ _ERROR_PHRASES_RAW: list[tuple[str, str]] = [
     ("unsupported consumable effect", "이 물건은 그 방식으로 쓸 수 없습니다"),
     ("consumable items can't be equipped", "소모품은 장착할 수 없습니다"),
     ("weapon must go in the weapon slot", "무기는 무기 슬롯에만 장착할 수 있습니다"),
-    ("defense item must go in armor or accessory slot", "방어 효과 물건은 갑옷이나 악세사리 슬롯에 장착할 수 있습니다"),
-    ("decorative item must go in the accessory slot", "장식품은 악세사리 슬롯에만 장착할 수 있습니다"),
+    (
+        "defense item must go in armor or accessory slot",
+        "방어 효과 물건은 갑옷이나 악세사리 슬롯에 장착할 수 있습니다",
+    ),
+    (
+        "decorative item must go in the accessory slot",
+        "장식품은 악세사리 슬롯에만 장착할 수 있습니다",
+    ),
     ("required stats not met", "능력치 요구 조건을 충족하지 못합니다"),
     ("has no equippable effect", "이 물건은 장착할 수 없습니다"),
     ("weight cap exceeded", "들 수 있는 무게 한도를 넘어섰습니다"),

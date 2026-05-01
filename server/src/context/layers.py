@@ -1,4 +1,5 @@
 """Narrate prompt input — world / session / history layers."""
+
 from pathlib import Path
 
 from ..domain.clock import day_phase
@@ -65,24 +66,24 @@ def redact_dead_quotes(text: str, dead_names: list[str]) -> str:
             if speaker_is_dead:
                 out.append("…")
             else:
-                out.append(text[i:close_idx + 1])
+                out.append(text[i : close_idx + 1])
             i = close_idx + 1
             continue
 
         kind, length = _classify_subject_at(text, i, name_set)
         if kind == "dead":
             speaker_is_dead = True
-            out.append(text[i:i + length])
+            out.append(text[i : i + length])
             i += length
             continue
         if kind == "alive":
             speaker_is_dead = False
-            out.append(text[i:i + length])
+            out.append(text[i : i + length])
             i += length
             continue
         if kind == "pronoun":
             # Continuation — don't change `speaker_is_dead`.
-            out.append(text[i:i + length])
+            out.append(text[i : i + length])
             i += length
             continue
 
@@ -139,9 +140,7 @@ def build_world_layer(
     return p.read_text(encoding="utf-8")
 
 
-def build_session_layer(
-    state: GameState, graph: GameGraph | None = None
-) -> dict:
+def build_session_layer(state: GameState, graph: GameGraph | None = None) -> dict:
     chapter_data = None
     # ssot-allow: filtering chapters by status is an attribute lookup —
     # active-chapter is a value predicate, not a relational scan.
@@ -171,23 +170,22 @@ def build_session_layer(
     return {"chapter": chapter_data, "day_phase": day_phase(state.turn_count)}
 
 
-def build_history_layer(
-    state: GameState, corpses: list[dict] | None = None
-) -> str:
+def build_history_layer(state: GameState, corpses: list[dict] | None = None) -> str:
     dialogue_turns = {d.turn for d in state.recent_dialogue}
     summary_entries = [e for e in state.turn_log if e.turn not in dialogue_turns]
 
     blocks: list[str] = []
 
     dead_names = [
-        c["name"] for c in (corpses or [])
-        if isinstance(c, dict) and c.get("name")
+        c["name"] for c in (corpses or []) if isinstance(c, dict) and c.get("name")
     ]
 
     if corpses:
         lines = ["=== 사망 — 다시 등장시키거나 발화시키지 말 것 ==="]
         for c in corpses:
-            lines.append(f"- {c['name']} (생전 발화가 아래 대화에 남아 있을 수 있으나 더 이상 말하지 않습니다)")
+            lines.append(
+                f"- {c['name']} (생전 발화가 아래 대화에 남아 있을 수 있으나 더 이상 말하지 않습니다)"
+            )
         blocks.append("\n".join(lines))
 
     if summary_entries:

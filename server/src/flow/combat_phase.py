@@ -9,6 +9,7 @@ terminal.
 Manual round-by-round play is gone. The cap inside run_auto_combat decides
 when to stop and hand control back to the player.
 """
+
 from __future__ import annotations
 
 import random
@@ -70,8 +71,10 @@ async def emit_combat_cinematic_and_end(
     /turn) and roll._resume_auto_combat (post-roll combat resume)."""
     if client is not None:
         narrate_input = build_narrate_input(
-            state, profile_dir,
-            player_input=player_input, result=result,
+            state,
+            profile_dir,
+            player_input=player_input,
+            result=result,
         )
         body_chunks: list[str] = []
         async for chunk in stream_combat_narrate(client, narrate_input):
@@ -117,8 +120,12 @@ async def _drive_auto_combat(
         yield {"type": "combat_turn", "data": tev}
 
     async for ev in emit_combat_cinematic_and_end(
-        client, state, profile_dir, dirty,
-        player_input=player_input, result=result,
+        client,
+        state,
+        profile_dir,
+        dirty,
+        player_input=player_input,
+        result=result,
     ):
         yield ev
 
@@ -161,15 +168,22 @@ async def start_combat_and_drive_auto(
         first_enemy = state.characters.get(enemy_ids[0])
         if first_enemy is not None:
             push_turn_log(
-                state, first_enemy.id,
+                state,
+                first_enemy.id,
                 f"{first_enemy.name}{gwa_wa(first_enemy.name)} 전투 개시",
                 dirty,
             )
 
     async for ev in _drive_auto_combat(
-        client, state, profile_dir, dirty,
-        player_input=player_input, player_action=player_action,
-        rng=rng, cap=cap, graph=graph,
+        client,
+        state,
+        profile_dir,
+        dirty,
+        player_input=player_input,
+        player_action=player_action,
+        rng=rng,
+        cap=cap,
+        graph=graph,
     ):
         yield ev
 
@@ -228,7 +242,9 @@ async def _passive_pre_emit(
     item interaction, mirroring the round events the auto-sim produces."""
     label: str
     if isinstance(result, UseAction):
-        async for ev in emit_use(state, state.player_id, result.item_id, result.target_id, dirty):
+        async for ev in emit_use(
+            state, state.player_id, result.item_id, result.target_id, dirty
+        ):
             yield ev
         label = "use"
     elif isinstance(result, EquipAction):
@@ -282,7 +298,9 @@ async def run_combat_player_turn(
         return
 
     if isinstance(result, RollAction):
-        async for ev in emit_roll_pending(state, saves_dir, player_input, result, dirty):
+        async for ev in emit_roll_pending(
+            state, saves_dir, player_input, result, dirty
+        ):
             yield ev
         return
 
@@ -314,9 +332,14 @@ async def run_combat_player_turn(
             yield ev
 
     async for ev in _drive_auto_combat(
-        client, state, profile_dir, dirty,
-        player_input=player_input, player_action=player_action,
-        rng=rng, graph=graph,
+        client,
+        state,
+        profile_dir,
+        dirty,
+        player_input=player_input,
+        player_action=player_action,
+        rng=rng,
+        graph=graph,
     ):
         yield ev
 

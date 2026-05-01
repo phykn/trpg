@@ -1,4 +1,5 @@
 """run_turn must reject input when the player is dead — no judge call, no narrate, no use/equip/etc."""
+
 import tempfile
 
 import pytest
@@ -36,13 +37,16 @@ async def _collect(it):
     return [ev async for ev in it]
 
 
-async def test_dead_player_turn_short_circuits(dead_player_state, tmp_data, monkeypatch):
+async def test_dead_player_turn_short_circuits(
+    dead_player_state, tmp_data, monkeypatch
+):
     judge_called = False
 
     async def fake_judge(*a, **kw):
         nonlocal judge_called
         judge_called = True
         raise AssertionError("judge must not run when player is dead")
+
     monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
 
@@ -59,5 +63,7 @@ async def test_dead_player_turn_short_circuits(dead_player_state, tmp_data, monk
     assert not judge_called
     types = [e["type"] for e in events]
     assert "judge" not in types
-    act_logs = [e for e in events if e["type"] == "log_entry" and e["data"].get("kind") == "act"]
+    act_logs = [
+        e for e in events if e["type"] == "log_entry" and e["data"].get("kind") == "act"
+    ]
     assert any("이야기가 여기서 끝납니다" in e["data"]["text"] for e in act_logs)

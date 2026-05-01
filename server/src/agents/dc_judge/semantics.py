@@ -166,9 +166,7 @@ def _check_combat(output: CombatAction, surroundings: dict[str, Any]) -> None:
     if output.skill_id is None:
         return
     valid_skills = {
-        s.get("id")
-        for s in surroundings.get("skills", []) or []
-        if isinstance(s, dict)
+        s.get("id") for s in surroundings.get("skills", []) or [] if isinstance(s, dict)
     }
     if output.skill_id not in valid_skills:
         raise JudgeSemanticError(
@@ -200,7 +198,9 @@ def _check_level_up(output: LevelUpAction, surroundings: dict[str, Any]) -> None
 def _check_learn_skill(output: LearnSkillAction, surroundings: dict[str, Any]) -> None:
     candidates = surroundings.get("skill_candidates") or []
     if not candidates:
-        raise JudgeSemanticError("no pending skill candidates. Use 'pass' or 'clarify'.")
+        raise JudgeSemanticError(
+            "no pending skill candidates. Use 'pass' or 'clarify'."
+        )
     if output.index >= len(candidates):
         raise JudgeSemanticError(
             f"index {output.index} out of range; only {len(candidates)} candidates."
@@ -219,9 +219,13 @@ def _check_buy(output: BuyAction, surroundings: dict[str, Any]) -> None:
 
 def _check_sell(output: SellAction, surroundings: dict[str, Any]) -> None:
     _find_merchant(output.npc_id, surroundings)
-    inv_ids = {i.get("id") for i in surroundings.get("inventory", []) if isinstance(i, dict)}
+    inv_ids = {
+        i.get("id") for i in surroundings.get("inventory", []) if isinstance(i, dict)
+    }
     if output.item_id not in inv_ids:
-        raise JudgeSemanticError(f"sell item {output.item_id!r} not in player inventory.")
+        raise JudgeSemanticError(
+            f"sell item {output.item_id!r} not in player inventory."
+        )
 
 
 def _check_use(output: UseAction, surroundings: dict[str, Any]) -> None:
@@ -240,7 +244,9 @@ def _check_use(output: UseAction, surroundings: dict[str, Any]) -> None:
     if output.target_id is not None:
         entity_ids = _surroundings_target_ids(surroundings)
         if output.target_id not in entity_ids:
-            raise JudgeSemanticError(f"target_id {output.target_id!r} not in surroundings.")
+            raise JudgeSemanticError(
+                f"target_id {output.target_id!r} not in surroundings."
+            )
 
 
 def _check_equip(output: EquipAction, surroundings: dict[str, Any]) -> None:

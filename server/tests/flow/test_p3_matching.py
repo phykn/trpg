@@ -1,4 +1,5 @@
 """§flee/level_up/learn_skill/buy/sell — natural-language integration. Branches verified via judge mocks."""
+
 import random
 import tempfile
 
@@ -38,6 +39,7 @@ def tmp_data():
 def _judge_returns(monkeypatch, action_obj):
     async def fake_judge(client, state, player_input, **kwargs):
         return action_obj
+
     monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
     monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
@@ -55,7 +57,10 @@ def _seed_player(fresh_state, **overrides):
         is_player=True,
         stats=Stats(),
         location_id="plaza_01",
-        hp=20, max_hp=20, mp=15, max_mp=15,
+        hp=20,
+        max_hp=20,
+        mp=15,
+        max_mp=15,
         gold=overrides.get("gold", 100),
         xp_pool=overrides.get("xp_pool", 0),
         level=overrides.get("level", 0),
@@ -74,8 +79,13 @@ async def test_flee_in_combat_succeeds_ends_combat(fresh_state, tmp_data, monkey
     """On flee success: combat_end (outcome=fled) + combat_state cleared."""
     state = _seed_player(fresh_state)
     enemy = Character(
-        id="goblin_01", name="고블린", race_id="human", stats=Stats(),
-        location_id="plaza_01", hp=8, max_hp=8,
+        id="goblin_01",
+        name="고블린",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+        hp=8,
+        max_hp=8,
     )
     state.characters["goblin_01"] = enemy
     combat_engine.start_combat(state, ["goblin_01"])
@@ -87,8 +97,13 @@ async def test_flee_in_combat_succeeds_ends_combat(fresh_state, tmp_data, monkey
     _judge_returns(monkeypatch, FleeAction(action="flee"))
 
     events = await _collect(
-        run_turn(client=None, state=state, profile_dir="<unused>",
-                 saves_dir=tmp_data, player_input="도망친다")
+        run_turn(
+            client=None,
+            state=state,
+            profile_dir="<unused>",
+            saves_dir=tmp_data,
+            player_input="도망친다",
+        )
     )
     types = [e["type"] for e in events]
     assert "combat_end" in types
@@ -102,8 +117,13 @@ async def test_flee_in_combat_fails_npc_phase_runs(fresh_state, tmp_data, monkey
     falling back to basic attacks, and a flee combat_turn event is recorded."""
     state = _seed_player(fresh_state)
     enemy = Character(
-        id="goblin_01", name="고블린", race_id="human", stats=Stats(),
-        location_id="plaza_01", hp=8, max_hp=8,
+        id="goblin_01",
+        name="고블린",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+        hp=8,
+        max_hp=8,
     )
     state.characters["goblin_01"] = enemy
     combat_engine.start_combat(state, ["goblin_01"])
@@ -113,21 +133,27 @@ async def test_flee_in_combat_fails_npc_phase_runs(fresh_state, tmp_data, monkey
     _judge_returns(monkeypatch, FleeAction(action="flee"))
 
     events = await _collect(
-        run_turn(client=None, state=state, profile_dir="<unused>",
-                 saves_dir=tmp_data, player_input="도망친다",
-                 rng=random.Random(0))
+        run_turn(
+            client=None,
+            state=state,
+            profile_dir="<unused>",
+            saves_dir=tmp_data,
+            player_input="도망친다",
+            rng=random.Random(0),
+        )
     )
     flee_evs = [
-        e for e in events
+        e
+        for e in events
         if e["type"] == "combat_turn" and e["data"].get("action") == "flee"
     ]
     assert flee_evs and flee_evs[0]["data"]["grade"] == "failure"
     # NPC took at least one turn — at minimum a non-flee combat_turn event from
     # the goblin should appear in the trace.
     npc_evs = [
-        e for e in events
-        if e["type"] == "combat_turn"
-        and e["data"].get("actor") == "goblin_01"
+        e
+        for e in events
+        if e["type"] == "combat_turn" and e["data"].get("actor") == "goblin_01"
     ]
     assert npc_evs
 
@@ -138,13 +164,17 @@ async def test_flee_outside_combat_no_op(fresh_state, tmp_data, monkeypatch):
     _judge_returns(monkeypatch, FleeAction(action="flee"))
 
     events = await _collect(
-        run_turn(client=None, state=state, profile_dir="<unused>",
-                 saves_dir=tmp_data, player_input="도망친다")
+        run_turn(
+            client=None,
+            state=state,
+            profile_dir="<unused>",
+            saves_dir=tmp_data,
+            player_input="도망친다",
+        )
     )
     assert state.turn_count == 0
     act_evs = [
-        e for e in events
-        if e["type"] == "log_entry" and e["data"].get("kind") == "act"
+        e for e in events if e["type"] == "log_entry" and e["data"].get("kind") == "act"
     ]
     assert any("전투" in e["data"]["text"] for e in act_evs)
 
@@ -152,20 +182,30 @@ async def test_flee_outside_combat_no_op(fresh_state, tmp_data, monkeypatch):
 # --- level_up natural language --------------------------------------------
 
 
-async def test_level_up_natural_language_applies_pair_trade(fresh_state, tmp_data, monkeypatch):
+async def test_level_up_natural_language_applies_pair_trade(
+    fresh_state, tmp_data, monkeypatch
+):
     state = _seed_player(fresh_state, xp_pool=100, level=0)
-    _judge_returns(monkeypatch, LevelUpAction(action="level_up", stat_up="STR", stat_down="CHA"))
+    _judge_returns(
+        monkeypatch, LevelUpAction(action="level_up", stat_up="STR", stat_down="CHA")
+    )
 
     events = await _collect(
-        run_turn(client=None, state=state, profile_dir="<unused>",
-                 saves_dir=tmp_data, player_input="근육을 단련해 한 단계 오른다")
+        run_turn(
+            client=None,
+            state=state,
+            profile_dir="<unused>",
+            saves_dir=tmp_data,
+            player_input="근육을 단련해 한 단계 오른다",
+        )
     )
     p = state.characters["player_01"]
     assert p.level == 1
     assert p.stats.STR == 11
     assert p.stats.CHA == 9
     log_texts = [
-        e["data"]["text"] for e in events
+        e["data"]["text"]
+        for e in events
         if e["type"] == "log_entry" and e["data"].get("kind") == "act"
     ]
     assert any("레벨 1" in t for t in log_texts)
@@ -174,11 +214,18 @@ async def test_level_up_natural_language_applies_pair_trade(fresh_state, tmp_dat
 async def test_level_up_invalid_pair_logs_error(fresh_state, tmp_data, monkeypatch):
     """Insufficient xp: level_up logs failure + turn consumed. Character stats unchanged."""
     state = _seed_player(fresh_state, xp_pool=0, level=0)
-    _judge_returns(monkeypatch, LevelUpAction(action="level_up", stat_up="STR", stat_down="CHA"))
+    _judge_returns(
+        monkeypatch, LevelUpAction(action="level_up", stat_up="STR", stat_down="CHA")
+    )
 
     await _collect(
-        run_turn(client=None, state=state, profile_dir="<unused>",
-                 saves_dir=tmp_data, player_input="성장한다")
+        run_turn(
+            client=None,
+            state=state,
+            profile_dir="<unused>",
+            saves_dir=tmp_data,
+            player_input="성장한다",
+        )
     )
     p = state.characters["player_01"]
     assert p.level == 0
@@ -191,17 +238,28 @@ async def test_level_up_invalid_pair_logs_error(fresh_state, tmp_data, monkeypat
 async def test_learn_skill_appends_to_learned(fresh_state, tmp_data, monkeypatch):
     state = _seed_player(fresh_state)
     candidate = Skill(
-        id="fireball_l1", name="화염구",
+        id="fireball_l1",
+        name="화염구",
         description="불꽃을 던진다",
-        type="attack", target="single", primary_stat="INT",
-        special_effect="화염", level=1, power=10, mp_cost=4,
+        type="attack",
+        target="single",
+        primary_stat="INT",
+        special_effect="화염",
+        level=1,
+        power=10,
+        mp_cost=4,
     )
     state.pending_skill_candidates = [candidate]
     _judge_returns(monkeypatch, LearnSkillAction(action="learn_skill", index=0))
 
     await _collect(
-        run_turn(client=None, state=state, profile_dir="<unused>",
-                 saves_dir=tmp_data, player_input="화염 쪽을 익힌다")
+        run_turn(
+            client=None,
+            state=state,
+            profile_dir="<unused>",
+            saves_dir=tmp_data,
+            player_input="화염 쪽을 익힌다",
+        )
     )
     p = state.characters["player_01"]
     assert "fireball_l1" in p.learned_skill_ids
@@ -216,8 +274,13 @@ async def test_learn_skill_invalid_index_logs_error(fresh_state, tmp_data, monke
     _judge_returns(monkeypatch, LearnSkillAction(action="learn_skill", index=0))
 
     await _collect(
-        run_turn(client=None, state=state, profile_dir="<unused>",
-                 saves_dir=tmp_data, player_input="첫 번째를 익힌다")
+        run_turn(
+            client=None,
+            state=state,
+            profile_dir="<unused>",
+            saves_dir=tmp_data,
+            player_input="첫 번째를 익힌다",
+        )
     )
     p = state.characters["player_01"]
     assert p.learned_skill_ids == []
@@ -229,16 +292,22 @@ async def test_learn_skill_invalid_index_logs_error(fresh_state, tmp_data, monke
 def _seed_merchant(state, merchant_inv=None):
     items = {
         "shield_01": Item(
-            id="shield_01", name="방패", price=30,
+            id="shield_01",
+            name="방패",
+            price=30,
             effects=ArmorEffect(type="armor", defense=2),
         ),
         "ore_01": Item(id="ore_01", name="철광석", price=10),
     }
     state.items.update(items)
     smith = Character(
-        id="smith_01", name="대장장이", race_id="human",
-        stats=Stats(), location_id="plaza_01",
-        hp=20, max_hp=20,
+        id="smith_01",
+        name="대장장이",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+        hp=20,
+        max_hp=20,
         inventory_ids=list(merchant_inv or ["shield_01"]),
         gold=200,
         relations={"player_01": 50},  # passes trade_threshold
@@ -250,11 +319,18 @@ def _seed_merchant(state, merchant_inv=None):
 async def test_buy_natural_language(fresh_state, tmp_data, monkeypatch):
     state = _seed_player(fresh_state, gold=100)
     _seed_merchant(state)
-    _judge_returns(monkeypatch, BuyAction(action="buy", npc_id="smith_01", item_id="shield_01"))
+    _judge_returns(
+        monkeypatch, BuyAction(action="buy", npc_id="smith_01", item_id="shield_01")
+    )
 
     await _collect(
-        run_turn(client=None, state=state, profile_dir="<unused>",
-                 saves_dir=tmp_data, player_input="방패를 산다")
+        run_turn(
+            client=None,
+            state=state,
+            profile_dir="<unused>",
+            saves_dir=tmp_data,
+            player_input="방패를 산다",
+        )
     )
     p = state.characters["player_01"]
     smith = state.characters["smith_01"]
@@ -266,11 +342,18 @@ async def test_buy_natural_language(fresh_state, tmp_data, monkeypatch):
 async def test_sell_natural_language(fresh_state, tmp_data, monkeypatch):
     state = _seed_player(fresh_state, gold=50, inventory_ids=["ore_01"])
     _seed_merchant(state, merchant_inv=[])
-    _judge_returns(monkeypatch, SellAction(action="sell", npc_id="smith_01", item_id="ore_01"))
+    _judge_returns(
+        monkeypatch, SellAction(action="sell", npc_id="smith_01", item_id="ore_01")
+    )
 
     await _collect(
-        run_turn(client=None, state=state, profile_dir="<unused>",
-                 saves_dir=tmp_data, player_input="철광석을 판다")
+        run_turn(
+            client=None,
+            state=state,
+            profile_dir="<unused>",
+            saves_dir=tmp_data,
+            player_input="철광석을 판다",
+        )
     )
     p = state.characters["player_01"]
     smith = state.characters["smith_01"]
@@ -284,11 +367,18 @@ async def test_buy_low_affinity_rejected(fresh_state, tmp_data, monkeypatch):
     state = _seed_player(fresh_state, gold=100)
     _seed_merchant(state)
     state.characters["smith_01"].relations = {"player_01": -20}  # below threshold
-    _judge_returns(monkeypatch, BuyAction(action="buy", npc_id="smith_01", item_id="shield_01"))
+    _judge_returns(
+        monkeypatch, BuyAction(action="buy", npc_id="smith_01", item_id="shield_01")
+    )
 
     await _collect(
-        run_turn(client=None, state=state, profile_dir="<unused>",
-                 saves_dir=tmp_data, player_input="방패를 산다")
+        run_turn(
+            client=None,
+            state=state,
+            profile_dir="<unused>",
+            saves_dir=tmp_data,
+            player_input="방패를 산다",
+        )
     )
     p = state.characters["player_01"]
     assert "shield_01" not in p.inventory_ids
@@ -322,6 +412,7 @@ def test_surroundings_hides_hostile_npcs_with_inventory(fresh_state):
     relations[player]=0 satisfies the trade_threshold and the bandit's
     weapons would be listed for sale."""
     from src.domain.entities import Disposition
+
     state = _seed_player(fresh_state)
     _seed_merchant(state)
     state.characters["smith_01"].disposition = Disposition(
@@ -349,9 +440,18 @@ def test_surroundings_growth_cannot_level_up(fresh_state):
 def test_surroundings_skill_candidates_visible_when_pending(fresh_state):
     state = _seed_player(fresh_state)
     state.pending_skill_candidates = [
-        Skill(id="x_l1", name="화염", type="attack", target="single",
-              primary_stat="INT", level=1, mp_cost=2, power=5, special_effect="x",
-              description="x"),
+        Skill(
+            id="x_l1",
+            name="화염",
+            type="attack",
+            target="single",
+            primary_stat="INT",
+            level=1,
+            mp_cost=2,
+            power=5,
+            special_effect="x",
+            description="x",
+        ),
     ]
     s = build_surroundings(state, "player_01")
     assert len(s["skill_candidates"]) == 1
@@ -367,12 +467,15 @@ def test_surroundings_in_combat_flag(fresh_state):
     assert s["in_combat"] is False
 
     enemy = Character(
-        id="goblin_01", name="고블린", race_id="human", stats=Stats(),
-        location_id="plaza_01", hp=8, max_hp=8,
+        id="goblin_01",
+        name="고블린",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+        hp=8,
+        max_hp=8,
     )
     state.characters["goblin_01"] = enemy
     combat_engine.start_combat(state, ["goblin_01"])
     s = build_surroundings(state, "player_01")
     assert s["in_combat"] is True
-
-

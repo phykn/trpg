@@ -222,7 +222,9 @@ class Character(BaseModel):
     inventory_ids: list[str] = []
     gold: int = 0
     xp_pool: int = 0
-    xp_reward: int = 0  # xp granted to the killer when this character dies. 0 = no reward.
+    xp_reward: int = (
+        0  # xp granted to the killer when this character dies. 0 = no reward.
+    )
 
     disposition: Disposition = Disposition()
     relations: dict[str, int] = {}

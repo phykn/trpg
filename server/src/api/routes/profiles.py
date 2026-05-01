@@ -1,4 +1,5 @@
 """Profile listing — scans <profile_dir>/<id>/profile.json + races/."""
+
 import json
 from pathlib import Path
 

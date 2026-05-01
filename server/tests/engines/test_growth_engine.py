@@ -1,4 +1,5 @@
 """Growth engine — xp curve, level_up pair-trade, HP/MP recompute, invariant checks."""
+
 import pytest
 
 from src.domain.entities import Character, Stats

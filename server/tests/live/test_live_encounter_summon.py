@@ -1,4 +1,5 @@
 """LLM live — verify encounter_summon agent produces a pair-trade-compliant enemy."""
+
 import os
 
 import pytest

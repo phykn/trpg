@@ -5,6 +5,7 @@ unredacted body; the `state` event at finalize clears the streaming buffer
 and the persisted GM log line carries the cleaned text, so the user-visible
 record and the next turn's history layer are both safe.
 """
+
 from collections.abc import AsyncIterator
 
 from src.agents.narrate import NarrativeDelta, NarrativeFinal
@@ -30,18 +31,29 @@ def _seed(state, *, dead_at_player=False, dead_off_screen=False):
     state.locations["plaza_01"] = Location(id="plaza_01", name="광장")
     state.locations["gate_01"] = Location(id="gate_01", name="성문")
     state.characters["player_01"] = Character(
-        id="player_01", name="주인공", race_id="human", stats=Stats(),
+        id="player_01",
+        name="주인공",
+        race_id="human",
+        stats=Stats(),
         location_id="plaza_01",
     )
     if dead_at_player:
         state.characters["hag"] = Character(
-            id="hag", name="노파", race_id="human", stats=Stats(),
-            location_id="plaza_01", alive=False,
+            id="hag",
+            name="노파",
+            race_id="human",
+            stats=Stats(),
+            location_id="plaza_01",
+            alive=False,
         )
     if dead_off_screen:
         state.characters["chief"] = Character(
-            id="chief", name="촌장", race_id="human", stats=Stats(),
-            location_id="gate_01", alive=False,
+            id="chief",
+            name="촌장",
+            race_id="human",
+            stats=Stats(),
+            location_id="gate_01",
+            alive=False,
         )
         state.turn_log.append(TurnLogEntry(turn=1, target="chief", summary="촌장 사망"))
 
@@ -52,7 +64,8 @@ async def _run(state, body, *, target_for_log, dialogue_input, output=None):
     dirty = Dirty()
     events = await _collect(
         consume_narrate(
-            state, dirty,
+            state,
+            dirty,
             _stream(NarrativeDelta(text=body), final),
             target_for_log=target_for_log,
             dialogue_input=dialogue_input,
@@ -72,7 +85,8 @@ async def test_consume_narrate_redacts_same_location_dead_quote(fresh_state):
     body = "노파가 고개를 듭니다. 「오랜만이오, 젊은이.」 손가락이 떨립니다."
 
     _events, dirty = await _run(
-        fresh_state, body,
+        fresh_state,
+        body,
         target_for_log="hag",
         dialogue_input="노파에게 인사한다",
     )
@@ -96,7 +110,8 @@ async def test_consume_narrate_redacts_off_screen_dead_quote(fresh_state):
     body = "촌장이 한숨을 쉽니다. 「자네는 왜 돌아왔는가.」"
 
     await _run(
-        fresh_state, body,
+        fresh_state,
+        body,
         target_for_log=None,
         dialogue_input="촌장 생각이 난다",
     )
@@ -111,13 +126,17 @@ async def test_consume_narrate_keeps_live_npc_quote(fresh_state):
     NPCs are in the scene — redaction is scoped to dead names only."""
     _seed(fresh_state, dead_at_player=True)
     fresh_state.characters["merchant"] = Character(
-        id="merchant", name="상인", race_id="human", stats=Stats(),
+        id="merchant",
+        name="상인",
+        race_id="human",
+        stats=Stats(),
         location_id="plaza_01",
     )
     body = "상인이 미소 짓습니다. 「오늘 좋은 물건이 있소.」"
 
     await _run(
-        fresh_state, body,
+        fresh_state,
+        body,
         target_for_log="merchant",
         dialogue_input="상인을 본다",
     )
@@ -130,13 +149,17 @@ async def test_consume_narrate_no_corpses_passes_through(fresh_state):
     """No dead NPCs in scope → no redaction, body unchanged."""
     fresh_state.locations["plaza_01"] = Location(id="plaza_01", name="광장")
     fresh_state.characters["player_01"] = Character(
-        id="player_01", name="주인공", race_id="human", stats=Stats(),
+        id="player_01",
+        name="주인공",
+        race_id="human",
+        stats=Stats(),
         location_id="plaza_01",
     )
     body = "당신이 광장을 둘러봅니다. 분수에서 물이 떨어집니다."
 
     await _run(
-        fresh_state, body,
+        fresh_state,
+        body,
         target_for_log=None,
         dialogue_input=None,
     )
@@ -158,7 +181,8 @@ async def test_consume_narrate_corpse_inspection_prose_unchanged(fresh_state):
     )
 
     await _run(
-        fresh_state, body,
+        fresh_state,
+        body,
         target_for_log="hag",
         dialogue_input="노파의 주머니를 뒤진다",
     )
@@ -180,7 +204,10 @@ def test_dead_names_in_scope_off_screen_via_turn_log(fresh_state):
 def test_dead_names_in_scope_excludes_alive(fresh_state):
     _seed(fresh_state)  # no dead seeded
     fresh_state.characters["alive"] = Character(
-        id="alive", name="살아있음", race_id="human", stats=Stats(),
+        id="alive",
+        name="살아있음",
+        race_id="human",
+        stats=Stats(),
         location_id="plaza_01",
     )
     assert _dead_names_in_scope(fresh_state) == []

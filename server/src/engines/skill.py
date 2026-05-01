@@ -7,6 +7,7 @@ learn-candidate recommendation (build_skill_from_candidate).
 Damage/heal base: `power + primary_stat_modifier`. grade_multipliers tunes per stage.
 Exact coefficients are a tuning knob — see `rules.skill.grade_multipliers`.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -35,9 +36,7 @@ def find_skill(actor: Character, skill_id: str, state: GameState) -> Skill:
 
 def _validate_gate(actor: Character, skill: Skill) -> None:
     if actor.level < skill.level:
-        raise SkillInvalid(
-            f"level too low: actor={actor.level} < skill={skill.level}"
-        )
+        raise SkillInvalid(f"level too low: actor={actor.level} < skill={skill.level}")
     if actor.mp < skill.mp_cost:
         raise SkillInvalid(f"not enough mp: {actor.mp} < {skill.mp_cost}")
 
@@ -54,7 +53,9 @@ def _resolve_targets(
 
     if skill.target == "single":
         if len(requested) != 1:
-            raise SkillInvalid(f"single-target skill needs 1 target, got {len(requested)}")
+            raise SkillInvalid(
+                f"single-target skill needs 1 target, got {len(requested)}"
+            )
         tid = requested[0]
         if tid not in state.characters:
             raise SkillInvalid(f"unknown target: {tid}")
@@ -76,9 +77,7 @@ def _validate_range(actor: Character, skill: Skill, targets: list[Character]) ->
         if t.id == actor.id:
             continue
         if t.location_id != actor.location_id:
-            raise SkillInvalid(
-                f"target {t.id} out of range (different location)"
-            )
+            raise SkillInvalid(f"target {t.id} out of range (different location)")
 
 
 def _grade_multiplier(grade: Grade | None) -> float:
@@ -108,9 +107,7 @@ def _apply_attack(
     return out
 
 
-def _apply_heal(
-    skill: Skill, mod: int, target: Character, multiplier: float
-) -> int:
+def _apply_heal(skill: Skill, mod: int, target: Character, multiplier: float) -> int:
     healed = _skill_output(skill, mod, multiplier)
     new_hp = min(target.max_hp, target.hp + healed)
     actual = new_hp - target.hp
@@ -118,9 +115,7 @@ def _apply_heal(
     return actual
 
 
-def _apply_buff(
-    skill: Skill, target: Character
-) -> ActiveBuff:
+def _apply_buff(skill: Skill, target: Character) -> ActiveBuff:
     description = skill.special_effect or skill.description or skill.name
     buff = ActiveBuff(description=description, duration=skill.duration)
     target.active_buffs.append(buff)

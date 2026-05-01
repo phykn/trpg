@@ -1,4 +1,5 @@
 """S2 — combat engine core unit tests. No LLM calls, deterministic RNG."""
+
 import random
 
 import pytest
@@ -121,6 +122,7 @@ def test_primary_stat_by_range():
 def primary_stat_for_weapon_for_range(r: float) -> str:
     """convenience for the table check above — wraps the engine helper."""
     from src.engines.combat import _Weapon
+
     return primary_stat_for_weapon(_Weapon(item_id="x", dice="1d4", range_m=r))
 
 
@@ -184,7 +186,9 @@ def test_attack_natural_one_is_critical_failure_zero_damage():
 
 
 def test_attack_ranged_weapon_uses_dex():
-    attacker = _char("a", str_=8, dex=16, equipment=Equipment(weapon="bow"))  # STR mod -1, DEX mod +3
+    attacker = _char(
+        "a", str_=8, dex=16, equipment=Equipment(weapon="bow")
+    )  # STR mod -1, DEX mod +3
     defender = _char("d")
     items = {"bow": _wpn_item("bow", dice="1d8", range_m=20.0)}
     rng = _SeqRandom([15, 5])
@@ -273,7 +277,9 @@ def test_pick_target_lowest_hp():
 
 
 def test_pick_target_healer_first_prefers_heal_skill_holder():
-    healer_skill = Skill(id="heal_01", name="치유", type="heal", target="single", primary_stat="WIS")
+    healer_skill = Skill(
+        id="heal_01", name="치유", type="heal", target="single", primary_stat="WIS"
+    )
     healer = _char("doc", hp=20, skills=[healer_skill])
     tank = _char("tank", hp=10)
     actor = _char("actor", behavior=CombatBehavior(attack_priority="healer_first"))
@@ -298,7 +304,9 @@ def test_pick_target_random_uses_rng_uniform():
 def test_pick_target_weighted_mode_with_zero_random_always_nearest():
     actor = _char(
         "actor",
-        behavior=CombatBehavior(attack_priority=None, nearest_weight=100, random_weight=0),
+        behavior=CombatBehavior(
+            attack_priority=None, nearest_weight=100, random_weight=0
+        ),
     )
     pool = [actor, _char("first"), _char("second"), _char("third")]
     rng = random.Random(0)
@@ -465,7 +473,9 @@ def test_remove_from_combat_corrects_current_turn():
     g1 = _char("g1")
     g2 = _char("g2")
     state = _state_with(p, g1, g2, player_id="p")
-    state.combat_state = CombatState(turn_order=["p", "g1", "g2"], current_turn=2, enemy_ids=["g1", "g2"])
+    state.combat_state = CombatState(
+        turn_order=["p", "g1", "g2"], current_turn=2, enemy_ids=["g1", "g2"]
+    )
     remove_from_combat(state, "g1")  # remove index 1 (before current turn 2)
     assert state.combat_state.turn_order == ["p", "g2"]
     assert state.combat_state.enemy_ids == ["g2"]

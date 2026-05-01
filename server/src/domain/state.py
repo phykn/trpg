@@ -26,7 +26,9 @@ class CombatState(BaseModel):
     round: int = 1
     surprise: Literal["player", "enemy"] | None = None
     enemy_ids: list[str] = []
-    damage_dealt: dict[str, int] = {}  # actor_id → cumulative damage (for highest_threat AI)
+    damage_dealt: dict[
+        str, int
+    ] = {}  # actor_id → cumulative damage (for highest_threat AI)
     # Player intent persisted across rounds — cinematic resolves one round per
     # /roll click, so each round's player attack/skill needs to be reconstructed
     # from these instead of fresh function args.

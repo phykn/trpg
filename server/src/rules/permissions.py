@@ -13,21 +13,43 @@ Order in the *_ORDERED tuples is the order the prompt prints; group by stat
 block, list-typed engine state, death tracking, then identity. The frozenset
 is derived — only edit the tuple.
 """
+
 from __future__ import annotations
 
 CHAR_FORBIDDEN_ORDERED: tuple[str, ...] = (
-    "hp", "max_hp", "mp", "max_mp",
-    "xp_pool", "xp_reward", "gold", "level", "alive",
-    "relations", "inventory_ids", "memories",
-    "learned_skill_ids", "racial_skill_ids",
-    "companions", "active_buffs", "hints",
-    "death_saves", "revive_coins",
-    "id", "is_player", "race_id", "gender", "location_id",
+    "hp",
+    "max_hp",
+    "mp",
+    "max_mp",
+    "xp_pool",
+    "xp_reward",
+    "gold",
+    "level",
+    "alive",
+    "relations",
+    "inventory_ids",
+    "memories",
+    "learned_skill_ids",
+    "racial_skill_ids",
+    "companions",
+    "active_buffs",
+    "hints",
+    "death_saves",
+    "revive_coins",
+    "id",
+    "is_player",
+    "race_id",
+    "gender",
+    "location_id",
 )
 ITEM_FORBIDDEN_ORDERED: tuple[str, ...] = ("id", "effects", "required")
 LOC_FORBIDDEN_ORDERED: tuple[str, ...] = (
-    "id", "item_ids", "hidden_items",
-    "connections", "hidden_connections", "sleep_encounters",
+    "id",
+    "item_ids",
+    "hidden_items",
+    "connections",
+    "hidden_connections",
+    "sleep_encounters",
 )
 CHAPTER_QUEST_ALLOWED_ORDERED: tuple[str, ...] = ("summary", "status")
 
@@ -47,8 +69,10 @@ def render_for_prompt() -> dict[str, str]:
     """Slash-joined forbidden lists keyed for narrate prompt placeholder
     substitution (`{{CHAR_FORBIDDEN}}` etc.). Identity-only fields (`id`)
     are dropped — they're universally forbidden and only add prompt noise."""
+
     def _render(t: tuple[str, ...]) -> str:
         return "/".join(f for f in t if f != "id")
+
     return {
         "CHAR_FORBIDDEN": _render(CHAR_FORBIDDEN_ORDERED),
         "ITEM_FORBIDDEN": _render(ITEM_FORBIDDEN_ORDERED),

@@ -103,9 +103,7 @@ def _build_location_edges(g: GameGraph, state: GameState) -> None:
                 attrs["difficulty"] = conn.difficulty
             if conn.key_item_id:
                 attrs["key_item_id"] = conn.key_item_id
-            g.add_edge(
-                lid, conn.target_id, "connects_to", attrs=attrs or None
-            )
+            g.add_edge(lid, conn.target_id, "connects_to", attrs=attrs or None)
             if conn.key_item_id:
                 g.add_edge(conn.key_item_id, conn.target_id, "unlocks")
         for item_id in loc.item_ids:

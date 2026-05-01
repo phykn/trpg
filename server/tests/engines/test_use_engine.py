@@ -1,4 +1,5 @@
 """Item use — heal/damage/mp_restore/buff + on_use + consumable decrement."""
+
 import pytest
 
 from src.domain.entities import (

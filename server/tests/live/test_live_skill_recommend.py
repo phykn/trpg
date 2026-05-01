@@ -1,4 +1,5 @@
 """§2.3 step 4 — verify skill candidate generation against a real LLM."""
+
 import os
 
 import pytest
@@ -32,15 +33,25 @@ async def test_live_recommend_returns_three_thematic_candidates(client):
         stats=Stats(),
         level=2,
         memories=[
-            Memory(content="고블린 정찰병에게 조용히 다가가 등에 칼을 박았다.", importance=3, turn=1),
+            Memory(
+                content="고블린 정찰병에게 조용히 다가가 등에 칼을 박았다.",
+                importance=3,
+                turn=1,
+            ),
             Memory(content="대장간에서 단검을 갈아 날을 세웠다.", importance=2, turn=2),
-            Memory(content="술집에서 주인을 설득해 정보를 얻어냈다.", importance=2, turn=3),
+            Memory(
+                content="술집에서 주인을 설득해 정보를 얻어냈다.", importance=2, turn=3
+            ),
         ],
     )
     state.turn_log = [
-        TurnLogEntry(turn=1, target="goblin_01", summary="잠입 후 일격으로 정찰병 처치"),
+        TurnLogEntry(
+            turn=1, target="goblin_01", summary="잠입 후 일격으로 정찰병 처치"
+        ),
         TurnLogEntry(turn=2, target=None, summary="단검 정비"),
-        TurnLogEntry(turn=3, target="barkeep_01", summary="술집 주인을 설득해 정보 획득"),
+        TurnLogEntry(
+            turn=3, target="barkeep_01", summary="술집 주인을 설득해 정보 획득"
+        ),
     ]
     state.recent_dialogue = [
         DialoguePair(turn=1, player="조용히 다가가서 등에 칼을 박는다", narrator="..."),

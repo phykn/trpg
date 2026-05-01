@@ -1,4 +1,5 @@
 """Skill cast — validation, effects, grade adjustment, ActiveBuff tick (§2.6 S1 core)."""
+
 import pytest
 
 from src.domain.entities import Character, Skill, Stats
@@ -215,8 +216,12 @@ def test_cast_rejects_unknown_skill(fresh_state):
 
 def test_find_skill_includes_racial_and_learned(fresh_state):
     racial = Skill(
-        id="bite", name="물기", type="attack", target="single",
-        primary_stat="STR", level=0,
+        id="bite",
+        name="물기",
+        type="attack",
+        target="single",
+        primary_stat="STR",
+        level=0,
     )
     learned = _attack_skill()
     p = _player(skills=[learned], racial=[racial])
@@ -275,7 +280,11 @@ def test_attack_kill_fires_quest_character_death(fresh_state):
         title="t",
         giver_id="player_01",
         difficulty="보통",
-        triggers=[QuestTrigger(id="a", name="처치", type="character_death", target_id="goblin_01")],
+        triggers=[
+            QuestTrigger(
+                id="a", name="처치", type="character_death", target_id="goblin_01"
+            )
+        ],
         rewards=QuestRewards(gold=50, exp=100),
         status="active",
     )
@@ -359,7 +368,13 @@ def test_compute_cast_grade_attack_uses_d20(fresh_state):
     grade, nat, req = skill_eng.compute_cast_grade(
         p, _attack_skill(), state, ["goblin_01"], rng=rng_mod.Random(0)
     )
-    assert grade in ("critical_success", "success", "partial_success", "failure", "critical_failure")
+    assert grade in (
+        "critical_success",
+        "success",
+        "partial_success",
+        "failure",
+        "critical_failure",
+    )
     assert 1 <= nat <= 20
     assert req >= 1
 

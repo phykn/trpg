@@ -1,4 +1,5 @@
 """Carry capacity (STR × weight_per_strength) gating."""
+
 from ...domain.entities import Character, Item
 from ...domain.errors import InventoryInvalid
 from ...rules import RULES
@@ -18,6 +19,4 @@ def check_can_carry(actor: Character, items: dict[str, Item], extra_id: str) -> 
     new_weight = current_weight(actor, items) + items[extra_id].weight
     cap = carry_capacity(actor)
     if new_weight > cap:
-        raise InventoryInvalid(
-            f"carry capacity exceeded: {new_weight:.1f} > {cap:.1f}"
-        )
+        raise InventoryInvalid(f"carry capacity exceeded: {new_weight:.1f} > {cap:.1f}")

@@ -5,6 +5,7 @@ recent N turns of raw player input. The LLM decides the narrative fields
 (name/description/type/target/primary_stat/special_effect) and the engine fills in
 id/level and template numerics to build the Skill object.
 """
+
 from __future__ import annotations
 
 from ..domain.entities import Skill
@@ -47,12 +48,14 @@ def _build_input(state: GameState) -> SkillRecommendInput:
         s = state.skills.get(edge.to_id)
         if s is None:
             continue
-        learned_skills.append({
-            "name": s.name,
-            "type": s.type,
-            "description": s.description,
-            "special_effect": s.special_effect,
-        })
+        learned_skills.append(
+            {
+                "name": s.name,
+                "type": s.type,
+                "description": s.description,
+                "special_effect": s.special_effect,
+            }
+        )
     return SkillRecommendInput(
         character={
             "name": p.name,

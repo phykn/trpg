@@ -1,5 +1,6 @@
 """FastAPI dependency helpers — short aliases for app-state singletons and
 the load-or-404 pattern that every game-scoped route needs."""
+
 from fastapi import Depends, HTTPException, Request
 
 from ..domain.state import GameState

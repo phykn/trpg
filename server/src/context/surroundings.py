@@ -10,6 +10,7 @@ fullscans or direct entity-relation fields. Pure-attribute reads (HP, alive,
 disposition, level, mp) still come from the entity. Phase 3 of the graph-SSOT
 work, see [02-runtime.md](./02-runtime.md) §4.
 """
+
 from ..domain.entities import (
     EQUIPMENT_SLOTS,
     Character,
@@ -56,17 +57,17 @@ def _inventory_payload(
         if item is None:
             continue
         seen.add(item_id)
-        out.append({
-            "id": item_id,
-            "name": item.name,
-            "kind": item_kind(item),
-        })
+        out.append(
+            {
+                "id": item_id,
+                "name": item.name,
+                "kind": item_kind(item),
+            }
+        )
     return out
 
 
-def _equipment_payload(
-    state: GameState, actor: Character, graph: GameGraph
-) -> dict:
+def _equipment_payload(state: GameState, actor: Character, graph: GameGraph) -> dict:
     out: dict[str, dict | None] = {slot: None for slot in EQUIPMENT_SLOTS}
     for edge in graph.get_edges(actor.id, "equips"):
         item_id = edge.to_id
@@ -80,9 +81,7 @@ def _equipment_payload(
     return out
 
 
-def _skills_payload(
-    state: GameState, actor: Character, graph: GameGraph
-) -> list[dict]:
+def _skills_payload(state: GameState, actor: Character, graph: GameGraph) -> list[dict]:
     out: list[dict] = []
     for edge in graph.get_edges(actor.id, "knows_skill"):
         s = state.skills.get(edge.to_id)
@@ -156,12 +155,14 @@ def _merchants_payload(
             if item is None:
                 continue
             stock_seen.add(iid)
-            stock.append({
-                "id": iid,
-                "name": item.name,
-                "price": item.price,
-                "kind": item_kind(item),
-            })
+            stock.append(
+                {
+                    "id": iid,
+                    "name": item.name,
+                    "price": item.price,
+                    "kind": item_kind(item),
+                }
+            )
         if stock:
             out.append({"id": cid, "name": npc.name, "stock": stock})
     return out

@@ -1,4 +1,5 @@
 """Debug-only LLM passthrough."""
+
 from pathlib import Path
 
 from fastapi import APIRouter, Depends

@@ -5,6 +5,7 @@ docs/03-features.md §2.3.
 Pair-trade invariant: a character's total stats = 60 (initial), with pair sums permanently
 20/20/20. Holds for both seeded NPCs and LLM-summoned characters.
 """
+
 from __future__ import annotations
 
 from ..domain.entities import Character
@@ -68,9 +69,7 @@ def level_up(
 
     cost = xp_for_next_level(character.level)
     if character.xp_pool < cost:
-        raise LevelUpInvalid(
-            f"not enough xp: have {character.xp_pool}, need {cost}"
-        )
+        raise LevelUpInvalid(f"not enough xp: have {character.xp_pool}, need {cost}")
 
     expected_down = STAT_PAIRS.get(stat_up)
     if expected_down is None:

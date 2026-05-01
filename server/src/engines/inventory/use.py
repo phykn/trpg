@@ -1,6 +1,7 @@
 """Item activation — heal/damage/mp_restore/buff consumables and on_use
 trigger pass-through. Damage routes through combat.apply_attack_to_defender
 so death-saves and revive_coins behave the same as melee/skill damage."""
+
 from ...domain.entities import ActiveBuff, Character, ConsumableEffect
 from ...domain.errors import InventoryInvalid
 from ...domain.state import GameState
@@ -12,7 +13,9 @@ from ..combat import apply_attack_to_defender
 
 def _heal(eff, recipient, result, **_) -> None:
     if recipient.hp >= recipient.max_hp:
-        raise InventoryInvalid(f"hp already full: cannot use heal item {result['item_id']}")
+        raise InventoryInvalid(
+            f"hp already full: cannot use heal item {result['item_id']}"
+        )
     new_hp = min(recipient.max_hp, recipient.hp + eff.amount)
     result["kind"] = "heal"
     result["amount"] = new_hp - recipient.hp
@@ -35,7 +38,9 @@ def _damage(eff, target, recipient, result, *, state, dirty, **_) -> None:
 
 def _mp_restore(eff, recipient, result, **_) -> None:
     if recipient.mp >= recipient.max_mp:
-        raise InventoryInvalid(f"mp already full: cannot use mp item {result['item_id']}")
+        raise InventoryInvalid(
+            f"mp already full: cannot use mp item {result['item_id']}"
+        )
     new_mp = min(recipient.max_mp, recipient.mp + eff.amount)
     result["kind"] = "mp_restore"
     result["amount"] = new_mp - recipient.mp
@@ -45,7 +50,9 @@ def _mp_restore(eff, recipient, result, **_) -> None:
 def _buff(item, eff, recipient, result, **_) -> None:
     description = eff.description or item.name
     duration = eff.duration or 0
-    recipient.active_buffs.append(ActiveBuff(description=description, duration=duration))
+    recipient.active_buffs.append(
+        ActiveBuff(description=description, duration=duration)
+    )
     result["kind"] = "buff"
     result["description"] = description
     result["duration"] = duration
@@ -98,8 +105,13 @@ def use(
         if handler is None:
             raise InventoryInvalid(f"unsupported consumable effect: {eff.effect}")
         handler(
-            item=item, eff=eff, target=target, recipient=recipient, result=result,
-            state=state, dirty=dirty,
+            item=item,
+            eff=eff,
+            target=target,
+            recipient=recipient,
+            result=result,
+            state=state,
+            dirty=dirty,
         )
 
     if item.on_use:

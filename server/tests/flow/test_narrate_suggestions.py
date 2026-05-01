@@ -2,6 +2,7 @@
 `suggestions` field — that the parser-final → SSE wiring stays correct, and
 that the reject branch blanks suggestions like the other meta fields.
 """
+
 from collections.abc import AsyncIterator
 
 from src.agents.narrate import NarrativeDelta, NarrativeFinal
@@ -68,8 +69,10 @@ async def test_run_narrate_reject_blanks_suggestions(fresh_state, monkeypatch):
     from src.agents import narrate as narrate_agent
     from src.flow import narrate as narrate_flow
 
-    fresh_state.locations["loc_01"] = type(  # minimal stand-in; surroundings expects nothing more for player loc
-        "L", (), {}
+    fresh_state.locations["loc_01"] = (
+        type(  # minimal stand-in; surroundings expects nothing more for player loc
+            "L", (), {}
+        )
     )  # pragma: no cover — not reached, surroundings/world stubbed below
 
     async def fake_stream_narrate(client, input_):

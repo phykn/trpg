@@ -4,6 +4,7 @@ no chance the model resurrects the dead NPC's voice in any phrasing the
 post-hoc redactor might miss (indirect speech, pronoun-only attribution,
 quote-after-attribution, etc.).
 """
+
 import tempfile
 
 import pytest
@@ -28,12 +29,19 @@ def tmp_saves():
 def state_with_corpse(fresh_state):
     fresh_state.locations["plaza_01"] = Location(id="plaza_01", name="광장")
     fresh_state.characters["player_01"] = Character(
-        id="player_01", name="주인공", race_id="human", is_player=True,
-        location_id="plaza_01", stats=Stats(),
+        id="player_01",
+        name="주인공",
+        race_id="human",
+        is_player=True,
+        location_id="plaza_01",
+        stats=Stats(),
     )
     fresh_state.characters["edrik"] = Character(
-        id="edrik", name="에드릭", race_id="human",
-        location_id="plaza_01", stats=Stats(),
+        id="edrik",
+        name="에드릭",
+        race_id="human",
+        location_id="plaza_01",
+        stats=Stats(),
         alive=False,
     )
     return fresh_state
@@ -44,7 +52,9 @@ async def _collect(it):
 
 
 async def test_pass_with_dead_target_bypasses_narrate(
-    state_with_corpse, tmp_saves, monkeypatch,
+    state_with_corpse,
+    tmp_saves,
+    monkeypatch,
 ):
     """The bypass path must:
     - never call run_narrate
@@ -58,10 +68,12 @@ async def test_pass_with_dead_target_bypasses_narrate(
         narrate_called = True
         if False:
             yield None  # pragma: no cover — make it an async generator
+
     monkeypatch.setattr(turn_mod, "run_narrate", fake_run_narrate)
 
     async def fake_judge(*a, **kw):
         return PassAction(action="pass", targets=["edrik"])
+
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
 
     events = await _collect(
@@ -93,14 +105,19 @@ async def test_pass_with_dead_target_bypasses_narrate(
 
 
 async def test_pass_with_alive_target_still_runs_narrate(
-    state_with_corpse, tmp_saves, monkeypatch,
+    state_with_corpse,
+    tmp_saves,
+    monkeypatch,
 ):
     """A live target shouldn't trigger the bypass — narrate runs as usual.
     Add a live merchant NPC alongside the dead Edrik so the action targets
     the live one."""
     state_with_corpse.characters["merchant"] = Character(
-        id="merchant", name="상인", race_id="human",
-        location_id="plaza_01", stats=Stats(),
+        id="merchant",
+        name="상인",
+        race_id="human",
+        location_id="plaza_01",
+        stats=Stats(),
     )
     narrate_called = False
 
@@ -111,10 +128,12 @@ async def test_pass_with_alive_target_still_runs_narrate(
         # "잠시 정적이 흐릅니다." This is enough to confirm narrate was reached.
         if False:
             yield None  # pragma: no cover
+
     monkeypatch.setattr(turn_mod, "run_narrate", fake_run_narrate)
 
     async def fake_judge(*a, **kw):
         return PassAction(action="pass", targets=["merchant"])
+
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
 
     await _collect(
@@ -131,7 +150,9 @@ async def test_pass_with_alive_target_still_runs_narrate(
 
 
 async def test_chain_with_dead_target_in_last_pass_bypasses(
-    state_with_corpse, tmp_saves, monkeypatch,
+    state_with_corpse,
+    tmp_saves,
+    monkeypatch,
 ):
     """ChainAction.last_pass with a dead target funnels through the same
     `_stream_narrate_tail`, so the bypass also fires there."""
@@ -142,6 +163,7 @@ async def test_chain_with_dead_target_in_last_pass_bypasses(
         narrate_called = True
         if False:
             yield None  # pragma: no cover
+
     monkeypatch.setattr(turn_mod, "run_narrate", fake_run_narrate)
 
     # chain = [use missing item (engine logs failure), pass with dead target]
@@ -158,6 +180,7 @@ async def test_chain_with_dead_target_in_last_pass_bypasses(
                 PassAction(action="pass", targets=["edrik"]),
             ],
         )
+
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
 
     events = await _collect(
@@ -176,18 +199,23 @@ async def test_chain_with_dead_target_in_last_pass_bypasses(
 
 
 async def test_corpse_bypass_pushes_turn_log_with_dead_id(
-    state_with_corpse, tmp_saves, monkeypatch,
+    state_with_corpse,
+    tmp_saves,
+    monkeypatch,
 ):
     """`turn_log` entry's `target` field must point at the dead character —
     that's what surfaces them as off-screen corpses on subsequent turns
     (`_corpses_payload` reads `turn_log.target`)."""
+
     async def fake_run_narrate(*a, **kw):
         if False:
             yield None  # pragma: no cover
+
     monkeypatch.setattr(turn_mod, "run_narrate", fake_run_narrate)
 
     async def fake_judge(*a, **kw):
         return PassAction(action="pass", targets=["edrik"])
+
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
 
     await _collect(

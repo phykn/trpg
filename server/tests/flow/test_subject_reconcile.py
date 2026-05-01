@@ -1,4 +1,5 @@
 """Subject pin tracking when the player relocates."""
+
 from src.domain.entities import Character, Location, Stats
 from src.domain.memory import TurnLogEntry
 from src.flow.subject import reconcile_subject_after_move
@@ -13,7 +14,10 @@ def _seed_two_locations(fresh_state):
         name="주인공",
         race_id="human",
         stats=Stats(STR=10, DEX=10, CON=10, INT=10, WIS=10, CHA=10),
-        hp=20, max_hp=20, mp=10, max_mp=10,
+        hp=20,
+        max_hp=20,
+        mp=10,
+        max_mp=10,
         location_id="plaza_01",
     )
     return s
@@ -25,7 +29,10 @@ def _add_npc(state, *, cid, name, location_id, alive=True):
         name=name,
         race_id="human",
         stats=Stats(STR=10, DEX=10, CON=10, INT=10, WIS=10, CHA=10),
-        hp=10, max_hp=10, mp=0, max_mp=0,
+        hp=10,
+        max_hp=10,
+        mp=0,
+        max_mp=0,
         location_id=location_id,
         alive=alive,
     )
@@ -60,9 +67,7 @@ def test_prefers_recent_npc_over_arbitrary_first(fresh_state):
     _add_npc(s, cid="guard_b", name="문지기B", location_id="gate_01")
     s.active_subject_id = "barkeep"
     s.characters["player_01"].location_id = "gate_01"
-    s.turn_log.append(
-        TurnLogEntry(turn=1, target="guard_b", summary="이전에 인사했음")
-    )
+    s.turn_log.append(TurnLogEntry(turn=1, target="guard_b", summary="이전에 인사했음"))
 
     reconcile_subject_after_move(s)
 

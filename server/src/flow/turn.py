@@ -1,5 +1,6 @@
 """/turn — single entry that logs the input, then dispatches to combat or
 non-combat handlers based on `state.combat_state`."""
+
 import random
 from collections.abc import AsyncIterator, Callable
 
@@ -75,15 +76,14 @@ async def run_turn(
 
     dirty = Dirty()
 
-    player_log = PlayerLogEntry(
-        id=next_log_id(state), kind="player", text=player_input
-    )
+    player_log = PlayerLogEntry(id=next_log_id(state), kind="player", text=player_input)
     push_log_entry(state, player_log, dirty)
     yield {"type": "log_entry", "data": player_log.model_dump()}
 
     if not state.characters[state.player_id].alive:
         yield push_act(
-            state, dirty,
+            state,
+            dirty,
             "당신의 이야기가 여기서 끝납니다.",
         )
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
@@ -94,7 +94,14 @@ async def run_turn(
 
     if state.combat_state is not None:
         async for ev in run_combat_player_turn(
-            client, state, profile_dir, saves_dir, player_input, dirty, rng, to_front_fn,
+            client,
+            state,
+            profile_dir,
+            saves_dir,
+            player_input,
+            dirty,
+            rng,
+            to_front_fn,
             graph=graph,
         ):
             yield ev
@@ -111,7 +118,15 @@ async def run_turn(
     refresh_active_subject(state, result)
 
     async for ev in _dispatch(
-        client, state, profile_dir, saves_dir, player_input, dirty, rng, to_front_fn, result,
+        client,
+        state,
+        profile_dir,
+        saves_dir,
+        player_input,
+        dirty,
+        rng,
+        to_front_fn,
+        result,
         graph=graph,
     ):
         yield ev
@@ -128,10 +143,16 @@ _ONE_STEP_EMITS: dict[type, EmitFactory] = {
     UseAction: lambda c, s, d, a: emit_use(s, s.player_id, a.item_id, a.target_id, d),
     EquipAction: lambda c, s, d, a: emit_equip(s, s.player_id, a.item_id, d),
     UnequipAction: lambda c, s, d, a: emit_unequip(s, s.player_id, a.item_id, d),
-    LevelUpAction: lambda c, s, d, a: emit_level_up(s, s.player_id, a.stat_up, a.stat_down, c, d),
+    LevelUpAction: lambda c, s, d, a: emit_level_up(
+        s, s.player_id, a.stat_up, a.stat_down, c, d
+    ),
     LearnSkillAction: lambda c, s, d, a: emit_learn_skill(s, s.player_id, a.index, d),
-    BuyAction: lambda c, s, d, a: emit_trade(s, s.player_id, a.npc_id, a.item_id, d, direction="buy"),
-    SellAction: lambda c, s, d, a: emit_trade(s, s.player_id, a.npc_id, a.item_id, d, direction="sell"),
+    BuyAction: lambda c, s, d, a: emit_trade(
+        s, s.player_id, a.npc_id, a.item_id, d, direction="buy"
+    ),
+    SellAction: lambda c, s, d, a: emit_trade(
+        s, s.player_id, a.npc_id, a.item_id, d, direction="sell"
+    ),
 }
 
 
@@ -178,8 +199,14 @@ async def _enter_combat_and_finalize(
         targets=list(enemy_ids),
     )
     async for ev in start_combat_and_drive_auto(
-        client, state, profile_dir, enemy_ids, dirty, rng,
-        player_input=player_input, player_action=player_action,
+        client,
+        state,
+        profile_dir,
+        enemy_ids,
+        dirty,
+        rng,
+        player_input=player_input,
+        player_action=player_action,
         graph=graph,
     ):
         yield ev
@@ -209,7 +236,13 @@ async def _dispatch(
                 yield ev
             return
         async for ev in _enter_combat_and_finalize(
-            client, state, profile_dir, saves_dir, dirty, rng, to_front_fn,
+            client,
+            state,
+            profile_dir,
+            saves_dir,
+            dirty,
+            rng,
+            to_front_fn,
             player_input=player_input,
             enemy_ids=list(result.targets),
             skill_id=result.skill_id,
@@ -225,8 +258,13 @@ async def _dispatch(
         if location is not None and client is not None:
             try:
                 summoned = await summon_encounter(
-                    client, state, location, profile_dir, state.profile,
-                    dirty=dirty.entities, requested_role=result.role,
+                    client,
+                    state,
+                    location,
+                    profile_dir,
+                    state.profile,
+                    dirty=dirty.entities,
+                    requested_role=result.role,
                 )
             except Exception:
                 summoned = None
@@ -240,7 +278,13 @@ async def _dispatch(
         # located_at edge is visible to anything downstream.
         graph = build_graph(state)
         async for ev in _enter_combat_and_finalize(
-            client, state, profile_dir, saves_dir, dirty, rng, to_front_fn,
+            client,
+            state,
+            profile_dir,
+            saves_dir,
+            dirty,
+            rng,
+            to_front_fn,
             player_input=player_input,
             enemy_ids=[summoned.id],
             skill_id=result.skill_id,
@@ -250,7 +294,9 @@ async def _dispatch(
         return
 
     if isinstance(result, RollAction):
-        async for ev in emit_roll_pending(state, saves_dir, player_input, result, dirty):
+        async for ev in emit_roll_pending(
+            state, saves_dir, player_input, result, dirty
+        ):
             yield ev
         return  # /roll resumes the flow.
 
@@ -294,7 +340,13 @@ async def _dispatch(
             # reads relations through it.
             graph = build_graph(state)
             async for ev in _stream_narrate_tail(
-                client, state, profile_dir, player_input, dirty, to_front_fn, last_pass,
+                client,
+                state,
+                profile_dir,
+                player_input,
+                dirty,
+                to_front_fn,
+                last_pass,
                 graph=graph,
             ):
                 yield ev
@@ -307,7 +359,13 @@ async def _dispatch(
     assert isinstance(result, (PassAction, RejectAction))
     state.turn_count += 1
     async for ev in _stream_narrate_tail(
-        client, state, profile_dir, player_input, dirty, to_front_fn, result,
+        client,
+        state,
+        profile_dir,
+        player_input,
+        dirty,
+        to_front_fn,
+        result,
         graph=graph,
     ):
         yield ev
@@ -362,13 +420,21 @@ async def _stream_narrate_tail(
             graph = build_graph(state)
 
         dead = next(
-            (state.characters[t] for t in action.targets
-             if t in state.characters and not state.characters[t].alive),
+            (
+                state.characters[t]
+                for t in action.targets
+                if t in state.characters and not state.characters[t].alive
+            ),
             None,
         )
         if dead is not None:
             async for ev in _emit_corpse_bypass(
-                state, dirty, player_input, dead, target_for_log, to_front_fn,
+                state,
+                dirty,
+                player_input,
+                dead,
+                target_for_log,
+                to_front_fn,
             ):
                 yield ev
             return
@@ -379,13 +445,18 @@ async def _stream_narrate_tail(
         yield {"type": "state", "data": to_front_fn(state)}
 
     stream = run_narrate(
-        client, state, profile_dir, player_input,
+        client,
+        state,
+        profile_dir,
+        player_input,
         judge_result=action.model_dump(),
         graph=graph,
         grade=None,
     )
     async for ev in consume_narrate(
-        state, dirty, stream,
+        state,
+        dirty,
+        stream,
         target_for_log=target_for_log,
         dialogue_input=player_input,
         graph=graph,

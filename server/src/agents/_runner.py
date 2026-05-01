@@ -5,6 +5,7 @@ post-parse `verify` for semantic checks beyond schema). The loop calls the
 LLM, runs parse + verify, and on failure appends the bad answer + the error
 back as messages so the next attempt sees its own mistake.
 """
+
 import asyncio
 from collections.abc import Callable
 from pathlib import Path
@@ -94,6 +95,8 @@ async def run_with_retries(
             if len(answer) > _MAX_RETRY_ANSWER_CHARS:
                 truncated += f"\n... (truncated, original {len(answer)} chars)"
             messages.append({"role": "assistant", "content": truncated})
-            messages.append({"role": "user", "content": nudge.format(error=_format_retry_error(e))})
+            messages.append(
+                {"role": "user", "content": nudge.format(error=_format_retry_error(e))}
+            )
     assert last_error is not None
     raise last_error

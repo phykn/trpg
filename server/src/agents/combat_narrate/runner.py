@@ -1,6 +1,7 @@
 """combat_narrate streams Korean prose for one combat round. No JSON tail —
 just body tokens until the model stops. Treated like narrate (no append-error
 self-correction loop, since body has already streamed)."""
+
 import asyncio
 from collections.abc import AsyncIterator
 

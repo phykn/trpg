@@ -107,7 +107,12 @@ def _full_state(fresh_state):
     s.log_entries = [
         GMLogEntry(id=1, kind="gm", text="x"),
         RollLogEntry(
-            id=2, kind="roll", check="x", roll=14, margin=8, result="success",
+            id=2,
+            kind="roll",
+            check="x",
+            roll=14,
+            margin=8,
+            result="success",
         ),
     ]
     return s
@@ -303,6 +308,7 @@ def test_to_combat_returns_none_when_no_combat_state(fresh_state):
         id="player_01", name="주인공", race_id="human", stats=Stats()
     )
     from src.mapping.to_front import to_combat
+
     assert to_combat(fresh_state) is None
 
 
@@ -326,9 +332,7 @@ def test_to_combat_projects_round_actor_enemies(fresh_state):
     assert out is not None
     assert out["round"] == 2
     assert out["turnLabel"] == "고블린 차례"
-    assert out["enemies"] == [
-        {"name": "고블린", "hp": 8, "hpMax": 10, "alive": True}
-    ]
+    assert out["enemies"] == [{"name": "고블린", "hp": 8, "hpMax": 10, "alive": True}]
 
 
 def test_unknown_race_id_falls_back_to_id(fresh_state):

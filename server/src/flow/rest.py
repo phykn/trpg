@@ -1,5 +1,6 @@
 """Long-rest branch. Risk-roll for full recovery vs. ambush. If the seed pool
 is empty and an LLM is wired, summon an ad-hoc enemy."""
+
 import random
 from collections.abc import AsyncIterator
 
@@ -28,6 +29,7 @@ async def run_rest(
 
     summon_cb: recovery_engine.SummonCallable | None = None
     if client is not None:
+
         async def _summon(s: GameState, loc_id: str) -> str | None:
             location = s.locations.get(loc_id)
             if location is None:
@@ -36,6 +38,7 @@ async def run_rest(
                 client, s, location, profile_dir, s.profile, dirty=dirty.entities
             )
             return char.id if char else None
+
         summon_cb = _summon
 
     outcome, enemy_ids = await recovery_engine.attempt_rest(
@@ -49,7 +52,12 @@ async def run_rest(
         # new located_at edge is visible to the combat path's downstream reads.
         graph = build_graph(state)
         async for ev in start_combat_and_drive_auto(
-            client, state, profile_dir, enemy_ids, dirty, rng,
+            client,
+            state,
+            profile_dir,
+            enemy_ids,
+            dirty,
+            rng,
             player_input="잠들기 직전 적의 습격에 대비합니다",
             player_action=PlayerAction(kind="pass"),
             surprise="enemy",

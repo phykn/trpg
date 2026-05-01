@@ -12,6 +12,7 @@ Event types (free-form strings, defined by the seed):
 - "location_enter" — apply_move changed the location
 - "item_use" — item used through the use endpoint
 """
+
 from __future__ import annotations
 
 from ..domain.entities import Quest
@@ -26,9 +27,13 @@ def _ensure_runtime_fields(quest: Quest) -> None:
     a new trigger mid-game must not wipe progress already accumulated against
     the old triggers."""
     n = len(quest.triggers)
-    quest.triggers_met = quest.triggers_met[:n] + [False] * max(0, n - len(quest.triggers_met))
+    quest.triggers_met = quest.triggers_met[:n] + [False] * max(
+        0, n - len(quest.triggers_met)
+    )
     m = len(quest.fail_triggers)
-    quest.fail_triggers_met = quest.fail_triggers_met[:m] + [False] * max(0, m - len(quest.fail_triggers_met))
+    quest.fail_triggers_met = quest.fail_triggers_met[:m] + [False] * max(
+        0, m - len(quest.fail_triggers_met)
+    )
 
 
 def _apply_rewards(state: GameState, quest: Quest, dirty: DirtySet) -> None:

@@ -1,4 +1,5 @@
 """Companion system (P3 §2.9) — location sync + combat join + faction-based enemy targeting."""
+
 import random
 
 from src.domain.entities import Character, CombatBehavior, Stats
@@ -133,8 +134,6 @@ def test_enemy_companion_targets_player_side(fresh_state):
     )
     combat_eng.start_combat(fresh_state, ["boss_01"], rng=random.Random(0))
 
-    target = combat_eng.pick_npc_target(
-        fresh_state, "minion_01", rng=random.Random(0)
-    )
+    target = combat_eng.pick_npc_target(fresh_state, "minion_01", rng=random.Random(0))
     assert target is not None
     assert target.id in {"player_01", "pet_01"}  # does not hit boss (same patron)

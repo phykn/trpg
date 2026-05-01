@@ -9,6 +9,7 @@ their view too. Location view: 1-hop along `required_by` to a quest,
 edge ids to names so narrate doesn't see bare ids in `unlocks` /
 `reward_of`.
 """
+
 from ..domain.state import GameState
 from .graph import GameGraph
 
@@ -51,9 +52,7 @@ def _omit_none(d: dict) -> dict:
 # --- 2-hop helpers ----------------------------------------------------------
 
 
-def _resolve_neighbor(
-    state: GameState, graph: GameGraph, node_id: str
-) -> dict | None:
+def _resolve_neighbor(state: GameState, graph: GameGraph, node_id: str) -> dict | None:
     """Turn a graph node id into a `{id, kind, name}` dict that the prompt
     can render. Returns None for unknown ids — graph nodes that point at a
     missing entity (stale edge). Quest nodes return `{id, kind, title}`."""
@@ -202,8 +201,7 @@ def _build_npc_view(
             "gender": npc.gender if npc.gender != "none" else None,
             "tone_hint": npc.tone_hint or None,
             "memories": [
-                {"content": m.content, "importance": m.importance}
-                for m in npc.memories
+                {"content": m.content, "importance": m.importance} for m in npc.memories
             ]
             or None,
             "equipment": equipped or None,

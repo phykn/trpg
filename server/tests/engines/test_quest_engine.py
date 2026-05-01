@@ -1,5 +1,13 @@
 """Quest auto-triggers, rewards, chapter progression — character_death / location_enter / item_use."""
-from src.domain.entities import Chapter, Character, Quest, QuestRewards, QuestTrigger, Stats
+
+from src.domain.entities import (
+    Chapter,
+    Character,
+    Quest,
+    QuestRewards,
+    QuestTrigger,
+    Stats,
+)
 from src.engines import quest as q
 
 
@@ -18,7 +26,16 @@ def _player(**kw):
     return p
 
 
-def _quest(qid, *, triggers, status="active", required=True, prereq=None, fail=None, rewards=None):
+def _quest(
+    qid,
+    *,
+    triggers,
+    status="active",
+    required=True,
+    prereq=None,
+    fail=None,
+    rewards=None,
+):
     return Quest(
         id=qid,
         title=qid,
@@ -203,7 +220,9 @@ def test_chapter_progress_counts_required_only(fresh_state):
             ),
         ],
         chapters=[
-            Chapter(id="ch1", title="t", quest_ids=["q_main", "q_side"], status="active")
+            Chapter(
+                id="ch1", title="t", quest_ids=["q_main", "q_side"], status="active"
+            )
         ],
     )
     q.check_quests(state, "character_death", "goblin_01")

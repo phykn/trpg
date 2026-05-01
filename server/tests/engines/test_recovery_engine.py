@@ -1,4 +1,5 @@
 """recovery.attempt_rest — deterministic tests for the full-recovery / encounter branch."""
+
 from src.domain.clock import next_dawn_turn
 from src.domain.entities import Character, Location, Stats
 from src.engines import recovery

@@ -11,6 +11,7 @@ data at the schema layer is a hard constraint — the soft prompt rule alone
 isn't enough. Engine-internal damage tracking happens in combat_auto.py
 without going through these types.
 """
+
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -26,9 +27,16 @@ class CombatRoundEvent(BaseModel):
     target: str | None = None
     action: Literal["attack", "skill", "pass", "miss", "flee"]
     skill_name: str | None = None
-    grade: Literal[
-        "critical_success", "success", "partial_success", "failure", "critical_failure"
-    ] | None = None
+    grade: (
+        Literal[
+            "critical_success",
+            "success",
+            "partial_success",
+            "failure",
+            "critical_failure",
+        ]
+        | None
+    ) = None
     killed: bool = False
 
 
@@ -60,10 +68,10 @@ class EnemyNarrateSnapshot(BaseModel):
 
 
 CombatOutcome = Literal[
-    "victory",   # all enemies down or fled
-    "defeat",    # player dead
-    "downed",    # player hit 0 HP, death-save resolved this fight (auto)
-    "fled",      # player flee succeeded (or hard-cap safety fallback)
+    "victory",  # all enemies down or fled
+    "defeat",  # player dead
+    "downed",  # player hit 0 HP, death-save resolved this fight (auto)
+    "fled",  # player flee succeeded (or hard-cap safety fallback)
 ]
 
 

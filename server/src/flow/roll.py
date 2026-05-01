@@ -1,5 +1,6 @@
 """/roll — resolve the pending stat check, narrate the outcome, and
 re-enter the auto-combat loop if a fight was paused for an environment roll."""
+
 import random
 from collections.abc import AsyncIterator
 
@@ -37,12 +38,16 @@ async def _resume_auto_combat(
     this fight. Drive an auto-cycle (player passes, NPCs continue) until the
     fight terminates."""
     result = run_auto_combat(
-        state, dirty,
+        state,
+        dirty,
         player_action=PlayerAction(kind="pass"),
         rng=rng,
     )
     async for ev in emit_combat_cinematic_and_end(
-        client, state, profile_dir, dirty,
+        client,
+        state,
+        profile_dir,
+        dirty,
         player_input="환경 굴림 후 한 박자 쉬며 적의 움직임을 살핍니다",
         result=result,
     ):

@@ -1,4 +1,5 @@
 """Inventory engine — equip/trade/use/carry, split by concern."""
+
 from .carry import carry_capacity, check_can_carry, current_weight
 from .equipment import (
     Slot,

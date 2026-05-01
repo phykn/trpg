@@ -1,4 +1,5 @@
 """§judge use action — surroundings exposure + out-of-combat / combat turn branching."""
+
 import random
 import tempfile
 
@@ -30,6 +31,7 @@ def tmp_data():
 def _judge_returns(monkeypatch, action_obj):
     async def fake_judge(client, state, player_input, **kwargs):
         return action_obj
+
     monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
     monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
@@ -172,7 +174,8 @@ async def test_combat_use_consumes_player_turn(fresh_state, tmp_data, monkeypatc
         )
     )
     use_evs = [
-        e for e in events
+        e
+        for e in events
         if e["type"] == "combat_turn" and e["data"].get("action") == "use"
     ]
     assert use_evs

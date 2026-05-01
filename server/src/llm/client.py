@@ -96,7 +96,8 @@ class LLMClient:
                 content = json.dumps(content, ensure_ascii=False, indent=2)
             parts.append(f"## {role}\n{content}")
         base.with_name(base.name + "_query.txt").write_text(
-            "\n\n".join(parts), encoding="utf-8",
+            "\n\n".join(parts),
+            encoding="utf-8",
         )
 
     def _log_answer(self, base: Path | None, answer: str) -> None:
@@ -111,7 +112,8 @@ class LLMClient:
         except (ValueError, TypeError):
             pass
         base.with_name(base.name + "_answer.txt").write_text(
-            content, encoding="utf-8",
+            content,
+            encoding="utf-8",
         )
 
     async def chat(
@@ -139,13 +141,18 @@ class LLMClient:
         base = self._log_basename(agent)
         self._log_query(base, messages)
         params = self._params(messages, think)
-        stream = await self._stream_client.chat.completions.create(**params, stream=True)
+        stream = await self._stream_client.chat.completions.create(
+            **params, stream=True
+        )
         accum_answer: list[str] = []
         try:
             async for chunk in stream:
                 delta = chunk.choices[0].delta
                 extra = delta.model_extra or {}
-                item = {"think": extra.get("reasoning_content"), "answer": delta.content}
+                item = {
+                    "think": extra.get("reasoning_content"),
+                    "answer": delta.content,
+                }
                 if item["answer"]:
                     accum_answer.append(item["answer"])
                 yield item

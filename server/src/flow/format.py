@@ -3,6 +3,7 @@
 Pure functions — no state mutation, no SSE, no I/O. Anything that returns a
 string for a log entry lives here.
 """
+
 from ..domain.state import GameState
 
 
@@ -50,10 +51,7 @@ def format_use_log(state: GameState, actor_id: str, result: dict) -> str:
     elif kind == "mp_restore":
         head += f" ({result.get('amount', 0)} MP 회복)"
     elif kind == "buff":
-        head += (
-            f" ({result.get('description', '')}, "
-            f"{result.get('duration', 0)} 턴)"
-        )
+        head += f" ({result.get('description', '')}, {result.get('duration', 0)} 턴)"
     elif kind == "trigger":
         on_use = result.get("on_use")
         if on_use:

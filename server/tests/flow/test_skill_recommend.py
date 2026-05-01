@@ -1,4 +1,5 @@
 """§2.3 step 4 — skill_recommend agent + build_skill_from_candidate + endpoint flow."""
+
 import pytest
 from pydantic import ValidationError
 

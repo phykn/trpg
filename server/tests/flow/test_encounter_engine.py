@@ -1,4 +1,5 @@
 """§2.4 fallback — LLM-summoned enemy when the sleep_encounters pool is empty. Agent mocked."""
+
 import tempfile
 from pathlib import Path
 
@@ -32,9 +33,17 @@ def _seed_state(fresh_state):
         id="forest_01", name="외진 숲길", sleep_risk="dangerous", sleep_encounters=[]
     )
     fresh_state.characters["player_01"] = Character(
-        id="player_01", name="주", race_id="human", is_player=True,
-        stats=Stats(), location_id="forest_01", level=2,
-        hp=20, max_hp=20, mp=15, max_mp=15,
+        id="player_01",
+        name="주",
+        race_id="human",
+        is_player=True,
+        stats=Stats(),
+        location_id="forest_01",
+        level=2,
+        hp=20,
+        max_hp=20,
+        mp=15,
+        max_mp=15,
     )
     return fresh_state
 
@@ -42,9 +51,8 @@ def _seed_state(fresh_state):
 def _patch_agent(monkeypatch, output: EncounterSummonOutput):
     async def fake_summon(client, input_, retries=5):
         return output
-    monkeypatch.setattr(
-        encounter_engine, "encounter_summon", fake_summon
-    )
+
+    monkeypatch.setattr(encounter_engine, "encounter_summon", fake_summon)
     monkeypatch.setattr(agent_mod, "encounter_summon", fake_summon)
 
 
@@ -62,14 +70,18 @@ _VALID_OUTPUT = EncounterSummonOutput(
 # --- agent output → Character ---------------------------------------------
 
 
-async def test_summon_registers_character_with_pair_trade(fresh_state, tmp_profile, monkeypatch):
+async def test_summon_registers_character_with_pair_trade(
+    fresh_state, tmp_profile, monkeypatch
+):
     state = _seed_state(fresh_state)
     _patch_agent(monkeypatch, _VALID_OUTPUT)
 
     char = await encounter_engine.summon_encounter(
-        client=None, state=state,
+        client=None,
+        state=state,
         location=state.locations["forest_01"],
-        profile_dir=tmp_profile, profile="default",
+        profile_dir=tmp_profile,
+        profile="default",
     )
     assert char is not None
     assert char.id in state.characters
@@ -88,15 +100,20 @@ async def test_summon_registers_character_with_pair_trade(fresh_state, tmp_profi
 async def test_summon_unknown_race_returns_none(fresh_state, tmp_profile, monkeypatch):
     state = _seed_state(fresh_state)
     bad = EncounterSummonOutput(
-        name="유령", description="x", appearance="x", race_id="ghost",
+        name="유령",
+        description="x",
+        appearance="x",
+        race_id="ghost",
         stats=EncounterStats(STR=10, DEX=10, CON=10, INT=10, WIS=10, CHA=10),
     )
     _patch_agent(monkeypatch, bad)
 
     char = await encounter_engine.summon_encounter(
-        client=None, state=state,
+        client=None,
+        state=state,
         location=state.locations["forest_01"],
-        profile_dir=tmp_profile, profile="default",
+        profile_dir=tmp_profile,
+        profile="default",
     )
     assert char is None
 
@@ -104,15 +121,21 @@ async def test_summon_unknown_race_returns_none(fresh_state, tmp_profile, monkey
 # --- recovery + summon integration ----------------------------------------
 
 
-async def test_recovery_uses_summon_when_pool_empty(fresh_state, tmp_profile, monkeypatch):
+async def test_recovery_uses_summon_when_pool_empty(
+    fresh_state, tmp_profile, monkeypatch
+):
     """Empty sleep_encounters with a summon callback → encounter."""
     state = _seed_state(fresh_state)
 
     async def summon(s, loc_id):
         char = Character(
-            id="summoned_01", name="늑대", race_id="wolf",
+            id="summoned_01",
+            name="늑대",
+            race_id="wolf",
             stats=Stats(STR=12, DEX=14, CON=11, INT=9, WIS=6, CHA=8),
-            location_id=loc_id, hp=8, max_hp=8,
+            location_id=loc_id,
+            hp=8,
+            max_hp=8,
         )
         s.characters[char.id] = char
         return char.id
@@ -129,7 +152,9 @@ async def test_recovery_uses_summon_when_pool_empty(fresh_state, tmp_profile, mo
     assert "summoned_01" in state.characters
 
 
-async def test_recovery_falls_back_when_summon_fails(fresh_state, tmp_profile, monkeypatch):
+async def test_recovery_falls_back_when_summon_fails(
+    fresh_state, tmp_profile, monkeypatch
+):
     """summon returns None → fall back to full recovery."""
     state = _seed_state(fresh_state)
 

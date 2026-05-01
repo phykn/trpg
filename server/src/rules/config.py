@@ -50,7 +50,9 @@ class LogConfig(_F):
 
 
 class TimeConfig(_F):
-    phase_turns: int = 10  # turns per day-phase; 4 phases × phase_turns = full day cycle
+    phase_turns: int = (
+        10  # turns per day-phase; 4 phases × phase_turns = full day cycle
+    )
 
 
 class RecoveryConfig(_F):

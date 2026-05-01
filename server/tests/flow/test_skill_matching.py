@@ -1,4 +1,5 @@
 """§2.6 S2 — judge semantic-matching integration. Mocks the case where judge supplies skill_id."""
+
 import random
 import tempfile
 
@@ -28,6 +29,7 @@ def tmp_data():
 def _judge_returns(monkeypatch, action_obj):
     async def fake_judge(client, state, player_input, **kwargs):
         return action_obj
+
     monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
     monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
@@ -164,9 +166,7 @@ async def test_combat_without_skill_id_runs_basic_attack_loop(
     """Without skill_id, the auto-sim runs basic weapon attacks. MP is
     untouched."""
     state = _seed_skill_state(fresh_state)
-    _judge_returns(
-        monkeypatch, CombatAction(action="combat", targets=["goblin_01"])
-    )
+    _judge_returns(monkeypatch, CombatAction(action="combat", targets=["goblin_01"]))
     events = await _collect(
         run_turn(
             client=None,
@@ -183,9 +183,7 @@ async def test_combat_without_skill_id_runs_basic_attack_loop(
     assert state.characters["player_01"].mp == 15
 
 
-async def test_combat_during_combat_with_skill_id(
-    fresh_state, tmp_data, monkeypatch
-):
+async def test_combat_during_combat_with_skill_id(fresh_state, tmp_data, monkeypatch):
     """combat_state already active and on the player's turn — skill_id matches.
     Auto-sim casts fireball at least once, MP burns by mp_cost."""
     from src.engines import combat as combat_engine

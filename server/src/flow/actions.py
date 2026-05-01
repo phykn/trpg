@@ -1,6 +1,7 @@
 """Per-action emit handlers — each one mutates state via an engine, pushes a
 log entry, and yields SSE events. Used by both combat and non-combat dispatch.
 """
+
 import random
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
@@ -85,11 +86,18 @@ def apply_attack_action(
         award_kill_xp(state, attacker_id, target_id, dirty=dirty.entities)
         register_kill(state, target_id, dirty)
     elif attacker_id == state.player_id:
-        push_turn_log(state, target_id, f"{target.name}{eul_reul(target.name)} 공격", dirty)
+        push_turn_log(
+            state, target_id, f"{target.name}{eul_reul(target.name)} 공격", dirty
+        )
     return {
-        "apply_result": apply_result or {
-            "hp_before": target.hp, "hp_after": target.hp,
-            "downed": False, "dying": False, "dead": False, "revived": False,
+        "apply_result": apply_result
+        or {
+            "hp_before": target.hp,
+            "hp_after": target.hp,
+            "downed": False,
+            "dying": False,
+            "dead": False,
+            "revived": False,
         },
         "killed": killed,
     }
@@ -130,7 +138,8 @@ def apply_skill_action(
         first_t = state.characters.get(targets[0])
         if first_t is not None and first_t.id != actor_id:
             push_turn_log(
-                state, first_t.id,
+                state,
+                first_t.id,
                 f"「{cast_result['skill_name']}」 → {first_t.name}",
                 dirty,
             )
@@ -160,10 +169,20 @@ async def emit_equip(
         slot = inventory_engine.auto_equip_slot(actor, item)
         inventory_engine.equip(actor, item_id, slot, state.items)
     except InventoryInvalid as e:
-        yield push_act(state, dirty, _fail_text(actor.name, f"「{item_name}」{eul_reul(item_name)} 장비하려 했지만", e))
+        yield push_act(
+            state,
+            dirty,
+            _fail_text(
+                actor.name, f"「{item_name}」{eul_reul(item_name)} 장비하려 했지만", e
+            ),
+        )
         return
     dirty.entities.add(("characters", actor_id))
-    yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 「{item_name}」{eul_reul(item_name)} 장비했습니다.")
+    yield push_act(
+        state,
+        dirty,
+        f"{actor.name}{i_ga(actor.name)} 「{item_name}」{eul_reul(item_name)} 장비했습니다.",
+    )
 
 
 async def emit_unequip(
@@ -177,7 +196,13 @@ async def emit_unequip(
     try:
         slot = inventory_engine.unequip_by_item(actor, item_id)
     except InventoryInvalid as e:
-        yield push_act(state, dirty, _fail_text(actor.name, f"「{item_name}」{eul_reul(item_name)} 해제하려 했지만", e))
+        yield push_act(
+            state,
+            dirty,
+            _fail_text(
+                actor.name, f"「{item_name}」{eul_reul(item_name)} 해제하려 했지만", e
+            ),
+        )
         return
     if slot is None:
         text = f"{actor.name}{eun_neun(actor.name)} 「{item_name}」{eul_reul(item_name)} 장비하고 있지 않습니다."
@@ -202,13 +227,24 @@ async def emit_use(
         )
     except InventoryInvalid as e:
         item_name = _item_name(state, item_id)
-        yield push_act(state, dirty, _fail_text(actor.name, f"「{item_name}」{eul_reul(item_name)} 쓰려 했지만", e))
+        yield push_act(
+            state,
+            dirty,
+            _fail_text(
+                actor.name, f"「{item_name}」{eul_reul(item_name)} 쓰려 했지만", e
+            ),
+        )
         return
     check_quests(state, "item_use", item_id, dirty.entities)
     yield push_act(state, dirty, format_use_log(state, actor_id, result))
     if target is not None:
         item_name = _item_name(state, item_id)
-        push_turn_log(state, target.id, f"{item_name}{eul_reul(item_name)} {target.name}에게 사용", dirty)
+        push_turn_log(
+            state,
+            target.id,
+            f"{item_name}{eul_reul(item_name)} {target.name}에게 사용",
+            dirty,
+        )
 
 
 # --- growth / trade --------------------------------------------------------
@@ -235,7 +271,8 @@ async def emit_level_up(
         )
     dirty.entities.add(("characters", actor_id))
     yield push_act(
-        state, dirty,
+        state,
+        dirty,
         f"{actor.name}의 레벨이 올랐습니다 "
         f"(레벨 {actor.level}, {stat_up} ↑ / {stat_down} ↓, HP {actor.max_hp} / MP {actor.max_mp}).",
     )
@@ -260,15 +297,25 @@ async def emit_learn_skill(
     actor = state.characters[actor_id]
     candidates = list(state.pending_skill_candidates)
     if not candidates or index < 0 or index >= len(candidates):
-        yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 익힐 만한 기술을 찾지 못했습니다.")
+        yield push_act(
+            state,
+            dirty,
+            f"{actor.name}{i_ga(actor.name)} 익힐 만한 기술을 찾지 못했습니다.",
+        )
         return
     chosen = candidates[index]
     state.skills[chosen.id] = chosen
-    actor.learned_skill_ids.append(chosen.id)  # ssot-allow: write path — graph rebuilds at next turn boundary.
+    actor.learned_skill_ids.append(
+        chosen.id
+    )  # ssot-allow: write path — graph rebuilds at next turn boundary.
     state.pending_skill_candidates = []
     dirty.entities.add(("characters", actor_id))
     dirty.entities.add(("skills", chosen.id))
-    yield push_act(state, dirty, f"{actor.name}{i_ga(actor.name)} 「{chosen.name}」{eul_reul(chosen.name)} 익혔습니다.")
+    yield push_act(
+        state,
+        dirty,
+        f"{actor.name}{i_ga(actor.name)} 「{chosen.name}」{eul_reul(chosen.name)} 익혔습니다.",
+    )
 
 
 async def emit_trade(
@@ -283,7 +330,11 @@ async def emit_trade(
     player = state.characters[actor_id]
     npc = state.characters.get(npc_id)
     if npc is None:
-        yield push_act(state, dirty, f"{player.name}{i_ga(player.name)} 거래할 상대를 찾지 못했습니다.")
+        yield push_act(
+            state,
+            dirty,
+            f"{player.name}{i_ga(player.name)} 거래할 상대를 찾지 못했습니다.",
+        )
         return
     try:
         if direction == "buy":
@@ -301,7 +352,12 @@ async def emit_trade(
     else:
         text = f"{player.name}{i_ga(player.name)} {npc.name}에게 「{item_name}」{eul_reul(item_name)} {price} 금화에 팔았습니다."
     yield push_act(state, dirty, text)
-    push_turn_log(state, npc.id, f"{npc.name}에게 「{item_name}」 {'구매' if direction == 'buy' else '판매'}", dirty)
+    push_turn_log(
+        state,
+        npc.id,
+        f"{npc.name}에게 「{item_name}」 {'구매' if direction == 'buy' else '판매'}",
+        dirty,
+    )
 
 
 # --- pending roll ----------------------------------------------------------

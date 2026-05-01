@@ -45,7 +45,9 @@ def create_app() -> FastAPI:
     basic_auth_pass = os.environ["BASIC_AUTH_PASS"]
     saves_dir = os.environ["SAVES_DIR"]
     profile_dir = os.environ["PROFILE_DIR"]
-    cors_origins = [s.strip() for s in os.environ["CORS_ORIGINS"].split(",") if s.strip()]
+    cors_origins = [
+        s.strip() for s in os.environ["CORS_ORIGINS"].split(",") if s.strip()
+    ]
 
     llm = LLMClient(
         base_url=base_url,

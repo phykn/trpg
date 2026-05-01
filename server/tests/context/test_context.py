@@ -91,19 +91,33 @@ def test_corpses_same_location_and_history_referenced(fresh_state):
     fresh_state.locations["plaza_01"] = Location(id="plaza_01", name="광장")
     fresh_state.locations["gate_01"] = Location(id="gate_01", name="성문")
     fresh_state.characters["player_01"] = Character(
-        id="player_01", name="주", race_id="human", stats=Stats(),
+        id="player_01",
+        name="주",
+        race_id="human",
+        stats=Stats(),
         location_id="gate_01",  # player walked away from plaza
     )
     fresh_state.characters["here_corpse"] = Character(
-        id="here_corpse", name="여기시체", race_id="human", stats=Stats(),
-        location_id="gate_01", alive=False,
+        id="here_corpse",
+        name="여기시체",
+        race_id="human",
+        stats=Stats(),
+        location_id="gate_01",
+        alive=False,
     )
     fresh_state.characters["plaza_corpse"] = Character(
-        id="plaza_corpse", name="광장노파", race_id="human", stats=Stats(),
-        location_id="plaza_01", alive=False,
+        id="plaza_corpse",
+        name="광장노파",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+        alive=False,
     )
     fresh_state.characters["plaza_alive"] = Character(
-        id="plaza_alive", name="광장상인", race_id="human", stats=Stats(),
+        id="plaza_alive",
+        name="광장상인",
+        race_id="human",
+        stats=Stats(),
         location_id="plaza_01",
     )
     fresh_state.turn_log = [
@@ -128,12 +142,19 @@ def test_corpses_dedupes_same_location_with_history(fresh_state):
     should appear once, without the off_screen flag (same-location wins)."""
     fresh_state.locations["plaza_01"] = Location(id="plaza_01", name="광장")
     fresh_state.characters["player_01"] = Character(
-        id="player_01", name="주", race_id="human", stats=Stats(),
+        id="player_01",
+        name="주",
+        race_id="human",
+        stats=Stats(),
         location_id="plaza_01",
     )
     fresh_state.characters["here_corpse"] = Character(
-        id="here_corpse", name="시체", race_id="human", stats=Stats(),
-        location_id="plaza_01", alive=False,
+        id="here_corpse",
+        name="시체",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+        alive=False,
     )
     fresh_state.turn_log = [
         TurnLogEntry(turn=1, target="here_corpse", summary="대화"),

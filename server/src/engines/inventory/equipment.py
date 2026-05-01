@@ -1,5 +1,6 @@
 """Equip / unequip (P3 §2.5). Slot validation and a small auto-slot
 heuristic for the natural-language equip path."""
+
 from typing import get_args
 
 from ...domain.entities import (
@@ -32,8 +33,12 @@ def _validate_slot_for_item(slot: Slot, item: Item) -> None:
         if allowed == ("weapon",):
             raise InventoryInvalid(f"weapon must go in the weapon slot, got {slot}")
         if "armor" in allowed and "accessory" in allowed:
-            raise InventoryInvalid(f"defense item must go in armor or accessory slot, got {slot}")
-        raise InventoryInvalid(f"decorative item must go in the accessory slot, got {slot}")
+            raise InventoryInvalid(
+                f"defense item must go in armor or accessory slot, got {slot}"
+            )
+        raise InventoryInvalid(
+            f"decorative item must go in the accessory slot, got {slot}"
+        )
 
 
 def equip(actor: Character, item_id: str, slot: Slot, items: dict[str, Item]) -> None:

@@ -1,4 +1,5 @@
 """Buy / sell with affinity-based pricing (P3 §2.5)."""
+
 from ...domain.entities import Character, Item
 from ...domain.errors import InventoryInvalid
 from ...rules import RULES
@@ -52,7 +53,9 @@ def buy(player: Character, npc: Character, item_id: str, items: dict[str, Item])
     return price
 
 
-def sell(player: Character, npc: Character, item_id: str, items: dict[str, Item]) -> int:
+def sell(
+    player: Character, npc: Character, item_id: str, items: dict[str, Item]
+) -> int:
     """Player sells item to NPC. Equipped items must be removed first."""
     _check_trade_allowed(npc, player)
     if item_id not in items:

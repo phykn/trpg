@@ -4,6 +4,7 @@ The game has no minute/hour clock — `state.turn_count` is the sole time variab
 A day cycles through 4 phases × `RULES.time.phase_turns` turns each:
 새벽 → 오전 → 오후 → 밤 → (next 새벽).
 """
+
 from ..rules import RULES
 
 PHASES: tuple[str, str, str, str] = ("새벽", "오전", "오후", "밤")

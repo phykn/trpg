@@ -3,12 +3,15 @@ strips Korean direct-quote blocks (`「…」` / `『…』`) attributed to a de
 NPC. The same helper feeds `build_history_layer` (input redaction) and
 `consume_narrate` (output redaction).
 """
+
 from src.context.layers import redact_dead_quotes
 
 
 def test_empty_dead_names_returns_unchanged():
-    assert redact_dead_quotes("그는 「잘 가시오.」라고 말합니다.", []) == \
-        "그는 「잘 가시오.」라고 말합니다."
+    assert (
+        redact_dead_quotes("그는 「잘 가시오.」라고 말합니다.", [])
+        == "그는 「잘 가시오.」라고 말합니다."
+    )
 
 
 def test_empty_text_returns_unchanged():
