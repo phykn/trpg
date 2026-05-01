@@ -313,21 +313,28 @@ def test_story_graph_projects_current_map_and_actions(fresh_state):
     edges = {(edge["source"], edge["target"], edge["label"]) for edge in out["edges"]}
 
     assert nodes["player_01"]["kind"] == "hero"
+    assert isinstance(nodes["player_01"]["level"], int)
     assert nodes["plaza_01"] == {
         "id": "plaza_01",
         "kind": "place",
         "label": "광장",
-        "detail": "맑음, 야외, 안전",
+        "description": "",
+        "risk": {"label": "안전", "tone": "good"},
+        "dayPhase": "새벽",
+        "weather": ["맑음"],
     }
     assert nodes["gate_01"]["kind"] == "location"
+    assert nodes["gate_01"]["risk"] == {"label": "안전", "tone": "good"}
     assert nodes["guard_01"]["kind"] == "subject"
+    assert nodes["guard_01"]["raceJob"]
     assert nodes["q1"]["kind"] == "quest"
+    assert nodes["q1"]["questDifficulty"]
 
     assert ("player_01", "plaza_01", "현재 위치") in edges
     assert ("plaza_01", "gate_01", "이동") in edges
     assert ("guard_01", "plaza_01", "등장") in edges
     assert ("guard_01", "q1", "의뢰") in edges
-    assert out["summary"] == "주인공 · 현재 위치 광장 · 퀘스트 t · 등장인물 2 · 배경 2"
+    assert out["summary"] == "주인공 · 현재 위치 광장 · 퀘스트 t · 등장인물 2 · 장소 2"
 
 
 def test_story_graph_does_not_leak_unseen_npcs_or_side_quests(fresh_state):

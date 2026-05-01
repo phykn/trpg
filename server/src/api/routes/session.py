@@ -9,7 +9,7 @@ from ...flow.intro import run_intro
 from ...flow.roll import run_roll
 from ...flow.turn import run_turn
 from ...llm.client import LLMClient, set_think_override
-from ...mapping.to_front import to_front_state, to_story_graph
+from ...mapping.to_front import to_front_state
 from ...persistence.init import init_game
 from ...persistence.repo import SaveRepo, ScenarioRepo
 from ..deps import get_llm, get_save_repo, get_scenario_repo, get_state
@@ -17,7 +17,6 @@ from ..schema import (
     InitRequest,
     InitResponse,
     RollRequest,
-    StoryGraphResponse,
     TurnRequest,
 )
 from ..sse import streaming_response
@@ -45,11 +44,6 @@ async def session_init(
 @router.get("/session/{game_id}/state")
 async def get_state_route(state: GameState = Depends(get_state)) -> dict:
     return {"game_id": state.game_id, "state": to_front_state(state)}
-
-
-@router.get("/session/{game_id}/graph", response_model=StoryGraphResponse)
-async def get_graph_route(state: GameState = Depends(get_state)) -> StoryGraphResponse:
-    return StoryGraphResponse(**to_story_graph(state))
 
 
 @router.post("/session/{game_id}/turn")

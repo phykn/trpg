@@ -377,79 +377,15 @@ def to_front_state(state: GameState, graph: GameGraph | None = None) -> dict:
         "combat": to_combat(state),
         "log": [e.model_dump() for e in state.log_entries],
         "pendingCheck": pending_check_to_front(state, pending) if pending else None,
+        "storyGraph": to_story_graph(state, graph),
     }
 
 
 # --- Story graph -----------------------------------------------------------
 
 
-_GRAPH_KIND_LABEL: dict[str, str] = {
-    "hero": "주인공",
-    "place": "현재 위치",
-    "location": "배경",
-    "subject": "대상",
-    "target": "등장인물",
-    "quest": "퀘스트",
-}
-
-_LOCATION_TAG_LABELS: dict[str, str] = {
-    "altar": "제단",
-    "boss": "결전지",
-    "forest": "숲",
-    "garden": "정원",
-    "indoor": "실내",
-    "mine": "광산",
-    "mountain": "산길",
-    "outdoor": "야외",
-    "road": "길",
-    "ruins": "유적",
-    "shop": "상점",
-    "shrine": "신전",
-    "smithy": "대장간",
-    "stronghold": "요새",
-    "tavern": "여관",
-    "tower": "탑",
-    "town": "마을",
-    "underground": "지하",
-}
-
-
 def _graph_edge_id(source: str, target: str, label: str) -> str:
     return f"{source}->{target}:{label}"
-
-
-def _graph_short_list(items: list[str], fallback: str = "정보 없음") -> str:
-    visible = [item for item in items if item]
-    if not visible:
-        return fallback
-    return ", ".join(visible[:3])
-
-
-def _graph_character_detail(state: GameState, graph: GameGraph, char: Character) -> str:
-    parts = [f"Lv.{char.level}", _race_job_label(state, graph, char)]
-    if char.role:
-        parts.append(char.role)
-    if not char.alive:
-        parts.append("죽음")
-    elif char.appearance:
-        parts.append(char.appearance)
-    elif char.description:
-        parts.append(char.description)
-    return " · ".join(part for part in parts if part)
-
-
-def _graph_location_detail(loc: Location) -> str:
-    tags = [
-        _LOCATION_TAG_LABELS[tag] for tag in loc.tags if tag in _LOCATION_TAG_LABELS
-    ]
-    return _graph_short_list(
-        [*loc.weather, *tags, _RISK_PAYLOAD[loc.sleep_risk]["label"]],
-        fallback=_RISK_PAYLOAD[loc.sleep_risk]["label"],
-    )
-
-
-def _graph_quest_detail(quest: Quest) -> str:
-    return f"{quest.status} · {quest.difficulty} · 보상 {quest.rewards.gold}G/{quest.rewards.exp}EXP"
 
 
 def _graph_reachable_location_ids(
@@ -491,13 +427,96 @@ def _graph_visible_character_ids(
     return visible
 
 
+def _graph_hero_node(state: GameState, graph: GameGraph, player: Character) -> dict:
+    return {
+        "id": player.id,
+        "kind": "hero",
+        "label": player.name,
+        "level": player.level,
+        "raceJob": _race_job_label(state, graph, player),
+    }
+
+
+def _graph_subject_node(
+    state: GameState, graph: GameGraph, subject: Character, player: Character
+) -> dict:
+    if not subject.alive:
+        known = ["죽음"]
+    else:
+        known = [subject.appearance] if subject.appearance else []
+        known += [m.content for m in player.memories if m.target_id == subject.id]
+    return {
+        "id": subject.id,
+        "kind": "subject",
+        "label": subject.name,
+        "level": subject.level,
+        "raceJob": _race_job_label(state, graph, subject),
+        "gender": _gender_label(subject),
+        "role": subject.role,
+        "trust": subject.relations.get(player.id, 0),
+        "known": known,
+    }
+
+
+def _graph_target_node(
+    state: GameState, graph: GameGraph, target: Character, player: Character
+) -> dict:
+    blurb = "죽음" if not target.alive else (target.appearance or target.description)
+    return {
+        "id": target.id,
+        "kind": "target",
+        "label": target.name,
+        "level": target.level,
+        "raceJob": _race_job_label(state, graph, target),
+        "gender": _gender_label(target),
+        "role": blurb,
+        "trust": target.relations.get(player.id, 0),
+    }
+
+
+def _graph_place_node(loc: Location, state: GameState) -> dict:
+    return {
+        "id": loc.id,
+        "kind": "place",
+        "label": loc.name,
+        "description": loc.description,
+        "risk": _RISK_PAYLOAD[loc.sleep_risk],
+        "dayPhase": day_phase(state.turn_count),
+        "weather": list(loc.weather),
+    }
+
+
+def _graph_location_node(loc: Location, move_difficulty: str | None) -> dict:
+    return {
+        "id": loc.id,
+        "kind": "location",
+        "label": loc.name,
+        "description": loc.description,
+        "risk": _RISK_PAYLOAD[loc.sleep_risk],
+        "moveDifficulty": move_difficulty,
+    }
+
+
+def _graph_quest_node(quest: Quest) -> dict:
+    return {
+        "id": quest.id,
+        "kind": "quest",
+        "label": quest.title,
+        "questDifficulty": quest.difficulty,
+        "rewards": {"gold": quest.rewards.gold, "exp": quest.rewards.exp},
+    }
+
+
 def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
     """Project the server-side state into the client's story graph contract.
 
     The endpoint is player-visible by design: location nodes expand through
     normal map connections, but character nodes are limited to the player,
     current-scene NPCs, companions, and the active subject so the graph does
-    not become a spoiler dump of every scenario entity.
+    not become a spoiler dump of every scenario entity. Each node carries
+    the kind-specific fields the panel renders (level/raceJob/risk/...);
+    the panel reads them directly without re-deriving from a display
+    string.
     """
     if graph is None:
         graph = state.graph()
@@ -511,13 +530,15 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
     )
     visible_character_ids = _graph_visible_character_ids(state, graph, player)
 
-    def add_node(node_id: str, kind: str, label: str, detail: str) -> None:
-        nodes[node_id] = {
-            "id": node_id,
-            "kind": kind,
-            "label": label,
-            "detail": detail,
-        }
+    # Adjacent (one-hop) move difficulties keyed by neighbor location id —
+    # used to populate `moveDifficulty` on adjacent location nodes only.
+    # Multi-hop reachable locations get null; the panel only acts on
+    # one-hop neighbors anyway.
+    adjacent_move_difficulty: dict[str, str | None] = {}
+    if player_location_id in state.locations:
+        for edge in connections_of(graph, player_location_id):
+            attrs = edge.attrs or {}
+            adjacent_move_difficulty[edge.to_id] = attrs.get("difficulty")
 
     def add_edge(source: str | None, target: str | None, label: str) -> None:
         if not source or not target or source == target:
@@ -533,43 +554,34 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
         }
 
     if player is not None and player.id in visible_character_ids:
-        add_node(
-            player.id,
-            "hero",
-            player.name,
-            _graph_character_detail(state, graph, player),
-        )
+        nodes[player.id] = _graph_hero_node(state, graph, player)
 
     for location_id, location in state.locations.items():
         if location_id not in visible_location_ids:
             continue
-        add_node(
-            location_id,
-            "place" if location_id == player_location_id else "location",
-            location.name,
-            _graph_location_detail(location),
-        )
+        if location_id == player_location_id:
+            nodes[location_id] = _graph_place_node(location, state)
+        else:
+            nodes[location_id] = _graph_location_node(
+                location, adjacent_move_difficulty.get(location_id)
+            )
 
     for character_id in visible_character_ids:
         if character_id == state.player_id:
             continue
         character = state.characters.get(character_id)
-        if character is None:
+        if character is None or player is None:
             continue
-        kind = "subject" if character_id == state.active_subject_id else "target"
-        add_node(
-            character_id,
-            kind,
-            character.name,
-            _graph_character_detail(state, graph, character),
-        )
+        if character_id == state.active_subject_id:
+            nodes[character_id] = _graph_subject_node(state, graph, character, player)
+        else:
+            nodes[character_id] = _graph_target_node(state, graph, character, player)
 
     quest_ids = (
         {state.active_quest_id} if state.active_quest_id in state.quests else set()
     )
     for quest_id in quest_ids:
-        quest = state.quests[quest_id]
-        add_node(quest_id, "quest", quest.title, _graph_quest_detail(quest))
+        nodes[quest_id] = _graph_quest_node(state.quests[quest_id])
 
     add_edge(state.player_id, player_location_id, "현재 위치")
     add_edge(state.player_id, state.active_subject_id, "주시")
@@ -613,8 +625,8 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
             if player_location_id in state.locations
             else None,
             f"퀘스트 {active_quest.title}" if active_quest is not None else None,
-            f"{_GRAPH_KIND_LABEL['target']} {count_by_kind['target'] + count_by_kind['subject']}",
-            f"{_GRAPH_KIND_LABEL['location']} {count_by_kind['location'] + count_by_kind['place']}",
+            f"등장인물 {count_by_kind['target'] + count_by_kind['subject']}",
+            f"장소 {count_by_kind['location'] + count_by_kind['place']}",
         ]
         if part
     )
