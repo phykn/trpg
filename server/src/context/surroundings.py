@@ -18,6 +18,7 @@ from ..domain.entities import (
     item_kind,
 )
 from ..domain.state import GameState
+from ..domain.types import is_secret_masked_grade
 from ..engines.growth import can_afford_level_up
 from ..ontology.graph import GameGraph, build_graph
 from ..rules import RULES
@@ -26,14 +27,19 @@ from ..rules import RULES
 # --- Common helpers (NPC state tags) -----------------------------------------
 
 
-def _state_tags(actor: Character, npc: Character) -> list[str]:
+def _state_tags(actor: Character, npc: Character, *, masked: bool = False) -> list[str]:
+    """`masked=True` (failure-grade narrate call) drops the affinity tag —
+    the player just botched a social/investigation roll, so they shouldn't
+    learn the NPC's true disposition from a sidebar tag. Visible-injury tags
+    stay (a wound is observable regardless of what the player rolled)."""
     tags: list[str] = []
-    aff = actor.relations.get(npc.id, 0)
-    threshold = RULES.social.friendly_threshold
-    if aff >= threshold:
-        tags.append(f"우호적(affinity {aff})")
-    elif aff <= -threshold:
-        tags.append(f"경계중(affinity {aff})")
+    if not masked:
+        aff = actor.relations.get(npc.id, 0)
+        threshold = RULES.social.friendly_threshold
+        if aff >= threshold:
+            tags.append(f"우호적(affinity {aff})")
+        elif aff <= -threshold:
+            tags.append(f"경계중(affinity {aff})")
     if npc.max_hp > 0:
         hp_pct = round(npc.hp / npc.max_hp * 100)
         if hp_pct < 50:
@@ -168,12 +174,47 @@ def _merchants_payload(
     return out
 
 
+def _npc_roles(
+    state: GameState, actor: Character, npc: Character, graph: GameGraph
+) -> list[str]:
+    """Positive role tags surfaced for narrate. Without these the LLM has no
+    way to tell that a same-location NPC is *not* a trade-eligible merchant
+    (the existing `surroundings.merchants` slot only carries the positives;
+    silence isn't a signal). Tags are unordered, kebab-case ASCII so they
+    don't collide with display Korean.
+
+    - `merchant`: gating mirrors `_merchants_payload` (trade_threshold +
+      non-aggressive + carries stock). When this is missing on a same-NPC
+      that's also in `merchants`, that's a bug.
+    - `quest_giver`: any outgoing `gives_quest` edge in the graph (status
+      irrelevant — a giver with only completed quests still gives the
+      tonal signal "this NPC is a quest hub").
+    Future roles (e.g. `companion`, `enemy_only`) can join the same list.
+    """
+    roles: list[str] = []
+    aggressive_cutoff = RULES.social.hostile_aggressive_threshold
+    threshold = RULES.social.trade_threshold
+    if (
+        npc.disposition.aggressive < aggressive_cutoff
+        and npc.relations.get(actor.id, 0) >= threshold
+    ):
+        for edge in graph.get_edges(npc.id, "carries"):
+            if state.items.get(edge.to_id) is not None:
+                roles.append("merchant")
+                break
+    if any(True for _ in graph.get_edges(npc.id, "gives_quest")):
+        roles.append("quest_giver")
+    return roles
+
+
 def _entities_payload(
     state: GameState,
     actor_id: str,
     actor: Character,
     location: Location,
     graph: GameGraph,
+    *,
+    masked: bool = False,
 ) -> list[dict]:
     entities: list[dict] = [{"id": actor_id, "name": actor.name, "type": "player"}]
     for edge in graph.get_in_edges(location.id, "located_at"):
@@ -184,7 +225,10 @@ def _entities_payload(
         if char is None or not char.alive:
             continue
         entry: dict = {"id": cid, "name": char.name, "type": "npc"}
-        tags = _state_tags(actor, char)
+        roles = _npc_roles(state, actor, char, graph)
+        if roles:
+            entry["roles"] = roles
+        tags = _state_tags(actor, char, masked=masked)
         if tags:
             entry["state_tags"] = tags
         entities.append(entry)
@@ -277,13 +321,20 @@ def build_surroundings(
     state: GameState,
     actor_id: str,
     graph: GameGraph | None = None,
+    *,
+    grade: str | None = None,
 ) -> dict:
     """Assemble the surroundings payload. `graph` is the relational SSOT —
     callers that already built one (flow entry points) should pass it; tests
     and ad-hoc callers can omit and we'll build internally.
+
+    `grade` gates secret slots for the failure-grade narrate path: a botched
+    roll drops affinity tags off `entities[*].state_tags` so the player
+    can't read the NPC's true disposition off a sidebar.
     """
     if graph is None:
         graph = build_graph(state)
+    masked = is_secret_masked_grade(grade)
     actor = state.characters[actor_id]
     in_combat = state.combat_state is not None
     base = {
@@ -307,7 +358,9 @@ def build_surroundings(
     return {
         **base,
         "location": _location_payload(location),
-        "entities": _entities_payload(state, actor_id, actor, location, graph),
+        "entities": _entities_payload(
+            state, actor_id, actor, location, graph, masked=masked
+        ),
         "corpses": _corpses_payload(state, actor, graph),
         "skills": _skills_payload(state, actor, graph),
         "inventory": _inventory_payload(state, actor, graph),

@@ -32,6 +32,11 @@ export type SessionPayload = {
 
 export type TurnRequest = {
   player_input: string;
+  think: boolean;
+};
+
+export type RollRequest = {
+  think: boolean;
 };
 
 // `judge` and `combat_*` events are observed but their payloads are never

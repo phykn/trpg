@@ -48,3 +48,8 @@ class InitResponse(BaseModel):
 
 class TurnRequest(BaseModel):
     player_input: str
+    think: bool = False
+
+
+class RollRequest(BaseModel):
+    think: bool = False

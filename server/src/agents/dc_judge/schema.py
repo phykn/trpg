@@ -76,7 +76,10 @@ class RollAction(_StrictAction):
     tier: Tier
     stat: StatKey
     targets: list[str] = Field(min_length=1)
-    reason: str = Field(min_length=1, max_length=80)
+    # Schema-level fallback so a missing `reason` doesn't crash the turn even
+    # when the coerce hook is bypassed (e.g. answer wrapped in markdown fence
+    # / prefix text → json.loads fails → validate_json fallback path).
+    reason: str = Field(default="행동 판정", min_length=1, max_length=80)
 
 
 class RestAction(_StrictAction):

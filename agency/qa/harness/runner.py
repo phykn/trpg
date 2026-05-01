@@ -199,7 +199,7 @@ async def run_qa_session(
             if pending:
                 try:
                     async with client.stream(
-                        "POST", f"/session/{game_id}/roll"
+                        "POST", f"/session/{game_id}/roll", json={}
                     ) as r:
                         roll_body, roll_events = await _drain_sse(r)
                 except Exception as e:  # noqa: BLE001

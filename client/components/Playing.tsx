@@ -18,7 +18,7 @@ const BGM_SOURCE = require('../assets/audio/bgm.mp3');
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, log, pending, streaming, awaitingNarration, suggestions, onSend, onRoll, onStop, goToNewGame } = game;
+  const { hero, subject, quest, place, combat, log, pending, streaming, awaitingNarration, suggestions, think, setThink, onSend, onRoll, onStop, goToNewGame } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -121,16 +121,20 @@ export function Playing({ game }: Props) {
 
       {combat ? <CombatStrip combat={combat} /> : null}
 
-      {pending ? <RollPrompt pending={pending} onRoll={onRoll} rolling={rolling} /> : null}
-
-      <Composer
-        input={input}
-        setInput={setInput}
-        onSend={onSend}
-        onStop={onStop}
-        focused={typing}
-        streaming={streaming}
-      />
+      {pending ? (
+        <RollPrompt pending={pending} onRoll={onRoll} onStop={onStop} rolling={rolling} />
+      ) : (
+        <Composer
+          input={input}
+          setInput={setInput}
+          onSend={onSend}
+          onStop={onStop}
+          focused={typing}
+          streaming={streaming}
+          think={think}
+          onToggleThink={() => setThink((v) => !v)}
+        />
+      )}
     </View>
   );
 }

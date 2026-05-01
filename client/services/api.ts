@@ -3,6 +3,7 @@ import { fetch } from 'expo/fetch';
 import type {
   InitRequest,
   ProfileCard,
+  RollRequest,
   SessionPayload,
   StreamEvent,
   TurnRequest,
@@ -133,12 +134,13 @@ export function streamTurn(
 
 export function streamRoll(
   gameId: string,
+  body: RollRequest,
   onEvent: (ev: StreamEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
   return streamSse(
     `${BASE_URL}/session/${gameId}/roll`,
-    { method: 'POST' },
+    { method: 'POST', body: JSON.stringify(body) },
     onEvent,
     signal,
   );

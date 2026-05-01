@@ -54,6 +54,7 @@ export function useGame() {
   const [streaming, setStreaming] = React.useState(false);
   const [streamingText, setStreamingText] = React.useState('');
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
+  const [think, setThink] = React.useState(false);
 
   const aborts = React.useRef<Set<AbortController>>(new Set());
   React.useEffect(() => {
@@ -169,16 +170,16 @@ export function useGame() {
       const trimmed = text.trim();
       if (!trimmed || !gameId || pending) return;
       void runStream((signal) =>
-        streamTurn(gameId, { player_input: trimmed }, handleEvent, signal),
+        streamTurn(gameId, { player_input: trimmed, think }, handleEvent, signal),
       );
     },
-    [gameId, pending, handleEvent, runStream],
+    [gameId, pending, handleEvent, runStream, think],
   );
 
   const onRoll = React.useCallback(() => {
     if (!gameId || !pending) return;
-    void runStream((signal) => streamRoll(gameId, handleEvent, signal));
-  }, [gameId, pending, handleEvent, runStream]);
+    void runStream((signal) => streamRoll(gameId, { think }, handleEvent, signal));
+  }, [gameId, pending, handleEvent, runStream, think]);
 
   const onStop = React.useCallback(() => {
     aborts.current.forEach((a) => a.abort());
@@ -211,6 +212,8 @@ export function useGame() {
     streaming,
     awaitingNarration,
     suggestions,
+    think,
+    setThink,
     onSend,
     onRoll,
     onStop,

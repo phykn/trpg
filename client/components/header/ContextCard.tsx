@@ -54,7 +54,7 @@ export function ContextCard({ slots, activeId, menuOpen, bgmOn, onSelect, onMenu
         className="bg-canvas-subtle border border-border-default rounded-md flex-row p-2 gap-1 items-center"
         style={shadow.paper}
       >
-        <IconButton d={bgmOn ? ICON_PATH.volumeOn : ICON_PATH.volumeOff} onPress={onBgmToggle} />
+        <IconButton d={ICON_PATH.menu} onPress={onMenuToggle} />
         <View className="flex-1 flex-row gap-1">
           {slots.map((s) => (
             <ChipTab
@@ -65,7 +65,7 @@ export function ContextCard({ slots, activeId, menuOpen, bgmOn, onSelect, onMenu
             />
           ))}
         </View>
-        <IconButton d={ICON_PATH.menu} onPress={onMenuToggle} />
+        <IconButton d={bgmOn ? ICON_PATH.volumeOn : ICON_PATH.volumeOff} onPress={onBgmToggle} />
       </View>
       {panel && (
         <View
@@ -89,7 +89,7 @@ export function ContextCard({ slots, activeId, menuOpen, bgmOn, onSelect, onMenu
           style={{
             position: 'absolute',
             top: chipBarHeight + 4,
-            right: 0,
+            left: 0,
             minWidth: 140,
             zIndex: 20,
             ...shadow.floating,

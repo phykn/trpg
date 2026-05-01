@@ -8,11 +8,11 @@ from ...domain.state import GameState
 from ...flow.intro import run_intro
 from ...flow.roll import run_roll
 from ...flow.turn import run_turn
-from ...llm.client import LLMClient
+from ...llm.client import LLMClient, set_think_override
 from ...mapping.to_front import to_front_state
 from ...persistence.init import init_game
 from ..deps import get_llm, get_profile_dir, get_saves_dir, get_state
-from ..schema import InitRequest, InitResponse, TurnRequest
+from ..schema import InitRequest, InitResponse, RollRequest, TurnRequest
 from ..sse import streaming_response
 
 router = APIRouter()
@@ -48,6 +48,7 @@ async def session_turn(
     saves_dir: str = Depends(get_saves_dir),
     profile_dir: str = Depends(get_profile_dir),
 ):
+    set_think_override(body.think)
     return streaming_response(
         run_turn(
             llm,
@@ -62,11 +63,13 @@ async def session_turn(
 
 @router.post("/session/{game_id}/roll")
 async def session_roll(
+    body: RollRequest,
     state: GameState = Depends(get_state),
     llm: LLMClient = Depends(get_llm),
     saves_dir: str = Depends(get_saves_dir),
     profile_dir: str = Depends(get_profile_dir),
 ):
+    set_think_override(body.think)
     return streaming_response(
         run_roll(
             llm,

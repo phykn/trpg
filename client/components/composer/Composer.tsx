@@ -11,14 +11,17 @@ import { colors, shadow } from '@/design/tokens';
 
 import { SendButton } from './SendButton';
 import { StopButton } from './StopButton';
+import { ThinkToggle } from './ThinkToggle';
 
-export function Composer({ input, setInput, onSend, onStop, focused, streaming }: {
+export function Composer({ input, setInput, onSend, onStop, focused, streaming, think, onToggleThink }: {
   input: string;
   setInput: (text: string) => void;
   onSend: (text: string) => void;
   onStop: () => void;
   focused: boolean;
   streaming: boolean;
+  think: boolean;
+  onToggleThink: () => void;
 }) {
   const inputRef = React.useRef(input);
   React.useEffect(() => { inputRef.current = input; }, [input]);
@@ -58,7 +61,7 @@ export function Composer({ input, setInput, onSend, onStop, focused, streaming }
 
   return (
     <View
-      className={`mx-5 mt-1.5 bg-canvas-subtle rounded-md p-2 border flex-row items-end gap-2 ${borderClass}`}
+      className={`mx-5 mt-1.5 bg-canvas-subtle rounded-md p-2 border gap-1 ${borderClass}`}
       style={shadow.paper}
     >
       <TextInput
@@ -69,17 +72,20 @@ export function Composer({ input, setInput, onSend, onStop, focused, streaming }
         placeholderTextColor={`${colors.fg.default}55`}
         returnKeyType="send"
         multiline
-        numberOfLines={1}
+        numberOfLines={2}
         submitBehavior="blurAndSubmit"
-        textAlignVertical="center"
-        className="flex-1 font-sans text-title px-2 text-fg-default"
-        style={{ paddingTop: 6, paddingBottom: 6, minHeight: 32, maxHeight: 140 }}
+        textAlignVertical="top"
+        className="font-sans text-title px-2 text-fg-default"
+        style={{ paddingTop: 6, paddingBottom: 6, minHeight: 54, maxHeight: 140 }}
       />
-      {streaming ? (
-        <StopButton onPress={onStop} />
-      ) : (
-        <SendButton enabled={hasText} onPress={submit} />
-      )}
+      <View className="flex-row items-center justify-between">
+        <ThinkToggle think={think} onToggle={onToggleThink} disabled />
+        {streaming ? (
+          <StopButton onPress={onStop} />
+        ) : (
+          <SendButton enabled={hasText} onPress={submit} />
+        )}
+      </View>
     </View>
   );
 }

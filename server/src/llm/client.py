@@ -15,6 +15,12 @@ from ..rules.config import RULES
 # the in-process game_id.
 _SESSION_ID: ContextVar[str | None] = ContextVar("llm_session_id", default=None)
 
+# Per-task override for the agent-passed `think` flag. The /turn and /roll
+# routes set this from the request body so the client's 빠르게/정확하게 toggle
+# wins over each agent's default. ContextVar is task-scoped — concurrent
+# requests don't leak into each other.
+_THINK_OVERRIDE: ContextVar[bool | None] = ContextVar("llm_think_override", default=None)
+
 
 def set_llm_session(session_id: str) -> None:
     _SESSION_ID.set(session_id)
@@ -23,6 +29,10 @@ def set_llm_session(session_id: str) -> None:
 def set_llm_session_if_unset(session_id: str) -> None:
     if _SESSION_ID.get() is None:
         _SESSION_ID.set(session_id)
+
+
+def set_think_override(value: bool | None) -> None:
+    _THINK_OVERRIDE.set(value)
 
 
 class LLMClient:
@@ -54,10 +64,14 @@ class LLMClient:
 
     def _params(self, messages: list[dict], think: bool) -> dict:
         # `extra_body.chat_template_kwargs.enable_thinking` toggles thinking on llama.cpp / Qwen.
+        # A request-scoped override (set by the /turn or /roll route from the
+        # client toggle) wins over the agent's hardcoded default.
+        override = _THINK_OVERRIDE.get()
+        effective = think if override is None else override
         return {
             "model": self._model,
             "messages": messages,
-            "extra_body": {"chat_template_kwargs": {"enable_thinking": think}},
+            "extra_body": {"chat_template_kwargs": {"enable_thinking": effective}},
         }
 
     def _log_basename(self, agent: str | None) -> Path | None:

@@ -82,6 +82,79 @@ def test_surroundings_includes_player_and_filters_dead_or_far(fresh_state):
         and ids["gate_01"]["difficulty"] == "어려움"
     )
 
+    # Failure-grade narrate path drops affinity tags (visible-injury stays):
+    # the player just botched a roll, so they shouldn't read the NPC's true
+    # disposition off a sidebar.
+    sur_fail = build_surroundings(fresh_state, "player_01", grade="failure")
+    ids_fail = {e["id"]: e for e in sur_fail["entities"]}
+    assert "state_tags" not in ids_fail["friend"], (
+        "affinity tag must drop on failure grade"
+    )
+    foe_tags = ids_fail["foe"].get("state_tags") or []
+    assert not any("affinity" in t for t in foe_tags), (
+        "affinity tag must drop on failure grade"
+    )
+    assert any("부상" in t for t in foe_tags), (
+        "visible injury must still surface on failure grade"
+    )
+
+
+def test_entities_carry_role_tags(fresh_state):
+    """Each NPC entry carries `roles` listing what the player can/can't do
+    with them. Without this the LLM has no positive signal that an NPC is
+    *not* trade-eligible (the existing `merchants` slot only carries the
+    positives — silence isn't a signal). Verifies merchant + quest_giver."""
+    from src.domain.entities import Item, Quest, QuestRewards
+
+    fresh_state.locations["plaza_01"] = Location(id="plaza_01", name="광장")
+    fresh_state.items["bread"] = Item(id="bread", name="빵", price=2)
+    fresh_state.characters["player_01"] = Character(
+        id="player_01",
+        name="주",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+        relations={},
+    )
+    # merchant: trade-eligible NPC carrying stock.
+    fresh_state.characters["seller"] = Character(
+        id="seller",
+        name="상인",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+        inventory_ids=["bread"],
+        relations={"player_01": 0},  # >= trade_threshold default 0
+    )
+    # quest_giver: gives a quest, no stock.
+    fresh_state.characters["chief"] = Character(
+        id="chief",
+        name="촌장",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+        relations={"player_01": 0},
+    )
+    fresh_state.quests["q1"] = Quest(
+        id="q1", title="t", giver_id="chief", difficulty="보통",
+        rewards=QuestRewards(),
+    )
+    # plain villager: no merchant role, no quest. roles must be absent
+    # (key omitted, not empty list — keeps payload tight).
+    fresh_state.characters["villager"] = Character(
+        id="villager",
+        name="주민",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+    )
+
+    sur = build_surroundings(fresh_state, "player_01")
+    ids = {e["id"]: e for e in sur["entities"]}
+    assert ids["seller"].get("roles") == ["merchant"]
+    assert ids["chief"].get("roles") == ["quest_giver"]
+    assert "roles" not in ids["villager"]
+
 
 def test_corpses_same_location_and_history_referenced(fresh_state):
     """Corpses payload covers two cases:

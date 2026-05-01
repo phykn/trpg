@@ -113,6 +113,7 @@ class _Meta(BaseModel):
     pending_check: PendingCheck | None = None
     pending_skill_candidates: list[Skill] = []
     combat_state: CombatState | None = None
+    previous_phase_signal: str | None = None
     next_log_id: int = 1
 
 
@@ -127,6 +128,7 @@ def _meta_from_state(state: GameState) -> _Meta:
         pending_check=state.pending_check,
         pending_skill_candidates=list(state.pending_skill_candidates),
         combat_state=state.combat_state,
+        previous_phase_signal=state.previous_phase_signal,
         next_log_id=state.next_log_id,
     )
 
@@ -278,6 +280,7 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
         pending_check=meta.pending_check,
         pending_skill_candidates=meta.pending_skill_candidates,
         combat_state=meta.combat_state,
+        previous_phase_signal=meta.previous_phase_signal,
         next_log_id=next_log_id,
         turn_log=turn_log,
         recent_dialogue=recent_dialogue,

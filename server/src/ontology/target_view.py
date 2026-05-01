@@ -11,6 +11,7 @@ edge ids to names so narrate doesn't see bare ids in `unlocks` /
 """
 
 from ..domain.state import GameState
+from ..domain.types import is_secret_masked_grade
 from .graph import GameGraph
 
 
@@ -19,7 +20,14 @@ def build_target_view(
     graph: GameGraph,
     target_id: str,
     actor_id: str,
+    *,
+    grade: str | None = None,
 ) -> dict | None:
+    """`grade` gates the secret slots: on a failed roll
+    (`is_secret_masked_grade(grade)`) NPC inner state (`tone_hint`,
+    `memories`) and quest reward detail are dropped before narrate sees
+    them. Other grades / non-roll calls leave the view untouched."""
+    masked = is_secret_masked_grade(grade)
     node_type = graph.get_node_type(target_id)
     if node_type == "character":
         # Dead NPCs return a minimal dead-marker payload — name + alive=false.
@@ -37,9 +45,9 @@ def build_target_view(
                 "name": npc.name,
                 "alive": False,
             }
-        return _build_npc_view(state, graph, target_id, actor_id)
+        return _build_npc_view(state, graph, target_id, actor_id, masked=masked)
     if node_type == "location":
-        return _build_location_view(state, graph, target_id)
+        return _build_location_view(state, graph, target_id, masked=masked)
     if node_type == "item":
         return _build_item_view(state, graph, target_id)
     return None
@@ -73,7 +81,12 @@ def _resolve_neighbor(state: GameState, graph: GameGraph, node_id: str) -> dict 
 
 
 def _quest_payload(
-    state: GameState, graph: GameGraph, qid: str, *, include_giver: bool
+    state: GameState,
+    graph: GameGraph,
+    qid: str,
+    *,
+    include_giver: bool,
+    masked: bool = False,
 ) -> dict | None:
     """Resolve a quest into a prompt-ready dict via 1-hop in-edges:
     - `kill_targets`: characters with a `character_death` trigger
@@ -111,13 +124,17 @@ def _quest_payload(
     if triggers:
         out["triggers"] = triggers
 
-    rewards: list[dict] = []
-    for e in graph.get_in_edges(qid, "reward_of"):
-        item = state.items.get(e.from_id)
-        if item is not None:
-            rewards.append({"id": e.from_id, "name": item.name})
-    if rewards:
-        out["rewards"] = rewards
+    # Reward detail is a "secret" surface for the failure-grade mask: a botched
+    # social/investigation roll shouldn't let the LLM surface what the NPC
+    # would have given on success.
+    if not masked:
+        rewards: list[dict] = []
+        for e in graph.get_in_edges(qid, "reward_of"):
+            item = state.items.get(e.from_id)
+            if item is not None:
+                rewards.append({"id": e.from_id, "name": item.name})
+        if rewards:
+            out["rewards"] = rewards
 
     if include_giver:
         for e in graph.get_in_edges(qid, "gives_quest"):
@@ -130,7 +147,12 @@ def _quest_payload(
 
 
 def _build_npc_view(
-    state: GameState, graph: GameGraph, target_id: str, actor_id: str
+    state: GameState,
+    graph: GameGraph,
+    target_id: str,
+    actor_id: str,
+    *,
+    masked: bool = False,
 ) -> dict:
     npc = state.characters[target_id]
 
@@ -170,7 +192,9 @@ def _build_npc_view(
     # Quests this NPC gives — 2-hop into kill_targets / triggers / rewards.
     quests_given: list[dict] = []
     for edge in graph.get_edges(target_id, "gives_quest"):
-        payload = _quest_payload(state, graph, edge.to_id, include_giver=False)
+        payload = _quest_payload(
+            state, graph, edge.to_id, include_giver=False, masked=masked
+        )
         if payload is not None:
             quests_given.append(payload)
 
@@ -191,6 +215,23 @@ def _build_npc_view(
                 break
         quests_kill_target.append(item)
 
+    # Inner-state slots blocked at the data layer when narrate is rendering a
+    # failed roll: tone_hint exposes the NPC's true disposition; memories
+    # carry past secrets the player hasn't earned this turn. The narrate
+    # prompt also forbids leaking these on failure, but the LLM drifts —
+    # keeping the data out of the prompt is the only hard block.
+    tone_hint = None if masked else (npc.tone_hint or None)
+    memories = (
+        None
+        if masked
+        else (
+            [
+                {"content": m.content, "importance": m.importance}
+                for m in npc.memories
+            ]
+            or None
+        )
+    )
     return _omit_none(
         {
             "type": "npc",
@@ -199,11 +240,8 @@ def _build_npc_view(
             "description": npc.description or None,
             "appearance": npc.appearance or None,
             "gender": npc.gender if npc.gender != "none" else None,
-            "tone_hint": npc.tone_hint or None,
-            "memories": [
-                {"content": m.content, "importance": m.importance} for m in npc.memories
-            ]
-            or None,
+            "tone_hint": tone_hint,
+            "memories": memories,
             "equipment": equipped or None,
             "inventory": inventory or None,
             "quests_given": quests_given or None,
@@ -212,7 +250,9 @@ def _build_npc_view(
     )
 
 
-def _build_location_view(state: GameState, graph: GameGraph, target_id: str) -> dict:
+def _build_location_view(
+    state: GameState, graph: GameGraph, target_id: str, *, masked: bool = False
+) -> dict:
     loc = state.locations[target_id]
 
     items: list[dict] = []
@@ -225,7 +265,9 @@ def _build_location_view(state: GameState, graph: GameGraph, target_id: str) -> 
     # narrate can phrase "이 장소에 가야 하는 이유는 X 영감의 부탁이오".
     quests: list[dict] = []
     for edge in graph.get_edges(target_id, "required_by"):
-        payload = _quest_payload(state, graph, edge.to_id, include_giver=True)
+        payload = _quest_payload(
+            state, graph, edge.to_id, include_giver=True, masked=masked
+        )
         if payload is not None:
             quests.append(payload)
 
