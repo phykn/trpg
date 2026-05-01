@@ -106,8 +106,8 @@ class SupabaseSaveRepo:
         ]
         await self._db.insert("log_entries", rows)
 
-    async def append_history_entries(
-        self, game_id: str, entries: list[TurnLogEntry]
+    async def _append_seq_rows(
+        self, table: str, game_id: str, entries: list[BaseModel]
     ) -> None:
         if not entries:
             return
@@ -115,18 +115,17 @@ class SupabaseSaveRepo:
             {"game_id": game_id, "entry": json.loads(e.model_dump_json())}
             for e in entries
         ]
-        await self._db.insert("history_entries", rows)
+        await self._db.insert(table, rows)
+
+    async def append_history_entries(
+        self, game_id: str, entries: list[TurnLogEntry]
+    ) -> None:
+        await self._append_seq_rows("history_entries", game_id, list(entries))
 
     async def append_dialogue_entries(
         self, game_id: str, entries: list[DialoguePair]
     ) -> None:
-        if not entries:
-            return
-        rows = [
-            {"game_id": game_id, "entry": json.loads(e.model_dump_json())}
-            for e in entries
-        ]
-        await self._db.insert("dialogue_entries", rows)
+        await self._append_seq_rows("dialogue_entries", game_id, list(entries))
 
     async def load_game(self, game_id: str) -> GameState:
         # Single round-trip per resource. Fan out via gather — PostgREST
