@@ -1,0 +1,25 @@
+{
+  "id": "forest_edge",
+  "name": "안개숲 어귀",
+  "description": "이스나르 동쪽으로 뻗은 좁은 길 끝, 흰 안개에 잠긴 숲의 입구. 비탈진 흙길 양옆으로 옹이진 너도밤나무들이 늘어서 있고, 늪 같은 진흙이 얕게 깔려 있다. 깊이 들어갈수록 안개가 짙어진다.",
+  "tags": [
+    "outdoor",
+    "forest"
+  ],
+  "item_ids": [],
+  "hidden_items": [],
+  "connections": [
+    { "target_id": "watch_post", "difficulty": null, "key_item_id": null },
+    { "target_id": "deep_forest", "difficulty": "보통", "key_item_id": null }
+  ],
+  "hidden_connections": [],
+  "weather": [
+    "짙은 안개"
+  ],
+  "sleep_risk": "risky",
+  "sleep_encounters": [
+    "goblin_hunter_01",
+    "goblin_hunter_02"
+  ],
+  "difficulty": "쉬움"
+}

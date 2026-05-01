@@ -1,0 +1,61 @@
+{
+  "id": "mist_wight_01",
+  "name": "안개 와이트",
+  "description": "안개숲 깊은 곳, 옛 엘프 비석 사이를 떠도는 망령. 형체는 잿빛 안개 같으나 손끝이 산 자의 가슴에 닿으면 따뜻한 기억을 한 줌 앗아 간다.",
+  "appearance": "허리 위는 잿빛 안개로 뭉개진 윤곽, 허리 아래는 닳은 회색 천 자락이 끌리는 듯한 형체. 눈자리에는 옅은 푸른 빛이 깜빡인다.",
+  "is_player": false,
+  "role": "안개숲 깊은 곳을 떠도는 망령",
+  "race_id": "mist_wight",
+  "job": "안개의 망령",
+  "gender": "none",
+  "level": 4,
+  "stats": {
+    "STR": 11,
+    "DEX": 13,
+    "CON": 12,
+    "INT": 8,
+    "WIS": 7,
+    "CHA": 9
+  },
+  "hp": 54,
+  "max_hp": 54,
+  "mp": 33,
+  "max_mp": 33,
+  "alive": true,
+  "location_id": "deep_forest",
+  "equipment": {
+    "weapon": null,
+    "armor": "wight_rags",
+    "accessory": null
+  },
+  "inventory_ids": [
+    "wight_rags"
+  ],
+  "gold": 0,
+  "xp_pool": 0,
+  "xp_reward": 110,
+  "disposition": {
+    "lawful": 30,
+    "moral": 20,
+    "aggressive": 80
+  },
+  "relations": {},
+  "tone_hint": "끊어질 듯 이어지는 한기 어린 속삭임. 사람의 어미를 흉내 내듯 짧게 늘어진다.",
+  "hints": [],
+  "racial_skill_ids": [
+    "wight_drain"
+  ],
+  "learned_skill_ids": [],
+  "status": [],
+  "active_buffs": [],
+  "memories": [],
+  "combat_behavior": {
+    "attack_priority": "lowest_hp",
+    "flee_hp_percent": 0,
+    "nearest_weight": 50,
+    "random_weight": 50
+  },
+  "death_saves": null,
+  "revive_coins": 0,
+  "companions": []
+}

@@ -1,0 +1,61 @@
+{
+  "id": "shadow_wolf_01",
+  "name": "그림자 늑대",
+  "description": "산문 길 비탈에 출몰하는 검은 짐승. 발소리가 거의 들리지 않고, 안개 속으로 녹아드는 가죽 때문에 가까이 와서야 형체가 잡힌다.",
+  "appearance": "큰 회색곰만 한 검은 늑대. 등줄기에 옅은 안개 자국이 흐르듯 머무르고, 노란 눈이 어둠 속에서 옅게 빛난다.",
+  "is_player": false,
+  "role": "산문 길에 출몰하는 흑마법에 물든 짐승",
+  "race_id": "shadow_wolf",
+  "job": "야생 짐승",
+  "gender": "none",
+  "level": 3,
+  "stats": {
+    "STR": 14,
+    "DEX": 14,
+    "CON": 12,
+    "INT": 8,
+    "WIS": 6,
+    "CHA": 6
+  },
+  "hp": 46,
+  "max_hp": 46,
+  "mp": 28,
+  "max_mp": 28,
+  "alive": true,
+  "location_id": "mountain_road",
+  "equipment": {
+    "weapon": null,
+    "armor": null,
+    "accessory": null
+  },
+  "inventory_ids": [
+    "wolf_hide"
+  ],
+  "gold": 0,
+  "xp_pool": 0,
+  "xp_reward": 90,
+  "disposition": {
+    "lawful": 10,
+    "moral": 25,
+    "aggressive": 90
+  },
+  "relations": {},
+  "tone_hint": "낮은 그르렁거림과 짧은 짖음. 사람의 말은 쓰지 않는다.",
+  "hints": [],
+  "racial_skill_ids": [
+    "shadow_strike"
+  ],
+  "learned_skill_ids": [],
+  "status": [],
+  "active_buffs": [],
+  "memories": [],
+  "combat_behavior": {
+    "attack_priority": "nearest",
+    "flee_hp_percent": 15,
+    "nearest_weight": 80,
+    "random_weight": 20
+  },
+  "death_saves": null,
+  "revive_coins": 0,
+  "companions": []
+}

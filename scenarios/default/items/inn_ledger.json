@@ -1,0 +1,11 @@
+{
+  "id": "inn_ledger",
+  "name": "여관 장부",
+  "description": "잿빛 까마귀 여관의 손때 묻은 장부. 변경을 지나간 모험가들의 이름이 흐릿한 필체로 적혀 있다.",
+  "weight": 0.6,
+  "price": 0,
+  "effects": null,
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

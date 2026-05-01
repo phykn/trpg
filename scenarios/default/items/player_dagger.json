@@ -1,0 +1,15 @@
+{
+  "id": "player_dagger",
+  "name": "여행자의 단검",
+  "description": "긴 길을 동행해 온 닳은 단검. 손잡이에 가는 끈이 감겨 있다.",
+  "weight": 1.5,
+  "price": 70,
+  "effects": {
+    "type": "weapon",
+    "weapon_dice": "1d6",
+    "range": 1.5
+  },
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

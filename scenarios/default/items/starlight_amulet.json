@@ -1,0 +1,14 @@
+{
+  "id": "starlight_amulet",
+  "name": "별빛 부적",
+  "description": "은빛으로 깎아 낸 작은 별 모양의 부적. 손에 쥐면 차가운 결이 손끝에 닿고, 어둠 속에서 옅게 빛난다.",
+  "weight": 0.1,
+  "price": 110,
+  "effects": {
+    "type": "armor",
+    "defense": 1
+  },
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

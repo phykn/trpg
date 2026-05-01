@@ -1,0 +1,8 @@
+{
+  "id": "sylvan_elf",
+  "name": "숲 엘프",
+  "description": "안개숲의 부족이 흩어진 뒤에도 숲 가장자리를 떠도는 긴 수명의 종족. 룬과 활을 익히며, 옛 노래를 잃지 않으려 애쓴다.",
+  "racial_skill_ids": [
+    "keen_sense"
+  ]
+}

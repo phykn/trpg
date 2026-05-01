@@ -1,0 +1,14 @@
+{
+  "id": "evasion_movement",
+  "name": "회피 보법",
+  "description": "위험을 미리 읽고 한 발 비켜서는 가벼운 발놀림.",
+  "level": 1,
+  "type": "buff",
+  "target": "self",
+  "primary_stat": "DEX",
+  "special_effect": "회피 증가",
+  "power": 2,
+  "mp_cost": 0,
+  "range": 0.0,
+  "duration": 2
+}

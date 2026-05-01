@@ -1,0 +1,14 @@
+{
+  "id": "wight_rags",
+  "name": "잿빛 누더기",
+  "description": "안개 와이트의 몸을 휘감았던 회색 천. 손에 쥐면 한기가 잠깐 머무른다.",
+  "weight": 1.0,
+  "price": 30,
+  "effects": {
+    "type": "armor",
+    "defense": 1
+  },
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

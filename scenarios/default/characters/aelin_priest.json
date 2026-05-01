@@ -1,0 +1,59 @@
+{
+  "id": "aelin_priest",
+  "name": "아일린",
+  "description": "별빛 신전을 지키는 사제. 변경 사람들의 상처와 두려움을 한 자리에 모아 의식의 향초로 다스린다. 안개숲 깊은 곳의 와이트가 일어나기 시작했음을 누구보다 먼저 눈치챘다.",
+  "appearance": "은빛 결을 띤 검은 머리를 단정히 묶어 올린 중년의 인간 여성. 짙은 남색 사제 로브 가장자리에 작은 별 무늬가 수놓여 있다.",
+  "is_player": false,
+  "role": "별빛 신전의 사제이자 안개숲 와이트의 최초 증인",
+  "race_id": "human",
+  "job": "별빛 신전 사제",
+  "gender": "female",
+  "level": 4,
+  "stats": {
+    "STR": 6,
+    "DEX": 8,
+    "CON": 8,
+    "INT": 12,
+    "WIS": 12,
+    "CHA": 14
+  },
+  "hp": 46,
+  "max_hp": 46,
+  "mp": 41,
+  "max_mp": 41,
+  "alive": true,
+  "location_id": "starlight_shrine",
+  "equipment": {
+    "weapon": null,
+    "armor": "priest_robe",
+    "accessory": "starlight_amulet"
+  },
+  "inventory_ids": [
+    "priest_robe",
+    "starlight_amulet"
+  ],
+  "gold": 10,
+  "xp_pool": 0,
+  "xp_reward": 0,
+  "disposition": {
+    "lawful": 80,
+    "moral": 85,
+    "aggressive": 20
+  },
+  "relations": {},
+  "tone_hint": "낮고 단정한 사제의 어조. 격식 어미를 쓰며, 의식 이야기에는 호흡이 길어진다.",
+  "hints": [],
+  "racial_skill_ids": [
+    "basic_trade"
+  ],
+  "learned_skill_ids": [
+    "healing_herbs"
+  ],
+  "status": [],
+  "active_buffs": [],
+  "memories": [],
+  "combat_behavior": null,
+  "death_saves": null,
+  "revive_coins": 0,
+  "companions": []
+}

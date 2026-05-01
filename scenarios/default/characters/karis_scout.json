@@ -1,0 +1,60 @@
+{
+  "id": "karis_scout",
+  "name": "카리스",
+  "description": "이스나르의 망루를 지키는 변경 정찰꾼. 산문 가는 길의 발자국을 누구보다 잘 읽지만, 흑탑 보초의 자취를 쫓아간 동료가 돌아오지 못한 뒤로 잠을 자주 설친다.",
+  "appearance": "구릿빛 짧은 머리에 가벼운 가죽 갑옷을 두른 청년의 인간 남성. 허리춤에는 단검이 단정하게 매달려 있다.",
+  "is_player": false,
+  "role": "이스나르 망루의 정찰꾼이자 흑탑 길의 첫 단서",
+  "race_id": "human",
+  "job": "변경 정찰꾼",
+  "gender": "male",
+  "level": 3,
+  "stats": {
+    "STR": 9,
+    "DEX": 14,
+    "CON": 12,
+    "INT": 8,
+    "WIS": 6,
+    "CHA": 11
+  },
+  "hp": 46,
+  "max_hp": 46,
+  "mp": 28,
+  "max_mp": 28,
+  "alive": true,
+  "location_id": "watch_post",
+  "equipment": {
+    "weapon": "scout_dagger",
+    "armor": "scout_vest",
+    "accessory": null
+  },
+  "inventory_ids": [
+    "scout_dagger",
+    "scout_vest"
+  ],
+  "gold": 15,
+  "xp_pool": 0,
+  "xp_reward": 0,
+  "disposition": {
+    "lawful": 70,
+    "moral": 65,
+    "aggressive": 35
+  },
+  "relations": {},
+  "tone_hint": "절제된 청년 군인의 어조. 짧고 분명한 어미를 쓰고, 길 이야기가 나오면 손짓이 빠르다.",
+  "hints": [],
+  "racial_skill_ids": [
+    "basic_trade"
+  ],
+  "learned_skill_ids": [
+    "mountain_scouting",
+    "evasion_movement"
+  ],
+  "status": [],
+  "active_buffs": [],
+  "memories": [],
+  "combat_behavior": null,
+  "death_saves": null,
+  "revive_coins": 0,
+  "companions": []
+}

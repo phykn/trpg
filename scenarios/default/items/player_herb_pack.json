@@ -1,0 +1,17 @@
+{
+  "id": "player_herb_pack",
+  "name": "약초 꾸러미",
+  "description": "마른 들풀을 묶은 작은 주머니. 가벼운 상처를 다스리는 데 쓴다.",
+  "weight": 0.3,
+  "price": 10,
+  "effects": {
+    "type": "consumable",
+    "effect": "heal",
+    "amount": 15,
+    "description": null,
+    "duration": null
+  },
+  "required": null,
+  "consumable": true,
+  "on_use": null
+}

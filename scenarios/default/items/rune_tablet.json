@@ -1,0 +1,11 @@
+{
+  "id": "rune_tablet",
+  "name": "룬 서판",
+  "description": "엘프 사제가 새긴 작은 청동 서판. 표면에는 카르 둠 봉인의 절반 — 옛 룬의 결을 따라 봉인을 다시 묶는 의식이 가는 글자로 기록되어 있다.",
+  "weight": 1.0,
+  "price": 0,
+  "effects": null,
+  "required": null,
+  "consumable": false,
+  "on_use": "엘프 사제의 룬 의식 절차를 떠올립니다."
+}

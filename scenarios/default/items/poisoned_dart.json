@@ -1,0 +1,15 @@
+{
+  "id": "poisoned_dart",
+  "name": "독 묻은 단검",
+  "description": "고블린 사냥꾼이 안개숲의 독초를 발라 둔 짧은 단검. 끝부분에 흐린 녹색 얼룩이 남아 있다.",
+  "weight": 0.7,
+  "price": 40,
+  "effects": {
+    "type": "weapon",
+    "weapon_dice": "1d6",
+    "range": 1.5
+  },
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

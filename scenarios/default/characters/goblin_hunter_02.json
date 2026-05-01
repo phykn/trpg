@@ -1,0 +1,59 @@
+{
+  "id": "goblin_hunter_02",
+  "name": "안개숲 사냥꾼",
+  "description": "첫 번째 사냥꾼과 짝을 지어 안개숲 어귀를 어슬렁거리는 다른 고블린. 동료가 정면에서 흔들면 옆으로 돌아 들어와 들풀 사이에서 칼을 빼 든다.",
+  "appearance": "조금 더 작은 회녹색 고블린. 손에는 한쪽 면이 살짝 휜 짧은 단검이 들려 있고, 머리에는 마른 풀잎으로 엮은 띠가 매여 있다.",
+  "is_player": false,
+  "role": "안개숲 어귀의 매복 사냥꾼",
+  "race_id": "goblin",
+  "job": "사냥꾼",
+  "gender": "male",
+  "level": 2,
+  "stats": {
+    "STR": 8,
+    "DEX": 14,
+    "CON": 10,
+    "INT": 10,
+    "WIS": 6,
+    "CHA": 12
+  },
+  "hp": 34,
+  "max_hp": 34,
+  "mp": 25,
+  "max_mp": 25,
+  "alive": true,
+  "location_id": "forest_edge",
+  "equipment": {
+    "weapon": null,
+    "armor": null,
+    "accessory": null
+  },
+  "inventory_ids": [],
+  "gold": 0,
+  "xp_pool": 0,
+  "xp_reward": 65,
+  "disposition": {
+    "lawful": 15,
+    "moral": 20,
+    "aggressive": 85
+  },
+  "relations": {},
+  "tone_hint": "짧고 거친 고블린 어조. 매복 자리에서는 거의 말이 없다.",
+  "hints": [],
+  "racial_skill_ids": [
+    "goblin_swarm"
+  ],
+  "learned_skill_ids": [],
+  "status": [],
+  "active_buffs": [],
+  "memories": [],
+  "combat_behavior": {
+    "attack_priority": "nearest",
+    "flee_hp_percent": 30,
+    "nearest_weight": 60,
+    "random_weight": 40
+  },
+  "death_saves": null,
+  "revive_coins": 0,
+  "companions": []
+}

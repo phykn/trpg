@@ -1,0 +1,11 @@
+{
+  "id": "soulgem",
+  "name": "잠든 영혼의 보석",
+  "description": "안개 와이트 우두머리의 가슴에서 나온 흐린 청록색 보석. 손바닥 위에서 옅게 떨리며, 룬 의식의 매개로 쓸 수 있다.",
+  "weight": 0.3,
+  "price": 220,
+  "effects": null,
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

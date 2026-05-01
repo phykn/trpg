@@ -1,0 +1,14 @@
+{
+  "id": "vex_chain",
+  "name": "가벼운 사슬 갑옷",
+  "description": "맞물린 작은 쇠고리 위에 검은 천을 덧댄 가벼운 사슬 갑옷. 변경 기사단 시절의 흔적이 어깨 안쪽에 옅게 남아 있다.",
+  "weight": 5.5,
+  "price": 200,
+  "effects": {
+    "type": "armor",
+    "defense": 3
+  },
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

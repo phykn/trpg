@@ -1,0 +1,8 @@
+{
+  "id": "goblin",
+  "name": "고블린",
+  "description": "북쪽 산악 깊은 곳에서 내려온 작고 빠른 약탈자. 흑탑 깃발 아래 무리지어 변경을 습격한다. 혼자서는 약하지만 떼지어 오면 무서운 적.",
+  "racial_skill_ids": [
+    "goblin_swarm"
+  ]
+}

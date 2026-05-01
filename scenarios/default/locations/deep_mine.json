@@ -1,0 +1,22 @@
+{
+  "id": "deep_mine",
+  "name": "깊은 갱도",
+  "description": "산문 너머, 카르 둠 드워프들이 자기 손으로 봉인한 깊은 갱도. 천장에 매달린 룬등이 희미하게 떨리고, 벽에는 봉인의 룬이 깊게 새겨져 있다. 한쪽 구석에는 무너진 갱차가 굴러 있고, 깊은 곳에서 무엇인가가 천천히 숨을 쉬는 듯한 진동이 느껴진다.",
+  "tags": [
+    "indoor",
+    "underground",
+    "ruins"
+  ],
+  "item_ids": [],
+  "hidden_items": [],
+  "connections": [
+    { "target_id": "broken_gate", "difficulty": null, "key_item_id": null }
+  ],
+  "hidden_connections": [],
+  "weather": [
+    "한기"
+  ],
+  "sleep_risk": "dangerous",
+  "sleep_encounters": [],
+  "difficulty": "어려움"
+}

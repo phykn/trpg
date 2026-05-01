@@ -1,0 +1,11 @@
+{
+  "id": "scout_journal",
+  "name": "정찰병의 일지",
+  "description": "한 정찰꾼이 산문 길에서 잃어버린 작은 가죽 표지의 일지. 흑탑 보초의 교대 시간과 부관의 이름이 거친 필체로 적혀 있다.",
+  "weight": 0.3,
+  "price": 0,
+  "effects": null,
+  "required": null,
+  "consumable": false,
+  "on_use": "흑탑 부관 벡스의 이름과 보초 교대 시간을 확인합니다."
+}

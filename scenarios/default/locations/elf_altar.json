@@ -1,0 +1,23 @@
+{
+  "id": "elf_altar",
+  "name": "엘프 옛 제단",
+  "description": "안개숲 가장 깊은 곳, 무너진 회랑이 둘러싼 둥근 돌제단. 표면에 새겨진 엘프의 룬은 절반쯤 부서져 있고, 그 위로 잿빛 안개가 휘감겨 돈다. 봉인이 옅어진 자리, 안개의 망령이 자기 영역으로 삼은 곳이다.",
+  "tags": [
+    "outdoor",
+    "ruins",
+    "altar"
+  ],
+  "item_ids": [],
+  "hidden_items": [],
+  "connections": [
+    { "target_id": "deep_forest", "difficulty": null, "key_item_id": null }
+  ],
+  "hidden_connections": [],
+  "weather": [
+    "짙은 안개",
+    "한기"
+  ],
+  "sleep_risk": "dangerous",
+  "sleep_encounters": [],
+  "difficulty": "어려움"
+}

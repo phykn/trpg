@@ -1,0 +1,11 @@
+{
+  "id": "tower_map",
+  "name": "흑탑 지도",
+  "description": "흑탑 부관 벡스가 잠시 책상 위에 펼쳐 두던 거친 양피지. 보초 자리와 두목의 옥좌 위치가 거친 선으로 그려져 있다.",
+  "weight": 0.2,
+  "price": 0,
+  "effects": null,
+  "required": null,
+  "consumable": false,
+  "on_use": "흑탑 내부의 보초 위치와 두목의 옥좌 자리를 떠올립니다."
+}

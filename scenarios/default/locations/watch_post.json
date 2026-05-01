@@ -1,0 +1,24 @@
+{
+  "id": "watch_post",
+  "name": "마을 망루",
+  "description": "이스나르 북쪽 끝에 세워진 나무·돌 혼합 망루. 사다리 위로 올라가면 산자락 길과 안개숲의 어귀가 한눈에 들어온다. 밤이면 변경의 정찰꾼들이 등불 하나로 길을 지킨다.",
+  "tags": [
+    "outdoor",
+    "tower"
+  ],
+  "item_ids": [],
+  "hidden_items": [],
+  "connections": [
+    { "target_id": "isnar_square", "difficulty": null, "key_item_id": null },
+    { "target_id": "forest_edge", "difficulty": "쉬움", "key_item_id": null },
+    { "target_id": "mountain_road", "difficulty": "쉬움", "key_item_id": null }
+  ],
+  "hidden_connections": [],
+  "weather": [
+    "바람",
+    "안개"
+  ],
+  "sleep_risk": "risky",
+  "sleep_encounters": [],
+  "difficulty": null
+}

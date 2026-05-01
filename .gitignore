@@ -9,5 +9,6 @@ __pycache__/
 saves/
 reports/
 .claude/
-scenarios/
+scenarios/*
+!scenarios/default/
 logs/

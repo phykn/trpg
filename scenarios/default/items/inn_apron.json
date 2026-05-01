@@ -1,0 +1,14 @@
+{
+  "id": "inn_apron",
+  "name": "여관 앞치마",
+  "description": "잿빛 까마귀 여관에서 매일 두르는 두꺼운 천 앞치마. 술 자국이 옅게 배어 있다.",
+  "weight": 0.5,
+  "price": 12,
+  "effects": {
+    "type": "armor",
+    "defense": 1
+  },
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

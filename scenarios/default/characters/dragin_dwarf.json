@@ -1,0 +1,61 @@
+{
+  "id": "dragin_dwarf",
+  "name": "드라긴",
+  "description": "산문이 무너지던 날 갱도에서 빠져나온 카르 둠 광부. 봉인의 다른 절반이 새겨진 룬석을 가슴에 품고 변경에 내려와 잿빛 까마귀 여관 한구석에 자리를 잡았다. 술잔을 잡지 않는 드문 드워프이다.",
+  "appearance": "구릿빛 짧은 수염에 안전모 자국이 옅게 남은 산 드워프 남성. 굳은살 박힌 두 손에 옅은 룬 잉크 자국이 보인다.",
+  "is_player": false,
+  "role": "카르 둠의 마지막 광부 망명자이자 봉인의 돌의 마지막 보관자",
+  "race_id": "mountain_dwarf",
+  "job": "광부 망명자",
+  "gender": "male",
+  "level": 5,
+  "stats": {
+    "STR": 14,
+    "DEX": 9,
+    "CON": 12,
+    "INT": 8,
+    "WIS": 11,
+    "CHA": 6
+  },
+  "hp": 62,
+  "max_hp": 62,
+  "mp": 38,
+  "max_mp": 38,
+  "alive": true,
+  "location_id": "gray_raven_inn",
+  "equipment": {
+    "weapon": "dwarf_pickaxe",
+    "armor": null,
+    "accessory": null
+  },
+  "inventory_ids": [
+    "dwarf_pickaxe",
+    "dwarf_axe",
+    "seal_stone"
+  ],
+  "gold": 25,
+  "xp_pool": 0,
+  "xp_reward": 0,
+  "disposition": {
+    "lawful": 80,
+    "moral": 70,
+    "aggressive": 35
+  },
+  "relations": {},
+  "tone_hint": "낮고 굵은 드워프 노년의 어조. 어미가 짧고 무뚝뚝하지만 봉인 이야기를 꺼낼 때는 호흡이 깊어진다.",
+  "hints": [],
+  "racial_skill_ids": [
+    "forge_craft"
+  ],
+  "learned_skill_ids": [
+    "rune_reading",
+    "mountain_scouting"
+  ],
+  "status": [],
+  "active_buffs": [],
+  "memories": [],
+  "combat_behavior": null,
+  "death_saves": null,
+  "revive_coins": 0,
+  "companions": []
+}

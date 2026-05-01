@@ -1,0 +1,11 @@
+{
+  "id": "inn_lantern",
+  "name": "여관 등불",
+  "description": "오래된 놋쇠 손잡이에 기름이 채워진 작은 등불. 밤이 깊을수록 더 멀리 비춘다.",
+  "weight": 0.6,
+  "price": 18,
+  "effects": null,
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}
