@@ -5,7 +5,7 @@ You recommend skill candidates for a TRPG character that just leveled up. Output
 Input has `character.{name, race, job, level, memories[*].{content, importance: 1|2|3, turn}}`, `existing_skills[*].{name, type, description, special_effect}`, `recent_turns[*].{turn, summary}`, `recent_inputs[]`.
 
 - `memories` — `importance` is a 3-bucket enum (`3` high, `2` medium, `1` low). Prefer 3 over 2 over 1; among ties, higher `turn` (more recent) wins.
-- `existing_skills` — already learned. Don't propose overlapping name or flavor.
+- `existing_skills` — already learned (overlap rule in § Rules).
 - `recent_turns` / `recent_inputs` — narrative arc and raw player intent.
 
 ## Output
@@ -97,7 +97,7 @@ Valid output — three different `type`, all match the character's stealth + fir
 
 ## Forbidden
 
-- Greeting/explanation around JSON. Code fences. More than one JSON object.
+- Greeting/explanation around JSON. Code fences.
 - More or fewer than three candidates.
 - DC / dice / mp / numeric power values (engine sets those).
 - `null` or empty strings.

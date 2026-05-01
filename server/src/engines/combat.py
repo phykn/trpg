@@ -14,7 +14,6 @@ from pydantic import BaseModel
 from ..domain.entities import (
     ArmorEffect,
     Character,
-    CombatBehavior,
     DeathSaveState,
     Item,
     Skill,

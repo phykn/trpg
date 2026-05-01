@@ -20,6 +20,7 @@ from ..agents.dc_judge.schema import (
     UnequipAction,
     UseAction,
 )
+from ..domain.entities import Character
 from ..domain.errors import JudgeMalformed, PendingCheckActive
 from ..domain.memory import PlayerLogEntry
 from ..domain.state import GameState
@@ -36,6 +37,7 @@ from .actions import (
 )
 from .combat_auto import PlayerAction
 from .combat_phase import (
+    has_invalid_combat_targets,
     run_combat_player_turn,
     start_combat_and_drive_auto,
 )
@@ -201,15 +203,7 @@ async def _dispatch(
     graph: GameGraph,
 ) -> AsyncIterator[dict]:
     if isinstance(result, CombatAction):
-        actor_loc = state.characters[state.player_id].location_id
-        invalid_targets = [
-            t for t in result.targets
-            if t == state.player_id
-            or t not in state.characters
-            or not state.characters[t].alive
-            or state.characters[t].location_id != actor_loc
-        ]
-        if invalid_targets:
+        if has_invalid_combat_targets(state, result.targets):
             yield push_act(state, dirty, "공격할 수 있는 대상이 없습니다.")
             async for ev in finalize(state, saves_dir, dirty, to_front_fn):
                 yield ev
@@ -403,7 +397,7 @@ async def _emit_corpse_bypass(
     state: GameState,
     dirty: Dirty,
     player_input: str,
-    dead: "Character",
+    dead: Character,
     target_for_log: str | None,
     to_front_fn: ToFrontFn | None,
 ) -> AsyncIterator[dict]:

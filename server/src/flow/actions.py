@@ -14,7 +14,6 @@ from ..domain.errors import (
     LevelUpInvalid,
     LLMUnavailable,
     PersistenceFailed,
-    SkillInvalid,
 )
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState

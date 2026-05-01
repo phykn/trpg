@@ -41,6 +41,7 @@ from .actions import (
 )
 from .clock import tick_turn_buffs
 from .combat_auto import (
+    AutoCombatResult,
     PlayerAction,
     build_narrate_input,
     format_outcome_summary,
@@ -53,6 +54,41 @@ from .subject import refresh_active_subject
 
 
 # --- entry: drive one auto-combat sim + cinematic + numeric ---------------
+
+
+async def emit_combat_cinematic_and_end(
+    client: LLMClient | None,
+    state: GameState,
+    profile_dir: str,
+    dirty: Dirty,
+    *,
+    player_input: str,
+    result: AutoCombatResult,
+) -> AsyncIterator[dict]:
+    """Stream combat_narrate cinematic, push numeric summary, emit end.
+    Shared tail of one auto-combat sim — used by _drive_auto_combat (in-combat
+    /turn) and roll._resume_auto_combat (post-roll combat resume)."""
+    if client is not None:
+        narrate_input = build_narrate_input(
+            state, profile_dir,
+            player_input=player_input, result=result,
+        )
+        body_chunks: list[str] = []
+        async for chunk in stream_combat_narrate(client, narrate_input):
+            body_chunks.append(chunk)
+            yield {"type": "narrative_delta", "data": {"text": chunk}}
+        body = "".join(body_chunks).strip()
+        if body:
+            yield push_gm(state, dirty, body)
+
+    summary = format_outcome_summary(result)
+    if summary:
+        yield push_act(state, dirty, summary)
+
+    end_label: Literal["victory", "defeat", "fled"]
+    end_label = "defeat" if result.outcome == "downed" else result.outcome
+    yield push_act(state, dirty, format_combat_end_text(end_label))
+    yield {"type": "combat_end", "data": {"outcome": result.outcome}}
 
 
 async def _drive_auto_combat(
@@ -80,27 +116,11 @@ async def _drive_auto_combat(
     for tev in result.turn_events:
         yield {"type": "combat_turn", "data": tev}
 
-    if client is not None:
-        narrate_input = build_narrate_input(
-            state, profile_dir,
-            player_input=player_input, result=result,
-        )
-        body_chunks: list[str] = []
-        async for chunk in stream_combat_narrate(client, narrate_input):
-            body_chunks.append(chunk)
-            yield {"type": "narrative_delta", "data": {"text": chunk}}
-        body = "".join(body_chunks).strip()
-        if body:
-            yield push_gm(state, dirty, body)
-
-    summary = format_outcome_summary(result)
-    if summary:
-        yield push_act(state, dirty, summary)
-
-    end_label: Literal["victory", "defeat", "fled"]
-    end_label = "defeat" if result.outcome == "downed" else result.outcome
-    yield push_act(state, dirty, format_combat_end_text(end_label))
-    yield {"type": "combat_end", "data": {"outcome": result.outcome}}
+    async for ev in emit_combat_cinematic_and_end(
+        client, state, profile_dir, dirty,
+        player_input=player_input, result=result,
+    ):
+        yield ev
 
 
 async def start_combat_and_drive_auto(
@@ -152,6 +172,24 @@ async def start_combat_and_drive_auto(
         rng=rng, cap=cap, graph=graph,
     ):
         yield ev
+
+
+# --- target validation -------------------------------------------------------
+
+
+def has_invalid_combat_targets(state: GameState, requested: list[str]) -> bool:
+    """True if any requested target isn't a valid attackable enemy in the
+    player's location: self-target, missing, dead, or in a different location.
+    Shared by turn.py (out-of-combat CombatAction) and run_combat_player_turn
+    (in-combat CombatAction)."""
+    actor_loc = state.characters[state.player_id].location_id
+    return any(
+        t == state.player_id
+        or t not in state.characters
+        or not state.characters[t].alive
+        or state.characters[t].location_id != actor_loc
+        for t in requested
+    )
 
 
 # --- judge action → PlayerAction --------------------------------------------
@@ -262,15 +300,7 @@ async def run_combat_player_turn(
         return
 
     if isinstance(result, CombatAction):
-        actor_loc = state.characters[state.player_id].location_id
-        invalid = [
-            t for t in result.targets
-            if t == state.player_id
-            or t not in state.characters
-            or not state.characters[t].alive
-            or state.characters[t].location_id != actor_loc
-        ]
-        if invalid:
+        if has_invalid_combat_targets(state, result.targets):
             yield push_act(state, dirty, "공격할 수 있는 대상이 없습니다.")
             async for ev in finalize(state, saves_dir, dirty, to_front_fn):
                 yield ev

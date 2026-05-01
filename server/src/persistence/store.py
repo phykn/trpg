@@ -153,37 +153,30 @@ async def save_entity(
         await asyncio.to_thread(_atomic_write, path, payload)
 
 
-async def append_log_entries(
-    saves_dir: str, game_id: str, entries: list[LogEntry]
-) -> None:
+async def _append_entries(path: Path, entries: list) -> None:
     if not entries:
         return
     lines = [e.model_dump_json() for e in entries]
-    path = _log_path(saves_dir, game_id)
     async with _save_lock:
         await asyncio.to_thread(_append_jsonl, path, lines)
+
+
+async def append_log_entries(
+    saves_dir: str, game_id: str, entries: list[LogEntry]
+) -> None:
+    await _append_entries(_log_path(saves_dir, game_id), entries)
 
 
 async def append_history_entries(
     saves_dir: str, game_id: str, entries: list[TurnLogEntry]
 ) -> None:
-    if not entries:
-        return
-    lines = [e.model_dump_json() for e in entries]
-    path = _history_path(saves_dir, game_id)
-    async with _save_lock:
-        await asyncio.to_thread(_append_jsonl, path, lines)
+    await _append_entries(_history_path(saves_dir, game_id), entries)
 
 
 async def append_dialogue_entries(
     saves_dir: str, game_id: str, entries: list[DialoguePair]
 ) -> None:
-    if not entries:
-        return
-    lines = [e.model_dump_json() for e in entries]
-    path = _dialogue_path(saves_dir, game_id)
-    async with _save_lock:
-        await asyncio.to_thread(_append_jsonl, path, lines)
+    await _append_entries(_dialogue_path(saves_dir, game_id), entries)
 
 
 # --- load ------------------------------------------------------------------

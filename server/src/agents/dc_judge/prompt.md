@@ -28,9 +28,7 @@ Input fields (in `surroundings`): `location`, `entities` (player/npc/item/connec
 | 13 | pass | `{"action":"pass","targets":["<id>"]}` (targets optional) | Valid in-character action — no check needed (greeting, casual look, idle, **NPC에게 다가가기·말 걸기**), or **fallback for unresolved input** (vague verb, blocked engine condition, target/scene mismatch). NPC를 향한 행동이면 `targets`에 그 id 넣기 (§ targets rule). narrate가 in-world로 흡수. |
 | 14 | chain | `{"action":"chain","parts":[<sub-action>, <sub-action>, ...]}` | Compound 입력에서 **두 이상의 engine 분기**가 모두 실제로 일어나야 할 때 ("약초 먹고 검을 든다" = use+equip, "검 들고 광장 상인에게 다가간다" = equip+pass). parts는 2~4개. 각 part는 `use`/`equip`/`unequip`/`buy`/`sell`/`level_up`/`learn_skill`/`pass` 중 하나 (combat·rest·flee·roll·reject·summon_combat은 chain 금지 — phase 충돌). 같은 분기 내 chain("뒤져서 연다" = 단일 roll)은 chain 아니라 단일 action 그대로. |
 
-**clarify 없음.** 모호함 만나면 절대 되묻지 않는다 — 합리적 default + narrate 안전망. 구체 fallback은 § Fallback rules.
-
-**Boundaries**: 모든 분기점에서 clarify 대신 default를 골라 forward 진행. `pass` vs idle — coherent-but-loose ("둘러본다", "앉는다", "뭔가 해봐") → `pass`. `pass` vs `rest` — breather → pass; long sleep → rest. `pass` vs `roll` — chat → pass; asking NPC to yield against will → roll. `flee` vs `pass`/`roll` — `flee` only when `in_combat=true`. Outside combat: "이 자리를 뜬다" → `pass`; "들키지 않게 빠져나간다" → `roll`(DEX). `equip` vs `combat` — draw verb 포함("검을 뽑으며 친다", "검을 들고 친다", "검을 쥐고 벤다") → **첫 동사**의 action 하나만 (보통 `equip`), narrate가 두 번째 의도를 "다음 호흡에 베어 들어가려 한다"로 묶어 끝맺음. draw verb 없음·weapon descriptor only("칼을 휘둘러", "주먹으로", "단검으로 찌른다")은 단일 combat. `buy` vs `roll` — listed price → buy; haggle → roll(CHA). One continuous attempt = one action; multiple targets → `targets:[a,b]`.
+**Boundaries**: 모든 분기점에서 clarify 대신 default를 골라 forward 진행. `pass` vs idle — coherent-but-loose ("둘러본다", "앉는다", "뭔가 해봐") → `pass`. `pass` vs `rest` — breather → pass; long sleep → rest. `pass` vs `roll` — chat → pass; asking NPC to yield against will → roll. `flee` vs `pass`/`roll` — `flee` only when `in_combat=true`. Outside combat: "이 자리를 뜬다" → `pass`; "들키지 않게 빠져나간다" → `roll`(DEX). `combat` 단일 — draw verb 없음·weapon descriptor only("칼을 휘둘러", "주먹으로", "단검으로 찌른다")는 단일 combat. (draw verb 포함 케이스는 § Fallback rules.) `buy` vs `roll` — listed price → buy; haggle → roll(CHA). One continuous attempt = one action; multiple targets → `targets:[a,b]`.
 
 **Combat target rule**: combat은 engine이 character id를 요구한다. **호명 유무로 분기**:
 
@@ -186,8 +184,6 @@ Roll tier (friction count → tier):
 |---|---|
 | 맥주 한 잔 달라 | `{"action":"pass"}` |
 | 자리에 앉는다 | `{"action":"pass"}` |
-| 주변을 둘러본다 | `{"action":"pass"}` |
-| 드래곤에게 저주를 건다 (시드 미스매치) | `{"action":"roll","tier":"쉬움","stat":"INT","targets":["<loc_id>"],"reason":"드래곤을 향해 저주를 시도"}` (narrate가 "허공" 흡수) |
 
 대인 행동 + 호명 없음·헐거운 호명 (default target — 절대 clarify 안 함):
 

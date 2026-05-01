@@ -3,7 +3,6 @@ re-enter the auto-combat loop if a fight was paused for an environment roll."""
 import random
 from collections.abc import AsyncIterator
 
-from ..agents.combat_narrate import stream_combat_narrate
 from ..domain.errors import PendingCheckExpected
 from ..domain.memory import RollLogEntry
 from ..domain.state import GameState
@@ -12,25 +11,17 @@ from ..llm.client import LLMClient, set_llm_session_if_unset
 from ..ontology.graph import build_graph
 from ..rules.dc import compute_grade
 from .clock import tick_turn_buffs
-from .combat_auto import (
-    PlayerAction,
-    build_narrate_input,
-    format_outcome_summary,
-    run_auto_combat,
-)
+from .combat_auto import PlayerAction, run_auto_combat
+from .combat_phase import emit_combat_cinematic_and_end
 from .dirty import (
     Dirty,
     ToFrontFn,
     finalize,
     next_log_id,
     push_act,
-    push_gm,
     push_log_entry,
 )
-from .format import (
-    format_combat_end_text,
-    front_grade,
-)
+from .format import front_grade
 from .narrate import consume_narrate, run_narrate
 from ..mapping.to_front import stat_label
 
@@ -50,27 +41,12 @@ async def _resume_auto_combat(
         player_action=PlayerAction(kind="pass"),
         rng=rng,
     )
-    if client is not None:
-        narrate_input = build_narrate_input(
-            state, profile_dir,
-            player_input="환경 굴림 후 한 박자 쉬며 적의 움직임을 살핍니다",
-            result=result,
-        )
-        body_chunks: list[str] = []
-        async for chunk in stream_combat_narrate(client, narrate_input):
-            body_chunks.append(chunk)
-            yield {"type": "narrative_delta", "data": {"text": chunk}}
-        body = "".join(body_chunks).strip()
-        if body:
-            yield push_gm(state, dirty, body)
-
-    summary = format_outcome_summary(result)
-    if summary:
-        yield push_act(state, dirty, summary)
-
-    end_label = "defeat" if result.outcome == "downed" else result.outcome
-    yield push_act(state, dirty, format_combat_end_text(end_label))
-    yield {"type": "combat_end", "data": {"outcome": result.outcome}}
+    async for ev in emit_combat_cinematic_and_end(
+        client, state, profile_dir, dirty,
+        player_input="환경 굴림 후 한 박자 쉬며 적의 움직임을 살핍니다",
+        result=result,
+    ):
+        yield ev
 
 
 async def run_roll(

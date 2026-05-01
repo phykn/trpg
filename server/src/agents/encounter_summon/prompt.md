@@ -84,7 +84,7 @@ Input has `world` (world.md content for tone/themes), `location.{id, name, descr
 
 ## Forbidden
 
-- Code fences. Text/greeting outside JSON. More than one JSON object.
+- Code fences. Text/greeting outside JSON.
 - Stats that violate pair-trade.
 - Inventing `race_id` not in `available_races`.
 - HP / MP / level / id fields (engine fills those).
