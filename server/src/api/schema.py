@@ -53,3 +53,23 @@ class TurnRequest(BaseModel):
 
 class RollRequest(BaseModel):
     think: bool = False
+
+
+class StoryGraphNode(BaseModel):
+    id: str
+    kind: str
+    label: str
+    detail: str = ""
+
+
+class StoryGraphEdge(BaseModel):
+    id: str
+    source: str
+    target: str
+    label: str
+
+
+class StoryGraphResponse(BaseModel):
+    nodes: list[StoryGraphNode]
+    edges: list[StoryGraphEdge]
+    summary: str

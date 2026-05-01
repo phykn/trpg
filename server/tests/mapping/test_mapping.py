@@ -19,6 +19,7 @@ from src.mapping.to_front import (
     to_hero,
     to_place,
     to_quest,
+    to_story_graph,
     to_subject,
 )
 
@@ -301,6 +302,69 @@ def test_no_internal_field_leakage(fresh_state):
     ]
     for f in forbidden:
         assert f not in front_json, f"내부 필드 누출: {f}"
+
+
+def test_story_graph_projects_current_map_and_actions(fresh_state):
+    state = _full_state(fresh_state)
+    state.characters["guard_01"].location_id = "plaza_01"
+
+    out = to_story_graph(state)
+    nodes = {node["id"]: node for node in out["nodes"]}
+    edges = {(edge["source"], edge["target"], edge["label"]) for edge in out["edges"]}
+
+    assert nodes["player_01"]["kind"] == "hero"
+    assert nodes["plaza_01"] == {
+        "id": "plaza_01",
+        "kind": "place",
+        "label": "광장",
+        "detail": "맑음, 야외, 안전",
+    }
+    assert nodes["gate_01"]["kind"] == "location"
+    assert nodes["guard_01"]["kind"] == "subject"
+    assert nodes["q1"]["kind"] == "quest"
+
+    assert ("player_01", "plaza_01", "현재 위치") in edges
+    assert ("plaza_01", "gate_01", "이동") in edges
+    assert ("guard_01", "plaza_01", "등장") in edges
+    assert ("guard_01", "q1", "의뢰") in edges
+    assert out["summary"] == "주인공 · 현재 위치 광장 · 퀘스트 t · 등장인물 2 · 배경 2"
+
+
+def test_story_graph_does_not_leak_unseen_npcs_or_side_quests(fresh_state):
+    state = _full_state(fresh_state)
+    state.characters["guard_01"].location_id = "plaza_01"
+    state.characters["secret_01"] = Character(
+        id="secret_01",
+        name="숨은 후원자",
+        race_id="human",
+        role="막후 인물",
+        appearance="검은 망토",
+        location_id="gate_01",
+        stats=Stats(),
+    )
+    state.quests["q2"] = Quest(
+        id="q2",
+        title="숨은 의뢰",
+        summary="아직 알 수 없는 일",
+        giver_id="secret_01",
+        difficulty="쉬움",
+        triggers=[
+            QuestTrigger(
+                id="secret_goal",
+                name="비밀 접촉",
+                type="location_enter",
+                target_id="secret_01",
+            )
+        ],
+        status="active",
+    )
+
+    front_json = json.dumps(to_story_graph(state), ensure_ascii=False)
+
+    assert "secret_01" not in front_json
+    assert "숨은 후원자" not in front_json
+    assert "검은 망토" not in front_json
+    assert "숨은 의뢰" not in front_json
 
 
 def test_to_combat_returns_none_when_no_combat_state(fresh_state):

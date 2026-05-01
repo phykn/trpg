@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { mergeAndStoreStoryGraph } from '@/hooks/useStoryGraph';
+import { buildStoryGraph } from '@/presenters/storyGraph';
 import {
   clearStoredGameId,
   getSessionById,
@@ -55,6 +57,7 @@ export function useGame() {
   const [streamingText, setStreamingText] = React.useState('');
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
   const [think, setThink] = React.useState(false);
+  const gameIdRef = React.useRef<string | null>(null);
 
   const aborts = React.useRef<Set<AbortController>>(new Set());
   React.useEffect(() => {
@@ -65,7 +68,12 @@ export function useGame() {
     };
   }, []);
 
-  const applyState = React.useCallback((s: FrontState) => {
+  const rememberGameId = React.useCallback((id: string | null) => {
+    gameIdRef.current = id;
+    setGameId(id);
+  }, []);
+
+  const applyState = React.useCallback((s: FrontState, stateGameId = gameIdRef.current) => {
     setHero(s.hero);
     setSubject(s.subject);
     setQuest(s.quest);
@@ -73,6 +81,9 @@ export function useGame() {
     setCombat(s.combat);
     setLog(s.log);
     setPending(s.pendingCheck);
+    if (stateGameId) {
+      mergeAndStoreStoryGraph(stateGameId, buildStoryGraph(s));
+    }
   }, []);
 
   const handleEvent = React.useCallback(
@@ -130,8 +141,8 @@ export function useGame() {
         setStatus('no-game');
         return;
       }
-      setGameId(payload.game_id);
-      applyState(payload.state);
+      rememberGameId(payload.game_id);
+      applyState(payload.state, payload.game_id);
       setStatus('ready');
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : String(err));
@@ -150,8 +161,8 @@ export function useGame() {
       try {
         const payload = await initSession(body);
         storeGameId(payload.game_id);
-        setGameId(payload.game_id);
-        applyState(payload.state);
+        rememberGameId(payload.game_id);
+        applyState(payload.state, payload.game_id);
         setPending(null);
         setStreamingText('');
         setSuggestions([]);
@@ -188,9 +199,9 @@ export function useGame() {
   const goToNewGame = React.useCallback(() => {
     aborts.current.forEach((a) => a.abort());
     clearStoredGameId();
-    setGameId(null);
+    rememberGameId(null);
     setStatus('no-game');
-  }, []);
+  }, [rememberGameId]);
 
   const displayLog = React.useMemo<LogEntry[]>(() => {
     if (!streamingText) return log;
@@ -202,6 +213,7 @@ export function useGame() {
   return {
     status,
     errorMessage,
+    gameId,
     hero,
     subject,
     quest,

@@ -1,10 +1,13 @@
 import { useAudioPlayer } from 'expo-audio';
+import { router } from 'expo-router';
 import React from 'react';
 import { Keyboard, Pressable, Text, View } from 'react-native';
 
 import type { Game } from '@/hooks/useGame';
+import { useStoryGraph } from '@/hooks/useStoryGraph';
 import { buildPanelSlots } from '@/presenters';
-import type { PanelAction } from '@/types/ui';
+import { buildStoryGraph } from '@/presenters/storyGraph';
+import type { PanelAction, PanelSlot } from '@/types/ui';
 
 import { CombatStrip } from './combat';
 import { Composer, RollPrompt } from './composer';
@@ -65,15 +68,27 @@ export function Playing({ game }: Props) {
     }
   }, [typing]);
 
+  const currentMapGraph = React.useMemo(
+    () => buildStoryGraph({ hero, subject, quest, place }),
+    [hero, subject, quest, place],
+  );
+  const miniMapGraph = useStoryGraph(game.gameId, currentMapGraph);
+
   if (!hero) return null;
 
-  const slots = buildPanelSlots({ hero, subject, quest, place });
+  const baseSlots = buildPanelSlots({ hero, subject, quest, place });
+  const slots: PanelSlot[] = [
+    ...baseSlots.slice(0, 3),
+    { id: 'map', chip: { short: '지도' }, panel: null },
+    baseSlots[3],
+  ];
   const rolling = pending !== null && streaming;
 
   return (
     <View className="flex-1 bg-canvas-default py-2.5 gap-2.5">
       <ContextCard
         slots={slots}
+        miniMapGraph={miniMapGraph}
         activeId={activeId}
         menuOpen={menuOpen}
         bgmOn={bgmOn}
@@ -82,6 +97,7 @@ export function Playing({ game }: Props) {
         onMenuClose={() => setMenuOpen(false)}
         onBgmToggle={toggleBgm}
         onNewGame={() => setNewGameConfirmOpen(true)}
+        onGraph={() => router.push('/graph')}
         onAction={(action) => {
           if (action.confirm) {
             setPendingAction(action);

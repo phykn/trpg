@@ -371,3 +371,239 @@ def to_front_state(state: GameState, graph: GameGraph | None = None) -> dict:
         "log": [e.model_dump() for e in state.log_entries],
         "pendingCheck": pending_check_to_front(state, pending) if pending else None,
     }
+
+
+# --- Story graph -----------------------------------------------------------
+
+
+_GRAPH_KIND_LABEL: dict[str, str] = {
+    "hero": "주인공",
+    "place": "현재 위치",
+    "location": "배경",
+    "subject": "대상",
+    "target": "등장인물",
+    "quest": "퀘스트",
+}
+
+_LOCATION_TAG_LABELS: dict[str, str] = {
+    "altar": "제단",
+    "boss": "결전지",
+    "forest": "숲",
+    "garden": "정원",
+    "indoor": "실내",
+    "mine": "광산",
+    "mountain": "산길",
+    "outdoor": "야외",
+    "road": "길",
+    "ruins": "유적",
+    "shop": "상점",
+    "shrine": "신전",
+    "smithy": "대장간",
+    "stronghold": "요새",
+    "tavern": "여관",
+    "tower": "탑",
+    "town": "마을",
+    "underground": "지하",
+}
+
+
+def _graph_edge_id(source: str, target: str, label: str) -> str:
+    return f"{source}->{target}:{label}"
+
+
+def _graph_short_list(items: list[str], fallback: str = "정보 없음") -> str:
+    visible = [item for item in items if item]
+    if not visible:
+        return fallback
+    return ", ".join(visible[:3])
+
+
+def _graph_character_detail(state: GameState, graph: GameGraph, char: Character) -> str:
+    parts = [f"Lv.{char.level}", _race_job_label(state, graph, char)]
+    if char.role:
+        parts.append(char.role)
+    if not char.alive:
+        parts.append("죽음")
+    elif char.appearance:
+        parts.append(char.appearance)
+    elif char.description:
+        parts.append(char.description)
+    return " · ".join(part for part in parts if part)
+
+
+def _graph_location_detail(loc: Location) -> str:
+    tags = [_LOCATION_TAG_LABELS[tag] for tag in loc.tags if tag in _LOCATION_TAG_LABELS]
+    return _graph_short_list(
+        [*loc.weather, *tags, _RISK_PAYLOAD[loc.sleep_risk]["label"]],
+        fallback=_RISK_PAYLOAD[loc.sleep_risk]["label"],
+    )
+
+
+def _graph_quest_detail(quest: Quest) -> str:
+    return f"{quest.status} · {quest.difficulty} · 보상 {quest.rewards.gold}G/{quest.rewards.exp}EXP"
+
+
+def _graph_reachable_location_ids(
+    state: GameState, graph: GameGraph, start_location_id: str | None
+) -> set[str]:
+    if start_location_id is None or start_location_id not in state.locations:
+        return set()
+    seen = {start_location_id}
+    queue = [start_location_id]
+    while queue:
+        location_id = queue.pop(0)
+        for edge in graph.get_edges(location_id, "connects_to"):
+            target_id = edge.to_id
+            if target_id not in state.locations or target_id in seen:
+                continue
+            seen.add(target_id)
+            queue.append(target_id)
+    return seen
+
+
+def _graph_visible_character_ids(
+    state: GameState, graph: GameGraph, player: Character | None
+) -> set[str]:
+    if player is None:
+        return set()
+
+    visible = {player.id}
+    if state.active_subject_id in state.characters:
+        visible.add(state.active_subject_id)
+    visible.update(cid for cid in player.companions if cid in state.characters)
+
+    if player.location_id is not None:
+        for edge in graph.get_in_edges(player.location_id, "located_at"):
+            if edge.from_id in state.characters:
+                visible.add(edge.from_id)
+
+    return visible
+
+
+def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
+    """Project the server-side state into the client's story graph contract.
+
+    The endpoint is player-visible by design: location nodes expand through
+    normal map connections, but character nodes are limited to the player,
+    current-scene NPCs, companions, and the active subject so the graph does
+    not become a spoiler dump of every scenario entity.
+    """
+    if graph is None:
+        graph = build_graph(state)
+
+    nodes: dict[str, dict] = {}
+    edges: dict[str, dict] = {}
+    player = state.characters.get(state.player_id)
+    player_location_id = player.location_id if player else None
+    visible_location_ids = _graph_reachable_location_ids(
+        state, graph, player_location_id
+    )
+    visible_character_ids = _graph_visible_character_ids(state, graph, player)
+
+    def add_node(node_id: str, kind: str, label: str, detail: str) -> None:
+        nodes[node_id] = {
+            "id": node_id,
+            "kind": kind,
+            "label": label,
+            "detail": detail,
+        }
+
+    def add_edge(source: str | None, target: str | None, label: str) -> None:
+        if not source or not target or source == target:
+            return
+        if source not in nodes or target not in nodes:
+            return
+        edge_id = _graph_edge_id(source, target, label)
+        edges[edge_id] = {
+            "id": edge_id,
+            "source": source,
+            "target": target,
+            "label": label,
+        }
+
+    if player is not None and player.id in visible_character_ids:
+        add_node(
+            player.id,
+            "hero",
+            player.name,
+            _graph_character_detail(state, graph, player),
+        )
+
+    for location_id, location in state.locations.items():
+        if location_id not in visible_location_ids:
+            continue
+        add_node(
+            location_id,
+            "place" if location_id == player_location_id else "location",
+            location.name,
+            _graph_location_detail(location),
+        )
+
+    for character_id, character in state.characters.items():
+        if character_id == state.player_id or character_id not in visible_character_ids:
+            continue
+        kind = "subject" if character_id == state.active_subject_id else "target"
+        add_node(
+            character_id,
+            kind,
+            character.name,
+            _graph_character_detail(state, graph, character),
+        )
+
+    quest_ids = {state.active_quest_id} if state.active_quest_id in state.quests else set()
+    for quest_id in quest_ids:
+        quest = state.quests[quest_id]
+        add_node(quest_id, "quest", quest.title, _graph_quest_detail(quest))
+
+    add_edge(state.player_id, player_location_id, "현재 위치")
+    add_edge(state.player_id, state.active_subject_id, "주시")
+    add_edge(state.player_id, state.active_quest_id, "진행 중")
+
+    for location_id in visible_location_ids:
+        for edge in graph.get_edges(location_id, "connects_to"):
+            add_edge(location_id, edge.to_id, "이동")
+
+    for character_id in visible_character_ids:
+        if character_id == state.player_id:
+            continue
+        for edge in graph.get_edges(character_id, "located_at"):
+            if edge.to_id == player_location_id:
+                add_edge(character_id, edge.to_id, "등장")
+
+    for quest_id in quest_ids:
+        quest = state.quests[quest_id]
+        add_edge(quest.giver_id, quest_id, "의뢰")
+        for trigger in quest.triggers:
+            add_edge(trigger.target_id, quest_id, "목표")
+
+    count_by_kind: dict[str, int] = {
+        "hero": 0,
+        "place": 0,
+        "location": 0,
+        "subject": 0,
+        "target": 0,
+        "quest": 0,
+    }
+    for node in nodes.values():
+        count_by_kind[node["kind"]] = count_by_kind.get(node["kind"], 0) + 1
+
+    active_quest = state.quests.get(state.active_quest_id) if state.active_quest_id else None
+    summary = " · ".join(
+        part
+        for part in [
+            "주인공" if player is not None else None,
+            f"현재 위치 {state.locations[player_location_id].name}"
+            if player_location_id in state.locations
+            else None,
+            f"퀘스트 {active_quest.title}" if active_quest is not None else None,
+            f"{_GRAPH_KIND_LABEL['target']} {count_by_kind['target'] + count_by_kind['subject']}",
+            f"{_GRAPH_KIND_LABEL['location']} {count_by_kind['location'] + count_by_kind['place']}",
+        ]
+        if part
+    )
+
+    return {
+        "nodes": list(nodes.values()),
+        "edges": list(edges.values()),
+        "summary": summary or "스토리 데이터 없음",
+    }

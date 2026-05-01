@@ -9,6 +9,7 @@ __pycache__/
 saves/
 reports/
 .claude/
+.tmux-agent-bridge/
 scenarios/*
 !scenarios/default/
 logs/
