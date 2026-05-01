@@ -3,6 +3,7 @@ import { PanResponder, Pressable, Text, View } from 'react-native';
 
 import { shadow } from '@/design/tokens';
 import type { StoryGraphModel } from '@/presenters/storyGraph';
+import type { Place, Subject } from '@/types/domain';
 import type { PanelAction, PanelSlot } from '@/types/ui';
 
 import { MiniMapPanel } from '../story-graph';
@@ -12,9 +13,11 @@ import { PanelBody } from './PanelBody';
 
 const FLOAT_BUFFER = 480;
 
-export function ContextCard({ slots, miniMapGraph, activeId, menuOpen, bgmOn, onSelect, onMenuToggle, onMenuClose, onBgmToggle, onNewGame, onGraph, onAction }: {
+export function ContextCard({ slots, miniMapGraph, place, subject, activeId, menuOpen, bgmOn, onSelect, onMenuToggle, onMenuClose, onBgmToggle, onNewGame, onGraph, onAction }: {
   slots: PanelSlot[];
   miniMapGraph: StoryGraphModel;
+  place: Place | null;
+  subject: Subject | null;
   activeId: string | null;
   menuOpen: boolean;
   bgmOn: boolean;
@@ -71,9 +74,9 @@ export function ContextCard({ slots, miniMapGraph, activeId, menuOpen, bgmOn, on
           ))}
         </View>
         <IconButton
-          d={bgmOn ? ICON_PATH.volumeOn : ICON_PATH.volumeOff}
-          label={bgmOn ? '배경음 끄기' : '배경음 켜기'}
-          onPress={onBgmToggle}
+          d={ICON_PATH.map}
+          label="전체 지도"
+          onPress={onGraph}
         />
       </View>
       {panel && (
@@ -89,7 +92,7 @@ export function ContextCard({ slots, miniMapGraph, activeId, menuOpen, bgmOn, on
           }}
           {...panResponder.panHandlers}
         >
-          <PanelBody panel={panel} kind={activeSlot?.id} onAction={onAction} />
+          <PanelBody panel={panel} onAction={onAction} />
         </View>
       )}
       {miniMapOpen && (
@@ -107,19 +110,20 @@ export function ContextCard({ slots, miniMapGraph, activeId, menuOpen, bgmOn, on
         >
           <MiniMapPanel
             graph={miniMapGraph}
-            onOpenFullMap={onGraph ?? (() => {})}
+            place={place}
+            subject={subject}
             onAction={onAction}
           />
         </View>
       )}
       {menuOpen && (
         <View
-          className="bg-canvas-subtle border border-border-default rounded-md"
+          className="bg-canvas-subtle border border-border-default rounded-md overflow-hidden"
           style={{
             position: 'absolute',
             top: chipBarHeight + 4,
             left: 0,
-            right: 0,
+            minWidth: 112,
             maxHeight: FLOAT_BUFFER,
             zIndex: 20,
             ...shadow.floating,
@@ -132,21 +136,20 @@ export function ContextCard({ slots, miniMapGraph, activeId, menuOpen, bgmOn, on
             }}
             accessibilityRole="button"
             accessibilityLabel="새 게임"
-            className="px-3 py-2.5"
+            className="px-3 py-2"
           >
             <Text className="font-sans text-body text-fg-default">새 게임</Text>
           </Pressable>
-          <View className="border-t border-border-default" />
           <Pressable
             onPress={() => {
               onMenuClose();
-              onGraph?.();
+              onBgmToggle();
             }}
             accessibilityRole="button"
-            accessibilityLabel="전체 지도"
-            className="px-3 py-2.5"
+            accessibilityLabel={bgmOn ? '소리 끄기' : '소리 켜기'}
+            className="px-3 py-2"
           >
-            <Text className="font-sans text-body text-fg-default">전체 지도</Text>
+            <Text className="font-sans text-body text-fg-default">{bgmOn ? '소리 끄기' : '소리 켜기'}</Text>
           </Pressable>
         </View>
       )}

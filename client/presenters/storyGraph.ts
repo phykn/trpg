@@ -16,6 +16,11 @@ export type StoryGraphNode = {
   kind: StoryGraphNodeKind;
   label: string;
   detail: string;
+  level?: number;
+  raceJob?: string;
+  gender?: string;
+  role?: string;
+  trust?: number;
 };
 
 export type StoryGraphEdge = {
@@ -49,7 +54,7 @@ const KIND_LABEL: Record<StoryGraphNodeKind, string> = {
   place: '현재 위치',
   subject: '대상',
   quest: '퀘스트',
-  location: '배경',
+  location: '장소',
   target: '등장인물',
 };
 
@@ -67,6 +72,10 @@ function nodeId(kind: StoryGraphNodeKind, label: string): string {
 
 function characterId(label: string): string {
   return `character:${slug(label) || 'unknown'}`;
+}
+
+function canonicalNodeId(kind: StoryGraphNodeKind, label: string): string {
+  return kind === 'subject' || kind === 'target' ? characterId(label) : nodeId(kind, label);
 }
 
 function shortList(items: string[], fallback = '정보 없음'): string {
@@ -129,7 +138,7 @@ export function buildStoryGraph({ hero, subject, quest, place }: StoryGraphInput
         id: nodeId('place', place.name),
         kind: 'place',
         label: place.name,
-        detail: shortList([place.dayPhase, ...place.weather, place.risk.label].filter(Boolean)),
+        detail: place.description || shortList([place.dayPhase, ...place.weather, place.risk.label].filter(Boolean)),
       })
     : null;
 
@@ -139,6 +148,11 @@ export function buildStoryGraph({ hero, subject, quest, place }: StoryGraphInput
         kind: 'subject',
         label: subject.name,
         detail: `${statLine(subject.level, subject.raceJob)} · ${subject.role}`,
+        level: subject.level,
+        raceJob: subject.raceJob,
+        gender: subject.gender,
+        role: subject.role,
+        trust: subject.trust,
       })
     : null;
 
@@ -165,7 +179,7 @@ export function buildStoryGraph({ hero, subject, quest, place }: StoryGraphInput
       id: nodeId('location', surrounding.name),
       kind: 'location',
       label: surrounding.name,
-      detail: surrounding.risk.label,
+      detail: surrounding.blurb || surrounding.risk.label,
     });
     addEdge(placeId, locationId, '이동');
   }
@@ -179,6 +193,11 @@ export function buildStoryGraph({ hero, subject, quest, place }: StoryGraphInput
             kind: 'target',
             label: target.name,
             detail: statLine(target.level, target.raceJob),
+            level: target.level,
+            raceJob: target.raceJob,
+            gender: target.gender,
+            role: target.blurb,
+            trust: target.trust,
           });
     addEdge(targetId, placeId, '등장');
   }
@@ -220,20 +239,45 @@ export function mergeStoryGraphs(base: StoryGraphModel, next: StoryGraphModel): 
 
   const nextPlaceIds = new Set(next.nodes.filter((node) => node.kind === 'place').map((node) => node.id));
   const nextSubjectIds = new Set(next.nodes.filter((node) => node.kind === 'subject').map((node) => node.id));
-  const nodes = new Map(base.nodes.map((node) => [node.id, node]));
-  for (const [id, node] of nodes) {
-    if (node.kind === 'place' && !nextPlaceIds.has(id)) {
-      nodes.set(id, { ...node, kind: 'location' });
+  const nextByLabel = new Map<string, StoryGraphNode>();
+  for (const n of next.nodes) {
+    if (!nextByLabel.has(n.label)) nextByLabel.set(n.label, n);
+  }
+
+  const idRemap = new Map<string, string>();
+  const nodes = new Map<string, StoryGraphNode>();
+  for (const node of base.nodes) {
+    const sameLabelInNext = nextByLabel.get(node.label);
+    if (sameLabelInNext && sameLabelInNext.id !== node.id) {
+      idRemap.set(node.id, sameLabelInNext.id);
+      continue;
     }
-    if (node.kind === 'subject' && !nextSubjectIds.has(id)) {
-      nodes.set(id, { ...node, kind: 'target' });
+    let demoted = node;
+    if (node.kind === 'place' && !nextPlaceIds.has(node.id)) {
+      demoted = { ...node, kind: 'location' };
+    } else if (node.kind === 'subject' && !nextSubjectIds.has(node.id)) {
+      demoted = { ...node, kind: 'target' };
     }
+    const canon = canonicalNodeId(demoted.kind, demoted.label);
+    if (canon !== node.id) {
+      idRemap.set(node.id, canon);
+      demoted = { ...demoted, id: canon };
+    }
+    nodes.set(demoted.id, demoted);
   }
   for (const node of next.nodes) {
     nodes.set(node.id, node);
   }
 
-  const edges = new Map(base.edges.map((edge) => [edge.id, edge]));
+  const remap = (id: string) => idRemap.get(id) ?? id;
+  const edges = new Map<string, StoryGraphEdge>();
+  for (const edge of base.edges) {
+    const source = remap(edge.source);
+    const target = remap(edge.target);
+    if (source === target) continue;
+    const id = `${source}->${target}:${edge.label}`;
+    edges.set(id, { id, source, target, label: edge.label });
+  }
   for (const edge of next.edges) {
     edges.set(edge.id, edge);
   }

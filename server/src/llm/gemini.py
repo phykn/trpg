@@ -63,7 +63,7 @@ class ThoughtSplitter:
         answer = ""
         if self._mode == "preopen":
             if self._buf.startswith(self.OPEN):
-                self._buf = self._buf[len(self.OPEN):]
+                self._buf = self._buf[len(self.OPEN) :]
                 self._mode = "think"
             elif self.OPEN.startswith(self._buf):
                 return "", ""  # may still grow into the open tag
@@ -73,7 +73,7 @@ class ThoughtSplitter:
             idx = self._buf.find(self.CLOSE)
             if idx >= 0:
                 think = self._buf[:idx]
-                self._buf = self._buf[idx + len(self.CLOSE):]
+                self._buf = self._buf[idx + len(self.CLOSE) :]
                 self._mode = "answer"
             else:
                 safe = max(0, len(self._buf) - self.LOOKAHEAD)

@@ -14,6 +14,7 @@ __pycache__/
 saves/
 logs/
 reports/
+qa_test/
 
 # Local-only (not part of the repo)
 scenarios/

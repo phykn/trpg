@@ -207,9 +207,7 @@ def _build_npc_view(
     # Quests this NPC gives — 2-hop into kill_targets / triggers / rewards.
     quests_given: list[dict] = []
     for qid in quests_given_by(graph, target_id):
-        payload = _quest_payload(
-            state, graph, qid, include_giver=False, masked=masked
-        )
+        payload = _quest_payload(state, graph, qid, include_giver=False, masked=masked)
         if payload is not None:
             quests_given.append(payload)
 
@@ -240,10 +238,7 @@ def _build_npc_view(
         None
         if masked
         else (
-            [
-                {"content": m.content, "importance": m.importance}
-                for m in npc.memories
-            ]
+            [{"content": m.content, "importance": m.importance} for m in npc.memories]
             or None
         )
     )
@@ -280,9 +275,7 @@ def _build_location_view(
     # narrate can phrase "이 장소에 가야 하는 이유는 X 영감의 부탁이오".
     quests: list[dict] = []
     for qid in quests_requiring(graph, target_id):
-        payload = _quest_payload(
-            state, graph, qid, include_giver=True, masked=masked
-        )
+        payload = _quest_payload(state, graph, qid, include_giver=True, masked=masked)
         if payload is not None:
             quests.append(payload)
 

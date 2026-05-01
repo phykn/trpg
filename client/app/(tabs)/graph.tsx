@@ -2,7 +2,6 @@ import React from 'react';
 import { Keyboard, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { PaperGrain } from '@/components/PaperGrain';
 import { StoryGraphScreen } from '@/components/story-graph/StoryGraphScreen';
 
 export default function GraphRoute() {
@@ -25,7 +24,6 @@ export default function GraphRoute() {
     >
       <View className="flex-1" style={{ paddingBottom: kb > 0 ? kb + insets.bottom : 0 }}>
         <StoryGraphScreen />
-        <PaperGrain />
       </View>
     </SafeAreaView>
   );

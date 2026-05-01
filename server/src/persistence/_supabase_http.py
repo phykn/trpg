@@ -55,7 +55,9 @@ class _PostgREST:
         if not rows:
             return
         url = f"{self._base}/{table}"
-        r = await self._client.post(url, headers=self._headers, content=json.dumps(rows))
+        r = await self._client.post(
+            url, headers=self._headers, content=json.dumps(rows)
+        )
         if r.status_code >= 300:
             raise PersistenceFailed(f"insert {table}: {r.status_code} {r.text}")
 
@@ -153,7 +155,9 @@ class _Storage:
             content=json.dumps(body),
         )
         if r.status_code >= 300:
-            raise PersistenceFailed(f"storage {label} {prefix}: {r.status_code} {r.text}")
+            raise PersistenceFailed(
+                f"storage {label} {prefix}: {r.status_code} {r.text}"
+            )
         return r.json()
 
     async def list_prefix(self, prefix: str) -> list[str]:

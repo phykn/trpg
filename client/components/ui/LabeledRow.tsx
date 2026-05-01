@@ -45,7 +45,9 @@ export function LabeledRow({ label, children, mono = false, clampLines = 1 }: {
               // text-panel line-height is 18px (design/tokens.js).
               // onTextLayout doesn't fire on react-native-web, so detect
               // overflow by measuring the unclamped height instead.
-              if (e.nativeEvent.layout.height > 18 * clampLines + 1) setOverflow(true);
+              // 펼치기 힌트는 3줄 이상일 때만 노출.
+              const minLines = Math.max(clampLines, 2);
+              if (e.nativeEvent.layout.height > 18 * minLines + 1) setOverflow(true);
             }}
           >
             <Text className={`${fontClass} text-panel text-fg-default`}>

@@ -50,13 +50,17 @@ async def init_game(
     if player.race_id not in races:
         raise RaceNotFound(player.race_id)
 
-    locations = await scenario_repo.load_seed_entities(profile_name, "locations", Location)
+    locations = await scenario_repo.load_seed_entities(
+        profile_name, "locations", Location
+    )
     items = await scenario_repo.load_seed_entities(profile_name, "items", Item)
     skills = await scenario_repo.load_seed_entities(profile_name, "skills", SkillModel)
     npcs = await scenario_repo.load_seed_entities(profile_name, "characters", Character)
     quests = await scenario_repo.load_seed_entities(profile_name, "quests", Quest)
     chapters = await scenario_repo.load_seed_entities(profile_name, "chapters", Chapter)
-    campaigns = await scenario_repo.load_seed_entities(profile_name, "campaigns", Campaign)
+    campaigns = await scenario_repo.load_seed_entities(
+        profile_name, "campaigns", Campaign
+    )
 
     start = await scenario_repo.read_start_json(profile_name)
     template = await scenario_repo.read_player_template(profile_name)

@@ -1,15 +1,15 @@
 # trpg-server
 
-Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in one directory (`saves/games/<id>/`) as a scatter of JSON + JSONL.
+Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in five Postgres tables keyed on `game_id` (`games / entities / log_entries / history_entries / dialogue_entries`); scenario seeds live in a Supabase Storage bucket.
 
 Design notes start at `../docs/01-overview.md`; the per-turn flow is in `../docs/02-runtime.md`; the module map is in `../docs/05-codemap.md`. The Claude Code guide is [CLAUDE.md](./CLAUDE.md).
 
 ## Stack
 
 - Python 3.12+, Pydantic v2, FastAPI, uvicorn, httpx, async/await
-- OpenAI-compatible LLM server (e.g. llama.cpp) pointed at by `BASE_URL`
-- Game state is a pile of files (`SAVES_DIR/games/<game_id>/`). No DB.
-- Single process (writes serialized via `asyncio.Lock`)
+- OpenAI-compatible LLM via `LLM_ROUTE_<AGENT> = <provider>/<model>` (llama.cpp local or Gemini hosted; provider blocks in `.env.llama_cpp` / `.env.google` layered on top of `.env.<APP_ENV>`)
+- **Supabase Postgres + Storage** for saves + scenarios. Schema: `migrations/001_init.sql`. Both `APP_ENV=dev` and `APP_ENV=release` go through the Supabase adapters; tests bypass the factory and use `LocalFsSaveRepo` / `LocalFsScenarioRepo` against `tmp_path`.
+- Single process. Per-turn flush order is entity upserts + jsonl appends → `games.meta` last, so a crash mid-flush is recoverable on reload via `next_log_id` self-heal.
 
 ## Setup
 
@@ -20,19 +20,32 @@ python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
+Apply the schema once per Supabase project (Supabase SQL editor or `psql $DATABASE_URL -f migrations/001_init.sql`), create a Storage bucket for scenarios, and upload a profile tree:
+
+```bash
+cd server && ../.venv/bin/python scripts/upload_scenarios.py ../scenarios/<profile>
+```
+
 Write `server/.env.dev` (required for local dev — `APP_ENV=release` switches to `.env.release` for prod; no fallbacks, missing keys raise `KeyError` at startup):
 
 ```
 HOST=0.0.0.0
 PORT=8001
-BASE_URL=http://localhost:8000/v1        # llama.cpp or another OpenAI-compatible server
 BASIC_AUTH_USER=<id>
 BASIC_AUTH_PASS=<pass>
-SAVES_DIR=../saves                       # peer of the repo root
-PROFILE_DIR=../scenarios                 # peer of the repo root
+CORS_ORIGINS=http://localhost:8081       # comma-separated exact origins (scheme + host)
+
+# Supabase — service-role key bypasses RLS. Server-only secret.
+SUPABASE_URL=https://<project>.supabase.co
+SUPABASE_SERVICE_KEY=<service-role key>
+SUPABASE_SCENARIO_BUCKET=scenarios
+
+# LLM routing — DEFAULT required; LLM_ROUTE_<AGENT> overrides per agent.
+LLM_ROUTE_DEFAULT=google/gemma-4-26b-a4b-it
+LLM_ROUTE_NARRATE=google/gemma-4-31b-it
 ```
 
-The LLM server runs separately. Example: `llama-server -m <model.gguf> -c 8192 --port 8000`.
+Provider blocks (`.env.llama_cpp`, `.env.google`) layer on top — they declare each provider's `BASE_URL`, API keys, and THINK_* model lists. For local llama.cpp, set `LLM_ROUTE_DEFAULT = llama_cpp/<model>` and run the LLM server alongside, e.g. `llama-server -m <model.gguf> -c 8192 --port 8000`.
 
 ## Run
 
@@ -74,20 +87,21 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q        # requires a live LLM
 server/
   run_api.py                       # entrypoint
   .env.dev                         # required for local dev (.env.release for prod), gitignored
+  migrations/001_init.sql          # Supabase schema (apply once per project)
+  scripts/                         # one-off tools (upload_scenarios.py, judge_stress.py, ...)
   src/                             # code (layer breakdown in docs/05-codemap.md)
   tests/                           # pytest
-  scripts/                         # one-off tools (judge_stress, etc.)
-../scenarios/<profile>/            # scenario seed (world.md, start.json, races/, locations/, characters/, items/, quests/, chapters/, player_template.json). Peer of the repo root
-../saves/                          # runtime store (gitignored)
-  games/<game_id>/
-    meta.json                        # singleton fields (player_id, turn_count, pending_check, ...)
-    characters/<id>.json             # one file per entity
-    items/<id>.json
-    locations/<id>.json
-    races/<id>.json                  # ...
-    log.jsonl                        # append-only log
-    history.jsonl                    # append-only turn summaries
-    dialogue.jsonl                   # append-only dialogue
+../scenarios/<profile>/            # local seed source (world.md, start.json, player_template.json, races/, locations/, characters/, items/, quests/, chapters/). Authored locally, uploaded to Supabase Storage; the running server reads from the bucket.
 ```
 
-Atomic writes (`.tmp` → `os.replace`) plus `asyncio.Lock` keep concurrent writes from clobbering each other.
+Runtime state lives in Supabase Postgres:
+
+| Table | PK | Notes |
+|---|---|---|
+| `games` | `(game_id)` | `meta jsonb` mirrors the old `meta.json` |
+| `entities` | `(game_id, kind, id)` | one row per entity; `kind ∈ {characters, items, locations, races, skills, quests, chapters, campaigns}` |
+| `log_entries` | `(game_id, log_id)` | `log_id = entry.id` (app-managed monotonic) |
+| `history_entries` | `(game_id, seq)` | `bigserial`, append-only turn summaries |
+| `dialogue_entries` | `(game_id, seq)` | `bigserial`, append-only dialogue |
+
+All four child tables FK → `games(game_id) ON DELETE CASCADE`. RLS enabled with no policies — the server uses the service-role key, anon/auth keys see nothing.

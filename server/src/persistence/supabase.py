@@ -71,9 +71,7 @@ class SupabaseSaveRepo:
             on_conflict="game_id",
         )
 
-    async def save_entity(
-        self, state: GameState, kind: str, entity_id: str
-    ) -> None:
+    async def save_entity(self, state: GameState, kind: str, entity_id: str) -> None:
         container = getattr(state, kind)
         if entity_id not in container:
             raise PersistenceFailed(f"unknown {kind} id: {entity_id!r}")
@@ -91,9 +89,7 @@ class SupabaseSaveRepo:
             on_conflict="game_id,kind,id",
         )
 
-    async def append_log_entries(
-        self, game_id: str, entries: list[LogEntry]
-    ) -> None:
+    async def append_log_entries(self, game_id: str, entries: list[LogEntry]) -> None:
         if not entries:
             return
         rows = [
@@ -309,9 +305,7 @@ class SupabaseStorageScenarioRepo:
             )
         return out
 
-    async def read_world_md(
-        self, profile: str, *, missing_ok: bool = False
-    ) -> str:
+    async def read_world_md(self, profile: str, *, missing_ok: bool = False) -> str:
         if profile in self._world_cache:
             return self._world_cache[profile]
         try:
@@ -329,9 +323,7 @@ class SupabaseStorageScenarioRepo:
         return json.loads(await self._fs.get_text(f"{profile}/start.json"))
 
     async def read_player_template(self, profile: str) -> dict:
-        return json.loads(
-            await self._fs.get_text(f"{profile}/player_template.json")
-        )
+        return json.loads(await self._fs.get_text(f"{profile}/player_template.json"))
 
     async def load_seed_entities(
         self, profile: str, kind: str, model_cls: Type[T]
@@ -360,7 +352,12 @@ class SupabaseStorageScenarioRepo:
             root.mkdir(parents=True, exist_ok=True)
 
             # Top-level files.
-            for fname in ("world.md", "start.json", "player_template.json", "profile.json"):
+            for fname in (
+                "world.md",
+                "start.json",
+                "player_template.json",
+                "profile.json",
+            ):
                 try:
                     blob = await self._fs.get_bytes(f"{profile}/{fname}")
                 except FileNotFoundError:

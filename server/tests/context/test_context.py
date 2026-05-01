@@ -137,7 +137,10 @@ def test_entities_carry_role_tags(fresh_state):
         relations={"player_01": 0},
     )
     fresh_state.quests["q1"] = Quest(
-        id="q1", title="t", giver_id="chief", difficulty="보통",
+        id="q1",
+        title="t",
+        giver_id="chief",
+        difficulty="보통",
         rewards=QuestRewards(),
     )
     # plain villager: no merchant role, no quest. roles must be absent
@@ -350,7 +353,5 @@ async def test_world_layer_reads_md():
         pdir = Path(tmp) / "default"
         pdir.mkdir()
         (pdir / "world.md").write_text("# world\n중세", encoding="utf-8")
-        text = await build_world_layer(
-            LocalFsScenarioRepo(profile_dir=tmp), "default"
-        )
+        text = await build_world_layer(LocalFsScenarioRepo(profile_dir=tmp), "default")
         assert "중세" in text

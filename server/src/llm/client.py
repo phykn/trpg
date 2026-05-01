@@ -19,7 +19,9 @@ _SESSION_ID: ContextVar[str | None] = ContextVar("llm_session_id", default=None)
 
 # Per-task override that wins over the agent's hardcoded `think` default.
 # ContextVar is task-scoped so concurrent requests don't leak.
-_THINK_OVERRIDE: ContextVar[bool | None] = ContextVar("llm_think_override", default=None)
+_THINK_OVERRIDE: ContextVar[bool | None] = ContextVar(
+    "llm_think_override", default=None
+)
 
 
 def set_llm_session(session_id: str) -> None:
@@ -186,9 +188,7 @@ class _Provider:
             for k in profile.api_keys
         ]
         self._stream_clients = [
-            AsyncOpenAI(
-                base_url=profile.base_url, api_key=k, timeout=stream_timeout_s
-            )
+            AsyncOpenAI(base_url=profile.base_url, api_key=k, timeout=stream_timeout_s)
             for k in profile.api_keys
         ]
         self._idx = 0
@@ -290,9 +290,7 @@ class LLMClient:
             if m.get("role") == "system":
                 continue
             if not prefixed and m.get("role") == "user":
-                out.append(
-                    {**m, "content": f"{prefix}\n\n{m.get('content', '')}"}
-                )
+                out.append({**m, "content": f"{prefix}\n\n{m.get('content', '')}"})
                 prefixed = True
             else:
                 out.append(m)
@@ -309,9 +307,7 @@ class LLMClient:
     def _toggle(provider: _Provider):
         return gemini if provider.toggle_style == "gemini" else llama_cpp
 
-    def _params(
-        self, provider: _Provider, messages: list[dict], think: bool
-    ) -> dict:
+    def _params(self, provider: _Provider, messages: list[dict], think: bool) -> dict:
         if not provider.supports_system:
             messages = self._inline_system(messages)
         params: dict = {"model": provider.model, "messages": messages}
@@ -374,9 +370,7 @@ class LLMClient:
         base = self._log_basename(agent) if log else None
         self._log_query(base, messages)
         params = self._params(provider, messages, think)
-        response = await provider.next_chat_client().chat.completions.create(
-            **params
-        )
+        response = await provider.next_chat_client().chat.completions.create(**params)
         msg = response.choices[0].message
         extra = msg.model_extra or {}
         thought = extra.get("reasoning_content")

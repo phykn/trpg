@@ -1,49 +1,81 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
+import { toneColor } from '@/design/tokens';
 import type { StoryGraphModel } from '@/presenters/storyGraph';
+import type { Place, Subject } from '@/types/domain';
 import type { PanelAction } from '@/types/ui';
 
 import { StoryGraphPanel } from './StoryGraphPanel';
 
 export function MiniMapPanel({
   graph,
-  onOpenFullMap,
+  place,
+  subject,
   onAction,
 }: {
   graph: StoryGraphModel;
-  onOpenFullMap: () => void;
+  place: Place | null;
+  subject: Subject | null;
   onAction?: (action: PanelAction) => void;
 }) {
-  const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(null);
+  const currentPlaceId = React.useMemo(
+    () => graph.nodes.find((n) => n.kind === 'place')?.id ?? null,
+    [graph.nodes],
+  );
+  const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(currentPlaceId);
 
   React.useEffect(() => {
-    if (selectedNodeId && !graph.nodes.some((node) => node.id === selectedNodeId)) {
-      setSelectedNodeId(null);
+    if (!selectedNodeId || !graph.nodes.some((node) => node.id === selectedNodeId)) {
+      setSelectedNodeId(currentPlaceId);
     }
-  }, [graph.nodes, selectedNodeId]);
+  }, [graph.nodes, selectedNodeId, currentPlaceId]);
+
+  const dayWeather = place
+    ? [place.dayPhase, ...place.weather].filter(Boolean).join(' · ')
+    : '';
 
   return (
-    <View className="gap-1">
+    <View>
+      {place ? (
+        <View
+          className="px-4 pt-3 flex-row items-center gap-2"
+          style={{ minHeight: 22 }}
+        >
+          <View className="flex-1 min-w-0">
+            <Text
+              numberOfLines={1}
+              className="font-serif-medium text-title text-fg-default"
+            >
+              {place.name}
+            </Text>
+          </View>
+          <View className="flex-1 min-w-0">
+            <Text
+              numberOfLines={1}
+              className="font-sans text-caption italic text-right text-fg-muted"
+            >
+              {dayWeather ? `${dayWeather} · ` : ''}
+              <Text
+                className="font-sans-semibold"
+                style={{ color: toneColor[place.risk.tone] }}
+              >
+                {place.risk.label}
+              </Text>
+            </Text>
+          </View>
+        </View>
+      ) : null}
       <StoryGraphPanel
         graph={graph}
         canvasHeight={210}
-        title="지도"
         accessibilityLabel="미니맵"
         selectedNodeId={selectedNodeId}
         onNodeSelect={setSelectedNodeId}
         onAction={onAction}
+        place={place}
+        subject={subject}
       />
-      <View className="border-t border-border-default px-3 py-2">
-        <Pressable
-          onPress={onOpenFullMap}
-          accessibilityRole="button"
-          accessibilityLabel="전체 지도 열기"
-          className="self-start rounded-sm border border-border-default bg-canvas-default px-3 py-1.5 active:bg-canvas-inset"
-        >
-          <Text className="font-sans text-panel text-fg-default">전체 지도</Text>
-        </Pressable>
-      </View>
     </View>
   );
 }

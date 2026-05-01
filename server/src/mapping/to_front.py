@@ -439,7 +439,9 @@ def _graph_character_detail(state: GameState, graph: GameGraph, char: Character)
 
 
 def _graph_location_detail(loc: Location) -> str:
-    tags = [_LOCATION_TAG_LABELS[tag] for tag in loc.tags if tag in _LOCATION_TAG_LABELS]
+    tags = [
+        _LOCATION_TAG_LABELS[tag] for tag in loc.tags if tag in _LOCATION_TAG_LABELS
+    ]
     return _graph_short_list(
         [*loc.weather, *tags, _RISK_PAYLOAD[loc.sleep_risk]["label"]],
         fallback=_RISK_PAYLOAD[loc.sleep_risk]["label"],
@@ -562,7 +564,9 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
             _graph_character_detail(state, graph, character),
         )
 
-    quest_ids = {state.active_quest_id} if state.active_quest_id in state.quests else set()
+    quest_ids = (
+        {state.active_quest_id} if state.active_quest_id in state.quests else set()
+    )
     for quest_id in quest_ids:
         quest = state.quests[quest_id]
         add_node(quest_id, "quest", quest.title, _graph_quest_detail(quest))
@@ -598,7 +602,9 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
     for node in nodes.values():
         count_by_kind[node["kind"]] = count_by_kind.get(node["kind"], 0) + 1
 
-    active_quest = state.quests.get(state.active_quest_id) if state.active_quest_id else None
+    active_quest = (
+        state.quests.get(state.active_quest_id) if state.active_quest_id else None
+    )
     summary = " · ".join(
         part
         for part in [

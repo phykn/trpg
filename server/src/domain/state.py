@@ -87,6 +87,7 @@ class GameState(BaseModel):
         callers that just mutated a relation field must invalidate first."""
         if self._graph_cache is None:
             from ..ontology.graph import build_graph
+
             self._graph_cache = build_graph(self)
         return self._graph_cache
 

@@ -13,6 +13,14 @@ export function StoryGraphCanvas({
   accessibilityLabel?: string;
   selectedNodeId?: string | null;
   onNodeSelect?: (nodeId: string | null) => void;
+  nodeOverrides?: Record<string, { color?: string; size?: number }>;
+  arrows?: boolean;
+  edgeLabels?: boolean;
+  layout?: 'cose' | 'concentric' | 'breadthfirst';
+  boxNodes?: boolean;
+  rootNodeId?: string;
+  centerNodeId?: string;
+  clearOnBackgroundTap?: boolean;
 }) {
   return (
     <View accessibilityLabel={`${accessibilityLabel}. ${graph.summary}`} className="gap-1.5">

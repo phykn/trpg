@@ -21,6 +21,7 @@ import {
   loadStoredGameId,
   streamTurn,
 } from '@/services';
+import type { Place } from '@/types/domain';
 import type { PanelAction } from '@/types/ui';
 import type { StreamEvent } from '@/types/wire';
 
@@ -29,12 +30,15 @@ import { StoryGraphPanel } from './StoryGraphPanel';
 type Status = 'loading' | 'ready' | 'empty' | 'error';
 type Source = 'backend' | 'front-state';
 
-const SOURCE_LABEL: Record<Source, string> = {
-  backend: 'API',
-  'front-state': 'STATE',
-};
-
-export function StoryGraphScreen() {
+export function StoryGraphScreen({
+  onClose,
+  embedded = false,
+  onAction,
+}: {
+  onClose?: () => void;
+  embedded?: boolean;
+  onAction?: (action: PanelAction) => void;
+} = {}) {
   const [status, setStatus] = React.useState<Status>('loading');
   const gameIdRef = React.useRef<string | null>(null);
   const [graph, setGraph] = React.useState<StoryGraphModel>(EMPTY_STORY_GRAPH);
@@ -43,6 +47,7 @@ export function StoryGraphScreen() {
   const [actionMessage, setActionMessage] = React.useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(null);
   const [actionRunning, setActionRunning] = React.useState(false);
+  const [place, setPlace] = React.useState<Place | null>(null);
   const actionAbortRef = React.useRef<AbortController | null>(null);
 
   const loadGraph = React.useCallback(async (isAlive: () => boolean) => {
@@ -60,7 +65,9 @@ export function StoryGraphScreen() {
     try {
       const graphPayload = await getSessionGraphById(stored);
       const normalizedGraph = normalizeStoryGraphPayload(graphPayload);
+      const session = await getSessionById(stored);
       if (!isAlive()) return;
+      if (session) setPlace(session.state.place);
       if (normalizedGraph) {
         setGraph(normalizedGraph);
         setSource('backend');
@@ -68,8 +75,6 @@ export function StoryGraphScreen() {
         return;
       }
 
-      const session = await getSessionById(stored);
-      if (!isAlive()) return;
       if (!session) {
         setGraph(EMPTY_STORY_GRAPH);
         setStatus('empty');
@@ -102,10 +107,11 @@ export function StoryGraphScreen() {
   );
 
   React.useEffect(() => {
-    if (selectedNodeId && !graph.nodes.some((node) => node.id === selectedNodeId)) {
-      setSelectedNodeId(null);
-    }
-  }, [graph.nodes, selectedNodeId]);
+    if (status !== 'ready') return;
+    if (selectedNodeId && graph.nodes.some((node) => node.id === selectedNodeId)) return;
+    const currentPlace = graph.nodes.find((node) => node.kind === 'place');
+    setSelectedNodeId(currentPlace ? currentPlace.id : null);
+  }, [status, graph, selectedNodeId]);
 
   React.useEffect(() => {
     return () => {
@@ -119,6 +125,7 @@ export function StoryGraphScreen() {
       if (!stored) return;
       setGraph(mergeAndStoreStoryGraph(stored, buildStoryGraph(ev.data)));
       setSource('front-state');
+      setPlace(ev.data.place);
       setSelectedNodeId(null);
       setActionMessage('지도 명령 결과를 반영했습니다.');
       return;
@@ -166,34 +173,41 @@ export function StoryGraphScreen() {
   }, [source]);
 
   return (
-    <View className="flex-1 bg-canvas-default py-2.5 gap-2.5">
-      <View
-        className="mx-5 bg-canvas-subtle border border-border-default rounded-md flex-row items-center gap-2 p-2"
-        style={shadow.paper}
-      >
-        <Pressable
-          onPress={() => {
-            if (router.canGoBack()) router.back();
-            else router.replace('/');
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="돌아가기"
-          className="h-8 w-8 items-center justify-center rounded-sm active:bg-canvas-inset"
+    <View className={`flex-1 ${embedded ? '' : 'bg-canvas-default py-2.5'} gap-2.5`}>
+      {embedded ? null : (
+        <View
+          className="mx-5 bg-canvas-subtle border border-border-default rounded-md flex-row items-center gap-2 p-2"
+          style={shadow.paper}
         >
-          <Text className="font-sans-semibold text-title text-fg-default">‹</Text>
-        </Pressable>
-        <View className="flex-1 min-w-0">
-          <Text className="font-sans-semibold text-body text-fg-default">전체 지도</Text>
-          <Text numberOfLines={1} className="font-sans text-caption text-fg-muted">
-            {status === 'ready' ? graph.summary : '게임 세계 지도'}
-          </Text>
+          <Pressable
+            onPress={() => {
+              if (onClose) onClose();
+              else if (router.canGoBack()) router.back();
+              else router.replace('/');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="돌아가기"
+            className="h-8 w-8 items-center justify-center rounded-sm active:bg-canvas-inset"
+          >
+            <Text className="font-sans-semibold text-title text-fg-default">‹</Text>
+          </Pressable>
+          <View className="flex-1 min-w-0">
+            <Text className="font-sans-semibold text-body text-fg-default">전체 지도</Text>
+            <Text numberOfLines={1} className="font-sans text-caption text-fg-muted">
+              {status === 'ready' ? graph.summary : '게임 세계 지도'}
+            </Text>
+          </View>
+          {status === 'loading' ? <ActivityIndicator color={colors.accent.fg} /> : null}
         </View>
-        {status === 'loading' ? <ActivityIndicator color={colors.accent.fg} /> : null}
-      </View>
+      )}
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20, gap: 10 }}
+        contentContainerStyle={{
+          paddingHorizontal: embedded ? 0 : 20,
+          paddingBottom: embedded ? 0 : 20,
+          gap: 10,
+        }}
       >
         {message ? (
           <View className="rounded-sm border border-border-default bg-canvas-subtle px-3 py-2">
@@ -209,7 +223,7 @@ export function StoryGraphScreen() {
 
         {status === 'loading' ? (
           <View className="items-center justify-center py-14">
-            <Text className="font-sans text-body text-fg-muted">그래프를 불러오는 중입니다.</Text>
+            <Text className="font-sans text-body text-fg-muted">지도를 펼치고 있습니다.</Text>
           </View>
         ) : null}
 
@@ -217,7 +231,10 @@ export function StoryGraphScreen() {
           <View className="items-center justify-center py-14 gap-3">
             <Text className="font-sans-semibold text-body text-fg-default">진행 중인 게임이 없습니다.</Text>
             <Pressable
-              onPress={() => router.replace('/')}
+              onPress={() => {
+                if (onClose) onClose();
+                else router.replace('/');
+              }}
               accessibilityRole="button"
               accessibilityLabel="게임 화면으로 이동"
               className="rounded-sm border border-border-default bg-canvas-subtle px-3 py-2 active:bg-canvas-inset"
@@ -230,7 +247,7 @@ export function StoryGraphScreen() {
         {status === 'error' ? (
           <View className="rounded-sm border border-danger-fg bg-canvas-subtle px-3 py-2">
             <Text className="font-sans text-caption text-danger-fg">
-              {message ?? '그래프를 불러오지 못했습니다.'}
+              {message ?? '지도를 펼치지 못했습니다.'}
             </Text>
           </View>
         ) : null}
@@ -238,15 +255,15 @@ export function StoryGraphScreen() {
         {status === 'ready' ? (
           <StoryGraphPanel
             graph={graph}
-            canvasHeight={430}
-            framed
-            sourceLabel={SOURCE_LABEL[source]}
-            title="전체 지도"
+            canvasHeight={embedded ? 340 : 430}
+            framed={!embedded}
             accessibilityLabel="전체 지도"
             selectedNodeId={selectedNodeId}
             onNodeSelect={setSelectedNodeId}
-            onAction={runMapAction}
+            onAction={onAction ?? runMapAction}
             actionDisabled={actionRunning}
+            mapView
+            place={place}
           />
         ) : null}
       </ScrollView>

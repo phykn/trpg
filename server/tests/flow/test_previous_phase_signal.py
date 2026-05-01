@@ -99,9 +99,7 @@ async def test_signal_cleared_even_when_combat_branch_runs(
         if False:
             yield None  # pragma: no cover
 
-    monkeypatch.setattr(
-        turn_mod, "run_combat_player_turn", fake_run_combat_player_turn
-    )
+    monkeypatch.setattr(turn_mod, "run_combat_player_turn", fake_run_combat_player_turn)
 
     await _collect(
         run_turn(

@@ -1,7 +1,8 @@
 import { useAudioPlayer } from 'expo-audio';
-import { router } from 'expo-router';
 import React from 'react';
-import { Keyboard, Pressable, Text, View } from 'react-native';
+import { Keyboard, Modal, Pressable, Text, View } from 'react-native';
+
+import { colors, shadow } from '@/design/tokens';
 
 import type { Game } from '@/hooks/useGame';
 import { useStoryGraph } from '@/hooks/useStoryGraph';
@@ -14,6 +15,7 @@ import { Composer, RollPrompt } from './composer';
 import { ContextCard } from './header';
 import { HeroStrip } from './hero';
 import { Log } from './log';
+import { StoryGraphScreen } from './story-graph/StoryGraphScreen';
 import { ConfirmDialog } from './ui';
 
 const BGM_SOURCE = require('../assets/audio/bgm.mp3');
@@ -29,6 +31,7 @@ export function Playing({ game }: Props) {
   const [input, setInput] = React.useState('');
   const [pendingAction, setPendingAction] = React.useState<PanelAction | null>(null);
   const [newGameConfirmOpen, setNewGameConfirmOpen] = React.useState(false);
+  const [graphOpen, setGraphOpen] = React.useState(false);
   const [bgmOn, setBgmOn] = React.useState(false);
 
   const bgm = useAudioPlayer(BGM_SOURCE);
@@ -76,11 +79,9 @@ export function Playing({ game }: Props) {
 
   if (!hero) return null;
 
-  const baseSlots = buildPanelSlots({ hero, subject, quest, place });
   const slots: PanelSlot[] = [
-    ...baseSlots.slice(0, 3),
-    { id: 'map', chip: { short: '지도' }, panel: null },
-    baseSlots[3],
+    ...buildPanelSlots({ hero, subject, quest }),
+    { id: 'map', chip: { short: '주변' }, panel: null },
   ];
   const rolling = pending !== null && streaming;
 
@@ -89,6 +90,8 @@ export function Playing({ game }: Props) {
       <ContextCard
         slots={slots}
         miniMapGraph={miniMapGraph}
+        place={place}
+        subject={subject}
         activeId={activeId}
         menuOpen={menuOpen}
         bgmOn={bgmOn}
@@ -97,7 +100,7 @@ export function Playing({ game }: Props) {
         onMenuClose={() => setMenuOpen(false)}
         onBgmToggle={toggleBgm}
         onNewGame={() => setNewGameConfirmOpen(true)}
-        onGraph={() => router.push('/graph')}
+        onGraph={() => setGraphOpen(true)}
         onAction={(action) => {
           if (action.confirm) {
             setPendingAction(action);
@@ -113,6 +116,36 @@ export function Playing({ game }: Props) {
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }}
         />
       )}
+
+      <Modal
+        transparent
+        visible={graphOpen}
+        animationType="fade"
+        onRequestClose={() => setGraphOpen(false)}
+      >
+        <Pressable
+          onPress={() => setGraphOpen(false)}
+          className="flex-1 items-center justify-start px-4"
+          style={{ backgroundColor: 'rgba(24, 20, 14, 0.62)', paddingTop: 170 }}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            className="bg-canvas-subtle border border-border-default rounded-md w-full"
+            style={{ maxWidth: 560, maxHeight: '92%', ...shadow.floating }}
+          >
+            <View className="px-3 py-3">
+              <StoryGraphScreen
+                embedded
+                onClose={() => setGraphOpen(false)}
+                onAction={(action) => {
+                  setGraphOpen(false);
+                  onSend(action.intent);
+                }}
+              />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {pendingAction?.confirm && (
         <ConfirmDialog

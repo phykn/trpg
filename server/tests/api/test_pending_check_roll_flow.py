@@ -13,17 +13,12 @@ relaxation is a deliberate choice, not silent regression).
 """
 
 import json
-from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from run_api import build_app
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-
-
-REPO_ROOT = Path(__file__).resolve().parents[3]
-PROFILE_DIR = REPO_ROOT / "scenarios"
+from tests._fakes import make_default_storage, make_save_repo, make_scenario_repo
 
 
 _JUDGE_ROLL = json.dumps(
@@ -63,15 +58,15 @@ async def _drain(response):
     return events
 
 
-def _build_app(tmp_path):
-    saves_dir = str(tmp_path)
-    profile_dir = str(PROFILE_DIR)
+def _build_app():
+    save_repo, _ = make_save_repo()
+    scenario_repo, _ = make_scenario_repo(make_default_storage())
     return build_app(
         llm=_MockLLM(),
         basic_auth_user="t",
         basic_auth_pass="t",
-        save_repo=LocalFsSaveRepo(saves_dir=saves_dir),
-        scenario_repo=LocalFsScenarioRepo(profile_dir=profile_dir),
+        save_repo=save_repo,
+        scenario_repo=scenario_repo,
         cors_origins=[],
     )
 
@@ -109,15 +104,13 @@ async def _init_and_arm_pending_check(client):
 
 
 @pytest.mark.asyncio
-async def test_roll_with_empty_json_body_streams_events(tmp_path):
+async def test_roll_with_empty_json_body_streams_events():
     """The fix path: harness now sends `json={}` and gets a real SSE stream."""
-    app = _build_app(tmp_path)
+    app = _build_app()
     async with _client(app) as client:
         gid = await _init_and_arm_pending_check(client)
 
-        async with client.stream(
-            "POST", f"/session/{gid}/roll", json={}
-        ) as r:
+        async with client.stream("POST", f"/session/{gid}/roll", json={}) as r:
             assert r.status_code == 200
             events = await _drain(r)
 
@@ -127,10 +120,10 @@ async def test_roll_with_empty_json_body_streams_events(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_roll_without_body_is_422_not_sse(tmp_path):
+async def test_roll_without_body_is_422_not_sse():
     """The trap: no body → 422 application/json, not SSE. Pinning this so any
     future move to make the body optional is a deliberate, tested change."""
-    app = _build_app(tmp_path)
+    app = _build_app()
     async with _client(app) as client:
         gid = await _init_and_arm_pending_check(client)
 

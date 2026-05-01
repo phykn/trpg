@@ -187,10 +187,7 @@ def coerce_judge_output(raw: dict) -> dict:
     if action == "chain":
         parts = raw.get("parts") or []
         for part in parts:
-            if (
-                isinstance(part, dict)
-                and part.get("action") in _PHASE_CHANGING_ACTIONS
-            ):
+            if isinstance(part, dict) and part.get("action") in _PHASE_CHANGING_ACTIONS:
                 return coerce_judge_output(part)
 
     if action == "roll" and not raw.get("reason"):

@@ -124,9 +124,7 @@ def test_target_view_npc_failure_grade_masks_secrets(fresh_state):
     base = build_target_view(state, g, "guard_01", actor_id="player_01")
     assert base["tone_hint"] == "격식"
     assert base["memories"] and base["memories"][0]["content"] == "비밀 단서"
-    assert base["quests_given"][0].get("rewards") == [
-        {"id": "sword_01", "name": "검"}
-    ]
+    assert base["quests_given"][0].get("rewards") == [{"id": "sword_01", "name": "검"}]
 
     masked = build_target_view(
         state, g, "guard_01", actor_id="player_01", grade="failure"
@@ -156,9 +154,7 @@ def test_target_view_npc_success_grade_unchanged(fresh_state):
     g = build_graph(state)
     base = build_target_view(state, g, "guard_01", actor_id="player_01")
     for grade in ("success", "partial_success", "critical_success", None):
-        v = build_target_view(
-            state, g, "guard_01", actor_id="player_01", grade=grade
-        )
+        v = build_target_view(state, g, "guard_01", actor_id="player_01", grade=grade)
         assert v == base, f"grade={grade!r} should not mask"
 
 

@@ -1,41 +1,29 @@
-"""Factory: pick a SaveRepo / ScenarioRepo pair based on `APP_ENV`.
+"""Factory: build SaveRepo / ScenarioRepo from env.
 
-- `APP_ENV=dev` (default): LocalFs adapters reading `SAVES_DIR`, `PROFILE_DIR`.
-- `APP_ENV=release`: Supabase adapters reading `SUPABASE_URL`,
-  `SUPABASE_SERVICE_KEY`, `SUPABASE_SCENARIO_BUCKET`.
+The running server always uses Supabase — both `APP_ENV=dev` and
+`APP_ENV=release` are Supabase-backed; the env files differ only in
+config knobs (basic auth, CORS, LLM routes), not in storage choice.
 
-Phase 1: the release branch instantiates the Supabase stubs which raise at
-__init__ time, surfacing the missing implementation at startup rather than
-at first request.
+Tests construct `LocalFsSaveRepo` / `LocalFsScenarioRepo` directly with
+tmp paths, so they bypass this factory and never hit a real Supabase.
 """
 
 import os
 
-from .local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from .repo import SaveRepo, ScenarioRepo
 from .supabase import SupabaseSaveRepo, SupabaseStorageScenarioRepo
 
 
 def build_save_repo() -> SaveRepo:
-    app_env = os.environ.get("APP_ENV", "dev")
-    if app_env == "dev":
-        return LocalFsSaveRepo(saves_dir=os.environ["SAVES_DIR"])
-    if app_env == "release":
-        return SupabaseSaveRepo(
-            url=os.environ["SUPABASE_URL"],
-            service_key=os.environ["SUPABASE_SERVICE_KEY"],
-        )
-    raise ValueError(f"unknown APP_ENV: {app_env!r}")
+    return SupabaseSaveRepo(
+        url=os.environ["SUPABASE_URL"],
+        service_key=os.environ["SUPABASE_SERVICE_KEY"],
+    )
 
 
 def build_scenario_repo() -> ScenarioRepo:
-    app_env = os.environ.get("APP_ENV", "dev")
-    if app_env == "dev":
-        return LocalFsScenarioRepo(profile_dir=os.environ["PROFILE_DIR"])
-    if app_env == "release":
-        return SupabaseStorageScenarioRepo(
-            url=os.environ["SUPABASE_URL"],
-            service_key=os.environ["SUPABASE_SERVICE_KEY"],
-            bucket=os.environ["SUPABASE_SCENARIO_BUCKET"],
-        )
-    raise ValueError(f"unknown APP_ENV: {app_env!r}")
+    return SupabaseStorageScenarioRepo(
+        url=os.environ["SUPABASE_URL"],
+        service_key=os.environ["SUPABASE_SERVICE_KEY"],
+        bucket=os.environ["SUPABASE_SCENARIO_BUCKET"],
+    )

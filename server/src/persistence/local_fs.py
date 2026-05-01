@@ -33,14 +33,10 @@ class LocalFsSaveRepo:
     async def save_meta(self, state: GameState) -> None:
         await store.save_meta(state, self.saves_dir)
 
-    async def save_entity(
-        self, state: GameState, kind: str, entity_id: str
-    ) -> None:
+    async def save_entity(self, state: GameState, kind: str, entity_id: str) -> None:
         await store.save_entity(state, self.saves_dir, kind, entity_id)
 
-    async def append_log_entries(
-        self, game_id: str, entries: list[LogEntry]
-    ) -> None:
+    async def append_log_entries(self, game_id: str, entries: list[LogEntry]) -> None:
         await store.append_log_entries(self.saves_dir, game_id, entries)
 
     async def append_history_entries(

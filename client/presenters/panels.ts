@@ -1,4 +1,4 @@
-import type { EquipItem, Hero, Place, Quest, Subject } from '@/types/domain';
+import type { EquipItem, Hero, Quest, Subject } from '@/types/domain';
 import type { MetaSegment, PanelSlot, Tone } from '@/types/ui';
 
 import { formatInventoryItem, joinOrDash } from './format';
@@ -17,7 +17,6 @@ type GameSnapshot = {
   hero: Hero;
   subject: Subject | null;
   quest: Quest | null;
-  place: Place | null;
 };
 
 function characterMeta(level: number, raceJob: string, gender: string): string {
@@ -140,83 +139,10 @@ function buildQuestSlot(quest: Quest | null): PanelSlot {
   };
 }
 
-function moveIntent(name: string): string {
-  const last = name.charCodeAt(name.length - 1);
-  if (last < 0xac00 || last > 0xd7a3) return `${name}로 이동`;
-  const final = (last - 0xac00) % 28;
-  if (final === 0 || final === 8) return `${name}로 이동`;
-  return `${name}으로 이동`;
-}
-
-function buildPlaceSlot(place: Place | null): PanelSlot {
-  if (!place) {
-    return {
-      id: 'bg',
-      chip: { short: '이동' },
-      panel: {
-        title: '—',
-        sections: [
-          { label: '모습', text: '—', clampLines: 3 },
-        ],
-        actions: [
-          { label: '장소', items: [] },
-          { label: '대상', items: [] },
-        ],
-      },
-    };
-  }
-  const metaPrefix = place.weather.length > 0 ? `${place.weather.join(' · ')} · ` : '';
-  return {
-    id: 'bg',
-    chip: { short: '이동' },
-    panel: {
-      title: place.name,
-      meta: [
-        ...(metaPrefix ? [{ text: metaPrefix }] : []),
-        { text: place.risk.label, tone: place.risk.tone },
-      ],
-      sections: [
-        { label: '모습', text: place.description || '—', clampLines: 3 },
-      ],
-      actions: [
-        {
-          label: '장소',
-          items: place.surroundings.map((s) => ({
-            label: s.name,
-            intent: moveIntent(s.name),
-            confirm: {
-              title: s.name,
-              subtitle: s.difficulty ? `이동 난이도: ${s.difficulty}` : undefined,
-              blurb: s.blurb || undefined,
-              risk: s.risk,
-              confirmLabel: '이동',
-            },
-          })),
-        },
-        {
-          label: '대상',
-          items: place.targets.map((t) => ({
-            label: t.name,
-            intent: `${t.name}에게 이동`,
-            confirm: {
-              title: t.name,
-              subtitle: characterMeta(t.level, t.raceJob, t.gender),
-              blurb: t.blurb || undefined,
-              trust: t.trust !== 0 ? t.trust : undefined,
-              confirmLabel: '이동',
-            },
-          })),
-        },
-      ],
-    },
-  };
-}
-
 export function buildPanelSlots(state: GameSnapshot): PanelSlot[] {
   return [
     buildHeroSlot(state.hero),
     buildSubjectSlot(state.subject),
     buildQuestSlot(state.quest),
-    buildPlaceSlot(state.place),
   ];
 }

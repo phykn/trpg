@@ -8,10 +8,10 @@ Repo-root guide. After moving into the directory you want to work in, also read 
 
 Korean-language TRPG. Three pieces in one bundle:
 
-- `server/` — FastAPI + Pydantic v2 + OpenAI-compatible LLM. Game engine. See [server/CLAUDE.md](./server/CLAUDE.md).
+- `server/` — FastAPI + Pydantic v2 + OpenAI-compatible LLM. Game engine, Supabase-backed persistence. See [server/CLAUDE.md](./server/CLAUDE.md).
 - `client/` — Expo (RN 0.81 / React 19) single-screen app. Streams from the server over SSE. [client/CLAUDE.md](./client/CLAUDE.md).
-- `scenarios/<name>/` — gitignored. Scenario seeds the server's `PROFILE_DIR` points at. Tree: `profile.json`, `world.md`, `start.json`, `player_template.json`, `races/`, `characters/`, `locations/`, `items/`, `quests/`, `chapters/`, `skills/`.
-- `saves/` — gitignored. One directory per game (`games/<game_id>/...`).
+- `scenarios/<name>/` — gitignored. Local seed source authored on dev fs and uploaded to a Supabase Storage bucket via `server/scripts/upload_scenarios.py`; the running server reads from Storage, not this dir. Tree: `profile.json`, `world.md`, `start.json`, `player_template.json`, `races/`, `characters/`, `locations/`, `items/`, `quests/`, `chapters/`, `skills/`.
+- Saves live in Supabase Postgres (5 tables keyed on `game_id`), not on disk. Tests construct `LocalFsSaveRepo` / `LocalFsScenarioRepo` directly against `tmp_path` to bypass the factory.
 
 The venv, pyproject, and requirements are a single set at the repo root.
 
@@ -25,7 +25,7 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q          # only when the LLM is up (BAS
 # single test
 .venv/bin/python -m pytest server/tests/test_apply.py::test_name -q
 
-# API server (cwd must be server/ so dotenv reads server/.env)
+# API server (cwd must be server/ so dotenv reads server/.env.<APP_ENV>; default APP_ENV=dev → .env.dev)
 cd server && ../.venv/bin/python run_api.py
 
 # client (separate from the venv, just npm)
@@ -41,22 +41,13 @@ Apply repo-wide. When a sub-CLAUDE.md repeats the same rule, the sub version is 
 - **Display data is built on the server and shipped over.** Korean dates, durations, composed strings, conditional labels — all built in `server/src/mapping/to_front.py` and rendered as-is on the client. Client types only carry the fields the UI renders.
 - **LLM agent retry = 5-shot self-correction loop.** judge and friends append the previous response + error to the message stream on `ValidationError` or semantic-check failure, so the next attempt corrects itself. After 5 attempts, the loop raises by the last error type. **narrate is an exception**: body tokens stream to the client live, so it retries (up to 5×) only on stream-transport errors or an empty body — once any body delta has been sent, a later failure raises.
 - **Stats keys = ASCII abbreviations** (`STR/DEX/CON/INT/WIS/CHA`). The judge's stat enum uses the same keys.
-- **Save-directory isolation.** Production saves go in the repo-root `saves/`. Local QA harnesses (e.g. agency) write into `reports/<...>/saves/` — keep them separate, never repoint at the production `saves/`.
+- **Save-directory isolation.** The running server writes saves to Supabase (both `APP_ENV=dev` and `release`). Local QA harnesses (e.g. agency) write into `reports/<...>/saves/` via the LocalFs adapter — keep them separate, never repoint at the production Supabase project.
 
 ## Stack
 
 - Python 3.12+, Pydantic v2, FastAPI, async/await throughout, uvicorn.
-- An OpenAI-compatible LLM server pointed at by `BASE_URL` (currently llama.cpp).
-- Single process + `asyncio.Lock` to serialize file writes. No DB — game state is per-entity JSON plus append-only JSONL.
-- Expo SDK 54 / RN 0.81 / React 19, NativeWind v4, expo-router with typedRoutes, `expo/fetch` for SSE streaming (standard `fetch` doesn't support SSE body streaming on RN).
+- **Supabase Postgres + Storage** is the runtime store. Saves → 5 tables keyed on `game_id` (`games / entities / log_entries / history_entries / dialogue_entries`); scenarios → Storage bucket mirroring the local `scenarios/<profile>/...` tree 1:1. Schema in `server/migrations/001_init.sql`. The running server (both `APP_ENV=dev` and `release`) goes through `SupabaseSaveRepo` + `SupabaseStorageScenarioRepo`; tests bypass the factory and use `LocalFsSaveRepo` / `LocalFsScenarioRepo` against `tmp_path`.
+- LLM is OpenAI-compatible. `LLM_ROUTE_<AGENT> = <provider>/<model>` per agent (`dc_judge`, `narrate`, `combat_narrate`, `encounter_summon`, `skill_recommend`); unmatched agents fall back to `default`. Provider blocks (llama.cpp local, Gemini hosted) layer on top of `.env.<APP_ENV>`.
+- Expo SDK 54 / RN 0.81 / React 19, NativeWind v4, expo-router with typedRoutes, `expo/fetch` for SSE streaming (standard `fetch` doesn't support SSE body streaming on RN). Web export deploys to Cloudflare Workers via `npm run deploy`.
 
-## Planned production stack
-
-The local setup above is dev-only. Intended hosted deployment is **Supabase + FastAPI + React Native (Expo) + Cloudflare**:
-
-- **Supabase (Postgres)** replaces local `saves/` JSON. Per-entity files → rows (start with JSONB mirror — `entities(game_id, kind, id, data jsonb)`); `log.jsonl / history.jsonl / dialogue.jsonl` → append-only tables keyed by `(game_id, seq)`.
-- **Cloudflare Workers (Python beta)** hosts the FastAPI app — Workers runtime has built-in ASGI. Cloudflare Containers is the fallback if Worker limits bite (SSE buffering, 100s idle timeout on Free/Pro, package whitelist).
-- **Expo (React Native)** client unchanged; web export likely on Cloudflare Pages.
-- **Hosted LLM** (Gemini already wired in `server/src/llm/gemini.py`) — local llama.cpp isn't reachable from a deployed Worker, so the prod `LLM_ROUTE_*` must point at a hosted provider.
-
-Not built yet — but new code should keep persistence and locking swappable: `asyncio.Lock` for save serialization won't survive multi-isolate deploys (move to DB-level locks like `SELECT ... FOR UPDATE`), and file writes in `persistence/store.py` should stay behind an interface so the storage layer can be replaced without touching `flow/` or `engines/`.
+The persistence seam — `SaveRepo` / `ScenarioRepo` Protocols in `server/src/persistence/repo.py` — exists so the storage layer can be swapped without touching `flow/`, `context/`, or `engines/`. `asyncio.Lock` save serialization is single-process only; multi-isolate deploys would need DB-level locks (`SELECT ... FOR UPDATE`).
