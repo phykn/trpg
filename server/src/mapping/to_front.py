@@ -24,6 +24,7 @@ from ..ontology.queries import (
 )
 from .labels import (
     RISK_PAYLOAD,
+    difficulty_badge,
     gender_label,
     race_job_label,
     stat_label,
@@ -196,7 +197,7 @@ def to_quest(state: GameState, graph: GameGraph | None = None) -> dict | None:
         "title": q.title,
         "summary": q.summary,
         "giver": giver_name,
-        "difficulty": q.difficulty,
+        "difficulty": difficulty_badge(q.difficulty),
         "goals": goals,
         "conditions": list(q.conditions),
         "rewards": {"gold": q.rewards.gold, "exp": q.rewards.exp},

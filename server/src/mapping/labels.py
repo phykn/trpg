@@ -62,3 +62,21 @@ RISK_PAYLOAD: dict[str, dict] = {
     "risky": {"label": "주의", "tone": "neutral"},
     "dangerous": {"label": "위험", "tone": "bad"},
 }
+
+
+# Tier → display tone for quest-difficulty chips. `None` for the neutral
+# middle tier so the panel renders no color (default text). Server sends
+# the {label, tone} pair so the client doesn't keep its own mapping.
+_TIER_TONE: dict[str, str | None] = {
+    "매우 쉬움": "neutral",
+    "쉬움": "good",
+    "보통": None,
+    "어려움": "exp",
+    "매우 어려움": "accent",
+    "전설": "bad",
+    "신화": "bad",
+}
+
+
+def difficulty_badge(tier: str) -> dict:
+    return {"label": tier, "tone": _TIER_TONE.get(tier)}

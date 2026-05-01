@@ -61,10 +61,12 @@ export type Subject = {
   skills: string[];
 };
 
+export type DifficultyBadge = { label: string; tone: Tone | null };
+
 export type Quest = {
   title: string;
   giver: string;
-  difficulty: string;
+  difficulty: DifficultyBadge;
   goals: string[];
   conditions: string[];
   rewards: { gold: number; exp: number };

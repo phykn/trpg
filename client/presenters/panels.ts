@@ -1,29 +1,13 @@
 import type { EquipItem, Hero, Quest, Subject } from '@/types/domain';
-import type { MetaSegment, PanelSlot, Tone } from '@/types/ui';
+import type { MetaSegment, PanelSlot } from '@/types/ui';
 
-import { formatInventoryItem, joinOrDash } from './format';
-
-const TIER_TONE: Record<string, Tone | undefined> = {
-  '매우 쉬움': 'neutral',
-  '쉬움': 'good',
-  '보통': undefined,
-  '어려움': 'exp',
-  '매우 어려움': 'accent',
-  '전설': 'bad',
-  '신화': 'bad',
-};
+import { DASH, characterMeta, formatInventoryItem, joinOrDash } from './format';
 
 type GameSnapshot = {
   hero: Hero;
   subject: Subject | null;
   quest: Quest | null;
 };
-
-function characterMeta(level: number, raceJob: string, gender: string): string {
-  const parts = [`Lv ${level}`, raceJob];
-  if (gender) parts.push(gender);
-  return parts.join(' · ');
-}
 
 function plainMeta(text: string): MetaSegment[] {
   return [{ text }];
@@ -58,21 +42,7 @@ function buildSubjectSlot(subject: Subject | null): PanelSlot {
     return {
       id: 'person',
       chip: { short: '대상' },
-      panel: {
-        title: '—',
-        barSplit: [
-          { label: 'HP', value: 0, max: 0, tone: 'hp', display: '—' },
-          { label: '호감도', value: 0, max: 100, tone: 'good', display: '—', signed: true },
-        ],
-        sections: [
-          { label: '능력', text: '—' },
-          { label: '장비', text: '—' },
-          { label: '소지', text: '—' },
-          { label: '기술', text: '—' },
-          { label: '역할', text: '—' },
-          { label: '특징', text: '—', clampLines: 2 },
-        ],
-      },
+      panel: { empty: true, title: '대상' },
     };
   }
   const equipped = Object.values(subject.equipment).filter((it): it is EquipItem => it !== null);
@@ -98,8 +68,8 @@ function buildSubjectSlot(subject: Subject | null): PanelSlot {
         { label: '장비', text: joinOrDash(equipped.map((it) => it.name)) },
         { label: '소지', text: joinOrDash(subject.inventory.map(formatInventoryItem)) },
         { label: '기술', text: joinOrDash(subject.skills) },
-        { label: '역할', text: subject.role || '—' },
-        { label: '특징', text: joinOrDash(subject.known), clampLines: 2 },
+        { label: '역할', text: subject.role || DASH },
+        { label: '특징', text: joinOrDash(subject.known) },
       ],
     },
   };
@@ -110,16 +80,7 @@ function buildQuestSlot(quest: Quest | null): PanelSlot {
     return {
       id: 'quest',
       chip: { short: '퀘스트' },
-      panel: {
-        title: '—',
-        sections: [
-          { label: '의뢰', text: '—' },
-          { label: '보상', text: '—' },
-          { label: '목표', text: '—' },
-          { label: '조건', text: '—' },
-          { label: '요약', text: '—', clampLines: 3 },
-        ],
-      },
+      panel: { empty: true, title: '퀘스트' },
     };
   }
   return {
@@ -127,13 +88,13 @@ function buildQuestSlot(quest: Quest | null): PanelSlot {
     chip: { short: '퀘스트' },
     panel: {
       title: quest.title,
-      meta: [{ text: quest.difficulty, tone: TIER_TONE[quest.difficulty] }],
+      meta: [{ text: quest.difficulty.label, tone: quest.difficulty.tone ?? undefined }],
       sections: [
         { label: '의뢰', text: quest.giver },
         { label: '보상', nodes: [['GOLD', quest.rewards.gold], ['EXP', quest.rewards.exp]] },
         { label: '목표', text: joinOrDash(quest.goals) },
         { label: '조건', text: joinOrDash(quest.conditions) },
-        { label: '요약', text: quest.summary, clampLines: 3 },
+        { label: '요약', text: quest.summary },
       ],
     },
   };

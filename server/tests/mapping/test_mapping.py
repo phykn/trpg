@@ -183,7 +183,7 @@ def test_subject_dead_known_marked_as_death(fresh_state):
 
 def test_quest_difficulty_label(fresh_state):
     q = to_quest(_full_state(fresh_state))
-    assert q["difficulty"] == "어려움"
+    assert q["difficulty"] == {"label": "어려움", "tone": "exp"}
     assert q["goals"] == ["처치", "보고"]
     assert q["giver"] == "경비병"
 
