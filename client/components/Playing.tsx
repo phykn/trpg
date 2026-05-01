@@ -1,13 +1,10 @@
 import { useAudioPlayer } from 'expo-audio';
 import React from 'react';
-import { Keyboard, Modal, Pressable, Text, View } from 'react-native';
-
-import { colors, shadow } from '@/design/tokens';
+import { Keyboard, Pressable, Text, View } from 'react-native';
 
 import type { Game } from '@/hooks/useGame';
 import { useStoryGraph } from '@/hooks/useStoryGraph';
 import { buildPanelSlots } from '@/presenters';
-import { buildStoryGraph } from '@/presenters/storyGraph';
 import type { PanelAction, PanelSlot } from '@/types/ui';
 
 import { CombatStrip } from './combat';
@@ -15,7 +12,6 @@ import { Composer, RollPrompt } from './composer';
 import { ContextCard } from './header';
 import { HeroStrip } from './hero';
 import { Log } from './log';
-import { StoryGraphScreen } from './story-graph/StoryGraphScreen';
 import { ConfirmDialog } from './ui';
 
 const BGM_SOURCE = require('../assets/audio/bgm.mp3');
@@ -23,7 +19,7 @@ const BGM_SOURCE = require('../assets/audio/bgm.mp3');
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, log, pending, streaming, awaitingNarration, suggestions, errorMessage, think, setThink, onSend, onRoll, onStop, goToNewGame } = game;
+  const { hero, subject, quest, place, combat, storyGraph, log, pending, streaming, awaitingNarration, suggestions, errorMessage, think, setThink, onSend, onRoll, onStop, goToNewGame } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -31,7 +27,6 @@ export function Playing({ game }: Props) {
   const [input, setInput] = React.useState('');
   const [pendingAction, setPendingAction] = React.useState<PanelAction | null>(null);
   const [newGameConfirmOpen, setNewGameConfirmOpen] = React.useState(false);
-  const [graphOpen, setGraphOpen] = React.useState(false);
   const [bgmOn, setBgmOn] = React.useState(false);
 
   const bgm = useAudioPlayer(BGM_SOURCE);
@@ -71,11 +66,7 @@ export function Playing({ game }: Props) {
     }
   }, [typing]);
 
-  const currentMapGraph = React.useMemo(
-    () => buildStoryGraph({ hero, subject, quest, place }),
-    [hero, subject, quest, place],
-  );
-  const miniMapGraph = useStoryGraph(game.gameId, currentMapGraph);
+  const miniMapGraph = useStoryGraph(game.gameId, storyGraph);
 
   if (!hero) return null;
 
@@ -91,7 +82,6 @@ export function Playing({ game }: Props) {
         slots={slots}
         miniMapGraph={miniMapGraph}
         place={place}
-        subject={subject}
         activeId={activeId}
         menuOpen={menuOpen}
         bgmOn={bgmOn}
@@ -100,7 +90,6 @@ export function Playing({ game }: Props) {
         onMenuClose={() => setMenuOpen(false)}
         onBgmToggle={toggleBgm}
         onNewGame={() => setNewGameConfirmOpen(true)}
-        onGraph={() => setGraphOpen(true)}
         onAction={(action) => {
           if (action.confirm) {
             setPendingAction(action);
@@ -116,36 +105,6 @@ export function Playing({ game }: Props) {
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }}
         />
       )}
-
-      <Modal
-        transparent
-        visible={graphOpen}
-        animationType="fade"
-        onRequestClose={() => setGraphOpen(false)}
-      >
-        <Pressable
-          onPress={() => setGraphOpen(false)}
-          className="flex-1 items-center justify-start px-4"
-          style={{ backgroundColor: 'rgba(24, 20, 14, 0.62)', paddingTop: 170 }}
-        >
-          <Pressable
-            onPress={(e) => e.stopPropagation()}
-            className="bg-canvas-subtle border border-border-default rounded-md w-full"
-            style={{ maxWidth: 560, maxHeight: '92%', ...shadow.floating }}
-          >
-            <View className="px-3 py-3">
-              <StoryGraphScreen
-                embedded
-                onClose={() => setGraphOpen(false)}
-                onAction={(action) => {
-                  setGraphOpen(false);
-                  onSend(action.intent);
-                }}
-              />
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
 
       {pendingAction?.confirm && (
         <ConfirmDialog

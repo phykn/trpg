@@ -9,26 +9,16 @@ import {
   readStoredStoryGraph,
   STORY_GRAPH_UPDATED_EVENT,
 } from '@/hooks/useStoryGraph';
-import {
-  buildStoryGraph,
-  EMPTY_STORY_GRAPH,
-  normalizeStoryGraphPayload,
-  type StoryGraphModel,
-} from '@/presenters/storyGraph';
-import {
-  getSessionById,
-  getSessionGraphById,
-  loadStoredGameId,
-  streamTurn,
-} from '@/services';
+import { EMPTY_STORY_GRAPH } from '@/presenters/storyGraph';
+import { getSessionById, loadStoredGameId, streamTurn } from '@/services';
 import type { Place } from '@/types/domain';
+import type { StoryGraphModel } from '@/types/storyGraph';
 import type { PanelAction } from '@/types/ui';
 import type { StreamEvent } from '@/types/wire';
 
 import { StoryGraphPanel } from './StoryGraphPanel';
 
 type Status = 'loading' | 'ready' | 'empty' | 'error';
-type Source = 'backend' | 'front-state';
 
 export function StoryGraphScreen({
   onClose,
@@ -42,7 +32,6 @@ export function StoryGraphScreen({
   const [status, setStatus] = React.useState<Status>('loading');
   const gameIdRef = React.useRef<string | null>(null);
   const [graph, setGraph] = React.useState<StoryGraphModel>(EMPTY_STORY_GRAPH);
-  const [source, setSource] = React.useState<Source>('front-state');
   const [message, setMessage] = React.useState<string | null>(null);
   const [actionMessage, setActionMessage] = React.useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(null);
@@ -63,31 +52,15 @@ export function StoryGraphScreen({
     }
 
     try {
-      const graphPayload = await getSessionGraphById(stored);
-      const normalizedGraph = normalizeStoryGraphPayload(graphPayload);
       const session = await getSessionById(stored);
       if (!isAlive()) return;
-      if (session) setPlace(session.state.place);
-      if (normalizedGraph) {
-        setGraph(normalizedGraph);
-        setSource('backend');
-        setStatus('ready');
-        return;
-      }
-
       if (!session) {
         setGraph(EMPTY_STORY_GRAPH);
         setStatus('empty');
         return;
       }
-
-      setGraph(mergeAndStoreStoryGraph(stored, buildStoryGraph(session.state)));
-      setSource('front-state');
-      setMessage(
-        graphPayload
-          ? '서버 graph 응답을 그래프 모델로 읽을 수 없어 현재 state로 표시합니다.'
-          : '서버 graph endpoint가 없어 현재 state로 표시합니다.',
-      );
+      setPlace(session.state.place);
+      setGraph(mergeAndStoreStoryGraph(stored, session.state.storyGraph));
       setStatus('ready');
     } catch (err) {
       if (!isAlive()) return;
@@ -123,8 +96,7 @@ export function StoryGraphScreen({
     if (ev.type === 'state') {
       const stored = gameIdRef.current;
       if (!stored) return;
-      setGraph(mergeAndStoreStoryGraph(stored, buildStoryGraph(ev.data)));
-      setSource('front-state');
+      setGraph(mergeAndStoreStoryGraph(stored, ev.data.storyGraph));
       setPlace(ev.data.place);
       setSelectedNodeId(null);
       setActionMessage('지도 명령 결과를 반영했습니다.');
@@ -164,13 +136,13 @@ export function StoryGraphScreen({
     const onGraphUpdate = (event: Event) => {
       const detail = (event as CustomEvent<{ gameId?: string }>).detail;
       const updatedGameId = detail?.gameId;
-      if (!updatedGameId || updatedGameId !== gameIdRef.current || source === 'backend') return;
+      if (!updatedGameId || updatedGameId !== gameIdRef.current) return;
       setGraph(readStoredStoryGraph(updatedGameId) ?? EMPTY_STORY_GRAPH);
     };
 
     window.addEventListener(STORY_GRAPH_UPDATED_EVENT, onGraphUpdate);
     return () => window.removeEventListener(STORY_GRAPH_UPDATED_EVENT, onGraphUpdate);
-  }, [source]);
+  }, []);
 
   return (
     <View className={`flex-1 ${embedded ? '' : 'bg-canvas-default py-2.5'} gap-2.5`}>
@@ -223,7 +195,7 @@ export function StoryGraphScreen({
 
         {status === 'loading' ? (
           <View className="items-center justify-center py-14">
-            <Text className="font-sans text-body text-fg-muted">지도를 펼치고 있습니다.</Text>
+            <Text className="font-sans text-body text-fg-muted">지도를 펼칩니다.</Text>
           </View>
         ) : null}
 

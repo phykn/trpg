@@ -39,30 +39,6 @@ export type RollRequest = {
   think: boolean;
 };
 
-// Story graph payload shipped by `GET /session/{id}/graph`. Fields mirror
-// `server/src/api/schema.py:StoryGraphResponse`. The client's rich
-// StoryGraphModel (in `presenters/storyGraph.ts`) is a superset built from
-// the FrontState panels; this wire type is the server's narrower shape.
-export type StoryGraphPayloadNode = {
-  id: string;
-  kind: string;
-  label: string;
-  detail: string;
-};
-
-export type StoryGraphPayloadEdge = {
-  id: string;
-  source: string;
-  target: string;
-  label: string;
-};
-
-export type StoryGraphPayload = {
-  nodes: StoryGraphPayloadNode[];
-  edges: StoryGraphPayloadEdge[];
-  summary: string;
-};
-
 // `judge` and `combat_*` events are observed but their payloads are never
 // destructured — `state` + `log_entry` are authoritative for the UI.
 export type StreamEvent =

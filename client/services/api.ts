@@ -5,7 +5,6 @@ import type {
   ProfileCard,
   RollRequest,
   SessionPayload,
-  StoryGraphPayload,
   StreamEvent,
   TurnRequest,
 } from '@/types/wire';
@@ -40,13 +39,6 @@ export async function getSessionById(gameId: string): Promise<SessionPayload | n
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`getSessionById failed: HTTP ${res.status}`);
   return (await res.json()) as SessionPayload;
-}
-
-export async function getSessionGraphById(gameId: string): Promise<StoryGraphPayload | null> {
-  const res = await fetch(`${BASE_URL}/session/${gameId}/graph`, { headers: baseHeaders });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`getSessionGraphById failed: HTTP ${res.status}`);
-  return (await res.json()) as StoryGraphPayload;
 }
 
 export async function initSession(body: InitRequest): Promise<SessionPayload> {

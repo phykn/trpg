@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { mergeAndStoreStoryGraph } from '@/hooks/useStoryGraph';
-import { buildStoryGraph } from '@/presenters/storyGraph';
+import { EMPTY_STORY_GRAPH } from '@/presenters/storyGraph';
 import {
   clearStoredGameId,
   getSessionById,
@@ -21,6 +21,7 @@ import type {
   Quest,
   Subject,
 } from '@/types/domain';
+import type { StoryGraphModel } from '@/types/storyGraph';
 import type { LogEntry } from '@/types/ui';
 import type { InitRequest, StreamEvent } from '@/types/wire';
 
@@ -53,6 +54,7 @@ export function useGame() {
 
   const [pending, setPending] = React.useState<PendingCheck | null>(null);
   const [combat, setCombat] = React.useState<CombatBadge | null>(null);
+  const [storyGraph, setStoryGraph] = React.useState<StoryGraphModel>(EMPTY_STORY_GRAPH);
   const [streaming, setStreaming] = React.useState(false);
   const [streamingText, setStreamingText] = React.useState('');
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
@@ -82,7 +84,9 @@ export function useGame() {
     setLog(s.log);
     setPending(s.pendingCheck);
     if (stateGameId) {
-      mergeAndStoreStoryGraph(stateGameId, buildStoryGraph(s));
+      setStoryGraph(mergeAndStoreStoryGraph(stateGameId, s.storyGraph));
+    } else {
+      setStoryGraph(s.storyGraph);
     }
   }, []);
 
@@ -219,6 +223,7 @@ export function useGame() {
     quest,
     place,
     combat,
+    storyGraph,
     log: displayLog,
     pending,
     streaming,

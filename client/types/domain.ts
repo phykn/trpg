@@ -1,3 +1,4 @@
+import type { StoryGraphModel } from './storyGraph';
 import type { LogEntry, Tone } from './ui';
 
 export type RiskBadge = { label: string; tone: Tone };
@@ -133,4 +134,5 @@ export type FrontState = {
   combat: CombatBadge | null;
   log: LogEntry[];
   pendingCheck: PendingCheck | null;
+  storyGraph: StoryGraphModel;
 };
