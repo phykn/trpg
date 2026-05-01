@@ -116,8 +116,45 @@ class _Storage:
             raise PersistenceFailed(f"storage get {path}: {r.status_code} {r.text}")
         return r.content
 
+    async def put_bytes(
+        self,
+        path: str,
+        blob: bytes,
+        *,
+        content_type: str = "application/octet-stream",
+    ) -> None:
+        """Upload (or overwrite) a single object. Used by the scenario
+        upload script — the server itself is read-only against scenarios."""
+        encoded = "/".join(quote(seg, safe="") for seg in path.split("/"))
+        url = f"{self._base}/object/{self._bucket}/{encoded}"
+        headers = {
+            **self._headers,
+            "Content-Type": content_type,
+            "x-upsert": "true",
+        }
+        r = await self._client.post(url, headers=headers, content=blob)
+        if r.status_code >= 300:
+            raise PersistenceFailed(f"storage put {path}: {r.status_code} {r.text}")
+
     async def get_text(self, path: str) -> str:
         return (await self.get_bytes(path)).decode("utf-8")
+
+    async def _list_objects(self, prefix: str, *, label: str) -> list[dict[str, Any]]:
+        url = f"{self._base}/object/list/{self._bucket}"
+        body = {
+            "prefix": prefix,
+            "limit": 1000,
+            "offset": 0,
+            "sortBy": {"column": "name", "order": "asc"},
+        }
+        r = await self._client.post(
+            url,
+            headers={**self._headers, "Content-Type": "application/json"},
+            content=json.dumps(body),
+        )
+        if r.status_code >= 300:
+            raise PersistenceFailed(f"storage {label} {prefix}: {r.status_code} {r.text}")
+        return r.json()
 
     async def list_prefix(self, prefix: str) -> list[str]:
         """List object names directly under `prefix/` (one level, no recursion).
@@ -127,37 +164,11 @@ class _Storage:
         names without `metadata` in the response — we filter to files only
         by checking `metadata` is non-null.
         """
-        url = f"{self._base}/object/list/{self._bucket}"
-        body = {
-            "prefix": prefix,
-            "limit": 1000,
-            "offset": 0,
-            "sortBy": {"column": "name", "order": "asc"},
-        }
-        r = await self._client.post(
-            url,
-            headers={**self._headers, "Content-Type": "application/json"},
-            content=json.dumps(body),
-        )
-        if r.status_code >= 300:
-            raise PersistenceFailed(f"storage list {prefix}: {r.status_code} {r.text}")
-        return [obj["name"] for obj in r.json() if obj.get("metadata") is not None]
+        objs = await self._list_objects(prefix, label="list")
+        return [obj["name"] for obj in objs if obj.get("metadata") is not None]
 
     async def list_dirs(self, prefix: str) -> list[str]:
         """List subdirectory names directly under `prefix/`. Folders are
         returned by Storage with `metadata: null`."""
-        url = f"{self._base}/object/list/{self._bucket}"
-        body = {
-            "prefix": prefix,
-            "limit": 1000,
-            "offset": 0,
-            "sortBy": {"column": "name", "order": "asc"},
-        }
-        r = await self._client.post(
-            url,
-            headers={**self._headers, "Content-Type": "application/json"},
-            content=json.dumps(body),
-        )
-        if r.status_code >= 300:
-            raise PersistenceFailed(f"storage list-dirs {prefix}: {r.status_code} {r.text}")
-        return [obj["name"] for obj in r.json() if obj.get("metadata") is None]
+        objs = await self._list_objects(prefix, label="list-dirs")
+        return [obj["name"] for obj in objs if obj.get("metadata") is None]
