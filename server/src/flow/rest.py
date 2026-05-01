@@ -7,14 +7,24 @@ from collections.abc import AsyncIterator
 from ..domain.state import GameState
 from ..engines import recovery as recovery_engine
 from ..llm.client import LLMClient
-from ..mapping.to_front import rest_ambush_text, rest_completed_text
-from ..ontology.graph import build_graph
+from ..mapping.josa import eun_neun
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from . import encounter as encounter_engine
 from .combat_auto import PlayerAction
 from .combat_phase import start_combat_and_drive_auto
 from .clock import tick_turn_buffs
 from .dirty import Dirty, ToFrontFn, finalize, push_act
+
+
+def _rest_completed_text(actor_name: str) -> str:
+    return (
+        f"{actor_name}{eun_neun(actor_name)} 자리를 잡고 잠을 청했습니다. "
+        f"새벽이 밝아오자 푹 쉬고 일어났습니다. HP/MP가 모두 회복됐습니다."
+    )
+
+
+def _rest_ambush_text(actor_name: str) -> str:
+    return f"{actor_name}{eun_neun(actor_name)} 잠들기 직전 적의 습격을 받았습니다."
 
 
 async def run_rest(
@@ -48,7 +58,7 @@ async def run_rest(
     actor = state.characters[state.player_id]
 
     if outcome == "encounter":
-        yield push_act(state, dirty, rest_ambush_text(actor.name))
+        yield push_act(state, dirty, _rest_ambush_text(actor.name))
         # attempt_rest may have spawned an enemy; build graph fresh so the
         # new located_at edge is visible to the combat path's downstream reads.
         state.invalidate_graph()
@@ -72,6 +82,6 @@ async def run_rest(
             yield ev
         return
 
-    yield push_act(state, dirty, rest_completed_text(actor.name))
+    yield push_act(state, dirty, _rest_completed_text(actor.name))
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev

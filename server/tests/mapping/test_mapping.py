@@ -14,12 +14,12 @@ from src.domain.entities import (
     WeaponEffect,
 )
 from src.domain.memory import GMLogEntry, Memory, RollLogEntry
+from src.mapping.story_graph import to_story_graph
 from src.mapping.to_front import (
     to_front_state,
     to_hero,
     to_place,
     to_quest,
-    to_story_graph,
     to_subject,
 )
 
