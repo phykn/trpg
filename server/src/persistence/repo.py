@@ -4,8 +4,9 @@ Two seams:
 - `SaveRepo`: per-game runtime state (replaces file IO under `saves/games/<game_id>/`).
 - `ScenarioRepo`: read-only seed data (replaces file IO under `scenarios/<profile>/`).
 
-Adapters live in `local_fs.py` (dev) and `supabase.py` (release, Phase 2 stub).
-`factory.py` picks one based on `APP_ENV`.
+Adapters live in `local_fs.py` (tests only — constructed directly with tmp
+paths) and `supabase.py` (running server, both APP_ENV=dev and =release).
+`factory.py` builds the Supabase pair unconditionally.
 """
 
 from pathlib import Path
