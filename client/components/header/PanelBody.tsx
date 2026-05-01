@@ -1,8 +1,34 @@
 import React from 'react';
 import { ScrollView, View, Text, Pressable } from 'react-native';
 import { StatRow, InlineParts, InlineNodes, LabeledRow, Row, ExpandGroup } from '@/components/ui';
-import { toneColor } from '@/design/tokens';
+import { colors, toneColor } from '@/design/tokens';
 import type { Panel, PanelAction, PanelActions } from '@/types/ui';
+
+function CornerMarks() {
+  const SIZE = 14;
+  const INSET = 8;
+  const COLOR = colors.accent.fg;
+  const OPACITY = 0.9;
+  const corner = (v: 'top' | 'bottom', h: 'left' | 'right') => ({
+    position: 'absolute' as const,
+    width: SIZE,
+    height: SIZE,
+    opacity: OPACITY,
+    [v]: INSET,
+    [h]: INSET,
+    [v === 'top' ? 'borderTopWidth' : 'borderBottomWidth']: 1,
+    [h === 'left' ? 'borderLeftWidth' : 'borderRightWidth']: 1,
+    borderColor: COLOR,
+  });
+  return (
+    <>
+      <View pointerEvents="none" style={corner('top', 'left')} />
+      <View pointerEvents="none" style={corner('top', 'right')} />
+      <View pointerEvents="none" style={corner('bottom', 'left')} />
+      <View pointerEvents="none" style={corner('bottom', 'right')} />
+    </>
+  );
+}
 
 function ActionScroller({ group, onAction }: {
   group: PanelActions;
@@ -38,9 +64,38 @@ function ActionScroller({ group, onAction }: {
   );
 }
 
-export function PanelBody({ panel, onAction }: { panel: Panel; onAction?: (action: PanelAction) => void }) {
+export function PanelBody({ panel, kind, onAction }: {
+  panel: Panel;
+  kind?: string;
+  onAction?: (action: PanelAction) => void;
+}) {
+  const sections = panel.sections || [];
+  const titleEmpty = !panel.title || panel.title === '—';
+  const sectionsEmpty = sections.every(
+    (s) => !(s.nodes ? s.nodes.length > 0 : s.text && s.text !== '—'),
+  );
+  const isEmptyPanel =
+    titleEmpty &&
+    sectionsEmpty &&
+    !panel.bar &&
+    !panel.barSplit &&
+    (panel.actions || []).every((g) => g.items.length === 0);
+
+  if (isEmptyPanel) {
+    return (
+      <View className="px-4 py-10 items-center justify-center" style={{ minHeight: 120 }}>
+        <Text className="font-sans text-caption text-fg-subtle">
+          아직 비어 있습니다
+        </Text>
+      </View>
+    );
+  }
+
+  const showCorners = kind === 'bg';
+
   return (
     <View className="px-4 py-3 gap-2.5" style={{ minHeight: 160 }}>
+      {showCorners && <CornerMarks />}
       <View className="flex-row items-center gap-2" style={{ minHeight: 22 }}>
         <View className="flex-1 min-w-0">
           <Text numberOfLines={1} className="font-serif-medium text-title text-fg-default">
@@ -85,7 +140,7 @@ export function PanelBody({ panel, onAction }: { panel: Panel; onAction?: (actio
       )}
 
       <ExpandGroup>
-        {(panel.sections || []).map((section) => (
+        {sections.map((section) => (
           <LabeledRow
             key={section.label}
             label={section.label}

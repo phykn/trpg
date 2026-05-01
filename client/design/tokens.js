@@ -108,9 +108,9 @@ const shadow = {
   },
   paper: {
     shadowColor: colors.fg.default,
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
     elevation: 1,
   },
 };

@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 
-import { CenterMessage, ErrorState } from '@/components/ui';
+import { CenterMessage, ErrorState, Glyph } from '@/components/ui';
 import { colors } from '@/design/tokens';
 import { listProfiles } from '@/services';
 import type { InitRequest, ProfileCard, RaceCard } from '@/types/wire';
@@ -102,7 +102,7 @@ export function NewGame({ onSubmit }: Props) {
             캐릭터 생성
           </Text>
           <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default }} />
-          <Text style={{ color: colors.accent.fg, fontSize: 10 }}>◇</Text>
+          <Glyph kind="outline" tone="accent" size={10} />
         </View>
         <Text className="font-serif-medium text-narration text-fg-default">새 게임</Text>
         <Text className="font-sans text-body text-fg-muted">

@@ -1,5 +1,6 @@
 import { Animated, Text, View } from 'react-native';
 
+import { Glyph } from '@/components/ui';
 import { colors, shadow, spacing } from '@/design/tokens';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 import type { LogEntry } from '@/types/ui';
@@ -19,6 +20,40 @@ export function LogItem({ entry }: { entry: LogEntry }) {
   }
 }
 
+type Segment = { text: string; kind: 'plain' | 'mark' | 'speech' };
+
+function splitDialogue(text: string): Segment[] {
+  const re = /「([^」]*)」/g;
+  const parts: Segment[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) parts.push({ text: text.slice(last, m.index), kind: 'plain' });
+    parts.push({ text: '「', kind: 'mark' });
+    parts.push({ text: m[1], kind: 'speech' });
+    parts.push({ text: '」', kind: 'mark' });
+    last = re.lastIndex;
+  }
+  if (last < text.length) parts.push({ text: text.slice(last), kind: 'plain' });
+  return parts;
+}
+
+function NarrationParts({ segments }: { segments: Segment[] }) {
+  return (
+    <>
+      {segments.map((s, i) =>
+        s.kind === 'mark' ? (
+          <Text key={i} className="text-accent-fg">{s.text}</Text>
+        ) : s.kind === 'speech' ? (
+          <Text key={i} className="font-sans-medium">{s.text}</Text>
+        ) : (
+          s.text
+        ),
+      )}
+    </>
+  );
+}
+
 function GMNarration({ text }: { text: string }) {
   const paragraphs = text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
   return (
@@ -29,15 +64,33 @@ function GMNarration({ text }: { text: string }) {
         paddingLeft: spacing[3],
       }}
     >
-      {paragraphs.map((p, i) => (
-        <Text
-          key={i}
-          className="font-serif text-narration text-fg-default"
-          style={{ marginTop: i === 0 ? 0 : spacing[3] }}
-        >
-          {p}
-        </Text>
-      ))}
+      {paragraphs.map((p, i) => {
+        const dropcap = i === 0 && p.length >= 20;
+        if (dropcap) {
+          const first = Array.from(p)[0];
+          const rest = p.slice(first.length);
+          return (
+            <Text key={i} className="font-serif text-narration text-fg-default">
+              <Text
+                className="font-sans-semibold text-fg-default"
+                style={{ fontSize: 30, lineHeight: 34 }}
+              >
+                {first}
+              </Text>
+              <NarrationParts segments={splitDialogue(rest)} />
+            </Text>
+          );
+        }
+        return (
+          <Text
+            key={i}
+            className="font-serif text-narration text-fg-default"
+            style={{ marginTop: i === 0 ? 0 : spacing[3] }}
+          >
+            <NarrationParts segments={splitDialogue(p)} />
+          </Text>
+        );
+      })}
     </View>
   );
 }
@@ -66,12 +119,7 @@ function ActDivider({ text }: { text: string }) {
         className="bg-canvas-subtle border border-border-default rounded-md px-3 py-2.5 flex-row items-start gap-2"
         style={{ borderLeftWidth: 2, borderLeftColor: colors.accent.fg, ...shadow.paper }}
       >
-        <Text
-          className="font-sans-bold text-caption text-accent-fg"
-          style={{ lineHeight: 20 }}
-        >
-          ◆
-        </Text>
+        <Glyph kind="filled" tone="accent" size={11} style={{ lineHeight: 20 }} />
         <Text className="font-sans-medium text-body text-fg-default flex-1">
           {text}
         </Text>

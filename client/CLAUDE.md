@@ -13,6 +13,7 @@ See [README.md](./README.md) for the full table. Notes:
 - After editing `tailwind.config.js`, `babel.config.js`, `metro.config.js`, or `design/tokens.js`, restart Metro with `-c`.
 - No test runner. Type-check via `node_modules/.bin/tsc --noEmit`, or implicitly through the editor / Metro (`strict` TS, extends `expo/tsconfig.base`).
 - Prefer `--host=tunnel` over `--tunnel` (`@expo/ngrok@4.x` bug).
+- **Browser-MCP / Playwright testing uses viewport 412×915** (mid-size Android — Pixel 6/7 / Galaxy S25 tall). Stays under the desktop breakpoint, keeps full Korean tab labels visible, fits typical session content without scrolling.
 
 ## Stack constraints
 

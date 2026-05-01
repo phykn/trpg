@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, FlatList, Animated, Easing, Keyboard } from 'react-native';
 import { colors, spacing } from '@/design/tokens';
 import type { LogEntry } from '@/types/ui';
+import { Glyph } from '@/components/ui';
 import { LogItem } from './LogItem';
 
 function Pulse({ color }: { color: string }) {
@@ -41,11 +42,16 @@ function RollingIndicator() {
 function Separator() {
   return (
     <View
-      style={{ height: spacing[5], alignItems: 'center', justifyContent: 'center' }}
+      style={{
+        height: spacing[5],
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing[2],
+      }}
     >
-      <Text style={{ color: colors.fg.subtle, fontSize: 9, letterSpacing: 5 }}>
-        · · ·
-      </Text>
+      <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default, opacity: 0.55 }} />
+      <Glyph kind="outline" tone="subtle" size={10} />
+      <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default, opacity: 0.55 }} />
     </View>
   );
 }
@@ -125,9 +131,18 @@ function SuggestionChips({
           onPress={() => onPick(text)}
           accessibilityRole="button"
           accessibilityLabel={text}
-          className="px-3 py-1.5 rounded-full bg-accent-muted border border-border-default active:opacity-60"
+          className="px-3 py-2 rounded-md bg-accent-muted border border-border-default flex-row items-center"
+          style={({ hovered, pressed }) => [
+            { gap: spacing[2] },
+            hovered && { borderColor: colors.accent.fg },
+            pressed && { opacity: 0.6 },
+          ]}
         >
-          <Text className="font-sans text-title text-fg-default text-center">
+          <Glyph kind="outline" tone="accent" size={10} />
+          <Text
+            className="font-sans text-title text-fg-default flex-1"
+            numberOfLines={1}
+          >
             {text}
           </Text>
         </Pressable>

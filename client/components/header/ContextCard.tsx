@@ -89,7 +89,7 @@ export function ContextCard({ slots, miniMapGraph, activeId, menuOpen, bgmOn, on
           }}
           {...panResponder.panHandlers}
         >
-          <PanelBody panel={panel} onAction={onAction} />
+          <PanelBody panel={panel} kind={activeSlot?.id} onAction={onAction} />
         </View>
       )}
       {miniMapOpen && (
