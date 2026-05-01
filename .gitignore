@@ -8,6 +8,7 @@ __pycache__/
 .venv/
 .claude/
 .tmux-agent-bridge/
+.playwright-mcp/
 
 # Runtime data
 saves/
