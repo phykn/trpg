@@ -34,28 +34,6 @@ export async function listProfiles(): Promise<ProfileCard[]> {
   return (await res.json()) as ProfileCard[];
 }
 
-// Persist the active game_id locally so the user resumes their own game on
-// reload. Each browser owns its own pointer — the server has no per-user
-// "last game" notion, so two users on the same server don't collide.
-const STORAGE_KEY = 'trpg.current_game_id';
-
-function getStorage(): Storage | null {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage ?? null;
-}
-
-export function loadStoredGameId(): string | null {
-  return getStorage()?.getItem(STORAGE_KEY) ?? null;
-}
-
-export function storeGameId(gameId: string): void {
-  getStorage()?.setItem(STORAGE_KEY, gameId);
-}
-
-export function clearStoredGameId(): void {
-  getStorage()?.removeItem(STORAGE_KEY);
-}
-
 export async function getSessionById(gameId: string): Promise<SessionPayload | null> {
   const res = await fetch(`${BASE_URL}/session/${gameId}/state`, { headers: baseHeaders });
   if (res.status === 404) return null;
