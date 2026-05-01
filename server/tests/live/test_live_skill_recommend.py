@@ -16,7 +16,7 @@ pytestmark = pytest.mark.live
 @pytest.fixture
 def client():
     base_url = os.environ.get("BASE_URL", "http://localhost:8000/v1")
-    return LLMClient(base_url=base_url, model="local")
+    return LLMClient.from_single(base_url=base_url, model="local")
 
 
 async def test_live_recommend_returns_three_thematic_candidates(client):

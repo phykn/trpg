@@ -6,20 +6,26 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-from src.llm import LLMClient
+from src.llm import LLMClient, LLMProfile
 from src.agents.dc_judge import PROMPT_PATH, judge
 from src.agents.dc_judge.schema import JudgeInput
 
 
 class CountingClient(LLMClient):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *, base_url: str, model: str = "local", api_key: str = "none"):
+        profile = LLMProfile(
+            base_url=base_url,
+            model=model,
+            api_keys=(api_key,),
+            thinking_mode="opt",
+        )
+        super().__init__(profiles={"default": profile})
         self.calls = 0
         self.last_answers: list[str] = []
 
-    async def chat(self, messages, think=True):
+    async def chat(self, messages, think=True, agent=None):
         self.calls += 1
-        result = await super().chat(messages, think=think)
+        result = await super().chat(messages, think=think, agent=agent)
         self.last_answers.append(result["answer"] or "")
         return result
 

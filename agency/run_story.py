@@ -54,7 +54,9 @@ async def _run_entity(args: argparse.Namespace) -> None:
         sys.exit(2)
 
     base_url = os.environ["BASE_URL"]
-    llm = LLMClient(base_url=base_url, model="local", log_dir=ROOT / "logs")
+    llm = LLMClient.from_single(
+        base_url=base_url, model="local", log_dir=ROOT / "logs"
+    )
 
     run_dir = _new_run_dir(kind)
     set_llm_session(f"story-{args.scenario}-{kind}-{run_dir.parent.name}")
@@ -99,8 +101,10 @@ async def _run_scenario(args: argparse.Namespace) -> None:
         sys.exit(2)
 
     base_url = os.environ["BASE_URL"]
-    llm = LLMClient(
-        base_url=base_url, model="local", log_dir=ROOT / "logs",
+    llm = LLMClient.from_single(
+        base_url=base_url,
+        model="local",
+        log_dir=ROOT / "logs",
         chat_timeout_s=600.0,
     )
 

@@ -21,7 +21,7 @@ src/
   rules/       config.py exposes the frozen RULES singleton (DC, social, memory, log, time, recovery, growth, skill, carry, trade, flee, combat, death). dc.py has roll math.
 tests/         pytest, asyncio_mode=auto, live marker for LLM-required tests.
 run_api.py     Entrypoint — loads env, builds the FastAPI app, runs uvicorn.
-.env           Required. No fallbacks; missing keys raise at startup.
+.env           Global config + LLM_ROUTE_* (required). Provider blocks live in .env.local / .env.google. No fallbacks; missing keys raise at startup.
 ```
 
 Layer rule: upper depends on lower, never the reverse. The dependency direction goes api → flow → agents/engines → llm/ontology/context/mapping → persistence → domain/rules.
@@ -53,7 +53,8 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q     # add live tests; needs BASE_URL re
 - Pydantic models *are* the schema. Every state file round-trips through `GameState.model_validate_json(...)`. Don't hand-munge JSON.
 - `LLMClient.chat_stream` is the streaming primitive; agents wrap it with their schema and retry loop.
 - One process, one save lock (`asyncio.Lock` in `persistence/store.py`). Horizontal scaling is out of scope.
-- Required env vars: `HOST PORT BASE_URL BASIC_AUTH_USER BASIC_AUTH_PASS SAVES_DIR PROFILE_DIR CORS_ORIGINS`. Missing any → `KeyError` at startup. No silent defaults. `CORS_ORIGINS` is a comma-separated list of exact origins (scheme + host) the web client may load from.
+- Env files load in order via `run_api.py:_load_env`: `.env` → `.env.local` → `.env.google`. `.env` carries `HOST PORT BASIC_AUTH_USER BASIC_AUTH_PASS SAVES_DIR PROFILE_DIR CORS_ORIGINS` and `LLM_ROUTE_DEFAULT` (required) plus optional `LLM_ROUTE_<AGENT>`. Each provider file declares `LLM_<NAME>_BASE_URL`, `LLM_<NAME>_API_KEYS` (comma-separated, rotated round-robin per call), and at least one of `LLM_<NAME>_THINK_OFF / _THINK_OPT / _THINK_ON` listing the provider's model names — the three lists must be disjoint and together name every model the provider serves. Missing required keys → `KeyError` at startup. No silent defaults. `CORS_ORIGINS` is a comma-separated list of exact origins (scheme + host) the web client may load from. Agency runners and live tests still read `BASE_URL` directly via `LLMClient.from_single`.
+- LLM routing — each `LLM_ROUTE_<AGENT> = <provider>/<model>` resolves to an `LLMProfile` keyed by lowercased agent name. Calls whose `agent=` matches a route (`dc_judge`, `narrate`, `combat_narrate`, `encounter_summon`, `skill_recommend`) go there; everything else falls back to `default`. The model's THINK_* category drives per-call thinking behavior — `OFF` sends no `extra_body` and yields `result["think"] = None`; `OPT` honors the caller's `think` flag via `extra_body.chat_template_kwargs.enable_thinking` (Qwen/llama.cpp) or `extra_body.reasoning_effort=medium` (Gemini, detected from `googleapis.com` in `base_url`); `ON` always thinks, and Gemma-4-style inline `<thought>...</thought>` at the head of the answer is auto-routed to the think channel by `_ThoughtSplitter` in both `chat` and `chat_stream`.
 
 ## Stats / tiers / grades
 

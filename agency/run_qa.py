@@ -107,7 +107,9 @@ async def _run_single(
 
 async def main_async(args: argparse.Namespace) -> None:
     base_url = os.environ["BASE_URL"]
-    llm = LLMClient(base_url=base_url, model="local", log_dir=ROOT / "logs")
+    llm = LLMClient.from_single(
+        base_url=base_url, model="local", log_dir=ROOT / "logs"
+    )
 
     profile_dir = (ROOT / "scenarios").resolve()
 

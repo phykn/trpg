@@ -10,6 +10,14 @@ from src.api.routes import router
 from src.llm import LLMClient
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+SERVER_DIR = Path(__file__).resolve().parent
+
+
+def _load_env() -> None:
+    """Load .env (global + routes), then provider blocks from .env.local/.google."""
+    load_dotenv(SERVER_DIR / ".env")
+    load_dotenv(SERVER_DIR / ".env.local")
+    load_dotenv(SERVER_DIR / ".env.google")
 
 
 def build_app(
@@ -38,9 +46,8 @@ def build_app(
 
 
 def create_app() -> FastAPI:
-    load_dotenv()
+    _load_env()
 
-    base_url = os.environ["BASE_URL"]
     basic_auth_user = os.environ["BASIC_AUTH_USER"]
     basic_auth_pass = os.environ["BASIC_AUTH_PASS"]
     saves_dir = os.environ["SAVES_DIR"]
@@ -49,12 +56,7 @@ def create_app() -> FastAPI:
         s.strip() for s in os.environ["CORS_ORIGINS"].split(",") if s.strip()
     ]
 
-    llm = LLMClient(
-        base_url=base_url,
-        model="local",
-        api_key="none",
-        log_dir=REPO_ROOT / "logs",
-    )
+    llm = LLMClient.from_env(log_dir=REPO_ROOT / "logs")
     return build_app(
         llm=llm,
         basic_auth_user=basic_auth_user,
@@ -66,7 +68,7 @@ def create_app() -> FastAPI:
 
 
 def main() -> None:
-    load_dotenv()
+    _load_env()
     host = os.environ["HOST"]
     port = int(os.environ["PORT"])
     reload = bool(os.environ.get("RELOAD"))
