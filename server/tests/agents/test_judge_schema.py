@@ -66,14 +66,17 @@ def test_all_seven_tiers_accepted():
         )
 
 
-def test_roll_requires_reason():
-    with pytest.raises(ValidationError):
-        output_adapter.validate_json(
-            json.dumps(
-                {"action": "roll", "tier": "보통", "stat": "CHA", "targets": ["g"]},
-                ensure_ascii=False,
-            )
+def test_roll_missing_reason_falls_back_to_default():
+    # Schema-level safety net: if `reason` is omitted and the coerce hook is
+    # bypassed (e.g. validate_json path on fenced answer), the field default
+    # absorbs the miss instead of raising.
+    r = output_adapter.validate_json(
+        json.dumps(
+            {"action": "roll", "tier": "보통", "stat": "CHA", "targets": ["g"]},
+            ensure_ascii=False,
         )
+    )
+    assert isinstance(r, RollAction) and r.reason == "행동 판정"
 
 
 def test_roll_rejects_empty_reason():

@@ -488,6 +488,11 @@ def run_auto_combat(
                     break
                 outcome = "downed"
                 outcome_decided = True
+                # Carry a one-shot signal into the next /turn's narrate so the
+                # body opens with recovery (waking, dazed, ringing ears) instead
+                # of pretending the player was upright the whole time. The next
+                # narrate consumes and clears this in `flow/turn.py`.
+                state.previous_phase_signal = "downed_recovered"
                 break  # stable — fight ends here for this turn
 
             end = combat_engine.check_combat_end(state)

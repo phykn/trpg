@@ -90,6 +90,13 @@ async def run_turn(
             yield ev
         return
 
+    # Consume the one-shot phase signal at turn entry. If a narrate-emitting
+    # branch runs below, it sees the signal once; combat re-entry skips the
+    # signal entirely (combat_narrate handles its own opening). Either way
+    # the marker is cleared before this turn's finalize, so it can't echo.
+    previous_phase_signal = state.previous_phase_signal
+    state.previous_phase_signal = None
+
     graph = build_graph(state)
 
     if state.combat_state is not None:
@@ -128,6 +135,7 @@ async def run_turn(
         to_front_fn,
         result,
         graph=graph,
+        previous_phase_signal=previous_phase_signal,
     ):
         yield ev
 
@@ -228,6 +236,7 @@ async def _dispatch(
     result,
     *,
     graph: GameGraph,
+    previous_phase_signal: str | None = None,
 ) -> AsyncIterator[dict]:
     if isinstance(result, CombatAction):
         if has_invalid_combat_targets(state, result.targets):
@@ -325,6 +334,12 @@ async def _dispatch(
     if isinstance(result, ChainAction):
         state.turn_count += 1
         last_pass: PassAction | None = None
+        # Collect engine notices ("이미 체력 가득", "거래 시도했지만 금화 부족"
+        # …) emitted by non-final chain parts so the narrate tail can reflect
+        # them in prose. Without this, narrate sees only the player_input
+        # ("약초 먹고 검 든다") and the final pass; if the heal silently
+        # skipped at the engine layer, the body still describes a heal.
+        chain_act_lines: list[str] = []
         for part in result.parts:
             if isinstance(part, PassAction):
                 last_pass = part
@@ -332,6 +347,12 @@ async def _dispatch(
             emit_factory = _ONE_STEP_EMITS.get(type(part))
             if emit_factory is not None:
                 async for ev in emit_factory(client, state, dirty, part):
+                    if ev.get("type") == "log_entry":
+                        d = ev.get("data") or {}
+                        if d.get("kind") == "act":
+                            text = d.get("text") or ""
+                            if text:
+                                chain_act_lines.append(text)
                     yield ev
             if getattr(part, "tail_intent", None):
                 yield push_act(state, dirty, part.tail_intent)
@@ -348,6 +369,8 @@ async def _dispatch(
                 to_front_fn,
                 last_pass,
                 graph=graph,
+                act_log_lines=chain_act_lines,
+                previous_phase_signal=previous_phase_signal,
             ):
                 yield ev
         tick_turn_buffs(state, dirty)
@@ -367,6 +390,7 @@ async def _dispatch(
         to_front_fn,
         result,
         graph=graph,
+        previous_phase_signal=previous_phase_signal,
     ):
         yield ev
     tick_turn_buffs(state, dirty)
@@ -390,6 +414,8 @@ async def _stream_narrate_tail(
     action: "PassAction | RejectAction",
     *,
     graph: GameGraph,
+    act_log_lines: list[str] | None = None,
+    previous_phase_signal: str | None = None,
 ) -> AsyncIterator[dict]:
     """Pre-apply movement (PassAction only), emit a panels state event, then
     drive run_narrate / consume_narrate. Used by both the ChainAction last_pass
@@ -452,6 +478,8 @@ async def _stream_narrate_tail(
         judge_result=action.model_dump(),
         graph=graph,
         grade=None,
+        act_log_lines=act_log_lines,
+        previous_phase_signal=previous_phase_signal,
     )
     async for ev in consume_narrate(
         state,

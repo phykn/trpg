@@ -60,6 +60,13 @@ class GameState(BaseModel):
     combat_state: CombatState | None = None
     pending_skill_candidates: list[Skill] = []
 
+    # One-shot signal handed to the next narrate call so prose can reflect
+    # the just-finished phase. Set when combat ends with a downed→stable
+    # revive (player blacked out then woke); narrate consumes and clears it
+    # on its next turn so the body opens with recovery, not amnesia. None
+    # means "previous turn was ordinary."
+    previous_phase_signal: str | None = None
+
     turn_log: list[TurnLogEntry] = []
     recent_dialogue: list[DialoguePair] = []
 

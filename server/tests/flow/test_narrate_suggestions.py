@@ -90,7 +90,7 @@ async def test_run_narrate_reject_blanks_suggestions(fresh_state, monkeypatch):
     monkeypatch.setattr(narrate_flow, "build_world_layer", lambda *_: "")
     monkeypatch.setattr(narrate_flow, "build_session_layer", lambda *_: {})
     monkeypatch.setattr(narrate_flow, "build_history_layer", lambda *_: "")
-    monkeypatch.setattr(narrate_flow, "build_surroundings", lambda *_: {})
+    monkeypatch.setattr(narrate_flow, "build_surroundings", lambda *_a, **_k: {})
     monkeypatch.setattr(narrate_flow, "build_player_view", lambda *_: {})
 
     from src.ontology.graph import GameGraph

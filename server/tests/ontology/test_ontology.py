@@ -106,6 +106,92 @@ def test_target_view_unknown_returns_none(fresh_state):
     assert build_target_view(state, g, "ghost", actor_id="player_01") is None
 
 
+def test_target_view_npc_failure_grade_masks_secrets(fresh_state):
+    """Failure-grade narrate path drops NPC inner-state slots: tone_hint
+    (true disposition) and memories (past secrets). Identity slots
+    (name/description/appearance) stay — race/appearance prose still needs
+    them. quests_given keeps title/kill_targets/triggers (player can still
+    see *what* the quest is) but rewards detail drops."""
+    state = _seed(fresh_state)
+    # Add a memory so the masking is observable, not just absent-by-seed.
+    from src.domain.memory import Memory
+
+    state.characters["guard_01"].memories.append(
+        Memory(content="비밀 단서", importance=2, turn=1)
+    )
+    g = build_graph(state)
+
+    base = build_target_view(state, g, "guard_01", actor_id="player_01")
+    assert base["tone_hint"] == "격식"
+    assert base["memories"] and base["memories"][0]["content"] == "비밀 단서"
+    assert base["quests_given"][0].get("rewards") == [
+        {"id": "sword_01", "name": "검"}
+    ]
+
+    masked = build_target_view(
+        state, g, "guard_01", actor_id="player_01", grade="failure"
+    )
+    assert "tone_hint" not in masked, "tone_hint must drop on failure grade"
+    assert "memories" not in masked, "memories must drop on failure grade"
+    assert masked["name"] == "경비"  # identity stays
+    assert "appearance" in masked
+    # quest stays surfaced (player can know the quest exists) but rewards drop.
+    assert masked["quests_given"][0]["title"] == "t"
+    assert "rewards" not in masked["quests_given"][0]
+
+
+def test_target_view_npc_critical_failure_grade_also_masks(fresh_state):
+    state = _seed(fresh_state)
+    g = build_graph(state)
+    masked = build_target_view(
+        state, g, "guard_01", actor_id="player_01", grade="critical_failure"
+    )
+    assert "tone_hint" not in masked
+
+
+def test_target_view_npc_success_grade_unchanged(fresh_state):
+    """Non-masked grades (success, partial_success, critical_success, None)
+    leave the view identical to a no-grade call — gate is failure-only."""
+    state = _seed(fresh_state)
+    g = build_graph(state)
+    base = build_target_view(state, g, "guard_01", actor_id="player_01")
+    for grade in ("success", "partial_success", "critical_success", None):
+        v = build_target_view(
+            state, g, "guard_01", actor_id="player_01", grade=grade
+        )
+        assert v == base, f"grade={grade!r} should not mask"
+
+
+def test_target_view_location_failure_grade_masks_quest_rewards(fresh_state):
+    state = _seed(fresh_state)
+    g = build_graph(state)
+    base = build_target_view(state, g, "plaza_01", actor_id="player_01")
+    # plaza has no quest in this seed; add a `required_by` link via a quest
+    # whose trigger is the location.
+    from src.domain.entities import QuestTrigger
+
+    state.quests["q_loc"] = state.quests["q1"].model_copy(
+        update={
+            "id": "q_loc",
+            "title": "광장 가기",
+            "triggers": [
+                QuestTrigger(
+                    id="x", name="도착", type="location_enter", target_id="plaza_01"
+                )
+            ],
+        }
+    )
+    g = build_graph(state)
+    base = build_target_view(state, g, "plaza_01", actor_id="player_01")
+    assert any(q.get("rewards") for q in base.get("quests", []))
+
+    masked = build_target_view(
+        state, g, "plaza_01", actor_id="player_01", grade="failure"
+    )
+    for q in masked.get("quests", []):
+        assert "rewards" not in q, f"location quest rewards must drop: {q}"
+
+
 def test_target_view_dead_character_returns_dead_marker(fresh_state):
     """Dead NPC target_view returns a minimal dead-marker dict — narrate
     needs the explicit `alive: false` signal so it won't render the

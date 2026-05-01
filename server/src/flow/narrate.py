@@ -45,6 +45,8 @@ async def run_narrate(
     graph: GameGraph,
     grade: str | None = None,
     target_id: str | None = None,
+    act_log_lines: list[str] | None = None,
+    previous_phase_signal: str | None = None,
 ) -> AsyncIterator[NarrativeDelta | NarrativeFinal]:
     """Yields NarrativeDelta tokens, then a final NarrativeFinal.
 
@@ -73,9 +75,11 @@ async def run_narrate(
             if targets:
                 chosen = targets[0]
         if chosen is not None:
-            target_view = build_target_view(state, graph, chosen, state.player_id)
+            target_view = build_target_view(
+                state, graph, chosen, state.player_id, grade=grade
+            )
 
-    surroundings = build_surroundings(state, state.player_id, graph)
+    surroundings = build_surroundings(state, state.player_id, graph, grade=grade)
     input_ = NarrateInput(
         world=build_world_layer(profile_dir, state.profile),
         session=build_session_layer(state),
@@ -85,6 +89,8 @@ async def run_narrate(
         surroundings=surroundings,
         judge_result=judge_result,
         grade=grade,
+        act_log_lines=act_log_lines or [],
+        previous_phase_signal=previous_phase_signal,
         player_input=player_input,
     )
 

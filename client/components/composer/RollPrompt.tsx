@@ -1,8 +1,11 @@
+import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { colors, shadow } from '@/design/tokens';
 import type { PendingCheck } from '@/types/domain';
+
+const STOP_BUTTON_DELAY_MS = 2000;
 
 type Zone = 'crit-fail' | 'fail' | 'partial' | 'success' | 'crit-success';
 
@@ -35,10 +38,12 @@ const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
 export function RollPrompt({
   pending,
   onRoll,
+  onStop,
   rolling,
 }: {
   pending: PendingCheck;
   onRoll: () => void;
+  onStop: () => void;
   rolling: boolean;
 }) {
   const requiredDice = Math.min(20, Math.max(2, pending.required_roll - pending.mod));
@@ -47,6 +52,17 @@ export function RollPrompt({
 
   const showStat = statBonus !== 0;
   const showMod = pending.mod !== 0;
+
+  // Stop button is delayed so a fast roll never flashes through it.
+  const [showStop, setShowStop] = React.useState(false);
+  React.useEffect(() => {
+    if (!rolling) {
+      setShowStop(false);
+      return;
+    }
+    const t = setTimeout(() => setShowStop(true), STOP_BUTTON_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [rolling]);
 
   return (
     <View
@@ -222,43 +238,68 @@ export function RollPrompt({
         </View>
       )}
 
-      <Pressable
-        onPress={rolling ? undefined : onRoll}
-        disabled={rolling}
-        accessibilityRole="button"
-        accessibilityLabel={rolling ? '주사위 굴리는 중' : '주사위 굴리기'}
-        accessibilityState={{ disabled: rolling }}
-        testID="roll-button"
-        className={`flex-row items-center justify-center gap-2 mt-3 h-10 rounded-md border ${
-          rolling
-            ? 'bg-transparent border-border-default'
-            : 'bg-accent-muted border-accent-fg active:opacity-80'
-        }`}
-        style={{ opacity: rolling ? 0.55 : 1 }}
-      >
-        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-          <Path
-            d="M12 2.5L20.5 7.5V16.5L12 21.5L3.5 16.5V7.5L12 2.5Z"
-            stroke={rolling ? colors.fg.subtle : colors.accent.fg}
-            strokeWidth={1.6}
-            strokeLinejoin="round"
-          />
-          <Path
-            d="M12 2.5L12 21.5M3.5 7.5L20.5 16.5M20.5 7.5L3.5 16.5"
-            stroke={rolling ? colors.fg.subtle : colors.accent.fg}
-            strokeWidth={0.8}
-            opacity={0.5}
-          />
-        </Svg>
-        <Text
-          className={`font-sans-semibold text-title ${
-            rolling ? 'text-fg-subtle' : 'text-accent-fg'
-          }`}
-          style={{ letterSpacing: 1.2 }}
+      {rolling && showStop ? (
+        <Pressable
+          onPress={onStop}
+          accessibilityRole="button"
+          accessibilityLabel="주사위 굴림 중단"
+          testID="roll-stop-button"
+          className="flex-row items-center justify-center gap-2 mt-3 h-10 rounded-md bg-accent-fg active:opacity-80"
         >
-          {rolling ? '굴리는 중…' : '굴리기'}
-        </Text>
-      </Pressable>
+          <View
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: 2,
+              backgroundColor: colors.canvas.subtle,
+            }}
+          />
+          <Text
+            className="font-sans-semibold text-title"
+            style={{ letterSpacing: 1.2, color: colors.canvas.subtle }}
+          >
+            정지
+          </Text>
+        </Pressable>
+      ) : (
+        <Pressable
+          onPress={rolling ? undefined : onRoll}
+          disabled={rolling}
+          accessibilityRole="button"
+          accessibilityLabel={rolling ? '주사위 굴리는 중' : '주사위 굴리기'}
+          accessibilityState={{ disabled: rolling }}
+          testID="roll-button"
+          className={`flex-row items-center justify-center gap-2 mt-3 h-10 rounded-md border ${
+            rolling
+              ? 'bg-transparent border-border-default'
+              : 'bg-accent-muted border-accent-fg active:opacity-80'
+          }`}
+          style={{ opacity: rolling ? 0.55 : 1 }}
+        >
+          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M12 2.5L20.5 7.5V16.5L12 21.5L3.5 16.5V7.5L12 2.5Z"
+              stroke={rolling ? colors.fg.subtle : colors.accent.fg}
+              strokeWidth={1.6}
+              strokeLinejoin="round"
+            />
+            <Path
+              d="M12 2.5L12 21.5M3.5 7.5L20.5 16.5M20.5 7.5L3.5 16.5"
+              stroke={rolling ? colors.fg.subtle : colors.accent.fg}
+              strokeWidth={0.8}
+              opacity={0.5}
+            />
+          </Svg>
+          <Text
+            className={`font-sans-semibold text-title ${
+              rolling ? 'text-fg-subtle' : 'text-accent-fg'
+            }`}
+            style={{ letterSpacing: 1.2 }}
+          >
+            {rolling ? '굴리는 중…' : '굴리기'}
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
