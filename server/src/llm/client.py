@@ -11,6 +11,7 @@ from typing import Literal, NamedTuple
 from openai import AsyncOpenAI
 
 from ..rules.config import RULES
+from . import gemini, llama_cpp
 
 # Logs land under `<log_dir>/<session_id>/<agent>/`. Outermost callers set
 # this; `set_llm_session_if_unset` lets a server flow defer to an outer tag.
@@ -34,16 +35,16 @@ def set_think_override(value: bool | None) -> None:
     _THINK_OVERRIDE.set(value)
 
 
-# off: model can't think (e.g. Gemma 3, GPT-4o)
-# opt: caller picks per call via `think` flag (e.g. Qwen3 with extra_body)
-# on:  model always thinks, no toggle (reasoning-only models)
-ThinkingMode = Literal["off", "opt", "on"]
+# off:    model can't think (e.g. Gemma 3, GPT-4o)
+# opt:    caller picks per call via `think` flag, default off (Qwen3, Gemini 3.x)
+# opt_on: caller picks per call via `think` flag, default on (Gemma 4 via Gemini)
+# on:     model always thinks, no toggle (reasoning-only models)
+ThinkingMode = Literal["off", "opt", "opt_on", "on"]
 
-# How an OPT-mode provider toggles thinking on a per-call basis.
-#   qwen:   extra_body.chat_template_kwargs.enable_thinking — llama.cpp / Qwen3
-#   gemini: extra_body.reasoning_effort — Google Gemini OpenAI-compat
-# Derived from base_url at provider construction; sniffed for googleapis.com.
-ToggleStyle = Literal["qwen", "gemini"]
+# Provider-style picks the `extra_body` builder + response parser; impls
+# live in `llama_cpp.py` (local) and `gemini.py` (Google OpenAI-compat).
+# Derived from base_url at provider construction.
+ToggleStyle = Literal["llama_cpp", "gemini"]
 
 
 @dataclass(frozen=True)
@@ -52,10 +53,11 @@ class LLMProfile:
     model: str
     api_keys: tuple[str, ...]
     thinking_mode: ThinkingMode
+    supports_system: bool
 
 
 _PROVIDER_RE = re.compile(
-    r"^LLM_(?!ROUTE_)([A-Z0-9_]+?)_(BASE_URL|API_KEYS|THINK_OFF|THINK_OPT|THINK_ON)$"
+    r"^LLM_(?!ROUTE_)([A-Z0-9_]+?)_(BASE_URL|API_KEYS|THINK_OFF|THINK_OPT_ON|THINK_OPT|THINK_ON|NO_SYSTEM)$"
 )
 _ROUTE_RE = re.compile(r"^LLM_ROUTE_([A-Z0-9_]+)$")
 
@@ -64,6 +66,7 @@ class _ProviderEnv(NamedTuple):
     base_url: str
     api_keys: tuple[str, ...]
     modes: dict[str, ThinkingMode]  # model_name → thinking_mode
+    no_system: frozenset[str]  # models that reject `role: system`
 
 
 def _parse_env_profiles() -> dict[str, LLMProfile]:
@@ -79,7 +82,12 @@ def _parse_env_profiles() -> dict[str, LLMProfile]:
 
     def collect_modes(upper: str) -> dict[str, ThinkingMode]:
         modes: dict[str, ThinkingMode] = {}
-        for suffix, mode in (("THINK_OFF", "off"), ("THINK_OPT", "opt"), ("THINK_ON", "on")):
+        for suffix, mode in (
+            ("THINK_OFF", "off"),
+            ("THINK_OPT", "opt"),
+            ("THINK_OPT_ON", "opt_on"),
+            ("THINK_ON", "on"),
+        ):
             for model in csv(os.environ.get(f"LLM_{upper}_{suffix}", "")):
                 if model in modes:
                     raise ValueError(
@@ -90,7 +98,7 @@ def _parse_env_profiles() -> dict[str, LLMProfile]:
         if not modes:
             raise ValueError(
                 f"LLM_{upper} must declare at least one of "
-                f"THINK_OFF / THINK_OPT / THINK_ON"
+                f"THINK_OFF / THINK_OPT / THINK_OPT_ON / THINK_ON"
             )
         return modes
 
@@ -100,10 +108,19 @@ def _parse_env_profiles() -> dict[str, LLMProfile]:
         api_keys = csv(os.environ[f"LLM_{upper}_API_KEYS"])
         if not api_keys:
             raise ValueError(f"LLM_{upper}_API_KEYS must list at least one key")
+        modes = collect_modes(upper)
+        no_system = frozenset(csv(os.environ.get(f"LLM_{upper}_NO_SYSTEM", "")))
+        unknown = no_system - modes.keys()
+        if unknown:
+            raise ValueError(
+                f"LLM_{upper}_NO_SYSTEM lists unknown model(s) "
+                f"{sorted(unknown)} (not in any LLM_{upper}_THINK_* list)"
+            )
         providers[upper.lower()] = _ProviderEnv(
             base_url=os.environ[f"LLM_{upper}_BASE_URL"],
             api_keys=api_keys,
-            modes=collect_modes(upper),
+            modes=modes,
+            no_system=no_system,
         )
 
     # Phase 2: read each LLM_ROUTE_<AGENT> = <provider>/<model>.
@@ -139,65 +156,9 @@ def _parse_env_profiles() -> dict[str, LLMProfile]:
             model=model_name,
             api_keys=prov.api_keys,
             thinking_mode=prov.modes[model_name],
+            supports_system=model_name not in prov.no_system,
         )
     return profiles
-
-
-class _ThoughtSplitter:
-    """Routes inline `<thought>...</thought>` from a token stream to the think channel.
-
-    Used for models like Gemma 4 that emit reasoning at the head of the answer
-    body. Buffers up to LOOKAHEAD chars to detect tags split across chunk
-    seams; falls through to answer-only when no tag appears.
-    """
-
-    OPEN = "<thought>"
-    CLOSE = "</thought>"
-    LOOKAHEAD = max(len(OPEN), len(CLOSE)) - 1
-
-    def __init__(self) -> None:
-        self._buf = ""
-        self._mode = "preopen"  # preopen → think → answer
-
-    def feed(self, chunk: str) -> tuple[str, str]:
-        if not chunk:
-            return "", ""
-        self._buf += chunk
-        think = ""
-        answer = ""
-        if self._mode == "preopen":
-            if self._buf.startswith(self.OPEN):
-                self._buf = self._buf[len(self.OPEN):]
-                self._mode = "think"
-            elif self.OPEN.startswith(self._buf):
-                return "", ""  # may still grow into the open tag
-            else:
-                self._mode = "answer"
-        if self._mode == "think":
-            idx = self._buf.find(self.CLOSE)
-            if idx >= 0:
-                think = self._buf[:idx]
-                self._buf = self._buf[idx + len(self.CLOSE):]
-                self._mode = "answer"
-            else:
-                safe = max(0, len(self._buf) - self.LOOKAHEAD)
-                think = self._buf[:safe]
-                self._buf = self._buf[safe:]
-                return think, ""
-        if self._mode == "answer":
-            answer = self._buf
-            self._buf = ""
-        return think, answer
-
-    def flush(self) -> tuple[str, str]:
-        if not self._buf:
-            return "", ""
-        if self._mode == "think":
-            out = (self._buf, "")
-        else:
-            out = ("", self._buf)
-        self._buf = ""
-        return out
 
 
 class _Provider:
@@ -217,8 +178,9 @@ class _Provider:
         self.model = profile.model
         self.thinking_mode = profile.thinking_mode
         self.toggle_style: ToggleStyle = (
-            "gemini" if "googleapis.com" in profile.base_url else "qwen"
+            "gemini" if "googleapis.com" in profile.base_url else "llama_cpp"
         )
+        self.supports_system = profile.supports_system
         self._chat_clients = [
             AsyncOpenAI(base_url=profile.base_url, api_key=k, timeout=chat_timeout_s)
             for k in profile.api_keys
@@ -273,6 +235,7 @@ class LLMClient:
         model: str = "local",
         api_key: str = "none",
         thinking_mode: ThinkingMode = "opt",
+        supports_system: bool = True,
         log_dir: Path | None = None,
         chat_timeout_s: float | None = None,
         stream_timeout_s: float | None = None,
@@ -282,6 +245,7 @@ class LLMClient:
             model=model,
             api_keys=(api_key,),
             thinking_mode=thinking_mode,
+            supports_system=supports_system,
         )
         return cls(
             profiles={"default": profile},
@@ -310,23 +274,52 @@ class LLMClient:
             return self._providers[agent]
         return self._providers["default"]
 
+    @staticmethod
+    def _inline_system(messages: list[dict]) -> list[dict]:
+        """Fold system messages into the first user message for providers that
+        reject `role: system` (e.g. Gemma via Gemini OpenAI-compat)."""
+        sys_chunks = [
+            str(m.get("content", "")) for m in messages if m.get("role") == "system"
+        ]
+        if not sys_chunks:
+            return messages
+        prefix = "\n\n".join(c for c in sys_chunks if c)
+        out: list[dict] = []
+        prefixed = False
+        for m in messages:
+            if m.get("role") == "system":
+                continue
+            if not prefixed and m.get("role") == "user":
+                out.append(
+                    {**m, "content": f"{prefix}\n\n{m.get('content', '')}"}
+                )
+                prefixed = True
+            else:
+                out.append(m)
+        if not prefixed:
+            out.insert(0, {"role": "user", "content": prefix})
+        return out
+
+    @staticmethod
+    def _effective_think(think: bool) -> bool:
+        override = _THINK_OVERRIDE.get()
+        return think if override is None else override
+
+    @staticmethod
+    def _toggle(provider: _Provider):
+        return gemini if provider.toggle_style == "gemini" else llama_cpp
+
     def _params(
         self, provider: _Provider, messages: list[dict], think: bool
     ) -> dict:
+        if not provider.supports_system:
+            messages = self._inline_system(messages)
         params: dict = {"model": provider.model, "messages": messages}
-        # Only the `opt` mode toggles via extra_body — `off` and `on` models
-        # decide for themselves and reject (or ignore) the unknown extra_body.
-        if provider.thinking_mode == "opt":
-            override = _THINK_OVERRIDE.get()
-            effective = think if override is None else override
-            if provider.toggle_style == "gemini":
-                # Gemini defaults to minimal thinking; only opt-in when asked.
-                if effective:
-                    params["extra_body"] = {"reasoning_effort": "medium"}
-            else:
-                params["extra_body"] = {
-                    "chat_template_kwargs": {"enable_thinking": effective}
-                }
+        extra = self._toggle(provider).extra_body(
+            provider.thinking_mode, self._effective_think(think)
+        )
+        if extra is not None:
+            params["extra_body"] = extra
         return params
 
     def _log_basename(self, agent: str | None) -> Path | None:
@@ -386,17 +379,19 @@ class LLMClient:
         )
         msg = response.choices[0].message
         extra = msg.model_extra or {}
-        think = extra.get("reasoning_content")
+        thought = extra.get("reasoning_content")
         answer = msg.content or ""
-        if provider.thinking_mode == "on":
-            sp = _ThoughtSplitter()
+        sp = self._toggle(provider).make_splitter(
+            provider.thinking_mode, self._effective_think(think)
+        )
+        if sp is not None:
             t1, a1 = sp.feed(answer)
             t2, a2 = sp.flush()
             inline_think = t1 + t2
             answer = a1 + a2
             if inline_think:
-                think = (think or "") + inline_think
-        result = {"think": think, "answer": answer}
+                thought = (thought or "") + inline_think
+        result = {"think": thought, "answer": answer}
         self._log_answer(base, answer)
         return result
 
@@ -414,23 +409,23 @@ class LLMClient:
         stream = await provider.next_stream_client().chat.completions.create(
             **params, stream=True
         )
-        splitter = (
-            _ThoughtSplitter() if provider.thinking_mode == "on" else None
+        splitter = self._toggle(provider).make_splitter(
+            provider.thinking_mode, self._effective_think(think)
         )
         accum_answer: list[str] = []
         try:
             async for chunk in stream:
                 delta = chunk.choices[0].delta
                 extra = delta.model_extra or {}
-                think = extra.get("reasoning_content")
+                thought = extra.get("reasoning_content")
                 answer = delta.content or ""
                 if splitter:
                     sp_think, answer = splitter.feed(answer)
                     if sp_think:
-                        think = (think or "") + sp_think
+                        thought = (thought or "") + sp_think
                 if answer:
                     accum_answer.append(answer)
-                yield {"think": think, "answer": answer or None}
+                yield {"think": thought, "answer": answer or None}
             if splitter:
                 sp_think, sp_answer = splitter.flush()
                 if sp_answer:
