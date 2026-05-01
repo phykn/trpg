@@ -1,16 +1,20 @@
-# Python
+# Python build artifacts
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
 
-# Project
+# Local environment / tooling
 .venv/
-saves/
-reports/
 .claude/
 .tmux-agent-bridge/
+
+# Runtime data
+saves/
+logs/
+reports/
+
+# Local-only (not part of the repo)
 scenarios/
 docs/
 agency/
-logs/

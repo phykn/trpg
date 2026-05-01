@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-User-facing setup is in [README.md](./README.md); design intent starts at `../docs/01-overview.md` (single-turn flow `02-runtime.md`, code map `05-codemap.md`).
+User-facing setup is in [README.md](./README.md).
 
 ## Layout
 
@@ -35,7 +35,7 @@ Layer rule: upper depends on lower, never the reverse. The dependency direction 
 
 CI grep enforces this — see `scripts/check_relational_ssot.sh`.
 
-`../scenarios/<profile>/` is the seed source (`world.md`, `start.json`, `player_template.json`, `profile.json`, plus `races/ characters/ items/ locations/ quests/ chapters/`); shared with `agency/story`. `../saves/` is the runtime store, gitignored. Per-game layout: `games/<game_id>/{meta.json, characters/<id>.json, items/<id>.json, ..., log.jsonl, history.jsonl, dialogue.jsonl}`. The active `game_id` is held by the client (browser localStorage), so a single server can host multiple users without one user's `init` clobbering another's "last game" pointer.
+`../scenarios/<profile>/` is the seed source (`world.md`, `start.json`, `player_template.json`, `profile.json`, plus `races/ characters/ items/ locations/ quests/ chapters/`), gitignored. `../saves/` is the runtime store, also gitignored. Per-game layout: `games/<game_id>/{meta.json, characters/<id>.json, items/<id>.json, ..., log.jsonl, history.jsonl, dialogue.jsonl}`. The active `game_id` is held by the client (browser localStorage), so a single server can host multiple users without one user's `init` clobbering another's "last game" pointer.
 
 ## Commands
 
