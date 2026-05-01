@@ -61,6 +61,7 @@ export type PanelActions = {
 };
 
 export type Panel = {
+  empty?: boolean;
   title: string;
   meta?: MetaSegment[];
   bar?: BarDef;

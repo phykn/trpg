@@ -3,7 +3,7 @@ import { Text, View, Pressable } from 'react-native';
 import { Row } from './Row';
 import { useExpandGroup } from './ExpandGroup';
 
-export function LabeledRow({ label, children, mono = false, clampLines = 1 }: {
+export function LabeledRow({ label, children, mono = false, clampLines = 3 }: {
   label: string;
   children: React.ReactNode;
   mono?: boolean;
@@ -42,12 +42,9 @@ export function LabeledRow({ label, children, mono = false, clampLines = 1 }: {
             className="absolute inset-x-0 opacity-0"
             pointerEvents="none"
             onLayout={(e) => {
-              // text-panel line-height is 18px (design/tokens.js).
-              // onTextLayout doesn't fire on react-native-web, so detect
-              // overflow by measuring the unclamped height instead.
-              // 펼치기 힌트는 3줄 이상일 때만 노출.
-              const minLines = Math.max(clampLines, 2);
-              if (e.nativeEvent.layout.height > 18 * minLines + 1) setOverflow(true);
+              // text-panel line-height is 18px; onTextLayout doesn't fire on
+              // react-native-web, so measure the unclamped height instead.
+              if (e.nativeEvent.layout.height > 18 * clampLines + 1) setOverflow(true);
             }}
           >
             <Text className={`${fontClass} text-panel text-fg-default`}>

@@ -82,7 +82,7 @@ export function Composer({ input, setInput, onSend, onStop, focused, streaming, 
         style={{ paddingTop: 6, paddingBottom: 6, minHeight: 54, maxHeight: 140 }}
       />
       <View className="flex-row items-center justify-between">
-        <ThinkToggle think={think} onToggle={onToggleThink} disabled />
+        <ThinkToggle think={think} onToggle={onToggleThink} />
         {streaming ? (
           <StopButton onPress={onStop} />
         ) : (

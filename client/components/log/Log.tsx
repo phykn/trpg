@@ -131,9 +131,8 @@ function SuggestionChips({
           onPress={() => onPick(text)}
           accessibilityRole="button"
           accessibilityLabel={text}
-          className="px-3 py-2 rounded-md bg-accent-muted border border-border-default flex-row items-center"
+          className="px-3 py-2 rounded-md bg-accent-muted border border-border-default flex-row items-center gap-3"
           style={({ hovered, pressed }) => [
-            { gap: spacing[2] },
             hovered && { borderColor: colors.accent.fg },
             pressed && { opacity: 0.6 },
           ]}

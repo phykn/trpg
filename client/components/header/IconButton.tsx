@@ -9,16 +9,17 @@ export const ICON_PATH = {
   map: 'M9 3L3 6v15l6-3 6 3 6-3V3l-6 3-6-3z M9 3v15 M15 6v15',
 } as const;
 
-export function IconButton({ d, label, onPress }: { d: string; label: string; onPress?: () => void }) {
+export function IconButton({ d, label, onPress, active = false }: { d: string; label: string; onPress?: () => void; active?: boolean }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      className="w-8 h-8 rounded-sm items-center justify-center shrink-0 active:bg-canvas-inset"
+      accessibilityState={{ selected: active }}
+      className={`w-8 h-8 rounded-sm items-center justify-center shrink-0 ${active ? 'bg-accent-muted' : 'active:bg-canvas-inset'}`}
     >
       <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"
-        stroke={colors.fg.muted} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+        stroke={active ? colors.accent.fg : colors.fg.muted} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
         <Path d={d} />
       </Svg>
     </Pressable>

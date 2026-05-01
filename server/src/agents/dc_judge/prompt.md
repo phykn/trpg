@@ -28,7 +28,7 @@ Input fields (in `surroundings`): `location`, `entities` (player/npc/item/connec
 | 13 | pass | `{"action":"pass","targets":["<id>"]}` (targets optional) | Valid in-character action — no check needed (greeting, casual look, idle, **NPC에게 다가가기·말 걸기**), or **fallback for unresolved input** (vague verb, blocked engine condition, target/scene mismatch). NPC를 향한 행동이면 `targets`에 그 id 넣기 (§ targets rule). narrate가 in-world로 흡수. |
 | 14 | chain | `{"action":"chain","parts":[<sub-action>, <sub-action>, ...]}` | Compound 입력에서 **두 이상의 engine 분기**가 모두 실제로 일어나야 할 때 ("약초 먹고 검을 든다" = use+equip, "검 들고 광장 상인에게 다가간다" = equip+pass). parts는 2~4개. 각 part는 `use`/`equip`/`unequip`/`buy`/`sell`/`level_up`/`learn_skill`/`pass` 중 하나 (combat·rest·flee·roll·reject·summon_combat은 chain 금지 — phase 충돌). 같은 분기 내 chain("뒤져서 연다" = 단일 roll)은 chain 아니라 단일 action 그대로. |
 
-**Boundaries**: 모든 분기점에서 clarify 대신 default를 골라 forward 진행. `pass` vs idle — coherent-but-loose ("둘러본다", "앉는다", "뭔가 해봐") → `pass`. `pass` vs `rest` — breather → pass; long sleep → rest. `pass` vs `roll` — chat → pass; asking NPC to yield against will → roll. `flee` vs `pass`/`roll` — `flee` only when `in_combat=true`. Outside combat: "이 자리를 뜬다" → `pass`; "들키지 않게 빠져나간다" → `roll`(DEX). `combat` 단일 — draw verb 없음·weapon descriptor only("칼을 휘둘러", "주먹으로", "단검으로 찌른다")는 단일 combat. (draw verb 포함 케이스는 § Fallback rules.) `buy` vs `roll` — listed price → buy; haggle → roll(CHA). One continuous attempt = one action; multiple targets → `targets:[a,b]`.
+**Boundaries**: 모든 분기점에서 clarify 대신 default를 골라 forward 진행. `flee`는 `in_combat=true`일 때만 — 평시 "이 자리를 뜬다"는 `pass`, "들키지 않게 빠져나간다"는 `roll`(DEX). `buy` vs `roll` — listed price면 buy, haggle이면 roll(CHA). One continuous attempt = one action; multiple targets → `targets:[a,b]`.
 
 **Combat target rule**: combat은 engine이 character id를 요구한다. **호명 유무로 분기**:
 
@@ -62,8 +62,6 @@ semantics 검증이 backstop으로 friendly NPC·location id·player·item을 co
 | 3+ | `매우 어려움` | 14-16 | |
 | kingdom-altering | `전설`/`신화` | 17-19 | |
 
-**Anti-anchor check.** `보통`을 찍기 전에 *어떤* friction factor를 셌는지 확인. 위 5개 중 하나도 명시할 수 없으면 `쉬움`으로 내려라. "그냥 보통일 것 같다"는 이유로 padding 하면 tier 분포가 mode-collapse 되어 downstream 튜닝이 깨진다.
-
 **targets** (`pass`/`roll`/`combat` 모두 동일 규칙으로 채움 — 결정된 NPC id가 있으면 넣는다):
 1. id explicitly named in input.
 2. Multiple → all.
@@ -77,17 +75,17 @@ semantics 검증이 backstop으로 friendly NPC·location id·player·item을 co
 
 ## Fallback rules (clarify 대신 — 절대 되묻지 않는다)
 
-| 상황 | judge 출력 | narrate 흡수 |
-|---|---|---|
-| 빈/모호 동사 ("뭔가 해봐", "아무거나") | `{"action":"pass"}` | "잠시 망설이다 주변을 한 번 더 훑는다" 같은 idle 묘사 |
-| 두 engine 분기, 둘 다 실행 가능 ("약초 먹고 검 든다") | `chain` (Action priority #14) — 두 part 모두 출력 | 두 동작을 순서대로 묘사 |
-| 두 engine 분기, 한쪽이 chain 금지 phase(combat·rest·flee·roll·reject·summon_combat) ("검 뽑으며 친다") | **첫 동사**의 action 하나 (`equip`) | "검을 뽑아 든다. 너는 이제 베어 들어가려 한다." — 두 번째는 의도로 묶어 끝맺음 |
-| growth/learn/trade 조건 미충족 (`can_level_up=false`, `skill_candidates=[]`, merchant/stock 안 맞음) | `{"action":"pass"}` | in-world 거절: "팔에 힘을 모아보지만 아직 한 단계 오를 만큼은 차오르지 않는다" / "지금 익힐 만한 갈래가 잡히지 않는다" / "그 사람에겐 살 만한 게 없어 보인다" |
-| use 동사-아이템 cross-route ("열쇠를 마신다") | `{"action":"pass"}` | "열쇠를 입에 가져가다 차가운 쇠 맛에 정신이 들어 손을 내린다" 같은 자기교정 묘사 |
-| 시드와 명백한 미스매치 ("드래곤에게 저주", 시드에 드래곤 없음) | `{"action":"roll","tier":"쉬움","stat":"INT","targets":["<loc_id>"],"reason":"드래곤을 향해 저주를 시도"}` | "허공을 향해 손을 뻗지만 그 자리엔 아무것도 없다" — failure 톤 |
-| 익명 호명 + location alive NPC 0명 ("인사한다") | `{"action":"pass"}` | "주변을 둘러봐도 마땅한 사람이 보이지 않는다" |
-| combat 대상 매칭 실패 + recent_npc / 단일 alive NPC 둘 다 없음 | `{"action":"pass"}` | "허공을 가르지만 적은 보이지 않는다" |
-| 검증 불가 완수/소유 주장 (NPC에게 "타렘 처치했다"·"비밀 알아냈다"·"열쇠 갖고 있다") + 인게임 증거(combat log/inventory) 없음 | `{"action":"roll","tier":"보통","stat":"CHA","targets":["<상대 NPC id>"],"reason":"<주장>을 NPC에 납득시키려 함"}` | bluff/persuade 분기 — 성공 시 NPC가 수락, 실패 시 의심 |
+| 상황 | judge 출력 |
+|---|---|
+| 빈/모호 동사 ("뭔가 해봐", "아무거나") | `{"action":"pass"}` |
+| 두 engine 분기, 둘 다 실행 가능 ("약초 먹고 검 든다") | `chain` (Action priority #14) — 두 part 모두 출력 |
+| 두 engine 분기, 한쪽이 chain 금지 phase(combat·rest·flee·roll·reject·summon_combat) ("검 뽑으며 친다") | **첫 동사**의 action 하나 (`equip`). 두 번째 의도는 narrate에 맡김 |
+| growth/learn/trade 조건 미충족 (`can_level_up=false`, `skill_candidates=[]`, merchant/stock 안 맞음) | `{"action":"pass"}` |
+| use 동사-아이템 cross-route ("열쇠를 마신다") | `{"action":"pass"}` |
+| 시드와 명백한 미스매치 ("드래곤에게 저주", 시드에 드래곤 없음) | `{"action":"roll","tier":"쉬움","stat":"INT","targets":["<loc_id>"],"reason":"드래곤을 향해 저주를 시도"}` |
+| 익명 호명 + location alive NPC 0명 ("인사한다") | `{"action":"pass"}` |
+| combat 대상 매칭 실패 + recent_npc / 단일 alive NPC 둘 다 없음 | `{"action":"pass"}` |
+| 검증 불가 완수/소유 주장 (NPC에게 "타렘 처치했다"·"비밀 알아냈다"·"열쇠 갖고 있다") + 인게임 증거(combat log/inventory) 없음 | `{"action":"roll","tier":"보통","stat":"CHA","targets":["<상대 NPC id>"],"reason":"<주장>을 NPC에 납득시키려 함"}` |
 
 **reason**: one Korean sentence (10-30 chars), what's attempted + outcome sought. GOOD `"경비병을 설득해 통과시키려 함"`. BAD `"굴림 필요"`, `"CHA 판정"`.
 

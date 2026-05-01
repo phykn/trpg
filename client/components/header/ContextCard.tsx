@@ -3,21 +3,21 @@ import { PanResponder, Pressable, Text, View } from 'react-native';
 
 import { shadow } from '@/design/tokens';
 import type { StoryGraphModel } from '@/presenters/storyGraph';
-import type { Place, Subject } from '@/types/domain';
+import type { Place } from '@/types/domain';
 import type { PanelAction, PanelSlot } from '@/types/ui';
 
 import { MiniMapPanel } from '../story-graph';
+import { StoryGraphScreen } from '../story-graph/StoryGraphScreen';
 import { ChipTab } from './ChipTab';
 import { IconButton, ICON_PATH } from './IconButton';
 import { PanelBody } from './PanelBody';
 
-const FLOAT_BUFFER = 480;
+const FLOAT_BUFFER = 540;
 
-export function ContextCard({ slots, miniMapGraph, place, subject, activeId, menuOpen, bgmOn, onSelect, onMenuToggle, onMenuClose, onBgmToggle, onNewGame, onGraph, onAction }: {
+export function ContextCard({ slots, miniMapGraph, place, activeId, menuOpen, bgmOn, onSelect, onMenuToggle, onMenuClose, onBgmToggle, onNewGame, onAction }: {
   slots: PanelSlot[];
   miniMapGraph: StoryGraphModel;
   place: Place | null;
-  subject: Subject | null;
   activeId: string | null;
   menuOpen: boolean;
   bgmOn: boolean;
@@ -26,14 +26,14 @@ export function ContextCard({ slots, miniMapGraph, place, subject, activeId, men
   onMenuClose: () => void;
   onBgmToggle: () => void;
   onNewGame?: () => void;
-  onGraph?: () => void;
   onAction?: (action: PanelAction) => void;
 }) {
   const activeSlot = slots.find((s) => s.id === activeId) ?? null;
   const panel = activeSlot?.panel ?? null;
   const miniMapOpen = activeId === 'map';
+  const graphOpen = activeId === 'graph';
   const [chipBarHeight, setChipBarHeight] = React.useState(48);
-  const floating = panel || miniMapOpen || menuOpen;
+  const floating = panel || miniMapOpen || graphOpen || menuOpen;
 
   const panResponder = React.useMemo(
     () =>
@@ -76,7 +76,8 @@ export function ContextCard({ slots, miniMapGraph, place, subject, activeId, men
         <IconButton
           d={ICON_PATH.map}
           label="전체 지도"
-          onPress={onGraph}
+          active={graphOpen}
+          onPress={() => onSelect('graph')}
         />
       </View>
       {panel && (
@@ -111,8 +112,29 @@ export function ContextCard({ slots, miniMapGraph, place, subject, activeId, men
           <MiniMapPanel
             graph={miniMapGraph}
             place={place}
-            subject={subject}
             onAction={onAction}
+          />
+        </View>
+      )}
+      {graphOpen && (
+        <View
+          className="bg-canvas-subtle border border-border-default rounded-md overflow-hidden"
+          style={{
+            position: 'absolute',
+            top: chipBarHeight + 4,
+            left: 0,
+            right: 0,
+            maxHeight: FLOAT_BUFFER,
+            ...shadow.floating,
+          }}
+          {...panResponder.panHandlers}
+        >
+          <StoryGraphScreen
+            embedded
+            onAction={(action) => {
+              onSelect('graph');
+              onAction?.(action);
+            }}
           />
         </View>
       )}

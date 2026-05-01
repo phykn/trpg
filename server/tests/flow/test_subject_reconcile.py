@@ -48,7 +48,7 @@ def test_keeps_pin_when_subject_at_same_location(fresh_state):
     assert s.active_subject_id == "barkeep"
 
 
-def test_swaps_to_first_alive_npc_at_new_location(fresh_state):
+def test_clears_when_arriving_with_no_dialogue_history(fresh_state):
     s = _seed_two_locations(fresh_state)
     _add_npc(s, cid="barkeep", name="주인", location_id="plaza_01")
     _add_npc(s, cid="guard", name="문지기", location_id="gate_01")
@@ -57,7 +57,7 @@ def test_swaps_to_first_alive_npc_at_new_location(fresh_state):
 
     reconcile_subject_after_move(s)
 
-    assert s.active_subject_id == "guard"
+    assert s.active_subject_id is None
 
 
 def test_prefers_recent_npc_over_arbitrary_first(fresh_state):
@@ -85,17 +85,18 @@ def test_clears_when_no_npc_at_new_location(fresh_state):
     assert s.active_subject_id is None
 
 
-def test_skips_dead_when_auto_picking(fresh_state):
+def test_recent_npc_must_be_alive(fresh_state):
     s = _seed_two_locations(fresh_state)
     _add_npc(s, cid="barkeep", name="주인", location_id="plaza_01")
     _add_npc(s, cid="corpse", name="시체", location_id="gate_01", alive=False)
     _add_npc(s, cid="guard", name="문지기", location_id="gate_01")
     s.active_subject_id = "barkeep"
     s.characters["player_01"].location_id = "gate_01"
+    s.turn_log.append(TurnLogEntry(turn=1, target="corpse", summary="이전에 시체를 살핌"))
 
     reconcile_subject_after_move(s)
 
-    assert s.active_subject_id == "guard"
+    assert s.active_subject_id is None
 
 
 def test_clears_when_subject_id_no_longer_in_state(fresh_state):

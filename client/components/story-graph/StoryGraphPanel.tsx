@@ -2,14 +2,14 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { colors, toneColor } from '@/design/tokens';
-import type {
-  StoryGraphEdge,
-  StoryGraphModel,
-  StoryGraphNode,
-  StoryGraphNodeKind,
+import {
+  KIND_LABEL,
+  type StoryGraphEdge,
+  type StoryGraphModel,
+  type StoryGraphNode,
 } from '@/presenters/storyGraph';
-import { joinOrDash } from '@/presenters/format';
-import type { Place, Subject } from '@/types/domain';
+import { SEP, characterMeta, joinOrDash } from '@/presenters/format';
+import type { Place } from '@/types/domain';
 import type { PanelAction } from '@/types/ui';
 
 import { LabeledRow, Row } from '../ui';
@@ -40,7 +40,7 @@ const PLACE_STATE_SIZE: Record<PlaceState, number> = {
   unreachable: 44,
 };
 
-const PLACE_STATE_LEVEL: Record<PlaceState, number> = {
+const PLACE_STATE_TIER: Record<PlaceState, number> = {
   current: 3,
   reachable: 2,
   unreachable: 1,
@@ -52,34 +52,19 @@ const PLACE_STATE_TEXT: Record<PlaceState, string> = {
   unreachable: colors.fg.default,
 };
 
-const KIND_LABEL: Record<StoryGraphNodeKind, string> = {
-  hero: '주인공',
-  place: '현재 위치',
-  location: '장소',
-  subject: '대상',
-  quest: '퀘스트',
-  target: '등장인물',
-};
-
 function moveIntent(name: string): string {
   const last = name.charCodeAt(name.length - 1);
-  if (last < 0xac00 || last > 0xd7a3) return `${name}로 이동`;
+  if (last < 0xac00 || last > 0xd7a3) return `${name}로 이동합니다`;
   const final = (last - 0xac00) % 28;
-  if (final === 0 || final === 8) return `${name}로 이동`;
-  return `${name}으로 이동`;
-}
-
-function characterMeta(level: number, raceJob: string, gender: string): string {
-  const parts = [`Lv ${level}`, raceJob];
-  if (gender) parts.push(gender);
-  return parts.join(' · ');
+  if (final === 0 || final === 8) return `${name}로 이동합니다`;
+  return `${name}으로 이동합니다`;
 }
 
 function meetIntent(name: string): string {
   const last = name.charCodeAt(name.length - 1);
-  if (last < 0xac00 || last > 0xd7a3) return `${name}를 만난다`;
+  if (last < 0xac00 || last > 0xd7a3) return `${name}를 만납니다`;
   const final = (last - 0xac00) % 28;
-  return final === 0 ? `${name}를 만난다` : `${name}을 만난다`;
+  return final === 0 ? `${name}를 만납니다` : `${name}을 만납니다`;
 }
 
 function isReachableFromCurrentPlace(node: StoryGraphNode, graph: StoryGraphModel): boolean {
@@ -122,7 +107,6 @@ export function StoryGraphPanel({
   actionDisabled = false,
   mapView = false,
   place = null,
-  subject = null,
 }: {
   graph: StoryGraphModel;
   canvasHeight?: number;
@@ -134,7 +118,6 @@ export function StoryGraphPanel({
   actionDisabled?: boolean;
   mapView?: boolean;
   place?: Place | null;
-  subject?: Subject | null;
 }) {
   const placeStates = React.useMemo<Record<string, PlaceState> | null>(() => {
     if (!mapView) return null;
@@ -187,31 +170,31 @@ export function StoryGraphPanel({
       `이동 가능 ${reachableCount}`,
     ]
       .filter(Boolean)
-      .join(' · ');
+      .join(SEP);
     return { nodes: placeNodes, edges: placeEdges, summary };
   }, [graph, mapView, placeStates]);
 
   const nodeOverrides = React.useMemo(() => {
     if (placeStates) {
-      const out: Record<string, { color: string; size: number; level: number; textColor: string }> = {};
+      const out: Record<string, { color: string; size: number; tier: number; textColor: string }> = {};
       for (const [id, state] of Object.entries(placeStates)) {
         const legend = PLACE_LEGEND.find((p) => p.state === state)!;
         out[id] = {
           color: legend.color,
           size: PLACE_STATE_SIZE[state],
-          level: PLACE_STATE_LEVEL[state],
+          tier: PLACE_STATE_TIER[state],
           textColor: PLACE_STATE_TEXT[state],
         };
       }
       return out;
     }
-    const out: Record<string, { color: string; level: number; textColor: string }> = {};
+    const out: Record<string, { color: string; tier: number; textColor: string }> = {};
     for (const node of graph.nodes) {
       if (node.kind !== 'location' && node.kind !== 'target') continue;
       if (!isReachableFromCurrentPlace(node, graph)) {
         out[node.id] = {
           color: node.kind === 'location' ? COLOR_PLACE_UNREACH : COLOR_CHAR_UNREACH,
-          level: 1,
+          tier: 1,
           textColor: colors.fg.muted,
         };
       }
@@ -223,19 +206,14 @@ export function StoryGraphPanel({
   const selectedAction = selectedNode ? actionForNode(selectedNode, graph) : null;
   const isPlaceKind = !!selectedNode && (selectedNode.kind === 'place' || selectedNode.kind === 'location');
   const placeFeatures = (() => {
-    if (mapView || !isPlaceKind || !selectedNode || !place) return null;
-    const weather = place.weather.filter(Boolean).join(' · ');
-    if (selectedNode.kind === 'place') {
-      return { weather, risk: place.risk };
-    }
-    const s = place.surroundings.find((s) => s.name === selectedNode.label);
-    if (!s) return null;
-    return { weather, risk: s.risk };
+    if (mapView || !isPlaceKind || !selectedNode) return null;
+    if (!selectedNode.risk) return null;
+    const weather = (place?.weather ?? []).filter(Boolean).join(SEP);
+    return { weather, risk: selectedNode.risk };
   })();
   const placeDescription = (() => {
     if (mapView || !isPlaceKind || !selectedNode) return null;
-    if (selectedNode.kind === 'place') return place?.description || '';
-    return place?.surroundings.find((s) => s.name === selectedNode.label)?.blurb || '';
+    return selectedNode.description || '';
   })();
   const charReachable: boolean | null = (() => {
     if (mapView || !selectedNode) return null;
@@ -244,26 +222,14 @@ export function StoryGraphPanel({
   })();
   const characterSections = (() => {
     if (mapView || !selectedNode) return null;
-    if (selectedNode.kind === 'subject' && subject && subject.name === selectedNode.label) {
-      return {
-        desc: characterMeta(subject.level, subject.raceJob, subject.gender),
-        role: subject.role || '',
-        known: joinOrDash(subject.known),
-        trust: subject.trust,
-      };
-    }
-    if (selectedNode.kind === 'target' && place) {
-      const t = place.targets.find((t) => t.name === selectedNode.label);
-      if (t) {
-        return {
-          desc: characterMeta(t.level, t.raceJob, t.gender),
-          role: t.blurb || '',
-          known: '',
-          trust: t.trust,
-        };
-      }
-    }
-    return null;
+    if (selectedNode.kind !== 'subject' && selectedNode.kind !== 'target') return null;
+    if (selectedNode.level === undefined || selectedNode.raceJob === undefined) return null;
+    return {
+      desc: characterMeta(selectedNode.level, selectedNode.raceJob, selectedNode.gender ?? ''),
+      role: selectedNode.role || '',
+      known: selectedNode.known ? joinOrDash(selectedNode.known) : '',
+      trust: selectedNode.trust ?? 0,
+    };
   })();
   const selectedPlaceState: PlaceState | null =
     mapView && selectedNode && placeStates ? placeStates[selectedNode.id] ?? null : null;
@@ -282,14 +248,14 @@ export function StoryGraphPanel({
   const selectedMeta: string | null = (() => {
     if (!mapView || !selectedNode || !place) return null;
     if (selectedPlaceState === 'current') {
-      return [place.dayPhase, ...place.weather, place.risk.label].filter(Boolean).join(' · ');
+      return [place.dayPhase, ...place.weather, place.risk.label].filter(Boolean).join(SEP);
     }
     if (selectedPlaceState === 'reachable') {
       const s = place.surroundings.find((s) => s.name === selectedNode.label);
       if (!s) return null;
       return [s.risk.label, s.difficulty ? `이동 난이도: ${s.difficulty}` : null]
         .filter(Boolean)
-        .join(' · ');
+        .join(SEP);
     }
     return null;
   })();
@@ -297,7 +263,7 @@ export function StoryGraphPanel({
   return (
     <View
       accessibilityLabel={`${accessibilityLabel}. ${visibleGraph.summary}`}
-      className={`${framed ? 'border border-border-default rounded-md bg-canvas-subtle px-3 py-3' : 'px-2 py-2'} gap-2`}
+      className={`${framed ? 'border border-border-default rounded-md bg-canvas-subtle px-3 py-3' : 'px-2 pt-2 pb-3'} gap-2`}
     >
       <StoryGraphCanvas
         graph={visibleGraph}
@@ -411,14 +377,14 @@ export function StoryGraphPanel({
                       </View>
                     ) : null}
                   </View>
-                  {selectedNode.kind === 'location' && placeFeatures ? (
+                  {isPlaceKind && placeFeatures ? (
                     <Row label="환경">
                       <Text
                         numberOfLines={1}
                         className="font-sans text-panel text-fg-default"
                       >
                         {placeFeatures.weather}
-                        {placeFeatures.weather && placeFeatures.risk ? ' · ' : ''}
+                        {placeFeatures.weather && placeFeatures.risk ? SEP : ''}
                         {placeFeatures.risk ? (
                           <Text
                             className="font-sans-semibold"
@@ -432,22 +398,22 @@ export function StoryGraphPanel({
                   ) : null}
                   {isPlaceKind ? (
                     placeDescription ? (
-                      <LabeledRow label="모습" clampLines={3}>
+                      <LabeledRow label="모습">
                         {placeDescription}
                       </LabeledRow>
                     ) : null
                   ) : isCharacterKind && characterSections ? (
                     <>
-                      <LabeledRow label="설명" clampLines={2}>
+                      <LabeledRow label="설명">
                         {characterSections.desc}
                       </LabeledRow>
                       {characterSections.role ? (
-                        <LabeledRow label="역할" clampLines={2}>
+                        <LabeledRow label="역할">
                           {characterSections.role}
                         </LabeledRow>
                       ) : null}
                       {characterSections.known ? (
-                        <LabeledRow label="특징" clampLines={2}>
+                        <LabeledRow label="특징">
                           {characterSections.known}
                         </LabeledRow>
                       ) : null}
@@ -462,10 +428,6 @@ export function StoryGraphPanel({
                         </Row>
                       ) : null}
                     </>
-                  ) : selectedNode.detail ? (
-                    <LabeledRow label="설명" clampLines={3}>
-                      {selectedNode.detail}
-                    </LabeledRow>
                   ) : null}
                   {selectedAction && onAction ? (
                     <View className="flex-row justify-end">

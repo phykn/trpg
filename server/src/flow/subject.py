@@ -17,8 +17,8 @@ from ..agents.dc_judge.schema import (
     SummonCombatAction,
 )
 from ..domain.state import GameState
-from ..ontology.graph import GameGraph, build_graph
-from ..ontology.queries import inhabitants_of, location_of
+from ..ontology.graph import GameGraph
+from ..ontology.queries import location_of
 
 
 def _is_active_npc(state: GameState, cid: str) -> bool:
@@ -85,27 +85,19 @@ def reconcile_subject_after_move(
     `refresh_active_subject` runs before `apply_intended_move`, so for travel
     turns it sees the old location and leaves the pin on the previous NPC.
     Once the player has actually moved, the pin is at the wrong location:
-    drop it and prefer a same-location NPC — recent_npc_id (most recently
-    addressed there) first, else the first alive resident, else clear.
+    drop it and only restore via `recent_npc_id` (player previously addressed
+    that NPC at the new location). On first arrival with no prior dialogue
+    history at the new location, leave the pin cleared — the player picks
+    explicitly via 만남.
     """
     cur = state.active_subject_id
     if cur is None:
         return
     subj = state.characters.get(cur)
-    player = state.characters[state.player_id]
     if graph is None:
         graph = state.graph()
     player_loc = location_of(graph, state.player_id)
     if subj is not None and location_of(graph, cur) == player_loc:
         return
 
-    candidate = state.recent_npc_id(state.player_id)
-    if candidate is None and player_loc is not None:
-        for cid in inhabitants_of(graph, player_loc):
-            if cid == state.player_id:
-                continue
-            c = state.characters.get(cid)
-            if c is not None and c.alive:
-                candidate = cid
-                break
-    state.active_subject_id = candidate
+    state.active_subject_id = state.recent_npc_id(state.player_id)

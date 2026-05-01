@@ -25,7 +25,7 @@ const NODE_SIZE: Record<StoryGraphNodeKind, number> = {
 type NodeOverride = {
   color?: string;
   size?: number;
-  level?: number;
+  tier?: number;
   textColor?: string;
 };
 
@@ -49,10 +49,9 @@ function toElements(
         data: {
           id: node.id,
           label: node.label,
-          detail: node.detail,
           color: override?.color ?? NODE_COLOR[node.kind],
           size: override?.size ?? NODE_SIZE[node.kind],
-          level: override?.level ?? 0,
+          tier: override?.tier ?? 0,
           textColor: override?.textColor ?? colors.fg.default,
         },
         position: seedPositions ? seedPosition(idx, total) : undefined,
@@ -211,7 +210,7 @@ export function StoryGraphCanvas({
                 minNodeSpacing: 18,
                 spacingFactor: 1.05,
                 avoidOverlap: true,
-                concentric: (node: cytoscape.NodeSingular) => Number(node.data('level') ?? 0),
+                concentric: (node: cytoscape.NodeSingular) => Number(node.data('tier') ?? 0),
                 levelWidth: () => 1,
               }
             : {

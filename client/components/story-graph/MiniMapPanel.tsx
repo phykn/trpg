@@ -2,8 +2,9 @@ import React from 'react';
 import { Text, View } from 'react-native';
 
 import { toneColor } from '@/design/tokens';
+import { SEP } from '@/presenters/format';
 import type { StoryGraphModel } from '@/presenters/storyGraph';
-import type { Place, Subject } from '@/types/domain';
+import type { Place } from '@/types/domain';
 import type { PanelAction } from '@/types/ui';
 
 import { StoryGraphPanel } from './StoryGraphPanel';
@@ -11,12 +12,10 @@ import { StoryGraphPanel } from './StoryGraphPanel';
 export function MiniMapPanel({
   graph,
   place,
-  subject,
   onAction,
 }: {
   graph: StoryGraphModel;
   place: Place | null;
-  subject: Subject | null;
   onAction?: (action: PanelAction) => void;
 }) {
   const currentPlaceId = React.useMemo(
@@ -32,7 +31,7 @@ export function MiniMapPanel({
   }, [graph.nodes, selectedNodeId, currentPlaceId]);
 
   const dayWeather = place
-    ? [place.dayPhase, ...place.weather].filter(Boolean).join(' · ')
+    ? [place.dayPhase, ...place.weather].filter(Boolean).join(SEP)
     : '';
 
   return (
@@ -55,7 +54,7 @@ export function MiniMapPanel({
               numberOfLines={1}
               className="font-sans text-caption italic text-right text-fg-muted"
             >
-              {dayWeather ? `${dayWeather} · ` : ''}
+              {dayWeather ? `${dayWeather}${SEP}` : ''}
               <Text
                 className="font-sans-semibold"
                 style={{ color: toneColor[place.risk.tone] }}
@@ -74,7 +73,6 @@ export function MiniMapPanel({
         onNodeSelect={setSelectedNodeId}
         onAction={onAction}
         place={place}
-        subject={subject}
       />
     </View>
   );

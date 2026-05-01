@@ -42,19 +42,7 @@ export function PanelBody({ panel, onAction }: {
   panel: Panel;
   onAction?: (action: PanelAction) => void;
 }) {
-  const sections = panel.sections || [];
-  const titleEmpty = !panel.title || panel.title === '—';
-  const sectionsEmpty = sections.every(
-    (s) => !(s.nodes ? s.nodes.length > 0 : s.text && s.text !== '—'),
-  );
-  const isEmptyPanel =
-    titleEmpty &&
-    sectionsEmpty &&
-    !panel.bar &&
-    !panel.barSplit &&
-    (panel.actions || []).every((g) => g.items.length === 0);
-
-  if (isEmptyPanel) {
+  if (panel.empty) {
     return (
       <View className="px-4 py-10 items-center justify-center" style={{ minHeight: 120 }}>
         <Text className="font-sans text-caption text-fg-subtle">
@@ -63,6 +51,8 @@ export function PanelBody({ panel, onAction }: {
       </View>
     );
   }
+
+  const sections = panel.sections || [];
 
   return (
     <View className="px-4 py-3 gap-2.5" style={{ minHeight: 160 }}>

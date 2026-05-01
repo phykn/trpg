@@ -2,26 +2,22 @@ import React from 'react';
 
 import {
   EMPTY_STORY_GRAPH,
+  isValidStoryGraph,
   mergeStoryGraphs,
   storyGraphFingerprint,
   type StoryGraphModel,
 } from '@/presenters/storyGraph';
+import { getStorage } from '@/services/storage';
 
 const STORAGE_PREFIX = 'trpg.story_graph.';
 export const STORY_GRAPH_UPDATED_EVENT = 'trpg:story-graph-updated';
-
-function getStorage(): Storage | null {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage ?? null;
-}
 
 export function readStoredStoryGraph(gameId: string): StoryGraphModel | null {
   const raw = getStorage()?.getItem(`${STORAGE_PREFIX}${gameId}`);
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as StoryGraphModel;
-    if (!Array.isArray(parsed.nodes) || !Array.isArray(parsed.edges)) return null;
-    return parsed;
+    const parsed = JSON.parse(raw);
+    return isValidStoryGraph(parsed) ? parsed : null;
   } catch {
     return null;
   }
