@@ -48,6 +48,7 @@ export type Subject = {
   name: string;
   raceJob: string;
   gender: string;
+  role: string;
   trust: number;
   known: string[];
   level: number;

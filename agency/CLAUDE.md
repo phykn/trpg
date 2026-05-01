@@ -115,9 +115,9 @@ Per agent: one verdict, 1–3 wins, 1–3 issues with severity + turn-numbered e
 
 **Reviewer pitfalls (don't repeat):**
 
-- `state.turn_count` is *not* the player-input count. Turns where `/turn` ended in a `pending_check` and was resolved by `/roll` (stat / combat_roll / death_save) don't double-bump it, and `chain` parts collapse into one bump. Don't flag the gap as desync.
+- `state.turn_count` is *not* the player-input count. Turns where `/turn` ended in a `pending_check` (only kind is `"stat"` — combat and death-save are resolved inside the auto-cycle and never surface as a dice button) and was resolved by `/roll` don't double-bump it, and `chain` parts collapse into one bump. Don't flag the gap as desync.
 - A `failure`/`critical_failure` roll where the GM still hands over information *is* a real issue (see `narrate/prompt.md`'s grade table) — flag it as narrative.
-- Combat is one-shot cinematic ([docs/03-features.md §1](../docs/03-features.md)): `combat_start` → one `pending_check kind="combat_roll"` → `/roll` → `combat_end`. Repeated `combat_start` events on the same enemies on consecutive `/turn` calls means engine state didn't persist — real bug. But `combat_start` on one turn followed by `combat_end` on the next `/roll` is the normal shape, not a desync.
+- Combat is an automatic cycle ([docs/03-features.md §1](../docs/03-features.md)): `combat_start` → many `combat_turn` events (one per actor per round) → `combat_end` with one of `victory / defeat / fled / downed`, all inside a single `/turn`. There is no `combat_roll` `pending_check` and no `/roll` step for combat. Repeated `combat_start` on the same enemies across consecutive `/turn` calls means `combat_state` didn't persist — real bug. A `combat_start` immediately followed (same turn) by `combat_end` is the normal shape.
 - Self-target combat (`targets=[player_id]`) should already be rejected upstream; if it slips through, that's a regression.
 
 ### Adding a new agent

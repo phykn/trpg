@@ -30,8 +30,8 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q          # only when the LLM is up (BAS
 # API server (cwd must be server/ so dotenv reads server/.env)
 cd server && ../.venv/bin/python run_api.py
 
-# one QA agent run
-.venv/bin/python agency/run_qa.py --agent diplomat --turns 20
+# one QA agent run (agents: socialite / fighter / shopkeeper / scout / caster / survivor / questor / provocateur / mourner)
+.venv/bin/python agency/run_qa.py --agent socialite --turns 25
 
 # client (separate from the venv, just npm)
 cd client && npx expo start
