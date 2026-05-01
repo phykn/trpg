@@ -10,6 +10,5 @@ saves/
 reports/
 .claude/
 .tmux-agent-bridge/
-scenarios/*
-!scenarios/default/
+scenarios/
 logs/

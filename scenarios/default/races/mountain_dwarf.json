@@ -1,8 +1,0 @@
-{
-  "id": "mountain_dwarf",
-  "name": "산 드워프",
-  "description": "카르 둠 왕국의 후예. 산문이 봉해진 뒤 갱도에 갇히거나 변경으로 망명했다. 단조와 룬 새김에 능하며, 짧고 굵은 체구에 단단한 의지를 지닌다.",
-  "racial_skill_ids": [
-    "forge_craft"
-  ]
-}
