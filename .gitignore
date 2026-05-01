@@ -12,4 +12,5 @@ reports/
 .tmux-agent-bridge/
 scenarios/
 docs/
+agency/
 logs/
