@@ -23,6 +23,8 @@ export function ErrorState({ message, onRetry }: Props) {
       </View>
       <Pressable
         onPress={onRetry}
+        accessibilityRole="button"
+        accessibilityLabel="다시 시도"
         className="px-4 h-9 mt-2 rounded-md bg-canvas-inset border border-border-default items-center justify-center active:bg-border-default"
       >
         <Text className="font-sans-medium text-body text-fg-default">다시 시도</Text>

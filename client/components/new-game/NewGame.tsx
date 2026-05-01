@@ -113,6 +113,9 @@ export function NewGame({ onSubmit }: Props) {
       <Pressable
         onPress={submit}
         disabled={!canSubmit}
+        accessibilityRole="button"
+        accessibilityLabel="시작"
+        accessibilityState={{ disabled: !canSubmit }}
         className={`h-10 rounded-md items-center justify-center ${
           canSubmit ? 'bg-accent-fg active:opacity-80' : 'bg-canvas-inset border border-border-default'
         }`}

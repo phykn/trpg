@@ -25,6 +25,8 @@ function ActionScroller({ group, onAction }: {
             <Pressable
               key={it.label}
               onPress={() => onAction?.(it)}
+              accessibilityRole="button"
+              accessibilityLabel={it.label}
               className="shrink-0 px-2 py-1 rounded-sm border border-border-default bg-canvas-default active:bg-canvas-inset"
             >
               <Text numberOfLines={1} className="font-sans text-panel text-fg-default">{it.label}</Text>

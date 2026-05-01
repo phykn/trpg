@@ -12,13 +12,14 @@ import { colors, shadow } from '@/design/tokens';
 import { SendButton } from './SendButton';
 import { StopButton } from './StopButton';
 
-export function Composer({ input, setInput, onSend, onStop, focused, streaming }: {
+export function Composer({ input, setInput, onSend, onStop, focused, streaming, locked = false }: {
   input: string;
   setInput: (text: string) => void;
   onSend: (text: string) => void;
   onStop: () => void;
   focused: boolean;
   streaming: boolean;
+  locked?: boolean;
 }) {
   const inputRef = React.useRef(input);
   React.useEffect(() => { inputRef.current = input; }, [input]);
@@ -29,7 +30,7 @@ export function Composer({ input, setInput, onSend, onStop, focused, streaming }
   };
 
   const trimmed = input.trim();
-  const hasText = trimmed.length > 0;
+  const hasText = trimmed.length > 0 && !locked;
 
   const sendText = (raw: string) => {
     const text = raw.trim();
@@ -65,7 +66,9 @@ export function Composer({ input, setInput, onSend, onStop, focused, streaming }
         value={input}
         onChangeText={handleChange}
         onSubmitEditing={onNativeSubmit}
-        placeholder="무엇을 하시겠습니까?"
+        editable={!locked}
+        accessibilityState={{ disabled: locked }}
+        placeholder={locked ? '판정을 먼저 굴려주세요' : '무엇을 하시겠습니까?'}
         placeholderTextColor={`${colors.fg.default}55`}
         returnKeyType="send"
         multiline

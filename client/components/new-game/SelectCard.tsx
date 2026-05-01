@@ -18,6 +18,9 @@ export function SelectCard({ title, description, selected, onPress, dense }: Pro
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ selected }}
       className={`px-4 ${sizing} rounded-md border ${borderClass} ${bg}`}
       style={accentEdge ? { borderLeftWidth: 2, borderLeftColor: colors.accent.fg } : undefined}
     >

@@ -87,7 +87,11 @@ async function streamSse(
     body: init.body,
     signal,
   });
-  if (!res.ok) throw new Error(`stream failed: HTTP ${res.status}`);
+  if (!res.ok) {
+    const detail = await res.text();
+    const suffix = detail ? ` — ${detail.slice(0, 300)}` : '';
+    throw new Error(`stream failed: HTTP ${res.status}${suffix}`);
+  }
   const reader = res.body?.getReader();
   if (!reader) throw new Error('stream failed: response body is not readable');
 
@@ -138,7 +142,7 @@ export function streamRoll(
 ): Promise<void> {
   return streamSse(
     `${BASE_URL}/session/${gameId}/roll`,
-    { method: 'POST' },
+    { method: 'POST', body: JSON.stringify({}) },
     onEvent,
     signal,
   );

@@ -8,10 +8,12 @@ export const ICON_PATH = {
   volumeOff: 'M11 5L6 9H2v6h4l5 4V5z M22 9l-6 6 M16 9l6 6',
 } as const;
 
-export function IconButton({ d, onPress }: { d: string; onPress?: () => void }) {
+export function IconButton({ d, label, onPress }: { d: string; label: string; onPress?: () => void }) {
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
       className="w-8 h-8 rounded-sm items-center justify-center shrink-0 active:bg-canvas-inset"
     >
       <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"

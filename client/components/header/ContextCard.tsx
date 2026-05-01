@@ -54,7 +54,11 @@ export function ContextCard({ slots, activeId, menuOpen, bgmOn, onSelect, onMenu
         className="bg-canvas-subtle border border-border-default rounded-md flex-row p-2 gap-1 items-center"
         style={shadow.paper}
       >
-        <IconButton d={bgmOn ? ICON_PATH.volumeOn : ICON_PATH.volumeOff} onPress={onBgmToggle} />
+        <IconButton
+          d={bgmOn ? ICON_PATH.volumeOn : ICON_PATH.volumeOff}
+          label={bgmOn ? '배경음 끄기' : '배경음 켜기'}
+          onPress={onBgmToggle}
+        />
         <View className="flex-1 flex-row gap-1">
           {slots.map((s) => (
             <ChipTab
@@ -65,7 +69,7 @@ export function ContextCard({ slots, activeId, menuOpen, bgmOn, onSelect, onMenu
             />
           ))}
         </View>
-        <IconButton d={ICON_PATH.menu} onPress={onMenuToggle} />
+        <IconButton d={ICON_PATH.menu} label="메뉴" onPress={onMenuToggle} />
       </View>
       {panel && (
         <View
@@ -100,6 +104,8 @@ export function ContextCard({ slots, activeId, menuOpen, bgmOn, onSelect, onMenu
               onMenuClose();
               onNewGame?.();
             }}
+            accessibilityRole="button"
+            accessibilityLabel="새 게임"
             className="px-3 py-2.5"
           >
             <Text className="font-sans text-body text-fg-default">새 게임</Text>

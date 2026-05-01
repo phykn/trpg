@@ -63,12 +63,16 @@ export function ConfirmDialog({ info, onConfirm, onCancel }: {
           <View className="flex-row gap-2 justify-end">
             <Pressable
               onPress={onCancel}
+              accessibilityRole="button"
+              accessibilityLabel="취소"
               className="px-3 py-2 rounded-sm border border-border-default active:bg-canvas-inset"
             >
               <Text className="font-sans text-body text-fg-default">취소</Text>
             </Pressable>
             <Pressable
               onPress={onConfirm}
+              accessibilityRole="button"
+              accessibilityLabel={info.confirmLabel ?? '확인'}
               className="px-3 py-2 rounded-sm bg-accent-muted active:opacity-80"
             >
               <Text className="font-sans-semibold text-body text-accent-fg">

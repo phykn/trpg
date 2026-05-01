@@ -1,6 +1,6 @@
 import { useAudioPlayer } from 'expo-audio';
 import React from 'react';
-import { Keyboard, Pressable, View } from 'react-native';
+import { Keyboard, Pressable, Text, View } from 'react-native';
 
 import type { Game } from '@/hooks/useGame';
 import { buildPanelSlots } from '@/presenters';
@@ -18,13 +18,14 @@ const BGM_SOURCE = require('../assets/audio/bgm.mp3');
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, log, pending, streaming, awaitingNarration, suggestions, onSend, onRoll, onStop, goToNewGame } = game;
+  const { hero, subject, quest, place, combat, log, pending, streaming, awaitingNarration, suggestions, errorMessage, onSend, onRoll, onStop, goToNewGame } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [input, setInput] = React.useState('');
   const [pendingAction, setPendingAction] = React.useState<PanelAction | null>(null);
+  const [newGameConfirmOpen, setNewGameConfirmOpen] = React.useState(false);
   const [bgmOn, setBgmOn] = React.useState(false);
 
   const bgm = useAudioPlayer(BGM_SOURCE);
@@ -80,7 +81,7 @@ export function Playing({ game }: Props) {
         onMenuToggle={() => setMenuOpen((v) => !v)}
         onMenuClose={() => setMenuOpen(false)}
         onBgmToggle={toggleBgm}
-        onNewGame={goToNewGame}
+        onNewGame={() => setNewGameConfirmOpen(true)}
         onAction={(action) => {
           if (action.confirm) {
             setPendingAction(action);
@@ -109,6 +110,22 @@ export function Playing({ game }: Props) {
         />
       )}
 
+      {newGameConfirmOpen && (
+        <ConfirmDialog
+          info={{
+            title: '새 게임',
+            blurb: '현재 이어 하던 세션 연결을 해제하고 새 게임 설정 화면으로 돌아갑니다.',
+            risk: { label: '세션 연결 해제', tone: 'bad' },
+            confirmLabel: '새 게임',
+          }}
+          onConfirm={() => {
+            setNewGameConfirmOpen(false);
+            goToNewGame();
+          }}
+          onCancel={() => setNewGameConfirmOpen(false)}
+        />
+      )}
+
       <HeroStrip hero={hero} />
 
       <Log
@@ -123,6 +140,14 @@ export function Playing({ game }: Props) {
 
       {pending ? <RollPrompt pending={pending} onRoll={onRoll} rolling={rolling} /> : null}
 
+      {errorMessage ? (
+        <View className="mx-5 rounded-sm border border-danger-fg bg-canvas-subtle px-3 py-2">
+          <Text className="font-sans text-caption text-danger-fg">
+            {errorMessage}
+          </Text>
+        </View>
+      ) : null}
+
       <Composer
         input={input}
         setInput={setInput}
@@ -130,6 +155,7 @@ export function Playing({ game }: Props) {
         onStop={onStop}
         focused={typing}
         streaming={streaming}
+        locked={pending !== null}
       />
     </View>
   );

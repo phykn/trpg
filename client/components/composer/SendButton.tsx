@@ -13,6 +13,10 @@ export function SendButton({ enabled, onPress }: {
     <Pressable
       onPress={onPress}
       disabled={!enabled}
+      accessibilityRole="button"
+      accessibilityLabel="행동 보내기"
+      accessibilityState={{ disabled: !enabled }}
+      testID="send-button"
       className={`items-center justify-center h-8 px-3 rounded-full ${bgClass} ${enabled ? 'active:opacity-80' : ''}`}
     >
       <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">

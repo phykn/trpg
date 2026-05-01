@@ -15,6 +15,9 @@ export function ChipTab({ chip, active, onPress }: {
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={chip.short}
+      accessibilityState={{ selected: active }}
       className={`flex-1 min-w-0 h-8 px-2 flex-row items-center justify-center gap-1.5 rounded-sm ${bg}`}
     >
       <Text numberOfLines={1} className={`text-caption ${fontWeight} ${color}`}>

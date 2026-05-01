@@ -225,6 +225,10 @@ export function RollPrompt({
       <Pressable
         onPress={rolling ? undefined : onRoll}
         disabled={rolling}
+        accessibilityRole="button"
+        accessibilityLabel={rolling ? '주사위 굴리는 중' : '주사위 굴리기'}
+        accessibilityState={{ disabled: rolling }}
+        testID="roll-button"
         className={`flex-row items-center justify-center gap-2 mt-3 h-10 rounded-md border ${
           rolling
             ? 'bg-transparent border-border-default'
