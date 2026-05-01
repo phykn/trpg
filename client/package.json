@@ -8,7 +8,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "jest"
+    "test": "jest",
+    "deploy": "rm -rf dist && expo export -p web && wrangler deploy"
   },
   "jest": {
     "preset": "jest-expo"

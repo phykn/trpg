@@ -40,14 +40,20 @@ export function LabeledRow({ label, children, mono = false, clampLines = 1 }: {
               {text}
             </Text>
             {!overflow && !expanded && (
-              <Text
-                className={`${fontClass} text-panel text-fg-default absolute inset-x-0 opacity-0`}
-                onTextLayout={(e) => {
-                  if (e.nativeEvent.lines.length > clampLines) setOverflow(true);
+              <View
+                className="absolute inset-x-0 opacity-0"
+                pointerEvents="none"
+                onLayout={(e) => {
+                  // text-panel line-height is 18px (design/tokens.js).
+                  // onTextLayout doesn't fire on react-native-web, so detect
+                  // overflow by measuring the unclamped height instead.
+                  if (e.nativeEvent.layout.height > 18 * clampLines + 1) setOverflow(true);
                 }}
               >
-                {text}
-              </Text>
+                <Text className={`${fontClass} text-panel text-fg-default`}>
+                  {text}
+                </Text>
+              </View>
             )}
           </View>
           {showHint && (

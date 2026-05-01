@@ -4,7 +4,7 @@ from pydantic import ValidationError
 
 from .._runner import read_prompt, run_with_retries
 from ...llm.client import LLMClient
-from .schema import JudgeInput, JudgeOutput, output_adapter
+from .schema import JudgeInput, JudgeOutput, validate_judge_output
 from .semantics import JudgeSemanticError, check_semantics
 
 PROMPT_PATH = Path(__file__).parent / "prompt.md"
@@ -13,7 +13,7 @@ _PROMPT = read_prompt(__file__)
 
 async def judge(client: LLMClient, input_: JudgeInput, retries: int = 5) -> JudgeOutput:
     def parse(answer: str) -> JudgeOutput:
-        out = output_adapter.validate_json(answer)
+        out = validate_judge_output(answer)
         check_semantics(out, input_.surroundings)
         return out
 

@@ -72,8 +72,10 @@ wrangler login
 Each deploy:
 
 ```bash
-npx expo export -p web && wrangler deploy
+npm run deploy
 ```
+
+This wipes `dist/`, runs `expo export -p web`, then `wrangler deploy` — chained so you can't ship a stale bundle by running export without deploy (or vice versa).
 
 `EXPO_PUBLIC_API_USER` / `EXPO_PUBLIC_API_PASS` are baked into the static bundle and visible to anyone who opens devtools on the public site. Use demo credentials and rotate after the demo.
 

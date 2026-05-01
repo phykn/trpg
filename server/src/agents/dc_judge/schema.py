@@ -1,3 +1,4 @@
+import json
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
@@ -147,3 +148,62 @@ JudgeOutput = Annotated[
 ]
 
 output_adapter: TypeAdapter[JudgeOutput] = TypeAdapter(JudgeOutput)
+
+
+# Phase-changing actions are excluded from ChainPart because they trigger
+# state transitions (combat phase, pending roll, rest sleep, flee resolution,
+# reject halt, summon spawn) that don't compose with sequential dispatch.
+_PHASE_CHANGING_ACTIONS = frozenset(
+    {"combat", "roll", "rest", "flee", "reject", "summon_combat"}
+)
+
+# Generic Korean fallback for RollAction.reason when the LLM omits it.
+# Keeps schema strict (min_length=1) while absorbing a recurring miss the
+# 5-shot self-correction loop fails to fix.
+_ROLL_REASON_FALLBACK = "행동 판정"
+
+
+def coerce_judge_output(raw: dict) -> dict:
+    """Last-mile fixes for two LLM patterns the prompt + retry loop cannot
+    eliminate (observed across QA passes):
+
+    1. `chain.parts` containing a phase-changing action. Promote the first
+       such part to be the top-level action; remaining parts are dropped
+       (the player's compound intent reduces to its phase-changing core,
+       which is what they cared about).
+    2. `roll` missing `reason`. Inject a generic Korean fallback so the
+       strict `min_length=1` field still validates.
+
+    Recursion handles nested fixes (e.g. a promoted roll part still needs
+    its reason filled).
+    """
+    if not isinstance(raw, dict):
+        return raw
+    action = raw.get("action")
+
+    if action == "chain":
+        parts = raw.get("parts") or []
+        for part in parts:
+            if (
+                isinstance(part, dict)
+                and part.get("action") in _PHASE_CHANGING_ACTIONS
+            ):
+                return coerce_judge_output(part)
+
+    if action == "roll" and not raw.get("reason"):
+        raw = {**raw, "reason": _ROLL_REASON_FALLBACK}
+
+    return raw
+
+
+def validate_judge_output(answer: str) -> JudgeOutput:
+    """Parse + coerce + validate. On JSON parse failure, defer to
+    `validate_json` so Pydantic raises ValidationError canonically into the
+    retry loop."""
+    try:
+        raw = json.loads(answer)
+    except json.JSONDecodeError:
+        return output_adapter.validate_json(answer)
+    if isinstance(raw, dict):
+        raw = coerce_judge_output(raw)
+    return output_adapter.validate_python(raw)

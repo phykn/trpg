@@ -69,6 +69,7 @@ export function Composer({ input, setInput, onSend, onStop, focused, streaming }
         placeholderTextColor={`${colors.fg.default}55`}
         returnKeyType="send"
         multiline
+        numberOfLines={1}
         submitBehavior="blurAndSubmit"
         textAlignVertical="center"
         className="flex-1 font-sans text-title px-2 text-fg-default"

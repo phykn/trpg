@@ -4,10 +4,13 @@ import pytest
 from pydantic import ValidationError
 
 from src.agents.dc_judge.schema import (
+    ChainAction,
     CombatAction,
     PassAction,
     RollAction,
+    coerce_judge_output,
     output_adapter,
+    validate_judge_output,
 )
 from src.agents.dc_judge.semantics import (
     JudgeSemanticError,
@@ -283,6 +286,93 @@ def test_roll_still_rejects_corpse_id_target():
     )
     with pytest.raises(JudgeSemanticError):
         check_semantics(r, sur)
+
+
+def test_coerce_promotes_phase_changing_chain_part_to_top_level():
+    # LLM occasionally wraps a phase-changing action (combat / roll / rest /
+    # flee / reject / summon_combat) inside chain.parts even though the schema
+    # rejects it. The coerce hook promotes the first such part to be the
+    # top-level action, dropping the rest.
+    raw = {
+        "action": "chain",
+        "parts": [
+            {"action": "use", "item_id": "herb_01"},
+            {
+                "action": "roll",
+                "tier": "보통",
+                "stat": "CHA",
+                "targets": ["g"],
+                "reason": "설득",
+            },
+        ],
+    }
+    coerced = coerce_judge_output(raw)
+    assert coerced["action"] == "roll"
+    assert "parts" not in coerced
+
+
+def test_coerce_fills_missing_roll_reason():
+    raw = {"action": "roll", "tier": "보통", "stat": "CHA", "targets": ["g"]}
+    coerced = coerce_judge_output(raw)
+    assert coerced["reason"] == "행동 판정"
+
+
+def test_coerce_passes_through_well_formed_output():
+    raw = {
+        "action": "roll",
+        "tier": "보통",
+        "stat": "CHA",
+        "targets": ["g"],
+        "reason": "원래 이유",
+    }
+    assert coerce_judge_output(raw) == raw
+
+
+def test_validate_absorbs_chain_with_combat_part():
+    answer = json.dumps(
+        {
+            "action": "chain",
+            "parts": [
+                {"action": "equip", "item_id": "sword_01"},
+                {"action": "combat", "targets": ["bandit_01"]},
+            ],
+        },
+        ensure_ascii=False,
+    )
+    out = validate_judge_output(answer)
+    assert isinstance(out, CombatAction)
+    assert out.targets == ["bandit_01"]
+
+
+def test_validate_absorbs_roll_missing_reason():
+    answer = json.dumps(
+        {"action": "roll", "tier": "보통", "stat": "CHA", "targets": ["g"]},
+        ensure_ascii=False,
+    )
+    out = validate_judge_output(answer)
+    assert isinstance(out, RollAction)
+    assert out.reason == "행동 판정"
+
+
+def test_validate_invalid_json_raises_validation_error():
+    with pytest.raises(ValidationError):
+        validate_judge_output("not json at all {{{")
+
+
+def test_validate_preserves_well_formed_chain():
+    answer = json.dumps(
+        {
+            "action": "chain",
+            "parts": [
+                {"action": "use", "item_id": "herb_01"},
+                {"action": "equip", "item_id": "sword_01"},
+            ],
+        },
+        ensure_ascii=False,
+    )
+    out = validate_judge_output(answer)
+    assert isinstance(out, ChainAction)
+    assert len(out.parts) == 2
 
 
 def test_chain_recurses_into_parts():
