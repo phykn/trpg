@@ -1,0 +1,18 @@
+{
+  "id": "ch2",
+  "title": "안개숲과 산문의 위협",
+  "summary": "산자락에서 흑탑의 그림자가 짙어지고, 안개숲 깊은 곳에서 잊혀진 와이트가 일어선다. 당신은 카르 둠의 봉인이 약해지고 있음을 점차 깨닫는다.",
+  "quest_ids": [
+    "q_forest_purge",
+    "q_seal_ritual"
+  ],
+  "prerequisite_ids": [
+    "ch1"
+  ],
+  "status": "locked",
+  "required": true,
+  "progress": {
+    "done": 0,
+    "total": 0
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "id": "selena_herbalist",
+  "name": "셀레나",
+  "description": "변경의 들풀과 신전의 향초를 다루는 젊은 약초사. 이스나르의 작은 약초밭을 손수 가꾸며, 다친 이들에게는 값을 깎아 주는 일이 잦다.",
+  "appearance": "어깨까지 내려오는 잿빛 머리에 회녹색 망토를 두른 젊은 인간 여성. 손끝에는 마른 들풀의 옅은 녹색이 늘 묻어 있다.",
+  "is_player": false,
+  "role": "이스나르 약초사이자 별빛 신전의 정원지기",
+  "race_id": "human",
+  "job": "약초사",
+  "gender": "female",
+  "level": 3,
+  "stats": {
+    "STR": 7,
+    "DEX": 8,
+    "CON": 8,
+    "INT": 12,
+    "WIS": 12,
+    "CHA": 13
+  },
+  "hp": 39,
+  "max_hp": 39,
+  "mp": 35,
+  "max_mp": 35,
+  "alive": true,
+  "location_id": "herb_garden",
+  "equipment": {
+    "weapon": null,
+    "armor": "herbalist_cloak",
+    "accessory": null
+  },
+  "inventory_ids": [
+    "herbalist_cloak",
+    "pungent_balm"
+  ],
+  "gold": 20,
+  "xp_pool": 0,
+  "xp_reward": 0,
+  "disposition": {
+    "lawful": 60,
+    "moral": 80,
+    "aggressive": 15
+  },
+  "relations": {},
+  "tone_hint": "차분하고 따뜻한 젊은 여성의 어조. 손이 닿는 사람에게는 어미가 부드럽다.",
+  "hints": [],
+  "racial_skill_ids": [
+    "basic_trade"
+  ],
+  "learned_skill_ids": [
+    "healing_herbs"
+  ],
+  "status": [],
+  "active_buffs": [],
+  "memories": [],
+  "combat_behavior": null,
+  "death_saves": null,
+  "revive_coins": 0,
+  "companions": []
+}

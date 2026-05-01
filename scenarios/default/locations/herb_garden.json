@@ -1,0 +1,21 @@
+{
+  "id": "herb_garden",
+  "name": "셀레나의 약초원",
+  "description": "낮은 돌담 안에 정성껏 가꾼 작은 약초밭. 줄지어 심긴 향초·들풀·이끼가 안개 낀 새벽이면 더 진한 향을 풍긴다. 한쪽 그늘에는 마른 약초를 다듬는 작은 작업대가 놓여 있다.",
+  "tags": [
+    "outdoor",
+    "garden"
+  ],
+  "item_ids": [],
+  "hidden_items": [],
+  "connections": [
+    { "target_id": "isnar_square", "difficulty": null, "key_item_id": null }
+  ],
+  "hidden_connections": [],
+  "weather": [
+    "옅은 안개"
+  ],
+  "sleep_risk": "safe",
+  "sleep_encounters": [],
+  "difficulty": null
+}

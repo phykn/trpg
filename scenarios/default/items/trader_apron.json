@@ -1,0 +1,14 @@
+{
+  "id": "trader_apron",
+  "name": "잡화상 앞치마",
+  "description": "여러 개의 작은 주머니가 정성스럽게 덧대어진 잡화상의 앞치마. 동전과 작은 도구가 늘 한 자리에 정돈되어 있다.",
+  "weight": 0.7,
+  "price": 18,
+  "effects": {
+    "type": "armor",
+    "defense": 1
+  },
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

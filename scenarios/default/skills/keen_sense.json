@@ -1,0 +1,14 @@
+{
+  "id": "keen_sense",
+  "name": "예민한 감각",
+  "description": "엘프의 긴 수명이 다듬어 낸 시청각. 안개와 발자국 너머의 기척을 먼저 잡아낸다.",
+  "level": 1,
+  "type": "buff",
+  "target": "self",
+  "primary_stat": "WIS",
+  "special_effect": "탐지 및 명중 보정 증가",
+  "power": 2,
+  "mp_cost": 0,
+  "range": 0.0,
+  "duration": 3
+}

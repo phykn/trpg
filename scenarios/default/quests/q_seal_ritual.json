@@ -1,0 +1,27 @@
+{
+  "id": "q_seal_ritual",
+  "title": "엘프의 룬 의식",
+  "summary": "별빛 신전에 머물고 있는 숲 엘프 시리엔이 전해 주는 룬 의식. 그녀의 룬 서판에는 카르 둠 봉인의 절반 — 봉인을 다시 묶기 위한 의식의 절차가 새겨져 있다.",
+  "giver_id": "sirien_elf",
+  "difficulty": "보통",
+  "prerequisite_ids": [],
+  "triggers": [
+    {
+      "id": "use_rune_tablet",
+      "name": "룬 서판으로 의식 절차 익히기",
+      "type": "item_use",
+      "target_id": "rune_tablet"
+    }
+  ],
+  "conditions": [],
+  "fail_triggers": [],
+  "rewards": {
+    "gold": 60,
+    "exp": 140,
+    "items": []
+  },
+  "status": "locked",
+  "required": true,
+  "triggers_met": [],
+  "fail_triggers_met": []
+}

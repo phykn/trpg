@@ -1,0 +1,14 @@
+{
+  "id": "crude_vest",
+  "name": "조잡한 가죽 조끼",
+  "description": "이리저리 기운 자국이 가득한 조잡한 가죽 조끼. 고블린들이 약탈한 천을 거칠게 덧댄 흔적이 보인다.",
+  "weight": 1.8,
+  "price": 18,
+  "effects": {
+    "type": "armor",
+    "defense": 1
+  },
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

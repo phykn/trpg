@@ -1,0 +1,62 @@
+{
+  "id": "goblin_grunt_02",
+  "name": "흑탑 보초",
+  "description": "흑탑 외곽 입구를 지키는 졸병 고블린. 보초 자리를 떠나지 못하지만, 자기 영역 안으로 들어선 자는 누구든 가차없이 노린다.",
+  "appearance": "회색에 가까운 녹색 피부의 작은 고블린. 머리에 닳은 두건을 두르고, 한 손에는 부서진 단검이, 다른 한 손에는 거친 가죽 조끼가 어색하게 걸쳐져 있다.",
+  "is_player": false,
+  "role": "흑탑 외곽의 보초",
+  "race_id": "goblin",
+  "job": "보초",
+  "gender": "male",
+  "level": 2,
+  "stats": {
+    "STR": 9,
+    "DEX": 12,
+    "CON": 10,
+    "INT": 10,
+    "WIS": 8,
+    "CHA": 11
+  },
+  "hp": 34,
+  "max_hp": 34,
+  "mp": 25,
+  "max_mp": 25,
+  "alive": true,
+  "location_id": "black_tower_base",
+  "equipment": {
+    "weapon": "broken_dagger",
+    "armor": "tattered_armor",
+    "accessory": null
+  },
+  "inventory_ids": [
+    "broken_dagger",
+    "tattered_armor"
+  ],
+  "gold": 0,
+  "xp_pool": 0,
+  "xp_reward": 60,
+  "disposition": {
+    "lawful": 20,
+    "moral": 20,
+    "aggressive": 85
+  },
+  "relations": {},
+  "tone_hint": "짧고 거친 고블린 어조. 보초 자리를 의식하며 으름장으로 시작하는 일이 잦다.",
+  "hints": [],
+  "racial_skill_ids": [
+    "goblin_swarm"
+  ],
+  "learned_skill_ids": [],
+  "status": [],
+  "active_buffs": [],
+  "memories": [],
+  "combat_behavior": {
+    "attack_priority": "nearest",
+    "flee_hp_percent": 20,
+    "nearest_weight": 70,
+    "random_weight": 30
+  },
+  "death_saves": null,
+  "revive_coins": 0,
+  "companions": []
+}

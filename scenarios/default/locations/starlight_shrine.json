@@ -1,0 +1,19 @@
+{
+  "id": "starlight_shrine",
+  "name": "별빛 신전",
+  "description": "광장 서쪽 골목 끝에 자리 잡은 작은 돌 신전. 천정에는 사라진 엘다린 별자리가 옅게 새겨져 있고, 제단 위에는 늘 향초 한 자루가 타고 있다. 사제는 변경 사람들의 상처와 두려움을 함께 어루만져 준다.",
+  "tags": [
+    "indoor",
+    "shrine"
+  ],
+  "item_ids": [],
+  "hidden_items": [],
+  "connections": [
+    { "target_id": "isnar_square", "difficulty": null, "key_item_id": null }
+  ],
+  "hidden_connections": [],
+  "weather": [],
+  "sleep_risk": "safe",
+  "sleep_encounters": [],
+  "difficulty": null
+}

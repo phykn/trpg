@@ -1,0 +1,14 @@
+{
+  "id": "elven_cloak",
+  "name": "엘프의 망토",
+  "description": "안개숲에서 엮은 회녹색 망토. 두르고 있으면 풀잎과 안개 사이에 윤곽이 옅게 묻힌다.",
+  "weight": 1.8,
+  "price": 180,
+  "effects": {
+    "type": "armor",
+    "defense": 3
+  },
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

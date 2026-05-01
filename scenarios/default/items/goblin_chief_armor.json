@@ -1,0 +1,14 @@
+{
+  "id": "goblin_chief_armor",
+  "name": "흑탑 두목 갑옷",
+  "description": "두꺼운 가죽 위에 쇠비늘을 덧댄 우두머리의 갑옷. 가슴 부분에는 흑탑의 깃발 무늬가 거칠게 새겨져 있다.",
+  "weight": 9.0,
+  "price": 320,
+  "effects": {
+    "type": "armor",
+    "defense": 5
+  },
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

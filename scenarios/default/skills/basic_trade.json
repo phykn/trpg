@@ -1,0 +1,14 @@
+{
+  "id": "basic_trade",
+  "name": "교역의 감각",
+  "description": "변경 마을에서 살아남으려면 누구나 한 줌씩은 익혀두는 흥정 솜씨.",
+  "level": 1,
+  "type": "buff",
+  "target": "self",
+  "primary_stat": "CHA",
+  "special_effect": "흥정 성공률 증가",
+  "power": 1,
+  "mp_cost": 0,
+  "range": 0.0,
+  "duration": 3
+}

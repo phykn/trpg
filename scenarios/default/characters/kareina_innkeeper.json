@@ -1,0 +1,60 @@
+{
+  "id": "kareina_innkeeper",
+  "name": "카레이나",
+  "description": "잿빛 까마귀 여관을 홀로 꾸려 가는 중년의 여관 주인. 밤이 깊은 변경에 등잔을 끄지 않는다는 평이 자자하다.",
+  "appearance": "검은 머리를 단정히 묶어 올린 단단한 인상의 인간 여성. 두툼한 손마디에는 오래된 화상 자국이 옅게 남아 있다.",
+  "is_player": false,
+  "role": "잿빛 까마귀 여관의 주인이자 변경 소문의 갈무리꾼",
+  "race_id": "human",
+  "job": "여관 주인",
+  "gender": "female",
+  "level": 3,
+  "stats": {
+    "STR": 9,
+    "DEX": 9,
+    "CON": 12,
+    "INT": 8,
+    "WIS": 11,
+    "CHA": 11
+  },
+  "hp": 46,
+  "max_hp": 46,
+  "mp": 28,
+  "max_mp": 28,
+  "alive": true,
+  "location_id": "gray_raven_inn",
+  "equipment": {
+    "weapon": null,
+    "armor": "inn_apron",
+    "accessory": "inn_lantern"
+  },
+  "inventory_ids": [
+    "inn_apron",
+    "inn_lantern",
+    "inn_ledger",
+    "inn_brew",
+    "travel_ration"
+  ],
+  "gold": 30,
+  "xp_pool": 0,
+  "xp_reward": 0,
+  "disposition": {
+    "lawful": 70,
+    "moral": 65,
+    "aggressive": 25
+  },
+  "relations": {},
+  "tone_hint": "차분하고 실무적인 중년 여성의 어조. 우스개를 섞으면서도 셈은 정확하다.",
+  "hints": [],
+  "racial_skill_ids": [
+    "basic_trade"
+  ],
+  "learned_skill_ids": [],
+  "status": [],
+  "active_buffs": [],
+  "memories": [],
+  "combat_behavior": null,
+  "death_saves": null,
+  "revive_coins": 0,
+  "companions": []
+}

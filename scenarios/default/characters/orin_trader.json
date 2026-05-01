@@ -1,0 +1,59 @@
+{
+  "id": "orin_trader",
+  "name": "오린",
+  "description": "변경 마을 잡화점을 운영하는 부지런한 인간 남성. 산문 너머 카르 둠 까지 이어지던 옛 교역로의 자취를 잘 안다.",
+  "appearance": "둥글둥글한 어깨에 굵은 손가락을 가진 중년의 인간 남성. 늘 잿빛 앞치마 자락에 작은 은화 한두 닢이 묻어 있다.",
+  "is_player": false,
+  "role": "이스나르 잡화점의 주인이자 변경 교역의 마지막 끈",
+  "race_id": "human",
+  "job": "잡화상",
+  "gender": "male",
+  "level": 3,
+  "stats": {
+    "STR": 7,
+    "DEX": 8,
+    "CON": 8,
+    "INT": 12,
+    "WIS": 12,
+    "CHA": 13
+  },
+  "hp": 39,
+  "max_hp": 39,
+  "mp": 35,
+  "max_mp": 35,
+  "alive": true,
+  "location_id": "general_store",
+  "equipment": {
+    "weapon": null,
+    "armor": "trader_apron",
+    "accessory": null
+  },
+  "inventory_ids": [
+    "trader_apron",
+    "rope_and_torch",
+    "mountain_charm",
+    "healing_salve"
+  ],
+  "gold": 80,
+  "xp_pool": 0,
+  "xp_reward": 0,
+  "disposition": {
+    "lawful": 65,
+    "moral": 60,
+    "aggressive": 20
+  },
+  "relations": {},
+  "tone_hint": "넉살 좋고 사근사근한 상인의 어조. 흥정이 시작되면 말이 빨라진다.",
+  "hints": [],
+  "racial_skill_ids": [
+    "basic_trade"
+  ],
+  "learned_skill_ids": [],
+  "status": [],
+  "active_buffs": [],
+  "memories": [],
+  "combat_behavior": null,
+  "death_saves": null,
+  "revive_coins": 0,
+  "companions": []
+}

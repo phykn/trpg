@@ -1,0 +1,26 @@
+{
+  "id": "deep_forest",
+  "name": "안개숲 깊은 곳",
+  "description": "햇빛이 닿지 않는 거대한 너도밤나무 사이로 잿빛 안개가 강물처럼 흐른다. 발밑에는 이끼와 부서진 엘프 비석 조각이 흩어져 있고, 멀리서 룬을 새긴 듯한 희미한 빛이 깜빡인다. 발소리에 안개가 멈칫하는 듯한 착각이 든다.",
+  "tags": [
+    "outdoor",
+    "forest",
+    "ruins"
+  ],
+  "item_ids": [],
+  "hidden_items": [],
+  "connections": [
+    { "target_id": "forest_edge", "difficulty": null, "key_item_id": null },
+    { "target_id": "elf_altar", "difficulty": "어려움", "key_item_id": null }
+  ],
+  "hidden_connections": [],
+  "weather": [
+    "짙은 안개",
+    "한기"
+  ],
+  "sleep_risk": "dangerous",
+  "sleep_encounters": [
+    "mist_wight_01"
+  ],
+  "difficulty": "보통"
+}

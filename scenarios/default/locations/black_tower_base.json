@@ -1,0 +1,25 @@
+{
+  "id": "black_tower_base",
+  "name": "흑탑 외곽",
+  "description": "산자락 한쪽에 검은 돌을 쌓아 올린 거대한 망루 — 흑탑의 발치. 입구는 녹슨 철문으로 닫혀 있고, 그 앞에는 흑탑 깃발을 세운 고블린 보초가 어슬렁거린다. 바람에 깃발이 펄럭이는 소리가 멀리까지 들린다.",
+  "tags": [
+    "outdoor",
+    "tower",
+    "stronghold"
+  ],
+  "item_ids": [],
+  "hidden_items": [],
+  "connections": [
+    { "target_id": "mountain_road", "difficulty": null, "key_item_id": null },
+    { "target_id": "black_tower_floor", "difficulty": "어려움", "key_item_id": null }
+  ],
+  "hidden_connections": [],
+  "weather": [
+    "찬바람"
+  ],
+  "sleep_risk": "dangerous",
+  "sleep_encounters": [
+    "goblin_grunt_02"
+  ],
+  "difficulty": "어려움"
+}

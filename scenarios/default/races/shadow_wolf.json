@@ -1,0 +1,8 @@
+{
+  "id": "shadow_wolf",
+  "name": "그림자 늑대",
+  "description": "흑탑의 어둠이 짙어진 뒤 산자락에 출몰하기 시작한 검은 짐승. 가죽이 안개에 녹아드는 듯 흐릿하고, 발소리가 거의 들리지 않는다.",
+  "racial_skill_ids": [
+    "shadow_strike"
+  ]
+}

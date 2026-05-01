@@ -1,0 +1,19 @@
+{
+  "id": "general_store",
+  "name": "오린의 잡화",
+  "description": "광장 동쪽, 작은 창문 너머로 갖가지 물건이 빼곡히 걸려 있는 잡화점. 천정에 매단 마른 약초, 벽에 가지런히 걸린 가죽끈과 등잔, 그리고 안쪽 책상 위에 놓인 두꺼운 장부가 변경의 거래를 기록한다.",
+  "tags": [
+    "indoor",
+    "shop"
+  ],
+  "item_ids": [],
+  "hidden_items": [],
+  "connections": [
+    { "target_id": "isnar_square", "difficulty": null, "key_item_id": null }
+  ],
+  "hidden_connections": [],
+  "weather": [],
+  "sleep_risk": "safe",
+  "sleep_encounters": [],
+  "difficulty": null
+}

@@ -1,0 +1,18 @@
+{
+  "id": "ch3",
+  "title": "흑탑의 종언과 룬의 봉인",
+  "summary": "흑탑 정상의 고블린 두목을 끝장내고, 카르 둠 깊은 갱도에서 봉인의 돌로 옛 룬을 다시 묶어 변경의 어둠을 가둔다.",
+  "quest_ids": [
+    "q_tower_assault",
+    "q_rune_lock"
+  ],
+  "prerequisite_ids": [
+    "ch2"
+  ],
+  "status": "locked",
+  "required": true,
+  "progress": {
+    "done": 0,
+    "total": 0
+  }
+}

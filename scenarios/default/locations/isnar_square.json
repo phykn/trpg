@@ -1,0 +1,26 @@
+{
+  "id": "isnar_square",
+  "name": "이스나르 광장",
+  "description": "변경 마을 한가운데 자리 잡은 돌이 닳은 광장. 가운데에 한쪽이 깨진 옛 분수가 메마른 채 서 있고, 동서로 좁은 골목이 갈라져 여관과 상점, 신전과 약초원으로 이어진다. 북쪽 끝에는 마을의 망루가 솟아 있다.",
+  "tags": [
+    "outdoor",
+    "town"
+  ],
+  "item_ids": [],
+  "hidden_items": [],
+  "connections": [
+    { "target_id": "gray_raven_inn", "difficulty": null, "key_item_id": null },
+    { "target_id": "general_store", "difficulty": null, "key_item_id": null },
+    { "target_id": "forge_smithy", "difficulty": null, "key_item_id": null },
+    { "target_id": "starlight_shrine", "difficulty": null, "key_item_id": null },
+    { "target_id": "herb_garden", "difficulty": null, "key_item_id": null },
+    { "target_id": "watch_post", "difficulty": null, "key_item_id": null }
+  ],
+  "hidden_connections": [],
+  "weather": [
+    "옅은 안개"
+  ],
+  "sleep_risk": "safe",
+  "sleep_encounters": [],
+  "difficulty": null
+}

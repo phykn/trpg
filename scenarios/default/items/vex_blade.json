@@ -1,0 +1,15 @@
+{
+  "id": "vex_blade",
+  "name": "배신자의 검",
+  "description": "엘다린 변방 기사의 표식이 옅게 남은 한 손검. 흑탑에 매수된 옛 변경 기사 벡스가 자기 휘장을 지운 자리에 흑탑의 깃발을 새로 새겨 두었다.",
+  "weight": 2.4,
+  "price": 180,
+  "effects": {
+    "type": "weapon",
+    "weapon_dice": "1d8+1",
+    "range": 1.5
+  },
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

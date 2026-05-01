@@ -1,0 +1,63 @@
+{
+  "id": "goblin_hunter_01",
+  "name": "안개숲 사냥꾼",
+  "description": "안개숲 어귀에 잠복해 변경 사람들을 노리는 고블린 사냥꾼. 들풀 사이에 몸을 낮추고 독 묻은 단검을 휘두른다.",
+  "appearance": "회녹색 피부에 진흙 자국이 묻은 비쩍 마른 고블린. 어깨에는 들풀로 위장한 가는 띠가 둘려 있고, 한 손에는 짧은 독 단검이 들려 있다.",
+  "is_player": false,
+  "role": "안개숲 어귀의 매복 사냥꾼",
+  "race_id": "goblin",
+  "job": "사냥꾼",
+  "gender": "male",
+  "level": 3,
+  "stats": {
+    "STR": 9,
+    "DEX": 14,
+    "CON": 10,
+    "INT": 10,
+    "WIS": 6,
+    "CHA": 11
+  },
+  "hp": 41,
+  "max_hp": 41,
+  "mp": 30,
+  "max_mp": 30,
+  "alive": true,
+  "location_id": "forest_edge",
+  "equipment": {
+    "weapon": "poisoned_dart",
+    "armor": null,
+    "accessory": null
+  },
+  "inventory_ids": [
+    "poisoned_dart"
+  ],
+  "gold": 0,
+  "xp_pool": 0,
+  "xp_reward": 80,
+  "disposition": {
+    "lawful": 15,
+    "moral": 20,
+    "aggressive": 85
+  },
+  "relations": {},
+  "tone_hint": "낮고 짧은 고블린 어조. 매복 자리에서는 거의 말이 없다.",
+  "hints": [],
+  "racial_skill_ids": [
+    "goblin_swarm"
+  ],
+  "learned_skill_ids": [
+    "evasion_movement"
+  ],
+  "status": [],
+  "active_buffs": [],
+  "memories": [],
+  "combat_behavior": {
+    "attack_priority": "lowest_hp",
+    "flee_hp_percent": 25,
+    "nearest_weight": 50,
+    "random_weight": 50
+  },
+  "death_saves": null,
+  "revive_coins": 0,
+  "companions": []
+}

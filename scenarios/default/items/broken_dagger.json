@@ -1,0 +1,15 @@
+{
+  "id": "broken_dagger",
+  "name": "부서진 단검",
+  "description": "끝이 살짝 부러진 작은 단검. 그래도 고블린 손에서는 충분히 위협적이다.",
+  "weight": 0.9,
+  "price": 12,
+  "effects": {
+    "type": "weapon",
+    "weapon_dice": "1d4",
+    "range": 1.5
+  },
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

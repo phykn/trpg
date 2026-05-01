@@ -1,0 +1,14 @@
+{
+  "id": "scout_vest",
+  "name": "가벼운 가죽 갑옷",
+  "description": "산자락을 빠르게 누비기 좋도록 짜인 얇은 가죽 갑옷. 어깨 부분에는 안개숲의 진흙이 옅게 배어 있다.",
+  "weight": 2.0,
+  "price": 95,
+  "effects": {
+    "type": "armor",
+    "defense": 2
+  },
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

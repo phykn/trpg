@@ -1,0 +1,23 @@
+{
+  "id": "black_tower_floor",
+  "name": "흑탑 1층",
+  "description": "흑탑 안쪽, 짙은 그을음으로 검게 물든 돌 회랑. 사슬과 무기들이 벽에 어지러이 걸려 있고, 한쪽 구석에는 빼앗긴 변경 마을의 물건들이 쌓여 있다. 위층으로 올라가는 좁은 나선 계단 곁에 두목의 부관이 자리를 잡고 있다.",
+  "tags": [
+    "indoor",
+    "tower",
+    "stronghold"
+  ],
+  "item_ids": [],
+  "hidden_items": [],
+  "connections": [
+    { "target_id": "black_tower_base", "difficulty": null, "key_item_id": null },
+    { "target_id": "black_tower_top", "difficulty": "매우 어려움", "key_item_id": null }
+  ],
+  "hidden_connections": [],
+  "weather": [],
+  "sleep_risk": "dangerous",
+  "sleep_encounters": [
+    "goblin_grunt_03"
+  ],
+  "difficulty": "어려움"
+}

@@ -1,0 +1,17 @@
+{
+  "id": "pungent_balm",
+  "name": "쓴내 발삼",
+  "description": "셀레나가 들풀과 송진을 짓이겨 빚은 짙은 갈색 발삼. 냄새는 사납지만 깊은 멍과 베인 상처에 잘 듣는다.",
+  "weight": 0.4,
+  "price": 38,
+  "effects": {
+    "type": "consumable",
+    "effect": "heal",
+    "amount": 22,
+    "description": null,
+    "duration": null
+  },
+  "required": null,
+  "consumable": true,
+  "on_use": null
+}

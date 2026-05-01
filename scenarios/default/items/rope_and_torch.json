@@ -1,0 +1,11 @@
+{
+  "id": "rope_and_torch",
+  "name": "밧줄과 횃불",
+  "description": "거친 삼끈 한 묶음과 송진을 듬뿍 머금은 짧은 횃불 두 자루. 갱도와 망루 길에서 쓸모가 많다.",
+  "weight": 1.4,
+  "price": 22,
+  "effects": null,
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}

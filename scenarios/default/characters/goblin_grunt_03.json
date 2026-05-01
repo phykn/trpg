@@ -1,0 +1,61 @@
+{
+  "id": "goblin_grunt_03",
+  "name": "흑탑 졸병",
+  "description": "흑탑 1층 회랑을 지키는 고블린. 부관 벡스의 옆에 붙어 다니며 약탈한 짐꾸러미를 정리하는 일을 맡는다.",
+  "appearance": "한쪽 귀가 잘려 나간 회녹색 작은 고블린. 손에는 녹슨 단검 한 자루만 들려 있고, 가슴에는 약탈한 가죽끈 여러 줄이 어수선하게 묶여 있다.",
+  "is_player": false,
+  "role": "흑탑 1층의 졸병",
+  "race_id": "goblin",
+  "job": "졸병",
+  "gender": "male",
+  "level": 2,
+  "stats": {
+    "STR": 8,
+    "DEX": 13,
+    "CON": 9,
+    "INT": 11,
+    "WIS": 7,
+    "CHA": 12
+  },
+  "hp": 33,
+  "max_hp": 33,
+  "mp": 26,
+  "max_mp": 26,
+  "alive": true,
+  "location_id": "black_tower_floor",
+  "equipment": {
+    "weapon": "rusty_dagger",
+    "armor": null,
+    "accessory": null
+  },
+  "inventory_ids": [
+    "rusty_dagger"
+  ],
+  "gold": 0,
+  "xp_pool": 0,
+  "xp_reward": 60,
+  "disposition": {
+    "lawful": 15,
+    "moral": 20,
+    "aggressive": 85
+  },
+  "relations": {},
+  "tone_hint": "짧고 거친 고블린 어조. 부관의 명령 앞에서는 어미가 짧아진다.",
+  "hints": [],
+  "racial_skill_ids": [
+    "goblin_swarm"
+  ],
+  "learned_skill_ids": [],
+  "status": [],
+  "active_buffs": [],
+  "memories": [],
+  "combat_behavior": {
+    "attack_priority": "nearest",
+    "flee_hp_percent": 25,
+    "nearest_weight": 70,
+    "random_weight": 30
+  },
+  "death_saves": null,
+  "revive_coins": 0,
+  "companions": []
+}

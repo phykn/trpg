@@ -1,0 +1,8 @@
+{
+  "id": "human",
+  "name": "인간",
+  "description": "엘다린 왕국이 무너진 뒤 변경 곳곳에 흩어져 살아가는 종족. 짧은 수명을 거래·기예·기록으로 메우며 마을을 지탱한다.",
+  "racial_skill_ids": [
+    "basic_trade"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "healing_herbs",
+  "name": "약초 치유",
+  "description": "변경의 들풀과 신전의 향초를 다루어 상처를 다스리는 솜씨.",
+  "level": 1,
+  "type": "heal",
+  "target": "single",
+  "primary_stat": "WIS",
+  "special_effect": "체력 회복",
+  "power": 6,
+  "mp_cost": 4,
+  "range": 1.5,
+  "duration": 0
+}

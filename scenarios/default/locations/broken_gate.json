@@ -1,0 +1,23 @@
+{
+  "id": "broken_gate",
+  "name": "무너진 산문",
+  "description": "한때 카르 둠 왕국의 자랑이었던 거대한 청동 산문. 지금은 한쪽 문짝이 무너져 안쪽이 어둡게 입을 벌리고 있다. 문틀에 새겨진 룬은 절반이 깨졌고, 깊은 갱도에서 차가운 바람이 단조 냄새와 섞여 흘러나온다.",
+  "tags": [
+    "outdoor",
+    "mountain",
+    "ruins"
+  ],
+  "item_ids": [],
+  "hidden_items": [],
+  "connections": [
+    { "target_id": "mountain_road", "difficulty": null, "key_item_id": null },
+    { "target_id": "deep_mine", "difficulty": "어려움", "key_item_id": null }
+  ],
+  "hidden_connections": [],
+  "weather": [
+    "찬바람"
+  ],
+  "sleep_risk": "dangerous",
+  "sleep_encounters": [],
+  "difficulty": "보통"
+}

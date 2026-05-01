@@ -1,0 +1,57 @@
+{
+  "id": "edrik_chief",
+  "name": "에드릭",
+  "description": "이스나르 변경 마을의 촌장. 엘다린 왕국이 무너진 뒤로도 사람들을 한 자리에 묶어 온 마지막 끈이라 불린다. 흑탑의 그림자가 짙어진 뒤로 잠을 자주 설친다.",
+  "appearance": "백발에 깊은 주름이 새겨진 노년의 인간 남성. 어깨가 다소 굽었으나 눈빛만은 맑다. 가슴에 청동 인장이 단정히 걸려 있다.",
+  "is_player": false,
+  "role": "이스나르 촌장이자 변경 사람들의 의뢰인",
+  "race_id": "human",
+  "job": "촌장",
+  "gender": "male",
+  "level": 4,
+  "stats": {
+    "STR": 6,
+    "DEX": 6,
+    "CON": 8,
+    "INT": 12,
+    "WIS": 14,
+    "CHA": 14
+  },
+  "hp": 46,
+  "max_hp": 46,
+  "mp": 41,
+  "max_mp": 41,
+  "alive": true,
+  "location_id": "isnar_square",
+  "equipment": {
+    "weapon": null,
+    "armor": "chief_robe",
+    "accessory": "chief_signet"
+  },
+  "inventory_ids": [
+    "chief_robe",
+    "chief_signet"
+  ],
+  "gold": 0,
+  "xp_pool": 0,
+  "xp_reward": 0,
+  "disposition": {
+    "lawful": 90,
+    "moral": 80,
+    "aggressive": 10
+  },
+  "relations": {},
+  "tone_hint": "느리고 단정한 노년의 어조. 격식 어미를 즐겨 쓰며, 부탁을 꺼낼 때는 시선을 똑바로 둔다.",
+  "hints": [],
+  "racial_skill_ids": [
+    "basic_trade"
+  ],
+  "learned_skill_ids": [],
+  "status": [],
+  "active_buffs": [],
+  "memories": [],
+  "combat_behavior": null,
+  "death_saves": null,
+  "revive_coins": 0,
+  "companions": []
+}

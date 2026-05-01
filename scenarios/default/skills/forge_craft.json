@@ -1,0 +1,14 @@
+{
+  "id": "forge_craft",
+  "name": "단조의 손",
+  "description": "카르 둠 드워프가 대를 이어 다듬어 온 단조 솜씨. 무기와 갑옷의 결을 단번에 알아본다.",
+  "level": 1,
+  "type": "buff",
+  "target": "self",
+  "primary_stat": "STR",
+  "special_effect": "장비 점검·수리 및 단조 판정 보정",
+  "power": 2,
+  "mp_cost": 0,
+  "range": 0.0,
+  "duration": 3
+}

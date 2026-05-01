@@ -1,0 +1,14 @@
+{
+  "id": "rune_reading",
+  "name": "룬 해독",
+  "description": "옛 드워프와 엘프가 새긴 룬의 결을 읽어 내는 학문. 봉인의 약점과 의식의 절차를 짚을 수 있다.",
+  "level": 1,
+  "type": "buff",
+  "target": "self",
+  "primary_stat": "INT",
+  "special_effect": "룬·봉인 관련 판정 보정",
+  "power": 2,
+  "mp_cost": 2,
+  "range": 0.0,
+  "duration": 3
+}

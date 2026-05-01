@@ -1,0 +1,27 @@
+{
+  "id": "q_tower_assault",
+  "title": "흑탑 돌격",
+  "summary": "촌장 에드릭이 마지막으로 부탁하는 변경의 임무. 흑탑 정상에 자리 잡은 고블린 두목 고라스를 끝장내 변경에서 흑마법사의 깃발을 거두는 것.",
+  "giver_id": "edrik_chief",
+  "difficulty": "매우 어려움",
+  "prerequisite_ids": [],
+  "triggers": [
+    {
+      "id": "kill_gorath",
+      "name": "흑탑 두목 고라스 처치",
+      "type": "character_death",
+      "target_id": "gorath_chief"
+    }
+  ],
+  "conditions": [],
+  "fail_triggers": [],
+  "rewards": {
+    "gold": 300,
+    "exp": 500,
+    "items": []
+  },
+  "status": "locked",
+  "required": true,
+  "triggers_met": [],
+  "fail_triggers_met": []
+}

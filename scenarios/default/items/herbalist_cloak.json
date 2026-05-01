@@ -1,0 +1,14 @@
+{
+  "id": "herbalist_cloak",
+  "name": "약초사의 망토",
+  "description": "마른 들풀의 향이 옅게 배어 있는 회녹색 망토. 안주머니에 작은 약초 다발이 정돈되어 있다.",
+  "weight": 1.5,
+  "price": 70,
+  "effects": {
+    "type": "armor",
+    "defense": 2
+  },
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}
