@@ -11,4 +11,5 @@ reports/
 .claude/
 .tmux-agent-bridge/
 scenarios/
+docs/
 logs/
