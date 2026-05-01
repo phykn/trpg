@@ -3,18 +3,22 @@
 Bundles location, entities, equipment, skills, inventory, growth, merchants and
 skill candidates into the dict the judge agent sees. Payload helpers stay
 private — only `build_surroundings` is exported.
-"""
-from collections import Counter
 
+Relational reads (who's at this location, what's equipped/carried, which
+skills are known) go through `GameGraph` — never via `state.characters`
+fullscans or direct entity-relation fields. Pure-attribute reads (HP, alive,
+disposition, level, mp) still come from the entity. Phase 3 of the graph-SSOT
+work, see [02-runtime.md](./02-runtime.md) §4.
+"""
 from ..domain.entities import (
     EQUIPMENT_SLOTS,
     Character,
-    ConsumableEffect,
     Location,
     item_kind,
 )
 from ..domain.state import GameState
-from ..engines.growth import can_afford_level_up, xp_for_next_level
+from ..engines.growth import can_afford_level_up
+from ..ontology.graph import GameGraph, build_graph
 from ..rules import RULES
 
 
@@ -39,67 +43,65 @@ def _state_tags(actor: Character, npc: Character) -> list[str]:
 # --- Inventory / equipment / skills / growth (actor-centric) -----------------
 
 
-def _inventory_payload(state: GameState, actor: Character) -> list[dict]:
-    counts: Counter[str] = Counter(actor.inventory_ids)
+def _inventory_payload(
+    state: GameState, actor: Character, graph: GameGraph
+) -> list[dict]:
+    seen: set[str] = set()
     out: list[dict] = []
-    for item_id, qty in counts.items():
+    for edge in graph.get_edges(actor.id, "carries"):
+        item_id = edge.to_id
+        if item_id in seen:
+            continue
         item = state.items.get(item_id)
         if item is None:
             continue
-        entry: dict = {
+        seen.add(item_id)
+        out.append({
             "id": item_id,
             "name": item.name,
-            "qty": qty,
             "kind": item_kind(item),
-        }
-        if isinstance(item.effects, ConsumableEffect):
-            entry["effect"] = item.effects.effect
-        if item.description:
-            entry["description"] = item.description
-        out.append(entry)
+        })
     return out
 
 
-def _equipment_payload(state: GameState, actor: Character) -> dict:
+def _equipment_payload(
+    state: GameState, actor: Character, graph: GameGraph
+) -> dict:
     out: dict[str, dict | None] = {slot: None for slot in EQUIPMENT_SLOTS}
-    for slot, item_id in actor.equipment.equipped_items():
-        if item_id in state.items:
-            out[slot] = {"id": item_id, "name": state.items[item_id].name}
+    for edge in graph.get_edges(actor.id, "equips"):
+        item_id = edge.to_id
+        slot = (edge.attrs or {}).get("slot")
+        if slot is None or slot not in out:
+            continue
+        item = state.items.get(item_id)
+        if item is None:
+            continue
+        out[slot] = {"id": item_id, "name": item.name}
     return out
 
 
-def _skills_payload(state: GameState, actor: Character) -> list[dict]:
+def _skills_payload(
+    state: GameState, actor: Character, graph: GameGraph
+) -> list[dict]:
     out: list[dict] = []
-    for source, ids in (
-        ("racial", actor.racial_skill_ids),
-        ("learned", actor.learned_skill_ids),
-    ):
-        for sid in ids:
-            s = state.skills.get(sid)
-            if s is None:
-                continue
-            if s.level > actor.level or actor.mp < s.mp_cost:
-                continue
-            item: dict = {
-                "id": s.id,
-                "name": s.name,
-                "type": s.type,
-                "target": s.target,
-                "source": source,
-            }
-            if s.description:
-                item["description"] = s.description
-            if s.special_effect:
-                item["effect"] = s.special_effect
-            out.append(item)
+    for edge in graph.get_edges(actor.id, "knows_skill"):
+        s = state.skills.get(edge.to_id)
+        if s is None:
+            continue
+        # level / mp are pure entity values — graph doesn't carry them.
+        if s.level > actor.level or actor.mp < s.mp_cost:
+            continue
+        item: dict = {"id": s.id, "name": s.name}
+        if s.description:
+            item["description"] = s.description
+        if s.special_effect:
+            item["effect"] = s.special_effect
+        out.append(item)
     return out
 
 
 def _growth_payload(actor: Character) -> dict:
     return {
-        "level": actor.level,
-        "xp_pool": actor.xp_pool,
-        "xp_needed": xp_for_next_level(actor.level),
         "can_level_up": can_afford_level_up(actor),
     }
 
@@ -120,7 +122,9 @@ def _skill_candidates_payload(state: GameState) -> list[dict]:
 # --- Location / nearby NPCs/items/connections / merchants (location-centric) -
 
 
-def _merchants_payload(state: GameState, actor: Character) -> list[dict]:
+def _merchants_payload(
+    state: GameState, actor: Character, graph: GameGraph
+) -> list[dict]:
     """Same-location NPCs whose affinity passes the trade threshold and who carry stock.
     Hostile seeds (bandits, beasts) are excluded by `hostile_aggressive_threshold`
     even when their relations[player] is still at the empty-dict default of 0,
@@ -131,20 +135,27 @@ def _merchants_payload(state: GameState, actor: Character) -> list[dict]:
     out: list[dict] = []
     threshold = RULES.social.trade_threshold
     aggressive_cutoff = RULES.social.hostile_aggressive_threshold
-    for cid, npc in state.characters.items():
-        if cid == actor.id or npc.location_id != actor.location_id:
+    for edge in graph.get_in_edges(actor.location_id, "located_at"):
+        cid = edge.from_id
+        if cid == actor.id:
             continue
-        if not npc.alive or not npc.inventory_ids:
+        npc = state.characters.get(cid)
+        if npc is None or not npc.alive:
             continue
         if npc.disposition.aggressive >= aggressive_cutoff:
             continue
         if npc.relations.get(actor.id, 0) < threshold:
             continue
+        stock_seen: set[str] = set()
         stock: list[dict] = []
-        for iid in set(npc.inventory_ids):
+        for carry in graph.get_edges(cid, "carries"):
+            iid = carry.to_id
+            if iid in stock_seen:
+                continue
             item = state.items.get(iid)
             if item is None:
                 continue
+            stock_seen.add(iid)
             stock.append({
                 "id": iid,
                 "name": item.name,
@@ -157,39 +168,52 @@ def _merchants_payload(state: GameState, actor: Character) -> list[dict]:
 
 
 def _entities_payload(
-    state: GameState, actor_id: str, actor: Character, location: Location
+    state: GameState,
+    actor_id: str,
+    actor: Character,
+    location: Location,
+    graph: GameGraph,
 ) -> list[dict]:
     entities: list[dict] = [{"id": actor_id, "name": actor.name, "type": "player"}]
-    for cid, char in state.characters.items():
-        if cid == actor_id or char.location_id != actor.location_id:
+    for edge in graph.get_in_edges(location.id, "located_at"):
+        cid = edge.from_id
+        if cid == actor_id:
             continue
-        if not char.alive:
+        char = state.characters.get(cid)
+        if char is None or not char.alive:
             continue
         entry: dict = {"id": cid, "name": char.name, "type": "npc"}
         tags = _state_tags(actor, char)
         if tags:
             entry["state_tags"] = tags
         entities.append(entry)
-    for item_id in location.item_ids:
-        if item_id in state.items:
-            entities.append(
-                {"id": item_id, "name": state.items[item_id].name, "type": "item"}
-            )
-    for conn in location.connections:
-        if conn.target_id not in state.locations:
+    for edge in graph.get_in_edges(location.id, "located_in"):
+        item_id = edge.from_id
+        item = state.items.get(item_id)
+        if item is None:
             continue
+        entities.append({"id": item_id, "name": item.name, "type": "item"})
+    for edge in graph.get_edges(location.id, "connects_to"):
+        target_id = edge.to_id
+        target_loc = state.locations.get(target_id)
+        if target_loc is None:
+            continue
+        attrs = edge.attrs or {}
         entry = {
-            "id": conn.target_id,
-            "name": state.locations[conn.target_id].name,
+            "id": target_id,
+            "name": target_loc.name,
             "type": "connection",
         }
-        if conn.difficulty:
-            entry["difficulty"] = conn.difficulty
+        difficulty = attrs.get("difficulty")
+        if difficulty:
+            entry["difficulty"] = difficulty
         entities.append(entry)
     return entities
 
 
-def _corpses_payload(state: GameState, actor: Character) -> list[dict]:
+def _corpses_payload(
+    state: GameState, actor: Character, graph: GameGraph
+) -> list[dict]:
     """Dead NPCs surfaced for narrate so it doesn't revive them. Two sources:
 
     - same-location: visible as a body in the scene.
@@ -202,12 +226,16 @@ def _corpses_payload(state: GameState, actor: Character) -> list[dict]:
     Surfaced separately from `entities` so judge semantics doesn't accept
     them as combat/buy/sell targets.
     """
+    if actor.location_id is None:
+        return []
     out: list[dict] = []
     seen: set[str] = set()
-    for cid, char in state.characters.items():
-        if cid == actor.id or char.location_id != actor.location_id:
+    for edge in graph.get_in_edges(actor.location_id, "located_at"):
+        cid = edge.from_id
+        if cid == actor.id:
             continue
-        if char.alive:
+        char = state.characters.get(cid)
+        if char is None or char.alive:
             continue
         out.append({"id": cid, "name": char.name})
         seen.add(cid)
@@ -244,11 +272,21 @@ def _location_payload(location: Location) -> dict:
 # --- Entry point (the dict the judge sees) -----------------------------------
 
 
-def build_surroundings(state: GameState, actor_id: str) -> dict:
+def build_surroundings(
+    state: GameState,
+    actor_id: str,
+    graph: GameGraph | None = None,
+) -> dict:
+    """Assemble the surroundings payload. `graph` is the relational SSOT —
+    callers that already built one (flow entry points) should pass it; tests
+    and ad-hoc callers can omit and we'll build internally.
+    """
+    if graph is None:
+        graph = build_graph(state)
     actor = state.characters[actor_id]
     in_combat = state.combat_state is not None
     base = {
-        "equipment": _equipment_payload(state, actor),
+        "equipment": _equipment_payload(state, actor, graph),
         "in_combat": in_combat,
         "growth": _growth_payload(actor),
         "skill_candidates": _skill_candidates_payload(state),
@@ -268,9 +306,9 @@ def build_surroundings(state: GameState, actor_id: str) -> dict:
     return {
         **base,
         "location": _location_payload(location),
-        "entities": _entities_payload(state, actor_id, actor, location),
-        "corpses": _corpses_payload(state, actor),
-        "skills": _skills_payload(state, actor),
-        "inventory": _inventory_payload(state, actor),
-        "merchants": _merchants_payload(state, actor),
+        "entities": _entities_payload(state, actor_id, actor, location, graph),
+        "corpses": _corpses_payload(state, actor, graph),
+        "skills": _skills_payload(state, actor, graph),
+        "inventory": _inventory_payload(state, actor, graph),
+        "merchants": _merchants_payload(state, actor, graph),
     }

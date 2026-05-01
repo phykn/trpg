@@ -12,6 +12,7 @@ from ..domain.memory import PendingCheck
 from ..domain.types import tier_to_int
 from ..engines.growth import can_afford_level_up, xp_for_next_level
 from ..domain.state import GameState
+from ..ontology.graph import GameGraph, build_graph
 from .josa import eun_neun
 
 
@@ -37,10 +38,20 @@ def _stats(stats: Stats) -> list[dict]:
     return [{"label": label, "value": getattr(stats, key)} for key, label in _STAT_LABELS]
 
 
-def _race_job_label(state: GameState, char: Character) -> str:
+def _race_label(state: GameState, graph: GameGraph, char_id: str) -> str:
+    """Race name resolved via the `belongs_to_race` edge — falls back to the
+    raw race id when the relation points at a missing race entity."""
+    for edge in graph.get_edges(char_id, "belongs_to_race"):
+        race = state.races.get(edge.to_id)
+        if race is not None:
+            return race.name
+        return edge.to_id
+    return ""
+
+
+def _race_job_label(state: GameState, graph: GameGraph, char: Character) -> str:
     """`<race> <job>` if the character has a job, otherwise just `<race>`."""
-    r = state.races.get(char.race_id)
-    race = r.name if r else char.race_id
+    race = _race_label(state, graph, char.id)
     return f"{race} · {char.job}" if char.job else race
 
 
@@ -53,20 +64,28 @@ def _gender_label(char: Character) -> str:
     return ""
 
 
-def _equipment(state: GameState, char: Character) -> dict:
+def _equipment(state: GameState, graph: GameGraph, char_id: str) -> dict:
     out: dict[str, dict | None] = {slot: None for slot in EQUIPMENT_SLOTS}
-    for slot, item_id in char.equipment.equipped_items():
-        if item_id in state.items:
-            out[slot] = {"name": state.items[item_id].name}
+    for edge in graph.get_edges(char_id, "equips"):
+        slot = (edge.attrs or {}).get("slot")
+        if slot is None or slot not in out:
+            continue
+        item = state.items.get(edge.to_id)
+        if item is None:
+            continue
+        out[slot] = {"name": item.name}
     return out
 
 
-def _inventory(state: GameState, char: Character) -> list[dict]:
+def _inventory(state: GameState, graph: GameGraph, char_id: str) -> list[dict]:
     """Inventory shown to the player, with currently-equipped items subtracted.
     Invariant: each equipped item_id is also present in inventory_ids — so we
     decrement once per equipped slot to avoid duplicate display."""
-    counts = Counter(char.inventory_ids)
-    for _, item_id in char.equipment.equipped_items():
+    counts: Counter[str] = Counter(
+        e.to_id for e in graph.get_edges(char_id, "carries")
+    )
+    for edge in graph.get_edges(char_id, "equips"):
+        item_id = edge.to_id
         counts[item_id] -= 1
         if counts[item_id] <= 0:
             del counts[item_id]
@@ -77,26 +96,41 @@ def _inventory(state: GameState, char: Character) -> list[dict]:
     ]
 
 
-def _companion_label(state: GameState, char_id: str) -> str | None:
+def _companion_label(
+    state: GameState, graph: GameGraph, char_id: str
+) -> str | None:
     """Returns the Korean label for a companion or None if the id no longer
     resolves (e.g. the companion died and was removed). Caller filters None
     so a stray technical id never reaches the UI."""
     if char_id not in state.characters:
         return None
     c = state.characters[char_id]
-    return f"{c.name} ({_race_job_label(state, c)})"
+    return f"{c.name} ({_race_job_label(state, graph, c)})"
 
 
-def _skill_names(state: GameState, char: Character) -> list[str]:
-    return [state.skills[sid].name for sid in char.known_skill_ids if sid in state.skills]
+def _skill_names(state: GameState, graph: GameGraph, char_id: str) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for edge in graph.get_edges(char_id, "knows_skill"):
+        sid = edge.to_id
+        if sid in seen:
+            continue
+        skill = state.skills.get(sid)
+        if skill is None:
+            continue
+        seen.add(sid)
+        out.append(skill.name)
+    return out
 
 
-def to_hero(state: GameState) -> dict:
+def to_hero(state: GameState, graph: GameGraph | None = None) -> dict:
+    if graph is None:
+        graph = build_graph(state)
     p = state.characters[state.player_id]
-    skills = _skill_names(state, p)
+    skills = _skill_names(state, graph, p.id)
     return {
         "name": p.name,
-        "raceJob": _race_job_label(state, p),
+        "raceJob": _race_job_label(state, graph, p),
         "gender": _gender_label(p),
         "level": p.level,
         "exp": p.xp_pool,
@@ -107,14 +141,14 @@ def to_hero(state: GameState) -> dict:
         "mp": p.mp,
         "mpMax": p.max_mp,
         "stats": _stats(p.stats),
-        "equipment": _equipment(state, p),
-        "inventory": _inventory(state, p),
+        "equipment": _equipment(state, graph, p.id),
+        "inventory": _inventory(state, graph, p.id),
         "status": list(p.status),
         "skills": skills,
         "companions": [
             label
-            for cid in p.companions
-            if (label := _companion_label(state, cid)) is not None
+            for edge in graph.get_edges(p.id, "has_companion")
+            if (label := _companion_label(state, graph, edge.to_id)) is not None
         ],
     }
 
@@ -122,7 +156,9 @@ def to_hero(state: GameState) -> dict:
 # --- Subject ---------------------------------------------------------------
 
 
-def to_subject(state: GameState) -> dict | None:
+def to_subject(state: GameState, graph: GameGraph | None = None) -> dict | None:
+    if graph is None:
+        graph = build_graph(state)
     if state.active_subject_id is None:
         return None
     sid = state.active_subject_id
@@ -135,11 +171,11 @@ def to_subject(state: GameState) -> dict | None:
     else:
         known = [s.appearance] if s.appearance else []
         known += [m.content for m in player.memories if m.target_id == sid]
-    skills = _skill_names(state, s)
+    skills = _skill_names(state, graph, s.id)
     return {
         "name": s.name,
         "role": s.role,
-        "raceJob": _race_job_label(state, s),
+        "raceJob": _race_job_label(state, graph, s),
         "gender": _gender_label(s),
         "trust": s.relations.get(state.player_id, 0),
         "known": known,
@@ -147,8 +183,8 @@ def to_subject(state: GameState) -> dict | None:
         "hp": s.hp,
         "hpMax": s.max_hp,
         "stats": _stats(s.stats),
-        "equipment": _equipment(state, s),
-        "inventory": _inventory(state, s),
+        "equipment": _equipment(state, graph, s.id),
+        "inventory": _inventory(state, graph, s.id),
         "skills": skills,
     }
 
@@ -156,20 +192,33 @@ def to_subject(state: GameState) -> dict | None:
 # --- Quest -----------------------------------------------------------------
 
 
-def to_quest(state: GameState) -> dict | None:
+def to_quest(state: GameState, graph: GameGraph | None = None) -> dict | None:
+    if graph is None:
+        graph = build_graph(state)
     if state.active_quest_id is None:
         return None
     qid = state.active_quest_id
     if qid not in state.quests:
         return None
     q: Quest = state.quests[qid]
-    giver = state.characters.get(q.giver_id)
+    giver_name = qid  # fallback to id
+    for edge in graph.get_in_edges(qid, "gives_quest"):
+        giver = state.characters.get(edge.from_id)
+        if giver is not None:
+            giver_name = giver.name
+        else:
+            giver_name = edge.from_id
+        break
+    # quest.triggers' display name is a per-trigger label — that's an
+    # entity attribute on the trigger object (no relational scan), so read
+    # the goals straight from the trigger names.
+    goals = [t.name for t in q.triggers]
     return {
         "title": q.title,
         "summary": q.summary,
-        "giver": giver.name if giver else q.giver_id,
+        "giver": giver_name,
         "difficulty": q.difficulty,
-        "goals": [t.name for t in q.triggers],
+        "goals": goals,
         "conditions": list(q.conditions),
         "rewards": {"gold": q.rewards.gold, "exp": q.rewards.exp},
     }
@@ -185,31 +234,40 @@ _RISK_PAYLOAD: dict[str, dict] = {
 }
 
 
-def to_place(state: GameState) -> dict | None:
+def to_place(state: GameState, graph: GameGraph | None = None) -> dict | None:
+    if graph is None:
+        graph = build_graph(state)
     p = state.characters[state.player_id]
-    if p.location_id is None or p.location_id not in state.locations:
+    player_loc_id = p.location_id
+    if player_loc_id is None or player_loc_id not in state.locations:
         return None
-    loc: Location = state.locations[p.location_id]
+    loc: Location = state.locations[player_loc_id]
     surroundings = []
-    for c in loc.connections:
-        if c.target_id not in state.locations:
+    for edge in graph.get_edges(player_loc_id, "connects_to"):
+        target_id = edge.to_id
+        target = state.locations.get(target_id)
+        if target is None:
             continue
-        target = state.locations[c.target_id]
+        attrs = edge.attrs or {}
         surroundings.append({
             "name": target.name,
             "blurb": target.description,
-            "difficulty": c.difficulty,
+            "difficulty": attrs.get("difficulty"),
             "risk": _RISK_PAYLOAD[target.sleep_risk],
         })
     targets = []
-    for cid, c in state.characters.items():
-        if cid == state.player_id or c.location_id != p.location_id:
+    for edge in graph.get_in_edges(player_loc_id, "located_at"):
+        cid = edge.from_id
+        if cid == state.player_id:
+            continue
+        c = state.characters.get(cid)
+        if c is None:
             continue
         blurb = "죽음" if not c.alive else (c.appearance or c.description)
         targets.append({
             "name": c.name,
             "level": c.level,
-            "raceJob": _race_job_label(state, c),
+            "raceJob": _race_job_label(state, graph, c),
             "gender": _gender_label(c),
             "blurb": blurb,
             "trust": c.relations.get(state.player_id, 0),
@@ -293,13 +351,18 @@ def rest_ambush_text(actor_name: str) -> str:
 # --- FrontState ------------------------------------------------------------
 
 
-def to_front_state(state: GameState) -> dict:
+def to_front_state(state: GameState, graph: GameGraph | None = None) -> dict:
+    """Assemble the full client-side state payload. `graph` is the relational
+    SSOT — flow finalize passes the turn-end graph; tests/api glue can omit
+    and we'll build internally."""
+    if graph is None:
+        graph = build_graph(state)
     pending = state.pending_check
     return {
-        "hero": to_hero(state),
-        "subject": to_subject(state),
-        "quest": to_quest(state),
-        "place": to_place(state),
+        "hero": to_hero(state, graph),
+        "subject": to_subject(state, graph),
+        "quest": to_quest(state, graph),
+        "place": to_place(state, graph),
         "combat": to_combat(state),
         "log": [e.model_dump() for e in state.log_entries],
         "pendingCheck": pending_check_to_front(state, pending) if pending else None,

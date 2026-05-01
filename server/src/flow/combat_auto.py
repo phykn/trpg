@@ -11,7 +11,8 @@ from ..agents.combat_narrate.schema import (
     CombatNarrateInput,
     CombatOutcome,
     CombatRoundEvent,
-    CombatStateSnapshot,
+    EnemyNarrateSnapshot,
+    PlayerNarrateSnapshot,
 )
 from ..context.layers import build_world_layer
 from ..domain.entities import Character
@@ -65,8 +66,8 @@ class AutoCombatResult:
     player_damage_total: int = 0
     player_hp_after: int = 0
     player_max_hp: int = 0
-    enemy_starts: list[CombatStateSnapshot] = field(default_factory=list)
-    player_start: CombatStateSnapshot | None = None
+    enemy_starts: list[EnemyNarrateSnapshot] = field(default_factory=list)
+    player_start: PlayerNarrateSnapshot | None = None
 
 
 def _turn_event(
@@ -115,7 +116,6 @@ def _emit_round_event(
         action=action_label,
         target=target_name,
         grade=grade,
-        damage=damage,
         killed=killed,
         skill_name=skill_name,
     ))
@@ -131,15 +131,15 @@ def _emit_round_event(
     ))
 
 
-def _snapshot(c: Character) -> CombatStateSnapshot:
-    return CombatStateSnapshot(name=c.name, hp=c.hp, max_hp=c.max_hp, alive=c.alive)
+def _player_snapshot(c: Character) -> PlayerNarrateSnapshot:
+    return PlayerNarrateSnapshot(name=c.name, alive=c.alive)
 
 
-def _enemy_snapshot(state: GameState, enemy_id: str) -> CombatStateSnapshot:
-    """Enemy variant — adds race / appearance / description / gender so the
-    cinematic can reflect each foe's seed identity instead of defaulting to
-    the bare name. Player identity travels in CombatNarrateInput.player_view,
-    so _snapshot stays bare for player_start/player_end.
+def _enemy_snapshot(state: GameState, enemy_id: str) -> EnemyNarrateSnapshot:
+    """Enemy snapshot — race / appearance / description / gender ride here so
+    the cinematic can reflect each foe's seed identity instead of defaulting
+    to the bare name. Player identity travels in CombatNarrateInput.player_view,
+    so _player_snapshot stays bare for player_start/player_end.
     """
     c = state.characters[enemy_id]
     race = state.races.get(c.race_id)
@@ -148,10 +148,8 @@ def _enemy_snapshot(state: GameState, enemy_id: str) -> CombatStateSnapshot:
         race_payload = {"name": race.name}
         if race.description:
             race_payload["description"] = race.description
-    return CombatStateSnapshot(
+    return EnemyNarrateSnapshot(
         name=c.name,
-        hp=c.hp,
-        max_hp=c.max_hp,
         alive=c.alive,
         race=race_payload,
         appearance=c.appearance or None,
@@ -365,7 +363,14 @@ def run_auto_combat(
         _enemy_snapshot(state, eid)
         for eid in enemy_ids_at_start if eid in state.characters
     ]
-    player_start = _snapshot(player)
+    # Capture starting HPs before any round mutates state. The LLM-side
+    # snapshot doesn't carry hp (numeric leak), so engine damage calc tracks
+    # it here independently.
+    enemy_starting_hp: dict[str, int] = {
+        eid: state.characters[eid].hp
+        for eid in enemy_ids_at_start if eid in state.characters
+    }
+    player_start = _player_snapshot(player)
     player_hp_before = player.hp
 
     events: list[CombatRoundEvent] = []
@@ -460,11 +465,12 @@ def run_auto_combat(
             state.combat_state.current_turn = 0
 
     enemy_hits: list[EnemyHit] = []
-    for eid, start in zip(enemy_ids_at_start, enemy_starts):
+    for eid in enemy_ids_at_start:
         ch = state.characters.get(eid)
         if ch is None:
             continue
-        dmg = max(0, start.hp - ch.hp)
+        start_hp = enemy_starting_hp.get(eid, ch.hp)
+        dmg = max(0, start_hp - ch.hp)
         enemy_hits.append(EnemyHit(
             id=eid, name=ch.name, damage_total=dmg,
             hp_after=ch.hp, max_hp=ch.max_hp, killed=not ch.alive,
@@ -512,7 +518,7 @@ def build_narrate_input(
         rounds_run=result.rounds_run,
         outcome=result.outcome,
         player_start=result.player_start,
-        player_end=_snapshot(player),
+        player_end=_player_snapshot(player),
         enemies_start=result.enemy_starts,
         enemies_end=enemies_end,
         events=result.events,

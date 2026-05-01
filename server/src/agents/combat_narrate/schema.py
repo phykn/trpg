@@ -4,6 +4,12 @@ The auto-combat sim runs the entire fight (or up to the round cap) in one
 shot, accumulates per-round events, and hands the whole trace to this agent.
 The agent streams a single 5-10 sentence Korean cinematic that walks the
 reader through every round in order.
+
+Numeric fields (hp, max_hp, damage) are deliberately absent from the LLM
+input. The prompt forbids exposing numbers in the body, and blocking the
+data at the schema layer is a hard constraint — the soft prompt rule alone
+isn't enough. Engine-internal damage tracking happens in combat_auto.py
+without going through these types.
 """
 from typing import Any, Literal
 
@@ -20,28 +26,32 @@ class CombatRoundEvent(BaseModel):
     target: str | None = None
     action: Literal["attack", "skill", "pass", "miss", "flee"]
     skill_name: str | None = None
-    damage: int = 0
     grade: Literal[
         "critical_success", "success", "partial_success", "failure", "critical_failure"
     ] | None = None
     killed: bool = False
 
 
-class CombatStateSnapshot(BaseModel):
-    """Per-actor HP snapshot — used for fight start and end.
-
-    Identity fields (race / appearance / description / gender) are populated
-    only for enemies via _enemy_snapshot in combat_auto.py — the player's
-    identity travels in CombatNarrateInput.player_view, so duplicating it on
-    player_start/player_end would be noise. Enemies have no equivalent
-    side-channel, so their identity rides on the snapshot itself.
-    """
+class PlayerNarrateSnapshot(BaseModel):
+    """Player snapshot for combat_narrate. Player identity travels in
+    CombatNarrateInput.player_view, so this only carries the alive flag —
+    enough for the cinematic's downed/defeat tone."""
 
     model_config = ConfigDict(extra="forbid")
 
     name: str
-    hp: int
-    max_hp: int
+    alive: bool
+
+
+class EnemyNarrateSnapshot(BaseModel):
+    """Per-enemy snapshot for combat_narrate. Enemies have no side-channel
+    for identity, so race / appearance / description / gender ride here.
+    HP / max_hp are kept out — the prompt's grade-tone mapping covers
+    intensity, and numerics never belong in the cinematic body."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
     alive: bool
     race: dict[str, Any] | None = None
     appearance: str | None = None
@@ -67,8 +77,8 @@ class CombatNarrateInput(BaseModel):
     player_intent: str  # the original player_input that drove this fight
     rounds_run: int = Field(ge=1)
     outcome: CombatOutcome
-    player_start: CombatStateSnapshot
-    player_end: CombatStateSnapshot
-    enemies_start: list[CombatStateSnapshot]
-    enemies_end: list[CombatStateSnapshot]
+    player_start: PlayerNarrateSnapshot
+    player_end: PlayerNarrateSnapshot
+    enemies_start: list[EnemyNarrateSnapshot]
+    enemies_end: list[EnemyNarrateSnapshot]
     events: list[CombatRoundEvent]

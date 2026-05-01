@@ -7,7 +7,6 @@ from src.domain.entities import (
     Connection,
     Location,
     Quest,
-    QuestTrigger,
     Stats,
 )
 from src.domain.memory import DialoguePair, TurnLogEntry
@@ -146,7 +145,7 @@ def test_corpses_dedupes_same_location_with_history(fresh_state):
     assert "off_screen" not in matches[0]
 
 
-def test_session_layer_active_only_pending_goals(fresh_state):
+def test_session_layer_active_only(fresh_state):
     fresh_state.chapters["ch1"] = Chapter(
         id="ch1",
         title="ch",
@@ -157,14 +156,9 @@ def test_session_layer_active_only_pending_goals(fresh_state):
     fresh_state.quests["q1"] = Quest(
         id="q1",
         title="t",
+        summary="quest summary",
         giver_id="g",
         difficulty="보통",
-        triggers=[
-            QuestTrigger(id="a", name="A", type="character_death", target_id="x"),
-            QuestTrigger(id="b", name="B", type="location_enter", target_id="y"),
-        ],
-        triggers_met=[True, False],
-        conditions=["c"],
         status="active",
     )
     fresh_state.quests["q2"] = Quest(
@@ -174,16 +168,13 @@ def test_session_layer_active_only_pending_goals(fresh_state):
         difficulty="쉬움",
         status="completed",
     )
-    fresh_state.characters["g"] = Character(
-        id="g", name="장로", race_id="human", stats=Stats()
-    )
 
     out = build_session_layer(fresh_state)
     assert out["chapter"]["title"] == "ch"
     assert len(out["chapter"]["quests"]) == 1  # excludes completed
     q = out["chapter"]["quests"][0]
-    assert q["goals"] == ["B"]  # pending only
-    assert q["giver"] == "장로"
+    assert q["title"] == "t"
+    assert q["summary"] == "quest summary"
 
 
 def test_history_layer_dedupes_dialogue_turns(fresh_state):

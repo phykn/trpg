@@ -54,7 +54,7 @@ def combat_state(fresh_state, tmp_data):
 
 
 def _judge_returns(monkeypatch, action_obj):
-    async def fake_judge(client, state, player_input):
+    async def fake_judge(client, state, player_input, **kwargs):
         return action_obj
     monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
@@ -214,6 +214,7 @@ async def test_start_combat_raises_when_already_in_combat(
     from src.flow.combat_auto import PlayerAction
     from src.flow.combat_phase import start_combat_and_drive_auto
     from src.flow.dirty import Dirty
+    from src.ontology.graph import build_graph
 
     combat_engine.start_combat(combat_state, ["goblin_01"], rng=random.Random(0))
     combat_state.combat_state.turn_order = ["player_01", "goblin_01"]
@@ -226,6 +227,7 @@ async def test_start_combat_raises_when_already_in_combat(
                 client=None, state=combat_state, profile_dir="<unused>",
                 enemy_ids=["goblin_01"], dirty=dirty, rng=random.Random(1),
                 player_input="공격", player_action=PlayerAction(kind="attack", targets=["goblin_01"]),
+                graph=build_graph(combat_state),
             )
         )
 

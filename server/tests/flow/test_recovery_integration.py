@@ -20,7 +20,7 @@ def tmp_data():
 
 
 def _judge_returns_rest(monkeypatch):
-    async def fake_judge(client, state, player_input):
+    async def fake_judge(client, state, player_input, **kwargs):
         return RestAction(action="rest")
     monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)

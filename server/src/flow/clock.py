@@ -14,5 +14,5 @@ from .dirty import Dirty
 def tick_turn_buffs(state: GameState, dirty: "Dirty | None" = None) -> None:
     """One turn boundary: tick every character's active buffs (duration -1, drop on 0)."""
     entity_dirty = dirty.entities if dirty is not None else None
-    for character in state.characters.values():
+    for character in state.characters.values():  # ssot-allow: attribute-only sweep (buff durations).
         tick_active_buffs(character, dirty=entity_dirty)

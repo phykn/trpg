@@ -11,7 +11,7 @@ from ..agents.narrate import (
 from ..domain.memory import GMLogEntry
 from ..engines.apply import apply_changes
 from ..llm.client import LLMClient
-from ..ontology.graph import build_graph
+from ..ontology.graph import GameGraph, build_graph
 from ..ontology.player_view import build_player_view
 from ..ontology.target_view import build_target_view
 from ..domain.state import GameState
@@ -41,6 +41,8 @@ async def run_narrate(
     profile_dir: str,
     player_input: str,
     judge_result: dict,
+    *,
+    graph: GameGraph,
     grade: str | None = None,
     target_id: str | None = None,
 ) -> AsyncIterator[NarrativeDelta | NarrativeFinal]:
@@ -52,6 +54,10 @@ async def run_narrate(
       turns ('말 건다', '인사한다') route here and narrate needs the NPC's
       memories/tone_hint/disposition to stay tonally consistent.
     - action='reject': no target_view (surroundings only).
+
+    `graph` is built once at turn entry and threaded through — the entry
+    point owns the build and rebuilds after any apply_changes that touches
+    relations (e.g. `apply_intended_move`). run_narrate never builds its own.
 
     reject post-processing: forces empty state_changes / memorable=false on the
     final NarrateOutput (engine-side enforcement; narrator is *also* told to do
@@ -67,10 +73,9 @@ async def run_narrate(
             if targets:
                 chosen = targets[0]
         if chosen is not None:
-            graph = build_graph(state)
             target_view = build_target_view(state, graph, chosen, state.player_id)
 
-    surroundings = build_surroundings(state, state.player_id)
+    surroundings = build_surroundings(state, state.player_id, graph)
     input_ = NarrateInput(
         world=build_world_layer(profile_dir, state.profile),
         session=build_session_layer(state),
@@ -224,6 +229,7 @@ async def consume_narrate(
     *,
     target_for_log: str | None,
     dialogue_input: str | None,
+    graph: GameGraph | None = None,
 ) -> AsyncIterator[dict]:
     """Drive a `run_narrate` stream: emit `narrative_delta` SSE events as body
     tokens arrive, then commit the post-narrate tail (state_changes, turn_log,
@@ -231,9 +237,15 @@ async def consume_narrate(
     `run_narrate` kwargs (judge_result, grade, target_id) and just hands us
     the resulting iterator.
 
+    `graph` is the relational SSOT — used here to read the dead NPCs in
+    scope for quote redaction. Flow callers pass through the turn-start
+    graph; tests/ad-hoc callers omit and we'll build internally.
+
     `dialogue_input=None` skips the dialogue push (used by intro, which has
     no player utterance).
     """
+    if graph is None:
+        graph = build_graph(state)
     final: NarrativeFinal | None = None
     async for item in stream:
         if isinstance(item, NarrativeDelta):
@@ -260,7 +272,7 @@ async def consume_narrate(
     # next turn's history layer reads are both clean. Without this, a single
     # LLM slip ("X가 말합니다. 「…」" where X is dead) compounds: it lands in
     # recent_dialogue and the next narrate call mimics the pattern.
-    body = redact_dead_quotes(body, _dead_names_in_scope(state))
+    body = redact_dead_quotes(body, _dead_names_in_scope(state, graph))
 
     final.output.suggestions = _strip_id_leaks(final.output.suggestions)
     yield {"type": "suggestions", "data": {"items": list(final.output.suggestions)}}
@@ -274,21 +286,27 @@ async def consume_narrate(
     push_log_entry(state, gm_log, dirty)
 
 
-def _dead_names_in_scope(state: GameState) -> list[str]:
+def _dead_names_in_scope(
+    state: GameState, graph: GameGraph | None = None
+) -> list[str]:
     """Names of dead NPCs the narrate prompt can see — same scope as
     `_corpses_payload`: same-location bodies plus history-referenced
     off-screen ones via `turn_log.target`. Used by `consume_narrate` to
     decide which names trigger quote redaction in the persisted body.
     """
+    if graph is None:
+        graph = build_graph(state)
     actor = state.characters.get(state.player_id)
-    if actor is None:
+    if actor is None or actor.location_id is None:
         return []
     seen: set[str] = set()
     names: list[str] = []
-    for cid, ch in state.characters.items():
-        if cid == actor.id or ch.alive:
+    for edge in graph.get_in_edges(actor.location_id, "located_at"):
+        cid = edge.from_id
+        if cid == actor.id:
             continue
-        if ch.location_id != actor.location_id:
+        ch = state.characters.get(cid)
+        if ch is None or ch.alive:
             continue
         names.append(ch.name)
         seen.add(cid)

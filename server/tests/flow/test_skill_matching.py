@@ -26,7 +26,7 @@ def tmp_data():
 
 
 def _judge_returns(monkeypatch, action_obj):
-    async def fake_judge(client, state, player_input):
+    async def fake_judge(client, state, player_input, **kwargs):
         return action_obj
     monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
@@ -92,8 +92,6 @@ def test_build_surroundings_includes_learned_skills(fresh_state):
     assert len(skills) == 1
     assert skills[0]["id"] == "fireball"
     assert skills[0]["name"] == "화염구"
-    assert skills[0]["type"] == "attack"
-    assert skills[0]["source"] == "learned"
 
 
 def test_build_surroundings_filters_skills_above_level(fresh_state):
@@ -111,7 +109,7 @@ def test_build_surroundings_filters_skills_when_mp_insufficient(fresh_state):
 
 
 def test_build_surroundings_includes_racial_skills(fresh_state):
-    """Racial skills are also auto-matched candidates — distinguished by the source field."""
+    """Racial skills are auto-matched candidates alongside learned skills."""
     state = _seed_skill_state(fresh_state)
     racial = Skill(
         id="bite",
@@ -125,8 +123,8 @@ def test_build_surroundings_includes_racial_skills(fresh_state):
     state.characters["player_01"].racial_skill_ids = [racial.id]
     s = build_surroundings(state, "player_01")
     by_id = {sk["id"]: sk for sk in s["skills"]}
-    assert by_id["bite"]["source"] == "racial"
-    assert by_id["fireball"]["source"] == "learned"
+    assert "bite" in by_id
+    assert "fireball" in by_id
 
 
 # --- skill cast in the combat branch --------------------------------------

@@ -7,6 +7,7 @@ from ..domain.state import GameState
 from ..engines import recovery as recovery_engine
 from ..llm.client import LLMClient
 from ..mapping.to_front import rest_ambush_text, rest_completed_text
+from ..ontology.graph import build_graph
 from . import encounter as encounter_engine
 from .combat_auto import PlayerAction
 from .combat_phase import start_combat_and_drive_auto
@@ -44,12 +45,16 @@ async def run_rest(
 
     if outcome == "encounter":
         yield push_act(state, dirty, rest_ambush_text(actor.name))
+        # attempt_rest may have spawned an enemy; build graph fresh so the
+        # new located_at edge is visible to the combat path's downstream reads.
+        graph = build_graph(state)
         async for ev in start_combat_and_drive_auto(
             client, state, profile_dir, enemy_ids, dirty, rng,
             player_input="잠들기 직전 적의 습격에 대비합니다",
             player_action=PlayerAction(kind="pass"),
             surprise="enemy",
             cap=1,
+            graph=graph,
         ):
             yield ev
         tick_turn_buffs(state, dirty)

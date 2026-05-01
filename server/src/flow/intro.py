@@ -3,6 +3,7 @@ from collections.abc import AsyncIterator
 
 from ..domain.state import GameState
 from ..llm.client import LLMClient, set_llm_session_if_unset
+from ..ontology.graph import build_graph
 from .dirty import Dirty, ToFrontFn, finalize
 from .narrate import consume_narrate, run_narrate
 
@@ -19,12 +20,14 @@ async def run_intro(
     only calls narrate. turn_count stays at zero (= day_phase '새벽')."""
     set_llm_session_if_unset(state.game_id)
     dirty = Dirty()
+    graph = build_graph(state)
     stream = run_narrate(
         client,
         state,
         profile_dir,
         "",
         judge_result={"action": "intro"},
+        graph=graph,
         grade=None,
     )
     async for ev in consume_narrate(
@@ -33,6 +36,7 @@ async def run_intro(
         stream,
         target_for_log=None,
         dialogue_input=None,
+        graph=graph,
     ):
         yield ev
 

@@ -60,4 +60,4 @@ async def test_dead_player_turn_short_circuits(dead_player_state, tmp_data, monk
     types = [e["type"] for e in events]
     assert "judge" not in types
     act_logs = [e for e in events if e["type"] == "log_entry" and e["data"].get("kind") == "act"]
-    assert any("쓰러진" in e["data"]["text"] for e in act_logs)
+    assert any("이야기가 여기서 끝납니다" in e["data"]["text"] for e in act_logs)

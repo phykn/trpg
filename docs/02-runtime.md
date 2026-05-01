@@ -50,13 +50,13 @@ LLM 을 두 개로 쪼갠다.
 | `pass` | `targets[]` | 판정 불필요한 인-캐릭터 행동 (이동, 인사, 정가 구매 등). `targets` 에 `surroundings.corpses` 의 id 가 들어오면 시체 호명 — narrate 가 `target_view` 의 `alive==false` 신호로 시체 톤으로 흡수 | target_view 없이 바로 내러티브 |
 | `reject` | — | 인-캐릭터 입력이 아님 (프롬프트 인젝션, OOC 잡담, 무의미) | 인-게임 표현으로 흡수 (아래 reject 처리) |
 | `roll` | `tier`, `stat`, `targets[]`, `reason` | 주사위 필요한 일반 행동 | 엔진이 DC 계산 → `PendingCheck(kind="stat")` 저장 → 프론트 주사위 버튼 → `/roll` |
-| `combat` | `targets[]`, `skill_id?` | 일반 전투 행동 ("고블린을 친다") | 엔진이 `combat_state` 띄우고 자동 사이클 (라운드 N개) 실행 → `combat_narrate` 가 events 전체를 5–10 문장 시네마틱으로 풀어 씀 ([03-features.md](./03-features.md) §1) |
+| `combat` | `targets[]`, `skill_id?` | 일반 전투 행동 ("고블린을 친다") | 엔진이 `combat_state` 띄우고 자동 사이클 (라운드 N개) 실행 → `combat_narrate` 가 events 전체를 3–5 문장 시네마틱으로 풀어 씀 ([03-features.md](./03-features.md) §1) |
 | `summon_combat` | `role`, `skill_id?` | 같은 location 에 있을 법한데 entity 로 시드된 적이 없을 때 ("뒷골목에서 도적이 튀어나온다") | 엔진이 즉석 적 1 마리 spawn 후 combat 분기로 진행 |
 | `flee` | — | 전투에서 빠짐 | 자동 사이클 안에서 1 회 flee 시도 처리, 실패 시 사이클이 평타로 라운드 진행 |
 | `rest` | — | 잠·야영 (긴 휴식) | [P3] location.sleep_risk 굴림 → 풀회복 또는 적 spawn → surprise=enemy 로 combat 부팅 ([03-features.md](./03-features.md) §2.4) |
 | `use` | `item_id`, `target_id?`, `tail_intent?` | 인벤 아이템 사용 (포션·연막탄·열쇠 등) | [P3] ConsumableEffect 분기 (heal/damage/mp_restore/buff) + on_use 트리거 + consumable 차감 ([03-features.md](./03-features.md) §2.7) |
 | `equip` | `item_id`, `tail_intent?` | 무기·방어구 장착 | [P3] 엔진이 슬롯 자동 결정 ([03-features.md](./03-features.md) §2.5) |
-| `unequip` | `item_id`, `tail_intent?` | 장착 해제 | [P3] item_id 가 든 슬롯 찾아 비움. 양손 무기는 두 슬롯 모두 |
+| `unequip` | `item_id`, `tail_intent?` | 장착 해제 | [P3] item_id 가 든 슬롯 찾아 비움 (3 슬롯: weapon / armor / accessory, [03-features.md](./03-features.md) §2.5) |
 | `buy` | `npc_id`, `item_id`, `tail_intent?` | 거래 — 사기 | [P3] affinity 게이트 + 가격 산정 + 무게 검증 |
 | `sell` | `npc_id`, `item_id`, `tail_intent?` | 거래 — 팔기 | [P3] 같은 검증 |
 | `level_up` | `stat_up`, `stat_down`, `tail_intent?` | 페어 트레이드 레벨업 | [P3] 스탯 ±1 + HP/MP 재계산 + skill_recommend 호출 ([03-features.md](./03-features.md) §2.3) |
@@ -85,7 +85,7 @@ LLM 을 두 개로 쪼갠다.
 - `history_layer`: 최근 N턴 대화 + 이전 턴 요약 (§3.3)
 - `target_view`: 대상 엔티티 기준 그래프 1-2홉 (§3.4.2). pass·reject 면 surroundings 만 (target_view 없음). reject 일 땐 추가로 reject 가이드(인-게임 방식으로 막으라는 지시)가 system 프롬프트에 합쳐짐.
 
-**출력**: 토큰 단위로 흘려보낸다(스트리밍). 한국어 2인칭 본문 3-6문장을 먼저 보내고, 구분자(`---JSON---`) 뒤에 메타 JSON을 붙인다.
+**출력**: 토큰 단위로 흘려보낸다(스트리밍). 한국어 2인칭 본문을 먼저 보내고 (pass/roll/reject 4~7문장, intro 6~9문장 — 첫 장면은 더 길게), 구분자(`---JSON---`) 뒤에 메타 JSON을 붙인다.
 
 ```
 <서술 본문>
@@ -251,12 +251,12 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 
 **프로필 목록** (`GET /profiles`): `PROFILE_DIR/` 아래 각 프로필 디렉터리를 스캔해 `[{id, name, description, races: [{id, name, description}]}]` 반환. 프론트 새게임 화면이 이 목록을 카드로 보여주고 사용자가 하나 골라서 시작.
 - 프로필 메타(`id, name, description`)는 `scenarios/{id}/profile.json` 한 파일에 들어 있음. `id` 는 디렉터리 이름과 같아야 (스캐너가 디렉터리명으로 찾고 검증).
-- race 목록은 `scenarios/{id}/races/*.json` 의 각 파일에서 `{id, name, description}` 만 추려서 응답에 포함 (`racial_skills` 는 내부 전용, 프론트로 안 나감).
+- race 목록은 `scenarios/{id}/races/*.json` 의 각 파일에서 `{id, name, description}` 만 추려서 응답에 포함 (`racial_skill_ids` 는 내부 전용, 프론트로 안 나감).
 
 **init** (`POST /session/init {profile, player: {name, race_id}}`):
 - 요청 검증: `profile` 이 `PROFILE_DIR` 에 있는 디렉터리인지, `race_id` 가 그 프로필의 race 목록에 있는지. 누락·미스매치는 422.
 - 시드 로딩: `PROFILE_DIR/{profile}/` 의 `world.md`, `start.json`, `player_template.json`, `characters/`, `locations/`, `quests/`, `items/`, `races/`, `skills/`, `chapters/`, `campaigns/` 를 읽어 초기 `GameState` 조립.
-- 플레이어 캐릭터 합성: `player_template.json` 의 시작 위치·equipment·인벤토리 시드는 그대로 쓰되, `name`·`race_id` 는 요청값으로 덮어쓰기. 스탯 6 개 (`STR/DEX/CON/INT/WIS/CHA`) 모두 10 으로 강제 (player_template 의 stats 는 무시). max_HP / max_MP 는 [03-features.md](./03-features.md) §2.3 의 공식 (level 0, CON 10 → max_HP 20, INT 10 → max_MP 15). race 의 `racial_skills` 자동 부여. `appearance` 는 플레이어 입력으로 받지 않음 — NPC 시드 전용 필드.
+- 플레이어 캐릭터 합성: `player_template.json` 의 시작 위치·equipment·인벤토리 시드는 그대로 쓰되, `name`·`race_id` 는 요청값으로 덮어쓰기. 스탯 6 개 (`STR/DEX/CON/INT/WIS/CHA`) 모두 10 으로 강제 (player_template 의 stats 는 무시). max_HP / max_MP 는 [03-features.md](./03-features.md) §2.3 의 공식 (level 0, CON 10 → max_HP 20, INT 10 → max_MP 15). race 의 `racial_skill_ids` 자동 부여. `appearance` 는 플레이어 입력으로 받지 않음 — NPC 시드 전용 필드.
 - `game_id` 는 시작 시각으로 할당 (`game_YYMMDD_HHMMSS`), 최초 저장. `FrontState` 와 함께 반환. 클라이언트가 응답의 `game_id` 를 `localStorage` 에 보관해 다음 부팅 때 자기 게임을 다시 열어준다.
 
 **현재 세션 복원**: 클라이언트는 `localStorage` 에 저장된 game_id 로 `GET /session/{id}/state` 를 호출. id 가 없으면 새게임 화면, 디렉터리가 없으면 (게임 삭제됐거나 saves 폐기) 포인터를 비우고 새게임 화면. 서버가 "최근 게임" 을 추적하지 않으므로 한 서버에 여러 사용자가 붙어도 서로의 마지막 게임을 덮어쓰지 않는다. 게임 목록·이어하기 화면은 P1 에 없음 (사용자 한 명당 한 게임 흐름).
@@ -283,7 +283,7 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 인간과 고블린이 대립하는 세계.
 
 # 톤
-진지하고 긴박한 분위기. 유머는 절제.
+진지하고 급박한 분위기. 유머는 절제.
 ```
 
 ### 3.2 세션 레이어 (퀘스트 완료 시 변경)
@@ -426,33 +426,42 @@ dc_judge runner 가 매 호출마다 두 단계 검증:
 
 엔티티(캐릭터·아이템·장소) 사이의 연결을 그래프로 본다. 점 하나(노드)가 엔티티 하나, 두 점을 잇는 선(엣지)이 그 사이의 관계.
 
+**노드**: character / item / location / quest / skill / race / chapter. 노드 종류는 `GameGraph.get_node_type(id)` 로 조회.
+
 **구조적 엣지**:
-- `location_id`: NPC → 장소
-- `equipment`: NPC → 아이템
-- `inventory_ids`: NPC → 아이템
-- `connections`: 장소 → 장소
+- `located_at`: NPC → 장소 (`Character.location_id`)
+- `located_in`: 아이템 → 장소 (`Location.item_ids`)
+- `equips`: NPC → 아이템 (`Character.equipment`, `attrs.slot` 에 weapon/armor/accessory)
+- `carries`: NPC → 아이템 (`Character.inventory_ids`)
+- `connects_to`: 장소 → 장소 (`Location.connections`, `attrs.difficulty` / `attrs.key_item_id`)
+- `belongs_to_race`: NPC → 종족 (`Character.race_id`)
+- `knows_skill`: NPC → 기술 (`Character.racial_skill_ids` + `learned_skill_ids`, `attrs.source` = racial / learned)
+- `racial_skill_of`: 기술 → 종족 (`Race.racial_skill_ids` 역방향)
+- `member_of_chapter`: 퀘스트 → 챕터 (`Chapter.quest_ids`)
 
 **의미적 엣지** (init 시 자동 추론):
-- 퀘스트 `triggers[].target_id` → `required_by` 엣지
+- 퀘스트 `triggers[].target_id` → `required_by` 엣지 (트리거 type 무관 — `character_death` / `location_enter` / `item_use` 모두 한 자리)
+- 퀘스트 `triggers[].type == "character_death"` → 추가로 `kill_target_of` 엣지 (NPC view 가 "잡혀야 할 대상" 으로 직접 읽도록 좁힌 자리)
 - 퀘스트 `giver_id` → `gives_quest` 엣지
-- 퀘스트 `triggers[].type == character_death` → `kill_target_of` 엣지
 - 퀘스트 `rewards.items` → `reward_of` 엣지
+- 아이템의 `key_item_id` (`Location.connections` 에 채워진) → `unlocks` 엣지 (열쇠 → 잠긴 connection 의 target 장소)
 
-**config 정의 관계** (서사적):
-- NPC 의 `hints`: 아는 정보/퀘스트 연결
-- Item 의 `key_item_id`: 열쇠 → 문 연결
-- Item 의 `unlocks`: 아이템 → 오브젝트 연결
+**역방향 인덱스**: `GameGraph.get_in_edges(node_id, type?)` 가 같은 정보를 to-side 에서 답한다 — "이 장소에 누가 있나"는 모든 character 풀스캔 없이 `get_in_edges(loc_id, "located_at")` 한 줄.
 
 **런타임 컨텐츠** (엣지 아님 — 엔티티 안에 쌓이는 항목 집합):
 - `memories[]`: 엔티티별 기억 (§7)
 
 ### 4.2 target_view 조립
 
-target 노드에서 시작해 1~2 단계(홉) 떨어진 이웃까지 훑어 모은다. 단계마다 **다른 종류의 엣지를 갈아타도 된다** — NPC 가 아는 정보의 범위를 자연스럽게 넓히기 위해서.
+target 노드에서 2홉을 훑어 prompt 가 의뢰 맥락을 그대로 받게 한다.
 
-예: `guard_01 →(gives_quest)→ quest_01 →(required_by)→ plaza_01` — 경비병이 주는 퀘스트, 그 퀘스트가 가리키는 장소까지 두 홉으로 도달.
+- **NPC view**: 1홉 `gives_quest` → quest. 그 quest 안으로 한 홉 더 들어가 `kill_target_of`(처치 대상), `required_by`(방문 대상·아이템 사용 대상), `reward_of`(보상 아이템) in-edge 를 모두 이름까지 펼침. 추가로 그 NPC 자신이 `kill_target_of` 인 quest 가 있으면 별도 `quests_kill_target` 필드로 표시 — "이 자를 잡아오라" 의뢰의 *대상* 임을 알림.
+- **Location view**: 1홉 `required_by` → quest. 같은 quest payload 를 펼치되 `giver` 까지 in-edge 로 추가 — narrator 가 "X 영감의 부탁이 떠오릅니다" 식으로 호명 가능.
+- **Item view**: 1홉으로 `unlocks`(잠긴 장소), `reward_of`(보상으로 걸린 quest), `located_in`(놓인 장소) 모두 이름·title 로 resolve. raw id 안 새도록 prompt 가 보기 전에 정리.
 
-구현은 `src/ontology/graph.py` 가 매 호출마다 `GameState` 에서 임시 그래프를 구성. 성능 최적화(인덱싱·캐시)는 P1 이슈 아님.
+예: `chief_01 →(gives_quest)→ q_chief →(kill_target_of)→ goblin_01` — 촌장 view 에 `quests_given:[{title:"촌장의 부탁", kill_targets:[{id:"goblin_01", name:"고블린 두목"}], rewards:[{id:"sword_01", name:"대장의 검"}]}]` 가 그대로 떨어진다.
+
+구현은 `src/ontology/graph.py` 가 매 턴마다 `GameState` 에서 임시 그래프를 구성하고 진입점이 인자로 흘려준다 ([05-codemap.md](./05-codemap.md) 의 flow 모듈 — Phase 2~4 graph SSOT 작업). 성능 최적화(인덱싱·캐시)는 P1 이슈 아님.
 
 ### 4.3 장소 확장
 
@@ -571,7 +580,7 @@ if aff <= -social.friendly_threshold:  mod = -social.roll_bonus  # 적대: -bonu
   - `items`, `locations` — 스칼라만 (`weather`, `status` 등).
   - `chapters`, `quests` — `summary` 와 `status` 만 ([03-features.md](./03-features.md) §2.8).
 - narrator 는 단순 스칼라 필드만 `set` 으로 바꿀 수 있다. 다음 두 묶음은 손댈 수 없다:
-  - **list 필드** — character 의 `relations`, `inventory_ids`, `memories`, `racial_skills`, `learned_skills`, `companions`. 추가/제거의 부수효과가 커서 (예: `inventory_ids` 변경은 소지품 수를 흔든다) narrator 가 직접 만지면 일관성이 깨진다. 구조 변경은 백엔드 로직 [P3] 가 한다. quest 의 `triggers`/`conditions` 같은 list 도 같은 이유로 막히지만 — quest 는 위 매트릭스가 이미 `summary`/`status` 만 허용해 자동으로 제외된다.
+  - **list 필드** — character 의 `relations`, `inventory_ids`, `memories`, `racial_skill_ids`, `learned_skill_ids`, `companions`, `active_buffs`, `hints`. 추가/제거의 부수효과가 커서 (예: `inventory_ids` 변경은 소지품 수를 흔든다) narrator 가 직접 만지면 일관성이 깨진다. 구조 변경은 백엔드 로직 [P3] 가 한다. quest 의 `triggers`/`conditions` 같은 list 도 같은 이유로 막히지만 — quest 는 위 매트릭스가 이미 `summary`/`status` 만 허용해 자동으로 제외된다.
   - **엔진 전용 필드** — `HP/MP/exp/gold/alive/death_saves/revive_coins` 등. 전투·레벨업·죽음 처리는 엔진이 독점하고, narrator 는 결과를 받아서 묘사만 한다 (수치를 결정할 권한이 없다). 전투 진입/이탈 자체는 `state.combat_state` 의 turn_order 등재 여부로 표현 — 캐릭터에 별도 `in_combat` 플래그는 두지 않는다.
 - **시간 점프는 별도 타입이 없다** — narrator 는 시간을 직접 만지지 못한다. `state.turn_count` 는 엔진이 매 턴 진입 시 1 씩 늘리고, 휴식 액션만 `next_dawn_turn` 으로 점프한다 ([03-features.md](./03-features.md) §2.1).
 - `affinity` 는 `grade × intent` (× `target.disposition` [P3]) 로 `rules.social` 기반 delta 를 엔진이 산출. narrator 는 숫자를 정하지 않는다 ([03-features.md](./03-features.md) §2.2). 복수 대상 시나리오(예: 두 경비병 동시 설득)에서는 entry 를 대상별로 하나씩 발행 — `target` 단일 필드라 한 entry = 한 대상.

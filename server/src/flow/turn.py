@@ -24,6 +24,7 @@ from ..domain.errors import JudgeMalformed, PendingCheckActive
 from ..domain.memory import PlayerLogEntry
 from ..domain.state import GameState
 from ..llm.client import LLMClient, set_llm_session_if_unset
+from ..ontology.graph import GameGraph, build_graph
 from .actions import (
     emit_equip,
     emit_learn_skill,
@@ -81,21 +82,24 @@ async def run_turn(
     if not state.characters[state.player_id].alive:
         yield push_act(
             state, dirty,
-            "쓰러진 채로는 더 이상 움직이지 못합니다.",
+            "당신의 이야기가 여기서 끝납니다.",
         )
         async for ev in finalize(state, saves_dir, dirty, to_front_fn):
             yield ev
         return
 
+    graph = build_graph(state)
+
     if state.combat_state is not None:
         async for ev in run_combat_player_turn(
-            client, state, profile_dir, saves_dir, player_input, dirty, rng, to_front_fn
+            client, state, profile_dir, saves_dir, player_input, dirty, rng, to_front_fn,
+            graph=graph,
         ):
             yield ev
         return
 
     try:
-        result = await run_judge(client, state, player_input)
+        result = await run_judge(client, state, player_input, graph=graph)
     except JudgeMalformed as e:
         yield {"type": "error", "data": {"message": str(e), "code": "JudgeMalformed"}}
         return
@@ -105,7 +109,8 @@ async def run_turn(
     refresh_active_subject(state, result)
 
     async for ev in _dispatch(
-        client, state, profile_dir, saves_dir, player_input, dirty, rng, to_front_fn, result
+        client, state, profile_dir, saves_dir, player_input, dirty, rng, to_front_fn, result,
+        graph=graph,
     ):
         yield ev
 
@@ -161,6 +166,7 @@ async def _enter_combat_and_finalize(
     player_input: str,
     enemy_ids: list[str],
     skill_id: str | None,
+    graph: GameGraph,
 ) -> AsyncIterator[dict]:
     """Start a fresh fight and run one auto-combat sim cycle, then finalize.
     Shared by CombatAction and SummonCombatAction entries."""
@@ -172,6 +178,7 @@ async def _enter_combat_and_finalize(
     async for ev in start_combat_and_drive_auto(
         client, state, profile_dir, enemy_ids, dirty, rng,
         player_input=player_input, player_action=player_action,
+        graph=graph,
     ):
         yield ev
     state.turn_count += 1
@@ -190,6 +197,8 @@ async def _dispatch(
     rng: random.Random | None,
     to_front_fn: ToFrontFn | None,
     result,
+    *,
+    graph: GameGraph,
 ) -> AsyncIterator[dict]:
     if isinstance(result, CombatAction):
         actor_loc = state.characters[state.player_id].location_id
@@ -210,6 +219,7 @@ async def _dispatch(
             player_input=player_input,
             enemy_ids=list(result.targets),
             skill_id=result.skill_id,
+            graph=graph,
         ):
             yield ev
         return
@@ -232,11 +242,15 @@ async def _dispatch(
                 yield ev
             return
         state.active_subject_id = summoned.id
+        # summon_encounter mutated state — rebuild graph so the new NPC's
+        # located_at edge is visible to anything downstream.
+        graph = build_graph(state)
         async for ev in _enter_combat_and_finalize(
             client, state, profile_dir, saves_dir, dirty, rng, to_front_fn,
             player_input=player_input,
             enemy_ids=[summoned.id],
             skill_id=result.skill_id,
+            graph=graph,
         ):
             yield ev
         return
@@ -282,8 +296,12 @@ async def _dispatch(
             if getattr(part, "tail_intent", None):
                 yield push_act(state, dirty, part.tail_intent)
         if last_pass is not None:
+            # chain parts mutated state via emit_*; rebuild graph before narrate
+            # reads relations through it.
+            graph = build_graph(state)
             async for ev in _stream_narrate_tail(
                 client, state, profile_dir, player_input, dirty, to_front_fn, last_pass,
+                graph=graph,
             ):
                 yield ev
         tick_turn_buffs(state, dirty)
@@ -296,6 +314,7 @@ async def _dispatch(
     state.turn_count += 1
     async for ev in _stream_narrate_tail(
         client, state, profile_dir, player_input, dirty, to_front_fn, result,
+        graph=graph,
     ):
         yield ev
     tick_turn_buffs(state, dirty)
@@ -317,6 +336,8 @@ async def _stream_narrate_tail(
     dirty: Dirty,
     to_front_fn: ToFrontFn | None,
     action: "PassAction | RejectAction",
+    *,
+    graph: GameGraph,
 ) -> AsyncIterator[dict]:
     """Pre-apply movement (PassAction only), emit a panels state event, then
     drive run_narrate / consume_narrate. Used by both the ChainAction last_pass
@@ -324,6 +345,10 @@ async def _stream_narrate_tail(
     emission lets the destination's surroundings appear in the prompt while
     the client's pill updates immediately. RejectAction has no movement intent
     so it skips apply_intended_move.
+
+    Graph plumbing: caller passes the turn-start graph. If `apply_intended_move`
+    relocates the player, the graph's `located_at` edges go stale, so we
+    rebuild before run_narrate consumes it.
 
     Corpse bypass: when a PassAction targets a dead character, narrate is
     skipped entirely and a deterministic single-line body is emitted. No LLM
@@ -336,8 +361,11 @@ async def _stream_narrate_tail(
     """
     if isinstance(action, PassAction):
         target_for_log = action.targets[0] if action.targets else None
+        prev_loc = state.characters[state.player_id].location_id
         apply_intended_move(state, action.model_dump(), dirty.entities)
         reconcile_subject_after_move(state)
+        if state.characters[state.player_id].location_id != prev_loc:
+            graph = build_graph(state)
 
         dead = next(
             (state.characters[t] for t in action.targets
@@ -359,12 +387,14 @@ async def _stream_narrate_tail(
     stream = run_narrate(
         client, state, profile_dir, player_input,
         judge_result=action.model_dump(),
+        graph=graph,
         grade=None,
     )
     async for ev in consume_narrate(
         state, dirty, stream,
         target_for_log=target_for_log,
         dialogue_input=player_input,
+        graph=graph,
     ):
         yield ev
 

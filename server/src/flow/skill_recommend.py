@@ -13,6 +13,7 @@ from ..agents.skill_recommend import (
     skill_recommend,
 )
 from ..llm.client import LLMClient
+from ..ontology.graph import build_graph
 from ..rules import RULES
 from ..domain.state import GameState
 from ..engines.skill import build_skill_from_candidate, existing_skill_ids
@@ -31,11 +32,31 @@ def _recent_turn_summaries(state: GameState, n: int) -> list[dict]:
 
 def _build_input(state: GameState) -> SkillRecommendInput:
     p = state.characters[state.player_id]
-    race = state.races.get(p.race_id)
+    graph = build_graph(state)
+    # Race name via graph relation; fall back to raw race id when no Race
+    # entity is registered for the player's race_id.
+    race_name = p.race_id
+    for edge in graph.get_edges(p.id, "belongs_to_race"):
+        race = state.races.get(edge.to_id)
+        race_name = race.name if race is not None else edge.to_id
+        break
+    learned_skills: list[dict] = []
+    for edge in graph.get_edges(p.id, "knows_skill"):
+        if (edge.attrs or {}).get("source") != "learned":
+            continue
+        s = state.skills.get(edge.to_id)
+        if s is None:
+            continue
+        learned_skills.append({
+            "name": s.name,
+            "type": s.type,
+            "description": s.description,
+            "special_effect": s.special_effect,
+        })
     return SkillRecommendInput(
         character={
             "name": p.name,
-            "race": race.name if race else p.race_id,
+            "race": race_name,
             "job": p.job,
             "level": p.level,
             "memories": [
@@ -47,16 +68,7 @@ def _build_input(state: GameState) -> SkillRecommendInput:
                 for m in p.memories
             ],
         },
-        existing_skills=[
-            {
-                "name": s.name,
-                "type": s.type,
-                "description": s.description,
-                "special_effect": s.special_effect,
-            }
-            for sid in p.learned_skill_ids
-            if (s := state.skills.get(sid)) is not None
-        ],
+        existing_skills=learned_skills,
         recent_turns=_recent_turn_summaries(state, RULES.skill.recommend_recent_turns),
         recent_inputs=_recent_inputs(state, RULES.skill.recommend_recent_inputs),
     )

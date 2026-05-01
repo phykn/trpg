@@ -3,6 +3,7 @@ from pathlib import Path
 
 from ..domain.clock import day_phase
 from ..domain.state import GameState
+from ..ontology.graph import GameGraph, build_graph
 
 
 _QUOTE_OPEN_TO_CLOSE = {"「": "」", "『": "』"}
@@ -138,32 +139,28 @@ def build_world_layer(
     return p.read_text(encoding="utf-8")
 
 
-def build_session_layer(state: GameState) -> dict:
+def build_session_layer(
+    state: GameState, graph: GameGraph | None = None
+) -> dict:
     chapter_data = None
+    # ssot-allow: filtering chapters by status is an attribute lookup —
+    # active-chapter is a value predicate, not a relational scan.
     active_chapter = next(
         (c for c in state.chapters.values() if c.status == "active"),
         None,
     )
     if active_chapter:
+        if graph is None:
+            graph = build_graph(state)
         active_quests = []
-        for qid in active_chapter.quest_ids:
-            q = state.quests.get(qid)
+        for edge in graph.get_in_edges(active_chapter.id, "member_of_chapter"):
+            q = state.quests.get(edge.from_id)
             if q is None or q.status != "active":
                 continue
-            giver = state.characters.get(q.giver_id)
-            giver_name = giver.name if giver else q.giver_id
-            pending_goals = [
-                t.name
-                for i, t in enumerate(q.triggers)
-                if i >= len(q.triggers_met) or not q.triggers_met[i]
-            ]
             active_quests.append(
                 {
                     "title": q.title,
                     "summary": q.summary,
-                    "giver": giver_name,
-                    "goals": pending_goals,
-                    "conditions": q.conditions,
                 }
             )
         chapter_data = {

@@ -90,6 +90,11 @@ async def test_run_narrate_reject_blanks_suggestions(fresh_state, monkeypatch):
     monkeypatch.setattr(narrate_flow, "build_surroundings", lambda *_: {})
     monkeypatch.setattr(narrate_flow, "build_player_view", lambda *_: {})
 
+    from src.ontology.graph import GameGraph
+
+    # reject branch never consumes the graph (no target_view assembly), so an
+    # empty placeholder is fine — and avoids build_graph choking on the
+    # bare-class Location stand-in this test wires into state.locations.
     items = []
     async for it in narrate_flow.run_narrate(
         client=None,
@@ -97,6 +102,7 @@ async def test_run_narrate_reject_blanks_suggestions(fresh_state, monkeypatch):
         profile_dir="<unused>",
         player_input="ooc",
         judge_result={"action": "reject"},
+        graph=GameGraph(),
     ):
         items.append(it)
 

@@ -22,7 +22,7 @@
 
 - **이니셔티브**: `roll_initiative` 로 d20 + DEX_mod 를 굴려 `turn_order` 결정. 매 라운드 같은 순서로 진행.
 - **공격 굴림**: 라운드별 actor 마다 `engines/combat.attack` 이 d20 + stat_modifier vs `enemy_defense` 로 명중·등급 결정. weapon dice + stat_mod 로 데미지. 어떤 스탯을 쓸지는 무기로 갈림 — 사거리 1.5m 이하 근접 무기는 STR, 그보다 멀면 DEX. 무기 없는 맨손은 `UNARMED_DAMAGE="1d4"`, `UNARMED_RANGE=1.5` 폴백.
-- **방어도**: `enemy_defense = 10 + Σ(armor_effect.defense for slot in 방어 슬롯)`. 합산 슬롯은 `head / top / bottom / feet` 4 개 + accessory (방패·방어 링).
+- **방어도**: `enemy_defense = 10 + Σ(armor_effect.defense for slot in 방어 슬롯)`. 합산 슬롯은 `armor` + `accessory` (방패·방어 링) — `ArmorEffect` 가 든 두 슬롯 모두 더해진다 (§2.5).
 - **range 단위는 미터 (실수)**. 같은 location 안의 추상적 거리. 다른 location 의 적은 사거리 밖이라 combat 액션 자체가 막힘. 같은 단위가 §2.6 기술 cast 의 사정거리 검증에도 쓰임.
 - **플레이어 행동 반복**: 첫 입력의 행동 (`PlayerAction.kind ∈ {attack, skill, pass, flee}`) 을 매 라운드 반복. skill cast 는 매 라운드 MP/level 검증을 통과하면 그 skill 로, 부족하면 평타로 폴백. `pass` / `flee` 는 라운드 1 만 적용되고 라운드 2+ 는 평타로 폴백. `use` / `equip` / `unequip` 같은 passive 액션은 라운드 1 에 한 번 실행되고 라운드 2+ 는 평타로 진행 (사이클 자체는 결판까지 감).
 - **NPC AI**: `pick_npc_target` 가 `combat_behavior.attack_priority` (`nearest` / `lowest_hp` / `highest_threat` / `healer_first` / `random`) 와 가중치 모드 (`nearest_weight`, `random_weight`) 로 타겟 선택. `highest_threat` 의 위협 지표는 `combat_state.damage_dealt` 누적값. NPC 도 `should_attempt_flee` / `try_flee` 로 자체 도주 가능.
@@ -83,7 +83,7 @@ class CombatState:
 
 ## 2. 확장 시스템
 
-확장 시스템 9 종은 `config/rules.py` 에서 모든 수치를 튜닝한다. 4 묶음으로 묶여 있다:
+확장 시스템 9 종은 `rules/config.py` 에서 모든 수치를 튜닝한다 ([05-codemap.md](./05-codemap.md) §1). 4 묶음으로 묶여 있다:
 
 1. **기반** — 시간, 호감도. 다른 시스템들이 참조하는 척도.
 2. **캐릭터 자원** — 성장 (영구 스탯·레벨), 회복 (HP/MP 사이클).
@@ -172,9 +172,9 @@ class CombatState:
 
    레벨 0 시작값 (모든 스탯 10): `max_HP = 20`, `max_MP = 15`.
 
-3. **기술 사용 게이트 해제** — 캐릭터 레벨이 오르면 `learned_skills` 안의 기술 중 `skill.level ≤ character.level` 인 것이 사용 가능 상태로 전환 (§2.6).
+3. **기술 사용 게이트 해제** — 캐릭터 레벨이 오르면 `learned_skill_ids` 안의 기술 중 `skill.level ≤ character.level` 인 것이 사용 가능 상태로 전환 (§2.6).
 
-4. **기술 학습 후보 제시** — LLM 이 캐릭터 과거를 보고 후보 **3 개** 산출. 플레이어가 1 개 골라 `learned_skills[]` 에 추가하거나 거부 (다음 레벨업까지 보류). 별도 endpoint·자원 비용 없음. 입력 신호와 LLM/엔진 분담은 §2.6.
+4. **기술 학습 후보 제시** — LLM 이 캐릭터 과거를 보고 후보 **3 개** 산출. 플레이어가 1 개 골라 `learned_skill_ids[]` 에 추가하거나 거부 (다음 레벨업까지 보류). 별도 endpoint·자원 비용 없음. 입력 신호와 LLM/엔진 분담은 §2.6.
 
 **NPC 도 같은 룰** — 모든 캐릭터가 **페어 트레이드 불변식**을 따른다: `STR+CHA = 20`, `DEX+WIS = 20`, `CON+INT = 20` (자연 귀결로 stat 합 = 60). 즉 NPC 의 강함은 stat 합이 아니라 **level → HP/MP + 기술 조합 + 분포 편향** 으로 표현. boss 도 페어 합 20/20/20 을 유지하되 극단적 분포 (예: STR 20 / CHA 0, CON 19 / INT 1, DEX 4 / WIS 16) 로 압도감을 만든다. 시드 NPC 든 LLM 즉석 NPC (§2.4) 든 모두 이 룰.
 
@@ -204,7 +204,7 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
 **LLM 즉석 적 산출 분담** (풀이 비었을 때, §2.6 기술 추천과 같은 패턴 — LLM 은 분류만, 엔진은 수치) — `flow/encounter.py:summon_encounter` + `agents/encounter_summon` 으로 구현됨. `flow/rest.py` 가 `summon_cb` 로 wire-in 하고, encounter_summon agent 가 페어 트레이드 invariant 까지 schema validator 로 강제:
 
-- LLM 이 정함: `name`, `description`, `race` (또는 `appearance` 한 줄), `role`, `disposition`, `special_traits`. 장소 컨텍스트 (지형·시간·이전 사건) 를 보고 결정 — 숲 → 늑대, 동굴 → 박쥐, 도시 뒷골목 → 도적.
+- LLM 이 정함: `name`, `description`, `race` (또는 `appearance` 한 줄), `role`, `disposition`, `special_traits`. 장소 컨텍스트 (지형·시간·이전 사건) 를 보고 결정 — 숲 → 늑대, 동굴 → 거미, 도시 뒷골목 → 도적.
 - 엔진이 정함: `id`; `level` (장소 위험도 매핑 — risky 는 플레이어 level ±2, dangerous 는 ±4 같은 식. 결과는 `max(0, ...)` 로 clamp — 시작 level=0 부근에서 음수 방지); HP/MP (§2.3 공식); stats (**페어 트레이드 불변식 — STR+CHA=20, DEX+WIS=20, CON+INT=20** 강제, 합 60 은 자동, 컨셉에 맞춰 분포 — 트롤 = STR 18 / CHA 2, DEX 6 / WIS 14, CON 16 / INT 4 같은 식); `combat_behavior` 디폴트.
 - 새 character 는 `create` state_change 로 `state.characters` 에 등록 (§6.1 의 내부 전용 타입).
 
@@ -236,10 +236,10 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
   | 활                    | 숏보우 1d6 / 롱보우 1d8              | —     |
 
   마법·이종족 무기는 위 표 + 보정 (예: 마법 롱소드 = 1d8 + 1). 시드에 명시 안 된 무기는 컨셉에 가장 가까운 행으로 매핑.
-- **방어도**: `head / top / bottom / feet` 4 슬롯의 ArmorEffect 합산.
-- 실효 스탯 = 베이스 스탯 + 장비 수정자. `get_effective_stat()` 이 매번 합산해서 반환. 활성 버프는 스탯에 직접 영향 안 줌 — DC 판정 시 judge 컨텍스트로만 작용 (§2.6 `ActiveBuff`).
+- **방어도**: `armor` + `accessory` 두 슬롯의 `ArmorEffect.defense` 합산 (§1.1 의 `enemy_defense` 와 같은 식).
+- **스탯 단일 출처**: 엔진은 `Character.stats` 를 직접 읽는다 — 장비는 weapon dice 와 armor defense 만 더하지 스탯 자체에 보정을 걸지 않는다. 활성 버프도 스탯에 직접 영향 안 줌 — DC 판정 시 judge 가 `description` 을 컨텍스트로 받아 tier/grade 만 보정 (§2.6 `ActiveBuff`).
 
-레거시 슬롯 (`head/left_hand/right_hand/chest/legs/necklace/ring_1/ring_2`) 은 폐기. 외부 계약 (프론트, API) 은 위 8 슬롯이 기준.
+레거시 슬롯 (`head/left_hand/right_hand/chest/legs/necklace/ring_1/ring_2`) 은 폐기. 외부 계약 (프론트, API) 은 위 3 슬롯이 기준.
 
 **인벤토리**: `inventory_ids: list[str]`. 들 수 있는 최대 무게 = `rules.carry.weight_per_strength` (기본 10.0) × STR. `buy` / `move_item` 시 `check_can_carry()` 가 검증.
 
@@ -273,7 +273,7 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
 **필드 의미**:
 
-- `level: int` (0..20) — 사용 요구 캐릭터 레벨. `racial_skills` 는 `level=0` (종족 기본, 시작부터 사용), `learned_skills` 는 `level≥1`. `cast` 시 `character.level ≥ skill.level` 검증 (§2.3 게이트 해제).
+- `level: int` (0..20) — 사용 요구 캐릭터 레벨. `racial_skill_ids` 는 `level=0` (종족 기본, 시작부터 사용), `learned_skill_ids` 는 `level≥1`. `cast` 시 `character.level ≥ skill.level` 검증 (§2.3 게이트 해제).
 - `type`: attack / heal / buff / debuff.
 - `target`: self / single / area.
 - `primary_stat: Stat` — 그 기술 `power` 가 기반하는 스탯.
@@ -281,10 +281,10 @@ P1 폴백 없음 — xp/레벨 시스템 자체가 P3 에서 도입.
 
 **보유 분류**:
 
-- `racial_skills` (종족 기본 — 시드에 들어 있음, 보통 `level=0`) / `learned_skills` (LLM 추천으로 습득) 두 컬렉션으로 분리 저장. `all_skills()` 로 병합 조회.
+- `racial_skill_ids` (종족 기본 — 시드에 들어 있음, 보통 `level=0`) / `learned_skill_ids` (LLM 추천으로 습득) 두 컬렉션으로 분리 저장. `Character.known_skill_ids` 로 병합 조회.
 - 일반 공격·점프 같은 보편 행동은 기술 목록에 안 들어간다 — 엔진 기본 동사로 따로 처리.
 
-**의미 매칭 발동** — cast 는 플레이어 입력에 기술 이름이 정확히 들어 있지 않아도 일어날 수 있다. judge 가 캐릭터의 `racial_skills` + `learned_skills` 를 합쳐서 컨텍스트로 받고, 입력의 의도와 의미적으로 부합하는 기술을 매칭한다 (예: "조용히 다가가 등에 칼" → 「그림자 보행」). 두 컬렉션 모두 자동 매칭 대상이고, 출력에는 `source: "racial"|"learned"` 가 붙어 어느 쪽인지 구분된다.
+**의미 매칭 발동** — cast 는 플레이어 입력에 기술 이름이 정확히 들어 있지 않아도 일어날 수 있다. judge 가 캐릭터의 `racial_skill_ids` + `learned_skill_ids` 를 합쳐서 컨텍스트로 받고, 입력의 의도와 의미적으로 부합하는 기술을 매칭한다 (예: "조용히 다가가 등에 칼" → 「그림자 보행」). 두 컬렉션 모두 자동 매칭 대상이고, 출력에는 `source: "racial"|"learned"` 가 붙어 어느 쪽인지 구분된다.
 
 - **회피**: "맨손으로" / "기술 없이" / "그냥 평타" 같은 표현이 보이면 매칭 시도 안 함 — 플레이어가 의도적으로 기술을 끄는 통로.
 - **알림 필수**: 매칭 발동 시 본문이나 `log_entry` 에 "「기술명」 발동" 표시. 자동 매칭이 일어났을 때 투명성을 보장하는 장치.

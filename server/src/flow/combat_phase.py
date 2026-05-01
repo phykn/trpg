@@ -32,6 +32,7 @@ from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..llm.client import LLMClient
 from ..mapping.josa import gwa_wa
+from ..ontology.graph import GameGraph
 from .actions import (
     emit_equip,
     emit_roll_pending,
@@ -64,6 +65,7 @@ async def _drive_auto_combat(
     player_action: PlayerAction,
     rng: random.Random | None,
     cap: int | None = None,
+    graph: GameGraph,
 ) -> AsyncIterator[dict]:
     """Run the auto-combat sim, stream the cinematic, push numeric summary
     and combat_end. Caller must have already set combat_state."""
@@ -113,6 +115,7 @@ async def start_combat_and_drive_auto(
     player_action: PlayerAction,
     surprise: Literal["player", "enemy"] | None = None,
     cap: int | None = None,
+    graph: GameGraph,
 ) -> AsyncIterator[dict]:
     """Open a fresh fight (no existing combat_state) and run one auto-sim.
     Used by /turn's CombatAction / SummonCombatAction entry and by rest's
@@ -146,7 +149,7 @@ async def start_combat_and_drive_auto(
     async for ev in _drive_auto_combat(
         client, state, profile_dir, dirty,
         player_input=player_input, player_action=player_action,
-        rng=rng, cap=cap,
+        rng=rng, cap=cap, graph=graph,
     ):
         yield ev
 
@@ -219,12 +222,14 @@ async def run_combat_player_turn(
     dirty: Dirty,
     rng: random.Random | None,
     to_front_fn: ToFrontFn | None,
+    *,
+    graph: GameGraph,
 ) -> AsyncIterator[dict]:
     """One in-combat /turn step. Always runs an auto-sim cycle (cap rounds
     or until terminal). The `ongoing` outcome leaves combat_state in place
     so the next /turn picks up where this one left off."""
     try:
-        result = await run_judge(client, state, player_input)
+        result = await run_judge(client, state, player_input, graph=graph)
     except JudgeMalformed as e:
         yield {"type": "error", "data": {"message": str(e), "code": "JudgeMalformed"}}
         return
@@ -281,7 +286,7 @@ async def run_combat_player_turn(
     async for ev in _drive_auto_combat(
         client, state, profile_dir, dirty,
         player_input=player_input, player_action=player_action,
-        rng=rng,
+        rng=rng, graph=graph,
     ):
         yield ev
 

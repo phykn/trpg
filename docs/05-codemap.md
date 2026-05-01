@@ -6,7 +6,7 @@
 
 ```
 scenarios/                       repo 루트 peer (server·agency/story 공유). PROFILE_DIR 가 가리킴
-  default_cli/
+  default/
     profile.json                 시나리오 메타: id, name, description (GET /profiles 응답 베이스)
     world.md                     세계관·톤
     start.json                   시작 장소·활성 퀘스트
@@ -14,8 +14,11 @@ scenarios/                       repo 루트 peer (server·agency/story 공유).
     characters/*.json            NPC 시드
     locations/*.json             장소 시드
     quests/*.json                퀘스트 시드
+    chapters/*.json              챕터 시드 (quest_ids 묶음 + 진행 status)
     items/*.json                 아이템 시드
     races/*.json                 종족 시드
+    skills/*.json                기술 시드 (racial + 시드 정의 learned)
+    # campaigns/*.json           [P3] init.py 가 디렉터리 없으면 빈 dict 로 흡수
 server/
   run_api.py                     FastAPI 진입점 (build_app, main)
   .env                           HOST, PORT, BASE_URL, BASIC_AUTH_USER, BASIC_AUTH_PASS, SAVES_DIR, PROFILE_DIR
@@ -25,12 +28,13 @@ server/
       state.py                   GameState container (엔티티 dict + turn_count + pending_check + combat_state + turn_log + recent_dialogue + log_entries + pending_skill_candidates + player_id)
       clock.py                   day_phase(turn_count) → 새벽/오전/오후/밤; next_dawn_turn(turn_count) → 다음 새벽 boundary 까지 점프 (수면 회복용)
       memory.py                  Memory, TurnLogEntry, DialoguePair, PendingCheck, LogEntry union (gm/player/act/roll)
-      types.py                   StatKey, Tier, Grade, Intent
+      types.py                   StatKey, Tier, Grade, Intent, tier_to_int (Tier → 1..7), STAT_PAIRS
       errors.py                  DomainError + PendingCheckActive/Expected, JudgeMalformed, LLMUnavailable, PersistenceFailed, ProfileNotFound, RaceNotFound, ProfileMalformed, LevelUpInvalid, InventoryInvalid, SkillInvalid
 
     rules/                       Tunable knobs + pure dice/DC math
       config.py                  frozen RULES (DC tiers, social, memory, log, time, combat, death, recovery, growth, skill, carry, trade, flee). frozen Pydantic — 변경 시 에러
-      dc.py                      compute_required_roll, tier_to_int, pick_dc, compute_grade, social_bonus
+      dc.py                      compute_required_roll, pick_dc, tier_mid_dc, compute_grade, social_bonus
+      permissions.py             `set` 권한 매트릭스 단일 출처 ([02-runtime.md](./02-runtime.md) §6.1). engines/apply 와 agents/narrate/runner 가 같은 frozenset 을 공유 — 옛 손-mirror 시절의 `gender`/`location_id` 누락을 일원화로 막음
 
     engines/                     Pure logic — no LLM, no disk I/O
       apply.py                   `state_changes` (set / move / move_item / affinity) 검증·적용 + rejected[] 기록 + character_death/location_enter quest 훅
@@ -50,13 +54,14 @@ server/
       _runner.py                 공유 5회 자기교정 루프 + AgentSemanticError + read_prompt 헬퍼
       dc_judge/                  DC 판정 + 액션 분류 (15종 union, [02-runtime.md](./02-runtime.md) §1.1). prompt.md / schema.py / semantics.py / runner.py
       narrate/                   일반 서사 스트리밍. parser.py 가 본문 조각 + 끝 JSON 분리
-      combat_narrate/            한 방 시네마틱 전투 서술 ([03-features.md](./03-features.md) §1). schema.py / runner.py / prompt.md. CombatNarrateInput / CombatRoundEvent / CombatStateSnapshot 으로 등급·이벤트·HP 스냅샷을 받아 5–10 문장 시네마틱 스트리밍
+      combat_narrate/            한 방 시네마틱 전투 서술 ([03-features.md](./03-features.md) §1). schema.py / runner.py / prompt.md. CombatNarrateInput / CombatRoundEvent / CombatStateSnapshot 으로 등급·이벤트·HP 스냅샷을 받아 3–5 문장 시네마틱 스트리밍
       skill_recommend/           §2.3 4단계 — level_up 직후 기술 후보 3개. 수치는 engines/skill 이 템플릿으로 채움
       encounter_summon/          §2.4 폴백 — sleep_encounters 풀이 비었을 때 LLM 으로 적 한 마리. 페어 트레이드 invariant 는 schema validator 가 강제
 
-    ontology/                    derived view (구조·의미·config 관계 그래프)
-      graph.py                   located_at / equips / carries / connects_to / unlocks / gives_quest / kill_target_of / reward_of
-      target_view.py             target 노드에서 1~2 단계 이웃 훑기
+    ontology/                    derived view (구조·의미·config 관계 그래프 — 관계 SSOT)
+      graph.py                   GameGraph (노드: character/item/location/quest/skill/race/chapter; 엣지: located_at, located_in, equips[slot], carries, connects_to[difficulty,key_item_id], unlocks, gives_quest, required_by, kill_target_of, reward_of, belongs_to_race, knows_skill[source], racial_skill_of, member_of_chapter). out·in 양방향 인덱스 (`get_edges` / `get_in_edges`), `Edge.attrs` 에 부가 정보
+      target_view.py             target 노드에서 2홉 훑기. NPC = gives_quest + (quest 의) kill_target_of/required_by/reward_of, 추가로 NPC 자신이 kill_target_of 인 quests_kill_target 별도 필드. Location = required_by + (quest 의) giver/kill_targets/triggers/rewards. Item = unlocks/reward_of/located_in 1홉 (모두 이름·title 로 resolve)
+      player_view.py             player 정체성(race/appearance/description/gender) 페이로드 — narrate / combat_narrate 용
 
     context/                     Prompt input builders
       layers.py                  build_world_layer / build_session_layer / build_history_layer (narrate 용)
@@ -145,6 +150,6 @@ server/
 액션 검증 (인-게임 GM log 로 흡수, HTTP 응답 영향 없음):
 - `LevelUpInvalid` — `level_up` 페어 트레이드 / 캡 / 잔여 xp 검증 실패. `engines/growth.py` 가 발행, `flow/actions.py:emit_level_up` 이 catch.
 - `InventoryInvalid` — `equip` / `unequip` / `buy` / `sell` 슬롯·요구치·무게·affinity·잔여 금화 검증 실패. `engines/inventory/` 가 발행, `flow/actions.py:emit_equip` / `emit_unequip` / `emit_trade` 등이 catch.
-- `SkillInvalid` — 기술 `cast` 레벨·MP·사정거리·소유 검증 실패. `engines/skill.py` 가 발행, `flow/actions.py:emit_skill_cast` 가 catch.
+- `SkillInvalid` — 기술 `cast` 레벨·MP·사정거리·소유 검증 실패. `engines/skill.py` 가 발행, 자동 사이클 안의 `flow/combat_auto.py:_resolve_player_turn` 이 catch 해서 평타 폴백으로 흡수 (out-of-combat cast 통로는 폐기 — 모든 cast 는 combat 분기를 통과한다).
 
 Pydantic 422 (요청 모양 검증), HTTP 404 (`game_id` 없음) 은 FastAPI 기본 처리로 가고 `DomainError` 가 아니다.

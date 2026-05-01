@@ -36,7 +36,7 @@ def tmp_data():
 
 
 def _judge_returns(monkeypatch, action_obj):
-    async def fake_judge(client, state, player_input):
+    async def fake_judge(client, state, player_input, **kwargs):
         return action_obj
     monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
@@ -338,7 +338,6 @@ def test_surroundings_growth_can_level_up(fresh_state):
     state = _seed_player(fresh_state, xp_pool=100, level=0)
     s = build_surroundings(state, "player_01")
     assert s["growth"]["can_level_up"] is True
-    assert s["growth"]["level"] == 0
 
 
 def test_surroundings_growth_cannot_level_up(fresh_state):

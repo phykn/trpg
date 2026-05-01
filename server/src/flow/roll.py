@@ -9,6 +9,7 @@ from ..domain.memory import RollLogEntry
 from ..domain.state import GameState
 from ..engines.growth import grant_roll_xp
 from ..llm.client import LLMClient, set_llm_session_if_unset
+from ..ontology.graph import build_graph
 from ..rules.dc import compute_grade
 from .clock import tick_turn_buffs
 from .combat_auto import (
@@ -114,12 +115,14 @@ async def run_roll(
         "stat": pending.stat,
         "targets": pending.targets,
     }
+    graph = build_graph(state)
     stream = run_narrate(
         client,
         state,
         profile_dir,
         pending.player_input,
         judge_result=judge_result,
+        graph=graph,
         grade=grade,
         target_id=pending.target,
     )
@@ -129,6 +132,7 @@ async def run_roll(
         stream,
         target_for_log=pending.target,
         dialogue_input=pending.player_input,
+        graph=graph,
     ):
         yield ev
 

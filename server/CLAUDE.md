@@ -13,7 +13,7 @@ src/
   agents/      LLM agents — one dir per agent (dc_judge, narrate, combat_narrate, encounter_summon, skill_recommend), each with prompt.md / schema.py / runner.py. _runner.py is the shared retry-and-self-correct loop.
   llm/         OpenAI-compatible transport (client.py). Agents wrap chat_stream with their own schemas.
   engines/     Pure rule engines: apply (state_changes), combat, growth, inventory/, quest, recovery, skill, invariants. No LLM, no IO.
-  ontology/    Derived views over GameState. graph.py builds typed-edge relations (located_at, equips, carries, connects_to, unlocks, gives_quest, kill_target_of, reward_of); target_view.py summarises one entity for prompts.
+  ontology/    Derived view of GameState — the relational source of truth. graph.py builds typed-edge relations over nodes {character, item, location, quest, skill, race, chapter}: located_at, located_in, equips (attrs.slot), carries, connects_to (attrs.difficulty/key_item_id), unlocks, gives_quest, required_by, kill_target_of, reward_of, belongs_to_race, knows_skill (attrs.source = racial|learned), racial_skill_of, member_of_chapter. Both directions are indexed — `get_edges(from_id, type?)` and `get_in_edges(to_id, type?)`. target_view.py traverses 2 hops: NPC view follows gives_quest into each quest's kill targets / triggers / rewards (and flags the NPC itself as a kill target if any quest names it); location view follows required_by into each quest's giver + targets + rewards; item view resolves unlocks / reward_of / located_in to names. player_view.py mirrors the shape for the active player so narrate / combat_narrate can reflect race/appearance/gender.
   context/     Prompt-facing context builders (surroundings, layered context).
   mapping/     to_front.py — GameState → flat dict the client renders. Korean dates, durations, composed strings, conditional labels are all built here.
   persistence/ init.py builds a new GameState from a profile + player input. store.py does atomic IO (.tmp + os.replace).
@@ -25,6 +25,15 @@ run_api.py     Entrypoint — loads env, builds the FastAPI app, runs uvicorn.
 ```
 
 Layer rule: upper depends on lower, never the reverse. The dependency direction goes api → flow → agents/engines → llm/ontology/context/mapping → persistence → domain/rules.
+
+**Relational SSOT — graph or entity?** `ontology/graph.py` is the *single source of truth for relations*. Inside `flow/`, `context/`, `mapping/`:
+
+- **Asking who-relates-to-whom** must go through `GameGraph` — never via `state.characters.items()` fullscans, and never via direct relation fields (`char.location_id`, `char.inventory_ids`, `char.equipment.weapon`, `char.racial_skill_ids`, `char.learned_skill_ids`, `char.race_id`, `char.companions`, `quest.giver_id`, `quest.triggers[*].target_id`, `quest.rewards.items`, `loc.connections`, `loc.item_ids`, `chapter.quest_ids`). Use `graph.get_edges(...)` / `graph.get_in_edges(...)` instead.
+- **Asking the value of an entity attribute** (HP, MP, stats, level, alive, disposition, mood, tone_hint, appearance, description, name, gender, status, memories, quest.status, quest.title) is fine via direct read — those are values, not relations.
+- **Writing** stays on entities — `engines/apply.py`, `engines/combat.py`, etc. mutate fields. After a mutation that touches a relation field, the caller in flow rebuilds the graph (`graph = build_graph(state)`).
+- **Exceptions** that can read relation fields directly: `persistence/`, `domain/`, `engines/apply.py`, pure numeric engines (combat damage math, recovery, dc), and `ontology/graph.py` itself (it's the bridge from entity to graph). `rules/permissions.py` lists relation field *names* but doesn't read them off entities.
+
+CI grep enforces this — see `scripts/check_relational_ssot.sh`.
 
 `../scenarios/<profile>/` is the seed source (`world.md`, `start.json`, `player_template.json`, `profile.json`, plus `races/ characters/ items/ locations/ quests/ chapters/`); shared with `agency/story`. `../saves/` is the runtime store, gitignored. Per-game layout: `games/<game_id>/{meta.json, characters/<id>.json, items/<id>.json, ..., log.jsonl, history.jsonl, dialogue.jsonl}`. The active `game_id` is held by the client (browser localStorage), so a single server can host multiple users without one user's `init` clobbering another's "last game" pointer.
 

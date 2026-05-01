@@ -28,7 +28,7 @@ def tmp_data():
 
 
 def _judge_returns(monkeypatch, action_obj):
-    async def fake_judge(client, state, player_input):
+    async def fake_judge(client, state, player_input, **kwargs):
         return action_obj
     monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
@@ -84,7 +84,7 @@ def test_inventory_lists_consumable_items(fresh_state):
     inv = s["inventory"]
     assert len(inv) == 1
     assert inv[0]["id"] == "potion"
-    assert inv[0]["effect"] == "heal"
+    assert inv[0]["kind"] == "consumable"
 
 
 def test_inventory_marks_weapons_as_equip_kind(fresh_state):
@@ -95,12 +95,15 @@ def test_inventory_marks_weapons_as_equip_kind(fresh_state):
     # weapons should match equip, not use
 
 
-def test_inventory_groups_qty(fresh_state):
+def test_inventory_dedupes_duplicates(fresh_state):
+    """Duplicate item ids in inventory_ids collapse to a single payload entry —
+    surroundings.inventory dedupes via the seen-set in `_inventory_payload`."""
     state = _seed(fresh_state, give_potion=True)
     state.characters["player_01"].inventory_ids.append("potion")
     s = build_surroundings(state, "player_01")
     inv = s["inventory"]
-    assert inv[0]["qty"] == 2
+    assert len(inv) == 1
+    assert inv[0]["id"] == "potion"
 
 
 def test_inventory_includes_quest_key_with_on_use(fresh_state):

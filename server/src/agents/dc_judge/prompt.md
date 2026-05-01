@@ -116,6 +116,8 @@ semantics 검증이 backstop으로 friendly NPC·location id·player·item을 co
 | 방을 뒤져 상자를 찾아 연다 | `{"action":"roll","tier":"쉬움","stat":"DEX","targets":["<loc_id>"],"reason":"방을 뒤져 상자를 열려 함"}` |
 | 약초를 먹고 검을 든다 | `{"action":"chain","parts":[{"action":"use","item_id":"herb_01"},{"action":"equip","item_id":"sword_01"}]}` |
 | 검 들고 광장 상인에게 다가간다 | `{"action":"chain","parts":[{"action":"equip","item_id":"sword_01"},{"action":"pass","targets":["merchant_01"]}]}` |
+| 검을 꺼내 상인을 친다 | `{"action":"equip","item_id":"sword_01"}` (chain `[equip, combat]` 금지 — combat은 phase-changing. narrate가 "겨누어 든다"로 두 번째 의도 흡수) |
+| 약초 마시고 상인을 설득한다 | `{"action":"use","item_id":"herb_01"}` (chain `[use, roll]` 금지 — roll은 phase-changing. narrate가 "한 모금 삼키며 말을 건넨다"로 흡수) |
 | 훈련사에게 보상을 묻는다 | `{"action":"roll","tier":"쉬움","stat":"CHA","targets":["trainer_01"],"reason":"보상 액수를 물어봄"}` |
 
 Roll tier (friction count → tier):
@@ -215,3 +217,5 @@ Scene prop (`entities`에 없어도 통과 — 묘사로만 등장한 무생물;
 - `null`/`""`/`[]` for unused fields — omit instead.
 - DC/probability/HP/dice values. Old tier names (`easy`, `normal`).
 - Korean enums for `action`/`stat`. Translating ids to Korean.
+- `chain.parts`에 `combat`/`roll`/`rest`/`flee`/`reject`/`summon_combat` — phase 충돌로 schema가 거절한다. 두 번째 동사가 이 중 하나면 chain 만들지 말고 **첫 동사 단일 action**으로 내고 두 번째 의도는 narrate에 맡긴다.
+- `roll` 출력에서 `reason` 필드 누락 — 필수다 (한국어 한 문장, 10-30자). "굴림 필요" 같은 메타 문구 금지, 시도+목적을 적는다.

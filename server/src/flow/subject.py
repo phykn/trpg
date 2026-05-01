@@ -16,6 +16,7 @@ from ..agents.dc_judge.schema import (
     SummonCombatAction,
 )
 from ..domain.state import GameState
+from ..ontology.graph import GameGraph, build_graph
 
 
 def _is_active_npc(state: GameState, cid: str) -> bool:
@@ -74,7 +75,9 @@ def refresh_active_subject(state: GameState, result) -> None:
         state.active_subject_id = candidate
 
 
-def reconcile_subject_after_move(state: GameState) -> None:
+def reconcile_subject_after_move(
+    state: GameState, graph: GameGraph | None = None
+) -> None:
     """Re-pick the subject after the player relocates.
 
     `refresh_active_subject` runs before `apply_intended_move`, so for travel
@@ -92,11 +95,15 @@ def reconcile_subject_after_move(state: GameState) -> None:
         return
 
     candidate = state.recent_npc_id(state.player_id)
-    if candidate is None:
-        for cid, c in state.characters.items():
-            if cid == state.player_id or not c.alive:
+    if candidate is None and player.location_id is not None:
+        if graph is None:
+            graph = build_graph(state)
+        for edge in graph.get_in_edges(player.location_id, "located_at"):
+            cid = edge.from_id
+            if cid == state.player_id:
                 continue
-            if c.location_id == player.location_id:
+            c = state.characters.get(cid)
+            if c is not None and c.alive:
                 candidate = cid
                 break
     state.active_subject_id = candidate

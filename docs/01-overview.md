@@ -52,8 +52,8 @@ LLM 은 "무엇을 할까 / 어떻게 말할까" 만 고른다. 숫자, 상태, 
 - 새 게임 흐름:
   - 프로필 목록 (`GET /profiles`) → 사용자가 시나리오 카드 중 하나 고름. P1 시드는 `scenarios/default/` 한 벌만이지만, 디렉터리 스캔 방식이라 추후 시나리오를 폴더 추가만으로 확장 가능.
   - 캐릭터 생성 — 종족(목록 선택) + 이름. 스탯 6 개는 모두 10 으로 시작 (분배 화면 없음). `appearance` 는 NPC 시드에만 들어가고 플레이어 입력 받지 않음.
-  - 골라진 race 의 racial_skills 자동 부여, max_HP/MP 는 [03-features.md](./03-features.md) §2.3 공식 (level 0).
-- 마지막 게임 자동 복원: 클라이언트가 `localStorage` 에 보관해 둔 game_id 로 `GET /session/{id}/state` 를 불러 `FrontState` 복원. 게임 목록·이어하기 화면 없음 — 사용자 한 명당 한 게임 흐름. 서버는 "최근 게임" 포인터를 따로 들고 있지 않아 한 서버에 여러 사용자가 붙어도 서로의 마지막 게임을 덮어쓰지 않는다.
+  - 골라진 race 의 racial_skill_ids 자동 부여, max_HP/MP 는 [03-features.md](./03-features.md) §2.3 공식 (level 0).
+- 마지막 게임 자동 복원: 클라이언트가 `localStorage` 에 보관해 둔 game_id 로 `GET /session/{id}/state` 를 불러 `FrontState` 복원. 게임 목록·이어하기 화면 없음 — 사용자 한 명당 한 게임 흐름. 다중 사용자 안전성(서버가 "최근 게임" 포인터를 들지 않는다는 invariant) 은 [02-runtime.md](./02-runtime.md) §2.5 에서 한 번 더.
 - 기억·호감도·게임 안 시간 흐름은 최소한만 (등급·의도까지만 구현, 성향 보정은 P3 으로 미룸)
 - 집/사무실 네트워크 안에서만 (환경 변수 누락 시 즉시 멈춤, 아이디·비밀번호 보호)
 
@@ -170,7 +170,7 @@ LLM 에 맡기면:
 - 글이 한 글자씩 흐르도록 보여 줘야 한다 (이야기 스트리밍)
 - 상태 보기·바꾸기는 HTTP 의 표준 패턴 (GET/POST + JSON) 으로 처리되어야 자연스러움
 
-→ FastAPI 라우트 (URL 진입점) 4개 + SSE. 옛 CLI 의 `scene` / `apply` / `roll` 은 각각 `GET /state` / 내부 `apply_changes` / `POST /roll` 로 흡수. 옛 CLI 는 더 이상 안 씀.
+→ FastAPI 라우트 (URL 진입점) — 처음엔 4개로 시작, 지금은 6개 (`/turn`, `/roll`, `/intro`, `POST /session/init`, `GET /session/{id}/state`, `GET /profiles`) + SSE. 옛 CLI 의 `scene` / `apply` / `roll` 은 각각 `GET /session/{id}/state` / 내부 `apply_changes` / `POST /roll` 로 흡수. 옛 CLI 는 더 이상 안 씀.
 
 → [02-runtime.md](./02-runtime.md) §2.4 (라우트 목록·SSE 신호)
 
