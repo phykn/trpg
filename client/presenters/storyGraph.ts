@@ -1,4 +1,7 @@
-import type { Hero, Place, Quest, Subject } from '@/types/domain';
+import type { Hero, Place, Quest, RiskBadge, Subject } from '@/types/domain';
+import type { StoryGraphPayload } from '@/types/wire';
+
+import { SEP } from './format';
 
 export type StoryGraphNodeKind = 'hero' | 'place' | 'subject' | 'quest' | 'location' | 'target';
 
@@ -11,16 +14,26 @@ const NODE_KIND = new Set<StoryGraphNodeKind>([
   'target',
 ]);
 
+// Flat shape with optional kind-specific fields. Producers populate the
+// fields for the kind they emit; consumers branch on kind and read the
+// matching fields directly — never re-parse a combined display string.
 export type StoryGraphNode = {
   id: string;
   kind: StoryGraphNodeKind;
   label: string;
-  detail: string;
   level?: number;
   raceJob?: string;
   gender?: string;
   role?: string;
   trust?: number;
+  known?: string[];
+  description?: string;
+  risk?: RiskBadge;
+  dayPhase?: string;
+  weather?: string[];
+  moveDifficulty?: string | null;
+  questDifficulty?: string;
+  rewards?: { gold: number; exp: number };
 };
 
 export type StoryGraphEdge = {
@@ -49,7 +62,7 @@ type StoryGraphInput = {
   place: Place | null;
 };
 
-const KIND_LABEL: Record<StoryGraphNodeKind, string> = {
+export const KIND_LABEL: Record<StoryGraphNodeKind, string> = {
   hero: '주인공',
   place: '현재 위치',
   subject: '대상',
@@ -78,35 +91,8 @@ function canonicalNodeId(kind: StoryGraphNodeKind, label: string): string {
   return kind === 'subject' || kind === 'target' ? characterId(label) : nodeId(kind, label);
 }
 
-function shortList(items: string[], fallback = '정보 없음'): string {
-  if (items.length === 0) return fallback;
-  return items.slice(0, 3).join(', ');
-}
-
-function statLine(level: number, raceJob: string): string {
-  return `Lv.${level} · ${raceJob}`;
-}
-
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function stringField(source: Record<string, unknown>, keys: string[]): string | null {
-  for (const key of keys) {
-    const value = source[key];
-    if (typeof value === 'string' && value.trim()) return value;
-    if (typeof value === 'number') return String(value);
-  }
-  return null;
-}
-
-function kindField(source: Record<string, unknown>): StoryGraphNodeKind {
-  const raw = stringField(source, ['kind', 'type', 'entity_type', 'category']);
-  if (raw === 'character') return 'target';
-  if (raw === 'npc') return 'target';
-  if (raw === 'player') return 'hero';
-  if (raw && NODE_KIND.has(raw as StoryGraphNodeKind)) return raw as StoryGraphNodeKind;
-  return 'target';
 }
 
 export function buildStoryGraph({ hero, subject, quest, place }: StoryGraphInput): StoryGraphModel {
@@ -129,7 +115,8 @@ export function buildStoryGraph({ hero, subject, quest, place }: StoryGraphInput
         id: nodeId('hero', hero.name),
         kind: 'hero',
         label: hero.name,
-        detail: statLine(hero.level, hero.raceJob),
+        level: hero.level,
+        raceJob: hero.raceJob,
       })
     : null;
 
@@ -138,7 +125,10 @@ export function buildStoryGraph({ hero, subject, quest, place }: StoryGraphInput
         id: nodeId('place', place.name),
         kind: 'place',
         label: place.name,
-        detail: place.description || shortList([place.dayPhase, ...place.weather, place.risk.label].filter(Boolean)),
+        description: place.description,
+        risk: place.risk,
+        dayPhase: place.dayPhase,
+        weather: place.weather,
       })
     : null;
 
@@ -147,12 +137,12 @@ export function buildStoryGraph({ hero, subject, quest, place }: StoryGraphInput
         id: characterId(subject.name),
         kind: 'subject',
         label: subject.name,
-        detail: `${statLine(subject.level, subject.raceJob)} · ${subject.role}`,
         level: subject.level,
         raceJob: subject.raceJob,
         gender: subject.gender,
         role: subject.role,
         trust: subject.trust,
+        known: subject.known,
       })
     : null;
 
@@ -161,7 +151,8 @@ export function buildStoryGraph({ hero, subject, quest, place }: StoryGraphInput
         id: nodeId('quest', quest.title),
         kind: 'quest',
         label: quest.title,
-        detail: `${quest.difficulty} · 보상 ${quest.rewards.gold}G/${quest.rewards.exp}EXP`,
+        questDifficulty: quest.difficulty,
+        rewards: quest.rewards,
       })
     : null;
 
@@ -179,7 +170,9 @@ export function buildStoryGraph({ hero, subject, quest, place }: StoryGraphInput
       id: nodeId('location', surrounding.name),
       kind: 'location',
       label: surrounding.name,
-      detail: surrounding.blurb || surrounding.risk.label,
+      description: surrounding.blurb,
+      risk: surrounding.risk,
+      moveDifficulty: surrounding.difficulty ?? null,
     });
     addEdge(placeId, locationId, '이동');
   }
@@ -192,7 +185,6 @@ export function buildStoryGraph({ hero, subject, quest, place }: StoryGraphInput
             id: characterId(target.name),
             kind: 'target',
             label: target.name,
-            detail: statLine(target.level, target.raceJob),
             level: target.level,
             raceJob: target.raceJob,
             gender: target.gender,
@@ -224,7 +216,7 @@ export function buildStoryGraph({ hero, subject, quest, place }: StoryGraphInput
     `${KIND_LABEL.location} ${countByKind.location + countByKind.place}`,
   ]
     .filter(Boolean)
-    .join(' · ');
+    .join(SEP);
 
   return {
     nodes: Array.from(nodes.values()),
@@ -291,7 +283,7 @@ export function mergeStoryGraphs(base: StoryGraphModel, next: StoryGraphModel): 
 
 export function storyGraphFingerprint(graph: StoryGraphModel): string {
   const nodes = graph.nodes
-    .map((node) => `${node.id}:${node.kind}:${node.label}:${node.detail}`)
+    .map((node) => JSON.stringify(node))
     .sort()
     .join('|');
   const edges = graph.edges
@@ -301,42 +293,43 @@ export function storyGraphFingerprint(graph: StoryGraphModel): string {
   return `${graph.summary}::${nodes}::${edges}`;
 }
 
-export function normalizeStoryGraphPayload(payload: unknown): StoryGraphModel | null {
-  const root = isObject(payload) && isObject(payload.graph) ? payload.graph : payload;
-  if (!isObject(root) || !Array.isArray(root.nodes) || !Array.isArray(root.edges)) return null;
+function isValidStoredNode(raw: unknown): raw is StoryGraphNode {
+  if (!isObject(raw)) return false;
+  if (typeof raw.id !== 'string' || typeof raw.label !== 'string') return false;
+  if (!NODE_KIND.has(raw.kind as StoryGraphNodeKind)) return false;
+  if (raw.kind === 'subject' || raw.kind === 'target') {
+    return typeof raw.level === 'number' && typeof raw.raceJob === 'string';
+  }
+  if (raw.kind === 'place' || raw.kind === 'location') {
+    return typeof raw.description === 'string';
+  }
+  if (raw.kind === 'hero') {
+    return typeof raw.level === 'number' && typeof raw.raceJob === 'string';
+  }
+  if (raw.kind === 'quest') {
+    return typeof raw.questDifficulty === 'string';
+  }
+  return true;
+}
 
-  const nodes = root.nodes.flatMap((raw): StoryGraphNode[] => {
-    if (!isObject(raw)) return [];
-    const id = stringField(raw, ['id', 'node_id', 'key']);
-    const label = stringField(raw, ['label', 'name', 'title']);
-    if (!id || !label) return [];
-    const kind = kindField(raw);
-    return [{
-      id,
-      kind,
-      label,
-      detail: stringField(raw, ['detail', 'description', 'summary', 'subtitle']) ?? KIND_LABEL[kind],
-    }];
-  });
+export function isValidStoryGraph(raw: unknown): raw is StoryGraphModel {
+  if (!isObject(raw)) return false;
+  if (!Array.isArray(raw.nodes) || !Array.isArray(raw.edges)) return false;
+  return raw.nodes.every(isValidStoredNode);
+}
 
+export function normalizeStoryGraphPayload(
+  payload: StoryGraphPayload | null,
+): StoryGraphModel | null {
+  if (!payload) return null;
+  const nodes = payload.nodes.flatMap((raw): StoryGraphNode[] =>
+    NODE_KIND.has(raw.kind as StoryGraphNodeKind)
+      ? [{ id: raw.id, kind: raw.kind as StoryGraphNodeKind, label: raw.label }]
+      : [],
+  );
   const knownNodeIds = new Set(nodes.map((node) => node.id));
-  const edges = root.edges.flatMap((raw): StoryGraphEdge[] => {
-    if (!isObject(raw)) return [];
-    const source = stringField(raw, ['source', 'source_id', 'from', 'from_id']);
-    const target = stringField(raw, ['target', 'target_id', 'to', 'to_id']);
-    if (!source || !target || !knownNodeIds.has(source) || !knownNodeIds.has(target)) return [];
-    const label = stringField(raw, ['label', 'type', 'relation']) ?? '관계';
-    return [{
-      id: stringField(raw, ['id']) ?? `${source}->${target}:${label}`,
-      source,
-      target,
-      label,
-    }];
-  });
-
-  return {
-    nodes,
-    edges,
-    summary: stringField(root, ['summary', 'title']) ?? `서버 그래프 · ${nodes.length}N/${edges.length}E`,
-  };
+  const edges = payload.edges.filter(
+    (e) => knownNodeIds.has(e.source) && knownNodeIds.has(e.target),
+  );
+  return { nodes, edges, summary: payload.summary };
 }
