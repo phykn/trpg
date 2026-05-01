@@ -18,7 +18,7 @@ from ..agents.dc_judge.schema import (
 )
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph, build_graph
-from ..ontology.queries import inhabitants_of
+from ..ontology.queries import inhabitants_of, location_of
 
 
 def _is_active_npc(state: GameState, cid: str) -> bool:
@@ -93,14 +93,15 @@ def reconcile_subject_after_move(
         return
     subj = state.characters.get(cur)
     player = state.characters[state.player_id]
-    if subj is not None and subj.location_id == player.location_id:
+    if graph is None:
+        graph = state.graph()
+    player_loc = location_of(graph, state.player_id)
+    if subj is not None and location_of(graph, cur) == player_loc:
         return
 
     candidate = state.recent_npc_id(state.player_id)
-    if candidate is None and player.location_id is not None:
-        if graph is None:
-            graph = state.graph()
-        for cid in inhabitants_of(graph, player.location_id):
+    if candidate is None and player_loc is not None:
+        for cid in inhabitants_of(graph, player_loc):
             if cid == state.player_id:
                 continue
             c = state.characters.get(cid)

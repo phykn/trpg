@@ -34,6 +34,7 @@ from ..engines import combat as combat_engine
 from ..llm.client import LLMClient
 from ..mapping.josa import gwa_wa
 from ..ontology.graph import GameGraph
+from ..ontology.queries import location_of
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from .actions import (
     emit_equip,
@@ -192,17 +193,19 @@ async def start_combat_and_drive_auto(
 # --- target validation -------------------------------------------------------
 
 
-def has_invalid_combat_targets(state: GameState, requested: list[str]) -> bool:
+def has_invalid_combat_targets(
+    state: GameState, graph: GameGraph, requested: list[str]
+) -> bool:
     """True if any requested target isn't a valid attackable enemy in the
     player's location: self-target, missing, dead, or in a different location.
     Shared by turn.py (out-of-combat CombatAction) and run_combat_player_turn
     (in-combat CombatAction)."""
-    actor_loc = state.characters[state.player_id].location_id
+    actor_loc = location_of(graph, state.player_id)
     return any(
         t == state.player_id
         or t not in state.characters
         or not state.characters[t].alive
-        or state.characters[t].location_id != actor_loc
+        or location_of(graph, t) != actor_loc
         for t in requested
     )
 
@@ -319,7 +322,7 @@ async def run_combat_player_turn(
         return
 
     if isinstance(result, CombatAction):
-        if has_invalid_combat_targets(state, result.targets):
+        if has_invalid_combat_targets(state, graph, result.targets):
             yield push_act(state, dirty, "공격할 수 있는 대상이 없습니다.")
             async for ev in finalize(state, save_repo, dirty, to_front_fn):
                 yield ev

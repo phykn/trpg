@@ -23,6 +23,7 @@ from ..ontology.queries import (
     known_skills_of,
     location_of,
     race_of,
+    trigger_targets_of,
 )
 from .josa import eun_neun
 
@@ -547,8 +548,11 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
             _graph_location_detail(location),
         )
 
-    for character_id, character in state.characters.items():
-        if character_id == state.player_id or character_id not in visible_character_ids:
+    for character_id in visible_character_ids:
+        if character_id == state.player_id:
+            continue
+        character = state.characters.get(character_id)
+        if character is None:
             continue
         kind = "subject" if character_id == state.active_subject_id else "target"
         add_node(
@@ -579,10 +583,9 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
             add_edge(character_id, loc_id, "등장")
 
     for quest_id in quest_ids:
-        quest = state.quests[quest_id]
-        add_edge(quest.giver_id, quest_id, "의뢰")
-        for trigger in quest.triggers:
-            add_edge(trigger.target_id, quest_id, "목표")
+        add_edge(giver_of(graph, quest_id), quest_id, "의뢰")
+        for target_id in trigger_targets_of(graph, quest_id):
+            add_edge(target_id, quest_id, "목표")
 
     count_by_kind: dict[str, int] = {
         "hero": 0,

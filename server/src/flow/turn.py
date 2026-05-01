@@ -27,6 +27,7 @@ from ..domain.memory import PlayerLogEntry
 from ..domain.state import GameState
 from ..llm.client import LLMClient, set_llm_session_if_unset
 from ..ontology.graph import GameGraph, build_graph
+from ..ontology.queries import location_of
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from .actions import (
     emit_equip,
@@ -240,7 +241,7 @@ async def _dispatch(
     previous_phase_signal: str | None = None,
 ) -> AsyncIterator[dict]:
     if isinstance(result, CombatAction):
-        if has_invalid_combat_targets(state, result.targets):
+        if has_invalid_combat_targets(state, graph, result.targets):
             yield push_act(state, dirty, "공격할 수 있는 대상이 없습니다.")
             async for ev in finalize(state, save_repo, dirty, to_front_fn):
                 yield ev
@@ -263,7 +264,8 @@ async def _dispatch(
 
     if isinstance(result, SummonCombatAction):
         actor = state.characters[state.player_id]
-        location = state.locations.get(actor.location_id) if actor.location_id else None
+        loc_id = location_of(graph, state.player_id)
+        location = state.locations.get(loc_id) if loc_id else None
         summoned = None
         if location is not None and client is not None:
             try:

@@ -21,6 +21,7 @@ from ..domain.errors import SkillInvalid
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..ontology.player_view import build_player_view
+from ..ontology.queries import location_of, race_of
 from ..persistence.repo import ScenarioRepo
 from .actions import apply_attack_action, apply_skill_action
 from .dirty import Dirty, register_kill
@@ -153,7 +154,8 @@ def _enemy_snapshot(state: GameState, enemy_id: str) -> EnemyNarrateSnapshot:
     so _player_snapshot stays bare for player_start/player_end.
     """
     c = state.characters[enemy_id]
-    race = state.races.get(c.race_id)
+    race_id = race_of(state.graph(), enemy_id)
+    race = state.races.get(race_id) if race_id else None
     race_payload: dict | None = None
     if race is not None:
         race_payload = {"name": race.name}
@@ -171,9 +173,12 @@ def _enemy_snapshot(state: GameState, enemy_id: str) -> EnemyNarrateSnapshot:
 
 def _location_payload(state: GameState) -> dict:
     actor = state.characters.get(state.player_id)
-    if actor is None or actor.location_id is None:
+    if actor is None:
         return {}
-    loc = state.locations.get(actor.location_id)
+    loc_id = location_of(state.graph(), state.player_id)
+    if loc_id is None:
+        return {}
+    loc = state.locations.get(loc_id)
     if loc is None:
         return {}
     return {
@@ -219,12 +224,14 @@ def _alive_player_targets(
 ) -> list[str]:
     """Filter requested targets to alive enemies in the player's location.
     Falls back to combat_state.enemy_ids when none of the requested are valid."""
+    graph = state.graph()
+    player_loc = location_of(graph, player.id)
     in_loc = [
         tid
         for tid in requested
         if tid in state.characters
         and state.characters[tid].alive
-        and state.characters[tid].location_id == player.location_id
+        and location_of(graph, tid) == player_loc
     ]
     if in_loc:
         return in_loc
