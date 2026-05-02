@@ -132,16 +132,7 @@ def _emit_round_event(
     )
 
 
-def _player_snapshot(c: Character) -> PlayerNarrateSnapshot:
-    return PlayerNarrateSnapshot(name=c.name, alive=c.alive)
-
-
 def _enemy_snapshot(state: GameState, enemy_id: str) -> EnemyNarrateSnapshot:
-    """Enemy snapshot — race / appearance / description / gender ride here so
-    the cinematic can reflect each foe's seed identity instead of defaulting
-    to the bare name. Player identity travels in CombatNarrateInput.player_view,
-    so _player_snapshot stays bare for player_start/player_end.
-    """
     c = state.characters[enemy_id]
     race_id = race_of(state.graph(), enemy_id)
     race = state.races.get(race_id) if race_id else None
@@ -411,7 +402,7 @@ def run_auto_combat(
         for eid in enemy_ids_at_start
         if eid in state.characters
     }
-    player_start = _player_snapshot(player)
+    player_start = PlayerNarrateSnapshot(name=player.name, alive=player.alive)
     player_hp_before = player.hp
 
     events: list[CombatRoundEvent] = []
@@ -574,7 +565,7 @@ async def build_narrate_input(
         rounds_run=result.rounds_run,
         outcome=result.outcome,
         player_start=result.player_start,
-        player_end=_player_snapshot(player),
+        player_end=PlayerNarrateSnapshot(name=player.name, alive=player.alive),
         enemies_start=result.enemy_starts,
         enemies_end=enemies_end,
         events=result.events,
