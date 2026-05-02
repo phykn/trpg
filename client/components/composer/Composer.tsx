@@ -118,18 +118,12 @@ export function Composer({ input, setInput, onSend, onStop, streaming, think, on
           paddingTop: 8,
           paddingBottom: 8,
           height: inputHeight,
-          // RN multiline TextInput renders as <textarea> on web, which keeps
-          // both the form-field border and Chrome's default focus ring (the
-          // ring uses `outline-style: auto`, which still paints a dark frame
-          // on focus even with `outline-width: 0`). Kill all three so the
-          // composer reads as a flat chat input.
+          // Kill RN-web's textarea border + Chrome focus ring so the composer reads as a flat chat input.
           borderWidth: 0,
           outlineWidth: 0,
           outlineStyle: 'none',
           backgroundColor: 'transparent',
-          // Hide the textarea scrollbar on web so a paste exceeding
-          // INPUT_MAX_HEIGHT doesn't flash a scrollbar; users can still scroll
-          // overflowing content via wheel/keys.
+          // Hide RN-web textarea scrollbar; wheel/keys still scroll overflow.
           ...(IS_WEB ? { scrollbarWidth: 'none' } : null),
         } as object}
       />
