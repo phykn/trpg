@@ -1,6 +1,6 @@
 import type { RollResult } from './domain';
 
-export type Tone = 'hp' | 'mp' | 'exp' | 'accent' | 'good' | 'bad' | 'neutral';
+export type Tone = 'hp' | 'mp' | 'exp' | 'revival' | 'accent' | 'good' | 'bad' | 'neutral';
 
 export type LogEntry =
   | { id: number; kind: 'gm'; text: string }

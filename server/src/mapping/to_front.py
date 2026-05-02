@@ -20,6 +20,7 @@ from ..ontology.queries import (
     inventory_of,
     known_skills_of,
 )
+from ..rules import RULES
 from .labels import (
     RISK_PAYLOAD,
     difficulty_badge,
@@ -120,6 +121,8 @@ def to_hero(state: GameState, graph: GameGraph | None = None) -> dict:
         "hpMax": p.max_hp,
         "mp": p.mp,
         "mpMax": p.max_mp,
+        "reviveCoins": p.revive_coins,
+        "reviveCoinsMax": RULES.death.revive_coins,
         "stats": stats_payload(p.stats),
         "equipment": _equipment(state, graph, p.id),
         "inventory": inventory,

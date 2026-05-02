@@ -538,8 +538,8 @@ def test_apply_attack_to_player_uses_revive_coin():
     assert out["revived"] is True
     assert p.alive is True
     assert p.revive_coins == 0
-    # max_hp * revive_ratio = 20 * 0.5 = 10
-    assert p.hp == 10
+    # Coin-revive sets HP to auto_revive_hp (1) so combat-pause + recovery is mandatory.
+    assert p.hp == 1
 
 
 def test_apply_attack_to_player_starts_death_save_when_no_coin():

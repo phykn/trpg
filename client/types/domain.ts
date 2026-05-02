@@ -38,6 +38,8 @@ export type Hero = {
   hpMax: number;
   mp: number;
   mpMax: number;
+  reviveCoins: number;
+  reviveCoinsMax: number;
   stats: Stats;
   equipment: Equipment;
   inventory: InventoryItem[];

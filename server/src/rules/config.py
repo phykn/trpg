@@ -106,7 +106,6 @@ class CombatConfig(_F):
 class DeathConfig(_F):
     instant_death: bool = False
     revive_coins: int = 3
-    revive_ratio: float = 0.5
     save_dc: int = 10
     successes_to_stabilize: int = 3
     failures_to_die: int = 3

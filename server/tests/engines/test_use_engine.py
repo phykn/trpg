@@ -192,7 +192,7 @@ def test_use_damage_on_player_consumes_revive_coin():
     assert victim.alive
     assert victim.revive_coins == 0
     assert victim.death_saves is None
-    assert victim.hp > 0  # revived to revive_ratio of max_hp
+    assert victim.hp == 1  # revived to auto_revive_hp
     assert res.get("revived") is True
 
 

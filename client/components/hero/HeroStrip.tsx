@@ -4,7 +4,7 @@ import { Bar } from '@/components/ui';
 import { toneColor } from '@/design/tokens';
 import type { Hero } from '@/types/domain';
 
-type MeterTone = 'hp' | 'mp' | 'exp';
+type MeterTone = 'hp' | 'mp' | 'exp' | 'revival';
 
 function Meter({ label, value, max, tone }: {
   label: string;
@@ -36,6 +36,12 @@ export function HeroStrip({ hero }: { hero: Hero }) {
       <Meter label="HP" value={hero.hp} max={hero.hpMax} tone="hp" />
       <Meter label="MP" value={hero.mp} max={hero.mpMax} tone="mp" />
       <Meter label="EXP" value={hero.exp} max={hero.expMax} tone="exp" />
+      <Meter
+        label="Revival"
+        value={hero.reviveCoins}
+        max={hero.reviveCoinsMax}
+        tone="revival"
+      />
     </View>
   );
 }

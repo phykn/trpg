@@ -8,6 +8,7 @@ export declare const colors: {
   hp: { fg: string };
   mp: { fg: string };
   exp: { fg: string };
+  revival: { fg: string };
 };
 
 export declare const spacing: Record<string, number>;

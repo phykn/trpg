@@ -405,7 +405,7 @@ def apply_attack_to_defender(
 
     if is_player and defender.revive_coins > 0:
         defender.revive_coins -= 1
-        defender.hp = max(1, round(defender.max_hp * RULES.death.revive_ratio))
+        defender.hp = RULES.death.auto_revive_hp
         defender.death_saves = None
         out["revived"] = True
         out["hp_after"] = defender.hp

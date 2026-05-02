@@ -439,6 +439,7 @@ def run_auto_combat(
                 )
                 continue
 
+            coins_before_action = player.revive_coins
             if actor_id == state.player_id:
                 round_action = _player_round_action(
                     player_action, cur_round, player, state
@@ -460,6 +461,11 @@ def run_auto_combat(
                 turn_events.extend(tevs)
 
             if not player.alive:
+                break
+            # Coin-revive ends the fight: player at auto_revive_hp, must recover before re-engaging.
+            if player.revive_coins < coins_before_action:
+                outcome = "downed"
+                outcome_decided = True
                 break
             if player.death_saves is not None:
                 ds = _auto_resolve_death_save(state, dirty, r)
