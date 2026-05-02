@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { colors, shadow } from '@/design/tokens';
-import type { PendingCheck } from '@/types/domain';
+import type { PendingCheck } from '@/types/wire';
 
 const STOP_BUTTON_DELAY_MS = 2000;
 

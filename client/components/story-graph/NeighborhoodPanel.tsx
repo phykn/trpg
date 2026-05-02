@@ -26,7 +26,6 @@ const LEGEND: { key: string; label: string; color: string }[] = [
 
 export function NeighborhoodPanel({
   graph,
-  canvasHeight = 260,
   framed = false,
   accessibilityLabel = '현재 스토리 그래프',
   selectedNodeId = null,
@@ -35,7 +34,6 @@ export function NeighborhoodPanel({
   actionDisabled = false,
 }: {
   graph: StoryGraphModel;
-  canvasHeight?: number;
   framed?: boolean;
   accessibilityLabel?: string;
   selectedNodeId?: string | null;
@@ -60,21 +58,6 @@ export function NeighborhoodPanel({
       }
     }
     return { ...graph, edges: Array.from(pairToEdge.values()) };
-  }, [graph]);
-
-  const nodeOverrides = React.useMemo(() => {
-    const out: Record<string, { color: string; tier: number; textColor: string }> = {};
-    for (const node of graph.nodes) {
-      if (node.kind !== 'location' && node.kind !== 'target') continue;
-      if (node.reachable === false) {
-        out[node.id] = {
-          color: node.kind === 'location' ? COLOR_PLACE_UNREACH : COLOR_CHAR_UNREACH,
-          tier: 1,
-          textColor: colors.fg.muted,
-        };
-      }
-    }
-    return Object.keys(out).length > 0 ? out : undefined;
   }, [graph]);
 
   const selectedNode = visibleGraph.nodes.find((node) => node.id === selectedNodeId) ?? null;
@@ -153,15 +136,9 @@ export function NeighborhoodPanel({
     >
       <StoryGraphCanvas
         graph={visibleGraph}
-        height={canvasHeight}
         accessibilityLabel={accessibilityLabel}
         selectedNodeId={selectedNodeId}
         onNodeSelect={onNodeSelect}
-        nodeOverrides={nodeOverrides}
-        arrows={false}
-        edgeLabels
-        layout="cose"
-        clearOnBackgroundTap={false}
       />
 
       <View className="flex-row flex-wrap items-center justify-center gap-x-3 gap-y-1">

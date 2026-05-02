@@ -1,5 +1,6 @@
 import type { StoryGraphModel } from './storyGraph';
 import type { LogEntry, Tone } from './ui';
+import type { PendingCheck } from './wire';
 
 export type RiskBadge = { label: string; tone: Tone };
 
@@ -117,19 +118,6 @@ export type CombatBadge = {
   round: number;
   turnLabel: string;
   enemies: CombatEnemy[];
-};
-
-export type PendingCheck = {
-  kind: 'stat';
-  dc: number;
-  stat: string;
-  stat_label: string;
-  stat_value: number;
-  mod: number;
-  required_roll: number;
-  tier: { value: number; max: number; label: string };
-  target: string;
-  reason: string;
 };
 
 export type FrontState = {

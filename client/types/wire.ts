@@ -1,5 +1,18 @@
-import type { FrontState, PendingCheck } from './domain';
+import type { FrontState } from './domain';
 import type { LogEntry } from './ui';
+
+export type PendingCheck = {
+  kind: 'stat';
+  dc: number;
+  stat: string;
+  stat_label: string;
+  stat_value: number;
+  mod: number;
+  required_roll: number;
+  tier: { value: number; max: number; label: string };
+  target: string;
+  reason: string;
+};
 
 export type RaceCard = {
   id: string;

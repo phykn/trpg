@@ -59,10 +59,14 @@ export function NewGame({ onSubmit }: Props) {
     if (!canSubmit || !profileId || !raceId) return;
     Keyboard.dismiss();
     setSubmitting(true);
-    await onSubmit({
-      profile: profileId,
-      player: { name: trimmedName, race_id: raceId, gender },
-    });
+    try {
+      await onSubmit({
+        profile: profileId,
+        player: { name: trimmedName, race_id: raceId, gender },
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loadError) {

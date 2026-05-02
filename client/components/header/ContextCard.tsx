@@ -120,7 +120,6 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, menuOpen, bg
       {graphOpen && (
         <FloatingDock top={chipBarHeight + 4} panHandlers={panResponder.panHandlers}>
           <StoryGraphScreen
-            embedded
             onAction={(action) => {
               onSelect('graph');
               onAction?.(action);

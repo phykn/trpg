@@ -67,7 +67,6 @@ export function MiniMapPanel({
       ) : null}
       <NeighborhoodPanel
         graph={graph}
-        canvasHeight={210}
         accessibilityLabel="미니맵"
         selectedNodeId={selectedNodeId}
         onNodeSelect={setSelectedNodeId}

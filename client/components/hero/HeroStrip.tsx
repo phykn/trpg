@@ -37,7 +37,7 @@ export function HeroStrip({ hero }: { hero: Hero }) {
       <Meter label="MP" value={hero.mp} max={hero.mpMax} tone="mp" />
       <Meter label="EXP" value={hero.exp} max={hero.expMax} tone="exp" />
       <Meter
-        label="Revival"
+        label="REV"
         value={hero.reviveCoins}
         max={hero.reviveCoinsMax}
         tone="revival"

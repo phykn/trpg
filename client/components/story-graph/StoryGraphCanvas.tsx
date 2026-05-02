@@ -2,6 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import type { StoryGraphModel } from '@/presenters/storyGraph';
 
+// Text-only renderer of the first 8 nodes — placeholder for a future graph viz.
 export function StoryGraphCanvas({
   graph,
   accessibilityLabel = '현재 스토리 그래프',
@@ -9,18 +10,9 @@ export function StoryGraphCanvas({
   onNodeSelect,
 }: {
   graph: StoryGraphModel;
-  height?: number;
   accessibilityLabel?: string;
   selectedNodeId?: string | null;
   onNodeSelect?: (nodeId: string | null) => void;
-  nodeOverrides?: Record<string, { color?: string; size?: number }>;
-  arrows?: boolean;
-  edgeLabels?: boolean;
-  layout?: 'cose' | 'concentric' | 'breadthfirst';
-  boxNodes?: boolean;
-  rootNodeId?: string;
-  centerNodeId?: string;
-  clearOnBackgroundTap?: boolean;
 }) {
   return (
     <View accessibilityLabel={`${accessibilityLabel}. ${graph.summary}`} className="gap-1.5">

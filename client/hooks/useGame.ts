@@ -16,14 +16,13 @@ import type {
   CombatBadge,
   FrontState,
   Hero,
-  PendingCheck,
   Place,
   Quest,
   Subject,
 } from '@/types/domain';
 import type { StoryGraphModel } from '@/types/storyGraph';
 import type { LogEntry } from '@/types/ui';
-import type { InitRequest, StreamEvent } from '@/types/wire';
+import type { InitRequest, PendingCheck, StreamEvent } from '@/types/wire';
 
 import { handleStreamEvent } from './handleStreamEvent';
 
@@ -151,7 +150,7 @@ export function useGame() {
       setErrorMessage(err instanceof Error ? err.message : String(err));
       setStatus('error');
     }
-  }, [applyState]);
+  }, [applyState, rememberGameId]);
 
   React.useEffect(() => {
     void refresh();
@@ -176,7 +175,7 @@ export function useGame() {
         setStatus('error');
       }
     },
-    [applyState, handleEvent, runStream],
+    [applyState, handleEvent, rememberGameId, runStream],
   );
 
   const onSend = React.useCallback(

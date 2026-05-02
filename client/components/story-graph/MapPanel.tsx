@@ -21,27 +21,8 @@ const PLACE_LEGEND: { state: PlaceState; label: string; color: string }[] = [
   { state: 'unreachable', label: '갈 수 없는 곳', color: colors.fg.subtle },
 ];
 
-const PLACE_STATE_SIZE: Record<PlaceState, number> = {
-  current: 64,
-  reachable: 52,
-  unreachable: 44,
-};
-
-const PLACE_STATE_TIER: Record<PlaceState, number> = {
-  current: 3,
-  reachable: 2,
-  unreachable: 1,
-};
-
-const PLACE_STATE_TEXT: Record<PlaceState, string> = {
-  current: colors.fg['on-emphasis'],
-  reachable: colors.fg.default,
-  unreachable: colors.fg.default,
-};
-
 export function MapPanel({
   graph,
-  canvasHeight = 260,
   framed = false,
   accessibilityLabel = '현재 스토리 그래프',
   selectedNodeId = null,
@@ -50,7 +31,6 @@ export function MapPanel({
   actionDisabled = false,
 }: {
   graph: StoryGraphModel;
-  canvasHeight?: number;
   framed?: boolean;
   accessibilityLabel?: string;
   selectedNodeId?: string | null;
@@ -101,20 +81,6 @@ export function MapPanel({
     return { nodes: placeNodes, edges: placeEdges, summary };
   }, [graph, placeStates]);
 
-  const nodeOverrides = React.useMemo(() => {
-    const out: Record<string, { color: string; size: number; tier: number; textColor: string }> = {};
-    for (const [id, state] of Object.entries(placeStates)) {
-      const legend = PLACE_LEGEND.find((p) => p.state === state)!;
-      out[id] = {
-        color: legend.color,
-        size: PLACE_STATE_SIZE[state],
-        tier: PLACE_STATE_TIER[state],
-        textColor: PLACE_STATE_TEXT[state],
-      };
-    }
-    return out;
-  }, [placeStates]);
-
   const selectedNode = visibleGraph.nodes.find((node) => node.id === selectedNodeId) ?? null;
   const selectedAction = selectedNode ? actionForNode(selectedNode) : null;
   const placeFeatures = (() => {
@@ -150,17 +116,9 @@ export function MapPanel({
       >
         <StoryGraphCanvas
           graph={visibleGraph}
-          height={canvasHeight}
           accessibilityLabel={accessibilityLabel}
           selectedNodeId={selectedNodeId}
           onNodeSelect={onNodeSelect}
-          nodeOverrides={nodeOverrides}
-          arrows={false}
-          edgeLabels={false}
-          layout="cose"
-          boxNodes
-          centerNodeId={visibleGraph.nodes.find((n) => n.kind === 'place')?.id}
-          clearOnBackgroundTap={false}
         />
 
         {selectedNode ? (
