@@ -75,11 +75,10 @@ SSE event types: `judge / pending_check / narrative_delta / suggestions / log_en
 
 ```bash
 # from repo root (pyproject pins testpaths=server/tests)
-.venv/bin/python -m pytest -q                   # unit (live skipped)
-RUN_LIVE=1 .venv/bin/python -m pytest -q        # requires a live LLM
+.venv/bin/python -m pytest -q                   # unit
 ```
 
-`pytest-asyncio` auto-mode. Tests marked `live` only run when `RUN_LIVE=1` (and `BASE_URL` is reachable).
+`pytest-asyncio` auto-mode. End-to-end LLM verification is via manual play after merge — see `server/scripts/smoke_judge.py` for a one-shot Gemini-routed sanity check.
 
 ## Layout
 

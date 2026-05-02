@@ -16,6 +16,25 @@ def read_prompt(file: str) -> str:
     return (Path(file).parent / "prompt.md").read_text(encoding="utf-8")
 
 
+_KERNEL_PATH = Path(__file__).parent / "_kernel.md"
+_KERNEL = _KERNEL_PATH.read_text(encoding="utf-8") if _KERNEL_PATH.exists() else ""
+
+
+def load_prompt(agent_file: str, *, substitutions: dict[str, str] | None = None) -> str:
+    """Prepend _kernel.md to the agent's prompt.md and apply {{KEY}} substitutions.
+
+    Read at module load (boot time) so the rendered prompt is byte-stable across
+    calls — keeps Gemini implicit cache hot. _KERNEL is empty until _kernel.md
+    is created; in that case load_prompt falls back to the agent prompt alone.
+    """
+    own = (Path(agent_file).parent / "prompt.md").read_text(encoding="utf-8")
+    text = f"{_KERNEL}\n\n---\n\n{own}" if _KERNEL else own
+    if substitutions:
+        for key, value in substitutions.items():
+            text = text.replace("{{" + key + "}}", value)
+    return text
+
+
 # Truncate long thinking-text dumps so retries don't blow past the model's ctx window.
 _MAX_RETRY_ANSWER_CHARS = 1500
 

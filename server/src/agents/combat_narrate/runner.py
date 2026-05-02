@@ -5,12 +5,12 @@ self-correction loop, since body has already streamed)."""
 import asyncio
 from collections.abc import AsyncIterator
 
-from .._runner import read_prompt
+from .._runner import load_prompt
 from ...domain.errors import LLMUnavailable
 from ...llm.client import LLMClient
 from .schema import CombatNarrateInput
 
-_PROMPT = read_prompt(__file__)
+_PROMPT = load_prompt(__file__)
 
 _MAX_RETRIES = 5
 
