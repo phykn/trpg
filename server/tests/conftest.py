@@ -1,4 +1,3 @@
-import os
 import sys
 import tempfile
 from pathlib import Path
@@ -67,10 +66,3 @@ def judge_returns(monkeypatch):
     return _stub
 
 
-def pytest_collection_modifyitems(config, items):
-    if os.environ.get("RUN_LIVE") == "1":
-        return
-    skip_live = pytest.mark.skip(reason="live LLM test (set RUN_LIVE=1 to run)")
-    for item in items:
-        if "live" in item.keywords:
-            item.add_marker(skip_live)

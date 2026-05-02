@@ -1,0 +1,126 @@
+import React from 'react';
+import { ScrollView, Text, View } from 'react-native';
+
+import { getSessionById, loadStoredGameId } from '@/services';
+import type { PanelAction } from '@/types/ui';
+
+import { MapPanel } from './MapPanel';
+import { EMPTY_STORY_GRAPH } from './presenters';
+import type { StoryGraphModel } from './types';
+import {
+  mergeAndStoreStoryGraph,
+  readStoredStoryGraph,
+  STORY_GRAPH_UPDATED_EVENT,
+} from './useStoryGraph';
+
+type Status = 'loading' | 'ready' | 'empty' | 'error';
+
+export function StoryGraphScreen({
+  onAction,
+}: {
+  onAction: (action: PanelAction) => void;
+}) {
+  const [status, setStatus] = React.useState<Status>('loading');
+  const gameIdRef = React.useRef<string | null>(null);
+  const [graph, setGraph] = React.useState<StoryGraphModel>(EMPTY_STORY_GRAPH);
+  const [message, setMessage] = React.useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      setStatus('loading');
+      setMessage(null);
+      const stored = loadStoredGameId();
+      gameIdRef.current = stored;
+      if (!stored) {
+        setGraph(EMPTY_STORY_GRAPH);
+        setStatus('empty');
+        return;
+      }
+      try {
+        const session = await getSessionById(stored);
+        if (!alive) return;
+        if (!session) {
+          setGraph(EMPTY_STORY_GRAPH);
+          setStatus('empty');
+          return;
+        }
+        setGraph(mergeAndStoreStoryGraph(stored, session.state.storyGraph));
+        setStatus('ready');
+      } catch (err) {
+        if (!alive) return;
+        setStatus('error');
+        setMessage(err instanceof Error ? err.message : String(err));
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (status !== 'ready') return;
+    if (selectedNodeId && graph.nodes.some((node) => node.id === selectedNodeId)) return;
+    const currentPlace = graph.nodes.find((node) => node.kind === 'place');
+    setSelectedNodeId(currentPlace ? currentPlace.id : null);
+  }, [status, graph, selectedNodeId]);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const onGraphUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<{ gameId?: string }>).detail;
+      const updatedGameId = detail?.gameId;
+      if (!updatedGameId || updatedGameId !== gameIdRef.current) return;
+      setGraph(readStoredStoryGraph(updatedGameId) ?? EMPTY_STORY_GRAPH);
+    };
+
+    window.addEventListener(STORY_GRAPH_UPDATED_EVENT, onGraphUpdate);
+    return () => window.removeEventListener(STORY_GRAPH_UPDATED_EVENT, onGraphUpdate);
+  }, []);
+
+  return (
+    <View className="flex-1 gap-2.5">
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ gap: 10 }}
+      >
+        {message ? (
+          <View className="rounded-sm border border-border-default bg-canvas-subtle px-3 py-2">
+            <Text className="font-sans text-caption text-fg-muted">{message}</Text>
+          </View>
+        ) : null}
+
+        {status === 'loading' ? (
+          <View className="items-center justify-center py-14">
+            <Text className="font-sans text-body text-fg-muted">지도를 펼칩니다.</Text>
+          </View>
+        ) : null}
+
+        {status === 'empty' ? (
+          <View className="items-center justify-center py-14 gap-3">
+            <Text className="font-sans-semibold text-body text-fg-default">진행 중인 게임이 없습니다.</Text>
+          </View>
+        ) : null}
+
+        {status === 'error' ? (
+          <View className="rounded-sm border border-danger-fg bg-canvas-subtle px-3 py-2">
+            <Text className="font-sans text-caption text-danger-fg">
+              {message ?? '지도를 펼치지 못했습니다.'}
+            </Text>
+          </View>
+        ) : null}
+
+        {status === 'ready' ? (
+          <MapPanel
+            graph={graph}
+            accessibilityLabel="전체 지도"
+            selectedNodeId={selectedNodeId}
+            onNodeSelect={setSelectedNodeId}
+            onAction={onAction}
+          />
+        ) : null}
+      </ScrollView>
+    </View>
+  );
+}
