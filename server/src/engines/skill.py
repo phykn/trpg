@@ -157,7 +157,7 @@ def cast(
 ) -> dict:
     """Cast skill_id. On validation pass, apply effects and return a result dict.
 
-    grade=None → out-of-combat cast (multiplier 1.0). Once judge integration runs, the grade is supplied and used for adjustment.
+    grade=None falls back to multiplier 1.0; in practice every call site goes through the combat branch so a real grade is always supplied.
     """
     skill = find_skill(actor, skill_id, state)
     _validate_gate(actor, skill)

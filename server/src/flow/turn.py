@@ -258,6 +258,24 @@ async def _enter_combat_and_finalize(
     ):
         yield ev
     state.turn_count += 1
+    # Post-combat narrate so the system card isn't the terminal UI line — adds aftermath body + suggestions, and consumes the downed_recovered signal here when present. Skipped on player death (game-over) and on client=None (engine-only test path).
+    if client is not None and state.characters[state.player_id].alive:
+        state.invalidate_graph()
+        graph = state.graph()
+        signal = state.previous_phase_signal
+        state.previous_phase_signal = None
+        async for ev in _stream_narrate_tail(
+            client,
+            state,
+            scenario_repo,
+            player_input,
+            dirty,
+            to_front_fn,
+            PassAction(action="pass"),
+            graph=graph,
+            previous_phase_signal=signal,
+        ):
+            yield ev
     tick_turn_buffs(state, dirty)
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
@@ -279,7 +297,20 @@ async def _dispatch(
 ) -> AsyncIterator[dict]:
     if isinstance(result, CombatAction):
         if has_invalid_combat_targets(state, graph, result.targets):
-            yield push_act(state, dirty, "공격할 수 있는 대상이 없습니다.")
+            fail_line = "공격할 수 있는 대상이 없습니다."
+            if client is None:
+                yield push_act(state, dirty, fail_line)
+            else:
+                state.turn_count += 1
+                fail_evt = push_act(state, dirty, fail_line)
+                _drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
+                async for ev in _stream_narrate_tail(
+                    client, state, scenario_repo, player_input, dirty, to_front_fn,
+                    PassAction(action="pass"),
+                    graph=graph, act_log_lines=[fail_line],
+                ):
+                    yield ev
+                tick_turn_buffs(state, dirty)
             async for ev in finalize(state, save_repo, dirty, to_front_fn):
                 yield ev
             return
@@ -375,7 +406,20 @@ async def _dispatch(
         return
 
     if isinstance(result, FleeAction):
-        yield push_act(state, dirty, "지금은 도망칠 전투가 없습니다.")
+        fail_line = "지금은 도망칠 전투가 없습니다."
+        if client is None:
+            yield push_act(state, dirty, fail_line)
+        else:
+            state.turn_count += 1
+            fail_evt = push_act(state, dirty, fail_line)
+            _drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
+            async for ev in _stream_narrate_tail(
+                client, state, scenario_repo, player_input, dirty, to_front_fn,
+                PassAction(action="pass"),
+                graph=graph, act_log_lines=[fail_line],
+            ):
+                yield ev
+            tick_turn_buffs(state, dirty)
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
