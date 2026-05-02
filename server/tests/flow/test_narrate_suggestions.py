@@ -17,14 +17,7 @@ async def _stream(*items) -> AsyncIterator[NarrativeDelta | NarrativeFinal]:
         yield it
 
 
-async def _collect(it):
-    out = []
-    async for ev in it:
-        out.append(ev)
-    return out
-
-
-async def test_consume_narrate_emits_suggestions_event(fresh_state):
+async def test_consume_narrate_emits_suggestions_event(fresh_state, collect):
     final = NarrativeFinal(
         body="본문.",
         output=NarrateOutput(
@@ -32,7 +25,7 @@ async def test_consume_narrate_emits_suggestions_event(fresh_state):
             suggestions=["광장 상인에게 다가간다", "골목으로 향한다"],
         ),
     )
-    events = await _collect(
+    events = await collect(
         consume_narrate(
             fresh_state,
             Dirty(),
@@ -47,9 +40,9 @@ async def test_consume_narrate_emits_suggestions_event(fresh_state):
     assert sug["data"]["items"] == ["광장 상인에게 다가간다", "골목으로 향한다"]
 
 
-async def test_consume_narrate_emits_empty_suggestions_when_none(fresh_state):
+async def test_consume_narrate_emits_empty_suggestions_when_none(fresh_state, collect):
     final = NarrativeFinal(body="본문.", output=NarrateOutput())
-    events = await _collect(
+    events = await collect(
         consume_narrate(
             fresh_state,
             Dirty(),

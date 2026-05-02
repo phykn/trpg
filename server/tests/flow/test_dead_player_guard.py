@@ -1,23 +1,12 @@
 """run_turn must reject input when the player is dead — no judge call, no narrate, no use/equip/etc."""
 
-import tempfile
-
 import pytest
 
 from src.domain.entities import Character, Stats
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow import judge as judge_mod
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow import turn as turn_mod
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow.turn import run_turn
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-
-
-@pytest.fixture
-def tmp_data():
-    with tempfile.TemporaryDirectory() as d:
-        yield d
 
 
 @pytest.fixture
@@ -37,12 +26,8 @@ def dead_player_state(fresh_state):
     return fresh_state
 
 
-async def _collect(it):
-    return [ev async for ev in it]
-
-
 async def test_dead_player_turn_short_circuits(
-    dead_player_state, tmp_data, monkeypatch
+    dead_player_state, tmp_data, monkeypatch, collect
 ):
     judge_called = False
 
@@ -54,7 +39,7 @@ async def test_dead_player_turn_short_circuits(
     monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
 
-    events = await _collect(
+    events = await collect(
         run_turn(
             client=None,
             state=dead_player_state,

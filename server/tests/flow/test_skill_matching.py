@@ -1,9 +1,6 @@
 """§2.6 S2 — judge semantic-matching integration. Mocks the case where judge supplies skill_id."""
 
 import random
-import tempfile
-
-import pytest
 
 from src.domain.entities import (
     Character,
@@ -14,30 +11,8 @@ from src.domain.entities import (
 )
 from src.agents.dc_judge.schema import CombatAction
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-from src.flow import judge as judge_mod
-from src.flow import combat_phase as combat_phase_mod
-from src.flow import turn as turn_mod
 from src.context import build_surroundings
 from src.flow.turn import run_turn
-
-
-@pytest.fixture
-def tmp_data():
-    with tempfile.TemporaryDirectory() as d:
-        yield d
-
-
-def _judge_returns(monkeypatch, action_obj):
-    async def fake_judge(client, state, player_input, **kwargs):
-        return action_obj
-
-    monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
-    monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
-    monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
-
-
-async def _collect(it):
-    return [ev async for ev in it]
 
 
 def _seed_skill_state(fresh_state):
@@ -134,16 +109,15 @@ def test_build_surroundings_includes_racial_skills(fresh_state):
 
 
 async def test_combat_with_skill_id_runs_auto_sim_and_burns_mp(
-    fresh_state, tmp_data, monkeypatch
+    fresh_state, tmp_data, judge_returns, collect
 ):
     """Auto-mode: CombatAction with skill_id triggers start_combat + auto-sim.
     The first round casts the skill, so MP is consumed at least once."""
     state = _seed_skill_state(fresh_state)
-    _judge_returns(
-        monkeypatch,
+    judge_returns(
         CombatAction(action="combat", targets=["goblin_01"], skill_id="fireball"),
     )
-    events = await _collect(
+    events = await collect(
         run_turn(
             client=None,
             state=state,
@@ -162,13 +136,13 @@ async def test_combat_with_skill_id_runs_auto_sim_and_burns_mp(
 
 
 async def test_combat_without_skill_id_runs_basic_attack_loop(
-    fresh_state, tmp_data, monkeypatch
+    fresh_state, tmp_data, judge_returns, collect
 ):
     """Without skill_id, the auto-sim runs basic weapon attacks. MP is
     untouched."""
     state = _seed_skill_state(fresh_state)
-    _judge_returns(monkeypatch, CombatAction(action="combat", targets=["goblin_01"]))
-    events = await _collect(
+    judge_returns(CombatAction(action="combat", targets=["goblin_01"]))
+    events = await collect(
         run_turn(
             client=None,
             state=state,
@@ -184,7 +158,9 @@ async def test_combat_without_skill_id_runs_basic_attack_loop(
     assert state.characters["player_01"].mp == 15
 
 
-async def test_combat_during_combat_with_skill_id(fresh_state, tmp_data, monkeypatch):
+async def test_combat_during_combat_with_skill_id(
+    fresh_state, tmp_data, judge_returns, collect
+):
     """combat_state already active and on the player's turn — skill_id matches.
     Auto-sim casts fireball at least once, MP burns by mp_cost."""
     from src.engines import combat as combat_engine
@@ -194,11 +170,10 @@ async def test_combat_during_combat_with_skill_id(fresh_state, tmp_data, monkeyp
     state.combat_state.turn_order = ["player_01", "goblin_01"]
     state.combat_state.current_turn = 0
 
-    _judge_returns(
-        monkeypatch,
+    judge_returns(
         CombatAction(action="combat", targets=["goblin_01"], skill_id="fireball"),
     )
-    await _collect(
+    await collect(
         run_turn(
             client=None,
             state=state,

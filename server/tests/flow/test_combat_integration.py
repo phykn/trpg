@@ -5,7 +5,6 @@ A CombatAction triggers start_combat + an auto-sim cycle inside the same
 LLM call (client=None skips the cinematic narrate stream)."""
 
 import random
-import tempfile
 
 import pytest
 
@@ -15,16 +14,7 @@ from src.agents.dc_judge.schema import (
     CombatAction,
     PassAction,
 )
-from src.flow import judge as judge_mod
-from src.flow import combat_phase as combat_phase_mod
-from src.flow import turn as turn_mod
 from src.flow.turn import run_turn
-
-
-@pytest.fixture
-def tmp_data():
-    with tempfile.TemporaryDirectory() as d:
-        yield d
 
 
 @pytest.fixture
@@ -55,24 +45,13 @@ def combat_state(fresh_state, tmp_data):
     return fresh_state
 
 
-def _judge_returns(monkeypatch, action_obj):
-    async def fake_judge(client, state, player_input, **kwargs):
-        return action_obj
-
-    monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
-    monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
-    monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
-
-
-async def _collect(it):
-    return [ev async for ev in it]
-
-
-async def test_combat_starts_and_runs_auto_sim(combat_state, tmp_data, monkeypatch):
+async def test_combat_starts_and_runs_auto_sim(
+    combat_state, tmp_data, judge_returns, collect
+):
     """A fresh combat input triggers combat_start + auto-sim — no pending_check."""
-    _judge_returns(monkeypatch, CombatAction(action="combat", targets=["goblin_01"]))
+    judge_returns(CombatAction(action="combat", targets=["goblin_01"]))
     rng = random.Random(123)
-    events = await _collect(
+    events = await collect(
         run_turn(
             client=None,
             state=combat_state,
@@ -92,15 +71,15 @@ async def test_combat_starts_and_runs_auto_sim(combat_state, tmp_data, monkeypat
 
 
 async def test_combat_with_invalid_target_does_not_consume_turn(
-    combat_state, tmp_data, monkeypatch
+    combat_state, tmp_data, judge_returns, collect
 ):
     # Regression: judge sometimes returned target=<location_id> (e.g. "swamp")
     # for a "rush into the fog" input. The dispatcher used to forward it to
     # start_combat, leaving combat_state in a half-broken shape. Now the
     # dispatcher rejects unknown / dead targets without consuming the turn.
-    _judge_returns(monkeypatch, CombatAction(action="combat", targets=["unknown_id"]))
+    judge_returns(CombatAction(action="combat", targets=["unknown_id"]))
     turn_before = combat_state.turn_count
-    events = await _collect(
+    events = await collect(
         run_turn(
             client=None,
             state=combat_state,
@@ -117,15 +96,15 @@ async def test_combat_with_invalid_target_does_not_consume_turn(
 
 
 async def test_combat_with_self_target_does_not_consume_turn(
-    combat_state, tmp_data, monkeypatch
+    combat_state, tmp_data, judge_returns, collect
 ):
     # Regression: judge sometimes returned `targets=['player_01']` (the player
     # attacking themselves). The dispatcher used to start combat with the
     # player as the only enemy, which then ended immediately — turn_count went
     # up but nothing else moved.
-    _judge_returns(monkeypatch, CombatAction(action="combat", targets=["player_01"]))
+    judge_returns(CombatAction(action="combat", targets=["player_01"]))
     turn_before = combat_state.turn_count
-    events = await _collect(
+    events = await collect(
         run_turn(
             client=None,
             state=combat_state,
@@ -142,7 +121,7 @@ async def test_combat_with_self_target_does_not_consume_turn(
 
 
 async def test_combat_player_attack_drops_affinity_bidirectional(
-    combat_state, tmp_data, monkeypatch
+    combat_state, tmp_data, judge_returns, collect
 ):
     """Attacking an NPC must drop affinity on both sides — combat never reaches
     narrate, so without the engine-side hook trade/social_bonus would still
@@ -153,8 +132,8 @@ async def test_combat_player_attack_drops_affinity_bidirectional(
     combat_state.characters["player_01"].relations["goblin_01"] = 0
     combat_state.characters["goblin_01"].relations["player_01"] = 0
 
-    _judge_returns(monkeypatch, CombatAction(action="combat", targets=["goblin_01"]))
-    await _collect(
+    judge_returns(CombatAction(action="combat", targets=["goblin_01"]))
+    await collect(
         run_turn(
             client=None,
             state=combat_state,
@@ -170,7 +149,7 @@ async def test_combat_player_attack_drops_affinity_bidirectional(
 
 
 async def test_combat_pass_action_runs_auto_sim_round(
-    combat_state, tmp_data, monkeypatch
+    combat_state, tmp_data, judge_returns, collect
 ):
     """In-combat PassAction → auto-sim runs at least one round (player passes,
     NPC takes its turn). combat_state ends up either cleared (decisive
@@ -181,9 +160,9 @@ async def test_combat_pass_action_runs_auto_sim_round(
     combat_state.combat_state.turn_order = ["player_01", "goblin_01"]
     combat_state.combat_state.current_turn = 0
 
-    _judge_returns(monkeypatch, PassAction(action="pass"))
+    judge_returns(PassAction(action="pass"))
     rng = random.Random(2)
-    events = await _collect(
+    events = await collect(
         run_turn(
             client=None,
             state=combat_state,
@@ -199,7 +178,7 @@ async def test_combat_pass_action_runs_auto_sim_round(
 
 
 async def test_start_combat_raises_when_already_in_combat(
-    combat_state, tmp_data, monkeypatch
+    combat_state, tmp_data, collect
 ):
     # /turn routes through run_combat_player_turn whenever combat_state is
     # set, so reaching start_combat_and_drive_auto with a live combat
@@ -220,7 +199,7 @@ async def test_start_combat_raises_when_already_in_combat(
 
     dirty = Dirty()
     with pytest.raises(CombatStateInvalid):
-        await _collect(
+        await collect(
             start_combat_and_drive_auto(
                 client=None,
                 state=combat_state,
@@ -236,16 +215,16 @@ async def test_start_combat_raises_when_already_in_combat(
 
 
 async def test_combat_ends_when_enemy_dies_from_player_attack(
-    combat_state, tmp_data, monkeypatch
+    combat_state, tmp_data, judge_returns, collect
 ):
     """Drop goblin hp to 1 so it dies in one hit → combat_end victory emitted
     and combat_state cleared."""
     combat_state.characters["goblin_01"].hp = 1
     combat_state.characters["goblin_01"].max_hp = 1
 
-    _judge_returns(monkeypatch, CombatAction(action="combat", targets=["goblin_01"]))
+    judge_returns(CombatAction(action="combat", targets=["goblin_01"]))
     rng = random.Random(99)
-    events = await _collect(
+    events = await collect(
         run_turn(
             client=None,
             state=combat_state,

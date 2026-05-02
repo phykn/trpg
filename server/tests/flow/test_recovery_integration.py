@@ -1,39 +1,12 @@
 """turn.run_turn rest routing — judge mocked; integrates the recovery engine + combat boot."""
 
 import random
-import tempfile
-
-import pytest
 
 from src.domain.clock import next_dawn_turn
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.domain.entities import Character, CombatBehavior, Location, Stats
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.agents.dc_judge.schema import RestAction
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-from src.flow import judge as judge_mod
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-from src.flow import combat_phase as combat_phase_mod
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-from src.flow import turn as turn_mod
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow.turn import run_turn
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-
-
-@pytest.fixture
-def tmp_data():
-    with tempfile.TemporaryDirectory() as d:
-        yield d
-
-
-def _judge_returns_rest(monkeypatch):
-    async def fake_judge(client, state, player_input, **kwargs):
-        return RestAction(action="rest")
-
-    monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
-    monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
-    monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
 
 
 def _seed_player(state, *, hp=4, mp=2):
@@ -51,18 +24,16 @@ def _seed_player(state, *, hp=4, mp=2):
     )
 
 
-async def _collect(it):
-    return [ev async for ev in it]
-
-
-async def test_rest_in_safe_location_full_recovery(fresh_state, tmp_data, monkeypatch):
+async def test_rest_in_safe_location_full_recovery(
+    fresh_state, tmp_data, judge_returns, collect
+):
     _seed_player(fresh_state)
     fresh_state.locations["plaza_01"] = Location(
         id="plaza_01", name="광장", sleep_risk="safe"
     )
 
-    _judge_returns_rest(monkeypatch)
-    events = await _collect(
+    judge_returns(RestAction(action="rest"))
+    events = await collect(
         run_turn(
             client=None,
             state=fresh_state,
@@ -87,7 +58,7 @@ async def test_rest_in_safe_location_full_recovery(fresh_state, tmp_data, monkey
 
 
 async def test_rest_in_dangerous_location_triggers_encounter(
-    fresh_state, tmp_data, monkeypatch
+    fresh_state, tmp_data, judge_returns, collect
 ):
     _seed_player(
         fresh_state, hp=20
@@ -109,12 +80,12 @@ async def test_rest_in_dangerous_location_triggers_encounter(
         combat_behavior=CombatBehavior(attack_priority="nearest"),
     )
 
-    _judge_returns_rest(monkeypatch)
+    judge_returns(RestAction(action="rest"))
     # The first rng.random() call is the encounter roll — force trigger with 0.
     # Random(seed) is deterministic per seed. Which seed triggers the encounter?
     # Rather than monkeypatch random.random, just try an arbitrary seed.
     rng = random.Random(0)
-    events = await _collect(
+    events = await collect(
         run_turn(
             client=None,
             state=fresh_state,
@@ -140,7 +111,7 @@ async def test_rest_in_dangerous_location_triggers_encounter(
 
 
 async def test_rest_dangerous_with_low_random_forces_encounter(
-    fresh_state, tmp_data, monkeypatch
+    fresh_state, tmp_data, judge_returns, collect
 ):
     """Patch recovery.random.random() to 0.0 — always triggers when dangerous."""
     _seed_player(fresh_state, hp=20)
@@ -170,8 +141,8 @@ async def test_rest_dangerous_with_low_random_forces_encounter(
         def randint(self, a, b):
             return random.Random(99).randint(a, b)
 
-    _judge_returns_rest(monkeypatch)
-    events = await _collect(
+    judge_returns(RestAction(action="rest"))
+    events = await collect(
         run_turn(
             client=None,
             state=fresh_state,
@@ -201,7 +172,7 @@ async def test_rest_dangerous_with_low_random_forces_encounter(
     assert pass_events
 
 
-async def test_rest_blocked_during_combat(fresh_state, tmp_data, monkeypatch):
+async def test_rest_blocked_during_combat(fresh_state, tmp_data, judge_returns, collect):
     """Attempting rest with combat_state active → rejection message, no recovery."""
     from src.engines import combat as combat_engine
 
@@ -221,8 +192,8 @@ async def test_rest_blocked_during_combat(fresh_state, tmp_data, monkeypatch):
     fresh_state.combat_state.turn_order = ["player_01", "goblin_01"]
     fresh_state.combat_state.current_turn = 0
 
-    _judge_returns_rest(monkeypatch)
-    await _collect(
+    judge_returns(RestAction(action="rest"))
+    await collect(
         run_turn(
             client=None,
             state=fresh_state,

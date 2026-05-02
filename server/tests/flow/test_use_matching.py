@@ -1,9 +1,6 @@
 """§judge use action — surroundings exposure + out-of-combat / combat turn branching."""
 
 import random
-import tempfile
-
-import pytest
 
 from src.domain.entities import (
     Character,
@@ -16,39 +13,8 @@ from src.domain.entities import (
 )
 from src.agents.dc_judge.schema import UseAction
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-from src.flow import judge as judge_mod
-from src.flow import combat_phase as combat_phase_mod
-from src.flow import narrate as narrate_mod
-from src.flow import turn as turn_mod
 from src.context import build_surroundings
 from src.flow.turn import run_turn
-
-
-@pytest.fixture
-def tmp_data():
-    with tempfile.TemporaryDirectory() as d:
-        yield d
-
-
-def _judge_returns(monkeypatch, action_obj):
-    async def fake_judge(client, state, player_input, **kwargs):
-        return action_obj
-
-    monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
-    monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
-    monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
-
-    # Single-action paths now invoke narrate. Stub it so this LLM-free test
-    # doesn't reach the real model.
-    async def _stub_run_narrate(*a, **kw):
-        if False:
-            yield None  # async-gen marker
-
-    monkeypatch.setattr(narrate_mod, "run_narrate", _stub_run_narrate)
-
-
-async def _collect(it):
-    return [ev async for ev in it]
 
 
 def _seed(fresh_state, *, give_potion=True, give_sword=False, hp=10):
@@ -131,10 +97,12 @@ def test_inventory_includes_quest_key_with_on_use(fresh_state):
 # --- Out-of-combat use branch ---------------------------------------------
 
 
-async def test_use_action_consumes_item_and_heals(fresh_state, tmp_data, monkeypatch):
+async def test_use_action_consumes_item_and_heals(
+    fresh_state, tmp_data, judge_returns, collect
+):
     state = _seed(fresh_state, hp=10)
-    _judge_returns(monkeypatch, UseAction(action="use", item_id="potion"))
-    events = await _collect(
+    judge_returns(UseAction(action="use", item_id="potion"))
+    events = await collect(
         run_turn(
             client=None,
             state=state,
@@ -154,7 +122,9 @@ async def test_use_action_consumes_item_and_heals(fresh_state, tmp_data, monkeyp
 # --- In-combat use branch -------------------------------------------------
 
 
-async def test_combat_use_consumes_player_turn(fresh_state, tmp_data, monkeypatch):
+async def test_combat_use_consumes_player_turn(
+    fresh_state, tmp_data, judge_returns, collect
+):
     from src.engines import combat as combat_engine
 
     state = _seed(fresh_state, hp=5)
@@ -172,8 +142,8 @@ async def test_combat_use_consumes_player_turn(fresh_state, tmp_data, monkeypatc
     state.combat_state.turn_order = ["player_01", "goblin_01"]
     state.combat_state.current_turn = 0
 
-    _judge_returns(monkeypatch, UseAction(action="use", item_id="potion"))
-    events = await _collect(
+    judge_returns(UseAction(action="use", item_id="potion"))
+    events = await collect(
         run_turn(
             client=None,
             state=state,

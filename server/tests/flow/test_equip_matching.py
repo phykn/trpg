@@ -1,9 +1,6 @@
 """§judge equip/unequip — surroundings.equipment exposure + turn branching."""
 
 import random
-import tempfile
-
-import pytest
 
 from src.domain.entities import (
     ArmorEffect,
@@ -16,41 +13,8 @@ from src.domain.entities import (
 )
 from src.agents.dc_judge.schema import EquipAction, UnequipAction
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-from src.flow import judge as judge_mod
-from src.flow import combat_phase as combat_phase_mod
-from src.flow import narrate as narrate_mod
-from src.flow import turn as turn_mod
 from src.context import build_surroundings
 from src.flow.turn import run_turn
-
-
-@pytest.fixture
-def tmp_data():
-    with tempfile.TemporaryDirectory() as d:
-        yield d
-
-
-def _judge_returns(monkeypatch, action_obj):
-    async def fake_judge(client, state, player_input, **kwargs):
-        return action_obj
-
-    monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
-    monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
-    monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
-
-    # Single-action paths now invoke narrate (so engine notices like
-    # "주인공이 「검」을 장비했습니다." get absorbed into prose instead of
-    # surfacing as system-toned chrome). Stub it out so these LLM-free
-    # engine matching tests don't try to call the real model.
-    async def _stub_run_narrate(*a, **kw):
-        if False:
-            yield None  # async-gen marker — never reached
-
-    monkeypatch.setattr(narrate_mod, "run_narrate", _stub_run_narrate)
-
-
-async def _collect(it):
-    return [ev async for ev in it]
 
 
 def _seed(fresh_state, *, equipped_weapon=None):
@@ -104,10 +68,12 @@ def test_inventory_kind_distinguishes_weapon_armor(fresh_state):
 # --- equip branch ---------------------------------------------------------
 
 
-async def test_equip_weapon_lands_in_weapon_slot(fresh_state, tmp_data, monkeypatch):
+async def test_equip_weapon_lands_in_weapon_slot(
+    fresh_state, tmp_data, judge_returns, collect
+):
     state = _seed(fresh_state)
-    _judge_returns(monkeypatch, EquipAction(action="equip", item_id="sword"))
-    events = await _collect(
+    judge_returns(EquipAction(action="equip", item_id="sword"))
+    events = await collect(
         run_turn(
             client=None,
             state=state,
@@ -123,10 +89,12 @@ async def test_equip_weapon_lands_in_weapon_slot(fresh_state, tmp_data, monkeypa
     assert state.turn_count == 1
 
 
-async def test_equip_armor_picks_armor_slot_first(fresh_state, tmp_data, monkeypatch):
+async def test_equip_armor_picks_armor_slot_first(
+    fresh_state, tmp_data, judge_returns, collect
+):
     state = _seed(fresh_state)
-    _judge_returns(monkeypatch, EquipAction(action="equip", item_id="helm"))
-    await _collect(
+    judge_returns(EquipAction(action="equip", item_id="helm"))
+    await collect(
         run_turn(
             client=None,
             state=state,
@@ -143,10 +111,12 @@ async def test_equip_armor_picks_armor_slot_first(fresh_state, tmp_data, monkeyp
 # --- unequip branch -------------------------------------------------------
 
 
-async def test_unequip_finds_slot_by_item(fresh_state, tmp_data, monkeypatch):
+async def test_unequip_finds_slot_by_item(
+    fresh_state, tmp_data, judge_returns, collect
+):
     state = _seed(fresh_state, equipped_weapon="sword")
-    _judge_returns(monkeypatch, UnequipAction(action="unequip", item_id="sword"))
-    await _collect(
+    judge_returns(UnequipAction(action="unequip", item_id="sword"))
+    await collect(
         run_turn(
             client=None,
             state=state,

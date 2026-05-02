@@ -1,9 +1,6 @@
 """§flee/level_up/learn_skill/buy/sell — natural-language integration. Branches verified via judge mocks."""
 
 import random
-import tempfile
-
-import pytest
 
 from src.domain.entities import (
     ArmorEffect,
@@ -12,52 +9,18 @@ from src.domain.entities import (
     Location,
     Skill,
     Stats,
-    WeaponEffect,
 )
 from src.agents.dc_judge.schema import (
     BuyAction,
     FleeAction,
     LearnSkillAction,
     LevelUpAction,
-    PassAction,
     SellAction,
 )
 from src.engines import combat as combat_engine
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-from src.flow import judge as judge_mod
-from src.flow import combat_phase as combat_phase_mod
-from src.flow import narrate as narrate_mod
-from src.flow import turn as turn_mod
 from src.context import build_surroundings
 from src.flow.turn import run_turn
-
-
-@pytest.fixture
-def tmp_data():
-    with tempfile.TemporaryDirectory() as d:
-        yield d
-
-
-def _judge_returns(monkeypatch, action_obj):
-    async def fake_judge(client, state, player_input, **kwargs):
-        return action_obj
-
-    monkeypatch.setattr(judge_mod, "run_judge", fake_judge)
-    monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
-    monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
-
-    # Single-action paths now invoke narrate (engine notices get absorbed into
-    # prose). Stub run_narrate so these LLM-free engine tests don't reach the
-    # real model.
-    async def _stub_run_narrate(*a, **kw):
-        if False:
-            yield None  # async-gen marker
-
-    monkeypatch.setattr(narrate_mod, "run_narrate", _stub_run_narrate)
-
-
-async def _collect(it):
-    return [ev async for ev in it]
 
 
 def _seed_player(fresh_state, **overrides):
@@ -86,7 +49,9 @@ def _seed_player(fresh_state, **overrides):
 # --- flee natural language ------------------------------------------------
 
 
-async def test_flee_in_combat_succeeds_ends_combat(fresh_state, tmp_data, monkeypatch):
+async def test_flee_in_combat_succeeds_ends_combat(
+    fresh_state, tmp_data, monkeypatch, judge_returns, collect
+):
     """On flee success: combat_end (outcome=fled) + combat_state cleared."""
     state = _seed_player(fresh_state)
     enemy = Character(
@@ -105,9 +70,9 @@ async def test_flee_in_combat_succeeds_ends_combat(fresh_state, tmp_data, monkey
 
     # Force try_flee to always pass with a roll above RULES.combat.flee.base_dc.
     monkeypatch.setattr(combat_engine, "try_flee", lambda actor, rng=None: (True, 30))
-    _judge_returns(monkeypatch, FleeAction(action="flee"))
+    judge_returns(FleeAction(action="flee"))
 
-    events = await _collect(
+    events = await collect(
         run_turn(
             client=None,
             state=state,
@@ -123,7 +88,9 @@ async def test_flee_in_combat_succeeds_ends_combat(fresh_state, tmp_data, monkey
     assert state.combat_state is None
 
 
-async def test_flee_in_combat_fails_npc_phase_runs(fresh_state, tmp_data, monkeypatch):
+async def test_flee_in_combat_fails_npc_phase_runs(
+    fresh_state, tmp_data, monkeypatch, judge_returns, collect
+):
     """On flee failure: turn consumed, the auto-sim continues with the player
     falling back to basic attacks, and a flee combat_turn event is recorded."""
     state = _seed_player(fresh_state)
@@ -141,9 +108,9 @@ async def test_flee_in_combat_fails_npc_phase_runs(fresh_state, tmp_data, monkey
     state.combat_state.turn_order = ["player_01", "goblin_01"]
 
     monkeypatch.setattr(combat_engine, "try_flee", lambda actor, rng=None: (False, 5))
-    _judge_returns(monkeypatch, FleeAction(action="flee"))
+    judge_returns(FleeAction(action="flee"))
 
-    events = await _collect(
+    events = await collect(
         run_turn(
             client=None,
             state=state,
@@ -169,12 +136,12 @@ async def test_flee_in_combat_fails_npc_phase_runs(fresh_state, tmp_data, monkey
     assert npc_evs
 
 
-async def test_flee_outside_combat_no_op(fresh_state, tmp_data, monkeypatch):
+async def test_flee_outside_combat_no_op(fresh_state, tmp_data, judge_returns, collect):
     """Out-of-combat flee → short act log + turn not advanced."""
     state = _seed_player(fresh_state)
-    _judge_returns(monkeypatch, FleeAction(action="flee"))
+    judge_returns(FleeAction(action="flee"))
 
-    events = await _collect(
+    events = await collect(
         run_turn(
             client=None,
             state=state,
@@ -194,14 +161,14 @@ async def test_flee_outside_combat_no_op(fresh_state, tmp_data, monkeypatch):
 
 
 async def test_level_up_natural_language_applies_pair_trade(
-    fresh_state, tmp_data, monkeypatch
+    fresh_state, tmp_data, judge_returns, collect
 ):
     state = _seed_player(fresh_state, xp_pool=100, level=0)
-    _judge_returns(
-        monkeypatch, LevelUpAction(action="level_up", stat_up="STR", stat_down="CHA")
+    judge_returns(
+        LevelUpAction(action="level_up", stat_up="STR", stat_down="CHA")
     )
 
-    events = await _collect(
+    await collect(
         run_turn(
             client=None,
             state=state,
@@ -221,14 +188,16 @@ async def test_level_up_natural_language_applies_pair_trade(
     # check that the engine action ran.
 
 
-async def test_level_up_invalid_pair_logs_error(fresh_state, tmp_data, monkeypatch):
+async def test_level_up_invalid_pair_logs_error(
+    fresh_state, tmp_data, judge_returns, collect
+):
     """Insufficient xp: level_up logs failure + turn consumed. Character stats unchanged."""
     state = _seed_player(fresh_state, xp_pool=0, level=0)
-    _judge_returns(
-        monkeypatch, LevelUpAction(action="level_up", stat_up="STR", stat_down="CHA")
+    judge_returns(
+        LevelUpAction(action="level_up", stat_up="STR", stat_down="CHA")
     )
 
-    await _collect(
+    await collect(
         run_turn(
             client=None,
             state=state,
@@ -245,7 +214,9 @@ async def test_level_up_invalid_pair_logs_error(fresh_state, tmp_data, monkeypat
 # --- learn_skill natural language -----------------------------------------
 
 
-async def test_learn_skill_appends_to_learned(fresh_state, tmp_data, monkeypatch):
+async def test_learn_skill_appends_to_learned(
+    fresh_state, tmp_data, judge_returns, collect
+):
     state = _seed_player(fresh_state)
     candidate = Skill(
         id="fireball_l1",
@@ -260,9 +231,9 @@ async def test_learn_skill_appends_to_learned(fresh_state, tmp_data, monkeypatch
         mp_cost=4,
     )
     state.pending_skill_candidates = [candidate]
-    _judge_returns(monkeypatch, LearnSkillAction(action="learn_skill", index=0))
+    judge_returns(LearnSkillAction(action="learn_skill", index=0))
 
-    await _collect(
+    await collect(
         run_turn(
             client=None,
             state=state,
@@ -277,13 +248,15 @@ async def test_learn_skill_appends_to_learned(fresh_state, tmp_data, monkeypatch
     assert state.pending_skill_candidates == []
 
 
-async def test_learn_skill_invalid_index_logs_error(fresh_state, tmp_data, monkeypatch):
+async def test_learn_skill_invalid_index_logs_error(
+    fresh_state, tmp_data, judge_returns, collect
+):
     """learn_skill input with empty candidates → short rejection."""
     state = _seed_player(fresh_state)
     state.pending_skill_candidates = []
-    _judge_returns(monkeypatch, LearnSkillAction(action="learn_skill", index=0))
+    judge_returns(LearnSkillAction(action="learn_skill", index=0))
 
-    await _collect(
+    await collect(
         run_turn(
             client=None,
             state=state,
@@ -326,14 +299,14 @@ def _seed_merchant(state, merchant_inv=None):
     return state
 
 
-async def test_buy_natural_language(fresh_state, tmp_data, monkeypatch):
+async def test_buy_natural_language(fresh_state, tmp_data, judge_returns, collect):
     state = _seed_player(fresh_state, gold=100)
     _seed_merchant(state)
-    _judge_returns(
-        monkeypatch, BuyAction(action="buy", npc_id="smith_01", item_id="shield_01")
+    judge_returns(
+        BuyAction(action="buy", npc_id="smith_01", item_id="shield_01")
     )
 
-    await _collect(
+    await collect(
         run_turn(
             client=None,
             state=state,
@@ -349,14 +322,14 @@ async def test_buy_natural_language(fresh_state, tmp_data, monkeypatch):
     assert p.gold < 100  # gold deducted
 
 
-async def test_sell_natural_language(fresh_state, tmp_data, monkeypatch):
+async def test_sell_natural_language(fresh_state, tmp_data, judge_returns, collect):
     state = _seed_player(fresh_state, gold=50, inventory_ids=["ore_01"])
     _seed_merchant(state, merchant_inv=[])
-    _judge_returns(
-        monkeypatch, SellAction(action="sell", npc_id="smith_01", item_id="ore_01")
+    judge_returns(
+        SellAction(action="sell", npc_id="smith_01", item_id="ore_01")
     )
 
-    await _collect(
+    await collect(
         run_turn(
             client=None,
             state=state,
@@ -372,16 +345,16 @@ async def test_sell_natural_language(fresh_state, tmp_data, monkeypatch):
     assert p.gold > 50  # gold received
 
 
-async def test_buy_low_affinity_rejected(fresh_state, tmp_data, monkeypatch):
+async def test_buy_low_affinity_rejected(fresh_state, tmp_data, judge_returns, collect):
     """affinity < trade_threshold → trade-failure log; inventory unchanged."""
     state = _seed_player(fresh_state, gold=100)
     _seed_merchant(state)
     state.characters["smith_01"].relations = {"player_01": -20}  # below threshold
-    _judge_returns(
-        monkeypatch, BuyAction(action="buy", npc_id="smith_01", item_id="shield_01")
+    judge_returns(
+        BuyAction(action="buy", npc_id="smith_01", item_id="shield_01")
     )
 
-    await _collect(
+    await collect(
         run_turn(
             client=None,
             state=state,

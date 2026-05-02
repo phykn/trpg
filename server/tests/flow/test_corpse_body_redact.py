@@ -21,10 +21,6 @@ async def _stream(*items) -> AsyncIterator[NarrativeDelta | NarrativeFinal]:
         yield it
 
 
-async def _collect(it):
-    return [ev async for ev in it]
-
-
 def _seed(state, *, dead_at_player=False, dead_off_screen=False):
     """Wire a player at plaza_01 and optionally seed a dead NPC at the same
     location and/or one referenced off-screen via turn_log."""
@@ -62,15 +58,16 @@ async def _run(state, body, *, target_for_log, dialogue_input, output=None):
     output = output or NarrateOutput()
     final = NarrativeFinal(body=body, output=output)
     dirty = Dirty()
-    events = await _collect(
-        consume_narrate(
+    events = [
+        ev
+        async for ev in consume_narrate(
             state,
             dirty,
             _stream(NarrativeDelta(text=body), final),
             target_for_log=target_for_log,
             dialogue_input=dialogue_input,
         )
-    )
+    ]
     return events, dirty
 
 
