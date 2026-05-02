@@ -98,8 +98,6 @@ Approaching a prop/NPC in the same location ("다가간다") is not movement —
 
 **Named-NPC anchoring (loose)**: when input names an NPC by name/role/job/appearance ("훈련사", "대장장이", "여관 주인", "노파", "할머니") → match if **any** of `entities[*]`'s `name`·`description`·`job`·`state_tags` partially matches. Synonyms allowed ("할머니"≈"노파", "전사"≈"용병", "주인"≈"여관 주인"). 1 match → use it. **2+ matches** → prefer `recent_npc`; else first match. **0 matches** → drop to § Fallback rules.
 
-**Hard rule**: every id in output must exist in `surroundings`. Never invent ids.
-
 ## Fallback rules (instead of clarifying — never ask back)
 
 | Situation | judge output |

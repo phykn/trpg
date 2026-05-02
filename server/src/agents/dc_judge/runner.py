@@ -2,13 +2,13 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from .._runner import read_prompt, run_with_retries
+from .._runner import load_prompt, run_with_retries
 from ...llm.client import LLMClient
 from .schema import JudgeInput, JudgeOutput, validate_judge_output
 from .semantics import JudgeSemanticError, check_semantics
 
 PROMPT_PATH = Path(__file__).parent / "prompt.md"
-_PROMPT = read_prompt(__file__)
+_PROMPT = load_prompt(__file__)
 
 
 async def judge(client: LLMClient, input_: JudgeInput, retries: int = 5) -> JudgeOutput:
