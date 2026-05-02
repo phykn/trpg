@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from ..domain.clock import day_phase
 from ..domain.state import GameState
-from ..ontology.graph import GameGraph, build_graph
+from ..ontology.graph import GameGraph
 from ..ontology.queries import quests_in_chapter
 
 if TYPE_CHECKING:

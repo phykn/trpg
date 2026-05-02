@@ -19,7 +19,6 @@ from ..ontology.queries import (
     inhabitants_of,
     inventory_of,
     known_skills_of,
-    trigger_targets_of,
 )
 from .labels import (
     RISK_PAYLOAD,

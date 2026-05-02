@@ -11,7 +11,7 @@ from ..agents.narrate import (
 from ..domain.memory import GMLogEntry
 from ..engines.apply import apply_changes
 from ..llm.client import LLMClient
-from ..ontology.graph import GameGraph, build_graph
+from ..ontology.graph import GameGraph
 from ..ontology.player_view import build_player_view
 from ..ontology.queries import inhabitants_of
 from ..ontology.target_view import build_target_view

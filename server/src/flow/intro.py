@@ -4,7 +4,6 @@ from collections.abc import AsyncIterator
 
 from ..domain.state import GameState
 from ..llm.client import LLMClient, set_llm_session_if_unset
-from ..ontology.graph import build_graph
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from .dirty import Dirty, ToFrontFn, finalize
 from .narrate import consume_narrate, run_narrate

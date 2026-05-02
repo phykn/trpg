@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, Type, TypeVar
+from typing import Type, TypeVar
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
@@ -29,11 +29,9 @@ from ..domain.errors import PersistenceFailed
 from ..domain.memory import (
     DialoguePair,
     LogEntry,
-    PendingCheck,
     TurnLogEntry,
 )
-from ..domain.entities import Skill
-from ..domain.state import CombatState, GameState
+from ..domain.state import GameState
 from ..rules import RULES
 from . import store
 from ._supabase_http import _PostgREST, _Storage

@@ -23,7 +23,7 @@ from ..domain.errors import JudgeMalformed, PendingCheckActive
 from ..domain.memory import PlayerLogEntry
 from ..domain.state import GameState
 from ..llm.client import LLMClient, set_llm_session_if_unset
-from ..ontology.graph import GameGraph, build_graph
+from ..ontology.graph import GameGraph
 from ..ontology.queries import location_of
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from .actions import (
@@ -296,7 +296,6 @@ async def _dispatch(
         return
 
     if isinstance(result, SummonCombatAction):
-        actor = state.characters[state.player_id]
         loc_id = location_of(graph, state.player_id)
         location = state.locations.get(loc_id) if loc_id else None
         summoned = None

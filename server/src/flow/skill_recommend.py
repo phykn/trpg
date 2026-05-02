@@ -14,7 +14,6 @@ from ..agents.skill_recommend import (
     skill_recommend,
 )
 from ..llm.client import LLMClient
-from ..ontology.graph import build_graph
 from ..ontology.queries import known_skills_of, race_of
 from ..rules import RULES
 from ..domain.state import GameState

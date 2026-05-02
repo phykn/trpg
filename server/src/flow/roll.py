@@ -9,7 +9,6 @@ from ..domain.memory import RollLogEntry
 from ..domain.state import GameState
 from ..engines.growth import grant_roll_xp
 from ..llm.client import LLMClient, set_llm_session_if_unset
-from ..ontology.graph import build_graph
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from ..rules.dc import compute_grade
 from .buff_tick import tick_turn_buffs
@@ -20,7 +19,6 @@ from .dirty import (
     ToFrontFn,
     finalize,
     next_log_id,
-    push_act,
     push_log_entry,
 )
 from .format import front_grade

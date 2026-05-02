@@ -20,7 +20,7 @@ from ..domain.entities import (
 from ..domain.state import GameState
 from ..domain.types import is_secret_masked_grade
 from ..engines.growth import can_afford_level_up
-from ..ontology.graph import GameGraph, build_graph
+from ..ontology.graph import GameGraph
 from ..ontology.queries import (
     connections_of,
     equipment_of,
