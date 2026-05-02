@@ -1,99 +1,16 @@
-import json
-from collections.abc import AsyncIterator
-from dataclasses import dataclass
+"""Body-cleaning helper used by the narrate chain orchestrator.
 
-from pydantic import ValidationError
-
-from .schema import NarrateOutput
-
-SEPARATOR = "---JSON---"
-
-
-@dataclass
-class NarrativeDelta:
-    text: str
-
-
-@dataclass
-class NarrativeFinal:
-    body: str
-    output: NarrateOutput
-    parse_error: str | None = None
+`_clean_body` undoes JSON-style escapes that the LLM occasionally leaks into
+the body (the body prompt forbids them, but the LLM sometimes slips). The
+old split_stream / NarrativeDelta / NarrativeFinal types now live in
+__init__.py — keep importing them from `llm_calls.narrate` (not parser).
+"""
 
 
 def _clean_body(body: str) -> str:
-    """Backup net for JSON escapes the LLM sometimes leaks into the body (the prompt forbids them)."""
     return (
         body.replace('\\"', '"')
         .replace("\\'", "'")
         .replace("\\n", "\n")
         .replace("\\t", "\t")
     )
-
-
-def _split_trailing_backslash_run(s: str) -> tuple[str, str]:
-    """(safe, hold): a trailing `\\` may straddle a stream chunk boundary and escape whatever arrives next, so we hold the run back until the next token."""
-    i = len(s)
-    while i > 0 and s[i - 1] == "\\":
-        i -= 1
-    return s[:i], s[i:]
-
-
-def _parse_output(json_text: str) -> tuple[NarrateOutput, str | None]:
-    """Returns (output, parse_error). Body has already streamed when this runs, so a parse failure can't trigger runner retry — caller surfaces parse_error as an SSE error event so the loss isn't silent."""
-    json_text = json_text.strip()
-    if not json_text:
-        return NarrateOutput(), "narrate JSON tail missing (no separator emitted)"
-    try:
-        return NarrateOutput.model_validate_json(json_text), None
-    except (ValidationError, json.JSONDecodeError) as e:
-        return NarrateOutput(), f"narrate JSON parse failed: {type(e).__name__}: {e}"
-
-
-async def split_stream(
-    tokens: AsyncIterator[str],
-) -> AsyncIterator[NarrativeDelta | NarrativeFinal]:
-    """Split a token stream into body deltas (yielded incrementally) and a
-    final NarrateOutput. Holds back up to len(SEPARATOR)-1 chars so a
-    separator straddling two chunks is detected correctly.
-    """
-    parts: list[str] = []
-    yielded = 0
-    sep_idx = -1
-
-    async for token in tokens:
-        if not token:
-            continue
-        parts.append(token)
-        if sep_idx != -1:
-            continue
-
-        full = "".join(parts)
-        idx = full.find(SEPARATOR)
-        if idx >= 0:
-            body_remaining = full[yielded:idx]
-            if body_remaining:
-                yield NarrativeDelta(text=_clean_body(body_remaining))
-            yielded = idx
-            sep_idx = idx
-        else:
-            safe_end = max(yielded, len(full) - len(SEPARATOR) + 1)
-            if safe_end > yielded:
-                chunk = full[yielded:safe_end]
-                safe_chunk, _hold = _split_trailing_backslash_run(chunk)
-                if safe_chunk:
-                    yield NarrativeDelta(text=_clean_body(safe_chunk))
-                    yielded += len(safe_chunk)
-
-    full = "".join(parts)
-    if sep_idx == -1:
-        if yielded < len(full):
-            yield NarrativeDelta(text=_clean_body(full[yielded:]))
-        body = full
-        json_text = ""
-    else:
-        body = full[:sep_idx]
-        json_text = full[sep_idx + len(SEPARATOR) :]
-
-    output, parse_error = _parse_output(json_text)
-    yield NarrativeFinal(body=_clean_body(body), output=output, parse_error=parse_error)

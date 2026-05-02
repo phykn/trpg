@@ -60,6 +60,7 @@ async def run_with_retries(
     retries: int = 5,
     correction_hint: str = "",
     agent: str | None = None,
+    temperature: float | None = None,
 ) -> T:
     """LLM call + self-correction retry loop. Transport failures wrap to LLMUnavailable (retries can't fix unreachable)."""
     messages: list[dict] = [
@@ -74,7 +75,9 @@ async def run_with_retries(
     )
     for _ in range(retries + 1):
         try:
-            result = await client.chat(messages=messages, think=False, agent=agent)
+            result = await client.chat(
+                messages=messages, think=False, agent=agent, temperature=temperature
+            )
         except (OSError, asyncio.TimeoutError) as e:
             raise LLMUnavailable(str(e)) from e
         answer = result["answer"] or ""

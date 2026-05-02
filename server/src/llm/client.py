@@ -300,10 +300,18 @@ class LLMClient:
     def _toggle(provider: _Provider):
         return gemini if provider.toggle_style == "gemini" else llama_cpp
 
-    def _params(self, provider: _Provider, messages: list[dict], think: bool) -> dict:
+    def _params(
+        self,
+        provider: _Provider,
+        messages: list[dict],
+        think: bool,
+        temperature: float | None,
+    ) -> dict:
         if not provider.supports_system:
             messages = self._inline_system(messages)
         params: dict = {"model": provider.model, "messages": messages}
+        if temperature is not None:
+            params["temperature"] = temperature
         extra = self._toggle(provider).extra_body(
             provider.thinking_mode, self._effective_think(think)
         )
@@ -358,11 +366,12 @@ class LLMClient:
         think: bool = True,
         agent: str | None = None,
         log: bool = True,
+        temperature: float | None = None,
     ) -> dict:
         provider = self._pick(agent)
         base = self._log_basename(agent) if log else None
         self._log_query(base, messages)
-        params = self._params(provider, messages, think)
+        params = self._params(provider, messages, think, temperature)
         response = await provider.next_chat_client().chat.completions.create(**params)
         msg = response.choices[0].message
         extra = msg.model_extra or {}
@@ -388,11 +397,12 @@ class LLMClient:
         think: bool = True,
         agent: str | None = None,
         log: bool = True,
+        temperature: float | None = None,
     ) -> AsyncIterator[dict]:
         provider = self._pick(agent)
         base = self._log_basename(agent) if log else None
         self._log_query(base, messages)
-        params = self._params(provider, messages, think)
+        params = self._params(provider, messages, think, temperature)
         stream = await provider.next_stream_client().chat.completions.create(
             **params, stream=True
         )
