@@ -3,7 +3,8 @@ import { Animated, Text, View } from 'react-native';
 import { Bar } from '@/components/ui';
 import { colors, shadow, toneColor } from '@/design/tokens';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
-import type { CombatBadge } from '@/types/domain';
+
+import type { CombatBadge } from './types';
 
 export function CombatStrip({ combat }: { combat: CombatBadge }) {
   const { scale, opacity } = useEntryAnimation();

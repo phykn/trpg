@@ -15,8 +15,8 @@ import {
   streamRoll,
   streamTurn,
 } from '@/services';
+import type { CombatBadge } from '@/features/combat';
 import type {
-  CombatBadge,
   FrontState,
   Hero,
   Place,

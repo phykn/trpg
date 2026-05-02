@@ -1,3 +1,4 @@
+import type { CombatBadge } from '@/features/combat';
 import type { StoryGraphModel } from '@/features/story-graph';
 import type { LogEntry, Tone } from './ui';
 import type { PendingCheck } from './wire';
@@ -106,19 +107,6 @@ export type Place = {
 };
 
 export type RollResult = 'success' | 'partial' | 'fail';
-
-export type CombatEnemy = {
-  name: string;
-  hp: number;
-  hpMax: number;
-  alive: boolean;
-};
-
-export type CombatBadge = {
-  round: number;
-  turnLabel: string;
-  enemies: CombatEnemy[];
-};
 
 export type FrontState = {
   hero: Hero;

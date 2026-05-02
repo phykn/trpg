@@ -2,12 +2,12 @@ import { useAudioPlayer } from 'expo-audio';
 import React from 'react';
 import { Keyboard, Pressable, Text, View } from 'react-native';
 
+import { CombatStrip } from '@/features/combat';
 import { useStoryGraph } from '@/features/story-graph';
 import type { Game } from '@/hooks/useGame';
 import { buildPanelSlots } from '@/presenters';
 import type { PanelAction, PanelSlot } from '@/types/ui';
 
-import { CombatStrip } from './combat';
 import { Composer, RollPrompt } from './composer';
 import { ContextCard } from './header';
 import { HeroStrip } from './hero';
