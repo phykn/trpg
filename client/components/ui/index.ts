@@ -4,7 +4,7 @@ export { StatRow } from './StatRow';
 export { InlineParts } from './InlineParts';
 export { InlineNodes } from './InlineNodes';
 export { LabeledRow } from './LabeledRow';
-export { ExpandGroup, useExpand, useExpandGroup } from './ExpandGroup';
+export { ExpandGroup, useExpandGroup } from './ExpandGroup';
 export { Expandable } from './Expandable';
 export { ExpandableTitle } from './ExpandableTitle';
 export { CenterMessage } from './CenterMessage';
