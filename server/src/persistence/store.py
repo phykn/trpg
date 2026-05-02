@@ -28,8 +28,6 @@ from ..domain.state import CombatState, GameState
 _save_lock = asyncio.Lock()
 
 
-# --- entity kind registry --------------------------------------------------
-
 _ENTITY_MODELS: dict[str, type[BaseModel]] = {
     "characters": Character,
     "items": Item,

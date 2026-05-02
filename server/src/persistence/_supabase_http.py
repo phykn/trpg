@@ -1,15 +1,4 @@
-"""Tiny httpx wrappers around Supabase PostgREST + Storage REST.
-
-We don't pull in `supabase-py` to keep the dep surface small and the runtime
-portable (Cloudflare Workers Python beta runs on Pyodide; httpx is pure
-Python and fits, the SDK pulls in heavier transitive deps).
-
-Both wrappers take `url` (project base, e.g. https://abc.supabase.co) and
-`service_key` (server-only secret — bypasses RLS). All methods are async.
-
-Errors: any non-2xx response raises `PersistenceFailed` with the response
-body, so callers can let it bubble like the existing file-IO error path.
-"""
+"""httpx wrappers around Supabase PostgREST + Storage; supabase-py would pull deps that don't fit Pyodide. Non-2xx → PersistenceFailed."""
 
 from __future__ import annotations
 

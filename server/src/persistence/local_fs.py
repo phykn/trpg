@@ -1,14 +1,4 @@
-"""Local filesystem adapters for SaveRepo / ScenarioRepo.
-
-These wrap the existing module-level functions in `store.py` and the
-file-reading code that lived inline in `init.py` / `context/layers.py` /
-`api/routes/profiles.py`. Behavior matches the pre-seam code 1:1.
-
-All methods are `async` to match the Protocol — internal IO stays sync since
-local file reads are fast and there's a single dev process; we don't
-`asyncio.to_thread` them. The async signature is what lets the Supabase
-adapter use real network IO without forcing two Protocols.
-"""
+"""LocalFs SaveRepo / ScenarioRepo — sync IO wrapped in async to match the Protocol shared with Supabase."""
 
 import json
 from pathlib import Path

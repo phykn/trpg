@@ -1,21 +1,4 @@
-"""Supabase adapters for SaveRepo / ScenarioRepo (Phase 2).
-
-SaveRepo → Supabase Postgres via PostgREST. Five tables:
-    games            (game_id PK, meta jsonb, updated_at)
-    entities         (game_id, kind, id, data jsonb) PK(game_id,kind,id)
-    log_entries      (game_id, log_id, entry jsonb)  PK(game_id,log_id)
-    history_entries  (game_id, seq bigserial, entry jsonb)
-    dialogue_entries (game_id, seq bigserial, entry jsonb)
-
-ScenarioRepo → Supabase Storage. Layout in the bucket mirrors the local
-`scenarios/<profile>/...` tree 1:1. Per-process caches:
-    - raw object bytes per Storage path
-    - directory listings per prefix
-
-The seed is read-only and the server is long-lived, so caching is safe and
-cheap. Cache invalidation is process-restart only — re-deploy on seed
-changes, same as it would be on local fs.
-"""
+"""Supabase adapters: SaveRepo → PostgREST (5 tables keyed on game_id), ScenarioRepo → Storage (bucket mirrors local scenarios/ tree). Read-only seed cached process-wide; restart to invalidate."""
 
 from __future__ import annotations
 
