@@ -17,12 +17,12 @@ def front_grade(grade: str) -> str:
 
 def format_combat_end_text(outcome: str) -> str:
     if outcome == "victory":
-        return "적을 모두 제압"
+        return "적을 모두 제압했습니다."
     if outcome == "defeat":
-        return "사망"
+        return "당신의 이야기가 여기서 끝납니다."
     if outcome == "downed":
-        return "의식을 잃었다 깨어남"
-    return "도주"
+        return "의식을 되찾았습니다."
+    return "도망쳤습니다."
 
 
 def format_use_log(state: GameState, actor_id: str, result: dict) -> str:

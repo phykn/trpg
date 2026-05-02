@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from ..domain.entities import Quest
+from ..domain.errors import InventoryInvalid
 from ..domain.state import GameState
+from .inventory.carry import check_can_carry
 
 DirtySet = set[tuple[str, str]] | None
 
@@ -29,7 +31,17 @@ def _apply_rewards(state: GameState, quest: Quest, dirty: DirtySet) -> None:
         return
     actor.gold += quest.rewards.gold
     actor.xp_pool += quest.rewards.exp
+    # Carry-overflow rewards land at the player's location (loot-on-the-ground), so quest completion can't silently break the carry invariant.
+    location = state.locations.get(actor.location_id) if actor.location_id else None
     for item_id in quest.rewards.items:
+        try:
+            check_can_carry(actor, state.items, item_id)
+        except InventoryInvalid:
+            if location is not None:
+                location.item_ids.append(item_id)
+                if dirty is not None:
+                    dirty.add(("locations", location.id))
+            continue
         actor.inventory_ids.append(item_id)
     if dirty is not None:
         dirty.add(("characters", actor.id))

@@ -44,6 +44,7 @@ from .dirty import Dirty, ToFrontFn, finalize, push_act, push_gm, push_turn_log
 from .error_phrases import humanize_runtime_error
 from .format import format_combat_end_text
 from .judge import run_judge
+from .narrate import stream_narrate_tail
 from .subject import refresh_active_subject
 
 
@@ -333,6 +334,28 @@ async def run_combat_player_turn(
         yield ev
 
     state.turn_count += 1
+    # Post-combat narrate when this in-combat turn ended the fight (coin-revive 'downed' or victory/defeat reached) — same pattern as _enter_combat_and_finalize so the system card isn't the terminal UI line. player_input="" because combat_narrate already consumed the original input; this beat is the recovery / aftermath. Skipped on client=None (engine-only test path).
+    if (
+        client is not None
+        and state.combat_state is None
+        and state.characters[state.player_id].alive
+    ):
+        state.invalidate_graph()
+        graph_post = state.graph()
+        signal = state.previous_phase_signal
+        state.previous_phase_signal = None
+        async for ev in stream_narrate_tail(
+            client,
+            state,
+            scenario_repo,
+            "",
+            dirty,
+            to_front_fn,
+            PassAction(action="pass"),
+            graph=graph_post,
+            previous_phase_signal=signal,
+        ):
+            yield ev
     tick_turn_buffs(state, dirty)
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev

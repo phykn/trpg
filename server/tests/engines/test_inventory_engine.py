@@ -294,6 +294,14 @@ def test_sell_transfers_item_and_gold():
     assert n.gold == 175
 
 
+def test_sell_blocked_by_insufficient_npc_gold():
+    items = _items()
+    p = _player(inventory_ids=["sword"])
+    n = _npc(relations={"player_01": 0}, gold=10)
+    with pytest.raises(InventoryInvalid, match="npc has not enough gold"):
+        inv.sell(p, n, "sword", items)
+
+
 def test_sell_rejects_equipped_item():
     items = _items()
     p = _player(inventory_ids=["sword"])

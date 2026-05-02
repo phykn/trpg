@@ -3,15 +3,13 @@ import { Pressable, Text, View } from 'react-native';
 
 import { colors, toneColor } from '@/design/tokens';
 import {
-  KIND_LABEL,
   type StoryGraphEdge,
   type StoryGraphModel,
 } from '@/presenters/storyGraph';
 import { SEP } from '@/presenters/format';
-import type { Place, RiskBadge } from '@/types/domain';
 import type { PanelAction } from '@/types/ui';
 
-import { Expandable, ExpandableTitle } from '../ui';
+import { ExpandableTitle, ExpandGroup, LabeledRow, Row } from '../ui';
 import { StoryGraphCanvas } from './StoryGraphCanvas';
 import { actionForNode } from './_nodeActions';
 
@@ -41,26 +39,6 @@ const PLACE_STATE_TEXT: Record<PlaceState, string> = {
   unreachable: colors.fg.default,
 };
 
-const DESCRIPTION_LINE_HEIGHT = 20;
-const DESCRIPTION_CLAMP_LINES = 3;
-const DESCRIPTION_CLASS = 'font-sans text-caption text-fg-muted';
-
-function ExpandableDescription({ text }: { text: string }) {
-  return (
-    <Expandable
-      contentKey={text}
-      lineHeight={DESCRIPTION_LINE_HEIGHT}
-      clampLines={DESCRIPTION_CLAMP_LINES}
-      showHint
-      textClassName={DESCRIPTION_CLASS}
-      textStyle={{ lineHeight: DESCRIPTION_LINE_HEIGHT }}
-      measureText={text}
-    >
-      {text}
-    </Expandable>
-  );
-}
-
 export function MapPanel({
   graph,
   canvasHeight = 260,
@@ -70,7 +48,6 @@ export function MapPanel({
   onNodeSelect,
   onAction,
   actionDisabled = false,
-  place = null,
 }: {
   graph: StoryGraphModel;
   canvasHeight?: number;
@@ -80,7 +57,6 @@ export function MapPanel({
   onNodeSelect?: (nodeId: string | null) => void;
   onAction?: (action: PanelAction) => void;
   actionDisabled?: boolean;
-  place?: Place | null;
 }) {
   const placeStates = React.useMemo<Record<string, PlaceState>>(() => {
     return Object.fromEntries(
@@ -141,120 +117,107 @@ export function MapPanel({
 
   const selectedNode = visibleGraph.nodes.find((node) => node.id === selectedNodeId) ?? null;
   const selectedAction = selectedNode ? actionForNode(selectedNode) : null;
-  const selectedLabel = (() => {
+  const placeFeatures = (() => {
+    if (!selectedNode) return null;
+    if (!('risk' in selectedNode) || !selectedNode.risk) return null;
+    return { risk: selectedNode.risk };
+  })();
+  const placeDescription = (() => {
     if (!selectedNode) return '';
-    if (
-      (selectedNode.kind === 'hero'
-        || selectedNode.kind === 'subject'
-        || selectedNode.kind === 'target')
-      && selectedNode.alive === false
-    ) {
-      return `${selectedNode.label} (죽음)`;
-    }
-    return selectedNode.label;
+    if (!('description' in selectedNode)) return '';
+    return selectedNode.description || '';
   })();
-  const selectedPlaceState: PlaceState | null = selectedNode
-    ? placeStates[selectedNode.id] ?? null
-    : null;
-  const selectedPlaceLabel = selectedPlaceState
-    ? PLACE_LEGEND.find((p) => p.state === selectedPlaceState)?.label ?? null
-    : null;
-  const selectedDescription: string | null = (() => {
-    if (!selectedNode || !place) return null;
-    if (selectedPlaceState === 'current') return place.description || null;
-    if (selectedPlaceState === 'reachable') {
-      const s = place.surroundings.find((s) => s.name === selectedNode.label);
-      return s?.blurb || null;
-    }
-    return null;
-  })();
-  const selectedRisk: RiskBadge | null = (() => {
-    if (!selectedNode || !place) return null;
-    let r: RiskBadge | null = null;
-    if (selectedPlaceState === 'current') r = place.risk;
-    else if (selectedPlaceState === 'reachable') {
-      const s = place.surroundings.find((s) => s.name === selectedNode.label);
-      r = s?.risk ?? null;
-    }
-    if (!r || r.tone === 'neutral') return null;
-    return r;
-  })();
-  const selectedEnvMeta: string | null = (() => {
-    if (!selectedNode || !place) return null;
-    if (selectedPlaceState !== 'current') return null;
-    return [place.dayPhase, ...place.weather].filter(Boolean).join(SEP) || null;
+  const metaText = (() => {
+    if (!selectedNode) return '';
+    if (selectedNode.kind === 'place') return '현재 위치';
+    if (selectedNode.kind === 'location' && !selectedAction) return '이동 불가';
+    return '';
   })();
 
   return (
-    <View
-      accessibilityLabel={`${accessibilityLabel}. ${visibleGraph.summary}`}
-      className={`${framed ? 'border border-border-default rounded-md bg-canvas-subtle px-3 py-3' : 'px-2 pt-2 pb-3'} gap-2`}
-    >
-      <StoryGraphCanvas
-        graph={visibleGraph}
-        height={canvasHeight}
-        accessibilityLabel={accessibilityLabel}
-        selectedNodeId={selectedNodeId}
-        onNodeSelect={onNodeSelect}
-        nodeOverrides={nodeOverrides}
-        arrows={false}
-        edgeLabels={false}
-        layout="cose"
-        boxNodes
-        centerNodeId={visibleGraph.nodes.find((n) => n.kind === 'place')?.id}
-        clearOnBackgroundTap={false}
-      />
+    <View>
+      {!framed && (
+        <View
+          className="px-4 pt-3 flex-row items-center"
+          style={{ minHeight: 22 }}
+        >
+          <ExpandableTitle text="지도" />
+        </View>
+      )}
+      <View
+        accessibilityLabel={`${accessibilityLabel}. ${visibleGraph.summary}`}
+        className={`${framed ? 'border border-border-default rounded-md bg-canvas-subtle px-3 py-3' : 'px-4 pt-2 pb-3'} gap-2`}
+      >
+        <StoryGraphCanvas
+          graph={visibleGraph}
+          height={canvasHeight}
+          accessibilityLabel={accessibilityLabel}
+          selectedNodeId={selectedNodeId}
+          onNodeSelect={onNodeSelect}
+          nodeOverrides={nodeOverrides}
+          arrows={false}
+          edgeLabels={false}
+          layout="cose"
+          boxNodes
+          centerNodeId={visibleGraph.nodes.find((n) => n.kind === 'place')?.id}
+          clearOnBackgroundTap={false}
+        />
 
-      {selectedNode ? (
-        <View className="border-t border-border-default pt-2.5 gap-2">
-          <View>
-            <Text className="font-sans text-meta text-fg-subtle">
-              {selectedPlaceLabel ?? KIND_LABEL[selectedNode.kind]}
-              {selectedRisk ? (
-                <Text
-                  className="font-sans-semibold"
-                  style={{ color: toneColor[selectedRisk.tone] }}
-                >
-                  {` (${selectedRisk.label})`}
-                </Text>
-              ) : null}
-            </Text>
-            <View className="mt-1 flex-row items-center justify-between gap-3">
-              <ExpandableTitle
-                text={selectedLabel}
-                color={selectedRisk ? toneColor[selectedRisk.tone] : colors.fg.default}
-              />
-              {selectedAction && onAction ? (
-                <Pressable
-                  onPress={() => onAction(selectedAction)}
-                  disabled={actionDisabled}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${selectedNode.label} 이동`}
-                  className={`rounded-full px-3.5 py-1 ${actionDisabled ? 'bg-accent-muted opacity-60' : 'bg-accent-muted active:opacity-80'}`}
-                >
-                  <Text className="font-sans-semibold text-caption text-accent-fg">
-                    {actionDisabled ? '처리 중' : selectedAction.label}
+        {selectedNode ? (
+          <View className="border-t border-border-default pt-2.5 gap-2">
+            <View className="gap-2.5">
+              <View
+                className="flex-row items-center gap-3"
+                style={{ minHeight: 22 }}
+              >
+                <ExpandableTitle text={selectedNode.label} />
+                {selectedAction && onAction ? (
+                  <Pressable
+                    onPress={() => onAction(selectedAction)}
+                    disabled={actionDisabled}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${selectedNode.label} ${selectedAction.label}`}
+                    className={`rounded-full px-3.5 py-1 ${actionDisabled ? 'bg-accent-muted opacity-60' : 'bg-accent-muted active:opacity-80'}`}
+                  >
+                    <Text className="font-sans-semibold text-caption text-accent-fg">
+                      {actionDisabled ? '처리 중' : selectedAction.label}
+                    </Text>
+                  </Pressable>
+                ) : metaText ? (
+                  <Text
+                    numberOfLines={1}
+                    className="font-sans text-caption italic text-fg-muted"
+                  >
+                    {metaText}
                   </Text>
-                </Pressable>
+                ) : null}
+              </View>
+              {placeFeatures ? (
+                <Row label="환경">
+                  <Text
+                    numberOfLines={1}
+                    className="font-sans text-panel text-fg-default"
+                  >
+                    <Text
+                      className="font-sans-semibold"
+                      style={{ color: toneColor[placeFeatures.risk.tone] }}
+                    >
+                      {placeFeatures.risk.label}
+                    </Text>
+                  </Text>
+                </Row>
               ) : null}
-            </View>
-            {selectedEnvMeta ? (
-              <Text className="mt-1 font-sans text-meta text-fg-subtle">
-                {selectedEnvMeta}
-              </Text>
-            ) : null}
-            <View className="mt-3">
-              {selectedPlaceState === 'unreachable' ? (
-                <Text className="font-sans text-caption text-fg-subtle">
-                  발견되지 않은 영역입니다.
-                </Text>
-              ) : selectedDescription ? (
-                <ExpandableDescription key={selectedNode.id} text={selectedDescription} />
-              ) : null}
+              <ExpandGroup>
+                {placeDescription ? (
+                  <LabeledRow label="모습">
+                    {placeDescription}
+                  </LabeledRow>
+                ) : null}
+              </ExpandGroup>
             </View>
           </View>
-        </View>
-      ) : null}
+        ) : null}
+      </View>
     </View>
   );
 }

@@ -13,6 +13,7 @@ from src.agents.dc_judge.schema import PassAction
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.domain.entities import Character, Location, Stats
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
+from src.flow import narrate as narrate_mod
 from src.flow import turn as turn_mod
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow.turn import run_turn
@@ -58,7 +59,7 @@ async def test_signal_passed_to_narrate_and_cleared(
         if False:
             yield None  # pragma: no cover
 
-    monkeypatch.setattr(turn_mod, "run_narrate", fake_run_narrate)
+    monkeypatch.setattr(narrate_mod, "run_narrate", fake_run_narrate)
 
     async def fake_judge(*a, **kw):
         return PassAction(action="pass")
@@ -140,7 +141,7 @@ async def test_no_signal_passes_none(
         if False:
             yield None  # pragma: no cover
 
-    monkeypatch.setattr(turn_mod, "run_narrate", fake_run_narrate)
+    monkeypatch.setattr(narrate_mod, "run_narrate", fake_run_narrate)
 
     async def fake_judge(*a, **kw):
         return PassAction(action="pass")

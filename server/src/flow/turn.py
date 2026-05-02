@@ -20,7 +20,9 @@ from ..agents.dc_judge.schema import (
     UnequipAction,
     UseAction,
 )
-from ..domain.errors import JudgeMalformed, PendingCheckActive
+from ..domain.errors import JudgeMalformed, LLMUnavailable, PendingCheckActive
+from ..engines.invariants import InvariantViolation
+from pydantic import ValidationError
 from ..domain.memory import PlayerLogEntry
 from ..domain.state import GameState
 from ..llm.client import LLMClient, set_llm_session_if_unset
@@ -56,7 +58,7 @@ from .dirty import (
     push_log_entry,
 )
 from .judge import run_judge
-from .narrate import consume_narrate, run_narrate
+from .narrate import stream_narrate_tail
 from .rest import run_rest
 from .subject import refresh_active_subject
 
@@ -212,7 +214,7 @@ async def _run_one_step_action(
 
         pin_subject_by_input_name(state, player_input, graph)
     fake_pass = PassAction(action="pass")
-    async for ev in _stream_narrate_tail(
+    async for ev in stream_narrate_tail(
         client,
         state,
         scenario_repo,
@@ -264,16 +266,17 @@ async def _enter_combat_and_finalize(
         yield ev
     state.turn_count += 1
     # Post-combat narrate so the system card isn't the terminal UI line — adds aftermath body + suggestions, and consumes the downed_recovered signal here when present. Skipped on player death (game-over) and on client=None (engine-only test path).
+    # player_input is empty: the original input was already consumed by combat_narrate; this second narrate is the recovery beat, not a re-run of the player's intent.
     if client is not None and state.characters[state.player_id].alive:
         state.invalidate_graph()
         graph = state.graph()
         signal = state.previous_phase_signal
         state.previous_phase_signal = None
-        async for ev in _stream_narrate_tail(
+        async for ev in stream_narrate_tail(
             client,
             state,
             scenario_repo,
-            player_input,
+            "",
             dirty,
             to_front_fn,
             PassAction(action="pass"),
@@ -302,20 +305,19 @@ async def _dispatch(
 ) -> AsyncIterator[dict]:
     if isinstance(result, CombatAction):
         if has_invalid_combat_targets(state, graph, result.targets):
+            # Invalid target doesn't consume the turn — the act line lands either as a raw push (no LLM) or absorbed into narrate prose (LLM available).
             fail_line = "공격할 수 있는 대상이 없습니다."
             if client is None:
                 yield push_act(state, dirty, fail_line)
             else:
-                state.turn_count += 1
                 fail_evt = push_act(state, dirty, fail_line)
                 _drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
-                async for ev in _stream_narrate_tail(
+                async for ev in stream_narrate_tail(
                     client, state, scenario_repo, player_input, dirty, to_front_fn,
                     PassAction(action="pass"),
                     graph=graph, act_log_lines=[fail_line],
                 ):
                     yield ev
-                tick_turn_buffs(state, dirty)
             async for ev in finalize(state, save_repo, dirty, to_front_fn):
                 yield ev
             return
@@ -350,17 +352,17 @@ async def _dispatch(
                     dirty=dirty.entities,
                     requested_role=result.role,
                 )
-            except Exception:
+            except (LLMUnavailable, ValidationError, InvariantViolation):
                 summoned = None
         if summoned is None:
-            # No enemy materialized — fold the engine line into narrate prose so it doesn't read as chrome + silence.
+            # No enemy materialized — fold the engine line into narrate prose so it doesn't read as chrome + silence. Failed summon doesn't consume the turn (mirrors the CombatAction invalid-target branch).
             fail_line = "허공을 가르지만 적은 보이지 않습니다."
             fail_evt = push_act(state, dirty, fail_line)
             _drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
             state.invalidate_graph()
             graph = state.graph()
             fake_pass = PassAction(action="pass")
-            async for ev in _stream_narrate_tail(
+            async for ev in stream_narrate_tail(
                 client,
                 state,
                 scenario_repo,
@@ -411,20 +413,19 @@ async def _dispatch(
         return
 
     if isinstance(result, FleeAction):
+        # Flee outside combat doesn't consume the turn — same shape as the CombatAction invalid-target branch.
         fail_line = "지금은 도망칠 전투가 없습니다."
         if client is None:
             yield push_act(state, dirty, fail_line)
         else:
-            state.turn_count += 1
             fail_evt = push_act(state, dirty, fail_line)
             _drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
-            async for ev in _stream_narrate_tail(
+            async for ev in stream_narrate_tail(
                 client, state, scenario_repo, player_input, dirty, to_front_fn,
                 PassAction(action="pass"),
                 graph=graph, act_log_lines=[fail_line],
             ):
                 yield ev
-            tick_turn_buffs(state, dirty)
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
@@ -478,7 +479,7 @@ async def _dispatch(
             from .subject import pin_subject_by_input_name
 
             pin_subject_by_input_name(state, player_input, graph)
-        async for ev in _stream_narrate_tail(
+        async for ev in stream_narrate_tail(
             client,
             state,
             scenario_repo,
@@ -498,7 +499,7 @@ async def _dispatch(
 
     assert isinstance(result, (PassAction, RejectAction))
     state.turn_count += 1
-    async for ev in _stream_narrate_tail(
+    async for ev in stream_narrate_tail(
         client,
         state,
         scenario_repo,
@@ -512,50 +513,6 @@ async def _dispatch(
         yield ev
     tick_turn_buffs(state, dirty)
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
-        yield ev
-
-
-async def _stream_narrate_tail(
-    client: LLMClient,
-    state: GameState,
-    scenario_repo: ScenarioRepo,
-    player_input: str,
-    dirty: Dirty,
-    to_front_fn: ToFrontFn | None,
-    action: "PassAction | RejectAction",
-    *,
-    graph: GameGraph,
-    act_log_lines: list[str] | None = None,
-    previous_phase_signal: str | None = None,
-) -> AsyncIterator[dict]:
-    """Emit a state event, then drive narrate."""
-    if isinstance(action, PassAction):
-        target_for_log = action.targets[0] if action.targets else None
-    else:
-        target_for_log = None
-
-    if to_front_fn is not None:
-        yield {"type": "state", "data": to_front_fn(state)}
-
-    stream = run_narrate(
-        client,
-        state,
-        scenario_repo,
-        player_input,
-        judge_result=action.model_dump(),
-        graph=graph,
-        grade=None,
-        act_log_lines=act_log_lines,
-        previous_phase_signal=previous_phase_signal,
-    )
-    async for ev in consume_narrate(
-        state,
-        dirty,
-        stream,
-        target_for_log=target_for_log,
-        dialogue_input=player_input,
-        graph=graph,
-    ):
         yield ev
 
 

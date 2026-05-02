@@ -149,6 +149,9 @@ def to_subject(state: GameState, graph: GameGraph | None = None) -> dict | None:
     known = [s.appearance] if s.appearance and s.alive else []
     known += [m.content for m in player.memories if m.target_id == sid]
     skills = _skill_names(state, graph, s.id)
+    inventory = _inventory(state, graph, s.id)
+    if s.gold > 0:
+        inventory = [{"name": f"금화({s.gold})", "qty": 1}, *inventory]
     return {
         "name": s.name,
         "alive": s.alive,
@@ -162,7 +165,7 @@ def to_subject(state: GameState, graph: GameGraph | None = None) -> dict | None:
         "hpMax": s.max_hp,
         "stats": stats_payload(s.stats),
         "equipment": _equipment(state, graph, s.id),
-        "inventory": _inventory(state, graph, s.id),
+        "inventory": inventory,
         "skills": skills,
     }
 

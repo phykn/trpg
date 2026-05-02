@@ -3,6 +3,8 @@
 from src.domain.entities import (
     Chapter,
     Character,
+    Item,
+    Location,
     Quest,
     QuestRewards,
     QuestTrigger,
@@ -339,5 +341,26 @@ def test_rewards_include_items(fresh_state):
             )
         ],
     )
+    state.items["sword_01"] = Item(id="sword_01", name="검", weight=0)
     q.check_quests(state, "character_death", "g1")
     assert "sword_01" in state.characters["player_01"].inventory_ids
+
+
+def test_rewards_overflow_drops_to_location(fresh_state):
+    """When a reward item exceeds carry, it lands at the player's location."""
+    state = _state(
+        fresh_state,
+        quests=[
+            _quest(
+                "q1",
+                triggers=[_trig("a", "character_death", "g1")],
+                rewards=QuestRewards(items=["anvil_01"]),
+            )
+        ],
+    )
+    state.items["anvil_01"] = Item(id="anvil_01", name="모루", weight=999)
+    state.locations["loc_01"] = Location(id="loc_01", name="대장간", description="")
+    state.characters["player_01"].location_id = "loc_01"
+    q.check_quests(state, "character_death", "g1")
+    assert "anvil_01" not in state.characters["player_01"].inventory_ids
+    assert "anvil_01" in state.locations["loc_01"].item_ids

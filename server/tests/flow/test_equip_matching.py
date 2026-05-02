@@ -18,6 +18,7 @@ from src.agents.dc_judge.schema import EquipAction, UnequipAction
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow import judge as judge_mod
 from src.flow import combat_phase as combat_phase_mod
+from src.flow import narrate as narrate_mod
 from src.flow import turn as turn_mod
 from src.context import build_surroundings
 from src.flow.turn import run_turn
@@ -45,7 +46,7 @@ def _judge_returns(monkeypatch, action_obj):
         if False:
             yield None  # async-gen marker — never reached
 
-    monkeypatch.setattr(turn_mod, "run_narrate", _stub_run_narrate)
+    monkeypatch.setattr(narrate_mod, "run_narrate", _stub_run_narrate)
 
 
 async def _collect(it):

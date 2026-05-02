@@ -11,7 +11,6 @@ import {
 } from '@/hooks/useStoryGraph';
 import { EMPTY_STORY_GRAPH } from '@/presenters/storyGraph';
 import { getSessionById, loadStoredGameId, streamTurn } from '@/services';
-import type { Place } from '@/types/domain';
 import type { StoryGraphModel } from '@/types/storyGraph';
 import type { PanelAction } from '@/types/ui';
 import type { StreamEvent } from '@/types/wire';
@@ -36,7 +35,6 @@ export function StoryGraphScreen({
   const [actionMessage, setActionMessage] = React.useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(null);
   const [actionRunning, setActionRunning] = React.useState(false);
-  const [place, setPlace] = React.useState<Place | null>(null);
   const actionAbortRef = React.useRef<AbortController | null>(null);
 
   const loadGraph = React.useCallback(async (isAlive: () => boolean) => {
@@ -59,7 +57,6 @@ export function StoryGraphScreen({
         setStatus('empty');
         return;
       }
-      setPlace(session.state.place);
       setGraph(mergeAndStoreStoryGraph(stored, session.state.storyGraph));
       setStatus('ready');
     } catch (err) {
@@ -97,7 +94,6 @@ export function StoryGraphScreen({
       const stored = gameIdRef.current;
       if (!stored) return;
       setGraph(mergeAndStoreStoryGraph(stored, ev.data.storyGraph));
-      setPlace(ev.data.place);
       setSelectedNodeId(null);
       setActionMessage('지도 명령 결과를 반영했습니다.');
       return;
@@ -234,7 +230,6 @@ export function StoryGraphScreen({
             onNodeSelect={setSelectedNodeId}
             onAction={onAction ?? runMapAction}
             actionDisabled={actionRunning}
-            place={place}
           />
         ) : null}
       </ScrollView>

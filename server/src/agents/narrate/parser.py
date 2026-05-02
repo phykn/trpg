@@ -18,6 +18,7 @@ class NarrativeDelta:
 class NarrativeFinal:
     body: str
     output: NarrateOutput
+    parse_error: str | None = None
 
 
 def _clean_body(body: str) -> str:
@@ -38,14 +39,15 @@ def _split_trailing_backslash_run(s: str) -> tuple[str, str]:
     return s[:i], s[i:]
 
 
-def _parse_output(json_text: str) -> NarrateOutput:
+def _parse_output(json_text: str) -> tuple[NarrateOutput, str | None]:
+    """Returns (output, parse_error). Body has already streamed when this runs, so a parse failure can't trigger runner retry — caller surfaces parse_error as an SSE error event so the loss isn't silent."""
     json_text = json_text.strip()
     if not json_text:
-        return NarrateOutput()
+        return NarrateOutput(), "narrate JSON tail missing (no separator emitted)"
     try:
-        return NarrateOutput.model_validate_json(json_text)
-    except (ValidationError, json.JSONDecodeError):
-        return NarrateOutput()
+        return NarrateOutput.model_validate_json(json_text), None
+    except (ValidationError, json.JSONDecodeError) as e:
+        return NarrateOutput(), f"narrate JSON parse failed: {type(e).__name__}: {e}"
 
 
 async def split_stream(
@@ -93,4 +95,5 @@ async def split_stream(
         body = full[:sep_idx]
         json_text = full[sep_idx + len(SEPARATOR) :]
 
-    yield NarrativeFinal(body=_clean_body(body), output=_parse_output(json_text))
+    output, parse_error = _parse_output(json_text)
+    yield NarrativeFinal(body=_clean_body(body), output=output, parse_error=parse_error)

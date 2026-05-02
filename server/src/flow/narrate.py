@@ -1,6 +1,7 @@
 import re
 from collections.abc import AsyncIterator
 
+from ..agents.dc_judge.schema import PassAction, RejectAction
 from ..agents.narrate import (
     NarrateInput,
     NarrateOutput,
@@ -26,6 +27,7 @@ from ..context import (
 )
 from .dirty import (
     Dirty,
+    ToFrontFn,
     next_log_id,
     push_dialogue,
     push_log_entry,
@@ -135,6 +137,12 @@ async def consume_narrate(
     # Fallback "잠시 정적이 흐릅니다" — without it an empty narrate leaves the turn looking broken (no GM line lands).
     if final is None:
         final = NarrativeFinal(body="", output=NarrateOutput())
+    if final.parse_error:
+        # Body has already streamed by the time we know the JSON tail is malformed; runner can't retry, so surface as SSE error so the dropped state_changes/memory aren't silent.
+        yield {
+            "type": "error",
+            "data": {"message": final.parse_error, "code": "NarrateParseFailed"},
+        }
     body = final.body.strip()
     if not body:
         body = "잠시 정적이 흐릅니다."
@@ -154,6 +162,51 @@ async def consume_narrate(
     write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
     gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=body)
     push_log_entry(state, gm_log, dirty)
+
+
+async def stream_narrate_tail(
+    client: LLMClient,
+    state: GameState,
+    scenario_repo: ScenarioRepo,
+    player_input: str,
+    dirty: Dirty,
+    to_front_fn: ToFrontFn | None,
+    action: PassAction | RejectAction,
+    *,
+    graph: GameGraph,
+    act_log_lines: list[str] | None = None,
+    previous_phase_signal: str | None = None,
+) -> AsyncIterator[dict]:
+    """Emit a state event, then drive narrate. Empty player_input is the post-combat / intro signal — dialogue push is skipped so recent_dialogue isn't polluted with a blank turn."""
+    if isinstance(action, PassAction):
+        target_for_log = action.targets[0] if action.targets else None
+    else:
+        target_for_log = None
+
+    if to_front_fn is not None:
+        yield {"type": "state", "data": to_front_fn(state)}
+
+    stream = run_narrate(
+        client,
+        state,
+        scenario_repo,
+        player_input,
+        judge_result=action.model_dump(),
+        graph=graph,
+        grade=None,
+        act_log_lines=act_log_lines,
+        previous_phase_signal=previous_phase_signal,
+    )
+    dialogue_input = player_input if player_input else None
+    async for ev in consume_narrate(
+        state,
+        dirty,
+        stream,
+        target_for_log=target_for_log,
+        dialogue_input=dialogue_input,
+        graph=graph,
+    ):
+        yield ev
 
 
 def _dead_names_in_scope(state: GameState, graph: GameGraph | None = None) -> list[str]:

@@ -173,6 +173,25 @@ def test_subject_known_filters_by_target_id(fresh_state):
     assert s["gender"] == "남성"
 
 
+def test_subject_inventory_prepends_gold_when_positive(fresh_state):
+    state = _full_state(fresh_state)
+    state.characters["guard_01"].gold = 42
+    state.characters["guard_01"].inventory_ids = ["herb_01"]
+    s = to_subject(state)
+    assert s["inventory"] == [
+        {"name": "금화(42)", "qty": 1},
+        {"name": "약초", "qty": 1},
+    ]
+
+
+def test_subject_inventory_omits_gold_when_zero(fresh_state):
+    state = _full_state(fresh_state)
+    state.characters["guard_01"].gold = 0
+    state.characters["guard_01"].inventory_ids = ["herb_01"]
+    s = to_subject(state)
+    assert s["inventory"] == [{"name": "약초", "qty": 1}]
+
+
 def test_subject_dead_exposed_via_alive_field(fresh_state):
     """Dead subjects drop the static appearance from `known` (it describes a
     living body and goes stale once equipment is looted) — only player

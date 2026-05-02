@@ -24,6 +24,7 @@ from src.domain.entities import (
     Location,
     Stats,
 )
+from src.flow import narrate as narrate_mod
 from src.flow import turn as turn_mod
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.flow.turn import run_turn
@@ -81,7 +82,7 @@ async def test_chain_passes_skipped_heal_notice_into_narrate(
         if False:
             yield None  # pragma: no cover — make it an async generator
 
-    monkeypatch.setattr(turn_mod, "run_narrate", fake_run_narrate)
+    monkeypatch.setattr(narrate_mod, "run_narrate", fake_run_narrate)
 
     async def fake_judge(*a, **kw):
         return ChainAction(
@@ -130,7 +131,7 @@ async def test_non_chain_pass_passes_empty_act_log_lines(
         if False:
             yield None  # pragma: no cover
 
-    monkeypatch.setattr(turn_mod, "run_narrate", fake_run_narrate)
+    monkeypatch.setattr(narrate_mod, "run_narrate", fake_run_narrate)
 
     async def fake_judge(*a, **kw):
         return PassAction(action="pass")

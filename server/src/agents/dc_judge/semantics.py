@@ -83,7 +83,7 @@ def _check_targets(output, surroundings: dict[str, Any]) -> None:
         raise JudgeSemanticError(
             f"targets contains ids not in surroundings: {bad}. "
             f"Valid ids are: {sorted(valid)}. "
-            f"If the player referenced something not present, action must be 'clarify'."
+            f"If the player referenced something not present, action must be 'pass'."
         )
 
 
@@ -171,7 +171,7 @@ def _check_level_up(output: LevelUpAction, surroundings: dict[str, Any]) -> None
     growth = surroundings.get("growth") or {}
     if not growth.get("can_level_up"):
         raise JudgeSemanticError(
-            "level_up not currently available — xp not at threshold. Use 'pass' or 'clarify'."
+            "level_up not currently available — xp not at threshold. Use 'pass'."
         )
     if STAT_PAIRS.get(output.stat_up) != output.stat_down:
         raise JudgeSemanticError(
@@ -183,7 +183,7 @@ def _check_learn_skill(output: LearnSkillAction, surroundings: dict[str, Any]) -
     candidates = surroundings.get("skill_candidates") or []
     if not candidates:
         raise JudgeSemanticError(
-            "no pending skill candidates. Use 'pass' or 'clarify'."
+            "no pending skill candidates. Use 'pass'."
         )
     if output.index >= len(candidates):
         raise JudgeSemanticError(
@@ -218,7 +218,7 @@ def _check_use(output: UseAction, surroundings: dict[str, Any]) -> None:
         raise JudgeSemanticError(
             f"item_id {output.item_id!r} not in inventory. "
             f"Valid items are: {sorted(i for i in inv_items if i)}. "
-            f"If the player referenced something they don't carry, action must be 'clarify'."
+            f"If the player referenced something they don't carry, action must be 'pass'."
         )
     kind = inv_items[output.item_id]
     if kind in ("weapon", "armor"):

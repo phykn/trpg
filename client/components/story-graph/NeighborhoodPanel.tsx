@@ -149,7 +149,7 @@ export function NeighborhoodPanel({
   return (
     <View
       accessibilityLabel={`${accessibilityLabel}. ${visibleGraph.summary}`}
-      className={`${framed ? 'border border-border-default rounded-md bg-canvas-subtle px-3 py-3' : 'px-2 pt-2 pb-3'} gap-2`}
+      className={`${framed ? 'border border-border-default rounded-md bg-canvas-subtle px-3 py-3' : 'px-4 pt-2 pb-3'} gap-2`}
     >
       <StoryGraphCanvas
         graph={visibleGraph}

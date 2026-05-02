@@ -10,11 +10,10 @@ from ..rules import RULES
 
 
 def xp_for_next_level(level: int) -> int:
-    """Cost from level N → N+1 = base_xp × N (linear). level=0 costs 1× base_xp."""
+    """Cost from level N → N+1 = base_xp × max(N, 1). 0→1 and 1→2 are both 1× base_xp; from 2→3 onward it scales linearly with the source level."""
     if level >= RULES.growth.max_level:
         return 0
-    n = max(level, 1)  # 0→1 is base_xp × 1, 1→2 is ×1, 2→3 is ×2, ...
-    return RULES.growth.base_xp * n
+    return RULES.growth.base_xp * max(level, 1)
 
 
 def calc_max_hp(level: int, con: int) -> int:
