@@ -1,4 +1,4 @@
-import type { StoryGraphModel } from './storyGraph';
+import type { StoryGraphModel } from '@/features/story-graph';
 import type { LogEntry, Tone } from './ui';
 import type { PendingCheck } from './wire';
 

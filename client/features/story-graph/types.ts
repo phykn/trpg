@@ -1,4 +1,4 @@
-import type { RiskBadge } from './domain';
+import type { RiskBadge } from '@/types/domain';
 
 export type StoryGraphNodeKind =
   | 'hero'

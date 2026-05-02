@@ -2,12 +2,14 @@ import React from 'react';
 import { type GestureResponderHandlers, PanResponder, Pressable, Text, View } from 'react-native';
 
 import { shadow } from '@/design/tokens';
-import type { StoryGraphModel } from '@/presenters/storyGraph';
+import {
+  MiniMapPanel,
+  StoryGraphScreen,
+  type StoryGraphModel,
+} from '@/features/story-graph';
 import type { Place } from '@/types/domain';
 import type { PanelAction, PanelSlot } from '@/types/ui';
 
-import { MiniMapPanel } from '../story-graph';
-import { StoryGraphScreen } from '../story-graph/StoryGraphScreen';
 import { ChipTab } from './ChipTab';
 import { IconButton, ICON_PATH } from './IconButton';
 import { PanelBody } from './PanelBody';

@@ -1,7 +1,10 @@
 import React from 'react';
 
-import { mergeAndStoreStoryGraph } from '@/hooks/useStoryGraph';
-import { EMPTY_STORY_GRAPH } from '@/presenters/storyGraph';
+import {
+  EMPTY_STORY_GRAPH,
+  mergeAndStoreStoryGraph,
+  type StoryGraphModel,
+} from '@/features/story-graph';
 import {
   clearStoredGameId,
   getSessionById,
@@ -20,7 +23,6 @@ import type {
   Quest,
   Subject,
 } from '@/types/domain';
-import type { StoryGraphModel } from '@/types/storyGraph';
 import type { LogEntry } from '@/types/ui';
 import type { InitRequest, PendingCheck, StreamEvent } from '@/types/wire';
 

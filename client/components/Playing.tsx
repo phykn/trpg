@@ -2,8 +2,8 @@ import { useAudioPlayer } from 'expo-audio';
 import React from 'react';
 import { Keyboard, Pressable, Text, View } from 'react-native';
 
+import { useStoryGraph } from '@/features/story-graph';
 import type { Game } from '@/hooks/useGame';
-import { useStoryGraph } from '@/hooks/useStoryGraph';
 import { buildPanelSlots } from '@/presenters';
 import type { PanelAction, PanelSlot } from '@/types/ui';
 
