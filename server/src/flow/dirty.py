@@ -22,9 +22,6 @@ from ..rules import RULES
 ToFrontFn = Callable[[GameState], dict]
 
 
-# --- Dirty set -------------------------------------------------------------
-
-
 @dataclass
 class Dirty:
     """Persistence work accumulated during one turn.
@@ -38,9 +35,6 @@ class Dirty:
     log: list[LogEntry] = field(default_factory=list)
     history: list[TurnLogEntry] = field(default_factory=list)
     dialogue: list[DialoguePair] = field(default_factory=list)
-
-
-# --- Log / turn / dialogue push helpers ------------------------------------
 
 
 def _trim(items: list, cap: int) -> None:
@@ -111,9 +105,6 @@ def push_dialogue(
     state.recent_dialogue.append(entry)
     _trim(state.recent_dialogue, RULES.memory.recent_dialogue_turns)
     dirty.dialogue.append(entry)
-
-
-# --- Flush + finalize ------------------------------------------------------
 
 
 async def flush(state: GameState, save_repo: SaveRepo, dirty: Dirty) -> None:

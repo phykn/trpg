@@ -25,10 +25,7 @@ export type EdgeKind =
   | 'quest_giver'
   | 'quest_target';
 
-// Discriminated union by `kind`. Each variant lists exactly the fields
-// the server emits for that node type — adding a field to a builder
-// without updating the matching variant here is a compile error, which
-// is the whole point.
+// Discriminated by `kind`; adding a field to a builder without updating the matching variant is a compile error.
 type BaseNode = { id: string; label: string };
 
 type CharacterFields = {

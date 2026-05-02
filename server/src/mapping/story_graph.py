@@ -57,9 +57,6 @@ EdgeKind = Literal[
 ]
 
 
-# --- helpers ---------------------------------------------------------------
-
-
 def _edge_id(source: str, target: str, label: str) -> str:
     return f"{source}->{target}:{label}"
 
@@ -101,9 +98,6 @@ def _visible_character_ids(
                 visible.add(cid)
 
     return visible
-
-
-# --- per-kind node builders ------------------------------------------------
 
 
 def _character_identity(state: GameState, graph: GameGraph, char: Character) -> dict:
@@ -207,9 +201,6 @@ def _quest_node(quest: Quest, state: GameState, graph: GameGraph) -> dict:
         "goals": [t.name for t in quest.triggers],
         "summary": quest.summary or "",
     }
-
-
-# --- main entry ------------------------------------------------------------
 
 
 def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:

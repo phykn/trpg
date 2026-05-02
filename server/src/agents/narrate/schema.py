@@ -21,18 +21,9 @@ class NarrateInput(BaseModel):
         ]
         | None
     ) = None
-    # Per-turn engine notices from chain dispatch's non-final parts (e.g.
-    # "이미 체력 가득" when a heal is skipped, "거래를 시도했지만 금화가
-    # 부족합니다"). Empty for non-chain turns. Narrate must reflect these in
-    # prose so the body doesn't contradict what the engine actually applied.
+    # Engine notices from non-final chain parts; narrate must reflect them so prose can't contradict the engine.
     act_log_lines: list[str] = []
-    # One-shot signal carried over from the previous turn. Currently the
-    # only value is `"downed_recovered"` (player blacked out at 0 HP last
-    # combat and woke via auto death-save). None for ordinary turns. When
-    # set, narrate must open the body with the recovery beat — waking,
-    # disorientation, the scene re-focusing — before the player_input takes
-    # over. The flow layer clears this on its way through narrate so it
-    # doesn't echo across multiple turns.
+    # One-shot from previous turn (only `"downed_recovered"` today). Narrate opens with the recovery beat; flow clears it after.
     previous_phase_signal: str | None = None
     player_input: str
 

@@ -14,18 +14,12 @@ def sse_pack(event: dict) -> str:
 
 
 async def _wrap(events: AsyncIterator[dict]) -> AsyncIterator[bytes]:
-    """SSE bytes generator. Wraps unhandled exceptions as `error` events.
-
-    Does NOT auto-append `done` — some flows (pending_check) intentionally end
-    without one and the client treats stream-close as the signal.
-    """
+    """SSE bytes generator. Wraps unhandled exceptions as `error` events; does NOT auto-append `done`."""
     try:
         async for ev in events:
             yield sse_pack(ev).encode("utf-8")
     except Exception as e:
-        # Log the raw exception for debugging; ship a sanitized Korean
-        # message to the player. Upstream API JSON / English traces never
-        # reach the client.
+        # Sanitize before send: raw exceptions / English traces must never reach the player.
         _log.exception("SSE stream raised: %s", e)
         err = {
             "type": "error",

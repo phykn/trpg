@@ -13,11 +13,7 @@ function plainMeta(text: string): MetaSegment[] {
   return [{ text }];
 }
 
-// Match strictly on `alive === false` (not `!alive`) so a missing or
-// undefined field doesn't get treated as dead. Some SSE state events
-// emit the alive field, others have not been audited yet; the safer
-// default is to render the plain name unless the server explicitly
-// says the character is dead.
+// Strict `alive === false`: undefined is not treated as dead since some SSE state events still omit the field.
 function withDeath(name: string, alive: boolean | undefined): string {
   return alive === false ? `${name} (죽음)` : name;
 }

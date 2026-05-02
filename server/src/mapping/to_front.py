@@ -33,9 +33,6 @@ from .labels import (
 from .story_graph import to_story_graph
 
 
-# Public re-export so flow/roll.py and any other caller can keep importing
-# `stat_label` from `mapping.to_front` without churn. (`to_story_graph` is
-# imported from `mapping.story_graph` directly by new callers.)
 __all__ = [
     "stat_label",
     "to_hero",
@@ -46,9 +43,6 @@ __all__ = [
     "pending_check_to_front",
     "to_front_state",
 ]
-
-
-# --- Hero ------------------------------------------------------------------
 
 
 def _equipment(state: GameState, graph: GameGraph, char_id: str) -> dict:
@@ -137,9 +131,6 @@ def to_hero(state: GameState, graph: GameGraph | None = None) -> dict:
     }
 
 
-# --- Subject ---------------------------------------------------------------
-
-
 def to_subject(state: GameState, graph: GameGraph | None = None) -> dict | None:
     if graph is None:
         graph = state.graph()
@@ -171,9 +162,6 @@ def to_subject(state: GameState, graph: GameGraph | None = None) -> dict | None:
     }
 
 
-# --- Quest -----------------------------------------------------------------
-
-
 def to_quest(state: GameState, graph: GameGraph | None = None) -> dict | None:
     if graph is None:
         graph = state.graph()
@@ -197,9 +185,6 @@ def to_quest(state: GameState, graph: GameGraph | None = None) -> dict | None:
         "conditions": list(q.conditions),
         "rewards": {"gold": q.rewards.gold, "exp": q.rewards.exp},
     }
-
-
-# --- Place -----------------------------------------------------------------
 
 
 def to_place(state: GameState, graph: GameGraph | None = None) -> dict | None:
@@ -255,9 +240,6 @@ def to_place(state: GameState, graph: GameGraph | None = None) -> dict | None:
     }
 
 
-# --- Combat ----------------------------------------------------------------
-
-
 def to_combat(state: GameState) -> dict | None:
     cs = state.combat_state
     if cs is None or not cs.turn_order:
@@ -281,9 +263,6 @@ def to_combat(state: GameState) -> dict | None:
     }
 
 
-# --- PendingCheck ----------------------------------------------------------
-
-
 def pending_check_to_front(state: GameState, pending: PendingCheck) -> dict:
     """`stat_label` is the Korean stat name (built here so the client doesn't
     re-derive it). `stat_value` is the player's current score on that stat.
@@ -305,9 +284,6 @@ def pending_check_to_front(state: GameState, pending: PendingCheck) -> dict:
         "target": pending.target,
         "reason": pending.reason,
     }
-
-
-# --- FrontState ------------------------------------------------------------
 
 
 def to_front_state(state: GameState, graph: GameGraph | None = None) -> dict:

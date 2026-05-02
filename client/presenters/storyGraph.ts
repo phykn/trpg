@@ -40,12 +40,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-// Merges the previous (stored) graph with the current server-built graph,
-// keeping nodes the player has already seen. When a `place` from base is
-// no longer the current place in next, demote it to a regular `location`
-// so the map view still shows it as "discovered but not current". Same
-// for `subject` → `target` when the player isn't actively engaging that
-// NPC anymore. Edges are kept if both endpoints survive the merge.
+// Merge stored + current graphs. Demote `place` → `location` and `subject` → `target` when no longer active.
 export function mergeStoryGraphs(base: StoryGraphModel, next: StoryGraphModel): StoryGraphModel {
   if (base.nodes.length === 0 && base.edges.length === 0) return next;
   if (next.nodes.length === 0 && next.edges.length === 0) return base;

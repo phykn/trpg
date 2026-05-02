@@ -1,8 +1,4 @@
-// Browser localStorage adapter and the keys that read/write through it.
-// `getStorage()` returns null on RN/SSR (no `window`), so callers no-op
-// gracefully off-web. Each browser owns its own active-game pointer — the
-// server has no per-user "last game" notion, so two browsers don't fight.
-
+// Browser localStorage adapter; `getStorage()` returns null on RN/SSR so callers no-op gracefully off-web.
 export function getStorage(): Storage | null {
   if (typeof window === 'undefined') return null;
   return window.localStorage ?? null;

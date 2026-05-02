@@ -1,13 +1,3 @@
-"""Player identity view — narrate / combat_narrate prompt input.
-
-Mirrors target_view's deep-dump shape but for the active player. Surfaces
-race, appearance, description, gender — the fields surroundings.entities[0]
-flattens away — so prose voice can reflect "you are a goblin" instead of
-defaulting to a human-shaped narrator. Stats / hp / equipment stay out:
-narrate prompt forbids numeric leakage and equipment is already in
-surroundings.
-"""
-
 from ..domain.state import GameState
 
 

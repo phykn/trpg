@@ -1,16 +1,4 @@
-"""Engine-error → Korean GM phrase translation table.
-
-Single concern: take an English exception message raised by an engine
-(InventoryInvalid / LevelUpInvalid / SkillInvalid / ...) and return a
-one-line Korean phrase safe to surface as GM text. Pulled out of
-flow/format.py so the format module stays focused on log-line builders.
-"""
-
-# Substring → Korean phrase. Order in this literal is for readability;
-# `_ERROR_PHRASES_SORTED` below scans longest-needle-first so a more specific
-# match (e.g. "npc has not enough gold") always wins over a shorter prefix
-# of itself ("not enough gold"). Add new entries here without worrying about
-# position — the sort handles precedence.
+# Substring → Korean phrase. `_ERROR_PHRASES_SORTED` scans longest-needle-first so order here is irrelevant.
 _ERROR_PHRASES_RAW: list[tuple[str, str]] = [
     ("hp already full", "이미 체력이 가득해 회복약을 쓸 필요가 없습니다"),
     ("mp already full", "이미 마력이 가득해 마력 음료를 쓸 필요가 없습니다"),
@@ -66,9 +54,6 @@ def humanize_engine_error(err: Exception) -> str:
         if needle.lower() in low:
             return korean
     return "지금은 그 행동이 통하지 않습니다"
-
-
-# --- runtime/transport-level error messages (SSE `error` event) -------------
 
 
 # Exception class name → Korean message shown to the player. Keyed by

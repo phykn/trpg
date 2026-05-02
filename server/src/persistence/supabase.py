@@ -41,8 +41,7 @@ from .repo import ScenarioRepo
 
 T = TypeVar("T", bound=BaseModel)
 
-# Reuse the meta schema from store.py — it's the canonical shape for the
-# `games.meta` jsonb column.
+# Canonical meta shape lives in store.py; reused for the `games.meta` jsonb column.
 _Meta = store._Meta
 _meta_from_state = store._meta_from_state
 _ENTITY_MODELS = store._ENTITY_MODELS
@@ -57,9 +56,7 @@ class SupabaseSaveRepo:
         self._db = _PostgREST(url, service_key)
 
     async def save_meta(self, state: GameState) -> None:
-        # _Meta dumps to a dict whose nested models (PendingCheck, Skill,
-        # CombatState) are themselves jsonable — round-trip via JSON to
-        # collapse to plain dict for the jsonb column.
+        # JSON round-trip collapses nested Pydantic models to a plain dict for the jsonb column.
         meta = json.loads(_meta_from_state(state).model_dump_json())
         await self._db.upsert(
             "games",
@@ -120,8 +117,7 @@ class SupabaseSaveRepo:
         await self._append_seq_rows("dialogue_entries", game_id, list(entries))
 
     async def load_game(self, game_id: str) -> GameState:
-        # Single round-trip per resource. Fan out via gather — PostgREST
-        # accepts independent connections in parallel.
+        # PostgREST accepts independent connections in parallel; fan out via gather.
         meta_row, entity_rows, log_rows, hist_rows, dlg_rows = await asyncio.gather(
             self._db.select_one(
                 "games", filters={"game_id": f"eq.{game_id}"}, select="meta"
@@ -176,7 +172,7 @@ class SupabaseSaveRepo:
                 ) from e
             entities[kind][row["id"]] = obj
 
-        # Tail rows came back DESC — flip to chronological order.
+        # Tail rows came back DESC; flip to chronological order.
         log_entries = [
             _LOG_ADAPTER.validate_python(r["entry"]) for r in reversed(log_rows)
         ]
@@ -215,12 +211,8 @@ class SupabaseSaveRepo:
     async def copy_seed_into_game(
         self, scenario_repo: ScenarioRepo, profile: str, game_id: str
     ) -> None:
-        """Read seed entities via scenario_repo and bulk-INSERT them as
-        the new game's starting entity rows. Skipped: world.md / start.json /
-        player_template.json / profile.json — those stay seed-only."""
-        # The games row must exist first because entities has FK to games.
-        # Caller (init_game → flush) writes meta separately; ensure a row
-        # exists here so this method is independently consistent.
+        """Bulk-INSERT seed entities as the new game's starting rows. world.md / start.json / player_template / profile stay seed-only."""
+        # entities has FK → games, so create the games row first; this keeps the method independently consistent.
         await self._db.upsert(
             "games",
             [{"game_id": game_id, "meta": {"game_id": game_id, "profile": profile}}],
@@ -244,15 +236,7 @@ class SupabaseSaveRepo:
 
 
 class SupabaseStorageScenarioRepo:
-    """ScenarioRepo over a Supabase Storage bucket.
-
-    Layout: <bucket>/<profile>/{world.md, start.json, player_template.json,
-    profile.json, races/*.json, characters/*.json, items/*.json, ...}.
-
-    Per-process caches keyed on Storage path: raw bytes (`_object_cache`)
-    and directory listings (`_listing_cache`). Process-lifetime only —
-    restart to reload.
-    """
+    """ScenarioRepo over a Supabase Storage bucket. Per-process caches are process-lifetime; restart to reload."""
 
     def __init__(self, *, url: str, service_key: str, bucket: str) -> None:
         self._fs = _Storage(url, service_key, bucket)

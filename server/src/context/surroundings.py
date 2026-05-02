@@ -33,17 +33,17 @@ from ..ontology.queries import (
 from ..rules import RULES
 
 
-# --- Common helpers (NPC state tags) -----------------------------------------
-
-
 def _state_tags(actor: Character, npc: Character, *, masked: bool = False) -> list[str]:
     """`masked=True` (failure-grade narrate call) drops the affinity tag —
     the player just botched a social/investigation roll, so they shouldn't
     learn the NPC's true disposition from a sidebar tag. Visible-injury tags
-    stay (a wound is observable regardless of what the player rolled)."""
+    stay (a wound is observable regardless of what the player rolled).
+
+    Affinity is read NPC→actor (how the NPC views the actor), the only
+    direction the rest of the system tracks."""
     tags: list[str] = []
     if not masked:
-        aff = actor.relations.get(npc.id, 0)
+        aff = npc.relations.get(actor.id, 0)
         threshold = RULES.social.friendly_threshold
         if aff >= threshold:
             tags.append(f"우호적(affinity {aff})")
@@ -54,9 +54,6 @@ def _state_tags(actor: Character, npc: Character, *, masked: bool = False) -> li
         if hp_pct < 50:
             tags.append(f"부상(hp {hp_pct}%)")
     return tags
-
-
-# --- Inventory / equipment / skills / growth (actor-centric) -----------------
 
 
 def _inventory_payload(
@@ -130,9 +127,6 @@ def _skill_candidates_payload(state: GameState) -> list[dict]:
         }
         for s in state.pending_skill_candidates
     ]
-
-
-# --- Location / nearby NPCs/items/connections / merchants (location-centric) -
 
 
 def _merchants_payload(
@@ -315,9 +309,6 @@ def _location_payload(location: Location) -> dict:
     if location.difficulty:
         out["difficulty"] = location.difficulty
     return out
-
-
-# --- Entry point (the dict the judge sees) -----------------------------------
 
 
 def build_surroundings(

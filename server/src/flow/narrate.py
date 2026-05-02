@@ -34,9 +34,6 @@ from .dirty import (
 from .memory_writer import write_memories
 
 
-# --- run_narrate -----------------------------------------------------------
-
-
 async def run_narrate(
     client: LLMClient,
     state: GameState,
@@ -109,11 +106,7 @@ async def run_narrate(
         yield item
 
 
-# --- entity-id leak guard --------------------------------------------------
-
-# Engine ids are lowercase ASCII with at least one underscore (`q_chief_request`,
-# `edrik_chief`, `healing_potion_01`). Korean text never matches this shape, so
-# any token matching it inside a player-facing suggestion is a prompt slip.
+# Engine ids are lowercase ASCII with an underscore — a token matching this shape in player-facing text is a prompt slip.
 _ID_TOKEN = re.compile(r"\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b")
 _PAREN_ID = re.compile(
     r"\s*[\(\[（［][^\(\[\)\]）］]*[a-z][a-z0-9]*(?:_[a-z0-9]+)+[^\(\[\)\]）］]*[\)\]）］]"
@@ -132,13 +125,8 @@ def _strip_id_leaks(suggestions: list[str]) -> list[str]:
     return cleaned
 
 
-# --- reject sterilizer -----------------------------------------------------
-
-
 def _sterilize_for_reject(output) -> None:
-    """Reject path must produce zero side effects: empty state_changes, no
-    memory, no suggestions. The narrate prompt also tells the LLM to do
-    this, but we don't trust the LLM here — engine-side enforcement."""
+    """Engine-side enforcement: reject must produce zero side effects, regardless of what the LLM emitted."""
     output.state_changes = []
     output.memorable = False
     output.memory_targets = []
@@ -146,9 +134,6 @@ def _sterilize_for_reject(output) -> None:
     output.memory_links = {}
     output.importance = None
     output.suggestions = []
-
-
-# --- player-move reconcile (pass action) -----------------------------------
 
 
 def _is_player_relocation(change: dict, player_id: str) -> bool:
@@ -166,9 +151,7 @@ def _is_player_relocation(change: dict, player_id: str) -> bool:
 
 
 def _expected_destination(judge_result: dict, state: GameState) -> str | None:
-    """When judge picks `pass targets=[loc_id]` and that loc differs from the
-    player's current location, that's the player's movement intent. Returns
-    the destination loc id or None."""
+    """Destination loc id when judge's `pass targets=[loc_id]` differs from the player's current location, else None."""
     targets = judge_result.get("targets") or []
     if not targets:
         return None
@@ -184,11 +167,7 @@ def _expected_destination(judge_result: dict, state: GameState) -> str | None:
 def apply_intended_move(
     state: GameState, judge_result: dict, dirty_entities: set
 ) -> None:
-    """Pre-apply the player's relocation before narrate streams, so panels and
-    the narrate prompt's surroundings both treat the destination as already
-    reached. After this runs, `_reconcile_player_move` becomes a no-op for the
-    move (player.location_id == expected → returns None), and any leftover
-    relocation deltas narrate still emits get stripped by the same path."""
+    """Pre-apply player relocation so panels + narrate surroundings see the destination as already reached."""
     expected = _expected_destination(judge_result, state)
     if expected is None:
         return
@@ -202,14 +181,7 @@ def apply_intended_move(
 def _reconcile_player_move(
     changes: list[dict], judge_result: dict, state: GameState
 ) -> list[dict]:
-    """Resolve narrate's player-relocation output against judge's intent.
-
-    - No movement intent (no location target) → strip any player relocations
-      narrate emitted (e.g., '잠시 숨을 고른다' shouldn't move the player).
-    - Movement intent → keep player moves only if they match the expected
-      destination, drop hallucinated moves to other locations, and auto-inject
-      a `move` change if narrate forgot to emit one (the bug where prose
-      reads '여관에 들어선다' but state stays at town_square)."""
+    """Reconcile narrate's player-relocation output with judge's intent: strip stray moves, inject a missing one if needed."""
     expected = _expected_destination(judge_result, state)
     player_id = state.player_id
     if expected is None:
@@ -229,9 +201,6 @@ def _reconcile_player_move(
     return kept
 
 
-# --- consume_narrate -------------------------------------------------------
-
-
 async def consume_narrate(
     state: GameState,
     dirty: Dirty,
@@ -241,19 +210,7 @@ async def consume_narrate(
     dialogue_input: str | None,
     graph: GameGraph | None = None,
 ) -> AsyncIterator[dict]:
-    """Drive a `run_narrate` stream: emit `narrative_delta` SSE events as body
-    tokens arrive, then commit the post-narrate tail (state_changes, turn_log,
-    optional dialogue, memory writes, GM log line). The caller still owns the
-    `run_narrate` kwargs (judge_result, grade, target_id) and just hands us
-    the resulting iterator.
-
-    `graph` is the relational SSOT — used here to read the dead NPCs in
-    scope for quote redaction. Flow callers pass through the turn-start
-    graph; tests/ad-hoc callers omit and we'll build internally.
-
-    `dialogue_input=None` skips the dialogue push (used by intro, which has
-    no player utterance).
-    """
+    """Stream narrate body, then commit the post-narrate tail. `dialogue_input=None` skips the dialogue push (intro)."""
     if graph is None:
         graph = state.graph()
     final: NarrativeFinal | None = None
@@ -263,11 +220,7 @@ async def consume_narrate(
         else:
             final = item
 
-    # Narrate guarantee: even when the LLM produces nothing usable (empty
-    # body after retries, or the stream short-circuited without a final),
-    # the narrator must still say something. Otherwise the turn looks broken
-    # — typing dots vanish and no GM line lands. Fall back to a deterministic
-    # "잠시 정적이 흐릅니다" and stream it as a delta so the client sees it.
+    # Fallback "잠시 정적이 흐릅니다" — without it an empty narrate leaves the turn looking broken (no GM line lands).
     if final is None:
         final = NarrativeFinal(body="", output=NarrateOutput())
     body = final.body.strip()
@@ -275,13 +228,7 @@ async def consume_narrate(
         body = "잠시 정적이 흐릅니다."
         yield {"type": "narrative_delta", "data": {"text": body}}
 
-    # Strip any direct-quote block attributed to a dead NPC before persisting.
-    # Streaming has already emitted the unredacted body to the client, but the
-    # `state` event at finalize clears the streaming buffer and the log_entry
-    # below carries the redacted text — so the user-visible record and what
-    # next turn's history layer reads are both clean. Without this, a single
-    # LLM slip ("X가 말합니다. 「…」" where X is dead) compounds: it lands in
-    # recent_dialogue and the next narrate call mimics the pattern.
+    # Redact dead-NPC direct quotes before persisting — without this a single LLM slip lands in recent_dialogue and compounds across turns.
     body = redact_dead_quotes(body, _dead_names_in_scope(state, graph))
 
     final.output.suggestions = _strip_id_leaks(final.output.suggestions)
@@ -297,11 +244,7 @@ async def consume_narrate(
 
 
 def _dead_names_in_scope(state: GameState, graph: GameGraph | None = None) -> list[str]:
-    """Names of dead NPCs the narrate prompt can see — same scope as
-    `_corpses_payload`: same-location bodies plus history-referenced
-    off-screen ones via `turn_log.target`. Used by `consume_narrate` to
-    decide which names trigger quote redaction in the persisted body.
-    """
+    """Dead NPCs visible to the narrate prompt — same scope as `_corpses_payload`."""
     if graph is None:
         graph = state.graph()
     actor = state.characters.get(state.player_id)

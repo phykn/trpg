@@ -3,7 +3,9 @@ import {
   View,
   TextInput,
   Keyboard,
+  Platform,
   type NativeSyntheticEvent,
+  type TextInputContentSizeChangeEventData,
   type TextInputSubmitEditingEventData,
 } from 'react-native';
 
@@ -13,12 +15,15 @@ import { SendButton } from './SendButton';
 import { StopButton } from './StopButton';
 import { ThinkToggle } from './ThinkToggle';
 
-export function Composer({ input, setInput, onSend, onStop, focused, streaming, think, onToggleThink, locked = false }: {
+const INPUT_MIN_HEIGHT = 40;
+const INPUT_MAX_HEIGHT = 320;
+const IS_WEB = Platform.OS === 'web';
+
+export function Composer({ input, setInput, onSend, onStop, streaming, think, onToggleThink, locked = false }: {
   input: string;
   setInput: (text: string) => void;
   onSend: (text: string) => void;
   onStop: () => void;
-  focused: boolean;
   streaming: boolean;
   locked?: boolean;
   think: boolean;
@@ -26,6 +31,26 @@ export function Composer({ input, setInput, onSend, onStop, focused, streaming, 
 }) {
   const inputRef = React.useRef(input);
   React.useEffect(() => { inputRef.current = input; }, [input]);
+
+  const textInputRef = React.useRef<TextInput>(null);
+  const [inputHeight, setInputHeight] = React.useState(INPUT_MIN_HEIGHT);
+
+  // RN-web's onContentSizeChange doesn't reliably fire when the textarea shrinks,
+  // so deleting a long draft would leave the composer puffed up. Measure
+  // scrollHeight directly each time `input` changes — collapse to 0 first so
+  // scrollHeight reflects the content alone, not the prior box height.
+  React.useLayoutEffect(() => {
+    if (!IS_WEB) return;
+    const node = textInputRef.current as unknown as HTMLTextAreaElement | null;
+    if (!node) return;
+    node.style.height = '0px';
+    const next = Math.min(
+      INPUT_MAX_HEIGHT,
+      Math.max(INPUT_MIN_HEIGHT, node.scrollHeight),
+    );
+    node.style.height = `${next}px`;
+    setInputHeight((prev) => (prev === next ? prev : next));
+  }, [input]);
 
   const handleChange = (t: string) => {
     inputRef.current = t;
@@ -41,13 +66,12 @@ export function Composer({ input, setInput, onSend, onStop, focused, streaming, 
     onSend(text);
     inputRef.current = '';
     setInput('');
+    setInputHeight(INPUT_MIN_HEIGHT);
     Keyboard.dismiss();
   };
 
   const submit = () => sendText(inputRef.current);
 
-  // Android Hangul IME fires SubmitEditing pre-composition; defer one tick
-  // and take whichever of nativeEvent.text / inputRef is longer.
   const onNativeSubmit = (
     e: NativeSyntheticEvent<TextInputSubmitEditingEventData>,
   ) => {
@@ -58,28 +82,56 @@ export function Composer({ input, setInput, onSend, onStop, focused, streaming, 
     }, 0);
   };
 
-  const borderClass = focused ? 'border-accent-fg' : 'border-border-default';
+  const onContentSizeChange = (
+    e: NativeSyntheticEvent<TextInputContentSizeChangeEventData>,
+  ) => {
+    if (IS_WEB) return;
+    const next = Math.min(
+      INPUT_MAX_HEIGHT,
+      Math.max(INPUT_MIN_HEIGHT, e.nativeEvent.contentSize.height),
+    );
+    setInputHeight(next);
+  };
 
   return (
     <View
-      className={`mx-5 mt-1.5 bg-canvas-subtle rounded-md p-2 border gap-1 ${borderClass}`}
-      style={shadow.paper}
+      className="mx-5 mt-1.5 bg-canvas-subtle rounded-xl px-3 pt-2 pb-2 gap-1"
+      style={shadow.floating}
     >
       <TextInput
+        ref={textInputRef}
         value={input}
         onChangeText={handleChange}
         onSubmitEditing={onNativeSubmit}
+        onContentSizeChange={onContentSizeChange}
         editable={!locked}
         accessibilityState={{ disabled: locked }}
         placeholder={locked ? '판정을 먼저 굴려주세요' : '무엇을 하시겠습니까?'}
         placeholderTextColor={`${colors.fg.default}55`}
         returnKeyType="send"
         multiline
-        numberOfLines={2}
         submitBehavior="blurAndSubmit"
         textAlignVertical="top"
-        className="font-sans text-title px-2 text-fg-default"
-        style={{ paddingTop: 6, paddingBottom: 6, minHeight: 54, maxHeight: 140 }}
+        className="font-sans text-title text-fg-default"
+        // Cast: web-only CSS (outlineStyle, scrollbarWidth) is passed through by RN-web but absent from TextStyle.
+        style={{
+          paddingTop: 8,
+          paddingBottom: 8,
+          height: inputHeight,
+          // RN multiline TextInput renders as <textarea> on web, which keeps
+          // both the form-field border and Chrome's default focus ring (the
+          // ring uses `outline-style: auto`, which still paints a dark frame
+          // on focus even with `outline-width: 0`). Kill all three so the
+          // composer reads as a flat chat input.
+          borderWidth: 0,
+          outlineWidth: 0,
+          outlineStyle: 'none',
+          backgroundColor: 'transparent',
+          // Hide the textarea scrollbar on web so a paste exceeding
+          // INPUT_MAX_HEIGHT doesn't flash a scrollbar; users can still scroll
+          // overflowing content via wheel/keys.
+          ...(IS_WEB ? { scrollbarWidth: 'none' } : null),
+        } as object}
       />
       <View className="flex-row items-center justify-between">
         <ThinkToggle think={think} onToggle={onToggleThink} />

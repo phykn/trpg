@@ -1,11 +1,6 @@
 import React from 'react';
 
-// Two-mode expand state. Historically a single hook switched between
-// "shared via context" and "isolated local" depending on whether a
-// provider was present, which made caller intent invisible. Split:
-// `useExpandGroup` is for the shared mode (provider required, throws
-// otherwise), `useExpand` is for the isolated mode (no id needed).
-
+// `useExpandGroup` (shared via provider) vs `useExpand` (isolated local) — split so caller intent is explicit.
 type Ctx = {
   expandedId: string | null;
   setExpanded: React.Dispatch<React.SetStateAction<string | null>>;
@@ -22,11 +17,7 @@ export function ExpandGroup({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Shared "one expanded at a time" state. Caller picks an id; tapping a
-// row already expanded collapses it, tapping any other row swaps. Throws
-// if no `<ExpandGroup>` ancestor — that's intentional, the failure mode
-// you want is "I called this in the wrong place" not "it silently fell
-// back to local state."
+// "One expanded at a time" state shared via provider. Throws without an ancestor — silent fallback would hide misuse.
 export function useExpandGroup(id: string) {
   const ctx = React.useContext(ExpandGroupContext);
   if (ctx === null) {

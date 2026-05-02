@@ -25,8 +25,15 @@ def compute_required_roll(dc: int, stat: int) -> int:
     return max(1, min(20, dc - mod))
 
 
-def social_bonus(actor: Character, target_id: str) -> int:
-    aff = actor.relations.get(target_id, 0)
+def social_bonus(target: Character, actor_id: str) -> int:
+    """Roll bonus based on how the *target* views the actor.
+
+    `target` holds the relations dict (the NPC the actor is rolling against);
+    `actor_id` is who's making the roll. A trusted persuader gets +bonus, a
+    despised one gets -bonus, neutral 0. This direction matches the rest of
+    the affinity system — only `npc.relations[player]` is tracked.
+    """
+    aff = target.relations.get(actor_id, 0)
     threshold = RULES.social.friendly_threshold
     bonus = RULES.social.roll_bonus
     if aff >= threshold:

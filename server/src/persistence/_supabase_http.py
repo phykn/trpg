@@ -26,7 +26,6 @@ class _PostgREST:
     """Subset of PostgREST we need: upsert, bulk insert, select with filter+order+limit."""
 
     def __init__(self, base_url: str, service_key: str) -> None:
-        # PostgREST is mounted at /rest/v1 on a Supabase project.
         self._base = base_url.rstrip("/") + "/rest/v1"
         self._headers = {
             "apikey": service_key,

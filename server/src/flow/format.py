@@ -7,9 +7,6 @@ string for a log entry lives here.
 from ..domain.state import GameState
 
 
-# --- Grade helpers ----------------------------------------------------------
-
-
 def front_grade(grade: str) -> str:
     if grade in ("critical_success", "success"):
         return "success"
@@ -24,9 +21,6 @@ def format_combat_end_text(outcome: str) -> str:
     if outcome == "defeat":
         return "전투 종료 — 당신은 쓰러졌습니다."
     return "전투 종료 — 도주."
-
-
-# --- GM log line builders --------------------------------------------------
 
 
 def format_use_log(state: GameState, actor_id: str, result: dict) -> str:

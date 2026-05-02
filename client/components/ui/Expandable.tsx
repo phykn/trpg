@@ -1,18 +1,7 @@
 import React from 'react';
 import { Pressable, StyleProp, Text, TextStyle, View } from 'react-native';
 
-// Shared "tap to expand a clamped text" primitive. The visible Text gets
-// `numberOfLines={clampLines}` while collapsed; an invisible duplicate of
-// the same text (`measureText`) is rendered absolutely so its onLayout
-// height tells us whether the content overflows. `contentKey` triggers
-// the reset — when it changes (caller decides what counts: the raw text,
-// or text + tone for rich segments) we forget the prior overflow/expanded
-// state and re-measure.
-//
-// `children` is what the user sees; for inline-styled segments pass them
-// as nested `<Text>` elements so RN renders them on the same line. The
-// measurement Text uses `measureText` (a plain string) so the inline
-// styling doesn't interfere with height measurement.
+// Tap-to-expand a clamped text. An absolutely-positioned duplicate measures overflow; `contentKey` triggers a reset.
 export function Expandable({
   contentKey,
   lineHeight,

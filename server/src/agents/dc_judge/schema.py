@@ -27,13 +27,11 @@ class RejectAction(_StrictAction):
 class CombatAction(_StrictAction):
     action: Literal["combat"]
     targets: list[str] = Field(min_length=1)
-    skill_id: str | None = None  # semantic match against racial + learned (§2.6 S2)
+    skill_id: str | None = None
 
 
 class SummonCombatAction(_StrictAction):
-    """Player references an enemy not in `entities` but contextually plausible
-    for the location — flow lazy-spawns one matching the role then enters
-    combat. `role` is the Korean hint to pin the summoned name."""
+    """Lazy-spawn an enemy matching `role` (Korean hint), then enter combat."""
 
     action: Literal["summon_combat"]
     role: str = Field(min_length=1, max_length=20)
@@ -76,9 +74,7 @@ class RollAction(_StrictAction):
     tier: Tier
     stat: StatKey
     targets: list[str] = Field(min_length=1)
-    # Schema-level fallback so a missing `reason` doesn't crash the turn even
-    # when the coerce hook is bypassed (e.g. answer wrapped in markdown fence
-    # / prefix text → json.loads fails → validate_json fallback path).
+    # Default absorbs LLM omits when validate_json bypasses the coerce hook (e.g. answer wrapped in markdown).
     reason: str = Field(default="행동 판정", min_length=1, max_length=80)
 
 
@@ -88,26 +84,24 @@ class RestAction(_StrictAction):
 
 class UseAction(_StrictAction):
     action: Literal["use"]
-    item_id: str  # id from surroundings.inventory
+    item_id: str
     target_id: str | None = None
     tail_intent: str | None = None
 
 
 class EquipAction(_StrictAction):
     action: Literal["equip"]
-    item_id: str  # weapon/armor in surroundings.inventory
+    item_id: str
     tail_intent: str | None = None
 
 
 class UnequipAction(_StrictAction):
     action: Literal["unequip"]
-    item_id: str  # whichever slot it currently occupies in surroundings.equipment
+    item_id: str
     tail_intent: str | None = None
 
 
-# Sub-actions allowed inside a ChainAction. Combat / rest / flee / roll /
-# reject / summon_combat are excluded — they trigger phase changes or
-# pending state that doesn't compose with sequential dispatch.
+# Phase-changing actions (combat / rest / flee / roll / reject / summon_combat) can't compose sequentially.
 ChainPart = Annotated[
     UseAction
     | EquipAction
@@ -122,10 +116,7 @@ ChainPart = Annotated[
 
 
 class ChainAction(_StrictAction):
-    """Sequential engine actions for compound input ("약초 먹고 검 든다").
-    Each `parts[i]` runs in order; turn_count bumps and finalize fire once
-    at the end. The last `pass` part (if any) runs through narrate so
-    flavor descriptions ("한숨 돌린다") still get prose."""
+    """Sequential engine actions for compound input. Trailing `pass` part runs through narrate for flavor."""
 
     action: Literal["chain"]
     parts: list[ChainPart] = Field(min_length=2, max_length=4)
@@ -153,33 +144,15 @@ JudgeOutput = Annotated[
 output_adapter: TypeAdapter[JudgeOutput] = TypeAdapter(JudgeOutput)
 
 
-# Phase-changing actions are excluded from ChainPart because they trigger
-# state transitions (combat phase, pending roll, rest sleep, flee resolution,
-# reject halt, summon spawn) that don't compose with sequential dispatch.
 _PHASE_CHANGING_ACTIONS = frozenset(
     {"combat", "roll", "rest", "flee", "reject", "summon_combat"}
 )
 
-# Generic Korean fallback for RollAction.reason when the LLM omits it.
-# Keeps schema strict (min_length=1) while absorbing a recurring miss the
-# 5-shot self-correction loop fails to fix.
 _ROLL_REASON_FALLBACK = "행동 판정"
 
 
 def coerce_judge_output(raw: dict) -> dict:
-    """Last-mile fixes for two LLM patterns the prompt + retry loop cannot
-    eliminate (observed across QA passes):
-
-    1. `chain.parts` containing a phase-changing action. Promote the first
-       such part to be the top-level action; remaining parts are dropped
-       (the player's compound intent reduces to its phase-changing core,
-       which is what they cared about).
-    2. `roll` missing `reason`. Inject a generic Korean fallback so the
-       strict `min_length=1` field still validates.
-
-    Recursion handles nested fixes (e.g. a promoted roll part still needs
-    its reason filled).
-    """
+    """Last-mile fixes the prompt + retry loop can't eliminate: promote phase-changers out of chains, fill missing roll reason."""
     if not isinstance(raw, dict):
         return raw
     action = raw.get("action")
@@ -197,9 +170,7 @@ def coerce_judge_output(raw: dict) -> dict:
 
 
 def validate_judge_output(answer: str) -> JudgeOutput:
-    """Parse + coerce + validate. On JSON parse failure, defer to
-    `validate_json` so Pydantic raises ValidationError canonically into the
-    retry loop."""
+    """Parse + coerce + validate. JSON parse failure defers to `validate_json` so Pydantic owns the error path."""
     try:
         raw = json.loads(answer)
     except json.JSONDecodeError:

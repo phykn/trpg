@@ -18,9 +18,6 @@ from .schema import (
 )
 
 
-# --- helpers ---------------------------------------------------------------
-
-
 def _check_chain(output: ChainAction, surroundings: dict[str, Any]) -> None:
     """Recurse into chain parts so nested actions face the same checks the
     standalone form does. Without this, a chain like
@@ -116,9 +113,6 @@ def _check_pass_targets(output: PassAction, surroundings: dict[str, Any]) -> Non
             f"(corpses: {corpse_ids}). "
             f"If the player referenced something not present, use 'reject'."
         )
-
-
-# --- per-action checks -----------------------------------------------------
 
 
 def _entities_by_id(surroundings: dict[str, Any]) -> dict[str, dict]:
@@ -266,9 +260,6 @@ def _check_unequip(output: UnequipAction, surroundings: dict[str, Any]) -> None:
             f"unequip item_id {output.item_id!r} not currently equipped. "
             f"Equipped: {sorted(equipped_ids)}."
         )
-
-
-# --- dispatch --------------------------------------------------------------
 
 
 # RejectAction / SummonCombatAction / RestAction have no surroundings-based

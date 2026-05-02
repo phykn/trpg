@@ -29,12 +29,8 @@ class CombatState(BaseModel):
     round: int = 1
     surprise: Literal["player", "enemy"] | None = None
     enemy_ids: list[str] = []
-    damage_dealt: dict[
-        str, int
-    ] = {}  # actor_id → cumulative damage (for highest_threat AI)
-    # Player intent persisted across rounds — cinematic resolves one round per
-    # /roll click, so each round's player attack/skill needs to be reconstructed
-    # from these instead of fresh function args.
+    damage_dealt: dict[str, int] = {}
+    # Persisted across rounds — cinematic resolves one round per /roll click and rebuilds the action from these.
     player_target_id: str | None = None
     player_skill_id: str | None = None
     player_skill_used: bool = False
@@ -63,11 +59,7 @@ class GameState(BaseModel):
     combat_state: CombatState | None = None
     pending_skill_candidates: list[Skill] = []
 
-    # One-shot signal handed to the next narrate call so prose can reflect
-    # the just-finished phase. Set when combat ends with a downed→stable
-    # revive (player blacked out then woke); narrate consumes and clears it
-    # on its next turn so the body opens with recovery, not amnesia. None
-    # means "previous turn was ordinary."
+    # Hand-off to next narrate (e.g. `"downed_recovered"`); narrate consumes + clears so it doesn't echo.
     previous_phase_signal: str | None = None
 
     turn_log: list[TurnLogEntry] = []
@@ -76,15 +68,11 @@ class GameState(BaseModel):
     log_entries: list[LogEntry] = []
     next_log_id: int = 1
 
-    # Lazy graph cache. Built on first `graph()` call, invalidated by callers
-    # in flow after relation-touching writes (CLAUDE.md: layer rule). Held as
-    # a Pydantic PrivateAttr so it doesn't round-trip through model_dump_json.
+    # Lazy graph cache — flow callers invalidate after relation-touching writes. PrivateAttr keeps it off the wire.
     _graph_cache: "GameGraph | None" = PrivateAttr(default=None)
 
     def graph(self) -> "GameGraph":
-        """Cached relational graph. Reuses the cached build until
-        `invalidate_graph()` is called. Read-only callers can use this freely;
-        callers that just mutated a relation field must invalidate first."""
+        """Cached relational graph. Mutators of relation fields must `invalidate_graph()` before re-reading."""
         if self._graph_cache is None:
             from ..ontology.graph import build_graph
 
@@ -92,19 +80,11 @@ class GameState(BaseModel):
         return self._graph_cache
 
     def invalidate_graph(self) -> None:
-        """Drop the cached graph so the next `graph()` rebuilds. Call after
-        any write that touches a relation field (location_id, inventory_ids,
-        equipment, racial/learned_skill_ids, race_id, companions,
-        quest.giver_id/triggers/rewards.items, location.connections/item_ids,
-        chapter.quest_ids)."""
+        """Drop the cached graph so the next `graph()` rebuilds. Call after any write that touches a relation field."""
         self._graph_cache = None
 
     def recent_npc_id(self, actor_id: str) -> str | None:
-        """Most recently addressed NPC at this location — anchors pronoun /
-        follow-up inputs ('한 번만 더 말해봐', '그래서?') to the same NPC
-        instead of letting the judge drift to a different same-location
-        character. Returns None if no recent target exists or it isn't an
-        alive same-location NPC."""
+        """Most recently addressed alive same-location NPC — anchors pronoun follow-ups to the same NPC."""
         if not self.turn_log:
             return None
         actor = self.characters.get(actor_id)

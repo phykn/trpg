@@ -1,18 +1,3 @@
-"""Google Gemini OpenAI-compat conventions.
-
-Toggle:
-- `opt` (Gemini 3.x flash-lite): default minimal thinking; opt in via
-  `reasoning_effort=medium`.
-- `opt_on` (Gemma 4): default thinking on; opt out via
-  `reasoning_effort=minimal`. Only `minimal` is accepted here — `low` /
-  `medium` / `none` all 400 with "Thinking level/budget is not supported".
-
-Response parsing:
-- Gemini 3.x puts reasoning in `reasoning_content`; no inline parsing needed.
-- Gemma 4 emits `<thought>...</thought>` at the head of `content` whenever
-  it is actively thinking. `ThoughtSplitter` routes that to the think channel.
-"""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

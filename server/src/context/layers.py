@@ -64,7 +64,6 @@ def redact_dead_quotes(text: str, dead_names: list[str]) -> str:
         if close is not None:
             close_idx = text.find(close, i + 1)
             if close_idx == -1:
-                # Unmatched opener — leave the rest as-is.
                 out.append(text[i:])
                 break
             if speaker_is_dead:
@@ -86,7 +85,7 @@ def redact_dead_quotes(text: str, dead_names: list[str]) -> str:
             i += length
             continue
         if kind == "pronoun":
-            # Continuation — don't change `speaker_is_dead`.
+            # Continuation: don't update speaker_is_dead.
             out.append(text[i : i + length])
             i += length
             continue
@@ -99,29 +98,20 @@ def redact_dead_quotes(text: str, dead_names: list[str]) -> str:
 def _classify_subject_at(
     text: str, i: int, dead_names: set[str]
 ) -> tuple[str | None, int]:
-    """Return (kind, length) for a subject pattern starting at `text[i]`,
-    or (None, 0) if no subject pattern starts here.
-
-    kind ∈ {'dead', 'alive', 'pronoun'} — see `redact_dead_quotes`.
-    """
-    # 1. Dead-name + subject josa (most specific).
+    """Return (kind, length) for a subject pattern at `text[i]`. Kinds: 'dead', 'alive', 'pronoun'."""
+    # Match in priority order: dead names first, then 당신, then pronoun continuation, then generic subject.
     for name in dead_names:
         for josa in _SUBJECT_JOSA:
             pat = name + josa
             if text.startswith(pat, i):
                 return "dead", len(pat)
-    # 2. 당신 (player) + subject josa.
     for josa in _SUBJECT_JOSA:
         pat = "당신" + josa
         if text.startswith(pat, i):
             return "alive", len(pat)
-    # 3. 그/그녀 + 가/는 — continuation pronoun.
     for pat in _PRONOUN_SUBJECTS:
         if text.startswith(pat, i):
             return "pronoun", len(pat)
-    # 4. Generic <hangul>+ + subject josa — any other subject. Reset to
-    #    "not dead". We don't track who exactly; we only care that a new
-    #    subject has taken over from the previous dead one.
     j = i
     while j < len(text) and "가" <= text[j] <= "힣":
         j += 1
@@ -135,16 +125,13 @@ def _classify_subject_at(
 async def build_world_layer(
     scenario_repo: "ScenarioRepo", profile: str, *, missing_ok: bool = False
 ) -> str:
-    """Read <profile>/world.md via the ScenarioRepo. Strict by default — set
-    missing_ok=True for callers (combat_auto narrate input, encounter summon)
-    that should fall back to an empty string."""
+    """Read <profile>/world.md via the ScenarioRepo. `missing_ok=True` returns empty string instead of raising."""
     return await scenario_repo.read_world_md(profile, missing_ok=missing_ok)
 
 
 def build_session_layer(state: GameState, graph: GameGraph | None = None) -> dict:
     chapter_data = None
-    # ssot-allow: filtering chapters by status is an attribute lookup —
-    # active-chapter is a value predicate, not a relational scan.
+    # ssot-allow: active-chapter is a value predicate, not a relational scan.
     active_chapter = next(
         (c for c in state.chapters.values() if c.status == "active"),
         None,

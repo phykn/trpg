@@ -1,7 +1,3 @@
-"""Display-label helpers shared by `to_front` (FrontState builder) and
-`story_graph` (graph projection). Pure transforms — entity/relation in,
-Korean string or static-payload out, no IO."""
-
 from ..domain.entities import Character, Stats
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph
@@ -30,8 +26,7 @@ def stats_payload(stats: Stats) -> list[dict]:
 
 
 def race_label(state: GameState, graph: GameGraph, char_id: str) -> str:
-    """Race name resolved via the `belongs_to_race` edge — falls back to the
-    raw race id when the relation points at a missing race entity."""
+    """Race name via the `belongs_to_race` edge; falls back to the raw race id when the entity is missing."""
     race_id = race_of(graph, char_id)
     if race_id is None:
         return ""
@@ -55,9 +50,7 @@ def gender_label(char: Character) -> str:
 
 
 def giver_with_location_label(state: GameState, graph: GameGraph, quest_id: str) -> str:
-    """`<giver name> (<location name>)` for the quest's giver. Falls back
-    to just the giver name when the giver has no resolvable location, or
-    empty string when the giver itself can't be resolved."""
+    """`<giver name> (<location name>)`. Falls back to giver name without location, or empty string if no giver."""
     giver_id = giver_of(graph, quest_id)
     if giver_id is None:
         return ""
@@ -71,9 +64,6 @@ def giver_with_location_label(state: GameState, graph: GameGraph, quest_id: str)
     return f"{giver.name} ({loc.name})"
 
 
-# Risk payload mirrors the client's `RiskBadge`: each entry is
-# `{label, tone}` so the panel renders the colored chip without
-# re-deriving from the raw enum.
 RISK_PAYLOAD: dict[str, dict] = {
     "safe": {"label": "안전", "tone": "good"},
     "risky": {"label": "주의", "tone": "neutral"},
@@ -81,9 +71,7 @@ RISK_PAYLOAD: dict[str, dict] = {
 }
 
 
-# Tier → display tone for quest-difficulty chips. `None` for the neutral
-# middle tier so the panel renders no color (default text). Server sends
-# the {label, tone} pair so the client doesn't keep its own mapping.
+# `None` tone keeps the neutral mid-tier label uncolored on the panel.
 _TIER_TONE: dict[str, str | None] = {
     "매우 쉬움": "neutral",
     "쉬움": "good",

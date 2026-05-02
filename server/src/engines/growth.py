@@ -15,9 +15,6 @@ from ..domain.errors import LevelUpInvalid
 from ..rules import RULES
 
 
-# --- xp curve --------------------------------------------------------------
-
-
 def xp_for_next_level(level: int) -> int:
     """Cost from level N → N+1 = base_xp × N (linear). level=0 costs 1× base_xp."""
     if level >= RULES.growth.max_level:
@@ -44,9 +41,6 @@ def recalc_max_hp_mp(character: Character) -> None:
         character.hp = new_max_hp
     if character.mp > new_max_mp:
         character.mp = new_max_mp
-
-
-# --- Level-up + pair-trade -------------------------------------------------
 
 
 def can_afford_level_up(character: Character) -> bool:
@@ -91,9 +85,6 @@ def level_up(
     setattr(character.stats, stat_up, up_value + 1)
     setattr(character.stats, stat_down, down_value - 1)
     recalc_max_hp_mp(character)
-
-
-# --- xp grants -------------------------------------------------------------
 
 
 def grant_xp(

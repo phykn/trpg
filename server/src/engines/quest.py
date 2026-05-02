@@ -130,11 +130,7 @@ def check_quests(
     target_id: str | None,
     dirty: DirtySet = None,
 ) -> list[str]:
-    """Evaluate quests against an event. Returns the list of quest ids whose status changed.
-
-    Same trigger firing twice is single-fire — once `triggers_met[i]` flips True it is
-    ignored on re-evaluation (docs §2.8 single-satisfaction model).
-    """
+    """Evaluate quests against an event; returns ids whose status changed. Triggers are single-fire."""
     changed: list[str] = []
     for q in state.quests.values():
         if q.status != "active":
@@ -142,14 +138,12 @@ def check_quests(
         _ensure_runtime_fields(q)
 
         any_change = False
-        # success triggers
         for i, t in enumerate(q.triggers):
             if q.triggers_met[i]:
                 continue
             if t.type == event_type and t.target_id == target_id:
                 q.triggers_met[i] = True
                 any_change = True
-        # fail triggers
         for i, t in enumerate(q.fail_triggers):
             if q.fail_triggers_met[i]:
                 continue

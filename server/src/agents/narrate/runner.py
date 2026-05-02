@@ -8,18 +8,11 @@ from ...rules.permissions import render_for_prompt
 from .parser import NarrativeDelta, NarrativeFinal, split_stream
 from .schema import NarrateInput
 
-# narrate streams body tokens as they arrive, so the judge-style self-correction
-# loop (append prior answer + error and retry) doesn't apply — once a body
-# delta is sent, we can't take it back. We do retry on the cases where
-# nothing usable came out: a stream-transport error or an empty body. Once a
-# body delta has actually been sent, a later transport failure raises rather
-# than retrying (would cause the client to see two bodies).
+# Streamed body tokens can't be retracted, so retry only fires before the first body delta lands.
 
 
 def _render_prompt() -> str:
-    """Substitute `{{CHAR_FORBIDDEN}}` / `{{ITEM_FORBIDDEN}}` / `{{LOC_FORBIDDEN}}`
-    in prompt.md from the engine's permission matrix so the prompt and
-    `engines/apply.py` can't drift."""
+    """Inject permission matrix into `{{CHAR_FORBIDDEN}}` / `{{ITEM_FORBIDDEN}}` / `{{LOC_FORBIDDEN}}` so prompt and engine can't drift."""
     text = read_prompt(__file__)
     for key, value in render_for_prompt().items():
         text = text.replace("{{" + key + "}}", value)

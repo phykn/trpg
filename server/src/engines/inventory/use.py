@@ -8,9 +8,6 @@ from ...domain.state import GameState
 from ..combat import apply_attack_to_defender
 
 
-# --- per-effect handlers ---------------------------------------------------
-
-
 def _heal(eff, recipient, result, **_) -> None:
     if recipient.hp >= recipient.max_hp:
         raise InventoryInvalid(
@@ -64,9 +61,6 @@ _EFFECT_HANDLERS = {
     "mp_restore": _mp_restore,
     "buff": _buff,
 }
-
-
-# --- entry points ----------------------------------------------------------
 
 
 def use(

@@ -26,9 +26,6 @@ from ..domain.state import CombatState, GameState
 from ..rules.dc import compute_grade, compute_required_roll
 
 
-# --- Common ------------------------------------------------------------------
-
-
 DICE_RE = re.compile(r"^\s*(\d+)d(\d+)\s*([+-]\s*\d+)?\s*$")
 
 
@@ -52,9 +49,6 @@ def roll_dice(spec: str, rng: random.Random | None = None) -> int:
     n, sides, bonus = _parse_dice(spec)
     r = rng or random
     return sum(r.randint(1, sides) for _ in range(n)) + bonus
-
-
-# --- Weapon / defense projection ---------------------------------------------
 
 
 class _Weapon(BaseModel):
@@ -98,9 +92,6 @@ def enemy_defense(defender: Character, items: dict[str, Item]) -> int:
         if isinstance(item.effects, ArmorEffect):
             total += item.effects.defense
     return total
-
-
-# --- Hit / damage ------------------------------------------------------------
 
 
 class AttackOutcome(BaseModel):
@@ -160,9 +151,6 @@ def attack(
     )
 
 
-# --- Initiative --------------------------------------------------------------
-
-
 def roll_initiative(
     participants: list[Character],
     rng: random.Random | None = None,
@@ -178,9 +166,6 @@ def roll_initiative(
         rolled.append((roll, c.stats.DEX, c.id))
     rolled.sort(key=lambda t: (-t[0], -t[1], t[2]))
     return [t[2] for t in rolled]
-
-
-# --- NPC AI -------------------------------------------------------------------
 
 
 def _has_heal_skill(c: Character, skills_pool: dict[str, Skill]) -> bool:
@@ -255,9 +240,6 @@ def pick_target(
     return pool[0]
 
 
-# --- flee ---------------------------------------------------------------------
-
-
 def should_attempt_flee(actor: Character, rng: random.Random | None = None) -> bool:
     """Below the flee_hp_percent threshold, try with probability `clamp((threshold - current HP%) * 2, 0, 100)`."""
     behavior = actor.combat_behavior
@@ -281,9 +263,6 @@ def try_flee(actor: Character, rng: random.Random | None = None) -> tuple[bool, 
     if f.dex_modifier:
         roll += stat_modifier(actor.stats.DEX)
     return (roll >= f.base_dc, roll)
-
-
-# --- Lifecycle ---------------------------------------------------------------
 
 
 def start_combat(
@@ -377,9 +356,6 @@ def check_combat_end(state: GameState) -> Literal["victory", "defeat"] | None:
         # Enemies wiped out. Note: actors removed from enemy_ids via flee are alive=True but no longer in enemy_ids.
         return "victory"
     return None
-
-
-# --- Damage application / death handling -------------------------------------
 
 
 def apply_attack_to_defender(
@@ -510,9 +486,6 @@ def tick_death_save(
         _kill(actor)
         return ("dead", roll)
     return ("progress", roll)
-
-
-# --- AI candidate selection helpers ------------------------------------------
 
 
 def pick_npc_target(

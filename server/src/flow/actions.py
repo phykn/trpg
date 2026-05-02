@@ -45,9 +45,6 @@ from .format import format_use_log
 from .skill_recommend import recommend_skill_candidates
 
 
-# --- helpers ---------------------------------------------------------------
-
-
 def _item_name(state: GameState, item_id: str) -> str:
     item = state.items.get(item_id)
     return item.name if item else item_id
@@ -55,9 +52,6 @@ def _item_name(state: GameState, item_id: str) -> str:
 
 def _fail_text(actor_name: str, attempt: str, e: Exception) -> str:
     return f"{actor_name}{i_ga(actor_name)} {attempt} {humanize_engine_error(e)}."
-
-
-# --- silent combat effect helpers (used by auto-combat sim) ----------------
 
 
 def apply_attack_action(
@@ -152,9 +146,6 @@ def apply_skill_action(
     }
 
 
-# --- equip / unequip / use -------------------------------------------------
-
-
 async def emit_equip(
     state: GameState,
     actor_id: str,
@@ -246,9 +237,6 @@ async def emit_use(
             f"{item_name}{eul_reul(item_name)} {target.name}에게 사용",
             dirty,
         )
-
-
-# --- growth / trade --------------------------------------------------------
 
 
 async def emit_level_up(
@@ -361,9 +349,6 @@ async def emit_trade(
     )
 
 
-# --- pending roll ----------------------------------------------------------
-
-
 async def emit_roll_pending(
     state: GameState,
     save_repo: SaveRepo,
@@ -374,11 +359,19 @@ async def emit_roll_pending(
     """Set pending_check, flush, emit pending_check SSE. Shared between
     /turn and the in-combat roll branch."""
     actor = state.characters[state.player_id]
-    target = min(result.targets, key=lambda t: actor.relations.get(t, 0))
+    # Pick the candidate who likes the actor least — the "hardest" target.
+    # Non-character entries (locations, items) score 0, so character targets
+    # with negative aff lose the tiebreak first, neutral ties fall through.
+    def _aff_against_actor(t: str) -> int:
+        npc = state.characters.get(t)
+        return 0 if npc is None else npc.relations.get(actor.id, 0)
+
+    target = min(result.targets, key=_aff_against_actor)
     dc = pick_dc(result.tier)
     stat_value = getattr(actor.stats, result.stat)
     required_roll = compute_required_roll(dc, stat_value)
-    mod = social_bonus(actor, target)
+    target_char = state.characters.get(target)
+    mod = social_bonus(target_char, actor.id) if target_char is not None else 0
     state.pending_check = PendingCheck(
         player_input=player_input,
         tier=result.tier,

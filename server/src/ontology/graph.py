@@ -112,10 +112,7 @@ def _build_location_edges(g: GameGraph, state: GameState) -> None:
 
 
 def _build_quest_edges(g: GameGraph, state: GameState) -> None:
-    # `required_by` collects every trigger target regardless of trigger.type;
-    # `kill_target_of` is an additional, narrower edge for character_death
-    # triggers only — NPC view uses it to flag "kill me to advance the quest"
-    # without having to re-filter required_by by trigger type.
+    # `kill_target_of` is a narrower second edge for character_death triggers so NPC view skips a re-filter.
     for qid, quest in state.quests.items():
         if quest.giver_id:
             g.add_edge(quest.giver_id, qid, "gives_quest")

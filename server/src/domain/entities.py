@@ -7,9 +7,6 @@ from .memory import Memory
 from .types import StatKey, Tier
 
 
-# --- character building blocks ---------------------------------------------
-
-
 class Stats(BaseModel):
     STR: int = Field(default=10, ge=0, le=20)
     DEX: int = Field(default=10, ge=0, le=20)
@@ -40,9 +37,6 @@ class DeathSaveState(BaseModel):
     failures: int = 0
 
 
-# --- skills / buffs --------------------------------------------------------
-
-
 class Skill(BaseModel):
     id: str
     name: str
@@ -64,12 +58,7 @@ class ActiveBuff(BaseModel):
 
 
 class SkillCandidate(BaseModel):
-    """LLM-produced learn-candidate (§2.3 step 4) — narrative fields only.
-    Numeric fields (mp_cost / power / range / duration) and id / level are
-    filled by `engines/skill.build_skill_from_candidate`. Lives in domain so
-    `engines/skill` can build a `Skill` from it without importing from
-    `agents/`.
-    """
+    """LLM-produced learn-candidate. Numeric fields filled later by `engines/skill.build_skill_from_candidate`."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -79,9 +68,6 @@ class SkillCandidate(BaseModel):
     target: Literal["self", "single", "area"]
     primary_stat: StatKey
     special_effect: str = Field(min_length=1, max_length=120)
-
-
-# --- equipment / connection ------------------------------------------------
 
 
 class Equipment(BaseModel):
@@ -105,9 +91,6 @@ class Connection(BaseModel):
     target_id: str
     difficulty: Tier | None = None
     key_item_id: str | None = None
-
-
-# --- items -----------------------------------------------------------------
 
 
 class WeaponEffect(BaseModel):
@@ -151,13 +134,7 @@ EquipSlot = Literal["weapon", "armor", "accessory"]
 
 
 def allowed_slots(item: Item) -> tuple[EquipSlot, ...]:
-    """Slots this item can occupy. Empty tuple = consumable, never equippable.
-
-    ArmorEffect items (defense bonus) live in either the armor slot
-    (clothing) or the accessory slot (shields, defense rings) — both are
-    legal so the engine sums defense across both. Plain accessories
-    (effects=None, e.g. signets) are accessory-only.
-    """
+    """Slots this item can occupy. ArmorEffect items take both armor and accessory; engine sums defense across both."""
     eff = item.effects
     if isinstance(eff, WeaponEffect):
         return ("weapon",)
@@ -171,10 +148,7 @@ def allowed_slots(item: Item) -> tuple[EquipSlot, ...]:
 def item_kind(
     item: Item,
 ) -> Literal["weapon", "armor", "consumable", "trigger", "misc"]:
-    """High-level classification used by judge prompts and judge semantics.
-    Lives next to allowed_slots because the choice depends on the same
-    Item.effects discriminator and the two kind vocabularies must agree
-    to keep judge validation consistent."""
+    """Judge prompt / semantics classification. Co-located with `allowed_slots` since both key off `Item.effects`."""
     eff = item.effects
     if isinstance(eff, ConsumableEffect):
         return "consumable"
@@ -185,9 +159,6 @@ def item_kind(
     if item.on_use:
         return "trigger"
     return "misc"
-
-
-# --- race / character ------------------------------------------------------
 
 
 class Race(BaseModel):
@@ -223,9 +194,7 @@ class Character(BaseModel):
     inventory_ids: list[str] = []
     gold: int = 0
     xp_pool: int = 0
-    xp_reward: int = (
-        0  # xp granted to the killer when this character dies. 0 = no reward.
-    )
+    xp_reward: int = 0
 
     disposition: Disposition = Disposition()
     relations: dict[str, int] = {}
@@ -251,9 +220,6 @@ class Character(BaseModel):
         return (*self.racial_skill_ids, *self.learned_skill_ids)
 
 
-# --- location --------------------------------------------------------------
-
-
 class Location(BaseModel):
     id: str
     name: str
@@ -267,9 +233,6 @@ class Location(BaseModel):
     sleep_risk: Literal["safe", "risky", "dangerous"] = "safe"
     sleep_encounters: list[str] = []
     difficulty: Tier | None = None
-
-
-# --- quest / chapter / campaign --------------------------------------------
 
 
 class QuestTrigger(BaseModel):

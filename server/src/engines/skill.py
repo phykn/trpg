@@ -234,17 +234,11 @@ def tick_active_buffs(
     return removed
 
 
-# --- Learn candidates (§2.3 step 4) ------------------------------------------
-
-
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
 
 def _slugify(name: str) -> str:
-    """Stable, name-derived id. ASCII names get the obvious slug. Non-ASCII
-    names (Korean is the dominant case in this project) collapse to a single
-    base under the ASCII filter, so hash the raw input to keep distinct names
-    distinct on disk."""
+    """Stable id from a (possibly non-ASCII) name. Non-ASCII falls back to a hash so distinct names stay distinct."""
     ascii_only = "".join(ch for ch in name if ord(ch) < 128)
     base = _SLUG_RE.sub("_", ascii_only.lower()).strip("_")
     if base:
@@ -263,7 +257,6 @@ def _unique_skill_id(base: str, existing_ids: set[str]) -> str:
 
 
 def _template_for(skill_type: str, level: int) -> dict:
-    """Numeric template by type and level. Exact coefficients are a P3 tuning knob."""
     safe_level = max(0, level)
     if skill_type == "attack":
         return {
@@ -279,7 +272,6 @@ def _template_for(skill_type: str, level: int) -> dict:
             "range": 5.0,
             "duration": 0,
         }
-    # buff / debuff
     return {
         "power": 0,
         "mp_cost": 2 + safe_level,

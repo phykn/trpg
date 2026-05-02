@@ -42,9 +42,6 @@ _ENTITY_MODELS: dict[str, type[BaseModel]] = {
 }
 
 
-# --- paths -----------------------------------------------------------------
-
-
 def _game_dir(saves_dir: str, game_id: str) -> Path:
     return Path(saves_dir) / "games" / game_id
 
@@ -67,9 +64,6 @@ def _history_path(saves_dir: str, game_id: str) -> Path:
 
 def _dialogue_path(saves_dir: str, game_id: str) -> Path:
     return _game_dir(saves_dir, game_id) / "dialogue.jsonl"
-
-
-# --- IO primitives ---------------------------------------------------------
 
 
 def _atomic_write(path: Path, data: str) -> None:
@@ -97,9 +91,6 @@ def _append_jsonl(path: Path, lines: list[str]) -> None:
                 f.write(line + "\n")
     except OSError as e:
         raise PersistenceFailed(str(e)) from e
-
-
-# --- meta schema -----------------------------------------------------------
 
 
 class _Meta(BaseModel):
@@ -130,9 +121,6 @@ def _meta_from_state(state: GameState) -> _Meta:
         previous_phase_signal=state.previous_phase_signal,
         next_log_id=state.next_log_id,
     )
-
-
-# --- save (granular) -------------------------------------------------------
 
 
 async def save_meta(state: GameState, saves_dir: str) -> None:
@@ -178,9 +166,6 @@ async def append_dialogue_entries(
     saves_dir: str, game_id: str, entries: list[DialoguePair]
 ) -> None:
     await _append_entries(_dialogue_path(saves_dir, game_id), entries)
-
-
-# --- load ------------------------------------------------------------------
 
 
 def _scan_entity_dir(

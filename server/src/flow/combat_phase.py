@@ -57,9 +57,6 @@ from .judge import run_judge
 from .subject import refresh_active_subject
 
 
-# --- entry: drive one auto-combat sim + cinematic + numeric ---------------
-
-
 async def emit_combat_cinematic_and_end(
     client: LLMClient | None,
     state: GameState,
@@ -191,9 +188,6 @@ async def start_combat_and_drive_auto(
         yield ev
 
 
-# --- target validation -------------------------------------------------------
-
-
 def has_invalid_combat_targets(
     state: GameState, graph: GameGraph, requested: list[str]
 ) -> bool:
@@ -209,9 +203,6 @@ def has_invalid_combat_targets(
         or location_of(graph, t) != actor_loc
         for t in requested
     )
-
-
-# --- judge action → PlayerAction --------------------------------------------
 
 
 def _judge_to_player_action(result, state: GameState) -> PlayerAction | None:
@@ -230,9 +221,6 @@ def _judge_to_player_action(result, state: GameState) -> PlayerAction | None:
     if isinstance(result, (UseAction, EquipAction, UnequipAction)):
         return PlayerAction(kind="pass")
     return None
-
-
-# --- in-combat player turn (state.combat_state already set) ---------------
 
 
 async def _passive_pre_emit(

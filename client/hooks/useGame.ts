@@ -139,8 +139,7 @@ export function useGame() {
       }
       const payload = await getSessionById(stored);
       if (!payload) {
-        // Stored id no longer exists on the server (game deleted, saves wiped,
-        // user moved between deployments). Drop the stale pointer.
+        // Stored id no longer exists on the server; drop the stale pointer.
         clearStoredGameId();
         setStatus('no-game');
         return;

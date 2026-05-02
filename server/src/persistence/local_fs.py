@@ -140,7 +140,5 @@ class LocalFsScenarioRepo:
             return result
         for f in sorted(dirpath.glob("*.json")):
             obj = model_cls.model_validate_json(f.read_text(encoding="utf-8"))
-            # Every seed model has `id` (Character, Item, Location, Quest, Race,
-            # Skill, Chapter, Campaign) — enforced by Pydantic schemas.
             result[obj.id] = obj  # type: ignore[attr-defined]
         return result

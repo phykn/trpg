@@ -3,9 +3,6 @@ from pydantic import BaseModel
 from ..persistence.init import PlayerInput
 
 
-# --- debug ----------------------------------------------------------------
-
-
 class ChatRequest(BaseModel):
     system: str | None = None
     query: str
@@ -15,9 +12,6 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     think: str | None = None
     answer: str | None = None
-
-
-# --- profiles -------------------------------------------------------------
 
 
 class RaceCard(BaseModel):
@@ -31,9 +25,6 @@ class ProfileCard(BaseModel):
     name: str
     description: str = ""
     races: list[RaceCard] = []
-
-
-# --- session (init / turn) ------------------------------------------------
 
 
 class InitRequest(BaseModel):

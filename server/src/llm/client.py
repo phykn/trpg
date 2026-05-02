@@ -13,12 +13,10 @@ from openai import AsyncOpenAI
 from ..rules.config import RULES
 from . import gemini, llama_cpp
 
-# Logs land under `<log_dir>/<session_id>/<agent>/`. Outermost callers set
-# this; `set_llm_session_if_unset` lets a server flow defer to an outer tag.
+# Logs land under `<log_dir>/<session_id>/<agent>/`; outer callers set this and inner ones can defer.
 _SESSION_ID: ContextVar[str | None] = ContextVar("llm_session_id", default=None)
 
-# Per-task override that wins over the agent's hardcoded `think` default.
-# ContextVar is task-scoped so concurrent requests don't leak.
+# Task-scoped override so concurrent requests can't leak each other's `think` choice.
 _THINK_OVERRIDE: ContextVar[bool | None] = ContextVar(
     "llm_think_override", default=None
 )

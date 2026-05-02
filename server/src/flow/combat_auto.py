@@ -26,24 +26,13 @@ from ..persistence.repo import ScenarioRepo
 from .actions import apply_attack_action, apply_skill_action
 from .dirty import Dirty, register_kill
 
-# A single auto-cycle runs every round until one side wins, the player flees,
-# or the player is downed. HARD_CAP is a safety belt against pathological
-# stalemates (both sides missing for many rounds) — production fights
-# rarely approach it. If the cap is hit anyway the cycle resolves as `fled`
-# so the state machine still terminates cleanly.
+# Safety belt against pathological stalemates — hitting it resolves the cycle as `fled`.
 HARD_CAP = 50
 
 
 @dataclass
 class PlayerAction:
-    """The player's input distilled into a per-round action.
-
-    kind:
-      - "attack": basic weapon attack against the targets
-      - "skill": cast skill_id (auto-falls back to attack on MP/level fail)
-      - "pass": defend / brace — round 1 only; round 2+ falls back to attack
-      - "flee": player attempts to flee
-    """
+    """Per-round player action. kind ∈ {'attack', 'skill', 'pass', 'flee'}."""
 
     kind: str
     skill_id: str | None = None
@@ -416,9 +405,7 @@ def run_auto_combat(
         for eid in enemy_ids_at_start
         if eid in state.characters
     ]
-    # Capture starting HPs before any round mutates state. The LLM-side
-    # snapshot doesn't carry hp (numeric leak), so engine damage calc tracks
-    # it here independently.
+    # Engine-side HP snapshot — the LLM payload omits hp to avoid numeric leak, so we track it here.
     enemy_starting_hp: dict[str, int] = {
         eid: state.characters[eid].hp
         for eid in enemy_ids_at_start
@@ -496,10 +483,7 @@ def run_auto_combat(
                     break
                 outcome = "downed"
                 outcome_decided = True
-                # Carry a one-shot signal into the next /turn's narrate so the
-                # body opens with recovery (waking, dazed, ringing ears) instead
-                # of pretending the player was upright the whole time. The next
-                # narrate consumes and clears this in `flow/turn.py`.
+                # One-shot signal so next turn's narrate opens with recovery prose; consumed and cleared in flow/turn.py.
                 state.previous_phase_signal = "downed_recovered"
                 break  # stable — fight ends here for this turn
 
@@ -551,8 +535,7 @@ def run_auto_combat(
 
     player_damage_total = max(0, player_hp_before - player.hp)
 
-    # Every terminal outcome — and the HARD_CAP fallback (`fled`) — clears
-    # combat_state. Cycles always end here.
+    # All terminal outcomes (including HARD_CAP `fled` fallback) clear combat_state here.
     combat_engine.end_combat(state)
 
     return AutoCombatResult(

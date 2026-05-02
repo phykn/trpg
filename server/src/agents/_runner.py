@@ -1,11 +1,3 @@
-"""Shared 5-retry self-correction loop for JSON-output agents.
-
-Each agent's runner.py builds a `parse` callable (and, optionally, a
-post-parse `verify` for semantic checks beyond schema). The loop calls the
-LLM, runs parse + verify, and on failure appends the bad answer + the error
-back as messages so the next attempt sees its own mistake.
-"""
-
 import asyncio
 from collections.abc import Callable
 from pathlib import Path
@@ -24,21 +16,12 @@ def read_prompt(file: str) -> str:
     return (Path(file).parent / "prompt.md").read_text(encoding="utf-8")
 
 
-# Bad answers occasionally include long thinking-text dumps before the JSON;
-# appending them verbatim grew the retry stream past the model's ctx window
-# (caster/provocateur/scout t4-t7 all hit "Context size exceeded"). The model
-# only needs to see enough of its prior output to correct itself, not the
-# entire dump.
+# Truncate long thinking-text dumps so retries don't blow past the model's ctx window.
 _MAX_RETRY_ANSWER_CHARS = 1500
 
 
 def _format_retry_error(e: Exception) -> str:
-    """Strip Pydantic's `input_value=...` echo from retry feedback.
-
-    str(ValidationError) embeds the offending input alongside every field
-    error, which duplicates the assistant's prior answer (already in the
-    message stream) and can add 1–2KB per retry. Keep loc/msg/type only.
-    """
+    """Drop Pydantic's `input_value=...` echo (1-2KB per retry; duplicates the assistant's already-streamed answer)."""
     if isinstance(e, ValidationError):
         lines = []
         for err in e.errors(include_url=False):
@@ -59,18 +42,7 @@ async def run_with_retries(
     correction_hint: str = "",
     agent: str | None = None,
 ) -> T:
-    """Call the LLM, parse the answer, and on failure feed the error back as
-    a correction prompt up to `retries` times. `parse` raises one of
-    `retry_on` for retryable failures; anything else propagates.
-
-    `correction_hint` is appended to the standard nudge — useful when the
-    schema has an invariant the LLM tends to break (e.g. pair-trade).
-
-    Transport-level failures (network/socket/timeout) wrap to `LLMUnavailable`
-    so the API edge can surface them as `SSE error: LLMUnavailable` per the
-    boundary contract; self-correction retries don't help when the LLM is
-    unreachable.
-    """
+    """LLM call + self-correction retry loop. Transport failures wrap to LLMUnavailable (retries can't fix unreachable)."""
     messages: list[dict] = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_payload},

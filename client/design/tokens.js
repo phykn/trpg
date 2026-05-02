@@ -1,16 +1,4 @@
-/**
- * Design tokens — single source of truth for colors, spacing, typography.
- * Consumed by tailwind.config.js (Node/CJS) and TS code via tokens.d.ts.
- *
- * Naming follows GitHub Primer:
- *   canvas.*  — background surfaces (page → cards → insets)
- *   fg.*      — foreground text/icon colors by emphasis
- *   border.*  — stroke colors
- *   accent.*  — brand accent (fg + muted bg)
- *   danger/success — semantic states
- *   hp/mp/exp — domain-specific game meters
- */
-
+// Design tokens consumed by tailwind.config.js (Node/CJS) and TS via tokens.d.ts. Naming follows GitHub Primer.
 const colors = {
   canvas: {
     default: '#EEE6D6',

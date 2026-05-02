@@ -10,8 +10,7 @@ function moveIntent(name: string): string {
 }
 
 function approachIntent(name: string): string {
-  // `에게` works for both alive characters and corpses regardless of the
-  // name's final-jamo shape, so no batchim split needed.
+  // `에게` works for any final-jamo so no batchim split is needed.
   return `${name}에게 접근합니다`;
 }
 

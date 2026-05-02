@@ -1,7 +1,3 @@
-"""state_changes — four mutation kinds (set, move, move_item, affinity) the
-LLM emits as part of NarrateOutput. Each kind has its own permission matrix;
-forbidden fields drop silently per change, the rest of the batch still applies."""
-
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
@@ -10,9 +6,6 @@ from ..domain.types import Grade, Intent
 from ..rules import RULES
 from ..rules.permissions import CHAPTER_QUEST_ALLOWED, FORBIDDEN_BY_ENTITY
 from ..domain.state import GameState
-
-
-# --- change models ---------------------------------------------------------
 
 
 class SetChange(BaseModel):
@@ -53,11 +46,6 @@ StateChange = Annotated[
 _state_change_adapter = TypeAdapter(StateChange)
 
 
-# --- permission matrix -----------------------------------------------------
-# The forbidden frozensets live in `rules/permissions.py` so the narrate
-# prompt can render the same lists at load time — see that module.
-
-
 def _check_set_permission(entity: str, field: str) -> str | None:
     top = field.split(".", 1)[0]
     if entity in ("chapters", "quests"):
@@ -73,9 +61,6 @@ class _StateChangeError(ValueError):
     pass
 
 
-# --- per-kind handlers -----------------------------------------------------
-
-
 def _set_dotted(obj: Any, dotted_field: str, value: Any) -> None:
     parts = dotted_field.split(".")
     for part in parts[:-1]:
@@ -84,11 +69,7 @@ def _set_dotted(obj: Any, dotted_field: str, value: Any) -> None:
     fields = getattr(type(obj), "model_fields", None)
     if fields is None or field_name not in fields:
         raise AttributeError(f"{type(obj).__name__!r} has no field {field_name!r}")
-    # Pydantic's default setattr skips type validation, so a bad value
-    # (e.g. a str where a list[str] is expected, or None on a non-nullable
-    # field) survives until the next read and surfaces as PersistenceFailed.
-    # Validate against the declared annotation up front so apply_changes can
-    # reject the change cleanly instead.
+    # Validate against the annotation up front; Pydantic's setattr skips type checks and a bad value would only surface later as PersistenceFailed.
     coerced = TypeAdapter(fields[field_name].annotation).validate_python(value)
     setattr(obj, field_name, coerced)
 
@@ -107,16 +88,10 @@ def _apply_set(
     try:
         _set_dotted(container[c.id], c.field, c.value)
     except (AttributeError, ValueError, ValidationError) as e:
-        # Pydantic v2 raises ValueError ("object has no field 'X'") for unknown
-        # fields under `extra='ignore'`. AttributeError covers nested .getattr
-        # failures, ValidationError covers type/range mismatches.
         raise _StateChangeError(f"failed to set {c.field!r}: {e}") from e
     if dirty is not None:
         dirty.add((c.entity, c.id))
-    # Narrate flips quest.status to drive natural acceptance (locked → active when an
-    # NPC offers a quest in dialogue). check_quests is the only other path that touches
-    # active_quest_id, so without this hook the panel keeps pointing at the previous
-    # quest (or stays None on a fresh game).
+    # Narrate's locked → active flip would otherwise leave active_quest_id pointing at the previous quest.
     if c.entity == "quests" and c.field == "status":
         from .quest import _refresh_active_quest_id
 
@@ -128,20 +103,14 @@ def _apply_move(
     c: MoveChange,
     dirty: set[tuple[str, str]] | None,
 ) -> None:
-    from .quest import (
-        check_quests,
-    )  # deferred import — keeps the cross-layer boundary clean
+    from .quest import check_quests  # deferred import keeps the cross-layer boundary clean
     from ..ontology.queries import connections_of
 
     if c.target not in state.characters:
         raise _StateChangeError(f"unknown character: {c.target!r}")
     if c.destination not in state.locations:
         raise _StateChangeError(f"unknown location: {c.destination!r}")
-    # Adjacency gate — only the player's own move is gated (NPC moves come
-    # from quest hooks / companion follow and are trusted). A no-op self-move
-    # (destination == current location) is idempotent and skipped. If the
-    # current location_id is None (init edge case) the gate is skipped so the
-    # first move from nowhere can still land.
+    # Only the player's move is gated; NPC moves are trusted (quest hooks / companion follow).
     if c.target == state.player_id:
         current_loc_id = state.characters[c.target].location_id
         if current_loc_id is not None and c.destination != current_loc_id:
@@ -155,13 +124,12 @@ def _apply_move(
     state.characters[c.target].location_id = c.destination
     if dirty is not None:
         dirty.add(("characters", c.target))
-    # Companions (P3 §2.9) — move with the patron.
+    # Companions move with the patron.
     for cid in state.characters[c.target].companions:
         if cid in state.characters:
             state.characters[cid].location_id = c.destination
             if dirty is not None:
                 dirty.add(("characters", cid))
-    # quest hook — only the player move is evaluated (NPC moves are not quest triggers).
     if c.target == state.player_id:
         check_quests(state, "location_enter", c.destination, dirty)
 
@@ -215,14 +183,17 @@ def _apply_affinity(
     c: AffinityChange,
     dirty: set[tuple[str, str]] | None,
 ) -> None:
+    """Single-direction write: only `target.relations[actor]`. Reverse direction is unused by gameplay."""
     if c.actor not in state.characters:
         raise _StateChangeError(f"unknown actor: {c.actor!r}")
-    actor = state.characters[c.actor]
+    if c.target not in state.characters:
+        raise _StateChangeError(f"unknown target: {c.target!r}")
+    target = state.characters[c.target]
     delta = _affinity_delta(c.grade, c.intent)
-    current = actor.relations.get(c.target, 0)
-    actor.relations[c.target] = max(-100, min(100, current + delta))
+    current = target.relations.get(c.actor, 0)
+    target.relations[c.actor] = max(-100, min(100, current + delta))
     if dirty is not None:
-        dirty.add(("characters", c.actor))
+        dirty.add(("characters", c.target))
 
 
 def apply_combat_affinity_drop(
@@ -231,32 +202,17 @@ def apply_combat_affinity_drop(
     target_id: str,
     dirty: set[tuple[str, str]] | None = None,
 ) -> None:
-    """Bidirectional affinity drop applied per offensive combat action.
-
-    Combat is dispatched by combat_phase / actions, never by narrate, so the
-    LLM-emitted `affinity` change kind never fires here. Without this hook,
-    attacking an NPC would leave both `npc.relations[player]` (which gates
-    trade and merchant access) and `player.relations[npc]` (which feeds the
-    social_bonus) unchanged. We deduct on both sides so a hostile act flips
-    the relationship symmetrically.
-
-    Self-targeting (e.g. self-buff that the caller mistakenly funnels here)
-    is a no-op. Missing characters are silently skipped — combat may have
-    just removed the target."""
+    """Combat-side affinity drop. Single direction (`target.relations[attacker]`); narrate's affinity change never fires here."""
     if attacker_id == target_id:
         return
+    target = state.characters.get(target_id)
+    if target is None:
+        return
     delta = RULES.social.combat_affinity_drop
-    for a, b in ((attacker_id, target_id), (target_id, attacker_id)):
-        char = state.characters.get(a)
-        if char is None:
-            continue
-        current = char.relations.get(b, 0)
-        char.relations[b] = max(-100, min(100, current - delta))
-        if dirty is not None:
-            dirty.add(("characters", a))
-
-
-# --- public dispatch -------------------------------------------------------
+    current = target.relations.get(attacker_id, 0)
+    target.relations[attacker_id] = max(-100, min(100, current - delta))
+    if dirty is not None:
+        dirty.add(("characters", target_id))
 
 
 _HANDLERS = {

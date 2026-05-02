@@ -26,16 +26,8 @@ class Social(_F):
     affinity_failure: int = -3
     affinity_critical: int = 10
     trade_threshold: int = 0
-    # Engine-side bidirectional affinity drop applied per attack / offensive
-    # skill cast. Combat actions never reach narrate, so the LLM can't emit
-    # the matching `affinity` change — the engine deducts it directly on both
-    # sides (attacker→target, target→attacker), clamped at -100.
     combat_affinity_drop: int = 20
-    # Disposition.aggressive at or above this blocks the NPC from appearing
-    # as a merchant regardless of `relations[player]`. Without this, hostile
-    # seeds (bandits with aggressive=85, wolves with 90) that happen to carry
-    # equipment in their inventory would surface as merchants on first sight,
-    # because the default empty `relations` dict reads as a neutral 0.
+    # Override `relations[player]` so hostile seeds carrying gear don't surface as merchants on first sight.
     hostile_aggressive_threshold: int = 70
 
 
@@ -50,9 +42,7 @@ class LogConfig(_F):
 
 
 class TimeConfig(_F):
-    phase_turns: int = (
-        10  # turns per day-phase; 4 phases × phase_turns = full day cycle
-    )
+    phase_turns: int = 10
 
 
 class RecoveryConfig(_F):
@@ -64,10 +54,8 @@ class RecoveryConfig(_F):
 
 
 class GrowthConfig(_F):
-    base_xp: int = 100  # cost from level N → N+1 = base_xp × N (linear)
+    base_xp: int = 100
     max_level: int = 20
-    # Per-grade xp the player earns from a successful skill check.
-    # Encourages learning by trying things; failure stays free.
     roll_xp: dict[str, int] = {
         "critical_success": 25,
         "success": 8,
@@ -78,8 +66,6 @@ class GrowthConfig(_F):
 
 
 class SkillConfig(_F):
-    """Skill cast effect base. tier/grade adjustment coefficients are tuning knobs."""
-
     grade_multipliers: dict[str, float] = {
         "critical_success": 2.0,
         "success": 1.0,
@@ -87,7 +73,6 @@ class SkillConfig(_F):
         "failure": 0.0,
         "critical_failure": 0.0,
     }
-    # §2.3 step 4 — context window for the LLM skill-recommend prompt.
     recommend_recent_turns: int = 10
     recommend_recent_inputs: int = 5
 
@@ -131,9 +116,7 @@ class DeathConfig(_F):
 
 
 class LLMConfig(_F):
-    # Per-call timeout. A stalled LLM otherwise hangs the whole turn under the
-    # OpenAI client's default (~10 minutes). Streaming uses a longer ceiling
-    # because narrate-style outputs can legitimately run a couple of minutes.
+    # Override the OpenAI client's ~10min default so a stalled LLM can't hang the whole turn.
     chat_timeout_s: float = 60.0
     stream_timeout_s: float = 180.0
 

@@ -1,15 +1,3 @@
-"""Target view — what narrate sees about the entity the player addressed.
-
-Phase 4: traverses the graph 2 hops so prompts can phrase quests in
-context. NPC view: from the NPC, 1-hop along `gives_quest` to a quest,
-2-hop into the quest's kill targets / locations / items / rewards. Same
-for `kill_target_of` so an NPC that the player must kill flags it on
-their view too. Location view: 1-hop along `required_by` to a quest,
-2-hop to the quest's giver / rewards. Item view: resolves the raw 1-hop
-edge ids to names so narrate doesn't see bare ids in `unlocks` /
-`reward_of`.
-"""
-
 from ..domain.state import GameState
 from ..domain.types import is_secret_masked_grade
 from .graph import GameGraph
@@ -39,20 +27,11 @@ def build_target_view(
     *,
     grade: str | None = None,
 ) -> dict | None:
-    """`grade` gates the secret slots: on a failed roll
-    (`is_secret_masked_grade(grade)`) NPC inner state (`tone_hint`,
-    `memories`) and quest reward detail are dropped before narrate sees
-    them. Other grades / non-roll calls leave the view untouched."""
+    """`grade` masks NPC inner state (`tone_hint`, `memories`) and quest reward detail on failed rolls."""
     masked = is_secret_masked_grade(grade)
     node_type = graph.get_node_type(target_id)
     if node_type == "character":
-        # Dead NPCs return a minimal dead-marker payload — name + alive=false.
-        # We don't expose memories/inventory (no live persona to render), but
-        # narrate still needs the explicit "this target is dead" signal so it
-        # won't revive them as a passerby. This is the belt-and-suspenders
-        # pair to surroundings.corpses: corpses covers "player mentions a
-        # dead NPC by name", target_view covers "judge routed
-        # targets=[corpse_id] past the Corpse rule".
+        # Dead NPC returns minimal marker so narrate gets the explicit signal and won't revive them.
         npc = state.characters.get(target_id)
         if npc is not None and not npc.alive:
             return {
@@ -73,13 +52,8 @@ def _omit_none(d: dict) -> dict:
     return {k: v for k, v in d.items() if v is not None}
 
 
-# --- 2-hop helpers ----------------------------------------------------------
-
-
 def _resolve_neighbor(state: GameState, graph: GameGraph, node_id: str) -> dict | None:
-    """Turn a graph node id into a `{id, kind, name}` dict that the prompt
-    can render. Returns None for unknown ids — graph nodes that point at a
-    missing entity (stale edge). Quest nodes return `{id, kind, title}`."""
+    """Resolve a node id to `{id, kind, name}` (quests return `title`). None for stale ids."""
     nt = graph.get_node_type(node_id)
     if nt == "character":
         c = state.characters.get(node_id)
@@ -104,15 +78,7 @@ def _quest_payload(
     include_giver: bool,
     masked: bool = False,
 ) -> dict | None:
-    """Resolve a quest into a prompt-ready dict via 1-hop in-edges:
-    - `kill_targets`: characters with a `character_death` trigger
-    - `triggers`: other trigger targets (locations to enter, items to use)
-    - `rewards`: items handed out on completion
-    - `giver`: the NPC who gave it (only when `include_giver=True` —
-      omitted for NPC view because the NPC already knows it's the giver,
-      surfaced for location view so narrate can say "이 장소를 가야 하는
-      이유는 X 영감의 부탁이오")
-    """
+    """Resolve a quest to `{id, title, status, kill_targets?, triggers?, rewards?, giver?}` via 1-hop in-edges."""
     q = state.quests.get(qid)
     if q is None:
         return None
@@ -140,9 +106,7 @@ def _quest_payload(
     if triggers:
         out["triggers"] = triggers
 
-    # Reward detail is a "secret" surface for the failure-grade mask: a botched
-    # social/investigation roll shouldn't let the LLM surface what the NPC
-    # would have given on success.
+    # Reward detail is masked on failed rolls so the LLM can't leak success-only payouts.
     if not masked:
         rewards: list[dict] = []
         for iid in reward_items_of(graph, qid):
@@ -172,8 +136,6 @@ def _build_npc_view(
 ) -> dict:
     npc = state.characters[target_id]
 
-    # Race: relation through graph (belongs_to_race), then attribute lookup
-    # for the race's display name/description.
     race_payload = None
     race_id = race_of(graph, target_id)
     if race_id is not None:
@@ -204,17 +166,13 @@ def _build_npc_view(
         inv_seen.add(iid)
         inventory.append({"id": iid, "name": item.name, "price": item.price})
 
-    # Quests this NPC gives — 2-hop into kill_targets / triggers / rewards.
     quests_given: list[dict] = []
     for qid in quests_given_by(graph, target_id):
         payload = _quest_payload(state, graph, qid, include_giver=False, masked=masked)
         if payload is not None:
             quests_given.append(payload)
 
-    # Quests this NPC is the kill target of — flagged so narrate knows
-    # "killing me advances something". Different list from quests_given so
-    # the LLM doesn't conflate "this NPC offers a job" with "this NPC IS the
-    # job."
+    # Separate list from quests_given so the LLM doesn't conflate "offers a job" with "IS the job".
     quests_kill_target: list[dict] = []
     for qid in quests_killing(graph, target_id):
         q = state.quests.get(qid)
@@ -228,11 +186,7 @@ def _build_npc_view(
                 item["giver"] = {"id": gid, "name": giver.name}
         quests_kill_target.append(item)
 
-    # Inner-state slots blocked at the data layer when narrate is rendering a
-    # failed roll: tone_hint exposes the NPC's true disposition; memories
-    # carry past secrets the player hasn't earned this turn. The narrate
-    # prompt also forbids leaking these on failure, but the LLM drifts —
-    # keeping the data out of the prompt is the only hard block.
+    # Hard block at the data layer: prompt rules also forbid leaking these on failure but the LLM drifts.
     tone_hint = None if masked else (npc.tone_hint or None)
     memories = (
         None
@@ -271,8 +225,7 @@ def _build_location_view(
         if item is not None:
             items.append({"id": iid, "name": item.name})
 
-    # Quests that require entering this location — 2-hop adds the giver so
-    # narrate can phrase "이 장소에 가야 하는 이유는 X 영감의 부탁이오".
+    # 2-hop adds the giver so narrate can phrase "이 장소에 가야 하는 이유는 X 영감의 부탁이오".
     quests: list[dict] = []
     for qid in quests_requiring(graph, target_id):
         payload = _quest_payload(state, graph, qid, include_giver=True, masked=masked)
@@ -292,9 +245,7 @@ def _build_location_view(
 
 
 def _build_item_view(state: GameState, graph: GameGraph, target_id: str) -> dict:
-    """Item view: surface the item itself + its outgoing relations as
-    name-resolved lists. Raw `edges` array is gone — narrate prompt forbids
-    raw ids and we control the ids that leak by resolving them here."""
+    """Outgoing relations name-resolved here — narrate prompt forbids raw ids."""
     item = state.items[target_id]
 
     unlocks: list[dict] = []

@@ -4,7 +4,6 @@ from typing import Literal, get_args
 StatKey = Literal["STR", "DEX", "CON", "INT", "WIS", "CHA"]
 
 
-# Pair-trade: stat_up → the stat that must be reduced together. Bidirectional. Shared by judge / growth / encounter.
 STAT_PAIRS: dict[StatKey, StatKey] = {
     "STR": "CHA",
     "CHA": "STR",
@@ -46,11 +45,7 @@ _SECRET_MASKED_GRADES: frozenset[str] = frozenset({"failure", "critical_failure"
 
 
 def is_secret_masked_grade(grade: str | None) -> bool:
-    """True when narrate context builders must drop secret slots (NPC inner
-    state, quest reward detail, hidden affinity tags). The narrate prompt
-    forbids leaking those on a failed roll, but prompt rules drift; the
-    builder honors the same gate at the data layer so the LLM never sees
-    the data it would have leaked."""
+    """True when narrate context must drop secret slots — data-layer enforcement of the failed-roll prompt rule."""
     return grade in _SECRET_MASKED_GRADES
 
 

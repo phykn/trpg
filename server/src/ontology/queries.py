@@ -1,21 +1,4 @@
-"""Named traversals over `GameGraph`.
-
-Hides edge-type strings — call sites read the intent (`inventory_of`,
-`inhabitants_of`) instead of the underlying edge label. Keeps the relational
-SSOT rule (CLAUDE.md) intact: anything asking who-relates-to-whom goes
-through the graph, just via a named function.
-
-Returns:
-- `list[str]` for traversals where the caller never inspects edge attrs.
-- `list[Edge]` for traversals where attrs matter (`equips.slot`,
-  `knows_skill.source`, `connects_to.difficulty/key_item_id`).
-- `str | None` for single-valued relations (race, quest giver, chapter).
-"""
-
 from .graph import Edge, GameGraph
-
-
-# --- location -------------------------------------------------------------
 
 
 def inhabitants_of(graph: GameGraph, location_id: str) -> list[str]:
@@ -29,25 +12,15 @@ def items_in(graph: GameGraph, location_id: str) -> list[str]:
 
 
 def container_of(graph: GameGraph, item_id: str) -> str | None:
-    """Location ID containing this item (`located_in`), or None.
-
-    Items in characters' inventories are tracked via `carries`, not this edge —
-    `container_of` only resolves items stashed in a location.
-    """
+    """Location ID containing this item (`located_in`), or None. Inventory items use `carries` instead."""
     for e in graph.get_edges(item_id, "located_in"):
         return e.to_id
     return None
 
 
 def connections_of(graph: GameGraph, location_id: str) -> list[Edge]:
-    """`connects_to` edges out of this location.
-
-    Edge.attrs holds `difficulty` and `key_item_id` when present.
-    """
+    """`connects_to` edges out of this location. `attrs.difficulty` / `attrs.key_item_id` may be set."""
     return graph.get_edges(location_id, "connects_to")
-
-
-# --- character composition ------------------------------------------------
 
 
 def race_of(graph: GameGraph, char_id: str) -> str | None:
@@ -84,9 +57,6 @@ def companions_of(graph: GameGraph, char_id: str) -> list[str]:
     return [e.to_id for e in graph.get_edges(char_id, "has_companion")]
 
 
-# --- quests ---------------------------------------------------------------
-
-
 def quests_given_by(graph: GameGraph, char_id: str) -> list[str]:
     """Quest IDs this character gives."""
     return [e.to_id for e in graph.get_edges(char_id, "gives_quest")]
@@ -100,8 +70,7 @@ def giver_of(graph: GameGraph, quest_id: str) -> str | None:
 
 
 def kill_targets_of(graph: GameGraph, quest_id: str) -> list[str]:
-    """Character IDs whose death advances this quest (strict subset of
-    `trigger_targets_of`)."""
+    """Character IDs whose death advances this quest (strict subset of `trigger_targets_of`)."""
     return [e.from_id for e in graph.get_in_edges(quest_id, "kill_target_of")]
 
 
@@ -130,15 +99,9 @@ def quests_rewarding(graph: GameGraph, item_id: str) -> list[str]:
     return [e.to_id for e in graph.get_edges(item_id, "reward_of")]
 
 
-# --- items ----------------------------------------------------------------
-
-
 def locations_unlocked_by(graph: GameGraph, item_id: str) -> list[str]:
     """Location IDs this item unlocks (key item → connection target)."""
     return [e.to_id for e in graph.get_edges(item_id, "unlocks")]
-
-
-# --- chapters -------------------------------------------------------------
 
 
 def chapter_of_quest(graph: GameGraph, quest_id: str) -> str | None:

@@ -72,9 +72,6 @@ def _slot_mismatch_hint(allowed: tuple[str, ...]) -> str:
     return "decorative, must be in the accessory slot"
 
 
-# --- Scenario container ----------------------------------------------------
-
-
 @dataclass
 class Scenario:
     """Seed bundle (or runtime state projection) — every entity dict + meta.
@@ -115,14 +112,8 @@ class Scenario:
         )
 
 
-# --- helpers ---------------------------------------------------------------
-
-
 def _v(out: list[str], where: str, msg: str) -> None:
     out.append(f"[{where}] {msg}")
-
-
-# --- check_stats -----------------------------------------------------------
 
 
 def check_stats(stats: Stats) -> list[str]:
@@ -138,9 +129,6 @@ def check_stats(stats: Stats) -> list[str]:
     if p3 != 20:
         out.append(f"stats.CON+INT: expected 20, got {p3}")
     return out
-
-
-# --- check_character (stateless) -------------------------------------------
 
 
 def check_character(c: Character) -> list[str]:
@@ -202,9 +190,6 @@ def check_character(c: Character) -> list[str]:
     return out
 
 
-# --- check_skills (skill ↔ type ↔ duration) --------------------------------
-
-
 def check_skills(c: Character, skills_pool: dict[str, Skill]) -> list[str]:
     where = f"characters/{c.id}"
     out: list[str] = []
@@ -232,9 +217,6 @@ def check_skills(c: Character, skills_pool: dict[str, Skill]) -> list[str]:
                 f"skill {s.id!r}: type={s.type!r} requires duration>0, got {s.duration}",
             )
     return out
-
-
-# --- check_item ------------------------------------------------------------
 
 
 def check_item(item: Item) -> list[str]:
@@ -265,9 +247,6 @@ def check_item(item: Item) -> list[str]:
                 f"effects.duration={eff.duration} (must be ≥ 0 or null)",
             )
     return out
-
-
-# --- check_inventory (character ↔ items pool) ------------------------------
 
 
 def check_inventory(c: Character, items: dict[str, Item]) -> list[str]:
@@ -313,9 +292,6 @@ def check_inventory(c: Character, items: dict[str, Item]) -> list[str]:
         )
 
     return out
-
-
-# --- seed-only character extras --------------------------------------------
 
 
 def _check_seed_only_rules(c: Character) -> list[str]:
@@ -364,9 +340,6 @@ def _check_seed_only_rules(c: Character) -> list[str]:
             )
 
     return out
-
-
-# --- check_quest_graph -----------------------------------------------------
 
 
 _TRIGGER_POOL_NAME = {
@@ -440,9 +413,6 @@ def check_chapter_graph(s: Scenario) -> list[str]:
     return _check_prereq_status(s.chapters, "chapters") + _check_prereq_cycles(
         s.chapters, "chapter"
     )
-
-
-# --- per-entity cross-ref helpers (used by scenario / state) ---------------
 
 
 def _check_character_cross_ref(c: Character, s: Scenario) -> list[str]:
@@ -558,9 +528,6 @@ def _check_chapter_cross_ref(ch: Chapter, s: Scenario) -> list[str]:
     return out
 
 
-# --- start.json + player_template (seed-only) ------------------------------
-
-
 def _check_start_json(s: Scenario) -> list[str]:
     where = "scenario/start"
     out: list[str] = []
@@ -633,9 +600,6 @@ def _check_player_template(s: Scenario) -> list[str]:
     return out
 
 
-# --- check_scenario --------------------------------------------------------
-
-
 def check_scenario(s: Scenario) -> list[str]:
     out: list[str] = []
 
@@ -672,9 +636,6 @@ def check_scenario(s: Scenario) -> list[str]:
         out.extend(_check_player_template(s))
 
     return out
-
-
-# --- public namespace ------------------------------------------------------
 
 
 def check_seed_character(

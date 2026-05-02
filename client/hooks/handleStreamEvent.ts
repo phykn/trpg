@@ -29,9 +29,7 @@ export function handleStreamEvent(ev: StreamEvent, h: StreamHandlers): void {
       return;
     case 'log_entry':
       h.upsertLogEntry(ev.data);
-      // Roll resolved → clear pending so the rolling indicator drops as soon
-      // as the dice number lands, instead of lingering through the entire GM
-      // narration that follows.
+      // Drop the rolling indicator the moment the dice lands, not after the GM narration finishes.
       if (ev.data.kind === 'roll') h.clearPending();
       return;
     case 'state':
@@ -40,18 +38,10 @@ export function handleStreamEvent(ev: StreamEvent, h: StreamHandlers): void {
       return;
     case 'combat_start':
     case 'combat_turn':
-      // The auto-combat sim runs the entire fight (or up to the round cap)
-      // server-side and streams the cinematic body via narrative_delta.
-      // combat_start fires once at fight entry; combat_turn fires once per
-      // actor action across all rounds in the cycle. Both are observability
-      // signals — `state` (after finalize) and `log_entry` (cinematic gm
-      // body + numeric act summary) are authoritative for the UI.
+      // Observability only; UI reads from `state` + `log_entry`.
       return;
     case 'combat_end':
-      // Terminal outcomes only (victory / defeat / fled / downed). The
-      // `ongoing` outcome (round cap reached, both sides still standing)
-      // does not fire combat_end — combat_state stays live so the next
-      // /turn picks up where this cycle left off.
+      // Fires for terminal outcomes only — `ongoing` keeps combat_state live for the next /turn.
       h.clearCombat();
       return;
     case 'done':
