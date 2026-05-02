@@ -17,40 +17,7 @@ _PRONOUN_SUBJECTS = ("그가", "그는", "그녀가", "그녀는")
 
 
 def redact_dead_quotes(text: str, dead_names: list[str]) -> str:
-    """Strip Korean direct-quote blocks attributed to dead NPCs.
-
-    Walks `text` once, tracking the most recent named subject as state.
-    Each `「` / `『` block inherits whoever was last marked as the speaker;
-    if that speaker is in `dead_names`, the block is replaced with `…`.
-
-    Subject classification at every position:
-    - `<dead_name>{가|이|은|는|께서}` → speaker = dead.
-    - `당신{가|이|은|는|께서}` → speaker = player (alive, resets dead).
-    - `그(가|는)` / `그녀(가|는)` → continuation pronoun, doesn't change
-      the recorded speaker. This is what catches `에드릭은 ... 「Q1」 그는
-      ... 「Q2」` — the pronoun keeps Edrik as the attributed speaker for
-      Q2 even though his name doesn't reappear in the immediate window.
-    - any other `<hangul>+{subject_josa}` → resets to "not dead". A live
-      NPC, a scene object (`안개가`, `분수는`), or 당신 all break the
-      dead-subject inheritance the safe way (under-redact, never falsely
-      redact a live speaker).
-    - object / dative markers (`을/를/에/에게/한테/와/과/의 …`) don't
-      participate — `노인을 떠올린다. 「잘 지내시오.」` correctly keeps the
-      quote because the dead name only appears as the player's mental
-      object, not as a subject.
-
-    Earlier window-scan version missed the common pattern where the LLM
-    introduces a corpse with a subject marker, opens a quote, then opens
-    a second quote a few sentences later anchored only by the pronoun
-    `그는`. Stateful walk handles that without an arbitrarily wide window.
-
-    Two callers — same single root cause:
-    - `build_history_layer` → strips from `recent_dialogue` so the LLM
-      doesn't see resurrected speech as an in-context pattern to mimic.
-    - `consume_narrate` → strips from the post-LLM body before persisting
-      to log_entry / dialogue / turn_log so a one-off slip doesn't
-      compound across turns.
-    """
+    """Strip Korean direct-quote blocks attributed to dead NPCs. Stateful walk so pronoun continuation (그는 / 그녀는) keeps the named speaker beyond the immediate window."""
     if not dead_names or not text:
         return text
     name_set = {n for n in dead_names if n}

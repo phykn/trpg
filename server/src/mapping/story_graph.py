@@ -1,25 +1,4 @@
-"""Story graph projection — `to_story_graph(state)` returns the nodes and
-edges the client's map view renders. Player-visible by design: the
-location half expands through normal map connections, the character half
-is limited to the player, current-scene NPCs, companions, and the active
-subject so the graph does not become a spoiler dump.
-
-Each node carries a `status` enum and a `reachable` boolean alongside the
-display fields, and each edge carries a semantic `kind`. The client reads
-those fields directly instead of pattern-matching the Korean display
-label, which keeps display labels free to change without breaking
-client-side derive logic.
-
-Status values:
-- `current` (place node at the player's current location)
-- `engaged` (the active conversation subject)
-- `reachable_move` / `unreachable_move` (location nodes)
-- `reachable_meet` / `unreachable_meet` (target/character nodes)
-- `None` for hero and quest nodes (status not applicable)
-
-Edge kinds: `current_pin / observe / progress / move / meet /
-quest_giver / quest_target`. The Korean `label` stays as the display
-string; `kind` is the machine-readable counterpart."""
+"""Story-graph projection for the client's map view; characters are limited to player + current scene + companions + active subject so it can't become a spoiler dump."""
 
 from typing import Literal
 

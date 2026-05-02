@@ -1,15 +1,4 @@
-"""Judge prompt input — `surroundings` layer.
-
-Bundles location, entities, equipment, skills, inventory, growth, merchants and
-skill candidates into the dict the judge agent sees. Payload helpers stay
-private — only `build_surroundings` is exported.
-
-Relational reads (who's at this location, what's equipped/carried, which
-skills are known) go through `GameGraph` — never via `state.characters`
-fullscans or direct entity-relation fields. Pure-attribute reads (HP, alive,
-disposition, level, mp) still come from the entity. Phase 3 of the graph-SSOT
-work, see [02-runtime.md](./02-runtime.md) §4.
-"""
+"""Build the `surroundings` dict the judge agent sees: location, entities, equipment, skills, inventory, growth, merchants, skill candidates."""
 
 from ..domain.entities import (
     EQUIPMENT_SLOTS,
@@ -34,13 +23,7 @@ from ..rules import RULES
 
 
 def _state_tags(actor: Character, npc: Character, *, masked: bool = False) -> list[str]:
-    """`masked=True` (failure-grade narrate call) drops the affinity tag —
-    the player just botched a social/investigation roll, so they shouldn't
-    learn the NPC's true disposition from a sidebar tag. Visible-injury tags
-    stay (a wound is observable regardless of what the player rolled).
-
-    Affinity is read NPC→actor (how the NPC views the actor), the only
-    direction the rest of the system tracks."""
+    """masked=True drops the affinity tag (failure-grade narrate shouldn't leak NPC disposition); injury tags stay because a wound is observable."""
     tags: list[str] = []
     if not masked:
         aff = npc.relations.get(actor.id, 0)
@@ -177,20 +160,7 @@ def _merchants_payload(
 def _npc_roles(
     state: GameState, actor: Character, npc: Character, graph: GameGraph
 ) -> list[str]:
-    """Positive role tags surfaced for narrate. Without these the LLM has no
-    way to tell that a same-location NPC is *not* a trade-eligible merchant
-    (the existing `surroundings.merchants` slot only carries the positives;
-    silence isn't a signal). Tags are unordered, kebab-case ASCII so they
-    don't collide with display Korean.
-
-    - `merchant`: gating mirrors `_merchants_payload` (trade_threshold +
-      non-aggressive + carries stock). When this is missing on a same-NPC
-      that's also in `merchants`, that's a bug.
-    - `quest_giver`: any outgoing `gives_quest` edge in the graph (status
-      irrelevant — a giver with only completed quests still gives the
-      tonal signal "this NPC is a quest hub").
-    Future roles (e.g. `companion`, `enemy_only`) can join the same list.
-    """
+    """Per-NPC role tags (kebab-case ASCII) so narrate can tell that a same-location NPC is *not* trade-eligible — `merchants` only carries positives, silence isn't a signal."""
     roles: list[str] = []
     aggressive_cutoff = RULES.social.hostile_aggressive_threshold
     threshold = RULES.social.trade_threshold
@@ -257,18 +227,7 @@ def _entities_payload(
 def _corpses_payload(
     state: GameState, actor: Character, graph: GameGraph
 ) -> list[dict]:
-    """Dead NPCs surfaced for narrate so it doesn't revive them. Two sources:
-
-    - same-location: visible as a body in the scene.
-    - history-referenced (any location, marked `off_screen=true`): id appears
-      in recent `turn_log.target`, so the player may still address them by
-      name from somewhere else. Without this, narrate loses the death
-      signal the moment the player walks away and hallucinates the dead
-      NPC speaking again from `recent_dialogue` text.
-
-    Surfaced separately from `entities` so judge semantics doesn't accept
-    them as combat/buy/sell targets.
-    """
+    """Dead NPCs (same-location bodies + off_screen=true ids surviving in turn_log) surfaced separately from `entities` so judge doesn't accept them as targets."""
     if actor.location_id is None:
         return []
     out: list[dict] = []
@@ -281,9 +240,7 @@ def _corpses_payload(
             continue
         out.append({"id": cid, "name": char.name})
         seen.add(cid)
-    # turn_log's structured `target` field is the only way to recover ids
-    # from history without fuzzy-matching narrator prose. recent_dialogue
-    # text mentions names but not ids.
+    # turn_log.target carries ids; recent_dialogue text only has names.
     for entry in state.turn_log:
         tid = entry.target
         if tid is None or tid == actor.id or tid in seen:
