@@ -17,6 +17,8 @@ from ..domain.entities import (
     WeaponEffect,
 )
 from ..domain.types import Grade, StatKey
+from ..ontology.graph import GameGraph
+from ..ontology.queries import location_of
 from ..rules import RULES
 from ..domain.state import CombatState, GameState
 from ..rules.dc import compute_grade, compute_required_roll
@@ -173,12 +175,15 @@ def _has_heal_skill(c: Character, skills_pool: dict[str, Skill]) -> bool:
 
 
 def _filter_alive_in_location(
-    actor: Character, candidates: list[Character]
+    actor: Character, candidates: list[Character], graph: GameGraph
 ) -> list[Character]:
+    actor_loc = location_of(graph, actor.id)
     return [
         c
         for c in candidates
-        if c.alive and c.id != actor.id and c.location_id == actor.location_id
+        if c.alive
+        and c.id != actor.id
+        and location_of(graph, c.id) == actor_loc
     ]
 
 
@@ -188,10 +193,12 @@ def pick_target(
     skills_pool: dict[str, Skill] | None = None,
     rng: random.Random | None = None,
     damage_dealt: dict[str, int] | None = None,
+    *,
+    graph: GameGraph,
 ) -> Character | None:
     """Pick one target by combat_behavior; appearance order in candidates stands in for "nearest" (no sub-location position model)."""
     r = rng or random
-    pool = _filter_alive_in_location(actor, candidates)
+    pool = _filter_alive_in_location(actor, candidates, graph)
     if not pool:
         return None
 
@@ -498,7 +505,12 @@ def pick_npc_target(
         state.characters[cid] for cid in targets_ids if cid in state.characters
     ]
     return pick_target(
-        actor, candidates, state.skills, rng=rng, damage_dealt=cs.damage_dealt
+        actor,
+        candidates,
+        state.skills,
+        rng=rng,
+        damage_dealt=cs.damage_dealt,
+        graph=state.graph(),
     )
 
 
