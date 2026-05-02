@@ -23,6 +23,7 @@ from ..engines import combat as combat_engine
 from ..ontology.player_view import build_player_view
 from ..ontology.queries import location_of, race_of
 from ..persistence.repo import ScenarioRepo
+from ..rules import RULES
 from .actions import apply_attack_action, apply_skill_action
 from .dirty import Dirty, register_kill
 
@@ -58,6 +59,8 @@ class AutoCombatResult:
     enemy_hits: list[EnemyHit] = field(default_factory=list)
     player_damage_total: int = 0
     player_revived: bool = False
+    player_revive_coins_after: int = 0
+    player_revive_coins_max: int = 0
     player_hp_after: int = 0
     player_max_hp: int = 0
     enemy_starts: list[EnemyNarrateSnapshot] = field(default_factory=list)
@@ -521,9 +524,14 @@ def run_auto_combat(
             )
         )
 
-    player_damage_total = max(0, player_hp_before - player.hp)
     player_revived = (
         player_revive_coins_before > player.revive_coins or outcome == "downed"
+    )
+    # Raw damage = visible HP delta + the auto_revive_hp the engine handed back. Without the +auto_revive_hp,
+    # a coin-revive turn reads "X 피해 (HP 1/Y)" where X is one short of what actually hit (HP went pre-hit→0→1).
+    naive_damage = max(0, player_hp_before - player.hp)
+    player_damage_total = (
+        naive_damage + RULES.death.auto_revive_hp if player_revived else naive_damage
     )
     if player_revived:
         # One-shot signal so next turn's narrate opens with recovery prose; consumed and cleared in flow/turn.py.
@@ -540,6 +548,8 @@ def run_auto_combat(
         enemy_hits=enemy_hits,
         player_damage_total=player_damage_total,
         player_revived=player_revived,
+        player_revive_coins_after=player.revive_coins,
+        player_revive_coins_max=RULES.death.revive_coins,
         player_hp_after=player.hp,
         player_max_hp=player.max_hp,
         enemy_starts=enemy_starts,
@@ -585,9 +595,15 @@ def format_outcome_summary(result: AutoCombatResult) -> str | None:
         elif h.damage_total > 0:
             lines.append(f"{h.name} {h.damage_total} 피해 (HP {h.hp_after}/{h.max_hp})")
     if result.player_damage_total > 0 or result.player_revived:
+        player_name = result.player_start.name if result.player_start else "주인공"
         lines.append(
-            f"피격 {result.player_damage_total} 피해 "
+            f"{player_name} {result.player_damage_total} 피해 "
             f"(HP {result.player_hp_after}/{result.player_max_hp})"
+        )
+    if result.player_revived:
+        lines.append(
+            f"가까스로 일어남 "
+            f"(Revival {result.player_revive_coins_after}/{result.player_revive_coins_max})"
         )
     if not lines:
         return None

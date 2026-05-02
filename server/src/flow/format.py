@@ -15,18 +15,14 @@ def front_grade(grade: str) -> str:
     return "fail"
 
 
-def format_combat_end_text(outcome: str, revived: bool = False) -> str:
+def format_combat_end_text(outcome: str) -> str:
     if outcome == "victory":
-        if revived:
-            return "전투 종료 — 의식을 잃었다 깨어나 적을 제압했습니다."
-        return "전투 종료 — 적을 모두 제압했습니다."
+        return "적을 모두 제압"
     if outcome == "defeat":
-        if revived:
-            return "전투 종료 — 의식을 잃었다 깨어났으나 결국 사망."
-        return "전투 종료 — 사망."
+        return "사망"
     if outcome == "downed":
-        return "전투 종료 — 의식을 잃었다 깨어났습니다."
-    return "전투 종료 — 도주."
+        return "의식을 잃었다 깨어남"
+    return "도주"
 
 
 def format_use_log(state: GameState, actor_id: str, result: dict) -> str:

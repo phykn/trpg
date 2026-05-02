@@ -75,8 +75,12 @@ async def emit_combat_cinematic_and_end(
             yield push_gm(state, dirty, body)
 
     summary = format_outcome_summary(result)
-    end_text = format_combat_end_text(result.outcome, revived=result.player_revived)
-    combined = f"{summary}\n{end_text}" if summary else end_text
+    # When player_revived, the "가까스로 일어남 (Revival N/M)" line in summary already serves as the end label — appending end_text would duplicate.
+    if result.player_revived:
+        combined = summary or format_combat_end_text(result.outcome)
+    else:
+        end_text = format_combat_end_text(result.outcome)
+        combined = f"{summary}\n{end_text}" if summary else end_text
     yield push_act(state, dirty, combined)
     yield {"type": "combat_end", "data": {"outcome": result.outcome}}
 
