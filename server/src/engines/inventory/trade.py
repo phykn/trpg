@@ -1,6 +1,6 @@
-"""Buy / sell with affinity-based pricing (P3 §2.5)."""
+"""Buy / sell with affinity-based pricing + free transfer (gift / loot)."""
 
-from ...domain.entities import Character, Item
+from ...domain.entities import Character, EQUIPMENT_SLOTS, Item
 from ...domain.errors import InventoryInvalid
 from ...rules import RULES
 from .carry import check_can_carry
@@ -74,3 +74,28 @@ def sell(
     player.gold += price
     npc.gold -= price
     return price
+
+
+def transfer(
+    src: Character, dst: Character, item_id: str, items: dict[str, Item]
+) -> None:
+    """Free item transfer (gift / lend / corpse loot). Live src→player path checks affinity. Auto-unequips if src had it equipped."""
+    if item_id not in items:
+        raise InventoryInvalid(f"unknown item: {item_id}")
+    if not dst.alive:
+        raise InventoryInvalid(f"can't transfer to a dead recipient: {dst.id}")
+    if item_id not in src.inventory_ids:
+        raise InventoryInvalid(f"{src.id} has no such item: {item_id}")
+    if src.alive and not src.is_player and dst.is_player:
+        aff = src.relations.get(dst.id, 0)
+        if aff < RULES.social.trade_threshold:
+            raise InventoryInvalid(
+                f"affinity too low to gift: {aff} < {RULES.social.trade_threshold}"
+            )
+    check_can_carry(dst, items, item_id)
+
+    src.inventory_ids.remove(item_id)
+    dst.inventory_ids.append(item_id)
+    for slot in EQUIPMENT_SLOTS:
+        if getattr(src.equipment, slot) == item_id:
+            setattr(src.equipment, slot, None)

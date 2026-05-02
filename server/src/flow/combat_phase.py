@@ -74,13 +74,12 @@ async def emit_combat_cinematic_and_end(
         if body:
             yield push_gm(state, dirty, body)
 
-    summary = format_outcome_summary(result)
-    if summary:
-        yield push_act(state, dirty, summary)
-
     end_label: Literal["victory", "defeat", "fled"]
     end_label = "defeat" if result.outcome == "downed" else result.outcome
-    yield push_act(state, dirty, format_combat_end_text(end_label))
+    summary = format_outcome_summary(result)
+    end_text = format_combat_end_text(end_label)
+    combined = f"{summary}\n{end_text}" if summary else end_text
+    yield push_act(state, dirty, combined)
     yield {"type": "combat_end", "data": {"outcome": result.outcome}}
 
 
@@ -144,7 +143,6 @@ async def start_combat_and_drive_auto(
             f"new enemy_ids={enemy_ids})"
         )
     cs = combat_engine.start_combat(state, enemy_ids, rng=rng, surprise=surprise)
-    yield push_act(state, dirty, "전투를 시작합니다.")
     yield {
         "type": "combat_start",
         "data": {

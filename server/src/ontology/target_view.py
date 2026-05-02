@@ -31,7 +31,6 @@ def build_target_view(
     masked = is_secret_masked_grade(grade)
     node_type = graph.get_node_type(target_id)
     if node_type == "character":
-        # Dead NPC returns minimal marker so narrate gets the explicit signal and won't revive them.
         npc = state.characters.get(target_id)
         if npc is not None and not npc.alive:
             return {
@@ -39,6 +38,7 @@ def build_target_view(
                 "id": target_id,
                 "name": npc.name,
                 "alive": False,
+                "inventory": _corpse_inventory(state, graph, target_id),
             }
         return _build_npc_view(state, graph, target_id, actor_id, masked=masked)
     if node_type == "location":
@@ -50,6 +50,20 @@ def build_target_view(
 
 def _omit_none(d: dict) -> dict:
     return {k: v for k, v in d.items() if v is not None}
+
+
+def _corpse_inventory(state: GameState, graph: GameGraph, target_id: str) -> list[dict]:
+    out: list[dict] = []
+    seen: set[str] = set()
+    for iid in inventory_of(graph, target_id):
+        if iid in seen:
+            continue
+        item = state.items.get(iid)
+        if item is None:
+            continue
+        seen.add(iid)
+        out.append({"id": iid, "name": item.name})
+    return out
 
 
 def _resolve_neighbor(state: GameState, graph: GameGraph, node_id: str) -> dict | None:

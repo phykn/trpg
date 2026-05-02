@@ -35,10 +35,7 @@ export function Composer({ input, setInput, onSend, onStop, streaming, think, on
   const textInputRef = React.useRef<TextInput>(null);
   const [inputHeight, setInputHeight] = React.useState(INPUT_MIN_HEIGHT);
 
-  // RN-web's onContentSizeChange doesn't reliably fire when the textarea shrinks,
-  // so deleting a long draft would leave the composer puffed up. Measure
-  // scrollHeight directly each time `input` changes — collapse to 0 first so
-  // scrollHeight reflects the content alone, not the prior box height.
+  // RN-web's onContentSizeChange doesn't fire on shrink — measure scrollHeight after collapsing to 0.
   React.useLayoutEffect(() => {
     if (!IS_WEB) return;
     const node = textInputRef.current as unknown as HTMLTextAreaElement | null;

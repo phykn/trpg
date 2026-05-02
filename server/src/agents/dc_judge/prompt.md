@@ -34,9 +34,10 @@ Input fields (in `surroundings`):
 | 9 | learn_skill | `{"action":"learn_skill","index":<0-based>}` | `skill_candidates` non-empty + pick by name/desc match. |
 | 10 | buy | `{"action":"buy","npc_id":"<id>","item_id":"<id>"}` | Merchant + listed price + item in their `stock`. |
 | 11 | sell | `{"action":"sell","npc_id":"<id>","item_id":"<id>"}` | Merchant + item in `inventory` + not equipped. |
+| 11.5 | give | `{"action":"give","from_id":"<src>","to_id":"<dst>","item_id":"<id>"}` | Free transfer (gift / lend / hand-over / corpse loot / accept). Player-input must name *which item* moves (`엔티티`·`equipment`·`corpses[*].inventory[*].id`에 잡혀야). 방향: NPC→Player 받기/빌리기/챙기기 (`from=npc_id, to=player_01`); Player→NPC 주기/건네기/넘기기 (`from=player_01, to=npc_id`); 시체 루팅 (`from=corpse_id, to=player_01` — corpse는 `surroundings.corpses[*].id`). 거절·회피·말돌리기 흐름이면 `pass`. 협상·설득·구걸이 들어가는 빌려달라 사정·간청은 `roll`(CHA) — 양도 자체가 아니라 동의 얻기가 본질. |
 | 12 | roll | `{"action":"roll","tier":"<KR>","stat":"<STAT>","targets":["<id>"],"reason":"<KR>"}` | Active resistance: persuade, lie, intimidate, haggle, sneak, pick lock, climb, search. |
 | 13 | pass | `{"action":"pass","targets":["<id>"]}` (targets optional) | Valid in-character action — no check needed (greeting, casual look, idle, **NPC에게 다가가기·말 걸기**), or **fallback for unresolved input** (vague verb, blocked engine condition, target/scene mismatch). NPC를 향한 행동이면 `targets`에 그 id 넣기 (§ targets rule). narrate가 in-world로 흡수. |
-| 14 | chain | `{"action":"chain","parts":[<sub-action>, <sub-action>, ...]}` | Compound 입력에서 **engine action + 별개 의도**가 함께 들어 있을 때 ("약초 먹고 검을 든다" = use+equip, "검 들고 광장 상인에게 다가간다" = equip+pass, "**검을 꺼내 경계하며 전진한다**" = equip+pass). parts는 2~4개. 각 part는 `use`/`equip`/`unequip`/`buy`/`sell`/`level_up`/`learn_skill`/`pass` 중 하나 (combat·rest·flee·roll·reject·summon_combat은 chain 금지 — phase 충돌). 같은 분기 내 chain("뒤져서 연다" = 단일 roll)은 chain 아니라 단일 action 그대로. **두 번째 동사가 호명 없는 일상 pass(전진한다·둘러본다·한숨 돌린다·자세를 가다듬는다·기다린다)도 chain part로 묶어라** — 단일 engine action으로 떨구면 narrate가 호출 안 되고 그 두 번째 의도가 본문에 영영 안 들어간다. fluff 분위기 어휘만 따라 붙은 경우(예: "검을 든다 (조심스레)")는 chain 아님 — 별개 동사가 있을 때만. |
+| 14 | chain | `{"action":"chain","parts":[<sub-action>, <sub-action>, ...]}` | Compound 입력에서 **engine action + 별개 의도**가 함께 들어 있을 때 ("약초 먹고 검을 든다" = use+equip, "검 들고 광장 상인에게 다가간다" = equip+pass, "**검을 꺼내 경계하며 전진한다**" = equip+pass). parts는 2~4개. 각 part는 `use`/`equip`/`unequip`/`buy`/`sell`/`give`/`level_up`/`learn_skill`/`pass` 중 하나 (combat·rest·flee·roll·reject·summon_combat은 chain 금지 — phase 충돌). 같은 분기 내 chain("뒤져서 연다" = 단일 roll)은 chain 아니라 단일 action 그대로. **두 번째 동사가 호명 없는 일상 pass(전진한다·둘러본다·한숨 돌린다·자세를 가다듬는다·기다린다)도 chain part로 묶어라** — 단일 engine action으로 떨구면 narrate가 호출 안 되고 그 두 번째 의도가 본문에 영영 안 들어간다. fluff 분위기 어휘만 따라 붙은 경우(예: "검을 든다 (조심스레)")는 chain 아님 — 별개 동사가 있을 때만. |
 
 **Boundaries**:
 
@@ -55,7 +56,7 @@ semantics 검증이 backstop으로 friendly NPC·location id·player·item을 co
 
 **Scene prop rule**: 무생물 환경 요소(분수·동상·문·창문·책상·나무·벽 등)는 `entities`에 없어도 묘사·분위기로 등장한 prop으로 받는다. 능력 판정이 필요한 행동(부수기/오르기/뒤지기/면밀 관찰) → `roll`(STR/DEX/WIS), `targets:[location.id]`, `reason`에 prop 이름. 가벼운 상호작용(만지기, 두드리기, 동전 던지기) → `pass`. 명명된 character/item이 `entities`에 없으면 § Fallback rules § targets로 떨어짐.
 
-**Corpse rule**: `player_input`이 `surroundings.corpses`의 NPC를 호명 → `{"action":"pass","targets":["<corpse_id>"]}`. combat/roll/buy/sell 금지. narrate가 `target_view.alive==false` 신호로 시체 톤 처리.
+**Corpse rule**: `player_input`이 `surroundings.corpses`의 NPC를 호명 → 루팅 의도(챙긴다·뒤진다·가져간다·회수한다·벗긴다 등 + 아이템 명시 또는 "쓸만한 것"·"전부")면 `{"action":"give","from_id":"<corpse_id>","to_id":"player_01","item_id":"<id>"}` (여러 아이템이면 chain). 단순 호명·확인·감정 표현이면 `{"action":"pass","targets":["<corpse_id>"]}`. combat/roll/buy/sell 금지.
 
 **Movement rule**: `player_input`이 다른 장소로의 **이동 의도**(이동/간다/향한다/들어간다/돌아간다/나간다/오른다 + 장소 이름)면, narrate가 본문에서 도착 묘사 + `move` state_change를 만들 수 있게 judge가 location id를 `targets[0]`에 넣어 준다. 분기:
 
@@ -92,7 +93,7 @@ semantics 검증이 backstop으로 friendly NPC·location id·player·item을 co
 4. No name + 환경 대상 행동 + `roll` → `[location.id]`. `combat` w/ no name → § Combat target rule (hostile/neutral only).
 5. `pass`의 `targets`는 optional이지만 **위 1~3에서 NPC를 골랐으면 반드시 채운다** — client 패널이 player가 마주하는 대상을 따라가려면 필요. 진짜 target 없는 일상 행동("자리에 앉는다", "둘러본다")만 `targets:[]`.
 
-**tail_intent (optional)**: `use`/`equip`/`unequip`/`buy`/`sell`/`level_up`/`learn_skill` 7종에서만 받는 짧은 한국어 프로즈 1문장. 엔진이 만든 act 로그 줄 뒤에 그대로 덧붙어 의도/플레이버를 살린다. **언제 채우나**: player_input에 엔진 템플릿이 못 잡는 명시적 동기·플레이버가 있을 때만 — 예: `약초를 한 모금 마신다` → `use, tail_intent: "한 모금에 묵직한 약초 향이 입안에 번집니다"`. 평범한 입력("약초를 먹는다")이면 **생략**. 다른 action(`combat`·`roll`·`pass`·`chain` 자체 등)에는 없는 필드 — 출력에 넣지 마라. chain의 각 part는 자기 part가 7종 중 하나면 part 내부에 채울 수 있다.
+**tail_intent (optional)**: `use`/`equip`/`unequip`/`buy`/`sell`/`give`/`level_up`/`learn_skill` 8종에서만 받는 짧은 한국어 프로즈 1문장. 엔진이 만든 act 로그 줄 뒤에 그대로 덧붙어 의도/플레이버를 살린다. **언제 채우나**: player_input에 엔진 템플릿이 못 잡는 명시적 동기·플레이버가 있을 때만 — 예: `약초를 한 모금 마신다` → `use, tail_intent: "한 모금에 묵직한 약초 향이 입안에 번집니다"`. 평범한 입력("약초를 먹는다")이면 **생략**. 다른 action(`combat`·`roll`·`pass`·`chain` 자체 등)에는 없는 필드 — 출력에 넣지 마라. chain의 각 part는 자기 part가 8종 중 하나면 part 내부에 채울 수 있다.
 
 **Named-NPC anchoring (loose)**: input names NPC by name/role/job/외모("훈련사", "대장장이", "여관 주인", "노파", "할머니") → `entities[*]`의 `name`·`description`·`job`·`state_tags` 중 **어느 하나라도** 부분 일치하면 매칭. 동의어("할머니"≈"노파", "전사"≈"용병", "주인"≈"여관 주인") 허용. 매칭 1명이면 그를 사용. 매칭 **2명 이상**이면 `recent_npc` 우선 → 없으면 첫 매칭. 매칭 **0명**이면 § Fallback rules로 떨어짐.
 

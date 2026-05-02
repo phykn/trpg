@@ -189,14 +189,14 @@ def test_target_view_location_failure_grade_masks_quest_rewards(fresh_state):
 
 
 def test_target_view_dead_character_returns_dead_marker(fresh_state):
-    """Dead NPC target_view returns a minimal dead-marker dict — narrate
-    needs the explicit `alive: false` signal so it won't render the
-    character as if alive (memories/disposition would lie)."""
+    """Dead NPC target_view returns name + alive=False + lootable inventory
+    so narrate gets the death signal and what's loot-eligible without
+    leaking live-only fields (memories/disposition)."""
     state = _seed(fresh_state)
     state.characters["guard_01"].alive = False
     g = build_graph(state)
     v = build_target_view(state, g, "guard_01", actor_id="player_01")
-    assert v == {"type": "npc", "id": "guard_01", "name": "경비", "alive": False}
+    assert v == {"type": "npc", "id": "guard_01", "name": "경비", "alive": False, "inventory": []}
 
 
 # --- Phase 1: richer graph (in_edges, attrs, new edge types, new nodes) ----

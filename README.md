@@ -38,4 +38,4 @@ git push origin main
 npm run deploy
 ```
 
-One-time setup: upload scenarios with `server/scripts/upload_scenarios.py ../scenarios/<profile>` → `npm install -g wrangler && wrangler login` for the client. The deploy URL must be listed in server `CORS_ORIGINS`.
+One-time setup: upload scenarios with `server/scripts/upload_scenarios.py ../scenarios/<profile>`; install + auth wrangler with `npm install -g wrangler && wrangler login`; add the deploy URL to server `CORS_ORIGINS`.

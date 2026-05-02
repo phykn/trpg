@@ -20,7 +20,7 @@ python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-Apply the schema once per Supabase project via the dashboard SQL editor, create a Storage bucket for scenarios, and upload a profile tree:
+Set up Supabase: apply the schema (table list under "Layout" below) via the dashboard SQL editor — schema isn't tracked in the repo — create a Storage bucket for scenarios, and upload a profile tree:
 
 ```bash
 cd server && ../.venv/bin/python scripts/upload_scenarios.py ../scenarios/<profile>
@@ -69,7 +69,7 @@ dotenv loads `server/.env.<APP_ENV>` (default `dev`) automatically and uvicorn b
 | POST | `/session/{id}/intro` | GM intro (SSE, fired once after init) |
 | POST | `/debug/complete` | One-shot LLM call for debugging |
 
-SSE event types: `judge / pending_check / narrative_delta / log_entry / state / combat_start / combat_turn / combat_end / done / error`. See `../docs/02-runtime.md` §2.4 for shapes.
+SSE event types: `judge / pending_check / narrative_delta / suggestions / log_entry / state / combat_start / combat_turn / combat_end / done / error`. See `../docs/02-runtime.md` §2.4 for shapes.
 
 ## Tests
 
@@ -90,14 +90,14 @@ server/
   scripts/                         # one-off tools (upload_scenarios.py, judge_stress.py, ...)
   src/                             # code (layer breakdown in docs/05-codemap.md)
   tests/                           # pytest
-../scenarios/<profile>/            # local seed source (world.md, start.json, player_template.json, races/, locations/, characters/, items/, quests/, chapters/). Authored locally, uploaded to Supabase Storage; the running server reads from the bucket.
+../scenarios/<profile>/            # local seed source (world.md, start.json, player_template.json, races/, locations/, characters/, items/, quests/, chapters/, skills/). Authored locally, uploaded to Supabase Storage; the running server reads from the bucket.
 ```
 
 Runtime state lives in Supabase Postgres:
 
 | Table | PK | Notes |
 |---|---|---|
-| `games` | `(game_id)` | `meta jsonb` mirrors the old `meta.json` |
+| `games` | `(game_id)` | `meta jsonb` carries session pointers (turn_count, pending_check, combat_state, active_*_id, next_log_id, ...) |
 | `entities` | `(game_id, kind, id)` | one row per entity; `kind ∈ {characters, items, locations, races, skills, quests, chapters, campaigns}` |
 | `log_entries` | `(game_id, log_id)` | `log_id = entry.id` (app-managed monotonic) |
 | `history_entries` | `(game_id, seq)` | `bigserial`, append-only turn summaries |

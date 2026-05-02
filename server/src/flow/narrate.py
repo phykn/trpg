@@ -219,6 +219,7 @@ async def consume_narrate(
     yield {"type": "suggestions", "data": {"items": list(final.output.suggestions)}}
 
     apply_changes(state, final.output.state_changes, dirty.entities)
+    state.invalidate_graph()
     push_turn_log(state, target_for_log, final.output.turn_summary, dirty)
     if dialogue_input is not None:
         push_dialogue(state, dialogue_input, body, dirty)

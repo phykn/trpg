@@ -7,6 +7,7 @@ from ..agents.dc_judge.schema import (
     CombatAction,
     EquipAction,
     FleeAction,
+    GiveAction,
     LearnSkillAction,
     LevelUpAction,
     PassAction,
@@ -18,7 +19,6 @@ from ..agents.dc_judge.schema import (
     UnequipAction,
     UseAction,
 )
-from ..domain.entities import Character
 from ..domain.errors import JudgeMalformed, PendingCheckActive
 from ..domain.memory import PlayerLogEntry
 from ..domain.state import GameState
@@ -28,6 +28,7 @@ from ..ontology.queries import location_of
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from .actions import (
     emit_equip,
+    emit_give,
     emit_learn_skill,
     emit_level_up,
     emit_roll_pending,
@@ -158,6 +159,7 @@ _ONE_STEP_EMITS: dict[type, EmitFactory] = {
     SellAction: lambda c, s, d, a: emit_trade(
         s, s.player_id, a.npc_id, a.item_id, d, direction="sell"
     ),
+    GiveAction: lambda c, s, d, a: emit_give(s, a.from_id, a.to_id, a.item_id, d),
 }
 
 
@@ -363,7 +365,8 @@ async def _dispatch(
 
     if isinstance(result, RestAction):
         async for ev in run_rest(
-            state, scenario_repo, save_repo, dirty, rng, to_front_fn, client=client
+            state, scenario_repo, save_repo, dirty, rng, to_front_fn,
+            client=client, player_input=player_input,
         ):
             yield ev
         return
@@ -455,9 +458,6 @@ async def _dispatch(
         yield ev
 
 
-_CORPSE_BYPASS_BODY = "죽은 자는 말이 없습니다."
-
-
 async def _stream_narrate_tail(
     client: LLMClient,
     state: GameState,
@@ -471,7 +471,7 @@ async def _stream_narrate_tail(
     act_log_lines: list[str] | None = None,
     previous_phase_signal: str | None = None,
 ) -> AsyncIterator[dict]:
-    """Pre-apply movement, emit a state event, then drive narrate. Corpse bypass short-circuits to a deterministic body."""
+    """Pre-apply movement, emit a state event, then drive narrate."""
     if isinstance(action, PassAction):
         target_for_log = action.targets[0] if action.targets else None
         prev_loc = state.characters[state.player_id].location_id
@@ -480,26 +480,6 @@ async def _stream_narrate_tail(
         if state.characters[state.player_id].location_id != prev_loc:
             state.invalidate_graph()
             graph = state.graph()
-
-        dead = next(
-            (
-                state.characters[t]
-                for t in action.targets
-                if t in state.characters and not state.characters[t].alive
-            ),
-            None,
-        )
-        if dead is not None:
-            async for ev in _emit_corpse_bypass(
-                state,
-                dirty,
-                player_input,
-                dead,
-                target_for_log,
-                to_front_fn,
-            ):
-                yield ev
-            return
     else:
         target_for_log = None
 
@@ -528,26 +508,3 @@ async def _stream_narrate_tail(
         yield ev
 
 
-async def _emit_corpse_bypass(
-    state: GameState,
-    dirty: Dirty,
-    player_input: str,
-    dead: Character,
-    target_for_log: str | None,
-    to_front_fn: ToFrontFn | None,
-) -> AsyncIterator[dict]:
-    """No-LLM bypass for dead-target pass — mirrors consume_narrate's persistence steps but skips state_changes."""
-    from ..domain.memory import GMLogEntry  # local import to avoid cycle
-    from .dirty import next_log_id, push_dialogue, push_log_entry, push_turn_log
-
-    if to_front_fn is not None:
-        yield {"type": "state", "data": to_front_fn(state)}
-
-    body = _CORPSE_BYPASS_BODY
-    yield {"type": "narrative_delta", "data": {"text": body}}
-    yield {"type": "suggestions", "data": {"items": []}}
-
-    push_turn_log(state, target_for_log, f"{dead.name}의 시신과 마주함", dirty)
-    push_dialogue(state, player_input, body, dirty)
-    gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=body)
-    push_log_entry(state, gm_log, dirty)

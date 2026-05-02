@@ -61,7 +61,7 @@ def test_rules_death_defaults():
     assert d.crit_damage_failure_inc == 2
     assert d.auto_revive_hp == 1
     assert d.instant_death is False
-    assert d.revive_coins == 1
+    assert d.revive_coins == 3
     assert d.revive_ratio == 0.5
 
 

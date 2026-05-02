@@ -21,6 +21,7 @@ from ..domain.errors import ProfileMalformed, ProfileNotFound, RaceNotFound
 from ..domain.state import GameState
 from ..engines.growth import calc_max_hp, calc_max_mp
 from ..engines.invariants import Scenario, check_scenario
+from ..rules.config import RULES
 from .repo import SaveRepo, ScenarioRepo
 
 
@@ -112,6 +113,7 @@ async def init_game(
         gold=int(template.get("gold", 0)),
         xp_pool=int(template.get("xp_pool", 0)),
         racial_skill_ids=list(chosen_race.racial_skill_ids),
+        revive_coins=RULES.death.revive_coins,
     )
     player_char.max_hp = calc_max_hp(player_char.level, stats.CON)
     player_char.max_mp = calc_max_mp(player_char.level, stats.INT)

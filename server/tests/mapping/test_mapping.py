@@ -174,15 +174,15 @@ def test_subject_known_filters_by_target_id(fresh_state):
 
 
 def test_subject_dead_exposed_via_alive_field(fresh_state):
-    """Dead subjects no longer hijack the `known` list with a "죽음" string —
-    the client reads `alive=False` and renders the death marker (e.g. "(죽음)"
-    next to the name) on its own. `known` keeps appearance + memories as-is."""
+    """Dead subjects drop the static appearance from `known` (it describes a
+    living body and goes stale once equipment is looted) — only player
+    memories about the NPC remain."""
     state = _full_state(fresh_state)
     state.characters["guard_01"].alive = False
     state.characters["guard_01"].hp = 0
     s = to_subject(state)
     assert s["alive"] is False
-    assert s["known"] == ["갑옷의 중년", "뇌물 줘서 통과"]
+    assert s["known"] == ["뇌물 줘서 통과"]
 
 
 def test_quest_difficulty_label(fresh_state):

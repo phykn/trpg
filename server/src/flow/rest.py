@@ -4,6 +4,7 @@ is empty and an LLM is wired, summon an ad-hoc enemy."""
 import random
 from collections.abc import AsyncIterator
 
+from ..agents.dc_judge.schema import PassAction
 from ..domain.state import GameState
 from ..engines import recovery as recovery_engine
 from ..llm.client import LLMClient
@@ -14,6 +15,7 @@ from .combat_auto import PlayerAction
 from .combat_phase import start_combat_and_drive_auto
 from .buff_tick import tick_turn_buffs
 from .dirty import Dirty, ToFrontFn, finalize, push_act
+from .narrate import consume_narrate, run_narrate
 
 
 def _rest_completed_text(actor_name: str) -> str:
@@ -35,6 +37,7 @@ async def run_rest(
     rng: random.Random | None,
     to_front_fn: ToFrontFn | None,
     client: LLMClient | None = None,
+    player_input: str = "휴식한다",
 ) -> AsyncIterator[dict]:
     state.turn_count += 1
 
@@ -82,6 +85,33 @@ async def run_rest(
             yield ev
         return
 
-    yield push_act(state, dirty, _rest_completed_text(actor.name))
+    rest_text = _rest_completed_text(actor.name)
+    state.invalidate_graph()
+    graph = state.graph()
+    if client is not None:
+        if to_front_fn is not None:
+            yield {"type": "state", "data": to_front_fn(state)}
+        fake_pass = PassAction(action="pass")
+        stream = run_narrate(
+            client,
+            state,
+            scenario_repo,
+            player_input,
+            judge_result=fake_pass.model_dump(),
+            graph=graph,
+            grade=None,
+            act_log_lines=[rest_text],
+        )
+        async for ev in consume_narrate(
+            state,
+            dirty,
+            stream,
+            target_for_log=None,
+            dialogue_input=player_input,
+            graph=graph,
+        ):
+            yield ev
+    else:
+        yield push_act(state, dirty, rest_text)
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev

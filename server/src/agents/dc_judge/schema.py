@@ -69,6 +69,15 @@ class SellAction(_StrictAction):
     tail_intent: str | None = None
 
 
+class GiveAction(_StrictAction):
+    """Free item transfer between two characters. Covers gift / lend / hand-over / corpse loot — bidirectional via from_id / to_id. Engine validates affinity (live NPC source) + carry capacity, auto-unequips if equipped."""
+    action: Literal["give"]
+    from_id: str
+    to_id: str
+    item_id: str
+    tail_intent: str | None = None
+
+
 class RollAction(_StrictAction):
     action: Literal["roll"]
     tier: Tier
@@ -108,6 +117,7 @@ ChainPart = Annotated[
     | UnequipAction
     | BuyAction
     | SellAction
+    | GiveAction
     | LevelUpAction
     | LearnSkillAction
     | PassAction,
@@ -137,6 +147,7 @@ JudgeOutput = Annotated[
     | LearnSkillAction
     | BuyAction
     | SellAction
+    | GiveAction
     | ChainAction,
     Field(discriminator="action"),
 ]

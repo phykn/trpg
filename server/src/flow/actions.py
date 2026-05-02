@@ -349,6 +349,41 @@ async def emit_trade(
     )
 
 
+async def emit_give(
+    state: GameState,
+    from_id: str,
+    to_id: str,
+    item_id: str,
+    dirty: Dirty,
+) -> AsyncIterator[dict]:
+    src = state.characters.get(from_id)
+    dst = state.characters.get(to_id)
+    actor_name = state.characters[state.player_id].name
+    if src is None or dst is None:
+        yield push_act(
+            state,
+            dirty,
+            f"{actor_name}{i_ga(actor_name)} 양도 상대를 찾지 못했습니다.",
+        )
+        return
+    try:
+        inventory_engine.transfer(src, dst, item_id, state.items)
+    except InventoryInvalid as e:
+        yield push_act(state, dirty, _fail_text(actor_name, "양도를 시도했지만", e))
+        return
+    dirty.entities.add(("characters", from_id))
+    dirty.entities.add(("characters", to_id))
+    item_name = _item_name(state, item_id)
+    text = f"{src.name}에게서 {dst.name}{i_ga(dst.name)} 「{item_name}」{eul_reul(item_name)} 받았습니다." if dst.is_player else f"{src.name}{i_ga(src.name)} {dst.name}에게 「{item_name}」{eul_reul(item_name)} 건넸습니다."
+    yield push_act(state, dirty, text)
+    push_turn_log(
+        state,
+        to_id if dst.is_player else from_id,
+        f"「{item_name}」 양도 ({src.name} → {dst.name})",
+        dirty,
+    )
+
+
 async def emit_roll_pending(
     state: GameState,
     save_repo: SaveRepo,

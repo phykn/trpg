@@ -16,12 +16,12 @@ src/
   ontology/    Derived view of GameState — the relational source of truth. graph.py builds typed-edge relations over nodes {character, item, location, quest, skill, race, chapter}: located_at, located_in, equips (attrs.slot), carries, connects_to (attrs.difficulty/key_item_id), unlocks, gives_quest, required_by, kill_target_of, reward_of, belongs_to_race, knows_skill (attrs.source = racial|learned), racial_skill_of, member_of_chapter. Both directions are indexed — `get_edges(from_id, type?)` and `get_in_edges(to_id, type?)`. queries.py exposes named traversals (`inhabitants_of`, `inventory_of`, `equipment_of`, `connections_of`, `race_of`, `location_of`, `quests_given_by`, `giver_of`, `kill_targets_of`, `trigger_targets_of`, `reward_items_of`, `quests_rewarding`, `locations_unlocked_by`, `chapter_of_quest`, `quests_in_chapter`, `container_of`, …) so consumers read intent, not edge labels — call sites in mapping/, context/, flow/ go through these instead of `graph.get_edges(...)` directly. target_view.py traverses 2 hops: NPC view follows gives_quest into each quest's kill targets / triggers / rewards (and flags the NPC itself as a kill target if any quest names it); location view follows required_by into each quest's giver + targets + rewards; item view resolves unlocks / reward_of / located_in to names. player_view.py mirrors the shape for the active player so narrate / combat_narrate can reflect race/appearance/gender.
   context/     Prompt-facing context builders (surroundings, layered context).
   mapping/     to_front.py — GameState → flat dict the client renders. Korean dates, durations, composed strings, conditional labels are all built here.
-  persistence/ init.py builds a new GameState from a profile + player input. store.py does atomic IO (.tmp + os.replace) and is now an internal helper called only by local_fs.py. repo.py defines `SaveRepo` / `ScenarioRepo` Protocols (all methods async); local_fs.py implements them for tests (delegates to store.py); supabase.py implements them for the running server (PostgREST + Storage via the `_supabase_http.py` httpx wrapper). factory.py builds the Supabase adapters unconditionally — both `APP_ENV=dev` and `release` go through Supabase. Tests construct `LocalFsSaveRepo` / `LocalFsScenarioRepo` directly with `tmp_path`, bypassing the factory. App startup wires repos onto `app.state.save_repo` / `app.state.scenario_repo`. All flow / context / api / persistence.init code threads `save_repo`/`scenario_repo` instances — no `saves_dir`/`profile_dir` strings remain in flow.
+  persistence/ init.py builds a new GameState from a profile + player input. store.py does atomic IO (.tmp + os.replace), internal to local_fs.py. repo.py defines `SaveRepo` / `ScenarioRepo` Protocols (all methods async); local_fs.py implements them for tests (delegates to store.py); supabase.py implements them for the running server (PostgREST + Storage via the `_supabase_http.py` httpx wrapper). factory.py builds the production adapters; app startup wires repos onto `app.state.save_repo` / `app.state.scenario_repo`. flow / context / api / persistence.init code threads `save_repo`/`scenario_repo` instances; flow doesn't take `saves_dir`/`profile_dir` strings.
   domain/      Pure data shapes. entities.py (Character, Item, Location, Race, Skill, Quest, Chapter, Campaign), memory.py (Memory, PendingCheck, LogEntry union, TurnLogEntry, DialoguePair), state.py (GameState, CombatState), types.py (StatKey, Tier, Grade, Intent, Action), errors.py (DomainError + subclasses).
   rules/       config.py exposes the frozen RULES singleton (DC, social, memory, log, time, recovery, growth, skill, carry, trade, flee, combat, death). dc.py has roll math.
 tests/         pytest, asyncio_mode=auto, live marker for LLM-required tests.
 run_api.py     Entrypoint — loads env, builds the FastAPI app, runs uvicorn.
-.env.dev       Global config + LLM_ROUTE_* (required) for local dev. .env.release is the prod counterpart (gitignored; populate at deploy time). Provider blocks live in .env.llama_cpp / .env.google. No fallbacks; missing keys raise at startup.
+.env.dev       Required env file for local dev (.env.release for prod, gitignored).
 ```
 
 Layer rule: upper depends on lower, never the reverse. The dependency direction goes api → flow → agents/engines → llm/ontology/context/mapping → persistence → domain/rules.
@@ -36,7 +36,7 @@ Layer rule: upper depends on lower, never the reverse. The dependency direction 
 
 CI grep enforces this — see `scripts/check_relational_ssot.sh`.
 
-`../scenarios/<profile>/` is the seed source (`world.md`, `start.json`, `player_template.json`, `profile.json`, plus `races/ characters/ items/ locations/ quests/ chapters/`), gitignored. `../saves/` is the runtime store, also gitignored. Per-game layout: `games/<game_id>/{meta.json, characters/<id>.json, items/<id>.json, ..., log.jsonl, history.jsonl, dialogue.jsonl}`. The active `game_id` is held by the client (browser localStorage), so a single server can host multiple users without one user's `init` clobbering another's "last game" pointer.
+`../scenarios/<profile>/` is the seed source (`world.md`, `start.json`, `player_template.json`, `profile.json`, plus `races/ characters/ items/ locations/ quests/ chapters/ skills/`), gitignored. The active `game_id` is held by the client (browser localStorage), so a single server can host multiple users without one user's `init` clobbering another's "last game" pointer.
 
 ## Commands
 
@@ -65,7 +65,7 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q     # add live tests; needs BASE_URL re
 
 ## Prose voice
 
-All player-facing Korean text — narrate / combat_narrate bodies, the deterministic `잠시 정적이 흐릅니다` fallback in `flow/narrate.py`, every engine-side log line built in `flow/format.py` · `flow/error_phrases.py` · `flow/actions.py` · `flow/combat_phase.py` · `flow/turn.py` · `flow/roll.py` · `mapping/to_front.py` — uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings. Plain `-다` form has been retired from output.
+All player-facing Korean text — narrate / combat_narrate bodies, the deterministic `잠시 정적이 흐릅니다` fallback in `flow/narrate.py`, every engine-side log line built in `flow/format.py` · `flow/error_phrases.py` · `flow/actions.py` · `flow/combat_phase.py` · `flow/turn.py` · `flow/roll.py` · `mapping/to_front.py` — uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings.
 
 The canonical user-facing term for skills is **기술**. The dc_judge prompt accepts `스킬` as a synonym from player input, but every other prompt and engine string says `기술`. Code identifiers and the `skills/` entity directory keep the English `skill`.
 
@@ -83,22 +83,13 @@ Trade gating: `_merchants_payload` filters out NPCs whose `disposition.aggressiv
 
 ## Persistence
 
-The repo Protocols (`SaveRepo`, `ScenarioRepo`) are **all-async** — the
-LocalFs adapter wraps sync IO in `async def`, the Supabase adapter is
-truly async over httpx. Callers (flow/, context/, api/, init.py) all
-`await` repo calls.
+The repo Protocols (`SaveRepo`, `ScenarioRepo`) are **all-async** — the LocalFs adapter wraps sync IO in `async def`, the Supabase adapter is truly async over httpx. Callers (flow/, context/, api/, init.py) all `await` repo calls.
 
-**The running server always uses Supabase.** Both `APP_ENV=dev` and
-`APP_ENV=release` go through the Supabase adapter; the env files differ
-only in config knobs (basic auth, CORS, LLM routes), not in storage
-choice. `factory.py` builds `SupabaseSaveRepo` + `SupabaseStorageScenarioRepo`
-unconditionally. Tests construct `LocalFsSaveRepo` / `LocalFsScenarioRepo`
-directly with `tmp_path`, so unit tests bypass the factory and never hit
-a real Supabase.
+**The running server always uses Supabase**, regardless of `APP_ENV` — env files differ only in config knobs (basic auth, CORS, LLM routes), not in storage choice.
 
 ### Schema — Supabase Postgres + Storage
 
-Schema is applied once per Supabase project via the dashboard SQL editor.
+Schema lives in the Supabase dashboard (not tracked in the repo); applied once per project via the dashboard SQL editor.
 
 - **Saves → Postgres** via PostgREST. Five tables, all keyed on `game_id`:
   - `games(game_id PK, meta jsonb, updated_at)` — meta.json mirrored as a single jsonb column. No column decomposition (saves migrations when meta evolves). `meta` carries `game_id, profile, player_id, turn_count, pending_check, pending_skill_candidates, combat_state, active_*_id, next_log_id`. `combat_state` must round-trip through meta — without it, `/turn` reloads as combat-cleared and the engine restarts the fight every turn.
@@ -117,7 +108,6 @@ Schema is applied once per Supabase project via the dashboard SQL editor.
 ## Memory writes (post-turn)
 
 - Per-entity: `NarrateOutput.memory: dict[entity_id, "one-line POV recall"]`. **Player memory is first-person ("내가 …")**; NPC memory is from that NPC's POV. Don't write the same string into both.
-- The LLM stays faithful to `player_input` — no escalation, no embellishment.
 - `memorable=true` is for scene-shifting events (decisions, promises, threats, deals, first impressions). Small talk is `false`.
 - `memory_links: {entity_id: target_id}` decides which Subject panel surfaces each memory. Omitted entries default to `target_id=None`.
 

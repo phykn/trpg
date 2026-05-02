@@ -2,6 +2,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
+from ..domain.entities import EQUIPMENT_SLOTS
 from ..domain.types import Grade, Intent
 from ..rules import RULES
 from ..rules.permissions import CHAPTER_QUEST_ALLOWED, FORBIDDEN_BY_ENTITY
@@ -156,6 +157,11 @@ def _apply_move_item(
         raise _StateChangeError(f"item {c.item!r} not in {c.from_!r}")
     src.remove(c.item)
     dst.append(c.item)
+    if src_kind == "characters":
+        equipment = state.characters[c.from_].equipment
+        for slot in EQUIPMENT_SLOTS:
+            if getattr(equipment, slot) == c.item:
+                setattr(equipment, slot, None)
     if dirty is not None:
         dirty.add((src_kind, c.from_))
         dirty.add((dst_kind, c.to))
