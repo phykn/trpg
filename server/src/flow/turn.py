@@ -1,7 +1,7 @@
 import random
 from collections.abc import AsyncIterator, Callable
 
-from ..llm_calls.dc_judge.schema import (
+from ..llm_calls.classify.schema import (
     BuyAction,
     ChainAction,
     CombatAction,

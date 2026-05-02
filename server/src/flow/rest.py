@@ -4,7 +4,7 @@ is empty and an LLM is wired, summon an ad-hoc enemy."""
 import random
 from collections.abc import AsyncIterator
 
-from ..llm_calls.dc_judge.schema import PassAction
+from ..llm_calls.classify.schema import PassAction
 from ..domain.state import GameState
 from ..engines import recovery as recovery_engine
 from ..llm.client import LLMClient

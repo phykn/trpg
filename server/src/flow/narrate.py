@@ -1,7 +1,7 @@
 import re
 from collections.abc import AsyncIterator
 
-from ..llm_calls.dc_judge.schema import PassAction, RejectAction
+from ..llm_calls.classify.schema import PassAction, RejectAction
 from ..llm_calls.narrate import (
     NarrateInput,
     NarrateOutput,

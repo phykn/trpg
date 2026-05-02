@@ -9,7 +9,7 @@ import tempfile
 
 import pytest
 
-from src.llm_calls.dc_judge.schema import PassAction
+from src.llm_calls.classify.schema import PassAction
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.domain.entities import Character, Location, Stats
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo

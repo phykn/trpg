@@ -11,7 +11,7 @@ import tempfile
 
 import pytest
 
-from src.llm_calls.dc_judge.schema import (
+from src.llm_calls.classify.schema import (
     ChainAction,
     EquipAction,
     PassAction,
