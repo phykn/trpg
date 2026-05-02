@@ -34,7 +34,7 @@ Input has `world` (world.md content for tone/themes), `location.{id, name, descr
 | 8–12 | 14–17 |
 | 13+ | 15–19 |
 
-**race_id**: must equal one `available_races[*].id` exactly. Never invent or guess. If none fits perfectly, pick the one closest *in concept* (e.g. `wolf` for "들개", `human` for any humanoid role) — closest by id-string spelling does not count.
+**race_id**: must equal one `available_races[*].id` exactly. Never invent or guess. If none fits perfectly, pick the one closest *in concept* (e.g. `wolf` for "들개", `human` for any humanoid role) — closest by id-string spelling does not count. `available_races` is guaranteed non-empty by the scenario seed; if it ever arrives empty, fall back to the first id you see and let the engine reject — never invent a string.
 
 **gender**: pick `male` or `female` for humanoid creatures (people, named NPCs). Use `none` for beasts, monsters, undead, or anything where biological sex isn't part of how the player meets it. When unsure, prefer `none`.
 
@@ -81,6 +81,25 @@ Input has `world` (world.md content for tone/themes), `location.{id, name, descr
   "attack_priority": "nearest"
 }
 ```
+
+### `requested_role` substitute, player_level=6
+
+`location.name="허물어진 신전"`, world="용 같은 거대 괴수는 전설로만 남은 세계", `player_level=6`, `requested_role="용"`, races = `[{id:"human"}, {id:"wolf"}, {id:"lizard"}]` (no dragon-like id):
+
+```json
+{
+  "name": "새끼 용 도마뱀",
+  "description": "전설 속 용의 후예라 자칭하지만 실제로는 신전 폐허에 둥지를 튼 큰 도마뱀. 이빨과 발톱이 사납다.",
+  "appearance": "비늘이 검붉고, 등줄기에 거친 가시, 누런 눈동자.",
+  "tone_hint": "낮은 쉭쉭",
+  "race_id": "lizard",
+  "gender": "none",
+  "stats": {"STR": 14, "DEX": 14, "CON": 13, "INT": 7, "WIS": 6, "CHA": 6},
+  "attack_priority": "nearest"
+}
+```
+
+`name`에 player가 부른 역할어 `용`을 보존(접두/접미로 살림), `race_id`는 `available_races` 안에서만 골랐고, 적의 정체는 여전히 `용` 계열(사냥꾼/용잡이로 뒤집지 않음).
 
 ## Forbidden
 

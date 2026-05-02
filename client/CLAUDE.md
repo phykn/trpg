@@ -1,49 +1,59 @@
-# CLAUDE.md
+## CLAUDE.md
 
-Reference for Claude Code when working under `client/`. User-facing setup and tests live in [README.md](./README.md); the server boundary contract is in `../docs/04-boundary.md`.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Layout
-
-`client/` is the Expo app. The server is a peer directory (`../server/`). Run all client commands from here.
+Reference for working under `client/`. End-user setup, phone testing, and deploy steps live in [README.md](./README.md). The server boundary contract lives in `../docs/04-boundary.md`.
 
 ## Commands
 
-See [README.md](./README.md) for the full table. Notes:
+Run everything from `client/`. The active environment file is `.env`; `npm run deploy` temporarily swaps in `.env.release` and restores `.env` on exit.
 
-- After editing `tailwind.config.js`, `babel.config.js`, `metro.config.js`, or `design/tokens.js`, restart Metro with `-c`.
-- No test runner. Type-check via `node_modules/.bin/tsc --noEmit`, or implicitly through the editor / Metro (`strict` TS, extends `expo/tsconfig.base`).
-- Prefer `--host=tunnel` over `--tunnel` (`@expo/ngrok@4.x` bug).
-- **Browser-MCP / Playwright testing uses viewport 412×915** (mid-size Android — Pixel 6/7 / Galaxy S25 tall). Stays under the desktop breakpoint, keeps full Korean tab labels visible, fits typical session content without scrolling.
+```bash
+npm start                   # Expo Go via QR (LAN / Tailscale Funnel — see README)
+npm run web                 # web on localhost:8081
+npm run lint                # expo lint (eslint flat config, dist/ ignored)
+npm run deploy              # rm dist/ → swap .env.release → expo export -p web → wrangler deploy
+npx tsc --noEmit            # type-check (strict, extends expo/tsconfig.base)
+npx expo start -c           # clear Metro cache — required after editing tokens / tailwind / babel / metro config
+```
+
+`@/*` resolves to this directory. Prefer `@/components/...` over relative paths.
 
 ## Stack constraints
 
-- **Expo SDK 54 / RN 0.81 / React 19**, with `newArchEnabled` + `experiments.reactCompiler` in `app.json` — manual memoization is usually unnecessary. Class components and legacy native modules must work under New Arch.
-- **expo-router** with `typedRoutes`. Add a screen by creating a file under `app/`; don't wire navigation manually.
-- **NativeWind v4**: `className="bg-canvas-subtle p-3 rounded-md"`, not StyleSheet objects. The `@tailwind` directive is in `global.css`, imported from `app/_layout.tsx`.
-- Path alias `@/*` → this directory. Prefer `@/components/...` over relative paths.
-- **Server communication uses expo/fetch.** Standard `fetch` doesn't support SSE body streaming on RN.
+- **Expo SDK 54 / RN 0.81 / React 19** with `newArchEnabled` and `experiments.reactCompiler` in `app.json` — manual memoization is usually unnecessary, and any class component or legacy native module must work under New Arch.
+- **expo-router** with `typedRoutes`. Add a screen by creating a file under `app/`; don't wire navigation manually. The tab bar is hidden (`tabBarStyle: { display: 'none' }`); the app is single-screen.
+- **NativeWind v4**: write `className="bg-canvas-subtle p-3 rounded-md"`, not `StyleSheet` objects. The `@tailwind` directives load via `global.css`, imported once at the top of `app/_layout.tsx`.
+- **Server calls use `expo/fetch`**, not the global `fetch`. Standard `fetch` does not support SSE body streaming on RN.
+- **Korean only.** The server composes every display string (including dates, durations, joined lists). The client renders verbatim — do not localize or reformat in `presenters/` or components.
 
 ## Architecture
 
-Single-screen Korean-language TRPG. The tab bar is hidden, and `app/(tabs)/index.tsx` mounts `<Shell />`. All UX lives under `components/Shell.tsx`.
+Single-screen Korean-language TRPG. `app/(tabs)/index.tsx` mounts `<ScreenShell><Shell/></ScreenShell>`; everything below sits under `components/Shell.tsx`.
 
-**Layers (top → bottom):**
+**Layers, top → bottom:**
 
-1. `app/` — route shell. `_layout.tsx` loads Google Fonts (Noto Serif KR for all Korean prose / labels / titles, Geist Mono for ASCII numerics and stat keys) and gates rendering until they're ready. `(tabs)/index.tsx` mounts `<Shell />`.
-2. `components/Shell.tsx` — composition root. Branches on `useGame()`'s `status` between `loading / no-game / error / ready`. The game screen is delegated to `Playing`.
-3. `components/Playing.tsx` — the game screen, mounted when `status === 'ready'`. Owns local UI state (`activeId / heroOpen / typing`); panels are composed via `buildPanelSlots(...)`.
-4. `components/new-game/` — exposed when `status === 'no-game'`. `NewGame.tsx` calls `GET /profiles`, renders scenario/race cards plus name + gender inputs, and calls `useGame().startNewGame(body)`. Internal helpers (`Section`, `SelectCard`, `Input`) live in the same folder.
-5. `components/{header,log,hero,composer,combat,ui}/` — feature folders, each with an `index.ts` barrel. Import the folder, not individual files. `ui/` holds shared primitives (`Bar`, `Row`, `StatRow`, `InlineParts`, `InlineNodes`, `LabeledRow`, `ExpandGroup`).
-6. `hooks/useGame.ts` — single source of truth for game state and actions (`onSend / onRoll / onStop / startNewGame / refresh`). On mount, `getCurrentSession()` auto-restores the last game; on unmount, all abort controllers are cancelled together. The SSE-event-to-state-setter mapping is handled by the pure dispatcher in `hooks/handleStreamEvent.ts`.
-7. `services/` — **data boundary**. `services/index.ts` re-exports from `services/api.ts`. The surface is `listProfiles / getSessionById / initSession / streamTurn / streamRoll / streamIntro` plus the localStorage helpers `loadStoredGameId / storeGameId / clearStoredGameId`. The active `game_id` lives in browser localStorage — the server has no per-user "last game" notion, so two browsers don't fight over a shared pointer. The server base URL and basic auth live here only — no other layer calls `fetch` directly.
-8. `presenters/` — **domain → UI presenter**. `panels.ts` converts `domain` types (`Subject / Quest / Place`) into the `PanelSlot` render contract (`buildPanelSlots`). `format.ts` holds shared display helpers (`joinOrDash`, `joinInventoryOrDash`, `formatInventoryItem`). Pure mapping — no state, no IO.
-9. `types/` — `domain.ts` (server game models: `Hero`, `Subject`, `Quest`, `Place`, `Stats`, `RollResult`, `FrontState`), `ui.ts` (client render contracts: `LogEntry`, `Panel`, `PanelSlot`, `Tone`, ...), `wire.ts` (server wire formats: `ProfileCard`, `RaceCard`, `InitRequest`, `SessionPayload`, `TurnRequest`, `PendingCheck`, `JudgeAction`, `StreamEvent`). The SSE `log_entry` payload reuses `ui.LogEntry` directly. `LogEntry` is a `kind: 'gm' | 'player' | 'act' | 'roll'` discriminated union — when extending the union, add the case to `components/log/LogItem.tsx`.
-10. `design/tokens.js` (+ `tokens.d.ts`) — **single source of truth for design tokens**: `colors`, `spacing`, `radius`, `fontFamily`, `fontSize`, `toneColor`. Both `tailwind.config.js` (className utilities) and TS code that needs raw values consume it. **Don't hardcode colors or spacing in components** — use a className or import from `@/design/tokens`. It's CJS (`.js`) because the Tailwind config runs in Node; types live in the `.d.ts` sibling.
+1. `app/` — route shell. `_layout.tsx` loads Noto Serif KR (all Korean prose / labels / titles) + Geist Mono (ASCII numerics and stat keys), and returns `null` until both font families are ready.
+2. `components/ScreenShell.tsx` — `SafeAreaView` + keyboard-aware bottom padding. Wraps every screen.
+3. `components/Shell.tsx` — composition root. Branches on `useGame().status` between `loading / no-game / error / ready`. The `ready` branch delegates to `Playing`; `no-game` mounts `NewGame`.
+4. `components/Playing.tsx` — game screen. Owns ephemeral UI state (`activeId`, `menuOpen`, `pendingAction`, BGM toggle, input draft). Reads `pending` to decide between `RollPrompt` and `Composer`.
+5. `components/{header,log,hero,composer,combat,new-game,story-graph,ui}/` — feature folders. Each has an `index.ts` barrel; import the folder, not individual files. `ui/` is shared primitives (`Bar`, `Row`, `StatRow`, `InlineParts`, `InlineNodes`, `LabeledRow`, `ExpandGroup`, `ConfirmDialog`, `Glyph`, `CenterMessage`, `ErrorState`).
+6. `hooks/useGame.ts` — single source of truth for game state and actions (`onSend / onRoll / onStop / startNewGame / goToNewGame / refresh`). On mount, restores the last game via the `trpg.current_game_id` localStorage key. All in-flight `AbortController`s are cancelled on unmount and on `onStop`. The SSE-event → state-setter dispatch is the pure function in `hooks/handleStreamEvent.ts`; `state` and `log_entry` events are authoritative for the UI, and `judge` / `combat_*` events are observability-only.
+7. `hooks/useStoryGraph.ts` — per-`gameId` localStorage merge for the story graph (key prefix `trpg.story_graph.`). Newer server snapshots merge over the cached one rather than replace, so transient absences don't blank the map.
+8. `services/` — **data boundary**. Surface: `listProfiles / getSessionById / initSession / streamTurn / streamRoll / streamIntro`, plus storage helpers (`loadStoredGameId / storeGameId / clearStoredGameId`, `getStorage`). The server base URL and basic auth header live here only; no other layer should call `fetch` directly. The active `game_id` lives in browser localStorage — the server has no "last game" notion, so two browsers don't fight over a shared pointer.
+9. `presenters/` — **domain → UI projection**. `panels.ts` builds `PanelSlot[]` from `Hero / Subject / Quest`. `format.ts` holds string helpers (`joinOrDash`, `formatInventoryItem`, `characterMeta`, `DASH`). `storyGraph.ts` is the merge / fingerprint / validation core for the map. Pure mapping only — no state, no I/O.
+10. `types/` — `domain.ts` (server game models the UI consumes), `ui.ts` (render contracts), `wire.ts` (REST + SSE payloads), `storyGraph.ts` (graph nodes/edges, discriminated by `kind`). The SSE `log_entry` payload reuses `ui.LogEntry` directly. `LogEntry` is a `kind: 'gm' | 'player' | 'act' | 'roll'` discriminated union — when extending the union, add the case to `components/log/LogItem.tsx`.
+11. `design/tokens.js` (+ `tokens.d.ts`) — **single source of truth for design tokens**: `colors`, `spacing`, `radius`, `fontFamily`, `fontSize`, `toneColor`, `shadow`. Both `tailwind.config.js` (className utilities) and TS code consuming raw values import from here. The file is CJS (`.js`) because Tailwind config runs in Node; types live in the `.d.ts` sibling. **Don't hardcode colors or spacing** — use a className or import from `@/design/tokens`. Color naming follows GitHub Primer (`canvas`, `fg`, `border`, `accent`, ...).
 
 ## Conventions
 
-- Client types only carry fields the UI renders. Server-only fields are added during server work.
-- UI structure is fixed. When data shape varies, move it to a different panel slot — don't branch the structure inside one slot.
+- Env vars fail fast. `services/api.ts` throws at import time when `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_API_USER` / `EXPO_PUBLIC_API_PASS` are missing.
+- Client types carry only fields the UI renders. Server-only fields are added during server work, not anticipated here.
+- UI structure is fixed. When data shape varies, move it to a different panel slot — don't branch structure inside one slot.
 - UI consistency fixes are holistic — don't patch only the flagged instance; unify the whole atom under one rule.
-- env vars are fail-fast. `services/api.ts` throws at import time when `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_API_USER` / `EXPO_PUBLIC_API_PASS` are missing.
-- Korean only. The server builds every display string in Korean (dates, durations, composed strings included). The client renders verbatim.
+- `pending` (`PendingCheck`) is the state that flips composer mode: when it's set, render `RollPrompt`; when clear, render `Composer`. The `roll` log entry clears it the moment the dice lands, before the GM narration finishes streaming.
+
+## Misc
+
+- For Playwright / browser-MCP runs, use viewport **412×915** (Pixel 6/7 / Galaxy S25 tall). It stays under the desktop breakpoint, keeps full Korean tab labels visible, and fits typical session content without scrolling.
+- Prefer `npx expo start --host=tunnel` over `--tunnel` (`@expo/ngrok@4.x` flag bug).

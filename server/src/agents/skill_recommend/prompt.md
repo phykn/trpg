@@ -12,7 +12,7 @@ Input has `character.{name, race, job, level, memories[*].{content, importance: 
 
 Pick **exactly three** plausible skill candidates. The JSON below shows one entry's shape; the array must contain three such entries.
 
-Variety matters. Default: three different `type` values — the safest variety. Exception: if the character's track points to one `type` only (every `recent_inputs` entry and every `importance: 3` memory aligns, e.g. pure mage = all `attack`), keep the `type` but vary `target` and/or `primary_stat` so that no two candidates share both axes — each candidate occupies a distinct tactical role.
+Variety matters. Default: three different `type` values — the safest variety. Exception: if the character's track points to one `type` only (every `recent_inputs` entry and every `importance: 3` memory aligns, e.g. pure mage = all `attack`), keep the `type` but vary `target` and/or `primary_stat` so that no two candidates share both axes — each candidate occupies a distinct tactical role. The single-track exception fires only when the alignment is unambiguous; if `recent_inputs` is empty, `importance: 3` memories are absent, or signals are mixed, fall back to the default (three different `type`).
 
 ```json
 {
@@ -44,7 +44,7 @@ Variety matters. Default: three different `type` values — the safest variety. 
   - social debuff → CHA
   - control / sensory debuff (smoke / blind / fog flavor) → INT/WIS
 - Match character's track: stealth memories → stealth skill; fire magic inputs → fire; bandaging → heal.
-- Don't duplicate `existing_skills` — same name, or same `type` + `target` + similar primary effect (both restore HP, both deal fire damage, both grant stealth) counts as near-identical even if the wording differs. Prefer a fresh angle.
+- Don't duplicate `existing_skills` — same name, or same `type` + `target` + similar primary effect (both restore HP, both deal fire damage, both grant stealth) counts as near-identical even if the wording differs. Prefer a fresh angle. When `existing_skills` is empty (first level-up), the dedup rule is vacuous — apply only the variety rule above among the three new candidates.
 
 ## Examples
 

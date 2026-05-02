@@ -1,135 +1,154 @@
 # CLAUDE.md
 
-User-facing setup is in [README.md](./README.md).
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Layout
+User-facing setup (env layout, routes, table schema) is in [README.md](./README.md). Design rationale and per-turn flow live in `../docs/01-overview.md` ~ `../docs/05-codemap.md`.
 
-`server/` is the FastAPI service. The venv, pyproject, and requirements live at the repo root — always invoke Python via `../.venv/bin/python` from `server/` (or `.venv/bin/python` from root). **Never create `server/.venv`.** Run pytest from the root; run `run_api.py` from `server/` so dotenv resolves `server/.env.<APP_ENV>` and src imports work.
+## Working tree layout
 
-```
-src/
-  api/         FastAPI surface — routes/, auth.py, sse.py, schema.py, deps.py. Glue only, no business logic.
-  flow/        Turn orchestration. turn.py / roll.py / intro.py are the entrypoints (each yields an AsyncIterator[dict] of SSE events). The rest are helpers: combat_auto, combat_phase, encounter, rest, judge, narrate, memory_writer, actions, subject, dirty, format, skill_recommend.
-  agents/      LLM agents — one dir per agent (dc_judge, narrate, combat_narrate, encounter_summon, skill_recommend), each with prompt.md / schema.py / runner.py. _runner.py is the shared retry-and-self-correct loop.
-  llm/         OpenAI-compatible transport (client.py). Agents wrap chat_stream with their own schemas.
-  engines/     Pure rule engines: apply (state_changes), combat, growth, inventory/, quest, recovery, skill, invariants. No LLM, no IO.
-  ontology/    Derived view of GameState — the relational source of truth. graph.py builds typed-edge relations over nodes {character, item, location, quest, skill, race, chapter}: located_at, located_in, equips (attrs.slot), carries, connects_to (attrs.difficulty/key_item_id), unlocks, gives_quest, required_by, kill_target_of, reward_of, belongs_to_race, knows_skill (attrs.source = racial|learned), racial_skill_of, member_of_chapter. Both directions are indexed — `get_edges(from_id, type?)` and `get_in_edges(to_id, type?)`. queries.py exposes named traversals (`inhabitants_of`, `inventory_of`, `equipment_of`, `connections_of`, `race_of`, `location_of`, `quests_given_by`, `giver_of`, `kill_targets_of`, `trigger_targets_of`, `reward_items_of`, `quests_rewarding`, `locations_unlocked_by`, `chapter_of_quest`, `quests_in_chapter`, `container_of`, …) so consumers read intent, not edge labels — call sites in mapping/, context/, flow/ go through these instead of `graph.get_edges(...)` directly. target_view.py traverses 2 hops: NPC view follows gives_quest into each quest's kill targets / triggers / rewards (and flags the NPC itself as a kill target if any quest names it); location view follows required_by into each quest's giver + targets + rewards; item view resolves unlocks / reward_of / located_in to names. player_view.py mirrors the shape for the active player so narrate / combat_narrate can reflect race/appearance/gender.
-  context/     Prompt-facing context builders (surroundings, layered context).
-  mapping/     to_front.py — GameState → flat dict the client renders. Korean dates, durations, composed strings, conditional labels are all built here.
-  persistence/ init.py builds a new GameState from a profile + player input. store.py does atomic IO (.tmp + os.replace), internal to local_fs.py. repo.py defines `SaveRepo` / `ScenarioRepo` Protocols (all methods async); local_fs.py implements them for tests (delegates to store.py); supabase.py implements them for the running server (PostgREST + Storage via the `_supabase_http.py` httpx wrapper). factory.py builds the production adapters; app startup wires repos onto `app.state.save_repo` / `app.state.scenario_repo`. flow / context / api / persistence.init code threads `save_repo`/`scenario_repo` instances; flow doesn't take `saves_dir`/`profile_dir` strings.
-  domain/      Pure data shapes. entities.py (Character, Item, Location, Race, Skill, Quest, Chapter, Campaign), memory.py (Memory, PendingCheck, LogEntry union, TurnLogEntry, DialoguePair), state.py (GameState, CombatState), types.py (StatKey, Tier, Grade, Intent, Action), errors.py (DomainError + subclasses).
-  rules/       config.py exposes the frozen RULES singleton (DC, social, memory, log, time, recovery, growth, skill, carry, trade, flee, combat, death). dc.py has roll math.
-tests/         pytest, asyncio_mode=auto, live marker for LLM-required tests.
-run_api.py     Entrypoint — loads env, builds the FastAPI app, runs uvicorn.
-.env.dev       Required env file for local dev (.env.release for prod, gitignored).
-```
+`server/` is the FastAPI service. The venv, `pyproject.toml`, and `requirements.txt` live at the repo root — always invoke Python via `../.venv/bin/python` from `server/` (or `.venv/bin/python` from root). **Never create `server/.venv`.**
 
-Layer rule: upper depends on lower, never the reverse. The dependency direction goes api → flow → agents/engines → llm/ontology/context/mapping → persistence → domain/rules.
-
-**Relational SSOT — graph or entity?** `ontology/graph.py` is the *single source of truth for relations*. Inside `flow/`, `context/`, `mapping/`:
-
-- **Asking who-relates-to-whom** must go through `GameGraph` — never via `state.characters.items()` fullscans, and never via direct relation fields (`char.location_id`, `char.inventory_ids`, `char.equipment.weapon`, `char.racial_skill_ids`, `char.learned_skill_ids`, `char.race_id`, `char.companions`, `quest.giver_id`, `quest.triggers[*].target_id`, `quest.rewards.items`, `loc.connections`, `loc.item_ids`, `chapter.quest_ids`). Prefer the named helpers in `ontology/queries.py` (`inhabitants_of`, `inventory_of`, …); fall back to `graph.get_edges(...)` only when no helper fits.
-- **Asking the value of an entity attribute** (HP, MP, stats, level, alive, disposition, mood, tone_hint, appearance, description, name, gender, status, memories, quest.status, quest.title) is fine via direct read — those are values, not relations.
-- **Writing** stays on entities — `engines/apply.py`, `engines/combat.py`, etc. mutate fields. After a mutation that touches a relation field, the caller in flow calls `state.invalidate_graph()` and the next `state.graph()` rebuilds.
-- **Graph caching:** `state.graph()` returns a lazily-built `GameGraph` cached on the state. Read paths (`mapping/to_front`, `context/surroundings`, defensive defaults inside `to_*`) just call `state.graph()` and trust the cache. Write paths in flow that touch relation fields must `state.invalidate_graph()` before re-reading, otherwise downstream consumers get stale edges. The cache is a Pydantic `PrivateAttr` and does not round-trip through `model_dump_json` — load_game starts cold.
-- **Exceptions** that can read relation fields directly: `persistence/`, `domain/`, `engines/apply.py`, pure numeric engines (combat damage math, recovery, dc), and `ontology/graph.py` itself (it's the bridge from entity to graph). `rules/permissions.py` lists relation field *names* but doesn't read them off entities.
-
-CI grep enforces this — see `scripts/check_relational_ssot.sh`.
-
-`../scenarios/<profile>/` is the seed source (`world.md`, `start.json`, `player_template.json`, `profile.json`, plus `races/ characters/ items/ locations/ quests/ chapters/ skills/`), gitignored. The active `game_id` is held by the client (browser localStorage), so a single server can host multiple users without one user's `init` clobbering another's "last game" pointer.
+- Run pytest from the repo root (pyproject pins `testpaths=server/tests`).
+- Run `run_api.py` from `server/` so dotenv resolves `server/.env.<APP_ENV>` and `src` imports work.
+- Scenarios are authored at `../scenarios/<profile>/` and uploaded to Supabase Storage with `scripts/upload_scenarios.py`. The running server reads from the bucket, never the local tree.
 
 ## Commands
 
 ```bash
 # from repo root
-.venv/bin/python -m pytest -q                # unit (live skipped). pyproject pins testpaths=server/tests.
-RUN_LIVE=1 .venv/bin/python -m pytest -q     # add live tests; needs BASE_URL reachable.
+.venv/bin/python -m pytest -q                # unit (live skipped)
+RUN_LIVE=1 .venv/bin/python -m pytest -q     # add live tests; needs reachable LLM at BASE_URL
+.venv/bin/python -m pytest server/tests/flow/test_turn.py::test_X   # single test
+.venv/bin/ruff check server/                 # lint
+bash server/scripts/check_relational_ssot.sh # graph-SSOT guard (CI-equivalent)
 
 # from server/
-../.venv/bin/python run_api.py               # cwd must be server/ so dotenv reads server/.env.<APP_ENV> (default 'dev').
+../.venv/bin/python run_api.py               # cwd must be server/ for dotenv + relative paths
+../.venv/bin/python scripts/upload_scenarios.py ../scenarios/<profile>
 ```
 
-## Stack and env
+## Architecture
 
-- Pydantic models *are* the schema. Every state file round-trips through `GameState.model_validate_json(...)`. Don't hand-munge JSON.
-- `LLMClient.chat_stream` is the streaming primitive; agents wrap it with their schema and retry loop.
-- One process. The LocalFs adapter uses one save lock (`asyncio.Lock` in `persistence/store.py`); the Supabase adapter relies on per-row PostgREST upserts plus a fixed flush order (entity upserts + jsonl appends → `games.meta` last) so a crash mid-flush is recoverable on next-turn `next_log_id` self-heal. Horizontal scaling is out of scope.
-- Env files load in order via `run_api.py:_load_env`: `.env.<APP_ENV>` (default `dev`, raises `FileNotFoundError` if missing) → `.env.llama_cpp` → `.env.google`. `APP_ENV=release` switches to `.env.release` for prod deploys. Both modes go through the Supabase adapters and require `SUPABASE_URL SUPABASE_SERVICE_KEY SUPABASE_SCENARIO_BUCKET`, plus `HOST PORT BASIC_AUTH_USER BASIC_AUTH_PASS CORS_ORIGINS` and `LLM_ROUTE_DEFAULT` (required) plus optional `LLM_ROUTE_<AGENT>`. Each provider file declares `LLM_<NAME>_BASE_URL`, `LLM_<NAME>_API_KEYS` (comma-separated, rotated round-robin per call), and at least one of `LLM_<NAME>_THINK_OFF / _THINK_OPT / _THINK_ON` listing the provider's model names — the three lists must be disjoint and together name every model the provider serves. Optional `LLM_<NAME>_NO_SYSTEM` lists models that reject `role: system` (Gemma via the Gemini OpenAI-compat endpoint returns "Developer instruction is not enabled"); for those models `LLMClient` folds the system prompt into the first user message. Listed names must appear in one of the THINK_* lists. Missing required keys → `KeyError` at startup. No silent defaults. `CORS_ORIGINS` is a comma-separated list of exact origins (scheme + host) the web client may load from. Agency runners and live tests still read `BASE_URL` directly via `LLMClient.from_single`.
-- LLM routing — each `LLM_ROUTE_<AGENT> = <provider>/<model>` resolves to an `LLMProfile` keyed by lowercased agent name. Calls whose `agent=` matches a route (`dc_judge`, `narrate`, `combat_narrate`, `encounter_summon`, `skill_recommend`) go there; everything else falls back to `default`. The model's THINK_* category drives per-call thinking behavior — `OFF` sends no `extra_body` and yields `result["think"] = None`; `OPT` honors the caller's `think` flag (default off) via `extra_body.chat_template_kwargs.enable_thinking` (llama.cpp) or `extra_body.reasoning_effort=medium` (Gemini 3.x, detected from `googleapis.com` in `base_url`); `OPT_ON` is the inverse (default on, opt out via `extra_body.reasoning_effort=minimal` on Gemini) — Gemma 4 via Gemini lives here because it accepts only `minimal` to disable; `ON` always thinks. Provider-style logic lives in `src/llm/llama_cpp.py` and `src/llm/gemini.py`; `client.py` only dispatches. Inline `<thought>...</thought>` at the head of the answer (Gemma 4) is auto-routed to the think channel by `gemini.ThoughtSplitter` in both `chat` and `chat_stream` whenever the model is actively thinking — always under `ON`, conditionally under `OPT_ON`.
+### Layer rule
 
-## Stats / tiers / grades
+```
+api → flow → agents/engines → llm/ontology/context/mapping → persistence → domain/rules
+```
 
-- Stat keys are ASCII abbreviations: `STR / DEX / CON / INT / WIS / CHA`. The judge's `stat` enum uses the same keys.
-- Tiers are seven Korean labels: `매우 쉬움 / 쉬움 / 보통 / 어려움 / 매우 어려움 / 전설 / 신화`. No English aliases.
-- Internal grade is five-way (`critical_success / success / partial_success / failure / critical_failure`). The client's `RollLogEntry.result` collapses to `success | partial | fail`.
+Upper depends on lower, never the reverse. Concretely:
 
-## Prose voice
+- `domain/` + `rules/` — pure data shapes and tunable knobs. No imports outside themselves.
+- `engines/` — pure game logic (combat math, apply state_changes, growth, inventory, skill, quest, recovery, invariants). No LLM, no I/O.
+- `agents/` — LLM-driven (dc_judge, narrate, combat_narrate, encounter_summon, skill_recommend). Each agent dir = `prompt.md` + `schema.py` + `runner.py` (+ `semantics.py` where needed). `agents/_runner.py` is the shared 5-attempt self-correction loop.
+- `ontology/` — derived relational view over `GameState`. **The single source of truth for relations.**
+- `context/` — prompt input builders (surroundings for judge, layered context for narrate).
+- `persistence/` — `SaveRepo` / `ScenarioRepo` Protocols (all-async) + Supabase and LocalFs adapters.
+- `mapping/to_front.py` — GameState → flat dict the client renders. All Korean composed strings end here.
+- `flow/` — per-turn orchestration. `turn.py` / `roll.py` / `intro.py` are entrypoints (each yields `AsyncIterator[dict]` of SSE events).
+- `api/` — thin FastAPI adapter. Glue only, no business logic.
 
-All player-facing Korean text — narrate / combat_narrate bodies, the deterministic `잠시 정적이 흐릅니다` fallback in `flow/narrate.py`, every engine-side log line built in `flow/format.py` · `flow/error_phrases.py` · `flow/actions.py` · `flow/combat_phase.py` · `flow/turn.py` · `flow/roll.py` · `mapping/to_front.py` — uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings.
+### Relational SSOT — graph or entity?
 
-The canonical user-facing term for skills is **기술**. The dc_judge prompt accepts `스킬` as a synonym from player input, but every other prompt and engine string says `기술`. Code identifiers and the `skills/` entity directory keep the English `skill`.
+`ontology/graph.py` is the single source of truth for relations. Inside `flow/`, `context/`, `mapping/`:
 
-## Affinity
+- **Asking who-relates-to-whom** must go through `GameGraph` — never via `state.characters.items()` fullscans, and never via direct relation fields (`char.location_id`, `char.inventory_ids`, `char.equipment.weapon`, `char.racial_skill_ids`, `char.learned_skill_ids`, `char.race_id`, `char.companions`, `quest.giver_id`, `quest.triggers[*].target_id`, `quest.rewards.items`, `loc.connections`, `loc.item_ids`, `chapter.quest_ids`). Prefer named helpers in `ontology/queries.py` (`inhabitants_of`, `inventory_of`, `equipment_of`, `connections_of`, `race_of`, `quests_given_by`, …); fall back to `graph.get_edges(...)` only when no helper fits.
+- **Asking the value of an entity attribute** (HP, MP, stats, level, alive, disposition, mood, name, gender, status, memories, quest.status, quest.title) is fine via direct read.
+- **Writing** stays on entities — `engines/apply.py`, `engines/combat.py` mutate fields. After a mutation that touches a relation field, the caller in flow calls `state.invalidate_graph()`; the next `state.graph()` rebuilds.
+- **Graph caching:** `state.graph()` returns a lazily-built `GameGraph` cached on the state via `PrivateAttr` (does not round-trip through `model_dump_json`; `load_game` starts cold). Read paths just call `state.graph()`. Write paths in flow that touch relation fields must `state.invalidate_graph()` before re-reading or downstream consumers see stale edges.
+- **Exceptions** that may read relation fields directly: `persistence/`, `domain/`, `engines/apply.py`, pure numeric engines (combat damage math, recovery, dc), and `ontology/graph.py` itself.
 
-Scale is `-100..+100`. **Single direction:** affinity is always read and written as `target.relations[actor]` — i.e. how the *target* views the *actor*. The reverse direction (actor's view of target) is not tracked; gameplay only consumes one number per pair, and tracking both was costing memory without anything reading it.
+`scripts/check_relational_ssot.sh` enforces this by greppable patterns (list-shaped relation fields and `.characters.items()/.values()` iterations in `flow|context|mapping`). Whitelist a justified single line with a trailing `# ssot-allow: <reason>` comment.
 
-With `social.friendly_threshold = 50`, a target at or above the threshold gives the actor `+social.roll_bonus = 2` on social rolls (the target trusts the actor → easier persuasion). Post-roll delta = `affinity_<grade>`, mirrored onto `intent`: hostile flips the sign; deceptive zeroes the success branch and doubles the failure one.
+### Persistence
+
+The repo Protocols (`SaveRepo`, `ScenarioRepo`) are all-async. **The running server always uses Supabase**, regardless of `APP_ENV` — env files differ only in config knobs (basic auth, CORS, LLM routes), not in storage choice. Tests bypass the factory and use `LocalFsSaveRepo` / `LocalFsScenarioRepo` against `tmp_path`.
+
+Five tables, all keyed on `game_id`:
+
+- `games(game_id PK, meta jsonb, updated_at)` — `meta` carries `turn_count, pending_check, pending_skill_candidates, combat_state, active_*_id, next_log_id`. **`combat_state` must round-trip through meta** — without it, `/turn` reloads as combat-cleared and the engine restarts the fight every turn.
+- `entities(game_id, kind, id, data jsonb)` PK `(game_id, kind, id)` — only entities mutated this turn are upserted.
+- `log_entries(game_id, log_id int, entry jsonb)` — `log_id = entry.id` (app-managed monotonic).
+- `history_entries(game_id, seq bigserial, entry jsonb)` — append-only turn summaries.
+- `dialogue_entries(game_id, seq bigserial, entry jsonb)` — append-only dialogue.
+
+All four child tables FK → `games(game_id) ON DELETE CASCADE`. RLS enabled with no policies (server uses service-role key, anon/auth keys see nothing).
+
+**Per-turn flush order:** entity upserts + jsonl appends → `games.meta` last. A crash mid-flush leaves entity/jsonl committed and only meta stale, recoverable on next reload via `next_log_id` self-heal in `load_game`.
+
+`SupabaseStorageScenarioRepo` caches `world.md` per profile (process-lifetime; restart to reload) and lazily materializes `local_profile_path` to a tempdir so `engines/invariants.Scenario.from_dir` can walk a real fs tree. `read_world_md(missing_ok=True)` does **not** cache empty results — a strict caller after a missing-ok caller will still raise.
+
+`game_id` shape: `game_YYMMDD_HHMMSS_<6hex>` (UTC + `secrets.token_hex(3)`) so concurrent inits across isolates can't collide.
+
+### LLM routing and thinking modes
+
+- `LLM_ROUTE_<AGENT> = <provider>/<model>` resolves to an `LLMProfile` keyed by lowercased agent name. `LLM_ROUTE_DEFAULT` is required; matched agents (`dc_judge`, `narrate`, `combat_narrate`, `encounter_summon`, `skill_recommend`) route per-agent, others fall back to default.
+- Provider blocks (`.env.llama_cpp`, `.env.google`) declare each provider's `LLM_<NAME>_BASE_URL`, `_API_KEYS` (comma-separated, rotated round-robin per call), and `_THINK_OFF / _THINK_OPT / _THINK_ON` model lists. The three lists must be disjoint and together name every model the provider serves. Listed names must appear in exactly one THINK_* list.
+- `LLM_<NAME>_NO_SYSTEM` lists models that reject `role: system` (Gemma via Gemini OpenAI-compat returns "Developer instruction is not enabled"); `LLMClient` folds the system prompt into the first user message for them.
+- Per-call thinking behavior is driven by the model's THINK_* category: `OFF` sends no `extra_body`; `OPT` honors caller's `think` flag (default off) via `extra_body.chat_template_kwargs.enable_thinking` (llama.cpp) or `extra_body.reasoning_effort=medium` (Gemini 3.x, detected from `googleapis.com` in `base_url`); `OPT_ON` is the inverse (default on, opt out via `extra_body.reasoning_effort=minimal` on Gemini — Gemma 4 via Gemini lives here because it accepts only `minimal` to disable); `ON` always thinks.
+- Provider-style logic lives in `src/llm/llama_cpp.py` and `src/llm/gemini.py`; `client.py` only dispatches.
+- Inline `<thought>...</thought>` at the head of the answer (Gemma 4) is auto-routed to the think channel by `gemini.ThoughtSplitter` in both `chat` and `chat_stream` whenever the model is actively thinking.
+- Missing required env keys → `KeyError` at startup. No silent defaults.
+
+### Agent retry
+
+Each agent runs a self-correction loop with `retries=5`. On `ValidationError` or semantic-check failure, the previous response and the error are appended to the message stream so the next attempt can correct itself. After 5 attempts, the loop raises by the last error type; flow code maps that to a domain error.
+
+`narrate` is the exception. Body tokens stream to the client live, so a self-correction loop with appended error messages isn't possible — once a body delta has been sent the client can't take it back. It retries (up to 5×) only when the stream errors out before any body delta or yields zero body content; if any body delta has already been streamed, a later failure raises.
+
+### state_changes
+
+Four kinds only: `set / move / move_item / affinity`. Each has its own permission matrix in `engines/apply.py` (single source: `rules/permissions.py`, shared with `agents/narrate/runner.py` so the prompt and engine use the same frozenset). Forbidden `set` fields are silently dropped per change; the rest of the batch still applies.
+
+### Affinity
+
+Scale `-100..+100`. **Single direction:** affinity is always read and written as `target.relations[actor]` — how the *target* views the *actor*. The reverse direction is not tracked.
+
+With `social.friendly_threshold = 50`, a target at or above the threshold gives the actor `+social.roll_bonus = 2` on social rolls. Post-roll delta = `affinity_<grade>`, mirrored onto `intent`: hostile flips the sign; deceptive zeroes the success branch and doubles the failure one.
 
 Two paths feed `relations`:
-- **Narrate** emits an `affinity` state_change for social acts (praise, insult, bribe, threaten, deceive). The schema carries `actor` + `target`, but engine writes the delta to `state.characters[target].relations[actor]` only. The narrate prompt requires emission for verbal social acts even on the `pass` branch — `intent` picks `friendly | hostile | deceptive`, `grade` is read off the prose tone.
-- **Engine** deducts `social.combat_affinity_drop` inside `emit_attack` and `emit_skill_cast` (offensive types only) on the target's side: `state.characters[target].relations[attacker] -= drop`. Combat never reaches narrate, so without this hook attacks would leave the NPC's view of the player unchanged and trade gating wouldn't react.
+- **Narrate** emits an `affinity` state_change for verbal social acts (praise/insult/bribe/threaten/deceive). Schema carries `actor` + `target`, but the engine writes the delta to `state.characters[target].relations[actor]` only. Narrate prompt requires emission for verbal social acts even on the `pass` branch; `intent` picks `friendly | hostile | deceptive`; `grade` is read off the prose tone.
+- **Engine** deducts `social.combat_affinity_drop` inside `emit_attack` and `emit_skill_cast` (offensive types only) on the target's side. Combat never reaches narrate, so without this hook attacks would leave the NPC's view of the player unchanged and trade gating wouldn't react.
 
-Trade gating: `_merchants_payload` filters out NPCs whose `disposition.aggressive >= social.hostile_aggressive_threshold` regardless of `npc.relations[player]`. Without it, a hostile seed (bandit, wolf) carrying equipment in its inventory would surface as a merchant on first sight, since `npc.relations[player]` defaults to 0 — which satisfies `trade_threshold = 0`.
+Trade gating: `_merchants_payload` filters out NPCs whose `disposition.aggressive >= social.hostile_aggressive_threshold` regardless of `npc.relations[player]`. Without it, a hostile seed (bandit, wolf) carrying equipment would surface as a merchant on first sight (default `relations[player] = 0` satisfies `trade_threshold = 0`).
 
-## Persistence
+### Time
 
-The repo Protocols (`SaveRepo`, `ScenarioRepo`) are **all-async** — the LocalFs adapter wraps sync IO in `async def`, the Supabase adapter is truly async over httpx. Callers (flow/, context/, api/, init.py) all `await` repo calls.
+There is no minute/hour clock. `state.turn_count` is the sole time variable; `domain/clock.py:day_phase` derives one of `새벽 / 오전 / 오후 / 밤` from it (4 phases × `RULES.time.phase_turns = 10` turns each = 40-turn day cycle). Sleep recovery (`engines/recovery.py`) jumps `turn_count` to the next 새벽 boundary via `next_dawn_turn`. The narrate prompt sees the current phase only — no absolute date or hour exists.
 
-**The running server always uses Supabase**, regardless of `APP_ENV` — env files differ only in config knobs (basic auth, CORS, LLM routes), not in storage choice.
+### SSE event shape
 
-### Schema — Supabase Postgres + Storage
+`{"type": "...", "data": {...}}` per event. Types: `judge / pending_check / narrative_delta / suggestions / log_entry / state / combat_start / combat_turn / combat_end / done / error`. **`done` is not auto-appended** — `run_turn`'s roll branch ends after `pending_check`, and the client treats stream-close as the signal. The three `combat_*` types come from `combat_phase.py`; the client ignores their payload (state + log_entry are authoritative for UI) but tests use them as observable signals.
 
-Schema lives in the Supabase dashboard (not tracked in the repo); applied once per project via the dashboard SQL editor.
-
-- **Saves → Postgres** via PostgREST. Five tables, all keyed on `game_id`:
-  - `games(game_id PK, meta jsonb, updated_at)` — meta.json mirrored as a single jsonb column. No column decomposition (saves migrations when meta evolves). `meta` carries `game_id, profile, player_id, turn_count, pending_check, pending_skill_candidates, combat_state, active_*_id, next_log_id`. `combat_state` must round-trip through meta — without it, `/turn` reloads as combat-cleared and the engine restarts the fight every turn.
-  - `entities(game_id, kind, id, data jsonb, updated_at)` PK `(game_id, kind, id)` — one row per entity. Indexed on `(game_id, kind)` for "load all characters of game X." `kind ∈ {characters, items, locations, races, skills, quests, chapters, campaigns}`. Only entities mutated this turn are upserted.
-  - `log_entries(game_id, log_id int, entry jsonb)` PK `(game_id, log_id)` — `log_id = entry.id` (monotonic, app-managed). Client dedupes by id. No retention cap on disk; in-memory caps (`RULES.log.display_turns`, `memory.turn_log_size`, `memory.recent_dialogue_turns`) apply only on tail-load and prompt assembly.
-  - `history_entries(game_id, seq bigserial, entry jsonb)` PK `(game_id, seq)` — append-only, `RULES.memory.turn_log_size` tail loaded.
-  - `dialogue_entries(game_id, seq bigserial, entry jsonb)` PK `(game_id, seq)` — append-only, `RULES.memory.recent_dialogue_turns` tail loaded.
-  - All four child tables FK → `games(game_id) ON DELETE CASCADE`. RLS enabled with no policies (server uses service-role key, bypasses RLS; anon/auth keys see nothing).
-- **Scenarios → Storage** bucket. Layout mirrors the local `scenarios/<profile>/...` tree 1:1 — `<bucket>/<profile>/{world.md, start.json, player_template.json, profile.json, races/*.json, characters/*.json, items/*.json, ...}`. Author scenarios locally on dev fs, then upload the dir tree to the bucket via `server/scripts/upload_scenarios.py <local-profile-dir>` (the script reads `.env.<APP_ENV>` and uses the same Storage bucket the server reads from).
-- `init_game` reads seed entities + start.json + player_template.json from Storage, then `copy_seed_into_game` bulk-INSERTs the seed into `entities` (creates the `games` row first to satisfy FK), then `save_meta` finalizes meta and `save_entity` writes the player character.
-- Dirty tracking: `flow/dirty.py` collects `(kind, id)` writes plus appended log/history/dialogue entries. Finalize flushes entity upserts + jsonl appends first, `games.meta` upsert last — a crash mid-flush leaves entity/jsonl committed and only meta stale, recoverable next turn via `next_log_id` self-heal in `load_game`.
-- Per-entity `memories` cap is `RULES.memory.cap`, applied at write time inside the entity model so the cap travels with the row.
-- `SupabaseStorageScenarioRepo` caches `world.md` per profile (process-lifetime; restart to reload) and lazily materializes `local_profile_path` to a tempdir so `engines/invariants.Scenario.from_dir` can walk a real fs tree. `read_world_md(missing_ok=True)` does **not** cache empty results — a strict caller after a missing-ok caller will still raise.
-- `game_id` shape: `game_YYMMDD_HHMMSS_<6hex>` (UTC, plus 3 random bytes hex). Built in `init_game` via `secrets.token_hex(3)` so concurrent inits across isolates can't collide.
-
-## Memory writes (post-turn)
+### Memory writes (post-turn)
 
 - Per-entity: `NarrateOutput.memory: dict[entity_id, "one-line POV recall"]`. **Player memory is first-person ("내가 …")**; NPC memory is from that NPC's POV. Don't write the same string into both.
 - `memorable=true` is for scene-shifting events (decisions, promises, threats, deals, first impressions). Small talk is `false`.
 - `memory_links: {entity_id: target_id}` decides which Subject panel surfaces each memory. Omitted entries default to `target_id=None`.
+- Per-entity cap is `RULES.memory.cap`, applied at write time inside the entity model so the cap travels with the row.
 
-## Agent retry
+## Stats / tiers / grades / prose voice
 
-Each agent (judge, ...) runs a self-correction loop with `retries=5`. On `ValidationError` or semantic-check failure, the previous response and the error are appended to the message stream so the next attempt can correct itself. After 5 attempts, the loop raises by the last error type; flow code maps that to a domain error.
+- Stat keys are ASCII abbreviations: `STR / DEX / CON / INT / WIS / CHA`. Judge's `stat` enum uses the same keys.
+- Tiers are seven Korean labels: `매우 쉬움 / 쉬움 / 보통 / 어려움 / 매우 어려움 / 전설 / 신화`. No English aliases.
+- Internal grade is five-way (`critical_success / success / partial_success / failure / critical_failure`). Client's `RollLogEntry.result` collapses to `success | partial | fail`.
+- All player-facing Korean — narrate / combat_narrate bodies, the deterministic `잠시 정적이 흐릅니다` fallback in `flow/narrate.py`, every engine-side log line built in `flow/format.py` · `flow/error_phrases.py` · `flow/actions.py` · `flow/combat_phase.py` · `flow/turn.py` · `flow/roll.py` · `mapping/to_front.py` — uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings.
+- Canonical user-facing term for skills is **기술**. The dc_judge prompt accepts `스킬` as a synonym from player input, but every other prompt and engine string says `기술`. Code identifiers and the `skills/` entity directory keep the English `skill`.
 
-`narrate` is the exception. Body tokens stream to the client live, so a self-correction loop with appended error messages isn't possible — once a body delta has been sent the client can't take it back. It retries (up to 5×) only when the stream errors out before any body delta or yields zero body content; if any body delta has already been streamed, a later failure raises.
+## Error hierarchy
 
-## state_changes
+`DomainError` (in `domain/errors.py`) splits two ways:
 
-Four kinds only: `set / move / move_item / affinity`. Each has its own permission matrix in `engines/apply.py`. Forbidden `set` fields are silently dropped per change; the rest of the batch still applies.
+**Session lifecycle (HTTP/SSE error mapping):** `PendingCheckActive`, `PendingCheckExpected`, `JudgeMalformed`, `LLMUnavailable`, `PersistenceFailed`, `ProfileNotFound` (HTTP 422), `RaceNotFound` (422), `ProfileMalformed` (422).
 
-## Time
+**Action validation (absorbed into in-game GM log, no HTTP impact):** `LevelUpInvalid`, `InventoryInvalid`, `SkillInvalid`. `flow/actions.py` catches and runs through `flow/error_phrases.py:humanize_engine_error` for a Korean one-liner GM log entry. Turn ends normally.
 
-There is no minute/hour clock. `state.turn_count` is the sole time variable; `domain/clock.py:day_phase` derives one of `새벽 / 오전 / 오후 / 밤` from it (4 phases × `RULES.time.phase_turns = 10` turns each = 40-turn day cycle). Sleep recovery (`engines/recovery.py`) jumps `turn_count` to the next 새벽 boundary via `next_dawn_turn`. The narrate prompt sees the current phase only — no absolute date or hour exists.
+Pydantic 422 (request-shape) and HTTP 404 (`game_id` not found) go through FastAPI's defaults — they are not `DomainError`.
 
-## SSE event shape
+## Stack notes
 
-`{"type": "...", "data": {...}}` per event. Types: `judge / pending_check / narrative_delta / suggestions / log_entry / state / combat_start / combat_turn / combat_end / done / error`. The three `combat_*` types come from `combat_phase.py`; the client currently ignores their payload (state + log_entry are authoritative for UI), but tests use them as observable signals. **`done` is not auto-appended** — `run_turn`'s roll branch ends after `pending_check`, and the client treats stream-close as the signal.
-
-## Tests
-
-- Unit tests run without an LLM. Live tests need `RUN_LIVE=1` and `BASE_URL` (env, default `http://localhost:8000/v1`) reachable.
-- `tests/conftest.py` exposes `fresh_state` (an empty `GameState`).
+- Python 3.12+, Pydantic v2, FastAPI, uvicorn, httpx, async/await throughout.
+- Pydantic models *are* the schema. Every state file round-trips through `GameState.model_validate_json(...)`. Don't hand-munge JSON.
+- `LLMClient.chat_stream` is the streaming primitive; agents wrap it with their schema and retry loop.
+- Single process. Horizontal scaling is out of scope. The LocalFs adapter uses one `asyncio.Lock` in `persistence/store.py`; Supabase relies on per-row PostgREST upserts plus the fixed flush order above.
+- Env files load in order via `run_api.py:_load_env`: `.env.<APP_ENV>` (default `dev`, raises `FileNotFoundError` if missing) → `.env.llama_cpp` → `.env.google`. `APP_ENV=release` switches to `.env.release`. Both modes go through Supabase and require `SUPABASE_URL SUPABASE_SERVICE_KEY SUPABASE_SCENARIO_BUCKET`, plus `HOST PORT BASIC_AUTH_USER BASIC_AUTH_PASS CORS_ORIGINS LLM_ROUTE_DEFAULT`.
+- `tests/conftest.py` exposes `fresh_state` (an empty `GameState`). Tests marked `live` only run with `RUN_LIVE=1` and a reachable `BASE_URL` (default `http://localhost:8000/v1`). Live tests live under `tests/live/`.
