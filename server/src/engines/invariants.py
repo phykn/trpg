@@ -18,7 +18,6 @@ Public API:
     check_chapter_graph(scenario)   -> list[str]
 
     Scenario (dataclass)
-    Scenario.from_dir(path)
     Scenario.from_state(state)
 
     InvariantViolation (ValueError subclass)
@@ -26,9 +25,7 @@ Public API:
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, get_args
 
 from ..domain.entities import (
@@ -96,39 +93,6 @@ class Scenario:
     start: dict = field(default_factory=dict)
     player_template: dict = field(default_factory=dict)
     runtime: bool = False
-
-    @classmethod
-    def from_dir(cls, scenario_dir: str | Path) -> "Scenario":
-        d = Path(scenario_dir)
-
-        def _load(sub: str, model: type) -> dict:
-            sub_dir = d / sub
-            if not sub_dir.is_dir():
-                return {}
-            out: dict[str, Any] = {}
-            for f in sorted(sub_dir.glob("*.json")):
-                obj = model.model_validate_json(f.read_text(encoding="utf-8"))
-                out[obj.id] = obj
-            return out
-
-        def _read_json(name: str) -> dict:
-            p = d / name
-            if not p.is_file():
-                return {}
-            return json.loads(p.read_text(encoding="utf-8"))
-
-        return cls(
-            races=_load("races", Race),
-            locations=_load("locations", Location),
-            items=_load("items", Item),
-            skills=_load("skills", Skill),
-            characters=_load("characters", Character),
-            quests=_load("quests", Quest),
-            chapters=_load("chapters", Chapter),
-            start=_read_json("start.json"),
-            player_template=_read_json("player_template.json"),
-            runtime=False,
-        )
 
     @classmethod
     def from_state(cls, state: Any) -> "Scenario":

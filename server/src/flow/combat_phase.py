@@ -51,6 +51,7 @@ from .combat_auto import (
     run_auto_combat,
 )
 from .dirty import Dirty, ToFrontFn, finalize, push_act, push_gm, push_turn_log
+from .error_phrases import humanize_runtime_error
 from .format import format_combat_end_text
 from .judge import run_judge
 from .subject import refresh_active_subject
@@ -289,7 +290,13 @@ async def run_combat_player_turn(
     try:
         result = await run_judge(client, state, player_input, graph=graph)
     except JudgeMalformed as e:
-        yield {"type": "error", "data": {"message": str(e), "code": "JudgeMalformed"}}
+        yield {
+            "type": "error",
+            "data": {
+                "message": humanize_runtime_error(e),
+                "code": "JudgeMalformed",
+            },
+        }
         return
 
     yield {"type": "judge", "data": result.model_dump()}

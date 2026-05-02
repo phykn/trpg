@@ -4,7 +4,7 @@ User-facing setup is in [README.md](./README.md).
 
 ## Layout
 
-`server/` is the FastAPI service. The venv, pyproject, and requirements live at the repo root. Run pytest from the root; run `run_api.py` from `server/` so dotenv resolves `server/.env.<APP_ENV>` and src imports work.
+`server/` is the FastAPI service. The venv, pyproject, and requirements live at the repo root — always invoke Python via `../.venv/bin/python` from `server/` (or `.venv/bin/python` from root). **Never create `server/.venv`.** Run pytest from the root; run `run_api.py` from `server/` so dotenv resolves `server/.env.<APP_ENV>` and src imports work.
 
 ```
 src/
@@ -21,7 +21,7 @@ src/
   rules/       config.py exposes the frozen RULES singleton (DC, social, memory, log, time, recovery, growth, skill, carry, trade, flee, combat, death). dc.py has roll math.
 tests/         pytest, asyncio_mode=auto, live marker for LLM-required tests.
 run_api.py     Entrypoint — loads env, builds the FastAPI app, runs uvicorn.
-.env.dev       Global config + LLM_ROUTE_* (required) for local dev. .env.release is the prod counterpart (not committed; created at deploy time, template at `.env.release.example`). Provider blocks live in .env.llama_cpp / .env.google. No fallbacks; missing keys raise at startup.
+.env.dev       Global config + LLM_ROUTE_* (required) for local dev. .env.release is the prod counterpart (gitignored; populate at deploy time). Provider blocks live in .env.llama_cpp / .env.google. No fallbacks; missing keys raise at startup.
 ```
 
 Layer rule: upper depends on lower, never the reverse. The dependency direction goes api → flow → agents/engines → llm/ontology/context/mapping → persistence → domain/rules.
@@ -96,7 +96,7 @@ a real Supabase.
 
 ### Schema — Supabase Postgres + Storage
 
-`migrations/001_init.sql` is the schema. Apply once per Supabase project (Supabase SQL editor or `psql $DATABASE_URL -f server/migrations/001_init.sql`).
+Schema is applied once per Supabase project via the dashboard SQL editor.
 
 - **Saves → Postgres** via PostgREST. Five tables, all keyed on `game_id`:
   - `games(game_id PK, meta jsonb, updated_at)` — meta.json mirrored as a single jsonb column. No column decomposition (saves migrations when meta evolves). `meta` carries `game_id, profile, player_id, turn_count, pending_check, pending_skill_candidates, combat_state, active_*_id, next_log_id`. `combat_state` must round-trip through meta — without it, `/turn` reloads as combat-cleared and the engine restarts the fight every turn.

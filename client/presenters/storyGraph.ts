@@ -57,11 +57,32 @@ export function mergeStoryGraphs(base: StoryGraphModel, next: StoryGraphModel): 
   const nodes = new Map<string, StoryGraphNode>();
   for (const node of base.nodes) {
     if (nextIds.has(node.id)) continue;
-    let demoted = node;
+    let demoted: StoryGraphNode = node;
     if (node.kind === 'place' && !nextPlaceIds.has(node.id)) {
-      demoted = { ...node, kind: 'location' };
+      demoted = {
+        id: node.id,
+        label: node.label,
+        kind: 'location',
+        status: 'unreachable_move',
+        reachable: false,
+        description: node.description,
+        risk: node.risk,
+        moveDifficulty: null,
+      };
     } else if (node.kind === 'subject' && !nextSubjectIds.has(node.id)) {
-      demoted = { ...node, kind: 'target' };
+      demoted = {
+        id: node.id,
+        label: node.label,
+        kind: 'target',
+        status: 'unreachable_meet',
+        reachable: false,
+        alive: node.alive,
+        level: node.level,
+        raceJob: node.raceJob,
+        gender: node.gender,
+        role: node.role,
+        trust: node.trust,
+      };
     }
     nodes.set(demoted.id, demoted);
   }

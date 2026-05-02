@@ -2,7 +2,26 @@
 edges the client's map view renders. Player-visible by design: the
 location half expands through normal map connections, the character half
 is limited to the player, current-scene NPCs, companions, and the active
-subject so the graph does not become a spoiler dump."""
+subject so the graph does not become a spoiler dump.
+
+Each node carries a `status` enum and a `reachable` boolean alongside the
+display fields, and each edge carries a semantic `kind`. The client reads
+those fields directly instead of pattern-matching the Korean display
+label, which keeps display labels free to change without breaking
+client-side derive logic.
+
+Status values:
+- `current` (place node at the player's current location)
+- `engaged` (the active conversation subject)
+- `reachable_move` / `unreachable_move` (location nodes)
+- `reachable_meet` / `unreachable_meet` (target/character nodes)
+- `None` for hero and quest nodes (status not applicable)
+
+Edge kinds: `current_pin / observe / progress / move / meet /
+quest_giver / quest_target`. The Korean `label` stays as the display
+string; `kind` is the machine-readable counterpart."""
+
+from typing import Literal
 
 from ..domain.clock import day_phase
 from ..domain.entities import Character, Location, Quest
@@ -16,7 +35,26 @@ from ..ontology.queries import (
     location_of,
     trigger_targets_of,
 )
-from .labels import RISK_PAYLOAD, gender_label, race_job_label
+from .labels import RISK_PAYLOAD, gender_label, giver_with_location_label, race_job_label
+
+
+NodeStatus = Literal[
+    "current",
+    "engaged",
+    "reachable_move",
+    "reachable_meet",
+    "unreachable_move",
+    "unreachable_meet",
+]
+EdgeKind = Literal[
+    "current_pin",
+    "observe",
+    "progress",
+    "move",
+    "meet",
+    "quest_giver",
+    "quest_target",
+]
 
 
 # --- helpers ---------------------------------------------------------------
@@ -68,31 +106,43 @@ def _visible_character_ids(
 # --- per-kind node builders ------------------------------------------------
 
 
+def _character_identity(state: GameState, graph: GameGraph, char: Character) -> dict:
+    """Identity fields shared by every character-kind node (hero / subject /
+    target). `role` and kind-specific extras (`known`, `trust`, `status`,
+    `reachable`) are left to each builder — target uses appearance for its
+    role label rather than `char.role`, hero has no `trust` against itself."""
+    return {
+        "id": char.id,
+        "label": char.name,
+        "level": char.level,
+        "raceJob": race_job_label(state, graph, char),
+        "gender": gender_label(char),
+    }
+
+
 def _hero_node(state: GameState, graph: GameGraph, player: Character) -> dict:
     return {
-        "id": player.id,
+        **_character_identity(state, graph, player),
         "kind": "hero",
-        "label": player.name,
-        "level": player.level,
-        "raceJob": race_job_label(state, graph, player),
+        "status": None,
+        "reachable": True,
+        "alive": player.alive,
+        "role": player.role,
+        "known": [player.appearance] if player.appearance else [],
     }
 
 
 def _subject_node(
     state: GameState, graph: GameGraph, subject: Character, player: Character
 ) -> dict:
-    if not subject.alive:
-        known = ["죽음"]
-    else:
-        known = [subject.appearance] if subject.appearance else []
-        known += [m.content for m in player.memories if m.target_id == subject.id]
+    known = [subject.appearance] if subject.appearance else []
+    known += [m.content for m in player.memories if m.target_id == subject.id]
     return {
-        "id": subject.id,
+        **_character_identity(state, graph, subject),
         "kind": "subject",
-        "label": subject.name,
-        "level": subject.level,
-        "raceJob": race_job_label(state, graph, subject),
-        "gender": gender_label(subject),
+        "status": "engaged",
+        "reachable": True,
+        "alive": subject.alive,
         "role": subject.role,
         "trust": subject.relations.get(player.id, 0),
         "known": known,
@@ -100,17 +150,19 @@ def _subject_node(
 
 
 def _target_node(
-    state: GameState, graph: GameGraph, target: Character, player: Character
+    state: GameState,
+    graph: GameGraph,
+    target: Character,
+    player: Character,
+    same_location: bool,
 ) -> dict:
-    blurb = "죽음" if not target.alive else (target.appearance or target.description)
     return {
-        "id": target.id,
+        **_character_identity(state, graph, target),
         "kind": "target",
-        "label": target.name,
-        "level": target.level,
-        "raceJob": race_job_label(state, graph, target),
-        "gender": gender_label(target),
-        "role": blurb,
+        "status": "reachable_meet" if same_location else "unreachable_meet",
+        "reachable": same_location,
+        "alive": target.alive,
+        "role": target.appearance or target.description,
         "trust": target.relations.get(player.id, 0),
     }
 
@@ -120,6 +172,8 @@ def _place_node(loc: Location, state: GameState) -> dict:
         "id": loc.id,
         "kind": "place",
         "label": loc.name,
+        "status": "current",
+        "reachable": True,
         "description": loc.description,
         "risk": RISK_PAYLOAD[loc.sleep_risk],
         "dayPhase": day_phase(state.turn_count),
@@ -127,24 +181,31 @@ def _place_node(loc: Location, state: GameState) -> dict:
     }
 
 
-def _location_node(loc: Location, move_difficulty: str | None) -> dict:
+def _location_node(loc: Location, move_difficulty: str | None, adjacent: bool) -> dict:
     return {
         "id": loc.id,
         "kind": "location",
         "label": loc.name,
+        "status": "reachable_move" if adjacent else "unreachable_move",
+        "reachable": adjacent,
         "description": loc.description,
         "risk": RISK_PAYLOAD[loc.sleep_risk],
         "moveDifficulty": move_difficulty,
     }
 
 
-def _quest_node(quest: Quest) -> dict:
+def _quest_node(quest: Quest, state: GameState, graph: GameGraph) -> dict:
     return {
         "id": quest.id,
         "kind": "quest",
         "label": quest.title,
+        "status": None,
+        "reachable": True,
         "questDifficulty": quest.difficulty,
         "rewards": {"gold": quest.rewards.gold, "exp": quest.rewards.exp},
+        "giver": giver_with_location_label(state, graph, quest.id),
+        "goals": [t.name for t in quest.triggers],
+        "summary": quest.summary or "",
     }
 
 
@@ -178,7 +239,9 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
             attrs = edge.attrs or {}
             adjacent_move_difficulty[edge.to_id] = attrs.get("difficulty")
 
-    def add_edge(source: str | None, target: str | None, label: str) -> None:
+    def add_edge(
+        source: str | None, target: str | None, label: str, kind: EdgeKind
+    ) -> None:
         if not source or not target or source == target:
             return
         if source not in nodes or target not in nodes:
@@ -189,11 +252,13 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
             "source": source,
             "target": target,
             "label": label,
+            "kind": kind,
         }
 
     if player is not None and player.id in visible_character_ids:
         nodes[player.id] = _hero_node(state, graph, player)
 
+    adjacent_location_ids = set(adjacent_move_difficulty.keys())
     for location_id, location in state.locations.items():
         if location_id not in visible_location_ids:
             continue
@@ -201,7 +266,9 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
             nodes[location_id] = _place_node(location, state)
         else:
             nodes[location_id] = _location_node(
-                location, adjacent_move_difficulty.get(location_id)
+                location,
+                adjacent_move_difficulty.get(location_id),
+                adjacent=location_id in adjacent_location_ids,
             )
 
     for character_id in visible_character_ids:
@@ -213,33 +280,36 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
         if character_id == state.active_subject_id:
             nodes[character_id] = _subject_node(state, graph, character, player)
         else:
-            nodes[character_id] = _target_node(state, graph, character, player)
+            same_location = location_of(graph, character_id) == player_location_id
+            nodes[character_id] = _target_node(
+                state, graph, character, player, same_location=same_location
+            )
 
     quest_ids = (
         {state.active_quest_id} if state.active_quest_id in state.quests else set()
     )
     for quest_id in quest_ids:
-        nodes[quest_id] = _quest_node(state.quests[quest_id])
+        nodes[quest_id] = _quest_node(state.quests[quest_id], state, graph)
 
-    add_edge(state.player_id, player_location_id, "현재 위치")
-    add_edge(state.player_id, state.active_subject_id, "주시")
-    add_edge(state.player_id, state.active_quest_id, "진행 중")
+    add_edge(state.player_id, player_location_id, "현재 위치", "current_pin")
+    add_edge(state.player_id, state.active_subject_id, "주시", "observe")
+    add_edge(state.player_id, state.active_quest_id, "진행 중", "progress")
 
     for location_id in visible_location_ids:
         for edge in connections_of(graph, location_id):
-            add_edge(location_id, edge.to_id, "이동")
+            add_edge(location_id, edge.to_id, "이동", "move")
 
     for character_id in visible_character_ids:
         if character_id == state.player_id:
             continue
         loc_id = location_of(graph, character_id)
         if loc_id == player_location_id:
-            add_edge(character_id, loc_id, "등장")
+            add_edge(character_id, loc_id, "등장", "meet")
 
     for quest_id in quest_ids:
-        add_edge(giver_of(graph, quest_id), quest_id, "의뢰")
+        add_edge(giver_of(graph, quest_id), quest_id, "의뢰", "quest_giver")
         for target_id in trigger_targets_of(graph, quest_id):
-            add_edge(target_id, quest_id, "목표")
+            add_edge(target_id, quest_id, "목표", "quest_target")
 
     count_by_kind: dict[str, int] = {
         "hero": 0,

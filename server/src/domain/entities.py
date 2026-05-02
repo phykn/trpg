@@ -194,6 +194,7 @@ class Race(BaseModel):
     id: str
     name: str
     description: str
+    playable: bool = True
     racial_skill_ids: list[str] = []
 
 

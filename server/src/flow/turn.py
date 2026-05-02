@@ -46,6 +46,7 @@ from .combat_phase import (
 )
 from .encounter import summon_encounter
 from .clock import tick_turn_buffs
+from .error_phrases import humanize_runtime_error
 from .dirty import (
     Dirty,
     ToFrontFn,
@@ -119,7 +120,13 @@ async def run_turn(
     try:
         result = await run_judge(client, state, player_input, graph=graph)
     except JudgeMalformed as e:
-        yield {"type": "error", "data": {"message": str(e), "code": "JudgeMalformed"}}
+        yield {
+            "type": "error",
+            "data": {
+                "message": humanize_runtime_error(e),
+                "code": "JudgeMalformed",
+            },
+        }
         return
 
     yield {"type": "judge", "data": result.model_dump()}
@@ -166,22 +173,84 @@ _ONE_STEP_EMITS: dict[type, EmitFactory] = {
 }
 
 
+def _drop_pushed_act(state: GameState, dirty: Dirty, entry_id: int | None) -> None:
+    """Remove the act log entry just emitted by `push_act` from both the
+    in-memory state.log_entries tail and the to-flush dirty.log slice.
+
+    Called from `_run_one_step_action` and the chain dispatch when the
+    act line is being absorbed into narrate's prose — without this, a
+    `state` SSE refresh or the per-turn persistence flush would still
+    surface the system-toned line ("주인공이 「X」을 장비했습니다.")
+    next to narrate's body, defeating the absorption.
+    """
+    if entry_id is None:
+        return
+    state.log_entries[:] = [
+        e for e in state.log_entries if getattr(e, "id", None) != entry_id
+    ]
+    dirty.log[:] = [e for e in dirty.log if getattr(e, "id", None) != entry_id]
+
+
 async def _run_one_step_action(
     client: LLMClient,
     state: GameState,
+    scenario_repo: ScenarioRepo,
     save_repo: SaveRepo,
     dirty: Dirty,
     to_front_fn: ToFrontFn | None,
+    player_input: str,
     result,
     emit_factory: EmitFactory,
 ) -> AsyncIterator[dict]:
-    """turn_count++ → run the engine emit → push tail_intent → finalize.
-    The seven one-step actions all follow this template."""
+    """turn_count++ → run the engine emit (act lines absorbed, not streamed)
+    → narrate tail (treats it like a chain's last_pass) → finalize.
+
+    The act log lines emitted by `emit_*` carry engine-side facts ("주인공이
+    「X」을 장비했습니다.", "이미 체력이 가득합니다.") that we don't want
+    surfacing as system-toned chrome — they're persisted to turn_log/history
+    for narrate context but the SSE is suppressed so the client only renders
+    narrate's prose. Narrate then absorbs the same lines via `act_log_lines`
+    so the body reflects whatever the engine actually did."""
     state.turn_count += 1
+    act_log_lines: list[str] = []
     async for ev in emit_factory(client, state, dirty, result):
+        if ev.get("type") == "log_entry":
+            data = ev.get("data") or {}
+            if data.get("kind") == "act":
+                text = data.get("text") or ""
+                if text:
+                    act_log_lines.append(text)
+                # Drop the just-pushed entry from both `state.log_entries`
+                # and `dirty.log` so the next `state` SSE / persistence
+                # flush doesn't resurface it. narrate body now carries the
+                # same fact in prose.
+                _drop_pushed_act(state, dirty, data.get("id"))
+                continue  # suppress SSE — narrate body covers it
         yield ev
     if getattr(result, "tail_intent", None):
-        yield push_act(state, dirty, result.tail_intent)
+        # tail_intent goes into act_log_lines for narrate to absorb but is
+        # not pushed as its own log entry — same suppression as the emit_*
+        # act lines above.
+        act_log_lines.append(result.tail_intent)
+
+    # emit_* mutated state (inventory, equipment, …); rebuild graph so
+    # narrate reads relations from the post-action snapshot.
+    state.invalidate_graph()
+    graph = state.graph()
+    fake_pass = PassAction(action="pass")
+    async for ev in _stream_narrate_tail(
+        client,
+        state,
+        scenario_repo,
+        player_input,
+        dirty,
+        to_front_fn,
+        fake_pass,
+        graph=graph,
+        act_log_lines=act_log_lines,
+    ):
+        yield ev
+
     tick_turn_buffs(state, dirty)
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
@@ -330,7 +399,15 @@ async def _dispatch(
     emit_factory = _ONE_STEP_EMITS.get(type(result))
     if emit_factory is not None:
         async for ev in _run_one_step_action(
-            client, state, save_repo, dirty, to_front_fn, result, emit_factory
+            client,
+            state,
+            scenario_repo,
+            save_repo,
+            dirty,
+            to_front_fn,
+            player_input,
+            result,
+            emit_factory,
         ):
             yield ev
         return
@@ -343,6 +420,9 @@ async def _dispatch(
         # them in prose. Without this, narrate sees only the player_input
         # ("약초 먹고 검 든다") and the final pass; if the heal silently
         # skipped at the engine layer, the body still describes a heal.
+        # The act log SSE itself is suppressed — narrate body covers the
+        # same fact in prose, so two side-by-side renders of the same event
+        # (system-toned line + narrate paragraph) are avoided.
         chain_act_lines: list[str] = []
         for part in result.parts:
             if isinstance(part, PassAction):
@@ -357,27 +437,32 @@ async def _dispatch(
                             text = d.get("text") or ""
                             if text:
                                 chain_act_lines.append(text)
+                            _drop_pushed_act(state, dirty, d.get("id"))
+                            continue  # suppress — narrate body absorbs
                     yield ev
             if getattr(part, "tail_intent", None):
-                yield push_act(state, dirty, part.tail_intent)
-        if last_pass is not None:
-            # chain parts mutated state via emit_*; rebuild graph before narrate
-            # reads relations through it.
-            state.invalidate_graph()
-            graph = state.graph()
-            async for ev in _stream_narrate_tail(
-                client,
-                state,
-                scenario_repo,
-                player_input,
-                dirty,
-                to_front_fn,
-                last_pass,
-                graph=graph,
-                act_log_lines=chain_act_lines,
-                previous_phase_signal=previous_phase_signal,
-            ):
-                yield ev
+                chain_act_lines.append(part.tail_intent)
+        # Always run narrate at chain tail — even when there's no explicit
+        # PassAction part (e.g. chain[use, equip]) the user expects prose.
+        # Synthesize an empty pass so narrate has a target_id-less anchor.
+        narrate_action = last_pass if last_pass is not None else PassAction(action="pass")
+        # chain parts mutated state via emit_*; rebuild graph before narrate
+        # reads relations through it.
+        state.invalidate_graph()
+        graph = state.graph()
+        async for ev in _stream_narrate_tail(
+            client,
+            state,
+            scenario_repo,
+            player_input,
+            dirty,
+            to_front_fn,
+            narrate_action,
+            graph=graph,
+            act_log_lines=chain_act_lines,
+            previous_phase_signal=previous_phase_signal,
+        ):
+            yield ev
         tick_turn_buffs(state, dirty)
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev

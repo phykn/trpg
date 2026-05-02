@@ -1,6 +1,5 @@
 import asyncio
 import os
-import shutil
 from collections.abc import Callable
 from pathlib import Path
 
@@ -289,27 +288,3 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
     )
 
 
-# --- seed copy (for init_game) --------------------------------------------
-
-
-def copy_seed_into_game(
-    profile_dir: str, profile: str, saves_dir: str, game_id: str
-) -> None:
-    """Copy seed entity directories from profile into the game's save dir.
-
-    Skipped: world.md, start.json, player_template.json, profile.json — those
-    stay read-only in the profile.
-    """
-    src_root = Path(profile_dir) / profile
-    if not src_root.is_dir():
-        raise PersistenceFailed(f"profile dir not found: {src_root}")
-    dst_root = _game_dir(saves_dir, game_id)
-    dst_root.mkdir(parents=True, exist_ok=True)
-    for kind in _ENTITY_MODELS:
-        src = src_root / kind
-        if not src.is_dir():
-            continue
-        dst = dst_root / kind
-        dst.mkdir(parents=True, exist_ok=True)
-        for f in src.glob("*.json"):
-            shutil.copy2(f, dst / f.name)

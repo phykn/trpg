@@ -1,7 +1,12 @@
 import json
+import logging
 from collections.abc import AsyncIterator
 
 from fastapi.responses import StreamingResponse
+
+from ..flow.error_phrases import humanize_runtime_error
+
+_log = logging.getLogger(__name__)
 
 
 def sse_pack(event: dict) -> str:
@@ -18,7 +23,17 @@ async def _wrap(events: AsyncIterator[dict]) -> AsyncIterator[bytes]:
         async for ev in events:
             yield sse_pack(ev).encode("utf-8")
     except Exception as e:
-        err = {"type": "error", "data": {"message": str(e), "code": type(e).__name__}}
+        # Log the raw exception for debugging; ship a sanitized Korean
+        # message to the player. Upstream API JSON / English traces never
+        # reach the client.
+        _log.exception("SSE stream raised: %s", e)
+        err = {
+            "type": "error",
+            "data": {
+                "message": humanize_runtime_error(e),
+                "code": type(e).__name__,
+            },
+        }
         yield sse_pack(err).encode("utf-8")
 
 

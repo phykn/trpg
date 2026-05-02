@@ -257,23 +257,6 @@ async def test_load_seed_entities_parses_each_file():
     assert items["sword"].name == "검"
 
 
-async def test_local_profile_path_materializes_and_caches(tmp_path, monkeypatch):
-    repo, fs = make_scenario_repo()
-    fs.objects["default/world.md"] = b"# world"
-    fs.objects["default/profile.json"] = b'{"id":"default","name":"X"}'
-    fs.objects["default/items/sword.json"] = (
-        '{"id":"sword","name":"검","description":"","weight":1.0}'.encode("utf-8")
-    )
-
-    p1 = await repo.local_profile_path("default")
-    assert (p1 / "world.md").read_text() == "# world"
-    assert (p1 / "items" / "sword.json").exists()
-
-    # Second call returns same cached Path (no re-materialize).
-    p2 = await repo.local_profile_path("default")
-    assert p1 == p2
-
-
 async def test_list_profiles_walks_top_level_dirs():
     repo, fs = make_scenario_repo()
     fs.objects["default/profile.json"] = json.dumps(

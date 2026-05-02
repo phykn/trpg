@@ -7,7 +7,7 @@ import type { StoryGraphModel } from '@/presenters/storyGraph';
 import type { Place } from '@/types/domain';
 import type { PanelAction } from '@/types/ui';
 
-import { StoryGraphPanel } from './StoryGraphPanel';
+import { NeighborhoodPanel } from './NeighborhoodPanel';
 
 export function MiniMapPanel({
   graph,
@@ -65,14 +65,13 @@ export function MiniMapPanel({
           </View>
         </View>
       ) : null}
-      <StoryGraphPanel
+      <NeighborhoodPanel
         graph={graph}
         canvasHeight={210}
         accessibilityLabel="미니맵"
         selectedNodeId={selectedNodeId}
         onNodeSelect={setSelectedNodeId}
         onAction={onAction}
-        place={place}
       />
     </View>
   );

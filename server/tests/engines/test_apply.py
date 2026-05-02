@@ -3,6 +3,7 @@ import pytest
 from src.domain.entities import (
     Chapter,
     Character,
+    Connection,
     Item,
     Location,
     Quest,
@@ -16,9 +17,17 @@ from src.rules import RULES
 @pytest.fixture
 def state(fresh_state):
     fresh_state.locations["plaza_01"] = Location(
-        id="plaza_01", name="광장", item_ids=["stone_01"]
+        id="plaza_01",
+        name="광장",
+        item_ids=["stone_01"],
+        connections=[Connection(target_id="gate_01")],
     )
-    fresh_state.locations["gate_01"] = Location(id="gate_01", name="성문")
+    fresh_state.locations["gate_01"] = Location(
+        id="gate_01",
+        name="성문",
+        connections=[Connection(target_id="plaza_01")],
+    )
+    fresh_state.locations["far_keep"] = Location(id="far_keep", name="먼 요새")
     fresh_state.items["stone_01"] = Item(id="stone_01", name="돌")
     fresh_state.items["key_01"] = Item(id="key_01", name="열쇠")
     fresh_state.characters["player_01"] = Character(
@@ -182,6 +191,38 @@ def test_move_valid_and_unknown(state):
         state, [{"type": "move", "target": "player_01", "destination": "nowhere"}]
     )
     assert r["applied"] == 0
+
+
+def test_move_player_rejects_non_adjacent(state):
+    # plaza_01 connects only to gate_01. far_keep is reachable in the world
+    # graph but not from plaza_01 in one hop — narrate must not teleport the
+    # player there even if the LLM emits the move. Engine guard rejects.
+    r = apply_changes(
+        state, [{"type": "move", "target": "player_01", "destination": "far_keep"}]
+    )
+    assert r["applied"] == 0
+    assert state.characters["player_01"].location_id == "plaza_01"
+    assert "not adjacent" in r["rejected"][0]["reason"]
+
+
+def test_move_npc_skips_adjacency_check(state):
+    # NPC moves come from quest hooks / companion follow and aren't gated —
+    # only the player's narrate-emitted moves go through the adjacency check.
+    r = apply_changes(
+        state, [{"type": "move", "target": "guard_01", "destination": "far_keep"}]
+    )
+    assert r["applied"] == 1
+    assert state.characters["guard_01"].location_id == "far_keep"
+
+
+def test_move_player_self_move_idempotent(state):
+    # Same-location move is a no-op (narrate may re-emit on retry); guard
+    # should not reject it as "non-adjacent to itself".
+    r = apply_changes(
+        state, [{"type": "move", "target": "player_01", "destination": "plaza_01"}]
+    )
+    assert r["applied"] == 1
+    assert state.characters["player_01"].location_id == "plaza_01"
 
 
 def test_move_item_between_containers(state):

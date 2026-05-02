@@ -1,8 +1,38 @@
 import React from 'react';
 import { ScrollView, View, Text, Pressable } from 'react-native';
-import { StatRow, InlineParts, InlineNodes, LabeledRow, Row, ExpandGroup } from '@/components/ui';
+import { Expandable, StatRow, InlineParts, InlineNodes, LabeledRow, Row, ExpandGroup, ExpandableTitle } from '@/components/ui';
 import { toneColor } from '@/design/tokens';
-import type { Panel, PanelAction, PanelActions } from '@/types/ui';
+import type { MetaSegment, Panel, PanelAction, PanelActions } from '@/types/ui';
+
+const META_LINE_HEIGHT = 18;
+const META_CLASS = 'font-sans text-caption italic text-right text-fg-muted';
+
+function ExpandableMeta({ segments }: { segments: MetaSegment[] }) {
+  const metaKey = segments.map((s) => `${s.text}|${s.tone ?? ''}`).join('::');
+  const measureText = segments.map((s) => s.text).join('');
+  return (
+    <Expandable
+      contentKey={metaKey}
+      lineHeight={META_LINE_HEIGHT}
+      textClassName={META_CLASS}
+      measureText={measureText}
+    >
+      {segments.map((seg, i) =>
+        seg.tone ? (
+          <Text
+            key={i}
+            className="font-sans-semibold"
+            style={{ color: toneColor[seg.tone] }}
+          >
+            {seg.text}
+          </Text>
+        ) : (
+          <Text key={i}>{seg.text}</Text>
+        ),
+      )}
+    </Expandable>
+  );
+}
 
 function ActionScroller({ group, onAction }: {
   group: PanelActions;
@@ -46,7 +76,7 @@ export function PanelBody({ panel, onAction }: {
     return (
       <View className="px-4 py-10 items-center justify-center" style={{ minHeight: 120 }}>
         <Text className="font-sans text-caption text-fg-subtle">
-          아직 비어 있습니다
+          비어 있음
         </Text>
       </View>
     );
@@ -57,31 +87,10 @@ export function PanelBody({ panel, onAction }: {
   return (
     <View className="px-4 py-3 gap-2.5" style={{ minHeight: 160 }}>
       <View className="flex-row items-center gap-2" style={{ minHeight: 22 }}>
-        <View className="flex-1 min-w-0">
-          <Text numberOfLines={1} className="font-serif-medium text-title text-fg-default">
-            {panel.title}
-          </Text>
-        </View>
+        <ExpandableTitle text={panel.title} />
         {panel.meta && panel.meta.length > 0 && (
           <View className="flex-1 min-w-0">
-            <Text
-              numberOfLines={1}
-              className="font-sans text-caption italic text-right text-fg-muted"
-            >
-              {panel.meta.map((seg, i) =>
-                seg.tone ? (
-                  <Text
-                    key={i}
-                    className="font-sans-semibold"
-                    style={{ color: toneColor[seg.tone] }}
-                  >
-                    {seg.text}
-                  </Text>
-                ) : (
-                  <Text key={i}>{seg.text}</Text>
-                ),
-              )}
-            </Text>
+            <ExpandableMeta segments={panel.meta} />
           </View>
         )}
       </View>

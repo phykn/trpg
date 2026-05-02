@@ -5,7 +5,7 @@ Korean string or static-payload out, no IO."""
 from ..domain.entities import Character, Stats
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph
-from ..ontology.queries import race_of
+from ..ontology.queries import giver_of, location_of, race_of
 
 
 _STAT_LABELS: tuple[tuple[str, str], ...] = (
@@ -52,6 +52,23 @@ def gender_label(char: Character) -> str:
     if char.gender == "female":
         return "여성"
     return ""
+
+
+def giver_with_location_label(state: GameState, graph: GameGraph, quest_id: str) -> str:
+    """`<giver name> (<location name>)` for the quest's giver. Falls back
+    to just the giver name when the giver has no resolvable location, or
+    empty string when the giver itself can't be resolved."""
+    giver_id = giver_of(graph, quest_id)
+    if giver_id is None:
+        return ""
+    giver = state.characters.get(giver_id)
+    if giver is None:
+        return giver_id
+    loc_id = location_of(graph, giver_id)
+    loc = state.locations.get(loc_id) if loc_id is not None else None
+    if loc is None:
+        return giver.name
+    return f"{giver.name} ({loc.name})"
 
 
 # Risk payload mirrors the client's `RiskBadge`: each entry is

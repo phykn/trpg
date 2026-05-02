@@ -47,10 +47,14 @@ def test_apply_move_drags_companions(fresh_state):
     pet = _npc("pet_01", location_id="plaza_01")
     fresh_state.characters["player_01"] = p
     fresh_state.characters["pet_01"] = pet
-    from src.domain.entities import Location
+    from src.domain.entities import Connection, Location
 
-    fresh_state.locations["plaza_01"] = Location(id="plaza_01", name="광장")
-    fresh_state.locations["gate_01"] = Location(id="gate_01", name="성문")
+    fresh_state.locations["plaza_01"] = Location(
+        id="plaza_01", name="광장", connections=[Connection(target_id="gate_01")]
+    )
+    fresh_state.locations["gate_01"] = Location(
+        id="gate_01", name="성문", connections=[Connection(target_id="plaza_01")]
+    )
 
     dirty: set[tuple[str, str]] = set()
     result = apply_changes(

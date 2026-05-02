@@ -1,3 +1,4 @@
+export * from './MapPanel';
 export * from './MiniMapPanel';
-export * from './StoryGraphPanel';
+export * from './NeighborhoodPanel';
 export * from './StoryGraphScreen';

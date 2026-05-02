@@ -16,7 +16,7 @@ import type { StoryGraphModel } from '@/types/storyGraph';
 import type { PanelAction } from '@/types/ui';
 import type { StreamEvent } from '@/types/wire';
 
-import { StoryGraphPanel } from './StoryGraphPanel';
+import { MapPanel } from './MapPanel';
 
 type Status = 'loading' | 'ready' | 'empty' | 'error';
 
@@ -225,7 +225,7 @@ export function StoryGraphScreen({
         ) : null}
 
         {status === 'ready' ? (
-          <StoryGraphPanel
+          <MapPanel
             graph={graph}
             canvasHeight={embedded ? 340 : 430}
             framed={!embedded}
@@ -234,7 +234,6 @@ export function StoryGraphScreen({
             onNodeSelect={setSelectedNodeId}
             onAction={onAction ?? runMapAction}
             actionDisabled={actionRunning}
-            mapView
             place={place}
           />
         ) : null}

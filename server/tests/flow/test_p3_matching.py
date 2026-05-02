@@ -45,6 +45,15 @@ def _judge_returns(monkeypatch, action_obj):
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
     monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
 
+    # Single-action paths now invoke narrate (engine notices get absorbed into
+    # prose). Stub run_narrate so these LLM-free engine tests don't reach the
+    # real model.
+    async def _stub_run_narrate(*a, **kw):
+        if False:
+            yield None  # async-gen marker
+
+    monkeypatch.setattr(turn_mod, "run_narrate", _stub_run_narrate)
+
 
 async def _collect(it):
     return [ev async for ev in it]
@@ -204,12 +213,11 @@ async def test_level_up_natural_language_applies_pair_trade(
     assert p.level == 1
     assert p.stats.STR == 11
     assert p.stats.CHA == 9
-    log_texts = [
-        e["data"]["text"]
-        for e in events
-        if e["type"] == "log_entry" and e["data"].get("kind") == "act"
-    ]
-    assert any("레벨 1" in t for t in log_texts)
+    # The "레벨 1" act log line is no longer surfaced as its own log_entry
+    # SSE — single-action paths absorb engine notices into narrate's prose
+    # via act_log_lines so the UI doesn't show system-toned chrome
+    # alongside the body. Stat / level state above is the authoritative
+    # check that the engine action ran.
 
 
 async def test_level_up_invalid_pair_logs_error(fresh_state, tmp_data, monkeypatch):

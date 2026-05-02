@@ -14,7 +14,6 @@ minimal-but-valid `default` scenario seed (1 race, 1 location, 1 NPC,
 
 from __future__ import annotations
 
-import asyncio
 import json
 from typing import Any
 
@@ -154,10 +153,8 @@ def make_scenario_repo(
     repo = SupabaseStorageScenarioRepo.__new__(SupabaseStorageScenarioRepo)
     fs = fs or FakeStorage()
     repo._fs = fs  # type: ignore[attr-defined]
-    repo._world_cache = {}  # type: ignore[attr-defined]
-    repo._tempdir_cache = {}  # type: ignore[attr-defined]
-    repo._tempdir_handles = []  # type: ignore[attr-defined]
-    repo._lock = asyncio.Lock()  # type: ignore[attr-defined]
+    repo._object_cache = {}  # type: ignore[attr-defined]
+    repo._listing_cache = {}  # type: ignore[attr-defined]
     return repo, fs
 
 

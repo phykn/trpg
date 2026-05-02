@@ -1,3 +1,4 @@
+import React from 'react';
 import { ActivityIndicator, Text } from 'react-native';
 
 import { CenterMessage, ErrorState } from '@/components/ui';
@@ -7,6 +8,34 @@ import { useGame } from '@/hooks/useGame';
 import { NewGame } from './new-game';
 import { Playing } from './Playing';
 
+const LOADING_MESSAGES = [
+  '세계 펼치는 중',
+  '모닥불 지피는 중',
+  '지도에 잉크 묻히는 중',
+  '별빛 살피는 중',
+  '이야기의 첫 줄 적는 중',
+];
+
+const ROTATION_MS = 5000;
+
+function LoadingMessage() {
+  const [idx, setIdx] = React.useState(0);
+  React.useEffect(() => {
+    const id = setInterval(() => {
+      setIdx((i) => (i + 1) % LOADING_MESSAGES.length);
+    }, ROTATION_MS);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <Text
+      className="font-sans-semibold text-panel text-fg-muted"
+      style={{ letterSpacing: 1.2 }}
+    >
+      {LOADING_MESSAGES[idx]}
+    </Text>
+  );
+}
+
 export function Shell() {
   const game = useGame();
 
@@ -14,12 +43,7 @@ export function Shell() {
     return (
       <CenterMessage>
         <ActivityIndicator color={colors.accent.fg} />
-        <Text
-          className="font-sans-semibold text-meta text-fg-subtle"
-          style={{ letterSpacing: 1.2 }}
-        >
-          불러오는 중
-        </Text>
+        <LoadingMessage />
       </CenterMessage>
     );
   }

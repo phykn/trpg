@@ -9,7 +9,6 @@ paths) and `supabase.py` (running server, both APP_ENV=dev and =release).
 `factory.py` builds the Supabase pair unconditionally.
 """
 
-from pathlib import Path
 from typing import Protocol, Type, TypeVar
 
 from pydantic import BaseModel
@@ -64,12 +63,3 @@ class ScenarioRepo(Protocol):
     async def load_seed_entities(
         self, profile: str, kind: str, model_cls: Type[T]
     ) -> dict[str, T]: ...
-
-    async def local_profile_path(self, profile: str) -> Path:
-        """Return a filesystem path to the profile dir.
-
-        LocalFs returns the actual path. Supabase materializes seed to a temp
-        dir lazily and caches it. Used by `engines/invariants.Scenario.from_dir`
-        which needs a real filesystem tree to walk.
-        """
-        ...

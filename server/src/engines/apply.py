@@ -131,11 +131,27 @@ def _apply_move(
     from .quest import (
         check_quests,
     )  # deferred import — keeps the cross-layer boundary clean
+    from ..ontology.queries import connections_of
 
     if c.target not in state.characters:
         raise _StateChangeError(f"unknown character: {c.target!r}")
     if c.destination not in state.locations:
         raise _StateChangeError(f"unknown location: {c.destination!r}")
+    # Adjacency gate — only the player's own move is gated (NPC moves come
+    # from quest hooks / companion follow and are trusted). A no-op self-move
+    # (destination == current location) is idempotent and skipped. If the
+    # current location_id is None (init edge case) the gate is skipped so the
+    # first move from nowhere can still land.
+    if c.target == state.player_id:
+        current_loc_id = state.characters[c.target].location_id
+        if current_loc_id is not None and c.destination != current_loc_id:
+            graph = state.graph()
+            reachable = {edge.to_id for edge in connections_of(graph, current_loc_id)}
+            if c.destination not in reachable:
+                raise _StateChangeError(
+                    f"destination {c.destination!r} is not adjacent to current "
+                    f"location {current_loc_id!r}. Reachable: {sorted(reachable)}."
+                )
     state.characters[c.target].location_id = c.destination
     if dirty is not None:
         dirty.add(("characters", c.target))

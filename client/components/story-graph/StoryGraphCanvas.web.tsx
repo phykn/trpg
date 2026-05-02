@@ -108,7 +108,7 @@ export function StoryGraphCanvas({
     const cy = cytoscape({
       container,
       elements: toElements(graph, nodeOverrides, boxNodes && layout === 'cose'),
-      autoungrabify: boxNodes,
+      autoungrabify: true,
       hideEdgesOnViewport: true,
       minZoom: 0.55,
       maxZoom: 1.8,

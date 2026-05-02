@@ -16,7 +16,6 @@ from ..ontology.queries import (
     companions_of,
     connections_of,
     equipment_of,
-    giver_of,
     inhabitants_of,
     inventory_of,
     known_skills_of,
@@ -26,6 +25,7 @@ from .labels import (
     RISK_PAYLOAD,
     difficulty_badge,
     gender_label,
+    giver_with_location_label,
     race_job_label,
     stat_label,
     stats_payload,
@@ -113,6 +113,7 @@ def to_hero(state: GameState, graph: GameGraph | None = None) -> dict:
     skills = _skill_names(state, graph, p.id)
     return {
         "name": p.name,
+        "alive": p.alive,
         "raceJob": race_job_label(state, graph, p),
         "gender": gender_label(p),
         "level": p.level,
@@ -149,14 +150,12 @@ def to_subject(state: GameState, graph: GameGraph | None = None) -> dict | None:
         return None
     s = state.characters[sid]
     player = state.characters[state.player_id]
-    if not s.alive:
-        known = ["죽음"]
-    else:
-        known = [s.appearance] if s.appearance else []
-        known += [m.content for m in player.memories if m.target_id == sid]
+    known = [s.appearance] if s.appearance else []
+    known += [m.content for m in player.memories if m.target_id == sid]
     skills = _skill_names(state, graph, s.id)
     return {
         "name": s.name,
+        "alive": s.alive,
         "role": s.role,
         "raceJob": race_job_label(state, graph, s),
         "gender": gender_label(s),
@@ -184,11 +183,7 @@ def to_quest(state: GameState, graph: GameGraph | None = None) -> dict | None:
     if qid not in state.quests:
         return None
     q: Quest = state.quests[qid]
-    giver_name = qid  # fallback to id
-    giver_id = giver_of(graph, qid)
-    if giver_id is not None:
-        giver = state.characters.get(giver_id)
-        giver_name = giver.name if giver is not None else giver_id
+    giver_name = giver_with_location_label(state, graph, qid) or qid
     # quest.triggers' display name is a per-trigger label — that's an
     # entity attribute on the trigger object (no relational scan), so read
     # the goals straight from the trigger names.

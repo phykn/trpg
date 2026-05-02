@@ -36,7 +36,7 @@ Input fields (in `surroundings`):
 | 11 | sell | `{"action":"sell","npc_id":"<id>","item_id":"<id>"}` | Merchant + item in `inventory` + not equipped. |
 | 12 | roll | `{"action":"roll","tier":"<KR>","stat":"<STAT>","targets":["<id>"],"reason":"<KR>"}` | Active resistance: persuade, lie, intimidate, haggle, sneak, pick lock, climb, search. |
 | 13 | pass | `{"action":"pass","targets":["<id>"]}` (targets optional) | Valid in-character action — no check needed (greeting, casual look, idle, **NPC에게 다가가기·말 걸기**), or **fallback for unresolved input** (vague verb, blocked engine condition, target/scene mismatch). NPC를 향한 행동이면 `targets`에 그 id 넣기 (§ targets rule). narrate가 in-world로 흡수. |
-| 14 | chain | `{"action":"chain","parts":[<sub-action>, <sub-action>, ...]}` | Compound 입력에서 **두 이상의 engine 분기**가 모두 실제로 일어나야 할 때 ("약초 먹고 검을 든다" = use+equip, "검 들고 광장 상인에게 다가간다" = equip+pass). parts는 2~4개. 각 part는 `use`/`equip`/`unequip`/`buy`/`sell`/`level_up`/`learn_skill`/`pass` 중 하나 (combat·rest·flee·roll·reject·summon_combat은 chain 금지 — phase 충돌). 같은 분기 내 chain("뒤져서 연다" = 단일 roll)은 chain 아니라 단일 action 그대로. |
+| 14 | chain | `{"action":"chain","parts":[<sub-action>, <sub-action>, ...]}` | Compound 입력에서 **engine action + 별개 의도**가 함께 들어 있을 때 ("약초 먹고 검을 든다" = use+equip, "검 들고 광장 상인에게 다가간다" = equip+pass, "**검을 꺼내 경계하며 전진한다**" = equip+pass). parts는 2~4개. 각 part는 `use`/`equip`/`unequip`/`buy`/`sell`/`level_up`/`learn_skill`/`pass` 중 하나 (combat·rest·flee·roll·reject·summon_combat은 chain 금지 — phase 충돌). 같은 분기 내 chain("뒤져서 연다" = 단일 roll)은 chain 아니라 단일 action 그대로. **두 번째 동사가 호명 없는 일상 pass(전진한다·둘러본다·한숨 돌린다·자세를 가다듬는다·기다린다)도 chain part로 묶어라** — 단일 engine action으로 떨구면 narrate가 호출 안 되고 그 두 번째 의도가 본문에 영영 안 들어간다. fluff 분위기 어휘만 따라 붙은 경우(예: "검을 든다 (조심스레)")는 chain 아님 — 별개 동사가 있을 때만. |
 
 **Boundaries**:
 
@@ -56,6 +56,14 @@ semantics 검증이 backstop으로 friendly NPC·location id·player·item을 co
 **Scene prop rule**: 무생물 환경 요소(분수·동상·문·창문·책상·나무·벽 등)는 `entities`에 없어도 묘사·분위기로 등장한 prop으로 받는다. 능력 판정이 필요한 행동(부수기/오르기/뒤지기/면밀 관찰) → `roll`(STR/DEX/WIS), `targets:[location.id]`, `reason`에 prop 이름. 가벼운 상호작용(만지기, 두드리기, 동전 던지기) → `pass`. 명명된 character/item이 `entities`에 없으면 § Fallback rules § targets로 떨어짐.
 
 **Corpse rule**: `player_input`이 `surroundings.corpses`의 NPC를 호명 → `{"action":"pass","targets":["<corpse_id>"]}`. combat/roll/buy/sell 금지. narrate가 `target_view.alive==false` 신호로 시체 톤 처리.
+
+**Movement rule**: `player_input`이 다른 장소로의 **이동 의도**(이동/간다/향한다/들어간다/돌아간다/나간다/오른다 + 장소 이름)면, narrate가 본문에서 도착 묘사 + `move` state_change를 만들 수 있게 judge가 location id를 `targets[0]`에 넣어 준다. 분기:
+
+- **인접 매칭**: 호명된 장소가 `surroundings.entities` 중 `type:"connection"` entry의 `name`/`id`와 매칭(부분 일치/동의어 OK) → `{"action":"pass","targets":["<connection_id>"]}`. 길이 험하면(밤·짙은 안개·잠긴 문 등 friction 명시) `{"action":"roll","tier":"...","stat":"DEX|WIS|STR","targets":["<connection_id>"],"reason":"..."}`.
+- **인접 매칭 실패**(이름은 호명됐는데 connection entries에 없음 — 한 hop 너머거나, 시드에 없는 장소): `{"action":"pass","targets":["<location.id>"]}` — narrate가 "그곳까지는 한 번에 갈 수 없습니다", "안개 속에 길을 잃습니다" 톤으로 흡수하며 player를 현재 위치에 둔다. **인접하지 않은 location id를 `targets`에 넣지 마라** — engine 가드가 거절한다.
+- **호명 없이 단순 "이동" / "걷는다"** (방향만): `{"action":"pass"}` (targets 없음 — narrate가 같은 자리에서 둘러보는 묘사로 흡수).
+
+같은 장소 안의 prop·NPC를 향한 "다가간다"는 이동이 아니라 § targets rule의 "대인 행동"으로 처리 (`pass.targets=[NPC id]`).
 
 ## Rules
 
@@ -129,6 +137,9 @@ semantics 검증이 backstop으로 friendly NPC·location id·player·item을 co
 | 방을 뒤져 상자를 찾아 연다 | `{"action":"roll","tier":"쉬움","stat":"DEX","targets":["<loc_id>"],"reason":"방을 뒤져 상자를 열려 함"}` |
 | 약초를 먹고 검을 든다 | `{"action":"chain","parts":[{"action":"use","item_id":"herb_01"},{"action":"equip","item_id":"sword_01"}]}` |
 | 검 들고 광장 상인에게 다가간다 | `{"action":"chain","parts":[{"action":"equip","item_id":"sword_01"},{"action":"pass","targets":["merchant_01"]}]}` |
+| 검을 꺼내 경계하며 전진한다 | `{"action":"chain","parts":[{"action":"equip","item_id":"sword_01"},{"action":"pass"}]}` (두 번째 동사가 호명 없는 환경 pass — chain으로 묶어 narrate가 "검을 쥐고 한 발 내딛는다"로 본문 흡수) |
+| 약초를 마시고 한숨 돌린다 | `{"action":"chain","parts":[{"action":"use","item_id":"herb_01"},{"action":"pass"}]}` (두 번째 동사가 idle pass — chain으로 묶어 narrate가 흡수) |
+| 단검을 들고 광장을 둘러본다 | `{"action":"chain","parts":[{"action":"equip","item_id":"dagger_01"},{"action":"pass"}]}` (관찰 pass도 chain part로 OK) |
 | 검을 꺼내 상인을 친다 | `{"action":"equip","item_id":"sword_01"}` (chain `[equip, combat]` 금지 — combat은 phase-changing. narrate가 "겨누어 든다"로 두 번째 의도 흡수) |
 | 약초 마시고 상인을 설득한다 | `{"action":"use","item_id":"herb_01"}` (chain `[use, roll]` 금지 — roll은 phase-changing. narrate가 "한 모금 삼키며 말을 건넨다"로 흡수) |
 | 훈련사에게 보상을 묻는다 | `{"action":"roll","tier":"쉬움","stat":"CHA","targets":["trainer_01"],"reason":"보상 액수를 물어봄"}` |
@@ -221,6 +232,17 @@ Scene prop (`entities`에 없어도 통과 — 묘사로만 등장한 무생물;
 | 동상을 자세히 살핀다 | `{"action":"roll","tier":"쉬움","stat":"WIS","targets":["<loc_id>"],"reason":"동상의 새김을 관찰함"}` |
 | 분수에 동전을 던진다 | `{"action":"pass"}` |
 | 책상을 두드린다 | `{"action":"pass"}` |
+
+Movement (현재 약초원, `entities` 안에 `connection` entries `[{id:"isnar_square",name:"이스나르 광장"}, {id:"mist_forest_edge",name:"안개숲 어귀"}]`):
+
+| Input | Output |
+|---|---|
+| 광장으로 돌아간다 | `{"action":"pass","targets":["isnar_square"]}` |
+| 안개숲 어귀로 향한다 | `{"action":"pass","targets":["mist_forest_edge"]}` |
+| 안개숲으로 들어가서 적을 찾는다 | `{"action":"pass","targets":["mist_forest_edge"]}` (이동 의도 우선 — narrate가 도착 후 정황 묘사로 흡수) |
+| 안개를 헤치며 조심스럽게 안개숲 어귀로 향한다 | `{"action":"roll","tier":"보통","stat":"WIS","targets":["mist_forest_edge"],"reason":"안개를 헤치며 안개숲 어귀로 향함"}` (friction 명시) |
+| 흑탑 1층으로 들어간다 (connection 아님 — 인접 X) | `{"action":"pass","targets":["<현재 loc.id>"]}` (narrate가 "그곳까지는 한 번에 갈 수 없습니다" 흡수) |
+| 마을을 떠난다 (방향만, 매칭 location 없음) | `{"action":"pass"}` |
 
 ## Forbidden
 

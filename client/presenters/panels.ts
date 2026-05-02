@@ -13,13 +13,22 @@ function plainMeta(text: string): MetaSegment[] {
   return [{ text }];
 }
 
+// Match strictly on `alive === false` (not `!alive`) so a missing or
+// undefined field doesn't get treated as dead. Some SSE state events
+// emit the alive field, others have not been audited yet; the safer
+// default is to render the plain name unless the server explicitly
+// says the character is dead.
+function withDeath(name: string, alive: boolean | undefined): string {
+  return alive === false ? `${name} (죽음)` : name;
+}
+
 function buildHeroSlot(hero: Hero): PanelSlot {
   const equipped = Object.values(hero.equipment).filter((it): it is EquipItem => it !== null);
   return {
     id: 'hero',
     chip: { short: hero.name, dot: hero.canLevelUp },
     panel: {
-      title: hero.name,
+      title: withDeath(hero.name, hero.alive),
       meta: plainMeta(characterMeta(hero.level, hero.raceJob, hero.gender)),
       barSplit: [
         { label: 'HP', value: hero.hp, max: hero.hpMax, tone: 'hp', display: `${hero.hp}/${hero.hpMax}` },
@@ -50,7 +59,7 @@ function buildSubjectSlot(subject: Subject | null): PanelSlot {
     id: 'person',
     chip: { short: '대상' },
     panel: {
-      title: subject.name,
+      title: withDeath(subject.name, subject.alive),
       meta: plainMeta(characterMeta(subject.level, subject.raceJob, subject.gender)),
       barSplit: [
         { label: 'HP', value: subject.hp, max: subject.hpMax, tone: 'hp', display: `${subject.hp}/${subject.hpMax}` },

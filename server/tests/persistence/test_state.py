@@ -224,7 +224,7 @@ async def test_init_game_happy_path(tmp_data):
     assert (gdir / "meta.json").exists()
     assert (gdir / "characters" / "player_01.json").exists()
     assert (gdir / "races" / "human.json").exists()
-    assert (gdir / "locations" / "plaza.json").exists()
+    assert (gdir / "locations" / "plaza_01.json").exists()
 
     # Round-trip via reload.
     reloaded = load_game(saves_dir, state.game_id)

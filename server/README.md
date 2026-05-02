@@ -8,7 +8,7 @@ Design notes start at `../docs/01-overview.md`; the per-turn flow is in `../docs
 
 - Python 3.12+, Pydantic v2, FastAPI, uvicorn, httpx, async/await
 - OpenAI-compatible LLM via `LLM_ROUTE_<AGENT> = <provider>/<model>` (llama.cpp local or Gemini hosted; provider blocks in `.env.llama_cpp` / `.env.google` layered on top of `.env.<APP_ENV>`)
-- **Supabase Postgres + Storage** for saves + scenarios. Schema: `migrations/001_init.sql`. Both `APP_ENV=dev` and `APP_ENV=release` go through the Supabase adapters; tests bypass the factory and use `LocalFsSaveRepo` / `LocalFsScenarioRepo` against `tmp_path`.
+- **Supabase Postgres + Storage** for saves + scenarios. Both `APP_ENV=dev` and `APP_ENV=release` go through the Supabase adapters; tests bypass the factory and use `LocalFsSaveRepo` / `LocalFsScenarioRepo` against `tmp_path`.
 - Single process. Per-turn flush order is entity upserts + jsonl appends → `games.meta` last, so a crash mid-flush is recoverable on reload via `next_log_id` self-heal.
 
 ## Setup
@@ -20,7 +20,7 @@ python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-Apply the schema once per Supabase project (Supabase SQL editor or `psql $DATABASE_URL -f migrations/001_init.sql`), create a Storage bucket for scenarios, and upload a profile tree:
+Apply the schema once per Supabase project via the dashboard SQL editor, create a Storage bucket for scenarios, and upload a profile tree:
 
 ```bash
 cd server && ../.venv/bin/python scripts/upload_scenarios.py ../scenarios/<profile>
@@ -87,7 +87,6 @@ RUN_LIVE=1 .venv/bin/python -m pytest -q        # requires a live LLM
 server/
   run_api.py                       # entrypoint
   .env.dev                         # required for local dev (.env.release for prod), gitignored
-  migrations/001_init.sql          # Supabase schema (apply once per project)
   scripts/                         # one-off tools (upload_scenarios.py, judge_stress.py, ...)
   src/                             # code (layer breakdown in docs/05-codemap.md)
   tests/                           # pytest

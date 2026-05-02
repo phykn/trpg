@@ -37,6 +37,16 @@ def _judge_returns(monkeypatch, action_obj):
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
     monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
 
+    # Single-action paths now invoke narrate (so engine notices like
+    # "주인공이 「검」을 장비했습니다." get absorbed into prose instead of
+    # surfacing as system-toned chrome). Stub it out so these LLM-free
+    # engine matching tests don't try to call the real model.
+    async def _stub_run_narrate(*a, **kw):
+        if False:
+            yield None  # async-gen marker — never reached
+
+    monkeypatch.setattr(turn_mod, "run_narrate", _stub_run_narrate)
+
 
 async def _collect(it):
     return [ev async for ev in it]

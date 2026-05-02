@@ -138,10 +138,7 @@ function SuggestionChips({
           ]}
         >
           <Glyph kind="outline" tone="accent" size={10} />
-          <Text
-            className="font-sans text-title text-fg-default flex-1"
-            numberOfLines={1}
-          >
+          <Text className="font-sans text-title text-fg-default flex-1">
             {text}
           </Text>
         </Pressable>

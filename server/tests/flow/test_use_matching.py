@@ -37,6 +37,14 @@ def _judge_returns(monkeypatch, action_obj):
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
     monkeypatch.setattr(combat_phase_mod, "run_judge", fake_judge)
 
+    # Single-action paths now invoke narrate. Stub it so this LLM-free test
+    # doesn't reach the real model.
+    async def _stub_run_narrate(*a, **kw):
+        if False:
+            yield None  # async-gen marker
+
+    monkeypatch.setattr(turn_mod, "run_narrate", _stub_run_narrate)
+
 
 async def _collect(it):
     return [ev async for ev in it]

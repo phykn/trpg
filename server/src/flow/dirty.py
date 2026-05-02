@@ -137,9 +137,14 @@ async def finalize(
     try:
         await flush(state, save_repo, dirty)
     except PersistenceFailed as e:
+        from .error_phrases import humanize_runtime_error
+
         yield {
             "type": "error",
-            "data": {"message": str(e), "code": "PersistenceFailed"},
+            "data": {
+                "message": humanize_runtime_error(e),
+                "code": "PersistenceFailed",
+            },
         }
         return
     if to_front_fn:

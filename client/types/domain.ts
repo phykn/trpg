@@ -27,6 +27,7 @@ export type Equipment = {
 
 export type Hero = {
   name: string;
+  alive: boolean;
   raceJob: string;
   gender: string;
   level: number;
@@ -47,6 +48,7 @@ export type Hero = {
 
 export type Subject = {
   name: string;
+  alive: boolean;
   raceJob: string;
   gender: string;
   role: string;

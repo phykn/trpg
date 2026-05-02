@@ -173,12 +173,16 @@ def test_subject_known_filters_by_target_id(fresh_state):
     assert s["gender"] == "남성"
 
 
-def test_subject_dead_known_marked_as_death(fresh_state):
+def test_subject_dead_exposed_via_alive_field(fresh_state):
+    """Dead subjects no longer hijack the `known` list with a "죽음" string —
+    the client reads `alive=False` and renders the death marker (e.g. "(죽음)"
+    next to the name) on its own. `known` keeps appearance + memories as-is."""
     state = _full_state(fresh_state)
     state.characters["guard_01"].alive = False
     state.characters["guard_01"].hp = 0
     s = to_subject(state)
-    assert s["known"] == ["죽음"]
+    assert s["alive"] is False
+    assert s["known"] == ["갑옷의 중년", "뇌물 줘서 통과"]
 
 
 def test_quest_difficulty_label(fresh_state):
@@ -311,29 +315,42 @@ def test_story_graph_projects_current_map_and_actions(fresh_state):
     out = to_story_graph(state)
     nodes = {node["id"]: node for node in out["nodes"]}
     edges = {(edge["source"], edge["target"], edge["label"]) for edge in out["edges"]}
+    edge_kinds = {(edge["source"], edge["target"]): edge["kind"] for edge in out["edges"]}
 
     assert nodes["player_01"]["kind"] == "hero"
+    assert nodes["player_01"]["status"] is None
+    assert nodes["player_01"]["reachable"] is True
     assert isinstance(nodes["player_01"]["level"], int)
     assert nodes["plaza_01"] == {
         "id": "plaza_01",
         "kind": "place",
         "label": "광장",
+        "status": "current",
+        "reachable": True,
         "description": "",
         "risk": {"label": "안전", "tone": "good"},
         "dayPhase": "새벽",
         "weather": ["맑음"],
     }
     assert nodes["gate_01"]["kind"] == "location"
+    assert nodes["gate_01"]["status"] == "reachable_move"
+    assert nodes["gate_01"]["reachable"] is True
     assert nodes["gate_01"]["risk"] == {"label": "안전", "tone": "good"}
     assert nodes["guard_01"]["kind"] == "subject"
+    assert nodes["guard_01"]["status"] == "engaged"
     assert nodes["guard_01"]["raceJob"]
     assert nodes["q1"]["kind"] == "quest"
+    assert nodes["q1"]["status"] is None
     assert nodes["q1"]["questDifficulty"]
 
     assert ("player_01", "plaza_01", "현재 위치") in edges
     assert ("plaza_01", "gate_01", "이동") in edges
     assert ("guard_01", "plaza_01", "등장") in edges
     assert ("guard_01", "q1", "의뢰") in edges
+    assert edge_kinds[("player_01", "plaza_01")] == "current_pin"
+    assert edge_kinds[("plaza_01", "gate_01")] == "move"
+    assert edge_kinds[("guard_01", "plaza_01")] == "meet"
+    assert edge_kinds[("guard_01", "q1")] == "quest_giver"
     assert out["summary"] == "주인공 · 현재 위치 광장 · 퀘스트 t · 등장인물 2 · 장소 2"
 
 

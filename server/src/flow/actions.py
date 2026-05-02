@@ -40,7 +40,7 @@ from .dirty import (
     push_turn_log,
     register_kill,
 )
-from .error_phrases import humanize_engine_error
+from .error_phrases import humanize_engine_error, humanize_runtime_error
 from .format import format_use_log
 from .skill_recommend import recommend_skill_candidates
 
@@ -396,7 +396,10 @@ async def emit_roll_pending(
     except PersistenceFailed as e:
         yield {
             "type": "error",
-            "data": {"message": str(e), "code": "PersistenceFailed"},
+            "data": {
+                "message": humanize_runtime_error(e),
+                "code": "PersistenceFailed",
+            },
         }
         return
     yield {

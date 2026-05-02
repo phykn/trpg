@@ -1,3 +1,4 @@
+import asyncio
 import secrets
 from datetime import datetime, timezone
 from typing import Literal
@@ -38,37 +39,56 @@ async def init_game(
     if not await scenario_repo.profile_exists(profile_name):
         raise ProfileNotFound(profile_name)
 
-    pdir = await scenario_repo.local_profile_path(profile_name)
-    seed_violations = check_scenario(Scenario.from_dir(pdir))
+    (
+        races,
+        locations,
+        items,
+        skills,
+        npcs,
+        quests,
+        chapters,
+        campaigns,
+        start,
+        template,
+    ) = await asyncio.gather(
+        scenario_repo.load_seed_entities(profile_name, "races", Race),
+        scenario_repo.load_seed_entities(profile_name, "locations", Location),
+        scenario_repo.load_seed_entities(profile_name, "items", Item),
+        scenario_repo.load_seed_entities(profile_name, "skills", SkillModel),
+        scenario_repo.load_seed_entities(profile_name, "characters", Character),
+        scenario_repo.load_seed_entities(profile_name, "quests", Quest),
+        scenario_repo.load_seed_entities(profile_name, "chapters", Chapter),
+        scenario_repo.load_seed_entities(profile_name, "campaigns", Campaign),
+        scenario_repo.read_start_json(profile_name),
+        scenario_repo.read_player_template(profile_name),
+    )
+
+    seed_violations = check_scenario(
+        Scenario(
+            races=races,
+            locations=locations,
+            items=items,
+            skills=skills,
+            characters=npcs,
+            quests=quests,
+            chapters=chapters,
+            start=start,
+            player_template=template,
+        )
+    )
     if seed_violations:
         raise ProfileMalformed(
             f"profile {profile_name!r} invariant violations:\n"
             + "\n".join(seed_violations)
         )
 
-    races = await scenario_repo.load_seed_entities(profile_name, "races", Race)
     if player.race_id not in races:
         raise RaceNotFound(player.race_id)
 
-    locations = await scenario_repo.load_seed_entities(
-        profile_name, "locations", Location
-    )
-    items = await scenario_repo.load_seed_entities(profile_name, "items", Item)
-    skills = await scenario_repo.load_seed_entities(profile_name, "skills", SkillModel)
-    npcs = await scenario_repo.load_seed_entities(profile_name, "characters", Character)
-    quests = await scenario_repo.load_seed_entities(profile_name, "quests", Quest)
-    chapters = await scenario_repo.load_seed_entities(profile_name, "chapters", Chapter)
-    campaigns = await scenario_repo.load_seed_entities(
-        profile_name, "campaigns", Campaign
-    )
-
-    start = await scenario_repo.read_start_json(profile_name)
-    template = await scenario_repo.read_player_template(profile_name)
-
     # start.json / player_template integrity is already covered by
-    # `check_scenario(Scenario.from_dir(pdir))` above (start_location_id,
-    # active_subject_id alive + colocated, active_quest_id status, etc.).
-    # Anything that gets here is well-formed.
+    # `check_scenario(...)` above (start_location_id, active_subject_id alive
+    # + colocated, active_quest_id status, etc.). Anything that gets here is
+    # well-formed.
     player_id = template.get("id", "player_01")
     template_equipment = Equipment.model_validate(template.get("equipment", {}))
     template_inventory = list(template.get("inventory_ids", []))

@@ -55,13 +55,18 @@ class LocalFsSaveRepo:
     async def copy_seed_into_game(
         self, scenario_repo: ScenarioRepo, profile: str, game_id: str
     ) -> None:
-        # ScenarioRepo's local_profile_path returns the on-disk root for
-        # local-fs scenarios. store.copy_seed_into_game still wants a string
-        # (profile_dir, profile) pair, so we recover the parent dir here.
-        profile_path = await scenario_repo.local_profile_path(profile)
-        store.copy_seed_into_game(
-            str(profile_path.parent), profile, self.saves_dir, game_id
-        )
+        game_root = store._game_dir(self.saves_dir, game_id)
+        game_root.mkdir(parents=True, exist_ok=True)
+        for kind, model_cls in store._ENTITY_MODELS.items():
+            seed = await scenario_repo.load_seed_entities(profile, kind, model_cls)
+            if not seed:
+                continue
+            kind_dir = game_root / kind
+            kind_dir.mkdir(parents=True, exist_ok=True)
+            for ent_id, obj in seed.items():
+                (kind_dir / f"{ent_id}.json").write_text(
+                    obj.model_dump_json(), encoding="utf-8"
+                )
 
 
 class LocalFsScenarioRepo:
@@ -91,6 +96,8 @@ class LocalFsScenarioRepo:
             if races_dir.is_dir():
                 for rf in sorted(races_dir.glob("*.json")):
                     rd = json.loads(rf.read_text(encoding="utf-8"))
+                    if rd.get("playable", True) is False:
+                        continue
                     races.append(
                         {
                             "id": rd.get("id"),
@@ -137,6 +144,3 @@ class LocalFsScenarioRepo:
             # Skill, Chapter, Campaign) — enforced by Pydantic schemas.
             result[obj.id] = obj  # type: ignore[attr-defined]
         return result
-
-    async def local_profile_path(self, profile: str) -> Path:
-        return self._root(profile)
