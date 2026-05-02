@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, Pressable, FlatList, Animated, Easing, Keyboard } from 'react-native';
-import { colors, spacing } from '@/design/tokens';
-import type { LogEntry } from '@/types/ui';
 import { Glyph } from '@/components/ui';
+import { colors, spacing } from '@/design/tokens';
+
 import { LogItem } from './LogItem';
+import type { LogEntry } from './types';
 
 function Pulse({ color }: { color: string }) {
   const anim = React.useRef(new Animated.Value(1)).current;

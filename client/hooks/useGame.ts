@@ -16,6 +16,7 @@ import {
   streamTurn,
 } from '@/services';
 import type { CombatBadge } from '@/features/combat';
+import type { LogEntry } from '@/features/log';
 import type {
   FrontState,
   Hero,
@@ -23,7 +24,6 @@ import type {
   Quest,
   Subject,
 } from '@/types/domain';
-import type { LogEntry } from '@/types/ui';
 import type { InitRequest, PendingCheck, StreamEvent } from '@/types/wire';
 
 import { handleStreamEvent } from './handleStreamEvent';

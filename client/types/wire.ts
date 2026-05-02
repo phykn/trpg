@@ -1,5 +1,6 @@
+import type { LogEntry } from '@/features/log';
+
 import type { FrontState } from './domain';
-import type { LogEntry } from './ui';
 
 export type PendingCheck = {
   kind: 'stat';

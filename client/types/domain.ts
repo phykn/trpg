@@ -1,6 +1,7 @@
 import type { CombatBadge } from '@/features/combat';
+import type { LogEntry } from '@/features/log';
 import type { StoryGraphModel } from '@/features/story-graph';
-import type { LogEntry, Tone } from './ui';
+import type { Tone } from './ui';
 import type { PendingCheck } from './wire';
 
 export type RiskBadge = { label: string; tone: Tone };

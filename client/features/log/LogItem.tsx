@@ -3,9 +3,9 @@ import { Animated, Text, View } from 'react-native';
 import { Glyph } from '@/components/ui';
 import { colors, shadow, spacing } from '@/design/tokens';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
-import type { LogEntry } from '@/types/ui';
 
 import { RollResult } from './RollResult';
+import type { LogEntry } from './types';
 
 export function LogItem({ entry }: { entry: LogEntry }) {
   switch (entry.kind) {

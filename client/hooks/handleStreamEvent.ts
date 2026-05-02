@@ -1,5 +1,5 @@
+import type { LogEntry } from '@/features/log';
 import type { FrontState } from '@/types/domain';
-import type { LogEntry } from '@/types/ui';
 import type { PendingCheck, StreamEvent } from '@/types/wire';
 
 export type StreamHandlers = {

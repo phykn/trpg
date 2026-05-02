@@ -3,6 +3,7 @@ import React from 'react';
 import { Keyboard, Pressable, Text, View } from 'react-native';
 
 import { CombatStrip } from '@/features/combat';
+import { Log } from '@/features/log';
 import { useStoryGraph } from '@/features/story-graph';
 import type { Game } from '@/hooks/useGame';
 import { buildPanelSlots } from '@/presenters';
@@ -11,7 +12,6 @@ import type { PanelAction, PanelSlot } from '@/types/ui';
 import { Composer, RollPrompt } from './composer';
 import { ContextCard } from './header';
 import { HeroStrip } from './hero';
-import { Log } from './log';
 import { ConfirmDialog } from './ui';
 
 const BGM_SOURCE = require('../assets/audio/bgm.mp3');
