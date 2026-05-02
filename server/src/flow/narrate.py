@@ -47,23 +47,7 @@ async def run_narrate(
     act_log_lines: list[str] | None = None,
     previous_phase_signal: str | None = None,
 ) -> AsyncIterator[NarrativeDelta | NarrativeFinal]:
-    """Yields NarrativeDelta tokens, then a final NarrativeFinal.
-
-    target_view assembly:
-    - action='roll' / 'pass': use `target_id` if given, else first of
-      judge_result.targets. pass picks up target_view too because dialogue
-      turns ('말 건다', '인사한다') route here and narrate needs the NPC's
-      memories/tone_hint/disposition to stay tonally consistent.
-    - action='reject': no target_view (surroundings only).
-
-    `graph` is built once at turn entry and threaded through — the entry
-    point owns the build and rebuilds after any apply_changes that touches
-    relations (e.g. `apply_intended_move`). run_narrate never builds its own.
-
-    reject post-processing: forces empty state_changes / memorable=false on the
-    final NarrateOutput (engine-side enforcement; narrator is *also* told to do
-    this in the prompt, but we don't trust LLM here).
-    """
+    """Yield NarrativeDelta tokens then NarrativeFinal. action='reject' is forced empty state_changes / memorable=false engine-side regardless of what the LLM returns."""
     action = judge_result.get("action")
 
     target_view = None

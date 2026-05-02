@@ -90,7 +90,7 @@ async def run_turn(
             yield ev
         return
 
-    # Consume the one-shot phase signal at entry — cleared before finalize so it can't echo to next turn.
+    # One-shot — cleared at entry so it can't echo into the next turn.
     previous_phase_signal = state.previous_phase_signal
     state.previous_phase_signal = None
 
@@ -143,7 +143,6 @@ async def run_turn(
         yield ev
 
 
-# Combat/Summon/Roll/Rest stay in `_dispatch` — they need bespoke pre/post handling.
 EmitFactory = Callable[[LLMClient, GameState, Dirty, object], AsyncIterator[dict]]
 _ONE_STEP_EMITS: dict[type, EmitFactory] = {
     UseAction: lambda c, s, d, a: emit_use(s, s.player_id, a.item_id, a.target_id, d),
@@ -163,7 +162,7 @@ _ONE_STEP_EMITS: dict[type, EmitFactory] = {
 
 
 def _drop_pushed_act(state: GameState, dirty: Dirty, entry_id: int | None) -> None:
-    """Remove the act entry from `state.log_entries` and `dirty.log` so narrate's prose isn't shadowed by a system-toned chrome line."""
+    """Drop the pushed act entry so narrate's prose isn't shadowed by an engine-toned line."""
     if entry_id is None:
         return
     state.log_entries[:] = [

@@ -75,9 +75,7 @@ def _turn_event(
     skill_id: str | None = None,
     round_no: int,
 ) -> dict:
-    """SSE payload for one combat action. Mirrors the cinematic event but
-    keys actors by character id, so client/test consumers can match without
-    a Korean-name lookup."""
+    """SSE payload for one combat action; keys actors by id (the cinematic event keys by name)."""
     return {
         "actor": actor_id,
         "action": action,
@@ -376,14 +374,7 @@ def run_auto_combat(
     rng: random.Random | None = None,
     cap: int | None = None,
 ) -> AutoCombatResult:
-    """Drive every round of the fight until terminal outcome. Mutates
-    state.combat_state and the characters in-place. Returns the full trace
-    plus per-side snapshots.
-
-    `cap` is for the rest-ambush case (cap=1 — one surprise round, then the
-    player wakes up and decides). Default `None` means run to a terminal
-    outcome (victory / defeat / fled / downed), bounded only by HARD_CAP
-    against pathological stalemates."""
+    """Drive the fight to terminal outcome. cap=1 is the rest-ambush surprise round; default runs to victory/defeat/fled/downed under HARD_CAP."""
     r = rng or random
     cs = state.combat_state
     if cs is None:

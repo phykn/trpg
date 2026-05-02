@@ -1,14 +1,4 @@
-"""Combat dispatch — auto-mode only.
-
-A combat turn (whether opening a fight from out-of-combat or continuing one
-already in progress) runs the same shape: judge → distil player input into a
-PlayerAction → boot combat_state if needed → run_auto_combat → stream
-combat_narrate cinematic → push numeric summary → emit combat_end if
-terminal.
-
-Manual round-by-round play is gone. The cap inside run_auto_combat decides
-when to stop and hand control back to the player.
-"""
+"""Combat dispatch — auto-mode. Each combat turn: judge → PlayerAction → run_auto_combat → stream cinematic → push summary → end-event if terminal."""
 
 from __future__ import annotations
 
