@@ -1,4 +1,4 @@
-from .runner import skill_recommend
+from .runner import recommend
 from .schema import (
     SkillCandidate,
     SkillRecommendInput,
@@ -9,5 +9,5 @@ __all__ = [
     "SkillCandidate",
     "SkillRecommendInput",
     "SkillRecommendOutput",
-    "skill_recommend",
+    "recommend",
 ]
