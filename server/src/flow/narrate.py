@@ -78,15 +78,8 @@ async def run_narrate(
     )
 
     async for item in stream_narrate(client, input_):
-        if isinstance(item, NarrativeFinal):
-            if action == "reject":
-                _sterilize_for_reject(item.output)
-            elif action == "pass":
-                item.output.state_changes = _reconcile_player_move(
-                    item.output.state_changes,
-                    judge_result,
-                    state,
-                )
+        if isinstance(item, NarrativeFinal) and action == "reject":
+            _sterilize_for_reject(item.output)
         yield item
 
 
@@ -118,71 +111,6 @@ def _sterilize_for_reject(output) -> None:
     output.memory_links = {}
     output.importance = None
     output.suggestions = []
-
-
-def _is_player_relocation(change: dict, player_id: str) -> bool:
-    t = change.get("type")
-    if t == "move" and change.get("target") == player_id:
-        return True
-    if (
-        t == "set"
-        and change.get("entity") == "characters"
-        and change.get("id") == player_id
-        and change.get("field") == "location_id"
-    ):
-        return True
-    return False
-
-
-def _expected_destination(judge_result: dict, state: GameState) -> str | None:
-    """Destination loc id when judge's `pass targets=[loc_id]` differs from the player's current location, else None."""
-    targets = judge_result.get("targets") or []
-    if not targets:
-        return None
-    first = targets[0]
-    if first not in state.locations:
-        return None
-    player = state.characters.get(state.player_id)
-    if player is None or player.location_id == first:
-        return None
-    return first
-
-
-def apply_intended_move(
-    state: GameState, judge_result: dict, dirty_entities: set
-) -> None:
-    """Pre-apply player relocation so panels + narrate surroundings see the destination as already reached."""
-    expected = _expected_destination(judge_result, state)
-    if expected is None:
-        return
-    apply_changes(
-        state,
-        [{"type": "move", "target": state.player_id, "destination": expected}],
-        dirty_entities,
-    )
-
-
-def _reconcile_player_move(
-    changes: list[dict], judge_result: dict, state: GameState
-) -> list[dict]:
-    """Reconcile narrate's player-relocation output with judge's intent: strip stray moves, inject a missing one if needed."""
-    expected = _expected_destination(judge_result, state)
-    player_id = state.player_id
-    if expected is None:
-        return [c for c in changes if not _is_player_relocation(c, player_id)]
-    kept: list[dict] = []
-    has_match = False
-    for c in changes:
-        if not _is_player_relocation(c, player_id):
-            kept.append(c)
-            continue
-        dest = c.get("destination") if c.get("type") == "move" else c.get("value")
-        if dest == expected:
-            kept.append(c)
-            has_match = True
-    if not has_match:
-        kept.append({"type": "move", "target": player_id, "destination": expected})
-    return kept
 
 
 async def consume_narrate(

@@ -42,6 +42,12 @@ class FleeAction(_StrictAction):
     action: Literal["flee"]
 
 
+class MoveAction(_StrictAction):
+    action: Literal["move"]
+    destination: str
+    tail_intent: str | None = None
+
+
 class LevelUpAction(_StrictAction):
     action: Literal["level_up"]
     stat_up: StatKey
@@ -118,6 +124,7 @@ ChainPart = Annotated[
     | BuyAction
     | SellAction
     | GiveAction
+    | MoveAction
     | LevelUpAction
     | LearnSkillAction
     | PassAction,
@@ -138,6 +145,7 @@ JudgeOutput = Annotated[
     | CombatAction
     | SummonCombatAction
     | FleeAction
+    | MoveAction
     | RollAction
     | RestAction
     | UseAction

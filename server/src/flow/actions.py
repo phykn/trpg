@@ -21,7 +21,7 @@ from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..engines import inventory as inventory_engine
 from ..engines import skill as skill_engine
-from ..engines.apply import apply_combat_affinity_drop
+from ..engines.apply import apply_changes, apply_combat_affinity_drop
 from ..engines.growth import (
     award_kill_xp,
     level_up as level_up_engine,
@@ -381,6 +381,47 @@ async def emit_give(
         to_id if dst.is_player else from_id,
         f"「{item_name}」 양도 ({src.name} → {dst.name})",
         dirty,
+    )
+
+
+async def emit_move(
+    state: GameState,
+    actor_id: str,
+    destination: str,
+    dirty: Dirty,
+) -> AsyncIterator[dict]:
+    actor = state.characters[actor_id]
+    loc = state.locations.get(destination)
+    if loc is None:
+        yield push_act(
+            state,
+            dirty,
+            f"{actor.name}{i_ga(actor.name)} 그곳으로 가는 길을 찾지 못했습니다.",
+        )
+        return
+    result = apply_changes(
+        state,
+        [{"type": "move", "target": actor_id, "destination": destination}],
+        dirty.entities,
+    )
+    if result["applied"] == 0:
+        reason = result["rejected"][0]["reason"] if result["rejected"] else ""
+        suffix = f" ({reason})" if reason else ""
+        yield push_act(
+            state,
+            dirty,
+            f"{actor.name}{i_ga(actor.name)} {loc.name}{eul_reul(loc.name)} 향했지만 닿지 못했습니다.{suffix}",
+        )
+        return
+    state.invalidate_graph()
+    if actor_id == state.player_id:
+        from .subject import reconcile_subject_after_move
+
+        reconcile_subject_after_move(state)
+    yield push_act(
+        state,
+        dirty,
+        f"{actor.name}{i_ga(actor.name)} {loc.name}에 들어섭니다.",
     )
 
 

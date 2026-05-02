@@ -80,16 +80,7 @@ def refresh_active_subject(state: GameState, result) -> None:
 def reconcile_subject_after_move(
     state: GameState, graph: GameGraph | None = None
 ) -> None:
-    """Re-pick the subject after the player relocates.
-
-    `refresh_active_subject` runs before `apply_intended_move`, so for travel
-    turns it sees the old location and leaves the pin on the previous NPC.
-    Once the player has actually moved, the pin is at the wrong location:
-    drop it and only restore via `recent_npc_id` (player previously addressed
-    that NPC at the new location). On first arrival with no prior dialogue
-    history at the new location, leave the pin cleared — the player picks
-    explicitly via 만남.
-    """
+    """Re-pick the subject after the player relocates. Called from `emit_move` once the location_id has flipped — drops a pin pointing at the old location and restores via `recent_npc_id` if the player previously addressed an NPC at the new location, else leaves the pin cleared (player picks via 만남)."""
     cur = state.active_subject_id
     if cur is None:
         return

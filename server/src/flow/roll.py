@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from ..domain.errors import PendingCheckExpected
 from ..domain.memory import RollLogEntry
 from ..domain.state import GameState
+from ..engines.apply import apply_changes
 from ..engines.growth import grant_roll_xp
 from ..llm.client import LLMClient, set_llm_session_if_unset
 from ..persistence.repo import SaveRepo, ScenarioRepo
@@ -24,6 +25,29 @@ from .dirty import (
 from .format import front_grade
 from .narrate import consume_narrate, run_narrate
 from ..mapping.to_front import stat_label
+
+
+_MOVE_GRADES = ("critical_success", "success", "partial_success")
+
+
+def _apply_movement_roll_outcome(
+    state: GameState, pending, grade: str, dirty: Dirty
+) -> None:
+    """Frictional-movement roll: judge sent `targets=[connection_id]` and a passing grade means the player reaches it. Prop rolls (`targets=[current_loc_id]`) skip this — destination equals origin."""
+    if grade not in _MOVE_GRADES or not pending.targets:
+        return
+    dest = pending.targets[0]
+    if dest not in state.locations:
+        return
+    player = state.characters[state.player_id]
+    if player.location_id == dest:
+        return
+    apply_changes(
+        state,
+        [{"type": "move", "target": state.player_id, "destination": dest}],
+        dirty.entities,
+    )
+    state.invalidate_graph()
 
 
 async def _resume_auto_combat(
@@ -117,6 +141,7 @@ async def run_roll(
         yield ev
 
     state.pending_check = None
+    _apply_movement_roll_outcome(state, pending, grade, dirty)
     tick_turn_buffs(state, dirty)
 
     if state.combat_state is not None:

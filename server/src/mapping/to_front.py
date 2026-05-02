@@ -104,6 +104,9 @@ def to_hero(state: GameState, graph: GameGraph | None = None) -> dict:
         graph = state.graph()
     p = state.characters[state.player_id]
     skills = _skill_names(state, graph, p.id)
+    inventory = _inventory(state, graph, p.id)
+    if p.gold > 0:
+        inventory = [{"name": f"금화({p.gold})", "qty": 1}, *inventory]
     return {
         "name": p.name,
         "alive": p.alive,
@@ -119,7 +122,7 @@ def to_hero(state: GameState, graph: GameGraph | None = None) -> dict:
         "mpMax": p.max_mp,
         "stats": stats_payload(p.stats),
         "equipment": _equipment(state, graph, p.id),
-        "inventory": _inventory(state, graph, p.id),
+        "inventory": inventory,
         "status": list(p.status),
         "skills": skills,
         "companions": [

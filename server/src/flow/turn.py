@@ -10,6 +10,7 @@ from ..agents.dc_judge.schema import (
     GiveAction,
     LearnSkillAction,
     LevelUpAction,
+    MoveAction,
     PassAction,
     RejectAction,
     RestAction,
@@ -31,6 +32,7 @@ from .actions import (
     emit_give,
     emit_learn_skill,
     emit_level_up,
+    emit_move,
     emit_roll_pending,
     emit_trade,
     emit_unequip,
@@ -54,9 +56,9 @@ from .dirty import (
     push_log_entry,
 )
 from .judge import run_judge
-from .narrate import apply_intended_move, consume_narrate, run_narrate
+from .narrate import consume_narrate, run_narrate
 from .rest import run_rest
-from .subject import reconcile_subject_after_move, refresh_active_subject
+from .subject import refresh_active_subject
 
 
 async def run_turn(
@@ -160,6 +162,7 @@ _ONE_STEP_EMITS: dict[type, EmitFactory] = {
         s, s.player_id, a.npc_id, a.item_id, d, direction="sell"
     ),
     GiveAction: lambda c, s, d, a: emit_give(s, a.from_id, a.to_id, a.item_id, d),
+    MoveAction: lambda c, s, d, a: emit_move(s, s.player_id, a.destination, d),
 }
 
 
@@ -471,15 +474,9 @@ async def _stream_narrate_tail(
     act_log_lines: list[str] | None = None,
     previous_phase_signal: str | None = None,
 ) -> AsyncIterator[dict]:
-    """Pre-apply movement, emit a state event, then drive narrate."""
+    """Emit a state event, then drive narrate."""
     if isinstance(action, PassAction):
         target_for_log = action.targets[0] if action.targets else None
-        prev_loc = state.characters[state.player_id].location_id
-        apply_intended_move(state, action.model_dump(), dirty.entities)
-        reconcile_subject_after_move(state)
-        if state.characters[state.player_id].location_id != prev_loc:
-            state.invalidate_graph()
-            graph = state.graph()
     else:
         target_for_log = None
 
