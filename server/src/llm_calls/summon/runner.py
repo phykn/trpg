@@ -5,7 +5,7 @@ from .schema import EncounterSummonInput, EncounterSummonOutput
 _PROMPT = load_prompt(__file__)
 
 
-async def encounter_summon(
+async def summon(
     client: LLMClient,
     input_: EncounterSummonInput,
     retries: int = 5,
@@ -18,5 +18,5 @@ async def encounter_summon(
         parse=EncounterSummonOutput.model_validate_json,
         retries=retries,
         correction_hint="especially pair-trade",
-        agent="encounter_summon",
+        agent="summon",
     )

@@ -9,7 +9,7 @@ from typing import Literal
 
 from pydantic import ValidationError
 
-from ..agents.dc_judge.schema import RollAction
+from ..llm_calls.classify.schema import RollAction
 from ..domain.errors import (
     InventoryInvalid,
     LevelUpInvalid,

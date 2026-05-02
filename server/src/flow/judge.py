@@ -1,8 +1,8 @@
 from pydantic import ValidationError
 
 from ..domain.errors import JudgeMalformed
-from ..agents.dc_judge import JudgeSemanticError, judge
-from ..agents.dc_judge.schema import JudgeInput, JudgeOutput, RollAction
+from ..llm_calls.classify import JudgeSemanticError, classify
+from ..llm_calls.classify.schema import JudgeInput, JudgeOutput, RollAction
 from ..llm.client import LLMClient
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph
@@ -16,7 +16,7 @@ async def run_judge(
     *,
     graph: GameGraph | None = None,
 ) -> JudgeOutput:
-    """Call dc_judge agent. After 5 self-correction retries inside the runner:
+    """Call the classify LLM. After 5 self-correction retries inside the runner:
     - schema-only failure (ValidationError) → raise JudgeMalformed.
     - semantic failure (JudgeSemanticError) → fall back to a roll on the
       player's current location (docs/02-runtime §2.3 step 3).
@@ -26,7 +26,7 @@ async def run_judge(
     """
     surroundings = build_surroundings(state, state.player_id, graph)
     try:
-        return await judge(
+        return await classify(
             client,
             JudgeInput(player_input=player_input, surroundings=surroundings),
         )

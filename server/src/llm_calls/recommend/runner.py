@@ -5,7 +5,7 @@ from .schema import SkillRecommendInput, SkillRecommendOutput
 _PROMPT = load_prompt(__file__)
 
 
-async def skill_recommend(
+async def recommend(
     client: LLMClient,
     input_: SkillRecommendInput,
     retries: int = 5,
@@ -16,5 +16,5 @@ async def skill_recommend(
         user_payload=input_.model_dump_json(),
         parse=SkillRecommendOutput.model_validate_json,
         retries=retries,
-        agent="skill_recommend",
+        agent="recommend",
     )

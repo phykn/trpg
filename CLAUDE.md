@@ -22,7 +22,7 @@ The venv, pyproject, and requirements are a single set at the repo root. **Never
 ```bash
 # from repo root
 .venv/bin/python -m pytest -q                     # unit. pyproject pins testpaths=server/tests
-.venv/bin/python server/scripts/smoke_judge.py    # one-shot Gemini-routed dc_judge sanity check
+.venv/bin/python server/scripts/smoke_judge.py    # one-shot Gemini-routed classify sanity check
 .venv/bin/python -m pytest server/tests/flow/test_turn.py::test_X -q   # single test
 .venv/bin/ruff check server/                      # lint
 bash server/scripts/check_relational_ssot.sh      # graph-SSOT guard (CI-equivalent)
@@ -42,7 +42,7 @@ Env files mirror on both sides: `server/.env.{dev,release}` and `client/.env.{de
 
 Apply repo-wide. When a sub-CLAUDE.md repeats a rule, the sub version is just more specific — not in conflict.
 
-- **Korean only.** Every piece of text that reaches the user (LLM prompts, logs, NPC lines, error messages, agent prompts) is in Korean. No localization layer. In-game prose and engine-side log lines use **2인칭 존댓말 합니다체** — `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings. The user-facing skill term is **기술** (`스킬` survives only as a synonym in the dc_judge prompt). Code text — server source, tests, validation error messages, structural prompts — stays English.
+- **Korean only.** Every piece of text that reaches the user (LLM prompts, logs, NPC lines, error messages, agent prompts) is in Korean. No localization layer. In-game prose and engine-side log lines use **2인칭 존댓말 합니다체** — `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings. The user-facing skill term is **기술** (`스킬` survives only as a synonym in the classify prompt). Code text — server source, tests, validation error messages, structural prompts — stays English.
 - **Comments minimal, English-only.** Default to no comments — add one only when the *why* is non-obvious (hidden constraint, subtle invariant, bug workaround); single short line. Korean is allowed inside an English comment only when quoting an in-game string the comment is reasoning about; never as the prose. No multi-paragraph docstrings, no multi-line `# ...` blocks. `# type:` / `# noqa` / `# pragma:` directives and shebangs aren't comments — leave them.
 - **env is fail-fast.** No `??` defaults, no silent defaults. Missing keys throw at startup. Applies to both `server/.env` and `client/.env`.
 - **Display data is built on the server and shipped over.** Korean dates, durations, composed strings, conditional labels for the client payload are built in `server/src/mapping/to_front.py`; engine-side log lines that thread through the SSE stream are built in `server/src/flow/{format,error_phrases,actions,combat_phase,turn,roll,rest}.py`. Both render as-is on the client. Client types only carry the fields the UI renders.
@@ -52,7 +52,7 @@ Apply repo-wide. When a sub-CLAUDE.md repeats a rule, the sub version is just mo
 
 - Python 3.12+, Pydantic v2, FastAPI, async/await throughout, uvicorn, httpx.
 - **Supabase Postgres + Storage** is the runtime store. Saves → 5 tables keyed on `game_id` (`games / entities / log_entries / history_entries / dialogue_entries`); scenarios → Storage bucket mirroring the local `scenarios/<profile>/...` tree 1:1. The running server (both `APP_ENV=dev` and `release`) goes through `SupabaseSaveRepo` + `SupabaseStorageScenarioRepo`; tests bypass the factory and use `LocalFsSaveRepo` / `LocalFsScenarioRepo` against `tmp_path`.
-- LLM is OpenAI-compatible. `LLM_ROUTE_<AGENT> = <provider>/<model>` per agent (`dc_judge`, `narrate`, `combat_narrate`, `encounter_summon`, `skill_recommend`); unmatched agents fall back to `default`. Provider blocks (llama.cpp local, Gemini hosted) layer on top of `.env.<APP_ENV>`.
+- LLM is OpenAI-compatible. `LLM_ROUTE_<AGENT> = <provider>/<model>` per agent (`classify`, `narrate`, `combat_narrate`, `summon`, `recommend`); unmatched agents fall back to `default`. Provider blocks (llama.cpp local, Gemini hosted) layer on top of `.env.<APP_ENV>`.
 - Expo SDK 54 / RN 0.81 / React 19, NativeWind v4, expo-router with typedRoutes, `expo/fetch` for SSE streaming (standard `fetch` doesn't support SSE body streaming on RN). Web export deploys to Cloudflare Workers via `npm run deploy`.
 
 The persistence seam — `SaveRepo` / `ScenarioRepo` Protocols in `server/src/persistence/repo.py` — exists so the storage layer can be swapped without touching `flow/`, `context/`, or `engines/`. `asyncio.Lock` save serialization is single-process only; multi-isolate deploys would need DB-level locks (`SELECT ... FOR UPDATE`).

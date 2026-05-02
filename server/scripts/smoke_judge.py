@@ -1,4 +1,4 @@
-"""One-shot smoke check: call dc_judge against the env-routed LLM (Gemini) to
+"""One-shot smoke check: call the classify LLM against the env-routed LLM (Gemini) to
 verify the production prompt path (kernel + agent rules + substitutions) works.
 
 Run from repo root:
@@ -22,8 +22,8 @@ load_dotenv(SERVER_DIR / ".env.dev")
 load_dotenv(SERVER_DIR / ".env.llama_cpp")
 load_dotenv(SERVER_DIR / ".env.google")
 
-from src.agents.dc_judge import judge  # noqa: E402
-from src.agents.dc_judge.schema import JudgeInput  # noqa: E402
+from src.llm_calls.classify import classify  # noqa: E402
+from src.llm_calls.classify.schema import JudgeInput  # noqa: E402
 from src.llm.client import LLMClient  # noqa: E402
 
 SAMPLE_SURROUNDINGS = {
@@ -63,16 +63,16 @@ async def main() -> int:
     client = LLMClient.from_env()
     providers = client._providers
     default_route = providers["default"].model
-    judge_route = providers.get("dc_judge", providers["default"]).model
+    judge_route = providers.get("classify", providers["default"]).model
     print(f"  default route: {default_route}")
-    print(f"  dc_judge route: {judge_route}")
+    print(f"  classify route: {judge_route}")
     print()
 
     failed = 0
     for player_input, hint in CASES:
         print(f"--- INPUT: {player_input!r}  (expect: {hint})")
         try:
-            result = await judge(
+            result = await classify(
                 client,
                 JudgeInput(player_input=player_input, surroundings=SAMPLE_SURROUNDINGS),
                 retries=2,

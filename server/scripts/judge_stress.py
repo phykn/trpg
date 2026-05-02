@@ -7,8 +7,8 @@ from typing import Any
 from dotenv import load_dotenv
 
 from src.llm import LLMClient, LLMProfile
-from src.agents.dc_judge import PROMPT_PATH, judge
-from src.agents.dc_judge.schema import JudgeInput
+from src.llm_calls.classify import PROMPT_PATH, classify
+from src.llm_calls.classify.schema import JudgeInput
 
 
 class CountingClient(LLMClient):
@@ -363,7 +363,7 @@ async def run(client: CountingClient, sc: dict) -> dict:
     t0 = time.time()
     expected = sc.get("expected")
     try:
-        result = await judge(
+        result = await classify(
             client,
             JudgeInput(
                 player_input=sc["player_input"], surroundings=sc["surroundings"]

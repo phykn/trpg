@@ -11,7 +11,7 @@ PROMPT_PATH = Path(__file__).parent / "prompt.md"
 _PROMPT = load_prompt(__file__)
 
 
-async def judge(client: LLMClient, input_: JudgeInput, retries: int = 5) -> JudgeOutput:
+async def classify(client: LLMClient, input_: JudgeInput, retries: int = 5) -> JudgeOutput:
     def parse(answer: str) -> JudgeOutput:
         out = validate_judge_output(answer)
         check_semantics(out, input_.surroundings)
@@ -24,5 +24,5 @@ async def judge(client: LLMClient, input_: JudgeInput, retries: int = 5) -> Judg
         parse=parse,
         retry_on=(ValidationError, JudgeSemanticError),
         retries=retries,
-        agent="dc_judge",
+        agent="classify",
     )

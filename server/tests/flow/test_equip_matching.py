@@ -11,7 +11,7 @@ from src.domain.entities import (
     Stats,
     WeaponEffect,
 )
-from src.agents.dc_judge.schema import EquipAction, UnequipAction
+from src.llm_calls.classify.schema import EquipAction, UnequipAction
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.context import build_surroundings
 from src.flow.turn import run_turn

@@ -1,6 +1,6 @@
 from src.domain.entities import Character, Stats
 from src.domain.memory import Memory
-from src.agents.narrate import NarrateOutput
+from src.llm_calls.narrate import NarrateOutput
 from src.flow.memory_writer import write_memories
 from src.rules import RULES
 

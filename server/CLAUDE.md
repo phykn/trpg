@@ -32,14 +32,14 @@ bash server/scripts/check_relational_ssot.sh # graph-SSOT guard (CI-equivalent)
 ### Layer rule
 
 ```
-api → flow → agents/engines → llm/ontology/context/mapping → persistence → domain/rules
+api → flow → llm_calls/engines → llm/ontology/context/mapping → persistence → domain/rules
 ```
 
 Upper depends on lower, never the reverse. Concretely:
 
 - `domain/` + `rules/` — pure data shapes and tunable knobs. No imports outside themselves.
 - `engines/` — pure game logic (combat math, apply state_changes, growth, inventory, skill, quest, recovery, invariants). No LLM, no I/O.
-- `agents/` — LLM-driven (dc_judge, narrate, combat_narrate, encounter_summon, skill_recommend). Each agent dir = `prompt.md` + `schema.py` + `runner.py` (+ `semantics.py` where needed). `agents/_runner.py` is the shared 5-attempt self-correction loop.
+- `llm_calls/` — LLM call modules (classify, narrate, combat_narrate, summon, recommend). Each module dir = `prompt.md` + `schema.py` + `runner.py` (+ `semantics.py` where needed). `llm_calls/_runner.py` is the shared 5-attempt self-correction loop. `llm_calls/_kernel.md` carries universal rules (Korean output, ID hygiene, world vocabulary) prepended to every prompt at boot via `load_prompt()`.
 - `ontology/` — derived relational view over `GameState`. **The single source of truth for relations.**
 - `context/` — prompt input builders (surroundings for judge, layered context for narrate).
 - `persistence/` — `SaveRepo` / `ScenarioRepo` Protocols (all-async) + Supabase and LocalFs adapters.
@@ -81,7 +81,7 @@ All four child tables FK → `games(game_id) ON DELETE CASCADE`. RLS enabled wit
 
 ### LLM routing and thinking modes
 
-- `LLM_ROUTE_<AGENT> = <provider>/<model>` resolves to an `LLMProfile` keyed by lowercased agent name. `LLM_ROUTE_DEFAULT` is required; matched agents (`dc_judge`, `narrate`, `combat_narrate`, `encounter_summon`, `skill_recommend`) route per-agent, others fall back to default.
+- `LLM_ROUTE_<AGENT> = <provider>/<model>` resolves to an `LLMProfile` keyed by lowercased agent name. `LLM_ROUTE_DEFAULT` is required; matched agents (`classify`, `narrate`, `combat_narrate`, `summon`, `recommend`) route per-agent, others fall back to default.
 - Provider blocks (`.env.llama_cpp`, `.env.google`) declare each provider's `LLM_<NAME>_BASE_URL`, `_API_KEYS` (comma-separated, rotated round-robin per call), and `_THINK_OFF / _THINK_OPT / _THINK_ON` model lists. The three lists must be disjoint and together name every model the provider serves. Listed names must appear in exactly one THINK_* list.
 - `LLM_<NAME>_NO_SYSTEM` lists models that reject `role: system` (Gemma via Gemini OpenAI-compat returns "Developer instruction is not enabled"); `LLMClient` folds the system prompt into the first user message for them.
 - Per-call thinking behavior is driven by the model's THINK_* category: `OFF` sends no `extra_body`; `OPT` honors caller's `think` flag (default off) via `extra_body.chat_template_kwargs.enable_thinking` (llama.cpp) or `extra_body.reasoning_effort=medium` (Gemini 3.x, detected from `googleapis.com` in `base_url`); `OPT_ON` is the inverse (default on, opt out via `extra_body.reasoning_effort=minimal` on Gemini — Gemma 4 via Gemini lives here because it accepts only `minimal` to disable); `ON` always thinks.
@@ -97,7 +97,7 @@ Each agent runs a self-correction loop with `retries=5`. On `ValidationError` or
 
 ### state_changes
 
-Four kinds only: `set / move / move_item / affinity`. Each has its own permission matrix in `engines/apply.py` (single source: `rules/permissions.py`, shared with `agents/narrate/runner.py` so the prompt and engine use the same frozenset). Forbidden `set` fields are silently dropped per change; the rest of the batch still applies.
+Four kinds only: `set / move / move_item / affinity`. Each has its own permission matrix in `engines/apply.py` (single source: `rules/permissions.py`, shared with `llm_calls/narrate/runner.py` so the prompt and engine use the same frozenset). Forbidden `set` fields are silently dropped per change; the rest of the batch still applies.
 
 ### Affinity
 
@@ -132,7 +132,7 @@ There is no minute/hour clock. `state.turn_count` is the sole time variable; `do
 - Tiers are seven Korean labels: `매우 쉬움 / 쉬움 / 보통 / 어려움 / 매우 어려움 / 전설 / 신화`. No English aliases.
 - Internal grade is five-way (`critical_success / success / partial_success / failure / critical_failure`). Client's `RollLogEntry.result` collapses to `success | partial | fail`.
 - All player-facing Korean — narrate / combat_narrate bodies, the deterministic `잠시 정적이 흐릅니다` fallback in `flow/narrate.py`, every engine-side log line built in `flow/format.py` · `flow/error_phrases.py` · `flow/actions.py` · `flow/combat_phase.py` · `flow/turn.py` · `flow/roll.py` · `mapping/to_front.py` — uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings.
-- Canonical user-facing term for skills is **기술**. The dc_judge prompt accepts `스킬` as a synonym from player input, but every other prompt and engine string says `기술`. Code identifiers and the `skills/` entity directory keep the English `skill`.
+- Canonical user-facing term for skills is **기술**. The classify prompt accepts `스킬` as a synonym from player input, but every other prompt and engine string says `기술`. Code identifiers and the `skills/` entity directory keep the English `skill`.
 
 ## Error hierarchy
 
@@ -151,4 +151,4 @@ Pydantic 422 (request-shape) and HTTP 404 (`game_id` not found) go through FastA
 - `LLMClient.chat_stream` is the streaming primitive; agents wrap it with their schema and retry loop.
 - Single process. Horizontal scaling is out of scope. The LocalFs adapter uses one `asyncio.Lock` in `persistence/store.py`; Supabase relies on per-row PostgREST upserts plus the fixed flush order above.
 - Env files load in order via `run_api.py:_load_env`: `.env.<APP_ENV>` (default `dev`, raises `FileNotFoundError` if missing) → `.env.llama_cpp` → `.env.google`. `APP_ENV=release` switches to `.env.release`. Both modes go through Supabase and require `SUPABASE_URL SUPABASE_SERVICE_KEY SUPABASE_SCENARIO_BUCKET`, plus `HOST PORT BASIC_AUTH_USER BASIC_AUTH_PASS CORS_ORIGINS LLM_ROUTE_DEFAULT`.
-- `tests/conftest.py` exposes `fresh_state` (an empty `GameState`). End-to-end LLM verification is manual after merge; `scripts/smoke_judge.py` is a one-shot Gemini-routed dc_judge sanity check.
+- `tests/conftest.py` exposes `fresh_state` (an empty `GameState`). End-to-end LLM verification is manual after merge; `scripts/smoke_judge.py` is a one-shot Gemini-routed classify sanity check.

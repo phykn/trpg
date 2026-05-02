@@ -5,8 +5,8 @@ that the reject branch blanks suggestions like the other meta fields.
 
 from collections.abc import AsyncIterator
 
-from src.agents.narrate import NarrativeDelta, NarrativeFinal
-from src.agents.narrate.schema import NarrateOutput
+from src.llm_calls.narrate import NarrativeDelta, NarrativeFinal
+from src.llm_calls.narrate.schema import NarrateOutput
 from src.flow.dirty import Dirty
 from src.flow.narrate import consume_narrate
 from src.persistence.local_fs import LocalFsScenarioRepo
@@ -60,7 +60,7 @@ async def test_run_narrate_reject_blanks_suggestions(fresh_state, monkeypatch):
     addition to the existing memory/state fields, so the engine doesn't
     surface stale chips for an OOC input the LLM didn't know to clear.
     """
-    from src.agents import narrate as narrate_agent
+    from src.llm_calls import narrate as narrate_agent
     from src.flow import narrate as narrate_flow
 
     fresh_state.locations["loc_01"] = (

@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 
 from src.domain.entities import Character, Location, Race, Stats
-from src.agents import encounter_summon as agent_mod
-from src.agents.encounter_summon import (
+from src.llm_calls import summon as agent_mod
+from src.llm_calls.summon import (
     EncounterStats,
     EncounterSummonOutput,
 )
@@ -53,8 +53,8 @@ def _patch_agent(monkeypatch, output: EncounterSummonOutput):
     async def fake_summon(client, input_, retries=5):
         return output
 
-    monkeypatch.setattr(encounter_engine, "encounter_summon", fake_summon)
-    monkeypatch.setattr(agent_mod, "encounter_summon", fake_summon)
+    monkeypatch.setattr(encounter_engine, "summon", fake_summon)
+    monkeypatch.setattr(agent_mod, "summon", fake_summon)
 
 
 _VALID_OUTPUT = EncounterSummonOutput(

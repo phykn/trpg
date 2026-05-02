@@ -1,6 +1,6 @@
 """LLM ad-hoc enemy summoning.
 
-Calls the `encounter_summon` agent to produce one character that obeys the pair-trade
+Calls the `summon` LLM to produce one character that obeys the pair-trade
 invariant and registers it into GameState.characters. Two callers:
 - /turn's SummonCombatAction branch (player casts a summon-and-attack).
 - recovery's sleep_encounters fallback when the seed pool is empty (P3 §2.4).
@@ -10,10 +10,10 @@ from __future__ import annotations
 
 from ..context.layers import build_world_layer
 from ..domain.entities import Character, CombatBehavior, Location, Stats
-from ..agents.encounter_summon import (
+from ..llm_calls.summon import (
     EncounterSummonInput,
     EncounterSummonOutput,
-    encounter_summon,
+    summon,
 )
 from ..llm.client import LLMClient
 from ..domain.state import GameState
@@ -108,7 +108,7 @@ async def summon_encounter(
 ) -> Character | None:
     """Summon one enemy via LLM and register it. Returns None if race_id is not in available races."""
     input_ = await _build_input(state, location, scenario_repo, profile, requested_role)
-    out = await encounter_summon(client, input_)
+    out = await summon(client, input_)
     if out.race_id not in state.races:
         return None
     char = _make_character(state, out, location.id)

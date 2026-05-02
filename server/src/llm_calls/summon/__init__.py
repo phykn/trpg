@@ -1,4 +1,4 @@
-from .runner import encounter_summon
+from .runner import summon
 from .schema import (
     EncounterStats,
     EncounterSummonInput,
@@ -9,5 +9,5 @@ __all__ = [
     "EncounterStats",
     "EncounterSummonInput",
     "EncounterSummonOutput",
-    "encounter_summon",
+    "summon",
 ]

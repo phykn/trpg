@@ -7,7 +7,7 @@ target, roll target, trade partner, or recent dialogue NPC. Without this,
 the seed value sticks forever and the client shows the wrong character.
 """
 
-from ..agents.dc_judge.schema import (
+from ..llm_calls.classify.schema import (
     BuyAction,
     ChainAction,
     CombatAction,

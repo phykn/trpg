@@ -1,4 +1,4 @@
-from src.agents.narrate.parser import (
+from src.llm_calls.narrate.parser import (
     NarrativeDelta,
     NarrativeFinal,
     split_stream,

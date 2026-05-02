@@ -3,7 +3,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from src.agents.dc_judge.schema import (
+from src.llm_calls.classify.schema import (
     ChainAction,
     CombatAction,
     PassAction,
@@ -12,7 +12,7 @@ from src.agents.dc_judge.schema import (
     output_adapter,
     validate_judge_output,
 )
-from src.agents.dc_judge.semantics import (
+from src.llm_calls.classify.semantics import (
     JudgeSemanticError,
     _surroundings_target_ids,
     check_semantics,

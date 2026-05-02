@@ -9,9 +9,9 @@ id/level and template numerics to build the Skill object.
 from __future__ import annotations
 
 from ..domain.entities import Skill
-from ..agents.skill_recommend import (
+from ..llm_calls.recommend import (
     SkillRecommendInput,
-    skill_recommend,
+    recommend,
 )
 from ..llm.client import LLMClient
 from ..ontology.queries import known_skills_of, race_of
@@ -86,7 +86,7 @@ async def recommend_skill_candidates(
     No side effects — does not touch state directly (the caller writes pending_skill_candidates).
     """
     payload = _build_input(state)
-    output = await skill_recommend(client, payload)
+    output = await recommend(client, payload)
     level = state.characters[state.player_id].level
     existing = existing_skill_ids(state)
     skills: list[Skill] = []
