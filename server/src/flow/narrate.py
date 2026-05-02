@@ -1,8 +1,8 @@
 import re
 from collections.abc import AsyncIterator
 
-from ..agents.dc_judge.schema import PassAction, RejectAction
-from ..agents.narrate import (
+from ..llm_calls.dc_judge.schema import PassAction, RejectAction
+from ..llm_calls.narrate import (
     NarrateInput,
     NarrateOutput,
     NarrativeDelta,

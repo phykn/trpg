@@ -1,7 +1,7 @@
 """Unit tests for load_prompt — the kernel-prepending helper in agents/_runner.py."""
 
-from src.agents import _runner
-from src.agents._runner import load_prompt
+from src.llm_calls import _runner
+from src.llm_calls._runner import load_prompt
 
 
 def test_load_prompt_prepends_kernel(tmp_path, monkeypatch):

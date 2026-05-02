@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 
 from src.domain.entities import Character, Location, Race, Stats
-from src.agents import encounter_summon as agent_mod
-from src.agents.encounter_summon import (
+from src.llm_calls import encounter_summon as agent_mod
+from src.llm_calls.encounter_summon import (
     EncounterStats,
     EncounterSummonOutput,
 )

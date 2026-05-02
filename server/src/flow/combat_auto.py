@@ -8,7 +8,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
-from ..agents.combat_narrate.schema import (
+from ..llm_calls.combat_narrate.schema import (
     CombatNarrateInput,
     CombatOutcome,
     CombatRoundEvent,

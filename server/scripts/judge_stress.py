@@ -7,8 +7,8 @@ from typing import Any
 from dotenv import load_dotenv
 
 from src.llm import LLMClient, LLMProfile
-from src.agents.dc_judge import PROMPT_PATH, judge
-from src.agents.dc_judge.schema import JudgeInput
+from src.llm_calls.dc_judge import PROMPT_PATH, judge
+from src.llm_calls.dc_judge.schema import JudgeInput
 
 
 class CountingClient(LLMClient):

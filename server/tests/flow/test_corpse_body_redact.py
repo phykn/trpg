@@ -8,8 +8,8 @@ record and the next turn's history layer are both safe.
 
 from collections.abc import AsyncIterator
 
-from src.agents.narrate import NarrativeDelta, NarrativeFinal
-from src.agents.narrate.schema import NarrateOutput
+from src.llm_calls.narrate import NarrativeDelta, NarrativeFinal
+from src.llm_calls.narrate.schema import NarrateOutput
 from src.domain.entities import Character, Location, Stats
 from src.domain.memory import TurnLogEntry
 from src.flow.dirty import Dirty

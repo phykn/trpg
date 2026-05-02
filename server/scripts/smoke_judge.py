@@ -22,8 +22,8 @@ load_dotenv(SERVER_DIR / ".env.dev")
 load_dotenv(SERVER_DIR / ".env.llama_cpp")
 load_dotenv(SERVER_DIR / ".env.google")
 
-from src.agents.dc_judge import judge  # noqa: E402
-from src.agents.dc_judge.schema import JudgeInput  # noqa: E402
+from src.llm_calls.dc_judge import judge  # noqa: E402
+from src.llm_calls.dc_judge.schema import JudgeInput  # noqa: E402
 from src.llm.client import LLMClient  # noqa: E402
 
 SAMPLE_SURROUNDINGS = {

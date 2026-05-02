@@ -10,7 +10,7 @@ from src.domain.entities import (
     Skill,
     Stats,
 )
-from src.agents.dc_judge.schema import (
+from src.llm_calls.dc_judge.schema import (
     BuyAction,
     FleeAction,
     LearnSkillAction,

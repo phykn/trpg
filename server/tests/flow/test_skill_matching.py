@@ -9,7 +9,7 @@ from src.domain.entities import (
     Skill,
     Stats,
 )
-from src.agents.dc_judge.schema import CombatAction
+from src.llm_calls.dc_judge.schema import CombatAction
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.context import build_surroundings
 from src.flow.turn import run_turn

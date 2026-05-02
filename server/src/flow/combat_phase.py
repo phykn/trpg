@@ -6,8 +6,8 @@ import random
 from collections.abc import AsyncIterator
 from typing import Literal
 
-from ..agents.combat_narrate import stream_combat_narrate
-from ..agents.dc_judge.schema import (
+from ..llm_calls.combat_narrate import stream_combat_narrate
+from ..llm_calls.dc_judge.schema import (
     CombatAction,
     EquipAction,
     FleeAction,

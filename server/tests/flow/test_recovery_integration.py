@@ -5,7 +5,7 @@ import random
 from src.domain.clock import next_dawn_turn
 from src.domain.entities import Character, CombatBehavior, Location, Stats
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-from src.agents.dc_judge.schema import RestAction
+from src.llm_calls.dc_judge.schema import RestAction
 from src.flow.turn import run_turn
 
 

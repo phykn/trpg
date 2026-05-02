@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from ..context.layers import build_world_layer
 from ..domain.entities import Character, CombatBehavior, Location, Stats
-from ..agents.encounter_summon import (
+from ..llm_calls.encounter_summon import (
     EncounterSummonInput,
     EncounterSummonOutput,
     encounter_summon,
