@@ -1,12 +1,4 @@
-"""Skill cast — level/MP/range validation + effect application (P3 §2.6).
-
-Cast pipeline (S1, core): level gate → MP check → range check → AoE auto-target →
-grade adjustment → damage/heal/buff. S2: judge semantic matching. §2.3 step 4: LLM
-learn-candidate recommendation (build_skill_from_candidate).
-
-Damage/heal base: `power + primary_stat_modifier`. grade_multipliers tunes per stage.
-Exact coefficients are a tuning knob — see `rules.skill.grade_multipliers`.
-"""
+"""Skill cast pipeline: gate → MP → range → AoE auto-target → grade adjustment → damage/heal/buff. Plus build_skill_from_candidate for LLM-recommended learn candidates."""
 
 from __future__ import annotations
 
@@ -72,7 +64,6 @@ def _resolve_targets(
 
 
 def _validate_range(actor: Character, skill: Skill, targets: list[Character]) -> None:
-    """Current rule — targets in other locations are out of range; same-location targets always pass."""
     for t in targets:
         if t.id == actor.id:
             continue

@@ -1,10 +1,4 @@
-"""Growth (level_up + pair-trade + xp curve).
-
-docs/03-features.md §2.3.
-
-Pair-trade invariant: a character's total stats = 60 (initial), with pair sums permanently
-20/20/20. Holds for both seeded NPCs and LLM-summoned characters.
-"""
+"""Growth: level_up, pair-trade, xp curve. Pair-trade invariant — total stats = 60, pair sums permanently 20/20/20."""
 
 from __future__ import annotations
 

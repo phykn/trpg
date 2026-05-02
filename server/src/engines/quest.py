@@ -1,17 +1,4 @@
-"""Quest auto-trigger / reward application / chapter progression (P3 §2.8).
-
-When an event (`event_type`, `target_id`) arrives, scan triggers/fail_triggers of all
-active quests for matches. All triggers met → transition to `completed` and apply rewards.
-Any fail_trigger met → `failed`. If a quest whose status changed is in another quest's
-prerequisite_ids, unlock that quest (`locked → active`). When a chapter's required quests
-all complete, the chapter flips to `completed`; any chapter whose prerequisite chapters are
-all completed then flips `locked → active`. chapter.progress only counts required=true quests.
-
-Event types (free-form strings, defined by the seed):
-- "character_death" — enemy killed via combat or use(damage)
-- "location_enter" — apply_move changed the location
-- "item_use" — item used through the use endpoint
-"""
+"""Quest auto-trigger / reward application / chapter progression. Event-driven: each (event_type, target_id) scans active quests' triggers and cascades through prerequisites and chapter progress."""
 
 from __future__ import annotations
 
@@ -37,7 +24,6 @@ def _ensure_runtime_fields(quest: Quest) -> None:
 
 
 def _apply_rewards(state: GameState, quest: Quest, dirty: DirtySet) -> None:
-    """quest.rewards → player. Assumes single-player (P1, P2)."""
     actor = state.characters.get(state.player_id)
     if actor is None:
         return

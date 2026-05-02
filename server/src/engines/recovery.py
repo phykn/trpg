@@ -1,13 +1,4 @@
-"""Long rest at the current location.
-
-No passive recovery — HP/MP heal only by sleeping (docs/03-features.md §2.4).
-attempt_rest splits encounter vs full recovery via a risk roll. Full recovery restores
-HP/MP to max and jumps `state.turn_count` forward to the next 새벽 boundary. On encounter
-it returns enemy_ids; the caller (turn.py) is responsible for booting combat.
-
-If the seeded sleep_encounters pool is empty and an LLM summon callback is supplied, an
-ad-hoc enemy is summoned (P3 §2.4 fallback).
-"""
+"""Long rest at the current location. attempt_rest rolls risk vs full recovery; on full recovery it restores HP/MP and jumps turn_count to the next 새벽 boundary."""
 
 import random
 from collections.abc import Awaitable, Callable

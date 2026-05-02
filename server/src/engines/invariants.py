@@ -1,27 +1,4 @@
-"""Game-rule invariants — one place, one entry point per scope.
-
-Every check_X function returns list[str] — empty means OK, otherwise each
-entry is a one-line violation message. The format is meant to be fed back
-to the LLM verbatim as self-correction feedback:
-
-    [<entity_kind>/<id>] <field>: <expected> vs <got>
-
-Public API:
-    check_stats(stats)              -> list[str]
-    check_character(c)              -> list[str]
-    check_seed_character(c, items)  -> list[str]
-    check_item(item)                -> list[str]
-    check_inventory(c, items_pool)  -> list[str]
-    check_skills(c, skill_pool)     -> list[str]
-    check_scenario(scenario)        -> list[str]
-    check_quest_graph(scenario)     -> list[str]
-    check_chapter_graph(scenario)   -> list[str]
-
-    Scenario (dataclass)
-    Scenario.from_state(state)
-
-    InvariantViolation (ValueError subclass)
-"""
+"""Game-rule invariants. Each check_* returns list[str]; one-line messages are fed back to the LLM verbatim as self-correction feedback."""
 
 from __future__ import annotations
 
@@ -51,12 +28,7 @@ from .inventory.carry import carry_capacity, current_weight
 
 
 class InvariantViolation(ValueError):
-    """Single error type. Callers wanting raise semantics:
-
-    violations = check_character(c)
-    if violations:
-        raise InvariantViolation('\\n'.join(violations))
-    """
+    pass
 
 
 _STAT_KEYS: tuple[str, ...] = get_args(StatKey)
@@ -74,11 +46,7 @@ def _slot_mismatch_hint(allowed: tuple[str, ...]) -> str:
 
 @dataclass
 class Scenario:
-    """Seed bundle (or runtime state projection) — every entity dict + meta.
-
-    runtime=True relaxes seed-only rules (hp == max_hp, NPC level >= 1, etc.)
-    so check_state can reuse the same machinery.
-    """
+    """Seed bundle or runtime state projection. runtime=True relaxes seed-only rules so check_state can reuse the same machinery."""
 
     races: dict[str, Race] = field(default_factory=dict)
     locations: dict[str, Location] = field(default_factory=dict)

@@ -1,8 +1,4 @@
-"""Combat engine core — pure rules, no LLM calls.
-
-The caller (pipeline/turn.py) drives round progression; this module exposes deterministic units like a single attack roll, damage, AI decision, or flee attempt.
-Spec source: docs/03-features.md §1.1-§1.6.
-"""
+"""Combat engine core — deterministic primitives (attack roll, damage, AI pick, flee). No LLM."""
 
 from __future__ import annotations
 
@@ -193,11 +189,7 @@ def pick_target(
     rng: random.Random | None = None,
     damage_dealt: dict[str, int] | None = None,
 ) -> Character | None:
-    """Pick one target according to combat_behavior. Falls back to a simple random pick when None.
-
-    `nearest` distance metric: there is no fine-grained position model within a location, so we treat the candidate list's appearance order (not turn_order index) as "nearest first".
-    `highest_threat` reads combat_state.damage_dealt and targets the enemy that has dealt the most damage (falls back to nearest if there is no record).
-    """
+    """Pick one target by combat_behavior; appearance order in candidates stands in for "nearest" (no sub-location position model)."""
     r = rng or random
     pool = _filter_alive_in_location(actor, candidates)
     if not pool:
@@ -205,7 +197,6 @@ def pick_target(
 
     behavior = actor.combat_behavior
     if behavior is None or behavior.attack_priority is None:
-        # Weighted-sum mode. nearest = first candidate, random = anything else.
         if behavior is None or len(pool) == 1:
             return pool[0]
         nw = max(0, behavior.nearest_weight)
@@ -271,12 +262,7 @@ def start_combat(
     rng: random.Random | None = None,
     surprise: Literal["player", "enemy"] | None = None,
 ) -> CombatState:
-    """Boot combat_state. Participants = player + companions on both sides + enemy_ids, sorted by initiative.
-
-    Stamps the result directly onto state.combat_state. surprise='enemy' means the player
-    cannot act in the first round (e.g. ambush during sleep). Companions auto-join with
-    their patron (§2.9).
-    """
+    """Boot combat_state with player + companions + enemy_ids sorted by initiative; surprise='enemy' skips the player's first round."""
     raw: list[str] = [state.player_id]
     if state.player_id in state.characters:
         raw.extend(state.characters[state.player_id].companions)
@@ -338,11 +324,7 @@ def remove_from_combat(state: GameState, actor_id: str) -> None:
 
 
 def check_combat_end(state: GameState) -> Literal["victory", "defeat"] | None:
-    """Check end conditions — enemies wiped/fled = victory, player dead = defeat.
-
-    Fleeing removes the enemy from enemy_ids, so an empty enemies_alive list resolves to victory.
-    flow/combat_phase yields a separate "fled" outcome, so we do not distinguish it here.
-    """
+    """Enemies wiped (or fled out of enemy_ids) = victory; player dead = defeat."""
     cs = state.combat_state
     if cs is None:
         return None
@@ -353,7 +335,6 @@ def check_combat_end(state: GameState) -> Literal["victory", "defeat"] | None:
     enemies = [state.characters.get(eid) for eid in cs.enemy_ids]
     enemies_alive = [e for e in enemies if e is not None and e.alive]
     if not enemies_alive:
-        # Enemies wiped out. Note: actors removed from enemy_ids via flee are alive=True but no longer in enemy_ids.
         return "victory"
     return None
 
