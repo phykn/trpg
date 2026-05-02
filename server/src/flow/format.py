@@ -5,8 +5,21 @@ string for a log entry lives here.
 """
 
 from ..domain.state import GameState
-from ..mapping.josa import eul_reul, eun_neun, i_ga
+from ..mapping.josa import eul_reul, eun_neun, gwa_wa, i_ga
 from .error_phrases import humanize_engine_error
+
+
+GAME_OVER_TEXT = "당신의 이야기가 여기서 끝납니다."
+NO_COMBAT_TARGETS_TEXT = "공격할 수 있는 대상이 없습니다."
+SUMMON_FAILED_TEXT = "허공을 가르지만 적은 보이지 않습니다."
+FLEE_OUTSIDE_COMBAT_TEXT = "지금은 도망칠 전투가 없습니다."
+REST_BLOCKED_IN_COMBAT_TEXT = "전투 중에는 잠들 수 없습니다."
+INPUT_REJECTED_TEXT = "그 말은 받아들여지지 않습니다."
+ACTION_FORBIDDEN_IN_COMBAT_TEXT = "전투 중에는 그 행동을 할 수 없습니다."
+
+
+def format_combat_start_turn_log(first_enemy_name: str) -> str:
+    return f"{first_enemy_name}{gwa_wa(first_enemy_name)} 전투 개시"
 
 
 def format_action_fail(actor_name: str, attempt: str, err: Exception) -> str:
@@ -142,7 +155,7 @@ def format_combat_end_text(outcome: str) -> str:
     if outcome == "victory":
         return "적을 모두 제압했습니다."
     if outcome == "defeat":
-        return "당신의 이야기가 여기서 끝납니다."
+        return GAME_OVER_TEXT
     if outcome == "downed":
         return "의식을 되찾았습니다."
     return "도망쳤습니다."

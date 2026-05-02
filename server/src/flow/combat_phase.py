@@ -22,7 +22,6 @@ from ..domain.errors import CombatStateInvalid, JudgeMalformed
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..llm.client import LLMClient
-from ..mapping.josa import gwa_wa
 from ..ontology.graph import GameGraph
 from ..ontology.queries import location_of
 from ..persistence.repo import SaveRepo, ScenarioRepo
@@ -42,7 +41,14 @@ from .combat_auto import (
 )
 from .dirty import Dirty, ToFrontFn, finalize, push_act, push_gm, push_turn_log
 from .error_phrases import humanize_runtime_error
-from .format import format_combat_end_text
+from .format import (
+    ACTION_FORBIDDEN_IN_COMBAT_TEXT,
+    INPUT_REJECTED_TEXT,
+    NO_COMBAT_TARGETS_TEXT,
+    REST_BLOCKED_IN_COMBAT_TEXT,
+    format_combat_end_text,
+    format_combat_start_turn_log,
+)
 from .judge import run_judge
 from .narrate import stream_narrate_tail
 from .subject import refresh_active_subject
@@ -161,7 +167,7 @@ async def start_combat_and_drive_auto(
             push_turn_log(
                 state,
                 first_enemy.id,
-                f"{first_enemy.name}{gwa_wa(first_enemy.name)} 전투 개시",
+                format_combat_start_turn_log(first_enemy.name),
                 dirty,
             )
 
@@ -282,7 +288,7 @@ async def run_combat_player_turn(
     refresh_active_subject(state, result)
 
     if isinstance(result, RestAction):
-        yield push_act(state, dirty, "전투 중에는 잠들 수 없습니다.")
+        yield push_act(state, dirty, REST_BLOCKED_IN_COMBAT_TEXT)
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
@@ -295,21 +301,21 @@ async def run_combat_player_turn(
         return
 
     if isinstance(result, RejectAction):
-        yield push_act(state, dirty, "그 말은 받아들여지지 않습니다.")
+        yield push_act(state, dirty, INPUT_REJECTED_TEXT)
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
 
     player_action = _judge_to_player_action(result, state)
     if player_action is None:
-        yield push_act(state, dirty, "전투 중에는 그 행동을 할 수 없습니다.")
+        yield push_act(state, dirty, ACTION_FORBIDDEN_IN_COMBAT_TEXT)
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
 
     if isinstance(result, CombatAction):
         if has_invalid_combat_targets(state, graph, result.targets):
-            yield push_act(state, dirty, "공격할 수 있는 대상이 없습니다.")
+            yield push_act(state, dirty, NO_COMBAT_TARGETS_TEXT)
             async for ev in finalize(state, save_repo, dirty, to_front_fn):
                 yield ev
             return

@@ -57,6 +57,12 @@ from .dirty import (
     push_act,
     push_log_entry,
 )
+from .format import (
+    FLEE_OUTSIDE_COMBAT_TEXT,
+    GAME_OVER_TEXT,
+    NO_COMBAT_TARGETS_TEXT,
+    SUMMON_FAILED_TEXT,
+)
 from .judge import run_judge
 from .narrate import stream_narrate_tail
 from .rest import run_rest
@@ -86,11 +92,7 @@ async def run_turn(
     yield {"type": "log_entry", "data": player_log.model_dump()}
 
     if not state.characters[state.player_id].alive:
-        yield push_act(
-            state,
-            dirty,
-            "당신의 이야기가 여기서 끝납니다.",
-        )
+        yield push_act(state, dirty, GAME_OVER_TEXT)
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
@@ -306,7 +308,7 @@ async def _dispatch(
     if isinstance(result, CombatAction):
         if has_invalid_combat_targets(state, graph, result.targets):
             # Invalid target doesn't consume the turn — the act line lands either as a raw push (no LLM) or absorbed into narrate prose (LLM available).
-            fail_line = "공격할 수 있는 대상이 없습니다."
+            fail_line = NO_COMBAT_TARGETS_TEXT
             if client is None:
                 yield push_act(state, dirty, fail_line)
             else:
@@ -362,7 +364,7 @@ async def _dispatch(
                 summoned = None
         if summoned is None:
             # No enemy materialized — fold the engine line into narrate prose so it doesn't read as chrome + silence. Failed summon doesn't consume the turn (mirrors the CombatAction invalid-target branch).
-            fail_line = "허공을 가르지만 적은 보이지 않습니다."
+            fail_line = SUMMON_FAILED_TEXT
             fail_evt = push_act(state, dirty, fail_line)
             _drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
             state.invalidate_graph()
@@ -426,7 +428,7 @@ async def _dispatch(
 
     if isinstance(result, FleeAction):
         # Flee outside combat doesn't consume the turn — same shape as the CombatAction invalid-target branch.
-        fail_line = "지금은 도망칠 전투가 없습니다."
+        fail_line = FLEE_OUTSIDE_COMBAT_TEXT
         if client is None:
             yield push_act(state, dirty, fail_line)
         else:
