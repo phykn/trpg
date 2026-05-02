@@ -104,13 +104,6 @@ def locations_unlocked_by(graph: GameGraph, item_id: str) -> list[str]:
     return [e.to_id for e in graph.get_edges(item_id, "unlocks")]
 
 
-def chapter_of_quest(graph: GameGraph, quest_id: str) -> str | None:
-    """Chapter ID this quest belongs to, or None."""
-    for e in graph.get_edges(quest_id, "member_of_chapter"):
-        return e.to_id
-    return None
-
-
 def quests_in_chapter(graph: GameGraph, chapter_id: str) -> list[str]:
     """Quest IDs that are members of this chapter."""
     return [e.from_id for e in graph.get_in_edges(chapter_id, "member_of_chapter")]
