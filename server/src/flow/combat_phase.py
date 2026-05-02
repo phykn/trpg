@@ -74,10 +74,8 @@ async def emit_combat_cinematic_and_end(
         if body:
             yield push_gm(state, dirty, body)
 
-    end_label: Literal["victory", "defeat", "fled"]
-    end_label = "defeat" if result.outcome == "downed" else result.outcome
     summary = format_outcome_summary(result)
-    end_text = format_combat_end_text(end_label)
+    end_text = format_combat_end_text(result.outcome)
     combined = f"{summary}\n{end_text}" if summary else end_text
     yield push_act(state, dirty, combined)
     yield {"type": "combat_end", "data": {"outcome": result.outcome}}

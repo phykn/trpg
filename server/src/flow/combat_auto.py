@@ -57,6 +57,7 @@ class AutoCombatResult:
     outcome: CombatOutcome = "fled"
     enemy_hits: list[EnemyHit] = field(default_factory=list)
     player_damage_total: int = 0
+    player_revived: bool = False
     player_hp_after: int = 0
     player_max_hp: int = 0
     enemy_starts: list[EnemyNarrateSnapshot] = field(default_factory=list)
@@ -395,6 +396,7 @@ def run_auto_combat(
     }
     player_start = PlayerNarrateSnapshot(name=player.name, alive=player.alive)
     player_hp_before = player.hp
+    player_revive_coins_before = player.revive_coins
 
     events: list[CombatRoundEvent] = []
     turn_events: list[dict] = []
@@ -465,8 +467,6 @@ def run_auto_combat(
                     break
                 outcome = "downed"
                 outcome_decided = True
-                # One-shot signal so next turn's narrate opens with recovery prose; consumed and cleared in flow/turn.py.
-                state.previous_phase_signal = "downed_recovered"
                 break  # stable — fight ends here for this turn
 
             end = combat_engine.check_combat_end(state)
@@ -516,6 +516,12 @@ def run_auto_combat(
         )
 
     player_damage_total = max(0, player_hp_before - player.hp)
+    player_revived = (
+        player_revive_coins_before > player.revive_coins or outcome == "downed"
+    )
+    if player_revived:
+        # One-shot signal so next turn's narrate opens with recovery prose; consumed and cleared in flow/turn.py.
+        state.previous_phase_signal = "downed_recovered"
 
     # All terminal outcomes (including HARD_CAP `fled` fallback) clear combat_state here.
     combat_engine.end_combat(state)
@@ -527,6 +533,7 @@ def run_auto_combat(
         outcome=outcome,
         enemy_hits=enemy_hits,
         player_damage_total=player_damage_total,
+        player_revived=player_revived,
         player_hp_after=player.hp,
         player_max_hp=player.max_hp,
         enemy_starts=enemy_starts,
@@ -571,10 +578,11 @@ def format_outcome_summary(result: AutoCombatResult) -> str | None:
             lines.append(f"{h.name} {h.damage_total} 피해 — 쓰러짐")
         elif h.damage_total > 0:
             lines.append(f"{h.name} {h.damage_total} 피해 (HP {h.hp_after}/{h.max_hp})")
-    if result.player_damage_total > 0:
+    if result.player_damage_total > 0 or result.player_revived:
+        suffix = " — 의식을 잃었다 깨어남" if result.player_revived else ""
         lines.append(
             f"피격 {result.player_damage_total} 피해 "
-            f"(HP {result.player_hp_after}/{result.player_max_hp})"
+            f"(HP {result.player_hp_after}/{result.player_max_hp}){suffix}"
         )
     if not lines:
         return None

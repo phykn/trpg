@@ -19,7 +19,9 @@ def format_combat_end_text(outcome: str) -> str:
     if outcome == "victory":
         return "전투 종료 — 적을 모두 제압했습니다."
     if outcome == "defeat":
-        return "전투 종료 — 당신은 쓰러졌습니다."
+        return "전투 종료 — 사망."
+    if outcome == "downed":
+        return "전투 종료 — 의식을 잃었다 깨어났습니다."
     return "전투 종료 — 도주."
 
 
