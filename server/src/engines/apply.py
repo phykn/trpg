@@ -104,7 +104,9 @@ def _apply_move(
     c: MoveChange,
     dirty: set[tuple[str, str]] | None,
 ) -> None:
-    from .quest import check_quests  # deferred import keeps the cross-layer boundary clean
+    from .quest import (
+        check_quests,
+    )  # deferred import keeps the cross-layer boundary clean
     from ..ontology.queries import connections_of
 
     if c.target not in state.characters:

@@ -14,7 +14,12 @@ from ..ontology.queries import (
     location_of,
     trigger_targets_of,
 )
-from .labels import RISK_PAYLOAD, gender_label, giver_with_location_label, race_job_label
+from .labels import (
+    RISK_PAYLOAD,
+    gender_label,
+    giver_with_location_label,
+    race_job_label,
+)
 
 
 NodeStatus = Literal[

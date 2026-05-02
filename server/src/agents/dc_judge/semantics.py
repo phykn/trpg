@@ -182,9 +182,7 @@ def _check_level_up(output: LevelUpAction, surroundings: dict[str, Any]) -> None
 def _check_learn_skill(output: LearnSkillAction, surroundings: dict[str, Any]) -> None:
     candidates = surroundings.get("skill_candidates") or []
     if not candidates:
-        raise JudgeSemanticError(
-            "no pending skill candidates. Use 'pass'."
-        )
+        raise JudgeSemanticError("no pending skill candidates. Use 'pass'.")
     if output.index >= len(candidates):
         raise JudgeSemanticError(
             f"index {output.index} out of range; only {len(candidates)} candidates."

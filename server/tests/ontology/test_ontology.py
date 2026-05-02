@@ -196,7 +196,13 @@ def test_target_view_dead_character_returns_dead_marker(fresh_state):
     state.characters["guard_01"].alive = False
     g = build_graph(state)
     v = build_target_view(state, g, "guard_01", actor_id="player_01")
-    assert v == {"type": "npc", "id": "guard_01", "name": "경비", "alive": False, "inventory": []}
+    assert v == {
+        "type": "npc",
+        "id": "guard_01",
+        "name": "경비",
+        "alive": False,
+        "inventory": [],
+    }
 
 
 # --- Phase 1: richer graph (in_edges, attrs, new edge types, new nodes) ----

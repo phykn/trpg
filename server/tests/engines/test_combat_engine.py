@@ -283,7 +283,10 @@ def test_pick_target_nearest_returns_first_in_pool():
     actor = _char("actor", behavior=CombatBehavior(attack_priority="nearest"))
     first, second, third = _char("first"), _char("second"), _char("third")
     pool = [actor, first, second, third]
-    assert pick_target(actor, pool, graph=_graph_for(actor, first, second, third)).id == "first"
+    assert (
+        pick_target(actor, pool, graph=_graph_for(actor, first, second, third)).id
+        == "first"
+    )
 
 
 def test_pick_target_lowest_hp():
@@ -301,9 +304,15 @@ def test_pick_target_healer_first_prefers_heal_skill_holder():
     tank = _char("tank", hp=10)
     actor = _char("actor", behavior=CombatBehavior(attack_priority="healer_first"))
     pool = [actor, tank, healer]
-    assert pick_target(
-        actor, pool, {"heal_01": healer_skill}, graph=_graph_for(actor, tank, healer)
-    ).id == "doc"
+    assert (
+        pick_target(
+            actor,
+            pool,
+            {"heal_01": healer_skill},
+            graph=_graph_for(actor, tank, healer),
+        ).id
+        == "doc"
+    )
 
 
 def test_pick_target_healer_first_falls_back_to_lowest_hp_when_no_healer():
@@ -343,7 +352,9 @@ def test_pick_target_no_behavior_falls_back_to_first():
     first, second = _char("first"), _char("second")
     pool = [actor, first, second]
     assert (
-        pick_target(actor, pool, rng=random.Random(0), graph=_graph_for(actor, first, second)).id
+        pick_target(
+            actor, pool, rng=random.Random(0), graph=_graph_for(actor, first, second)
+        ).id
         == "first"
     )
 
@@ -354,18 +365,24 @@ def test_pick_target_highest_threat_uses_damage_dealt():
     a, b, c = _char("a", hp=20), _char("b", hp=20), _char("c", hp=20)
     pool = [actor, a, b, c]
     damage_dealt = {"a": 5, "b": 12, "c": 3}
-    assert pick_target(
-        actor, pool, damage_dealt=damage_dealt, graph=_graph_for(actor, a, b, c)
-    ).id == "b"
+    assert (
+        pick_target(
+            actor, pool, damage_dealt=damage_dealt, graph=_graph_for(actor, a, b, c)
+        ).id
+        == "b"
+    )
 
 
 def test_pick_target_highest_threat_no_damage_falls_back_to_nearest():
     actor = _char("actor", behavior=CombatBehavior(attack_priority="highest_threat"))
     first, second = _char("first"), _char("second")
     pool = [actor, first, second]
-    assert pick_target(
-        actor, pool, damage_dealt={}, graph=_graph_for(actor, first, second)
-    ).id == "first"
+    assert (
+        pick_target(
+            actor, pool, damage_dealt={}, graph=_graph_for(actor, first, second)
+        ).id
+        == "first"
+    )
 
 
 def test_pick_target_highest_threat_tiebreaker_lowest_hp():
@@ -374,9 +391,12 @@ def test_pick_target_highest_threat_tiebreaker_lowest_hp():
     a, b = _char("a", hp=20), _char("b", hp=5)
     pool = [actor, a, b]
     damage_dealt = {"a": 10, "b": 10}
-    assert pick_target(
-        actor, pool, damage_dealt=damage_dealt, graph=_graph_for(actor, a, b)
-    ).id == "b"
+    assert (
+        pick_target(
+            actor, pool, damage_dealt=damage_dealt, graph=_graph_for(actor, a, b)
+        ).id
+        == "b"
+    )
 
 
 # --- flee ---------------------------------------------------------------------

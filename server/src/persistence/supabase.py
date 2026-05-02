@@ -278,7 +278,9 @@ class SupabaseStorageScenarioRepo:
                 "races": races,
             }
 
-        results = await asyncio.gather(*(_build_one(pid) for pid in sorted(profile_ids)))
+        results = await asyncio.gather(
+            *(_build_one(pid) for pid in sorted(profile_ids))
+        )
         return [r for r in results if r is not None]
 
     async def read_world_md(self, profile: str, *, missing_ok: bool = False) -> str:

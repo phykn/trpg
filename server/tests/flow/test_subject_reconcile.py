@@ -92,7 +92,9 @@ def test_recent_npc_must_be_alive(fresh_state):
     _add_npc(s, cid="guard", name="문지기", location_id="gate_01")
     s.active_subject_id = "barkeep"
     s.characters["player_01"].location_id = "gate_01"
-    s.turn_log.append(TurnLogEntry(turn=1, target="corpse", summary="이전에 시체를 살핌"))
+    s.turn_log.append(
+        TurnLogEntry(turn=1, target="corpse", summary="이전에 시체를 살핌")
+    )
 
     reconcile_subject_after_move(s)
 

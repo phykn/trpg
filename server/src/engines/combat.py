@@ -181,9 +181,7 @@ def _filter_alive_in_location(
     return [
         c
         for c in candidates
-        if c.alive
-        and c.id != actor.id
-        and location_of(graph, c.id) == actor_loc
+        if c.alive and c.id != actor.id and location_of(graph, c.id) == actor_loc
     ]
 
 

@@ -238,7 +238,13 @@ def _corpses_payload(
         char = state.characters.get(cid)
         if char is None or char.alive:
             continue
-        out.append({"id": cid, "name": char.name, "inventory": _corpse_inventory_payload(state, graph, cid)})
+        out.append(
+            {
+                "id": cid,
+                "name": char.name,
+                "inventory": _corpse_inventory_payload(state, graph, cid),
+            }
+        )
         seen.add(cid)
     # turn_log.target carries ids; recent_dialogue text only has names.
     for entry in state.turn_log:
@@ -253,7 +259,9 @@ def _corpses_payload(
     return out
 
 
-def _corpse_inventory_payload(state: GameState, graph: GameGraph, cid: str) -> list[dict]:
+def _corpse_inventory_payload(
+    state: GameState, graph: GameGraph, cid: str
+) -> list[dict]:
     out: list[dict] = []
     seen: set[str] = set()
     for iid in inventory_of(graph, cid):

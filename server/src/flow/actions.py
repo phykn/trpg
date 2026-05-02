@@ -374,7 +374,11 @@ async def emit_give(
     dirty.entities.add(("characters", from_id))
     dirty.entities.add(("characters", to_id))
     item_name = _item_name(state, item_id)
-    text = f"{src.name}에게서 {dst.name}{i_ga(dst.name)} 「{item_name}」{eul_reul(item_name)} 받았습니다." if dst.is_player else f"{src.name}{i_ga(src.name)} {dst.name}에게 「{item_name}」{eul_reul(item_name)} 건넸습니다."
+    text = (
+        f"{src.name}에게서 {dst.name}{i_ga(dst.name)} 「{item_name}」{eul_reul(item_name)} 받았습니다."
+        if dst.is_player
+        else f"{src.name}{i_ga(src.name)} {dst.name}에게 「{item_name}」{eul_reul(item_name)} 건넸습니다."
+    )
     yield push_act(state, dirty, text)
     push_turn_log(
         state,
@@ -435,6 +439,7 @@ async def emit_roll_pending(
     """Set pending_check, flush, emit pending_check SSE. Shared between
     /turn and the in-combat roll branch."""
     actor = state.characters[state.player_id]
+
     # Pick the candidate who likes the actor least — the "hardest" target.
     # Non-character entries (locations, items) score 0, so character targets
     # with negative aff lose the tiebreak first, neutral ties fall through.

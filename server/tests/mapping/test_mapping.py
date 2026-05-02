@@ -334,7 +334,9 @@ def test_story_graph_projects_current_map_and_actions(fresh_state):
     out = to_story_graph(state)
     nodes = {node["id"]: node for node in out["nodes"]}
     edges = {(edge["source"], edge["target"], edge["label"]) for edge in out["edges"]}
-    edge_kinds = {(edge["source"], edge["target"]): edge["kind"] for edge in out["edges"]}
+    edge_kinds = {
+        (edge["source"], edge["target"]): edge["kind"] for edge in out["edges"]
+    }
 
     assert nodes["player_01"]["kind"] == "hero"
     assert nodes["player_01"]["status"] is None

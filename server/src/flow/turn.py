@@ -313,9 +313,15 @@ async def _dispatch(
                 fail_evt = push_act(state, dirty, fail_line)
                 _drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
                 async for ev in stream_narrate_tail(
-                    client, state, scenario_repo, player_input, dirty, to_front_fn,
+                    client,
+                    state,
+                    scenario_repo,
+                    player_input,
+                    dirty,
+                    to_front_fn,
                     PassAction(action="pass"),
-                    graph=graph, act_log_lines=[fail_line],
+                    graph=graph,
+                    act_log_lines=[fail_line],
                 ):
                     yield ev
             async for ev in finalize(state, save_repo, dirty, to_front_fn):
@@ -406,8 +412,14 @@ async def _dispatch(
 
     if isinstance(result, RestAction):
         async for ev in run_rest(
-            state, scenario_repo, save_repo, dirty, rng, to_front_fn,
-            client=client, player_input=player_input,
+            state,
+            scenario_repo,
+            save_repo,
+            dirty,
+            rng,
+            to_front_fn,
+            client=client,
+            player_input=player_input,
         ):
             yield ev
         return
@@ -421,9 +433,15 @@ async def _dispatch(
             fail_evt = push_act(state, dirty, fail_line)
             _drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
             async for ev in stream_narrate_tail(
-                client, state, scenario_repo, player_input, dirty, to_front_fn,
+                client,
+                state,
+                scenario_repo,
+                player_input,
+                dirty,
+                to_front_fn,
                 PassAction(action="pass"),
-                graph=graph, act_log_lines=[fail_line],
+                graph=graph,
+                act_log_lines=[fail_line],
             ):
                 yield ev
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
@@ -470,7 +488,9 @@ async def _dispatch(
             if getattr(part, "tail_intent", None):
                 chain_act_lines.append(part.tail_intent)
         # Synthesize an empty pass so narrate always runs at chain tail, even without an explicit PassAction part.
-        narrate_action = last_pass if last_pass is not None else PassAction(action="pass")
+        narrate_action = (
+            last_pass if last_pass is not None else PassAction(action="pass")
+        )
         # Chain parts mutated relations via emit_*; rebuild graph before narrate reads.
         state.invalidate_graph()
         graph = state.graph()
@@ -514,5 +534,3 @@ async def _dispatch(
     tick_turn_buffs(state, dirty)
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
-
-

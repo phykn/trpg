@@ -269,5 +269,3 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
         log_entries=log_entries,
         **entities,
     )
-
-
