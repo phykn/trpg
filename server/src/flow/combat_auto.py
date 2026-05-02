@@ -579,10 +579,9 @@ def format_outcome_summary(result: AutoCombatResult) -> str | None:
         elif h.damage_total > 0:
             lines.append(f"{h.name} {h.damage_total} 피해 (HP {h.hp_after}/{h.max_hp})")
     if result.player_damage_total > 0 or result.player_revived:
-        suffix = " — 의식을 잃었다 깨어남" if result.player_revived else ""
         lines.append(
             f"피격 {result.player_damage_total} 피해 "
-            f"(HP {result.player_hp_after}/{result.player_max_hp}){suffix}"
+            f"(HP {result.player_hp_after}/{result.player_max_hp})"
         )
     if not lines:
         return None

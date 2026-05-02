@@ -75,7 +75,7 @@ async def emit_combat_cinematic_and_end(
             yield push_gm(state, dirty, body)
 
     summary = format_outcome_summary(result)
-    end_text = format_combat_end_text(result.outcome)
+    end_text = format_combat_end_text(result.outcome, revived=result.player_revived)
     combined = f"{summary}\n{end_text}" if summary else end_text
     yield push_act(state, dirty, combined)
     yield {"type": "combat_end", "data": {"outcome": result.outcome}}
