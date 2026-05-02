@@ -1,18 +1,4 @@
-"""state_change `set` permission matrix.
-
-Single source for `engines/apply.py` (which enforces forbidden fields per
-change) and `agents/narrate/runner.py` (which renders these into the narrate
-prompt at load time so the LLM sees the same list the engine will reject
-against).
-
-The two used to be hand-mirrored: `gender` and `location_id` had been added
-to the prompt but not the engine's frozenset, leaving a `set field=location_id`
-route around the dedicated `move` change kind. Centralizing closes that.
-
-Order in the *_ORDERED tuples is the order the prompt prints; group by stat
-block, list-typed engine state, death tracking, then identity. The frozenset
-is derived — only edit the tuple.
-"""
+"""state_change `set` permission matrix — single source for the engine's forbidden-field check and the narrate prompt's rendered list. Edit the tuple; the frozenset derives."""
 
 from __future__ import annotations
 

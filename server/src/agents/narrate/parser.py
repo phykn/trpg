@@ -21,11 +21,7 @@ class NarrativeFinal:
 
 
 def _clean_body(body: str) -> str:
-    """Strip JSON-style escapes the LLM sometimes leaks into the body.
-
-    `\\"` → `"`, `\\n` → real newline, `\\\\` → `\\`.
-    The prompt forbids this; this is a backup safety net.
-    """
+    """Backup net for JSON escapes the LLM sometimes leaks into the body (the prompt forbids them)."""
     return (
         body.replace('\\"', '"')
         .replace("\\'", "'")
@@ -35,13 +31,7 @@ def _clean_body(body: str) -> str:
 
 
 def _split_trailing_backslash_run(s: str) -> tuple[str, str]:
-    """Return (safe, hold) where `hold` is a trailing run of backslashes —
-    a `\\` straddling a stream chunk boundary would escape whatever arrives
-    next, so we hold it back until the next token. Only protects the
-    \\\\-pair case; a lone `\\` followed by `n`/`t`/`"` across a boundary
-    is not held back (those are still cleaned via _clean_body once the
-    full pair lands in the same chunk).
-    """
+    """(safe, hold): a trailing `\\` may straddle a stream chunk boundary and escape whatever arrives next, so we hold the run back until the next token."""
     i = len(s)
     while i > 0 and s[i - 1] == "\\":
         i -= 1

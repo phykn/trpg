@@ -19,10 +19,7 @@ from .schema import (
 
 
 def _check_chain(output: ChainAction, surroundings: dict[str, Any]) -> None:
-    """Recurse into chain parts so nested actions face the same checks the
-    standalone form does. Without this, a chain like
-    [UseAction(item_id="ghost"), PassAction] slips past judge validation
-    and surfaces as the engine's worse InventoryInvalid."""
+    """Recurse into chain parts so each one faces the same checks as its standalone form."""
     for part in output.parts:
         check_semantics(part, surroundings)
 
@@ -79,10 +76,7 @@ def _find_merchant(npc_id: str, surroundings: dict[str, Any]) -> dict:
 
 
 def _check_targets(output, surroundings: dict[str, Any]) -> None:
-    """Reject any target id that's not a real entity in surroundings.
-    `targets` is optional on PassAction (default []) but if filled it must
-    still resolve — placeholders like ['unknown'] / ['?'] silently flow
-    through to narrate's target_view otherwise."""
+    """Reject any target id not in surroundings; placeholder ids ('unknown', '?') would otherwise pass through to narrate's target_view."""
     valid = _surroundings_target_ids(surroundings)
     bad = [t for t in output.targets if t not in valid]
     if bad:
@@ -94,11 +88,7 @@ def _check_targets(output, surroundings: dict[str, Any]) -> None:
 
 
 def _check_pass_targets(output: PassAction, surroundings: dict[str, Any]) -> None:
-    """Pass-specific target check — accepts corpse ids in addition to live
-    entities and the location. Addressing a corpse routes through pass +
-    target_view (dead-marker) so narrate has an explicit identity to anchor
-    the corpse-tone prose, instead of guessing from `surroundings.corpses`
-    plus prose alone (which silently degrades to the empty-body fallback)."""
+    """Pass accepts corpse ids in addition to live entities — addressing a corpse needs an explicit target so narrate can anchor the corpse-tone prose."""
     valid = _surroundings_target_ids(surroundings, include_corpses=True)
     bad = [t for t in output.targets if t not in valid]
     if bad:

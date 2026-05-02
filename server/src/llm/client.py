@@ -35,15 +35,10 @@ def set_think_override(value: bool | None) -> None:
     _THINK_OVERRIDE.set(value)
 
 
-# off:    model can't think (e.g. Gemma 3, GPT-4o)
-# opt:    caller picks per call via `think` flag, default off (Qwen3, Gemini 3.x)
-# opt_on: caller picks per call via `think` flag, default on (Gemma 4 via Gemini)
-# on:     model always thinks, no toggle (reasoning-only models)
+# off / on: forced; opt / opt_on: per-call `think` flag with that default.
 ThinkingMode = Literal["off", "opt", "opt_on", "on"]
 
-# Provider-style picks the `extra_body` builder + response parser; impls
-# live in `llama_cpp.py` (local) and `gemini.py` (Google OpenAI-compat).
-# Derived from base_url at provider construction.
+# Picks the `extra_body` builder + response parser; derived from base_url.
 ToggleStyle = Literal["llama_cpp", "gemini"]
 
 
