@@ -1,7 +1,7 @@
 import asyncio
 from collections.abc import AsyncIterator
 
-from .._runner import read_prompt
+from .._runner import load_prompt
 from ...domain.errors import LLMUnavailable
 from ...llm.client import LLMClient
 from ...rules.permissions import render_for_prompt
@@ -10,16 +10,8 @@ from .schema import NarrateInput
 
 # Streamed body tokens can't be retracted, so retry only fires before the first body delta lands.
 
-
-def _render_prompt() -> str:
-    """Inject permission matrix into `{{CHAR_FORBIDDEN}}` / `{{ITEM_FORBIDDEN}}` / `{{LOC_FORBIDDEN}}` so prompt and engine can't drift."""
-    text = read_prompt(__file__)
-    for key, value in render_for_prompt().items():
-        text = text.replace("{{" + key + "}}", value)
-    return text
-
-
-_PROMPT = _render_prompt()
+# Permission matrix is injected via `{{CHAR_FORBIDDEN}}` / `{{ITEM_FORBIDDEN}}` / `{{LOC_FORBIDDEN}}` so prompt and engine can't drift.
+_PROMPT = load_prompt(__file__, substitutions=render_for_prompt())
 
 _MAX_RETRIES = 5
 
