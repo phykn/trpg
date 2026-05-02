@@ -18,7 +18,7 @@ from ..agents.dc_judge.schema import (
 )
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph
-from ..ontology.queries import location_of
+from ..ontology.queries import inhabitants_of, location_of
 
 
 def _is_active_npc(state: GameState, cid: str) -> bool:
@@ -80,7 +80,7 @@ def refresh_active_subject(state: GameState, result) -> None:
 def reconcile_subject_after_move(
     state: GameState, graph: GameGraph | None = None
 ) -> None:
-    """Re-pick the subject after the player relocates. Called from `emit_move` once the location_id has flipped — drops a pin pointing at the old location and restores via `recent_npc_id` if the player previously addressed an NPC at the new location, else leaves the pin cleared (player picks via 만남)."""
+    """Re-pick the subject after the player relocates. Called from `emit_move` once the location_id has flipped — drops a pin pointing at the old location and restores via `recent_npc_id` if the player previously addressed an NPC at the new location, else leaves the pin cleared (caller may override with context-aware logic, e.g. NPC name in player_input)."""
     cur = state.active_subject_id
     if cur is None:
         return
@@ -92,3 +92,25 @@ def reconcile_subject_after_move(
         return
 
     state.active_subject_id = state.recent_npc_id(state.player_id)
+
+
+def pin_subject_by_input_name(
+    state: GameState, player_input: str, graph: GameGraph | None = None
+) -> None:
+    """If `player_input` literally names an alive NPC at the player's current location, pin them. Conservative: scoped to current location and exact-name substring, so it fires for "탈크의 대장간으로 이동" but not for stray mentions of NPCs elsewhere."""
+    if not player_input:
+        return
+    if graph is None:
+        graph = state.graph()
+    player_loc = location_of(graph, state.player_id)
+    if player_loc is None:
+        return
+    for cid in inhabitants_of(graph, player_loc):
+        if cid == state.player_id:
+            continue
+        ch = state.characters.get(cid)
+        if ch is None or not ch.alive or not ch.name:
+            continue
+        if ch.name in player_input:
+            state.active_subject_id = cid
+            return

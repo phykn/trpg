@@ -206,6 +206,11 @@ async def _run_one_step_action(
     # emit_* mutated relations; rebuild graph before narrate reads.
     state.invalidate_graph()
     graph = state.graph()
+    # Move into a new location named after an alive NPC ("탈크의 대장간으로 이동") → pin that NPC so the target panel matches narrate's first prose.
+    if isinstance(result, MoveAction):
+        from .subject import pin_subject_by_input_name
+
+        pin_subject_by_input_name(state, player_input, graph)
     fake_pass = PassAction(action="pass")
     async for ev in _stream_narrate_tail(
         client,
@@ -468,6 +473,11 @@ async def _dispatch(
         # Chain parts mutated relations via emit_*; rebuild graph before narrate reads.
         state.invalidate_graph()
         graph = state.graph()
+        # Chain that includes a move into a named-NPC location: pin the NPC so target panel matches narrate.
+        if any(isinstance(p, MoveAction) for p in result.parts):
+            from .subject import pin_subject_by_input_name
+
+            pin_subject_by_input_name(state, player_input, graph)
         async for ev in _stream_narrate_tail(
             client,
             state,
