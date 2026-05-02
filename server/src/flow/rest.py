@@ -12,7 +12,7 @@ from ..persistence.repo import SaveRepo, ScenarioRepo
 from . import encounter as encounter_engine
 from .combat_auto import PlayerAction
 from .combat_phase import start_combat_and_drive_auto
-from .clock import tick_turn_buffs
+from .buff_tick import tick_turn_buffs
 from .dirty import Dirty, ToFrontFn, finalize, push_act
 
 

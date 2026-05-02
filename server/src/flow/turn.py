@@ -42,7 +42,7 @@ from .combat_phase import (
     start_combat_and_drive_auto,
 )
 from .encounter import summon_encounter
-from .clock import tick_turn_buffs
+from .buff_tick import tick_turn_buffs
 from .error_phrases import humanize_runtime_error
 from .dirty import (
     Dirty,

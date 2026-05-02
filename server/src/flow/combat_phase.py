@@ -42,7 +42,7 @@ from .actions import (
     emit_unequip,
     emit_use,
 )
-from .clock import tick_turn_buffs
+from .buff_tick import tick_turn_buffs
 from .combat_auto import (
     AutoCombatResult,
     PlayerAction,

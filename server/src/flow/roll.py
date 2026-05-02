@@ -12,7 +12,7 @@ from ..llm.client import LLMClient, set_llm_session_if_unset
 from ..ontology.graph import build_graph
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from ..rules.dc import compute_grade
-from .clock import tick_turn_buffs
+from .buff_tick import tick_turn_buffs
 from .combat_auto import PlayerAction, run_auto_combat
 from .combat_phase import emit_combat_cinematic_and_end
 from .dirty import (

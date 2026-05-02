@@ -1,8 +1,4 @@
-"""Per-turn dirty tracking, log push helpers, and the flush + finalize
-tail. Every flow module pushes through these helpers so persistence
-and SSE shape stay consistent. (`tick_turn_buffs` lives next door in
-flow/clock.py — turn-boundary semantics, not dirty bookkeeping.)
-"""
+"""Per-turn dirty tracking, log push helpers, and the flush + finalize tail."""
 
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
