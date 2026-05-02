@@ -243,6 +243,8 @@ def test_move_item_between_containers(state):
 
 
 def test_affinity_grade_intent_matrix(state):
+    """Affinity is single-direction — the change writes to
+    `target.relations[actor]` (how the target now views the actor)."""
     apply_changes(
         state,
         [
@@ -255,9 +257,9 @@ def test_affinity_grade_intent_matrix(state):
             }
         ],
     )
-    assert state.characters["player_01"].relations["guard_01"] == 5
+    assert state.characters["guard_01"].relations["player_01"] == 5
 
-    state.characters["player_01"].relations["guard_01"] = 0
+    state.characters["guard_01"].relations["player_01"] = 0
     apply_changes(
         state,
         [
@@ -270,9 +272,9 @@ def test_affinity_grade_intent_matrix(state):
             }
         ],
     )
-    assert state.characters["player_01"].relations["guard_01"] == -5
+    assert state.characters["guard_01"].relations["player_01"] == -5
 
-    state.characters["player_01"].relations["guard_01"] = 0
+    state.characters["guard_01"].relations["player_01"] = 0
     apply_changes(
         state,
         [
@@ -286,10 +288,10 @@ def test_affinity_grade_intent_matrix(state):
         ],
     )
     assert (
-        state.characters["player_01"].relations["guard_01"] == 0
+        state.characters["guard_01"].relations["player_01"] == 0
     )  # successful deception = 0
 
-    state.characters["player_01"].relations["guard_01"] = 0
+    state.characters["guard_01"].relations["player_01"] = 0
     apply_changes(
         state,
         [
@@ -302,10 +304,10 @@ def test_affinity_grade_intent_matrix(state):
             }
         ],
     )
-    assert state.characters["player_01"].relations["guard_01"] == -6  # delta * 2
+    assert state.characters["guard_01"].relations["player_01"] == -6  # delta * 2
 
     # clamp 100
-    state.characters["player_01"].relations["guard_01"] = 95
+    state.characters["guard_01"].relations["player_01"] = 95
     apply_changes(
         state,
         [
@@ -318,24 +320,22 @@ def test_affinity_grade_intent_matrix(state):
             }
         ],
     )
-    assert state.characters["player_01"].relations["guard_01"] == 100
+    assert state.characters["guard_01"].relations["player_01"] == 100
 
 
-def test_combat_affinity_drop_bidirectional(state):
-    """Combat actions never reach narrate; the engine deducts on both sides
-    (attacker→target, target→attacker) so trade blocks (npc→player) and
-    social_bonus (player→npc) both react to a hostile act."""
+def test_combat_affinity_drop_target_only(state):
+    """Combat actions never reach narrate; the engine deducts only on the
+    target's side so trade gating (npc→player) reacts to a hostile act.
+    The reverse direction is no longer tracked."""
     drop = RULES.social.combat_affinity_drop
     apply_combat_affinity_drop(state, "player_01", "guard_01")
-    assert state.characters["player_01"].relations["guard_01"] == -drop
     assert state.characters["guard_01"].relations["player_01"] == -drop
+    assert "guard_01" not in state.characters["player_01"].relations
 
 
 def test_combat_affinity_drop_clamps_at_floor(state):
-    state.characters["player_01"].relations["guard_01"] = -95
     state.characters["guard_01"].relations["player_01"] = -95
     apply_combat_affinity_drop(state, "player_01", "guard_01")
-    assert state.characters["player_01"].relations["guard_01"] == -100
     assert state.characters["guard_01"].relations["player_01"] == -100
 
 
@@ -348,8 +348,8 @@ def test_combat_affinity_drop_self_target_noop(state):
 def test_combat_affinity_drop_marks_dirty(state):
     dirty: set[tuple[str, str]] = set()
     apply_combat_affinity_drop(state, "player_01", "guard_01", dirty=dirty)
-    assert ("characters", "player_01") in dirty
     assert ("characters", "guard_01") in dirty
+    assert ("characters", "player_01") not in dirty
 
 
 def test_partial_success_keeps_valid_changes(state):

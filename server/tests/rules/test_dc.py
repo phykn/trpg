@@ -41,17 +41,20 @@ def test_required_roll_clamps_to_one_or_twenty():
 
 
 def test_social_bonus_thresholds():
-    ch = Character(
+    """`social_bonus(target, actor_id)` reads how the target views the actor.
+    The character holding the relations dict is the target; we ask "does
+    this target like/dislike actor X enough to shift X's roll?"."""
+    target = Character(
         id="p",
         name="x",
         race_id="human",
         stats=Stats(),
         relations={"friend": 70, "foe": -60, "neutral": 10},
     )
-    assert social_bonus(ch, "friend") == RULES.social.roll_bonus
-    assert social_bonus(ch, "foe") == -RULES.social.roll_bonus
-    assert social_bonus(ch, "neutral") == 0
-    assert social_bonus(ch, "unknown") == 0
+    assert social_bonus(target, "friend") == RULES.social.roll_bonus
+    assert social_bonus(target, "foe") == -RULES.social.roll_bonus
+    assert social_bonus(target, "neutral") == 0
+    assert social_bonus(target, "unknown") == 0
 
 
 def test_compute_grade_critical_priority():

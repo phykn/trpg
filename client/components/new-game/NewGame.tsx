@@ -104,9 +104,9 @@ export function NewGame({ onSubmit }: Props) {
           <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default }} />
           <Glyph kind="outline" tone="accent" size={10} />
         </View>
-        <Text className="font-serif-medium text-narration text-fg-default">새 게임</Text>
+        <Text className="font-serif-medium text-narration text-fg-default">새로운 이야기</Text>
         <Text className="font-sans text-body text-fg-muted">
-          이름을 정하고, 세계관과 종족을 고르면 시작합니다.
+          이름을 정하고, 세계와 종족을 고르면 시작합니다.
         </Text>
       </View>
 

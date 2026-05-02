@@ -121,10 +121,9 @@ export function Playing({ game }: Props) {
       {newGameConfirmOpen && (
         <ConfirmDialog
           info={{
-            title: '새 게임',
-            blurb: '현재 이어 하던 세션 연결을 해제하고 새 게임 설정 화면으로 돌아갑니다.',
-            risk: { label: '세션 연결 해제', tone: 'bad' },
-            confirmLabel: '새 게임',
+            title: '새로운 이야기',
+            blurb: '진행 중인 이야기를 멈춥니다. 새로운 이야기를 시작합니다.',
+            confirmLabel: '시작',
           }}
           onConfirm={() => {
             setNewGameConfirmOpen(false);
@@ -154,7 +153,6 @@ export function Playing({ game }: Props) {
           setInput={setInput}
           onSend={onSend}
           onStop={onStop}
-          focused={typing}
           streaming={streaming}
           think={think}
           onToggleThink={() => setThink((v) => !v)}

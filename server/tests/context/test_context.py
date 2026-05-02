@@ -33,8 +33,9 @@ def test_surroundings_includes_player_and_filters_dead_or_far(fresh_state):
         race_id="human",
         stats=Stats(),
         location_id="plaza_01",
-        relations={"friend": 70, "foe": -60},
     )
+    # Affinity is now read NPC→player (how each NPC views the player), so
+    # the relations dict lives on the NPCs, not the player.
     fresh_state.characters["friend"] = Character(
         id="friend",
         name="친구",
@@ -43,6 +44,7 @@ def test_surroundings_includes_player_and_filters_dead_or_far(fresh_state):
         location_id="plaza_01",
         max_hp=20,
         hp=20,
+        relations={"player_01": 70},
     )
     fresh_state.characters["foe"] = Character(
         id="foe",
@@ -52,6 +54,7 @@ def test_surroundings_includes_player_and_filters_dead_or_far(fresh_state):
         location_id="plaza_01",
         max_hp=20,
         hp=8,
+        relations={"player_01": -60},
     )
     fresh_state.characters["far"] = Character(
         id="far",

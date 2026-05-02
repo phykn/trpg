@@ -71,13 +71,15 @@ The canonical user-facing term for skills is **기술**. The dc_judge prompt acc
 
 ## Affinity
 
-Scale is `-100..+100`. With `social.friendly_threshold = 50`, a target at or above the threshold gives the actor `+social.roll_bonus = 2`. Post-roll delta = `affinity_<grade>`, mirrored onto `intent`: hostile flips the sign; deceptive zeroes the success branch and doubles the failure one.
+Scale is `-100..+100`. **Single direction:** affinity is always read and written as `target.relations[actor]` — i.e. how the *target* views the *actor*. The reverse direction (actor's view of target) is not tracked; gameplay only consumes one number per pair, and tracking both was costing memory without anything reading it.
+
+With `social.friendly_threshold = 50`, a target at or above the threshold gives the actor `+social.roll_bonus = 2` on social rolls (the target trusts the actor → easier persuasion). Post-roll delta = `affinity_<grade>`, mirrored onto `intent`: hostile flips the sign; deceptive zeroes the success branch and doubles the failure one.
 
 Two paths feed `relations`:
-- **Narrate** emits an `affinity` state_change for social acts (praise, insult, bribe, threaten, deceive). One actor → target update per change. The narrate prompt now requires emission for verbal social acts even on the `pass` branch — `intent` picks `friendly | hostile | deceptive`, `grade` is read off the prose tone.
-- **Engine** deducts `social.combat_affinity_drop` bidirectionally inside `emit_attack` and `emit_skill_cast` (offensive types only) — combat never reaches narrate, so without this hook attacks would leave `npc.relations[player]` (which gates trade) and `player.relations[npc]` (which feeds `social_bonus`) untouched.
+- **Narrate** emits an `affinity` state_change for social acts (praise, insult, bribe, threaten, deceive). The schema carries `actor` + `target`, but engine writes the delta to `state.characters[target].relations[actor]` only. The narrate prompt requires emission for verbal social acts even on the `pass` branch — `intent` picks `friendly | hostile | deceptive`, `grade` is read off the prose tone.
+- **Engine** deducts `social.combat_affinity_drop` inside `emit_attack` and `emit_skill_cast` (offensive types only) on the target's side: `state.characters[target].relations[attacker] -= drop`. Combat never reaches narrate, so without this hook attacks would leave the NPC's view of the player unchanged and trade gating wouldn't react.
 
-Trade gating: `_merchants_payload` filters out NPCs whose `disposition.aggressive >= social.hostile_aggressive_threshold` regardless of `relations[player]`. Without it, a hostile seed (bandit, wolf) carrying equipment in its inventory would surface as a merchant on first sight, since `relations[player]` defaults to 0 — which satisfies `trade_threshold = 0`.
+Trade gating: `_merchants_payload` filters out NPCs whose `disposition.aggressive >= social.hostile_aggressive_threshold` regardless of `npc.relations[player]`. Without it, a hostile seed (bandit, wolf) carrying equipment in its inventory would surface as a merchant on first sight, since `npc.relations[player]` defaults to 0 — which satisfies `trade_threshold = 0`.
 
 ## Persistence
 

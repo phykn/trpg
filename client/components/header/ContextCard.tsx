@@ -157,10 +157,10 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, menuOpen, bg
               onNewGame?.();
             }}
             accessibilityRole="button"
-            accessibilityLabel="새 게임"
+            accessibilityLabel="새로운 이야기"
             className="px-3 py-2"
           >
-            <Text className="font-sans text-body text-fg-default">새 게임</Text>
+            <Text className="font-sans text-body text-fg-default">새로운 이야기</Text>
           </Pressable>
           <Pressable
             onPress={() => {
