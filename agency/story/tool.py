@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT))
 # sys.path must be set first; decompose.py transitively imports src.llm
 from agency.story.harness.decompose import DecomSetup, DecomCast, DecomArc, _check_setup, _check_cast, _check_arc  # noqa: E402
 from agency.story.harness._common import EntityWriterError  # noqa: E402
+from agency.story.harness.scenario import fill_equipment  # noqa: E402
 from agency.story.harness.runner import (  # noqa: E402
     SPECS,
     _check_entity_invariants,
@@ -85,6 +86,13 @@ def _build_parser() -> argparse.ArgumentParser:
         help="풀-의존 검사 건너뜀 (character의 inventory/skill 풀 검증을 sweep까지 미룸)",
     )
     sp_chk.set_defaults(func=_cmd_check_entity)
+    # equip-fill
+    sp_eq = sub.add_parser(
+        "equip-fill",
+        help="character.equipment 슬롯을 inventory 아이템 effect 보고 자동 배치",
+    )
+    sp_eq.add_argument("scenario_dir", help="scenario directory")
+    sp_eq.set_defaults(func=_cmd_equip_fill)
     return parser
 
 
@@ -192,6 +200,19 @@ def _cmd_decompose_setup(args: argparse.Namespace) -> int:
         _check_setup(setup)
     except Exception as e:
         return _fail("decompose-setup", e)
+    print("OK")
+    return 0
+
+
+def _cmd_equip_fill(args: argparse.Namespace) -> int:
+    sd = Path(args.scenario_dir)
+    if not sd.is_dir():
+        print(f"equip-fill failed: scenario_dir not a directory: {sd}", file=sys.stderr)
+        return 1
+    try:
+        fill_equipment(sd)
+    except Exception as e:
+        return _fail("equip-fill", e)
     print("OK")
     return 0
 
