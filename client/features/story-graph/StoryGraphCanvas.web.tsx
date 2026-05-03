@@ -33,13 +33,13 @@ type NodeOverride = {
 };
 
 function hashJitter(id: string): { dx: number; dy: number } {
-  // Deterministic small offset (~±15 px) so newly added nodes don't all stack at the centroid.
+  // Deterministic small offset (~±35 px) so newly added nodes don't all stack at the centroid.
   let h = 0;
   for (let i = 0; i < id.length; i += 1) {
     h = (h * 31 + id.charCodeAt(i)) | 0;
   }
-  const dx = ((h & 0xffff) / 0xffff - 0.5) * 30;
-  const dy = (((h >> 16) & 0xffff) / 0xffff - 0.5) * 30;
+  const dx = ((h & 0xffff) / 0xffff - 0.5) * 70;  // ±35px
+  const dy = (((h >> 16) & 0xffff) / 0xffff - 0.5) * 70;
   return { dx, dy };
 }
 
@@ -247,20 +247,24 @@ export function StoryGraphCanvas({
                 concentric: (node: cytoscape.NodeSingular) => Number(node.data('tier') ?? 0),
                 levelWidth: () => 1,
               }
-            : graph.nodes.every((n) => positionsRef.current[n.id])
-              ? { name: 'preset', fit: true, padding: 14 }
-              : {
-                  name: 'fcose',
-                  animate: false,
-                  fit: true,
-                  idealEdgeLength: 72,
-                  nodeRepulsion: 4500,
-                  padding: 12,
-                  randomize: false,
-                  quality: 'default',
-                  uniformNodeDimensions: true,
-                  packComponents: true,
-                },
+            : (() => {
+              const allCached = graph.nodes.every((n) => positionsRef.current[n.id]);
+              const hasNewNodes = unseenNodeIds && unseenNodeIds.size > 0;
+              return (allCached && !hasNewNodes)
+                ? { name: 'preset', fit: true, padding: 12 }
+                : {
+                    name: 'fcose',
+                    animate: false,
+                    fit: true,
+                    idealEdgeLength: 72,
+                    nodeRepulsion: 4500,
+                    padding: 12,
+                    randomize: false,
+                    quality: 'default',
+                    uniformNodeDimensions: true,
+                    packComponents: true,
+                  };
+            })(),
     } as any);
 
     // Capture positions synchronously — `cytoscape({layout: ..., animate: false})`
