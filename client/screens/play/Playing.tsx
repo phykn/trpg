@@ -9,7 +9,7 @@ import type { Game } from '@/hooks/useGame';
 import { buildPanelSlots } from '@/features/info-panel';
 import type { PanelAction, PanelSlot } from '@/features/info-panel';
 
-import { Composer, LevelUpPrompt, RollPrompt } from '@/features/composer';
+import { Composer, GameOverPanel, LevelUpPrompt, RollPrompt } from '@/features/composer';
 import { ContextCard } from '@/features/info-panel';
 import { HeroStrip } from '@/features/hero';
 import { ConfirmDialog } from '@/components/ui';
@@ -17,7 +17,7 @@ import { ConfirmDialog } from '@/components/ui';
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, storyGraph, log, pending, streaming, awaitingNarration, suggestions, errorMessage, think, setThink, onSend, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp } = game;
+  const { hero, subject, quest, place, combat, storyGraph, log, pending, streaming, awaitingNarration, gameOver, suggestions, errorMessage, think, setThink, onSend, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -134,7 +134,7 @@ export function Playing({ game }: Props) {
         log={log}
         rolling={rolling}
         typing={awaitingNarration}
-        suggestions={!streaming && !pending ? suggestions : []}
+        suggestions={!gameOver && !streaming && !pending ? suggestions : []}
         onPickSuggestion={onSend}
       />
 
@@ -152,7 +152,9 @@ export function Playing({ game }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
-        {pending ? (
+        {gameOver ? (
+          <GameOverPanel onRestart={goToNewGame} />
+        ) : pending ? (
           <RollPrompt pending={pending} onRoll={onRoll} onStop={onStop} rolling={rolling} />
         ) : levelUpOpen ? (
           <LevelUpPrompt
