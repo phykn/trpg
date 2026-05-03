@@ -4,6 +4,7 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from ...domain.types import StatKey, Tier
+from ...mapping.labels import ROLL_REASON_DEFAULT
 
 
 class JudgeInput(BaseModel):
@@ -91,7 +92,7 @@ class RollAction(_StrictAction):
     stat: StatKey
     targets: list[str] = Field(min_length=1)
     # Default absorbs LLM omits when validate_json bypasses the coerce hook (e.g. answer wrapped in markdown).
-    reason: str = Field(default="행동 판정", min_length=1, max_length=80)
+    reason: str = Field(default=ROLL_REASON_DEFAULT, min_length=1, max_length=80)
 
 
 class RestAction(_StrictAction):
@@ -178,7 +179,7 @@ _PHASE_CHANGING_ACTIONS = frozenset(
     {"combat", "roll", "rest", "flee", "reject", "summon_combat"}
 )
 
-_ROLL_REASON_FALLBACK = "행동 판정"
+_ROLL_REASON_FALLBACK = ROLL_REASON_DEFAULT
 
 
 def coerce_judge_output(raw: dict) -> dict:
