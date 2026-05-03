@@ -66,7 +66,7 @@ export function Playing({ game }: Props) {
     }
   }, [typing]);
 
-  const miniMapGraph = useStoryGraph(game.gameId, storyGraph);
+  const { graph: miniMapGraph, unseenNodeIds: unseenMapNodeIds, markNodeSeen } = useStoryGraph(game.gameId, storyGraph);
 
   if (!hero) return null;
 

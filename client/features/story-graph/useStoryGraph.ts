@@ -7,7 +7,7 @@ import {
   storyGraphFingerprint,
   type StoryGraphModel,
 } from './presenters';
-import { getStorage } from '@/services/storage';
+import { getStorage, loadSeenNodes, storeSeenNodes } from '@/services/storage';
 
 const STORAGE_PREFIX = 'trpg.story_graph.';
 export const STORY_GRAPH_UPDATED_EVENT = 'trpg:story-graph-updated';
@@ -36,14 +36,22 @@ export function mergeAndStoreStoryGraph(gameId: string, current: StoryGraphModel
   return next;
 }
 
-export function useStoryGraph(gameId: string | null, current: StoryGraphModel): StoryGraphModel {
+export type StoryGraphHookValue = {
+  graph: StoryGraphModel;
+  unseenNodeIds: Set<string>;
+  markNodeSeen: (id: string) => void;
+};
+
+export function useStoryGraph(gameId: string | null, current: StoryGraphModel): StoryGraphHookValue {
   const [graph, setGraph] = React.useState<StoryGraphModel>(current);
+  const [seen, setSeen] = React.useState<Set<string>>(() => new Set());
   const activeGameId = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     if (!gameId) {
       activeGameId.current = null;
       setGraph(current.nodes.length > 0 ? current : EMPTY_STORY_GRAPH);
+      setSeen(new Set());
       return;
     }
 
@@ -52,6 +60,15 @@ export function useStoryGraph(gameId: string | null, current: StoryGraphModel): 
       const next = mergeStoryGraphs(readStoredStoryGraph(gameId) ?? EMPTY_STORY_GRAPH, current);
       setGraph(next);
       writeStoredStoryGraph(gameId, next);
+      // Hydrate seen set from cache, and auto-seed with the player's starting node so
+      // it doesn't get a "new" ring on first load.
+      const loaded = loadSeenNodes(gameId);
+      const startNode = next.nodes.find((n) => n.kind === 'place');
+      if (startNode && !loaded.has(startNode.id)) {
+        loaded.add(startNode.id);
+        storeSeenNodes(gameId, loaded);
+      }
+      setSeen(loaded);
       return;
     }
 
@@ -63,5 +80,25 @@ export function useStoryGraph(gameId: string | null, current: StoryGraphModel): 
     });
   }, [current, gameId]);
 
-  return graph;
+  const unseenNodeIds = React.useMemo(() => {
+    const out = new Set<string>();
+    for (const n of graph.nodes) if (!seen.has(n.id)) out.add(n.id);
+    return out;
+  }, [graph, seen]);
+
+  const markNodeSeen = React.useCallback(
+    (id: string) => {
+      const activeId = activeGameId.current;
+      if (!activeId || seen.has(id)) return;
+      setSeen((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        storeSeenNodes(activeId, next);
+        return next;
+      });
+    },
+    [seen],
+  );
+
+  return { graph, unseenNodeIds, markNodeSeen };
 }
