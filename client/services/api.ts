@@ -2,6 +2,8 @@ import { fetch } from 'expo/fetch';
 
 import type {
   InitRequest,
+  LevelUpPreviewResponse,
+  LevelUpRequest,
   ProfileCard,
   RollRequest,
   SessionPayload,
@@ -136,6 +138,26 @@ export function streamIntro(
   return streamSse(
     `${BASE_URL}/session/${gameId}/intro`,
     { method: 'POST' },
+    onEvent,
+    signal,
+  );
+}
+
+export async function getLevelUpPreview(gameId: string): Promise<LevelUpPreviewResponse> {
+  const res = await fetch(`${BASE_URL}/session/${gameId}/level_up_preview`, { headers: baseHeaders });
+  if (!res.ok) throw new Error(`getLevelUpPreview failed: HTTP ${res.status}`);
+  return (await res.json()) as LevelUpPreviewResponse;
+}
+
+export function streamLevelUp(
+  gameId: string,
+  body: LevelUpRequest,
+  onEvent: (ev: StreamEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  return streamSse(
+    `${BASE_URL}/session/${gameId}/level_up`,
+    { method: 'POST', body: JSON.stringify(body) },
     onEvent,
     signal,
   );
