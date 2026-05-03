@@ -39,7 +39,7 @@ export function Bar({ value, max, color, h = 4, signed = false }: Props) {
     >
       {pct > 0 && (
         <View
-          className="h-full rounded-full"
+          className="h-full"
           style={{ width: `${pct}%`, backgroundColor: color }}
         />
       )}
