@@ -3,6 +3,7 @@
 from src.domain.entities import (
     Chapter,
     Character,
+    CombatBehavior,
     Item,
     Location,
     Quest,
@@ -364,3 +365,161 @@ def test_rewards_overflow_drops_to_location(fresh_state):
     q.check_quests(state, "character_death", "g1")
     assert "anvil_01" not in state.characters["player_01"].inventory_ids
     assert "anvil_01" in state.locations["loc_01"].item_ids
+
+
+# --- kill trigger fallback by location ------------------------------------
+
+
+def test_kill_trigger_matches_same_location_hostile_when_id_misses(fresh_state):
+    """Trigger references a scenario bandit at san_pass_road; player kills a
+    different hostile (dynamic spawn) at the same location. The fallback
+    matches by (event_type=character_death, victim's location == trigger
+    target's location, victim has combat_behavior)."""
+    state = _state(
+        fresh_state,
+        quests=[
+            _quest(
+                "q1",
+                triggers=[_trig("a", "character_death", "bandit_at_san_pass")],
+                rewards=QuestRewards(gold=50, exp=100),
+            )
+        ],
+    )
+    state.locations["san_pass_road"] = Location(id="san_pass_road", name="산문 가는 길")
+    state.characters["bandit_at_san_pass"] = Character(
+        id="bandit_at_san_pass",
+        name="약탈자",
+        race_id="human",
+        stats=Stats(),
+        location_id="san_pass_road",
+        combat_behavior=CombatBehavior(),
+    )
+    state.characters["goblin_spawn_3"] = Character(
+        id="goblin_spawn_3",
+        name="고블린 약탈자",
+        race_id="goblin",
+        stats=Stats(),
+        location_id="san_pass_road",
+        combat_behavior=CombatBehavior(),
+        alive=False,
+    )
+    dirty: set[tuple[str, str]] = set()
+    changed = q.check_quests(state, "character_death", "goblin_spawn_3", dirty)
+    assert changed == ["q1"]
+    assert state.quests["q1"].status == "completed"
+    assert state.quests["q1"].triggers_met == [True]
+    assert state.characters["player_01"].gold == 50
+    assert state.characters["player_01"].xp_pool == 100
+
+
+def test_kill_trigger_fallback_skips_non_hostile(fresh_state):
+    """A non-hostile (no combat_behavior) victim at the right location
+    must NOT satisfy the trigger — guards against quest completion when the
+    player kills a friendly NPC."""
+    state = _state(
+        fresh_state,
+        quests=[
+            _quest(
+                "q1",
+                triggers=[_trig("a", "character_death", "bandit_at_san_pass")],
+            )
+        ],
+    )
+    state.locations["san_pass_road"] = Location(id="san_pass_road", name="산문 가는 길")
+    state.characters["bandit_at_san_pass"] = Character(
+        id="bandit_at_san_pass",
+        name="약탈자",
+        race_id="human",
+        stats=Stats(),
+        location_id="san_pass_road",
+        combat_behavior=CombatBehavior(),
+    )
+    state.characters["villager_npc"] = Character(
+        id="villager_npc",
+        name="마을 사람",
+        race_id="human",
+        stats=Stats(),
+        location_id="san_pass_road",
+        combat_behavior=None,
+        alive=False,
+    )
+    q.check_quests(state, "character_death", "villager_npc")
+    assert state.quests["q1"].status == "active"
+
+
+def test_kill_trigger_fallback_skips_different_location(fresh_state):
+    """A hostile killed at a DIFFERENT location must not satisfy the trigger."""
+    state = _state(
+        fresh_state,
+        quests=[
+            _quest(
+                "q1",
+                triggers=[_trig("a", "character_death", "bandit_at_san_pass")],
+            )
+        ],
+    )
+    state.locations["san_pass_road"] = Location(id="san_pass_road", name="산문 가는 길")
+    state.locations["plaza"] = Location(id="plaza", name="광장")
+    state.characters["bandit_at_san_pass"] = Character(
+        id="bandit_at_san_pass",
+        name="약탈자",
+        race_id="human",
+        stats=Stats(),
+        location_id="san_pass_road",
+        combat_behavior=CombatBehavior(),
+    )
+    state.characters["goblin_spawn_3"] = Character(
+        id="goblin_spawn_3",
+        name="고블린",
+        race_id="goblin",
+        stats=Stats(),
+        location_id="plaza",
+        combat_behavior=CombatBehavior(),
+        alive=False,
+    )
+    q.check_quests(state, "character_death", "goblin_spawn_3")
+    assert state.quests["q1"].status == "active"
+
+
+def test_kill_trigger_fallback_skips_when_target_id_unknown(fresh_state):
+    """If the trigger's target_id refers to no Character (no location to anchor),
+    the fallback can't fire — only exact-id match works."""
+    state = _state(
+        fresh_state,
+        quests=[
+            _quest(
+                "q1",
+                triggers=[_trig("a", "character_death", "abstract_quest_target")],
+            )
+        ],
+    )
+    state.locations["san_pass_road"] = Location(id="san_pass_road", name="산문 가는 길")
+    state.characters["goblin_spawn_3"] = Character(
+        id="goblin_spawn_3",
+        name="고블린",
+        race_id="goblin",
+        stats=Stats(),
+        location_id="san_pass_road",
+        combat_behavior=CombatBehavior(),
+        alive=False,
+    )
+    q.check_quests(state, "character_death", "goblin_spawn_3")
+    assert state.quests["q1"].status == "active"
+
+
+def test_non_kill_trigger_event_does_not_fall_back(fresh_state):
+    """Fallback applies only to character_death — location_enter / item_use
+    must keep strict id matching."""
+    state = _state(
+        fresh_state,
+        quests=[
+            _quest(
+                "q1",
+                triggers=[_trig("a", "location_enter", "plaza_main")],
+            )
+        ],
+    )
+    state.locations["plaza_main"] = Location(id="plaza_main", name="중앙 광장")
+    state.locations["plaza_side"] = Location(id="plaza_side", name="옆 광장")
+    q.check_quests(state, "location_enter", "plaza_side")
+    assert state.quests["q1"].status == "active"

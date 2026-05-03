@@ -169,6 +169,29 @@ def _refresh_active_quest_id(state: GameState) -> None:
     )
 
 
+def _trigger_matches(
+    state: GameState,
+    trigger,
+    event_type: str,
+    target_id: str | None,
+) -> bool:
+    """Exact-id match, or character_death fallback by location for hostile spawns
+    whose runtime ids don't equal the scenario's literal trigger target_id."""
+    if trigger.type != event_type:
+        return False
+    if trigger.target_id == target_id:
+        return True
+    if event_type != "character_death" or target_id is None:
+        return False
+    expected = state.characters.get(trigger.target_id)
+    victim = state.characters.get(target_id)
+    if expected is None or victim is None:
+        return False
+    if expected.location_id is None or victim.location_id != expected.location_id:
+        return False
+    return victim.combat_behavior is not None
+
+
 def check_quests(
     state: GameState,
     event_type: str,
@@ -187,13 +210,13 @@ def check_quests(
         for i, t in enumerate(q.triggers):
             if q.triggers_met[i]:
                 continue
-            if t.type == event_type and t.target_id == target_id:
+            if _trigger_matches(state, t, event_type, target_id):
                 q.triggers_met[i] = True
                 any_change = True
         for i, t in enumerate(q.fail_triggers):
             if q.fail_triggers_met[i]:
                 continue
-            if t.type == event_type and t.target_id == target_id:
+            if _trigger_matches(state, t, event_type, target_id):
                 q.fail_triggers_met[i] = True
                 any_change = True
 
