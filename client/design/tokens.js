@@ -24,6 +24,7 @@ const colors = {
   mp: { fg: '#9DAE92' },
   exp: { fg: '#D6A86D' },
   revival: { fg: '#A698BD' },
+  gold: { fg: '#D4A85A' },
 };
 
 const spacing = {
@@ -81,6 +82,7 @@ const toneColor = {
   mp: colors.mp.fg,
   exp: colors.exp.fg,
   revival: colors.revival.fg,
+  gold: colors.gold.fg,
   accent: colors.accent.fg,
   good: colors.success.fg,
   bad: colors.danger.fg,

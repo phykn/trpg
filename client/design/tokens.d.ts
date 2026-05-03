@@ -9,6 +9,7 @@ export declare const colors: {
   mp: { fg: string };
   exp: { fg: string };
   revival: { fg: string };
+  gold: { fg: string };
 };
 
 export declare const spacing: Record<string, number>;

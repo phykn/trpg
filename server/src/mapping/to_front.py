@@ -123,6 +123,7 @@ def to_hero(state: GameState, graph: GameGraph | None = None) -> dict:
         "mpMax": p.max_mp,
         "reviveCoins": p.revive_coins,
         "reviveCoinsMax": RULES.death.revive_coins,
+        "gold": p.gold,
         "stats": stats_payload(p.stats),
         "equipment": _equipment(state, graph, p.id),
         "inventory": inventory,
