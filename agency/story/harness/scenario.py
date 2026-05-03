@@ -10,7 +10,7 @@ import json
 from collections.abc import Callable
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from src.domain.entities import (
     ArmorEffect,
@@ -22,9 +22,207 @@ from src.domain.entities import (
 from src.engines.invariants import Scenario, check_scenario
 from src.llm import LLMClient
 
-from ._common import EntityWriterError
+from ._common import EntityWriterError, strip_code_fences
 from .decompose import Decomposition
-from .runner import write_entity, write_entity_to_disk
+from .runner import (
+    SPECS,
+    EntitySpec,
+    _check_entity_invariants,
+    _check_id,
+    _collect_refs,
+    _load_dir,
+)
+
+
+# --- LLM writer (moved from runner.py) ------------------------------------
+
+def _validate_entity_response(
+    answer: str,
+    *,
+    spec: EntitySpec,
+    existing_ids: set[str],
+    force_id: str | None,
+    refs: dict[str, set[str]],
+    scenario_dir: Path,
+    extra_check: Callable[[BaseModel], None] | None,
+    skeleton: bool,
+) -> BaseModel:
+    entity = spec.model.model_validate_json(answer)
+    _check_id(entity, existing_ids, force_id=force_id)
+    spec.check_refs(entity, refs)
+    _check_entity_invariants(entity, scenario_dir, skeleton=skeleton)
+    if extra_check is not None:
+        extra_check(entity)
+    return entity
+
+
+def _build_system(
+    *,
+    base_path: Path,
+    fragment_path: Path,
+    scenario_dir: Path,
+    spec: EntitySpec,
+) -> str:
+    parts = [
+        base_path.read_text(encoding="utf-8"),
+        "",
+        "---",
+        "",
+        fragment_path.read_text(encoding="utf-8"),
+        "",
+        "---",
+        "",
+        "## scenario world.md",
+        "",
+        (scenario_dir / "world.md").read_text(encoding="utf-8"),
+        "",
+        f"## existing {spec.kind} list (JSON)",
+        "",
+        json.dumps(_load_dir(scenario_dir, spec.sub_dir), ensure_ascii=False, indent=2),
+    ]
+    for ref_kind in spec.ref_kinds:
+        if ref_kind == spec.kind:
+            continue
+        ref_spec = SPECS[ref_kind]
+        parts.append("")
+        parts.append(f"## reference {ref_kind} list (JSON)")
+        parts.append("")
+        parts.append(
+            json.dumps(
+                _load_dir(scenario_dir, ref_spec.sub_dir), ensure_ascii=False, indent=2
+            )
+        )
+    return "\n".join(parts)
+
+
+async def write_entity(
+    *,
+    kind: str,
+    scenario_dir: Path,
+    agents_dir: Path,
+    hint: str,
+    llm: LLMClient,
+    retries: int = 5,
+    force_id: str | None = None,
+    extra_check: Callable[[BaseModel], None] | None = None,
+    think: bool = True,
+    critic_prompt_path: Path | None = None,
+    decomp_summary: str = "",
+    skeleton: bool = False,
+) -> tuple[BaseModel, list[dict]]:
+    from .critic import run_critic
+
+    if kind not in SPECS:
+        raise EntityWriterError(
+            f"unknown kind: {kind!r}. valid values: {sorted(SPECS)}"
+        )
+    spec = SPECS[kind]
+    base_path = agents_dir / "_base.md"
+    fragment_path = agents_dir / spec.fragment
+
+    refs = _collect_refs(scenario_dir, spec)
+    existing_ids = refs[spec.kind]
+
+    system = _build_system(
+        base_path=base_path,
+        fragment_path=fragment_path,
+        scenario_dir=scenario_dir,
+        spec=spec,
+    )
+    user_msg = (
+        hint.strip()
+        if hint
+        else f"(No hint — author one {spec.kind} using your own judgment.)"
+    )
+    messages: list[dict] = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user_msg},
+    ]
+    last_error: Exception | None = None
+    final_entity: BaseModel | None = None
+    final_answer: str | None = None
+    agent_tag = f"story_write_{kind}"
+    base_len = len(messages)
+
+    def _validate(answer: str) -> BaseModel:
+        return _validate_entity_response(
+            answer,
+            spec=spec,
+            existing_ids=existing_ids,
+            force_id=force_id,
+            refs=refs,
+            scenario_dir=scenario_dir,
+            extra_check=extra_check,
+            skeleton=skeleton,
+        )
+
+    for _ in range(retries + 1):
+        result = await llm.chat(messages=messages, think=think, agent=agent_tag)
+        answer = strip_code_fences(result["answer"] or "")
+        try:
+            final_entity = _validate(answer)
+            final_answer = answer
+            break
+        except (ValidationError, EntityWriterError, json.JSONDecodeError) as e:
+            last_error = e
+            messages = messages[:base_len]
+            messages.append({"role": "assistant", "content": answer})
+            messages.append(
+                {
+                    "role": "user",
+                    "content": (
+                        f"The previous response failed validation: {e}. "
+                        "Re-read the rules and output the corrected JSON only."
+                    ),
+                }
+            )
+    if final_entity is None:
+        assert last_error is not None
+        raise last_error
+
+    messages.append({"role": "assistant", "content": final_answer})
+
+    if critic_prompt_path is not None:
+        world_md = (scenario_dir / "world.md").read_text(encoding="utf-8")
+        verdict = await run_critic(
+            entity_kind=kind,
+            entity_json=final_answer or "",
+            world_md=world_md,
+            decomp_summary=decomp_summary,
+            prompt_path=critic_prompt_path,
+            llm=llm,
+        )
+        if not verdict.ok:
+            messages.append(
+                {
+                    "role": "user",
+                    "content": (
+                        f"Critic feedback:\n{verdict.feedback}\n"
+                        "Apply the feedback above and output the corrected JSON only."
+                    ),
+                }
+            )
+            result = await llm.chat(messages=messages, think=think, agent=agent_tag)
+            answer = strip_code_fences(result["answer"] or "")
+            try:
+                final_entity = _validate(answer)
+                messages.append({"role": "assistant", "content": answer})
+            except (ValidationError, EntityWriterError, json.JSONDecodeError):
+                pass
+
+    return final_entity, messages
+
+
+def write_entity_to_disk(entity: BaseModel, scenario_dir: Path, kind: str) -> Path:
+    """Write to scenarios/<scenario>/<sub_dir>/<id>.json."""
+    spec = SPECS[kind]
+    eid: str = entity.id  # type: ignore[attr-defined]
+    out_path = scenario_dir / spec.sub_dir / f"{eid}.json"
+    if out_path.exists():
+        raise EntityWriterError(f"{out_path} already exists. Will not overwrite.")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(entity.model_dump_json(indent=2), encoding="utf-8")
+    return out_path
 
 
 # --- standalone helpers ----------------------------------------------------
