@@ -1,7 +1,7 @@
 import React from 'react';
 import { PanResponder, Pressable, Text, View } from 'react-native';
 
-import { Surface } from '@/components/ui';
+import { Chip, Surface } from '@/components/ui';
 import {
   MiniMapPanel,
   StoryGraphScreen,
@@ -10,7 +10,6 @@ import {
 import type { Place } from '@/types/domain';
 import type { PanelAction, PanelSlot } from '@/types/ui';
 
-import { ChipTab } from './ChipTab';
 import { IconButton, ICON_PATH } from './IconButton';
 import { PanelBody } from './PanelBody';
 
@@ -66,10 +65,12 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, menuOpen, bg
         <IconButton d={ICON_PATH.menu} label="메뉴" onPress={onMenuToggle} />
         <View className="flex-1 flex-row gap-1">
           {slots.map((s) => (
-            <ChipTab
+            <Chip
               key={s.id}
-              chip={s.chip}
+              variant="tab"
+              label={s.chip.short}
               active={s.id === activeId}
+              dot={s.chip.dot}
               onPress={() => onSelect(s.id)}
             />
           ))}
