@@ -9,6 +9,11 @@ from ..domain.entities import (
 from ..domain.state import GameState
 from ..domain.types import is_secret_masked_grade
 from ..engines.growth import can_afford_level_up
+from ..mapping.labels import (
+    state_tag_friendly,
+    state_tag_wary,
+    state_tag_wounded,
+)
 from ..ontology.graph import GameGraph
 from ..ontology.queries import (
     connections_of,
@@ -29,13 +34,13 @@ def _state_tags(actor: Character, npc: Character, *, masked: bool = False) -> li
         aff = npc.relations.get(actor.id, 0)
         threshold = RULES.social.friendly_threshold
         if aff >= threshold:
-            tags.append(f"우호적(affinity {aff})")
+            tags.append(state_tag_friendly(aff))
         elif aff <= -threshold:
-            tags.append(f"경계중(affinity {aff})")
+            tags.append(state_tag_wary(aff))
     if npc.max_hp > 0:
         hp_pct = round(npc.hp / npc.max_hp * 100)
         if hp_pct < 50:
-            tags.append(f"부상(hp {hp_pct}%)")
+            tags.append(state_tag_wounded(hp_pct))
     return tags
 
 
