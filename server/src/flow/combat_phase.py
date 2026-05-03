@@ -144,7 +144,6 @@ async def start_combat_and_drive_auto(
     """Open a fresh fight (no existing combat_state) and run one auto-sim.
     Used by /turn's CombatAction / SummonCombatAction entry and by rest's
     ambush branch."""
-    state.pending_growth = None  # E4: combat blocks level-up; goddess scene shouldn't carry into the fight.
     if state.combat_state is not None:
         raise CombatStateInvalid(
             "start_combat called while combat_state is already set "

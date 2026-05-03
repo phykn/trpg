@@ -49,19 +49,6 @@ class MoveAction(_StrictAction):
     tail_intent: str | None = None
 
 
-class LevelUpAction(_StrictAction):
-    action: Literal["level_up"]
-    stat_up: StatKey
-    stat_down: StatKey
-    tail_intent: str | None = None
-
-
-class LearnSkillAction(_StrictAction):
-    action: Literal["learn_skill"]
-    index: int = Field(ge=0)
-    tail_intent: str | None = None
-
-
 class BuyAction(_StrictAction):
     action: Literal["buy"]
     npc_id: str
@@ -118,14 +105,6 @@ class UnequipAction(_StrictAction):
     tail_intent: str | None = None
 
 
-class GrowthPendingAction(_StrictAction):
-    action: Literal["growth_pending"]
-
-
-class CancelGrowthAction(_StrictAction):
-    action: Literal["cancel_growth"]
-
-
 # Phase-changing actions (combat / rest / flee / roll / reject / summon_combat) can't compose sequentially.
 ChainPart = Annotated[
     UseAction
@@ -135,8 +114,6 @@ ChainPart = Annotated[
     | SellAction
     | GiveAction
     | MoveAction
-    | LevelUpAction
-    | LearnSkillAction
     | PassAction,
     Field(discriminator="action"),
 ]
@@ -161,13 +138,9 @@ JudgeOutput = Annotated[
     | UseAction
     | EquipAction
     | UnequipAction
-    | LevelUpAction
-    | LearnSkillAction
     | BuyAction
     | SellAction
     | GiveAction
-    | GrowthPendingAction
-    | CancelGrowthAction
     | ChainAction,
     Field(discriminator="action"),
 ]

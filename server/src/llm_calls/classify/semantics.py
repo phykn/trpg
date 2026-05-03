@@ -1,17 +1,12 @@
 from typing import Any, Callable
 
-from ...domain.types import STAT_PAIRS
 from .schema import (
     BuyAction,
-    CancelGrowthAction,
     ChainAction,
     CombatAction,
     EquipAction,
     FleeAction,
-    GrowthPendingAction,
     JudgeOutput,
-    LearnSkillAction,
-    LevelUpAction,
     PassAction,
     RollAction,
     SellAction,
@@ -169,28 +164,6 @@ def _check_flee(output: FleeAction, surroundings: dict[str, Any]) -> None:
         )
 
 
-def _check_level_up(output: LevelUpAction, surroundings: dict[str, Any]) -> None:
-    growth = surroundings.get("growth") or {}
-    if not growth.get("can_level_up"):
-        raise JudgeSemanticError(
-            "level_up not currently available — xp not at threshold. Use 'pass'."
-        )
-    if STAT_PAIRS.get(output.stat_up) != output.stat_down:
-        raise JudgeSemanticError(
-            f"invalid pair: {output.stat_up}↑/{output.stat_down}↓. Pairs are STR↔CHA, DEX↔WIS, CON↔INT."
-        )
-
-
-def _check_learn_skill(output: LearnSkillAction, surroundings: dict[str, Any]) -> None:
-    candidates = surroundings.get("skill_candidates") or []
-    if not candidates:
-        raise JudgeSemanticError("no pending skill candidates. Use 'pass'.")
-    if output.index >= len(candidates):
-        raise JudgeSemanticError(
-            f"index {output.index} out of range; only {len(candidates)} candidates."
-        )
-
-
 def _check_buy(output: BuyAction, surroundings: dict[str, Any]) -> None:
     merchant = _find_merchant(output.npc_id, surroundings)
     stock_ids = {i.get("id") for i in merchant.get("stock", []) if isinstance(i, dict)}
@@ -252,23 +225,6 @@ def _check_unequip(output: UnequipAction, surroundings: dict[str, Any]) -> None:
         )
 
 
-def _check_growth_pending(
-    output: GrowthPendingAction, surroundings: dict[str, Any]
-) -> None:
-    growth = surroundings.get("growth") or {}
-    if not growth.get("can_level_up"):
-        raise JudgeSemanticError("growth_pending requires can_level_up=true")
-
-
-def _check_cancel_growth(
-    output: CancelGrowthAction, surroundings: dict[str, Any]
-) -> None:
-    if not surroundings.get("pending_growth"):
-        raise JudgeSemanticError(
-            "cancel_growth requires pending_growth.stage='asking_stat'"
-        )
-
-
 # RejectAction / SummonCombatAction / RestAction have no surroundings-based
 # check — schema validation alone is enough; check_semantics's .get() returns
 # None for them and we exit cleanly.
@@ -277,16 +233,12 @@ _CHECKS: dict[type, Callable[[Any, dict[str, Any]], None]] = {
     RollAction: _check_targets,
     CombatAction: _check_combat,
     FleeAction: _check_flee,
-    LevelUpAction: _check_level_up,
-    LearnSkillAction: _check_learn_skill,
     BuyAction: _check_buy,
     SellAction: _check_sell,
     UseAction: _check_use,
     EquipAction: _check_equip,
     UnequipAction: _check_unequip,
     ChainAction: _check_chain,
-    GrowthPendingAction: _check_growth_pending,
-    CancelGrowthAction: _check_cancel_growth,
 }
 
 

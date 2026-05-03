@@ -1,4 +1,4 @@
-"""Build the `surroundings` dict the judge agent sees: location, entities, equipment, skills, inventory, growth, merchants, skill candidates."""
+"""Build the `surroundings` dict the judge agent sees: location, entities, equipment, skills, inventory, growth, merchants."""
 
 from ..domain.entities import (
     EQUIPMENT_SLOTS,
@@ -102,19 +102,6 @@ def _growth_payload(actor: Character) -> dict:
     return {
         "can_level_up": can_afford_level_up(actor),
     }
-
-
-def _skill_candidates_payload(state: GameState) -> list[dict]:
-    return [
-        {
-            "name": s.name,
-            "type": s.type,
-            "target": s.target,
-            "primary_stat": s.primary_stat,
-            "description": s.description,
-        }
-        for s in state.pending_skill_candidates
-    ]
 
 
 def _merchants_payload(
@@ -319,10 +306,6 @@ def build_surroundings(
         "equipment": _equipment_payload(state, actor, graph),
         "in_combat": in_combat,
         "growth": _growth_payload(actor),
-        "pending_growth": (
-            state.pending_growth.model_dump() if state.pending_growth else None
-        ),
-        "skill_candidates": _skill_candidates_payload(state),
         "recent_npc": state.recent_npc_id(actor_id),
     }
     if not actor.location_id or actor.location_id not in state.locations:

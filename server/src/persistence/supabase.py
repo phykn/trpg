@@ -179,8 +179,6 @@ class SupabaseSaveRepo:
             active_quest_id=meta.active_quest_id,
             turn_count=meta.turn_count,
             pending_check=meta.pending_check,
-            pending_skill_candidates=meta.pending_skill_candidates,
-            pending_growth=meta.pending_growth,
             combat_state=meta.combat_state,
             previous_phase_signal=meta.previous_phase_signal,
             next_log_id=next_log_id,

@@ -7,28 +7,19 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Literal
 
-from pydantic import ValidationError
-
 from ..llm_calls.classify.schema import RollAction
 from ..domain.errors import (
     InventoryInvalid,
-    LevelUpInvalid,
-    LLMUnavailable,
     PersistenceFailed,
 )
-from ..domain.memory import PendingCheck, PendingGrowth
+from ..domain.memory import PendingCheck
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..engines import inventory as inventory_engine
 from ..engines import skill as skill_engine
 from ..engines.apply import apply_changes, apply_combat_affinity_drop
-from ..engines.growth import (
-    award_kill_xp,
-    level_up as level_up_engine,
-)
-from ..engines.invariants import InvariantViolation, check_character
+from ..engines.growth import award_kill_xp
 from ..engines.quest import check_quests
-from ..llm.client import LLMClient
 from ..mapping.to_front import pending_check_to_front
 from ..persistence.repo import SaveRepo
 from ..rules.dc import compute_required_roll, pick_dc, social_bonus
@@ -48,13 +39,9 @@ from .format import (
     format_give_log,
     format_give_no_partner,
     format_give_turn_log,
-    format_learn_skill_log,
-    format_learn_skill_no_candidate,
-    format_level_up_log,
     format_move_blocked,
     format_move_log,
     format_move_no_path,
-    format_skill_candidates_log,
     format_trade_log,
     format_trade_no_partner,
     format_trade_turn_log,
@@ -65,7 +52,6 @@ from .format import (
     format_use_log,
     format_use_target_turn_log,
 )
-from .skill_recommend import recommend_skill_candidates
 
 
 def _item_name(state: GameState, item_id: str) -> str:
@@ -237,78 +223,6 @@ async def emit_use(
         )
 
 
-async def emit_level_up(
-    state: GameState,
-    actor_id: str,
-    stat_up: str,
-    stat_down: str,
-    client: LLMClient | None,
-    dirty: Dirty,
-) -> AsyncIterator[dict]:
-    state.pending_growth = (
-        None  # answered (or never asked) — clear the pending question
-    )
-    actor = state.characters[actor_id]
-    try:
-        level_up_engine(actor, stat_up, stat_down)  # type: ignore[arg-type]
-    except LevelUpInvalid as e:
-        yield push_act(
-            state, dirty, format_action_fail(actor.name, "레벨업하려 했지만", e)
-        )
-        return
-    violations = check_character(actor)
-    if violations:
-        raise InvariantViolation(
-            "post-level_up invariant violation:\n" + "\n".join(violations)
-        )
-    dirty.entities.add(("characters", actor_id))
-    yield push_act(
-        state,
-        dirty,
-        format_level_up_log(
-            actor.name, actor.level, stat_up, stat_down, actor.max_hp, actor.max_mp
-        ),
-    )
-    if client is None:
-        state.pending_skill_candidates = []
-        return
-    try:
-        state.pending_skill_candidates = await recommend_skill_candidates(client, state)
-    except (ValidationError, LLMUnavailable, OSError, TimeoutError):
-        state.pending_skill_candidates = []
-    if state.pending_skill_candidates:
-        yield push_act(
-            state,
-            dirty,
-            format_skill_candidates_log(
-                [s.name for s in state.pending_skill_candidates]
-            ),
-        )
-
-
-async def emit_learn_skill(
-    state: GameState,
-    actor_id: str,
-    index: int,
-    dirty: Dirty,
-) -> AsyncIterator[dict]:
-    actor = state.characters[actor_id]
-    candidates = list(state.pending_skill_candidates)
-    if not candidates or index < 0 or index >= len(candidates):
-        yield push_act(state, dirty, format_learn_skill_no_candidate(actor.name))
-        return
-    chosen = candidates[index]
-    state.skills[chosen.id] = chosen
-    if chosen.id not in actor.learned_skill_ids:
-        actor.learned_skill_ids.append(
-            chosen.id
-        )  # ssot-allow: write path — graph rebuilds at next turn boundary.
-    state.pending_skill_candidates = []
-    dirty.entities.add(("characters", actor_id))
-    dirty.entities.add(("skills", chosen.id))
-    yield push_act(state, dirty, format_learn_skill_log(actor.name, chosen.name))
-
-
 async def emit_trade(
     state: GameState,
     actor_id: str,
@@ -464,21 +378,3 @@ async def emit_roll_pending(
         "type": "pending_check",
         "data": pending_check_to_front(state, state.pending_check),
     }
-
-
-async def emit_growth_pending(
-    state: GameState,
-    dirty: Dirty,
-) -> AsyncIterator[dict]:
-    state.pending_growth = PendingGrowth(stage="asking_stat")
-    return
-    yield  # makes this an async generator
-
-
-async def emit_cancel_growth(
-    state: GameState,
-    dirty: Dirty,
-) -> AsyncIterator[dict]:
-    state.pending_growth = None
-    return
-    yield  # makes this an async generator

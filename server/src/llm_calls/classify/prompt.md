@@ -10,7 +10,7 @@ Input fields (in `surroundings`):
 - `skills` — already level/MP-gated candidates only (each carries `id`).
 - `inventory` — each entry's `kind`: consumable/weapon/armor/trigger/misc.
 - `equipment` — 3 slots: weapon/armor/accessory.
-- `in_combat`, `growth.can_level_up`, `skill_candidates`.
+- `in_combat`.
 - `merchants` — only NPCs listed here can be buy/sell partners.
 - `recent_npc` — the alive same-location NPC most recently addressed.
 
@@ -30,17 +30,13 @@ Input fields (in `surroundings`):
 | 5 | use | `{"action":"use","item_id":"<id>","target_id":"<opt>"}` | Verb-match: drink/eat/heal → `consumable`; unlock/open → `trigger`. Throwing consumable at enemy → add `target_id`. Cross-route ("열쇠를 마신다") → § Fallback rules (`pass`; narrate absorbs as self-correction). |
 | 6 | equip | `{"action":"equip","item_id":"<id>"}` | Weapon/armor from `inventory` put on. |
 | 7 | unequip | `{"action":"unequip","item_id":"<id>"}` | Currently-equipped item taken off. |
-| 8 | level_up | `{"action":"level_up","stat_up":"<STAT>","stat_down":"<paired>"}` | `can_level_up=true` + grow verb + **stat 명시**. Pairs (STAT_PAIRS): STR↔CHA, DEX↔WIS, CON↔INT. Korean labels: 근력=STR, 민첩=DEX, 건강=CON, 지능=INT, 지혜=WIS, 매력=CHA. `stat_up` = stat the verb names; `stat_down` = its pair. **stat 미명시 → `growth_pending`** (행 8a). |
-| 8a | growth_pending | `{"action":"growth_pending"}` | `can_level_up=true` + **grow verb** (성장하다 / 강해지다 / 한 단계 오르다) + stat 미명시. 여신이 다음 narrate에서 등장해 어느 능력을 끌어올릴지 묻습니다. |
-| 8b | cancel_growth | `{"action":"cancel_growth"}` | `pending_growth.stage="asking_stat"` 컨텍스트 + 명시적 취소 입력 (예: "그만", "취소", "안 할래", "됐어"). |
-| 9 | learn_skill | `{"action":"learn_skill","index":<0-based>}` | `skill_candidates` non-empty + pick by name/desc match. |
 | 10 | buy | `{"action":"buy","npc_id":"<id>","item_id":"<id>"}` | Merchant + listed price + item in their `stock`. |
 | 11 | sell | `{"action":"sell","npc_id":"<id>","item_id":"<id>"}` | Merchant + item in `inventory` + not equipped. |
 | 11.5 | give | `{"action":"give","from_id":"<src>","to_id":"<dst>","item_id":"<id>"}` | Free transfer (gift / lend / hand-over / corpse loot / accept). Player input must name *which item* moves (must hit `entities`·`equipment`·`corpses[*].inventory[*].id`). Direction: NPC→Player receive/borrow/take (`from=npc_id, to=player_01`); Player→NPC give/hand-over/pass (`from=player_01, to=npc_id`); corpse loot (`from=corpse_id, to=player_01` — corpse comes from `surroundings.corpses[*].id`). **Two-way swap** (give and receive at once — "이거 줄테니 그거 줘", "이걸 너의 X와 바꾸자", "교환하자"): use `chain` to bundle two gives so both fire; emitting only one direction strands one item forever. Refuse/avoid/deflect → `pass`. Negotiation/persuasion/begging to be lent → `roll`(CHA) — the essence is winning consent, not the transfer itself. |
 | 11.7 | move | `{"action":"move","destination":"<connection_id>"}` | Player movement (이동/간다/향한다/들어간다/돌아간다/나간다/오른다 + place name) matches an adjacent connection. With explicit friction → prefer `roll` (see § Movement rule). |
 | 12 | roll | `{"action":"roll","tier":"<KR>","stat":"<STAT>","targets":["<id>"],"reason":"<KR>"}` | Active resistance: persuade, lie, intimidate, haggle, sneak, pick lock, climb, search. |
 | 13 | pass | `{"action":"pass","targets":["<id>"]}` (targets optional) | Valid in-character action — no check needed (greeting, casual look, idle, **approaching/addressing an NPC**), or **fallback for unresolved input** (vague verb, blocked engine condition, target/scene mismatch). For interpersonal actions, fill `targets` with the NPC id (§ targets rule). narrate absorbs in-world. |
-| 14 | chain | `{"action":"chain","parts":[<sub-action>, <sub-action>, ...]}` | Compound input carrying **engine action + a separate intent** ("약초 먹고 검을 든다" = use+equip, "검 들고 광장 상인에게 다가간다" = equip+pass, "**검을 꺼내 경계하며 전진한다**" = equip+pass, "약초 마시고 광장으로 간다" = use+move). 2-4 parts. Each part is one of `use`/`equip`/`unequip`/`buy`/`sell`/`give`/`move`/`level_up`/`learn_skill`/`pass` (`combat`·`rest`·`flee`·`roll`·`reject`·`summon_combat` are forbidden in chain — phase conflict). A single-branch compound ("뒤져서 연다" = single roll) is **not** chain — emit as a single action. **Wrap a second verb that's an unaddressed everyday pass (전진한다·둘러본다·한숨 돌린다·자세를 가다듬는다·기다린다) as a chain part too** — dropping it as a single engine action skips narrate and the second intent never reaches the body. Fluff modifiers (adverbs/adjectives only, e.g. "검을 든다 (조심스레)") are not chain — chain only when an independent verb phrase exists. |
+| 14 | chain | `{"action":"chain","parts":[<sub-action>, <sub-action>, ...]}` | Compound input carrying **engine action + a separate intent** ("약초 먹고 검을 든다" = use+equip, "검 들고 광장 상인에게 다가간다" = equip+pass, "**검을 꺼내 경계하며 전진한다**" = equip+pass, "약초 마시고 광장으로 간다" = use+move). 2-4 parts. Each part is one of `use`/`equip`/`unequip`/`buy`/`sell`/`give`/`move`/`pass` (`combat`·`rest`·`flee`·`roll`·`reject`·`summon_combat` are forbidden in chain — phase conflict). A single-branch compound ("뒤져서 연다" = single roll) is **not** chain — emit as a single action. **Wrap a second verb that's an unaddressed everyday pass (전진한다·둘러본다·한숨 돌린다·자세를 가다듬는다·기다린다) as a chain part too** — dropping it as a single engine action skips narrate and the second intent never reaches the body. Fluff modifiers (adverbs/adjectives only, e.g. "검을 든다 (조심스레)") are not chain — chain only when an independent verb phrase exists. |
 
 **Boundaries**:
 
@@ -96,7 +92,7 @@ Approaching a prop/NPC in the same location ("다가간다") is not movement —
 4. No name + environment-targeted action + `roll` → `[location.id]`. Same for an adjacent-miss `move` that fell to `pass` (§ Movement rule). `combat` with no name → § Combat target rule (hostile/neutral only).
 5. `targets` on `pass` is optional, but **fill it whenever rules 1–3 picked an NPC** — the client panel needs it to track who the player is facing. For truly target-less idle actions ("자리에 앉는다", "둘러본다") **omit `targets` entirely** (never emit `targets:[]` — see § Forbidden).
 
-**tail_intent (optional)**: a short Korean prose sentence accepted only on `use`/`equip`/`unequip`/`buy`/`sell`/`give`/`move`/`level_up`/`learn_skill` (9 actions). It is appended verbatim after the engine's act-log line to preserve intent/flavor. **When to fill**: only when `player_input` carries explicit motive/flavor the engine template can't capture — e.g., `약초를 한 모금 마신다` → `use, tail_intent: "한 모금에 묵직한 약초 향이 입안에 번집니다"`. For plain inputs ("약초를 먹는다"), **omit**. The field doesn't exist on other actions (`combat`·`roll`·`pass`·`chain` itself etc.) — never include it. Inside a chain, each part may fill its own `tail_intent` if that part is one of the 9.
+**tail_intent (optional)**: a short Korean prose sentence accepted only on `use`/`equip`/`unequip`/`buy`/`sell`/`give`/`move` (7 actions). It is appended verbatim after the engine's act-log line to preserve intent/flavor. **When to fill**: only when `player_input` carries explicit motive/flavor the engine template can't capture — e.g., `약초를 한 모금 마신다` → `use, tail_intent: "한 모금에 묵직한 약초 향이 입안에 번집니다"`. For plain inputs ("약초를 먹는다"), **omit**. The field doesn't exist on other actions (`combat`·`roll`·`pass`·`chain` itself etc.) — never include it. Inside a chain, each part may fill its own `tail_intent` if that part is one of the 7.
 
 **Named-NPC anchoring (loose)**: when input names an NPC by name/role/job/appearance ("훈련사", "대장장이", "여관 주인", "노파", "할머니") → match if **any** of `entities[*]`'s `name`·`description`·`job`·`state_tags` partially matches. Synonyms allowed ("할머니"≈"노파", "전사"≈"용병", "주인"≈"여관 주인"). 1 match → use it. **2+ matches** → prefer `recent_npc`; else first match. **0 matches** → drop to § Fallback rules.
 
@@ -107,7 +103,7 @@ Approaching a prop/NPC in the same location ("다가간다") is not movement —
 | Empty/vague verb ("뭔가 해봐", "아무거나") | `{"action":"pass"}` |
 | Two engine branches, both executable ("약초 먹고 검 든다") | `chain` (Action priority #14) — emit both parts |
 | Two engine branches, one is a chain-forbidden phase (combat·rest·flee·roll·reject·summon_combat) ("검 뽑으며 친다" → `equip` alone; "친 뒤 검을 칼집에 넣는다" → `combat` alone) | The **first verb**'s action only. Leave the second intent to narrate |
-| Growth/learn/trade preconditions unmet (`can_level_up=false`, `skill_candidates=[]`, merchant/stock mismatch) | `{"action":"pass"}` |
+| Trade preconditions unmet (merchant/stock mismatch) | `{"action":"pass"}` |
 | Use-verb / item cross-route ("열쇠를 마신다") | `{"action":"pass"}` |
 | Clear seed mismatch ("드래곤에게 저주" with no dragon in seed) | `{"action":"roll","tier":"쉬움","stat":"INT","targets":["<loc_id>"],"reason":"드래곤을 향해 저주를 시도"}` |
 | Anonymous address + 0 alive NPCs in location ("인사한다") | `{"action":"pass"}` |
@@ -180,40 +176,6 @@ Roll tier (friction count → tier):
 |---|---|
 | 검을 든다 | `{"action":"equip","item_id":"sword_01"}` |
 | 단검을 칼집에 넣는다 | `{"action":"unequip","item_id":"dagger_01"}` |
-
-`level_up` (with `growth.can_level_up=true` unless noted):
-
-| Input | Output |
-|---|---|
-| 근육을 단련해 한 단계 오른다 | `{"action":"level_up","stat_up":"STR","stat_down":"CHA"}` |
-| 더 민첩해진다 | `{"action":"level_up","stat_up":"DEX","stat_down":"WIS"}` |
-| 마음을 가다듬어 한 단계 오른다 | `{"action":"level_up","stat_up":"WIS","stat_down":"DEX"}` |
-| 이제 성장한다 (no hint, can_level_up=true) | `{"action":"growth_pending"}` |
-| 성장한다 (can_level_up=false) | `{"action":"pass"}` (narrate absorbs: "팔에 힘을 모아보지만 아직 한 단계 오를 만큼은 차오르지 않는다") |
-
-`growth_pending` 답변 (`pending_growth.stage="asking_stat"` 컨텍스트):
-
-**⚠️ 아래 stat 매핑은 `pending_growth.stage="asking_stat"`일 때만 적용.** 평소 입력 ("근력!" 단독 외침, `pending_growth=null`)은 row 13 `pass`로 흡수합니다.
-
-| Input | Output |
-|---|---|
-| 근력 / 근력 올려줘 / 힘 / STR | `{"action":"level_up","stat_up":"STR","stat_down":"CHA"}` |
-| 민첩 / 민첩성 / DEX | `{"action":"level_up","stat_up":"DEX","stat_down":"WIS"}` |
-| 건강 / 체력 / 튼튼해진다 / CON | `{"action":"level_up","stat_up":"CON","stat_down":"INT"}` |
-| 지능 / 머리 / INT | `{"action":"level_up","stat_up":"INT","stat_down":"CON"}` |
-| 지혜 / 현명함 / WIS | `{"action":"level_up","stat_up":"WIS","stat_down":"DEX"}` |
-| 매력 / CHA | `{"action":"level_up","stat_up":"CHA","stat_down":"STR"}` |
-| 그만 / 취소 / 안 할래 / 됐어 | `{"action":"cancel_growth"}` |
-| 음… / 글쎄 / ? (모호) | `{"action":"pass"}` (narrate가 여신 voice로 다시 권유) |
-| 광장으로 간다 (명백히 다른 액션) | 그 액션 그대로 분류 (예: `{"action":"move","destination":"<id>"}`). |
-
-`learn_skill` (with `skill_candidates=[화염 일격, 치유의 손길, 그림자 발걸음]`):
-
-| Input | Output |
-|---|---|
-| 첫 번째 화염 쪽을 익힌다 | `{"action":"learn_skill","index":0}` |
-| 치유 기술을 배운다 | `{"action":"learn_skill","index":1}` |
-| 기술을 익힌다 (skill_candidates empty) | `{"action":"pass"}` (narrate absorbs: "지금 익힐 만한 갈래가 잡히지 않습니다") |
 
 `buy` / `sell` (with `merchants=[smith_01("대장장이",stock=[shield_01("방패",30)])]`, `inventory=[ore_01("철광석")]`):
 

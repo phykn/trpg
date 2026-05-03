@@ -83,7 +83,7 @@ async def recommend_skill_candidates(
 ) -> list[Skill]:
     """LLM call → 3 Skill objects. Re-raises call failures (the caller decides any silent fallback).
 
-    No side effects — does not touch state directly (the caller writes pending_skill_candidates).
+    No side effects — does not touch state directly (the caller wires the candidates into its own flow).
     """
     payload = _build_input(state)
     output = await recommend(client, payload)

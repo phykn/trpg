@@ -68,7 +68,6 @@ async def run_level_up(
         }
         return
 
-    state.pending_growth = None
     violations = check_character(actor)
     if violations:
         raise InvariantViolation(

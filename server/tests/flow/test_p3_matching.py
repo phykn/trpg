@@ -1,4 +1,4 @@
-"""§flee/level_up/learn_skill/buy/sell — natural-language integration. Branches verified via judge mocks."""
+"""§flee/buy/sell — natural-language integration. Branches verified via judge mocks."""
 
 import random
 
@@ -7,14 +7,11 @@ from src.domain.entities import (
     Character,
     Item,
     Location,
-    Skill,
     Stats,
 )
 from src.llm_calls.classify.schema import (
     BuyAction,
     FleeAction,
-    LearnSkillAction,
-    LevelUpAction,
     SellAction,
 )
 from src.engines import combat as combat_engine
@@ -155,114 +152,6 @@ async def test_flee_outside_combat_no_op(fresh_state, tmp_data, judge_returns, c
         e for e in events if e["type"] == "log_entry" and e["data"].get("kind") == "act"
     ]
     assert any("전투" in e["data"]["text"] for e in act_evs)
-
-
-# --- level_up natural language --------------------------------------------
-
-
-async def test_level_up_natural_language_applies_pair_trade(
-    fresh_state, tmp_data, judge_returns, collect
-):
-    state = _seed_player(fresh_state, xp_pool=100, level=0)
-    judge_returns(LevelUpAction(action="level_up", stat_up="STR", stat_down="CHA"))
-
-    await collect(
-        run_turn(
-            client=None,
-            state=state,
-            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
-            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
-            player_input="근육을 단련해 한 단계 오른다",
-        )
-    )
-    p = state.characters["player_01"]
-    assert p.level == 1
-    assert p.stats.STR == 11
-    assert p.stats.CHA == 9
-    # The "레벨 1" act log line is no longer surfaced as its own log_entry
-    # SSE — single-action paths absorb engine notices into narrate's prose
-    # via act_log_lines so the UI doesn't show system-toned chrome
-    # alongside the body. Stat / level state above is the authoritative
-    # check that the engine action ran.
-
-
-async def test_level_up_invalid_pair_logs_error(
-    fresh_state, tmp_data, judge_returns, collect
-):
-    """Insufficient xp: level_up logs failure + turn consumed. Character stats unchanged."""
-    state = _seed_player(fresh_state, xp_pool=0, level=0)
-    judge_returns(LevelUpAction(action="level_up", stat_up="STR", stat_down="CHA"))
-
-    await collect(
-        run_turn(
-            client=None,
-            state=state,
-            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
-            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
-            player_input="성장한다",
-        )
-    )
-    p = state.characters["player_01"]
-    assert p.level == 0
-    assert p.stats.STR == 10
-
-
-# --- learn_skill natural language -----------------------------------------
-
-
-async def test_learn_skill_appends_to_learned(
-    fresh_state, tmp_data, judge_returns, collect
-):
-    state = _seed_player(fresh_state)
-    candidate = Skill(
-        id="fireball_l1",
-        name="화염구",
-        description="불꽃을 던진다",
-        type="attack",
-        target="single",
-        primary_stat="INT",
-        special_effect="화염",
-        level=1,
-        power=10,
-        mp_cost=4,
-    )
-    state.pending_skill_candidates = [candidate]
-    judge_returns(LearnSkillAction(action="learn_skill", index=0))
-
-    await collect(
-        run_turn(
-            client=None,
-            state=state,
-            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
-            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
-            player_input="화염 쪽을 익힌다",
-        )
-    )
-    p = state.characters["player_01"]
-    assert "fireball_l1" in p.learned_skill_ids
-    assert "fireball_l1" in state.skills
-    assert state.pending_skill_candidates == []
-
-
-async def test_learn_skill_invalid_index_logs_error(
-    fresh_state, tmp_data, judge_returns, collect
-):
-    """learn_skill input with empty candidates → short rejection."""
-    state = _seed_player(fresh_state)
-    state.pending_skill_candidates = []
-    judge_returns(LearnSkillAction(action="learn_skill", index=0))
-
-    await collect(
-        run_turn(
-            client=None,
-            state=state,
-            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
-            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
-            player_input="첫 번째를 익힌다",
-        )
-    )
-    p = state.characters["player_01"]
-    assert p.learned_skill_ids == []
 
 
 # --- buy/sell natural language --------------------------------------------
@@ -408,27 +297,6 @@ def test_surroundings_growth_cannot_level_up(fresh_state):
     state = _seed_player(fresh_state, xp_pool=0, level=0)
     s = build_surroundings(state, "player_01")
     assert s["growth"]["can_level_up"] is False
-
-
-def test_surroundings_skill_candidates_visible_when_pending(fresh_state):
-    state = _seed_player(fresh_state)
-    state.pending_skill_candidates = [
-        Skill(
-            id="x_l1",
-            name="화염",
-            type="attack",
-            target="single",
-            primary_stat="INT",
-            level=1,
-            mp_cost=2,
-            power=5,
-            special_effect="x",
-            description="x",
-        ),
-    ]
-    s = build_surroundings(state, "player_01")
-    assert len(s["skill_candidates"]) == 1
-    assert s["skill_candidates"][0]["name"] == "화염"
 
 
 # --- in_combat flag --------------------------------------------------------

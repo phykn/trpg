@@ -19,7 +19,6 @@ from ..domain.memory import (
     DialoguePair,
     LogEntry,
     PendingCheck,
-    PendingGrowth,
     TurnLogEntry,
 )
 from ..domain.errors import PersistenceFailed
@@ -111,8 +110,6 @@ class _Meta(BaseModel):
     active_quest_id: str | None = None
     turn_count: int = 0
     pending_check: PendingCheck | None = None
-    pending_skill_candidates: list[Skill] = []
-    pending_growth: PendingGrowth | None = None
     combat_state: CombatState | None = None
     previous_phase_signal: str | None = None
     next_log_id: int = 1
@@ -127,8 +124,6 @@ def _meta_from_state(state: GameState) -> _Meta:
         active_quest_id=state.active_quest_id,
         turn_count=state.turn_count,
         pending_check=state.pending_check,
-        pending_skill_candidates=list(state.pending_skill_candidates),
-        pending_growth=state.pending_growth,
         combat_state=state.combat_state,
         previous_phase_signal=state.previous_phase_signal,
         next_log_id=state.next_log_id,
@@ -274,8 +269,6 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
         active_quest_id=meta.active_quest_id,
         turn_count=meta.turn_count,
         pending_check=meta.pending_check,
-        pending_skill_candidates=meta.pending_skill_candidates,
-        pending_growth=meta.pending_growth,
         combat_state=meta.combat_state,
         previous_phase_signal=meta.previous_phase_signal,
         next_log_id=next_log_id,
