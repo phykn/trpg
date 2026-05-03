@@ -23,7 +23,7 @@ python3.12 -m venv .venv
 Set up Supabase: apply the schema (table list under "Layout" below) via the dashboard SQL editor — schema isn't tracked in the repo — create a Storage bucket for scenarios, and upload a profile tree:
 
 ```bash
-cd server && ../.venv/bin/python scripts/upload_scenarios.py ../scenarios/<profile>
+APP_ENV=release .venv/bin/python -m agency.story.tool upload scenarios/<profile>
 ```
 
 Write `server/.env.dev` (required for local dev — `APP_ENV=release` switches to `.env.release` for prod; no fallbacks, missing keys raise `KeyError` at startup):
@@ -94,7 +94,7 @@ SSE event types: `judge / pending_check / narrative_delta / suggestions / log_en
 server/
   run_api.py                       # entrypoint
   .env.dev                         # required for local dev (.env.release for prod), gitignored
-  scripts/                         # one-off tools (upload_scenarios.py, judge_stress.py, ...)
+  scripts/                         # one-off tools (judge_stress.py, smoke_judge.py, ...)
   src/                             # code (layer breakdown in docs/05-codemap.md)
   tests/                           # pytest
 ../scenarios/<profile>/            # local seed source (world.md, start.json, player_template.json, races/, locations/, characters/, items/, quests/, chapters/, skills/). Authored locally, uploaded to Supabase Storage; the running server reads from the bucket.

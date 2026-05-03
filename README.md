@@ -7,7 +7,7 @@ trpg/
   server/     FastAPI + Pydantic v2 + OpenAI-compatible LLM. Game engine. → server/README.md
   client/     Expo (React Native) single-screen client. → client/README.md
   agency/     LLM-staffed office that drives the server in-process (QA + Story teams). → agency/README.md
-  scenarios/  Local seed source (one dir per profile). Uploaded to Supabase Storage via server/scripts/upload_scenarios.py.
+  scenarios/  Local seed source (one dir per profile). Uploaded to Supabase Storage via agency.story.tool upload (APP_ENV=release).
   docs/       Design notes (01-overview / 02-runtime / 03-features / 04-boundary / 05-codemap)
 ```
 
@@ -38,4 +38,4 @@ git push origin main
 npm run deploy
 ```
 
-One-time setup: upload scenarios with `server/scripts/upload_scenarios.py ../scenarios/<profile>`; install + auth wrangler with `npm install -g wrangler && wrangler login`; add the deploy URL to server `CORS_ORIGINS`.
+One-time setup: upload scenarios with `APP_ENV=release .venv/bin/python -m agency.story.tool upload scenarios/<profile>`; install + auth wrangler with `npm install -g wrangler && wrangler login`; add the deploy URL to server `CORS_ORIGINS`.
