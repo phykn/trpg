@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "server"))
 sys.path.insert(0, str(ROOT))
 
+# sys.path must be set first; decompose.py transitively imports src.llm
 from agency.story.harness.decompose import DecomSetup, _check_setup  # noqa: E402
 from agency.story.harness._common import EntityWriterError  # noqa: E402
 
@@ -47,17 +48,28 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _fail(cmd: str, e: Exception) -> int:
+    """Print a failure line and return exit code 1.
+
+    EntityWriterError / FileNotFoundError carry their own self-explanatory
+    messages — passed through as-is. Other exceptions get the class name
+    prepended so 'ValidationError: ...' / 'JSONDecodeError: ...' is visible.
+    """
+    if isinstance(e, (FileNotFoundError, EntityWriterError)):
+        prefix = ""
+    else:
+        prefix = f"{type(e).__name__}: "
+    print(f"{cmd} failed: {prefix}{e}", file=sys.stderr)
+    return 1
+
+
 def _cmd_decompose_setup(args: argparse.Namespace) -> int:
     try:
         raw = Path(args.setup_json).read_text(encoding="utf-8")
         setup = DecomSetup.model_validate_json(raw)
         _check_setup(setup)
-    except (FileNotFoundError, EntityWriterError) as e:
-        print(f"decompose-setup failed: {e}", file=sys.stderr)
-        return 1
-    except Exception as e:  # ValidationError, JSONDecodeError 등
-        print(f"decompose-setup failed: {type(e).__name__}: {e}", file=sys.stderr)
-        return 1
+    except Exception as e:
+        return _fail("decompose-setup", e)
     print("OK")
     return 0
 
