@@ -206,7 +206,7 @@ def _check_ids(items: list, kind: str) -> set[str]:
 
 def _check_setup(s: DecomSetup) -> None:
     """Phase A self-consistency: id patterns, location graph, racial skills."""
-    race_ids = _check_ids(s.races, "race")
+    _check_ids(s.races, "race")  # validates id pattern + duplicates; result unused here
     skill_ids = _check_ids(s.skills, "skill")
     loc_ids = _check_ids(s.locations, "location")
 
@@ -281,9 +281,9 @@ def _check_cast(s: DecomSetup, c: DecomCast) -> None:
     """Phase B: characters/items cross-ref to Phase A + start_subject + ownership."""
     race_ids = {r.id for r in s.races}
     skill_ids = {sk.id for sk in s.skills}
-    loc_ids = {l.id for l in s.locations}
+    loc_ids = {loc.id for loc in s.locations}
     char_ids = _check_ids(c.characters, "character")
-    item_ids = _check_ids(c.items, "item")
+    _check_ids(c.items, "item")  # validates id pattern + duplicates; result unused here
     char_by_id = {ch.id: ch for ch in c.characters}
     race_by_id = {r.id: r for r in s.races}
 
@@ -382,7 +382,7 @@ def _check_arc(s: DecomSetup, c: DecomCast, a: DecomArc) -> None:
     """Phase C: quest/chapter graphs + start_quest + opening-chapter rules."""
     char_ids = {ch.id for ch in c.characters}
     item_ids = {it.id for it in c.items}
-    loc_ids = {l.id for l in s.locations}
+    loc_ids = {loc.id for loc in s.locations}
     char_by_id = {ch.id: ch for ch in c.characters}
 
     quest_ids = _check_ids(a.quests, "quest")
