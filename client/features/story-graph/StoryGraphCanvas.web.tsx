@@ -251,6 +251,7 @@ export function StoryGraphCanvas({
               ? { name: 'preset', fit: true, padding: 14 }
               : {
                   name: 'fcose',
+                  animate: false,
                   fit: true,
                   idealEdgeLength: 96,
                   nodeRepulsion: 6000,
