@@ -132,18 +132,31 @@ export function useGame() {
       setStreaming(true);
       setErrorMessage(null);
       setSuggestions([]);
+      let needsResync = false;
       try {
         await call(controller.signal);
       } catch (err) {
+        needsResync = true;
         if (controller.signal.aborted) return;
         setErrorMessage(err instanceof Error ? err.message : String(err));
       } finally {
         aborts.current.delete(controller);
         setStreaming(false);
         setStreamingText('');
+        // Stream may have ended before a final `state` event arrived (network drop, server error, user abort).
+        // The server's persisted state is authoritative — re-pull it so `pending` and friends don't drift.
+        const id = gameIdRef.current;
+        if (needsResync && id) {
+          try {
+            const payload = await getSessionById(id);
+            if (payload) applyState(payload.state, payload.game_id);
+          } catch {
+            // resync failed too; the user's existing errorMessage covers it.
+          }
+        }
       }
     },
-    [streaming],
+    [applyState, streaming],
   );
 
   const refresh = React.useCallback(async () => {

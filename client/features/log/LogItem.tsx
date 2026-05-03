@@ -16,6 +16,10 @@ export function LogItem({ entry }: { entry: LogEntry }) {
       return <ActDivider text={entry.text} />;
     case 'roll':
       return <RollResult entry={entry} />;
+    default:
+      // Server may add a new log kind ahead of a client deploy — render nothing
+      // rather than letting FlatList trip on undefined.
+      return null;
   }
 }
 

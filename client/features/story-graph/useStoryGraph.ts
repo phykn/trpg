@@ -24,7 +24,13 @@ export function readStoredStoryGraph(gameId: string): StoryGraphModel | null {
 }
 
 export function writeStoredStoryGraph(gameId: string, graph: StoryGraphModel): void {
-  getStorage()?.setItem(`${STORAGE_PREFIX}${gameId}`, JSON.stringify(graph));
+  // Best-effort cache. localStorage can throw QuotaExceededError after many games
+  // pile up; swallow it rather than crashing the render tree — server stays authoritative.
+  try {
+    getStorage()?.setItem(`${STORAGE_PREFIX}${gameId}`, JSON.stringify(graph));
+  } catch {
+    // intentionally empty
+  }
 }
 
 export function mergeAndStoreStoryGraph(gameId: string, current: StoryGraphModel): StoryGraphModel {
