@@ -185,6 +185,16 @@ def to_quest(state: GameState, graph: GameGraph | None = None) -> dict | None:
     # entity attribute on the trigger object (no relational scan), so read
     # the goals straight from the trigger names.
     goals = [t.name for t in q.triggers]
+    # triggers_met is a parallel bool array; engine ensures aligned length on
+    # accept. Tolerate misalignment defensively (treat missing slots as unmet).
+    total = len(q.triggers)
+    done = sum(1 for met in q.triggers_met[:total] if met)
+    if total == 0:
+        progress_label = ""
+    elif done >= total:
+        progress_label = "✓"
+    else:
+        progress_label = f"{done}/{total}"
     actions: list[str] = []
     if q.status == "pending":
         actions.append("accept")
@@ -196,6 +206,7 @@ def to_quest(state: GameState, graph: GameGraph | None = None) -> dict | None:
         "giver": giver_name,
         "difficulty": difficulty_badge(q.difficulty),
         "goals": goals,
+        "progressLabel": progress_label,
         "conditions": list(q.conditions),
         "rewards": {"gold": q.rewards.gold, "exp": q.rewards.exp},
         "status": q.status,
