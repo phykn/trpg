@@ -1,7 +1,7 @@
 import { Animated, Text, View } from 'react-native';
 
-import { Glyph } from '@/components/ui';
-import { colors, shadow, spacing } from '@/design/tokens';
+import { Glyph, Surface } from '@/components/ui';
+import { colors, spacing } from '@/design/tokens';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 
 import { RollResult } from './RollResult';
@@ -115,15 +115,15 @@ function ActDivider({ text }: { text: string }) {
   const { scale, opacity } = useEntryAnimation();
   return (
     <Animated.View style={{ transform: [{ scale }], opacity }}>
-      <View
-        className="bg-canvas-subtle border border-border-default rounded-md px-3 py-2.5 flex-row items-start gap-2"
-        style={{ borderLeftWidth: 2, borderLeftColor: colors.accent.fg, ...shadow.paper }}
+      <Surface
+        stripeColor={colors.accent.fg}
+        className="px-3 py-2.5 flex-row items-start gap-2"
       >
         <Glyph kind="filled" tone="accent" size={11} style={{ lineHeight: 20 }} />
         <Text className="font-sans-medium text-body text-fg-default flex-1">
           {text}
         </Text>
-      </View>
+      </Surface>
     </Animated.View>
   );
 }

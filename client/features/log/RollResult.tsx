@@ -1,7 +1,7 @@
 import { Animated, Text, View } from 'react-native';
 
-import { Glyph } from '@/components/ui';
-import { colors, shadow } from '@/design/tokens';
+import { Glyph, Surface } from '@/components/ui';
+import { colors } from '@/design/tokens';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 
 import type { LogEntry } from './types';
@@ -28,9 +28,9 @@ export function RollResult({ entry }: { entry: RollEntry }) {
 
   return (
     <Animated.View style={{ transform: [{ scale }], opacity }}>
-      <View
-        className="bg-canvas-subtle border border-border-default rounded-md px-3 py-2.5"
-        style={{ borderLeftWidth: 2, borderLeftColor: tone.color, ...shadow.paper }}
+      <Surface
+        stripeColor={tone.color}
+        className="px-3 py-2.5"
       >
         <View className="flex-row items-center" style={{ gap: 8 }}>
           <View
@@ -75,7 +75,7 @@ export function RollResult({ entry }: { entry: RollEntry }) {
             </Text>
           )}
         </View>
-      </View>
+      </Surface>
     </Animated.View>
   );
 }
