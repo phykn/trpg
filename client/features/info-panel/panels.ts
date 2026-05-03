@@ -13,9 +13,16 @@ type GameSnapshot = {
   quest: Quest | null;
 };
 
-export function buildPanelSlots(state: GameSnapshot): PanelSlot[] {
+type BuildPanelSlotsOpts = {
+  onLevelUpOpen?: () => void;
+};
+
+export function buildPanelSlots(
+  state: GameSnapshot,
+  opts?: BuildPanelSlotsOpts,
+): PanelSlot[] {
   return [
-    buildHeroSlot(state.hero),
+    buildHeroSlot(state.hero, { onLevelUpOpen: opts?.onLevelUpOpen }),
     buildSubjectSlot(state.subject),
     buildQuestSlot(state.quest),
   ];

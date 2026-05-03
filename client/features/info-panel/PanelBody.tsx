@@ -1,7 +1,7 @@
 import React from 'react';
-import { ScrollView, View, Text } from 'react-native';
+import { Pressable, ScrollView, View, Text } from 'react-native';
 import { Chip, Expandable, Glyph, StatRow, InlineParts, InlineNodes, LabeledRow, Row, ExpandGroup, ExpandableTitle } from '@/components/ui';
-import { toneColor } from '@/design/tokens';
+import { colors, toneColor } from '@/design/tokens';
 import type { MetaSegment, Panel, PanelAction, PanelActions } from './types';
 
 const META_LINE_HEIGHT = 18;
@@ -89,6 +89,25 @@ export function PanelBody({ panel, onAction }: {
     <View className="px-4 py-3 gap-2.5" style={{ minHeight: 160 }}>
       <View className="flex-row items-center gap-2" style={{ minHeight: 22 }}>
         <ExpandableTitle text={panel.title} />
+        {panel.titleAction && (
+          <Pressable
+            onPress={panel.titleAction.onPress}
+            accessibilityRole="button"
+            accessibilityLabel={panel.titleAction.label}
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: 9999,
+              backgroundColor: colors.accent.muted,
+              borderWidth: 1,
+              borderColor: colors.accent.fg,
+            }}
+          >
+            <Text className="font-sans-semibold text-caption" style={{ color: colors.accent.fg, letterSpacing: 0.6 }}>
+              {panel.titleAction.label}
+            </Text>
+          </Pressable>
+        )}
         {panel.meta && panel.meta.length > 0 && (
           <View className="flex-1 min-w-0">
             <ExpandableMeta segments={panel.meta} />

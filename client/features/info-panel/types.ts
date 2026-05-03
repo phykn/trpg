@@ -16,10 +16,13 @@ export type PanelSection = {
   clampLines?: number;
 };
 
+export type PanelTitleAction = { label: string; onPress: () => void };
+
 export type Panel = {
   empty?: boolean;
   title: string;
   meta?: MetaSegment[];
+  titleAction?: PanelTitleAction;
   bar?: BarDef;
   barSplit?: (BarDef | PartsCell)[];
   sections?: PanelSection[];
