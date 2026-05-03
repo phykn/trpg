@@ -4,9 +4,14 @@ Pure functions — no state mutation, no SSE, no I/O. Anything that returns a
 string for a log entry lives here.
 """
 
+from typing import TYPE_CHECKING
+
 from ..domain.state import GameState
 from ..mapping.josa import eul_reul, eun_neun, gwa_wa, i_ga
 from .error_phrases import humanize_engine_error
+
+if TYPE_CHECKING:
+    from .combat_auto import AutoCombatResult
 
 
 GAME_OVER_TEXT = "당신의 이야기가 여기서 끝납니다."
@@ -193,3 +198,59 @@ def format_use_log(state: GameState, actor_id: str, result: dict) -> str:
         if on_use:
             head += f" ({on_use})"
     return head
+
+
+# ----- Combat outcome summary (one act-line after the cinematic) -----
+
+_COMBAT_PLAYER_FALLBACK_NAME = "주인공"
+
+
+def format_combat_enemy_killed(name: str, damage: int) -> str:
+    return f"{name} {damage} 피해 — 쓰러짐"
+
+
+def format_combat_enemy_hit(name: str, damage: int, hp_after: int, max_hp: int) -> str:
+    return f"{name} {damage} 피해 (HP {hp_after}/{max_hp})"
+
+
+def format_combat_player_hit(name: str, damage: int, hp_after: int, max_hp: int) -> str:
+    return f"{name} {damage} 피해 (HP {hp_after}/{max_hp})"
+
+
+def format_combat_revived(coins_after: int, coins_max: int) -> str:
+    return f"가까스로 일어남 (Revival {coins_after}/{coins_max})"
+
+
+def format_combat_outcome_summary(result: "AutoCombatResult") -> str | None:
+    """Numeric breakdown rendered as one act-line after the cinematic."""
+    lines: list[str] = []
+    for h in result.enemy_hits:
+        if h.killed:
+            lines.append(format_combat_enemy_killed(h.name, h.damage_total))
+        elif h.damage_total > 0:
+            lines.append(
+                format_combat_enemy_hit(h.name, h.damage_total, h.hp_after, h.max_hp)
+            )
+    if result.player_damage_total > 0 or result.player_revived:
+        player_name = (
+            result.player_start.name
+            if result.player_start
+            else _COMBAT_PLAYER_FALLBACK_NAME
+        )
+        lines.append(
+            format_combat_player_hit(
+                player_name,
+                result.player_damage_total,
+                result.player_hp_after,
+                result.player_max_hp,
+            )
+        )
+    if result.player_revived:
+        lines.append(
+            format_combat_revived(
+                result.player_revive_coins_after, result.player_revive_coins_max
+            )
+        )
+    if not lines:
+        return None
+    return "전투 결과\n" + "\n".join(lines)
