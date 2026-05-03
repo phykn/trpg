@@ -20,7 +20,7 @@ def apply_judge_result(state: GameState, quest_id: str, result: dict) -> bool:
     outcome = result.get("outcome")
     if outcome == "satisfied":
         quest.status = "completed"
-        quest.success_reason = "free_path_satisfied"
+        quest.success_reason = result.get("reason") or "free_path_satisfied"
         return True
     if outcome == "partial":
         delta = result.get("progress_delta") or 0

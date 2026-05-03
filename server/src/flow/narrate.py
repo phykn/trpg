@@ -192,6 +192,15 @@ async def stream_narrate_tail(
     else:
         target_for_log = None
 
+    # NPC dialogue quest check: PassAction targeting a non-player character.
+    if isinstance(action, PassAction) and target_for_log is not None:
+        target_char = state.characters.get(target_for_log)
+        if target_char is not None and not target_char.is_player:
+            try:
+                npc_dialogue_quest_check(state, claim=player_input, npc_id=target_for_log)
+            except NotImplementedError:
+                pass  # judge LLM stub; live turns stay safe
+
     if to_front_fn is not None:
         yield {"type": "state", "data": to_front_fn(state)}
 
