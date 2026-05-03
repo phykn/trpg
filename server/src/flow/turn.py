@@ -608,11 +608,23 @@ async def _dispatch(
         return
 
     if isinstance(result, ChainAction):
-        state.turn_count += 1
+        # Tail CombatAction is handled by the combat phase, which itself bumps
+        # turn_count — the prefix parts are bookkeeping (equip/move/etc.) that
+        # share the combat turn rather than spending one of their own.
+        tail_combat: CombatAction | None = (
+            result.parts[-1]
+            if result.parts and isinstance(result.parts[-1], CombatAction)
+            else None
+        )
+        prefix_parts = (
+            result.parts[:-1] if tail_combat is not None else list(result.parts)
+        )
+        if tail_combat is None:
+            state.turn_count += 1
         # Snapshot pre-move so first-visit detection survives _apply_move's atomic visited update.
         pre_move_visited = (
             state.characters[state.player_id].visited_location_ids.copy()
-            if any(isinstance(p, MoveAction) for p in result.parts)
+            if any(isinstance(p, MoveAction) for p in prefix_parts)
             else None
         )
         last_pass: PassAction | None = None
@@ -623,9 +635,9 @@ async def _dispatch(
         # isn't final at act-yield time.
         chain_act_evts: list[tuple[dict, int]] = []
         chain_failure_raws: list[str] = []
-        # Per-part failure flags aligned to result.parts indices; PassAction parts stay False.
-        part_failures: list[bool] = [False] * len(result.parts)
-        for idx, part in enumerate(result.parts):
+        # Per-part failure flags aligned to prefix_parts indices; PassAction parts stay False.
+        part_failures: list[bool] = [False] * len(prefix_parts)
+        for idx, part in enumerate(prefix_parts):
             if isinstance(part, PassAction):
                 last_pass = part
                 continue
@@ -649,18 +661,76 @@ async def _dispatch(
                     yield ev
             if getattr(part, "tail_intent", None):
                 chain_act_lines.append(part.tail_intent)
+
+        # Chain parts mutated relations via emit_*; rebuild graph before narrate / combat reads.
+        state.invalidate_graph()
+        graph = state.graph()
+        # Chain that includes a move into a named-NPC location: pin the NPC so target panel matches narrate.
+        if any(isinstance(p, MoveAction) for p in prefix_parts):
+            from .subject import pin_subject_by_input_name
+
+            pin_subject_by_input_name(state, player_input, graph)
+
+        if tail_combat is not None:
+            # Surface prefix-part act cards (move enter cards) before combat fires.
+            # Equip/use/unequip/buy/sell/give cards are rolled into combat narrate's act_log_lines.
+            for ev, part_idx in chain_act_evts:
+                keep_card = (
+                    isinstance(prefix_parts[part_idx], MoveAction)
+                    and not part_failures[part_idx]
+                )
+                if keep_card:
+                    yield ev
+                else:
+                    _drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
+            if has_invalid_combat_targets(state, graph, tail_combat.targets):
+                # Tail combat with no valid target — same shape as standalone CombatAction's invalid-target branch, but the prefix parts already ran.
+                fail_line = NO_COMBAT_TARGETS_TEXT
+                if client is None:
+                    yield push_act(state, dirty, fail_line)
+                else:
+                    fail_evt = push_act(state, dirty, fail_line)
+                    _drop_pushed_act(
+                        state, dirty, (fail_evt.get("data") or {}).get("id")
+                    )
+                    chain_act_lines.append(fail_line)
+                    async for ev in stream_narrate_tail(
+                        client,
+                        state,
+                        scenario_repo,
+                        player_input,
+                        dirty,
+                        to_front_fn,
+                        PassAction(action="pass"),
+                        graph=graph,
+                        act_log_lines=chain_act_lines,
+                        previous_phase_signal=previous_phase_signal,
+                    ):
+                        yield ev
+                async for ev in finalize(state, save_repo, dirty, to_front_fn):
+                    yield ev
+                return
+            async for ev in _enter_combat_and_finalize(
+                client,
+                state,
+                scenario_repo,
+                save_repo,
+                dirty,
+                rng,
+                to_front_fn,
+                player_input=player_input,
+                enemy_ids=list(tail_combat.targets),
+                skill_id=tail_combat.skill_id,
+                graph=graph,
+                surprise=tail_combat.surprise,
+            ):
+                yield ev
+            return
+
         # Synthesize an empty pass so narrate always runs at chain tail, even without an explicit PassAction part.
         narrate_action = (
             last_pass if last_pass is not None else PassAction(action="pass")
         )
-        # Chain parts mutated relations via emit_*; rebuild graph before narrate reads.
-        state.invalidate_graph()
-        graph = state.graph()
-        # Chain that includes a move into a named-NPC location: pin the NPC so target panel matches narrate.
-        if any(isinstance(p, MoveAction) for p in result.parts):
-            from .subject import pin_subject_by_input_name
-
-            pin_subject_by_input_name(state, player_input, graph)
 
         # First-visit detection uses the pre-move snapshot — _apply_move already
         # marked visited, so the live set would lie. A failed first-visit move
@@ -668,7 +738,7 @@ async def _dispatch(
         dramatic_chain = any(is_dramatic_fail(r) for r in chain_failure_raws)
         narrate_chain = (
             _chain_needs_narrate(
-                state, result.parts, part_failures, pre_move_visited
+                state, prefix_parts, part_failures, pre_move_visited
             )
             or dramatic_chain
         )
@@ -676,7 +746,7 @@ async def _dispatch(
         if narrate_chain:
             for ev, part_idx in chain_act_evts:
                 keep_card = (
-                    isinstance(result.parts[part_idx], MoveAction)
+                    isinstance(prefix_parts[part_idx], MoveAction)
                     and not part_failures[part_idx]
                 )
                 if keep_card:

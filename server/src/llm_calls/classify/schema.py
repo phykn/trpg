@@ -1,7 +1,7 @@
 import json
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
 from ...domain.types import StatKey, Tier
 from ...mapping.labels import ROLL_REASON_DEFAULT
@@ -137,7 +137,9 @@ class UnequipAction(_StrictAction):
     tail_intent: str | None = None
 
 
-# Phase-changing actions (combat / rest / flee / roll / reject / summon_combat) can't compose sequentially.
+# CombatAction is a phase change but allowed *only as the chain tail* — engine
+# runs prefix parts then routes to combat. Other phase-changers (rest / flee /
+# roll / reject / summon_combat) can't compose sequentially.
 ChainPart = Annotated[
     UseAction
     | EquipAction
@@ -146,16 +148,29 @@ ChainPart = Annotated[
     | SellAction
     | GiveAction
     | MoveAction
-    | PassAction,
+    | PassAction
+    | CombatAction,
     Field(discriminator="action"),
 ]
 
 
 class ChainAction(_StrictAction):
-    """Sequential engine actions for compound input. Trailing `pass` part runs through narrate for flavor."""
+    """Sequential engine actions for compound input. Trailing `pass` part runs
+    through narrate for flavor; trailing `combat` part transitions into the
+    combat phase after prefix parts execute."""
 
     action: Literal["chain"]
     parts: list[ChainPart] = Field(min_length=2, max_length=4)
+
+    @model_validator(mode="after")
+    def _combat_only_at_tail(self) -> "ChainAction":
+        for part in self.parts[:-1]:
+            if isinstance(part, CombatAction):
+                raise ValueError(
+                    "CombatAction may appear only as the last chain part "
+                    "(combat is phase-changing — prefix parts run, then combat fires)."
+                )
+        return self
 
 
 JudgeOutput = Annotated[
@@ -180,23 +195,33 @@ JudgeOutput = Annotated[
 output_adapter: TypeAdapter[JudgeOutput] = TypeAdapter(JudgeOutput)
 
 
-_PHASE_CHANGING_ACTIONS = frozenset(
-    {"combat", "roll", "rest", "flee", "reject", "summon_combat"}
+# Phase-changers other than combat can't compose into a chain at all. Combat
+# is allowed only as the chain tail (engine runs prefix parts then transitions
+# to combat phase) — promoting it would drop player intent.
+_NON_TAIL_PHASE_CHANGING_ACTIONS = frozenset(
+    {"roll", "rest", "flee", "reject", "summon_combat"}
 )
 
 _ROLL_REASON_FALLBACK = ROLL_REASON_DEFAULT
 
 
 def coerce_judge_output(raw: dict) -> dict:
-    """Last-mile fixes the prompt + retry loop can't eliminate: promote phase-changers out of chains, fill missing roll reason."""
+    """Last-mile fixes the prompt + retry loop can't eliminate: promote chain-illegal phase-changers out of chains, fill missing roll reason."""
     if not isinstance(raw, dict):
         return raw
     action = raw.get("action")
 
     if action == "chain":
         parts = raw.get("parts") or []
-        for part in parts:
-            if isinstance(part, dict) and part.get("action") in _PHASE_CHANGING_ACTIONS:
+        for idx, part in enumerate(parts):
+            if not isinstance(part, dict):
+                continue
+            part_action = part.get("action")
+            if part_action in _NON_TAIL_PHASE_CHANGING_ACTIONS:
+                return coerce_judge_output(part)
+            # Combat in the middle is illegal (only valid at tail); promote
+            # so the attack survives even when classify mis-orders the parts.
+            if part_action == "combat" and idx != len(parts) - 1:
                 return coerce_judge_output(part)
 
     if action == "roll" and not raw.get("reason"):

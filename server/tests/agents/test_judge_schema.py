@@ -331,13 +331,37 @@ def test_coerce_passes_through_well_formed_output():
     assert coerce_judge_output(raw) == raw
 
 
-def test_validate_absorbs_chain_with_combat_part():
+def test_chain_with_combat_at_tail_preserved():
+    """[Equip, Combat] is the canonical "단검을 뽑아 공격한다" shape — both parts
+    must survive so the engine can equip then transition to combat. Promoting
+    Combat alone (the old behavior) drops the equip step and the player's
+    intent."""
     answer = json.dumps(
         {
             "action": "chain",
             "parts": [
                 {"action": "equip", "item_id": "sword_01"},
                 {"action": "combat", "targets": ["bandit_01"]},
+            ],
+        },
+        ensure_ascii=False,
+    )
+    out = validate_judge_output(answer)
+    assert isinstance(out, ChainAction)
+    assert len(out.parts) == 2
+    assert out.parts[-1].action == "combat"
+    assert out.parts[-1].targets == ["bandit_01"]
+
+
+def test_chain_with_combat_in_middle_promoted():
+    """Combat in a non-tail slot is illegal — coerce promotes it so the attack
+    isn't lost when classify mis-orders parts."""
+    answer = json.dumps(
+        {
+            "action": "chain",
+            "parts": [
+                {"action": "combat", "targets": ["bandit_01"]},
+                {"action": "equip", "item_id": "sword_01"},
             ],
         },
         ensure_ascii=False,
