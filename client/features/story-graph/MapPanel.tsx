@@ -47,9 +47,9 @@ export function MapPanel({
         .filter((n) => n.kind === 'place' || n.kind === 'location')
         .map((n) => {
           const state: PlaceState =
-            n.status === 'current'
+            n.kind === 'place'
               ? 'current'
-              : n.status === 'reachable_move'
+              : n.reachable
                 ? 'reachable'
                 : 'unreachable';
           return [n.id, state];
