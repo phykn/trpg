@@ -1,6 +1,6 @@
 """Auto-combat sim — runs the entire fight (or up to round cap) deterministically,
 mutates GameState, and produces the trace plus snapshots that the caller hands
-to combat_narrate for one cinematic body and to format_outcome_summary for the
+to combat_narrate for one cinematic body and to format_combat_outcome_summary for the
 numeric act-line that follows."""
 
 from __future__ import annotations
@@ -584,27 +584,3 @@ async def build_narrate_input(
         enemies_end=enemies_end,
         events=result.events,
     )
-
-
-def format_outcome_summary(result: AutoCombatResult) -> str | None:
-    """Numeric breakdown rendered as one act-line after the cinematic."""
-    lines: list[str] = []
-    for h in result.enemy_hits:
-        if h.killed:
-            lines.append(f"{h.name} {h.damage_total} 피해 — 쓰러짐")
-        elif h.damage_total > 0:
-            lines.append(f"{h.name} {h.damage_total} 피해 (HP {h.hp_after}/{h.max_hp})")
-    if result.player_damage_total > 0 or result.player_revived:
-        player_name = result.player_start.name if result.player_start else "주인공"
-        lines.append(
-            f"{player_name} {result.player_damage_total} 피해 "
-            f"(HP {result.player_hp_after}/{result.player_max_hp})"
-        )
-    if result.player_revived:
-        lines.append(
-            f"가까스로 일어남 "
-            f"(Revival {result.player_revive_coins_after}/{result.player_revive_coins_max})"
-        )
-    if not lines:
-        return None
-    return "전투 결과\n" + "\n".join(lines)

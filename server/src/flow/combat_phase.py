@@ -36,7 +36,6 @@ from .combat_auto import (
     AutoCombatResult,
     PlayerAction,
     build_narrate_input,
-    format_outcome_summary,
     run_auto_combat,
 )
 from .dirty import Dirty, ToFrontFn, finalize, push_act, push_gm, push_turn_log
@@ -47,6 +46,7 @@ from .format import (
     NO_COMBAT_TARGETS_TEXT,
     REST_BLOCKED_IN_COMBAT_TEXT,
     format_combat_end_text,
+    format_combat_outcome_summary,
     format_combat_start_turn_log,
 )
 from .judge import run_judge
@@ -81,7 +81,7 @@ async def emit_combat_cinematic_and_end(
         if body:
             yield push_gm(state, dirty, body)
 
-    summary = format_outcome_summary(result)
+    summary = format_combat_outcome_summary(result)
     # When player_revived, the "가까스로 일어남 (Revival N/M)" line in summary already serves as the end label — appending end_text would duplicate.
     if result.player_revived:
         combined = summary or format_combat_end_text(result.outcome)
