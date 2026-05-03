@@ -6,14 +6,13 @@ from collections.abc import AsyncIterator
 
 from pydantic import ValidationError
 
-from ..domain.errors import LevelUpInvalid
+from ..domain.errors import LevelUpInvalid, LLMUnavailable
 from ..domain.state import GameState
 from ..domain.types import STAT_PAIRS, StatKey
 from ..engines.growth import level_up as level_up_engine
 from ..engines.invariants import InvariantViolation
 from ..engines.invariants.character import check_character
 from ..llm.client import LLMClient, set_llm_session_if_unset
-from ..llm_calls.classify.schema import PassAction
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from .dirty import (
     Dirty,
@@ -90,20 +89,19 @@ async def run_level_up(
         learned_skill_text = format_learn_skill_log(actor.name, skill.name)
         yield push_act(state, dirty, learned_skill_text)
         act_log_lines.append(learned_skill_text)
-        dirty.entities.add(("skills", skill_id))
 
     state.invalidate_graph()
 
     # Narrate is optional — without an LLM client (test path) we skip the prose.
     if client is not None and scenario_repo is not None:
         graph = state.graph()
-        action = PassAction(action="pass", targets=[])
+        judge_result = {"action": "pass", "targets": []}
         stream = run_narrate(
             client,
             state,
             scenario_repo,
             player_input="",
-            judge_result=action.model_dump(),
+            judge_result=judge_result,
             graph=graph,
             grade=None,
             target_id=None,
@@ -119,7 +117,7 @@ async def run_level_up(
                 graph=graph,
             ):
                 yield ev
-        except (ValidationError, OSError, TimeoutError) as e:
+        except (ValidationError, LLMUnavailable, OSError, TimeoutError) as e:
             yield {
                 "type": "error",
                 "data": {"message": str(e), "code": "NarrateFailed"},

@@ -144,3 +144,40 @@ async def test_run_level_up_invalid_stat_emits_error(monkeypatch):
     error_events = [ev for ev in events if ev["type"] == "error"]
     assert len(error_events) >= 1
     assert error_events[0]["data"]["code"] == "LevelUpInvalid"
+
+
+@pytest.mark.asyncio
+async def test_run_level_up_yields_error_and_finalizes_when_narrate_fails(monkeypatch):
+    """Narrate-side LLM failure must not abort before finalize — stat change is already
+    committed engine-side and must be persisted."""
+    from src.domain.errors import LLMUnavailable
+    from src.flow import level_up as level_up_mod
+
+    state = _player_state()
+
+    async def _failing_narrate(*a, **kw):
+        raise LLMUnavailable("simulated provider outage")
+        if False:
+            yield None  # async-gen marker
+
+    monkeypatch.setattr(level_up_mod, "run_narrate", _failing_narrate)
+
+    class _Stub:
+        pass
+
+    events = [ev async for ev in run_level_up(
+        client=_Stub(),
+        state=state,
+        scenario_repo=_Stub(),
+        save_repo=_FakeRepo(),
+        stat_up="STR",
+        skill_id=None,
+    )]
+
+    error_events = [ev for ev in events if ev["type"] == "error"]
+    done_events = [ev for ev in events if ev["type"] == "done"]
+    assert len(error_events) == 1
+    assert error_events[0]["data"]["code"] == "NarrateFailed"
+    assert len(done_events) == 1  # finalize still ran
+    p = state.characters["player_01"]
+    assert p.level == 3  # stat change committed
