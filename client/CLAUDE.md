@@ -25,7 +25,7 @@ npx expo start -c           # clear Metro cache — required after editing token
 - **expo-router** with `typedRoutes`. Add a screen by creating a file under `app/`; don't wire navigation manually. The tab bar is hidden (`tabBarStyle: { display: 'none' }`); the app is single-screen.
 - **NativeWind v4**: write `className="bg-canvas-subtle p-3 rounded-md"`, not `StyleSheet` objects. The `@tailwind` directives load via `global.css`, imported once at the top of `app/_layout.tsx`.
 - **Server calls use `expo/fetch`**, not the global `fetch`. Standard `fetch` does not support SSE body streaming on RN.
-- **Korean only.** The server composes every display string (including dates, durations, joined lists). The client renders verbatim — do not localize or reformat in `features/<x>/panel.ts` or components.
+- **Korean only — with one design-system exception.** The server composes every display string (including dates, durations, joined lists). The client renders verbatim — do not localize or reformat in `features/<x>/panel.ts` or components. **Exception:** short uppercase English used as a visual atom in the GeistMono type system — narrowly, **form section labels in character creation** (`NAME` / `GENDER` / `WORLD` / `RACE`) — is allowed in client-side code (`screens/`, `components/ui/`, `features/<x>/` view files). **Action buttons stay Korean** (`시작` / `굴리기` / `멈추기` / `빠르게` / `정확하게`). **Stat keys stay Korean** (`체력` / `마나` / `경험` / `소생`). **Log entry types are distinguished visually** (font size, accent border, mono box) — no inline text label. Anything composed from server data stays as the server sent it.
 
 ## Architecture
 
@@ -73,7 +73,7 @@ A file may not span two buckets. If you're unsure, the file probably wants split
 - **No hand-rolled `bg-canvas-subtle border ... rounded-md` stacks.** Use `<Surface>` (paper or floating, optional `stripeColor`). Use `<Chip>` for clickable pills. New visual atoms go in `components/ui/`.
 - UI consistency fixes are holistic — don't patch only the flagged instance; change the atom.
 - `pending` (`PendingCheck`) flips composer mode: when it's set, render `RollPrompt`; when clear, render `Composer`. The `roll` log entry clears it the moment the dice lands, before the GM narration finishes streaming.
-- **Korean only.** The server composes every display string. The client renders verbatim — do not localize or reformat in `features/<x>/panel.ts` or components.
+- **Korean only — with one design-system exception.** The server composes every display string. The client renders verbatim — do not localize or reformat in `features/<x>/panel.ts` or components. **Form section labels in character creation** (`NAME` / `GENDER` / `WORLD` / `RACE`) may be uppercase English in GeistMono as visual atoms. Action buttons, stat keys, and log markers stay Korean (see Stack constraints above for the full policy).
 - `LogEntry` is a `kind: 'gm' | 'player' | 'act' | 'roll'` discriminated union — when extending the union, add the case to `features/log/LogItem.tsx`.
 
 ## Misc
