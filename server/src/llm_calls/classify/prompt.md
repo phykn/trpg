@@ -30,7 +30,9 @@ Input fields (in `surroundings`):
 | 5 | use | `{"action":"use","item_id":"<id>","target_id":"<opt>"}` | Verb-match: drink/eat/heal → `consumable`; unlock/open → `trigger`. Throwing consumable at enemy → add `target_id`. Cross-route ("열쇠를 마신다") → § Fallback rules (`pass`; narrate absorbs as self-correction). |
 | 6 | equip | `{"action":"equip","item_id":"<id>"}` | Weapon/armor from `inventory` put on. |
 | 7 | unequip | `{"action":"unequip","item_id":"<id>"}` | Currently-equipped item taken off. |
-| 8 | level_up | `{"action":"level_up","stat_up":"<STAT>","stat_down":"<paired>"}` | `can_level_up=true` + grow verb. Pairs: STR↔CHA, DEX↔WIS, CON↔INT. `stat_up` = stat the verb names; `stat_down` = its pair. No hint → default STR↑/CHA↓. |
+| 8 | level_up | `{"action":"level_up","stat_up":"<STAT>","stat_down":"<paired>"}` | `can_level_up=true` + grow verb + **stat 명시**. Pairs (STAT_PAIRS): STR↔CHA, DEX↔WIS, CON↔INT. Korean labels: 근력=STR, 민첩=DEX, 건강=CON, 지능=INT, 지혜=WIS, 매력=CHA. `stat_up` = stat the verb names; `stat_down` = its pair. **stat 미명시 → `growth_pending`** (행 8a). |
+| 8a | growth_pending | `{"action":"growth_pending"}` | `can_level_up=true` + 성장 의도 + stat 미명시. 여신이 다음 narrate에서 등장해 어느 능력을 끌어올릴지 묻습니다. |
+| 8b | cancel_growth | `{"action":"cancel_growth"}` | `pending_growth.stage="asking_stat"` 컨텍스트 + 명시적 취소 입력 (예: "그만", "취소", "안 할래", "됐어"). |
 | 9 | learn_skill | `{"action":"learn_skill","index":<0-based>}` | `skill_candidates` non-empty + pick by name/desc match. |
 | 10 | buy | `{"action":"buy","npc_id":"<id>","item_id":"<id>"}` | Merchant + listed price + item in their `stock`. |
 | 11 | sell | `{"action":"sell","npc_id":"<id>","item_id":"<id>"}` | Merchant + item in `inventory` + not equipped. |
@@ -186,8 +188,24 @@ Roll tier (friction count → tier):
 | 근육을 단련해 한 단계 오른다 | `{"action":"level_up","stat_up":"STR","stat_down":"CHA"}` |
 | 더 민첩해진다 | `{"action":"level_up","stat_up":"DEX","stat_down":"WIS"}` |
 | 마음을 가다듬어 한 단계 오른다 | `{"action":"level_up","stat_up":"WIS","stat_down":"DEX"}` |
-| 이제 성장한다 (no hint) | `{"action":"level_up","stat_up":"STR","stat_down":"CHA"}` |
+| 이제 성장한다 (no hint, can_level_up=true) | `{"action":"growth_pending"}` |
 | 성장한다 (can_level_up=false) | `{"action":"pass"}` (narrate absorbs: "팔에 힘을 모아보지만 아직 한 단계 오를 만큼은 차오르지 않는다") |
+
+`growth_pending` 답변 (`pending_growth.stage="asking_stat"` 컨텍스트):
+
+| Input | Output |
+|---|---|
+| 근력 / 근력 올려줘 / 힘 / STR | `{"action":"level_up","stat_up":"STR","stat_down":"CHA"}` |
+| 민첩 / 민첩성 / DEX | `{"action":"level_up","stat_up":"DEX","stat_down":"WIS"}` |
+| 건강 / 체력 / 튼튼해진다 / CON | `{"action":"level_up","stat_up":"CON","stat_down":"INT"}` |
+| 지능 / 머리 / INT | `{"action":"level_up","stat_up":"INT","stat_down":"CON"}` |
+| 지혜 / 현명함 / WIS | `{"action":"level_up","stat_up":"WIS","stat_down":"DEX"}` |
+| 매력 / CHA | `{"action":"level_up","stat_up":"CHA","stat_down":"STR"}` |
+| 그만 / 취소 / 안 할래 / 됐어 | `{"action":"cancel_growth"}` |
+| 음… / 글쎄 / ? (모호) | `{"action":"pass"}` (narrate가 여신 voice로 다시 권유) |
+| 광장으로 간다 (명백히 다른 액션) | 그 액션 그대로 분류 (flow가 사전에 pending_growth 클리어) |
+
+**Stat 매핑은 위 컨텍스트(`pending_growth.stage="asking_stat"`)일 때만 적용.** 평소 입력 ("근력!" 단독 외침)은 row 13 `pass`로 흡수.
 
 `learn_skill` (with `skill_candidates=[화염 일격, 치유의 손길, 그림자 발걸음]`):
 
