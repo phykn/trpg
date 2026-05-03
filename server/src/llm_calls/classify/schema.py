@@ -117,6 +117,14 @@ class UnequipAction(_StrictAction):
     tail_intent: str | None = None
 
 
+class GrowthPendingAction(_StrictAction):
+    action: Literal["growth_pending"]
+
+
+class CancelGrowthAction(_StrictAction):
+    action: Literal["cancel_growth"]
+
+
 # Phase-changing actions (combat / rest / flee / roll / reject / summon_combat) can't compose sequentially.
 ChainPart = Annotated[
     UseAction
@@ -157,6 +165,8 @@ JudgeOutput = Annotated[
     | BuyAction
     | SellAction
     | GiveAction
+    | GrowthPendingAction
+    | CancelGrowthAction
     | ChainAction,
     Field(discriminator="action"),
 ]
