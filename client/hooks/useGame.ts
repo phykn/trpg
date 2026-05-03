@@ -78,6 +78,10 @@ export function useGame() {
 
   const [think, setThink] = React.useState(false);
   const gameIdRef = React.useRef<string | null>(null);
+  // The streaming gate has to be synchronous — using the React state alone leaves a
+  // window where a second click in the same tick reads the stale (false) value and
+  // launches a parallel stream against the same game_id.
+  const streamingRef = React.useRef(false);
 
   const aborts = React.useRef<Set<AbortController>>(new Set());
   React.useEffect(() => {
@@ -126,7 +130,8 @@ export function useGame() {
 
   const runStream = React.useCallback(
     async (call: (signal: AbortSignal) => Promise<void>) => {
-      if (streaming) return;
+      if (streamingRef.current) return;
+      streamingRef.current = true;
       const controller = new AbortController();
       aborts.current.add(controller);
       setStreaming(true);
@@ -141,6 +146,7 @@ export function useGame() {
         setErrorMessage(err instanceof Error ? err.message : String(err));
       } finally {
         aborts.current.delete(controller);
+        streamingRef.current = false;
         setStreaming(false);
         setStreamingText('');
         // Stream may have ended before a final `state` event arrived (network drop, server error, user abort).
@@ -156,7 +162,7 @@ export function useGame() {
         }
       }
     },
-    [applyState, streaming],
+    [applyState],
   );
 
   const refresh = React.useCallback(async () => {

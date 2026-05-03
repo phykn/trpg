@@ -127,7 +127,7 @@ export function Composer({ input, setInput, onSend, onStop, streaming, think, on
         } as object}
       />
       <View className="flex-row items-center justify-between">
-        <ThinkToggle think={think} onToggle={onToggleThink} />
+        <ThinkToggle think={think} onToggle={onToggleThink} disabled={streaming} />
         {streaming ? (
           <StopButton onPress={onStop} />
         ) : (
