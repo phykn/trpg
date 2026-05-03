@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class NarrateInput(BaseModel):
@@ -25,7 +25,15 @@ class NarrateInput(BaseModel):
     act_log_lines: list[str] = []
     # One-shot from previous turn (only `"downed_recovered"` today). Narrate opens with the recovery beat; flow clears it after.
     previous_phase_signal: str | None = None
+    # Engine results from the immediately preceding turn — each entry is {"type": str, "summary": str}.
+    # Narrate must not contradict these (e.g. must not say "no combat" if a combat summary is present).
+    recent_engine_events: list[dict] = []
     player_input: str
+
+    @field_validator("recent_engine_events", mode="before")
+    @classmethod
+    def _coerce_none_to_empty(cls, v: object) -> object:
+        return v if v is not None else []
 
 
 class NarrateOutput(BaseModel):

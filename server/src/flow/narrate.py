@@ -48,6 +48,7 @@ async def run_narrate(
     target_id: str | None = None,
     act_log_lines: list[str] | None = None,
     previous_phase_signal: str | None = None,
+    recent_engine_events: list[dict] | None = None,
 ) -> AsyncIterator[NarrativeDelta | NarrativeFinal]:
     """Yield NarrativeDelta tokens then NarrativeFinal. action='reject' is forced empty state_changes / memorable=false engine-side regardless of what the LLM returns."""
     action = judge_result.get("action")
@@ -76,6 +77,7 @@ async def run_narrate(
         grade=grade,
         act_log_lines=act_log_lines or [],
         previous_phase_signal=previous_phase_signal,
+        recent_engine_events=recent_engine_events or [],
         player_input=player_input,
     )
 
@@ -157,6 +159,7 @@ async def stream_narrate_tail(
     graph: GameGraph,
     act_log_lines: list[str] | None = None,
     previous_phase_signal: str | None = None,
+    recent_engine_events: list[dict] | None = None,
 ) -> AsyncIterator[dict]:
     """Emit a state event, then drive narrate. Empty player_input is the post-combat / intro signal — dialogue push is skipped so recent_dialogue isn't polluted with a blank turn."""
     if isinstance(action, PassAction):
@@ -177,6 +180,7 @@ async def stream_narrate_tail(
         grade=None,
         act_log_lines=act_log_lines,
         previous_phase_signal=previous_phase_signal,
+        recent_engine_events=recent_engine_events,
     )
     dialogue_input = player_input if player_input else None
     async for ev in consume_narrate(

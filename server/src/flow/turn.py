@@ -58,8 +58,10 @@ from .format import (
     GAME_OVER_TEXT,
     NO_COMBAT_TARGETS_TEXT,
     SUMMON_FAILED_TEXT,
+    format_combat_event_summary,
 )
 from .judge import run_judge
+from .combat_auto import AutoCombatResult
 from .narrate import stream_narrate_tail
 from .rest import run_rest
 from .subject import refresh_active_subject
@@ -315,6 +317,7 @@ async def _enter_combat_and_finalize(
         skill_id=skill_id,
         targets=list(enemy_ids),
     )
+    combat_results: list[AutoCombatResult] = []
     async for ev in start_combat_and_drive_auto(
         client,
         state,
@@ -325,6 +328,7 @@ async def _enter_combat_and_finalize(
         player_input=player_input,
         player_action=player_action,
         graph=graph,
+        _result_out=combat_results,
     ):
         yield ev
     state.turn_count += 1
@@ -335,6 +339,14 @@ async def _enter_combat_and_finalize(
         graph = state.graph()
         signal = state.previous_phase_signal
         state.previous_phase_signal = None
+        recent_events: list[dict] = []
+        if combat_results:
+            recent_events.append(
+                {
+                    "type": "combat",
+                    "summary": format_combat_event_summary(combat_results[0]),
+                }
+            )
         async for ev in stream_narrate_tail(
             client,
             state,
@@ -345,6 +357,7 @@ async def _enter_combat_and_finalize(
             PassAction(action="pass"),
             graph=graph,
             previous_phase_signal=signal,
+            recent_engine_events=recent_events,
         ):
             yield ev
     # Buffs already ticked per-round inside run_auto_combat; no /turn-end tick here.

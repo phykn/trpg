@@ -45,6 +45,7 @@ from .format import (
     NO_COMBAT_TARGETS_TEXT,
     REST_BLOCKED_IN_COMBAT_TEXT,
     format_combat_end_text,
+    format_combat_event_summary,
     format_combat_outcome_summary,
     format_combat_start_turn_log,
 )
@@ -107,9 +108,11 @@ async def _drive_auto_combat(
     rng: random.Random | None,
     cap: int | None = None,
     graph: GameGraph,
+    _result_out: list | None = None,
 ) -> AsyncIterator[dict]:
     """Run the auto-combat sim, stream the cinematic, push numeric summary
-    and combat_end. Caller must have already set combat_state."""
+    and combat_end. Caller must have already set combat_state.
+    If _result_out is provided, appends the AutoCombatResult to it."""
     if state.combat_state is None:
         raise CombatStateInvalid("_drive_auto_combat called without combat_state")
 
@@ -117,6 +120,8 @@ async def _drive_auto_combat(
     if cap is not None:
         kwargs["cap"] = cap
     result = run_auto_combat(state, dirty, **kwargs)
+    if _result_out is not None:
+        _result_out.append(result)
 
     for tev in result.turn_events:
         yield {"type": "combat_turn", "data": tev}
@@ -145,6 +150,7 @@ async def start_combat_and_drive_auto(
     surprise: Literal["player", "enemy"] | None = None,
     cap: int | None = None,
     graph: GameGraph,
+    _result_out: list | None = None,
 ) -> AsyncIterator[dict]:
     """Open a fresh fight (no existing combat_state) and run one auto-sim.
     Used by /turn's CombatAction / SummonCombatAction entry and by rest's
@@ -185,6 +191,7 @@ async def start_combat_and_drive_auto(
         rng=rng,
         cap=cap,
         graph=graph,
+        _result_out=_result_out,
     ):
         yield ev
 
@@ -331,6 +338,7 @@ async def run_combat_player_turn(
         async for ev in _passive_pre_emit(state, dirty, result):
             yield ev
 
+    combat_results: list[AutoCombatResult] = []
     async for ev in _drive_auto_combat(
         client,
         state,
@@ -340,6 +348,7 @@ async def run_combat_player_turn(
         player_action=player_action,
         rng=rng,
         graph=graph,
+        _result_out=combat_results,
     ):
         yield ev
 
@@ -354,6 +363,14 @@ async def run_combat_player_turn(
         graph_post = state.graph()
         signal = state.previous_phase_signal
         state.previous_phase_signal = None
+        recent_events: list[dict] = []
+        if combat_results:
+            recent_events.append(
+                {
+                    "type": "combat",
+                    "summary": format_combat_event_summary(combat_results[0]),
+                }
+            )
         async for ev in stream_narrate_tail(
             client,
             state,
@@ -364,6 +381,7 @@ async def run_combat_player_turn(
             PassAction(action="pass"),
             graph=graph_post,
             previous_phase_signal=signal,
+            recent_engine_events=recent_events,
         ):
             yield ev
     # Buffs already ticked per-round inside run_auto_combat; no /turn-end tick here.
