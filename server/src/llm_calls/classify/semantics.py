@@ -3,10 +3,12 @@ from typing import Any, Callable
 from ...domain.types import STAT_PAIRS
 from .schema import (
     BuyAction,
+    CancelGrowthAction,
     ChainAction,
     CombatAction,
     EquipAction,
     FleeAction,
+    GrowthPendingAction,
     JudgeOutput,
     LearnSkillAction,
     LevelUpAction,
@@ -250,6 +252,17 @@ def _check_unequip(output: UnequipAction, surroundings: dict[str, Any]) -> None:
         )
 
 
+def _check_growth_pending(output: GrowthPendingAction, surroundings: dict[str, Any]) -> None:
+    growth = surroundings.get("growth") or {}
+    if not growth.get("can_level_up"):
+        raise JudgeSemanticError("growth_pending requires can_level_up=true")
+
+
+def _check_cancel_growth(output: CancelGrowthAction, surroundings: dict[str, Any]) -> None:
+    if not surroundings.get("pending_growth"):
+        raise JudgeSemanticError("cancel_growth requires pending_growth.stage='asking_stat'")
+
+
 # RejectAction / SummonCombatAction / RestAction have no surroundings-based
 # check — schema validation alone is enough; check_semantics's .get() returns
 # None for them and we exit cleanly.
@@ -266,6 +279,8 @@ _CHECKS: dict[type, Callable[[Any, dict[str, Any]], None]] = {
     EquipAction: _check_equip,
     UnequipAction: _check_unequip,
     ChainAction: _check_chain,
+    GrowthPendingAction: _check_growth_pending,
+    CancelGrowthAction: _check_cancel_growth,
 }
 
 
