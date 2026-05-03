@@ -22,6 +22,12 @@ sys.path.insert(0, str(ROOT))
 # sys.path must be set first; decompose.py transitively imports src.llm
 from agency.story.harness.decompose import DecomSetup, DecomCast, DecomArc, _check_setup, _check_cast, _check_arc  # noqa: E402
 from agency.story.harness._common import EntityWriterError  # noqa: E402
+from agency.story.harness.runner import (  # noqa: E402
+    SPECS,
+    _check_entity_invariants,
+    _check_id,
+    _collect_refs,
+)
 
 # env loading mirrors run_qa.py / run_story.py so SUPABASE_* / BASE_URL
 # / LLM_ROUTE_* resolve here. Subcommands that don't need env (decompose-*,
@@ -62,6 +68,15 @@ def _build_parser() -> argparse.ArgumentParser:
     sp_arc.add_argument("cast_json", help="path to cast.json")
     sp_arc.add_argument("arc_json", help="path to arc.json")
     sp_arc.set_defaults(func=_cmd_decompose_arc)
+    # check-entity
+    sp_chk = sub.add_parser(
+        "check-entity",
+        help="한 엔티티 cross-ref + invariant 검사",
+    )
+    sp_chk.add_argument("kind", choices=sorted(SPECS), help="entity kind")
+    sp_chk.add_argument("scenario_dir", help="scenario directory (already partially populated)")
+    sp_chk.add_argument("entity_json", help="path to the entity JSON to check")
+    sp_chk.set_defaults(func=_cmd_check_entity)
     return parser
 
 
@@ -78,6 +93,30 @@ def _fail(cmd: str, e: Exception) -> int:
         prefix = f"{type(e).__name__}: "
     print(f"{cmd} failed: {prefix}{e}", file=sys.stderr)
     return 1
+
+
+def _cmd_check_entity(args: argparse.Namespace) -> int:
+    spec = SPECS[args.kind]
+    sd = Path(args.scenario_dir)
+    if not sd.is_dir():
+        print(f"check-entity failed: scenario_dir not a directory: {sd}", file=sys.stderr)
+        return 1
+    try:
+        entity = spec.model.model_validate_json(
+            Path(args.entity_json).read_text(encoding="utf-8")
+        )
+        refs = _collect_refs(sd, spec)
+        existing_ids = refs[spec.kind]
+        # remove the entity-being-checked id from `existing_ids` so it doesn't
+        # trip the collision check against its own future on-disk file.
+        existing_ids.discard(entity.id)
+        _check_id(entity, existing_ids, force_id=None)
+        spec.check_refs(entity, refs)
+        _check_entity_invariants(entity, sd, skeleton=False)
+    except Exception as e:
+        return _fail("check-entity", e)
+    print("OK")
+    return 0
 
 
 def _cmd_decompose_arc(args: argparse.Namespace) -> int:
