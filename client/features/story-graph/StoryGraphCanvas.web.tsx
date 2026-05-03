@@ -2,7 +2,7 @@ import cytoscape, { type Core, type ElementDefinition } from 'cytoscape';
 import React from 'react';
 
 import { colors } from '@/design/tokens';
-import type { StoryGraphModel, StoryGraphNodeKind } from './presenters';
+import type { StoryGraphEdge, StoryGraphModel, StoryGraphNodeKind } from './presenters';
 
 const NODE_COLOR: Record<StoryGraphNodeKind, string> = {
   hero: colors.accent.fg,
@@ -29,14 +29,51 @@ type NodeOverride = {
   textColor?: string;
 };
 
+function hashJitter(id: string): { dx: number; dy: number } {
+  // Deterministic small offset (~±15 px) so newly added nodes don't all stack at the centroid.
+  let h = 0;
+  for (let i = 0; i < id.length; i += 1) {
+    h = (h * 31 + id.charCodeAt(i)) | 0;
+  }
+  const dx = ((h & 0xffff) / 0xffff - 0.5) * 30;
+  const dy = (((h >> 16) & 0xffff) / 0xffff - 0.5) * 30;
+  return { dx, dy };
+}
+
+function seedFromConnected(
+  nodeId: string,
+  edges: StoryGraphEdge[],
+  cached: Record<string, { x: number; y: number }>,
+): { x: number; y: number } | undefined {
+  const connected: string[] = [];
+  for (const e of edges) {
+    if (e.source === nodeId && cached[e.target]) connected.push(e.target);
+    else if (e.target === nodeId && cached[e.source]) connected.push(e.source);
+  }
+  if (connected.length === 0) return undefined;
+  let sx = 0;
+  let sy = 0;
+  for (const cid of connected) {
+    sx += cached[cid].x;
+    sy += cached[cid].y;
+  }
+  const cx = sx / connected.length;
+  const cy_ = sy / connected.length;
+  const { dx, dy } = hashJitter(nodeId);
+  return { x: cx + dx, y: cy_ + dy };
+}
+
 function toElements(
   graph: StoryGraphModel,
-  overrides?: Record<string, NodeOverride>,
-  unseenNodeIds?: Set<string>,
+  overrides: Record<string, NodeOverride> | undefined,
+  unseenNodeIds: Set<string> | undefined,
+  cached: Record<string, { x: number; y: number }>,
 ): ElementDefinition[] {
   return [
     ...graph.nodes.map((node) => {
       const override = overrides?.[node.id];
+      const cachedPos = cached[node.id];
+      const seed = cachedPos ?? seedFromConnected(node.id, graph.edges, cached);
       return {
         data: {
           id: node.id,
@@ -48,6 +85,8 @@ function toElements(
           isNew: unseenNodeIds?.has(node.id) ? 'true' : undefined,
           interactable: node.reachable ? 'true' : 'false',
         },
+        position: seed,
+        locked: cachedPos !== undefined,
         classes: node.kind,
       };
     }),
@@ -88,14 +127,21 @@ export function StoryGraphCanvas({
 }) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const cyRef = React.useRef<Core | null>(null);
+  const positionsRef = React.useRef<Record<string, { x: number; y: number }>>({});
 
   React.useEffect(() => {
+    // Drop cache entries for nodes no longer in the graph.
+    const validIds = new Set(graph.nodes.map((n) => n.id));
+    for (const id of Object.keys(positionsRef.current)) {
+      if (!validIds.has(id)) delete positionsRef.current[id];
+    }
+
     const container = containerRef.current;
     if (!container) return undefined;
 
     const cy = cytoscape({
       container,
-      elements: toElements(graph, nodeOverrides, unseenNodeIds),
+      elements: toElements(graph, nodeOverrides, unseenNodeIds, positionsRef.current),
       autoungrabify: true,
       hideEdgesOnViewport: false,
       minZoom: 0.55,
@@ -198,17 +244,19 @@ export function StoryGraphCanvas({
                 concentric: (node: cytoscape.NodeSingular) => Number(node.data('tier') ?? 0),
                 levelWidth: () => 1,
               }
-            : {
-                name: 'cose',
-                animate: false,
-                componentSpacing: 58,
-                fit: true,
-                idealEdgeLength: 96,
-                nodeOverlap: 15,
-                nodeRepulsion: 6000,
-                padding: 14,
-                randomize: false,
-              },
+            : graph.nodes.every((n) => positionsRef.current[n.id])
+              ? { name: 'preset', fit: true, padding: 14 }
+              : {
+                  name: 'cose',
+                  animate: false,
+                  componentSpacing: 58,
+                  fit: true,
+                  idealEdgeLength: 96,
+                  nodeOverlap: 15,
+                  nodeRepulsion: 6000,
+                  padding: 14,
+                  randomize: false,
+                },
     });
 
     cy.on('tap', 'node', (event) => {
@@ -219,6 +267,12 @@ export function StoryGraphCanvas({
         if (event.target === cy) onNodeSelect?.(null);
       });
     }
+    cy.on('layoutstop', () => {
+      cy.nodes().forEach((node) => {
+        const pos = node.position();
+        positionsRef.current[node.id()] = { x: pos.x, y: pos.y };
+      });
+    });
     // layout runs synchronously when animate:false, so positions are ready here
     cy.fit(undefined, 16);
     if (centerNodeId) {
