@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, View, Text } from 'react-native';
-import { Chip, Expandable, StatRow, InlineParts, InlineNodes, LabeledRow, Row, ExpandGroup, ExpandableTitle } from '@/components/ui';
+import { Chip, Expandable, Glyph, StatRow, InlineParts, InlineNodes, LabeledRow, Row, ExpandGroup, ExpandableTitle } from '@/components/ui';
 import { toneColor } from '@/design/tokens';
 import type { MetaSegment, Panel, PanelAction, PanelActions } from './types';
 
@@ -71,7 +71,11 @@ export function PanelBody({ panel, onAction }: {
 }) {
   if (panel.empty) {
     return (
-      <View className="px-4 py-10 items-center justify-center" style={{ minHeight: 120 }}>
+      <View
+        className="px-4 py-10 items-center justify-center gap-2"
+        style={{ minHeight: 120 }}
+      >
+        <Glyph kind="outline" tone="subtle" size={16} />
         <Text className="font-sans text-caption text-fg-subtle">
           비어 있음
         </Text>
