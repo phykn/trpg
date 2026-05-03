@@ -1,8 +1,11 @@
 import cytoscape, { type Core, type ElementDefinition } from 'cytoscape';
+import fcose from 'cytoscape-fcose';
 import React from 'react';
 
 import { colors } from '@/design/tokens';
 import type { StoryGraphEdge, StoryGraphModel, StoryGraphNodeKind } from './presenters';
+
+cytoscape.use(fcose);
 
 const NODE_COLOR: Record<StoryGraphNodeKind, string> = {
   hero: colors.accent.fg,
@@ -247,17 +250,17 @@ export function StoryGraphCanvas({
             : graph.nodes.every((n) => positionsRef.current[n.id])
               ? { name: 'preset', fit: true, padding: 14 }
               : {
-                  name: 'cose',
-                  animate: false,
-                  componentSpacing: 58,
+                  name: 'fcose',
                   fit: true,
                   idealEdgeLength: 96,
-                  nodeOverlap: 15,
                   nodeRepulsion: 6000,
                   padding: 14,
                   randomize: false,
+                  quality: 'default',
+                  uniformNodeDimensions: true,
+                  packComponents: true,
                 },
-    });
+    } as any);
 
     // Capture positions synchronously — `cytoscape({layout: ..., animate: false})`
     // runs layout inside the constructor, so the layoutstop event fires before any
