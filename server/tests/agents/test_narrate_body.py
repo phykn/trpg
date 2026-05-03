@@ -23,7 +23,7 @@ class FakeStreamClient:
         self.chunks = chunks
         self.kwargs_seen: dict = {}
 
-    async def chat_stream(self, messages, *, think=False, agent=None, temperature=None):
+    async def chat_stream(self, messages, *, think=False, agent=None, temperature=None, use_fallback=False):
         self.kwargs_seen = {
             "messages": messages,
             "think": think,

@@ -40,7 +40,7 @@ async def test_chat_omits_temperature_when_none(monkeypatch):
     fake_provider.supports_system = True
     fake_provider.model = "test-model"
 
-    monkeypatch.setattr(client, "_pick", lambda agent: fake_provider)
+    monkeypatch.setattr(client, "_pick", lambda agent, *, fallback=False: fake_provider)
 
     await client.chat(messages=[{"role": "user", "content": "x"}], log=False)
     assert "temperature" not in captured
@@ -67,7 +67,7 @@ async def test_chat_passes_temperature_when_set(monkeypatch):
     fake_provider.supports_system = True
     fake_provider.model = "test-model"
 
-    monkeypatch.setattr(client, "_pick", lambda agent: fake_provider)
+    monkeypatch.setattr(client, "_pick", lambda agent, *, fallback=False: fake_provider)
 
     await client.chat(
         messages=[{"role": "user", "content": "x"}], temperature=0.2, log=False

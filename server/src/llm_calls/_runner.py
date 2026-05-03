@@ -1,8 +1,10 @@
 import asyncio
+import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import TypeVar
 
+from openai import RateLimitError
 from pydantic import ValidationError
 
 from ..domain.errors import LLMUnavailable
@@ -75,11 +77,27 @@ async def run_with_retries(
     )
     # `retries` is the total attempt budget — initial call counted. Previously
     # ran retries+1 attempts, costing one extra LLM round per agent.
+    fallback_engaged = False
     for _ in range(retries):
         try:
             result = await client.chat(
-                messages=messages, think=False, agent=agent, temperature=temperature
+                messages=messages,
+                think=False,
+                agent=agent,
+                temperature=temperature,
+                use_fallback=fallback_engaged,
             )
+        except RateLimitError as e:
+            fb = client.pick_fallback(agent)
+            if not fallback_engaged and fb is not None:
+                print(
+                    f"[llm-fallback] agent={agent} primary_failed_with={type(e).__name__} "
+                    f"→ using fallback={fb.model}",
+                    file=sys.stderr,
+                )
+                fallback_engaged = True
+                continue
+            raise LLMUnavailable(str(e)) from e
         except (OSError, asyncio.TimeoutError) as e:
             raise LLMUnavailable(str(e)) from e
         answer = result["answer"] or ""

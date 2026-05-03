@@ -55,6 +55,7 @@ _PROVIDER_RE = re.compile(
     r"^LLM_(?!ROUTE_)([A-Z0-9_]+?)_(BASE_URL|API_KEYS|THINK_OFF|THINK_OPT_ON|THINK_OPT|THINK_ON|NO_SYSTEM)$"
 )
 _ROUTE_RE = re.compile(r"^LLM_ROUTE_([A-Z0-9_]+)$")
+_FALLBACK_RE = re.compile(r"^LLM_ROUTE_([A-Z0-9_]+)_FALLBACK$")
 
 
 class _ProviderEnv(NamedTuple):
@@ -64,12 +65,13 @@ class _ProviderEnv(NamedTuple):
     no_system: frozenset[str]  # models that reject `role: system`
 
 
-def _parse_env_profiles() -> dict[str, LLMProfile]:
-    """Build agent profiles from `LLM_<NAME>_*` and `LLM_ROUTE_<AGENT>` env vars.
+def _parse_env_profiles() -> tuple[dict[str, LLMProfile], dict[str, LLMProfile]]:
+    """Build agent (primary, fallback) profiles from env.
 
     `LLM_ROUTE_DEFAULT` is required; unmatched agents fall back to default at
-    call time. THINK_* lists per provider are disjoint and together name every
-    model the provider serves.
+    call time. Optional `LLM_ROUTE_<AGENT>_FALLBACK` defines a secondary
+    profile reached on quota errors. THINK_* lists per provider are disjoint
+    and together name every model the provider serves.
     """
 
     def csv(s: str) -> tuple[str, ...]:
@@ -118,10 +120,21 @@ def _parse_env_profiles() -> dict[str, LLMProfile]:
             no_system=no_system,
         )
 
-    # Phase 2: read each LLM_ROUTE_<AGENT> = <provider>/<model>.
+    # Phase 2: read each LLM_ROUTE_<AGENT> = <provider>/<model>; route _FALLBACK
+    # variants to a separate map so the primary regex doesn't capture them.
     routes: dict[str, tuple[str, str]] = {}
+    fallback_routes: dict[str, tuple[str, str]] = {}
     for key, value in os.environ.items():
-        if not (m := _ROUTE_RE.match(key)):
+        m_fb = _FALLBACK_RE.match(key)
+        if m_fb:
+            spec = value.strip()
+            if "/" not in spec:
+                raise ValueError(f"{key} must be '<provider>/<model>' (got {value!r})")
+            prov, model = spec.split("/", 1)
+            fallback_routes[m_fb[1].lower()] = (prov.strip(), model.strip())
+            continue
+        m = _ROUTE_RE.match(key)
+        if not m:
             continue
         spec = value.strip()
         if "/" not in spec:
@@ -131,29 +144,37 @@ def _parse_env_profiles() -> dict[str, LLMProfile]:
     if "default" not in routes:
         raise ValueError("LLM_ROUTE_DEFAULT must be set")
 
-    # Phase 3: resolve each route into a profile.
-    profiles: dict[str, LLMProfile] = {}
-    for agent, (prov_name, model_name) in routes.items():
+    def _resolve(label: str, prov_name: str, model_name: str) -> LLMProfile:
         if prov_name not in providers:
             raise ValueError(
-                f"LLM_ROUTE_{agent.upper()} references unknown provider "
+                f"{label} references unknown provider "
                 f"{prov_name!r} (no LLM_{prov_name.upper()}_BASE_URL)"
             )
         prov = providers[prov_name]
         if model_name not in prov.modes:
             raise ValueError(
-                f"LLM_ROUTE_{agent.upper()} references unknown model "
+                f"{label} references unknown model "
                 f"{model_name!r} for provider {prov_name!r} (not in any "
                 f"LLM_{prov_name.upper()}_THINK_* list)"
             )
-        profiles[agent] = LLMProfile(
+        return LLMProfile(
             base_url=prov.base_url,
             model=model_name,
             api_keys=prov.api_keys,
             thinking_mode=prov.modes[model_name],
             supports_system=model_name not in prov.no_system,
         )
-    return profiles
+
+    # Phase 3: resolve each route into a profile.
+    profiles: dict[str, LLMProfile] = {
+        agent: _resolve(f"LLM_ROUTE_{agent.upper()}", prov_name, model_name)
+        for agent, (prov_name, model_name) in routes.items()
+    }
+    fallbacks: dict[str, LLMProfile] = {
+        agent: _resolve(f"LLM_ROUTE_{agent.upper()}_FALLBACK", prov_name, model_name)
+        for agent, (prov_name, model_name) in fallback_routes.items()
+    }
+    return profiles, fallbacks
 
 
 class _Provider:
@@ -207,6 +228,7 @@ class LLMClient:
     def __init__(
         self,
         profiles: dict[str, LLMProfile],
+        fallbacks: dict[str, LLMProfile] | None = None,
         log_dir: Path | None = None,
         chat_timeout_s: float | None = None,
         stream_timeout_s: float | None = None,
@@ -217,6 +239,9 @@ class LLMClient:
         stream_t = stream_timeout_s or RULES.llm.stream_timeout_s
         self._providers: dict[str, _Provider] = {
             name: _Provider(p, chat_t, stream_t) for name, p in profiles.items()
+        }
+        self._fallbacks: dict[str, _Provider] = {
+            name: _Provider(p, chat_t, stream_t) for name, p in (fallbacks or {}).items()
         }
         self._log_dir = log_dir
 
@@ -255,17 +280,26 @@ class LLMClient:
         chat_timeout_s: float | None = None,
         stream_timeout_s: float | None = None,
     ) -> "LLMClient":
+        primary, fallbacks = _parse_env_profiles()
         return cls(
-            profiles=_parse_env_profiles(),
+            profiles=primary,
+            fallbacks=fallbacks,
             log_dir=log_dir,
             chat_timeout_s=chat_timeout_s,
             stream_timeout_s=stream_timeout_s,
         )
 
-    def _pick(self, agent: str | None) -> _Provider:
+    def _pick(self, agent: str | None, *, fallback: bool = False) -> _Provider:
+        if fallback and agent and agent in self._fallbacks:
+            return self._fallbacks[agent]
         if agent and agent in self._providers:
             return self._providers[agent]
         return self._providers["default"]
+
+    def pick_fallback(self, agent: str | None) -> "_Provider | None":
+        if not agent:
+            return None
+        return self._fallbacks.get(agent)
 
     @staticmethod
     def _inline_system(messages: list[dict]) -> list[dict]:
@@ -367,8 +401,9 @@ class LLMClient:
         agent: str | None = None,
         log: bool = True,
         temperature: float | None = None,
+        use_fallback: bool = False,
     ) -> dict:
-        provider = self._pick(agent)
+        provider = self._pick(agent, fallback=use_fallback)
         base = self._log_basename(agent) if log else None
         self._log_query(base, messages)
         params = self._params(provider, messages, think, temperature)
@@ -398,8 +433,9 @@ class LLMClient:
         agent: str | None = None,
         log: bool = True,
         temperature: float | None = None,
+        use_fallback: bool = False,
     ) -> AsyncIterator[dict]:
-        provider = self._pick(agent)
+        provider = self._pick(agent, fallback=use_fallback)
         base = self._log_basename(agent) if log else None
         self._log_query(base, messages)
         params = self._params(provider, messages, think, temperature)

@@ -1,5 +1,8 @@
 import asyncio
+import sys
 from collections.abc import AsyncIterator
+
+from openai import RateLimitError
 
 from ..._runner import load_prompt
 from ....domain.errors import LLMUnavailable
@@ -29,6 +32,7 @@ async def stream_body(
         {"role": "user", "content": input_.model_dump_json()},
     ]
 
+    fallback_engaged = False
     for attempt in range(_MAX_RETRIES + 1):
         body_streamed = False
         try:
@@ -37,11 +41,27 @@ async def stream_body(
                 think=False,
                 agent="narrate_body",
                 temperature=_BODY_TEMPERATURE,
+                use_fallback=fallback_engaged,
             ):
                 text = chunk.get("answer")
                 if text:
                     body_streamed = True
                     yield text
+        except RateLimitError as e:
+            # Fallback only meaningful before the first body delta — once the
+            # client has prose on screen, restarting from scratch is a worse UX
+            # than raising. Mirror the transport-error policy.
+            fb = client.pick_fallback("narrate_body")
+            if body_streamed or attempt == _MAX_RETRIES:
+                raise LLMUnavailable(str(e)) from e
+            if not fallback_engaged and fb is not None:
+                print(
+                    f"[llm-fallback] agent=narrate_body primary_failed_with={type(e).__name__} "
+                    f"→ using fallback={fb.model}",
+                    file=sys.stderr,
+                )
+                fallback_engaged = True
+            continue
         except (OSError, asyncio.TimeoutError) as e:
             if body_streamed or attempt == _MAX_RETRIES:
                 raise LLMUnavailable(str(e)) from e

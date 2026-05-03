@@ -52,10 +52,10 @@ _NARRATE_FULL = f"{_NARRATE_BODY}---JSON---{_NARRATE_OUTPUT_JSON}"
 class _MockLLM:
     """Returns recommend payload from chat(), narrate stream from chat_stream()."""
 
-    async def chat(self, messages, think=False, agent=None, temperature=None):
+    async def chat(self, messages, think=False, agent=None, temperature=None, use_fallback=False):
         return {"answer": _RECOMMEND_OUTPUT, "think": ""}
 
-    async def chat_stream(self, messages, think=False, agent=None, temperature=None):
+    async def chat_stream(self, messages, think=False, agent=None, temperature=None, use_fallback=False):
         mid = len(_NARRATE_FULL) // 2
         for piece in (_NARRATE_FULL[:mid], _NARRATE_FULL[mid:]):
             yield {"answer": piece, "think": ""}
