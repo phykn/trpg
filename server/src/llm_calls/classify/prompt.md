@@ -128,6 +128,7 @@ Approaching a prop/NPC in the same location ("다가간다") is not movement —
 | Anonymous address + 0 alive NPCs in location ("인사한다") | `{"action":"pass"}` |
 | Combat target miss + neither recent_npc nor a single alive NPC | `{"action":"pass"}` |
 | Unverifiable claim of completion/possession to NPC ("타렘 처치했다"·"비밀 알아냈다"·"열쇠 갖고 있다") with no in-game evidence — claimed item not in `inventory`, claimed kill not in `corpses` | `{"action":"roll","tier":"보통","stat":"CHA","targets":["<해당 NPC id>"],"reason":"<주장>을 NPC에 납득시키려 함"}` |
+| Skill/magic name in input but no matching `skills[*]` entry ("빛의 마법", "치유의 손길" without learned skill) — never invent a skill_id; fall to non-skill branch (combat without skill_id, or `pass` if no target) — narrate closes as "기술이 손에 익지 않았다" / "마법이 응하지 않았다" | (drop skill, route by remaining intent) |
 
 **reason**: one Korean sentence (≤80 chars), what's attempted + outcome sought. GOOD `"경비병을 설득해 통과시키려 함"`. BAD `"굴림 필요"`, `"CHA 판정"`.
 
