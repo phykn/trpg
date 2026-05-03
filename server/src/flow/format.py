@@ -139,6 +139,10 @@ def format_skill_candidates_log(skill_names: list[str]) -> str:
     return f"새 기술 후보: {names}"
 
 
+def format_death_log(name: str) -> str:
+    return f"{name} 사망"
+
+
 def format_attack_turn_log(target_name: str) -> str:
     return f"{target_name}{eul_reul(target_name)} 공격"
 

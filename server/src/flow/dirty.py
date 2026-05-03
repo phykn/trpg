@@ -14,6 +14,7 @@ from ..domain.memory import (
 from ..domain.state import GameState
 from ..persistence.repo import SaveRepo
 from ..rules import RULES
+from .format import format_death_log
 
 ToFrontFn = Callable[[GameState], dict]
 
@@ -80,7 +81,7 @@ def register_kill(state: GameState, victim_id: str, dirty: Dirty) -> None:
     """Single death entry point — the turn_log signal is what survives the player leaving the body, so every kill path must route through here."""
     char = state.characters.get(victim_id)
     name = char.name if char is not None else victim_id
-    push_turn_log(state, victim_id, f"{name} 사망", dirty)
+    push_turn_log(state, victim_id, format_death_log(name), dirty)
     dirty.entities.add(("characters", victim_id))
 
 
