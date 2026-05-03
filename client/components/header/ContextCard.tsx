@@ -1,7 +1,6 @@
 import React from 'react';
-import { type GestureResponderHandlers, PanResponder, Pressable, Text, View } from 'react-native';
+import { PanResponder, Pressable, Text, View } from 'react-native';
 
-import { shadow } from '@/design/tokens';
 import { Surface } from '@/components/ui';
 import {
   MiniMapPanel,
@@ -16,29 +15,6 @@ import { IconButton, ICON_PATH } from './IconButton';
 import { PanelBody } from './PanelBody';
 
 const FLOAT_BUFFER = 540;
-
-function FloatingDock({ top, panHandlers, children }: {
-  top: number;
-  panHandlers: GestureResponderHandlers;
-  children: React.ReactNode;
-}) {
-  return (
-    <View
-      className="bg-canvas-subtle border border-border-default rounded-md overflow-hidden"
-      style={{
-        position: 'absolute',
-        top,
-        left: 0,
-        right: 0,
-        maxHeight: FLOAT_BUFFER,
-        ...shadow.floating,
-      }}
-      {...panHandlers}
-    >
-      {children}
-    </View>
-  );
-}
 
 export function ContextCard({ slots, miniMapGraph, place, activeId, menuOpen, bgmOn, onSelect, onMenuToggle, onMenuClose, onBgmToggle, onNewGame, onAction }: {
   slots: PanelSlot[];
@@ -106,32 +82,48 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, menuOpen, bg
         />
       </Surface>
       {panel && (
-        <FloatingDock top={chipBarHeight + 4} panHandlers={panResponder.panHandlers}>
+        <Surface
+          variant="floating"
+          className="overflow-hidden"
+          style={{ position: 'absolute', top: chipBarHeight + 4, left: 0, right: 0, maxHeight: FLOAT_BUFFER }}
+          {...panResponder.panHandlers}
+        >
           <PanelBody panel={panel} onAction={onAction} />
-        </FloatingDock>
+        </Surface>
       )}
       {miniMapOpen && (
-        <FloatingDock top={chipBarHeight + 4} panHandlers={panResponder.panHandlers}>
+        <Surface
+          variant="floating"
+          className="overflow-hidden"
+          style={{ position: 'absolute', top: chipBarHeight + 4, left: 0, right: 0, maxHeight: FLOAT_BUFFER }}
+          {...panResponder.panHandlers}
+        >
           <MiniMapPanel
             graph={miniMapGraph}
             place={place}
             onAction={onAction}
           />
-        </FloatingDock>
+        </Surface>
       )}
       {graphOpen && (
-        <FloatingDock top={chipBarHeight + 4} panHandlers={panResponder.panHandlers}>
+        <Surface
+          variant="floating"
+          className="overflow-hidden"
+          style={{ position: 'absolute', top: chipBarHeight + 4, left: 0, right: 0, maxHeight: FLOAT_BUFFER }}
+          {...panResponder.panHandlers}
+        >
           <StoryGraphScreen
             onAction={(action) => {
               onSelect('graph');
               onAction?.(action);
             }}
           />
-        </FloatingDock>
+        </Surface>
       )}
       {menuOpen && (
-        <View
-          className="bg-canvas-subtle border border-border-default rounded-md overflow-hidden"
+        <Surface
+          variant="floating"
+          className="overflow-hidden"
           style={{
             position: 'absolute',
             top: chipBarHeight + 4,
@@ -139,7 +131,6 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, menuOpen, bg
             minWidth: 112,
             maxHeight: FLOAT_BUFFER,
             zIndex: 20,
-            ...shadow.floating,
           }}
         >
           <Pressable
@@ -164,7 +155,7 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, menuOpen, bg
           >
             <Text className="font-sans text-body text-fg-default">{bgmOn ? '소리 끄기' : '소리 켜기'}</Text>
           </Pressable>
-        </View>
+        </Surface>
       )}
     </View>
   );
