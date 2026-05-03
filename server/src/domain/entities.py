@@ -203,6 +203,7 @@ class Character(BaseModel):
 
     racial_skill_ids: list[str] = []
     learned_skill_ids: list[str] = []
+    visited_location_ids: set[str] = Field(default_factory=set)
 
     status: list[str] = []
     active_buffs: list[ActiveBuff] = []

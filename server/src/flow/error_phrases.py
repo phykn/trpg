@@ -81,3 +81,22 @@ def humanize_runtime_error(exc: Exception) -> str:
     client never sees raw English / upstream API payloads. Caller still logs
     the original exception for debugging."""
     return _RUNTIME_PHRASES.get(type(exc).__name__, _GENERIC_RUNTIME_PHRASE)
+
+
+# Receipt actions skip narrate by default. These error substrings escalate a
+# failure back to a narrated reaction — they're moments worth GM prose because
+# the player misjudged a social/threshold gate, not a typo-shaped slip.
+_DRAMATIC_FAIL_KEYS: frozenset[str] = frozenset(
+    {
+        "affinity too low to trade",
+        "required stats not met",
+        "npc has not enough gold",
+    }
+)
+
+
+def is_dramatic_fail(err: Exception | str) -> bool:
+    """True if the engine error matches a key worth a narrated reaction."""
+    text = err if isinstance(err, str) else str(err)
+    low = text.lower()
+    return any(needle in low for needle in _DRAMATIC_FAIL_KEYS)
