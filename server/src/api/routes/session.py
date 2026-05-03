@@ -1,10 +1,17 @@
 """Session lifecycle — init/state and the streaming entries
 (turn / roll / intro)."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
 
-from ...domain.errors import LLMUnavailable, ProfileMalformed, ProfileNotFound, RaceNotFound
+from ...domain.errors import (
+    LLMUnavailable,
+    ProfileMalformed,
+    ProfileNotFound,
+    RaceNotFound,
+)
 from ...domain.state import GameState
 from ...engines.quest import accept_quest, abandon_quest
 from ...flow.intro import run_intro
@@ -28,6 +35,7 @@ from ..schema import (
 from ..sse import streaming_response
 
 router = APIRouter()
+_log = logging.getLogger(__name__)
 
 
 @router.post("/session/init", response_model=InitResponse)
@@ -116,16 +124,32 @@ async def session_intro(
     )
 
 
-@router.get("/session/{game_id}/level_up_preview", response_model=LevelUpPreviewResponse)
+@router.get(
+    "/session/{game_id}/level_up_preview", response_model=LevelUpPreviewResponse
+)
 async def session_level_up_preview(
     state: GameState = Depends(get_state),
     llm: LLMClient = Depends(get_llm),
 ) -> LevelUpPreviewResponse:
     try:
         candidates = await recommend_skill_candidates(llm, state)
-    except (ValidationError, LLMUnavailable, OSError, TimeoutError):
+    except (ValidationError, LLMUnavailable, OSError, TimeoutError) as e:
         # LLM failure → empty list (client treats this as 'no skill choice required').
+        _log.warning(
+            "recommend_skill_candidates failed: type=%s game_id=%s memories=%d turn_log=%d err=%s",
+            type(e).__name__,
+            state.game_id,
+            len(state.characters[state.player_id].memories),
+            len(state.turn_log),
+            str(e)[:200],
+        )
         candidates = []
+    if 0 < len(candidates) < 3:
+        _log.info(
+            "recommend_skill_candidates returned %d (< 3): game_id=%s",
+            len(candidates),
+            state.game_id,
+        )
     return LevelUpPreviewResponse(
         skill_candidates=[
             {

@@ -65,8 +65,22 @@ def test_kill_event():
     """Enemy HP 0 -> 쓰러짐 marker."""
     result = _result(
         enemy_hits=[
-            EnemyHit(id="goblin", name="고블린", damage_total=8, hp_after=0, max_hp=10, killed=True),
-            EnemyHit(id="troll", name="에드릭", damage_total=46, hp_after=0, max_hp=46, killed=True),
+            EnemyHit(
+                id="goblin",
+                name="고블린",
+                damage_total=8,
+                hp_after=0,
+                max_hp=10,
+                killed=True,
+            ),
+            EnemyHit(
+                id="troll",
+                name="에드릭",
+                damage_total=46,
+                hp_after=0,
+                max_hp=46,
+                killed=True,
+            ),
         ],
     )
     text = format_combat_outcome_summary(result)

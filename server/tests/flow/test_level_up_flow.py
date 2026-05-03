@@ -9,12 +9,23 @@ from src.flow.level_up import run_level_up
 class _FakeRepo:
     """No-op SaveRepo — finalize.flush() is a coroutine chain we don't exercise here."""
 
-    async def save_entity(self, *a, **kw): pass
-    async def append_log_entries(self, *a, **kw): pass
-    async def append_history_entries(self, *a, **kw): pass
-    async def append_dialogue_entries(self, *a, **kw): pass
-    async def save_meta(self, *a, **kw): pass
-    async def load_game(self, *a, **kw): pass
+    async def save_entity(self, *a, **kw):
+        pass
+
+    async def append_log_entries(self, *a, **kw):
+        pass
+
+    async def append_history_entries(self, *a, **kw):
+        pass
+
+    async def append_dialogue_entries(self, *a, **kw):
+        pass
+
+    async def save_meta(self, *a, **kw):
+        pass
+
+    async def load_game(self, *a, **kw):
+        pass
 
 
 def _player_state(*, xp_pool: int = 200, pending_check=None) -> GameState:
@@ -76,20 +87,33 @@ async def test_run_level_up_applies_stat_change_and_emits_log_entry(monkeypatch)
 
 @pytest.mark.asyncio
 async def test_run_level_up_rejects_when_pending_check_active(monkeypatch):
-    state = _player_state(pending_check=PendingCheck(
-        kind="stat", dc=10, stat="STR", mod=0,
-        required_roll=10, tier="보통", target="player_01", reason="t",
-        targets=[], player_input="t", created_at="2026-01-01T00:00:00Z",
-    ))
+    state = _player_state(
+        pending_check=PendingCheck(
+            kind="stat",
+            dc=10,
+            stat="STR",
+            mod=0,
+            required_roll=10,
+            tier="보통",
+            target="player_01",
+            reason="t",
+            targets=[],
+            player_input="t",
+            created_at="2026-01-01T00:00:00Z",
+        )
+    )
 
-    events = [ev async for ev in run_level_up(
-        client=None,
-        state=state,
-        scenario_repo=None,
-        save_repo=_FakeRepo(),
-        stat_up="STR",
-        skill_id=None,
-    )]
+    events = [
+        ev
+        async for ev in run_level_up(
+            client=None,
+            state=state,
+            scenario_repo=None,
+            save_repo=_FakeRepo(),
+            stat_up="STR",
+            skill_id=None,
+        )
+    ]
 
     error_events = [ev for ev in events if ev["type"] == "error"]
     assert len(error_events) == 1
@@ -102,8 +126,11 @@ async def test_run_level_up_rejects_when_pending_check_active(monkeypatch):
 async def test_run_level_up_learns_skill_when_id_provided(monkeypatch):
     state = _player_state()
     state.skills["skill_test"] = Skill(
-        id="skill_test", name="강타", type="attack",
-        target="single", primary_stat="STR",
+        id="skill_test",
+        name="강타",
+        type="attack",
+        target="single",
+        primary_stat="STR",
     )
 
     from src.flow import level_up as level_up_mod
@@ -132,14 +159,17 @@ async def test_run_level_up_learns_skill_when_id_provided(monkeypatch):
 async def test_run_level_up_invalid_stat_emits_error(monkeypatch):
     state = _player_state(xp_pool=0)  # not enough xp
 
-    events = [ev async for ev in run_level_up(
-        client=None,
-        state=state,
-        scenario_repo=None,
-        save_repo=_FakeRepo(),
-        stat_up="STR",
-        skill_id=None,
-    )]
+    events = [
+        ev
+        async for ev in run_level_up(
+            client=None,
+            state=state,
+            scenario_repo=None,
+            save_repo=_FakeRepo(),
+            stat_up="STR",
+            skill_id=None,
+        )
+    ]
 
     error_events = [ev for ev in events if ev["type"] == "error"]
     assert len(error_events) >= 1
@@ -165,14 +195,17 @@ async def test_run_level_up_yields_error_and_finalizes_when_narrate_fails(monkey
     class _Stub:
         pass
 
-    events = [ev async for ev in run_level_up(
-        client=_Stub(),
-        state=state,
-        scenario_repo=_Stub(),
-        save_repo=_FakeRepo(),
-        stat_up="STR",
-        skill_id=None,
-    )]
+    events = [
+        ev
+        async for ev in run_level_up(
+            client=_Stub(),
+            state=state,
+            scenario_repo=_Stub(),
+            save_repo=_FakeRepo(),
+            stat_up="STR",
+            skill_id=None,
+        )
+    ]
 
     error_events = [ev for ev in events if ev["type"] == "error"]
     done_events = [ev for ev in events if ev["type"] == "done"]

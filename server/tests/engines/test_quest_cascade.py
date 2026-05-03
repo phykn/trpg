@@ -22,7 +22,15 @@ def _player():
     )
 
 
-def _quest(qid, *, giver_id="npc_giver", triggers=None, fail_triggers=None, status="active", rewards=None):
+def _quest(
+    qid,
+    *,
+    giver_id="npc_giver",
+    triggers=None,
+    fail_triggers=None,
+    status="active",
+    rewards=None,
+):
     return Quest(
         id=qid,
         title=qid,

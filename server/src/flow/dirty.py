@@ -12,7 +12,6 @@ from ..domain.memory import (
     TurnLogEntry,
 )
 from ..domain.state import GameState
-from ..mapping.suggestion_chips import build_suggestion_chips
 from ..persistence.repo import SaveRepo
 from ..rules import RULES
 from .format import format_death_log
@@ -26,6 +25,11 @@ class Dirty:
 
     `entities`: (kind, id) pairs whose JSON file must be rewritten.
     `log/history/dialogue`: new entries to append to their respective jsonl.
+    `narrate_suggestions`: chips emitted by narrate.extract for this turn.
+        None = narrate didn't run (receipt-only turn / game-over / re-visit move),
+        finalize emits an empty `suggestions` event so the client clears the strip.
+    Quest starts cascade in via apply_result["started_quests"] → push_act in
+    narrate, appending to `log` + `history` like any other receipt.
     Meta is always saved at finalize, no flag needed.
     """
 
@@ -33,6 +37,7 @@ class Dirty:
     log: list[LogEntry] = field(default_factory=list)
     history: list[TurnLogEntry] = field(default_factory=list)
     dialogue: list[DialoguePair] = field(default_factory=list)
+    narrate_suggestions: list[str] | None = None
 
 
 def _trim(items: list, cap: int) -> None:
@@ -59,10 +64,23 @@ def push_gm(state: GameState, dirty: Dirty, text: str) -> dict:
     return {"type": "log_entry", "data": log.model_dump()}
 
 
-def push_act(state: GameState, dirty: Dirty, text: str) -> dict:
-    """Push one player-action line and return the SSE log_entry payload."""
+def push_act(
+    state: GameState,
+    dirty: Dirty,
+    text: str,
+    *,
+    turn_summary: str | None = None,
+    target: str | None = None,
+) -> dict:
+    """Push one player-action line and return the SSE log_entry payload.
+
+    When `turn_summary` is provided, also append a turn_log entry — keeps the
+    receipt action visible in next-turn engine context (turn_log feeds judge / extract).
+    """
     log = ActLogEntry(id=next_log_id(state), kind="act", text=text)
     push_log_entry(state, log, dirty)
+    if turn_summary is not None:
+        push_turn_log(state, target, turn_summary, dirty)
     return {"type": "log_entry", "data": log.model_dump()}
 
 
@@ -131,9 +149,11 @@ async def finalize(
         return
     if to_front_fn:
         yield {"type": "state", "data": to_front_fn(state)}
-        # Suggestion chips: deterministic from end-of-turn state. Same gate as `state` — engine-only test paths (to_front_fn=None) stay quiet.
-        yield {
-            "type": "suggestions",
-            "data": {"items": build_suggestion_chips(state)},
-        }
+        # Suggestion chips come from narrate.extract when narrate ran this turn;
+        # otherwise (receipt / game-over / re-visit move) emit an empty list so
+        # the client strip clears instead of holding stale chips.
+        items = (
+            dirty.narrate_suggestions if dirty.narrate_suggestions is not None else []
+        )
+        yield {"type": "suggestions", "data": {"items": items}}
     yield {"type": "done", "data": {}}

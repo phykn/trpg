@@ -260,7 +260,9 @@ class Quest(BaseModel):
     conditions: list[str] = []
     fail_triggers: list[QuestTrigger] = []
     rewards: QuestRewards = QuestRewards()
-    status: Literal["locked", "pending", "active", "completed", "failed", "abandoned"] = "locked"
+    status: Literal[
+        "locked", "pending", "active", "completed", "failed", "abandoned"
+    ] = "locked"
     required: bool = True
     # pending: appeared via scenario but awaiting explicit player acceptance.
     # abandoned: player explicitly gave up (distinct from failed by external event).

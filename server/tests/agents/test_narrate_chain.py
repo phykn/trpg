@@ -30,11 +30,15 @@ class FakeChainClient:
         self.body_chunks = body_chunks
         self.metadata_json = metadata_json
 
-    async def chat_stream(self, messages, *, think=False, agent=None, temperature=None, use_fallback=False):
+    async def chat_stream(
+        self, messages, *, think=False, agent=None, temperature=None, use_fallback=False
+    ):
         for c in self.body_chunks:
             yield {"answer": c}
 
-    async def chat(self, *, messages, think=False, agent=None, temperature=None, use_fallback=False):
+    async def chat(
+        self, *, messages, think=False, agent=None, temperature=None, use_fallback=False
+    ):
         return {"answer": self.metadata_json}
 
 

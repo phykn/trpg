@@ -63,6 +63,7 @@ class SkillCandidatePayload(BaseModel):
     /level_up_preview endpoint builds Skill objects, then projects them down to
     this payload shape.
     """
+
     id: str
     name: str
     description: str

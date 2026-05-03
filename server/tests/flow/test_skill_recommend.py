@@ -16,7 +16,7 @@ from src.flow import skill_recommend as recommend_mod
 # --- schema ---------------------------------------------------------------
 
 
-def test_output_requires_exactly_three_candidates():
+def test_output_allows_one_to_three_candidates():
     one = {
         "name": "화염구",
         "description": "불꽃을 던진다",
@@ -26,11 +26,13 @@ def test_output_requires_exactly_three_candidates():
         "special_effect": "갑옷을 녹임",
     }
     with pytest.raises(ValidationError):
-        SkillRecommendOutput.model_validate({"candidates": [one]})
+        SkillRecommendOutput.model_validate({"candidates": []})
     with pytest.raises(ValidationError):
         SkillRecommendOutput.model_validate({"candidates": [one] * 4})
-    out = SkillRecommendOutput.model_validate({"candidates": [one] * 3})
-    assert len(out.candidates) == 3
+    out1 = SkillRecommendOutput.model_validate({"candidates": [one]})
+    assert len(out1.candidates) == 1
+    out3 = SkillRecommendOutput.model_validate({"candidates": [one] * 3})
+    assert len(out3.candidates) == 3
 
 
 def test_candidate_rejects_extra_fields():
@@ -195,7 +197,9 @@ class _FakeLLM:
     def __init__(self, candidates):
         self.candidates = candidates
 
-    async def chat(self, messages, think=False, agent=None, temperature=None, use_fallback=False):
+    async def chat(
+        self, messages, think=False, agent=None, temperature=None, use_fallback=False
+    ):
         body = SkillRecommendOutput(candidates=self.candidates).model_dump_json()
         return {"answer": body, "think": ""}
 

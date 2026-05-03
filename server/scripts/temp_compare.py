@@ -76,7 +76,9 @@ async def run_one(client, sc, *, temperature):
     try:
         result = await classify_with_temp(
             client,
-            JudgeInput(player_input=sc["player_input"], surroundings=sc["surroundings"]),
+            JudgeInput(
+                player_input=sc["player_input"], surroundings=sc["surroundings"]
+            ),
             temperature=temperature,
         )
         return {
@@ -103,7 +105,9 @@ def summarize(label, results):
     for r in results:
         dist[r["attempts"]] = dist.get(r["attempts"], 0) + 1
     avg = sum(r["elapsed"] for r in results) / len(results) if results else 0
-    print(f"\n[{label}] total={len(results)} ok={len(ok)} fail={len(failed)} attempts={dict(sorted(dist.items()))} avg={avg:.2f}s")
+    print(
+        f"\n[{label}] total={len(results)} ok={len(ok)} fail={len(failed)} attempts={dict(sorted(dist.items()))} avg={avg:.2f}s"
+    )
     if failed:
         print("  failures:")
         for r in failed:
@@ -120,7 +124,11 @@ async def run_all_at_temp(client, temperature):
         for sc in cases:
             r = await run_one(client, sc, temperature=temperature)
             mark = "✓" if r["error"] is None else "✗"
-            extra = f" → {r['error'][:80]}" if r["error"] else f" → {r['action']} (attempts={r['attempts']})"
+            extra = (
+                f" → {r['error'][:80]}"
+                if r["error"]
+                else f" → {r['action']} (attempts={r['attempts']})"
+            )
             print(f"  [{mark}] {r['name']}{extra}", flush=True)
             cat_results.append(r)
             all_results.append(r)

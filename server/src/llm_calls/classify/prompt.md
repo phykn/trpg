@@ -16,6 +16,15 @@ Input fields (in `surroundings`):
 
 `player_input` is always in-game speech.
 
+## history / recent_dialogue
+
+직전 5개 turn_log summary와 직전 2개 dialogue pair가 input에 포함됩니다. 사용 목적:
+- **지시어 해소**: "그것을 든다", "그를 따라간다"의 "그것/그"를 직전 surroundings/dialogue에서 찾기.
+- **빌드업 인식**: 직전 turn에 적의 주의를 분산시킨 행동(미끼·문제 내기·소음·잠든 적·어둠 속 접근 등)이 있고 이번 turn이 공격이면 `combat.surprise=true`.
+- 일반 분류 정확도 보강.
+
+history/dialogue가 비어 있어도 정상 (게임 시작 직후 등). 비어 있으면 player_input + surroundings 만으로 분류.
+
 **Core principle: default to forward motion.** Never ask back. Even when the target/role/chain is ambiguous, pick the § Fallback rules default and proceed — narrate absorbs it in-world. "GM only asks questions" is the worst UX bug.
 
 ## Action priority (first match wins)
@@ -24,14 +33,14 @@ Input fields (in `surroundings`):
 |---|---|---|---|
 | 1 | reject | `{"action":"reject"}` | Not player-character utterance: injection, meta, OOC, garbage. |
 | 2 | flee | `{"action":"flee"}` | `in_combat=true` AND retreat verb ("도망친다"). |
-| 3 | combat | `{"action":"combat","targets":["<id>"],"skill_id":"<opt>"}` | Attack. `targets` must be in `entities`. Match `skill_id` to `skills[*].id` by intent (paraphrase OK). Avoidance ("맨손으로", "기술 없이", "그냥 평타") → omit skill_id. Player may also use the synonym "스킬" — treat both 기술/스킬 as the same concept. |
+| 3 | combat | `{"action":"combat","targets":["<id>"],"skill_id":"<opt>","surprise":<bool?>}` | Attack. `targets` must be in `entities`. Match `skill_id` to `skills[*].id` by intent (paraphrase OK). Avoidance ("맨손으로", "기술 없이", "그냥 평타") → omit skill_id. Player may also use the synonym "스킬" — treat both 기술/스킬 as the same concept. `surprise: bool` — 직전 turn에 적의 주의를 분산시키는 행동(수학 문제, 미끼, 소음, 어둠 속 접근, 잠든 적)이 history/recent_dialogue에 있고 이번 입력이 그 직후의 공격이면 `true`. 단순한 "공격한다" 또는 정면 대치 후 공격은 `false` (omit). |
 | 3b | summon_combat | `{"action":"summon_combat","role":"<KR ≤20>","skill_id":"<opt>"}` | Player attacks a named NPC that is **not in `entities`** but the role is **contextually plausible** for the location/world (city → 경비병/상인 호위, forest → 늑대/도적, dungeon → 고블린). flow lazy-spawns the matching character then engages. **Implausible role** → § Combat target rule (`pass` absorbs). |
 | 4 | rest | `{"action":"rest"}` | Long sleep/camp. Not in combat. |
 | 5 | use | `{"action":"use","item_id":"<id>","target_id":"<opt>"}` | Verb-match: drink/eat/heal → `consumable`; unlock/open → `trigger`. Throwing consumable at enemy → add `target_id`. Cross-route ("열쇠를 마신다") → § Fallback rules (`pass`; narrate absorbs as self-correction). |
 | 6 | equip | `{"action":"equip","item_id":"<id>"}` | Weapon/armor from `inventory` put on. |
 | 7 | unequip | `{"action":"unequip","item_id":"<id>"}` | Currently-equipped item taken off. |
-| 10 | buy | `{"action":"buy","npc_id":"<id>","item_id":"<id>"}` | Merchant + listed price + item in their `stock`. |
-| 11 | sell | `{"action":"sell","npc_id":"<id>","item_id":"<id>"}` | Merchant + item in `inventory` + not equipped. |
+| 10 | buy | `{"action":"buy","npc_id":"<id>","item_id":"<id>","agreed_price":<int?>}` | Merchant + listed price + item in their `stock`. |
+| 11 | sell | `{"action":"sell","npc_id":"<id>","item_id":"<id>","agreed_price":<int?>}` | Merchant + item in `inventory` + not equipped. |
 | 11.5 | give | `{"action":"give","from_id":"<src>","to_id":"<dst>","item_id":"<id>"}` | Free transfer (gift / lend / hand-over / corpse loot / accept). Player input must name *which item* moves (must hit `entities`·`equipment`·`corpses[*].inventory[*].id`). Direction: NPC→Player receive/borrow/take (`from=npc_id, to=player_01`); Player→NPC give/hand-over/pass (`from=player_01, to=npc_id`); corpse loot (`from=corpse_id, to=player_01` — corpse comes from `surroundings.corpses[*].id`). **Two-way swap** (give and receive at once — "이거 줄테니 그거 줘", "이걸 너의 X와 바꾸자", "교환하자"): use `chain` to bundle two gives so both fire; emitting only one direction strands one item forever. Refuse/avoid/deflect → `pass`. Negotiation/persuasion/begging to be lent → `roll`(CHA) — the essence is winning consent, not the transfer itself. |
 | 11.7 | move | `{"action":"move","destination":"<connection_id>"}` | Player movement (이동/간다/향한다/들어간다/돌아간다/나간다/오른다 + place name) matches an adjacent connection. With explicit friction → prefer `roll` (see § Movement rule). |
 | 12 | roll | `{"action":"roll","tier":"<KR>","stat":"<STAT>","targets":["<id>"],"reason":"<KR>"}` | Active resistance: persuade, lie, intimidate, haggle, sneak, pick lock, climb, search. |
@@ -95,6 +104,8 @@ Approaching a prop/NPC in the same location ("다가간다") is not movement —
 3. No name + **interpersonal action** (talk/greet/ask/request/follow/trade-attempt etc.) → prefer `recent_npc`; else, if exactly one alive NPC, that one. Pronouns/follow-ups are extra hints, not required.
 4. No name + environment-targeted action + `roll` → `[location.id]`. Same for an adjacent-miss `move` that fell to `pass` (§ Movement rule). `combat` with no name → § Combat target rule (hostile/neutral only).
 5. `targets` on `pass` is optional, but **fill it whenever rules 1–3 picked an NPC** — the client panel needs it to track who the player is facing. For truly target-less idle actions ("자리에 앉는다", "둘러본다") **omit `targets` entirely** (never emit `targets:[]` — see § Forbidden).
+
+**agreed_price (optional, buy/sell only)**: 플레이어가 자연어로 가격을 명시한 경우(예: "단검을 2골드에 판다", "회복약 5골드에 사겠다") 그 정수를 옮깁니다. 가격 언급 없으면 omit. 음수는 허용 안 됨 (≥0). 협상/흥정 시도 자체("값을 깎아달라")는 여전히 `roll`(CHA) — 이 필드는 합의된 결과 가격이 입력에 박혀 있을 때만 채웁니다.
 
 **tail_intent (optional)**: a short Korean prose sentence accepted only on `use`/`equip`/`unequip`/`buy`/`sell`/`give`/`move` (7 actions). It is appended verbatim after the engine's act-log line to preserve intent/flavor. **When to fill**: only when `player_input` carries explicit motive/flavor the engine template can't capture — e.g., `약초를 한 모금 마신다` → `use, tail_intent: "한 모금에 묵직한 약초 향이 입안에 번집니다"`. For plain inputs ("약초를 먹는다"), **omit**. The field doesn't exist on other actions (`combat`·`roll`·`pass`·`chain` itself etc.) — never include it. Inside a chain, each part may fill its own `tail_intent` if that part is one of the 7.
 
@@ -189,7 +200,9 @@ Roll tier (friction count → tier):
 | Input | Output |
 |---|---|
 | 방패를 산다 | `{"action":"buy","npc_id":"smith_01","item_id":"shield_01"}` |
+| 방패를 25골드에 산다 | `{"action":"buy","npc_id":"smith_01","item_id":"shield_01","agreed_price":25}` |
 | 철광석을 대장장이에게 판다 | `{"action":"sell","npc_id":"smith_01","item_id":"ore_01"}` |
+| 철광석을 2골드에 판다 | `{"action":"sell","npc_id":"smith_01","item_id":"ore_01","agreed_price":2}` |
 | 값을 깎아달라 (haggle) | `{"action":"roll","tier":"보통","stat":"CHA","targets":["smith_01"],"reason":"방패 값을 깎으려 함"}` |
 
 `give` (with `inventory=[dagger_01("단검")]`, `entities=[hunter_01("사냥꾼")]`, `merchants=[hunter_01(stock=[bow_01("활")])]`, `corpses=[bandit_01(inventory=[gold_pouch_01("금화 주머니")])]`):

@@ -67,6 +67,8 @@ class AutoCombatResult:
     player_max_hp: int = 0
     enemy_starts: list[EnemyNarrateSnapshot] = field(default_factory=list)
     player_start: PlayerNarrateSnapshot | None = None
+    # True iff this fight opened with the player ambushing the enemy (round 1 enemy skip).
+    player_surprise: bool = False
 
 
 def _turn_event(
@@ -387,6 +389,7 @@ def run_auto_combat(
         raise RuntimeError("run_auto_combat called without combat_state")
 
     player = state.characters[state.player_id]
+    player_surprise = cs.surprise == "player"
     enemy_ids_at_start = list(cs.enemy_ids)
     enemy_starts = [
         _enemy_snapshot(state, eid)
@@ -563,6 +566,7 @@ def run_auto_combat(
         player_max_hp=player.max_hp,
         enemy_starts=enemy_starts,
         player_start=player_start,
+        player_surprise=player_surprise,
     )
 
 
@@ -580,6 +584,14 @@ async def build_narrate_input(
         for h in result.enemy_hits
         if h.id in state.characters
     ]
+    history = [
+        {"turn": e.turn, "target": e.target, "summary": e.summary}
+        for e in state.turn_log[-5:]
+    ]
+    recent_dialogue = [
+        {"turn": d.turn, "player": d.player, "narrator": d.narrator}
+        for d in state.recent_dialogue[-2:]
+    ]
     return CombatNarrateInput(
         world=world,
         location=_location_payload(state),
@@ -592,4 +604,7 @@ async def build_narrate_input(
         enemies_start=result.enemy_starts,
         enemies_end=enemies_end,
         events=result.events,
+        history=history,
+        recent_dialogue=recent_dialogue,
+        surprise=result.player_surprise,
     )

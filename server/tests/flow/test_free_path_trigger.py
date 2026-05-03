@@ -1,4 +1,5 @@
 """Free-path judge triggered on turn end + NPC dialogue."""
+
 import tempfile
 import pytest
 from src.domain.entities import Character, Location, Quest, Stats
@@ -66,8 +67,12 @@ def test_apply_judge_result_partial():
 
 def test_apply_judge_result_partial_accumulates():
     state = _make_state()
-    apply_judge_result(state, "q1", {"outcome": "partial", "reason": "1/2", "progress_delta": 1})
-    apply_judge_result(state, "q1", {"outcome": "partial", "reason": "2/2", "progress_delta": 1})
+    apply_judge_result(
+        state, "q1", {"outcome": "partial", "reason": "1/2", "progress_delta": 1}
+    )
+    apply_judge_result(
+        state, "q1", {"outcome": "partial", "reason": "2/2", "progress_delta": 1}
+    )
     assert state.quests["q1"].progress == 2
 
 
@@ -92,7 +97,9 @@ def test_apply_judge_result_skip_non_active():
 def test_apply_judge_result_missing_quest_no_crash():
     state = _make_state()
     changed = apply_judge_result(
-        state, "nonexistent", {"outcome": "satisfied", "reason": "ok", "progress_delta": None}
+        state,
+        "nonexistent",
+        {"outcome": "satisfied", "reason": "ok", "progress_delta": None},
     )
     assert changed is False
 
@@ -111,7 +118,11 @@ def test_active_quest_judge_satisfied_completes_quest(monkeypatch):
 
     def mock_judge(quest, history, claim, npc_context):
         judge_calls.append(quest["id"])
-        return {"outcome": "satisfied", "reason": "history confirms", "progress_delta": None}
+        return {
+            "outcome": "satisfied",
+            "reason": "history confirms",
+            "progress_delta": None,
+        }
 
     monkeypatch.setattr("src.flow.turn.judge_quest_progress", mock_judge, raising=False)
 
@@ -163,9 +174,15 @@ def test_npc_dialogue_matching_giver_triggers_judge(monkeypatch):
 
     def mock_judge(quest, history, claim, npc_context):
         judge_calls.append(quest["id"])
-        return {"outcome": "satisfied", "reason": "claim verified", "progress_delta": None}
+        return {
+            "outcome": "satisfied",
+            "reason": "claim verified",
+            "progress_delta": None,
+        }
 
-    monkeypatch.setattr("src.flow.narrate.judge_quest_progress", mock_judge, raising=False)
+    monkeypatch.setattr(
+        "src.flow.narrate.judge_quest_progress", mock_judge, raising=False
+    )
 
     npc_dialogue_quest_check(state, claim="처치했습니다", npc_id="npc_01")
 
@@ -182,7 +199,9 @@ def test_npc_dialogue_wrong_npc_skips_judge(monkeypatch):
         judge_calls.append(True)
         return {"outcome": "satisfied", "reason": "", "progress_delta": None}
 
-    monkeypatch.setattr("src.flow.narrate.judge_quest_progress", mock_judge, raising=False)
+    monkeypatch.setattr(
+        "src.flow.narrate.judge_quest_progress", mock_judge, raising=False
+    )
 
     npc_dialogue_quest_check(state, claim="처치했습니다", npc_id="npc_other")
 
@@ -199,7 +218,9 @@ def test_npc_dialogue_completed_quest_skipped(monkeypatch):
         judge_calls.append(True)
         return {"outcome": "satisfied", "reason": "", "progress_delta": None}
 
-    monkeypatch.setattr("src.flow.narrate.judge_quest_progress", mock_judge, raising=False)
+    monkeypatch.setattr(
+        "src.flow.narrate.judge_quest_progress", mock_judge, raising=False
+    )
 
     npc_dialogue_quest_check(state, claim="처치했습니다", npc_id="npc_01")
 
@@ -213,7 +234,9 @@ def test_npc_dialogue_completed_quest_skipped(monkeypatch):
 def test_apply_judge_result_satisfied_uses_result_reason():
     state = _make_state()
     apply_judge_result(
-        state, "q1", {"outcome": "satisfied", "reason": "claim verified", "progress_delta": None}
+        state,
+        "q1",
+        {"outcome": "satisfied", "reason": "claim verified", "progress_delta": None},
     )
     assert state.quests["q1"].success_reason == "claim verified"
 

@@ -33,7 +33,9 @@ def _set_env(monkeypatch, **overrides):
 
 
 def _rate_limit_error(message: str = "quota exceeded") -> RateLimitError:
-    response = httpx.Response(status_code=429, request=httpx.Request("POST", "http://x"))
+    response = httpx.Response(
+        status_code=429, request=httpx.Request("POST", "http://x")
+    )
     return RateLimitError(message, response=response, body=None)
 
 
@@ -82,7 +84,9 @@ async def test_rate_limit_engages_fallback(monkeypatch):
         if kwargs["model"] == primary.model:
             raise _rate_limit_error()
         return MagicMock(
-            choices=[MagicMock(message=MagicMock(content='{"ok":true}', model_extra=None))]
+            choices=[
+                MagicMock(message=MagicMock(content='{"ok":true}', model_extra=None))
+            ]
         )
 
     for client in primary._chat_clients + fallback._chat_clients:

@@ -10,34 +10,37 @@ from tests._fakes import make_default_storage, make_save_repo, make_scenario_rep
 
 
 # Recommend agent returns 3 SkillCandidate-shape objects.
-_RECOMMEND_OUTPUT = json.dumps({
-    "candidates": [
-        {
-            "name": "강타",
-            "description": "근력 기반 일격",
-            "type": "attack",
-            "target": "single",
-            "primary_stat": "STR",
-            "special_effect": "추가 피해",
-        },
-        {
-            "name": "방패막기",
-            "description": "한 턴 피해 절반",
-            "type": "buff",
-            "target": "self",
-            "primary_stat": "CON",
-            "special_effect": "방어 증가",
-        },
-        {
-            "name": "전투 함성",
-            "description": "주변 적 사기 약화",
-            "type": "debuff",
-            "target": "area",
-            "primary_stat": "CHA",
-            "special_effect": "공격력 감소",
-        },
-    ],
-}, ensure_ascii=False)
+_RECOMMEND_OUTPUT = json.dumps(
+    {
+        "candidates": [
+            {
+                "name": "강타",
+                "description": "근력 기반 일격",
+                "type": "attack",
+                "target": "single",
+                "primary_stat": "STR",
+                "special_effect": "추가 피해",
+            },
+            {
+                "name": "방패막기",
+                "description": "한 턴 피해 절반",
+                "type": "buff",
+                "target": "self",
+                "primary_stat": "CON",
+                "special_effect": "방어 증가",
+            },
+            {
+                "name": "전투 함성",
+                "description": "주변 적 사기 약화",
+                "type": "debuff",
+                "target": "area",
+                "primary_stat": "CHA",
+                "special_effect": "공격력 감소",
+            },
+        ],
+    },
+    ensure_ascii=False,
+)
 
 
 # Narrate stub for /level_up — minimal body + valid JSON tail.
@@ -52,10 +55,14 @@ _NARRATE_FULL = f"{_NARRATE_BODY}---JSON---{_NARRATE_OUTPUT_JSON}"
 class _MockLLM:
     """Returns recommend payload from chat(), narrate stream from chat_stream()."""
 
-    async def chat(self, messages, think=False, agent=None, temperature=None, use_fallback=False):
+    async def chat(
+        self, messages, think=False, agent=None, temperature=None, use_fallback=False
+    ):
         return {"answer": _RECOMMEND_OUTPUT, "think": ""}
 
-    async def chat_stream(self, messages, think=False, agent=None, temperature=None, use_fallback=False):
+    async def chat_stream(
+        self, messages, think=False, agent=None, temperature=None, use_fallback=False
+    ):
         mid = len(_NARRATE_FULL) // 2
         for piece in (_NARRATE_FULL[:mid], _NARRATE_FULL[mid:]):
             yield {"answer": piece, "think": ""}

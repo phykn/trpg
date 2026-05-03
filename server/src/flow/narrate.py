@@ -1,3 +1,4 @@
+import re
 from collections.abc import AsyncIterator
 
 from ..llm_calls.classify.schema import PassAction, RejectAction
@@ -30,9 +31,16 @@ from .dirty import (
     Dirty,
     ToFrontFn,
     next_log_id,
+    push_act,
     push_dialogue,
     push_log_entry,
     push_turn_log,
+)
+from .format import (
+    format_affinity_card_log,
+    format_affinity_card_turn_log,
+    format_quest_start_log,
+    format_quest_start_turn_log,
 )
 from .judge import judge_quest_progress
 from .memory_writer import write_memories
@@ -91,11 +99,21 @@ async def run_narrate(
             )
 
     surroundings = build_surroundings(state, state.player_id, graph, grade=grade)
+    # Recovery beat: prior fight + memories would pull stale events into the aftermath; zero them so prose stays in the moment.
+    is_recovery = previous_phase_signal == "downed_recovered"
+    history_str = (
+        ""
+        if is_recovery
+        else build_history_layer(state, surroundings.get("corpses", []))
+    )
+    player_view = build_player_view(state)
+    if is_recovery:
+        player_view = {**player_view, "memories": []}
     input_ = NarrateInput(
         world=await build_world_layer(scenario_repo, state.profile),
         session=build_session_layer(state),
-        history=build_history_layer(state, surroundings.get("corpses", [])),
-        player_view=build_player_view(state),
+        history=history_str,
+        player_view=player_view,
         target_view=target_view,
         surroundings=surroundings,
         judge_result=judge_result,
@@ -112,6 +130,25 @@ async def run_narrate(
         yield item
 
 
+# Engine ids are lowercase ASCII with an underscore — a token matching this shape in player-facing text is a prompt slip.
+_ID_TOKEN = re.compile(r"\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b")
+_PAREN_ID = re.compile(
+    r"\s*[\(\[（［][^\(\[\)\]）］]*[a-z][a-z0-9]*(?:_[a-z0-9]+)+[^\(\[\)\]）］]*[\)\]）］]"
+)
+
+
+def _strip_id_leaks(suggestions: list[str]) -> list[str]:
+    """Remove parenthetical id glosses ('촌장의 부탁 (q_chief_request)') and drop
+    any suggestion still carrying a bare id token after the strip."""
+    cleaned: list[str] = []
+    for s in suggestions:
+        stripped = _PAREN_ID.sub("", s).strip()
+        if not stripped or _ID_TOKEN.search(stripped):
+            continue
+        cleaned.append(stripped)
+    return cleaned
+
+
 def _sterilize_for_reject(output) -> None:
     """Engine-side enforcement: reject must produce zero side effects, regardless of what the LLM emitted."""
     output.state_changes = []
@@ -120,6 +157,7 @@ def _sterilize_for_reject(output) -> None:
     output.memory = {}
     output.memory_links = {}
     output.importance = None
+    output.suggestions = []
 
 
 async def consume_narrate(
@@ -158,13 +196,40 @@ async def consume_narrate(
     # Redact dead-NPC direct quotes before persisting — without this a single LLM slip lands in recent_dialogue and compounds across turns.
     body = redact_dead_quotes(body, _dead_names_in_scope(state, graph))
 
-    apply_changes(state, final.output.state_changes, dirty.entities)
+    final.output.suggestions = _strip_id_leaks(final.output.suggestions)
+    dirty.narrate_suggestions = list(final.output.suggestions)
+
+    apply_result = apply_changes(state, final.output.state_changes, dirty.entities)
     locality_warnings = enforce_item_locality(state, dirty=dirty.entities)
     for warning in locality_warnings:
         gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=warning)
         push_log_entry(state, gm_log, dirty)
     state.invalidate_graph()
     push_turn_log(state, target_for_log, final.output.turn_summary, dirty)
+    # Quest-start system cards: surface locked → active flips after narrate body
+    # so the receipt lands alongside the prose that motivated it.
+    for q_id in apply_result["started_quests"]:
+        quest = state.quests.get(q_id)
+        if quest is None:
+            continue
+        yield push_act(
+            state,
+            dirty,
+            format_quest_start_log(quest.title),
+            turn_summary=format_quest_start_turn_log(quest.title),
+        )
+    for npc_id, delta in apply_result["affinity_deltas"]:
+        if delta == 0:
+            continue
+        npc = state.characters.get(npc_id)
+        if npc is None:
+            continue
+        yield push_act(
+            state,
+            dirty,
+            format_affinity_card_log(npc.name, delta),
+            turn_summary=format_affinity_card_turn_log(npc.name, delta),
+        )
     if dialogue_input is not None:
         push_dialogue(state, dialogue_input, body, dirty)
     write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
@@ -197,7 +262,9 @@ async def stream_narrate_tail(
         target_char = state.characters.get(target_for_log)
         if target_char is not None and not target_char.is_player:
             try:
-                npc_dialogue_quest_check(state, claim=player_input, npc_id=target_for_log)
+                npc_dialogue_quest_check(
+                    state, claim=player_input, npc_id=target_for_log
+                )
             except NotImplementedError:
                 pass  # judge LLM stub; live turns stay safe
 

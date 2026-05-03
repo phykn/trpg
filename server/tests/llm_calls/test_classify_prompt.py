@@ -1,4 +1,5 @@
 """Smoke test: judge prompt encodes the word-strength-independent attack rule."""
+
 from pathlib import Path
 
 PROMPT_PATH = Path(__file__).parents[2] / "src" / "llm_calls" / "classify" / "prompt.md"

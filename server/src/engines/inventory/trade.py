@@ -34,14 +34,29 @@ def _check_trade_allowed(npc: Character, player: Character) -> None:
         )
 
 
-def buy(player: Character, npc: Character, item_id: str, items: dict[str, Item]) -> int:
-    """Player buys item from NPC. Transfers gold + inventory, returns price."""
+def buy(
+    player: Character,
+    npc: Character,
+    item_id: str,
+    items: dict[str, Item],
+    *,
+    price_override: int | None = None,
+) -> int:
+    """Player buys item from NPC. Transfers gold + inventory, returns price.
+    `price_override` (when set) substitutes the engine formula — used for
+    judge-classified player-stated prices (e.g. '단검을 2골드에 산다')."""
     _check_trade_allowed(npc, player)
     if item_id not in items:
         raise InventoryInvalid(f"unknown item: {item_id}")
     if item_id not in npc.inventory_ids:
         raise InventoryInvalid(f"npc has no such item: {item_id}")
-    price = buy_price(items[item_id], npc, player)
+    price = (
+        price_override
+        if price_override is not None
+        else buy_price(items[item_id], npc, player)
+    )
+    if price < 0:
+        raise InventoryInvalid(f"negative price not allowed: {price}")
     if player.gold < price:
         raise InventoryInvalid(f"not enough gold: {player.gold} < {price}")
     check_can_carry(player, items, item_id)
@@ -54,9 +69,16 @@ def buy(player: Character, npc: Character, item_id: str, items: dict[str, Item])
 
 
 def sell(
-    player: Character, npc: Character, item_id: str, items: dict[str, Item]
+    player: Character,
+    npc: Character,
+    item_id: str,
+    items: dict[str, Item],
+    *,
+    price_override: int | None = None,
 ) -> int:
-    """Player sells item to NPC. Equipped items must be removed first."""
+    """Player sells item to NPC. Equipped items must be removed first.
+    `price_override` substitutes the engine formula when judge captured a
+    player-stated price."""
     _check_trade_allowed(npc, player)
     if item_id not in items:
         raise InventoryInvalid(f"unknown item: {item_id}")
@@ -65,7 +87,13 @@ def sell(
     for _, eq_id in player.equipment.equipped_items():
         if eq_id == item_id:
             raise InventoryInvalid(f"can't sell equipped item: {item_id}")
-    price = sell_price(items[item_id], player, npc)
+    price = (
+        price_override
+        if price_override is not None
+        else sell_price(items[item_id], player, npc)
+    )
+    if price < 0:
+        raise InventoryInvalid(f"negative price not allowed: {price}")
     if npc.gold < price:
         raise InventoryInvalid(f"npc has not enough gold: {npc.gold} < {price}")
 

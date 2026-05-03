@@ -18,10 +18,13 @@ from src.flow import narrate as narrate_mod
 from src.flow import turn as turn_mod
 from src.flow.turn import run_turn
 from src.llm_calls.classify.schema import (
+    BuyAction,
     ChainAction,
     EquipAction,
+    GiveAction,
     MoveAction,
     PassAction,
+    SellAction,
     UnequipAction,
 )
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
@@ -196,3 +199,92 @@ async def test_chain_with_failed_first_visit_move_skips_narrate(
     )
     assert narrate_calls == []
     assert "loc_unreachable" not in state.characters["player_01"].visited_location_ids
+
+
+@pytest.mark.asyncio
+async def test_chain_pass_plus_failed_move_drops_failed_act_card(
+    fresh_state, tmp_saves, monkeypatch
+):
+    # [Pass, MoveFail] chain: narrate engages (Pass tail), and the failed
+    # MoveAction's act line must be absorbed into narrate prose — NOT
+    # surfaced as a system act card. Otherwise the player sees the failure
+    # twice (card + narrate body).
+    state = _seed(fresh_state)
+    events, narrate_calls = await _run_chain(
+        state,
+        tmp_saves,
+        monkeypatch,
+        [
+            PassAction(action="pass"),
+            MoveAction(action="move", destination="loc_unreachable"),
+        ],
+    )
+    assert len(narrate_calls) == 1, narrate_calls
+    # Failed move's humanized line should be in act_log_lines (so narrate sees it),
+    # but NOT in the SSE act log_entry stream (would duplicate as a card).
+    lines = narrate_calls[0].get("act_log_lines") or []
+    assert any("길" in line or "찾지" in line for line in lines), lines
+    act_texts = _act_texts(events)
+    assert not any("길" in t or "찾지" in t for t in act_texts), act_texts
+
+
+@pytest.mark.asyncio
+async def test_chain_pass_plus_successful_first_visit_move_keeps_card(
+    fresh_state, tmp_saves, monkeypatch
+):
+    # [Pass, MoveSuccess (first visit)] chain: narrate engages, AND the
+    # successful move's location-enter act stays as a system card. This is
+    # the regression-prevention twin of the failed-move test above.
+    state = _seed(fresh_state)
+    assert "loc_b" not in state.characters["player_01"].visited_location_ids
+    events, narrate_calls = await _run_chain(
+        state,
+        tmp_saves,
+        monkeypatch,
+        [
+            PassAction(action="pass"),
+            MoveAction(action="move", destination="loc_b"),
+        ],
+    )
+    assert len(narrate_calls) == 1, narrate_calls
+    act_texts = _act_texts(events)
+    assert any("시장" in t for t in act_texts), act_texts
+
+
+def test_chain_with_successful_buy_needs_narrate(fresh_state):
+    state = _seed(fresh_state)
+    parts = [
+        BuyAction(action="buy", npc_id="m_01", item_id="i_01"),
+        EquipAction(action="equip", item_id="i_01"),
+    ]
+    assert turn_mod._chain_needs_narrate(state, parts) is True
+
+
+def test_chain_with_successful_sell_needs_narrate(fresh_state):
+    state = _seed(fresh_state)
+    parts = [
+        SellAction(action="sell", npc_id="m_01", item_id="i_01"),
+        UnequipAction(action="unequip", item_id="i_01"),
+    ]
+    assert turn_mod._chain_needs_narrate(state, parts) is True
+
+
+def test_chain_with_successful_give_needs_narrate(fresh_state):
+    state = _seed(fresh_state)
+    parts = [
+        GiveAction(action="give", from_id="player_01", to_id="npc_01", item_id="i_01"),
+        EquipAction(action="equip", item_id="i_02"),
+    ]
+    assert turn_mod._chain_needs_narrate(state, parts) is True
+
+
+def test_chain_with_failed_buy_no_narrate(fresh_state):
+    state = _seed(fresh_state)
+    parts = [
+        BuyAction(action="buy", npc_id="m_01", item_id="i_01"),
+        EquipAction(action="equip", item_id="i_01"),
+    ]
+    assert (
+        turn_mod._chain_needs_narrate(state, parts, part_failures=[True, False])
+        is False
+    )

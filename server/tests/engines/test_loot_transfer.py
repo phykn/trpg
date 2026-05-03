@@ -1,4 +1,5 @@
 """Verify dead entity's loot transfers to the killer."""
+
 from server.src.engines.combat import transfer_loot_on_death
 from server.src.domain.entities import Character
 

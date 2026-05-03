@@ -175,19 +175,32 @@ _ONE_STEP_EMITS: dict[type, EmitFactory] = {
     EquipAction: lambda c, s, d, a: emit_equip(s, s.player_id, a.item_id, d),
     UnequipAction: lambda c, s, d, a: emit_unequip(s, s.player_id, a.item_id, d),
     BuyAction: lambda c, s, d, a: emit_trade(
-        s, s.player_id, a.npc_id, a.item_id, d, direction="buy"
+        s,
+        s.player_id,
+        a.npc_id,
+        a.item_id,
+        d,
+        direction="buy",
+        agreed_price=a.agreed_price,
     ),
     SellAction: lambda c, s, d, a: emit_trade(
-        s, s.player_id, a.npc_id, a.item_id, d, direction="sell"
+        s,
+        s.player_id,
+        a.npc_id,
+        a.item_id,
+        d,
+        direction="sell",
+        agreed_price=a.agreed_price,
     ),
     GiveAction: lambda c, s, d, a: emit_give(s, a.from_id, a.to_id, a.item_id, d),
     MoveAction: lambda c, s, d, a: emit_move(s, s.player_id, a.destination, d),
 }
 
 # Receipt-only success paths: act_log + state mutation, no narrate. Move is
-# conditional (first visit narrates, re-visit is a receipt).
+# conditional (first visit narrates, re-visit is a receipt). NPC-touching
+# actions (buy/sell/give) re-engage narrate so the partner reaction lands.
 _RECEIPT_ACTION_TYPES: frozenset[type] = frozenset(
-    {UseAction, EquipAction, UnequipAction, BuyAction, SellAction, GiveAction}
+    {UseAction, EquipAction, UnequipAction}
 )
 
 
@@ -195,9 +208,9 @@ def _is_receipt(state: GameState, action: object) -> bool:
     if type(action) in _RECEIPT_ACTION_TYPES:
         return True
     if isinstance(action, MoveAction):
-        return action.destination in state.characters[
-            state.player_id
-        ].visited_location_ids
+        return (
+            action.destination in state.characters[state.player_id].visited_location_ids
+        )
     return False
 
 
@@ -206,13 +219,18 @@ def _chain_needs_narrate(
     parts: list,
     part_failures: list[bool] | None = None,
 ) -> bool:
-    """Chain narrates iff any part is narrate-worthy: a Pass tail, or a
-    first-visit move that actually succeeded. Receipt-only chains and
-    chains whose only "interesting" part failed skip narrate entirely."""
+    """Chain narrates iff any part is narrate-worthy: a Pass tail, a successful
+    NPC-interaction (buy/sell/give), or a first-visit move that actually succeeded.
+    Receipt-only chains (equip/unequip/use-self) and chains whose only "interesting"
+    part failed skip narrate entirely."""
     visited = state.characters[state.player_id].visited_location_ids
     for i, part in enumerate(parts):
         if isinstance(part, PassAction):
             return True
+        if isinstance(part, (BuyAction, SellAction, GiveAction)):
+            failed = bool(part_failures[i]) if part_failures is not None else False
+            if not failed:
+                return True
         if isinstance(part, MoveAction) and part.destination not in visited:
             failed = bool(part_failures[i]) if part_failures is not None else False
             if not failed:
@@ -278,8 +296,14 @@ async def _run_one_step_action(
     narrate_path = dramatic or (not is_failure and not receipt_action)
 
     if narrate_path:
+        # Move's location-enter act is the system card; surface it on the
+        # narrate path too instead of dropping it into prose.
+        keep_card = isinstance(result, MoveAction) and not is_failure
         for ev in pushed_act_evts:
-            _drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
+            if keep_card:
+                yield ev
+            else:
+                _drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
         if getattr(result, "tail_intent", None):
             act_log_lines.append(result.tail_intent)
         # First-visit move: record the destination so re-visits are receipts.
@@ -335,6 +359,7 @@ async def _enter_combat_and_finalize(
     enemy_ids: list[str],
     skill_id: str | None,
     graph: GameGraph,
+    surprise: bool = False,
 ) -> AsyncIterator[dict]:
     """Start a fresh fight, run one auto-combat sim cycle, then finalize."""
     player_action = PlayerAction(
@@ -352,6 +377,7 @@ async def _enter_combat_and_finalize(
         rng,
         player_input=player_input,
         player_action=player_action,
+        surprise="player" if surprise else None,
         graph=graph,
         _result_out=combat_results,
     ):
@@ -440,6 +466,7 @@ async def _dispatch(
             enemy_ids=list(result.targets),
             skill_id=result.skill_id,
             graph=graph,
+            surprise=result.surprise,
         ):
             yield ev
         return
@@ -570,7 +597,10 @@ async def _dispatch(
         last_pass: PassAction | None = None
         # Feed engine notices ("이미 체력 가득" etc.) into narrate so prose can't contradict the engine.
         chain_act_lines: list[str] = []
-        chain_act_evts: list[dict] = []
+        # (event, part_idx) — keep_card is computed AFTER the part loop finishes,
+        # since _engine_fail arrives after the act event so part_failures[idx]
+        # isn't final at act-yield time.
+        chain_act_evts: list[tuple[dict, int]] = []
         chain_failure_raws: list[str] = []
         # Per-part failure flags aligned to result.parts indices; PassAction parts stay False.
         part_failures: list[bool] = [False] * len(result.parts)
@@ -593,7 +623,7 @@ async def _dispatch(
                             text = d.get("text") or ""
                             if text:
                                 chain_act_lines.append(text)
-                            chain_act_evts.append(ev)
+                            chain_act_evts.append((ev, idx))
                             continue
                     yield ev
             if getattr(part, "tail_intent", None):
@@ -629,8 +659,15 @@ async def _dispatch(
                 dirty.entities.add(("characters", state.player_id))
 
         if narrate_chain:
-            for ev in chain_act_evts:
-                _drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
+            for ev, part_idx in chain_act_evts:
+                keep_card = (
+                    isinstance(result.parts[part_idx], MoveAction)
+                    and not part_failures[part_idx]
+                )
+                if keep_card:
+                    yield ev
+                else:
+                    _drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
             async for ev in stream_narrate_tail(
                 client,
                 state,
@@ -645,7 +682,7 @@ async def _dispatch(
             ):
                 yield ev
         else:
-            for ev in chain_act_evts:
+            for ev, _part_idx in chain_act_evts:
                 yield ev
             if to_front_fn is not None:
                 yield {"type": "state", "data": to_front_fn(state)}
