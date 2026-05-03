@@ -30,3 +30,15 @@ def eul_reul(name: str) -> str:
 
 def gwa_wa(name: str) -> str:
     return "과" if has_jongseong(name) else "와"
+
+
+def eu_ro(name: str) -> str:
+    """Picks 으로/로: 으로 when 받침 (except ㄹ); 로 otherwise (no 받침 or ㄹ 받침)."""
+    if not name:
+        return "로"
+    last = name[-1]
+    if not ("가" <= last <= "힣"):
+        return "로"
+    jong = (ord(last) - 0xAC00) % 28
+    # 0 = no jongseong, 8 = ㄹ — both take 로 instead of 으로.
+    return "로" if jong in (0, 8) else "으로"

@@ -328,7 +328,7 @@ async def _enter_combat_and_finalize(
     ):
         yield ev
     state.turn_count += 1
-    # Post-combat narrate so the system card isn't the terminal UI line — adds aftermath body + suggestions, and consumes the downed_recovered signal here when present. Skipped on player death (game-over) and on client=None (engine-only test path).
+    # Post-combat narrate so the system card isn't the terminal UI line — adds aftermath body and consumes the downed_recovered signal here when present. Skipped on player death (game-over) and on client=None (engine-only test path).
     # player_input is empty: the original input was already consumed by combat_narrate; this second narrate is the recovery beat, not a re-run of the player's intent.
     if client is not None and state.characters[state.player_id].alive:
         state.invalidate_graph()

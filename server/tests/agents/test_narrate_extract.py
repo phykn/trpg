@@ -30,7 +30,7 @@ class FakeChatClient:
 
 @pytest.mark.asyncio
 async def test_extract_returns_parsed_output_on_first_try():
-    valid_json = '{"turn_summary":"광장 둘러봄","state_changes":[],"memorable":false,"memory_targets":[],"memory":{},"memory_links":{},"importance":null,"suggestions":[]}'
+    valid_json = '{"turn_summary":"광장 둘러봄","state_changes":[],"memorable":false,"memory_targets":[],"memory":{},"memory_links":{},"importance":null}'
     client = FakeChatClient([valid_json])
     result = await run_extract(client, _input())
     assert result.turn_summary == "광장 둘러봄"
@@ -42,7 +42,7 @@ async def test_extract_returns_parsed_output_on_first_try():
 @pytest.mark.asyncio
 async def test_extract_retries_on_validation_error_then_succeeds():
     invalid = "not json at all"
-    valid = '{"turn_summary":"OK","state_changes":[],"memorable":false,"memory_targets":[],"memory":{},"memory_links":{},"importance":null,"suggestions":[]}'
+    valid = '{"turn_summary":"OK","state_changes":[],"memorable":false,"memory_targets":[],"memory":{},"memory_links":{},"importance":null}'
     client = FakeChatClient([invalid, invalid, valid])
     result = await run_extract(client, _input())
     assert result.turn_summary == "OK"
@@ -56,7 +56,6 @@ async def test_extract_returns_empty_output_after_exhausted_retries():
     client = FakeChatClient(bad)
     result = await run_extract(client, _input())
     assert result == NarrateOutput()
-    assert result.suggestions == []
     assert result.state_changes == []
     assert result.turn_summary == ""
     assert result.memorable is False
@@ -73,7 +72,7 @@ async def test_extract_passes_body_in_user_payload_with_temperature_and_agent():
             captured["temperature"] = temperature
             captured["agent"] = agent
             return {
-                "answer": '{"turn_summary":"","state_changes":[],"memorable":false,"memory_targets":[],"memory":{},"memory_links":{},"importance":null,"suggestions":[]}'
+                "answer": '{"turn_summary":"","state_changes":[],"memorable":false,"memory_targets":[],"memory":{},"memory_links":{},"importance":null}'
             }
 
     client = CapturingClient()

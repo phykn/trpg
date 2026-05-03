@@ -43,7 +43,7 @@ _RECOMMEND_OUTPUT = json.dumps({
 # Narrate stub for /level_up — minimal body + valid JSON tail.
 _NARRATE_BODY = "당신의 손에 새로운 힘이 깃듭니다."
 _NARRATE_OUTPUT_JSON = json.dumps(
-    {"turn_summary": "레벨업", "memorable": False, "suggestions": []},
+    {"turn_summary": "레벨업", "memorable": False},
     ensure_ascii=False,
 )
 _NARRATE_FULL = f"{_NARRATE_BODY}---JSON---{_NARRATE_OUTPUT_JSON}"

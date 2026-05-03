@@ -34,7 +34,7 @@ _JUDGE_ROLL = json.dumps(
 
 _NARRATE_BODY = "당신은 에드릭에게 인사합니다."
 _NARRATE_OUTPUT_JSON = json.dumps(
-    {"turn_summary": "인사", "memorable": False, "suggestions": []},
+    {"turn_summary": "인사", "memorable": False},
     ensure_ascii=False,
 )
 _NARRATE_FULL = f"{_NARRATE_BODY}---JSON---{_NARRATE_OUTPUT_JSON}"

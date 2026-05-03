@@ -29,7 +29,7 @@ async def run_extract(
     Empty fallback shape:
       turn_summary="", state_changes=[], memorable=False,
       memory_targets=[], memory={}, memory_links={},
-      importance=None, suggestions=[]
+      importance=None
     """
     try:
         return await run_with_retries(

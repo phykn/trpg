@@ -42,8 +42,7 @@ class FakeChainClient:
 async def test_stream_narrate_yields_deltas_then_final():
     valid_meta = (
         '{"turn_summary":"광장 둘러봄","state_changes":[],"memorable":false,'
-        '"memory_targets":[],"memory":{},"memory_links":{},"importance":null,'
-        '"suggestions":[]}'
+        '"memory_targets":[],"memory":{},"memory_links":{},"importance":null}'
     )
     client = FakeChainClient(
         body_chunks=["당신은 ", "광장을 ", "둘러봅니다."],
@@ -78,5 +77,4 @@ async def test_stream_narrate_falls_back_to_empty_metadata_on_extract_failure():
     assert len(finals) == 1
     assert finals[0].body == "당신은 광장을 둘러봅니다."
     assert finals[0].output == NarrateOutput()
-    assert finals[0].output.suggestions == []
     assert finals[0].output.state_changes == []

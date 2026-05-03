@@ -1,4 +1,3 @@
-import re
 from collections.abc import AsyncIterator
 
 from ..llm_calls.classify.schema import PassAction, RejectAction
@@ -86,25 +85,6 @@ async def run_narrate(
         yield item
 
 
-# Engine ids are lowercase ASCII with an underscore — a token matching this shape in player-facing text is a prompt slip.
-_ID_TOKEN = re.compile(r"\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b")
-_PAREN_ID = re.compile(
-    r"\s*[\(\[（［][^\(\[\)\]）］]*[a-z][a-z0-9]*(?:_[a-z0-9]+)+[^\(\[\)\]）］]*[\)\]）］]"
-)
-
-
-def _strip_id_leaks(suggestions: list[str]) -> list[str]:
-    """Remove parenthetical id glosses ('촌장의 부탁 (q_chief_request)') and drop
-    any suggestion still carrying a bare id token after the strip."""
-    cleaned: list[str] = []
-    for s in suggestions:
-        stripped = _PAREN_ID.sub("", s).strip()
-        if not stripped or _ID_TOKEN.search(stripped):
-            continue
-        cleaned.append(stripped)
-    return cleaned
-
-
 def _sterilize_for_reject(output) -> None:
     """Engine-side enforcement: reject must produce zero side effects, regardless of what the LLM emitted."""
     output.state_changes = []
@@ -113,7 +93,6 @@ def _sterilize_for_reject(output) -> None:
     output.memory = {}
     output.memory_links = {}
     output.importance = None
-    output.suggestions = []
 
 
 async def consume_narrate(
@@ -151,9 +130,6 @@ async def consume_narrate(
 
     # Redact dead-NPC direct quotes before persisting — without this a single LLM slip lands in recent_dialogue and compounds across turns.
     body = redact_dead_quotes(body, _dead_names_in_scope(state, graph))
-
-    final.output.suggestions = _strip_id_leaks(final.output.suggestions)
-    yield {"type": "suggestions", "data": {"items": list(final.output.suggestions)}}
 
     apply_changes(state, final.output.state_changes, dirty.entities)
     locality_warnings = enforce_item_locality(state, dirty=dirty.entities)

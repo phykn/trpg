@@ -36,4 +36,3 @@ class NarrateOutput(BaseModel):
     memory: dict[str, str] = {}
     memory_links: dict[str, str | None] = {}
     importance: int | None = Field(default=None, ge=1, le=3)
-    suggestions: list[str] = Field(default_factory=list, max_length=3)

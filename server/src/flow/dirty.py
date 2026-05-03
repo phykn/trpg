@@ -12,6 +12,7 @@ from ..domain.memory import (
     TurnLogEntry,
 )
 from ..domain.state import GameState
+from ..mapping.to_front import _build_suggestion_chips
 from ..persistence.repo import SaveRepo
 from ..rules import RULES
 from .format import format_death_log
@@ -130,4 +131,9 @@ async def finalize(
         return
     if to_front_fn:
         yield {"type": "state", "data": to_front_fn(state)}
+        # Suggestion chips: deterministic from end-of-turn state. Same gate as `state` — engine-only test paths (to_front_fn=None) stay quiet.
+        yield {
+            "type": "suggestions",
+            "data": {"items": _build_suggestion_chips(state)},
+        }
     yield {"type": "done", "data": {}}
