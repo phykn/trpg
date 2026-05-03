@@ -375,6 +375,11 @@ def apply_attack_to_defender(
     entities = _entities_set(dirty)
 
     defender = state.characters[defender_id]
+    # Story-critical NPCs (children, civilians, quest givers) cap incoming damage at 30% of max_hp per application
+    # so a single attack — even a crit or high-roll skill — can't oneshot them. Sole survival mechanic.
+    if defender.protected and defender.max_hp > 0:
+        cap = max(1, defender.max_hp * 30 // 100)
+        damage = min(damage, cap)
     hp_before = defender.hp
     hp_after = max(0, defender.hp - damage)
     defender.hp = hp_after

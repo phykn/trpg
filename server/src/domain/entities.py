@@ -214,6 +214,10 @@ class Character(BaseModel):
     death_saves: DeathSaveState | None = None
     revive_coins: int = 0
 
+    # Story-critical NPCs (children, civilians, quest givers): per-application damage capped to 30% of max_hp
+    # so a single attack can't oneshot them. Default False keeps existing serialized data backward-compatible.
+    protected: bool = False
+
     companions: list[str] = []
 
     @property

@@ -544,6 +544,46 @@ def test_apply_attack_to_defender_npc_dies_on_zero_hp():
     assert ("characters", "g") in dirty
 
 
+def test_apply_attack_to_protected_npc_caps_damage_at_30_percent_of_max_hp():
+    g = _char("g", hp=100, max_hp=100)
+    g.protected = True
+    state = _state_with(_player(), g, player_id="p")
+    out = apply_attack_to_defender(state, "g", damage=200)
+    cap = max(1, g.max_hp * 30 // 100)  # 30
+    assert g.hp == 100 - cap
+    assert out["dead"] is False
+    assert g.alive is True
+
+
+def test_apply_attack_to_protected_npc_minimum_one_damage_floor():
+    """max_hp=1 → cap = max(1, 0) = 1, so a single hit can still chip a tiny NPC."""
+    g = _char("g", hp=1, max_hp=1)
+    g.protected = True
+    state = _state_with(_player(), g, player_id="p")
+    out = apply_attack_to_defender(state, "g", damage=200)
+    assert out["dead"] is True  # 1 damage on hp=1 still kills
+    assert g.hp == 0
+
+
+def test_apply_attack_to_protected_npc_small_hit_passes_through():
+    """Cap only clamps oversize hits — a normal swing still applies fully."""
+    g = _char("g", hp=46, max_hp=46)
+    g.protected = True
+    state = _state_with(_player(), g, player_id="p")
+    apply_attack_to_defender(state, "g", damage=5)
+    assert g.hp == 41  # 5 < cap (13) so no clamp
+
+
+def test_apply_attack_to_unprotected_npc_takes_full_damage():
+    """Default protected=False — combat math unchanged for hostile NPCs."""
+    g = _char("g", hp=100, max_hp=100)
+    assert g.protected is False
+    state = _state_with(_player(), g, player_id="p")
+    out = apply_attack_to_defender(state, "g", damage=200)
+    assert g.hp == 0
+    assert out["dead"] is True
+
+
 def test_apply_attack_to_player_uses_revive_coin():
     p = _player(hp=5, max_hp=20)
     p.revive_coins = 1
