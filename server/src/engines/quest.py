@@ -30,8 +30,16 @@ def _as_dirty(dirty):
     return dirty
 
 
-def apply_judge_result(state: GameState, quest_id: str, result: dict) -> bool:
-    """Apply free-path judge outcome. Returns True if state changed."""
+def apply_judge_result(
+    state: GameState, quest_id: str, result: dict, dirty=None
+) -> bool:
+    """Apply free-path judge outcome. Returns True if state changed.
+
+    On 'satisfied', routes through `_apply_rewards` so the same success card
+    that the trigger-driven `check_quests` path emits also surfaces here.
+    Card emit only when `dirty` is the full `flow.dirty.Dirty`; legacy callers
+    passing None (or omitting) get the state mutation without the card.
+    """
     quest = state.quests.get(quest_id)
     if not quest or quest.status != "active":
         return False
@@ -39,6 +47,7 @@ def apply_judge_result(state: GameState, quest_id: str, result: dict) -> bool:
     if outcome == "satisfied":
         quest.status = "completed"
         quest.success_reason = result.get("reason") or "free_path_satisfied"
+        _apply_rewards(state, quest, dirty)
         return True
     if outcome == "partial":
         delta = result.get("progress_delta") or 0
