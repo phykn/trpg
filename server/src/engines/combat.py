@@ -435,16 +435,7 @@ def tick_death_save(
     d20: int | None = None,
     dirty: set[tuple[str, str]] | None = None,
 ) -> tuple[Literal["progress", "stable", "dead"], int]:
-    """One death_save tick. Returns (status, d20 roll).
-
-    - d20 ≥ save_dc → success +1
-    - d20 < save_dc → failure +1
-    - successes = successes_to_stabilize → stable (hp=auto_revive_hp, death_saves=None)
-    - failures = failures_to_die → dead (alive=False)
-
-    `d20` lets the caller pass an externally-rolled value (used by /roll
-    when the player triggered the dice button). Otherwise we roll internally.
-    """
+    """One death_save tick → (status, d20 roll). d20 ≥ save_dc → success +1; else failure +1. Hits successes_to_stabilize → stable (hp=auto_revive_hp, death_saves=None); hits failures_to_die → dead (alive=False). `d20` is for the /roll caller passing a pre-rolled value; otherwise we roll internally."""
     actor = state.characters[actor_id]
     if actor.death_saves is None:
         actor.death_saves = DeathSaveState()

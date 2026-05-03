@@ -48,10 +48,7 @@ def refresh_active_subject(state: GameState, result) -> None:
     narrate-path actions (pass/reject) we fall back to recent_npc, which
     captures whoever the previous narrate turn was about.
     """
-    # Only drop the pinned subject if the character was deleted from state
-    # (shouldn't happen in current flow, but defensive). Death itself keeps
-    # the pin — the Subject panel renders it as 죽음 so the player still has
-    # the corpse's identity on screen.
+    # Defensive: drop pin only on actual deletion. Death keeps the pin (Subject panel still shows the corpse).
     cur = state.active_subject_id
     if cur is not None and cur not in state.characters:
         state.active_subject_id = None
