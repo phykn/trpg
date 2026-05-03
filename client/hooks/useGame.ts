@@ -13,11 +13,13 @@ import {
   initSession,
   loadLastSeenLocation,
   loadLastSeenQuestTitle,
+  loadLastSeenSubjectId,
   loadStoredGameId,
   loadSuggestions,
   storeGameId,
   storeLastSeenLocation,
   storeLastSeenQuestTitle,
+  storeLastSeenSubjectId,
   storeSuggestions,
   streamIntro,
   streamLevelUp,
@@ -67,6 +69,7 @@ export function useGame() {
   const [suggestions, setSuggestionsRaw] = React.useState<string[]>([]);
   const [lastSeenLocation, setLastSeenLocation] = React.useState<string | null>(null);
   const [lastSeenQuestTitle, setLastSeenQuestTitle] = React.useState<string | null>(null);
+  const [lastSeenSubjectId, setLastSeenSubjectId] = React.useState<string | null>(null);
   const [levelUpOpen, setLevelUpOpen] = React.useState(false);
   const [levelUpCandidates, setLevelUpCandidates] = React.useState<SkillCandidate[] | null>(null);
 
@@ -202,6 +205,7 @@ export function useGame() {
       setSuggestionsRaw(loadSuggestions(payload.game_id));
       setLastSeenLocation(loadLastSeenLocation(payload.game_id));
       setLastSeenQuestTitle(loadLastSeenQuestTitle(payload.game_id));
+      setLastSeenSubjectId(loadLastSeenSubjectId(payload.game_id));
       setStatus('ready');
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : String(err));
@@ -224,6 +228,7 @@ export function useGame() {
         applyState(payload.state, payload.game_id);
         setLastSeenLocation(null);
         setLastSeenQuestTitle(null);
+        setLastSeenSubjectId(null);
         setPending(null);
         setStreamingText('');
         setSuggestions([]);
@@ -341,6 +346,17 @@ export function useGame() {
     storeLastSeenQuestTitle(id, questTitle);
   }, [questTitle]);
 
+  // Subject wire type has no `id` — use `name` as the cache key.
+  const subjectName = subject?.name ?? null;
+  const hasUnseenSubject = subjectName !== null && subjectName !== lastSeenSubjectId;
+
+  const markSubjectSeen = React.useCallback(() => {
+    const id = gameIdRef.current;
+    if (!id || !subjectName) return;
+    setLastSeenSubjectId(subjectName);
+    storeLastSeenSubjectId(id, subjectName);
+  }, [subjectName]);
+
   return {
     status,
     errorMessage,
@@ -360,6 +376,8 @@ export function useGame() {
     markLocationSeen,
     hasUnseenQuest,
     markQuestSeen,
+    hasUnseenSubject,
+    markSubjectSeen,
     think,
     setThink,
     onSend,

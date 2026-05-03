@@ -4,18 +4,18 @@ import type { PanelSlot } from '@/features/info-panel';
 
 import type { Subject } from './types';
 
-export function buildSubjectSlot(subject: Subject | null): PanelSlot {
+export function buildSubjectSlot(subject: Subject | null, opts?: { dot?: boolean }): PanelSlot {
   if (!subject) {
     return {
       id: 'person',
-      chip: { short: '대상' },
+      chip: { short: '대상', dot: opts?.dot },
       panel: { empty: true, title: '대상' },
     };
   }
   const equipped = Object.values(subject.equipment).filter((it): it is EquipItem => it !== null);
   return {
     id: 'person',
-    chip: { short: '대상' },
+    chip: { short: '대상', dot: opts?.dot },
     panel: {
       title: withDeath(subject.name, subject.alive),
       meta: [{ text: characterMeta(subject.level, subject.raceJob, subject.gender) }],
