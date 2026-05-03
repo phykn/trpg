@@ -167,3 +167,57 @@ def test_pending_quest_immune_to_giver_death(fresh_state):
     changed = q.check_quests(state, "character_death", "npc_giver")
     assert "q1" not in changed
     assert state.quests["q1"].status == "pending"
+
+
+# --- prerequisite unlock with requires_acceptance ---------------------
+
+
+def test_unlocked_quest_with_requires_acceptance_goes_to_pending(fresh_state):
+    """When a locked quest's prereq is met, it transitions to pending if requires_acceptance=True."""
+    # q0 is a simple active quest we'll complete
+    # q1 is locked with requires_acceptance=True, has q0 as prerequisite
+    q0 = _quest("q0", status="active")
+    q1 = _quest(
+        "q1",
+        status="locked",
+        requires_acceptance=True,
+    )
+    q1.prerequisite_ids = ["q0"]
+
+    state = _state(fresh_state, quests=[q0, q1])
+    dirty: set[tuple[str, str]] = set()
+
+    # Simulate q0 completion via check_quests
+    # (this is how it normally happens: trigger fires, q0 → completed, then _maybe_unlock_dependents runs)
+    q0.status = "completed"
+    q.update_chapter_progress(state, dirty)
+    q._maybe_unlock_dependents(state, dirty)
+
+    # q1 should now be pending (awaiting accept_quest), not active
+    assert state.quests["q1"].status == "pending"
+    assert ("quests", "q1") in dirty
+
+
+def test_unlocked_quest_without_requires_acceptance_goes_to_active(fresh_state):
+    """When a locked quest's prereq is met, it transitions to active if requires_acceptance=False."""
+    # q0 is a simple active quest we'll complete
+    # q1 is locked with requires_acceptance=False, has q0 as prerequisite
+    q0 = _quest("q0", status="active")
+    q1 = _quest(
+        "q1",
+        status="locked",
+        requires_acceptance=False,
+    )
+    q1.prerequisite_ids = ["q0"]
+
+    state = _state(fresh_state, quests=[q0, q1])
+    dirty: set[tuple[str, str]] = set()
+
+    # Simulate q0 completion
+    q0.status = "completed"
+    q.update_chapter_progress(state, dirty)
+    q._maybe_unlock_dependents(state, dirty)
+
+    # q1 should now be active (auto-starts), not pending
+    assert state.quests["q1"].status == "active"
+    assert ("quests", "q1") in dirty

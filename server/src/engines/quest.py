@@ -81,7 +81,7 @@ def _maybe_unlock_dependents(state: GameState, dirty: DirtySet) -> None:
             pid in state.quests and state.quests[pid].status == "completed"
             for pid in prereq_ids
         ):
-            q.status = "active"
+            q.status = "pending" if q.requires_acceptance else "active"
             _ensure_runtime_fields(q)
             if dirty is not None:
                 dirty.add(("quests", q.id))
