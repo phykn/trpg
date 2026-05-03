@@ -17,7 +17,7 @@ export function ThinkToggle({ think, onToggle, disabled = false }: {
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled, selected: think }}
-      className={`flex-row items-center justify-center h-8 px-3 rounded-full ${stateClass} ${bgClass}`}
+      className={`flex-row items-center justify-center h-8 px-3 rounded-full min-w-[78px] ${stateClass} ${bgClass}`}
     >
       {!think && (
         <View className="mr-1">
