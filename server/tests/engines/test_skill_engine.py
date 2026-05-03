@@ -5,7 +5,6 @@ import pytest
 from src.domain.entities import Character, Skill, Stats
 from src.domain.errors import SkillInvalid
 from src.engines import skill as skill_eng
-from src.rules import RULES
 
 
 def _player(skills=None, racial=None, **kw):

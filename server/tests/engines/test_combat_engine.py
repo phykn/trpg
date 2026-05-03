@@ -8,23 +8,33 @@ from src.domain.entities import (
     ArmorEffect,
     Character,
     CombatBehavior,
+    DeathSaveState,
     Equipment,
     Item,
     Skill,
     Stats,
     WeaponEffect,
 )
-from src.domain.state import GameState
+from src.domain.state import CombatState, GameState
 from src.engines.combat import (
     AttackOutcome,
+    advance_turn,
+    apply_attack_to_defender,
     attack,
+    check_combat_end,
+    current_actor_id,
+    end_combat,
     enemy_defense,
+    pick_npc_target,
     pick_target,
     primary_stat_for_weapon,
+    remove_from_combat,
     roll_dice,
     roll_initiative,
     should_attempt_flee,
+    start_combat,
     stat_modifier,
+    tick_death_save,
     try_flee,
 )
 from src.ontology.graph import build_graph
@@ -454,22 +464,6 @@ def test_attack_outcome_shape():
 
 
 # --- Lifecycle ---------------------------------------------------------------
-
-
-from src.domain.entities import DeathSaveState
-from src.domain.state import CombatState
-from src.engines.combat import (
-    advance_turn,
-    apply_attack_to_defender,
-    check_combat_end,
-    current_actor_id,
-    end_combat,
-    pick_npc_target,
-    remove_from_combat,
-    start_combat,
-    tick_death_save,
-)
-from src.domain.state import GameState
 
 
 def _state_with(

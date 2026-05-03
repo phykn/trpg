@@ -3,7 +3,6 @@
 import pytest
 
 from src.domain.entities import (
-    ArmorEffect,
     Character,
     ConsumableEffect,
     Item,

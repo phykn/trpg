@@ -10,7 +10,6 @@ from src.domain.entities import (
     Equipment,
     Item,
     Quest,
-    QuestRewards,
     QuestTrigger,
     Race,
     Skill,
@@ -421,7 +420,6 @@ def _minimal_scenario(**overrides) -> Scenario:
         weight=1.0,
         effects=WeaponEffect(type="weapon", weapon_dice="1d6"),
     )
-    inn = type("L", (), {})  # placeholder — use actual Location below
     from src.domain.entities import Chapter, Location
 
     location = Location(id="inn", name="inn")
