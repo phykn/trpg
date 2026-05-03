@@ -11,8 +11,8 @@ export function StatRow({ label, value, max, tone, display, signed }: BarDef) {
       label={label}
       trailing={
         <Text
-          className="font-mono-semibold text-panel text-fg-default"
-          style={{ fontVariant: ['tabular-nums'] }}
+          className="font-mono-semibold text-panel"
+          style={{ color, fontVariant: ['tabular-nums'] }}
         >
           {display}
         </Text>

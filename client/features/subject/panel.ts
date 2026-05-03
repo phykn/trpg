@@ -25,7 +25,7 @@ export function buildSubjectSlot(subject: Subject | null): PanelSlot {
           label: '호감도',
           value: subject.trust,
           max: 100,
-          tone: subject.trust >= 0 ? 'good' : 'bad',
+          tone: subject.trust > 0 ? 'good' : subject.trust < 0 ? 'bad' : 'neutral',
           display: subject.trust > 0 ? `+${subject.trust}` : `${subject.trust}`,
           signed: true,
         },
