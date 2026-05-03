@@ -65,14 +65,53 @@ def accept_quest(state: GameState, quest_id: str) -> bool:
     return True
 
 
-def abandon_quest(state: GameState, quest_id: str) -> bool:
-    """active → abandoned. No-op for any other status."""
+def abandon_quest(state: GameState, quest_id: str, dirty=None) -> bool:
+    """active → failed via _fail_quest. No-op for any other status."""
     quest = state.quests.get(quest_id)
     if not quest or quest.status != "active":
         return False
-    quest.status = "abandoned"
-    quest.fail_reason = "abandoned"
+    _fail_quest(state, quest, reason="의뢰 포기", dirty=dirty)
     return True
+
+
+def _fail_quest(state: GameState, quest: Quest, reason: str, dirty) -> None:
+    """Mark quest failed, clear active pointer if matching, emit fail card.
+
+    Card emit only when `dirty` is the full `flow.dirty.Dirty` (has `.log`);
+    legacy callers passing a bare entity-set get the state mutation but no card.
+    """
+    quest.status = "failed"
+    quest.fail_reason = reason
+    entities = _entities_set(dirty)
+    full = _as_dirty(dirty)
+    if entities is not None:
+        entities.add(("quests", quest.id))
+    if full is not None:
+        from ..flow.dirty import push_act
+        from ..flow.format import format_quest_fail_log
+
+        text = format_quest_fail_log(title=quest.title, reason=reason)
+        push_act(
+            state,
+            full,
+            text,
+            turn_summary=f"퀘스트 «{quest.title}» 실패 ({reason})",
+        )
+    if state.active_quest_id == quest.id:
+        state.active_quest_id = None
+
+
+def cascade_giver_death(state: GameState, victim_id: str, dirty) -> None:
+    """When an NPC dies, fail every active/pending quest where they were the giver.
+
+    Routes through `_fail_quest` so the card emit + active_quest_id clear stay
+    consistent with the player-initiated abandon path.
+    """
+    for quest in state.quests.values():
+        if quest.status not in ("active", "pending"):
+            continue
+        if quest.giver_id == victim_id:
+            _fail_quest(state, quest, reason="의뢰자 사망", dirty=dirty)
 
 
 def _ensure_runtime_fields(quest: Quest) -> None:
@@ -315,24 +354,20 @@ def _cascade_death(
     - Kill-target died → if quest is already completed this turn via its trigger,
       annotate success_reason='objective_killed'.
     """
-    entities = _entities_set(dirty)
     for q in state.quests.values():
         giver = giver_of(graph, q.id)
         kill_targets = kill_targets_of(graph, q.id)
         is_giver_dead = giver == dead_id
         is_kill_target_dead = dead_id in kill_targets
 
-        # locked / pending / abandoned / failed quests are intentionally excluded.
-        if is_giver_dead and q.status in ("active", "completed"):
+        # locked / abandoned / failed quests are intentionally excluded.
+        if is_giver_dead and q.status in ("active", "pending", "completed"):
             if q.status == "completed" and q.id in changed:
                 # Undo same-turn completion so fail wins.
                 changed.remove(q.id)
-            q.status = "failed"
-            q.fail_reason = "giver_dead"
+            _fail_quest(state, q, reason="의뢰자 사망", dirty=dirty)
             if q.id not in changed:
                 changed.append(q.id)
-            if entities is not None:
-                entities.add(("quests", q.id))
 
         elif is_kill_target_dead and not is_giver_dead:
             if q.status == "completed" and q.id in changed and q.success_reason is None:

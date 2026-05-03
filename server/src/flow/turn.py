@@ -65,7 +65,7 @@ from .combat_auto import AutoCombatResult
 from .narrate import stream_narrate_tail
 from .rest import run_rest
 from .subject import refresh_active_subject
-from ..engines.quest import apply_judge_result
+from ..engines.quest import abandon_quest, accept_quest, apply_judge_result
 
 
 def end_turn_quest_check(state: GameState) -> None:
@@ -97,6 +97,7 @@ async def run_turn(
     *,
     to_front_fn: ToFrontFn | None = None,
     rng: random.Random | None = None,
+    quest_action: tuple[str, str] | None = None,
 ) -> AsyncIterator[dict]:
     set_llm_session_if_unset(state.game_id)
     if state.pending_check is not None:
@@ -105,6 +106,13 @@ async def run_turn(
         )
 
     dirty = Dirty()
+
+    if quest_action is not None:
+        kind, qid = quest_action
+        if kind == "accept":
+            accept_quest(state, qid)
+        elif kind == "abandon":
+            abandon_quest(state, qid, dirty)
 
     player_log = PlayerLogEntry(id=next_log_id(state), kind="player", text=player_input)
     push_log_entry(state, player_log, dirty)
