@@ -19,7 +19,7 @@ const BGM_SOURCE = require('../../assets/audio/bgm.mp3');
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, storyGraph, log, pending, streaming, awaitingNarration, suggestions, errorMessage, think, setThink, onSend, onRoll, onStop, goToNewGame } = game;
+  const { hero, subject, quest, place, combat, storyGraph, log, pending, streaming, awaitingNarration, suggestions, errorMessage, think, setThink, onSend, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -72,7 +72,7 @@ export function Playing({ game }: Props) {
 
   const slots: PanelSlot[] = [
     ...buildPanelSlots({ hero, subject, quest }),
-    { id: 'map', chip: { short: '주변' }, panel: null },
+    { id: 'map', chip: { short: '주변', dot: hasUnseenLocation }, panel: null },
   ];
   const rolling = pending !== null && streaming;
 
@@ -85,7 +85,13 @@ export function Playing({ game }: Props) {
         activeId={activeId}
         menuOpen={menuOpen}
         bgmOn={bgmOn}
-        onSelect={(id) => setActiveId((prev) => (prev === id ? null : id))}
+        onSelect={(id) => {
+          setActiveId((prev) => {
+            const next = prev === id ? null : id;
+            if (id === 'map' && next === id) markLocationSeen();
+            return next;
+          });
+        }}
         onMenuToggle={() => setMenuOpen((v) => !v)}
         onMenuClose={() => setMenuOpen(false)}
         onBgmToggle={toggleBgm}
