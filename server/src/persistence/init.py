@@ -119,6 +119,8 @@ async def init_game(
     player_char.max_mp = calc_max_mp(player_char.level, stats.INT)
     player_char.hp = player_char.max_hp
     player_char.mp = player_char.max_mp
+    # Spawn counts as the first visit; otherwise returning to it trips first-visit narrate.
+    player_char.visited_location_ids.add(location_id)
 
     characters: dict[str, Character] = {**npcs, player_id: player_char}
 
