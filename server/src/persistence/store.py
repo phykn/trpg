@@ -26,7 +26,18 @@ from ..domain.errors import PersistenceFailed
 from ..rules import RULES
 from ..domain.state import CombatState, GameState
 
-_save_lock = asyncio.Lock()
+# Per-game write serialization. A single global lock would funnel unrelated
+# game writes through one queue and — worse — let two requests for the same
+# game_id race on overlapping reads-then-writes if the lock were ever dropped.
+_save_locks: dict[str, asyncio.Lock] = {}
+
+
+def _lock_for(game_id: str) -> asyncio.Lock:
+    lock = _save_locks.get(game_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _save_locks[game_id] = lock
+    return lock
 
 
 _ENTITY_MODELS: dict[str, type[BaseModel]] = {
@@ -127,7 +138,7 @@ def _meta_from_state(state: GameState) -> _Meta:
 async def save_meta(state: GameState, saves_dir: str) -> None:
     payload = _meta_from_state(state).model_dump_json(indent=2)
     path = _meta_path(saves_dir, state.game_id)
-    async with _save_lock:
+    async with _lock_for(state.game_id):
         await asyncio.to_thread(_atomic_write, path, payload)
 
 
@@ -139,34 +150,34 @@ async def save_entity(
         raise PersistenceFailed(f"unknown {kind} id: {entity_id!r}")
     payload = container[entity_id].model_dump_json(indent=2)
     path = _entity_path(saves_dir, state.game_id, kind, entity_id)
-    async with _save_lock:
+    async with _lock_for(state.game_id):
         await asyncio.to_thread(_atomic_write, path, payload)
 
 
-async def _append_entries(path: Path, entries: list) -> None:
+async def _append_entries(game_id: str, path: Path, entries: list) -> None:
     if not entries:
         return
     lines = [e.model_dump_json() for e in entries]
-    async with _save_lock:
+    async with _lock_for(game_id):
         await asyncio.to_thread(_append_jsonl, path, lines)
 
 
 async def append_log_entries(
     saves_dir: str, game_id: str, entries: list[LogEntry]
 ) -> None:
-    await _append_entries(_log_path(saves_dir, game_id), entries)
+    await _append_entries(game_id, _log_path(saves_dir, game_id), entries)
 
 
 async def append_history_entries(
     saves_dir: str, game_id: str, entries: list[TurnLogEntry]
 ) -> None:
-    await _append_entries(_history_path(saves_dir, game_id), entries)
+    await _append_entries(game_id, _history_path(saves_dir, game_id), entries)
 
 
 async def append_dialogue_entries(
     saves_dir: str, game_id: str, entries: list[DialoguePair]
 ) -> None:
-    await _append_entries(_dialogue_path(saves_dir, game_id), entries)
+    await _append_entries(game_id, _dialogue_path(saves_dir, game_id), entries)
 
 
 def _scan_entity_dir(
