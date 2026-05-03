@@ -16,9 +16,22 @@ from ..ontology.queries import (
 )
 from .labels import (
     RISK_PAYLOAD,
+    STORY_EDGE_LABEL_CURRENT,
+    STORY_EDGE_LABEL_MEET,
+    STORY_EDGE_LABEL_MOVE,
+    STORY_EDGE_LABEL_OBSERVE,
+    STORY_EDGE_LABEL_PROGRESS,
+    STORY_EDGE_LABEL_QUEST_GIVER,
+    STORY_EDGE_LABEL_QUEST_TARGET,
+    STORY_SUMMARY_EMPTY,
+    STORY_SUMMARY_HERO,
     gender_label,
     giver_with_location_label,
     race_job_label,
+    story_summary_entities,
+    story_summary_location,
+    story_summary_places,
+    story_summary_quest,
 )
 
 
@@ -266,25 +279,25 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
     for quest_id in quest_ids:
         nodes[quest_id] = _quest_node(state.quests[quest_id], state, graph)
 
-    add_edge(state.player_id, player_location_id, "현재 위치", "current_pin")
-    add_edge(state.player_id, state.active_subject_id, "주시", "observe")
-    add_edge(state.player_id, state.active_quest_id, "진행 중", "progress")
+    add_edge(state.player_id, player_location_id, STORY_EDGE_LABEL_CURRENT, "current_pin")
+    add_edge(state.player_id, state.active_subject_id, STORY_EDGE_LABEL_OBSERVE, "observe")
+    add_edge(state.player_id, state.active_quest_id, STORY_EDGE_LABEL_PROGRESS, "progress")
 
     for location_id in visible_location_ids:
         for edge in connections_of(graph, location_id):
-            add_edge(location_id, edge.to_id, "이동", "move")
+            add_edge(location_id, edge.to_id, STORY_EDGE_LABEL_MOVE, "move")
 
     for character_id in visible_character_ids:
         if character_id == state.player_id:
             continue
         loc_id = location_of(graph, character_id)
         if loc_id == player_location_id:
-            add_edge(character_id, loc_id, "등장", "meet")
+            add_edge(character_id, loc_id, STORY_EDGE_LABEL_MEET, "meet")
 
     for quest_id in quest_ids:
-        add_edge(giver_of(graph, quest_id), quest_id, "의뢰", "quest_giver")
+        add_edge(giver_of(graph, quest_id), quest_id, STORY_EDGE_LABEL_QUEST_GIVER, "quest_giver")
         for target_id in trigger_targets_of(graph, quest_id):
-            add_edge(target_id, quest_id, "목표", "quest_target")
+            add_edge(target_id, quest_id, STORY_EDGE_LABEL_QUEST_TARGET, "quest_target")
 
     count_by_kind: dict[str, int] = {
         "hero": 0,
@@ -303,13 +316,13 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
     summary = " · ".join(
         part
         for part in [
-            "주인공" if player is not None else None,
-            f"현재 위치 {state.locations[player_location_id].name}"
+            STORY_SUMMARY_HERO if player is not None else None,
+            story_summary_location(state.locations[player_location_id].name)
             if player_location_id in state.locations
             else None,
-            f"퀘스트 {active_quest.title}" if active_quest is not None else None,
-            f"등장인물 {count_by_kind['target'] + count_by_kind['subject']}",
-            f"장소 {count_by_kind['location'] + count_by_kind['place']}",
+            story_summary_quest(active_quest.title) if active_quest is not None else None,
+            story_summary_entities(count_by_kind['target'] + count_by_kind['subject']),
+            story_summary_places(count_by_kind['location'] + count_by_kind['place']),
         ]
         if part
     )
@@ -317,5 +330,5 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
     return {
         "nodes": list(nodes.values()),
         "edges": list(edges.values()),
-        "summary": summary or "스토리 데이터 없음",
+        "summary": summary or STORY_SUMMARY_EMPTY,
     }
