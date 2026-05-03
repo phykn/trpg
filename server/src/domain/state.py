@@ -16,6 +16,7 @@ from ..domain.memory import (
     DialoguePair,
     LogEntry,
     PendingCheck,
+    PendingGrowth,
     TurnLogEntry,
 )
 
@@ -58,6 +59,7 @@ class GameState(BaseModel):
     pending_check: PendingCheck | None = None
     combat_state: CombatState | None = None
     pending_skill_candidates: list[Skill] = []
+    pending_growth: PendingGrowth | None = None
 
     # Hand-off to next narrate (e.g. `"downed_recovered"`); narrate consumes + clears so it doesn't echo.
     previous_phase_signal: str | None = None

@@ -38,6 +38,10 @@ class PendingCheck(BaseModel):
     created_at: str
 
 
+class PendingGrowth(BaseModel):
+    stage: Literal["asking_stat"]
+
+
 class GMLogEntry(BaseModel):
     id: int
     kind: Literal["gm"]
