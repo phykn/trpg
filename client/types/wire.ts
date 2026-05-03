@@ -81,3 +81,25 @@ export type StreamEvent =
   | { type: 'combat_end'; data: unknown }
   | { type: 'done'; data: Record<string, never> }
   | { type: 'error'; data: { message: string; code: string } };
+
+export type StatKey = 'STR' | 'DEX' | 'CON' | 'INT' | 'WIS' | 'CHA';
+
+export type SkillCandidate = {
+  id: string;
+  name: string;
+  description: string;
+  type: 'attack' | 'heal' | 'buff' | 'debuff';
+  target: 'self' | 'single' | 'area';
+  primary_stat: StatKey;
+  special_effect: string;
+};
+
+export type LevelUpPreviewResponse = {
+  skill_candidates: SkillCandidate[];
+};
+
+export type LevelUpRequest = {
+  stat_up: StatKey;
+  skill_id: string | null;
+  think: boolean;
+};
