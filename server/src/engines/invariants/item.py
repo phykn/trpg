@@ -194,12 +194,17 @@ def enforce_item_locality(
                 (loc_id, "location_items", loc_id, None)
             )
 
+    # Keeper precedence: any character holding (inventory or equipment) beats a location.
+    # Without this, the previous alphabetical-container-id sort could pick `locations/aaa`
+    # over `characters/zzz`, deleting an item out of the player's inventory after a loot.
+    # Character-vs-character conflicts still fall back to alphabetical container id.
+    kind_priority = {"char_equipment": 0, "char_inventory": 0, "location_items": 1}
+
     warnings: list[str] = []
     for item_id, places in locations.items():
         if len(places) <= 1:
             continue
-        # Sort by sort_key (alphabetical container id) then by kind+slot for stability.
-        places_sorted = sorted(places, key=lambda p: (p[0], p[1], p[3] or ""))
+        places_sorted = sorted(places, key=lambda p: (kind_priority[p[1]], p[0], p[3] or ""))
         keeper = places_sorted[0]
         losers = places_sorted[1:]
 

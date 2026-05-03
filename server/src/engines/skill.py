@@ -51,7 +51,12 @@ def _resolve_targets(
         tid = requested[0]
         if tid not in state.characters:
             raise SkillInvalid(f"unknown target: {tid}")
-        return [state.characters[tid]]
+        target = state.characters[tid]
+        # Dead targets break the alive=False/hp>0 invariant if heal/buff lands on them,
+        # and route into _kill again for attack skills. Treat as invalid up front.
+        if not target.alive:
+            raise SkillInvalid(f"target {tid} is incapacitated")
+        return [target]
 
     # area: every living character in the same location (excluding the actor).
     if actor.location_id is None:

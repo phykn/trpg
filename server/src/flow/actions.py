@@ -94,7 +94,10 @@ def apply_attack_action(
             dirty=dirty.entities,
         )
         combat_engine.record_damage(state, attacker_id, outcome.damage)
-    apply_combat_affinity_drop(state, attacker_id, target_id, dirty=dirty.entities)
+        # Drop affinity only when the strike actually lands. Whiffed swings still register
+        # as hostile intent narratively, but compounding the drop on misses pushes NPCs
+        # past the trade-gating threshold far faster than the design intends.
+        apply_combat_affinity_drop(state, attacker_id, target_id, dirty=dirty.entities)
     killed = not target.alive
     if killed:
         award_kill_xp(state, attacker_id, target_id, dirty=dirty.entities)

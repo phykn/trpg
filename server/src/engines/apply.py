@@ -178,7 +178,9 @@ def _affinity_delta(grade: Grade, intent: Intent) -> int:
         "critical_failure": -RULES.social.affinity_critical,
     }[grade]
     if intent == "hostile":
-        return -base
+        # Cap at 0: a botched threat shouldn't *endear* the actor to the target.
+        # Without this, hostile + critical_failure flipped to +10 (same as a successful befriend).
+        return min(0, -base)
     if intent == "deceptive":
         if grade in ("critical_success", "success", "partial_success"):
             return 0
