@@ -9,7 +9,9 @@ import {
   type TextInputSubmitEditingEventData,
 } from 'react-native';
 
-import { colors, shadow } from '@/design/tokens';
+import { colors } from '@/design/tokens';
+
+import { Surface } from '@/components/ui';
 
 import { SendButton } from './SendButton';
 import { StopButton } from './StopButton';
@@ -91,9 +93,9 @@ export function Composer({ input, setInput, onSend, onStop, streaming, think, on
   };
 
   return (
-    <View
-      className="mx-5 mt-1.5 bg-canvas-subtle rounded-xl px-3 pt-2 pb-2 gap-1"
-      style={shadow.floating}
+    <Surface
+      variant="floating"
+      className="mx-5 mt-1.5 px-3 pt-2 pb-2 gap-1"
     >
       <TextInput
         ref={textInputRef}
@@ -132,6 +134,6 @@ export function Composer({ input, setInput, onSend, onStop, streaming, think, on
           <SendButton enabled={hasText} onPress={submit} />
         )}
       </View>
-    </View>
+    </Surface>
   );
 }
