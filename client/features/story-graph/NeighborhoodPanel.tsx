@@ -128,6 +128,7 @@ export function NeighborhoodPanel({
     >
       <StoryGraphCanvas
         graph={visibleGraph}
+        height={260}
         accessibilityLabel={accessibilityLabel}
         selectedNodeId={selectedNodeId}
         onNodeSelect={onNodeSelect}

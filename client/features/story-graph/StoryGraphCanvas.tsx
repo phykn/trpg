@@ -10,6 +10,7 @@ export function StoryGraphCanvas({
   onNodeSelect,
 }: {
   graph: StoryGraphModel;
+  height?: number;
   accessibilityLabel?: string;
   selectedNodeId?: string | null;
   onNodeSelect?: (nodeId: string | null) => void;
