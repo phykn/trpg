@@ -87,7 +87,7 @@ async def emit_combat_cinematic_and_end(
         for h in result.enemy_hits
         if not h.killed
     ]
-    # When player_revived, the "가까스로 일어남 (Revival N/M)" line in summary already serves as the end label — appending end_text would duplicate.
+    # When player_revived, the "가까스로 일어남 (소생 N/M)" line in summary already serves as the end label — appending end_text would duplicate.
     if result.player_revived:
         combined = summary or format_combat_end_text(result.outcome, enemies_remaining)
     else:

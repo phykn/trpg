@@ -58,7 +58,7 @@ def test_revival_two_lines():
     lines = [l for l in text.strip().split("\n") if l.strip() and l != "전투 결과"]
     assert len(lines) == 2
     assert "0" in lines[0] and "사망 직전" in lines[0]
-    assert ("Revival 2" in lines[1] or "소생 2" in lines[1]) and "1" in lines[1]
+    assert "소생 2" in lines[1] and "1" in lines[1]
 
 
 def test_kill_event():
