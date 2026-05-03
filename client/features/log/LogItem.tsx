@@ -68,22 +68,6 @@ function GMNarration({ text }: { text: string }) {
       }}
     >
       {paragraphs.map((p, i) => {
-        const dropcap = i === 0 && p.length >= 20;
-        if (dropcap) {
-          const first = Array.from(p)[0];
-          const rest = p.slice(first.length);
-          return (
-            <Text key={i} className="font-serif text-narration text-fg-default">
-              <Text
-                className="font-sans-semibold text-fg-default"
-                style={{ fontSize: 30, lineHeight: 34 }}
-              >
-                {first}
-              </Text>
-              <NarrationParts segments={splitDialogue(rest)} />
-            </Text>
-          );
-        }
         return (
           <Text
             key={i}
