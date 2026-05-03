@@ -266,6 +266,10 @@ class Quest(BaseModel):
     triggers_met: list[bool] = []
     fail_triggers_met: list[bool] = []
 
+    # Set by the quest engine on terminal transition; None until then.
+    fail_reason: str | None = None
+    success_reason: str | None = None
+
 
 class ChapterProgress(BaseModel):
     done: int = 0

@@ -5,6 +5,7 @@ from __future__ import annotations
 from ..domain.entities import Quest
 from ..domain.errors import InventoryInvalid
 from ..domain.state import GameState
+from ..ontology.queries import giver_of, kill_targets_of
 from .inventory.carry import check_can_carry
 
 DirtySet = set[tuple[str, str]] | None
@@ -130,6 +131,7 @@ def check_quests(
 ) -> list[str]:
     """Evaluate quests against an event; returns ids whose status changed. Triggers are single-fire."""
     changed: list[str] = []
+    graph = state.graph()
     for q in state.quests.values():
         if q.status != "active":
             continue
@@ -163,6 +165,12 @@ def check_quests(
         if dirty is not None:
             dirty.add(("quests", q.id))
 
+    # Death cascade: giver death → fail; kill-target death → complete (objective_killed).
+    # Runs as a second pass so it can also catch quests with no explicit triggers.
+    # Giver-dead overrides a trigger-completed result (fail wins).
+    if event_type == "character_death" and target_id is not None:
+        _cascade_death(state, graph, target_id, changed, dirty)
+
     if changed:
         _maybe_unlock_dependents(state, dirty)
     update_chapter_progress(state, dirty)
@@ -170,3 +178,41 @@ def check_quests(
     _maybe_unlock_chapters(state, dirty)
     _refresh_active_quest_id(state)
     return changed
+
+
+def _cascade_death(
+    state: GameState,
+    graph,
+    dead_id: str,
+    changed: list[str],
+    dirty: DirtySet,
+) -> None:
+    """Cascade entity death onto quest statuses without requiring explicit triggers.
+
+    - Giver died → active quest fails (fail_reason='giver_dead'); overrides a
+      same-turn trigger-completion so fail always wins.
+    - Kill-target died → if quest is already completed this turn via its trigger,
+      annotate success_reason='objective_killed'. If somehow still active and this
+      entity is its only kill target, complete it now.
+    """
+    for q in state.quests.values():
+        giver = giver_of(graph, q.id)
+        kill_targets = kill_targets_of(graph, q.id)
+        is_giver_dead = giver == dead_id
+        is_kill_target_dead = dead_id in kill_targets
+
+        if is_giver_dead and q.status in ("active", "completed"):
+            if q.status == "completed" and q.id in changed:
+                # Undo same-turn completion so fail wins.
+                changed.remove(q.id)
+            q.status = "failed"
+            q.fail_reason = "giver_dead"
+            if q.id not in changed:
+                changed.append(q.id)
+            if dirty is not None:
+                dirty.add(("quests", q.id))
+
+        elif is_kill_target_dead and not is_giver_dead:
+            if q.status == "completed" and q.id in changed and q.success_reason is None:
+                # Trigger path already completed it this turn — annotate reason.
+                q.success_reason = "objective_killed"
