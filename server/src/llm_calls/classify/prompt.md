@@ -49,9 +49,13 @@ Input fields (in `surroundings`):
 
 - **Named enemy** (들쥐·고블린·산적·도적 — specific species/role): if a matching id exists in `entities`, use it. If no match: (a) if the role is contextually plausible for location/world (city → 경비병·상인 호위, forest → 도적·늑대, dungeon → 고블린, frontier village → 들쥐·산적) → `summon_combat` (lazy spawn); (b) implausible (medieval plaza → dragon/alien) → `pass` (narrate absorbs as "허공을 가르지만 적은 보이지 않는다"). **Never fall back to recent_npc/single-alive-NPC when a named enemy fails to match** — picking a differently-named NPC standing in the plaza as the attack target is a critical bug (friendly NPC death, etc.).
 
-- **Unnamed** ("공격한다"·"찌른다" only): if hostile/neutral NPCs exist in entities — prefer recent_npc when it's hostile/neutral, otherwise the first hostile/neutral. If 0 hostile/neutral NPCs (only friendly, or no NPCs at all) → `pass` (friendly NPCs are never combat targets — narrate absorbs as "허공을 가른다"·"아무도 적이 아니다").
+- **Unnamed** ("공격한다"·"찌른다" only, **no target name**): if hostile/neutral NPCs exist in entities — prefer recent_npc when it's hostile/neutral, otherwise the first hostile/neutral. If 0 hostile/neutral NPCs (only friendly, or no NPCs at all) → `pass` (no name + only friendly NPCs = ambiguous attacker intent — narrate absorbs as "허공을 가른다"·"아무도 적이 아니다").
 
-Semantic validation is a backstop that rejects friendly NPC / location id / player / item as combat targets.
+**Word-strength invariant**: the verb's graphic intensity does not change classification. "공격한다" and "살해한다" and "베어버린다" and "죽인다" are all identical attack signals — word strength (강도 무관) is irrelevant. Never demote a graphic verb to `pass` or `roll` because it sounds more violent.
+
+**Explicitly-named friendly NPC target + attack verb → still `combat`**: if input names a friendly NPC and uses an attack verb, produce `CombatAction` — the engine handles the assault and flips disposition. Do not pre-filter by friendliness. ("에드릭을 공격한다" or "촌장을 살해한다" — friendly NPC, but the player named them and used an attack verb → `combat`.) The judge does not decide whether the attack is morally appropriate; it classifies intent.
+
+Semantic validation is a backstop that rejects location id / player / item as combat targets (not friendly NPCs — those must be allowed through).
 
 **Scene prop rule**: inanimate environment elements (fountains/statues/doors/windows/desks/trees/walls) are accepted as scene-described props even without an `entities` entry. Actions needing a check (break/climb/search/scrutinize) → `roll`(STR/DEX/WIS), `targets:[location.id]`, prop name in `reason`. Light interaction (touch/knock/toss-coin) → `pass`. If a named character/item isn't in `entities`, drop into § Fallback rules § targets.
 
@@ -124,6 +128,9 @@ Approaching a prop/NPC in the same location ("다가간다") is not movement —
 | 공격한다 (no name, recent_npc=drunk_01 hostile/neutral) | `{"action":"combat","targets":["drunk_01"]}` |
 | 공격한다 (no name, alive NPCs = 정운 friendly only) | `{"action":"pass"}` (no combat when only friendly NPCs present) |
 | 취객을 찌른다 (drunk_01 in entities) | `{"action":"combat","targets":["drunk_01"]}` |
+| 에드릭을 공격한다 (에드릭 friendly NPC in entities) | `{"action":"combat","targets":["에드릭_id"]}` (friendly target + attack verb → combat; engine resolves assault) |
+| 에드릭을 베어버린다 (에드릭 friendly NPC in entities) | `{"action":"combat","targets":["에드릭_id"]}` (graphic verb, friendly target — word strength irrelevant, still combat) |
+| 촌장을 살해한다 (촌장 friendly NPC in entities) | `{"action":"combat","targets":["촌장_id"]}` (살해 = 공격 in classification; word strength does not change action) |
 | 화염구를 던진다 (with `skills=[{id:"fireball"}]`) | `{"action":"combat","targets":["..."],"skill_id":"fireball"}` |
 | 맨손으로 친다 | `{"action":"combat","targets":["..."]}` |
 
