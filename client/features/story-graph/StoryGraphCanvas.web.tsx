@@ -71,12 +71,14 @@ function toElements(
   overrides: Record<string, NodeOverride> | undefined,
   unseenNodeIds: Set<string> | undefined,
   cached: Record<string, { x: number; y: number }>,
+  centerNodeId: string | undefined,
 ): ElementDefinition[] {
   return [
     ...graph.nodes.map((node) => {
       const override = overrides?.[node.id];
       const cachedPos = cached[node.id];
       const seed = cachedPos ?? seedFromConnected(node.id, graph.edges, cached);
+      const isCurrent = centerNodeId !== undefined && node.id === centerNodeId;
       return {
         data: {
           id: node.id,
@@ -90,7 +92,7 @@ function toElements(
         },
         position: seed,
         locked: cachedPos !== undefined,
-        classes: node.kind,
+        classes: `${node.kind} ${isCurrent ? 'current' : ''}`.trim(),
       };
     }),
     ...graph.edges.map((edge) => ({
@@ -144,7 +146,7 @@ export function StoryGraphCanvas({
 
     const cy = cytoscape({
       container,
-      elements: toElements(graph, nodeOverrides, unseenNodeIds, positionsRef.current),
+      elements: toElements(graph, nodeOverrides, unseenNodeIds, positionsRef.current, centerNodeId),
       autoungrabify: true,
       hideEdgesOnViewport: false,
       minZoom: 0.2,
@@ -199,6 +201,16 @@ export function StoryGraphCanvas({
           style: {
             'border-color': colors.accent.fg,
             'border-width': 4,
+          },
+        },
+        {
+          selector: 'node.current',
+          style: {
+            'border-color': colors.accent.fg,
+            'border-width': 4,
+            'overlay-color': colors.accent.fg,
+            'overlay-opacity': 0.12,
+            'overlay-padding': 4,
           },
         },
         {
