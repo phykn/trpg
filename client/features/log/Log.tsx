@@ -183,6 +183,7 @@ export function Log({
           ? <SuggestionChips items={suggestions} onPick={onPickSuggestion} />
           : null
       }
+      ItemSeparatorComponent={() => <View style={{ height: spacing[4] }} />}
       onLayout={(ev) => setViewportH(ev.nativeEvent.layout.height)}
       onContentSizeChange={onContentSizeChange}
       contentContainerStyle={{
