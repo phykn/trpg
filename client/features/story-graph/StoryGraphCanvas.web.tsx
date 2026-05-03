@@ -105,7 +105,7 @@ function toElements(
 
 export function StoryGraphCanvas({
   graph,
-  height = 260,
+  height = 320,
   accessibilityLabel = '현재 스토리 그래프',
   selectedNodeId = null,
   onNodeSelect,
@@ -147,7 +147,7 @@ export function StoryGraphCanvas({
       elements: toElements(graph, nodeOverrides, unseenNodeIds, positionsRef.current),
       autoungrabify: true,
       hideEdgesOnViewport: false,
-      minZoom: 0.55,
+      minZoom: 0.2,
       maxZoom: 1.8,
       textureOnViewport: true,
       wheelSensitivity: 0.18,
@@ -213,10 +213,10 @@ export function StoryGraphCanvas({
           selector: 'edge',
           style: {
             'curve-style': 'bezier',
-            'line-color': colors.fg.subtle,
+            'line-color': colors.border.default,
             'overlay-opacity': 0,
             'target-arrow-shape': 'none',
-            width: 1.8,
+            width: 2.4,
           },
         },
       ],
@@ -253,9 +253,9 @@ export function StoryGraphCanvas({
                   name: 'fcose',
                   animate: false,
                   fit: true,
-                  idealEdgeLength: 96,
-                  nodeRepulsion: 6000,
-                  padding: 14,
+                  idealEdgeLength: 72,
+                  nodeRepulsion: 4500,
+                  padding: 12,
                   randomize: false,
                   quality: 'default',
                   uniformNodeDimensions: true,
@@ -280,7 +280,7 @@ export function StoryGraphCanvas({
       });
     }
     // layout runs synchronously when animate:false, so positions are ready here
-    cy.fit(undefined, 16);
+    cy.fit(undefined, 12);
     if (centerNodeId) {
       const node = cy.getElementById(centerNodeId);
       if (node.length > 0) {
