@@ -1,11 +1,7 @@
-import { characterMeta, formatInventoryItem, joinOrDash } from '@/components/ui';
+import { characterMeta, formatInventoryItem, joinOrDash, withDeath } from '@/components/ui';
 import type { PanelSlot } from '@/features/info-panel';
 
 import type { EquipItem, Hero } from './types';
-
-function withDeath(name: string, alive: boolean | undefined): string {
-  return alive === false ? `${name} (죽음)` : name;
-}
 
 export function buildHeroSlot(hero: Hero): PanelSlot {
   const equipped = Object.values(hero.equipment).filter((it): it is EquipItem => it !== null);

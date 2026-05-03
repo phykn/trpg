@@ -1,12 +1,8 @@
-import { DASH, characterMeta, formatInventoryItem, joinOrDash } from '@/components/ui';
+import { DASH, characterMeta, formatInventoryItem, joinOrDash, withDeath } from '@/components/ui';
 import type { EquipItem } from '@/features/hero';
 import type { PanelSlot } from '@/features/info-panel';
 
 import type { Subject } from './types';
-
-function withDeath(name: string, alive: boolean | undefined): string {
-  return alive === false ? `${name} (죽음)` : name;
-}
 
 export function buildSubjectSlot(subject: Subject | null): PanelSlot {
   if (!subject) {

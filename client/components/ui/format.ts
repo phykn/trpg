@@ -16,3 +16,7 @@ export function characterMeta(level: number, raceJob: string, gender: string): s
   if (gender) parts.push(gender);
   return parts.join(SEP);
 }
+
+export function withDeath(name: string, alive: boolean | undefined): string {
+  return alive === false ? `${name} (죽음)` : name;
+}
