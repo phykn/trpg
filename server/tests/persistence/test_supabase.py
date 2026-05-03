@@ -193,10 +193,13 @@ async def test_copy_seed_into_game_inserts_entities():
                 return {"human": Race(id="human", name="인간", description="...")}
             return {}
 
-    await repo.copy_seed_into_game(_FakeScenario(), "default", "g_seed_test")
+    await repo.copy_seed_into_game(_FakeScenario(), "default", "g_seed_test", "player_01")
 
     # games row created first (FK precondition).
-    assert any(r["game_id"] == "g_seed_test" for r in db.rows["games"])
+    games_row = next(r for r in db.rows["games"] if r["game_id"] == "g_seed_test")
+    # Stub meta must be _Meta-valid so a crash before save_meta doesn't leave
+    # the game permanently unloadable.
+    assert games_row["meta"]["player_id"] == "player_01"
 
     inserted_kinds = {r["kind"] for r in db.rows["entities"]}
     assert inserted_kinds == {"characters", "races"}

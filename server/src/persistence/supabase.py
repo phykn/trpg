@@ -191,13 +191,16 @@ class SupabaseSaveRepo:
         )
 
     async def copy_seed_into_game(
-        self, scenario_repo: ScenarioRepo, profile: str, game_id: str
+        self, scenario_repo: ScenarioRepo, profile: str, game_id: str, player_id: str
     ) -> None:
         """Bulk-INSERT seed entities as the new game's starting rows. world.md / start.json / player_template / profile stay seed-only."""
         # entities has FK → games, so create the games row first; this keeps the method independently consistent.
+        # Stub meta must validate against _Meta in case init crashes before save_meta lands;
+        # otherwise load_game would raise PersistenceFailed and the game_id would be permanently unrecoverable.
+        stub_meta = _Meta(game_id=game_id, profile=profile, player_id=player_id).model_dump(mode="json")
         await self._db.upsert(
             "games",
-            [{"game_id": game_id, "meta": {"game_id": game_id, "profile": profile}}],
+            [{"game_id": game_id, "meta": stub_meta}],
             on_conflict="game_id",
         )
 

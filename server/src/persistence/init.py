@@ -141,7 +141,7 @@ async def init_game(
         active_quest_id=active_quest_id,
     )
 
-    await save_repo.copy_seed_into_game(scenario_repo, profile_name, state.game_id)
+    await save_repo.copy_seed_into_game(scenario_repo, profile_name, state.game_id, player_id)
     # Persist the player character separately — it isn't part of the seed.
     await save_repo.save_entity(state, "characters", player_id)
     await save_repo.save_meta(state)

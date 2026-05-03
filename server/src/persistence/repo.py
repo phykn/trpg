@@ -43,7 +43,7 @@ class SaveRepo(Protocol):
     async def load_game(self, game_id: str) -> GameState: ...
 
     async def copy_seed_into_game(
-        self, scenario_repo: "ScenarioRepo", profile: str, game_id: str
+        self, scenario_repo: "ScenarioRepo", profile: str, game_id: str, player_id: str
     ) -> None: ...
 
 

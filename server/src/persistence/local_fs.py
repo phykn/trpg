@@ -43,8 +43,11 @@ class LocalFsSaveRepo:
         return store.load_game(self.saves_dir, game_id)
 
     async def copy_seed_into_game(
-        self, scenario_repo: ScenarioRepo, profile: str, game_id: str
+        self, scenario_repo: ScenarioRepo, profile: str, game_id: str, player_id: str
     ) -> None:
+        # player_id is unused here — LocalFs has no stub-meta hazard because meta
+        # is only written by save_meta; entity files don't reference it.
+        del player_id
         game_root = store._game_dir(self.saves_dir, game_id)
         game_root.mkdir(parents=True, exist_ok=True)
         for kind, model_cls in store._ENTITY_MODELS.items():
