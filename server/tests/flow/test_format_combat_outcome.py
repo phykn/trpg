@@ -44,6 +44,20 @@ def test_format_combat_revived_uses_korean_label():
     assert "HP 0→1" in out
 
 
+def test_format_combat_revived_last_chance_label():
+    out = format_combat_revived(coins_after=0, coins_max=3, hp_after=1)
+    assert "최후의 호흡" in out
+    assert "(소생 0/3" in out
+    assert "HP 0→1" in out
+
+
+def test_format_combat_revived_normal_label():
+    out = format_combat_revived(coins_after=2, coins_max=3, hp_after=1)
+    assert "최후의 호흡" not in out
+    assert "가까스로 일어남" in out
+    assert "(소생 2/3" in out
+
+
 def _result(
     *,
     enemy_hits: list[EnemyHit] | None = None,

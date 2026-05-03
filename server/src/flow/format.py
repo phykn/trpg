@@ -265,6 +265,8 @@ def format_combat_player_downed(name: str, damage: int, hp_before: int) -> str:
 
 def format_combat_revived(coins_after: int, coins_max: int, hp_after: int) -> str:
     """Player revival: dropped to 0, came back at hp_after."""
+    if coins_after == 0:
+        return f"최후의 호흡 (소생 0/{coins_max}, HP 0→{hp_after})"
     return f"가까스로 일어남 (소생 {coins_after}/{coins_max}, HP 0→{hp_after})"
 
 
