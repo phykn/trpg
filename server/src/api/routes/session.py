@@ -2,8 +2,9 @@
 (turn / roll / intro)."""
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import ValidationError
 
-from ...domain.errors import ProfileMalformed, ProfileNotFound, RaceNotFound
+from ...domain.errors import LLMUnavailable, ProfileMalformed, ProfileNotFound, RaceNotFound
 from ...domain.state import GameState
 from ...flow.intro import run_intro
 from ...flow.level_up import run_level_up
@@ -110,13 +111,13 @@ async def session_intro(
 
 
 @router.get("/session/{game_id}/level_up_preview", response_model=LevelUpPreviewResponse)
-async def level_up_preview(
+async def session_level_up_preview(
     state: GameState = Depends(get_state),
     llm: LLMClient = Depends(get_llm),
 ) -> LevelUpPreviewResponse:
     try:
         candidates = await recommend_skill_candidates(llm, state)
-    except Exception:
+    except (ValidationError, LLMUnavailable, OSError, TimeoutError):
         # LLM failure → empty list (client treats this as 'no skill choice required').
         candidates = []
     return LevelUpPreviewResponse(
