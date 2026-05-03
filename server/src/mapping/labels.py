@@ -85,3 +85,55 @@ _TIER_TONE: dict[str, str | None] = {
 
 def difficulty_badge(tier: str) -> dict:
     return {"label": tier, "tone": _TIER_TONE.get(tier)}
+
+
+# ----- Story-graph edge labels (rendered on client map) -----
+
+STORY_EDGE_LABEL_CURRENT = "현재 위치"
+STORY_EDGE_LABEL_OBSERVE = "주시"
+STORY_EDGE_LABEL_PROGRESS = "진행 중"
+STORY_EDGE_LABEL_MOVE = "이동"
+STORY_EDGE_LABEL_MEET = "등장"
+STORY_EDGE_LABEL_QUEST_GIVER = "의뢰"
+STORY_EDGE_LABEL_QUEST_TARGET = "목표"
+
+
+# ----- Story-graph summary line parts -----
+
+STORY_SUMMARY_HERO = "주인공"
+STORY_SUMMARY_EMPTY = "스토리 데이터 없음"
+
+
+def story_summary_quest(title: str) -> str:
+    return f"퀘스트 {title}"
+
+
+def story_summary_location(name: str) -> str:
+    return f"현재 위치 {name}"
+
+
+def story_summary_entities(count: int) -> str:
+    return f"등장인물 {count}"
+
+
+def story_summary_places(count: int) -> str:
+    return f"장소 {count}"
+
+
+# ----- Default fallback for action reasons surfaced in the GM log -----
+
+ROLL_REASON_DEFAULT = "행동 판정"
+
+
+# ----- NPC state tags surfaced to the judge prompt -----
+
+def state_tag_friendly(affinity: int) -> str:
+    return f"우호적(affinity {affinity})"
+
+
+def state_tag_wary(affinity: int) -> str:
+    return f"경계중(affinity {affinity})"
+
+
+def state_tag_wounded(hp_pct: int) -> str:
+    return f"부상(hp {hp_pct}%)"
