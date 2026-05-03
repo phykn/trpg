@@ -97,7 +97,7 @@ export function StoryGraphCanvas({
       container,
       elements: toElements(graph, nodeOverrides, unseenNodeIds),
       autoungrabify: true,
-      hideEdgesOnViewport: true,
+      hideEdgesOnViewport: false,
       minZoom: 0.55,
       maxZoom: 1.8,
       textureOnViewport: true,
