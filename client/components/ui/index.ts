@@ -1,5 +1,6 @@
 export { Bar } from './Bar';
 export { CenterMessage } from './CenterMessage';
+export { Chip } from './Chip';
 export { ConfirmDialog } from './ConfirmDialog';
 export { ErrorState } from './ErrorState';
 export { ExpandGroup, useExpandGroup } from './ExpandGroup';
