@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT / "server"))
 sys.path.insert(0, str(ROOT))
 
 # sys.path must be set first; decompose.py transitively imports src.llm
-from agency.story.harness.decompose import DecomSetup, DecomCast, _check_setup, _check_cast  # noqa: E402
+from agency.story.harness.decompose import DecomSetup, DecomCast, DecomArc, _check_setup, _check_cast, _check_arc  # noqa: E402
 from agency.story.harness._common import EntityWriterError  # noqa: E402
 
 # env loading mirrors run_qa.py / run_story.py so SUPABASE_* / BASE_URL
@@ -53,6 +53,15 @@ def _build_parser() -> argparse.ArgumentParser:
     sp_cast.add_argument("setup_json", help="path to setup.json")
     sp_cast.add_argument("cast_json", help="path to cast.json")
     sp_cast.set_defaults(func=_cmd_decompose_cast)
+    # decompose-arc
+    sp_arc = sub.add_parser(
+        "decompose-arc",
+        help="DecomArc JSON 검증 (Phase C). setup + cast 컨텍스트 필요.",
+    )
+    sp_arc.add_argument("setup_json", help="path to setup.json")
+    sp_arc.add_argument("cast_json", help="path to cast.json")
+    sp_arc.add_argument("arc_json", help="path to arc.json")
+    sp_arc.set_defaults(func=_cmd_decompose_arc)
     return parser
 
 
@@ -69,6 +78,24 @@ def _fail(cmd: str, e: Exception) -> int:
         prefix = f"{type(e).__name__}: "
     print(f"{cmd} failed: {prefix}{e}", file=sys.stderr)
     return 1
+
+
+def _cmd_decompose_arc(args: argparse.Namespace) -> int:
+    try:
+        setup = DecomSetup.model_validate_json(
+            Path(args.setup_json).read_text(encoding="utf-8")
+        )
+        cast = DecomCast.model_validate_json(
+            Path(args.cast_json).read_text(encoding="utf-8")
+        )
+        arc = DecomArc.model_validate_json(
+            Path(args.arc_json).read_text(encoding="utf-8")
+        )
+        _check_arc(setup, cast, arc)
+    except Exception as e:
+        return _fail("decompose-arc", e)
+    print("OK")
+    return 0
 
 
 def _cmd_decompose_cast(args: argparse.Namespace) -> int:
