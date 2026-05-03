@@ -80,6 +80,10 @@ def _build_parser() -> argparse.ArgumentParser:
         "--decomp", default=None,
         help="decompose dir (setup/cast/arc.json). 있으면 그 명단도 valid ID 풀에 합침",
     )
+    sp_chk.add_argument(
+        "--skeleton", action="store_true",
+        help="풀-의존 검사 건너뜀 (character의 inventory/skill 풀 검증을 sweep까지 미룸)",
+    )
     sp_chk.set_defaults(func=_cmd_check_entity)
     return parser
 
@@ -141,7 +145,7 @@ def _cmd_check_entity(args: argparse.Namespace) -> int:
         existing_ids.discard(entity.id)
         _check_id(entity, existing_ids, force_id=None)
         spec.check_refs(entity, refs)
-        _check_entity_invariants(entity, sd, skeleton=False)
+        _check_entity_invariants(entity, sd, skeleton=args.skeleton)
     except Exception as e:
         return _fail("check-entity", e)
     print("OK")
