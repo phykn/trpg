@@ -11,6 +11,7 @@ from ..llm_calls.narrate import (
 )
 from ..domain.memory import GMLogEntry
 from ..engines.apply import apply_changes
+from ..engines.invariants import enforce_item_locality
 from ..llm.client import LLMClient
 from ..ontology.graph import GameGraph
 from ..ontology.player_view import build_player_view
@@ -155,6 +156,10 @@ async def consume_narrate(
     yield {"type": "suggestions", "data": {"items": list(final.output.suggestions)}}
 
     apply_changes(state, final.output.state_changes, dirty.entities)
+    locality_warnings = enforce_item_locality(state, dirty=dirty.entities)
+    for warning in locality_warnings:
+        gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=warning)
+        push_log_entry(state, gm_log, dirty)
     state.invalidate_graph()
     push_turn_log(state, target_for_log, final.output.turn_summary, dirty)
     if dialogue_input is not None:

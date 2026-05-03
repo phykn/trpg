@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from typing import get_args
+from typing import TYPE_CHECKING, get_args
+
+if TYPE_CHECKING:
+    from ...domain.state import GameState
 
 from ...domain.entities import (
     Character,
@@ -95,3 +98,141 @@ def check_inventory(c: Character, items: dict[str, Item]) -> list[str]:
         )
 
     return out
+
+
+# ----- Runtime item-locality guard (defense against LLM-emitted state_change errors) -----
+
+def check_item_locality(state: "GameState") -> list[str]:
+    """Detect items appearing in 2+ locations (inventory, equipment, location items).
+
+    An item equipped by its own owner counts as ONE location (inventory + own equipment is normal).
+    Returns a list of one-line violation messages, one per duplicated item.
+    """
+    from ...domain.entities import EQUIPMENT_SLOTS
+
+    # Map item_id → list of (sort_key, location_label) pairs.
+    locations: dict[str, list[tuple[str, str]]] = {}
+
+    def _add(item_id: str, sort_key: str, label: str) -> None:
+        locations.setdefault(item_id, []).append((sort_key, label))
+
+    for char_id in sorted(state.characters):
+        char = state.characters[char_id]
+        equipped: set[str] = set()
+        for slot in EQUIPMENT_SLOTS:
+            eq_id = getattr(char.equipment, slot)
+            if eq_id is not None:
+                equipped.add(eq_id)
+        for item_id in char.inventory_ids:
+            label = f"characters/{char_id}/inventory"
+            _add(item_id, char_id, label)
+        for slot in EQUIPMENT_SLOTS:
+            eq_id = getattr(char.equipment, slot)
+            if eq_id is None:
+                continue
+            # Equipment by own owner is not a separate location — already counted via inventory above.
+            if eq_id in char.inventory_ids:
+                continue
+            label = f"characters/{char_id}/equipment.{slot}"
+            _add(eq_id, char_id, label)
+
+    for loc_id in sorted(state.locations):
+        loc = state.locations[loc_id]
+        for item_id in loc.item_ids:
+            label = f"locations/{loc_id}/items"
+            _add(item_id, loc_id, label)
+
+    violations: list[str] = []
+    for item_id, places in locations.items():
+        if len(places) <= 1:
+            continue
+        item = state.items.get(item_id)
+        name = item.name if item is not None else item_id
+        place_labels = ", ".join(p[1] for p in sorted(places))
+        violations.append(
+            f"item {item_id!r} ({name!r}) duplicated across: {place_labels}"
+        )
+    return violations
+
+
+def enforce_item_locality(
+    state: "GameState",
+    *,
+    dirty: set[tuple[str, str]] | None = None,
+) -> list[str]:
+    """Detect duplicated items and auto-repair by keeping the alphabetically-first
+    location and clearing the rest. Returns one warning string per duplication
+    detected (and corrected).
+    """
+    from ...domain.entities import EQUIPMENT_SLOTS
+
+    # Tuple shape: (sort_key, kind, container_id, slot_or_none)
+    Occurrence = tuple[str, str, str, str | None]
+    locations: dict[str, list[Occurrence]] = {}
+
+    for char_id in sorted(state.characters):
+        char = state.characters[char_id]
+        for item_id in char.inventory_ids:
+            locations.setdefault(item_id, []).append(
+                (char_id, "char_inventory", char_id, None)
+            )
+        for slot in EQUIPMENT_SLOTS:
+            eq_id = getattr(char.equipment, slot)
+            if eq_id is None:
+                continue
+            if eq_id in char.inventory_ids:
+                continue
+            locations.setdefault(eq_id, []).append(
+                (char_id, "char_equipment", char_id, slot)
+            )
+
+    for loc_id in sorted(state.locations):
+        loc = state.locations[loc_id]
+        for item_id in loc.item_ids:
+            locations.setdefault(item_id, []).append(
+                (loc_id, "location_items", loc_id, None)
+            )
+
+    warnings: list[str] = []
+    for item_id, places in locations.items():
+        if len(places) <= 1:
+            continue
+        # Sort by sort_key (alphabetical container id) then by kind+slot for stability.
+        places_sorted = sorted(places, key=lambda p: (p[0], p[1], p[3] or ""))
+        keeper = places_sorted[0]
+        losers = places_sorted[1:]
+
+        item = state.items.get(item_id)
+        name = item.name if item is not None else item_id
+        kept_label = _occurrence_label(keeper)
+        lost_labels = ", ".join(_occurrence_label(p) for p in losers)
+        warnings.append(
+            f"item {item_id!r} ({name!r}) was duplicated; kept {kept_label}, cleared {lost_labels}"
+        )
+
+        for loser in losers:
+            _, kind, container_id, slot = loser
+            if kind == "char_inventory":
+                state.characters[container_id].inventory_ids.remove(item_id)
+                if dirty is not None:
+                    dirty.add(("characters", container_id))
+            elif kind == "char_equipment":
+                assert slot is not None
+                setattr(state.characters[container_id].equipment, slot, None)
+                if dirty is not None:
+                    dirty.add(("characters", container_id))
+            elif kind == "location_items":
+                state.locations[container_id].item_ids.remove(item_id)
+                if dirty is not None:
+                    dirty.add(("locations", container_id))
+
+    return warnings
+
+
+def _occurrence_label(o: tuple[str, str, str, str | None]) -> str:
+    _, kind, container_id, slot = o
+    if kind == "char_inventory":
+        return f"characters/{container_id}/inventory"
+    if kind == "char_equipment":
+        return f"characters/{container_id}/equipment.{slot}"
+    return f"locations/{container_id}/items"
