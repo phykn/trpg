@@ -23,7 +23,7 @@ from src.engines.invariants import Scenario, check_scenario
 from src.llm import LLMClient
 
 from ._common import EntityWriterError
-from .decompose import Decomposition, decompose_prose
+from .decompose import Decomposition
 from .runner import write_entity, write_entity_to_disk
 
 

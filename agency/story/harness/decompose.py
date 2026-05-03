@@ -1,24 +1,19 @@
-"""Prose → Decomposition. Phased decomposer used as the first step of build_scenario.
+"""Decomposition data shapes + validators.
 
-Three sequential LLM calls (setup → cast → arc), each with its own prompt
-fragment, Pydantic schema, and validation. Phases compose into one
-Decomposition that the build pipeline consumes.
+Pydantic models (DecomSetup/Cast/Arc and entity records) plus the per-phase
+validators (_check_setup/_check_cast/_check_arc) used by `agency.story.tool`.
+The LLM call loop that originally produced these decompositions has been
+removed — Claude Code now writes them directly per agency/story/SKILL.md.
 """
 
-import json
-from collections.abc import Callable
-from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ValidationError
-
-from src.llm import LLMClient
+from pydantic import BaseModel
 
 from ._common import (
     ID_PATTERN,
     TRIGGER_TARGET_KIND,
     EntityWriterError,
-    strip_code_fences,
 )
 
 
@@ -558,125 +553,3 @@ def _check_decomp(d: Decomposition) -> None:
     _check_arc(setup, cast, arc)
 
 
-async def _decompose_phase(
-    *,
-    fragment_path: Path,
-    prose: str,
-    prior_context: str | None,
-    model: type[BaseModel],
-    check: Callable[[BaseModel], None],
-    agent: str,
-    llm: LLMClient,
-    retries: int,
-    think: bool,
-) -> tuple[BaseModel, list[dict]]:
-    """One decompose phase: build system prompt (fragment + optional prior phase
-    context), call the LLM, validate, retry up to `retries` times with the same
-    base+latest trim used elsewhere."""
-    system_parts = [fragment_path.read_text(encoding="utf-8")]
-    if prior_context:
-        system_parts.append("")
-        system_parts.append("---")
-        system_parts.append("")
-        system_parts.append("## entity rosters decided in earlier phases")
-        system_parts.append("")
-        system_parts.append(
-            "Use the ids and rosters in the JSON below verbatim. Do not invent new ones — pick from the existing pool."
-        )
-        system_parts.append("")
-        system_parts.append(prior_context)
-    messages: list[dict] = [
-        {"role": "system", "content": "\n".join(system_parts)},
-        {"role": "user", "content": prose},
-    ]
-    base_len = len(messages)
-    last_error: Exception | None = None
-    for _ in range(retries + 1):
-        result = await llm.chat(messages=messages, think=think, agent=agent)
-        answer = strip_code_fences(result["answer"] or "")
-        try:
-            entity = model.model_validate_json(answer)
-            check(entity)
-            return entity, messages + [{"role": "assistant", "content": answer}]
-        except (ValidationError, EntityWriterError, json.JSONDecodeError) as e:
-            last_error = e
-            messages = messages[:base_len]
-            messages.append({"role": "assistant", "content": answer})
-            messages.append(
-                {
-                    "role": "user",
-                    "content": (
-                        f"The previous response failed validation: {e}. "
-                        "Re-read the rules and output the corrected JSON only."
-                    ),
-                }
-            )
-    assert last_error is not None
-    raise last_error
-
-
-async def decompose_prose(
-    *,
-    prose: str,
-    agents_dir: Path,
-    llm: LLMClient,
-    retries: int = 5,
-    think: bool = True,
-) -> tuple[Decomposition, list[dict]]:
-    """Prose → Decomposition via 3 sequential phases (setup → cast → arc).
-
-    Each phase has its own LLM call, prompt fragment, and validation — output
-    sizes per call stay bounded and a retry on phase N doesn't restart phases
-    1..N-1. Final composed Decomposition still goes through `_check_decomp`
-    as a paranoia step.
-    """
-    setup, setup_msgs = await _decompose_phase(
-        fragment_path=agents_dir / "_decompose_setup.md",
-        prose=prose,
-        prior_context=None,
-        model=DecomSetup,
-        check=_check_setup,
-        agent="story_decompose_setup",
-        llm=llm,
-        retries=retries,
-        think=think,
-    )
-    assert isinstance(setup, DecomSetup)
-
-    # Setup context for phase B excludes world_md (free-form, large) — phase B
-    # only needs the entity rosters as id pools.
-    setup_ctx = setup.model_dump_json(indent=2, exclude={"world_md"})
-    cast, cast_msgs = await _decompose_phase(
-        fragment_path=agents_dir / "_decompose_cast.md",
-        prose=prose,
-        prior_context=setup_ctx,
-        model=DecomCast,
-        check=lambda c: _check_cast(setup, c),
-        agent="story_decompose_cast",
-        llm=llm,
-        retries=retries,
-        think=think,
-    )
-    assert isinstance(cast, DecomCast)
-
-    cast_ctx = (
-        f"### Phase A (setup)\n{setup_ctx}\n\n"
-        f"### Phase B (cast)\n{cast.model_dump_json(indent=2)}"
-    )
-    arc, arc_msgs = await _decompose_phase(
-        fragment_path=agents_dir / "_decompose_arc.md",
-        prose=prose,
-        prior_context=cast_ctx,
-        model=DecomArc,
-        check=lambda a: _check_arc(setup, cast, a),
-        agent="story_decompose_arc",
-        llm=llm,
-        retries=retries,
-        think=think,
-    )
-    assert isinstance(arc, DecomArc)
-
-    d = _compose_decomposition(setup, cast, arc)
-    _normalize_decomp(d)
-    _check_decomp(d)  # paranoia: every phase rule re-fires here
-    return d, setup_msgs + cast_msgs + arc_msgs
