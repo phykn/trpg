@@ -23,6 +23,7 @@ sys.path.insert(0, str(ROOT))
 from agency.story.harness.decompose import DecomSetup, DecomCast, DecomArc, _check_setup, _check_cast, _check_arc  # noqa: E402
 from agency.story.harness._common import EntityWriterError  # noqa: E402
 from agency.story.harness.scenario import fill_equipment  # noqa: E402
+from src.engines.invariants import Scenario, check_scenario  # noqa: E402
 from agency.story.harness.runner import (  # noqa: E402
     SPECS,
     _check_entity_invariants,
@@ -93,6 +94,13 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sp_eq.add_argument("scenario_dir", help="scenario directory")
     sp_eq.set_defaults(func=_cmd_equip_fill)
+    # sweep
+    sp_sw = sub.add_parser(
+        "sweep",
+        help="최종 시나리오 invariant sweep (engines.invariants.check_scenario)",
+    )
+    sp_sw.add_argument("scenario_dir", help="scenario directory")
+    sp_sw.set_defaults(func=_cmd_sweep)
     return parser
 
 
@@ -213,6 +221,24 @@ def _cmd_equip_fill(args: argparse.Namespace) -> int:
         fill_equipment(sd)
     except Exception as e:
         return _fail("equip-fill", e)
+    print("OK")
+    return 0
+
+
+def _cmd_sweep(args: argparse.Namespace) -> int:
+    sd = Path(args.scenario_dir)
+    if not sd.is_dir():
+        print(f"sweep failed: scenario_dir not a directory: {sd}", file=sys.stderr)
+        return 1
+    try:
+        violations = check_scenario(Scenario.from_dir(sd))
+    except Exception as e:
+        return _fail("sweep", e)
+    if violations:
+        print("sweep failed:", file=sys.stderr)
+        for v in violations:
+            print(f"  - {v}", file=sys.stderr)
+        return 1
     print("OK")
     return 0
 
