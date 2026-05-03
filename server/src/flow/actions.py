@@ -16,7 +16,7 @@ from ..domain.errors import (
     LLMUnavailable,
     PersistenceFailed,
 )
-from ..domain.memory import PendingCheck
+from ..domain.memory import PendingCheck, PendingGrowth
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..engines import inventory as inventory_engine
@@ -449,3 +449,21 @@ async def emit_roll_pending(
         "type": "pending_check",
         "data": pending_check_to_front(state, state.pending_check),
     }
+
+
+async def emit_growth_pending(
+    state: GameState,
+    dirty: Dirty,
+) -> AsyncIterator[dict]:
+    state.pending_growth = PendingGrowth(stage="asking_stat")
+    return
+    yield  # makes this an async generator
+
+
+async def emit_cancel_growth(
+    state: GameState,
+    dirty: Dirty,
+) -> AsyncIterator[dict]:
+    state.pending_growth = None
+    return
+    yield  # makes this an async generator
