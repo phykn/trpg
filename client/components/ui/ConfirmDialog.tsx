@@ -1,7 +1,7 @@
 import { Modal, Pressable, Text, View } from 'react-native';
 
 import { shadow, toneColor } from '@/design/tokens';
-import type { ConfirmInfo } from '@/types/ui';
+import type { ConfirmInfo } from './types';
 
 export function ConfirmDialog({ info, onConfirm, onCancel }: {
   info: ConfirmInfo;

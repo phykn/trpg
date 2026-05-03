@@ -1,10 +1,9 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { ExpandableTitle, ExpandGroup, LabeledRow, Row, SEP, characterMeta, joinOrDash } from '@/components/ui';
 import { colors, toneColor } from '@/design/tokens';
-import { SEP, characterMeta, joinOrDash } from '@/presenters/format';
-import type { PanelAction } from '@/types/ui';
-import { ExpandableTitle, ExpandGroup, LabeledRow, Row } from '@/components/ui';
+import type { PanelAction } from '@/features/info-panel';
 
 import {
   type StoryGraphEdge,

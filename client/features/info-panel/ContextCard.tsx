@@ -7,8 +7,9 @@ import {
   StoryGraphScreen,
   type StoryGraphModel,
 } from '@/features/story-graph';
-import type { Place } from '@/types/domain';
-import type { PanelAction, PanelSlot } from '@/types/ui';
+import type { Place } from '@/features/story-graph';
+
+import type { PanelAction, PanelSlot } from './types';
 
 import { IconButton, ICON_PATH } from './IconButton';
 import { PanelBody } from './PanelBody';

@@ -1,4 +1,4 @@
-import type { InventoryItem } from '@/types/domain';
+import type { InventoryItem } from '@/features/hero';
 
 export const SEP = ' · ';
 export const DASH = '—';

@@ -1,11 +1,12 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 
+import { SEP } from '@/components/ui';
 import { toneColor } from '@/design/tokens';
-import { SEP } from '@/presenters/format';
+import type { PanelAction } from '@/features/info-panel';
+
 import type { StoryGraphModel } from './presenters';
-import type { Place } from '@/types/domain';
-import type { PanelAction } from '@/types/ui';
+import type { Place } from './types';
 
 import { NeighborhoodPanel } from './NeighborhoodPanel';
 

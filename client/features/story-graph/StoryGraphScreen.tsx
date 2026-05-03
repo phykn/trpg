@@ -1,8 +1,8 @@
 import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
+import type { PanelAction } from '@/features/info-panel';
 import { getSessionById, loadStoredGameId } from '@/services';
-import type { PanelAction } from '@/types/ui';
 
 import { MapPanel } from './MapPanel';
 import { EMPTY_STORY_GRAPH } from './presenters';

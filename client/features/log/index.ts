@@ -1,2 +1,2 @@
-export type { LogEntry } from './types';
+export type { LogEntry, RollResult } from './types';
 export { Log } from './Log';

@@ -1,6 +1,9 @@
+import type { CombatBadge } from '@/features/combat';
+import type { Hero } from '@/features/hero';
 import type { LogEntry } from '@/features/log';
-
-import type { FrontState } from './domain';
+import type { Quest } from '@/features/quest';
+import type { Place, StoryGraphModel } from '@/features/story-graph';
+import type { Subject } from '@/features/subject';
 
 export type PendingCheck = {
   kind: 'stat';
@@ -13,6 +16,17 @@ export type PendingCheck = {
   tier: { value: number; max: number; label: string };
   target: string;
   reason: string;
+};
+
+export type FrontState = {
+  hero: Hero;
+  subject: Subject | null;
+  quest: Quest | null;
+  place: Place | null;
+  combat: CombatBadge | null;
+  log: LogEntry[];
+  pendingCheck: PendingCheck | null;
+  storyGraph: StoryGraphModel;
 };
 
 export type RaceCard = {

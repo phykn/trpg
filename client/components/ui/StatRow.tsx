@@ -2,7 +2,7 @@ import { Text } from 'react-native';
 import { toneColor } from '@/design/tokens';
 import { Bar } from './Bar';
 import { Row } from './Row';
-import type { BarDef } from '@/types/ui';
+import type { BarDef } from './types';
 
 export function StatRow({ label, value, max, tone, display, signed }: BarDef) {
   const color = toneColor[tone];

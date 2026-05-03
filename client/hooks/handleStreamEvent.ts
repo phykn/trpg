@@ -1,6 +1,5 @@
 import type { LogEntry } from '@/features/log';
-import type { FrontState } from '@/types/domain';
-import type { PendingCheck, StreamEvent } from '@/types/wire';
+import type { FrontState, PendingCheck, StreamEvent } from '@/types/wire';
 
 export type StreamHandlers = {
   setPending: (p: PendingCheck) => void;

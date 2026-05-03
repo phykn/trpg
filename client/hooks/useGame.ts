@@ -16,15 +16,12 @@ import {
   streamTurn,
 } from '@/services';
 import type { CombatBadge } from '@/features/combat';
+import type { Hero } from '@/features/hero';
 import type { LogEntry } from '@/features/log';
-import type {
-  FrontState,
-  Hero,
-  Place,
-  Quest,
-  Subject,
-} from '@/types/domain';
-import type { InitRequest, PendingCheck, StreamEvent } from '@/types/wire';
+import type { Quest } from '@/features/quest';
+import type { Place } from '@/features/story-graph';
+import type { Subject } from '@/features/subject';
+import type { FrontState, InitRequest, PendingCheck, StreamEvent } from '@/types/wire';
 
 import { handleStreamEvent } from './handleStreamEvent';
 

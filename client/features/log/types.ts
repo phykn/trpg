@@ -1,4 +1,4 @@
-import type { RollResult } from '@/types/domain';
+export type RollResult = 'success' | 'partial' | 'fail';
 
 export type LogEntry =
   | { id: number; kind: 'gm'; text: string }

@@ -29,7 +29,7 @@ export declare const fontSize: Record<
   readonly [string, { lineHeight: string; letterSpacing: string }]
 >;
 
-import type { Tone } from '@/types/ui';
+import type { Tone } from '@/components/ui/types';
 
 export declare const toneColor: Record<Tone, string>;
 

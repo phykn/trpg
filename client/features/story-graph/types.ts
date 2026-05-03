@@ -1,4 +1,6 @@
-import type { RiskBadge } from '@/types/domain';
+import type { Tone } from '@/components/ui';
+
+export type RiskBadge = { label: string; tone: Tone };
 
 export type StoryGraphNodeKind =
   | 'hero'
@@ -108,4 +110,31 @@ export type StoryGraphModel = {
   nodes: StoryGraphNode[];
   edges: StoryGraphEdge[];
   summary: string;
+};
+
+export type PlaceSurrounding = {
+  name: string;
+  blurb: string;
+  difficulty: string | null;
+  risk: RiskBadge;
+};
+
+export type PlaceTarget = {
+  name: string;
+  level: number;
+  raceJob: string;
+  gender: string;
+  blurb: string;
+  trust: number;
+};
+
+export type Place = {
+  name: string;
+  description: string;
+  dayPhase: string;
+  weather: string[];
+  features: string[];
+  surroundings: PlaceSurrounding[];
+  targets: PlaceTarget[];
+  risk: RiskBadge;
 };

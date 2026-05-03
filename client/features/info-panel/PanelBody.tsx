@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, View, Text } from 'react-native';
 import { Chip, Expandable, StatRow, InlineParts, InlineNodes, LabeledRow, Row, ExpandGroup, ExpandableTitle } from '@/components/ui';
 import { toneColor } from '@/design/tokens';
-import type { MetaSegment, Panel, PanelAction, PanelActions } from '@/types/ui';
+import type { MetaSegment, Panel, PanelAction, PanelActions } from './types';
 
 const META_LINE_HEIGHT = 18;
 const META_CLASS = 'font-sans text-caption italic text-right text-fg-muted';

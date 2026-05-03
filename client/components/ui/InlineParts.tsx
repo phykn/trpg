@@ -1,7 +1,7 @@
 import { View, Text } from 'react-native';
 import { colors, toneColor } from '@/design/tokens';
 import { Row } from './Row';
-import type { DisplayPart } from '@/types/ui';
+import type { DisplayPart } from './types';
 
 export function InlineParts({ label, parts }: { label: string; parts: DisplayPart[] }) {
   return (
