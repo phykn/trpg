@@ -204,13 +204,22 @@ _RECEIPT_ACTION_TYPES: frozenset[type] = frozenset(
 )
 
 
-def _is_receipt(state: GameState, action: object) -> bool:
+def _is_receipt(
+    state: GameState,
+    action: object,
+    pre_move_visited: set[str] | None = None,
+) -> bool:
     if type(action) in _RECEIPT_ACTION_TYPES:
         return True
     if isinstance(action, MoveAction):
-        return (
-            action.destination in state.characters[state.player_id].visited_location_ids
+        # _apply_move now marks visited atomically, so callers must hand in a
+        # pre-move snapshot to detect first-visit; the live set is post-move.
+        visited = (
+            pre_move_visited
+            if pre_move_visited is not None
+            else state.characters[state.player_id].visited_location_ids
         )
+        return action.destination in visited
     return False
 
 
@@ -218,12 +227,17 @@ def _chain_needs_narrate(
     state: GameState,
     parts: list,
     part_failures: list[bool] | None = None,
+    pre_move_visited: set[str] | None = None,
 ) -> bool:
     """Chain narrates iff any part is narrate-worthy: a Pass tail, a successful
     NPC-interaction (buy/sell/give), or a first-visit move that actually succeeded.
     Receipt-only chains (equip/unequip/use-self) and chains whose only "interesting"
     part failed skip narrate entirely."""
-    visited = state.characters[state.player_id].visited_location_ids
+    visited = (
+        pre_move_visited
+        if pre_move_visited is not None
+        else state.characters[state.player_id].visited_location_ids
+    )
     for i, part in enumerate(parts):
         if isinstance(part, PassAction):
             return True
@@ -263,6 +277,12 @@ async def _run_one_step_action(
     skip narrate; non-receipts (first-visit move, dramatic fails) drop the act
     and let narrate absorb the lines into prose."""
     state.turn_count += 1
+    # Snapshot pre-move so first-visit detection survives _apply_move's atomic visited update.
+    pre_move_visited = (
+        state.characters[state.player_id].visited_location_ids.copy()
+        if isinstance(result, MoveAction)
+        else None
+    )
     act_log_lines: list[str] = []
     pushed_act_evts: list[dict] = []
     failure_raws: list[str] = []
@@ -291,7 +311,7 @@ async def _run_one_step_action(
 
     is_failure = bool(failure_raws)
     dramatic = is_failure and any(is_dramatic_fail(r) for r in failure_raws)
-    receipt_action = _is_receipt(state, result)
+    receipt_action = _is_receipt(state, result, pre_move_visited)
     # narrate iff: dramatic failure OR (success on a non-receipt action, i.e. first-visit move)
     narrate_path = dramatic or (not is_failure and not receipt_action)
 
@@ -594,6 +614,12 @@ async def _dispatch(
 
     if isinstance(result, ChainAction):
         state.turn_count += 1
+        # Snapshot pre-move so first-visit detection survives _apply_move's atomic visited update.
+        pre_move_visited = (
+            state.characters[state.player_id].visited_location_ids.copy()
+            if any(isinstance(p, MoveAction) for p in result.parts)
+            else None
+        )
         last_pass: PassAction | None = None
         # Feed engine notices ("이미 체력 가득" etc.) into narrate so prose can't contradict the engine.
         chain_act_lines: list[str] = []
@@ -641,12 +667,15 @@ async def _dispatch(
 
             pin_subject_by_input_name(state, player_input, graph)
 
-        # Compute narrate decision BEFORE marking moves as visited — first-visit
-        # detection depends on the pre-update set. A failed first-visit move is
-        # non-dramatic and stays receipt-only.
+        # First-visit detection uses the pre-move snapshot — _apply_move already
+        # marked visited, so the live set would lie. A failed first-visit move
+        # is non-dramatic and stays receipt-only.
         dramatic_chain = any(is_dramatic_fail(r) for r in chain_failure_raws)
         narrate_chain = (
-            _chain_needs_narrate(state, result.parts, part_failures) or dramatic_chain
+            _chain_needs_narrate(
+                state, result.parts, part_failures, pre_move_visited
+            )
+            or dramatic_chain
         )
 
         # Record only successfully-arrived destinations; a failed move never put

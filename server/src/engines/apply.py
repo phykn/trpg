@@ -125,12 +125,16 @@ def _apply_move(
                     f"location {current_loc_id!r}. Reachable: {sorted(reachable)}."
                 )
     state.characters[c.target].location_id = c.destination
+    # "Moving to a location implies visiting it" — engine-level invariant so
+    # callers in flow/ don't each have to remember to update visited_location_ids.
+    state.characters[c.target].visited_location_ids.add(c.destination)
     if dirty is not None:
         dirty.add(("characters", c.target))
     # Companions move with the patron.
     for cid in state.characters[c.target].companions:
         if cid in state.characters:
             state.characters[cid].location_id = c.destination
+            state.characters[cid].visited_location_ids.add(c.destination)
             if dirty is not None:
                 dirty.add(("characters", cid))
     if c.target == state.player_id:
