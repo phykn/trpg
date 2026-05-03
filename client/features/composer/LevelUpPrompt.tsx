@@ -27,9 +27,10 @@ type Props = {
   hero: Hero;
   candidates: SkillCandidate[] | null; // null = loading
   onCommit: (stat_up: StatKey, skill_id: string | null) => void;
+  onCancel: () => void;
 };
 
-export function LevelUpPrompt({ hero, candidates, onCommit }: Props) {
+export function LevelUpPrompt({ hero, candidates, onCommit, onCancel }: Props) {
   const [statUp, setStatUp] = React.useState<StatKey | null>(null);
   const [skillId, setSkillId] = React.useState<string | null>(null);
 
@@ -156,25 +157,41 @@ export function LevelUpPrompt({ hero, candidates, onCommit }: Props) {
         </View>
       </View>
 
-      <Pressable
-        onPress={canCommit ? () => onCommit(statUp!, skillId) : undefined}
-        disabled={!canCommit}
-        accessibilityRole="button"
-        accessibilityLabel="레벨업 확정"
-        style={[
-          {
-            marginTop: 8, height: 36, borderRadius: 6,
+      <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+        <Pressable
+          onPress={onCancel}
+          accessibilityRole="button"
+          accessibilityLabel="레벨업 취소"
+          style={{
+            flex: 1, height: 36, borderRadius: 6,
             alignItems: 'center', justifyContent: 'center',
-            borderWidth: 1, borderColor: colors.accent.fg,
-            backgroundColor: 'rgba(214,122,92,0.15)',
-          },
-          !canCommit ? { opacity: 0.55 } : null,
-        ]}
-      >
-        <Text className="font-sans-semibold text-title" style={{ color: colors.accent.fg, letterSpacing: 1.2 }}>
-          ✦ 레벨업
-        </Text>
-      </Pressable>
+            borderWidth: 1, borderColor: colors.border.default,
+          }}
+        >
+          <Text className="font-sans-medium text-title" style={{ color: colors.fg.default, letterSpacing: 1.2 }}>
+            취소
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={canCommit ? () => onCommit(statUp!, skillId) : undefined}
+          disabled={!canCommit}
+          accessibilityRole="button"
+          accessibilityLabel="레벨업 확정"
+          style={[
+            {
+              flex: 1, height: 36, borderRadius: 6,
+              alignItems: 'center', justifyContent: 'center',
+              borderWidth: 1, borderColor: colors.accent.fg,
+              backgroundColor: 'rgba(214,122,92,0.15)',
+            },
+            !canCommit ? { opacity: 0.55 } : null,
+          ]}
+        >
+          <Text className="font-sans-semibold text-title" style={{ color: colors.accent.fg, letterSpacing: 1.2 }}>
+            ✦ 레벨업
+          </Text>
+        </Pressable>
+      </View>
     </Surface>
   );
 }

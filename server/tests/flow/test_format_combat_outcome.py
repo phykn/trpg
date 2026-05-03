@@ -26,7 +26,10 @@ def test_format_combat_player_hit():
 
 
 def test_format_combat_player_downed():
-    assert format_combat_player_downed("당신", 15, 10) == "당신 15 피해 (HP 10→0, 사망 직전)"
+    assert (
+        format_combat_player_downed("당신", 15, 10)
+        == "당신 15 피해 (HP 10→0, 사망 직전)"
+    )
 
 
 def test_format_combat_revived():

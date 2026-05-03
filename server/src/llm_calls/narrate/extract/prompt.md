@@ -4,7 +4,7 @@ You extract metadata from a Korean body that just streamed to the player. Output
 
 ## Anti-reinterpretation (mandatory, top of the rules)
 
-Extract from what the body explicitly describes. **Never reinterpret, expand, or contradict the body.** If the body is ambiguous about a state change, prefer omission (`memorable=false`, `state_changes=[]`) over speculation. The body has already streamed — invented `state_changes` desync the game from the prose the player saw.
+Extract from what the body explicitly describes. **Never reinterpret, expand, or contradict the body.** If the body is ambiguous about a state change, prefer omission (`memorable=false`, `state_changes=[]`, `suggestions=[]`) over speculation. The body has already streamed — invented `state_changes` desync the game from the prose the player saw.
 
 ## Input fields
 
@@ -14,7 +14,7 @@ Extract from what the body explicitly describes. **Never reinterpret, expand, or
 - `surroundings` — same shape the body saw: `entities` (alive NPCs only), `corpses` (dead NPCs), `merchants`, `inventory`, etc.
 - `target_view` — deep target data on `pass`/`roll` (NPC alive/dead, location, item — see body prompt for field details). null on `reject`/`intro`.
 - `grade` — set only on `roll` (5 grades), null otherwise. The body has already used this for tone; you reuse it for `affinity` grade only when the social act actually landed in body (see "affinity emission" below).
-- `previous_phase_signal` — one-shot signal from the prior turn (currently only `"downed_recovered"`). When set, the body is a recovery beat; this turn is **not** a social act → no `affinity`, `state_changes=[]`.
+- `previous_phase_signal` — one-shot signal from the prior turn (currently only `"downed_recovered"`). When set, the body is a recovery beat; this turn is **not** a social act → no `affinity`, `state_changes=[]`, `suggestions` should be 1-3 recovery beats (자세를 추스른다 / 무기를 다시 쥔다 / 거리를 둔다 류).
 
 ## Output
 
@@ -26,7 +26,8 @@ Extract from what the body explicitly describes. **Never reinterpret, expand, or
   "memory_targets": [...],
   "memory": {...},
   "memory_links": {...},
-  "importance": <1|2|3|null>
+  "importance": <1|2|3|null>,
+  "suggestions": [...]
 }
 ```
 
@@ -58,6 +59,15 @@ Set on a forbidden field is rejected per item; the rest of the batch applies.
 
 **affinity emission (important)**: when body contains a social act toward an NPC (greet/praise/insult/threaten/lie), emit one `affinity` entry — even on the `pass` branch. **`grade` is set fresh from body tone** — fill it even if input `grade` is null. Lands cleanly → `success`, awkward → `partial_success`, missed → `failure`, flashy missed → `critical_failure`. **`grade` measures only "did the act land as intended" — not whether the relationship improved.** Insulting cleanly with `intent=hostile` is still `grade=success`; the NPC memory captures "shut down" tone (engine flips relation delta sign by intent). So even at the same `grade=success`, write memory in receiving tone for `intent=friendly`, hardening tone for `intent=hostile`. If body doesn't address an NPC (looking around, sitting down etc.), no `affinity`.
 
+**affinity 차단 케이스 (mandatory)**: 다음 중 하나면 `affinity` emit 금지 (`memorable=false`, `state_changes=[]`):
+- 단순 인사 / 잠깐 안부 ("안녕하세요", "어떻게 지냈소")
+- 일반 관찰 / 둘러보기 / 질문 없는 응시
+- 모호한 답변 ("음…", "글쎄요")
+- 같은 의미의 반복 발화 (history에 같은 톤이 이미 있으면 추가 호감도 변동 없음)
+- 정보 요청만 ("이 길은 어디로 통합니까")
+
+`affinity`는 사회적 의도(칭찬·뇌물·협박·거짓말·요청 거절 등)가 명확히 담긴 경우에만 emit합니다. 매 인사마다 +5씩 누적되면 NPC 호감도가 인플레이션 되고, 호감도 변동마다 발생하는 시스템 카드("도린 호감도 +5")가 노이즈로 바뀝니다.
+
 **Dead-target exception**: if the target NPC is `target_view.alive==false` or in `surroundings.corpses[*]` (i.e., a corpse), no `affinity` — corpses don't have shifting relations. Insults/mockery toward corpses live in body only; `state_changes` stays empty. For the same reason, corpses don't go in `memory_targets` — no POV exists. If a corpse-related event is `memorable=true` (e.g., a decisive find), put only the player in `memory_targets` with a 1인칭 player POV ("내가 …"). In that case, drop the player key from `memory_links` (a corpse isn't a live link target — don't force a corpse id in).
 
 ## Memory
@@ -83,16 +93,26 @@ BAD `{"guard_01":"플레이어가 통과함","player_01":"플레이어가 통과
 
 **memorable=false**: greeting, brief check-in, generic look-around, vague answer ("음…"), repetition. ⇒ `memory={}`, `memory_targets=[]`, `memory_links={}`, `importance=null`.
 
+## suggestions
+
+UI chips; clicking fills the input box, free typing remains.
+
+- **When**: `intro` always 2-3. Branch points (NPC requests, forks, just-before-trade-or-combat): 1-3. Otherwise `[]`. `reject` is always `[]`. On `previous_phase_signal="downed_recovered"`, 1-3 recovery beats.
+- **What**: **Player's direct *actions* at the current focus (current location · current addressee) only.** Verbs only — 묻는다·청한다·요청한다·위협한다·거절한다·관찰한다·시도한다·거래한다·교섭한다·도구를 쓴다, etc. Seed entities only. Short Korean line (8-20 chars), declarative ending (`-ㄴ다`/`-는다`). No numeric/HP/체력 vocabulary ("회복약 마신다" OK; "HP를 회복한다"·"체력을 본다" forbidden). No state-mismatched candidates (full HP suggesting healing potion; an item not in inventory).
+- **No navigation/approach suggestions**: place/person transitions are handled by the front panel — verbs like "X에게 다가간다", "Y쪽으로 걸어간다", "X에게 다가가 말을 건다", "X를 한쪽으로 데려간다" are forbidden.
+- **Count**: 0-3 (with `intro` forced to 2-3 per "When"; `reject` always `[]`). Outside branch points, `[]`. No out-of-context picks — only actions that flow naturally from the body just streamed.
+
 ## Branch-specific forced shapes
 
-- `intro` → `state_changes=[]`, `memorable=false`, `memory_targets=[]`, `memory={}`, `memory_links={}`, `importance=null`.
-- `reject` → `state_changes=[]`, `memorable=false`, `memory_targets=[]`, `memory={}`, `memory_links={}`, `importance=null`.
-- `previous_phase_signal="downed_recovered"` → `state_changes=[]`, no `affinity`.
+- `intro` → `state_changes=[]`, `memorable=false`, `memory_targets=[]`, `memory={}`, `memory_links={}`, `importance=null`. `suggestions` is 2-3.
+- `reject` → `state_changes=[]`, `memorable=false`, `memory_targets=[]`, `memory={}`, `memory_links={}`, `importance=null`, `suggestions=[]`.
+- `previous_phase_signal="downed_recovered"` → `state_changes=[]`, no `affinity`. `suggestions` is 1-3 recovery beats.
 
 ## Empty-fallback preference (mandatory)
 
 When in doubt, prefer empty fields over invented content:
 - `state_changes=[]` over speculative entries
+- `suggestions=[]` over off-context picks
 - `memorable=false` (with the corresponding empties) over forcing a memory line
 - `turn_summary=""` over a meta phrase like "본문 진행"
 

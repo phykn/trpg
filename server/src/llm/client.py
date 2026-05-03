@@ -241,7 +241,8 @@ class LLMClient:
             name: _Provider(p, chat_t, stream_t) for name, p in profiles.items()
         }
         self._fallbacks: dict[str, _Provider] = {
-            name: _Provider(p, chat_t, stream_t) for name, p in (fallbacks or {}).items()
+            name: _Provider(p, chat_t, stream_t)
+            for name, p in (fallbacks or {}).items()
         }
         self._log_dir = log_dir
 

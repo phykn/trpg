@@ -36,11 +36,13 @@ from .format import (
     format_attack_turn_log,
     format_equip_fail,
     format_equip_log,
+    format_equip_turn_log,
     format_give_log,
     format_give_no_partner,
     format_give_turn_log,
+    format_location_enter_log,
+    format_location_enter_turn_log,
     format_move_blocked,
-    format_move_log,
     format_move_no_path,
     format_trade_log,
     format_trade_no_partner,
@@ -48,8 +50,10 @@ from .format import (
     format_unequip_fail,
     format_unequip_log,
     format_unequip_not_equipped,
+    format_unequip_turn_log,
     format_use_fail,
     format_use_log,
+    format_use_self_turn_log,
     format_use_target_turn_log,
 )
 
@@ -172,7 +176,12 @@ async def emit_equip(
         yield {"type": "_engine_fail", "data": {"raw_error_msg": str(e)}}
         return
     dirty.entities.add(("characters", actor_id))
-    yield push_act(state, dirty, format_equip_log(actor.name, item_name))
+    yield push_act(
+        state,
+        dirty,
+        format_equip_log(actor.name, item_name),
+        turn_summary=format_equip_turn_log(actor.name, item_name),
+    )
 
 
 async def emit_unequip(
@@ -191,10 +200,16 @@ async def emit_unequip(
         return
     if slot is None:
         text = format_unequip_not_equipped(actor.name, item_name)
+        yield push_act(state, dirty, text)
     else:
         text = format_unequip_log(actor.name, item_name)
         dirty.entities.add(("characters", actor_id))
-    yield push_act(state, dirty, text)
+        yield push_act(
+            state,
+            dirty,
+            text,
+            turn_summary=format_unequip_turn_log(actor.name, item_name),
+        )
 
 
 async def emit_use(
@@ -217,13 +232,21 @@ async def emit_use(
         yield {"type": "_engine_fail", "data": {"raw_error_msg": str(e)}}
         return
     check_quests(state, "item_use", item_id, dirty.entities)
-    yield push_act(state, dirty, format_use_log(state, actor_id, result))
+    item_name = _item_name(state, item_id)
     if target is not None:
+        yield push_act(state, dirty, format_use_log(state, actor_id, result))
         push_turn_log(
             state,
             target.id,
-            format_use_target_turn_log(_item_name(state, item_id), target.name),
+            format_use_target_turn_log(item_name, target.name),
             dirty,
+        )
+    else:
+        yield push_act(
+            state,
+            dirty,
+            format_use_log(state, actor_id, result),
+            turn_summary=format_use_self_turn_log(actor.name, item_name),
         )
 
 
@@ -235,6 +258,7 @@ async def emit_trade(
     dirty: Dirty,
     *,
     direction: Literal["buy", "sell"],
+    agreed_price: int | None = None,
 ) -> AsyncIterator[dict]:
     player = state.characters[actor_id]
     npc = state.characters.get(npc_id)
@@ -244,9 +268,13 @@ async def emit_trade(
         return
     try:
         if direction == "buy":
-            price = inventory_engine.buy(player, npc, item_id, state.items)
+            price = inventory_engine.buy(
+                player, npc, item_id, state.items, price_override=agreed_price
+            )
         else:
-            price = inventory_engine.sell(player, npc, item_id, state.items)
+            price = inventory_engine.sell(
+                player, npc, item_id, state.items, price_override=agreed_price
+            )
     except InventoryInvalid as e:
         yield push_act(
             state, dirty, format_action_fail(player.name, "거래를 시도했지만", e)
@@ -327,14 +355,22 @@ async def emit_move(
     if result["applied"] == 0:
         reason = result["rejected"][0]["reason"] if result["rejected"] else ""
         yield push_act(state, dirty, format_move_blocked(actor.name, loc.name, reason))
-        yield {"type": "_engine_fail", "data": {"raw_error_msg": f"move blocked: {reason}"}}
+        yield {
+            "type": "_engine_fail",
+            "data": {"raw_error_msg": f"move blocked: {reason}"},
+        }
         return
     state.invalidate_graph()
     if actor_id == state.player_id:
         from .subject import reconcile_subject_after_move
 
         reconcile_subject_after_move(state)
-    yield push_act(state, dirty, format_move_log(actor.name, loc.name))
+    yield push_act(
+        state,
+        dirty,
+        format_location_enter_log(loc.name),
+        turn_summary=format_location_enter_turn_log(loc.name),
+    )
 
 
 async def emit_roll_pending(

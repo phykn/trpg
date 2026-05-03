@@ -90,3 +90,8 @@ class CombatNarrateInput(BaseModel):
     enemies_start: list[EnemyNarrateSnapshot]
     enemies_end: list[EnemyNarrateSnapshot]
     events: list[CombatRoundEvent]
+    # Build-up beats so the cinematic can reflect a setup turn (e.g. distraction, trap, bait) in round 1 prose.
+    history: list[dict] = []
+    recent_dialogue: list[dict] = []
+    # True when round 1 was a player-side ambush — enemy did not act this round.
+    surprise: bool = False

@@ -41,10 +41,14 @@ _NARRATE_FULL = f"{_NARRATE_BODY}---JSON---{_NARRATE_OUTPUT_JSON}"
 
 
 class _MockLLM:
-    async def chat(self, messages, think=False, agent=None, temperature=None, use_fallback=False):
+    async def chat(
+        self, messages, think=False, agent=None, temperature=None, use_fallback=False
+    ):
         return {"answer": _JUDGE_ROLL, "think": ""}
 
-    async def chat_stream(self, messages, think=False, agent=None, temperature=None, use_fallback=False):
+    async def chat_stream(
+        self, messages, think=False, agent=None, temperature=None, use_fallback=False
+    ):
         mid = len(_NARRATE_FULL) // 2
         for piece in (_NARRATE_FULL[:mid], _NARRATE_FULL[mid:]):
             yield {"answer": piece, "think": ""}

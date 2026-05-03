@@ -20,7 +20,9 @@ class JudgeResult(TypedDict):
 def _call_judge_llm(prompt: str, schema: type) -> dict:
     """LLM call wrapper — override in tests via monkeypatch."""
     # real LLM wiring lands in Task 10; stub raises to surface accidental live calls
-    raise NotImplementedError("Judge LLM integration not wired in this cycle (test-only stub).")
+    raise NotImplementedError(
+        "Judge LLM integration not wired in this cycle (test-only stub)."
+    )
 
 
 def judge_quest_progress(
@@ -37,10 +39,13 @@ def judge_quest_progress(
         claim: player's assertion if in dialogue (None for auto turn-end check)
         npc_context: {npc_id, favor} for NPC dialogue context (None for auto check)
     """
-    history_text = "\n".join(f"- {h.get('summary', str(h))}" for h in history) or "(없음)"
+    history_text = (
+        "\n".join(f"- {h.get('summary', str(h))}" for h in history) or "(없음)"
+    )
     npc_block = (
         f"NPC: {npc_context.get('npc_id')}, 호감도: {npc_context.get('favor', 0)}"
-        if npc_context else "(turn 종료 자동 체크)"
+        if npc_context
+        else "(turn 종료 자동 체크)"
     )
     prompt = (
         f"[Quest 자유 경로 판정]\n"
@@ -72,10 +77,23 @@ async def run_judge(
     graph so build_surroundings doesn't rebuild. Test/ad-hoc callers can omit.
     """
     surroundings = build_surroundings(state, state.player_id, graph)
+    history = [
+        {"turn": e.turn, "target": e.target, "summary": e.summary}
+        for e in state.turn_log[-5:]
+    ]
+    recent_dialogue = [
+        {"turn": d.turn, "player": d.player, "narrator": d.narrator}
+        for d in state.recent_dialogue[-2:]
+    ]
     try:
         return await classify(
             client,
-            JudgeInput(player_input=player_input, surroundings=surroundings),
+            JudgeInput(
+                player_input=player_input,
+                surroundings=surroundings,
+                history=history,
+                recent_dialogue=recent_dialogue,
+            ),
         )
     except ValidationError as e:
         raise JudgeMalformed(str(e)) from e

@@ -78,6 +78,18 @@ def format_use_target_turn_log(item_name: str, target_name: str) -> str:
     return f"{item_name}{eul_reul(item_name)} {target_name}에게 사용"
 
 
+def format_equip_turn_log(actor_name: str, item_name: str) -> str:
+    return f"{item_name} 착용"
+
+
+def format_unequip_turn_log(actor_name: str, item_name: str) -> str:
+    return f"{item_name} 해제"
+
+
+def format_use_self_turn_log(actor_name: str, item_name: str) -> str:
+    return f"{item_name} 사용"
+
+
 def format_trade_no_partner(actor_name: str) -> str:
     return f"{actor_name}{i_ga(actor_name)} 거래할 상대를 찾지 못했습니다."
 
@@ -125,8 +137,31 @@ def format_move_blocked(actor_name: str, loc_name: str, reason: str) -> str:
     return f"{actor_name}{i_ga(actor_name)} {loc_name}{eul_reul(loc_name)} 향했지만 닿지 못했습니다.{suffix}"
 
 
-def format_move_log(actor_name: str, loc_name: str) -> str:
-    return f"{actor_name}{i_ga(actor_name)} {loc_name}에 들어섭니다."
+def format_location_enter_log(location_name: str) -> str:
+    return f"{location_name}에 도착합니다."
+
+
+def format_location_enter_turn_log(location_name: str) -> str:
+    return f"{location_name} 도착"
+
+
+def format_quest_start_log(quest_title: str) -> str:
+    return f"퀘스트 시작: {quest_title}"
+
+
+# Same body as format_quest_start_log; kept paired (cf. format_location_enter_*) so future SSE/turn_log tone divergence is a one-line edit.
+def format_quest_start_turn_log(quest_title: str) -> str:
+    return f"퀘스트 시작: {quest_title}"
+
+
+def format_affinity_card_log(npc_name: str, delta: int) -> str:
+    sign = "+" if delta >= 0 else ""
+    return f"{npc_name} 호감도 {sign}{delta}"
+
+
+def format_affinity_card_turn_log(npc_name: str, delta: int) -> str:
+    sign = "+" if delta >= 0 else ""
+    return f"{npc_name} 호감도 {sign}{delta}"
 
 
 def format_level_up_log(
@@ -256,8 +291,18 @@ def format_combat_outcome_summary(result: "AutoCombatResult") -> str | None:
         )
         if result.player_revived:
             # Show chronological two-step: downed at 0, then revived.
-            lines.append(format_combat_player_downed(player_name, result.player_damage_total, result.player_hp_before))
-            lines.append(format_combat_revived(result.player_revive_coins_after, result.player_revive_coins_max, result.player_hp_after))
+            lines.append(
+                format_combat_player_downed(
+                    player_name, result.player_damage_total, result.player_hp_before
+                )
+            )
+            lines.append(
+                format_combat_revived(
+                    result.player_revive_coins_after,
+                    result.player_revive_coins_max,
+                    result.player_hp_after,
+                )
+            )
         else:
             lines.append(
                 format_combat_player_hit(
@@ -278,11 +323,17 @@ def format_item_locality_warning(item_name: str) -> str:
 
 def format_combat_event_summary(result: "AutoCombatResult") -> str:
     """One-line Korean summary of a combat result for injection into narrate prompt."""
-    player_name = result.player_start.name if result.player_start else _COMBAT_PLAYER_FALLBACK_NAME
+    player_name = (
+        result.player_start.name
+        if result.player_start
+        else _COMBAT_PLAYER_FALLBACK_NAME
+    )
     parts: list[str] = []
     for h in result.enemy_hits:
         if h.killed:
-            parts.append(f"{player_name}{i_ga(player_name)} {h.name}에게 {h.damage_total} 피해 — {h.name} 쓰러짐")
+            parts.append(
+                f"{player_name}{i_ga(player_name)} {h.name}에게 {h.damage_total} 피해 — {h.name} 쓰러짐"
+            )
         elif h.damage_total > 0:
             parts.append(
                 f"{player_name}{i_ga(player_name)} {h.name}에게 {h.damage_total} 피해 (적 HP {h.hp_after}/{h.max_hp})"

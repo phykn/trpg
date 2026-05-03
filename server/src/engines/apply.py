@@ -248,9 +248,20 @@ def apply_changes(
 ) -> dict:
     """Apply state_changes to `state`. If `dirty` is provided, populate it
     with `(entity_kind, entity_id)` tuples for every change that successfully
-    mutates an entity file."""
+    mutates an entity file.
+
+    Returns:
+      - "applied": int — count of successfully applied changes
+      - "rejected": list[dict] — per-change failure records
+      - "started_quests": list[str] — quest ids that flipped locked → active
+      - "affinity_deltas": list[tuple[str, int]] — (target_id, signed delta) per applied affinity change
+      - "exp_deltas": list[int] — reserved; engine xp paths bypass apply_changes and xp_pool is engine-owned, so always empty
+    """
     applied = 0
     rejected: list[dict] = []
+    started_quests: list[str] = []
+    affinity_deltas: list[tuple[str, int]] = []
+    exp_deltas: list[int] = []
     for idx, raw in enumerate(raw_changes):
         try:
             change = _state_change_adapter.validate_python(raw)
@@ -259,9 +270,46 @@ def apply_changes(
                 {"index": idx, "change": raw, "reason": _format_validation_error(e)}
             )
             continue
+        # Snapshot quest status pre-apply so locked → active flip is detectable.
+        is_quest_status_set = (
+            isinstance(change, SetChange)
+            and change.entity == "quests"
+            and change.field == "status"
+            and change.value == "active"
+        )
+        prev_status: str | None = None
+        if is_quest_status_set:
+            quest = state.quests.get(change.id)
+            prev_status = quest.status if quest is not None else None
+        # Snapshot affinity pre-apply so the engine-computed signed delta is recoverable.
+        is_affinity = isinstance(change, AffinityChange)
+        prev_affinity: int | None = None
+        if is_affinity:
+            tgt = state.characters.get(change.target)
+            prev_affinity = (
+                tgt.relations.get(change.actor, 0) if tgt is not None else None
+            )
         try:
             _HANDLERS[change.type](state, change, dirty)
             applied += 1
+            if (
+                is_quest_status_set
+                and prev_status is not None
+                and prev_status != "active"
+            ):
+                started_quests.append(change.id)
+            if is_affinity and prev_affinity is not None:
+                tgt = state.characters.get(change.target)
+                if tgt is not None:
+                    delta = tgt.relations.get(change.actor, 0) - prev_affinity
+                    if delta != 0:
+                        affinity_deltas.append((change.target, delta))
         except _StateChangeError as e:
             rejected.append({"index": idx, "change": raw, "reason": str(e)})
-    return {"applied": applied, "rejected": rejected}
+    return {
+        "applied": applied,
+        "rejected": rejected,
+        "started_quests": started_quests,
+        "affinity_deltas": affinity_deltas,
+        "exp_deltas": exp_deltas,
+    }

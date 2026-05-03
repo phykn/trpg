@@ -35,6 +35,9 @@ def classify_action_intent(action_text: str, target_kind: str) -> ActionIntent:
 class JudgeInput(BaseModel):
     player_input: str
     surroundings: dict[str, Any]
+    # Build-up beats so judge can resolve pronouns ("그것을 든다") and detect surprise attacks.
+    history: list[dict] = []
+    recent_dialogue: list[dict] = []
 
 
 class _StrictAction(BaseModel):
@@ -54,6 +57,8 @@ class CombatAction(_StrictAction):
     action: Literal["combat"]
     targets: list[str] = Field(min_length=1)
     skill_id: str | None = None
+    # True iff judge detects build-up that ambushes the enemy (distraction, sleep, dark approach).
+    surprise: bool = False
 
 
 class SummonCombatAction(_StrictAction):
@@ -78,6 +83,7 @@ class BuyAction(_StrictAction):
     action: Literal["buy"]
     npc_id: str
     item_id: str
+    agreed_price: int | None = Field(default=None, ge=0)
     tail_intent: str | None = None
 
 
@@ -85,6 +91,7 @@ class SellAction(_StrictAction):
     action: Literal["sell"]
     npc_id: str
     item_id: str
+    agreed_price: int | None = Field(default=None, ge=0)
     tail_intent: str | None = None
 
 

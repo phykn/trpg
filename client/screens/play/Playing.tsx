@@ -1,7 +1,7 @@
-import { useAudioPlayer } from 'expo-audio';
 import React from 'react';
-import { Keyboard, Pressable, Text, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 
+import { useBgm } from '@/features/audio';
 import { CombatStrip } from '@/features/combat';
 import { Log } from '@/features/log';
 import { useStoryGraph } from '@/features/story-graph';
@@ -14,8 +14,6 @@ import { ContextCard } from '@/features/info-panel';
 import { HeroStrip } from '@/features/hero';
 import { ConfirmDialog } from '@/components/ui';
 
-const BGM_SOURCE = require('../../assets/audio/bgm.mp3');
-
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
@@ -27,18 +25,7 @@ export function Playing({ game }: Props) {
   const [input, setInput] = React.useState('');
   const [pendingAction, setPendingAction] = React.useState<PanelAction | null>(null);
   const [newGameConfirmOpen, setNewGameConfirmOpen] = React.useState(false);
-  const [bgmOn, setBgmOn] = React.useState(false);
-
-  const bgm = useAudioPlayer(BGM_SOURCE);
-  React.useEffect(() => {
-    bgm.loop = true;
-  }, [bgm]);
-
-  const toggleBgm = () => {
-    if (bgmOn) bgm.pause();
-    else bgm.play();
-    setBgmOn((v) => !v);
-  };
+  const { bgmOn, toggle: toggleBgm } = useBgm();
 
   const runAction = (action: PanelAction) => {
     setActiveId(null);
@@ -107,12 +94,9 @@ export function Playing({ game }: Props) {
         }}
       />
 
-      {(activeId !== null || menuOpen || levelUpOpen) && (
+      {(activeId !== null || menuOpen) && (
         <Pressable
-          onPress={() => {
-            closePopups();
-            if (levelUpOpen) cancelLevelUp();
-          }}
+          onPress={closePopups}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }}
         />
       )}
@@ -164,25 +148,31 @@ export function Playing({ game }: Props) {
         </View>
       ) : null}
 
-      {pending ? (
-        <RollPrompt pending={pending} onRoll={onRoll} onStop={onStop} rolling={rolling} />
-      ) : levelUpOpen ? (
-        <LevelUpPrompt
-          hero={hero}
-          candidates={levelUpCandidates}
-          onCommit={commitLevelUp}
-        />
-      ) : (
-        <Composer
-          input={input}
-          setInput={setInput}
-          onSend={onSend}
-          onStop={onStop}
-          streaming={streaming}
-          think={think}
-          onToggleThink={() => setThink((v) => !v)}
-        />
-      )}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
+        {pending ? (
+          <RollPrompt pending={pending} onRoll={onRoll} onStop={onStop} rolling={rolling} />
+        ) : levelUpOpen ? (
+          <LevelUpPrompt
+            hero={hero}
+            candidates={levelUpCandidates}
+            onCommit={commitLevelUp}
+            onCancel={cancelLevelUp}
+          />
+        ) : (
+          <Composer
+            input={input}
+            setInput={setInput}
+            onSend={onSend}
+            onStop={onStop}
+            streaming={streaming}
+            think={think}
+            onToggleThink={() => setThink((v) => !v)}
+          />
+        )}
+      </KeyboardAvoidingView>
     </View>
   );
 }

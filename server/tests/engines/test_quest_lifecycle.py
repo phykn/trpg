@@ -41,7 +41,9 @@ def _state(fresh_state, *, quests=None):
 
 def test_pending_quest_accepts_to_active(fresh_state):
     """Quest with requires_acceptance=True starts pending, accept transitions to active."""
-    state = _state(fresh_state, quests=[_quest("q1", status="pending", requires_acceptance=True)])
+    state = _state(
+        fresh_state, quests=[_quest("q1", status="pending", requires_acceptance=True)]
+    )
     assert state.quests["q1"].status == "pending"
     result = q.accept_quest(state, "q1")
     assert result is True
@@ -109,7 +111,9 @@ def test_abandoned_quest_immune_to_objective_check(fresh_state):
     """Already-abandoned quest stays abandoned even if objective target dies."""
     from src.domain.entities import QuestTrigger
 
-    trigger = QuestTrigger(id="t1", name="kill goblin", type="character_death", target_id="goblin")
+    trigger = QuestTrigger(
+        id="t1", name="kill goblin", type="character_death", target_id="goblin"
+    )
     quest_obj = Quest(
         id="q1",
         title="q1",

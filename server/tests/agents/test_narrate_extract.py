@@ -21,7 +21,9 @@ class FakeChatClient:
         self.answers = list(answers)
         self.calls = 0
 
-    async def chat(self, *, messages, think=False, agent=None, temperature=None, use_fallback=False):
+    async def chat(
+        self, *, messages, think=False, agent=None, temperature=None, use_fallback=False
+    ):
         self.calls += 1
         if not self.answers:
             return {"answer": ""}
@@ -67,7 +69,15 @@ async def test_extract_passes_body_in_user_payload_with_temperature_and_agent():
     captured: dict = {}
 
     class CapturingClient:
-        async def chat(self, *, messages, think=False, agent=None, temperature=None, use_fallback=False):
+        async def chat(
+            self,
+            *,
+            messages,
+            think=False,
+            agent=None,
+            temperature=None,
+            use_fallback=False,
+        ):
             captured["messages"] = messages
             captured["temperature"] = temperature
             captured["agent"] = agent

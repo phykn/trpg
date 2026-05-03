@@ -28,5 +28,7 @@ def test_defeat():
 
 def test_downed():
     """Downed outcome → 의식을 되찾았습니다 label, enemies list ignored."""
-    result = format_combat_end_text(outcome="downed", enemies_remaining=[{"id": "goblin_1", "hp": 10, "hp_max": 34}])
+    result = format_combat_end_text(
+        outcome="downed", enemies_remaining=[{"id": "goblin_1", "hp": 10, "hp_max": 34}]
+    )
     assert "의식" in result

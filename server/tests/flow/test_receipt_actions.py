@@ -1,5 +1,7 @@
-"""Receipt-action policy: equip / unequip / use / buy / sell / give / rest
-all skip narrate (no body, no extract) and surface only the engine's act_log."""
+"""Receipt-action policy: equip / unequip / use / rest skip narrate (no body,
+no extract) and surface only the engine's act_log. NPC-touching trades
+(buy / sell / give) re-engage narrate so the partner reaction lands; the
+engine still emits the act line, narrate absorbs it via `act_log_lines`."""
 
 import random
 import tempfile
@@ -164,37 +166,37 @@ async def test_use_skips_narrate(fresh_state, tmp_saves, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_buy_skips_narrate(fresh_state, tmp_saves, monkeypatch):
+async def test_buy_runs_narrate_with_act_log_line(fresh_state, tmp_saves, monkeypatch):
     state = _seed_basic(fresh_state, with_npc=True)
-    events, narrate_calls = await _run_with_action(
+    _events, narrate_calls = await _run_with_action(
         state,
         tmp_saves,
         monkeypatch,
         BuyAction(action="buy", npc_id="npc_01", item_id="potion_01"),
     )
-    assert narrate_calls == []
-    texts = _act_texts(events)
-    assert any("샀습니다" in t for t in texts), texts
+    assert len(narrate_calls) == 1
+    lines = narrate_calls[0].get("act_log_lines") or []
+    assert any("샀습니다" in line for line in lines), lines
 
 
 @pytest.mark.asyncio
-async def test_sell_skips_narrate(fresh_state, tmp_saves, monkeypatch):
+async def test_sell_runs_narrate_with_act_log_line(fresh_state, tmp_saves, monkeypatch):
     state = _seed_basic(fresh_state, with_npc=True)
-    events, narrate_calls = await _run_with_action(
+    _events, narrate_calls = await _run_with_action(
         state,
         tmp_saves,
         monkeypatch,
         SellAction(action="sell", npc_id="npc_01", item_id="potion_01"),
     )
-    assert narrate_calls == []
-    texts = _act_texts(events)
-    assert any("팔았습니다" in t for t in texts), texts
+    assert len(narrate_calls) == 1
+    lines = narrate_calls[0].get("act_log_lines") or []
+    assert any("팔았습니다" in line for line in lines), lines
 
 
 @pytest.mark.asyncio
-async def test_give_skips_narrate(fresh_state, tmp_saves, monkeypatch):
+async def test_give_runs_narrate_with_act_log_line(fresh_state, tmp_saves, monkeypatch):
     state = _seed_basic(fresh_state, with_npc=True)
-    events, narrate_calls = await _run_with_action(
+    _events, narrate_calls = await _run_with_action(
         state,
         tmp_saves,
         monkeypatch,
@@ -202,9 +204,9 @@ async def test_give_skips_narrate(fresh_state, tmp_saves, monkeypatch):
             action="give", from_id="player_01", to_id="npc_01", item_id="potion_01"
         ),
     )
-    assert narrate_calls == []
-    texts = _act_texts(events)
-    assert any("건넸습니다" in t for t in texts), texts
+    assert len(narrate_calls) == 1
+    lines = narrate_calls[0].get("act_log_lines") or []
+    assert any("건넸습니다" in line for line in lines), lines
 
 
 @pytest.mark.asyncio

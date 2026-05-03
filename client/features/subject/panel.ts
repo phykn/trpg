@@ -8,14 +8,14 @@ export function buildSubjectSlot(subject: Subject | null, opts?: { dot?: boolean
   if (!subject) {
     return {
       id: 'person',
-      chip: { short: '대상', dot: opts?.dot },
-      panel: { empty: true, title: '대상' },
+      chip: { short: '상대', dot: opts?.dot },
+      panel: { empty: true, title: '상대' },
     };
   }
   const equipped = Object.values(subject.equipment).filter((it): it is EquipItem => it !== null);
   return {
     id: 'person',
-    chip: { short: '대상', dot: opts?.dot },
+    chip: { short: '상대', dot: opts?.dot },
     panel: {
       title: withDeath(subject.name, subject.alive),
       meta: [{ text: characterMeta(subject.level, subject.raceJob, subject.gender) }],
