@@ -12,14 +12,9 @@ import {
 import { StoryGraphCanvas } from './StoryGraphCanvas';
 import { actionForNode } from './_nodeActions';
 
-const COLOR_PLACE_UNREACH = '#DBC5A2';
-const COLOR_CHAR_UNREACH = '#B5BEA8';
-
 const LEGEND: { key: string; label: string; color: string }[] = [
-  { key: 'place-reach', label: '이동 가능', color: colors.exp.fg },
-  { key: 'place-unreach', label: '이동 불가', color: COLOR_PLACE_UNREACH },
-  { key: 'char-reach', label: '접근 가능', color: colors.success.fg },
-  { key: 'char-unreach', label: '접근 불가', color: COLOR_CHAR_UNREACH },
+  { key: 'place', label: '장소', color: colors.exp.fg },
+  { key: 'char', label: '캐릭터', color: colors.success.fg },
   { key: 'quest', label: '퀘스트', color: colors.danger.fg },
 ];
 
@@ -147,6 +142,7 @@ export function NeighborhoodPanel({
             <Text className="font-sans text-caption text-fg-muted">{item.label}</Text>
           </View>
         ))}
+        <Text className="font-sans text-caption text-fg-subtle">· 채워짐 = 탭 가능</Text>
       </View>
 
       {selectedNode ? (

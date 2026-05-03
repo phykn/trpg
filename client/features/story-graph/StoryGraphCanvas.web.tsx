@@ -46,6 +46,7 @@ function toElements(
           tier: override?.tier ?? 0,
           textColor: override?.textColor ?? colors.fg.default,
           isNew: unseenNodeIds?.has(node.id) ? 'true' : undefined,
+          interactable: node.reachable ? 'true' : 'false',
         },
         classes: node.kind,
       };
@@ -103,13 +104,34 @@ export function StoryGraphCanvas({
       wheelSensitivity: 0.18,
       style: [
         {
-          selector: 'node',
+          selector: 'node[interactable = "true"]',
           style: {
             shape: 'round-rectangle',
             'background-color': 'data(color)',
             'border-color': colors.border.default,
             'border-width': 1,
             color: 'data(textColor)',
+            content: 'data(label)',
+            'font-family': 'NanumGothic_700Bold, serif',
+            'font-size': 17,
+            'text-valign': 'center',
+            'text-halign': 'center',
+            'text-wrap': 'none',
+            width: 'label',
+            height: 34,
+            'padding-left': '12px',
+            'padding-right': '12px',
+            'overlay-opacity': 0,
+          },
+        },
+        {
+          selector: 'node[interactable = "false"]',
+          style: {
+            shape: 'round-rectangle',
+            'background-color': 'transparent',
+            'border-color': 'data(color)',
+            'border-width': 1.5,
+            color: colors.fg.muted,
             content: 'data(label)',
             'font-family': 'NanumGothic_700Bold, serif',
             'font-size': 17,
