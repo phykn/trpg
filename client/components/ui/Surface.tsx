@@ -11,7 +11,9 @@ type SurfaceProps = {
   children: React.ReactNode;
 } & Omit<ViewProps, 'style' | 'children' | 'className'>;
 
-const BASE = 'bg-canvas-subtle border border-border-default rounded-md';
+const PAPER_CLASS = 'bg-canvas-subtle border border-border-default rounded-md';
+// Floating sits above paper and is positioned absolutely over content — must be opaque so underlying text doesn't bleed through. Stronger border + slightly brighter solid bg replaces the (now-invisible) shadow.
+const FLOATING_CLASS = 'bg-[#262931] border border-[rgba(255,255,255,0.18)] rounded-md';
 
 export function Surface({
   variant = 'paper',
@@ -25,7 +27,8 @@ export function Surface({
   const stripeStyle: ViewStyle | null = stripeColor
     ? { borderLeftWidth: 2, borderLeftColor: stripeColor }
     : null;
-  const composedClass = className ? `${BASE} ${className}` : BASE;
+  const base = variant === 'floating' ? FLOATING_CLASS : PAPER_CLASS;
+  const composedClass = className ? `${base} ${className}` : base;
   const composedStyle = [shadowStyle, stripeStyle, style].filter(Boolean) as ViewStyle[];
   return (
     <View {...rest} className={composedClass} style={composedStyle}>

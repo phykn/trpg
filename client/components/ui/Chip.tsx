@@ -27,7 +27,7 @@ function TabChip({ label, active, dot, onPress }: {
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected: active }}
-      className={`flex-1 min-w-0 h-8 px-2 flex-row items-center justify-center gap-1.5 rounded-sm ${bg}`}
+      className={`flex-1 min-w-0 h-8 px-2 flex-row items-center justify-center gap-1.5 rounded-full ${bg}`}
     >
       <Text numberOfLines={1} className={`text-caption ${fontWeight} ${color}`}>
         {label}
@@ -55,7 +55,7 @@ function ActionChip({ label, onPress }: { label: string; onPress: () => void }) 
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      className="shrink-0 px-2 py-1 rounded-sm border border-border-default bg-canvas-default active:bg-canvas-inset"
+      className="shrink-0 px-3 py-1.5 rounded-full border border-border-default bg-canvas-default active:bg-canvas-inset"
     >
       <Text numberOfLines={1} className="font-sans text-panel text-fg-default">{label}</Text>
     </Pressable>

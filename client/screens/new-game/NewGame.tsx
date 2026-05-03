@@ -99,11 +99,8 @@ export function NewGame({ onSubmit }: Props) {
     >
       <View className="gap-2">
         <View className="flex-row items-center gap-2.5">
-          <Text
-            className="font-sans-semibold text-meta text-accent-fg"
-            style={{ letterSpacing: 1.2 }}
-          >
-            캐릭터 생성
+          <Text className="font-mono text-meta text-accent-fg uppercase">
+            CHARACTER · NEW
           </Text>
           <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default }} />
           <Glyph kind="outline" tone="accent" size={10} />
@@ -133,11 +130,11 @@ export function NewGame({ onSubmit }: Props) {
         </Text>
       </Pressable>
 
-      <Section label="이름">
+      <Section label="NAME">
         <Input value={name} onChangeText={setName} placeholder="등장인물의 이름" />
       </Section>
 
-      <Section label="성별">
+      <Section label="GENDER">
         <View className="flex-row gap-2">
           <View className="flex-1">
             <SelectCard
@@ -158,7 +155,7 @@ export function NewGame({ onSubmit }: Props) {
         </View>
       </Section>
 
-      <Section label="세계관">
+      <Section label="WORLD">
         {profiles.map((p) => (
           <SelectCard
             key={p.id}
@@ -174,7 +171,7 @@ export function NewGame({ onSubmit }: Props) {
       </Section>
 
       {selectedProfile && (
-        <Section label="종족">
+        <Section label="RACE">
           {races.length === 0 ? (
             <Text className="font-sans text-body text-fg-muted">선택 가능한 종족이 없습니다.</Text>
           ) : (

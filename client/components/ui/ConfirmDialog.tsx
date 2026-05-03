@@ -21,11 +21,11 @@ export function ConfirmDialog({ info, onConfirm, onCancel }: {
       <Pressable
         onPress={onCancel}
         className="flex-1 items-center justify-center px-6"
-        style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+        style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
       >
         <Pressable
           onPress={(e) => e.stopPropagation()}
-          className="bg-canvas-default border border-border-default rounded-md p-4 gap-3 w-full"
+          className="bg-[#262931] border border-[rgba(255,255,255,0.18)] rounded-md p-4 gap-3 w-full"
           style={{ maxWidth: 320, ...shadow.floating }}
         >
           <View className="gap-1">

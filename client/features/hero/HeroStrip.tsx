@@ -16,7 +16,7 @@ function Meter({ label, value, max, tone }: {
   return (
     <View className="flex-1 gap-1">
       <View className="flex-row items-baseline justify-between">
-        <Text className="font-mono text-caption text-fg-subtle">{label}</Text>
+        <Text className="font-sans-medium text-caption text-fg-subtle">{label}</Text>
         <Text
           numberOfLines={1}
           className="font-mono text-caption"
@@ -33,11 +33,11 @@ function Meter({ label, value, max, tone }: {
 export function HeroStrip({ hero }: { hero: Hero }) {
   return (
     <Surface className="mx-5 px-3 py-1 flex-row gap-4">
-      <Meter label="HP" value={hero.hp} max={hero.hpMax} tone="hp" />
-      <Meter label="MP" value={hero.mp} max={hero.mpMax} tone="mp" />
-      <Meter label="EXP" value={hero.exp} max={hero.expMax} tone="exp" />
+      <Meter label="체력" value={hero.hp} max={hero.hpMax} tone="hp" />
+      <Meter label="마나" value={hero.mp} max={hero.mpMax} tone="mp" />
+      <Meter label="경험" value={hero.exp} max={hero.expMax} tone="exp" />
       <Meter
-        label="REV"
+        label="소생"
         value={hero.reviveCoins}
         max={hero.reviveCoinsMax}
         tone="revival"

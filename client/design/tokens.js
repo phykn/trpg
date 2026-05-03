@@ -1,29 +1,29 @@
 // Design tokens consumed by tailwind.config.js (Node/CJS) and TS via tokens.d.ts. Naming follows GitHub Primer.
 const colors = {
   canvas: {
-    default: '#EEE6D6',
-    subtle: '#FBF8F3',
-    inset: '#E0D5C0',
+    default: '#1f2228',
+    subtle: 'rgba(255,255,255,0.03)',
+    inset: 'rgba(255,255,255,0.06)',
   },
   fg: {
-    default: '#2D2A26',
-    muted: '#6B6359',
-    subtle: '#9A9285',
-    'on-emphasis': '#FBF8F3',
+    default: '#ffffff',
+    muted: 'rgba(255,255,255,0.7)',
+    subtle: 'rgba(255,255,255,0.5)',
+    'on-emphasis': '#1f2228',
   },
   border: {
-    default: '#D6CCBA',
+    default: 'rgba(255,255,255,0.1)',
   },
   accent: {
-    fg: '#C96442',
-    muted: 'rgba(201,100,66,0.10)',
+    fg: '#D67A5C',
+    muted: 'rgba(214,122,92,0.12)',
   },
-  danger: { fg: '#B5534A' },
-  success: { fg: '#7B8C70' },
-  hp: { fg: '#C96442' },
-  mp: { fg: '#7B8C70' },
-  exp: { fg: '#B8894A' },
-  revival: { fg: '#7E6D9A' },
+  danger: { fg: '#E5775A' },
+  success: { fg: '#9DAE92' },
+  hp: { fg: '#E0826A' },
+  mp: { fg: '#9DAE92' },
+  exp: { fg: '#D6A86D' },
+  revival: { fg: '#A698BD' },
 };
 
 const spacing = {
@@ -45,23 +45,22 @@ const spacing = {
 
 const radius = {
   none: 0,
-  sm: 8,
-  md: 14,
-  lg: 18,
-  xl: 24,
+  sm: 2,
+  md: 4,
+  lg: 6,
+  xl: 8,
   full: 9999,
 };
 
-// Two-family system: NotoSerifKR for all Korean prose / labels / titles,
-// GeistMono for ASCII numerics and stat keys only. `serif*` aliases stay
-// for callsites that already lean on the narration name.
+// NanumGothic (Korean prose / labels / titles, weights 400/700) + GeistMono (ASCII numerics, stat values).
+// medium/semibold both map to 700 — NanumGothic has no 500/600 weight.
 const fontFamily = {
-  sans: ['NotoSerifKR_400Regular'],
-  'sans-medium': ['NotoSerifKR_500Medium'],
-  'sans-semibold': ['NotoSerifKR_600SemiBold'],
-  'sans-bold': ['NotoSerifKR_700Bold'],
-  serif: ['NotoSerifKR_400Regular'],
-  'serif-medium': ['NotoSerifKR_500Medium'],
+  sans: ['NanumGothic_400Regular'],
+  'sans-medium': ['NanumGothic_700Bold'],
+  'sans-semibold': ['NanumGothic_700Bold'],
+  'sans-bold': ['NanumGothic_700Bold'],
+  serif: ['NanumGothic_400Regular'],
+  'serif-medium': ['NanumGothic_700Bold'],
   mono: ['GeistMono_400Regular'],
   'mono-medium': ['GeistMono_500Medium'],
   'mono-semibold': ['GeistMono_600SemiBold'],
@@ -88,20 +87,21 @@ const toneColor = {
   neutral: colors.fg.subtle,
 };
 
+// Shadow API kept (callers reference shadow.floating / shadow.paper) but rendered invisible — depth in the dark theme comes from borders + bg opacity, not light-and-shadow simulation.
 const shadow = {
   floating: {
-    shadowColor: colors.fg.default,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    shadowColor: '#000000',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
   },
   paper: {
-    shadowColor: colors.fg.default,
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    shadowColor: '#000000',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
   },
 };
 

@@ -7,7 +7,7 @@ export function SendButton({ enabled, onPress }: {
   onPress: () => void;
 }) {
   const bgClass = enabled ? 'bg-accent-fg' : 'bg-canvas-inset';
-  const stroke = enabled ? colors.canvas.subtle : colors.fg.subtle;
+  const stroke = enabled ? colors['fg']['on-emphasis'] : colors.fg.subtle;
 
   return (
     <Pressable

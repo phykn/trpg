@@ -5,12 +5,11 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import {
-  NotoSerifKR_400Regular,
-  NotoSerifKR_500Medium,
-  NotoSerifKR_600SemiBold,
-  NotoSerifKR_700Bold,
-  useFonts as useSerif,
-} from '@expo-google-fonts/noto-serif-kr';
+  NanumGothic_400Regular,
+  NanumGothic_700Bold,
+  NanumGothic_800ExtraBold,
+  useFonts as useGothic,
+} from '@expo-google-fonts/nanum-gothic';
 import {
   GeistMono_400Regular,
   GeistMono_500Medium,
@@ -23,15 +22,14 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  const [serifLoaded] = useSerif({
-    NotoSerifKR_400Regular,
-    NotoSerifKR_500Medium,
-    NotoSerifKR_600SemiBold,
-    NotoSerifKR_700Bold,
+  const [gothicLoaded] = useGothic({
+    NanumGothic_400Regular,
+    NanumGothic_700Bold,
+    NanumGothic_800ExtraBold,
   });
   const [monoLoaded] = useMono({ GeistMono_400Regular, GeistMono_500Medium, GeistMono_600SemiBold });
 
-  if (!serifLoaded || !monoLoaded) return null;
+  if (!gothicLoaded || !monoLoaded) return null;
 
   return (
     <ThemeProvider value={DefaultTheme}>

@@ -32,7 +32,7 @@ export function SelectCard({ title, description, selected, onPress, dense }: Pro
         {title}
       </Text>
       {!dense && description ? (
-        <Text className="font-sans text-body text-fg-muted mt-1">{description}</Text>
+        <Text numberOfLines={2} className="font-sans text-body text-fg-muted mt-1">{description}</Text>
       ) : null}
     </Pressable>
   );
