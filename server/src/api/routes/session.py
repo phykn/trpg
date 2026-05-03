@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from ...domain.errors import ProfileMalformed, ProfileNotFound, RaceNotFound
 from ...domain.state import GameState
 from ...flow.intro import run_intro
+from ...flow.level_up import run_level_up
 from ...flow.roll import run_roll
+from ...flow.skill_recommend import recommend_skill_candidates
 from ...flow.turn import run_turn
 from ...llm.client import LLMClient, set_think_override
 from ...mapping.to_front import to_front_state
@@ -16,6 +18,8 @@ from ..deps import get_llm, get_save_repo, get_scenario_repo, get_state
 from ..schema import (
     InitRequest,
     InitResponse,
+    LevelUpPreviewResponse,
+    LevelUpRequest,
     RollRequest,
     TurnRequest,
 )
@@ -100,6 +104,54 @@ async def session_intro(
             state,
             scenario_repo,
             save_repo,
+            to_front_fn=to_front_state,
+        )
+    )
+
+
+@router.get("/session/{game_id}/level_up_preview", response_model=LevelUpPreviewResponse)
+async def level_up_preview(
+    state: GameState = Depends(get_state),
+    llm: LLMClient = Depends(get_llm),
+) -> LevelUpPreviewResponse:
+    try:
+        candidates = await recommend_skill_candidates(llm, state)
+    except Exception:
+        # LLM failure → empty list (client treats this as 'no skill choice required').
+        candidates = []
+    return LevelUpPreviewResponse(
+        skill_candidates=[
+            {
+                "id": s.id,
+                "name": s.name,
+                "description": s.description,
+                "type": s.type,
+                "target": s.target,
+                "primary_stat": s.primary_stat,
+                "special_effect": s.special_effect,
+            }
+            for s in candidates
+        ],
+    )
+
+
+@router.post("/session/{game_id}/level_up")
+async def session_level_up(
+    body: LevelUpRequest,
+    state: GameState = Depends(get_state),
+    llm: LLMClient = Depends(get_llm),
+    save_repo: SaveRepo = Depends(get_save_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+):
+    set_think_override(body.think)
+    return streaming_response(
+        run_level_up(
+            llm,
+            state,
+            scenario_repo,
+            save_repo,
+            stat_up=body.stat_up,
+            skill_id=body.skill_id,
             to_front_fn=to_front_state,
         )
     )
