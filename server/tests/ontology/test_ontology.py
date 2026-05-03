@@ -469,3 +469,80 @@ def test_item_view_resolves_unlocks_and_reward_of(fresh_state):
     v_sword = build_target_view(state, g, "sword_01", actor_id="player_01")
     reward_titles = [r["title"] for r in (v_sword.get("reward_of") or [])]
     assert "촌장의 부탁" in reward_titles
+
+
+def test_npc_view_drops_completed_failed_quests(fresh_state):
+    """quests_given and quests_kill_target filter out completed/failed; locked/active survive with full 2-hop payload."""
+    state = _seed(fresh_state)
+    state.quests["q_locked"] = Quest(
+        id="q_locked",
+        title="잠긴 의뢰",
+        giver_id="guard_01",
+        difficulty="보통",
+        triggers=[
+            QuestTrigger(id="t1", name="처치", type="character_death", target_id="goblin_01")
+        ],
+        rewards=QuestRewards(items=["sword_01"]),
+        status="locked",
+    )
+    state.quests["q_active"] = Quest(
+        id="q_active",
+        title="진행 의뢰",
+        giver_id="guard_01",
+        difficulty="보통",
+        triggers=[
+            QuestTrigger(id="t2", name="처치", type="character_death", target_id="goblin_02")
+        ],
+        rewards=QuestRewards(items=["sword_01"]),
+        status="active",
+    )
+    state.quests["q_completed"] = Quest(
+        id="q_completed",
+        title="완료 의뢰",
+        giver_id="guard_01",
+        difficulty="보통",
+        status="completed",
+    )
+    state.quests["q_failed"] = Quest(
+        id="q_failed",
+        title="실패 의뢰",
+        giver_id="guard_01",
+        difficulty="보통",
+        status="failed",
+    )
+    state.characters["goblin_02"] = Character(
+        id="goblin_02", name="고블린2", race_id="human", stats=Stats()
+    )
+    state.quests["q_hunt_active"] = Quest(
+        id="q_hunt_active",
+        title="현상금: 경비",
+        giver_id="player_01",
+        difficulty="보통",
+        triggers=[
+            QuestTrigger(id="t3", name="처치", type="character_death", target_id="guard_01")
+        ],
+        status="active",
+    )
+    state.quests["q_hunt_completed"] = Quest(
+        id="q_hunt_completed",
+        title="이전 현상금",
+        giver_id="player_01",
+        difficulty="보통",
+        triggers=[
+            QuestTrigger(id="t4", name="처치", type="character_death", target_id="guard_01")
+        ],
+        status="completed",
+    )
+
+    g = build_graph(state)
+    v = build_target_view(state, g, "guard_01", actor_id="player_01")
+
+    given_titles = {q["title"] for q in v["quests_given"]}
+    assert given_titles == {"t", "잠긴 의뢰", "진행 의뢰"}
+
+    locked = next(q for q in v["quests_given"] if q["title"] == "잠긴 의뢰")
+    assert locked["status"] == "locked"
+    assert "rewards" in locked
+
+    hunt_titles = {q["title"] for q in v["quests_kill_target"]}
+    assert hunt_titles == {"현상금: 경비"}

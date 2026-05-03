@@ -18,6 +18,8 @@ from .queries import (
     trigger_targets_of,
 )
 
+_KEEP_QUEST_STATUSES = frozenset({"locked", "active"})
+
 
 def build_target_view(
     state: GameState,
@@ -182,6 +184,9 @@ def _build_npc_view(
 
     quests_given: list[dict] = []
     for qid in quests_given_by(graph, target_id):
+        q = state.quests.get(qid)
+        if q is None or q.status not in _KEEP_QUEST_STATUSES:
+            continue
         payload = _quest_payload(state, graph, qid, include_giver=False, masked=masked)
         if payload is not None:
             quests_given.append(payload)
@@ -190,7 +195,7 @@ def _build_npc_view(
     quests_kill_target: list[dict] = []
     for qid in quests_killing(graph, target_id):
         q = state.quests.get(qid)
-        if q is None:
+        if q is None or q.status not in _KEEP_QUEST_STATUSES:
             continue
         item: dict = {"id": q.id, "title": q.title, "status": q.status}
         gid = giver_of(graph, qid)
