@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from ..domain.state import GameState
 from ..mapping.josa import eul_reul, eun_neun, gwa_wa, i_ga
+from ..mapping.labels import stat_label
 from .error_phrases import humanize_engine_error
 
 if TYPE_CHECKING:
@@ -133,9 +134,11 @@ def format_level_up_log(
     max_hp: int,
     max_mp: int,
 ) -> str:
+    up_kr = stat_label(stat_up)
+    down_kr = stat_label(stat_down)
     return (
         f"{actor_name}의 레벨이 올랐습니다 "
-        f"(레벨 {level}, {stat_up} ↑ / {stat_down} ↓, HP {max_hp} / MP {max_mp})."
+        f"(레벨 {level}, {up_kr} ↑ / {down_kr} ↓, HP {max_hp} / MP {max_mp})."
     )
 
 
