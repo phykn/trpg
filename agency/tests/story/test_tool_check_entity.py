@@ -73,3 +73,44 @@ def test_check_entity_race_unknown_skill(capsys, tmp_path):
     assert rc == 1
     err = capsys.readouterr().err
     assert "fire_breath" in err
+
+
+def test_check_entity_with_decomp_pool(capsys, tmp_path):
+    """decompose 명단에 있는 ID는 디스크에 없어도 valid로 인정."""
+    sd = _scaffold_minimal_scenario(tmp_path)
+    # decompose 디렉토리: 'fire_breath' 스킬을 명단에 포함
+    decomp_dir = tmp_path / ".decomp"
+    decomp_dir.mkdir()
+    setup = {
+        "world_md": "테스트",
+        "profile_name": "테스트",
+        "profile_description": "테스트",
+        "races": [
+            {"id": "human", "role": "주민", "racial_skill_ids": ["barter"], "is_humanoid": True},
+            {"id": "elf", "role": "엘프", "racial_skill_ids": ["fire_breath"], "is_humanoid": True},
+        ],
+        "skills": [
+            {"id": "barter", "role": "흥정", "primary_stat": "CHA", "type": "buff"},
+            {"id": "fire_breath", "role": "화염숨결", "primary_stat": "INT", "type": "attack"},
+        ],
+        "locations": [{"id": "town", "role": "광장", "connection_ids": []}],
+        "start_location_id": "town",
+    }
+    (decomp_dir / "setup.json").write_text(
+        json.dumps(setup, ensure_ascii=False), encoding="utf-8"
+    )
+    race_path = tmp_path / "elf.json"
+    race_path.write_text(json.dumps({
+        "id": "elf",
+        "name": "엘프",
+        "description": "긴 귀.",
+        "is_humanoid": True,
+        "racial_skill_ids": ["fire_breath"],
+        "stat_modifiers": {},
+    }, ensure_ascii=False), encoding="utf-8")
+    rc = tool._main([
+        "check-entity", "race", str(sd), str(race_path),
+        "--decomp", str(decomp_dir),
+    ])
+    assert rc == 0, capsys.readouterr().err
+    assert capsys.readouterr().out.strip() == "OK"

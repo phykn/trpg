@@ -76,6 +76,10 @@ def _build_parser() -> argparse.ArgumentParser:
     sp_chk.add_argument("kind", choices=sorted(SPECS), help="entity kind")
     sp_chk.add_argument("scenario_dir", help="scenario directory (already partially populated)")
     sp_chk.add_argument("entity_json", help="path to the entity JSON to check")
+    sp_chk.add_argument(
+        "--decomp", default=None,
+        help="decompose dir (setup/cast/arc.json). 있으면 그 명단도 valid ID 풀에 합침",
+    )
     sp_chk.set_defaults(func=_cmd_check_entity)
     return parser
 
@@ -95,6 +99,29 @@ def _fail(cmd: str, e: Exception) -> int:
     return 1
 
 
+def _merge_decomp_pool(refs: dict, decomp_dir: Path) -> None:
+    """decompose 디렉토리의 setup/cast/arc JSON에서 명단을 읽어 valid ID 풀에 합침.
+
+    Each phase JSON contributes its own roster; existence is optional (a
+    skill check before cast.json is written should still work).
+    """
+    setup_path = decomp_dir / "setup.json"
+    cast_path = decomp_dir / "cast.json"
+    arc_path = decomp_dir / "arc.json"
+    if setup_path.is_file():
+        s = DecomSetup.model_validate_json(setup_path.read_text(encoding="utf-8"))
+        refs.setdefault("race", set()).update(r.id for r in s.races)
+        refs.setdefault("skill", set()).update(sk.id for sk in s.skills)
+        refs.setdefault("location", set()).update(loc.id for loc in s.locations)
+    if cast_path.is_file():
+        c = DecomCast.model_validate_json(cast_path.read_text(encoding="utf-8"))
+        refs.setdefault("character", set()).update(ch.id for ch in c.characters)
+        refs.setdefault("item", set()).update(it.id for it in c.items)
+    if arc_path.is_file():
+        a = DecomArc.model_validate_json(arc_path.read_text(encoding="utf-8"))
+        refs.setdefault("quest", set()).update(q.id for q in a.quests)
+
+
 def _cmd_check_entity(args: argparse.Namespace) -> int:
     spec = SPECS[args.kind]
     sd = Path(args.scenario_dir)
@@ -106,6 +133,8 @@ def _cmd_check_entity(args: argparse.Namespace) -> int:
             Path(args.entity_json).read_text(encoding="utf-8")
         )
         refs = _collect_refs(sd, spec)
+        if args.decomp:
+            _merge_decomp_pool(refs, Path(args.decomp))
         existing_ids = refs[spec.kind]
         # remove the entity-being-checked id from `existing_ids` so it doesn't
         # trip the collision check against its own future on-disk file.
