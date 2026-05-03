@@ -242,6 +242,7 @@ async def emit_level_up(
     client: LLMClient | None,
     dirty: Dirty,
 ) -> AsyncIterator[dict]:
+    state.pending_growth = None  # answered (or never asked) — clear the pending question
     actor = state.characters[actor_id]
     try:
         level_up_engine(actor, stat_up, stat_down)  # type: ignore[arg-type]
