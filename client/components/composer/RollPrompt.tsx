@@ -2,7 +2,8 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { colors, shadow } from '@/design/tokens';
+import { colors } from '@/design/tokens';
+import { Surface } from '@/components/ui';
 import type { PendingCheck } from '@/types/wire';
 
 const STOP_BUTTON_DELAY_MS = 2000;
@@ -65,10 +66,7 @@ export function RollPrompt({
   }, [rolling]);
 
   return (
-    <View
-      className="mx-5 mt-1.5 bg-canvas-subtle rounded-md border border-border-default px-3 py-2.5"
-      style={shadow.paper}
-    >
+    <Surface className="mx-5 mt-1.5 px-3 py-2.5">
       {pending.reason && (
         <Text
           className="font-sans-medium text-caption text-fg-subtle mb-2"
@@ -300,6 +298,6 @@ export function RollPrompt({
           </Text>
         </Pressable>
       )}
-    </View>
+    </Surface>
   );
 }
