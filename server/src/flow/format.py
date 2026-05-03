@@ -161,14 +161,19 @@ def front_grade(grade: str) -> str:
     return "fail"
 
 
-def format_combat_end_text(outcome: str) -> str:
-    if outcome == "victory":
-        return "적을 모두 제압했습니다."
+def format_combat_end_text(
+    outcome: str, enemies_remaining: list[dict] | None = None
+) -> str:
     if outcome == "defeat":
-        return GAME_OVER_TEXT
+        return "패배했습니다."
+    if outcome == "fled":
+        return "전투에서 이탈했습니다."
     if outcome == "downed":
         return "의식을 되찾았습니다."
-    return "도망쳤습니다."
+    enemies_remaining = enemies_remaining or []
+    if any(e.get("hp", 0) > 0 for e in enemies_remaining):
+        return "적을 물리쳤습니다."
+    return "적을 처치했습니다."
 
 
 def format_use_log(state: GameState, actor_id: str, result: dict) -> str:
