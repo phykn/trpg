@@ -147,6 +147,7 @@ def to_subject(state: GameState, graph: GameGraph | None = None) -> dict | None:
     s = state.characters[sid]
     player = state.characters[state.player_id]
     known = [s.appearance] if s.appearance and s.alive else []
+    known += list(s.hints)
     known += [m.content for m in player.memories if m.target_id == sid]
     skills = _skill_names(state, graph, s.id)
     inventory = _inventory(state, graph, s.id)
