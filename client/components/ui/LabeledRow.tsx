@@ -24,7 +24,6 @@ export function LabeledRow({ label, children, mono = false, clampLines = 3 }: {
 
   const fontClass = mono ? 'font-mono' : 'font-sans';
   const canToggle = overflow || expanded;
-  const showHint = overflow && !expanded;
   const multiLine = expanded || clampLines > 1;
 
   return (
@@ -33,7 +32,7 @@ export function LabeledRow({ label, children, mono = false, clampLines = 3 }: {
         <Text
           className={`${fontClass} text-panel text-fg-default`}
           numberOfLines={expanded ? undefined : clampLines}
-          ellipsizeMode="clip"
+          ellipsizeMode="tail"
         >
           {text}
         </Text>
@@ -49,14 +48,6 @@ export function LabeledRow({ label, children, mono = false, clampLines = 3 }: {
             <Text className={`${fontClass} text-panel text-fg-default`}>
               {text}
             </Text>
-          </View>
-        )}
-        {showHint && (
-          <View
-            className="absolute bottom-0 right-0 bg-canvas-subtle pl-3"
-            pointerEvents="none"
-          >
-            <Text className={`${fontClass} text-panel text-fg-subtle`}>(펼치기)</Text>
           </View>
         )}
       </Row>
