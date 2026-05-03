@@ -7,6 +7,7 @@ from src.flow.format import (
     format_combat_enemy_hit,
     format_combat_enemy_killed,
     format_combat_outcome_summary,
+    format_combat_player_downed,
     format_combat_player_hit,
     format_combat_revived,
 )
@@ -24,8 +25,12 @@ def test_format_combat_player_hit():
     assert format_combat_player_hit("당신", 4, 16, 20) == "당신 4 피해 (HP 16/20)"
 
 
+def test_format_combat_player_downed():
+    assert format_combat_player_downed("당신", 15, 10) == "당신 15 피해 (HP 10→0, 사망 직전)"
+
+
 def test_format_combat_revived():
-    assert format_combat_revived(2, 3) == "가까스로 일어남 (Revival 2/3)"
+    assert format_combat_revived(2, 3, 5) == "가까스로 일어남 (Revival 2/3, HP 0→5)"
 
 
 def _result(

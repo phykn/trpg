@@ -223,8 +223,14 @@ def format_combat_player_hit(name: str, damage: int, hp_after: int, max_hp: int)
     return f"{name} {damage} 피해 (HP {hp_after}/{max_hp})"
 
 
-def format_combat_revived(coins_after: int, coins_max: int) -> str:
-    return f"가까스로 일어남 (Revival {coins_after}/{coins_max})"
+def format_combat_player_downed(name: str, damage: int, hp_before: int) -> str:
+    """Player hit reduces HP to 0 (revival imminent on next event)."""
+    return f"{name} {damage} 피해 (HP {hp_before}→0, 사망 직전)"
+
+
+def format_combat_revived(coins_after: int, coins_max: int, hp_after: int) -> str:
+    """Player revival: dropped to 0, came back at hp_after."""
+    return f"가까스로 일어남 (Revival {coins_after}/{coins_max}, HP 0→{hp_after})"
 
 
 def format_combat_outcome_summary(result: "AutoCombatResult") -> str | None:
@@ -250,11 +256,8 @@ def format_combat_outcome_summary(result: "AutoCombatResult") -> str | None:
         )
         if result.player_revived:
             # Show chronological two-step: downed at 0, then revived.
-            hp_before = result.player_hp_before
-            lines.append(f"{player_name} {result.player_damage_total} 피해 (HP {hp_before}→0, 사망 직전)")
-            lines.append(
-                f"가까스로 일어남 (Revival {result.player_revive_coins_after}/{result.player_revive_coins_max}, HP 0→{result.player_hp_after})"
-            )
+            lines.append(format_combat_player_downed(player_name, result.player_damage_total, result.player_hp_before))
+            lines.append(format_combat_revived(result.player_revive_coins_after, result.player_revive_coins_max, result.player_hp_after))
         else:
             lines.append(
                 format_combat_player_hit(
