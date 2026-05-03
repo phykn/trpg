@@ -40,23 +40,6 @@ function RollingIndicator() {
   );
 }
 
-function Separator() {
-  return (
-    <View
-      style={{
-        height: spacing[5],
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing[2],
-      }}
-    >
-      <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default, opacity: 0.55 }} />
-      <Glyph kind="outline" tone="subtle" size={10} />
-      <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default, opacity: 0.55 }} />
-    </View>
-  );
-}
-
 function TypingDot({ delay }: { delay: number }) {
   const anim = React.useRef(new Animated.Value(0)).current;
   React.useEffect(() => {
@@ -191,7 +174,6 @@ export function Log({
       data={log}
       keyExtractor={(e) => String(e.id)}
       renderItem={({ item }) => <LogItem entry={item} />}
-      ItemSeparatorComponent={Separator}
       ListFooterComponent={
         rolling
           ? <RollingIndicator />
