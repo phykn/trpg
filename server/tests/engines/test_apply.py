@@ -225,6 +225,38 @@ def test_move_player_self_move_idempotent(state):
     assert state.characters["player_01"].location_id == "plaza_01"
 
 
+def test_move_marks_destination_visited(state):
+    # Engine-level invariant: any successful move marks the destination as
+    # visited. Centralizing this in _apply_move makes every caller (turn.py
+    # narrate-emitted moves, roll.py movement outcomes, future callers)
+    # automatically correct.
+    assert "gate_01" not in state.characters["player_01"].visited_location_ids
+    apply_changes(
+        state, [{"type": "move", "target": "player_01", "destination": "gate_01"}]
+    )
+    assert "gate_01" in state.characters["player_01"].visited_location_ids
+
+
+def test_move_marks_visited_for_companions(state):
+    # Companions follow the patron — their visited set must also pick up the
+    # destination so a returning companion sees a re-visit, not a first-visit.
+    state.characters["player_01"].companions = ["guard_01"]
+    apply_changes(
+        state, [{"type": "move", "target": "player_01", "destination": "gate_01"}]
+    )
+    assert "gate_01" in state.characters["player_01"].visited_location_ids
+    assert "gate_01" in state.characters["guard_01"].visited_location_ids
+
+
+def test_move_npc_marks_npc_visited(state):
+    # NPC moves (quest hooks) should also accumulate the NPC's visited set
+    # so any future "have you been here before" check works for that NPC.
+    apply_changes(
+        state, [{"type": "move", "target": "guard_01", "destination": "far_keep"}]
+    )
+    assert "far_keep" in state.characters["guard_01"].visited_location_ids
+
+
 def test_move_item_between_containers(state):
     r = apply_changes(
         state,

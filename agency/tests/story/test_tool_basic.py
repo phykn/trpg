@@ -1,4 +1,5 @@
 """tool.py CLI 진입점 — 인자 없으면 usage 에러로 종료."""
+
 import pytest
 
 from agency.story import tool

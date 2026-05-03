@@ -186,6 +186,8 @@ def _entities_payload(
         if char is None or not char.alive:
             continue
         entry: dict = {"id": cid, "name": char.name, "type": "npc"}
+        if char.protected:
+            entry["protected"] = True
         roles = _npc_roles(state, actor, char, graph)
         if roles:
             entry["roles"] = roles

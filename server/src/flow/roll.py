@@ -5,9 +5,10 @@ import random
 from collections.abc import AsyncIterator
 
 from ..domain.errors import PendingCheckExpected
-from ..domain.memory import RollLogEntry
+from ..domain.memory import BonusItem, RollLogEntry
 from ..domain.state import GameState
 from ..engines.apply import apply_changes
+from ..engines.combat import stat_modifier
 from ..engines.growth import grant_roll_xp
 from ..llm.client import LLMClient, set_llm_session_if_unset
 from ..persistence.repo import SaveRepo, ScenarioRepo
@@ -45,7 +46,7 @@ def _apply_movement_roll_outcome(
     apply_changes(
         state,
         [{"type": "move", "target": state.player_id, "destination": dest}],
-        dirty.entities,
+        dirty,
     )
     state.invalidate_graph()
 
@@ -100,6 +101,16 @@ async def run_roll(
     total = dice + pending.mod
     grade = compute_grade(dice, total, pending.required_roll)
 
+    actor = state.characters[state.player_id]
+    stat_value = getattr(actor.stats, pending.stat)
+    stat_mod = stat_modifier(stat_value)
+    breakdown = [
+        BonusItem(label="주사위", value=dice),
+        BonusItem(label=stat_label(pending.stat), value=stat_mod),
+    ]
+    if pending.mod != 0:
+        breakdown.append(BonusItem(label="호감", value=pending.mod))
+
     roll_log = RollLogEntry(
         id=next_log_id(state),
         kind="roll",
@@ -107,6 +118,7 @@ async def run_roll(
         roll=dice,
         margin=total - pending.required_roll,
         result=front_grade(grade),
+        bonus_breakdown=breakdown,
     )
     push_log_entry(state, roll_log, dirty)
     yield {"type": "log_entry", "data": roll_log.model_dump()}

@@ -57,6 +57,10 @@ def judge_quest_progress(
         f"- satisfied: 목표를 충분히 달성했다고 인정. 보상 지급.\n"
         f"- partial: 일부 진행 — progress_delta로 누적량 반환.\n"
         f"- rejected: 충족 근거 부족.\n"
+        f"\n진행 시그널 인식: 다음 행위도 quest 진행으로 인정합니다 — "
+        f"의뢰자 NPC에게 결과를 보고하는 발화, 의뢰의 핵심 조건을 충족하는 다른 우회 행위(예: 처치 대신 추방·설득). "
+        f"직전 turn_log에 quest의 trigger와 매칭되는 사건이 있고, "
+        f"현재 행위가 그 결과를 의뢰자에게 알리거나 의뢰 완료 의사를 표현하면 satisfied로 판정합니다.\n"
     )
     return _call_judge_llm(prompt, schema=JudgeResult)
 

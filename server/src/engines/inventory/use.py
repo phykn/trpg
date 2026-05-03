@@ -74,15 +74,21 @@ def use(
     target: Character | None,
     state: GameState,
     *,
-    dirty: set[tuple[str, str]] | None = None,
+    dirty=None,
 ) -> dict:
     """Apply ConsumableEffect. target=None means actor self.
 
     consumable=True items are removed from inventory after one use.
     Weapon/armor items are not valid `use` targets — those go through equip.
     `on_use` (free text or trigger id) rides along on the result; quest
-    evaluation happens in engines.quest.check_quests.
+    evaluation happens in engines.quest.check_quests. `dirty` accepts both the
+    legacy entity-set and a full `Dirty`; downstream apply_attack_to_defender
+    forwards the latter so a quest-closing damage item can push the card.
     """
+    from ..quest import _entities_set
+
+    entities = _entities_set(dirty)
+
     items = state.items
     if item_id not in items:
         raise InventoryInvalid(f"unknown item: {item_id}")
@@ -120,9 +126,9 @@ def use(
         actor.inventory_ids.remove(item_id)
         result["consumed"] = True
 
-    if dirty is not None:
-        dirty.add(("characters", actor.id))
+    if entities is not None:
+        entities.add(("characters", actor.id))
         if recipient.id != actor.id:
-            dirty.add(("characters", recipient.id))
+            entities.add(("characters", recipient.id))
 
     return result

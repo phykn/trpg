@@ -180,7 +180,9 @@ def main() -> None:
         default=DEFAULT_TURNS,
         help=f"max turns (default: {DEFAULT_TURNS})",
     )
-    p.add_argument("--profile", default="default", help="profile name (default: default)")
+    p.add_argument(
+        "--profile", default="default", help="profile name (default: default)"
+    )
     args = p.parse_args()
     asyncio.run(main_async(args))
 

@@ -65,7 +65,7 @@ from .combat_auto import AutoCombatResult
 from .narrate import stream_narrate_tail
 from .rest import run_rest
 from .subject import refresh_active_subject
-from ..engines.quest import apply_judge_result
+from ..engines.quest import abandon_quest, accept_quest, apply_judge_result
 
 
 def end_turn_quest_check(state: GameState) -> None:
@@ -97,6 +97,7 @@ async def run_turn(
     *,
     to_front_fn: ToFrontFn | None = None,
     rng: random.Random | None = None,
+    quest_action: tuple[str, str] | None = None,
 ) -> AsyncIterator[dict]:
     set_llm_session_if_unset(state.game_id)
     if state.pending_check is not None:
@@ -105,6 +106,13 @@ async def run_turn(
         )
 
     dirty = Dirty()
+
+    if quest_action is not None:
+        kind, qid = quest_action
+        if kind == "accept":
+            accept_quest(state, qid)
+        elif kind == "abandon":
+            abandon_quest(state, qid, dirty)
 
     player_log = PlayerLogEntry(id=next_log_id(state), kind="player", text=player_input)
     push_log_entry(state, player_log, dirty)
@@ -204,13 +212,20 @@ _RECEIPT_ACTION_TYPES: frozenset[type] = frozenset(
 )
 
 
-def _is_receipt(state: GameState, action: object) -> bool:
+def _is_receipt(
+    state: GameState,
+    action: object,
+    pre_move_visited: set[str] | None = None,
+) -> bool:
     if type(action) in _RECEIPT_ACTION_TYPES:
         return True
     if isinstance(action, MoveAction):
-        return (
-            action.destination in state.characters[state.player_id].visited_location_ids
+        # _apply_move marks visited atomically, so the live set is post-move and
+        # would lie about first-visit. Callers must snapshot before emit_move.
+        assert pre_move_visited is not None, (
+            "MoveAction first-visit check needs a pre-move visited snapshot"
         )
+        return action.destination in pre_move_visited
     return False
 
 
@@ -218,12 +233,12 @@ def _chain_needs_narrate(
     state: GameState,
     parts: list,
     part_failures: list[bool] | None = None,
+    pre_move_visited: set[str] | None = None,
 ) -> bool:
     """Chain narrates iff any part is narrate-worthy: a Pass tail, a successful
     NPC-interaction (buy/sell/give), or a first-visit move that actually succeeded.
     Receipt-only chains (equip/unequip/use-self) and chains whose only "interesting"
     part failed skip narrate entirely."""
-    visited = state.characters[state.player_id].visited_location_ids
     for i, part in enumerate(parts):
         if isinstance(part, PassAction):
             return True
@@ -231,10 +246,14 @@ def _chain_needs_narrate(
             failed = bool(part_failures[i]) if part_failures is not None else False
             if not failed:
                 return True
-        if isinstance(part, MoveAction) and part.destination not in visited:
-            failed = bool(part_failures[i]) if part_failures is not None else False
-            if not failed:
-                return True
+        if isinstance(part, MoveAction):
+            assert pre_move_visited is not None, (
+                "MoveAction first-visit check needs a pre-move visited snapshot"
+            )
+            if part.destination not in pre_move_visited:
+                failed = bool(part_failures[i]) if part_failures is not None else False
+                if not failed:
+                    return True
     return False
 
 
@@ -263,6 +282,12 @@ async def _run_one_step_action(
     skip narrate; non-receipts (first-visit move, dramatic fails) drop the act
     and let narrate absorb the lines into prose."""
     state.turn_count += 1
+    # Snapshot pre-move so first-visit detection survives _apply_move's atomic visited update.
+    pre_move_visited = (
+        state.characters[state.player_id].visited_location_ids.copy()
+        if isinstance(result, MoveAction)
+        else None
+    )
     act_log_lines: list[str] = []
     pushed_act_evts: list[dict] = []
     failure_raws: list[str] = []
@@ -291,7 +316,7 @@ async def _run_one_step_action(
 
     is_failure = bool(failure_raws)
     dramatic = is_failure and any(is_dramatic_fail(r) for r in failure_raws)
-    receipt_action = _is_receipt(state, result)
+    receipt_action = _is_receipt(state, result, pre_move_visited)
     # narrate iff: dramatic failure OR (success on a non-receipt action, i.e. first-visit move)
     narrate_path = dramatic or (not is_failure and not receipt_action)
 
@@ -306,12 +331,6 @@ async def _run_one_step_action(
                 _drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
         if getattr(result, "tail_intent", None):
             act_log_lines.append(result.tail_intent)
-        # First-visit move: record the destination so re-visits are receipts.
-        if not is_failure and isinstance(result, MoveAction):
-            state.characters[state.player_id].visited_location_ids.add(
-                result.destination
-            )
-            dirty.entities.add(("characters", state.player_id))
         fake_pass = PassAction(action="pass")
         async for ev in stream_narrate_tail(
             client,
@@ -328,12 +347,6 @@ async def _run_one_step_action(
     else:
         for ev in pushed_act_evts:
             yield ev
-        # Successful re-visit: keep the set in sync (idempotent).
-        if not is_failure and isinstance(result, MoveAction):
-            state.characters[state.player_id].visited_location_ids.add(
-                result.destination
-            )
-            dirty.entities.add(("characters", state.player_id))
         if to_front_fn is not None:
             yield {"type": "state", "data": to_front_fn(state)}
 
@@ -593,7 +606,25 @@ async def _dispatch(
         return
 
     if isinstance(result, ChainAction):
-        state.turn_count += 1
+        # Tail CombatAction is handled by the combat phase, which itself bumps
+        # turn_count — the prefix parts are bookkeeping (equip/move/etc.) that
+        # share the combat turn rather than spending one of their own.
+        tail_combat: CombatAction | None = (
+            result.parts[-1]
+            if result.parts and isinstance(result.parts[-1], CombatAction)
+            else None
+        )
+        prefix_parts = (
+            result.parts[:-1] if tail_combat is not None else list(result.parts)
+        )
+        if tail_combat is None:
+            state.turn_count += 1
+        # Snapshot pre-move so first-visit detection survives _apply_move's atomic visited update.
+        pre_move_visited = (
+            state.characters[state.player_id].visited_location_ids.copy()
+            if any(isinstance(p, MoveAction) for p in prefix_parts)
+            else None
+        )
         last_pass: PassAction | None = None
         # Feed engine notices ("이미 체력 가득" etc.) into narrate so prose can't contradict the engine.
         chain_act_lines: list[str] = []
@@ -602,9 +633,9 @@ async def _dispatch(
         # isn't final at act-yield time.
         chain_act_evts: list[tuple[dict, int]] = []
         chain_failure_raws: list[str] = []
-        # Per-part failure flags aligned to result.parts indices; PassAction parts stay False.
-        part_failures: list[bool] = [False] * len(result.parts)
-        for idx, part in enumerate(result.parts):
+        # Per-part failure flags aligned to prefix_parts indices; PassAction parts stay False.
+        part_failures: list[bool] = [False] * len(prefix_parts)
+        for idx, part in enumerate(prefix_parts):
             if isinstance(part, PassAction):
                 last_pass = part
                 continue
@@ -628,40 +659,90 @@ async def _dispatch(
                     yield ev
             if getattr(part, "tail_intent", None):
                 chain_act_lines.append(part.tail_intent)
-        # Synthesize an empty pass so narrate always runs at chain tail, even without an explicit PassAction part.
-        narrate_action = (
-            last_pass if last_pass is not None else PassAction(action="pass")
-        )
-        # Chain parts mutated relations via emit_*; rebuild graph before narrate reads.
+
+        # Chain parts mutated relations via emit_*; rebuild graph before narrate / combat reads.
         state.invalidate_graph()
         graph = state.graph()
         # Chain that includes a move into a named-NPC location: pin the NPC so target panel matches narrate.
-        if any(isinstance(p, MoveAction) for p in result.parts):
+        if any(isinstance(p, MoveAction) for p in prefix_parts):
             from .subject import pin_subject_by_input_name
 
             pin_subject_by_input_name(state, player_input, graph)
 
-        # Compute narrate decision BEFORE marking moves as visited — first-visit
-        # detection depends on the pre-update set. A failed first-visit move is
-        # non-dramatic and stays receipt-only.
-        dramatic_chain = any(is_dramatic_fail(r) for r in chain_failure_raws)
-        narrate_chain = (
-            _chain_needs_narrate(state, result.parts, part_failures) or dramatic_chain
+        if tail_combat is not None:
+            # Surface prefix-part act cards (move enter cards) before combat fires.
+            # Equip/use/unequip/buy/sell/give cards are rolled into combat narrate's act_log_lines.
+            for ev, part_idx in chain_act_evts:
+                keep_card = (
+                    isinstance(prefix_parts[part_idx], MoveAction)
+                    and not part_failures[part_idx]
+                )
+                if keep_card:
+                    yield ev
+                else:
+                    _drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
+            if has_invalid_combat_targets(state, graph, tail_combat.targets):
+                # Tail combat with no valid target — same shape as standalone CombatAction's invalid-target branch, but the prefix parts already ran.
+                fail_line = NO_COMBAT_TARGETS_TEXT
+                if client is None:
+                    yield push_act(state, dirty, fail_line)
+                else:
+                    fail_evt = push_act(state, dirty, fail_line)
+                    _drop_pushed_act(
+                        state, dirty, (fail_evt.get("data") or {}).get("id")
+                    )
+                    chain_act_lines.append(fail_line)
+                    async for ev in stream_narrate_tail(
+                        client,
+                        state,
+                        scenario_repo,
+                        player_input,
+                        dirty,
+                        to_front_fn,
+                        PassAction(action="pass"),
+                        graph=graph,
+                        act_log_lines=chain_act_lines,
+                        previous_phase_signal=previous_phase_signal,
+                    ):
+                        yield ev
+                async for ev in finalize(state, save_repo, dirty, to_front_fn):
+                    yield ev
+                return
+            async for ev in _enter_combat_and_finalize(
+                client,
+                state,
+                scenario_repo,
+                save_repo,
+                dirty,
+                rng,
+                to_front_fn,
+                player_input=player_input,
+                enemy_ids=list(tail_combat.targets),
+                skill_id=tail_combat.skill_id,
+                graph=graph,
+                surprise=tail_combat.surprise,
+            ):
+                yield ev
+            return
+
+        # Synthesize an empty pass so narrate always runs at chain tail, even without an explicit PassAction part.
+        narrate_action = (
+            last_pass if last_pass is not None else PassAction(action="pass")
         )
 
-        # Record only successfully-arrived destinations; a failed move never put
-        # the player there, so future first-visit detection must still fire.
-        for idx, part in enumerate(result.parts):
-            if isinstance(part, MoveAction) and not part_failures[idx]:
-                state.characters[state.player_id].visited_location_ids.add(
-                    part.destination
-                )
-                dirty.entities.add(("characters", state.player_id))
+        # First-visit detection uses the pre-move snapshot — _apply_move already
+        # marked visited, so the live set would lie. A failed first-visit move
+        # is non-dramatic and stays receipt-only.
+        dramatic_chain = any(is_dramatic_fail(r) for r in chain_failure_raws)
+        narrate_chain = (
+            _chain_needs_narrate(state, prefix_parts, part_failures, pre_move_visited)
+            or dramatic_chain
+        )
 
         if narrate_chain:
             for ev, part_idx in chain_act_evts:
                 keep_card = (
-                    isinstance(result.parts[part_idx], MoveAction)
+                    isinstance(prefix_parts[part_idx], MoveAction)
                     and not part_failures[part_idx]
                 )
                 if keep_card:

@@ -20,10 +20,13 @@ function marginText(entry: RollEntry): string | null {
   return null;
 }
 
+const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
+
 export function RollResult({ entry }: { entry: RollEntry }) {
   const tone = TONE[entry.result];
   const margin = marginText(entry);
   const { scale, opacity } = useEntryAnimation();
+  const breakdown = entry.bonus_breakdown ?? [];
 
   return (
     <Animated.View style={{ transform: [{ scale }], opacity }}>
@@ -74,6 +77,33 @@ export function RollResult({ entry }: { entry: RollEntry }) {
             </Text>
           )}
         </View>
+        {breakdown.length > 0 && (
+          <View
+            className="flex-row items-baseline flex-wrap mt-1.5"
+            style={{ gap: 8 }}
+          >
+            {breakdown.map((item, idx) => (
+              <View
+                key={`${item.label}-${idx}`}
+                className="flex-row items-baseline"
+                style={{ gap: 3 }}
+              >
+                <Text
+                  className="font-sans text-caption text-fg-muted"
+                  style={{ letterSpacing: 0.6 }}
+                >
+                  {item.label}
+                </Text>
+                <Text
+                  className="font-mono text-caption text-fg-subtle"
+                  style={{ fontVariant: ['tabular-nums'] }}
+                >
+                  {idx === 0 ? item.value : signed(item.value)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
       </Surface>
     </Animated.View>
   );

@@ -281,7 +281,7 @@ async def test_stream_narrate_tail_calls_npc_dialogue_check_for_npc_target(
 
         captured: list[dict] = []
 
-        def fake_npc_check(state, *, claim, npc_id):
+        def fake_npc_check(state, *, claim, npc_id, dirty=None):
             captured.append({"claim": claim, "npc_id": npc_id})
 
         monkeypatch.setattr(narrate_mod, "npc_dialogue_quest_check", fake_npc_check)
@@ -331,7 +331,7 @@ async def test_stream_narrate_tail_skips_npc_check_for_player_target(
 
         captured: list[dict] = []
 
-        def fake_npc_check(state, *, claim, npc_id):
+        def fake_npc_check(state, *, claim, npc_id, dirty=None):
             captured.append({"npc_id": npc_id})
 
         monkeypatch.setattr(narrate_mod, "npc_dialogue_quest_check", fake_npc_check)
@@ -378,7 +378,7 @@ async def test_stream_narrate_tail_skips_npc_check_when_no_target(
 
     captured: list[dict] = []
 
-    def fake_npc_check(state, *, claim, npc_id):
+    def fake_npc_check(state, *, claim, npc_id, dirty=None):
         captured.append({"npc_id": npc_id})
 
     monkeypatch.setattr(narrate_mod, "npc_dialogue_quest_check", fake_npc_check)

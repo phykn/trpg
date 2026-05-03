@@ -3,6 +3,7 @@
 Each subcommand reads JSON file(s), validates against the matching Pydantic
 model + _check_* function, prints OK or a one-paragraph error.
 """
+
 import json
 
 from agency.story import tool
@@ -28,9 +29,7 @@ VALID_SETUP = {
             "type": "buff",
         }
     ],
-    "locations": [
-        {"id": "town", "role": "시작 광장", "connection_ids": []}
-    ],
+    "locations": [{"id": "town", "role": "시작 광장", "connection_ids": []}],
     "start_location_id": "town",
 }
 
@@ -102,20 +101,32 @@ def test_decompose_cast_bad_race_id(capsys, tmp_path):
 # Arc 테스트는 enemy character가 필요 (character_death trigger의 target).
 # VALID_CAST에 적군 추가한 변형 사용.
 ENEMY_CAST = json.loads(json.dumps(VALID_CAST))
-ENEMY_CAST["characters"].append({
-    "id": "bandit_01",
-    "role": "산적",
-    "is_enemy": True,
-    "location_id": "town",
-    "race_id": "human",
-    "learned_skill_ids": [],
-})
-ENEMY_CAST["items"].append({
-    "id": "robe_02", "kind": "armor", "role": "산적 옷", "owner_character_id": "bandit_01",
-})
-ENEMY_CAST["items"].append({
-    "id": "blade_01", "kind": "weapon", "role": "산적 단검", "owner_character_id": "bandit_01",
-})
+ENEMY_CAST["characters"].append(
+    {
+        "id": "bandit_01",
+        "role": "산적",
+        "is_enemy": True,
+        "location_id": "town",
+        "race_id": "human",
+        "learned_skill_ids": [],
+    }
+)
+ENEMY_CAST["items"].append(
+    {
+        "id": "robe_02",
+        "kind": "armor",
+        "role": "산적 옷",
+        "owner_character_id": "bandit_01",
+    }
+)
+ENEMY_CAST["items"].append(
+    {
+        "id": "blade_01",
+        "kind": "weapon",
+        "role": "산적 단검",
+        "owner_character_id": "bandit_01",
+    }
+)
 
 
 VALID_ARC = {

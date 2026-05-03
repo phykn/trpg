@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from ..domain.entities import (
+    EQUIPMENT_SLOTS,
     ArmorEffect,
     Character,
     DeathSaveState,
@@ -352,7 +353,7 @@ def apply_attack_to_defender(
     damage: int,
     *,
     nat_d20: int | None = None,
-    dirty: set[tuple[str, str]] | None = None,
+    dirty=None,
     attacker_id: str | None = None,
 ) -> dict:
     """Subtract damage from hp and route to death / death-save branches.
@@ -360,18 +361,30 @@ def apply_attack_to_defender(
     Returns: `{hp_before, hp_after, downed: bool, dying: bool, dead: bool, revived: bool}`.
     When `nat_d20` is 1 (critical_failure damage) during a death save, failures += crit_inc.
     On death, the quest character_death trigger is evaluated and killer fact appended to hints.
+
+    `dirty` may be a plain entity-tracking set (legacy combat-engine tests) or a
+    full `Dirty` (flow callers). The full form lets quest completion push a
+    success card through `check_quests` → `_apply_rewards`.
     """
     from .quest import (
+        _entities_set,
         check_quests,
     )  # deferred import — avoid cycle within pipeline layer
     from .perspective import append_death_to_hints
 
+    entities = _entities_set(dirty)
+
     defender = state.characters[defender_id]
+    # Story-critical NPCs (children, civilians, quest givers) cap incoming damage at 30% of max_hp per application
+    # so a single attack — even a crit or high-roll skill — can't oneshot them. Sole survival mechanic.
+    if defender.protected and defender.max_hp > 0:
+        cap = max(1, defender.max_hp * 30 // 100)
+        damage = min(damage, cap)
     hp_before = defender.hp
     hp_after = max(0, defender.hp - damage)
     defender.hp = hp_after
-    if dirty is not None:
-        dirty.add(("characters", defender_id))
+    if entities is not None:
+        entities.add(("characters", defender_id))
 
     out = {
         "hp_before": hp_before,
@@ -442,10 +455,17 @@ def _kill(defender: Character) -> None:
 
 
 def transfer_loot_on_death(dead: Character, winner: Character) -> None:
-    """Move all inventory_ids + gold from dead entity to winner. Atomic."""
+    """Move inventory_ids + gold from dead entity to winner; skip ids the winner already owns and clear corpse equipment slots — both prevent the locality guard from auto-repairing the loot back onto the corpse."""
     if dead.inventory_ids:
-        winner.inventory_ids.extend(dead.inventory_ids)
+        existing = set(winner.inventory_ids)
+        for iid in dead.inventory_ids:
+            if iid not in existing:
+                winner.inventory_ids.append(iid)
+                existing.add(iid)
         dead.inventory_ids.clear()
+    for slot in EQUIPMENT_SLOTS:
+        if getattr(dead.equipment, slot) is not None:
+            setattr(dead.equipment, slot, None)
     if dead.gold:
         winner.gold += dead.gold
         dead.gold = 0

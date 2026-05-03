@@ -154,6 +154,24 @@ def format_quest_start_turn_log(quest_title: str) -> str:
     return f"퀘스트 시작: {quest_title}"
 
 
+def format_quest_success_log(title: str, exp: int, gold: int, items: list[str]) -> str:
+    parts = [f"퀘스트 성공: {title}"]
+    rewards = []
+    if exp > 0:
+        rewards.append(f"+EXP {exp}")
+    if gold > 0:
+        rewards.append(f"+GOLD {gold}")
+    if items:
+        rewards.append(" / ".join(items))
+    if rewards:
+        parts.append(" · ".join(rewards))
+    return " — ".join(parts)
+
+
+def format_quest_fail_log(title: str, reason: str) -> str:
+    return f"퀘스트 실패: {title} — {reason}"
+
+
 def format_affinity_card_log(npc_name: str, delta: int) -> str:
     sign = "+" if delta >= 0 else ""
     return f"{npc_name} 호감도 {sign}{delta}"
@@ -265,7 +283,9 @@ def format_combat_player_downed(name: str, damage: int, hp_before: int) -> str:
 
 def format_combat_revived(coins_after: int, coins_max: int, hp_after: int) -> str:
     """Player revival: dropped to 0, came back at hp_after."""
-    return f"가까스로 일어남 (Revival {coins_after}/{coins_max}, HP 0→{hp_after})"
+    if coins_after == 0:
+        return f"최후의 호흡 (소생 0/{coins_max}, HP 0→{hp_after})"
+    return f"가까스로 일어남 (소생 {coins_after}/{coins_max}, HP 0→{hp_after})"
 
 
 def format_combat_outcome_summary(result: "AutoCombatResult") -> str | None:
@@ -315,10 +335,6 @@ def format_combat_outcome_summary(result: "AutoCombatResult") -> str | None:
     if not lines:
         return None
     return "전투 결과\n" + "\n".join(lines)
-
-
-def format_item_locality_warning(item_name: str) -> str:
-    return f"system: 「{item_name}」 위치 일관성 정정"
 
 
 def format_combat_event_summary(result: "AutoCombatResult") -> str:

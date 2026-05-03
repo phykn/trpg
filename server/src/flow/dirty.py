@@ -97,11 +97,15 @@ def push_turn_log(
 
 
 def register_kill(state: GameState, victim_id: str, dirty: Dirty) -> None:
-    """Single death entry point — the turn_log signal is what survives the player leaving the body, so every kill path must route through here."""
+    """Single death entry point — the turn_log signal is what survives the player leaving the body, so every kill path must route through here. Cascades giver-death quest fails so any future death path automatically closes orphaned quests."""
     char = state.characters.get(victim_id)
     name = char.name if char is not None else victim_id
     push_turn_log(state, victim_id, format_death_log(name), dirty)
     dirty.entities.add(("characters", victim_id))
+    # Inline import: engines/quest already imports push_act from flow/dirty.
+    from ..engines.quest import cascade_giver_death
+
+    cascade_giver_death(state, victim_id, dirty)
 
 
 def push_dialogue(

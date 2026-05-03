@@ -211,6 +211,46 @@ def test_quest_difficulty_label(fresh_state):
     assert q["giver"] == "경비병"
 
 
+def test_quest_progress_label_partial(fresh_state):
+    state = _full_state(fresh_state)
+    state.quests["q1"].triggers_met = [True, False]
+    q = to_quest(state)
+    assert q["progressLabel"] == "1/2"
+
+
+def test_quest_progress_label_complete(fresh_state):
+    state = _full_state(fresh_state)
+    state.quests["q1"].triggers_met = [True, True]
+    q = to_quest(state)
+    assert q["progressLabel"] == "✓"
+
+
+def test_quest_progress_label_empty_when_no_triggers(fresh_state):
+    state = _full_state(fresh_state)
+    state.quests["q1"].triggers = []
+    state.quests["q1"].triggers_met = []
+    q = to_quest(state)
+    assert q["progressLabel"] == ""
+
+
+def test_quest_progress_label_unmet_when_triggers_met_missing(fresh_state):
+    """Defensive: if triggers_met is unaligned (e.g. legacy save), treat
+    missing slots as unmet rather than crashing."""
+    state = _full_state(fresh_state)
+    state.quests["q1"].triggers_met = []
+    q = to_quest(state)
+    assert q["progressLabel"] == "0/2"
+
+
+def test_quest_none_when_active_id_cleared(fresh_state):
+    """After completion clears active_quest_id, the front payload's quest
+    slot must be None — not a stale dict."""
+    state = _full_state(fresh_state)
+    state.active_quest_id = None
+    assert to_quest(state) is None
+    assert to_front_state(state)["quest"] is None
+
+
 def test_place_day_phase_default_dawn(fresh_state):
     """turn_count 0 → 새벽 (start of day cycle)."""
     p = to_place(_full_state(fresh_state))

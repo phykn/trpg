@@ -152,3 +152,69 @@ async def test_consume_narrate_emits_affinity_card(fresh_state):
         events
     )
     assert any("도린 호감도 +5" in e.summary for e in state.turn_log), state.turn_log
+
+
+@pytest.mark.asyncio
+async def test_affinity_card_emits_after_gm_body_log_entry(fresh_state):
+    """Affinity card is a reaction to the body — its SSE event and its position in
+    state.log_entries must both come AFTER the gm body so the player reads the prose
+    before the receipt that justifies it."""
+    from src.llm_calls.narrate import NarrativeDelta
+
+    state = fresh_state
+    _seed_player(state)
+    _seed_npc(state, "npc_01", "에드릭")
+
+    final = NarrativeFinal(
+        body="당신은 고개를 살짝 숙입니다. 에드릭이 미소 짓습니다.",
+        output=NarrateOutput(
+            turn_summary="에드릭에게 인사",
+            state_changes=[
+                {
+                    "type": "affinity",
+                    "actor": "player_01",
+                    "target": "npc_01",
+                    "grade": "success",
+                    "intent": "friendly",
+                }
+            ],
+        ),
+    )
+
+    async def stream():
+        yield NarrativeDelta(text="당신은 고개를 살짝 숙입니다. ")
+        yield NarrativeDelta(text="에드릭이 미소 짓습니다.")
+        yield final
+
+    dirty = Dirty()
+    events = [
+        ev
+        async for ev in consume_narrate(
+            state,
+            dirty,
+            stream(),
+            target_for_log=None,
+            dialogue_input="에드릭에게 인사한다",
+        )
+    ]
+    log_events = [(i, e) for i, e in enumerate(events) if e.get("type") == "log_entry"]
+    gm_idx = next(i for i, e in log_events if (e.get("data") or {}).get("kind") == "gm")
+    aff_idx = next(
+        i
+        for i, e in log_events
+        if "호감도" in ((e.get("data") or {}).get("text") or "")
+    )
+    assert aff_idx > gm_idx, (
+        "affinity card SSE must emit AFTER gm body log_entry SSE",
+        [(i, e) for i, e in log_events],
+    )
+
+    log_kinds_text = [(e.kind, getattr(e, "text", "")) for e in state.log_entries]
+    gm_pos = next(i for i, (k, _) in enumerate(log_kinds_text) if k == "gm")
+    aff_pos = next(
+        i for i, (k, t) in enumerate(log_kinds_text) if k == "act" and "호감도" in t
+    )
+    assert aff_pos > gm_pos, (
+        "affinity card must sit AFTER gm body in state.log_entries",
+        log_kinds_text,
+    )

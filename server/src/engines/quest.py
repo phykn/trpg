@@ -9,11 +9,37 @@ from ..ontology.graph import GameGraph
 from ..ontology.queries import giver_of, kill_targets_of
 from .inventory.carry import check_can_carry
 
-DirtySet = set[tuple[str, str]] | None
+# Quest evaluation accepts either a plain entity-tracking set (legacy callers)
+# or a full `flow.dirty.Dirty` (when a quest closure must push a success card).
+# A bare set still works — only the card emit is conditional on getting the
+# full object.
 
 
-def apply_judge_result(state: GameState, quest_id: str, result: dict) -> bool:
-    """Apply free-path judge outcome. Returns True if state changed."""
+def _entities_set(dirty) -> set[tuple[str, str]] | None:
+    if dirty is None:
+        return None
+    if isinstance(dirty, set):
+        return dirty
+    return dirty.entities
+
+
+def _as_dirty(dirty):
+    """Return the full Dirty if available; None when the caller only had a set."""
+    if dirty is None or isinstance(dirty, set):
+        return None
+    return dirty
+
+
+def apply_judge_result(
+    state: GameState, quest_id: str, result: dict, dirty=None
+) -> bool:
+    """Apply free-path judge outcome. Returns True if state changed.
+
+    On 'satisfied', routes through `_apply_rewards` so the same success card
+    that the trigger-driven `check_quests` path emits also surfaces here.
+    Card emit only when `dirty` is the full `flow.dirty.Dirty`; legacy callers
+    passing None (or omitting) get the state mutation without the card.
+    """
     quest = state.quests.get(quest_id)
     if not quest or quest.status != "active":
         return False
@@ -21,6 +47,7 @@ def apply_judge_result(state: GameState, quest_id: str, result: dict) -> bool:
     if outcome == "satisfied":
         quest.status = "completed"
         quest.success_reason = result.get("reason") or "free_path_satisfied"
+        _apply_rewards(state, quest, dirty)
         return True
     if outcome == "partial":
         delta = result.get("progress_delta") or 0
@@ -47,14 +74,53 @@ def accept_quest(state: GameState, quest_id: str) -> bool:
     return True
 
 
-def abandon_quest(state: GameState, quest_id: str) -> bool:
-    """active → abandoned. No-op for any other status."""
+def abandon_quest(state: GameState, quest_id: str, dirty=None) -> bool:
+    """active → failed via _fail_quest. No-op for any other status."""
     quest = state.quests.get(quest_id)
     if not quest or quest.status != "active":
         return False
-    quest.status = "abandoned"
-    quest.fail_reason = "abandoned"
+    _fail_quest(state, quest, reason="의뢰 포기", dirty=dirty)
     return True
+
+
+def _fail_quest(state: GameState, quest: Quest, reason: str, dirty) -> None:
+    """Mark quest failed, clear active pointer if matching, emit fail card.
+
+    Card emit only when `dirty` is the full `flow.dirty.Dirty` (has `.log`);
+    legacy callers passing a bare entity-set get the state mutation but no card.
+    """
+    quest.status = "failed"
+    quest.fail_reason = reason
+    entities = _entities_set(dirty)
+    full = _as_dirty(dirty)
+    if entities is not None:
+        entities.add(("quests", quest.id))
+    if full is not None:
+        from ..flow.dirty import push_act
+        from ..flow.format import format_quest_fail_log
+
+        text = format_quest_fail_log(title=quest.title, reason=reason)
+        push_act(
+            state,
+            full,
+            text,
+            turn_summary=f"퀘스트 «{quest.title}» 실패 ({reason})",
+        )
+    if state.active_quest_id == quest.id:
+        state.active_quest_id = None
+
+
+def cascade_giver_death(state: GameState, victim_id: str, dirty) -> None:
+    """When an NPC dies, fail every active/pending quest where they were the giver.
+
+    Routes through `_fail_quest` so the card emit + active_quest_id clear stay
+    consistent with the player-initiated abandon path.
+    """
+    for quest in state.quests.values():
+        if quest.status not in ("active", "pending"):
+            continue
+        if quest.giver_id == victim_id:
+            _fail_quest(state, quest, reason="의뢰자 사망", dirty=dirty)
 
 
 def _ensure_runtime_fields(quest: Quest) -> None:
@@ -72,7 +138,9 @@ def _ensure_runtime_fields(quest: Quest) -> None:
     )
 
 
-def _apply_rewards(state: GameState, quest: Quest, dirty: DirtySet) -> None:
+def _apply_rewards(state: GameState, quest: Quest, dirty) -> None:
+    entities = _entities_set(dirty)
+    full = _as_dirty(dirty)
     actor = state.characters.get(state.player_id)
     if actor is None:
         return
@@ -80,22 +148,46 @@ def _apply_rewards(state: GameState, quest: Quest, dirty: DirtySet) -> None:
     actor.xp_pool += quest.rewards.exp
     # Carry-overflow rewards land at the player's location (loot-on-the-ground), so quest completion can't silently break the carry invariant.
     location = state.locations.get(actor.location_id) if actor.location_id else None
+    granted_item_names: list[str] = []
     for item_id in quest.rewards.items:
+        item = state.items.get(item_id)
+        if item is not None:
+            granted_item_names.append(item.name)
         try:
             check_can_carry(actor, state.items, item_id)
         except InventoryInvalid:
             if location is not None:
                 location.item_ids.append(item_id)
-                if dirty is not None:
-                    dirty.add(("locations", location.id))
+                if entities is not None:
+                    entities.add(("locations", location.id))
             continue
         actor.inventory_ids.append(item_id)
-    if dirty is not None:
-        dirty.add(("characters", actor.id))
+    if entities is not None:
+        entities.add(("characters", actor.id))
+    if full is not None:
+        # Inline imports avoid the engines→flow cycle (flow already imports engines).
+        from ..flow.dirty import push_act
+        from ..flow.format import format_quest_success_log
+
+        text = format_quest_success_log(
+            title=quest.title,
+            exp=quest.rewards.exp,
+            gold=quest.rewards.gold,
+            items=granted_item_names,
+        )
+        push_act(
+            state,
+            full,
+            text,
+            turn_summary=f"퀘스트 «{quest.title}» 성공, 보상 수령",
+        )
+    if state.active_quest_id == quest.id:
+        state.active_quest_id = None
 
 
-def _maybe_unlock_dependents(state: GameState, dirty: DirtySet) -> None:
+def _maybe_unlock_dependents(state: GameState, dirty) -> None:
     """If all prerequisite_ids of another quest are completed, flip locked → active."""
+    entities = _entities_set(dirty)
     for q in state.quests.values():
         if q.status != "locked":
             continue
@@ -108,12 +200,13 @@ def _maybe_unlock_dependents(state: GameState, dirty: DirtySet) -> None:
         ):
             q.status = "pending" if q.requires_acceptance else "active"
             _ensure_runtime_fields(q)
-            if dirty is not None:
-                dirty.add(("quests", q.id))
+            if entities is not None:
+                entities.add(("quests", q.id))
 
 
-def update_chapter_progress(state: GameState, dirty: DirtySet = None) -> None:
+def update_chapter_progress(state: GameState, dirty=None) -> None:
     """Recompute progress for every chapter. Only required=true quests count."""
+    entities = _entities_set(dirty)
     for ch in state.chapters.values():
         required_quests = [
             state.quests[qid]
@@ -125,23 +218,25 @@ def update_chapter_progress(state: GameState, dirty: DirtySet = None) -> None:
         if ch.progress.done != done or ch.progress.total != total:
             ch.progress.done = done
             ch.progress.total = total
-            if dirty is not None:
-                dirty.add(("chapters", ch.id))
+            if entities is not None:
+                entities.add(("chapters", ch.id))
 
 
-def _maybe_advance_chapters(state: GameState, dirty: DirtySet) -> None:
+def _maybe_advance_chapters(state: GameState, dirty) -> None:
     """If all required quests of a chapter are completed, flip active → completed."""
+    entities = _entities_set(dirty)
     for ch in state.chapters.values():
         if ch.status != "active":
             continue
         if ch.progress.total > 0 and ch.progress.done >= ch.progress.total:
             ch.status = "completed"
-            if dirty is not None:
-                dirty.add(("chapters", ch.id))
+            if entities is not None:
+                entities.add(("chapters", ch.id))
 
 
-def _maybe_unlock_chapters(state: GameState, dirty: DirtySet) -> None:
+def _maybe_unlock_chapters(state: GameState, dirty) -> None:
     """If all prerequisite_ids of a locked chapter are completed, flip locked → active."""
+    entities = _entities_set(dirty)
     for ch in state.chapters.values():
         if ch.status != "locked":
             continue
@@ -152,8 +247,8 @@ def _maybe_unlock_chapters(state: GameState, dirty: DirtySet) -> None:
             for pid in ch.prerequisite_ids
         ):
             ch.status = "active"
-            if dirty is not None:
-                dirty.add(("chapters", ch.id))
+            if entities is not None:
+                entities.add(("chapters", ch.id))
 
 
 def _refresh_active_quest_id(state: GameState) -> None:
@@ -169,13 +264,41 @@ def _refresh_active_quest_id(state: GameState) -> None:
     )
 
 
+def _trigger_matches(
+    state: GameState,
+    trigger,
+    event_type: str,
+    target_id: str | None,
+) -> bool:
+    """Exact-id match, or character_death fallback by location for hostile spawns
+    whose runtime ids don't equal the scenario's literal trigger target_id."""
+    if trigger.type != event_type:
+        return False
+    if trigger.target_id == target_id:
+        return True
+    if event_type != "character_death" or target_id is None:
+        return False
+    expected = state.characters.get(trigger.target_id)
+    victim = state.characters.get(target_id)
+    if expected is None or victim is None:
+        return False
+    if expected.location_id is None or victim.location_id != expected.location_id:
+        return False
+    return victim.combat_behavior is not None
+
+
 def check_quests(
     state: GameState,
     event_type: str,
     target_id: str | None,
-    dirty: DirtySet = None,
+    dirty=None,
 ) -> list[str]:
-    """Evaluate quests against an event; returns ids whose status changed. Triggers are single-fire."""
+    """Evaluate quests against an event; returns ids whose status changed. Triggers are single-fire.
+
+    `dirty` may be either the entity-tracking set (legacy) or a full `Dirty`.
+    Only the latter receives a success/fail card on completion.
+    """
+    entities = _entities_set(dirty)
     changed: list[str] = []
     graph = state.graph()
     for q in state.quests.values():
@@ -187,13 +310,13 @@ def check_quests(
         for i, t in enumerate(q.triggers):
             if q.triggers_met[i]:
                 continue
-            if t.type == event_type and t.target_id == target_id:
+            if _trigger_matches(state, t, event_type, target_id):
                 q.triggers_met[i] = True
                 any_change = True
         for i, t in enumerate(q.fail_triggers):
             if q.fail_triggers_met[i]:
                 continue
-            if t.type == event_type and t.target_id == target_id:
+            if _trigger_matches(state, t, event_type, target_id):
                 q.fail_triggers_met[i] = True
                 any_change = True
 
@@ -208,8 +331,8 @@ def check_quests(
             q.status = "completed"
             _apply_rewards(state, q, dirty)
             changed.append(q.id)
-        if dirty is not None:
-            dirty.add(("quests", q.id))
+        if entities is not None:
+            entities.add(("quests", q.id))
 
     # Death cascade: giver death → fail; kill-target death → complete (objective_killed).
     # Runs as a second pass so it can also catch quests with no explicit triggers.
@@ -231,7 +354,7 @@ def _cascade_death(
     graph: GameGraph,
     dead_id: str,
     changed: list[str],
-    dirty: DirtySet,
+    dirty,
 ) -> None:
     """Cascade entity death onto quest statuses without requiring explicit triggers.
 
@@ -246,17 +369,14 @@ def _cascade_death(
         is_giver_dead = giver == dead_id
         is_kill_target_dead = dead_id in kill_targets
 
-        # locked / pending / abandoned / failed quests are intentionally excluded.
-        if is_giver_dead and q.status in ("active", "completed"):
+        # locked / abandoned / failed quests are intentionally excluded.
+        if is_giver_dead and q.status in ("active", "pending", "completed"):
             if q.status == "completed" and q.id in changed:
                 # Undo same-turn completion so fail wins.
                 changed.remove(q.id)
-            q.status = "failed"
-            q.fail_reason = "giver_dead"
+            _fail_quest(state, q, reason="의뢰자 사망", dirty=dirty)
             if q.id not in changed:
                 changed.append(q.id)
-            if dirty is not None:
-                dirty.add(("quests", q.id))
 
         elif is_kill_target_dead and not is_giver_dead:
             if q.status == "completed" and q.id in changed and q.success_reason is None:

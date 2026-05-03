@@ -163,6 +163,45 @@ def test_entities_carry_role_tags(fresh_state):
     assert "roles" not in ids["villager"]
 
 
+def test_entities_surface_protected_flag(fresh_state):
+    """`protected=true` Character → entities entry carries `protected: true`
+    so the classify LLM can override the friendly-attack→combat default and
+    pass instead. Default `protected=false` NPCs omit the field (no payload bloat)."""
+    fresh_state.locations["plaza_01"] = Location(id="plaza_01", name="광장")
+    fresh_state.characters["player_01"] = Character(
+        id="player_01",
+        name="주",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+    )
+    child = Character(
+        id="mira",
+        name="미라",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+        max_hp=8,
+        hp=8,
+    )
+    child.protected = True
+    fresh_state.characters["mira"] = child
+    fresh_state.characters["bandit"] = Character(
+        id="bandit",
+        name="산적",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+        max_hp=20,
+        hp=20,
+    )
+
+    sur = build_surroundings(fresh_state, "player_01")
+    ids = {e["id"]: e for e in sur["entities"]}
+    assert ids["mira"].get("protected") is True
+    assert "protected" not in ids["bandit"]
+
+
 def test_corpses_same_location_and_history_referenced(fresh_state):
     """Corpses payload covers two cases:
     - same-location dead NPC (no off_screen flag)

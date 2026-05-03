@@ -75,7 +75,7 @@ def test_giver_death_fails_active_quest(fresh_state):
     changed = q.check_quests(state, "character_death", "edric_01", dirty)
     assert "q1" in changed
     assert state.quests["q1"].status == "failed"
-    assert state.quests["q1"].fail_reason == "giver_dead"
+    assert state.quests["q1"].fail_reason == "의뢰자 사망"
     assert ("quests", "q1") in dirty
 
 
@@ -91,8 +91,8 @@ def test_giver_death_multiple_quests_all_fail(fresh_state):
     q.check_quests(state, "character_death", "edric_01")
     assert state.quests["q1"].status == "failed"
     assert state.quests["q2"].status == "failed"
-    assert state.quests["q1"].fail_reason == "giver_dead"
-    assert state.quests["q2"].fail_reason == "giver_dead"
+    assert state.quests["q1"].fail_reason == "의뢰자 사망"
+    assert state.quests["q2"].fail_reason == "의뢰자 사망"
 
 
 # --- Objective kill → quest completes -------------------------------------
@@ -214,4 +214,100 @@ def test_giver_death_beats_kill_target_when_same_entity(fresh_state):
     )
     q.check_quests(state, "character_death", "edric_01")
     assert state.quests["q1"].status == "failed"
-    assert state.quests["q1"].fail_reason == "giver_dead"
+    assert state.quests["q1"].fail_reason == "의뢰자 사망"
+
+
+# --- _fail_quest direct call ----------------------------------------------
+
+
+def test_fail_quest_sets_status_and_clears_active(fresh_state):
+    """_fail_quest with a full Dirty: status flips to failed, fail_reason set,
+    fail card lands in dirty.log, active_quest_id clears when matching."""
+    from src.flow.dirty import Dirty
+
+    state = _state(
+        fresh_state,
+        quests=[_quest("q1", giver_id="edric_01")],
+        extra_chars=[_npc("edric_01")],
+    )
+    state.quests["q1"].title = "촌장의 부탁"
+    state.active_quest_id = "q1"
+    dirty = Dirty()
+    q._fail_quest(state, state.quests["q1"], reason="의뢰자 사망", dirty=dirty)
+    assert state.quests["q1"].status == "failed"
+    assert state.quests["q1"].fail_reason == "의뢰자 사망"
+    assert state.active_quest_id is None
+    texts = [e.model_dump().get("text", "") for e in dirty.log]
+    assert any("퀘스트 실패: 촌장의 부탁" in t and "의뢰자 사망" in t for t in texts), (
+        texts
+    )
+
+
+def test_fail_quest_keeps_active_pointer_when_other(fresh_state):
+    from src.flow.dirty import Dirty
+
+    state = _state(
+        fresh_state,
+        quests=[
+            _quest("q1", giver_id="edric_01"),
+            _quest("q2", giver_id="edric_01"),
+        ],
+        extra_chars=[_npc("edric_01")],
+    )
+    state.active_quest_id = "q2"
+    q._fail_quest(state, state.quests["q1"], reason="의뢰자 사망", dirty=Dirty())
+    assert state.active_quest_id == "q2"
+
+
+# --- cascade_giver_death (called from register_kill) ----------------------
+
+
+def test_cascade_giver_death_fails_active_quests_with_that_giver(fresh_state):
+    """Multiple quests, only those with matching giver flip to failed."""
+    from src.flow.dirty import Dirty
+
+    state = _state(
+        fresh_state,
+        quests=[
+            _quest("q1", giver_id="edric_01"),
+            _quest("q2", giver_id="edric_01"),
+            _quest("q3", giver_id="elder_05"),
+        ],
+        extra_chars=[_npc("edric_01"), _npc("elder_05")],
+    )
+    dirty = Dirty()
+    q.cascade_giver_death(state, "edric_01", dirty)
+    assert state.quests["q1"].status == "failed"
+    assert state.quests["q2"].status == "failed"
+    assert state.quests["q3"].status == "active"
+    fail_texts = [e.model_dump().get("text", "") for e in dirty.log]
+    assert sum("퀘스트 실패" in t for t in fail_texts) == 2
+
+
+def test_cascade_giver_death_skips_completed_quests(fresh_state):
+    """Quest already completed isn't reverted by cascade."""
+    from src.flow.dirty import Dirty
+
+    state = _state(
+        fresh_state,
+        quests=[_quest("q1", giver_id="edric_01", status="completed")],
+        extra_chars=[_npc("edric_01")],
+    )
+    dirty = Dirty()
+    q.cascade_giver_death(state, "edric_01", dirty)
+    assert state.quests["q1"].status == "completed"
+    assert dirty.log == []
+
+
+def test_cascade_giver_death_with_set_dirty_skips_card_but_still_fails(fresh_state):
+    """Back-compat: a bare entity-set as `dirty` mutates state but skips card emit."""
+    state = _state(
+        fresh_state,
+        quests=[_quest("q1", giver_id="edric_01")],
+        extra_chars=[_npc("edric_01")],
+    )
+    entities: set[tuple[str, str]] = set()
+    q.cascade_giver_death(state, "edric_01", entities)
+    assert state.quests["q1"].status == "failed"
+    assert state.quests["q1"].fail_reason == "의뢰자 사망"
+    assert ("quests", "q1") in entities

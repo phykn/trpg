@@ -4,6 +4,7 @@ Network is mocked: we monkeypatch _Storage to record put_bytes calls instead
 of actually hitting Supabase. This still verifies path mapping, content_type
 guess, and error handling without real env vars.
 """
+
 import json
 from unittest.mock import AsyncMock, patch
 
@@ -24,7 +25,9 @@ def test_upload_uploads_every_file(capsys, tmp_path, fake_storage_env):
     sd.mkdir()
     (sd / "world.md").write_text("테스트", encoding="utf-8")
     (sd / "items").mkdir()
-    (sd / "items" / "sword.json").write_text(json.dumps({"id": "sword"}), encoding="utf-8")
+    (sd / "items" / "sword.json").write_text(
+        json.dumps({"id": "sword"}), encoding="utf-8"
+    )
 
     fake = AsyncMock()
     fake.put_bytes = AsyncMock(return_value=None)

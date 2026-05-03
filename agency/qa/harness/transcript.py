@@ -8,9 +8,7 @@ def write_sse_jsonl(path: Path, turn_no: int, kind: str, events: list[dict]) -> 
     with path.open("a", encoding="utf-8") as f:
         for ev in events:
             f.write(
-                json.dumps(
-                    {"turn": turn_no, "kind": kind, **ev}, ensure_ascii=False
-                )
+                json.dumps({"turn": turn_no, "kind": kind, **ev}, ensure_ascii=False)
                 + "\n"
             )
 

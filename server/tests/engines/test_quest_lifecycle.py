@@ -75,12 +75,29 @@ def test_accept_nonexistent_quest_returns_false(fresh_state):
 
 
 def test_active_quest_abandons(fresh_state):
-    """Active quest → abandoned via explicit player action."""
+    """Active quest → failed via explicit player action ('의뢰 포기')."""
     state = _state(fresh_state, quests=[_quest("q1", status="active")])
     result = q.abandon_quest(state, "q1")
     assert result is True
-    assert state.quests["q1"].status == "abandoned"
-    assert state.quests["q1"].fail_reason == "abandoned"
+    assert state.quests["q1"].status == "failed"
+    assert state.quests["q1"].fail_reason == "의뢰 포기"
+
+
+def test_abandon_quest_emits_fail_card(fresh_state):
+    """abandon_quest with a full Dirty pushes the '의뢰 포기' fail card."""
+    from src.flow.dirty import Dirty
+
+    state = _state(fresh_state, quests=[_quest("q1", status="active")])
+    state.quests["q1"].title = "촌장의 부탁"
+    state.active_quest_id = "q1"
+    dirty = Dirty()
+    q.abandon_quest(state, "q1", dirty)
+    assert state.quests["q1"].status == "failed"
+    assert state.active_quest_id is None
+    texts = [e.model_dump().get("text", "") for e in dirty.log]
+    assert any("퀘스트 실패: 촌장의 부탁" in t and "의뢰 포기" in t for t in texts), (
+        texts
+    )
 
 
 def test_cannot_abandon_pending_quest(fresh_state):
@@ -107,8 +124,8 @@ def test_abandon_nonexistent_quest_returns_false(fresh_state):
 # --- abandoned immunity to triggers -----------------------------------------
 
 
-def test_abandoned_quest_immune_to_objective_check(fresh_state):
-    """Already-abandoned quest stays abandoned even if objective target dies."""
+def test_failed_quest_immune_to_objective_check(fresh_state):
+    """Already-failed quest stays failed even if objective target dies."""
     from src.domain.entities import QuestTrigger
 
     trigger = QuestTrigger(
@@ -119,27 +136,25 @@ def test_abandoned_quest_immune_to_objective_check(fresh_state):
         title="q1",
         giver_id="npc_giver",
         difficulty="보통",
-        status="abandoned",
+        status="failed",
         triggers=[trigger],
         rewards=QuestRewards(),
     )
     state = _state(fresh_state, quests=[quest_obj])
     dirty: set[tuple[str, str]] = set()
     q.check_quests(state, "character_death", "goblin", dirty)
-    assert state.quests["q1"].status == "abandoned"
+    assert state.quests["q1"].status == "failed"
 
 
-def test_abandoned_quest_immune_to_giver_death(fresh_state):
-    """Abandoned quest is not re-failed when giver dies."""
-    from src.domain.entities import QuestTrigger
-
+def test_failed_quest_immune_to_giver_death(fresh_state):
+    """Failed quest is not re-failed when giver dies."""
     quest_obj = Quest(
         id="q1",
         title="q1",
         giver_id="npc_giver",
         difficulty="보통",
-        status="abandoned",
-        fail_reason="abandoned",
+        status="failed",
+        fail_reason="의뢰 포기",
         rewards=QuestRewards(),
     )
     npc = Character(id="npc_giver", name="npc_giver", race_id="human", stats=Stats())
@@ -148,15 +163,16 @@ def test_abandoned_quest_immune_to_giver_death(fresh_state):
     dirty: set[tuple[str, str]] = set()
     changed = q.check_quests(state, "character_death", "npc_giver", dirty)
     assert "q1" not in changed
-    assert state.quests["q1"].status == "abandoned"
-    assert state.quests["q1"].fail_reason == "abandoned"
+    assert state.quests["q1"].status == "failed"
+    assert state.quests["q1"].fail_reason == "의뢰 포기"
 
 
 # --- pending immunity to triggers -------------------------------------------
 
 
-def test_pending_quest_immune_to_giver_death(fresh_state):
-    """Pending quest (not yet accepted) is not failed when giver dies."""
+def test_pending_quest_fails_on_giver_death(fresh_state):
+    """Pending quest (offered but not yet accepted) becomes unrecoverable when
+    giver dies — the player can no longer accept, so it must close as failed."""
     quest_obj = Quest(
         id="q1",
         title="q1",
@@ -169,8 +185,9 @@ def test_pending_quest_immune_to_giver_death(fresh_state):
     state = _state(fresh_state, quests=[quest_obj])
     state.characters["npc_giver"] = npc
     changed = q.check_quests(state, "character_death", "npc_giver")
-    assert "q1" not in changed
-    assert state.quests["q1"].status == "pending"
+    assert "q1" in changed
+    assert state.quests["q1"].status == "failed"
+    assert state.quests["q1"].fail_reason == "의뢰자 사망"
 
 
 # --- prerequisite unlock with requires_acceptance ---------------------

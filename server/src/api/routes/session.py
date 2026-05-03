@@ -13,7 +13,6 @@ from ...domain.errors import (
     RaceNotFound,
 )
 from ...domain.state import GameState
-from ...engines.quest import accept_quest, abandon_quest
 from ...flow.intro import run_intro
 from ...flow.level_up import run_level_up
 from ...flow.roll import run_roll
@@ -69,11 +68,11 @@ async def session_turn(
     scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ):
     set_think_override(body.think)
-    if body.quest_action is not None:
-        if body.quest_action.kind == "accept":
-            accept_quest(state, body.quest_action.quest_id)
-        elif body.quest_action.kind == "abandon":
-            abandon_quest(state, body.quest_action.quest_id)
+    quest_action = (
+        (body.quest_action.kind, body.quest_action.quest_id)
+        if body.quest_action is not None
+        else None
+    )
     return streaming_response(
         run_turn(
             llm,
@@ -82,6 +81,7 @@ async def session_turn(
             save_repo,
             body.player_input,
             to_front_fn=to_front_state,
+            quest_action=quest_action,
         )
     )
 
