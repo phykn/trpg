@@ -1,11 +1,13 @@
 import cytoscape, { type Core, type ElementDefinition } from 'cytoscape';
-import fcose from 'cytoscape-fcose';
 import React from 'react';
 
 import { colors } from '@/design/tokens';
 import type { StoryGraphEdge, StoryGraphModel, StoryGraphNodeKind } from './presenters';
 
-cytoscape.use(fcose);
+// Module-scoped so positions survive panel switches (component remount).
+// Keyed by nodeId; scenario-unique IDs make cross-game collision unlikely,
+// and stale entries are pruned each effect run against the current graph.
+const positionStore: Record<string, { x: number; y: number }> = {};
 
 const NODE_COLOR: Record<StoryGraphNodeKind, string> = {
   hero: colors.accent.fg,
@@ -132,13 +134,12 @@ export function StoryGraphCanvas({
 }) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const cyRef = React.useRef<Core | null>(null);
-  const positionsRef = React.useRef<Record<string, { x: number; y: number }>>({});
 
   React.useEffect(() => {
     // Drop cache entries for nodes no longer in the graph.
     const validIds = new Set(graph.nodes.map((n) => n.id));
-    for (const id of Object.keys(positionsRef.current)) {
-      if (!validIds.has(id)) delete positionsRef.current[id];
+    for (const id of Object.keys(positionStore)) {
+      if (!validIds.has(id)) delete positionStore[id];
     }
 
     const container = containerRef.current;
@@ -146,53 +147,55 @@ export function StoryGraphCanvas({
 
     const cy = cytoscape({
       container,
-      elements: toElements(graph, nodeOverrides, unseenNodeIds, positionsRef.current, centerNodeId),
+      elements: toElements(graph, nodeOverrides, unseenNodeIds, positionStore, centerNodeId),
       autoungrabify: true,
       hideEdgesOnViewport: false,
       minZoom: 0.2,
       maxZoom: 1.8,
-      textureOnViewport: true,
+      textureOnViewport: false,
       wheelSensitivity: 0.18,
       style: [
         {
           selector: 'node[interactable = "true"]',
           style: {
-            shape: 'round-rectangle',
             'background-color': 'data(color)',
             'border-color': colors.border.default,
             'border-width': 1,
             color: 'data(textColor)',
             content: 'data(label)',
             'font-family': 'NanumGothic_700Bold, serif',
-            'font-size': 17,
-            'text-valign': 'center',
+            'font-size': 14,
+            'text-valign': 'bottom',
             'text-halign': 'center',
+            'text-margin-y': 6,
             'text-wrap': 'none',
-            width: 'label',
-            height: 34,
-            'padding-left': '14px',
-            'padding-right': '14px',
+            'text-background-opacity': 0,
+            'text-border-opacity': 0,
+            'text-border-width': 0,
+            width: 'data(size)',
+            height: 'data(size)',
             'overlay-opacity': 0,
           },
         },
         {
           selector: 'node[interactable = "false"]',
           style: {
-            shape: 'round-rectangle',
             'background-color': 'transparent',
             'border-color': 'data(color)',
             'border-width': 1.5,
             color: colors.fg.muted,
             content: 'data(label)',
             'font-family': 'NanumGothic_700Bold, serif',
-            'font-size': 17,
-            'text-valign': 'center',
+            'font-size': 14,
+            'text-valign': 'bottom',
             'text-halign': 'center',
+            'text-margin-y': 6,
             'text-wrap': 'none',
-            width: 'label',
-            height: 34,
-            'padding-left': '14px',
-            'padding-right': '14px',
+            'text-background-opacity': 0,
+            'text-border-opacity': 0,
+            'text-border-width': 0,
+            width: 'data(size)',
+            height: 'data(size)',
             'overlay-opacity': 0,
           },
         },
@@ -260,21 +263,24 @@ export function StoryGraphCanvas({
                 levelWidth: () => 1,
               }
             : (() => {
-              const allCached = graph.nodes.every((n) => positionsRef.current[n.id]);
+              const allCached = graph.nodes.every((n) => positionStore[n.id]);
               const hasNewNodes = unseenNodeIds && unseenNodeIds.size > 0;
               return (allCached && !hasNewNodes)
-                ? { name: 'preset', fit: true, padding: 12 }
+                ? { name: 'preset', fit: true, padding: 14 }
                 : {
-                    name: 'fcose',
+                    name: 'cose',
                     animate: false,
+                    componentSpacing: 80,
                     fit: true,
-                    idealEdgeLength: 72,
-                    nodeRepulsion: 4500,
-                    padding: 12,
+                    idealEdgeLength: 110,
+                    nodeOverlap: 20,
+                    nodeRepulsion: 9000,
+                    gravity: 0.4,
+                    numIter: 2500,
+                    initialTemp: 220,
+                    coolingFactor: 0.95,
+                    padding: 14,
                     randomize: false,
-                    quality: 'default',
-                    uniformNodeDimensions: true,
-                    packComponents: true,
                   };
             })(),
     } as any);
@@ -284,7 +290,7 @@ export function StoryGraphCanvas({
     // listener could be attached. Save positions now while cy is fresh.
     cy.nodes().forEach((node) => {
       const pos = node.position();
-      positionsRef.current[node.id()] = { x: pos.x, y: pos.y };
+      positionStore[node.id()] = { x: pos.x, y: pos.y };
     });
 
     cy.on('tap', 'node', (event) => {
