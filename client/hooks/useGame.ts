@@ -9,6 +9,7 @@ import {
   clearAllForGame,
   clearStoredGameId,
   getSessionById,
+  getLevelUpPreview,
   initSession,
   loadLastSeenLocation,
   loadStoredGameId,
@@ -17,6 +18,7 @@ import {
   storeLastSeenLocation,
   storeSuggestions,
   streamIntro,
+  streamLevelUp,
   streamRoll,
   streamTurn,
 } from '@/services';
@@ -26,7 +28,7 @@ import type { LogEntry } from '@/features/log';
 import type { Quest } from '@/features/quest';
 import type { Place } from '@/features/story-graph';
 import type { Subject } from '@/features/subject';
-import type { FrontState, InitRequest, PendingCheck, StreamEvent } from '@/types/wire';
+import type { FrontState, InitRequest, PendingCheck, SkillCandidate, StatKey, StreamEvent } from '@/types/wire';
 
 import { handleStreamEvent } from './handleStreamEvent';
 
@@ -62,6 +64,8 @@ export function useGame() {
   const [streamingText, setStreamingText] = React.useState('');
   const [suggestions, setSuggestionsRaw] = React.useState<string[]>([]);
   const [lastSeenLocation, setLastSeenLocation] = React.useState<string | null>(null);
+  const [levelUpOpen, setLevelUpOpen] = React.useState(false);
+  const [levelUpCandidates, setLevelUpCandidates] = React.useState<SkillCandidate[] | null>(null);
 
   // Wrap setSuggestions so every state change is mirrored into the per-game localStorage cache.
   const setSuggestions = React.useCallback(
@@ -91,6 +95,13 @@ export function useGame() {
       pendingAborts.clear();
     };
   }, []);
+
+  React.useEffect(() => {
+    if (pending) {
+      setLevelUpOpen(false);
+      setLevelUpCandidates(null);
+    }
+  }, [pending]);
 
   const rememberGameId = React.useCallback((id: string | null) => {
     gameIdRef.current = id;
@@ -239,12 +250,45 @@ export function useGame() {
     aborts.current.forEach((a) => a.abort());
   }, []);
 
+  const openLevelUp = React.useCallback(async () => {
+    const id = gameIdRef.current;
+    if (!id || streamingRef.current || pending) return;
+    setLevelUpOpen(true);
+    setLevelUpCandidates(null); // loading state
+    try {
+      const preview = await getLevelUpPreview(id);
+      setLevelUpCandidates(preview.skill_candidates);
+    } catch {
+      setLevelUpCandidates([]);
+    }
+  }, [pending]);
+
+  const cancelLevelUp = React.useCallback(() => {
+    setLevelUpOpen(false);
+    setLevelUpCandidates(null);
+  }, []);
+
+  const commitLevelUp = React.useCallback(
+    (stat_up: StatKey, skill_id: string | null) => {
+      const id = gameIdRef.current;
+      if (!id) return;
+      setLevelUpOpen(false);
+      setLevelUpCandidates(null);
+      void runStream((signal) =>
+        streamLevelUp(id, { stat_up, skill_id, think }, handleEvent, signal),
+      );
+    },
+    [handleEvent, runStream, think],
+  );
+
   const goToNewGame = React.useCallback(() => {
     aborts.current.forEach((a) => a.abort());
     const id = gameIdRef.current;
     if (id) clearAllForGame(id);
     clearStoredGameId();
     rememberGameId(null);
+    setLevelUpOpen(false);
+    setLevelUpCandidates(null);
     setStatus('no-game');
   }, [rememberGameId]);
 
@@ -288,6 +332,11 @@ export function useGame() {
     onSend,
     onRoll,
     onStop,
+    levelUpOpen,
+    levelUpCandidates,
+    openLevelUp,
+    cancelLevelUp,
+    commitLevelUp,
     startNewGame,
     goToNewGame,
     refresh,
