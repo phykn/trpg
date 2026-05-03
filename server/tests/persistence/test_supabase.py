@@ -193,7 +193,9 @@ async def test_copy_seed_into_game_inserts_entities():
                 return {"human": Race(id="human", name="인간", description="...")}
             return {}
 
-    await repo.copy_seed_into_game(_FakeScenario(), "default", "g_seed_test", "player_01")
+    await repo.copy_seed_into_game(
+        _FakeScenario(), "default", "g_seed_test", "player_01"
+    )
 
     # games row created first (FK precondition).
     games_row = next(r for r in db.rows["games"] if r["game_id"] == "g_seed_test")

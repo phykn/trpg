@@ -204,7 +204,9 @@ def enforce_item_locality(
     for item_id, places in locations.items():
         if len(places) <= 1:
             continue
-        places_sorted = sorted(places, key=lambda p: (kind_priority[p[1]], p[0], p[3] or ""))
+        places_sorted = sorted(
+            places, key=lambda p: (kind_priority[p[1]], p[0], p[3] or "")
+        )
         keeper = places_sorted[0]
         losers = places_sorted[1:]
 
