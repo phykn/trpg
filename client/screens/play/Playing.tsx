@@ -151,6 +151,14 @@ export function Playing({ game }: Props) {
 
       {combat ? <CombatStrip combat={combat} /> : null}
 
+      {errorMessage ? (
+        <View className="mx-5 rounded-sm border border-danger-fg bg-canvas-subtle px-3 py-2">
+          <Text className="font-sans text-caption text-danger-fg">
+            {errorMessage}
+          </Text>
+        </View>
+      ) : null}
+
       {pending ? (
         <RollPrompt pending={pending} onRoll={onRoll} onStop={onStop} rolling={rolling} />
       ) : (
@@ -164,14 +172,6 @@ export function Playing({ game }: Props) {
           onToggleThink={() => setThink((v) => !v)}
         />
       )}
-
-      {errorMessage ? (
-        <View className="mx-5 rounded-sm border border-danger-fg bg-canvas-subtle px-3 py-2">
-          <Text className="font-sans text-caption text-danger-fg">
-            {errorMessage}
-          </Text>
-        </View>
-      ) : null}
     </View>
   );
 }
