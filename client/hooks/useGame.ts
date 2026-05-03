@@ -6,11 +6,16 @@ import {
   type StoryGraphModel,
 } from '@/features/story-graph';
 import {
+  clearAllForGame,
   clearStoredGameId,
   getSessionById,
   initSession,
+  loadLastSeenLocation,
   loadStoredGameId,
+  loadSuggestions,
   storeGameId,
+  storeLastSeenLocation,
+  storeSuggestions,
   streamIntro,
   streamRoll,
   streamTurn,
@@ -55,7 +60,22 @@ export function useGame() {
   const [storyGraph, setStoryGraph] = React.useState<StoryGraphModel>(EMPTY_STORY_GRAPH);
   const [streaming, setStreaming] = React.useState(false);
   const [streamingText, setStreamingText] = React.useState('');
-  const [suggestions, setSuggestions] = React.useState<string[]>([]);
+  const [suggestions, setSuggestionsRaw] = React.useState<string[]>([]);
+  const [lastSeenLocation, setLastSeenLocation] = React.useState<string | null>(null);
+
+  // Wrap setSuggestions so every state change is mirrored into the per-game localStorage cache.
+  const setSuggestions = React.useCallback(
+    (next: React.SetStateAction<string[]>) => {
+      setSuggestionsRaw((prev) => {
+        const value = typeof next === 'function' ? (next as (p: string[]) => string[])(prev) : next;
+        const id = gameIdRef.current;
+        if (id) storeSuggestions(id, value);
+        return value;
+      });
+    },
+    [],
+  );
+
   const [think, setThink] = React.useState(false);
   const gameIdRef = React.useRef<string | null>(null);
 
@@ -144,6 +164,8 @@ export function useGame() {
       }
       rememberGameId(payload.game_id);
       applyState(payload.state, payload.game_id);
+      setSuggestionsRaw(loadSuggestions(payload.game_id));
+      setLastSeenLocation(loadLastSeenLocation(payload.game_id));
       setStatus('ready');
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : String(err));
@@ -164,6 +186,7 @@ export function useGame() {
         storeGameId(payload.game_id);
         rememberGameId(payload.game_id);
         applyState(payload.state, payload.game_id);
+        setLastSeenLocation(null);
         setPending(null);
         setStreamingText('');
         setSuggestions([]);
@@ -199,6 +222,8 @@ export function useGame() {
 
   const goToNewGame = React.useCallback(() => {
     aborts.current.forEach((a) => a.abort());
+    const id = gameIdRef.current;
+    if (id) clearAllForGame(id);
     clearStoredGameId();
     rememberGameId(null);
     setStatus('no-game');
@@ -210,6 +235,17 @@ export function useGame() {
   }, [log, streamingText]);
 
   const awaitingNarration = streaming && !pending;
+
+  // Place wire type has no `id` — use `name` as the cache key (location names are unique per scenario).
+  const placeKey = place?.name ?? null;
+  const hasUnseenLocation = placeKey !== null && placeKey !== lastSeenLocation;
+
+  const markLocationSeen = React.useCallback(() => {
+    const id = gameIdRef.current;
+    if (!id || !placeKey) return;
+    setLastSeenLocation(placeKey);
+    storeLastSeenLocation(id, placeKey);
+  }, [placeKey]);
 
   return {
     status,
@@ -226,6 +262,8 @@ export function useGame() {
     streaming,
     awaitingNarration,
     suggestions,
+    hasUnseenLocation,
+    markLocationSeen,
     think,
     setThink,
     onSend,
