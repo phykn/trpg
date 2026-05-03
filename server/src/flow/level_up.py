@@ -83,12 +83,8 @@ async def run_level_up(
 
     if skill_id is not None and skill_id in state.skills:
         skill = state.skills[skill_id]
-        if (
-            skill_id not in actor.learned_skill_ids
-        ):  # ssot-allow: write path — graph rebuilds at next turn boundary.
-            actor.learned_skill_ids.append(
-                skill_id
-            )  # ssot-allow: write path — graph rebuilds at next turn boundary.
+        if skill_id not in actor.learned_skill_ids:  # ssot-allow: write path
+            actor.learned_skill_ids.append(skill_id)  # ssot-allow: write path
         learned_skill_text = format_learn_skill_log(actor.name, skill.name)
         yield push_act(state, dirty, learned_skill_text)
         act_log_lines.append(learned_skill_text)

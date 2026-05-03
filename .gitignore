@@ -19,5 +19,4 @@ qa_test/
 # Local-only (not part of the repo)
 scenarios/
 docs/
-agency/
 .superpowers/

@@ -11,7 +11,7 @@ Korean-language TRPG. The LLM handles narrative and difficulty judgment; the eng
 - `server/` — FastAPI + Pydantic v2 + OpenAI-compatible LLM. Game engine, Supabase-backed persistence. See [server/CLAUDE.md](./server/CLAUDE.md).
 - `client/` — Expo (RN 0.81 / React 19) single-screen app. Streams from the server over SSE. [client/CLAUDE.md](./client/CLAUDE.md).
 - `agency/` — gitignored. LLM-staffed in-process QA + Story harness driving the server with `LocalFsSaveRepo`. See `agency/README.md`.
-- `scenarios/<name>/` — gitignored. Local seed source authored on dev fs and uploaded to a Supabase Storage bucket via `server/scripts/upload_scenarios.py`; the running server reads from Storage, not this dir. Tree: `profile.json`, `world.md`, `start.json`, `player_template.json`, `races/`, `characters/`, `locations/`, `items/`, `quests/`, `chapters/`, `skills/`.
+- `scenarios/<name>/` — gitignored. Local seed source authored on dev fs and uploaded to a Supabase Storage bucket via `agency.story.tool upload` (run with APP_ENV=release); the running server reads from Storage, not this dir. Tree: `profile.json`, `world.md`, `start.json`, `player_template.json`, `races/`, `characters/`, `locations/`, `items/`, `quests/`, `chapters/`, `skills/`.
 - `docs/` — gitignored design notes (`01-overview` → `05-codemap`). Design rationale lives here, not in code.
 - Saves live in Supabase Postgres (5 tables keyed on `game_id`), not on disk.
 
