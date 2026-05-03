@@ -546,3 +546,35 @@ def test_npc_view_drops_completed_failed_quests(fresh_state):
 
     hunt_titles = {q["title"] for q in v["quests_kill_target"]}
     assert hunt_titles == {"현상금: 경비"}
+
+
+def test_location_view_drops_completed_failed_quests(fresh_state):
+    state = _seed(fresh_state)
+    state.characters["player_01"].location_id = "plaza_01"
+    state.quests["q_visit_active"] = Quest(
+        id="q_visit_active",
+        title="광장 방문",
+        giver_id="guard_01",
+        difficulty="보통",
+        triggers=[
+            QuestTrigger(id="tv1", name="도달", type="location_visited", target_id="plaza_01")
+        ],
+        status="active",
+    )
+    state.quests["q_visit_completed"] = Quest(
+        id="q_visit_completed",
+        title="과거 방문 의뢰",
+        giver_id="guard_01",
+        difficulty="보통",
+        triggers=[
+            QuestTrigger(id="tv2", name="도달", type="location_visited", target_id="plaza_01")
+        ],
+        status="completed",
+    )
+
+    g = build_graph(state)
+    v = build_target_view(state, g, "plaza_01", actor_id="player_01")
+
+    titles = {q["title"] for q in v.get("quests", [])}
+    assert "광장 방문" in titles
+    assert "과거 방문 의뢰" not in titles

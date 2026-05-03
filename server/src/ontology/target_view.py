@@ -247,6 +247,9 @@ def _build_location_view(
     # 2-hop adds the giver so narrate can phrase "이 장소에 가야 하는 이유는 X 영감의 부탁이오".
     quests: list[dict] = []
     for qid in quests_requiring(graph, target_id):
+        q = state.quests.get(qid)
+        if q is None or q.status not in _KEEP_QUEST_STATUSES:
+            continue
         payload = _quest_payload(state, graph, qid, include_giver=True, masked=masked)
         if payload is not None:
             quests.append(payload)
