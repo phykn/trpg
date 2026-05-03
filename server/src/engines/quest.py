@@ -26,7 +26,14 @@ def apply_judge_result(state: GameState, quest_id: str, result: dict) -> bool:
         delta = result.get("progress_delta") or 0
         quest.progress = (quest.progress or 0) + delta
         return True
-    # rejected → no-op
+    # rejected → record for dead-end detour prompt, no state change
+    state.recent_engine_events.append(
+        {
+            "type": "judge_rejected",
+            "quest_id": quest_id,
+            "reason": result.get("reason", ""),
+        }
+    )
     return False
 
 

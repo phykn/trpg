@@ -64,6 +64,11 @@ class GameState(BaseModel):
     turn_log: list[TurnLogEntry] = []
     recent_dialogue: list[DialoguePair] = []
 
+    # Transient engine notices for the current turn (judge_rejected, etc.).
+    # Appended during the turn; naturally ages out as turn_count advances.
+    # Not relied on after the turn that produced them.
+    recent_engine_events: list[dict] = []
+
     log_entries: list[LogEntry] = []
     next_log_id: int = 1
 
