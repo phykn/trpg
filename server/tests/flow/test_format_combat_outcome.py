@@ -63,7 +63,14 @@ def test_format_combat_outcome_summary_empty_returns_none():
 def test_format_combat_outcome_summary_single_kill():
     result = _result(
         enemy_hits=[
-            EnemyHit(id="goblin", name="고블린", damage_total=8, hp_after=0, max_hp=10, killed=True),
+            EnemyHit(
+                id="goblin",
+                name="고블린",
+                damage_total=8,
+                hp_after=0,
+                max_hp=10,
+                killed=True,
+            ),
         ],
     )
     text = format_combat_outcome_summary(result)
@@ -75,7 +82,14 @@ def test_format_combat_outcome_summary_single_kill():
 def test_format_combat_outcome_summary_with_player_damage():
     result = _result(
         enemy_hits=[
-            EnemyHit(id="goblin", name="고블린", damage_total=3, hp_after=7, max_hp=10, killed=False),
+            EnemyHit(
+                id="goblin",
+                name="고블린",
+                damage_total=3,
+                hp_after=7,
+                max_hp=10,
+                killed=False,
+            ),
         ],
         player_damage_total=4,
         player_hp_after=16,

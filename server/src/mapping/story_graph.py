@@ -279,9 +279,15 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
     for quest_id in quest_ids:
         nodes[quest_id] = _quest_node(state.quests[quest_id], state, graph)
 
-    add_edge(state.player_id, player_location_id, STORY_EDGE_LABEL_CURRENT, "current_pin")
-    add_edge(state.player_id, state.active_subject_id, STORY_EDGE_LABEL_OBSERVE, "observe")
-    add_edge(state.player_id, state.active_quest_id, STORY_EDGE_LABEL_PROGRESS, "progress")
+    add_edge(
+        state.player_id, player_location_id, STORY_EDGE_LABEL_CURRENT, "current_pin"
+    )
+    add_edge(
+        state.player_id, state.active_subject_id, STORY_EDGE_LABEL_OBSERVE, "observe"
+    )
+    add_edge(
+        state.player_id, state.active_quest_id, STORY_EDGE_LABEL_PROGRESS, "progress"
+    )
 
     for location_id in visible_location_ids:
         for edge in connections_of(graph, location_id):
@@ -295,7 +301,12 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
             add_edge(character_id, loc_id, STORY_EDGE_LABEL_MEET, "meet")
 
     for quest_id in quest_ids:
-        add_edge(giver_of(graph, quest_id), quest_id, STORY_EDGE_LABEL_QUEST_GIVER, "quest_giver")
+        add_edge(
+            giver_of(graph, quest_id),
+            quest_id,
+            STORY_EDGE_LABEL_QUEST_GIVER,
+            "quest_giver",
+        )
         for target_id in trigger_targets_of(graph, quest_id):
             add_edge(target_id, quest_id, STORY_EDGE_LABEL_QUEST_TARGET, "quest_target")
 
@@ -320,9 +331,11 @@ def to_story_graph(state: GameState, graph: GameGraph | None = None) -> dict:
             story_summary_location(state.locations[player_location_id].name)
             if player_location_id in state.locations
             else None,
-            story_summary_quest(active_quest.title) if active_quest is not None else None,
-            story_summary_entities(count_by_kind['target'] + count_by_kind['subject']),
-            story_summary_places(count_by_kind['location'] + count_by_kind['place']),
+            story_summary_quest(active_quest.title)
+            if active_quest is not None
+            else None,
+            story_summary_entities(count_by_kind["target"] + count_by_kind["subject"]),
+            story_summary_places(count_by_kind["location"] + count_by_kind["place"]),
         ]
         if part
     )

@@ -252,15 +252,21 @@ def _check_unequip(output: UnequipAction, surroundings: dict[str, Any]) -> None:
         )
 
 
-def _check_growth_pending(output: GrowthPendingAction, surroundings: dict[str, Any]) -> None:
+def _check_growth_pending(
+    output: GrowthPendingAction, surroundings: dict[str, Any]
+) -> None:
     growth = surroundings.get("growth") or {}
     if not growth.get("can_level_up"):
         raise JudgeSemanticError("growth_pending requires can_level_up=true")
 
 
-def _check_cancel_growth(output: CancelGrowthAction, surroundings: dict[str, Any]) -> None:
+def _check_cancel_growth(
+    output: CancelGrowthAction, surroundings: dict[str, Any]
+) -> None:
     if not surroundings.get("pending_growth"):
-        raise JudgeSemanticError("cancel_growth requires pending_growth.stage='asking_stat'")
+        raise JudgeSemanticError(
+            "cancel_growth requires pending_growth.stage='asking_stat'"
+        )
 
 
 # RejectAction / SummonCombatAction / RestAction have no surroundings-based

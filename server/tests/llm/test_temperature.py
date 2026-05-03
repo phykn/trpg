@@ -27,7 +27,9 @@ async def test_chat_omits_temperature_when_none(monkeypatch):
 
     async def fake_create(**kwargs):
         captured.update(kwargs)
-        return MagicMock(choices=[MagicMock(message=MagicMock(content="ok", model_extra=None))])
+        return MagicMock(
+            choices=[MagicMock(message=MagicMock(content="ok", model_extra=None))]
+        )
 
     fake_inner = MagicMock()
     fake_inner.chat.completions.create = fake_create
@@ -52,7 +54,9 @@ async def test_chat_passes_temperature_when_set(monkeypatch):
 
     async def fake_create(**kwargs):
         captured.update(kwargs)
-        return MagicMock(choices=[MagicMock(message=MagicMock(content="ok", model_extra=None))])
+        return MagicMock(
+            choices=[MagicMock(message=MagicMock(content="ok", model_extra=None))]
+        )
 
     fake_inner = MagicMock()
     fake_inner.chat.completions.create = fake_create
@@ -65,5 +69,7 @@ async def test_chat_passes_temperature_when_set(monkeypatch):
 
     monkeypatch.setattr(client, "_pick", lambda agent: fake_provider)
 
-    await client.chat(messages=[{"role": "user", "content": "x"}], temperature=0.2, log=False)
+    await client.chat(
+        messages=[{"role": "user", "content": "x"}], temperature=0.2, log=False
+    )
     assert captured.get("temperature") == 0.2

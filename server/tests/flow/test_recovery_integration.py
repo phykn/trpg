@@ -172,7 +172,9 @@ async def test_rest_dangerous_with_low_random_forces_encounter(
     assert pass_events
 
 
-async def test_rest_blocked_during_combat(fresh_state, tmp_data, judge_returns, collect):
+async def test_rest_blocked_during_combat(
+    fresh_state, tmp_data, judge_returns, collect
+):
     """Attempting rest with combat_state active → rejection message, no recovery."""
     from src.engines import combat as combat_engine
 

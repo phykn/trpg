@@ -11,7 +11,9 @@ PROMPT_PATH = Path(__file__).parent / "prompt.md"
 _PROMPT = load_prompt(__file__)
 
 
-async def classify(client: LLMClient, input_: JudgeInput, retries: int = 5) -> JudgeOutput:
+async def classify(
+    client: LLMClient, input_: JudgeInput, retries: int = 5
+) -> JudgeOutput:
     def parse(answer: str) -> JudgeOutput:
         out = validate_judge_output(answer)
         check_semantics(out, input_.surroundings)

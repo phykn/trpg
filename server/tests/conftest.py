@@ -64,5 +64,3 @@ def judge_returns(monkeypatch):
             monkeypatch.setattr(narrate_mod, "run_narrate", _noop_narrate)
 
     return _stub
-
-

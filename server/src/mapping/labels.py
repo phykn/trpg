@@ -127,6 +127,7 @@ ROLL_REASON_DEFAULT = "행동 판정"
 
 # ----- NPC state tags surfaced to the judge prompt -----
 
+
 def state_tag_friendly(affinity: int) -> str:
     return f"우호적(affinity {affinity})"
 

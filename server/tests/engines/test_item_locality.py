@@ -15,7 +15,9 @@ from src.engines.invariants import check_item_locality, enforce_item_locality
 
 def _state_with_item(item_id: str = "sword_01") -> GameState:
     state = GameState(game_id="g_test", profile="p_test", player_id="player_01")
-    state.races["race_human"] = Race(id="race_human", name="인간", description="인간 종족")
+    state.races["race_human"] = Race(
+        id="race_human", name="인간", description="인간 종족"
+    )
     state.locations["loc_01"] = Location(id="loc_01", name="광장")
     state.items[item_id] = Item(id=item_id, name="검", weight=1, price=10)
     p = Character(
@@ -47,6 +49,7 @@ def _add_npc(state: GameState, npc_id: str = "npc_01") -> Character:
 
 
 # ----- check_item_locality (read-only detection) -----
+
 
 def test_check_item_locality_clean_state():
     state = _state_with_item()
@@ -106,6 +109,7 @@ def test_check_item_locality_three_way_duplication():
 
 
 # ----- enforce_item_locality (detect + auto-repair) -----
+
 
 def test_enforce_item_locality_clean_state_returns_empty():
     state = _state_with_item()

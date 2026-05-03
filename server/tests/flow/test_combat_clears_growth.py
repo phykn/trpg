@@ -14,7 +14,9 @@ def _state_with_pending_and_enemy() -> GameState:
         pending_growth=PendingGrowth(stage="asking_stat"),
     )
     state.locations["loc_01"] = Location(id="loc_01", name="광장")
-    state.races["race_human"] = Race(id="race_human", name="인간", description="인간 종족")
+    state.races["race_human"] = Race(
+        id="race_human", name="인간", description="인간 종족"
+    )
     p = Character(
         id="player_01",
         name="당신",
@@ -61,6 +63,7 @@ async def test_combat_phase_entry_clears_pending_growth():
 
     # PlayerAction lives in flow.combat_phase — find it via that module's namespace.
     from src.flow import combat_phase as cp
+
     PlayerAction = cp.PlayerAction
 
     state = _state_with_pending_and_enemy()

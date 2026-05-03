@@ -480,7 +480,9 @@ def test_npc_view_drops_completed_failed_quests(fresh_state):
         giver_id="guard_01",
         difficulty="보통",
         triggers=[
-            QuestTrigger(id="t1", name="처치", type="character_death", target_id="goblin_01")
+            QuestTrigger(
+                id="t1", name="처치", type="character_death", target_id="goblin_01"
+            )
         ],
         rewards=QuestRewards(items=["sword_01"]),
         status="locked",
@@ -491,7 +493,9 @@ def test_npc_view_drops_completed_failed_quests(fresh_state):
         giver_id="guard_01",
         difficulty="보통",
         triggers=[
-            QuestTrigger(id="t2", name="처치", type="character_death", target_id="goblin_02")
+            QuestTrigger(
+                id="t2", name="처치", type="character_death", target_id="goblin_02"
+            )
         ],
         rewards=QuestRewards(items=["sword_01"]),
         status="active",
@@ -519,7 +523,9 @@ def test_npc_view_drops_completed_failed_quests(fresh_state):
         giver_id="player_01",
         difficulty="보통",
         triggers=[
-            QuestTrigger(id="t3", name="처치", type="character_death", target_id="guard_01")
+            QuestTrigger(
+                id="t3", name="처치", type="character_death", target_id="guard_01"
+            )
         ],
         status="active",
     )
@@ -529,7 +535,9 @@ def test_npc_view_drops_completed_failed_quests(fresh_state):
         giver_id="player_01",
         difficulty="보통",
         triggers=[
-            QuestTrigger(id="t4", name="처치", type="character_death", target_id="guard_01")
+            QuestTrigger(
+                id="t4", name="처치", type="character_death", target_id="guard_01"
+            )
         ],
         status="completed",
     )
@@ -557,7 +565,9 @@ def test_location_view_drops_completed_failed_quests(fresh_state):
         giver_id="guard_01",
         difficulty="보통",
         triggers=[
-            QuestTrigger(id="tv1", name="도달", type="location_visited", target_id="plaza_01")
+            QuestTrigger(
+                id="tv1", name="도달", type="location_visited", target_id="plaza_01"
+            )
         ],
         status="active",
     )
@@ -567,7 +577,9 @@ def test_location_view_drops_completed_failed_quests(fresh_state):
         giver_id="guard_01",
         difficulty="보통",
         triggers=[
-            QuestTrigger(id="tv2", name="도달", type="location_visited", target_id="plaza_01")
+            QuestTrigger(
+                id="tv2", name="도달", type="location_visited", target_id="plaza_01"
+            )
         ],
         status="completed",
     )

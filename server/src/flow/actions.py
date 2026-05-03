@@ -242,12 +242,16 @@ async def emit_level_up(
     client: LLMClient | None,
     dirty: Dirty,
 ) -> AsyncIterator[dict]:
-    state.pending_growth = None  # answered (or never asked) — clear the pending question
+    state.pending_growth = (
+        None  # answered (or never asked) — clear the pending question
+    )
     actor = state.characters[actor_id]
     try:
         level_up_engine(actor, stat_up, stat_down)  # type: ignore[arg-type]
     except LevelUpInvalid as e:
-        yield push_act(state, dirty, format_action_fail(actor.name, "레벨업하려 했지만", e))
+        yield push_act(
+            state, dirty, format_action_fail(actor.name, "레벨업하려 했지만", e)
+        )
         return
     violations = check_character(actor)
     if violations:
@@ -292,7 +296,9 @@ async def emit_learn_skill(
         return
     chosen = candidates[index]
     state.skills[chosen.id] = chosen
-    actor.learned_skill_ids.append(chosen.id)  # ssot-allow: write path — graph rebuilds at next turn boundary.
+    actor.learned_skill_ids.append(
+        chosen.id
+    )  # ssot-allow: write path — graph rebuilds at next turn boundary.
     state.pending_skill_candidates = []
     dirty.entities.add(("characters", actor_id))
     dirty.entities.add(("skills", chosen.id))
@@ -319,7 +325,9 @@ async def emit_trade(
         else:
             price = inventory_engine.sell(player, npc, item_id, state.items)
     except InventoryInvalid as e:
-        yield push_act(state, dirty, format_action_fail(player.name, "거래를 시도했지만", e))
+        yield push_act(
+            state, dirty, format_action_fail(player.name, "거래를 시도했지만", e)
+        )
         return
     dirty.entities.add(("characters", actor_id))
     dirty.entities.add(("characters", npc.id))
@@ -353,7 +361,9 @@ async def emit_give(
     try:
         inventory_engine.transfer(src, dst, item_id, state.items)
     except InventoryInvalid as e:
-        yield push_act(state, dirty, format_action_fail(actor_name, "양도를 시도했지만", e))
+        yield push_act(
+            state, dirty, format_action_fail(actor_name, "양도를 시도했지만", e)
+        )
         return
     dirty.entities.add(("characters", from_id))
     dirty.entities.add(("characters", to_id))

@@ -102,6 +102,7 @@ def check_inventory(c: Character, items: dict[str, Item]) -> list[str]:
 
 # ----- Runtime item-locality guard (defense against LLM-emitted state_change errors) -----
 
+
 def check_item_locality(state: "GameState") -> list[str]:
     """Detect items appearing in 2+ locations (inventory, equipment, location items).
 
