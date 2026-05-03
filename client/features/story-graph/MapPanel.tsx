@@ -84,6 +84,11 @@ export function MapPanel({
     return { nodes: placeNodes, edges: placeEdges, summary };
   }, [graph, placeStates]);
 
+  const currentPlaceId = React.useMemo(
+    () => visibleGraph.nodes.find((n) => n.kind === 'place')?.id ?? undefined,
+    [visibleGraph.nodes],
+  );
+
   const selectedNode = visibleGraph.nodes.find((node) => node.id === selectedNodeId) ?? null;
   const selectedAction = selectedNode ? actionForNode(selectedNode) : null;
   const placeFeatures = (() => {
@@ -126,6 +131,7 @@ export function MapPanel({
             onNodeSelect?.(id);
           }}
           unseenNodeIds={unseenNodeIds}
+          centerNodeId={currentPlaceId}
         />
 
         {selectedNode ? (

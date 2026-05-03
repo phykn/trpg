@@ -47,6 +47,11 @@ export function NeighborhoodPanel({
     return { ...graph, edges: Array.from(pairToEdge.values()) };
   }, [graph]);
 
+  const currentPlaceId = React.useMemo(
+    () => visibleGraph.nodes.find((n) => n.kind === 'place')?.id ?? undefined,
+    [visibleGraph.nodes],
+  );
+
   const selectedNode = visibleGraph.nodes.find((node) => node.id === selectedNodeId) ?? null;
   const selectedAction = selectedNode ? actionForNode(selectedNode) : null;
   const isPlaceKind = !!selectedNode && (selectedNode.kind === 'place' || selectedNode.kind === 'location');
@@ -126,6 +131,7 @@ export function NeighborhoodPanel({
         accessibilityLabel={accessibilityLabel}
         selectedNodeId={selectedNodeId}
         onNodeSelect={onNodeSelect}
+        centerNodeId={currentPlaceId}
       />
 
       <View className="flex-row flex-wrap items-center justify-center gap-x-3 gap-y-1">

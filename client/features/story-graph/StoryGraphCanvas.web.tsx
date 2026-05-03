@@ -224,12 +224,7 @@ export function StoryGraphCanvas({
     if (centerNodeId) {
       const node = cy.getElementById(centerNodeId);
       if (node.length > 0) {
-        const pos = node.position();
-        const z = cy.zoom();
-        cy.pan({
-          x: cy.width() / 2 - pos.x * z,
-          y: cy.height() / 2 - pos.y * z,
-        });
+        cy.center(node);
       }
     }
     cyRef.current = cy;
