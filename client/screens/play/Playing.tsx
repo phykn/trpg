@@ -11,7 +11,7 @@ import type { PanelAction, PanelSlot } from '@/types/ui';
 
 import { Composer, RollPrompt } from '@/components/composer';
 import { ContextCard } from '@/components/header';
-import { HeroStrip } from '@/components/hero';
+import { HeroStrip } from '@/features/hero';
 import { ConfirmDialog } from '@/components/ui';
 
 const BGM_SOURCE = require('../../assets/audio/bgm.mp3');
