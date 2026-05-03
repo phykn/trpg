@@ -29,22 +29,13 @@ type NodeOverride = {
   textColor?: string;
 };
 
-function seedPosition(index: number, total: number): { x: number; y: number } {
-  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-  const radius = 30 * Math.sqrt(index + 1);
-  const angle = index * goldenAngle;
-  return { x: radius * Math.cos(angle), y: radius * Math.sin(angle) };
-}
-
 function toElements(
   graph: StoryGraphModel,
   overrides?: Record<string, NodeOverride>,
-  seedPositions = false,
   unseenNodeIds?: Set<string>,
 ): ElementDefinition[] {
-  const total = graph.nodes.length;
   return [
-    ...graph.nodes.map((node, idx) => {
+    ...graph.nodes.map((node) => {
       const override = overrides?.[node.id];
       return {
         data: {
@@ -56,7 +47,6 @@ function toElements(
           textColor: override?.textColor ?? colors.fg.default,
           isNew: unseenNodeIds?.has(node.id) ? 'true' : undefined,
         },
-        position: seedPositions ? seedPosition(idx, total) : undefined,
         classes: node.kind,
       };
     }),
@@ -65,7 +55,6 @@ function toElements(
         id: edge.id,
         source: edge.source,
         target: edge.target,
-        label: edge.label,
       },
     })),
   ];
@@ -78,10 +67,7 @@ export function StoryGraphCanvas({
   selectedNodeId = null,
   onNodeSelect,
   nodeOverrides,
-  arrows = true,
-  edgeLabels = true,
   layout = 'cose',
-  boxNodes = false,
   rootNodeId,
   centerNodeId,
   clearOnBackgroundTap = true,
@@ -93,10 +79,7 @@ export function StoryGraphCanvas({
   selectedNodeId?: string | null;
   onNodeSelect?: (nodeId: string | null) => void;
   nodeOverrides?: Record<string, NodeOverride>;
-  arrows?: boolean;
-  edgeLabels?: boolean;
   layout?: 'cose' | 'concentric' | 'breadthfirst';
-  boxNodes?: boolean;
   rootNodeId?: string;
   centerNodeId?: string;
   clearOnBackgroundTap?: boolean;
@@ -111,7 +94,7 @@ export function StoryGraphCanvas({
 
     const cy = cytoscape({
       container,
-      elements: toElements(graph, nodeOverrides, boxNodes && layout === 'cose', unseenNodeIds),
+      elements: toElements(graph, nodeOverrides, unseenNodeIds),
       autoungrabify: true,
       hideEdgesOnViewport: true,
       minZoom: 0.55,
@@ -121,53 +104,30 @@ export function StoryGraphCanvas({
       style: [
         {
           selector: 'node',
-          style: boxNodes
-            ? {
-                shape: 'round-rectangle',
-                'background-color': 'data(color)',
-                'border-color': colors.border.default,
-                'border-width': 1,
-                color: 'data(textColor)',
-                content: 'data(label)',
-                'font-family': 'NanumGothic_700Bold, serif',
-                'font-size': 17,
-                'text-valign': 'center',
-                'text-halign': 'center',
-                'text-wrap': 'none',
-                width: 'label',
-                height: 34,
-                'padding-left': '12px',
-                'padding-right': '12px',
-                'overlay-opacity': 0,
-              }
-            : {
-                'background-color': 'data(color)',
-                'border-color': colors.canvas.subtle,
-                'border-width': 2,
-                color: colors.fg.default,
-                content: 'data(label)',
-                'font-family': 'NanumGothic_700Bold, serif',
-                'font-size': 15,
-                height: 'data(size)',
-                label: 'data(label)',
-                'min-zoomed-font-size': 10,
-                'overlay-opacity': 0,
-                'text-background-color': '#1f2228',
-                'text-background-opacity': 0.85,
-                'text-background-padding': '3px',
-                'text-margin-y': 6,
-                'text-valign': 'bottom',
-                width: 'data(size)',
-              },
+          style: {
+            shape: 'round-rectangle',
+            'background-color': 'data(color)',
+            'border-color': colors.border.default,
+            'border-width': 1,
+            color: 'data(textColor)',
+            content: 'data(label)',
+            'font-family': 'NanumGothic_700Bold, serif',
+            'font-size': 17,
+            'text-valign': 'center',
+            'text-halign': 'center',
+            'text-wrap': 'none',
+            width: 'label',
+            height: 34,
+            'padding-left': '12px',
+            'padding-right': '12px',
+            'overlay-opacity': 0,
+          },
         },
         {
           selector: 'node:selected',
           style: {
             'border-color': colors.accent.fg,
             'border-width': 4,
-            'overlay-color': colors.accent.fg,
-            'overlay-opacity': 0.12,
-            'overlay-padding': 6,
           },
         },
         {
@@ -181,20 +141,11 @@ export function StoryGraphCanvas({
         {
           selector: 'edge',
           style: {
-            color: colors.fg.muted,
             'curve-style': 'bezier',
-            'font-family': 'NanumGothic_400Regular, serif',
-            'font-size': 8,
-            label: edgeLabels ? 'data(label)' : '',
-            'line-color': boxNodes ? colors.fg.subtle : colors.border.default,
+            'line-color': colors.fg.subtle,
             'overlay-opacity': 0,
-            'target-arrow-color': boxNodes ? colors.fg.subtle : colors.border.default,
-            'target-arrow-shape': arrows ? 'triangle' : 'none',
-            'text-background-color': '#1f2228',
-            'text-background-opacity': 0.72,
-            'text-background-padding': '1px',
-            'text-rotation': 'autorotate',
-            width: boxNodes ? 1.8 : 1.4,
+            'target-arrow-shape': 'none',
+            width: 1.8,
           },
         },
       ],
@@ -230,9 +181,9 @@ export function StoryGraphCanvas({
                 animate: false,
                 componentSpacing: 58,
                 fit: true,
-                idealEdgeLength: boxNodes ? 96 : 60,
-                nodeOverlap: boxNodes ? 15 : 8,
-                nodeRepulsion: boxNodes ? 6000 : 6000,
+                idealEdgeLength: 96,
+                nodeOverlap: 15,
+                nodeRepulsion: 6000,
                 padding: 14,
                 randomize: false,
               },
@@ -265,7 +216,7 @@ export function StoryGraphCanvas({
       cy.destroy();
       cyRef.current = null;
     };
-  }, [graph, nodeOverrides, arrows, edgeLabels, layout, boxNodes, rootNodeId, centerNodeId, onNodeSelect, clearOnBackgroundTap, unseenNodeIds]);
+  }, [graph, nodeOverrides, layout, rootNodeId, centerNodeId, onNodeSelect, clearOnBackgroundTap, unseenNodeIds]);
 
   React.useEffect(() => {
     const cy = cyRef.current;

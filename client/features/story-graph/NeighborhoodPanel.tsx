@@ -41,18 +41,11 @@ export function NeighborhoodPanel({
   actionDisabled?: boolean;
 }) {
   const visibleGraph: StoryGraphModel = React.useMemo(() => {
-    const transformed = graph.edges.map((edge) => {
-      if (edge.kind === 'current_pin') return { ...edge, label: '위치' };
-      if (edge.kind === 'observe') return { ...edge, label: '대상' };
-      return { ...edge, label: '' };
-    });
-    // Collapse parallel edges between the same two nodes — keep a labeled
-    // edge over an unlabeled one when both exist.
+    // Collapse parallel edges between the same two nodes (first wins; labels are no longer rendered).
     const pairToEdge = new Map<string, StoryGraphEdge>();
-    for (const e of transformed) {
+    for (const e of graph.edges) {
       const pair = e.source < e.target ? `${e.source}|${e.target}` : `${e.target}|${e.source}`;
-      const existing = pairToEdge.get(pair);
-      if (!existing || (e.label && !existing.label)) {
+      if (!pairToEdge.has(pair)) {
         pairToEdge.set(pair, e);
       }
     }
