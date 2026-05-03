@@ -2,6 +2,7 @@ import React from 'react';
 import { type GestureResponderHandlers, PanResponder, Pressable, Text, View } from 'react-native';
 
 import { shadow } from '@/design/tokens';
+import { Surface } from '@/components/ui';
 import {
   MiniMapPanel,
   StoryGraphScreen,
@@ -82,10 +83,9 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, menuOpen, bg
         floating ? { paddingBottom: FLOAT_BUFFER, marginBottom: -FLOAT_BUFFER } : null,
       ]}
     >
-      <View
+      <Surface
         onLayout={(e) => setChipBarHeight(e.nativeEvent.layout.height)}
-        className="bg-canvas-subtle border border-border-default rounded-md flex-row p-2 gap-1 items-center"
-        style={shadow.paper}
+        className="flex-row p-2 gap-1 items-center"
       >
         <IconButton d={ICON_PATH.menu} label="메뉴" onPress={onMenuToggle} />
         <View className="flex-1 flex-row gap-1">
@@ -104,7 +104,7 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, menuOpen, bg
           active={graphOpen}
           onPress={() => onSelect('graph')}
         />
-      </View>
+      </Surface>
       {panel && (
         <FloatingDock top={chipBarHeight + 4} panHandlers={panResponder.panHandlers}>
           <PanelBody panel={panel} onAction={onAction} />
