@@ -259,6 +259,14 @@ export function StoryGraphCanvas({
                 },
     });
 
+    // Capture positions synchronously — `cytoscape({layout: ..., animate: false})`
+    // runs layout inside the constructor, so the layoutstop event fires before any
+    // listener could be attached. Save positions now while cy is fresh.
+    cy.nodes().forEach((node) => {
+      const pos = node.position();
+      positionsRef.current[node.id()] = { x: pos.x, y: pos.y };
+    });
+
     cy.on('tap', 'node', (event) => {
       onNodeSelect?.(event.target.id());
     });
@@ -267,12 +275,6 @@ export function StoryGraphCanvas({
         if (event.target === cy) onNodeSelect?.(null);
       });
     }
-    cy.on('layoutstop', () => {
-      cy.nodes().forEach((node) => {
-        const pos = node.position();
-        positionsRef.current[node.id()] = { x: pos.x, y: pos.y };
-      });
-    });
     // layout runs synchronously when animate:false, so positions are ready here
     cy.fit(undefined, 16);
     if (centerNodeId) {
