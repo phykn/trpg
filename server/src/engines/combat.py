@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from ..domain.entities import (
+    EQUIPMENT_SLOTS,
     ArmorEffect,
     Character,
     DeathSaveState,
@@ -442,10 +443,17 @@ def _kill(defender: Character) -> None:
 
 
 def transfer_loot_on_death(dead: Character, winner: Character) -> None:
-    """Move all inventory_ids + gold from dead entity to winner. Atomic."""
+    """Move inventory_ids + gold from dead entity to winner; skip ids the winner already owns and clear corpse equipment slots — both prevent the locality guard from auto-repairing the loot back onto the corpse."""
     if dead.inventory_ids:
-        winner.inventory_ids.extend(dead.inventory_ids)
+        existing = set(winner.inventory_ids)
+        for iid in dead.inventory_ids:
+            if iid not in existing:
+                winner.inventory_ids.append(iid)
+                existing.add(iid)
         dead.inventory_ids.clear()
+    for slot in EQUIPMENT_SLOTS:
+        if getattr(dead.equipment, slot) is not None:
+            setattr(dead.equipment, slot, None)
     if dead.gold:
         winner.gold += dead.gold
         dead.gold = 0

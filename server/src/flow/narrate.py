@@ -1,3 +1,4 @@
+import logging
 import re
 from collections.abc import AsyncIterator
 
@@ -44,6 +45,9 @@ from .format import (
 )
 from .judge import judge_quest_progress
 from .memory_writer import write_memories
+
+
+_log = logging.getLogger(__name__)
 
 
 def npc_dialogue_quest_check(state: GameState, claim: str, npc_id: str) -> None:
@@ -202,8 +206,8 @@ async def consume_narrate(
     apply_result = apply_changes(state, final.output.state_changes, dirty.entities)
     locality_warnings = enforce_item_locality(state, dirty=dirty.entities)
     for warning in locality_warnings:
-        gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=warning)
-        push_log_entry(state, gm_log, dirty)
+        # Auto-repair telemetry — server logs only; engine-internal text (English + ids) must never reach the player log.
+        _log.warning("item_locality_repair: %s", warning)
     state.invalidate_graph()
     push_turn_log(state, target_for_log, final.output.turn_summary, dirty)
     # Quest-start system cards: surface locked → active flips after narrate body

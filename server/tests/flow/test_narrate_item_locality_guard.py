@@ -1,8 +1,16 @@
 """Test that narrate's apply_changes + enforce_item_locality wire correctly."""
 
+import logging
+
+import pytest
+
 from src.domain.entities import Character, Item, Location, Race, Stats
+from src.domain.memory import GMLogEntry
 from src.domain.state import GameState
 from src.engines.invariants import enforce_item_locality
+from src.flow.dirty import Dirty
+from src.flow.narrate import consume_narrate
+from src.llm_calls.narrate import NarrateOutput, NarrativeFinal
 
 
 def _state() -> GameState:
@@ -49,3 +57,50 @@ def test_enforce_after_simulated_llm_duplicate_set():
     assert "sword_01" in state.characters["player_01"].inventory_ids
     assert state.characters["z_npc_01"].equipment.weapon is None
     assert ("characters", "z_npc_01") in dirty
+
+
+@pytest.mark.asyncio
+async def test_consume_narrate_does_not_leak_locality_warning_to_player_log(caplog):
+    """Pre-fix: enforce_item_locality warnings landed in the GM log as raw English
+    text containing entity ids ('item X was duplicated; kept characters/Y/...').
+    Now they must go to the server logger only, never to dirty.log / state.log_entries."""
+    state = _state()
+    state.characters["player_01"].inventory_ids.append("sword_01")
+    state.characters["z_npc_01"].equipment.weapon = "sword_01"
+
+    final = NarrativeFinal(body="좋습니다.", output=NarrateOutput())
+
+    async def _stream():
+        yield final
+
+    dirty = Dirty()
+    with caplog.at_level(logging.WARNING, logger="src.flow.narrate"):
+        events = [
+            ev
+            async for ev in consume_narrate(
+                state,
+                dirty,
+                _stream(),
+                target_for_log=None,
+                dialogue_input=None,
+            )
+        ]
+
+    # State-side repair still happens.
+    assert state.characters["z_npc_01"].equipment.weapon is None
+
+    # No GM log entry carries the raw English warning.
+    for entry in dirty.log:
+        if isinstance(entry, GMLogEntry):
+            assert "duplicated" not in entry.text
+            assert "sword_01" not in entry.text
+            assert "characters/" not in entry.text
+    for ev in events:
+        if ev.get("type") == "log_entry":
+            text = ev["data"].get("text", "")
+            assert "duplicated" not in text
+            assert "sword_01" not in text
+            assert "characters/" not in text
+
+    # Routed to server logger instead.
+    assert any("item_locality_repair" in r.message for r in caplog.records)

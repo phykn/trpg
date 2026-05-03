@@ -317,10 +317,6 @@ def format_combat_outcome_summary(result: "AutoCombatResult") -> str | None:
     return "전투 결과\n" + "\n".join(lines)
 
 
-def format_item_locality_warning(item_name: str) -> str:
-    return f"system: 「{item_name}」 위치 일관성 정정"
-
-
 def format_combat_event_summary(result: "AutoCombatResult") -> str:
     """One-line Korean summary of a combat result for injection into narrate prompt."""
     player_name = (
