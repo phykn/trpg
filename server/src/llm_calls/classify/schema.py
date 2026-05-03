@@ -6,6 +6,31 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 from ...domain.types import StatKey, Tier
 from ...mapping.labels import ROLL_REASON_DEFAULT
 
+# ─── Action intent ────────────────────────────────────────────────────────────
+
+ActionIntent = Literal[
+    "aggressive_attack",
+    "intimidate",
+    "deceive",
+    "negotiate",
+    "friendly",
+    "theft",
+    "inspect",
+]
+
+
+def _classify_intent_llm(action_text: str, target_kind: str) -> ActionIntent:
+    """Override point for tests. Default raises so callers must supply real LLM."""
+    raise NotImplementedError("_classify_intent_llm must be supplied by the caller")
+
+
+def classify_action_intent(action_text: str, target_kind: str) -> ActionIntent:
+    """Map free-text player action to ActionIntent. Word strength is irrelevant —
+    any physical attack verb ('공격', '찌른다', '베어버린다', '살해', '죽인다') maps
+    to aggressive_attack. Callers that need a real LLM round-trip should replace
+    _classify_intent_llm; unit tests monkeypatch it to return a fixed string."""
+    return _classify_intent_llm(action_text, target_kind)
+
 
 class JudgeInput(BaseModel):
     player_input: str
