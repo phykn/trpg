@@ -445,7 +445,7 @@ def transfer_loot_on_death(dead: Character, winner: Character) -> None:
     """Move all inventory_ids + gold from dead entity to winner. Atomic."""
     if dead.inventory_ids:
         winner.inventory_ids.extend(dead.inventory_ids)
-        dead.inventory_ids = []
+        dead.inventory_ids.clear()
     if dead.gold:
         winner.gold += dead.gold
         dead.gold = 0
@@ -486,6 +486,7 @@ def tick_death_save(
     if actor.death_saves.failures >= RULES.death.failures_to_die:
         _kill(actor)
         remove_from_combat(state, actor_id)
+        # no attacker context for standalone death-save bleeds — loot transfer is per-killer only
         return ("dead", roll)
     return ("progress", roll)
 
