@@ -6,7 +6,6 @@ export function Expandable({
   contentKey,
   lineHeight,
   clampLines = 1,
-  showHint = false,
   textClassName,
   textStyle,
   measureText,
@@ -16,7 +15,6 @@ export function Expandable({
   contentKey: string;
   lineHeight: number;
   clampLines?: number;
-  showHint?: boolean;
   textClassName: string;
   textStyle?: StyleProp<TextStyle>;
   measureText: string;
@@ -30,7 +28,6 @@ export function Expandable({
     setExpanded(false);
   }, [contentKey]);
   const canToggle = overflow || expanded;
-  const showHintNow = showHint && overflow && !expanded;
 
   return (
     <Pressable
@@ -58,14 +55,6 @@ export function Expandable({
             <Text className={textClassName} style={textStyle}>
               {measureText}
             </Text>
-          </View>
-        )}
-        {showHintNow && (
-          <View
-            className="absolute bottom-0 right-0 bg-canvas-subtle pl-3"
-            pointerEvents="none"
-          >
-            <Text className="font-sans text-caption text-fg-subtle">(펼치기)</Text>
           </View>
         )}
       </View>
