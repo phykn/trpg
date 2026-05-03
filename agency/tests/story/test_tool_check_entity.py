@@ -3,6 +3,7 @@
 Per-entity check uses the on-disk pool from scenario_dir. With no flags,
 behaves identically to the legacy `_validate_entity_response`.
 """
+
 import json
 from pathlib import Path
 
@@ -16,43 +17,61 @@ def _scaffold_minimal_scenario(tmp_path: Path) -> Path:
     sd.mkdir()
     (sd / "world.md").write_text("테스트", encoding="utf-8")
     (sd / "races").mkdir()
-    (sd / "races" / "human.json").write_text(json.dumps({
-        "id": "human",
-        "name": "인간",
-        "description": "보통 사람.",
-        "is_humanoid": True,
-        "racial_skill_ids": ["barter"],
-        "stat_modifiers": {},
-    }, ensure_ascii=False), encoding="utf-8")
+    (sd / "races" / "human.json").write_text(
+        json.dumps(
+            {
+                "id": "human",
+                "name": "인간",
+                "description": "보통 사람.",
+                "is_humanoid": True,
+                "racial_skill_ids": ["barter"],
+                "stat_modifiers": {},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
     (sd / "skills").mkdir()
-    (sd / "skills" / "barter.json").write_text(json.dumps({
-        "id": "barter",
-        "name": "흥정",
-        "description": "값을 깎는 능력.",
-        "type": "buff",
-        "target": "single",
-        "primary_stat": "CHA",
-        "level": 1,
-        "mp_cost": 0,
-        "special_effect": "",
-    }, ensure_ascii=False), encoding="utf-8")
+    (sd / "skills" / "barter.json").write_text(
+        json.dumps(
+            {
+                "id": "barter",
+                "name": "흥정",
+                "description": "값을 깎는 능력.",
+                "type": "buff",
+                "target": "single",
+                "primary_stat": "CHA",
+                "level": 1,
+                "mp_cost": 0,
+                "special_effect": "",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
     return sd
 
 
 def test_check_entity_skill_ok(capsys, tmp_path):
     sd = _scaffold_minimal_scenario(tmp_path)
     skill_path = tmp_path / "new_skill.json"
-    skill_path.write_text(json.dumps({
-        "id": "trip",
-        "name": "발걸기",
-        "description": "상대를 넘어뜨립니다.",
-        "type": "debuff",
-        "target": "single",
-        "primary_stat": "DEX",
-        "level": 1,
-        "mp_cost": 1,
-        "special_effect": "",
-    }, ensure_ascii=False), encoding="utf-8")
+    skill_path.write_text(
+        json.dumps(
+            {
+                "id": "trip",
+                "name": "발걸기",
+                "description": "상대를 넘어뜨립니다.",
+                "type": "debuff",
+                "target": "single",
+                "primary_stat": "DEX",
+                "level": 1,
+                "mp_cost": 1,
+                "special_effect": "",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
     rc = tool._main(["check-entity", "skill", str(sd), str(skill_path)])
     assert rc == 0
     assert capsys.readouterr().out.strip() == "OK"
@@ -61,14 +80,20 @@ def test_check_entity_skill_ok(capsys, tmp_path):
 def test_check_entity_race_unknown_skill(capsys, tmp_path):
     sd = _scaffold_minimal_scenario(tmp_path)
     race_path = tmp_path / "elf.json"
-    race_path.write_text(json.dumps({
-        "id": "elf",
-        "name": "엘프",
-        "description": "긴 귀.",
-        "is_humanoid": True,
-        "racial_skill_ids": ["fire_breath"],  # not on disk
-        "stat_modifiers": {},
-    }, ensure_ascii=False), encoding="utf-8")
+    race_path.write_text(
+        json.dumps(
+            {
+                "id": "elf",
+                "name": "엘프",
+                "description": "긴 귀.",
+                "is_humanoid": True,
+                "racial_skill_ids": ["fire_breath"],  # not on disk
+                "stat_modifiers": {},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
     rc = tool._main(["check-entity", "race", str(sd), str(race_path)])
     assert rc == 1
     err = capsys.readouterr().err
@@ -86,12 +111,27 @@ def test_check_entity_with_decomp_pool(capsys, tmp_path):
         "profile_name": "테스트",
         "profile_description": "테스트",
         "races": [
-            {"id": "human", "role": "주민", "racial_skill_ids": ["barter"], "is_humanoid": True},
-            {"id": "elf", "role": "엘프", "racial_skill_ids": ["fire_breath"], "is_humanoid": True},
+            {
+                "id": "human",
+                "role": "주민",
+                "racial_skill_ids": ["barter"],
+                "is_humanoid": True,
+            },
+            {
+                "id": "elf",
+                "role": "엘프",
+                "racial_skill_ids": ["fire_breath"],
+                "is_humanoid": True,
+            },
         ],
         "skills": [
             {"id": "barter", "role": "흥정", "primary_stat": "CHA", "type": "buff"},
-            {"id": "fire_breath", "role": "화염숨결", "primary_stat": "INT", "type": "attack"},
+            {
+                "id": "fire_breath",
+                "role": "화염숨결",
+                "primary_stat": "INT",
+                "type": "attack",
+            },
         ],
         "locations": [{"id": "town", "role": "광장", "connection_ids": []}],
         "start_location_id": "town",
@@ -100,18 +140,30 @@ def test_check_entity_with_decomp_pool(capsys, tmp_path):
         json.dumps(setup, ensure_ascii=False), encoding="utf-8"
     )
     race_path = tmp_path / "elf.json"
-    race_path.write_text(json.dumps({
-        "id": "elf",
-        "name": "엘프",
-        "description": "긴 귀.",
-        "is_humanoid": True,
-        "racial_skill_ids": ["fire_breath"],
-        "stat_modifiers": {},
-    }, ensure_ascii=False), encoding="utf-8")
-    rc = tool._main([
-        "check-entity", "race", str(sd), str(race_path),
-        "--decomp", str(decomp_dir),
-    ])
+    race_path.write_text(
+        json.dumps(
+            {
+                "id": "elf",
+                "name": "엘프",
+                "description": "긴 귀.",
+                "is_humanoid": True,
+                "racial_skill_ids": ["fire_breath"],
+                "stat_modifiers": {},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    rc = tool._main(
+        [
+            "check-entity",
+            "race",
+            str(sd),
+            str(race_path),
+            "--decomp",
+            str(decomp_dir),
+        ]
+    )
     assert rc == 0, capsys.readouterr().err
     assert capsys.readouterr().out.strip() == "OK"
 
@@ -122,22 +174,56 @@ def _scaffold_for_character(tmp_path: Path) -> Path:
     sd.mkdir()
     (sd / "world.md").write_text("테스트", encoding="utf-8")
     (sd / "races").mkdir()
-    (sd / "races" / "human.json").write_text(json.dumps({
-        "id": "human", "name": "인간", "description": "보통 사람.",
-        "is_humanoid": True, "racial_skill_ids": ["barter"], "stat_modifiers": {},
-    }, ensure_ascii=False), encoding="utf-8")
+    (sd / "races" / "human.json").write_text(
+        json.dumps(
+            {
+                "id": "human",
+                "name": "인간",
+                "description": "보통 사람.",
+                "is_humanoid": True,
+                "racial_skill_ids": ["barter"],
+                "stat_modifiers": {},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
     (sd / "skills").mkdir()
-    (sd / "skills" / "barter.json").write_text(json.dumps({
-        "id": "barter", "name": "흥정", "description": "값을 깎는 능력.",
-        "type": "buff", "primary_stat": "CHA", "level": 1,
-        "mp_cost": 0, "cooldown": 0, "target": "single", "special_effect": "",
-    }, ensure_ascii=False), encoding="utf-8")
+    (sd / "skills" / "barter.json").write_text(
+        json.dumps(
+            {
+                "id": "barter",
+                "name": "흥정",
+                "description": "값을 깎는 능력.",
+                "type": "buff",
+                "primary_stat": "CHA",
+                "level": 1,
+                "mp_cost": 0,
+                "cooldown": 0,
+                "target": "single",
+                "special_effect": "",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
     (sd / "locations").mkdir()
-    (sd / "locations" / "town.json").write_text(json.dumps({
-        "id": "town", "name": "광장", "description": "마을 광장.",
-        "connections": [], "item_ids": [], "hidden_items": [],
-        "hidden_connections": [], "props": [],
-    }, ensure_ascii=False), encoding="utf-8")
+    (sd / "locations" / "town.json").write_text(
+        json.dumps(
+            {
+                "id": "town",
+                "name": "광장",
+                "description": "마을 광장.",
+                "connections": [],
+                "item_ids": [],
+                "hidden_items": [],
+                "hidden_connections": [],
+                "props": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
     return sd
 
 
@@ -157,12 +243,16 @@ CHARACTER_WITH_FUTURE_INV = {
     "location_id": "town",
     "level": 1,
     "stats": {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10},
-    "hp": 27, "max_hp": 27, "mp": 20, "max_mp": 20,
+    "hp": 27,
+    "max_hp": 27,
+    "mp": 20,
+    "max_mp": 20,
     "racial_skill_ids": ["barter"],
     "learned_skill_ids": [],
-    "inventory_ids": ["robe_99"],   # 디스크에 없음 — skeleton 모드에서 통과해야 함
+    "inventory_ids": ["robe_99"],  # 디스크에 없음 — skeleton 모드에서 통과해야 함
     "equipment": {"weapon": None, "armor": None, "accessory": None},
-    "job": "주민", "gender": "male",
+    "job": "주민",
+    "gender": "male",
     "alive": True,
     "xp_reward": 0,
 }
@@ -171,10 +261,18 @@ CHARACTER_WITH_FUTURE_INV = {
 def test_check_entity_character_skeleton_skips_inventory_pool(capsys, tmp_path):
     sd = _scaffold_for_character(tmp_path)
     cp = tmp_path / "villager.json"
-    cp.write_text(json.dumps(CHARACTER_WITH_FUTURE_INV, ensure_ascii=False), encoding="utf-8")
-    rc = tool._main([
-        "check-entity", "character", str(sd), str(cp), "--skeleton",
-    ])
+    cp.write_text(
+        json.dumps(CHARACTER_WITH_FUTURE_INV, ensure_ascii=False), encoding="utf-8"
+    )
+    rc = tool._main(
+        [
+            "check-entity",
+            "character",
+            str(sd),
+            str(cp),
+            "--skeleton",
+        ]
+    )
     assert rc == 0, capsys.readouterr().err
     assert capsys.readouterr().out.strip() == "OK"
 
@@ -182,10 +280,17 @@ def test_check_entity_character_skeleton_skips_inventory_pool(capsys, tmp_path):
 def test_check_entity_character_full_catches_missing_inventory(capsys, tmp_path):
     sd = _scaffold_for_character(tmp_path)
     cp = tmp_path / "villager.json"
-    cp.write_text(json.dumps(CHARACTER_WITH_FUTURE_INV, ensure_ascii=False), encoding="utf-8")
-    rc = tool._main([
-        "check-entity", "character", str(sd), str(cp),
-    ])
+    cp.write_text(
+        json.dumps(CHARACTER_WITH_FUTURE_INV, ensure_ascii=False), encoding="utf-8"
+    )
+    rc = tool._main(
+        [
+            "check-entity",
+            "character",
+            str(sd),
+            str(cp),
+        ]
+    )
     assert rc == 1
     err = capsys.readouterr().err
     # 풀-의존 검사가 robe_99 누락을 잡아야 함

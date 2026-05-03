@@ -197,14 +197,8 @@ async def test_affinity_card_emits_after_gm_body_log_entry(fresh_state):
             dialogue_input="에드릭에게 인사한다",
         )
     ]
-    log_events = [
-        (i, e)
-        for i, e in enumerate(events)
-        if e.get("type") == "log_entry"
-    ]
-    gm_idx = next(
-        i for i, e in log_events if (e.get("data") or {}).get("kind") == "gm"
-    )
+    log_events = [(i, e) for i, e in enumerate(events) if e.get("type") == "log_entry"]
+    gm_idx = next(i for i, e in log_events if (e.get("data") or {}).get("kind") == "gm")
     aff_idx = next(
         i
         for i, e in log_events

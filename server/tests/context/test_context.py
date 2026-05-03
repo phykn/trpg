@@ -169,18 +169,31 @@ def test_entities_surface_protected_flag(fresh_state):
     pass instead. Default `protected=false` NPCs omit the field (no payload bloat)."""
     fresh_state.locations["plaza_01"] = Location(id="plaza_01", name="광장")
     fresh_state.characters["player_01"] = Character(
-        id="player_01", name="주", race_id="human", stats=Stats(),
+        id="player_01",
+        name="주",
+        race_id="human",
+        stats=Stats(),
         location_id="plaza_01",
     )
     child = Character(
-        id="mira", name="미라", race_id="human", stats=Stats(),
-        location_id="plaza_01", max_hp=8, hp=8,
+        id="mira",
+        name="미라",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+        max_hp=8,
+        hp=8,
     )
     child.protected = True
     fresh_state.characters["mira"] = child
     fresh_state.characters["bandit"] = Character(
-        id="bandit", name="산적", race_id="human", stats=Stats(),
-        location_id="plaza_01", max_hp=20, hp=20,
+        id="bandit",
+        name="산적",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+        max_hp=20,
+        hp=20,
     )
 
     sur = build_surroundings(fresh_state, "player_01")

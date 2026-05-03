@@ -6,7 +6,9 @@ from src.llm import LLMClient
 class PlayerAgent:
     """QA player. The system prompt encodes a persona; one LLM call per turn yields the next single-line input."""
 
-    def __init__(self, name: str, prompt_path: Path, llm: LLMClient, max_turns: int = 0):
+    def __init__(
+        self, name: str, prompt_path: Path, llm: LLMClient, max_turns: int = 0
+    ):
         self.name = name
         self.system = prompt_path.read_text(encoding="utf-8")
         self.llm = llm
@@ -16,10 +18,13 @@ class PlayerAgent:
     async def next_input(
         self, state_summary: str, last_gm: str, turn_no: int = 0
     ) -> str:
-        recent_block = "\n".join(
-            f"[prev turn] me: {p}\n  → narrator: {n[:200]}"
-            for p, n in self.history[-3:]
-        ) or "(none yet)"
+        recent_block = (
+            "\n".join(
+                f"[prev turn] me: {p}\n  → narrator: {n[:200]}"
+                for p, n in self.history[-3:]
+            )
+            or "(none yet)"
+        )
 
         if self.max_turns:
             turn_line = f"This turn: {turn_no}/{self.max_turns}"
@@ -54,7 +59,7 @@ class PlayerAgent:
         text = text.strip('"').strip("'").strip()
         for prefix in ("다음 행동:", "행동:", "플레이어:", "나:", "주인공:"):
             if text.startswith(prefix):
-                text = text[len(prefix):].strip()
+                text = text[len(prefix) :].strip()
         return text or "주변을 둘러본다."
 
     def record(self, player_input: str, gm_body: str) -> None:

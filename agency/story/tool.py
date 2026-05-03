@@ -8,6 +8,7 @@ Each subcommand reads input, runs a check or transform, and exits with:
 Subcommands are added in subsequent tasks. This file currently has only the
 argparse skeleton + bootstrap.
 """
+
 import argparse
 import asyncio
 import mimetypes
@@ -22,7 +23,14 @@ sys.path.insert(0, str(ROOT / "server"))
 sys.path.insert(0, str(ROOT))
 
 # sys.path must be set first; decompose.py transitively imports src.llm
-from agency.story.harness.decompose import DecomSetup, DecomCast, DecomArc, _check_setup, _check_cast, _check_arc  # noqa: E402
+from agency.story.harness.decompose import (
+    DecomSetup,
+    DecomCast,
+    DecomArc,
+    _check_setup,
+    _check_cast,
+    _check_arc,
+)  # noqa: E402
 from agency.story.harness._common import EntityWriterError  # noqa: E402
 from agency.story.harness.scenario import fill_equipment  # noqa: E402
 from src.engines.invariants import Scenario, check_scenario  # noqa: E402
@@ -79,14 +87,18 @@ def _build_parser() -> argparse.ArgumentParser:
         help="한 엔티티 cross-ref + invariant 검사",
     )
     sp_chk.add_argument("kind", choices=sorted(SPECS), help="entity kind")
-    sp_chk.add_argument("scenario_dir", help="scenario directory (already partially populated)")
+    sp_chk.add_argument(
+        "scenario_dir", help="scenario directory (already partially populated)"
+    )
     sp_chk.add_argument("entity_json", help="path to the entity JSON to check")
     sp_chk.add_argument(
-        "--decomp", default=None,
+        "--decomp",
+        default=None,
         help="decompose dir (setup/cast/arc.json). 있으면 그 명단도 valid ID 풀에 합침",
     )
     sp_chk.add_argument(
-        "--skeleton", action="store_true",
+        "--skeleton",
+        action="store_true",
         help="풀-의존 검사 건너뜀 (character의 inventory/skill 풀 검증을 sweep까지 미룸)",
     )
     sp_chk.set_defaults(func=_cmd_check_entity)
@@ -156,7 +168,9 @@ def _cmd_check_entity(args: argparse.Namespace) -> int:
     spec = SPECS[args.kind]
     sd = Path(args.scenario_dir)
     if not sd.is_dir():
-        print(f"check-entity failed: scenario_dir not a directory: {sd}", file=sys.stderr)
+        print(
+            f"check-entity failed: scenario_dir not a directory: {sd}", file=sys.stderr
+        )
         return 1
     try:
         entity = spec.model.model_validate_json(

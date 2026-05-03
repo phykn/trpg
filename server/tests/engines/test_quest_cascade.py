@@ -238,7 +238,9 @@ def test_fail_quest_sets_status_and_clears_active(fresh_state):
     assert state.quests["q1"].fail_reason == "의뢰자 사망"
     assert state.active_quest_id is None
     texts = [e.model_dump().get("text", "") for e in dirty.log]
-    assert any("퀘스트 실패: 촌장의 부탁" in t and "의뢰자 사망" in t for t in texts), texts
+    assert any("퀘스트 실패: 촌장의 부탁" in t and "의뢰자 사망" in t for t in texts), (
+        texts
+    )
 
 
 def test_fail_quest_keeps_active_pointer_when_other(fresh_state):

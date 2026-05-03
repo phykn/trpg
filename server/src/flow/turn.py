@@ -251,9 +251,7 @@ def _chain_needs_narrate(
                 "MoveAction first-visit check needs a pre-move visited snapshot"
             )
             if part.destination not in pre_move_visited:
-                failed = (
-                    bool(part_failures[i]) if part_failures is not None else False
-                )
+                failed = bool(part_failures[i]) if part_failures is not None else False
                 if not failed:
                     return True
     return False
@@ -737,9 +735,7 @@ async def _dispatch(
         # is non-dramatic and stays receipt-only.
         dramatic_chain = any(is_dramatic_fail(r) for r in chain_failure_raws)
         narrate_chain = (
-            _chain_needs_narrate(
-                state, prefix_parts, part_failures, pre_move_visited
-            )
+            _chain_needs_narrate(state, prefix_parts, part_failures, pre_move_visited)
             or dramatic_chain
         )
 

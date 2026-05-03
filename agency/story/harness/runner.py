@@ -44,6 +44,7 @@ class EntitySpec:
 
 # --- manifest cross-ref checks --------------------------------------------
 
+
 def _check_location_refs(loc: Location, refs: dict[str, set[str]]) -> None:
     location_ids = refs.get("location", set())
     item_ids = refs.get("item", set())
@@ -141,37 +142,62 @@ def _check_chapter_refs(ch: Chapter, refs: dict[str, set[str]]) -> None:
 
 SPECS: dict[str, EntitySpec] = {
     "race": EntitySpec(
-        kind="race", model=Race, sub_dir="races", fragment="race.md",
-        ref_kinds=("skill",), check_refs=_check_race_refs,
+        kind="race",
+        model=Race,
+        sub_dir="races",
+        fragment="race.md",
+        ref_kinds=("skill",),
+        check_refs=_check_race_refs,
     ),
     "location": EntitySpec(
-        kind="location", model=Location, sub_dir="locations", fragment="location.md",
-        ref_kinds=("location", "item"), check_refs=_check_location_refs,
+        kind="location",
+        model=Location,
+        sub_dir="locations",
+        fragment="location.md",
+        ref_kinds=("location", "item"),
+        check_refs=_check_location_refs,
     ),
     "skill": EntitySpec(
-        kind="skill", model=Skill, sub_dir="skills", fragment="skill.md",
+        kind="skill",
+        model=Skill,
+        sub_dir="skills",
+        fragment="skill.md",
     ),
     "item": EntitySpec(
-        kind="item", model=Item, sub_dir="items", fragment="item.md",
+        kind="item",
+        model=Item,
+        sub_dir="items",
+        fragment="item.md",
     ),
     "character": EntitySpec(
-        kind="character", model=Character, sub_dir="characters", fragment="character.md",
+        kind="character",
+        model=Character,
+        sub_dir="characters",
+        fragment="character.md",
         ref_kinds=("race", "location", "item", "skill"),
         check_refs=_check_character_refs,
     ),
     "quest": EntitySpec(
-        kind="quest", model=Quest, sub_dir="quests", fragment="quest.md",
+        kind="quest",
+        model=Quest,
+        sub_dir="quests",
+        fragment="quest.md",
         ref_kinds=("character", "location", "item", "quest"),
         check_refs=_check_quest_refs,
     ),
     "chapter": EntitySpec(
-        kind="chapter", model=Chapter, sub_dir="chapters", fragment="chapter.md",
-        ref_kinds=("quest",), check_refs=_check_chapter_refs,
+        kind="chapter",
+        model=Chapter,
+        sub_dir="chapters",
+        fragment="chapter.md",
+        ref_kinds=("quest",),
+        check_refs=_check_chapter_refs,
     ),
 }
 
 
 # --- build helpers ---------------------------------------------------------
+
 
 def _load_dir(scenario_dir: Path, sub_dir: str) -> list[dict]:
     d = scenario_dir / sub_dir
@@ -192,17 +218,11 @@ def _collect_refs(scenario_dir: Path, spec: EntitySpec) -> dict[str, set[str]]:
 
 
 def _items_pool(scenario_dir: Path) -> dict[str, Item]:
-    return {
-        e["id"]: Item.model_validate(e)
-        for e in _load_dir(scenario_dir, "items")
-    }
+    return {e["id"]: Item.model_validate(e) for e in _load_dir(scenario_dir, "items")}
 
 
 def _skills_pool(scenario_dir: Path) -> dict[str, Skill]:
-    return {
-        e["id"]: Skill.model_validate(e)
-        for e in _load_dir(scenario_dir, "skills")
-    }
+    return {e["id"]: Skill.model_validate(e) for e in _load_dir(scenario_dir, "skills")}
 
 
 def _check_entity_invariants(
@@ -249,4 +269,3 @@ def _check_id(
         raise EntityWriterError(
             f"id={eid!r} collides with existing ids. Existing: {sorted(existing)}"
         )
-

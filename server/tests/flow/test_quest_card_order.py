@@ -87,12 +87,8 @@ async def test_quest_success_card_emits_after_gm_body_log_entry(
         )
     ]
 
-    log_events = [
-        (i, e) for i, e in enumerate(events) if e.get("type") == "log_entry"
-    ]
-    gm_idx = next(
-        i for i, e in log_events if (e.get("data") or {}).get("kind") == "gm"
-    )
+    log_events = [(i, e) for i, e in enumerate(events) if e.get("type") == "log_entry"]
+    gm_idx = next(i for i, e in log_events if (e.get("data") or {}).get("kind") == "gm")
     quest_idx = next(
         i
         for i, e in log_events

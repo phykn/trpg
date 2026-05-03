@@ -528,7 +528,9 @@ def test_non_kill_trigger_event_does_not_fall_back(fresh_state):
 # --- _apply_rewards: success card emission + active_quest_id clear ---------
 
 
-def _completed_quest(qid="q_apply", title="촌장의 부탁", *, exp=80, gold=40, items=None):
+def _completed_quest(
+    qid="q_apply", title="촌장의 부탁", *, exp=80, gold=40, items=None
+):
     return Quest(
         id=qid,
         title=title,

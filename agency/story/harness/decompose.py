@@ -19,6 +19,7 @@ from ._common import (
 
 # --- decomposition schema --------------------------------------------------
 
+
 class DecRace(BaseModel):
     id: str
     role: str
@@ -97,8 +98,10 @@ class Decomposition(BaseModel):
 # results compose into Decomposition above. Splitting reduces single-call
 # output size and makes each retry self-contained.
 
+
 class DecomSetup(BaseModel):
     """Phase A — world toolbox: races + skills + locations + start_location."""
+
     world_md: str
     profile_name: str
     profile_description: str
@@ -110,6 +113,7 @@ class DecomSetup(BaseModel):
 
 class DecomCast(BaseModel):
     """Phase B — characters + items + start_subject (race/location come from Phase A)."""
+
     characters: list[DecCharacter]
     items: list[DecItem]
     start_subject_id: str
@@ -117,6 +121,7 @@ class DecomCast(BaseModel):
 
 class DecomArc(BaseModel):
     """Phase C — quests + chapters + start_quest_id."""
+
     quests: list[DecQuest]
     chapters: list[DecChapter]
     start_quest_id: str
@@ -144,16 +149,15 @@ def _compose_decomposition(
 
 # --- decomposer ------------------------------------------------------------
 
-def _check_no_cycle(
-    *, nodes: set[str], edges: dict[str, list[str]], kind: str
-) -> None:
+
+def _check_no_cycle(*, nodes: set[str], edges: dict[str, list[str]], kind: str) -> None:
     """DFS-based cycle detection over a prerequisite_ids DAG. Raises on first cycle."""
     visited: set[str] = set()
     on_stack: set[str] = set()
 
     def _dfs(nid: str, path: list[str]) -> list[str] | None:
         if nid in on_stack:
-            return path[path.index(nid):] + [nid]
+            return path[path.index(nid) :] + [nid]
         if nid in visited:
             return None
         visited.add(nid)
@@ -551,5 +555,3 @@ def _check_decomp(d: Decomposition) -> None:
     _check_setup(setup)
     _check_cast(setup, cast)
     _check_arc(setup, cast, arc)
-
-

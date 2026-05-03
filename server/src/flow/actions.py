@@ -222,9 +222,7 @@ async def emit_use(
     actor = state.characters[actor_id]
     target = state.characters.get(target_id) if target_id else None
     try:
-        result = inventory_engine.use(
-            actor, item_id, target, state, dirty=dirty
-        )
+        result = inventory_engine.use(actor, item_id, target, state, dirty=dirty)
     except InventoryInvalid as e:
         yield push_act(
             state, dirty, format_use_fail(actor.name, _item_name(state, item_id), e)

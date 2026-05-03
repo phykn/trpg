@@ -1,4 +1,5 @@
 """sweep subcommand — runs engines.invariants.check_scenario on the assembled directory."""
+
 import json
 from pathlib import Path
 
@@ -19,9 +20,17 @@ def _scaffold_minimal_passable(tmp_path: Path) -> Path:
     (sd / "characters").mkdir()
     (sd / "quests").mkdir()
     (sd / "chapters").mkdir()
-    (sd / "profile.json").write_text(json.dumps({
-        "id": "swept", "name": "테스트", "description": "테스트 프로필",
-    }, ensure_ascii=False), encoding="utf-8")
+    (sd / "profile.json").write_text(
+        json.dumps(
+            {
+                "id": "swept",
+                "name": "테스트",
+                "description": "테스트 프로필",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
     return sd
 
 
