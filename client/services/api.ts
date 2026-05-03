@@ -143,8 +143,14 @@ export function streamIntro(
   );
 }
 
-export async function getLevelUpPreview(gameId: string): Promise<LevelUpPreviewResponse> {
-  const res = await fetch(`${BASE_URL}/session/${gameId}/level_up_preview`, { headers: baseHeaders });
+export async function getLevelUpPreview(
+  gameId: string,
+  signal?: AbortSignal,
+): Promise<LevelUpPreviewResponse> {
+  const res = await fetch(`${BASE_URL}/session/${gameId}/level_up_preview`, {
+    headers: baseHeaders,
+    signal,
+  });
   if (!res.ok) throw new Error(`getLevelUpPreview failed: HTTP ${res.status}`);
   return (await res.json()) as LevelUpPreviewResponse;
 }

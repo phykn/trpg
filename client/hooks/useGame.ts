@@ -88,6 +88,7 @@ export function useGame() {
   const streamingRef = React.useRef(false);
 
   const aborts = React.useRef<Set<AbortController>>(new Set());
+  const previewAbortRef = React.useRef<AbortController | null>(null);
   React.useEffect(() => {
     const pendingAborts = aborts.current;
     return () => {
@@ -98,6 +99,7 @@ export function useGame() {
 
   React.useEffect(() => {
     if (pending) {
+      previewAbortRef.current?.abort();
       setLevelUpOpen(false);
       setLevelUpCandidates(null);
     }
@@ -255,15 +257,26 @@ export function useGame() {
     if (!id || streamingRef.current || pending) return;
     setLevelUpOpen(true);
     setLevelUpCandidates(null); // loading state
+    // Abort any prior in-flight preview before starting a new one
+    previewAbortRef.current?.abort();
+    const controller = new AbortController();
+    previewAbortRef.current = controller;
     try {
-      const preview = await getLevelUpPreview(id);
+      const preview = await getLevelUpPreview(id, controller.signal);
+      if (controller.signal.aborted) return;
       setLevelUpCandidates(preview.skill_candidates);
     } catch {
+      if (controller.signal.aborted) return;
       setLevelUpCandidates([]);
+    } finally {
+      if (previewAbortRef.current === controller) {
+        previewAbortRef.current = null;
+      }
     }
   }, [pending]);
 
   const cancelLevelUp = React.useCallback(() => {
+    previewAbortRef.current?.abort();
     setLevelUpOpen(false);
     setLevelUpCandidates(null);
   }, []);
@@ -272,6 +285,7 @@ export function useGame() {
     (stat_up: StatKey, skill_id: string | null) => {
       const id = gameIdRef.current;
       if (!id) return;
+      previewAbortRef.current?.abort();
       setLevelUpOpen(false);
       setLevelUpCandidates(null);
       void runStream((signal) =>
@@ -283,6 +297,7 @@ export function useGame() {
 
   const goToNewGame = React.useCallback(() => {
     aborts.current.forEach((a) => a.abort());
+    previewAbortRef.current?.abort();
     const id = gameIdRef.current;
     if (id) clearAllForGame(id);
     clearStoredGameId();
