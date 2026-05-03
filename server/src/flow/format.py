@@ -268,21 +268,16 @@ def format_item_locality_warning(item_name: str) -> str:
 
 def format_combat_event_summary(result: "AutoCombatResult") -> str:
     """One-line Korean summary of a combat result for injection into narrate prompt."""
+    player_name = result.player_start.name if result.player_start else _COMBAT_PLAYER_FALLBACK_NAME
     parts: list[str] = []
     for h in result.enemy_hits:
-        player_name = (
-            result.player_start.name if result.player_start else _COMBAT_PLAYER_FALLBACK_NAME
-        )
         if h.killed:
-            parts.append(f"{player_name}이(가) {h.name}에게 {h.damage_total} 피해 — {h.name} 쓰러짐")
+            parts.append(f"{player_name}{i_ga(player_name)} {h.name}에게 {h.damage_total} 피해 — {h.name} 쓰러짐")
         elif h.damage_total > 0:
             parts.append(
-                f"{player_name}이(가) {h.name}에게 {h.damage_total} 피해 (적 HP {h.hp_after}/{h.max_hp})"
+                f"{player_name}{i_ga(player_name)} {h.name}에게 {h.damage_total} 피해 (적 HP {h.hp_after}/{h.max_hp})"
             )
     if result.player_damage_total > 0:
-        player_name = (
-            result.player_start.name if result.player_start else _COMBAT_PLAYER_FALLBACK_NAME
-        )
         parts.append(
             f"{player_name} {result.player_damage_total} 피해 입음 (HP {result.player_hp_after}/{result.player_max_hp})"
         )
