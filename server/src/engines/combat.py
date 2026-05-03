@@ -399,6 +399,8 @@ def apply_attack_to_defender(
             killer = state.characters.get(attacker_id) if attacker_id else None
             append_death_to_hints(defender, killer_name=killer.name if killer else None)
             check_quests(state, "character_death", defender_id, dirty)
+            if killer is not None:
+                transfer_loot_on_death(dead=defender, winner=killer)
         return out
 
     if hp_after > 0:
@@ -423,6 +425,8 @@ def apply_attack_to_defender(
         killer = state.characters.get(attacker_id) if attacker_id else None
         append_death_to_hints(defender, killer_name=killer.name if killer else None)
         check_quests(state, "character_death", defender_id, dirty)
+        if killer is not None:
+            transfer_loot_on_death(dead=defender, winner=killer)
         return out
 
     # Player not dead yet — dying state.
@@ -435,6 +439,16 @@ def _kill(defender: Character) -> None:
     defender.alive = False
     defender.hp = 0
     defender.death_saves = None
+
+
+def transfer_loot_on_death(dead: Character, winner: Character) -> None:
+    """Move all inventory_ids + gold from dead entity to winner. Atomic."""
+    if dead.inventory_ids:
+        winner.inventory_ids.extend(dead.inventory_ids)
+        dead.inventory_ids = []
+    if dead.gold:
+        winner.gold += dead.gold
+        dead.gold = 0
 
 
 def tick_death_save(
