@@ -5,6 +5,7 @@ from __future__ import annotations
 from ..domain.entities import Quest
 from ..domain.errors import InventoryInvalid
 from ..domain.state import GameState
+from ..ontology.graph import GameGraph
 from ..ontology.queries import giver_of, kill_targets_of
 from .inventory.carry import check_can_carry
 
@@ -182,7 +183,7 @@ def check_quests(
 
 def _cascade_death(
     state: GameState,
-    graph,
+    graph: GameGraph,
     dead_id: str,
     changed: list[str],
     dirty: DirtySet,
@@ -192,8 +193,7 @@ def _cascade_death(
     - Giver died → active quest fails (fail_reason='giver_dead'); overrides a
       same-turn trigger-completion so fail always wins.
     - Kill-target died → if quest is already completed this turn via its trigger,
-      annotate success_reason='objective_killed'. If somehow still active and this
-      entity is its only kill target, complete it now.
+      annotate success_reason='objective_killed'.
     """
     for q in state.quests.values():
         giver = giver_of(graph, q.id)
