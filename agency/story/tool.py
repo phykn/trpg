@@ -16,8 +16,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "server"))
+sys.path.insert(0, str(ROOT))
 
 # env loading mirrors run_qa.py / run_story.py so SUPABASE_* / BASE_URL
 # / LLM_ROUTE_* resolve here. Subcommands that don't need env (decompose-*,
@@ -33,7 +33,7 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="agency.story.tool",
         description="Deterministic helpers for the story SKILL.",
     )
-    sub = parser.add_subparsers(dest="cmd", required=True)
+    sub = parser.add_subparsers(dest="cmd", required=True)  # noqa: F841 — populated by subcommand tasks
     # subcommands registered in later tasks
     return parser
 
