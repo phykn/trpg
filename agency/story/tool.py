@@ -9,6 +9,8 @@ Subcommands are added in subsequent tasks. This file currently has only the
 argparse skeleton + bootstrap.
 """
 import argparse
+import asyncio
+import mimetypes
 import os
 import sys
 from pathlib import Path
@@ -30,6 +32,7 @@ from agency.story.harness.runner import (  # noqa: E402
     _check_id,
     _collect_refs,
 )
+from src.persistence._supabase_http import _Storage  # noqa: E402
 
 # env loading mirrors run_qa.py / run_story.py so SUPABASE_* / BASE_URL
 # / LLM_ROUTE_* resolve here. Subcommands that don't need env (decompose-*,
@@ -101,6 +104,13 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sp_sw.add_argument("scenario_dir", help="scenario directory")
     sp_sw.set_defaults(func=_cmd_sweep)
+    # upload
+    sp_up = sub.add_parser(
+        "upload",
+        help="prod Supabase Storage bucket에 시나리오 디렉토리 업로드",
+    )
+    sp_up.add_argument("scenario_dir", help="local scenario directory")
+    sp_up.set_defaults(func=_cmd_upload)
     return parser
 
 
@@ -239,6 +249,53 @@ def _cmd_sweep(args: argparse.Namespace) -> int:
         for v in violations:
             print(f"  - {v}", file=sys.stderr)
         return 1
+    print("OK")
+    return 0
+
+
+def _content_type(path: Path) -> str:
+    guess, _ = mimetypes.guess_type(path.name)
+    if guess:
+        return guess
+    if path.suffix == ".md":
+        return "text/markdown"
+    return "application/octet-stream"
+
+
+async def _upload_async(local: Path) -> None:
+    url = os.environ["SUPABASE_URL"]
+    key = os.environ["SUPABASE_SERVICE_KEY"]
+    bucket = os.environ["SUPABASE_SCENARIO_BUCKET"]
+    fs = _Storage(url, key, bucket)
+    profile = local.name
+    print(f"uploading {local} -> {bucket}/{profile}/")
+    files = sorted(p for p in local.rglob("*") if p.is_file())
+    if not files:
+        print("  (no files)")
+        await fs.aclose()
+        return
+    for f in files:
+        rel = f.relative_to(local).as_posix()
+        bucket_key = f"{profile}/{rel}"
+        blob = f.read_bytes()
+        await fs.put_bytes(bucket_key, blob, content_type=_content_type(f))
+        print(f"  {bucket_key}  ({len(blob)}B)")
+    await fs.aclose()
+    print(f"done — {len(files)} files uploaded")
+
+
+def _cmd_upload(args: argparse.Namespace) -> int:
+    local = Path(args.scenario_dir).resolve()
+    if not local.is_dir():
+        print(f"upload failed: not a directory: {local}", file=sys.stderr)
+        return 1
+    try:
+        asyncio.run(_upload_async(local))
+    except KeyError as e:
+        print(f"upload failed: missing env var: {e}", file=sys.stderr)
+        return 1
+    except Exception as e:
+        return _fail("upload", e)
     print("OK")
     return 0
 
