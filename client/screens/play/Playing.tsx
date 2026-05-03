@@ -9,7 +9,7 @@ import type { Game } from '@/hooks/useGame';
 import { buildPanelSlots } from '@/presenters';
 import type { PanelAction, PanelSlot } from '@/types/ui';
 
-import { Composer, RollPrompt } from '@/components/composer';
+import { Composer, RollPrompt } from '@/features/composer';
 import { ContextCard } from '@/components/header';
 import { HeroStrip } from '@/features/hero';
 import { ConfirmDialog } from '@/components/ui';
