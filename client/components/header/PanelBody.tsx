@@ -1,6 +1,6 @@
 import React from 'react';
-import { ScrollView, View, Text, Pressable } from 'react-native';
-import { Expandable, StatRow, InlineParts, InlineNodes, LabeledRow, Row, ExpandGroup, ExpandableTitle } from '@/components/ui';
+import { ScrollView, View, Text } from 'react-native';
+import { Chip, Expandable, StatRow, InlineParts, InlineNodes, LabeledRow, Row, ExpandGroup, ExpandableTitle } from '@/components/ui';
 import { toneColor } from '@/design/tokens';
 import type { MetaSegment, Panel, PanelAction, PanelActions } from '@/types/ui';
 
@@ -52,15 +52,12 @@ function ActionScroller({ group, onAction }: {
           contentContainerStyle={{ flexDirection: 'row', gap: 6, paddingRight: 8 }}
         >
           {group.items.map((it) => (
-            <Pressable
+            <Chip
               key={it.label}
+              variant="action"
+              label={it.label}
               onPress={() => onAction?.(it)}
-              accessibilityRole="button"
-              accessibilityLabel={it.label}
-              className="shrink-0 px-2 py-1 rounded-sm border border-border-default bg-canvas-default active:bg-canvas-inset"
-            >
-              <Text numberOfLines={1} className="font-sans text-panel text-fg-default">{it.label}</Text>
-            </Pressable>
+            />
           ))}
         </ScrollView>
       )}
