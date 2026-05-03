@@ -78,6 +78,7 @@ def apply_attack_action(
             outcome.damage,
             nat_d20=outcome.nat_d20,
             dirty=dirty.entities,
+            attacker_id=attacker_id,
         )
         combat_engine.record_damage(state, attacker_id, outcome.damage)
         # Drop affinity only when the strike actually lands. Whiffed swings still register

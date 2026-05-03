@@ -353,16 +353,18 @@ def apply_attack_to_defender(
     *,
     nat_d20: int | None = None,
     dirty: set[tuple[str, str]] | None = None,
+    attacker_id: str | None = None,
 ) -> dict:
     """Subtract damage from hp and route to death / death-save branches.
 
     Returns: `{hp_before, hp_after, downed: bool, dying: bool, dead: bool, revived: bool}`.
     When `nat_d20` is 1 (critical_failure damage) during a death save, failures += crit_inc.
-    On death, the quest character_death trigger is evaluated.
+    On death, the quest character_death trigger is evaluated and killer fact appended to hints.
     """
     from .quest import (
         check_quests,
     )  # deferred import — avoid cycle within pipeline layer
+    from .perspective import append_death_to_hints
 
     defender = state.characters[defender_id]
     hp_before = defender.hp
@@ -394,6 +396,8 @@ def apply_attack_to_defender(
             _kill(defender)
             remove_from_combat(state, defender_id)
             out["dead"] = True
+            killer = state.characters.get(attacker_id) if attacker_id else None
+            append_death_to_hints(defender, killer_name=killer.name if killer else None)
             check_quests(state, "character_death", defender_id, dirty)
         return out
 
@@ -416,6 +420,8 @@ def apply_attack_to_defender(
         _kill(defender)
         remove_from_combat(state, defender_id)
         out["dead"] = True
+        killer = state.characters.get(attacker_id) if attacker_id else None
+        append_death_to_hints(defender, killer_name=killer.name if killer else None)
         check_quests(state, "character_death", defender_id, dirty)
         return out
 

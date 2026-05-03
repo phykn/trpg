@@ -93,12 +93,13 @@ def _apply_attack(
     multiplier: float,
     state: GameState,
     dirty: set[tuple[str, str]] | None,
+    attacker_id: str | None = None,
 ) -> dict:
     """Route skill damage through the same death-save / revive-coin pipeline
     as melee attacks. Returns the apply_attack_to_defender result with the
     computed `damage` merged in."""
     damage = _skill_output(skill, mod, multiplier)
-    out = apply_attack_to_defender(state, target.id, damage, dirty=dirty)
+    out = apply_attack_to_defender(state, target.id, damage, dirty=dirty, attacker_id=attacker_id)
     out["damage"] = damage
     return out
 
@@ -176,7 +177,7 @@ def cast(
     for t in targets:
         per: dict = {"target": t.id, "kind": skill.type}
         if skill.type == "attack":
-            atk = _apply_attack(skill, mod, t, multiplier, state, dirty)
+            atk = _apply_attack(skill, mod, t, multiplier, state, dirty, attacker_id=actor.id)
             per["damage"] = atk["damage"]
             if atk.get("dead"):
                 per["dead"] = True
