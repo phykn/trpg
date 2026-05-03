@@ -203,7 +203,7 @@ def has_invalid_combat_targets(
 
 def _judge_to_player_action(result, state: GameState) -> PlayerAction | None:
     """Distil a judge action into a PlayerAction for the auto-sim. Returns
-    None if the action is not allowed in combat (rest, level_up, etc.)."""
+    None if the action is not allowed in combat (rest, move, etc.)."""
     if isinstance(result, CombatAction):
         return PlayerAction(
             kind="skill" if result.skill_id else "attack",

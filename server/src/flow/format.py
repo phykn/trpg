@@ -57,10 +57,6 @@ def format_unequip_not_equipped(actor_name: str, item_name: str) -> str:
     return f"{actor_name}{eun_neun(actor_name)} 「{item_name}」{eul_reul(item_name)} 장비하고 있지 않습니다."
 
 
-def format_learn_skill_no_candidate(actor_name: str) -> str:
-    return f"{actor_name}{i_ga(actor_name)} 익힐 만한 기술을 찾지 못했습니다."
-
-
 def format_learn_skill_log(actor_name: str, skill_name: str) -> str:
     return f"{actor_name}{i_ga(actor_name)} 「{skill_name}」{eul_reul(skill_name)} 익혔습니다."
 
@@ -140,11 +136,6 @@ def format_level_up_log(
         f"{actor_name}의 레벨이 올랐습니다 "
         f"(레벨 {level}, {up_kr} ↑ / {down_kr} ↓, HP {max_hp} / MP {max_mp})."
     )
-
-
-def format_skill_candidates_log(skill_names: list[str]) -> str:
-    names = ", ".join(f"「{n}」" for n in skill_names)
-    return f"새 기술 후보: {names}"
 
 
 def format_death_log(name: str) -> str:

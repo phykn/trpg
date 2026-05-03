@@ -36,7 +36,6 @@ SAMPLE_SURROUNDINGS = {
     "equipment": {},
     "in_combat": False,
     "growth": {"can_level_up": False},
-    "skill_candidates": [],
     "merchants": [
         {
             "id": "merchant_01",

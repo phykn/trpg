@@ -65,7 +65,7 @@ The repo Protocols (`SaveRepo`, `ScenarioRepo`) are all-async. **The running ser
 
 Five tables, all keyed on `game_id`:
 
-- `games(game_id PK, meta jsonb, updated_at)` — `meta` carries `turn_count, pending_check, pending_skill_candidates, combat_state, active_*_id, next_log_id`. **`combat_state` must round-trip through meta** — without it, `/turn` reloads as combat-cleared and the engine restarts the fight every turn.
+- `games(game_id PK, meta jsonb, updated_at)` — `meta` carries `turn_count, pending_check, combat_state, active_*_id, next_log_id`. **`combat_state` must round-trip through meta** — without it, `/turn` reloads as combat-cleared and the engine restarts the fight every turn.
 - `entities(game_id, kind, id, data jsonb)` PK `(game_id, kind, id)` — only entities mutated this turn are upserted.
 - `log_entries(game_id, log_id int, entry jsonb)` — `log_id = entry.id` (app-managed monotonic).
 - `history_entries(game_id, seq bigserial, entry jsonb)` — append-only turn summaries.

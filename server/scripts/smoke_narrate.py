@@ -61,7 +61,6 @@ async def main() -> int:
             "equipment": {},
             "in_combat": False,
             "growth": {"can_level_up": False},
-            "skill_candidates": [],
             "merchants": [],
             "recent_npc": "guard_01",
         },
