@@ -154,6 +154,24 @@ def format_quest_start_turn_log(quest_title: str) -> str:
     return f"퀘스트 시작: {quest_title}"
 
 
+def format_quest_success_log(title: str, exp: int, gold: int, items: list[str]) -> str:
+    parts = [f"퀘스트 성공: {title}"]
+    rewards = []
+    if exp > 0:
+        rewards.append(f"+EXP {exp}")
+    if gold > 0:
+        rewards.append(f"+GOLD {gold}")
+    if items:
+        rewards.append(" / ".join(items))
+    if rewards:
+        parts.append(" · ".join(rewards))
+    return " — ".join(parts)
+
+
+def format_quest_fail_log(title: str, reason: str) -> str:
+    return f"퀘스트 실패: {title} — {reason}"
+
+
 def format_affinity_card_log(npc_name: str, delta: int) -> str:
     sign = "+" if delta >= 0 else ""
     return f"{npc_name} 호감도 {sign}{delta}"

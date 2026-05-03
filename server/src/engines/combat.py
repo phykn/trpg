@@ -353,7 +353,7 @@ def apply_attack_to_defender(
     damage: int,
     *,
     nat_d20: int | None = None,
-    dirty: set[tuple[str, str]] | None = None,
+    dirty=None,
     attacker_id: str | None = None,
 ) -> dict:
     """Subtract damage from hp and route to death / death-save branches.
@@ -361,18 +361,25 @@ def apply_attack_to_defender(
     Returns: `{hp_before, hp_after, downed: bool, dying: bool, dead: bool, revived: bool}`.
     When `nat_d20` is 1 (critical_failure damage) during a death save, failures += crit_inc.
     On death, the quest character_death trigger is evaluated and killer fact appended to hints.
+
+    `dirty` may be a plain entity-tracking set (legacy combat-engine tests) or a
+    full `Dirty` (flow callers). The full form lets quest completion push a
+    success card through `check_quests` → `_apply_rewards`.
     """
     from .quest import (
+        _entities_set,
         check_quests,
     )  # deferred import — avoid cycle within pipeline layer
     from .perspective import append_death_to_hints
+
+    entities = _entities_set(dirty)
 
     defender = state.characters[defender_id]
     hp_before = defender.hp
     hp_after = max(0, defender.hp - damage)
     defender.hp = hp_after
-    if dirty is not None:
-        dirty.add(("characters", defender_id))
+    if entities is not None:
+        entities.add(("characters", defender_id))
 
     out = {
         "hp_before": hp_before,

@@ -203,7 +203,7 @@ async def consume_narrate(
     final.output.suggestions = _strip_id_leaks(final.output.suggestions)
     dirty.narrate_suggestions = list(final.output.suggestions)
 
-    apply_result = apply_changes(state, final.output.state_changes, dirty.entities)
+    apply_result = apply_changes(state, final.output.state_changes, dirty)
     locality_warnings = enforce_item_locality(state, dirty=dirty.entities)
     for warning in locality_warnings:
         # Auto-repair telemetry — server logs only; engine-internal text (English + ids) must never reach the player log.

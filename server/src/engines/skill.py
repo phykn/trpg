@@ -92,12 +92,14 @@ def _apply_attack(
     target: Character,
     multiplier: float,
     state: GameState,
-    dirty: set[tuple[str, str]] | None,
+    dirty,
     attacker_id: str | None = None,
 ) -> dict:
     """Route skill damage through the same death-save / revive-coin pipeline
     as melee attacks. Returns the apply_attack_to_defender result with the
-    computed `damage` merged in."""
+    computed `damage` merged in. `dirty` is the entity-set or full `Dirty`,
+    passed through untouched so apply_attack_to_defender → check_quests →
+    _apply_rewards can push the success card when the kill closes a quest."""
     damage = _skill_output(skill, mod, multiplier)
     out = apply_attack_to_defender(
         state, target.id, damage, dirty=dirty, attacker_id=attacker_id
@@ -161,12 +163,18 @@ def cast(
     requested_targets: CastTargets,
     *,
     grade: Grade | None = None,
-    dirty: set[tuple[str, str]] | None = None,
+    dirty=None,
 ) -> dict:
     """Cast skill_id. On validation pass, apply effects and return a result dict.
 
     grade=None falls back to multiplier 1.0; in practice every call site goes through the combat branch so a real grade is always supplied.
+    `dirty` may be a plain entity-set or a full `Dirty`; the latter lets a
+    quest-closing kill emit its success card downstream.
     """
+    from .quest import _entities_set
+
+    entities = _entities_set(dirty)
+
     skill = find_skill(actor, skill_id, state)
     _validate_gate(actor, skill)
     targets = _resolve_targets(actor, skill, state, requested_targets)
@@ -191,21 +199,21 @@ def cast(
                 per["revived"] = True
         elif skill.type == "heal":
             per["healed"] = _apply_heal(skill, mod, t, multiplier)
-            if dirty is not None:
-                dirty.add(("characters", t.id))
+            if entities is not None:
+                entities.add(("characters", t.id))
         elif skill.type in ("buff", "debuff"):
             buff = _apply_buff(skill, t)
             per["buff"] = {
                 "description": buff.description,
                 "duration": buff.duration,
             }
-            if dirty is not None:
-                dirty.add(("characters", t.id))
+            if entities is not None:
+                entities.add(("characters", t.id))
         effects.append(per)
 
     actor.mp -= skill.mp_cost
-    if dirty is not None:
-        dirty.add(("characters", actor.id))
+    if entities is not None:
+        entities.add(("characters", actor.id))
 
     return {
         "skill_id": skill.id,

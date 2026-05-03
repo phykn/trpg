@@ -45,7 +45,7 @@ def _apply_movement_roll_outcome(
     apply_changes(
         state,
         [{"type": "move", "target": state.player_id, "destination": dest}],
-        dirty.entities,
+        dirty,
     )
     state.invalidate_graph()
 

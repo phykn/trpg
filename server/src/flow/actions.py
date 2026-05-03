@@ -81,7 +81,7 @@ def apply_attack_action(
             target_id,
             outcome.damage,
             nat_d20=outcome.nat_d20,
-            dirty=dirty.entities,
+            dirty=dirty,
             attacker_id=attacker_id,
         )
         combat_engine.record_damage(state, attacker_id, outcome.damage)
@@ -127,7 +127,7 @@ def apply_skill_action(
         actor, skill_obj, state, targets, rng=rng
     )
     cast_result = skill_engine.cast(
-        actor, skill_id, state, targets, grade=grade, dirty=dirty.entities
+        actor, skill_id, state, targets, grade=grade, dirty=dirty
     )
     killed_ids: list[str] = []
     for eff in cast_result["effects"]:
@@ -223,7 +223,7 @@ async def emit_use(
     target = state.characters.get(target_id) if target_id else None
     try:
         result = inventory_engine.use(
-            actor, item_id, target, state, dirty=dirty.entities
+            actor, item_id, target, state, dirty=dirty
         )
     except InventoryInvalid as e:
         yield push_act(
@@ -231,7 +231,7 @@ async def emit_use(
         )
         yield {"type": "_engine_fail", "data": {"raw_error_msg": str(e)}}
         return
-    check_quests(state, "item_use", item_id, dirty.entities)
+    check_quests(state, "item_use", item_id, dirty)
     item_name = _item_name(state, item_id)
     if target is not None:
         yield push_act(state, dirty, format_use_log(state, actor_id, result))
@@ -350,7 +350,7 @@ async def emit_move(
     result = apply_changes(
         state,
         [{"type": "move", "target": actor_id, "destination": destination}],
-        dirty.entities,
+        dirty,
     )
     if result["applied"] == 0:
         reason = result["rejected"][0]["reason"] if result["rejected"] else ""

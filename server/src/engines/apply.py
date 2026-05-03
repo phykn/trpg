@@ -78,8 +78,11 @@ def _set_dotted(obj: Any, dotted_field: str, value: Any) -> None:
 def _apply_set(
     state: GameState,
     c: SetChange,
-    dirty: set[tuple[str, str]] | None,
+    dirty,
 ) -> None:
+    from .quest import _entities_set
+
+    entities = _entities_set(dirty)
     reason = _check_set_permission(c.entity, c.field)
     if reason:
         raise _StateChangeError(reason)
@@ -90,8 +93,8 @@ def _apply_set(
         _set_dotted(container[c.id], c.field, c.value)
     except (AttributeError, ValueError, ValidationError) as e:
         raise _StateChangeError(f"failed to set {c.field!r}: {e}") from e
-    if dirty is not None:
-        dirty.add((c.entity, c.id))
+    if entities is not None:
+        entities.add((c.entity, c.id))
     # Narrate's locked → active flip would otherwise leave active_quest_id pointing at the previous quest.
     if c.entity == "quests" and c.field == "status":
         from .quest import _refresh_active_quest_id
@@ -102,12 +105,15 @@ def _apply_set(
 def _apply_move(
     state: GameState,
     c: MoveChange,
-    dirty: set[tuple[str, str]] | None,
+    dirty,
 ) -> None:
     from .quest import (
+        _entities_set,
         check_quests,
     )  # deferred import keeps the cross-layer boundary clean
     from ..ontology.queries import connections_of
+
+    entities = _entities_set(dirty)
 
     if c.target not in state.characters:
         raise _StateChangeError(f"unknown character: {c.target!r}")
@@ -128,15 +134,15 @@ def _apply_move(
     # "Moving to a location implies visiting it" — engine-level invariant so
     # callers in flow/ don't each have to remember to update visited_location_ids.
     state.characters[c.target].visited_location_ids.add(c.destination)
-    if dirty is not None:
-        dirty.add(("characters", c.target))
+    if entities is not None:
+        entities.add(("characters", c.target))
     # Companions move with the patron.
     for cid in state.characters[c.target].companions:
         if cid in state.characters:
             state.characters[cid].location_id = c.destination
             state.characters[cid].visited_location_ids.add(c.destination)
-            if dirty is not None:
-                dirty.add(("characters", cid))
+            if entities is not None:
+                entities.add(("characters", cid))
     if c.target == state.player_id:
         check_quests(state, "location_enter", c.destination, dirty)
 
@@ -153,8 +159,11 @@ def _resolve_inventory(state: GameState, container_id: str) -> tuple[str, list[s
 def _apply_move_item(
     state: GameState,
     c: MoveItemChange,
-    dirty: set[tuple[str, str]] | None,
+    dirty,
 ) -> None:
+    from .quest import _entities_set
+
+    entities = _entities_set(dirty)
     if c.item not in state.items:
         raise _StateChangeError(f"unknown item: {c.item!r}")
     src_kind, src = _resolve_inventory(state, c.from_)
@@ -168,9 +177,9 @@ def _apply_move_item(
         for slot in EQUIPMENT_SLOTS:
             if getattr(equipment, slot) == c.item:
                 setattr(equipment, slot, None)
-    if dirty is not None:
-        dirty.add((src_kind, c.from_))
-        dirty.add((dst_kind, c.to))
+    if entities is not None:
+        entities.add((src_kind, c.from_))
+        entities.add((dst_kind, c.to))
 
 
 def _affinity_delta(grade: Grade, intent: Intent) -> int:
@@ -195,9 +204,12 @@ def _affinity_delta(grade: Grade, intent: Intent) -> int:
 def _apply_affinity(
     state: GameState,
     c: AffinityChange,
-    dirty: set[tuple[str, str]] | None,
+    dirty,
 ) -> None:
     """Single-direction write: only `target.relations[actor]`. Reverse direction is unused by gameplay."""
+    from .quest import _entities_set
+
+    entities = _entities_set(dirty)
     if c.actor not in state.characters:
         raise _StateChangeError(f"unknown actor: {c.actor!r}")
     if c.target not in state.characters:
@@ -206,17 +218,20 @@ def _apply_affinity(
     delta = _affinity_delta(c.grade, c.intent)
     current = target.relations.get(c.actor, 0)
     target.relations[c.actor] = max(-100, min(100, current + delta))
-    if dirty is not None:
-        dirty.add(("characters", c.target))
+    if entities is not None:
+        entities.add(("characters", c.target))
 
 
 def apply_combat_affinity_drop(
     state: GameState,
     attacker_id: str,
     target_id: str,
-    dirty: set[tuple[str, str]] | None = None,
+    dirty=None,
 ) -> None:
     """Combat-side affinity drop. Single direction (`target.relations[attacker]`); narrate's affinity change never fires here."""
+    from .quest import _entities_set
+
+    entities = _entities_set(dirty)
     if attacker_id == target_id:
         return
     target = state.characters.get(target_id)
@@ -225,8 +240,8 @@ def apply_combat_affinity_drop(
     delta = RULES.social.combat_affinity_drop
     current = target.relations.get(attacker_id, 0)
     target.relations[attacker_id] = max(-100, min(100, current - delta))
-    if dirty is not None:
-        dirty.add(("characters", target_id))
+    if entities is not None:
+        entities.add(("characters", target_id))
 
 
 _HANDLERS = {
@@ -248,11 +263,11 @@ def _format_validation_error(exc: ValidationError) -> str:
 def apply_changes(
     state: GameState,
     raw_changes: list[dict],
-    dirty: set[tuple[str, str]] | None = None,
+    dirty=None,
 ) -> dict:
-    """Apply state_changes to `state`. If `dirty` is provided, populate it
-    with `(entity_kind, entity_id)` tuples for every change that successfully
-    mutates an entity file.
+    """Apply state_changes to `state`. `dirty` accepts the legacy entity-set
+    or a full `Dirty`; downstream check_quests uses the full form to push the
+    quest success card on completion. Either way, the entity set is grown.
 
     Returns:
       - "applied": int — count of successfully applied changes
