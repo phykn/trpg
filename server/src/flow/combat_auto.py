@@ -62,6 +62,7 @@ class AutoCombatResult:
     player_revived: bool = False
     player_revive_coins_after: int = 0
     player_revive_coins_max: int = 0
+    player_hp_before: int = 0
     player_hp_after: int = 0
     player_max_hp: int = 0
     enemy_starts: list[EnemyNarrateSnapshot] = field(default_factory=list)
@@ -557,6 +558,7 @@ def run_auto_combat(
         player_revived=player_revived,
         player_revive_coins_after=player.revive_coins,
         player_revive_coins_max=RULES.death.revive_coins,
+        player_hp_before=player_hp_before,
         player_hp_after=player.hp,
         player_max_hp=player.max_hp,
         enemy_starts=enemy_starts,

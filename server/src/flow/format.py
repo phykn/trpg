@@ -228,7 +228,12 @@ def format_combat_revived(coins_after: int, coins_max: int) -> str:
 
 
 def format_combat_outcome_summary(result: "AutoCombatResult") -> str | None:
-    """Numeric breakdown rendered as one act-line after the cinematic."""
+    """Numeric breakdown rendered as ordered act-lines after the cinematic.
+
+    Revival splits into two lines to surface the intermediate HP 0 state:
+      line 1 — hit that downed the player (HP X→0, 사망 직전)
+      line 2 — coin revival (HP 0→auto_revive_hp)
+    """
     lines: list[str] = []
     for h in result.enemy_hits:
         if h.killed:
@@ -243,20 +248,22 @@ def format_combat_outcome_summary(result: "AutoCombatResult") -> str | None:
             if result.player_start
             else _COMBAT_PLAYER_FALLBACK_NAME
         )
-        lines.append(
-            format_combat_player_hit(
-                player_name,
-                result.player_damage_total,
-                result.player_hp_after,
-                result.player_max_hp,
+        if result.player_revived:
+            # Show chronological two-step: downed at 0, then revived.
+            hp_before = result.player_hp_before
+            lines.append(f"{player_name} {result.player_damage_total} 피해 (HP {hp_before}→0, 사망 직전)")
+            lines.append(
+                f"가까스로 일어남 (Revival {result.player_revive_coins_after}/{result.player_revive_coins_max}, HP 0→{result.player_hp_after})"
             )
-        )
-    if result.player_revived:
-        lines.append(
-            format_combat_revived(
-                result.player_revive_coins_after, result.player_revive_coins_max
+        else:
+            lines.append(
+                format_combat_player_hit(
+                    player_name,
+                    result.player_damage_total,
+                    result.player_hp_after,
+                    result.player_max_hp,
+                )
             )
-        )
     if not lines:
         return None
     return "전투 결과\n" + "\n".join(lines)

@@ -34,6 +34,7 @@ def _result(
     player_damage_total: int = 0,
     player_revived: bool = False,
     player_start_name: str = "당신",
+    player_hp_before: int = 20,
     player_hp_after: int = 20,
     player_max_hp: int = 20,
     player_revive_coins_after: int = 3,
@@ -49,6 +50,7 @@ def _result(
         player_revived=player_revived,
         player_revive_coins_after=player_revive_coins_after,
         player_revive_coins_max=player_revive_coins_max,
+        player_hp_before=player_hp_before,
         player_hp_after=player_hp_after,
         player_max_hp=player_max_hp,
         enemy_starts=[],
@@ -106,6 +108,7 @@ def test_format_combat_outcome_summary_revived():
         enemy_hits=[],
         player_damage_total=12,
         player_revived=True,
+        player_hp_before=12,
         player_hp_after=1,
         player_max_hp=20,
         player_revive_coins_after=2,
@@ -113,8 +116,9 @@ def test_format_combat_outcome_summary_revived():
     )
     text = format_combat_outcome_summary(result)
     assert text is not None
-    assert "당신 12 피해 (HP 1/20)" in text
-    assert "가까스로 일어남 (Revival 2/3)" in text
+    # Revival splits into two lines exposing intermediate HP 0.
+    assert "당신 12 피해 (HP 12→0, 사망 직전)" in text
+    assert "가까스로 일어남 (Revival 2/3, HP 0→1)" in text
 
 
 def test_format_combat_outcome_summary_player_start_none_uses_fallback():
