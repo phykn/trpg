@@ -33,7 +33,15 @@ def test_format_combat_player_downed():
 
 
 def test_format_combat_revived():
-    assert format_combat_revived(2, 3, 5) == "가까스로 일어남 (Revival 2/3, HP 0→5)"
+    assert format_combat_revived(2, 3, 5) == "가까스로 일어남 (소생 2/3, HP 0→5)"
+
+
+def test_format_combat_revived_uses_korean_label():
+    out = format_combat_revived(coins_after=2, coins_max=3, hp_after=1)
+    assert "Revival" not in out
+    assert "소생" in out
+    assert "(소생 2/3" in out
+    assert "HP 0→1" in out
 
 
 def _result(
@@ -126,7 +134,7 @@ def test_format_combat_outcome_summary_revived():
     assert text is not None
     # Revival splits into two lines exposing intermediate HP 0.
     assert "당신 12 피해 (HP 12→0, 사망 직전)" in text
-    assert "가까스로 일어남 (Revival 2/3, HP 0→1)" in text
+    assert "가까스로 일어남 (소생 2/3, HP 0→1)" in text
 
 
 def test_format_combat_outcome_summary_player_start_none_uses_fallback():
