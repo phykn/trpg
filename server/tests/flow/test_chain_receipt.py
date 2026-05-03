@@ -175,3 +175,24 @@ async def test_chain_revisit_move_skips_narrate(fresh_state, tmp_saves, monkeypa
         ],
     )
     assert narrate_calls == []
+
+
+@pytest.mark.asyncio
+async def test_chain_with_failed_first_visit_move_skips_narrate(
+    fresh_state, tmp_saves, monkeypatch
+):
+    # Unknown destination -> emit_move "no path" (non-dramatic). Chain stays
+    # all-receipt and the failed destination must NOT be marked visited.
+    state = _seed(fresh_state)
+    assert "loc_unreachable" not in state.characters["player_01"].visited_location_ids
+    _events, narrate_calls = await _run_chain(
+        state,
+        tmp_saves,
+        monkeypatch,
+        [
+            EquipAction(action="equip", item_id="sword_01"),
+            MoveAction(action="move", destination="loc_unreachable"),
+        ],
+    )
+    assert narrate_calls == []
+    assert "loc_unreachable" not in state.characters["player_01"].visited_location_ids

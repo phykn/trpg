@@ -97,3 +97,17 @@ async def test_move_revisit_skips_narrate(fresh_state, tmp_saves, monkeypatch):
     assert narrate_calls == []
     # Idempotent: still in the set.
     assert "loc_b" in state.characters["player_01"].visited_location_ids
+
+
+@pytest.mark.asyncio
+async def test_failed_move_does_not_mark_visited_or_call_narrate(
+    fresh_state, tmp_saves, monkeypatch
+):
+    # Unknown destination triggers emit_move's "no path" branch (non-dramatic fail).
+    state = _seed_two_locations(fresh_state)
+    assert "loc_unreachable" not in state.characters["player_01"].visited_location_ids
+    _events, narrate_calls = await _move_to(
+        state, tmp_saves, monkeypatch, "loc_unreachable"
+    )
+    assert narrate_calls == []
+    assert "loc_unreachable" not in state.characters["player_01"].visited_location_ids

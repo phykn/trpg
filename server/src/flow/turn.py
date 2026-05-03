@@ -178,15 +178,22 @@ def _is_receipt(state: GameState, action: object) -> bool:
     return False
 
 
-def _chain_needs_narrate(state: GameState, parts: list) -> bool:
+def _chain_needs_narrate(
+    state: GameState,
+    parts: list,
+    part_failures: list[bool] | None = None,
+) -> bool:
     """Chain narrates iff any part is narrate-worthy: a Pass tail, or a
-    first-visit move. Receipt-only chains skip narrate entirely."""
+    first-visit move that actually succeeded. Receipt-only chains and
+    chains whose only "interesting" part failed skip narrate entirely."""
     visited = state.characters[state.player_id].visited_location_ids
-    for part in parts:
+    for i, part in enumerate(parts):
         if isinstance(part, PassAction):
             return True
         if isinstance(part, MoveAction) and part.destination not in visited:
-            return True
+            failed = bool(part_failures[i]) if part_failures is not None else False
+            if not failed:
+                return True
     return False
 
 
@@ -527,7 +534,9 @@ async def _dispatch(
         chain_act_lines: list[str] = []
         chain_act_evts: list[dict] = []
         chain_failure_raws: list[str] = []
-        for part in result.parts:
+        # Per-part failure flags aligned to result.parts indices; PassAction parts stay False.
+        part_failures: list[bool] = [False] * len(result.parts)
+        for idx, part in enumerate(result.parts):
             if isinstance(part, PassAction):
                 last_pass = part
                 continue
@@ -538,6 +547,7 @@ async def _dispatch(
                         chain_failure_raws.append(
                             (ev.get("data") or {}).get("raw_error_msg") or ""
                         )
+                        part_failures[idx] = True
                         continue
                     if ev.get("type") == "log_entry":
                         d = ev.get("data") or {}
@@ -564,14 +574,17 @@ async def _dispatch(
             pin_subject_by_input_name(state, player_input, graph)
 
         # Compute narrate decision BEFORE marking moves as visited — first-visit
-        # detection depends on the pre-update set.
+        # detection depends on the pre-update set. A failed first-visit move is
+        # non-dramatic and stays receipt-only.
         dramatic_chain = any(is_dramatic_fail(r) for r in chain_failure_raws)
-        narrate_chain = _chain_needs_narrate(state, result.parts) or dramatic_chain
+        narrate_chain = (
+            _chain_needs_narrate(state, result.parts, part_failures) or dramatic_chain
+        )
 
-        # Record any successful move destinations (set is idempotent; missing
-        # destination on failure paths is fine — emit_move yielded _engine_fail).
-        for part in result.parts:
-            if isinstance(part, MoveAction):
+        # Record only successfully-arrived destinations; a failed move never put
+        # the player there, so future first-visit detection must still fire.
+        for idx, part in enumerate(result.parts):
+            if isinstance(part, MoveAction) and not part_failures[idx]:
                 state.characters[state.player_id].visited_location_ids.add(
                     part.destination
                 )
