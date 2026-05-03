@@ -44,7 +44,7 @@ from .combat_phase import (
 )
 from .encounter import summon_encounter
 from .buff_tick import tick_turn_buffs
-from .error_phrases import humanize_runtime_error
+from .error_phrases import humanize_runtime_error, is_dramatic_fail
 from .dirty import (
     Dirty,
     ToFrontFn,
@@ -161,6 +161,34 @@ _ONE_STEP_EMITS: dict[type, EmitFactory] = {
     MoveAction: lambda c, s, d, a: emit_move(s, s.player_id, a.destination, d),
 }
 
+# Receipt-only success paths: act_log + state mutation, no narrate. Move is
+# conditional (first visit narrates, re-visit is a receipt).
+_RECEIPT_ACTION_TYPES: frozenset[type] = frozenset(
+    {UseAction, EquipAction, UnequipAction, BuyAction, SellAction, GiveAction}
+)
+
+
+def _is_receipt(state: GameState, action: object) -> bool:
+    if type(action) in _RECEIPT_ACTION_TYPES:
+        return True
+    if isinstance(action, MoveAction):
+        return action.destination in state.characters[
+            state.player_id
+        ].visited_location_ids
+    return False
+
+
+def _chain_needs_narrate(state: GameState, parts: list) -> bool:
+    """Chain narrates iff any part is narrate-worthy: a Pass tail, or a
+    first-visit move. Receipt-only chains skip narrate entirely."""
+    visited = state.characters[state.player_id].visited_location_ids
+    for part in parts:
+        if isinstance(part, PassAction):
+            return True
+        if isinstance(part, MoveAction) and part.destination not in visited:
+            return True
+    return False
+
 
 def _drop_pushed_act(state: GameState, dirty: Dirty, entry_id: int | None) -> None:
     """Drop the pushed act entry so narrate's prose isn't shadowed by an engine-toned line."""
@@ -183,21 +211,26 @@ async def _run_one_step_action(
     result,
     emit_factory: EmitFactory,
 ) -> AsyncIterator[dict]:
-    """turn_count++ → run engine emit (SSE suppressed) → narrate tail absorbs the act lines → finalize."""
+    """turn_count++ → engine emit. Receipt actions surface the act line and
+    skip narrate; non-receipts (first-visit move, dramatic fails) drop the act
+    and let narrate absorb the lines into prose."""
     state.turn_count += 1
     act_log_lines: list[str] = []
+    pushed_act_evts: list[dict] = []
+    failure_raws: list[str] = []
     async for ev in emit_factory(client, state, dirty, result):
+        if ev.get("type") == "_engine_fail":
+            failure_raws.append((ev.get("data") or {}).get("raw_error_msg") or "")
+            continue
         if ev.get("type") == "log_entry":
             data = ev.get("data") or {}
             if data.get("kind") == "act":
                 text = data.get("text") or ""
                 if text:
                     act_log_lines.append(text)
-                _drop_pushed_act(state, dirty, data.get("id"))
+                pushed_act_evts.append(ev)
                 continue
         yield ev
-    if getattr(result, "tail_intent", None):
-        act_log_lines.append(result.tail_intent)
 
     # emit_* mutated relations; rebuild graph before narrate reads.
     state.invalidate_graph()
@@ -207,19 +240,48 @@ async def _run_one_step_action(
         from .subject import pin_subject_by_input_name
 
         pin_subject_by_input_name(state, player_input, graph)
-    fake_pass = PassAction(action="pass")
-    async for ev in stream_narrate_tail(
-        client,
-        state,
-        scenario_repo,
-        player_input,
-        dirty,
-        to_front_fn,
-        fake_pass,
-        graph=graph,
-        act_log_lines=act_log_lines,
-    ):
-        yield ev
+
+    is_failure = bool(failure_raws)
+    dramatic = is_failure and any(is_dramatic_fail(r) for r in failure_raws)
+    receipt_action = _is_receipt(state, result)
+    # narrate iff: dramatic failure OR (success on a non-receipt action, i.e. first-visit move)
+    narrate_path = dramatic or (not is_failure and not receipt_action)
+
+    if narrate_path:
+        for ev in pushed_act_evts:
+            _drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
+        if getattr(result, "tail_intent", None):
+            act_log_lines.append(result.tail_intent)
+        # First-visit move: record the destination so re-visits are receipts.
+        if not is_failure and isinstance(result, MoveAction):
+            state.characters[state.player_id].visited_location_ids.add(
+                result.destination
+            )
+            dirty.entities.add(("characters", state.player_id))
+        fake_pass = PassAction(action="pass")
+        async for ev in stream_narrate_tail(
+            client,
+            state,
+            scenario_repo,
+            player_input,
+            dirty,
+            to_front_fn,
+            fake_pass,
+            graph=graph,
+            act_log_lines=act_log_lines,
+        ):
+            yield ev
+    else:
+        for ev in pushed_act_evts:
+            yield ev
+        # Successful re-visit: keep the set in sync (idempotent).
+        if not is_failure and isinstance(result, MoveAction):
+            state.characters[state.player_id].visited_location_ids.add(
+                result.destination
+            )
+            dirty.entities.add(("characters", state.player_id))
+        if to_front_fn is not None:
+            yield {"type": "state", "data": to_front_fn(state)}
 
     tick_turn_buffs(state, dirty)
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
@@ -463,6 +525,8 @@ async def _dispatch(
         last_pass: PassAction | None = None
         # Feed engine notices ("이미 체력 가득" etc.) into narrate so prose can't contradict the engine.
         chain_act_lines: list[str] = []
+        chain_act_evts: list[dict] = []
+        chain_failure_raws: list[str] = []
         for part in result.parts:
             if isinstance(part, PassAction):
                 last_pass = part
@@ -470,13 +534,18 @@ async def _dispatch(
             emit_factory = _ONE_STEP_EMITS.get(type(part))
             if emit_factory is not None:
                 async for ev in emit_factory(client, state, dirty, part):
+                    if ev.get("type") == "_engine_fail":
+                        chain_failure_raws.append(
+                            (ev.get("data") or {}).get("raw_error_msg") or ""
+                        )
+                        continue
                     if ev.get("type") == "log_entry":
                         d = ev.get("data") or {}
                         if d.get("kind") == "act":
                             text = d.get("text") or ""
                             if text:
                                 chain_act_lines.append(text)
-                            _drop_pushed_act(state, dirty, d.get("id"))
+                            chain_act_evts.append(ev)
                             continue
                     yield ev
             if getattr(part, "tail_intent", None):
@@ -493,19 +562,42 @@ async def _dispatch(
             from .subject import pin_subject_by_input_name
 
             pin_subject_by_input_name(state, player_input, graph)
-        async for ev in stream_narrate_tail(
-            client,
-            state,
-            scenario_repo,
-            player_input,
-            dirty,
-            to_front_fn,
-            narrate_action,
-            graph=graph,
-            act_log_lines=chain_act_lines,
-            previous_phase_signal=previous_phase_signal,
-        ):
-            yield ev
+
+        # Compute narrate decision BEFORE marking moves as visited — first-visit
+        # detection depends on the pre-update set.
+        dramatic_chain = any(is_dramatic_fail(r) for r in chain_failure_raws)
+        narrate_chain = _chain_needs_narrate(state, result.parts) or dramatic_chain
+
+        # Record any successful move destinations (set is idempotent; missing
+        # destination on failure paths is fine — emit_move yielded _engine_fail).
+        for part in result.parts:
+            if isinstance(part, MoveAction):
+                state.characters[state.player_id].visited_location_ids.add(
+                    part.destination
+                )
+                dirty.entities.add(("characters", state.player_id))
+
+        if narrate_chain:
+            for ev in chain_act_evts:
+                _drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
+            async for ev in stream_narrate_tail(
+                client,
+                state,
+                scenario_repo,
+                player_input,
+                dirty,
+                to_front_fn,
+                narrate_action,
+                graph=graph,
+                act_log_lines=chain_act_lines,
+                previous_phase_signal=previous_phase_signal,
+            ):
+                yield ev
+        else:
+            for ev in chain_act_evts:
+                yield ev
+            if to_front_fn is not None:
+                yield {"type": "state", "data": to_front_fn(state)}
         tick_turn_buffs(state, dirty)
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev

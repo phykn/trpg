@@ -168,6 +168,7 @@ async def emit_equip(
         inventory_engine.equip(actor, item_id, slot, state.items)
     except InventoryInvalid as e:
         yield push_act(state, dirty, format_equip_fail(actor.name, item_name, e))
+        yield {"type": "_engine_fail", "data": {"raw_error_msg": str(e)}}
         return
     dirty.entities.add(("characters", actor_id))
     yield push_act(state, dirty, format_equip_log(actor.name, item_name))
@@ -185,6 +186,7 @@ async def emit_unequip(
         slot = inventory_engine.unequip_by_item(actor, item_id)
     except InventoryInvalid as e:
         yield push_act(state, dirty, format_unequip_fail(actor.name, item_name, e))
+        yield {"type": "_engine_fail", "data": {"raw_error_msg": str(e)}}
         return
     if slot is None:
         text = format_unequip_not_equipped(actor.name, item_name)
@@ -211,6 +213,7 @@ async def emit_use(
         yield push_act(
             state, dirty, format_use_fail(actor.name, _item_name(state, item_id), e)
         )
+        yield {"type": "_engine_fail", "data": {"raw_error_msg": str(e)}}
         return
     check_quests(state, "item_use", item_id, dirty.entities)
     yield push_act(state, dirty, format_use_log(state, actor_id, result))
@@ -236,6 +239,7 @@ async def emit_trade(
     npc = state.characters.get(npc_id)
     if npc is None:
         yield push_act(state, dirty, format_trade_no_partner(player.name))
+        yield {"type": "_engine_fail", "data": {"raw_error_msg": "trade no partner"}}
         return
     try:
         if direction == "buy":
@@ -246,6 +250,7 @@ async def emit_trade(
         yield push_act(
             state, dirty, format_action_fail(player.name, "거래를 시도했지만", e)
         )
+        yield {"type": "_engine_fail", "data": {"raw_error_msg": str(e)}}
         return
     dirty.entities.add(("characters", actor_id))
     dirty.entities.add(("characters", npc.id))
@@ -275,6 +280,7 @@ async def emit_give(
     actor_name = state.characters[state.player_id].name
     if src is None or dst is None:
         yield push_act(state, dirty, format_give_no_partner(actor_name))
+        yield {"type": "_engine_fail", "data": {"raw_error_msg": "give no partner"}}
         return
     try:
         inventory_engine.transfer(src, dst, item_id, state.items)
@@ -282,6 +288,7 @@ async def emit_give(
         yield push_act(
             state, dirty, format_action_fail(actor_name, "양도를 시도했지만", e)
         )
+        yield {"type": "_engine_fail", "data": {"raw_error_msg": str(e)}}
         return
     dirty.entities.add(("characters", from_id))
     dirty.entities.add(("characters", to_id))
@@ -309,6 +316,7 @@ async def emit_move(
     loc = state.locations.get(destination)
     if loc is None:
         yield push_act(state, dirty, format_move_no_path(actor.name))
+        yield {"type": "_engine_fail", "data": {"raw_error_msg": "move no path"}}
         return
     result = apply_changes(
         state,
@@ -318,6 +326,7 @@ async def emit_move(
     if result["applied"] == 0:
         reason = result["rejected"][0]["reason"] if result["rejected"] else ""
         yield push_act(state, dirty, format_move_blocked(actor.name, loc.name, reason))
+        yield {"type": "_engine_fail", "data": {"raw_error_msg": f"move blocked: {reason}"}}
         return
     state.invalidate_graph()
     if actor_id == state.player_id:

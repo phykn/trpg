@@ -4,25 +4,17 @@ is empty and an LLM is wired, summon an ad-hoc enemy."""
 import random
 from collections.abc import AsyncIterator
 
-from ..llm_calls.classify.schema import PassAction
 from ..domain.state import GameState
 from ..engines import recovery as recovery_engine
 from ..llm.client import LLMClient
 from ..mapping.josa import eun_neun
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from . import encounter as encounter_engine
+from .buff_tick import tick_turn_buffs
 from .combat_auto import PlayerAction
 from .combat_phase import start_combat_and_drive_auto
-from .buff_tick import tick_turn_buffs
 from .dirty import Dirty, ToFrontFn, finalize, push_act
-from .narrate import consume_narrate, run_narrate
-
-
-def _rest_completed_text(actor_name: str) -> str:
-    return (
-        f"{actor_name}{eun_neun(actor_name)} 자리를 잡고 잠을 청했습니다. "
-        f"새벽이 밝아오자 푹 쉬고 일어났습니다. HP/MP가 모두 회복됐습니다."
-    )
+from .format import format_rest_log
 
 
 def _rest_ambush_text(actor_name: str) -> str:
@@ -85,33 +77,9 @@ async def run_rest(
             yield ev
         return
 
-    rest_text = _rest_completed_text(actor.name)
     state.invalidate_graph()
-    graph = state.graph()
-    if client is not None:
-        if to_front_fn is not None:
-            yield {"type": "state", "data": to_front_fn(state)}
-        fake_pass = PassAction(action="pass")
-        stream = run_narrate(
-            client,
-            state,
-            scenario_repo,
-            player_input,
-            judge_result=fake_pass.model_dump(),
-            graph=graph,
-            grade=None,
-            act_log_lines=[rest_text],
-        )
-        async for ev in consume_narrate(
-            state,
-            dirty,
-            stream,
-            target_for_log=None,
-            dialogue_input=player_input,
-            graph=graph,
-        ):
-            yield ev
-    else:
-        yield push_act(state, dirty, rest_text)
+    yield push_act(state, dirty, format_rest_log(actor.name))
+    if to_front_fn is not None:
+        yield {"type": "state", "data": to_front_fn(state)}
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
