@@ -19,7 +19,7 @@ const BGM_SOURCE = require('../../assets/audio/bgm.mp3');
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, storyGraph, log, pending, streaming, awaitingNarration, suggestions, errorMessage, think, setThink, onSend, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp } = game;
+  const { hero, subject, quest, place, combat, storyGraph, log, pending, streaming, awaitingNarration, suggestions, errorMessage, think, setThink, onSend, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -71,7 +71,7 @@ export function Playing({ game }: Props) {
   if (!hero) return null;
 
   const slots: PanelSlot[] = [
-    ...buildPanelSlots({ hero, subject, quest }, { onLevelUpOpen: openLevelUp }),
+    ...buildPanelSlots({ hero, subject, quest }, { onLevelUpOpen: openLevelUp, questDot: hasUnseenQuest }),
     { id: 'map', chip: { short: '주변', dot: hasUnseenLocation }, panel: null },
   ];
   const rolling = pending !== null && streaming;
@@ -89,6 +89,7 @@ export function Playing({ game }: Props) {
           setActiveId((prev) => {
             const next = prev === id ? null : id;
             if (id === 'map' && next === id) markLocationSeen();
+            if (id === 'quest' && next === id) markQuestSeen();
             return next;
           });
         }}

@@ -21,6 +21,7 @@ export function clearStoredGameId(): void {
 // Per-game UI state caches — survive page reloads.
 const SUGGESTIONS_PREFIX = 'trpg.suggestions.';
 const LAST_SEEN_LOCATION_PREFIX = 'trpg.last_seen_location.';
+const LAST_SEEN_QUEST_TITLE_PREFIX = 'trpg.last_seen_quest_title.';
 const SEEN_NODES_PREFIX = 'trpg.seen_nodes.';
 
 export function loadSuggestions(gameId: string): string[] {
@@ -50,6 +51,14 @@ export function storeLastSeenLocation(gameId: string, locationId: string): void 
   getStorage()?.setItem(`${LAST_SEEN_LOCATION_PREFIX}${gameId}`, locationId);
 }
 
+export function loadLastSeenQuestTitle(gameId: string): string | null {
+  return getStorage()?.getItem(`${LAST_SEEN_QUEST_TITLE_PREFIX}${gameId}`) ?? null;
+}
+
+export function storeLastSeenQuestTitle(gameId: string, title: string): void {
+  getStorage()?.setItem(`${LAST_SEEN_QUEST_TITLE_PREFIX}${gameId}`, title);
+}
+
 export function loadSeenNodes(gameId: string): Set<string> {
   const raw = getStorage()?.getItem(`${SEEN_NODES_PREFIX}${gameId}`);
   if (!raw) return new Set();
@@ -71,6 +80,7 @@ export function clearAllForGame(gameId: string): void {
   if (!s) return;
   s.removeItem(`${SUGGESTIONS_PREFIX}${gameId}`);
   s.removeItem(`${LAST_SEEN_LOCATION_PREFIX}${gameId}`);
+  s.removeItem(`${LAST_SEEN_QUEST_TITLE_PREFIX}${gameId}`);
   s.removeItem(`${SEEN_NODES_PREFIX}${gameId}`);
   s.removeItem(`trpg.story_graph.${gameId}`);
 }

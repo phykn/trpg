@@ -12,10 +12,12 @@ import {
   getLevelUpPreview,
   initSession,
   loadLastSeenLocation,
+  loadLastSeenQuestTitle,
   loadStoredGameId,
   loadSuggestions,
   storeGameId,
   storeLastSeenLocation,
+  storeLastSeenQuestTitle,
   storeSuggestions,
   streamIntro,
   streamLevelUp,
@@ -64,6 +66,7 @@ export function useGame() {
   const [streamingText, setStreamingText] = React.useState('');
   const [suggestions, setSuggestionsRaw] = React.useState<string[]>([]);
   const [lastSeenLocation, setLastSeenLocation] = React.useState<string | null>(null);
+  const [lastSeenQuestTitle, setLastSeenQuestTitle] = React.useState<string | null>(null);
   const [levelUpOpen, setLevelUpOpen] = React.useState(false);
   const [levelUpCandidates, setLevelUpCandidates] = React.useState<SkillCandidate[] | null>(null);
 
@@ -198,6 +201,7 @@ export function useGame() {
       applyState(payload.state, payload.game_id);
       setSuggestionsRaw(loadSuggestions(payload.game_id));
       setLastSeenLocation(loadLastSeenLocation(payload.game_id));
+      setLastSeenQuestTitle(loadLastSeenQuestTitle(payload.game_id));
       setStatus('ready');
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : String(err));
@@ -219,6 +223,7 @@ export function useGame() {
         rememberGameId(payload.game_id);
         applyState(payload.state, payload.game_id);
         setLastSeenLocation(null);
+        setLastSeenQuestTitle(null);
         setPending(null);
         setStreamingText('');
         setSuggestions([]);
@@ -325,6 +330,17 @@ export function useGame() {
     storeLastSeenLocation(id, placeKey);
   }, [placeKey]);
 
+  // Quest wire type has no `id` — use `title` as the cache key.
+  const questTitle = quest?.title ?? null;
+  const hasUnseenQuest = questTitle !== null && questTitle !== lastSeenQuestTitle;
+
+  const markQuestSeen = React.useCallback(() => {
+    const id = gameIdRef.current;
+    if (!id || !questTitle) return;
+    setLastSeenQuestTitle(questTitle);
+    storeLastSeenQuestTitle(id, questTitle);
+  }, [questTitle]);
+
   return {
     status,
     errorMessage,
@@ -342,6 +358,8 @@ export function useGame() {
     suggestions,
     hasUnseenLocation,
     markLocationSeen,
+    hasUnseenQuest,
+    markQuestSeen,
     think,
     setThink,
     onSend,

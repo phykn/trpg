@@ -3,17 +3,17 @@ import type { PanelSlot } from '@/features/info-panel';
 
 import type { Quest } from './types';
 
-export function buildQuestSlot(quest: Quest | null): PanelSlot {
+export function buildQuestSlot(quest: Quest | null, opts?: { dot?: boolean }): PanelSlot {
   if (!quest) {
     return {
       id: 'quest',
-      chip: { short: '퀘스트' },
+      chip: { short: '퀘스트', dot: opts?.dot },
       panel: { empty: true, title: '퀘스트' },
     };
   }
   return {
     id: 'quest',
-    chip: { short: '퀘스트' },
+    chip: { short: '퀘스트', dot: opts?.dot },
     panel: {
       title: quest.title,
       meta: [{ text: quest.difficulty.label, tone: quest.difficulty.tone ?? undefined }],
