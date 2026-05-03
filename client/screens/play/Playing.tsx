@@ -10,7 +10,7 @@ import { buildPanelSlots } from '@/presenters';
 import type { PanelAction, PanelSlot } from '@/types/ui';
 
 import { Composer, RollPrompt } from '@/features/composer';
-import { ContextCard } from '@/components/header';
+import { ContextCard } from '@/features/info-panel';
 import { HeroStrip } from '@/features/hero';
 import { ConfirmDialog } from '@/components/ui';
 
