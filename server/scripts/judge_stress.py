@@ -1,31 +1,41 @@
+"""Stress test the classify (judge) agent against the env-routed LLM.
+
+Run from repo root:
+  .venv/bin/python server/scripts/judge_stress.py
+
+Loads .env.dev to mirror run_api.py and routes via LLM_ROUTE_CLASSIFY (falling
+back to LLM_ROUTE_DEFAULT). Reports per-category attempts/elapsed/expected_match.
+"""
+
 import asyncio
 import json
 import os
+import sys
 import time
+from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
 
-from src.llm import LLMClient, LLMProfile
-from src.llm_calls.classify import PROMPT_PATH, classify
-from src.llm_calls.classify.schema import JudgeInput
+SERVER_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(SERVER_DIR))
+
+load_dotenv(SERVER_DIR / ".env.dev")
+
+from src.llm import LLMClient  # noqa: E402
+from src.llm_calls.classify import PROMPT_PATH, classify  # noqa: E402
+from src.llm_calls.classify.schema import JudgeInput  # noqa: E402
 
 
 class CountingClient(LLMClient):
-    def __init__(self, *, base_url: str, model: str = "local", api_key: str = "none"):
-        profile = LLMProfile(
-            base_url=base_url,
-            model=model,
-            api_keys=(api_key,),
-            thinking_mode="opt",
-        )
-        super().__init__(profiles={"default": profile})
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.calls = 0
         self.last_answers: list[str] = []
 
-    async def chat(self, messages, think=True, agent=None):
+    async def chat(self, messages, **kwargs):
         self.calls += 1
-        result = await super().chat(messages, think=think, agent=agent)
+        result = await super().chat(messages, **kwargs)
         self.last_answers.append(result["answer"] or "")
         return result
 
@@ -445,12 +455,13 @@ def _print_cat_summary(title: str, results: list[dict]) -> None:
 
 
 async def main():
-    load_dotenv()
-    base_url = os.environ["BASE_URL"]
-    client = CountingClient(base_url=base_url, model="local", api_key="none")
+    client = CountingClient.from_env()
+    classify_route = os.environ.get(
+        "LLM_ROUTE_CLASSIFY", os.environ["LLM_ROUTE_DEFAULT"]
+    )
 
     print(f"prompt: {PROMPT_PATH}")
-    print(f"base_url: {base_url}\n")
+    print(f"classify route: {classify_route}\n")
 
     all_results: list[dict] = []
     per_cat: list[tuple[str, list[dict]]] = []

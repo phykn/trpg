@@ -18,8 +18,6 @@ SERVER_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SERVER_DIR))
 
 load_dotenv(SERVER_DIR / ".env.dev")
-load_dotenv(SERVER_DIR / ".env.llama_cpp")
-load_dotenv(SERVER_DIR / ".env.google")
 
 from src.llm.client import LLMClient  # noqa: E402
 from src.llm_calls.narrate import (  # noqa: E402

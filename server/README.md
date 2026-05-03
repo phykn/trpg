@@ -7,7 +7,7 @@ Design notes start at `../docs/01-overview.md`; the per-turn flow is in `../docs
 ## Stack
 
 - Python 3.12+, Pydantic v2, FastAPI, uvicorn, httpx, async/await
-- OpenAI-compatible LLM via `LLM_ROUTE_<AGENT> = <provider>/<model>` (llama.cpp local or Gemini hosted; provider blocks in `.env.llama_cpp` / `.env.google` layered on top of `.env.<APP_ENV>`)
+- OpenAI-compatible LLM via `LLM_ROUTE_<AGENT> = <provider>/<model>` (llama.cpp local or Gemini hosted; provider blocks live alongside the routes in `.env.<APP_ENV>`)
 - **Supabase Postgres + Storage** for saves + scenarios. Both `APP_ENV=dev` and `APP_ENV=release` go through the Supabase adapters; tests bypass the factory and use `LocalFsSaveRepo` / `LocalFsScenarioRepo` against `tmp_path`.
 - Single process. Per-turn flush order is entity upserts + jsonl appends → `games.meta` last, so a crash mid-flush is recoverable on reload via `next_log_id` self-heal.
 
@@ -42,10 +42,18 @@ SUPABASE_SCENARIO_BUCKET=scenarios
 
 # LLM routing — DEFAULT required; LLM_ROUTE_<AGENT> overrides per agent.
 LLM_ROUTE_DEFAULT=google/gemma-4-26b-a4b-it
-LLM_ROUTE_NARRATE=google/gemma-4-31b-it
+LLM_ROUTE_NARRATE_BODY=google/gemma-4-31b-it
+
+# Provider block(s) — declare each provider referenced by the routes.
+LLM_GOOGLE_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+LLM_GOOGLE_API_KEYS=<key1>,<key2>
+LLM_GOOGLE_THINK_OFF=gemma-3-27b-it
+LLM_GOOGLE_THINK_OPT=gemini-3.1-flash-lite-preview
+LLM_GOOGLE_THINK_OPT_ON=gemma-4-31b-it,gemma-4-26b-a4b-it
+LLM_GOOGLE_NO_SYSTEM=gemma-3-27b-it
 ```
 
-Provider blocks (`.env.llama_cpp`, `.env.google`) layer on top — they declare each provider's `BASE_URL`, API keys, and THINK_* model lists. For local llama.cpp, set `LLM_ROUTE_DEFAULT = llama_cpp/<model>` and run the LLM server alongside, e.g. `llama-server -m <model.gguf> -c 8192 --port 8000`.
+For local llama.cpp, add an `LLM_LLAMA_CPP_*` block with the same shape and set `LLM_ROUTE_DEFAULT = llama_cpp/<model>`, then run the LLM server alongside (e.g. `llama-server -m <model.gguf> -c 8192 --port 8000`).
 
 ## Run
 

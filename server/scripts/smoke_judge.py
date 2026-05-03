@@ -4,7 +4,7 @@ verify the production prompt path (kernel + agent rules + substitutions) works.
 Run from repo root:
   .venv/bin/python server/scripts/smoke_judge.py
 
-Loads .env.dev + .env.llama_cpp + .env.google in the same order as run_api.py.
+Loads .env.dev to mirror run_api.py.
 Exits 0 if every case parses to a valid action; non-zero otherwise.
 """
 
@@ -17,10 +17,7 @@ from dotenv import load_dotenv
 SERVER_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SERVER_DIR))
 
-# Mirror run_api.py:_load_env order.
 load_dotenv(SERVER_DIR / ".env.dev")
-load_dotenv(SERVER_DIR / ".env.llama_cpp")
-load_dotenv(SERVER_DIR / ".env.google")
 
 from src.llm_calls.classify import classify  # noqa: E402
 from src.llm_calls.classify.schema import JudgeInput  # noqa: E402
