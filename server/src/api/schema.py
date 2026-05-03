@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 from ..domain.types import StatKey
@@ -58,8 +60,8 @@ class SkillCandidatePayload(BaseModel):
     id: str
     name: str
     description: str
-    type: str
-    target: str
+    type: Literal["attack", "heal", "buff", "debuff"]
+    target: Literal["self", "single", "area"]
     primary_stat: StatKey
     special_effect: str
 
