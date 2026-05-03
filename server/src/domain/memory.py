@@ -56,6 +56,11 @@ class ActLogEntry(BaseModel):
     text: str
 
 
+class BonusItem(BaseModel):
+    label: str
+    value: int
+
+
 class RollLogEntry(BaseModel):
     id: int
     kind: Literal["roll"]
@@ -63,6 +68,10 @@ class RollLogEntry(BaseModel):
     roll: int
     margin: int
     result: Literal["success", "partial", "fail"]
+    # Player-facing breakdown of (die + bonuses) → total. Stat is folded
+    # into required_roll on the engine side; we surface the equivalent
+    # +mod here so the result label tells the same story.
+    bonus_breakdown: list[BonusItem] = []
 
 
 LogEntry = Annotated[

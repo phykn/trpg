@@ -1,5 +1,7 @@
 export type RollResult = 'success' | 'partial' | 'fail';
 
+export type BonusItem = { label: string; value: number };
+
 export type LogEntry =
   | { id: number; kind: 'gm'; text: string }
   | { id: number; kind: 'player'; text: string }
@@ -11,4 +13,5 @@ export type LogEntry =
       roll: number;
       margin: number;
       result: RollResult;
+      bonus_breakdown: BonusItem[];
     };
