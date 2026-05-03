@@ -25,6 +25,7 @@ from ..ontology.queries import location_of, race_of
 from ..persistence.repo import ScenarioRepo
 from ..rules import RULES
 from .actions import apply_attack_action, apply_skill_action
+from .buff_tick import tick_turn_buffs
 from .dirty import Dirty, register_kill
 
 # Safety belt against pathological stalemates — hitting it resolves the cycle as `fled`.
@@ -481,6 +482,12 @@ def run_auto_combat(
             end = combat_engine.check_combat_end(state)
             if end is not None:
                 break
+
+        # End-of-round tick: buff durations are measured in combat rounds. Without this
+        # a 5-round fight would still only burn one duration off, making `duration: 3`
+        # behave like "lasts 3 separate fights" instead of "lasts 3 rounds". Placed
+        # before the break checks so the terminating round also gets its tick.
+        tick_turn_buffs(state, dirty)
 
         if player_fled:
             outcome = "fled"

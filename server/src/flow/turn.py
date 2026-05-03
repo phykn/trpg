@@ -292,7 +292,7 @@ async def _enter_combat_and_finalize(
             previous_phase_signal=signal,
         ):
             yield ev
-    tick_turn_buffs(state, dirty)
+    # Buffs already ticked per-round inside run_auto_combat; no /turn-end tick here.
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
 

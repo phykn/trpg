@@ -31,7 +31,6 @@ from .actions import (
     emit_unequip,
     emit_use,
 )
-from .buff_tick import tick_turn_buffs
 from .combat_auto import (
     AutoCombatResult,
     PlayerAction,
@@ -363,6 +362,6 @@ async def run_combat_player_turn(
             previous_phase_signal=signal,
         ):
             yield ev
-    tick_turn_buffs(state, dirty)
+    # Buffs already ticked per-round inside run_auto_combat; no /turn-end tick here.
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev

@@ -312,7 +312,10 @@ def advance_turn(state: GameState) -> None:
 
 
 def remove_from_combat(state: GameState, actor_id: str) -> None:
-    """Remove actor_id from turn_order. Called on flee/death. Also removed from enemy_ids."""
+    """Remove actor_id from turn_order. Called on flee/death. Also removed from enemy_ids.
+    Round bookkeeping (round += 1, current_turn = 0) is owned by run_auto_combat's
+    outer loop — keeping it here too caused round to advance twice on a flee that
+    happened on the last actor of a round."""
     cs = state.combat_state
     if cs is None or actor_id not in cs.turn_order:
         return
@@ -325,7 +328,6 @@ def remove_from_combat(state: GameState, actor_id: str) -> None:
         cs.current_turn -= 1
     if cs.turn_order and cs.current_turn >= len(cs.turn_order):
         cs.current_turn = 0
-        cs.round += 1
 
 
 def check_combat_end(state: GameState) -> Literal["victory", "defeat"] | None:
@@ -390,6 +392,7 @@ def apply_attack_to_defender(
         )
         if defender.death_saves.failures >= RULES.death.failures_to_die:
             _kill(defender)
+            remove_from_combat(state, defender_id)
             out["dead"] = True
             check_quests(state, "character_death", defender_id, dirty)
         return out
@@ -411,6 +414,7 @@ def apply_attack_to_defender(
 
     if RULES.death.instant_death or not is_player:
         _kill(defender)
+        remove_from_combat(state, defender_id)
         out["dead"] = True
         check_quests(state, "character_death", defender_id, dirty)
         return out
@@ -461,6 +465,7 @@ def tick_death_save(
         return ("stable", roll)
     if actor.death_saves.failures >= RULES.death.failures_to_die:
         _kill(actor)
+        remove_from_combat(state, actor_id)
         return ("dead", roll)
     return ("progress", roll)
 
