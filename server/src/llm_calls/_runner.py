@@ -73,7 +73,9 @@ async def run_with_retries(
         "Your previous response failed validation: {error}. "
         f"Re-read the instructions{hint_clause} and output only the corrected JSON."
     )
-    for _ in range(retries + 1):
+    # `retries` is the total attempt budget — initial call counted. Previously
+    # ran retries+1 attempts, costing one extra LLM round per agent.
+    for _ in range(retries):
         try:
             result = await client.chat(
                 messages=messages, think=False, agent=agent, temperature=temperature

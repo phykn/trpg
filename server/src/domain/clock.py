@@ -15,7 +15,8 @@ def day_phase(turn_count: int) -> str:
 
 
 def next_dawn_turn(turn_count: int) -> int:
-    """Smallest turn count strictly greater than `turn_count` whose phase is 새벽
-    (i.e. the start of the next day cycle). Used by sleep recovery."""
+    """Smallest turn count >= `turn_count` whose phase is 새벽. Used by sleep
+    recovery — resting at the exact dawn boundary should stay on this dawn,
+    not jump a full cycle (~24h) to the next one."""
     cycle = RULES.time.phase_turns * len(PHASES)
-    return ((turn_count // cycle) + 1) * cycle
+    return ((turn_count + cycle - 1) // cycle) * cycle

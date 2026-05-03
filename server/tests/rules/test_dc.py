@@ -64,6 +64,9 @@ def test_compute_grade_critical_priority():
 
 
 def test_compute_grade_normal_branches():
+    # total >= required → success (boundary inclusive, matching "DC 이상이면 성공" convention).
     assert compute_grade(dice=15, total=18, required_roll=15) == "success"
-    assert compute_grade(dice=10, total=10, required_roll=10) == "partial_success"
+    assert compute_grade(dice=10, total=10, required_roll=10) == "success"
+    # Missing by exactly 1 is the partial_success window.
+    assert compute_grade(dice=10, total=9, required_roll=10) == "partial_success"
     assert compute_grade(dice=5, total=5, required_roll=10) == "failure"

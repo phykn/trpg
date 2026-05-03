@@ -49,8 +49,8 @@ def compute_grade(dice: int, total: int, required_roll: int) -> Grade:
         return "critical_success"
     if dice <= RULES.difficulty_class.critical_miss_threshold:
         return "critical_failure"
-    if total > required_roll:
+    if total >= required_roll:
         return "success"
-    if total == required_roll:
+    if total == required_roll - 1:
         return "partial_success"
     return "failure"
