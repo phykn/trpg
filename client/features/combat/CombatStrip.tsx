@@ -1,8 +1,7 @@
 import { Animated, Text, View } from 'react-native';
 
-import { Bar, Surface } from '@/components/ui';
+import { Bar, Surface, useEntryAnimation } from '@/components/ui';
 import { colors, toneColor } from '@/design/tokens';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 
 import type { CombatBadge } from './types';
 

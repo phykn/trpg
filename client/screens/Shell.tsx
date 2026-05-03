@@ -6,7 +6,7 @@ import { colors } from '@/design/tokens';
 import { useGame } from '@/hooks/useGame';
 
 import { NewGame } from './new-game';
-import { Playing } from './Playing';
+import { Playing } from './play';
 
 const LOADING_MESSAGES = [
   '세계 펼치는 중',

@@ -11,5 +11,7 @@ export { InlineNodes } from './InlineNodes';
 export { InlineParts } from './InlineParts';
 export { LabeledRow } from './LabeledRow';
 export { Row } from './Row';
+export { ScreenShell } from './ScreenShell';
 export { StatRow } from './StatRow';
 export { Surface } from './Surface';
+export { useEntryAnimation } from './useEntryAnimation';

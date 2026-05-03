@@ -9,12 +9,12 @@ import type { Game } from '@/hooks/useGame';
 import { buildPanelSlots } from '@/presenters';
 import type { PanelAction, PanelSlot } from '@/types/ui';
 
-import { Composer, RollPrompt } from './composer';
-import { ContextCard } from './header';
-import { HeroStrip } from './hero';
-import { ConfirmDialog } from './ui';
+import { Composer, RollPrompt } from '@/components/composer';
+import { ContextCard } from '@/components/header';
+import { HeroStrip } from '@/components/hero';
+import { ConfirmDialog } from '@/components/ui';
 
-const BGM_SOURCE = require('../assets/audio/bgm.mp3');
+const BGM_SOURCE = require('../../assets/audio/bgm.mp3');
 
 type Props = { game: Game };
 

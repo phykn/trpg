@@ -1,5 +1,5 @@
-import { ScreenShell } from '@/components/ScreenShell';
-import { Shell } from '@/components/Shell';
+import { ScreenShell } from '@/components/ui';
+import { Shell } from '@/screens/Shell';
 
 export default function HomeScreen() {
   return (

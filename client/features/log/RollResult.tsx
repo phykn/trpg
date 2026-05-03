@@ -1,8 +1,7 @@
 import { Animated, Text, View } from 'react-native';
 
-import { Glyph, Surface } from '@/components/ui';
+import { Glyph, Surface, useEntryAnimation } from '@/components/ui';
 import { colors } from '@/design/tokens';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 
 import type { LogEntry } from './types';
 

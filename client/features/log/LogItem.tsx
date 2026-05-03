@@ -1,8 +1,7 @@
 import { Animated, Text, View } from 'react-native';
 
-import { Glyph, Surface } from '@/components/ui';
+import { Glyph, Surface, useEntryAnimation } from '@/components/ui';
 import { colors, spacing } from '@/design/tokens';
-import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 
 import { RollResult } from './RollResult';
 import type { LogEntry } from './types';
