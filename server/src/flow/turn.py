@@ -212,14 +212,12 @@ def _is_receipt(
     if type(action) in _RECEIPT_ACTION_TYPES:
         return True
     if isinstance(action, MoveAction):
-        # _apply_move now marks visited atomically, so callers must hand in a
-        # pre-move snapshot to detect first-visit; the live set is post-move.
-        visited = (
-            pre_move_visited
-            if pre_move_visited is not None
-            else state.characters[state.player_id].visited_location_ids
+        # _apply_move marks visited atomically, so the live set is post-move and
+        # would lie about first-visit. Callers must snapshot before emit_move.
+        assert pre_move_visited is not None, (
+            "MoveAction first-visit check needs a pre-move visited snapshot"
         )
-        return action.destination in visited
+        return action.destination in pre_move_visited
     return False
 
 
@@ -233,11 +231,6 @@ def _chain_needs_narrate(
     NPC-interaction (buy/sell/give), or a first-visit move that actually succeeded.
     Receipt-only chains (equip/unequip/use-self) and chains whose only "interesting"
     part failed skip narrate entirely."""
-    visited = (
-        pre_move_visited
-        if pre_move_visited is not None
-        else state.characters[state.player_id].visited_location_ids
-    )
     for i, part in enumerate(parts):
         if isinstance(part, PassAction):
             return True
@@ -245,10 +238,16 @@ def _chain_needs_narrate(
             failed = bool(part_failures[i]) if part_failures is not None else False
             if not failed:
                 return True
-        if isinstance(part, MoveAction) and part.destination not in visited:
-            failed = bool(part_failures[i]) if part_failures is not None else False
-            if not failed:
-                return True
+        if isinstance(part, MoveAction):
+            assert pre_move_visited is not None, (
+                "MoveAction first-visit check needs a pre-move visited snapshot"
+            )
+            if part.destination not in pre_move_visited:
+                failed = (
+                    bool(part_failures[i]) if part_failures is not None else False
+                )
+                if not failed:
+                    return True
     return False
 
 
@@ -326,12 +325,6 @@ async def _run_one_step_action(
                 _drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
         if getattr(result, "tail_intent", None):
             act_log_lines.append(result.tail_intent)
-        # First-visit move: record the destination so re-visits are receipts.
-        if not is_failure and isinstance(result, MoveAction):
-            state.characters[state.player_id].visited_location_ids.add(
-                result.destination
-            )
-            dirty.entities.add(("characters", state.player_id))
         fake_pass = PassAction(action="pass")
         async for ev in stream_narrate_tail(
             client,
@@ -348,12 +341,6 @@ async def _run_one_step_action(
     else:
         for ev in pushed_act_evts:
             yield ev
-        # Successful re-visit: keep the set in sync (idempotent).
-        if not is_failure and isinstance(result, MoveAction):
-            state.characters[state.player_id].visited_location_ids.add(
-                result.destination
-            )
-            dirty.entities.add(("characters", state.player_id))
         if to_front_fn is not None:
             yield {"type": "state", "data": to_front_fn(state)}
 
@@ -677,15 +664,6 @@ async def _dispatch(
             )
             or dramatic_chain
         )
-
-        # Record only successfully-arrived destinations; a failed move never put
-        # the player there, so future first-visit detection must still fire.
-        for idx, part in enumerate(result.parts):
-            if isinstance(part, MoveAction) and not part_failures[idx]:
-                state.characters[state.player_id].visited_location_ids.add(
-                    part.destination
-                )
-                dirty.entities.add(("characters", state.player_id))
 
         if narrate_chain:
             for ev, part_idx in chain_act_evts:
