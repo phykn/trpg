@@ -34,6 +34,11 @@ async def attempt_rest(
     actor = state.characters[actor_id]
 
     def full_recover() -> None:
+        # Defensive: the upstream /turn flow already blocks dead players from resting,
+        # but the engine shouldn't trust that — a dead actor with hp == max_hp would
+        # break the alive=False/hp>0 invariant.
+        if not actor.alive:
+            return
         state.turn_count = next_dawn_turn(state.turn_count)
         actor.hp = actor.max_hp
         actor.mp = actor.max_mp

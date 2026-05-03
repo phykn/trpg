@@ -45,14 +45,19 @@ def _mp_restore(eff, recipient, result, **_) -> None:
 
 
 def _buff(item, eff, recipient, result, **_) -> None:
+    # tick_active_buffs filters out non-positive durations on the next tick, so a
+    # duration of 0 / None would silently disappear before the buff ever helps.
+    if eff.duration is None or eff.duration < 1:
+        raise InventoryInvalid(
+            f"buff item {result['item_id']} has non-positive duration: {eff.duration}"
+        )
     description = eff.description or item.name
-    duration = eff.duration or 0
     recipient.active_buffs.append(
-        ActiveBuff(description=description, duration=duration)
+        ActiveBuff(description=description, duration=eff.duration)
     )
     result["kind"] = "buff"
     result["description"] = description
-    result["duration"] = duration
+    result["duration"] = eff.duration
 
 
 _EFFECT_HANDLERS = {

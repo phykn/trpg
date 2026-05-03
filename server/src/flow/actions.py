@@ -299,9 +299,10 @@ async def emit_learn_skill(
         return
     chosen = candidates[index]
     state.skills[chosen.id] = chosen
-    actor.learned_skill_ids.append(
-        chosen.id
-    )  # ssot-allow: write path — graph rebuilds at next turn boundary.
+    if chosen.id not in actor.learned_skill_ids:
+        actor.learned_skill_ids.append(
+            chosen.id
+        )  # ssot-allow: write path — graph rebuilds at next turn boundary.
     state.pending_skill_candidates = []
     dirty.entities.add(("characters", actor_id))
     dirty.entities.add(("skills", chosen.id))
