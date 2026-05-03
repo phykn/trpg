@@ -3,11 +3,13 @@ from collections.abc import AsyncIterator, Callable
 
 from ..llm_calls.classify.schema import (
     BuyAction,
+    CancelGrowthAction,
     ChainAction,
     CombatAction,
     EquipAction,
     FleeAction,
     GiveAction,
+    GrowthPendingAction,
     LearnSkillAction,
     LevelUpAction,
     MoveAction,
@@ -30,8 +32,10 @@ from ..ontology.graph import GameGraph
 from ..ontology.queries import location_of
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from .actions import (
+    emit_cancel_growth,
     emit_equip,
     emit_give,
+    emit_growth_pending,
     emit_learn_skill,
     emit_level_up,
     emit_move,
@@ -167,6 +171,8 @@ _ONE_STEP_EMITS: dict[type, EmitFactory] = {
     ),
     GiveAction: lambda c, s, d, a: emit_give(s, a.from_id, a.to_id, a.item_id, d),
     MoveAction: lambda c, s, d, a: emit_move(s, s.player_id, a.destination, d),
+    GrowthPendingAction: lambda c, s, d, a: emit_growth_pending(s, d),
+    CancelGrowthAction: lambda c, s, d, a: emit_cancel_growth(s, d),
 }
 
 
@@ -305,6 +311,11 @@ async def _dispatch(
     graph: GameGraph,
     previous_phase_signal: str | None = None,
 ) -> AsyncIterator[dict]:
+    # Auto-cancel pending_growth on unrelated actions; LevelUp/GrowthPending/CancelGrowth handle it themselves.
+    if state.pending_growth and not isinstance(
+        result, (LevelUpAction, GrowthPendingAction, CancelGrowthAction)
+    ):
+        state.pending_growth = None
     if isinstance(result, CombatAction):
         if has_invalid_combat_targets(state, graph, result.targets):
             # Invalid target doesn't consume the turn — the act line lands either as a raw push (no LLM) or absorbed into narrate prose (LLM available).
