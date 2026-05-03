@@ -30,6 +30,9 @@ export function handleStreamEvent(ev: StreamEvent, h: StreamHandlers): void {
       h.upsertLogEntry(ev.data);
       // Drop the rolling indicator the moment the dice lands, not after the GM narration finishes.
       if (ev.data.kind === 'roll') h.clearPending();
+      // The gm log_entry signals streaming is done — clear the in-flight text so
+      // reaction cards (affinity, quest-start) that arrive next render after, not above.
+      if (ev.data.kind === 'gm') h.clearStreamingText();
       return;
     case 'state':
       h.applyState(ev.data);

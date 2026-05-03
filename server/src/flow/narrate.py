@@ -210,6 +210,13 @@ async def consume_narrate(
         _log.warning("item_locality_repair: %s", warning)
     state.invalidate_graph()
     push_turn_log(state, target_for_log, final.output.turn_summary, dirty)
+    if dialogue_input is not None:
+        push_dialogue(state, dialogue_input, body, dirty)
+    write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
+    # GM body lands and SSE-emits before reaction cards so the client clears the in-flight stream and reaction cards (affinity, quest-start) render after the prose that justifies them.
+    gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=body)
+    push_log_entry(state, gm_log, dirty)
+    yield {"type": "log_entry", "data": gm_log.model_dump()}
     # Quest-start system cards: surface locked → active flips after narrate body
     # so the receipt lands alongside the prose that motivated it.
     for q_id in apply_result["started_quests"]:
@@ -234,11 +241,6 @@ async def consume_narrate(
             format_affinity_card_log(npc.name, delta),
             turn_summary=format_affinity_card_turn_log(npc.name, delta),
         )
-    if dialogue_input is not None:
-        push_dialogue(state, dialogue_input, body, dirty)
-    write_memories(state, final.output, turn=state.turn_count, dirty=dirty.entities)
-    gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=body)
-    push_log_entry(state, gm_log, dirty)
 
 
 async def stream_narrate_tail(
