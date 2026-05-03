@@ -15,6 +15,23 @@ _QUOTE_OPEN_TO_CLOSE = {"「": "」", "『": "』"}
 _SUBJECT_JOSA = ("가", "이", "은", "는", "께서")
 _PRONOUN_SUBJECTS = ("그가", "그는", "그녀가", "그녀는")
 
+# History-block headers + per-line builders. Hoisted so the layer body stays free of inline Korean prompt fragments.
+_HISTORY_HEADER_DEAD = "=== 사망 — 다시 등장시키거나 발화시키지 말 것 ==="
+_HISTORY_HEADER_SUMMARY = "=== 이전 요약 ==="
+_HISTORY_HEADER_DIALOGUE = "=== 최근 대화 ==="
+
+
+def _format_corpse_line(name: str) -> str:
+    return f"- {name} (생전 발화가 아래 대화에 남아 있을 수 있으나 더 이상 말하지 않습니다)"
+
+
+def _format_summary_entry(turn: int, summary: str) -> str:
+    return f"[턴 {turn}] — {summary}"
+
+
+def _format_dialogue_entry(turn: int, player: str, narrator_redacted: str) -> str:
+    return f"[턴 {turn}]\n  플레이어: {player}\n  서술자: {narrator_redacted}"
+
 
 def redact_dead_quotes(text: str, dead_names: list[str]) -> str:
     """Strip Korean direct-quote blocks attributed to dead NPCs. Stateful walk so pronoun continuation (그는 / 그녀는) keeps the named speaker beyond the immediate window."""
@@ -136,24 +153,24 @@ def build_history_layer(state: GameState, corpses: list[dict] | None = None) -> 
     ]
 
     if corpses:
-        lines = ["=== 사망 — 다시 등장시키거나 발화시키지 말 것 ==="]
+        lines = [_HISTORY_HEADER_DEAD]
         for c in corpses:
-            lines.append(
-                f"- {c['name']} (생전 발화가 아래 대화에 남아 있을 수 있으나 더 이상 말하지 않습니다)"
-            )
+            lines.append(_format_corpse_line(c["name"]))
         blocks.append("\n".join(lines))
 
     if summary_entries:
-        lines = ["=== 이전 요약 ==="]
+        lines = [_HISTORY_HEADER_SUMMARY]
         for e in summary_entries:
-            lines.append(f"[턴 {e.turn}] — {e.summary}")
+            lines.append(_format_summary_entry(e.turn, e.summary))
         blocks.append("\n".join(lines))
 
     if state.recent_dialogue:
         items = [
-            f"[턴 {d.turn}]\n  플레이어: {d.player}\n  서술자: {redact_dead_quotes(d.narrator, dead_names)}"
+            _format_dialogue_entry(
+                d.turn, d.player, redact_dead_quotes(d.narrator, dead_names)
+            )
             for d in state.recent_dialogue
         ]
-        blocks.append("=== 최근 대화 ===\n" + "\n".join(items))
+        blocks.append(_HISTORY_HEADER_DIALOGUE + "\n" + "\n".join(items))
 
     return "\n\n".join(blocks)
