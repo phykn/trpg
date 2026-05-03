@@ -12,7 +12,7 @@ from .schema import ExtractInput
 _PROMPT = load_prompt(__file__, substitutions=render_for_prompt())
 
 _MAX_RETRIES = 5
-_EXTRACT_TEMPERATURE = 0.2
+_EXTRACT_TEMPERATURE = 0.4
 
 _log = logging.getLogger(__name__)
 

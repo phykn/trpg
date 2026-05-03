@@ -49,7 +49,7 @@ async def test_stream_body_passes_temperature_and_agent():
     async for _ in stream_body(client, _input()):
         pass
     assert client.kwargs_seen["agent"] == "narrate_body"
-    assert client.kwargs_seen["temperature"] == 0.8
+    assert client.kwargs_seen["temperature"] == 1.0
     assert client.kwargs_seen["think"] is False
 
 

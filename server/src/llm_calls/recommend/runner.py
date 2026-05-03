@@ -4,6 +4,8 @@ from .schema import SkillRecommendInput, SkillRecommendOutput
 
 _PROMPT = load_prompt(__file__)
 
+_RECOMMEND_TEMPERATURE = 1.0
+
 
 async def recommend(
     client: LLMClient,
@@ -17,4 +19,5 @@ async def recommend(
         parse=SkillRecommendOutput.model_validate_json,
         retries=retries,
         agent="recommend",
+        temperature=_RECOMMEND_TEMPERATURE,
     )

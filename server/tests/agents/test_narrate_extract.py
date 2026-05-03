@@ -79,5 +79,5 @@ async def test_extract_passes_body_in_user_payload_with_temperature_and_agent():
     await run_extract(client, _input(body="당신은 노파에게 인사합니다."))
     user_msg = next(m for m in captured["messages"] if m["role"] == "user")
     assert "당신은 노파에게 인사합니다." in user_msg["content"]
-    assert captured["temperature"] == 0.2
+    assert captured["temperature"] == 0.4
     assert captured["agent"] == "narrate_extract"

@@ -13,6 +13,7 @@ from .schema import CombatNarrateInput
 _PROMPT = load_prompt(__file__)
 
 _MAX_RETRIES = 5
+_COMBAT_NARRATE_TEMPERATURE = 1.0
 
 
 async def stream_combat_narrate(
@@ -32,7 +33,10 @@ async def stream_combat_narrate(
         body_streamed = False
         try:
             async for chunk in client.chat_stream(
-                messages, think=False, agent="combat_narrate"
+                messages,
+                think=False,
+                agent="combat_narrate",
+                temperature=_COMBAT_NARRATE_TEMPERATURE,
             ):
                 text = chunk.get("answer")
                 if text:

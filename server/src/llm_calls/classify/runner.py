@@ -10,6 +10,8 @@ from .semantics import JudgeSemanticError, check_semantics
 PROMPT_PATH = Path(__file__).parent / "prompt.md"
 _PROMPT = load_prompt(__file__)
 
+_CLASSIFY_TEMPERATURE = 0.4
+
 
 async def classify(
     client: LLMClient, input_: JudgeInput, retries: int = 5
@@ -27,4 +29,5 @@ async def classify(
         retry_on=(ValidationError, JudgeSemanticError),
         retries=retries,
         agent="classify",
+        temperature=_CLASSIFY_TEMPERATURE,
     )

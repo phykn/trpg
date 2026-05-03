@@ -11,7 +11,7 @@ from ..schema import NarrateInput
 _PROMPT = load_prompt(__file__, substitutions=render_for_prompt())
 
 _MAX_RETRIES = 5
-_BODY_TEMPERATURE = 0.8
+_BODY_TEMPERATURE = 1.0
 
 
 async def stream_body(

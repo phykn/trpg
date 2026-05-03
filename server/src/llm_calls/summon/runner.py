@@ -4,6 +4,8 @@ from .schema import EncounterSummonInput, EncounterSummonOutput
 
 _PROMPT = load_prompt(__file__)
 
+_SUMMON_TEMPERATURE = 1.0
+
 
 async def summon(
     client: LLMClient,
@@ -19,4 +21,5 @@ async def summon(
         retries=retries,
         correction_hint="especially pair-trade",
         agent="summon",
+        temperature=_SUMMON_TEMPERATURE,
     )
