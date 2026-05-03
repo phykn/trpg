@@ -11,10 +11,11 @@ from ..llm_calls.narrate import (
 from ..domain.memory import GMLogEntry
 from ..engines.apply import apply_changes
 from ..engines.invariants import enforce_item_locality
+from ..engines.quest import apply_judge_result
 from ..llm.client import LLMClient
 from ..ontology.graph import GameGraph
 from ..ontology.player_view import build_player_view
-from ..ontology.queries import inhabitants_of
+from ..ontology.queries import giver_of, inhabitants_of
 from ..ontology.target_view import build_target_view
 from ..persistence.repo import ScenarioRepo
 from ..domain.state import GameState
@@ -33,7 +34,31 @@ from .dirty import (
     push_log_entry,
     push_turn_log,
 )
+from .judge import judge_quest_progress
 from .memory_writer import write_memories
+
+
+def npc_dialogue_quest_check(state: GameState, claim: str, npc_id: str) -> None:
+    """During NPC dialogue, run free-path judge for quests given by this NPC."""
+    history = [{"summary": e.summary} for e in state.turn_log[-5:]]
+    graph = state.graph()
+    npc = state.characters.get(npc_id)
+    npc_favor = npc.relations.get(state.player_id, 0) if npc else 0
+    for quest in list(state.quests.values()):
+        if quest.status != "active":
+            continue
+        if giver_of(graph, quest.id) != npc_id:
+            continue
+        result = judge_quest_progress(
+            quest={
+                "id": quest.id,
+                "objective_text": quest.objective_text or quest.title,
+            },
+            history=history,
+            claim=claim,
+            npc_context={"npc_id": npc_id, "favor": npc_favor},
+        )
+        apply_judge_result(state, quest.id, result)
 
 
 async def run_narrate(

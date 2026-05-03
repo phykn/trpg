@@ -273,6 +273,10 @@ class Quest(BaseModel):
     fail_reason: str | None = None
     success_reason: str | None = None
 
+    # Free-path fields: human-readable objective for the judge LLM; accumulated partial progress count.
+    objective_text: str = ""
+    progress: int = 0
+
 
 class ChapterProgress(BaseModel):
     done: int = 0

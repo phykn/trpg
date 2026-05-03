@@ -12,6 +12,24 @@ from .inventory.carry import check_can_carry
 DirtySet = set[tuple[str, str]] | None
 
 
+def apply_judge_result(state: GameState, quest_id: str, result: dict) -> bool:
+    """Apply free-path judge outcome. Returns True if state changed."""
+    quest = state.quests.get(quest_id)
+    if not quest or quest.status != "active":
+        return False
+    outcome = result.get("outcome")
+    if outcome == "satisfied":
+        quest.status = "completed"
+        quest.success_reason = "free_path_satisfied"
+        return True
+    if outcome == "partial":
+        delta = result.get("progress_delta") or 0
+        quest.progress = (quest.progress or 0) + delta
+        return True
+    # rejected → no-op
+    return False
+
+
 def accept_quest(state: GameState, quest_id: str) -> bool:
     """pending → active. No-op for any other status."""
     quest = state.quests.get(quest_id)

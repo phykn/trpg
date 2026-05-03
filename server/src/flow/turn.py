@@ -60,11 +60,32 @@ from .format import (
     SUMMON_FAILED_TEXT,
     format_combat_event_summary,
 )
-from .judge import run_judge
+from .judge import run_judge, judge_quest_progress
 from .combat_auto import AutoCombatResult
 from .narrate import stream_narrate_tail
 from .rest import run_rest
 from .subject import refresh_active_subject
+from ..engines.quest import apply_judge_result
+
+
+def end_turn_quest_check(state: GameState) -> None:
+    """At turn end, run free-path judge over active quests using recent turn log."""
+    if not state.turn_log:
+        return
+    history = [{"summary": e.summary} for e in state.turn_log[-5:]]
+    for quest in list(state.quests.values()):
+        if quest.status != "active":
+            continue
+        result = judge_quest_progress(
+            quest={
+                "id": quest.id,
+                "objective_text": quest.objective_text or quest.title,
+            },
+            history=history,
+            claim=None,
+            npc_context=None,
+        )
+        apply_judge_result(state, quest.id, result)
 
 
 async def run_turn(
@@ -292,6 +313,10 @@ async def _run_one_step_action(
         if to_front_fn is not None:
             yield {"type": "state", "data": to_front_fn(state)}
 
+    try:
+        end_turn_quest_check(state)
+    except NotImplementedError:
+        pass  # LLM not wired yet; hook placement is correct
     tick_turn_buffs(state, dirty)
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
@@ -624,6 +649,10 @@ async def _dispatch(
                 yield ev
             if to_front_fn is not None:
                 yield {"type": "state", "data": to_front_fn(state)}
+        try:
+            end_turn_quest_check(state)
+        except NotImplementedError:
+            pass  # LLM not wired yet; hook placement is correct
         tick_turn_buffs(state, dirty)
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
@@ -643,6 +672,10 @@ async def _dispatch(
         previous_phase_signal=previous_phase_signal,
     ):
         yield ev
+    try:
+        end_turn_quest_check(state)
+    except NotImplementedError:
+        pass  # LLM not wired yet; hook placement is correct
     tick_turn_buffs(state, dirty)
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
