@@ -13,6 +13,7 @@ export function StoryGraphCanvas({
   accessibilityLabel?: string;
   selectedNodeId?: string | null;
   onNodeSelect?: (nodeId: string | null) => void;
+  unseenNodeIds?: Set<string>;
 }) {
   return (
     <View accessibilityLabel={`${accessibilityLabel}. ${graph.summary}`} className="gap-1.5">

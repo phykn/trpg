@@ -40,6 +40,7 @@ function toElements(
   graph: StoryGraphModel,
   overrides?: Record<string, NodeOverride>,
   seedPositions = false,
+  unseenNodeIds?: Set<string>,
 ): ElementDefinition[] {
   const total = graph.nodes.length;
   return [
@@ -53,6 +54,7 @@ function toElements(
           size: override?.size ?? NODE_SIZE[node.kind],
           tier: override?.tier ?? 0,
           textColor: override?.textColor ?? colors.fg.default,
+          isNew: unseenNodeIds?.has(node.id) ? 'true' : undefined,
         },
         position: seedPositions ? seedPosition(idx, total) : undefined,
         classes: node.kind,
@@ -83,6 +85,7 @@ export function StoryGraphCanvas({
   rootNodeId,
   centerNodeId,
   clearOnBackgroundTap = true,
+  unseenNodeIds,
 }: {
   graph: StoryGraphModel;
   height?: number;
@@ -97,6 +100,7 @@ export function StoryGraphCanvas({
   rootNodeId?: string;
   centerNodeId?: string;
   clearOnBackgroundTap?: boolean;
+  unseenNodeIds?: Set<string>;
 }) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const cyRef = React.useRef<Core | null>(null);
@@ -107,7 +111,7 @@ export function StoryGraphCanvas({
 
     const cy = cytoscape({
       container,
-      elements: toElements(graph, nodeOverrides, boxNodes && layout === 'cose'),
+      elements: toElements(graph, nodeOverrides, boxNodes && layout === 'cose', unseenNodeIds),
       autoungrabify: true,
       hideEdgesOnViewport: true,
       minZoom: 0.55,
@@ -126,7 +130,7 @@ export function StoryGraphCanvas({
                 color: 'data(textColor)',
                 content: 'data(label)',
                 'font-family': 'NanumGothic_700Bold, serif',
-                'font-size': 15,
+                'font-size': 17,
                 'text-valign': 'center',
                 'text-halign': 'center',
                 'text-wrap': 'none',
@@ -143,7 +147,7 @@ export function StoryGraphCanvas({
                 color: colors.fg.default,
                 content: 'data(label)',
                 'font-family': 'NanumGothic_700Bold, serif',
-                'font-size': 13,
+                'font-size': 15,
                 height: 'data(size)',
                 label: 'data(label)',
                 'min-zoomed-font-size': 10,
@@ -151,7 +155,7 @@ export function StoryGraphCanvas({
                 'text-background-color': '#1f2228',
                 'text-background-opacity': 0.85,
                 'text-background-padding': '3px',
-                'text-margin-y': 4,
+                'text-margin-y': 6,
                 'text-valign': 'bottom',
                 width: 'data(size)',
               },
@@ -164,6 +168,14 @@ export function StoryGraphCanvas({
             'overlay-color': colors.accent.fg,
             'overlay-opacity': 0.12,
             'overlay-padding': 6,
+          },
+        },
+        {
+          selector: 'node[isNew = "true"]',
+          style: {
+            'overlay-color': colors.accent.fg,
+            'overlay-opacity': 0.18,
+            'overlay-padding': 5,
           },
         },
         {
@@ -220,7 +232,7 @@ export function StoryGraphCanvas({
                 fit: true,
                 idealEdgeLength: boxNodes ? 96 : 60,
                 nodeOverlap: boxNodes ? 15 : 8,
-                nodeRepulsion: boxNodes ? 6000 : 3500,
+                nodeRepulsion: boxNodes ? 6000 : 6000,
                 padding: 14,
                 randomize: false,
               },
@@ -253,7 +265,7 @@ export function StoryGraphCanvas({
       cy.destroy();
       cyRef.current = null;
     };
-  }, [graph, nodeOverrides, arrows, edgeLabels, layout, boxNodes, rootNodeId, centerNodeId, onNodeSelect, clearOnBackgroundTap]);
+  }, [graph, nodeOverrides, arrows, edgeLabels, layout, boxNodes, rootNodeId, centerNodeId, onNodeSelect, clearOnBackgroundTap, unseenNodeIds]);
 
   React.useEffect(() => {
     const cy = cyRef.current;

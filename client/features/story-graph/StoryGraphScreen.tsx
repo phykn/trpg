@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import type { PanelAction } from '@/features/info-panel';
-import { getSessionById, loadStoredGameId } from '@/services';
+import { getSessionById, loadSeenNodes, loadStoredGameId, storeSeenNodes } from '@/services';
 
 import { MapPanel } from './MapPanel';
 import { EMPTY_STORY_GRAPH } from './presenters';
@@ -25,6 +25,7 @@ export function StoryGraphScreen({
   const [graph, setGraph] = React.useState<StoryGraphModel>(EMPTY_STORY_GRAPH);
   const [message, setMessage] = React.useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(null);
+  const [seen, setSeen] = React.useState<Set<string>>(() => new Set());
 
   React.useEffect(() => {
     let alive = true;
@@ -47,6 +48,14 @@ export function StoryGraphScreen({
           return;
         }
         setGraph(mergeAndStoreStoryGraph(stored, session.state.storyGraph));
+        const loaded = loadSeenNodes(stored);
+        // Auto-seed the player's starting place so it doesn't get a "new" ring on first load.
+        const startNode = session.state.storyGraph.nodes.find((n) => n.kind === 'place');
+        if (startNode && !loaded.has(startNode.id)) {
+          loaded.add(startNode.id);
+          storeSeenNodes(stored, loaded);
+        }
+        setSeen(loaded);
         setStatus('ready');
       } catch (err) {
         if (!alive) return;
@@ -78,6 +87,26 @@ export function StoryGraphScreen({
     window.addEventListener(STORY_GRAPH_UPDATED_EVENT, onGraphUpdate);
     return () => window.removeEventListener(STORY_GRAPH_UPDATED_EVENT, onGraphUpdate);
   }, []);
+
+  const unseenNodeIds = React.useMemo(() => {
+    const out = new Set<string>();
+    for (const n of graph.nodes) if (!seen.has(n.id)) out.add(n.id);
+    return out;
+  }, [graph, seen]);
+
+  const markNodeSeen = React.useCallback(
+    (id: string) => {
+      const gameId = gameIdRef.current;
+      if (!gameId || seen.has(id)) return;
+      setSeen((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        storeSeenNodes(gameId, next);
+        return next;
+      });
+    },
+    [seen],
+  );
 
   return (
     <View className="flex-1 gap-2.5">
@@ -118,6 +147,8 @@ export function StoryGraphScreen({
             selectedNodeId={selectedNodeId}
             onNodeSelect={setSelectedNodeId}
             onAction={onAction}
+            unseenNodeIds={unseenNodeIds}
+            onNodeSeen={markNodeSeen}
           />
         ) : null}
       </ScrollView>

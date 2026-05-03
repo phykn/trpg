@@ -28,6 +28,8 @@ export function MapPanel({
   onNodeSelect,
   onAction,
   actionDisabled = false,
+  unseenNodeIds,
+  onNodeSeen,
 }: {
   graph: StoryGraphModel;
   framed?: boolean;
@@ -36,6 +38,8 @@ export function MapPanel({
   onNodeSelect?: (nodeId: string | null) => void;
   onAction?: (action: PanelAction) => void;
   actionDisabled?: boolean;
+  unseenNodeIds?: Set<string>;
+  onNodeSeen?: (id: string) => void;
 }) {
   const placeStates = React.useMemo<Record<string, PlaceState>>(() => {
     return Object.fromEntries(
@@ -117,7 +121,11 @@ export function MapPanel({
           graph={visibleGraph}
           accessibilityLabel={accessibilityLabel}
           selectedNodeId={selectedNodeId}
-          onNodeSelect={onNodeSelect}
+          onNodeSelect={(id) => {
+            if (id) onNodeSeen?.(id);
+            onNodeSelect?.(id);
+          }}
+          unseenNodeIds={unseenNodeIds}
         />
 
         {selectedNode ? (
