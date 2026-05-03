@@ -9,7 +9,7 @@ import type { Game } from '@/hooks/useGame';
 import { buildPanelSlots } from '@/features/info-panel';
 import type { PanelAction, PanelSlot } from '@/features/info-panel';
 
-import { Composer, RollPrompt } from '@/features/composer';
+import { Composer, LevelUpPrompt, RollPrompt } from '@/features/composer';
 import { ContextCard } from '@/features/info-panel';
 import { HeroStrip } from '@/features/hero';
 import { ConfirmDialog } from '@/components/ui';
@@ -19,7 +19,7 @@ const BGM_SOURCE = require('../../assets/audio/bgm.mp3');
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, storyGraph, log, pending, streaming, awaitingNarration, suggestions, errorMessage, think, setThink, onSend, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen } = game;
+  const { hero, subject, quest, place, combat, storyGraph, log, pending, streaming, awaitingNarration, suggestions, errorMessage, think, setThink, onSend, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -71,7 +71,7 @@ export function Playing({ game }: Props) {
   if (!hero) return null;
 
   const slots: PanelSlot[] = [
-    ...buildPanelSlots({ hero, subject, quest }),
+    ...buildPanelSlots({ hero, subject, quest }, { onLevelUpOpen: openLevelUp }),
     { id: 'map', chip: { short: '주변', dot: hasUnseenLocation }, panel: null },
   ];
   const rolling = pending !== null && streaming;
@@ -105,9 +105,12 @@ export function Playing({ game }: Props) {
         }}
       />
 
-      {(activeId !== null || menuOpen) && (
+      {(activeId !== null || menuOpen || levelUpOpen) && (
         <Pressable
-          onPress={closePopups}
+          onPress={() => {
+            closePopups();
+            if (levelUpOpen) cancelLevelUp();
+          }}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }}
         />
       )}
@@ -161,6 +164,12 @@ export function Playing({ game }: Props) {
 
       {pending ? (
         <RollPrompt pending={pending} onRoll={onRoll} onStop={onStop} rolling={rolling} />
+      ) : levelUpOpen ? (
+        <LevelUpPrompt
+          hero={hero}
+          candidates={levelUpCandidates}
+          onCommit={commitLevelUp}
+        />
       ) : (
         <Composer
           input={input}
