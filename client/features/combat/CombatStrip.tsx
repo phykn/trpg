@@ -1,7 +1,7 @@
 import { Animated, Text, View } from 'react-native';
 
-import { Bar } from '@/components/ui';
-import { colors, shadow, toneColor } from '@/design/tokens';
+import { Bar, Surface } from '@/components/ui';
+import { colors, toneColor } from '@/design/tokens';
 import { useEntryAnimation } from '@/hooks/useEntryAnimation';
 
 import type { CombatBadge } from './types';
@@ -13,9 +13,9 @@ export function CombatStrip({ combat }: { combat: CombatBadge }) {
       className="mx-5 mt-1"
       style={{ transform: [{ scale }], opacity }}
     >
-      <View
-        className="px-4 py-3 rounded-md bg-canvas-subtle border border-border-default gap-2"
-        style={{ borderLeftWidth: 2, borderLeftColor: colors.danger.fg, ...shadow.paper }}
+      <Surface
+        stripeColor={colors.danger.fg}
+        className="px-4 py-3 gap-2"
       >
         <View className="flex-row items-center gap-2">
           <Text
@@ -63,7 +63,7 @@ export function CombatStrip({ combat }: { combat: CombatBadge }) {
             ))}
           </View>
         )}
-      </View>
+      </Surface>
     </Animated.View>
   );
 }
