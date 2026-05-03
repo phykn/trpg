@@ -314,6 +314,9 @@ def build_surroundings(
         "equipment": _equipment_payload(state, actor, graph),
         "in_combat": in_combat,
         "growth": _growth_payload(actor),
+        "pending_growth": (
+            state.pending_growth.model_dump() if state.pending_growth else None
+        ),
         "skill_candidates": _skill_candidates_payload(state),
         "recent_npc": state.recent_npc_id(actor_id),
     }
