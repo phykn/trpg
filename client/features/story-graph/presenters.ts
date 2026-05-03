@@ -27,15 +27,6 @@ export const EMPTY_STORY_GRAPH: StoryGraphModel = {
   summary: '스토리 데이터 없음',
 };
 
-export const KIND_LABEL: Record<StoryGraphNodeKind, string> = {
-  hero: '주인공',
-  place: '현재 위치',
-  subject: '대상',
-  quest: '퀘스트',
-  location: '장소',
-  target: '등장인물',
-};
-
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

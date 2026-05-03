@@ -1,6 +1,6 @@
 import type { PanelAction } from '@/features/info-panel';
 
-import type { StoryGraphNode } from './presenters';
+import type { StoryGraphNode } from './types';
 
 function moveIntent(name: string): string {
   const last = name.charCodeAt(name.length - 1);
