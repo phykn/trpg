@@ -185,6 +185,11 @@ def to_quest(state: GameState, graph: GameGraph | None = None) -> dict | None:
     # entity attribute on the trigger object (no relational scan), so read
     # the goals straight from the trigger names.
     goals = [t.name for t in q.triggers]
+    actions: list[str] = []
+    if q.status == "pending":
+        actions.append("accept")
+    elif q.status == "active":
+        actions.append("abandon")
     return {
         "title": q.title,
         "summary": q.summary,
@@ -193,6 +198,8 @@ def to_quest(state: GameState, graph: GameGraph | None = None) -> dict | None:
         "goals": goals,
         "conditions": list(q.conditions),
         "rewards": {"gold": q.rewards.gold, "exp": q.rewards.exp},
+        "status": q.status,
+        "actions": actions,
     }
 
 

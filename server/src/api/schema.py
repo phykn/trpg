@@ -6,6 +6,11 @@ from ..domain.types import StatKey
 from ..persistence.init import PlayerInput
 
 
+class QuestAction(BaseModel):
+    kind: Literal["accept", "abandon"]
+    quest_id: str
+
+
 class ChatRequest(BaseModel):
     system: str | None = None
     query: str
@@ -43,6 +48,7 @@ class InitResponse(BaseModel):
 class TurnRequest(BaseModel):
     player_input: str
     think: bool = False
+    quest_action: QuestAction | None = None
 
 
 class RollRequest(BaseModel):

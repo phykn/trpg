@@ -12,6 +12,26 @@ from .inventory.carry import check_can_carry
 DirtySet = set[tuple[str, str]] | None
 
 
+def accept_quest(state: GameState, quest_id: str) -> bool:
+    """pending → active. No-op for any other status."""
+    quest = state.quests.get(quest_id)
+    if not quest or quest.status != "pending":
+        return False
+    quest.status = "active"
+    _ensure_runtime_fields(quest)
+    return True
+
+
+def abandon_quest(state: GameState, quest_id: str) -> bool:
+    """active → abandoned. No-op for any other status."""
+    quest = state.quests.get(quest_id)
+    if not quest or quest.status != "active":
+        return False
+    quest.status = "abandoned"
+    quest.fail_reason = "abandoned"
+    return True
+
+
 def _ensure_runtime_fields(quest: Quest) -> None:
     """Align lengths of triggers_met / fail_triggers_met with their trigger lists.
     Preserves the existing prefix when triggers grew — a seed change that adds
@@ -201,6 +221,7 @@ def _cascade_death(
         is_giver_dead = giver == dead_id
         is_kill_target_dead = dead_id in kill_targets
 
+        # locked / pending / abandoned / failed quests are intentionally excluded.
         if is_giver_dead and q.status in ("active", "completed"):
             if q.status == "completed" and q.id in changed:
                 # Undo same-turn completion so fail wins.
