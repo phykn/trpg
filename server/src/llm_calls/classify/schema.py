@@ -139,12 +139,12 @@ class UnequipAction(_StrictAction):
 
 class RecruitAction(_StrictAction):
     action: Literal["recruit"]
-    target: str
+    target: str = Field(min_length=1)
 
 
 class DismissAction(_StrictAction):
     action: Literal["dismiss"]
-    target: str
+    target: str = Field(min_length=1)
 
 
 # CombatAction is a phase change but allowed *only as the chain tail* — engine

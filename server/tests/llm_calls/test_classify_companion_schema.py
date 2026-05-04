@@ -46,3 +46,26 @@ def test_recruit_not_chainable():
     }
     with pytest.raises(ValidationError):
         output_adapter.validate_python(raw)
+
+
+def test_dismiss_not_chainable():
+    """dismiss cannot appear as a chain part."""
+    raw = {
+        "action": "chain",
+        "parts": [
+            {"action": "pass"},
+            {"action": "dismiss", "target": "npc.edric"},
+        ],
+    }
+    with pytest.raises(ValidationError):
+        output_adapter.validate_python(raw)
+
+
+def test_recruit_rejects_empty_target():
+    with pytest.raises(ValidationError):
+        RecruitAction(action="recruit", target="")
+
+
+def test_dismiss_rejects_empty_target():
+    with pytest.raises(ValidationError):
+        DismissAction(action="dismiss", target="")
