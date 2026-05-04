@@ -217,14 +217,6 @@ export function StoryGraphCanvas({
           },
         },
         {
-          selector: 'node[isNew = "true"]',
-          style: {
-            'overlay-color': colors.accent.fg,
-            'overlay-opacity': 0.18,
-            'overlay-padding': 5,
-          },
-        },
-        {
           selector: 'edge',
           style: {
             'curve-style': 'bezier',
