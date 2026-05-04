@@ -1,5 +1,3 @@
-import pytest
-
 from src.domain.entities import Character, Stats
 from src.flow.companion import run_dismiss
 from src.flow.dirty import Dirty
@@ -35,9 +33,7 @@ async def test_dismiss_removes_companion(fresh_state, tmp_data, collect):
     save_repo = LocalFsSaveRepo(saves_dir=str(tmp_data))
     dirty = Dirty()
 
-    events = await collect(
-        run_dismiss(state, save_repo, "에드릭, 이제 헤어지자", "npc.edric", dirty, None)
-    )
+    events = await collect(run_dismiss(state, save_repo, "npc.edric", dirty, None))
 
     assert "npc.edric" not in state.characters["player_01"].companions
     assert state.previous_phase_signal == "companion_dismissed:에드릭"
@@ -74,9 +70,20 @@ async def test_dismiss_target_not_in_companions_no_op(fresh_state, tmp_data, col
     save_repo = LocalFsSaveRepo(saves_dir=str(tmp_data))
     dirty = Dirty()
 
-    events = await collect(
-        run_dismiss(state, save_repo, "에드릭, 헤어지자", "npc.edric", dirty, None)
-    )
+    await collect(run_dismiss(state, save_repo, "npc.edric", dirty, None))
 
     assert "npc.edric" not in state.characters["player_01"].companions
     assert state.previous_phase_signal != "companion_dismissed:에드릭"
+
+
+async def test_dismiss_records_turn_log(fresh_state, tmp_data, collect):
+    state = _setup_state_with_companion(fresh_state)
+    save_repo = LocalFsSaveRepo(saves_dir=str(tmp_data))
+    dirty = Dirty()
+
+    await collect(run_dismiss(state, save_repo, "npc.edric", dirty, None))
+
+    assert any(
+        getattr(entry, "summary", None) == "에드릭 동행 이탈"
+        for entry in state.turn_log
+    )

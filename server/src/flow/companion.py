@@ -7,13 +7,12 @@ from collections.abc import AsyncIterator
 from ..domain.state import GameState
 from ..persistence.repo import SaveRepo
 from .dirty import Dirty, ToFrontFn, finalize, push_act
-from .format import format_dismiss_log
+from .format import format_dismiss_log, format_dismiss_turn_log
 
 
 async def run_dismiss(
     state: GameState,
     save_repo: SaveRepo,
-    player_input: str,
     target_id: str,
     dirty: Dirty,
     to_front_fn: ToFrontFn | None,
@@ -34,7 +33,12 @@ async def run_dismiss(
     state.invalidate_graph()
     dirty.entities.add(("characters", state.player_id))
 
-    yield push_act(state, dirty, format_dismiss_log(target_name))
+    yield push_act(
+        state,
+        dirty,
+        format_dismiss_log(target_name),
+        turn_summary=format_dismiss_turn_log(target_name),
+    )
     state.previous_phase_signal = f"companion_dismissed:{target_name}"
 
     state.turn_count += 1

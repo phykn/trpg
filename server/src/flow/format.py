@@ -201,6 +201,10 @@ def format_dismiss_log(name: str) -> str:
     return f"{name}{i_ga(name)} 일행에서 빠집니다."
 
 
+def format_dismiss_turn_log(name: str) -> str:
+    return f"{name} 동행 이탈"
+
+
 def format_level_up_log(
     actor_name: str,
     level: int,

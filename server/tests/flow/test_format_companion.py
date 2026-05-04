@@ -3,6 +3,7 @@ from src.flow.format import (
     format_recruit_failure_log,
     format_recruit_critical_failure_log,
     format_dismiss_log,
+    format_dismiss_turn_log,
 )
 
 
@@ -36,3 +37,7 @@ def test_dismiss_log():
 
 def test_dismiss_log_with_vowel_ending():
     assert format_dismiss_log("리나") == "리나가 일행에서 빠집니다."
+
+
+def test_dismiss_turn_log():
+    assert format_dismiss_turn_log("에드릭") == "에드릭 동행 이탈"
