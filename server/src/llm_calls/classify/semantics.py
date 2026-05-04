@@ -238,12 +238,12 @@ def _check_recruit(output: RecruitAction, surroundings: dict[str, Any]) -> None:
     if int(ent.get("relations_player") or 0) < 0:
         raise JudgeSemanticError(
             f"recruit target {output.target!r} is hostile (relations_player < 0). "
-            f"Use 'pass' or 'reject'."
+            f"Use 'pass'."
         )
     if bool(ent.get("protected")):
         raise JudgeSemanticError(
             f"recruit target {output.target!r} is protected (NPC unfit for adventuring). "
-            f"Use 'pass' or 'reject'."
+            f"Use 'pass'."
         )
     companions = surroundings.get("companions") or []
     if output.target in companions:

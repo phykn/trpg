@@ -205,6 +205,14 @@ def format_dismiss_turn_log(name: str) -> str:
     return f"{name} 동행 이탈"
 
 
+def format_recruit_success_turn_log(name: str) -> str:
+    return f"{name} 동료 합류"
+
+
+def format_recruit_failure_turn_log(name: str) -> str:
+    return f"{name} 동료 영입 실패"
+
+
 def format_level_up_log(
     actor_name: str,
     level: int,

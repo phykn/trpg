@@ -4,6 +4,8 @@ from src.flow.format import (
     format_recruit_critical_failure_log,
     format_dismiss_log,
     format_dismiss_turn_log,
+    format_recruit_success_turn_log,
+    format_recruit_failure_turn_log,
 )
 
 
@@ -41,3 +43,11 @@ def test_dismiss_log_with_vowel_ending():
 
 def test_dismiss_turn_log():
     assert format_dismiss_turn_log("에드릭") == "에드릭 동행 이탈"
+
+
+def test_recruit_success_turn_log():
+    assert format_recruit_success_turn_log("에드릭") == "에드릭 동료 합류"
+
+
+def test_recruit_failure_turn_log():
+    assert format_recruit_failure_turn_log("에드릭") == "에드릭 동료 영입 실패"

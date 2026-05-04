@@ -560,7 +560,9 @@ async def _dispatch(
         return
 
     if isinstance(result, DismissAction):
-        async for ev in run_dismiss(state, save_repo, result.target, dirty, to_front_fn):
+        async for ev in run_dismiss(
+            state, scenario_repo, save_repo, client, result.target, dirty, to_front_fn
+        ):
             yield ev
         return
 

@@ -125,6 +125,7 @@ async def run_roll(
     push_log_entry(state, roll_log, dirty)
     yield {"type": "log_entry", "data": roll_log.model_dump()}
 
+    # Recruit rolls don't grant XP — they're social judgment calls, not growth events. Skip the XP/narrate stat-roll path entirely.
     if pending.kind == "recruit":
         async for ev in handle_recruit_roll_result(state, pending, grade, dirty):
             yield ev

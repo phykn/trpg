@@ -6,6 +6,7 @@ from src.llm_calls.classify.schema import RecruitAction
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
+
 def _setup_state(fresh_state, *, edric_affinity=50):
     fresh_state.characters["player_01"] = Character(
         id="player_01",
@@ -126,3 +127,40 @@ async def test_recruit_via_run_turn(
     assert state.pending_check is not None
     assert state.pending_check.kind == "recruit"
     assert state.pending_check.target == "npc.edric"
+
+
+async def test_recruit_target_missing_is_noop(fresh_state, tmp_data, collect):
+    """Defensive: classify should reject this, but if it slips through, no-op safely."""
+    fresh_state.characters["player_01"] = Character(
+        id="player_01",
+        name="주인공",
+        race_id="human",
+        is_player=True,
+        location_id="plaza_01",
+        stats=Stats(STR=10, DEX=10, CON=10, INT=10, WIS=10, CHA=12),
+        hp=20,
+        max_hp=20,
+        companions=[],
+    )
+    save_repo = LocalFsSaveRepo(saves_dir=str(tmp_data))
+    dirty = Dirty()
+
+    await collect(
+        run_recruit(fresh_state, save_repo, "에드릭, 함께 가자", "npc.unknown", dirty, None)
+    )
+
+    assert fresh_state.pending_check is None
+
+
+async def test_recruit_already_companion_is_noop(fresh_state, tmp_data, collect):
+    """Defensive: classify rejects already-companion, but flow guards too."""
+    state = _setup_state(fresh_state, edric_affinity=50)
+    state.characters["player_01"].companions = ["npc.edric"]  # ssot-allow: test setup
+    save_repo = LocalFsSaveRepo(saves_dir=str(tmp_data))
+    dirty = Dirty()
+
+    await collect(
+        run_recruit(state, save_repo, "에드릭, 함께 가자", "npc.edric", dirty, None)
+    )
+
+    assert state.pending_check is None

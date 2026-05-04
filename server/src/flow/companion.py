@@ -9,7 +9,8 @@ from ..domain.errors import PersistenceFailed
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
 from ..mapping.to_front import pending_check_to_front
-from ..persistence.repo import SaveRepo
+from ..llm_calls.classify.schema import PassAction
+from ..persistence.repo import SaveRepo, ScenarioRepo
 from ..rules import RULES
 from ..rules.dc import compute_required_roll
 from .dirty import Dirty, ToFrontFn, finalize, flush, push_act
@@ -20,7 +21,10 @@ from .format import (
     format_recruit_critical_failure_log,
     format_recruit_failure_log,
     format_recruit_success_log,
+    format_recruit_success_turn_log,
+    format_recruit_failure_turn_log,
 )
+from .narrate import stream_narrate_tail
 
 
 def _clamp(v: int, lo: int, hi: int) -> int:
@@ -91,14 +95,15 @@ async def run_recruit(
 
 async def run_dismiss(
     state: GameState,
+    scenario_repo: ScenarioRepo,
     save_repo: SaveRepo,
+    client,  # LLMClient | None — None on engine-only test path
     target_id: str,
     dirty: Dirty,
     to_front_fn: ToFrontFn | None,
 ) -> AsyncIterator[dict]:
     """Remove target_id from the player's companion list. No roll. No affinity change.
-    Pushes a system card + sets previous_phase_signal so next narrate frames
-    the parting in prose."""
+    Pushes a system card + fires inline narrate (mirrors recruit roll branch)."""
     player = state.characters[state.player_id]
     if target_id not in player.companions:  # ssot-allow: write path guard, not a relation scan
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
@@ -121,6 +126,23 @@ async def run_dismiss(
     state.previous_phase_signal = f"companion_dismissed:{target_name}"
 
     state.turn_count += 1
+
+    if client is not None:
+        graph = state.graph()
+        signal = state.previous_phase_signal
+        state.previous_phase_signal = None
+        async for ev in stream_narrate_tail(
+            client,
+            state,
+            scenario_repo,
+            "",
+            dirty,
+            to_front_fn,
+            PassAction(action="pass"),
+            graph=graph,
+            previous_phase_signal=signal,
+        ):
+            yield ev
 
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
@@ -162,7 +184,7 @@ async def handle_recruit_roll_result(
             state,
             dirty,
             format_recruit_success_log(target_name),
-            turn_summary=f"{target_name} 동료 합류",
+            turn_summary=format_recruit_success_turn_log(target_name),
         )
         state.previous_phase_signal = f"companion_joined:{target_name}"
         return
@@ -176,13 +198,13 @@ async def handle_recruit_roll_result(
             state,
             dirty,
             format_recruit_critical_failure_log(target_name),
-            turn_summary=f"{target_name} 동료 영입 실패",
+            turn_summary=format_recruit_failure_turn_log(target_name),
         )
     else:
         yield push_act(
             state,
             dirty,
             format_recruit_failure_log(target_name),
-            turn_summary=f"{target_name} 동료 영입 실패",
+            turn_summary=format_recruit_failure_turn_log(target_name),
         )
     state.previous_phase_signal = f"companion_refused:{target_name}"

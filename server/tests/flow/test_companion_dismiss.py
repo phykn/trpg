@@ -6,6 +6,9 @@ from src.llm_calls.classify.schema import DismissAction
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
+_SCENARIO_REPO = LocalFsScenarioRepo(profile_dir="<unused>")
+
+
 def _setup_state_with_companion(fresh_state):
     fresh_state.characters["player_01"] = Character(
         id="player_01",
@@ -35,7 +38,9 @@ async def test_dismiss_removes_companion(fresh_state, tmp_data, collect):
     save_repo = LocalFsSaveRepo(saves_dir=str(tmp_data))
     dirty = Dirty()
 
-    events = await collect(run_dismiss(state, save_repo, "npc.edric", dirty, None))
+    events = await collect(
+        run_dismiss(state, _SCENARIO_REPO, save_repo, None, "npc.edric", dirty, None)
+    )
 
     assert "npc.edric" not in state.characters["player_01"].companions
     assert state.previous_phase_signal == "companion_dismissed:에드릭"
@@ -72,7 +77,9 @@ async def test_dismiss_target_not_in_companions_no_op(fresh_state, tmp_data, col
     save_repo = LocalFsSaveRepo(saves_dir=str(tmp_data))
     dirty = Dirty()
 
-    await collect(run_dismiss(state, save_repo, "npc.edric", dirty, None))
+    await collect(
+        run_dismiss(state, _SCENARIO_REPO, save_repo, None, "npc.edric", dirty, None)
+    )
 
     assert "npc.edric" not in state.characters["player_01"].companions
     assert state.previous_phase_signal != "companion_dismissed:에드릭"
@@ -83,7 +90,9 @@ async def test_dismiss_records_turn_log(fresh_state, tmp_data, collect):
     save_repo = LocalFsSaveRepo(saves_dir=str(tmp_data))
     dirty = Dirty()
 
-    await collect(run_dismiss(state, save_repo, "npc.edric", dirty, None))
+    await collect(
+        run_dismiss(state, _SCENARIO_REPO, save_repo, None, "npc.edric", dirty, None)
+    )
 
     assert any(
         getattr(entry, "summary", None) == "에드릭 동행 이탈"
