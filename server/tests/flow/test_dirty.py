@@ -44,7 +44,7 @@ def test_register_kill_cascades_giver_death(fresh_state):
     assert fresh_state.quests["q_villager"].status == "failed"
     assert fresh_state.quests["q_villager"].fail_reason == "의뢰자 사망"
     assert fresh_state.active_quest_id is None
-    texts = [e.model_dump().get("text", "") for e in dirty.log]
+    texts = [text for text, _ in dirty.deferred_quest_cards]
     assert any("퀘스트 실패: 촌장의 부탁" in t and "의뢰자 사망" in t for t in texts), (
         texts
     )

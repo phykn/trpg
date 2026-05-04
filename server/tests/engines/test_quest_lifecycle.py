@@ -94,7 +94,7 @@ def test_abandon_quest_emits_fail_card(fresh_state):
     q.abandon_quest(state, "q1", dirty)
     assert state.quests["q1"].status == "failed"
     assert state.active_quest_id is None
-    texts = [e.model_dump().get("text", "") for e in dirty.log]
+    texts = [text for text, _ in dirty.deferred_quest_cards]
     assert any("퀘스트 실패: 촌장의 부탁" in t and "의뢰 포기" in t for t in texts), (
         texts
     )

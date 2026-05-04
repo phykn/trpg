@@ -550,7 +550,7 @@ def test_apply_rewards_emits_success_card(fresh_state):
     state.quests[quest.id] = quest
     dirty = Dirty()
     q._apply_rewards(state, quest, dirty)
-    texts = [e.model_dump().get("text", "") for e in dirty.log]
+    texts = [text for text, _ in dirty.deferred_quest_cards]
     assert any("퀘스트 성공: 촌장의 부탁" in t for t in texts), texts
     assert any("+EXP 80" in t and "+GOLD 40" in t for t in texts), texts
     assert state.characters["player_01"].xp_pool == 80
@@ -618,5 +618,5 @@ def test_apply_rewards_card_on_check_quests_path(fresh_state):
     assert changed == ["q1"]
     assert state.quests["q1"].status == "completed"
     assert state.active_quest_id is None
-    texts = [e.model_dump().get("text", "") for e in dirty.log]
+    texts = [text for text, _ in dirty.deferred_quest_cards]
     assert any("퀘스트 성공: 산문 도적 토벌" in t for t in texts), texts

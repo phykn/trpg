@@ -31,6 +31,7 @@ from ..context import (
 from .dirty import (
     Dirty,
     ToFrontFn,
+    flush_deferred_quest_cards,
     next_log_id,
     push_act,
     push_dialogue,
@@ -259,6 +260,11 @@ async def consume_narrate(
                 yield {"type": "log_entry", "data": entry.model_dump()}
         except NotImplementedError:
             pass  # judge LLM stub; live turns stay safe
+    # Drain deferred quest cards stashed by _apply_rewards / _fail_quest during
+    # apply_changes / npc_dialogue_quest_check. Keeps quest 성공/실패 cards
+    # AFTER the gm body that motivated them.
+    for ev in flush_deferred_quest_cards(state, dirty):
+        yield ev
 
 
 async def stream_narrate_tail(

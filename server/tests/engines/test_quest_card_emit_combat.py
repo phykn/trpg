@@ -70,7 +70,10 @@ def _build() -> tuple[GameState, Dirty]:
     return state, Dirty()
 
 
-def test_combat_kill_completes_quest_and_pushes_success_card():
+def test_combat_kill_completes_quest_and_stashes_success_card():
+    """Reward + quest state must apply immediately. Success card text must be
+    queued in dirty.deferred_quest_cards so caller (combat_phase) can flush it
+    AFTER 전투 결과 — not directly into log_entries here."""
     state, dirty = _build()
     apply_attack_to_defender(
         state,
@@ -80,21 +83,20 @@ def test_combat_kill_completes_quest_and_pushes_success_card():
         dirty=dirty,
         attacker_id="player_01",
     )
-    # Reward applied
+    # Reward applied immediately
     player = state.characters["player_01"]
     assert player.gold == 40
     assert player.xp_pool == 80
     assert state.quests["q_chief_request"].status == "completed"
-    # Success card present in state.log_entries
-    success_entries = [
+    # Success card stashed for deferred flush — must NOT be in log_entries yet
+    early_log_success = [
         e for e in state.log_entries
         if e.kind == "act" and "퀘스트 성공" in e.text
     ]
-    assert success_entries, [(e.kind, e.text) for e in state.log_entries]
-    assert "촌장의 부탁" in success_entries[0].text
-    # And in dirty.log so SSE / persistence both see it
-    dirty_success = [
-        e for e in dirty.log
-        if e.kind == "act" and "퀘스트 성공" in e.text
-    ]
-    assert dirty_success, [(e.kind, e.text) for e in dirty.log]
+    assert not early_log_success, [(e.kind, e.text) for e in state.log_entries]
+    # Should be in deferred queue
+    assert dirty.deferred_quest_cards, dirty.deferred_quest_cards
+    text, summary = dirty.deferred_quest_cards[0]
+    assert "퀘스트 성공" in text
+    assert "촌장의 부탁" in text
+    assert summary is not None and "촌장의 부탁" in summary

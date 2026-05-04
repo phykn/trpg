@@ -96,15 +96,11 @@ def _fail_quest(state: GameState, quest: Quest, reason: str, dirty) -> None:
     if entities is not None:
         entities.add(("quests", quest.id))
     if full is not None:
-        from ..flow.dirty import push_act
         from ..flow.format import format_quest_fail_log
 
         text = format_quest_fail_log(title=quest.title, reason=reason)
-        push_act(
-            state,
-            full,
-            text,
-            turn_summary=f"퀘스트 «{quest.title}» 실패 ({reason})",
+        full.deferred_quest_cards.append(
+            (text, f"퀘스트 «{quest.title}» 실패 ({reason})")
         )
     if state.active_quest_id == quest.id:
         state.active_quest_id = None
@@ -166,7 +162,6 @@ def _apply_rewards(state: GameState, quest: Quest, dirty) -> None:
         entities.add(("characters", actor.id))
     if full is not None:
         # Inline imports avoid the engines→flow cycle (flow already imports engines).
-        from ..flow.dirty import push_act
         from ..flow.format import format_quest_success_log
 
         text = format_quest_success_log(
@@ -175,11 +170,8 @@ def _apply_rewards(state: GameState, quest: Quest, dirty) -> None:
             gold=quest.rewards.gold,
             items=granted_item_names,
         )
-        push_act(
-            state,
-            full,
-            text,
-            turn_summary=f"퀘스트 «{quest.title}» 성공, 보상 수령",
+        full.deferred_quest_cards.append(
+            (text, f"퀘스트 «{quest.title}» 성공, 보상 수령")
         )
     if state.active_quest_id == quest.id:
         state.active_quest_id = None
