@@ -32,6 +32,7 @@ def _seed_state(fresh_state, *, risk="safe", encounters=None):
         is_player=True,
         location_id="plaza_01",
         stats=Stats(),
+        gold=100,
         hp=4,
         max_hp=20,
         mp=2,
@@ -160,6 +161,7 @@ async def test_no_location_falls_back_to_recovery(fresh_state):
         is_player=True,
         location_id=None,
         stats=Stats(),
+        gold=100,
         hp=1,
         max_hp=20,
     )

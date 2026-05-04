@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import ValidationError
 
 from ..domain.clock import next_dawn_turn
-from ..domain.errors import LLMUnavailable
+from ..domain.errors import LLMUnavailable, RestInsufficientGold
 from ..domain.state import GameState
 from ..rules import RULES
 
@@ -32,6 +32,13 @@ async def attempt_rest(
     """
     rng_obj = rng or random
     actor = state.characters[actor_id]
+
+    # Charged regardless of ambush vs full_recovery — the cost is for the rest attempt itself.
+    if actor.gold < RULES.recovery.cost_gold:
+        raise RestInsufficientGold("rest insufficient gold")
+    actor.gold -= RULES.recovery.cost_gold
+    if dirty is not None:
+        dirty.add(("characters", actor_id))
 
     def full_recover() -> None:
         # Defensive: the upstream /turn flow already blocks dead players from resting,

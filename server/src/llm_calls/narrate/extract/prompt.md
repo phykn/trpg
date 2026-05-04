@@ -14,7 +14,7 @@ Extract from what the body explicitly describes. **Never reinterpret, expand, or
 - `surroundings` — same shape the body saw: `entities` (alive NPCs only), `corpses` (dead NPCs), `merchants`, `inventory`, etc.
 - `target_view` — deep target data on `pass`/`roll` (NPC alive/dead, location, item — see body prompt for field details). null on `reject`/`intro`.
 - `grade` — set only on `roll` (5 grades), null otherwise. The body has already used this for tone; you reuse it for `affinity` grade only when the social act actually landed in body (see "affinity emission" below).
-- `previous_phase_signal` — one-shot signal from the prior turn (currently only `"downed_recovered"`). When set, the body is a recovery beat; this turn is **not** a social act → no `affinity`, `state_changes=[]`, `suggestions` should be 1-3 recovery beats (자세를 추스른다 / 무기를 다시 쥔다 / 거리를 둔다 류).
+- `previous_phase_signal` — one-shot signal from the prior turn (currently only `"downed_recovered"`). When set, the body is a recovery beat; this turn is **not** a social act → no `affinity`, `state_changes=[]`.
 
 ## Output
 
@@ -97,16 +97,17 @@ BAD `{"guard_01":"플레이어가 통과함","player_01":"플레이어가 통과
 
 UI chips; clicking fills the input box, free typing remains.
 
-- **When**: `intro` always 2-3. Branch points (NPC requests, forks, just-before-trade-or-combat): 1-3. Otherwise `[]`. `reject` is always `[]`. On `previous_phase_signal="downed_recovered"`, 1-3 recovery beats.
-- **What**: **Player's direct *actions* at the current focus (current location · current addressee) only.** Verbs only — 묻는다·청한다·요청한다·위협한다·거절한다·관찰한다·시도한다·거래한다·교섭한다·도구를 쓴다, etc. Seed entities only. Short Korean line (8-20 chars), declarative ending (`-ㄴ다`/`-는다`). No numeric/HP/체력 vocabulary ("회복약 마신다" OK; "HP를 회복한다"·"체력을 본다" forbidden). No state-mismatched candidates (full HP suggesting healing potion; an item not in inventory).
-- **No navigation/approach suggestions**: place/person transitions are handled by the front panel — verbs like "X에게 다가간다", "Y쪽으로 걸어간다", "X에게 다가가 말을 건다", "X를 한쪽으로 데려간다" are forbidden.
-- **Count**: 0-3 (with `intro` forced to 2-3 per "When"; `reject` always `[]`). Outside branch points, `[]`. No out-of-context picks — only actions that flow naturally from the body just streamed.
+- 현재 문맥에 맞고
+- 한국어 20자 이내
+- 현재 장면에서 어울리는 행동을 추천
+
+If nothing fitting comes to mind, return `suggestions=[]` — the client
+hides the strip. No fallback, no canned trio, no re-call.
 
 ## Branch-specific forced shapes
 
-- `intro` → `state_changes=[]`, `memorable=false`, `memory_targets=[]`, `memory={}`, `memory_links={}`, `importance=null`. `suggestions` is 2-3.
-- `reject` → `state_changes=[]`, `memorable=false`, `memory_targets=[]`, `memory={}`, `memory_links={}`, `importance=null`, `suggestions=[]`.
-- `previous_phase_signal="downed_recovered"` → `state_changes=[]`, no `affinity`. `suggestions` is 1-3 recovery beats.
+- `intro` → `state_changes=[]`, `memorable=false`, `memory_targets=[]`, `memory={}`, `memory_links={}`, `importance=null`.
+- `reject` → `state_changes=[]`, `memorable=false`, `memory_targets=[]`, `memory={}`, `memory_links={}`, `importance=null`.
 
 ## Empty-fallback preference (mandatory)
 

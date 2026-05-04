@@ -6,7 +6,7 @@ from ..domain.entities import Quest
 from ..domain.errors import InventoryInvalid
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph
-from ..ontology.queries import giver_of, kill_targets_of
+from ..ontology.queries import connections_of, giver_of, kill_targets_of
 from .inventory.carry import check_can_carry
 
 # Quest evaluation accepts either a plain entity-tracking set (legacy callers)
@@ -270,8 +270,8 @@ def _trigger_matches(
     event_type: str,
     target_id: str | None,
 ) -> bool:
-    """Exact-id match, or character_death fallback by location for hostile spawns
-    whose runtime ids don't equal the scenario's literal trigger target_id."""
+    """Exact-id match, or character_death fallback by location / race for hostile
+    spawns whose runtime ids don't equal the scenario's literal trigger target_id."""
     if trigger.type != event_type:
         return False
     if trigger.target_id == target_id:
@@ -282,9 +282,21 @@ def _trigger_matches(
     victim = state.characters.get(target_id)
     if expected is None or victim is None:
         return False
-    if expected.location_id is None or victim.location_id != expected.location_id:
+    # Same-location fallback (existing behavior, race-agnostic).
+    if expected.location_id is not None and victim.location_id == expected.location_id:
+        return victim.combat_behavior is not None
+    # Race-match fallback for dynamic spawns whose runtime id differs from the
+    # seed but share the seed's race. Restricted to the expected location's
+    # direct neighbors so cross-region quests don't co-progress on the same kill.
+    if expected.race_id is None or victim.race_id != expected.race_id:
         return False
-    return victim.combat_behavior is not None
+    if victim.combat_behavior is None:
+        return False
+    if victim.location_id is None or expected.location_id is None:
+        return False
+    graph = state.graph()
+    neighbor_ids = {e.to_id for e in connections_of(graph, expected.location_id)}
+    return victim.location_id in neighbor_ids
 
 
 def check_quests(

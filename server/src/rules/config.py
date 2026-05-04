@@ -51,6 +51,7 @@ class RecoveryConfig(_F):
         "risky": 0.25,
         "dangerous": 0.6,
     }
+    cost_gold: int = 10
 
 
 class GrowthConfig(_F):

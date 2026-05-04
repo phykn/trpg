@@ -8,6 +8,7 @@ _ERROR_PHRASES_RAW: list[tuple[str, str]] = [
         "장착 중인 물건은 팔 수 없습니다 (먼저 해제하셔야 합니다)",
     ),
     ("npc has not enough gold", "상대의 금화가 부족합니다"),
+    ("rest insufficient gold", "여관에 묵을 금화가 부족합니다"),
     ("not enough gold", "금화가 부족합니다"),
     ("npc has no such item", "그쪽은 그 물건을 가지고 있지 않습니다"),
     ("player has no such item", "그 물건을 가지고 있지 않습니다"),

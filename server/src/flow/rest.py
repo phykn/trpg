@@ -4,6 +4,7 @@ is empty and an LLM is wired, summon an ad-hoc enemy."""
 import random
 from collections.abc import AsyncIterator
 
+from ..domain.errors import RestInsufficientGold
 from ..domain.state import GameState
 from ..engines import recovery as recovery_engine
 from ..llm.client import LLMClient
@@ -14,6 +15,7 @@ from .buff_tick import tick_turn_buffs
 from .combat_auto import PlayerAction
 from .combat_phase import start_combat_and_drive_auto
 from .dirty import Dirty, ToFrontFn, finalize, push_act
+from .error_phrases import humanize_engine_error
 from .format import format_rest_log
 
 
@@ -47,9 +49,17 @@ async def run_rest(
 
         summon_cb = _summon
 
-    outcome, enemy_ids = await recovery_engine.attempt_rest(
-        state, state.player_id, rng=rng, dirty=dirty.entities, summon=summon_cb
-    )
+    try:
+        outcome, enemy_ids = await recovery_engine.attempt_rest(
+            state, state.player_id, rng=rng, dirty=dirty.entities, summon=summon_cb
+        )
+    except RestInsufficientGold as exc:
+        yield push_act(state, dirty, humanize_engine_error(exc))
+        if to_front_fn is not None:
+            yield {"type": "state", "data": to_front_fn(state)}
+        async for ev in finalize(state, save_repo, dirty, to_front_fn):
+            yield ev
+        return
     actor = state.characters[state.player_id]
 
     if outcome == "encounter":

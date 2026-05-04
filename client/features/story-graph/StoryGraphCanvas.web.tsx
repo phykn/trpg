@@ -109,7 +109,7 @@ function toElements(
 
 export function StoryGraphCanvas({
   graph,
-  height = 320,
+  height,
   accessibilityLabel = '현재 스토리 그래프',
   selectedNodeId = null,
   onNodeSelect,
@@ -121,6 +121,7 @@ export function StoryGraphCanvas({
   unseenNodeIds,
 }: {
   graph: StoryGraphModel;
+  /** Explicit pixel height. Omit to let the component fill its parent (pair with an aspectRatio wrapper). */
   height?: number;
   accessibilityLabel?: string;
   selectedNodeId?: string | null;
@@ -214,14 +215,6 @@ export function StoryGraphCanvas({
             'overlay-color': colors.accent.fg,
             'overlay-opacity': 0.12,
             'overlay-padding': 4,
-          },
-        },
-        {
-          selector: 'node[isNew = "true"]',
-          style: {
-            'overlay-color': colors.accent.fg,
-            'overlay-opacity': 0.18,
-            'overlay-padding': 5,
           },
         },
         {
@@ -338,7 +331,7 @@ export function StoryGraphCanvas({
         borderStyle: 'solid',
         borderWidth: 1,
         cursor: onNodeSelect ? 'pointer' : 'default',
-        height,
+        height: height ?? '100%',
         overflow: 'hidden',
         width: '100%',
       }}

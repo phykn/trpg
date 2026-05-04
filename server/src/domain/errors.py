@@ -59,3 +59,9 @@ class CombatStateInvalid(DomainError):
     state-machine inconsistency around combat lifecycle."""
 
     pass
+
+
+class RestInsufficientGold(DomainError):
+    """Rest attempt failed because the actor has fewer gold than RULES.recovery.cost_gold."""
+
+    pass
