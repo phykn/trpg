@@ -24,7 +24,7 @@ def _clamp(v: int, lo: int, hi: int) -> int:
 def _recruit_dc(state: GameState, target_id: str) -> int:
     target = state.characters.get(target_id)
     rel = target.relations.get(state.player_id, 0) if target else 0
-    base = RULES.companions.recruit_base_dc  # ssot-allow: RULES config read, not entity relation field
+    base = RULES.companions.recruit_base_dc  # ssot-allow: RULES config attribute, not entity.companions list
     return base - _clamp(rel // 10, -5, 5)
 
 

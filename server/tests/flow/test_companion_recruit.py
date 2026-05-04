@@ -85,3 +85,20 @@ async def test_recruit_dc_low_affinity(fresh_state, tmp_data, collect):
 
     # base 12 - clamp(-30/10=-3, -5, +5) = 12 - (-3) = 15
     assert state.pending_check.dc == 15
+
+
+async def test_recruit_dc_clamps_at_low_affinity(fresh_state, tmp_data, collect):
+    """Negative affinity clamp boundary: -50 // 10 = -5, hits the floor."""
+    state = _setup_state(fresh_state, edric_affinity=-50)
+    # Lower the friendly threshold check would normally trip here, but recruit
+    # is gated by classify semantics, not by the DC. The DC computation itself
+    # should clamp.
+    save_repo = LocalFsSaveRepo(saves_dir=str(tmp_data))
+    dirty = Dirty()
+
+    await collect(
+        run_recruit(state, save_repo, "에드릭, 함께 가자", "npc.edric", dirty, None)
+    )
+
+    # base 12 - clamp(-50 // 10 = -5, -5, +5) = 12 - (-5) = 17
+    assert state.pending_check.dc == 17
