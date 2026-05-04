@@ -48,7 +48,7 @@ async def test_history_and_dialogue_truncated_to_last_window(state_with_log):
         events=[],
         rounds_run=1,
         outcome="victory",
-        player_start=PlayerNarrateSnapshot(name="주인공", alive=True),
+        player_start=PlayerNarrateSnapshot(alive=True),
     )
     input_ = await build_narrate_input(
         state_with_log,
@@ -93,7 +93,7 @@ async def test_empty_log_yields_empty_lists(fresh_state):
         events=[],
         rounds_run=1,
         outcome="victory",
-        player_start=PlayerNarrateSnapshot(name="주인공", alive=True),
+        player_start=PlayerNarrateSnapshot(alive=True),
     )
     input_ = await build_narrate_input(
         fresh_state,

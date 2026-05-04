@@ -12,7 +12,8 @@ from ..llm_calls.combat_narrate.schema import (
     CombatNarrateInput,
     CombatOutcome,
     CombatRoundEvent,
-    EnemyNarrateSnapshot,
+    EnemyEndSnapshot,
+    EnemyStartSnapshot,
     PlayerNarrateSnapshot,
 )
 from ..context.layers import build_world_layer
@@ -65,8 +66,9 @@ class AutoCombatResult:
     player_hp_before: int = 0
     player_hp_after: int = 0
     player_max_hp: int = 0
-    enemy_starts: list[EnemyNarrateSnapshot] = field(default_factory=list)
+    enemy_starts: list[EnemyStartSnapshot] = field(default_factory=list)
     player_start: PlayerNarrateSnapshot | None = None
+    player_name: str = ""  # used by format.py for log lines; name not carried on PlayerNarrateSnapshot
     # True iff this fight opened with the player ambushing the enemy (round 1 enemy skip).
     player_surprise: bool = False
 
@@ -138,7 +140,7 @@ def _emit_round_event(
     )
 
 
-def _enemy_snapshot(state: GameState, enemy_id: str) -> EnemyNarrateSnapshot:
+def _enemy_start_snapshot(state: GameState, enemy_id: str) -> EnemyStartSnapshot:
     c = state.characters[enemy_id]
     race_id = race_of(state.graph(), enemy_id)
     race = state.races.get(race_id) if race_id else None
@@ -147,7 +149,7 @@ def _enemy_snapshot(state: GameState, enemy_id: str) -> EnemyNarrateSnapshot:
         race_payload = {"name": race.name}
         if race.description:
             race_payload["description"] = race.description
-    return EnemyNarrateSnapshot(
+    return EnemyStartSnapshot(
         name=c.name,
         alive=c.alive,
         race=race_payload,
@@ -155,6 +157,11 @@ def _enemy_snapshot(state: GameState, enemy_id: str) -> EnemyNarrateSnapshot:
         description=c.description or None,
         gender=c.gender if c.gender != "none" else None,
     )
+
+
+def _enemy_end_snapshot(state: GameState, enemy_id: str) -> EnemyEndSnapshot:
+    c = state.characters[enemy_id]
+    return EnemyEndSnapshot(name=c.name, alive=c.alive)
 
 
 def _location_payload(state: GameState) -> dict:
@@ -392,7 +399,7 @@ def run_auto_combat(
     player_surprise = cs.surprise == "player"
     enemy_ids_at_start = list(cs.enemy_ids)
     enemy_starts = [
-        _enemy_snapshot(state, eid)
+        _enemy_start_snapshot(state, eid)
         for eid in enemy_ids_at_start
         if eid in state.characters
     ]
@@ -402,7 +409,7 @@ def run_auto_combat(
         for eid in enemy_ids_at_start
         if eid in state.characters
     }
-    player_start = PlayerNarrateSnapshot(name=player.name, alive=player.alive)
+    player_start = PlayerNarrateSnapshot(alive=player.alive)
     player_hp_before = player.hp
     player_revive_coins_before = player.revive_coins
 
@@ -566,6 +573,7 @@ def run_auto_combat(
         player_max_hp=player.max_hp,
         enemy_starts=enemy_starts,
         player_start=player_start,
+        player_name=player.name,
         player_surprise=player_surprise,
     )
 
@@ -580,7 +588,7 @@ async def build_narrate_input(
     player = state.characters[state.player_id]
     world = await build_world_layer(scenario_repo, state.profile, missing_ok=True)
     enemies_end = [
-        _enemy_snapshot(state, h.id)
+        _enemy_end_snapshot(state, h.id)
         for h in result.enemy_hits
         if h.id in state.characters
     ]
@@ -600,7 +608,7 @@ async def build_narrate_input(
         rounds_run=result.rounds_run,
         outcome=result.outcome,
         player_start=result.player_start,
-        player_end=PlayerNarrateSnapshot(name=player.name, alive=player.alive),
+        player_end=PlayerNarrateSnapshot(alive=player.alive),
         enemies_start=result.enemy_starts,
         enemies_end=enemies_end,
         events=result.events,

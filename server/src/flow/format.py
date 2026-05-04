@@ -312,11 +312,7 @@ def format_combat_outcome_summary(result: "AutoCombatResult") -> str | None:
                 format_combat_enemy_hit(h.name, h.damage_total, h.hp_after, h.max_hp)
             )
     if result.player_damage_total > 0 or result.player_revived:
-        player_name = (
-            result.player_start.name
-            if result.player_start
-            else _COMBAT_PLAYER_FALLBACK_NAME
-        )
+        player_name = result.player_name or _COMBAT_PLAYER_FALLBACK_NAME
         if result.player_revived:
             # Show chronological two-step: downed at 0, then revived.
             lines.append(
@@ -347,11 +343,7 @@ def format_combat_outcome_summary(result: "AutoCombatResult") -> str | None:
 
 def format_combat_event_summary(result: "AutoCombatResult") -> str:
     """One-line Korean summary of a combat result for injection into narrate prompt."""
-    player_name = (
-        result.player_start.name
-        if result.player_start
-        else _COMBAT_PLAYER_FALLBACK_NAME
-    )
+    player_name = result.player_name or _COMBAT_PLAYER_FALLBACK_NAME
     parts: list[str] = []
     for h in result.enemy_hits:
         if h.killed:

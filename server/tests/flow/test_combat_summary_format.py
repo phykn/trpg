@@ -1,8 +1,8 @@
 from src.flow.combat_auto import (
     AutoCombatResult,
     EnemyHit,
-    PlayerNarrateSnapshot,
 )
+from src.llm_calls.combat_narrate.schema import PlayerNarrateSnapshot
 from src.flow.format import format_combat_outcome_summary
 
 
@@ -21,7 +21,8 @@ def _result(**kwargs) -> AutoCombatResult:
         player_hp_after=20,
         player_max_hp=20,
         enemy_starts=[],
-        player_start=PlayerNarrateSnapshot(name="주인공", alive=True),
+        player_start=PlayerNarrateSnapshot(alive=True),
+        player_name="주인공",
     )
     defaults.update(kwargs)
     return AutoCombatResult(**defaults)

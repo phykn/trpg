@@ -1,8 +1,8 @@
 from src.flow.combat_auto import (
     AutoCombatResult,
     EnemyHit,
-    PlayerNarrateSnapshot,
 )
+from src.llm_calls.combat_narrate.schema import PlayerNarrateSnapshot
 from src.flow.format import (
     format_combat_enemy_hit,
     format_combat_enemy_killed,
@@ -84,7 +84,8 @@ def _result(
         player_hp_after=player_hp_after,
         player_max_hp=player_max_hp,
         enemy_starts=[],
-        player_start=PlayerNarrateSnapshot(name=player_start_name, alive=True),
+        player_start=PlayerNarrateSnapshot(alive=True),
+        player_name=player_start_name,
     )
 
 
@@ -151,13 +152,13 @@ def test_format_combat_outcome_summary_revived():
     assert "가까스로 일어남 (소생 2/3, HP 0→1)" in text
 
 
-def test_format_combat_outcome_summary_player_start_none_uses_fallback():
+def test_format_combat_outcome_summary_empty_player_name_uses_fallback():
     result = _result(
         player_damage_total=4,
         player_hp_after=16,
         player_max_hp=20,
     )
-    result.player_start = None  # type: ignore[assignment]
+    result.player_name = ""  # fallback path
     text = format_combat_outcome_summary(result)
     assert text is not None
     assert "주인공 4 피해" in text

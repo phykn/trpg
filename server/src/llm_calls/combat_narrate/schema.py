@@ -42,20 +42,19 @@ class CombatRoundEvent(BaseModel):
 
 class PlayerNarrateSnapshot(BaseModel):
     """Player snapshot for combat_narrate. Player identity travels in
-    CombatNarrateInput.player_view, so this only carries the alive flag —
+    CombatNarrateInput.player_view; this only carries the alive flag —
     enough for the cinematic's downed/defeat tone."""
 
     model_config = ConfigDict(extra="forbid")
 
-    name: str
     alive: bool
 
 
-class EnemyNarrateSnapshot(BaseModel):
-    """Per-enemy snapshot for combat_narrate. Enemies have no side-channel
-    for identity, so race / appearance / description / gender ride here.
-    HP / max_hp are kept out — the prompt's grade-tone mapping covers
-    intensity, and numerics never belong in the cinematic body."""
+class EnemyStartSnapshot(BaseModel):
+    """Per-enemy snapshot at fight start. Enemies have no side-channel for
+    identity, so race / appearance / description / gender ride here for
+    opening cues. HP / max_hp are kept out — numerics never belong in the
+    cinematic body."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -65,6 +64,17 @@ class EnemyNarrateSnapshot(BaseModel):
     appearance: str | None = None
     description: str | None = None
     gender: str | None = None
+
+
+class EnemyEndSnapshot(BaseModel):
+    """Per-enemy snapshot at fight end — name + alive only, used for the
+    closing-tone branch (downed/defeat). Identity already covered by
+    enemies_start."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    alive: bool
 
 
 CombatOutcome = Literal[
@@ -87,8 +97,8 @@ class CombatNarrateInput(BaseModel):
     outcome: CombatOutcome
     player_start: PlayerNarrateSnapshot
     player_end: PlayerNarrateSnapshot
-    enemies_start: list[EnemyNarrateSnapshot]
-    enemies_end: list[EnemyNarrateSnapshot]
+    enemies_start: list[EnemyStartSnapshot]
+    enemies_end: list[EnemyEndSnapshot]
     events: list[CombatRoundEvent]
     # Build-up beats so the cinematic can reflect a setup turn (e.g. distraction, trap, bait) in round 1 prose.
     history: list[dict] = []
