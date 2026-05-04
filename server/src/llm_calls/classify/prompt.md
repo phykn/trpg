@@ -213,7 +213,7 @@ Roll tier (friction count → tier):
 | 철광석을 2골드에 판다 | `{"action":"sell","npc_id":"smith_01","item_id":"ore_01","agreed_price":2}` |
 | 값을 깎아달라 (haggle) | `{"action":"roll","tier":"보통","stat":"CHA","targets":["smith_01"],"reason":"방패 값을 깎으려 함"}` |
 
-`give` (with `inventory=[dagger_01("단검")]`, `entities=[hunter_01("사냥꾼")]`, `merchants=[hunter_01(stock=[bow_01("활")])]`, `corpses=[bandit_01(inventory=[gold_pouch_01("금화 주머니")])]`):
+`give` (with `inventory=[dagger_01("단검")]`, `entities=[hunter_01("사냥꾼", carryables=[{id:"bow_01", name:"활"}]), scout_01("정찰병 카리스", carryables=[{id:"npc_dagger_01", name:"단검"}])]`, `merchants=[hunter_01(stock=[bow_01("활")])]`, `corpses=[bandit_01(inventory=[gold_pouch_01("금화 주머니")])]`):
 
 | Input | Output |
 |---|---|
@@ -222,6 +222,7 @@ Roll tier (friction count → tier):
 | 산적의 시체에서 금화 주머니를 챙긴다 | `{"action":"give","from_id":"bandit_01","to_id":"player_01","item_id":"gold_pouch_01"}` |
 | 내 단검을 사냥꾼의 활과 바꾸자 | `{"action":"chain","parts":[{"action":"give","from_id":"player_01","to_id":"hunter_01","item_id":"dagger_01"},{"action":"give","from_id":"hunter_01","to_id":"player_01","item_id":"bow_01"}]}` (two-way swap — emitting only one direction strands the NPC's item) |
 | 단검 줄테니 활 줘 | `{"action":"chain","parts":[{"action":"give","from_id":"player_01","to_id":"hunter_01","item_id":"dagger_01"},{"action":"give","from_id":"hunter_01","to_id":"player_01","item_id":"bow_01"}]}` |
+| 카리스와 단검을 교환한다 | `{"action":"chain","parts":[{"action":"give","from_id":"player_01","to_id":"scout_01","item_id":"dagger_01"},{"action":"give","from_id":"scout_01","to_id":"player_01","item_id":"npc_dagger_01"}]}` (non-merchant NPC — npc-side `item_id` resolved through `entities[scout_01].carryables[*].id`, since 카리스는 `merchants`에 없음) |
 
 `pass` everyday:
 
