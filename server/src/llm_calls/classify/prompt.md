@@ -5,7 +5,7 @@ You classify a Korean player input. Output **one JSON object only** — no text,
 Input fields (in `surroundings`):
 
 - `location` — current place.
-- `entities` — player/npc/item/connection. Each entry has `id`, `name`, `type`, optional `state_tags`/`difficulty`/`protected`.
+- `entities` — player/npc/item/connection. Each entry has `id`, `name`, `type`. NPC entries also carry optional `gender?`, `race?`, `role?` (archetype string like 정찰병/노파), `friendly?` (boolean — set when affinity ≥ friendly threshold), `protected?`, `roles?` (functional flags: `merchant`/`quest_giver`). Connection entries carry optional `difficulty?`. `roles` (plural, functional) ≠ `role` (singular, archetype).
 - `corpses` — dead NPCs `{id, name, off_screen?}`. `off_screen=true` means a corpse in another location that has appeared in history. Not a target for combat/buy/sell.
 - `skills` — already level/MP-gated candidates only (each carries `id`).
 - `inventory` — each entry's `kind`: consumable/weapon/armor/trigger/misc.
@@ -113,7 +113,7 @@ Approaching a prop/NPC in the same location ("다가간다") is not movement —
 
 **tail_intent (optional)**: a short Korean prose sentence accepted only on `use`/`equip`/`unequip`/`buy`/`sell`/`give`/`move` (7 actions). It is appended verbatim after the engine's act-log line to preserve intent/flavor. **When to fill**: only when `player_input` carries explicit motive/flavor the engine template can't capture — e.g., `약초를 한 모금 마신다` → `use, tail_intent: "한 모금에 묵직한 약초 향이 입안에 번집니다"`. For plain inputs ("약초를 먹는다"), **omit**. The field doesn't exist on other actions (`combat`·`roll`·`pass`·`chain` itself etc.) — never include it. Inside a chain, each part may fill its own `tail_intent` if that part is one of the 7.
 
-**Named-NPC anchoring (loose)**: when input names an NPC by name/role/job/appearance ("훈련사", "대장장이", "여관 주인", "노파", "할머니") → match if **any** of `entities[*]`'s `name`·`description`·`job`·`state_tags` partially matches. Synonyms allowed ("할머니"≈"노파", "전사"≈"용병", "주인"≈"여관 주인"). 1 match → use it. **2+ matches** → prefer `recent_npc`; else first match. **0 matches** → drop to § Fallback rules.
+**Named-NPC anchoring (loose)**: when input names an NPC by name/role/job/appearance ("훈련사", "대장장이", "여관 주인", "노파", "할머니") → match if **any** of `entities[*]`'s `name`·`role`·`race` partially matches. Synonyms allowed ("할머니"≈"노파", "전사"≈"용병", "주인"≈"여관 주인"). 1 match → use it. **2+ matches** → prefer `recent_npc`; else first match. **0 matches** → drop to § Fallback rules.
 
 ## Fallback rules (instead of clarifying — never ask back)
 
