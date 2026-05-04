@@ -165,7 +165,7 @@ export function StoryGraphCanvas({
             color: 'data(textColor)',
             content: 'data(label)',
             'font-family': 'NanumGothic_700Bold, serif',
-            'font-size': 14,
+            'font-size': 11,
             'text-valign': 'bottom',
             'text-halign': 'center',
             'text-margin-y': 6,
@@ -187,7 +187,7 @@ export function StoryGraphCanvas({
             color: colors.fg.muted,
             content: 'data(label)',
             'font-family': 'NanumGothic_700Bold, serif',
-            'font-size': 14,
+            'font-size': 11,
             'text-valign': 'bottom',
             'text-halign': 'center',
             'text-margin-y': 6,
@@ -295,7 +295,7 @@ export function StoryGraphCanvas({
       });
     }
     // layout runs synchronously when animate:false, so positions are ready here
-    cy.fit(undefined, 12);
+    cy.fit(undefined, 28);
     if (centerNodeId) {
       const node = cy.getElementById(centerNodeId);
       if (node.length > 0) {
