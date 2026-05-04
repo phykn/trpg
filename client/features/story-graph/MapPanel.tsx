@@ -122,17 +122,19 @@ export function MapPanel({
         accessibilityLabel={`${accessibilityLabel}. ${visibleGraph.summary}`}
         className={`${framed ? 'border border-border-default rounded-md bg-canvas-subtle px-3 py-3' : 'px-4 pt-2 pb-3'} gap-2`}
       >
-        <StoryGraphCanvas
-          graph={visibleGraph}
-          accessibilityLabel={accessibilityLabel}
-          selectedNodeId={selectedNodeId}
-          onNodeSelect={(id) => {
-            if (id) onNodeSeen?.(id);
-            onNodeSelect?.(id);
-          }}
-          unseenNodeIds={unseenNodeIds}
-          centerNodeId={currentPlaceId}
-        />
+        <View style={{ aspectRatio: 1.618 }}>
+          <StoryGraphCanvas
+            graph={visibleGraph}
+            accessibilityLabel={accessibilityLabel}
+            selectedNodeId={selectedNodeId}
+            onNodeSelect={(id) => {
+              if (id) onNodeSeen?.(id);
+              onNodeSelect?.(id);
+            }}
+            unseenNodeIds={unseenNodeIds}
+            centerNodeId={currentPlaceId}
+          />
+        </View>
 
         {selectedNode ? (
           <View className="border-t border-border-default pt-2.5 gap-2">
