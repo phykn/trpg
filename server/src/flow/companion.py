@@ -37,8 +37,7 @@ async def run_recruit(
     to_front_fn: ToFrontFn | None,
 ) -> AsyncIterator[dict]:
     """Set a recruit-kind pending_check and emit pending_check SSE.
-    The /roll endpoint resolves the result via flow/companion.handle_recruit_roll_result
-    (Task 12)."""
+    The /roll endpoint resolves the result via flow/companion.handle_recruit_roll_result."""
     actor = state.characters[state.player_id]
 
     if target_id not in state.characters:

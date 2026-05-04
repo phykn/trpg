@@ -1,7 +1,9 @@
 from src.domain.entities import Character, Stats
 from src.flow.companion import run_dismiss
 from src.flow.dirty import Dirty
-from src.persistence.local_fs import LocalFsSaveRepo
+from src.flow.turn import run_turn
+from src.llm_calls.classify.schema import DismissAction
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
 def _setup_state_with_companion(fresh_state):
@@ -93,10 +95,6 @@ async def test_dismiss_via_run_turn(
     fresh_state, tmp_data, judge_returns, collect
 ):
     """run_turn → judge returns DismissAction → run_dismiss is invoked."""
-    from src.llm_calls.classify.schema import DismissAction
-    from src.persistence.local_fs import LocalFsScenarioRepo
-    from src.flow.turn import run_turn
-
     state = _setup_state_with_companion(fresh_state)
     judge_returns(DismissAction(action="dismiss", target="npc.edric"))
 
