@@ -240,7 +240,7 @@ Interpersonal action + no name / loose name (default target — never clarify):
 | 3 NPCs in plaza, recent_npc=guard_01 | 행인에게 길을 묻는다 | `{"action":"roll","tier":"쉬움","stat":"CHA","targets":["guard_01"],"reason":"근처 사람에게 길을 물음"}` |
 | 0 alive NPCs in location | 인사한다 | `{"action":"pass"}` (no targets — narrate absorbs as "주변에 사람이 보이지 않는다") |
 | `entities=[trainer_01("훈련사 카엘")]` | 훈련사한테 묻는다 | `{"action":"roll","tier":"쉬움","stat":"CHA","targets":["trainer_01"],"reason":"훈련사에게 물음"}` (partial name match) |
-| `entities=[old_woman_01(job="여관 주인", description="흰 머리 노파")]` | 할머니한테 말 건다 | `{"action":"pass","targets":["old_woman_01"]}` (synonym match against description "노파") |
+| `entities=[old_woman_01(role="여관 주인", race="인간", gender="female")]` | 할머니한테 말 건다 | `{"action":"pass","targets":["old_woman_01"]}` (synonym match against role "여관 주인" → "할머니") |
 | `entities=[merchant_01("광장 상인")]` | 광장 상인에게 다가간다 | `{"action":"pass","targets":["merchant_01"]}` (interpersonal action — fill targets) |
 
 Scene prop (passes without `entities` entry — inanimate elements appearing only in description; `<loc_id>` is `surroundings.location.id`):
