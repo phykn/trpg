@@ -150,15 +150,18 @@ async def flush(state: GameState, save_repo: SaveRepo, dirty: Dirty) -> None:
     """Persist a turn's worth of changes. Order: entities + jsonls in parallel
     (independent tables), meta last (commit point on partial-failure recovery).
     """
-    async with asyncio.TaskGroup() as tg:
-        for kind, eid in dirty.entities:
-            tg.create_task(save_repo.save_entity(state, kind, eid))
-        if dirty.log:
-            tg.create_task(save_repo.append_log_entries(state.game_id, dirty.log))
-        if dirty.history:
-            tg.create_task(save_repo.append_history_entries(state.game_id, dirty.history))
-        if dirty.dialogue:
-            tg.create_task(save_repo.append_dialogue_entries(state.game_id, dirty.dialogue))
+    try:
+        async with asyncio.TaskGroup() as tg:
+            for kind, eid in dirty.entities:
+                tg.create_task(save_repo.save_entity(state, kind, eid))
+            if dirty.log:
+                tg.create_task(save_repo.append_log_entries(state.game_id, dirty.log))
+            if dirty.history:
+                tg.create_task(save_repo.append_history_entries(state.game_id, dirty.history))
+            if dirty.dialogue:
+                tg.create_task(save_repo.append_dialogue_entries(state.game_id, dirty.dialogue))
+    except* PersistenceFailed as eg:
+        raise eg.exceptions[0]
     await save_repo.save_meta(state)
 
 
@@ -176,15 +179,13 @@ async def finalize(
         yield {"type": "suggestions", "data": {"items": items}}
     try:
         await flush(state, save_repo, dirty)
-    except (PersistenceFailed, ExceptionGroup) as e:  # noqa: F821 ExceptionGroup is py311+ builtin
+    except PersistenceFailed as e:
         from .error_phrases import humanize_runtime_error
 
-        # TaskGroup wraps child failures in ExceptionGroup; unwrap to the first inner.
-        inner = e.exceptions[0] if isinstance(e, ExceptionGroup) else e  # noqa: F821
         yield {
             "type": "error",
             "data": {
-                "message": humanize_runtime_error(inner),
+                "message": humanize_runtime_error(e),
                 "code": "PersistenceFailed",
             },
         }
