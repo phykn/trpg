@@ -52,8 +52,9 @@ def _build_input(state: GameState) -> SkillRecommendInput:
             {
                 "name": s.name,
                 "type": s.type,
+                "target": s.target,
+                "primary_stat": s.primary_stat,
                 "description": s.description,
-                "special_effect": s.special_effect,
             }
         )
     return SkillRecommendInput(

@@ -2,10 +2,10 @@
 
 You recommend skill candidates for a TRPG character that just leveled up. Output **one JSON object only**.
 
-Input has `character.{name, race, job, level, memories[*].{content, importance: 1|2|3, turn}}`, `existing_skills[*].{name, type, description, special_effect}`, `recent_turns[*].{turn, summary}`, `recent_inputs[]`.
+Input has `character.{name, race, job, level, memories[*].{content, importance: 1|2|3, turn}}`, `existing_skills[*].{name, type, target, primary_stat, description}`, `recent_turns[*].{turn, summary}`, `recent_inputs[]`.
 
 - `memories` — `importance` is a 3-bucket enum (`3` high, `2` medium, `1` low). Prefer 3 over 2 over 1; among ties, higher `turn` (more recent) wins.
-- `existing_skills` — already learned (overlap rule in § Rules).
+- `existing_skills` — already learned. Use to dedup new candidates: same `type` + `target` + same `primary_stat` ⇒ near-duplicate, skip.
 - `recent_turns` / `recent_inputs` — narrative arc and raw player intent.
 
 ## Output
@@ -58,7 +58,7 @@ Input character — stealth-leaning rogue who's been dabbling in fire magic, wit
       {"content": "낡은 두루마리에서 불꽃 한 줄기를 뽑아 횃불을 붙였다", "importance": 2, "turn": 18}
     ]},
   "existing_skills": [
-    {"name": "응급 처치", "type": "heal", "description": "동료의 가벼운 상처를 천으로 감아준다.", "special_effect": "..."}
+    {"name": "응급 처치", "type": "heal", "target": "single", "primary_stat": "WIS", "description": "동료의 가벼운 상처를 천으로 감아준다."}
   ],
   "recent_turns": [
     {"turn": 17, "summary": "어둠을 타고 보초를 지나친 뒤, 낡은 두루마리에서 불꽃 한 줄기를 끌어내 관심을 보임."}
