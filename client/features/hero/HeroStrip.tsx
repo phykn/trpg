@@ -4,7 +4,7 @@ import { Bar, Surface } from '@/components/ui';
 import { toneColor } from '@/design/tokens';
 import type { Hero } from './types';
 
-type MeterTone = 'hp' | 'mp' | 'exp' | 'revival' | 'gold';
+type MeterTone = 'hp' | 'mp' | 'exp' | 'revival';
 
 function Meter({ label, value, max, tone }: {
   label: string;
@@ -46,7 +46,6 @@ export function HeroStrip({ hero }: { hero: Hero }) {
         max={hero.reviveCoinsMax}
         tone="revival"
       />
-      <Meter label="금화" value={hero.gold} tone="gold" />
     </Surface>
   );
 }
