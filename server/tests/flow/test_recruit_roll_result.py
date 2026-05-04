@@ -85,6 +85,7 @@ async def test_partial_success_adds_companion(fresh_state, collect):
 
     assert "npc.edric" in state.characters["player_01"].companions
     assert state.characters["npc.edric"].relations["player_01"] == 33
+    assert state.previous_phase_signal == "companion_joined:에드릭"
 
 
 async def test_failure_keeps_affinity_unchanged(fresh_state, collect):

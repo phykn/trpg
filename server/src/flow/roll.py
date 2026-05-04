@@ -132,6 +132,8 @@ async def run_roll(
         tick_turn_buffs(state, dirty)
         if client is not None:
             graph = state.graph()
+            signal = state.previous_phase_signal
+            state.previous_phase_signal = None
             async for ev in stream_narrate_tail(
                 client,
                 state,
@@ -141,10 +143,9 @@ async def run_roll(
                 to_front_fn,
                 PassAction(action="pass"),
                 graph=graph,
-                previous_phase_signal=state.previous_phase_signal,
+                previous_phase_signal=signal,
             ):
                 yield ev
-            state.previous_phase_signal = None
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
