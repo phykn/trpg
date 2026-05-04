@@ -237,7 +237,7 @@ def test_fail_quest_sets_status_and_clears_active(fresh_state):
     assert state.quests["q1"].status == "failed"
     assert state.quests["q1"].fail_reason == "의뢰자 사망"
     assert state.active_quest_id is None
-    texts = [text for text, _ in dirty.deferred_quest_cards]
+    texts = [text for text, _ in dirty.deferred_act_cards]
     assert any("퀘스트 실패: 촌장의 부탁" in t and "의뢰자 사망" in t for t in texts), (
         texts
     )
@@ -280,7 +280,7 @@ def test_cascade_giver_death_fails_active_quests_with_that_giver(fresh_state):
     assert state.quests["q1"].status == "failed"
     assert state.quests["q2"].status == "failed"
     assert state.quests["q3"].status == "active"
-    fail_texts = [text for text, _ in dirty.deferred_quest_cards]
+    fail_texts = [text for text, _ in dirty.deferred_act_cards]
     assert sum("퀘스트 실패" in t for t in fail_texts) == 2
 
 
@@ -297,7 +297,7 @@ def test_cascade_giver_death_skips_completed_quests(fresh_state):
     q.cascade_giver_death(state, "edric_01", dirty)
     assert state.quests["q1"].status == "completed"
     assert dirty.log == []
-    assert dirty.deferred_quest_cards == []
+    assert dirty.deferred_act_cards == []
 
 
 def test_cascade_giver_death_with_set_dirty_skips_card_but_still_fails(fresh_state):

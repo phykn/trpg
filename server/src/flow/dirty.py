@@ -38,11 +38,11 @@ class Dirty:
     history: list[TurnLogEntry] = field(default_factory=list)
     dialogue: list[DialoguePair] = field(default_factory=list)
     narrate_suggestions: list[str] | None = None
-    # Quest 성공/실패 cards stashed by _apply_rewards / _fail_quest so they
-    # can be flushed AFTER the prose that motivated them. Tuple = (text,
-    # turn_summary). Drained by flush_deferred_quest_cards in narrate
+    # System reaction cards (quest 성공/실패, quest_start, affinity) stashed
+    # so they can be flushed AFTER the prose that motivated them. Tuple =
+    # (text, turn_summary). Drained by flush_deferred_act_cards in narrate
     # (npc dialogue path) and combat_phase (post 전투 결과).
-    deferred_quest_cards: list[tuple[str, str | None]] = field(default_factory=list)
+    deferred_act_cards: list[tuple[str, str | None]] = field(default_factory=list)
 
 
 def _trim(items: list, cap: int) -> None:
@@ -89,13 +89,14 @@ def push_act(
     return {"type": "log_entry", "data": log.model_dump()}
 
 
-def flush_deferred_quest_cards(state: GameState, dirty: Dirty):
-    """Yield SSE log_entry events for any quest 성공/실패 cards stashed by
-    _apply_rewards / _fail_quest. Caller decides when — after gm body in
-    narrate, after 전투 결과 act in combat_phase. Drains the list."""
-    for text, summary in dirty.deferred_quest_cards:
+def flush_deferred_act_cards(state: GameState, dirty: Dirty):
+    """Yield SSE log_entry events for any reaction cards (quest 성공/실패,
+    quest_start, affinity) stashed during apply_changes / engine triggers.
+    Caller decides when — after gm body in narrate, after 전투 결과 act in
+    combat_phase. Drains the list."""
+    for text, summary in dirty.deferred_act_cards:
         yield push_act(state, dirty, text, turn_summary=summary)
-    dirty.deferred_quest_cards.clear()
+    dirty.deferred_act_cards.clear()
 
 
 def push_turn_log(

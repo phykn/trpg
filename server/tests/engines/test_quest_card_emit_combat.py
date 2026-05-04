@@ -72,7 +72,7 @@ def _build() -> tuple[GameState, Dirty]:
 
 def test_combat_kill_completes_quest_and_stashes_success_card():
     """Reward + quest state must apply immediately. Success card text must be
-    queued in dirty.deferred_quest_cards so caller (combat_phase) can flush it
+    queued in dirty.deferred_act_cards so caller (combat_phase) can flush it
     AFTER 전투 결과 — not directly into log_entries here."""
     state, dirty = _build()
     apply_attack_to_defender(
@@ -95,8 +95,8 @@ def test_combat_kill_completes_quest_and_stashes_success_card():
     ]
     assert not early_log_success, [(e.kind, e.text) for e in state.log_entries]
     # Should be in deferred queue
-    assert dirty.deferred_quest_cards, dirty.deferred_quest_cards
-    text, summary = dirty.deferred_quest_cards[0]
+    assert dirty.deferred_act_cards, dirty.deferred_act_cards
+    text, summary = dirty.deferred_act_cards[0]
     assert "퀘스트 성공" in text
     assert "촌장의 부탁" in text
     assert summary is not None and "촌장의 부탁" in summary

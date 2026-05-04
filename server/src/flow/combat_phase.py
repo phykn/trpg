@@ -37,7 +37,7 @@ from .combat_auto import (
     build_narrate_input,
     run_auto_combat,
 )
-from .dirty import Dirty, ToFrontFn, finalize, flush_deferred_quest_cards, push_act, push_gm, push_turn_log
+from .dirty import Dirty, ToFrontFn, finalize, flush_deferred_act_cards, push_act, push_gm, push_turn_log
 from .error_phrases import humanize_runtime_error
 from .format import (
     ACTION_FORBIDDEN_IN_COMBAT_TEXT,
@@ -94,8 +94,9 @@ async def emit_combat_cinematic_and_end(
         end_text = format_combat_end_text(result.outcome, enemies_remaining)
         combined = f"{summary}\n{end_text}" if summary else end_text
     yield push_act(state, dirty, combined)
-    # Quest 성공/실패 카드는 cinematic + 전투 결과 다음 — 시간 순서: 전투 narration → 결과 → 보상 카드.
-    for ev in flush_deferred_quest_cards(state, dirty):
+    # Reaction cards (quest 성공/실패, etc.) flush AFTER cinematic + 전투 결과.
+    # Time order: 전투 narration → 결과 → 보상 카드.
+    for ev in flush_deferred_act_cards(state, dirty):
         yield ev
     yield {"type": "combat_end", "data": {"outcome": result.outcome}}
 

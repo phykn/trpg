@@ -99,7 +99,7 @@ def _fail_quest(state: GameState, quest: Quest, reason: str, dirty) -> None:
         from ..flow.format import format_quest_fail_log
 
         text = format_quest_fail_log(title=quest.title, reason=reason)
-        full.deferred_quest_cards.append(
+        full.deferred_act_cards.append(
             (text, f"퀘스트 «{quest.title}» 실패 ({reason})")
         )
     if state.active_quest_id == quest.id:
@@ -170,7 +170,7 @@ def _apply_rewards(state: GameState, quest: Quest, dirty) -> None:
             gold=quest.rewards.gold,
             items=granted_item_names,
         )
-        full.deferred_quest_cards.append(
+        full.deferred_act_cards.append(
             (text, f"퀘스트 «{quest.title}» 성공, 보상 수령")
         )
     if state.active_quest_id == quest.id:

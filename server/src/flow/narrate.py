@@ -31,9 +31,8 @@ from ..context import (
 from .dirty import (
     Dirty,
     ToFrontFn,
-    flush_deferred_quest_cards,
+    flush_deferred_act_cards,
     next_log_id,
-    push_act,
     push_dialogue,
     push_log_entry,
     push_turn_log,
@@ -223,17 +222,18 @@ async def consume_narrate(
     gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=body)
     push_log_entry(state, gm_log, dirty)
     yield {"type": "log_entry", "data": gm_log.model_dump()}
-    # Quest-start system cards: surface locked → active flips after narrate body
-    # so the receipt lands alongside the prose that motivated it.
+    # Quest-start and affinity cards stash into the deferred queue so they
+    # flush together with quest 성공/실패 — single ordering invariant for
+    # all reaction cards (always after the gm body that motivated them).
     for q_id in apply_result["started_quests"]:
         quest = state.quests.get(q_id)
         if quest is None:
             continue
-        yield push_act(
-            state,
-            dirty,
-            format_quest_start_log(quest.title),
-            turn_summary=format_quest_start_turn_log(quest.title),
+        dirty.deferred_act_cards.append(
+            (
+                format_quest_start_log(quest.title),
+                format_quest_start_turn_log(quest.title),
+            )
         )
     for npc_id, delta in apply_result["affinity_deltas"]:
         if delta == 0:
@@ -241,11 +241,11 @@ async def consume_narrate(
         npc = state.characters.get(npc_id)
         if npc is None:
             continue
-        yield push_act(
-            state,
-            dirty,
-            format_affinity_card_log(npc.name, delta),
-            turn_summary=format_affinity_card_turn_log(npc.name, delta),
+        dirty.deferred_act_cards.append(
+            (
+                format_affinity_card_log(npc.name, delta),
+                format_affinity_card_turn_log(npc.name, delta),
+            )
         )
     # NPC dialogue free-path judge runs AFTER the gm body so any '퀘스트 성공/실패' card
     # emits through dirty.log past the prose that justifies it. Pre-existing dirty.log
@@ -260,10 +260,9 @@ async def consume_narrate(
                 yield {"type": "log_entry", "data": entry.model_dump()}
         except NotImplementedError:
             pass  # judge LLM stub; live turns stay safe
-    # Drain deferred quest cards stashed by _apply_rewards / _fail_quest during
-    # apply_changes / npc_dialogue_quest_check. Keeps quest 성공/실패 cards
-    # AFTER the gm body that motivated them.
-    for ev in flush_deferred_quest_cards(state, dirty):
+    # Drain all deferred reaction cards (quest_start, affinity, quest
+    # 성공/실패) so they emit AFTER the gm body that motivated them.
+    for ev in flush_deferred_act_cards(state, dirty):
         yield ev
 
 
