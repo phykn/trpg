@@ -152,6 +152,7 @@ export function StoryGraphCanvas({
 }) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const cyRef = React.useRef<Core | null>(null);
+  const hasMountedRef = React.useRef(false);
 
   const graphIdentityKey = React.useMemo(() => {
     const ns = graph.nodes.map((n) => n.id).sort().join('|');
@@ -160,9 +161,13 @@ export function StoryGraphCanvas({
   }, [graph]);
 
   // Effect 1: cy lifecycle — graph identity + the props that genuinely require
-  // rebuilding (overrides/layout/root). Selection and centerNodeId are
-  // intentionally absent; they get their own effects so a tap doesn't reset zoom.
+  // rebuilding (overrides/layout/root). Selection, centerNodeId, and unseenNodeIds
+  // are intentionally absent; they get their own effects so a tap doesn't reset zoom.
   React.useEffect(() => {
+    // Capture viewport before destroying the existing cy instance.
+    const prevPan = cyRef.current?.pan();
+    const prevZoom = cyRef.current?.zoom();
+
     // Drop cache entries for nodes no longer in the graph.
     const validIds = new Set(graph.nodes.map((n) => n.id));
     for (const id of Object.keys(positionStore)) {
@@ -264,7 +269,7 @@ export function StoryGraphCanvas({
         layout === 'breadthfirst'
           ? {
               name: 'breadthfirst',
-              fit: true,
+              fit: !hasMountedRef.current,
               padding: 16,
               spacingFactor: 1.0,
               directed: false,
@@ -278,7 +283,7 @@ export function StoryGraphCanvas({
           : layout === 'concentric'
             ? {
                 name: 'concentric',
-                fit: true,
+                fit: !hasMountedRef.current,
                 padding: 16,
                 startAngle: (3 / 2) * Math.PI,
                 minNodeSpacing: 18,
@@ -291,12 +296,12 @@ export function StoryGraphCanvas({
               const allCached = graph.nodes.every((n) => positionStore[n.id]);
               const hasNewNodes = unseenNodeIds && unseenNodeIds.size > 0;
               return (allCached && !hasNewNodes)
-                ? { name: 'preset', fit: true, padding: 24 }
+                ? { name: 'preset', fit: !hasMountedRef.current, padding: 24 }
                 : {
                     name: 'cose',
                     animate: false,
                     componentSpacing: 120,
-                    fit: true,
+                    fit: !hasMountedRef.current,
                     idealEdgeLength: 190,
                     nodeOverlap: 36,
                     nodeRepulsion: 22000,
@@ -327,10 +332,18 @@ export function StoryGraphCanvas({
       });
     }
     // layout runs synchronously when animate:false, so positions are ready here
-    cy.fit(undefined, 28);
-    if (centerNodeId) {
-      const node = cy.getElementById(centerNodeId);
-      if (node.length > 0) cy.center(node);
+    if (!hasMountedRef.current) {
+      // True first mount — fit + initial center.
+      cy.fit(undefined, 28);
+      if (centerNodeId) {
+        const node = cy.getElementById(centerNodeId);
+        if (node.length > 0) cy.center(node);
+      }
+      hasMountedRef.current = true;
+    } else if (prevPan !== undefined && prevZoom !== undefined) {
+      // Re-mount on topology / overrides change — preserve viewport.
+      cy.zoom(prevZoom);
+      cy.pan(prevPan);
     }
     cyRef.current = cy;
 
@@ -338,8 +351,8 @@ export function StoryGraphCanvas({
       cy.destroy();
       cyRef.current = null;
     };
-  // centerNodeId dropped from deps; selection isn't here either.
-  }, [graphIdentityKey, nodeOverrides, layout, rootNodeId, onNodeSelect, clearOnBackgroundTap, unseenNodeIds]);
+  // centerNodeId, unseenNodeIds dropped from deps; selection isn't here either.
+  }, [graphIdentityKey, nodeOverrides, layout, rootNodeId, onNodeSelect, clearOnBackgroundTap]);
 
   // Effect 2: selection — viewport untouched.
   React.useEffect(() => {
@@ -368,6 +381,22 @@ export function StoryGraphCanvas({
       );
     });
   }, [centerNodeId]);
+
+  // Effect 4: unseen-state reflection — update node data without rebuilding cy.
+  React.useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.batch(() => {
+      cy.nodes().forEach((node) => {
+        const isNew = unseenNodeIds?.has(node.id()) ? 'true' : undefined;
+        if (isNew) {
+          node.data('isNew', isNew);
+        } else {
+          node.removeData('isNew');
+        }
+      });
+    });
+  }, [unseenNodeIds]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: height ?? '100%' }}>
@@ -399,6 +428,7 @@ export function StoryGraphCanvas({
           background: colors.canvas.default,
           border: `1px solid ${colors.border.default}`,
           borderRadius: 6,
+          color: colors.fg.default,
           cursor: 'pointer',
           opacity: 0.85,
         }}
