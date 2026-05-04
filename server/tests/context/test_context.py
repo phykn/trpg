@@ -27,6 +27,8 @@ def test_surroundings_includes_player_and_filters_dead_or_far(fresh_state):
         connections=[Connection(target_id="gate_01", difficulty="어려움")],
     )
     fresh_state.locations["gate_01"] = Location(id="gate_01", name="성문")
+    from src.domain.entities import Race
+    fresh_state.races["human"] = Race(id="human", name="인간", description="")
     fresh_state.characters["player_01"] = Character(
         id="player_01",
         name="주",
@@ -77,29 +79,15 @@ def test_surroundings_includes_player_and_filters_dead_or_far(fresh_state):
     assert "player_01" in ids and ids["player_01"]["type"] == "player"
     assert "friend" in ids and "foe" in ids
     assert "far" not in ids and "dead" not in ids
-    assert ids["friend"]["state_tags"] == ["우호적(affinity 70)"]
-    assert "경계중(affinity -60)" in ids["foe"]["state_tags"]
-    assert "부상" in ids["foe"]["state_tags"][1]
+    # NPC entries now carry gender/race/role instead of state_tags
+    assert ids["friend"]["race"] == "인간"
+    assert "state_tags" not in ids["friend"]
+    assert ids["foe"]["race"] == "인간"
+    assert "state_tags" not in ids["foe"]
     # adjacent connection
     assert (
         ids["gate_01"]["type"] == "connection"
         and ids["gate_01"]["difficulty"] == "어려움"
-    )
-
-    # Failure-grade narrate path drops affinity tags (visible-injury stays):
-    # the player just botched a roll, so they shouldn't read the NPC's true
-    # disposition off a sidebar.
-    sur_fail = build_surroundings(fresh_state, "player_01", grade="failure")
-    ids_fail = {e["id"]: e for e in sur_fail["entities"]}
-    assert "state_tags" not in ids_fail["friend"], (
-        "affinity tag must drop on failure grade"
-    )
-    foe_tags = ids_fail["foe"].get("state_tags") or []
-    assert not any("affinity" in t for t in foe_tags), (
-        "affinity tag must drop on failure grade"
-    )
-    assert any("부상" in t for t in foe_tags), (
-        "visible injury must still surface on failure grade"
     )
 
 

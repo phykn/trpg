@@ -9,11 +9,6 @@ from ..domain.entities import (
 from ..domain.state import GameState
 from ..domain.types import is_secret_masked_grade
 from ..engines.growth import can_afford_level_up
-from ..mapping.labels import (
-    state_tag_friendly,
-    state_tag_wary,
-    state_tag_wounded,
-)
 from ..ontology.graph import GameGraph
 from ..ontology.queries import (
     connections_of,
@@ -25,23 +20,6 @@ from ..ontology.queries import (
     quests_given_by,
 )
 from ..rules import RULES
-
-
-def _state_tags(actor: Character, npc: Character, *, masked: bool = False) -> list[str]:
-    """masked=True drops the affinity tag (failure-grade narrate shouldn't leak NPC disposition); injury tags stay because a wound is observable."""
-    tags: list[str] = []
-    if not masked:
-        aff = npc.relations.get(actor.id, 0)
-        threshold = RULES.social.friendly_threshold
-        if aff >= threshold:
-            tags.append(state_tag_friendly(aff))
-        elif aff <= -threshold:
-            tags.append(state_tag_wary(aff))
-    if npc.max_hp > 0:
-        hp_pct = round(npc.hp / npc.max_hp * 100)
-        if hp_pct < 50:
-            tags.append(state_tag_wounded(hp_pct))
-    return tags
 
 
 def _inventory_payload(
@@ -186,14 +164,19 @@ def _entities_payload(
         if char is None or not char.alive:
             continue
         entry: dict = {"id": cid, "name": char.name, "type": "npc"}
+        if char.gender != "none":
+            entry["gender"] = char.gender
+        race = state.races.get(char.race_id)
+        if race is not None:
+            entry["race"] = race.name
+        role_label = char.role or char.job
+        if role_label:
+            entry["role"] = role_label
         if char.protected:
             entry["protected"] = True
         roles = _npc_roles(state, actor, char, graph)
         if roles:
             entry["roles"] = roles
-        tags = _state_tags(actor, char, masked=masked)
-        if tags:
-            entry["state_tags"] = tags
         entities.append(entry)
     for item_id in items_in(graph, location.id):
         item = state.items.get(item_id)
