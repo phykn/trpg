@@ -5,6 +5,7 @@ from ..llm_calls.classify.schema import (
     BuyAction,
     ChainAction,
     CombatAction,
+    DismissAction,
     EquipAction,
     FleeAction,
     GiveAction,
@@ -37,6 +38,7 @@ from .actions import (
     emit_use,
 )
 from .combat_auto import PlayerAction
+from .companion import run_dismiss
 from .combat_phase import (
     has_invalid_combat_targets,
     run_combat_player_turn,
@@ -553,6 +555,11 @@ async def _dispatch(
             client=client,
             player_input=player_input,
         ):
+            yield ev
+        return
+
+    if isinstance(result, DismissAction):
+        async for ev in run_dismiss(state, save_repo, result.target, dirty, to_front_fn):
             yield ev
         return
 

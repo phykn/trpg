@@ -87,3 +87,28 @@ async def test_dismiss_records_turn_log(fresh_state, tmp_data, collect):
         getattr(entry, "summary", None) == "에드릭 동행 이탈"
         for entry in state.turn_log
     )
+
+
+async def test_dismiss_via_run_turn(
+    fresh_state, tmp_data, judge_returns, collect
+):
+    """run_turn → judge returns DismissAction → run_dismiss is invoked."""
+    from src.llm_calls.classify.schema import DismissAction
+    from src.persistence.local_fs import LocalFsScenarioRepo
+    from src.flow.turn import run_turn
+
+    state = _setup_state_with_companion(fresh_state)
+    judge_returns(DismissAction(action="dismiss", target="npc.edric"))
+
+    await collect(
+        run_turn(
+            client=None,
+            state=state,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
+            player_input="에드릭, 이제 헤어지자",
+        )
+    )
+
+    assert "npc.edric" not in state.characters["player_01"].companions
+    assert state.previous_phase_signal == "companion_dismissed:에드릭"
