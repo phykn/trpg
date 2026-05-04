@@ -74,7 +74,7 @@ async def stream_narrate(
     # TEMP: timing investigation for chip-gap. Remove after measuring.
     t_extract_start = time.perf_counter()
     output = await run_extract(client, extract_input)
-    _log.info(
+    _log.warning(
         "turn-timing extract=%dms body_chars=%d",
         int((time.perf_counter() - t_extract_start) * 1000),
         len(full_body),

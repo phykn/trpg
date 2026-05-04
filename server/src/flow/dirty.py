@@ -172,7 +172,7 @@ async def finalize(
     n_entities = len(dirty.entities)
     try:
         await flush(state, save_repo, dirty)
-        _log.info(
+        _log.warning(
             "turn-timing flush=%dms entities=%d game=%s",
             int((time.perf_counter() - t_flush_start) * 1000),
             n_entities,
