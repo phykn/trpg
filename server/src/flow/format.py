@@ -63,7 +63,7 @@ def format_rest_log(actor_name: str, cost_gold: int = 0) -> str:
         f"새벽이 밝아오자 푹 쉬고 일어났습니다. HP/MP가 모두 회복됐습니다."
     )
     if cost_gold > 0:
-        return f"{base} (−GOLD {cost_gold})"
+        return f"{base} (금화 {cost_gold} 사용)"
     return base
 
 
