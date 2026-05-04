@@ -16,12 +16,11 @@ SERVER_DIR = Path(__file__).resolve().parent
 
 
 def _load_env() -> None:
-    """Load .env.<APP_ENV> (default 'dev')."""
+    """Load .env.<APP_ENV> if present (default 'dev'). Missing file is OK — OS env vars (e.g. Render dashboard) suffice; per-key fail-fast still happens at downstream os.environ[...] reads."""
     app_env = os.environ.get("APP_ENV", "dev")
     env_path = SERVER_DIR / f".env.{app_env}"
-    if not env_path.is_file():
-        raise FileNotFoundError(f"env file not found: {env_path}")
-    load_dotenv(env_path)
+    if env_path.is_file():
+        load_dotenv(env_path)
 
 
 def build_app(
