@@ -126,14 +126,15 @@ export function NeighborhoodPanel({
       accessibilityLabel={`${accessibilityLabel}. ${visibleGraph.summary}`}
       className={`${framed ? 'border border-border-default rounded-md bg-canvas-subtle px-3 py-3' : 'px-4 pt-2 pb-3'} gap-2`}
     >
-      <StoryGraphCanvas
-        graph={visibleGraph}
-        height={260}
-        accessibilityLabel={accessibilityLabel}
-        selectedNodeId={selectedNodeId}
-        onNodeSelect={onNodeSelect}
-        centerNodeId={currentPlaceId}
-      />
+      <View style={{ aspectRatio: 1.618 }}>
+        <StoryGraphCanvas
+          graph={visibleGraph}
+          accessibilityLabel={accessibilityLabel}
+          selectedNodeId={selectedNodeId}
+          onNodeSelect={onNodeSelect}
+          centerNodeId={currentPlaceId}
+        />
+      </View>
 
       <View className="flex-row flex-wrap items-center justify-center gap-x-3 gap-y-1">
         {LEGEND.map((item) => (
