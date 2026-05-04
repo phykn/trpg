@@ -137,6 +137,16 @@ class UnequipAction(_StrictAction):
     tail_intent: str | None = None
 
 
+class RecruitAction(_StrictAction):
+    action: Literal["recruit"]
+    target: str
+
+
+class DismissAction(_StrictAction):
+    action: Literal["dismiss"]
+    target: str
+
+
 # CombatAction is a phase change but allowed *only as the chain tail* — engine
 # runs prefix parts then routes to combat. Other phase-changers (rest / flee /
 # roll / reject / summon_combat) can't compose sequentially.
@@ -188,6 +198,8 @@ JudgeOutput = Annotated[
     | BuyAction
     | SellAction
     | GiveAction
+    | RecruitAction
+    | DismissAction
     | ChainAction,
     Field(discriminator="action"),
 ]
@@ -199,7 +211,7 @@ output_adapter: TypeAdapter[JudgeOutput] = TypeAdapter(JudgeOutput)
 # is allowed only as the chain tail (engine runs prefix parts then transitions
 # to combat phase) — promoting it would drop player intent.
 _NON_TAIL_PHASE_CHANGING_ACTIONS = frozenset(
-    {"roll", "rest", "flee", "reject", "summon_combat"}
+    {"roll", "rest", "flee", "reject", "summon_combat", "recruit", "dismiss"}
 )
 
 _ROLL_REASON_FALLBACK = ROLL_REASON_DEFAULT
