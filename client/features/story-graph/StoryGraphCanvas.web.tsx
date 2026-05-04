@@ -19,12 +19,12 @@ const NODE_COLOR: Record<StoryGraphNodeKind, string> = {
 };
 
 const NODE_SIZE: Record<StoryGraphNodeKind, number> = {
-  hero: 42,
-  place: 38,
-  subject: 34,
-  quest: 36,
-  location: 28,
-  target: 30,
+  hero: 36,
+  place: 32,
+  subject: 30,
+  quest: 30,
+  location: 22,
+  target: 24,
 };
 
 type NodeOverride = {
@@ -259,20 +259,20 @@ export function StoryGraphCanvas({
               const allCached = graph.nodes.every((n) => positionStore[n.id]);
               const hasNewNodes = unseenNodeIds && unseenNodeIds.size > 0;
               return (allCached && !hasNewNodes)
-                ? { name: 'preset', fit: true, padding: 14 }
+                ? { name: 'preset', fit: true, padding: 24 }
                 : {
                     name: 'cose',
                     animate: false,
-                    componentSpacing: 80,
+                    componentSpacing: 100,
                     fit: true,
-                    idealEdgeLength: 110,
-                    nodeOverlap: 20,
-                    nodeRepulsion: 9000,
-                    gravity: 0.4,
-                    numIter: 2500,
-                    initialTemp: 220,
-                    coolingFactor: 0.95,
-                    padding: 14,
+                    idealEdgeLength: 150,
+                    nodeOverlap: 28,
+                    nodeRepulsion: 14000,
+                    gravity: 0.55,
+                    numIter: 3500,
+                    initialTemp: 240,
+                    coolingFactor: 0.96,
+                    padding: 24,
                     randomize: false,
                   };
             })(),
