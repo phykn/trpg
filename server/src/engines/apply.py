@@ -247,7 +247,7 @@ def apply_combat_affinity_drop(
     target.relations[attacker_id] = new_val
     if entities is not None:
         entities.add(("characters", target_id))
-    if full is not None and actual_delta != 0:
+    if full is not None and actual_delta != 0 and state.combat_state is None:
         from ..flow.format import format_affinity_card_log, format_affinity_card_turn_log
 
         full.deferred_act_cards.append(
