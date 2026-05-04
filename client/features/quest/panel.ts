@@ -24,11 +24,11 @@ export function buildQuestSlot(quest: Quest | null, opts?: { dot?: boolean }): P
       title: quest.title,
       meta,
       sections: [
-        { label: '의뢰', text: quest.giver },
-        { label: '보상', nodes: [['GOLD', quest.rewards.gold], ['EXP', quest.rewards.exp]] },
         { label: '목표', text: joinOrDash(quest.goals) },
-        { label: '조건', text: joinOrDash(quest.conditions) },
         { label: '요약', text: quest.summary },
+        { label: '보상', nodes: [['GOLD', quest.rewards.gold], ['EXP', quest.rewards.exp]] },
+        { label: '의뢰', text: quest.giver },
+        { label: '조건', text: joinOrDash(quest.conditions) },
       ],
     },
   };
