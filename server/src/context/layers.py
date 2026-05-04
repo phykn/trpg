@@ -20,6 +20,26 @@ _HISTORY_HEADER_DEAD = "=== 사망 — 다시 등장시키거나 발화시키지
 _HISTORY_HEADER_SUMMARY = "=== 이전 요약 ==="
 _HISTORY_HEADER_DIALOGUE = "=== 최근 대화 ==="
 
+# Cap recent_dialogue narrator bodies before they enter the narrate prompt:
+# the LLM was verbatim-echoing prior-turn narrators as a prefix in the new
+# turn (R2 D2). ~80-char opener (1-2 short sentences) is enough continuity
+# context without giving the LLM a paste target.
+_DIALOGUE_NARRATOR_MAX_CHARS = 80
+_SENTENCE_END_CHARS = ".!?"
+
+
+def _truncate_narrator(text: str) -> str:
+    """Cap at _DIALOGUE_NARRATOR_MAX_CHARS, ending at the nearest sentence
+    boundary at or before the cap when possible. Append a `…` marker only
+    when truncated."""
+    if len(text) <= _DIALOGUE_NARRATOR_MAX_CHARS:
+        return text
+    cap = _DIALOGUE_NARRATOR_MAX_CHARS
+    for end_pos in range(cap, 0, -1):
+        if text[end_pos - 1] in _SENTENCE_END_CHARS:
+            return text[:end_pos].rstrip() + "…"
+    return text[:cap].rstrip() + "…"
+
 
 def _format_corpse_line(name: str) -> str:
     return f"- {name} (생전 발화가 아래 대화에 남아 있을 수 있으나 더 이상 말하지 않습니다)"
@@ -30,7 +50,7 @@ def _format_summary_entry(turn: int, summary: str) -> str:
 
 
 def _format_dialogue_entry(turn: int, player: str, narrator_redacted: str) -> str:
-    return f"[턴 {turn}]\n  플레이어: {player}\n  서술자: {narrator_redacted}"
+    return f"[턴 {turn}]\n  플레이어: {player}\n  서술자: {_truncate_narrator(narrator_redacted)}"
 
 
 def redact_dead_quotes(text: str, dead_names: list[str]) -> str:
