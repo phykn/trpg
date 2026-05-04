@@ -149,7 +149,6 @@ export function NeighborhoodPanel({
             <Text className="font-sans text-caption text-fg-muted">{item.label}</Text>
           </View>
         ))}
-        <Text className="font-sans text-caption text-fg-subtle">· 채워짐 = 탭 가능</Text>
       </View>
 
       {selectedNode ? (
