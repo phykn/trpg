@@ -185,6 +185,22 @@ def format_affinity_card_turn_log(npc_name: str, delta: int) -> str:
     return f"{npc_name} 호감도 {sign}{delta}"
 
 
+def format_recruit_success_log(name: str) -> str:
+    return f"{name}{i_ga(name)} 동료가 되었습니다."
+
+
+def format_recruit_failure_log(name: str) -> str:
+    return f"{name}{i_ga(name)} 제안을 거절합니다."
+
+
+def format_recruit_critical_failure_log(name: str) -> str:
+    return f"{name}{i_ga(name)} 노골적으로 거절합니다."
+
+
+def format_dismiss_log(name: str) -> str:
+    return f"{name}{i_ga(name)} 일행에서 빠집니다."
+
+
 def format_level_up_log(
     actor_name: str,
     level: int,
