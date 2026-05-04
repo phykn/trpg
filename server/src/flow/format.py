@@ -57,11 +57,14 @@ def format_unequip_not_equipped(actor_name: str, item_name: str) -> str:
     return f"{actor_name}{eun_neun(actor_name)} 「{item_name}」{eul_reul(item_name)} 장비하고 있지 않습니다."
 
 
-def format_rest_log(actor_name: str) -> str:
-    return (
+def format_rest_log(actor_name: str, cost_gold: int = 0) -> str:
+    base = (
         f"{actor_name}{eun_neun(actor_name)} 자리를 잡고 잠을 청했습니다. "
         f"새벽이 밝아오자 푹 쉬고 일어났습니다. HP/MP가 모두 회복됐습니다."
     )
+    if cost_gold > 0:
+        return f"{base} (−GOLD {cost_gold})"
+    return base
 
 
 def format_learn_skill_log(actor_name: str, skill_name: str) -> str:

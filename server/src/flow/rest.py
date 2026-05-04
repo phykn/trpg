@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from ..domain.errors import RestInsufficientGold
 from ..domain.state import GameState
 from ..engines import recovery as recovery_engine
+from ..rules import RULES
 from ..llm.client import LLMClient
 from ..mapping.josa import eun_neun
 from ..persistence.repo import SaveRepo, ScenarioRepo
@@ -88,7 +89,7 @@ async def run_rest(
         return
 
     state.invalidate_graph()
-    yield push_act(state, dirty, format_rest_log(actor.name))
+    yield push_act(state, dirty, format_rest_log(actor.name, RULES.recovery.cost_gold))
     if to_front_fn is not None:
         yield {"type": "state", "data": to_front_fn(state)}
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
