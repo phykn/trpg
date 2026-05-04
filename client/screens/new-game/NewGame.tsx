@@ -199,7 +199,7 @@ export function NewGame({ onSubmit }: Props) {
 
       <View className="items-center pt-2">
         <Text className="font-mono text-meta text-fg-subtle">
-          클라이언트 {CLIENT_SHA} · 서버 {serverSha}
+          client: {CLIENT_SHA}  ·  server: {serverSha}
         </Text>
       </View>
     </ScrollView>
