@@ -9,6 +9,7 @@ narrate — flow code doesn't change.
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
+from ...context.surroundings import surroundings_for_extract
 from ...llm.client import LLMClient
 from .body import stream_body
 from .extract import ExtractInput, run_extract
@@ -62,7 +63,7 @@ async def stream_narrate(
     extract_input = ExtractInput(
         body=full_body,
         judge_result=input_.judge_result,
-        surroundings=input_.surroundings,
+        surroundings=surroundings_for_extract(input_.surroundings),
         target_view=input_.target_view,
         grade=input_.grade,
         previous_phase_signal=input_.previous_phase_signal,

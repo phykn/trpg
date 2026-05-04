@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator
 from openai import RateLimitError
 
 from ..._runner import load_prompt
+from ....context.surroundings import surroundings_for_narrate_body
 from ....domain.errors import LLMUnavailable
 from ....llm.client import LLMClient
 from ....rules.permissions import render_for_prompt
@@ -27,9 +28,12 @@ async def stream_body(
     transport fails BEFORE any token has yielded. Once a chunk is out, a later
     transport error raises LLMUnavailable.
     """
+    body_input = input_.model_copy(
+        update={"surroundings": surroundings_for_narrate_body(input_.surroundings)}
+    )
     messages = [
         {"role": "system", "content": _PROMPT},
-        {"role": "user", "content": input_.model_dump_json()},
+        {"role": "user", "content": body_input.model_dump_json()},
     ]
 
     fallback_engaged = False
