@@ -39,6 +39,17 @@ def test_recruit_hostile_rejected():
         check_semantics(RecruitAction(action="recruit", target="npc.bandit"), surroundings)
 
 
+def test_recruit_neutral_boundary_passes():
+    surroundings = _surroundings(entities=[_npc("npc.edge", relations_player=0)])
+    check_semantics(RecruitAction(action="recruit", target="npc.edge"), surroundings)
+
+
+def test_recruit_just_hostile_boundary():
+    surroundings = _surroundings(entities=[_npc("npc.edge", relations_player=-1)])
+    with pytest.raises(JudgeSemanticError, match="hostile"):
+        check_semantics(RecruitAction(action="recruit", target="npc.edge"), surroundings)
+
+
 def test_recruit_protected_rejected():
     surroundings = _surroundings(entities=[_npc("npc.child", protected=True)])
     with pytest.raises(JudgeSemanticError, match="protected"):

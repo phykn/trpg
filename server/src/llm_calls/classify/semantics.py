@@ -235,7 +235,7 @@ def _check_recruit(output: RecruitAction, surroundings: dict[str, Any]) -> None:
             f"recruit target {output.target!r} not in surroundings. "
             f"Valid entities: {sorted(by_id.keys())}."
         )
-    if int(ent.get("relations_player", 0)) < 0:
+    if int(ent.get("relations_player") or 0) < 0:
         raise JudgeSemanticError(
             f"recruit target {output.target!r} is hostile (relations_player < 0). "
             f"Use 'pass' or 'reject'."
