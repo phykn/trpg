@@ -1,0 +1,78 @@
+import pytest
+
+from src.llm_calls.classify.schema import DismissAction, RecruitAction
+from src.llm_calls.classify.semantics import JudgeSemanticError, check_semantics
+
+
+def _surroundings(*, entities=(), companions=(), max_companions=3):
+    return {
+        "entities": list(entities),
+        "companions": list(companions),
+        "companions_max": max_companions,
+    }
+
+
+def _npc(npc_id, *, friendly=True, protected=False, relations_player=10):
+    return {
+        "id": npc_id,
+        "type": "npc",
+        "friendly": friendly,
+        "protected": protected,
+        "relations_player": relations_player,
+    }
+
+
+def test_recruit_valid_friendly_npc():
+    surroundings = _surroundings(entities=[_npc("npc.edric")])
+    check_semantics(RecruitAction(action="recruit", target="npc.edric"), surroundings)
+
+
+def test_recruit_target_not_in_surroundings():
+    surroundings = _surroundings(entities=[_npc("npc.edric")])
+    with pytest.raises(JudgeSemanticError, match="not in surroundings"):
+        check_semantics(RecruitAction(action="recruit", target="npc.unknown"), surroundings)
+
+
+def test_recruit_hostile_rejected():
+    surroundings = _surroundings(entities=[_npc("npc.bandit", relations_player=-30)])
+    with pytest.raises(JudgeSemanticError, match="hostile"):
+        check_semantics(RecruitAction(action="recruit", target="npc.bandit"), surroundings)
+
+
+def test_recruit_protected_rejected():
+    surroundings = _surroundings(entities=[_npc("npc.child", protected=True)])
+    with pytest.raises(JudgeSemanticError, match="protected"):
+        check_semantics(RecruitAction(action="recruit", target="npc.child"), surroundings)
+
+
+def test_recruit_already_companion_rejected():
+    surroundings = _surroundings(
+        entities=[_npc("npc.edric")],
+        companions=["npc.edric"],
+    )
+    with pytest.raises(JudgeSemanticError, match="already a companion"):
+        check_semantics(RecruitAction(action="recruit", target="npc.edric"), surroundings)
+
+
+def test_recruit_at_capacity_rejected():
+    surroundings = _surroundings(
+        entities=[_npc("npc.edric"), _npc("npc.a"), _npc("npc.b"), _npc("npc.c")],
+        companions=["npc.a", "npc.b", "npc.c"],
+        max_companions=3,
+    )
+    with pytest.raises(JudgeSemanticError, match="capacity"):
+        check_semantics(RecruitAction(action="recruit", target="npc.edric"), surroundings)
+
+
+def test_dismiss_valid_companion():
+    surroundings = _surroundings(
+        entities=[_npc("npc.edric")],
+        companions=["npc.edric"],
+    )
+    check_semantics(DismissAction(action="dismiss", target="npc.edric"), surroundings)
+
+
+def test_dismiss_not_a_companion_rejected():
+    surroundings = _surroundings(entities=[_npc("npc.edric")])
+    with pytest.raises(JudgeSemanticError, match="not a companion"):
+        check_semantics(DismissAction(action="dismiss", target="npc.edric"), surroundings)

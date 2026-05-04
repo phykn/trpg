@@ -4,10 +4,12 @@ from .schema import (
     BuyAction,
     ChainAction,
     CombatAction,
+    DismissAction,
     EquipAction,
     FleeAction,
     JudgeOutput,
     PassAction,
+    RecruitAction,
     RollAction,
     SellAction,
     UnequipAction,
@@ -225,6 +227,47 @@ def _check_unequip(output: UnequipAction, surroundings: dict[str, Any]) -> None:
         )
 
 
+def _check_recruit(output: RecruitAction, surroundings: dict[str, Any]) -> None:
+    by_id = _entities_by_id(surroundings)
+    ent = by_id.get(output.target)
+    if ent is None:
+        raise JudgeSemanticError(
+            f"recruit target {output.target!r} not in surroundings. "
+            f"Valid entities: {sorted(by_id.keys())}."
+        )
+    if int(ent.get("relations_player", 0)) < 0:
+        raise JudgeSemanticError(
+            f"recruit target {output.target!r} is hostile (relations_player < 0). "
+            f"Use 'pass' or 'reject'."
+        )
+    if bool(ent.get("protected")):
+        raise JudgeSemanticError(
+            f"recruit target {output.target!r} is protected (NPC unfit for adventuring). "
+            f"Use 'pass' or 'reject'."
+        )
+    companions = surroundings.get("companions") or []
+    if output.target in companions:
+        raise JudgeSemanticError(
+            f"recruit target {output.target!r} is already a companion. "
+            f"Use 'pass' or 'dismiss'."
+        )
+    max_n = int(surroundings.get("companions_max", 3))
+    if len(companions) >= max_n:
+        raise JudgeSemanticError(
+            f"companion party at capacity ({len(companions)}/{max_n}). "
+            f"Dismiss an existing companion first."
+        )
+
+
+def _check_dismiss(output: DismissAction, surroundings: dict[str, Any]) -> None:
+    companions = surroundings.get("companions") or []
+    if output.target not in companions:
+        raise JudgeSemanticError(
+            f"dismiss target {output.target!r} is not a companion. "
+            f"Current companions: {sorted(companions)}."
+        )
+
+
 # RejectAction / SummonCombatAction / RestAction have no surroundings-based
 # check — schema validation alone is enough; check_semantics's .get() returns
 # None for them and we exit cleanly.
@@ -238,6 +281,8 @@ _CHECKS: dict[type, Callable[[Any, dict[str, Any]], None]] = {
     UseAction: _check_use,
     EquipAction: _check_equip,
     UnequipAction: _check_unequip,
+    RecruitAction: _check_recruit,
+    DismissAction: _check_dismiss,
     ChainAction: _check_chain,
 }
 
