@@ -174,7 +174,7 @@ def test_combat_rejects_friendly_npc_target():
                 "id": "gyeryun_chief",
                 "name": "정운",
                 "type": "npc",
-                "state_tags": ["우호적(affinity 60)"],
+                "friendly": True,
             },
         ],
     }
@@ -219,7 +219,6 @@ def test_combat_accepts_hostile_npc_target():
                 "id": "bandit_01",
                 "name": "산적",
                 "type": "npc",
-                "state_tags": ["경계중(affinity -60)"],
             }
         ],
     }

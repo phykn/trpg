@@ -3,6 +3,7 @@
 from src.context.surroundings import build_surroundings
 from src.domain.entities import Character, Location, Race, Stats
 from src.domain.state import GameState
+from src.rules import RULES
 
 
 def _make_state() -> GameState:
@@ -63,3 +64,27 @@ def test_npc_entry_no_state_tags():
     for e in sur["entities"]:
         if e.get("type") == "npc":
             assert "state_tags" not in e
+
+
+def test_friendly_flag_on_high_affinity_npc():
+    state = _make_state()
+    state.characters["scout_01"].relations["player_01"] = RULES.social.friendly_threshold
+    sur = build_surroundings(state, "player_01")
+    npc = next(e for e in sur["entities"] if e["id"] == "scout_01")
+    assert npc.get("friendly") is True
+
+
+def test_friendly_flag_omitted_below_threshold():
+    state = _make_state()
+    state.characters["scout_01"].relations["player_01"] = RULES.social.friendly_threshold - 1
+    sur = build_surroundings(state, "player_01")
+    npc = next(e for e in sur["entities"] if e["id"] == "scout_01")
+    assert "friendly" not in npc
+
+
+def test_npc_entry_carries_female_gender():
+    state = _make_state()
+    state.characters["scout_01"].gender = "female"
+    sur = build_surroundings(state, "player_01")
+    npc = next(e for e in sur["entities"] if e["id"] == "scout_01")
+    assert npc["gender"] == "female"

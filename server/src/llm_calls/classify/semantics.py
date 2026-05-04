@@ -111,7 +111,7 @@ def _entities_by_id(surroundings: dict[str, Any]) -> dict[str, dict]:
 
 
 def _is_friendly(entity: dict) -> bool:
-    return any("우호적" in t for t in entity.get("state_tags") or [])
+    return bool(entity.get("friendly"))
 
 
 def _check_combat(output: CombatAction, surroundings: dict[str, Any]) -> None:
@@ -139,7 +139,7 @@ def _check_combat(output: CombatAction, surroundings: dict[str, Any]) -> None:
             )
         if _is_friendly(ent):
             raise JudgeSemanticError(
-                f"combat target {tid!r} is a friendly NPC ({ent.get('state_tags')}). "
+                f"combat target {tid!r} is a friendly NPC. "
                 f"Use action='roll' (CHA, hostile intent) for confrontation, "
                 f"or 'summon_combat' to bring in a real adversary. "
                 f"Hostile/neutral NPCs here: {hostile_npcs}."

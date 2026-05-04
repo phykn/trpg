@@ -7,7 +7,6 @@ from ..domain.entities import (
     item_kind,
 )
 from ..domain.state import GameState
-from ..domain.types import is_secret_masked_grade
 from ..engines.growth import can_afford_level_up
 from ..ontology.graph import GameGraph
 from ..ontology.queries import (
@@ -153,8 +152,6 @@ def _entities_payload(
     actor: Character,
     location: Location,
     graph: GameGraph,
-    *,
-    masked: bool = False,
 ) -> list[dict]:
     entities: list[dict] = [{"id": actor_id, "name": actor.name, "type": "player"}]
     for cid in inhabitants_of(graph, location.id):
@@ -174,6 +171,8 @@ def _entities_payload(
             entry["role"] = role_label
         if char.protected:
             entry["protected"] = True
+        if char.relations.get(actor.id, 0) >= RULES.social.friendly_threshold:
+            entry["friendly"] = True
         roles = _npc_roles(state, actor, char, graph)
         if roles:
             entry["roles"] = roles
@@ -271,20 +270,13 @@ def build_surroundings(
     state: GameState,
     actor_id: str,
     graph: GameGraph | None = None,
-    *,
-    grade: str | None = None,
 ) -> dict:
     """Assemble the surroundings payload. `graph` is the relational SSOT —
     callers that already built one (flow entry points) should pass it; tests
     and ad-hoc callers can omit and we'll build internally.
-
-    `grade` gates secret slots for the failure-grade narrate path: a botched
-    roll drops affinity tags off `entities[*].state_tags` so the player
-    can't read the NPC's true disposition off a sidebar.
     """
     if graph is None:
         graph = state.graph()
-    masked = is_secret_masked_grade(grade)
     actor = state.characters[actor_id]
     in_combat = state.combat_state is not None
     base = {
@@ -308,7 +300,7 @@ def build_surroundings(
         **base,
         "location": _location_payload(location),
         "entities": _entities_payload(
-            state, actor_id, actor, location, graph, masked=masked
+            state, actor_id, actor, location, graph
         ),
         "corpses": _corpses_payload(state, actor, graph),
         "skills": _skills_payload(state, actor, graph),

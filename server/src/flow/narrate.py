@@ -105,7 +105,7 @@ async def run_narrate(
                 state, graph, chosen, state.player_id, grade=grade
             )
 
-    surroundings = build_surroundings(state, state.player_id, graph, grade=grade)
+    surroundings = build_surroundings(state, state.player_id, graph)
     # Recovery beat: prior fight + memories would pull stale events into the aftermath; zero them so prose stays in the moment.
     is_recovery = previous_phase_signal == "downed_recovered"
     history_str = (
