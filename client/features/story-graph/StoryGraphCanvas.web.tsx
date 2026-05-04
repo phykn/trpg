@@ -153,6 +153,15 @@ export function StoryGraphCanvas({
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const cyRef = React.useRef<Core | null>(null);
 
+  const graphIdentityKey = React.useMemo(() => {
+    const ns = graph.nodes.map((n) => n.id).sort().join('|');
+    const es = graph.edges.map((e) => `${e.source}>${e.target}`).sort().join('|');
+    return `${ns}#${es}`;
+  }, [graph]);
+
+  // Effect 1: cy lifecycle — graph identity + the props that genuinely require
+  // rebuilding (overrides/layout/root). Selection and centerNodeId are
+  // intentionally absent; they get their own effects so a tap doesn't reset zoom.
   React.useEffect(() => {
     // Drop cache entries for nodes no longer in the graph.
     const validIds = new Set(graph.nodes.map((n) => n.id));
@@ -321,9 +330,7 @@ export function StoryGraphCanvas({
     cy.fit(undefined, 28);
     if (centerNodeId) {
       const node = cy.getElementById(centerNodeId);
-      if (node.length > 0) {
-        cy.center(node);
-      }
+      if (node.length > 0) cy.center(node);
     }
     cyRef.current = cy;
 
@@ -331,8 +338,10 @@ export function StoryGraphCanvas({
       cy.destroy();
       cyRef.current = null;
     };
-  }, [graph, nodeOverrides, layout, rootNodeId, centerNodeId, onNodeSelect, clearOnBackgroundTap, unseenNodeIds]);
+  // centerNodeId dropped from deps; selection isn't here either.
+  }, [graphIdentityKey, nodeOverrides, layout, rootNodeId, onNodeSelect, clearOnBackgroundTap, unseenNodeIds]);
 
+  // Effect 2: selection — viewport untouched.
   React.useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
@@ -340,24 +349,62 @@ export function StoryGraphCanvas({
     if (!selectedNodeId) return;
     const selected = cy.getElementById(selectedNodeId);
     if (selected.length > 0) selected.select();
-  }, [graph, selectedNodeId]);
+  }, [selectedNodeId]);
+
+  // Effect 3: camera follow — animated pan only, zoom preserved.
+  React.useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || !centerNodeId) return;
+    const node = cy.getElementById(centerNodeId);
+    if (node.length === 0) return;
+    cy.ready(() => {
+      const z = cy.zoom();
+      const w = cy.width();
+      const h = cy.height();
+      const p = node.position();
+      cy.animate(
+        { pan: { x: -p.x * z + w / 2, y: -p.y * z + h / 2 } },
+        { duration: 250 },
+      );
+    });
+  }, [centerNodeId]);
 
   return (
-    <div
-      ref={containerRef}
-      role="img"
-      aria-label={`${accessibilityLabel}. ${graph.summary}`}
-      style={{
-        backgroundColor: colors.canvas.default,
-        borderColor: colors.border.default,
-        borderRadius: 8,
-        borderStyle: 'solid',
-        borderWidth: 1,
-        cursor: onNodeSelect ? 'pointer' : 'default',
-        height: height ?? '100%',
-        overflow: 'hidden',
-        width: '100%',
-      }}
-    />
+    <div style={{ position: 'relative', width: '100%', height: height ?? '100%' }}>
+      <div
+        ref={containerRef}
+        role="img"
+        aria-label={`${accessibilityLabel}. ${graph.summary}`}
+        style={{
+          backgroundColor: colors.canvas.default,
+          borderColor: colors.border.default,
+          borderRadius: 8,
+          borderStyle: 'solid',
+          borderWidth: 1,
+          cursor: onNodeSelect ? 'pointer' : 'default',
+          height: '100%',
+          overflow: 'hidden',
+          width: '100%',
+        }}
+      />
+      <button
+        type="button"
+        aria-label="맵 다시 맞추기"
+        onClick={() => cyRef.current?.fit(undefined, 28)}
+        style={{
+          position: 'absolute',
+          top: 8,
+          right: 8,
+          padding: 6,
+          background: colors.canvas.default,
+          border: `1px solid ${colors.border.default}`,
+          borderRadius: 6,
+          cursor: 'pointer',
+          opacity: 0.85,
+        }}
+      >
+        ⟳
+      </button>
+    </div>
   );
 }
