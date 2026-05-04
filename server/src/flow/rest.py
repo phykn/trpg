@@ -13,11 +13,13 @@ from ..mapping.josa import eun_neun
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from . import encounter as encounter_engine
 from .buff_tick import tick_turn_buffs
+from ..llm_calls.classify.schema import PassAction
 from .combat_auto import PlayerAction
 from .combat_phase import start_combat_and_drive_auto
-from .dirty import Dirty, ToFrontFn, finalize, push_act
+from .dirty import Dirty, ToFrontFn, drop_pushed_act, finalize, push_act
 from .error_phrases import humanize_engine_error
 from .format import format_rest_log
+from .narrate import stream_narrate_tail
 
 
 def _rest_ambush_text(actor_name: str) -> str:
@@ -55,9 +57,28 @@ async def run_rest(
             state, state.player_id, rng=rng, dirty=dirty.entities, summon=summon_cb
         )
     except RestInsufficientGold as exc:
-        yield push_act(state, dirty, humanize_engine_error(exc))
-        if to_front_fn is not None:
-            yield {"type": "state", "data": to_front_fn(state)}
+        fail_line = humanize_engine_error(exc)
+        if client is None:
+            yield push_act(state, dirty, fail_line)
+        else:
+            # Fold the engine line into narrate prose so it doesn't read as
+            # chrome + silence — the LLM gets fail_line as context and
+            # describes the player realizing they can't afford the inn.
+            fail_evt = push_act(state, dirty, fail_line)
+            drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
+            graph = state.graph()
+            async for ev in stream_narrate_tail(
+                client,
+                state,
+                scenario_repo,
+                player_input,
+                dirty,
+                to_front_fn,
+                PassAction(action="pass"),
+                graph=graph,
+                act_log_lines=[fail_line],
+            ):
+                yield ev
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return

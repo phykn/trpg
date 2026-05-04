@@ -48,6 +48,7 @@ from .error_phrases import humanize_runtime_error, is_dramatic_fail
 from .dirty import (
     Dirty,
     ToFrontFn,
+    drop_pushed_act,
     finalize,
     next_log_id,
     push_act,
@@ -257,16 +258,6 @@ def _chain_needs_narrate(
     return False
 
 
-def _drop_pushed_act(state: GameState, dirty: Dirty, entry_id: int | None) -> None:
-    """Drop the pushed act entry so narrate's prose isn't shadowed by an engine-toned line."""
-    if entry_id is None:
-        return
-    state.log_entries[:] = [
-        e for e in state.log_entries if getattr(e, "id", None) != entry_id
-    ]
-    dirty.log[:] = [e for e in dirty.log if getattr(e, "id", None) != entry_id]
-
-
 async def _run_one_step_action(
     client: LLMClient,
     state: GameState,
@@ -328,7 +319,7 @@ async def _run_one_step_action(
             if keep_card:
                 yield ev
             else:
-                _drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
+                drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
         if getattr(result, "tail_intent", None):
             act_log_lines.append(result.tail_intent)
         fake_pass = PassAction(action="pass")
@@ -451,7 +442,7 @@ async def _dispatch(
                 yield push_act(state, dirty, fail_line)
             else:
                 fail_evt = push_act(state, dirty, fail_line)
-                _drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
+                drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
                 async for ev in stream_narrate_tail(
                     client,
                     state,
@@ -505,7 +496,7 @@ async def _dispatch(
             # No enemy materialized — fold the engine line into narrate prose so it doesn't read as chrome + silence. Failed summon doesn't consume the turn (mirrors the CombatAction invalid-target branch).
             fail_line = SUMMON_FAILED_TEXT
             fail_evt = push_act(state, dirty, fail_line)
-            _drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
+            drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
             state.invalidate_graph()
             graph = state.graph()
             fake_pass = PassAction(action="pass")
@@ -572,7 +563,7 @@ async def _dispatch(
             yield push_act(state, dirty, fail_line)
         else:
             fail_evt = push_act(state, dirty, fail_line)
-            _drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
+            drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
             async for ev in stream_narrate_tail(
                 client,
                 state,
@@ -680,7 +671,7 @@ async def _dispatch(
                 if keep_card:
                     yield ev
                 else:
-                    _drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
+                    drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
             if has_invalid_combat_targets(state, graph, tail_combat.targets):
                 # Tail combat with no valid target — same shape as standalone CombatAction's invalid-target branch, but the prefix parts already ran.
                 fail_line = NO_COMBAT_TARGETS_TEXT
@@ -688,7 +679,7 @@ async def _dispatch(
                     yield push_act(state, dirty, fail_line)
                 else:
                     fail_evt = push_act(state, dirty, fail_line)
-                    _drop_pushed_act(
+                    drop_pushed_act(
                         state, dirty, (fail_evt.get("data") or {}).get("id")
                     )
                     chain_act_lines.append(fail_line)
@@ -748,7 +739,7 @@ async def _dispatch(
                 if keep_card:
                     yield ev
                 else:
-                    _drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
+                    drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
             async for ev in stream_narrate_tail(
                 client,
                 state,

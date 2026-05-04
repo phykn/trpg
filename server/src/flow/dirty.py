@@ -89,6 +89,16 @@ def push_act(
     return {"type": "log_entry", "data": log.model_dump()}
 
 
+def drop_pushed_act(state: GameState, dirty: Dirty, entry_id: int | None) -> None:
+    """Drop a previously-pushed act entry from both state.log_entries and dirty.log so narrate's prose isn't shadowed by an engine-toned line. Used by fail-fold paths that hand the line to narrate as act_log_lines context."""
+    if entry_id is None:
+        return
+    state.log_entries[:] = [
+        e for e in state.log_entries if getattr(e, "id", None) != entry_id
+    ]
+    dirty.log[:] = [e for e in dirty.log if getattr(e, "id", None) != entry_id]
+
+
 def flush_deferred_act_cards(state: GameState, dirty: Dirty):
     """Yield SSE log_entry events for any reaction cards (quest 성공/실패,
     quest_start, affinity) stashed during apply_changes / engine triggers.
