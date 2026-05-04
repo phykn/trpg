@@ -45,6 +45,20 @@ function hashJitter(id: string): { dx: number; dy: number } {
   return { dx, dy };
 }
 
+function hashSeedPosition(id: string): { x: number; y: number } {
+  // Deterministic spread across ~800×500 starting region. Without this every
+  // first-time node shares position (0,0); cose then ties them apart with
+  // internal randomness, producing different layouts each session. With it,
+  // identical graphs yield identical layouts.
+  let h = 0;
+  for (let i = 0; i < id.length; i += 1) {
+    h = (h * 1315423911 + id.charCodeAt(i)) | 0;
+  }
+  const ux = (h & 0xfffff) / 0xfffff;
+  const uy = ((h >>> 12) & 0xfffff) / 0xfffff;
+  return { x: ux * 800, y: uy * 500 };
+}
+
 function seedFromConnected(
   nodeId: string,
   edges: StoryGraphEdge[],
@@ -79,7 +93,10 @@ function toElements(
     ...graph.nodes.map((node) => {
       const override = overrides?.[node.id];
       const cachedPos = cached[node.id];
-      const seed = cachedPos ?? seedFromConnected(node.id, graph.edges, cached);
+      const seed =
+        cachedPos
+        ?? seedFromConnected(node.id, graph.edges, cached)
+        ?? hashSeedPosition(node.id);
       const isCurrent = centerNodeId !== undefined && node.id === centerNodeId;
       return {
         data: {
