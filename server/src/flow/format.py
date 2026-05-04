@@ -224,8 +224,13 @@ def format_combat_end_text(
     if outcome == "downed":
         return "의식을 되찾았습니다."
     enemies_remaining = enemies_remaining or []
-    if any(e.get("hp", 0) > 0 for e in enemies_remaining):
-        return "적을 물리쳤습니다."
+    survivors = [e for e in enemies_remaining if e.get("hp", 0) > 0]
+    if survivors:
+        names = [e.get("name", "") for e in survivors if e.get("name")]
+        if names:
+            joined = ", ".join(names)
+            return f"{joined}{i_ga(joined)} 도망쳤습니다."
+        return "적이 도망쳤습니다."
     return "적을 처치했습니다."
 
 

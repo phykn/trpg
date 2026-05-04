@@ -83,7 +83,7 @@ async def emit_combat_cinematic_and_end(
 
     summary = format_combat_outcome_summary(result)
     enemies_remaining = [
-        {"id": h.id, "hp": h.hp_after, "hp_max": h.max_hp}
+        {"id": h.id, "name": h.name, "hp": h.hp_after, "hp_max": h.max_hp}
         for h in result.enemy_hits
         if not h.killed
     ]

@@ -8,10 +8,18 @@ def test_victory_kill_all_enemies_dead():
 
 
 def test_victory_rout_some_enemies_alive():
-    """At least one enemy alive (rout) → 물리쳤 label."""
+    """At least one enemy alive (rout) → 도망 label, names included when provided."""
+    enemies = [{"id": "goblin_1", "name": "고블린 약탈자", "hp": 7, "hp_max": 34}]
+    result = format_combat_end_text(outcome="victory", enemies_remaining=enemies)
+    assert "도망" in result
+    assert "고블린 약탈자" in result
+
+
+def test_victory_rout_anonymous_enemies():
+    """Survivors without name → generic 적이 도망쳤습니다."""
     enemies = [{"id": "goblin_1", "hp": 7, "hp_max": 34}]
     result = format_combat_end_text(outcome="victory", enemies_remaining=enemies)
-    assert "물리쳤" in result
+    assert "도망" in result
 
 
 def test_player_fled():
