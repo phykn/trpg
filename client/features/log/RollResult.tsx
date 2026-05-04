@@ -26,7 +26,9 @@ export function RollResult({ entry }: { entry: RollEntry }) {
   const tone = TONE[entry.result];
   const margin = marginText(entry);
   const { scale, opacity } = useEntryAnimation();
+  // breakdown[0] is always the d20 roll itself; slice(1) sums only ability/affinity bonuses.
   const breakdown = entry.bonus_breakdown ?? [];
+  const totalBonus = breakdown.slice(1).reduce((acc, item) => acc + item.value, 0);
 
   return (
     <Animated.View style={{ transform: [{ scale }], opacity }}>
@@ -67,6 +69,14 @@ export function RollResult({ entry }: { entry: RollEntry }) {
           >
             {entry.roll}
           </Text>
+          {totalBonus !== 0 && (
+            <Text
+              className="font-mono text-panel text-fg-muted"
+              style={{ fontVariant: ['tabular-nums'] }}
+            >
+              ({signed(totalBonus)})
+            </Text>
+          )}
           <View style={{ flex: 1 }} />
           {margin !== null && (
             <Text
@@ -77,33 +87,6 @@ export function RollResult({ entry }: { entry: RollEntry }) {
             </Text>
           )}
         </View>
-        {breakdown.length > 0 && (
-          <View
-            className="flex-row items-baseline flex-wrap mt-1.5"
-            style={{ gap: 8 }}
-          >
-            {breakdown.map((item, idx) => (
-              <View
-                key={`${item.label}-${idx}`}
-                className="flex-row items-baseline"
-                style={{ gap: 3 }}
-              >
-                <Text
-                  className="font-sans text-caption text-fg-muted"
-                  style={{ letterSpacing: 0.6 }}
-                >
-                  {item.label}
-                </Text>
-                <Text
-                  className="font-mono text-caption text-fg-subtle"
-                  style={{ fontVariant: ['tabular-nums'] }}
-                >
-                  {idx === 0 ? item.value : signed(item.value)}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
       </Surface>
     </Animated.View>
   );
