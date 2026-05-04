@@ -30,6 +30,12 @@ const jsonHeaders = {
   'Content-Type': 'application/json',
 };
 
+export async function getVersion(): Promise<{ sha: string }> {
+  const res = await fetch(`${BASE_URL}/version`);
+  if (!res.ok) throw new Error(`getVersion failed: HTTP ${res.status}`);
+  return (await res.json()) as { sha: string };
+}
+
 export async function listProfiles(): Promise<ProfileCard[]> {
   const res = await fetch(`${BASE_URL}/profiles`, { headers: baseHeaders });
   if (!res.ok) throw new Error(`listProfiles failed: HTTP ${res.status}`);

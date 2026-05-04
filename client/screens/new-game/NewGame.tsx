@@ -10,12 +10,14 @@ import {
 
 import { CenterMessage, ErrorState, Glyph } from '@/components/ui';
 import { colors } from '@/design/tokens';
-import { listProfiles } from '@/services';
+import { getVersion, listProfiles } from '@/services';
 import type { InitRequest, ProfileCard, RaceCard } from '@/types/wire';
 
 import { Input } from './Input';
 import { Section } from './Section';
 import { SelectCard } from './SelectCard';
+
+const CLIENT_SHA = process.env.EXPO_PUBLIC_GIT_SHA ?? 'local';
 
 type Props = {
   onSubmit: (body: InitRequest) => Promise<void>;
@@ -30,6 +32,13 @@ export function NewGame({ onSubmit }: Props) {
   const [gender, setGender] = React.useState<'male' | 'female'>('male');
   const [name, setName] = React.useState('주인공');
   const [submitting, setSubmitting] = React.useState(false);
+  const [serverSha, setServerSha] = React.useState<string>('?');
+
+  React.useEffect(() => {
+    getVersion()
+      .then((v) => setServerSha(v.sha))
+      .catch(() => setServerSha('?'));
+  }, []);
 
   const loadProfiles = React.useCallback(() => {
     setLoadError(null);
@@ -187,6 +196,12 @@ export function NewGame({ onSubmit }: Props) {
           )}
         </Section>
       )}
+
+      <View className="items-center pt-2">
+        <Text className="font-mono text-meta text-fg-subtle">
+          클라이언트 {CLIENT_SHA} · 서버 {serverSha}
+        </Text>
+      </View>
     </ScrollView>
   );
 }

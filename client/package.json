@@ -9,7 +9,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest",
-    "deploy": "rm -rf dist && cp .env .env.bak && cp .env.release .env && (expo export -p web && wrangler deploy); status=$?; cp .env.bak .env && rm .env.bak; exit $status"
+    "deploy": "rm -rf dist && cp .env .env.bak && cp .env.release .env && echo \"EXPO_PUBLIC_GIT_SHA=$(git rev-parse --short HEAD)\" >> .env && (expo export -p web && wrangler deploy); status=$?; cp .env.bak .env && rm .env.bak; exit $status"
   },
   "jest": {
     "preset": "jest-expo"
