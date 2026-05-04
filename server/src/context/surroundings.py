@@ -176,6 +176,24 @@ def _entities_payload(
         roles = _npc_roles(state, actor, char, graph)
         if roles:
             entry["roles"] = roles
+        # Transferable items — independent of `merchants` (which gates on
+        # price/affinity). carryables exposes give/swap targets to judge
+        # regardless of trade eligibility. Excludes equipped items.
+        equipped_ids: set[str] = set()
+        for edge in equipment_of(graph, char.id):
+            equipped_ids.add(edge.to_id)
+        carryables: list[dict] = []
+        seen_carry: set[str] = set()
+        for iid in inventory_of(graph, char.id):
+            if iid in seen_carry or iid in equipped_ids:
+                continue
+            item = state.items.get(iid)
+            if item is None:
+                continue
+            seen_carry.add(iid)
+            carryables.append({"id": iid, "name": item.name})
+        if carryables:
+            entry["carryables"] = carryables
         entities.append(entry)
     for item_id in items_in(graph, location.id):
         item = state.items.get(item_id)
