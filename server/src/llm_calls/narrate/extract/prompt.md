@@ -11,7 +11,7 @@ Extract from what the body explicitly describes. **Never reinterpret, expand, or
 - `body` — the Korean prose body that just streamed. Read it carefully; it is the ground truth for what happened this turn.
 - `judge_result.action` — one of `pass` / `roll` / `reject` / `intro`.
 - `judge_result.targets` — target id list judge picked, on `pass`/`roll`. `roll` always has ≥1; `pass` may be empty. Absent on `reject`/`intro`.
-- `surroundings` — same shape the body saw: `entities` (alive NPCs only), `corpses` (dead NPCs), `merchants`, `inventory`, etc.
+- `surroundings` — id-validating slots only: `entities` (alive NPCs only), `corpses` (dead NPCs), `merchants`. Trimmed from the body's view so this stage doesn't hallucinate state changes against fields it has nothing to write to.
 - `target_view` — deep target data on `pass`/`roll` (NPC alive/dead, location, item — see body prompt for field details). null on `reject`/`intro`.
 - `grade` — set only on `roll` (5 grades), null otherwise. The body has already used this for tone; you reuse it for `affinity` grade only when the social act actually landed in body (see "affinity emission" below).
 - `previous_phase_signal` — one-shot signal from the prior turn (currently only `"downed_recovered"`). When set, the body is a recovery beat; this turn is **not** a social act → no `affinity`, `state_changes=[]`.
