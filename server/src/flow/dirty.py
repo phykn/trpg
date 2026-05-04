@@ -1,5 +1,6 @@
 """Per-turn dirty tracking, log push helpers, and the flush + finalize tail."""
 
+import asyncio
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 
@@ -146,14 +147,18 @@ def push_dialogue(
 
 
 async def flush(state: GameState, save_repo: SaveRepo, dirty: Dirty) -> None:
-    """Persist a turn's worth of changes. Order: entities + jsonls first,
-    meta last (meta = commit point on partial-failure recovery).
+    """Persist a turn's worth of changes. Order: entities + jsonls in parallel
+    (independent tables), meta last (commit point on partial-failure recovery).
     """
-    for kind, eid in dirty.entities:
-        await save_repo.save_entity(state, kind, eid)
-    await save_repo.append_log_entries(state.game_id, dirty.log)
-    await save_repo.append_history_entries(state.game_id, dirty.history)
-    await save_repo.append_dialogue_entries(state.game_id, dirty.dialogue)
+    async with asyncio.TaskGroup() as tg:
+        for kind, eid in dirty.entities:
+            tg.create_task(save_repo.save_entity(state, kind, eid))
+        if dirty.log:
+            tg.create_task(save_repo.append_log_entries(state.game_id, dirty.log))
+        if dirty.history:
+            tg.create_task(save_repo.append_history_entries(state.game_id, dirty.history))
+        if dirty.dialogue:
+            tg.create_task(save_repo.append_dialogue_entries(state.game_id, dirty.dialogue))
     await save_repo.save_meta(state)
 
 
@@ -163,26 +168,25 @@ async def finalize(
     dirty: Dirty,
     to_front_fn: ToFrontFn | None,
 ) -> AsyncIterator[dict]:
-    try:
-        await flush(state, save_repo, dirty)
-    except PersistenceFailed as e:
-        from .error_phrases import humanize_runtime_error
-
-        yield {
-            "type": "error",
-            "data": {
-                "message": humanize_runtime_error(e),
-                "code": "PersistenceFailed",
-            },
-        }
-        return
     if to_front_fn:
         yield {"type": "state", "data": to_front_fn(state)}
-        # Suggestion chips come from narrate.extract when narrate ran this turn;
-        # otherwise (receipt / game-over / re-visit move) emit an empty list so
-        # the client strip clears instead of holding stale chips.
         items = (
             dirty.narrate_suggestions if dirty.narrate_suggestions is not None else []
         )
         yield {"type": "suggestions", "data": {"items": items}}
+    try:
+        await flush(state, save_repo, dirty)
+    except (PersistenceFailed, ExceptionGroup) as e:  # noqa: F821 ExceptionGroup is py311+ builtin
+        from .error_phrases import humanize_runtime_error
+
+        # TaskGroup wraps child failures in ExceptionGroup; unwrap to the first inner.
+        inner = e.exceptions[0] if isinstance(e, ExceptionGroup) else e  # noqa: F821
+        yield {
+            "type": "error",
+            "data": {
+                "message": humanize_runtime_error(inner),
+                "code": "PersistenceFailed",
+            },
+        }
+        return
     yield {"type": "done", "data": {}}
