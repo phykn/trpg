@@ -6,6 +6,8 @@ context to produce the metadata. Same external API as the pre-PR3 single-call
 narrate — flow code doesn't change.
 """
 
+import logging
+import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
@@ -14,6 +16,8 @@ from .body import stream_body
 from .extract import ExtractInput, run_extract
 from .parser import _clean_body
 from .schema import NarrateInput, NarrateOutput
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -67,7 +71,14 @@ async def stream_narrate(
         grade=input_.grade,
         previous_phase_signal=input_.previous_phase_signal,
     )
+    # TEMP: timing investigation for chip-gap. Remove after measuring.
+    t_extract_start = time.perf_counter()
     output = await run_extract(client, extract_input)
+    _log.info(
+        "turn-timing extract=%dms body_chars=%d",
+        int((time.perf_counter() - t_extract_start) * 1000),
+        len(full_body),
+    )
     yield NarrativeFinal(body=full_body, output=output, parse_error=None)
 
 

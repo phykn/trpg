@@ -1,5 +1,7 @@
 """Per-turn dirty tracking, log push helpers, and the flush + finalize tail."""
 
+import logging
+import time
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 
@@ -17,6 +19,8 @@ from ..rules import RULES
 from .format import format_death_log
 
 ToFrontFn = Callable[[GameState], dict]
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -163,8 +167,17 @@ async def finalize(
     dirty: Dirty,
     to_front_fn: ToFrontFn | None,
 ) -> AsyncIterator[dict]:
+    # TEMP: timing investigation for chip-gap. Remove after measuring.
+    t_flush_start = time.perf_counter()
+    n_entities = len(dirty.entities)
     try:
         await flush(state, save_repo, dirty)
+        _log.info(
+            "turn-timing flush=%dms entities=%d game=%s",
+            int((time.perf_counter() - t_flush_start) * 1000),
+            n_entities,
+            state.game_id,
+        )
     except PersistenceFailed as e:
         from .error_phrases import humanize_runtime_error
 
