@@ -305,7 +305,7 @@ def build_surroundings(
         "growth": _growth_payload(actor),
         "recent_npc": state.recent_npc_id(actor_id),
         "companions": list(companions_of(graph, actor_id)),
-        "companions_max": RULES.companions.max_companions,
+        "companions_max": RULES.companions.max_companions,  # ssot-allow: RULES attr, not a relation field
     }
     if not actor.location_id or actor.location_id not in state.locations:
         return {
