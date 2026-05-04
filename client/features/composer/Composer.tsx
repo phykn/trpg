@@ -15,21 +15,18 @@ import { Surface } from '@/components/ui';
 
 import { SendButton } from './SendButton';
 import { StopButton } from './StopButton';
-import { ThinkToggle } from './ThinkToggle';
 
 const INPUT_MIN_HEIGHT = 40;
 const INPUT_MAX_HEIGHT = 320;
 const IS_WEB = Platform.OS === 'web';
 
-export function Composer({ input, setInput, onSend, onStop, streaming, think, onToggleThink, locked = false }: {
+export function Composer({ input, setInput, onSend, onStop, streaming, locked = false }: {
   input: string;
   setInput: (text: string) => void;
   onSend: (text: string) => void;
   onStop: () => void;
   streaming: boolean;
   locked?: boolean;
-  think: boolean;
-  onToggleThink: () => void;
 }) {
   const inputRef = React.useRef(input);
   React.useEffect(() => { inputRef.current = input; }, [input]);
@@ -126,8 +123,7 @@ export function Composer({ input, setInput, onSend, onStop, streaming, think, on
           ...(IS_WEB ? { scrollbarWidth: 'none' } : null),
         } as object}
       />
-      <View className="flex-row items-center justify-between">
-        <ThinkToggle think={think} onToggle={onToggleThink} disabled={streaming} />
+      <View className="flex-row items-center justify-end">
         {streaming ? (
           <StopButton onPress={onStop} />
         ) : (

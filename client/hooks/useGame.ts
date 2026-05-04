@@ -86,7 +86,6 @@ export function useGame() {
     [],
   );
 
-  const [think, setThink] = React.useState(false);
   const gameIdRef = React.useRef<string | null>(null);
   // The streaming gate has to be synchronous — using the React state alone leaves a
   // window where a second click in the same tick reads the stale (false) value and
@@ -247,16 +246,16 @@ export function useGame() {
       const trimmed = text.trim();
       if (!trimmed || !gameId || pending) return;
       void runStream((signal) =>
-        streamTurn(gameId, { player_input: trimmed, think }, handleEvent, signal),
+        streamTurn(gameId, { player_input: trimmed, think: false }, handleEvent, signal),
       );
     },
-    [gameId, pending, handleEvent, runStream, think],
+    [gameId, pending, handleEvent, runStream],
   );
 
   const onRoll = React.useCallback(() => {
     if (!gameId || !pending) return;
-    void runStream((signal) => streamRoll(gameId, { think }, handleEvent, signal));
-  }, [gameId, pending, handleEvent, runStream, think]);
+    void runStream((signal) => streamRoll(gameId, { think: false }, handleEvent, signal));
+  }, [gameId, pending, handleEvent, runStream]);
 
   const onStop = React.useCallback(() => {
     aborts.current.forEach((a) => a.abort());
@@ -299,10 +298,10 @@ export function useGame() {
       setLevelUpOpen(false);
       setLevelUpCandidates(null);
       void runStream((signal) =>
-        streamLevelUp(id, { stat_up, skill_id, think }, handleEvent, signal),
+        streamLevelUp(id, { stat_up, skill_id, think: false }, handleEvent, signal),
       );
     },
-    [handleEvent, runStream, think],
+    [handleEvent, runStream],
   );
 
   const goToNewGame = React.useCallback(() => {
@@ -383,8 +382,6 @@ export function useGame() {
     markQuestSeen,
     hasUnseenSubject,
     markSubjectSeen,
-    think,
-    setThink,
     onSend,
     onRoll,
     onStop,

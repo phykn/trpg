@@ -17,7 +17,7 @@ import { ConfirmDialog } from '@/components/ui';
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, storyGraph, log, pending, streaming, awaitingNarration, gameOver, suggestions, errorMessage, think, setThink, onSend, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp } = game;
+  const { hero, subject, quest, place, combat, storyGraph, log, pending, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -170,8 +170,6 @@ export function Playing({ game }: Props) {
             onSend={onSend}
             onStop={onStop}
             streaming={streaming}
-            think={think}
-            onToggleThink={() => setThink((v) => !v)}
           />
         )}
       </KeyboardAvoidingView>
