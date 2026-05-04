@@ -148,7 +148,7 @@ def test_hero_equipment_three_slots_with_names(fresh_state):
 
 def test_hero_inventory_grouped(fresh_state):
     h = to_hero(_full_state(fresh_state))
-    assert h["inventory"] == [{"name": "약초", "qty": 2}]
+    assert h["inventory"] == [{"name": "금화(0)", "qty": 1}, {"name": "약초", "qty": 2}]
 
 
 def test_hero_companion_label_when_job_empty(fresh_state):
@@ -184,12 +184,15 @@ def test_subject_inventory_prepends_gold_when_positive(fresh_state):
     ]
 
 
-def test_subject_inventory_omits_gold_when_zero(fresh_state):
+def test_subject_inventory_includes_gold_when_zero(fresh_state):
     state = _full_state(fresh_state)
     state.characters["guard_01"].gold = 0
     state.characters["guard_01"].inventory_ids = ["herb_01"]
     s = to_subject(state)
-    assert s["inventory"] == [{"name": "약초", "qty": 1}]
+    assert s["inventory"] == [
+        {"name": "금화(0)", "qty": 1},
+        {"name": "약초", "qty": 1},
+    ]
 
 
 def test_subject_dead_exposed_via_alive_field(fresh_state):

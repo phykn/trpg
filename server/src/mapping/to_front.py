@@ -106,8 +106,7 @@ def to_hero(state: GameState, graph: GameGraph | None = None) -> dict:
     p = state.characters[state.player_id]
     skills = _skill_names(state, graph, p.id)
     inventory = _inventory(state, graph, p.id)
-    if p.gold > 0:
-        inventory = [{"name": f"금화({p.gold})", "qty": 1}, *inventory]
+    inventory = [{"name": f"금화({p.gold})", "qty": 1}, *inventory]
     return {
         "name": p.name,
         "alive": p.alive,
@@ -152,8 +151,7 @@ def to_subject(state: GameState, graph: GameGraph | None = None) -> dict | None:
     known += [m.content for m in player.memories if m.target_id == sid]
     skills = _skill_names(state, graph, s.id)
     inventory = _inventory(state, graph, s.id)
-    if s.gold > 0:
-        inventory = [{"name": f"금화({s.gold})", "qty": 1}, *inventory]
+    inventory = [{"name": f"금화({s.gold})", "qty": 1}, *inventory]
     return {
         "name": s.name,
         "alive": s.alive,
