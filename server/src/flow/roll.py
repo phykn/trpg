@@ -11,11 +11,14 @@ from ..engines.apply import apply_changes
 from ..engines.combat import stat_modifier
 from ..engines.growth import grant_roll_xp
 from ..llm.client import LLMClient, set_llm_session_if_unset
+from ..llm_calls.classify.schema import PassAction
+from ..mapping.to_front import stat_label
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from ..rules.dc import compute_grade
 from .buff_tick import tick_turn_buffs
 from .combat_auto import PlayerAction, run_auto_combat
 from .combat_phase import emit_combat_cinematic_and_end
+from .companion import handle_recruit_roll_result
 from .dirty import (
     Dirty,
     ToFrontFn,
@@ -24,8 +27,7 @@ from .dirty import (
     push_log_entry,
 )
 from .format import front_grade
-from .narrate import consume_narrate, run_narrate
-from ..mapping.to_front import stat_label
+from .narrate import consume_narrate, run_narrate, stream_narrate_tail
 
 
 _MOVE_GRADES = ("critical_success", "success", "partial_success")
@@ -122,6 +124,30 @@ async def run_roll(
     )
     push_log_entry(state, roll_log, dirty)
     yield {"type": "log_entry", "data": roll_log.model_dump()}
+
+    if pending.kind == "recruit":
+        async for ev in handle_recruit_roll_result(state, pending, grade, dirty):
+            yield ev
+        state.pending_check = None
+        tick_turn_buffs(state, dirty)
+        if client is not None:
+            graph = state.graph()
+            async for ev in stream_narrate_tail(
+                client,
+                state,
+                scenario_repo,
+                pending.player_input,
+                dirty,
+                to_front_fn,
+                PassAction(action="pass"),
+                graph=graph,
+                previous_phase_signal=state.previous_phase_signal,
+            ):
+                yield ev
+            state.previous_phase_signal = None
+        async for ev in finalize(state, save_repo, dirty, to_front_fn):
+            yield ev
+        return
 
     grant_roll_xp(state, grade, dirty=dirty.entities)
 

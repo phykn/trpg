@@ -14,7 +14,13 @@ from ..rules import RULES
 from ..rules.dc import compute_required_roll
 from .dirty import Dirty, ToFrontFn, finalize, flush, push_act
 from .error_phrases import humanize_runtime_error
-from .format import format_dismiss_log, format_dismiss_turn_log
+from .format import (
+    format_dismiss_log,
+    format_dismiss_turn_log,
+    format_recruit_critical_failure_log,
+    format_recruit_failure_log,
+    format_recruit_success_log,
+)
 
 
 def _clamp(v: int, lo: int, hi: int) -> int:
@@ -118,3 +124,65 @@ async def run_dismiss(
 
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
+
+
+async def handle_recruit_roll_result(
+    state: GameState,
+    pending: PendingCheck,
+    grade: str,
+    dirty: Dirty,
+) -> AsyncIterator[dict]:
+    """Apply recruit roll outcome: companions add (success branches) or
+    affinity drop (critical_failure). Pushes a system card and sets
+    previous_phase_signal for the next narrate."""
+    target_id = pending.target
+    target = state.characters.get(target_id)
+    if target is None:
+        return
+    target_name = target.name
+    player = state.characters[state.player_id]
+
+    rules = RULES.companions  # ssot-allow: RULES config attribute, not entity.companions list
+
+    if grade in ("critical_success", "success", "partial_success"):
+        if target_id not in player.companions:  # ssot-allow: write path guard
+            player.companions.append(target_id)  # ssot-allow: write path
+            state.invalidate_graph()
+            dirty.entities.add(("characters", state.player_id))
+        delta = (
+            rules.recruit_affinity_crit_success
+            if grade == "critical_success"
+            else rules.recruit_affinity_success
+        )
+        target.relations[state.player_id] = (
+            target.relations.get(state.player_id, 0) + delta
+        )
+        dirty.entities.add(("characters", target_id))
+        yield push_act(
+            state,
+            dirty,
+            format_recruit_success_log(target_name),
+            turn_summary=f"{target_name} 동료 합류",
+        )
+        state.previous_phase_signal = f"companion_joined:{target_name}"
+        return
+
+    if grade == "critical_failure":
+        target.relations[state.player_id] = (
+            target.relations.get(state.player_id, 0) + rules.recruit_affinity_crit_failure
+        )
+        dirty.entities.add(("characters", target_id))
+        yield push_act(
+            state,
+            dirty,
+            format_recruit_critical_failure_log(target_name),
+            turn_summary=f"{target_name} 동료 영입 실패",
+        )
+    else:
+        yield push_act(
+            state,
+            dirty,
+            format_recruit_failure_log(target_name),
+            turn_summary=f"{target_name} 동료 영입 실패",
+        )
+    state.previous_phase_signal = f"companion_refused:{target_name}"
