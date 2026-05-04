@@ -88,7 +88,7 @@ def apply_attack_action(
         # Drop affinity only when the strike actually lands. Whiffed swings still register
         # as hostile intent narratively, but compounding the drop on misses pushes NPCs
         # past the trade-gating threshold far faster than the design intends.
-        apply_combat_affinity_drop(state, attacker_id, target_id, dirty=dirty.entities)
+        apply_combat_affinity_drop(state, attacker_id, target_id, dirty=dirty)
     killed = not target.alive
     if killed:
         award_kill_xp(state, attacker_id, target_id, dirty=dirty.entities)
@@ -139,7 +139,7 @@ def apply_skill_action(
                 killed_ids.append(eff["target"])
     if skill_obj.type in ("attack", "debuff"):
         for tid in targets:
-            apply_combat_affinity_drop(state, actor_id, tid, dirty=dirty.entities)
+            apply_combat_affinity_drop(state, actor_id, tid, dirty=dirty)
     if actor_id == state.player_id and targets:
         first_t = state.characters.get(targets[0])
         if first_t is not None and first_t.id != actor_id:

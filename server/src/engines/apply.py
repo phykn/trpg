@@ -228,10 +228,13 @@ def apply_combat_affinity_drop(
     target_id: str,
     dirty=None,
 ) -> None:
-    """Combat-side affinity drop. Single direction (`target.relations[attacker]`); narrate's affinity change never fires here."""
-    from .quest import _entities_set
+    """Combat-side affinity drop. Single direction (`target.relations[attacker]`); narrate's affinity change never fires here.
+    With a full `Dirty`, also queues a deferred reaction card so the player
+    sees the hostility shift after the combat result."""
+    from .quest import _as_dirty, _entities_set
 
     entities = _entities_set(dirty)
+    full = _as_dirty(dirty)
     if attacker_id == target_id:
         return
     target = state.characters.get(target_id)
@@ -239,9 +242,20 @@ def apply_combat_affinity_drop(
         return
     delta = RULES.social.combat_affinity_drop
     current = target.relations.get(attacker_id, 0)
-    target.relations[attacker_id] = max(-100, min(100, current - delta))
+    new_val = max(-100, min(100, current - delta))
+    actual_delta = new_val - current
+    target.relations[attacker_id] = new_val
     if entities is not None:
         entities.add(("characters", target_id))
+    if full is not None and actual_delta != 0:
+        from ..flow.format import format_affinity_card_log, format_affinity_card_turn_log
+
+        full.deferred_act_cards.append(
+            (
+                format_affinity_card_log(target.name, actual_delta),
+                format_affinity_card_turn_log(target.name, actual_delta),
+            )
+        )
 
 
 _HANDLERS = {

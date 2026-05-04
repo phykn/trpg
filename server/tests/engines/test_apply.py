@@ -384,6 +384,30 @@ def test_combat_affinity_drop_marks_dirty(state):
     assert ("characters", "player_01") not in dirty
 
 
+def test_combat_affinity_drop_with_full_dirty_stashes_card(state):
+    """A full Dirty triggers a deferred reaction card so the player sees the
+    hostility shift after the combat result."""
+    from src.flow.dirty import Dirty
+
+    dirty = Dirty()
+    apply_combat_affinity_drop(state, "player_01", "guard_01", dirty=dirty)
+    assert ("characters", "guard_01") in dirty.entities
+    assert dirty.deferred_act_cards, dirty.deferred_act_cards
+    text, _ = dirty.deferred_act_cards[0]
+    assert "guard_01" in text or state.characters["guard_01"].name in text
+
+
+def test_combat_affinity_drop_full_dirty_no_card_at_floor(state):
+    """If affinity is already at -100, the clamp produces no actual delta —
+    the card is suppressed to avoid noise."""
+    from src.flow.dirty import Dirty
+
+    state.characters["guard_01"].relations["player_01"] = -100
+    dirty = Dirty()
+    apply_combat_affinity_drop(state, "player_01", "guard_01", dirty=dirty)
+    assert dirty.deferred_act_cards == []
+
+
 def test_partial_success_keeps_valid_changes(state):
     r = apply_changes(
         state,
