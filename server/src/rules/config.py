@@ -1,5 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 
+from .companions import CompanionRules
+
 
 class _F(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -135,6 +137,7 @@ class Rules(_F):
     growth: GrowthConfig = GrowthConfig()
     skill: SkillConfig = SkillConfig()
     llm: LLMConfig = LLMConfig()
+    companions: CompanionRules = CompanionRules()
 
 
 RULES = Rules()
