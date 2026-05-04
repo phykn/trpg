@@ -3,11 +3,85 @@ with system card + previous_phase_signal hand-off to narrate. The companion list
 stays forbidden in narrate's set permission; flow mutates directly."""
 
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 
+from ..domain.errors import PersistenceFailed
+from ..domain.memory import PendingCheck
 from ..domain.state import GameState
+from ..mapping.to_front import pending_check_to_front
 from ..persistence.repo import SaveRepo
-from .dirty import Dirty, ToFrontFn, finalize, push_act
+from ..rules import RULES
+from ..rules.dc import compute_required_roll
+from .dirty import Dirty, ToFrontFn, finalize, flush, push_act
+from .error_phrases import humanize_runtime_error
 from .format import format_dismiss_log, format_dismiss_turn_log
+
+
+def _clamp(v: int, lo: int, hi: int) -> int:
+    return max(lo, min(hi, v))
+
+
+def _recruit_dc(state: GameState, target_id: str) -> int:
+    target = state.characters.get(target_id)
+    rel = target.relations.get(state.player_id, 0) if target else 0
+    base = RULES.companions.recruit_base_dc  # ssot-allow: RULES config read, not entity relation field
+    return base - _clamp(rel // 10, -5, 5)
+
+
+async def run_recruit(
+    state: GameState,
+    save_repo: SaveRepo,
+    player_input: str,
+    target_id: str,
+    dirty: Dirty,
+    to_front_fn: ToFrontFn | None,
+) -> AsyncIterator[dict]:
+    """Set a recruit-kind pending_check and emit pending_check SSE.
+    The /roll endpoint resolves the result via flow/companion.handle_recruit_roll_result
+    (Task 12)."""
+    actor = state.characters[state.player_id]
+
+    if target_id not in state.characters:
+        async for ev in finalize(state, save_repo, dirty, to_front_fn):
+            yield ev
+        return
+    if target_id in actor.companions:  # ssot-allow: write path guard
+        async for ev in finalize(state, save_repo, dirty, to_front_fn):
+            yield ev
+        return
+
+    dc = _recruit_dc(state, target_id)
+    stat_value = actor.stats.CHA
+    required_roll = compute_required_roll(dc, stat_value)
+
+    state.pending_check = PendingCheck(
+        player_input=player_input,
+        kind="recruit",
+        tier="보통",
+        stat="CHA",
+        target=target_id,
+        targets=[target_id],
+        dc=dc,
+        mod=0,
+        required_roll=required_roll,
+        reason="동료 영입",
+        created_at=datetime.now(UTC).isoformat(),
+    )
+    try:
+        await flush(state, save_repo, dirty)
+    except PersistenceFailed as e:
+        yield {
+            "type": "error",
+            "data": {
+                "message": humanize_runtime_error(e),
+                "code": "PersistenceFailed",
+            },
+        }
+        return
+    yield {
+        "type": "pending_check",
+        "data": pending_check_to_front(state, state.pending_check),
+    }
 
 
 async def run_dismiss(
