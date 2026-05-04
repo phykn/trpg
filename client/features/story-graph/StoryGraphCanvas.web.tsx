@@ -153,6 +153,7 @@ export function StoryGraphCanvas({
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const cyRef = React.useRef<Core | null>(null);
   const hasMountedRef = React.useRef(false);
+  const prevViewportRef = React.useRef<{ pan: { x: number; y: number }; zoom: number } | null>(null);
 
   const graphIdentityKey = React.useMemo(() => {
     const ns = graph.nodes.map((n) => n.id).sort().join('|');
@@ -164,9 +165,10 @@ export function StoryGraphCanvas({
   // rebuilding (overrides/layout/root). Selection, centerNodeId, and unseenNodeIds
   // are intentionally absent; they get their own effects so a tap doesn't reset zoom.
   React.useEffect(() => {
-    // Capture viewport before destroying the existing cy instance.
-    const prevPan = cyRef.current?.pan();
-    const prevZoom = cyRef.current?.zoom();
+    // Read viewport snapshot stashed by the previous cleanup, then clear it
+    // so a stale value can't feed a future run.
+    const prev = prevViewportRef.current;
+    prevViewportRef.current = null;
 
     // Drop cache entries for nodes no longer in the graph.
     const validIds = new Set(graph.nodes.map((n) => n.id));
@@ -340,14 +342,15 @@ export function StoryGraphCanvas({
         if (node.length > 0) cy.center(node);
       }
       hasMountedRef.current = true;
-    } else if (prevPan !== undefined && prevZoom !== undefined) {
+    } else if (prev) {
       // Re-mount on topology / overrides change — preserve viewport.
-      cy.zoom(prevZoom);
-      cy.pan(prevPan);
+      cy.zoom(prev.zoom);
+      cy.pan(prev.pan);
     }
     cyRef.current = cy;
 
     return () => {
+      prevViewportRef.current = { pan: cy.pan(), zoom: cy.zoom() };
       cy.destroy();
       cyRef.current = null;
     };
