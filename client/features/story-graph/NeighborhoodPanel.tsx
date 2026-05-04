@@ -36,15 +36,29 @@ export function NeighborhoodPanel({
   actionDisabled?: boolean;
 }) {
   const visibleGraph: StoryGraphModel = React.useMemo(() => {
-    // Collapse parallel edges between the same two nodes (first wins; labels are no longer rendered).
+    // "주변" panel — restrict to the immediate neighborhood so the small
+    // viewport doesn't get crammed with the full reachable map. Allowed:
+    // current place, hero, active subject, active quest, 1-hop adjacent
+    // locations (location.reachable=true), and characters in the current
+    // place (target.reachable=true).
+    const allowed = new Set<string>();
+    for (const n of graph.nodes) {
+      if (n.kind === 'place' || n.kind === 'hero' || n.kind === 'subject' || n.kind === 'quest') {
+        allowed.add(n.id);
+      } else if ((n.kind === 'location' || n.kind === 'target') && n.reachable) {
+        allowed.add(n.id);
+      }
+    }
+    const filteredNodes = graph.nodes.filter((n) => allowed.has(n.id));
     const pairToEdge = new Map<string, StoryGraphEdge>();
     for (const e of graph.edges) {
+      if (!allowed.has(e.source) || !allowed.has(e.target)) continue;
       const pair = e.source < e.target ? `${e.source}|${e.target}` : `${e.target}|${e.source}`;
       if (!pairToEdge.has(pair)) {
         pairToEdge.set(pair, e);
       }
     }
-    return { ...graph, edges: Array.from(pairToEdge.values()) };
+    return { ...graph, nodes: filteredNodes, edges: Array.from(pairToEdge.values()) };
   }, [graph]);
 
   const currentPlaceId = React.useMemo(
