@@ -11,6 +11,7 @@ from ..llm_calls.classify.schema import (
     GiveAction,
     MoveAction,
     PassAction,
+    RecruitAction,
     RejectAction,
     RestAction,
     RollAction,
@@ -38,7 +39,7 @@ from .actions import (
     emit_use,
 )
 from .combat_auto import PlayerAction
-from .companion import run_dismiss
+from .companion import run_dismiss, run_recruit
 from .combat_phase import (
     has_invalid_combat_targets,
     run_combat_player_turn,
@@ -560,6 +561,13 @@ async def _dispatch(
 
     if isinstance(result, DismissAction):
         async for ev in run_dismiss(state, save_repo, result.target, dirty, to_front_fn):
+            yield ev
+        return
+
+    if isinstance(result, RecruitAction):
+        async for ev in run_recruit(
+            state, save_repo, player_input, result.target, dirty, to_front_fn
+        ):
             yield ev
         return
 

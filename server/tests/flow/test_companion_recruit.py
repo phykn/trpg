@@ -1,7 +1,9 @@
 from src.domain.entities import Character, Stats
 from src.flow.companion import run_recruit
 from src.flow.dirty import Dirty
-from src.persistence.local_fs import LocalFsSaveRepo
+from src.flow.turn import run_turn
+from src.llm_calls.classify.schema import RecruitAction
+from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
 def _setup_state(fresh_state, *, edric_affinity=50):
@@ -102,3 +104,25 @@ async def test_recruit_dc_clamps_at_low_affinity(fresh_state, tmp_data, collect)
 
     # base 12 - clamp(-50 // 10 = -5, -5, +5) = 12 - (-5) = 17
     assert state.pending_check.dc == 17
+
+
+async def test_recruit_via_run_turn(
+    fresh_state, tmp_data, judge_returns, collect
+):
+    """run_turn → judge returns RecruitAction → run_recruit emits pending_check."""
+    state = _setup_state(fresh_state, edric_affinity=50)
+    judge_returns(RecruitAction(action="recruit", target="npc.edric"))
+
+    await collect(
+        run_turn(
+            client=None,
+            state=state,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
+            player_input="에드릭, 함께 가자",
+        )
+    )
+
+    assert state.pending_check is not None
+    assert state.pending_check.kind == "recruit"
+    assert state.pending_check.target == "npc.edric"
