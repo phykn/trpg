@@ -17,6 +17,7 @@ def _seed_player(state, *, hp=4, mp=2):
         is_player=True,
         location_id="plaza_01",
         stats=Stats(STR=10, DEX=12, CON=10, INT=10, WIS=10, CHA=10),
+        gold=100,
         hp=hp,
         max_hp=20,
         mp=mp,

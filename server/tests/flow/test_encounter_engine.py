@@ -41,6 +41,7 @@ def _seed_state(fresh_state):
         stats=Stats(),
         location_id="forest_01",
         level=2,
+        gold=100,
         hp=20,
         max_hp=20,
         mp=15,
