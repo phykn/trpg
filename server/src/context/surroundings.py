@@ -10,6 +10,7 @@ from ..domain.state import GameState
 from ..engines.growth import can_afford_level_up
 from ..ontology.graph import GameGraph
 from ..ontology.queries import (
+    companions_of,
     connections_of,
     equipment_of,
     inhabitants_of,
@@ -173,6 +174,7 @@ def _entities_payload(
             entry["protected"] = True
         if char.relations.get(actor.id, 0) >= RULES.social.friendly_threshold:
             entry["friendly"] = True
+        entry["relations_player"] = char.relations.get(actor.id, 0)
         roles = _npc_roles(state, actor, char, graph)
         if roles:
             entry["roles"] = roles
@@ -302,6 +304,8 @@ def build_surroundings(
         "in_combat": in_combat,
         "growth": _growth_payload(actor),
         "recent_npc": state.recent_npc_id(actor_id),
+        "companions": list(companions_of(graph, actor_id)),
+        "companions_max": RULES.companions.max_companions,
     }
     if not actor.location_id or actor.location_id not in state.locations:
         return {

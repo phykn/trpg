@@ -92,3 +92,26 @@ def test_npc_entry_carries_female_gender():
     sur = build_surroundings(state, "player_01")
     npc = next(e for e in sur["entities"] if e["id"] == "scout_01")
     assert npc["gender"] == "female"
+
+
+def test_relations_player_default_zero():
+    state = _make_state()
+    sur = build_surroundings(state, "player_01")
+    npc = next(e for e in sur["entities"] if e["id"] == "scout_01")
+    assert npc["relations_player"] == 0
+
+
+def test_relations_player_positive():
+    state = _make_state()
+    state.characters["scout_01"].relations["player_01"] = 30
+    sur = build_surroundings(state, "player_01")
+    npc = next(e for e in sur["entities"] if e["id"] == "scout_01")
+    assert npc["relations_player"] == 30
+
+
+def test_relations_player_negative():
+    state = _make_state()
+    state.characters["scout_01"].relations["player_01"] = -20
+    sur = build_surroundings(state, "player_01")
+    npc = next(e for e in sur["entities"] if e["id"] == "scout_01")
+    assert npc["relations_player"] == -20
