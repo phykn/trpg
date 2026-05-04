@@ -25,7 +25,15 @@ def test_narrate_body_trim_drops_skills_equipment_in_combat():
     out = surroundings_for_narrate_body(_full())
     for k in ("skills", "equipment", "in_combat"):
         assert k not in out
-    for k in ("location", "entities", "corpses", "inventory", "merchants", "growth", "recent_npc"):
+    for k in (
+        "location",
+        "entities",
+        "corpses",
+        "inventory",
+        "merchants",
+        "growth",
+        "recent_npc",
+    ):
         assert k in out
 
 

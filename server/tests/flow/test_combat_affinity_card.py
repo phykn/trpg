@@ -26,7 +26,10 @@ def test_in_combat_suppresses_card_keeps_mutation():
     apply_combat_affinity_drop(state, "player_01", "npc_01", dirty=dirty)
 
     # mutation: yes
-    assert state.characters["npc_01"].relations["player_01"] == -RULES.social.combat_affinity_drop
+    assert (
+        state.characters["npc_01"].relations["player_01"]
+        == -RULES.social.combat_affinity_drop
+    )
     # card: no
     assert dirty.deferred_act_cards == []
 
@@ -38,5 +41,8 @@ def test_out_of_combat_emits_card():
 
     apply_combat_affinity_drop(state, "player_01", "npc_01", dirty=dirty)
 
-    assert state.characters["npc_01"].relations["player_01"] == -RULES.social.combat_affinity_drop
+    assert (
+        state.characters["npc_01"].relations["player_01"]
+        == -RULES.social.combat_affinity_drop
+    )
     assert len(dirty.deferred_act_cards) == 1

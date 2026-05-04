@@ -37,7 +37,15 @@ from .combat_auto import (
     build_narrate_input,
     run_auto_combat,
 )
-from .dirty import Dirty, ToFrontFn, finalize, flush_deferred_act_cards, push_act, push_gm, push_turn_log
+from .dirty import (
+    Dirty,
+    ToFrontFn,
+    finalize,
+    flush_deferred_act_cards,
+    push_act,
+    push_gm,
+    push_turn_log,
+)
 from .error_phrases import humanize_runtime_error
 from .format import (
     ACTION_FORBIDDEN_IN_COMBAT_TEXT,

@@ -28,6 +28,7 @@ def test_surroundings_includes_player_and_filters_dead_or_far(fresh_state):
     )
     fresh_state.locations["gate_01"] = Location(id="gate_01", name="성문")
     from src.domain.entities import Race
+
     fresh_state.races["human"] = Race(id="human", name="인간", description="")
     fresh_state.characters["player_01"] = Character(
         id="player_01",

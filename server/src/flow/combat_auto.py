@@ -68,7 +68,9 @@ class AutoCombatResult:
     player_max_hp: int = 0
     enemy_starts: list[EnemyStartSnapshot] = field(default_factory=list)
     player_start: PlayerNarrateSnapshot | None = None
-    player_name: str = ""  # used by format.py for log lines; name not carried on PlayerNarrateSnapshot
+    player_name: str = (
+        ""  # used by format.py for log lines; name not carried on PlayerNarrateSnapshot
+    )
     # True iff this fight opened with the player ambushing the enemy (round 1 enemy skip).
     player_surprise: bool = False
 

@@ -90,8 +90,7 @@ def test_combat_kill_completes_quest_and_stashes_success_card():
     assert state.quests["q_chief_request"].status == "completed"
     # Success card stashed for deferred flush — must NOT be in log_entries yet
     early_log_success = [
-        e for e in state.log_entries
-        if e.kind == "act" and "퀘스트 성공" in e.text
+        e for e in state.log_entries if e.kind == "act" and "퀘스트 성공" in e.text
     ]
     assert not early_log_success, [(e.kind, e.text) for e in state.log_entries]
     # Should be in deferred queue

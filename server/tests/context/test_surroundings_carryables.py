@@ -19,12 +19,20 @@ def _state() -> GameState:
     state.items["dagger_01"] = Item(id="dagger_01", name="단검")
     state.items["sword_01"] = Item(id="sword_01", name="장검")
     state.characters["player_01"] = Character(
-        id="player_01", name="주인공", race_id="human", is_player=True,
-        stats=Stats(), location_id="loc_01",
+        id="player_01",
+        name="주인공",
+        race_id="human",
+        is_player=True,
+        stats=Stats(),
+        location_id="loc_01",
     )
     npc = Character(
-        id="scout_01", name="카리스", race_id="human", gender="male",
-        stats=Stats(), location_id="loc_01",
+        id="scout_01",
+        name="카리스",
+        race_id="human",
+        gender="male",
+        stats=Stats(),
+        location_id="loc_01",
         inventory_ids=["dagger_01", "sword_01"],
         equipment=Equipment(weapon="sword_01"),
     )

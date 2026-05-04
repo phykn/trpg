@@ -6,7 +6,11 @@ to its opening 1-2 sentences (around 80-120 chars) before injection
 keeps enough context for continuity without inviting verbatim reuse.
 """
 
-from src.context.layers import _DIALOGUE_NARRATOR_MAX_CHARS, _format_dialogue_entry, _truncate_narrator
+from src.context.layers import (
+    _DIALOGUE_NARRATOR_MAX_CHARS,
+    _format_dialogue_entry,
+    _truncate_narrator,
+)
 
 
 def test_short_narrator_passes_through_unchanged():
@@ -46,10 +50,10 @@ def test_truncated_marker_indicates_cut():
 
 def test_format_dialogue_entry_uses_truncated_narrator():
     """The user-facing helper threads through truncation."""
-    long_narrator = (
-        "긴 본문이 들어옵니다. 첫 문장. 두 번째 문장. 세 번째 문장. " * 5
+    long_narrator = "긴 본문이 들어옵니다. 첫 문장. 두 번째 문장. 세 번째 문장. " * 5
+    line = _format_dialogue_entry(
+        turn=12, player="앞으로 간다", narrator_redacted=long_narrator
     )
-    line = _format_dialogue_entry(turn=12, player="앞으로 간다", narrator_redacted=long_narrator)
     # The full long_narrator should NOT appear verbatim in the output
     assert long_narrator not in line
     # But some prefix of it should

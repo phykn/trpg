@@ -317,9 +317,7 @@ def build_surroundings(
     return {
         **base,
         "location": _location_payload(location),
-        "entities": _entities_payload(
-            state, actor_id, actor, location, graph
-        ),
+        "entities": _entities_payload(state, actor_id, actor, location, graph),
         "corpses": _corpses_payload(state, actor, graph),
         "skills": _skills_payload(state, actor, graph),
         "inventory": _inventory_payload(state, actor, graph),
@@ -330,7 +328,9 @@ def build_surroundings(
 def surroundings_for_narrate_body(full: dict) -> dict:
     """body never narrates skill casts (combat_narrate does), never branches on
     equipment slots, and runs only when in_combat is False."""
-    return {k: v for k, v in full.items() if k not in ("skills", "equipment", "in_combat")}
+    return {
+        k: v for k, v in full.items() if k not in ("skills", "equipment", "in_combat")
+    }
 
 
 def surroundings_for_extract(full: dict) -> dict:

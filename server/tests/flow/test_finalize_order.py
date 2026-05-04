@@ -49,11 +49,19 @@ async def test_state_and_suggestions_fire_before_flush():
     first_flush_idx = next(i for i, s in enumerate(sequence) if s.startswith("flush:"))
     done_idx = sequence.index("yield:done")
     # At least one non-meta child must have run.
-    assert any(s.startswith("flush:save_entity") for s in sequence), f"TaskGroup child should run. sequence: {sequence}"
+    assert any(s.startswith("flush:save_entity") for s in sequence), (
+        f"TaskGroup child should run. sequence: {sequence}"
+    )
 
-    assert state_idx < first_flush_idx, f"state should fire before flush. sequence: {sequence}"
-    assert suggestions_idx < first_flush_idx, f"suggestions should fire before flush. sequence: {sequence}"
-    assert first_flush_idx < done_idx, f"flush should complete before done. sequence: {sequence}"
+    assert state_idx < first_flush_idx, (
+        f"state should fire before flush. sequence: {sequence}"
+    )
+    assert suggestions_idx < first_flush_idx, (
+        f"suggestions should fire before flush. sequence: {sequence}"
+    )
+    assert first_flush_idx < done_idx, (
+        f"flush should complete before done. sequence: {sequence}"
+    )
 
 
 @pytest.mark.asyncio

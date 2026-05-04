@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 def _clear_save_locks():
     """Clear the global save locks dict between tests to avoid event loop binding issues."""
     from src.persistence import store
+
     store._save_locks.clear()
     yield
     store._save_locks.clear()

@@ -157,9 +157,13 @@ async def flush(state: GameState, save_repo: SaveRepo, dirty: Dirty) -> None:
             if dirty.log:
                 tg.create_task(save_repo.append_log_entries(state.game_id, dirty.log))
             if dirty.history:
-                tg.create_task(save_repo.append_history_entries(state.game_id, dirty.history))
+                tg.create_task(
+                    save_repo.append_history_entries(state.game_id, dirty.history)
+                )
             if dirty.dialogue:
-                tg.create_task(save_repo.append_dialogue_entries(state.game_id, dirty.dialogue))
+                tg.create_task(
+                    save_repo.append_dialogue_entries(state.game_id, dirty.dialogue)
+                )
     except* PersistenceFailed as eg:
         raise eg.exceptions[0]
     await save_repo.save_meta(state)

@@ -111,8 +111,7 @@ def test_race_match_at_adjacent_location_passes():
     )
     trig = state.quests["q_chief_request"].triggers[0]
     assert (
-        _trigger_matches(state, trig, "character_death", "dyn_goblin_at_square")
-        is True
+        _trigger_matches(state, trig, "character_death", "dyn_goblin_at_square") is True
     )
 
 
@@ -120,9 +119,7 @@ def test_race_match_at_distant_location_rejects():
     state = _make_state()
     _make_dynamic_goblin(state, char_id="dyn_goblin_far", location_id="far_field")
     trig = state.quests["q_chief_request"].triggers[0]
-    assert (
-        _trigger_matches(state, trig, "character_death", "dyn_goblin_far") is False
-    )
+    assert _trigger_matches(state, trig, "character_death", "dyn_goblin_far") is False
 
 
 def test_race_mismatch_at_adjacent_rejects():
