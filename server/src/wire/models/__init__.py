@@ -6,6 +6,13 @@ from .hero import (
     InventoryItem,
     StatEntry,
 )
+from .judge import (
+    JudgePayload,
+    JudgePendingCheckTrigger,
+    JudgeRefuse,
+    JudgeVerb,
+    JudgeVerbs,
+)
 from .pending_check import PendingCheckPayload, TierBadge
 from .place import PlacePayload, PlaceSurrounding, PlaceTarget, RiskBadge
 from .quest import DifficultyBadge, QuestPayload, QuestRewards
@@ -18,6 +25,11 @@ __all__ = [
     "ErrorPayload",
     "HeroPayload",
     "InventoryItem",
+    "JudgePayload",
+    "JudgePendingCheckTrigger",
+    "JudgeRefuse",
+    "JudgeVerb",
+    "JudgeVerbs",
     "PendingCheckPayload",
     "PlacePayload",
     "PlaceSurrounding",

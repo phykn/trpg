@@ -101,7 +101,7 @@ describe('handleStreamEvent', () => {
   test('judge / combat_* / done are observability-only (no handlers fire)', () => {
     const h = makeHandlers();
     handleStreamEvent(
-      { type: 'judge', data: { judge_kind: 'refuse', refuse: { category: 'x', message_hint: 'y' } } },
+      { type: 'judge', data: { judge_kind: 'refuse', refuse: { category: 'out_of_game', message_hint: 'y' } } },
       h,
     );
     handleStreamEvent({ type: 'combat_start', data: {} }, h);
