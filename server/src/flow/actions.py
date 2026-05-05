@@ -22,10 +22,9 @@ from ..engines import skill as skill_engine
 from ..engines.apply import apply_changes, apply_combat_affinity_drop
 from ..engines.growth import award_kill_xp
 from ..engines.quest import check_quests
-from ..mapping.to_front import pending_check_to_front
 from ..persistence.repo import SaveRepo
 from ..rules.dc import compute_required_roll, pick_dc, social_bonus
-from ..wire.emit import emit_error
+from ..wire.emit import emit_error, emit_pending_check
 from .dirty import (
     Dirty,
     flush,
@@ -416,7 +415,4 @@ async def emit_roll_pending_from_trigger(
     except PersistenceFailed as e:
         yield emit_error(e)
         return
-    yield {
-        "type": "pending_check",
-        "data": pending_check_to_front(state, state.pending_check),
-    }
+    yield emit_pending_check(state, state.pending_check)

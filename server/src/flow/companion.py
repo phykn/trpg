@@ -10,12 +10,11 @@ from ..domain.errors import PersistenceFailed
 from ..locale import render
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
-from ..mapping.to_front import pending_check_to_front
 from ..llm_calls.classify.schema import Verb
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from ..rules import RULES
 from ..rules.dc import compute_required_roll
-from ..wire.emit import emit_error
+from ..wire.emit import emit_error, emit_pending_check
 from .dirty import Dirty, ToFrontFn, finalize, flush, push_act
 from .format import (
     format_dismiss_log,
@@ -95,10 +94,7 @@ async def run_recruit(
     except PersistenceFailed as e:
         yield emit_error(e)
         return
-    yield {
-        "type": "pending_check",
-        "data": pending_check_to_front(state, state.pending_check),
-    }
+    yield emit_pending_check(state, state.pending_check)
 
 
 async def run_dismiss(
