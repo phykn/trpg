@@ -84,9 +84,9 @@ def _build_pending_check_payload(
 ) -> PendingCheckPayload:
     """Build the wire model from domain state. Centralizes derivation
     (stat_label, stat_value, tier badge) so both emit_pending_check and
-    mapping.pending_check_to_front share one source of truth."""
+    wire.pending_check_to_front share one source of truth."""
     from ..domain.types import tier_to_int
-    from ..mapping.labels import stat_label
+    from .labels import stat_label
 
     actor = state.characters[state.player_id]
     return PendingCheckPayload(
@@ -116,16 +116,16 @@ def emit_pending_check(state: "GameState", pending: "PendingCheck") -> dict:
 
 def _build_hero_payload(state: "GameState", graph: "GameGraph") -> HeroPayload:
     """Build the wire model for the `hero` state slot. SSOT for to_hero
-    dict construction (mapping/to_front.to_hero delegates here). Pulls
+    dict construction (wire/to_front.to_hero delegates here). Pulls
     derivations from existing helpers — equipment/inventory/skills/companions
     via ontology queries, stats via stats_payload, level math via growth.
-    Mirrors mapping/to_front._equipment / _inventory / _skill_names /
+    Mirrors wire/to_front._equipment / _inventory / _skill_names /
     _companion_label exactly so the JSON shape stays identical."""
     from collections import Counter
 
     from ..domain.entities import EQUIPMENT_SLOTS
     from ..engines.growth import can_afford_level_up, xp_for_next_level
-    from ..mapping.labels import gender_label, race_job_label, stats_payload
+    from .labels import gender_label, race_job_label, stats_payload
     from ..ontology.queries import (
         companions_of,
         equipment_of,
@@ -208,13 +208,13 @@ def _build_subject_payload(
 ) -> SubjectPayload | None:
     """Build the wire model for the `subject` state slot. Returns None when
     no subject is active or the active id no longer resolves — same gating
-    as mapping.to_subject. Mirrors mapping.to_subject's exact derivation
+    as wire.to_subject. Mirrors wire.to_subject's exact derivation
     (known list = appearance + hints + player memories, equipment/inventory/
     skills via ontology queries, gold pseudo-row at inventory[0])."""
     from collections import Counter
 
     from ..domain.entities import EQUIPMENT_SLOTS
-    from ..mapping.labels import gender_label, race_job_label, stats_payload
+    from .labels import gender_label, race_job_label, stats_payload
     from ..ontology.queries import equipment_of, inventory_of, known_skills_of
 
     if state.active_subject_id is None:
@@ -287,10 +287,10 @@ def _build_quest_payload(
 ) -> QuestPayload | None:
     """Build the wire model for the `quest` state slot. Returns None when
     no quest is active or the active id no longer resolves — same gating
-    as mapping.to_quest. Mirrors mapping.to_quest's exact derivation
+    as wire.to_quest. Mirrors wire.to_quest's exact derivation
     (giver via giver_with_location_label, goals from triggers, progress
     label from triggers_met counts, action list from status)."""
-    from ..mapping.labels import difficulty_badge, giver_with_location_label
+    from .labels import difficulty_badge, giver_with_location_label
 
     if state.active_quest_id is None:
         return None
@@ -337,12 +337,12 @@ def _build_place_payload(
 ) -> PlacePayload | None:
     """Build the wire model for the `place` state slot. Returns None when
     the player has no location or the id no longer resolves — same gating
-    as mapping.to_place. Mirrors mapping.to_place's exact derivation
+    as wire.to_place. Mirrors wire.to_place's exact derivation
     (surroundings via connections_of, targets via inhabitants_of, blurb
     fallback chain, day_phase via clock + render, risk via risk_payload)."""
     from ..domain.clock import day_phase
     from ..locale import render
-    from ..mapping.labels import gender_label, race_job_label, risk_payload
+    from .labels import gender_label, race_job_label, risk_payload
     from ..ontology.queries import connections_of, inhabitants_of
 
     p = state.characters[state.player_id]
@@ -506,7 +506,7 @@ def emit_combat_end(
 def _build_combat_badge_payload(state: "GameState") -> CombatBadgePayload | None:
     """Build the wire model for the `combat` state slot. Returns None when
     there's no active combat or turn_order is empty — same gating as
-    mapping.to_combat. Mirrors mapping.to_combat's exact derivation
+    wire.to_combat. Mirrors wire.to_combat's exact derivation
     (current actor lookup, "내 차례" vs "{name} 차례" composition,
     enemy filtering by character existence)."""
     cs = state.combat_state

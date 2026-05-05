@@ -1,7 +1,7 @@
 """Verb-grammar primitives.
 
 Lives in `domain/` so `domain.memory.PendingCheck` can carry `Verb` directly
-without depending on `llm_calls/classify` (cycle through mapping/labels →
+without depending on `llm_calls/classify` (cycle through wire/labels →
 domain/entities → domain/memory). `llm_calls/classify/schema.py` re-exports
 these for call-site convenience.
 """

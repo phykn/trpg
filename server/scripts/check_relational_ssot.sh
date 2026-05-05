@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Relational SSOT guard — fails when `flow/`, `context/`, or `mapping/`
+# Relational SSOT guard — fails when `flow/`, `context/`, or `wire/`
 # code reads an entity's relation field as a *list* (iterating across
 # many ids) instead of asking the graph. Full rule + the value-vs-relation
 # distinction is in server/CLAUDE.md.
@@ -29,7 +29,7 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SEARCH_DIRS=(
   "$ROOT/server/src/flow"
   "$ROOT/server/src/context"
-  "$ROOT/server/src/mapping"
+  "$ROOT/server/src/wire"
 )
 
 FORBIDDEN_PATTERNS=(
@@ -65,7 +65,7 @@ done
 
 if [[ $violations -gt 0 ]]; then
   echo
-  echo "❌ relational SSOT guard: $violations direct relation-iteration reads found in flow/context/mapping."
+  echo "❌ relational SSOT guard: $violations direct relation-iteration reads found in flow/context/wire."
   echo "   Use ontology/graph queries instead, or mark the line with '# ssot-allow: <reason>' if it's a justified exception (write path, attribute-only sweep, etc)."
   echo "   See server/CLAUDE.md for the full rule."
   exit 1

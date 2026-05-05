@@ -14,8 +14,8 @@ from src.domain.entities import (
     WeaponEffect,
 )
 from src.domain.memory import GMLogEntry, Memory, RollLogEntry
-from src.mapping.story_graph import to_story_graph
-from src.mapping.to_front import (
+from src.wire.story_graph import to_story_graph
+from src.wire.to_front import (
     to_front_state,
     to_hero,
     to_place,
@@ -461,14 +461,14 @@ def test_to_combat_returns_none_when_no_combat_state(fresh_state):
     fresh_state.characters["player_01"] = Character(
         id="player_01", name="주인공", race_id="human", stats=Stats()
     )
-    from src.mapping.to_front import to_combat
+    from src.wire.to_front import to_combat
 
     assert to_combat(fresh_state) is None
 
 
 def test_to_combat_projects_round_actor_enemies(fresh_state):
     from src.domain.state import CombatState
-    from src.mapping.to_front import to_combat
+    from src.wire.to_front import to_combat
 
     fresh_state.characters["player_01"] = Character(
         id="player_01", name="주인공", race_id="human", is_player=True, stats=Stats()

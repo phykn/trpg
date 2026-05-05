@@ -1,7 +1,7 @@
 """Verify dead entity's hints (death fact) surface in subject.known."""
 
 from src.domain.entities import Character, Race, Stats
-from src.mapping.to_front import to_subject
+from src.wire.to_front import to_subject
 
 
 def _minimal_state(fresh_state, *, npc_hints=None, npc_alive=True):

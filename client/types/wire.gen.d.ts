@@ -291,7 +291,7 @@ export interface HeroPayload {
 }
 /**
  * Wire shape for the `subject` slot inside the `state` payload.
- * Field order matches mapping/to_front.to_subject's dict insertion order.
+ * Field order matches wire/to_front.to_subject's dict insertion order.
  * NPC mp/mpMax is intentionally absent — subject panel doesn't expose
  * NPC mana to the player.
  *
@@ -318,7 +318,7 @@ export interface SubjectPayload {
 /**
  * Difficulty visual atom for the quest panel: localized label + tone hint
  * (the latter aligns with client `Tone` design-system literals; the 5-value
- * subset matches mapping.labels._TIER_TONE).
+ * subset matches wire.labels._TIER_TONE).
  *
  * This interface was referenced by `Wire`'s JSON-Schema
  * via the `definition` "DifficultyBadge".
@@ -342,7 +342,7 @@ export interface QuestRewards {
 }
 /**
  * Wire shape for the `quest` slot inside the `state` payload.
- * Field order matches mapping/to_front.to_quest's dict insertion order.
+ * Field order matches wire/to_front.to_quest's dict insertion order.
  * `status` / `actions` are narrowed to the four/two literals to_quest can
  * emit — domain Quest.status carries `locked`/`abandoned` too but those
  * never reach the active-quest path.
@@ -381,7 +381,7 @@ export interface PlaceSurrounding {
 }
 /**
  * Sleep-risk visual atom: localized label + tone hint. Tone is the
- * 3-literal subset (`good`/`neutral`/`bad`) that mapping.labels._RISK_TONES
+ * 3-literal subset (`good`/`neutral`/`bad`) that wire.labels._RISK_TONES
  * actually emits — domain `EncounterRisk` is a closed 3-value Literal so
  * no fallback default ever fires. Sub-set of client `Tone` (9-literal),
  * so client assignment is safe.
@@ -412,7 +412,7 @@ export interface PlaceTarget {
 }
 /**
  * Wire shape for the `place` slot inside the `state` payload.
- * Field order matches mapping/to_front.to_place's dict insertion order.
+ * Field order matches wire/to_front.to_place's dict insertion order.
  *
  * This interface was referenced by `Wire`'s JSON-Schema
  * via the `definition` "PlacePayload".
@@ -650,7 +650,7 @@ export interface CombatEnemy {
 /**
  * Wire shape for the `combat` slot inside the `state` payload —
  * surfaced when combat is active. None when no combat or empty turn order
- * (gated by mapping/to_front.to_combat). `turn_label` is a pre-composed
+ * (gated by wire/to_front.to_combat). `turn_label` is a pre-composed
  * Korean string ("내 차례" or "{name} 차례") so the client renders verbatim.
  *
  * This interface was referenced by `Wire`'s JSON-Schema

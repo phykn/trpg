@@ -14,7 +14,7 @@ import pytest
 from src.domain.entities import Character, Location, Stats
 from src.domain.state import GameState
 from src.flow.dirty import Dirty, finalize
-from src.mapping.to_front import to_front_state
+from src.wire.to_front import to_front_state
 
 
 class _FakeRepo:
