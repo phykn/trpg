@@ -21,7 +21,7 @@ from ..ontology.graph import GameGraph
 from ..ontology.player_view import build_player_view
 from ..ontology.queries import giver_of, inhabitants_of
 from ..ontology.target_view import build_target_view
-from ...persistence.repo import ScenarioRepo
+from ...db.repo import ScenarioRepo
 from ..domain.state import GameState
 from ...llm.context import (
     build_history_layer,

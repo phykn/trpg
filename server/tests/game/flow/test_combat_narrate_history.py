@@ -13,7 +13,7 @@ from src.game.flow.combat_auto import (
     build_narrate_input,
 )
 from src.llm.calls.combat_narrate.schema import PlayerNarrateSnapshot
-from src.persistence.local_fs import LocalFsScenarioRepo
+from src.db.local_fs import LocalFsScenarioRepo
 
 
 @pytest.fixture

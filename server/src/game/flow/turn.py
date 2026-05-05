@@ -8,7 +8,7 @@ from ..domain.memory import GMLogEntry, PlayerLogEntry
 from ..domain.state import GameState
 from ...llm.client import LLMClient, set_llm_session_if_unset
 from ..ontology.graph import GameGraph
-from ...persistence.repo import SaveRepo, ScenarioRepo
+from ...db.repo import SaveRepo, ScenarioRepo
 from .actions import (
     emit_equip,
     emit_give,

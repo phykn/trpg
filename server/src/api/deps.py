@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException, Request
 
 from ..game.domain.state import GameState
 from ..llm.client import LLMClient
-from ..persistence.repo import SaveRepo, ScenarioRepo
+from ..db.repo import SaveRepo, ScenarioRepo
 
 
 def get_save_repo(request: Request) -> SaveRepo:

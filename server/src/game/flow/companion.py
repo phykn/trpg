@@ -11,7 +11,7 @@ from ...locale import render
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
 from ...llm.calls.classify.schema import Verb
-from ...persistence.repo import SaveRepo, ScenarioRepo
+from ...db.repo import SaveRepo, ScenarioRepo
 from ..rules import RULES
 from ..rules.dc import compute_required_roll
 from ...wire.emit import emit_error, emit_pending_check

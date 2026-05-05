@@ -32,7 +32,7 @@ bash server/scripts/check_relational_ssot.sh # graph-SSOT guard (CI-equivalent)
 ### Layer rule
 
 ```
-api → game.flow → llm.calls/game.engines → llm/game.ontology/wire → persistence → game.domain/game.rules
+api → game.flow → llm.calls/game.engines → llm/game.ontology/wire → db → game.domain/game.rules
 ```
 
 Upper depends on lower, never the reverse. Concretely:
@@ -42,7 +42,7 @@ Upper depends on lower, never the reverse. Concretely:
 - `llm/calls/` — LLM call modules (classify, narrate, combat_narrate, summon, recommend) under the `llm/` package. Each module dir = `prompt.md` + `schema.py` + `runner.py` (+ `semantics.py` where needed). `llm/calls/_runner.py` is the shared 5-attempt self-correction loop. `llm/calls/_kernel.md` carries universal rules (Korean output, ID hygiene, world vocabulary) prepended to every prompt at boot via `load_prompt()`.
 - `game/ontology/` — derived relational view over `GameState`. **The single source of truth for relations.**
 - `llm/context/` — prompt input builders under the `llm/` package (surroundings for judge, layered context for narrate).
-- `persistence/` — `SaveRepo` / `ScenarioRepo` Protocols (all-async) + Supabase and LocalFs adapters.
+- `db/` — `SaveRepo` / `ScenarioRepo` Protocols (all-async) + Supabase and LocalFs adapters. Holds all persistence concerns.
 - `wire/` — server↔client interface. `wire/models/` Pydantic payloads (single source of typed shapes; codegen → client `wire.gen.d.ts`), `wire/emit.py` SSE event builders + state slot helpers, `wire/to_front.py` GameState → flat dict the client renders, `wire/labels.py` UI label catalog wrappers + badge combiners, `wire/story_graph.py` reachable-edges shaping. All Korean composed strings end here.
 - `game/flow/` — per-turn orchestration. `turn.py` / `roll.py` / `intro.py` are entrypoints (each yields `AsyncIterator[dict]` of SSE events).
 - `api/` — thin FastAPI adapter. Glue only, no business logic.
@@ -55,7 +55,7 @@ Upper depends on lower, never the reverse. Concretely:
 - **Asking the value of an entity attribute** (HP, MP, stats, level, alive, disposition, mood, name, gender, status, memories, quest.status, quest.title) is fine via direct read.
 - **Writing** stays on entities — `game/engines/apply.py`, `game/engines/combat.py` mutate fields. After a mutation that touches a relation field, the caller in flow calls `state.invalidate_graph()`; the next `state.graph()` rebuilds.
 - **Graph caching:** `state.graph()` returns a lazily-built `GameGraph` cached on the state via `PrivateAttr` (does not round-trip through `model_dump_json`; `load_game` starts cold). Read paths just call `state.graph()`. Write paths in flow that touch relation fields must `state.invalidate_graph()` before re-reading or downstream consumers see stale edges.
-- **Exceptions** that may read relation fields directly: `persistence/`, `game/domain/`, `game/engines/apply.py`, pure numeric engines (combat damage math, recovery, dc), and `game/ontology/graph.py` itself.
+- **Exceptions** that may read relation fields directly: `db/`, `game/domain/`, `game/engines/apply.py`, pure numeric engines (combat damage math, recovery, dc), and `game/ontology/graph.py` itself.
 
 `scripts/check_relational_ssot.sh` enforces this by greppable patterns (list-shaped relation fields and `.characters.items()/.values()` iterations in `game/flow|llm/context|wire`). Whitelist a justified single line with a trailing `# ssot-allow: <reason>` comment.
 
@@ -149,6 +149,6 @@ Pydantic 422 (request-shape) and HTTP 404 (`game_id` not found) go through FastA
 - Python 3.12+, Pydantic v2, FastAPI, uvicorn, httpx, async/await throughout.
 - Pydantic models *are* the schema. Every state file round-trips through `GameState.model_validate_json(...)`. Don't hand-munge JSON.
 - `LLMClient.chat_stream` is the streaming primitive; agents wrap it with their schema and retry loop.
-- Single process. Horizontal scaling is out of scope. The LocalFs adapter uses one `asyncio.Lock` in `persistence/store.py`; Supabase relies on per-row PostgREST upserts plus the fixed flush order above.
+- Single process. Horizontal scaling is out of scope. The LocalFs adapter uses one `asyncio.Lock` in `db/store.py`; Supabase relies on per-row PostgREST upserts plus the fixed flush order above.
 - `run_api.py:_load_env` loads `.env.<APP_ENV>` if the file exists (default `APP_ENV=dev`); missing file is tolerated so managed envs (Render) can supply vars via OS env directly. Per-key fail-fast still happens at downstream `os.environ["..."]` reads. `APP_ENV=release` switches to `.env.release`. Both modes go through Supabase and require `SUPABASE_URL SUPABASE_SERVICE_KEY SUPABASE_SCENARIO_BUCKET`, plus `HOST PORT BASIC_AUTH_USER BASIC_AUTH_PASS CORS_ORIGINS LLM_ROUTE_DEFAULT` and the `LLM_<NAME>_*` provider block(s) referenced by the routes.
 - `tests/conftest.py` exposes `fresh_state` (an empty `GameState`). End-to-end LLM verification is manual after merge; `scripts/smoke_judge.py` is a one-shot Gemini-routed classify sanity check.

@@ -12,7 +12,7 @@ from src.game.flow.dirty import Dirty
 from src.game.engines import combat as combat_engine
 from src.llm.calls.classify.schema import Verb
 from src.game.flow.turn import run_turn
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
+from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
 @pytest.fixture

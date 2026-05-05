@@ -7,10 +7,10 @@ import pytest
 from src.game.domain.entities import Character, Stats
 from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
 from src.game.domain.errors import PersistenceFailed, ProfileNotFound, RaceNotFound
-from src.persistence.init import PlayerInput, init_game
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
+from src.db.init import PlayerInput, init_game
+from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.game.domain.state import GameState
-from src.persistence.store import (
+from src.db.store import (
     append_dialogue_entries,
     append_history_entries,
     append_log_entries,

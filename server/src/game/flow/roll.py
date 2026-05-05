@@ -14,7 +14,7 @@ from ..engines.growth import grant_roll_xp
 from ...llm.client import LLMClient, set_llm_session_if_unset
 from ...llm.calls.classify.schema import Verb
 from ...wire.to_front import stat_label
-from ...persistence.repo import SaveRepo, ScenarioRepo
+from ...db.repo import SaveRepo, ScenarioRepo
 from ..rules.dc import compute_grade
 from .buff_tick import tick_turn_buffs
 from .combat_auto import PlayerAction, run_auto_combat

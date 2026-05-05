@@ -13,7 +13,7 @@ from src.llm.calls.summon import (
 )
 from src.game.flow import encounter as encounter_engine
 from src.game.engines import recovery
-from src.persistence.local_fs import LocalFsScenarioRepo
+from src.db.local_fs import LocalFsScenarioRepo
 
 
 @pytest.fixture
