@@ -1,14 +1,17 @@
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from ..locale import render
 from .models import (
+    DifficultyBadge,
     Equipment,
     EquipItem,
     ErrorPayload,
     HeroPayload,
     InventoryItem,
     PendingCheckPayload,
+    QuestPayload,
+    QuestRewards,
     StatEntry,
     SubjectPayload,
     TierBadge,
@@ -256,4 +259,54 @@ def _build_subject_payload(
         equipment=Equipment(**equipped),
         inventory=inventory,
         skills=skills,
+    )
+
+
+def _build_quest_payload(
+    state: "GameState", graph: "GameGraph"
+) -> QuestPayload | None:
+    """Build the wire model for the `quest` state slot. Returns None when
+    no quest is active or the active id no longer resolves — same gating
+    as mapping.to_quest. Mirrors mapping.to_quest's exact derivation
+    (giver via giver_with_location_label, goals from triggers, progress
+    label from triggers_met counts, action list from status)."""
+    from ..mapping.labels import difficulty_badge, giver_with_location_label
+
+    if state.active_quest_id is None:
+        return None
+    qid = state.active_quest_id
+    if qid not in state.quests:
+        return None
+    q = state.quests[qid]
+
+    giver_name = giver_with_location_label(state, graph, qid) or qid
+    goals = [t.name for t in q.triggers]
+    total = len(q.triggers)
+    done = sum(1 for met in q.triggers_met[:total] if met)
+    if total == 0:
+        progress_label = ""
+    elif done >= total:
+        progress_label = "✓"
+    else:
+        progress_label = f"{done}/{total}"
+
+    actions: list[Literal["accept", "abandon"]] = []
+    if q.status == "pending":
+        actions.append("accept")
+    elif q.status == "active":
+        actions.append("abandon")
+
+    badge = difficulty_badge(q.difficulty)
+    return QuestPayload(
+        id=qid,
+        title=q.title,
+        summary=q.summary,
+        giver=giver_name,
+        difficulty=DifficultyBadge(label=badge["label"], tone=badge["tone"]),
+        goals=goals,
+        progress_label=progress_label,
+        conditions=list(q.conditions),
+        rewards=QuestRewards(gold=q.rewards.gold, exp=q.rewards.exp),
+        status=q.status,
+        actions=actions,
     )
