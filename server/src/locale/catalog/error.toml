@@ -29,3 +29,9 @@ en = "A problem occurred while saving. Please try again later."
 [error.runtime_generic]
 ko = "지금은 응답할 수 없습니다. 잠시 후 다시 시도해 주세요."
 en = "Cannot respond at the moment. Please try again later."
+
+[error.pending_check_active]
+ko = "굴림이 진행 중입니다. 먼저 주사위를 굴려 주세요."
+
+[error.level_up_invalid_stat]
+ko = "잘못된 능력치입니다: {stat_up}"

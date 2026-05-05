@@ -210,7 +210,7 @@ async def test_run_level_up_yields_error_and_finalizes_when_narrate_fails(monkey
     error_events = [ev for ev in events if ev["type"] == "error"]
     done_events = [ev for ev in events if ev["type"] == "done"]
     assert len(error_events) == 1
-    assert error_events[0]["data"]["code"] == "NarrateFailed"
+    assert error_events[0]["data"]["code"] == "LLMUnavailable"
     assert len(done_events) == 1  # finalize still ran
     p = state.characters["player_01"]
     assert p.level == 3  # stat change committed

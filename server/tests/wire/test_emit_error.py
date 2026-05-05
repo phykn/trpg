@@ -47,3 +47,24 @@ def test_emit_error_jsondecodeerror_maps_via_catalog():
     ev = emit_error(err)
     assert ev["data"]["code"] == "JSONDecodeError"
     assert ev["data"]["message"] == "행동을 해석하지 못했습니다. 다시 시도해 주세요."
+
+
+def test_emit_error_string_code_catalog_hit():
+    """Plain string code → catalog lookup."""
+    ev = emit_error("PendingCheckActive")
+    assert ev["data"]["code"] == "PendingCheckActive"
+    assert ev["data"]["message"] == "굴림이 진행 중입니다. 먼저 주사위를 굴려 주세요."
+
+
+def test_emit_error_message_override_bypasses_catalog():
+    """Explicit message= bypasses catalog lookup."""
+    ev = emit_error("LevelUpInvalid", message="잘못된 능력치입니다: STR")
+    assert ev["data"]["code"] == "LevelUpInvalid"
+    assert ev["data"]["message"] == "잘못된 능력치입니다: STR"
+
+
+def test_emit_error_message_override_with_exception():
+    """Exception + explicit message= preserves class-name code while overriding text."""
+    ev = emit_error(LLMUnavailable("upstream"), message="대체 메시지")
+    assert ev["data"]["code"] == "LLMUnavailable"
+    assert ev["data"]["message"] == "대체 메시지"
