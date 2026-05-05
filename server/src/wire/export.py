@@ -4,12 +4,21 @@ from pathlib import Path
 
 from .models.error import ErrorPayload
 from .models.hero import HeroPayload
+from .models.judge import JudgePayload
 from .models.pending_check import PendingCheckPayload
 from .models.place import PlacePayload
 from .models.quest import QuestPayload
 from .models.subject import SubjectPayload
 
-_MODELS = [ErrorPayload, PendingCheckPayload, HeroPayload, SubjectPayload, QuestPayload, PlacePayload]
+_MODELS = [
+    ErrorPayload,
+    PendingCheckPayload,
+    HeroPayload,
+    SubjectPayload,
+    QuestPayload,
+    PlacePayload,
+    JudgePayload,
+]
 
 
 def _flatten(schema: dict, definitions: dict) -> dict:

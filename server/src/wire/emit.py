@@ -9,6 +9,11 @@ from .models import (
     ErrorPayload,
     HeroPayload,
     InventoryItem,
+    JudgePayload,
+    JudgePendingCheckTrigger,
+    JudgeRefuse,
+    JudgeVerb,
+    JudgeVerbs,
     PendingCheckPayload,
     PlacePayload,
     PlaceSurrounding,
@@ -24,6 +29,8 @@ from .models import (
 if TYPE_CHECKING:
     from ..domain.memory import PendingCheck
     from ..domain.state import GameState
+    from ..domain.types import StatKey, Tier
+    from ..domain.verb import RefuseReason, Verb
     from ..ontology.graph import GameGraph
 
 _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
@@ -384,3 +391,43 @@ def _build_place_payload(
         targets=targets,
         risk=RiskBadge(label=risk["label"], tone=risk["tone"]),
     )
+
+
+def emit_judge_pending_check_trigger(
+    *, tier: "Tier", stat: "StatKey", targets: list[str], reason: str
+) -> dict:
+    """SSE judge event — pending_check_trigger branch."""
+    payload = JudgePayload(
+        root=JudgePendingCheckTrigger(
+            judge_kind="pending_check_trigger",
+            tier=tier,
+            stat=stat,
+            targets=list(targets),
+            reason=reason,
+        )
+    )
+    return {"type": "judge", "data": payload.model_dump()}
+
+
+def emit_judge_refuse(refuse: "RefuseReason") -> dict:
+    """SSE judge event — refuse branch."""
+    payload = JudgePayload(
+        root=JudgeRefuse(judge_kind="refuse", refuse=refuse)
+    )
+    return {"type": "judge", "data": payload.model_dump()}
+
+
+def emit_judge_verb(verb: "Verb") -> dict:
+    """SSE judge event — single-verb branch."""
+    payload = JudgePayload(
+        root=JudgeVerb(judge_kind="verb", verb=verb)
+    )
+    return {"type": "judge", "data": payload.model_dump()}
+
+
+def emit_judge_verbs(actions: list["Verb"]) -> dict:
+    """SSE judge event — multi-verb chain branch."""
+    payload = JudgePayload(
+        root=JudgeVerbs(judge_kind="verbs", actions=list(actions))
+    )
+    return {"type": "judge", "data": payload.model_dump()}
