@@ -112,12 +112,17 @@ def _check_attack(verb: Verb, surroundings: dict[str, Any]) -> None:
 
 def _check_cast(verb: Verb, surroundings: dict[str, Any]) -> None:
     skill_id = verb.modifiers.get("skill_id")
-    valid_skills = {
-        s.get("id") for s in surroundings.get("skills", []) or [] if isinstance(s, dict)
-    }
-    if skill_id not in valid_skills:
+    skills = [s for s in surroundings.get("skills", []) or [] if isinstance(s, dict)]
+    by_id = {s.get("id"): s for s in skills}
+    if skill_id not in by_id:
         raise JudgeSemanticError(
-            f"cast skill_id {skill_id!r} not in skills. Valid: {sorted(s for s in valid_skills if s)}."
+            f"cast skill_id {skill_id!r} not in skills. Valid: {sorted(s for s in by_id if s)}."
+        )
+    skill_type = by_id[skill_id].get("type")
+    if skill_type not in ("heal", "buff"):
+        raise JudgeSemanticError(
+            f"cast skill {skill_id!r} is type={skill_type!r}; "
+            f"cast handles heal/buff only. Use attack verb for attack/debuff skills."
         )
 
 
@@ -128,8 +133,8 @@ def _check_speak(verb: Verb, surroundings: dict[str, Any]) -> None:
         _check_recruit_inner(target, surroundings)
     elif intent == "part":
         _check_dismiss_inner(target, surroundings)
-    # Other intents (friendly/hostile/deceptive/negotiate/ask/command/pray)
-    # have no surroundings-dependent check — schema validator covers the intent itself.
+    # friendly/hostile/deceptive: no surroundings-dependent check — schema
+    # validator covers the intent itself; narrate handles tone-driven affinity.
 
 
 def _check_recruit_inner(target: str | None, surroundings: dict[str, Any]) -> None:

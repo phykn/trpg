@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 from ..domain.errors import (
     InventoryInvalid,
     PersistenceFailed,
+    SkillInvalid,
 )
 from src.locale import render
 from ..domain.memory import PendingCheck
@@ -35,6 +36,9 @@ from .dirty import (
 from .format import (
     format_action_fail,
     format_attack_turn_log,
+    format_cast_fail,
+    format_cast_log,
+    format_cast_turn_log,
     format_equip_fail,
     format_equip_log,
     format_equip_turn_log,
@@ -156,6 +160,46 @@ def apply_skill_action(
         "skill_type": skill_obj.type,
         "killed_ids": killed_ids,
     }
+
+
+async def emit_cast(
+    state: GameState,
+    actor_id: str,
+    skill_id: str,
+    target_ids: list[str],
+    dirty: Dirty,
+    rng: random.Random | None = None,
+) -> AsyncIterator[dict]:
+    """Out-of-combat heal/buff cast. Wraps `apply_skill_action`; on success
+    pushes the act log line, on `SkillInvalid` pushes a fail line + yields
+    `_engine_fail` so dispatch routes to a dramatic narrate.
+
+    `turn_summary` is filled only for self-cast — `apply_skill_action` already
+    pushes a turn_log line for cross-target casts (combat path uses the same
+    function and depends on that push)."""
+    actor = state.characters[actor_id]
+    skill = state.skills.get(skill_id)
+    skill_name = skill.name if skill else skill_id
+    try:
+        result = apply_skill_action(state, actor_id, skill_id, list(target_ids), dirty, rng=rng)
+    except SkillInvalid as e:
+        yield push_act(state, dirty, format_cast_fail(actor.name, skill_name, e))
+        yield {"type": "_engine_fail", "data": {"raw_error_msg": str(e)}}
+        return
+
+    text = format_cast_log(state, actor_id, result)
+    effects = result.get("effects") or []
+    first_target_id = effects[0].get("target") if effects else None
+    is_self_cast = first_target_id == actor_id or first_target_id is None
+    if is_self_cast:
+        yield push_act(
+            state,
+            dirty,
+            text,
+            turn_summary=format_cast_turn_log(result["skill_name"], None),
+        )
+    else:
+        yield push_act(state, dirty, text)
 
 
 async def emit_equip(

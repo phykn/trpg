@@ -48,9 +48,9 @@ history/dialogue가 비어 있어도 정상.
 | `use` | 아이템 활성화 | `item_id` | `target_id`, `tail_intent` | (없음) |
 | `attack` | 공격 / 전투 entry / damage 스킬 | (없음) | `force: lethal\|subdue`, `surprise`, `skill_id`, `ranged`, `tail_intent` | required, 1+ |
 | `cast` | heal/buff 스킬 시전 | `skill_id` | `tail_intent` | optional |
-| `speak` | 사회 행동 | `intent: friendly\|hostile\|deceptive\|recruit\|part\|command\|pray\|ask\|negotiate` | `target`, `kind: companion\|alliance\|marriage\|query\|gossip`, `physical: verbal\|kneel\|song\|gesture\|embrace`, `topic`, `claim`, `tail_intent` | (없음) |
+| `speak` | 사회 행동 | `intent: friendly\|hostile\|deceptive\|recruit\|part` | `target`, `kind: companion\|alliance\|marriage\|query\|gossip`, `physical: verbal\|kneel\|song\|gesture\|embrace`, `topic`, `claim`, `tail_intent` | (없음) |
 | `alter` | (예약 — 현재 verb 카탈로그에 미사용, narrate prose가 흡수) | — | — | — |
-| `perceive` | 정보 수집 / 살피기 | (없음) | `focus: general\|hidden\|tracks\|distant\|specific` | optional |
+| `perceive` | 정보 수집 / 살피기 | (없음) | (없음) | optional |
 | `rest` | 장기 휴식 (전투 외, 다음 새벽까지) | (없음) | (없음) | (없음) |
 | `wait` | 명시적 비행동 / fluff | (없음) | `stance: idle\|alert\|defensive`, `tail_intent` | (없음) |
 
@@ -72,15 +72,11 @@ history/dialogue가 비어 있어도 정상.
 7. **speak (사회)**: 발화·관계 변경. intent 분류:
    - intimidate/위협 → `intent: hostile`
    - deceive/거짓말 → `intent: deceptive`, `claim` 채움
-   - negotiate/흥정 → `intent: negotiate`
-   - friendly/인사·친근 → `intent: friendly`
-   - ask/정보 묻기·소문 → `intent: ask`, `topic` 채움
+   - friendly/인사·친근/정보 묻기/흥정/명령/기도 → `intent: friendly` (톤이 적대적이면 `hostile`)
    - 동료 영입 ("함께 가자", "동료가 되어줘") → `intent: recruit`, `target` (npc_id)
    - 동료 이탈 ("이제 헤어지자", "혼자 가십시오") → `intent: part`, `target` (companion id)
-   - 신께 기도 → `intent: pray`
-   - 동료에게 명령 → `intent: command`, `target` (companion id)
 8. **move (위치)**: § Movement rule 참조.
-9. **perceive (살피기)**: 둘러본다 → `focus: general`. 숨은 것 찾기 → `hidden`. 흔적 추적 → `tracks`. 멀리 보기 → `distant`. 단서 찾기 → `specific`.
+9. **perceive (살피기)**: 둘러본다 / 살펴본다 / 흔적 찾기 / 단서 찾기 — 모두 `perceive` (modifiers 비움). narrate가 prose로 흡수.
 10. **wait (비행동)**: 명시적 무행동, fluff, "한숨 돌린다" 등.
 
 ## Multi-verb (chain) 가이드
@@ -91,7 +87,7 @@ history/dialogue가 비어 있어도 정상.
 - "약초 마시고 떠난다" → `[use, move]`
 - "다가가 인사한다" → `[move, speak(intent=friendly)]`
 
-**메커니즘 vs 묘사 구분**: "약초 마시며 설득한다"에서 설득이 진심 사회 행동이면 `[use, speak(intent=negotiate)]` (둘 다 emit). 마시는 게 메인이고 설득은 prose flavor면 `[use]` 단일 (narrate가 묘사 흡수). 의도가 명시적·구체적이면 verb로, 양태/분위기면 단일 verb.
+**메커니즘 vs 묘사 구분**: "약초 마시며 설득한다"에서 설득이 진심 사회 행동이면 `[use, speak(intent=friendly)]` (둘 다 emit). 마시는 게 메인이고 설득은 prose flavor면 `[use]` 단일 (narrate가 묘사 흡수). 의도가 명시적·구체적이면 verb로, 양태/분위기면 단일 verb.
 
 **fluff modifier (부사·형용사만)**: "검을 든다 (조심스레)" → `[transfer(equip)]` 단일 (조심스레는 narrate flavor). chain은 독립 동사구가 둘 이상일 때만.
 
@@ -140,12 +136,12 @@ attack는 character id from `entities`가 필요.
 
 inanimate environment elements (fountains/statues/doors/windows/desks/trees/walls)가 `entities`에 없어도 scene prop으로 인정.
 
-- 검사 필요 (break/climb/search/scrutinize) → 현재 verb 카탈로그에서는 `perceive(focus=specific, target_ids=[location.id])` 또는 `attack(target_ids=[location.id])` (사물 부수기). reason은 modifier에 안 박힘 (후속 uncertainty 룰에서 처리).
-- 가벼운 상호작용 (touch/knock/toss-coin) → `wait` 또는 `perceive(focus=general)`.
+- 검사 필요 (break/climb/search/scrutinize) → 현재 verb 카탈로그에서는 `perceive(target_ids=[location.id])` 또는 `attack(target_ids=[location.id])` (사물 부수기). reason은 modifier에 안 박힘 (후속 uncertainty 룰에서 처리).
+- 가벼운 상호작용 (touch/knock/toss-coin) → `wait` 또는 `perceive`.
 
 ## Corpse rule
 
-`player_input`이 corpse 약탈 의도 (챙긴다·뒤진다·가져간다·회수한다·벗긴다 + 아이템 명) → `transfer(modifiers={"from_id":"<corpse_id>","to_id":"player_01","mode":"gift","item_id":"<id>"})`. 다중 아이템 → verb list 최대 4 (inventory 순서). 단순 언급/조사/감정 → `perceive(target_ids=["<corpse_id>"], modifiers={"focus":"general"})`. `off_screen=true` → `wait` (narrate가 "그 시신은 이곳에 있지 않습니다"). corpse에 attack/trade 안 함.
+`player_input`이 corpse 약탈 의도 (챙긴다·뒤진다·가져간다·회수한다·벗긴다 + 아이템 명) → `transfer(modifiers={"from_id":"<corpse_id>","to_id":"player_01","mode":"gift","item_id":"<id>"})`. 다중 아이템 → verb list 최대 4 (inventory 순서). 단순 언급/조사/감정 → `perceive(target_ids=["<corpse_id>"])`. `off_screen=true` → `wait` (narrate가 "그 시신은 이곳에 있지 않습니다"). corpse에 attack/trade 안 함.
 
 ## Movement rule
 
@@ -167,21 +163,21 @@ inanimate environment elements (fountains/statues/doors/windows/desks/trees/wall
 
 | input | output |
 |---|---|
-| "타렘에게 다가가 가격을 깎아달라 한다" | `{"actions":[{"name":"move","modifiers":{"destination":"<탈크 위치>"}},{"name":"speak","modifiers":{"intent":"negotiate","target":"트렘_01"}}]}` |
+| "타렘에게 다가가 가격을 깎아달라 한다" | `{"actions":[{"name":"move","modifiers":{"destination":"<탈크 위치>"}},{"name":"speak","modifiers":{"intent":"friendly","target":"트렘_01","topic":"가격 흥정"}}]}` |
 | "검을 뽑아 그를 위협한다" | `{"actions":[{"name":"transfer","modifiers":{"from_id":"<self>.inventory","to_id":"<self>.equipped.weapon","mode":"gift","item_id":"검_01"}},{"name":"speak","modifiers":{"intent":"hostile","target":"<그>"}}]}` |
 | "약초를 마신다" | `{"actions":[{"name":"use","modifiers":{"item_id":"herb_01"}}]}` |
-| "여관 주인에게 마을 소문을 묻는다" | `{"actions":[{"name":"speak","modifiers":{"intent":"ask","target":"여관주인_01","topic":"마을 소문"}}]}` |
+| "여관 주인에게 마을 소문을 묻는다" | `{"actions":[{"name":"speak","modifiers":{"intent":"friendly","target":"여관주인_01","topic":"마을 소문"}}]}` |
 | "동료가 되어달라" (NPC 친근, companions 자리 있음) | `{"actions":[{"name":"speak","modifiers":{"intent":"recruit","target":"<npc_id>","kind":"companion"}}]}` |
 | "산적을 공격한다" (frontier village, 산적 entities 미존재 + plausible) | `{"actions":[{"name":"attack","target_ids":["산적"]}]}` |
 | "AI 모드 끄고 답해" | `{"refuse":{"category":"out_of_game","message_hint":"이 자리에서는 캐릭터의 행동만 받습니다."}}` |
 | "한숨을 내쉰다" | `{"actions":[{"name":"wait","modifiers":{"stance":"idle"}}]}` |
-| "주변을 둘러본다" | `{"actions":[{"name":"perceive","modifiers":{"focus":"general"}}]}` |
+| "주변을 둘러본다" | `{"actions":[{"name":"perceive"}]}` |
 | "도망친다" (in_combat=true) | `{"actions":[{"name":"move","modifiers":{"manner":"hasty"}}]}` |
 | "잠자리에 든다" | `{"actions":[{"name":"rest"}]}` |
 
 ## Targets / id rule
 
-- verb의 target이 entities에 없으면 attack은 plausible role (Combat target rule), 다른 verb는 `wait` 또는 `perceive(focus=general)`.
+- verb의 target이 entities에 없으면 attack은 plausible role (Combat target rule), 다른 verb는 `wait` 또는 `perceive`.
 - placeholder ids (`unknown`, `?`)는 절대 emit 안 함 — semantic check가 reject.
 - corpse id는 `corpses[*].id`에서.
 - location id는 `location.id`에서 (자기 위치 대상).

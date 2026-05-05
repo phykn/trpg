@@ -62,8 +62,7 @@ _MODIFIER_SCHEMAS: dict[VerbName, ModifierSchema] = {
     "speak": ModifierSchema(
         required_modifiers=frozenset({"intent"}),
         optional_modifiers={
-            "intent": ("friendly", "hostile", "deceptive", "recruit", "part",
-                       "command", "pray", "ask", "negotiate"),
+            "intent": ("friendly", "hostile", "deceptive", "recruit", "part"),
             "target": str,
             "kind": ("companion", "alliance", "marriage", "query", "gossip"),
             "physical": ("verbal", "kneel", "song", "gesture", "embrace"),
@@ -86,9 +85,7 @@ _MODIFIER_SCHEMAS: dict[VerbName, ModifierSchema] = {
     ),
     "perceive": ModifierSchema(
         required_modifiers=frozenset(),
-        optional_modifiers={
-            "focus": ("general", "hidden", "tracks", "distant", "specific"),
-        },
+        optional_modifiers={},
         target_cardinality="optional",
     ),
     "rest": ModifierSchema(

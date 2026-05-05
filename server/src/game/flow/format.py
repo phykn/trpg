@@ -264,6 +264,66 @@ def format_combat_end_text(
     return render("log.combat.enemies_defeated", "ko")
 
 
+def format_cast_log(state: GameState, actor_id: str, result: dict) -> str:
+    """Build the post-cast act line: '<actor> — 「<skill>」 시전 (효과)'.
+
+    `result` is the dict returned by `apply_skill_action`; only heal/buff
+    branches render a tail (cast verb is heal/buff-only — attack/debuff route
+    via the attack verb)."""
+    actor = state.characters.get(actor_id)
+    actor_name = actor.name if actor else actor_id
+    skill_name = result.get("skill_name") or result.get("skill_id") or ""
+    head = render("log.cast.head", "ko", actor=actor_name, skill=skill_name)
+    effects = result.get("effects") or []
+    if not effects:
+        return head
+    eff = effects[0]
+    target_id = eff.get("target")
+    is_self = target_id == actor_id
+    target_name = ""
+    if not is_self and target_id and target_id in state.characters:
+        target_name = state.characters[target_id].name
+    elif not is_self and target_id:
+        target_name = target_id
+    kind = eff.get("kind")
+    if kind == "heal":
+        if is_self:
+            tail = render("log.cast.heal_self", "ko", amount=int(eff.get("healed", 0)))
+        else:
+            tail = render(
+                "log.cast.heal_target", "ko",
+                target=target_name, amount=int(eff.get("healed", 0)),
+            )
+        return f"{head} {tail}"
+    if kind == "buff":
+        buff = eff.get("buff") or {}
+        description = buff.get("description") or ""
+        duration = int(buff.get("duration", 0))
+        if is_self:
+            tail = render(
+                "log.cast.buff_self", "ko",
+                description=description, duration=duration,
+            )
+        else:
+            tail = render(
+                "log.cast.buff_target", "ko",
+                target=target_name, description=description, duration=duration,
+            )
+        return f"{head} {tail}"
+    return head
+
+
+def format_cast_turn_log(skill_name: str, target_name: str | None) -> str:
+    if target_name is None:
+        return render("log.cast.turn_self", "ko", skill=skill_name)
+    return render("log.cast.turn_target", "ko", skill=skill_name, target=target_name)
+
+
+def format_cast_fail(actor_name: str, skill_name: str, err: Exception) -> str:
+    attempt = render("log.cast.attempt", "ko", skill=skill_name)
+    return format_action_fail(actor_name, attempt, err)
+
+
 def format_use_log(state: GameState, actor_id: str, result: dict) -> str:
     actor = state.characters.get(actor_id)
     actor_name = actor.name if actor else actor_id

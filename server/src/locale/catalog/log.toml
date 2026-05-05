@@ -330,6 +330,30 @@ ko = "({description}, {duration} 턴)"
 [log."use.trigger"]
 ko = "({on_use})"
 
+[log."cast.head"]
+ko = "{actor} — 「{skill}」 시전"
+
+[log."cast.heal_self"]
+ko = "(HP {amount} 회복)"
+
+[log."cast.heal_target"]
+ko = "({target} HP {amount} 회복)"
+
+[log."cast.buff_self"]
+ko = "({description}, {duration} 턴)"
+
+[log."cast.buff_target"]
+ko = "({target}: {description}, {duration} 턴)"
+
+[log."cast.turn_self"]
+ko = "「{skill}」 자가 시전"
+
+[log."cast.turn_target"]
+ko = "「{skill}」 → {target}"
+
+[log."cast.attempt"]
+ko = "「{skill}」{을/를} 시전하려 했지만"
+
 [log."rest.ambush"]
 ko = "{actor}{은/는} 잠들기 직전 적의 습격을 받았습니다."
 

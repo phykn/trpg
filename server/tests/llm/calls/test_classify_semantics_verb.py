@@ -118,3 +118,36 @@ def test_wait_no_check():
 def test_perceive_no_check():
     output = JudgeOutput(actions=[Verb(name="perceive")])
     check_semantics(output, {"entities": []})
+
+
+def test_cast_heal_skill_passes():
+    output = JudgeOutput(actions=[Verb(name="cast", modifiers={"skill_id": "minor_heal"})])
+    surroundings = {"skills": [{"id": "minor_heal", "type": "heal"}]}
+    check_semantics(output, surroundings)
+
+
+def test_cast_buff_skill_passes():
+    output = JudgeOutput(actions=[Verb(name="cast", modifiers={"skill_id": "blessing"})])
+    surroundings = {"skills": [{"id": "blessing", "type": "buff"}]}
+    check_semantics(output, surroundings)
+
+
+def test_cast_attack_skill_rejected():
+    output = JudgeOutput(actions=[Verb(name="cast", modifiers={"skill_id": "fireball"})])
+    surroundings = {"skills": [{"id": "fireball", "type": "attack"}]}
+    with pytest.raises(JudgeSemanticError, match="attack verb"):
+        check_semantics(output, surroundings)
+
+
+def test_cast_debuff_skill_rejected():
+    output = JudgeOutput(actions=[Verb(name="cast", modifiers={"skill_id": "weaken"})])
+    surroundings = {"skills": [{"id": "weaken", "type": "debuff"}]}
+    with pytest.raises(JudgeSemanticError, match="attack verb"):
+        check_semantics(output, surroundings)
+
+
+def test_cast_unknown_skill_rejected():
+    output = JudgeOutput(actions=[Verb(name="cast", modifiers={"skill_id": "ghost_skill"})])
+    surroundings = {"skills": [{"id": "minor_heal", "type": "heal"}]}
+    with pytest.raises(JudgeSemanticError, match="not in skills"):
+        check_semantics(output, surroundings)
