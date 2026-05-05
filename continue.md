@@ -2,7 +2,7 @@
 
 이 문서는 본 세션의 합의 결과 + 작업 내역을 새 세션이 그대로 이어받기 위한 정리입니다. 결정 굳은 항목은 흔들지 말고, 굳지 않은 미정 항목은 새 세션에서 정합니다.
 
-원본 큰 그림: `0505.md` (서버 4분할 — locale / llm / game system / 통역기)
+원본 큰 그림: `0505.md` (서버 6분할 — locale / llm / game / wire(통역기) / api / persistence. 라운드 2 finale 후 4 → 6 갱신; 자세한 결정 근거는 0505 §2 참조)
 
 ---
 
@@ -13,7 +13,7 @@
 | # | 경로 | 왜 |
 |---|---|---|
 | 1 | `continue.md` (이 파일) | 본 세션 인계 — 어디까지 왔고 다음 뭘 할지 |
-| 2 | `0505.md` | 큰 그림 4분할 plan. §1 통증 분리, §4 첫 케이스 결, §5 두 갈래 진행, §9 합의 굳음 |
+| 2 | `0505.md` | 큰 그림 6분할 plan. §1 통증 분리, §2 6분할 (4 → 6 갱신 근거 포함), §4 첫 케이스 결, §5 두 갈래 진행, §9 합의 굳음 |
 | 3 | `CLAUDE.md` (repo root) | 한국어 정책, env 정책, save isolation, 스택 |
 | 4 | `server/CLAUDE.md` | 레이어 룰, 관계 SSOT, 에러 hierarchy, 명명 규칙 (Tier ASCII enum 등 1.1 결과 반영됨) |
 | 5 | `client/CLAUDE.md` | 클라 폴더 룰, wire 타입 위치 (`types/wire.ts`), 디자인 토큰 |
@@ -99,7 +99,7 @@ main HEAD: `45e7f95` (PR #9 머지 후).
 
 ### 큰 그림
 
-- **서버 4분할** (locale / llm / game system / 통역기). 0505.md §9 합의 굳음.
+- **서버 6분할** (locale / llm / game / wire(통역기) / api / persistence). 0505.md §2·§9 합의 굳음 (라운드 2 finale 후 4 → 6 갱신).
 - **통역기 위치**: 서버 안 (옵션 A). 별도 패키지(B)는 형태 잡힌 후.
 - **다국어 모델**: W (풀 i18n + 한 곳 관리).
 - **첫 케이스**: 에러 메시지 한 종류 (이미 1.1 시점에 통과).
@@ -249,16 +249,18 @@ render(key, locale, **vars) -> str
 
 `narrative_delta` `done` 같은 단순 이벤트는 모델 만드는 비용이 크지 않고 자동 생성 파이프라인 검증 외 가치 적음. `judge` `log_entry`의 discriminated union은 진짜 검증 자리.
 
-### D. 라운드 1·2 끝나면 — 폴더 4분할 정리
+### D. 라운드 1·2 끝나면 — 폴더 6분할 정리
 
-`server/src/` 13 폴더를 4분할로 묶기. 0505.md §5의 "두 갈래 진행의 부산물로 자연스럽게 따라옴". 이 시점에 `flow/` `mapping/` 책임이 빠져 슬림해져 있어 폴더 이동만 남음.
+`server/src/` 13 폴더를 6분할로 묶기. 0505.md §5의 "두 갈래 진행의 부산물로 자연스럽게 따라옴". 라운드 2 finale 후 4 → 6분할로 갱신 (api·persistence 1급 분리, 0505.md §2 결정 근거 참조). 이 시점에 `flow/` `mapping/` 책임이 빠져 슬림해져 있어 폴더 이동만 남음.
 
-| 4분할 | 흡수 |
+| 6분할 | 흡수 |
 |---|---|
 | **locale/** | `locale/` |
 | **llm/** | `llm/`, `llm_calls/`, `context/` |
-| **game/** | `domain/`, `rules/`, `engines/`, `ontology/`, `persistence/`, `flow/` (orchestration만 남은 후) |
-| **wire/** | `wire/`, `api/`, `mapping/` (잔여) |
+| **game/** | `domain/`, `rules/`, `engines/`, `ontology/`, `flow/` (orchestration만 남은 후) |
+| **wire/** | `wire/`, `mapping/` (잔여 — 2.10 to_combat 위임 후 거의 비어있음) |
+| **api/** | `api/` |
+| **persistence/** | `persistence/` |
 
 ### E. 별개 cleanup
 
