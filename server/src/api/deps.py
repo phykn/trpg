@@ -3,9 +3,9 @@ the load-or-404 pattern that every game-scoped route needs."""
 
 from fastapi import Depends, HTTPException, Request
 
-from ..game.domain.state import GameState
-from ..llm.client import LLMClient
-from ..db.repo import SaveRepo, ScenarioRepo
+from src.game.domain.state import GameState
+from src.llm.client import LLMClient
+from src.db.repo import SaveRepo, ScenarioRepo
 
 
 def get_save_repo(request: Request) -> SaveRepo:

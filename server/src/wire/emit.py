@@ -1,7 +1,7 @@
 import re
 from typing import TYPE_CHECKING, Literal
 
-from ..locale import render
+from src.locale import render
 from .models import (
     CombatBadgePayload,
     CombatEndPayload,
@@ -36,11 +36,11 @@ from .models import (
 )
 
 if TYPE_CHECKING:
-    from ..game.domain.memory import PendingCheck
-    from ..game.domain.state import GameState
-    from ..game.domain.types import StatKey, Tier
-    from ..game.domain.verb import RefuseReason, Verb
-    from ..game.ontology.graph import GameGraph
+    from src.game.domain.memory import PendingCheck
+    from src.game.domain.state import GameState
+    from src.game.domain.types import StatKey, Tier
+    from src.game.domain.verb import RefuseReason, Verb
+    from src.game.ontology.graph import GameGraph
 
 _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
 
@@ -85,7 +85,7 @@ def _build_pending_check_payload(
     """Build the wire model from domain state. Centralizes derivation
     (stat_label, stat_value, tier badge) so both emit_pending_check and
     wire.pending_check_to_front share one source of truth."""
-    from ..game.domain.types import tier_to_int
+    from src.game.domain.types import tier_to_int
     from .labels import stat_label
 
     actor = state.characters[state.player_id]
@@ -123,16 +123,16 @@ def _build_hero_payload(state: "GameState", graph: "GameGraph") -> HeroPayload:
     _companion_label exactly so the JSON shape stays identical."""
     from collections import Counter
 
-    from ..game.domain.entities import EQUIPMENT_SLOTS
-    from ..game.engines.growth import can_afford_level_up, xp_for_next_level
+    from src.game.domain.entities import EQUIPMENT_SLOTS
+    from src.game.engines.growth import can_afford_level_up, xp_for_next_level
     from .labels import gender_label, race_job_label, stats_payload
-    from ..game.ontology.queries import (
+    from src.game.ontology.queries import (
         companions_of,
         equipment_of,
         inventory_of,
         known_skills_of,
     )
-    from ..game.rules import RULES
+    from src.game.rules import RULES
 
     p = state.characters[state.player_id]
 
@@ -213,9 +213,9 @@ def _build_subject_payload(
     skills via ontology queries, gold pseudo-row at inventory[0])."""
     from collections import Counter
 
-    from ..game.domain.entities import EQUIPMENT_SLOTS
+    from src.game.domain.entities import EQUIPMENT_SLOTS
     from .labels import gender_label, race_job_label, stats_payload
-    from ..game.ontology.queries import equipment_of, inventory_of, known_skills_of
+    from src.game.ontology.queries import equipment_of, inventory_of, known_skills_of
 
     if state.active_subject_id is None:
         return None
@@ -340,10 +340,10 @@ def _build_place_payload(
     as wire.to_place. Mirrors wire.to_place's exact derivation
     (surroundings via connections_of, targets via inhabitants_of, blurb
     fallback chain, day_phase via clock + render, risk via risk_payload)."""
-    from ..game.domain.clock import day_phase
-    from ..locale import render
+    from src.game.domain.clock import day_phase
+    from src.locale import render
     from .labels import gender_label, race_job_label, risk_payload
-    from ..game.ontology.queries import connections_of, inhabitants_of
+    from src.game.ontology.queries import connections_of, inhabitants_of
 
     p = state.characters[state.player_id]
     player_loc_id = p.location_id

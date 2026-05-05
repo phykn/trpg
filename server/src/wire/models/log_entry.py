@@ -2,7 +2,7 @@ from typing import Annotated
 
 from pydantic import Field, RootModel
 
-from ...game.domain.memory import (
+from src.game.domain.memory import (
     ActLogEntry,
     BonusItem,
     GMLogEntry,

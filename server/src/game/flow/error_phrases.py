@@ -1,4 +1,4 @@
-from ...locale import render
+from src.locale import render
 
 # Substring(English) → catalog key. _ERROR_KEYS_SORTED scans longest-needle-first
 # so order here is irrelevant.

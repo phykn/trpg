@@ -6,15 +6,15 @@ import random
 from collections.abc import AsyncIterator
 from typing import Literal
 
-from ...llm.calls.combat_narrate import stream_combat_narrate
-from ...llm.calls.classify.schema import Verb
+from src.llm.calls.combat_narrate import stream_combat_narrate
+from src.llm.calls.classify.schema import Verb
 from ..domain.errors import CombatStateInvalid, JudgeMalformed
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
-from ...llm.client import LLMClient
+from src.llm.client import LLMClient
 from ..ontology.graph import GameGraph
 from ..ontology.queries import location_of
-from ...db.repo import SaveRepo, ScenarioRepo
+from src.db.repo import SaveRepo, ScenarioRepo
 from .actions import (
     emit_equip,
     emit_unequip,
@@ -26,7 +26,7 @@ from .combat_auto import (
     build_narrate_input,
     run_auto_combat,
 )
-from ...wire.emit import (
+from src.wire.emit import (
     emit_combat_end,
     emit_combat_start,
     emit_combat_turn,
@@ -35,7 +35,7 @@ from ...wire.emit import (
     emit_judge_verb,
     emit_narrative_delta,
 )
-from ...wire.models import CombatTurnPayload
+from src.wire.models import CombatTurnPayload
 from .dirty import (
     Dirty,
     ToFrontFn,

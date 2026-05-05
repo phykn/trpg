@@ -9,11 +9,11 @@ id/level and template numerics to build the Skill object.
 from __future__ import annotations
 
 from ..domain.entities import Skill
-from ...llm.calls.recommend import (
+from src.llm.calls.recommend import (
     SkillRecommendInput,
     recommend,
 )
-from ...llm.client import LLMClient
+from src.llm.client import LLMClient
 from ..ontology.queries import known_skills_of, race_of
 from ..rules import RULES
 from ..domain.state import GameState

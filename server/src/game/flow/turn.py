@@ -1,14 +1,14 @@
 import random
 from collections.abc import AsyncIterator, Callable
 
-from ...llm.calls.classify.schema import JudgeOutput, Verb
+from src.llm.calls.classify.schema import JudgeOutput, Verb
 from ..domain.errors import JudgeMalformed, PendingCheckActive
 from pydantic import ValidationError
 from ..domain.memory import GMLogEntry, PlayerLogEntry
 from ..domain.state import GameState
-from ...llm.client import LLMClient, set_llm_session_if_unset
+from src.llm.client import LLMClient, set_llm_session_if_unset
 from ..ontology.graph import GameGraph
-from ...db.repo import SaveRepo, ScenarioRepo
+from src.db.repo import SaveRepo, ScenarioRepo
 from .actions import (
     emit_equip,
     emit_give,
@@ -23,7 +23,7 @@ from .combat_phase import (
     run_combat_player_turn,
     start_combat_and_drive_auto,
 )
-from ...wire.emit import (
+from src.wire.emit import (
     emit_error,
     emit_judge_pending_check_trigger,
     emit_judge_refuse,

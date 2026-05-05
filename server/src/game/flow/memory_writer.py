@@ -1,5 +1,5 @@
 from ..domain.memory import Memory
-from ...llm.calls.narrate import NarrateOutput
+from src.llm.calls.narrate import NarrateOutput
 from ..rules import RULES
 from ..domain.state import GameState
 

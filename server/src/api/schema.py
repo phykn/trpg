@@ -2,8 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from ..game.domain.types import StatKey
-from ..db.init import PlayerInput
+from src.game.domain.types import StatKey
+from src.db.init import PlayerInput
 
 
 class QuestAction(BaseModel):

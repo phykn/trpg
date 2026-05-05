@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends
 
-from ...llm.client import LLMClient
+from src.llm.client import LLMClient
 from ..deps import get_llm
 from ..schema import ChatRequest, ChatResponse
 

@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends
 
-from ...db.repo import ScenarioRepo
+from src.db.repo import ScenarioRepo
 from ..deps import get_scenario_repo
 from ..schema import ProfileCard
 

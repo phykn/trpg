@@ -2,8 +2,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, RootModel
 
-from ...game.domain.types import StatKey, Tier
-from ...game.domain.verb import RefuseReason, Verb
+from src.game.domain.types import StatKey, Tier
+from src.game.domain.verb import RefuseReason, Verb
 
 __all__ = [
     "JudgePayload",

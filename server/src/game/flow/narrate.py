@@ -2,10 +2,10 @@ import logging
 import re
 from collections.abc import AsyncIterator
 
-from ...locale import render
-from ...llm.calls.classify.schema import Verb
-from ...wire.emit import emit_error, emit_log_entry, emit_narrative_delta
-from ...llm.calls.narrate import (
+from src.locale import render
+from src.llm.calls.classify.schema import Verb
+from src.wire.emit import emit_error, emit_log_entry, emit_narrative_delta
+from src.llm.calls.narrate import (
     NarrateInput,
     NarrateOutput,
     NarrativeDelta,
@@ -16,14 +16,14 @@ from ..domain.memory import GMLogEntry
 from ..engines.apply import apply_changes
 from ..engines.invariants import enforce_item_locality
 from ..engines.quest import apply_judge_result
-from ...llm.client import LLMClient
+from src.llm.client import LLMClient
 from ..ontology.graph import GameGraph
 from ..ontology.player_view import build_player_view
 from ..ontology.queries import giver_of, inhabitants_of
 from ..ontology.target_view import build_target_view
-from ...db.repo import ScenarioRepo
+from src.db.repo import ScenarioRepo
 from ..domain.state import GameState
-from ...llm.context import (
+from src.llm.context import (
     build_history_layer,
     build_session_layer,
     build_surroundings,
