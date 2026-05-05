@@ -148,6 +148,15 @@ async def run_turn(
         push_log_entry(state, player_log, dirty)
         yield emit_log_entry(player_log)
 
+    # Button-only quest_action turn: state mutation already applied, no input
+    # to classify — short-circuit to finalize so we don't burn a judge LLM
+    # call on an empty prompt. turn_count stays put (UI button isn't an
+    # in-world action).
+    if quest_action is not None and not player_input:
+        async for ev in finalize(state, save_repo, dirty, to_front_fn):
+            yield ev
+        return
+
     if not state.characters[state.player_id].alive:
         yield push_act(state, dirty, GAME_OVER_TEXT)
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
