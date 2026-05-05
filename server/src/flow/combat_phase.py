@@ -331,11 +331,11 @@ async def run_combat_player_turn(
         yield {
             "type": "judge",
             "data": {
+                "judge_kind": "pending_check_trigger",
                 "tier": result.tier,
                 "stat": result.stat,
                 "targets": list(result.targets),
                 "reason": result.reason,
-                "kind": "stat",
             },
         }
         async for ev in emit_roll_pending_from_trigger(
@@ -355,7 +355,7 @@ async def run_combat_player_turn(
     # _exactly_one validator guarantees actions is 1+ when refuse is None.
     verb = result.actions[0]
 
-    yield {"type": "judge", "data": verb.model_dump()}
+    yield {"type": "judge", "data": {"judge_kind": "verb", "verb": verb.model_dump()}}
     refresh_active_subject(state, [verb])
 
     if verb.name == "rest":
