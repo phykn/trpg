@@ -153,6 +153,34 @@ async def run_roll(
             yield ev
         return
 
+    # Steal mirrors recruit's structure — system card + signal hand-off to
+    # narrate, no XP (DEX skill check on a social act, not growth).
+    if pending.kind == "steal":
+        from .steal import handle_steal_roll_result
+        async for ev in handle_steal_roll_result(state, pending, grade, dirty, rng=rng_obj):
+            yield ev
+        state.pending_check = None
+        tick_turn_buffs(state, dirty)
+        if client is not None:
+            graph = state.graph()
+            signal = state.previous_phase_signal
+            state.previous_phase_signal = None
+            async for ev in stream_narrate_tail(
+                client,
+                state,
+                scenario_repo,
+                pending.player_input,
+                dirty,
+                to_front_fn,
+                Verb(name="wait"),
+                graph=graph,
+                previous_phase_signal=signal,
+            ):
+                yield ev
+        async for ev in finalize(state, save_repo, dirty, to_front_fn):
+            yield ev
+        return
+
     grant_roll_xp(state, grade, dirty=dirty.entities)
 
     judge_result = {

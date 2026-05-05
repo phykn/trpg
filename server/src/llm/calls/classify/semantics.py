@@ -183,6 +183,9 @@ def _check_transfer(verb: Verb, surroundings: dict[str, Any]) -> None:
     item_id = verb.modifiers.get("item_id")
     from_id = verb.modifiers.get("from_id")
     to_id = verb.modifiers.get("to_id")
+    # gift/trade need item_id; steal lets the engine pick a random item.
+    if mode in ("gift", "trade") and not item_id:
+        raise JudgeSemanticError(f"transfer(mode={mode!r}) requires item_id")
     if mode == "trade":
         # buy: from_id=npc, to_id=player. sell: from_id=player, to_id=npc.
         npc_id = from_id if to_id == "player_01" else to_id
@@ -198,6 +201,23 @@ def _check_transfer(verb: Verb, surroundings: dict[str, Any]) -> None:
             inv_ids = {i.get("id") for i in surroundings.get("inventory", []) if isinstance(i, dict)}
             if item_id not in inv_ids:
                 raise JudgeSemanticError(f"sell item {item_id!r} not in player inventory.")
+    elif mode == "steal":
+        if to_id != "player_01":
+            raise JudgeSemanticError(
+                f"transfer(steal) must have to_id='player_01'; got {to_id!r}"
+            )
+        by_id = _entities_by_id(surroundings)
+        ent = by_id.get(from_id) if isinstance(from_id, str) else None
+        if ent is None or ent.get("type") != "npc":
+            raise JudgeSemanticError(
+                f"steal from_id {from_id!r} must be a same-location NPC. "
+                f"Valid NPCs: {sorted(eid for eid, e in by_id.items() if e.get('type') == 'npc')}."
+            )
+        carryables = ent.get("carryables") or []
+        if not carryables:
+            raise JudgeSemanticError(
+                f"steal target {from_id!r} has nothing to steal."
+            )
 
 
 def _check_use(verb: Verb, surroundings: dict[str, Any]) -> None:

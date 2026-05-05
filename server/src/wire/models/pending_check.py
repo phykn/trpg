@@ -15,7 +15,7 @@ class PendingCheckPayload(BaseModel):
     """Wire shape for the `pending_check` SSE event and the `pendingCheck` slot
     inside the `state` payload."""
 
-    kind: Literal["stat", "recruit"]
+    kind: Literal["stat", "recruit", "steal"]
     dc: int
     stat: str
     stat_label: str
