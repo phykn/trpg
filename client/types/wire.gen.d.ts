@@ -146,6 +146,8 @@ export type BonusBreakdown = BonusItem[];
  * via the `definition` "LogEntryPayload".
  */
 export type LogEntryPayload = GMLogEntry | PlayerLogEntry | ActLogEntry | RollLogEntry;
+export type Text3 = string;
+export type Items = string[];
 
 export interface Wire {
   [k: string]: unknown;
@@ -524,5 +526,39 @@ export interface RollLogEntry {
   margin: Margin;
   result: Result;
   bonus_breakdown?: BonusBreakdown;
+  [k: string]: unknown;
+}
+/**
+ * SSE narrative_delta event payload — incremental prose chunk streamed
+ * from narrate / combat_narrate. Concatenated client-side until the body
+ * is complete.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "NarrativeDeltaPayload".
+ */
+export interface NarrativeDeltaPayload {
+  text: Text3;
+  [k: string]: unknown;
+}
+/**
+ * SSE suggestions event payload — short ordered list of clickable
+ * follow-up actions for the player. Items are localized strings.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "SuggestionsPayload".
+ */
+export interface SuggestionsPayload {
+  items: Items;
+  [k: string]: unknown;
+}
+/**
+ * SSE done event payload — turn ended marker. Empty body; client
+ * treats stream-close as the signal but the explicit event is also
+ * emitted by `dirty.run` after suggestions.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "DonePayload".
+ */
+export interface DonePayload {
   [k: string]: unknown;
 }
