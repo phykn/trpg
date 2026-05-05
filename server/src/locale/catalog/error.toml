@@ -1,0 +1,31 @@
+[error.llm_unavailable]
+ko = "이야기꾼이 잠시 길을 잃었습니다. 다시 시도해 주세요."
+en = "The storyteller is briefly lost. Please try again."
+
+[error.invariant_violation]
+ko = "세계의 규칙이 어긋났습니다. 다시 시도해 주세요."
+en = "The world's rules became inconsistent. Please try again."
+
+[error.json_decode_error]
+ko = "행동을 해석하지 못했습니다. 다시 시도해 주세요."
+en = "Could not interpret the action. Please try again."
+
+[error.judge_malformed]
+ko = "행동을 해석하지 못했습니다. 다시 시도해 주세요."
+en = "Could not interpret the action. Please try again."
+
+[error.narrate_malformed]
+ko = "이야기 한 줄을 마저 잇지 못했습니다. 다시 시도해 주세요."
+en = "Could not finish the story line. Please try again."
+
+[error.narrate_unavailable]
+ko = "이야기꾼이 잠시 길을 잃었습니다. 다시 시도해 주세요."
+en = "The storyteller is briefly lost. Please try again."
+
+[error.persistence_failed]
+ko = "저장 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요."
+en = "A problem occurred while saving. Please try again later."
+
+[error.runtime_generic]
+ko = "지금은 응답할 수 없습니다. 잠시 후 다시 시도해 주세요."
+en = "Cannot respond at the moment. Please try again later."
