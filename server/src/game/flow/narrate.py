@@ -222,8 +222,8 @@ async def consume_narrate(
     push_log_entry(state, gm_log, dirty)
     yield emit_log_entry(gm_log)
     # Quest-start and affinity cards stash into the deferred queue so they
-    # flush together with quest 성공/실패 — single ordering invariant for
-    # all reaction cards (always after the gm body that motivated them).
+    # flush together with quest success/failure — single ordering invariant
+    # for all reaction cards (always after the gm body that motivated them).
     for q_id in apply_result["started_quests"]:
         quest = state.quests.get(q_id)
         if quest is None:
@@ -260,7 +260,7 @@ async def consume_narrate(
         except NotImplementedError:
             pass  # judge LLM stub; live turns stay safe
     # Drain all deferred reaction cards (quest_start, affinity, quest
-    # 성공/실패) so they emit AFTER the gm body that motivated them.
+    # success/failure) so they emit AFTER the gm body that motivated them.
     for ev in flush_deferred_act_cards(state, dirty):
         yield ev
 

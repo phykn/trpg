@@ -40,10 +40,10 @@ class Dirty:
     history: list[TurnLogEntry] = field(default_factory=list)
     dialogue: list[DialoguePair] = field(default_factory=list)
     narrate_suggestions: list[str] | None = None
-    # System reaction cards (quest 성공/실패, quest_start, affinity) stashed
-    # so they can be flushed AFTER the prose that motivated them. Tuple =
-    # (text, turn_summary). Drained by flush_deferred_act_cards in narrate
-    # (npc dialogue path) and combat_phase (post 전투 결과).
+    # System reaction cards (quest success/failure, quest_start, affinity)
+    # stashed so they can be flushed AFTER the prose that motivated them.
+    # Tuple = (text, turn_summary). Drained by flush_deferred_act_cards in
+    # narrate (npc dialogue path) and combat_phase (after combat resolves).
     deferred_act_cards: list[tuple[str, str | None]] = field(default_factory=list)
 
 
@@ -102,10 +102,10 @@ def drop_pushed_act(state: GameState, dirty: Dirty, entry_id: int | None) -> Non
 
 
 def flush_deferred_act_cards(state: GameState, dirty: Dirty):
-    """Yield SSE log_entry events for any reaction cards (quest 성공/실패,
-    quest_start, affinity) stashed during apply_changes / engine triggers.
-    Caller decides when — after gm body in narrate, after 전투 결과 act in
-    combat_phase. Drains the list."""
+    """Yield SSE log_entry events for any reaction cards (quest
+    success/failure, quest_start, affinity) stashed during apply_changes
+    / engine triggers. Caller decides when — after the gm body in narrate,
+    after the combat-result act in combat_phase. Drains the list."""
     for text, summary in dirty.deferred_act_cards:
         yield push_act(state, dirty, text, turn_summary=summary)
     dirty.deferred_act_cards.clear()

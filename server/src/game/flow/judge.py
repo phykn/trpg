@@ -17,11 +17,13 @@ from src.locale.labels import ROLL_REASON_DEFAULT
 
 @dataclass(frozen=True)
 class PendingCheckTrigger:
-    """Semantic fallback 또는 verb-driven uncertainty 결과로 즉시 pending_check 발사가 필요한 경우.
-    JudgeOutput과 별 type — turn.py가 isinstance로 분기.
+    """Signal that a pending_check should be emitted immediately, from
+    semantic fallback or verb-driven uncertainty. Distinct type from
+    JudgeOutput — turn.py branches on isinstance.
 
-    현재는 semantic fallback에서만 발사 (triggering_verb=None). 후속 uncertainty
-    룰에서는 verb dispatch 안에서 같은 trigger를 생성해 emit_roll_pending_from_trigger 호출."""
+    Today only the semantic fallback emits this (triggering_verb=None);
+    the later uncertainty rule will let verb dispatch construct the same
+    trigger and call emit_roll_pending_from_trigger."""
     tier: Tier
     stat: StatKey
     targets: list[str]
@@ -90,7 +92,7 @@ async def run_judge(
     """Call the classify LLM. After 5 self-correction retries inside the runner:
     - schema-only failure (ValidationError) → raise JudgeMalformed.
     - semantic failure (JudgeSemanticError) → return PendingCheckTrigger
-      (WIS roll on player's current location — 현 동작 동일성 유지).
+      (WIS roll on player's current location — preserves prior behavior).
 
     `graph` is the relational SSOT — flow entry points pass the turn-start
     graph so build_surroundings doesn't rebuild. Test/ad-hoc callers can omit.

@@ -1,4 +1,4 @@
-"""Long rest at the current location. attempt_rest rolls risk vs full recovery; on full recovery it restores HP/MP and jumps turn_count to the next 새벽 boundary."""
+"""Long rest at the current location. attempt_rest rolls risk vs full recovery; on full recovery it restores HP/MP and jumps turn_count to the next dawn boundary."""
 
 import random
 from collections.abc import Awaitable, Callable

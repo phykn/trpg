@@ -128,8 +128,8 @@ def _check_speak(verb: Verb, surroundings: dict[str, Any]) -> None:
         _check_recruit_inner(target, surroundings)
     elif intent == "part":
         _check_dismiss_inner(target, surroundings)
-    # 기타 intent (friendly/hostile/deceptive/negotiate/ask/command/pray)는
-    # surroundings 의존 검증 없음 — schema validator가 intent 자체는 검증.
+    # Other intents (friendly/hostile/deceptive/negotiate/ask/command/pray)
+    # have no surroundings-dependent check — schema validator covers the intent itself.
 
 
 def _check_recruit_inner(target: str | None, surroundings: dict[str, Any]) -> None:
@@ -222,7 +222,7 @@ _CHECKS: dict[VerbName, Callable[[Verb, dict[str, Any]], None]] = {
     "speak": _check_speak,
     "transfer": _check_transfer,
     "use": _check_use,
-    # move, rest, wait, perceive, alter: schema/modifier-validation 후 자동 통과
+    # move, rest, wait, perceive, alter: pass automatically after schema/modifier validation
 }
 
 

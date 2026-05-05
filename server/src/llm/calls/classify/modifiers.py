@@ -108,7 +108,7 @@ _MODIFIER_SCHEMAS: dict[VerbName, ModifierSchema] = {
 
 
 def validate_modifiers(verb: Verb, *, in_combat: bool) -> None:
-    """Mutates verb.modifiers in place to drop unknown keys (LLM 환각 흡수).
+    """Mutates verb.modifiers in place to drop unknown keys (absorbs LLM hallucination).
     Raises ModifierValidationError on missing required, type/enum mismatch,
     target_ids cardinality violation, or unmet disjunctive_required."""
     schema = _MODIFIER_SCHEMAS.get(verb.name)
