@@ -1,6 +1,11 @@
-import type { Tone } from '@/components/ui';
+import type {
+  PlacePayload,
+  PlaceSurrounding as PlaceSurroundingPayload,
+  PlaceTarget as PlaceTargetPayload,
+  RiskBadge as RiskBadgePayload,
+} from '@/types/wire.gen';
 
-export type RiskBadge = { label: string; tone: Tone };
+export type RiskBadge = RiskBadgePayload;
 
 export type StoryGraphNodeKind =
   | 'hero'
@@ -112,29 +117,8 @@ export type StoryGraphModel = {
   summary: string;
 };
 
-export type PlaceSurrounding = {
-  name: string;
-  blurb: string;
-  difficulty: string | null;
-  risk: RiskBadge;
-};
+export type PlaceSurrounding = PlaceSurroundingPayload;
 
-export type PlaceTarget = {
-  name: string;
-  level: number;
-  raceJob: string;
-  gender: string;
-  blurb: string;
-  trust: number;
-};
+export type PlaceTarget = PlaceTargetPayload;
 
-export type Place = {
-  name: string;
-  description: string;
-  dayPhase: string;
-  weather: string[];
-  features: string[];
-  surroundings: PlaceSurrounding[];
-  targets: PlaceTarget[];
-  risk: RiskBadge;
-};
+export type Place = PlacePayload;
