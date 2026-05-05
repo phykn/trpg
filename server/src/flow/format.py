@@ -7,6 +7,7 @@ string for a log entry lives here.
 from typing import TYPE_CHECKING
 
 from ..domain.state import GameState
+from ..locale import render
 from ..locale.particles import eul_reul, eun_neun, gwa_wa, i_ga
 from ..mapping.labels import stat_label
 from .error_phrases import humanize_engine_error
@@ -15,13 +16,13 @@ if TYPE_CHECKING:
     from .combat_auto import AutoCombatResult
 
 
-GAME_OVER_TEXT = "당신의 이야기가 여기서 끝납니다."
-NO_COMBAT_TARGETS_TEXT = "공격할 수 있는 대상이 없습니다."
-SUMMON_FAILED_TEXT = "허공을 가르지만 적은 보이지 않습니다."
-FLEE_OUTSIDE_COMBAT_TEXT = "지금은 도망칠 전투가 없습니다."
-REST_BLOCKED_IN_COMBAT_TEXT = "전투 중에는 잠들 수 없습니다."
-INPUT_REJECTED_TEXT = "그 말은 받아들여지지 않습니다."
-ACTION_FORBIDDEN_IN_COMBAT_TEXT = "전투 중에는 그 행동을 할 수 없습니다."
+GAME_OVER_TEXT = render("log.game_over", "ko")
+NO_COMBAT_TARGETS_TEXT = render("log.no_combat_targets", "ko")
+SUMMON_FAILED_TEXT = render("log.summon_failed", "ko")
+FLEE_OUTSIDE_COMBAT_TEXT = render("log.flee_outside_combat", "ko")
+REST_BLOCKED_IN_COMBAT_TEXT = render("log.rest_blocked_in_combat", "ko")
+INPUT_REJECTED_TEXT = render("log.input_rejected", "ko")
+ACTION_FORBIDDEN_IN_COMBAT_TEXT = render("log.action_forbidden_in_combat", "ko")
 
 
 def format_combat_start_turn_log(first_enemy_name: str) -> str:

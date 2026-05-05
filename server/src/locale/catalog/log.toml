@@ -86,3 +86,24 @@ ko = "그런 기술은 시나리오에 없습니다"
 
 [log."error.generic_block"]
 ko = "지금은 그 행동이 통하지 않습니다"
+
+[log.game_over]
+ko = "당신의 이야기가 여기서 끝납니다."
+
+[log.no_combat_targets]
+ko = "공격할 수 있는 대상이 없습니다."
+
+[log.summon_failed]
+ko = "허공을 가르지만 적은 보이지 않습니다."
+
+[log.flee_outside_combat]
+ko = "지금은 도망칠 전투가 없습니다."
+
+[log.rest_blocked_in_combat]
+ko = "전투 중에는 잠들 수 없습니다."
+
+[log.input_rejected]
+ko = "그 말은 받아들여지지 않습니다."
+
+[log.action_forbidden_in_combat]
+ko = "전투 중에는 그 행동을 할 수 없습니다."
