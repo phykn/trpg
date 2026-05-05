@@ -4,7 +4,7 @@ from pathlib import Path
 
 from typing import get_args
 
-from src.domain.types import Tier, Phase, EncounterRisk
+from src.domain.types import EncounterRisk, Phase, StatKey, Tier
 
 
 CATALOG = Path(__file__).resolve().parents[2] / "src" / "locale" / "catalog"
@@ -23,6 +23,11 @@ def test_tier_catalog_covers_enum() -> None:
 def test_phase_catalog_covers_enum() -> None:
     expected = set(get_args(Phase))
     assert _keys("phase.toml", "phase") == expected
+
+
+def test_stat_catalog_covers_enum() -> None:
+    expected = set(get_args(StatKey))
+    assert _keys("stat.toml", "stat") == expected
 
 
 def test_encounter_risk_no_catalog_yet() -> None:
