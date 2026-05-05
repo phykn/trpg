@@ -379,10 +379,10 @@ async def emit_roll_pending_from_trigger(
     trigger: "PendingCheckTrigger",
     dirty: Dirty,
 ) -> AsyncIterator[dict]:
-    """PendingCheckTrigger 기반 pending_check 발사 (semantic fallback + 후속
-    uncertainty 룰 호환). triggering_verb / pending_verbs 필드 carry.
-    kind는 _derive_pending_kind로 설정."""
-    from .companion import _derive_pending_kind  # 순환 import 회피
+    """Emit pending_check from a PendingCheckTrigger (semantic fallback +
+    later-uncertainty-rule compatible). Carries the triggering_verb /
+    pending_verbs fields; kind is set via _derive_pending_kind."""
+    from .companion import _derive_pending_kind  # avoid circular import
     actor = state.characters[state.player_id]
 
     def _aff_against_actor(t: str) -> int:
@@ -408,7 +408,7 @@ async def emit_roll_pending_from_trigger(
         reason=trigger.reason,
         created_at=datetime.now(UTC).isoformat(),
         triggering_verb=trigger.triggering_verb,
-        pending_verbs=[],  # 잔여 verb 폐기 (후속 uncertainty 룰에서 활성화 예정)
+        pending_verbs=[],  # discard remaining verbs (will activate in the later uncertainty rule)
     )
     try:
         await flush(state, save_repo, dirty)

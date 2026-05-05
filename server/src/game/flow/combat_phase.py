@@ -100,8 +100,8 @@ async def emit_combat_cinematic_and_end(
         end_text = format_combat_end_text(result.outcome, enemies_remaining)
         combined = f"{summary}\n{end_text}" if summary else end_text
     yield push_act(state, dirty, combined)
-    # Reaction cards (quest 성공/실패, etc.) flush AFTER cinematic + outcome
-    # summary. Order: combat narration → outcome → reward cards.
+    # Reaction cards (quest success/failure, etc.) flush AFTER cinematic
+    # + outcome summary. Order: combat narration → outcome → reward cards.
     for ev in flush_deferred_act_cards(state, dirty):
         yield ev
     yield emit_combat_end(result.outcome)
