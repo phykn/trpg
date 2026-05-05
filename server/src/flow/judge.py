@@ -1,14 +1,31 @@
+from dataclasses import dataclass
 from typing import Literal, TypedDict
 
 from pydantic import ValidationError
 
 from ..domain.errors import JudgeMalformed
+from ..domain.types import StatKey, Tier
 from ..llm_calls.classify import JudgeSemanticError, classify
-from ..llm_calls.classify.schema import JudgeInput, JudgeOutput, RollAction
+from ..llm_calls.classify.schema import JudgeInput, JudgeOutput, Verb
 from ..llm.client import LLMClient
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph
 from ..context import build_surroundings
+from ..mapping.labels import ROLL_REASON_DEFAULT
+
+
+@dataclass(frozen=True)
+class PendingCheckTrigger:
+    """Semantic fallback 또는 verb-driven uncertainty 결과로 즉시 pending_check 발사가 필요한 경우.
+    JudgeOutput과 별 type — turn.py가 isinstance로 분기.
+
+    Stage 1: semantic fallback에서만 발사 (triggering_verb=None). Stage 2 uncertainty
+    룰에서는 verb dispatch 안에서 같은 trigger를 생성해 emit_roll_pending_from_trigger 호출."""
+    tier: Tier
+    stat: StatKey
+    targets: list[str]
+    reason: str
+    triggering_verb: Verb | None = None
 
 
 class JudgeResult(TypedDict):
@@ -71,11 +88,11 @@ async def run_judge(
     player_input: str,
     *,
     graph: GameGraph | None = None,
-) -> JudgeOutput:
+) -> JudgeOutput | PendingCheckTrigger:
     """Call the classify LLM. After 5 self-correction retries inside the runner:
     - schema-only failure (ValidationError) → raise JudgeMalformed.
-    - semantic failure (JudgeSemanticError) → fall back to a roll on the
-      player's current location (docs/02-runtime §2.3 step 3).
+    - semantic failure (JudgeSemanticError) → return PendingCheckTrigger
+      (WIS roll on player's current location — Stage 1 동작 동일성 유지).
 
     `graph` is the relational SSOT — flow entry points pass the turn-start
     graph so build_surroundings doesn't rebuild. Test/ad-hoc callers can omit.
@@ -107,4 +124,10 @@ async def run_judge(
             raise JudgeMalformed(
                 f"semantic fallback impossible: no location ({e})"
             ) from e
-        return RollAction(action="roll", tier="보통", stat="WIS", targets=[loc_id])
+        return PendingCheckTrigger(
+            tier="보통",
+            stat="WIS",
+            targets=[loc_id],
+            reason=ROLL_REASON_DEFAULT,
+            triggering_verb=None,
+        )

@@ -1,15 +1,13 @@
 """Free-path judge triggered on turn end + NPC dialogue."""
 
-import tempfile
-import pytest
 from src.domain.entities import Character, Location, Quest, Stats
 from src.domain.state import GameState
 from src.engines.quest import apply_judge_result
 from src.flow.turn import end_turn_quest_check
 from src.flow.narrate import npc_dialogue_quest_check
 from src.flow import narrate as narrate_mod
-from src.llm_calls.classify.schema import PassAction
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
+from src.llm_calls.classify.schema import Verb
+from src.persistence.local_fs import LocalFsScenarioRepo
 
 
 # ---------------------------------------------------------------------------
@@ -260,114 +258,65 @@ def test_apply_judge_result_satisfied_fallback_when_reason_empty():
 async def test_stream_narrate_tail_calls_npc_dialogue_check_for_npc_target(
     fresh_state, monkeypatch
 ):
-    """PassAction targeting an NPC character must invoke npc_dialogue_quest_check."""
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        fresh_state.locations["plaza_01"] = Location(id="plaza_01", name="광장")
-        fresh_state.characters["player_01"] = Character(
-            id="player_01",
-            name="주",
-            race_id="human",
-            is_player=True,
-            location_id="plaza_01",
-            stats=Stats(),
+    """wait verb targeting an NPC character must invoke npc_dialogue_quest_check."""
+    fresh_state.locations["plaza_01"] = Location(id="plaza_01", name="광장")
+    fresh_state.characters["player_01"] = Character(
+        id="player_01",
+        name="주",
+        race_id="human",
+        is_player=True,
+        location_id="plaza_01",
+        stats=Stats(),
+    )
+    fresh_state.characters["npc_01"] = Character(
+        id="npc_01",
+        name="NPC",
+        race_id="human",
+        location_id="plaza_01",
+        stats=Stats(),
+    )
+
+    captured: list[dict] = []
+
+    def fake_npc_check(state, *, claim, npc_id, dirty=None):
+        captured.append({"claim": claim, "npc_id": npc_id})
+
+    monkeypatch.setattr(narrate_mod, "npc_dialogue_quest_check", fake_npc_check)
+
+    async def fake_run_narrate(*a, **kw):
+        if False:
+            yield None  # pragma: no cover
+
+    monkeypatch.setattr(narrate_mod, "run_narrate", fake_run_narrate)
+
+    from src.flow.dirty import Dirty
+    from src.flow.narrate import stream_narrate_tail
+
+    action = Verb(name="wait", target_ids=["npc_01"])
+    dirty = Dirty()
+    [
+        ev
+        async for ev in stream_narrate_tail(
+            client=None,
+            state=fresh_state,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            player_input="퀘스트를 완료했습니다",
+            dirty=dirty,
+            to_front_fn=None,
+            action=action,
+            graph=fresh_state.graph(),
         )
-        fresh_state.characters["npc_01"] = Character(
-            id="npc_01",
-            name="NPC",
-            race_id="human",
-            location_id="plaza_01",
-            stats=Stats(),
-        )
+    ]
 
-        captured: list[dict] = []
-
-        def fake_npc_check(state, *, claim, npc_id, dirty=None):
-            captured.append({"claim": claim, "npc_id": npc_id})
-
-        monkeypatch.setattr(narrate_mod, "npc_dialogue_quest_check", fake_npc_check)
-
-        async def fake_run_narrate(*a, **kw):
-            if False:
-                yield None  # pragma: no cover
-
-        monkeypatch.setattr(narrate_mod, "run_narrate", fake_run_narrate)
-
-        from src.flow.dirty import Dirty
-        from src.flow.narrate import stream_narrate_tail
-
-        action = PassAction(action="pass", targets=["npc_01"])
-        dirty = Dirty()
-        events = [
-            ev
-            async for ev in stream_narrate_tail(
-                client=None,
-                state=fresh_state,
-                scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
-                player_input="퀘스트를 완료했습니다",
-                dirty=dirty,
-                to_front_fn=None,
-                action=action,
-                graph=fresh_state.graph(),
-            )
-        ]
-
-        assert len(captured) == 1
-        assert captured[0]["npc_id"] == "npc_01"
-        assert captured[0]["claim"] == "퀘스트를 완료했습니다"
+    assert len(captured) == 1
+    assert captured[0]["npc_id"] == "npc_01"
+    assert captured[0]["claim"] == "퀘스트를 완료했습니다"
 
 
 async def test_stream_narrate_tail_skips_npc_check_for_player_target(
     fresh_state, monkeypatch
 ):
-    """PassAction targeting the player itself must NOT invoke npc_dialogue_quest_check."""
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        fresh_state.characters["player_01"] = Character(
-            id="player_01",
-            name="주",
-            race_id="human",
-            is_player=True,
-            stats=Stats(),
-        )
-
-        captured: list[dict] = []
-
-        def fake_npc_check(state, *, claim, npc_id, dirty=None):
-            captured.append({"npc_id": npc_id})
-
-        monkeypatch.setattr(narrate_mod, "npc_dialogue_quest_check", fake_npc_check)
-
-        async def fake_run_narrate(*a, **kw):
-            if False:
-                yield None  # pragma: no cover
-
-        monkeypatch.setattr(narrate_mod, "run_narrate", fake_run_narrate)
-
-        from src.flow.dirty import Dirty
-        from src.flow.narrate import stream_narrate_tail
-
-        action = PassAction(action="pass", targets=["player_01"])
-        dirty = Dirty()
-        [
-            ev
-            async for ev in stream_narrate_tail(
-                client=None,
-                state=fresh_state,
-                scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
-                player_input="자신을 살펴본다",
-                dirty=dirty,
-                to_front_fn=None,
-                action=action,
-                graph=fresh_state.graph(),
-            )
-        ]
-
-        assert captured == []
-
-
-async def test_stream_narrate_tail_skips_npc_check_when_no_target(
-    fresh_state, monkeypatch
-):
-    """PassAction with no targets must NOT invoke npc_dialogue_quest_check."""
+    """wait verb targeting the player itself must NOT invoke npc_dialogue_quest_check."""
     fresh_state.characters["player_01"] = Character(
         id="player_01",
         name="주",
@@ -389,24 +338,70 @@ async def test_stream_narrate_tail_skips_npc_check_when_no_target(
 
     monkeypatch.setattr(narrate_mod, "run_narrate", fake_run_narrate)
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        from src.flow.dirty import Dirty
-        from src.flow.narrate import stream_narrate_tail
+    from src.flow.dirty import Dirty
+    from src.flow.narrate import stream_narrate_tail
 
-        action = PassAction(action="pass")
-        dirty = Dirty()
-        [
-            ev
-            async for ev in stream_narrate_tail(
-                client=None,
-                state=fresh_state,
-                scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
-                player_input="주변을 살핀다",
-                dirty=dirty,
-                to_front_fn=None,
-                action=action,
-                graph=fresh_state.graph(),
-            )
-        ]
+    action = Verb(name="wait", target_ids=["player_01"])
+    dirty = Dirty()
+    [
+        ev
+        async for ev in stream_narrate_tail(
+            client=None,
+            state=fresh_state,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            player_input="자신을 살펴본다",
+            dirty=dirty,
+            to_front_fn=None,
+            action=action,
+            graph=fresh_state.graph(),
+        )
+    ]
 
-        assert captured == []
+    assert captured == []
+
+
+async def test_stream_narrate_tail_skips_npc_check_when_no_target(
+    fresh_state, monkeypatch
+):
+    """wait verb with no targets must NOT invoke npc_dialogue_quest_check."""
+    fresh_state.characters["player_01"] = Character(
+        id="player_01",
+        name="주",
+        race_id="human",
+        is_player=True,
+        stats=Stats(),
+    )
+
+    captured: list[dict] = []
+
+    def fake_npc_check(state, *, claim, npc_id, dirty=None):
+        captured.append({"npc_id": npc_id})
+
+    monkeypatch.setattr(narrate_mod, "npc_dialogue_quest_check", fake_npc_check)
+
+    async def fake_run_narrate(*a, **kw):
+        if False:
+            yield None  # pragma: no cover
+
+    monkeypatch.setattr(narrate_mod, "run_narrate", fake_run_narrate)
+
+    from src.flow.dirty import Dirty
+    from src.flow.narrate import stream_narrate_tail
+
+    action = Verb(name="wait")
+    dirty = Dirty()
+    [
+        ev
+        async for ev in stream_narrate_tail(
+            client=None,
+            state=fresh_state,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            player_input="주변을 살핀다",
+            dirty=dirty,
+            to_front_fn=None,
+            action=action,
+            graph=fresh_state.graph(),
+        )
+    ]
+
+    assert captured == []

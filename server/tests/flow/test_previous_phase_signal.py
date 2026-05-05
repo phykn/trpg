@@ -9,7 +9,7 @@ import tempfile
 
 import pytest
 
-from src.llm_calls.classify.schema import PassAction
+from src.llm_calls.classify.schema import JudgeOutput, Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.domain.entities import Character, Location, Stats
 from src.flow import narrate as narrate_mod
@@ -59,7 +59,7 @@ async def test_signal_passed_to_narrate_and_cleared(
     monkeypatch.setattr(narrate_mod, "run_narrate", fake_run_narrate)
 
     async def fake_judge(*a, **kw):
-        return PassAction(action="pass")
+        return JudgeOutput(actions=[Verb(name="wait")])
 
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
 
@@ -141,7 +141,7 @@ async def test_no_signal_passes_none(
     monkeypatch.setattr(narrate_mod, "run_narrate", fake_run_narrate)
 
     async def fake_judge(*a, **kw):
-        return PassAction(action="pass")
+        return JudgeOutput(actions=[Verb(name="wait")])
 
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
 

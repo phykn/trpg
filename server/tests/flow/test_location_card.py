@@ -10,7 +10,7 @@ from src.domain.entities import Character, Connection, Location, Stats
 from src.flow import narrate as narrate_mod
 from src.flow import turn as turn_mod
 from src.flow.turn import run_turn
-from src.llm_calls.classify.schema import MoveAction
+from src.llm_calls.classify.schema import JudgeOutput, Verb
 from src.llm_calls.narrate import NarrativeFinal
 from src.llm_calls.narrate.schema import NarrateOutput
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
@@ -61,7 +61,7 @@ async def _move_to(state, tmp_saves, monkeypatch, dest):
     narrate_calls = _stub_narrate(monkeypatch)
 
     async def fake_judge(*a, **kw):
-        return MoveAction(action="move", destination=dest)
+        return JudgeOutput(actions=[Verb(name="move", modifiers={"destination": dest})])
 
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
     events = [

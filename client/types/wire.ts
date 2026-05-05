@@ -6,7 +6,7 @@ import type { Place, StoryGraphModel } from '@/features/story-graph';
 import type { Subject } from '@/features/subject';
 
 export type PendingCheck = {
-  kind: 'stat';
+  kind: 'stat' | 'recruit';
   dc: number;
   stat: string;
   stat_label: string;

@@ -7,17 +7,7 @@ from collections.abc import AsyncIterator
 from typing import Literal
 
 from ..llm_calls.combat_narrate import stream_combat_narrate
-from ..llm_calls.classify.schema import (
-    CombatAction,
-    EquipAction,
-    FleeAction,
-    PassAction,
-    RejectAction,
-    RestAction,
-    RollAction,
-    UnequipAction,
-    UseAction,
-)
+from ..llm_calls.classify.schema import Verb
 from ..domain.errors import CombatStateInvalid, JudgeMalformed
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
@@ -27,7 +17,6 @@ from ..ontology.queries import location_of
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from .actions import (
     emit_equip,
-    emit_roll_pending,
     emit_unequip,
     emit_use,
 )
@@ -102,8 +91,8 @@ async def emit_combat_cinematic_and_end(
         end_text = format_combat_end_text(result.outcome, enemies_remaining)
         combined = f"{summary}\n{end_text}" if summary else end_text
     yield push_act(state, dirty, combined)
-    # Reaction cards (quest 성공/실패, etc.) flush AFTER cinematic + 전투 결과.
-    # Time order: 전투 narration → 결과 → 보상 카드.
+    # Reaction cards (quest 성공/실패, etc.) flush AFTER cinematic + outcome
+    # summary. Order: combat narration → outcome → reward cards.
     for ev in flush_deferred_act_cards(state, dirty):
         yield ev
     yield {"type": "combat_end", "data": {"outcome": result.outcome}}
@@ -165,8 +154,7 @@ async def start_combat_and_drive_auto(
     _result_out: list | None = None,
 ) -> AsyncIterator[dict]:
     """Open a fresh fight (no existing combat_state) and run one auto-sim.
-    Used by /turn's CombatAction / SummonCombatAction entry and by rest's
-    ambush branch."""
+    Used by /turn's attack verb entry and by rest's ambush branch."""
     if state.combat_state is not None:
         raise CombatStateInvalid(
             "start_combat called while combat_state is already set "
@@ -213,8 +201,8 @@ def has_invalid_combat_targets(
 ) -> bool:
     """True if any requested target isn't a valid attackable enemy in the
     player's location: self-target, missing, dead, or in a different location.
-    Shared by turn.py (out-of-combat CombatAction) and run_combat_player_turn
-    (in-combat CombatAction)."""
+    Shared by turn.py (out-of-combat attack verb) and run_combat_player_turn
+    (in-combat attack verb)."""
     actor_loc = location_of(graph, state.player_id)
     return any(
         t == state.player_id
@@ -225,49 +213,78 @@ def has_invalid_combat_targets(
     )
 
 
-def _judge_to_player_action(result, state: GameState) -> PlayerAction | None:
-    """Distil a judge action into a PlayerAction for the auto-sim. Returns
-    None if the action is not allowed in combat (rest, move, etc.)."""
-    if isinstance(result, CombatAction):
+def _judge_to_player_action(verb: Verb, state: GameState) -> PlayerAction | None:
+    """Distil a verb into a PlayerAction for the auto-sim. Returns None if the
+    verb is not allowed in combat (rest, move outside flee, etc.). Non-equip
+    transfer (trade/gift) is meaningless mid-fight, so it returns None and
+    falls through to ACTION_FORBIDDEN_IN_COMBAT_TEXT."""
+    n = verb.name
+    m = verb.modifiers or {}
+    if n == "attack":
         return PlayerAction(
-            kind="skill" if result.skill_id else "attack",
-            skill_id=result.skill_id,
-            targets=list(result.targets),
+            kind="skill" if m.get("skill_id") else "attack",
+            skill_id=m.get("skill_id"),
+            targets=list(verb.target_ids),
         )
-    if isinstance(result, FleeAction):
+    if n == "cast":
+        return PlayerAction(
+            kind="skill",
+            skill_id=m.get("skill_id"),
+            targets=list(verb.target_ids),
+        )
+    if n == "move" and m.get("manner") == "hasty":
         return PlayerAction(kind="flee")
-    if isinstance(result, PassAction):
+    if n == "wait":
         return PlayerAction(kind="pass")
-    if isinstance(result, (UseAction, EquipAction, UnequipAction)):
+    if n == "use":
+        # bookkeeping verb — combat treats this as a pass round.
         return PlayerAction(kind="pass")
+    if n == "transfer":
+        # Only equip/unequip are allowed as in-combat passives. trade/gift
+        # return None and fall through to ACTION_FORBIDDEN_IN_COMBAT_TEXT
+        # (avoids a silent pass round on a meaningless trade attempt).
+        from_id = m.get("from_id", "")
+        to_id = m.get("to_id", "")
+        if "<self>.equipped" in from_id or "<self>.equipped" in to_id:
+            return PlayerAction(kind="pass")
+        return None
     return None
 
 
 async def _passive_pre_emit(
     state: GameState,
     dirty: Dirty,
-    result,
+    verb: Verb,
 ) -> AsyncIterator[dict]:
-    """For UseAction / EquipAction / UnequipAction inside combat: apply the
-    item engine action before the auto-sim sees a `pass` round, so the
-    cinematic narrates a fight where the player consumed/swapped this turn.
-    Emits a combat_turn event so the client can attribute the round to the
-    item interaction, mirroring the round events the auto-sim produces."""
+    """For passive in-combat verbs: apply the item/transfer engine action
+    before the auto-sim sees a `pass` round, so the cinematic narrates a fight
+    where the player consumed/swapped this turn."""
     label: str
-    if isinstance(result, UseAction):
+    item_id_carried: str
+    n = verb.name
+    m = verb.modifiers or {}
+    if n == "use":
         async for ev in emit_use(
-            state, state.player_id, result.item_id, result.target_id, dirty
+            state, state.player_id, m["item_id"], m.get("target_id"), dirty
         ):
             yield ev
         label = "use"
-    elif isinstance(result, EquipAction):
-        async for ev in emit_equip(state, state.player_id, result.item_id, dirty):
-            yield ev
-        label = "equip"
-    elif isinstance(result, UnequipAction):
-        async for ev in emit_unequip(state, state.player_id, result.item_id, dirty):
-            yield ev
-        label = "unequip"
+        item_id_carried = m["item_id"]
+    elif n == "transfer":
+        from_id = m.get("from_id", "")
+        to_id = m.get("to_id", "")
+        item_id_carried = m["item_id"]
+        if "<self>.equipped" in to_id:
+            async for ev in emit_equip(state, state.player_id, item_id_carried, dirty):
+                yield ev
+            label = "equip"
+        elif "<self>.equipped" in from_id:
+            async for ev in emit_unequip(state, state.player_id, item_id_carried, dirty):
+                yield ev
+            label = "unequip"
+        else:
+            # Other transfer modes (gift/trade) — not a combat passive
+            return
     else:
         return
     yield {
@@ -275,7 +292,7 @@ async def _passive_pre_emit(
         "data": {
             "actor": state.player_id,
             "action": label,
-            "item_id": result.item_id,
+            "item_id": item_id_carried,
         },
     }
 
@@ -307,47 +324,69 @@ async def run_combat_player_turn(
         }
         return
 
-    yield {"type": "judge", "data": result.model_dump()}
-    refresh_active_subject(state, result)
+    # PendingCheckTrigger → emit_roll_pending_from_trigger directly.
+    from .judge import PendingCheckTrigger
+    if isinstance(result, PendingCheckTrigger):
+        from .actions import emit_roll_pending_from_trigger
+        yield {
+            "type": "judge",
+            "data": {
+                "tier": result.tier,
+                "stat": result.stat,
+                "targets": list(result.targets),
+                "reason": result.reason,
+                "kind": "stat",
+            },
+        }
+        async for ev in emit_roll_pending_from_trigger(
+            state, save_repo, player_input, result, dirty,
+        ):
+            yield ev
+        return
 
-    if isinstance(result, RestAction):
+    # JudgeOutput (verb-based): refuse → INPUT_REJECTED; otherwise take the
+    # first verb (in-combat assumes a single action — chains are out-of-combat
+    # only).
+    if result.refuse is not None:
+        yield push_act(state, dirty, INPUT_REJECTED_TEXT)
+        async for ev in finalize(state, save_repo, dirty, to_front_fn):
+            yield ev
+        return
+    # _exactly_one validator guarantees actions is 1+ when refuse is None.
+    verb = result.actions[0]
+
+    yield {"type": "judge", "data": verb.model_dump()}
+    refresh_active_subject(state, [verb])
+
+    if verb.name == "rest":
         yield push_act(state, dirty, REST_BLOCKED_IN_COMBAT_TEXT)
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
 
-    if isinstance(result, RollAction):
-        async for ev in emit_roll_pending(
-            state, save_repo, player_input, result, dirty
-        ):
-            yield ev
-        return
-
-    if isinstance(result, RejectAction):
-        yield push_act(state, dirty, INPUT_REJECTED_TEXT)
-        async for ev in finalize(state, save_repo, dirty, to_front_fn):
-            yield ev
-        return
-
-    player_action = _judge_to_player_action(result, state)
+    player_action = _judge_to_player_action(verb, state)
     if player_action is None:
         yield push_act(state, dirty, ACTION_FORBIDDEN_IN_COMBAT_TEXT)
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
 
-    if isinstance(result, CombatAction):
-        if has_invalid_combat_targets(state, graph, result.targets):
+    if verb.name == "attack":
+        if has_invalid_combat_targets(state, graph, list(verb.target_ids)):
             yield push_act(state, dirty, NO_COMBAT_TARGETS_TEXT)
             async for ev in finalize(state, save_repo, dirty, to_front_fn):
                 yield ev
             return
 
-    # Passive in-combat actions emit their engine effect first; the auto-sim
-    # then runs to terminal outcome with the player falling back to attack
-    # from round 2 onwards.
-    if isinstance(result, (UseAction, EquipAction, UnequipAction)):
-        async for ev in _passive_pre_emit(state, dirty, result):
+    # Passive in-combat verb: use, or transfer(equip/unequip).
+    is_passive = (
+        verb.name == "use"
+        or (verb.name == "transfer"
+            and ("<self>.equipped" in (verb.modifiers or {}).get("from_id", "")
+                 or "<self>.equipped" in (verb.modifiers or {}).get("to_id", "")))
+    )
+    if is_passive:
+        async for ev in _passive_pre_emit(state, dirty, verb):
             yield ev
 
     combat_results: list[AutoCombatResult] = []
@@ -390,7 +429,7 @@ async def run_combat_player_turn(
             "",
             dirty,
             to_front_fn,
-            PassAction(action="pass"),
+            Verb(name="wait"),
             graph=graph_post,
             previous_phase_signal=signal,
             recent_engine_events=recent_events,

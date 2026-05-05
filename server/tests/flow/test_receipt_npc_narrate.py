@@ -1,54 +1,67 @@
-"""NPC-touching actions (buy / sell / give) re-engage narrate even though they
-mutate state.
+"""NPC-touching verbs (transfer mode=trade or gift to NPC) re-engage narrate even
+though they mutate state.
 
-Receipt-only paths (equip / unequip / use / rest) are pure inventory shuffles —
-narrate adds nothing. But buy / sell / give involve a second character's
-reaction; without a narrate beat the engine card is the only signal of that
-interaction and the NPC reads as inert. The receipt set keeps only actions that
-don't touch another character.
-"""
+Receipt-only verbs (transfer equip|unequip / use / rest) are pure inventory shuffles —
+narrate adds nothing. But mode=trade or mode=gift to/from NPC involve a second
+character's reaction; without a narrate beat the engine card is the only signal of
+that interaction and the NPC reads as inert.
 
-from src.flow.turn import _RECEIPT_ACTION_TYPES, _is_receipt
-from src.llm_calls.classify.schema import (
-    BuyAction,
-    EquipAction,
-    GiveAction,
-    SellAction,
-    UnequipAction,
-    UseAction,
-)
+Stage 1b verb-direct: receipt 분기는 verb 인스턴스 + `_is_receipt` 검증."""
+
+from src.flow.turn import _is_receipt
+from src.llm_calls.classify.schema import Verb
 
 
-def test_buy_is_not_receipt():
-    assert BuyAction not in _RECEIPT_ACTION_TYPES
+def test_buy_verb_is_not_receipt(fresh_state):
+    """transfer(mode=trade, NPC→player) is buy — narrate-worthy (NPC reaction)."""
+    verb = Verb(name="transfer", modifiers={
+        "from_id": "npc_01", "to_id": "player_01",
+        "mode": "trade", "item_id": "item_01",
+    })
+    assert not _is_receipt(fresh_state, verb)
 
 
-def test_sell_is_not_receipt():
-    assert SellAction not in _RECEIPT_ACTION_TYPES
+def test_sell_verb_is_not_receipt(fresh_state):
+    """transfer(mode=trade, player→NPC) is sell — narrate-worthy."""
+    verb = Verb(name="transfer", modifiers={
+        "from_id": "player_01", "to_id": "npc_01",
+        "mode": "trade", "item_id": "item_01",
+    })
+    assert not _is_receipt(fresh_state, verb)
 
 
-def test_give_is_not_receipt():
-    assert GiveAction not in _RECEIPT_ACTION_TYPES
+def test_give_verb_is_not_receipt(fresh_state):
+    """transfer(mode=gift, player→NPC) is give — narrate-worthy."""
+    verb = Verb(name="transfer", modifiers={
+        "from_id": "player_01", "to_id": "npc_01",
+        "mode": "gift", "item_id": "item_01",
+    })
+    assert not _is_receipt(fresh_state, verb)
 
 
-def test_equip_unequip_use_remain_receipt():
-    assert EquipAction in _RECEIPT_ACTION_TYPES
-    assert UnequipAction in _RECEIPT_ACTION_TYPES
-    assert UseAction in _RECEIPT_ACTION_TYPES
+def test_equip_verb_is_receipt(fresh_state):
+    """transfer(equip slot)은 receipt — narrate skip."""
+    verb = Verb(name="transfer", modifiers={
+        "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
+        "mode": "gift", "item_id": "sword_01",
+    })
+    assert _is_receipt(fresh_state, verb)
 
 
-def test_is_receipt_dispatches_buy_to_narrate(fresh_state):
-    action = BuyAction(action="buy", npc_id="npc_01", item_id="item_01")
-    assert not _is_receipt(fresh_state, action)
+def test_unequip_verb_is_receipt(fresh_state):
+    verb = Verb(name="transfer", modifiers={
+        "from_id": "<self>.equipped.weapon", "to_id": "<self>.inventory",
+        "mode": "gift", "item_id": "sword_01",
+    })
+    assert _is_receipt(fresh_state, verb)
 
 
-def test_is_receipt_dispatches_sell_to_narrate(fresh_state):
-    action = SellAction(action="sell", npc_id="npc_01", item_id="item_01")
-    assert not _is_receipt(fresh_state, action)
+def test_use_verb_is_receipt(fresh_state):
+    verb = Verb(name="use", modifiers={"item_id": "potion_01"})
+    assert _is_receipt(fresh_state, verb)
 
 
-def test_is_receipt_dispatches_give_to_narrate(fresh_state):
-    action = GiveAction(
-        action="give", from_id="player_01", to_id="npc_01", item_id="item_01"
-    )
-    assert not _is_receipt(fresh_state, action)
+def test_wait_verb_not_receipt(fresh_state):
+    """wait는 narrate-worthy (idle / fluff)."""
+    verb = Verb(name="wait")
+    assert not _is_receipt(fresh_state, verb)

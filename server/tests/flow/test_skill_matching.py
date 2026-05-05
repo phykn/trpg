@@ -9,7 +9,7 @@ from src.domain.entities import (
     Skill,
     Stats,
 )
-from src.llm_calls.classify.schema import CombatAction
+from src.llm_calls.classify.schema import Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.context import build_surroundings
 from src.flow.turn import run_turn
@@ -115,7 +115,7 @@ async def test_combat_with_skill_id_runs_auto_sim_and_burns_mp(
     The first round casts the skill, so MP is consumed at least once."""
     state = _seed_skill_state(fresh_state)
     judge_returns(
-        CombatAction(action="combat", targets=["goblin_01"], skill_id="fireball"),
+        Verb(name="attack", target_ids=["goblin_01"], modifiers={"skill_id": "fireball"}),
     )
     events = await collect(
         run_turn(
@@ -141,7 +141,7 @@ async def test_combat_without_skill_id_runs_basic_attack_loop(
     """Without skill_id, the auto-sim runs basic weapon attacks. MP is
     untouched."""
     state = _seed_skill_state(fresh_state)
-    judge_returns(CombatAction(action="combat", targets=["goblin_01"]))
+    judge_returns(Verb(name="attack", target_ids=["goblin_01"]))
     events = await collect(
         run_turn(
             client=None,
@@ -171,7 +171,7 @@ async def test_combat_during_combat_with_skill_id(
     state.combat_state.current_turn = 0
 
     judge_returns(
-        CombatAction(action="combat", targets=["goblin_01"], skill_id="fireball"),
+        Verb(name="attack", target_ids=["goblin_01"], modifiers={"skill_id": "fireball"}),
     )
     await collect(
         run_turn(

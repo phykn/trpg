@@ -1,10 +1,8 @@
 """LLM ad-hoc enemy summoning.
 
 Calls the `summon` LLM to produce one character that obeys the pair-trade
-invariant and registers it into GameState.characters. Two callers:
-- /turn's SummonCombatAction branch (player casts a summon-and-attack).
-- recovery's sleep_encounters fallback when the seed pool is empty (P3 §2.4).
-"""
+invariant and registers it into GameState.characters. Caller: recovery's
+sleep_encounters fallback when the seed pool is empty (P3 §2.4)."""
 
 from __future__ import annotations
 

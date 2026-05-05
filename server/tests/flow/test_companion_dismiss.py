@@ -2,7 +2,7 @@ from src.domain.entities import Character, Stats
 from src.flow.companion import run_dismiss
 from src.flow.dirty import Dirty
 from src.flow.turn import run_turn
-from src.llm_calls.classify.schema import DismissAction
+from src.llm_calls.classify.schema import Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
@@ -105,7 +105,7 @@ async def test_dismiss_via_run_turn(
 ):
     """run_turn → judge returns DismissAction → run_dismiss is invoked."""
     state = _setup_state_with_companion(fresh_state)
-    judge_returns(DismissAction(action="dismiss", target="npc.edric"))
+    judge_returns(Verb(name="speak", modifiers={"intent": "part", "target": "npc.edric"}))
 
     await collect(
         run_turn(

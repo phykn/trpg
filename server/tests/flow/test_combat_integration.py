@@ -10,10 +10,7 @@ import pytest
 
 from src.domain.entities import Character, CombatBehavior, Stats
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-from src.llm_calls.classify.schema import (
-    CombatAction,
-    PassAction,
-)
+from src.llm_calls.classify.schema import Verb
 from src.flow.turn import run_turn
 
 
@@ -49,7 +46,7 @@ async def test_combat_starts_and_runs_auto_sim(
     combat_state, tmp_data, judge_returns, collect
 ):
     """A fresh combat input triggers combat_start + auto-sim — no pending_check."""
-    judge_returns(CombatAction(action="combat", targets=["goblin_01"]))
+    judge_returns(Verb(name="attack", target_ids=["goblin_01"]))
     rng = random.Random(123)
     events = await collect(
         run_turn(
@@ -77,7 +74,7 @@ async def test_combat_with_invalid_target_does_not_consume_turn(
     # for a "rush into the fog" input. The dispatcher used to forward it to
     # start_combat, leaving combat_state in a half-broken shape. Now the
     # dispatcher rejects unknown / dead targets without consuming the turn.
-    judge_returns(CombatAction(action="combat", targets=["unknown_id"]))
+    judge_returns(Verb(name="attack", target_ids=["unknown_id"]))
     turn_before = combat_state.turn_count
     events = await collect(
         run_turn(
@@ -102,7 +99,7 @@ async def test_combat_with_self_target_does_not_consume_turn(
     # attacking themselves). The dispatcher used to start combat with the
     # player as the only enemy, which then ended immediately — turn_count went
     # up but nothing else moved.
-    judge_returns(CombatAction(action="combat", targets=["player_01"]))
+    judge_returns(Verb(name="attack", target_ids=["player_01"]))
     turn_before = combat_state.turn_count
     events = await collect(
         run_turn(
@@ -132,7 +129,7 @@ async def test_combat_player_attack_drops_affinity_bidirectional(
     combat_state.characters["player_01"].relations["goblin_01"] = 0
     combat_state.characters["goblin_01"].relations["player_01"] = 0
 
-    judge_returns(CombatAction(action="combat", targets=["goblin_01"]))
+    judge_returns(Verb(name="attack", target_ids=["goblin_01"]))
     await collect(
         run_turn(
             client=None,
@@ -160,7 +157,7 @@ async def test_combat_pass_action_runs_auto_sim_round(
     combat_state.combat_state.turn_order = ["player_01", "goblin_01"]
     combat_state.combat_state.current_turn = 0
 
-    judge_returns(PassAction(action="pass"))
+    judge_returns(Verb(name="wait"))
     rng = random.Random(2)
     events = await collect(
         run_turn(
@@ -222,7 +219,7 @@ async def test_combat_ends_when_enemy_dies_from_player_attack(
     combat_state.characters["goblin_01"].hp = 1
     combat_state.characters["goblin_01"].max_hp = 1
 
-    judge_returns(CombatAction(action="combat", targets=["goblin_01"]))
+    judge_returns(Verb(name="attack", target_ids=["goblin_01"]))
     rng = random.Random(99)
     events = await collect(
         run_turn(

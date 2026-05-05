@@ -10,7 +10,7 @@ from src.domain.entities import Character, CombatBehavior, Stats
 from src.flow.combat_auto import PlayerAction, run_auto_combat
 from src.flow.dirty import Dirty
 from src.engines import combat as combat_engine
-from src.llm_calls.classify.schema import CombatAction
+from src.llm_calls.classify.schema import Verb
 from src.flow.turn import run_turn
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
@@ -114,7 +114,7 @@ async def test_combat_action_surprise_routes_through_to_combat_state(
 ):
     """End-to-end: judge returns CombatAction(surprise=True) → combat_state is
     booted with surprise='player' and the auto-sim records player_surprise."""
-    judge_returns(CombatAction(action="combat", targets=["goblin_01"], surprise=True))
+    judge_returns(Verb(name="attack", target_ids=["goblin_01"], modifiers={"surprise": True}))
     events = await collect(
         run_turn(
             client=None,

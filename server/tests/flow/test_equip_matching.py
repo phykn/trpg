@@ -11,7 +11,7 @@ from src.domain.entities import (
     Stats,
     WeaponEffect,
 )
-from src.llm_calls.classify.schema import EquipAction, UnequipAction
+from src.llm_calls.classify.schema import Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.context import build_surroundings
 from src.flow.turn import run_turn
@@ -72,7 +72,10 @@ async def test_equip_weapon_lands_in_weapon_slot(
     fresh_state, tmp_data, judge_returns, collect
 ):
     state = _seed(fresh_state)
-    judge_returns(EquipAction(action="equip", item_id="sword"))
+    judge_returns(Verb(name="transfer", modifiers={
+        "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
+        "mode": "gift", "item_id": "sword",
+    }))
     events = await collect(
         run_turn(
             client=None,
@@ -93,7 +96,10 @@ async def test_equip_armor_picks_armor_slot_first(
     fresh_state, tmp_data, judge_returns, collect
 ):
     state = _seed(fresh_state)
-    judge_returns(EquipAction(action="equip", item_id="helm"))
+    judge_returns(Verb(name="transfer", modifiers={
+        "from_id": "<self>.inventory", "to_id": "<self>.equipped.armor",
+        "mode": "gift", "item_id": "helm",
+    }))
     await collect(
         run_turn(
             client=None,
@@ -115,7 +121,10 @@ async def test_unequip_finds_slot_by_item(
     fresh_state, tmp_data, judge_returns, collect
 ):
     state = _seed(fresh_state, equipped_weapon="sword")
-    judge_returns(UnequipAction(action="unequip", item_id="sword"))
+    judge_returns(Verb(name="transfer", modifiers={
+        "from_id": "<self>.equipped.weapon", "to_id": "<self>.inventory",
+        "mode": "gift", "item_id": "sword",
+    }))
     await collect(
         run_turn(
             client=None,

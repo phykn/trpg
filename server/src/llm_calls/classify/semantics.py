@@ -1,27 +1,13 @@
 from typing import Any, Callable
 
-from .schema import (
-    BuyAction,
-    ChainAction,
-    CombatAction,
-    DismissAction,
-    EquipAction,
-    FleeAction,
-    JudgeOutput,
-    PassAction,
-    RecruitAction,
-    RollAction,
-    SellAction,
-    UnequipAction,
-    UseAction,
-)
+from .schema import JudgeOutput, Verb, VerbName
 
 
-def _check_chain(output: ChainAction, surroundings: dict[str, Any]) -> None:
-    """Recurse into chain parts so each one faces the same checks as its standalone form."""
-    for part in output.parts:
-        check_semantics(part, surroundings)
+class JudgeSemanticError(Exception):
+    pass
 
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
 
 def _inventory_kinds(surroundings: dict[str, Any]) -> dict[str, str]:
     return {
@@ -56,8 +42,16 @@ def _surroundings_target_ids(
     return ids
 
 
-class JudgeSemanticError(Exception):
-    pass
+def _entities_by_id(surroundings: dict[str, Any]) -> dict[str, dict]:
+    return {
+        e["id"]: e
+        for e in surroundings.get("entities") or []
+        if isinstance(e, dict) and isinstance(e.get("id"), str)
+    }
+
+
+def _is_friendly(entity: dict) -> bool:
+    return bool(entity.get("friendly"))
 
 
 def _find_merchant(npc_id: str, surroundings: dict[str, Any]) -> dict:
@@ -74,220 +68,179 @@ def _find_merchant(npc_id: str, surroundings: dict[str, Any]) -> dict:
     return merchant
 
 
-def _check_targets(output, surroundings: dict[str, Any]) -> None:
-    """Reject any target id not in surroundings; placeholder ids ('unknown', '?') would otherwise pass through to narrate's target_view."""
-    valid = _surroundings_target_ids(surroundings)
-    bad = [t for t in output.targets if t not in valid]
+# ─── Per-verb checks ──────────────────────────────────────────────────────────
+
+def _check_attack(verb: Verb, surroundings: dict[str, Any]) -> None:
+    valid_target_ids = _surroundings_target_ids(surroundings)
+    bad = [t for t in verb.target_ids if t not in valid_target_ids]
     if bad:
         raise JudgeSemanticError(
-            f"targets contains ids not in surroundings: {bad}. "
-            f"Valid ids are: {sorted(valid)}. "
-            f"If the player referenced something not present, action must be 'pass'."
+            f"attack target ids not in surroundings: {bad}. "
+            f"Valid ids: {sorted(valid_target_ids)}."
         )
-
-
-def _check_pass_targets(output: PassAction, surroundings: dict[str, Any]) -> None:
-    """Pass accepts corpse ids in addition to live entities — addressing a corpse needs an explicit target so narrate can anchor the corpse-tone prose."""
-    valid = _surroundings_target_ids(surroundings, include_corpses=True)
-    bad = [t for t in output.targets if t not in valid]
-    if bad:
-        corpse_ids = sorted(
-            c.get("id", "")
-            for c in surroundings.get("corpses") or []
-            if isinstance(c, dict)
-        )
-        raise JudgeSemanticError(
-            f"pass targets contains ids not in surroundings: {bad}. "
-            f"Valid ids are: {sorted(valid)} "
-            f"(corpses: {corpse_ids}). "
-            f"If the player referenced something not present, use 'reject'."
-        )
-
-
-def _entities_by_id(surroundings: dict[str, Any]) -> dict[str, dict]:
-    return {
-        e["id"]: e
-        for e in surroundings.get("entities") or []
-        if isinstance(e, dict) and isinstance(e.get("id"), str)
-    }
-
-
-def _is_friendly(entity: dict) -> bool:
-    return bool(entity.get("friendly"))
-
-
-def _check_combat(output: CombatAction, surroundings: dict[str, Any]) -> None:
-    _check_targets(output, surroundings)
     by_id = _entities_by_id(surroundings)
     hostile_npcs = sorted(
-        eid
-        for eid, e in by_id.items()
+        eid for eid, e in by_id.items()
         if e.get("type") == "npc" and not _is_friendly(e)
     )
-    for tid in output.targets:
+    for tid in verb.target_ids:
         ent = by_id.get(tid)
         if ent is None:
             raise JudgeSemanticError(
-                f"combat target {tid!r} is not an NPC entity (it's a location/item/connection). "
-                f"Combat targets must be hostile/neutral living NPCs in the same location. "
-                f"Hostile/neutral NPCs here: {hostile_npcs}. "
-                f"If no real adversary is present, use 'summon_combat' or 'pass'."
+                f"attack target {tid!r} is not an NPC entity. "
+                f"Hostile/neutral NPCs here: {hostile_npcs}."
             )
         ent_type = ent.get("type")
         if ent_type != "npc":
             raise JudgeSemanticError(
-                f"combat target {tid!r} has type={ent_type!r}; only NPCs are valid combat targets. "
-                f"Hostile/neutral NPCs here: {hostile_npcs}."
+                f"attack target {tid!r} has type={ent_type!r}; only NPCs valid."
             )
         if _is_friendly(ent):
             raise JudgeSemanticError(
-                f"combat target {tid!r} is a friendly NPC. "
-                f"Use action='roll' (CHA, hostile intent) for confrontation, "
-                f"or 'summon_combat' to bring in a real adversary. "
-                f"Hostile/neutral NPCs here: {hostile_npcs}."
+                f"attack target {tid!r} is friendly. Use speak(intent=hostile) instead."
             )
-    if output.skill_id is None:
-        return
+    skill_id = verb.modifiers.get("skill_id")
+    if skill_id is not None:
+        valid_skills = {
+            s.get("id") for s in surroundings.get("skills", []) or [] if isinstance(s, dict)
+        }
+        if skill_id not in valid_skills:
+            raise JudgeSemanticError(
+                f"skill_id {skill_id!r} not in skills. Valid: {sorted(s for s in valid_skills if s)}."
+            )
+
+
+def _check_cast(verb: Verb, surroundings: dict[str, Any]) -> None:
+    skill_id = verb.modifiers.get("skill_id")
     valid_skills = {
         s.get("id") for s in surroundings.get("skills", []) or [] if isinstance(s, dict)
     }
-    if output.skill_id not in valid_skills:
+    if skill_id not in valid_skills:
         raise JudgeSemanticError(
-            f"skill_id {output.skill_id!r} not in skills. "
-            f"Valid skills are: {sorted(s for s in valid_skills if s)}. "
-            f"Either pick one from the list or omit skill_id for a plain attack."
+            f"cast skill_id {skill_id!r} not in skills. Valid: {sorted(s for s in valid_skills if s)}."
         )
 
 
-def _check_flee(output: FleeAction, surroundings: dict[str, Any]) -> None:
-    if not surroundings.get("in_combat"):
-        raise JudgeSemanticError(
-            "flee only valid in combat. Outside combat, use 'pass' or 'roll' instead."
-        )
+def _check_speak(verb: Verb, surroundings: dict[str, Any]) -> None:
+    intent = verb.modifiers.get("intent")
+    target = verb.modifiers.get("target")
+    if intent == "recruit":
+        _check_recruit_inner(target, surroundings)
+    elif intent == "part":
+        _check_dismiss_inner(target, surroundings)
+    # 기타 intent (friendly/hostile/deceptive/negotiate/ask/command/pray)는
+    # surroundings 의존 검증 없음 — schema validator가 intent 자체는 검증.
 
 
-def _check_buy(output: BuyAction, surroundings: dict[str, Any]) -> None:
-    merchant = _find_merchant(output.npc_id, surroundings)
-    stock_ids = {i.get("id") for i in merchant.get("stock", []) if isinstance(i, dict)}
-    if output.item_id not in stock_ids:
-        raise JudgeSemanticError(
-            f"item {output.item_id!r} not in {output.npc_id} stock. "
-            f"Available: {sorted(s for s in stock_ids if s)}."
-        )
-
-
-def _check_sell(output: SellAction, surroundings: dict[str, Any]) -> None:
-    _find_merchant(output.npc_id, surroundings)
-    inv_ids = {
-        i.get("id") for i in surroundings.get("inventory", []) if isinstance(i, dict)
-    }
-    if output.item_id not in inv_ids:
-        raise JudgeSemanticError(
-            f"sell item {output.item_id!r} not in player inventory."
-        )
-
-
-def _check_use(output: UseAction, surroundings: dict[str, Any]) -> None:
-    inv_items = _inventory_kinds(surroundings)
-    if output.item_id not in inv_items:
-        raise JudgeSemanticError(
-            f"item_id {output.item_id!r} not in inventory. "
-            f"Valid items are: {sorted(i for i in inv_items if i)}. "
-            f"If the player referenced something they don't carry, action must be 'pass'."
-        )
-    kind = inv_items[output.item_id]
-    if kind in ("weapon", "armor"):
-        raise JudgeSemanticError(
-            f"item {output.item_id!r} is a {kind} — use action='equip', not 'use'."
-        )
-    if output.target_id is not None:
-        entity_ids = _surroundings_target_ids(surroundings)
-        if output.target_id not in entity_ids:
-            raise JudgeSemanticError(
-                f"target_id {output.target_id!r} not in surroundings."
-            )
-
-
-def _check_equip(output: EquipAction, surroundings: dict[str, Any]) -> None:
-    inv_items = _inventory_kinds(surroundings)
-    if output.item_id not in inv_items:
-        raise JudgeSemanticError(f"equip item_id {output.item_id!r} not in inventory.")
-    if inv_items[output.item_id] not in ("weapon", "armor"):
-        raise JudgeSemanticError(
-            f"item {output.item_id!r} is not equippable (weapon/armor only)."
-        )
-
-
-def _check_unequip(output: UnequipAction, surroundings: dict[str, Any]) -> None:
-    equipped_ids = _equipped_ids(surroundings)
-    if output.item_id not in equipped_ids:
-        raise JudgeSemanticError(
-            f"unequip item_id {output.item_id!r} not currently equipped. "
-            f"Equipped: {sorted(equipped_ids)}."
-        )
-
-
-def _check_recruit(output: RecruitAction, surroundings: dict[str, Any]) -> None:
+def _check_recruit_inner(target: str | None, surroundings: dict[str, Any]) -> None:
+    if target is None:
+        raise JudgeSemanticError("speak(intent=recruit) requires target modifier")
     by_id = _entities_by_id(surroundings)
-    ent = by_id.get(output.target)
+    ent = by_id.get(target)
     if ent is None:
         raise JudgeSemanticError(
-            f"recruit target {output.target!r} not in surroundings. "
+            f"recruit target {target!r} not in surroundings. "
             f"Valid entities: {sorted(by_id.keys())}."
         )
     if int(ent.get("relations_player") or 0) < 0:
         raise JudgeSemanticError(
-            f"recruit target {output.target!r} is hostile (relations_player < 0). "
-            f"Use 'pass'."
+            f"recruit target {target!r} is hostile (relations_player < 0)."
         )
     if bool(ent.get("protected")):
         raise JudgeSemanticError(
-            f"recruit target {output.target!r} is protected (NPC unfit for adventuring). "
-            f"Use 'pass'."
+            f"recruit target {target!r} is protected (unfit for adventuring)."
         )
     companions = surroundings.get("companions") or []
-    if output.target in companions:
+    if target in companions:
         raise JudgeSemanticError(
-            f"recruit target {output.target!r} is already a companion. "
-            f"Use 'pass' or 'dismiss'."
+            f"recruit target {target!r} is already a companion."
         )
     max_n = int(surroundings.get("companions_max", 3))
     if len(companions) >= max_n:
         raise JudgeSemanticError(
-            f"companion party at capacity ({len(companions)}/{max_n}). "
-            f"Dismiss an existing companion first."
+            f"companion party at capacity ({len(companions)}/{max_n})."
         )
 
 
-def _check_dismiss(output: DismissAction, surroundings: dict[str, Any]) -> None:
+def _check_dismiss_inner(target: str | None, surroundings: dict[str, Any]) -> None:
+    if target is None:
+        raise JudgeSemanticError("speak(intent=part) requires target modifier")
     companions = surroundings.get("companions") or []
-    if output.target not in companions:
+    if target not in companions:
         raise JudgeSemanticError(
-            f"dismiss target {output.target!r} is not a companion. "
+            f"dismiss target {target!r} is not a companion. "
             f"Current companions: {sorted(companions)}."
         )
 
 
-# RejectAction / SummonCombatAction / RestAction have no surroundings-based
-# check — schema validation alone is enough; check_semantics's .get() returns
-# None for them and we exit cleanly.
-_CHECKS: dict[type, Callable[[Any, dict[str, Any]], None]] = {
-    PassAction: _check_pass_targets,
-    RollAction: _check_targets,
-    CombatAction: _check_combat,
-    FleeAction: _check_flee,
-    BuyAction: _check_buy,
-    SellAction: _check_sell,
-    UseAction: _check_use,
-    EquipAction: _check_equip,
-    UnequipAction: _check_unequip,
-    RecruitAction: _check_recruit,
-    DismissAction: _check_dismiss,
-    ChainAction: _check_chain,
+def _check_transfer(verb: Verb, surroundings: dict[str, Any]) -> None:
+    mode = verb.modifiers.get("mode")
+    item_id = verb.modifiers.get("item_id")
+    from_id = verb.modifiers.get("from_id")
+    to_id = verb.modifiers.get("to_id")
+    if mode == "trade":
+        # buy: from_id=npc, to_id=player. sell: from_id=player, to_id=npc.
+        npc_id = from_id if to_id == "player_01" else to_id
+        merchant = _find_merchant(npc_id, surroundings)
+        if from_id != "player_01":  # buy
+            stock_ids = {i.get("id") for i in merchant.get("stock", []) if isinstance(i, dict)}
+            if item_id not in stock_ids:
+                raise JudgeSemanticError(
+                    f"item {item_id!r} not in {npc_id} stock. "
+                    f"Available: {sorted(s for s in stock_ids if s)}."
+                )
+        else:  # sell
+            inv_ids = {i.get("id") for i in surroundings.get("inventory", []) if isinstance(i, dict)}
+            if item_id not in inv_ids:
+                raise JudgeSemanticError(f"sell item {item_id!r} not in player inventory.")
+
+
+def _check_use(verb: Verb, surroundings: dict[str, Any]) -> None:
+    item_id = verb.modifiers.get("item_id")
+    target_id = verb.modifiers.get("target_id")
+    inv_items = _inventory_kinds(surroundings)
+    if item_id not in inv_items:
+        raise JudgeSemanticError(
+            f"item_id {item_id!r} not in inventory. "
+            f"Valid: {sorted(i for i in inv_items if i)}."
+        )
+    kind = inv_items[item_id]
+    if kind in ("weapon", "armor"):
+        raise JudgeSemanticError(
+            f"item {item_id!r} is a {kind} — use transfer(equip), not use."
+        )
+    if target_id is not None:
+        if target_id not in _surroundings_target_ids(surroundings):
+            raise JudgeSemanticError(f"target_id {target_id!r} not in surroundings.")
+
+
+def _check_move(verb: Verb, surroundings: dict[str, Any]) -> None:
+    # destination is required-modifier outside combat (validated by ModifierSchema).
+    # Surroundings check: destination must match a connection or be inside the
+    # location-id space. Stage 1 keeps this lenient — the engine handles
+    # real navigation; semantic check just guards obvious garbage.
+    return
+
+
+# ─── _CHECKS table ────────────────────────────────────────────────────────────
+
+_CHECKS: dict[VerbName, Callable[[Verb, dict[str, Any]], None]] = {
+    "attack": _check_attack,
+    "cast": _check_cast,
+    "speak": _check_speak,
+    "transfer": _check_transfer,
+    "use": _check_use,
+    "move": _check_move,
+    # rest, wait, perceive, alter: 자동 통과 (schema-only)
 }
 
 
 def check_semantics(output: JudgeOutput, surroundings: dict[str, Any]) -> None:
-    check = _CHECKS.get(type(output))
-    if check is not None:
-        check(output, surroundings)
+    """Run per-verb semantic checks on each Verb in JudgeOutput.actions.
+    Refuse and empty-actions paths are no-ops."""
+    if output.refuse is not None or output.actions is None:
+        return
+    for verb in output.actions:
+        check = _CHECKS.get(verb.name)
+        if check is not None:
+            check(verb, surroundings)

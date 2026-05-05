@@ -5,7 +5,7 @@ import random
 from src.domain.clock import next_dawn_turn
 from src.domain.entities import Character, CombatBehavior, Location, Stats
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-from src.llm_calls.classify.schema import RestAction
+from src.llm_calls.classify.schema import Verb
 from src.flow.turn import run_turn
 
 
@@ -33,7 +33,7 @@ async def test_rest_in_safe_location_full_recovery(
         id="plaza_01", name="광장", sleep_risk="safe"
     )
 
-    judge_returns(RestAction(action="rest"))
+    judge_returns(Verb(name="rest"))
     events = await collect(
         run_turn(
             client=None,
@@ -81,7 +81,7 @@ async def test_rest_in_dangerous_location_triggers_encounter(
         combat_behavior=CombatBehavior(attack_priority="nearest"),
     )
 
-    judge_returns(RestAction(action="rest"))
+    judge_returns(Verb(name="rest"))
     # The first rng.random() call is the encounter roll — force trigger with 0.
     # Random(seed) is deterministic per seed. Which seed triggers the encounter?
     # Rather than monkeypatch random.random, just try an arbitrary seed.
@@ -142,7 +142,7 @@ async def test_rest_dangerous_with_low_random_forces_encounter(
         def randint(self, a, b):
             return random.Random(99).randint(a, b)
 
-    judge_returns(RestAction(action="rest"))
+    judge_returns(Verb(name="rest"))
     events = await collect(
         run_turn(
             client=None,
@@ -195,7 +195,7 @@ async def test_rest_blocked_during_combat(
     fresh_state.combat_state.turn_order = ["player_01", "goblin_01"]
     fresh_state.combat_state.current_turn = 0
 
-    judge_returns(RestAction(action="rest"))
+    judge_returns(Verb(name="rest"))
     await collect(
         run_turn(
             client=None,

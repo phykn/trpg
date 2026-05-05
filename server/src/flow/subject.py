@@ -7,15 +7,7 @@ target, roll target, trade partner, or recent dialogue NPC. Without this,
 the seed value sticks forever and the client shows the wrong character.
 """
 
-from ..llm_calls.classify.schema import (
-    BuyAction,
-    ChainAction,
-    CombatAction,
-    PassAction,
-    RollAction,
-    SellAction,
-    SummonCombatAction,
-)
+from ..llm_calls.classify.schema import Verb
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph
 from ..ontology.queries import inhabitants_of, location_of
@@ -27,45 +19,48 @@ def _is_active_npc(state: GameState, cid: str) -> bool:
     return cid in state.characters
 
 
-def _candidate_from_action(state: GameState, action) -> str | None:
-    """Per-action subject candidate. Returns the NPC id this action engages,
-    or None if the action doesn't carry an engagement signal."""
-    if isinstance(action, (CombatAction, RollAction, PassAction)):
-        for tid in action.targets:
+def _candidate_from_verb(state: GameState, verb: Verb) -> str | None:
+    """Per-verb subject candidate. attack/cast/perceive use target_ids; speak/transfer
+    use modifiers (target / from_id / to_id). wait/rest no-op."""
+    if verb.name in ("attack", "cast", "perceive", "wait"):
+        for tid in verb.target_ids:
             if _is_active_npc(state, tid):
                 return tid
         return None
-    if isinstance(action, (BuyAction, SellAction)):
-        if _is_active_npc(state, action.npc_id):
-            return action.npc_id
+    if verb.name == "speak":
+        target = verb.modifiers.get("target")
+        if isinstance(target, str) and _is_active_npc(state, target):
+            return target
+        return None
+    if verb.name == "transfer":
+        # buy: from=npc_id (NPC is the active subject). sell: to=npc_id.
+        for k in ("from_id", "to_id"):
+            v = verb.modifiers.get(k)
+            if isinstance(v, str) and _is_active_npc(state, v):
+                return v
+        return None
+    if verb.name == "use":
+        target_id = verb.modifiers.get("target_id")
+        if isinstance(target_id, str) and _is_active_npc(state, target_id):
+            return target_id
+        return None
+    # move, alter, rest: no NPC engagement signal.
     return None
 
 
-def refresh_active_subject(state: GameState, result) -> None:
+def refresh_active_subject(state: GameState, verbs: list[Verb]) -> None:
     """Update active_subject_id to whoever the player is engaging this turn.
-
-    Explicit-target actions (combat/roll/buy/sell) take precedence; for
-    narrate-path actions (pass/reject) we fall back to recent_npc, which
-    captures whoever the previous narrate turn was about.
-    """
+    Walks `verbs` in reverse so the last-emitted verb wins on chains."""
     # Defensive: drop pin only on actual deletion. Death keeps the pin (Subject panel still shows the corpse).
     cur = state.active_subject_id
     if cur is not None and cur not in state.characters:
         state.active_subject_id = None
 
-    if isinstance(result, SummonCombatAction):
-        # active_subject will be set when the summoned character is registered.
-        return
-
     candidate: str | None = None
-    if isinstance(result, ChainAction):
-        # Walk parts in reverse; first NPC-engaging part wins.
-        for part in reversed(result.parts):
-            candidate = _candidate_from_action(state, part)
-            if candidate is not None:
-                break
-    else:
-        candidate = _candidate_from_action(state, result)
+    for verb in reversed(verbs):
+        candidate = _candidate_from_verb(state, verb)
+        if candidate is not None:
+            break
 
     if candidate is None:
         candidate = state.recent_npc_id(state.player_id)

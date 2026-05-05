@@ -11,12 +11,7 @@ import tempfile
 
 import pytest
 
-from src.llm_calls.classify.schema import (
-    ChainAction,
-    EquipAction,
-    PassAction,
-    UseAction,
-)
+from src.llm_calls.classify.schema import JudgeOutput, Verb
 from src.domain.entities import (
     Character,
     ConsumableEffect,
@@ -85,14 +80,14 @@ async def test_chain_passes_skipped_heal_notice_into_narrate(
     monkeypatch.setattr(narrate_mod, "run_narrate", fake_run_narrate)
 
     async def fake_judge(*a, **kw):
-        return ChainAction(
-            action="chain",
-            parts=[
-                UseAction(action="use", item_id="herb_01"),
-                EquipAction(action="equip", item_id="sword_01"),
-                PassAction(action="pass"),
-            ],
-        )
+        return JudgeOutput(actions=[
+            Verb(name="use", modifiers={"item_id": "herb_01"}),
+            Verb(name="transfer", modifiers={
+                "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
+                "mode": "gift", "item_id": "sword_01",
+            }),
+            Verb(name="wait"),
+        ])
 
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
 
@@ -134,7 +129,7 @@ async def test_non_chain_pass_passes_empty_act_log_lines(
     monkeypatch.setattr(narrate_mod, "run_narrate", fake_run_narrate)
 
     async def fake_judge(*a, **kw):
-        return PassAction(action="pass")
+        return JudgeOutput(actions=[Verb(name="wait")])
 
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
 

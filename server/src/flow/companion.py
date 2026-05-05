@@ -4,12 +4,13 @@ stays forbidden in narrate's set permission; flow mutates directly."""
 
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
+from typing import Literal
 
 from ..domain.errors import PersistenceFailed
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
 from ..mapping.to_front import pending_check_to_front
-from ..llm_calls.classify.schema import PassAction
+from ..llm_calls.classify.schema import Verb
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from ..rules import RULES
 from ..rules.dc import compute_required_roll
@@ -29,6 +30,18 @@ from .narrate import stream_narrate_tail
 
 def _clamp(v: int, lo: int, hi: int) -> int:
     return max(lo, min(hi, v))
+
+
+def _derive_pending_kind(
+    triggering_verb: "Verb | None",
+) -> Literal["recruit", "stat"]:
+    """Derive PendingCheck.kind from the triggering verb: 'recruit' for
+    speak(intent=recruit), otherwise 'stat'."""
+    if triggering_verb is not None:
+        if (triggering_verb.name == "speak"
+                and triggering_verb.modifiers.get("intent") == "recruit"):
+            return "recruit"
+    return "stat"
 
 
 def _recruit_dc(state: GameState, target_id: str) -> int:
@@ -103,7 +116,8 @@ async def run_dismiss(
     to_front_fn: ToFrontFn | None,
 ) -> AsyncIterator[dict]:
     """Remove target_id from the player's companion list. No roll. No affinity change.
-    Pushes a system card + fires inline narrate (mirrors recruit roll branch)."""
+    Pushes a system card + fires inline narrate (mirrors recruit roll branch).
+    Always emits its own `companion_dismissed:<name>` signal."""
     player = state.characters[state.player_id]
     if target_id not in player.companions:  # ssot-allow: write path guard, not a relation scan
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
@@ -138,13 +152,48 @@ async def run_dismiss(
             "",
             dirty,
             to_front_fn,
-            PassAction(action="pass"),
+            Verb(name="wait"),
             graph=graph,
             previous_phase_signal=signal,
         ):
             yield ev
 
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
+        yield ev
+
+
+async def run_recruit_verb(
+    verb: Verb,
+    *,
+    state: GameState,
+    save_repo: SaveRepo,
+    player_input: str,
+    dirty: Dirty,
+    to_front_fn: ToFrontFn | None,
+) -> AsyncIterator[dict]:
+    """Verb-arg entrypoint for run_recruit — pulls target from verb.modifiers["target"]."""
+    target_id = verb.modifiers["target"]
+    async for ev in run_recruit(
+        state, save_repo, player_input, target_id, dirty, to_front_fn
+    ):
+        yield ev
+
+
+async def run_dismiss_verb(
+    verb: Verb,
+    *,
+    state: GameState,
+    scenario_repo: ScenarioRepo,
+    save_repo: SaveRepo,
+    client,
+    dirty: Dirty,
+    to_front_fn: ToFrontFn | None,
+) -> AsyncIterator[dict]:
+    """Verb-arg entrypoint for run_dismiss."""
+    target_id = verb.modifiers["target"]
+    async for ev in run_dismiss(
+        state, scenario_repo, save_repo, client, target_id, dirty, to_front_fn,
+    ):
         yield ev
 
 

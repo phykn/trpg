@@ -19,15 +19,7 @@ from src.domain.entities import (
 from src.flow import narrate as narrate_mod
 from src.flow import turn as turn_mod
 from src.flow.turn import run_turn
-from src.llm_calls.classify.schema import (
-    BuyAction,
-    EquipAction,
-    GiveAction,
-    RestAction,
-    SellAction,
-    UnequipAction,
-    UseAction,
-)
+from src.llm_calls.classify.schema import Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
@@ -102,6 +94,11 @@ async def _run_with_action(state, tmp_saves, monkeypatch, action, *, client=obje
     """Stub judge → action; collect events from run_turn."""
     narrate_calls = _track_narrate(monkeypatch)
 
+    # Stage 1b: Verb 인스턴스는 JudgeOutput으로 wrap
+    from src.llm_calls.classify.schema import JudgeOutput
+    if isinstance(action, Verb):
+        action = JudgeOutput(actions=[action])
+
     async def fake_judge(*a, **kw):
         return action
 
@@ -132,7 +129,11 @@ def _act_texts(events):
 async def test_equip_skips_narrate(fresh_state, tmp_saves, monkeypatch):
     state = _seed_basic(fresh_state)
     events, narrate_calls = await _run_with_action(
-        state, tmp_saves, monkeypatch, EquipAction(action="equip", item_id="sword_01")
+        state, tmp_saves, monkeypatch,
+        Verb(name="transfer", modifiers={
+            "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
+            "mode": "gift", "item_id": "sword_01",
+        })
     )
     assert narrate_calls == []
     texts = _act_texts(events)
@@ -147,7 +148,10 @@ async def test_unequip_skips_narrate(fresh_state, tmp_saves, monkeypatch):
         state,
         tmp_saves,
         monkeypatch,
-        UnequipAction(action="unequip", item_id="sword_01"),
+        Verb(name="transfer", modifiers={
+            "from_id": "<self>.equipped.weapon", "to_id": "<self>.inventory",
+            "mode": "gift", "item_id": "sword_01",
+        }),
     )
     assert narrate_calls == []
     texts = _act_texts(events)
@@ -158,7 +162,8 @@ async def test_unequip_skips_narrate(fresh_state, tmp_saves, monkeypatch):
 async def test_use_skips_narrate(fresh_state, tmp_saves, monkeypatch):
     state = _seed_basic(fresh_state)
     events, narrate_calls = await _run_with_action(
-        state, tmp_saves, monkeypatch, UseAction(action="use", item_id="potion_01")
+        state, tmp_saves, monkeypatch,
+        Verb(name="use", modifiers={"item_id": "potion_01"})
     )
     assert narrate_calls == []
     texts = _act_texts(events)
@@ -172,7 +177,10 @@ async def test_buy_runs_narrate_with_act_log_line(fresh_state, tmp_saves, monkey
         state,
         tmp_saves,
         monkeypatch,
-        BuyAction(action="buy", npc_id="npc_01", item_id="potion_01"),
+        Verb(name="transfer", modifiers={
+            "from_id": "npc_01", "to_id": "player_01",
+            "mode": "trade", "item_id": "potion_01",
+        }),
     )
     assert len(narrate_calls) == 1
     lines = narrate_calls[0].get("act_log_lines") or []
@@ -186,7 +194,10 @@ async def test_sell_runs_narrate_with_act_log_line(fresh_state, tmp_saves, monke
         state,
         tmp_saves,
         monkeypatch,
-        SellAction(action="sell", npc_id="npc_01", item_id="potion_01"),
+        Verb(name="transfer", modifiers={
+            "from_id": "player_01", "to_id": "npc_01",
+            "mode": "trade", "item_id": "potion_01",
+        }),
     )
     assert len(narrate_calls) == 1
     lines = narrate_calls[0].get("act_log_lines") or []
@@ -200,9 +211,10 @@ async def test_give_runs_narrate_with_act_log_line(fresh_state, tmp_saves, monke
         state,
         tmp_saves,
         monkeypatch,
-        GiveAction(
-            action="give", from_id="player_01", to_id="npc_01", item_id="potion_01"
-        ),
+        Verb(name="transfer", modifiers={
+            "from_id": "player_01", "to_id": "npc_01",
+            "mode": "gift", "item_id": "potion_01",
+        }),
     )
     assert len(narrate_calls) == 1
     lines = narrate_calls[0].get("act_log_lines") or []
@@ -218,7 +230,7 @@ async def test_rest_skips_narrate(fresh_state, tmp_saves, monkeypatch):
     # if the receipt policy weren't applied. Mock the summon (encounter) callback
     # to never fire so we hit the rest_completed branch deterministically.
     events, narrate_calls = await _run_with_action(
-        state, tmp_saves, monkeypatch, RestAction(action="rest"), client=object()
+        state, tmp_saves, monkeypatch, Verb(name="rest"), client=object()
     )
     assert narrate_calls == []
     texts = _act_texts(events)

@@ -13,7 +13,7 @@ from ..mapping.josa import eun_neun
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from . import encounter as encounter_engine
 from .buff_tick import tick_turn_buffs
-from ..llm_calls.classify.schema import PassAction
+from ..llm_calls.classify.schema import Verb
 from .combat_auto import PlayerAction
 from .combat_phase import start_combat_and_drive_auto
 from .dirty import Dirty, ToFrontFn, drop_pushed_act, finalize, push_act
@@ -74,7 +74,7 @@ async def run_rest(
                 player_input,
                 dirty,
                 to_front_fn,
-                PassAction(action="pass"),
+                Verb(name="wait"),
                 graph=graph,
                 act_log_lines=[fail_line],
             ):

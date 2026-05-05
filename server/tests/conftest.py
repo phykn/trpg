@@ -58,6 +58,13 @@ def judge_returns(monkeypatch):
         from src.flow import judge as judge_mod
         from src.flow import turn as turn_mod
 
+        # Wrap a Verb or list[Verb] into a JudgeOutput so verb-direct dispatch sees the right type.
+        from src.llm_calls.classify.schema import JudgeOutput, Verb
+        if isinstance(action_obj, Verb):
+            action_obj = JudgeOutput(actions=[action_obj])
+        elif isinstance(action_obj, list) and all(isinstance(v, Verb) for v in action_obj):
+            action_obj = JudgeOutput(actions=action_obj)
+
         async def fake_judge(*a, **kw):
             return action_obj
 

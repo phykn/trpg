@@ -11,7 +11,7 @@ from src.domain.entities import (
     Stats,
     WeaponEffect,
 )
-from src.llm_calls.classify.schema import UseAction
+from src.llm_calls.classify.schema import Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.context import build_surroundings
 from src.flow.turn import run_turn
@@ -101,7 +101,7 @@ async def test_use_action_consumes_item_and_heals(
     fresh_state, tmp_data, judge_returns, collect
 ):
     state = _seed(fresh_state, hp=10)
-    judge_returns(UseAction(action="use", item_id="potion"))
+    judge_returns(Verb(name="use", modifiers={"item_id": "potion"}))
     events = await collect(
         run_turn(
             client=None,
@@ -142,7 +142,7 @@ async def test_combat_use_consumes_player_turn(
     state.combat_state.turn_order = ["player_01", "goblin_01"]
     state.combat_state.current_turn = 0
 
-    judge_returns(UseAction(action="use", item_id="potion"))
+    judge_returns(Verb(name="use", modifiers={"item_id": "potion"}))
     events = await collect(
         run_turn(
             client=None,

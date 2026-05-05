@@ -37,7 +37,7 @@ def test_normal_hit_single_line():
     )
     text = format_combat_outcome_summary(result)
     assert text is not None
-    lines = [l for l in text.strip().split("\n") if l.strip() and l != "전투 결과"]
+    lines = [ln for ln in text.strip().split("\n") if ln.strip() and ln != "전투 결과"]
     assert len(lines) == 1
     assert "5 피해" in lines[0]
     assert "20" in lines[0] and "15" in lines[0]
@@ -56,7 +56,7 @@ def test_revival_two_lines():
     )
     text = format_combat_outcome_summary(result)
     assert text is not None
-    lines = [l for l in text.strip().split("\n") if l.strip() and l != "전투 결과"]
+    lines = [ln for ln in text.strip().split("\n") if ln.strip() and ln != "전투 결과"]
     assert len(lines) == 2
     assert "0" in lines[0] and "사망 직전" in lines[0]
     assert "소생 2" in lines[1] and "1" in lines[1]

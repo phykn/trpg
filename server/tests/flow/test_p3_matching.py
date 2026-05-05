@@ -9,11 +9,7 @@ from src.domain.entities import (
     Location,
     Stats,
 )
-from src.llm_calls.classify.schema import (
-    BuyAction,
-    FleeAction,
-    SellAction,
-)
+from src.llm_calls.classify.schema import Verb
 from src.engines import combat as combat_engine
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.context import build_surroundings
@@ -67,7 +63,7 @@ async def test_flee_in_combat_succeeds_ends_combat(
 
     # Force try_flee to always pass with a roll above RULES.combat.flee.base_dc.
     monkeypatch.setattr(combat_engine, "try_flee", lambda actor, rng=None: (True, 30))
-    judge_returns(FleeAction(action="flee"))
+    judge_returns(Verb(name="move", modifiers={"manner": "hasty"}))
 
     events = await collect(
         run_turn(
@@ -105,7 +101,7 @@ async def test_flee_in_combat_fails_npc_phase_runs(
     state.combat_state.turn_order = ["player_01", "goblin_01"]
 
     monkeypatch.setattr(combat_engine, "try_flee", lambda actor, rng=None: (False, 5))
-    judge_returns(FleeAction(action="flee"))
+    judge_returns(Verb(name="move", modifiers={"manner": "hasty"}))
 
     events = await collect(
         run_turn(
@@ -136,7 +132,7 @@ async def test_flee_in_combat_fails_npc_phase_runs(
 async def test_flee_outside_combat_no_op(fresh_state, tmp_data, judge_returns, collect):
     """Out-of-combat flee → short act log + turn not advanced."""
     state = _seed_player(fresh_state)
-    judge_returns(FleeAction(action="flee"))
+    judge_returns(Verb(name="move", modifiers={"manner": "hasty"}))
 
     events = await collect(
         run_turn(
@@ -187,7 +183,10 @@ def _seed_merchant(state, merchant_inv=None):
 async def test_buy_natural_language(fresh_state, tmp_data, judge_returns, collect):
     state = _seed_player(fresh_state, gold=100)
     _seed_merchant(state)
-    judge_returns(BuyAction(action="buy", npc_id="smith_01", item_id="shield_01"))
+    judge_returns(Verb(name="transfer", modifiers={
+        "from_id": "smith_01", "to_id": "player_01",
+        "mode": "trade", "item_id": "shield_01",
+    }))
 
     await collect(
         run_turn(
@@ -208,7 +207,10 @@ async def test_buy_natural_language(fresh_state, tmp_data, judge_returns, collec
 async def test_sell_natural_language(fresh_state, tmp_data, judge_returns, collect):
     state = _seed_player(fresh_state, gold=50, inventory_ids=["ore_01"])
     _seed_merchant(state, merchant_inv=[])
-    judge_returns(SellAction(action="sell", npc_id="smith_01", item_id="ore_01"))
+    judge_returns(Verb(name="transfer", modifiers={
+        "from_id": "player_01", "to_id": "smith_01",
+        "mode": "trade", "item_id": "ore_01",
+    }))
 
     await collect(
         run_turn(
@@ -231,7 +233,10 @@ async def test_buy_low_affinity_rejected(fresh_state, tmp_data, judge_returns, c
     state = _seed_player(fresh_state, gold=100)
     _seed_merchant(state)
     state.characters["smith_01"].relations = {"player_01": -20}  # below threshold
-    judge_returns(BuyAction(action="buy", npc_id="smith_01", item_id="shield_01"))
+    judge_returns(Verb(name="transfer", modifiers={
+        "from_id": "smith_01", "to_id": "player_01",
+        "mode": "trade", "item_id": "shield_01",
+    }))
 
     await collect(
         run_turn(

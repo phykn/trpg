@@ -21,11 +21,7 @@ from src.flow import narrate as narrate_mod
 from src.flow import turn as turn_mod
 from src.flow.error_phrases import is_dramatic_fail
 from src.flow.turn import run_turn
-from src.llm_calls.classify.schema import (
-    BuyAction,
-    EquipAction,
-    SellAction,
-)
+from src.llm_calls.classify.schema import JudgeOutput, Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
@@ -108,7 +104,10 @@ async def test_buy_dramatic_fail_calls_narrate(fresh_state, tmp_saves, monkeypat
     narrate_calls = _track_narrate(monkeypatch)
 
     async def fake_judge(*a, **kw):
-        return BuyAction(action="buy", npc_id="npc_01", item_id="potion_01")
+        return JudgeOutput(actions=[Verb(name="transfer", modifiers={
+            "from_id": "npc_01", "to_id": "player_01",
+            "mode": "trade", "item_id": "potion_01",
+        })])
 
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
     await _collect(
@@ -133,7 +132,10 @@ async def test_sell_npc_no_gold_calls_narrate(fresh_state, tmp_saves, monkeypatc
     narrate_calls = _track_narrate(monkeypatch)
 
     async def fake_judge(*a, **kw):
-        return SellAction(action="sell", npc_id="npc_01", item_id="potion_01")
+        return JudgeOutput(actions=[Verb(name="transfer", modifiers={
+            "from_id": "player_01", "to_id": "npc_01",
+            "mode": "trade", "item_id": "potion_01",
+        })])
 
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
     await _collect(
@@ -158,7 +160,10 @@ async def test_buy_nondramatic_fail_skips_narrate(fresh_state, tmp_saves, monkey
     narrate_calls = _track_narrate(monkeypatch)
 
     async def fake_judge(*a, **kw):
-        return BuyAction(action="buy", npc_id="npc_01", item_id="potion_01")
+        return JudgeOutput(actions=[Verb(name="transfer", modifiers={
+            "from_id": "npc_01", "to_id": "player_01",
+            "mode": "trade", "item_id": "potion_01",
+        })])
 
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
     events = await _collect(
@@ -205,7 +210,10 @@ async def test_equip_required_stats_calls_narrate(fresh_state, tmp_saves, monkey
     narrate_calls = _track_narrate(monkeypatch)
 
     async def fake_judge(*a, **kw):
-        return EquipAction(action="equip", item_id="heavy_sword")
+        return JudgeOutput(actions=[Verb(name="transfer", modifiers={
+            "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
+            "mode": "gift", "item_id": "heavy_sword",
+        })])
 
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
     await _collect(

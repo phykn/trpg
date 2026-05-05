@@ -21,13 +21,15 @@ from run_api import build_app
 from tests._fakes import make_default_storage, make_save_repo, make_scenario_repo
 
 
+# Stage 1: classify outputs verb list. To arm pending_check via the LLM mock
+# we trigger the semantic fallback path — `attack` with a target_id missing
+# from surroundings raises JudgeSemanticError (in _check_attack) which
+# `run_judge` converts to a PendingCheckTrigger (WIS roll on player's
+# location). turn.py's adapter converts that to legacy RollAction and
+# emit_roll_pending fires the pending_check SSE.
 _JUDGE_ROLL = json.dumps(
     {
-        "action": "roll",
-        "tier": "쉬움",
-        "stat": "CHA",
-        "targets": ["edrik_chief"],
-        "reason": "테스트",
+        "actions": [{"name": "attack", "target_ids": ["__missing__"]}],
     },
     ensure_ascii=False,
 )

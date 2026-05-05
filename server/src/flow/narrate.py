@@ -2,7 +2,7 @@ import logging
 import re
 from collections.abc import AsyncIterator
 
-from ..llm_calls.classify.schema import PassAction, RejectAction
+from ..llm_calls.classify.schema import Verb
 from ..llm_calls.narrate import (
     NarrateInput,
     NarrateOutput,
@@ -273,7 +273,7 @@ async def stream_narrate_tail(
     player_input: str,
     dirty: Dirty,
     to_front_fn: ToFrontFn | None,
-    action: PassAction | RejectAction,
+    action: Verb,
     *,
     graph: GameGraph,
     act_log_lines: list[str] | None = None,
@@ -281,16 +281,14 @@ async def stream_narrate_tail(
     recent_engine_events: list[dict] | None = None,
 ) -> AsyncIterator[dict]:
     """Emit a state event, then drive narrate. Empty player_input is the post-combat / intro signal — dialogue push is skipped so recent_dialogue isn't polluted with a blank turn."""
-    if isinstance(action, PassAction):
-        target_for_log = action.targets[0] if action.targets else None
-    else:
-        target_for_log = None
+    is_pass = action.name == "wait"
+    target_for_log = action.target_ids[0] if (is_pass and action.target_ids) else None
 
     # NPC dialogue quest check resolves the npc target here, but the call itself
     # runs inside consume_narrate AFTER the gm body push so any '퀘스트 성공/실패'
     # card emits past the prose that justifies it.
     npc_dialogue_target: str | None = None
-    if isinstance(action, PassAction) and target_for_log is not None:
+    if is_pass and target_for_log is not None:
         target_char = state.characters.get(target_for_log)
         if target_char is not None and not target_char.is_player:
             npc_dialogue_target = target_for_log

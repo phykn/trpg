@@ -1,35 +1,18 @@
 import json
-from typing import Annotated, Any, Literal
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
+from pydantic import BaseModel
 
-from ...domain.types import StatKey, Tier
-from ...mapping.labels import ROLL_REASON_DEFAULT
-
-# ─── Action intent ────────────────────────────────────────────────────────────
-
-ActionIntent = Literal[
-    "aggressive_attack",
-    "intimidate",
-    "deceive",
-    "negotiate",
-    "friendly",
-    "theft",
-    "inspect",
-]
-
-
-def _classify_intent_llm(action_text: str, target_kind: str) -> ActionIntent:
-    """Override point for tests. Default raises so callers must supply real LLM."""
-    raise NotImplementedError("_classify_intent_llm must be supplied by the caller")
-
-
-def classify_action_intent(action_text: str, target_kind: str) -> ActionIntent:
-    """Map free-text player action to ActionIntent. Word strength is irrelevant —
-    any physical attack verb ('공격', '찌른다', '베어버린다', '살해', '죽인다') maps
-    to aggressive_attack. Callers that need a real LLM round-trip should replace
-    _classify_intent_llm; unit tests monkeypatch it to return a fixed string."""
-    return _classify_intent_llm(action_text, target_kind)
+# Verb / RefuseReason / JudgeOutput live in domain/verb.py to break import cycle
+# with domain/memory.py (PendingCheck carries Verb). Re-exported here so call sites
+# can import from either location.
+from ...domain.verb import (  # noqa: F401
+    JudgeOutput,
+    RefuseCategory,
+    RefuseReason,
+    Verb,
+    VerbName,
+)
 
 
 class JudgeInput(BaseModel):
@@ -40,214 +23,15 @@ class JudgeInput(BaseModel):
     recent_dialogue: list[dict] = []
 
 
-class _StrictAction(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+def validate_judge_output(answer: str, *, in_combat: bool = False) -> JudgeOutput:
+    """Parse JSON, validate Pydantic shape, then per-verb modifier validation.
+    Pydantic ValidationError → retry. ModifierValidationError → retry.
+    Unknown modifier keys silently dropped (LLM hallucination tolerance)."""
+    from .modifiers import validate_modifiers
 
-
-class PassAction(_StrictAction):
-    action: Literal["pass"]
-    targets: list[str] = []
-
-
-class RejectAction(_StrictAction):
-    action: Literal["reject"]
-
-
-class CombatAction(_StrictAction):
-    action: Literal["combat"]
-    targets: list[str] = Field(min_length=1)
-    skill_id: str | None = None
-    # True iff judge detects build-up that ambushes the enemy (distraction, sleep, dark approach).
-    surprise: bool = False
-
-
-class SummonCombatAction(_StrictAction):
-    """Lazy-spawn an enemy matching `role` (Korean hint), then enter combat."""
-
-    action: Literal["summon_combat"]
-    role: str = Field(min_length=1, max_length=20)
-    skill_id: str | None = None
-
-
-class FleeAction(_StrictAction):
-    action: Literal["flee"]
-
-
-class MoveAction(_StrictAction):
-    action: Literal["move"]
-    destination: str
-    tail_intent: str | None = None
-
-
-class BuyAction(_StrictAction):
-    action: Literal["buy"]
-    npc_id: str
-    item_id: str
-    agreed_price: int | None = Field(default=None, ge=0)
-    tail_intent: str | None = None
-
-
-class SellAction(_StrictAction):
-    action: Literal["sell"]
-    npc_id: str
-    item_id: str
-    agreed_price: int | None = Field(default=None, ge=0)
-    tail_intent: str | None = None
-
-
-class GiveAction(_StrictAction):
-    """Free item transfer between two characters. Covers gift / lend / hand-over / corpse loot — bidirectional via from_id / to_id. Engine validates affinity (live NPC source) + carry capacity, auto-unequips if equipped."""
-
-    action: Literal["give"]
-    from_id: str
-    to_id: str
-    item_id: str
-    tail_intent: str | None = None
-
-
-class RollAction(_StrictAction):
-    action: Literal["roll"]
-    tier: Tier
-    stat: StatKey
-    targets: list[str] = Field(min_length=1)
-    # Default absorbs LLM omits when validate_json bypasses the coerce hook (e.g. answer wrapped in markdown).
-    reason: str = Field(default=ROLL_REASON_DEFAULT, min_length=1, max_length=80)
-
-
-class RestAction(_StrictAction):
-    action: Literal["rest"]
-
-
-class UseAction(_StrictAction):
-    action: Literal["use"]
-    item_id: str
-    target_id: str | None = None
-    tail_intent: str | None = None
-
-
-class EquipAction(_StrictAction):
-    action: Literal["equip"]
-    item_id: str
-    tail_intent: str | None = None
-
-
-class UnequipAction(_StrictAction):
-    action: Literal["unequip"]
-    item_id: str
-    tail_intent: str | None = None
-
-
-class RecruitAction(_StrictAction):
-    action: Literal["recruit"]
-    target: str = Field(min_length=1)
-
-
-class DismissAction(_StrictAction):
-    action: Literal["dismiss"]
-    target: str = Field(min_length=1)
-
-
-# CombatAction is a phase change but allowed *only as the chain tail* — engine
-# runs prefix parts then routes to combat. Other phase-changers (rest / flee /
-# roll / reject / summon_combat) can't compose sequentially.
-ChainPart = Annotated[
-    UseAction
-    | EquipAction
-    | UnequipAction
-    | BuyAction
-    | SellAction
-    | GiveAction
-    | MoveAction
-    | PassAction
-    | CombatAction,
-    Field(discriminator="action"),
-]
-
-
-class ChainAction(_StrictAction):
-    """Sequential engine actions for compound input. Trailing `pass` part runs
-    through narrate for flavor; trailing `combat` part transitions into the
-    combat phase after prefix parts execute."""
-
-    action: Literal["chain"]
-    parts: list[ChainPart] = Field(min_length=2, max_length=4)
-
-    @model_validator(mode="after")
-    def _combat_only_at_tail(self) -> "ChainAction":
-        for part in self.parts[:-1]:
-            if isinstance(part, CombatAction):
-                raise ValueError(
-                    "CombatAction may appear only as the last chain part "
-                    "(combat is phase-changing — prefix parts run, then combat fires)."
-                )
-        return self
-
-
-JudgeOutput = Annotated[
-    PassAction
-    | RejectAction
-    | CombatAction
-    | SummonCombatAction
-    | FleeAction
-    | MoveAction
-    | RollAction
-    | RestAction
-    | UseAction
-    | EquipAction
-    | UnequipAction
-    | BuyAction
-    | SellAction
-    | GiveAction
-    | RecruitAction
-    | DismissAction
-    | ChainAction,
-    Field(discriminator="action"),
-]
-
-output_adapter: TypeAdapter[JudgeOutput] = TypeAdapter(JudgeOutput)
-
-
-# Phase-changers other than combat can't compose into a chain at all. Combat
-# is allowed only as the chain tail (engine runs prefix parts then transitions
-# to combat phase) — promoting it would drop player intent.
-_NON_TAIL_PHASE_CHANGING_ACTIONS = frozenset(
-    {"roll", "rest", "flee", "reject", "summon_combat", "recruit", "dismiss"}
-)
-
-_ROLL_REASON_FALLBACK = ROLL_REASON_DEFAULT
-
-
-def coerce_judge_output(raw: dict) -> dict:
-    """Last-mile fixes the prompt + retry loop can't eliminate: promote chain-illegal phase-changers out of chains, fill missing roll reason."""
-    if not isinstance(raw, dict):
-        return raw
-    action = raw.get("action")
-
-    if action == "chain":
-        parts = raw.get("parts") or []
-        for idx, part in enumerate(parts):
-            if not isinstance(part, dict):
-                continue
-            part_action = part.get("action")
-            if part_action in _NON_TAIL_PHASE_CHANGING_ACTIONS:
-                return coerce_judge_output(part)
-            # Combat in the middle is illegal (only valid at tail); promote
-            # so the attack survives even when classify mis-orders the parts.
-            if part_action == "combat" and idx != len(parts) - 1:
-                return coerce_judge_output(part)
-
-    if action == "roll" and not raw.get("reason"):
-        raw = {**raw, "reason": _ROLL_REASON_FALLBACK}
-
-    return raw
-
-
-def validate_judge_output(answer: str) -> JudgeOutput:
-    """Parse + coerce + validate. JSON parse failure defers to `validate_json` so Pydantic owns the error path."""
-    try:
-        raw = json.loads(answer)
-    except json.JSONDecodeError:
-        return output_adapter.validate_json(answer)
-    if isinstance(raw, dict):
-        raw = coerce_judge_output(raw)
-    return output_adapter.validate_python(raw)
+    raw = json.loads(answer)
+    output = JudgeOutput.model_validate(raw)
+    if output.actions is not None:
+        for verb in output.actions:
+            validate_modifiers(verb, in_combat=in_combat)
+    return output

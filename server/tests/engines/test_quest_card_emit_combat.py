@@ -6,7 +6,6 @@ the chat — covers that path so the regression can't recur."""
 from src.domain.entities import (
     Character,
     CombatBehavior,
-    Connection,
     Location,
     Quest,
     QuestRewards,

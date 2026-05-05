@@ -5,9 +5,10 @@ log entry, and yields SSE events. Used by both combat and non-combat dispatch.
 import random
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from ..llm_calls.classify.schema import RollAction
+if TYPE_CHECKING:
+    from .judge import PendingCheckTrigger
 from ..domain.errors import (
     InventoryInvalid,
     PersistenceFailed,
@@ -371,41 +372,43 @@ async def emit_move(
     )
 
 
-async def emit_roll_pending(
+async def emit_roll_pending_from_trigger(
     state: GameState,
     save_repo: SaveRepo,
     player_input: str,
-    result: RollAction,
+    trigger: "PendingCheckTrigger",
     dirty: Dirty,
 ) -> AsyncIterator[dict]:
-    """Set pending_check, flush, emit pending_check SSE. Shared between
-    /turn and the in-combat roll branch."""
+    """Stage 1b: PendingCheckTrigger 기반 pending_check 발사 (semantic fallback +
+    Stage 2 uncertainty 룰 호환). triggering_verb / pending_verbs 필드 carry.
+    kind는 _derive_pending_kind로 설정."""
+    from .companion import _derive_pending_kind  # 순환 import 회피
     actor = state.characters[state.player_id]
 
-    # Pick the candidate who likes the actor least — the "hardest" target.
-    # Non-character entries (locations, items) score 0, so character targets
-    # with negative aff lose the tiebreak first, neutral ties fall through.
     def _aff_against_actor(t: str) -> int:
         npc = state.characters.get(t)
         return 0 if npc is None else npc.relations.get(actor.id, 0)
 
-    target = min(result.targets, key=_aff_against_actor)
-    dc = pick_dc(result.tier)
-    stat_value = getattr(actor.stats, result.stat)
+    target = min(trigger.targets, key=_aff_against_actor)
+    dc = pick_dc(trigger.tier)
+    stat_value = getattr(actor.stats, trigger.stat)
     required_roll = compute_required_roll(dc, stat_value)
     target_char = state.characters.get(target)
     mod = social_bonus(target_char, actor.id) if target_char is not None else 0
     state.pending_check = PendingCheck(
         player_input=player_input,
-        tier=result.tier,
-        stat=result.stat,
+        kind=_derive_pending_kind(trigger.triggering_verb),
+        tier=trigger.tier,
+        stat=trigger.stat,
         target=target,
-        targets=list(result.targets),
+        targets=list(trigger.targets),
         dc=dc,
         mod=mod,
         required_roll=required_roll,
-        reason=result.reason,
+        reason=trigger.reason,
         created_at=datetime.now(UTC).isoformat(),
+        triggering_verb=trigger.triggering_verb,
+        pending_verbs=[],  # Stage 1b: 잔여 verb 폐기 (Stage 2에서 활성화)
     )
     try:
         await flush(state, save_repo, dirty)

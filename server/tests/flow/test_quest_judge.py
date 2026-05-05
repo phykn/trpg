@@ -1,7 +1,6 @@
 """LLM quest judge — free-path satisfaction evaluator."""
 
-import pytest
-from server.src.flow.judge import judge_quest_progress, JudgeResult
+from server.src.flow.judge import judge_quest_progress
 
 
 def test_satisfied_when_history_supports_claim(monkeypatch):
