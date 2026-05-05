@@ -30,6 +30,7 @@ from ..wire.emit import (
     emit_error,
     emit_judge_pending_check_trigger,
     emit_judge_verb,
+    emit_narrative_delta,
 )
 from .dirty import (
     Dirty,
@@ -77,7 +78,7 @@ async def emit_combat_cinematic_and_end(
         body_chunks: list[str] = []
         async for chunk in stream_combat_narrate(client, narrate_input):
             body_chunks.append(chunk)
-            yield {"type": "narrative_delta", "data": {"text": chunk}}
+            yield emit_narrative_delta(chunk)
         body = "".join(body_chunks).strip()
         if body:
             yield push_gm(state, dirty, body)
