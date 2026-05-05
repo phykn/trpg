@@ -1,3 +1,4 @@
+from .done import DonePayload
 from .error import ErrorPayload
 from .hero import (
     Equipment,
@@ -21,15 +22,18 @@ from .log_entry import (
     PlayerLogEntry,
     RollLogEntry,
 )
+from .narrative_delta import NarrativeDeltaPayload
 from .pending_check import PendingCheckPayload, TierBadge
 from .place import PlacePayload, PlaceSurrounding, PlaceTarget, RiskBadge
 from .quest import DifficultyBadge, QuestPayload, QuestRewards
 from .subject import SubjectPayload
+from .suggestions import SuggestionsPayload
 
 __all__ = [
     "ActLogEntry",
     "BonusItem",
     "DifficultyBadge",
+    "DonePayload",
     "Equipment",
     "EquipItem",
     "ErrorPayload",
@@ -42,6 +46,7 @@ __all__ = [
     "JudgeVerb",
     "JudgeVerbs",
     "LogEntryPayload",
+    "NarrativeDeltaPayload",
     "PendingCheckPayload",
     "PlacePayload",
     "PlaceSurrounding",
@@ -53,5 +58,6 @@ __all__ = [
     "RollLogEntry",
     "StatEntry",
     "SubjectPayload",
+    "SuggestionsPayload",
     "TierBadge",
 ]

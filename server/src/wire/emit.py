@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Literal
 from ..locale import render
 from .models import (
     DifficultyBadge,
+    DonePayload,
     Equipment,
     EquipItem,
     ErrorPayload,
@@ -15,6 +16,7 @@ from .models import (
     JudgeVerb,
     JudgeVerbs,
     LogEntryPayload,
+    NarrativeDeltaPayload,
     PendingCheckPayload,
     PlacePayload,
     PlaceSurrounding,
@@ -24,6 +26,7 @@ from .models import (
     RiskBadge,
     StatEntry,
     SubjectPayload,
+    SuggestionsPayload,
     TierBadge,
 )
 
@@ -441,3 +444,21 @@ def emit_log_entry(log) -> dict:
     else with ValidationError (loud-fail consistent with other builders)."""
     payload = LogEntryPayload(root=log)
     return {"type": "log_entry", "data": payload.model_dump()}
+
+
+def emit_narrative_delta(text: str) -> dict:
+    """SSE narrative_delta event. Streams a prose chunk to the client."""
+    payload = NarrativeDeltaPayload(text=text)
+    return {"type": "narrative_delta", "data": payload.model_dump()}
+
+
+def emit_suggestions(items: list[str]) -> dict:
+    """SSE suggestions event. Defensive list copy."""
+    payload = SuggestionsPayload(items=list(items))
+    return {"type": "suggestions", "data": payload.model_dump()}
+
+
+def emit_done() -> dict:
+    """SSE done event. Empty payload — turn-end marker."""
+    payload = DonePayload()
+    return {"type": "done", "data": payload.model_dump()}
