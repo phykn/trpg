@@ -5,6 +5,7 @@ import random
 from collections.abc import AsyncIterator
 
 from ..domain.errors import PendingCheckExpected
+from ..locale import render
 from ..domain.memory import BonusItem, RollLogEntry
 from ..domain.state import GameState
 from ..engines.apply import apply_changes
@@ -74,7 +75,7 @@ async def _resume_auto_combat(
         state,
         scenario_repo,
         dirty,
-        player_input="환경 굴림 후 한 박자 쉬며 적의 움직임을 살핍니다",
+        player_input=render("log.roll.synthetic_environment", "ko"),
         result=result,
     ):
         yield ev
@@ -107,11 +108,11 @@ async def run_roll(
     stat_value = getattr(actor.stats, pending.stat)
     stat_mod = stat_modifier(stat_value)
     breakdown = [
-        BonusItem(label="주사위", value=dice),
+        BonusItem(label=render("ui.roll.dice_label", "ko"), value=dice),
         BonusItem(label=stat_label(pending.stat), value=stat_mod),
     ]
     if pending.mod != 0:
-        breakdown.append(BonusItem(label="호감", value=pending.mod))
+        breakdown.append(BonusItem(label=render("ui.roll.affinity_label", "ko"), value=pending.mod))
 
     roll_log = RollLogEntry(
         id=next_log_id(state),

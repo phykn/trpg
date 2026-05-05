@@ -5,6 +5,7 @@ from __future__ import annotations
 from ..domain.entities import Quest
 from ..domain.errors import InventoryInvalid
 from ..domain.state import GameState
+from ..locale import render
 from ..ontology.graph import GameGraph
 from ..ontology.queries import connections_of, giver_of, kill_targets_of
 from .inventory.carry import check_can_carry
@@ -78,7 +79,7 @@ def abandon_quest(state: GameState, quest_id: str, dirty=None) -> bool:
     quest = state.quests.get(quest_id)
     if not quest or quest.status != "active":
         return False
-    _fail_quest(state, quest, reason="의뢰 포기", dirty=dirty)
+    _fail_quest(state, quest, reason=render("log.quest.abandon_reason", "ko"), dirty=dirty)
     return True
 
 
@@ -99,7 +100,7 @@ def _fail_quest(state: GameState, quest: Quest, reason: str, dirty) -> None:
 
         text = format_quest_fail_log(title=quest.title, reason=reason)
         full.deferred_act_cards.append(
-            (text, f"퀘스트 «{quest.title}» 실패 ({reason})")
+            (text, render("log.quest.fail_log", "ko", title=quest.title, reason=reason))
         )
     if state.active_quest_id == quest.id:
         state.active_quest_id = None
@@ -115,7 +116,7 @@ def cascade_giver_death(state: GameState, victim_id: str, dirty) -> None:
         if quest.status not in ("active", "pending"):
             continue
         if quest.giver_id == victim_id:
-            _fail_quest(state, quest, reason="의뢰자 사망", dirty=dirty)
+            _fail_quest(state, quest, reason=render("log.quest.giver_dead_reason", "ko"), dirty=dirty)
 
 
 def _ensure_runtime_fields(quest: Quest) -> None:
@@ -170,7 +171,7 @@ def _apply_rewards(state: GameState, quest: Quest, dirty) -> None:
             items=granted_item_names,
         )
         full.deferred_act_cards.append(
-            (text, f"퀘스트 «{quest.title}» 성공, 보상 수령")
+            (text, render("log.quest.success_log", "ko", title=quest.title))
         )
     if state.active_quest_id == quest.id:
         state.active_quest_id = None
@@ -377,7 +378,7 @@ def _cascade_death(
             if q.status == "completed" and q.id in changed:
                 # Undo same-turn completion so fail wins.
                 changed.remove(q.id)
-            _fail_quest(state, q, reason="의뢰자 사망", dirty=dirty)
+            _fail_quest(state, q, reason=render("log.quest.giver_dead_reason", "ko"), dirty=dirty)
             if q.id not in changed:
                 changed.append(q.id)
 

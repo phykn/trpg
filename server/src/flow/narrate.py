@@ -2,6 +2,7 @@ import logging
 import re
 from collections.abc import AsyncIterator
 
+from ..locale import render
 from ..llm_calls.classify.schema import Verb
 from ..llm_calls.narrate import (
     NarrateInput,
@@ -199,7 +200,7 @@ async def consume_narrate(
         }
     body = final.body.strip()
     if not body:
-        body = "잠시 정적이 흐릅니다."
+        body = render("log.narrate.fallback", "ko")
         yield {"type": "narrative_delta", "data": {"text": body}}
 
     # Redact dead-NPC direct quotes before persisting — without this a single LLM slip lands in recent_dialogue and compounds across turns.

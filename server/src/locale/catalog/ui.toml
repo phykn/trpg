@@ -65,3 +65,9 @@ ko = "경계중(affinity {affinity})"
 
 [ui."state.wounded"]
 ko = "부상(hp {hp_pct}%)"
+
+[ui."roll.dice_label"]
+ko = "주사위"
+
+[ui."roll.affinity_label"]
+ko = "호감"

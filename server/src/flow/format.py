@@ -269,7 +269,7 @@ def format_use_log(state: GameState, actor_id: str, result: dict) -> str:
     actor_name = actor.name if actor else actor_id
     item_id = result.get("item_id")
     item = state.items.get(item_id) if item_id else None
-    item_name = item.name if item else (item_id or "아이템")  # locale-allow: 아이템 fallback moves to catalog in 1.4
+    item_name = item.name if item else (item_id or render("log.use.item_fallback", "ko"))
 
     head = render("log.use.head", "ko", actor=actor_name, item=item_name)
     kind = result.get("kind")
