@@ -10,8 +10,12 @@ from .models import (
     HeroPayload,
     InventoryItem,
     PendingCheckPayload,
+    PlacePayload,
+    PlaceSurrounding,
+    PlaceTarget,
     QuestPayload,
     QuestRewards,
+    RiskBadge,
     StatEntry,
     SubjectPayload,
     TierBadge,
@@ -309,4 +313,74 @@ def _build_quest_payload(
         rewards=QuestRewards(gold=q.rewards.gold, exp=q.rewards.exp),
         status=q.status,
         actions=actions,
+    )
+
+
+def _build_place_payload(
+    state: "GameState", graph: "GameGraph"
+) -> PlacePayload | None:
+    """Build the wire model for the `place` state slot. Returns None when
+    the player has no location or the id no longer resolves — same gating
+    as mapping.to_place. Mirrors mapping.to_place's exact derivation
+    (surroundings via connections_of, targets via inhabitants_of, blurb
+    fallback chain, day_phase via clock + render, risk via risk_payload)."""
+    from ..domain.clock import day_phase
+    from ..locale import render
+    from ..mapping.labels import gender_label, race_job_label, risk_payload
+    from ..ontology.queries import connections_of, inhabitants_of
+
+    p = state.characters[state.player_id]
+    player_loc_id = p.location_id
+    if player_loc_id is None or player_loc_id not in state.locations:
+        return None
+    loc = state.locations[player_loc_id]
+
+    surroundings: list[PlaceSurrounding] = []
+    for edge in connections_of(graph, player_loc_id):
+        target = state.locations.get(edge.to_id)
+        if target is None:
+            continue
+        attrs = edge.attrs or {}
+        difficulty_label: str | None = (
+            render(f"tier.{d}", "ko") if (d := attrs.get("difficulty")) else None
+        )
+        risk = risk_payload(target.sleep_risk)
+        surroundings.append(
+            PlaceSurrounding(
+                name=target.name,
+                blurb=target.description,
+                difficulty=difficulty_label,
+                risk=RiskBadge(label=risk["label"], tone=risk["tone"]),
+            )
+        )
+
+    targets: list[PlaceTarget] = []
+    for cid in inhabitants_of(graph, player_loc_id):
+        if cid == state.player_id:
+            continue
+        c = state.characters.get(cid)
+        if c is None:
+            continue
+        blurb = "죽음" if not c.alive else (c.appearance or c.description)
+        targets.append(
+            PlaceTarget(
+                name=c.name,
+                level=c.level,
+                race_job=race_job_label(state, graph, c),
+                gender=gender_label(c),
+                blurb=blurb,
+                trust=c.relations.get(state.player_id, 0),
+            )
+        )
+
+    risk = risk_payload(loc.sleep_risk)
+    return PlacePayload(
+        name=loc.name,
+        description=loc.description,
+        day_phase=render(f"phase.{day_phase(state.turn_count)}", "ko"),
+        weather=list(loc.weather),
+        features=list(loc.tags),
+        surroundings=surroundings,
+        targets=targets,
+        risk=RiskBadge(label=risk["label"], tone=risk["tone"]),
     )
