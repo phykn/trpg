@@ -324,6 +324,96 @@
       ],
       "title": "HeroPayload",
       "type": "object"
+    },
+    "SubjectPayload": {
+      "description": "Wire shape for the `subject` slot inside the `state` payload.\nField order matches mapping/to_front.to_subject's dict insertion order.\nNPC mp/mpMax is intentionally absent — subject panel doesn't expose\nNPC mana to the player.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "alive": {
+          "title": "Alive",
+          "type": "boolean"
+        },
+        "role": {
+          "title": "Role",
+          "type": "string"
+        },
+        "raceJob": {
+          "title": "Racejob",
+          "type": "string"
+        },
+        "gender": {
+          "title": "Gender",
+          "type": "string"
+        },
+        "trust": {
+          "title": "Trust",
+          "type": "integer"
+        },
+        "known": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Known",
+          "type": "array"
+        },
+        "level": {
+          "title": "Level",
+          "type": "integer"
+        },
+        "hp": {
+          "title": "Hp",
+          "type": "integer"
+        },
+        "hpMax": {
+          "title": "Hpmax",
+          "type": "integer"
+        },
+        "stats": {
+          "items": {
+            "$ref": "#/definitions/StatEntry"
+          },
+          "title": "Stats",
+          "type": "array"
+        },
+        "equipment": {
+          "$ref": "#/definitions/Equipment"
+        },
+        "inventory": {
+          "items": {
+            "$ref": "#/definitions/InventoryItem"
+          },
+          "title": "Inventory",
+          "type": "array"
+        },
+        "skills": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Skills",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "alive",
+        "role",
+        "raceJob",
+        "gender",
+        "trust",
+        "known",
+        "level",
+        "hp",
+        "hpMax",
+        "stats",
+        "equipment",
+        "inventory",
+        "skills"
+      ],
+      "title": "SubjectPayload",
+      "type": "object"
     }
   }
 }

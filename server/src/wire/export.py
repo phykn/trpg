@@ -5,8 +5,9 @@ from pathlib import Path
 from .models.error import ErrorPayload
 from .models.hero import HeroPayload
 from .models.pending_check import PendingCheckPayload
+from .models.subject import SubjectPayload
 
-_MODELS = [ErrorPayload, PendingCheckPayload, HeroPayload]
+_MODELS = [ErrorPayload, PendingCheckPayload, HeroPayload, SubjectPayload]
 
 
 def _flatten(schema: dict, definitions: dict) -> dict:

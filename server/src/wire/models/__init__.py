@@ -7,6 +7,7 @@ from .hero import (
     StatEntry,
 )
 from .pending_check import PendingCheckPayload, TierBadge
+from .subject import SubjectPayload
 
 __all__ = [
     "Equipment",
@@ -16,5 +17,6 @@ __all__ = [
     "InventoryItem",
     "PendingCheckPayload",
     "StatEntry",
+    "SubjectPayload",
     "TierBadge",
 ]

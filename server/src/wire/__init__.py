@@ -7,6 +7,7 @@ from .models import (
     InventoryItem,
     PendingCheckPayload,
     StatEntry,
+    SubjectPayload,
     TierBadge,
 )
 
@@ -18,6 +19,7 @@ __all__ = [
     "InventoryItem",
     "PendingCheckPayload",
     "StatEntry",
+    "SubjectPayload",
     "TierBadge",
     "emit_error",
     "emit_pending_check",
