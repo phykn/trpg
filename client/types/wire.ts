@@ -4,7 +4,7 @@ import type { LogEntry } from '@/features/log';
 import type { Quest } from '@/features/quest';
 import type { Place, StoryGraphModel } from '@/features/story-graph';
 import type { Subject } from '@/features/subject';
-import type { ErrorPayload, PendingCheckPayload } from './wire.gen';
+import type { ErrorPayload, JudgePayload, PendingCheckPayload } from './wire.gen';
 
 // Re-export the auto-generated wire shape under the historical client name.
 // Caller code (handleStreamEvent, useGame, RollPrompt) keeps using `PendingCheck`.
@@ -70,12 +70,7 @@ export type RollRequest = {
 // observability-only today (handleStreamEvent early-returns), but the payload
 // shape is typed as a discriminated union so future debug/observability
 // consumers stay safe across server changes.
-type VerbWire = { name: string; target_ids: string[]; modifiers: Record<string, unknown> };
-export type JudgeData =
-  | { judge_kind: 'pending_check_trigger'; tier: number; stat: string; targets: string[]; reason: string }
-  | { judge_kind: 'refuse'; refuse: { category: string; message_hint: string } }
-  | { judge_kind: 'verb'; verb: VerbWire }
-  | { judge_kind: 'verbs'; actions: VerbWire[] };
+export type JudgeData = JudgePayload;
 
 export type StreamEvent =
   | { type: 'judge'; data: JudgeData }

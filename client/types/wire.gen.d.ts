@@ -83,6 +83,40 @@ export type Weather = string[];
 export type Features = string[];
 export type Surroundings = PlaceSurrounding[];
 export type Targets = PlaceTarget[];
+export type JudgeKind = "pending_check_trigger";
+export type Tier = "very_easy" | "easy" | "normal" | "hard" | "very_hard" | "legend" | "myth";
+export type Stat1 = "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA";
+export type Targets1 = string[];
+export type Reason1 = string;
+export type JudgeKind1 = "refuse";
+export type Category = "out_of_game" | "meta_breaking";
+export type MessageHint = string;
+export type JudgeKind2 = "verb";
+export type Name7 = "move" | "transfer" | "use" | "attack" | "cast" | "speak" | "alter" | "perceive" | "rest" | "wait";
+/**
+ * @maxItems 8
+ */
+export type TargetIds =
+  | []
+  | [string]
+  | [string, string]
+  | [string, string, string]
+  | [string, string, string, string]
+  | [string, string, string, string, string]
+  | [string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string]
+  | [string, string, string, string, string, string, string, string];
+export type JudgeKind3 = "verbs";
+export type Actions1 = Verb[];
+/**
+ * SSE `judge` event payload — discriminated union over `judge_kind`.
+ * RootModel is the Pydantic v2 way to wrap a non-class root type so it can
+ * be exported alongside other top-level wire models in wire/export.py.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "JudgePayload".
+ */
+export type JudgePayload = JudgePendingCheckTrigger | JudgeRefuse | JudgeVerb | JudgeVerbs;
 
 export interface Wire {
   [k: string]: unknown;
@@ -339,5 +373,74 @@ export interface PlacePayload {
   surroundings: Surroundings;
   targets: Targets;
   risk: RiskBadge;
+  [k: string]: unknown;
+}
+/**
+ * Semantic-fallback or verb-driven uncertainty path: judge declared an
+ * immediate stat check before any verb dispatches.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "JudgePendingCheckTrigger".
+ */
+export interface JudgePendingCheckTrigger {
+  judge_kind: JudgeKind;
+  tier: Tier;
+  stat: Stat1;
+  targets: Targets1;
+  reason: Reason1;
+  [k: string]: unknown;
+}
+/**
+ * Player input rejected at the judge layer (out_of_game / meta_breaking).
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "JudgeRefuse".
+ */
+export interface JudgeRefuse {
+  judge_kind: JudgeKind1;
+  refuse: RefuseReason;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "RefuseReason".
+ */
+export interface RefuseReason {
+  category: Category;
+  message_hint: MessageHint;
+}
+/**
+ * Single verb classification — most common branch.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "JudgeVerb".
+ */
+export interface JudgeVerb {
+  judge_kind: JudgeKind2;
+  verb: Verb;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "Verb".
+ */
+export interface Verb {
+  name: Name7;
+  target_ids?: TargetIds;
+  modifiers?: Modifiers;
+}
+export interface Modifiers {
+  [k: string]: unknown;
+}
+/**
+ * Multi-verb chain (out-of-combat only). Field name is `actions` to
+ * match the existing wire shape consumed by the client.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "JudgeVerbs".
+ */
+export interface JudgeVerbs {
+  judge_kind: JudgeKind3;
+  actions: Actions1;
   [k: string]: unknown;
 }

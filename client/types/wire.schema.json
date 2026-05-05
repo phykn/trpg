@@ -705,6 +705,213 @@
       ],
       "title": "PlacePayload",
       "type": "object"
+    },
+    "JudgePendingCheckTrigger": {
+      "description": "Semantic-fallback or verb-driven uncertainty path: judge declared an\nimmediate stat check before any verb dispatches.",
+      "properties": {
+        "judge_kind": {
+          "const": "pending_check_trigger",
+          "title": "Judge Kind",
+          "type": "string"
+        },
+        "tier": {
+          "enum": [
+            "very_easy",
+            "easy",
+            "normal",
+            "hard",
+            "very_hard",
+            "legend",
+            "myth"
+          ],
+          "title": "Tier",
+          "type": "string"
+        },
+        "stat": {
+          "enum": [
+            "STR",
+            "DEX",
+            "CON",
+            "INT",
+            "WIS",
+            "CHA"
+          ],
+          "title": "Stat",
+          "type": "string"
+        },
+        "targets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Targets",
+          "type": "array"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "judge_kind",
+        "tier",
+        "stat",
+        "targets",
+        "reason"
+      ],
+      "title": "JudgePendingCheckTrigger",
+      "type": "object"
+    },
+    "JudgeRefuse": {
+      "description": "Player input rejected at the judge layer (out_of_game / meta_breaking).",
+      "properties": {
+        "judge_kind": {
+          "const": "refuse",
+          "title": "Judge Kind",
+          "type": "string"
+        },
+        "refuse": {
+          "$ref": "#/definitions/RefuseReason"
+        }
+      },
+      "required": [
+        "judge_kind",
+        "refuse"
+      ],
+      "title": "JudgeRefuse",
+      "type": "object"
+    },
+    "JudgeVerb": {
+      "description": "Single verb classification — most common branch.",
+      "properties": {
+        "judge_kind": {
+          "const": "verb",
+          "title": "Judge Kind",
+          "type": "string"
+        },
+        "verb": {
+          "$ref": "#/definitions/Verb"
+        }
+      },
+      "required": [
+        "judge_kind",
+        "verb"
+      ],
+      "title": "JudgeVerb",
+      "type": "object"
+    },
+    "JudgeVerbs": {
+      "description": "Multi-verb chain (out-of-combat only). Field name is `actions` to\nmatch the existing wire shape consumed by the client.",
+      "properties": {
+        "judge_kind": {
+          "const": "verbs",
+          "title": "Judge Kind",
+          "type": "string"
+        },
+        "actions": {
+          "items": {
+            "$ref": "#/definitions/Verb"
+          },
+          "title": "Actions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "judge_kind",
+        "actions"
+      ],
+      "title": "JudgeVerbs",
+      "type": "object"
+    },
+    "RefuseReason": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "enum": [
+            "out_of_game",
+            "meta_breaking"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "message_hint": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Message Hint",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "message_hint"
+      ],
+      "title": "RefuseReason",
+      "type": "object"
+    },
+    "Verb": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "move",
+            "transfer",
+            "use",
+            "attack",
+            "cast",
+            "speak",
+            "alter",
+            "perceive",
+            "rest",
+            "wait"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "target_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Target Ids",
+          "type": "array"
+        },
+        "modifiers": {
+          "additionalProperties": true,
+          "title": "Modifiers",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Verb",
+      "type": "object"
+    },
+    "JudgePayload": {
+      "description": "SSE `judge` event payload — discriminated union over `judge_kind`.\nRootModel is the Pydantic v2 way to wrap a non-class root type so it can\nbe exported alongside other top-level wire models in wire/export.py.",
+      "discriminator": {
+        "mapping": {
+          "pending_check_trigger": "#/definitions/JudgePendingCheckTrigger",
+          "refuse": "#/definitions/JudgeRefuse",
+          "verb": "#/definitions/JudgeVerb",
+          "verbs": "#/definitions/JudgeVerbs"
+        },
+        "propertyName": "judge_kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/definitions/JudgePendingCheckTrigger"
+        },
+        {
+          "$ref": "#/definitions/JudgeRefuse"
+        },
+        {
+          "$ref": "#/definitions/JudgeVerb"
+        },
+        {
+          "$ref": "#/definitions/JudgeVerbs"
+        }
+      ],
+      "title": "JudgePayload"
     }
   }
 }
