@@ -2,12 +2,13 @@ import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import type { PanelAction } from '@/features/info-panel';
-import { getSessionById, loadSeenNodes, loadStoredGameId, storeSeenNodes } from '@/services';
+import { getSessionById, loadStoredGameId, storeSeenNodes } from '@/services';
 
 import { MapPanel } from './MapPanel';
 import { EMPTY_STORY_GRAPH } from './presenters';
 import type { StoryGraphModel } from './types';
 import {
+  loadAndSeedSeenNodes,
   mergeAndStoreStoryGraph,
   readStoredStoryGraph,
   STORY_GRAPH_UPDATED_EVENT,
@@ -47,15 +48,9 @@ export function StoryGraphScreen({
           setStatus('empty');
           return;
         }
-        setGraph(mergeAndStoreStoryGraph(stored, session.state.storyGraph));
-        const loaded = loadSeenNodes(stored);
-        // Auto-seed the player's starting place so it doesn't get a "new" ring on first load.
-        const startNode = session.state.storyGraph.nodes.find((n) => n.kind === 'place');
-        if (startNode && !loaded.has(startNode.id)) {
-          loaded.add(startNode.id);
-          storeSeenNodes(stored, loaded);
-        }
-        setSeen(loaded);
+        const merged = mergeAndStoreStoryGraph(stored, session.state.storyGraph);
+        setGraph(merged);
+        setSeen(loadAndSeedSeenNodes(stored, merged));
         setStatus('ready');
       } catch (err) {
         if (!alive) return;

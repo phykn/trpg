@@ -5,13 +5,6 @@ import type {
   StoryGraphNodeKind,
 } from './types';
 
-export type {
-  StoryGraphEdge,
-  StoryGraphModel,
-  StoryGraphNode,
-  StoryGraphNodeKind,
-} from './types';
-
 const NODE_KIND = new Set<StoryGraphNodeKind>([
   'hero',
   'place',

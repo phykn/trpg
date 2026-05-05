@@ -2,7 +2,7 @@ import cytoscape, { type Core, type ElementDefinition } from 'cytoscape';
 import React from 'react';
 
 import { colors } from '@/design/tokens';
-import type { StoryGraphEdge, StoryGraphModel, StoryGraphNodeKind } from './presenters';
+import type { StoryGraphEdge, StoryGraphModel, StoryGraphNodeKind } from './types';
 
 // Module-scoped so positions survive panel switches (component remount).
 // Keyed by nodeId; scenario-unique IDs make cross-game collision unlikely,

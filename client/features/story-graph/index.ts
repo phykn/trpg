@@ -6,6 +6,13 @@ export type {
   StoryGraphModel,
 } from './types';
 export { EMPTY_STORY_GRAPH } from './presenters';
-export { mergeAndStoreStoryGraph, useStoryGraph } from './useStoryGraph';
+export {
+  loadAndSeedSeenNodes,
+  mergeAndStoreStoryGraph,
+  readStoredStoryGraph,
+  STORY_GRAPH_UPDATED_EVENT,
+  useStoryGraph,
+  writeStoredStoryGraph,
+} from './useStoryGraph';
 export { MiniMapPanel } from './MiniMapPanel';
 export { StoryGraphScreen } from './StoryGraphScreen';

@@ -5,8 +5,7 @@ import { SEP } from '@/components/ui';
 import { toneColor } from '@/design/tokens';
 import type { PanelAction } from '@/features/info-panel';
 
-import type { StoryGraphModel } from './presenters';
-import type { Place } from './types';
+import type { Place, StoryGraphModel } from './types';
 
 import { NeighborhoodPanel } from './NeighborhoodPanel';
 

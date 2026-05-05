@@ -5,10 +5,7 @@ import { ExpandableTitle, ExpandGroup, LabeledRow, Row, SEP, characterMeta, join
 import { colors, toneColor } from '@/design/tokens';
 import type { PanelAction } from '@/features/info-panel';
 
-import {
-  type StoryGraphEdge,
-  type StoryGraphModel,
-} from './presenters';
+import type { StoryGraphEdge, StoryGraphModel } from './types';
 import { StoryGraphCanvas } from './StoryGraphCanvas';
 import { actionForNode } from './_nodeActions';
 

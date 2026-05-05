@@ -219,11 +219,12 @@ export function RollPrompt({
           )}
           {showMod && (
             <View className="flex-row items-baseline gap-1">
+              {/* Provisional branch: long-term wire should carry `mod_label` from server (spec §5.3 미정 항목). */}
               <Text
                 className="font-sans text-caption text-fg-subtle"
                 style={{ letterSpacing: 0.6 }}
               >
-                호감
+                {pending.kind === 'recruit' ? '친밀도' : '호감'}
               </Text>
               <Text
                 className="font-mono-semibold text-caption"

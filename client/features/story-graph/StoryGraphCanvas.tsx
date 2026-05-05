@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
 
-import type { StoryGraphModel } from './presenters';
+import type { StoryGraphModel } from './types';
 
 // Text-only renderer of the first 8 nodes — placeholder for a future graph viz.
 export function StoryGraphCanvas({

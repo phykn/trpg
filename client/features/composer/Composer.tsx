@@ -11,8 +11,6 @@ import {
 
 import { colors } from '@/design/tokens';
 
-import { Surface } from '@/components/ui';
-
 import { SendButton } from './SendButton';
 import { StopButton } from './StopButton';
 
@@ -90,10 +88,7 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
   };
 
   return (
-    <Surface
-      variant="floating"
-      className="mx-5 mt-1.5 px-3 pt-2 pb-2 gap-1"
-    >
+    <View className="mx-5 mt-1.5 px-3 pt-2 pb-2 gap-1">
       <TextInput
         ref={textInputRef}
         value={input}
@@ -130,6 +125,6 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
           <SendButton enabled={hasText} onPress={submit} />
         )}
       </View>
-    </Surface>
+    </View>
   );
 }

@@ -8,7 +8,6 @@ export type StreamHandlers = {
   clearStreamingText: () => void;
   upsertLogEntry: (e: LogEntry) => void;
   applyState: (s: FrontState) => void;
-  clearCombat: () => void;
   setSuggestions: (items: string[]) => void;
   setErrorMessage: (m: string) => void;
 };
@@ -40,11 +39,9 @@ export function handleStreamEvent(ev: StreamEvent, h: StreamHandlers): void {
       return;
     case 'combat_start':
     case 'combat_turn':
-      // Observability only; UI reads from `state` + `log_entry`.
-      return;
     case 'combat_end':
-      // Fires for terminal outcomes only — `ongoing` keeps combat_state live for the next /turn.
-      h.clearCombat();
+      // Observability only; UI reads from `state` + `log_entry`. The trailing
+      // `state` event after combat_end carries `combat: null` authoritatively.
       return;
     case 'done':
       return;

@@ -7,7 +7,6 @@ import 'react-native-reanimated';
 import {
   NanumGothic_400Regular,
   NanumGothic_700Bold,
-  NanumGothic_800ExtraBold,
   useFonts as useGothic,
 } from '@expo-google-fonts/nanum-gothic';
 import {
@@ -25,7 +24,6 @@ export default function RootLayout() {
   const [gothicLoaded] = useGothic({
     NanumGothic_400Regular,
     NanumGothic_700Bold,
-    NanumGothic_800ExtraBold,
   });
   const [monoLoaded] = useMono({ GeistMono_400Regular, GeistMono_500Medium, GeistMono_600SemiBold });
 

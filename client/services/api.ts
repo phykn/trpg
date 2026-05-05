@@ -31,7 +31,7 @@ const jsonHeaders = {
 };
 
 export async function getVersion(): Promise<{ sha: string }> {
-  const res = await fetch(`${BASE_URL}/version`);
+  const res = await fetch(`${BASE_URL}/version`, { headers: baseHeaders });
   if (!res.ok) throw new Error(`getVersion failed: HTTP ${res.status}`);
   return (await res.json()) as { sha: string };
 }
