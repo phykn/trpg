@@ -9,6 +9,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest",
+    "gen": "cd .. && .venv/bin/python server/scripts/gen_wire_schema.py && cd client && node scripts/gen-wire-types.cjs",
     "deploy": "rm -rf dist && cp .env .env.bak && cp .env.release .env && echo \"EXPO_PUBLIC_GIT_SHA=$(git rev-parse --short HEAD)\" >> .env && (expo export -p web && wrangler deploy); status=$?; cp .env.bak .env && rm .env.bak; exit $status"
   },
   "jest": {
@@ -57,6 +58,7 @@
     "eslint-config-expo": "~10.0.0",
     "jest": "^29.7.0",
     "jest-expo": "^55.0.16",
+    "json-schema-to-typescript": "^15.0.4",
     "typescript": "~5.9.2"
   },
   "private": true
