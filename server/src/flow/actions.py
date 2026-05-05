@@ -181,7 +181,7 @@ async def emit_equip(
         state,
         dirty,
         format_equip_log(actor.name, item_name),
-        turn_summary=format_equip_turn_log(actor.name, item_name),
+        turn_summary=format_equip_turn_log(item_name),
     )
 
 
@@ -209,7 +209,7 @@ async def emit_unequip(
             state,
             dirty,
             text,
-            turn_summary=format_unequip_turn_log(actor.name, item_name),
+            turn_summary=format_unequip_turn_log(item_name),
         )
 
 
@@ -245,7 +245,7 @@ async def emit_use(
             state,
             dirty,
             format_use_log(state, actor_id, result),
-            turn_summary=format_use_self_turn_log(actor.name, item_name),
+            turn_summary=format_use_self_turn_log(item_name),
         )
 
 
@@ -379,8 +379,8 @@ async def emit_roll_pending_from_trigger(
     trigger: "PendingCheckTrigger",
     dirty: Dirty,
 ) -> AsyncIterator[dict]:
-    """Stage 1b: PendingCheckTrigger 기반 pending_check 발사 (semantic fallback +
-    Stage 2 uncertainty 룰 호환). triggering_verb / pending_verbs 필드 carry.
+    """PendingCheckTrigger 기반 pending_check 발사 (semantic fallback + 후속
+    uncertainty 룰 호환). triggering_verb / pending_verbs 필드 carry.
     kind는 _derive_pending_kind로 설정."""
     from .companion import _derive_pending_kind  # 순환 import 회피
     actor = state.characters[state.player_id]
@@ -408,7 +408,7 @@ async def emit_roll_pending_from_trigger(
         reason=trigger.reason,
         created_at=datetime.now(UTC).isoformat(),
         triggering_verb=trigger.triggering_verb,
-        pending_verbs=[],  # Stage 1b: 잔여 verb 폐기 (Stage 2에서 활성화)
+        pending_verbs=[],  # 잔여 verb 폐기 (후속 uncertainty 룰에서 활성화 예정)
     )
     try:
         await flush(state, save_repo, dirty)

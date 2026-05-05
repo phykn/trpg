@@ -81,15 +81,15 @@ def format_use_target_turn_log(item_name: str, target_name: str) -> str:
     return f"{item_name}{eul_reul(item_name)} {target_name}에게 사용"
 
 
-def format_equip_turn_log(actor_name: str, item_name: str) -> str:
+def format_equip_turn_log(item_name: str) -> str:
     return f"{item_name} 착용"
 
 
-def format_unequip_turn_log(actor_name: str, item_name: str) -> str:
+def format_unequip_turn_log(item_name: str) -> str:
     return f"{item_name} 해제"
 
 
-def format_use_self_turn_log(actor_name: str, item_name: str) -> str:
+def format_use_self_turn_log(item_name: str) -> str:
     return f"{item_name} 사용"
 
 

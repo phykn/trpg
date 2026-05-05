@@ -81,9 +81,9 @@ def use(
     consumable=True items are removed from inventory after one use.
     Weapon/armor items are not valid `use` targets — those go through equip.
     `on_use` (free text or trigger id) rides along on the result; quest
-    evaluation happens in engines.quest.check_quests. `dirty` accepts both the
-    legacy entity-set and a full `Dirty`; downstream apply_attack_to_defender
-    forwards the latter so a quest-closing damage item can push the card.
+    evaluation happens in engines.quest.check_quests. `dirty` accepts `None`
+    or a full `Dirty`; downstream apply_attack_to_defender forwards the latter
+    so a quest-closing damage item can push the card.
     """
     from ..quest import _entities_set
 

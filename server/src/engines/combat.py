@@ -362,9 +362,9 @@ def apply_attack_to_defender(
     When `nat_d20` is 1 (critical_failure damage) during a death save, failures += crit_inc.
     On death, the quest character_death trigger is evaluated and killer fact appended to hints.
 
-    `dirty` may be a plain entity-tracking set (legacy combat-engine tests) or a
-    full `Dirty` (flow callers). The full form lets quest completion push a
-    success card through `check_quests` → `_apply_rewards`.
+    `dirty` may be `None` (combat-engine standalone tests) or a full `Dirty`
+    (flow callers). The full form lets quest completion push a success card
+    through `check_quests` → `_apply_rewards`.
     """
     from .quest import (
         _entities_set,

@@ -282,9 +282,9 @@ def apply_changes(
     raw_changes: list[dict],
     dirty=None,
 ) -> dict:
-    """Apply state_changes to `state`. `dirty` accepts the legacy entity-set
-    or a full `Dirty`; downstream check_quests uses the full form to push the
-    quest success card on completion. Either way, the entity set is grown.
+    """Apply state_changes to `state`. `dirty` accepts `None` or a full
+    `Dirty`; downstream check_quests uses the full form to push the quest
+    success card on completion. Either way, the entity set is grown.
 
     Returns:
       - "applied": int — count of successfully applied changes

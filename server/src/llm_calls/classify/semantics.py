@@ -214,14 +214,6 @@ def _check_use(verb: Verb, surroundings: dict[str, Any]) -> None:
             raise JudgeSemanticError(f"target_id {target_id!r} not in surroundings.")
 
 
-def _check_move(verb: Verb, surroundings: dict[str, Any]) -> None:
-    # destination is required-modifier outside combat (validated by ModifierSchema).
-    # Surroundings check: destination must match a connection or be inside the
-    # location-id space. Stage 1 keeps this lenient — the engine handles
-    # real navigation; semantic check just guards obvious garbage.
-    return
-
-
 # ─── _CHECKS table ────────────────────────────────────────────────────────────
 
 _CHECKS: dict[VerbName, Callable[[Verb, dict[str, Any]], None]] = {
@@ -230,8 +222,7 @@ _CHECKS: dict[VerbName, Callable[[Verb, dict[str, Any]], None]] = {
     "speak": _check_speak,
     "transfer": _check_transfer,
     "use": _check_use,
-    "move": _check_move,
-    # rest, wait, perceive, alter: 자동 통과 (schema-only)
+    # move, rest, wait, perceive, alter: schema/modifier-validation 후 자동 통과
 }
 
 

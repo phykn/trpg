@@ -9,10 +9,9 @@ from ..ontology.graph import GameGraph
 from ..ontology.queries import connections_of, giver_of, kill_targets_of
 from .inventory.carry import check_can_carry
 
-# Quest evaluation accepts either a plain entity-tracking set (legacy callers)
-# or a full `flow.dirty.Dirty` (when a quest closure must push a success card).
-# A bare set still works — only the card emit is conditional on getting the
-# full object.
+# Quest mutations accept a full `flow.dirty.Dirty` (or `None`) — `Dirty.entities`
+# tracks which entities to upsert, `Dirty.log` collects card emissions. The
+# helpers below extract each piece so apply/inventory/skill can pass either.
 
 
 def _entities_set(dirty) -> set[tuple[str, str]] | None:
@@ -37,8 +36,8 @@ def apply_judge_result(
 
     On 'satisfied', routes through `_apply_rewards` so the same success card
     that the trigger-driven `check_quests` path emits also surfaces here.
-    Card emit only when `dirty` is the full `flow.dirty.Dirty`; legacy callers
-    passing None (or omitting) get the state mutation without the card.
+    Card emit only when `dirty` is the full `flow.dirty.Dirty`; passing None
+    yields the state mutation without the card.
     """
     quest = state.quests.get(quest_id)
     if not quest or quest.status != "active":
@@ -87,7 +86,7 @@ def _fail_quest(state: GameState, quest: Quest, reason: str, dirty) -> None:
     """Mark quest failed, clear active pointer if matching, emit fail card.
 
     Card emit only when `dirty` is the full `flow.dirty.Dirty` (has `.log`);
-    legacy callers passing a bare entity-set get the state mutation but no card.
+    callers passing None get the state mutation without the card.
     """
     quest.status = "failed"
     quest.fail_reason = reason
@@ -299,8 +298,8 @@ def check_quests(
 ) -> list[str]:
     """Evaluate quests against an event; returns ids whose status changed. Triggers are single-fire.
 
-    `dirty` may be either the entity-tracking set (legacy) or a full `Dirty`.
-    Only the latter receives a success/fail card on completion.
+    `dirty` may be `None` or a full `Dirty`. Only the latter receives a
+    success/fail card on completion.
     """
     entities = _entities_set(dirty)
     changed: list[str] = []

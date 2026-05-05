@@ -1,10 +1,9 @@
-"""Verb-grammar primitives (Stage 1 of classify redesign).
+"""Verb-grammar primitives.
 
 Lives in `domain/` so `domain.memory.PendingCheck` can carry `Verb` directly
-without depending on `llm_calls/classify` (which imports `mapping/labels` →
-`domain/entities` → `domain/memory` cycle).
-
-`llm_calls/classify/schema.py` re-exports these names for plan/spec compatibility.
+without depending on `llm_calls/classify` (cycle through mapping/labels →
+domain/entities → domain/memory). `llm_calls/classify/schema.py` re-exports
+these for call-site convenience.
 """
 
 from typing import Any, Literal
