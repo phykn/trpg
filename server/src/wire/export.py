@@ -2,8 +2,9 @@ import json
 from pathlib import Path
 
 from .models.error import ErrorPayload
+from .models.pending_check import PendingCheckPayload
 
-_MODELS = [ErrorPayload]
+_MODELS = [ErrorPayload, PendingCheckPayload]
 
 
 def dump_schemas(out_path: Path) -> None:
