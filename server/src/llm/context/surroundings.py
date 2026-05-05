@@ -67,7 +67,7 @@ def _skills_payload(state: GameState, actor: Character, graph: GameGraph) -> lis
         # level / mp are pure entity values — graph doesn't carry them.
         if s.level > actor.level or actor.mp < s.mp_cost:
             continue
-        item: dict = {"id": s.id, "name": s.name}
+        item: dict = {"id": s.id, "name": s.name, "type": s.type}
         if s.description:
             item["description"] = s.description
         if s.special_effect:

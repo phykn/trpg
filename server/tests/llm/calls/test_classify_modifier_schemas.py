@@ -71,6 +71,21 @@ def test_speak_intent_invalid_value():
         validate_modifiers(v, in_combat=False)
 
 
+def test_speak_intent_dead_values_rejected():
+    """command/pray/ask/negotiate were dropped from the intent enum — narrate
+    absorbs those player inputs via friendly/hostile fallback."""
+    for dead in ("command", "pray", "ask", "negotiate"):
+        v = Verb(name="speak", modifiers={"intent": dead})
+        with pytest.raises(ModifierValidationError, match="intent"):
+            validate_modifiers(v, in_combat=False)
+
+
+def test_speak_intent_live_values_pass():
+    for live in ("friendly", "hostile", "deceptive", "recruit", "part"):
+        v = Verb(name="speak", modifiers={"intent": live, "target": "n_01"})
+        validate_modifiers(v, in_combat=False)
+
+
 def test_wait_target_cardinality_forbidden():
     v = Verb(name="wait", target_ids=["x"])
     with pytest.raises(ModifierValidationError, match="target_ids"):

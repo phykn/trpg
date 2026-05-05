@@ -63,14 +63,18 @@ def test_dispatch_verb_transfer_branches_equip_unequip_gift_trade():
     assert "emit_trade" in src
 
 
-def test_dispatch_verb_cast_uses_narrate_only():
-    """Stage 1b cast 결정: narrate-only (자해 진입 회피)."""
+def test_dispatch_verb_cast_routes_through_emit_cast():
+    """cast(heal/buff) → emit_cast via _run_one_step_action. 전투 진입 없음
+    (heal/buff는 자가/동료 시전 — 적대 행위 아님). 미존재/비-heal-buff skill은
+    semantic check이 1차 거름, 거기 슬리든 케이스만 narrate fallback."""
     src = inspect.getsource(turn_module._dispatch_verb)
-    # cast 분기가 _enter_combat_and_finalize 직접 호출 안 하는지
     cast_section_start = src.find('name == "cast"')
     cast_section_end = src.find('name == "rest"', cast_section_start)
     cast_section = src[cast_section_start:cast_section_end]
     assert "_enter_combat_and_finalize" not in cast_section
+    assert "emit_cast" in cast_section
+    assert "_run_one_step_action" in cast_section
+    # narrate fallback (defensive — semantic check should catch this first)
     assert "stream_narrate_tail" in cast_section
 
 

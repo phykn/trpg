@@ -10,6 +10,7 @@ from src.llm.client import LLMClient, set_llm_session_if_unset
 from ..ontology.graph import GameGraph
 from src.db.repo import SaveRepo, ScenarioRepo
 from .actions import (
+    emit_cast,
     emit_equip,
     emit_give,
     emit_move,
@@ -615,11 +616,31 @@ async def _dispatch_verb(
         return
 
     if name == "cast":
-        # narrate-only for now (avoid entering combat against self). Promote
-        # after the friendly-heal branch in combat_auto is validated.
-        async for ev in stream_narrate_tail(
-            client, state, scenario_repo, player_input, dirty, to_front_fn,
-            verb, graph=graph, previous_phase_signal=previous_phase_signal,
+        skill_id = m.get("skill_id")
+        skill = state.skills.get(skill_id) if skill_id else None
+        # Defensive — semantic check rejects non-heal/buff cast and unknown
+        # skill_id, so reaching here with a bad skill means a slipped retry.
+        # Fall back to narrate so the turn doesn't crash.
+        if skill is None or skill.type not in ("heal", "buff"):
+            async for ev in stream_narrate_tail(
+                client, state, scenario_repo, player_input, dirty, to_front_fn,
+                verb, graph=graph, previous_phase_signal=previous_phase_signal,
+            ):
+                yield ev
+            return
+        if skill.target == "self":
+            target_ids: list[str] = [state.player_id]
+        elif skill.target == "single":
+            target_ids = list(verb.target_ids[:1]) or [state.player_id]
+        else:
+            target_ids = []
+
+        def cast_emit_factory(c, s, d, v):
+            return emit_cast(s, s.player_id, skill_id, target_ids, d, rng=rng)
+        async for ev in _run_one_step_action(
+            client, state, scenario_repo, save_repo, dirty, to_front_fn,
+            player_input, verb, cast_emit_factory,
+            previous_phase_signal=previous_phase_signal,
         ):
             yield ev
         return
@@ -652,8 +673,8 @@ async def _dispatch_verb(
             ):
                 yield ev
             return
-        # Other intents (friendly/hostile/deceptive/negotiate/ask/command/pray):
-        # absorbed by narrate pre-Stage-2 uncertainty rule.
+        # friendly/hostile/deceptive: absorbed by narrate — narrate emits
+        # the affinity state_change keyed off intent's tone.
         async for ev in stream_narrate_tail(
             client, state, scenario_repo, player_input, dirty, to_front_fn,
             verb, graph=graph, previous_phase_signal=previous_phase_signal,
