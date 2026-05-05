@@ -15,6 +15,7 @@ from ..domain.memory import (
 from ..domain.state import GameState
 from ..persistence.repo import SaveRepo
 from ..rules import RULES
+from ..wire.emit import emit_error
 from .format import format_death_log
 
 ToFrontFn = Callable[[GameState], dict]
@@ -184,14 +185,6 @@ async def finalize(
     try:
         await flush(state, save_repo, dirty)
     except PersistenceFailed as e:
-        from .error_phrases import humanize_runtime_error
-
-        yield {
-            "type": "error",
-            "data": {
-                "message": humanize_runtime_error(e),
-                "code": "PersistenceFailed",
-            },
-        }
+        yield emit_error(e)
         return
     yield {"type": "done", "data": {}}

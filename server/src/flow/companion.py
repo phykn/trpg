@@ -14,8 +14,8 @@ from ..llm_calls.classify.schema import Verb
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from ..rules import RULES
 from ..rules.dc import compute_required_roll
+from ..wire.emit import emit_error
 from .dirty import Dirty, ToFrontFn, finalize, flush, push_act
-from .error_phrases import humanize_runtime_error
 from .format import (
     format_dismiss_log,
     format_dismiss_turn_log,
@@ -92,13 +92,7 @@ async def run_recruit(
     try:
         await flush(state, save_repo, dirty)
     except PersistenceFailed as e:
-        yield {
-            "type": "error",
-            "data": {
-                "message": humanize_runtime_error(e),
-                "code": "PersistenceFailed",
-            },
-        }
+        yield emit_error(e)
         return
     yield {
         "type": "pending_check",

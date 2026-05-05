@@ -57,34 +57,6 @@ def humanize_engine_error(err: Exception) -> str:
     return "지금은 그 행동이 통하지 않습니다"
 
 
-# Exception class name → Korean message shown to the player. Keyed by
-# `type(exc).__name__` so the table matches what `api/sse.py` already puts in
-# the SSE `code` field. Raw `str(exc)` (English stack noise, upstream API
-# JSON, traceback fragments) is never shipped to the client — it goes to
-# server logs only. Add a row here when a new exception class becomes
-# reachable from a turn/intro/roll stream; the generic fallback is intentionally
-# vague so unknown failures don't leak internals.
-_RUNTIME_PHRASES: dict[str, str] = {
-    "InvariantViolation": "세계의 규칙이 어긋났습니다. 다시 시도해 주세요.",
-    "JSONDecodeError": "행동을 해석하지 못했습니다. 다시 시도해 주세요.",
-    "JudgeMalformed": "행동을 해석하지 못했습니다. 다시 시도해 주세요.",
-    "LLMUnavailable": "이야기꾼이 잠시 길을 잃었습니다. 다시 시도해 주세요.",
-    "NarrateMalformed": "이야기 한 줄을 마저 잇지 못했습니다. 다시 시도해 주세요.",
-    "NarrateUnavailable": "이야기꾼이 잠시 길을 잃었습니다. 다시 시도해 주세요.",
-    "PersistenceFailed": "저장 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.",
-}
-
-_GENERIC_RUNTIME_PHRASE = "지금은 응답할 수 없습니다. 잠시 후 다시 시도해 주세요."
-
-
-def humanize_runtime_error(exc: Exception) -> str:
-    """Map an unhandled/SSE-stream exception class to a player-safe Korean
-    one-liner. Use at every `{"type":"error", "data":...}` emit site so the
-    client never sees raw English / upstream API payloads. Caller still logs
-    the original exception for debugging."""
-    return _RUNTIME_PHRASES.get(type(exc).__name__, _GENERIC_RUNTIME_PHRASE)
-
-
 # Receipt actions skip narrate by default. These error substrings escalate a
 # failure back to a narrated reaction — they're moments worth GM prose because
 # the player misjudged a social/threshold gate, not a typo-shaped slip.

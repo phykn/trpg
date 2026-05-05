@@ -31,3 +31,19 @@ def test_emit_error_generic_fallback():
 def test_emit_error_serializable():
     ev = emit_error(LLMUnavailable("x"))
     json.dumps(ev, ensure_ascii=False)
+
+
+def test_emit_error_strips_raw_message():
+    raw = "Error code: 500 - [{'error': {'code': 500, 'message': 'Internal'}}]"
+    ev = emit_error(LLMUnavailable(raw))
+    text = ev["data"]["message"]
+    assert "500" not in text
+    assert "Error" not in text
+    assert "Internal" not in text
+
+
+def test_emit_error_jsondecodeerror_maps_via_catalog():
+    err = json.JSONDecodeError("empty answer", "", 0)
+    ev = emit_error(err)
+    assert ev["data"]["code"] == "JSONDecodeError"
+    assert ev["data"]["message"] == "행동을 해석하지 못했습니다. 다시 시도해 주세요."

@@ -23,8 +23,9 @@ from .combat_phase import (
     run_combat_player_turn,
     start_combat_and_drive_auto,
 )
+from ..wire.emit import emit_error
 from .buff_tick import tick_turn_buffs
-from .error_phrases import humanize_runtime_error, is_dramatic_fail
+from .error_phrases import is_dramatic_fail
 from .dirty import (
     Dirty,
     ToFrontFn,
@@ -171,13 +172,7 @@ async def run_turn(
     try:
         result = await run_judge(client, state, player_input, graph=graph)
     except JudgeMalformed as e:
-        yield {
-            "type": "error",
-            "data": {
-                "message": humanize_runtime_error(e),
-                "code": "JudgeMalformed",
-            },
-        }
+        yield emit_error(e)
         return
 
     # PendingCheckTrigger → emit_roll_pending_from_trigger directly.

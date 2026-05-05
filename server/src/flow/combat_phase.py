@@ -26,6 +26,7 @@ from .combat_auto import (
     build_narrate_input,
     run_auto_combat,
 )
+from ..wire.emit import emit_error
 from .dirty import (
     Dirty,
     ToFrontFn,
@@ -35,7 +36,6 @@ from .dirty import (
     push_gm,
     push_turn_log,
 )
-from .error_phrases import humanize_runtime_error
 from .format import (
     ACTION_FORBIDDEN_IN_COMBAT_TEXT,
     INPUT_REJECTED_TEXT,
@@ -315,13 +315,7 @@ async def run_combat_player_turn(
     try:
         result = await run_judge(client, state, player_input, graph=graph)
     except JudgeMalformed as e:
-        yield {
-            "type": "error",
-            "data": {
-                "message": humanize_runtime_error(e),
-                "code": "JudgeMalformed",
-            },
-        }
+        yield emit_error(e)
         return
 
     # PendingCheckTrigger → emit_roll_pending_from_trigger directly.

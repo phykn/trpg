@@ -24,6 +24,7 @@ from ..engines.quest import check_quests
 from ..mapping.to_front import pending_check_to_front
 from ..persistence.repo import SaveRepo
 from ..rules.dc import compute_required_roll, pick_dc, social_bonus
+from ..wire.emit import emit_error
 from .dirty import (
     Dirty,
     flush,
@@ -31,7 +32,6 @@ from .dirty import (
     push_turn_log,
     register_kill,
 )
-from .error_phrases import humanize_runtime_error
 from .format import (
     format_action_fail,
     format_attack_turn_log,
@@ -413,13 +413,7 @@ async def emit_roll_pending_from_trigger(
     try:
         await flush(state, save_repo, dirty)
     except PersistenceFailed as e:
-        yield {
-            "type": "error",
-            "data": {
-                "message": humanize_runtime_error(e),
-                "code": "PersistenceFailed",
-            },
-        }
+        yield emit_error(e)
         return
     yield {
         "type": "pending_check",
