@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from ..domain.errors import PersistenceFailed
+from ..locale import render
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
 from ..mapping.to_front import pending_check_to_front
@@ -86,7 +87,7 @@ async def run_recruit(
         dc=dc,
         mod=0,
         required_roll=required_roll,
-        reason="동료 영입",
+        reason=render("log.companion.recruit_reason", "ko"),
         created_at=datetime.now(UTC).isoformat(),
     )
     try:

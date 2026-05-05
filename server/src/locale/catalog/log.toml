@@ -329,3 +329,30 @@ ko = "({description}, {duration} 턴)"
 
 [log."use.trigger"]
 ko = "({on_use})"
+
+[log."rest.ambush"]
+ko = "{actor}{은/는} 잠들기 직전 적의 습격을 받았습니다."
+
+[log."rest.default_input"]
+ko = "휴식한다"
+
+[log."rest.ambush_input"]
+ko = "잠들기 직전 적의 습격에 대비합니다"
+
+[log."action.trade_attempt"]
+ko = "거래를 시도했지만"
+
+[log."action.give_attempt"]
+ko = "양도를 시도했지만"
+
+[log."companion.recruit_reason"]
+ko = "동료 영입"
+
+[log."roll.synthetic_environment"]
+ko = "환경 굴림 후 한 박자 쉬며 적의 움직임을 살핍니다"
+
+[log."narrate.fallback"]
+ko = "잠시 정적이 흐릅니다."
+
+[log."use.item_fallback"]
+ko = "아이템"

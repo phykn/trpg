@@ -13,6 +13,7 @@ from ..domain.errors import (
     InventoryInvalid,
     PersistenceFailed,
 )
+from ..locale import render
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
@@ -276,7 +277,7 @@ async def emit_trade(
             )
     except InventoryInvalid as e:
         yield push_act(
-            state, dirty, format_action_fail(player.name, "거래를 시도했지만", e)
+            state, dirty, format_action_fail(player.name, render("log.action.trade_attempt", "ko"), e)
         )
         yield {"type": "_engine_fail", "data": {"raw_error_msg": str(e)}}
         return
@@ -314,7 +315,7 @@ async def emit_give(
         inventory_engine.transfer(src, dst, item_id, state.items)
     except InventoryInvalid as e:
         yield push_act(
-            state, dirty, format_action_fail(actor_name, "양도를 시도했지만", e)
+            state, dirty, format_action_fail(actor_name, render("log.action.give_attempt", "ko"), e)
         )
         yield {"type": "_engine_fail", "data": {"raw_error_msg": str(e)}}
         return

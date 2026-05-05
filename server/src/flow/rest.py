@@ -7,10 +7,10 @@ from collections.abc import AsyncIterator
 from ..domain.errors import RestInsufficientGold
 from ..domain.state import GameState
 from ..engines import recovery as recovery_engine
-from ..rules import RULES
+from ..locale import render
 from ..llm.client import LLMClient
-from ..locale.particles import eun_neun
 from ..persistence.repo import SaveRepo, ScenarioRepo
+from ..rules import RULES
 from . import encounter as encounter_engine
 from .buff_tick import tick_turn_buffs
 from ..llm_calls.classify.schema import Verb
@@ -22,8 +22,11 @@ from .format import format_rest_log
 from .narrate import stream_narrate_tail
 
 
+_REST_DEFAULT_INPUT = render("log.rest.default_input", "ko")
+
+
 def _rest_ambush_text(actor_name: str) -> str:
-    return f"{actor_name}{eun_neun(actor_name)} 잠들기 직전 적의 습격을 받았습니다."
+    return render("log.rest.ambush", "ko", actor=actor_name)
 
 
 async def run_rest(
@@ -34,7 +37,7 @@ async def run_rest(
     rng: random.Random | None,
     to_front_fn: ToFrontFn | None,
     client: LLMClient | None = None,
-    player_input: str = "휴식한다",
+    player_input: str = _REST_DEFAULT_INPUT,
 ) -> AsyncIterator[dict]:
     state.turn_count += 1
 
@@ -97,7 +100,7 @@ async def run_rest(
             enemy_ids,
             dirty,
             rng,
-            player_input="잠들기 직전 적의 습격에 대비합니다",
+            player_input=render("log.rest.ambush_input", "ko"),
             player_action=PlayerAction(kind="pass"),
             surprise="enemy",
             cap=1,
