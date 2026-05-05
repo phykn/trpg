@@ -1,17 +1,10 @@
-import type { Tone } from '@/components/ui';
+import type {
+  DifficultyBadge as DifficultyBadgePayload,
+  QuestPayload,
+} from '@/types/wire.gen';
 
-export type DifficultyBadge = { label: string; tone: Tone | null };
-
-export type Quest = {
-  id: string;
-  title: string;
-  giver: string;
-  difficulty: DifficultyBadge;
-  goals: string[];
-  progressLabel: string;
-  conditions: string[];
-  rewards: { gold: number; exp: number };
-  summary: string;
-  status: 'pending' | 'active' | 'completed' | 'failed';
-  actions: ('accept' | 'abandon')[];
-};
+// Wire `tone`은 5-literal subset (neutral/good/exp/accent/bad). 클라 Tone은
+// 9-literal union — 5-literal은 진부분집합이라 안전. 별도 alias로 export하지
+// 않고 직접 wire 타입을 노출.
+export type DifficultyBadge = DifficultyBadgePayload;
+export type Quest = QuestPayload;

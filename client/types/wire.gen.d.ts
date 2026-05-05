@@ -52,6 +52,19 @@ export type Hpmax1 = number;
 export type Stats1 = StatEntry[];
 export type Inventory1 = InventoryItem[];
 export type Skills1 = string[];
+export type Label2 = string;
+export type Tone = ("neutral" | "good" | "exp" | "accent" | "bad") | null;
+export type Gold1 = number;
+export type Exp1 = number;
+export type Id = string;
+export type Title = string;
+export type Summary = string;
+export type Giver = string;
+export type Goals = string[];
+export type Progresslabel = string;
+export type Conditions = string[];
+export type Status1 = "pending" | "active" | "completed" | "failed";
+export type Actions = ("accept" | "abandon")[];
 
 export interface Wire {
   [k: string]: unknown;
@@ -195,5 +208,54 @@ export interface SubjectPayload {
   equipment: Equipment;
   inventory: Inventory1;
   skills: Skills1;
+  [k: string]: unknown;
+}
+/**
+ * Difficulty visual atom for the quest panel: localized label + tone hint
+ * (the latter aligns with client `Tone` design-system literals; the 5-value
+ * subset matches mapping.labels._TIER_TONE).
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "DifficultyBadge".
+ */
+export interface DifficultyBadge {
+  label: Label2;
+  tone?: Tone;
+  [k: string]: unknown;
+}
+/**
+ * Wire view of quest rewards — gold + exp only. Domain QuestRewards also
+ * carries `items: list[str]` but the quest panel doesn't surface them today.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "QuestRewards".
+ */
+export interface QuestRewards {
+  gold: Gold1;
+  exp: Exp1;
+  [k: string]: unknown;
+}
+/**
+ * Wire shape for the `quest` slot inside the `state` payload.
+ * Field order matches mapping/to_front.to_quest's dict insertion order.
+ * `status` / `actions` are narrowed to the four/two literals to_quest can
+ * emit — domain Quest.status carries `locked`/`abandoned` too but those
+ * never reach the active-quest path.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "QuestPayload".
+ */
+export interface QuestPayload {
+  id: Id;
+  title: Title;
+  summary: Summary;
+  giver: Giver;
+  difficulty: DifficultyBadge;
+  goals: Goals;
+  progressLabel: Progresslabel;
+  conditions: Conditions;
+  rewards: QuestRewards;
+  status: Status1;
+  actions: Actions;
   [k: string]: unknown;
 }

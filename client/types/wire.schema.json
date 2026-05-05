@@ -414,6 +414,139 @@
       ],
       "title": "SubjectPayload",
       "type": "object"
+    },
+    "DifficultyBadge": {
+      "description": "Difficulty visual atom for the quest panel: localized label + tone hint\n(the latter aligns with client `Tone` design-system literals; the 5-value\nsubset matches mapping.labels._TIER_TONE).",
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "tone": {
+          "anyOf": [
+            {
+              "enum": [
+                "neutral",
+                "good",
+                "exp",
+                "accent",
+                "bad"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tone"
+        }
+      },
+      "required": [
+        "label"
+      ],
+      "title": "DifficultyBadge",
+      "type": "object"
+    },
+    "QuestRewards": {
+      "description": "Wire view of quest rewards — gold + exp only. Domain QuestRewards also\ncarries `items: list[str]` but the quest panel doesn't surface them today.",
+      "properties": {
+        "gold": {
+          "title": "Gold",
+          "type": "integer"
+        },
+        "exp": {
+          "title": "Exp",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "gold",
+        "exp"
+      ],
+      "title": "QuestRewards",
+      "type": "object"
+    },
+    "QuestPayload": {
+      "description": "Wire shape for the `quest` slot inside the `state` payload.\nField order matches mapping/to_front.to_quest's dict insertion order.\n`status` / `actions` are narrowed to the four/two literals to_quest can\nemit — domain Quest.status carries `locked`/`abandoned` too but those\nnever reach the active-quest path.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "giver": {
+          "title": "Giver",
+          "type": "string"
+        },
+        "difficulty": {
+          "$ref": "#/definitions/DifficultyBadge"
+        },
+        "goals": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Goals",
+          "type": "array"
+        },
+        "progressLabel": {
+          "title": "Progresslabel",
+          "type": "string"
+        },
+        "conditions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conditions",
+          "type": "array"
+        },
+        "rewards": {
+          "$ref": "#/definitions/QuestRewards"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "active",
+            "completed",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "actions": {
+          "items": {
+            "enum": [
+              "accept",
+              "abandon"
+            ],
+            "type": "string"
+          },
+          "title": "Actions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "summary",
+        "giver",
+        "difficulty",
+        "goals",
+        "progressLabel",
+        "conditions",
+        "rewards",
+        "status",
+        "actions"
+      ],
+      "title": "QuestPayload",
+      "type": "object"
     }
   }
 }
