@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from ..domain.state import GameState
 from ..locale import render
-from ..locale.particles import eul_reul, eun_neun, gwa_wa, i_ga
+from ..locale.particles import eul_reul, i_ga
 from ..mapping.labels import stat_label
 from .error_phrases import humanize_engine_error
 
@@ -26,76 +26,73 @@ ACTION_FORBIDDEN_IN_COMBAT_TEXT = render("log.action_forbidden_in_combat", "ko")
 
 
 def format_combat_start_turn_log(first_enemy_name: str) -> str:
-    return f"{first_enemy_name}{gwa_wa(first_enemy_name)} 전투 개시"
+    return render("log.combat_start_turn", "ko", enemy=first_enemy_name)
 
 
 def format_action_fail(actor_name: str, attempt: str, err: Exception) -> str:
     """Generic failure line: '<actor>이 <attempt> <korean error>.'"""
-    return f"{actor_name}{i_ga(actor_name)} {attempt} {humanize_engine_error(err)}."
+    return render(
+        "log.action_fail", "ko",
+        actor=actor_name, attempt=attempt, err=humanize_engine_error(err),
+    )
 
 
 def format_equip_log(actor_name: str, item_name: str) -> str:
-    return f"{actor_name}{i_ga(actor_name)} 「{item_name}」{eul_reul(item_name)} 장비했습니다."
+    return render("log.equip", "ko", actor=actor_name, item=item_name)
 
 
 def format_equip_fail(actor_name: str, item_name: str, err: Exception) -> str:
-    return format_action_fail(
-        actor_name, f"「{item_name}」{eul_reul(item_name)} 장비하려 했지만", err
-    )
+    attempt = render("log.equip_attempt", "ko", item=item_name)
+    return format_action_fail(actor_name, attempt, err)
 
 
 def format_unequip_log(actor_name: str, item_name: str) -> str:
-    return f"{actor_name}{i_ga(actor_name)} 「{item_name}」{eul_reul(item_name)} 해제했습니다."
+    return render("log.unequip", "ko", actor=actor_name, item=item_name)
 
 
 def format_unequip_fail(actor_name: str, item_name: str, err: Exception) -> str:
-    return format_action_fail(
-        actor_name, f"「{item_name}」{eul_reul(item_name)} 해제하려 했지만", err
-    )
+    attempt = render("log.unequip_attempt", "ko", item=item_name)
+    return format_action_fail(actor_name, attempt, err)
 
 
 def format_unequip_not_equipped(actor_name: str, item_name: str) -> str:
-    return f"{actor_name}{eun_neun(actor_name)} 「{item_name}」{eul_reul(item_name)} 장비하고 있지 않습니다."
+    return render("log.unequip_not_equipped", "ko", actor=actor_name, item=item_name)
 
 
 def format_rest_log(actor_name: str, cost_gold: int = 0) -> str:
-    base = (
-        f"{actor_name}{eun_neun(actor_name)} 자리를 잡고 잠을 청했습니다. "
-        f"새벽이 밝아오자 푹 쉬고 일어났습니다. HP/MP가 모두 회복됐습니다."
-    )
+    base = render("log.rest_base", "ko", actor=actor_name)
     if cost_gold > 0:
-        return f"{base} (금화 {cost_gold} 사용)"
+        return render("log.rest_with_cost", "ko", base=base, cost=cost_gold)
     return base
 
 
 def format_learn_skill_log(actor_name: str, skill_name: str) -> str:
-    return f"{actor_name}{i_ga(actor_name)} 「{skill_name}」{eul_reul(skill_name)} 익혔습니다."
+    return render("log.learn_skill", "ko", actor=actor_name, skill=skill_name)
 
 
 def format_use_fail(actor_name: str, item_name: str, err: Exception) -> str:
-    return format_action_fail(
-        actor_name, f"「{item_name}」{eul_reul(item_name)} 쓰려 했지만", err
-    )
+    attempt = render("log.use_attempt", "ko", item=item_name)
+    return format_action_fail(actor_name, attempt, err)
 
 
 def format_use_target_turn_log(item_name: str, target_name: str) -> str:
-    return f"{item_name}{eul_reul(item_name)} {target_name}에게 사용"
+    return render("log.use_target_turn", "ko", item=item_name, target=target_name)
 
 
 def format_equip_turn_log(item_name: str) -> str:
-    return f"{item_name} 착용"
+    return render("log.equip_turn", "ko", item=item_name)
 
 
 def format_unequip_turn_log(item_name: str) -> str:
-    return f"{item_name} 해제"
+    return render("log.unequip_turn", "ko", item=item_name)
 
 
 def format_use_self_turn_log(item_name: str) -> str:
-    return f"{item_name} 사용"
+    return render("log.use_self_turn", "ko", item=item_name)
 
 
 def format_trade_no_partner(actor_name: str) -> str:
-    return f"{actor_name}{i_ga(actor_name)} 거래할 상대를 찾지 못했습니다."
+    return render("log.trade_no_partner", "ko", actor=actor_name)
 
 
 def format_trade_log(
@@ -106,47 +103,49 @@ def format_trade_log(
     *,
     direction: str,
 ) -> str:
-    if direction == "buy":
-        return f"{actor_name}{i_ga(actor_name)} {npc_name}에게서 「{item_name}」{eul_reul(item_name)} {price} 금화에 샀습니다."
-    return f"{actor_name}{i_ga(actor_name)} {npc_name}에게 「{item_name}」{eul_reul(item_name)} {price} 금화에 팔았습니다."
+    key = "log.trade_buy" if direction == "buy" else "log.trade_sell"
+    return render(key, "ko", actor=actor_name, npc=npc_name, item=item_name, price=price)
 
 
 def format_trade_turn_log(npc_name: str, item_name: str, *, direction: str) -> str:
-    label = "구매" if direction == "buy" else "판매"
-    return f"{npc_name}에게 「{item_name}」 {label}"
+    key = "log.trade_turn_buy" if direction == "buy" else "log.trade_turn_sell"
+    return render(key, "ko", npc=npc_name, item=item_name)
 
 
 def format_give_no_partner(actor_name: str) -> str:
-    return f"{actor_name}{i_ga(actor_name)} 양도 상대를 찾지 못했습니다."
+    return render("log.give_no_partner", "ko", actor=actor_name)
 
 
 def format_give_log(
     src_name: str, dst_name: str, item_name: str, *, dst_is_player: bool
 ) -> str:
-    if dst_is_player:
-        return f"{src_name}에게서 {dst_name}{i_ga(dst_name)} 「{item_name}」{eul_reul(item_name)} 받았습니다."
-    return f"{src_name}{i_ga(src_name)} {dst_name}에게 「{item_name}」{eul_reul(item_name)} 건넸습니다."
+    key = "log.give_to_player" if dst_is_player else "log.give_from_player"
+    return render(key, "ko", src=src_name, dst=dst_name, item=item_name)
 
 
 def format_give_turn_log(src_name: str, dst_name: str, item_name: str) -> str:
-    return f"「{item_name}」 양도 ({src_name} → {dst_name})"
+    return render("log.give_turn", "ko", src=src_name, dst=dst_name, item=item_name)
 
 
 def format_move_no_path(actor_name: str) -> str:
-    return f"{actor_name}{i_ga(actor_name)} 그곳으로 가는 길을 찾지 못했습니다."
+    return render("log.move_no_path", "ko", actor=actor_name)
 
 
 def format_move_blocked(actor_name: str, loc_name: str, reason: str) -> str:
-    suffix = f" ({reason})" if reason else ""
-    return f"{actor_name}{i_ga(actor_name)} {loc_name}{eul_reul(loc_name)} 향했지만 닿지 못했습니다.{suffix}"
+    if reason:
+        return render(
+            "log.move_blocked_with_reason", "ko",
+            actor=actor_name, loc=loc_name, reason=reason,
+        )
+    return render("log.move_blocked", "ko", actor=actor_name, loc=loc_name)
 
 
 def format_location_enter_log(location_name: str) -> str:
-    return f"{location_name}에 도착합니다."
+    return render("log.location_enter", "ko", location=location_name)
 
 
 def format_location_enter_turn_log(location_name: str) -> str:
-    return f"{location_name} 도착"
+    return render("log.location_enter_turn", "ko", location=location_name)
 
 
 def format_quest_start_log(quest_title: str) -> str:
