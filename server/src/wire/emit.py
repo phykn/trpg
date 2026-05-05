@@ -3,7 +3,9 @@ from typing import TYPE_CHECKING, Literal
 
 from ..locale import render
 from .models import (
+    CombatBadgePayload,
     CombatEndPayload,
+    CombatEnemy,
     CombatStartPayload,
     CombatTurnPayload,
     DifficultyBadge,
@@ -499,3 +501,33 @@ def emit_combat_end(
     """SSE combat_end event."""
     payload = CombatEndPayload(outcome=outcome)
     return {"type": "combat_end", "data": payload.model_dump()}
+
+
+def _build_combat_badge_payload(state: "GameState") -> CombatBadgePayload | None:
+    """Build the wire model for the `combat` state slot. Returns None when
+    there's no active combat or turn_order is empty — same gating as
+    mapping.to_combat. Mirrors mapping.to_combat's exact derivation
+    (current actor lookup, "내 차례" vs "{name} 차례" composition,
+    enemy filtering by character existence)."""
+    cs = state.combat_state
+    if cs is None or not cs.turn_order:
+        return None
+    current_id = cs.turn_order[cs.current_turn]
+    current = state.characters.get(current_id)
+    actor_name = current.name if current else current_id
+    turn_label = "내 차례" if current_id == state.player_id else f"{actor_name} 차례"
+
+    enemies: list[CombatEnemy] = []
+    for eid in cs.enemy_ids:
+        e = state.characters.get(eid)
+        if e is None:
+            continue
+        enemies.append(CombatEnemy(
+            name=e.name, hp=e.hp, hp_max=e.max_hp, alive=e.alive,
+        ))
+
+    return CombatBadgePayload(
+        round=cs.round,
+        turn_label=turn_label,
+        enemies=enemies,
+    )

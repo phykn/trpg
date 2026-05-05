@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 
 from .models.combat import CombatEndPayload, CombatStartPayload, CombatTurnPayload
+from .models.combat_badge import CombatBadgePayload
 from .models.done import DonePayload
 from .models.error import ErrorPayload
 from .models.hero import HeroPayload
@@ -30,6 +31,7 @@ _MODELS = [
     CombatStartPayload,
     CombatTurnPayload,
     CombatEndPayload,
+    CombatBadgePayload,
 ]
 
 

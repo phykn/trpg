@@ -1,4 +1,5 @@
 from .combat import CombatEndPayload, CombatStartPayload, CombatTurnPayload
+from .combat_badge import CombatBadgePayload, CombatEnemy
 from .done import DonePayload
 from .error import ErrorPayload
 from .hero import (
@@ -33,7 +34,9 @@ from .suggestions import SuggestionsPayload
 __all__ = [
     "ActLogEntry",
     "BonusItem",
+    "CombatBadgePayload",
     "CombatEndPayload",
+    "CombatEnemy",
     "CombatStartPayload",
     "CombatTurnPayload",
     "DifficultyBadge",
