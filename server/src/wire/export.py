@@ -2,14 +2,17 @@ import json
 import re
 from pathlib import Path
 
+from .models.done import DonePayload
 from .models.error import ErrorPayload
 from .models.hero import HeroPayload
 from .models.judge import JudgePayload
 from .models.log_entry import LogEntryPayload
+from .models.narrative_delta import NarrativeDeltaPayload
 from .models.pending_check import PendingCheckPayload
 from .models.place import PlacePayload
 from .models.quest import QuestPayload
 from .models.subject import SubjectPayload
+from .models.suggestions import SuggestionsPayload
 
 _MODELS = [
     ErrorPayload,
@@ -20,6 +23,9 @@ _MODELS = [
     PlacePayload,
     JudgePayload,
     LogEntryPayload,
+    NarrativeDeltaPayload,
+    SuggestionsPayload,
+    DonePayload,
 ]
 
 

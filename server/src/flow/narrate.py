@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 
 from ..locale import render
 from ..llm_calls.classify.schema import Verb
-from ..wire.emit import emit_error, emit_log_entry
+from ..wire.emit import emit_error, emit_log_entry, emit_narrative_delta
 from ..llm_calls.narrate import (
     NarrateInput,
     NarrateOutput,
@@ -186,7 +186,7 @@ async def consume_narrate(
     final: NarrativeFinal | None = None
     async for item in stream:
         if isinstance(item, NarrativeDelta):
-            yield {"type": "narrative_delta", "data": {"text": item.text}}
+            yield emit_narrative_delta(item.text)
         else:
             final = item
 
@@ -199,7 +199,7 @@ async def consume_narrate(
     body = final.body.strip()
     if not body:
         body = render("log.narrate.fallback", "ko")
-        yield {"type": "narrative_delta", "data": {"text": body}}
+        yield emit_narrative_delta(body)
 
     # Redact dead-NPC direct quotes before persisting — without this a single LLM slip lands in recent_dialogue and compounds across turns.
     body = redact_dead_quotes(body, _dead_names_in_scope(state, graph))

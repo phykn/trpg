@@ -4,7 +4,14 @@ import type { LogEntry } from '@/features/log';
 import type { Quest } from '@/features/quest';
 import type { Place, StoryGraphModel } from '@/features/story-graph';
 import type { Subject } from '@/features/subject';
-import type { ErrorPayload, JudgePayload, PendingCheckPayload } from './wire.gen';
+import type {
+  DonePayload,
+  ErrorPayload,
+  JudgePayload,
+  NarrativeDeltaPayload,
+  PendingCheckPayload,
+  SuggestionsPayload,
+} from './wire.gen';
 
 // Re-export the auto-generated wire shape under the historical client name.
 // Caller code (handleStreamEvent, useGame, RollPrompt) keeps using `PendingCheck`.
@@ -75,14 +82,14 @@ export type JudgeData = JudgePayload;
 export type StreamEvent =
   | { type: 'judge'; data: JudgeData }
   | { type: 'pending_check'; data: PendingCheck }
-  | { type: 'narrative_delta'; data: { text: string } }
-  | { type: 'suggestions'; data: { items: string[] } }
+  | { type: 'narrative_delta'; data: NarrativeDeltaPayload }
+  | { type: 'suggestions'; data: SuggestionsPayload }
   | { type: 'log_entry'; data: LogEntry }
   | { type: 'state'; data: FrontState }
   | { type: 'combat_start'; data: unknown }
   | { type: 'combat_turn'; data: unknown }
   | { type: 'combat_end'; data: unknown }
-  | { type: 'done'; data: Record<string, never> }
+  | { type: 'done'; data: DonePayload }
   | { type: 'error'; data: ErrorPayload };
 
 export type StatKey = 'STR' | 'DEX' | 'CON' | 'INT' | 'WIS' | 'CHA';

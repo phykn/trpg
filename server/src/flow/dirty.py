@@ -15,7 +15,7 @@ from ..domain.memory import (
 from ..domain.state import GameState
 from ..persistence.repo import SaveRepo
 from ..rules import RULES
-from ..wire.emit import emit_error, emit_log_entry
+from ..wire.emit import emit_done, emit_error, emit_log_entry, emit_suggestions
 from .format import format_death_log
 
 ToFrontFn = Callable[[GameState], dict]
@@ -181,10 +181,10 @@ async def finalize(
         items = (
             dirty.narrate_suggestions if dirty.narrate_suggestions is not None else []
         )
-        yield {"type": "suggestions", "data": {"items": items}}
+        yield emit_suggestions(items)
     try:
         await flush(state, save_repo, dirty)
     except PersistenceFailed as e:
         yield emit_error(e)
         return
-    yield {"type": "done", "data": {}}
+    yield emit_done()
