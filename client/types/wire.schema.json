@@ -547,6 +547,164 @@
       ],
       "title": "QuestPayload",
       "type": "object"
+    },
+    "PlaceSurrounding": {
+      "description": "Adjacent navigable location, surfaced in the place panel.\n`difficulty` is the localized tier label (already rendered) or None\nwhen the connection has no tier requirement.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "blurb": {
+          "title": "Blurb",
+          "type": "string"
+        },
+        "difficulty": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Difficulty"
+        },
+        "risk": {
+          "$ref": "#/definitions/RiskBadge"
+        }
+      },
+      "required": [
+        "name",
+        "blurb",
+        "risk"
+      ],
+      "title": "PlaceSurrounding",
+      "type": "object"
+    },
+    "PlaceTarget": {
+      "description": "Other inhabitants in the same location, visible to the player.\n`blurb` is appearance-or-description for living NPCs, `\"죽음\"` for the dead.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "level": {
+          "title": "Level",
+          "type": "integer"
+        },
+        "raceJob": {
+          "title": "Racejob",
+          "type": "string"
+        },
+        "gender": {
+          "title": "Gender",
+          "type": "string"
+        },
+        "blurb": {
+          "title": "Blurb",
+          "type": "string"
+        },
+        "trust": {
+          "title": "Trust",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "level",
+        "raceJob",
+        "gender",
+        "blurb",
+        "trust"
+      ],
+      "title": "PlaceTarget",
+      "type": "object"
+    },
+    "RiskBadge": {
+      "description": "Sleep-risk visual atom: localized label + tone hint. Tone is the\n3-literal subset (`good`/`neutral`/`bad`) that mapping.labels._RISK_TONES\nactually emits — domain `EncounterRisk` is a closed 3-value Literal so\nno fallback default ever fires. Sub-set of client `Tone` (9-literal),\nso client assignment is safe.",
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "tone": {
+          "enum": [
+            "good",
+            "neutral",
+            "bad"
+          ],
+          "title": "Tone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "tone"
+      ],
+      "title": "RiskBadge",
+      "type": "object"
+    },
+    "PlacePayload": {
+      "description": "Wire shape for the `place` slot inside the `state` payload.\nField order matches mapping/to_front.to_place's dict insertion order.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "dayPhase": {
+          "title": "Dayphase",
+          "type": "string"
+        },
+        "weather": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Weather",
+          "type": "array"
+        },
+        "features": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Features",
+          "type": "array"
+        },
+        "surroundings": {
+          "items": {
+            "$ref": "#/definitions/PlaceSurrounding"
+          },
+          "title": "Surroundings",
+          "type": "array"
+        },
+        "targets": {
+          "items": {
+            "$ref": "#/definitions/PlaceTarget"
+          },
+          "title": "Targets",
+          "type": "array"
+        },
+        "risk": {
+          "$ref": "#/definitions/RiskBadge"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "dayPhase",
+        "weather",
+        "features",
+        "surroundings",
+        "targets",
+        "risk"
+      ],
+      "title": "PlacePayload",
+      "type": "object"
     }
   }
 }

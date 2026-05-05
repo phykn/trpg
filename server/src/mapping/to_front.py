@@ -3,19 +3,10 @@ client renders. Korean dates, durations, composed strings, and conditional
 labels are all built here. Story graph projection lives in
 `story_graph.py`; shared label helpers live in `labels.py`."""
 
-from ..domain.clock import day_phase
-from ..domain.entities import Location
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
-from ..locale import render
 from ..ontology.graph import GameGraph
-from ..ontology.queries import connections_of, inhabitants_of
-from .labels import (
-    gender_label,
-    race_job_label,
-    risk_payload,
-    stat_label,
-)
+from .labels import stat_label
 from .story_graph import to_story_graph
 
 
@@ -61,56 +52,13 @@ def to_quest(state: GameState, graph: GameGraph | None = None) -> dict | None:
 
 
 def to_place(state: GameState, graph: GameGraph | None = None) -> dict | None:
+    """Wire shape comes from `_build_place_payload`; this just unwraps to a
+    plain dict (or None) for state-payload embedding."""
+    from ..wire.emit import _build_place_payload  # local import avoids layer cycle
     if graph is None:
         graph = state.graph()
-    p = state.characters[state.player_id]
-    player_loc_id = p.location_id
-    if player_loc_id is None or player_loc_id not in state.locations:
-        return None
-    loc: Location = state.locations[player_loc_id]
-    surroundings = []
-    for edge in connections_of(graph, player_loc_id):
-        target_id = edge.to_id
-        target = state.locations.get(target_id)
-        if target is None:
-            continue
-        attrs = edge.attrs or {}
-        surroundings.append(
-            {
-                "name": target.name,
-                "blurb": target.description,
-                "difficulty": render(f"tier.{d}", "ko") if (d := attrs.get("difficulty")) else None,
-                "risk": risk_payload(target.sleep_risk),
-            }
-        )
-    targets = []
-    for cid in inhabitants_of(graph, player_loc_id):
-        if cid == state.player_id:
-            continue
-        c = state.characters.get(cid)
-        if c is None:
-            continue
-        blurb = "죽음" if not c.alive else (c.appearance or c.description)
-        targets.append(
-            {
-                "name": c.name,
-                "level": c.level,
-                "raceJob": race_job_label(state, graph, c),
-                "gender": gender_label(c),
-                "blurb": blurb,
-                "trust": c.relations.get(state.player_id, 0),
-            }
-        )
-    return {
-        "name": loc.name,
-        "description": loc.description,
-        "dayPhase": render(f"phase.{day_phase(state.turn_count)}", "ko"),
-        "weather": list(loc.weather),
-        "features": list(loc.tags),
-        "surroundings": surroundings,
-        "targets": targets,
-        "risk": risk_payload(loc.sleep_risk),
-    }
+    payload = _build_place_payload(state, graph)
+    return payload.model_dump() if payload else None
 
 
 def to_combat(state: GameState) -> dict | None:

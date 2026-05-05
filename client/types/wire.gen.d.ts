@@ -65,6 +65,24 @@ export type Progresslabel = string;
 export type Conditions = string[];
 export type Status1 = "pending" | "active" | "completed" | "failed";
 export type Actions = ("accept" | "abandon")[];
+export type Name4 = string;
+export type Blurb = string;
+export type Difficulty = string | null;
+export type Label3 = string;
+export type Tone1 = "good" | "neutral" | "bad";
+export type Name5 = string;
+export type Level2 = number;
+export type Racejob2 = string;
+export type Gender2 = string;
+export type Blurb1 = string;
+export type Trust1 = number;
+export type Name6 = string;
+export type Description = string;
+export type Dayphase = string;
+export type Weather = string[];
+export type Features = string[];
+export type Surroundings = PlaceSurrounding[];
+export type Targets = PlaceTarget[];
 
 export interface Wire {
   [k: string]: unknown;
@@ -257,5 +275,69 @@ export interface QuestPayload {
   rewards: QuestRewards;
   status: Status1;
   actions: Actions;
+  [k: string]: unknown;
+}
+/**
+ * Adjacent navigable location, surfaced in the place panel.
+ * `difficulty` is the localized tier label (already rendered) or None
+ * when the connection has no tier requirement.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "PlaceSurrounding".
+ */
+export interface PlaceSurrounding {
+  name: Name4;
+  blurb: Blurb;
+  difficulty?: Difficulty;
+  risk: RiskBadge;
+  [k: string]: unknown;
+}
+/**
+ * Sleep-risk visual atom: localized label + tone hint. Tone is the
+ * 3-literal subset (`good`/`neutral`/`bad`) that mapping.labels._RISK_TONES
+ * actually emits — domain `EncounterRisk` is a closed 3-value Literal so
+ * no fallback default ever fires. Sub-set of client `Tone` (9-literal),
+ * so client assignment is safe.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "RiskBadge".
+ */
+export interface RiskBadge {
+  label: Label3;
+  tone: Tone1;
+  [k: string]: unknown;
+}
+/**
+ * Other inhabitants in the same location, visible to the player.
+ * `blurb` is appearance-or-description for living NPCs, `"죽음"` for the dead.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "PlaceTarget".
+ */
+export interface PlaceTarget {
+  name: Name5;
+  level: Level2;
+  raceJob: Racejob2;
+  gender: Gender2;
+  blurb: Blurb1;
+  trust: Trust1;
+  [k: string]: unknown;
+}
+/**
+ * Wire shape for the `place` slot inside the `state` payload.
+ * Field order matches mapping/to_front.to_place's dict insertion order.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "PlacePayload".
+ */
+export interface PlacePayload {
+  name: Name6;
+  description: Description;
+  dayPhase: Dayphase;
+  weather: Weather;
+  features: Features;
+  surroundings: Surroundings;
+  targets: Targets;
+  risk: RiskBadge;
   [k: string]: unknown;
 }
