@@ -4,6 +4,7 @@ import type { LogEntry } from '@/features/log';
 import type { Quest } from '@/features/quest';
 import type { Place, StoryGraphModel } from '@/features/story-graph';
 import type { Subject } from '@/features/subject';
+import type { ErrorPayload } from './wire.gen';
 
 export type PendingCheck = {
   kind: 'stat' | 'recruit';
@@ -96,7 +97,7 @@ export type StreamEvent =
   | { type: 'combat_turn'; data: unknown }
   | { type: 'combat_end'; data: unknown }
   | { type: 'done'; data: Record<string, never> }
-  | { type: 'error'; data: { message: string; code: string } };
+  | { type: 'error'; data: ErrorPayload };
 
 export type StatKey = 'STR' | 'DEX' | 'CON' | 'INT' | 'WIS' | 'CHA';
 

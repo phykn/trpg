@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 const SRC = path.resolve(__dirname, "../types/wire.schema.json");
-const OUT = path.resolve(__dirname, "../types/wire.d.ts");
+const OUT = path.resolve(__dirname, "../types/wire.gen.d.ts");
 
 compileFromFile(SRC, {
   bannerComment:
