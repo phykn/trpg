@@ -1,4 +1,4 @@
-from src.rules import RULES
+from src.game.rules import RULES
 
 
 def test_companions_defaults():

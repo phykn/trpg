@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from ..domain.types import StatKey
+from ..game.domain.types import StatKey
 from ..persistence.init import PlayerInput
 
 

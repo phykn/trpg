@@ -6,7 +6,7 @@ from pydantic import BaseModel
 # Verb / RefuseReason / JudgeOutput live in domain/verb.py to break import cycle
 # with domain/memory.py (PendingCheck carries Verb). Re-exported here so call sites
 # can import from either location.
-from ....domain.verb import (  # noqa: F401
+from ....game.domain.verb import (  # noqa: F401
     JudgeOutput,
     RefuseCategory,
     RefuseReason,

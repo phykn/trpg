@@ -1,7 +1,7 @@
 import tempfile
 from pathlib import Path
 
-from src.domain.entities import (
+from src.game.domain.entities import (
     Chapter,
     Character,
     Connection,
@@ -9,7 +9,7 @@ from src.domain.entities import (
     Quest,
     Stats,
 )
-from src.domain.memory import DialoguePair, TurnLogEntry
+from src.game.domain.memory import DialoguePair, TurnLogEntry
 from src.llm.context import (
     build_history_layer,
     build_session_layer,
@@ -27,7 +27,7 @@ def test_surroundings_includes_player_and_filters_dead_or_far(fresh_state):
         connections=[Connection(target_id="gate_01", difficulty="hard")],
     )
     fresh_state.locations["gate_01"] = Location(id="gate_01", name="성문")
-    from src.domain.entities import Race
+    from src.game.domain.entities import Race
 
     fresh_state.races["human"] = Race(id="human", name="인간", description="")
     fresh_state.characters["player_01"] = Character(
@@ -97,7 +97,7 @@ def test_entities_carry_role_tags(fresh_state):
     with them. Without this the LLM has no positive signal that an NPC is
     *not* trade-eligible (the existing `merchants` slot only carries the
     positives — silence isn't a signal). Verifies merchant + quest_giver."""
-    from src.domain.entities import Item, Quest, QuestRewards
+    from src.game.domain.entities import Item, Quest, QuestRewards
 
     fresh_state.locations["plaza_01"] = Location(id="plaza_01", name="광장")
     fresh_state.items["bread"] = Item(id="bread", name="빵", price=2)

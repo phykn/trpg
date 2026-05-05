@@ -18,7 +18,7 @@ User-facing setup (env layout, routes, table schema) is in [README.md](./README.
 # from repo root
 .venv/bin/python -m pytest -q                # unit (live skipped)
 RUN_LIVE=1 .venv/bin/python -m pytest -q     # add live tests; needs reachable LLM at BASE_URL
-.venv/bin/python -m pytest server/tests/flow/test_turn.py::test_X   # single test
+.venv/bin/python -m pytest server/tests/game/flow/test_turn.py::test_X   # single test
 .venv/bin/ruff check server/                 # lint
 bash server/scripts/check_relational_ssot.sh # graph-SSOT guard (CI-equivalent)
 
@@ -32,32 +32,32 @@ bash server/scripts/check_relational_ssot.sh # graph-SSOT guard (CI-equivalent)
 ### Layer rule
 
 ```
-api → flow → llm.calls/engines → llm/ontology/wire → persistence → domain/rules
+api → game.flow → llm.calls/game.engines → llm/game.ontology/wire → persistence → game.domain/game.rules
 ```
 
 Upper depends on lower, never the reverse. Concretely:
 
-- `domain/` + `rules/` — pure data shapes and tunable knobs. No imports outside themselves.
-- `engines/` — pure game logic (combat math, apply state_changes, growth, inventory, skill, quest, recovery, invariants). No LLM, no I/O.
+- `game/domain/` + `game/rules/` — pure data shapes and tunable knobs. No imports outside themselves.
+- `game/engines/` — pure game logic (combat math, apply state_changes, growth, inventory, skill, quest, recovery, invariants). No LLM, no I/O.
 - `llm/calls/` — LLM call modules (classify, narrate, combat_narrate, summon, recommend) under the `llm/` package. Each module dir = `prompt.md` + `schema.py` + `runner.py` (+ `semantics.py` where needed). `llm/calls/_runner.py` is the shared 5-attempt self-correction loop. `llm/calls/_kernel.md` carries universal rules (Korean output, ID hygiene, world vocabulary) prepended to every prompt at boot via `load_prompt()`.
-- `ontology/` — derived relational view over `GameState`. **The single source of truth for relations.**
+- `game/ontology/` — derived relational view over `GameState`. **The single source of truth for relations.**
 - `llm/context/` — prompt input builders under the `llm/` package (surroundings for judge, layered context for narrate).
 - `persistence/` — `SaveRepo` / `ScenarioRepo` Protocols (all-async) + Supabase and LocalFs adapters.
 - `wire/` — server↔client interface. `wire/models/` Pydantic payloads (single source of typed shapes; codegen → client `wire.gen.d.ts`), `wire/emit.py` SSE event builders + state slot helpers, `wire/to_front.py` GameState → flat dict the client renders, `wire/labels.py` UI label catalog wrappers + badge combiners, `wire/story_graph.py` reachable-edges shaping. All Korean composed strings end here.
-- `flow/` — per-turn orchestration. `turn.py` / `roll.py` / `intro.py` are entrypoints (each yields `AsyncIterator[dict]` of SSE events).
+- `game/flow/` — per-turn orchestration. `turn.py` / `roll.py` / `intro.py` are entrypoints (each yields `AsyncIterator[dict]` of SSE events).
 - `api/` — thin FastAPI adapter. Glue only, no business logic.
 
 ### Relational SSOT — graph or entity?
 
-`ontology/graph.py` is the single source of truth for relations. Inside `flow/`, `llm/context/`, `wire/`:
+`game/ontology/graph.py` is the single source of truth for relations. Inside `game/flow/`, `llm/context/`, `wire/`:
 
-- **Asking who-relates-to-whom** must go through `GameGraph` — never via `state.characters.items()` fullscans, and never via direct relation fields (`char.location_id`, `char.inventory_ids`, `char.equipment.weapon`, `char.racial_skill_ids`, `char.learned_skill_ids`, `char.race_id`, `char.companions`, `quest.giver_id`, `quest.triggers[*].target_id`, `quest.rewards.items`, `loc.connections`, `loc.item_ids`, `chapter.quest_ids`). Prefer named helpers in `ontology/queries.py` (`inhabitants_of`, `inventory_of`, `equipment_of`, `connections_of`, `race_of`, `quests_given_by`, …); fall back to `graph.get_edges(...)` only when no helper fits.
+- **Asking who-relates-to-whom** must go through `GameGraph` — never via `state.characters.items()` fullscans, and never via direct relation fields (`char.location_id`, `char.inventory_ids`, `char.equipment.weapon`, `char.racial_skill_ids`, `char.learned_skill_ids`, `char.race_id`, `char.companions`, `quest.giver_id`, `quest.triggers[*].target_id`, `quest.rewards.items`, `loc.connections`, `loc.item_ids`, `chapter.quest_ids`). Prefer named helpers in `game/ontology/queries.py` (`inhabitants_of`, `inventory_of`, `equipment_of`, `connections_of`, `race_of`, `quests_given_by`, …); fall back to `graph.get_edges(...)` only when no helper fits.
 - **Asking the value of an entity attribute** (HP, MP, stats, level, alive, disposition, mood, name, gender, status, memories, quest.status, quest.title) is fine via direct read.
-- **Writing** stays on entities — `engines/apply.py`, `engines/combat.py` mutate fields. After a mutation that touches a relation field, the caller in flow calls `state.invalidate_graph()`; the next `state.graph()` rebuilds.
+- **Writing** stays on entities — `game/engines/apply.py`, `game/engines/combat.py` mutate fields. After a mutation that touches a relation field, the caller in flow calls `state.invalidate_graph()`; the next `state.graph()` rebuilds.
 - **Graph caching:** `state.graph()` returns a lazily-built `GameGraph` cached on the state via `PrivateAttr` (does not round-trip through `model_dump_json`; `load_game` starts cold). Read paths just call `state.graph()`. Write paths in flow that touch relation fields must `state.invalidate_graph()` before re-reading or downstream consumers see stale edges.
-- **Exceptions** that may read relation fields directly: `persistence/`, `domain/`, `engines/apply.py`, pure numeric engines (combat damage math, recovery, dc), and `ontology/graph.py` itself.
+- **Exceptions** that may read relation fields directly: `persistence/`, `game/domain/`, `game/engines/apply.py`, pure numeric engines (combat damage math, recovery, dc), and `game/ontology/graph.py` itself.
 
-`scripts/check_relational_ssot.sh` enforces this by greppable patterns (list-shaped relation fields and `.characters.items()/.values()` iterations in `flow|llm/context|wire`). Whitelist a justified single line with a trailing `# ssot-allow: <reason>` comment.
+`scripts/check_relational_ssot.sh` enforces this by greppable patterns (list-shaped relation fields and `.characters.items()/.values()` iterations in `game/flow|llm/context|wire`). Whitelist a justified single line with a trailing `# ssot-allow: <reason>` comment.
 
 ### Persistence
 
@@ -75,7 +75,7 @@ All four child tables FK → `games(game_id) ON DELETE CASCADE`. RLS enabled wit
 
 **Per-turn flush order:** entity upserts + jsonl appends → `games.meta` last. A crash mid-flush leaves entity/jsonl committed and only meta stale, recoverable on next reload via `next_log_id` self-heal in `load_game`.
 
-`SupabaseStorageScenarioRepo` caches `world.md` per profile (process-lifetime; restart to reload) and lazily materializes `local_profile_path` to a tempdir so `engines/invariants.Scenario.from_dir` can walk a real fs tree. `read_world_md(missing_ok=True)` does **not** cache empty results — a strict caller after a missing-ok caller will still raise.
+`SupabaseStorageScenarioRepo` caches `world.md` per profile (process-lifetime; restart to reload) and lazily materializes `local_profile_path` to a tempdir so `game/engines/invariants.Scenario.from_dir` can walk a real fs tree. `read_world_md(missing_ok=True)` does **not** cache empty results — a strict caller after a missing-ok caller will still raise.
 
 `game_id` shape: `game_YYMMDD_HHMMSS_<6hex>` (UTC + `secrets.token_hex(3)`) so concurrent inits across isolates can't collide.
 
@@ -97,7 +97,7 @@ Each agent runs a self-correction loop with `retries=5`. On `ValidationError` or
 
 ### state_changes
 
-Four kinds only: `set / move / move_item / affinity`. Each has its own permission matrix in `engines/apply.py` (single source: `rules/permissions.py`, shared with `llm/calls/narrate/body/runner.py` and `llm/calls/narrate/extract/runner.py` so the prompt and engine use the same frozenset). Forbidden `set` fields are silently dropped per change; the rest of the batch still applies.
+Four kinds only: `set / move / move_item / affinity`. Each has its own permission matrix in `game/engines/apply.py` (single source: `game/rules/permissions.py`, shared with `llm/calls/narrate/body/runner.py` and `llm/calls/narrate/extract/runner.py` so the prompt and engine use the same frozenset). Forbidden `set` fields are silently dropped per change; the rest of the batch still applies.
 
 ### Affinity
 
@@ -113,7 +113,7 @@ Trade gating: `_merchants_payload` filters out NPCs whose `disposition.aggressiv
 
 ### Time
 
-There is no minute/hour clock. `state.turn_count` is the sole time variable; `domain/clock.py:day_phase` derives one of `새벽 / 오전 / 오후 / 밤` from it (4 phases × `RULES.time.phase_turns = 10` turns each = 40-turn day cycle). Sleep recovery (`engines/recovery.py`) jumps `turn_count` to the next 새벽 boundary via `next_dawn_turn`. The narrate prompt sees the current phase only — no absolute date or hour exists.
+There is no minute/hour clock. `state.turn_count` is the sole time variable; `game/domain/clock.py:day_phase` derives one of `새벽 / 오전 / 오후 / 밤` from it (4 phases × `RULES.time.phase_turns = 10` turns each = 40-turn day cycle). Sleep recovery (`game/engines/recovery.py`) jumps `turn_count` to the next 새벽 boundary via `next_dawn_turn`. The narrate prompt sees the current phase only — no absolute date or hour exists.
 
 ### SSE event shape
 
@@ -131,16 +131,16 @@ There is no minute/hour clock. `state.turn_count` is the sole time variable; `do
 - Stat keys are ASCII abbreviations: `STR / DEX / CON / INT / WIS / CHA`. Judge's `stat` enum uses the same keys.
 - Tiers are seven ASCII identifiers: `very_easy / easy / normal / hard / very_hard / legend / myth`. Korean display labels live in `src/locale/catalog/tier.toml`, accessed via `render(f"tier.{value}", "ko")`.
 - Internal grade is five-way (`critical_success / success / partial_success / failure / critical_failure`). Client's `RollLogEntry.result` collapses to `success | partial | fail`.
-- All player-facing Korean — narrate / combat_narrate bodies, the deterministic `잠시 정적이 흐릅니다` fallback in `flow/narrate.py`, every engine-side log line built in `flow/format.py` · `flow/error_phrases.py` · `flow/actions.py` · `flow/combat_phase.py` · `flow/turn.py` · `flow/roll.py` · `wire/to_front.py` — uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings.
+- All player-facing Korean — narrate / combat_narrate bodies, the deterministic `잠시 정적이 흐릅니다` fallback in `game/flow/narrate.py`, every engine-side log line built in `game/flow/format.py` · `game/flow/error_phrases.py` · `game/flow/actions.py` · `game/flow/combat_phase.py` · `game/flow/turn.py` · `game/flow/roll.py` · `wire/to_front.py` — uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings.
 - Canonical user-facing term for skills is **기술**. The classify prompt accepts `스킬` as a synonym from player input, but every other prompt and engine string says `기술`. Code identifiers and the `skills/` entity directory keep the English `skill`.
 
 ## Error hierarchy
 
-`DomainError` (in `domain/errors.py`) splits two ways:
+`DomainError` (in `game/domain/errors.py`) splits two ways:
 
 **Session lifecycle (HTTP/SSE error mapping):** `PendingCheckActive`, `PendingCheckExpected`, `JudgeMalformed`, `LLMUnavailable`, `PersistenceFailed`, `ProfileNotFound` (HTTP 422), `RaceNotFound` (422), `ProfileMalformed` (422).
 
-**Action validation (absorbed into in-game GM log, no HTTP impact):** `LevelUpInvalid`, `InventoryInvalid`, `SkillInvalid`. `flow/actions.py` catches and runs through `flow/error_phrases.py:humanize_engine_error` for a Korean one-liner GM log entry. Turn ends normally.
+**Action validation (absorbed into in-game GM log, no HTTP impact):** `LevelUpInvalid`, `InventoryInvalid`, `SkillInvalid`. `game/flow/actions.py` catches and runs through `game/flow/error_phrases.py:humanize_engine_error` for a Korean one-liner GM log entry. Turn ends normally.
 
 Pydantic 422 (request-shape) and HTTP 404 (`game_id` not found) go through FastAPI's defaults — they are not `DomainError`.
 

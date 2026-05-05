@@ -1,9 +1,9 @@
 """NPC entries in surroundings.entities carry gender/race/role; state_tags is gone."""
 
 from src.llm.context.surroundings import build_surroundings
-from src.domain.entities import Character, Location, Race, Stats
-from src.domain.state import GameState
-from src.rules import RULES
+from src.game.domain.entities import Character, Location, Race, Stats
+from src.game.domain.state import GameState
+from src.game.rules import RULES
 
 
 def _make_state() -> GameState:

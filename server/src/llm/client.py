@@ -10,7 +10,7 @@ from typing import Literal, NamedTuple
 
 from openai import AsyncOpenAI
 
-from ..rules.config import RULES
+from ..game.rules.config import RULES
 from . import gemini, llama_cpp
 
 # Logs land under `<log_dir>/<session_id>/<agent>/`; outer callers set this and inner ones can defer.

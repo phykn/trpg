@@ -4,12 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from src.domain.entities import Character, Stats
-from src.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
-from src.domain.errors import PersistenceFailed, ProfileNotFound, RaceNotFound
+from src.game.domain.entities import Character, Stats
+from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
+from src.game.domain.errors import PersistenceFailed, ProfileNotFound, RaceNotFound
 from src.persistence.init import PlayerInput, init_game
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-from src.domain.state import GameState
+from src.game.domain.state import GameState
 from src.persistence.store import (
     append_dialogue_entries,
     append_history_entries,
@@ -100,7 +100,7 @@ async def test_combat_state_survives_meta_round_trip(fresh_state, tmp_data):
     # Regression: meta.json used to skip combat_state, so each /turn request
     # reloaded as combat-cleared and the engine restarted the fight every turn,
     # never letting the player land more than the opening hit.
-    from src.domain.state import CombatState
+    from src.game.domain.state import CombatState
 
     fresh_state.combat_state = CombatState(
         round=2,
@@ -121,7 +121,7 @@ async def test_meta_json_on_disk_includes_per_turn_fields(fresh_state, tmp_data)
     # The round-trip test above passes even if save and load are jointly
     # buggy (both omit a field). This one reads the raw JSON to confirm the
     # fields actually land on disk — covers combat_state.
-    from src.domain.state import CombatState
+    from src.game.domain.state import CombatState
 
     fresh_state.combat_state = CombatState(
         round=1,

@@ -10,7 +10,7 @@ fed back to the LLM verbatim during story-team self-correction loops.
 import sys
 from pathlib import Path
 
-from src.engines.invariants import Scenario, check_scenario
+from src.game.engines.invariants import Scenario, check_scenario
 
 
 def main(argv: list[str]) -> int:

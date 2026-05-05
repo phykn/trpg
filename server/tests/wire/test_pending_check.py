@@ -1,8 +1,8 @@
 import json
 
-from src.domain.entities import Character, Stats
-from src.domain.memory import PendingCheck
-from src.domain.state import GameState
+from src.game.domain.entities import Character, Stats
+from src.game.domain.memory import PendingCheck
+from src.game.domain.state import GameState
 from src.wire.emit import _build_pending_check_payload, emit_pending_check
 from src.wire.models import PendingCheckPayload, TierBadge
 

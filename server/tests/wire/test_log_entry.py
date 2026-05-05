@@ -3,7 +3,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from src.domain.memory import (
+from src.game.domain.memory import (
     ActLogEntry,
     BonusItem,
     GMLogEntry,

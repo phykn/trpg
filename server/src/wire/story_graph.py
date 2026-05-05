@@ -2,12 +2,12 @@
 
 from typing import Literal
 
-from ..domain.clock import day_phase
-from ..domain.entities import Character, Location, Quest
-from ..domain.state import GameState
+from ..game.domain.clock import day_phase
+from ..game.domain.entities import Character, Location, Quest
+from ..game.domain.state import GameState
 from ..locale import render
-from ..ontology.graph import GameGraph
-from ..ontology.queries import (
+from ..game.ontology.graph import GameGraph
+from ..game.ontology.queries import (
     companions_of,
     connections_of,
     giver_of,

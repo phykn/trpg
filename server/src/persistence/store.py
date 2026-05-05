@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
-from ..domain.entities import (
+from ..game.domain.entities import (
     Campaign,
     Chapter,
     Character,
@@ -15,15 +15,15 @@ from ..domain.entities import (
     Race,
     Skill,
 )
-from ..domain.memory import (
+from ..game.domain.memory import (
     DialoguePair,
     LogEntry,
     PendingCheck,
     TurnLogEntry,
 )
-from ..domain.errors import PersistenceFailed
-from ..rules import RULES
-from ..domain.state import CombatState, GameState
+from ..game.domain.errors import PersistenceFailed
+from ..game.rules import RULES
+from ..game.domain.state import CombatState, GameState
 
 # Per-game write serialization. A single global lock would funnel unrelated
 # game writes through one queue and — worse — let two requests for the same

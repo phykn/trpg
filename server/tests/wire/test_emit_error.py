@@ -1,6 +1,6 @@
 import json
 
-from src.domain.errors import LLMUnavailable
+from src.game.domain.errors import LLMUnavailable
 from src.wire.emit import _to_snake, emit_error
 
 

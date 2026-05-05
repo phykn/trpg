@@ -6,8 +6,8 @@ from typing import Type, TypeVar
 
 from pydantic import BaseModel
 
-from ..domain.memory import DialoguePair, LogEntry, TurnLogEntry
-from ..domain.state import GameState
+from ..game.domain.memory import DialoguePair, LogEntry, TurnLogEntry
+from ..game.domain.state import GameState
 from . import store
 from .repo import ScenarioRepo
 

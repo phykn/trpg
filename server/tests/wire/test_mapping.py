@@ -1,6 +1,6 @@
 import json
 
-from src.domain.entities import (
+from src.game.domain.entities import (
     Character,
     Connection,
     Equipment,
@@ -13,7 +13,7 @@ from src.domain.entities import (
     Stats,
     WeaponEffect,
 )
-from src.domain.memory import GMLogEntry, Memory, RollLogEntry
+from src.game.domain.memory import GMLogEntry, Memory, RollLogEntry
 from src.wire.story_graph import to_story_graph
 from src.wire.to_front import (
     to_front_state,
@@ -130,7 +130,7 @@ def test_hero_basic_fields(fresh_state):
 
 def test_hero_exp_uses_xp_pool_and_curve(fresh_state):
     """to_hero's exp/expMax are sourced from xp_pool and xp_for_next_level."""
-    from src.rules import RULES
+    from src.game.rules import RULES
 
     state = _full_state(fresh_state)
     state.characters["player_01"].xp_pool = 80
@@ -467,7 +467,7 @@ def test_to_combat_returns_none_when_no_combat_state(fresh_state):
 
 
 def test_to_combat_projects_round_actor_enemies(fresh_state):
-    from src.domain.state import CombatState
+    from src.game.domain.state import CombatState
     from src.wire.to_front import to_combat
 
     fresh_state.characters["player_01"] = Character(

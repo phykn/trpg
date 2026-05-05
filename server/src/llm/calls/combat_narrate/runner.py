@@ -6,7 +6,7 @@ import asyncio
 from collections.abc import AsyncIterator
 
 from .._runner import load_prompt
-from ....domain.errors import LLMUnavailable
+from ....game.domain.errors import LLMUnavailable
 from ...client import LLMClient
 from .schema import CombatNarrateInput
 
