@@ -27,11 +27,15 @@ from .combat_auto import (
     run_auto_combat,
 )
 from ..wire.emit import (
+    emit_combat_end,
+    emit_combat_start,
+    emit_combat_turn,
     emit_error,
     emit_judge_pending_check_trigger,
     emit_judge_verb,
     emit_narrative_delta,
 )
+from ..wire.models import CombatTurnPayload
 from .dirty import (
     Dirty,
     ToFrontFn,
@@ -100,7 +104,7 @@ async def emit_combat_cinematic_and_end(
     # summary. Order: combat narration → outcome → reward cards.
     for ev in flush_deferred_act_cards(state, dirty):
         yield ev
-    yield {"type": "combat_end", "data": {"outcome": result.outcome}}
+    yield emit_combat_end(result.outcome)
 
 
 async def _drive_auto_combat(
@@ -130,7 +134,7 @@ async def _drive_auto_combat(
         _result_out.append(result)
 
     for tev in result.turn_events:
-        yield {"type": "combat_turn", "data": tev}
+        yield emit_combat_turn(tev)
 
     async for ev in emit_combat_cinematic_and_end(
         client,
@@ -167,15 +171,12 @@ async def start_combat_and_drive_auto(
             f"new enemy_ids={enemy_ids})"
         )
     cs = combat_engine.start_combat(state, enemy_ids, rng=rng, surprise=surprise)
-    yield {
-        "type": "combat_start",
-        "data": {
-            "turn_order": list(cs.turn_order),
-            "round": cs.round,
-            "surprise": cs.surprise,
-            "enemy_ids": list(cs.enemy_ids),
-        },
-    }
+    yield emit_combat_start(
+        turn_order=cs.turn_order,
+        round=cs.round,
+        surprise=cs.surprise,
+        enemy_ids=cs.enemy_ids,
+    )
     if enemy_ids:
         first_enemy = state.characters.get(enemy_ids[0])
         if first_enemy is not None:
@@ -292,14 +293,12 @@ async def _passive_pre_emit(
             return
     else:
         return
-    yield {
-        "type": "combat_turn",
-        "data": {
-            "actor": state.player_id,
-            "action": label,
-            "item_id": item_id_carried,
-        },
-    }
+    yield emit_combat_turn(CombatTurnPayload(
+        actor=state.player_id,
+        action=label,
+        round=state.combat_state.round,
+        item_id=item_id_carried,
+    ))
 
 
 async def run_combat_player_turn(
