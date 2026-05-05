@@ -912,6 +912,175 @@
         }
       ],
       "title": "JudgePayload"
+    },
+    "ActLogEntry": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "act",
+          "title": "Kind",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "text"
+      ],
+      "title": "ActLogEntry",
+      "type": "object"
+    },
+    "BonusItem": {
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "label",
+        "value"
+      ],
+      "title": "BonusItem",
+      "type": "object"
+    },
+    "GMLogEntry": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "gm",
+          "title": "Kind",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "text"
+      ],
+      "title": "GMLogEntry",
+      "type": "object"
+    },
+    "PlayerLogEntry": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "player",
+          "title": "Kind",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "text"
+      ],
+      "title": "PlayerLogEntry",
+      "type": "object"
+    },
+    "RollLogEntry": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "roll",
+          "title": "Kind",
+          "type": "string"
+        },
+        "check": {
+          "title": "Check",
+          "type": "string"
+        },
+        "roll": {
+          "title": "Roll",
+          "type": "integer"
+        },
+        "margin": {
+          "title": "Margin",
+          "type": "integer"
+        },
+        "result": {
+          "enum": [
+            "success",
+            "partial",
+            "fail"
+          ],
+          "title": "Result",
+          "type": "string"
+        },
+        "bonus_breakdown": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/BonusItem"
+          },
+          "title": "Bonus Breakdown",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "check",
+        "roll",
+        "margin",
+        "result"
+      ],
+      "title": "RollLogEntry",
+      "type": "object"
+    },
+    "LogEntryPayload": {
+      "description": "SSE `log_entry` event payload — discriminated union over `kind`.\nWraps domain.memory's 4 sub-classes (GMLogEntry / PlayerLogEntry /\nActLogEntry / RollLogEntry) + BonusItem (RollLogEntry sub-shape).\nSame RootModel pattern as JudgePayload (sub-round 2.6) — codegen\nemits a clean union alias on the client side.",
+      "discriminator": {
+        "mapping": {
+          "act": "#/definitions/ActLogEntry",
+          "gm": "#/definitions/GMLogEntry",
+          "player": "#/definitions/PlayerLogEntry",
+          "roll": "#/definitions/RollLogEntry"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/definitions/GMLogEntry"
+        },
+        {
+          "$ref": "#/definitions/PlayerLogEntry"
+        },
+        {
+          "$ref": "#/definitions/ActLogEntry"
+        },
+        {
+          "$ref": "#/definitions/RollLogEntry"
+        }
+      ],
+      "title": "LogEntryPayload"
     }
   }
 }

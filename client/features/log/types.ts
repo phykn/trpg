@@ -1,17 +1,13 @@
-export type RollResult = 'success' | 'partial' | 'fail';
+import type {
+  BonusItem as BonusItemPayload,
+  LogEntryPayload,
+  RollLogEntry,
+} from '@/types/wire.gen';
 
-export type BonusItem = { label: string; value: number };
-
-export type LogEntry =
-  | { id: number; kind: 'gm'; text: string }
-  | { id: number; kind: 'player'; text: string }
-  | { id: number; kind: 'act'; text: string }
-  | {
-      id: number;
-      kind: 'roll';
-      check: string;
-      roll: number;
-      margin: number;
-      result: RollResult;
-      bonus_breakdown: BonusItem[];
-    };
+// Re-export auto-generated wire shapes under historical client names.
+// Caller code (LogItem, useGame, wire.ts) keeps using `LogEntry` /
+// `BonusItem` / `RollResult`. RollResult uses indexed access so it
+// survives codegen renaming of the `result` literal.
+export type LogEntry = LogEntryPayload;
+export type BonusItem = BonusItemPayload;
+export type RollResult = RollLogEntry["result"];
