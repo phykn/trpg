@@ -50,7 +50,7 @@ def state(fresh_state):
         id="q1",
         title="t",
         giver_id="guard_01",
-        difficulty="보통",
+        difficulty="normal",
         triggers=[
             QuestTrigger(
                 id="x", name="n", type="character_death", target_id="goblin_01"
@@ -168,7 +168,7 @@ def test_set_chapter_quest_only_summary_or_status(state):
                 "entity": "quests",
                 "id": "q1",
                 "field": "difficulty",
-                "value": "신화",
+                "value": "myth",
             },
             {
                 "type": "set",

@@ -278,7 +278,7 @@ def test_attack_kill_fires_quest_character_death(fresh_state):
         id="q1",
         title="t",
         giver_id="player_01",
-        difficulty="보통",
+        difficulty="normal",
         triggers=[
             QuestTrigger(
                 id="a", name="처치", type="character_death", target_id="goblin_01"

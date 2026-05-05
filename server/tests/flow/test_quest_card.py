@@ -15,7 +15,7 @@ def _seed_quest(state, qid: str, title: str, status: str) -> None:
         id=qid,
         title=title,
         giver_id="npc_01",
-        difficulty="보통",
+        difficulty="normal",
         status=status,
     )
 

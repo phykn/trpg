@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 
 from .companions import CompanionRules
+from ..domain.types import Tier
 
 
 class _F(BaseModel):
@@ -10,14 +11,14 @@ class _F(BaseModel):
 class DifficultyClass(_F):
     critical_hit_threshold: int = 20
     critical_miss_threshold: int = 1
-    tier_dc_ranges: dict[str, tuple[int, int]] = {
-        "매우 쉬움": (2, 3),
-        "쉬움": (4, 6),
-        "보통": (7, 10),
-        "어려움": (11, 13),
-        "매우 어려움": (14, 16),
-        "전설": (17, 18),
-        "신화": (19, 19),
+    tier_dc_ranges: dict[Tier, tuple[int, int]] = {
+        "very_easy": (2, 3),
+        "easy": (4, 6),
+        "normal": (7, 10),
+        "hard": (11, 13),
+        "very_hard": (14, 16),
+        "legend": (17, 18),
+        "myth": (19, 19),
     }
 
 

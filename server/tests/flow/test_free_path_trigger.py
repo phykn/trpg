@@ -33,7 +33,7 @@ def _make_state(*, quest_status="active", giver_id="npc_01"):
         id="q1",
         title="테스트 퀘스트",
         giver_id=giver_id,
-        difficulty="보통",
+        difficulty="normal",
         status=quest_status,
         objective_text="약탈자 처치",
     )

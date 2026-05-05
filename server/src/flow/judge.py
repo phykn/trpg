@@ -125,7 +125,7 @@ async def run_judge(
                 f"semantic fallback impossible: no location ({e})"
             ) from e
         return PendingCheckTrigger(
-            tier="보통",
+            tier="normal",
             stat="WIS",
             targets=[loc_id],
             reason=ROLL_REASON_DEFAULT,

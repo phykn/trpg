@@ -93,7 +93,7 @@ def _full_state(fresh_state):
         title="t",
         summary="진행 중",
         giver_id="guard_01",
-        difficulty="어려움",
+        difficulty="hard",
         triggers=[
             QuestTrigger(
                 id="a", name="처치", type="character_death", target_id="goblin_01"
@@ -286,7 +286,7 @@ def test_place_surroundings_carry_blurb_and_difficulty(fresh_state):
     state = _full_state(fresh_state)
     state.locations["gate_01"].description = "닫힌 성문"
     state.locations["plaza_01"].connections = [
-        Connection(target_id="gate_01", difficulty="어려움")
+        Connection(target_id="gate_01", difficulty="hard")
     ]
     p = to_place(state)
     assert p["surroundings"] == [
@@ -436,7 +436,7 @@ def test_story_graph_does_not_leak_unseen_npcs_or_side_quests(fresh_state):
         title="숨은 의뢰",
         summary="아직 알 수 없는 일",
         giver_id="secret_01",
-        difficulty="쉬움",
+        difficulty="easy",
         triggers=[
             QuestTrigger(
                 id="secret_goal",

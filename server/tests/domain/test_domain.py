@@ -36,7 +36,7 @@ def test_memory_target_id_optional():
 def test_pending_check_required_roll_bounds():
     base = dict(
         player_input="x",
-        tier="보통",
+        tier="normal",
         stat="CHA",
         target="g",
         targets=["g"],

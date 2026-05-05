@@ -52,7 +52,7 @@ def _build() -> tuple[GameState, Dirty]:
         id="q_chief_request",
         title="촌장의 부탁",
         giver_id="edrik",
-        difficulty="쉬움",
+        difficulty="easy",
         triggers=[
             QuestTrigger(
                 id="t0",

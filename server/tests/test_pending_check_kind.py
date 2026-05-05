@@ -4,7 +4,7 @@ from src.domain.memory import PendingCheck
 def test_pending_check_default_kind_is_stat():
     pc = PendingCheck(
         player_input="test",
-        tier="보통",
+        tier="normal",
         stat="CHA",
         target="npc.1",
         targets=["npc.1"],
@@ -21,7 +21,7 @@ def test_pending_check_recruit_kind():
     pc = PendingCheck(
         player_input="test",
         kind="recruit",
-        tier="보통",
+        tier="normal",
         stat="CHA",
         target="npc.1",
         targets=["npc.1"],

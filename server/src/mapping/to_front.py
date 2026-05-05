@@ -10,6 +10,7 @@ from ..domain.entities import EQUIPMENT_SLOTS, Location, Quest
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
 from ..domain.types import tier_to_int
+from ..locale import render
 from ..engines.growth import can_afford_level_up, xp_for_next_level
 from ..ontology.graph import GameGraph
 from ..ontology.queries import (
@@ -233,7 +234,7 @@ def to_place(state: GameState, graph: GameGraph | None = None) -> dict | None:
             {
                 "name": target.name,
                 "blurb": target.description,
-                "difficulty": attrs.get("difficulty"),
+                "difficulty": render(f"tier.{attrs['difficulty']}", "ko") if attrs.get("difficulty") else None,
                 "risk": RISK_PAYLOAD[target.sleep_risk],
             }
         )
@@ -306,7 +307,7 @@ def pending_check_to_front(state: GameState, pending: PendingCheck) -> dict:
         "tier": {
             "value": tier_to_int(pending.tier),
             "max": 7,
-            "label": pending.tier,
+            "label": render(f"tier.{pending.tier}", "ko"),
         },
         "target": pending.target,
         "reason": pending.reason,

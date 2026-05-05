@@ -79,7 +79,7 @@ async def run_recruit(
     state.pending_check = PendingCheck(
         player_input=player_input,
         kind="recruit",
-        tier="보통",
+        tier="normal",
         stat="CHA",
         target=target_id,
         targets=[target_id],

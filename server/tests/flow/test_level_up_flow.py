@@ -94,7 +94,7 @@ async def test_run_level_up_rejects_when_pending_check_active(monkeypatch):
             stat="STR",
             mod=0,
             required_roll=10,
-            tier="보통",
+            tier="normal",
             target="player_01",
             reason="t",
             targets=[],

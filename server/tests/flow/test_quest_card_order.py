@@ -36,7 +36,7 @@ def _seed_quest(state, qid: str, title: str, *, giver_id: str, status: str = "ac
         id=qid,
         title=title,
         giver_id=giver_id,
-        difficulty="보통",
+        difficulty="normal",
         status=status,
         objective_text="목표",
         rewards=QuestRewards(exp=50, gold=20),

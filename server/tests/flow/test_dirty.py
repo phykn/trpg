@@ -23,7 +23,7 @@ def _active_quest(qid, *, giver_id, title):
         id=qid,
         title=title,
         giver_id=giver_id,
-        difficulty="보통",
+        difficulty="normal",
         status="active",
         rewards=QuestRewards(),
     )

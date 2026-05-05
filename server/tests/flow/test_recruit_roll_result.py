@@ -33,7 +33,7 @@ def _recruit_pending(target="npc.edric"):
     return PendingCheck(
         player_input="에드릭, 함께 가자",
         kind="recruit",
-        tier="보통",
+        tier="normal",
         stat="CHA",
         target=target,
         targets=[target],

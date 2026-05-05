@@ -15,13 +15,13 @@ STAT_PAIRS: dict[StatKey, StatKey] = {
 
 
 Tier = Literal[
-    "매우 쉬움",
-    "쉬움",
-    "보통",
-    "어려움",
-    "매우 어려움",
-    "전설",
-    "신화",
+    "very_easy",
+    "easy",
+    "normal",
+    "hard",
+    "very_hard",
+    "legend",
+    "myth",
 ]
 
 

@@ -24,7 +24,7 @@ def test_surroundings_includes_player_and_filters_dead_or_far(fresh_state):
         id="plaza_01",
         name="광장",
         tags=["t"],
-        connections=[Connection(target_id="gate_01", difficulty="어려움")],
+        connections=[Connection(target_id="gate_01", difficulty="hard")],
     )
     fresh_state.locations["gate_01"] = Location(id="gate_01", name="성문")
     from src.domain.entities import Race
@@ -88,7 +88,7 @@ def test_surroundings_includes_player_and_filters_dead_or_far(fresh_state):
     # adjacent connection
     assert (
         ids["gate_01"]["type"] == "connection"
-        and ids["gate_01"]["difficulty"] == "어려움"
+        and ids["gate_01"]["difficulty"] == "hard"
     )
 
 
@@ -132,7 +132,7 @@ def test_entities_carry_role_tags(fresh_state):
         id="q1",
         title="t",
         giver_id="chief",
-        difficulty="보통",
+        difficulty="normal",
         rewards=QuestRewards(),
     )
     # plain villager: no merchant role, no quest. roles must be absent
@@ -287,14 +287,14 @@ def test_session_layer_active_only(fresh_state):
         title="t",
         summary="quest summary",
         giver_id="g",
-        difficulty="보통",
+        difficulty="normal",
         status="active",
     )
     fresh_state.quests["q2"] = Quest(
         id="q2",
         title="done",
         giver_id="g",
-        difficulty="쉬움",
+        difficulty="easy",
         status="completed",
     )
 

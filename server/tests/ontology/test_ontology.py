@@ -47,7 +47,7 @@ def _seed(state):
         id="q1",
         title="t",
         giver_id="guard_01",
-        difficulty="보통",
+        difficulty="normal",
         triggers=[
             QuestTrigger(
                 id="x", name="처치", type="character_death", target_id="goblin_01"
@@ -225,7 +225,7 @@ def _seed_phase1(state):
         id="plaza_01",
         name="광장",
         connections=[
-            Connection(target_id="gate_01", difficulty="어려움", key_item_id="key_01")
+            Connection(target_id="gate_01", difficulty="hard", key_item_id="key_01")
         ],
         item_ids=["sword_01"],
     )
@@ -254,7 +254,7 @@ def _seed_phase1(state):
         id="q_kill",
         title="고블린 처치",
         giver_id="player_01",
-        difficulty="보통",
+        difficulty="normal",
         triggers=[
             QuestTrigger(
                 id="t1", name="처치", type="character_death", target_id="goblin_01"
@@ -265,7 +265,7 @@ def _seed_phase1(state):
         id="q_visit",
         title="성문에 도착",
         giver_id="player_01",
-        difficulty="쉬움",
+        difficulty="easy",
         triggers=[
             QuestTrigger(
                 id="t2", name="도착", type="location_enter", target_id="gate_01"
@@ -351,7 +351,7 @@ def test_connects_to_attrs(fresh_state):
     edges = g.get_edges("plaza_01", "connects_to")
     assert len(edges) == 1
     assert edges[0].to_id == "gate_01"
-    assert edges[0].attrs == {"difficulty": "어려움", "key_item_id": "key_01"}
+    assert edges[0].attrs == {"difficulty": "hard", "key_item_id": "key_01"}
 
 
 # --- Phase 4: target_view 2-hop traversal ----------------------------------
@@ -390,7 +390,7 @@ def _seed_phase4(state):
         id="q_chief",
         title="촌장의 부탁",
         giver_id="chief_01",
-        difficulty="보통",
+        difficulty="normal",
         triggers=[
             QuestTrigger(
                 id="t1", name="처치", type="character_death", target_id="goblin_01"
@@ -478,7 +478,7 @@ def test_npc_view_drops_completed_failed_quests(fresh_state):
         id="q_locked",
         title="잠긴 의뢰",
         giver_id="guard_01",
-        difficulty="보통",
+        difficulty="normal",
         triggers=[
             QuestTrigger(
                 id="t1", name="처치", type="character_death", target_id="goblin_01"
@@ -491,7 +491,7 @@ def test_npc_view_drops_completed_failed_quests(fresh_state):
         id="q_active",
         title="진행 의뢰",
         giver_id="guard_01",
-        difficulty="보통",
+        difficulty="normal",
         triggers=[
             QuestTrigger(
                 id="t2", name="처치", type="character_death", target_id="goblin_02"
@@ -504,14 +504,14 @@ def test_npc_view_drops_completed_failed_quests(fresh_state):
         id="q_completed",
         title="완료 의뢰",
         giver_id="guard_01",
-        difficulty="보통",
+        difficulty="normal",
         status="completed",
     )
     state.quests["q_failed"] = Quest(
         id="q_failed",
         title="실패 의뢰",
         giver_id="guard_01",
-        difficulty="보통",
+        difficulty="normal",
         status="failed",
     )
     state.characters["goblin_02"] = Character(
@@ -521,7 +521,7 @@ def test_npc_view_drops_completed_failed_quests(fresh_state):
         id="q_hunt_active",
         title="현상금: 경비",
         giver_id="player_01",
-        difficulty="보통",
+        difficulty="normal",
         triggers=[
             QuestTrigger(
                 id="t3", name="처치", type="character_death", target_id="guard_01"
@@ -533,7 +533,7 @@ def test_npc_view_drops_completed_failed_quests(fresh_state):
         id="q_hunt_completed",
         title="이전 현상금",
         giver_id="player_01",
-        difficulty="보통",
+        difficulty="normal",
         triggers=[
             QuestTrigger(
                 id="t4", name="처치", type="character_death", target_id="guard_01"
@@ -563,7 +563,7 @@ def test_location_view_drops_completed_failed_quests(fresh_state):
         id="q_visit_active",
         title="광장 방문",
         giver_id="guard_01",
-        difficulty="보통",
+        difficulty="normal",
         triggers=[
             QuestTrigger(
                 id="tv1", name="도달", type="location_visited", target_id="plaza_01"
@@ -575,7 +575,7 @@ def test_location_view_drops_completed_failed_quests(fresh_state):
         id="q_visit_completed",
         title="과거 방문 의뢰",
         giver_id="guard_01",
-        difficulty="보통",
+        difficulty="normal",
         triggers=[
             QuestTrigger(
                 id="tv2", name="도달", type="location_visited", target_id="plaza_01"

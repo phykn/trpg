@@ -34,7 +34,7 @@ def _build_state(fresh_state):
 def _pending(targets: list[str], **overrides) -> PendingCheck:
     base = dict(
         player_input="가본다",
-        tier="보통",
+        tier="normal",
         stat="DEX",
         target="gate_01",
         targets=targets,

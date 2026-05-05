@@ -35,7 +35,7 @@ def _quest(
         id=qid,
         title=qid,
         giver_id=giver_id,
-        difficulty="보통",
+        difficulty="normal",
         triggers=triggers or [],
         fail_triggers=fail_triggers or [],
         status=status,

@@ -1,5 +1,6 @@
 from ..domain.entities import Character, Stats
 from ..domain.state import GameState
+from ..locale import render
 from ..ontology.graph import GameGraph
 from ..ontology.queries import giver_of, location_of, race_of
 
@@ -73,18 +74,18 @@ RISK_PAYLOAD: dict[str, dict] = {
 
 # `None` tone keeps the neutral mid-tier label uncolored on the panel.
 _TIER_TONE: dict[str, str | None] = {
-    "매우 쉬움": "neutral",
-    "쉬움": "good",
-    "보통": None,
-    "어려움": "exp",
-    "매우 어려움": "accent",
-    "전설": "bad",
-    "신화": "bad",
+    "very_easy": "neutral",
+    "easy": "good",
+    "normal": None,
+    "hard": "exp",
+    "very_hard": "accent",
+    "legend": "bad",
+    "myth": "bad",
 }
 
 
 def difficulty_badge(tier: str) -> dict:
-    return {"label": tier, "tone": _TIER_TONE.get(tier)}
+    return {"label": render(f"tier.{tier}", "ko"), "tone": _TIER_TONE.get(tier)}
 
 
 # ----- Story-graph edge labels (rendered on client map) -----

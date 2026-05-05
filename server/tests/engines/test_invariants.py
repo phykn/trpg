@@ -326,7 +326,7 @@ def _quest(qid: str, status: str = "active", prereq: list[str] | None = None) ->
         id=qid,
         title=qid,
         giver_id="anyone",
-        difficulty="보통",
+        difficulty="normal",
         prerequisite_ids=prereq or [],
         status=status,
     )
@@ -440,7 +440,7 @@ def _minimal_scenario(**overrides) -> Scenario:
         id="q1",
         title="t",
         giver_id="npc1",
-        difficulty="보통",
+        difficulty="normal",
         status="active",
         triggers=[
             QuestTrigger(id="t1", name="t1", type="character_death", target_id="npc1")
