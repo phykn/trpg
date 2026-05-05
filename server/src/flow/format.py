@@ -7,7 +7,7 @@ string for a log entry lives here.
 from typing import TYPE_CHECKING
 
 from ..domain.state import GameState
-from ..mapping.josa import eul_reul, eun_neun, gwa_wa, i_ga
+from ..locale.particles import eul_reul, eun_neun, gwa_wa, i_ga
 from ..mapping.labels import stat_label
 from .error_phrases import humanize_engine_error
 

@@ -1,10 +1,4 @@
-"""Korean particle (조사) selection helpers.
-
-Picks 이/가, 은/는, 을/를, 와/과 based on the trailing syllable's final
-consonant (받침). Non-Hangul tails (digits, ASCII, punctuation) default to
-"no final consonant", which is good enough for our names — they're either
-pure Hangul or single-loanword strings that read as having no final.
-"""
+"""Korean particle (조사) selection: 이/가, 은/는, 을/를, 와/과, 으로/로 by 받침 of trailing syllable."""
 
 
 def has_jongseong(name: str) -> bool:

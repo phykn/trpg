@@ -9,7 +9,7 @@ from ..domain.state import GameState
 from ..engines import recovery as recovery_engine
 from ..rules import RULES
 from ..llm.client import LLMClient
-from ..mapping.josa import eun_neun
+from ..locale.particles import eun_neun
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from . import encounter as encounter_engine
 from .buff_tick import tick_turn_buffs
