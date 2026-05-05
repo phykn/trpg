@@ -12,7 +12,7 @@ from src.locale import render
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph
 from src.llm.context import build_surroundings
-from src.wire.labels import ROLL_REASON_DEFAULT
+from src.locale.labels import ROLL_REASON_DEFAULT
 
 
 @dataclass(frozen=True)

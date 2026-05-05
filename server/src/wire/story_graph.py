@@ -15,7 +15,7 @@ from src.game.ontology.queries import (
     location_of,
     trigger_targets_of,
 )
-from .labels import (
+from src.locale.labels import (
     STORY_EDGE_LABEL_CURRENT,
     STORY_EDGE_LABEL_MEET,
     STORY_EDGE_LABEL_MOVE,
@@ -26,13 +26,15 @@ from .labels import (
     STORY_SUMMARY_EMPTY,
     STORY_SUMMARY_HERO,
     gender_label,
-    giver_with_location_label,
-    race_job_label,
-    risk_payload,
     story_summary_entities,
     story_summary_location,
     story_summary_places,
     story_summary_quest,
+)
+from .labels import (
+    giver_with_location_label,
+    race_job_label,
+    risk_payload,
 )
 
 
@@ -108,7 +110,7 @@ def _character_identity(state: GameState, graph: GameGraph, char: Character) -> 
         "label": char.name,
         "level": char.level,
         "raceJob": race_job_label(state, graph, char),
-        "gender": gender_label(char),
+        "gender": gender_label(char.gender),
     }
 
 
