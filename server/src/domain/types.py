@@ -50,3 +50,9 @@ def is_secret_masked_grade(grade: str | None) -> bool:
 
 
 Intent = Literal["friendly", "hostile", "deceptive"]
+
+
+Phase = Literal["dawn", "morning", "afternoon", "night"]
+
+
+EncounterRisk = Literal["safe", "risky", "dangerous"]
