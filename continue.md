@@ -6,6 +6,69 @@
 
 ---
 
+## 0. 봐야할 문서 (새 세션 시작 시)
+
+### 필수 읽기 (이 순서대로)
+
+| # | 경로 | 왜 |
+|---|---|---|
+| 1 | `continue.md` (이 파일) | 본 세션 인계 — 어디까지 왔고 다음 뭘 할지 |
+| 2 | `0505.md` | 큰 그림 4분할 plan. §1 통증 분리, §4 첫 케이스 결, §5 두 갈래 진행, §9 합의 굳음 |
+| 3 | `CLAUDE.md` (repo root) | 한국어 정책, env 정책, save isolation, 스택 |
+| 4 | `server/CLAUDE.md` | 레이어 룰, 관계 SSOT, 에러 hierarchy, 명명 규칙 (Tier ASCII enum 등 1.1 결과 반영됨) |
+| 5 | `client/CLAUDE.md` | 클라 폴더 룰, wire 타입 위치 (`types/wire.ts`), 디자인 토큰 |
+
+자동 로드 (별도 명시 안 해도 들어옴):
+- `~/.claude/projects/-home-kn-code-trpg/memory/MEMORY.md` 인덱스 + 그 안 7개 메모리 파일 (§3 "메모리 / 피드백" 참조)
+
+### 참조용 (필요할 때 보면 됨)
+
+#### sub-round 진행 plan (작업 패턴 참조)
+
+| 경로 | 무엇 |
+|---|---|
+| `docs/superpowers/plans/2026-05-05-locale-sub-round-1-2-stat-labels.md` | 작은 sub-round 패턴 (3 task, mechanical) |
+| `docs/superpowers/plans/2026-05-05-locale-sub-round-1-3-system-messages.md` | 큰 sub-round 패턴 (8 task, 패턴 굳히기) |
+| `docs/superpowers/plans/2026-05-05-locale-sub-round-1-4-residue.md` | 잔재 정리 패턴 (3 task) |
+| `docs/superpowers/plans/2026-05-05-locale-sub-round-1-5-llm-input-labels.md` | prompt.toml 도입 + multi-line template |
+| `docs/superpowers/plans/2026-05-05-wire-sub-round-2-0-emit-error-extension.md` | emit_error 시그니처 확장 |
+| `docs/superpowers/plans/2026-05-05-wire-sub-round-2-1-pending-check-payload.md` | **첫 큰 페이로드 패턴 — 2.2~2.5의 템플릿** |
+
+#### 패턴 참조 코드
+
+| 무엇 | 어디 |
+|---|---|
+| catalog 파일 형식 (단일/다중 segment 키, 조사 토큰) | `server/src/locale/catalog/*.toml` (7개: error/tier/phase/stat/log/ui/prompt) |
+| render() 구현 + 조사 토큰 walker | `server/src/locale/render.py` |
+| 조사 함수 (`i_ga`, `eun_neun` 등) | `server/src/locale/particles.py` |
+| Wire 모델 패턴 | `server/src/wire/models/error.py`, `server/src/wire/models/pending_check.py` |
+| Wire 빌더 패턴 (emit_error / emit_pending_check / _build_*) | `server/src/wire/emit.py` |
+| Codegen export + `_flatten` 헬퍼 ($defs hoist) | `server/src/wire/export.py` |
+| Wire `__init__` public API | `server/src/wire/__init__.py` |
+| 클라 wire alias re-export 패턴 | `client/types/wire.ts` |
+| 단위 테스트 패턴 (wire) | `server/tests/wire/test_emit_error.py`, `server/tests/wire/test_pending_check.py` |
+| Catalog 무결성 테스트 | `server/tests/locale/test_catalog_integrity.py` |
+| Render token-walker 단위 테스트 | `server/tests/locale/test_render_particles.py` |
+
+#### 도메인 / 게임 컨텍스트 (디자인 의도)
+
+| 경로 | 무엇 |
+|---|---|
+| `docs/01-overview.md` ~ `docs/05-codemap.md` | gitignored 디자인 노트 (rationale, per-turn flow). 새 세션에서 큰 디자인 결정 필요할 때 참조 |
+| `server/src/domain/errors.py` | DomainError 계층 (session lifecycle vs action validation 분리 — CLAUDE.md "Error hierarchy" 참조) |
+| `server/src/domain/memory.py` | `PendingCheck` 등 게임 상태 도메인 모델 |
+| `server/src/domain/state.py` | `GameState` (게임 진행 SSOT) |
+| `server/src/ontology/graph.py` | 관계 SSOT (CLAUDE.md "Relational SSOT" 참조) |
+
+### 문서 읽기 우선순위
+
+- **새 세션 첫 답변 전**: 1+2 (continue.md + 0505.md). 나머지는 task에 따라 ad-hoc.
+- **첫 sub-round 진행 시작 전**: 6 (가장 가까운 패턴의 sub-round plan)
+- **첫 wire 페이로드 작업 시 (2.2)**: `2026-05-05-wire-sub-round-2-1-pending-check-payload.md` 가 직접 템플릿
+- **catalog 늘릴 때**: 기존 catalog 파일 형식 grep 으로 확인
+
+---
+
 ## 1. 어디까지 왔는가
 
 ### 라운드 1 (locale, 통증 B) — 5/6 sub-round 완료, 1.6 남음
@@ -207,12 +270,12 @@ render(key, locale, **vars) -> str
 
 ## 5. 새 세션 시작 가이드
 
-1. `cat continue.md` (이 파일) 읽기
-2. `cat 0505.md` 큰 그림 확인
-3. `git log --oneline -10` 최근 진행 확인 (`45e7f95` 기준)
-4. `~/.claude/projects/-home-kn-code-trpg/memory/MEMORY.md` 메모리 인덱스 확인 — 자동 로드됨
-5. 사용자에게 다음 sub-round 결정 받기 (A/B/C/D/E 우선순위 중)
-6. Brainstorm (필요시) → plan 문서 → branch → dispatch
+1. `continue.md` (이 파일) 읽기 — §0 봐야할 문서 + §1 어디까지 + §4 다음 할 일
+2. `0505.md` 읽기 — 큰 그림 합의 굳음 항목 internalize
+3. `git log --oneline -10` 최근 진행 확인 (`374ba6e` 기준 — continue.md 커밋 직후)
+4. 메모리 인덱스 자동 로드 확인 (`~/.claude/projects/-home-kn-code-trpg/memory/MEMORY.md`)
+5. 사용자에게 다음 sub-round 결정 받기 (§4의 A/B/C/D/E 우선순위 중)
+6. Brainstorm (필요시) → plan 문서 (직전 sub-round plan을 템플릿으로) → branch → dispatch
 
 ### 첫 결정 brainstorm 후보 (사용자에게 물을 내용)
 
