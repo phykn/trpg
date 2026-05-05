@@ -5,6 +5,7 @@ from pathlib import Path
 from .models.error import ErrorPayload
 from .models.hero import HeroPayload
 from .models.judge import JudgePayload
+from .models.log_entry import LogEntryPayload
 from .models.pending_check import PendingCheckPayload
 from .models.place import PlacePayload
 from .models.quest import QuestPayload
@@ -18,6 +19,7 @@ _MODELS = [
     QuestPayload,
     PlacePayload,
     JudgePayload,
+    LogEntryPayload,
 ]
 
 

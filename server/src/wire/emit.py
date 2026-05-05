@@ -14,6 +14,7 @@ from .models import (
     JudgeRefuse,
     JudgeVerb,
     JudgeVerbs,
+    LogEntryPayload,
     PendingCheckPayload,
     PlacePayload,
     PlaceSurrounding,
@@ -431,3 +432,12 @@ def emit_judge_verbs(actions: list["Verb"]) -> dict:
         root=JudgeVerbs(judge_kind="verbs", actions=list(actions))
     )
     return {"type": "judge", "data": payload.model_dump()}
+
+
+def emit_log_entry(log) -> dict:
+    """SSE log_entry event. Wraps a GMLogEntry / PlayerLogEntry /
+    ActLogEntry / RollLogEntry instance. Caller passes the already-built
+    domain log object; the discriminated-union validator rejects anything
+    else with ValidationError (loud-fail consistent with other builders)."""
+    payload = LogEntryPayload(root=log)
+    return {"type": "log_entry", "data": payload.model_dump()}
