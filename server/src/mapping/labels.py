@@ -1,29 +1,28 @@
+from typing import get_args
+
 from ..domain.entities import Character, Stats
 from ..domain.state import GameState
-from ..domain.types import Tier
+from ..domain.types import StatKey, Tier
 from ..locale import render
 from ..ontology.graph import GameGraph
 from ..ontology.queries import giver_of, location_of, race_of
 
 
-_STAT_LABELS: tuple[tuple[str, str], ...] = (
-    ("STR", "근력"),
-    ("DEX", "민첩"),
-    ("CON", "건강"),
-    ("INT", "지능"),
-    ("WIS", "지혜"),
-    ("CHA", "매력"),
-)
-_STAT_LABEL_BY_KEY: dict[str, str] = dict(_STAT_LABELS)
+# Display order tied to StatKey definition.
+_STAT_ORDER: tuple[StatKey, ...] = get_args(StatKey)
 
 
 def stat_label(stat: str) -> str:
-    return _STAT_LABEL_BY_KEY.get(stat, stat)
+    """Korean display label for a stat key. Falls back to the raw key for unknown values."""
+    try:
+        return render(f"stat.{stat}", "ko")
+    except KeyError:
+        return stat
 
 
 def stats_payload(stats: Stats) -> list[dict]:
     return [
-        {"label": label, "value": getattr(stats, key)} for key, label in _STAT_LABELS
+        {"label": stat_label(key), "value": getattr(stats, key)} for key in _STAT_ORDER
     ]
 
 
