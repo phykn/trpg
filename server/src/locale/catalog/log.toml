@@ -194,3 +194,51 @@ ko = "{location}에 도착합니다."
 
 [log.location_enter_turn]
 ko = "{location} 도착"
+
+[log.quest_start]
+ko = "퀘스트 시작: {title}"
+
+[log.quest_success_head]
+ko = "퀘스트 성공: {title}"
+
+[log.reward_exp]
+ko = "+EXP {exp}"
+
+[log.reward_gold]
+ko = "+GOLD {gold}"
+
+[log.quest_fail]
+ko = "퀘스트 실패: {title} — {reason}"
+
+[log.affinity_card]
+ko = "{npc} 호감도 {sign}{delta}"
+
+[log.recruit_success]
+ko = "{name}{이/가} 동료가 되었습니다."
+
+[log.recruit_failure]
+ko = "{name}{이/가} 제안을 거절합니다."
+
+[log.recruit_critical_failure]
+ko = "{name}{이/가} 노골적으로 거절합니다."
+
+[log.dismiss]
+ko = "{name}{이/가} 일행에서 빠집니다."
+
+[log.dismiss_turn]
+ko = "{name} 동행 이탈"
+
+[log.recruit_success_turn]
+ko = "{name} 동료 합류"
+
+[log.recruit_failure_turn]
+ko = "{name} 동료 영입 실패"
+
+[log.level_up]
+ko = "{actor}의 레벨이 올랐습니다 (레벨 {level}, {up} ↑ / {down} ↓, HP {hp} / MP {mp})."
+
+[log.death]
+ko = "{name} 사망"
+
+[log.attack_turn]
+ko = "{target}{을/를} 공격"

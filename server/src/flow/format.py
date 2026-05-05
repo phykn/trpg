@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from ..domain.state import GameState
 from ..locale import render
-from ..locale.particles import eul_reul, i_ga
+from ..locale.particles import i_ga
 from ..mapping.labels import stat_label
 from .error_phrases import humanize_engine_error
 
@@ -149,68 +149,68 @@ def format_location_enter_turn_log(location_name: str) -> str:
 
 
 def format_quest_start_log(quest_title: str) -> str:
-    return f"퀘스트 시작: {quest_title}"
+    return render("log.quest_start", "ko", title=quest_title)
 
 
 # Same body as format_quest_start_log; kept paired (cf. format_location_enter_*) so future SSE/turn_log tone divergence is a one-line edit.
 def format_quest_start_turn_log(quest_title: str) -> str:
-    return f"퀘스트 시작: {quest_title}"
+    return render("log.quest_start", "ko", title=quest_title)
 
 
 def format_quest_success_log(title: str, exp: int, gold: int, items: list[str]) -> str:
-    parts = [f"퀘스트 성공: {title}"]
-    rewards = []
+    head = render("log.quest_success_head", "ko", title=title)
+    rewards: list[str] = []
     if exp > 0:
-        rewards.append(f"+EXP {exp}")
+        rewards.append(render("log.reward_exp", "ko", exp=exp))
     if gold > 0:
-        rewards.append(f"+GOLD {gold}")
+        rewards.append(render("log.reward_gold", "ko", gold=gold))
     if items:
         rewards.append(" / ".join(items))
     if rewards:
-        parts.append(" · ".join(rewards))
-    return " — ".join(parts)
+        return f"{head} — " + " · ".join(rewards)
+    return head
 
 
 def format_quest_fail_log(title: str, reason: str) -> str:
-    return f"퀘스트 실패: {title} — {reason}"
+    return render("log.quest_fail", "ko", title=title, reason=reason)
 
 
 def format_affinity_card_log(npc_name: str, delta: int) -> str:
     sign = "+" if delta >= 0 else ""
-    return f"{npc_name} 호감도 {sign}{delta}"
+    return render("log.affinity_card", "ko", npc=npc_name, sign=sign, delta=delta)
 
 
 def format_affinity_card_turn_log(npc_name: str, delta: int) -> str:
     sign = "+" if delta >= 0 else ""
-    return f"{npc_name} 호감도 {sign}{delta}"
+    return render("log.affinity_card", "ko", npc=npc_name, sign=sign, delta=delta)
 
 
 def format_recruit_success_log(name: str) -> str:
-    return f"{name}{i_ga(name)} 동료가 되었습니다."
+    return render("log.recruit_success", "ko", name=name)
 
 
 def format_recruit_failure_log(name: str) -> str:
-    return f"{name}{i_ga(name)} 제안을 거절합니다."
+    return render("log.recruit_failure", "ko", name=name)
 
 
 def format_recruit_critical_failure_log(name: str) -> str:
-    return f"{name}{i_ga(name)} 노골적으로 거절합니다."
+    return render("log.recruit_critical_failure", "ko", name=name)
 
 
 def format_dismiss_log(name: str) -> str:
-    return f"{name}{i_ga(name)} 일행에서 빠집니다."
+    return render("log.dismiss", "ko", name=name)
 
 
 def format_dismiss_turn_log(name: str) -> str:
-    return f"{name} 동행 이탈"
+    return render("log.dismiss_turn", "ko", name=name)
 
 
 def format_recruit_success_turn_log(name: str) -> str:
-    return f"{name} 동료 합류"
+    return render("log.recruit_success_turn", "ko", name=name)
 
 
 def format_recruit_failure_turn_log(name: str) -> str:
-    return f"{name} 동료 영입 실패"
+    return render("log.recruit_failure_turn", "ko", name=name)
 
 
 def format_level_up_log(
@@ -221,20 +221,20 @@ def format_level_up_log(
     max_hp: int,
     max_mp: int,
 ) -> str:
-    up_kr = stat_label(stat_up)
-    down_kr = stat_label(stat_down)
-    return (
-        f"{actor_name}의 레벨이 올랐습니다 "
-        f"(레벨 {level}, {up_kr} ↑ / {down_kr} ↓, HP {max_hp} / MP {max_mp})."
+    return render(
+        "log.level_up", "ko",
+        actor=actor_name, level=level,
+        up=stat_label(stat_up), down=stat_label(stat_down),
+        hp=max_hp, mp=max_mp,
     )
 
 
 def format_death_log(name: str) -> str:
-    return f"{name} 사망"
+    return render("log.death", "ko", name=name)
 
 
 def format_attack_turn_log(target_name: str) -> str:
-    return f"{target_name}{eul_reul(target_name)} 공격"
+    return render("log.attack_turn", "ko", target=target_name)
 
 
 def front_grade(grade: str) -> str:
