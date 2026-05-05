@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 
 from ..locale import render
 from ..llm_calls.classify.schema import Verb
-from ..wire.emit import emit_error
+from ..wire.emit import emit_error, emit_log_entry
 from ..llm_calls.narrate import (
     NarrateInput,
     NarrateOutput,
@@ -220,7 +220,7 @@ async def consume_narrate(
     # GM body lands and SSE-emits before reaction cards so the client clears the in-flight stream and reaction cards (affinity, quest-start) render after the prose that justifies them.
     gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=body)
     push_log_entry(state, gm_log, dirty)
-    yield {"type": "log_entry", "data": gm_log.model_dump()}
+    yield emit_log_entry(gm_log)
     # Quest-start and affinity cards stash into the deferred queue so they
     # flush together with quest 성공/실패 — single ordering invariant for
     # all reaction cards (always after the gm body that motivated them).
@@ -256,7 +256,7 @@ async def consume_narrate(
                 state, claim=dialogue_input, npc_id=npc_dialogue_target, dirty=dirty
             )
             for entry in dirty.log[pre_log_len:]:
-                yield {"type": "log_entry", "data": entry.model_dump()}
+                yield emit_log_entry(entry)
         except NotImplementedError:
             pass  # judge LLM stub; live turns stay safe
     # Drain all deferred reaction cards (quest_start, affinity, quest

@@ -29,6 +29,7 @@ from ..wire.emit import (
     emit_judge_refuse,
     emit_judge_verb,
     emit_judge_verbs,
+    emit_log_entry,
 )
 from .buff_tick import tick_turn_buffs
 from .error_phrases import is_dramatic_fail
@@ -91,14 +92,13 @@ async def _emit_input_rejected_and_finalize(
     bare narrate so the player_input is absorbed as in-world prose, then
     quest check + buff tick + finalize. Used by single-verb and multi-verb
     redirect branches when verb dispatch raises ValidationError / ValueError."""
-    yield {
-        "type": "log_entry",
-        "data": GMLogEntry(
+    yield emit_log_entry(
+        GMLogEntry(
             id=next_log_id(state),
             kind="gm",
             text=INPUT_REJECTED_TEXT,
-        ).model_dump(),
-    }
+        )
+    )
     state.turn_count += 1
     async for ev in stream_narrate_tail(
         client, state, scenario_repo, player_input, dirty, to_front_fn,
@@ -146,7 +146,7 @@ async def run_turn(
     if player_input:
         player_log = PlayerLogEntry(id=next_log_id(state), kind="player", text=player_input)
         push_log_entry(state, player_log, dirty)
-        yield {"type": "log_entry", "data": player_log.model_dump()}
+        yield emit_log_entry(player_log)
 
     if not state.characters[state.player_id].alive:
         yield push_act(state, dirty, GAME_OVER_TEXT)

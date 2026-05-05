@@ -117,6 +117,35 @@ export type Actions1 = Verb[];
  * via the `definition` "JudgePayload".
  */
 export type JudgePayload = JudgePendingCheckTrigger | JudgeRefuse | JudgeVerb | JudgeVerbs;
+export type Id1 = number;
+export type Kind1 = "act";
+export type Text = string;
+export type Label4 = string;
+export type Value2 = number;
+export type Id2 = number;
+export type Kind2 = "gm";
+export type Text1 = string;
+export type Id3 = number;
+export type Kind3 = "player";
+export type Text2 = string;
+export type Id4 = number;
+export type Kind4 = "roll";
+export type Check = string;
+export type Roll = number;
+export type Margin = number;
+export type Result = "success" | "partial" | "fail";
+export type BonusBreakdown = BonusItem[];
+/**
+ * SSE `log_entry` event payload — discriminated union over `kind`.
+ * Wraps domain.memory's 4 sub-classes (GMLogEntry / PlayerLogEntry /
+ * ActLogEntry / RollLogEntry) + BonusItem (RollLogEntry sub-shape).
+ * Same RootModel pattern as JudgePayload (sub-round 2.6) — codegen
+ * emits a clean union alias on the client side.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "LogEntryPayload".
+ */
+export type LogEntryPayload = GMLogEntry | PlayerLogEntry | ActLogEntry | RollLogEntry;
 
 export interface Wire {
   [k: string]: unknown;
@@ -442,5 +471,58 @@ export interface Modifiers {
 export interface JudgeVerbs {
   judge_kind: JudgeKind3;
   actions: Actions1;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "ActLogEntry".
+ */
+export interface ActLogEntry {
+  id: Id1;
+  kind: Kind1;
+  text: Text;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "BonusItem".
+ */
+export interface BonusItem {
+  label: Label4;
+  value: Value2;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "GMLogEntry".
+ */
+export interface GMLogEntry {
+  id: Id2;
+  kind: Kind2;
+  text: Text1;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "PlayerLogEntry".
+ */
+export interface PlayerLogEntry {
+  id: Id3;
+  kind: Kind3;
+  text: Text2;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "RollLogEntry".
+ */
+export interface RollLogEntry {
+  id: Id4;
+  kind: Kind4;
+  check: Check;
+  roll: Roll;
+  margin: Margin;
+  result: Result;
+  bonus_breakdown?: BonusBreakdown;
   [k: string]: unknown;
 }
