@@ -242,3 +242,90 @@ ko = "{name} 사망"
 
 [log.attack_turn]
 ko = "{target}{을/를} 공격"
+
+[log."combat.player_fallback"]
+ko = "주인공"
+
+[log."combat.defeat"]
+ko = "패배했습니다."
+
+[log."combat.fled"]
+ko = "전투에서 이탈했습니다."
+
+[log."combat.downed"]
+ko = "의식을 되찾았습니다."
+
+[log."combat.enemies_fled"]
+ko = "{names}{이/가} 도망쳤습니다."
+
+[log."combat.enemies_fled_anon"]
+ko = "적이 도망쳤습니다."
+
+[log."combat.enemies_defeated"]
+ko = "적을 처치했습니다."
+
+[log."combat.enemy_killed"]
+ko = "{name} {damage} 피해 — 쓰러짐"
+
+[log."combat.enemy_hit"]
+ko = "{name} {damage} 피해 (HP {hp_after}/{hp_max})"
+
+[log."combat.player_hit"]
+ko = "{name} {damage} 피해 (HP {hp_after}/{hp_max})"
+
+[log."combat.player_downed"]
+ko = "{name} {damage} 피해 (HP {hp_before}→0, 사망 직전)"
+
+[log."combat.revived_critical"]
+ko = "최후의 호흡 (소생 0/{coins_max}, HP 0→{hp_after})"
+
+[log."combat.revived_normal"]
+ko = "가까스로 일어남 (소생 {coins_after}/{coins_max}, HP 0→{hp_after})"
+
+[log."combat.outcome_header"]
+ko = "전투 결과"
+
+[log."combat.outcome_victory"]
+ko = "전투 승리"
+
+[log."combat.outcome_defeat"]
+ko = "전투 패배"
+
+[log."combat.outcome_fled"]
+ko = "전투 이탈"
+
+[log."combat.outcome_downed"]
+ko = "전투 중 쓰러짐"
+
+[log."combat.event_enemy_killed"]
+ko = "{actor}{이/가} {name}에게 {damage} 피해 — {name} 쓰러짐"
+
+[log."combat.event_enemy_hit"]
+ko = "{actor}{이/가} {name}에게 {damage} 피해 (적 HP {hp_after}/{hp_max})"
+
+[log."combat.event_player_hit"]
+ko = "{name} {damage} 피해 입음 (HP {hp_after}/{hp_max})"
+
+[log."combat.event_revived"]
+ko = "가까스로 소생"
+
+[log."use.head"]
+ko = "{actor} — 「{item}」 사용"
+
+[log."use.heal"]
+ko = "({amount} 회복)"
+
+[log."use.damage_alive"]
+ko = "({target}에게 {amount} 데미지)"
+
+[log."use.damage_dead"]
+ko = "({target}에게 {amount} 데미지 ({target} 쓰러짐))"
+
+[log."use.mp_restore"]
+ko = "({amount} MP 회복)"
+
+[log."use.buff"]
+ko = "({description}, {duration} 턴)"
+
+[log."use.trigger"]
+ko = "({on_use})"

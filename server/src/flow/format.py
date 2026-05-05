@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 from ..domain.state import GameState
 from ..locale import render
-from ..locale.particles import i_ga
 from ..mapping.labels import stat_label
 from .error_phrases import humanize_engine_error
 
@@ -249,20 +248,20 @@ def format_combat_end_text(
     outcome: str, enemies_remaining: list[dict] | None = None
 ) -> str:
     if outcome == "defeat":
-        return "패배했습니다."
+        return render("log.combat.defeat", "ko")
     if outcome == "fled":
-        return "전투에서 이탈했습니다."
+        return render("log.combat.fled", "ko")
     if outcome == "downed":
-        return "의식을 되찾았습니다."
+        return render("log.combat.downed", "ko")
     enemies_remaining = enemies_remaining or []
     survivors = [e for e in enemies_remaining if e.get("hp", 0) > 0]
     if survivors:
         names = [e.get("name", "") for e in survivors if e.get("name")]
         if names:
             joined = ", ".join(names)
-            return f"{joined}{i_ga(joined)} 도망쳤습니다."
-        return "적이 도망쳤습니다."
-    return "적을 처치했습니다."
+            return render("log.combat.enemies_fled", "ko", names=joined)
+        return render("log.combat.enemies_fled_anon", "ko")
+    return render("log.combat.enemies_defeated", "ko")
 
 
 def format_use_log(state: GameState, actor_id: str, result: dict) -> str:
@@ -270,58 +269,60 @@ def format_use_log(state: GameState, actor_id: str, result: dict) -> str:
     actor_name = actor.name if actor else actor_id
     item_id = result.get("item_id")
     item = state.items.get(item_id) if item_id else None
-    item_name = item.name if item else (item_id or "아이템")
+    item_name = item.name if item else (item_id or "아이템")  # locale-allow: 아이템 fallback moves to catalog in 1.4
+
+    head = render("log.use.head", "ko", actor=actor_name, item=item_name)
     kind = result.get("kind")
-    head = f"{actor_name} — 「{item_name}」 사용"
     if kind == "heal":
-        head += f" ({result.get('amount', 0)} 회복)"
-    elif kind == "damage":
+        return f"{head} {render('log.use.heal', 'ko', amount=result.get('amount', 0))}"
+    if kind == "damage":
         target_id = result.get("target")
         tname = (
             state.characters[target_id].name
             if target_id and target_id in state.characters
             else target_id or ""
         )
-        tail = f" ({tname} 쓰러짐)" if result.get("dead") else ""
-        head += f" ({tname}에게 {result.get('amount', 0)} 데미지{tail})"
-    elif kind == "mp_restore":
-        head += f" ({result.get('amount', 0)} MP 회복)"
-    elif kind == "buff":
-        head += f" ({result.get('description', '')}, {result.get('duration', 0)} 턴)"
-    elif kind == "trigger":
+        if result.get("dead"):
+            return f"{head} {render('log.use.damage_dead', 'ko', target=tname, amount=result.get('amount', 0))}"
+        return f"{head} {render('log.use.damage_alive', 'ko', target=tname, amount=result.get('amount', 0))}"
+    if kind == "mp_restore":
+        return f"{head} {render('log.use.mp_restore', 'ko', amount=result.get('amount', 0))}"
+    if kind == "buff":
+        return f"{head} {render('log.use.buff', 'ko', description=result.get('description', ''), duration=result.get('duration', 0))}"
+    if kind == "trigger":
         on_use = result.get("on_use")
         if on_use:
-            head += f" ({on_use})"
+            return f"{head} {render('log.use.trigger', 'ko', on_use=on_use)}"
     return head
 
 
 # ----- Combat outcome summary (one act-line after the cinematic) -----
 
-_COMBAT_PLAYER_FALLBACK_NAME = "주인공"
+_COMBAT_PLAYER_FALLBACK_NAME = render("log.combat.player_fallback", "ko")
 
 
 def format_combat_enemy_killed(name: str, damage: int) -> str:
-    return f"{name} {damage} 피해 — 쓰러짐"
+    return render("log.combat.enemy_killed", "ko", name=name, damage=damage)
 
 
 def format_combat_enemy_hit(name: str, damage: int, hp_after: int, max_hp: int) -> str:
-    return f"{name} {damage} 피해 (HP {hp_after}/{max_hp})"
+    return render("log.combat.enemy_hit", "ko", name=name, damage=damage, hp_after=hp_after, hp_max=max_hp)
 
 
 def format_combat_player_hit(name: str, damage: int, hp_after: int, max_hp: int) -> str:
-    return f"{name} {damage} 피해 (HP {hp_after}/{max_hp})"
+    return render("log.combat.player_hit", "ko", name=name, damage=damage, hp_after=hp_after, hp_max=max_hp)
 
 
 def format_combat_player_downed(name: str, damage: int, hp_before: int) -> str:
     """Player hit reduces HP to 0 (revival imminent on next event)."""
-    return f"{name} {damage} 피해 (HP {hp_before}→0, 사망 직전)"
+    return render("log.combat.player_downed", "ko", name=name, damage=damage, hp_before=hp_before)
 
 
 def format_combat_revived(coins_after: int, coins_max: int, hp_after: int) -> str:
     """Player revival: dropped to 0, came back at hp_after."""
     if coins_after == 0:
-        return f"최후의 호흡 (소생 0/{coins_max}, HP 0→{hp_after})"
-    return f"가까스로 일어남 (소생 {coins_after}/{coins_max}, HP 0→{hp_after})"
+        return render("log.combat.revived_critical", "ko", coins_max=coins_max, hp_after=hp_after)
+    return render("log.combat.revived_normal", "ko", coins_after=coins_after, coins_max=coins_max, hp_after=hp_after)
 
 
 def format_combat_outcome_summary(result: "AutoCombatResult") -> str | None:
@@ -336,37 +337,17 @@ def format_combat_outcome_summary(result: "AutoCombatResult") -> str | None:
         if h.killed:
             lines.append(format_combat_enemy_killed(h.name, h.damage_total))
         elif h.damage_total > 0:
-            lines.append(
-                format_combat_enemy_hit(h.name, h.damage_total, h.hp_after, h.max_hp)
-            )
+            lines.append(format_combat_enemy_hit(h.name, h.damage_total, h.hp_after, h.max_hp))
     if result.player_damage_total > 0 or result.player_revived:
         player_name = result.player_name or _COMBAT_PLAYER_FALLBACK_NAME
         if result.player_revived:
-            # Show chronological two-step: downed at 0, then revived.
-            lines.append(
-                format_combat_player_downed(
-                    player_name, result.player_damage_total, result.player_hp_before
-                )
-            )
-            lines.append(
-                format_combat_revived(
-                    result.player_revive_coins_after,
-                    result.player_revive_coins_max,
-                    result.player_hp_after,
-                )
-            )
+            lines.append(format_combat_player_downed(player_name, result.player_damage_total, result.player_hp_before))
+            lines.append(format_combat_revived(result.player_revive_coins_after, result.player_revive_coins_max, result.player_hp_after))
         else:
-            lines.append(
-                format_combat_player_hit(
-                    player_name,
-                    result.player_damage_total,
-                    result.player_hp_after,
-                    result.player_max_hp,
-                )
-            )
+            lines.append(format_combat_player_hit(player_name, result.player_damage_total, result.player_hp_after, result.player_max_hp))
     if not lines:
         return None
-    return "전투 결과\n" + "\n".join(lines)
+    return render("log.combat.outcome_header", "ko") + "\n" + "\n".join(lines)
 
 
 def format_combat_event_summary(result: "AutoCombatResult") -> str:
@@ -375,26 +356,32 @@ def format_combat_event_summary(result: "AutoCombatResult") -> str:
     parts: list[str] = []
     for h in result.enemy_hits:
         if h.killed:
-            parts.append(
-                f"{player_name}{i_ga(player_name)} {h.name}에게 {h.damage_total} 피해 — {h.name} 쓰러짐"
-            )
+            parts.append(render(
+                "log.combat.event_enemy_killed", "ko",
+                actor=player_name, name=h.name, damage=h.damage_total,
+            ))
         elif h.damage_total > 0:
-            parts.append(
-                f"{player_name}{i_ga(player_name)} {h.name}에게 {h.damage_total} 피해 (적 HP {h.hp_after}/{h.max_hp})"
-            )
+            parts.append(render(
+                "log.combat.event_enemy_hit", "ko",
+                actor=player_name, name=h.name, damage=h.damage_total,
+                hp_after=h.hp_after, hp_max=h.max_hp,
+            ))
     if result.player_damage_total > 0:
-        parts.append(
-            f"{player_name} {result.player_damage_total} 피해 입음 (HP {result.player_hp_after}/{result.player_max_hp})"
-        )
+        parts.append(render(
+            "log.combat.event_player_hit", "ko",
+            name=player_name, damage=result.player_damage_total,
+            hp_after=result.player_hp_after, hp_max=result.player_max_hp,
+        ))
     if result.player_revived:
-        parts.append("가까스로 소생")
-    outcome_map = {
-        "victory": "전투 승리",
-        "defeat": "전투 패배",
-        "fled": "전투 이탈",
-        "downed": "전투 중 쓰러짐",
+        parts.append(render("log.combat.event_revived", "ko"))
+    outcome_keys = {
+        "victory": "log.combat.outcome_victory",
+        "defeat": "log.combat.outcome_defeat",
+        "fled": "log.combat.outcome_fled",
+        "downed": "log.combat.outcome_downed",
     }
-    outcome_label = outcome_map.get(result.outcome, result.outcome)
+    outcome_key = outcome_keys.get(result.outcome)
+    outcome_label = render(outcome_key, "ko") if outcome_key else result.outcome
     summary = ", ".join(parts) if parts else outcome_label
     if parts:
         summary += f" — {outcome_label}"
