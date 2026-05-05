@@ -5,9 +5,9 @@ from src.llm.calls.classify.modifiers import _MODIFIER_SCHEMAS, validate_modifie
 from src.llm.calls.classify.schema import Verb
 
 
-def test_all_ten_verbs_have_schemas():
+def test_all_nine_verbs_have_schemas():
     expected = {"move", "transfer", "use", "attack", "cast",
-                "speak", "alter", "perceive", "rest", "wait"}
+                "speak", "perceive", "rest", "wait"}
     assert set(_MODIFIER_SCHEMAS.keys()) == expected
 
 
@@ -92,18 +92,13 @@ def test_wait_target_cardinality_forbidden():
         validate_modifiers(v, in_combat=False)
 
 
-def test_alter_disjunctive_state_or_action():
-    v = Verb(name="alter", modifiers={"target": "lock_01"})
-    with pytest.raises(ModifierValidationError, match=r"state|action"):
-        validate_modifiers(v, in_combat=False)
+def test_alter_verb_no_longer_accepted():
+    """alter was removed (10 → 9 verbs). Pydantic rejects the name at Verb
+    construction — modifier validation never runs."""
+    from pydantic import ValidationError
 
-
-def test_alter_with_state_passes():
-    validate_modifiers(Verb(name="alter", modifiers={"target": "lock_01", "state": "open"}), in_combat=False)
-
-
-def test_alter_with_action_passes():
-    validate_modifiers(Verb(name="alter", modifiers={"target": "door_01", "action": "break"}), in_combat=False)
+    with pytest.raises(ValidationError):
+        Verb(name="alter", modifiers={"target": "door_01"})
 
 
 def test_rest_no_modifier():

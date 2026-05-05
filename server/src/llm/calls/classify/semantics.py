@@ -227,7 +227,7 @@ _CHECKS: dict[VerbName, Callable[[Verb, dict[str, Any]], None]] = {
     "speak": _check_speak,
     "transfer": _check_transfer,
     "use": _check_use,
-    # move, rest, wait, perceive, alter: pass automatically after schema/modifier validation
+    # move, rest, wait, perceive: pass automatically after schema/modifier validation
 }
 
 

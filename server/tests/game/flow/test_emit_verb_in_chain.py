@@ -39,7 +39,7 @@ def test_emit_verb_in_chain_transfer_branches_4_paths():
 
 
 def test_emit_verb_in_chain_rejects_non_compat_verbs():
-    """wait/perceive/speak/alter/cast/attack/rest는 chain 안에서 emit 불가."""
+    """wait/perceive/speak/cast/attack/rest는 chain 안에서 emit 불가."""
     src = inspect.getsource(_emit_verb_in_chain)
     assert "raise ValueError" in src
     assert "cannot be emitted in chain" in src

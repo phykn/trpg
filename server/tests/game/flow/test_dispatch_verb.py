@@ -20,11 +20,11 @@ def test_dispatch_verb_signature_takes_keyword_args():
         assert required in keyword_params, f"missing kwarg: {required}"
 
 
-def test_dispatch_verb_handles_all_ten_verbs():
-    """소스 inspection: _dispatch_verb이 10개 verb name 모두에 대해 분기를 갖는지."""
+def test_dispatch_verb_handles_all_nine_verbs():
+    """소스 inspection: _dispatch_verb이 9개 verb name 모두에 대해 분기를 갖는지."""
     src = inspect.getsource(turn_module._dispatch_verb)
     for verb_name in ("move", "transfer", "use", "attack", "cast",
-                        "speak", "alter", "perceive", "rest", "wait"):
+                        "speak", "perceive", "rest", "wait"):
         assert f'name == "{verb_name}"' in src, f"_dispatch_verb missing branch: {verb_name}"
 
 

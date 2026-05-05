@@ -72,17 +72,6 @@ _MODIFIER_SCHEMAS: dict[VerbName, ModifierSchema] = {
         },
         target_cardinality="forbidden",
     ),
-    "alter": ModifierSchema(
-        required_modifiers=frozenset({"target"}),
-        optional_modifiers={
-            "target": str,
-            "state": str,
-            "action": ("knock", "break", "light", "lock", "unlock", "disable"),
-            "tail_intent": str,
-        },
-        target_cardinality="forbidden",
-        disjunctive_required=(frozenset({"state", "action"}),),
-    ),
     "perceive": ModifierSchema(
         required_modifiers=frozenset(),
         optional_modifiers={},
