@@ -1,6 +1,4 @@
-# Engine action-validation error phrases. flow/error_phrases.py의 _ERROR_PHRASES_RAW에서 옮김.
-# substring(영어) → 한국어 phrase. error_phrases.humanize_engine_error가
-# substring 매칭 후 catalog 키로 lookup.
+# Engine action-validation error phrases. Keyed by substring match in error_phrases.humanize_engine_error.
 
 [log."error.hp_full"]
 ko = "이미 체력이 가득해 회복약을 쓸 필요가 없습니다"
