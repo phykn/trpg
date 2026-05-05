@@ -15,7 +15,7 @@ from ..domain.memory import (
 from ..domain.state import GameState
 from ..persistence.repo import SaveRepo
 from ..rules import RULES
-from ..wire.emit import emit_error
+from ..wire.emit import emit_error, emit_log_entry
 from .format import format_death_log
 
 ToFrontFn = Callable[[GameState], dict]
@@ -68,7 +68,7 @@ def push_gm(state: GameState, dirty: Dirty, text: str) -> dict:
     """Push one GM line and return the SSE log_entry payload."""
     log = GMLogEntry(id=next_log_id(state), kind="gm", text=text)
     push_log_entry(state, log, dirty)
-    return {"type": "log_entry", "data": log.model_dump()}
+    return emit_log_entry(log)
 
 
 def push_act(
@@ -88,7 +88,7 @@ def push_act(
     push_log_entry(state, log, dirty)
     if turn_summary is not None:
         push_turn_log(state, target, turn_summary, dirty)
-    return {"type": "log_entry", "data": log.model_dump()}
+    return emit_log_entry(log)
 
 
 def drop_pushed_act(state: GameState, dirty: Dirty, entry_id: int | None) -> None:

@@ -20,6 +20,7 @@ from .buff_tick import tick_turn_buffs
 from .combat_auto import PlayerAction, run_auto_combat
 from .combat_phase import emit_combat_cinematic_and_end
 from .companion import handle_recruit_roll_result
+from ..wire.emit import emit_log_entry
 from .dirty import (
     Dirty,
     ToFrontFn,
@@ -124,7 +125,7 @@ async def run_roll(
         bonus_breakdown=breakdown,
     )
     push_log_entry(state, roll_log, dirty)
-    yield {"type": "log_entry", "data": roll_log.model_dump()}
+    yield emit_log_entry(roll_log)
 
     # Recruit rolls don't grant XP — they're social judgment calls, not growth events. Skip the XP/narrate stat-roll path entirely.
     if pending.kind == "recruit":
