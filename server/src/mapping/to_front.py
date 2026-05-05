@@ -10,17 +10,14 @@ from ..domain.entities import EQUIPMENT_SLOTS, Location, Quest
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
 from ..locale import render
-from ..engines.growth import can_afford_level_up, xp_for_next_level
 from ..ontology.graph import GameGraph
 from ..ontology.queries import (
-    companions_of,
     connections_of,
     equipment_of,
     inhabitants_of,
     inventory_of,
     known_skills_of,
 )
-from ..rules import RULES
 from .labels import (
     difficulty_badge,
     gender_label,
@@ -101,39 +98,12 @@ def _skill_names(state: GameState, graph: GameGraph, char_id: str) -> list[str]:
 
 
 def to_hero(state: GameState, graph: GameGraph | None = None) -> dict:
+    """Wire shape comes from `_build_hero_payload`; this just unwraps to a
+    plain dict for state-payload embedding."""
+    from ..wire.emit import _build_hero_payload  # local import avoids layer cycle
     if graph is None:
         graph = state.graph()
-    p = state.characters[state.player_id]
-    skills = _skill_names(state, graph, p.id)
-    inventory = _inventory(state, graph, p.id)
-    inventory = [{"name": f"금화({p.gold})", "qty": 1}, *inventory]
-    return {
-        "name": p.name,
-        "alive": p.alive,
-        "raceJob": race_job_label(state, graph, p),
-        "gender": gender_label(p),
-        "level": p.level,
-        "exp": p.xp_pool,
-        "expMax": xp_for_next_level(p.level),
-        "canLevelUp": can_afford_level_up(p),
-        "hp": p.hp,
-        "hpMax": p.max_hp,
-        "mp": p.mp,
-        "mpMax": p.max_mp,
-        "reviveCoins": p.revive_coins,
-        "reviveCoinsMax": RULES.death.revive_coins,
-        "gold": p.gold,
-        "stats": stats_payload(p.stats),
-        "equipment": _equipment(state, graph, p.id),
-        "inventory": inventory,
-        "status": list(p.status),
-        "skills": skills,
-        "companions": [
-            label
-            for cid in companions_of(graph, p.id)
-            if (label := _companion_label(state, graph, cid)) is not None
-        ],
-    }
+    return _build_hero_payload(state, graph).model_dump()
 
 
 def to_subject(state: GameState, graph: GameGraph | None = None) -> dict | None:
