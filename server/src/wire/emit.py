@@ -10,6 +10,7 @@ from .models import (
     InventoryItem,
     PendingCheckPayload,
     StatEntry,
+    SubjectPayload,
     TierBadge,
 )
 
@@ -176,4 +177,83 @@ def _build_hero_payload(state: "GameState", graph: "GameGraph") -> HeroPayload:
         status=list(p.status),
         skills=skills,
         companions=companions,
+    )
+
+
+def _build_subject_payload(
+    state: "GameState", graph: "GameGraph"
+) -> SubjectPayload | None:
+    """Build the wire model for the `subject` state slot. Returns None when
+    no subject is active or the active id no longer resolves — same gating
+    as mapping.to_subject. Mirrors mapping.to_subject's exact derivation
+    (known list = appearance + hints + player memories, equipment/inventory/
+    skills via ontology queries, gold pseudo-row at inventory[0])."""
+    from collections import Counter
+
+    from ..domain.entities import EQUIPMENT_SLOTS
+    from ..mapping.labels import gender_label, race_job_label, stats_payload
+    from ..ontology.queries import equipment_of, inventory_of, known_skills_of
+
+    if state.active_subject_id is None:
+        return None
+    sid = state.active_subject_id
+    if sid not in state.characters:
+        return None
+    s = state.characters[sid]
+    player = state.characters[state.player_id]
+
+    known: list[str] = [s.appearance] if s.appearance and s.alive else []
+    known += list(s.hints)
+    known += [m.content for m in player.memories if m.target_id == sid]
+
+    equipped: dict[str, EquipItem | None] = {slot: None for slot in EQUIPMENT_SLOTS}
+    for edge in equipment_of(graph, s.id):
+        slot = (edge.attrs or {}).get("slot")
+        if slot is None or slot not in equipped:
+            continue
+        item = state.items.get(edge.to_id)
+        if item is None:
+            continue
+        equipped[slot] = EquipItem(name=item.name)
+
+    counts: Counter[str] = Counter(inventory_of(graph, s.id))
+    for edge in equipment_of(graph, s.id):
+        item_id = edge.to_id
+        counts[item_id] -= 1
+        if counts[item_id] <= 0:
+            del counts[item_id]
+    inventory: list[InventoryItem] = [InventoryItem(name=f"금화({s.gold})", qty=1)]
+    inventory.extend(
+        InventoryItem(name=state.items[item_id].name, qty=qty)
+        for item_id, qty in counts.items()
+        if item_id in state.items
+    )
+
+    skills: list[str] = []
+    seen: set[str] = set()
+    for edge in known_skills_of(graph, s.id):
+        skill_id = edge.to_id
+        if skill_id in seen:
+            continue
+        skill = state.skills.get(skill_id)
+        if skill is None:
+            continue
+        seen.add(skill_id)
+        skills.append(skill.name)
+
+    return SubjectPayload(
+        name=s.name,
+        alive=s.alive,
+        role=s.role,
+        race_job=race_job_label(state, graph, s),
+        gender=gender_label(s),
+        trust=s.relations.get(state.player_id, 0),
+        known=known,
+        level=s.level,
+        hp=s.hp,
+        hp_max=s.max_hp,
+        stats=[StatEntry(**row) for row in stats_payload(s.stats)],
+        equipment=Equipment(**equipped),
+        inventory=inventory,
+        skills=skills,
     )
