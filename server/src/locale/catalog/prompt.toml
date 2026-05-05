@@ -17,3 +17,36 @@ ko = "[턴 {turn}] — {summary}"
 
 [prompt."history.dialogue_entry"]
 ko = "[턴 {turn}]\n  플레이어: {player}\n  서술자: {narrator}"
+
+[prompt."judge.empty_history"]
+ko = "(없음)"
+
+[prompt."judge.npc_block"]
+ko = "NPC: {npc_id}, 호감도: {favor}"
+
+[prompt."judge.no_npc"]
+ko = "(turn 종료 자동 체크)"
+
+[prompt."judge.empty_objective"]
+ko = "(목표 없음)"
+
+[prompt."judge.empty_claim"]
+ko = "(주장 없음)"
+
+[prompt."judge.quest_evaluator"]
+ko = """[Quest 자유 경로 판정]
+Quest 목표: {objective}
+
+Player 최근 행적:
+{history}
+
+Player 주장: {claim}
+{npc_block}
+
+다음 enum 중 하나로 판정:
+- satisfied: 목표를 충분히 달성했다고 인정. 보상 지급.
+- partial: 일부 진행 — progress_delta로 누적량 반환.
+- rejected: 충족 근거 부족.
+
+진행 시그널 인식: 다음 행위도 quest 진행으로 인정합니다 — 의뢰자 NPC에게 결과를 보고하는 발화, 의뢰의 핵심 조건을 충족하는 다른 우회 행위(예: 처치 대신 추방·설득). 직전 turn_log에 quest의 trigger와 매칭되는 사건이 있고, 현재 행위가 그 결과를 의뢰자에게 알리거나 의뢰 완료 의사를 표현하면 satisfied로 판정합니다.
+"""
