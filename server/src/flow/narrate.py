@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 
 from ..locale import render
 from ..llm_calls.classify.schema import Verb
+from ..wire.emit import emit_error
 from ..llm_calls.narrate import (
     NarrateInput,
     NarrateOutput,
@@ -194,10 +195,7 @@ async def consume_narrate(
         final = NarrativeFinal(body="", output=NarrateOutput())
     if final.parse_error:
         # Body has already streamed by the time we know the JSON tail is malformed; runner can't retry, so surface as SSE error so the dropped state_changes/memory aren't silent.
-        yield {
-            "type": "error",
-            "data": {"message": final.parse_error, "code": "NarrateParseFailed"},
-        }
+        yield emit_error("NarrateMalformed")
     body = final.body.strip()
     if not body:
         body = render("log.narrate.fallback", "ko")

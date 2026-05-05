@@ -13,13 +13,16 @@ from ..engines.growth import level_up as level_up_engine
 from ..engines.invariants import InvariantViolation
 from ..engines.invariants.character import check_character
 from ..llm.client import LLMClient, set_llm_session_if_unset
+from ..locale import render
 from ..persistence.repo import SaveRepo, ScenarioRepo
+from ..wire.emit import emit_error
 from .dirty import (
     Dirty,
     ToFrontFn,
     finalize,
     push_act,
 )
+from .error_phrases import humanize_engine_error
 from .format import format_learn_skill_log, format_level_up_log
 from .narrate import consume_narrate, run_narrate
 
@@ -37,35 +40,23 @@ async def run_level_up(
     set_llm_session_if_unset(state.game_id)
 
     if state.pending_check is not None:
-        yield {
-            "type": "error",
-            "data": {
-                "message": "굴림이 진행 중입니다. 먼저 주사위를 굴려 주세요.",
-                "code": "PendingCheckActive",
-            },
-        }
+        yield emit_error("PendingCheckActive")
         return
 
     dirty = Dirty()
     actor = state.characters[state.player_id]
     stat_down = STAT_PAIRS.get(stat_up)
     if stat_down is None:
-        yield {
-            "type": "error",
-            "data": {
-                "message": f"잘못된 능력치입니다: {stat_up}",
-                "code": "LevelUpInvalid",
-            },
-        }
+        yield emit_error(
+            "LevelUpInvalid",
+            message=render("error.level_up_invalid_stat", "ko", stat_up=stat_up),
+        )
         return
 
     try:
         level_up_engine(actor, stat_up, stat_down)
     except LevelUpInvalid as e:
-        yield {
-            "type": "error",
-            "data": {"message": str(e), "code": "LevelUpInvalid"},
-        }
+        yield emit_error(e, message=humanize_engine_error(e))
         return
 
     violations = check_character(actor)
@@ -117,10 +108,7 @@ async def run_level_up(
             ):
                 yield ev
         except (ValidationError, LLMUnavailable, OSError, TimeoutError) as e:
-            yield {
-                "type": "error",
-                "data": {"message": str(e), "code": "NarrateFailed"},
-            }
+            yield emit_error(e)
 
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
