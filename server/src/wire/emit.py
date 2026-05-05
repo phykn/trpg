@@ -1,7 +1,12 @@
 import re
+from typing import TYPE_CHECKING
 
 from ..locale import render
-from .models import ErrorPayload
+from .models import ErrorPayload, PendingCheckPayload, TierBadge
+
+if TYPE_CHECKING:
+    from ..domain.memory import PendingCheck
+    from ..domain.state import GameState
 
 _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
 
@@ -38,3 +43,38 @@ def emit_error(
 
     payload = ErrorPayload(code=code, message=message)
     return {"type": "error", "data": payload.model_dump()}
+
+
+def _build_pending_check_payload(
+    state: "GameState", pending: "PendingCheck"
+) -> PendingCheckPayload:
+    """Build the wire model from domain state. Centralizes derivation
+    (stat_label, stat_value, tier badge) so both emit_pending_check and
+    mapping.pending_check_to_front share one source of truth."""
+    from ..domain.types import tier_to_int
+    from ..mapping.labels import stat_label
+
+    actor = state.characters[state.player_id]
+    return PendingCheckPayload(
+        kind=pending.kind,
+        dc=pending.dc,
+        stat=pending.stat,
+        stat_label=stat_label(pending.stat),
+        stat_value=getattr(actor.stats, pending.stat),
+        mod=pending.mod,
+        required_roll=pending.required_roll,
+        tier=TierBadge(
+            value=tier_to_int(pending.tier),
+            max=7,
+            label=render(f"tier.{pending.tier}", "ko"),
+        ),
+        target=pending.target,
+        reason=pending.reason,
+    )
+
+
+def emit_pending_check(state: "GameState", pending: "PendingCheck") -> dict:
+    """SSE pending_check event. Mirrors emit_error pattern: state + pending →
+    full {"type": "pending_check", "data": {...}} envelope."""
+    payload = _build_pending_check_payload(state, pending)
+    return {"type": "pending_check", "data": payload.model_dump()}

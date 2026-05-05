@@ -9,7 +9,6 @@ from ..domain.clock import day_phase
 from ..domain.entities import EQUIPMENT_SLOTS, Location, Quest
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
-from ..domain.types import tier_to_int
 from ..locale import render
 from ..engines.growth import can_afford_level_up, xp_for_next_level
 from ..ontology.graph import GameGraph
@@ -295,23 +294,8 @@ def pending_check_to_front(state: GameState, pending: PendingCheck) -> dict:
     """`stat_label` is the Korean stat name (built here so the client doesn't
     re-derive it). `stat_value` is the player's current score on that stat.
     `reason` is shown verbatim above the dice strip."""
-    actor = state.characters[state.player_id]
-    return {
-        "kind": pending.kind,
-        "dc": pending.dc,
-        "stat": pending.stat,
-        "stat_label": stat_label(pending.stat),
-        "stat_value": getattr(actor.stats, pending.stat),
-        "mod": pending.mod,
-        "required_roll": pending.required_roll,
-        "tier": {
-            "value": tier_to_int(pending.tier),
-            "max": 7,
-            "label": render(f"tier.{pending.tier}", "ko"),
-        },
-        "target": pending.target,
-        "reason": pending.reason,
-    }
+    from ..wire.emit import _build_pending_check_payload  # local import avoids cycle
+    return _build_pending_check_payload(state, pending).model_dump()
 
 
 def to_front_state(state: GameState, graph: GameGraph | None = None) -> dict:
