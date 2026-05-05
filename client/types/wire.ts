@@ -4,20 +4,11 @@ import type { LogEntry } from '@/features/log';
 import type { Quest } from '@/features/quest';
 import type { Place, StoryGraphModel } from '@/features/story-graph';
 import type { Subject } from '@/features/subject';
-import type { ErrorPayload } from './wire.gen';
+import type { ErrorPayload, PendingCheckPayload } from './wire.gen';
 
-export type PendingCheck = {
-  kind: 'stat' | 'recruit';
-  dc: number;
-  stat: string;
-  stat_label: string;
-  stat_value: number;
-  mod: number;
-  required_roll: number;
-  tier: { value: number; max: number; label: string };
-  target: string;
-  reason: string;
-};
+// Re-export the auto-generated wire shape under the historical client name.
+// Caller code (handleStreamEvent, useGame, RollPrompt) keeps using `PendingCheck`.
+export type PendingCheck = PendingCheckPayload;
 
 export type FrontState = {
   hero: Hero;

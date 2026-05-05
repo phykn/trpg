@@ -18,6 +18,92 @@
       ],
       "title": "ErrorPayload",
       "type": "object"
+    },
+    "TierBadge": {
+      "description": "Difficulty tier display: numeric position (value/max) plus localized label.",
+      "properties": {
+        "value": {
+          "title": "Value",
+          "type": "integer"
+        },
+        "max": {
+          "title": "Max",
+          "type": "integer"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "max",
+        "label"
+      ],
+      "title": "TierBadge",
+      "type": "object"
+    },
+    "PendingCheckPayload": {
+      "description": "Wire shape for the `pending_check` SSE event and the `pendingCheck` slot\ninside the `state` payload.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "stat",
+            "recruit"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "dc": {
+          "title": "Dc",
+          "type": "integer"
+        },
+        "stat": {
+          "title": "Stat",
+          "type": "string"
+        },
+        "stat_label": {
+          "title": "Stat Label",
+          "type": "string"
+        },
+        "stat_value": {
+          "title": "Stat Value",
+          "type": "integer"
+        },
+        "mod": {
+          "title": "Mod",
+          "type": "integer"
+        },
+        "required_roll": {
+          "title": "Required Roll",
+          "type": "integer"
+        },
+        "tier": {
+          "$ref": "#/definitions/TierBadge"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "dc",
+        "stat",
+        "stat_label",
+        "stat_value",
+        "mod",
+        "required_roll",
+        "tier",
+        "target",
+        "reason"
+      ],
+      "title": "PendingCheckPayload",
+      "type": "object"
     }
   }
 }
