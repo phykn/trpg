@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from .memory import Memory
-from .types import StatKey, Tier
+from .types import EncounterRisk, StatKey, Tier
 
 
 class Stats(BaseModel):
@@ -235,7 +235,7 @@ class Location(BaseModel):
     connections: list[Connection] = []
     hidden_connections: list[Connection] = []
     weather: list[str] = []
-    sleep_risk: Literal["safe", "risky", "dangerous"] = "safe"
+    sleep_risk: EncounterRisk = "safe"
     sleep_encounters: list[str] = []
     difficulty: Tier | None = None
 

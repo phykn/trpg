@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 
 from .companions import CompanionRules
-from ..domain.types import Tier
+from ..domain.types import EncounterRisk, Grade, Tier
 
 
 class _F(BaseModel):
@@ -49,7 +49,7 @@ class TimeConfig(_F):
 
 
 class RecoveryConfig(_F):
-    encounter_chance: dict[str, float] = {
+    encounter_chance: dict[EncounterRisk, float] = {
         "safe": 0.0,
         "risky": 0.25,
         "dangerous": 0.6,
@@ -60,7 +60,7 @@ class RecoveryConfig(_F):
 class GrowthConfig(_F):
     base_xp: int = 100
     max_level: int = 20
-    roll_xp: dict[str, int] = {
+    roll_xp: dict[Grade, int] = {
         "critical_success": 25,
         "success": 8,
         "partial_success": 3,
@@ -70,7 +70,7 @@ class GrowthConfig(_F):
 
 
 class SkillConfig(_F):
-    grade_multipliers: dict[str, float] = {
+    grade_multipliers: dict[Grade, float] = {
         "critical_success": 2.0,
         "success": 1.0,
         "partial_success": 0.5,
