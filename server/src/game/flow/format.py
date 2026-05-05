@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from ..domain.state import GameState
 from src.locale import render
-from src.wire.labels import stat_label
+from src.locale.labels import stat_label
 from .error_phrases import humanize_engine_error
 
 if TYPE_CHECKING:

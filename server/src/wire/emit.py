@@ -125,7 +125,8 @@ def _build_hero_payload(state: "GameState", graph: "GameGraph") -> HeroPayload:
 
     from src.game.domain.entities import EQUIPMENT_SLOTS
     from src.game.engines.growth import can_afford_level_up, xp_for_next_level
-    from .labels import gender_label, race_job_label, stats_payload
+    from src.locale.labels import gender_label
+    from .labels import race_job_label, stats_payload
     from src.game.ontology.queries import (
         companions_of,
         equipment_of,
@@ -182,7 +183,7 @@ def _build_hero_payload(state: "GameState", graph: "GameGraph") -> HeroPayload:
         name=p.name,
         alive=p.alive,
         race_job=race_job_label(state, graph, p),
-        gender=gender_label(p),
+        gender=gender_label(p.gender),
         level=p.level,
         exp=p.xp_pool,
         exp_max=xp_for_next_level(p.level),
@@ -214,7 +215,8 @@ def _build_subject_payload(
     from collections import Counter
 
     from src.game.domain.entities import EQUIPMENT_SLOTS
-    from .labels import gender_label, race_job_label, stats_payload
+    from src.locale.labels import gender_label
+    from .labels import race_job_label, stats_payload
     from src.game.ontology.queries import equipment_of, inventory_of, known_skills_of
 
     if state.active_subject_id is None:
@@ -269,7 +271,7 @@ def _build_subject_payload(
         alive=s.alive,
         role=s.role,
         race_job=race_job_label(state, graph, s),
-        gender=gender_label(s),
+        gender=gender_label(s.gender),
         trust=s.relations.get(state.player_id, 0),
         known=known,
         level=s.level,
@@ -342,7 +344,8 @@ def _build_place_payload(
     fallback chain, day_phase via clock + render, risk via risk_payload)."""
     from src.game.domain.clock import day_phase
     from src.locale import render
-    from .labels import gender_label, race_job_label, risk_payload
+    from src.locale.labels import gender_label
+    from .labels import race_job_label, risk_payload
     from src.game.ontology.queries import connections_of, inhabitants_of
 
     p = state.characters[state.player_id]
@@ -383,7 +386,7 @@ def _build_place_payload(
                 name=c.name,
                 level=c.level,
                 race_job=race_job_label(state, graph, c),
-                gender=gender_label(c),
+                gender=gender_label(c.gender),
                 blurb=blurb,
                 trust=c.relations.get(state.player_id, 0),
             )
