@@ -85,7 +85,6 @@ _MODIFIER_SCHEMAS: dict[VerbName, ModifierSchema] = {
     "wait": ModifierSchema(
         required_modifiers=frozenset(),
         optional_modifiers={
-            "stance": ("idle", "alert", "defensive"),
             "tail_intent": str,
         },
         target_cardinality="forbidden",

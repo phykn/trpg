@@ -7,7 +7,7 @@ from src.llm.calls.classify.schema import validate_judge_output
 
 
 def test_actions_one_verb():
-    raw = json.dumps({"actions": [{"name": "wait", "modifiers": {"stance": "idle"}}]})
+    raw = json.dumps({"actions": [{"name": "wait"}]})
     out = validate_judge_output(raw, in_combat=False)
     assert out.actions[0].name == "wait"
 

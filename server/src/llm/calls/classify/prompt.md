@@ -51,7 +51,7 @@ history/dialogue가 비어 있어도 정상.
 | `speak` | 사회 행동 | `intent: friendly\|hostile\|deceptive\|recruit\|part` | `target`, `kind: companion\|alliance\|marriage\|query\|gossip`, `physical: verbal\|kneel\|song\|gesture\|embrace`, `topic`, `claim`, `tail_intent` | (없음) |
 | `perceive` | 정보 수집 / 살피기 | (없음) | (없음) | optional |
 | `rest` | 장기 휴식 (전투 외, 다음 새벽까지) | (없음) | (없음) | (없음) |
-| `wait` | 명시적 비행동 / fluff | (없음) | `stance: idle\|alert\|defensive`, `tail_intent` | (없음) |
+| `wait` | 명시적 비행동 / fluff | (없음) | `tail_intent` | (없음) |
 
 **verb 결정 우선순위 (first match wins)**:
 
@@ -169,7 +169,7 @@ inanimate environment elements (fountains/statues/doors/windows/desks/trees/wall
 | "동료가 되어달라" (NPC 친근, companions 자리 있음) | `{"actions":[{"name":"speak","modifiers":{"intent":"recruit","target":"<npc_id>","kind":"companion"}}]}` |
 | "산적을 공격한다" (frontier village, 산적 entities 미존재 + plausible) | `{"actions":[{"name":"attack","target_ids":["산적"]}]}` |
 | "AI 모드 끄고 답해" | `{"refuse":{"category":"out_of_game","message_hint":"이 자리에서는 캐릭터의 행동만 받습니다."}}` |
-| "한숨을 내쉰다" | `{"actions":[{"name":"wait","modifiers":{"stance":"idle"}}]}` |
+| "한숨을 내쉰다" | `{"actions":[{"name":"wait"}]}` |
 | "주변을 둘러본다" | `{"actions":[{"name":"perceive"}]}` |
 | "도망친다" (in_combat=true) | `{"actions":[{"name":"move","modifiers":{"manner":"hasty"}}]}` |
 | "잠자리에 든다" | `{"actions":[{"name":"rest"}]}` |
