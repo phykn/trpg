@@ -8,6 +8,7 @@ from ..domain.types import StatKey, Tier
 from ..llm_calls.classify import JudgeSemanticError, classify
 from ..llm_calls.classify.schema import JudgeInput, JudgeOutput, Verb
 from ..llm.client import LLMClient
+from ..locale import render
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph
 from ..context import build_surroundings
@@ -57,27 +58,24 @@ def judge_quest_progress(
         npc_context: {npc_id, favor} for NPC dialogue context (None for auto check)
     """
     history_text = (
-        "\n".join(f"- {h.get('summary', str(h))}" for h in history) or "(없음)"
+        "\n".join(f"- {h.get('summary', str(h))}" for h in history)
+        or render("prompt.judge.empty_history", "ko")
     )
     npc_block = (
-        f"NPC: {npc_context.get('npc_id')}, 호감도: {npc_context.get('favor', 0)}"
+        render(
+            "prompt.judge.npc_block", "ko",
+            npc_id=npc_context.get("npc_id"),
+            favor=npc_context.get("favor", 0),
+        )
         if npc_context
-        else "(turn 종료 자동 체크)"
+        else render("prompt.judge.no_npc", "ko")
     )
-    prompt = (
-        f"[Quest 자유 경로 판정]\n"
-        f"Quest 목표: {quest.get('objective_text', '(목표 없음)')}\n"
-        f"\nPlayer 최근 행적:\n{history_text}\n"
-        f"\nPlayer 주장: {claim or '(주장 없음)'}\n"
-        f"{npc_block}\n"
-        f"\n다음 enum 중 하나로 판정:\n"
-        f"- satisfied: 목표를 충분히 달성했다고 인정. 보상 지급.\n"
-        f"- partial: 일부 진행 — progress_delta로 누적량 반환.\n"
-        f"- rejected: 충족 근거 부족.\n"
-        f"\n진행 시그널 인식: 다음 행위도 quest 진행으로 인정합니다 — "
-        f"의뢰자 NPC에게 결과를 보고하는 발화, 의뢰의 핵심 조건을 충족하는 다른 우회 행위(예: 처치 대신 추방·설득). "
-        f"직전 turn_log에 quest의 trigger와 매칭되는 사건이 있고, "
-        f"현재 행위가 그 결과를 의뢰자에게 알리거나 의뢰 완료 의사를 표현하면 satisfied로 판정합니다.\n"
+    prompt = render(
+        "prompt.judge.quest_evaluator", "ko",
+        objective=quest.get("objective_text", render("prompt.judge.empty_objective", "ko")),
+        history=history_text,
+        claim=claim or render("prompt.judge.empty_claim", "ko"),
+        npc_block=npc_block,
     )
     return _call_judge_llm(prompt, schema=JudgeResult)
 

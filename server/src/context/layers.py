@@ -17,9 +17,9 @@ _SUBJECT_JOSA = ("가", "이", "은", "는", "께서")
 _PRONOUN_SUBJECTS = ("그가", "그는", "그녀가", "그녀는")
 
 # History-block headers + per-line builders. Hoisted so the layer body stays free of inline Korean prompt fragments.
-_HISTORY_HEADER_DEAD = "=== 사망 — 다시 등장시키거나 발화시키지 말 것 ==="
-_HISTORY_HEADER_SUMMARY = "=== 이전 요약 ==="
-_HISTORY_HEADER_DIALOGUE = "=== 최근 대화 ==="
+_HISTORY_HEADER_DEAD = render("prompt.history.dead_header", "ko")
+_HISTORY_HEADER_SUMMARY = render("prompt.history.summary_header", "ko")
+_HISTORY_HEADER_DIALOGUE = render("prompt.history.dialogue_header", "ko")
 
 # Cap recent_dialogue narrator bodies before they enter the narrate prompt:
 # the LLM was verbatim-echoing prior-turn narrators as a prefix in the new
@@ -43,15 +43,20 @@ def _truncate_narrator(text: str) -> str:
 
 
 def _format_corpse_line(name: str) -> str:
-    return f"- {name} (생전 발화가 아래 대화에 남아 있을 수 있으나 더 이상 말하지 않습니다)"
+    return render("prompt.history.corpse_line", "ko", name=name)
 
 
 def _format_summary_entry(turn: int, summary: str) -> str:
-    return f"[턴 {turn}] — {summary}"
+    return render("prompt.history.summary_entry", "ko", turn=turn, summary=summary)
 
 
 def _format_dialogue_entry(turn: int, player: str, narrator_redacted: str) -> str:
-    return f"[턴 {turn}]\n  플레이어: {player}\n  서술자: {_truncate_narrator(narrator_redacted)}"
+    return render(
+        "prompt.history.dialogue_entry", "ko",
+        turn=turn,
+        player=player,
+        narrator=_truncate_narrator(narrator_redacted),
+    )
 
 
 def redact_dead_quotes(text: str, dead_names: list[str]) -> str:
