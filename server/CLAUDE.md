@@ -129,7 +129,7 @@ There is no minute/hour clock. `state.turn_count` is the sole time variable; `do
 ## Stats / tiers / grades / prose voice
 
 - Stat keys are ASCII abbreviations: `STR / DEX / CON / INT / WIS / CHA`. Judge's `stat` enum uses the same keys.
-- Tiers are seven Korean labels: `매우 쉬움 / 쉬움 / 보통 / 어려움 / 매우 어려움 / 전설 / 신화`. No English aliases.
+- Tiers are seven ASCII identifiers: `very_easy / easy / normal / hard / very_hard / legend / myth`. Korean display labels live in `src/locale/catalog/tier.toml`, accessed via `render(f"tier.{value}", "ko")`.
 - Internal grade is five-way (`critical_success / success / partial_success / failure / critical_failure`). Client's `RollLogEntry.result` collapses to `success | partial | fail`.
 - All player-facing Korean — narrate / combat_narrate bodies, the deterministic `잠시 정적이 흐릅니다` fallback in `flow/narrate.py`, every engine-side log line built in `flow/format.py` · `flow/error_phrases.py` · `flow/actions.py` · `flow/combat_phase.py` · `flow/turn.py` · `flow/roll.py` · `mapping/to_front.py` — uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings.
 - Canonical user-facing term for skills is **기술**. The classify prompt accepts `스킬` as a synonym from player input, but every other prompt and engine string says `기술`. Code identifiers and the `skills/` entity directory keep the English `skill`.

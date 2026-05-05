@@ -1,5 +1,6 @@
 from ..domain.entities import Character, Stats
 from ..domain.state import GameState
+from ..domain.types import Tier
 from ..locale import render
 from ..ontology.graph import GameGraph
 from ..ontology.queries import giver_of, location_of, race_of
@@ -73,7 +74,7 @@ RISK_PAYLOAD: dict[str, dict] = {
 
 
 # `None` tone keeps the neutral mid-tier label uncolored on the panel.
-_TIER_TONE: dict[str, str | None] = {
+_TIER_TONE: dict[Tier, str | None] = {
     "very_easy": "neutral",
     "easy": "good",
     "normal": None,

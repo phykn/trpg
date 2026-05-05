@@ -234,7 +234,7 @@ def to_place(state: GameState, graph: GameGraph | None = None) -> dict | None:
             {
                 "name": target.name,
                 "blurb": target.description,
-                "difficulty": render(f"tier.{attrs['difficulty']}", "ko") if attrs.get("difficulty") else None,
+                "difficulty": render(f"tier.{d}", "ko") if (d := attrs.get("difficulty")) else None,
                 "risk": RISK_PAYLOAD[target.sleep_risk],
             }
         )
