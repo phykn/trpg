@@ -15,13 +15,23 @@ def _flatten(schema: dict, definitions: dict) -> dict:
     Pydantic v2 places nested-model schemas in a per-model $defs block and
     emits $ref: "#/$defs/Name". The draft-07 bundle uses definitions at the
     root, so we must lift those entries up and rewrite the refs accordingly.
+    Sub-schemas hoisted from $defs may themselves contain $ref: "#/$defs/..."
+    (e.g. Equipment referencing EquipItem), so the ref rewrite must cover
+    the whole bundle dump, not just the top-level schema body.
     """
     nested = schema.pop("$defs", {})
     for name, sub in nested.items():
         definitions[name] = sub
+    # rewrite refs in the main schema body
     raw = json.dumps(schema)
     fixed = re.sub(r'"#/\$defs/', '"#/definitions/', raw)
-    return json.loads(fixed)
+    schema = json.loads(fixed)
+    # rewrite refs inside any sub-schemas that were just hoisted
+    for name, sub in nested.items():
+        raw_sub = json.dumps(sub)
+        fixed_sub = re.sub(r'"#/\$defs/', '"#/definitions/', raw_sub)
+        definitions[name] = json.loads(fixed_sub)
+    return schema
 
 
 def dump_schemas(out_path: Path) -> None:
