@@ -39,6 +39,19 @@ export type Inventory = InventoryItem[];
 export type Status = string[];
 export type Skills = string[];
 export type Companions = string[];
+export type Name3 = string;
+export type Alive1 = boolean;
+export type Role = string;
+export type Racejob1 = string;
+export type Gender1 = string;
+export type Trust = number;
+export type Known = string[];
+export type Level1 = number;
+export type Hp1 = number;
+export type Hpmax1 = number;
+export type Stats1 = StatEntry[];
+export type Inventory1 = InventoryItem[];
+export type Skills1 = string[];
 
 export interface Wire {
   [k: string]: unknown;
@@ -156,5 +169,31 @@ export interface HeroPayload {
   status: Status;
   skills: Skills;
   companions: Companions;
+  [k: string]: unknown;
+}
+/**
+ * Wire shape for the `subject` slot inside the `state` payload.
+ * Field order matches mapping/to_front.to_subject's dict insertion order.
+ * NPC mp/mpMax is intentionally absent — subject panel doesn't expose
+ * NPC mana to the player.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "SubjectPayload".
+ */
+export interface SubjectPayload {
+  name: Name3;
+  alive: Alive1;
+  role: Role;
+  raceJob: Racejob1;
+  gender: Gender1;
+  trust: Trust;
+  known: Known;
+  level: Level1;
+  hp: Hp1;
+  hpMax: Hpmax1;
+  stats: Stats1;
+  equipment: Equipment;
+  inventory: Inventory1;
+  skills: Skills1;
   [k: string]: unknown;
 }
