@@ -2,6 +2,7 @@ import json
 import re
 from pathlib import Path
 
+from .models.combat import CombatEndPayload, CombatStartPayload, CombatTurnPayload
 from .models.done import DonePayload
 from .models.error import ErrorPayload
 from .models.hero import HeroPayload
@@ -26,6 +27,9 @@ _MODELS = [
     NarrativeDeltaPayload,
     SuggestionsPayload,
     DonePayload,
+    CombatStartPayload,
+    CombatTurnPayload,
+    CombatEndPayload,
 ]
 
 

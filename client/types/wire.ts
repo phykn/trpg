@@ -5,6 +5,9 @@ import type { Quest } from '@/features/quest';
 import type { Place, StoryGraphModel } from '@/features/story-graph';
 import type { Subject } from '@/features/subject';
 import type {
+  CombatEndPayload,
+  CombatStartPayload,
+  CombatTurnPayload,
   DonePayload,
   ErrorPayload,
   JudgePayload,
@@ -72,11 +75,10 @@ export type RollRequest = {
   think: boolean;
 };
 
-// `combat_*` events are observed but their payloads are never destructured —
-// `state` + `log_entry` are authoritative for the UI. `judge` is also
-// observability-only today (handleStreamEvent early-returns), but the payload
-// shape is typed as a discriminated union so future debug/observability
-// consumers stay safe across server changes.
+// `combat_*` events and `judge` are observability-only today
+// (handleStreamEvent early-returns), but the payload shapes are now typed
+// via wire.gen so future debug/observability consumers stay safe across
+// server changes. `state` + `log_entry` remain authoritative for the UI.
 export type JudgeData = JudgePayload;
 
 export type StreamEvent =
@@ -86,9 +88,9 @@ export type StreamEvent =
   | { type: 'suggestions'; data: SuggestionsPayload }
   | { type: 'log_entry'; data: LogEntry }
   | { type: 'state'; data: FrontState }
-  | { type: 'combat_start'; data: unknown }
-  | { type: 'combat_turn'; data: unknown }
-  | { type: 'combat_end'; data: unknown }
+  | { type: 'combat_start'; data: CombatStartPayload }
+  | { type: 'combat_turn'; data: CombatTurnPayload }
+  | { type: 'combat_end'; data: CombatEndPayload }
   | { type: 'done'; data: DonePayload }
   | { type: 'error'; data: ErrorPayload };
 

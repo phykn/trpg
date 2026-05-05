@@ -3,6 +3,9 @@ from typing import TYPE_CHECKING, Literal
 
 from ..locale import render
 from .models import (
+    CombatEndPayload,
+    CombatStartPayload,
+    CombatTurnPayload,
     DifficultyBadge,
     DonePayload,
     Equipment,
@@ -462,3 +465,37 @@ def emit_done() -> dict:
     """SSE done event. Empty payload — turn-end marker."""
     payload = DonePayload()
     return {"type": "done", "data": payload.model_dump()}
+
+
+def emit_combat_start(
+    *,
+    turn_order: list[str],
+    round: int,
+    surprise: Literal["player", "enemy"] | None,
+    enemy_ids: list[str],
+) -> dict:
+    """SSE combat_start event. Defensive list copies for turn_order/enemy_ids."""
+    payload = CombatStartPayload(
+        turn_order=list(turn_order),
+        round=round,
+        surprise=surprise,
+        enemy_ids=list(enemy_ids),
+    )
+    return {"type": "combat_start", "data": payload.model_dump()}
+
+
+def emit_combat_turn(payload: "CombatTurnPayload | dict") -> dict:
+    """SSE combat_turn event. Accepts either a CombatTurnPayload instance or
+    a raw dict (auto-combat emits dicts via _turn_event factory). Dict input
+    is validated against CombatTurnPayload — loud-fail on shape mismatch."""
+    if not isinstance(payload, CombatTurnPayload):
+        payload = CombatTurnPayload.model_validate(payload)
+    return {"type": "combat_turn", "data": payload.model_dump()}
+
+
+def emit_combat_end(
+    outcome: Literal["victory", "defeat", "downed", "fled"],
+) -> dict:
+    """SSE combat_end event."""
+    payload = CombatEndPayload(outcome=outcome)
+    return {"type": "combat_end", "data": payload.model_dump()}

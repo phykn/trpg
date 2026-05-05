@@ -1118,6 +1118,166 @@
       "properties": {},
       "title": "DonePayload",
       "type": "object"
+    },
+    "CombatStartPayload": {
+      "description": "SSE combat_start event payload — emitted when a fight opens.\n`surprise` flags an ambush direction (player-initiated vs enemy-initiated)\nor None for a clean fight.",
+      "properties": {
+        "turn_order": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Turn Order",
+          "type": "array"
+        },
+        "round": {
+          "title": "Round",
+          "type": "integer"
+        },
+        "surprise": {
+          "anyOf": [
+            {
+              "enum": [
+                "player",
+                "enemy"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Surprise"
+        },
+        "enemy_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Enemy Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "turn_order",
+        "round",
+        "enemy_ids"
+      ],
+      "title": "CombatStartPayload",
+      "type": "object"
+    },
+    "CombatTurnPayload": {
+      "description": "SSE combat_turn event payload. Two emit sites share this shape:\nauto-combat per-action turn events (full damage/grade/skill fields) and\nplayer passive equip/unequip during combat (only actor/action/item_id).\nAll non-actor/non-action/non-round fields are optional defaults so both\nsites validate.",
+      "properties": {
+        "actor": {
+          "title": "Actor",
+          "type": "string"
+        },
+        "action": {
+          "title": "Action",
+          "type": "string"
+        },
+        "round": {
+          "title": "Round",
+          "type": "integer"
+        },
+        "grade": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Grade"
+        },
+        "damage": {
+          "default": 0,
+          "title": "Damage",
+          "type": "integer"
+        },
+        "killed": {
+          "default": false,
+          "title": "Killed",
+          "type": "boolean"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target"
+        },
+        "skill_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Name"
+        },
+        "skill_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Id"
+        },
+        "item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Id"
+        }
+      },
+      "required": [
+        "actor",
+        "action",
+        "round"
+      ],
+      "title": "CombatTurnPayload",
+      "type": "object"
+    },
+    "CombatEndPayload": {
+      "description": "SSE combat_end event payload. `outcome` narrows to the 4-literal\nCombatOutcome that auto-combat produces.",
+      "properties": {
+        "outcome": {
+          "enum": [
+            "victory",
+            "defeat",
+            "downed",
+            "fled"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        }
+      },
+      "required": [
+        "outcome"
+      ],
+      "title": "CombatEndPayload",
+      "type": "object"
     }
   }
 }

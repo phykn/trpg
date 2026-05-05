@@ -104,9 +104,21 @@ describe('handleStreamEvent', () => {
       { type: 'judge', data: { judge_kind: 'refuse', refuse: { category: 'out_of_game', message_hint: 'y' } } },
       h,
     );
-    handleStreamEvent({ type: 'combat_start', data: {} }, h);
-    handleStreamEvent({ type: 'combat_turn', data: {} }, h);
-    handleStreamEvent({ type: 'combat_end', data: {} }, h);
+    handleStreamEvent(
+      {
+        type: 'combat_start',
+        data: { turn_order: ['player'], round: 1, enemy_ids: ['enemy_1'] },
+      },
+      h,
+    );
+    handleStreamEvent(
+      {
+        type: 'combat_turn',
+        data: { actor: 'player', action: 'attack', round: 1 },
+      },
+      h,
+    );
+    handleStreamEvent({ type: 'combat_end', data: { outcome: 'victory' } }, h);
     handleStreamEvent({ type: 'done', data: {} }, h);
 
     for (const fn of Object.values(h)) {

@@ -1,4 +1,7 @@
 from .emit import (
+    emit_combat_end,
+    emit_combat_start,
+    emit_combat_turn,
     emit_done,
     emit_error,
     emit_judge_pending_check_trigger,
@@ -13,6 +16,9 @@ from .emit import (
 from .models import (
     ActLogEntry,
     BonusItem,
+    CombatEndPayload,
+    CombatStartPayload,
+    CombatTurnPayload,
     DifficultyBadge,
     DonePayload,
     Equipment,
@@ -46,6 +52,9 @@ from .models import (
 __all__ = [
     "ActLogEntry",
     "BonusItem",
+    "CombatEndPayload",
+    "CombatStartPayload",
+    "CombatTurnPayload",
     "DifficultyBadge",
     "DonePayload",
     "Equipment",
@@ -74,6 +83,9 @@ __all__ = [
     "SubjectPayload",
     "SuggestionsPayload",
     "TierBadge",
+    "emit_combat_end",
+    "emit_combat_start",
+    "emit_combat_turn",
     "emit_done",
     "emit_error",
     "emit_judge_pending_check_trigger",

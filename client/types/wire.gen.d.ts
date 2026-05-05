@@ -148,6 +148,21 @@ export type BonusBreakdown = BonusItem[];
 export type LogEntryPayload = GMLogEntry | PlayerLogEntry | ActLogEntry | RollLogEntry;
 export type Text3 = string;
 export type Items = string[];
+export type TurnOrder = string[];
+export type Round = number;
+export type Surprise = ("player" | "enemy") | null;
+export type EnemyIds = string[];
+export type Actor = string;
+export type Action = string;
+export type Round1 = number;
+export type Grade = string | null;
+export type Damage = number;
+export type Killed = boolean;
+export type Target1 = string | null;
+export type SkillName = string | null;
+export type SkillId = string | null;
+export type ItemId = string | null;
+export type Outcome = "victory" | "defeat" | "downed" | "fled";
 
 export interface Wire {
   [k: string]: unknown;
@@ -560,5 +575,54 @@ export interface SuggestionsPayload {
  * via the `definition` "DonePayload".
  */
 export interface DonePayload {
+  [k: string]: unknown;
+}
+/**
+ * SSE combat_start event payload — emitted when a fight opens.
+ * `surprise` flags an ambush direction (player-initiated vs enemy-initiated)
+ * or None for a clean fight.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "CombatStartPayload".
+ */
+export interface CombatStartPayload {
+  turn_order: TurnOrder;
+  round: Round;
+  surprise?: Surprise;
+  enemy_ids: EnemyIds;
+  [k: string]: unknown;
+}
+/**
+ * SSE combat_turn event payload. Two emit sites share this shape:
+ * auto-combat per-action turn events (full damage/grade/skill fields) and
+ * player passive equip/unequip during combat (only actor/action/item_id).
+ * All non-actor/non-action/non-round fields are optional defaults so both
+ * sites validate.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "CombatTurnPayload".
+ */
+export interface CombatTurnPayload {
+  actor: Actor;
+  action: Action;
+  round: Round1;
+  grade?: Grade;
+  damage?: Damage;
+  killed?: Killed;
+  target?: Target1;
+  skill_name?: SkillName;
+  skill_id?: SkillId;
+  item_id?: ItemId;
+  [k: string]: unknown;
+}
+/**
+ * SSE combat_end event payload. `outcome` narrows to the 4-literal
+ * CombatOutcome that auto-combat produces.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "CombatEndPayload".
+ */
+export interface CombatEndPayload {
+  outcome: Outcome;
   [k: string]: unknown;
 }
