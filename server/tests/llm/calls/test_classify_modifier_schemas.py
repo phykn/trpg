@@ -113,6 +113,15 @@ def test_rest_no_modifier():
 def test_perceive_optional_target_ids():
     validate_modifiers(Verb(name="perceive", target_ids=[]), in_combat=False)
     validate_modifiers(
-        Verb(name="perceive", target_ids=["loc_01"], modifiers={"focus": "hidden"}),
+        Verb(name="perceive", target_ids=["loc_01"]),
         in_combat=False,
     )
+
+
+def test_perceive_focus_silently_dropped():
+    """focus enum was removed when perceive collapsed to a flavor verb. Stale
+    LLM output carrying focus shouldn't crash — unknown modifier silent-drop
+    handles it (same pattern as speak's garbage_key)."""
+    v = Verb(name="perceive", modifiers={"focus": "hidden"})
+    validate_modifiers(v, in_combat=False)
+    assert "focus" not in v.modifiers

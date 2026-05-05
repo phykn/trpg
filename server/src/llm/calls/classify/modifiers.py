@@ -85,9 +85,7 @@ _MODIFIER_SCHEMAS: dict[VerbName, ModifierSchema] = {
     ),
     "perceive": ModifierSchema(
         required_modifiers=frozenset(),
-        optional_modifiers={
-            "focus": ("general", "hidden", "tracks", "distant", "specific"),
-        },
+        optional_modifiers={},
         target_cardinality="optional",
     ),
     "rest": ModifierSchema(
