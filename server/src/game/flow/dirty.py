@@ -13,7 +13,7 @@ from ..domain.memory import (
     TurnLogEntry,
 )
 from ..domain.state import GameState
-from ...persistence.repo import SaveRepo
+from ...db.repo import SaveRepo
 from ..rules import RULES
 from ...wire.emit import emit_done, emit_error, emit_log_entry, emit_suggestions
 from .format import format_death_log

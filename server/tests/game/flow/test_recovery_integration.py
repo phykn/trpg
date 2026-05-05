@@ -4,7 +4,7 @@ import random
 
 from src.game.domain.clock import next_dawn_turn
 from src.game.domain.entities import Character, CombatBehavior, Location, Stats
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
+from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.llm.calls.classify.schema import Verb
 from src.game.flow.turn import run_turn
 

@@ -6,7 +6,7 @@ from src.game.domain.entities import Character, Connection, Location, Stats
 from src.game.domain.memory import PendingCheck
 from src.game.flow.dirty import Dirty
 from src.game.flow.roll import _apply_movement_roll_outcome, run_roll
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
+from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
 def _build_state(fresh_state):

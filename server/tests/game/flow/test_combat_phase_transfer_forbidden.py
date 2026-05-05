@@ -13,7 +13,7 @@ from src.game.domain.state import CombatState
 from src.game.flow.format import ACTION_FORBIDDEN_IN_COMBAT_TEXT
 from src.game.flow.turn import run_turn
 from src.llm.calls.classify.schema import Verb
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
+from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
 def _setup_in_combat_state(fresh_state):

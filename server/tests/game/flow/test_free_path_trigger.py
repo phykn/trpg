@@ -7,7 +7,7 @@ from src.game.flow.turn import end_turn_quest_check
 from src.game.flow.narrate import npc_dialogue_quest_check
 from src.game.flow import narrate as narrate_mod
 from src.llm.calls.classify.schema import Verb
-from src.persistence.local_fs import LocalFsScenarioRepo
+from src.db.local_fs import LocalFsScenarioRepo
 
 
 # ---------------------------------------------------------------------------

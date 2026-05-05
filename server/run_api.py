@@ -8,8 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routes import router
 from src.llm import LLMClient
-from src.persistence.factory import build_save_repo, build_scenario_repo
-from src.persistence.repo import SaveRepo, ScenarioRepo
+from src.db.factory import build_save_repo, build_scenario_repo
+from src.db.repo import SaveRepo, ScenarioRepo
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SERVER_DIR = Path(__file__).resolve().parent

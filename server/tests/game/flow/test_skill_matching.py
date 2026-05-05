@@ -10,7 +10,7 @@ from src.game.domain.entities import (
     Stats,
 )
 from src.llm.calls.classify.schema import Verb
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
+from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.llm.context import build_surroundings
 from src.game.flow.turn import run_turn
 

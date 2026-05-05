@@ -25,7 +25,7 @@ from src.game.domain.entities import (
     Stats,
 )
 from src.game.engines.growth import calc_max_hp, calc_max_mp
-from src.persistence.supabase import (
+from src.db.supabase import (
     SupabaseSaveRepo,
     SupabaseStorageScenarioRepo,
 )

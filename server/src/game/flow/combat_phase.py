@@ -14,7 +14,7 @@ from ..engines import combat as combat_engine
 from ...llm.client import LLMClient
 from ..ontology.graph import GameGraph
 from ..ontology.queries import location_of
-from ...persistence.repo import SaveRepo, ScenarioRepo
+from ...db.repo import SaveRepo, ScenarioRepo
 from .actions import (
     emit_equip,
     emit_unequip,

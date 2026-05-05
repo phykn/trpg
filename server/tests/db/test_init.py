@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from src.persistence.init import PlayerInput, init_game
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
+from src.db.init import PlayerInput, init_game
+from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
 def _write_minimal_seed(profile_dir: Path) -> None:

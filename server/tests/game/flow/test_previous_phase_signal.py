@@ -10,7 +10,7 @@ import tempfile
 import pytest
 
 from src.llm.calls.classify.schema import JudgeOutput, Verb
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
+from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.game.domain.entities import Character, Location, Stats
 from src.game.flow import narrate as narrate_mod
 from src.game.flow import turn as turn_mod

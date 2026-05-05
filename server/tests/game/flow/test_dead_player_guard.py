@@ -3,7 +3,7 @@
 import pytest
 
 from src.game.domain.entities import Character, Stats
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
+from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.game.flow import judge as judge_mod
 from src.game.flow import turn as turn_mod
 from src.game.flow.turn import run_turn

@@ -20,8 +20,8 @@ from ...game.flow.skill_recommend import recommend_skill_candidates
 from ...game.flow.turn import run_turn
 from ...llm.client import LLMClient, set_think_override
 from ...wire.to_front import to_front_state
-from ...persistence.init import init_game
-from ...persistence.repo import SaveRepo, ScenarioRepo
+from ...db.init import init_game
+from ...db.repo import SaveRepo, ScenarioRepo
 from ..deps import get_llm, get_save_repo, get_scenario_repo, get_state
 from ..schema import (
     InitRequest,

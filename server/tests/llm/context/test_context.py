@@ -16,7 +16,7 @@ from src.llm.context import (
     build_surroundings,
     build_world_layer,
 )
-from src.persistence.local_fs import LocalFsScenarioRepo
+from src.db.local_fs import LocalFsScenarioRepo
 
 
 def test_surroundings_includes_player_and_filters_dead_or_far(fresh_state):

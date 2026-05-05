@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT))
 @pytest.fixture(autouse=True)
 def _clear_save_locks():
     """Clear the global save locks dict between tests to avoid event loop binding issues."""
-    from src.persistence import store
+    from src.db import store
 
     store._save_locks.clear()
     yield

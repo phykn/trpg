@@ -6,7 +6,7 @@ from src.game.domain.entities import Character, Location, Race, Stats
 from src.game.domain.state import GameState
 from src.game.flow.dirty import Dirty
 from src.game.flow.rest import run_rest
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
+from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
 def _make_state(gold: int = 0) -> GameState:

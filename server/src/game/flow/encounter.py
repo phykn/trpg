@@ -17,7 +17,7 @@ from ...llm.client import LLMClient
 from ..domain.state import GameState
 from ..engines.growth import calc_max_hp, calc_max_mp
 from ..engines.invariants import InvariantViolation, check_character
-from ...persistence.repo import ScenarioRepo
+from ...db.repo import ScenarioRepo
 
 
 async def _build_input(

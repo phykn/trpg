@@ -14,7 +14,7 @@ from ..engines.invariants import InvariantViolation
 from ..engines.invariants.character import check_character
 from ...llm.client import LLMClient, set_llm_session_if_unset
 from ...locale import render
-from ...persistence.repo import SaveRepo, ScenarioRepo
+from ...db.repo import SaveRepo, ScenarioRepo
 from ...wire.emit import emit_error
 from .dirty import (
     Dirty,

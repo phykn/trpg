@@ -9,7 +9,7 @@ from ..domain.state import GameState
 from ..engines import recovery as recovery_engine
 from ...locale import render
 from ...llm.client import LLMClient
-from ...persistence.repo import SaveRepo, ScenarioRepo
+from ...db.repo import SaveRepo, ScenarioRepo
 from ..rules import RULES
 from . import encounter as encounter_engine
 from .buff_tick import tick_turn_buffs

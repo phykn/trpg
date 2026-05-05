@@ -22,7 +22,7 @@ from ..engines import skill as skill_engine
 from ..engines.apply import apply_changes, apply_combat_affinity_drop
 from ..engines.growth import award_kill_xp
 from ..engines.quest import check_quests
-from ...persistence.repo import SaveRepo
+from ...db.repo import SaveRepo
 from ..rules.dc import compute_required_roll, pick_dc, social_bonus
 from ...wire.emit import emit_error, emit_pending_check
 from .dirty import (

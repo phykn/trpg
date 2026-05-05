@@ -13,7 +13,7 @@ from src.game.flow.turn import run_turn
 from src.llm.calls.classify.schema import JudgeOutput, Verb
 from src.llm.calls.narrate import NarrativeFinal
 from src.llm.calls.narrate.schema import NarrateOutput
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
+from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
 @pytest.fixture

@@ -9,7 +9,7 @@ from src.game.flow import roll as roll_mod
 from src.game.flow.roll import run_roll
 from src.game.flow.turn import run_turn
 from src.llm.calls.classify.schema import Verb
-from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
+from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
 def _seed_state(fresh_state, edric_affinity=80):

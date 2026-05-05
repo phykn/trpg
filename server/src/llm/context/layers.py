@@ -9,7 +9,7 @@ from ...game.ontology.graph import GameGraph
 from ...game.ontology.queries import quests_in_chapter
 
 if TYPE_CHECKING:
-    from ...persistence.repo import ScenarioRepo
+    from ...db.repo import ScenarioRepo
 
 
 _QUOTE_OPEN_TO_CLOSE = {"「": "」", "『": "』"}
