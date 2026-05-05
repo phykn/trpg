@@ -1278,6 +1278,62 @@
       ],
       "title": "CombatEndPayload",
       "type": "object"
+    },
+    "CombatEnemy": {
+      "description": "Single enemy entry in the combat badge. `hp_max` Python field\nserializes to `hpMax` (camelCase) for the client.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "hp": {
+          "title": "Hp",
+          "type": "integer"
+        },
+        "hpMax": {
+          "title": "Hpmax",
+          "type": "integer"
+        },
+        "alive": {
+          "title": "Alive",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "hp",
+        "hpMax",
+        "alive"
+      ],
+      "title": "CombatEnemy",
+      "type": "object"
+    },
+    "CombatBadgePayload": {
+      "description": "Wire shape for the `combat` slot inside the `state` payload —\nsurfaced when combat is active. None when no combat or empty turn order\n(gated by mapping/to_front.to_combat). `turn_label` is a pre-composed\nKorean string (\"내 차례\" or \"{name} 차례\") so the client renders verbatim.",
+      "properties": {
+        "round": {
+          "title": "Round",
+          "type": "integer"
+        },
+        "turnLabel": {
+          "title": "Turnlabel",
+          "type": "string"
+        },
+        "enemies": {
+          "items": {
+            "$ref": "#/definitions/CombatEnemy"
+          },
+          "title": "Enemies",
+          "type": "array"
+        }
+      },
+      "required": [
+        "round",
+        "turnLabel",
+        "enemies"
+      ],
+      "title": "CombatBadgePayload",
+      "type": "object"
     }
   }
 }

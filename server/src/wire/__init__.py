@@ -16,7 +16,9 @@ from .emit import (
 from .models import (
     ActLogEntry,
     BonusItem,
+    CombatBadgePayload,
     CombatEndPayload,
+    CombatEnemy,
     CombatStartPayload,
     CombatTurnPayload,
     DifficultyBadge,
@@ -52,7 +54,9 @@ from .models import (
 __all__ = [
     "ActLogEntry",
     "BonusItem",
+    "CombatBadgePayload",
     "CombatEndPayload",
+    "CombatEnemy",
     "CombatStartPayload",
     "CombatTurnPayload",
     "DifficultyBadge",

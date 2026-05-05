@@ -163,6 +163,13 @@ export type SkillName = string | null;
 export type SkillId = string | null;
 export type ItemId = string | null;
 export type Outcome = "victory" | "defeat" | "downed" | "fled";
+export type Name8 = string;
+export type Hp2 = number;
+export type Hpmax2 = number;
+export type Alive2 = boolean;
+export type Round2 = number;
+export type Turnlabel = string;
+export type Enemies = CombatEnemy[];
 
 export interface Wire {
   [k: string]: unknown;
@@ -624,5 +631,34 @@ export interface CombatTurnPayload {
  */
 export interface CombatEndPayload {
   outcome: Outcome;
+  [k: string]: unknown;
+}
+/**
+ * Single enemy entry in the combat badge. `hp_max` Python field
+ * serializes to `hpMax` (camelCase) for the client.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "CombatEnemy".
+ */
+export interface CombatEnemy {
+  name: Name8;
+  hp: Hp2;
+  hpMax: Hpmax2;
+  alive: Alive2;
+  [k: string]: unknown;
+}
+/**
+ * Wire shape for the `combat` slot inside the `state` payload —
+ * surfaced when combat is active. None when no combat or empty turn order
+ * (gated by mapping/to_front.to_combat). `turn_label` is a pre-composed
+ * Korean string ("내 차례" or "{name} 차례") so the client renders verbatim.
+ *
+ * This interface was referenced by `Wire`'s JSON-Schema
+ * via the `definition` "CombatBadgePayload".
+ */
+export interface CombatBadgePayload {
+  round: Round2;
+  turnLabel: Turnlabel;
+  enemies: Enemies;
   [k: string]: unknown;
 }
