@@ -44,7 +44,7 @@ def _candidate_from_verb(state: GameState, verb: Verb) -> str | None:
         if isinstance(target_id, str) and _is_active_npc(state, target_id):
             return target_id
         return None
-    # move, alter, rest: no NPC engagement signal.
+    # move, rest: no NPC engagement signal.
     return None
 
 

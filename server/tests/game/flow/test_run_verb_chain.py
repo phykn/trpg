@@ -70,13 +70,13 @@ def test_run_verb_chain_narrate_decision_uses_chain_needs_narrate():
 
 
 def test_run_verb_chain_skips_emit_for_narrate_absorb_verbs():
-    """speak/perceive/alter/cast/attack는 chain prefix에서 emit_* 호출 안 함 —
+    """speak/perceive/cast/attack는 chain prefix에서 emit_* 호출 안 함 —
     narrate가 prose 흡수. cast/attack은 prefix 위치에서 phase-changing 의도
     아니므로 _emit_verb_in_chain의 ValueError raise를 회피."""
     src = inspect.getsource(turn_module._run_verb_chain)
-    assert 'verb.name in ("speak", "perceive", "alter", "cast", "attack")' in src
+    assert 'verb.name in ("speak", "perceive", "cast", "attack")' in src
     # 이 분기가 _emit_verb_in_chain 호출 전에 와야 함 (continue로 skip)
-    branch_idx = src.find('verb.name in ("speak", "perceive", "alter", "cast", "attack")')
+    branch_idx = src.find('verb.name in ("speak", "perceive", "cast", "attack")')
     emit_call_idx = src.find("_emit_verb_in_chain(client, state, dirty, verb)")
     assert branch_idx < emit_call_idx
 

@@ -325,7 +325,7 @@ def _emit_verb_in_chain(client, state, dirty, verb: Verb) -> AsyncIterator[dict]
             state, state.player_id, from_id, item_id, dirty,
             direction="buy", agreed_price=m.get("price"),
         )
-    # wait/perceive/speak/alter/cast: absorbed by narrate inside a chain — no
+    # wait/perceive/speak/cast: absorbed by narrate inside a chain — no
     # emit. _emit_verb_in_chain handles only chain-prefix-compatible verbs.
     raise ValueError(f"verb {n!r} cannot be emitted in chain (use _dispatch_verb)")
 
@@ -362,15 +362,13 @@ def _chain_needs_narrate(
     pre_move_visited: set[str] | None = None,
 ) -> bool:
     """Chain narrates iff any part is narrate-worthy:
-    wait/perceive/speak/alter/cast/attack are narrate-worthy (cast/attack
-    in prefix position get prose-absorbed under the current cast policy +
-    chain-prefix attack-ignore policy; alter is a reserved dead-path verb
-    listed here for symmetry with the single-verb _dispatch_verb). transfer
-    (gift/trade) is an NPC interaction. first-visit move narrates. Skip:
-    receipt-only chains (equip/unequip/use-self) and chains where every
-    narrate-worthy part failed."""
+    wait/perceive/speak/cast/attack are narrate-worthy (cast/attack in prefix
+    position get prose-absorbed under the current cast policy + chain-prefix
+    attack-ignore policy). transfer (gift/trade) is an NPC interaction.
+    first-visit move narrates. Skip: receipt-only chains (equip/unequip/
+    use-self) and chains where every narrate-worthy part failed."""
     for i, part in enumerate(parts):
-        if part.name in ("wait", "perceive", "speak", "alter", "cast", "attack"):
+        if part.name in ("wait", "perceive", "speak", "cast", "attack"):
             return True
         if part.name == "transfer":
             mods = part.modifiers or {}
@@ -583,9 +581,8 @@ async def _dispatch_verb(
 ) -> AsyncIterator[dict]:
     """Dispatch a single verb to its emit_* / run_* handler.
 
-    wait / perceive / alter absorb into narrate (alter is a reserved dead-path
-    verb). move / use / transfer / attack / cast / speak / rest call their
-    emit_* or run_* handler directly."""
+    wait / perceive absorb into narrate. move / use / transfer / attack / cast
+    / speak / rest call their emit_* or run_* handler directly."""
     name = verb.name
     m = verb.modifiers or {}
 
@@ -599,15 +596,6 @@ async def _dispatch_verb(
 
     if name == "perceive":
         # Pre-Stage-2 uncertainty rule: absorbed by narrate.
-        async for ev in stream_narrate_tail(
-            client, state, scenario_repo, player_input, dirty, to_front_fn,
-            verb, graph=graph, previous_phase_signal=previous_phase_signal,
-        ):
-            yield ev
-        return
-
-    if name == "alter":
-        # Reserved dead-path verb — absorbed by narrate.
         async for ev in stream_narrate_tail(
             client, state, scenario_repo, player_input, dirty, to_front_fn,
             verb, graph=graph, previous_phase_signal=previous_phase_signal,
@@ -812,9 +800,9 @@ async def _run_verb_chain(
     tail attack → combat phase entry. tail cast is narrate-only in the current
     policy (same as single cast in _dispatch_verb — avoid self-targeting combat
     entry). prefix verbs go to _emit_verb_in_chain (use/move/transfer) or are
-    absorbed by narrate (wait/perceive/speak/alter/cast/attack — the latter
-    two get prose-absorbed inside a chain). narrate decision is
-    _chain_needs_narrate + dramatic_chain."""
+    absorbed by narrate (wait/perceive/speak/cast/attack — the latter two get
+    prose-absorbed inside a chain). narrate decision is _chain_needs_narrate
+    + dramatic_chain."""
     # Only tail attack triggers combat phase entry. cast falls into the
     # narrate-absorb path so chain semantics match single-cast in _dispatch_verb.
     tail_combat: Verb | None = (
@@ -841,7 +829,7 @@ async def _run_verb_chain(
         if verb.name == "wait":
             last_wait = verb
             continue
-        if verb.name in ("speak", "perceive", "alter", "cast", "attack"):
+        if verb.name in ("speak", "perceive", "cast", "attack"):
             # In-chain narrate absorption — no emit; narrate handles prose.
             # cast/attack in prefix position are not phase-changing (tail is
             # non-combat), so narrate describes them as prose. Skipping emit
