@@ -62,26 +62,11 @@ def to_place(state: GameState, graph: GameGraph | None = None) -> dict | None:
 
 
 def to_combat(state: GameState) -> dict | None:
-    cs = state.combat_state
-    if cs is None or not cs.turn_order:
-        return None
-    current_id = cs.turn_order[cs.current_turn]
-    current = state.characters.get(current_id)
-    actor_name = current.name if current else current_id
-    turn_label = "내 차례" if current_id == state.player_id else f"{actor_name} 차례"
-    enemies = []
-    for eid in cs.enemy_ids:
-        e = state.characters.get(eid)
-        if e is None:
-            continue
-        enemies.append(
-            {"name": e.name, "hp": e.hp, "hpMax": e.max_hp, "alive": e.alive}
-        )
-    return {
-        "round": cs.round,
-        "turnLabel": turn_label,
-        "enemies": enemies,
-    }
+    """Wire shape comes from `_build_combat_badge_payload`; this just unwraps
+    to a plain dict (or None) for state-payload embedding."""
+    from ..wire.emit import _build_combat_badge_payload  # local import avoids layer cycle
+    payload = _build_combat_badge_payload(state)
+    return payload.model_dump() if payload else None
 
 
 def pending_check_to_front(state: GameState, pending: PendingCheck) -> dict:
