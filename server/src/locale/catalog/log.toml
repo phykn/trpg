@@ -356,3 +356,27 @@ ko = "잠시 정적이 흐릅니다."
 
 [log."use.item_fallback"]
 ko = "아이템"
+
+[log."quest.abandon_reason"]
+ko = "의뢰 포기"
+
+[log."quest.giver_dead_reason"]
+ko = "의뢰자 사망"
+
+[log."quest.fail_log"]
+ko = "퀘스트 «{title}» 실패 ({reason})"
+
+[log."quest.success_log"]
+ko = "퀘스트 «{title}» 성공, 보상 수령"
+
+[log."death.killed"]
+ko = "{killer}에게 살해당했다."
+
+[log."death.killed_marker"]
+ko = "살해당했다"
+
+[log."death.died"]
+ko = "사망했다."
+
+[log."death.died_marker"]
+ko = "사망했다"
