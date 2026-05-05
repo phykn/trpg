@@ -104,6 +104,7 @@ def _full_state(fresh_state):
         ],
         conditions=["민간인 피해 최소화"],
         rewards=QuestRewards(gold=50, exp=100),
+        status="pending",
     )
     s.log_entries = [
         GMLogEntry(id=1, kind="gm", text="x"),

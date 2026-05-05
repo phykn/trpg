@@ -4,16 +4,14 @@ labels are all built here. Story graph projection lives in
 `story_graph.py`; shared label helpers live in `labels.py`."""
 
 from ..domain.clock import day_phase
-from ..domain.entities import Location, Quest
+from ..domain.entities import Location
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
 from ..locale import render
 from ..ontology.graph import GameGraph
 from ..ontology.queries import connections_of, inhabitants_of
 from .labels import (
-    difficulty_badge,
     gender_label,
-    giver_with_location_label,
     race_job_label,
     risk_payload,
     stat_label,
@@ -53,47 +51,13 @@ def to_subject(state: GameState, graph: GameGraph | None = None) -> dict | None:
 
 
 def to_quest(state: GameState, graph: GameGraph | None = None) -> dict | None:
+    """Wire shape comes from `_build_quest_payload`; this just unwraps to a
+    plain dict (or None) for state-payload embedding."""
+    from ..wire.emit import _build_quest_payload  # local import avoids layer cycle
     if graph is None:
         graph = state.graph()
-    if state.active_quest_id is None:
-        return None
-    qid = state.active_quest_id
-    if qid not in state.quests:
-        return None
-    q: Quest = state.quests[qid]
-    giver_name = giver_with_location_label(state, graph, qid) or qid
-    # quest.triggers' display name is a per-trigger label — that's an
-    # entity attribute on the trigger object (no relational scan), so read
-    # the goals straight from the trigger names.
-    goals = [t.name for t in q.triggers]
-    # triggers_met is a parallel bool array; engine ensures aligned length on
-    # accept. Tolerate misalignment defensively (treat missing slots as unmet).
-    total = len(q.triggers)
-    done = sum(1 for met in q.triggers_met[:total] if met)
-    if total == 0:
-        progress_label = ""
-    elif done >= total:
-        progress_label = "✓"
-    else:
-        progress_label = f"{done}/{total}"
-    actions: list[str] = []
-    if q.status == "pending":
-        actions.append("accept")
-    elif q.status == "active":
-        actions.append("abandon")
-    return {
-        "id": qid,
-        "title": q.title,
-        "summary": q.summary,
-        "giver": giver_name,
-        "difficulty": difficulty_badge(q.difficulty),
-        "goals": goals,
-        "progressLabel": progress_label,
-        "conditions": list(q.conditions),
-        "rewards": {"gold": q.rewards.gold, "exp": q.rewards.exp},
-        "status": q.status,
-        "actions": actions,
-    }
+    payload = _build_quest_payload(state, graph)
+    return payload.model_dump() if payload else None
 
 
 def to_place(state: GameState, graph: GameGraph | None = None) -> dict | None:
