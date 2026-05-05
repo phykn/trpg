@@ -3,9 +3,10 @@ import re
 from pathlib import Path
 
 from .models.error import ErrorPayload
+from .models.hero import HeroPayload
 from .models.pending_check import PendingCheckPayload
 
-_MODELS = [ErrorPayload, PendingCheckPayload]
+_MODELS = [ErrorPayload, PendingCheckPayload, HeroPayload]
 
 
 def _flatten(schema: dict, definitions: dict) -> dict:
