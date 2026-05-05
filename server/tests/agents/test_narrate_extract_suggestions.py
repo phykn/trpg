@@ -4,8 +4,8 @@ JSON tail and the engine ferries them out as the SSE `suggestions` event."""
 
 import pytest
 
-from src.llm_calls.narrate.extract import ExtractInput, run_extract
-from src.llm_calls.narrate.schema import NarrateOutput
+from src.llm.calls.narrate.extract import ExtractInput, run_extract
+from src.llm.calls.narrate.schema import NarrateOutput
 
 
 def _input(body: str = "노파가 부탁을 청합니다.") -> ExtractInput:

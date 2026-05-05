@@ -5,7 +5,7 @@ NPC subject 추적이 정상 동작하는지 검증."""
 
 from src.domain.entities import Character, Stats
 from src.flow.subject import refresh_active_subject
-from src.llm_calls.classify.schema import Verb
+from src.llm.calls.classify.schema import Verb
 
 
 def _make_state(fresh_state, npc_id: str = "npc.tarem"):

@@ -21,7 +21,7 @@ from src.flow import narrate as narrate_mod
 from src.flow import turn as turn_mod
 from src.flow.error_phrases import is_dramatic_fail
 from src.flow.turn import run_turn
-from src.llm_calls.classify.schema import JudgeOutput, Verb
+from src.llm.calls.classify.schema import JudgeOutput, Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 

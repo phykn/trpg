@@ -20,7 +20,7 @@ sys.path.insert(0, str(SERVER_DIR))
 load_dotenv(SERVER_DIR / ".env.dev")
 
 from src.llm.client import LLMClient  # noqa: E402
-from src.llm_calls.narrate import (  # noqa: E402
+from src.llm.calls.narrate import (  # noqa: E402
     NarrateInput,
     NarrativeDelta,
     NarrativeFinal,

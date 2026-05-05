@@ -12,7 +12,7 @@ from src.domain.entities import Character, Item, Stats
 from src.domain.state import CombatState
 from src.flow.format import ACTION_FORBIDDEN_IN_COMBAT_TEXT
 from src.flow.turn import run_turn
-from src.llm_calls.classify.schema import Verb
+from src.llm.calls.classify.schema import Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 

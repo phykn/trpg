@@ -2,13 +2,13 @@
 
 import pytest
 
-from src.llm_calls.narrate import (
+from src.llm.calls.narrate import (
     NarrateInput,
     NarrativeDelta,
     NarrativeFinal,
     stream_narrate,
 )
-from src.llm_calls.narrate.schema import NarrateOutput
+from src.llm.calls.narrate.schema import NarrateOutput
 
 
 def _input() -> NarrateInput:

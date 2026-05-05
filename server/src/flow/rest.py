@@ -13,7 +13,7 @@ from ..persistence.repo import SaveRepo, ScenarioRepo
 from ..rules import RULES
 from . import encounter as encounter_engine
 from .buff_tick import tick_turn_buffs
-from ..llm_calls.classify.schema import Verb
+from ..llm.calls.classify.schema import Verb
 from .combat_auto import PlayerAction
 from .combat_phase import start_combat_and_drive_auto
 from .dirty import Dirty, ToFrontFn, drop_pushed_act, finalize, push_act

@@ -9,7 +9,7 @@ id/level and template numerics to build the Skill object.
 from __future__ import annotations
 
 from ..domain.entities import Skill
-from ..llm_calls.recommend import (
+from ..llm.calls.recommend import (
     SkillRecommendInput,
     recommend,
 )

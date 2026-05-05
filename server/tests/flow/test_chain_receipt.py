@@ -17,7 +17,7 @@ from src.domain.entities import (
 from src.flow import narrate as narrate_mod
 from src.flow import turn as turn_mod
 from src.flow.turn import run_turn
-from src.llm_calls.classify.schema import Verb
+from src.llm.calls.classify.schema import Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
@@ -75,7 +75,7 @@ async def _collect(it):
 async def _run_chain(state, tmp_saves, monkeypatch, parts, *, player_input="x"):
     narrate_calls = _track_narrate(monkeypatch)
 
-    from src.llm_calls.classify.schema import JudgeOutput
+    from src.llm.calls.classify.schema import JudgeOutput
 
     judge_result = JudgeOutput(actions=list(parts))
 

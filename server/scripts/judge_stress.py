@@ -23,8 +23,8 @@ sys.path.insert(0, str(SERVER_DIR))
 load_dotenv(SERVER_DIR / ".env.dev")
 
 from src.llm import LLMClient  # noqa: E402
-from src.llm_calls.classify import PROMPT_PATH, classify  # noqa: E402
-from src.llm_calls.classify.schema import JudgeInput  # noqa: E402
+from src.llm.calls.classify import PROMPT_PATH, classify  # noqa: E402
+from src.llm.calls.classify.schema import JudgeInput  # noqa: E402
 
 
 class CountingClient(LLMClient):

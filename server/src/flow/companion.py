@@ -10,7 +10,7 @@ from ..domain.errors import PersistenceFailed
 from ..locale import render
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
-from ..llm_calls.classify.schema import Verb
+from ..llm.calls.classify.schema import Verb
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from ..rules import RULES
 from ..rules.dc import compute_required_roll

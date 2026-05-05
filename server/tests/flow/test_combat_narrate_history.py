@@ -12,7 +12,7 @@ from src.flow.combat_auto import (
     AutoCombatResult,
     build_narrate_input,
 )
-from src.llm_calls.combat_narrate.schema import PlayerNarrateSnapshot
+from src.llm.calls.combat_narrate.schema import PlayerNarrateSnapshot
 from src.persistence.local_fs import LocalFsScenarioRepo
 
 

@@ -6,9 +6,9 @@ sleep_encounters fallback when the seed pool is empty (P3 §2.4)."""
 
 from __future__ import annotations
 
-from ..context.layers import build_world_layer
+from ..llm.context.layers import build_world_layer
 from ..domain.entities import Character, CombatBehavior, Location, Stats
-from ..llm_calls.summon import (
+from ..llm.calls.summon import (
     EncounterSummonInput,
     EncounterSummonOutput,
     summon,

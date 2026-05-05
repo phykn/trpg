@@ -2,7 +2,7 @@
 pronouns ("그것을 든다") and detect surprise build-up. Defaults are empty
 lists when no prior context exists (game start)."""
 
-from src.llm_calls.classify.schema import JudgeInput
+from src.llm.calls.classify.schema import JudgeInput
 
 
 def test_judge_input_defaults_history_dialogue_empty():

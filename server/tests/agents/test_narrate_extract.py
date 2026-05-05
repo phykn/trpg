@@ -2,8 +2,8 @@
 
 import pytest
 
-from src.llm_calls.narrate.extract import ExtractInput, run_extract
-from src.llm_calls.narrate.schema import NarrateOutput
+from src.llm.calls.narrate.extract import ExtractInput, run_extract
+from src.llm.calls.narrate.schema import NarrateOutput
 
 
 def _input(body: str = "당신은 광장을 둘러봅니다.") -> ExtractInput:

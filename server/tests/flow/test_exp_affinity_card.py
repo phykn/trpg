@@ -11,8 +11,8 @@ from src.domain.entities import Character, Stats
 from src.engines.apply import apply_changes
 from src.flow.dirty import Dirty
 from src.flow.narrate import consume_narrate
-from src.llm_calls.narrate import NarrativeFinal
-from src.llm_calls.narrate.schema import NarrateOutput
+from src.llm.calls.narrate import NarrativeFinal
+from src.llm.calls.narrate.schema import NarrateOutput
 
 
 def _seed_player(state):
@@ -159,7 +159,7 @@ async def test_affinity_card_emits_after_gm_body_log_entry(fresh_state):
     """Affinity card is a reaction to the body — its SSE event and its position in
     state.log_entries must both come AFTER the gm body so the player reads the prose
     before the receipt that justifies it."""
-    from src.llm_calls.narrate import NarrativeDelta
+    from src.llm.calls.narrate import NarrativeDelta
 
     state = fresh_state
     _seed_player(state)

@@ -1,7 +1,7 @@
 import random
 from collections.abc import AsyncIterator, Callable
 
-from ..llm_calls.classify.schema import JudgeOutput, Verb
+from ..llm.calls.classify.schema import JudgeOutput, Verb
 from ..domain.errors import JudgeMalformed, PendingCheckActive
 from pydantic import ValidationError
 from ..domain.memory import GMLogEntry, PlayerLogEntry
