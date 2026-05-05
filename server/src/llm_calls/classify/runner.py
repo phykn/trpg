@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -29,7 +30,7 @@ async def classify(
         system_prompt=_PROMPT,
         user_payload=input_.model_dump_json(),
         parse=parse,
-        retry_on=(ValidationError, JudgeSemanticError, ModifierValidationError),
+        retry_on=(ValidationError, JudgeSemanticError, ModifierValidationError, json.JSONDecodeError),
         retries=retries,
         agent="classify",
         temperature=_CLASSIFY_TEMPERATURE,

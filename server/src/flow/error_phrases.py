@@ -65,12 +65,13 @@ def humanize_engine_error(err: Exception) -> str:
 # reachable from a turn/intro/roll stream; the generic fallback is intentionally
 # vague so unknown failures don't leak internals.
 _RUNTIME_PHRASES: dict[str, str] = {
-    "JudgeMalformed": "행동을 해석하지 못했습니다. 다시 시도해 주세요.",
-    "PersistenceFailed": "저장 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.",
-    "LLMUnavailable": "이야기꾼이 잠시 길을 잃었습니다. 다시 시도해 주세요.",
-    "NarrateUnavailable": "이야기꾼이 잠시 길을 잃었습니다. 다시 시도해 주세요.",
-    "NarrateMalformed": "이야기 한 줄을 마저 잇지 못했습니다. 다시 시도해 주세요.",
     "InvariantViolation": "세계의 규칙이 어긋났습니다. 다시 시도해 주세요.",
+    "JSONDecodeError": "행동을 해석하지 못했습니다. 다시 시도해 주세요.",
+    "JudgeMalformed": "행동을 해석하지 못했습니다. 다시 시도해 주세요.",
+    "LLMUnavailable": "이야기꾼이 잠시 길을 잃었습니다. 다시 시도해 주세요.",
+    "NarrateMalformed": "이야기 한 줄을 마저 잇지 못했습니다. 다시 시도해 주세요.",
+    "NarrateUnavailable": "이야기꾼이 잠시 길을 잃었습니다. 다시 시도해 주세요.",
+    "PersistenceFailed": "저장 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.",
 }
 
 _GENERIC_RUNTIME_PHRASE = "지금은 응답할 수 없습니다. 잠시 후 다시 시도해 주세요."

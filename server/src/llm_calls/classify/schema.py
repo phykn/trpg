@@ -26,9 +26,14 @@ class JudgeInput(BaseModel):
 def validate_judge_output(answer: str, *, in_combat: bool = False) -> JudgeOutput:
     """Parse JSON, validate Pydantic shape, then per-verb modifier validation.
     Pydantic ValidationError → retry. ModifierValidationError → retry.
+    JSONDecodeError → retry (covers empty / whitespace-only answers — LLMs
+    occasionally emit content=None with reasoning_content set; `_runner.py`'s
+    `or ""` then yields a string that fails json.loads at column 0).
     Unknown modifier keys silently dropped (LLM hallucination tolerance)."""
     from .modifiers import validate_modifiers
 
+    if not answer.strip():
+        raise json.JSONDecodeError("empty answer", answer or "", 0)
     raw = json.loads(answer)
     output = JudgeOutput.model_validate(raw)
     if output.actions is not None:

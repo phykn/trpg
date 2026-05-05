@@ -51,3 +51,13 @@ def test_out_of_combat_move_without_destination_fails():
     raw = json.dumps({"actions": [{"name": "move", "modifiers": {"manner": "hasty"}}]})
     with pytest.raises(ModifierValidationError):
         validate_judge_output(raw, in_combat=False)
+
+
+def test_empty_answer_raises_jsondecodeerror():
+    with pytest.raises(json.JSONDecodeError):
+        validate_judge_output("", in_combat=False)
+
+
+def test_whitespace_only_answer_raises_jsondecodeerror():
+    with pytest.raises(json.JSONDecodeError):
+        validate_judge_output("  \n  ", in_combat=False)
