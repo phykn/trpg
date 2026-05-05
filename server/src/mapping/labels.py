@@ -44,9 +44,9 @@ def race_job_label(state: GameState, graph: GameGraph, char: Character) -> str:
 def gender_label(char: Character) -> str:
     """Korean label for display, empty for non-sexed entities."""
     if char.gender == "male":
-        return "남성"
+        return render("ui.gender.male", "ko")
     if char.gender == "female":
-        return "여성"
+        return render("ui.gender.female", "ko")
     return ""
 
 
@@ -65,11 +65,13 @@ def giver_with_location_label(state: GameState, graph: GameGraph, quest_id: str)
     return f"{giver.name} ({loc.name})"
 
 
-RISK_PAYLOAD: dict[str, dict] = {
-    "safe": {"label": "안전", "tone": "good"},
-    "risky": {"label": "주의", "tone": "neutral"},
-    "dangerous": {"label": "위험", "tone": "bad"},
-}
+# Risk badge: ASCII enum value → {label, tone} dict for client. Tone stays in
+# Python (visual atom, not localized); only the label flows from the catalog.
+_RISK_TONES: dict[str, str] = {"safe": "good", "risky": "neutral", "dangerous": "bad"}
+
+
+def risk_payload(risk: str) -> dict:
+    return {"label": render(f"ui.risk.{risk}.label", "ko"), "tone": _RISK_TONES.get(risk, "neutral")}
 
 
 # `None` tone keeps the neutral mid-tier label uncolored on the panel.
@@ -90,52 +92,52 @@ def difficulty_badge(tier: str) -> dict:
 
 # ----- Story-graph edge labels (rendered on client map) -----
 
-STORY_EDGE_LABEL_CURRENT = "현재 위치"
-STORY_EDGE_LABEL_OBSERVE = "주시"
-STORY_EDGE_LABEL_PROGRESS = "진행 중"
-STORY_EDGE_LABEL_MOVE = "이동"
-STORY_EDGE_LABEL_MEET = "등장"
-STORY_EDGE_LABEL_QUEST_GIVER = "의뢰"
-STORY_EDGE_LABEL_QUEST_TARGET = "목표"
+STORY_EDGE_LABEL_CURRENT = render("ui.story.edge.current", "ko")
+STORY_EDGE_LABEL_OBSERVE = render("ui.story.edge.observe", "ko")
+STORY_EDGE_LABEL_PROGRESS = render("ui.story.edge.progress", "ko")
+STORY_EDGE_LABEL_MOVE = render("ui.story.edge.move", "ko")
+STORY_EDGE_LABEL_MEET = render("ui.story.edge.meet", "ko")
+STORY_EDGE_LABEL_QUEST_GIVER = render("ui.story.edge.quest_giver", "ko")
+STORY_EDGE_LABEL_QUEST_TARGET = render("ui.story.edge.quest_target", "ko")
 
 
 # ----- Story-graph summary line parts -----
 
-STORY_SUMMARY_HERO = "주인공"
-STORY_SUMMARY_EMPTY = "스토리 데이터 없음"
+STORY_SUMMARY_HERO = render("ui.story.summary.hero", "ko")
+STORY_SUMMARY_EMPTY = render("ui.story.summary.empty", "ko")
 
 
 def story_summary_quest(title: str) -> str:
-    return f"퀘스트 {title}"
+    return render("ui.story.summary.quest", "ko", title=title)
 
 
 def story_summary_location(name: str) -> str:
-    return f"현재 위치 {name}"
+    return render("ui.story.summary.location", "ko", name=name)
 
 
 def story_summary_entities(count: int) -> str:
-    return f"등장인물 {count}"
+    return render("ui.story.summary.entities", "ko", count=count)
 
 
 def story_summary_places(count: int) -> str:
-    return f"장소 {count}"
+    return render("ui.story.summary.places", "ko", count=count)
 
 
 # ----- Default fallback for action reasons surfaced in the GM log -----
 
-ROLL_REASON_DEFAULT = "행동 판정"
+ROLL_REASON_DEFAULT = render("ui.roll.reason_default", "ko")
 
 
 # ----- NPC state tags surfaced to the judge prompt -----
 
 
 def state_tag_friendly(affinity: int) -> str:
-    return f"우호적(affinity {affinity})"
+    return render("ui.state.friendly", "ko", affinity=affinity)
 
 
 def state_tag_wary(affinity: int) -> str:
-    return f"경계중(affinity {affinity})"
+    return render("ui.state.wary", "ko", affinity=affinity)
 
 
 def state_tag_wounded(hp_pct: int) -> str:
-    return f"부상(hp {hp_pct}%)"
+    return render("ui.state.wounded", "ko", hp_pct=hp_pct)

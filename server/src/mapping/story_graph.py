@@ -16,7 +16,6 @@ from ..ontology.queries import (
     trigger_targets_of,
 )
 from .labels import (
-    RISK_PAYLOAD,
     STORY_EDGE_LABEL_CURRENT,
     STORY_EDGE_LABEL_MEET,
     STORY_EDGE_LABEL_MOVE,
@@ -29,6 +28,7 @@ from .labels import (
     gender_label,
     giver_with_location_label,
     race_job_label,
+    risk_payload,
     story_summary_entities,
     story_summary_location,
     story_summary_places,
@@ -167,7 +167,7 @@ def _place_node(loc: Location, state: GameState) -> dict:
         "status": "current",
         "reachable": True,
         "description": loc.description,
-        "risk": RISK_PAYLOAD[loc.sleep_risk],
+        "risk": risk_payload(loc.sleep_risk),
         "dayPhase": render(f"phase.{day_phase(state.turn_count)}", "ko"),
         "weather": list(loc.weather),
     }
@@ -181,7 +181,7 @@ def _location_node(loc: Location, move_difficulty: str | None, adjacent: bool) -
         "status": "reachable_move" if adjacent else "unreachable_move",
         "reachable": adjacent,
         "description": loc.description,
-        "risk": RISK_PAYLOAD[loc.sleep_risk],
+        "risk": risk_payload(loc.sleep_risk),
         "moveDifficulty": move_difficulty,
     }
 

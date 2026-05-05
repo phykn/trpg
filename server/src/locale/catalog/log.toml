@@ -1,0 +1,331 @@
+# Engine action-validation error phrases. Keyed by substring match in error_phrases.humanize_engine_error.
+
+[log."error.hp_full"]
+ko = "이미 체력이 가득해 회복약을 쓸 필요가 없습니다"
+
+[log."error.mp_full"]
+ko = "이미 마력이 가득해 마력 음료를 쓸 필요가 없습니다"
+
+[log."error.affinity_too_low"]
+ko = "친밀도가 부족해 거래가 되지 않습니다"
+
+[log."error.cant_sell_equipped"]
+ko = "장착 중인 물건은 팔 수 없습니다 (먼저 해제하셔야 합니다)"
+
+[log."error.npc_not_enough_gold"]
+ko = "상대의 금화가 부족합니다"
+
+[log."error.rest_insufficient_gold"]
+ko = "여관에 묵을 금화가 부족합니다"
+
+[log."error.not_enough_gold"]
+ko = "금화가 부족합니다"
+
+[log."error.npc_no_such_item"]
+ko = "그쪽은 그 물건을 가지고 있지 않습니다"
+
+[log."error.player_no_such_item"]
+ko = "그 물건을 가지고 있지 않습니다"
+
+[log."error.item_not_in_inventory"]
+ko = "그 물건을 가지고 있지 않습니다"
+
+[log."error.unknown_item"]
+ko = "그런 물건은 없습니다"
+
+[log."error.not_consumable"]
+ko = "소모할 수 있는 물건이 아닙니다"
+
+[log."error.damage_needs_target"]
+ko = "대상을 지정해야 합니다"
+
+[log."error.unsupported_consumable"]
+ko = "이 물건은 그 방식으로 쓸 수 없습니다"
+
+[log."error.consumable_not_equippable"]
+ko = "소모품은 장착할 수 없습니다"
+
+[log."error.weapon_slot_only"]
+ko = "무기는 무기 슬롯에만 장착할 수 있습니다"
+
+[log."error.defense_slot"]
+ko = "방어 효과 물건은 갑옷이나 악세사리 슬롯에 장착할 수 있습니다"
+
+[log."error.decorative_slot"]
+ko = "장식품은 악세사리 슬롯에만 장착할 수 있습니다"
+
+[log."error.stats_unmet"]
+ko = "능력치 요구 조건을 충족하지 못합니다"
+
+[log."error.no_equippable"]
+ko = "이 물건은 장착할 수 없습니다"
+
+[log."error.weight_cap"]
+ko = "들 수 있는 무게 한도를 넘어섰습니다"
+
+[log."error.not_enough_xp"]
+ko = "성장에 필요한 경험이 부족합니다"
+
+[log."error.max_level"]
+ko = "이미 최고 레벨입니다"
+
+[log."error.cap_20"]
+ko = "그 능력치는 이미 한계입니다"
+
+[log."error.pair_blocked"]
+ko = "페어 능력치가 0이라 더 떨어뜨릴 수 없습니다"
+
+[log."error.invalid_stat_up"]
+ko = "성장시킬 능력치가 잘못되었습니다"
+
+[log."error.no_such_skill"]
+ko = "그런 기술은 익히지 않았습니다"
+
+[log."error.skill_not_in_pool"]
+ko = "그런 기술은 시나리오에 없습니다"
+
+[log."error.generic_block"]
+ko = "지금은 그 행동이 통하지 않습니다"
+
+[log.game_over]
+ko = "당신의 이야기가 여기서 끝납니다."
+
+[log.no_combat_targets]
+ko = "공격할 수 있는 대상이 없습니다."
+
+[log.summon_failed]
+ko = "허공을 가르지만 적은 보이지 않습니다."
+
+[log.flee_outside_combat]
+ko = "지금은 도망칠 전투가 없습니다."
+
+[log.rest_blocked_in_combat]
+ko = "전투 중에는 잠들 수 없습니다."
+
+[log.input_rejected]
+ko = "그 말은 받아들여지지 않습니다."
+
+[log.action_forbidden_in_combat]
+ko = "전투 중에는 그 행동을 할 수 없습니다."
+
+[log.combat_start_turn]
+ko = "{enemy}{과/와} 전투 개시"
+
+[log.action_fail]
+ko = "{actor}{이/가} {attempt} {err}."
+
+[log.equip]
+ko = "{actor}{이/가} 「{item}」{을/를} 장비했습니다."
+
+[log.equip_attempt]
+ko = "「{item}」{을/를} 장비하려 했지만"
+
+[log.unequip]
+ko = "{actor}{이/가} 「{item}」{을/를} 해제했습니다."
+
+[log.unequip_attempt]
+ko = "「{item}」{을/를} 해제하려 했지만"
+
+[log.unequip_not_equipped]
+ko = "{actor}{은/는} 「{item}」{을/를} 장비하고 있지 않습니다."
+
+[log.rest_base]
+ko = "{actor}{은/는} 자리를 잡고 잠을 청했습니다. 새벽이 밝아오자 푹 쉬고 일어났습니다. HP/MP가 모두 회복됐습니다."
+
+[log.rest_with_cost]
+ko = "{base} (금화 {cost} 사용)"
+
+[log.learn_skill]
+ko = "{actor}{이/가} 「{skill}」{을/를} 익혔습니다."
+
+[log.use_attempt]
+ko = "「{item}」{을/를} 쓰려 했지만"
+
+[log.use_target_turn]
+ko = "{item}{을/를} {target}에게 사용"
+
+[log.equip_turn]
+ko = "{item} 착용"
+
+[log.unequip_turn]
+ko = "{item} 해제"
+
+[log.use_self_turn]
+ko = "{item} 사용"
+
+[log.trade_no_partner]
+ko = "{actor}{이/가} 거래할 상대를 찾지 못했습니다."
+
+[log.trade_buy]
+ko = "{actor}{이/가} {npc}에게서 「{item}」{을/를} {price} 금화에 샀습니다."
+
+[log.trade_sell]
+ko = "{actor}{이/가} {npc}에게 「{item}」{을/를} {price} 금화에 팔았습니다."
+
+[log.trade_turn_buy]
+ko = "{npc}에게 「{item}」 구매"
+
+[log.trade_turn_sell]
+ko = "{npc}에게 「{item}」 판매"
+
+[log.give_no_partner]
+ko = "{actor}{이/가} 양도 상대를 찾지 못했습니다."
+
+[log.give_to_player]
+ko = "{src}에게서 {dst}{이/가} 「{item}」{을/를} 받았습니다."
+
+[log.give_from_player]
+ko = "{src}{이/가} {dst}에게 「{item}」{을/를} 건넸습니다."
+
+[log.give_turn]
+ko = "「{item}」 양도 ({src} → {dst})"
+
+[log.move_no_path]
+ko = "{actor}{이/가} 그곳으로 가는 길을 찾지 못했습니다."
+
+[log.move_blocked]
+ko = "{actor}{이/가} {loc}{을/를} 향했지만 닿지 못했습니다."
+
+[log.move_blocked_with_reason]
+ko = "{actor}{이/가} {loc}{을/를} 향했지만 닿지 못했습니다. ({reason})"
+
+[log.location_enter]
+ko = "{location}에 도착합니다."
+
+[log.location_enter_turn]
+ko = "{location} 도착"
+
+[log.quest_start]
+ko = "퀘스트 시작: {title}"
+
+[log.quest_success_head]
+ko = "퀘스트 성공: {title}"
+
+[log.reward_exp]
+ko = "+EXP {exp}"
+
+[log.reward_gold]
+ko = "+GOLD {gold}"
+
+[log.quest_fail]
+ko = "퀘스트 실패: {title} — {reason}"
+
+[log.affinity_card]
+ko = "{npc} 호감도 {sign}{delta}"
+
+[log.recruit_success]
+ko = "{name}{이/가} 동료가 되었습니다."
+
+[log.recruit_failure]
+ko = "{name}{이/가} 제안을 거절합니다."
+
+[log.recruit_critical_failure]
+ko = "{name}{이/가} 노골적으로 거절합니다."
+
+[log.dismiss]
+ko = "{name}{이/가} 일행에서 빠집니다."
+
+[log.dismiss_turn]
+ko = "{name} 동행 이탈"
+
+[log.recruit_success_turn]
+ko = "{name} 동료 합류"
+
+[log.recruit_failure_turn]
+ko = "{name} 동료 영입 실패"
+
+[log.level_up]
+ko = "{actor}의 레벨이 올랐습니다 (레벨 {level}, {up} ↑ / {down} ↓, HP {hp} / MP {mp})."
+
+[log.death]
+ko = "{name} 사망"
+
+[log.attack_turn]
+ko = "{target}{을/를} 공격"
+
+[log."combat.player_fallback"]
+ko = "주인공"
+
+[log."combat.defeat"]
+ko = "패배했습니다."
+
+[log."combat.fled"]
+ko = "전투에서 이탈했습니다."
+
+[log."combat.downed"]
+ko = "의식을 되찾았습니다."
+
+[log."combat.enemies_fled"]
+ko = "{names}{이/가} 도망쳤습니다."
+
+[log."combat.enemies_fled_anon"]
+ko = "적이 도망쳤습니다."
+
+[log."combat.enemies_defeated"]
+ko = "적을 처치했습니다."
+
+[log."combat.enemy_killed"]
+ko = "{name} {damage} 피해 — 쓰러짐"
+
+[log."combat.enemy_hit"]
+ko = "{name} {damage} 피해 (HP {hp_after}/{hp_max})"
+
+[log."combat.player_hit"]
+ko = "{name} {damage} 피해 (HP {hp_after}/{hp_max})"
+
+[log."combat.player_downed"]
+ko = "{name} {damage} 피해 (HP {hp_before}→0, 사망 직전)"
+
+[log."combat.revived_critical"]
+ko = "최후의 호흡 (소생 0/{coins_max}, HP 0→{hp_after})"
+
+[log."combat.revived_normal"]
+ko = "가까스로 일어남 (소생 {coins_after}/{coins_max}, HP 0→{hp_after})"
+
+[log."combat.outcome_header"]
+ko = "전투 결과"
+
+[log."combat.outcome_victory"]
+ko = "전투 승리"
+
+[log."combat.outcome_defeat"]
+ko = "전투 패배"
+
+[log."combat.outcome_fled"]
+ko = "전투 이탈"
+
+[log."combat.outcome_downed"]
+ko = "전투 중 쓰러짐"
+
+[log."combat.event_enemy_killed"]
+ko = "{actor}{이/가} {name}에게 {damage} 피해 — {name} 쓰러짐"
+
+[log."combat.event_enemy_hit"]
+ko = "{actor}{이/가} {name}에게 {damage} 피해 (적 HP {hp_after}/{hp_max})"
+
+[log."combat.event_player_hit"]
+ko = "{name} {damage} 피해 입음 (HP {hp_after}/{hp_max})"
+
+[log."combat.event_revived"]
+ko = "가까스로 소생"
+
+[log."use.head"]
+ko = "{actor} — 「{item}」 사용"
+
+[log."use.heal"]
+ko = "({amount} 회복)"
+
+[log."use.damage_alive"]
+ko = "({target}에게 {amount} 데미지)"
+
+[log."use.damage_dead"]
+ko = "({target}에게 {amount} 데미지 ({target} 쓰러짐))"
+
+[log."use.mp_restore"]
+ko = "({amount} MP 회복)"
+
+[log."use.buff"]
+ko = "({description}, {duration} 턴)"
+
+[log."use.trigger"]
+ko = "({on_use})"
