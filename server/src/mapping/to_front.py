@@ -3,21 +3,13 @@ client renders. Korean dates, durations, composed strings, and conditional
 labels are all built here. Story graph projection lives in
 `story_graph.py`; shared label helpers live in `labels.py`."""
 
-from collections import Counter
-
 from ..domain.clock import day_phase
-from ..domain.entities import EQUIPMENT_SLOTS, Location, Quest
+from ..domain.entities import Location, Quest
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
 from ..locale import render
 from ..ontology.graph import GameGraph
-from ..ontology.queries import (
-    connections_of,
-    equipment_of,
-    inhabitants_of,
-    inventory_of,
-    known_skills_of,
-)
+from ..ontology.queries import connections_of, inhabitants_of
 from .labels import (
     difficulty_badge,
     gender_label,
@@ -25,7 +17,6 @@ from .labels import (
     race_job_label,
     risk_payload,
     stat_label,
-    stats_payload,
 )
 from .story_graph import to_story_graph
 
@@ -42,61 +33,6 @@ __all__ = [
 ]
 
 
-def _equipment(state: GameState, graph: GameGraph, char_id: str) -> dict:
-    out: dict[str, dict | None] = {slot: None for slot in EQUIPMENT_SLOTS}
-    for edge in equipment_of(graph, char_id):
-        slot = (edge.attrs or {}).get("slot")
-        if slot is None or slot not in out:
-            continue
-        item = state.items.get(edge.to_id)
-        if item is None:
-            continue
-        out[slot] = {"name": item.name}
-    return out
-
-
-def _inventory(state: GameState, graph: GameGraph, char_id: str) -> list[dict]:
-    """Inventory shown to the player, with currently-equipped items subtracted.
-    Invariant: each equipped item_id is also present in inventory_ids — so we
-    decrement once per equipped slot to avoid duplicate display."""
-    counts: Counter[str] = Counter(inventory_of(graph, char_id))
-    for edge in equipment_of(graph, char_id):
-        item_id = edge.to_id
-        counts[item_id] -= 1
-        if counts[item_id] <= 0:
-            del counts[item_id]
-    return [
-        {"name": state.items[item_id].name, "qty": qty}
-        for item_id, qty in counts.items()
-        if item_id in state.items
-    ]
-
-
-def _companion_label(state: GameState, graph: GameGraph, char_id: str) -> str | None:
-    """Returns the Korean label for a companion or None if the id no longer
-    resolves (e.g. the companion died and was removed). Caller filters None
-    so a stray technical id never reaches the UI."""
-    if char_id not in state.characters:
-        return None
-    c = state.characters[char_id]
-    return f"{c.name} ({race_job_label(state, graph, c)})"
-
-
-def _skill_names(state: GameState, graph: GameGraph, char_id: str) -> list[str]:
-    out: list[str] = []
-    seen: set[str] = set()
-    for edge in known_skills_of(graph, char_id):
-        sid = edge.to_id
-        if sid in seen:
-            continue
-        skill = state.skills.get(sid)
-        if skill is None:
-            continue
-        seen.add(sid)
-        out.append(skill.name)
-    return out
-
-
 def to_hero(state: GameState, graph: GameGraph | None = None) -> dict:
     """Wire shape comes from `_build_hero_payload`; this just unwraps to a
     plain dict for state-payload embedding."""
@@ -107,37 +43,13 @@ def to_hero(state: GameState, graph: GameGraph | None = None) -> dict:
 
 
 def to_subject(state: GameState, graph: GameGraph | None = None) -> dict | None:
+    """Wire shape comes from `_build_subject_payload`; this just unwraps to
+    a plain dict (or None) for state-payload embedding."""
+    from ..wire.emit import _build_subject_payload  # local import avoids layer cycle
     if graph is None:
         graph = state.graph()
-    if state.active_subject_id is None:
-        return None
-    sid = state.active_subject_id
-    if sid not in state.characters:
-        return None
-    s = state.characters[sid]
-    player = state.characters[state.player_id]
-    known = [s.appearance] if s.appearance and s.alive else []
-    known += list(s.hints)
-    known += [m.content for m in player.memories if m.target_id == sid]
-    skills = _skill_names(state, graph, s.id)
-    inventory = _inventory(state, graph, s.id)
-    inventory = [{"name": f"금화({s.gold})", "qty": 1}, *inventory]
-    return {
-        "name": s.name,
-        "alive": s.alive,
-        "role": s.role,
-        "raceJob": race_job_label(state, graph, s),
-        "gender": gender_label(s),
-        "trust": s.relations.get(state.player_id, 0),
-        "known": known,
-        "level": s.level,
-        "hp": s.hp,
-        "hpMax": s.max_hp,
-        "stats": stats_payload(s.stats),
-        "equipment": _equipment(state, graph, s.id),
-        "inventory": inventory,
-        "skills": skills,
-    }
+    payload = _build_subject_payload(state, graph)
+    return payload.model_dump() if payload else None
 
 
 def to_quest(state: GameState, graph: GameGraph | None = None) -> dict | None:
