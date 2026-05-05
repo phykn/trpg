@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 
 from fastapi.responses import StreamingResponse
 
-from ..flow.error_phrases import humanize_runtime_error
+from ..wire.emit import emit_error
 
 _log = logging.getLogger(__name__)
 
@@ -28,14 +28,7 @@ async def _wrap(events: AsyncIterator[dict]) -> AsyncIterator[bytes]:
     except Exception as e:
         # Sanitize before send: raw exceptions / English traces must never reach the player.
         _log.exception("SSE stream raised: %s", e)
-        err = {
-            "type": "error",
-            "data": {
-                "message": humanize_runtime_error(e),
-                "code": type(e).__name__,
-            },
-        }
-        yield sse_pack(err).encode("utf-8")
+        yield sse_pack(emit_error(e)).encode("utf-8")
 
 
 def streaming_response(events: AsyncIterator[dict]) -> StreamingResponse:
