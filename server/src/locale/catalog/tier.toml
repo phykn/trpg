@@ -1,0 +1,27 @@
+[tier.very_easy]
+ko = "매우 쉬움"
+en = "Very Easy"
+
+[tier.easy]
+ko = "쉬움"
+en = "Easy"
+
+[tier.normal]
+ko = "보통"
+en = "Normal"
+
+[tier.hard]
+ko = "어려움"
+en = "Hard"
+
+[tier.very_hard]
+ko = "매우 어려움"
+en = "Very Hard"
+
+[tier.legend]
+ko = "전설"
+en = "Legend"
+
+[tier.myth]
+ko = "신화"
+en = "Mythic"

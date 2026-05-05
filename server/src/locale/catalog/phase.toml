@@ -1,0 +1,15 @@
+[phase.dawn]
+ko = "새벽"
+en = "Dawn"
+
+[phase.morning]
+ko = "오전"
+en = "Morning"
+
+[phase.afternoon]
+ko = "오후"
+en = "Afternoon"
+
+[phase.night]
+ko = "밤"
+en = "Night"
