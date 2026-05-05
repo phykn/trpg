@@ -1,36 +1,14 @@
-export type Stat = { label: string; value: number };
-export type Stats = Stat[];
+import type {
+  Equipment as EquipmentPayload,
+  EquipItem as EquipItemPayload,
+  HeroPayload,
+  InventoryItem as InventoryItemPayload,
+  StatEntry,
+} from '@/types/wire.gen';
 
-export type EquipItem = { name: string };
-
-export type Equipment = {
-  weapon: EquipItem | null;
-  armor: EquipItem | null;
-  accessory: EquipItem | null;
-};
-
-export type InventoryItem = { name: string; qty: number };
-
-export type Hero = {
-  name: string;
-  alive: boolean;
-  raceJob: string;
-  gender: string;
-  level: number;
-  exp: number;
-  expMax: number;
-  canLevelUp: boolean;
-  hp: number;
-  hpMax: number;
-  mp: number;
-  mpMax: number;
-  reviveCoins: number;
-  reviveCoinsMax: number;
-  gold: number;
-  stats: Stats;
-  equipment: Equipment;
-  inventory: InventoryItem[];
-  status: string[];
-  skills: string[];
-  companions: string[];
-};
+export type Hero = HeroPayload;
+export type EquipItem = EquipItemPayload;
+export type Equipment = EquipmentPayload;
+export type InventoryItem = InventoryItemPayload;
+export type Stat = StatEntry;
+export type Stats = StatEntry[];

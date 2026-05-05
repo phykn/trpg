@@ -104,6 +104,226 @@
       ],
       "title": "PendingCheckPayload",
       "type": "object"
+    },
+    "EquipItem": {
+      "description": "Equipped item display — name only (qty implicit = 1).",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "EquipItem",
+      "type": "object"
+    },
+    "Equipment": {
+      "description": "Hero/subject equipment slots. Mirrors domain.Equipment field set.",
+      "properties": {
+        "weapon": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EquipItem"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "armor": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EquipItem"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "accessory": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EquipItem"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "Equipment",
+      "type": "object"
+    },
+    "InventoryItem": {
+      "description": "Inventory row: item name + quantity.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "qty": {
+          "title": "Qty",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "qty"
+      ],
+      "title": "InventoryItem",
+      "type": "object"
+    },
+    "StatEntry": {
+      "description": "One row of the stats display: localized label + numeric value.",
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "label",
+        "value"
+      ],
+      "title": "StatEntry",
+      "type": "object"
+    },
+    "HeroPayload": {
+      "description": "Wire shape for the `hero` slot inside the `state` payload.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "alive": {
+          "title": "Alive",
+          "type": "boolean"
+        },
+        "raceJob": {
+          "title": "Racejob",
+          "type": "string"
+        },
+        "gender": {
+          "title": "Gender",
+          "type": "string"
+        },
+        "level": {
+          "title": "Level",
+          "type": "integer"
+        },
+        "exp": {
+          "title": "Exp",
+          "type": "integer"
+        },
+        "expMax": {
+          "title": "Expmax",
+          "type": "integer"
+        },
+        "canLevelUp": {
+          "title": "Canlevelup",
+          "type": "boolean"
+        },
+        "hp": {
+          "title": "Hp",
+          "type": "integer"
+        },
+        "hpMax": {
+          "title": "Hpmax",
+          "type": "integer"
+        },
+        "mp": {
+          "title": "Mp",
+          "type": "integer"
+        },
+        "mpMax": {
+          "title": "Mpmax",
+          "type": "integer"
+        },
+        "reviveCoins": {
+          "title": "Revivecoins",
+          "type": "integer"
+        },
+        "reviveCoinsMax": {
+          "title": "Revivecoinsmax",
+          "type": "integer"
+        },
+        "gold": {
+          "title": "Gold",
+          "type": "integer"
+        },
+        "stats": {
+          "items": {
+            "$ref": "#/definitions/StatEntry"
+          },
+          "title": "Stats",
+          "type": "array"
+        },
+        "equipment": {
+          "$ref": "#/definitions/Equipment"
+        },
+        "inventory": {
+          "items": {
+            "$ref": "#/definitions/InventoryItem"
+          },
+          "title": "Inventory",
+          "type": "array"
+        },
+        "status": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Status",
+          "type": "array"
+        },
+        "skills": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Skills",
+          "type": "array"
+        },
+        "companions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Companions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "alive",
+        "raceJob",
+        "gender",
+        "level",
+        "exp",
+        "expMax",
+        "canLevelUp",
+        "hp",
+        "hpMax",
+        "mp",
+        "mpMax",
+        "reviveCoins",
+        "reviveCoinsMax",
+        "gold",
+        "stats",
+        "equipment",
+        "inventory",
+        "status",
+        "skills",
+        "companions"
+      ],
+      "title": "HeroPayload",
+      "type": "object"
     }
   }
 }
