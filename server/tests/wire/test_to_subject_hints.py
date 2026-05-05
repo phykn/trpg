@@ -1,6 +1,6 @@
 """Verify dead entity's hints (death fact) surface in subject.known."""
 
-from src.domain.entities import Character, Race, Stats
+from src.game.domain.entities import Character, Race, Stats
 from src.wire.to_front import to_subject
 
 
@@ -50,7 +50,7 @@ def test_hints_appear_even_when_alive(fresh_state):
 
 
 def test_hints_ordered_after_appearance_before_memories(fresh_state):
-    from src.domain.memory import Memory
+    from src.game.domain.memory import Memory
 
     state = _minimal_state(
         fresh_state,

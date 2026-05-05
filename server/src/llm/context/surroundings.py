@@ -1,15 +1,15 @@
 """Build the `surroundings` dict the judge agent sees: location, entities, equipment, skills, inventory, growth, merchants."""
 
-from ...domain.entities import (
+from ...game.domain.entities import (
     EQUIPMENT_SLOTS,
     Character,
     Location,
     item_kind,
 )
-from ...domain.state import GameState
-from ...engines.growth import can_afford_level_up
-from ...ontology.graph import GameGraph
-from ...ontology.queries import (
+from ...game.domain.state import GameState
+from ...game.engines.growth import can_afford_level_up
+from ...game.ontology.graph import GameGraph
+from ...game.ontology.queries import (
     companions_of,
     connections_of,
     equipment_of,
@@ -19,7 +19,7 @@ from ...ontology.queries import (
     known_skills_of,
     quests_given_by,
 )
-from ...rules import RULES
+from ...game.rules import RULES
 
 
 def _inventory_payload(

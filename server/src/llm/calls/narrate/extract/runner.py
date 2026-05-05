@@ -4,7 +4,7 @@ from pydantic import ValidationError
 
 from ..._runner import load_prompt, run_with_retries
 from ....client import LLMClient
-from .....rules.permissions import render_for_prompt
+from .....game.rules.permissions import render_for_prompt
 from ..schema import NarrateOutput
 from .schema import ExtractInput
 

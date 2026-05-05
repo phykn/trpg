@@ -6,18 +6,18 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
 
-from ...domain.errors import (
+from ...game.domain.errors import (
     LLMUnavailable,
     ProfileMalformed,
     ProfileNotFound,
     RaceNotFound,
 )
-from ...domain.state import GameState
-from ...flow.intro import run_intro
-from ...flow.level_up import run_level_up
-from ...flow.roll import run_roll
-from ...flow.skill_recommend import recommend_skill_candidates
-from ...flow.turn import run_turn
+from ...game.domain.state import GameState
+from ...game.flow.intro import run_intro
+from ...game.flow.level_up import run_level_up
+from ...game.flow.roll import run_roll
+from ...game.flow.skill_recommend import recommend_skill_candidates
+from ...game.flow.turn import run_turn
 from ...llm.client import LLMClient, set_think_override
 from ...wire.to_front import to_front_state
 from ...persistence.init import init_game

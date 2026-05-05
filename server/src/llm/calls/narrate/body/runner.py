@@ -6,9 +6,9 @@ from openai import RateLimitError
 
 from ..._runner import load_prompt
 from ....context.surroundings import surroundings_for_narrate_body
-from .....domain.errors import LLMUnavailable
+from .....game.domain.errors import LLMUnavailable
 from ....client import LLMClient
-from .....rules.permissions import render_for_prompt
+from .....game.rules.permissions import render_for_prompt
 from ..schema import NarrateInput
 
 # Permission matrix tokens are substituted at module load (matches old narrate runner).

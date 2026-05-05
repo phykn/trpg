@@ -2,11 +2,11 @@
 
 from typing import TYPE_CHECKING
 
-from ...domain.clock import day_phase
-from ...domain.state import GameState
+from ...game.domain.clock import day_phase
+from ...game.domain.state import GameState
 from ...locale import render
-from ...ontology.graph import GameGraph
-from ...ontology.queries import quests_in_chapter
+from ...game.ontology.graph import GameGraph
+from ...game.ontology.queries import quests_in_chapter
 
 if TYPE_CHECKING:
     from ...persistence.repo import ScenarioRepo

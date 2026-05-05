@@ -1,4 +1,4 @@
-from src.domain.memory import PendingCheck
+from src.game.domain.memory import PendingCheck
 
 
 def test_pending_check_default_kind_is_stat():

@@ -1,7 +1,7 @@
 """NPC entries carry a transferable-items list (excluding equipped/quest-locked)."""
 
 from src.llm.context.surroundings import build_surroundings
-from src.domain.entities import (
+from src.game.domain.entities import (
     Character,
     Equipment,
     Item,
@@ -9,7 +9,7 @@ from src.domain.entities import (
     Race,
     Stats,
 )
-from src.domain.state import GameState
+from src.game.domain.state import GameState
 
 
 def _state() -> GameState:

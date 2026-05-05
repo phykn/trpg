@@ -11,14 +11,14 @@ import json
 
 import pytest
 
-from src.domain.entities import Character, Item, Race
-from src.domain.memory import (
+from src.game.domain.entities import Character, Item, Race
+from src.game.domain.memory import (
     ActLogEntry,
     DialoguePair,
     TurnLogEntry,
 )
-from src.domain.errors import PersistenceFailed
-from src.domain.state import GameState
+from src.game.domain.errors import PersistenceFailed
+from src.game.domain.state import GameState
 from tests._fakes import (
     make_save_repo,
     make_scenario_repo,

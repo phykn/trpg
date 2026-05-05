@@ -1,0 +1,164 @@
+from src.game.flow.combat_auto import (
+    AutoCombatResult,
+    EnemyHit,
+)
+from src.llm.calls.combat_narrate.schema import PlayerNarrateSnapshot
+from src.game.flow.format import (
+    format_combat_enemy_hit,
+    format_combat_enemy_killed,
+    format_combat_outcome_summary,
+    format_combat_player_downed,
+    format_combat_player_hit,
+    format_combat_revived,
+)
+
+
+def test_format_combat_enemy_killed():
+    assert format_combat_enemy_killed("고블린", 8) == "고블린 8 피해 — 쓰러짐"
+
+
+def test_format_combat_enemy_hit():
+    assert format_combat_enemy_hit("고블린", 5, 3, 10) == "고블린 5 피해 (HP 3/10)"
+
+
+def test_format_combat_player_hit():
+    assert format_combat_player_hit("당신", 4, 16, 20) == "당신 4 피해 (HP 16/20)"
+
+
+def test_format_combat_player_downed():
+    assert (
+        format_combat_player_downed("당신", 15, 10)
+        == "당신 15 피해 (HP 10→0, 사망 직전)"
+    )
+
+
+def test_format_combat_revived():
+    assert format_combat_revived(2, 3, 5) == "가까스로 일어남 (소생 2/3, HP 0→5)"
+
+
+def test_format_combat_revived_uses_korean_label():
+    out = format_combat_revived(coins_after=2, coins_max=3, hp_after=1)
+    assert "Revival" not in out
+    assert "소생" in out
+    assert "(소생 2/3" in out
+    assert "HP 0→1" in out
+
+
+def test_format_combat_revived_last_chance_label():
+    out = format_combat_revived(coins_after=0, coins_max=3, hp_after=1)
+    assert "최후의 호흡" in out
+    assert "(소생 0/3" in out
+    assert "HP 0→1" in out
+
+
+def test_format_combat_revived_normal_label():
+    out = format_combat_revived(coins_after=2, coins_max=3, hp_after=1)
+    assert "최후의 호흡" not in out
+    assert "가까스로 일어남" in out
+    assert "(소생 2/3" in out
+
+
+def _result(
+    *,
+    enemy_hits: list[EnemyHit] | None = None,
+    player_damage_total: int = 0,
+    player_revived: bool = False,
+    player_start_name: str = "당신",
+    player_hp_before: int = 20,
+    player_hp_after: int = 20,
+    player_max_hp: int = 20,
+    player_revive_coins_after: int = 3,
+    player_revive_coins_max: int = 3,
+) -> AutoCombatResult:
+    return AutoCombatResult(
+        events=[],
+        turn_events=[],
+        rounds_run=1,
+        outcome="victory",
+        enemy_hits=enemy_hits or [],
+        player_damage_total=player_damage_total,
+        player_revived=player_revived,
+        player_revive_coins_after=player_revive_coins_after,
+        player_revive_coins_max=player_revive_coins_max,
+        player_hp_before=player_hp_before,
+        player_hp_after=player_hp_after,
+        player_max_hp=player_max_hp,
+        enemy_starts=[],
+        player_start=PlayerNarrateSnapshot(alive=True),
+        player_name=player_start_name,
+    )
+
+
+def test_format_combat_outcome_summary_empty_returns_none():
+    assert format_combat_outcome_summary(_result()) is None
+
+
+def test_format_combat_outcome_summary_single_kill():
+    result = _result(
+        enemy_hits=[
+            EnemyHit(
+                id="goblin",
+                name="고블린",
+                damage_total=8,
+                hp_after=0,
+                max_hp=10,
+                killed=True,
+            ),
+        ],
+    )
+    text = format_combat_outcome_summary(result)
+    assert text is not None
+    assert text.startswith("전투 결과\n")
+    assert "고블린 8 피해 — 쓰러짐" in text
+
+
+def test_format_combat_outcome_summary_with_player_damage():
+    result = _result(
+        enemy_hits=[
+            EnemyHit(
+                id="goblin",
+                name="고블린",
+                damage_total=3,
+                hp_after=7,
+                max_hp=10,
+                killed=False,
+            ),
+        ],
+        player_damage_total=4,
+        player_hp_after=16,
+        player_max_hp=20,
+    )
+    text = format_combat_outcome_summary(result)
+    assert text is not None
+    assert "고블린 3 피해 (HP 7/10)" in text
+    assert "당신 4 피해 (HP 16/20)" in text
+
+
+def test_format_combat_outcome_summary_revived():
+    result = _result(
+        enemy_hits=[],
+        player_damage_total=12,
+        player_revived=True,
+        player_hp_before=12,
+        player_hp_after=1,
+        player_max_hp=20,
+        player_revive_coins_after=2,
+        player_revive_coins_max=3,
+    )
+    text = format_combat_outcome_summary(result)
+    assert text is not None
+    # Revival splits into two lines exposing intermediate HP 0.
+    assert "당신 12 피해 (HP 12→0, 사망 직전)" in text
+    assert "가까스로 일어남 (소생 2/3, HP 0→1)" in text
+
+
+def test_format_combat_outcome_summary_empty_player_name_uses_fallback():
+    result = _result(
+        player_damage_total=4,
+        player_hp_after=16,
+        player_max_hp=20,
+    )
+    result.player_name = ""  # fallback path
+    text = format_combat_outcome_summary(result)
+    assert text is not None
+    assert "주인공 4 피해" in text

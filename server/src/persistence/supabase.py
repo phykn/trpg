@@ -8,14 +8,14 @@ from typing import Type, TypeVar
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
-from ..domain.errors import PersistenceFailed
-from ..domain.memory import (
+from ..game.domain.errors import PersistenceFailed
+from ..game.domain.memory import (
     DialoguePair,
     LogEntry,
     TurnLogEntry,
 )
-from ..domain.state import GameState
-from ..rules import RULES
+from ..game.domain.state import GameState
+from ..game.rules import RULES
 from . import store
 from ._supabase_http import _PostgREST, _Storage
 from .repo import ScenarioRepo

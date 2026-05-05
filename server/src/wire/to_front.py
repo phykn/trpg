@@ -3,9 +3,9 @@ client renders. Korean dates, durations, composed strings, and conditional
 labels are all built here. Story graph projection lives in
 `story_graph.py`; shared label helpers live in `labels.py`."""
 
-from ..domain.memory import PendingCheck
-from ..domain.state import GameState
-from ..ontology.graph import GameGraph
+from ..game.domain.memory import PendingCheck
+from ..game.domain.state import GameState
+from ..game.ontology.graph import GameGraph
 from .labels import stat_label
 from .story_graph import to_story_graph
 

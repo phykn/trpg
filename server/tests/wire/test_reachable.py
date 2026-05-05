@@ -1,6 +1,6 @@
 """Reachable is decided once on server based on adjacency from current location."""
 
-from src.domain.entities import Character, Connection, Location, Stats
+from src.game.domain.entities import Character, Connection, Location, Stats
 from src.wire.story_graph import to_story_graph
 
 

@@ -3,7 +3,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from src.domain.verb import RefuseReason, Verb
+from src.game.domain.verb import RefuseReason, Verb
 from src.wire.emit import (
     emit_judge_pending_check_trigger,
     emit_judge_refuse,

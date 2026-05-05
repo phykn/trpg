@@ -17,14 +17,14 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from src.domain.entities import (
+from src.game.domain.entities import (
     Character,
     Location,
     Race,
     Skill,
     Stats,
 )
-from src.engines.growth import calc_max_hp, calc_max_mp
+from src.game.engines.growth import calc_max_hp, calc_max_mp
 from src.persistence.supabase import (
     SupabaseSaveRepo,
     SupabaseStorageScenarioRepo,

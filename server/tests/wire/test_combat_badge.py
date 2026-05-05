@@ -1,7 +1,7 @@
 import json
 
-from src.domain.entities import Character, Stats
-from src.domain.state import CombatState, GameState
+from src.game.domain.entities import Character, Stats
+from src.game.domain.state import CombatState, GameState
 from src.wire.emit import _build_combat_badge_payload
 
 

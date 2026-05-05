@@ -4,7 +4,7 @@ from pathlib import Path
 
 from typing import get_args
 
-from src.domain.types import EncounterRisk, Phase, StatKey, Tier
+from src.game.domain.types import EncounterRisk, Phase, StatKey, Tier
 
 
 CATALOG = Path(__file__).resolve().parents[2] / "src" / "locale" / "catalog"

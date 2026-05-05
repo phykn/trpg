@@ -20,7 +20,7 @@ def _clear_save_locks():
 
 @pytest.fixture
 def fresh_state():
-    from src.domain.state import GameState
+    from src.game.domain.state import GameState
 
     return GameState(
         game_id="t",
@@ -54,9 +54,9 @@ def judge_returns(monkeypatch):
     """
 
     def _stub(action_obj, *, stub_narrate=True):
-        from src.flow import combat_phase as combat_phase_mod
-        from src.flow import judge as judge_mod
-        from src.flow import turn as turn_mod
+        from src.game.flow import combat_phase as combat_phase_mod
+        from src.game.flow import judge as judge_mod
+        from src.game.flow import turn as turn_mod
 
         # Wrap a Verb or list[Verb] into a JudgeOutput so verb-direct dispatch sees the right type.
         from src.llm.calls.classify.schema import JudgeOutput, Verb
@@ -72,7 +72,7 @@ def judge_returns(monkeypatch):
             monkeypatch.setattr(mod, "run_judge", fake_judge)
 
         if stub_narrate:
-            from src.flow import narrate as narrate_mod
+            from src.game.flow import narrate as narrate_mod
 
             async def _noop_narrate(*a, **kw):
                 if False:

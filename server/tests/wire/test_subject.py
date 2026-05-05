@@ -1,8 +1,8 @@
 import json
 
-from src.domain.entities import Character, Race
-from src.domain.memory import Memory
-from src.domain.state import GameState
+from src.game.domain.entities import Character, Race
+from src.game.domain.memory import Memory
+from src.game.domain.state import GameState
 from src.wire.emit import _build_subject_payload
 from src.wire.models import Equipment as WireEquipment
 from src.wire.models import InventoryItem, SubjectPayload

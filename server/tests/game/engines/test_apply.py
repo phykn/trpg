@@ -1,0 +1,458 @@
+import pytest
+
+from src.game.domain.entities import (
+    Chapter,
+    Character,
+    Connection,
+    Item,
+    Location,
+    Quest,
+    QuestTrigger,
+    Stats,
+)
+from src.game.engines.apply import apply_changes, apply_combat_affinity_drop
+from src.game.rules import RULES
+
+
+@pytest.fixture
+def state(fresh_state):
+    fresh_state.locations["plaza_01"] = Location(
+        id="plaza_01",
+        name="광장",
+        item_ids=["stone_01"],
+        connections=[Connection(target_id="gate_01")],
+    )
+    fresh_state.locations["gate_01"] = Location(
+        id="gate_01",
+        name="성문",
+        connections=[Connection(target_id="plaza_01")],
+    )
+    fresh_state.locations["far_keep"] = Location(id="far_keep", name="먼 요새")
+    fresh_state.items["stone_01"] = Item(id="stone_01", name="돌")
+    fresh_state.items["key_01"] = Item(id="key_01", name="열쇠")
+    fresh_state.characters["player_01"] = Character(
+        id="player_01",
+        name="주",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+        inventory_ids=["key_01"],
+    )
+    fresh_state.characters["guard_01"] = Character(
+        id="guard_01",
+        name="경비",
+        race_id="human",
+        stats=Stats(),
+        location_id="plaza_01",
+    )
+    fresh_state.chapters["ch1"] = Chapter(id="ch1", title="t", status="active")
+    fresh_state.quests["q1"] = Quest(
+        id="q1",
+        title="t",
+        giver_id="guard_01",
+        difficulty="normal",
+        triggers=[
+            QuestTrigger(
+                id="x", name="n", type="character_death", target_id="goblin_01"
+            )
+        ],
+        status="active",
+    )
+    return fresh_state
+
+
+def test_set_scalar_and_dotted(state):
+    r = apply_changes(
+        state,
+        [
+            {
+                "type": "set",
+                "entity": "characters",
+                "id": "guard_01",
+                "field": "tone_hint",
+                "value": "격식",
+            },
+            {
+                "type": "set",
+                "entity": "characters",
+                "id": "guard_01",
+                "field": "disposition.aggressive",
+                "value": 80,
+            },
+        ],
+    )
+    assert r["applied"] == 2 and r["rejected"] == []
+    assert state.characters["guard_01"].tone_hint == "격식"
+    assert state.characters["guard_01"].disposition.aggressive == 80
+
+
+def test_set_rejects_wrong_type_before_persist(state):
+    # Regression: judge produced `Character.status = 'muddy_foot'` (str instead
+    # of list[str]) and the bad value survived setattr only to blow up at the
+    # next persistence read as PersistenceFailed. Now the type is validated up
+    # front and the change is rejected without touching the entity.
+    r = apply_changes(
+        state,
+        [
+            {
+                "type": "set",
+                "entity": "characters",
+                "id": "guard_01",
+                "field": "status",
+                "value": "muddy_foot",
+            },
+            {
+                "type": "set",
+                "entity": "locations",
+                "id": "plaza_01",
+                "field": "description",
+                "value": None,
+            },
+        ],
+    )
+    assert r["applied"] == 0 and len(r["rejected"]) == 2
+    assert state.characters["guard_01"].status == []
+    assert state.locations["plaza_01"].description == ""
+
+
+def test_set_engine_owned_field_rejected(state):
+    r = apply_changes(
+        state,
+        [
+            {
+                "type": "set",
+                "entity": "characters",
+                "id": "guard_01",
+                "field": "hp",
+                "value": 0,
+            },
+            {
+                "type": "set",
+                "entity": "characters",
+                "id": "guard_01",
+                "field": "level",
+                "value": 99,
+            },
+            {
+                "type": "set",
+                "entity": "characters",
+                "id": "guard_01",
+                "field": "memories",
+                "value": [],
+            },
+        ],
+    )
+    assert r["applied"] == 0 and len(r["rejected"]) == 3
+
+
+def test_set_chapter_quest_only_summary_or_status(state):
+    r = apply_changes(
+        state,
+        [
+            {
+                "type": "set",
+                "entity": "quests",
+                "id": "q1",
+                "field": "summary",
+                "value": "x",
+            },
+            {
+                "type": "set",
+                "entity": "chapters",
+                "id": "ch1",
+                "field": "status",
+                "value": "completed",
+            },
+            {
+                "type": "set",
+                "entity": "quests",
+                "id": "q1",
+                "field": "difficulty",
+                "value": "myth",
+            },
+            {
+                "type": "set",
+                "entity": "chapters",
+                "id": "ch1",
+                "field": "title",
+                "value": "X",
+            },
+        ],
+    )
+    assert r["applied"] == 2 and len(r["rejected"]) == 2
+
+
+def test_move_valid_and_unknown(state):
+    r = apply_changes(
+        state, [{"type": "move", "target": "player_01", "destination": "gate_01"}]
+    )
+    assert r["applied"] == 1 and state.characters["player_01"].location_id == "gate_01"
+    r = apply_changes(
+        state, [{"type": "move", "target": "player_01", "destination": "nowhere"}]
+    )
+    assert r["applied"] == 0
+
+
+def test_move_player_rejects_non_adjacent(state):
+    # plaza_01 connects only to gate_01. far_keep is reachable in the world
+    # graph but not from plaza_01 in one hop — narrate must not teleport the
+    # player there even if the LLM emits the move. Engine guard rejects.
+    r = apply_changes(
+        state, [{"type": "move", "target": "player_01", "destination": "far_keep"}]
+    )
+    assert r["applied"] == 0
+    assert state.characters["player_01"].location_id == "plaza_01"
+    assert "not adjacent" in r["rejected"][0]["reason"]
+
+
+def test_move_npc_skips_adjacency_check(state):
+    # NPC moves come from quest hooks / companion follow and aren't gated —
+    # only the player's narrate-emitted moves go through the adjacency check.
+    r = apply_changes(
+        state, [{"type": "move", "target": "guard_01", "destination": "far_keep"}]
+    )
+    assert r["applied"] == 1
+    assert state.characters["guard_01"].location_id == "far_keep"
+
+
+def test_move_player_self_move_idempotent(state):
+    # Same-location move is a no-op (narrate may re-emit on retry); guard
+    # should not reject it as "non-adjacent to itself".
+    r = apply_changes(
+        state, [{"type": "move", "target": "player_01", "destination": "plaza_01"}]
+    )
+    assert r["applied"] == 1
+    assert state.characters["player_01"].location_id == "plaza_01"
+
+
+def test_move_marks_destination_visited(state):
+    # Engine-level invariant: any successful move marks the destination as
+    # visited. Centralizing this in _apply_move makes every caller (turn.py
+    # narrate-emitted moves, roll.py movement outcomes, future callers)
+    # automatically correct.
+    assert "gate_01" not in state.characters["player_01"].visited_location_ids
+    apply_changes(
+        state, [{"type": "move", "target": "player_01", "destination": "gate_01"}]
+    )
+    assert "gate_01" in state.characters["player_01"].visited_location_ids
+
+
+def test_move_marks_visited_for_companions(state):
+    # Companions follow the patron — their visited set must also pick up the
+    # destination so a returning companion sees a re-visit, not a first-visit.
+    state.characters["player_01"].companions = ["guard_01"]
+    apply_changes(
+        state, [{"type": "move", "target": "player_01", "destination": "gate_01"}]
+    )
+    assert "gate_01" in state.characters["player_01"].visited_location_ids
+    assert "gate_01" in state.characters["guard_01"].visited_location_ids
+
+
+def test_move_npc_marks_npc_visited(state):
+    # NPC moves (quest hooks) should also accumulate the NPC's visited set
+    # so any future "have you been here before" check works for that NPC.
+    apply_changes(
+        state, [{"type": "move", "target": "guard_01", "destination": "far_keep"}]
+    )
+    assert "far_keep" in state.characters["guard_01"].visited_location_ids
+
+
+def test_move_item_between_containers(state):
+    r = apply_changes(
+        state,
+        [
+            {
+                "type": "move_item",
+                "item": "key_01",
+                "from": "player_01",
+                "to": "plaza_01",
+            }
+        ],
+    )
+    assert r["applied"] == 1
+    assert "key_01" not in state.characters["player_01"].inventory_ids
+    assert "key_01" in state.locations["plaza_01"].item_ids
+
+
+def test_affinity_grade_intent_matrix(state):
+    """Affinity is single-direction — the change writes to
+    `target.relations[actor]` (how the target now views the actor)."""
+    apply_changes(
+        state,
+        [
+            {
+                "type": "affinity",
+                "actor": "player_01",
+                "target": "guard_01",
+                "grade": "success",
+                "intent": "friendly",
+            }
+        ],
+    )
+    assert state.characters["guard_01"].relations["player_01"] == 5
+
+    state.characters["guard_01"].relations["player_01"] = 0
+    apply_changes(
+        state,
+        [
+            {
+                "type": "affinity",
+                "actor": "player_01",
+                "target": "guard_01",
+                "grade": "success",
+                "intent": "hostile",
+            }
+        ],
+    )
+    assert state.characters["guard_01"].relations["player_01"] == -5
+
+    state.characters["guard_01"].relations["player_01"] = 0
+    apply_changes(
+        state,
+        [
+            {
+                "type": "affinity",
+                "actor": "player_01",
+                "target": "guard_01",
+                "grade": "success",
+                "intent": "deceptive",
+            }
+        ],
+    )
+    assert (
+        state.characters["guard_01"].relations["player_01"] == 0
+    )  # successful deception = 0
+
+    state.characters["guard_01"].relations["player_01"] = 0
+    apply_changes(
+        state,
+        [
+            {
+                "type": "affinity",
+                "actor": "player_01",
+                "target": "guard_01",
+                "grade": "failure",
+                "intent": "deceptive",
+            }
+        ],
+    )
+    assert state.characters["guard_01"].relations["player_01"] == -6  # delta * 2
+
+    # clamp 100
+    state.characters["guard_01"].relations["player_01"] = 95
+    apply_changes(
+        state,
+        [
+            {
+                "type": "affinity",
+                "actor": "player_01",
+                "target": "guard_01",
+                "grade": "critical_success",
+                "intent": "friendly",
+            }
+        ],
+    )
+    assert state.characters["guard_01"].relations["player_01"] == 100
+
+
+def test_combat_affinity_drop_target_only(state):
+    """Combat actions never reach narrate; the engine deducts only on the
+    target's side so trade gating (npc→player) reacts to a hostile act.
+    The reverse direction is no longer tracked."""
+    drop = RULES.social.combat_affinity_drop
+    apply_combat_affinity_drop(state, "player_01", "guard_01")
+    assert state.characters["guard_01"].relations["player_01"] == -drop
+    assert "guard_01" not in state.characters["player_01"].relations
+
+
+def test_combat_affinity_drop_clamps_at_floor(state):
+    state.characters["guard_01"].relations["player_01"] = -95
+    apply_combat_affinity_drop(state, "player_01", "guard_01")
+    assert state.characters["guard_01"].relations["player_01"] == -100
+
+
+def test_combat_affinity_drop_self_target_noop(state):
+    """Self-buff funneled here by mistake must not deduct affinity-to-self."""
+    apply_combat_affinity_drop(state, "player_01", "player_01")
+    assert state.characters["player_01"].relations.get("player_01", 0) == 0
+
+
+def test_combat_affinity_drop_marks_dirty(state):
+    dirty: set[tuple[str, str]] = set()
+    apply_combat_affinity_drop(state, "player_01", "guard_01", dirty=dirty)
+    assert ("characters", "guard_01") in dirty
+    assert ("characters", "player_01") not in dirty
+
+
+def test_combat_affinity_drop_with_full_dirty_stashes_card(state):
+    """A full Dirty triggers a deferred reaction card so the player sees the
+    hostility shift after the combat result."""
+    from src.game.flow.dirty import Dirty
+
+    dirty = Dirty()
+    apply_combat_affinity_drop(state, "player_01", "guard_01", dirty=dirty)
+    assert ("characters", "guard_01") in dirty.entities
+    assert dirty.deferred_act_cards, dirty.deferred_act_cards
+    text, _ = dirty.deferred_act_cards[0]
+    assert "guard_01" in text or state.characters["guard_01"].name in text
+
+
+def test_combat_affinity_drop_full_dirty_no_card_at_floor(state):
+    """If affinity is already at -100, the clamp produces no actual delta —
+    the card is suppressed to avoid noise."""
+    from src.game.flow.dirty import Dirty
+
+    state.characters["guard_01"].relations["player_01"] = -100
+    dirty = Dirty()
+    apply_combat_affinity_drop(state, "player_01", "guard_01", dirty=dirty)
+    assert dirty.deferred_act_cards == []
+
+
+def test_partial_success_keeps_valid_changes(state):
+    r = apply_changes(
+        state,
+        [
+            {
+                "type": "set",
+                "entity": "characters",
+                "id": "guard_01",
+                "field": "tone_hint",
+                "value": "x",
+            },
+            {
+                "type": "set",
+                "entity": "characters",
+                "id": "guard_01",
+                "field": "hp",
+                "value": 0,
+            },
+            {"type": "exotic_thing"},
+        ],
+    )
+    assert r["applied"] == 1 and len(r["rejected"]) == 2
+    assert state.characters["guard_01"].tone_hint == "x"
+
+
+def test_unknown_change_type_rejected(state):
+    r = apply_changes(state, [{"type": "exotic_thing"}])
+    assert r["applied"] == 0 and len(r["rejected"]) == 1
+
+
+def test_set_unknown_field_on_character_rejected(state):
+    """Pydantic v2 raises ValueError for unknown fields. _apply_set must
+    catch it and route to rejected[] like any other set failure."""
+    r = apply_changes(
+        state,
+        [
+            {
+                "type": "set",
+                "entity": "characters",
+                "id": "guard_01",
+                "field": "is_resting",  # not a Character field
+                "value": True,
+            }
+        ],
+    )
+    assert r["applied"] == 0
+    assert len(r["rejected"]) == 1
+    assert "is_resting" in r["rejected"][0]["reason"]

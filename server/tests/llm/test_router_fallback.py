@@ -8,7 +8,7 @@ import pytest
 from openai import RateLimitError
 from pydantic import BaseModel, ValidationError
 
-from src.domain.errors import LLMUnavailable
+from src.game.domain.errors import LLMUnavailable
 from src.llm.client import LLMClient
 from src.llm.calls._runner import run_with_retries
 
