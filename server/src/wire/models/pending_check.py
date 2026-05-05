@@ -23,5 +23,5 @@ class PendingCheckPayload(BaseModel):
     mod: int
     required_roll: int
     tier: TierBadge
-    target: str | None
+    target: str
     reason: str
