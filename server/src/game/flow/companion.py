@@ -7,14 +7,14 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from ..domain.errors import PersistenceFailed
-from ...locale import render
+from src.locale import render
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
-from ...llm.calls.classify.schema import Verb
-from ...db.repo import SaveRepo, ScenarioRepo
+from src.llm.calls.classify.schema import Verb
+from src.db.repo import SaveRepo, ScenarioRepo
 from ..rules import RULES
 from ..rules.dc import compute_required_roll
-from ...wire.emit import emit_error, emit_pending_check
+from src.wire.emit import emit_error, emit_pending_check
 from .dirty import Dirty, ToFrontFn, finalize, flush, push_act
 from .format import (
     format_dismiss_log,

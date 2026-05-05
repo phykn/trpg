@@ -13,9 +13,9 @@ from ..domain.memory import (
     TurnLogEntry,
 )
 from ..domain.state import GameState
-from ...db.repo import SaveRepo
+from src.db.repo import SaveRepo
 from ..rules import RULES
-from ...wire.emit import emit_done, emit_error, emit_log_entry, emit_suggestions
+from src.wire.emit import emit_done, emit_error, emit_log_entry, emit_suggestions
 from .format import format_death_log
 
 ToFrontFn = Callable[[GameState], dict]

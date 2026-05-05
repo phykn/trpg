@@ -8,7 +8,7 @@ from urllib.parse import quote
 
 import httpx
 
-from ..game.domain.errors import PersistenceFailed
+from src.game.domain.errors import PersistenceFailed
 
 
 class _PostgREST:

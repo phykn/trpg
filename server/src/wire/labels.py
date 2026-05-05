@@ -1,11 +1,11 @@
 from typing import get_args
 
-from ..game.domain.entities import Character, Stats
-from ..game.domain.state import GameState
-from ..game.domain.types import StatKey, Tier
-from ..locale import render
-from ..game.ontology.graph import GameGraph
-from ..game.ontology.queries import giver_of, location_of, race_of
+from src.game.domain.entities import Character, Stats
+from src.game.domain.state import GameState
+from src.game.domain.types import StatKey, Tier
+from src.locale import render
+from src.game.ontology.graph import GameGraph
+from src.game.ontology.queries import giver_of, location_of, race_of
 
 
 # Display order tied to StatKey definition.

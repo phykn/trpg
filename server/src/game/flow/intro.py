@@ -3,8 +3,8 @@
 from collections.abc import AsyncIterator
 
 from ..domain.state import GameState
-from ...llm.client import LLMClient, set_llm_session_if_unset
-from ...db.repo import SaveRepo, ScenarioRepo
+from src.llm.client import LLMClient, set_llm_session_if_unset
+from src.db.repo import SaveRepo, ScenarioRepo
 from .dirty import Dirty, ToFrontFn, finalize
 from .narrate import consume_narrate, run_narrate
 

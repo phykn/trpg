@@ -6,18 +6,18 @@ sleep_encounters fallback when the seed pool is empty (P3 §2.4)."""
 
 from __future__ import annotations
 
-from ...llm.context.layers import build_world_layer
+from src.llm.context.layers import build_world_layer
 from ..domain.entities import Character, CombatBehavior, Location, Stats
-from ...llm.calls.summon import (
+from src.llm.calls.summon import (
     EncounterSummonInput,
     EncounterSummonOutput,
     summon,
 )
-from ...llm.client import LLMClient
+from src.llm.client import LLMClient
 from ..domain.state import GameState
 from ..engines.growth import calc_max_hp, calc_max_mp
 from ..engines.invariants import InvariantViolation, check_character
-from ...db.repo import ScenarioRepo
+from src.db.repo import ScenarioRepo
 
 
 async def _build_input(

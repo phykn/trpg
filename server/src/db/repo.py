@@ -13,8 +13,8 @@ from typing import Protocol, Type, TypeVar
 
 from pydantic import BaseModel
 
-from ..game.domain.memory import DialoguePair, LogEntry, TurnLogEntry
-from ..game.domain.state import GameState
+from src.game.domain.memory import DialoguePair, LogEntry, TurnLogEntry
+from src.game.domain.state import GameState
 
 T = TypeVar("T", bound=BaseModel)
 

@@ -5,22 +5,22 @@ import random
 from collections.abc import AsyncIterator
 
 from ..domain.errors import PendingCheckExpected
-from ...locale import render
+from src.locale import render
 from ..domain.memory import BonusItem, RollLogEntry
 from ..domain.state import GameState
 from ..engines.apply import apply_changes
 from ..engines.combat import stat_modifier
 from ..engines.growth import grant_roll_xp
-from ...llm.client import LLMClient, set_llm_session_if_unset
-from ...llm.calls.classify.schema import Verb
-from ...wire.to_front import stat_label
-from ...db.repo import SaveRepo, ScenarioRepo
+from src.llm.client import LLMClient, set_llm_session_if_unset
+from src.llm.calls.classify.schema import Verb
+from src.wire.to_front import stat_label
+from src.db.repo import SaveRepo, ScenarioRepo
 from ..rules.dc import compute_grade
 from .buff_tick import tick_turn_buffs
 from .combat_auto import PlayerAction, run_auto_combat
 from .combat_phase import emit_combat_cinematic_and_end
 from .companion import handle_recruit_roll_result
-from ...wire.emit import emit_log_entry
+from src.wire.emit import emit_log_entry
 from .dirty import (
     Dirty,
     ToFrontFn,

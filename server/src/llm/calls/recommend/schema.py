@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from ....game.domain.entities import SkillCandidate
+from src.game.domain.entities import SkillCandidate
 
 
 class SkillRecommendInput(BaseModel):

@@ -47,6 +47,8 @@ Upper depends on lower, never the reverse. Concretely:
 - `game/flow/` — per-turn orchestration. `turn.py` / `roll.py` / `intro.py` are entrypoints (each yields `AsyncIterator[dict]` of SSE events).
 - `api/` — thin FastAPI adapter. Glue only, no business logic.
 
+**Import convention:** within a bucket use relative (`from .X` / `from ..X`); cross-bucket use absolute (`from src.<bucket>.X`). The 6-fold partition is the boundary — absolute import is the visible signal that a line crosses it.
+
 ### Relational SSOT — graph or entity?
 
 `game/ontology/graph.py` is the single source of truth for relations. Inside `game/flow/`, `llm/context/`, `wire/`:

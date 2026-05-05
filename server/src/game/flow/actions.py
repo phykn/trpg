@@ -13,7 +13,7 @@ from ..domain.errors import (
     InventoryInvalid,
     PersistenceFailed,
 )
-from ...locale import render
+from src.locale import render
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
@@ -22,9 +22,9 @@ from ..engines import skill as skill_engine
 from ..engines.apply import apply_changes, apply_combat_affinity_drop
 from ..engines.growth import award_kill_xp
 from ..engines.quest import check_quests
-from ...db.repo import SaveRepo
+from src.db.repo import SaveRepo
 from ..rules.dc import compute_required_roll, pick_dc, social_bonus
-from ...wire.emit import emit_error, emit_pending_check
+from src.wire.emit import emit_error, emit_pending_check
 from .dirty import (
     Dirty,
     flush,

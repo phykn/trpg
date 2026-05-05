@@ -5,7 +5,7 @@ from __future__ import annotations
 from ..domain.entities import Quest
 from ..domain.errors import InventoryInvalid
 from ..domain.state import GameState
-from ...locale import render
+from src.locale import render
 from ..ontology.graph import GameGraph
 from ..ontology.queries import connections_of, giver_of, kill_targets_of
 from .inventory.carry import check_can_carry

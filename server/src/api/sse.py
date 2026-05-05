@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 
 from fastapi.responses import StreamingResponse
 
-from ..wire.emit import emit_error
+from src.wire.emit import emit_error
 
 _log = logging.getLogger(__name__)
 

@@ -7,7 +7,7 @@ target, roll target, trade partner, or recent dialogue NPC. Without this,
 the seed value sticks forever and the client shows the wrong character.
 """
 
-from ...llm.calls.classify.schema import Verb
+from src.llm.calls.classify.schema import Verb
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph
 from ..ontology.queries import inhabitants_of, location_of

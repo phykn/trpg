@@ -2,14 +2,14 @@
 
 from typing import TYPE_CHECKING
 
-from ...game.domain.clock import day_phase
-from ...game.domain.state import GameState
-from ...locale import render
-from ...game.ontology.graph import GameGraph
-from ...game.ontology.queries import quests_in_chapter
+from src.game.domain.clock import day_phase
+from src.game.domain.state import GameState
+from src.locale import render
+from src.game.ontology.graph import GameGraph
+from src.game.ontology.queries import quests_in_chapter
 
 if TYPE_CHECKING:
-    from ...db.repo import ScenarioRepo
+    from src.db.repo import ScenarioRepo
 
 
 _QUOTE_OPEN_TO_CLOSE = {"「": "」", "『": "』"}

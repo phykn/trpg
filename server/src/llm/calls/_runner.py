@@ -7,7 +7,7 @@ from typing import TypeVar
 from openai import RateLimitError
 from pydantic import ValidationError
 
-from ...game.domain.errors import LLMUnavailable
+from src.game.domain.errors import LLMUnavailable
 from ..client import LLMClient
 
 T = TypeVar("T")

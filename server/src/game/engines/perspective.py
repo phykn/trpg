@@ -1,6 +1,6 @@
 """Entity perspective (hints) update on engine events."""
 
-from ...locale import render
+from src.locale import render
 
 
 def append_death_to_hints(entity, killer_name: str | None = None) -> None:

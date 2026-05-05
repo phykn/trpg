@@ -5,14 +5,14 @@ from pydantic import ValidationError
 
 from ..domain.errors import JudgeMalformed
 from ..domain.types import StatKey, Tier
-from ...llm.calls.classify import JudgeSemanticError, classify
-from ...llm.calls.classify.schema import JudgeInput, JudgeOutput, Verb
-from ...llm.client import LLMClient
-from ...locale import render
+from src.llm.calls.classify import JudgeSemanticError, classify
+from src.llm.calls.classify.schema import JudgeInput, JudgeOutput, Verb
+from src.llm.client import LLMClient
+from src.locale import render
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph
-from ...llm.context import build_surroundings
-from ...wire.labels import ROLL_REASON_DEFAULT
+from src.llm.context import build_surroundings
+from src.wire.labels import ROLL_REASON_DEFAULT
 
 
 @dataclass(frozen=True)
