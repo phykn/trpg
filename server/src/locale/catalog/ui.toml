@@ -1,0 +1,67 @@
+# Domain UI labels rendered into payloads from mapping/labels.py.
+
+[ui."gender.male"]
+ko = "남성"
+
+[ui."gender.female"]
+ko = "여성"
+
+[ui."risk.safe.label"]
+ko = "안전"
+
+[ui."risk.risky.label"]
+ko = "주의"
+
+[ui."risk.dangerous.label"]
+ko = "위험"
+
+[ui."story.edge.current"]
+ko = "현재 위치"
+
+[ui."story.edge.observe"]
+ko = "주시"
+
+[ui."story.edge.progress"]
+ko = "진행 중"
+
+[ui."story.edge.move"]
+ko = "이동"
+
+[ui."story.edge.meet"]
+ko = "등장"
+
+[ui."story.edge.quest_giver"]
+ko = "의뢰"
+
+[ui."story.edge.quest_target"]
+ko = "목표"
+
+[ui."story.summary.hero"]
+ko = "주인공"
+
+[ui."story.summary.empty"]
+ko = "스토리 데이터 없음"
+
+[ui."story.summary.quest"]
+ko = "퀘스트 {title}"
+
+[ui."story.summary.location"]
+ko = "현재 위치 {name}"
+
+[ui."story.summary.entities"]
+ko = "등장인물 {count}"
+
+[ui."story.summary.places"]
+ko = "장소 {count}"
+
+[ui."roll.reason_default"]
+ko = "행동 판정"
+
+[ui."state.friendly"]
+ko = "우호적(affinity {affinity})"
+
+[ui."state.wary"]
+ko = "경계중(affinity {affinity})"
+
+[ui."state.wounded"]
+ko = "부상(hp {hp_pct}%)"

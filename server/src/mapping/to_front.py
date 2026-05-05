@@ -23,11 +23,11 @@ from ..ontology.queries import (
 )
 from ..rules import RULES
 from .labels import (
-    RISK_PAYLOAD,
     difficulty_badge,
     gender_label,
     giver_with_location_label,
     race_job_label,
+    risk_payload,
     stat_label,
     stats_payload,
 )
@@ -235,7 +235,7 @@ def to_place(state: GameState, graph: GameGraph | None = None) -> dict | None:
                 "name": target.name,
                 "blurb": target.description,
                 "difficulty": render(f"tier.{d}", "ko") if (d := attrs.get("difficulty")) else None,
-                "risk": RISK_PAYLOAD[target.sleep_risk],
+                "risk": risk_payload(target.sleep_risk),
             }
         )
     targets = []
@@ -264,7 +264,7 @@ def to_place(state: GameState, graph: GameGraph | None = None) -> dict | None:
         "features": list(loc.tags),
         "surroundings": surroundings,
         "targets": targets,
-        "risk": RISK_PAYLOAD[loc.sleep_risk],
+        "risk": risk_payload(loc.sleep_risk),
     }
 
 

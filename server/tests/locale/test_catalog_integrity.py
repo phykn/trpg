@@ -30,6 +30,13 @@ def test_stat_catalog_covers_enum() -> None:
     assert _keys("stat.toml", "stat") == expected
 
 
-def test_encounter_risk_no_catalog_yet() -> None:
-    """1.1 시점: EncounterRisk는 catalog 라벨 안 가짐 (RISK_PAYLOAD가 1.3에서 ui.toml로 흡수). 이 테스트는 1.3에서 _keys('ui.toml', 'risk') == get_args(EncounterRisk)로 갱신."""
-    assert set(get_args(EncounterRisk)) == {"safe", "risky", "dangerous"}
+def test_risk_catalog_covers_enum() -> None:
+    """ui.toml의 risk.<value>.label 키 set이 EncounterRisk와 정합."""
+    import tomllib as _tl
+    data = _tl.loads((CATALOG / "ui.toml").read_text(encoding="utf-8"))
+    risk_values = {
+        k.split(".")[1]
+        for k in data["ui"].keys()
+        if k.startswith("risk.") and k.endswith(".label")
+    }
+    assert risk_values == set(get_args(EncounterRisk))
