@@ -324,6 +324,26 @@ def format_cast_fail(actor_name: str, skill_name: str, err: Exception) -> str:
     return format_action_fail(actor_name, attempt, err)
 
 
+def format_steal_success_log(target_name: str, item_name: str) -> str:
+    return render("log.steal.success", "ko", target=target_name, item=item_name)
+
+
+def format_steal_success_turn_log(target_name: str, item_name: str) -> str:
+    return render("log.steal.success_turn", "ko", target=target_name, item=item_name)
+
+
+def format_steal_failure_log(target_name: str) -> str:
+    return render("log.steal.failure", "ko", target=target_name)
+
+
+def format_steal_failure_turn_log(target_name: str) -> str:
+    return render("log.steal.failure_turn", "ko", target=target_name)
+
+
+def format_steal_no_carryables_log(target_name: str) -> str:
+    return render("log.steal.no_carryables", "ko", target=target_name)
+
+
 def format_use_log(state: GameState, actor_id: str, result: dict) -> str:
     actor = state.characters.get(actor_id)
     actor_name = actor.name if actor else actor_id

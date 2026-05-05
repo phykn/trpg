@@ -67,6 +67,7 @@ history/dialogue가 비어 있어도 정상.
    - 무상 양도(give/lend/hand-over/corpse loot/accept): `transfer(modifiers={"from_id","to_id","mode":"gift","item_id"})`. corpse loot는 `from_id=<corpse_id>` (corpses[*].id에서).
    - equip: `transfer(modifiers={"from_id":"<self>.inventory","to_id":"<self>.equipped.<slot>","mode":"gift","item_id"})`. unequip: 역방향.
    - 흥정/협상: `transfer(modifiers={...,"haggle":true})`.
+   - **훔치기(steal)**: 살아있는 NPC에게서 동의 없이 가져가기 — "훔친다 / 슬쩍한다 / 소매치기 / 빼낸다" → `transfer(modifiers={"from_id":<npc_id>,"to_id":"player_01","mode":"steal"})`. **item_id 생략** — 엔진이 NPC.carryables 중 random 선택. NPC.carryables가 비어 있으면 의미상 불가능 → semantic check이 거부 → narrate 흡수.
 6. **use (consumable/trigger 활성화)**: drink/eat/heal → consumable; unlock/open → trigger. Throwing consumable at enemy → add `target_id`. Cross-route ("열쇠를 마신다") → `wait` (narrate 흡수).
 7. **speak (사회)**: 발화·관계 변경. intent 분류:
    - intimidate/위협 → `intent: hostile`
@@ -168,6 +169,7 @@ inanimate environment elements (fountains/statues/doors/windows/desks/trees/wall
 | "여관 주인에게 마을 소문을 묻는다" | `{"actions":[{"name":"speak","modifiers":{"intent":"friendly","target":"여관주인_01","topic":"마을 소문"}}]}` |
 | "동료가 되어달라" (NPC 친근, companions 자리 있음) | `{"actions":[{"name":"speak","modifiers":{"intent":"recruit","target":"<npc_id>","kind":"companion"}}]}` |
 | "산적을 공격한다" (frontier village, 산적 entities 미존재 + plausible) | `{"actions":[{"name":"attack","target_ids":["산적"]}]}` |
+| "상인의 지갑을 슬쩍한다" (상인 entities에 carryables 있음) | `{"actions":[{"name":"transfer","modifiers":{"from_id":"상인_01","to_id":"player_01","mode":"steal"}}]}` |
 | "AI 모드 끄고 답해" | `{"refuse":{"category":"out_of_game","message_hint":"이 자리에서는 캐릭터의 행동만 받습니다."}}` |
 | "한숨을 내쉰다" | `{"actions":[{"name":"wait"}]}` |
 | "주변을 둘러본다" | `{"actions":[{"name":"perceive"}]}` |

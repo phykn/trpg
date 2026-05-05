@@ -8,7 +8,7 @@ from .equipment import (
     unequip,
     unequip_by_item,
 )
-from .trade import buy, buy_price, sell, sell_price, transfer
+from .trade import buy, buy_price, sell, sell_price, steal, transfer
 from .use import use
 
 __all__ = [
@@ -22,6 +22,7 @@ __all__ = [
     "equip",
     "sell",
     "sell_price",
+    "steal",
     "transfer",
     "unequip",
     "unequip_by_item",

@@ -146,6 +146,60 @@ def test_cast_debuff_skill_rejected():
         check_semantics(output, surroundings)
 
 
+def test_transfer_steal_passes_when_npc_has_carryables():
+    output = JudgeOutput(actions=[Verb(name="transfer", modifiers={
+        "from_id": "n_01", "to_id": "player_01", "mode": "steal",
+    })])
+    surroundings = {
+        "entities": [
+            {"id": "n_01", "type": "npc", "carryables": [{"id": "coin_01", "name": "동전"}]}
+        ],
+    }
+    check_semantics(output, surroundings)
+
+
+def test_transfer_steal_rejected_when_no_carryables():
+    output = JudgeOutput(actions=[Verb(name="transfer", modifiers={
+        "from_id": "n_01", "to_id": "player_01", "mode": "steal",
+    })])
+    surroundings = {"entities": [{"id": "n_01", "type": "npc"}]}
+    with pytest.raises(JudgeSemanticError, match="nothing to steal"):
+        check_semantics(output, surroundings)
+
+
+def test_transfer_steal_rejected_when_target_not_npc():
+    output = JudgeOutput(actions=[Verb(name="transfer", modifiers={
+        "from_id": "loc_01", "to_id": "player_01", "mode": "steal",
+    })])
+    surroundings = {"entities": [{"id": "loc_01", "type": "item"}]}
+    with pytest.raises(JudgeSemanticError, match="same-location NPC"):
+        check_semantics(output, surroundings)
+
+
+def test_transfer_steal_rejected_when_to_id_not_player():
+    output = JudgeOutput(actions=[Verb(name="transfer", modifiers={
+        "from_id": "n_01", "to_id": "n_02", "mode": "steal",
+    })])
+    surroundings = {
+        "entities": [
+            {"id": "n_01", "type": "npc", "carryables": [{"id": "coin_01"}]},
+            {"id": "n_02", "type": "npc"},
+        ],
+    }
+    with pytest.raises(JudgeSemanticError, match="player_01"):
+        check_semantics(output, surroundings)
+
+
+def test_transfer_gift_still_requires_item_id():
+    """Non-steal modes still require item_id (semantic-level enforcement
+    after item_id moved out of required_modifiers)."""
+    output = JudgeOutput(actions=[Verb(name="transfer", modifiers={
+        "from_id": "n_01", "to_id": "player_01", "mode": "gift",
+    })])
+    with pytest.raises(JudgeSemanticError, match="item_id"):
+        check_semantics(output, {"entities": [{"id": "n_01", "type": "npc"}]})
+
+
 def test_cast_unknown_skill_rejected():
     output = JudgeOutput(actions=[Verb(name="cast", modifiers={"skill_id": "ghost_skill"})])
     surroundings = {"skills": [{"id": "minor_heal", "type": "heal"}]}

@@ -26,11 +26,11 @@ _MODIFIER_SCHEMAS: dict[VerbName, ModifierSchema] = {
         target_cardinality="forbidden",
     ),
     "transfer": ModifierSchema(
-        required_modifiers=frozenset({"from_id", "to_id", "mode", "item_id"}),
+        required_modifiers=frozenset({"from_id", "to_id", "mode"}),
         optional_modifiers={
             "from_id": str,
             "to_id": str,
-            "mode": ("gift", "trade"),
+            "mode": ("gift", "trade", "steal"),
             "item_id": str,
             "price": int,
             "haggle": bool,

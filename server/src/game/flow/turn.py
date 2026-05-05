@@ -720,6 +720,13 @@ async def _dispatch_verb(
         mode = m["mode"]
         from_id = m["from_id"]
         to_id = m["to_id"]
+        if mode == "steal":
+            from .steal import run_steal
+            async for ev in run_steal(
+                state, save_repo, player_input, from_id, dirty, to_front_fn,
+            ):
+                yield ev
+            return
         item_id = m["item_id"]
         agreed_price = m.get("price")
 

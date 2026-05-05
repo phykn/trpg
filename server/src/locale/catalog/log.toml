@@ -354,6 +354,24 @@ ko = "「{skill}」 → {target}"
 [log."cast.attempt"]
 ko = "「{skill}」{을/를} 시전하려 했지만"
 
+[log."steal.reason"]
+ko = "훔치기 — DEX"
+
+[log."steal.success"]
+ko = "{target}의 「{item}」{을/를} 슬쩍 빼냈습니다."
+
+[log."steal.success_turn"]
+ko = "{target}에게서 「{item}」 훔침"
+
+[log."steal.failure"]
+ko = "{target}{이/가} 당신의 손길을 알아차렸습니다. 호감도가 크게 떨어졌습니다."
+
+[log."steal.failure_turn"]
+ko = "{target} 훔치기 발각"
+
+[log."steal.no_carryables"]
+ko = "{target}에게서 훔칠 만한 것이 없습니다."
+
 [log."rest.ambush"]
 ko = "{actor}{은/는} 잠들기 직전 적의 습격을 받았습니다."
 
