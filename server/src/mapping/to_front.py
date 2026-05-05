@@ -259,7 +259,7 @@ def to_place(state: GameState, graph: GameGraph | None = None) -> dict | None:
     return {
         "name": loc.name,
         "description": loc.description,
-        "dayPhase": day_phase(state.turn_count),
+        "dayPhase": render(f"phase.{day_phase(state.turn_count)}", "ko"),
         "weather": list(loc.weather),
         "features": list(loc.tags),
         "surroundings": surroundings,

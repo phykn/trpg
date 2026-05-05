@@ -5,6 +5,7 @@ from typing import Literal
 from ..domain.clock import day_phase
 from ..domain.entities import Character, Location, Quest
 from ..domain.state import GameState
+from ..locale import render
 from ..ontology.graph import GameGraph
 from ..ontology.queries import (
     companions_of,
@@ -167,7 +168,7 @@ def _place_node(loc: Location, state: GameState) -> dict:
         "reachable": True,
         "description": loc.description,
         "risk": RISK_PAYLOAD[loc.sleep_risk],
-        "dayPhase": day_phase(state.turn_count),
+        "dayPhase": render(f"phase.{day_phase(state.turn_count)}", "ko"),
         "weather": list(loc.weather),
     }
 

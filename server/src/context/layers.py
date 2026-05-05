@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from ..domain.clock import day_phase
 from ..domain.state import GameState
+from ..locale import render
 from ..ontology.graph import GameGraph
 from ..ontology.queries import quests_in_chapter
 
@@ -159,7 +160,7 @@ def build_session_layer(state: GameState, graph: GameGraph | None = None) -> dic
             "summary": active_chapter.summary,
             "quests": active_quests,
         }
-    return {"chapter": chapter_data, "day_phase": day_phase(state.turn_count)}
+    return {"chapter": chapter_data, "day_phase": render(f"phase.{day_phase(state.turn_count)}", "ko")}
 
 
 def build_history_layer(state: GameState, corpses: list[dict] | None = None) -> str:
