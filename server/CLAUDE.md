@@ -32,16 +32,16 @@ bash server/scripts/check_relational_ssot.sh # graph-SSOT guard (CI-equivalent)
 ### Layer rule
 
 ```
-api → flow → llm_calls/engines → llm/ontology/context/wire → persistence → domain/rules
+api → flow → llm.calls/engines → llm/ontology/wire → persistence → domain/rules
 ```
 
 Upper depends on lower, never the reverse. Concretely:
 
 - `domain/` + `rules/` — pure data shapes and tunable knobs. No imports outside themselves.
 - `engines/` — pure game logic (combat math, apply state_changes, growth, inventory, skill, quest, recovery, invariants). No LLM, no I/O.
-- `llm_calls/` — LLM call modules (classify, narrate, combat_narrate, summon, recommend). Each module dir = `prompt.md` + `schema.py` + `runner.py` (+ `semantics.py` where needed). `llm_calls/_runner.py` is the shared 5-attempt self-correction loop. `llm_calls/_kernel.md` carries universal rules (Korean output, ID hygiene, world vocabulary) prepended to every prompt at boot via `load_prompt()`.
+- `llm/calls/` — LLM call modules (classify, narrate, combat_narrate, summon, recommend) under the `llm/` package. Each module dir = `prompt.md` + `schema.py` + `runner.py` (+ `semantics.py` where needed). `llm/calls/_runner.py` is the shared 5-attempt self-correction loop. `llm/calls/_kernel.md` carries universal rules (Korean output, ID hygiene, world vocabulary) prepended to every prompt at boot via `load_prompt()`.
 - `ontology/` — derived relational view over `GameState`. **The single source of truth for relations.**
-- `context/` — prompt input builders (surroundings for judge, layered context for narrate).
+- `llm/context/` — prompt input builders under the `llm/` package (surroundings for judge, layered context for narrate).
 - `persistence/` — `SaveRepo` / `ScenarioRepo` Protocols (all-async) + Supabase and LocalFs adapters.
 - `wire/` — server↔client interface. `wire/models/` Pydantic payloads (single source of typed shapes; codegen → client `wire.gen.d.ts`), `wire/emit.py` SSE event builders + state slot helpers, `wire/to_front.py` GameState → flat dict the client renders, `wire/labels.py` UI label catalog wrappers + badge combiners, `wire/story_graph.py` reachable-edges shaping. All Korean composed strings end here.
 - `flow/` — per-turn orchestration. `turn.py` / `roll.py` / `intro.py` are entrypoints (each yields `AsyncIterator[dict]` of SSE events).
@@ -49,7 +49,7 @@ Upper depends on lower, never the reverse. Concretely:
 
 ### Relational SSOT — graph or entity?
 
-`ontology/graph.py` is the single source of truth for relations. Inside `flow/`, `context/`, `wire/`:
+`ontology/graph.py` is the single source of truth for relations. Inside `flow/`, `llm/context/`, `wire/`:
 
 - **Asking who-relates-to-whom** must go through `GameGraph` — never via `state.characters.items()` fullscans, and never via direct relation fields (`char.location_id`, `char.inventory_ids`, `char.equipment.weapon`, `char.racial_skill_ids`, `char.learned_skill_ids`, `char.race_id`, `char.companions`, `quest.giver_id`, `quest.triggers[*].target_id`, `quest.rewards.items`, `loc.connections`, `loc.item_ids`, `chapter.quest_ids`). Prefer named helpers in `ontology/queries.py` (`inhabitants_of`, `inventory_of`, `equipment_of`, `connections_of`, `race_of`, `quests_given_by`, …); fall back to `graph.get_edges(...)` only when no helper fits.
 - **Asking the value of an entity attribute** (HP, MP, stats, level, alive, disposition, mood, name, gender, status, memories, quest.status, quest.title) is fine via direct read.
@@ -57,7 +57,7 @@ Upper depends on lower, never the reverse. Concretely:
 - **Graph caching:** `state.graph()` returns a lazily-built `GameGraph` cached on the state via `PrivateAttr` (does not round-trip through `model_dump_json`; `load_game` starts cold). Read paths just call `state.graph()`. Write paths in flow that touch relation fields must `state.invalidate_graph()` before re-reading or downstream consumers see stale edges.
 - **Exceptions** that may read relation fields directly: `persistence/`, `domain/`, `engines/apply.py`, pure numeric engines (combat damage math, recovery, dc), and `ontology/graph.py` itself.
 
-`scripts/check_relational_ssot.sh` enforces this by greppable patterns (list-shaped relation fields and `.characters.items()/.values()` iterations in `flow|context|wire`). Whitelist a justified single line with a trailing `# ssot-allow: <reason>` comment.
+`scripts/check_relational_ssot.sh` enforces this by greppable patterns (list-shaped relation fields and `.characters.items()/.values()` iterations in `flow|llm/context|wire`). Whitelist a justified single line with a trailing `# ssot-allow: <reason>` comment.
 
 ### Persistence
 
@@ -97,7 +97,7 @@ Each agent runs a self-correction loop with `retries=5`. On `ValidationError` or
 
 ### state_changes
 
-Four kinds only: `set / move / move_item / affinity`. Each has its own permission matrix in `engines/apply.py` (single source: `rules/permissions.py`, shared with `llm_calls/narrate/runner.py` so the prompt and engine use the same frozenset). Forbidden `set` fields are silently dropped per change; the rest of the batch still applies.
+Four kinds only: `set / move / move_item / affinity`. Each has its own permission matrix in `engines/apply.py` (single source: `rules/permissions.py`, shared with `llm/calls/narrate/body/runner.py` and `llm/calls/narrate/extract/runner.py` so the prompt and engine use the same frozenset). Forbidden `set` fields are silently dropped per change; the rest of the batch still applies.
 
 ### Affinity
 

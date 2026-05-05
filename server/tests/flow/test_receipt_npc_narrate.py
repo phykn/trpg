@@ -9,7 +9,7 @@ that interaction and the NPC reads as inert.
 Stage 1b verb-direct: receipt 분기는 verb 인스턴스 + `_is_receipt` 검증."""
 
 from src.flow.turn import _is_receipt
-from src.llm_calls.classify.schema import Verb
+from src.llm.calls.classify.schema import Verb
 
 
 def test_buy_verb_is_not_receipt(fresh_state):

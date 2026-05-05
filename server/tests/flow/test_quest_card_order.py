@@ -7,8 +7,8 @@ import pytest
 from src.domain.entities import Character, Quest, QuestRewards, Stats
 from src.flow.dirty import Dirty
 from src.flow.narrate import consume_narrate
-from src.llm_calls.narrate import NarrativeDelta, NarrativeFinal
-from src.llm_calls.narrate.schema import NarrateOutput
+from src.llm.calls.narrate import NarrativeDelta, NarrativeFinal
+from src.llm.calls.narrate.schema import NarrateOutput
 
 
 def _seed_player(state):

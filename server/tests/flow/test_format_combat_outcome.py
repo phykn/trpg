@@ -2,7 +2,7 @@ from src.flow.combat_auto import (
     AutoCombatResult,
     EnemyHit,
 )
-from src.llm_calls.combat_narrate.schema import PlayerNarrateSnapshot
+from src.llm.calls.combat_narrate.schema import PlayerNarrateSnapshot
 from src.flow.format import (
     format_combat_enemy_hit,
     format_combat_enemy_killed,

@@ -3,9 +3,9 @@ import re
 from collections.abc import AsyncIterator
 
 from ..locale import render
-from ..llm_calls.classify.schema import Verb
+from ..llm.calls.classify.schema import Verb
 from ..wire.emit import emit_error, emit_log_entry, emit_narrative_delta
-from ..llm_calls.narrate import (
+from ..llm.calls.narrate import (
     NarrateInput,
     NarrateOutput,
     NarrativeDelta,
@@ -23,7 +23,7 @@ from ..ontology.queries import giver_of, inhabitants_of
 from ..ontology.target_view import build_target_view
 from ..persistence.repo import ScenarioRepo
 from ..domain.state import GameState
-from ..context import (
+from ..llm.context import (
     build_history_layer,
     build_session_layer,
     build_surroundings,

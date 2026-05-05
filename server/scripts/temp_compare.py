@@ -25,19 +25,19 @@ sys.path.insert(0, str(SERVER_DIR))
 
 load_dotenv(SERVER_DIR / ".env.dev")
 
-from src.llm_calls._runner import load_prompt, run_with_retries  # noqa: E402
-from src.llm_calls.classify.schema import (  # noqa: E402
+from src.llm.calls._runner import load_prompt, run_with_retries  # noqa: E402
+from src.llm.calls.classify.schema import (  # noqa: E402
     JudgeInput,
     validate_judge_output,
 )
-from src.llm_calls.classify.semantics import (  # noqa: E402
+from src.llm.calls.classify.semantics import (  # noqa: E402
     JudgeSemanticError,
     check_semantics,
 )
 from scripts.judge_stress import CATEGORIES, CountingClient  # noqa: E402
 
 _PROMPT = load_prompt(
-    str(SERVER_DIR / "src" / "llm_calls" / "classify" / "runner.py"),
+    str(SERVER_DIR / "src" / "llm" / "calls" / "classify" / "runner.py"),
 )
 
 _RATE_LIMIT_SLEEP_S = 6.0  # ~10 calls/min

@@ -12,7 +12,7 @@ from ..engines.apply import apply_changes
 from ..engines.combat import stat_modifier
 from ..engines.growth import grant_roll_xp
 from ..llm.client import LLMClient, set_llm_session_if_unset
-from ..llm_calls.classify.schema import Verb
+from ..llm.calls.classify.schema import Verb
 from ..wire.to_front import stat_label
 from ..persistence.repo import SaveRepo, ScenarioRepo
 from ..rules.dc import compute_grade

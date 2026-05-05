@@ -19,7 +19,7 @@ from src.domain.entities import (
 from src.flow import narrate as narrate_mod
 from src.flow import turn as turn_mod
 from src.flow.turn import run_turn
-from src.llm_calls.classify.schema import Verb
+from src.llm.calls.classify.schema import Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
@@ -95,7 +95,7 @@ async def _run_with_action(state, tmp_saves, monkeypatch, action, *, client=obje
     narrate_calls = _track_narrate(monkeypatch)
 
     # Stage 1b: Verb 인스턴스는 JudgeOutput으로 wrap
-    from src.llm_calls.classify.schema import JudgeOutput
+    from src.llm.calls.classify.schema import JudgeOutput
     if isinstance(action, Verb):
         action = JudgeOutput(actions=[action])
 

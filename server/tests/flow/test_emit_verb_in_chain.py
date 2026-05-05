@@ -8,7 +8,7 @@ import inspect
 import pytest
 
 from src.flow.turn import _emit_verb_in_chain
-from src.llm_calls.classify.schema import Verb
+from src.llm.calls.classify.schema import Verb
 
 
 def test_emit_verb_in_chain_signature():

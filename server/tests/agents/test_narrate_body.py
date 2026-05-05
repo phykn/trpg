@@ -2,8 +2,8 @@
 
 import pytest
 
-from src.llm_calls.narrate.body import stream_body
-from src.llm_calls.narrate.schema import NarrateInput
+from src.llm.calls.narrate.body import stream_body
+from src.llm.calls.narrate.schema import NarrateInput
 
 
 def _input() -> NarrateInput:

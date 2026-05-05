@@ -1,4 +1,4 @@
-from src.llm_calls.narrate.schema import NarrateInput
+from src.llm.calls.narrate.schema import NarrateInput
 
 
 def _base_input(**kwargs) -> NarrateInput:

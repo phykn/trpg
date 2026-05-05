@@ -6,8 +6,8 @@ import random
 from collections.abc import AsyncIterator
 from typing import Literal
 
-from ..llm_calls.combat_narrate import stream_combat_narrate
-from ..llm_calls.classify.schema import Verb
+from ..llm.calls.combat_narrate import stream_combat_narrate
+from ..llm.calls.classify.schema import Verb
 from ..domain.errors import CombatStateInvalid, JudgeMalformed
 from ..domain.state import GameState
 from ..engines import combat as combat_engine

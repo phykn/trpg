@@ -2,7 +2,7 @@ from src.domain.entities import Character, Stats
 from src.flow.companion import run_recruit
 from src.flow.dirty import Dirty
 from src.flow.turn import run_turn
-from src.llm_calls.classify.schema import Verb
+from src.llm.calls.classify.schema import Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 

@@ -9,7 +9,7 @@ import tempfile
 
 import pytest
 
-from src.llm_calls.classify.schema import JudgeOutput, Verb
+from src.llm.calls.classify.schema import JudgeOutput, Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.domain.entities import Character, Location, Stats
 from src.flow import narrate as narrate_mod

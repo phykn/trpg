@@ -17,7 +17,7 @@ from src.domain.entities import (
     WeaponEffect,
 )
 from src.flow.turn import run_turn
-from src.llm_calls.classify.schema import Verb
+from src.llm.calls.classify.schema import Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
@@ -171,7 +171,7 @@ async def test_chain_combat_invalid_target_does_not_double_consume_turn(
 def test_verb_list_accepts_attack_anywhere():
     """Stage 1b: Verb 모델은 chain 비대칭 룰 없음 — attack을 prefix에 둬도 schema는 OK.
     legacy ChainAction의 'combat tail-only' 룰은 사라짐 — phase 전환은 엔진 결과."""
-    from src.llm_calls.classify.schema import JudgeOutput
+    from src.llm.calls.classify.schema import JudgeOutput
     out = JudgeOutput(actions=[
         Verb(name="attack", target_ids=["bandit_01"]),
         Verb(name="transfer", modifiers={

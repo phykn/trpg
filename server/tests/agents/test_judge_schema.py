@@ -11,8 +11,8 @@ semantic 회귀를 verb 모델로 cover."""
 
 import pytest
 
-from src.llm_calls.classify.schema import JudgeOutput, RefuseReason, Verb
-from src.llm_calls.classify.semantics import (
+from src.llm.calls.classify.schema import JudgeOutput, RefuseReason, Verb
+from src.llm.calls.classify.semantics import (
     JudgeSemanticError,
     _surroundings_target_ids,
     check_semantics,

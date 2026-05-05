@@ -11,7 +11,7 @@ import tempfile
 
 import pytest
 
-from src.llm_calls.classify.schema import JudgeOutput, Verb
+from src.llm.calls.classify.schema import JudgeOutput, Verb
 from src.domain.entities import (
     Character,
     ConsumableEffect,

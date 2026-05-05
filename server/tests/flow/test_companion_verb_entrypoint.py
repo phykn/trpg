@@ -5,7 +5,7 @@ Task 1 (turn.py dispatch refactor) 완료 시 기존 path는 폐기."""
 
 
 from src.flow.companion import run_recruit_verb, run_dismiss_verb
-from src.llm_calls.classify.schema import Verb
+from src.llm.calls.classify.schema import Verb
 
 
 def test_run_recruit_verb_extracts_target_from_modifiers():

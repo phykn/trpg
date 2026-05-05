@@ -8,7 +8,7 @@ from src.domain.entities import Character, Stats
 from src.flow import roll as roll_mod
 from src.flow.roll import run_roll
 from src.flow.turn import run_turn
-from src.llm_calls.classify.schema import Verb
+from src.llm.calls.classify.schema import Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 

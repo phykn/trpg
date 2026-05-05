@@ -10,7 +10,7 @@ from src.domain.state import GameState
 from src.engines.invariants import enforce_item_locality
 from src.flow.dirty import Dirty
 from src.flow.narrate import consume_narrate
-from src.llm_calls.narrate import NarrateOutput, NarrativeFinal
+from src.llm.calls.narrate import NarrateOutput, NarrativeFinal
 
 
 def _state() -> GameState:

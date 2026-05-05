@@ -8,7 +8,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
-from ..llm_calls.combat_narrate.schema import (
+from ..llm.calls.combat_narrate.schema import (
     CombatNarrateInput,
     CombatOutcome,
     CombatRoundEvent,
@@ -16,7 +16,7 @@ from ..llm_calls.combat_narrate.schema import (
     EnemyStartSnapshot,
     PlayerNarrateSnapshot,
 )
-from ..context.layers import build_world_layer
+from ..llm.context.layers import build_world_layer
 from ..domain.entities import Character
 from ..domain.errors import SkillInvalid
 from ..domain.state import GameState

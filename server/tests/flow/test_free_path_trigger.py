@@ -6,7 +6,7 @@ from src.engines.quest import apply_judge_result
 from src.flow.turn import end_turn_quest_check
 from src.flow.narrate import npc_dialogue_quest_check
 from src.flow import narrate as narrate_mod
-from src.llm_calls.classify.schema import Verb
+from src.llm.calls.classify.schema import Verb
 from src.persistence.local_fs import LocalFsScenarioRepo
 
 

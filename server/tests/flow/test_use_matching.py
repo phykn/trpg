@@ -11,9 +11,9 @@ from src.domain.entities import (
     Stats,
     WeaponEffect,
 )
-from src.llm_calls.classify.schema import Verb
+from src.llm.calls.classify.schema import Verb
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-from src.context import build_surroundings
+from src.llm.context import build_surroundings
 from src.flow.turn import run_turn
 
 

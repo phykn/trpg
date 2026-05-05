@@ -6,8 +6,8 @@ from src.domain.entities import Character, Quest, Stats
 from src.engines.apply import apply_changes
 from src.flow.dirty import Dirty
 from src.flow.narrate import consume_narrate
-from src.llm_calls.narrate import NarrativeFinal
-from src.llm_calls.narrate.schema import NarrateOutput
+from src.llm.calls.narrate import NarrativeFinal
+from src.llm.calls.narrate.schema import NarrateOutput
 
 
 def _seed_quest(state, qid: str, title: str, status: str) -> None:

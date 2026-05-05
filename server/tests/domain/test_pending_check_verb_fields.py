@@ -1,5 +1,5 @@
 from src.domain.memory import PendingCheck
-from src.llm_calls.classify.schema import Verb
+from src.llm.calls.classify.schema import Verb
 
 
 def test_pending_check_default_no_triggering_verb():

@@ -10,7 +10,7 @@ from src.domain.entities import Character, CombatBehavior, Stats
 from src.flow.combat_auto import PlayerAction, run_auto_combat
 from src.flow.dirty import Dirty
 from src.engines import combat as combat_engine
-from src.llm_calls.classify.schema import Verb
+from src.llm.calls.classify.schema import Verb
 from src.flow.turn import run_turn
 from src.persistence.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
