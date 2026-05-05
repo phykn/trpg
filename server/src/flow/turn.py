@@ -23,7 +23,13 @@ from .combat_phase import (
     run_combat_player_turn,
     start_combat_and_drive_auto,
 )
-from ..wire.emit import emit_error
+from ..wire.emit import (
+    emit_error,
+    emit_judge_pending_check_trigger,
+    emit_judge_refuse,
+    emit_judge_verb,
+    emit_judge_verbs,
+)
 from .buff_tick import tick_turn_buffs
 from .error_phrases import is_dramatic_fail
 from .dirty import (
@@ -179,16 +185,12 @@ async def run_turn(
     from .judge import PendingCheckTrigger
     if isinstance(result, PendingCheckTrigger):
         from .actions import emit_roll_pending_from_trigger
-        yield {
-            "type": "judge",
-            "data": {
-                "judge_kind": "pending_check_trigger",
-                "tier": result.tier,
-                "stat": result.stat,
-                "targets": list(result.targets),
-                "reason": result.reason,
-            },
-        }
+        yield emit_judge_pending_check_trigger(
+            tier=result.tier,
+            stat=result.stat,
+            targets=result.targets,
+            reason=result.reason,
+        )
         async for ev in emit_roll_pending_from_trigger(
             state, save_repo, player_input, result, dirty,
         ):
@@ -201,7 +203,7 @@ async def run_turn(
     if isinstance(result, JudgeOutput):
         # Refuse direct path
         if result.refuse is not None:
-            yield {"type": "judge", "data": {"judge_kind": "refuse", "refuse": result.refuse.model_dump()}}
+            yield emit_judge_refuse(result.refuse)
             state.turn_count += 1
             async for ev in stream_narrate_tail(
                 client, state, scenario_repo, player_input, dirty, to_front_fn,
@@ -225,7 +227,7 @@ async def run_turn(
                 and len(result.actions) == 1):
             single_verb = result.actions[0]
             try:
-                yield {"type": "judge", "data": {"judge_kind": "verb", "verb": single_verb.model_dump()}}
+                yield emit_judge_verb(single_verb)
                 refresh_active_subject(state, [single_verb])
                 async for ev in _dispatch_verb(
                     single_verb,
@@ -252,7 +254,7 @@ async def run_turn(
                 and len(result.actions) >= 2):
             verbs = result.actions
             try:
-                yield {"type": "judge", "data": {"judge_kind": "verbs", "actions": [v.model_dump() for v in verbs]}}
+                yield emit_judge_verbs(verbs)
                 refresh_active_subject(state, verbs)
                 async for ev in _run_verb_chain(
                     verbs,

@@ -26,7 +26,11 @@ from .combat_auto import (
     build_narrate_input,
     run_auto_combat,
 )
-from ..wire.emit import emit_error
+from ..wire.emit import (
+    emit_error,
+    emit_judge_pending_check_trigger,
+    emit_judge_verb,
+)
 from .dirty import (
     Dirty,
     ToFrontFn,
@@ -322,16 +326,12 @@ async def run_combat_player_turn(
     from .judge import PendingCheckTrigger
     if isinstance(result, PendingCheckTrigger):
         from .actions import emit_roll_pending_from_trigger
-        yield {
-            "type": "judge",
-            "data": {
-                "judge_kind": "pending_check_trigger",
-                "tier": result.tier,
-                "stat": result.stat,
-                "targets": list(result.targets),
-                "reason": result.reason,
-            },
-        }
+        yield emit_judge_pending_check_trigger(
+            tier=result.tier,
+            stat=result.stat,
+            targets=result.targets,
+            reason=result.reason,
+        )
         async for ev in emit_roll_pending_from_trigger(
             state, save_repo, player_input, result, dirty,
         ):
@@ -349,7 +349,7 @@ async def run_combat_player_turn(
     # _exactly_one validator guarantees actions is 1+ when refuse is None.
     verb = result.actions[0]
 
-    yield {"type": "judge", "data": {"judge_kind": "verb", "verb": verb.model_dump()}}
+    yield emit_judge_verb(verb)
     refresh_active_subject(state, [verb])
 
     if verb.name == "rest":
