@@ -200,6 +200,7 @@ def to_quest(state: GameState, graph: GameGraph | None = None) -> dict | None:
     elif q.status == "active":
         actions.append("abandon")
     return {
+        "id": qid,
         "title": q.title,
         "summary": q.summary,
         "giver": giver_name,

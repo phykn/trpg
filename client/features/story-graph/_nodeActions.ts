@@ -17,10 +17,10 @@ function approachIntent(name: string): string {
 
 export function actionForNode(node: StoryGraphNode): PanelAction | null {
   if (node.status === 'reachable_move') {
-    return { label: '이동', intent: moveIntent(node.label) };
+    return { kind: 'text', label: '이동', text: moveIntent(node.label) };
   }
   if (node.status === 'reachable_meet') {
-    return { label: '접근', intent: approachIntent(node.label) };
+    return { kind: 'text', label: '접근', text: approachIntent(node.label) };
   }
   return null;
 }

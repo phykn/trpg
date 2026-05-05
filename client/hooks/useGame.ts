@@ -139,7 +139,6 @@ export function useGame() {
         clearStreamingText: () => setStreamingText(''),
         upsertLogEntry: (entry) => setLog((L) => mergeEntry(L, entry)),
         applyState,
-        clearCombat: () => setCombat(null),
         setSuggestions,
         setErrorMessage,
       }),
@@ -252,6 +251,21 @@ export function useGame() {
     [gameId, pending, handleEvent, runStream],
   );
 
+  const onQuestAction = React.useCallback(
+    (kind: 'accept' | 'abandon', quest_id: string) => {
+      if (!gameId || pending) return;
+      void runStream((signal) =>
+        streamTurn(
+          gameId,
+          { player_input: '', think: false, quest_action: { kind, quest_id } },
+          handleEvent,
+          signal,
+        ),
+      );
+    },
+    [gameId, pending, handleEvent, runStream],
+  );
+
   const onRoll = React.useCallback(() => {
     if (!gameId || !pending) return;
     void runStream((signal) => streamRoll(gameId, { think: false }, handleEvent, signal));
@@ -338,7 +352,7 @@ export function useGame() {
     storeLastSeenLocation(id, placeKey);
   }, [placeKey]);
 
-  // Quest wire type has no `id` — use `title` as the cache key.
+  // Quest wire carries `id`, but `title` is the cache key — id can churn across server-side renumbering, while titles are stable per-scenario.
   const questTitle = quest?.title ?? null;
   const hasUnseenQuest = questTitle !== null && questTitle !== lastSeenQuestTitle;
 
@@ -383,6 +397,7 @@ export function useGame() {
     hasUnseenSubject,
     markSubjectSeen,
     onSend,
+    onQuestAction,
     onRoll,
     onStop,
     levelUpOpen,

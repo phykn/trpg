@@ -17,7 +17,7 @@ import { ConfirmDialog } from '@/components/ui';
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, storyGraph, log, pending, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp } = game;
+  const { hero, subject, quest, place, combat, storyGraph, log, pending, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -29,7 +29,11 @@ export function Playing({ game }: Props) {
 
   const runAction = (action: PanelAction) => {
     setActiveId(null);
-    onSend(action.intent);
+    if (action.kind === 'text') {
+      onSend(action.text);
+    } else {
+      onQuestAction(action.questAction.kind, action.questAction.quest_id);
+    }
   };
 
   const closePopups = () => {

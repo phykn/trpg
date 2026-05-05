@@ -1,7 +1,7 @@
 import random
 from collections.abc import AsyncIterator, Callable
 
-from ..llm_calls.classify.schema import Verb
+from ..llm_calls.classify.schema import JudgeOutput, Verb
 from ..domain.errors import JudgeMalformed, PendingCheckActive
 from pydantic import ValidationError
 from ..domain.memory import GMLogEntry, PlayerLogEntry
@@ -134,9 +134,12 @@ async def run_turn(
         elif kind == "abandon":
             abandon_quest(state, qid, dirty)
 
-    player_log = PlayerLogEntry(id=next_log_id(state), kind="player", text=player_input)
-    push_log_entry(state, player_log, dirty)
-    yield {"type": "log_entry", "data": player_log.model_dump()}
+    # Skip empty player log entries — quest_action turns can arrive with
+    # player_input="" (button-only). An empty 'player' card would render blank.
+    if player_input:
+        player_log = PlayerLogEntry(id=next_log_id(state), kind="player", text=player_input)
+        push_log_entry(state, player_log, dirty)
+        yield {"type": "log_entry", "data": player_log.model_dump()}
 
     if not state.characters[state.player_id].alive:
         yield push_act(state, dirty, GAME_OVER_TEXT)
@@ -184,11 +187,11 @@ async def run_turn(
         yield {
             "type": "judge",
             "data": {
+                "judge_kind": "pending_check_trigger",
                 "tier": result.tier,
                 "stat": result.stat,
                 "targets": list(result.targets),
                 "reason": result.reason,
-                "kind": "stat",
             },
         }
         async for ev in emit_roll_pending_from_trigger(
@@ -200,11 +203,10 @@ async def run_turn(
     # JudgeOutput: refuse → narrate alone, single verb → _dispatch_verb,
     # multi-verb → _run_verb_chain. Dispatch raises are absorbed by the
     # narrate fallback below.
-    from ..llm_calls.classify.schema import JudgeOutput as VerbJudgeOutput
-    if isinstance(result, VerbJudgeOutput):
+    if isinstance(result, JudgeOutput):
         # Refuse direct path
         if result.refuse is not None:
-            yield {"type": "judge", "data": {"refuse": result.refuse.model_dump()}}
+            yield {"type": "judge", "data": {"judge_kind": "refuse", "refuse": result.refuse.model_dump()}}
             state.turn_count += 1
             async for ev in stream_narrate_tail(
                 client, state, scenario_repo, player_input, dirty, to_front_fn,
@@ -228,7 +230,7 @@ async def run_turn(
                 and len(result.actions) == 1):
             single_verb = result.actions[0]
             try:
-                yield {"type": "judge", "data": single_verb.model_dump()}
+                yield {"type": "judge", "data": {"judge_kind": "verb", "verb": single_verb.model_dump()}}
                 refresh_active_subject(state, [single_verb])
                 async for ev in _dispatch_verb(
                     single_verb,
@@ -255,7 +257,7 @@ async def run_turn(
                 and len(result.actions) >= 2):
             verbs = result.actions
             try:
-                yield {"type": "judge", "data": {"actions": [v.model_dump() for v in verbs]}}
+                yield {"type": "judge", "data": {"judge_kind": "verbs", "actions": [v.model_dump() for v in verbs]}}
                 refresh_active_subject(state, verbs)
                 async for ev in _run_verb_chain(
                     verbs,
@@ -275,7 +277,7 @@ async def run_turn(
                     yield ev
                 return
 
-    # Unreachable: run_judge returns only VerbJudgeOutput | PendingCheckTrigger;
+    # Unreachable: run_judge returns only JudgeOutput | PendingCheckTrigger;
     # the _exactly_one validator rejects empty actions and both branches above
     # return.
     raise AssertionError(
@@ -354,8 +356,8 @@ def _chain_needs_narrate(
 ) -> bool:
     """Chain narrates iff any part is narrate-worthy:
     wait/perceive/speak/alter/cast/attack are narrate-worthy (cast/attack
-    in prefix position get prose-absorbed under Stage 1b cast policy +
-    chain-prefix attack-ignore policy; alter is dead-path through Stage 4 but
+    in prefix position get prose-absorbed under the current cast policy +
+    chain-prefix attack-ignore policy; alter is a reserved dead-path verb
     listed here for symmetry with the single-verb _dispatch_verb). transfer
     (gift/trade) is an NPC interaction. first-visit move narrates. Skip:
     receipt-only chains (equip/unequip/use-self) and chains where every
@@ -574,8 +576,8 @@ async def _dispatch_verb(
 ) -> AsyncIterator[dict]:
     """Dispatch a single verb to its emit_* / run_* handler.
 
-    wait / perceive / alter absorb into narrate (alter is dead-path through
-    Stage 4). move / use / transfer / attack / cast / speak / rest call their
+    wait / perceive / alter absorb into narrate (alter is a reserved dead-path
+    verb). move / use / transfer / attack / cast / speak / rest call their
     emit_* or run_* handler directly."""
     name = verb.name
     m = verb.modifiers or {}
@@ -598,7 +600,7 @@ async def _dispatch_verb(
         return
 
     if name == "alter":
-        # Dead path through Stage 4 — absorbed by narrate.
+        # Reserved dead-path verb — absorbed by narrate.
         async for ev in stream_narrate_tail(
             client, state, scenario_repo, player_input, dirty, to_front_fn,
             verb, graph=graph, previous_phase_signal=previous_phase_signal,
@@ -607,9 +609,8 @@ async def _dispatch_verb(
         return
 
     if name == "cast":
-        # TODO(stage4-cast): promote after the friendly-heal branch in
-        # combat_auto is validated. Stage 1b: narrate-only (avoid entering
-        # combat against self).
+        # narrate-only for now (avoid entering combat against self). Promote
+        # after the friendly-heal branch in combat_auto is validated.
         async for ev in stream_narrate_tail(
             client, state, scenario_repo, player_input, dirty, to_front_fn,
             verb, graph=graph, previous_phase_signal=previous_phase_signal,
@@ -781,8 +782,8 @@ async def _run_verb_chain(
 ) -> AsyncIterator[dict]:
     """Multi-verb chain dispatch — iterate list[Verb].
 
-    tail attack → combat phase entry. tail cast is narrate-only in Stage 1b
-    (same policy as single cast in _dispatch_verb — avoid self-targeting combat
+    tail attack → combat phase entry. tail cast is narrate-only in the current
+    policy (same as single cast in _dispatch_verb — avoid self-targeting combat
     entry). prefix verbs go to _emit_verb_in_chain (use/move/transfer) or are
     absorbed by narrate (wait/perceive/speak/alter/cast/attack — the latter
     two get prose-absorbed inside a chain). narrate decision is

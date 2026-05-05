@@ -1,8 +1,11 @@
 import type { BarDef, ConfirmInfo, PartsCell, Tone } from '@/components/ui';
+import type { QuestAction } from '@/types/wire';
 
 export type MetaSegment = { text: string; tone?: Tone };
 
-export type PanelAction = { label: string; intent: string; confirm?: ConfirmInfo };
+export type PanelAction =
+  | { kind: 'text'; label: string; text: string; confirm?: ConfirmInfo }
+  | { kind: 'quest_action'; label: string; questAction: QuestAction; confirm?: ConfirmInfo };
 
 export type PanelActions = {
   label: string;
@@ -35,4 +38,3 @@ export type PanelSlot = {
   panel: Panel | null;
 };
 
-export type { ConfirmInfo };

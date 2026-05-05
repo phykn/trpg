@@ -58,19 +58,35 @@ export type SessionPayload = {
   state: FrontState;
 };
 
+export type QuestAction = {
+  kind: 'accept' | 'abandon';
+  quest_id: string;
+};
+
 export type TurnRequest = {
   player_input: string;
   think: boolean;
+  quest_action?: QuestAction;
 };
 
 export type RollRequest = {
   think: boolean;
 };
 
-// `judge` and `combat_*` events are observed but their payloads are never
-// destructured — `state` + `log_entry` are authoritative for the UI.
+// `combat_*` events are observed but their payloads are never destructured —
+// `state` + `log_entry` are authoritative for the UI. `judge` is also
+// observability-only today (handleStreamEvent early-returns), but the payload
+// shape is typed as a discriminated union so future debug/observability
+// consumers stay safe across server changes.
+type VerbWire = { name: string; target_ids: string[]; modifiers: Record<string, unknown> };
+export type JudgeData =
+  | { judge_kind: 'pending_check_trigger'; tier: number; stat: string; targets: string[]; reason: string }
+  | { judge_kind: 'refuse'; refuse: { category: string; message_hint: string } }
+  | { judge_kind: 'verb'; verb: VerbWire }
+  | { judge_kind: 'verbs'; actions: VerbWire[] };
+
 export type StreamEvent =
-  | { type: 'judge'; data: unknown }
+  | { type: 'judge'; data: JudgeData }
   | { type: 'pending_check'; data: PendingCheck }
   | { type: 'narrative_delta'; data: { text: string } }
   | { type: 'suggestions'; data: { items: string[] } }
