@@ -1,4 +1,4 @@
-from src.mapping.labels import (
+from src.wire.labels import (
     ROLL_REASON_DEFAULT,
     STORY_EDGE_LABEL_CURRENT,
     STORY_EDGE_LABEL_MEET,

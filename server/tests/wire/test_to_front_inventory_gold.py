@@ -3,7 +3,7 @@
 
 from src.domain.entities import Character, Race
 from src.domain.state import GameState
-from src.mapping.to_front import to_hero, to_subject
+from src.wire.to_front import to_hero, to_subject
 
 
 def _make_player_state(gold: int = 0) -> GameState:

@@ -8,7 +8,7 @@ __all__ = ["DifficultyBadge", "QuestPayload", "QuestRewards"]
 class DifficultyBadge(_CamelModel):
     """Difficulty visual atom for the quest panel: localized label + tone hint
     (the latter aligns with client `Tone` design-system literals; the 5-value
-    subset matches mapping.labels._TIER_TONE)."""
+    subset matches wire.labels._TIER_TONE)."""
 
     label: str
     tone: Literal["neutral", "good", "exp", "accent", "bad"] | None = None
@@ -24,7 +24,7 @@ class QuestRewards(_CamelModel):
 
 class QuestPayload(_CamelModel):
     """Wire shape for the `quest` slot inside the `state` payload.
-    Field order matches mapping/to_front.to_quest's dict insertion order.
+    Field order matches wire/to_front.to_quest's dict insertion order.
     `status` / `actions` are narrowed to the four/two literals to_quest can
     emit — domain Quest.status carries `locked`/`abandoned` too but those
     never reach the active-quest path."""

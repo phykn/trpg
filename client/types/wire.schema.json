@@ -326,7 +326,7 @@
       "type": "object"
     },
     "SubjectPayload": {
-      "description": "Wire shape for the `subject` slot inside the `state` payload.\nField order matches mapping/to_front.to_subject's dict insertion order.\nNPC mp/mpMax is intentionally absent — subject panel doesn't expose\nNPC mana to the player.",
+      "description": "Wire shape for the `subject` slot inside the `state` payload.\nField order matches wire/to_front.to_subject's dict insertion order.\nNPC mp/mpMax is intentionally absent — subject panel doesn't expose\nNPC mana to the player.",
       "properties": {
         "name": {
           "title": "Name",
@@ -416,7 +416,7 @@
       "type": "object"
     },
     "DifficultyBadge": {
-      "description": "Difficulty visual atom for the quest panel: localized label + tone hint\n(the latter aligns with client `Tone` design-system literals; the 5-value\nsubset matches mapping.labels._TIER_TONE).",
+      "description": "Difficulty visual atom for the quest panel: localized label + tone hint\n(the latter aligns with client `Tone` design-system literals; the 5-value\nsubset matches wire.labels._TIER_TONE).",
       "properties": {
         "label": {
           "title": "Label",
@@ -468,7 +468,7 @@
       "type": "object"
     },
     "QuestPayload": {
-      "description": "Wire shape for the `quest` slot inside the `state` payload.\nField order matches mapping/to_front.to_quest's dict insertion order.\n`status` / `actions` are narrowed to the four/two literals to_quest can\nemit — domain Quest.status carries `locked`/`abandoned` too but those\nnever reach the active-quest path.",
+      "description": "Wire shape for the `quest` slot inside the `state` payload.\nField order matches wire/to_front.to_quest's dict insertion order.\n`status` / `actions` are narrowed to the four/two literals to_quest can\nemit — domain Quest.status carries `locked`/`abandoned` too but those\nnever reach the active-quest path.",
       "properties": {
         "id": {
           "title": "Id",
@@ -623,7 +623,7 @@
       "type": "object"
     },
     "RiskBadge": {
-      "description": "Sleep-risk visual atom: localized label + tone hint. Tone is the\n3-literal subset (`good`/`neutral`/`bad`) that mapping.labels._RISK_TONES\nactually emits — domain `EncounterRisk` is a closed 3-value Literal so\nno fallback default ever fires. Sub-set of client `Tone` (9-literal),\nso client assignment is safe.",
+      "description": "Sleep-risk visual atom: localized label + tone hint. Tone is the\n3-literal subset (`good`/`neutral`/`bad`) that wire.labels._RISK_TONES\nactually emits — domain `EncounterRisk` is a closed 3-value Literal so\nno fallback default ever fires. Sub-set of client `Tone` (9-literal),\nso client assignment is safe.",
       "properties": {
         "label": {
           "title": "Label",
@@ -647,7 +647,7 @@
       "type": "object"
     },
     "PlacePayload": {
-      "description": "Wire shape for the `place` slot inside the `state` payload.\nField order matches mapping/to_front.to_place's dict insertion order.",
+      "description": "Wire shape for the `place` slot inside the `state` payload.\nField order matches wire/to_front.to_place's dict insertion order.",
       "properties": {
         "name": {
           "title": "Name",
@@ -1309,7 +1309,7 @@
       "type": "object"
     },
     "CombatBadgePayload": {
-      "description": "Wire shape for the `combat` slot inside the `state` payload —\nsurfaced when combat is active. None when no combat or empty turn order\n(gated by mapping/to_front.to_combat). `turn_label` is a pre-composed\nKorean string (\"내 차례\" or \"{name} 차례\") so the client renders verbatim.",
+      "description": "Wire shape for the `combat` slot inside the `state` payload —\nsurfaced when combat is active. None when no combat or empty turn order\n(gated by wire/to_front.to_combat). `turn_label` is a pre-composed\nKorean string (\"내 차례\" or \"{name} 차례\") so the client renders verbatim.",
       "properties": {
         "round": {
           "title": "Round",

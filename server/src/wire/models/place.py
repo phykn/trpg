@@ -12,7 +12,7 @@ __all__ = [
 
 class RiskBadge(_CamelModel):
     """Sleep-risk visual atom: localized label + tone hint. Tone is the
-    3-literal subset (`good`/`neutral`/`bad`) that mapping.labels._RISK_TONES
+    3-literal subset (`good`/`neutral`/`bad`) that wire.labels._RISK_TONES
     actually emits — domain `EncounterRisk` is a closed 3-value Literal so
     no fallback default ever fires. Sub-set of client `Tone` (9-literal),
     so client assignment is safe."""
@@ -46,7 +46,7 @@ class PlaceTarget(_CamelModel):
 
 class PlacePayload(_CamelModel):
     """Wire shape for the `place` slot inside the `state` payload.
-    Field order matches mapping/to_front.to_place's dict insertion order."""
+    Field order matches wire/to_front.to_place's dict insertion order."""
 
     name: str
     description: str

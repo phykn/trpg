@@ -1,7 +1,7 @@
 """Reachable is decided once on server based on adjacency from current location."""
 
 from src.domain.entities import Character, Connection, Location, Stats
-from src.mapping.story_graph import to_story_graph
+from src.wire.story_graph import to_story_graph
 
 
 def _base_state(fresh_state):

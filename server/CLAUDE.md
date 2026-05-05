@@ -32,7 +32,7 @@ bash server/scripts/check_relational_ssot.sh # graph-SSOT guard (CI-equivalent)
 ### Layer rule
 
 ```
-api → flow → llm_calls/engines → llm/ontology/context/mapping → persistence → domain/rules
+api → flow → llm_calls/engines → llm/ontology/context/wire → persistence → domain/rules
 ```
 
 Upper depends on lower, never the reverse. Concretely:
@@ -43,13 +43,13 @@ Upper depends on lower, never the reverse. Concretely:
 - `ontology/` — derived relational view over `GameState`. **The single source of truth for relations.**
 - `context/` — prompt input builders (surroundings for judge, layered context for narrate).
 - `persistence/` — `SaveRepo` / `ScenarioRepo` Protocols (all-async) + Supabase and LocalFs adapters.
-- `mapping/to_front.py` — GameState → flat dict the client renders. All Korean composed strings end here.
+- `wire/` — server↔client interface. `wire/models/` Pydantic payloads (single source of typed shapes; codegen → client `wire.gen.d.ts`), `wire/emit.py` SSE event builders + state slot helpers, `wire/to_front.py` GameState → flat dict the client renders, `wire/labels.py` UI label catalog wrappers + badge combiners, `wire/story_graph.py` reachable-edges shaping. All Korean composed strings end here.
 - `flow/` — per-turn orchestration. `turn.py` / `roll.py` / `intro.py` are entrypoints (each yields `AsyncIterator[dict]` of SSE events).
 - `api/` — thin FastAPI adapter. Glue only, no business logic.
 
 ### Relational SSOT — graph or entity?
 
-`ontology/graph.py` is the single source of truth for relations. Inside `flow/`, `context/`, `mapping/`:
+`ontology/graph.py` is the single source of truth for relations. Inside `flow/`, `context/`, `wire/`:
 
 - **Asking who-relates-to-whom** must go through `GameGraph` — never via `state.characters.items()` fullscans, and never via direct relation fields (`char.location_id`, `char.inventory_ids`, `char.equipment.weapon`, `char.racial_skill_ids`, `char.learned_skill_ids`, `char.race_id`, `char.companions`, `quest.giver_id`, `quest.triggers[*].target_id`, `quest.rewards.items`, `loc.connections`, `loc.item_ids`, `chapter.quest_ids`). Prefer named helpers in `ontology/queries.py` (`inhabitants_of`, `inventory_of`, `equipment_of`, `connections_of`, `race_of`, `quests_given_by`, …); fall back to `graph.get_edges(...)` only when no helper fits.
 - **Asking the value of an entity attribute** (HP, MP, stats, level, alive, disposition, mood, name, gender, status, memories, quest.status, quest.title) is fine via direct read.
@@ -57,7 +57,7 @@ Upper depends on lower, never the reverse. Concretely:
 - **Graph caching:** `state.graph()` returns a lazily-built `GameGraph` cached on the state via `PrivateAttr` (does not round-trip through `model_dump_json`; `load_game` starts cold). Read paths just call `state.graph()`. Write paths in flow that touch relation fields must `state.invalidate_graph()` before re-reading or downstream consumers see stale edges.
 - **Exceptions** that may read relation fields directly: `persistence/`, `domain/`, `engines/apply.py`, pure numeric engines (combat damage math, recovery, dc), and `ontology/graph.py` itself.
 
-`scripts/check_relational_ssot.sh` enforces this by greppable patterns (list-shaped relation fields and `.characters.items()/.values()` iterations in `flow|context|mapping`). Whitelist a justified single line with a trailing `# ssot-allow: <reason>` comment.
+`scripts/check_relational_ssot.sh` enforces this by greppable patterns (list-shaped relation fields and `.characters.items()/.values()` iterations in `flow|context|wire`). Whitelist a justified single line with a trailing `# ssot-allow: <reason>` comment.
 
 ### Persistence
 
@@ -131,7 +131,7 @@ There is no minute/hour clock. `state.turn_count` is the sole time variable; `do
 - Stat keys are ASCII abbreviations: `STR / DEX / CON / INT / WIS / CHA`. Judge's `stat` enum uses the same keys.
 - Tiers are seven ASCII identifiers: `very_easy / easy / normal / hard / very_hard / legend / myth`. Korean display labels live in `src/locale/catalog/tier.toml`, accessed via `render(f"tier.{value}", "ko")`.
 - Internal grade is five-way (`critical_success / success / partial_success / failure / critical_failure`). Client's `RollLogEntry.result` collapses to `success | partial | fail`.
-- All player-facing Korean — narrate / combat_narrate bodies, the deterministic `잠시 정적이 흐릅니다` fallback in `flow/narrate.py`, every engine-side log line built in `flow/format.py` · `flow/error_phrases.py` · `flow/actions.py` · `flow/combat_phase.py` · `flow/turn.py` · `flow/roll.py` · `mapping/to_front.py` — uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings.
+- All player-facing Korean — narrate / combat_narrate bodies, the deterministic `잠시 정적이 흐릅니다` fallback in `flow/narrate.py`, every engine-side log line built in `flow/format.py` · `flow/error_phrases.py` · `flow/actions.py` · `flow/combat_phase.py` · `flow/turn.py` · `flow/roll.py` · `wire/to_front.py` — uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings.
 - Canonical user-facing term for skills is **기술**. The classify prompt accepts `스킬` as a synonym from player input, but every other prompt and engine string says `기술`. Code identifiers and the `skills/` entity directory keep the English `skill`.
 
 ## Error hierarchy

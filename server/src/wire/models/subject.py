@@ -5,7 +5,7 @@ __all__ = ["SubjectPayload"]
 
 class SubjectPayload(_CamelModel):
     """Wire shape for the `subject` slot inside the `state` payload.
-    Field order matches mapping/to_front.to_subject's dict insertion order.
+    Field order matches wire/to_front.to_subject's dict insertion order.
     NPC mp/mpMax is intentionally absent — subject panel doesn't expose
     NPC mana to the player."""
 

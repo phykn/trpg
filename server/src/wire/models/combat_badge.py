@@ -16,7 +16,7 @@ class CombatEnemy(_CamelModel):
 class CombatBadgePayload(_CamelModel):
     """Wire shape for the `combat` slot inside the `state` payload —
     surfaced when combat is active. None when no combat or empty turn order
-    (gated by mapping/to_front.to_combat). `turn_label` is a pre-composed
+    (gated by wire/to_front.to_combat). `turn_label` is a pre-composed
     Korean string ("내 차례" or "{name} 차례") so the client renders verbatim."""
 
     round: int

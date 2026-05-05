@@ -1,4 +1,4 @@
-# Domain UI labels rendered into payloads from mapping/labels.py.
+# Domain UI labels rendered into payloads from wire/labels.py.
 
 [ui."gender.male"]
 ko = "남성"
