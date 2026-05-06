@@ -2,7 +2,7 @@ import json
 
 from src.game.domain.entities import Character, Stats
 from src.game.domain.state import CombatState, GameState
-from src.wire.emit import _build_combat_badge_payload
+from src.wire.to_front import _build_combat_badge_payload
 
 
 def _state(*, player_id="p1") -> GameState:

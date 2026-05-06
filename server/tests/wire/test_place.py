@@ -2,7 +2,7 @@ import json
 
 from src.game.domain.entities import Character, Location, Stats
 from src.game.domain.state import GameState
-from src.wire.emit import _build_place_payload
+from src.wire.to_front import _build_place_payload
 from src.wire.models import PlacePayload, RiskBadge
 
 
