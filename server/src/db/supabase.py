@@ -16,7 +16,7 @@ from src.game.domain.memory import (
 )
 from src.game.domain.state import GameState
 from src.game.rules import RULES
-from ._schema import _ENTITY_MODELS, _Meta, _meta_from_state
+from ._schema import _ENTITY_MODELS, _Meta, _meta_from_state, _resolve_next_log_id
 from ._supabase_http import _PostgREST, _Storage
 from .repo import ScenarioRepo
 
@@ -159,13 +159,6 @@ class SupabaseSaveRepo:
             DialoguePair.model_validate(r["entry"]) for r in reversed(dlg_rows)
         ]
 
-        # next_log_id self-heal — same logic as store.load_game.
-        next_log_id = meta.next_log_id
-        if log_entries:
-            max_disk_id = max(e.id for e in log_entries)
-            if max_disk_id >= next_log_id:
-                next_log_id = max_disk_id + 1
-
         return GameState(
             game_id=meta.game_id,
             profile=meta.profile,
@@ -177,7 +170,7 @@ class SupabaseSaveRepo:
             pending_check=meta.pending_check,
             combat_state=meta.combat_state,
             previous_phase_signal=meta.previous_phase_signal,
-            next_log_id=next_log_id,
+            next_log_id=_resolve_next_log_id(meta.next_log_id, log_entries),
             turn_log=turn_log,
             recent_dialogue=recent_dialogue,
             log_entries=log_entries,

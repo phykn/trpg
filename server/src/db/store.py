@@ -13,7 +13,7 @@ from src.game.domain.memory import (
 from src.game.domain.errors import PersistenceFailed
 from src.game.rules import RULES
 from src.game.domain.state import GameState
-from ._schema import _ENTITY_MODELS, _Meta, _meta_from_state
+from ._schema import _ENTITY_MODELS, _Meta, _meta_from_state, _resolve_next_log_id
 
 # Per-game write serialization. A single global lock would funnel unrelated
 # game writes through one queue and — worse — let two requests for the same
@@ -202,15 +202,6 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
         DialoguePair.model_validate_json,
     )
 
-    # next_log_id self-heal: a mid-flush crash can leave meta.json stale while
-    # log.jsonl already has new entries. Bumping past the largest id we've
-    # actually loaded prevents id collisions on the next turn.
-    next_log_id = meta.next_log_id
-    if log_entries:
-        max_disk_id = max(e.id for e in log_entries)
-        if max_disk_id >= next_log_id:
-            next_log_id = max_disk_id + 1
-
     return GameState(
         game_id=meta.game_id,
         profile=meta.profile,
@@ -222,7 +213,7 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
         pending_check=meta.pending_check,
         combat_state=meta.combat_state,
         previous_phase_signal=meta.previous_phase_signal,
-        next_log_id=next_log_id,
+        next_log_id=_resolve_next_log_id(meta.next_log_id, log_entries),
         turn_log=turn_log,
         recent_dialogue=recent_dialogue,
         log_entries=log_entries,

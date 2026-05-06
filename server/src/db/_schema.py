@@ -14,7 +14,7 @@ from src.game.domain.entities import (
     Race,
     Skill,
 )
-from src.game.domain.memory import PendingCheck
+from src.game.domain.memory import LogEntry, PendingCheck
 from src.game.domain.state import CombatState, GameState
 
 
@@ -58,3 +58,12 @@ def _meta_from_state(state: GameState) -> _Meta:
         previous_phase_signal=state.previous_phase_signal,
         next_log_id=state.next_log_id,
     )
+
+
+def _resolve_next_log_id(meta_next_log_id: int, log_entries: list[LogEntry]) -> int:
+    """A mid-flush crash can leave meta stale while log rows already carry new
+    entries. Bumping past the largest id actually loaded prevents id collisions
+    on the next turn."""
+    if not log_entries:
+        return meta_next_log_id
+    return max(meta_next_log_id, max(e.id for e in log_entries) + 1)
