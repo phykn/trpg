@@ -7,7 +7,6 @@ import {
   storyGraphFingerprint,
 } from './presenters';
 import type { StoryGraphModel } from './types';
-import { ko } from '@/locale/ko';
 import { getStorage, loadSeenNodes, storeSeenNodes } from '@/services/storage';
 
 // Hydrate the seen-node set from cache and auto-seed with the player's starting
@@ -24,7 +23,7 @@ export function loadAndSeedSeenNodes(gameId: string, graph: StoryGraphModel): Se
   return loaded;
 }
 
-const STORAGE_PREFIX = ko.storage.storyGraphPrefix;
+const STORAGE_PREFIX = 'trpg.story_graph.';
 export const STORY_GRAPH_UPDATED_EVENT = 'trpg:story-graph-updated';
 
 export function readStoredStoryGraph(gameId: string): StoryGraphModel | null {

@@ -1,12 +1,12 @@
-import { ko } from '@/locale/ko';
-
 // Browser localStorage adapter; `getStorage()` returns null on RN/SSR so callers no-op gracefully off-web.
 export function getStorage(): Storage | null {
   if (typeof window === 'undefined') return null;
   return window.localStorage ?? null;
 }
 
-const CURRENT_GAME_KEY = ko.storage.currentGameKey;
+// Storage keys are internal identifiers, not user-facing labels; they don't move with locale.
+const CURRENT_GAME_KEY = 'trpg.current_game_id';
+const STORY_GRAPH_PREFIX = 'trpg.story_graph.';
 
 export function loadStoredGameId(): string | null {
   return getStorage()?.getItem(CURRENT_GAME_KEY) ?? null;
@@ -94,5 +94,5 @@ export function clearAllForGame(gameId: string): void {
   s.removeItem(`${LAST_SEEN_QUEST_TITLE_PREFIX}${gameId}`);
   s.removeItem(`${LAST_SEEN_SUBJECT_ID_PREFIX}${gameId}`);
   s.removeItem(`${SEEN_NODES_PREFIX}${gameId}`);
-  s.removeItem(`${ko.storage.storyGraphPrefix}${gameId}`);
+  s.removeItem(`${STORY_GRAPH_PREFIX}${gameId}`);
 }

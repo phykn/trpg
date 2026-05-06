@@ -4,7 +4,9 @@ import type { StoryGraphNode } from './types';
 
 function moveIntent(name: string): string {
   const last = name.charCodeAt(name.length - 1);
-  if (last < 0xac00 || last > 0xd7a3) return `${name}로 이동합니다`;
+  // Non-Korean (ASCII, etc.) — fall back to neutral '(으)로' so the particle
+  // doesn't lock to the wrong final consonant for unknown phonology.
+  if (last < 0xac00 || last > 0xd7a3) return `${name}(으)로 이동합니다`;
   const final = (last - 0xac00) % 28;
   if (final === 0 || final === 8) return `${name}로 이동합니다`;
   return `${name}으로 이동합니다`;

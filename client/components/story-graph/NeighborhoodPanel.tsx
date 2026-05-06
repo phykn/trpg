@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { ExpandableTitle, ExpandGroup, LabeledRow, Row, SEP, characterMeta, joinOrDash } from '@/components/ui';
+import { ExpandableTitle, ExpandGroup, LabeledRow, Row, characterMeta, joinOrDash } from '@/components/ui';
 import { colors, toneColor } from '@/design/tokens';
 import type { PanelAction } from '@/logic/info-panel';
 
