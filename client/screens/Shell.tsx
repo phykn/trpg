@@ -3,7 +3,7 @@ import { ActivityIndicator, Text } from 'react-native';
 
 import { CenterMessage, ErrorState } from '@/components/ui';
 import { colors } from '@/design/tokens';
-import { useGame } from '@/hooks/useGame';
+import { useGame } from '@/logic/game/useGame';
 
 import { NewGame } from './new-game';
 import { Playing } from './play';

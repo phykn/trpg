@@ -1,18 +1,19 @@
 import React from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 
-import { useBgm } from '@/features/audio';
-import { CombatStrip } from '@/features/combat';
-import { Log } from '@/features/log';
-import { useStoryGraph } from '@/features/story-graph';
-import type { Game } from '@/hooks/useGame';
-import { buildPanelSlots } from '@/features/info-panel';
-import type { PanelAction, PanelSlot } from '@/features/info-panel';
+import { useBgm } from '@/logic/audio';
+import { CombatStrip } from '@/logic/combat';
+import { Log } from '@/logic/log';
+import { useStoryGraph } from '@/logic/story-graph';
+import type { Game } from '@/logic/game/useGame';
+import { buildPanelSlots } from '@/logic/info-panel';
+import type { PanelAction, PanelSlot } from '@/logic/info-panel';
 
-import { Composer, GameOverPanel, LevelUpPrompt, RollPrompt } from '@/features/composer';
-import { ContextCard } from '@/features/info-panel';
-import { HeroStrip } from '@/features/hero';
+import { Composer, GameOverPanel, LevelUpPrompt, RollPrompt } from '@/logic/composer';
+import { ContextCard } from '@/logic/info-panel';
+import { HeroStrip } from '@/logic/hero';
 import { ConfirmDialog } from '@/components/ui';
+import { ko } from '@/locale/ko';
 
 type Props = { game: Game };
 
@@ -122,7 +123,7 @@ export function Playing({ game }: Props) {
           info={{
             title: '새로운 이야기',
             blurb: '진행 중인 이야기를 멈춥니다. 새로운 이야기를 시작합니다.',
-            confirmLabel: '시작',
+            confirmLabel: ko.action.start,
           }}
           onConfirm={() => {
             setNewGameConfirmOpen(false);
