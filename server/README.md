@@ -40,9 +40,12 @@ SUPABASE_URL=https://<project>.supabase.co
 SUPABASE_SERVICE_KEY=<service-role key>
 SUPABASE_SCENARIO_BUCKET=scenarios
 
-# LLM routing — DEFAULT required; LLM_ROUTE_<AGENT> overrides per agent.
+# LLM routing — DEFAULT required; LLM_ROUTE_<AGENT> overrides per agent
+# (matched agents: classify, narrate_body, narrate_extract, combat_narrate,
+# summon, recommend). Optional LLM_ROUTE_<AGENT>_FALLBACK engages on quota.
 LLM_ROUTE_DEFAULT=google/gemma-4-26b-a4b-it
 LLM_ROUTE_NARRATE_BODY=google/gemma-4-31b-it
+LLM_ROUTE_NARRATE_BODY_FALLBACK=google/gemma-4-26b-a4b-it
 
 # Provider block(s) — declare each provider referenced by the routes.
 LLM_GOOGLE_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/

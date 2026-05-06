@@ -6,7 +6,6 @@ from src.llm.calls.classify.schema import Verb
 from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 
-
 def _setup_state(fresh_state, *, edric_affinity=50):
     fresh_state.characters["player_01"] = Character(
         id="player_01",
@@ -107,12 +106,12 @@ async def test_recruit_dc_clamps_at_low_affinity(fresh_state, tmp_data, collect)
     assert state.pending_check.dc == 17
 
 
-async def test_recruit_via_run_turn(
-    fresh_state, tmp_data, judge_returns, collect
-):
+async def test_recruit_via_run_turn(fresh_state, tmp_data, judge_returns, collect):
     """run_turn → judge returns RecruitAction → run_recruit emits pending_check."""
     state = _setup_state(fresh_state, edric_affinity=50)
-    judge_returns(Verb(name="speak", modifiers={"intent": "recruit", "target": "npc.edric"}))
+    judge_returns(
+        Verb(name="speak", modifiers={"intent": "recruit", "target": "npc.edric"})
+    )
 
     await collect(
         run_turn(
@@ -146,7 +145,9 @@ async def test_recruit_target_missing_is_noop(fresh_state, tmp_data, collect):
     dirty = Dirty()
 
     await collect(
-        run_recruit(fresh_state, save_repo, "에드릭, 함께 가자", "npc.unknown", dirty, None)
+        run_recruit(
+            fresh_state, save_repo, "에드릭, 함께 가자", "npc.unknown", dirty, None
+        )
     )
 
     assert fresh_state.pending_check is None

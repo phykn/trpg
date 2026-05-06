@@ -1,4 +1,5 @@
 """enum 값 ↔ catalog .toml 키 정합 검사. 새 enum 값을 추가했는데 catalog 빠뜨리거나 그 반대를 잡는다."""
+
 import tomllib
 from pathlib import Path
 
@@ -33,6 +34,7 @@ def test_stat_catalog_covers_enum() -> None:
 def test_risk_catalog_covers_enum() -> None:
     """ui.toml의 risk.<value>.label 키 set이 EncounterRisk와 정합."""
     import tomllib as _tl
+
     data = _tl.loads((CATALOG / "ui.toml").read_text(encoding="utf-8"))
     risk_values = {
         k.split(".")[1]

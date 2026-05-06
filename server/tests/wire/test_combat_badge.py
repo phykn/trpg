@@ -9,7 +9,10 @@ def _state(*, player_id="p1") -> GameState:
     state = GameState(game_id="game_dev", profile="dev", player_id=player_id)
     stats = Stats(STR=10, DEX=10, CON=10, INT=10, WIS=10, CHA=10)
     state.characters[player_id] = Character(
-        id=player_id, name="레오", race_id="race_human", stats=stats,
+        id=player_id,
+        name="레오",
+        race_id="race_human",
+        stats=stats,
     )
     return state
 
@@ -21,7 +24,9 @@ def test_returns_none_when_no_combat():
 
 def test_returns_none_when_empty_turn_order():
     state = _state()
-    state.combat_state = CombatState(turn_order=[], current_turn=0, round=1, enemy_ids=[])
+    state.combat_state = CombatState(
+        turn_order=[], current_turn=0, round=1, enemy_ids=[]
+    )
     assert _build_combat_badge_payload(state) is None
 
 
@@ -31,9 +36,12 @@ def test_player_turn_label():
         turn_order=["p1", "e1"], current_turn=0, round=1, enemy_ids=["e1"]
     )
     state.characters["e1"] = Character(
-        id="e1", name="고블린", race_id="race_human",
+        id="e1",
+        name="고블린",
+        race_id="race_human",
         stats=Stats(STR=10, DEX=10, CON=10, INT=10, WIS=10, CHA=10),
-        hp=10, max_hp=15,
+        hp=10,
+        max_hp=15,
     )
     payload = _build_combat_badge_payload(state)
     assert payload.turn_label == "내 차례"
@@ -46,9 +54,12 @@ def test_enemy_turn_label():
         turn_order=["p1", "e1"], current_turn=1, round=1, enemy_ids=["e1"]
     )
     state.characters["e1"] = Character(
-        id="e1", name="고블린", race_id="race_human",
+        id="e1",
+        name="고블린",
+        race_id="race_human",
         stats=Stats(STR=10, DEX=10, CON=10, INT=10, WIS=10, CHA=10),
-        hp=10, max_hp=15,
+        hp=10,
+        max_hp=15,
     )
     payload = _build_combat_badge_payload(state)
     assert payload.turn_label == "고블린 차례"
@@ -60,9 +71,12 @@ def test_camel_case_serialization():
         turn_order=["p1"], current_turn=0, round=1, enemy_ids=["e1"]
     )
     state.characters["e1"] = Character(
-        id="e1", name="goblin", race_id="race_human",
+        id="e1",
+        name="goblin",
+        race_id="race_human",
         stats=Stats(STR=10, DEX=10, CON=10, INT=10, WIS=10, CHA=10),
-        hp=10, max_hp=15,
+        hp=10,
+        max_hp=15,
     )
     payload = _build_combat_badge_payload(state)
     dumped = payload.model_dump()
@@ -78,9 +92,12 @@ def test_enemies_skip_missing_character():
         turn_order=["p1"], current_turn=0, round=1, enemy_ids=["e1", "ghost"]
     )
     state.characters["e1"] = Character(
-        id="e1", name="goblin", race_id="race_human",
+        id="e1",
+        name="goblin",
+        race_id="race_human",
         stats=Stats(STR=10, DEX=10, CON=10, INT=10, WIS=10, CHA=10),
-        hp=10, max_hp=15,
+        hp=10,
+        max_hp=15,
     )
     payload = _build_combat_badge_payload(state)
     assert len(payload.enemies) == 1
@@ -93,9 +110,12 @@ def test_serializable_to_json():
         turn_order=["p1"], current_turn=0, round=1, enemy_ids=["e1"]
     )
     state.characters["e1"] = Character(
-        id="e1", name="고블린", race_id="race_human",
+        id="e1",
+        name="고블린",
+        race_id="race_human",
         stats=Stats(STR=10, DEX=10, CON=10, INT=10, WIS=10, CHA=10),
-        hp=10, max_hp=15,
+        hp=10,
+        max_hp=15,
     )
     payload = _build_combat_badge_payload(state)
     s = json.dumps(payload.model_dump(), ensure_ascii=False)

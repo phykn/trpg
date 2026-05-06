@@ -11,16 +11,30 @@ from src.llm.calls.classify.schema import Verb
 def _make_state(fresh_state, npc_id: str = "npc.tarem"):
     fresh_state.player_id = "player_01"
     fresh_state.characters["player_01"] = Character(
-        id="player_01", name="P", race_id="human", gender="male",
+        id="player_01",
+        name="P",
+        race_id="human",
+        gender="male",
         stats=Stats(STR=10, DEX=10, CON=10, INT=10, WIS=10, CHA=10),
-        hp=10, max_hp=10, mp=5, max_mp=5,
-        location_id="loc_01", is_player=True,
+        hp=10,
+        max_hp=10,
+        mp=5,
+        max_mp=5,
+        location_id="loc_01",
+        is_player=True,
     )
     fresh_state.characters[npc_id] = Character(
-        id=npc_id, name="Tarem", race_id="human", gender="male",
+        id=npc_id,
+        name="Tarem",
+        race_id="human",
+        gender="male",
         stats=Stats(STR=10, DEX=10, CON=10, INT=10, WIS=10, CHA=10),
-        hp=10, max_hp=10, mp=5, max_mp=5,
-        location_id="loc_01", is_player=False,
+        hp=10,
+        max_hp=10,
+        mp=5,
+        max_mp=5,
+        location_id="loc_01",
+        is_player=False,
     )
     return fresh_state
 
@@ -42,17 +56,24 @@ def test_refresh_with_attack_verb_pins_target(fresh_state):
 def test_refresh_with_transfer_verb_pins_npc(fresh_state):
     """transfer (buy)에서 from_id가 NPC면 active subject로."""
     s = _make_state(fresh_state)
-    verb = Verb(name="transfer", modifiers={
-        "from_id": "npc.tarem", "to_id": "player_01",
-        "mode": "trade", "item_id": "potion_01",
-    })
+    verb = Verb(
+        name="transfer",
+        modifiers={
+            "from_id": "npc.tarem",
+            "to_id": "player_01",
+            "mode": "trade",
+            "item_id": "potion_01",
+        },
+    )
     refresh_active_subject(s, [verb])
     assert s.active_subject_id == "npc.tarem"
 
 
 def test_refresh_with_use_verb_pins_target(fresh_state):
     s = _make_state(fresh_state)
-    verb = Verb(name="use", modifiers={"item_id": "potion_01", "target_id": "npc.tarem"})
+    verb = Verb(
+        name="use", modifiers={"item_id": "potion_01", "target_id": "npc.tarem"}
+    )
     refresh_active_subject(s, [verb])
     assert s.active_subject_id == "npc.tarem"
 
@@ -72,10 +93,17 @@ def test_refresh_walks_list_in_reverse(fresh_state):
     """list[Verb] 순회는 reverse order — 마지막 verb의 target 우선."""
     s = _make_state(fresh_state, npc_id="npc.first")
     s.characters["npc.last"] = Character(
-        id="npc.last", name="Last", race_id="human", gender="male",
+        id="npc.last",
+        name="Last",
+        race_id="human",
+        gender="male",
         stats=Stats(STR=10, DEX=10, CON=10, INT=10, WIS=10, CHA=10),
-        hp=10, max_hp=10, mp=5, max_mp=5,
-        location_id="loc_01", is_player=False,
+        hp=10,
+        max_hp=10,
+        mp=5,
+        max_mp=5,
+        location_id="loc_01",
+        is_player=False,
     )
     verbs = [
         Verb(name="speak", modifiers={"intent": "friendly", "target": "npc.first"}),

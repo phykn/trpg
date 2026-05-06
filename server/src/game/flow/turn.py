@@ -102,9 +102,15 @@ async def _emit_input_rejected_and_finalize(
     )
     state.turn_count += 1
     async for ev in stream_narrate_tail(
-        client, state, scenario_repo, player_input, dirty, to_front_fn,
+        client,
+        state,
+        scenario_repo,
+        player_input,
+        dirty,
+        to_front_fn,
         Verb(name="wait"),
-        graph=graph, previous_phase_signal=previous_phase_signal,
+        graph=graph,
+        previous_phase_signal=previous_phase_signal,
     ):
         yield ev
     try:
@@ -145,7 +151,9 @@ async def run_turn(
     # Skip empty player log entries — quest_action turns can arrive with
     # player_input="" (button-only). An empty 'player' card would render blank.
     if player_input:
-        player_log = PlayerLogEntry(id=next_log_id(state), kind="player", text=player_input)
+        player_log = PlayerLogEntry(
+            id=next_log_id(state), kind="player", text=player_input
+        )
         push_log_entry(state, player_log, dirty)
         yield emit_log_entry(player_log)
 
@@ -193,8 +201,10 @@ async def run_turn(
 
     # PendingCheckTrigger → emit_roll_pending_from_trigger directly.
     from .judge import PendingCheckTrigger
+
     if isinstance(result, PendingCheckTrigger):
         from .actions import emit_roll_pending_from_trigger
+
         yield emit_judge_pending_check_trigger(
             tier=result.tier,
             stat=result.stat,
@@ -202,7 +212,11 @@ async def run_turn(
             reason=result.reason,
         )
         async for ev in emit_roll_pending_from_trigger(
-            state, save_repo, player_input, result, dirty,
+            state,
+            save_repo,
+            player_input,
+            result,
+            dirty,
         ):
             yield ev
         return
@@ -216,7 +230,12 @@ async def run_turn(
             yield emit_judge_refuse(result.refuse)
             state.turn_count += 1
             async for ev in stream_narrate_tail(
-                client, state, scenario_repo, player_input, dirty, to_front_fn,
+                client,
+                state,
+                scenario_repo,
+                player_input,
+                dirty,
+                to_front_fn,
                 Verb(name="wait"),
                 graph=graph,
                 previous_phase_signal=previous_phase_signal,
@@ -232,18 +251,26 @@ async def run_turn(
             return
 
         # Single-verb redirect
-        if (result.refuse is None
-                and result.actions is not None
-                and len(result.actions) == 1):
+        if (
+            result.refuse is None
+            and result.actions is not None
+            and len(result.actions) == 1
+        ):
             single_verb = result.actions[0]
             try:
                 yield emit_judge_verb(single_verb)
                 refresh_active_subject(state, [single_verb])
                 async for ev in _dispatch_verb(
                     single_verb,
-                    client=client, state=state, scenario_repo=scenario_repo,
-                    save_repo=save_repo, dirty=dirty, rng=rng,
-                    to_front_fn=to_front_fn, player_input=player_input, graph=graph,
+                    client=client,
+                    state=state,
+                    scenario_repo=scenario_repo,
+                    save_repo=save_repo,
+                    dirty=dirty,
+                    rng=rng,
+                    to_front_fn=to_front_fn,
+                    player_input=player_input,
+                    graph=graph,
                     previous_phase_signal=previous_phase_signal,
                 ):
                     yield ev
@@ -252,25 +279,40 @@ async def run_turn(
                 # Surface INPUT_REJECTED_TEXT to the player so the internal
                 # exception type isn't exposed; absorb player_input via narrate.
                 async for ev in _emit_input_rejected_and_finalize(
-                    client, state, scenario_repo, save_repo, dirty,
-                    to_front_fn, player_input, graph, previous_phase_signal,
+                    client,
+                    state,
+                    scenario_repo,
+                    save_repo,
+                    dirty,
+                    to_front_fn,
+                    player_input,
+                    graph,
+                    previous_phase_signal,
                 ):
                     yield ev
                 return
 
         # Multi-verb redirect (length >= 2): call _run_verb_chain.
-        if (result.refuse is None
-                and result.actions is not None
-                and len(result.actions) >= 2):
+        if (
+            result.refuse is None
+            and result.actions is not None
+            and len(result.actions) >= 2
+        ):
             verbs = result.actions
             try:
                 yield emit_judge_verbs(verbs)
                 refresh_active_subject(state, verbs)
                 async for ev in _run_verb_chain(
                     verbs,
-                    client=client, state=state, scenario_repo=scenario_repo,
-                    save_repo=save_repo, dirty=dirty, rng=rng,
-                    to_front_fn=to_front_fn, player_input=player_input, graph=graph,
+                    client=client,
+                    state=state,
+                    scenario_repo=scenario_repo,
+                    save_repo=save_repo,
+                    dirty=dirty,
+                    rng=rng,
+                    to_front_fn=to_front_fn,
+                    player_input=player_input,
+                    graph=graph,
                     previous_phase_signal=previous_phase_signal,
                 ):
                     yield ev
@@ -278,8 +320,15 @@ async def run_turn(
             except (ValidationError, ValueError):
                 # Same INPUT_REJECTED_TEXT fallback as the single-verb branch.
                 async for ev in _emit_input_rejected_and_finalize(
-                    client, state, scenario_repo, save_repo, dirty,
-                    to_front_fn, player_input, graph, previous_phase_signal,
+                    client,
+                    state,
+                    scenario_repo,
+                    save_repo,
+                    dirty,
+                    to_front_fn,
+                    player_input,
+                    graph,
+                    previous_phase_signal,
                 ):
                     yield ev
                 return
@@ -287,9 +336,7 @@ async def run_turn(
     # Unreachable: run_judge returns only JudgeOutput | PendingCheckTrigger;
     # the _exactly_one validator rejects empty actions and both branches above
     # return.
-    raise AssertionError(
-        f"unexpected run_judge result: {type(result).__name__}"
-    )
+    raise AssertionError(f"unexpected run_judge result: {type(result).__name__}")
 
 
 EmitFactory = Callable[[LLMClient, GameState, Dirty, object], AsyncIterator[dict]]
@@ -316,12 +363,22 @@ def _resolve_transfer_emit(
         return emit_give(state, from_id, to_id, item_id, dirty)
     if from_id == state.player_id:
         return emit_trade(
-            state, state.player_id, to_id, item_id, dirty,
-            direction="sell", agreed_price=price,
+            state,
+            state.player_id,
+            to_id,
+            item_id,
+            dirty,
+            direction="sell",
+            agreed_price=price,
         )
     return emit_trade(
-        state, state.player_id, from_id, item_id, dirty,
-        direction="buy", agreed_price=price,
+        state,
+        state.player_id,
+        from_id,
+        item_id,
+        dirty,
+        direction="buy",
+        agreed_price=price,
     )
 
 
@@ -337,9 +394,13 @@ def _emit_verb_in_chain(client, state, dirty, verb: Verb) -> AsyncIterator[dict]
         return emit_move(state, state.player_id, destination, dirty)
     if n == "transfer":
         return _resolve_transfer_emit(
-            state, dirty,
-            mode=m["mode"], from_id=m["from_id"], to_id=m["to_id"],
-            item_id=m["item_id"], price=m.get("price"),
+            state,
+            dirty,
+            mode=m["mode"],
+            from_id=m["from_id"],
+            to_id=m["to_id"],
+            item_id=m["item_id"],
+            price=m.get("price"),
         )
     # wait/perceive/speak/cast: absorbed by narrate inside a chain — no
     # emit. _emit_verb_in_chain handles only chain-prefix-compatible verbs.
@@ -401,7 +462,9 @@ def _chain_needs_narrate(
             destination = (part.modifiers or {}).get("destination")
             if destination and pre_move_visited is not None:
                 if destination not in pre_move_visited:
-                    failed = bool(part_failures[i]) if part_failures is not None else False
+                    failed = (
+                        bool(part_failures[i]) if part_failures is not None else False
+                    )
                     if not failed:
                         return True
     return False
@@ -604,8 +667,15 @@ async def _dispatch_verb(
 
     if name == "wait":
         async for ev in stream_narrate_tail(
-            client, state, scenario_repo, player_input, dirty, to_front_fn,
-            verb, graph=graph, previous_phase_signal=previous_phase_signal,
+            client,
+            state,
+            scenario_repo,
+            player_input,
+            dirty,
+            to_front_fn,
+            verb,
+            graph=graph,
+            previous_phase_signal=previous_phase_signal,
         ):
             yield ev
         return
@@ -613,8 +683,15 @@ async def _dispatch_verb(
     if name == "perceive":
         # Pre-Stage-2 uncertainty rule: absorbed by narrate.
         async for ev in stream_narrate_tail(
-            client, state, scenario_repo, player_input, dirty, to_front_fn,
-            verb, graph=graph, previous_phase_signal=previous_phase_signal,
+            client,
+            state,
+            scenario_repo,
+            player_input,
+            dirty,
+            to_front_fn,
+            verb,
+            graph=graph,
+            previous_phase_signal=previous_phase_signal,
         ):
             yield ev
         return
@@ -627,8 +704,15 @@ async def _dispatch_verb(
         # Fall back to narrate so the turn doesn't crash.
         if skill is None or skill.type not in ("heal", "buff"):
             async for ev in stream_narrate_tail(
-                client, state, scenario_repo, player_input, dirty, to_front_fn,
-                verb, graph=graph, previous_phase_signal=previous_phase_signal,
+                client,
+                state,
+                scenario_repo,
+                player_input,
+                dirty,
+                to_front_fn,
+                verb,
+                graph=graph,
+                previous_phase_signal=previous_phase_signal,
             ):
                 yield ev
             return
@@ -641,9 +725,17 @@ async def _dispatch_verb(
 
         def cast_emit_factory(c, s, d, v):
             return emit_cast(s, s.player_id, skill_id, target_ids, d, rng=rng)
+
         async for ev in _run_one_step_action(
-            client, state, scenario_repo, save_repo, dirty, to_front_fn,
-            player_input, verb, cast_emit_factory,
+            client,
+            state,
+            scenario_repo,
+            save_repo,
+            dirty,
+            to_front_fn,
+            player_input,
+            verb,
+            cast_emit_factory,
             previous_phase_signal=previous_phase_signal,
         ):
             yield ev
@@ -651,8 +743,14 @@ async def _dispatch_verb(
 
     if name == "rest":
         async for ev in run_rest(
-            state, scenario_repo, save_repo, dirty, rng, to_front_fn,
-            client=client, player_input=player_input,
+            state,
+            scenario_repo,
+            save_repo,
+            dirty,
+            rng,
+            to_front_fn,
+            client=client,
+            player_input=player_input,
         ):
             yield ev
         return
@@ -662,17 +760,27 @@ async def _dispatch_verb(
         target = m.get("target")
         if intent == "recruit" and target:
             from .companion import run_recruit_verb
+
             async for ev in run_recruit_verb(
-                verb, state=state, save_repo=save_repo,
-                player_input=player_input, dirty=dirty, to_front_fn=to_front_fn,
+                verb,
+                state=state,
+                save_repo=save_repo,
+                player_input=player_input,
+                dirty=dirty,
+                to_front_fn=to_front_fn,
             ):
                 yield ev
             return
         if intent == "part" and target:
             from .companion import run_dismiss_verb
+
             async for ev in run_dismiss_verb(
-                verb, state=state, scenario_repo=scenario_repo,
-                save_repo=save_repo, client=client, dirty=dirty,
+                verb,
+                state=state,
+                scenario_repo=scenario_repo,
+                save_repo=save_repo,
+                client=client,
+                dirty=dirty,
                 to_front_fn=to_front_fn,
             ):
                 yield ev
@@ -680,8 +788,15 @@ async def _dispatch_verb(
         # friendly/hostile/deceptive: absorbed by narrate — narrate emits
         # the affinity state_change keyed off intent's tone.
         async for ev in stream_narrate_tail(
-            client, state, scenario_repo, player_input, dirty, to_front_fn,
-            verb, graph=graph, previous_phase_signal=previous_phase_signal,
+            client,
+            state,
+            scenario_repo,
+            player_input,
+            dirty,
+            to_front_fn,
+            verb,
+            graph=graph,
+            previous_phase_signal=previous_phase_signal,
         ):
             yield ev
         return
@@ -699,20 +814,36 @@ async def _dispatch_verb(
                 fail_evt = push_act(state, dirty, fail_line)
                 drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
                 async for ev in stream_narrate_tail(
-                    client, state, scenario_repo, player_input, dirty, to_front_fn,
-                    Verb(name="wait"), graph=graph, act_log_lines=[fail_line],
+                    client,
+                    state,
+                    scenario_repo,
+                    player_input,
+                    dirty,
+                    to_front_fn,
+                    Verb(name="wait"),
+                    graph=graph,
+                    act_log_lines=[fail_line],
                     previous_phase_signal=previous_phase_signal,
                 ):
                     yield ev
             async for ev in finalize(state, save_repo, dirty, to_front_fn):
                 yield ev
             return
+
         # _run_one_step_action: pre_move snapshot + emit + narrate decision (first-visit)
         def move_emit_factory(c, s, d, v):
             return emit_move(s, s.player_id, destination, d)
+
         async for ev in _run_one_step_action(
-            client, state, scenario_repo, save_repo, dirty, to_front_fn,
-            player_input, verb, move_emit_factory,
+            client,
+            state,
+            scenario_repo,
+            save_repo,
+            dirty,
+            to_front_fn,
+            player_input,
+            verb,
+            move_emit_factory,
             previous_phase_signal=previous_phase_signal,
         ):
             yield ev
@@ -724,9 +855,17 @@ async def _dispatch_verb(
 
         def use_emit_factory(c, s, d, v):
             return emit_use(s, s.player_id, item_id, target_id, d)
+
         async for ev in _run_one_step_action(
-            client, state, scenario_repo, save_repo, dirty, to_front_fn,
-            player_input, verb, use_emit_factory,
+            client,
+            state,
+            scenario_repo,
+            save_repo,
+            dirty,
+            to_front_fn,
+            player_input,
+            verb,
+            use_emit_factory,
             previous_phase_signal=previous_phase_signal,
         ):
             yield ev
@@ -738,8 +877,14 @@ async def _dispatch_verb(
         to_id = m["to_id"]
         if mode == "steal":
             from .steal import run_steal
+
             async for ev in run_steal(
-                state, save_repo, player_input, from_id, dirty, to_front_fn,
+                state,
+                save_repo,
+                player_input,
+                from_id,
+                dirty,
+                to_front_fn,
             ):
                 yield ev
             return
@@ -748,14 +893,25 @@ async def _dispatch_verb(
 
         def transfer_emit_factory(c, s, d, v):
             return _resolve_transfer_emit(
-                s, d,
-                mode=mode, from_id=from_id, to_id=to_id,
-                item_id=item_id, price=agreed_price,
+                s,
+                d,
+                mode=mode,
+                from_id=from_id,
+                to_id=to_id,
+                item_id=item_id,
+                price=agreed_price,
             )
 
         async for ev in _run_one_step_action(
-            client, state, scenario_repo, save_repo, dirty, to_front_fn,
-            player_input, verb, transfer_emit_factory,
+            client,
+            state,
+            scenario_repo,
+            save_repo,
+            dirty,
+            to_front_fn,
+            player_input,
+            verb,
+            transfer_emit_factory,
             previous_phase_signal=previous_phase_signal,
         ):
             yield ev
@@ -771,8 +927,15 @@ async def _dispatch_verb(
                 fail_evt = push_act(state, dirty, fail_line)
                 drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
                 async for ev in stream_narrate_tail(
-                    client, state, scenario_repo, player_input, dirty, to_front_fn,
-                    Verb(name="wait"), graph=graph, act_log_lines=[fail_line],
+                    client,
+                    state,
+                    scenario_repo,
+                    player_input,
+                    dirty,
+                    to_front_fn,
+                    Verb(name="wait"),
+                    graph=graph,
+                    act_log_lines=[fail_line],
                     previous_phase_signal=previous_phase_signal,
                 ):
                     yield ev
@@ -780,7 +943,13 @@ async def _dispatch_verb(
                 yield ev
             return
         async for ev in _enter_combat_and_finalize(
-            client, state, scenario_repo, save_repo, dirty, rng, to_front_fn,
+            client,
+            state,
+            scenario_repo,
+            save_repo,
+            dirty,
+            rng,
+            to_front_fn,
             player_input=player_input,
             enemy_ids=targets,
             skill_id=m.get("skill_id"),
@@ -876,14 +1045,13 @@ async def _run_verb_chain(
     graph = state.graph()
     if any(p.name == "move" for p in prefix):
         from .subject import pin_subject_by_input_name
+
         pin_subject_by_input_name(state, player_input, graph)
 
     if tail_combat is not None:
         # combat path — handle prefix act cards.
         for ev, part_idx in chain_act_evts:
-            keep_card = (
-                prefix[part_idx].name == "move" and not part_failures[part_idx]
-            )
+            keep_card = prefix[part_idx].name == "move" and not part_failures[part_idx]
             if keep_card:
                 yield ev
             else:
@@ -898,9 +1066,15 @@ async def _run_verb_chain(
                 drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
                 chain_act_lines.append(fail_line)
                 async for ev in stream_narrate_tail(
-                    client, state, scenario_repo, player_input, dirty, to_front_fn,
+                    client,
+                    state,
+                    scenario_repo,
+                    player_input,
+                    dirty,
+                    to_front_fn,
                     Verb(name="wait"),
-                    graph=graph, act_log_lines=chain_act_lines,
+                    graph=graph,
+                    act_log_lines=chain_act_lines,
                     previous_phase_signal=previous_phase_signal,
                 ):
                     yield ev
@@ -908,7 +1082,13 @@ async def _run_verb_chain(
                 yield ev
             return
         async for ev in _enter_combat_and_finalize(
-            client, state, scenario_repo, save_repo, dirty, rng, to_front_fn,
+            client,
+            state,
+            scenario_repo,
+            save_repo,
+            dirty,
+            rng,
+            to_front_fn,
             player_input=player_input,
             enemy_ids=targets,
             skill_id=(tail_combat.modifiers or {}).get("skill_id"),
@@ -930,17 +1110,21 @@ async def _run_verb_chain(
 
     if narrate_chain:
         for ev, part_idx in chain_act_evts:
-            keep_card = (
-                prefix[part_idx].name == "move" and not part_failures[part_idx]
-            )
+            keep_card = prefix[part_idx].name == "move" and not part_failures[part_idx]
             if keep_card:
                 yield ev
             else:
                 drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
         async for ev in stream_narrate_tail(
-            client, state, scenario_repo, player_input, dirty, to_front_fn,
+            client,
+            state,
+            scenario_repo,
+            player_input,
+            dirty,
+            to_front_fn,
             narrate_action,
-            graph=graph, act_log_lines=chain_act_lines,
+            graph=graph,
+            act_log_lines=chain_act_lines,
             previous_phase_signal=previous_phase_signal,
         ):
             yield ev
@@ -957,5 +1141,3 @@ async def _run_verb_chain(
     tick_turn_buffs(state, dirty)
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
-
-

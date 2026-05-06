@@ -136,9 +136,7 @@ def _build_hero_payload(state: GameState, graph: GameGraph) -> HeroPayload:
     )
 
 
-def _build_subject_payload(
-    state: GameState, graph: GameGraph
-) -> SubjectPayload | None:
+def _build_subject_payload(state: GameState, graph: GameGraph) -> SubjectPayload | None:
     """Typed wire model for the `subject` state slot. Returns None when
     no subject is active or the active id no longer resolves. `known` =
     appearance + hints + player memories; gold pseudo-row at inventory[0]."""
@@ -207,9 +205,7 @@ def _build_subject_payload(
     )
 
 
-def _build_quest_payload(
-    state: GameState, graph: GameGraph
-) -> QuestPayload | None:
+def _build_quest_payload(state: GameState, graph: GameGraph) -> QuestPayload | None:
     """Typed wire model for the `quest` state slot. Returns None when no
     quest is active. Goals from triggers, progress label from triggers_met
     counts, action list from status."""
@@ -253,9 +249,7 @@ def _build_quest_payload(
     )
 
 
-def _build_place_payload(
-    state: GameState, graph: GameGraph
-) -> PlacePayload | None:
+def _build_place_payload(state: GameState, graph: GameGraph) -> PlacePayload | None:
     """Typed wire model for the `place` state slot. Returns None when the
     player has no location. Surroundings via connections_of, targets via
     inhabitants_of, blurb fallback chain, day_phase via clock + render."""
@@ -333,9 +327,14 @@ def _build_combat_badge_payload(state: GameState) -> CombatBadgePayload | None:
         e = state.characters.get(eid)
         if e is None:
             continue
-        enemies.append(CombatEnemy(
-            name=e.name, hp=e.hp, hp_max=e.max_hp, alive=e.alive,
-        ))
+        enemies.append(
+            CombatEnemy(
+                name=e.name,
+                hp=e.hp,
+                hp_max=e.max_hp,
+                alive=e.alive,
+            )
+        )
 
     return CombatBadgePayload(
         round=cs.round,
@@ -386,6 +385,7 @@ def pending_check_to_front(state: GameState, pending: PendingCheck) -> dict:
     re-derive it). `stat_value` is the player's current score on that stat.
     `reason` is shown verbatim above the dice strip."""
     from .emit import _build_pending_check_payload
+
     return _build_pending_check_payload(state, pending).model_dump()
 
 

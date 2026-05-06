@@ -89,7 +89,9 @@ def test_camel_case_serialization():
 
 
 def test_known_combines_appearance_hints_memories():
-    mem = Memory(content="처음 만났을 때 친절했다", importance=1, turn=1, target_id="s1")
+    mem = Memory(
+        content="처음 만났을 때 친절했다", importance=1, turn=1, target_id="s1"
+    )
     state = _state(
         appearance="긴 갈색 머리카락",
         hints=["상인 조합 소속"],
@@ -97,7 +99,11 @@ def test_known_combines_appearance_hints_memories():
     )
     payload = _build_subject_payload(state, state.graph())
     assert payload is not None
-    assert payload.known == ["긴 갈색 머리카락", "상인 조합 소속", "처음 만났을 때 친절했다"]
+    assert payload.known == [
+        "긴 갈색 머리카락",
+        "상인 조합 소속",
+        "처음 만났을 때 친절했다",
+    ]
 
 
 def test_known_drops_appearance_when_dead():

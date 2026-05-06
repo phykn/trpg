@@ -38,8 +38,10 @@ def _derive_pending_kind(
     """Derive PendingCheck.kind from the triggering verb: 'recruit' for
     speak(intent=recruit), otherwise 'stat'."""
     if triggering_verb is not None:
-        if (triggering_verb.name == "speak"
-                and triggering_verb.modifiers.get("intent") == "recruit"):
+        if (
+            triggering_verb.name == "speak"
+            and triggering_verb.modifiers.get("intent") == "recruit"
+        ):
             return "recruit"
     return "stat"
 
@@ -47,7 +49,9 @@ def _derive_pending_kind(
 def _recruit_dc(state: GameState, target_id: str) -> int:
     target = state.characters.get(target_id)
     rel = target.relations.get(state.player_id, 0) if target else 0
-    base = RULES.companions.recruit_base_dc  # ssot-allow: RULES config attribute, not entity.companions list
+    base = (
+        RULES.companions.recruit_base_dc
+    )  # ssot-allow: RULES config attribute, not entity.companions list
     return base - _clamp(rel // 10, -5, 5)
 
 
@@ -110,7 +114,9 @@ async def run_dismiss(
     Pushes a system card + fires inline narrate (mirrors recruit roll branch).
     Always emits its own `companion_dismissed:<name>` signal."""
     player = state.characters[state.player_id]
-    if target_id not in player.companions:  # ssot-allow: write path guard, not a relation scan
+    if (
+        target_id not in player.companions
+    ):  # ssot-allow: write path guard, not a relation scan
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
@@ -183,7 +189,13 @@ async def run_dismiss_verb(
     """Verb-arg entrypoint for run_dismiss."""
     target_id = verb.modifiers["target"]
     async for ev in run_dismiss(
-        state, scenario_repo, save_repo, client, target_id, dirty, to_front_fn,
+        state,
+        scenario_repo,
+        save_repo,
+        client,
+        target_id,
+        dirty,
+        to_front_fn,
     ):
         yield ev
 
@@ -204,7 +216,9 @@ async def handle_recruit_roll_result(
     target_name = target.name
     player = state.characters[state.player_id]
 
-    rules = RULES.companions  # ssot-allow: RULES config attribute, not entity.companions list
+    rules = (
+        RULES.companions
+    )  # ssot-allow: RULES config attribute, not entity.companions list
 
     if grade in ("critical_success", "success", "partial_success"):
         if target_id not in player.companions:  # ssot-allow: write path guard
@@ -231,7 +245,8 @@ async def handle_recruit_roll_result(
 
     if grade == "critical_failure":
         target.relations[state.player_id] = (
-            target.relations.get(state.player_id, 0) + rules.recruit_affinity_crit_failure
+            target.relations.get(state.player_id, 0)
+            + rules.recruit_affinity_crit_failure
         )
         dirty.entities.add(("characters", target_id))
         yield push_act(

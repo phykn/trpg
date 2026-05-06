@@ -113,7 +113,9 @@ async def init_game(
         inventory_ids=template_inventory,
         gold=int(template.get("gold", 0)),
         xp_pool=int(template.get("xp_pool", 0)),
-        racial_skill_ids=list(chosen_race.racial_skill_ids),  # ssot-allow: seed copy — graph doesn't exist yet, populating fresh player character from chosen Race
+        racial_skill_ids=list(
+            chosen_race.racial_skill_ids
+        ),  # ssot-allow: seed copy — graph doesn't exist yet, populating fresh player character from chosen Race
         revive_coins=RULES.death.revive_coins,
     )
     player_char.max_hp = calc_max_hp(player_char.level, stats.CON)

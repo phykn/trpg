@@ -285,7 +285,9 @@ async def _passive_pre_emit(
                 yield ev
             label = "equip"
         elif "<self>.equipped" in from_id:
-            async for ev in emit_unequip(state, state.player_id, item_id_carried, dirty):
+            async for ev in emit_unequip(
+                state, state.player_id, item_id_carried, dirty
+            ):
                 yield ev
             label = "unequip"
         else:
@@ -293,12 +295,14 @@ async def _passive_pre_emit(
             return
     else:
         return
-    yield emit_combat_turn(CombatTurnPayload(
-        actor=state.player_id,
-        action=label,
-        round=state.combat_state.round,
-        item_id=item_id_carried,
-    ))
+    yield emit_combat_turn(
+        CombatTurnPayload(
+            actor=state.player_id,
+            action=label,
+            round=state.combat_state.round,
+            item_id=item_id_carried,
+        )
+    )
 
 
 async def run_combat_player_turn(
@@ -324,8 +328,10 @@ async def run_combat_player_turn(
 
     # PendingCheckTrigger → emit_roll_pending_from_trigger directly.
     from .judge import PendingCheckTrigger
+
     if isinstance(result, PendingCheckTrigger):
         from .actions import emit_roll_pending_from_trigger
+
         yield emit_judge_pending_check_trigger(
             tier=result.tier,
             stat=result.stat,
@@ -333,7 +339,11 @@ async def run_combat_player_turn(
             reason=result.reason,
         )
         async for ev in emit_roll_pending_from_trigger(
-            state, save_repo, player_input, result, dirty,
+            state,
+            save_repo,
+            player_input,
+            result,
+            dirty,
         ):
             yield ev
         return
@@ -373,11 +383,12 @@ async def run_combat_player_turn(
             return
 
     # Passive in-combat verb: use, or transfer(equip/unequip).
-    is_passive = (
-        verb.name == "use"
-        or (verb.name == "transfer"
-            and ("<self>.equipped" in (verb.modifiers or {}).get("from_id", "")
-                 or "<self>.equipped" in (verb.modifiers or {}).get("to_id", "")))
+    is_passive = verb.name == "use" or (
+        verb.name == "transfer"
+        and (
+            "<self>.equipped" in (verb.modifiers or {}).get("from_id", "")
+            or "<self>.equipped" in (verb.modifiers or {}).get("to_id", "")
+        )
     )
     if is_passive:
         async for ev in _passive_pre_emit(state, dirty, verb):

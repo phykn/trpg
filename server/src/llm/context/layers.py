@@ -52,7 +52,8 @@ def _format_summary_entry(turn: int, summary: str) -> str:
 
 def _format_dialogue_entry(turn: int, player: str, narrator_redacted: str) -> str:
     return render(
-        "prompt.history.dialogue_entry", "ko",
+        "prompt.history.dialogue_entry",
+        "ko",
         turn=turn,
         player=player,
         narrator=_truncate_narrator(narrator_redacted),
@@ -165,7 +166,10 @@ def build_session_layer(state: GameState, graph: GameGraph | None = None) -> dic
             "summary": active_chapter.summary,
             "quests": active_quests,
         }
-    return {"chapter": chapter_data, "day_phase": render(f"phase.{day_phase(state.turn_count)}", "ko")}
+    return {
+        "chapter": chapter_data,
+        "day_phase": render(f"phase.{day_phase(state.turn_count)}", "ko"),
+    }
 
 
 def build_history_layer(state: GameState, corpses: list[dict] | None = None) -> str:

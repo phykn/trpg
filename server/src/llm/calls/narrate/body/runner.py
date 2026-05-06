@@ -29,7 +29,10 @@ async def stream_body(
         update={"surroundings": surroundings_for_narrate_body(input_.surroundings)}
     )
     messages = [
-        {"role": "system", "content": get_prompt_with_perm_subs("narrate/body", locale)},
+        {
+            "role": "system",
+            "content": get_prompt_with_perm_subs("narrate/body", locale),
+        },
         {"role": "user", "content": body_input.model_dump_json()},
     ]
 

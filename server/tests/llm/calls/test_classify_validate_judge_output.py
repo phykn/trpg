@@ -25,12 +25,20 @@ def test_modifier_validation_raised():
 
 
 def test_silent_drop_unknown_modifier():
-    raw = json.dumps({
-        "actions": [{
-            "name": "speak",
-            "modifiers": {"intent": "friendly", "target": "n", "ghost_key": "x"},
-        }]
-    })
+    raw = json.dumps(
+        {
+            "actions": [
+                {
+                    "name": "speak",
+                    "modifiers": {
+                        "intent": "friendly",
+                        "target": "n",
+                        "ghost_key": "x",
+                    },
+                }
+            ]
+        }
+    )
     out = validate_judge_output(raw, in_combat=False)
     assert "ghost_key" not in out.actions[0].modifiers
 

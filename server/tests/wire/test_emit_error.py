@@ -18,14 +18,19 @@ def test_emit_error_catalog_hit():
     ev = emit_error(LLMUnavailable("upstream timed out"))
     assert ev["type"] == "error"
     assert ev["data"]["code"] == "LLMUnavailable"
-    assert ev["data"]["message"] == "이야기꾼이 잠시 길을 잃었습니다. 다시 시도해 주세요."
+    assert (
+        ev["data"]["message"] == "이야기꾼이 잠시 길을 잃었습니다. 다시 시도해 주세요."
+    )
 
 
 def test_emit_error_generic_fallback():
     ev = emit_error(RuntimeError("boom"))
     assert ev["type"] == "error"
     assert ev["data"]["code"] == "RuntimeError"
-    assert ev["data"]["message"] == "지금은 응답할 수 없습니다. 잠시 후 다시 시도해 주세요."
+    assert (
+        ev["data"]["message"]
+        == "지금은 응답할 수 없습니다. 잠시 후 다시 시도해 주세요."
+    )
 
 
 def test_emit_error_serializable():

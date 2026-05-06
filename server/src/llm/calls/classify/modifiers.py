@@ -138,9 +138,7 @@ def validate_modifiers(verb: Verb, *, in_combat: bool) -> None:
     n = len(verb.target_ids)
     cardinality = schema.target_cardinality
     if cardinality == "forbidden" and n > 0:
-        raise ModifierValidationError(
-            f"verb={verb.name} forbids target_ids; got {n}"
-        )
+        raise ModifierValidationError(f"verb={verb.name} forbids target_ids; got {n}")
     if cardinality == "required_one" and n != 1:
         raise ModifierValidationError(
             f"verb={verb.name} requires exactly 1 target_id; got {n}"

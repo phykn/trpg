@@ -181,7 +181,9 @@ async def emit_cast(
     skill = state.skills.get(skill_id)
     skill_name = skill.name if skill else skill_id
     try:
-        result = apply_skill_action(state, actor_id, skill_id, list(target_ids), dirty, rng=rng)
+        result = apply_skill_action(
+            state, actor_id, skill_id, list(target_ids), dirty, rng=rng
+        )
     except SkillInvalid as e:
         yield push_act(state, dirty, format_cast_fail(actor.name, skill_name, e))
         yield {"type": "_engine_fail", "data": {"raw_error_msg": str(e)}}
@@ -320,7 +322,11 @@ async def emit_trade(
             )
     except InventoryInvalid as e:
         yield push_act(
-            state, dirty, format_action_fail(player.name, render("log.action.trade_attempt", "ko"), e)
+            state,
+            dirty,
+            format_action_fail(
+                player.name, render("log.action.trade_attempt", "ko"), e
+            ),
         )
         yield {"type": "_engine_fail", "data": {"raw_error_msg": str(e)}}
         return
@@ -358,7 +364,9 @@ async def emit_give(
         inventory_engine.transfer(src, dst, item_id, state.items)
     except InventoryInvalid as e:
         yield push_act(
-            state, dirty, format_action_fail(actor_name, render("log.action.give_attempt", "ko"), e)
+            state,
+            dirty,
+            format_action_fail(actor_name, render("log.action.give_attempt", "ko"), e),
         )
         yield {"type": "_engine_fail", "data": {"raw_error_msg": str(e)}}
         return
@@ -427,6 +435,7 @@ async def emit_roll_pending_from_trigger(
     later-uncertainty-rule compatible). Carries the triggering_verb /
     pending_verbs fields; kind is set via _derive_pending_kind."""
     from .companion import _derive_pending_kind  # avoid circular import
+
     actor = state.characters[state.player_id]
 
     def _aff_against_actor(t: str) -> int:

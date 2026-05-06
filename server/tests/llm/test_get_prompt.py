@@ -84,10 +84,5 @@ def test_render_for_prompt_accepts_locale():
 
 
 def test_prompts_root_resolves_to_repo_path():
-    expected = (
-        Path(__file__).resolve().parents[2]
-        / "src"
-        / "locale"
-        / "prompts"
-    )
+    expected = Path(__file__).resolve().parents[2] / "src" / "locale" / "prompts"
     assert _runner._PROMPTS_ROOT == expected

@@ -23,11 +23,15 @@ def _npc(npc_id, *, friendly=True, protected=False, relations_player=10):
 
 
 def _recruit_output(target: str) -> JudgeOutput:
-    return JudgeOutput(actions=[Verb(name="speak", modifiers={"intent": "recruit", "target": target})])
+    return JudgeOutput(
+        actions=[Verb(name="speak", modifiers={"intent": "recruit", "target": target})]
+    )
 
 
 def _dismiss_output(target: str) -> JudgeOutput:
-    return JudgeOutput(actions=[Verb(name="speak", modifiers={"intent": "part", "target": target})])
+    return JudgeOutput(
+        actions=[Verb(name="speak", modifiers={"intent": "part", "target": target})]
+    )
 
 
 def test_recruit_valid_friendly_npc():

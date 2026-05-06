@@ -64,7 +64,9 @@ async def _collect(it):
 
 
 async def test_button_only_accept_skips_judge(
-    state_with_pending_quest, tmp_saves, monkeypatch,
+    state_with_pending_quest,
+    tmp_saves,
+    monkeypatch,
 ):
     """quest_action=('accept', qid) with empty player_input: quest gets
     accepted (status='active'), run_judge is NOT called, finalize emits
@@ -97,7 +99,9 @@ async def test_button_only_accept_skips_judge(
 
 
 async def test_button_only_abandon_skips_judge(
-    state_with_pending_quest, tmp_saves, monkeypatch,
+    state_with_pending_quest,
+    tmp_saves,
+    monkeypatch,
 ):
     """abandon variant: status flips to 'abandoned', run_judge skipped."""
     state_with_pending_quest.quests["q1"].status = "active"
@@ -127,7 +131,9 @@ async def test_button_only_abandon_skips_judge(
 
 
 async def test_quest_action_with_player_input_still_calls_judge(
-    state_with_pending_quest, tmp_saves, monkeypatch,
+    state_with_pending_quest,
+    tmp_saves,
+    monkeypatch,
 ):
     """quest_action + non-empty player_input: state mutation applies AND
     judge runs on the typed action. Short-circuit must be input-gated, not
@@ -143,6 +149,7 @@ async def test_quest_action_with_player_input_still_calls_judge(
             yield None  # pragma: no cover
 
     from src.game.flow import narrate as narrate_mod
+
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
     monkeypatch.setattr(narrate_mod, "run_narrate", fake_run_narrate)
 

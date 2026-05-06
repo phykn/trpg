@@ -9,6 +9,7 @@ from src.wire.models import CombatTurnPayload
 
 # combat_start
 
+
 def test_combat_start_envelope():
     ev = emit_combat_start(
         turn_order=["p1", "e1"], round=1, surprise=None, enemy_ids=["e1"]
@@ -36,11 +37,18 @@ def test_combat_start_defensive_list_copy():
 
 # combat_turn
 
+
 def test_combat_turn_from_payload_object():
     payload = CombatTurnPayload(
-        actor="p1", action="attack", round=1,
-        grade="success", damage=5, killed=False,
-        target="e1", skill_name=None, skill_id=None,
+        actor="p1",
+        action="attack",
+        round=1,
+        grade="success",
+        damage=5,
+        killed=False,
+        target="e1",
+        skill_name=None,
+        skill_id=None,
     )
     ev = emit_combat_turn(payload)
     assert ev["type"] == "combat_turn"
@@ -53,9 +61,15 @@ def test_combat_turn_from_payload_object():
 def test_combat_turn_from_dict_validates():
     """emit_combat_turn accepts auto-combat's _turn_event dict shape."""
     tev = {
-        "actor": "p1", "action": "attack", "grade": "success",
-        "damage": 5, "killed": False, "target": "e1",
-        "skill_name": None, "skill_id": None, "round": 1,
+        "actor": "p1",
+        "action": "attack",
+        "grade": "success",
+        "damage": 5,
+        "killed": False,
+        "target": "e1",
+        "skill_name": None,
+        "skill_id": None,
+        "round": 1,
     }
     ev = emit_combat_turn(tev)
     assert ev["data"]["actor"] == "p1"
@@ -64,9 +78,7 @@ def test_combat_turn_from_dict_validates():
 
 def test_combat_turn_with_item_id():
     """Player passive equip/unequip path includes item_id."""
-    payload = CombatTurnPayload(
-        actor="p1", action="equip", round=2, item_id="sword1"
-    )
+    payload = CombatTurnPayload(actor="p1", action="equip", round=2, item_id="sword1")
     ev = emit_combat_turn(payload)
     assert ev["data"]["item_id"] == "sword1"
     assert ev["data"]["damage"] == 0  # default
@@ -81,6 +93,7 @@ def test_combat_turn_dict_missing_required_field_raises():
 
 
 # combat_end
+
 
 def test_combat_end_envelope():
     ev = emit_combat_end("victory")
@@ -100,9 +113,14 @@ def test_combat_end_invalid_outcome_raises():
 
 # JSON serializable
 
+
 def test_envelopes_serializable():
-    s = json.dumps(emit_combat_start(turn_order=["p1"], round=1, surprise=None, enemy_ids=[]))
-    s += json.dumps(emit_combat_turn(CombatTurnPayload(actor="p1", action="wait", round=1)))
+    s = json.dumps(
+        emit_combat_start(turn_order=["p1"], round=1, surprise=None, enemy_ids=[])
+    )
+    s += json.dumps(
+        emit_combat_turn(CombatTurnPayload(actor="p1", action="wait", round=1))
+    )
     s += json.dumps(emit_combat_end("victory"))
     assert "combat_start" in s
     assert "combat_turn" in s
@@ -114,7 +132,16 @@ def test_combat_turn_payload_field_order():
     the item_id append. This documents the schema for site #4 migration."""
     payload = CombatTurnPayload(actor="p1", action="x", round=1)
     keys = list(payload.model_dump().keys())
-    expected_prefix = ["actor", "action", "round", "grade", "damage", "killed",
-                       "target", "skill_name", "skill_id"]
+    expected_prefix = [
+        "actor",
+        "action",
+        "round",
+        "grade",
+        "damage",
+        "killed",
+        "target",
+        "skill_name",
+        "skill_id",
+    ]
     assert keys[:9] == expected_prefix
     assert keys[9] == "item_id"

@@ -32,7 +32,9 @@ def test_judge_output_actions_only():
 
 
 def test_judge_output_refuse_only():
-    out = JudgeOutput(refuse=RefuseReason(category="out_of_game", message_hint="범위 밖"))
+    out = JudgeOutput(
+        refuse=RefuseReason(category="out_of_game", message_hint="범위 밖")
+    )
     assert out.actions is None
 
 

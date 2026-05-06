@@ -30,15 +30,19 @@ def test_attack_hostile_npc_passes():
 
 
 def test_speak_recruit_target_in_entities_required():
-    output = JudgeOutput(actions=[Verb(name="speak",
-                                       modifiers={"intent": "recruit", "target": "ghost_npc"})])
+    output = JudgeOutput(
+        actions=[
+            Verb(name="speak", modifiers={"intent": "recruit", "target": "ghost_npc"})
+        ]
+    )
     with pytest.raises(JudgeSemanticError):
         check_semantics(output, {"entities": []})
 
 
 def test_speak_recruit_already_companion():
-    output = JudgeOutput(actions=[Verb(name="speak",
-                                       modifiers={"intent": "recruit", "target": "n_01"})])
+    output = JudgeOutput(
+        actions=[Verb(name="speak", modifiers={"intent": "recruit", "target": "n_01"})]
+    )
     surroundings = {
         "entities": [{"id": "n_01", "type": "npc", "relations_player": 50}],
         "companions": ["n_01"],
@@ -48,32 +52,44 @@ def test_speak_recruit_already_companion():
 
 
 def test_speak_part_not_companion():
-    output = JudgeOutput(actions=[Verb(name="speak",
-                                       modifiers={"intent": "part", "target": "n_01"})])
+    output = JudgeOutput(
+        actions=[Verb(name="speak", modifiers={"intent": "part", "target": "n_01"})]
+    )
     surroundings = {"companions": []}
     with pytest.raises(JudgeSemanticError, match="not a companion"):
         check_semantics(output, surroundings)
 
 
 def test_speak_part_companion_passes():
-    output = JudgeOutput(actions=[Verb(name="speak",
-                                       modifiers={"intent": "part", "target": "n_01"})])
+    output = JudgeOutput(
+        actions=[Verb(name="speak", modifiers={"intent": "part", "target": "n_01"})]
+    )
     surroundings = {"companions": ["n_01"]}
     check_semantics(output, surroundings)
 
 
 def test_speak_friendly_no_check():
     """non-recruit/part intents have no surroundings-based check."""
-    output = JudgeOutput(actions=[Verb(name="speak",
-                                       modifiers={"intent": "friendly", "target": "n_01"})])
+    output = JudgeOutput(
+        actions=[Verb(name="speak", modifiers={"intent": "friendly", "target": "n_01"})]
+    )
     check_semantics(output, {"entities": []})
 
 
 def test_transfer_buy_npc_in_merchants():
-    output = JudgeOutput(actions=[Verb(name="transfer", modifiers={
-        "from_id": "n_01", "to_id": "player_01",
-        "mode": "trade", "item_id": "potion_01",
-    })])
+    output = JudgeOutput(
+        actions=[
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "n_01",
+                    "to_id": "player_01",
+                    "mode": "trade",
+                    "item_id": "potion_01",
+                },
+            )
+        ]
+    )
     surroundings = {
         "merchants": [{"id": "n_01", "stock": [{"id": "potion_01"}]}],
     }
@@ -81,10 +97,19 @@ def test_transfer_buy_npc_in_merchants():
 
 
 def test_transfer_buy_item_not_in_stock():
-    output = JudgeOutput(actions=[Verb(name="transfer", modifiers={
-        "from_id": "n_01", "to_id": "player_01",
-        "mode": "trade", "item_id": "ghost_item",
-    })])
+    output = JudgeOutput(
+        actions=[
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "n_01",
+                    "to_id": "player_01",
+                    "mode": "trade",
+                    "item_id": "ghost_item",
+                },
+            )
+        ]
+    )
     surroundings = {
         "merchants": [{"id": "n_01", "stock": [{"id": "potion_01"}]}],
     }
@@ -121,19 +146,25 @@ def test_perceive_no_check():
 
 
 def test_cast_heal_skill_passes():
-    output = JudgeOutput(actions=[Verb(name="cast", modifiers={"skill_id": "minor_heal"})])
+    output = JudgeOutput(
+        actions=[Verb(name="cast", modifiers={"skill_id": "minor_heal"})]
+    )
     surroundings = {"skills": [{"id": "minor_heal", "type": "heal"}]}
     check_semantics(output, surroundings)
 
 
 def test_cast_buff_skill_passes():
-    output = JudgeOutput(actions=[Verb(name="cast", modifiers={"skill_id": "blessing"})])
+    output = JudgeOutput(
+        actions=[Verb(name="cast", modifiers={"skill_id": "blessing"})]
+    )
     surroundings = {"skills": [{"id": "blessing", "type": "buff"}]}
     check_semantics(output, surroundings)
 
 
 def test_cast_attack_skill_rejected():
-    output = JudgeOutput(actions=[Verb(name="cast", modifiers={"skill_id": "fireball"})])
+    output = JudgeOutput(
+        actions=[Verb(name="cast", modifiers={"skill_id": "fireball"})]
+    )
     surroundings = {"skills": [{"id": "fireball", "type": "attack"}]}
     with pytest.raises(JudgeSemanticError, match="attack verb"):
         check_semantics(output, surroundings)
@@ -147,39 +178,79 @@ def test_cast_debuff_skill_rejected():
 
 
 def test_transfer_steal_passes_when_npc_has_carryables():
-    output = JudgeOutput(actions=[Verb(name="transfer", modifiers={
-        "from_id": "n_01", "to_id": "player_01", "mode": "steal",
-    })])
+    output = JudgeOutput(
+        actions=[
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "n_01",
+                    "to_id": "player_01",
+                    "mode": "steal",
+                },
+            )
+        ]
+    )
     surroundings = {
         "entities": [
-            {"id": "n_01", "type": "npc", "carryables": [{"id": "coin_01", "name": "동전"}]}
+            {
+                "id": "n_01",
+                "type": "npc",
+                "carryables": [{"id": "coin_01", "name": "동전"}],
+            }
         ],
     }
     check_semantics(output, surroundings)
 
 
 def test_transfer_steal_rejected_when_no_carryables():
-    output = JudgeOutput(actions=[Verb(name="transfer", modifiers={
-        "from_id": "n_01", "to_id": "player_01", "mode": "steal",
-    })])
+    output = JudgeOutput(
+        actions=[
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "n_01",
+                    "to_id": "player_01",
+                    "mode": "steal",
+                },
+            )
+        ]
+    )
     surroundings = {"entities": [{"id": "n_01", "type": "npc"}]}
     with pytest.raises(JudgeSemanticError, match="nothing to steal"):
         check_semantics(output, surroundings)
 
 
 def test_transfer_steal_rejected_when_target_not_npc():
-    output = JudgeOutput(actions=[Verb(name="transfer", modifiers={
-        "from_id": "loc_01", "to_id": "player_01", "mode": "steal",
-    })])
+    output = JudgeOutput(
+        actions=[
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "loc_01",
+                    "to_id": "player_01",
+                    "mode": "steal",
+                },
+            )
+        ]
+    )
     surroundings = {"entities": [{"id": "loc_01", "type": "item"}]}
     with pytest.raises(JudgeSemanticError, match="same-location NPC"):
         check_semantics(output, surroundings)
 
 
 def test_transfer_steal_rejected_when_to_id_not_player():
-    output = JudgeOutput(actions=[Verb(name="transfer", modifiers={
-        "from_id": "n_01", "to_id": "n_02", "mode": "steal",
-    })])
+    output = JudgeOutput(
+        actions=[
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "n_01",
+                    "to_id": "n_02",
+                    "mode": "steal",
+                },
+            )
+        ]
+    )
     surroundings = {
         "entities": [
             {"id": "n_01", "type": "npc", "carryables": [{"id": "coin_01"}]},
@@ -193,15 +264,26 @@ def test_transfer_steal_rejected_when_to_id_not_player():
 def test_transfer_gift_still_requires_item_id():
     """Non-steal modes still require item_id (semantic-level enforcement
     after item_id moved out of required_modifiers)."""
-    output = JudgeOutput(actions=[Verb(name="transfer", modifiers={
-        "from_id": "n_01", "to_id": "player_01", "mode": "gift",
-    })])
+    output = JudgeOutput(
+        actions=[
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "n_01",
+                    "to_id": "player_01",
+                    "mode": "gift",
+                },
+            )
+        ]
+    )
     with pytest.raises(JudgeSemanticError, match="item_id"):
         check_semantics(output, {"entities": [{"id": "n_01", "type": "npc"}]})
 
 
 def test_cast_unknown_skill_rejected():
-    output = JudgeOutput(actions=[Verb(name="cast", modifiers={"skill_id": "ghost_skill"})])
+    output = JudgeOutput(
+        actions=[Verb(name="cast", modifiers={"skill_id": "ghost_skill"})]
+    )
     surroundings = {"skills": [{"id": "minor_heal", "type": "heal"}]}
     with pytest.raises(JudgeSemanticError, match="not in skills"):
         check_semantics(output, surroundings)

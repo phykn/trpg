@@ -80,14 +80,21 @@ async def test_chain_passes_skipped_heal_notice_into_narrate(
     monkeypatch.setattr(narrate_mod, "run_narrate", fake_run_narrate)
 
     async def fake_judge(*a, **kw):
-        return JudgeOutput(actions=[
-            Verb(name="use", modifiers={"item_id": "herb_01"}),
-            Verb(name="transfer", modifiers={
-                "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
-                "mode": "gift", "item_id": "sword_01",
-            }),
-            Verb(name="wait"),
-        ])
+        return JudgeOutput(
+            actions=[
+                Verb(name="use", modifiers={"item_id": "herb_01"}),
+                Verb(
+                    name="transfer",
+                    modifiers={
+                        "from_id": "<self>.inventory",
+                        "to_id": "<self>.equipped.weapon",
+                        "mode": "gift",
+                        "item_id": "sword_01",
+                    },
+                ),
+                Verb(name="wait"),
+            ]
+        )
 
     monkeypatch.setattr(turn_mod, "run_judge", fake_judge)
 

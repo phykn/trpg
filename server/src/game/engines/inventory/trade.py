@@ -129,9 +129,7 @@ def transfer(
             setattr(src.equipment, slot, None)
 
 
-def steal(
-    src: Character, dst: Character, item_id: str, items: dict[str, Item]
-) -> None:
+def steal(src: Character, dst: Character, item_id: str, items: dict[str, Item]) -> None:
     """Forced transfer bypassing the affinity gate — caller (steal /roll
     handler) has already paid the social cost via the DEX vs DC roll. Equipped
     items are excluded by the caller (NPC.carryables filter)."""

@@ -100,8 +100,11 @@ def test_attack_skill_id_must_match_skills():
     s = _ents({"id": "n1", "type": "npc", "friendly": False})
     s["location"] = {"id": "loc_01"}
     s["skills"] = [{"id": "skill_01"}]
-    output = JudgeOutput(actions=[Verb(name="attack", target_ids=["n1"],
-                                       modifiers={"skill_id": "skill_01"})])
+    output = JudgeOutput(
+        actions=[
+            Verb(name="attack", target_ids=["n1"], modifiers={"skill_id": "skill_01"})
+        ]
+    )
     check_semantics(output, s)
 
 
@@ -109,7 +112,12 @@ def test_attack_skill_id_unknown_rejected():
     s = _ents({"id": "n1", "type": "npc", "friendly": False})
     s["location"] = {"id": "loc_01"}
     s["skills"] = [{"id": "skill_01"}]
-    output = JudgeOutput(actions=[Verb(name="attack", target_ids=["n1"],
-                                       modifiers={"skill_id": "ghost_skill"})])
+    output = JudgeOutput(
+        actions=[
+            Verb(
+                name="attack", target_ids=["n1"], modifiers={"skill_id": "ghost_skill"}
+            )
+        ]
+    )
     with pytest.raises(JudgeSemanticError, match="not in skills"):
         check_semantics(output, s)

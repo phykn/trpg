@@ -31,8 +31,11 @@ def format_combat_start_turn_log(first_enemy_name: str) -> str:
 def format_action_fail(actor_name: str, attempt: str, err: Exception) -> str:
     """Generic failure line: '<actor>이 <attempt> <korean error>.'"""
     return render(
-        "log.action_fail", "ko",
-        actor=actor_name, attempt=attempt, err=humanize_engine_error(err),
+        "log.action_fail",
+        "ko",
+        actor=actor_name,
+        attempt=attempt,
+        err=humanize_engine_error(err),
     )
 
 
@@ -103,7 +106,9 @@ def format_trade_log(
     direction: str,
 ) -> str:
     key = "log.trade_buy" if direction == "buy" else "log.trade_sell"
-    return render(key, "ko", actor=actor_name, npc=npc_name, item=item_name, price=price)
+    return render(
+        key, "ko", actor=actor_name, npc=npc_name, item=item_name, price=price
+    )
 
 
 def format_trade_turn_log(npc_name: str, item_name: str, *, direction: str) -> str:
@@ -133,8 +138,11 @@ def format_move_no_path(actor_name: str) -> str:
 def format_move_blocked(actor_name: str, loc_name: str, reason: str) -> str:
     if reason:
         return render(
-            "log.move_blocked_with_reason", "ko",
-            actor=actor_name, loc=loc_name, reason=reason,
+            "log.move_blocked_with_reason",
+            "ko",
+            actor=actor_name,
+            loc=loc_name,
+            reason=reason,
         )
     return render("log.move_blocked", "ko", actor=actor_name, loc=loc_name)
 
@@ -211,10 +219,14 @@ def format_level_up_log(
     max_mp: int,
 ) -> str:
     return render(
-        "log.level_up", "ko",
-        actor=actor_name, level=level,
-        up=stat_label(stat_up), down=stat_label(stat_down),
-        hp=max_hp, mp=max_mp,
+        "log.level_up",
+        "ko",
+        actor=actor_name,
+        level=level,
+        up=stat_label(stat_up),
+        down=stat_label(stat_down),
+        hp=max_hp,
+        mp=max_mp,
     )
 
 
@@ -281,8 +293,10 @@ def format_cast_log(state: GameState, actor_id: str, result: dict) -> str:
             tail = render("log.cast.heal_self", "ko", amount=int(eff.get("healed", 0)))
         else:
             tail = render(
-                "log.cast.heal_target", "ko",
-                target=target_name, amount=int(eff.get("healed", 0)),
+                "log.cast.heal_target",
+                "ko",
+                target=target_name,
+                amount=int(eff.get("healed", 0)),
             )
         return f"{head} {tail}"
     if kind == "buff":
@@ -291,13 +305,18 @@ def format_cast_log(state: GameState, actor_id: str, result: dict) -> str:
         duration = int(buff.get("duration", 0))
         if is_self:
             tail = render(
-                "log.cast.buff_self", "ko",
-                description=description, duration=duration,
+                "log.cast.buff_self",
+                "ko",
+                description=description,
+                duration=duration,
             )
         else:
             tail = render(
-                "log.cast.buff_target", "ko",
-                target=target_name, description=description, duration=duration,
+                "log.cast.buff_target",
+                "ko",
+                target=target_name,
+                description=description,
+                duration=duration,
             )
         return f"{head} {tail}"
     return head
@@ -339,7 +358,9 @@ def format_use_log(state: GameState, actor_id: str, result: dict) -> str:
     actor_name = actor.name if actor else actor_id
     item_id = result.get("item_id")
     item = state.items.get(item_id) if item_id else None
-    item_name = item.name if item else (item_id or render("log.use.item_fallback", "ko"))
+    item_name = (
+        item.name if item else (item_id or render("log.use.item_fallback", "ko"))
+    )
 
     head = render("log.use.head", "ko", actor=actor_name, item=item_name)
     kind = result.get("kind")
@@ -376,23 +397,47 @@ def format_combat_enemy_killed(name: str, damage: int) -> str:
 
 
 def format_combat_enemy_hit(name: str, damage: int, hp_after: int, max_hp: int) -> str:
-    return render("log.combat.enemy_hit", "ko", name=name, damage=damage, hp_after=hp_after, hp_max=max_hp)
+    return render(
+        "log.combat.enemy_hit",
+        "ko",
+        name=name,
+        damage=damage,
+        hp_after=hp_after,
+        hp_max=max_hp,
+    )
 
 
 def format_combat_player_hit(name: str, damage: int, hp_after: int, max_hp: int) -> str:
-    return render("log.combat.player_hit", "ko", name=name, damage=damage, hp_after=hp_after, hp_max=max_hp)
+    return render(
+        "log.combat.player_hit",
+        "ko",
+        name=name,
+        damage=damage,
+        hp_after=hp_after,
+        hp_max=max_hp,
+    )
 
 
 def format_combat_player_downed(name: str, damage: int, hp_before: int) -> str:
     """Player hit reduces HP to 0 (revival imminent on next event)."""
-    return render("log.combat.player_downed", "ko", name=name, damage=damage, hp_before=hp_before)
+    return render(
+        "log.combat.player_downed", "ko", name=name, damage=damage, hp_before=hp_before
+    )
 
 
 def format_combat_revived(coins_after: int, coins_max: int, hp_after: int) -> str:
     """Player revival: dropped to 0, came back at hp_after."""
     if coins_after == 0:
-        return render("log.combat.revived_critical", "ko", coins_max=coins_max, hp_after=hp_after)
-    return render("log.combat.revived_normal", "ko", coins_after=coins_after, coins_max=coins_max, hp_after=hp_after)
+        return render(
+            "log.combat.revived_critical", "ko", coins_max=coins_max, hp_after=hp_after
+        )
+    return render(
+        "log.combat.revived_normal",
+        "ko",
+        coins_after=coins_after,
+        coins_max=coins_max,
+        hp_after=hp_after,
+    )
 
 
 def format_combat_outcome_summary(result: "AutoCombatResult") -> str | None:
@@ -407,14 +452,33 @@ def format_combat_outcome_summary(result: "AutoCombatResult") -> str | None:
         if h.killed:
             lines.append(format_combat_enemy_killed(h.name, h.damage_total))
         elif h.damage_total > 0:
-            lines.append(format_combat_enemy_hit(h.name, h.damage_total, h.hp_after, h.max_hp))
+            lines.append(
+                format_combat_enemy_hit(h.name, h.damage_total, h.hp_after, h.max_hp)
+            )
     if result.player_damage_total > 0 or result.player_revived:
         player_name = result.player_name or _COMBAT_PLAYER_FALLBACK_NAME
         if result.player_revived:
-            lines.append(format_combat_player_downed(player_name, result.player_damage_total, result.player_hp_before))
-            lines.append(format_combat_revived(result.player_revive_coins_after, result.player_revive_coins_max, result.player_hp_after))
+            lines.append(
+                format_combat_player_downed(
+                    player_name, result.player_damage_total, result.player_hp_before
+                )
+            )
+            lines.append(
+                format_combat_revived(
+                    result.player_revive_coins_after,
+                    result.player_revive_coins_max,
+                    result.player_hp_after,
+                )
+            )
         else:
-            lines.append(format_combat_player_hit(player_name, result.player_damage_total, result.player_hp_after, result.player_max_hp))
+            lines.append(
+                format_combat_player_hit(
+                    player_name,
+                    result.player_damage_total,
+                    result.player_hp_after,
+                    result.player_max_hp,
+                )
+            )
     if not lines:
         return None
     return render("log.combat.outcome_header", "ko") + "\n" + "\n".join(lines)
@@ -426,22 +490,38 @@ def format_combat_event_summary(result: "AutoCombatResult") -> str:
     parts: list[str] = []
     for h in result.enemy_hits:
         if h.killed:
-            parts.append(render(
-                "log.combat.event_enemy_killed", "ko",
-                actor=player_name, name=h.name, damage=h.damage_total,
-            ))
+            parts.append(
+                render(
+                    "log.combat.event_enemy_killed",
+                    "ko",
+                    actor=player_name,
+                    name=h.name,
+                    damage=h.damage_total,
+                )
+            )
         elif h.damage_total > 0:
-            parts.append(render(
-                "log.combat.event_enemy_hit", "ko",
-                actor=player_name, name=h.name, damage=h.damage_total,
-                hp_after=h.hp_after, hp_max=h.max_hp,
-            ))
+            parts.append(
+                render(
+                    "log.combat.event_enemy_hit",
+                    "ko",
+                    actor=player_name,
+                    name=h.name,
+                    damage=h.damage_total,
+                    hp_after=h.hp_after,
+                    hp_max=h.max_hp,
+                )
+            )
     if result.player_damage_total > 0:
-        parts.append(render(
-            "log.combat.event_player_hit", "ko",
-            name=player_name, damage=result.player_damage_total,
-            hp_after=result.player_hp_after, hp_max=result.player_max_hp,
-        ))
+        parts.append(
+            render(
+                "log.combat.event_player_hit",
+                "ko",
+                name=player_name,
+                damage=result.player_damage_total,
+                hp_after=result.player_hp_after,
+                hp_max=result.player_max_hp,
+            )
+        )
     if result.player_revived:
         parts.append(render("log.combat.event_revived", "ko"))
     outcome_keys = {

@@ -9,6 +9,7 @@ class JudgeSemanticError(Exception):
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
+
 def _inventory_kinds(surroundings: dict[str, Any]) -> dict[str, str]:
     return {
         i.get("id"): i.get("kind")
@@ -70,6 +71,7 @@ def _find_merchant(npc_id: str, surroundings: dict[str, Any]) -> dict:
 
 # ─── Per-verb checks ──────────────────────────────────────────────────────────
 
+
 def _check_attack(verb: Verb, surroundings: dict[str, Any]) -> None:
     valid_target_ids = _surroundings_target_ids(surroundings)
     bad = [t for t in verb.target_ids if t not in valid_target_ids]
@@ -80,7 +82,8 @@ def _check_attack(verb: Verb, surroundings: dict[str, Any]) -> None:
         )
     by_id = _entities_by_id(surroundings)
     hostile_npcs = sorted(
-        eid for eid, e in by_id.items()
+        eid
+        for eid, e in by_id.items()
         if e.get("type") == "npc" and not _is_friendly(e)
     )
     for tid in verb.target_ids:
@@ -102,7 +105,9 @@ def _check_attack(verb: Verb, surroundings: dict[str, Any]) -> None:
     skill_id = verb.modifiers.get("skill_id")
     if skill_id is not None:
         valid_skills = {
-            s.get("id") for s in surroundings.get("skills", []) or [] if isinstance(s, dict)
+            s.get("id")
+            for s in surroundings.get("skills", []) or []
+            if isinstance(s, dict)
         }
         if skill_id not in valid_skills:
             raise JudgeSemanticError(
@@ -157,9 +162,7 @@ def _check_recruit_inner(target: str | None, surroundings: dict[str, Any]) -> No
         )
     companions = surroundings.get("companions") or []
     if target in companions:
-        raise JudgeSemanticError(
-            f"recruit target {target!r} is already a companion."
-        )
+        raise JudgeSemanticError(f"recruit target {target!r} is already a companion.")
     max_n = int(surroundings.get("companions_max", 3))
     if len(companions) >= max_n:
         raise JudgeSemanticError(
@@ -191,16 +194,24 @@ def _check_transfer(verb: Verb, surroundings: dict[str, Any]) -> None:
         npc_id = from_id if to_id == "player_01" else to_id
         merchant = _find_merchant(npc_id, surroundings)
         if from_id != "player_01":  # buy
-            stock_ids = {i.get("id") for i in merchant.get("stock", []) if isinstance(i, dict)}
+            stock_ids = {
+                i.get("id") for i in merchant.get("stock", []) if isinstance(i, dict)
+            }
             if item_id not in stock_ids:
                 raise JudgeSemanticError(
                     f"item {item_id!r} not in {npc_id} stock. "
                     f"Available: {sorted(s for s in stock_ids if s)}."
                 )
         else:  # sell
-            inv_ids = {i.get("id") for i in surroundings.get("inventory", []) if isinstance(i, dict)}
+            inv_ids = {
+                i.get("id")
+                for i in surroundings.get("inventory", [])
+                if isinstance(i, dict)
+            }
             if item_id not in inv_ids:
-                raise JudgeSemanticError(f"sell item {item_id!r} not in player inventory.")
+                raise JudgeSemanticError(
+                    f"sell item {item_id!r} not in player inventory."
+                )
     elif mode == "steal":
         if to_id != "player_01":
             raise JudgeSemanticError(
@@ -215,9 +226,7 @@ def _check_transfer(verb: Verb, surroundings: dict[str, Any]) -> None:
             )
         carryables = ent.get("carryables") or []
         if not carryables:
-            raise JudgeSemanticError(
-                f"steal target {from_id!r} has nothing to steal."
-            )
+            raise JudgeSemanticError(f"steal target {from_id!r} has nothing to steal.")
 
 
 def _check_use(verb: Verb, surroundings: dict[str, Any]) -> None:

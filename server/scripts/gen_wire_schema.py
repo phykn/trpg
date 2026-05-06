@@ -1,4 +1,5 @@
 """Generate wire JSON Schema bundle for client codegen."""
+
 import sys
 from pathlib import Path
 

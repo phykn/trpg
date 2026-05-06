@@ -114,7 +114,9 @@ async def test_combat_action_surprise_routes_through_to_combat_state(
 ):
     """End-to-end: judge returns CombatAction(surprise=True) → combat_state is
     booted with surprise='player' and the auto-sim records player_surprise."""
-    judge_returns(Verb(name="attack", target_ids=["goblin_01"], modifiers={"surprise": True}))
+    judge_returns(
+        Verb(name="attack", target_ids=["goblin_01"], modifiers={"surprise": True})
+    )
     events = await collect(
         run_turn(
             client=None,

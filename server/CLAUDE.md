@@ -43,7 +43,7 @@ Upper depends on lower, never the reverse. Concretely:
 - `game/ontology/` — derived relational view over `GameState`. **The single source of truth for relations.**
 - `llm/context/` — prompt input builders under the `llm/` package (surroundings for judge, layered context for narrate).
 - `db/` — `SaveRepo` / `ScenarioRepo` Protocols (all-async) + Supabase and LocalFs adapters. Holds all persistence concerns.
-- `wire/` — server↔client interface. `wire/models/` Pydantic payloads (single source of typed shapes; codegen → client `wire.gen.d.ts`), `wire/emit.py` SSE event builders + state slot helpers, `wire/to_front.py` GameState → flat dict the client renders, `wire/labels.py` UI label catalog wrappers + badge combiners, `wire/story_graph.py` reachable-edges shaping. All Korean composed strings end here.
+- `wire/` — server↔client interface. `wire/models/` Pydantic payloads (single source of typed shapes), `wire/export.py` JSON-Schema bundle codegen → client `wire.gen.d.ts`, `wire/emit.py` SSE event builders, `wire/to_front.py` GameState → flat dict + typed state-slot models (`hero / subject / quest / place / combat`) the client renders, `wire/labels.py` UI label catalog wrappers + badge combiners, `wire/story_graph.py` reachable-edges shaping. All Korean composed strings end here.
 - `game/flow/` — per-turn orchestration. `turn.py` / `roll.py` / `intro.py` are entrypoints (each yields `AsyncIterator[dict]` of SSE events).
 - `api/` — thin FastAPI adapter. Glue only, no business logic.
 
@@ -83,7 +83,7 @@ All four child tables FK → `games(game_id) ON DELETE CASCADE`. RLS enabled wit
 
 ### LLM routing and thinking modes
 
-- `LLM_ROUTE_<AGENT> = <provider>/<model>` resolves to an `LLMProfile` keyed by lowercased agent name. `LLM_ROUTE_DEFAULT` is required; matched agents (`classify`, `narrate`, `combat_narrate`, `summon`, `recommend`) route per-agent, others fall back to default.
+- `LLM_ROUTE_<AGENT> = <provider>/<model>` resolves to an `LLMProfile` keyed by lowercased agent name. `LLM_ROUTE_DEFAULT` is required; matched agents (`classify`, `narrate_body`, `narrate_extract`, `combat_narrate`, `summon`, `recommend`) route per-agent, others fall back to default. Optional `LLM_ROUTE_<AGENT>_FALLBACK = <provider>/<model>` declares a secondary profile that engages once on `RateLimitError` (quota) and stays for the rest of that agent's retry loop.
 - Provider blocks (`LLM_<NAME>_*` keys) live in the same `.env.<APP_ENV>` file and declare each provider's `BASE_URL`, `API_KEYS` (comma-separated, rotated round-robin per call), and `_THINK_OFF / _THINK_OPT / _THINK_ON` model lists. The three lists must be disjoint and together name every model the provider serves. Listed names must appear in exactly one THINK_* list.
 - `LLM_<NAME>_NO_SYSTEM` lists models that reject `role: system` (Gemma via Gemini OpenAI-compat returns "Developer instruction is not enabled"); `LLMClient` folds the system prompt into the first user message for them.
 - Per-call thinking behavior is driven by the model's THINK_* category: `OFF` sends no `extra_body`; `OPT` honors caller's `think` flag (default off) via `extra_body.chat_template_kwargs.enable_thinking` (llama.cpp) or `extra_body.reasoning_effort=medium` (Gemini 3.x, detected from `googleapis.com` in `base_url`); `OPT_ON` is the inverse (default on, opt out via `extra_body.reasoning_effort=minimal` on Gemini — Gemma 4 via Gemini lives here because it accepts only `minimal` to disable); `ON` always thinks.
@@ -95,7 +95,7 @@ All four child tables FK → `games(game_id) ON DELETE CASCADE`. RLS enabled wit
 
 Each agent runs a self-correction loop with `retries=5`. On `ValidationError` or semantic-check failure, the previous response and the error are appended to the message stream so the next attempt can correct itself. After 5 attempts, the loop raises by the last error type; flow code maps that to a domain error.
 
-`narrate` is the exception. Body tokens stream to the client live, so a self-correction loop with appended error messages isn't possible — once a body delta has been sent the client can't take it back. It retries (up to 5×) only when the stream errors out before any body delta or yields zero body content; if any body delta has already been streamed, a later failure raises.
+`narrate_body` is the exception. Body tokens stream to the client live, so a self-correction loop with appended error messages isn't possible — once a body delta has been sent the client can't take it back. It retries (up to 5×) only when the stream errors out before any body delta or yields zero body content; if any body delta has already been streamed, a later failure raises. `narrate_extract` runs after streaming finishes and uses the standard self-correction loop.
 
 ### state_changes
 

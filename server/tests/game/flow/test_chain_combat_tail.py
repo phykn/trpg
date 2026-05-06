@@ -74,13 +74,20 @@ async def test_chain_equip_then_attack_routes_to_combat(
     """[Equip, Combat] — engine equips the weapon then transitions to combat
     against the named target. Without the chain-tail handling, combat is
     dropped and narrate has to invent the attack outcome."""
-    judge_returns([
-        Verb(name="transfer", modifiers={
-            "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
-            "mode": "gift", "item_id": "dagger_01",
-        }),
-        Verb(name="attack", target_ids=["goblin_01"]),
-    ])
+    judge_returns(
+        [
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "<self>.inventory",
+                    "to_id": "<self>.equipped.weapon",
+                    "mode": "gift",
+                    "item_id": "dagger_01",
+                },
+            ),
+            Verb(name="attack", target_ids=["goblin_01"]),
+        ]
+    )
 
     events = await collect(
         run_turn(
@@ -109,10 +116,12 @@ async def test_chain_move_then_attack_at_destination(
     target there. The live test failure: 'classify produced [MoveAction], dropped
     CombatAction; narrate then invented "공격을 단숨에 쳐냅니다"'. With combat at
     the chain tail, the attack actually fires."""
-    judge_returns([
-        Verb(name="move", modifiers={"destination": "forge_01"}),
-        Verb(name="attack", target_ids=["talc_01"]),
-    ])
+    judge_returns(
+        [
+            Verb(name="move", modifiers={"destination": "forge_01"}),
+            Verb(name="attack", target_ids=["talc_01"]),
+        ]
+    )
 
     events = await collect(
         run_turn(
@@ -142,13 +151,20 @@ async def test_chain_combat_invalid_target_does_not_double_consume_turn(
     and combat_state stays clear — symmetrical with the standalone CombatAction
     invalid-target branch."""
     # talc_01 is in forge_01, player is in plaza_01 — invalid same-loc rule.
-    judge_returns([
-        Verb(name="transfer", modifiers={
-            "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
-            "mode": "gift", "item_id": "dagger_01",
-        }),
-        Verb(name="attack", target_ids=["talc_01"]),
-    ])
+    judge_returns(
+        [
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "<self>.inventory",
+                    "to_id": "<self>.equipped.weapon",
+                    "mode": "gift",
+                    "item_id": "dagger_01",
+                },
+            ),
+            Verb(name="attack", target_ids=["talc_01"]),
+        ]
+    )
 
     events = await collect(
         run_turn(
@@ -172,12 +188,20 @@ def test_verb_list_accepts_attack_anywhere():
     """Stage 1b: Verb 모델은 chain 비대칭 룰 없음 — attack을 prefix에 둬도 schema는 OK.
     legacy ChainAction의 'combat tail-only' 룰은 사라짐 — phase 전환은 엔진 결과."""
     from src.llm.calls.classify.schema import JudgeOutput
-    out = JudgeOutput(actions=[
-        Verb(name="attack", target_ids=["bandit_01"]),
-        Verb(name="transfer", modifiers={
-            "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
-            "mode": "gift", "item_id": "sword_01",
-        }),
-    ])
+
+    out = JudgeOutput(
+        actions=[
+            Verb(name="attack", target_ids=["bandit_01"]),
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "<self>.inventory",
+                    "to_id": "<self>.equipped.weapon",
+                    "mode": "gift",
+                    "item_id": "sword_01",
+                },
+            ),
+        ]
+    )
     assert len(out.actions) == 2
     assert out.actions[0].name == "attack"

@@ -100,12 +100,12 @@ async def test_dismiss_records_turn_log(fresh_state, tmp_data, collect):
     )
 
 
-async def test_dismiss_via_run_turn(
-    fresh_state, tmp_data, judge_returns, collect
-):
+async def test_dismiss_via_run_turn(fresh_state, tmp_data, judge_returns, collect):
     """run_turn → judge returns DismissAction → run_dismiss is invoked."""
     state = _setup_state_with_companion(fresh_state)
-    judge_returns(Verb(name="speak", modifiers={"intent": "part", "target": "npc.edric"}))
+    judge_returns(
+        Verb(name="speak", modifiers={"intent": "part", "target": "npc.edric"})
+    )
 
     await collect(
         run_turn(

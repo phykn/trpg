@@ -84,9 +84,7 @@ async def test_emit_cast_self_heal_happy(fresh_state):
     assert fail_events == []
     assert "치유" in act_events[0]["data"]["text"]
     # Self-cast emits a turn_log line via push_act's turn_summary.
-    self_turn_logs = [
-        t for t in state.turn_log if "자가 시전" in t.summary
-    ]
+    self_turn_logs = [t for t in state.turn_log if "자가 시전" in t.summary]
     assert len(self_turn_logs) == 1
 
 
@@ -107,9 +105,7 @@ async def test_emit_cast_ally_heal_no_duplicate_turn_log(fresh_state):
     state = _seed(fresh_state, skill_type="heal", target="single")
     dirty = Dirty()
 
-    await _drain(
-        emit_cast(state, "player_01", "minor_heal", ["ally_01"], dirty)
-    )
+    await _drain(emit_cast(state, "player_01", "minor_heal", ["ally_01"], dirty))
 
     assert state.characters["ally_01"].hp > 5
     cast_logs = [t for t in state.turn_log if "치유" in t.summary]

@@ -122,7 +122,9 @@ def test_active_quest_judge_satisfied_completes_quest(monkeypatch):
             "progress_delta": None,
         }
 
-    monkeypatch.setattr("src.game.flow.turn.judge_quest_progress", mock_judge, raising=False)
+    monkeypatch.setattr(
+        "src.game.flow.turn.judge_quest_progress", mock_judge, raising=False
+    )
 
     end_turn_quest_check(state)
 
@@ -142,7 +144,9 @@ def test_no_active_quests_no_judge_call(monkeypatch):
         judge_calls.append(True)
         return {"outcome": "rejected", "reason": "", "progress_delta": None}
 
-    monkeypatch.setattr("src.game.flow.turn.judge_quest_progress", mock_judge, raising=False)
+    monkeypatch.setattr(
+        "src.game.flow.turn.judge_quest_progress", mock_judge, raising=False
+    )
     end_turn_quest_check(state)
     assert judge_calls == []
 
@@ -156,7 +160,9 @@ def test_empty_history_skips_judge(monkeypatch):
         judge_calls.append(True)
         return {"outcome": "satisfied", "reason": "", "progress_delta": None}
 
-    monkeypatch.setattr("src.game.flow.turn.judge_quest_progress", mock_judge, raising=False)
+    monkeypatch.setattr(
+        "src.game.flow.turn.judge_quest_progress", mock_judge, raising=False
+    )
     end_turn_quest_check(state)
     assert judge_calls == []
 

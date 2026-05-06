@@ -24,6 +24,7 @@ class PendingCheckTrigger:
     Today only the semantic fallback emits this (triggering_verb=None);
     the later uncertainty rule will let verb dispatch construct the same
     trigger and call emit_roll_pending_from_trigger."""
+
     tier: Tier
     stat: StatKey
     targets: list[str]
@@ -40,9 +41,7 @@ class JudgeResult(TypedDict):
 def _call_judge_llm(prompt: str, schema: type) -> dict:
     """LLM call wrapper — override in tests via monkeypatch."""
     # not yet wired; callers catch NotImplementedError.
-    raise NotImplementedError(
-        "Judge LLM integration not wired (test-only stub)."
-    )
+    raise NotImplementedError("Judge LLM integration not wired (test-only stub).")
 
 
 def judge_quest_progress(
@@ -59,13 +58,13 @@ def judge_quest_progress(
         claim: player's assertion if in dialogue (None for auto turn-end check)
         npc_context: {npc_id, favor} for NPC dialogue context (None for auto check)
     """
-    history_text = (
-        "\n".join(f"- {h.get('summary', str(h))}" for h in history)
-        or render("prompt.judge.empty_history", "ko")
-    )
+    history_text = "\n".join(
+        f"- {h.get('summary', str(h))}" for h in history
+    ) or render("prompt.judge.empty_history", "ko")
     npc_block = (
         render(
-            "prompt.judge.npc_block", "ko",
+            "prompt.judge.npc_block",
+            "ko",
             npc_id=npc_context.get("npc_id"),
             favor=npc_context.get("favor", 0),
         )
@@ -73,8 +72,11 @@ def judge_quest_progress(
         else render("prompt.judge.no_npc", "ko")
     )
     prompt = render(
-        "prompt.judge.quest_evaluator", "ko",
-        objective=quest.get("objective_text", render("prompt.judge.empty_objective", "ko")),
+        "prompt.judge.quest_evaluator",
+        "ko",
+        objective=quest.get(
+            "objective_text", render("prompt.judge.empty_objective", "ko")
+        ),
         history=history_text,
         claim=claim or render("prompt.judge.empty_claim", "ko"),
         npc_block=npc_block,

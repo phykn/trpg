@@ -115,7 +115,9 @@ async def test_combat_with_skill_id_runs_auto_sim_and_burns_mp(
     The first round casts the skill, so MP is consumed at least once."""
     state = _seed_skill_state(fresh_state)
     judge_returns(
-        Verb(name="attack", target_ids=["goblin_01"], modifiers={"skill_id": "fireball"}),
+        Verb(
+            name="attack", target_ids=["goblin_01"], modifiers={"skill_id": "fireball"}
+        ),
     )
     events = await collect(
         run_turn(
@@ -171,7 +173,9 @@ async def test_combat_during_combat_with_skill_id(
     state.combat_state.current_turn = 0
 
     judge_returns(
-        Verb(name="attack", target_ids=["goblin_01"], modifiers={"skill_id": "fireball"}),
+        Verb(
+            name="attack", target_ids=["goblin_01"], modifiers={"skill_id": "fireball"}
+        ),
     )
     await collect(
         run_turn(

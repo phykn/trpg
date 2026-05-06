@@ -3,7 +3,6 @@
 Stage 1b Task 4 incremental: 기존 run_recruit/run_dismiss는 그대로 + verb wrapper 추가.
 Task 1 (turn.py dispatch refactor) 완료 시 기존 path는 폐기."""
 
-
 from src.game.flow.companion import run_recruit_verb, run_dismiss_verb
 from src.llm.calls.classify.schema import Verb
 
@@ -23,11 +22,13 @@ def test_run_dismiss_verb_extracts_target_from_modifiers():
 def test_run_recruit_verb_signature_takes_keyword_args():
     """run_recruit_verb이 verb 첫 인자 + 나머지 키워드 시그니처를 갖는지 inspection."""
     import inspect
+
     sig = inspect.signature(run_recruit_verb)
     params = list(sig.parameters.items())
     assert params[0][0] == "verb"
-    keyword_params = [name for name, p in params[1:]
-                      if p.kind == inspect.Parameter.KEYWORD_ONLY]
+    keyword_params = [
+        name for name, p in params[1:] if p.kind == inspect.Parameter.KEYWORD_ONLY
+    ]
     assert "state" in keyword_params
     assert "save_repo" in keyword_params
     assert "player_input" in keyword_params
@@ -37,11 +38,13 @@ def test_run_recruit_verb_signature_takes_keyword_args():
 
 def test_run_dismiss_verb_signature_takes_keyword_args():
     import inspect
+
     sig = inspect.signature(run_dismiss_verb)
     params = list(sig.parameters.items())
     assert params[0][0] == "verb"
-    keyword_params = [name for name, p in params[1:]
-                      if p.kind == inspect.Parameter.KEYWORD_ONLY]
+    keyword_params = [
+        name for name, p in params[1:] if p.kind == inspect.Parameter.KEYWORD_ONLY
+    ]
     assert "state" in keyword_params
     assert "scenario_repo" in keyword_params
     assert "save_repo" in keyword_params

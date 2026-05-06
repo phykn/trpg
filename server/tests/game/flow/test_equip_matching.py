@@ -72,10 +72,17 @@ async def test_equip_weapon_lands_in_weapon_slot(
     fresh_state, tmp_data, judge_returns, collect
 ):
     state = _seed(fresh_state)
-    judge_returns(Verb(name="transfer", modifiers={
-        "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
-        "mode": "gift", "item_id": "sword",
-    }))
+    judge_returns(
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "<self>.inventory",
+                "to_id": "<self>.equipped.weapon",
+                "mode": "gift",
+                "item_id": "sword",
+            },
+        )
+    )
     events = await collect(
         run_turn(
             client=None,
@@ -96,10 +103,17 @@ async def test_equip_armor_picks_armor_slot_first(
     fresh_state, tmp_data, judge_returns, collect
 ):
     state = _seed(fresh_state)
-    judge_returns(Verb(name="transfer", modifiers={
-        "from_id": "<self>.inventory", "to_id": "<self>.equipped.armor",
-        "mode": "gift", "item_id": "helm",
-    }))
+    judge_returns(
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "<self>.inventory",
+                "to_id": "<self>.equipped.armor",
+                "mode": "gift",
+                "item_id": "helm",
+            },
+        )
+    )
     await collect(
         run_turn(
             client=None,
@@ -121,10 +135,17 @@ async def test_unequip_finds_slot_by_item(
     fresh_state, tmp_data, judge_returns, collect
 ):
     state = _seed(fresh_state, equipped_weapon="sword")
-    judge_returns(Verb(name="transfer", modifiers={
-        "from_id": "<self>.equipped.weapon", "to_id": "<self>.inventory",
-        "mode": "gift", "item_id": "sword",
-    }))
+    judge_returns(
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "<self>.equipped.weapon",
+                "to_id": "<self>.inventory",
+                "mode": "gift",
+                "item_id": "sword",
+            },
+        )
+    )
     await collect(
         run_turn(
             client=None,

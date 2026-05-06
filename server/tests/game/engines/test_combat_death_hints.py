@@ -1,4 +1,6 @@
-from server.src.game.engines.combat import _append_death_to_hints as append_death_to_hints
+from server.src.game.engines.combat import (
+    _append_death_to_hints as append_death_to_hints,
+)
 
 
 def test_dead_character_hints_includes_death_fact():

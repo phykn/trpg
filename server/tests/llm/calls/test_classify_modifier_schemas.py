@@ -6,8 +6,17 @@ from src.llm.calls.classify.schema import Verb
 
 
 def test_all_nine_verbs_have_schemas():
-    expected = {"move", "transfer", "use", "attack", "cast",
-                "speak", "perceive", "rest", "wait"}
+    expected = {
+        "move",
+        "transfer",
+        "use",
+        "attack",
+        "cast",
+        "speak",
+        "perceive",
+        "rest",
+        "wait",
+    }
     assert set(_MODIFIER_SCHEMAS.keys()) == expected
 
 
@@ -18,7 +27,9 @@ def test_move_required_destination_outside_combat():
 
 
 def test_move_destination_passes():
-    validate_modifiers(Verb(name="move", modifiers={"destination": "loc_01"}), in_combat=False)
+    validate_modifiers(
+        Verb(name="move", modifiers={"destination": "loc_01"}), in_combat=False
+    )
 
 
 def test_move_in_combat_destination_optional():
@@ -32,10 +43,19 @@ def test_transfer_required_keys():
 
 
 def test_transfer_complete():
-    validate_modifiers(Verb(name="transfer", modifiers={
-        "from_id": "merchant_01", "to_id": "player_01",
-        "mode": "trade", "item_id": "potion_01", "price": 5,
-    }), in_combat=False)
+    validate_modifiers(
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "merchant_01",
+                "to_id": "player_01",
+                "mode": "trade",
+                "item_id": "potion_01",
+                "price": 5,
+            },
+        ),
+        in_combat=False,
+    )
 
 
 def test_attack_target_cardinality():
@@ -60,7 +80,9 @@ def test_speak_required_intent():
 
 
 def test_speak_unknown_modifier_silent_drop():
-    v = Verb(name="speak", modifiers={"intent": "friendly", "target": "n", "garbage_key": 1})
+    v = Verb(
+        name="speak", modifiers={"intent": "friendly", "target": "n", "garbage_key": 1}
+    )
     validate_modifiers(v, in_combat=False)
     assert "garbage_key" not in v.modifiers
 

@@ -26,7 +26,12 @@ async def classify(
         system_prompt=get_prompt("classify", locale),
         user_payload=input_.model_dump_json(),
         parse=parse,
-        retry_on=(ValidationError, JudgeSemanticError, ModifierValidationError, json.JSONDecodeError),
+        retry_on=(
+            ValidationError,
+            JudgeSemanticError,
+            ModifierValidationError,
+            json.JSONDecodeError,
+        ),
         retries=retries,
         agent="classify",
         temperature=_CLASSIFY_TEMPERATURE,

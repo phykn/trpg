@@ -137,9 +137,7 @@ async def handle_steal_roll_result(
 
     # failure / critical_failure → relations drop + system card.
     drop = RULES.social.combat_affinity_drop
-    target.relations[state.player_id] = (
-        target.relations.get(state.player_id, 0) - drop
-    )
+    target.relations[state.player_id] = target.relations.get(state.player_id, 0) - drop
     dirty.entities.add(("characters", target_id))
     yield push_act(
         state,

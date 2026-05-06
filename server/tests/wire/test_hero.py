@@ -1,6 +1,13 @@
 import json
 
-from src.game.domain.entities import Character, Equipment, Item, Race, Stats, WeaponEffect
+from src.game.domain.entities import (
+    Character,
+    Equipment,
+    Item,
+    Race,
+    Stats,
+    WeaponEffect,
+)
 from src.game.domain.state import GameState
 from src.wire.to_front import _build_hero_payload
 from src.wire.models import Equipment as WireEquipment

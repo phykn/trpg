@@ -102,9 +102,7 @@ async def test_handle_steal_roll_success_transfers_random_item(fresh_state):
     dirty = Dirty()
     rng = random.Random(0)
 
-    await _drain(
-        handle_steal_roll_result(state, pending, "success", dirty, rng=rng)
-    )
+    await _drain(handle_steal_roll_result(state, pending, "success", dirty, rng=rng))
 
     assert "coin_01" in state.characters["player_01"].inventory_ids
     assert "coin_01" not in state.characters["npc_01"].inventory_ids
@@ -129,9 +127,7 @@ async def test_handle_steal_roll_failure_drops_relations(fresh_state):
     )
     dirty = Dirty()
 
-    await _drain(
-        handle_steal_roll_result(state, pending, "failure", dirty)
-    )
+    await _drain(handle_steal_roll_result(state, pending, "failure", dirty))
 
     # item stayed with NPC
     assert "coin_01" in state.characters["npc_01"].inventory_ids
@@ -143,16 +139,21 @@ async def test_handle_steal_roll_failure_drops_relations(fresh_state):
 async def test_handle_steal_roll_critical_failure_same_drop(fresh_state):
     state = _seed(fresh_state, npc_inventory=["coin_01"])
     pending = PendingCheck(
-        player_input="훔친다", kind="steal", tier="normal", stat="DEX",
-        target="npc_01", targets=["npc_01"],
-        dc=10, mod=0, required_roll=8,
-        reason="훔치기", created_at="2026-05-06T00:00:00Z",
+        player_input="훔친다",
+        kind="steal",
+        tier="normal",
+        stat="DEX",
+        target="npc_01",
+        targets=["npc_01"],
+        dc=10,
+        mod=0,
+        required_roll=8,
+        reason="훔치기",
+        created_at="2026-05-06T00:00:00Z",
     )
     dirty = Dirty()
 
-    await _drain(
-        handle_steal_roll_result(state, pending, "critical_failure", dirty)
-    )
+    await _drain(handle_steal_roll_result(state, pending, "critical_failure", dirty))
     # No transfer
     assert "coin_01" in state.characters["npc_01"].inventory_ids
     assert state.characters["npc_01"].relations.get("player_01", 0) < 0
@@ -167,10 +168,17 @@ async def test_handle_steal_roll_skips_equipped_items(fresh_state):
     state.characters["npc_01"].equipment.weapon = "sword_01"
     state.invalidate_graph()
     pending = PendingCheck(
-        player_input="훔친다", kind="steal", tier="normal", stat="DEX",
-        target="npc_01", targets=["npc_01"],
-        dc=10, mod=0, required_roll=8,
-        reason="훔치기", created_at="2026-05-06T00:00:00Z",
+        player_input="훔친다",
+        kind="steal",
+        tier="normal",
+        stat="DEX",
+        target="npc_01",
+        targets=["npc_01"],
+        dc=10,
+        mod=0,
+        required_roll=8,
+        reason="훔치기",
+        created_at="2026-05-06T00:00:00Z",
     )
     dirty = Dirty()
     # Force any rng outcome — only non-equipped item is "coin_01".

@@ -113,14 +113,24 @@ async def test_chain_all_receipts_skips_narrate(fresh_state, tmp_saves, monkeypa
         tmp_saves,
         monkeypatch,
         [
-            Verb(name="transfer", modifiers={
-                "from_id": "<self>.equipped.weapon", "to_id": "<self>.inventory",
-                "mode": "gift", "item_id": "sword_01",
-            }),
-            Verb(name="transfer", modifiers={
-                "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
-                "mode": "gift", "item_id": "sword_02",
-            }),
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "<self>.equipped.weapon",
+                    "to_id": "<self>.inventory",
+                    "mode": "gift",
+                    "item_id": "sword_01",
+                },
+            ),
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "<self>.inventory",
+                    "to_id": "<self>.equipped.weapon",
+                    "mode": "gift",
+                    "item_id": "sword_02",
+                },
+            ),
         ],
     )
     assert narrate_calls == []
@@ -137,10 +147,15 @@ async def test_chain_with_pass_calls_narrate(fresh_state, tmp_saves, monkeypatch
         tmp_saves,
         monkeypatch,
         [
-            Verb(name="transfer", modifiers={
-                "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
-                "mode": "gift", "item_id": "sword_01",
-            }),
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "<self>.inventory",
+                    "to_id": "<self>.equipped.weapon",
+                    "mode": "gift",
+                    "item_id": "sword_01",
+                },
+            ),
             Verb(name="wait"),
         ],
     )
@@ -160,10 +175,15 @@ async def test_chain_first_visit_move_calls_narrate(
         tmp_saves,
         monkeypatch,
         [
-            Verb(name="transfer", modifiers={
-                "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
-                "mode": "gift", "item_id": "sword_01",
-            }),
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "<self>.inventory",
+                    "to_id": "<self>.equipped.weapon",
+                    "mode": "gift",
+                    "item_id": "sword_01",
+                },
+            ),
             Verb(name="move", modifiers={"destination": "loc_b"}),
         ],
     )
@@ -180,10 +200,15 @@ async def test_chain_revisit_move_skips_narrate(fresh_state, tmp_saves, monkeypa
         tmp_saves,
         monkeypatch,
         [
-            Verb(name="transfer", modifiers={
-                "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
-                "mode": "gift", "item_id": "sword_01",
-            }),
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "<self>.inventory",
+                    "to_id": "<self>.equipped.weapon",
+                    "mode": "gift",
+                    "item_id": "sword_01",
+                },
+            ),
             Verb(name="move", modifiers={"destination": "loc_b"}),
         ],
     )
@@ -203,10 +228,15 @@ async def test_chain_with_failed_first_visit_move_skips_narrate(
         tmp_saves,
         monkeypatch,
         [
-            Verb(name="transfer", modifiers={
-                "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
-                "mode": "gift", "item_id": "sword_01",
-            }),
+            Verb(
+                name="transfer",
+                modifiers={
+                    "from_id": "<self>.inventory",
+                    "to_id": "<self>.equipped.weapon",
+                    "mode": "gift",
+                    "item_id": "sword_01",
+                },
+            ),
             Verb(name="move", modifiers={"destination": "loc_unreachable"}),
         ],
     )
@@ -267,14 +297,24 @@ async def test_chain_pass_plus_successful_first_visit_move_keeps_card(
 def test_chain_with_successful_buy_needs_narrate(fresh_state):
     state = _seed(fresh_state)
     parts = [
-        Verb(name="transfer", modifiers={
-            "from_id": "m_01", "to_id": "<self>.inventory",
-            "mode": "trade", "item_id": "i_01",
-        }),
-        Verb(name="transfer", modifiers={
-            "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
-            "mode": "gift", "item_id": "i_01",
-        }),
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "m_01",
+                "to_id": "<self>.inventory",
+                "mode": "trade",
+                "item_id": "i_01",
+            },
+        ),
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "<self>.inventory",
+                "to_id": "<self>.equipped.weapon",
+                "mode": "gift",
+                "item_id": "i_01",
+            },
+        ),
     ]
     assert turn_mod._chain_needs_narrate(state, parts) is True
 
@@ -282,14 +322,24 @@ def test_chain_with_successful_buy_needs_narrate(fresh_state):
 def test_chain_with_successful_sell_needs_narrate(fresh_state):
     state = _seed(fresh_state)
     parts = [
-        Verb(name="transfer", modifiers={
-            "from_id": "<self>.inventory", "to_id": "m_01",
-            "mode": "trade", "item_id": "i_01",
-        }),
-        Verb(name="transfer", modifiers={
-            "from_id": "<self>.equipped.weapon", "to_id": "<self>.inventory",
-            "mode": "gift", "item_id": "i_01",
-        }),
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "<self>.inventory",
+                "to_id": "m_01",
+                "mode": "trade",
+                "item_id": "i_01",
+            },
+        ),
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "<self>.equipped.weapon",
+                "to_id": "<self>.inventory",
+                "mode": "gift",
+                "item_id": "i_01",
+            },
+        ),
     ]
     assert turn_mod._chain_needs_narrate(state, parts) is True
 
@@ -297,14 +347,24 @@ def test_chain_with_successful_sell_needs_narrate(fresh_state):
 def test_chain_with_successful_give_needs_narrate(fresh_state):
     state = _seed(fresh_state)
     parts = [
-        Verb(name="transfer", modifiers={
-            "from_id": "<self>.inventory", "to_id": "npc_01",
-            "mode": "gift", "item_id": "i_01",
-        }),
-        Verb(name="transfer", modifiers={
-            "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
-            "mode": "gift", "item_id": "i_02",
-        }),
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "<self>.inventory",
+                "to_id": "npc_01",
+                "mode": "gift",
+                "item_id": "i_01",
+            },
+        ),
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "<self>.inventory",
+                "to_id": "<self>.equipped.weapon",
+                "mode": "gift",
+                "item_id": "i_02",
+            },
+        ),
     ]
     assert turn_mod._chain_needs_narrate(state, parts) is True
 
@@ -312,14 +372,24 @@ def test_chain_with_successful_give_needs_narrate(fresh_state):
 def test_chain_with_failed_buy_no_narrate(fresh_state):
     state = _seed(fresh_state)
     parts = [
-        Verb(name="transfer", modifiers={
-            "from_id": "m_01", "to_id": "<self>.inventory",
-            "mode": "trade", "item_id": "i_01",
-        }),
-        Verb(name="transfer", modifiers={
-            "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
-            "mode": "gift", "item_id": "i_01",
-        }),
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "m_01",
+                "to_id": "<self>.inventory",
+                "mode": "trade",
+                "item_id": "i_01",
+            },
+        ),
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "<self>.inventory",
+                "to_id": "<self>.equipped.weapon",
+                "mode": "gift",
+                "item_id": "i_01",
+            },
+        ),
     ]
     assert (
         turn_mod._chain_needs_narrate(state, parts, part_failures=[True, False])

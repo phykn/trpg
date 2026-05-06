@@ -6,6 +6,7 @@ from src.wire.models import DonePayload, NarrativeDeltaPayload, SuggestionsPaylo
 
 # narrative_delta
 
+
 def test_narrative_delta_envelope():
     ev = emit_narrative_delta("당신은 문 앞에 섰습니다.")
     assert ev["type"] == "narrative_delta"
@@ -27,6 +28,7 @@ def test_narrative_delta_serializable():
 
 # suggestions
 
+
 def test_suggestions_envelope():
     ev = emit_suggestions(["문을 연다", "주위를 둘러본다"])
     assert ev["type"] == "suggestions"
@@ -47,6 +49,7 @@ def test_suggestions_defensive_copy():
 
 
 # done
+
 
 def test_done_envelope():
     ev = emit_done()

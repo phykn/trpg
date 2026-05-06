@@ -76,7 +76,8 @@ async def test_in_combat_transfer_trade_or_gift_is_forbidden(
     )
 
     forbidden_acts = [
-        ev for ev in events
+        ev
+        for ev in events
         if ev.get("type") == "log_entry"
         and (ev.get("data") or {}).get("kind") == "act"
         and (ev.get("data") or {}).get("text") == ACTION_FORBIDDEN_IN_COMBAT_TEXT

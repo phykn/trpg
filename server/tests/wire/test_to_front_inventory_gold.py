@@ -1,6 +1,5 @@
 """B1 — inventory shows 금화(N) consistently, including N=0."""
 
-
 from src.game.domain.entities import Character, Race
 from src.game.domain.state import GameState
 from src.wire.to_front import to_hero, to_subject

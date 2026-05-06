@@ -116,25 +116,19 @@ def emit_judge_pending_check_trigger(
 
 def emit_judge_refuse(refuse: "RefuseReason") -> dict:
     """SSE judge event — refuse branch."""
-    payload = JudgePayload(
-        root=JudgeRefuse(judge_kind="refuse", refuse=refuse)
-    )
+    payload = JudgePayload(root=JudgeRefuse(judge_kind="refuse", refuse=refuse))
     return {"type": "judge", "data": payload.model_dump()}
 
 
 def emit_judge_verb(verb: "Verb") -> dict:
     """SSE judge event — single-verb branch."""
-    payload = JudgePayload(
-        root=JudgeVerb(judge_kind="verb", verb=verb)
-    )
+    payload = JudgePayload(root=JudgeVerb(judge_kind="verb", verb=verb))
     return {"type": "judge", "data": payload.model_dump()}
 
 
 def emit_judge_verbs(actions: list["Verb"]) -> dict:
     """SSE judge event — multi-verb chain branch."""
-    payload = JudgePayload(
-        root=JudgeVerbs(judge_kind="verbs", actions=list(actions))
-    )
+    payload = JudgePayload(root=JudgeVerbs(judge_kind="verbs", actions=list(actions)))
     return {"type": "judge", "data": payload.model_dump()}
 
 
@@ -197,5 +191,3 @@ def emit_combat_end(
     """SSE combat_end event."""
     payload = CombatEndPayload(outcome=outcome)
     return {"type": "combat_end", "data": payload.model_dump()}
-
-

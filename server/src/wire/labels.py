@@ -60,7 +60,10 @@ _RISK_TONES: dict[str, str] = {"safe": "good", "risky": "neutral", "dangerous": 
 
 
 def risk_payload(risk: str) -> dict:
-    return {"label": render(f"ui.risk.{risk}.label", "ko"), "tone": _RISK_TONES.get(risk, "neutral")}
+    return {
+        "label": render(f"ui.risk.{risk}.label", "ko"),
+        "tone": _RISK_TONES.get(risk, "neutral"),
+    }
 
 
 # `None` tone keeps the neutral mid-tier label uncolored on the panel.

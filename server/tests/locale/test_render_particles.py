@@ -20,22 +20,22 @@ def test_tier_lookup_unchanged() -> None:
 
 def test_has_jongseong_basic() -> None:
     """particles.has_jongseong 기본 회로."""
-    assert has_jongseong("검") is True   # ㅁ 받침
-    assert has_jongseong("칼") is True   # ㄹ 받침
+    assert has_jongseong("검") is True  # ㅁ 받침
+    assert has_jongseong("칼") is True  # ㄹ 받침
     assert has_jongseong("나") is False  # 받침 없음
-    assert has_jongseong("") is False    # 빈 문자열
+    assert has_jongseong("") is False  # 빈 문자열
     assert has_jongseong("Sword") is False  # 한글 아님
 
 
 def test_token_walker_via_fixture(tmp_path, monkeypatch) -> None:
     """render의 token walker를 fixture catalog로 검증."""
     import sys
+
     render_mod = sys.modules["src.locale.render"]
 
     fixture = tmp_path / "fix.toml"
     fixture.write_text(
-        '[fix.equip]\n'
-        'ko = "{actor}{이/가} 「{item}」{을/를} 장비"\n',
+        '[fix.equip]\nko = "{actor}{이/가} 「{item}」{을/를} 장비"\n',
         encoding="utf-8",
     )
     monkeypatch.setattr(render_mod, "_CATALOG_DIR", tmp_path)
@@ -50,6 +50,7 @@ def test_token_walker_via_fixture(tmp_path, monkeypatch) -> None:
 def test_all_five_particles(tmp_path, monkeypatch) -> None:
     """이/가, 은/는, 을/를, 과/와, 으로/로 모두 받침 회로."""
     import sys
+
     render_mod = sys.modules["src.locale.render"]
 
     fixture = tmp_path / "fix.toml"

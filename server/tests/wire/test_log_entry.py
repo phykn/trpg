@@ -47,7 +47,10 @@ def test_roll_envelope():
         roll=14,
         margin=2,
         result="success",
-        bonus_breakdown=[BonusItem(label="근력", value=2), BonusItem(label="장비", value=1)],
+        bonus_breakdown=[
+            BonusItem(label="근력", value=2),
+            BonusItem(label="장비", value=1),
+        ],
     )
     ev = emit_log_entry(log)
     assert ev["type"] == "log_entry"
@@ -81,8 +84,12 @@ def test_discriminator_validates_kind():
 
 def test_serializable_to_json():
     log = RollLogEntry(
-        id=1, kind="roll", check="WIS DC 10",
-        roll=12, margin=2, result="partial",
+        id=1,
+        kind="roll",
+        check="WIS DC 10",
+        roll=12,
+        margin=2,
+        result="partial",
         bonus_breakdown=[],
     )
     ev = emit_log_entry(log)
@@ -95,8 +102,12 @@ def test_roll_result_literal_preserved():
     """`result` Literal[success|partial|fail] survives serialization."""
     for result_value in ("success", "partial", "fail"):
         log = RollLogEntry(
-            id=0, kind="roll", check="x",
-            roll=1, margin=0, result=result_value,
+            id=0,
+            kind="roll",
+            check="x",
+            roll=1,
+            margin=0,
+            result=result_value,
             bonus_breakdown=[],
         )
         ev = emit_log_entry(log)

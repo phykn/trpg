@@ -13,19 +13,40 @@ def test_dispatch_verb_signature_takes_keyword_args():
     sig = inspect.signature(turn_module._dispatch_verb)
     params = list(sig.parameters.items())
     assert params[0][0] == "verb"
-    keyword_params = [name for name, p in params[1:]
-                      if p.kind == inspect.Parameter.KEYWORD_ONLY]
-    for required in ("client", "state", "scenario_repo", "save_repo",
-                       "dirty", "rng", "to_front_fn", "player_input", "graph"):
+    keyword_params = [
+        name for name, p in params[1:] if p.kind == inspect.Parameter.KEYWORD_ONLY
+    ]
+    for required in (
+        "client",
+        "state",
+        "scenario_repo",
+        "save_repo",
+        "dirty",
+        "rng",
+        "to_front_fn",
+        "player_input",
+        "graph",
+    ):
         assert required in keyword_params, f"missing kwarg: {required}"
 
 
 def test_dispatch_verb_handles_all_nine_verbs():
     """소스 inspection: _dispatch_verb이 9개 verb name 모두에 대해 분기를 갖는지."""
     src = inspect.getsource(turn_module._dispatch_verb)
-    for verb_name in ("move", "transfer", "use", "attack", "cast",
-                        "speak", "perceive", "rest", "wait"):
-        assert f'name == "{verb_name}"' in src, f"_dispatch_verb missing branch: {verb_name}"
+    for verb_name in (
+        "move",
+        "transfer",
+        "use",
+        "attack",
+        "cast",
+        "speak",
+        "perceive",
+        "rest",
+        "wait",
+    ):
+        assert f'name == "{verb_name}"' in src, (
+            f"_dispatch_verb missing branch: {verb_name}"
+        )
 
 
 def test_dispatch_verb_speak_recruit_dispatches_to_companion():

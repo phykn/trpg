@@ -424,7 +424,9 @@ def apply_attack_to_defender(
             remove_from_combat(state, defender_id)
             out["dead"] = True
             killer = state.characters.get(attacker_id) if attacker_id else None
-            _append_death_to_hints(defender, killer_name=killer.name if killer else None)
+            _append_death_to_hints(
+                defender, killer_name=killer.name if killer else None
+            )
             check_quests(state, "character_death", defender_id, dirty)
             if killer is not None:
                 transfer_loot_on_death(dead=defender, winner=killer)

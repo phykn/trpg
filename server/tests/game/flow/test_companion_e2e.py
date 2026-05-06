@@ -46,7 +46,9 @@ async def test_recruit_then_dismiss_cycle(
     scenario_repo = LocalFsScenarioRepo(profile_dir="<unused>")
 
     # 1) Player input "에드릭, 함께 가자" → judge returns RecruitAction → run_recruit emits pending
-    judge_returns(Verb(name="speak", modifiers={"intent": "recruit", "target": "npc.edric"}))
+    judge_returns(
+        Verb(name="speak", modifiers={"intent": "recruit", "target": "npc.edric"})
+    )
     await collect(
         run_turn(
             client=None,
@@ -75,7 +77,9 @@ async def test_recruit_then_dismiss_cycle(
     assert state.previous_phase_signal == "companion_joined:에드릭"
 
     # 3) Player input "에드릭, 헤어지자" → judge returns DismissAction → companion removed
-    judge_returns(Verb(name="speak", modifiers={"intent": "part", "target": "npc.edric"}))
+    judge_returns(
+        Verb(name="speak", modifiers={"intent": "part", "target": "npc.edric"})
+    )
     await collect(
         run_turn(
             client=None,
@@ -97,7 +101,9 @@ async def test_recruit_critical_failure_drops_affinity_no_companion(
     save_repo = LocalFsSaveRepo(saves_dir=str(tmp_data))
     scenario_repo = LocalFsScenarioRepo(profile_dir="<unused>")
 
-    judge_returns(Verb(name="speak", modifiers={"intent": "recruit", "target": "npc.edric"}))
+    judge_returns(
+        Verb(name="speak", modifiers={"intent": "recruit", "target": "npc.edric"})
+    )
     await collect(
         run_turn(
             client=None,
@@ -108,7 +114,9 @@ async def test_recruit_critical_failure_drops_affinity_no_companion(
         )
     )
 
-    monkeypatch.setattr(roll_mod, "compute_grade", lambda nat, total, req: "critical_failure")
+    monkeypatch.setattr(
+        roll_mod, "compute_grade", lambda nat, total, req: "critical_failure"
+    )
     await collect(
         run_roll(
             client=None,

@@ -96,6 +96,7 @@ async def _run_with_action(state, tmp_saves, monkeypatch, action, *, client=obje
 
     # Stage 1b: Verb 인스턴스는 JudgeOutput으로 wrap
     from src.llm.calls.classify.schema import JudgeOutput
+
     if isinstance(action, Verb):
         action = JudgeOutput(actions=[action])
 
@@ -129,11 +130,18 @@ def _act_texts(events):
 async def test_equip_skips_narrate(fresh_state, tmp_saves, monkeypatch):
     state = _seed_basic(fresh_state)
     events, narrate_calls = await _run_with_action(
-        state, tmp_saves, monkeypatch,
-        Verb(name="transfer", modifiers={
-            "from_id": "<self>.inventory", "to_id": "<self>.equipped.weapon",
-            "mode": "gift", "item_id": "sword_01",
-        })
+        state,
+        tmp_saves,
+        monkeypatch,
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "<self>.inventory",
+                "to_id": "<self>.equipped.weapon",
+                "mode": "gift",
+                "item_id": "sword_01",
+            },
+        ),
     )
     assert narrate_calls == []
     texts = _act_texts(events)
@@ -148,10 +156,15 @@ async def test_unequip_skips_narrate(fresh_state, tmp_saves, monkeypatch):
         state,
         tmp_saves,
         monkeypatch,
-        Verb(name="transfer", modifiers={
-            "from_id": "<self>.equipped.weapon", "to_id": "<self>.inventory",
-            "mode": "gift", "item_id": "sword_01",
-        }),
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "<self>.equipped.weapon",
+                "to_id": "<self>.inventory",
+                "mode": "gift",
+                "item_id": "sword_01",
+            },
+        ),
     )
     assert narrate_calls == []
     texts = _act_texts(events)
@@ -162,8 +175,10 @@ async def test_unequip_skips_narrate(fresh_state, tmp_saves, monkeypatch):
 async def test_use_skips_narrate(fresh_state, tmp_saves, monkeypatch):
     state = _seed_basic(fresh_state)
     events, narrate_calls = await _run_with_action(
-        state, tmp_saves, monkeypatch,
-        Verb(name="use", modifiers={"item_id": "potion_01"})
+        state,
+        tmp_saves,
+        monkeypatch,
+        Verb(name="use", modifiers={"item_id": "potion_01"}),
     )
     assert narrate_calls == []
     texts = _act_texts(events)
@@ -177,10 +192,15 @@ async def test_buy_runs_narrate_with_act_log_line(fresh_state, tmp_saves, monkey
         state,
         tmp_saves,
         monkeypatch,
-        Verb(name="transfer", modifiers={
-            "from_id": "npc_01", "to_id": "player_01",
-            "mode": "trade", "item_id": "potion_01",
-        }),
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "npc_01",
+                "to_id": "player_01",
+                "mode": "trade",
+                "item_id": "potion_01",
+            },
+        ),
     )
     assert len(narrate_calls) == 1
     lines = narrate_calls[0].get("act_log_lines") or []
@@ -194,10 +214,15 @@ async def test_sell_runs_narrate_with_act_log_line(fresh_state, tmp_saves, monke
         state,
         tmp_saves,
         monkeypatch,
-        Verb(name="transfer", modifiers={
-            "from_id": "player_01", "to_id": "npc_01",
-            "mode": "trade", "item_id": "potion_01",
-        }),
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "player_01",
+                "to_id": "npc_01",
+                "mode": "trade",
+                "item_id": "potion_01",
+            },
+        ),
     )
     assert len(narrate_calls) == 1
     lines = narrate_calls[0].get("act_log_lines") or []
@@ -211,10 +236,15 @@ async def test_give_runs_narrate_with_act_log_line(fresh_state, tmp_saves, monke
         state,
         tmp_saves,
         monkeypatch,
-        Verb(name="transfer", modifiers={
-            "from_id": "player_01", "to_id": "npc_01",
-            "mode": "gift", "item_id": "potion_01",
-        }),
+        Verb(
+            name="transfer",
+            modifiers={
+                "from_id": "player_01",
+                "to_id": "npc_01",
+                "mode": "gift",
+                "item_id": "potion_01",
+            },
+        ),
     )
     assert len(narrate_calls) == 1
     lines = narrate_calls[0].get("act_log_lines") or []

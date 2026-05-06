@@ -44,7 +44,9 @@ async def session_init(
     scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> InitResponse:
     try:
-        state = await init_game(body.profile, body.player, save_repo, scenario_repo, locale=body.locale)
+        state = await init_game(
+            body.profile, body.player, save_repo, scenario_repo, locale=body.locale
+        )
     except ProfileNotFound as e:
         raise HTTPException(status_code=422, detail=f"profile not found: {e}")
     except RaceNotFound as e:

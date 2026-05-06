@@ -12,20 +12,30 @@ def test_run_verb_chain_signature():
     sig = inspect.signature(turn_module._run_verb_chain)
     params = list(sig.parameters.items())
     assert params[0][0] == "verbs"
-    keyword_params = [name for name, p in params[1:]
-                      if p.kind == inspect.Parameter.KEYWORD_ONLY]
-    for required in ("client", "state", "scenario_repo", "save_repo",
-                       "dirty", "rng", "to_front_fn", "player_input", "graph"):
+    keyword_params = [
+        name for name, p in params[1:] if p.kind == inspect.Parameter.KEYWORD_ONLY
+    ]
+    for required in (
+        "client",
+        "state",
+        "scenario_repo",
+        "save_repo",
+        "dirty",
+        "rng",
+        "to_front_fn",
+        "player_input",
+        "graph",
+    ):
         assert required in keyword_params
 
 
 def test_run_verb_chain_separates_tail_combat_from_prefix():
     src = inspect.getsource(turn_module._run_verb_chain)
-    assert 'tail_combat' in src
+    assert "tail_combat" in src
     # Stage 1b: tail attack만 combat entry. cast는 narrate-only (단일 cast와 같은
     # 정책, 자해 진입 회피).
     assert 'verbs[-1].name == "attack"' in src
-    assert 'prefix = verbs[:-1] if tail_combat is not None else list(verbs)' in src
+    assert "prefix = verbs[:-1] if tail_combat is not None else list(verbs)" in src
 
 
 def test_run_verb_chain_pre_move_snapshot_uses_verb_name():
@@ -83,7 +93,10 @@ def test_run_verb_chain_skips_emit_for_narrate_absorb_verbs():
 
 def test_run_verb_chain_synthesizes_wait_when_no_explicit_wait():
     src = inspect.getsource(turn_module._run_verb_chain)
-    assert 'narrate_action = last_wait if last_wait is not None else Verb(name="wait")' in src
+    assert (
+        'narrate_action = last_wait if last_wait is not None else Verb(name="wait")'
+        in src
+    )
 
 
 def test_run_verb_chain_finalize_at_end():

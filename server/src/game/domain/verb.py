@@ -11,8 +11,15 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 VerbName = Literal[
-    "move", "transfer", "use", "attack", "cast",
-    "speak", "perceive", "rest", "wait",
+    "move",
+    "transfer",
+    "use",
+    "attack",
+    "cast",
+    "speak",
+    "perceive",
+    "rest",
+    "wait",
 ]
 RefuseCategory = Literal["out_of_game", "meta_breaking"]
 

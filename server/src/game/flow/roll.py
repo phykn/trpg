@@ -113,7 +113,9 @@ async def run_roll(
         BonusItem(label=stat_label(pending.stat), value=stat_mod),
     ]
     if pending.mod != 0:
-        breakdown.append(BonusItem(label=render("ui.roll.affinity_label", "ko"), value=pending.mod))
+        breakdown.append(
+            BonusItem(label=render("ui.roll.affinity_label", "ko"), value=pending.mod)
+        )
 
     roll_log = RollLogEntry(
         id=next_log_id(state),
@@ -157,7 +159,10 @@ async def run_roll(
     # narrate, no XP (DEX skill check on a social act, not growth).
     if pending.kind == "steal":
         from .steal import handle_steal_roll_result
-        async for ev in handle_steal_roll_result(state, pending, grade, dirty, rng=rng_obj):
+
+        async for ev in handle_steal_roll_result(
+            state, pending, grade, dirty, rng=rng_obj
+        ):
             yield ev
         state.pending_check = None
         tick_turn_buffs(state, dirty)

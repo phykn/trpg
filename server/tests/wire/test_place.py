@@ -10,12 +10,18 @@ def _state(*, player_id="p1", loc_id="loc_town") -> GameState:
     state = GameState(game_id="game_dev", profile="dev", player_id=player_id)
     stats = Stats(STR=10, DEX=10, CON=10, INT=10, WIS=10, CHA=10)
     state.characters[player_id] = Character(
-        id=player_id, name="레오", race_id="race_human", stats=stats,
+        id=player_id,
+        name="레오",
+        race_id="race_human",
+        stats=stats,
         location_id=loc_id,
     )
     state.locations[loc_id] = Location(
-        id=loc_id, name="작은 마을", description="평화로운 마을입니다.",
-        weather=["맑음"], tags=["주거"],
+        id=loc_id,
+        name="작은 마을",
+        description="평화로운 마을입니다.",
+        weather=["맑음"],
+        tags=["주거"],
     )
     return state
 
@@ -77,7 +83,10 @@ def test_targets_excludes_player():
     state = _state()
     stats = Stats()
     state.characters["npc1"] = Character(
-        id="npc1", name="상인", race_id="race_human", stats=stats,
+        id="npc1",
+        name="상인",
+        race_id="race_human",
+        stats=stats,
         location_id="loc_town",
     )
     state.invalidate_graph()
@@ -92,12 +101,22 @@ def test_target_blurb_uses_appearance_or_description():
     state = _state()
     stats = Stats()
     state.characters["npc_a"] = Character(
-        id="npc_a", name="기사", race_id="race_human", stats=stats,
-        location_id="loc_town", appearance="갑옷을 입은 기사", description="설명",
+        id="npc_a",
+        name="기사",
+        race_id="race_human",
+        stats=stats,
+        location_id="loc_town",
+        appearance="갑옷을 입은 기사",
+        description="설명",
     )
     state.characters["npc_b"] = Character(
-        id="npc_b", name="농부", race_id="race_human", stats=stats,
-        location_id="loc_town", appearance="", description="늙은 농부",
+        id="npc_b",
+        name="농부",
+        race_id="race_human",
+        stats=stats,
+        location_id="loc_town",
+        appearance="",
+        description="늙은 농부",
     )
     state.invalidate_graph()
     payload = _build_place_payload(state, state.graph())
@@ -111,8 +130,13 @@ def test_target_blurb_dead_is_죽음():
     state = _state()
     stats = Stats()
     state.characters["npc_dead"] = Character(
-        id="npc_dead", name="망자", race_id="race_human", stats=stats,
-        location_id="loc_town", appearance="비석", alive=False,
+        id="npc_dead",
+        name="망자",
+        race_id="race_human",
+        stats=stats,
+        location_id="loc_town",
+        appearance="비석",
+        alive=False,
     )
     state.invalidate_graph()
     payload = _build_place_payload(state, state.graph())

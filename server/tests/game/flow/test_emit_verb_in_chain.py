@@ -22,7 +22,9 @@ def test_emit_verb_in_chain_handles_compat_verbs():
     """소스 inspection — chain-compat verb (use/move/transfer) 모두 분기 포함."""
     src = inspect.getsource(_emit_verb_in_chain)
     for verb_name in ("use", "move", "transfer"):
-        assert f'n == "{verb_name}"' in src, f"_emit_verb_in_chain missing branch: {verb_name}"
+        assert f'n == "{verb_name}"' in src, (
+            f"_emit_verb_in_chain missing branch: {verb_name}"
+        )
 
 
 def test_emit_verb_in_chain_transfer_branches_4_paths():
