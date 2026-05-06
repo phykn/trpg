@@ -4,23 +4,14 @@ from collections.abc import AsyncIterator
 
 from openai import RateLimitError
 
-from ..._runner import get_prompt
+from ..._runner import get_prompt_with_perm_subs
 from ....context.surroundings import surroundings_for_narrate_body
 from src.game.domain.errors import LLMUnavailable
 from ....client import LLMClient
-from src.game.rules.permissions import render_for_prompt
 from ..schema import NarrateInput
 
 _MAX_RETRIES = 5
 _BODY_TEMPERATURE = 1.0
-
-
-def _build_prompt(locale: str) -> str:
-    base = get_prompt("narrate/body", locale)
-    subs = render_for_prompt(locale)
-    for k, v in subs.items():
-        base = base.replace("{{" + k + "}}", v)
-    return base
 
 
 async def stream_body(
@@ -38,7 +29,7 @@ async def stream_body(
         update={"surroundings": surroundings_for_narrate_body(input_.surroundings)}
     )
     messages = [
-        {"role": "system", "content": _build_prompt(locale)},
+        {"role": "system", "content": get_prompt_with_perm_subs("narrate/body", locale)},
         {"role": "user", "content": body_input.model_dump_json()},
     ]
 

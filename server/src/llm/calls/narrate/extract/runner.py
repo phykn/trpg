@@ -2,9 +2,8 @@ import logging
 
 from pydantic import ValidationError
 
-from ..._runner import get_prompt, run_with_retries
+from ..._runner import get_prompt_with_perm_subs, run_with_retries
 from ....client import LLMClient
-from src.game.rules.permissions import render_for_prompt
 from ..schema import NarrateOutput
 from .schema import ExtractInput
 
@@ -12,14 +11,6 @@ _MAX_RETRIES = 5
 _EXTRACT_TEMPERATURE = 0.4
 
 _log = logging.getLogger(__name__)
-
-
-def _build_prompt(locale: str) -> str:
-    base = get_prompt("narrate/extract", locale)
-    subs = render_for_prompt(locale)
-    for k, v in subs.items():
-        base = base.replace("{{" + k + "}}", v)
-    return base
 
 
 async def run_extract(
@@ -40,7 +31,7 @@ async def run_extract(
     try:
         return await run_with_retries(
             client,
-            system_prompt=_build_prompt(locale),
+            system_prompt=get_prompt_with_perm_subs("narrate/extract", locale),
             user_payload=input_.model_dump_json(),
             parse=NarrateOutput.model_validate_json,
             retry_on=(ValidationError,),

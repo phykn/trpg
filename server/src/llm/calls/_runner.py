@@ -31,6 +31,16 @@ def get_prompt(agent: str, locale: str) -> str:
     return own
 
 
+def get_prompt_with_perm_subs(agent: str, locale: str) -> str:
+    """get_prompt + permission-table {{KEY}} placeholder substitution. Used by narrate."""
+    from src.game.rules.permissions import render_for_prompt
+
+    base = get_prompt(agent, locale)
+    for k, v in render_for_prompt(locale).items():
+        base = base.replace("{{" + k + "}}", v)
+    return base
+
+
 # Truncate long thinking-text dumps so retries don't blow past the model's ctx window.
 _MAX_RETRY_ANSWER_CHARS = 1500
 
