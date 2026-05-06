@@ -102,11 +102,14 @@ npx expo start --host=tunnel -c
 
 ```
 client/
-  app/                # expo-router route shell (single screen — index.tsx mounts Shell)
-  components/         # screen pieces (header / log / hero / composer / combat / ui + Shell + new-game)
-  hooks/useGame.ts    # game-state hook (server calls + applying SSE events). handleStreamEvent.ts is the pure SSE → state-setter dispatcher.
-  services/           # server boundary (api.ts: REST + SSE client)
-  presenters/         # domain → UI projection (panels.ts) + format helpers (format.ts)
-  types/              # domain (server models), ui (render contracts), wire (SSE/REST payloads)
-  design/tokens.js    # single design tokens source (imported by both Tailwind config and code)
+  app/         # expo-router routes (single screen — (tabs)/index.tsx mounts Shell)
+  screens/     # screen composition: Shell, new-game/, play/
+  components/  # domain views (hero, composer, log, combat, info-panel, story-graph) + ui/ primitives
+  logic/       # domain calculation, state, hooks (game/useGame.ts is the state root)
+  services/    # server boundary — api.ts (REST + SSE), wire.ts (types), storage.ts (localStorage)
+  locale/      # client-owned Korean labels (ko.ts)
+  design/      # design tokens (tokens.js) shared by Tailwind config and TS
+  scripts/     # codegen (wire.schema.json → wire.gen.d.ts)
 ```
+
+Architecture rules (bucket boundaries, import conventions, layer responsibilities) live in [CLAUDE.md](./CLAUDE.md).
