@@ -40,6 +40,7 @@ class CombatState(BaseModel):
 class GameState(BaseModel):
     game_id: str
     profile: str
+    locale: str = "ko"
 
     characters: dict[str, Character] = {}
     items: dict[str, Item] = {}
