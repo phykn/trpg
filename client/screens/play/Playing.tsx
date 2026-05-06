@@ -13,6 +13,7 @@ import { Composer, GameOverPanel, LevelUpPrompt, RollPrompt } from '@/logic/comp
 import { ContextCard } from '@/logic/info-panel';
 import { HeroStrip } from '@/logic/hero';
 import { ConfirmDialog } from '@/components/ui';
+import { ko } from '@/locale/ko';
 
 type Props = { game: Game };
 
@@ -122,7 +123,7 @@ export function Playing({ game }: Props) {
           info={{
             title: '새로운 이야기',
             blurb: '진행 중인 이야기를 멈춥니다. 새로운 이야기를 시작합니다.',
-            confirmLabel: '시작',
+            confirmLabel: ko.action.start,
           }}
           onConfirm={() => {
             setNewGameConfirmOpen(false);

@@ -10,6 +10,7 @@ import {
 
 import { CenterMessage, ErrorState, Glyph } from '@/components/ui';
 import { colors } from '@/design/tokens';
+import { ko } from '@/locale/ko';
 import { getVersion, listProfiles } from '@/services';
 import type { InitRequest, ProfileCard, RaceCard } from '@/services/wire';
 
@@ -124,7 +125,7 @@ export function NewGame({ onSubmit }: Props) {
         onPress={submit}
         disabled={!canSubmit}
         accessibilityRole="button"
-        accessibilityLabel="시작"
+        accessibilityLabel={ko.action.start}
         accessibilityState={{ disabled: !canSubmit }}
         className={`h-10 rounded-md items-center justify-center ${
           canSubmit ? 'bg-accent-fg active:opacity-80' : 'bg-canvas-inset border border-border-default'
@@ -135,15 +136,15 @@ export function NewGame({ onSubmit }: Props) {
             canSubmit ? 'text-fg-on-emphasis' : 'text-fg-subtle'
           }`}
         >
-          {submitting ? '생성 중…' : '시작'}
+          {submitting ? '생성 중…' : ko.action.start}
         </Text>
       </Pressable>
 
-      <Section label="NAME">
+      <Section label={ko.form.name}>
         <Input value={name} onChangeText={setName} placeholder="등장인물의 이름" />
       </Section>
 
-      <Section label="GENDER">
+      <Section label={ko.form.gender}>
         <View className="flex-row gap-2">
           <View className="flex-1">
             <SelectCard
@@ -164,7 +165,7 @@ export function NewGame({ onSubmit }: Props) {
         </View>
       </Section>
 
-      <Section label="WORLD">
+      <Section label={ko.form.world}>
         {profiles.map((p) => (
           <SelectCard
             key={p.id}
@@ -180,7 +181,7 @@ export function NewGame({ onSubmit }: Props) {
       </Section>
 
       {selectedProfile && (
-        <Section label="RACE">
+        <Section label={ko.form.race}>
           {races.length === 0 ? (
             <Text className="font-sans text-body text-fg-muted">선택 가능한 종족이 없습니다.</Text>
           ) : (

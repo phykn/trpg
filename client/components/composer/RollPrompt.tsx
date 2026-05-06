@@ -4,6 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { colors } from '@/design/tokens';
 import { Surface } from '@/components/ui';
+import { ko } from '@/locale/ko';
 import type { PendingCheck } from '@/services/wire';
 
 const STOP_BUTTON_DELAY_MS = 2000;
@@ -295,7 +296,7 @@ export function RollPrompt({
             }`}
             style={{ letterSpacing: 1.2 }}
           >
-            {rolling ? '굴리는 중…' : '굴리기'}
+            {rolling ? '굴리는 중…' : ko.action.roll}
           </Text>
         </Pressable>
       )}

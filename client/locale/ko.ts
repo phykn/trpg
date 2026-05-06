@@ -1,0 +1,25 @@
+export const ko = {
+  action: {
+    start: '시작',
+    roll: '굴리기',
+    stop: '멈추기',
+    fast: '빠르게',
+    accurate: '정확하게',
+  },
+  stat: {
+    hp: '체력',
+    mp: '마나',
+    exp: '경험',
+    revive: '소생',
+  },
+  form: {
+    name: 'NAME',
+    gender: 'GENDER',
+    world: 'WORLD',
+    race: 'RACE',
+  },
+  storage: {
+    currentGameKey: 'trpg.current_game_id',
+    storyGraphPrefix: 'trpg.story_graph.',
+  },
+} as const;
