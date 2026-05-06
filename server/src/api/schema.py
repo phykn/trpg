@@ -57,13 +57,7 @@ class RollRequest(BaseModel):
 
 
 class SkillCandidatePayload(BaseModel):
-    """Wire-shape: includes the engine-assigned `id` so the client can echo it on POST /level_up.
-
-    Distinct from the domain SkillCandidate (which has no id — id is assigned by
-    `engines/skill.build_skill_from_candidate` after recommendation). The
-    /level_up_preview endpoint builds Skill objects, then projects them down to
-    this payload shape.
-    """
+    """Wire shape: adds the engine-assigned id missing from the domain SkillCandidate."""
 
     id: str
     name: str
