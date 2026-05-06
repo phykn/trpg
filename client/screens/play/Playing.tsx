@@ -5,7 +5,7 @@ import { useBgm } from '@/features/audio';
 import { CombatStrip } from '@/features/combat';
 import { Log } from '@/features/log';
 import { useStoryGraph } from '@/features/story-graph';
-import type { Game } from '@/hooks/useGame';
+import type { Game } from '@/logic/game/useGame';
 import { buildPanelSlots } from '@/features/info-panel';
 import type { PanelAction, PanelSlot } from '@/features/info-panel';
 
