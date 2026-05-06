@@ -151,18 +151,7 @@ async def session_level_up_preview(
             state.game_id,
         )
     return LevelUpPreviewResponse(
-        skill_candidates=[
-            {
-                "id": s.id,
-                "name": s.name,
-                "description": s.description,
-                "type": s.type,
-                "target": s.target,
-                "primary_stat": s.primary_stat,
-                "special_effect": s.special_effect,
-            }
-            for s in candidates
-        ],
+        skill_candidates=[s.model_dump() for s in candidates],
     )
 
 
