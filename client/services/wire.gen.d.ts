@@ -5,7 +5,7 @@ export type Message = string;
 export type Value = number;
 export type Max = number;
 export type Label = string;
-export type Kind = "stat" | "recruit";
+export type Kind = "stat" | "recruit" | "steal";
 export type Dc = number;
 export type Stat = string;
 export type StatLabel = string;
@@ -92,7 +92,7 @@ export type JudgeKind1 = "refuse";
 export type Category = "out_of_game" | "meta_breaking";
 export type MessageHint = string;
 export type JudgeKind2 = "verb";
-export type Name7 = "move" | "transfer" | "use" | "attack" | "cast" | "speak" | "alter" | "perceive" | "rest" | "wait";
+export type Name7 = "move" | "transfer" | "use" | "attack" | "cast" | "speak" | "perceive" | "rest" | "wait";
 /**
  * @maxItems 8
  */
