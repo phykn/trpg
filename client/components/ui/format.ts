@@ -12,6 +12,10 @@ export function joinOrDash(items: string[]): string {
   return items.length > 0 ? items.join(SEP) : DASH;
 }
 
+export function signed(n: number): string {
+  return n >= 0 ? `+${n}` : `${n}`;
+}
+
 export function characterMeta(level: number, raceJob: string, gender: string): string {
   const parts = [`Lv ${level}`, raceJob];
   if (gender) parts.push(gender);

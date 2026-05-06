@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { colors } from '@/design/tokens';
-import { Surface } from '@/components/ui';
+import { Surface, signed } from '@/components/ui';
 import { ko } from '@/locale/ko';
 import type { PendingCheck } from '@/services/wire';
 
@@ -34,8 +34,6 @@ const ZONE_FG: Record<Zone, string> = {
   success:        colors.success.fg,
   'crit-success': colors.fg['on-emphasis'],
 };
-
-const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
 
 export function RollPrompt({
   pending,

@@ -1,6 +1,6 @@
 import { Animated, Text, View } from 'react-native';
 
-import { Glyph, Surface, useEntryAnimation } from '@/components/ui';
+import { Glyph, Surface, signed, useEntryAnimation } from '@/components/ui';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 
@@ -20,8 +20,6 @@ function marginText(entry: RollEntry): string | null {
   if (entry.margin < 0) return `${-entry.margin} ${ko.roll.short}`;
   return null;
 }
-
-const signed = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
 
 export function RollResult({ entry }: { entry: RollEntry }) {
   const tone = TONE[entry.result];
