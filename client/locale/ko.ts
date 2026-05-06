@@ -98,6 +98,23 @@ export const ko = {
     restart: '새 이야기 시작',
     restartAction: '새 이야기 시작',
   },
+  quest: {
+    accept: '수락',
+    abandon: '포기',
+    abandonTitle: '퀘스트 포기',
+    abandonBlurb: '진행 상황이 사라집니다.',
+    name: '퀘스트',
+  },
+  hero: {
+    ability: '능력',
+    equip: '장비',
+    inventory: '소지',
+    skill: '기술',
+    companion: '동료',
+  },
+  subject: {
+    chip: '상대',
+  },
 } as const;
 
 export const compose = {
