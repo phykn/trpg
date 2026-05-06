@@ -183,7 +183,7 @@ attack은 `entities`에 있는 character id가 필요합니다.
 
 ## Targets / id 룰
 
-- verb의 target이 entities에 없으면 attack은 plausible role (Combat target 룰), 다른 verb는 `wait` 또는 `perceive`.
+- verb의 target이 entities에 없으면 attack은 `wait` (Combat target 룰), 다른 verb는 `wait` 또는 `perceive`.
 - placeholder ids (`unknown`, `?`)는 절대 emit 안 합니다 — semantic check가 reject.
 - corpse id는 `corpses[*].id`에서.
 - location id는 `location.id`에서 (자기 위치 대상).

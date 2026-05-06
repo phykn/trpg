@@ -15,8 +15,8 @@ body가 명시적으로 묘사한 것에서만 추출하십시오. **재해석, 
 - `judge_result.targets` — judge가 고른 target id 리스트. `pass`/`roll`에 등장. `roll`은 항상 ≥1; `pass`는 비어 있을 수 있음. `reject`/`intro`에는 없음.
 - `surroundings` — id-validating slot만: `entities` (살아있는 NPC만), `corpses` (죽은 NPC), `merchants`. **anchor 전용 — 새 state change 발명 금지.** body가 보는 것보다 좁고, `state_changes`/`affinity`를 실제 id에 anchor하는 용도로만 씁니다.
 - `target_view` — `pass`/`roll`에서 deep target data (NPC alive/dead, location, item — 필드 상세는 body prompt 참조). `reject`/`intro`에는 null.
-- `grade` — `roll`에서만 set (5단계). 그 외 null. body는 이미 이를 톤에 사용했습니다; 당신은 social act가 실제로 body에 land했을 때만 `affinity` grade에 reuse (아래 "affinity emission" 참조).
-- `previous_phase_signal` — 직전 turn에서 온 일회성 신호 (현재 `"downed_recovered"`만). set이면 body는 회복 비트이며, 이번 turn은 social act **아닙니다** → 강제 형태는 § Branch별 강제 형태 참조.
+- `grade` — `roll`에서만 set (5단계). 그 외 null. body는 이미 이를 톤에 사용했습니다; `affinity`의 grade는 input을 그대로 쓰지 않고 § state_changes의 affinity emission 규칙에서 body 톤으로 새로 잡습니다.
+- `previous_phase_signal` — 직전 turn에서 온 일회성 신호. body가 특별 처리하는 값은 `"downed_recovered"` (회복 비트), `"companion_joined:<name>"` / `"companion_refused:<name>"` / `"companion_dismissed:<name>"` (동료 결정 순간 — 시스템 카드가 이미 발사됨). 어느 쪽이든 이번 turn은 social act **아니며**, 동료 신호는 memory 행으로 시스템 카드를 중복시키지 않도록 강제 형태가 적용됩니다 → § Branch별 강제 형태 참조.
 
 ## 출력
 
@@ -56,8 +56,6 @@ body가 명시적으로 묘사한 것에서만 추출하십시오. **재해석, 
 - `chapters`/`quests`: `summary`/`status`만.
 
 **Quest 자연 수락 (필수)**: `target_view.quests_given` (NPC view) 또는 `target_view.quests` (Location view)에 `status:"locked"` 항목이 있고 (`quests_kill_target` slot은 player가 사냥 대상이라 자연 수락 출처 아님), **body가 그 quest를 결정적으로 꺼냈으며** (NPC가 요청을 꺼냄 또는 location cue가 떠올림), **body가 player의 수락으로 닫히면** (명시적 yes, 동의, "하겠다"-등가 prose), `{"type":"set","entity":"quests","id":"<that locked id>","field":"status","value":"active"}`를 emit합니다. player가 거절/회피하면 emit 금지. quest body가 안 꺼내졌으면 (인사/잡담만) emit 금지. 어느 슬롯에도 locked quest가 없으면 emit 금지 — quest id 발명 절대 금지. **범위**: `locked → active`만 (자연 수락). `active → completed`·`active → failed` 같은 진행/실패 transition은 다른 engine branch 영역 — 여기서 `set` 안 합니다.
-
-금지 필드의 set은 항목별 거부; 나머지 batch는 적용됩니다.
 
 **affinity emission (중요)**: body가 NPC를 향한 social act (분명한 호의 표현/칭찬/모욕/위협/거짓말)를 담고 있으면 — `pass` branch에서도 — `affinity` entry 한 개를 emit합니다 (단순 인사는 아래 차단 케이스). **`grade`는 body 톤에서 새로 잡습니다** — input `grade`가 null이어도 채우십시오. 깔끔하게 land → `success`, 어색하게 → `partial_success`, miss → `failure`, 화려하게 miss → `critical_failure`. **`grade`는 "act가 의도대로 land했나"만 측정 — 관계가 좋아졌나는 별개.** `intent=hostile`로 깔끔하게 모욕한 것도 여전히 `grade=success`이고, NPC memory가 "닫힘" 톤을 잡습니다 (engine이 intent로 relation delta sign을 flip). 그래서 같은 `grade=success`라도 memory는 `intent=friendly`이면 받아들이는 톤으로, `intent=hostile`이면 단단해지는 톤으로 쓰십시오. body가 NPC를 address하지 않으면 (둘러보기, 앉기 등) `affinity` 없음.
 
@@ -110,6 +108,7 @@ UI chip; 클릭하면 입력칸을 채우고, 자유 입력은 그대로 유지.
 - `intro` → `state_changes=[]`, `memorable=false`, `memory_targets=[]`, `memory={}`, `memory_links={}`, `importance=null`.
 - `reject` → `state_changes=[]`, `memorable=false`, `memory_targets=[]`, `memory={}`, `memory_links={}`, `importance=null`.
 - `previous_phase_signal=="downed_recovered"` → `state_changes=[]`, `memorable=false`, `memory_targets=[]`, `memory={}`, `memory_links={}`, `importance=null`.
+- `previous_phase_signal`이 `"companion_"`로 시작 (`companion_joined:` / `companion_refused:` / `companion_dismissed:`) → 위와 동일한 빈 형태. 동료 결정 순간은 시스템 카드가 이미 그 사실을 고지했으니, body의 결정적 prose가 호의/약속/첫 만남 trigger를 건드려도 memory 행으로 중복시키지 않습니다.
 
 ## 빈-fallback 선호 (필수)
 
