@@ -54,10 +54,10 @@ def _agent_blocks_for(agent_file: str, locale: str) -> dict[str, str]:
     catalog = _load_catalog("prompt").get("prompt", {})
     parent = Path(agent_file).parent
     grandparent = parent.parent
-    candidate_prefixes = [parent.name + "."]
     if grandparent.name == "narrate":
-        candidate_prefixes.insert(0, f"{grandparent.name}.{parent.name}.")
-        candidate_prefixes.append(f"{grandparent.name}.")
+        candidate_prefixes = [f"narrate.{parent.name}.", "narrate."]
+    else:
+        candidate_prefixes = [f"{parent.name}."]
     out: dict[str, str] = {}
     for key, locales in catalog.items():
         for pfx in candidate_prefixes:
