@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { colors, toneColor } from '@/design/tokens';
+import { toneColor } from '@/design/tokens';
 import { ExpandableTitle, ExpandGroup, LabeledRow, Row, SEP } from '@/components/ui';
 import type { PanelAction } from '@/logic/info-panel';
 
@@ -10,12 +10,6 @@ import { StoryGraphCanvas } from './StoryGraphCanvas';
 import { actionForNode } from '@/logic/story-graph/_nodeActions';
 
 type PlaceState = 'current' | 'reachable' | 'unreachable';
-
-const PLACE_LEGEND: { state: PlaceState; label: string; color: string }[] = [
-  { state: 'current', label: '현재 위치', color: colors.accent.fg },
-  { state: 'reachable', label: '갈 수 있는 곳', color: colors.success.fg },
-  { state: 'unreachable', label: '갈 수 없는 곳', color: colors.fg.subtle },
-];
 
 export function MapPanel({
   graph,
