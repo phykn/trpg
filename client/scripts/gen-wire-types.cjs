@@ -2,8 +2,8 @@ const { compileFromFile } = require("json-schema-to-typescript");
 const fs = require("fs");
 const path = require("path");
 
-const SRC = path.resolve(__dirname, "../types/wire.schema.json");
-const OUT = path.resolve(__dirname, "../types/wire.gen.d.ts");
+const SRC = path.resolve(__dirname, "../services/wire.schema.json");
+const OUT = path.resolve(__dirname, "../services/wire.gen.d.ts");
 
 compileFromFile(SRC, {
   bannerComment:
