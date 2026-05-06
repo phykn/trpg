@@ -9,6 +9,7 @@ from openai import RateLimitError
 from pydantic import ValidationError
 
 from src.game.domain.errors import LLMUnavailable
+from src.locale.render import _load as _load_catalog
 from ..client import LLMClient
 
 T = TypeVar("T")
@@ -39,10 +40,7 @@ def load_prompt(agent_file: str, *, substitutions: dict[str, str] | None = None)
 
 
 def _kernel_blocks_for(locale: str) -> dict[str, str]:
-    """Map catalog kernel.* keys to {{LOCALE_*}} substitution tokens for the given locale."""
-    from src.locale.render import _load
-
-    catalog = _load("prompt").get("prompt", {})
+    catalog = _load_catalog("prompt").get("prompt", {})
     out: dict[str, str] = {}
     for key, locales in catalog.items():
         if not key.startswith("kernel."):
@@ -54,7 +52,6 @@ def _kernel_blocks_for(locale: str) -> dict[str, str]:
 
 @lru_cache(maxsize=None)
 def get_prompt(agent_file: str, locale: str) -> str:
-    """Locale-aware variant of load_prompt; cached per (agent_file, locale)."""
     own = (Path(agent_file).parent / "prompt.md").read_text(encoding="utf-8")
     text = f"{_KERNEL}\n\n---\n\n{own}" if _KERNEL else own
     subs = _kernel_blocks_for(locale)
