@@ -90,7 +90,7 @@ export function RollPrompt({
             className="font-sans text-caption text-fg-subtle"
             style={{ letterSpacing: 0.6 }}
           >
-            판정
+            {ko.roll.check}
           </Text>
         </View>
         <View className="flex-row items-baseline gap-1">
@@ -98,7 +98,7 @@ export function RollPrompt({
             className="font-sans text-caption text-fg-subtle"
             style={{ letterSpacing: 0.6 }}
           >
-            난이도
+            {ko.roll.difficulty}
           </Text>
           <Text
             className="font-mono-semibold text-panel text-fg-default"
@@ -162,7 +162,7 @@ export function RollPrompt({
           className="font-sans-semibold text-caption text-fg-subtle"
           style={{ letterSpacing: 1.2 }}
         >
-          필요 주사위
+          {ko.roll.required}
         </Text>
         <Text
           className="font-mono-semibold text-title"
@@ -174,7 +174,7 @@ export function RollPrompt({
           className="font-sans text-caption text-fg-muted"
           style={{ letterSpacing: 0.6 }}
         >
-          이상
+          {ko.roll.orMore}
         </Text>
       </View>
 
@@ -208,7 +208,7 @@ export function RollPrompt({
                 className="font-sans text-caption text-fg-subtle"
                 style={{ letterSpacing: 0.6 }}
               >
-                능력
+                {ko.roll.abilityBonus}
               </Text>
               <Text
                 className="font-mono-semibold text-caption"
@@ -225,7 +225,7 @@ export function RollPrompt({
                 className="font-sans text-caption text-fg-subtle"
                 style={{ letterSpacing: 0.6 }}
               >
-                {pending.kind === 'recruit' ? '친밀도' : '호감'}
+                {pending.kind === 'recruit' ? ko.roll.affinity : ko.roll.liking}
               </Text>
               <Text
                 className="font-mono-semibold text-caption"
@@ -242,7 +242,7 @@ export function RollPrompt({
         <Pressable
           onPress={onStop}
           accessibilityRole="button"
-          accessibilityLabel="주사위 굴림 중단"
+          accessibilityLabel={ko.roll.stopLabel}
           testID="roll-stop-button"
           className="flex-row items-center justify-center gap-2 mt-3 h-10 rounded-md bg-accent-fg active:opacity-80"
         >
@@ -258,7 +258,7 @@ export function RollPrompt({
             className="font-sans-semibold text-title"
             style={{ letterSpacing: 1.2, color: colors.canvas.subtle }}
           >
-            정지
+            {ko.roll.halt}
           </Text>
         </Pressable>
       ) : (
@@ -266,7 +266,7 @@ export function RollPrompt({
           onPress={rolling ? undefined : onRoll}
           disabled={rolling}
           accessibilityRole="button"
-          accessibilityLabel={rolling ? '주사위 굴리는 중' : '주사위 굴리기'}
+          accessibilityLabel={rolling ? ko.roll.rollingLabel : ko.roll.rollLabel}
           accessibilityState={{ disabled: rolling }}
           testID="roll-button"
           className={`flex-row items-center justify-center gap-2 mt-3 h-10 rounded-md border ${
@@ -296,7 +296,7 @@ export function RollPrompt({
             }`}
             style={{ letterSpacing: 1.2 }}
           >
-            {rolling ? '굴리는 중…' : ko.action.roll}
+            {rolling ? ko.roll.rolling : ko.action.roll}
           </Text>
         </Pressable>
       )}

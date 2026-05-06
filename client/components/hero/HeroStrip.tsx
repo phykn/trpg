@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 
 import { Bar, Surface } from '@/components/ui';
 import { toneColor } from '@/design/tokens';
+import { ko } from '@/locale/ko';
 import type { Hero } from '@/logic/hero/types';
 
 type MeterTone = 'hp' | 'mp' | 'exp' | 'revival';
@@ -37,11 +38,11 @@ function Meter({ label, value, max, tone }: {
 export function HeroStrip({ hero }: { hero: Hero }) {
   return (
     <Surface className="mx-5 px-3 py-1 flex-row gap-3">
-      <Meter label="체력" value={hero.hp} max={hero.hpMax} tone="hp" />
-      <Meter label="마나" value={hero.mp} max={hero.mpMax} tone="mp" />
-      <Meter label="경험" value={hero.exp} max={hero.expMax} tone="exp" />
+      <Meter label={ko.hero.hp} value={hero.hp} max={hero.hpMax} tone="hp" />
+      <Meter label={ko.hero.mp} value={hero.mp} max={hero.mpMax} tone="mp" />
+      <Meter label={ko.hero.exp} value={hero.exp} max={hero.expMax} tone="exp" />
       <Meter
-        label="소생"
+        label={ko.hero.revive}
         value={hero.reviveCoins}
         max={hero.reviveCoinsMax}
         tone="revival"

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, FlatList, Animated, Easing, Keyboard } from 'react-native';
 import { Glyph } from '@/components/ui';
 import { colors, spacing } from '@/design/tokens';
+import { ko } from '@/locale/ko';
 
 import { LogItem } from './LogItem';
 import type { LogEntry } from '@/logic/log/types';
@@ -34,7 +35,7 @@ function RollingIndicator() {
     <View className="flex-row items-center gap-2.5" style={{ paddingTop: spacing[5] }}>
       <Pulse color={colors.accent.fg} />
       <Text className="font-sans text-body text-accent-fg">
-        주사위를 굴리는 중…
+        {ko.roll.rollingLog}
       </Text>
     </View>
   );

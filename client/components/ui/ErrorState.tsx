@@ -1,5 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
 
+import { ko } from '@/locale/ko';
 import { CenterMessage } from './CenterMessage';
 
 type Props = {
@@ -15,7 +16,7 @@ export function ErrorState({ message, onRetry }: Props) {
           className="font-sans-semibold text-meta text-danger-fg"
           style={{ letterSpacing: 1.2 }}
         >
-          오류
+          {ko.error.heading}
         </Text>
         <Text className="font-sans text-body text-fg-default text-center">
           {message}
@@ -24,10 +25,10 @@ export function ErrorState({ message, onRetry }: Props) {
       <Pressable
         onPress={onRetry}
         accessibilityRole="button"
-        accessibilityLabel="다시 시도"
+        accessibilityLabel={ko.error.retry}
         className="px-4 h-9 mt-2 rounded-md bg-canvas-inset border border-border-default items-center justify-center active:bg-border-default"
       >
-        <Text className="font-sans-medium text-body text-fg-default">다시 시도</Text>
+        <Text className="font-sans-medium text-body text-fg-default">{ko.error.retry}</Text>
       </Pressable>
     </CenterMessage>
   );

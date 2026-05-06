@@ -1,6 +1,7 @@
 import { Modal, Pressable, Text, View } from 'react-native';
 
 import { shadow, toneColor } from '@/design/tokens';
+import { compose, ko } from '@/locale/ko';
 import type { ConfirmInfo } from './types';
 
 export function ConfirmDialog({ info, onConfirm, onCancel }: {
@@ -13,7 +14,7 @@ export function ConfirmDialog({ info, onConfirm, onCancel }: {
       ? null
       : {
           cls: info.trust > 0 ? 'text-success-fg' : 'text-danger-fg',
-          text: `호감도 ${info.trust > 0 ? '+' : ''}${info.trust}`,
+          text: compose.affinity(info.trust),
         };
 
   return (
@@ -64,19 +65,19 @@ export function ConfirmDialog({ info, onConfirm, onCancel }: {
             <Pressable
               onPress={onCancel}
               accessibilityRole="button"
-              accessibilityLabel="취소"
+              accessibilityLabel={ko.level.cancel}
               className="px-3 py-2 rounded-sm border border-border-default active:bg-canvas-inset"
             >
-              <Text className="font-sans text-body text-fg-default">취소</Text>
+              <Text className="font-sans text-body text-fg-default">{ko.level.cancel}</Text>
             </Pressable>
             <Pressable
               onPress={onConfirm}
               accessibilityRole="button"
-              accessibilityLabel={info.confirmLabel ?? '확인'}
+              accessibilityLabel={info.confirmLabel ?? ko.confirm.ok}
               className="px-3 py-2 rounded-sm bg-accent-muted active:opacity-80"
             >
               <Text className="font-sans-semibold text-body text-accent-fg">
-                {info.confirmLabel ?? '확인'}
+                {info.confirmLabel ?? ko.confirm.ok}
               </Text>
             </Pressable>
           </View>

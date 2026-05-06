@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { ExpandableTitle, ExpandGroup, LabeledRow, Row, characterMeta, joinOrDash } from '@/components/ui';
 import { colors, toneColor } from '@/design/tokens';
+import { compose, ko } from '@/locale/ko';
 import type { PanelAction } from '@/logic/info-panel';
 
 import type { StoryGraphEdge, StoryGraphModel } from '@/logic/story-graph/types';
@@ -10,15 +11,15 @@ import { StoryGraphCanvas } from './StoryGraphCanvas';
 import { actionForNode } from '@/logic/story-graph/_nodeActions';
 
 const LEGEND: { key: string; label: string; color: string }[] = [
-  { key: 'place', label: '장소', color: colors.exp.fg },
-  { key: 'char', label: '캐릭터', color: colors.success.fg },
-  { key: 'quest', label: '퀘스트', color: colors.danger.fg },
+  { key: 'place', label: ko.legend.place, color: colors.exp.fg },
+  { key: 'char', label: ko.legend.character, color: colors.success.fg },
+  { key: 'quest', label: ko.legend.quest, color: colors.danger.fg },
 ];
 
 export function NeighborhoodPanel({
   graph,
   framed = false,
-  accessibilityLabel = '현재 스토리 그래프',
+  accessibilityLabel = ko.panel.storyGraph,
   selectedNodeId = null,
   onNodeSelect,
   onAction,
@@ -76,7 +77,7 @@ export function NeighborhoodPanel({
         || selectedNode.kind === 'target')
       && selectedNode.alive === false
     ) {
-      return `${selectedNode.label} (죽음)`;
+      return compose.deceased(selectedNode.label);
     }
     return selectedNode.label;
   })();
@@ -124,10 +125,10 @@ export function NeighborhoodPanel({
     ) {
       return '';
     }
-    if (selectedNode.kind === 'place') return '현재 위치';
-    if (selectedNode.kind === 'subject') return '대면 중';
-    if (selectedNode.kind === 'location' && !selectedAction) return '이동 불가';
-    if (selectedNode.kind === 'target' && !selectedNode.reachable) return '접근 불가';
+    if (selectedNode.kind === 'place') return ko.panel.here;
+    if (selectedNode.kind === 'subject') return ko.status.facing;
+    if (selectedNode.kind === 'location' && !selectedAction) return ko.status.moveBlocked;
+    if (selectedNode.kind === 'target' && !selectedNode.reachable) return ko.status.approachBlocked;
     if (selectedNode.kind === 'quest') return selectedNode.questDifficulty;
     return '';
   })();
@@ -180,7 +181,7 @@ export function NeighborhoodPanel({
                   className={`rounded-full px-3.5 py-1 ${actionDisabled ? 'bg-accent-muted opacity-60' : 'bg-accent-muted active:opacity-80'}`}
                 >
                   <Text className="font-sans-semibold text-caption text-accent-fg">
-                    {actionDisabled ? '처리 중' : selectedAction.label}
+                    {actionDisabled ? ko.status.busy : selectedAction.label}
                   </Text>
                 </Pressable>
               ) : metaText ? (
@@ -193,7 +194,7 @@ export function NeighborhoodPanel({
               ) : null}
             </View>
             {isPlaceKind && placeFeatures ? (
-              <Row label="환경">
+              <Row label={ko.panel.environment}>
                 <Text
                   numberOfLines={1}
                   className="font-sans text-panel text-fg-default"
@@ -212,27 +213,27 @@ export function NeighborhoodPanel({
             <ExpandGroup>
               {isPlaceKind ? (
                 placeDescription ? (
-                  <LabeledRow label="모습">
+                  <LabeledRow label={ko.panel.appearance}>
                     {placeDescription}
                   </LabeledRow>
                 ) : null
               ) : isCharacterKind && characterSections ? (
                 <>
-                  <LabeledRow label="설명">
+                  <LabeledRow label={ko.panel.description}>
                     {characterSections.desc}
                   </LabeledRow>
                   {characterSections.role ? (
-                    <LabeledRow label="역할">
+                    <LabeledRow label={ko.panel.role}>
                       {characterSections.role}
                     </LabeledRow>
                   ) : null}
                   {characterSections.known ? (
-                    <LabeledRow label="특징">
+                    <LabeledRow label={ko.panel.traits}>
                       {characterSections.known}
                     </LabeledRow>
                   ) : null}
                   {characterSections.trust !== 0 ? (
-                    <Row label="호감도">
+                    <Row label={ko.panel.affinity}>
                       <Text
                         className="font-sans-semibold text-panel"
                         style={{ color: toneColor[characterSections.trust >= 0 ? 'good' : 'bad'] }}
@@ -245,19 +246,19 @@ export function NeighborhoodPanel({
               ) : isQuestKind && questSections ? (
                 <>
                   {questSections.giver ? (
-                    <Row label="의뢰">
+                    <Row label={ko.panel.commission}>
                       <Text className="font-sans text-panel text-fg-default">
                         {questSections.giver}
                       </Text>
                     </Row>
                   ) : null}
                   {questSections.goals ? (
-                    <LabeledRow label="목표">
+                    <LabeledRow label={ko.panel.goal}>
                       {questSections.goals}
                     </LabeledRow>
                   ) : null}
                   {questSections.summary ? (
-                    <LabeledRow label="요약">
+                    <LabeledRow label={ko.panel.summary}>
                       {questSections.summary}
                     </LabeledRow>
                   ) : null}

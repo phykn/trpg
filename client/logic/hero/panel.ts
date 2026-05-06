@@ -1,4 +1,5 @@
 import { characterMeta, formatInventoryItem, joinOrDash, withDeath } from '@/components/ui';
+import { ko } from '@/locale/ko';
 import type { PanelSlot } from '@/logic/info-panel';
 
 import type { EquipItem, Hero } from './types';
@@ -10,7 +11,7 @@ export type BuildHeroSlotOpts = {
 export function buildHeroSlot(hero: Hero, opts?: BuildHeroSlotOpts): PanelSlot {
   const equipped = Object.values(hero.equipment).filter((it): it is EquipItem => it !== null);
   const titleAction = hero.canLevelUp && opts?.onLevelUpOpen
-    ? { label: '레벨업', onPress: opts.onLevelUpOpen }
+    ? { label: ko.level.title, onPress: opts.onLevelUpOpen }
     : undefined;
   return {
     id: 'hero',
@@ -24,12 +25,12 @@ export function buildHeroSlot(hero: Hero, opts?: BuildHeroSlotOpts): PanelSlot {
         { label: 'MP', value: hero.mp, max: hero.mpMax, tone: 'mp', display: `${hero.mp}/${hero.mpMax}` },
       ],
       sections: [
-        { label: '능력', nodes: hero.stats.map((s): [string, number] => [s.label, s.value]) },
-        { label: '장비', text: joinOrDash(equipped.map((it) => it.name)) },
-        { label: '소지', text: joinOrDash(hero.inventory.map(formatInventoryItem)) },
-        { label: '기술', text: joinOrDash(hero.skills) },
-        { label: '동료', text: joinOrDash(hero.companions) },
-        { label: '특징', text: joinOrDash(hero.status) },
+        { label: ko.hero.ability, nodes: hero.stats.map((s): [string, number] => [s.label, s.value]) },
+        { label: ko.hero.equip, text: joinOrDash(equipped.map((it) => it.name)) },
+        { label: ko.hero.inventory, text: joinOrDash(hero.inventory.map(formatInventoryItem)) },
+        { label: ko.hero.skill, text: joinOrDash(hero.skills) },
+        { label: ko.hero.companion, text: joinOrDash(hero.companions) },
+        { label: ko.panel.traits, text: joinOrDash(hero.status) },
       ],
     },
   };

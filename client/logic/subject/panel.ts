@@ -1,4 +1,5 @@
 import { DASH, characterMeta, formatInventoryItem, joinOrDash, withDeath } from '@/components/ui';
+import { ko } from '@/locale/ko';
 import type { EquipItem } from '@/logic/hero';
 import type { PanelSlot } from '@/logic/info-panel';
 
@@ -8,21 +9,21 @@ export function buildSubjectSlot(subject: Subject | null, opts?: { dot?: boolean
   if (!subject) {
     return {
       id: 'person',
-      chip: { short: '상대', dot: opts?.dot },
-      panel: { empty: true, title: '상대' },
+      chip: { short: ko.subject.chip, dot: opts?.dot },
+      panel: { empty: true, title: ko.subject.chip },
     };
   }
   const equipped = Object.values(subject.equipment).filter((it): it is EquipItem => it !== null);
   return {
     id: 'person',
-    chip: { short: '상대', dot: opts?.dot },
+    chip: { short: ko.subject.chip, dot: opts?.dot },
     panel: {
       title: withDeath(subject.name, subject.alive),
       meta: [{ text: characterMeta(subject.level, subject.raceJob, subject.gender) }],
       barSplit: [
         { label: 'HP', value: subject.hp, max: subject.hpMax, tone: 'hp', display: `${subject.hp}/${subject.hpMax}` },
         {
-          label: '호감도',
+          label: ko.panel.affinity,
           value: subject.trust,
           max: 100,
           tone: subject.trust > 0 ? 'good' : subject.trust < 0 ? 'bad' : 'neutral',
@@ -31,12 +32,12 @@ export function buildSubjectSlot(subject: Subject | null, opts?: { dot?: boolean
         },
       ],
       sections: [
-        { label: '능력', nodes: subject.stats.map((s): [string, number] => [s.label, s.value]) },
-        { label: '장비', text: joinOrDash(equipped.map((it) => it.name)) },
-        { label: '소지', text: joinOrDash(subject.inventory.map(formatInventoryItem)) },
-        { label: '기술', text: joinOrDash(subject.skills) },
-        { label: '역할', text: subject.role || DASH },
-        { label: '특징', text: joinOrDash(subject.known) },
+        { label: ko.hero.ability, nodes: subject.stats.map((s): [string, number] => [s.label, s.value]) },
+        { label: ko.hero.equip, text: joinOrDash(equipped.map((it) => it.name)) },
+        { label: ko.hero.inventory, text: joinOrDash(subject.inventory.map(formatInventoryItem)) },
+        { label: ko.hero.skill, text: joinOrDash(subject.skills) },
+        { label: ko.panel.role, text: subject.role || DASH },
+        { label: ko.panel.traits, text: joinOrDash(subject.known) },
       ],
     },
   };

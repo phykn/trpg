@@ -1,4 +1,5 @@
 import type { InventoryItem } from '@/logic/hero';
+import { compose } from '@/locale/ko';
 
 export const SEP = ' · ';
 export const DASH = '—';
@@ -18,5 +19,5 @@ export function characterMeta(level: number, raceJob: string, gender: string): s
 }
 
 export function withDeath(name: string, alive: boolean | undefined): string {
-  return alive === false ? `${name} (죽음)` : name;
+  return alive === false ? compose.deceased(name) : name;
 }

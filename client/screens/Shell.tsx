@@ -3,18 +3,13 @@ import { ActivityIndicator, Text } from 'react-native';
 
 import { CenterMessage, ErrorState } from '@/components/ui';
 import { colors } from '@/design/tokens';
+import { ko } from '@/locale/ko';
 import { useGame } from '@/logic/game/useGame';
 
 import { NewGame } from './new-game';
 import { Playing } from './play';
 
-const LOADING_MESSAGES = [
-  '세계 펼치는 중',
-  '모닥불 지피는 중',
-  '지도에 잉크 묻히는 중',
-  '별빛 살피는 중',
-  '이야기의 첫 줄 적는 중',
-];
+const LOADING_MESSAGES = ko.shell.loading;
 
 const ROTATION_MS = 5000;
 
@@ -51,7 +46,7 @@ export function Shell() {
   if (game.status === 'error') {
     return (
       <ErrorState
-        message={game.errorMessage ?? '알 수 없는 오류'}
+        message={game.errorMessage ?? ko.error.unknown}
         onRetry={game.refresh}
       />
     );
