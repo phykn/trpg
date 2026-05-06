@@ -51,13 +51,12 @@ FORBIDDEN_BY_ENTITY: dict[str, frozenset[str]] = {
 }
 
 
-def render_for_prompt(locale: str) -> dict[str, str]:
-    """Forbidden-field substitution dict; locale reserved for Tasks 13-14."""
+def render_for_prompt(_locale: str) -> dict[str, str]:
+    """Slash-joined forbidden-field lists for narrate prompt substitution (`{{CHAR_FORBIDDEN}}` etc.). `_locale` is reserved for future catalog merging."""
 
     def _render(t: tuple[str, ...]) -> str:
         return "/".join(f for f in t if f != "id")
 
-    del locale  # placeholder until narrate catalog keys exist
     return {
         "CHAR_FORBIDDEN": _render(CHAR_FORBIDDEN_ORDERED),
         "ITEM_FORBIDDEN": _render(ITEM_FORBIDDEN_ORDERED),
