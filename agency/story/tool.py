@@ -34,6 +34,16 @@ from agency.story.harness.decompose import (
 from agency.story.harness._common import EntityWriterError  # noqa: E402
 from agency.story.harness.scenario import fill_equipment  # noqa: E402
 from src.game.engines.invariants import Scenario, check_scenario  # noqa: E402
+from src.game.domain.entities import (  # noqa: E402
+    Chapter,
+    Character,
+    Item,
+    Location,
+    Quest,
+    Race,
+    Skill,
+)
+from src.db.local_fs import LocalFsScenarioRepo  # noqa: E402
 from agency.story.harness.runner import (  # noqa: E402
     SPECS,
     _check_entity_invariants,
@@ -262,13 +272,29 @@ def _cmd_equip_fill(args: argparse.Namespace) -> int:
     return 0
 
 
+async def _load_scenario_async(profile: str, profile_root: Path) -> Scenario:
+    repo = LocalFsScenarioRepo(str(profile_root))
+    return Scenario(
+        races=await repo.load_seed_entities(profile, "races", Race),
+        locations=await repo.load_seed_entities(profile, "locations", Location),
+        items=await repo.load_seed_entities(profile, "items", Item),
+        skills=await repo.load_seed_entities(profile, "skills", Skill),
+        characters=await repo.load_seed_entities(profile, "characters", Character),
+        quests=await repo.load_seed_entities(profile, "quests", Quest),
+        chapters=await repo.load_seed_entities(profile, "chapters", Chapter),
+        start=await repo.read_start_json(profile),
+        player_template=await repo.read_player_template(profile),
+    )
+
+
 def _cmd_sweep(args: argparse.Namespace) -> int:
-    sd = Path(args.scenario_dir)
+    sd = Path(args.scenario_dir).resolve()
     if not sd.is_dir():
         print(f"sweep failed: scenario_dir not a directory: {sd}", file=sys.stderr)
         return 1
     try:
-        violations = check_scenario(Scenario.from_dir(sd))
+        scenario = asyncio.run(_load_scenario_async(sd.name, sd.parent))
+        violations = check_scenario(scenario)
     except Exception as e:
         return _fail("sweep", e)
     if violations:
@@ -361,7 +387,11 @@ async def _download_async(profile: str, dest: Path) -> None:
 
 def _cmd_download(args: argparse.Namespace) -> int:
     profile = args.profile
-    dest = Path(args.out).resolve() if args.out else (ROOT / "scenarios" / profile).resolve()
+    dest = (
+        Path(args.out).resolve()
+        if args.out
+        else (ROOT / "scenarios" / profile).resolve()
+    )
     if dest.exists():
         print(
             f"download failed: dest already exists (remove first to avoid mixing stale files): {dest}",

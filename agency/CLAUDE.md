@@ -65,7 +65,7 @@ Per-turn loop in `runner.py`: read `/state` → `PlayerAgent.next_input(state_su
 
 ### Boundary
 
-Entity-level rules and the engine's full invariant sweep live in `server/src/engines/invariants.py`; cross-ref between manifests is the only validation logic that lives here. New entity kinds → server first (model + invariant), then expose via `SPECS` here.
+Entity-level rules and the engine's full invariant sweep live in `server/src/game/engines/invariants/`; cross-ref between manifests is the only validation logic that lives here. New entity kinds → server first (model + invariant), then expose via `SPECS` here.
 
 QA's loop intentionally stops on the first error — do not "retry past it." The transcript should reflect what actually happened, including the failure point.
 

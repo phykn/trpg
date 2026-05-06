@@ -2,7 +2,7 @@
 
 `SPECS` maps entity kinds to their Pydantic model + cross-ref validator,
 used by `agency.story.tool check-entity`. Entity-level rules (stat
-invariants, HP/MP formula, NPC seed extras) live in `server.engines.invariants`.
+invariants, HP/MP formula, NPC seed extras) live in `src.game.engines.invariants`.
 The LLM-call writer that originally consumed this metadata has been removed —
 Claude Code now writes entities directly per agency/story/SKILL.md.
 """
@@ -14,8 +14,20 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from src.game.domain.entities import Chapter, Character, Item, Location, Quest, Race, Skill
-from src.game.engines.invariants import check_character, check_item, check_seed_character
+from src.game.domain.entities import (
+    Chapter,
+    Character,
+    Item,
+    Location,
+    Quest,
+    Race,
+    Skill,
+)
+from src.game.engines.invariants import (
+    check_character,
+    check_item,
+    check_seed_character,
+)
 
 from ._common import (
     ID_PATTERN,
@@ -228,7 +240,7 @@ def _skills_pool(scenario_dir: Path) -> dict[str, Skill]:
 def _check_entity_invariants(
     entity: BaseModel, scenario_dir: Path, *, skeleton: bool = False
 ) -> None:
-    """Dispatch to server.engines.invariants — all entity-level rules.
+    """Dispatch to src.game.engines.invariants — all entity-level rules.
 
     Cross-ref between manifests is already done by spec.check_refs above; this
     runs the rule layer (stat invariants, HP/MP formula, NPC seed extras, etc).

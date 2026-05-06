@@ -99,7 +99,7 @@ Single Claude Code skill (`agency/story/SKILL.md`) authors a complete scenario d
 agency/story/
   SKILL.md            # The skill — Claude reads this and follows the workflow
   tool.py             # Single CLI. Subcommands: decompose-{setup,cast,arc},
-                      # check-entity, equip-fill, sweep, upload
+                      # check-entity, equip-fill, sweep, upload, download
   harness/
     _common.py        # ID pattern, trigger map, EntityWriterError
     decompose.py      # Pydantic models + _check_setup/_check_cast/_check_arc

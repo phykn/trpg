@@ -36,7 +36,7 @@ def _scaffold_minimal_passable(tmp_path: Path) -> Path:
 
 def test_sweep_passes_on_empty_scaffold_or_reports_missing(capsys, tmp_path):
     """check_scenario는 빈 시나리오에 대해 PASS이거나 NPC/start 등 누락을 보고함.
-    구체 invariant 동작은 server.engines.invariants 책임 — 여기선 wiring만 검증."""
+    구체 invariant 동작은 src.game.engines.invariants 책임 — 여기선 wiring만 검증."""
     sd = _scaffold_minimal_passable(tmp_path)
     rc = tool._main(["sweep", str(sd)])
     out = capsys.readouterr()

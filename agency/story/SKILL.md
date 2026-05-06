@@ -174,7 +174,7 @@ APP_ENV=release .venv/bin/python -m agency.story.tool upload scenarios/<name>/
 
 ## 엔티티 카드 (작성 규칙 요약)
 
-(각 카드에는 필수 필드 + 금지사항 + 톤 가이드. 엔티티 모델 정의는 `server/src/domain/entities.py` 참조.)
+(각 카드에는 필수 필드 + 금지사항 + 톤 가이드. 엔티티 모델 정의는 `server/src/game/domain/entities.py` 참조.)
 
 ### race
 - 필수: `id`, `name`, `description`, `is_humanoid`, `racial_skill_ids` (≥1, 평민 종족도 `barter` 같은 일상 능력 1개 필요 — NPC 시드는 ≥1 스킬 invariant 때문)
@@ -187,7 +187,7 @@ APP_ENV=release .venv/bin/python -m agency.story.tool upload scenarios/<name>/
 
 ### character
 - 필수: `id`, `name`, `description`, `race_id`, `location_id`, `level`, `stats`, `hp`, `max_hp`, `mp`, `max_mp`, `racial_skill_ids`, `learned_skill_ids`, `inventory_ids`, `equipment`, `job`, `gender`, `alive`, `memorable`, `memories`, `relations`, `disposition`, `is_enemy`, `xp_reward`
-- HP/MP는 `engines/invariants.py`의 공식대로 (level + stat 기반).
+- HP/MP는 `server/src/game/engines/growth.py`의 `calc_max_hp` / `calc_max_mp` 공식대로 (level + stat 기반).
 - stats는 짝수 합 = 60 (pair-trade 규칙).
 - `is_enemy=true`이면 `combat_behavior` 필수 (`{attack_priority, flee_hp_percent}`), `xp_reward > 0` (level 1: 40~80, level 3: 100~200, level 5+: 250+).
 - `is_enemy=false`이면 `combat_behavior` 생략, `xp_reward=0`.
@@ -202,7 +202,7 @@ APP_ENV=release .venv/bin/python -m agency.story.tool upload scenarios/<name>/
 - 필수: `id`, `name`, `description`, `weight`, `effects`, `required`
 - `required` 항상 `null` (seed에서). 부분 명시도 금지.
 - effects shape: weapon → `{type, weapon_dice, ...}`; armor → `{type, defense, ...}`; consumable → `{type, ...}`; key → `null`.
-- 정확한 필드는 `server/src/domain/entities.py`의 `WeaponEffect`/`ArmorEffect`/`ConsumableEffect` 참조.
+- 정확한 필드는 `server/src/game/domain/entities.py`의 `WeaponEffect`/`ArmorEffect`/`ConsumableEffect` 참조.
 
 ### quest
 - 필수: `id`, `title`, `description`, `giver_id`, `triggers`, `fail_triggers`, `prerequisite_ids`, `status`, `required`, `rewards`
