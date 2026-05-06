@@ -53,7 +53,7 @@ export type PlayerInput = {
 export type InitRequest = {
   profile: string;
   player: PlayerInput;
-  locale?: 'ko' | 'en';
+  locale: 'ko' | 'en';
 };
 
 export type SessionPayload = {
