@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from src.db.init import PlayerInput, init_game
+from src.game.flow.init import PlayerInput, init_game
 from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
 

@@ -20,7 +20,7 @@ from src.game.flow.skill_recommend import recommend_skill_candidates
 from src.game.flow.turn import run_turn
 from src.llm.client import LLMClient, set_think_override
 from src.wire.to_front import to_front_state
-from src.db.init import init_game
+from src.game.flow.init import init_game
 from src.db.repo import SaveRepo, ScenarioRepo
 from ..deps import get_llm, get_save_repo, get_scenario_repo, get_state
 from ..schema import (

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from src.db.init import PlayerInput, init_game
+from src.game.flow.init import PlayerInput, init_game
 from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.db.store import _Meta, _meta_from_state
 from src.game.domain.state import GameState

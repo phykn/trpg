@@ -7,7 +7,7 @@ import pytest
 from src.game.domain.entities import Character, Stats
 from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
 from src.game.domain.errors import PersistenceFailed, ProfileNotFound, RaceNotFound
-from src.db.init import PlayerInput, init_game
+from src.game.flow.init import PlayerInput, init_game
 from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.game.domain.state import GameState
 from src.db.store import (

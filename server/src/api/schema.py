@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from src.game.domain.types import StatKey
-from src.db.init import PlayerInput
+from src.game.flow.init import PlayerInput
 
 
 class QuestAction(BaseModel):

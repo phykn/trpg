@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from src.game.domain.entities import (
+from ..domain.entities import (
     Campaign,
     Chapter,
     Character,
@@ -17,12 +17,12 @@ from src.game.domain.entities import (
     Skill as SkillModel,
     Stats,
 )
-from src.game.domain.errors import ProfileMalformed, ProfileNotFound, RaceNotFound
-from src.game.domain.state import GameState
-from src.game.engines.growth import calc_max_hp, calc_max_mp
-from src.game.engines.invariants import Scenario, check_scenario
-from src.game.rules.config import RULES
-from .repo import SaveRepo, ScenarioRepo
+from ..domain.errors import ProfileMalformed, ProfileNotFound, RaceNotFound
+from ..domain.state import GameState
+from ..engines.growth import calc_max_hp, calc_max_mp
+from ..engines.invariants import Scenario, check_scenario
+from ..rules.config import RULES
+from src.db.repo import SaveRepo, ScenarioRepo
 
 
 class PlayerInput(BaseModel):
