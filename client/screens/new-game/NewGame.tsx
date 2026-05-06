@@ -13,9 +13,9 @@ import { colors } from '@/design/tokens';
 import { getVersion, listProfiles } from '@/services';
 import type { InitRequest, ProfileCard, RaceCard } from '@/services/wire';
 
-import { Input } from './Input';
-import { Section } from './Section';
-import { SelectCard } from './SelectCard';
+import { Input } from '@/components/new-game/Input';
+import { Section } from '@/components/new-game/Section';
+import { SelectCard } from '@/components/new-game/SelectCard';
 
 const CLIENT_SHA = process.env.EXPO_PUBLIC_GIT_SHA ?? 'local';
 
