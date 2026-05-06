@@ -1,7 +1,7 @@
 import { buildHeroSlot } from '@/features/hero';
 import type { Hero } from '@/features/hero';
-import { buildQuestSlot } from '@/features/quest';
-import type { Quest } from '@/features/quest';
+import { buildQuestSlot } from '@/logic/quest';
+import type { Quest } from '@/logic/quest';
 import { buildSubjectSlot } from '@/logic/subject';
 import type { Subject } from '@/logic/subject';
 

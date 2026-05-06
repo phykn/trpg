@@ -1,7 +1,7 @@
 import type { CombatBadge } from '@/features/combat';
 import type { Hero } from '@/features/hero';
 import type { LogEntry } from '@/features/log';
-import type { Quest } from '@/features/quest';
+import type { Quest } from '@/logic/quest';
 import type { Place, StoryGraphModel } from '@/features/story-graph';
 import type { Subject } from '@/logic/subject';
 import type {
