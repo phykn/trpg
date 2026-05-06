@@ -133,7 +133,7 @@ async def run_narrate(
         player_input=player_input,
     )
 
-    async for item in stream_narrate(client, input_):
+    async for item in stream_narrate(client, input_, state.locale):
         if isinstance(item, NarrativeFinal) and action == "reject":
             _sterilize_for_reject(item.output)
         yield item

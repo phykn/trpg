@@ -54,7 +54,7 @@ async def test_recovery_signal_zeroes_history_and_memories(
 ):
     captured: dict = {}
 
-    async def fake_stream_narrate(client, input_):
+    async def fake_stream_narrate(client, input_, locale="ko"):
         captured["input"] = input_
         if False:
             yield None  # async-gen marker
@@ -89,7 +89,7 @@ async def test_no_signal_keeps_history_and_default_player_view(
     follows build_player_view defaults (no 'memories' key forced in)."""
     captured: dict = {}
 
-    async def fake_stream_narrate(client, input_):
+    async def fake_stream_narrate(client, input_, locale="ko"):
         captured["input"] = input_
         if False:
             yield None

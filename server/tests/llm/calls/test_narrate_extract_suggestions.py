@@ -56,7 +56,7 @@ async def test_extract_parses_suggestions_from_llm_output():
         '"suggestions":["수락한다","거절한다","조건을 묻는다"]}'
     )
     client = FakeChatClient([payload])
-    result = await run_extract(client, _input())
+    result = await run_extract(client, _input(), "ko")
     assert result.suggestions == ["수락한다", "거절한다", "조건을 묻는다"]
 
 
@@ -67,5 +67,5 @@ async def test_extract_omitted_suggestions_default_empty():
         '"memory_targets":[],"memory":{},"memory_links":{},"importance":null}'
     )
     client = FakeChatClient([payload])
-    result = await run_extract(client, _input())
+    result = await run_extract(client, _input(), "ko")
     assert result.suggestions == []

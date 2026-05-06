@@ -40,7 +40,7 @@ class FakeStreamClient:
 async def test_stream_body_yields_each_chunk():
     client = FakeStreamClient(["당신은 ", "광장을 ", "둘러봅니다."])
     out: list[str] = []
-    async for chunk in stream_body(client, _input()):
+    async for chunk in stream_body(client, _input(), "ko"):
         out.append(chunk)
     assert out == ["당신은 ", "광장을 ", "둘러봅니다."]
 
@@ -48,7 +48,7 @@ async def test_stream_body_yields_each_chunk():
 @pytest.mark.asyncio
 async def test_stream_body_passes_temperature_and_agent():
     client = FakeStreamClient(["x"])
-    async for _ in stream_body(client, _input()):
+    async for _ in stream_body(client, _input(), "ko"):
         pass
     assert client.kwargs_seen["agent"] == "narrate_body"
     assert client.kwargs_seen["temperature"] == 1.0
@@ -59,6 +59,6 @@ async def test_stream_body_passes_temperature_and_agent():
 async def test_stream_body_skips_empty_chunks():
     client = FakeStreamClient(["", "당신은 둘러봅니다.", ""])
     out: list[str] = []
-    async for chunk in stream_body(client, _input()):
+    async for chunk in stream_body(client, _input(), "ko"):
         out.append(chunk)
     assert out == ["당신은 둘러봅니다."]

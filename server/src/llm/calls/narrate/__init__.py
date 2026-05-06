@@ -36,6 +36,7 @@ SEPARATOR = "---JSON---"
 async def stream_narrate(
     client: LLMClient,
     input_: NarrateInput,
+    locale: str,
 ) -> AsyncIterator[NarrativeDelta | NarrativeFinal]:
     """Body stream → extract → final.
 
@@ -53,7 +54,7 @@ async def stream_narrate(
       tolerates empty metadata as a fallback shape).
     """
     body_chunks: list[str] = []
-    async for raw_chunk in stream_body(client, input_):
+    async for raw_chunk in stream_body(client, input_, locale):
         cleaned = _clean_body(raw_chunk)
         body_chunks.append(cleaned)
         yield NarrativeDelta(text=cleaned)
@@ -68,7 +69,7 @@ async def stream_narrate(
         grade=input_.grade,
         previous_phase_signal=input_.previous_phase_signal,
     )
-    output = await run_extract(client, extract_input)
+    output = await run_extract(client, extract_input, locale)
     yield NarrativeFinal(body=full_body, output=output, parse_error=None)
 
 

@@ -80,7 +80,7 @@ async def emit_combat_cinematic_and_end(
             result=result,
         )
         body_chunks: list[str] = []
-        async for chunk in stream_combat_narrate(client, narrate_input):
+        async for chunk in stream_combat_narrate(client, narrate_input, state.locale):
             body_chunks.append(chunk)
             yield emit_narrative_delta(chunk)
         body = "".join(body_chunks).strip()

@@ -54,7 +54,7 @@ async def test_stream_narrate_yields_deltas_then_final():
     )
 
     events = []
-    async for ev in stream_narrate(client, _input()):
+    async for ev in stream_narrate(client, _input(), "ko"):
         events.append(ev)
 
     deltas = [e for e in events if isinstance(e, NarrativeDelta)]
@@ -74,7 +74,7 @@ async def test_stream_narrate_falls_back_to_empty_metadata_on_extract_failure():
     )
 
     events = []
-    async for ev in stream_narrate(client, _input()):
+    async for ev in stream_narrate(client, _input(), "ko"):
         events.append(ev)
 
     finals = [e for e in events if isinstance(e, NarrativeFinal)]

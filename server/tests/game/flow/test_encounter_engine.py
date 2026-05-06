@@ -51,7 +51,7 @@ def _seed_state(fresh_state):
 
 
 def _patch_agent(monkeypatch, output: EncounterSummonOutput):
-    async def fake_summon(client, input_, retries=5):
+    async def fake_summon(client, input_, locale="ko", retries=5):
         return output
 
     monkeypatch.setattr(encounter_engine, "summon", fake_summon)

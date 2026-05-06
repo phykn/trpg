@@ -106,7 +106,7 @@ async def summon_encounter(
 ) -> Character | None:
     """Summon one enemy via LLM and register it. Returns None if race_id is not in available races."""
     input_ = await _build_input(state, location, scenario_repo, profile, requested_role)
-    out = await summon(client, input_)
+    out = await summon(client, input_, state.locale)
     if out.race_id not in state.races:
         return None
     char = _make_character(state, out, location.id)

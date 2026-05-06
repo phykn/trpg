@@ -3,20 +3,19 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from .._runner import load_prompt, run_with_retries
+from .._runner import get_prompt, run_with_retries
 from ...client import LLMClient
 from .errors import ModifierValidationError
 from .schema import JudgeInput, JudgeOutput, validate_judge_output
 from .semantics import JudgeSemanticError, check_semantics
 
 PROMPT_PATH = Path(__file__).parent / "prompt.md"
-_PROMPT = load_prompt(__file__)
 
 _CLASSIFY_TEMPERATURE = 0.4
 
 
 async def classify(
-    client: LLMClient, input_: JudgeInput, retries: int = 5
+    client: LLMClient, input_: JudgeInput, locale: str, retries: int = 5
 ) -> JudgeOutput:
     in_combat = bool(input_.surroundings.get("in_combat", False))
 
@@ -27,7 +26,7 @@ async def classify(
 
     return await run_with_retries(
         client,
-        system_prompt=_PROMPT,
+        system_prompt=get_prompt(__file__, locale),
         user_payload=input_.model_dump_json(),
         parse=parse,
         retry_on=(ValidationError, JudgeSemanticError, ModifierValidationError, json.JSONDecodeError),

@@ -4,23 +4,29 @@ from collections.abc import AsyncIterator
 
 from openai import RateLimitError
 
-from ..._runner import load_prompt
+from ..._runner import get_prompt
 from ....context.surroundings import surroundings_for_narrate_body
 from src.game.domain.errors import LLMUnavailable
 from ....client import LLMClient
 from src.game.rules.permissions import render_for_prompt
 from ..schema import NarrateInput
 
-# Permission matrix tokens are substituted at module load (matches old narrate runner).
-_PROMPT = load_prompt(__file__, substitutions=render_for_prompt("ko"))
-
 _MAX_RETRIES = 5
 _BODY_TEMPERATURE = 1.0
+
+
+def _build_prompt(locale: str) -> str:
+    base = get_prompt(__file__, locale)
+    subs = render_for_prompt(locale)
+    for k, v in subs.items():
+        base = base.replace("{{" + k + "}}", v)
+    return base
 
 
 async def stream_body(
     client: LLMClient,
     input_: NarrateInput,
+    locale: str,
 ) -> AsyncIterator[str]:
     """Stream raw body chunks (Korean prose, no JSON tail).
 
@@ -32,7 +38,7 @@ async def stream_body(
         update={"surroundings": surroundings_for_narrate_body(input_.surroundings)}
     )
     messages = [
-        {"role": "system", "content": _PROMPT},
+        {"role": "system", "content": _build_prompt(locale)},
         {"role": "user", "content": body_input.model_dump_json()},
     ]
 

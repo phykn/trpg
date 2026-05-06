@@ -115,6 +115,7 @@ async def run_judge(
                 history=history,
                 recent_dialogue=recent_dialogue,
             ),
+            state.locale,
         )
     except ValidationError as e:
         raise JudgeMalformed(str(e)) from e

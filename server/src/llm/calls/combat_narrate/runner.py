@@ -5,12 +5,10 @@ self-correction loop, since body has already streamed)."""
 import asyncio
 from collections.abc import AsyncIterator
 
-from .._runner import load_prompt
+from .._runner import get_prompt
 from src.game.domain.errors import LLMUnavailable
 from ...client import LLMClient
 from .schema import CombatNarrateInput
-
-_PROMPT = load_prompt(__file__)
 
 _MAX_RETRIES = 5
 _COMBAT_NARRATE_TEMPERATURE = 1.0
@@ -19,13 +17,14 @@ _COMBAT_NARRATE_TEMPERATURE = 1.0
 async def stream_combat_narrate(
     client: LLMClient,
     input_: CombatNarrateInput,
+    locale: str,
 ) -> AsyncIterator[str]:
     """Stream Korean prose tokens. Retries up to 5× on stream-transport failure
     BEFORE any body has streamed; once a token has gone out, a later
     transport error raises (the client can't take back what was shown).
     Non-transport exceptions always raise (programming bugs shouldn't hide)."""
     messages = [
-        {"role": "system", "content": _PROMPT},
+        {"role": "system", "content": get_prompt(__file__, locale)},
         {"role": "user", "content": input_.model_dump_json()},
     ]
 

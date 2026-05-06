@@ -87,7 +87,7 @@ async def recommend_skill_candidates(
     No side effects — does not touch state directly (the caller wires the candidates into its own flow).
     """
     payload = _build_input(state)
-    output = await recommend(client, payload)
+    output = await recommend(client, payload, state.locale)
     level = state.characters[state.player_id].level
     existing = existing_skill_ids(state)
     skills: list[Skill] = []

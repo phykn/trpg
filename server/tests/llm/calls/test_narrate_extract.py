@@ -34,7 +34,7 @@ class FakeChatClient:
 async def test_extract_returns_parsed_output_on_first_try():
     valid_json = '{"turn_summary":"광장 둘러봄","state_changes":[],"memorable":false,"memory_targets":[],"memory":{},"memory_links":{},"importance":null}'
     client = FakeChatClient([valid_json])
-    result = await run_extract(client, _input())
+    result = await run_extract(client, _input(), "ko")
     assert result.turn_summary == "광장 둘러봄"
     assert result.state_changes == []
     assert result.memorable is False
@@ -46,7 +46,7 @@ async def test_extract_retries_on_validation_error_then_succeeds():
     invalid = "not json at all"
     valid = '{"turn_summary":"OK","state_changes":[],"memorable":false,"memory_targets":[],"memory":{},"memory_links":{},"importance":null}'
     client = FakeChatClient([invalid, invalid, valid])
-    result = await run_extract(client, _input())
+    result = await run_extract(client, _input(), "ko")
     assert result.turn_summary == "OK"
     assert client.calls == 3
 
@@ -56,7 +56,7 @@ async def test_extract_returns_empty_output_after_exhausted_retries():
     """5 retries (=6 attempts) all fail → empty NarrateOutput, no exception."""
     bad = ["not json"] * 10
     client = FakeChatClient(bad)
-    result = await run_extract(client, _input())
+    result = await run_extract(client, _input(), "ko")
     assert result == NarrateOutput()
     assert result.state_changes == []
     assert result.turn_summary == ""
@@ -86,7 +86,7 @@ async def test_extract_passes_body_in_user_payload_with_temperature_and_agent():
             }
 
     client = CapturingClient()
-    await run_extract(client, _input(body="당신은 노파에게 인사합니다."))
+    await run_extract(client, _input(body="당신은 노파에게 인사합니다."), "ko")
     user_msg = next(m for m in captured["messages"] if m["role"] == "user")
     assert "당신은 노파에게 인사합니다." in user_msg["content"]
     assert captured["temperature"] == 0.4

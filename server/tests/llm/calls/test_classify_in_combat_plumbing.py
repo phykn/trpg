@@ -26,7 +26,7 @@ async def test_in_combat_true_allows_move_without_destination():
 
     with patch("src.llm.calls.classify.runner.run_with_retries",
                new=AsyncMock(side_effect=lambda *a, **kw: kw["parse"](fake_answer))):
-        out = await classify(client=None, input_=input_, retries=1)
+        out = await classify(client=None, input_=input_, locale="ko", retries=1)
     assert out.actions[0].name == "move"
     assert out.actions[0].modifiers.get("manner") == "hasty"
 
@@ -51,7 +51,7 @@ async def test_in_combat_false_rejects_move_without_destination():
     with patch("src.llm.calls.classify.runner.run_with_retries",
                new=AsyncMock(side_effect=lambda *a, **kw: kw["parse"](fake_answer))):
         with pytest.raises(ModifierValidationError, match="destination"):
-            await classify(client=None, input_=input_, retries=1)
+            await classify(client=None, input_=input_, locale="ko", retries=1)
 
 
 @pytest.mark.asyncio
@@ -71,7 +71,7 @@ async def test_in_combat_default_false_when_key_missing():
     with patch("src.llm.calls.classify.runner.run_with_retries",
                new=AsyncMock(side_effect=lambda *a, **kw: kw["parse"](fake_answer))):
         with pytest.raises(ModifierValidationError, match="destination"):
-            await classify(client=None, input_=input_, retries=1)
+            await classify(client=None, input_=input_, locale="ko", retries=1)
 
 
 def test_surroundings_includes_in_combat_key():
