@@ -1,3 +1,4 @@
+import { ko } from '@/locale/ko';
 import type {
   StoryGraphEdge,
   StoryGraphModel,
@@ -17,7 +18,7 @@ const NODE_KIND = new Set<StoryGraphNodeKind>([
 export const EMPTY_STORY_GRAPH: StoryGraphModel = {
   nodes: [],
   edges: [],
-  summary: '스토리 데이터 없음',
+  summary: ko.panel.noStoryData,
 };
 
 function isObject(value: unknown): value is Record<string, unknown> {

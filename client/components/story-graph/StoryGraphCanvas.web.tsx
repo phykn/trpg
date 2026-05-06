@@ -2,6 +2,7 @@ import cytoscape, { type Core, type ElementDefinition } from 'cytoscape';
 import React from 'react';
 
 import { colors } from '@/design/tokens';
+import { ko } from '@/locale/ko';
 import type { StoryGraphEdge, StoryGraphModel, StoryGraphNodeKind } from '@/logic/story-graph/types';
 
 // Module-scoped so positions survive panel switches (component remount).
@@ -127,7 +128,7 @@ function toElements(
 export function StoryGraphCanvas({
   graph,
   height,
-  accessibilityLabel = '현재 스토리 그래프',
+  accessibilityLabel = ko.panel.storyGraph,
   selectedNodeId = null,
   onNodeSelect,
   nodeOverrides,
@@ -421,7 +422,7 @@ export function StoryGraphCanvas({
       />
       <button
         type="button"
-        aria-label="맵 다시 맞추기"
+        aria-label={ko.panel.mapReset}
         onClick={() => cyRef.current?.fit(undefined, 28)}
         style={{
           position: 'absolute',

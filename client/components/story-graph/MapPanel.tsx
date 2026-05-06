@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { toneColor } from '@/design/tokens';
 import { ExpandableTitle, ExpandGroup, LabeledRow, Row, SEP } from '@/components/ui';
+import { compose, ko } from '@/locale/ko';
 import type { PanelAction } from '@/logic/info-panel';
 
 import type { StoryGraphEdge, StoryGraphModel } from '@/logic/story-graph/types';
@@ -14,7 +15,7 @@ type PlaceState = 'current' | 'reachable' | 'unreachable';
 export function MapPanel({
   graph,
   framed = false,
-  accessibilityLabel = '현재 스토리 그래프',
+  accessibilityLabel = ko.panel.storyGraph,
   selectedNodeId = null,
   onNodeSelect,
   onAction,
@@ -66,9 +67,9 @@ export function MapPanel({
       (n) => n.kind === 'location' && placeStates[n.id] === 'reachable',
     ).length;
     const summary = [
-      currentPlace ? `현재 ${currentPlace.label}` : null,
-      `장소 ${placeNodes.length}곳`,
-      `이동 가능 ${reachableCount}`,
+      currentPlace ? compose.here(currentPlace.label) : null,
+      compose.placeCount(placeNodes.length),
+      compose.reachableCount(reachableCount),
     ]
       .filter(Boolean)
       .join(SEP);
@@ -94,8 +95,8 @@ export function MapPanel({
   })();
   const metaText = (() => {
     if (!selectedNode) return '';
-    if (selectedNode.kind === 'place') return '현재 위치';
-    if (selectedNode.kind === 'location' && !selectedAction) return '이동 불가';
+    if (selectedNode.kind === 'place') return ko.panel.here;
+    if (selectedNode.kind === 'location' && !selectedAction) return ko.status.moveBlocked;
     return '';
   })();
 
@@ -106,7 +107,7 @@ export function MapPanel({
           className="px-4 pt-3 flex-row items-center"
           style={{ minHeight: 22 }}
         >
-          <ExpandableTitle text="지도" />
+          <ExpandableTitle text={ko.panel.map} />
         </View>
       )}
       <View
@@ -144,7 +145,7 @@ export function MapPanel({
                     className={`rounded-full px-3.5 py-1 ${actionDisabled ? 'bg-accent-muted opacity-60' : 'bg-accent-muted active:opacity-80'}`}
                   >
                     <Text className="font-sans-semibold text-caption text-accent-fg">
-                      {actionDisabled ? '처리 중' : selectedAction.label}
+                      {actionDisabled ? ko.status.busy : selectedAction.label}
                     </Text>
                   </Pressable>
                 ) : metaText ? (
@@ -157,7 +158,7 @@ export function MapPanel({
                 ) : null}
               </View>
               {placeFeatures ? (
-                <Row label="환경">
+                <Row label={ko.panel.environment}>
                   <Text
                     numberOfLines={1}
                     className="font-sans text-panel text-fg-default"
@@ -173,7 +174,7 @@ export function MapPanel({
               ) : null}
               <ExpandGroup>
                 {placeDescription ? (
-                  <LabeledRow label="모습">
+                  <LabeledRow label={ko.panel.appearance}>
                     {placeDescription}
                   </LabeledRow>
                 ) : null}

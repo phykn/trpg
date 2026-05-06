@@ -1,11 +1,12 @@
 import { Pressable, Text, View } from 'react-native';
 
+import { ko } from '@/locale/ko';
 import type { StoryGraphModel } from '@/logic/story-graph/types';
 
 // Text-only renderer of the first 8 nodes — placeholder for a future graph viz.
 export function StoryGraphCanvas({
   graph,
-  accessibilityLabel = '현재 스토리 그래프',
+  accessibilityLabel = ko.panel.storyGraph,
   selectedNodeId = null,
   onNodeSelect,
 }: {

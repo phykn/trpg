@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
+import { ko } from '@/locale/ko';
 import type { PanelAction } from '@/logic/info-panel';
 import { getSessionById, loadStoredGameId, storeSeenNodes } from '@/services';
 
@@ -117,20 +118,20 @@ export function StoryGraphScreen({
 
         {status === 'loading' ? (
           <View className="items-center justify-center py-14">
-            <Text className="font-sans text-body text-fg-muted">지도를 펼칩니다.</Text>
+            <Text className="font-sans text-body text-fg-muted">{ko.panel.mapLoading}</Text>
           </View>
         ) : null}
 
         {status === 'empty' ? (
           <View className="items-center justify-center py-14 gap-3">
-            <Text className="font-sans-semibold text-body text-fg-default">진행 중인 게임이 없습니다.</Text>
+            <Text className="font-sans-semibold text-body text-fg-default">{ko.panel.noGame}</Text>
           </View>
         ) : null}
 
         {status === 'error' ? (
           <View className="rounded-sm border border-danger-fg bg-canvas-subtle px-3 py-2">
             <Text className="font-sans text-caption text-danger-fg">
-              {message ?? '지도를 펼치지 못했습니다.'}
+              {message ?? ko.panel.mapError}
             </Text>
           </View>
         ) : null}
@@ -138,7 +139,7 @@ export function StoryGraphScreen({
         {status === 'ready' ? (
           <MapPanel
             graph={graph}
-            accessibilityLabel="전체 지도"
+            accessibilityLabel={ko.panel.fullMap}
             selectedNodeId={selectedNodeId}
             onNodeSelect={setSelectedNodeId}
             onAction={onAction}
