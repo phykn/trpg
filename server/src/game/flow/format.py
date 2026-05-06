@@ -151,11 +151,6 @@ def format_quest_start_log(quest_title: str) -> str:
     return render("log.quest_start", "ko", title=quest_title)
 
 
-# Same body as format_quest_start_log; kept paired (cf. format_location_enter_*) so future SSE/turn_log tone divergence is a one-line edit.
-def format_quest_start_turn_log(quest_title: str) -> str:
-    return render("log.quest_start", "ko", title=quest_title)
-
-
 def format_quest_success_log(title: str, exp: int, gold: int, items: list[str]) -> str:
     head = render("log.quest_success_head", "ko", title=title)
     rewards: list[str] = []

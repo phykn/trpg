@@ -43,7 +43,6 @@ from .format import (
     format_affinity_card_log,
     format_affinity_card_turn_log,
     format_quest_start_log,
-    format_quest_start_turn_log,
 )
 from .judge import judge_quest_progress
 from .memory_writer import write_memories
@@ -228,12 +227,8 @@ async def consume_narrate(
         quest = state.quests.get(q_id)
         if quest is None:
             continue
-        dirty.deferred_act_cards.append(
-            (
-                format_quest_start_log(quest.title),
-                format_quest_start_turn_log(quest.title),
-            )
-        )
+        text = format_quest_start_log(quest.title)
+        dirty.deferred_act_cards.append((text, text))
     for npc_id, delta in apply_result["affinity_deltas"]:
         if delta == 0:
             continue
