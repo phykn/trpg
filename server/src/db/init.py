@@ -36,6 +36,7 @@ async def init_game(
     player: PlayerInput,
     save_repo: SaveRepo,
     scenario_repo: ScenarioRepo,
+    locale: str = "ko",
 ) -> GameState:
     if not await scenario_repo.profile_exists(profile_name):
         raise ProfileNotFound(profile_name)
@@ -130,6 +131,7 @@ async def init_game(
             + secrets.token_hex(3)
         ),
         profile=profile_name,
+        locale=locale,
         characters=characters,
         items=items,
         locations=locations,
