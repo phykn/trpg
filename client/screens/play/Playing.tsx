@@ -9,7 +9,7 @@ import type { Game } from '@/logic/game/useGame';
 import { buildPanelSlots } from '@/logic/info-panel';
 import type { PanelAction, PanelSlot } from '@/logic/info-panel';
 
-import { Composer, GameOverPanel, LevelUpPrompt, RollPrompt } from '@/features/composer';
+import { Composer, GameOverPanel, LevelUpPrompt, RollPrompt } from '@/logic/composer';
 import { ContextCard } from '@/logic/info-panel';
 import { HeroStrip } from '@/logic/hero';
 import { ConfirmDialog } from '@/components/ui';
