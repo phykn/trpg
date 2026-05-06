@@ -5,25 +5,15 @@ from pathlib import Path
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
-from src.game.domain.entities import (
-    Campaign,
-    Chapter,
-    Character,
-    Item,
-    Location,
-    Quest,
-    Race,
-    Skill,
-)
 from src.game.domain.memory import (
     DialoguePair,
     LogEntry,
-    PendingCheck,
     TurnLogEntry,
 )
 from src.game.domain.errors import PersistenceFailed
 from src.game.rules import RULES
-from src.game.domain.state import CombatState, GameState
+from src.game.domain.state import GameState
+from ._schema import _ENTITY_MODELS, _Meta, _meta_from_state
 
 # Per-game write serialization. A single global lock would funnel unrelated
 # game writes through one queue and — worse — let two requests for the same
@@ -37,18 +27,6 @@ def _lock_for(game_id: str) -> asyncio.Lock:
         lock = asyncio.Lock()
         _save_locks[game_id] = lock
     return lock
-
-
-_ENTITY_MODELS: dict[str, type[BaseModel]] = {
-    "characters": Character,
-    "items": Item,
-    "locations": Location,
-    "races": Race,
-    "skills": Skill,
-    "quests": Quest,
-    "chapters": Chapter,
-    "campaigns": Campaign,
-}
 
 
 def _game_dir(saves_dir: str, game_id: str) -> Path:
@@ -100,36 +78,6 @@ def _append_jsonl(path: Path, lines: list[str]) -> None:
                 f.write(line + "\n")
     except OSError as e:
         raise PersistenceFailed(str(e)) from e
-
-
-class _Meta(BaseModel):
-    game_id: str
-    profile: str
-    locale: str = "ko"
-    player_id: str
-    active_subject_id: str | None = None
-    active_quest_id: str | None = None
-    turn_count: int = 0
-    pending_check: PendingCheck | None = None
-    combat_state: CombatState | None = None
-    previous_phase_signal: str | None = None
-    next_log_id: int = 1
-
-
-def _meta_from_state(state: GameState) -> _Meta:
-    return _Meta(
-        game_id=state.game_id,
-        profile=state.profile,
-        locale=state.locale,
-        player_id=state.player_id,
-        active_subject_id=state.active_subject_id,
-        active_quest_id=state.active_quest_id,
-        turn_count=state.turn_count,
-        pending_check=state.pending_check,
-        combat_state=state.combat_state,
-        previous_phase_signal=state.previous_phase_signal,
-        next_log_id=state.next_log_id,
-    )
 
 
 async def save_meta(state: GameState, saves_dir: str) -> None:

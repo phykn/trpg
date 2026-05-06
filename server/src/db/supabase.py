@@ -16,16 +16,11 @@ from src.game.domain.memory import (
 )
 from src.game.domain.state import GameState
 from src.game.rules import RULES
-from . import store
+from ._schema import _ENTITY_MODELS, _Meta, _meta_from_state
 from ._supabase_http import _PostgREST, _Storage
 from .repo import ScenarioRepo
 
 T = TypeVar("T", bound=BaseModel)
-
-# Canonical meta shape lives in store.py; reused for the `games.meta` jsonb column.
-_Meta = store._Meta
-_meta_from_state = store._meta_from_state
-_ENTITY_MODELS = store._ENTITY_MODELS
 
 _LOG_ADAPTER: TypeAdapter[LogEntry] = TypeAdapter(LogEntry)
 

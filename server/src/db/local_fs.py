@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from src.game.domain.memory import DialoguePair, LogEntry, TurnLogEntry
 from src.game.domain.state import GameState
 from . import store
+from ._schema import _ENTITY_MODELS
 from .repo import ScenarioRepo
 
 T = TypeVar("T", bound=BaseModel)
@@ -50,7 +51,7 @@ class LocalFsSaveRepo:
         del player_id
         game_root = store._game_dir(self.saves_dir, game_id)
         game_root.mkdir(parents=True, exist_ok=True)
-        for kind, model_cls in store._ENTITY_MODELS.items():
+        for kind, model_cls in _ENTITY_MODELS.items():
             seed = await scenario_repo.load_seed_entities(profile, kind, model_cls)
             if not seed:
                 continue
