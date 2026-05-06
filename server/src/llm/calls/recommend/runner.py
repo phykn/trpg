@@ -13,7 +13,7 @@ async def recommend(
 ) -> SkillRecommendOutput:
     return await run_with_retries(
         client,
-        system_prompt=get_prompt(__file__, locale),
+        system_prompt=get_prompt("recommend", locale),
         user_payload=input_.model_dump_json(),
         parse=SkillRecommendOutput.model_validate_json,
         retries=retries,

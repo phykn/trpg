@@ -2,7 +2,14 @@
 
 from pathlib import Path
 
-PROMPT_PATH = Path(__file__).parents[3] / "src" / "llm" / "calls" / "classify" / "prompt.md"
+PROMPT_PATH = (
+    Path(__file__).parents[3]
+    / "src"
+    / "locale"
+    / "prompts"
+    / "classify"
+    / "prompt.ko.md"
+)
 
 
 def test_prompt_contains_attack_verb_examples():

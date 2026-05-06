@@ -16,7 +16,7 @@ _BODY_TEMPERATURE = 1.0
 
 
 def _build_prompt(locale: str) -> str:
-    base = get_prompt(__file__, locale)
+    base = get_prompt("narrate/body", locale)
     subs = render_for_prompt(locale)
     for k, v in subs.items():
         base = base.replace("{{" + k + "}}", v)

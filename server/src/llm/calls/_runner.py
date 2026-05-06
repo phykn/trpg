@@ -9,73 +9,26 @@ from openai import RateLimitError
 from pydantic import ValidationError
 
 from src.game.domain.errors import LLMUnavailable
-from src.locale.render import _load as _load_catalog
 from ..client import LLMClient
 
 T = TypeVar("T")
 
-
-def read_prompt(file: str) -> str:
-    """Load a sibling prompt.md given the agent's __file__."""
-    return (Path(file).parent / "prompt.md").read_text(encoding="utf-8")
-
-
-_KERNEL_PATH = Path(__file__).parent / "_kernel.md"
-_KERNEL = _KERNEL_PATH.read_text(encoding="utf-8") if _KERNEL_PATH.exists() else ""
-
-
-def load_prompt(agent_file: str, *, substitutions: dict[str, str] | None = None) -> str:
-    """Prepend _kernel.md to the agent's prompt.md and apply {{KEY}} substitutions.
-
-    Read at module load (boot time) so the rendered prompt is byte-stable across
-    calls — keeps Gemini implicit cache hot. _KERNEL is empty until _kernel.md
-    is created; in that case load_prompt falls back to the agent prompt alone.
-    """
-    own = (Path(agent_file).parent / "prompt.md").read_text(encoding="utf-8")
-    text = f"{_KERNEL}\n\n---\n\n{own}" if _KERNEL else own
-    if substitutions:
-        for key, value in substitutions.items():
-            text = text.replace("{{" + key + "}}", value)
-    return text
-
-
-def _kernel_blocks_for(locale: str) -> dict[str, str]:
-    catalog = _load_catalog("prompt").get("prompt", {})
-    out: dict[str, str] = {}
-    for key, locales in catalog.items():
-        if not key.startswith("kernel."):
-            continue
-        token = "LOCALE_" + key.split(".", 1)[1].upper()
-        out[token] = locales.get(locale, "")
-    return out
-
-
-def _agent_blocks_for(agent_file: str, locale: str) -> dict[str, str]:
-    catalog = _load_catalog("prompt").get("prompt", {})
-    parent = Path(agent_file).parent
-    grandparent = parent.parent
-    if grandparent.name == "narrate":
-        candidate_prefixes = [f"narrate.{parent.name}.", "narrate."]
-    else:
-        candidate_prefixes = [f"{parent.name}."]
-    out: dict[str, str] = {}
-    for key, locales in catalog.items():
-        for pfx in candidate_prefixes:
-            if key.startswith(pfx):
-                token = "LOCALE_" + key.replace(".", "_").upper()
-                out[token] = locales.get(locale, "")
-                break
-    return out
+_PROMPTS_ROOT = Path(__file__).resolve().parents[2] / "locale" / "prompts"
 
 
 @lru_cache(maxsize=None)
-def get_prompt(agent_file: str, locale: str) -> str:
-    own = (Path(agent_file).parent / "prompt.md").read_text(encoding="utf-8")
-    text = f"{_KERNEL}\n\n---\n\n{own}" if _KERNEL else own
-    subs = {**_kernel_blocks_for(locale), **_agent_blocks_for(agent_file, locale)}
-    for key, value in subs.items():
-        text = text.replace("{{" + key + "}}", value)
-    return text
+def get_prompt(agent: str, locale: str) -> str:
+    """Load `_kernel.<locale>.md` + `<agent>/prompt.<locale>.md` joined by `---`.
+
+    `agent` is a slash-delimited path under `src/locale/prompts/`
+    (e.g. `"classify"`, `"narrate/body"`). Cached per (agent, locale) so the
+    rendered prompt is byte-stable across calls — keeps Gemini implicit cache hot.
+    """
+    own = (_PROMPTS_ROOT / agent / f"prompt.{locale}.md").read_text(encoding="utf-8")
+    kernel_path = _PROMPTS_ROOT / f"_kernel.{locale}.md"
+    if kernel_path.exists():
+        return f"{kernel_path.read_text(encoding='utf-8')}\n\n---\n\n{own}"
+    return own
 
 
 # Truncate long thinking-text dumps so retries don't blow past the model's ctx window.

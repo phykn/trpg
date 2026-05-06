@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 
 from pydantic import ValidationError
 
@@ -8,8 +7,6 @@ from ...client import LLMClient
 from .errors import ModifierValidationError
 from .schema import JudgeInput, JudgeOutput, validate_judge_output
 from .semantics import JudgeSemanticError, check_semantics
-
-PROMPT_PATH = Path(__file__).parent / "prompt.md"
 
 _CLASSIFY_TEMPERATURE = 0.4
 
@@ -26,7 +23,7 @@ async def classify(
 
     return await run_with_retries(
         client,
-        system_prompt=get_prompt(__file__, locale),
+        system_prompt=get_prompt("classify", locale),
         user_payload=input_.model_dump_json(),
         parse=parse,
         retry_on=(ValidationError, JudgeSemanticError, ModifierValidationError, json.JSONDecodeError),

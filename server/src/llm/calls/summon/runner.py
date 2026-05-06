@@ -14,7 +14,7 @@ async def summon(
     """Generate one ad-hoc enemy. Pair-trade violations trigger 5 retries."""
     return await run_with_retries(
         client,
-        system_prompt=get_prompt(__file__, locale),
+        system_prompt=get_prompt("summon", locale),
         user_payload=input_.model_dump_json(),
         parse=EncounterSummonOutput.model_validate_json,
         retries=retries,

@@ -23,7 +23,7 @@ sys.path.insert(0, str(SERVER_DIR))
 load_dotenv(SERVER_DIR / ".env.dev")
 
 from src.llm import LLMClient  # noqa: E402
-from src.llm.calls.classify import PROMPT_PATH, classify  # noqa: E402
+from src.llm.calls.classify import classify  # noqa: E402
 from src.llm.calls.classify.schema import JudgeInput  # noqa: E402
 
 
@@ -460,7 +460,6 @@ async def main():
         "LLM_ROUTE_CLASSIFY", os.environ["LLM_ROUTE_DEFAULT"]
     )
 
-    print(f"prompt: {PROMPT_PATH}")
     print(f"classify route: {classify_route}\n")
 
     all_results: list[dict] = []

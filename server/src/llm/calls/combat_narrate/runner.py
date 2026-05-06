@@ -24,7 +24,7 @@ async def stream_combat_narrate(
     transport error raises (the client can't take back what was shown).
     Non-transport exceptions always raise (programming bugs shouldn't hide)."""
     messages = [
-        {"role": "system", "content": get_prompt(__file__, locale)},
+        {"role": "system", "content": get_prompt("combat_narrate", locale)},
         {"role": "user", "content": input_.model_dump_json()},
     ]
 

@@ -15,7 +15,7 @@ _log = logging.getLogger(__name__)
 
 
 def _build_prompt(locale: str) -> str:
-    base = get_prompt(__file__, locale)
+    base = get_prompt("narrate/extract", locale)
     subs = render_for_prompt(locale)
     for k, v in subs.items():
         base = base.replace("{{" + k + "}}", v)
