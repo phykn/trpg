@@ -79,9 +79,9 @@ Valid output — three different `type`, all match the character's stealth + fir
 }
 ```
 
-왜 valid: (a) `type` 셋 다 다름 (`buff/attack/debuff`) — variety. (b) 각 후보가 character 메모리·입력에 anchor — stealth(그림자 발걸음), fire+stealth 융합(불꽃 단도), area control(연막 폭발). (c) `existing_skills`의 `heal`과 겹치지 않음. (d) `name` / `description` / `special_effect` 셋이 같은 문장의 paraphrase가 아님 — 각각 다른 정보(이름·정체·시전 시 묘사).
+Why valid: (a) three different `type` values (`buff/attack/debuff`) — variety. (b) each candidate is anchored to character memories/inputs — stealth (그림자 발걸음), fire+stealth fusion (불꽃 단도), area control (연막 폭발). (c) no overlap with the existing `heal` in `existing_skills`. (d) `name` / `description` / `special_effect` are not paraphrases of each other — each carries distinct information (identity, lore, cast imagery).
 
-또는 (single-track variation) — 만약 character가 순수 화염 마법사라 `recent_inputs`·메모리가 전부 `attack`만 가리킨다면, `type`은 셋 다 `attack`으로 두고 `target` / `primary_stat`을 다르게 굴려 variety를 잡는다:
+Or (single-track variation) — if the character is a pure fire mage and all `recent_inputs` and memories point exclusively to `attack`, keep all three `type` values as `attack` and vary `target` / `primary_stat` for variety:
 
 ```json
 {
@@ -93,7 +93,7 @@ Valid output — three different `type`, all match the character's stealth + fir
 }
 ```
 
-세 후보 모두 `attack`이지만 `target`(single/area/single)과 `primary_stat`(INT/INT/STR) 조합이 달라 plays differently — 원거리 단일타, 광역 제압, 근접 마법-격투 융합.
+All three candidates are `attack`, but the `target` (single/area/single) and `primary_stat` (INT/INT/STR) combinations differ — ranged single-target, area suppression, melee magic-martial fusion.
 
 ## Forbidden
 
