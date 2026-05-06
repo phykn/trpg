@@ -1,6 +1,7 @@
 import asyncio
 import sys
 from collections.abc import Callable
+from functools import lru_cache
 from pathlib import Path
 from typing import TypeVar
 
@@ -34,6 +35,31 @@ def load_prompt(agent_file: str, *, substitutions: dict[str, str] | None = None)
     if substitutions:
         for key, value in substitutions.items():
             text = text.replace("{{" + key + "}}", value)
+    return text
+
+
+def _kernel_blocks_for(locale: str) -> dict[str, str]:
+    """Map catalog kernel.* keys to {{LOCALE_*}} substitution tokens for the given locale."""
+    from src.locale.render import _load
+
+    catalog = _load("prompt").get("prompt", {})
+    out: dict[str, str] = {}
+    for key, locales in catalog.items():
+        if not key.startswith("kernel."):
+            continue
+        token = "LOCALE_" + key.split(".", 1)[1].upper()
+        out[token] = locales.get(locale, "")
+    return out
+
+
+@lru_cache(maxsize=None)
+def get_prompt(agent_file: str, locale: str) -> str:
+    """Locale-aware variant of load_prompt; cached per (agent_file, locale)."""
+    own = (Path(agent_file).parent / "prompt.md").read_text(encoding="utf-8")
+    text = f"{_KERNEL}\n\n---\n\n{own}" if _KERNEL else own
+    subs = _kernel_blocks_for(locale)
+    for key, value in subs.items():
+        text = text.replace("{{" + key + "}}", value)
     return text
 
 
