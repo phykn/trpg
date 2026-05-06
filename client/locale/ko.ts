@@ -11,6 +11,7 @@ export const ko = {
     gender: 'GENDER',
     world: 'WORLD',
     race: 'RACE',
+    language: 'LANGUAGE',
   },
   ability: {
     STR: '근력',
@@ -162,6 +163,8 @@ export const ko = {
     male: '남성',
     female: '여성',
     noRaces: '선택 가능한 종족이 없습니다.',
+    korean: '한국어',
+    english: 'English',
     leaveBlurb: '진행 중인 이야기를 멈춥니다. 새로운 이야기를 시작합니다.',
   },
 } as const;

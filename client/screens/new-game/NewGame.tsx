@@ -31,6 +31,7 @@ export function NewGame({ onSubmit }: Props) {
   const [profileId, setProfileId] = React.useState<string | null>(null);
   const [raceId, setRaceId] = React.useState<string | null>(null);
   const [gender, setGender] = React.useState<'male' | 'female'>('male');
+  const [locale, setLocale] = React.useState<'ko' | 'en'>('ko');
   const [name, setName] = React.useState<string>(ko.newGame.defaultName);
   const [submitting, setSubmitting] = React.useState(false);
   const [serverSha, setServerSha] = React.useState<string>('?');
@@ -73,6 +74,7 @@ export function NewGame({ onSubmit }: Props) {
       await onSubmit({
         profile: profileId,
         player: { name: trimmedName, race_id: raceId, gender },
+        locale,
       });
     } finally {
       setSubmitting(false);
@@ -197,6 +199,27 @@ export function NewGame({ onSubmit }: Props) {
           )}
         </Section>
       )}
+
+      <Section label={ko.form.language}>
+        <View className="flex-row gap-2">
+          <View className="flex-1">
+            <SelectCard
+              title={ko.newGame.korean}
+              selected={locale === 'ko'}
+              onPress={() => setLocale('ko')}
+              dense
+            />
+          </View>
+          <View className="flex-1">
+            <SelectCard
+              title={ko.newGame.english}
+              selected={locale === 'en'}
+              onPress={() => setLocale('en')}
+              dense
+            />
+          </View>
+        </View>
+      </Section>
 
       <View className="items-center pt-2">
         <Text className="font-mono text-meta text-fg-subtle">
