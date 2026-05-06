@@ -2,21 +2,22 @@ import { Animated, Text, View } from 'react-native';
 
 import { Glyph, Surface, useEntryAnimation } from '@/components/ui';
 import { colors } from '@/design/tokens';
+import { ko } from '@/locale/ko';
 
 import type { LogEntry } from '@/logic/log/types';
 
 type RollEntry = Extract<LogEntry, { kind: 'roll' }>;
 
 const TONE = {
-  success: { color: colors.success.fg, label: '성공', cls: 'text-success-fg' },
-  partial: { color: colors.exp.fg,     label: '절반', cls: 'text-exp-fg'     },
-  fail:    { color: colors.danger.fg,  label: '실패', cls: 'text-danger-fg'  },
+  success: { color: colors.success.fg, label: ko.roll.success, cls: 'text-success-fg' },
+  partial: { color: colors.exp.fg,     label: ko.roll.partial, cls: 'text-exp-fg'     },
+  fail:    { color: colors.danger.fg,  label: ko.roll.fail,    cls: 'text-danger-fg'  },
 } as const;
 
 function marginText(entry: RollEntry): string | null {
   if (entry.roll === 20 || entry.roll === 1) return null;
-  if (entry.margin > 0) return `+${entry.margin} 초과`;
-  if (entry.margin < 0) return `${-entry.margin} 부족`;
+  if (entry.margin > 0) return `+${entry.margin} ${ko.roll.exceed}`;
+  if (entry.margin < 0) return `${-entry.margin} ${ko.roll.short}`;
   return null;
 }
 
@@ -61,7 +62,7 @@ export function RollResult({ entry }: { entry: RollEntry }) {
             className="font-sans-semibold text-panel text-fg-subtle"
             style={{ letterSpacing: 1.2 }}
           >
-            주사위
+            {ko.roll.die}
           </Text>
           <Text
             className="font-mono-semibold text-panel text-fg-default"

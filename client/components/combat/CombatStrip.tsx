@@ -2,6 +2,7 @@ import { Animated, Text, View } from 'react-native';
 
 import { Bar, Surface, useEntryAnimation } from '@/components/ui';
 import { colors, toneColor } from '@/design/tokens';
+import { ko } from '@/locale/ko';
 
 import type { CombatBadge } from '@/logic/combat/types';
 
@@ -21,7 +22,7 @@ export function CombatStrip({ combat }: { combat: CombatBadge }) {
             className="font-sans-bold text-caption text-danger-fg uppercase"
             style={{ letterSpacing: 1.2 }}
           >
-            전투
+            {ko.combat.label}
           </Text>
           <Text className="font-mono text-caption text-fg-subtle">·</Text>
           <Text

@@ -70,9 +70,16 @@ export const ko = {
     liking: '호감',
     stopLabel: '주사위 굴림 중단',
     rolling: '굴리는 중…',
+    rollingLog: '주사위를 굴리는 중…',
     rollingLabel: '주사위 굴리는 중',
     rollLabel: '주사위 굴리기',
     halt: '정지',
+    success: '성공',
+    partial: '절반',
+    fail: '실패',
+    exceed: '초과',
+    short: '부족',
+    die: '주사위',
   },
   composer: {
     placeholderLocked: '판정을 먼저 굴려주세요',
@@ -83,6 +90,7 @@ export const ko = {
   empty: {
     loadingSkill: '불러오는 중…',
     noSkillCandidates: '기술 후보 없음',
+    panel: '비어 있음',
   },
   level: {
     title: '레벨업',
@@ -111,6 +119,19 @@ export const ko = {
     inventory: '소지',
     skill: '기술',
     companion: '동료',
+    hp: '체력',
+    mp: '마나',
+    exp: '경험',
+    revive: '소생',
+  },
+  combat: {
+    label: '전투',
+  },
+  menu: {
+    newGame: '새로운 이야기',
+    soundOff: '소리 끄기',
+    soundOn: '소리 켜기',
+    menuLabel: '메뉴',
   },
   subject: {
     chip: '상대',

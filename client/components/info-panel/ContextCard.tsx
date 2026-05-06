@@ -1,6 +1,8 @@
 import React from 'react';
 import { PanResponder, Pressable, Text, View } from 'react-native';
 
+import { ko } from '@/locale/ko';
+
 import { Chip, Surface } from '@/components/ui';
 import {
   MiniMapPanel,
@@ -63,7 +65,7 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, menuOpen, bg
         onLayout={(e) => setChipBarHeight(e.nativeEvent.layout.height)}
         className="flex-row p-2 gap-1 items-center"
       >
-        <IconButton d={ICON_PATH.menu} label="메뉴" onPress={onMenuToggle} />
+        <IconButton d={ICON_PATH.menu} label={ko.menu.menuLabel} onPress={onMenuToggle} />
         <View className="flex-1 flex-row gap-1">
           {slots.map((s) => (
             <Chip
@@ -78,7 +80,7 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, menuOpen, bg
         </View>
         <IconButton
           d={ICON_PATH.map}
-          label="전체 지도"
+          label={ko.panel.fullMap}
           active={graphOpen}
           onPress={() => onSelect('graph')}
         />
@@ -141,10 +143,10 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, menuOpen, bg
               onNewGame?.();
             }}
             accessibilityRole="button"
-            accessibilityLabel="새로운 이야기"
+            accessibilityLabel={ko.menu.newGame}
             className="px-3 py-2"
           >
-            <Text className="font-sans text-body text-fg-default">새로운 이야기</Text>
+            <Text className="font-sans text-body text-fg-default">{ko.menu.newGame}</Text>
           </Pressable>
           <Pressable
             onPress={() => {
@@ -152,10 +154,10 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, menuOpen, bg
               onBgmToggle();
             }}
             accessibilityRole="button"
-            accessibilityLabel={bgmOn ? '소리 끄기' : '소리 켜기'}
+            accessibilityLabel={bgmOn ? ko.menu.soundOff : ko.menu.soundOn}
             className="px-3 py-2"
           >
-            <Text className="font-sans text-body text-fg-default">{bgmOn ? '소리 끄기' : '소리 켜기'}</Text>
+            <Text className="font-sans text-body text-fg-default">{bgmOn ? ko.menu.soundOff : ko.menu.soundOn}</Text>
           </Pressable>
         </Surface>
       )}
