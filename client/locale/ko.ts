@@ -12,8 +12,4 @@ export const ko = {
     world: 'WORLD',
     race: 'RACE',
   },
-  storage: {
-    currentGameKey: 'trpg.current_game_id',
-    storyGraphPrefix: 'trpg.story_graph.',
-  },
 } as const;
