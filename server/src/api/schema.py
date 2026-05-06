@@ -38,7 +38,7 @@ class ProfileCard(BaseModel):
 class InitRequest(BaseModel):
     profile: str
     player: PlayerInput
-    locale: str = "ko"
+    locale: Literal["ko", "en"] = "ko"
 
 
 class InitResponse(BaseModel):
