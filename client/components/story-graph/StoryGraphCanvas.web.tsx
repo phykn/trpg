@@ -171,7 +171,6 @@ export function StoryGraphCanvas({
     const prev = prevViewportRef.current;
     prevViewportRef.current = null;
 
-    // Drop cache entries for nodes no longer in the graph.
     const validIds = new Set(graph.nodes.map((n) => n.id));
     for (const id of Object.keys(positionStore)) {
       if (!validIds.has(id)) delete positionStore[id];
@@ -355,7 +354,6 @@ export function StoryGraphCanvas({
       cy.destroy();
       cyRef.current = null;
     };
-  // centerNodeId, unseenNodeIds dropped from deps; selection isn't here either.
   }, [graphIdentityKey, nodeOverrides, layout, rootNodeId, onNodeSelect, clearOnBackgroundTap]);
 
   // Effect 2: selection — viewport untouched.

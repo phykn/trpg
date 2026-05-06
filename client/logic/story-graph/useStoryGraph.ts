@@ -10,9 +10,7 @@ import type { StoryGraphModel } from './types';
 import { getStorage, loadSeenNodes, storeSeenNodes } from '@/services/storage';
 
 // Hydrate the seen-node set from cache and auto-seed with the player's starting
-// place node so it doesn't get a "new" ring on first load. Shared between the
-// mini-map hook and the full-screen StoryGraphScreen so seed behavior stays
-// in lock-step.
+// place node so it doesn't get a "new" ring on first load.
 export function loadAndSeedSeenNodes(gameId: string, graph: StoryGraphModel): Set<string> {
   const loaded = loadSeenNodes(gameId);
   const startNode = graph.nodes.find((n) => n.kind === 'place');

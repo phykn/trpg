@@ -25,7 +25,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-// Merge stored + current graphs. Demote `place` → `location` and `subject` → `target` when no longer active.
+// Demotes `place` → `location` and `subject` → `target` when no longer active in the next snapshot.
 export function mergeStoryGraphs(base: StoryGraphModel, next: StoryGraphModel): StoryGraphModel {
   if (base.nodes.length === 0 && base.edges.length === 0) return next;
   if (next.nodes.length === 0 && next.edges.length === 0) return base;

@@ -89,7 +89,7 @@ const toneColor = {
   neutral: colors.fg.subtle,
 };
 
-// Shadow API kept (callers reference shadow.floating / shadow.paper) but rendered invisible — depth in the dark theme comes from borders + bg opacity, not light-and-shadow simulation.
+// Shadow API kept but rendered invisible — depth in the dark theme comes from borders + bg opacity, not light-and-shadow simulation.
 const shadow = {
   floating: {
     shadowColor: '#000000',

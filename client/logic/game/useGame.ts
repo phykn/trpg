@@ -73,7 +73,6 @@ export function useGame() {
   const [levelUpOpen, setLevelUpOpen] = React.useState(false);
   const [levelUpCandidates, setLevelUpCandidates] = React.useState<SkillCandidate[] | null>(null);
 
-  // Wrap setSuggestions so every state change is mirrored into the per-game localStorage cache.
   const setSuggestions = React.useCallback(
     (next: React.SetStateAction<string[]>) => {
       setSuggestionsRaw((prev) => {
@@ -279,8 +278,7 @@ export function useGame() {
     const id = gameIdRef.current;
     if (!id || streamingRef.current || pending) return;
     setLevelUpOpen(true);
-    setLevelUpCandidates(null); // loading state
-    // Abort any prior in-flight preview before starting a new one
+    setLevelUpCandidates(null);
     previewAbortRef.current?.abort();
     const controller = new AbortController();
     previewAbortRef.current = controller;

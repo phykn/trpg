@@ -16,8 +16,6 @@ import type {
   SuggestionsPayload,
 } from './wire.gen';
 
-// Re-export the auto-generated wire shape under the historical client name.
-// Caller code (handleStreamEvent, useGame, RollPrompt) keeps using `PendingCheck`.
 export type PendingCheck = PendingCheckPayload;
 
 export type FrontState = {
@@ -76,10 +74,8 @@ export type RollRequest = {
   think: boolean;
 };
 
-// `combat_*` events and `judge` are observability-only today
-// (handleStreamEvent early-returns), but the payload shapes are now typed
-// via wire.gen so future debug/observability consumers stay safe across
-// server changes. `state` + `log_entry` remain authoritative for the UI.
+// `combat_*` and `judge` events are observability-only — the dispatch
+// early-returns. UI state comes from `state` + `log_entry`.
 export type StreamEvent =
   | { type: 'judge'; data: JudgePayload }
   | { type: 'pending_check'; data: PendingCheck }

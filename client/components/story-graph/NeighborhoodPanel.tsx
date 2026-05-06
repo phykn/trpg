@@ -35,10 +35,7 @@ export function NeighborhoodPanel({
 }) {
   const visibleGraph: StoryGraphModel = React.useMemo(() => {
     // "주변" panel — restrict to the immediate neighborhood so the small
-    // viewport doesn't get crammed with the full reachable map. Allowed:
-    // current place, hero, active subject, active quest, 1-hop adjacent
-    // locations (location.reachable=true), and characters in the current
-    // place (target.reachable=true).
+    // viewport doesn't get crammed with the full reachable map.
     const allowed = new Set<string>();
     for (const n of graph.nodes) {
       if (n.kind === 'place' || n.kind === 'hero' || n.kind === 'subject' || n.kind === 'quest') {

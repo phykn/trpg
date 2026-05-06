@@ -20,7 +20,6 @@ export function clearStoredGameId(): void {
   getStorage()?.removeItem(CURRENT_GAME_KEY);
 }
 
-// Per-game UI state caches — survive page reloads.
 const SUGGESTIONS_PREFIX = 'trpg.suggestions.';
 const LAST_SEEN_LOCATION_PREFIX = 'trpg.last_seen_location.';
 const LAST_SEEN_QUEST_TITLE_PREFIX = 'trpg.last_seen_quest_title.';
