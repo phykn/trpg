@@ -1,4 +1,4 @@
-import type { LogEntry } from '@/features/log';
+import type { LogEntry } from '@/logic/log';
 import type { FrontState, PendingCheck, StreamEvent } from '@/services/wire';
 
 export type StreamHandlers = {

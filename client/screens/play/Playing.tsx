@@ -3,7 +3,7 @@ import { Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, View } from 
 
 import { useBgm } from '@/logic/audio';
 import { CombatStrip } from '@/logic/combat';
-import { Log } from '@/features/log';
+import { Log } from '@/logic/log';
 import { useStoryGraph } from '@/features/story-graph';
 import type { Game } from '@/logic/game/useGame';
 import { buildPanelSlots } from '@/features/info-panel';

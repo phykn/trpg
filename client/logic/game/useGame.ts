@@ -28,7 +28,7 @@ import {
 } from '@/services';
 import type { CombatBadge } from '@/logic/combat';
 import type { Hero } from '@/logic/hero';
-import type { LogEntry } from '@/features/log';
+import type { LogEntry } from '@/logic/log';
 import type { Quest } from '@/logic/quest';
 import type { Place } from '@/features/story-graph';
 import type { Subject } from '@/logic/subject';

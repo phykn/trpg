@@ -3,7 +3,7 @@ import { Animated, Text, View } from 'react-native';
 import { Glyph, Surface, useEntryAnimation } from '@/components/ui';
 import { colors } from '@/design/tokens';
 
-import type { LogEntry } from './types';
+import type { LogEntry } from '@/logic/log/types';
 
 type RollEntry = Extract<LogEntry, { kind: 'roll' }>;
 

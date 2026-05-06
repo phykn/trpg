@@ -4,7 +4,7 @@ import { Glyph, Surface, useEntryAnimation } from '@/components/ui';
 import { colors, spacing } from '@/design/tokens';
 
 import { RollResult } from './RollResult';
-import type { LogEntry } from './types';
+import type { LogEntry } from '@/logic/log/types';
 
 export function LogItem({ entry }: { entry: LogEntry }) {
   switch (entry.kind) {

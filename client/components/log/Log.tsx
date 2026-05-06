@@ -4,7 +4,7 @@ import { Glyph } from '@/components/ui';
 import { colors, spacing } from '@/design/tokens';
 
 import { LogItem } from './LogItem';
-import type { LogEntry } from './types';
+import type { LogEntry } from '@/logic/log/types';
 
 function Pulse({ color }: { color: string }) {
   const anim = React.useRef(new Animated.Value(1)).current;
