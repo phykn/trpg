@@ -12,4 +12,12 @@ export const ko = {
     world: 'WORLD',
     race: 'RACE',
   },
+  ability: {
+    STR: '근력',
+    DEX: '민첩',
+    CON: '건강',
+    INT: '지능',
+    WIS: '지혜',
+    CHA: '매력',
+  },
 } as const;

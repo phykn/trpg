@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Surface } from '@/components/ui';
 import { colors } from '@/design/tokens';
+import { ko } from '@/locale/ko';
 import type { Hero } from '@/logic/hero';
 import type { SkillCandidate, StatKey } from '@/services/wire';
 
@@ -11,10 +12,6 @@ const STAT_PAIRS: Array<[StatKey, StatKey]> = [
   ['DEX', 'WIS'],
   ['CON', 'INT'],
 ];
-
-const STAT_KR: Record<StatKey, string> = {
-  STR: '근력', DEX: '민첩', CON: '건강', INT: '지능', WIS: '지혜', CHA: '매력',
-};
 
 const STAT_PAIRED_DOWN: Record<StatKey, StatKey> = {
   STR: 'CHA', CHA: 'STR', DEX: 'WIS', WIS: 'DEX', CON: 'INT', INT: 'CON',
@@ -35,7 +32,7 @@ export function LevelUpPrompt({ hero, candidates, onCommit, onCancel }: Props) {
   const [skillId, setSkillId] = React.useState<string | null>(null);
 
   const statValueOf = (k: StatKey): number => {
-    const row = hero.stats.find((s) => s.label === STAT_KR[k]);
+    const row = hero.stats.find((s) => s.label === ko.ability[k]);
     return row ? row.value : 0;
   };
 
@@ -74,14 +71,14 @@ export function LevelUpPrompt({ hero, candidates, onCommit, onCancel }: Props) {
         onPress={disabled ? undefined : () => { setStatUp(k); }}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel={`${STAT_KR[k]} 올리기`}
+        accessibilityLabel={`${ko.ability[k]} 올리기`}
         style={[
           { flex: 1, paddingVertical: 6, paddingHorizontal: 4, borderRadius: 3, alignItems: 'center', justifyContent: 'center' },
           style,
         ]}
       >
         <Text className="font-sans-medium" style={{ color: textColor, fontSize: 11 }}>
-          {STAT_KR[k]} <Text style={{ fontVariant: ['tabular-nums'] }}>{previewValue}</Text>
+          {ko.ability[k]} <Text style={{ fontVariant: ['tabular-nums'] }}>{previewValue}</Text>
         </Text>
       </Pressable>
     );
