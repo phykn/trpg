@@ -65,3 +65,11 @@ ko = """When emitting Korean content, avoid anachronisms unless world/seed expli
 - Out-of-seed creatures (forbidden unless in seed): 들쥐 떼, 까마귀 떼, 거대 거미.
 - Out-of-seed magic (forbidden unless in seed): 룬 문자, 낡은 비석, 고대 문자, 결계, 마법진, 차원의 문, 고대 봉인, 신성한 제단."""
 en = ""
+
+[prompt."classify.refuse_message_hint"]
+ko = "이 자리에서는 캐릭터의 행동만 받습니다."
+en = ""
+
+[prompt."classify.tail_intent_example"]
+ko = """transfer(item_id=herb_01, ..., tail_intent: "한 모금에 묵직한 약초 향이 입안에 번집니다")"""
+en = ""

@@ -50,11 +50,29 @@ def _kernel_blocks_for(locale: str) -> dict[str, str]:
     return out
 
 
+def _agent_blocks_for(agent_file: str, locale: str) -> dict[str, str]:
+    catalog = _load_catalog("prompt").get("prompt", {})
+    parent = Path(agent_file).parent
+    grandparent = parent.parent
+    candidate_prefixes = [parent.name + "."]
+    if grandparent.name == "narrate":
+        candidate_prefixes.insert(0, f"{grandparent.name}.{parent.name}.")
+        candidate_prefixes.append(f"{grandparent.name}.")
+    out: dict[str, str] = {}
+    for key, locales in catalog.items():
+        for pfx in candidate_prefixes:
+            if key.startswith(pfx):
+                token = "LOCALE_" + key.replace(".", "_").upper()
+                out[token] = locales.get(locale, "")
+                break
+    return out
+
+
 @lru_cache(maxsize=None)
 def get_prompt(agent_file: str, locale: str) -> str:
     own = (Path(agent_file).parent / "prompt.md").read_text(encoding="utf-8")
     text = f"{_KERNEL}\n\n---\n\n{own}" if _KERNEL else own
-    subs = _kernel_blocks_for(locale)
+    subs = {**_kernel_blocks_for(locale), **_agent_blocks_for(agent_file, locale)}
     for key, value in subs.items():
         text = text.replace("{{" + key + "}}", value)
     return text
