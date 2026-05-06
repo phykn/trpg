@@ -14,8 +14,8 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from src.domain.entities import Chapter, Character, Item, Location, Quest, Race, Skill
-from src.engines.invariants import check_character, check_item, check_seed_character
+from src.game.domain.entities import Chapter, Character, Item, Location, Quest, Race, Skill
+from src.game.engines.invariants import check_character, check_item, check_seed_character
 
 from ._common import (
     ID_PATTERN,

@@ -8,7 +8,7 @@ step of the workflow.
 
 from pathlib import Path
 
-from src.domain.entities import (
+from src.game.domain.entities import (
     ArmorEffect,
     Character,
     Item,

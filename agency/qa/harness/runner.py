@@ -14,8 +14,8 @@ from pathlib import Path
 from httpx import ASGITransport, AsyncClient
 
 from src.llm import LLMClient, set_llm_session
-from src.persistence.local_fs import LocalFsSaveRepo
-from src.persistence.supabase import SupabaseStorageScenarioRepo
+from src.db.local_fs import LocalFsSaveRepo
+from src.db.supabase import SupabaseStorageScenarioRepo
 
 from run_api import build_app
 

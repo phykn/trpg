@@ -27,6 +27,7 @@ User-facing setup, full directory map, and the per-agent persona summary live in
 .venv/bin/python -m agency.story.tool equip-fill      <scenario_dir>
 .venv/bin/python -m agency.story.tool sweep           <scenario_dir>
 APP_ENV=release .venv/bin/python -m agency.story.tool upload <scenario_dir>
+APP_ENV=release .venv/bin/python -m agency.story.tool download <profile> [--out <dir>]
 ```
 
 Single QA run output lands at the repo root `qa_test/<agent>/` (gitignored): `transcript.md` (human review), `sse.jsonl` (event replay), `final_state.json`, `saves/` (per-agent `LocalFsSaveRepo`), `llm/` (per-call request/response pairs). The runner wipes **only the targeted agent's directory** at session start, so re-running `socialite` doesn't touch `fighter`'s artifacts from an earlier full-suite run.
