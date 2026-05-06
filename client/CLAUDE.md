@@ -25,11 +25,11 @@ npx expo start -c           # clear Metro cache — required after editing token
 - **expo-router** with `typedRoutes`. Add a screen by creating a file under `app/`; don't wire navigation manually. The tab bar is hidden (`tabBarStyle: { display: 'none' }`); the app is single-screen.
 - **NativeWind v4**: write `className="bg-canvas-subtle p-3 rounded-md"`, not `StyleSheet` objects. The `@tailwind` directives load via `global.css`, imported once at the top of `app/_layout.tsx`.
 - **Server calls use `expo/fetch`**, not the global `fetch`. Standard `fetch` does not support SSE body streaming on RN.
-- **Korean only — with one design-system exception.** The server composes every display string (including dates, durations, joined lists). The client renders verbatim — do not localize or reformat in `features/<x>/panel.ts` or components. **Exception:** short uppercase English used as a visual atom in the GeistMono type system — narrowly, **form section labels in character creation** (`NAME` / `GENDER` / `WORLD` / `RACE`) — is allowed in client-side code (`screens/`, `components/ui/`, `features/<x>/` view files). **Action buttons stay Korean** (`시작` / `굴리기` / `멈추기` / `빠르게` / `정확하게`). **Stat keys stay Korean** (`체력` / `마나` / `경험` / `소생`). **Log entry types are distinguished visually** (font size, accent border, mono box) — no inline text label. Anything composed from server data stays as the server sent it.
+- **Korean only — with one design-system exception.** The server composes every display string (including dates, durations, joined lists). The client renders verbatim — do not localize or reformat in `logic/<x>/panel.ts` or `components/<x>/`. **Exception:** short uppercase English used as a visual atom in the GeistMono type system — narrowly, **form section labels in character creation** (`NAME` / `GENDER` / `WORLD` / `RACE`) — is allowed in client-side code (`screens/`, `components/ui/`, `components/<x>/` view files). **Action buttons stay Korean** (`시작` / `굴리기` / `멈추기` / `빠르게` / `정확하게`). **Stat keys stay Korean** (`체력` / `마나` / `경험` / `소생`). **Log entry types are distinguished visually** (font size, accent border, mono box) — no inline text label. Anything composed from server data stays as the server sent it.
 
 ## Architecture
 
-Single-screen Korean-language TRPG. `app/(tabs)/index.tsx` mounts `<ScreenShell><Shell/></ScreenShell>`; everything else lives under `screens/`, `features/`, or `components/ui/`.
+Single-screen Korean-language TRPG. `app/(tabs)/index.tsx` mounts `<ScreenShell><Shell/></ScreenShell>`; everything else lives under `screens/`, `components/`, `logic/`, or `services/`.
 
 **Layers, top → bottom:**
 
@@ -38,13 +38,14 @@ Single-screen Korean-language TRPG. `app/(tabs)/index.tsx` mounts `<ScreenShell>
 3. `screens/Shell.tsx` — composition root. Branches on `useGame().status` between `loading / no-game / error / ready`. The `ready` branch delegates to `screens/play/Playing`; `no-game` mounts `screens/new-game/NewGame`.
 4. `screens/play/Playing.tsx` — game screen. Owns ephemeral UI state (`activeId`, `menuOpen`, `pendingAction`, BGM toggle, input draft). Reads `pending` to decide between `RollPrompt` and `Composer`.
 5. `screens/new-game/` — character creation screen.
-6. `features/<name>/` — domain modules. Each owns its views + `types.ts` + (optional) `panel.ts` + (optional) hook + `index.ts` barrel; feature-internal helpers (e.g. `story-graph/presenters.ts` for merge/fingerprint, `story-graph/_nodeActions.ts` for intent builders) are also allowed. Currently: `hero`, `subject`, `quest`, `info-panel`, `composer`, `log`, `combat`, `story-graph`. Import the folder, not individual files.
-7. `components/ui/` — design-system primitives with no domain knowledge. `Surface` (paper/floating + optional stripeColor), `Chip` (tab/action), `Bar`, `Row`, `StatRow`, `InlineParts`, `InlineNodes`, `LabeledRow`, `Expandable`, `ExpandableTitle`, `ExpandGroup`, `ConfirmDialog`, `Glyph`, `CenterMessage`, `ErrorState`, `ScreenShell`, `useEntryAnimation`, `format` (joinOrDash, characterMeta, withDeath, ...). Plus `types.ts` (`Tone`, `BarDef`, `DisplayPart`, `PartsCell`, `ConfirmInfo`).
-8. `hooks/useGame.ts` — single source of truth for game state and actions (`onSend / onRoll / onStop / startNewGame / goToNewGame / refresh`). On mount, restores the last game via the `trpg.current_game_id` localStorage key. All in-flight `AbortController`s are cancelled on unmount and on `onStop`. The SSE-event → state-setter dispatch is the pure function in `hooks/handleStreamEvent.ts`; `state` and `log_entry` events are authoritative for the UI, and `judge` / `combat_*` events are observability-only.
-9. `features/story-graph/useStoryGraph.ts` — per-`gameId` localStorage merge for the story graph (key prefix `trpg.story_graph.`). Newer server snapshots merge over the cached one rather than replace, so transient absences don't blank the map.
-10. `services/` — data boundary. Surface: `listProfiles / getSessionById / initSession / streamTurn / streamRoll / streamIntro`, plus storage helpers. The server base URL and basic auth header live here only; no other layer should call `fetch` directly. The active `game_id` lives in browser localStorage — the server has no "last game" notion, so two browsers don't fight over a shared pointer.
-11. `types/wire.ts` — network contract. Owns `FrontState` (the SSE/REST `state` payload), `StreamEvent`, `PendingCheck`, `SessionPayload`, `InitRequest`, etc. — anything the server sends. Domain types live in their `features/<x>/types.ts`; `wire.ts` pulls them.
-12. `design/tokens.js` (+ `tokens.d.ts`) — single source of truth for design tokens: `colors`, `spacing`, `radius`, `fontFamily`, `fontSize`, `toneColor`, `shadow`. Both `tailwind.config.js` (className utilities) and TS code consuming raw values import from here. The file is CJS (`.js`) because Tailwind config runs in Node; types live in the `.d.ts` sibling. **Don't hardcode colors or spacing** — use a className or import from `@/design/tokens`. Color naming follows GitHub Primer (`canvas`, `fg`, `border`, `accent`, ...).
+6. `components/<name>/` — domain view files only. Currently: `HeroStrip`, `Log`, `LogItem`, `RollResult`, `Composer`, `RollPrompt`, `SendButton`, `StopButton`, `GameOverPanel`, `LevelUpPrompt`, `CombatStrip`, `ContextCard`, `IconButton`, `PanelBody`, `StoryGraphCanvas`, `StoryGraphCanvas.web`, `StoryGraphScreen`, `MapPanel`, `MiniMapPanel`, `NeighborhoodPanel`, `SelectCard`, `Section`, `Input`. Domains: `hero`, `composer`, `log`, `combat`, `info-panel`, `story-graph`. Import via `logic/<name>/` barrel — not directly.
+7. `logic/<name>/` — domain calculation, types, hooks. Each barrel (`logic/<name>/index.ts`) re-exports view components from `@/components/<name>/...` to preserve the external alias surface. Feature-internal helpers (e.g. `logic/story-graph/presenters.ts` for merge/fingerprint, `logic/story-graph/_nodeActions.ts` for intent builders) live here. Domains: `hero`, `subject`, `quest`, `info-panel`, `composer`, `log`, `combat`, `story-graph`, `audio`. View-less domains (`audio`, `subject`, `quest`) have no `components/<x>/` counterpart.
+8. `components/ui/` — design-system primitives with no domain knowledge. `Surface` (paper/floating + optional stripeColor), `Chip` (tab/action), `Bar`, `Row`, `StatRow`, `InlineParts`, `InlineNodes`, `LabeledRow`, `Expandable`, `ExpandableTitle`, `ExpandGroup`, `ConfirmDialog`, `Glyph`, `CenterMessage`, `ErrorState`, `ScreenShell`, `useEntryAnimation`, `format` (joinOrDash, characterMeta, withDeath, ...). Plus `types.ts` (`Tone`, `BarDef`, `DisplayPart`, `PartsCell`, `ConfirmInfo`).
+9. `logic/game/useGame.ts` — single source of truth for game state and actions (`onSend / onRoll / onStop / startNewGame / goToNewGame / refresh`). On mount, restores the last game via the `trpg.current_game_id` localStorage key. All in-flight `AbortController`s are cancelled on unmount and on `onStop`. The SSE-event → state-setter dispatch is the pure function in `logic/game/handleStreamEvent.ts`; `state` and `log_entry` events are authoritative for the UI, and `judge` / `combat_*` events are observability-only.
+10. `logic/story-graph/useStoryGraph.ts` — per-`gameId` localStorage merge for the story graph (key prefix `trpg.story_graph.`). Newer server snapshots merge over the cached one rather than replace, so transient absences don't blank the map.
+11. `services/` — data boundary. Surface: `listProfiles / getSessionById / initSession / streamTurn / streamRoll / streamIntro`, plus storage helpers. `services/wire.ts` owns the network contract: `FrontState` (the SSE/REST `state` payload), `StreamEvent`, `PendingCheck`, `SessionPayload`, `InitRequest`, etc. Sibling files: `wire.gen.d.ts`, `wire.schema.json`, `cytoscape-fcose.d.ts`. The server base URL and basic auth header live here only; no other layer should call `fetch` directly. The active `game_id` lives in browser localStorage — the server has no "last game" notion, so two browsers don't fight over a shared pointer.
+12. `locale/ko.ts` — client-side hardcoded label catalog (action / stat / form / storage key groups). Server-composed strings are rendered verbatim; this file covers labels the client owns.
+13. `design/tokens.js` (+ `tokens.d.ts`) — single source of truth for design tokens: `colors`, `spacing`, `radius`, `fontFamily`, `fontSize`, `toneColor`, `shadow`. Both `tailwind.config.js` (className utilities) and TS code consuming raw values import from here. The file is CJS (`.js`) because Tailwind config runs in Node; types live in the `.d.ts` sibling. **Don't hardcode colors or spacing** — use a className or import from `@/design/tokens`. Color naming follows GitHub Primer (`canvas`, `fg`, `border`, `accent`, ...).
 
 ## Folder rule (MECE)
 
@@ -54,16 +55,17 @@ Every file lives in exactly one bucket. Decision tree:
 |---|---|
 | expo-router route? | `app/` |
 | Screen composition? | `screens/<name>/` |
-| Touches fetch / storage? | `services/` |
+| Touches fetch / storage / wire format? | `services/` |
 | Design token? | `design/` |
-| Knows about a domain (Hero, Combat, Log, Story Graph, ...)? | `features/<x>/` |
-| Server wire format? | `types/wire.ts` |
-| Game state root or its input boundary? | `hooks/useGame.ts`, `hooks/handleStreamEvent.ts` |
+| Client-side hardcoded label / storage key? | `locale/ko.ts` |
+| Domain visual part? | `components/<x>/` |
+| Domain calculation / state / types? | `logic/<x>/` |
+| Game state root or its input boundary? | `logic/game/{useGame,handleStreamEvent}.ts` |
 | Otherwise (no domain knowledge — visual / animation primitive) | `components/ui/` |
 
 A file may not span two buckets. If you're unsure, the file probably wants splitting.
 
-**Locality consequence:** adding a `Hero` field touches only `features/hero/{types.ts, panel.ts, HeroStrip.tsx}`. Adding a log entry kind touches only `features/log/` plus the SSE dispatch in `hooks/handleStreamEvent.ts`. There is no cross-feature `presenters/` or `types/domain.ts` hub.
+**Locality consequence:** adding a `Hero` field touches only `logic/hero/{types.ts, panel.ts}` + `components/hero/HeroStrip.tsx`. Adding a log entry kind touches only `logic/log/` + `components/log/LogItem.tsx` plus the SSE dispatch in `logic/game/handleStreamEvent.ts`. There is no cross-feature `presenters/` or `types/domain.ts` hub.
 
 ## Conventions
 
@@ -73,8 +75,8 @@ A file may not span two buckets. If you're unsure, the file probably wants split
 - **No hand-rolled `bg-canvas-subtle border ... rounded-md` stacks.** Use `<Surface>` (paper or floating, optional `stripeColor`). Use `<Chip>` for clickable pills. New visual atoms go in `components/ui/`.
 - UI consistency fixes are holistic — don't patch only the flagged instance; change the atom.
 - `pending` (`PendingCheck`) flips composer mode: when it's set, render `RollPrompt`; when clear, render `Composer`. The `roll` log entry clears it the moment the dice lands, before the GM narration finishes streaming.
-- **Korean only — with one design-system exception.** The server composes every display string. The client renders verbatim — do not localize or reformat in `features/<x>/panel.ts` or components. **Form section labels in character creation** (`NAME` / `GENDER` / `WORLD` / `RACE`) may be uppercase English in GeistMono as visual atoms. Action buttons, stat keys, and log markers stay Korean (see Stack constraints above for the full policy).
-- `LogEntry` is a `kind: 'gm' | 'player' | 'act' | 'roll'` discriminated union — when extending the union, add the case to `features/log/LogItem.tsx`.
+- **Korean only — with one design-system exception.** The server composes every display string. The client renders verbatim — do not localize or reformat in `logic/<x>/panel.ts` or `components/<x>/`. **Form section labels in character creation** (`NAME` / `GENDER` / `WORLD` / `RACE`) may be uppercase English in GeistMono as visual atoms. Action buttons, stat keys, and log markers stay Korean (see Stack constraints above for the full policy).
+- `LogEntry` is a `kind: 'gm' | 'player' | 'act' | 'roll'` discriminated union — when extending the union, add the case to `components/log/LogItem.tsx`.
 
 ## Misc
 
