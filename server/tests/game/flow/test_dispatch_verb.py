@@ -53,14 +53,16 @@ def test_dispatch_verb_attack_calls_enter_combat():
 
 
 def test_dispatch_verb_transfer_branches_equip_unequip_gift_trade():
-    src = inspect.getsource(turn_module._dispatch_verb)
-    # transfer 분기가 4 path 모두 처리
-    assert 'mode == "gift"' in src
-    assert "<self>.equipped" in src
-    assert "emit_equip" in src
-    assert "emit_unequip" in src
-    assert "emit_give" in src
-    assert "emit_trade" in src
+    # transfer 분기 4 path는 공통 helper에 있고, _dispatch_verb는 그것을 호출
+    dispatch_src = inspect.getsource(turn_module._dispatch_verb)
+    assert "_resolve_transfer_emit(" in dispatch_src
+    helper_src = inspect.getsource(turn_module._resolve_transfer_emit)
+    assert 'mode == "gift"' in helper_src
+    assert "<self>.equipped" in helper_src
+    assert "emit_equip" in helper_src
+    assert "emit_unequip" in helper_src
+    assert "emit_give" in helper_src
+    assert "emit_trade" in helper_src
 
 
 def test_dispatch_verb_cast_routes_through_emit_cast():

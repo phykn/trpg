@@ -7,7 +7,7 @@ import inspect
 
 import pytest
 
-from src.game.flow.turn import _emit_verb_in_chain
+from src.game.flow.turn import _emit_verb_in_chain, _resolve_transfer_emit
 from src.llm.calls.classify.schema import Verb
 
 
@@ -26,16 +26,18 @@ def test_emit_verb_in_chain_handles_compat_verbs():
 
 
 def test_emit_verb_in_chain_transfer_branches_4_paths():
-    """transfer가 equip/unequip/gift/buy/sell 5 path로 분기."""
-    src = inspect.getsource(_emit_verb_in_chain)
-    assert "<self>.equipped" in src
-    assert "emit_equip" in src
-    assert "emit_unequip" in src
-    assert "emit_give" in src
-    assert 'mode == "gift"' in src
-    assert "emit_trade" in src
-    assert 'direction="sell"' in src
-    assert 'direction="buy"' in src
+    """transfer가 equip/unequip/gift/buy/sell 5 path로 분기 — 공통 helper로 위임."""
+    chain_src = inspect.getsource(_emit_verb_in_chain)
+    assert "_resolve_transfer_emit(" in chain_src
+    helper_src = inspect.getsource(_resolve_transfer_emit)
+    assert "<self>.equipped" in helper_src
+    assert "emit_equip" in helper_src
+    assert "emit_unequip" in helper_src
+    assert "emit_give" in helper_src
+    assert 'mode == "gift"' in helper_src
+    assert "emit_trade" in helper_src
+    assert 'direction="sell"' in helper_src
+    assert 'direction="buy"' in helper_src
 
 
 def test_emit_verb_in_chain_rejects_non_compat_verbs():

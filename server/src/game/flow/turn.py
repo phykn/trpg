@@ -295,6 +295,36 @@ async def run_turn(
 EmitFactory = Callable[[LLMClient, GameState, Dirty, object], AsyncIterator[dict]]
 
 
+def _resolve_transfer_emit(
+    state: GameState,
+    dirty: Dirty,
+    *,
+    mode: str,
+    from_id: str,
+    to_id: str,
+    item_id: str,
+    price: int | None,
+) -> AsyncIterator[dict]:
+    """Pick the inventory emit_* matching a non-steal transfer verb. Shared by
+    the single-verb dispatch and the chain-internal dispatch so both paths use
+    one decision table."""
+    if "<self>.equipped" in to_id:
+        return emit_equip(state, state.player_id, item_id, dirty)
+    if "<self>.equipped" in from_id:
+        return emit_unequip(state, state.player_id, item_id, dirty)
+    if mode == "gift":
+        return emit_give(state, from_id, to_id, item_id, dirty)
+    if from_id == state.player_id:
+        return emit_trade(
+            state, state.player_id, to_id, item_id, dirty,
+            direction="sell", agreed_price=price,
+        )
+    return emit_trade(
+        state, state.player_id, from_id, item_id, dirty,
+        direction="buy", agreed_price=price,
+    )
+
+
 def _emit_verb_in_chain(client, state, dirty, verb: Verb) -> AsyncIterator[dict]:
     """Dispatch a single chain-internal verb to its emit_* handler. No
     self-finalize — the chain outer loop owns narrate / finalize."""
@@ -306,24 +336,10 @@ def _emit_verb_in_chain(client, state, dirty, verb: Verb) -> AsyncIterator[dict]
         destination = m["destination"]
         return emit_move(state, state.player_id, destination, dirty)
     if n == "transfer":
-        mode = m["mode"]
-        from_id = m["from_id"]
-        to_id = m["to_id"]
-        item_id = m["item_id"]
-        if "<self>.equipped" in to_id:
-            return emit_equip(state, state.player_id, item_id, dirty)
-        if "<self>.equipped" in from_id:
-            return emit_unequip(state, state.player_id, item_id, dirty)
-        if mode == "gift":
-            return emit_give(state, from_id, to_id, item_id, dirty)
-        if from_id == state.player_id:
-            return emit_trade(
-                state, state.player_id, to_id, item_id, dirty,
-                direction="sell", agreed_price=m.get("price"),
-            )
-        return emit_trade(
-            state, state.player_id, from_id, item_id, dirty,
-            direction="buy", agreed_price=m.get("price"),
+        return _resolve_transfer_emit(
+            state, dirty,
+            mode=m["mode"], from_id=m["from_id"], to_id=m["to_id"],
+            item_id=m["item_id"], price=m.get("price"),
         )
     # wait/perceive/speak/cast: absorbed by narrate inside a chain — no
     # emit. _emit_verb_in_chain handles only chain-prefix-compatible verbs.
@@ -731,20 +747,10 @@ async def _dispatch_verb(
         agreed_price = m.get("price")
 
         def transfer_emit_factory(c, s, d, v):
-            if "<self>.equipped" in to_id:
-                return emit_equip(s, s.player_id, item_id, d)
-            if "<self>.equipped" in from_id:
-                return emit_unequip(s, s.player_id, item_id, d)
-            if mode == "gift":
-                return emit_give(s, from_id, to_id, item_id, d)
-            if from_id == s.player_id:
-                return emit_trade(
-                    s, s.player_id, to_id, item_id, d,
-                    direction="sell", agreed_price=agreed_price,
-                )
-            return emit_trade(
-                s, s.player_id, from_id, item_id, d,
-                direction="buy", agreed_price=agreed_price,
+            return _resolve_transfer_emit(
+                s, d,
+                mode=mode, from_id=from_id, to_id=to_id,
+                item_id=item_id, price=agreed_price,
             )
 
         async for ev in _run_one_step_action(
