@@ -2,7 +2,7 @@ import React from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 
 import { useBgm } from '@/logic/audio';
-import { CombatStrip } from '@/features/combat';
+import { CombatStrip } from '@/logic/combat';
 import { Log } from '@/features/log';
 import { useStoryGraph } from '@/features/story-graph';
 import type { Game } from '@/logic/game/useGame';

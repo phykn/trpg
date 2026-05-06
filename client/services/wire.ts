@@ -1,4 +1,4 @@
-import type { CombatBadge } from '@/features/combat';
+import type { CombatBadge } from '@/logic/combat';
 import type { Hero } from '@/logic/hero';
 import type { LogEntry } from '@/features/log';
 import type { Quest } from '@/logic/quest';
