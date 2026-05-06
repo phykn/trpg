@@ -1,5 +1,5 @@
 import type { BarDef, ConfirmInfo, PartsCell, Tone } from '@/components/ui';
-import type { QuestAction } from '@/types/wire';
+import type { QuestAction } from '@/services/wire';
 
 export type MetaSegment = { text: string; tone?: Tone };
 

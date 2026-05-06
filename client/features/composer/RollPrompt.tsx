@@ -4,7 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { colors } from '@/design/tokens';
 import { Surface } from '@/components/ui';
-import type { PendingCheck } from '@/types/wire';
+import type { PendingCheck } from '@/services/wire';
 
 const STOP_BUTTON_DELAY_MS = 2000;
 

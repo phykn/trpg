@@ -3,7 +3,7 @@ import type {
   PlaceSurrounding as PlaceSurroundingPayload,
   PlaceTarget as PlaceTargetPayload,
   RiskBadge as RiskBadgePayload,
-} from '@/types/wire.gen';
+} from '@/services/wire.gen';
 
 export type RiskBadge = RiskBadgePayload;
 

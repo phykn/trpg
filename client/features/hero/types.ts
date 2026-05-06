@@ -4,7 +4,7 @@ import type {
   HeroPayload,
   InventoryItem as InventoryItemPayload,
   StatEntry,
-} from '@/types/wire.gen';
+} from '@/services/wire.gen';
 
 export type Hero = HeroPayload;
 export type EquipItem = EquipItemPayload;

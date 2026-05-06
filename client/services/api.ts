@@ -9,7 +9,7 @@ import type {
   SessionPayload,
   StreamEvent,
   TurnRequest,
-} from '@/types/wire';
+} from '@/services/wire';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 if (!BASE_URL) throw new Error('EXPO_PUBLIC_API_URL is not set');

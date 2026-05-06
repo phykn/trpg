@@ -2,7 +2,7 @@ import type {
   BonusItem as BonusItemPayload,
   LogEntryPayload,
   RollLogEntry,
-} from '@/types/wire.gen';
+} from '@/services/wire.gen';
 
 // Re-export auto-generated wire shapes under historical client names.
 // Caller code (LogItem, useGame, wire.ts) keeps using `LogEntry` /

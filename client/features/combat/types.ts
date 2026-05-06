@@ -1,7 +1,7 @@
 import type {
   CombatBadgePayload,
   CombatEnemy as CombatEnemyPayload,
-} from '@/types/wire.gen';
+} from '@/services/wire.gen';
 
 export type CombatEnemy = CombatEnemyPayload;
 export type CombatBadge = CombatBadgePayload;
