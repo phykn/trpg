@@ -1,4 +1,4 @@
-import type { PanelAction } from '@/features/info-panel';
+import type { PanelAction } from '@/logic/info-panel';
 
 import type { StoryGraphNode } from './types';
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import type { PanelAction } from '@/features/info-panel';
+import type { PanelAction } from '@/logic/info-panel';
 import { getSessionById, loadStoredGameId, storeSeenNodes } from '@/services';
 
 import { MapPanel } from './MapPanel';

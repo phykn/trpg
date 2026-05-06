@@ -6,11 +6,11 @@ import { CombatStrip } from '@/logic/combat';
 import { Log } from '@/logic/log';
 import { useStoryGraph } from '@/features/story-graph';
 import type { Game } from '@/logic/game/useGame';
-import { buildPanelSlots } from '@/features/info-panel';
-import type { PanelAction, PanelSlot } from '@/features/info-panel';
+import { buildPanelSlots } from '@/logic/info-panel';
+import type { PanelAction, PanelSlot } from '@/logic/info-panel';
 
 import { Composer, GameOverPanel, LevelUpPrompt, RollPrompt } from '@/features/composer';
-import { ContextCard } from '@/features/info-panel';
+import { ContextCard } from '@/logic/info-panel';
 import { HeroStrip } from '@/logic/hero';
 import { ConfirmDialog } from '@/components/ui';
 

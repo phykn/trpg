@@ -1,6 +1,6 @@
 import { DASH, characterMeta, formatInventoryItem, joinOrDash, withDeath } from '@/components/ui';
 import type { EquipItem } from '@/logic/hero';
-import type { PanelSlot } from '@/features/info-panel';
+import type { PanelSlot } from '@/logic/info-panel';
 
 import type { Subject } from './types';
 

@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { ExpandableTitle, ExpandGroup, LabeledRow, Row, SEP, characterMeta, joinOrDash } from '@/components/ui';
 import { colors, toneColor } from '@/design/tokens';
-import type { PanelAction } from '@/features/info-panel';
+import type { PanelAction } from '@/logic/info-panel';
 
 import type { StoryGraphEdge, StoryGraphModel } from './types';
 import { StoryGraphCanvas } from './StoryGraphCanvas';

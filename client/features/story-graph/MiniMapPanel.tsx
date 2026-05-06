@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 
 import { SEP } from '@/components/ui';
 import { toneColor } from '@/design/tokens';
-import type { PanelAction } from '@/features/info-panel';
+import type { PanelAction } from '@/logic/info-panel';
 
 import type { Place, StoryGraphModel } from './types';
 

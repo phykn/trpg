@@ -1,5 +1,5 @@
 import { characterMeta, formatInventoryItem, joinOrDash, withDeath } from '@/components/ui';
-import type { PanelSlot } from '@/features/info-panel';
+import type { PanelSlot } from '@/logic/info-panel';
 
 import type { EquipItem, Hero } from './types';
 

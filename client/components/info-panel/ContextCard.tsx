@@ -6,13 +6,13 @@ import {
   MiniMapPanel,
   StoryGraphScreen,
   type StoryGraphModel,
+  type Place,
 } from '@/features/story-graph';
-import type { Place } from '@/features/story-graph';
 
-import type { PanelAction, PanelSlot } from './types';
+import type { PanelAction, PanelSlot } from '@/logic/info-panel/types';
 
-import { IconButton, ICON_PATH } from './IconButton';
-import { PanelBody } from './PanelBody';
+import { IconButton, ICON_PATH } from '@/components/info-panel/IconButton';
+import { PanelBody } from '@/components/info-panel/PanelBody';
 
 const FLOAT_BUFFER = 540;
 

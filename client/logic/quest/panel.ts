@@ -1,5 +1,5 @@
 import { joinOrDash } from '@/components/ui';
-import type { MetaSegment, PanelAction, PanelActions, PanelSlot } from '@/features/info-panel';
+import type { MetaSegment, PanelAction, PanelActions, PanelSlot } from '@/logic/info-panel';
 
 import type { Quest } from './types';
 
