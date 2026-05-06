@@ -51,14 +51,13 @@ FORBIDDEN_BY_ENTITY: dict[str, frozenset[str]] = {
 }
 
 
-def render_for_prompt() -> dict[str, str]:
-    """Slash-joined forbidden lists keyed for narrate prompt placeholder
-    substitution (`{{CHAR_FORBIDDEN}}` etc.). Identity-only fields (`id`)
-    are dropped — they're universally forbidden and only add prompt noise."""
+def render_for_prompt(locale: str) -> dict[str, str]:
+    """Forbidden-field substitution dict; locale reserved for Tasks 13-14."""
 
     def _render(t: tuple[str, ...]) -> str:
         return "/".join(f for f in t if f != "id")
 
+    del locale  # placeholder until narrate catalog keys exist
     return {
         "CHAR_FORBIDDEN": _render(CHAR_FORBIDDEN_ORDERED),
         "ITEM_FORBIDDEN": _render(ITEM_FORBIDDEN_ORDERED),

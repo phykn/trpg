@@ -9,7 +9,7 @@ from ..schema import NarrateOutput
 from .schema import ExtractInput
 
 # {{CHAR_FORBIDDEN}} etc. tokens are substituted at module load (matches old narrate runner — extract owns state_changes permissions).
-_PROMPT = load_prompt(__file__, substitutions=render_for_prompt())
+_PROMPT = load_prompt(__file__, substitutions=render_for_prompt("ko"))
 
 _MAX_RETRIES = 5
 _EXTRACT_TEMPERATURE = 0.4

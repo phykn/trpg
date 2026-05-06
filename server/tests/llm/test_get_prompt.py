@@ -40,3 +40,11 @@ def test_get_prompt_caches_per_locale(monkeypatch):
         assert calls["n"] == 1
         get_prompt(str(p), "en")
         assert calls["n"] == 2
+
+
+def test_render_for_prompt_accepts_locale():
+    from src.game.rules.permissions import render_for_prompt
+    out = render_for_prompt("ko")
+    assert "CHAR_FORBIDDEN" in out
+    out_en = render_for_prompt("en")
+    assert "CHAR_FORBIDDEN" in out_en
