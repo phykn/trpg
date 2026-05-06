@@ -126,9 +126,6 @@ class _Storage:
         if r.status_code >= 300:
             raise PersistenceFailed(f"storage put {path}: {r.status_code} {r.text}")
 
-    async def get_text(self, path: str) -> str:
-        return (await self.get_bytes(path)).decode("utf-8")
-
     async def _list_objects(self, prefix: str, *, label: str) -> list[dict[str, Any]]:
         url = f"{self._base}/object/list/{self._bucket}"
         body = {
