@@ -13,8 +13,18 @@ from ...context.surroundings import surroundings_for_extract
 from ...client import LLMClient
 from .body import stream_body
 from .extract import ExtractInput, run_extract
-from .parser import _clean_body
 from .schema import NarrateInput, NarrateOutput
+
+
+def _clean_body(body: str) -> str:
+    # Undo JSON-style escapes the LLM occasionally leaks into the body
+    # (the body prompt forbids them, but the LLM sometimes slips).
+    return (
+        body.replace('\\"', '"')
+        .replace("\\'", "'")
+        .replace("\\n", "\n")
+        .replace("\\t", "\t")
+    )
 
 
 @dataclass
