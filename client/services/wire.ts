@@ -44,7 +44,7 @@ export type ProfileCard = {
   races: RaceCard[];
 };
 
-export type PlayerInput = {
+type PlayerInput = {
   name: string;
   race_id: string;
   gender: 'male' | 'female';
@@ -80,10 +80,8 @@ export type RollRequest = {
 // (handleStreamEvent early-returns), but the payload shapes are now typed
 // via wire.gen so future debug/observability consumers stay safe across
 // server changes. `state` + `log_entry` remain authoritative for the UI.
-export type JudgeData = JudgePayload;
-
 export type StreamEvent =
-  | { type: 'judge'; data: JudgeData }
+  | { type: 'judge'; data: JudgePayload }
   | { type: 'pending_check'; data: PendingCheck }
   | { type: 'narrative_delta'; data: NarrativeDeltaPayload }
   | { type: 'suggestions'; data: SuggestionsPayload }
