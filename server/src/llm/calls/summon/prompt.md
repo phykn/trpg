@@ -44,8 +44,6 @@ Input has `world` (world.md content for tone/themes), `location.{id, name, descr
 
 **`requested_role` honoring**: when set, the `name` field must echo the role (e.g., `requested_role="경비병"` → `name="경비병"` or close variant like "광장 경비병"). `description`/`appearance`/`stats` should fit the role: 경비병 = 인간 갑옷·창, 상인 = 인간 평복, 늑대 = 짐승 등. `race_id` still must be one of `available_races[*].id`. The summoned creature is **the enemy to fight** — substitutes must stay a hostile target, never flip into a hunter/ally of that role (`용` → `용` shape, not `용잡이`). **Substitute when needed**: if the role is implausible for the location (e.g., 우주인 in 중세 술집) *or* the role's natural race is missing from `available_races` (e.g., `requested_role="용"` but no dragon-like id available), output an absurd-but-plausible substitute that fits the world and uses an available race while preserving the role's threat type — keep the player's role word in `name` if at all possible (e.g., for "용" with only `human/wolf/lizard`, pick `race_id="lizard"` and `name="새끼 용 도마뱀"`); never invent races, never substitute the role's natural predator/slayer.
 
-**Korean only**: all text fields in Korean.
-
 ## Examples
 
 ### Forest path, player_level=2
@@ -99,7 +97,7 @@ Input has `world` (world.md content for tone/themes), `location.{id, name, descr
 }
 ```
 
-`name`에 player가 부른 역할어 `용`을 보존(접두/접미로 살림), `race_id`는 `available_races` 안에서만 골랐고, 적의 정체는 여전히 `용` 계열(사냥꾼/용잡이로 뒤집지 않음).
+The player's role word `용` is preserved in `name` (as prefix/suffix). `race_id` is chosen only from `available_races`. The creature's identity remains in the `용` lineage — never flipped to its predator or slayer.
 
 ## Forbidden
 
