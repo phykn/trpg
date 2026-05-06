@@ -56,7 +56,7 @@ export function mergeAndStoreStoryGraph(gameId: string, current: StoryGraphModel
   return next;
 }
 
-export type StoryGraphHookValue = {
+type StoryGraphHookValue = {
   graph: StoryGraphModel;
   unseenNodeIds: Set<string>;
   markNodeSeen: (id: string) => void;

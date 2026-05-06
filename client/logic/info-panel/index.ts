@@ -7,7 +7,5 @@ export type {
   Panel,
   PanelAction,
   PanelActions,
-  PanelSection,
   PanelSlot,
-  PanelTitleAction,
 } from './types';
