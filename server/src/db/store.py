@@ -105,8 +105,8 @@ def _append_jsonl(path: Path, lines: list[str]) -> None:
 class _Meta(BaseModel):
     game_id: str
     profile: str
-    player_id: str
     locale: str = "ko"
+    player_id: str
     active_subject_id: str | None = None
     active_quest_id: str | None = None
     turn_count: int = 0
@@ -120,8 +120,8 @@ def _meta_from_state(state: GameState) -> _Meta:
     return _Meta(
         game_id=state.game_id,
         profile=state.profile,
-        player_id=state.player_id,
         locale=state.locale,
+        player_id=state.player_id,
         active_subject_id=state.active_subject_id,
         active_quest_id=state.active_quest_id,
         turn_count=state.turn_count,
@@ -266,8 +266,8 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
     return GameState(
         game_id=meta.game_id,
         profile=meta.profile,
-        player_id=meta.player_id,
         locale=meta.locale,
+        player_id=meta.player_id,
         active_subject_id=meta.active_subject_id,
         active_quest_id=meta.active_quest_id,
         turn_count=meta.turn_count,

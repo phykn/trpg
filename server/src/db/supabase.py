@@ -174,8 +174,8 @@ class SupabaseSaveRepo:
         return GameState(
             game_id=meta.game_id,
             profile=meta.profile,
-            player_id=meta.player_id,
             locale=meta.locale,
+            player_id=meta.player_id,
             active_subject_id=meta.active_subject_id,
             active_quest_id=meta.active_quest_id,
             turn_count=meta.turn_count,
