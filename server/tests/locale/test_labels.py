@@ -9,9 +9,6 @@ from src.locale.labels import (
     STORY_EDGE_LABEL_QUEST_TARGET,
     STORY_SUMMARY_EMPTY,
     STORY_SUMMARY_HERO,
-    state_tag_friendly,
-    state_tag_wary,
-    state_tag_wounded,
     story_summary_entities,
     story_summary_location,
     story_summary_places,
@@ -43,9 +40,3 @@ def test_story_summary_helpers():
 
 def test_roll_reason_default():
     assert ROLL_REASON_DEFAULT == "행동 판정"
-
-
-def test_state_tag_helpers():
-    assert state_tag_friendly(50) == "우호적(affinity 50)"
-    assert state_tag_wary(-30) == "경계중(affinity -30)"
-    assert state_tag_wounded(45) == "부상(hp 45%)"

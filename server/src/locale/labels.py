@@ -64,18 +64,3 @@ def story_summary_places(count: int) -> str:
 # ----- Default fallback for action reasons surfaced in the GM log -----
 
 ROLL_REASON_DEFAULT = render("ui.roll.reason_default", "ko")
-
-
-# ----- NPC state tags surfaced to the judge prompt -----
-
-
-def state_tag_friendly(affinity: int) -> str:
-    return render("ui.state.friendly", "ko", affinity=affinity)
-
-
-def state_tag_wary(affinity: int) -> str:
-    return render("ui.state.wary", "ko", affinity=affinity)
-
-
-def state_tag_wounded(hp_pct: int) -> str:
-    return render("ui.state.wounded", "ko", hp_pct=hp_pct)

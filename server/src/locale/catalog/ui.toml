@@ -57,15 +57,6 @@ ko = "장소 {count}"
 [ui."roll.reason_default"]
 ko = "행동 판정"
 
-[ui."state.friendly"]
-ko = "우호적(affinity {affinity})"
-
-[ui."state.wary"]
-ko = "경계중(affinity {affinity})"
-
-[ui."state.wounded"]
-ko = "부상(hp {hp_pct}%)"
-
 [ui."roll.dice_label"]
 ko = "주사위"
 
