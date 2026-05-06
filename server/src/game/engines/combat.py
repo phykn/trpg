@@ -23,9 +23,24 @@ from ..ontology.queries import location_of
 from ..rules import RULES
 from ..domain.state import CombatState, GameState
 from ..rules.dc import compute_grade, compute_required_roll
+from src.locale import render
 
 
 DICE_RE = re.compile(r"^\s*(\d+)d(\d+)\s*([+-]\s*\d+)?\s*$")
+
+
+def _append_death_to_hints(entity, killer_name: str | None = None) -> None:
+    # Idempotent — the 'marker' catalog entries must be substrings of their hint
+    # counterparts so the dedupe check survives translations of the longer line.
+    if killer_name:
+        marker = render("log.death.killed_marker", "ko")
+        hint = render("log.death.killed", "ko", killer=killer_name)
+    else:
+        marker = render("log.death.died_marker", "ko")
+        hint = render("log.death.died", "ko")
+    if any(marker in h for h in entity.hints):
+        return
+    entity.hints.append(hint)
 
 
 def stat_modifier(stat_value: int) -> int:
@@ -370,7 +385,6 @@ def apply_attack_to_defender(
         _entities_set,
         check_quests,
     )  # deferred import — avoid cycle within pipeline layer
-    from .perspective import append_death_to_hints
 
     entities = _entities_set(dirty)
 
@@ -410,7 +424,7 @@ def apply_attack_to_defender(
             remove_from_combat(state, defender_id)
             out["dead"] = True
             killer = state.characters.get(attacker_id) if attacker_id else None
-            append_death_to_hints(defender, killer_name=killer.name if killer else None)
+            _append_death_to_hints(defender, killer_name=killer.name if killer else None)
             check_quests(state, "character_death", defender_id, dirty)
             if killer is not None:
                 transfer_loot_on_death(dead=defender, winner=killer)
@@ -436,7 +450,7 @@ def apply_attack_to_defender(
         remove_from_combat(state, defender_id)
         out["dead"] = True
         killer = state.characters.get(attacker_id) if attacker_id else None
-        append_death_to_hints(defender, killer_name=killer.name if killer else None)
+        _append_death_to_hints(defender, killer_name=killer.name if killer else None)
         check_quests(state, "character_death", defender_id, dirty)
         if killer is not None:
             transfer_loot_on_death(dead=defender, winner=killer)
