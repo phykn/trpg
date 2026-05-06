@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { colors } from '@/design/tokens';
+import { ko } from '@/locale/ko';
 
 import { SendButton } from './SendButton';
 import { StopButton } from './StopButton';
@@ -97,7 +98,7 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
         onContentSizeChange={onContentSizeChange}
         editable={!locked}
         accessibilityState={{ disabled: locked }}
-        placeholder={locked ? '판정을 먼저 굴려주세요' : '무엇을 하시겠습니까?'}
+        placeholder={locked ? ko.composer.placeholderLocked : ko.composer.placeholder}
         placeholderTextColor={`${colors.fg.default}55`}
         returnKeyType="send"
         multiline

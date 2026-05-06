@@ -1,6 +1,7 @@
 import { Pressable } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '@/design/tokens';
+import { ko } from '@/locale/ko';
 
 export function SendButton({ enabled, onPress }: {
   enabled: boolean;
@@ -14,7 +15,7 @@ export function SendButton({ enabled, onPress }: {
       onPress={onPress}
       disabled={!enabled}
       accessibilityRole="button"
-      accessibilityLabel="행동 보내기"
+      accessibilityLabel={ko.composer.sendAction}
       accessibilityState={{ disabled: !enabled }}
       testID="send-button"
       className={`items-center justify-center h-8 px-3 rounded-full ${bgClass} ${enabled ? 'active:opacity-80' : ''}`}

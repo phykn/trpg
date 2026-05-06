@@ -71,7 +71,7 @@ export function LevelUpPrompt({ hero, candidates, onCommit, onCancel }: Props) {
         onPress={disabled ? undefined : () => { setStatUp(k); }}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel={`${ko.ability[k]} 올리기`}
+        accessibilityLabel={`${ko.ability[k]} ${ko.level.raiseSuffix}`}
         style={[
           { flex: 1, paddingVertical: 6, paddingHorizontal: 4, borderRadius: 3, alignItems: 'center', justifyContent: 'center' },
           style,
@@ -91,7 +91,7 @@ export function LevelUpPrompt({ hero, candidates, onCommit, onCancel }: Props) {
         key={c.id}
         onPress={() => setSkillId(c.id)}
         accessibilityRole="button"
-        accessibilityLabel={`기술 ${c.name}`}
+        accessibilityLabel={`${ko.level.skillPrefix} ${c.name}`}
         style={[
           { paddingVertical: 6, paddingHorizontal: 8, borderRadius: 3 },
           isSelected
@@ -114,13 +114,13 @@ export function LevelUpPrompt({ hero, candidates, onCommit, onCancel }: Props) {
       <View className="flex-row items-baseline justify-between mb-2">
         <View className="flex-row items-baseline gap-1.5">
           <Text className="font-sans-semibold text-panel text-fg-default" style={{ letterSpacing: 1.2 }}>
-            레벨업
+            {ko.level.title}
           </Text>
           <Text className="font-sans text-caption text-fg-subtle" style={{ letterSpacing: 0.6 }}>
             {hero.level} → {hero.level + 1}
           </Text>
         </View>
-        <Text className="font-sans text-caption text-fg-muted">영구 적용</Text>
+        <Text className="font-sans text-caption text-fg-muted">{ko.level.permanent}</Text>
       </View>
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -145,11 +145,11 @@ export function LevelUpPrompt({ hero, candidates, onCommit, onCancel }: Props) {
                     borderWidth: 1, borderColor: colors.border.default, opacity: 0.4,
                   }}
                 >
-                  <Text className="font-sans text-caption text-fg-subtle">불러오는 중…</Text>
+                  <Text className="font-sans text-caption text-fg-subtle">{ko.empty.loadingSkill}</Text>
                 </View>
               ))
             : candidates.length === 0
-            ? <Text className="font-sans text-caption text-fg-subtle">기술 후보 없음</Text>
+            ? <Text className="font-sans text-caption text-fg-subtle">{ko.empty.noSkillCandidates}</Text>
             : candidates.map(renderSkillCard)}
         </View>
       </View>
@@ -158,7 +158,7 @@ export function LevelUpPrompt({ hero, candidates, onCommit, onCancel }: Props) {
         <Pressable
           onPress={onCancel}
           accessibilityRole="button"
-          accessibilityLabel="레벨업 취소"
+          accessibilityLabel={ko.level.cancelAction}
           style={{
             flex: 1, height: 36, borderRadius: 6,
             alignItems: 'center', justifyContent: 'center',
@@ -166,14 +166,14 @@ export function LevelUpPrompt({ hero, candidates, onCommit, onCancel }: Props) {
           }}
         >
           <Text className="font-sans-medium text-title" style={{ color: colors.fg.default, letterSpacing: 1.2 }}>
-            취소
+            {ko.level.cancel}
           </Text>
         </Pressable>
         <Pressable
           onPress={canCommit ? () => onCommit(statUp!, skillId) : undefined}
           disabled={!canCommit}
           accessibilityRole="button"
-          accessibilityLabel="레벨업 확정"
+          accessibilityLabel={ko.level.confirmAction}
           style={[
             {
               flex: 1, height: 36, borderRadius: 6,
@@ -185,7 +185,7 @@ export function LevelUpPrompt({ hero, candidates, onCommit, onCancel }: Props) {
           ]}
         >
           <Text className="font-sans-semibold text-title" style={{ color: colors.accent.fg, letterSpacing: 1.2 }}>
-            ✦ 레벨업
+            ✦ {ko.level.title}
           </Text>
         </Pressable>
       </View>

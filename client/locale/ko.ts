@@ -60,6 +60,44 @@ export const ko = {
     approachBlocked: '접근 불가',
     busy: '처리 중',
   },
+  roll: {
+    check: '판정',
+    difficulty: '난이도',
+    required: '필요 주사위',
+    orMore: '이상',
+    abilityBonus: '능력',
+    affinity: '친밀도',
+    liking: '호감',
+    stopLabel: '주사위 굴림 중단',
+    rolling: '굴리는 중…',
+    rollingLabel: '주사위 굴리는 중',
+    rollLabel: '주사위 굴리기',
+    halt: '정지',
+  },
+  composer: {
+    placeholderLocked: '판정을 먼저 굴려주세요',
+    placeholder: '무엇을 하시겠습니까?',
+    sendAction: '행동 보내기',
+    stopAction: '행동 중단',
+  },
+  empty: {
+    loadingSkill: '불러오는 중…',
+    noSkillCandidates: '기술 후보 없음',
+  },
+  level: {
+    title: '레벨업',
+    cancel: '취소',
+    permanent: '영구 적용',
+    confirmAction: '레벨업 확정',
+    cancelAction: '레벨업 취소',
+    raiseSuffix: '올리기',
+    skillPrefix: '기술',
+  },
+  gameOver: {
+    ending: '이야기는 여기서 끝납니다.',
+    restart: '새 이야기 시작',
+    restartAction: '새 이야기 시작',
+  },
 } as const;
 
 export const compose = {

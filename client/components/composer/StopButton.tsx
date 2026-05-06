@@ -1,12 +1,13 @@
 import { Pressable, View } from 'react-native';
 import { colors } from '@/design/tokens';
+import { ko } from '@/locale/ko';
 
 export function StopButton({ onPress }: { onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="행동 중단"
+      accessibilityLabel={ko.composer.stopAction}
       testID="stop-button"
       className="items-center justify-center h-8 px-3 rounded-full bg-accent-fg active:opacity-80"
     >
