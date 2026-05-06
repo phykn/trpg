@@ -4,7 +4,7 @@ import {
   EMPTY_STORY_GRAPH,
   mergeAndStoreStoryGraph,
   type StoryGraphModel,
-} from '@/features/story-graph';
+} from '@/logic/story-graph';
 import {
   clearAllForGame,
   clearStoredGameId,
@@ -30,7 +30,7 @@ import type { CombatBadge } from '@/logic/combat';
 import type { Hero } from '@/logic/hero';
 import type { LogEntry } from '@/logic/log';
 import type { Quest } from '@/logic/quest';
-import type { Place } from '@/features/story-graph';
+import type { Place } from '@/logic/story-graph';
 import type { Subject } from '@/logic/subject';
 import type { FrontState, InitRequest, PendingCheck, SkillCandidate, StatKey, StreamEvent } from '@/services/wire';
 

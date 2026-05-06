@@ -5,7 +5,7 @@ import { SEP } from '@/components/ui';
 import { toneColor } from '@/design/tokens';
 import type { PanelAction } from '@/logic/info-panel';
 
-import type { Place, StoryGraphModel } from './types';
+import type { Place, StoryGraphModel } from '@/logic/story-graph/types';
 
 import { NeighborhoodPanel } from './NeighborhoodPanel';
 

@@ -5,9 +5,9 @@ import { ExpandableTitle, ExpandGroup, LabeledRow, Row, SEP, characterMeta, join
 import { colors, toneColor } from '@/design/tokens';
 import type { PanelAction } from '@/logic/info-panel';
 
-import type { StoryGraphEdge, StoryGraphModel } from './types';
+import type { StoryGraphEdge, StoryGraphModel } from '@/logic/story-graph/types';
 import { StoryGraphCanvas } from './StoryGraphCanvas';
-import { actionForNode } from './_nodeActions';
+import { actionForNode } from '@/logic/story-graph/_nodeActions';
 
 const LEGEND: { key: string; label: string; color: string }[] = [
   { key: 'place', label: '장소', color: colors.exp.fg },

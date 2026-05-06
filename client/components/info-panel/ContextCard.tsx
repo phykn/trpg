@@ -7,7 +7,7 @@ import {
   StoryGraphScreen,
   type StoryGraphModel,
   type Place,
-} from '@/features/story-graph';
+} from '@/logic/story-graph';
 
 import type { PanelAction, PanelSlot } from '@/logic/info-panel/types';
 

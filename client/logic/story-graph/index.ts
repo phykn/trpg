@@ -14,5 +14,5 @@ export {
   useStoryGraph,
   writeStoredStoryGraph,
 } from './useStoryGraph';
-export { MiniMapPanel } from './MiniMapPanel';
-export { StoryGraphScreen } from './StoryGraphScreen';
+export { MiniMapPanel } from '@/components/story-graph/MiniMapPanel';
+export { StoryGraphScreen } from '@/components/story-graph/StoryGraphScreen';

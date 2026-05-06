@@ -4,7 +4,7 @@ import { Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, View } from 
 import { useBgm } from '@/logic/audio';
 import { CombatStrip } from '@/logic/combat';
 import { Log } from '@/logic/log';
-import { useStoryGraph } from '@/features/story-graph';
+import { useStoryGraph } from '@/logic/story-graph';
 import type { Game } from '@/logic/game/useGame';
 import { buildPanelSlots } from '@/logic/info-panel';
 import type { PanelAction, PanelSlot } from '@/logic/info-panel';

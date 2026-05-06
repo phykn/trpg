@@ -2,7 +2,7 @@ import type { CombatBadge } from '@/logic/combat';
 import type { Hero } from '@/logic/hero';
 import type { LogEntry } from '@/logic/log';
 import type { Quest } from '@/logic/quest';
-import type { Place, StoryGraphModel } from '@/features/story-graph';
+import type { Place, StoryGraphModel } from '@/logic/story-graph';
 import type { Subject } from '@/logic/subject';
 import type {
   CombatEndPayload,

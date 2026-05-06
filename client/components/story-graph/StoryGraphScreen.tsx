@@ -5,14 +5,14 @@ import type { PanelAction } from '@/logic/info-panel';
 import { getSessionById, loadStoredGameId, storeSeenNodes } from '@/services';
 
 import { MapPanel } from './MapPanel';
-import { EMPTY_STORY_GRAPH } from './presenters';
-import type { StoryGraphModel } from './types';
+import { EMPTY_STORY_GRAPH } from '@/logic/story-graph/presenters';
+import type { StoryGraphModel } from '@/logic/story-graph/types';
 import {
   loadAndSeedSeenNodes,
   mergeAndStoreStoryGraph,
   readStoredStoryGraph,
   STORY_GRAPH_UPDATED_EVENT,
-} from './useStoryGraph';
+} from '@/logic/story-graph/useStoryGraph';
 
 type Status = 'loading' | 'ready' | 'empty' | 'error';
 

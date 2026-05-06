@@ -5,9 +5,9 @@ import { colors, toneColor } from '@/design/tokens';
 import { ExpandableTitle, ExpandGroup, LabeledRow, Row, SEP } from '@/components/ui';
 import type { PanelAction } from '@/logic/info-panel';
 
-import type { StoryGraphEdge, StoryGraphModel } from './types';
+import type { StoryGraphEdge, StoryGraphModel } from '@/logic/story-graph/types';
 import { StoryGraphCanvas } from './StoryGraphCanvas';
-import { actionForNode } from './_nodeActions';
+import { actionForNode } from '@/logic/story-graph/_nodeActions';
 
 type PlaceState = 'current' | 'reachable' | 'unreachable';
 
