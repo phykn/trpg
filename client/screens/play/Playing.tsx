@@ -64,7 +64,7 @@ export function Playing({ game }: Props) {
 
   const slots: PanelSlot[] = [
     ...buildPanelSlots({ hero, subject, quest }, { onLevelUpOpen: openLevelUp, questDot: hasUnseenQuest, subjectDot: hasUnseenSubject }),
-    { id: 'map', chip: { short: '주변', dot: hasUnseenLocation }, panel: null },
+    { id: 'map', chip: { short: ko.panel.neighborhood, dot: hasUnseenLocation }, panel: null },
   ];
   const rolling = pending !== null && streaming;
 
@@ -121,8 +121,8 @@ export function Playing({ game }: Props) {
       {newGameConfirmOpen && (
         <ConfirmDialog
           info={{
-            title: '새로운 이야기',
-            blurb: '진행 중인 이야기를 멈춥니다. 새로운 이야기를 시작합니다.',
+            title: ko.menu.newGame,
+            blurb: ko.newGame.leaveBlurb,
             confirmLabel: ko.action.start,
           }}
           onConfirm={() => {

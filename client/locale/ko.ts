@@ -136,6 +136,34 @@ export const ko = {
   subject: {
     chip: '상대',
   },
+  confirm: {
+    ok: '확인',
+  },
+  error: {
+    heading: '오류',
+    retry: '다시 시도',
+    unknown: '알 수 없는 오류',
+  },
+  shell: {
+    loading: [
+      '세계 펼치는 중',
+      '모닥불 지피는 중',
+      '지도에 잉크 묻히는 중',
+      '별빛 살피는 중',
+      '이야기의 첫 줄 적는 중',
+    ] as readonly string[],
+  },
+  newGame: {
+    defaultName: '주인공',
+    noProfiles: '선택 가능한 시나리오가 없습니다.',
+    hint: '이름을 정하고, 세계와 종족을 고르면 시작합니다.',
+    creating: '생성 중…',
+    namePlaceholder: '등장인물의 이름',
+    male: '남성',
+    female: '여성',
+    noRaces: '선택 가능한 종족이 없습니다.',
+    leaveBlurb: '진행 중인 이야기를 멈춥니다. 새로운 이야기를 시작합니다.',
+  },
 } as const;
 
 export const compose = {
@@ -151,4 +179,5 @@ export const compose = {
   here: (label: string) => `현재 ${label}`,
   placeCount: (n: number) => `장소 ${n}곳`,
   reachableCount: (n: number) => `이동 가능 ${n}`,
+  affinity: (delta: number) => `호감도 ${delta > 0 ? '+' : ''}${delta}`,
 };

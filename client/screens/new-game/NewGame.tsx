@@ -31,7 +31,7 @@ export function NewGame({ onSubmit }: Props) {
   const [profileId, setProfileId] = React.useState<string | null>(null);
   const [raceId, setRaceId] = React.useState<string | null>(null);
   const [gender, setGender] = React.useState<'male' | 'female'>('male');
-  const [name, setName] = React.useState('주인공');
+  const [name, setName] = React.useState<string>(ko.newGame.defaultName);
   const [submitting, setSubmitting] = React.useState(false);
   const [serverSha, setServerSha] = React.useState<string>('?');
 
@@ -95,7 +95,7 @@ export function NewGame({ onSubmit }: Props) {
     return (
       <CenterMessage>
         <Text className="font-sans text-body text-fg-muted">
-          선택 가능한 시나리오가 없습니다.
+          {ko.newGame.noProfiles}
         </Text>
       </CenterMessage>
     );
@@ -115,9 +115,9 @@ export function NewGame({ onSubmit }: Props) {
           <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default }} />
           <Glyph kind="outline" tone="accent" size={10} />
         </View>
-        <Text className="font-serif-medium text-narration text-fg-default">새로운 이야기</Text>
+        <Text className="font-serif-medium text-narration text-fg-default">{ko.menu.newGame}</Text>
         <Text className="font-sans text-body text-fg-muted">
-          이름을 정하고, 세계와 종족을 고르면 시작합니다.
+          {ko.newGame.hint}
         </Text>
       </View>
 
@@ -136,19 +136,19 @@ export function NewGame({ onSubmit }: Props) {
             canSubmit ? 'text-fg-on-emphasis' : 'text-fg-subtle'
           }`}
         >
-          {submitting ? '생성 중…' : ko.action.start}
+          {submitting ? ko.newGame.creating : ko.action.start}
         </Text>
       </Pressable>
 
       <Section label={ko.form.name}>
-        <Input value={name} onChangeText={setName} placeholder="등장인물의 이름" />
+        <Input value={name} onChangeText={setName} placeholder={ko.newGame.namePlaceholder} />
       </Section>
 
       <Section label={ko.form.gender}>
         <View className="flex-row gap-2">
           <View className="flex-1">
             <SelectCard
-              title="남성"
+              title={ko.newGame.male}
               selected={gender === 'male'}
               onPress={() => setGender('male')}
               dense
@@ -156,7 +156,7 @@ export function NewGame({ onSubmit }: Props) {
           </View>
           <View className="flex-1">
             <SelectCard
-              title="여성"
+              title={ko.newGame.female}
               selected={gender === 'female'}
               onPress={() => setGender('female')}
               dense
@@ -183,7 +183,7 @@ export function NewGame({ onSubmit }: Props) {
       {selectedProfile && (
         <Section label={ko.form.race}>
           {races.length === 0 ? (
-            <Text className="font-sans text-body text-fg-muted">선택 가능한 종족이 없습니다.</Text>
+            <Text className="font-sans text-body text-fg-muted">{ko.newGame.noRaces}</Text>
           ) : (
             races.map((r: RaceCard) => (
               <SelectCard
