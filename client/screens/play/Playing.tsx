@@ -11,7 +11,7 @@ import type { PanelAction, PanelSlot } from '@/features/info-panel';
 
 import { Composer, GameOverPanel, LevelUpPrompt, RollPrompt } from '@/features/composer';
 import { ContextCard } from '@/features/info-panel';
-import { HeroStrip } from '@/features/hero';
+import { HeroStrip } from '@/logic/hero';
 import { ConfirmDialog } from '@/components/ui';
 
 type Props = { game: Game };

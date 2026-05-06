@@ -1,4 +1,4 @@
-export { HeroStrip } from './HeroStrip';
+export { HeroStrip } from '@/components/hero/HeroStrip';
 export { buildHeroSlot } from './panel';
 export type { BuildHeroSlotOpts } from './panel';
 export type { Equipment, EquipItem, Hero, InventoryItem, Stat, Stats } from './types';

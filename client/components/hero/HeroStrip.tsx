@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 
 import { Bar, Surface } from '@/components/ui';
 import { toneColor } from '@/design/tokens';
-import type { Hero } from './types';
+import type { Hero } from '@/logic/hero/types';
 
 type MeterTone = 'hp' | 'mp' | 'exp' | 'revival';
 

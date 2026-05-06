@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Surface } from '@/components/ui';
 import { colors } from '@/design/tokens';
-import type { Hero } from '@/features/hero';
+import type { Hero } from '@/logic/hero';
 import type { SkillCandidate, StatKey } from '@/services/wire';
 
 const STAT_PAIRS: Array<[StatKey, StatKey]> = [

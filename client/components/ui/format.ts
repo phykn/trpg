@@ -1,4 +1,4 @@
-import type { InventoryItem } from '@/features/hero';
+import type { InventoryItem } from '@/logic/hero';
 
 export const SEP = ' · ';
 export const DASH = '—';
