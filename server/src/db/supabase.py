@@ -175,6 +175,7 @@ class SupabaseSaveRepo:
             game_id=meta.game_id,
             profile=meta.profile,
             player_id=meta.player_id,
+            locale=meta.locale,
             active_subject_id=meta.active_subject_id,
             active_quest_id=meta.active_quest_id,
             turn_count=meta.turn_count,
