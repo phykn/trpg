@@ -41,7 +41,6 @@ from .dirty import (
 )
 from .format import (
     format_affinity_card_log,
-    format_affinity_card_turn_log,
     format_quest_start_log,
 )
 from .judge import judge_quest_progress
@@ -235,12 +234,8 @@ async def consume_narrate(
         npc = state.characters.get(npc_id)
         if npc is None:
             continue
-        dirty.deferred_act_cards.append(
-            (
-                format_affinity_card_log(npc.name, delta),
-                format_affinity_card_turn_log(npc.name, delta),
-            )
-        )
+        text = format_affinity_card_log(npc.name, delta)
+        dirty.deferred_act_cards.append((text, text))
     # NPC dialogue free-path judge runs AFTER the gm body so any '퀘스트 성공/실패' card
     # emits through dirty.log past the prose that justifies it. Pre-existing dirty.log
     # length lets us drain only the cards the judge added.

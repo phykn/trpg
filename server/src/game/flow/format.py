@@ -174,11 +174,6 @@ def format_affinity_card_log(npc_name: str, delta: int) -> str:
     return render("log.affinity_card", "ko", npc=npc_name, sign=sign, delta=delta)
 
 
-def format_affinity_card_turn_log(npc_name: str, delta: int) -> str:
-    sign = "+" if delta >= 0 else ""
-    return render("log.affinity_card", "ko", npc=npc_name, sign=sign, delta=delta)
-
-
 def format_recruit_success_log(name: str) -> str:
     return render("log.recruit_success", "ko", name=name)
 
