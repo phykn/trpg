@@ -48,7 +48,6 @@ def test_payload_top_level_shape():
     assert payload.name == "작은 마을"
     assert payload.description == "평화로운 마을입니다."
     assert payload.weather == ["맑음"]
-    assert payload.features == ["주거"]
     assert isinstance(payload.risk, RiskBadge)
 
 

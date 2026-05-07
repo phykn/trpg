@@ -52,7 +52,6 @@ class PlacePayload(_CamelModel):
     description: str
     day_phase: str
     weather: list[str]
-    features: list[str]
     surroundings: list[PlaceSurrounding]
     targets: list[PlaceTarget]
     risk: RiskBadge
