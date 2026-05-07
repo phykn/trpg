@@ -77,6 +77,13 @@ def _parse_env_profiles() -> tuple[dict[str, LLMProfile], dict[str, LLMProfile]]
     def csv(s: str) -> tuple[str, ...]:
         return tuple(p.strip() for p in s.split(",") if p.strip())
 
+    def parse_spec(key: str, value: str) -> tuple[str, str]:
+        spec = value.strip()
+        if "/" not in spec:
+            raise ValueError(f"{key} must be '<provider>/<model>' (got {value!r})")
+        prov, model = spec.split("/", 1)
+        return prov.strip(), model.strip()
+
     def collect_modes(upper: str) -> dict[str, ThinkingMode]:
         modes: dict[str, ThinkingMode] = {}
         for suffix, mode in (
@@ -127,20 +134,11 @@ def _parse_env_profiles() -> tuple[dict[str, LLMProfile], dict[str, LLMProfile]]
     for key, value in os.environ.items():
         m_fb = _FALLBACK_RE.match(key)
         if m_fb:
-            spec = value.strip()
-            if "/" not in spec:
-                raise ValueError(f"{key} must be '<provider>/<model>' (got {value!r})")
-            prov, model = spec.split("/", 1)
-            fallback_routes[m_fb[1].lower()] = (prov.strip(), model.strip())
+            fallback_routes[m_fb[1].lower()] = parse_spec(key, value)
             continue
         m = _ROUTE_RE.match(key)
-        if not m:
-            continue
-        spec = value.strip()
-        if "/" not in spec:
-            raise ValueError(f"{key} must be '<provider>/<model>' (got {value!r})")
-        prov, model = spec.split("/", 1)
-        routes[m[1].lower()] = (prov.strip(), model.strip())
+        if m:
+            routes[m[1].lower()] = parse_spec(key, value)
     if "default" not in routes:
         raise ValueError("LLM_ROUTE_DEFAULT must be set")
 
