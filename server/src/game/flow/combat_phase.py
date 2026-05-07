@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import random
 from collections.abc import AsyncIterator
 from typing import Literal
@@ -79,9 +80,20 @@ async def emit_combat_cinematic_and_end(
             result=result,
         )
         body_chunks: list[str] = []
-        async for chunk in stream_combat_narrate(client, narrate_input, state.locale):
-            body_chunks.append(chunk)
-            yield emit_narrative_delta(chunk)
+        try:
+            async for chunk in stream_combat_narrate(
+                client, narrate_input, state.locale
+            ):
+                body_chunks.append(chunk)
+                yield emit_narrative_delta(chunk)
+        except (asyncio.CancelledError, GeneratorExit):
+            # Mirror narrate's cancel handler: persist whatever streamed so the
+            # cinematic prose isn't thrown away. Outcome summary / end card are
+            # extract-side and skipped — run_turn's outer cancel branch flushes.
+            body = "".join(body_chunks).strip()
+            if body:
+                push_gm(state, dirty, body)
+            raise
         body = "".join(body_chunks).strip()
         if body:
             yield push_gm(state, dirty, body)

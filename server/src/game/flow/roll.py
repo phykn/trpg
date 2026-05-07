@@ -27,6 +27,7 @@ from .dirty import (
     ToFrontFn,
     finalize,
     next_log_id,
+    persist_on_exit,
     push_log_entry,
 )
 from .format import front_grade
@@ -97,6 +98,22 @@ async def run_roll(
         raise PendingCheckExpected("no pending_check; call /turn first")
 
     dirty = Dirty()
+    inner = _run_roll_inner(
+        client, state, scenario_repo, save_repo, dirty, to_front_fn, rng
+    )
+    async for ev in persist_on_exit(state, save_repo, dirty, to_front_fn, inner):
+        yield ev
+
+
+async def _run_roll_inner(
+    client: LLMClient,
+    state: GameState,
+    scenario_repo: ScenarioRepo,
+    save_repo: SaveRepo,
+    dirty: Dirty,
+    to_front_fn: ToFrontFn | None,
+    rng: random.Random | None,
+) -> AsyncIterator[dict]:
     pending = state.pending_check
     state.turn_count += 1
     set_diag_context(state.game_id, state.turn_count)

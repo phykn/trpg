@@ -194,3 +194,40 @@ async def finalize(
         yield emit_error(e)
         return
     yield emit_done()
+
+
+async def persist_on_exit(
+    state: GameState,
+    save_repo: SaveRepo,
+    dirty: Dirty,
+    to_front_fn: ToFrontFn | None,
+    inner: AsyncIterator[dict],
+) -> AsyncIterator[dict]:
+    """Wrap a streaming flow with cancel/error persistence.
+
+    Cancel (client closed the SSE — stop button, network drop): persist dirty
+    directly via flush(). finalize's state/done yields would land on a closed
+    connection. Shielded so the cancel can't tear the write half-way.
+
+    Other exceptions: the connection's still open, so run finalize() so the
+    error/state events still reach the client.
+    """
+    try:
+        async for ev in inner:
+            yield ev
+    except (asyncio.CancelledError, GeneratorExit):
+        if not dirty.finalized:
+            try:
+                await asyncio.shield(flush(state, save_repo, dirty))
+                dirty.finalized = True
+            except BaseException:
+                pass
+        raise
+    except Exception:
+        if not dirty.finalized:
+            try:
+                async for ev in finalize(state, save_repo, dirty, to_front_fn):
+                    yield ev
+            except Exception:
+                pass
+        raise

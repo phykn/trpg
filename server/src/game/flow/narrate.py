@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 from collections.abc import AsyncIterator
@@ -141,15 +142,34 @@ async def consume_narrate(
     graph: GameGraph | None = None,
 ) -> AsyncIterator[dict]:
     """Stream narrate body, then commit the post-narrate tail.
-    `dialogue_input=None` skips the dialogue push (intro)."""
+    `dialogue_input=None` skips the dialogue push (intro).
+
+    On client abort during streaming (CancelledError / GeneratorExit), persist
+    whatever body chunks already streamed as a GMLogEntry so the prose the
+    player saw isn't thrown away. Extract artifacts (state_changes, memory,
+    quest cards) are skipped because the JSON tail never arrived — matches
+    'cut off mid-sentence' semantics. run_turn's outer cancel handler runs
+    flush() to push the partial entry to the DB.
+    """
     if graph is None:
         graph = state.graph()
     final: NarrativeFinal | None = None
-    async for item in stream:
-        if isinstance(item, NarrativeDelta):
-            yield emit_narrative_delta(item.text)
-        else:
-            final = item
+    collected: list[str] = []
+    try:
+        async for item in stream:
+            if isinstance(item, NarrativeDelta):
+                collected.append(item.text)
+                yield emit_narrative_delta(item.text)
+            else:
+                final = item
+    except (asyncio.CancelledError, GeneratorExit):
+        body = "".join(collected).strip()
+        if body:
+            gm_log = GMLogEntry(id=next_log_id(state), kind="gm", text=body)
+            push_log_entry(state, gm_log, dirty)
+            if dialogue_input is not None:
+                push_dialogue(state, dialogue_input, body, dirty)
+        raise
 
     # Fallback "잠시 정적이 흐릅니다" — without it an empty narrate leaves the turn looking broken (no GM line lands).
     if final is None:

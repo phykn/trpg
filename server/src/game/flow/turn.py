@@ -26,6 +26,7 @@ from .dirty import (
     finalize,
     flush_deferred_act_cards,
     next_log_id,
+    persist_on_exit,
     push_act,
     push_log_entry,
 )
@@ -58,31 +59,19 @@ async def run_turn(
         )
 
     dirty = Dirty()
-    try:
-        async for ev in _run_turn_inner(
-            client,
-            state,
-            scenario_repo,
-            save_repo,
-            player_input,
-            dirty,
-            to_front_fn,
-            rng,
-            quest_action,
-        ):
-            yield ev
-    except Exception:
-        # Streamed content (player input, GM body, engine events) lives in
-        # `dirty` until finalize flushes it. If something raised before that,
-        # the next /turn would load pre-error state and the user sees the turn
-        # "rewound". Flush what we have, then re-raise.
-        if not dirty.finalized:
-            try:
-                async for ev in finalize(state, save_repo, dirty, to_front_fn):
-                    yield ev
-            except Exception:
-                pass
-        raise
+    inner = _run_turn_inner(
+        client,
+        state,
+        scenario_repo,
+        save_repo,
+        player_input,
+        dirty,
+        to_front_fn,
+        rng,
+        quest_action,
+    )
+    async for ev in persist_on_exit(state, save_repo, dirty, to_front_fn, inner):
+        yield ev
 
 
 async def _run_turn_inner(
