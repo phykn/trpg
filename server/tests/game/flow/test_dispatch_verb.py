@@ -77,7 +77,9 @@ def test_dispatch_verb_transfer_branches_equip_unequip_gift_trade():
     # transfer 분기 4 path는 공통 helper에 있고, _dispatch_verb는 그것을 호출
     dispatch_src = inspect.getsource(turn_module._dispatch_verb)
     assert "_resolve_transfer_emit(" in dispatch_src
-    helper_src = inspect.getsource(turn_module._resolve_transfer_emit)
+    from src.game.flow import chain as chain_module
+
+    helper_src = inspect.getsource(chain_module._resolve_transfer_emit)
     assert 'mode == "gift"' in helper_src
     assert "<self>.equipped" in helper_src
     assert "emit_equip" in helper_src
