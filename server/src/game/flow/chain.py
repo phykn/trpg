@@ -32,7 +32,7 @@ from .combat_phase import (
 from .dirty import Dirty, ToFrontFn, drop_pushed_act, finalize, push_act
 from .error_phrases import is_dramatic_fail
 from .format import NO_COMBAT_TARGETS_TEXT
-from .narrate import stream_narrate_tail
+from .narrate import emit_fail_line_and_finalize, stream_narrate_tail
 
 
 def _resolve_transfer_emit(
@@ -322,27 +322,20 @@ async def _run_verb_chain(
                 drop_pushed_act(state, dirty, (ev.get("data") or {}).get("id"))
         targets = list(tail_combat.target_ids)
         if has_invalid_combat_targets(state, graph, targets):
-            fail_line = NO_COMBAT_TARGETS_TEXT
-            if client is None:
-                yield push_act(state, dirty, fail_line)
-            else:
-                fail_evt = push_act(state, dirty, fail_line)
-                drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
-                chain_act_lines.append(fail_line)
-                async for ev in stream_narrate_tail(
-                    client,
-                    state,
-                    scenario_repo,
-                    player_input,
-                    dirty,
-                    to_front_fn,
-                    Verb(name="wait"),
-                    graph=graph,
-                    act_log_lines=chain_act_lines,
-                    previous_phase_signal=previous_phase_signal,
-                ):
-                    yield ev
-            async for ev in finalize(state, save_repo, dirty, to_front_fn):
+            chain_act_lines.append(NO_COMBAT_TARGETS_TEXT)
+            async for ev in emit_fail_line_and_finalize(
+                client,
+                state,
+                scenario_repo,
+                save_repo,
+                dirty,
+                to_front_fn,
+                fail_line=NO_COMBAT_TARGETS_TEXT,
+                player_input=player_input,
+                graph=graph,
+                previous_phase_signal=previous_phase_signal,
+                act_log_lines=chain_act_lines,
+            ):
                 yield ev
             return
         async for ev in _enter_combat_and_finalize(

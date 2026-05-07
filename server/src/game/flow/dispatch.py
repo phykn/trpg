@@ -33,7 +33,11 @@ from .format import (
     FLEE_OUTSIDE_COMBAT_TEXT,
     NO_COMBAT_TARGETS_TEXT,
 )
-from .narrate import narrate_absorb_and_finalize, stream_narrate_tail
+from .narrate import (
+    emit_fail_line_and_finalize,
+    narrate_absorb_and_finalize,
+    stream_narrate_tail,
+)
 from .rest import run_rest
 
 
@@ -306,26 +310,18 @@ async def _dispatch_verb(
             # Out-of-combat move with no destination is blocked by schema —
             # defensive. manner=hasty (flee equivalent) is meaningless out of
             # combat, same message.
-            fail_line = FLEE_OUTSIDE_COMBAT_TEXT
-            if client is None:
-                yield push_act(state, dirty, fail_line)
-            else:
-                fail_evt = push_act(state, dirty, fail_line)
-                drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
-                async for ev in stream_narrate_tail(
-                    client,
-                    state,
-                    scenario_repo,
-                    player_input,
-                    dirty,
-                    to_front_fn,
-                    Verb(name="wait"),
-                    graph=graph,
-                    act_log_lines=[fail_line],
-                    previous_phase_signal=previous_phase_signal,
-                ):
-                    yield ev
-            async for ev in finalize(state, save_repo, dirty, to_front_fn):
+            async for ev in emit_fail_line_and_finalize(
+                client,
+                state,
+                scenario_repo,
+                save_repo,
+                dirty,
+                to_front_fn,
+                fail_line=FLEE_OUTSIDE_COMBAT_TEXT,
+                player_input=player_input,
+                graph=graph,
+                previous_phase_signal=previous_phase_signal,
+            ):
                 yield ev
             return
 
@@ -419,26 +415,18 @@ async def _dispatch_verb(
     if name == "attack":
         targets = list(verb.target_ids)
         if has_invalid_combat_targets(state, graph, targets):
-            fail_line = NO_COMBAT_TARGETS_TEXT
-            if client is None:
-                yield push_act(state, dirty, fail_line)
-            else:
-                fail_evt = push_act(state, dirty, fail_line)
-                drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
-                async for ev in stream_narrate_tail(
-                    client,
-                    state,
-                    scenario_repo,
-                    player_input,
-                    dirty,
-                    to_front_fn,
-                    Verb(name="wait"),
-                    graph=graph,
-                    act_log_lines=[fail_line],
-                    previous_phase_signal=previous_phase_signal,
-                ):
-                    yield ev
-            async for ev in finalize(state, save_repo, dirty, to_front_fn):
+            async for ev in emit_fail_line_and_finalize(
+                client,
+                state,
+                scenario_repo,
+                save_repo,
+                dirty,
+                to_front_fn,
+                fail_line=NO_COMBAT_TARGETS_TEXT,
+                player_input=player_input,
+                graph=graph,
+                previous_phase_signal=previous_phase_signal,
+            ):
                 yield ev
             return
         async for ev in _enter_combat_and_finalize(

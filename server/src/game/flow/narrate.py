@@ -33,9 +33,11 @@ from .buff_tick import tick_turn_buffs
 from .dirty import (
     Dirty,
     ToFrontFn,
+    drop_pushed_act,
     finalize,
     flush_deferred_act_cards,
     next_log_id,
+    push_act,
     push_dialogue,
     push_log_entry,
     push_turn_log,
@@ -322,6 +324,46 @@ async def narrate_absorb_and_finalize(
     ):
         yield ev
     tick_turn_buffs(state, dirty)
+    async for ev in finalize(state, save_repo, dirty, to_front_fn):
+        yield ev
+
+
+async def emit_fail_line_and_finalize(
+    client: LLMClient | None,
+    state: GameState,
+    scenario_repo: ScenarioRepo,
+    save_repo: SaveRepo,
+    dirty: Dirty,
+    to_front_fn: ToFrontFn | None,
+    *,
+    fail_line: str,
+    player_input: str,
+    graph: GameGraph,
+    previous_phase_signal: str | None = None,
+    act_log_lines: list[str] | None = None,
+) -> AsyncIterator[dict]:
+    """Surface a fail card, then either narrate the failure (with the line in
+    act_log_lines) and drop the bare card, or leave the card alone when no
+    client is wired. `act_log_lines` defaults to [fail_line]; chain callers
+    that already accumulated prior lines pass the extended list."""
+    if client is None:
+        yield push_act(state, dirty, fail_line)
+    else:
+        fail_evt = push_act(state, dirty, fail_line)
+        drop_pushed_act(state, dirty, (fail_evt.get("data") or {}).get("id"))
+        async for ev in stream_narrate_tail(
+            client,
+            state,
+            scenario_repo,
+            player_input,
+            dirty,
+            to_front_fn,
+            Verb(name="wait"),
+            graph=graph,
+            act_log_lines=act_log_lines if act_log_lines is not None else [fail_line],
+            previous_phase_signal=previous_phase_signal,
+        ):
+            yield ev
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
 
