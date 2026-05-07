@@ -10,14 +10,6 @@ def pick_dc(tier: Tier, rng: random.Random | None = None) -> int:
     return (rng or random).randint(lo, hi)
 
 
-def tier_mid_dc(tier: Tier) -> int:
-    """Deterministic mid-range DC for a tier. Used when the call site needs
-    a stable DC without threading rng (e.g. arming a pending_check whose
-    actual roll target gets recomputed in /roll)."""
-    lo, hi = RULES.difficulty_class.tier_dc_ranges[tier]
-    return (lo + hi) // 2
-
-
 def compute_required_roll(dc: int, stat: int) -> int:
     """D&D 5e: required = DC - stat_modifier, where stat_modifier = floor((stat-10)/2).
     Stat 10/11 → required = DC (no shift). Clamped to [1, 20]."""
