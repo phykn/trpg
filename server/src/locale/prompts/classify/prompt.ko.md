@@ -183,11 +183,25 @@ attack은 `entities`에 있는 character id가 필요합니다.
 
 ## Targets / id 룰
 
-- verb의 target이 entities에 없으면 attack은 `wait` (Combat target 룰), 다른 verb는 `wait` 또는 `perceive`.
-- placeholder ids (`unknown`, `?`)는 절대 emit 안 합니다 — semantic check가 reject.
-- corpse id는 `corpses[*].id`에서.
-- location id는 `location.id`에서 (자기 위치 대상).
+**모든 id는 surroundings에 실재해야 합니다. 한국어 이름·추측·번역으로 id를 만들지 마십시오.** 매칭 실패면 해당 verb는 `wait` (verb별 룰 — Combat target / Movement / Recruit 참조).
+
+- entity id (`target_ids`, `target`, `from_id`, `to_id`)는 `entities[*].id` (npc/connection) · `corpses[*].id` (시신) · `location.id` (자기 위치 대상)에서.
+- `skill_id`는 `skills[*].id`에서. 리스트에 없는 기술은 시전 불가 → `wait`.
+- `item_id`는 `inventory[*].id` (자기 사용/판매) · `merchants[*].stock[*].id` (구매) · `corpses[*].inventory[*].id` (시신 약탈) · `entities[*].carryables[*].id` (steal)에서.
+- placeholder ids (`unknown`, `?`, `<...>`, `npc_a`)는 절대 emit 안 합니다 — semantic check가 reject.
+- merchant 검증: `transfer(mode=trade)`의 NPC는 `merchants[*].id`에 실재해야 합니다. 적대적이거나 거래 안 하는 NPC는 빠져 있습니다 → 거래 대신 `speak` 또는 `wait`.
+
+**부정 예시**: 입력 "산적을 친다", entities에 `산적_01` 없음 → `bandit_a` · `산적` 같은 추측 id를 박지 말 것. → `wait`.
 
 ## tail_intent (optional)
 
 verb가 prose flavor를 carry해야 할 때 `modifiers.tail_intent`에 한 줄 한국어 산문. 예: `transfer(item_id=herb_01, ..., tail_intent: "한 모금에 묵직한 약초 향이 입안에 번집니다")`. 평이한 입력에는 omit.
+
+## Emit 전 self-check
+
+JSON을 출력하기 직전 4가지를 확인합니다. 하나라도 어긋나면 해당 verb를 `wait`로 바꿉니다 (refuse 아님 — narrate가 흡수합니다).
+
+1. **id 실재성** — `target_ids`와 modifier의 모든 id (`target`, `from_id`, `to_id`, `destination`, `item_id`, `skill_id`)가 surroundings의 해당 리스트에서 그대로 가져온 값입니까? 한국어 이름·추측 id 금지.
+2. **필수 모디파이어** — 카탈로그 표의 required가 모두 채워졌습니까? (`move.destination`은 `in_combat=true` 시 예외.)
+3. **enum 값** — `speak.intent`, `transfer.mode`, `move.manner`, `attack.force`, `speak.kind`, `speak.physical`이 카탈로그에 명시된 값 중 하나입니까?
+4. **target_ids 카디널리티** — `attack`은 1개 이상 필수, `cast`/`perceive`는 optional, 나머지(`move`/`transfer`/`use`/`speak`/`rest`/`wait`)는 비어 있어야 합니다.

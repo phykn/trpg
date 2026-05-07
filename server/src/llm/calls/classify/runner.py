@@ -12,7 +12,7 @@ _CLASSIFY_TEMPERATURE = 0.4
 
 
 async def classify(
-    client: LLMClient, input_: JudgeInput, locale: str, retries: int = 5
+    client: LLMClient, input_: JudgeInput, locale: str, retries: int = 3
 ) -> JudgeOutput:
     in_combat = bool(input_.surroundings.get("in_combat", False))
 
@@ -35,4 +35,5 @@ async def classify(
         retries=retries,
         agent="classify",
         temperature=_CLASSIFY_TEMPERATURE,
+        correction_hint="re-check the 'Emit 전 self-check' block",
     )

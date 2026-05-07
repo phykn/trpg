@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from typing import Literal, TypedDict
 
@@ -6,6 +7,7 @@ from pydantic import ValidationError
 from ..domain.errors import JudgeMalformed
 from ..domain.types import StatKey, Tier
 from src.llm.calls.classify import JudgeSemanticError, classify
+from src.llm.calls.classify.errors import ModifierValidationError
 from src.llm.calls.classify.schema import JudgeInput, JudgeOutput, Verb
 from src.llm.client import LLMClient
 from src.locale import render
@@ -119,7 +121,7 @@ async def run_judge(
             ),
             state.locale,
         )
-    except ValidationError as e:
+    except (ValidationError, ModifierValidationError, json.JSONDecodeError) as e:
         raise JudgeMalformed(str(e)) from e
     except JudgeSemanticError as e:
         loc_id = state.characters[state.player_id].location_id
