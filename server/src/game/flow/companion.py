@@ -4,8 +4,6 @@ stays forbidden in narrate's set permission; flow mutates directly."""
 
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
-from typing import Literal
-
 from ..domain.errors import PersistenceFailed
 from src.locale import render
 from ..domain.memory import PendingCheck
@@ -27,20 +25,6 @@ from .narrate import stream_narrate_tail
 
 def _clamp(v: int, lo: int, hi: int) -> int:
     return max(lo, min(hi, v))
-
-
-def _derive_pending_kind(
-    triggering_verb: "Verb | None",
-) -> Literal["recruit", "stat"]:
-    """Derive PendingCheck.kind from the triggering verb: 'recruit' for
-    speak(intent=recruit), otherwise 'stat'."""
-    if triggering_verb is not None:
-        if (
-            triggering_verb.name == "speak"
-            and triggering_verb.modifiers.get("intent") == "recruit"
-        ):
-            return "recruit"
-    return "stat"
 
 
 def _recruit_dc(state: GameState, target_id: str) -> int:
