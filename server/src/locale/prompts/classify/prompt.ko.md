@@ -17,7 +17,7 @@
 ### 키 위치 (필수 — 자주 틀림)
 
 - **`target_ids`는 Verb top-level** (`list[str]`). **`attack` 한정** — NPC id 1+를 여기에. 다른 verb는 비우거나 생략.
-- **나머지 모든 키는 `modifiers` 안**: `destination`, `intent`, `target` (speak 단일 NPC), `item_id`, `skill_id`, `mode`, `from_id`, `to_id`, `manner`, `force`, `surprise`, `ranged`, `price`, `haggle`, `tail_intent` 등.
+- **나머지 모든 키는 `modifiers` 안**: `destination`, `intent`, `target` (speak 단일 NPC), `item_id`, `skill_id`, `mode`, `from_id`, `to_id`, `manner`, `surprise`, `price`, `tail_intent` 등.
 
 아래 카탈로그·예시들은 단축 표기 `verb(key=val)`을 씁니다 — 이는 **`modifiers.key = val`** 을 의미합니다 (예외: `target_ids`).
 
@@ -60,10 +60,10 @@
 
 | verb | required | optional | targets | 매칭 힌트 |
 |---|---|---|---|---|
-| `attack` | — | `force: lethal\|subdue`, `surprise`, `skill_id`, `ranged`, `tail_intent` | 1+ | hostile/neutral NPC. 익명 → `recent_npc`. 0이면 `wait`. damage·debuff 스킬도 attack |
+| `attack` | — | `surprise`, `skill_id`, `tail_intent` | 1+ | hostile/neutral NPC. 익명 → `recent_npc`. 0이면 `wait`. damage·debuff 스킬도 attack |
 | `cast` | `skill_id` | `tail_intent` | optional | heal·buff 스킬만 |
-| `move` | `destination` (전투 외) | `manner: normal\|stealthy\|hasty`, `tail_intent` | — | `entities[type=connection]`의 id. 도망(`manner=hasty`)은 전투 한정 — destination 생략 가능 |
-| `transfer` | `from_id`, `to_id`, `mode: gift\|trade\|steal` | `item_id`, `price`, `haggle`, `tail_intent` | — | trade는 `merchants`만. equip은 `from_id="<self>.inventory" to_id="<self>.equipped.<slot>" mode="gift"`, unequip 역방향. corpse loot은 `from_id=<corpse_id>` (`corpses[*].id`). steal은 `item_id` 생략 (엔진이 carryables 중 random) |
+| `move` | `destination` (전투 외) | `manner: hasty`, `tail_intent` | — | `entities[type=connection]`의 id. 도망(`manner=hasty`)은 전투 한정 — destination 생략 가능 |
+| `transfer` | `from_id`, `to_id`, `mode: gift\|trade\|steal` | `item_id`, `price`, `tail_intent` | — | trade는 `merchants`만. equip은 `from_id="<self>.inventory" to_id="<self>.equipped.<slot>" mode="gift"`, unequip 역방향. corpse loot은 `from_id=<corpse_id>` (`corpses[*].id`). steal은 `item_id` 생략 (엔진이 carryables 중 random) |
 | `use` | `item_id` | `target_id`, `tail_intent` | — | consumable / trigger. weapon·armor는 `transfer(equip)` |
 | `speak` | `intent: friendly\|hostile\|deceptive\|recruit\|part\|accept` | `target`, `tail_intent` | — | 위협→hostile, 거짓말→deceptive, 영입→recruit(`target=npc_id`), 이별→part(`target=companion_id`), 의뢰/quest 수락·맡음→accept(`target=npc_id`), 그 외 톤 친근→friendly |
 | `perceive` | — | — | optional | 둘러본다·조사·scene prop 상호작용 |

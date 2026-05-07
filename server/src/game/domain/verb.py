@@ -38,7 +38,7 @@ _MODIFIER_SCHEMAS: dict[VerbName, _ModifierSchema] = {
         required_modifiers=frozenset({"destination"}),
         optional_modifiers={
             "destination": str,
-            "manner": ("normal", "stealthy", "hasty"),
+            "manner": ("hasty",),
             "tail_intent": str,
         },
         target_cardinality="forbidden",
@@ -51,7 +51,6 @@ _MODIFIER_SCHEMAS: dict[VerbName, _ModifierSchema] = {
             "mode": ("gift", "trade", "steal"),
             "item_id": str,
             "price": int,
-            "haggle": bool,
             "tail_intent": str,
         },
         target_cardinality="forbidden",
@@ -64,10 +63,8 @@ _MODIFIER_SCHEMAS: dict[VerbName, _ModifierSchema] = {
     "attack": _ModifierSchema(
         required_modifiers=frozenset(),
         optional_modifiers={
-            "force": ("lethal", "subdue"),
             "surprise": bool,
             "skill_id": str,
-            "ranged": bool,
             "tail_intent": str,
         },
         target_cardinality="required_many",

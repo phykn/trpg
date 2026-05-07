@@ -90,15 +90,6 @@ def test_attack_with_target():
     _validate("attack", target_ids=["goblin_01"])
 
 
-def test_attack_force_enum():
-    with pytest.raises(ValidationError, match="force"):
-        _validate("attack", target_ids=["a"], modifiers={"force": "kill"})
-
-
-def test_attack_subdue_force_passes():
-    _validate("attack", target_ids=["a"], modifiers={"force": "subdue"})
-
-
 def test_cast_requires_skill_id():
     with pytest.raises(ValidationError, match="skill_id"):
         _validate("cast", modifiers={})
