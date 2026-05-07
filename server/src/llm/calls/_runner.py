@@ -1,4 +1,5 @@
 import asyncio
+import re
 import sys
 from collections.abc import Callable
 from functools import lru_cache
@@ -11,6 +12,16 @@ from pydantic import ValidationError
 from src.game.domain.errors import LLMUnavailable
 from src.game.flow._diag import llm_diag
 from ..client import LLMClient
+
+# Gemma routinely wraps JSON in ```json ... ``` despite the prompt forbidding
+# code fences. Stripping here covers all run_with_retries callers (classify,
+# narrate_extract, summon, recommend, combat_narrate) in one place.
+# narrate_body streams prose and never goes through this runner.
+_FENCE_RE = re.compile(r"^\s*```(?:json)?\s*\n?|\n?\s*```\s*$", re.MULTILINE)
+
+
+def _strip_fence(answer: str) -> str:
+    return _FENCE_RE.sub("", answer).strip()
 
 T = TypeVar("T")
 
@@ -109,7 +120,7 @@ async def run_with_retries(
         except (OSError, asyncio.TimeoutError) as e:
             llm_diag("llm:fail", agent=agent, attempt=attempt, err=type(e).__name__)
             raise LLMUnavailable(str(e)) from e
-        answer = result["answer"] or ""
+        answer = _strip_fence(result["answer"] or "")
         try:
             parsed = parse(answer)
             llm_diag("llm:done", agent=agent, attempts=attempt)
