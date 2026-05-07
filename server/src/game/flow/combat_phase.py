@@ -31,7 +31,6 @@ from src.wire.emit import (
     emit_combat_start,
     emit_combat_turn,
     emit_error,
-    emit_judge_pending_check_trigger,
     emit_judge_verb,
     emit_narrative_delta,
 )
@@ -324,28 +323,6 @@ async def run_combat_player_turn(
         result = await run_judge(client, state, player_input, graph=graph)
     except JudgeMalformed as e:
         yield emit_error(e)
-        return
-
-    # PendingCheckTrigger → emit_roll_pending_from_trigger directly.
-    from .judge import PendingCheckTrigger
-
-    if isinstance(result, PendingCheckTrigger):
-        from .actions import emit_roll_pending_from_trigger
-
-        yield emit_judge_pending_check_trigger(
-            tier=result.tier,
-            stat=result.stat,
-            targets=result.targets,
-            reason=result.reason,
-        )
-        async for ev in emit_roll_pending_from_trigger(
-            state,
-            save_repo,
-            player_input,
-            result,
-            dirty,
-        ):
-            yield ev
         return
 
     # JudgeOutput (verb-based): refuse → INPUT_REJECTED; otherwise take the

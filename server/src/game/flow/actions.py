@@ -4,18 +4,13 @@ log entry, and yields SSE events. Used by both combat and non-combat dispatch.
 
 import random
 from collections.abc import AsyncIterator
-from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
-if TYPE_CHECKING:
-    from .judge import PendingCheckTrigger
 from ..domain.errors import (
     InventoryInvalid,
-    PersistenceFailed,
     SkillInvalid,
 )
 from src.locale import render
-from ..domain.memory import PendingCheck
 from ..domain.state import GameState
 from ..engines import combat as combat_engine
 from ..engines import inventory as inventory_engine
@@ -23,12 +18,8 @@ from ..engines import skill as skill_engine
 from ..engines.apply import apply_changes, apply_combat_affinity_drop
 from ..engines.growth import award_kill_xp
 from ..engines.quest import check_quests
-from src.db.repo import SaveRepo
-from ..rules.dc import compute_required_roll, pick_dc, social_bonus
-from src.wire.emit import emit_error, emit_pending_check
 from .dirty import (
     Dirty,
-    flush,
     push_act,
     push_turn_log,
     register_kill,
@@ -424,48 +415,3 @@ async def emit_move(
     )
 
 
-async def emit_roll_pending_from_trigger(
-    state: GameState,
-    save_repo: SaveRepo,
-    player_input: str,
-    trigger: "PendingCheckTrigger",
-    dirty: Dirty,
-) -> AsyncIterator[dict]:
-    """Emit pending_check from a PendingCheckTrigger (semantic fallback +
-    later-uncertainty-rule compatible). Carries the triggering_verb /
-    pending_verbs fields; kind is set via _derive_pending_kind."""
-    from .companion import _derive_pending_kind  # avoid circular import
-
-    actor = state.characters[state.player_id]
-
-    def _aff_against_actor(t: str) -> int:
-        npc = state.characters.get(t)
-        return 0 if npc is None else npc.relations.get(actor.id, 0)
-
-    target = min(trigger.targets, key=_aff_against_actor)
-    dc = pick_dc(trigger.tier)
-    stat_value = getattr(actor.stats, trigger.stat)
-    required_roll = compute_required_roll(dc, stat_value)
-    target_char = state.characters.get(target)
-    mod = social_bonus(target_char, actor.id) if target_char is not None else 0
-    state.pending_check = PendingCheck(
-        player_input=player_input,
-        kind=_derive_pending_kind(trigger.triggering_verb),
-        tier=trigger.tier,
-        stat=trigger.stat,
-        target=target,
-        targets=list(trigger.targets),
-        dc=dc,
-        mod=mod,
-        required_roll=required_roll,
-        reason=trigger.reason,
-        created_at=datetime.now(UTC).isoformat(),
-        triggering_verb=trigger.triggering_verb,
-        pending_verbs=[],  # discard remaining verbs (will activate in the later uncertainty rule)
-    )
-    try:
-        await flush(state, save_repo, dirty)
-    except PersistenceFailed as e:
-        yield emit_error(e)
-        return
-    yield emit_pending_check(state, state.pending_check)

@@ -1,11 +1,8 @@
-import json
-
 import pytest
 from pydantic import ValidationError
 
 from src.game.domain.verb import RefuseReason, Verb
 from src.wire.emit import (
-    emit_judge_pending_check_trigger,
     emit_judge_refuse,
     emit_judge_verb,
     emit_judge_verbs,
@@ -14,18 +11,6 @@ from src.wire.models import (
     JudgePayload,
     JudgeVerb,
 )
-
-
-def test_pending_check_trigger_envelope():
-    ev = emit_judge_pending_check_trigger(
-        tier="normal", stat="STR", targets=["loc1"], reason="문이 잠겼습니다."
-    )
-    assert ev["type"] == "judge"
-    assert ev["data"]["judge_kind"] == "pending_check_trigger"
-    assert ev["data"]["tier"] == "normal"
-    assert ev["data"]["stat"] == "STR"
-    assert ev["data"]["targets"] == ["loc1"]
-    assert ev["data"]["reason"] == "문이 잠겼습니다."
 
 
 def test_refuse_envelope():
@@ -81,25 +66,6 @@ def test_discriminator_validates_kind():
                 "refuse": {"category": "out_of_game", "message_hint": "x"},
             }
         )
-
-
-def test_serializable_to_json():
-    ev = emit_judge_pending_check_trigger(
-        tier="hard", stat="DEX", targets=["t1", "t2"], reason="민첩 판정"
-    )
-    s = json.dumps(ev, ensure_ascii=False)
-    assert "민첩 판정" in s
-    assert "judge_kind" in s
-
-
-def test_targets_list_copy_independence():
-    """emit_judge_pending_check_trigger should defensively copy targets."""
-    src = ["a", "b"]
-    ev = emit_judge_pending_check_trigger(
-        tier="easy", stat="WIS", targets=src, reason="r"
-    )
-    src.append("c")
-    assert ev["data"]["targets"] == ["a", "b"]
 
 
 def test_actions_list_copy_independence():

@@ -15,11 +15,10 @@ from src.llm.calls.narrate import (
 from ..domain.memory import GMLogEntry
 from ..engines.apply import apply_changes
 from ..engines.invariants import enforce_item_locality
-from ..engines.quest import apply_judge_result
 from src.llm.client import LLMClient
 from ..ontology.graph import GameGraph
 from ..ontology.player_view import build_player_view
-from ..ontology.queries import giver_of, inhabitants_of
+from ..ontology.queries import inhabitants_of
 from ..ontology.target_view import build_target_view
 from src.db.repo import ScenarioRepo
 from ..domain.state import GameState
@@ -43,37 +42,10 @@ from .format import (
     format_affinity_card_log,
     format_quest_start_log,
 )
-from .judge import judge_quest_progress
 from .memory_writer import write_memories
 
 
 _log = logging.getLogger(__name__)
-
-
-def npc_dialogue_quest_check(
-    state: GameState, claim: str, npc_id: str, dirty=None
-) -> None:
-    """During NPC dialogue, run free-path judge for quests given by this NPC.
-    `dirty` (when full Dirty) lets a satisfied judgment push the success card."""
-    history = [{"summary": e.summary} for e in state.turn_log[-5:]]
-    graph = state.graph()
-    npc = state.characters.get(npc_id)
-    npc_favor = npc.relations.get(state.player_id, 0) if npc else 0
-    for quest in list(state.quests.values()):
-        if quest.status != "active":
-            continue
-        if giver_of(graph, quest.id) != npc_id:
-            continue
-        result = judge_quest_progress(
-            quest={
-                "id": quest.id,
-                "objective_text": quest.objective_text or quest.title,
-            },
-            history=history,
-            claim=claim,
-            npc_context={"npc_id": npc_id, "favor": npc_favor},
-        )
-        apply_judge_result(state, quest.id, result, dirty)
 
 
 async def run_narrate(
@@ -175,10 +147,9 @@ async def consume_narrate(
     target_for_log: str | None,
     dialogue_input: str | None,
     graph: GameGraph | None = None,
-    npc_dialogue_target: str | None = None,
 ) -> AsyncIterator[dict]:
-    """Stream narrate body, then commit the post-narrate tail. `dialogue_input=None` skips the dialogue push (intro).
-    `npc_dialogue_target` (an NPC id) triggers the post-body free-path quest judge so any success card lands AFTER the gm prose."""
+    """Stream narrate body, then commit the post-narrate tail.
+    `dialogue_input=None` skips the dialogue push (intro)."""
     if graph is None:
         graph = state.graph()
     final: NarrativeFinal | None = None
@@ -236,21 +207,8 @@ async def consume_narrate(
             continue
         text = format_affinity_card_log(npc.name, delta)
         dirty.deferred_act_cards.append((text, text))
-    # NPC dialogue free-path judge runs AFTER the gm body so any '퀘스트 성공/실패' card
-    # emits through dirty.log past the prose that justifies it. Pre-existing dirty.log
-    # length lets us drain only the cards the judge added.
-    if npc_dialogue_target is not None and dialogue_input is not None:
-        try:
-            pre_log_len = len(dirty.log)
-            npc_dialogue_quest_check(
-                state, claim=dialogue_input, npc_id=npc_dialogue_target, dirty=dirty
-            )
-            for entry in dirty.log[pre_log_len:]:
-                yield emit_log_entry(entry)
-        except NotImplementedError:
-            pass  # judge LLM stub; live turns stay safe
-    # Drain all deferred reaction cards (quest_start, affinity, quest
-    # success/failure) so they emit AFTER the gm body that motivated them.
+    # Drain all deferred reaction cards (quest_start, affinity) so they emit
+    # AFTER the gm body that motivated them.
     for ev in flush_deferred_act_cards(state, dirty):
         yield ev
 
@@ -272,15 +230,6 @@ async def stream_narrate_tail(
     """Emit a state event, then drive narrate. Empty player_input is the post-combat / intro signal — dialogue push is skipped so recent_dialogue isn't polluted with a blank turn."""
     is_pass = action.name == "wait"
     target_for_log = action.target_ids[0] if (is_pass and action.target_ids) else None
-
-    # NPC dialogue quest check resolves the npc target here, but the call itself
-    # runs inside consume_narrate AFTER the gm body push so any '퀘스트 성공/실패'
-    # card emits past the prose that justifies it.
-    npc_dialogue_target: str | None = None
-    if is_pass and target_for_log is not None:
-        target_char = state.characters.get(target_for_log)
-        if target_char is not None and not target_char.is_player:
-            npc_dialogue_target = target_for_log
 
     if to_front_fn is not None:
         yield {"type": "state", "data": to_front_fn(state)}
@@ -305,7 +254,6 @@ async def stream_narrate_tail(
         target_for_log=target_for_log,
         dialogue_input=dialogue_input,
         graph=graph,
-        npc_dialogue_target=npc_dialogue_target,
     ):
         yield ev
 

@@ -6,7 +6,6 @@ from .._runner import get_prompt, run_with_retries
 from ...client import LLMClient
 from .errors import ModifierValidationError
 from .schema import JudgeInput, JudgeOutput, validate_judge_output
-from .semantics import JudgeSemanticError, check_semantics
 
 _CLASSIFY_TEMPERATURE = 0.4
 
@@ -17,9 +16,7 @@ async def classify(
     in_combat = bool(input_.surroundings.get("in_combat", False))
 
     def parse(answer: str) -> JudgeOutput:
-        out = validate_judge_output(answer, in_combat=in_combat)
-        check_semantics(out, input_.surroundings)
-        return out
+        return validate_judge_output(answer, in_combat=in_combat)
 
     return await run_with_retries(
         client,
@@ -28,7 +25,6 @@ async def classify(
         parse=parse,
         retry_on=(
             ValidationError,
-            JudgeSemanticError,
             ModifierValidationError,
             json.JSONDecodeError,
         ),

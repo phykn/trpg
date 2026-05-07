@@ -48,32 +48,12 @@ from .format import (
     NO_COMBAT_TARGETS_TEXT,
     format_combat_event_summary,
 )
-from .judge import run_judge, judge_quest_progress
+from .judge import run_judge
 from .combat_auto import AutoCombatResult
 from .narrate import stream_narrate_tail
 from .rest import run_rest
 from .subject import refresh_active_subject
-from ..engines.quest import abandon_quest, accept_quest, apply_judge_result
-
-
-def end_turn_quest_check(state: GameState) -> None:
-    """At turn end, run free-path judge over active quests using recent turn log."""
-    if not state.turn_log:
-        return
-    history = [{"summary": e.summary} for e in state.turn_log[-5:]]
-    for quest in list(state.quests.values()):
-        if quest.status != "active":
-            continue
-        result = judge_quest_progress(
-            quest={
-                "id": quest.id,
-                "objective_text": quest.objective_text or quest.title,
-            },
-            history=history,
-            claim=None,
-            npc_context=None,
-        )
-        apply_judge_result(state, quest.id, result)
+from ..engines.quest import abandon_quest, accept_quest
 
 
 async def _narrate_absorb_and_finalize(
@@ -107,10 +87,6 @@ async def _narrate_absorb_and_finalize(
         previous_phase_signal=previous_phase_signal,
     ):
         yield ev
-    try:
-        end_turn_quest_check(state)
-    except NotImplementedError:
-        pass
     tick_turn_buffs(state, dirty)
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
@@ -126,21 +102,16 @@ async def _emit_input_rejected_and_finalize(
     player_input: str,
     graph: GameGraph,
     previous_phase_signal: str | None,
-    *,
-    surface_reject_text: bool = True,
 ) -> AsyncIterator[dict]:
-    """Judge/dispatch-fail absorb path: optionally surface INPUT_REJECTED_TEXT
-    (engine-level rejection visible), then run the standard narrate-absorb
-    tail with a bare wait verb so the player_input still lands as in-world
-    prose."""
-    if surface_reject_text:
-        yield emit_log_entry(
-            GMLogEntry(
-                id=next_log_id(state),
-                kind="gm",
-                text=INPUT_REJECTED_TEXT,
-            )
+    """Verb-dispatch-fail path: surface INPUT_REJECTED_TEXT card, then absorb
+    player_input via narrate so the internal exception type isn't exposed."""
+    yield emit_log_entry(
+        GMLogEntry(
+            id=next_log_id(state),
+            kind="gm",
+            text=INPUT_REJECTED_TEXT,
         )
+    )
     async for ev in _narrate_absorb_and_finalize(
         client,
         state,
@@ -267,10 +238,9 @@ async def _run_turn_inner(
     try:
         result = await run_judge(client, state, player_input, graph=graph)
     except JudgeMalformed:
-        # Judge couldn't structure the input. Don't surface a system error —
-        # let the GM absorb the player's intent as prose. State doesn't change
-        # because the verb is wait.
-        async for ev in _emit_input_rejected_and_finalize(
+        # Judge couldn't structure or ground the input. Absorb into narrate
+        # rather than surfacing a system error — state stays unchanged.
+        async for ev in _narrate_absorb_and_finalize(
             client,
             state,
             scenario_repo,
@@ -278,31 +248,9 @@ async def _run_turn_inner(
             dirty,
             to_front_fn,
             player_input,
+            Verb(name="wait"),
             graph,
             previous_phase_signal,
-            surface_reject_text=False,
-        ):
-            yield ev
-        return
-
-    # Semantic-fallback (target absent, etc.) used to fire a silent WIS roll;
-    # out of combat we now absorb into narrate too. Combat's own run_judge
-    # consumer (combat_phase.py) keeps the roll fallback because every combat
-    # turn must produce a structured action.
-    from .judge import PendingCheckTrigger
-
-    if isinstance(result, PendingCheckTrigger):
-        async for ev in _emit_input_rejected_and_finalize(
-            client,
-            state,
-            scenario_repo,
-            save_repo,
-            dirty,
-            to_front_fn,
-            player_input,
-            graph,
-            previous_phase_signal,
-            surface_reject_text=False,
         ):
             yield ev
         return
@@ -327,10 +275,6 @@ async def _run_turn_inner(
                 previous_phase_signal=previous_phase_signal,
             ):
                 yield ev
-            try:
-                end_turn_quest_check(state)
-            except NotImplementedError:
-                pass
             tick_turn_buffs(state, dirty)
             async for ev in finalize(state, save_repo, dirty, to_front_fn):
                 yield ev
@@ -419,9 +363,8 @@ async def _run_turn_inner(
                     yield ev
                 return
 
-    # Unreachable: run_judge returns only JudgeOutput | PendingCheckTrigger;
-    # the _exactly_one validator rejects empty actions and both branches above
-    # return.
+    # Unreachable: out of combat run_judge returns only JudgeOutput, and the
+    # _exactly_one validator rejects empty actions; all branches above return.
     raise AssertionError(f"unexpected run_judge result: {type(result).__name__}")
 
 
@@ -644,10 +587,6 @@ async def _run_one_step_action(
         if to_front_fn is not None:
             yield {"type": "state", "data": to_front_fn(state)}
 
-    try:
-        end_turn_quest_check(state)
-    except NotImplementedError:
-        pass  # LLM not wired yet; hook placement is correct
     tick_turn_buffs(state, dirty)
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
@@ -1224,10 +1163,6 @@ async def _run_verb_chain(
         if to_front_fn is not None:
             yield {"type": "state", "data": to_front_fn(state)}
 
-    try:
-        end_turn_quest_check(state)
-    except NotImplementedError:
-        pass
     tick_turn_buffs(state, dirty)
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev

@@ -9,7 +9,6 @@ from .models import (
     DonePayload,
     ErrorPayload,
     JudgePayload,
-    JudgePendingCheckTrigger,
     JudgeRefuse,
     JudgeVerb,
     JudgeVerbs,
@@ -23,7 +22,6 @@ from .models import (
 if TYPE_CHECKING:
     from src.game.domain.memory import PendingCheck
     from src.game.domain.state import GameState
-    from src.game.domain.types import StatKey, Tier
     from src.game.domain.verb import RefuseReason, Verb
 
 _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
@@ -96,22 +94,6 @@ def emit_pending_check(state: "GameState", pending: "PendingCheck") -> dict:
     full {"type": "pending_check", "data": {...}} envelope."""
     payload = _build_pending_check_payload(state, pending)
     return {"type": "pending_check", "data": payload.model_dump()}
-
-
-def emit_judge_pending_check_trigger(
-    *, tier: "Tier", stat: "StatKey", targets: list[str], reason: str
-) -> dict:
-    """SSE judge event — pending_check_trigger branch."""
-    payload = JudgePayload(
-        root=JudgePendingCheckTrigger(
-            judge_kind="pending_check_trigger",
-            tier=tier,
-            stat=stat,
-            targets=list(targets),
-            reason=reason,
-        )
-    )
-    return {"type": "judge", "data": payload.model_dump()}
 
 
 def emit_judge_refuse(refuse: "RefuseReason") -> dict:

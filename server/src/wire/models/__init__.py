@@ -11,7 +11,6 @@ from .hero import (
 )
 from .judge import (
     JudgePayload,
-    JudgePendingCheckTrigger,
     JudgeRefuse,
     JudgeVerb,
     JudgeVerbs,
@@ -48,7 +47,6 @@ __all__ = [
     "HeroPayload",
     "InventoryItem",
     "JudgePayload",
-    "JudgePendingCheckTrigger",
     "JudgeRefuse",
     "JudgeVerb",
     "JudgeVerbs",

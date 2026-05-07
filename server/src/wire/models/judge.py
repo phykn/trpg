@@ -2,27 +2,14 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, RootModel
 
-from src.game.domain.types import StatKey, Tier
 from src.game.domain.verb import RefuseReason, Verb
 
 __all__ = [
     "JudgePayload",
-    "JudgePendingCheckTrigger",
     "JudgeRefuse",
     "JudgeVerb",
     "JudgeVerbs",
 ]
-
-
-class JudgePendingCheckTrigger(BaseModel):
-    """Semantic-fallback or verb-driven uncertainty path: judge declared an
-    immediate stat check before any verb dispatches."""
-
-    judge_kind: Literal["pending_check_trigger"]
-    tier: Tier
-    stat: StatKey
-    targets: list[str]
-    reason: str
 
 
 class JudgeRefuse(BaseModel):
@@ -53,6 +40,6 @@ class JudgePayload(RootModel):
     be exported alongside other top-level wire models in wire/export.py."""
 
     root: Annotated[
-        JudgePendingCheckTrigger | JudgeRefuse | JudgeVerb | JudgeVerbs,
+        JudgeRefuse | JudgeVerb | JudgeVerbs,
         Field(discriminator="judge_kind"),
     ]
