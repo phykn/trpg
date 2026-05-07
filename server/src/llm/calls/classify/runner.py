@@ -26,5 +26,5 @@ async def classify(
         retries=retries,
         agent="classify",
         temperature=_CLASSIFY_TEMPERATURE,
-        correction_hint="re-check the 'Emit 전 self-check' block",
+        correction_hint="re-check the verb catalog (required, enum, target_ids) and that every id exists in surroundings",
     )
