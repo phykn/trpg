@@ -188,7 +188,6 @@ async def test_start_combat_raises_when_already_in_combat(
     from src.game.flow.combat_auto import PlayerAction
     from src.game.flow.combat_phase import start_combat_and_drive_auto
     from src.game.flow.dirty import Dirty
-    from src.game.ontology.graph import build_graph
 
     combat_engine.start_combat(combat_state, ["goblin_01"], rng=random.Random(0))
     combat_state.combat_state.turn_order = ["player_01", "goblin_01"]
@@ -206,7 +205,6 @@ async def test_start_combat_raises_when_already_in_combat(
                 rng=random.Random(1),
                 player_input="공격",
                 player_action=PlayerAction(kind="attack", targets=["goblin_01"]),
-                graph=build_graph(combat_state),
             )
         )
 

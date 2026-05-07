@@ -89,10 +89,9 @@ async def run_rest(
 
     if outcome == "encounter":
         yield push_act(state, dirty, _rest_ambush_text(actor.name))
-        # attempt_rest may have spawned an enemy; build graph fresh so the
-        # new located_at edge is visible to the combat path's downstream reads.
+        # attempt_rest may have spawned an enemy; reset the cached graph so
+        # downstream reads see the new located_at edge.
         state.invalidate_graph()
-        graph = state.graph()
         async for ev in start_combat_and_drive_auto(
             client,
             state,
@@ -104,7 +103,6 @@ async def run_rest(
             player_action=PlayerAction(kind="pass"),
             surprise="enemy",
             cap=1,
-            graph=graph,
         ):
             yield ev
         tick_turn_buffs(state, dirty)

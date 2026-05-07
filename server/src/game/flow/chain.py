@@ -199,7 +199,6 @@ async def _enter_combat_and_finalize(
         player_input=player_input,
         player_action=player_action,
         surprise="player" if surprise else None,
-        graph=graph,
         _result_out=combat_results,
     ):
         yield ev

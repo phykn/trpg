@@ -166,7 +166,6 @@ async def _drive_auto_combat(
     player_action: PlayerAction,
     rng: random.Random | None,
     cap: int | None = None,
-    graph: GameGraph,
     _result_out: list | None = None,
 ) -> AsyncIterator[dict]:
     """Run the auto-combat sim, stream the cinematic, push numeric summary
@@ -208,7 +207,6 @@ async def start_combat_and_drive_auto(
     player_action: PlayerAction,
     surprise: Literal["player", "enemy"] | None = None,
     cap: int | None = None,
-    graph: GameGraph,
     _result_out: list | None = None,
 ) -> AsyncIterator[dict]:
     """Open a fresh fight (no existing combat_state) and run one auto-sim.
@@ -245,7 +243,6 @@ async def start_combat_and_drive_auto(
         player_action=player_action,
         rng=rng,
         cap=cap,
-        graph=graph,
         _result_out=_result_out,
     ):
         yield ev
@@ -430,7 +427,6 @@ async def run_combat_player_turn(
         player_input=player_input,
         player_action=player_action,
         rng=rng,
-        graph=graph,
         _result_out=combat_results,
     ):
         yield ev
