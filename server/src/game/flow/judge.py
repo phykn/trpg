@@ -4,7 +4,6 @@ from pydantic import ValidationError
 
 from ..domain.errors import JudgeMalformed
 from src.llm.calls.classify import classify
-from src.llm.calls.classify.errors import ModifierValidationError
 from src.llm.calls.classify.schema import JudgeInput, JudgeOutput
 from src.llm.client import LLMClient
 from ..domain.state import GameState
@@ -46,5 +45,5 @@ async def run_judge(
             ),
             state.locale,
         )
-    except (ValidationError, ModifierValidationError, json.JSONDecodeError) as e:
+    except (ValidationError, json.JSONDecodeError) as e:
         raise JudgeMalformed(str(e)) from e

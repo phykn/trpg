@@ -1,8 +1,17 @@
-import pytest
+"""Modifier-rule regression tests: required keys, enum values, target_ids
+cardinality. The rules live in `Verb._check_modifiers` (game/domain/verb.py)
+and fire on `Verb.model_validate(data, context={"in_combat": ...})` — a missing
+context skips the check, matching the save/load round-trip path."""
 
-from src.llm.calls.classify.errors import ModifierValidationError
-from src.llm.calls.classify.modifiers import _MODIFIER_SCHEMAS, validate_modifiers
-from src.llm.calls.classify.schema import Verb
+import pytest
+from pydantic import ValidationError
+
+from src.game.domain.verb import _MODIFIER_SCHEMAS, Verb
+
+
+def _validate(name: str, *, in_combat: bool = False, **kwargs) -> Verb:
+    data = {"name": name, **kwargs}
+    return Verb.model_validate(data, context={"in_combat": in_combat})
 
 
 def test_all_nine_verbs_have_schemas():
@@ -21,124 +30,145 @@ def test_all_nine_verbs_have_schemas():
 
 
 def test_move_required_destination_outside_combat():
-    v = Verb(name="move", modifiers={})
-    with pytest.raises(ModifierValidationError, match="destination"):
-        validate_modifiers(v, in_combat=False)
+    with pytest.raises(ValidationError, match="destination"):
+        _validate("move", modifiers={})
 
 
 def test_move_destination_passes():
-    validate_modifiers(
-        Verb(name="move", modifiers={"destination": "loc_01"}), in_combat=False
-    )
+    _validate("move", modifiers={"destination": "loc_01"})
 
 
 def test_move_in_combat_destination_optional():
-    validate_modifiers(Verb(name="move", modifiers={"manner": "hasty"}), in_combat=True)
+    _validate("move", in_combat=True, modifiers={"manner": "hasty"})
 
 
 def test_transfer_required_keys():
-    v = Verb(name="transfer", modifiers={"from_id": "a", "to_id": "b"})
-    with pytest.raises(ModifierValidationError):
-        validate_modifiers(v, in_combat=False)
+    with pytest.raises(ValidationError):
+        _validate("transfer", modifiers={"from_id": "a", "to_id": "b"})
 
 
 def test_transfer_complete():
-    validate_modifiers(
-        Verb(
-            name="transfer",
+    _validate(
+        "transfer",
+        modifiers={
+            "from_id": "merchant_01",
+            "to_id": "player_01",
+            "mode": "trade",
+            "item_id": "potion_01",
+            "price": 5,
+        },
+    )
+
+
+def test_transfer_unknown_mode_rejected():
+    with pytest.raises(ValidationError, match="mode"):
+        _validate(
+            "transfer",
             modifiers={
-                "from_id": "merchant_01",
-                "to_id": "player_01",
-                "mode": "trade",
-                "item_id": "potion_01",
-                "price": 5,
+                "from_id": "a",
+                "to_id": "b",
+                "mode": "barter",
             },
-        ),
-        in_combat=False,
+        )
+
+
+def test_use_requires_item_id():
+    with pytest.raises(ValidationError, match="item_id"):
+        _validate("use", modifiers={})
+
+
+def test_use_with_item_id():
+    _validate("use", modifiers={"item_id": "potion_01"})
+
+
+def test_attack_requires_target_ids():
+    with pytest.raises(ValidationError, match="target_id"):
+        _validate("attack", target_ids=[])
+
+
+def test_attack_with_target():
+    _validate("attack", target_ids=["goblin_01"])
+
+
+def test_attack_force_enum():
+    with pytest.raises(ValidationError, match="force"):
+        _validate("attack", target_ids=["a"], modifiers={"force": "kill"})
+
+
+def test_attack_subdue_force_passes():
+    _validate("attack", target_ids=["a"], modifiers={"force": "subdue"})
+
+
+def test_cast_requires_skill_id():
+    with pytest.raises(ValidationError, match="skill_id"):
+        _validate("cast", modifiers={})
+
+
+def test_cast_with_skill():
+    _validate("cast", modifiers={"skill_id": "heal_01"})
+
+
+def test_speak_requires_intent():
+    with pytest.raises(ValidationError, match="intent"):
+        _validate("speak", modifiers={})
+
+
+def test_speak_intent_friendly():
+    _validate("speak", modifiers={"intent": "friendly"})
+
+
+def test_speak_intent_unknown_rejected():
+    with pytest.raises(ValidationError, match="intent"):
+        _validate("speak", modifiers={"intent": "confused"})
+
+
+def test_speak_kind_enum():
+    with pytest.raises(ValidationError, match="kind"):
+        _validate(
+            "speak",
+            modifiers={"intent": "recruit", "kind": "fellowship"},
+        )
+
+
+def test_perceive_optional_target():
+    _validate("perceive", target_ids=["loc_01"])
+    _validate("perceive")
+
+
+def test_rest_no_modifiers():
+    _validate("rest")
+
+
+def test_rest_forbids_targets():
+    with pytest.raises(ValidationError, match="target_ids"):
+        _validate("rest", target_ids=["loc_01"])
+
+
+def test_wait_no_modifiers():
+    _validate("wait")
+
+
+def test_wait_with_tail_intent():
+    _validate("wait", modifiers={"tail_intent": "잠시 숨을 고른다."})
+
+
+def test_unknown_modifier_silently_dropped():
+    v = _validate(
+        "speak",
+        modifiers={"intent": "friendly", "ghost_key": "x"},
     )
+    assert "ghost_key" not in v.modifiers
 
 
-def test_attack_target_cardinality():
-    v = Verb(name="attack", target_ids=[], modifiers={})
-    with pytest.raises(ModifierValidationError, match="target"):
-        validate_modifiers(v, in_combat=False)
+def test_no_context_skips_modifier_check():
+    """Save/load path: model_validate without context must not run the
+    in_combat-dependent modifier rules — saved verbs are already validated."""
+    Verb.model_validate({"name": "move", "modifiers": {"manner": "hasty"}})
 
 
-def test_cast_target_optional_skill_required():
-    validate_modifiers(
-        Verb(name="cast", target_ids=[], modifiers={"skill_id": "heal_01"}),
-        in_combat=True,
-    )
-    with pytest.raises(ModifierValidationError, match="skill_id"):
-        validate_modifiers(Verb(name="cast"), in_combat=True)
-
-
-def test_speak_required_intent():
-    v = Verb(name="speak", modifiers={"target": "npc_01"})
-    with pytest.raises(ModifierValidationError, match="intent"):
-        validate_modifiers(v, in_combat=False)
-
-
-def test_speak_unknown_modifier_silent_drop():
-    v = Verb(
-        name="speak", modifiers={"intent": "friendly", "target": "n", "garbage_key": 1}
-    )
-    validate_modifiers(v, in_combat=False)
-    assert "garbage_key" not in v.modifiers
-
-
-def test_speak_intent_invalid_value():
-    v = Verb(name="speak", modifiers={"intent": "shout"})
-    with pytest.raises(ModifierValidationError, match="intent"):
-        validate_modifiers(v, in_combat=False)
-
-
-def test_speak_intent_dead_values_rejected():
-    """command/pray/ask/negotiate were dropped from the intent enum — narrate
-    absorbs those player inputs via friendly/hostile fallback."""
-    for dead in ("command", "pray", "ask", "negotiate"):
-        v = Verb(name="speak", modifiers={"intent": dead})
-        with pytest.raises(ModifierValidationError, match="intent"):
-            validate_modifiers(v, in_combat=False)
-
-
-def test_speak_intent_live_values_pass():
-    for live in ("friendly", "hostile", "deceptive", "recruit", "part"):
-        v = Verb(name="speak", modifiers={"intent": live, "target": "n_01"})
-        validate_modifiers(v, in_combat=False)
-
-
-def test_wait_target_cardinality_forbidden():
-    v = Verb(name="wait", target_ids=["x"])
-    with pytest.raises(ModifierValidationError, match="target_ids"):
-        validate_modifiers(v, in_combat=False)
-
-
-def test_alter_verb_no_longer_accepted():
-    """alter was removed (10 → 9 verbs). Pydantic rejects the name at Verb
-    construction — modifier validation never runs."""
-    from pydantic import ValidationError
-
+def test_unknown_verb_name_rejected_by_literal():
     with pytest.raises(ValidationError):
-        Verb(name="alter", modifiers={"target": "door_01"})
-
-
-def test_rest_no_modifier():
-    validate_modifiers(Verb(name="rest"), in_combat=False)
-
-
-def test_perceive_optional_target_ids():
-    validate_modifiers(Verb(name="perceive", target_ids=[]), in_combat=False)
-    validate_modifiers(
-        Verb(name="perceive", target_ids=["loc_01"]),
-        in_combat=False,
-    )
-
-
-def test_perceive_focus_silently_dropped():
-    """focus enum was removed when perceive collapsed to a flavor verb. Stale
-    LLM output carrying focus shouldn't crash — unknown modifier silent-drop
-    handles it (same pattern as speak's garbage_key)."""
-    v = Verb(name="perceive", modifiers={"focus": "hidden"})
-    validate_modifiers(v, in_combat=False)
-    assert "focus" not in v.modifiers
+        Verb.model_validate(
+            {"name": "fly", "modifiers": {}},
+            context={"in_combat": False},
+        )

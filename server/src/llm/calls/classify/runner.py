@@ -4,7 +4,6 @@ from pydantic import ValidationError
 
 from .._runner import get_prompt, run_with_retries
 from ...client import LLMClient
-from .errors import ModifierValidationError
 from .schema import JudgeInput, JudgeOutput, validate_judge_output
 
 _CLASSIFY_TEMPERATURE = 0.4
@@ -23,11 +22,7 @@ async def classify(
         system_prompt=get_prompt("classify", locale),
         user_payload=input_.model_dump_json(),
         parse=parse,
-        retry_on=(
-            ValidationError,
-            ModifierValidationError,
-            json.JSONDecodeError,
-        ),
+        retry_on=(ValidationError, json.JSONDecodeError),
         retries=retries,
         agent="classify",
         temperature=_CLASSIFY_TEMPERATURE,

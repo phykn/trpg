@@ -24,19 +24,12 @@ class JudgeInput(BaseModel):
 
 
 def validate_judge_output(answer: str, *, in_combat: bool = False) -> JudgeOutput:
-    """Parse JSON, validate Pydantic shape, then per-verb modifier validation.
-    Pydantic ValidationError → retry. ModifierValidationError → retry.
-    JSONDecodeError → retry (covers empty / whitespace-only answers — LLMs
-    occasionally emit content=None with reasoning_content set; `_runner.py`'s
-    `or ""` then yields a string that fails json.loads at column 0).
-    Unknown modifier keys silently dropped (LLM hallucination tolerance)."""
-    from .modifiers import validate_modifiers
-
+    """Parse JSON, then validate the JudgeOutput shape with `in_combat` context
+    so each Verb's model_validator can apply modifier rules. Empty/whitespace
+    answers raise JSONDecodeError so the runner's retry loop sees a structured
+    failure (some models leak content=None on internal reasoning hiccups).
+    Unknown modifier keys are silently dropped inside Verb.model_validator."""
     if not answer.strip():
         raise json.JSONDecodeError("empty answer", answer or "", 0)
     raw = json.loads(answer)
-    output = JudgeOutput.model_validate(raw)
-    if output.actions is not None:
-        for verb in output.actions:
-            validate_modifiers(verb, in_combat=in_combat)
-    return output
+    return JudgeOutput.model_validate(raw, context={"in_combat": in_combat})

@@ -1,8 +1,8 @@
 import json
+
 import pytest
 from pydantic import ValidationError
 
-from src.llm.calls.classify.errors import ModifierValidationError
 from src.llm.calls.classify.schema import validate_judge_output
 
 
@@ -18,9 +18,9 @@ def test_refuse_alone():
     assert out.actions is None
 
 
-def test_modifier_validation_raised():
+def test_modifier_violation_raises_validation_error():
     raw = json.dumps({"actions": [{"name": "move", "modifiers": {}}]})
-    with pytest.raises(ModifierValidationError):
+    with pytest.raises(ValidationError):
         validate_judge_output(raw, in_combat=False)
 
 
@@ -43,7 +43,7 @@ def test_silent_drop_unknown_modifier():
     assert "ghost_key" not in out.actions[0].modifiers
 
 
-def test_pydantic_error_for_unknown_verb():
+def test_unknown_verb_rejected():
     raw = json.dumps({"actions": [{"name": "fly", "modifiers": {}}]})
     with pytest.raises(ValidationError):
         validate_judge_output(raw, in_combat=False)
@@ -57,7 +57,7 @@ def test_in_combat_move_without_destination():
 
 def test_out_of_combat_move_without_destination_fails():
     raw = json.dumps({"actions": [{"name": "move", "modifiers": {"manner": "hasty"}}]})
-    with pytest.raises(ModifierValidationError):
+    with pytest.raises(ValidationError):
         validate_judge_output(raw, in_combat=False)
 
 
