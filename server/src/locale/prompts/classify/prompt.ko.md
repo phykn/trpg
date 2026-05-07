@@ -14,6 +14,26 @@
 
 `actions` (Verb 1~4개) 또는 `refuse` 중 **정확히 하나**만. `target_ids`·`modifiers`는 비어 있으면 생략.
 
+### 키 위치 (필수 — 자주 틀림)
+
+- **`target_ids`는 Verb top-level** (`list[str]`). **`attack` 한정** — NPC id 1+를 여기에. 다른 verb는 비우거나 생략.
+- **나머지 모든 키는 `modifiers` 안**: `destination`, `intent`, `target` (speak 단일 NPC), `item_id`, `skill_id`, `mode`, `from_id`, `to_id`, `topic`, `claim`, `manner`, `physical`, `kind`, `force`, `surprise`, `ranged`, `price`, `haggle`, `tail_intent` 등.
+
+아래 카탈로그·예시들은 단축 표기 `verb(key=val)`을 씁니다 — 이는 **`modifiers.key = val`** 을 의미합니다 (예외: `target_ids`).
+
+실제 JSON 모양:
+
+```json
+{"actions": [{"name": "move", "modifiers": {"destination": "herb_garden"}}]}
+{"actions": [{"name": "speak", "modifiers": {"intent": "friendly", "target": "edrik_chief", "topic": "마을 소문"}}]}
+{"actions": [{"name": "attack", "target_ids": ["bandit_01"]}]}
+{"actions": [{"name": "use", "modifiers": {"item_id": "herb_01"}}]}
+{"actions": [{"name": "cast", "modifiers": {"skill_id": "heal_minor"}}]}
+{"actions": [{"name": "transfer", "modifiers": {"from_id": "player_01.inventory", "to_id": "player_01.equipped.weapon", "mode": "gift", "item_id": "shortsword_01"}}]}
+{"actions": [{"name": "perceive"}]}
+{"actions": [{"name": "wait"}]}
+```
+
 ## 입력 (`surroundings`)
 
 - `location` — 현재 장소 `{id, name}`.
