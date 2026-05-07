@@ -271,7 +271,7 @@ def _check_player_template(s: Scenario) -> list[str]:
 
 
 def check_scenario(s: Scenario) -> list[str]:
-    from .character import check_character, check_skills, _check_seed_only_rules
+    from .character import check_character, check_skills, check_seed_only_rules
     from .item import check_item, check_inventory
 
     out: list[str] = []
@@ -285,7 +285,7 @@ def check_scenario(s: Scenario) -> list[str]:
         out.extend(check_skills(c, s.skills))
         out.extend(_check_character_cross_ref(c, s))
         if not s.runtime:
-            out.extend(_check_seed_only_rules(c))
+            out.extend(check_seed_only_rules(c))
 
     for r in s.races.values():
         for sid in r.racial_skill_ids:

@@ -111,7 +111,7 @@ def check_skills(c: Character, skills_pool: dict[str, Skill]) -> list[str]:
     return out
 
 
-def _check_seed_only_rules(c: Character) -> list[str]:
+def check_seed_only_rules(c: Character) -> list[str]:
     """Extra rules at seed time only — relaxed for runtime state."""
     where = f"characters/{c.id}"
     out: list[str] = []
@@ -176,5 +176,5 @@ def check_seed_character(
     out.extend(check_character(c))
     out.extend(check_inventory(c, items_pool))
     out.extend(check_skills(c, skills_pool))
-    out.extend(_check_seed_only_rules(c))
+    out.extend(check_seed_only_rules(c))
     return out
