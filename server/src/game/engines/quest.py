@@ -30,13 +30,26 @@ def _as_dirty(dirty):
     return dirty
 
 
-def accept_quest(state: GameState, quest_id: str) -> bool:
-    """pending → active. No-op for any other status."""
+def accept_quest(state: GameState, quest_id: str, dirty=None) -> bool:
+    """pending → active. With a full Dirty, also marks the quest entity dirty
+    (so Supabase upserts the new status) and pushes a start card; without it,
+    only the in-memory transition happens. Pins active_quest_id to the
+    accepted quest so the panel switches focus. No-op for any other status."""
     quest = state.quests.get(quest_id)
     if not quest or quest.status != "pending":
         return False
     quest.status = "active"
     _ensure_runtime_fields(quest)
+    entities = _entities_set(dirty)
+    full = _as_dirty(dirty)
+    if entities is not None:
+        entities.add(("quests", quest.id))
+    if full is not None:
+        from ..flow.format import format_quest_start_log
+
+        text = format_quest_start_log(quest.title)
+        full.deferred_act_cards.append((text, text))
+    state.active_quest_id = quest.id
     return True
 
 

@@ -24,6 +24,7 @@ from .dirty import (
     Dirty,
     ToFrontFn,
     finalize,
+    flush_deferred_act_cards,
     next_log_id,
     push_act,
     push_log_entry,
@@ -102,7 +103,7 @@ async def _run_turn_inner(
         kind, qid = quest_action
         diag(state.game_id, state.turn_count, "quest:action", kind=kind, qid=qid)
         if kind == "accept":
-            accept_quest(state, qid)
+            accept_quest(state, qid, dirty)
         elif kind == "abandon":
             abandon_quest(state, qid, dirty)
 
@@ -118,8 +119,11 @@ async def _run_turn_inner(
     # Button-only quest_action turn: state mutation already applied, no input
     # to classify — short-circuit to finalize so we don't burn a judge LLM
     # call on an empty prompt. turn_count stays put (UI button isn't an
-    # in-world action).
+    # in-world action). Drain quest start/fail cards before finalize so the
+    # client sees the in-game ack.
     if quest_action is not None and not player_input:
+        for ev in flush_deferred_act_cards(state, dirty):
+            yield ev
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return

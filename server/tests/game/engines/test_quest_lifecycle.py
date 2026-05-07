@@ -71,6 +71,25 @@ def test_accept_nonexistent_quest_returns_false(fresh_state):
     assert result is False
 
 
+def test_accept_quest_persists_and_emits_start_card(fresh_state):
+    """accept_quest with a full Dirty marks the quest entity dirty (so Supabase
+    upserts the new status), pushes the start card, and pins active_quest_id."""
+    from src.game.flow.dirty import Dirty
+
+    state = _state(
+        fresh_state, quests=[_quest("q1", status="pending", requires_acceptance=True)]
+    )
+    state.quests["q1"].title = "촌장의 부탁"
+    dirty = Dirty()
+    result = q.accept_quest(state, "q1", dirty)
+    assert result is True
+    assert state.quests["q1"].status == "active"
+    assert state.active_quest_id == "q1"
+    assert ("quests", "q1") in dirty.entities
+    texts = [text for text, _ in dirty.deferred_act_cards]
+    assert any("퀘스트 시작: 촌장의 부탁" in t for t in texts), texts
+
+
 # --- abandon_quest ----------------------------------------------------------
 
 
