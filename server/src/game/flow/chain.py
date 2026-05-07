@@ -21,6 +21,7 @@ from .actions import (
     emit_trade,
     emit_unequip,
     emit_use,
+    is_player_equipped_ref,
 )
 from .buff_tick import tick_turn_buffs
 from .combat_auto import AutoCombatResult, PlayerAction
@@ -48,9 +49,9 @@ def _resolve_transfer_emit(
     """Pick the inventory emit_* matching a non-steal transfer verb. Shared by
     the single-verb dispatch and the chain-internal dispatch so both paths use
     one decision table."""
-    if "<self>.equipped" in to_id:
+    if is_player_equipped_ref(state, to_id):
         return emit_equip(state, state.player_id, item_id, dirty)
-    if "<self>.equipped" in from_id:
+    if is_player_equipped_ref(state, from_id):
         return emit_unequip(state, state.player_id, item_id, dirty)
     if mode == "gift":
         return emit_give(state, from_id, to_id, item_id, dirty)
@@ -114,7 +115,7 @@ def _is_receipt(
         mods = action.modifiers or {}
         from_id = mods.get("from_id", "")
         to_id = mods.get("to_id", "")
-        if "<self>.equipped" in to_id or "<self>.equipped" in from_id:
+        if is_player_equipped_ref(state, to_id) or is_player_equipped_ref(state, from_id):
             return True
         return False
     if action.name == "move":
@@ -145,7 +146,7 @@ def _chain_needs_narrate(
             mode = mods.get("mode")
             from_id = mods.get("from_id", "")
             to_id = mods.get("to_id", "")
-            if "<self>.equipped" in to_id or "<self>.equipped" in from_id:
+            if is_player_equipped_ref(state, to_id) or is_player_equipped_ref(state, from_id):
                 continue
             if mode in ("gift", "trade"):
                 failed = bool(part_failures[i]) if part_failures is not None else False

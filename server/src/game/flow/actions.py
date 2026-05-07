@@ -59,6 +59,12 @@ def _item_name(state: GameState, item_id: str) -> str:
     return item.name if item else item_id
 
 
+def is_player_equipped_ref(state: GameState, ref: str) -> bool:
+    # LLM sometimes substitutes the prompt's literal `<self>` with the actual
+    # player_id, so accept both forms when routing transfer to equip/unequip.
+    return "<self>.equipped" in ref or f"{state.player_id}.equipped" in ref
+
+
 def apply_attack_action(
     state: GameState,
     attacker_id: str,

@@ -20,6 +20,7 @@ from .actions import (
     emit_equip,
     emit_unequip,
     emit_use,
+    is_player_equipped_ref,
 )
 from .combat_auto import (
     AutoCombatResult,
@@ -322,7 +323,7 @@ def _judge_to_player_action(verb: Verb, state: GameState) -> PlayerAction | None
         # (avoids a silent pass round on a meaningless trade attempt).
         from_id = m.get("from_id", "")
         to_id = m.get("to_id", "")
-        if "<self>.equipped" in from_id or "<self>.equipped" in to_id:
+        if is_player_equipped_ref(state, from_id) or is_player_equipped_ref(state, to_id):
             return PlayerAction(kind="pass")
         return None
     return None
@@ -351,11 +352,11 @@ async def _passive_pre_emit(
         from_id = m.get("from_id", "")
         to_id = m.get("to_id", "")
         item_id_carried = m["item_id"]
-        if "<self>.equipped" in to_id:
+        if is_player_equipped_ref(state, to_id):
             async for ev in emit_equip(state, state.player_id, item_id_carried, dirty):
                 yield ev
             label = "equip"
-        elif "<self>.equipped" in from_id:
+        elif is_player_equipped_ref(state, from_id):
             async for ev in emit_unequip(
                 state, state.player_id, item_id_carried, dirty
             ):
@@ -435,8 +436,8 @@ async def run_combat_player_turn(
     is_passive = verb.name == "use" or (
         verb.name == "transfer"
         and (
-            "<self>.equipped" in (verb.modifiers or {}).get("from_id", "")
-            or "<self>.equipped" in (verb.modifiers or {}).get("to_id", "")
+            is_player_equipped_ref(state, (verb.modifiers or {}).get("from_id", ""))
+            or is_player_equipped_ref(state, (verb.modifiers or {}).get("to_id", ""))
         )
     )
     if is_passive:
