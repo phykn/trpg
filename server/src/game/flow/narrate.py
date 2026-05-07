@@ -30,6 +30,7 @@ from src.llm.context import (
     build_world_layer,
     redact_dead_quotes,
 )
+from ._diag import diag
 from .buff_tick import tick_turn_buffs
 from .dirty import (
     Dirty,
@@ -189,6 +190,17 @@ async def consume_narrate(
     dirty.narrate_suggestions = list(final.output.suggestions)
 
     apply_result = apply_changes(state, final.output.state_changes, dirty)
+    diag(
+        state.game_id, state.turn_count, "narrate:extract",
+        changes=len(final.output.state_changes),
+        applied=apply_result["applied"],
+        rejected=len(apply_result["rejected"]),
+        started_quests=apply_result["started_quests"] or None,
+        fields=[
+            f"{c.get('entity')}.{c.get('field') or c.get('type')}"
+            for c in final.output.state_changes
+        ] or None,
+    )
     locality_warnings = enforce_item_locality(state, dirty=dirty.entities)
     for warning in locality_warnings:
         # Auto-repair telemetry — server logs only; engine-internal text (English + ids) must never reach the player log.
