@@ -122,14 +122,6 @@ def test_speak_intent_unknown_rejected():
         _validate("speak", modifiers={"intent": "confused"})
 
 
-def test_speak_kind_enum():
-    with pytest.raises(ValidationError, match="kind"):
-        _validate(
-            "speak",
-            modifiers={"intent": "recruit", "kind": "fellowship"},
-        )
-
-
 def test_perceive_optional_target():
     _validate("perceive", target_ids=["loc_01"])
     _validate("perceive")

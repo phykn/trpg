@@ -17,7 +17,7 @@
 ### 키 위치 (필수 — 자주 틀림)
 
 - **`target_ids`는 Verb top-level** (`list[str]`). **`attack` 한정** — NPC id 1+를 여기에. 다른 verb는 비우거나 생략.
-- **나머지 모든 키는 `modifiers` 안**: `destination`, `intent`, `target` (speak 단일 NPC), `item_id`, `skill_id`, `mode`, `from_id`, `to_id`, `topic`, `claim`, `manner`, `physical`, `kind`, `force`, `surprise`, `ranged`, `price`, `haggle`, `tail_intent` 등.
+- **나머지 모든 키는 `modifiers` 안**: `destination`, `intent`, `target` (speak 단일 NPC), `item_id`, `skill_id`, `mode`, `from_id`, `to_id`, `manner`, `force`, `surprise`, `ranged`, `price`, `haggle`, `tail_intent` 등.
 
 아래 카탈로그·예시들은 단축 표기 `verb(key=val)`을 씁니다 — 이는 **`modifiers.key = val`** 을 의미합니다 (예외: `target_ids`).
 
@@ -25,7 +25,7 @@
 
 ```json
 {"actions": [{"name": "move", "modifiers": {"destination": "herb_garden"}}]}
-{"actions": [{"name": "speak", "modifiers": {"intent": "friendly", "target": "edrik_chief", "topic": "마을 소문"}}]}
+{"actions": [{"name": "speak", "modifiers": {"intent": "friendly", "target": "edrik_chief"}}]}
 {"actions": [{"name": "attack", "target_ids": ["bandit_01"]}]}
 {"actions": [{"name": "use", "modifiers": {"item_id": "herb_01"}}]}
 {"actions": [{"name": "cast", "modifiers": {"skill_id": "heal_minor"}}]}
@@ -65,7 +65,7 @@
 | `move` | `destination` (전투 외) | `manner: normal\|stealthy\|hasty`, `tail_intent` | — | `entities[type=connection]`의 id. 도망(`manner=hasty`)은 전투 한정 — destination 생략 가능 |
 | `transfer` | `from_id`, `to_id`, `mode: gift\|trade\|steal` | `item_id`, `price`, `haggle`, `tail_intent` | — | trade는 `merchants`만. equip은 `from_id="<self>.inventory" to_id="<self>.equipped.<slot>" mode="gift"`, unequip 역방향. corpse loot은 `from_id=<corpse_id>` (`corpses[*].id`). steal은 `item_id` 생략 (엔진이 carryables 중 random) |
 | `use` | `item_id` | `target_id`, `tail_intent` | — | consumable / trigger. weapon·armor는 `transfer(equip)` |
-| `speak` | `intent: friendly\|hostile\|deceptive\|recruit\|part` | `target`, `kind: companion\|alliance\|marriage\|query\|gossip`, `physical: verbal\|kneel\|song\|gesture\|embrace`, `topic`, `claim`, `tail_intent` | — | 위협→hostile, 거짓말→deceptive(`claim` 채움), 영입→recruit(`target=npc_id`), 이별→part(`target=companion_id`), 그 외 톤 친근→friendly |
+| `speak` | `intent: friendly\|hostile\|deceptive\|recruit\|part` | `target`, `tail_intent` | — | 위협→hostile, 거짓말→deceptive, 영입→recruit(`target=npc_id`), 이별→part(`target=companion_id`), 그 외 톤 친근→friendly |
 | `perceive` | — | — | optional | 둘러본다·조사·scene prop 상호작용 |
 | `rest` | — | — | — | 잔다·캠프·야영 + 회복 의도 (전투 외) |
 | `wait` | — | `tail_intent` | — | 한숨·명시 무행동·fluff |
@@ -93,11 +93,11 @@
 
 | input | output |
 |---|---|
-| "타렘에게 다가가 가격을 깎아달라 한다" | `[move(destination=<타렘 위치>), speak(intent=friendly, target=타렘_01, topic=가격 흥정)]` |
+| "타렘에게 다가가 가격을 깎아달라 한다" | `[move(destination=<타렘 위치>), speak(intent=friendly, target=타렘_01)]` |
 | "검을 뽑아 그를 위협한다" (직전 상대=산적_01) | `[transfer(<self>.inventory→<self>.equipped.weapon, gift, item_id=검_01), speak(intent=hostile, target=산적_01)]` |
 | "약초를 마신다" | `[use(item_id=herb_01)]` |
-| "여관 주인에게 마을 소문을 묻는다" | `[speak(intent=friendly, target=여관주인_01, topic=마을 소문)]` |
-| "동료가 되어달라" (친근 NPC, 자리 있음) | `[speak(intent=recruit, target=<npc_id>, kind=companion)]` |
+| "여관 주인에게 마을 소문을 묻는다" | `[speak(intent=friendly, target=여관주인_01)]` |
+| "동료가 되어달라" (친근 NPC, 자리 있음) | `[speak(intent=recruit, target=<npc_id>)]` |
 | "산적을 공격한다" (entities에 산적_01) | `[attack(target_ids=[산적_01])]` |
 | "산적을 공격한다" (산적 미존재) | `[wait]` |
 | "상인의 지갑을 슬쩍한다" (carryables 있음) | `[transfer(상인_01→player_01, mode=steal)]` |

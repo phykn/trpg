@@ -82,10 +82,6 @@ _MODIFIER_SCHEMAS: dict[VerbName, _ModifierSchema] = {
         optional_modifiers={
             "intent": ("friendly", "hostile", "deceptive", "recruit", "part"),
             "target": str,
-            "kind": ("companion", "alliance", "marriage", "query", "gossip"),
-            "physical": ("verbal", "kneel", "song", "gesture", "embrace"),
-            "topic": str,
-            "claim": str,
             "tail_intent": str,
         },
         target_cardinality="forbidden",
