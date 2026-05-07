@@ -1,6 +1,7 @@
 """Buy / sell with affinity-based pricing + free transfer (gift / loot)."""
 
-from ...domain.entities import Character, EQUIPMENT_SLOTS, Item
+from ...domain.entities import Character, Item
+from .equipment import unequip_by_item
 from ...domain.errors import InventoryInvalid
 from ...rules import RULES
 from .carry import check_can_carry
@@ -124,9 +125,7 @@ def transfer(
 
     src.inventory_ids.remove(item_id)
     dst.inventory_ids.append(item_id)
-    for slot in EQUIPMENT_SLOTS:
-        if getattr(src.equipment, slot) == item_id:
-            setattr(src.equipment, slot, None)
+    unequip_by_item(src, item_id)
 
 
 def steal(src: Character, dst: Character, item_id: str, items: dict[str, Item]) -> None:

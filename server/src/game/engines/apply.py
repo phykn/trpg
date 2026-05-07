@@ -2,11 +2,11 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
-from ..domain.entities import EQUIPMENT_SLOTS
 from ..domain.types import Grade, Intent
 from ..rules import RULES
 from ..rules.permissions import CHAPTER_QUEST_ALLOWED, FORBIDDEN_BY_ENTITY
 from ..domain.state import GameState
+from .inventory.equipment import unequip_by_item
 
 
 class SetChange(BaseModel):
@@ -173,10 +173,7 @@ def _apply_move_item(
     src.remove(c.item)
     dst.append(c.item)
     if src_kind == "characters":
-        equipment = state.characters[c.from_].equipment
-        for slot in EQUIPMENT_SLOTS:
-            if getattr(equipment, slot) == c.item:
-                setattr(equipment, slot, None)
+        unequip_by_item(state.characters[c.from_], c.item)
     if entities is not None:
         entities.add((src_kind, c.from_))
         entities.add((dst_kind, c.to))
