@@ -1,5 +1,6 @@
 from ..domain.state import GameState
 from ..domain.types import is_secret_masked_grade
+from . import omit_none
 from .graph import GameGraph
 from .queries import (
     container_of,
@@ -48,10 +49,6 @@ def build_target_view(
     if node_type == "item":
         return _build_item_view(state, graph, target_id)
     return None
-
-
-def _omit_none(d: dict) -> dict:
-    return {k: v for k, v in d.items() if v is not None}
 
 
 def _corpse_inventory(state: GameState, graph: GameGraph, target_id: str) -> list[dict]:
@@ -157,7 +154,7 @@ def _build_npc_view(
     if race_id is not None:
         race = state.races.get(race_id)
         if race is not None:
-            race_payload = _omit_none(
+            race_payload = omit_none(
                 {"name": race.name, "description": race.description or None}
             )
 
@@ -215,7 +212,7 @@ def _build_npc_view(
             or None
         )
     )
-    return _omit_none(
+    return omit_none(
         {
             "type": "npc",
             "name": npc.name,
@@ -254,7 +251,7 @@ def _build_location_view(
         if payload is not None:
             quests.append(payload)
 
-    return _omit_none(
+    return omit_none(
         {
             "type": "location",
             "name": loc.name,
@@ -289,7 +286,7 @@ def _build_item_view(state: GameState, graph: GameGraph, target_id: str) -> dict
         if loc is not None:
             located_in.append({"id": container_id, "name": loc.name})
 
-    return _omit_none(
+    return omit_none(
         {
             "type": "item",
             "name": item.name,
