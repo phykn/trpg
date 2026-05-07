@@ -259,7 +259,6 @@ class Quest(BaseModel):
     difficulty: Tier
     prerequisite_ids: list[str] = []
     triggers: list[QuestTrigger] = []
-    conditions: list[str] = []
     fail_triggers: list[QuestTrigger] = []
     rewards: QuestRewards = QuestRewards()
     status: Literal[

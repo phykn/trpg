@@ -31,7 +31,6 @@ export const ko = {
     commission: '의뢰',
     goal: '목표',
     summary: '요약',
-    condition: '조건',
     reward: '보상',
     map: '지도',
     neighborhood: '주변',

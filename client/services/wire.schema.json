@@ -501,13 +501,6 @@
           "title": "Progresslabel",
           "type": "string"
         },
-        "conditions": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Conditions",
-          "type": "array"
-        },
         "rewards": {
           "$ref": "#/definitions/QuestRewards"
         },
@@ -541,7 +534,6 @@
         "difficulty",
         "goals",
         "progressLabel",
-        "conditions",
         "rewards",
         "status",
         "actions"
@@ -669,13 +661,6 @@
           "title": "Weather",
           "type": "array"
         },
-        "features": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Features",
-          "type": "array"
-        },
         "surroundings": {
           "items": {
             "$ref": "#/definitions/PlaceSurrounding"
@@ -699,67 +684,11 @@
         "description",
         "dayPhase",
         "weather",
-        "features",
         "surroundings",
         "targets",
         "risk"
       ],
       "title": "PlacePayload",
-      "type": "object"
-    },
-    "JudgePendingCheckTrigger": {
-      "description": "Semantic-fallback or verb-driven uncertainty path: judge declared an\nimmediate stat check before any verb dispatches.",
-      "properties": {
-        "judge_kind": {
-          "const": "pending_check_trigger",
-          "title": "Judge Kind",
-          "type": "string"
-        },
-        "tier": {
-          "enum": [
-            "very_easy",
-            "easy",
-            "normal",
-            "hard",
-            "very_hard",
-            "legend",
-            "myth"
-          ],
-          "title": "Tier",
-          "type": "string"
-        },
-        "stat": {
-          "enum": [
-            "STR",
-            "DEX",
-            "CON",
-            "INT",
-            "WIS",
-            "CHA"
-          ],
-          "title": "Stat",
-          "type": "string"
-        },
-        "targets": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Targets",
-          "type": "array"
-        },
-        "reason": {
-          "title": "Reason",
-          "type": "string"
-        }
-      },
-      "required": [
-        "judge_kind",
-        "tier",
-        "stat",
-        "targets",
-        "reason"
-      ],
-      "title": "JudgePendingCheckTrigger",
       "type": "object"
     },
     "JudgeRefuse": {
@@ -890,7 +819,6 @@
       "description": "SSE `judge` event payload — discriminated union over `judge_kind`.\nRootModel is the Pydantic v2 way to wrap a non-class root type so it can\nbe exported alongside other top-level wire models in wire/export.py.",
       "discriminator": {
         "mapping": {
-          "pending_check_trigger": "#/definitions/JudgePendingCheckTrigger",
           "refuse": "#/definitions/JudgeRefuse",
           "verb": "#/definitions/JudgeVerb",
           "verbs": "#/definitions/JudgeVerbs"
@@ -898,9 +826,6 @@
         "propertyName": "judge_kind"
       },
       "oneOf": [
-        {
-          "$ref": "#/definitions/JudgePendingCheckTrigger"
-        },
         {
           "$ref": "#/definitions/JudgeRefuse"
         },

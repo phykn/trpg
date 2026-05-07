@@ -62,7 +62,6 @@ export type Summary = string;
 export type Giver = string;
 export type Goals = string[];
 export type Progresslabel = string;
-export type Conditions = string[];
 export type Status1 = "pending" | "active" | "completed" | "failed";
 export type Actions = ("accept" | "abandon")[];
 export type Name4 = string;
@@ -80,18 +79,12 @@ export type Name6 = string;
 export type Description = string;
 export type Dayphase = string;
 export type Weather = string[];
-export type Features = string[];
 export type Surroundings = PlaceSurrounding[];
 export type Targets = PlaceTarget[];
-export type JudgeKind = "pending_check_trigger";
-export type Tier = "very_easy" | "easy" | "normal" | "hard" | "very_hard" | "legend" | "myth";
-export type Stat1 = "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA";
-export type Targets1 = string[];
-export type Reason1 = string;
-export type JudgeKind1 = "refuse";
+export type JudgeKind = "refuse";
 export type Category = "out_of_game" | "meta_breaking";
 export type MessageHint = string;
-export type JudgeKind2 = "verb";
+export type JudgeKind1 = "verb";
 export type Name7 = "move" | "transfer" | "use" | "attack" | "cast" | "speak" | "perceive" | "rest" | "wait";
 /**
  * @maxItems 8
@@ -106,7 +99,7 @@ export type TargetIds =
   | [string, string, string, string, string, string]
   | [string, string, string, string, string, string, string]
   | [string, string, string, string, string, string, string, string];
-export type JudgeKind3 = "verbs";
+export type JudgeKind2 = "verbs";
 export type Actions1 = Verb[];
 /**
  * SSE `judge` event payload — discriminated union over `judge_kind`.
@@ -116,7 +109,7 @@ export type Actions1 = Verb[];
  * This interface was referenced by `Wire`'s JSON-Schema
  * via the `definition` "JudgePayload".
  */
-export type JudgePayload = JudgePendingCheckTrigger | JudgeRefuse | JudgeVerb | JudgeVerbs;
+export type JudgePayload = JudgeRefuse | JudgeVerb | JudgeVerbs;
 export type Id1 = number;
 export type Kind1 = "act";
 export type Text = string;
@@ -358,7 +351,6 @@ export interface QuestPayload {
   difficulty: DifficultyBadge;
   goals: Goals;
   progressLabel: Progresslabel;
-  conditions: Conditions;
   rewards: QuestRewards;
   status: Status1;
   actions: Actions;
@@ -422,25 +414,9 @@ export interface PlacePayload {
   description: Description;
   dayPhase: Dayphase;
   weather: Weather;
-  features: Features;
   surroundings: Surroundings;
   targets: Targets;
   risk: RiskBadge;
-  [k: string]: unknown;
-}
-/**
- * Semantic-fallback or verb-driven uncertainty path: judge declared an
- * immediate stat check before any verb dispatches.
- *
- * This interface was referenced by `Wire`'s JSON-Schema
- * via the `definition` "JudgePendingCheckTrigger".
- */
-export interface JudgePendingCheckTrigger {
-  judge_kind: JudgeKind;
-  tier: Tier;
-  stat: Stat1;
-  targets: Targets1;
-  reason: Reason1;
   [k: string]: unknown;
 }
 /**
@@ -450,7 +426,7 @@ export interface JudgePendingCheckTrigger {
  * via the `definition` "JudgeRefuse".
  */
 export interface JudgeRefuse {
-  judge_kind: JudgeKind1;
+  judge_kind: JudgeKind;
   refuse: RefuseReason;
   [k: string]: unknown;
 }
@@ -469,7 +445,7 @@ export interface RefuseReason {
  * via the `definition` "JudgeVerb".
  */
 export interface JudgeVerb {
-  judge_kind: JudgeKind2;
+  judge_kind: JudgeKind1;
   verb: Verb;
   [k: string]: unknown;
 }
@@ -493,7 +469,7 @@ export interface Modifiers {
  * via the `definition` "JudgeVerbs".
  */
 export interface JudgeVerbs {
-  judge_kind: JudgeKind3;
+  judge_kind: JudgeKind2;
   actions: Actions1;
   [k: string]: unknown;
 }

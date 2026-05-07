@@ -36,7 +36,6 @@ class QuestPayload(_CamelModel):
     difficulty: DifficultyBadge
     goals: list[str]
     progress_label: str
-    conditions: list[str]
     rewards: QuestRewards
     status: Literal["pending", "active", "completed", "failed"]
     actions: list[Literal["accept", "abandon"]]

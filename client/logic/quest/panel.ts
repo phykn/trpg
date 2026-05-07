@@ -45,7 +45,6 @@ export function buildQuestSlot(quest: Quest | null, opts?: { dot?: boolean }): P
         { label: ko.panel.summary, text: quest.summary },
         { label: ko.panel.reward, nodes: [['GOLD', quest.rewards.gold], ['EXP', quest.rewards.exp]] },
         { label: ko.panel.commission, text: quest.giver },
-        { label: ko.panel.condition, text: joinOrDash(quest.conditions) },
       ],
       actions: actions.length > 0 ? actions : undefined,
     },
