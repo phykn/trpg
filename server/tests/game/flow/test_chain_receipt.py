@@ -14,6 +14,7 @@ from src.game.domain.entities import (
     Stats,
     WeaponEffect,
 )
+from src.game.flow import chain as chain_mod
 from src.game.flow import narrate as narrate_mod
 from src.game.flow import turn as turn_mod
 from src.game.flow.turn import run_turn
@@ -316,7 +317,7 @@ def test_chain_with_successful_buy_needs_narrate(fresh_state):
             },
         ),
     ]
-    assert turn_mod._chain_needs_narrate(state, parts) is True
+    assert chain_mod._chain_needs_narrate(state, parts) is True
 
 
 def test_chain_with_successful_sell_needs_narrate(fresh_state):
@@ -341,7 +342,7 @@ def test_chain_with_successful_sell_needs_narrate(fresh_state):
             },
         ),
     ]
-    assert turn_mod._chain_needs_narrate(state, parts) is True
+    assert chain_mod._chain_needs_narrate(state, parts) is True
 
 
 def test_chain_with_successful_give_needs_narrate(fresh_state):
@@ -366,7 +367,7 @@ def test_chain_with_successful_give_needs_narrate(fresh_state):
             },
         ),
     ]
-    assert turn_mod._chain_needs_narrate(state, parts) is True
+    assert chain_mod._chain_needs_narrate(state, parts) is True
 
 
 def test_chain_with_failed_buy_no_narrate(fresh_state):
@@ -392,6 +393,6 @@ def test_chain_with_failed_buy_no_narrate(fresh_state):
         ),
     ]
     assert (
-        turn_mod._chain_needs_narrate(state, parts, part_failures=[True, False])
+        chain_mod._chain_needs_narrate(state, parts, part_failures=[True, False])
         is False
     )

@@ -7,7 +7,7 @@ import inspect
 
 import pytest
 
-from src.game.flow.turn import _emit_verb_in_chain, _resolve_transfer_emit
+from src.game.flow.chain import _emit_verb_in_chain, _resolve_transfer_emit
 from src.llm.calls.classify.schema import Verb
 
 
