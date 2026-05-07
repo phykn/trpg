@@ -1,8 +1,6 @@
 """Session lifecycle — init/state and the streaming entries
 (turn / roll / intro)."""
 
-import logging
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
 
@@ -13,6 +11,7 @@ from src.game.domain.errors import (
     RaceNotFound,
 )
 from src.game.domain.state import GameState
+from src.game.flow._diag import diag
 from src.game.flow.intro import run_intro
 from src.game.flow.level_up import run_level_up
 from src.game.flow.roll import run_roll
@@ -34,7 +33,6 @@ from ..schema import (
 from ..sse import streaming_response
 
 router = APIRouter()
-_log = logging.getLogger(__name__)
 
 
 @router.post("/session/init", response_model=InitResponse)
@@ -137,20 +135,18 @@ async def session_level_up_preview(
         candidates = await recommend_skill_candidates(llm, state)
     except (ValidationError, LLMUnavailable, OSError, TimeoutError) as e:
         # LLM failure → empty list (client treats this as 'no skill choice required').
-        _log.warning(
-            "recommend_skill_candidates failed: type=%s game_id=%s memories=%d turn_log=%d err=%s",
-            type(e).__name__,
-            state.game_id,
-            len(state.characters[state.player_id].memories),
-            len(state.turn_log),
-            str(e)[:200],
+        diag(
+            state.game_id, state.turn_count, "recommend:failed",
+            err=type(e).__name__,
+            memories=len(state.characters[state.player_id].memories),
+            turn_log=len(state.turn_log),
+            msg=str(e)[:200],
         )
         candidates = []
     if 0 < len(candidates) < 3:
-        _log.info(
-            "recommend_skill_candidates returned %d (< 3): game_id=%s",
-            len(candidates),
-            state.game_id,
+        diag(
+            state.game_id, state.turn_count, "recommend:short",
+            n=len(candidates),
         )
     return LevelUpPreviewResponse(
         skill_candidates=[s.model_dump() for s in candidates],

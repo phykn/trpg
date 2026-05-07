@@ -1,12 +1,12 @@
 import json
-import logging
+import sys
+import traceback
 from collections.abc import AsyncIterator
 
 from fastapi.responses import StreamingResponse
 
+from src.game.flow._diag import engine_diag
 from src.wire.emit import emit_error
-
-_log = logging.getLogger(__name__)
 
 
 def sse_pack(event: dict) -> str:
@@ -27,7 +27,10 @@ async def _wrap(events: AsyncIterator[dict]) -> AsyncIterator[bytes]:
             yield sse_pack(ev).encode("utf-8")
     except Exception as e:
         # Sanitize before send: raw exceptions / English traces must never reach the player.
-        _log.exception("SSE stream raised: %s", e)
+        # Diag line first (single-line, grep-friendly); traceback dumped on the
+        # next stderr lines so post-mortem keeps the full frame chain.
+        engine_diag("sse:error", err=type(e).__name__, msg=str(e)[:200])
+        print(traceback.format_exc(), file=sys.stderr, flush=True)
         yield sse_pack(emit_error(e)).encode("utf-8")
 
 

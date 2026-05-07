@@ -1,6 +1,5 @@
 import asyncio
 import re
-import sys
 from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
@@ -107,12 +106,7 @@ async def run_with_retries(
         except RateLimitError as e:
             fb = client.pick_fallback(agent)
             if not fallback_engaged and fb is not None:
-                print(
-                    f"[llm-fallback] agent={agent} primary_failed_with={type(e).__name__} "
-                    f"→ using fallback={fb.model}",
-                    file=sys.stderr,
-                )
-                llm_diag("llm:fallback", agent=agent, model=fb.model)
+                llm_diag("llm:fallback", agent=agent, model=fb.model, cause=type(e).__name__)
                 fallback_engaged = True
                 continue
             llm_diag("llm:fail", agent=agent, attempt=attempt, err="RateLimitError")

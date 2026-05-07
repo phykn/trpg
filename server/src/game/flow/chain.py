@@ -30,7 +30,7 @@ from .combat_phase import (
     has_invalid_combat_targets,
     start_combat_and_drive_auto,
 )
-from .dirty import Dirty, ToFrontFn, drop_pushed_act, finalize, push_act
+from .dirty import Dirty, ToFrontFn, drop_pushed_act, finalize
 from .error_phrases import is_dramatic_fail
 from .format import NO_COMBAT_TARGETS_TEXT
 from .narrate import emit_fail_line_and_finalize, stream_narrate_tail

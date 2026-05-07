@@ -26,7 +26,6 @@ from .dirty import (
     ToFrontFn,
     drop_pushed_act,
     finalize,
-    push_act,
 )
 from .error_phrases import is_dramatic_fail
 from .format import (

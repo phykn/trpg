@@ -1,7 +1,6 @@
-import logging
-
 from pydantic import ValidationError
 
+from src.game.flow._diag import llm_diag
 from ..._runner import get_prompt_with_perm_subs, run_with_retries
 from ....client import LLMClient
 from ..schema import NarrateOutput
@@ -9,8 +8,6 @@ from .schema import ExtractInput
 
 _MAX_RETRIES = 3
 _EXTRACT_TEMPERATURE = 1.0
-
-_log = logging.getLogger(__name__)
 
 
 async def run_extract(
@@ -40,8 +37,5 @@ async def run_extract(
             temperature=_EXTRACT_TEMPERATURE,
         )
     except ValidationError as e:
-        _log.warning(
-            "narrate.extract retries exhausted; falling back to empty metadata: %s",
-            e,
-        )
+        llm_diag("extract:fallback_empty", err=type(e).__name__, msg=str(e)[:200])
         return NarrateOutput()

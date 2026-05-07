@@ -1,5 +1,4 @@
 import asyncio
-import sys
 from collections.abc import AsyncIterator
 
 from openai import APIConnectionError, InternalServerError, RateLimitError
@@ -73,12 +72,10 @@ async def stream_body(
                 )
                 raise LLMUnavailable(str(e)) from e
             if not fallback_engaged and fb is not None:
-                print(
-                    f"[llm-fallback] agent=narrate_body primary_failed_with={type(e).__name__} "
-                    f"→ using fallback={fb.model}",
-                    file=sys.stderr,
+                llm_diag(
+                    "llm:fallback", agent="narrate_body",
+                    model=fb.model, cause=type(e).__name__,
                 )
-                llm_diag("llm:fallback", agent="narrate_body", model=fb.model)
                 fallback_engaged = True
             continue
         except (OSError, asyncio.TimeoutError, InternalServerError, APIConnectionError) as e:

@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import re
 from collections.abc import AsyncIterator
 
@@ -50,9 +49,6 @@ from .format import (
     format_quest_start_log,
 )
 from .memory_writer import write_memories
-
-
-_log = logging.getLogger(__name__)
 
 
 def _summarize_change(c: dict) -> str:
@@ -222,7 +218,10 @@ async def consume_narrate(
     locality_warnings = enforce_item_locality(state, dirty=dirty.entities)
     for warning in locality_warnings:
         # Auto-repair telemetry — server logs only; engine-internal text (English + ids) must never reach the player log.
-        _log.warning("item_locality_repair: %s", warning)
+        diag(
+            state.game_id, state.turn_count,
+            "narrate:item_locality_repair", warning=str(warning)[:200],
+        )
     state.invalidate_graph()
     push_turn_log(state, target_for_log, final.output.turn_summary, dirty)
     if dialogue_input is not None:

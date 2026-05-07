@@ -123,14 +123,21 @@ There is no minute/hour clock. `state.turn_count` is the sole time variable; `ga
 
 ### Diagnostic logging (`FLOW_DEBUG`)
 
-`game/flow/_diag.py` emits one structured stderr line per key flow / LLM event so Render Logs can be grepped for post-mortem. **On by default** — set `FLOW_DEBUG=0` to mute. Production debugging used this end-to-end to pin the move bug down to gemma wrapping JSON in markdown fences.
+`game/flow/_diag.py` emits one structured stderr line per key flow / LLM event so Render Logs can be grepped for post-mortem and per-step timing. **On by default** — set `FLOW_DEBUG=0` to mute.
 
-Two entrypoints, both safe no-ops when disabled:
+Line shape: `[HH:MM:SS.mmm gid=XXX turn=Y t=N.NNNs LAYER] tag key=val ...`
+- `t=` is wall-clock seconds since the previous diag line on this task; reset at every `set_diag_context` (turn entry). Read it as "this step took N seconds."
+- `LAYER` is `engine` or `llm   ` so engine vs. LLM time can be told apart at a glance.
+
+Three entrypoints, all safe no-ops when disabled:
 
 - `diag(state.game_id, state.turn_count, "category:event", **kv)` — flow-layer code with GameState in scope.
-- `llm_diag("category:event", **kv)` — code under `_runner` / `narrate/body/runner` that doesn't see GameState; flow callers prime gid/turn via `set_diag_context` (already done at `turn.py` / `roll.py` / `level_up.py` entries).
+- `engine_diag("category:event", **kv)` — engine-layer code without GameState (sse, route handlers); gid/turn pulled from contextvars primed by the entry flow's `set_diag_context`.
+- `llm_diag("category:event", **kv)` — code under `_runner` / `narrate/body/runner` that doesn't see GameState; same contextvar source.
 
-Existing tags live where they fire: `turn:start`, `classify -> ...`, `step:ok` / `step:fail`, `chain_step:*`, `roll:result`, `levelup:*`, `rest:*`, `combat:*`, `recruit:result`, `quest:action`, plus the LLM lifecycle (`llm:call/retry/fallback/done/fail`). The full inventory + add-a-hook pattern is in `_diag.py`'s module docstring — read that before adding new hooks.
+`set_diag_context` is already called at `turn.py` / `roll.py` / `level_up.py` entries, so engine_diag/llm_diag downstream lines get tagged automatically.
+
+Existing tags live where they fire: `turn:start`, `classify -> ...`, `step:ok/fail`, `chain_step:*`, `roll:result`, `levelup:*`, `rest:*`, `combat:*`, `recruit:result`, `quest:action`, `narrate:extract / narrate:item_locality_repair`, `recommend:failed / recommend:short`, `sse:error`, plus the LLM lifecycle (`llm:call/retry/fallback/done/fail`, `extract:fallback_empty`). The full inventory + add-a-hook pattern is in `_diag.py`'s module docstring — read that before adding new hooks.
 
 ### Memory writes (post-turn)
 
