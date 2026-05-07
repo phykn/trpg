@@ -16,6 +16,7 @@ from src.llm.client import LLMClient, set_llm_session_if_unset
 from src.locale import render
 from src.db.repo import SaveRepo, ScenarioRepo
 from src.wire.emit import emit_error
+from ._diag import diag, set_diag_context
 from .dirty import (
     Dirty,
     ToFrontFn,
@@ -38,8 +39,14 @@ async def run_level_up(
     to_front_fn: ToFrontFn | None = None,
 ) -> AsyncIterator[dict]:
     set_llm_session_if_unset(state.game_id)
+    set_diag_context(state.game_id, state.turn_count)
+    diag(
+        state.game_id, state.turn_count, "levelup:start",
+        stat_up=stat_up, skill_id=skill_id,
+    )
 
     if state.pending_check is not None:
+        diag(state.game_id, state.turn_count, "levelup:fail", reason="pending_check_active")
         yield emit_error("PendingCheckActive")
         return
 
@@ -47,6 +54,7 @@ async def run_level_up(
     actor = state.characters[state.player_id]
     stat_down = STAT_PAIRS.get(stat_up)
     if stat_down is None:
+        diag(state.game_id, state.turn_count, "levelup:fail", reason="invalid_stat", stat_up=stat_up)
         yield emit_error(
             "LevelUpInvalid",
             message=render("error.level_up_invalid_stat", "ko", stat_up=stat_up),
@@ -56,8 +64,15 @@ async def run_level_up(
     try:
         level_up_engine(actor, stat_up, stat_down)
     except LevelUpInvalid as e:
+        diag(state.game_id, state.turn_count, "levelup:fail", reason=str(e))
         yield emit_error(e, message=humanize_engine_error(e))
         return
+
+    diag(
+        state.game_id, state.turn_count, "levelup:ok",
+        level=actor.level, stat_up=stat_up, stat_down=stat_down,
+        learned_skill=skill_id if skill_id and skill_id in state.skills else None,
+    )
 
     violations = check_character(actor)
     if violations:

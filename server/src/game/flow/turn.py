@@ -12,6 +12,7 @@ from src.db.repo import SaveRepo, ScenarioRepo
 from .buff_tick import tick_turn_buffs
 from .chain import _run_verb_chain
 from .combat_phase import run_combat_player_turn
+from ._diag import diag, fmt_verb, set_diag_context
 from .dispatch import _dispatch_verb
 from src.wire.emit import (
     emit_judge_refuse,
@@ -94,6 +95,9 @@ async def _run_turn_inner(
     rng: random.Random | None,
     quest_action: tuple[str, str] | None,
 ) -> AsyncIterator[dict]:
+    set_diag_context(state.game_id, state.turn_count)
+    diag(state.game_id, state.turn_count, "turn:start", input=player_input)
+
     if quest_action is not None:
         kind, qid = quest_action
         if kind == "accept":
@@ -151,6 +155,7 @@ async def _run_turn_inner(
     except JudgeMalformed:
         # Judge couldn't structure or ground the input. Absorb into narrate
         # rather than surfacing a system error — state stays unchanged.
+        diag(state.game_id, state.turn_count, "classify -> JudgeMalformed")
         async for ev in narrate_absorb_and_finalize(
             client,
             state,
@@ -172,6 +177,12 @@ async def _run_turn_inner(
     if isinstance(result, JudgeOutput):
         # Refuse direct path
         if result.refuse is not None:
+            diag(
+                state.game_id,
+                state.turn_count,
+                "classify -> refuse",
+                category=result.refuse.category,
+            )
             yield emit_judge_refuse(result.refuse)
             state.turn_count += 1
             async for ev in stream_narrate_tail(
@@ -198,6 +209,12 @@ async def _run_turn_inner(
             and len(result.actions) == 1
         ):
             single_verb = result.actions[0]
+            diag(
+                state.game_id,
+                state.turn_count,
+                "classify -> single",
+                verb=fmt_verb(single_verb),
+            )
             try:
                 yield emit_judge_verb(single_verb)
                 refresh_active_subject(state, [single_verb])
@@ -240,6 +257,12 @@ async def _run_turn_inner(
             and len(result.actions) >= 2
         ):
             verbs = result.actions
+            diag(
+                state.game_id,
+                state.turn_count,
+                "classify -> chain",
+                verbs=[fmt_verb(v) for v in verbs],
+            )
             try:
                 yield emit_judge_verbs(verbs)
                 refresh_active_subject(state, verbs)

@@ -9,6 +9,7 @@ from openai import RateLimitError
 from pydantic import ValidationError
 
 from src.game.domain.errors import LLMUnavailable
+from src.game.flow._diag import llm_diag
 from ..client import LLMClient
 
 T = TypeVar("T")
@@ -82,7 +83,8 @@ async def run_with_retries(
     # `retries` is the total attempt budget — initial call counted. Previously
     # ran retries+1 attempts, costing one extra LLM round per agent.
     fallback_engaged = False
-    for _ in range(retries):
+    for attempt in range(1, retries + 1):
+        llm_diag("llm:call", agent=agent, attempt=attempt, fallback=fallback_engaged or None)
         try:
             result = await client.chat(
                 messages=messages,
@@ -99,16 +101,25 @@ async def run_with_retries(
                     f"→ using fallback={fb.model}",
                     file=sys.stderr,
                 )
+                llm_diag("llm:fallback", agent=agent, model=fb.model)
                 fallback_engaged = True
                 continue
+            llm_diag("llm:fail", agent=agent, attempt=attempt, err="RateLimitError")
             raise LLMUnavailable(str(e)) from e
         except (OSError, asyncio.TimeoutError) as e:
+            llm_diag("llm:fail", agent=agent, attempt=attempt, err=type(e).__name__)
             raise LLMUnavailable(str(e)) from e
         answer = result["answer"] or ""
         try:
-            return parse(answer)
+            parsed = parse(answer)
+            llm_diag("llm:done", agent=agent, attempts=attempt)
+            return parsed
         except retry_on as e:
             last_error = e
+            llm_diag(
+                "llm:retry", agent=agent, attempt=attempt,
+                err=type(e).__name__, msg=_format_retry_error(e)[:200],
+            )
             truncated = answer[:_MAX_RETRY_ANSWER_CHARS]
             if len(answer) > _MAX_RETRY_ANSWER_CHARS:
                 truncated += f"\n... (truncated, original {len(answer)} chars)"
@@ -117,4 +128,5 @@ async def run_with_retries(
                 {"role": "user", "content": nudge.format(error=_format_retry_error(e))}
             )
     assert last_error is not None
+    llm_diag("llm:fail", agent=agent, attempts=retries, err=type(last_error).__name__)
     raise last_error

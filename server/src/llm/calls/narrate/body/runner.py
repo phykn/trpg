@@ -7,6 +7,7 @@ from openai import RateLimitError
 from ..._runner import get_prompt_with_perm_subs
 from ....context.surroundings import surroundings_for_narrate_body
 from src.game.domain.errors import LLMUnavailable
+from src.game.flow._diag import llm_diag
 from ....client import LLMClient
 from ..schema import NarrateInput
 
@@ -38,6 +39,10 @@ async def stream_body(
 
     fallback_engaged = False
     for attempt in range(_MAX_RETRIES + 1):
+        llm_diag(
+            "llm:call", agent="narrate_body",
+            attempt=attempt + 1, fallback=fallback_engaged or None,
+        )
         body_streamed = False
         try:
             async for chunk in client.chat_stream(
@@ -57,6 +62,11 @@ async def stream_body(
             # than raising. Mirror the transport-error policy.
             fb = client.pick_fallback("narrate_body")
             if body_streamed or attempt == _MAX_RETRIES:
+                llm_diag(
+                    "llm:fail", agent="narrate_body",
+                    attempt=attempt + 1, err="RateLimitError",
+                    streamed=body_streamed,
+                )
                 raise LLMUnavailable(str(e)) from e
             if not fallback_engaged and fb is not None:
                 print(
@@ -64,10 +74,20 @@ async def stream_body(
                     f"→ using fallback={fb.model}",
                     file=sys.stderr,
                 )
+                llm_diag("llm:fallback", agent="narrate_body", model=fb.model)
                 fallback_engaged = True
             continue
         except (OSError, asyncio.TimeoutError) as e:
             if body_streamed or attempt == _MAX_RETRIES:
+                llm_diag(
+                    "llm:fail", agent="narrate_body",
+                    attempt=attempt + 1, err=type(e).__name__,
+                    streamed=body_streamed,
+                )
                 raise LLMUnavailable(str(e)) from e
             continue
+        llm_diag(
+            "llm:done", agent="narrate_body",
+            attempts=attempt + 1, streamed=body_streamed,
+        )
         return

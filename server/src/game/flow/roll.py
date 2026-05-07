@@ -16,6 +16,7 @@ from src.llm.calls.classify.schema import Verb
 from src.wire.to_front import stat_label
 from src.db.repo import SaveRepo, ScenarioRepo
 from ..rules.dc import compute_grade
+from ._diag import diag, set_diag_context
 from .buff_tick import tick_turn_buffs
 from .combat_auto import PlayerAction, run_auto_combat
 from .combat_phase import emit_combat_cinematic_and_end
@@ -98,12 +99,20 @@ async def run_roll(
     dirty = Dirty()
     pending = state.pending_check
     state.turn_count += 1
+    set_diag_context(state.game_id, state.turn_count)
 
     rng_obj = rng or random
     dice = rng_obj.randint(1, 20)
 
     total = dice + pending.mod
     grade = compute_grade(dice, total, pending.required_roll)
+
+    diag(
+        state.game_id, state.turn_count, "roll:result",
+        kind=pending.kind, stat=pending.stat,
+        dice=dice, mod=pending.mod, dc=pending.required_roll,
+        grade=grade,
+    )
 
     actor = state.characters[state.player_id]
     stat_value = getattr(actor.stats, pending.stat)

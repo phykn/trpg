@@ -12,6 +12,7 @@ from src.llm.client import LLMClient
 from src.db.repo import SaveRepo, ScenarioRepo
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph
+from ._diag import diag, fmt_verb
 from .actions import emit_cast, emit_move, emit_use
 from .buff_tick import tick_turn_buffs
 from .chain import (
@@ -90,6 +91,12 @@ async def _run_one_step_action(
         pin_subject_by_input_name(state, player_input, graph)
 
     is_failure = bool(failure_raws)
+    diag(
+        state.game_id, state.turn_count,
+        "step:fail" if is_failure else "step:ok",
+        verb=fmt_verb(result),
+        reasons=failure_raws if is_failure else None,
+    )
     dramatic = is_failure and any(is_dramatic_fail(r) for r in failure_raws)
     receipt_action = _is_receipt(state, result, pre_move_visited)
     # narrate iff: dramatic failure OR (success on a non-receipt action, i.e. first-visit move)

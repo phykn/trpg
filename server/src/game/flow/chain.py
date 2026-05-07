@@ -13,6 +13,7 @@ from src.llm.client import LLMClient
 from src.db.repo import SaveRepo, ScenarioRepo
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph
+from ._diag import diag, fmt_verb
 from .actions import (
     emit_equip,
     emit_give,
@@ -294,11 +295,12 @@ async def _run_verb_chain(
                 chain_act_lines.append(tail_intent)
             continue
         # use / move / transfer → emit_*
+        step_failures: list[str] = []
         async for ev in _emit_verb_in_chain(client, state, dirty, verb):
             if ev.get("type") == "_engine_fail":
-                chain_failure_raws.append(
-                    (ev.get("data") or {}).get("raw_error_msg") or ""
-                )
+                raw = (ev.get("data") or {}).get("raw_error_msg") or ""
+                chain_failure_raws.append(raw)
+                step_failures.append(raw)
                 part_failures[idx] = True
                 continue
             if ev.get("type") == "log_entry":
@@ -310,6 +312,12 @@ async def _run_verb_chain(
                     chain_act_evts.append((ev, idx))
                     continue
             yield ev
+        diag(
+            state.game_id, state.turn_count,
+            "chain_step:fail" if step_failures else "chain_step:ok",
+            idx=idx, verb=fmt_verb(verb),
+            reasons=step_failures if step_failures else None,
+        )
         if (verb.modifiers or {}).get("tail_intent"):
             chain_act_lines.append(verb.modifiers["tail_intent"])
 
