@@ -116,23 +116,20 @@ async def run_with_retries(
             return parsed
         except retry_on as e:
             last_error = e
-            # On empty answer, dump a `think` preview so post-mortem can tell
-            # whether the model returned nothing vs. spilled content into the
-            # wrong channel (ThoughtSplitter mis-routing).
-            if not answer.strip():
-                think_head = (result.get("think") or "")[:300]
-                llm_diag(
-                    "llm:retry", agent=agent, attempt=attempt,
-                    err=type(e).__name__, empty=True,
-                    answer_len=len(answer),
-                    think_len=len(result.get("think") or ""),
-                    think_head=think_head,
-                )
-            else:
-                llm_diag(
-                    "llm:retry", agent=agent, attempt=attempt,
-                    err=type(e).__name__, msg=_format_retry_error(e)[:200],
-                )
+            # Dump answer/think previews so post-mortem can tell the failure
+            # mode: empty answer (model silence vs. ThoughtSplitter routing
+            # everything to think) vs. non-JSON content (markdown fence,
+            # leftover thought tags, plain text).
+            think_blob = result.get("think") or ""
+            llm_diag(
+                "llm:retry", agent=agent, attempt=attempt,
+                err=type(e).__name__,
+                msg=_format_retry_error(e)[:120],
+                answer_len=len(answer),
+                answer_head=answer[:200] if answer else None,
+                think_len=len(think_blob),
+                think_head=think_blob[:200] if think_blob else None,
+            )
             truncated = answer[:_MAX_RETRY_ANSWER_CHARS]
             if len(answer) > _MAX_RETRY_ANSWER_CHARS:
                 truncated += f"\n... (truncated, original {len(answer)} chars)"
