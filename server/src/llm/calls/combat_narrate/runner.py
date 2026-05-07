@@ -10,7 +10,7 @@ from src.game.domain.errors import LLMUnavailable
 from ...client import LLMClient
 from .schema import CombatNarrateInput
 
-_MAX_RETRIES = 5
+_MAX_RETRIES = 3
 _COMBAT_NARRATE_TEMPERATURE = 1.0
 
 

@@ -2,7 +2,7 @@ import asyncio
 import sys
 from collections.abc import AsyncIterator
 
-from openai import RateLimitError
+from openai import APIConnectionError, InternalServerError, RateLimitError
 
 from ..._runner import get_prompt_with_perm_subs
 from ....context.surroundings import surroundings_for_narrate_body
@@ -11,7 +11,7 @@ from src.game.flow._diag import llm_diag
 from ....client import LLMClient
 from ..schema import NarrateInput
 
-_MAX_RETRIES = 5
+_MAX_RETRIES = 3
 _BODY_TEMPERATURE = 1.0
 
 
@@ -81,7 +81,7 @@ async def stream_body(
                 llm_diag("llm:fallback", agent="narrate_body", model=fb.model)
                 fallback_engaged = True
             continue
-        except (OSError, asyncio.TimeoutError) as e:
+        except (OSError, asyncio.TimeoutError, InternalServerError, APIConnectionError) as e:
             if body_streamed or attempt == _MAX_RETRIES:
                 llm_diag(
                     "llm:fail", agent="narrate_body",

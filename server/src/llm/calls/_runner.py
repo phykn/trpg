@@ -6,7 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import TypeVar
 
-from openai import RateLimitError
+from openai import APIConnectionError, InternalServerError, RateLimitError
 from pydantic import ValidationError
 
 from src.game.domain.errors import LLMUnavailable
@@ -117,9 +117,15 @@ async def run_with_retries(
                 continue
             llm_diag("llm:fail", agent=agent, attempt=attempt, err="RateLimitError")
             raise LLMUnavailable(str(e)) from e
-        except (OSError, asyncio.TimeoutError) as e:
-            llm_diag("llm:fail", agent=agent, attempt=attempt, err=type(e).__name__)
-            raise LLMUnavailable(str(e)) from e
+        except (OSError, asyncio.TimeoutError, InternalServerError, APIConnectionError) as e:
+            if attempt == retries:
+                llm_diag("llm:fail", agent=agent, attempt=attempt, err=type(e).__name__)
+                raise LLMUnavailable(str(e)) from e
+            llm_diag(
+                "llm:retry", agent=agent, attempt=attempt,
+                err=type(e).__name__,
+            )
+            continue
         answer = _strip_fence(result["answer"] or "")
         try:
             parsed = parse(answer)

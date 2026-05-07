@@ -9,7 +9,7 @@ async def recommend(
     client: LLMClient,
     input_: SkillRecommendInput,
     locale: str,
-    retries: int = 5,
+    retries: int = 3,
 ) -> SkillRecommendOutput:
     return await run_with_retries(
         client,

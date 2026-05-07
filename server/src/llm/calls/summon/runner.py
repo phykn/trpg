@@ -9,9 +9,9 @@ async def summon(
     client: LLMClient,
     input_: EncounterSummonInput,
     locale: str,
-    retries: int = 5,
+    retries: int = 3,
 ) -> EncounterSummonOutput:
-    """Generate one ad-hoc enemy. Pair-trade violations trigger 5 retries."""
+    """Generate one ad-hoc enemy. Pair-trade violations trigger 3 retries."""
     return await run_with_retries(
         client,
         system_prompt=get_prompt("summon", locale),

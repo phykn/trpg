@@ -7,7 +7,7 @@ from ....client import LLMClient
 from ..schema import NarrateOutput
 from .schema import ExtractInput
 
-_MAX_RETRIES = 5
+_MAX_RETRIES = 3
 _EXTRACT_TEMPERATURE = 1.0
 
 _log = logging.getLogger(__name__)

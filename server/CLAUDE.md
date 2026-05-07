@@ -39,7 +39,7 @@ Upper depends on lower, never the reverse. Concretely:
 
 - `game/domain/` + `game/rules/` — pure data shapes and tunable knobs. No imports outside themselves.
 - `game/engines/` — pure game logic (combat math, apply state_changes, growth, inventory, skill, quest, recovery, invariants). No LLM, no I/O.
-- `llm/calls/` — LLM call modules (classify, narrate, combat_narrate, summon, recommend) under the `llm/` package. Each module dir = `schema.py` + `runner.py` (+ `semantics.py` where needed). Prompts live separately under `src/locale/prompts/<agent>/prompt.<locale>.md`; `src/locale/prompts/_kernel.<locale>.md` holds universal rules (output language, register, ID hygiene, world vocabulary). `llm/calls/_runner.py:get_prompt(agent, locale)` joins kernel + agent prompt with `---`, cached per (agent, locale). `_runner.py` also owns the shared 5-attempt self-correction loop.
+- `llm/calls/` — LLM call modules (classify, narrate, combat_narrate, summon, recommend) under the `llm/` package. Each module dir = `schema.py` + `runner.py` (+ `semantics.py` where needed). Prompts live separately under `src/locale/prompts/<agent>/prompt.<locale>.md`; `src/locale/prompts/_kernel.<locale>.md` holds universal rules (output language, register, ID hygiene, world vocabulary). `llm/calls/_runner.py:get_prompt(agent, locale)` joins kernel + agent prompt with `---`, cached per (agent, locale). `_runner.py` also owns the shared 3-attempt self-correction loop.
 - `game/ontology/` — derived relational view over `GameState`. **The single source of truth for relations.**
 - `llm/context/` — prompt input builders under the `llm/` package (surroundings for judge, layered context for narrate).
 - `db/` — `SaveRepo` / `ScenarioRepo` Protocols (all-async) + Supabase and LocalFs adapters. Holds all persistence concerns.
@@ -93,9 +93,9 @@ All four child tables FK → `games(game_id) ON DELETE CASCADE`. RLS enabled wit
 
 ### Agent retry
 
-Each agent runs a self-correction loop with `retries=5`. On `ValidationError` or semantic-check failure, the previous response and the error are appended to the message stream so the next attempt can correct itself. After 5 attempts, the loop raises by the last error type; flow code maps that to a domain error.
+Each agent runs a self-correction loop with `retries=3`. On `ValidationError` or semantic-check failure, the previous response and the error are appended to the message stream so the next attempt can correct itself. The same attempt counter also covers transient transport / 5xx errors (`OSError`, `asyncio.TimeoutError`, `openai.InternalServerError`, `openai.APIConnectionError`) — these `continue` instead of raising until the budget is spent, then map to `LLMUnavailable`. After 3 attempts, the loop raises by the last error type; flow code maps that to a domain error.
 
-`narrate_body` is the exception. Body tokens stream to the client live, so a self-correction loop with appended error messages isn't possible — once a body delta has been sent the client can't take it back. It retries (up to 5×) only when the stream errors out before any body delta or yields zero body content; if any body delta has already been streamed, a later failure raises. `narrate_extract` runs after streaming finishes and uses the standard self-correction loop.
+`narrate_body` is the exception. Body tokens stream to the client live, so a self-correction loop with appended error messages isn't possible — once a body delta has been sent the client can't take it back. It retries (up to 3×) only when the stream errors out before any body delta or yields zero body content; if any body delta has already been streamed, a later failure raises. `narrate_extract` runs after streaming finishes and uses the standard self-correction loop.
 
 ### state_changes
 
