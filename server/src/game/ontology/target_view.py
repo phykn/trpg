@@ -34,15 +34,6 @@ def build_target_view(
     masked = is_secret_masked_grade(grade)
     node_type = graph.get_node_type(target_id)
     if node_type == "character":
-        npc = state.characters.get(target_id)
-        if npc is not None and not npc.alive:
-            return {
-                "type": "npc",
-                "id": target_id,
-                "name": npc.name,
-                "alive": False,
-                "inventory": _corpse_inventory(state, graph, target_id),
-            }
         return _build_npc_view(state, graph, target_id, actor_id, masked=masked)
     if node_type == "location":
         return _build_location_view(state, graph, target_id, masked=masked)
@@ -148,6 +139,14 @@ def _build_npc_view(
     masked: bool = False,
 ) -> dict:
     npc = state.characters[target_id]
+    if not npc.alive:
+        return {
+            "type": "npc",
+            "id": target_id,
+            "name": npc.name,
+            "alive": False,
+            "inventory": _corpse_inventory(state, graph, target_id),
+        }
 
     race_payload = None
     race_id = race_of(graph, target_id)
