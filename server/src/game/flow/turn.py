@@ -12,11 +12,7 @@ from src.db.repo import SaveRepo, ScenarioRepo
 from .buff_tick import tick_turn_buffs
 from .chain import _run_verb_chain
 from .combat_phase import run_combat_player_turn
-from .dispatch import (
-    _dispatch_verb,
-    _emit_input_rejected_and_finalize,
-    _narrate_absorb_and_finalize,
-)
+from .dispatch import _dispatch_verb
 from src.wire.emit import (
     emit_judge_refuse,
     emit_judge_verb,
@@ -33,7 +29,11 @@ from .dirty import (
 )
 from .format import GAME_OVER_TEXT
 from .judge import run_judge
-from .narrate import stream_narrate_tail
+from .narrate import (
+    emit_input_rejected_and_finalize,
+    narrate_absorb_and_finalize,
+    stream_narrate_tail,
+)
 from .subject import refresh_active_subject
 from ..engines.quest import abandon_quest, accept_quest
 
@@ -151,7 +151,7 @@ async def _run_turn_inner(
     except JudgeMalformed:
         # Judge couldn't structure or ground the input. Absorb into narrate
         # rather than surfacing a system error — state stays unchanged.
-        async for ev in _narrate_absorb_and_finalize(
+        async for ev in narrate_absorb_and_finalize(
             client,
             state,
             scenario_repo,
@@ -219,7 +219,7 @@ async def _run_turn_inner(
             except (ValidationError, ValueError):
                 # Surface INPUT_REJECTED_TEXT to the player so the internal
                 # exception type isn't exposed; absorb player_input via narrate.
-                async for ev in _emit_input_rejected_and_finalize(
+                async for ev in emit_input_rejected_and_finalize(
                     client,
                     state,
                     scenario_repo,
@@ -260,7 +260,7 @@ async def _run_turn_inner(
                 return
             except (ValidationError, ValueError):
                 # Same INPUT_REJECTED_TEXT fallback as the single-verb branch.
-                async for ev in _emit_input_rejected_and_finalize(
+                async for ev in emit_input_rejected_and_finalize(
                     client,
                     state,
                     scenario_repo,

@@ -20,7 +20,7 @@ from ..ontology.graph import GameGraph
 from ..ontology.player_view import build_player_view
 from ..ontology.queries import inhabitants_of
 from ..ontology.target_view import build_target_view
-from src.db.repo import ScenarioRepo
+from src.db.repo import ScenarioRepo, SaveRepo
 from ..domain.state import GameState
 from src.llm.context import (
     build_history_layer,
@@ -29,9 +29,11 @@ from src.llm.context import (
     build_world_layer,
     redact_dead_quotes,
 )
+from .buff_tick import tick_turn_buffs
 from .dirty import (
     Dirty,
     ToFrontFn,
+    finalize,
     flush_deferred_act_cards,
     next_log_id,
     push_dialogue,
@@ -39,6 +41,7 @@ from .dirty import (
     push_turn_log,
 )
 from .format import (
+    INPUT_REJECTED_TEXT,
     format_affinity_card_log,
     format_quest_start_log,
 )
@@ -285,3 +288,74 @@ def _dead_names_in_scope(state: GameState, graph: GameGraph | None = None) -> li
         names.append(ch.name)
         seen.add(tid)
     return names
+
+
+async def narrate_absorb_and_finalize(
+    client: LLMClient,
+    state: GameState,
+    scenario_repo: ScenarioRepo,
+    save_repo: SaveRepo,
+    dirty: Dirty,
+    to_front_fn: ToFrontFn | None,
+    player_input: str,
+    verb: Verb,
+    graph: GameGraph,
+    previous_phase_signal: str | None,
+) -> AsyncIterator[dict]:
+    """Shared tail for verbs whose effect is captured entirely by GM prose
+    (wait, perceive, speak with social intent, defensive cast fallback, the
+    judge/dispatch-fail absorb paths): bump turn count, run narrate, then
+    buff tick + finalize. Without the finalize tail, narrate's state_changes
+    (e.g. affinity drops) and pushed cards live only in dirty and vanish on
+    the next /turn reload."""
+    state.turn_count += 1
+    async for ev in stream_narrate_tail(
+        client,
+        state,
+        scenario_repo,
+        player_input,
+        dirty,
+        to_front_fn,
+        verb,
+        graph=graph,
+        previous_phase_signal=previous_phase_signal,
+    ):
+        yield ev
+    tick_turn_buffs(state, dirty)
+    async for ev in finalize(state, save_repo, dirty, to_front_fn):
+        yield ev
+
+
+async def emit_input_rejected_and_finalize(
+    client: LLMClient,
+    state: GameState,
+    scenario_repo: ScenarioRepo,
+    save_repo: SaveRepo,
+    dirty: Dirty,
+    to_front_fn: ToFrontFn | None,
+    player_input: str,
+    graph: GameGraph,
+    previous_phase_signal: str | None,
+) -> AsyncIterator[dict]:
+    """Verb-dispatch-fail path: surface INPUT_REJECTED_TEXT card, then absorb
+    player_input via narrate so the internal exception type isn't exposed."""
+    yield emit_log_entry(
+        GMLogEntry(
+            id=next_log_id(state),
+            kind="gm",
+            text=INPUT_REJECTED_TEXT,
+        )
+    )
+    async for ev in narrate_absorb_and_finalize(
+        client,
+        state,
+        scenario_repo,
+        save_repo,
+        dirty,
+        to_front_fn,
+        player_input,
+        Verb(name="wait"),
+        graph,
+        previous_phase_signal,
+    ):
+        yield ev

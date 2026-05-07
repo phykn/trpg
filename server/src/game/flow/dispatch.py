@@ -1,9 +1,7 @@
-"""Single-verb dispatch + the narrate-absorb tail every absorb path shares.
+"""Single-verb dispatch.
 
 Split out of `turn.py` once `_dispatch_verb` grew past 300 lines. Owns the
-per-verb routing for non-chain dispatch and the shared narrate-absorb wrapper.
-The wrappers live here for now to keep `turn.py` and `dispatch.py` on a
-one-way import; they may move under `narrate.py` in a later round.
+per-verb routing for non-chain dispatch.
 """
 
 import random
@@ -12,8 +10,6 @@ from collections.abc import AsyncIterator, Callable
 from src.llm.calls.classify.schema import Verb
 from src.llm.client import LLMClient
 from src.db.repo import SaveRepo, ScenarioRepo
-from src.wire.emit import emit_log_entry
-from ..domain.memory import GMLogEntry
 from ..domain.state import GameState
 from ..ontology.graph import GameGraph
 from .actions import emit_cast, emit_move, emit_use
@@ -29,88 +25,15 @@ from .dirty import (
     ToFrontFn,
     drop_pushed_act,
     finalize,
-    next_log_id,
     push_act,
 )
 from .error_phrases import is_dramatic_fail
 from .format import (
     FLEE_OUTSIDE_COMBAT_TEXT,
-    INPUT_REJECTED_TEXT,
     NO_COMBAT_TARGETS_TEXT,
 )
-from .narrate import stream_narrate_tail
+from .narrate import narrate_absorb_and_finalize, stream_narrate_tail
 from .rest import run_rest
-
-
-async def _narrate_absorb_and_finalize(
-    client: LLMClient,
-    state: GameState,
-    scenario_repo: ScenarioRepo,
-    save_repo: SaveRepo,
-    dirty: Dirty,
-    to_front_fn: ToFrontFn | None,
-    player_input: str,
-    verb: Verb,
-    graph: GameGraph,
-    previous_phase_signal: str | None,
-) -> AsyncIterator[dict]:
-    """Shared tail for verbs whose effect is captured entirely by GM prose
-    (wait, perceive, speak with social intent, defensive cast fallback, the
-    judge/dispatch-fail absorb paths): bump turn count, run narrate, then
-    quest check + buff tick + finalize. Without the finalize tail, narrate's
-    state_changes (e.g. affinity drops) and pushed cards live only in dirty
-    and vanish on the next /turn reload."""
-    state.turn_count += 1
-    async for ev in stream_narrate_tail(
-        client,
-        state,
-        scenario_repo,
-        player_input,
-        dirty,
-        to_front_fn,
-        verb,
-        graph=graph,
-        previous_phase_signal=previous_phase_signal,
-    ):
-        yield ev
-    tick_turn_buffs(state, dirty)
-    async for ev in finalize(state, save_repo, dirty, to_front_fn):
-        yield ev
-
-
-async def _emit_input_rejected_and_finalize(
-    client: LLMClient,
-    state: GameState,
-    scenario_repo: ScenarioRepo,
-    save_repo: SaveRepo,
-    dirty: Dirty,
-    to_front_fn: ToFrontFn | None,
-    player_input: str,
-    graph: GameGraph,
-    previous_phase_signal: str | None,
-) -> AsyncIterator[dict]:
-    """Verb-dispatch-fail path: surface INPUT_REJECTED_TEXT card, then absorb
-    player_input via narrate so the internal exception type isn't exposed."""
-    yield emit_log_entry(
-        GMLogEntry(
-            id=next_log_id(state),
-            kind="gm",
-            text=INPUT_REJECTED_TEXT,
-        )
-    )
-    async for ev in _narrate_absorb_and_finalize(
-        client,
-        state,
-        scenario_repo,
-        save_repo,
-        dirty,
-        to_front_fn,
-        player_input,
-        Verb(name="wait"),
-        graph,
-        previous_phase_signal,
-    ):
-        yield ev
 
 
 EmitFactory = Callable[[LLMClient, GameState, Dirty, object], AsyncIterator[dict]]
@@ -231,7 +154,7 @@ async def _dispatch_verb(
     m = verb.modifiers or {}
 
     if name == "wait":
-        async for ev in _narrate_absorb_and_finalize(
+        async for ev in narrate_absorb_and_finalize(
             client,
             state,
             scenario_repo,
@@ -248,7 +171,7 @@ async def _dispatch_verb(
 
     if name == "perceive":
         # Pre-Stage-2 uncertainty rule: absorbed by narrate.
-        async for ev in _narrate_absorb_and_finalize(
+        async for ev in narrate_absorb_and_finalize(
             client,
             state,
             scenario_repo,
@@ -270,7 +193,7 @@ async def _dispatch_verb(
         # skill_id, so reaching here with a bad skill means a slipped retry.
         # Fall back to narrate so the turn doesn't crash.
         if skill is None or skill.type not in ("heal", "buff"):
-            async for ev in _narrate_absorb_and_finalize(
+            async for ev in narrate_absorb_and_finalize(
                 client,
                 state,
                 scenario_repo,
@@ -355,7 +278,7 @@ async def _dispatch_verb(
             return
         # friendly/hostile/deceptive: absorbed by narrate — narrate emits
         # the affinity state_change keyed off intent's tone.
-        async for ev in _narrate_absorb_and_finalize(
+        async for ev in narrate_absorb_and_finalize(
             client,
             state,
             scenario_repo,
