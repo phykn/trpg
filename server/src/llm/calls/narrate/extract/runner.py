@@ -8,7 +8,7 @@ from ..schema import NarrateOutput
 from .schema import ExtractInput
 
 _MAX_RETRIES = 5
-_EXTRACT_TEMPERATURE = 0.4
+_EXTRACT_TEMPERATURE = 1.0
 
 _log = logging.getLogger(__name__)
 

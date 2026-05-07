@@ -156,7 +156,7 @@ async def main() -> int:
             total += 1
             try:
                 resp = await client.chat(
-                    messages=msgs, think=False, agent="classify", temperature=0.0
+                    messages=msgs, think=False, agent="classify", temperature=1.0
                 )
             except Exception as e:
                 transport_fail_count += 1

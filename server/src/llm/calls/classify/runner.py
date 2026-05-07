@@ -6,7 +6,7 @@ from .._runner import get_prompt, run_with_retries
 from ...client import LLMClient
 from .schema import JudgeInput, JudgeOutput, validate_judge_output
 
-_CLASSIFY_TEMPERATURE = 0.4
+_CLASSIFY_TEMPERATURE = 1.0
 
 
 async def classify(
