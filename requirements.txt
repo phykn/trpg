@@ -5,7 +5,3 @@ openai
 httpx
 fastapi
 uvicorn[standard]
-
-pytest
-pytest-asyncio
-ruff

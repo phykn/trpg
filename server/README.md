@@ -17,7 +17,7 @@ The venv, `pyproject.toml`, and `requirements.txt` live at the repo root. From t
 
 ```bash
 python3.12 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install -r requirements-dev.txt   # runtime + pytest/ruff; use requirements.txt for prod-only
 ```
 
 Set up Supabase: apply the schema (table list under "Layout" below) via the dashboard SQL editor — schema isn't tracked in the repo — create a Storage bucket for scenarios, and upload a profile tree:
