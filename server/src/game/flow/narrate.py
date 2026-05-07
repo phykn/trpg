@@ -67,7 +67,7 @@ async def run_narrate(
     previous_phase_signal: str | None = None,
     recent_engine_events: list[dict] | None = None,
 ) -> AsyncIterator[NarrativeDelta | NarrativeFinal]:
-    """Yield NarrativeDelta tokens then NarrativeFinal. action='reject' is forced empty state_changes / memorable=false engine-side regardless of what the LLM returns."""
+    """Yield NarrativeDelta tokens then NarrativeFinal."""
     action = judge_result.get("action")
 
     target_view = None
@@ -109,8 +109,6 @@ async def run_narrate(
     )
 
     async for item in stream_narrate(client, input_, state.locale):
-        if isinstance(item, NarrativeFinal) and action == "reject":
-            _sterilize_for_reject(item.output)
         yield item
 
 
@@ -131,17 +129,6 @@ def _strip_id_leaks(suggestions: list[str]) -> list[str]:
             continue
         cleaned.append(stripped)
     return cleaned
-
-
-def _sterilize_for_reject(output) -> None:
-    """Engine-side enforcement: reject must produce zero side effects, regardless of what the LLM emitted."""
-    output.state_changes = []
-    output.memorable = False
-    output.memory_targets = []
-    output.memory = {}
-    output.memory_links = {}
-    output.importance = None
-    output.suggestions = []
 
 
 async def consume_narrate(
