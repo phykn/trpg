@@ -19,11 +19,8 @@ from .dirty import Dirty, ToFrontFn, finalize, flush, push_act
 from .format import (
     format_dismiss_log,
     format_dismiss_turn_log,
-    format_recruit_critical_failure_log,
-    format_recruit_failure_log,
-    format_recruit_success_log,
-    format_recruit_success_turn_log,
-    format_recruit_failure_turn_log,
+    format_recruit_log,
+    format_recruit_turn_log,
 )
 from .narrate import stream_narrate_tail
 
@@ -237,29 +234,23 @@ async def handle_recruit_roll_result(
         yield push_act(
             state,
             dirty,
-            format_recruit_success_log(target_name),
-            turn_summary=format_recruit_success_turn_log(target_name),
+            format_recruit_log(target_name, "success"),
+            turn_summary=format_recruit_turn_log(target_name, "success"),
         )
         state.previous_phase_signal = f"companion_joined:{target_name}"
         return
 
-    if grade == "critical_failure":
+    outcome = "critical_failure" if grade == "critical_failure" else "failure"
+    if outcome == "critical_failure":
         target.relations[state.player_id] = (
             target.relations.get(state.player_id, 0)
             + rules.recruit_affinity_crit_failure
         )
         dirty.entities.add(("characters", target_id))
-        yield push_act(
-            state,
-            dirty,
-            format_recruit_critical_failure_log(target_name),
-            turn_summary=format_recruit_failure_turn_log(target_name),
-        )
-    else:
-        yield push_act(
-            state,
-            dirty,
-            format_recruit_failure_log(target_name),
-            turn_summary=format_recruit_failure_turn_log(target_name),
-        )
+    yield push_act(
+        state,
+        dirty,
+        format_recruit_log(target_name, outcome),
+        turn_summary=format_recruit_turn_log(target_name, outcome),
+    )
     state.previous_phase_signal = f"companion_refused:{target_name}"

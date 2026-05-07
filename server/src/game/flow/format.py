@@ -4,7 +4,7 @@ Pure functions — no state mutation, no SSE, no I/O. Anything that returns a
 string for a log entry lives here.
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from ..domain.state import GameState
 from src.locale import render
@@ -182,16 +182,17 @@ def format_affinity_card_log(npc_name: str, delta: int) -> str:
     return render("log.affinity_card", "ko", npc=npc_name, sign=sign, delta=delta)
 
 
-def format_recruit_success_log(name: str) -> str:
-    return render("log.recruit_success", "ko", name=name)
+RecruitOutcome = Literal["success", "failure", "critical_failure"]
 
 
-def format_recruit_failure_log(name: str) -> str:
-    return render("log.recruit_failure", "ko", name=name)
+def format_recruit_log(name: str, outcome: RecruitOutcome) -> str:
+    return render(f"log.recruit_{outcome}", "ko", name=name)
 
 
-def format_recruit_critical_failure_log(name: str) -> str:
-    return render("log.recruit_critical_failure", "ko", name=name)
+def format_recruit_turn_log(name: str, outcome: RecruitOutcome) -> str:
+    # turn_log collapses critical_failure into the same line as failure.
+    key = "log.recruit_success_turn" if outcome == "success" else "log.recruit_failure_turn"
+    return render(key, "ko", name=name)
 
 
 def format_dismiss_log(name: str) -> str:
@@ -200,14 +201,6 @@ def format_dismiss_log(name: str) -> str:
 
 def format_dismiss_turn_log(name: str) -> str:
     return render("log.dismiss_turn", "ko", name=name)
-
-
-def format_recruit_success_turn_log(name: str) -> str:
-    return render("log.recruit_success_turn", "ko", name=name)
-
-
-def format_recruit_failure_turn_log(name: str) -> str:
-    return render("log.recruit_failure_turn", "ko", name=name)
 
 
 def format_level_up_log(
