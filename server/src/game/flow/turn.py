@@ -25,8 +25,6 @@ from .combat_phase import (
     start_combat_and_drive_auto,
 )
 from src.wire.emit import (
-    emit_error,
-    emit_judge_pending_check_trigger,
     emit_judge_refuse,
     emit_judge_verb,
     emit_judge_verbs,
@@ -78,7 +76,7 @@ def end_turn_quest_check(state: GameState) -> None:
         apply_judge_result(state, quest.id, result)
 
 
-async def _emit_input_rejected_and_finalize(
+async def _narrate_absorb_and_finalize(
     client: LLMClient,
     state: GameState,
     scenario_repo: ScenarioRepo,
@@ -86,20 +84,16 @@ async def _emit_input_rejected_and_finalize(
     dirty: Dirty,
     to_front_fn: ToFrontFn | None,
     player_input: str,
+    verb: Verb,
     graph: GameGraph,
     previous_phase_signal: str | None,
 ) -> AsyncIterator[dict]:
-    """Shared dispatch-raise fallback: surface INPUT_REJECTED_TEXT, run a
-    bare narrate so the player_input is absorbed as in-world prose, then
-    quest check + buff tick + finalize. Used by single-verb and multi-verb
-    redirect branches when verb dispatch raises ValidationError / ValueError."""
-    yield emit_log_entry(
-        GMLogEntry(
-            id=next_log_id(state),
-            kind="gm",
-            text=INPUT_REJECTED_TEXT,
-        )
-    )
+    """Shared tail for verbs whose effect is captured entirely by GM prose
+    (wait, perceive, speak with social intent, defensive cast fallback, the
+    judge/dispatch-fail absorb paths): bump turn count, run narrate, then
+    quest check + buff tick + finalize. Without the finalize tail, narrate's
+    state_changes (e.g. affinity drops) and pushed cards live only in dirty
+    and vanish on the next /turn reload."""
     state.turn_count += 1
     async for ev in stream_narrate_tail(
         client,
@@ -108,7 +102,7 @@ async def _emit_input_rejected_and_finalize(
         player_input,
         dirty,
         to_front_fn,
-        Verb(name="wait"),
+        verb,
         graph=graph,
         previous_phase_signal=previous_phase_signal,
     ):
@@ -119,6 +113,46 @@ async def _emit_input_rejected_and_finalize(
         pass
     tick_turn_buffs(state, dirty)
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
+        yield ev
+
+
+async def _emit_input_rejected_and_finalize(
+    client: LLMClient,
+    state: GameState,
+    scenario_repo: ScenarioRepo,
+    save_repo: SaveRepo,
+    dirty: Dirty,
+    to_front_fn: ToFrontFn | None,
+    player_input: str,
+    graph: GameGraph,
+    previous_phase_signal: str | None,
+    *,
+    surface_reject_text: bool = True,
+) -> AsyncIterator[dict]:
+    """Judge/dispatch-fail absorb path: optionally surface INPUT_REJECTED_TEXT
+    (engine-level rejection visible), then run the standard narrate-absorb
+    tail with a bare wait verb so the player_input still lands as in-world
+    prose."""
+    if surface_reject_text:
+        yield emit_log_entry(
+            GMLogEntry(
+                id=next_log_id(state),
+                kind="gm",
+                text=INPUT_REJECTED_TEXT,
+            )
+        )
+    async for ev in _narrate_absorb_and_finalize(
+        client,
+        state,
+        scenario_repo,
+        save_repo,
+        dirty,
+        to_front_fn,
+        player_input,
+        Verb(name="wait"),
+        graph,
+        previous_phase_signal,
+    ):
         yield ev
 
 
@@ -140,7 +174,44 @@ async def run_turn(
         )
 
     dirty = Dirty()
+    try:
+        async for ev in _run_turn_inner(
+            client,
+            state,
+            scenario_repo,
+            save_repo,
+            player_input,
+            dirty,
+            to_front_fn,
+            rng,
+            quest_action,
+        ):
+            yield ev
+    except Exception:
+        # Streamed content (player input, GM body, engine events) lives in
+        # `dirty` until finalize flushes it. If something raised before that,
+        # the next /turn would load pre-error state and the user sees the turn
+        # "rewound". Flush what we have, then re-raise.
+        if not dirty.finalized:
+            try:
+                async for ev in finalize(state, save_repo, dirty, to_front_fn):
+                    yield ev
+            except Exception:
+                pass
+        raise
 
+
+async def _run_turn_inner(
+    client: LLMClient,
+    state: GameState,
+    scenario_repo: ScenarioRepo,
+    save_repo: SaveRepo,
+    player_input: str,
+    dirty: Dirty,
+    to_front_fn: ToFrontFn | None,
+    rng: random.Random | None,
+    quest_action: tuple[str, str] | None,
+) -> AsyncIterator[dict]:
     if quest_action is not None:
         kind, qid = quest_action
         if kind == "accept":
@@ -195,28 +266,43 @@ async def run_turn(
 
     try:
         result = await run_judge(client, state, player_input, graph=graph)
-    except JudgeMalformed as e:
-        yield emit_error(e)
+    except JudgeMalformed:
+        # Judge couldn't structure the input. Don't surface a system error —
+        # let the GM absorb the player's intent as prose. State doesn't change
+        # because the verb is wait.
+        async for ev in _emit_input_rejected_and_finalize(
+            client,
+            state,
+            scenario_repo,
+            save_repo,
+            dirty,
+            to_front_fn,
+            player_input,
+            graph,
+            previous_phase_signal,
+            surface_reject_text=False,
+        ):
+            yield ev
         return
 
-    # PendingCheckTrigger → emit_roll_pending_from_trigger directly.
+    # Semantic-fallback (target absent, etc.) used to fire a silent WIS roll;
+    # out of combat we now absorb into narrate too. Combat's own run_judge
+    # consumer (combat_phase.py) keeps the roll fallback because every combat
+    # turn must produce a structured action.
     from .judge import PendingCheckTrigger
 
     if isinstance(result, PendingCheckTrigger):
-        from .actions import emit_roll_pending_from_trigger
-
-        yield emit_judge_pending_check_trigger(
-            tier=result.tier,
-            stat=result.stat,
-            targets=result.targets,
-            reason=result.reason,
-        )
-        async for ev in emit_roll_pending_from_trigger(
+        async for ev in _emit_input_rejected_and_finalize(
+            client,
             state,
+            scenario_repo,
             save_repo,
-            player_input,
-            result,
             dirty,
+            to_front_fn,
+            player_input,
+            graph,
+            previous_phase_signal,
+            surface_reject_text=False,
         ):
             yield ev
         return
@@ -666,32 +752,34 @@ async def _dispatch_verb(
     m = verb.modifiers or {}
 
     if name == "wait":
-        async for ev in stream_narrate_tail(
+        async for ev in _narrate_absorb_and_finalize(
             client,
             state,
             scenario_repo,
-            player_input,
+            save_repo,
             dirty,
             to_front_fn,
+            player_input,
             verb,
-            graph=graph,
-            previous_phase_signal=previous_phase_signal,
+            graph,
+            previous_phase_signal,
         ):
             yield ev
         return
 
     if name == "perceive":
         # Pre-Stage-2 uncertainty rule: absorbed by narrate.
-        async for ev in stream_narrate_tail(
+        async for ev in _narrate_absorb_and_finalize(
             client,
             state,
             scenario_repo,
-            player_input,
+            save_repo,
             dirty,
             to_front_fn,
+            player_input,
             verb,
-            graph=graph,
-            previous_phase_signal=previous_phase_signal,
+            graph,
+            previous_phase_signal,
         ):
             yield ev
         return
@@ -703,16 +791,17 @@ async def _dispatch_verb(
         # skill_id, so reaching here with a bad skill means a slipped retry.
         # Fall back to narrate so the turn doesn't crash.
         if skill is None or skill.type not in ("heal", "buff"):
-            async for ev in stream_narrate_tail(
+            async for ev in _narrate_absorb_and_finalize(
                 client,
                 state,
                 scenario_repo,
-                player_input,
+                save_repo,
                 dirty,
                 to_front_fn,
+                player_input,
                 verb,
-                graph=graph,
-                previous_phase_signal=previous_phase_signal,
+                graph,
+                previous_phase_signal,
             ):
                 yield ev
             return
@@ -787,16 +876,17 @@ async def _dispatch_verb(
             return
         # friendly/hostile/deceptive: absorbed by narrate — narrate emits
         # the affinity state_change keyed off intent's tone.
-        async for ev in stream_narrate_tail(
+        async for ev in _narrate_absorb_and_finalize(
             client,
             state,
             scenario_repo,
-            player_input,
+            save_repo,
             dirty,
             to_front_fn,
+            player_input,
             verb,
-            graph=graph,
-            previous_phase_signal=previous_phase_signal,
+            graph,
+            previous_phase_signal,
         ):
             yield ev
         return

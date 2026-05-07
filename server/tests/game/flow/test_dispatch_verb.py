@@ -97,8 +97,10 @@ def test_dispatch_verb_cast_routes_through_emit_cast():
     assert "_enter_combat_and_finalize" not in cast_section
     assert "emit_cast" in cast_section
     assert "_run_one_step_action" in cast_section
-    # narrate fallback (defensive — semantic check should catch this first)
-    assert "stream_narrate_tail" in cast_section
+    # narrate fallback (defensive — semantic check should catch this first).
+    # Goes through _narrate_absorb_and_finalize so the turn still finalizes
+    # (state_changes / cards from narrate would otherwise vanish).
+    assert "_narrate_absorb_and_finalize" in cast_section
 
 
 def test_dispatch_verb_unknown_verb_raises():

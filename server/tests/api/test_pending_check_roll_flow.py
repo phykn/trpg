@@ -21,15 +21,18 @@ from run_api import build_app
 from tests._fakes import make_default_storage, make_save_repo, make_scenario_repo
 
 
-# Stage 1: classify outputs verb list. To arm pending_check via the LLM mock
-# we trigger the semantic fallback path — `attack` with a target_id missing
-# from surroundings raises JudgeSemanticError (in _check_attack) which
-# `run_judge` converts to a PendingCheckTrigger (WIS roll on player's
-# location). turn.py's adapter converts that to legacy RollAction and
-# emit_roll_pending fires the pending_check SSE.
+# Stage 1: classify outputs verb list. Arm pending_check via recruit —
+# speak(intent=recruit) on the seeded NPC fires run_recruit, which builds a
+# CHA pending_check on that NPC. (The earlier semantic-fallback path —
+# attack on a missing target — now absorbs into narrate out of combat.)
 _JUDGE_ROLL = json.dumps(
     {
-        "actions": [{"name": "attack", "target_ids": ["__missing__"]}],
+        "actions": [
+            {
+                "name": "speak",
+                "modifiers": {"intent": "recruit", "target": "edrik_chief"},
+            }
+        ],
     },
     ensure_ascii=False,
 )
@@ -100,7 +103,7 @@ async def _init_and_arm_pending_check(client):
     async with client.stream(
         "POST",
         f"/session/{gid}/turn",
-        json={"player_input": "에드릭에게 인사한다"},
+        json={"player_input": "에드릭을 동료로 영입한다"},
     ) as r:
         turn_events = await _drain(r)
     assert any(e["type"] == "pending_check" for e in turn_events), (

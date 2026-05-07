@@ -6,7 +6,7 @@
 
 ## 재해석 금지 (필수, 규칙의 최상단)
 
-body가 명시적으로 묘사한 것에서만 추출하십시오. **재해석, 확장, 모순 절대 금지.** body가 state change에 대해 모호하면 추측보다 생략 (`memorable=false`, `state_changes=[]`, `suggestions=[]`)을 선호합니다. body는 이미 stream되었습니다 — 만들어낸 `state_changes`는 player가 본 prose와 게임 상태를 어긋나게 합니다.
+body가 명시적으로 묘사한 것에서만 추출하십시오. **재해석, 확장, 모순 절대 금지.** body가 state change에 대해 모호하면 추측보다 생략 (`memorable=false`, `state_changes=[]`)을 선호합니다. body는 이미 stream되었습니다 — 만들어낸 `state_changes`는 player가 본 prose와 게임 상태를 어긋나게 합니다. (단, `suggestions`는 다른 결 — § suggestions 참조.)
 
 ## 입력 필드
 
@@ -97,11 +97,9 @@ BAD `{"guard_01":"플레이어가 통과함","player_01":"플레이어가 통과
 
 UI chip; 클릭하면 입력칸을 채우고, 자유 입력은 그대로 유지.
 
-- 현재 문맥에 맞고
+- **거의 항상 1~3개**를 채웁니다. 대강 현재 문맥에 어울리는 행동이면 충분 — 정밀히 들어맞을 필요 없음.
 - 한국어 20자 이내
-- 현재 장면에서 어울리는 행동을 추천
-
-마땅한 게 없으면 `suggestions=[]` 반환 — 클라이언트가 strip을 숨깁니다. fallback 없음, 정해진 trio 없음, 재호출 없음.
+- 빈 배열은 정말 아무 행동도 어울리지 않는 극단 상황(게임 종료 직전, 의식 잃음, 대화 불가능 상태 등)에서만.
 
 ## Branch별 강제 형태
 
@@ -114,9 +112,10 @@ UI chip; 클릭하면 입력칸을 채우고, 자유 입력은 그대로 유지.
 
 확신이 안 서면 필드별 빈 형태:
 - 추측 entry보다 `state_changes=[]`
-- 문맥에서 빗나간 픽보다 `suggestions=[]`
 - memory 라인을 강제하기보다 `memorable=false` (그에 따른 빈 값들과 함께)
 - "본문 진행" 같은 메타 어구보다 `turn_summary=""`
+
+(`suggestions`는 예외 — 위 § suggestions 규칙대로 거의 항상 1~3개 채움.)
 
 ## 금지
 

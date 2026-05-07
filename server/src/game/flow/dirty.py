@@ -45,6 +45,9 @@ class Dirty:
     # Tuple = (text, turn_summary). Drained by flush_deferred_act_cards in
     # narrate (npc dialogue path) and combat_phase (after combat resolves).
     deferred_act_cards: list[tuple[str, str | None]] = field(default_factory=list)
+    # Set by finalize() so the safety-net finalize in run_turn's except
+    # branch doesn't double-flush on a normal exit.
+    finalized: bool = False
 
 
 def _trim(items: list, cap: int) -> None:
@@ -176,6 +179,9 @@ async def finalize(
     dirty: Dirty,
     to_front_fn: ToFrontFn | None,
 ) -> AsyncIterator[dict]:
+    if dirty.finalized:
+        return
+    dirty.finalized = True
     if to_front_fn:
         yield {"type": "state", "data": to_front_fn(state)}
         items = (

@@ -101,6 +101,24 @@ function TypingDots() {
   );
 }
 
+function EmptySuggestionHint() {
+  return (
+    <View style={{ paddingTop: spacing[3] }}>
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no"
+        className="px-3 py-2 rounded-md bg-canvas-subtle border border-border-default flex-row items-center gap-3 opacity-60"
+      >
+        <Glyph kind="outline" tone="muted" size={10} />
+        <Text className="font-sans text-title text-fg-subtle flex-1">
+          {ko.empty.suggestionHint}
+        </Text>
+        <Text className="font-sans text-title text-fg-subtle">↓</Text>
+      </View>
+    </View>
+  );
+}
+
 function SuggestionChips({
   items,
   onPick,
@@ -182,7 +200,7 @@ export function Log({
           ? <TypingDots />
           : suggestions.length > 0
           ? <SuggestionChips items={suggestions} onPick={onPickSuggestion} />
-          : null
+          : <EmptySuggestionHint />
       }
       ItemSeparatorComponent={() => <View style={{ height: spacing[4] }} />}
       onLayout={(ev) => setViewportH(ev.nativeEvent.layout.height)}

@@ -92,6 +92,7 @@ export const ko = {
     loadingSkill: '불러오는 중…',
     noSkillCandidates: '기술 후보 없음',
     panel: '비어 있음',
+    suggestionHint: '아래 입력창에 자유롭게 적어보세요',
   },
   level: {
     title: '레벨업',
