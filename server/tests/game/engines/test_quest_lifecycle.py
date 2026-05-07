@@ -129,6 +129,33 @@ def test_accept_quest_persists_and_emits_start_card(fresh_state):
 # --- abandon_quest ----------------------------------------------------------
 
 
+def test_abandon_npc_active_quest_finds_and_fails(fresh_state):
+    """Mirror of accept_npc_locked_quest: resolve the NPC's active quest via the
+    graph and fail it via abandon_quest."""
+    state = _state(
+        fresh_state,
+        quests=[_quest("q1", giver_id="edrik_chief", status="active")],
+    )
+    state.characters["edrik_chief"] = Character(
+        id="edrik_chief", name="에드릭", race_id="human", stats=Stats(),
+    )
+    qid = q.abandon_npc_active_quest(state, state.graph(), "edrik_chief")
+    assert qid == "q1"
+    assert state.quests["q1"].status == "failed"
+
+
+def test_abandon_npc_active_quest_returns_none_when_no_active(fresh_state):
+    state = _state(
+        fresh_state,
+        quests=[_quest("q1", giver_id="edrik_chief", status="locked")],
+    )
+    state.characters["edrik_chief"] = Character(
+        id="edrik_chief", name="에드릭", race_id="human", stats=Stats(),
+    )
+    qid = q.abandon_npc_active_quest(state, state.graph(), "edrik_chief")
+    assert qid is None
+
+
 def test_active_quest_abandons(fresh_state):
     """Active quest → failed via explicit player action ('의뢰 포기')."""
     state = _state(fresh_state, quests=[_quest("q1", status="active")])

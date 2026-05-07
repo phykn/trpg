@@ -72,6 +72,20 @@ def accept_npc_locked_quest(
     return None
 
 
+def abandon_npc_active_quest(
+    state: GameState, graph: GameGraph, npc_id: str, dirty=None
+) -> str | None:
+    """Mirror of accept_npc_locked_quest for the abandon path: find the NPC's
+    first active quest and fail it via abandon_quest. Returns the failed quest
+    id, or None if the NPC has no active quest to abandon."""
+    for qid in quests_given_by(graph, npc_id):
+        q = state.quests.get(qid)
+        if q and q.status == "active":
+            if abandon_quest(state, qid, dirty):
+                return qid
+    return None
+
+
 def abandon_quest(state: GameState, quest_id: str, dirty=None) -> bool:
     """active → failed via _fail_quest. No-op for any other status."""
     quest = state.quests.get(quest_id)

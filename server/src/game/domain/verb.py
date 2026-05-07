@@ -77,7 +77,7 @@ _MODIFIER_SCHEMAS: dict[VerbName, _ModifierSchema] = {
     "speak": _ModifierSchema(
         required_modifiers=frozenset({"intent"}),
         optional_modifiers={
-            "intent": ("friendly", "hostile", "deceptive", "recruit", "part", "accept"),
+            "intent": ("friendly", "hostile", "deceptive", "recruit", "part", "accept", "abandon"),
             "target": str,
             "tail_intent": str,
         },
