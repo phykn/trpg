@@ -72,6 +72,28 @@ def test_dead_entity_equipped_items_unequipped_to_winner():
     assert dead.equipment.weapon is None
 
 
+def test_transfer_marks_both_entities_dirty():
+    """Loot transfer mutates winner inventory/gold and dead equipment/inventory;
+    both must be added to dirty.entities so Supabase persists the change. Skip
+    this and a companion-kill (no kill XP) silently loses the loot on reload."""
+    dead = _make_char("enemy", ["sword"], 5)
+    winner = _make_char("companion", [], 0)
+    dirty: set[tuple[str, str]] = set()
+    transfer_loot_on_death(dead=dead, winner=winner, dirty=dirty)
+    assert ("characters", "companion") in dirty
+    assert ("characters", "enemy") in dirty
+
+
+def test_transfer_dirty_optional():
+    """Without `dirty`, the function still transfers loot — used by older tests
+    and combat paths where the caller dirties separately."""
+    dead = _make_char("enemy", ["sword"], 5)
+    winner = _make_char("player", [], 0)
+    transfer_loot_on_death(dead=dead, winner=winner)
+    assert "sword" in winner.inventory_ids
+    assert winner.gold == 5
+
+
 def test_winner_already_owns_same_item_no_duplicate():
     """If killer already owns the same item id, transfer must not push a second
     copy into inventory_ids — duplicates within a single inventory still trip the

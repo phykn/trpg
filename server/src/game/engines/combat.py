@@ -429,7 +429,7 @@ def apply_attack_to_defender(
             )
             check_quests(state, "character_death", defender_id, dirty)
             if killer is not None:
-                transfer_loot_on_death(dead=defender, winner=killer)
+                transfer_loot_on_death(dead=defender, winner=killer, dirty=entities)
         return out
 
     if hp_after > 0:
@@ -470,8 +470,18 @@ def _kill(defender: Character) -> None:
     defender.death_saves = None
 
 
-def transfer_loot_on_death(dead: Character, winner: Character) -> None:
-    """Move inventory_ids + gold from dead entity to winner; skip ids the winner already owns and clear corpse equipment slots — both prevent the locality guard from auto-repairing the loot back onto the corpse."""
+def transfer_loot_on_death(
+    dead: Character,
+    winner: Character,
+    *,
+    dirty: set[tuple[str, str]] | None = None,
+) -> None:
+    """Move inventory_ids + gold from dead entity to winner; skip ids the winner already owns and clear corpse equipment slots — both prevent the locality guard from auto-repairing the loot back onto the corpse.
+
+    Without `dirty`, callers must add the winner to dirty.entities themselves —
+    otherwise the loot mutation is lost on next reload (e.g. companion kills,
+    or 0-XP victims where award_kill_xp short-circuits before dirtying).
+    """
     if dead.inventory_ids:
         existing = set(winner.inventory_ids)
         for iid in dead.inventory_ids:
@@ -485,6 +495,9 @@ def transfer_loot_on_death(dead: Character, winner: Character) -> None:
     if dead.gold:
         winner.gold += dead.gold
         dead.gold = 0
+    if dirty is not None:
+        dirty.add(("characters", winner.id))
+        dirty.add(("characters", dead.id))
 
 
 def tick_death_save(
