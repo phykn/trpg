@@ -55,6 +55,23 @@ from .memory_writer import write_memories
 _log = logging.getLogger(__name__)
 
 
+def _summarize_change(c: dict) -> str:
+    # Compact one-line repr of a state_change dict for narrate:extract diag.
+    t = c.get("type", "?")
+    if t == "set":
+        v = repr(c.get("value"))
+        if len(v) > 30:
+            v = v[:30] + "..."
+        return f"set:{c.get('entity')}/{c.get('id')!r}.{c.get('field')}={v}"
+    if t == "affinity":
+        return f"aff:{c.get('actor')}->{c.get('target')}/{c.get('intent')}"
+    if t == "move":
+        return f"mv:{c.get('target')}->{c.get('destination')}"
+    if t == "move_item":
+        return f"mvi:{c.get('item')}@{c.get('from_')}->{c.get('to_')}"
+    return t
+
+
 async def run_narrate(
     client: LLMClient,
     state: GameState,
@@ -196,9 +213,10 @@ async def consume_narrate(
         applied=apply_result["applied"],
         rejected=len(apply_result["rejected"]),
         started_quests=apply_result["started_quests"] or None,
-        fields=[
-            f"{c.get('entity')}.{c.get('field') or c.get('type')}"
-            for c in final.output.state_changes
+        emitted=[_summarize_change(c) for c in final.output.state_changes] or None,
+        reject_reasons=[
+            f"{_summarize_change(r['change'])} -> {r['reason'][:80]}"
+            for r in apply_result["rejected"]
         ] or None,
     )
     locality_warnings = enforce_item_locality(state, dirty=dirty.entities)
