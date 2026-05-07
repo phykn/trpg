@@ -44,6 +44,8 @@ async def stream_body(
             attempt=attempt + 1, fallback=fallback_engaged or None,
         )
         body_streamed = False
+        chunks = 0
+        chars = 0
         try:
             async for chunk in client.chat_stream(
                 messages,
@@ -55,6 +57,8 @@ async def stream_body(
                 text = chunk.get("answer")
                 if text:
                     body_streamed = True
+                    chunks += 1
+                    chars += len(text)
                     yield text
         except RateLimitError as e:
             # Fallback only meaningful before the first body delta — once the
@@ -65,7 +69,7 @@ async def stream_body(
                 llm_diag(
                     "llm:fail", agent="narrate_body",
                     attempt=attempt + 1, err="RateLimitError",
-                    streamed=body_streamed,
+                    streamed=body_streamed, chunks=chunks, chars=chars,
                 )
                 raise LLMUnavailable(str(e)) from e
             if not fallback_engaged and fb is not None:
@@ -82,12 +86,13 @@ async def stream_body(
                 llm_diag(
                     "llm:fail", agent="narrate_body",
                     attempt=attempt + 1, err=type(e).__name__,
-                    streamed=body_streamed,
+                    streamed=body_streamed, chunks=chunks, chars=chars,
                 )
                 raise LLMUnavailable(str(e)) from e
             continue
         llm_diag(
             "llm:done", agent="narrate_body",
             attempts=attempt + 1, streamed=body_streamed,
+            chunks=chunks, chars=chars,
         )
         return
