@@ -1,7 +1,7 @@
 """Per-turn stderr diagnostic logger.
 
-Off unless `FLOW_DEBUG=1` in the env. When on, emits one structured line
-per key event so Render Logs is grep-friendly. Built for the intermittent
+On by default (set `FLOW_DEBUG=0` to mute). Emits one structured line per
+key event so Render Logs is grep-friendly. Built for the intermittent
 gemma stochastic failures where post-mortem needs to see which verb
 classify produced and which dispatch path ran.
 
@@ -28,7 +28,7 @@ _TURN: ContextVar[int | None] = ContextVar("_diag_turn", default=None)
 
 
 def _enabled() -> bool:
-    return os.getenv("FLOW_DEBUG", "0") == "1"
+    return os.getenv("FLOW_DEBUG", "1") != "0"
 
 
 def set_diag_context(game_id: str, turn: int) -> None:
