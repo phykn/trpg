@@ -39,10 +39,6 @@ class NarrativeFinal:
     parse_error: str | None = None
 
 
-# Legacy export — flow imports it, but post-PR3 the body and JSON tail are separate calls so the token never appears in either stream.
-SEPARATOR = "---JSON---"
-
-
 async def stream_narrate(
     client: LLMClient,
     input_: NarrateInput,
@@ -88,6 +84,5 @@ __all__ = [
     "NarrateOutput",
     "NarrativeDelta",
     "NarrativeFinal",
-    "SEPARATOR",
     "stream_narrate",
 ]
