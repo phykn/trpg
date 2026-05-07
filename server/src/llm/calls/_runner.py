@@ -149,5 +149,13 @@ async def run_with_retries(
                 {"role": "user", "content": nudge.format(error=_format_retry_error(e))}
             )
     assert last_error is not None
-    llm_diag("llm:fail", agent=agent, attempts=retries, err=type(last_error).__name__)
+    # `answer` carries the last attempt's content (fence-stripped already);
+    # surface a head + length so post-mortem doesn't have to read every
+    # llm:retry line above.
+    llm_diag(
+        "llm:fail", agent=agent, attempts=retries,
+        err=type(last_error).__name__,
+        last_answer_len=len(answer),
+        last_answer_head=answer[:200] if answer else None,
+    )
     raise last_error

@@ -201,6 +201,13 @@ async def handle_recruit_roll_result(
         RULES.companions
     )  # ssot-allow: RULES config attribute, not entity.companions list
 
+    from ._diag import diag
+
+    diag(
+        state.game_id, state.turn_count, "recruit:result",
+        target=target_id, grade=grade,
+    )
+
     if grade in ("critical_success", "success", "partial_success"):
         if target_id not in player.companions:  # ssot-allow: write path guard
             player.companions.append(target_id)  # ssot-allow: write path

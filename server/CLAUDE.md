@@ -121,6 +121,17 @@ There is no minute/hour clock. `state.turn_count` is the sole time variable; `ga
 
 `{"type": "...", "data": {...}}` per event. Types: `judge / pending_check / narrative_delta / suggestions / log_entry / state / combat_start / combat_turn / combat_end / done / error`. **`done` is not auto-appended** — `run_turn`'s roll branch ends after `pending_check`, and the client treats stream-close as the signal. The three `combat_*` types come from `combat_phase.py`; the client ignores their payload (state + log_entry are authoritative for UI) but tests use them as observable signals.
 
+### Diagnostic logging (`FLOW_DEBUG`)
+
+`game/flow/_diag.py` emits one structured stderr line per key flow / LLM event so Render Logs can be grepped for post-mortem. **On by default** — set `FLOW_DEBUG=0` to mute. Production debugging used this end-to-end to pin the move bug down to gemma wrapping JSON in markdown fences.
+
+Two entrypoints, both safe no-ops when disabled:
+
+- `diag(state.game_id, state.turn_count, "category:event", **kv)` — flow-layer code with GameState in scope.
+- `llm_diag("category:event", **kv)` — code under `_runner` / `narrate/body/runner` that doesn't see GameState; flow callers prime gid/turn via `set_diag_context` (already done at `turn.py` / `roll.py` / `level_up.py` entries).
+
+Existing tags live where they fire: `turn:start`, `classify -> ...`, `step:ok` / `step:fail`, `chain_step:*`, `roll:result`, `levelup:*`, `rest:*`, `combat:*`, `recruit:result`, `quest:action`, plus the LLM lifecycle (`llm:call/retry/fallback/done/fail`). The full inventory + add-a-hook pattern is in `_diag.py`'s module docstring — read that before adding new hooks.
+
 ### Memory writes (post-turn)
 
 - Per-entity: `NarrateOutput.memory: dict[entity_id, "one-line POV recall"]`. **Player memory is first-person ("내가 …")**; NPC memory is from that NPC's POV. Don't write the same string into both.

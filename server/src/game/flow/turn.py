@@ -100,6 +100,7 @@ async def _run_turn_inner(
 
     if quest_action is not None:
         kind, qid = quest_action
+        diag(state.game_id, state.turn_count, "quest:action", kind=kind, qid=qid)
         if kind == "accept":
             accept_quest(state, qid)
         elif kind == "abandon":

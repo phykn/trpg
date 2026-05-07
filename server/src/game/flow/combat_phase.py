@@ -180,6 +180,13 @@ async def _drive_auto_combat(
     result = run_auto_combat(state, dirty, **kwargs)
     if _result_out is not None:
         _result_out.append(result)
+    from ._diag import diag
+
+    diag(
+        state.game_id, state.turn_count, "combat:end",
+        outcome=result.outcome, rounds=result.rounds_run,
+        player_hp=state.characters[state.player_id].hp,
+    )
 
     for tev in result.turn_events:
         yield emit_combat_turn(tev)
@@ -218,6 +225,12 @@ async def start_combat_and_drive_auto(
             f"new enemy_ids={enemy_ids})"
         )
     cs = combat_engine.start_combat(state, enemy_ids, rng=rng, surprise=surprise)
+    from ._diag import diag
+
+    diag(
+        state.game_id, state.turn_count, "combat:start",
+        enemy_ids=list(cs.enemy_ids), surprise=cs.surprise, round=cs.round,
+    )
     yield emit_combat_start(
         turn_order=cs.turn_order,
         round=cs.round,

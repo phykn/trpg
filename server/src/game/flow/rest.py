@@ -39,7 +39,10 @@ async def run_rest(
     client: LLMClient | None = None,
     player_input: str = _REST_DEFAULT_INPUT,
 ) -> AsyncIterator[dict]:
+    from ._diag import diag
+
     state.turn_count += 1
+    diag(state.game_id, state.turn_count, "rest:start")
 
     summon_cb: recovery_engine.SummonCallable | None = None
     if client is not None:
@@ -86,6 +89,12 @@ async def run_rest(
             yield ev
         return
     actor = state.characters[state.player_id]
+
+    diag(
+        state.game_id, state.turn_count, "rest:outcome",
+        outcome=outcome, enemies=enemy_ids if enemy_ids else None,
+        hp=actor.hp, mp=actor.mp,
+    )
 
     if outcome == "encounter":
         yield push_act(state, dirty, _rest_ambush_text(actor.name))

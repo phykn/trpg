@@ -1,21 +1,58 @@
 """Per-turn stderr diagnostic logger.
 
 On by default (set `FLOW_DEBUG=0` to mute). Emits one structured line per
-key event so Render Logs is grep-friendly. Built for the intermittent
-gemma stochastic failures where post-mortem needs to see which verb
-classify produced and which dispatch path ran.
+key event so Render Logs is grep-friendly. Built for intermittent gemma
+stochastic failures where post-mortem needs to see which verb classify
+produced and which dispatch path ran.
 
-`diag` is the explicit entrypoint — flow code passes (game_id, turn) it
-already has on hand. `llm_diag` is for code under `_runner` /
-`narrate/body/runner` that doesn't see GameState; flow callers prime the
-context with `set_diag_context` so `_runner` can emit lines tagged with
-the same gid/turn without threading state through.
+## Entrypoints
 
-Lines look like:
+- `diag(game_id, turn, tag, **kv)` — flow code calls this with the
+  GameState fields it already has.
+- `llm_diag(tag, **kv)` — code deep under `_runner` /
+  `narrate/body/runner` that doesn't see GameState; flow callers prime
+  the context with `set_diag_context(game_id, turn)` so the line still
+  gets tagged with the right gid/turn.
+- `fmt_verb(verb)` — compact `name(key=val, ...)` summary, used in flow
+  hooks that log a verb result.
+
+## Tag inventory (where each line comes from)
+
+Flow layer:
+- `turn:start` — turn.py, every `/turn` entry
+- `quest:action` — turn.py, accept/abandon path
+- `classify -> {single|chain|refuse|JudgeMalformed}` — turn.py, after run_judge
+- `step:ok` / `step:fail` — dispatch.py, after each emit_*
+- `chain_step:ok` / `chain_step:fail` — chain.py, per chain part
+- `roll:result` — roll.py, dice + grade
+- `levelup:start` / `levelup:ok` / `levelup:fail` — level_up.py
+- `rest:start` / `rest:outcome` — rest.py
+- `combat:start` / `combat:end` — combat_phase.py
+- `recruit:result` — companion.py, recruit roll outcome
+
+LLM layer (via `llm_diag`, gid/turn from contextvars):
+- `llm:call` / `llm:retry` / `llm:fallback` / `llm:done` / `llm:fail` —
+  `_runner.run_with_retries` covers classify, narrate_extract, summon,
+  recommend, combat_narrate. `narrate/body/runner` adds the same five
+  for its streaming path; `llm:done` there carries `chunks` + `chars`.
+
+## Adding a hook
+
+1. Pick a tag with `category:event` shape (`combat:end`, `quest:action`).
+2. Pass kv pairs that disambiguate post-mortem — IDs over indexes,
+   reasons over flags. Keep each value short; long blobs (raw LLM
+   answers, large lists) get truncated by the caller.
+3. In flow code call `diag(state.game_id, state.turn_count, tag, ...)`.
+   In code that can't see GameState, ensure a flow caller above primed
+   `set_diag_context` then call `llm_diag(tag, ...)`.
+
+## Line shape
+
   [diag gid=2771d6 t=4] turn:start input='탈크의 대장간으로 이동합니다'
-  [diag gid=2771d6 t=4] llm:call agent='classify' attempt=1
-  [diag gid=2771d6 t=4] classify -> single verb='move(destination=forge_smithy)'
-  [diag gid=2771d6 t=4] step:ok verb='move(destination=forge_smithy)'
+
+`gid` is the last 6 chars of `state.game_id`; `t` is `state.turn_count`
+at emission time. Values render via `repr()`, so strings are quoted and
+None values are dropped (so optional fields don't pollute the line).
 """
 
 import os
