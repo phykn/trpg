@@ -113,25 +113,9 @@ def _check_location_cross_ref(loc: Location, s: Scenario) -> list[str]:
                 where,
                 f"connections.key_item_id={conn.key_item_id!r} not in items",
             )
-    for conn in loc.hidden_connections:
-        if conn.target_id not in s.locations:
-            _v(
-                out,
-                where,
-                f"hidden_connections.target_id={conn.target_id!r} not in locations",
-            )
-        if conn.key_item_id is not None and conn.key_item_id not in s.items:
-            _v(
-                out,
-                where,
-                f"hidden_connections.key_item_id={conn.key_item_id!r} not in items",
-            )
     for iid in loc.item_ids:
         if iid not in s.items:
             _v(out, where, f"item_ids: {iid!r} not in items")
-    for iid in loc.hidden_items:
-        if iid not in s.items:
-            _v(out, where, f"hidden_items: {iid!r} not in items")
     for cid in loc.sleep_encounters:
         if cid not in s.characters:
             _v(out, where, f"sleep_encounters: {cid!r} not in characters")

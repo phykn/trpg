@@ -75,11 +75,6 @@ def _check_location_refs(loc: Location, refs: dict[str, set[str]]) -> None:
             raise EntityWriterError(
                 f"location.item_ids entry {iid!r} not found in scenario items."
             )
-    for iid in loc.hidden_items:
-        if iid not in item_ids:
-            raise EntityWriterError(
-                f"location.hidden_items entry {iid!r} not found in scenario items."
-            )
 
 
 def _check_character_refs(ch: Character, refs: dict[str, set[str]]) -> None:

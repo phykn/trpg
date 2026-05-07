@@ -216,8 +216,6 @@ def _scaffold_for_character(tmp_path: Path) -> Path:
                 "description": "마을 광장.",
                 "connections": [],
                 "item_ids": [],
-                "hidden_items": [],
-                "hidden_connections": [],
                 "props": [],
             },
             ensure_ascii=False,

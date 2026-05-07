@@ -231,9 +231,7 @@ class Location(BaseModel):
     description: str = ""
     tags: list[str] = []
     item_ids: list[str] = []
-    hidden_items: list[str] = []
     connections: list[Connection] = []
-    hidden_connections: list[Connection] = []
     weather: list[str] = []
     sleep_risk: EncounterRisk = "safe"
     sleep_encounters: list[str] = []

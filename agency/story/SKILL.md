@@ -181,7 +181,7 @@ APP_ENV=release .venv/bin/python -m agency.story.tool upload scenarios/<name>/
 - 톤: 한국어 두세 문장. 외래어 음역(`엘프 (Elf)`) 금지.
 
 ### location
-- 필수: `id`, `name`, `description`, `connections`, `item_ids`, `hidden_items`, `hidden_connections`, `props`
+- 필수: `id`, `name`, `description`, `connections`, `item_ids`, `props`
 - self-loop 금지 (`connections`에 자기 자신 ID).
 - props는 캐릭터가 상호작용할 만한 정적 환경 요소 (등불, 우물, 벤치 등).
 

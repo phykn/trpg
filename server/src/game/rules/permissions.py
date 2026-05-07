@@ -32,9 +32,7 @@ ITEM_FORBIDDEN_ORDERED: tuple[str, ...] = ("id", "effects", "required")
 LOC_FORBIDDEN_ORDERED: tuple[str, ...] = (
     "id",
     "item_ids",
-    "hidden_items",
     "connections",
-    "hidden_connections",
     "sleep_encounters",
 )
 CHAPTER_QUEST_ALLOWED_ORDERED: tuple[str, ...] = ("summary", "status")
