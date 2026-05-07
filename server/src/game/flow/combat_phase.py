@@ -106,6 +106,56 @@ async def emit_combat_cinematic_and_end(
     yield emit_combat_end(result.outcome)
 
 
+async def emit_post_combat_narrate(
+    client: LLMClient | None,
+    state: GameState,
+    scenario_repo: ScenarioRepo,
+    dirty: Dirty,
+    to_front_fn: ToFrontFn | None,
+    *,
+    combat_results: list[AutoCombatResult],
+    fallback_signal: str | None = None,
+    act_log_lines: list[str] | None = None,
+    require_combat_cleared: bool = False,
+) -> AsyncIterator[dict]:
+    """Aftermath beat that follows a combat sim — adds recovery prose and
+    consumes downed_recovered. `require_combat_cleared` gates the in-combat
+    continuation path where mid-fight turns must NOT trigger this. Skipped
+    on game-over (player dead) and on client=None (engine-only test path)."""
+    if client is None:
+        return
+    if require_combat_cleared and state.combat_state is not None:
+        return
+    if not state.characters[state.player_id].alive:
+        return
+    state.invalidate_graph()
+    graph = state.graph()
+    signal = state.previous_phase_signal or fallback_signal
+    state.previous_phase_signal = None
+    recent_events: list[dict] = []
+    if combat_results:
+        recent_events.append(
+            {
+                "type": "combat",
+                "summary": format_combat_event_summary(combat_results[0]),
+            }
+        )
+    async for ev in stream_narrate_tail(
+        client,
+        state,
+        scenario_repo,
+        "",
+        dirty,
+        to_front_fn,
+        Verb(name="wait"),
+        graph=graph,
+        previous_phase_signal=signal,
+        recent_engine_events=recent_events,
+        act_log_lines=act_log_lines,
+    ):
+        yield ev
+
+
 async def _drive_auto_combat(
     client: LLMClient | None,
     state: GameState,
@@ -386,37 +436,16 @@ async def run_combat_player_turn(
         yield ev
 
     state.turn_count += 1
-    # Post-combat narrate when this in-combat turn ended the fight (coin-revive 'downed' or victory/defeat reached) — same pattern as _enter_combat_and_finalize so the system card isn't the terminal UI line. player_input="" because combat_narrate already consumed the original input; this beat is the recovery / aftermath. Skipped on client=None (engine-only test path).
-    if (
-        client is not None
-        and state.combat_state is None
-        and state.characters[state.player_id].alive
+    async for ev in emit_post_combat_narrate(
+        client,
+        state,
+        scenario_repo,
+        dirty,
+        to_front_fn,
+        combat_results=combat_results,
+        require_combat_cleared=True,
     ):
-        state.invalidate_graph()
-        graph_post = state.graph()
-        signal = state.previous_phase_signal
-        state.previous_phase_signal = None
-        recent_events: list[dict] = []
-        if combat_results:
-            recent_events.append(
-                {
-                    "type": "combat",
-                    "summary": format_combat_event_summary(combat_results[0]),
-                }
-            )
-        async for ev in stream_narrate_tail(
-            client,
-            state,
-            scenario_repo,
-            "",
-            dirty,
-            to_front_fn,
-            Verb(name="wait"),
-            graph=graph_post,
-            previous_phase_signal=signal,
-            recent_engine_events=recent_events,
-        ):
-            yield ev
+        yield ev
     # Buffs already ticked per-round inside run_auto_combat; no /turn-end tick here.
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev

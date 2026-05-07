@@ -24,10 +24,14 @@ from .actions import (
 )
 from .buff_tick import tick_turn_buffs
 from .combat_auto import AutoCombatResult, PlayerAction
-from .combat_phase import has_invalid_combat_targets, start_combat_and_drive_auto
+from .combat_phase import (
+    emit_post_combat_narrate,
+    has_invalid_combat_targets,
+    start_combat_and_drive_auto,
+)
 from .dirty import Dirty, ToFrontFn, drop_pushed_act, finalize, push_act
 from .error_phrases import is_dramatic_fail
-from .format import NO_COMBAT_TARGETS_TEXT, format_combat_event_summary
+from .format import NO_COMBAT_TARGETS_TEXT
 from .narrate import stream_narrate_tail
 
 
@@ -200,37 +204,17 @@ async def _enter_combat_and_finalize(
     ):
         yield ev
     state.turn_count += 1
-    # Post-combat narrate so the system card isn't the terminal UI line — adds aftermath body and consumes the downed_recovered signal here when present. Skipped on player death (game-over) and on client=None (engine-only test path).
-    # player_input is empty: the original input was already consumed by combat_narrate; this second narrate is the recovery beat, not a re-run of the player's intent.
-    if client is not None and state.characters[state.player_id].alive:
-        state.invalidate_graph()
-        graph = state.graph()
-        # Combat-set signal (e.g. downed_recovered) takes priority over the
-        # pre-turn signal carried in via previous_phase_signal arg.
-        signal = state.previous_phase_signal or previous_phase_signal
-        state.previous_phase_signal = None
-        recent_events: list[dict] = []
-        if combat_results:
-            recent_events.append(
-                {
-                    "type": "combat",
-                    "summary": format_combat_event_summary(combat_results[0]),
-                }
-            )
-        async for ev in stream_narrate_tail(
-            client,
-            state,
-            scenario_repo,
-            "",
-            dirty,
-            to_front_fn,
-            Verb(name="wait"),
-            graph=graph,
-            previous_phase_signal=signal,
-            recent_engine_events=recent_events,
-            act_log_lines=act_log_lines,
-        ):
-            yield ev
+    async for ev in emit_post_combat_narrate(
+        client,
+        state,
+        scenario_repo,
+        dirty,
+        to_front_fn,
+        combat_results=combat_results,
+        fallback_signal=previous_phase_signal,
+        act_log_lines=act_log_lines,
+    ):
+        yield ev
     # Buffs already ticked per-round inside run_auto_combat; no /turn-end tick here.
     async for ev in finalize(state, save_repo, dirty, to_front_fn):
         yield ev
