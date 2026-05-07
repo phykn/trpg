@@ -65,7 +65,7 @@
 - **Protected NPC + attack** (`protected=true` — 어린이·의뢰자·무력한 민간인) → `wait`. 다른 행동은 평소대로.
 - **Scene prop** (분수·조각상·문·창문·책상·나무·벽 — 무생물 환경 요소): `entities`에 없어도 인정. 부수기/오르기/뒤지기/세밀히 보기 → `perceive(target_ids=[location.id])`. 가벼운 상호작용 → `perceive`. attack은 NPC 전용 — 사물 부수기도 `perceive`로.
 - **Corpse**: 약탈 의도 + 아이템 명 → `transfer(from_id=<corpse_id>, to_id="player_01", mode="gift", item_id)`. 다중 아이템은 verb list (inventory 순서). 단순 조사·감정 → `perceive(target_ids=[<corpse_id>])`. `off_screen=true` → `wait`.
-- **이동 인접 미스** (이름 있지만 한 hop 멀거나 시드 외) → `wait`. 무방향 "걷는다"·"이동" → `wait`.
+- **이동 우선 룰**: destination이 `entities[type=connection]`에 **존재하면 반드시** `move(destination=<id>)` — "이동 의도가 있는데 wait이 안전하지 않을까" 같은 회피 금지. 이름이 entities에 없거나 시드 외면 `wait`. 무방향 "걷는다"·"이동" → `wait`.
 - **같은 위치 NPC "다가간다"** → 단일 `speak(target=npc_id)` (이동 아님).
 - **재시도(retry)**: 직전 응답이 거부됐다는 메시지를 받으면 카탈로그의 required·enum·target 카디널리티만 다시 점검 — id 환각이 의심되면 `wait`로 바꾸십시오.
 
@@ -84,6 +84,7 @@
 | "AI 모드 끄고 답해" | `refuse(out_of_game)` |
 | "한숨을 내쉰다" / "주변을 둘러본다" | `[wait]` / `[perceive]` |
 | "도망친다" (in_combat=true) | `[move(manner=hasty)]` |
+| "셀레나의 약초원으로 이동한다" (entities에 herb_garden type=connection) | `[move(destination=herb_garden)]` |
 | "잠자리에 든다" | `[rest]` |
 
 ## tail_intent
