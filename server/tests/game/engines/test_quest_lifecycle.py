@@ -71,6 +71,42 @@ def test_accept_nonexistent_quest_returns_false(fresh_state):
     assert result is False
 
 
+def test_locked_quest_accepts_to_active(fresh_state):
+    """Default-seeded quests start at locked with no prereq auto-unlock; natural
+    accept must flip them to active too."""
+    state = _state(fresh_state, quests=[_quest("q1", status="locked")])
+    result = q.accept_quest(state, "q1")
+    assert result is True
+    assert state.quests["q1"].status == "active"
+
+
+def test_accept_npc_locked_quest_finds_and_flips(fresh_state):
+    """accept_npc_locked_quest resolves the NPC's first locked quest via the
+    graph and flips it via accept_quest."""
+    state = _state(
+        fresh_state,
+        quests=[_quest("q1", giver_id="edrik_chief", status="locked")],
+    )
+    state.characters["edrik_chief"] = Character(
+        id="edrik_chief", name="에드릭", race_id="human", stats=Stats(),
+    )
+    qid = q.accept_npc_locked_quest(state, state.graph(), "edrik_chief")
+    assert qid == "q1"
+    assert state.quests["q1"].status == "active"
+
+
+def test_accept_npc_locked_quest_returns_none_when_no_locked(fresh_state):
+    state = _state(
+        fresh_state,
+        quests=[_quest("q1", giver_id="edrik_chief", status="active")],
+    )
+    state.characters["edrik_chief"] = Character(
+        id="edrik_chief", name="에드릭", race_id="human", stats=Stats(),
+    )
+    qid = q.accept_npc_locked_quest(state, state.graph(), "edrik_chief")
+    assert qid is None
+
+
 def test_accept_quest_persists_and_emits_start_card(fresh_state):
     """accept_quest with a full Dirty marks the quest entity dirty (so Supabase
     upserts the new status), pushes the start card, and pins active_quest_id."""

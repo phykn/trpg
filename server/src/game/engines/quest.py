@@ -7,7 +7,9 @@ from ..domain.errors import InventoryInvalid
 from ..domain.state import GameState
 from src.locale import render
 from ..ontology.graph import GameGraph
-from ..ontology.queries import connections_of, giver_of, kill_targets_of
+from ..ontology.queries import (
+    connections_of, giver_of, kill_targets_of, quests_given_by,
+)
 from .inventory.carry import check_can_carry
 
 # Quest mutations accept a full `flow.dirty.Dirty` (or `None`) — `Dirty.entities`
@@ -31,12 +33,14 @@ def _as_dirty(dirty):
 
 
 def accept_quest(state: GameState, quest_id: str, dirty=None) -> bool:
-    """pending → active. With a full Dirty, also marks the quest entity dirty
-    (so Supabase upserts the new status) and pushes a start card; without it,
-    only the in-memory transition happens. Pins active_quest_id to the
-    accepted quest so the panel switches focus. No-op for any other status."""
+    """`locked` or `pending` → active. Default-seeded quests start at `locked`
+    (no prereq auto-unlock fires for prereq-less quests), so natural acceptance
+    via classify intent=accept must flip from there too. With a full Dirty,
+    also marks the quest entity dirty and pushes a start card; without it,
+    only the in-memory transition happens. Pins active_quest_id. No-op for
+    any other status."""
     quest = state.quests.get(quest_id)
-    if not quest or quest.status != "pending":
+    if not quest or quest.status not in ("locked", "pending"):
         return False
     quest.status = "active"
     _ensure_runtime_fields(quest)
@@ -51,6 +55,21 @@ def accept_quest(state: GameState, quest_id: str, dirty=None) -> bool:
         full.deferred_act_cards.append((text, text))
     state.active_quest_id = quest.id
     return True
+
+
+def accept_npc_locked_quest(
+    state: GameState, graph: GameGraph, npc_id: str, dirty=None
+) -> str | None:
+    """Find the NPC's first locked quest and flip it via accept_quest. Returns
+    the flipped quest id, or None if the NPC has no locked quest to give.
+    Used by the natural-language accept route (speak intent=accept) so quest
+    transitions don't depend on narrate extract emitting set quests.status."""
+    for qid in quests_given_by(graph, npc_id):
+        q = state.quests.get(qid)
+        if q and q.status == "locked":
+            if accept_quest(state, qid, dirty):
+                return qid
+    return None
 
 
 def abandon_quest(state: GameState, quest_id: str, dirty=None) -> bool:

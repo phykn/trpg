@@ -287,6 +287,21 @@ async def _dispatch_verb(
             ):
                 yield ev
             return
+        if intent == "accept" and target:
+            # Engine flips the NPC's first locked quest to active before
+            # narrate runs — body lands first, deferred 퀘스트 시작 card flushes
+            # after. No-op when the NPC has no locked quest to give; falls
+            # through to the friendly narrate path so prose still covers the
+            # beat.
+            from ..engines.quest import accept_npc_locked_quest
+
+            accept_npc_locked_quest(state, graph, target, dirty)
+            async for ev in narrate_absorb_and_finalize(
+                client, state, scenario_repo, save_repo, dirty,
+                to_front_fn, player_input, verb, graph, previous_phase_signal,
+            ):
+                yield ev
+            return
         # friendly/hostile/deceptive: absorbed by narrate — narrate emits
         # the affinity state_change keyed off intent's tone.
         async for ev in narrate_absorb_and_finalize(

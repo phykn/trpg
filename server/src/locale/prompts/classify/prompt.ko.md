@@ -65,7 +65,7 @@
 | `move` | `destination` (전투 외) | `manner: normal\|stealthy\|hasty`, `tail_intent` | — | `entities[type=connection]`의 id. 도망(`manner=hasty`)은 전투 한정 — destination 생략 가능 |
 | `transfer` | `from_id`, `to_id`, `mode: gift\|trade\|steal` | `item_id`, `price`, `haggle`, `tail_intent` | — | trade는 `merchants`만. equip은 `from_id="<self>.inventory" to_id="<self>.equipped.<slot>" mode="gift"`, unequip 역방향. corpse loot은 `from_id=<corpse_id>` (`corpses[*].id`). steal은 `item_id` 생략 (엔진이 carryables 중 random) |
 | `use` | `item_id` | `target_id`, `tail_intent` | — | consumable / trigger. weapon·armor는 `transfer(equip)` |
-| `speak` | `intent: friendly\|hostile\|deceptive\|recruit\|part` | `target`, `tail_intent` | — | 위협→hostile, 거짓말→deceptive, 영입→recruit(`target=npc_id`), 이별→part(`target=companion_id`), 그 외 톤 친근→friendly |
+| `speak` | `intent: friendly\|hostile\|deceptive\|recruit\|part\|accept` | `target`, `tail_intent` | — | 위협→hostile, 거짓말→deceptive, 영입→recruit(`target=npc_id`), 이별→part(`target=companion_id`), 의뢰/quest 수락·맡음→accept(`target=npc_id`), 그 외 톤 친근→friendly |
 | `perceive` | — | — | optional | 둘러본다·조사·scene prop 상호작용 |
 | `rest` | — | — | — | 잔다·캠프·야영 + 회복 의도 (전투 외) |
 | `wait` | — | `tail_intent` | — | 한숨·명시 무행동·fluff |
@@ -98,6 +98,7 @@
 | "약초를 마신다" | `[use(item_id=herb_01)]` |
 | "여관 주인에게 마을 소문을 묻는다" | `[speak(intent=friendly, target=여관주인_01)]` |
 | "동료가 되어달라" (친근 NPC, 자리 있음) | `[speak(intent=recruit, target=<npc_id>)]` |
+| "의뢰를 수락한다" / "받아들이겠다" / "내가 맡겠다" (NPC가 quest 제시) | `[speak(intent=accept, target=<npc_id>)]` |
 | "산적을 공격한다" (entities에 산적_01) | `[attack(target_ids=[산적_01])]` |
 | "산적을 공격한다" (산적 미존재) | `[wait]` |
 | "상인의 지갑을 슬쩍한다" (carryables 있음) | `[transfer(상인_01→player_01, mode=steal)]` |
