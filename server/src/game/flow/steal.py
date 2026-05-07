@@ -14,7 +14,7 @@ from src.db.repo import SaveRepo
 from src.locale import render
 from src.wire.emit import emit_error, emit_pending_check
 
-from ..domain.errors import PersistenceFailed
+from ..domain.errors import InventoryInvalid, PersistenceFailed
 from ..domain.memory import PendingCheck
 from ..domain.state import GameState
 from ..engines import inventory as inventory_engine
@@ -120,7 +120,7 @@ async def handle_steal_roll_result(
         item_name = item.name if item else item_id
         try:
             inventory_engine.steal(target, player, item_id, state.items)
-        except Exception:
+        except InventoryInvalid:
             yield push_act(state, dirty, format_steal_no_carryables_log(target_name))
             return
         state.invalidate_graph()
