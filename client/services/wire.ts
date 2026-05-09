@@ -18,6 +18,16 @@ import type {
 
 export type PendingCheck = PendingCheckPayload;
 
+export type PendingConfirmation = {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  targetLabel?: string | null;
+};
+
 export type FrontState = {
   hero: Hero;
   subject: Subject | null;
@@ -26,6 +36,7 @@ export type FrontState = {
   combat: CombatBadge | null;
   log: LogEntry[];
   pendingCheck: PendingCheck | null;
+  pendingConfirmation?: PendingConfirmation | null;
   storyGraph: StoryGraphModel;
 };
 
@@ -72,6 +83,90 @@ export type TurnRequest = {
 
 export type RollRequest = {
   think: boolean;
+};
+
+export type ConfirmRequest = {
+  confirmation_id: string;
+  decision: 'confirm' | 'cancel';
+  think: boolean;
+};
+
+export type GraphResource = {
+  current: number;
+  maximum: number;
+  state: string;
+};
+
+export type GraphHeroState = {
+  id: string;
+  name: string;
+  resources: {
+    hp: GraphResource;
+    mp: GraphResource;
+  };
+  stats: Record<string, number>;
+};
+
+export type GraphPlaceLink = {
+  id: string;
+  name: string;
+  description: string;
+};
+
+export type GraphPlaceTarget = {
+  id: string;
+  name: string;
+  hp: GraphResource;
+};
+
+export type GraphPlaceState = {
+  id: string;
+  name: string;
+  description: string;
+  exits: GraphPlaceLink[];
+  targets: GraphPlaceTarget[];
+};
+
+export type GraphCombatParticipant = {
+  id: string;
+  name: string;
+  side: 'player' | 'enemy';
+  hp: GraphResource;
+  mp: GraphResource | null;
+};
+
+export type GraphCombatState = {
+  round: number;
+  outcome: 'ongoing' | 'victory' | 'defeat' | 'fled';
+  participants: GraphCombatParticipant[];
+};
+
+export type GraphFrontState = {
+  hero: GraphHeroState;
+  place: GraphPlaceState | null;
+  combat: GraphCombatState | null;
+  pendingConfirmation: PendingConfirmation | null;
+  log: LogEntry[];
+};
+
+export type GraphSessionPayload = {
+  game_id: string;
+  state: GraphFrontState;
+};
+
+export type GraphActionResponse = {
+  game_id: string;
+  state: GraphFrontState;
+  status?: string | null;
+  message?: string | null;
+};
+
+export type GraphActionClientResponse = {
+  game_id: string;
+  state: FrontState;
+  pendingConfirmation: PendingConfirmation | null;
+  status?: string | null;
+  message?: string | null;
 };
 
 // `combat_*` and `judge` events are observability-only — the dispatch

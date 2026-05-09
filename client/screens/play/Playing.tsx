@@ -18,7 +18,7 @@ import { ko } from '@/locale/ko';
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, storyGraph, log, pending, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp } = game;
+  const { hero, subject, quest, place, combat, storyGraph, log, pending, pendingConfirmation, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onConfirmPending, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -118,6 +118,20 @@ export function Playing({ game }: Props) {
         />
       )}
 
+      {pendingConfirmation && (
+        <ConfirmDialog
+          info={{
+            title: pendingConfirmation.title,
+            subtitle: pendingConfirmation.targetLabel ?? undefined,
+            blurb: pendingConfirmation.body,
+            confirmLabel: pendingConfirmation.confirmLabel,
+            cancelLabel: pendingConfirmation.cancelLabel,
+          }}
+          onConfirm={() => onConfirmPending('confirm')}
+          onCancel={() => onConfirmPending('cancel')}
+        />
+      )}
+
       {newGameConfirmOpen && (
         <ConfirmDialog
           info={{
@@ -139,7 +153,7 @@ export function Playing({ game }: Props) {
         log={log}
         rolling={rolling}
         typing={awaitingNarration}
-        suggestions={!gameOver && !streaming && !pending ? suggestions : []}
+        suggestions={!gameOver && !streaming && !pending && !pendingConfirmation ? suggestions : []}
         onPickSuggestion={onSend}
       />
 

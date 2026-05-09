@@ -1,6 +1,11 @@
 import { fetch } from 'expo/fetch';
 
+import { adaptGraphState } from './graphAdapter';
 import type {
+  ConfirmRequest,
+  GraphActionClientResponse,
+  GraphActionResponse,
+  GraphSessionPayload,
   InitRequest,
   LevelUpPreviewResponse,
   LevelUpRequest,
@@ -57,6 +62,59 @@ export async function initSession(body: InitRequest): Promise<SessionPayload> {
   });
   if (!res.ok) throw new Error(`initSession failed: HTTP ${res.status}`);
   return (await res.json()) as SessionPayload;
+}
+
+export async function initGraphSession(body: InitRequest): Promise<SessionPayload> {
+  const res = await fetch(`${BASE_URL}/session/graph/init`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`initGraphSession failed: HTTP ${res.status}`);
+  const payload = (await res.json()) as GraphSessionPayload;
+  return {
+    game_id: payload.game_id,
+    state: adaptGraphState(payload.state),
+  };
+}
+
+export async function sendGraphInput(
+  gameId: string,
+  playerInput: string,
+): Promise<GraphActionClientResponse> {
+  const res = await fetch(`${BASE_URL}/session/${gameId}/graph/input`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ player_input: playerInput, think: false }),
+  });
+  if (!res.ok) throw new Error(`sendGraphInput failed: HTTP ${res.status}`);
+  return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
+}
+
+export async function confirmGraphAction(
+  gameId: string,
+  body: ConfirmRequest,
+): Promise<GraphActionClientResponse> {
+  const res = await fetch(`${BASE_URL}/session/${gameId}/graph/confirm`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`confirmGraphAction failed: HTTP ${res.status}`);
+  return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
+}
+
+function adaptGraphActionResponse(
+  payload: GraphActionResponse,
+): GraphActionClientResponse {
+  const state = adaptGraphState(payload.state);
+  return {
+    game_id: payload.game_id,
+    state,
+    pendingConfirmation: state.pendingConfirmation ?? null,
+    status: payload.status,
+    message: payload.message,
+  };
 }
 
 async function streamSse(

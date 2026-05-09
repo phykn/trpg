@@ -20,6 +20,10 @@ export const ko = {
     INT: '지능',
     WIS: '지혜',
     CHA: '매력',
+    body: '몸',
+    agility: '민첩',
+    mind: '정신',
+    presence: '존재감',
   },
   panel: {
     environment: '환경',
@@ -59,6 +63,7 @@ export const ko = {
     moveBlocked: '이동 불가',
     approachBlocked: '접근 불가',
     busy: '처리 중',
+    normalRisk: '보통',
   },
   roll: {
     check: '판정',

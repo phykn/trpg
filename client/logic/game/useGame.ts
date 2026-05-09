@@ -8,9 +8,10 @@ import {
 import {
   clearAllForGame,
   clearStoredGameId,
+  confirmGraphAction,
   getSessionById,
   getLevelUpPreview,
-  initSession,
+  initGraphSession,
   loadLastSeenLocation,
   loadLastSeenQuestTitle,
   loadLastSeenSubjectId,
@@ -21,10 +22,10 @@ import {
   storeLastSeenQuestTitle,
   storeLastSeenSubjectId,
   storeSuggestions,
-  streamIntro,
   streamLevelUp,
   streamRoll,
   streamTurn,
+  sendGraphInput,
 } from '@/services';
 import type { CombatBadge } from '@/logic/combat';
 import type { Hero } from '@/logic/hero';
@@ -32,7 +33,16 @@ import type { LogEntry } from '@/logic/log';
 import type { Quest } from '@/logic/quest';
 import type { Place } from '@/logic/story-graph';
 import type { Subject } from '@/logic/subject';
-import type { FrontState, InitRequest, PendingCheck, SkillCandidate, StatKey, StreamEvent } from '@/services/wire';
+import type {
+  FrontState,
+  GraphActionClientResponse,
+  InitRequest,
+  PendingCheck,
+  PendingConfirmation,
+  SkillCandidate,
+  StatKey,
+  StreamEvent,
+} from '@/services/wire';
 
 import { handleStreamEvent } from './handleStreamEvent';
 
@@ -62,6 +72,7 @@ export function useGame() {
   const [log, setLog] = React.useState<LogEntry[]>([]);
 
   const [pending, setPending] = React.useState<PendingCheck | null>(null);
+  const [pendingConfirmation, setPendingConfirmation] = React.useState<PendingConfirmation | null>(null);
   const [combat, setCombat] = React.useState<CombatBadge | null>(null);
   const [storyGraph, setStoryGraph] = React.useState<StoryGraphModel>(EMPTY_STORY_GRAPH);
   const [streaming, setStreaming] = React.useState(false);
@@ -102,12 +113,12 @@ export function useGame() {
   }, []);
 
   React.useEffect(() => {
-    if (pending) {
+    if (pending || pendingConfirmation) {
       previewAbortRef.current?.abort();
       setLevelUpOpen(false);
       setLevelUpCandidates(null);
     }
-  }, [pending]);
+  }, [pending, pendingConfirmation]);
 
   const rememberGameId = React.useCallback((id: string | null) => {
     gameIdRef.current = id;
@@ -122,6 +133,7 @@ export function useGame() {
     setCombat(s.combat);
     setLog(s.log);
     setPending(s.pendingCheck);
+    setPendingConfirmation(s.pendingConfirmation ?? null);
     if (stateGameId) {
       setStoryGraph(mergeAndStoreStoryGraph(stateGameId, s.storyGraph));
     } else {
@@ -142,6 +154,36 @@ export function useGame() {
         setErrorMessage,
       }),
     [applyState],
+  );
+
+  const runGraphRequest = React.useCallback(
+    async (call: () => Promise<GraphActionClientResponse>) => {
+      if (streamingRef.current) return;
+      streamingRef.current = true;
+      setStreaming(true);
+      setErrorMessage(null);
+      setSuggestions([]);
+      setStreamingText('');
+      try {
+        const response = await call();
+        applyState(response.state, response.game_id);
+        if (response.message) {
+          setLog((current) =>
+            mergeEntry(current, {
+              id: -Date.now(),
+              kind: 'gm',
+              text: response.message ?? '',
+            }),
+          );
+        }
+      } catch (err) {
+        setErrorMessage(err instanceof Error ? err.message : String(err));
+      } finally {
+        streamingRef.current = false;
+        setStreaming(false);
+      }
+    },
+    [applyState, setSuggestions],
   );
 
   const runStream = React.useCallback(
@@ -219,7 +261,7 @@ export function useGame() {
       setStatus('loading');
       setErrorMessage(null);
       try {
-        const payload = await initSession(body);
+        const payload = await initGraphSession(body);
         storeGameId(payload.game_id);
         rememberGameId(payload.game_id);
         applyState(payload.state, payload.game_id);
@@ -227,10 +269,10 @@ export function useGame() {
         setLastSeenQuestTitle(null);
         setLastSeenSubjectId(null);
         setPending(null);
+        setPendingConfirmation(payload.state.pendingConfirmation ?? null);
         setStreamingText('');
         setSuggestions([]);
         setStatus('ready');
-        await runStream((signal) => streamIntro(payload.game_id, handleEvent, signal));
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : String(err));
         setStatus('error');
@@ -242,17 +284,15 @@ export function useGame() {
   const onSend = React.useCallback(
     (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed || !gameId || pending) return;
-      void runStream((signal) =>
-        streamTurn(gameId, { player_input: trimmed, think: false }, handleEvent, signal),
-      );
+      if (!trimmed || !gameId || pending || pendingConfirmation) return;
+      void runGraphRequest(() => sendGraphInput(gameId, trimmed));
     },
-    [gameId, pending, handleEvent, runStream],
+    [gameId, pending, pendingConfirmation, runGraphRequest],
   );
 
   const onQuestAction = React.useCallback(
     (kind: 'accept' | 'abandon', quest_id: string) => {
-      if (!gameId || pending) return;
+      if (!gameId || pending || pendingConfirmation) return;
       void runStream((signal) =>
         streamTurn(
           gameId,
@@ -262,7 +302,22 @@ export function useGame() {
         ),
       );
     },
-    [gameId, pending, handleEvent, runStream],
+    [gameId, pending, pendingConfirmation, handleEvent, runStream],
+  );
+
+  const onConfirmPending = React.useCallback(
+    (decision: 'confirm' | 'cancel') => {
+      if (!gameId || !pendingConfirmation) return;
+      const confirmationId = pendingConfirmation.id;
+      void runGraphRequest(() =>
+        confirmGraphAction(gameId, {
+          confirmation_id: confirmationId,
+          decision,
+          think: false,
+        }),
+      );
+    },
+    [gameId, pendingConfirmation, runGraphRequest],
   );
 
   const onRoll = React.useCallback(() => {
@@ -276,7 +331,7 @@ export function useGame() {
 
   const openLevelUp = React.useCallback(async () => {
     const id = gameIdRef.current;
-    if (!id || streamingRef.current || pending) return;
+    if (!id || streamingRef.current || pending || pendingConfirmation) return;
     setLevelUpOpen(true);
     setLevelUpCandidates(null);
     previewAbortRef.current?.abort();
@@ -294,7 +349,7 @@ export function useGame() {
         previewAbortRef.current = null;
       }
     }
-  }, [pending]);
+  }, [pending, pendingConfirmation]);
 
   const cancelLevelUp = React.useCallback(() => {
     previewAbortRef.current?.abort();
@@ -333,7 +388,7 @@ export function useGame() {
     return [...log, { id: STREAMING_GM_ID, kind: 'gm', text: streamingText }];
   }, [log, streamingText]);
 
-  const awaitingNarration = streaming && !pending;
+  const awaitingNarration = streaming && !pending && !pendingConfirmation;
 
   // Guarded by !streaming because hp can transiently hit 0 before reviveCoins
   // decrements during a roll/turn stream — wait for the final `state` event.
@@ -384,6 +439,7 @@ export function useGame() {
     storyGraph,
     log: displayLog,
     pending,
+    pendingConfirmation,
     streaming,
     awaitingNarration,
     gameOver,
@@ -396,6 +452,7 @@ export function useGame() {
     markSubjectSeen,
     onSend,
     onQuestAction,
+    onConfirmPending,
     onRoll,
     onStop,
     levelUpOpen,

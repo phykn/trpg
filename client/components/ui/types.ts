@@ -29,4 +29,5 @@ export type ConfirmInfo = {
   trust?: number;
   risk?: { label: string; tone: Tone };
   confirmLabel?: string;
+  cancelLabel?: string;
 };

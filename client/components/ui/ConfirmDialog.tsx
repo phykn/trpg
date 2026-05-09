@@ -65,10 +65,12 @@ export function ConfirmDialog({ info, onConfirm, onCancel }: {
             <Pressable
               onPress={onCancel}
               accessibilityRole="button"
-              accessibilityLabel={ko.level.cancel}
+              accessibilityLabel={info.cancelLabel ?? ko.level.cancel}
               className="px-3 py-2 rounded-sm border border-border-default active:bg-canvas-inset"
             >
-              <Text className="font-sans text-body text-fg-default">{ko.level.cancel}</Text>
+              <Text className="font-sans text-body text-fg-default">
+                {info.cancelLabel ?? ko.level.cancel}
+              </Text>
             </Pressable>
             <Pressable
               onPress={onConfirm}

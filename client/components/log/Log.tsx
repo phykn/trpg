@@ -135,10 +135,7 @@ function SuggestionChips({
           accessibilityRole="button"
           accessibilityLabel={text}
           className="px-3 py-2 rounded-md bg-accent-muted border border-border-default flex-row items-center gap-3"
-          style={({ hovered, pressed }) => [
-            hovered && { borderColor: colors.accent.fg },
-            pressed && { opacity: 0.6 },
-          ]}
+          style={(state) => [state.pressed && { opacity: 0.6 }]}
         >
           <Glyph kind="outline" tone="accent" size={10} />
           <Text className="font-sans text-title text-fg-default flex-1">
