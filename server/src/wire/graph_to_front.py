@@ -14,6 +14,7 @@ from src.game.domain.graph_query import (
     nodes_of_type,
 )
 from src.game.domain.memory import LogEntry
+from src.game.engines.growth import xp_for_next_level
 from src.game.runtime.state import GameRuntimeState
 from src.llm.context.graph_combat import hp_state, mp_state
 from src.wire.labels import difficulty_badge
@@ -42,6 +43,11 @@ class GraphResourcePayload(_CamelModel):
 class GraphHeroPayload(_CamelModel):
     id: str
     name: str
+    level: int
+    gold: int
+    exp: int
+    exp_max: int
+    can_level_up: bool
     resources: dict[Literal["hp", "mp"], GraphResourcePayload]
     stats: dict[str, int]
 
@@ -227,9 +233,17 @@ def _quest_giver_name(graph: Graph, quest_id: str) -> str:
 
 
 def _hero_payload(player: GraphNode) -> GraphHeroPayload:
+    level = _int_prop_default(player, "level", 1)
+    exp = _int_prop_default(player, "xp_pool", 0)
+    exp_max = xp_for_next_level(level)
     return GraphHeroPayload(
         id=player.id,
         name=_name(player),
+        level=level,
+        gold=_int_prop_default(player, "gold", 0),
+        exp=exp,
+        exp_max=exp_max,
+        can_level_up=exp >= exp_max,
         resources={
             "hp": _resource(player, "hp", "max_hp"),
             "mp": _resource(player, "mp", "max_mp"),
@@ -372,6 +386,11 @@ def _int_prop(node: GraphNode, key: str) -> int:
     if not isinstance(value, int):
         raise ValueError(f"missing numeric property {node.id}.{key}")
     return value
+
+
+def _int_prop_default(node: GraphNode, key: str, default: int) -> int:
+    value = node.properties.get(key)
+    return value if isinstance(value, int) else default
 
 
 def _stats(node: GraphNode) -> dict[str, int]:

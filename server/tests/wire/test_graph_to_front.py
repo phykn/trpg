@@ -19,6 +19,9 @@ def _character(
         type="character",
         properties={
             "name": character_id,
+            "level": 2,
+            "gold": 7,
+            "xp_pool": 11,
             "hp": hp,
             "max_hp": max_hp,
             "mp": mp,
@@ -153,6 +156,10 @@ def test_graph_front_state_builds_hero_resource_state_words():
     assert payload.hero.resources["hp"].maximum == 30
     assert payload.hero.resources["hp"].state == "hurt"
     assert payload.hero.resources["mp"].state == "drained"
+    assert payload.hero.level == 2
+    assert payload.hero.gold == 7
+    assert payload.hero.exp == 11
+    assert payload.hero.exp_max > payload.hero.exp
     assert payload.hero.stats == {"agility": 2, "body": 3, "mind": 1, "presence": 0}
     assert payload.log[0].text == "당신은 Town에 있습니다."
 

@@ -15,6 +15,11 @@ const graphState = (): GraphFrontState => ({
   hero: {
     id: 'player_01',
     name: '테스터',
+    level: 1,
+    exp: 0,
+    expMax: 20,
+    canLevelUp: false,
+    gold: 0,
     resources: {
       hp: { current: 30, maximum: 30, state: 'healthy' },
       mp: { current: 10, maximum: 10, state: 'fresh' },

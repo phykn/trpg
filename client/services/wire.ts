@@ -123,6 +123,11 @@ export type GraphResource = {
 export type GraphHeroState = {
   id: string;
   name: string;
+  level: number;
+  exp: number;
+  expMax: number;
+  canLevelUp: boolean;
+  gold: number;
   resources: {
     hp: GraphResource;
     mp: GraphResource;

@@ -6,6 +6,11 @@ describe('adaptGraphState', () => {
       hero: {
         id: 'player_01',
         name: '테스터',
+        level: 2,
+        exp: 11,
+        expMax: 30,
+        canLevelUp: false,
+        gold: 7,
         resources: {
           hp: { current: 18, maximum: 30, state: 'hurt' },
           mp: { current: 3, maximum: 10, state: 'strained' },
@@ -81,6 +86,11 @@ describe('adaptGraphState', () => {
     expect(state.hero.hpMax).toBe(30);
     expect(state.hero.mp).toBe(3);
     expect(state.hero.mpMax).toBe(10);
+    expect(state.hero.level).toBe(2);
+    expect(state.hero.exp).toBe(11);
+    expect(state.hero.expMax).toBe(30);
+    expect(state.hero.canLevelUp).toBe(false);
+    expect(state.hero.gold).toBe(7);
     expect(state.hero.stats).toEqual([
       { label: '몸', value: 3 },
       { label: '민첩', value: 2 },
