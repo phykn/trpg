@@ -141,6 +141,46 @@ def test_attack_can_finish_existing_combat_and_clear_progress():
     assert enemy["defeat_mode"] == "unconscious"
 
 
+def test_victory_completes_matching_active_quest_and_clears_active_id():
+    runtime = _runtime(
+        enemy=_character("goblin_01", hp=8, max_hp=24),
+        graph_combat_state=_ongoing_state(round_no=3),
+    )
+    runtime.graph.nodes["quest_01"] = GraphNode(
+        id="quest_01",
+        type="quest",
+        properties={
+            "status": "active",
+            "triggers": [
+                {
+                    "id": "trigger_01",
+                    "name": "고블린 물리치기",
+                    "type": "character_defeat",
+                    "target_id": "goblin_01",
+                }
+            ],
+            "triggers_met": [False],
+        },
+    )
+    runtime = runtime.model_copy(
+        update={
+            "progress": runtime.progress.model_copy(
+                update={"active_quest_id": "quest_01"}
+            )
+        }
+    )
+
+    result = dispatch_graph_combat_action(
+        runtime,
+        Action(verb="attack", what="goblin_01"),
+    )
+
+    quest = result.runtime.graph.nodes["quest_01"].properties
+    assert quest["triggers_met"] == [True]
+    assert quest["status"] == "completed"
+    assert result.runtime.progress.active_quest_id is None
+
+
 def test_flee_clears_existing_graph_combat_state_without_graph_changes():
     runtime = _runtime(graph_combat_state=_ongoing_state())
 

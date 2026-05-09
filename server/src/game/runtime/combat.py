@@ -10,6 +10,7 @@ from src.game.engines.graph_combat import (
     plan_combat_exchange,
     plan_combat_start,
 )
+from src.game.engines.graph_quest import plan_quest_progress_for_character_defeat
 
 from .apply import GraphRuntimeApplyError, apply_runtime_graph_changes
 from .state import GameRuntimeState
@@ -47,12 +48,29 @@ def dispatch_graph_combat_action(
         raise GraphCombatDispatchError(str(exc)) from exc
 
     graph_runtime = applied.runtime
-    next_progress = graph_runtime.progress.model_copy(
-        update={
-            "graph_combat_state": (
-                combat_result.state if combat_result.state.outcome == "ongoing" else None
+    completed_quest_ids: list[str] = []
+    if combat_result.state.outcome == "victory":
+        for target_id in _victory_target_ids(combat_result.state):
+            quest_progress = plan_quest_progress_for_character_defeat(
+                graph_runtime.graph,
+                target_id,
             )
-        }
+            if quest_progress.changes:
+                graph_runtime = apply_runtime_graph_changes(
+                    graph_runtime,
+                    quest_progress.changes,
+                ).runtime
+                completed_quest_ids.extend(quest_progress.completed_quest_ids)
+
+    progress_update = {
+        "graph_combat_state": (
+            combat_result.state if combat_result.state.outcome == "ongoing" else None
+        )
+    }
+    if graph_runtime.progress.active_quest_id in completed_quest_ids:
+        progress_update["active_quest_id"] = None
+    next_progress = graph_runtime.progress.model_copy(
+        update=progress_update
     )
     next_runtime = graph_runtime.model_copy(update={"progress": next_progress})
     return GraphCombatDispatchResult(
@@ -62,6 +80,16 @@ def dispatch_graph_combat_action(
         started=started,
         applied=applied.applied,
     )
+
+
+def _victory_target_ids(state: GraphCombatState) -> list[str]:
+    target_ids: list[str] = []
+    for event in state.trace:
+        if event.target_id is None or event.target_id not in state.enemy_ids:
+            continue
+        if event.kind in {"enemy_defeated", "forced_end"}:
+            target_ids.append(event.target_id)
+    return target_ids
 
 
 def _resolve_state(

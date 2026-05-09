@@ -7,6 +7,7 @@ from src.game.engines.graph_quest import (
     plan_quest_accept,
     plan_quest_complete,
     plan_quest_fail,
+    plan_quest_progress_for_character_defeat,
 )
 
 
@@ -79,6 +80,30 @@ def test_fail_active_quest_sets_status_and_reason():
     assert result.next_status == "failed"
     assert changed.nodes["quest_active"].properties["status"] == "failed"
     assert changed.nodes["quest_active"].properties["fail_reason"] == "target escaped"
+
+
+def test_character_defeat_trigger_completes_active_quest():
+    graph = _graph()
+    graph.nodes["quest_active"].properties.update(
+        {
+            "triggers": [
+                {
+                    "id": "trigger_01",
+                    "name": "고블린 물리치기",
+                    "type": "character_defeat",
+                    "target_id": "goblin_01",
+                }
+            ],
+            "triggers_met": [False],
+        }
+    )
+
+    result = plan_quest_progress_for_character_defeat(graph, "goblin_01")
+    changed = _apply_all(graph, result.changes)
+
+    assert result.completed_quest_ids == ["quest_active"]
+    assert changed.nodes["quest_active"].properties["triggers_met"] == [True]
+    assert changed.nodes["quest_active"].properties["status"] == "completed"
 
 
 def test_terminal_quests_reject_later_state_changes():

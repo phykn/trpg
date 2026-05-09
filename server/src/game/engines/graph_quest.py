@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -34,6 +34,13 @@ class GraphQuestResult(BaseModel):
     action: QuestAction
     previous_status: str
     next_status: str
+
+
+class GraphQuestProgressResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    changes: list[GraphChange]
+    completed_quest_ids: list[str]
 
 
 def plan_quest_accept(graph: Graph, quest_id: str) -> GraphQuestResult:
@@ -91,6 +98,39 @@ def plan_quest_fail(
     return _result(quest_id, "fail", status, "failed", changes)
 
 
+def plan_quest_progress_for_character_defeat(
+    graph: Graph,
+    character_id: str,
+) -> GraphQuestProgressResult:
+    changes: list[GraphChange] = []
+    completed_quest_ids: list[str] = []
+    for quest in graph.nodes.values():
+        if quest.type != "quest" or _quest_status(quest) != "active":
+            continue
+        triggers = _quest_triggers(quest)
+        triggers_met = _quest_triggers_met(quest, len(triggers))
+        changed = False
+        for index, trigger in enumerate(triggers):
+            if triggers_met[index]:
+                continue
+            if (
+                trigger.get("type") in {"character_defeat", "character_death"}
+                and trigger.get("target_id") == character_id
+            ):
+                triggers_met[index] = True
+                changed = True
+        if not changed:
+            continue
+        changes.append(_property_change(quest.id, "triggers_met", triggers_met))
+        if triggers and all(triggers_met):
+            changes.append(_status_change(quest.id, "completed"))
+            completed_quest_ids.append(quest.id)
+    return GraphQuestProgressResult(
+        changes=changes,
+        completed_quest_ids=completed_quest_ids,
+    )
+
+
 def _require_quest(graph: Graph, quest_id: str) -> GraphNode:
     node = graph.nodes.get(quest_id)
     if node is None:
@@ -105,6 +145,20 @@ def _quest_status(quest: GraphNode) -> str:
     if not isinstance(status, str):
         raise GraphQuestError(f"missing quest status: {quest.id}")
     return status
+
+
+def _quest_triggers(quest: GraphNode) -> list[dict[str, Any]]:
+    triggers = quest.properties.get("triggers", [])
+    if not isinstance(triggers, list):
+        return []
+    return [trigger for trigger in triggers if isinstance(trigger, dict)]
+
+
+def _quest_triggers_met(quest: GraphNode, total: int) -> list[bool]:
+    raw = quest.properties.get("triggers_met", [])
+    values = raw if isinstance(raw, list) else []
+    padded = [*values[:total], *([False] * max(0, total - len(values)))]
+    return [item if isinstance(item, bool) else False for item in padded]
 
 
 def _reject_terminal(status: str, quest_id: str) -> None:
@@ -150,7 +204,7 @@ def _status_change(quest_id: str, status: QuestStatus) -> SetNodePropertyChange:
 def _property_change(
     quest_id: str,
     path: str,
-    value: str,
+    value: Any,
 ) -> SetNodePropertyChange:
     return SetNodePropertyChange(
         type="set_node_property",
