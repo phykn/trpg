@@ -188,6 +188,33 @@ async def test_graph_turn_moves_player_and_persists_progress(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_graph_state_route_restores_graph_session(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.get(f"/session/{game_id}/graph/state")
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    assert body["game_id"] == game_id
+    assert body["state"]["hero"]["id"] == "player_01"
+    assert body["state"]["place"]["id"] == "loc_01"
+    assert body["state"]["log"][0]["kind"] == "gm"
+
+
+@pytest.mark.asyncio
+async def test_graph_state_route_missing_game_returns_404(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        response = await client.get("/session/missing/graph/state")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_graph_turn_missing_game_returns_404(tmp_path):
     app = _build_app(tmp_path)
 

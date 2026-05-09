@@ -28,6 +28,7 @@ from src.game.runtime.confirmation import (
 )
 from src.game.runtime.input import GraphInputError, run_graph_input_turn
 from src.game.runtime.intro import run_graph_initial_narration
+from src.game.runtime.load import load_runtime_state
 from src.game.runtime.state import GameRuntimeState
 from src.game.runtime.turn import GraphActionTurnError
 from src.llm.client import LLMClient, set_think_override
@@ -109,6 +110,21 @@ async def session_graph_init(
 @router.get("/session/{game_id}/state")
 async def get_state_route(state: GameState = Depends(get_state)) -> dict:
     return {"game_id": state.game_id, "state": to_front_state(state)}
+
+
+@router.get("/session/{game_id}/graph/state", response_model=InitResponse)
+async def get_graph_state_route(
+    game_id: str,
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+) -> InitResponse:
+    try:
+        runtime = await load_runtime_state(graph_repo, game_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="game not found")
+    return InitResponse(
+        game_id=game_id,
+        state=graph_to_front_state(runtime).model_dump(mode="json", by_alias=True),
+    )
 
 
 @router.post("/session/{game_id}/graph/turn", response_model=GraphActionResponse)

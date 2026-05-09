@@ -9,6 +9,7 @@ import {
   clearAllForGame,
   clearStoredGameId,
   confirmGraphAction,
+  getGraphSessionById,
   getSessionById,
   getLevelUpPreview,
   initGraphSession,
@@ -232,7 +233,10 @@ export function useGame() {
         setStatus('no-game');
         return;
       }
-      const payload = await getSessionById(stored);
+      let payload = await getSessionById(stored);
+      if (!payload) {
+        payload = await getGraphSessionById(stored);
+      }
       if (!payload) {
         // Stored id no longer exists on the server; drop the stale pointer.
         clearStoredGameId();

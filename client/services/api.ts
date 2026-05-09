@@ -54,6 +54,17 @@ export async function getSessionById(gameId: string): Promise<SessionPayload | n
   return (await res.json()) as SessionPayload;
 }
 
+export async function getGraphSessionById(gameId: string): Promise<SessionPayload | null> {
+  const res = await fetch(`${BASE_URL}/session/${gameId}/graph/state`, { headers: baseHeaders });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`getGraphSessionById failed: HTTP ${res.status}`);
+  const payload = (await res.json()) as GraphSessionPayload;
+  return {
+    game_id: payload.game_id,
+    state: adaptGraphState(payload.state),
+  };
+}
+
 export async function initSession(body: InitRequest): Promise<SessionPayload> {
   const res = await fetch(`${BASE_URL}/session/init`, {
     method: 'POST',
