@@ -22,6 +22,19 @@ def build_graph_action_card(
     )
 
 
+def build_graph_quest_offer_card(
+    runtime: GameRuntimeState,
+    quest_id: str,
+    log_id: int,
+) -> ActLogEntry:
+    quest = _quest_title(runtime.graph, quest_id)
+    return ActLogEntry(
+        id=log_id,
+        kind="act",
+        text=f"새 의뢰가 도착합니다: {quest}.",
+    )
+
+
 def _card_text(
     before: GameRuntimeState,
     after: GameRuntimeState,

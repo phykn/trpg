@@ -124,7 +124,7 @@ async def test_graph_init_persists_graph_and_returns_front_state(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_graph_init_adds_intro_narration_but_move_stays_system_card_only(
+async def test_graph_init_adds_intro_narration_but_move_and_offer_stay_system_card_only(
     tmp_path,
 ):
     intro = "당신은 광장의 낮은 소음 속에서 첫 발을 내딛습니다."
@@ -157,12 +157,13 @@ async def test_graph_init_adds_intro_narration_but_move_stays_system_card_only(
     progress = await app.state.graph_repo.load_progress(game_id)
 
     assert init_body["state"]["log"] == [{"id": 1, "kind": "gm", "text": intro}]
-    assert [entry.kind for entry in logs] == ["gm", "act"]
-    assert [entry.id for entry in logs] == [1, 2]
+    assert [entry.kind for entry in logs] == ["gm", "act", "act"]
+    assert [entry.id for entry in logs] == [1, 2, 3]
     assert logs[0].text == intro
     assert logs[1].text == "당신은 숲길로 이동합니다."
+    assert logs[2].text == "새 의뢰가 도착합니다: 마을의 부탁."
     assert move_body["state"]["log"][-1]["kind"] == "act"
-    assert progress.next_log_id == 3
+    assert progress.next_log_id == 4
     assert [call["agent"] for call in app.state.llm.calls].count("graph_intro") == 1
 
 

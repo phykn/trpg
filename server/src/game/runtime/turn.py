@@ -13,7 +13,7 @@ from .dispatch import (
     GraphActionDispatchResult,
     dispatch_graph_action,
 )
-from .cards import build_graph_action_card
+from .cards import build_graph_action_card, build_graph_quest_offer_card
 from .load import load_runtime_state
 from .state import GameRuntimeState
 
@@ -51,6 +51,7 @@ async def run_graph_action_turn_from_runtime(
         raise GraphActionTurnError(str(exc)) from exc
 
     next_runtime = dispatch.runtime
+    offer_quest_id: str | None = None
     if next_runtime.progress.graph_combat_state is None:
         offer = plan_missing_quest_offer(
             next_runtime.graph,
@@ -61,18 +62,28 @@ async def run_graph_action_turn_from_runtime(
                 next_runtime,
                 offer.changes,
             ).runtime
+            offer_quest_id = offer.quest_id
     card = build_graph_action_card(runtime, next_runtime, action, dispatch)
+    cards = [card]
+    if offer_quest_id is not None:
+        cards.append(
+            build_graph_quest_offer_card(
+                next_runtime,
+                offer_quest_id,
+                card.id + 1,
+            )
+        )
     next_progress = next_runtime.progress.model_copy(
-        update={"next_log_id": card.id + 1}
+        update={"next_log_id": card.id + len(cards)}
     )
     next_runtime = next_runtime.model_copy(
         update={
             "progress": next_progress,
-            "log_entries": [*next_runtime.log_entries, card],
+            "log_entries": [*next_runtime.log_entries, *cards],
         }
     )
     await repo.save_graph(game_id, next_runtime.graph)
-    await repo.append_log_entries(game_id, [card])
+    await repo.append_log_entries(game_id, cards)
     await repo.save_progress(next_runtime.progress)
     return GraphActionTurnResult(
         runtime=next_runtime,

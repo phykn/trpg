@@ -89,10 +89,12 @@ async def test_run_graph_action_turn_saves_move_and_returns_front_state(tmp_path
     assert "located_at:player_01:forest" in saved_graph.edges
     assert "located_at:player_01:town" not in saved_graph.edges
     assert saved_progress.turn_count == 1
-    assert saved_progress.next_log_id == 2
-    assert len(saved_logs) == 1
+    assert saved_progress.next_log_id == 3
+    assert len(saved_logs) == 2
     assert saved_logs[0].kind == "act"
     assert saved_logs[0].text == "당신은 광장으로 이동합니다."
+    assert saved_logs[1].kind == "act"
+    assert saved_logs[1].text == "새 의뢰가 도착합니다: 마을의 부탁."
     assert result.front_state.log == saved_logs
     assert result.front_state.place.id == "forest"
     assert result.runtime.progress.turn_count == 1
@@ -103,12 +105,16 @@ async def test_run_graph_action_turn_generates_offer_when_no_work_exists(tmp_pat
 
     result = await run_graph_action_turn(repo, "game-1", Action(verb="move", to="forest"))
     saved_graph = await repo.load_graph("game-1")
+    saved_logs = await repo.load_log_entries("game-1")
 
     assert "auto_quest_001" in saved_graph.nodes
     assert saved_graph.nodes["auto_quest_001"].properties["status"] == "pending"
     assert result.front_state.quest is not None
     assert result.front_state.quest.id == "auto_quest_001"
     assert result.front_state.quest.actions == ["accept"]
+    assert [entry.kind for entry in saved_logs] == ["act", "act"]
+    assert saved_logs[1].text == "새 의뢰가 도착합니다: 마을의 부탁."
+    assert result.front_state.log == saved_logs
 
 
 async def test_run_graph_action_turn_saves_attack_progress_and_front_combat(tmp_path):
