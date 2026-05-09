@@ -25,7 +25,7 @@ export function adaptGraphState(state: GraphFrontState): FrontState {
   return {
     hero: adaptHero(state.hero),
     subject: null,
-    quest: null,
+    quest: state.quest,
     place: adaptPlace(state.place),
     combat: adaptCombat(state.combat),
     log: state.log,
@@ -176,6 +176,22 @@ function buildStoryGraph(state: GraphFrontState): FrontState['storyGraph'] {
         alive: target.hp.current > 0,
         trust: 0,
       })),
+      ...(state.quest
+        ? [
+            {
+              id: state.quest.id,
+              label: state.quest.title,
+              kind: 'quest' as const,
+              status: null,
+              reachable: true as const,
+              questDifficulty: state.quest.difficulty.label,
+              rewards: state.quest.rewards,
+              giver: state.quest.giver,
+              goals: state.quest.goals,
+              summary: state.quest.summary,
+            },
+          ]
+        : []),
     ],
     edges: [
       {
@@ -199,6 +215,17 @@ function buildStoryGraph(state: GraphFrontState): FrontState['storyGraph'] {
         label: ko.panel.approach,
         kind: 'meet' as const,
       })),
+      ...(state.quest
+        ? [
+            {
+              id: `quest:${place.id}:${state.quest.id}`,
+              source: place.id,
+              target: state.quest.id,
+              label: ko.quest.name,
+              kind: 'quest_giver' as const,
+            },
+          ]
+        : []),
     ],
     summary: place.name,
   };

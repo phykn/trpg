@@ -3,6 +3,7 @@ import { fetch } from 'expo/fetch';
 import { adaptGraphState } from './graphAdapter';
 import type {
   ConfirmRequest,
+  GraphAction,
   GraphActionClientResponse,
   GraphActionResponse,
   GraphSessionPayload,
@@ -51,7 +52,8 @@ export async function getSessionById(gameId: string): Promise<SessionPayload | n
   const res = await fetch(`${BASE_URL}/session/${gameId}/state`, { headers: baseHeaders });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`getSessionById failed: HTTP ${res.status}`);
-  return (await res.json()) as SessionPayload;
+  const payload = (await res.json()) as SessionPayload;
+  return { ...payload, runtime: 'legacy' };
 }
 
 export async function getGraphSessionById(gameId: string): Promise<SessionPayload | null> {
@@ -62,6 +64,7 @@ export async function getGraphSessionById(gameId: string): Promise<SessionPayloa
   return {
     game_id: payload.game_id,
     state: adaptGraphState(payload.state),
+    runtime: 'graph',
   };
 }
 
@@ -72,7 +75,8 @@ export async function initSession(body: InitRequest): Promise<SessionPayload> {
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`initSession failed: HTTP ${res.status}`);
-  return (await res.json()) as SessionPayload;
+  const payload = (await res.json()) as SessionPayload;
+  return { ...payload, runtime: 'legacy' };
 }
 
 export async function initGraphSession(body: InitRequest): Promise<SessionPayload> {
@@ -86,6 +90,7 @@ export async function initGraphSession(body: InitRequest): Promise<SessionPayloa
   return {
     game_id: payload.game_id,
     state: adaptGraphState(payload.state),
+    runtime: 'graph',
   };
 }
 
@@ -99,6 +104,19 @@ export async function sendGraphInput(
     body: JSON.stringify({ player_input: playerInput, think: false }),
   });
   if (!res.ok) throw new Error(`sendGraphInput failed: HTTP ${res.status}`);
+  return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
+}
+
+export async function sendGraphAction(
+  gameId: string,
+  action: GraphAction,
+): Promise<GraphActionClientResponse> {
+  const res = await fetch(`${BASE_URL}/session/${gameId}/graph/turn`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ action }),
+  });
+  if (!res.ok) throw new Error(`sendGraphAction failed: HTTP ${res.status}`);
   return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
 }
 
@@ -123,6 +141,7 @@ function adaptGraphActionResponse(
     game_id: payload.game_id,
     state,
     pendingConfirmation: state.pendingConfirmation ?? null,
+    runtime: 'graph',
     status: payload.status,
     message: payload.message,
   };

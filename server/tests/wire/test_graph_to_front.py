@@ -55,6 +55,26 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
                 mp=0,
                 max_mp=0,
             ),
+            "quest_01": GraphNode(
+                id="quest_01",
+                type="quest",
+                properties={
+                    "title": "첫 의뢰",
+                    "summary": "광장의 문제를 해결합니다.",
+                    "difficulty": "normal",
+                    "status": "pending",
+                    "triggers": [
+                        {
+                            "id": "trigger_01",
+                            "name": "늑대 쫓아내기",
+                            "type": "character_defeat",
+                            "target_id": "goblin_01",
+                        }
+                    ],
+                    "triggers_met": [False],
+                    "rewards": {"gold": 5, "exp": 10, "items": []},
+                },
+            ),
             "hidden_01": _character(
                 "hidden_01",
                 hp=10,
@@ -87,6 +107,12 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
                 type="connects_to",
                 from_node_id="town",
                 to_node_id="forest",
+            ),
+            "gives_quest:goblin_01:quest_01": GraphEdge(
+                id="gives_quest:goblin_01:quest_01",
+                type="gives_quest",
+                from_node_id="goblin_01",
+                to_node_id="quest_01",
             ),
         },
     )
@@ -138,6 +164,20 @@ def test_graph_front_state_builds_place_from_visible_graph_edges():
     assert payload.place.id == "town"
     assert [exit_.id for exit_ in payload.place.exits] == ["forest"]
     assert [target.id for target in payload.place.targets] == ["goblin_01"]
+
+
+def test_graph_front_state_builds_visible_quest_offer():
+    payload = graph_to_front_state(_runtime())
+
+    assert payload.quest is not None
+    assert payload.quest.id == "quest_01"
+    assert payload.quest.title == "첫 의뢰"
+    assert payload.quest.giver == "goblin_01"
+    assert payload.quest.goals == ["늑대 쫓아내기"]
+    assert payload.quest.rewards.gold == 5
+    assert payload.quest.rewards.exp == 10
+    assert payload.quest.status == "pending"
+    assert payload.quest.actions == ["accept"]
 
 
 def test_graph_front_state_builds_combat_view_when_progress_exists():

@@ -32,6 +32,18 @@ describe('adaptGraphState', () => {
           },
         ],
       },
+      quest: {
+        id: 'quest_01',
+        title: '첫 의뢰',
+        summary: '광장의 문제를 해결합니다.',
+        giver: '늑대',
+        difficulty: { label: '보통', tone: null },
+        goals: ['늑대 쫓아내기'],
+        progressLabel: '0/1',
+        rewards: { gold: 5, exp: 10 },
+        status: 'pending',
+        actions: ['accept'],
+      },
       combat: {
         round: 2,
         outcome: 'ongoing',
@@ -78,6 +90,8 @@ describe('adaptGraphState', () => {
     expect(state.place?.name).toBe('광장');
     expect(state.place?.surroundings[0].name).toBe('숲길');
     expect(state.place?.targets[0].name).toBe('늑대');
+    expect(state.quest?.title).toBe('첫 의뢰');
+    expect(state.quest?.actions).toEqual(['accept']);
     expect(state.combat?.round).toBe(2);
     expect(state.combat?.enemies[0]).toMatchObject({
       name: '늑대',
@@ -88,12 +102,12 @@ describe('adaptGraphState', () => {
     expect(state.pendingConfirmation?.confirmLabel).toBe('공격');
     expect(state.pendingCheck).toBeNull();
     expect(state.subject).toBeNull();
-    expect(state.quest).toBeNull();
     expect(state.storyGraph.nodes.map((node) => node.id)).toEqual([
       'player_01',
       'town',
       'forest',
       'wolf_01',
+      'quest_01',
     ]);
   });
 });

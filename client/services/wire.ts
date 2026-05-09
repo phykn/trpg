@@ -65,9 +65,12 @@ export type InitRequest = {
   locale: 'ko' | 'en';
 };
 
+export type RuntimeMode = 'legacy' | 'graph';
+
 export type SessionPayload = {
   game_id: string;
   state: FrontState;
+  runtime?: RuntimeMode;
 };
 
 export type QuestAction = {
@@ -89,6 +92,26 @@ export type ConfirmRequest = {
   confirmation_id: string;
   decision: 'confirm' | 'cancel';
   think: boolean;
+};
+
+export type GraphAction = {
+  verb:
+    | 'move'
+    | 'transfer'
+    | 'use'
+    | 'attack'
+    | 'cast'
+    | 'speak'
+    | 'perceive'
+    | 'query'
+    | 'rest'
+    | 'pass';
+  what?: string | string[] | null;
+  from?: string | null;
+  to?: string | null;
+  with?: string | null;
+  how?: string | null;
+  note?: string | null;
 };
 
 export type GraphResource = {
@@ -143,6 +166,7 @@ export type GraphCombatState = {
 
 export type GraphFrontState = {
   hero: GraphHeroState;
+  quest: Quest | null;
   place: GraphPlaceState | null;
   combat: GraphCombatState | null;
   pendingConfirmation: PendingConfirmation | null;
@@ -165,6 +189,7 @@ export type GraphActionClientResponse = {
   game_id: string;
   state: FrontState;
   pendingConfirmation: PendingConfirmation | null;
+  runtime: 'graph';
   status?: string | null;
   message?: string | null;
 };

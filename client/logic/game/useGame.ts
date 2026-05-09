@@ -26,6 +26,7 @@ import {
   streamLevelUp,
   streamRoll,
   streamTurn,
+  sendGraphAction,
   sendGraphInput,
 } from '@/services';
 import type { CombatBadge } from '@/logic/combat';
@@ -40,6 +41,7 @@ import type {
   InitRequest,
   PendingCheck,
   PendingConfirmation,
+  RuntimeMode,
   SkillCandidate,
   StatKey,
   StreamEvent,
@@ -66,6 +68,7 @@ export function useGame() {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   const [gameId, setGameId] = React.useState<string | null>(null);
+  const [runtimeMode, setRuntimeMode] = React.useState<RuntimeMode>('legacy');
   const [hero, setHero] = React.useState<Hero | null>(null);
   const [subject, setSubject] = React.useState<Subject | null>(null);
   const [quest, setQuest] = React.useState<Quest | null>(null);
@@ -243,6 +246,7 @@ export function useGame() {
         setStatus('no-game');
         return;
       }
+      setRuntimeMode(payload.runtime ?? 'legacy');
       rememberGameId(payload.game_id);
       applyState(payload.state, payload.game_id);
       setSuggestionsRaw(loadSuggestions(payload.game_id));
@@ -267,6 +271,7 @@ export function useGame() {
       try {
         const payload = await initGraphSession(body);
         storeGameId(payload.game_id);
+        setRuntimeMode(payload.runtime ?? 'graph');
         rememberGameId(payload.game_id);
         applyState(payload.state, payload.game_id);
         setLastSeenLocation(null);
@@ -289,14 +294,30 @@ export function useGame() {
     (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || !gameId || pending || pendingConfirmation) return;
-      void runGraphRequest(() => sendGraphInput(gameId, trimmed));
+      if (runtimeMode === 'graph') {
+        void runGraphRequest(() => sendGraphInput(gameId, trimmed));
+        return;
+      }
+      void runStream((signal) =>
+        streamTurn(gameId, { player_input: trimmed, think: false }, handleEvent, signal),
+      );
     },
-    [gameId, pending, pendingConfirmation, runGraphRequest],
+    [gameId, pending, pendingConfirmation, runtimeMode, handleEvent, runGraphRequest, runStream],
   );
 
   const onQuestAction = React.useCallback(
     (kind: 'accept' | 'abandon', quest_id: string) => {
       if (!gameId || pending || pendingConfirmation) return;
+      if (runtimeMode === 'graph') {
+        void runGraphRequest(() =>
+          sendGraphAction(gameId, {
+            verb: 'transfer',
+            what: quest_id,
+            how: kind,
+          }),
+        );
+        return;
+      }
       void runStream((signal) =>
         streamTurn(
           gameId,
@@ -306,7 +327,7 @@ export function useGame() {
         ),
       );
     },
-    [gameId, pending, pendingConfirmation, handleEvent, runStream],
+    [gameId, pending, pendingConfirmation, runtimeMode, handleEvent, runGraphRequest, runStream],
   );
 
   const onConfirmPending = React.useCallback(
@@ -381,6 +402,7 @@ export function useGame() {
     const id = gameIdRef.current;
     if (id) clearAllForGame(id);
     clearStoredGameId();
+    setRuntimeMode('legacy');
     rememberGameId(null);
     setLevelUpOpen(false);
     setLevelUpCandidates(null);
