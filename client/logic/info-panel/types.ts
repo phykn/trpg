@@ -1,10 +1,11 @@
 import type { BarDef, ConfirmInfo, PartsCell, Tone } from '@/components/ui';
-import type { QuestAction } from '@/services/wire';
+import type { GraphAction, QuestAction } from '@/services/wire';
 
 export type MetaSegment = { text: string; tone?: Tone };
 
 export type PanelAction =
   | { kind: 'text'; label: string; text: string; confirm?: ConfirmInfo }
+  | { kind: 'graph_action'; label: string; graphAction: GraphAction; textFallback?: string; confirm?: ConfirmInfo }
   | { kind: 'quest_action'; label: string; questAction: QuestAction; confirm?: ConfirmInfo };
 
 export type PanelActions = {

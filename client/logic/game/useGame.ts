@@ -38,6 +38,7 @@ import type { Subject } from '@/logic/subject';
 import type {
   FrontState,
   GraphActionClientResponse,
+  GraphAction,
   InitRequest,
   PendingCheck,
   PendingConfirmation,
@@ -330,6 +331,22 @@ export function useGame() {
     [gameId, pending, pendingConfirmation, runtimeMode, handleEvent, runGraphRequest, runStream],
   );
 
+  const onGraphAction = React.useCallback(
+    (action: GraphAction, textFallback?: string) => {
+      if (!gameId || pending || pendingConfirmation) return;
+      if (runtimeMode === 'graph') {
+        void runGraphRequest(() => sendGraphAction(gameId, action));
+        return;
+      }
+      const trimmed = textFallback?.trim();
+      if (!trimmed) return;
+      void runStream((signal) =>
+        streamTurn(gameId, { player_input: trimmed, think: false }, handleEvent, signal),
+      );
+    },
+    [gameId, pending, pendingConfirmation, runtimeMode, handleEvent, runGraphRequest, runStream],
+  );
+
   const onConfirmPending = React.useCallback(
     (decision: 'confirm' | 'cancel') => {
       if (!gameId || !pendingConfirmation) return;
@@ -478,6 +495,7 @@ export function useGame() {
     markSubjectSeen,
     onSend,
     onQuestAction,
+    onGraphAction,
     onConfirmPending,
     onRoll,
     onStop,

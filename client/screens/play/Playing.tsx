@@ -18,7 +18,7 @@ import { ko } from '@/locale/ko';
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, storyGraph, log, pending, pendingConfirmation, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onConfirmPending, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp } = game;
+  const { hero, subject, quest, place, combat, storyGraph, log, pending, pendingConfirmation, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onConfirmPending, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -32,6 +32,8 @@ export function Playing({ game }: Props) {
     setActiveId(null);
     if (action.kind === 'text') {
       onSend(action.text);
+    } else if (action.kind === 'graph_action') {
+      onGraphAction(action.graphAction, action.textFallback);
     } else {
       onQuestAction(action.questAction.kind, action.questAction.quest_id);
     }
