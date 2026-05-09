@@ -1,6 +1,6 @@
 import pytest
 
-from src.game.domain.graph import Graph, GraphNode, apply_graph_change
+from src.game.domain.graph import Graph, GraphEdge, GraphNode, apply_graph_change
 from src.game.engines.graph_quest import (
     GraphQuestError,
     plan_quest_abandon,
@@ -8,6 +8,7 @@ from src.game.engines.graph_quest import (
     plan_quest_complete,
     plan_quest_fail,
     plan_quest_progress_for_character_defeat,
+    plan_quest_rewards,
 )
 
 
@@ -30,6 +31,16 @@ def _graph() -> Graph:
                 properties={"status": "completed"},
             ),
             "town": GraphNode(id="town", type="location"),
+            "player_01": GraphNode(
+                id="player_01",
+                type="character",
+                properties={"gold": 1, "xp_pool": 2},
+            ),
+            "reward_sword": GraphNode(
+                id="reward_sword",
+                type="item",
+                properties={"name": "보상 검"},
+            ),
         }
     )
 
@@ -104,6 +115,30 @@ def test_character_defeat_trigger_completes_active_quest():
     assert result.completed_quest_ids == ["quest_active"]
     assert changed.nodes["quest_active"].properties["triggers_met"] == [True]
     assert changed.nodes["quest_active"].properties["status"] == "completed"
+
+
+def test_completed_quest_rewards_move_to_player():
+    graph = _graph()
+    graph.nodes["quest_completed"].properties["rewards"] = {
+        "gold": 5,
+        "exp": 10,
+        "items": ["reward_sword"],
+    }
+    graph.edges["reward_of:reward_sword:quest_completed"] = GraphEdge(
+        id="reward_of:reward_sword:quest_completed",
+        type="reward_of",
+        from_node_id="reward_sword",
+        to_node_id="quest_completed",
+    )
+
+    result = plan_quest_rewards(graph, "quest_completed", "player_01")
+    changed = _apply_all(graph, result.changes)
+
+    player = changed.nodes["player_01"].properties
+    assert player["gold"] == 6
+    assert player["xp_pool"] == 12
+    assert "reward_of:reward_sword:quest_completed" not in changed.edges
+    assert "carries:player_01:reward_sword" in changed.edges
 
 
 def test_terminal_quests_reject_later_state_changes():

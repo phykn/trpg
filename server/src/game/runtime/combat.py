@@ -10,7 +10,10 @@ from src.game.engines.graph_combat import (
     plan_combat_exchange,
     plan_combat_start,
 )
-from src.game.engines.graph_quest import plan_quest_progress_for_character_defeat
+from src.game.engines.graph_quest import (
+    plan_quest_progress_for_character_defeat,
+    plan_quest_rewards,
+)
 
 from .apply import GraphRuntimeApplyError, apply_runtime_graph_changes
 from .state import GameRuntimeState
@@ -61,6 +64,17 @@ def dispatch_graph_combat_action(
                     quest_progress.changes,
                 ).runtime
                 completed_quest_ids.extend(quest_progress.completed_quest_ids)
+        for quest_id in completed_quest_ids:
+            reward = plan_quest_rewards(
+                graph_runtime.graph,
+                quest_id,
+                graph_runtime.progress.player_id,
+            )
+            if reward.changes:
+                graph_runtime = apply_runtime_graph_changes(
+                    graph_runtime,
+                    reward.changes,
+                ).runtime
 
     progress_update = {
         "graph_combat_state": (

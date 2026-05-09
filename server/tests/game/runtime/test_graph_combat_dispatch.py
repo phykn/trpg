@@ -24,6 +24,8 @@ def _character(
         type="character",
         properties={
             "name": character_id,
+            "gold": 0,
+            "xp_pool": 0,
             "hp": hp,
             "max_hp": max_hp,
             "mp": mp,
@@ -151,6 +153,7 @@ def test_victory_completes_matching_active_quest_and_clears_active_id():
         type="quest",
         properties={
             "status": "active",
+            "rewards": {"gold": 5, "exp": 10, "items": ["reward_sword"]},
             "triggers": [
                 {
                     "id": "trigger_01",
@@ -161,6 +164,17 @@ def test_victory_completes_matching_active_quest_and_clears_active_id():
             ],
             "triggers_met": [False],
         },
+    )
+    runtime.graph.nodes["reward_sword"] = GraphNode(
+        id="reward_sword",
+        type="item",
+        properties={"name": "보상 검"},
+    )
+    runtime.graph.edges["reward_of:reward_sword:quest_01"] = GraphEdge(
+        id="reward_of:reward_sword:quest_01",
+        type="reward_of",
+        from_node_id="reward_sword",
+        to_node_id="quest_01",
     )
     runtime = runtime.model_copy(
         update={
@@ -178,6 +192,11 @@ def test_victory_completes_matching_active_quest_and_clears_active_id():
     quest = result.runtime.graph.nodes["quest_01"].properties
     assert quest["triggers_met"] == [True]
     assert quest["status"] == "completed"
+    player = result.runtime.graph.nodes["player_01"].properties
+    assert player["gold"] == 5
+    assert player["xp_pool"] == 10
+    assert "reward_of:reward_sword:quest_01" not in result.runtime.graph.edges
+    assert "carries:player_01:reward_sword" in result.runtime.graph.edges
     assert result.runtime.progress.active_quest_id is None
 
 
