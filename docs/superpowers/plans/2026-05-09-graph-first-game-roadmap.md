@@ -45,6 +45,7 @@
 - Graph `query` actions answer from visible graph facts through a `message` without advancing time or mutating graph/progress.
 - Confirmed graph actions append factual `act` log cards and graph front state exposes `log`.
 - Graph init may append one LLM-written GM narration for the first place; later move actions remain system-card-only.
+- Graph runtime can create a deterministic pending quest offer when no active quest or visible offer exists.
 - The live flow still uses legacy `GameState`, legacy entity tables, and old derived ontology graph in several places.
 
 ## Migration Rule
