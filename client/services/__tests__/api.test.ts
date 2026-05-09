@@ -32,6 +32,7 @@ const graphState = (): GraphFrontState => ({
     },
   },
   quest: null,
+  questOffers: [],
   place: null,
   combat: null,
   pendingConfirmation: null,

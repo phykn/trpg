@@ -172,6 +172,7 @@ export type GraphCombatState = {
 export type GraphFrontState = {
   hero: GraphHeroState;
   quest: Quest | null;
+  questOffers: Quest[];
   place: GraphPlaceState | null;
   combat: GraphCombatState | null;
   pendingConfirmation: PendingConfirmation | null;

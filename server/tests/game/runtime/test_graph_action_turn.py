@@ -109,9 +109,10 @@ async def test_run_graph_action_turn_generates_offer_when_no_work_exists(tmp_pat
 
     assert "auto_quest_001" in saved_graph.nodes
     assert saved_graph.nodes["auto_quest_001"].properties["status"] == "pending"
-    assert result.front_state.quest is not None
-    assert result.front_state.quest.id == "auto_quest_001"
-    assert result.front_state.quest.actions == ["accept"]
+    assert result.front_state.quest is None
+    assert len(result.front_state.quest_offers) == 1
+    assert result.front_state.quest_offers[0].id == "auto_quest_001"
+    assert result.front_state.quest_offers[0].actions == ["accept"]
     assert [entry.kind for entry in saved_logs] == ["act", "act"]
     assert saved_logs[1].text == "새 의뢰가 도착합니다: 마을의 부탁."
     assert result.front_state.log == saved_logs

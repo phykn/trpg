@@ -176,15 +176,17 @@ def test_graph_front_state_builds_place_from_visible_graph_edges():
 def test_graph_front_state_builds_visible_quest_offer():
     payload = graph_to_front_state(_runtime())
 
-    assert payload.quest is not None
-    assert payload.quest.id == "quest_01"
-    assert payload.quest.title == "첫 의뢰"
-    assert payload.quest.giver == "goblin_01"
-    assert payload.quest.goals == ["늑대 쫓아내기"]
-    assert payload.quest.rewards.gold == 5
-    assert payload.quest.rewards.exp == 10
-    assert payload.quest.status == "pending"
-    assert payload.quest.actions == ["accept"]
+    assert payload.quest is None
+    assert len(payload.quest_offers) == 1
+    offer = payload.quest_offers[0]
+    assert offer.id == "quest_01"
+    assert offer.title == "첫 의뢰"
+    assert offer.giver == "goblin_01"
+    assert offer.goals == ["늑대 쫓아내기"]
+    assert offer.rewards.gold == 5
+    assert offer.rewards.exp == 10
+    assert offer.status == "pending"
+    assert offer.actions == ["accept"]
 
 
 def test_graph_front_state_prefers_progress_active_quest():

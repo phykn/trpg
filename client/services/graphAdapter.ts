@@ -22,16 +22,17 @@ const EMPTY_EQUIPMENT = {
 };
 
 export function adaptGraphState(state: GraphFrontState): FrontState {
+  const displayedQuest = state.quest ?? state.questOffers[0] ?? null;
   return {
     hero: adaptHero(state.hero),
     subject: null,
-    quest: state.quest,
+    quest: displayedQuest,
     place: adaptPlace(state.place),
     combat: adaptCombat(state.combat),
     log: state.log,
     pendingCheck: null,
     pendingConfirmation: state.pendingConfirmation,
-    storyGraph: buildStoryGraph(state),
+    storyGraph: buildStoryGraph(state, displayedQuest),
   };
 }
 
@@ -103,7 +104,10 @@ function adaptCombat(combat: GraphCombatState | null): FrontState['combat'] {
   };
 }
 
-function buildStoryGraph(state: GraphFrontState): FrontState['storyGraph'] {
+function buildStoryGraph(
+  state: GraphFrontState,
+  displayedQuest: FrontState['quest'],
+): FrontState['storyGraph'] {
   const place = state.place;
   if (place === null) {
     return {
@@ -176,19 +180,19 @@ function buildStoryGraph(state: GraphFrontState): FrontState['storyGraph'] {
         alive: target.hp.current > 0,
         trust: 0,
       })),
-      ...(state.quest
+      ...(displayedQuest
         ? [
             {
-              id: state.quest.id,
-              label: state.quest.title,
+              id: displayedQuest.id,
+              label: displayedQuest.title,
               kind: 'quest' as const,
               status: null,
               reachable: true as const,
-              questDifficulty: state.quest.difficulty.label,
-              rewards: state.quest.rewards,
-              giver: state.quest.giver,
-              goals: state.quest.goals,
-              summary: state.quest.summary,
+              questDifficulty: displayedQuest.difficulty.label,
+              rewards: displayedQuest.rewards,
+              giver: displayedQuest.giver,
+              goals: displayedQuest.goals,
+              summary: displayedQuest.summary,
             },
           ]
         : []),
@@ -215,12 +219,12 @@ function buildStoryGraph(state: GraphFrontState): FrontState['storyGraph'] {
         label: ko.panel.approach,
         kind: 'meet' as const,
       })),
-      ...(state.quest
+      ...(displayedQuest
         ? [
             {
-              id: `quest:${place.id}:${state.quest.id}`,
+              id: `quest:${place.id}:${displayedQuest.id}`,
               source: place.id,
-              target: state.quest.id,
+              target: displayedQuest.id,
               label: ko.quest.name,
               kind: 'quest_giver' as const,
             },

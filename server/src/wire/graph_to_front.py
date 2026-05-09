@@ -89,6 +89,7 @@ class GraphCombatPayload(_CamelModel):
 class GraphFrontStatePayload(_CamelModel):
     hero: GraphHeroPayload
     quest: QuestPayload | None
+    quest_offers: list[QuestPayload]
     place: GraphPlacePayload | None
     combat: GraphCombatPayload | None
     pending_confirmation: PendingConfirmationPayload | None
@@ -102,6 +103,7 @@ def graph_to_front_state(runtime: GameRuntimeState) -> GraphFrontStatePayload:
     return GraphFrontStatePayload(
         hero=_hero_payload(player),
         quest=_quest_payload(runtime),
+        quest_offers=_quest_offer_payloads(runtime),
         place=_place_payload(graph, player_id),
         combat=_combat_payload(runtime),
         pending_confirmation=_pending_confirmation_payload(
@@ -116,17 +118,26 @@ def _quest_payload(runtime: GameRuntimeState) -> QuestPayload | None:
     active_quest_id = runtime.progress.active_quest_id
     if active_quest_id is not None:
         quest = graph.nodes.get(active_quest_id)
-        if quest is not None and quest.type == "quest":
+        if (
+            quest is not None
+            and quest.type == "quest"
+            and _quest_status(quest) == "active"
+        ):
             return _build_quest_payload(graph, quest)
 
     active = _first_quest_with_status(graph, "active")
     if active is not None:
         return _build_quest_payload(graph, active)
+    return None
 
+
+def _quest_offer_payloads(runtime: GameRuntimeState) -> list[QuestPayload]:
+    graph = runtime.graph
     location_id = location_of(graph, runtime.progress.player_id)
     if location_id is None:
-        return None
+        return []
     visible_characters = set(characters_at(graph, location_id))
+    offers: list[QuestPayload] = []
     for edge in graph.edges.values():
         if edge.type != "gives_quest" or edge.from_node_id not in visible_characters:
             continue
@@ -134,8 +145,8 @@ def _quest_payload(runtime: GameRuntimeState) -> QuestPayload | None:
         if quest is None or quest.type != "quest":
             continue
         if _quest_status(quest) in {"locked", "pending"}:
-            return _build_quest_payload(graph, quest)
-    return None
+            offers.append(_build_quest_payload(graph, quest))
+    return offers
 
 
 def _first_quest_with_status(graph: Graph, status: str) -> GraphNode | None:
