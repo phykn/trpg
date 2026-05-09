@@ -95,7 +95,7 @@ def graph_to_front_state(runtime: GameRuntimeState) -> GraphFrontStatePayload:
     player = _require_node(graph, player_id, "character")
     return GraphFrontStatePayload(
         hero=_hero_payload(player),
-        quest=_quest_payload(graph, player_id),
+        quest=_quest_payload(runtime),
         place=_place_payload(graph, player_id),
         combat=_combat_payload(runtime),
         pending_confirmation=_pending_confirmation_payload(
@@ -105,12 +105,19 @@ def graph_to_front_state(runtime: GameRuntimeState) -> GraphFrontStatePayload:
     )
 
 
-def _quest_payload(graph: Graph, player_id: str) -> QuestPayload | None:
+def _quest_payload(runtime: GameRuntimeState) -> QuestPayload | None:
+    graph = runtime.graph
+    active_quest_id = runtime.progress.active_quest_id
+    if active_quest_id is not None:
+        quest = graph.nodes.get(active_quest_id)
+        if quest is not None and quest.type == "quest":
+            return _build_quest_payload(graph, quest)
+
     active = _first_quest_with_status(graph, "active")
     if active is not None:
         return _build_quest_payload(graph, active)
 
-    location_id = location_of(graph, player_id)
+    location_id = location_of(graph, runtime.progress.player_id)
     if location_id is None:
         return None
     visible_characters = set(characters_at(graph, location_id))

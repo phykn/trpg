@@ -180,6 +180,33 @@ def test_graph_front_state_builds_visible_quest_offer():
     assert payload.quest.actions == ["accept"]
 
 
+def test_graph_front_state_prefers_progress_active_quest():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"].properties["status"] = "active"
+    runtime.graph.nodes["quest_02"] = GraphNode(
+        id="quest_02",
+        type="quest",
+        properties={
+            "title": "두 번째 의뢰",
+            "status": "active",
+            "triggers": [],
+            "triggers_met": [],
+        },
+    )
+    runtime = runtime.model_copy(
+        update={
+            "progress": runtime.progress.model_copy(
+                update={"active_quest_id": "quest_02"}
+            )
+        }
+    )
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.quest is not None
+    assert payload.quest.id == "quest_02"
+
+
 def test_graph_front_state_builds_combat_view_when_progress_exists():
     payload = graph_to_front_state(_runtime(combat=True))
 

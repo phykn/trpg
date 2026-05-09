@@ -127,9 +127,15 @@ def _plan_non_combat(
                 raise GraphActionDispatchError("quest id is required")
             if action.how == "accept":
                 result = plan_quest_accept(runtime.graph, quest_id)
-                return "quest_accept", result.changes, _advance_turn(runtime)
+                return "quest_accept", result.changes, {
+                    **_advance_turn(runtime),
+                    "active_quest_id": quest_id,
+                }
             result = plan_quest_abandon(runtime.graph, quest_id)
-            return "quest_abandon", result.changes, _advance_turn(runtime)
+            return "quest_abandon", result.changes, {
+                **_advance_turn(runtime),
+                "active_quest_id": None,
+            }
 
         item_id = _single(action.what) or _single(action.with_)
         if item_id is None:

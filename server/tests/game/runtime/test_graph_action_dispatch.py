@@ -155,7 +155,29 @@ def test_quest_accept_dispatch_updates_status():
 
     assert result.kind == "quest_accept"
     assert result.runtime.progress.turn_count == 6
+    assert result.runtime.progress.active_quest_id == "quest_rat"
     assert result.runtime.graph.nodes["quest_rat"].properties["status"] == "active"
+
+
+def test_quest_abandon_dispatch_clears_active_quest():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_rat"].properties["status"] = "active"
+    runtime = runtime.model_copy(
+        update={
+            "progress": runtime.progress.model_copy(
+                update={"active_quest_id": "quest_rat"}
+            )
+        }
+    )
+
+    result = dispatch_graph_action(
+        runtime,
+        Action(verb="transfer", what="quest_rat", how="abandon"),
+    )
+
+    assert result.kind == "quest_abandon"
+    assert result.runtime.progress.active_quest_id is None
+    assert result.runtime.graph.nodes["quest_rat"].properties["status"] == "abandoned"
 
 
 def test_rest_dispatch_restores_resources_and_jumps_turn_count():
