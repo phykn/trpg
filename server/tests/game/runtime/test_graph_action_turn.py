@@ -98,6 +98,19 @@ async def test_run_graph_action_turn_saves_move_and_returns_front_state(tmp_path
     assert result.runtime.progress.turn_count == 1
 
 
+async def test_run_graph_action_turn_generates_offer_when_no_work_exists(tmp_path):
+    repo = await _repo(tmp_path)
+
+    result = await run_graph_action_turn(repo, "game-1", Action(verb="move", to="forest"))
+    saved_graph = await repo.load_graph("game-1")
+
+    assert "auto_quest_001" in saved_graph.nodes
+    assert saved_graph.nodes["auto_quest_001"].properties["status"] == "pending"
+    assert result.front_state.quest is not None
+    assert result.front_state.quest.id == "auto_quest_001"
+    assert result.front_state.quest.actions == ["accept"]
+
+
 async def test_run_graph_action_turn_saves_attack_progress_and_front_combat(tmp_path):
     repo = await _repo(tmp_path)
 
