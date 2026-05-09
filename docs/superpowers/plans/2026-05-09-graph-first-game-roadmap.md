@@ -48,6 +48,7 @@
 - Graph runtime can create a deterministic pending quest offer when no active quest or visible offer exists.
 - Automatic graph quest offers append a system log card so the player can notice the new work without LLM narration.
 - Graph sessions can commit level-up choices through a graph-native route instead of the legacy entity stream.
+- Graph seed and graph level-up now use the target 4-stat model instead of legacy 6-stat growth.
 - The live flow still uses legacy `GameState`, legacy entity tables, and old derived ontology graph in several places.
 
 ## Migration Rule

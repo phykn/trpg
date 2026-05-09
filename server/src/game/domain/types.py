@@ -2,6 +2,8 @@ from typing import Literal, get_args
 
 
 StatKey = Literal["STR", "DEX", "CON", "INT", "WIS", "CHA"]
+GraphStatKey = Literal["body", "agility", "mind", "presence"]
+GRAPH_STAT_KEYS: tuple[GraphStatKey, ...] = ("body", "agility", "mind", "presence")
 
 
 STAT_PAIRS: dict[StatKey, StatKey] = {

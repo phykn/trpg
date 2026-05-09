@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from src.game.domain.action import Action
-from src.game.domain.types import StatKey
+from src.game.domain.types import GraphStatKey, StatKey
 from src.game.flow.init import PlayerInput
 
 
@@ -93,6 +93,12 @@ class SkillCandidatePayload(BaseModel):
 
 class LevelUpRequest(BaseModel):
     stat_up: StatKey
+    skill_id: str | None = None
+    think: bool = False
+
+
+class GraphLevelUpRequest(BaseModel):
+    stat_up: GraphStatKey
     skill_id: str | None = None
     think: bool = False
 

@@ -45,6 +45,8 @@ import type {
   PendingConfirmation,
   RuntimeMode,
   SkillCandidate,
+  GraphStatKey,
+  LevelUpStatKey,
   StatKey,
   StreamEvent,
 } from '@/services/wire';
@@ -56,6 +58,8 @@ export type GameStatus = 'loading' | 'no-game' | 'ready' | 'error';
 export type Game = ReturnType<typeof useGame>;
 
 const STREAMING_GM_ID = -1;
+const GRAPH_STAT_KEYS = new Set<LevelUpStatKey>(['body', 'agility', 'mind', 'presence']);
+const LEGACY_STAT_KEYS = new Set<LevelUpStatKey>(['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA']);
 
 function mergeEntry(log: LogEntry[], entry: LogEntry): LogEntry[] {
   const idx = log.findIndex((e) => e.id === entry.id);
@@ -405,16 +409,24 @@ export function useGame() {
   }, []);
 
   const commitLevelUp = React.useCallback(
-    (stat_up: StatKey, skill_id: string | null) => {
+    (stat_up: LevelUpStatKey, skill_id: string | null) => {
       const id = gameIdRef.current;
       if (!id) return;
       previewAbortRef.current?.abort();
       setLevelUpOpen(false);
       setLevelUpCandidates(null);
       if (runtimeMode === 'graph') {
+        if (!isGraphStatKey(stat_up)) {
+          setErrorMessage('잘못된 능력치입니다.');
+          return;
+        }
         void runGraphRequest(() =>
           sendGraphLevelUp(id, { stat_up, skill_id, think: false }),
         );
+        return;
+      }
+      if (!isLegacyStatKey(stat_up)) {
+        setErrorMessage('잘못된 능력치입니다.');
         return;
       }
       void runStream((signal) =>
@@ -485,6 +497,7 @@ export function useGame() {
     status,
     errorMessage,
     gameId,
+    runtimeMode,
     hero,
     subject,
     quest,
@@ -519,4 +532,12 @@ export function useGame() {
     goToNewGame,
     refresh,
   };
+}
+
+function isGraphStatKey(value: LevelUpStatKey): value is GraphStatKey {
+  return GRAPH_STAT_KEYS.has(value);
+}
+
+function isLegacyStatKey(value: LevelUpStatKey): value is StatKey {
+  return LEGACY_STAT_KEYS.has(value);
 }

@@ -6,6 +6,7 @@ import type {
   GraphAction,
   GraphActionClientResponse,
   GraphActionResponse,
+  GraphLevelUpRequest,
   GraphSessionPayload,
   InitRequest,
   LevelUpPreviewResponse,
@@ -122,7 +123,7 @@ export async function sendGraphAction(
 
 export async function sendGraphLevelUp(
   gameId: string,
-  body: LevelUpRequest,
+  body: GraphLevelUpRequest,
 ): Promise<GraphActionClientResponse> {
   const res = await fetch(`${BASE_URL}/session/${gameId}/graph/level_up`, {
     method: 'POST',

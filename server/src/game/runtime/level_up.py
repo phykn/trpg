@@ -3,7 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict
 
 from src.db.repo import GraphRepo
-from src.game.domain.types import StatKey
+from src.game.domain.types import GraphStatKey
 from src.game.engines.graph_growth import GraphGrowthError, plan_level_up
 from src.wire.graph_to_front import GraphFrontStatePayload, graph_to_front_state
 
@@ -28,7 +28,7 @@ async def run_graph_level_up(
     repo: GraphRepo,
     game_id: str,
     *,
-    stat_up: StatKey,
+    stat_up: GraphStatKey,
     skill_id: str | None,
 ) -> GraphLevelUpResult:
     if skill_id is not None:

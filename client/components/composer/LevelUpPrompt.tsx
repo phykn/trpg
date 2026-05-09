@@ -5,15 +5,26 @@ import { Surface } from '@/components/ui';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import type { Hero } from '@/logic/hero';
-import type { SkillCandidate, StatKey } from '@/services/wire';
+import type {
+  GraphStatKey,
+  LevelUpStatKey,
+  RuntimeMode,
+  SkillCandidate,
+  StatKey,
+} from '@/services/wire';
 
-const STAT_PAIRS: Array<[StatKey, StatKey]> = [
+const LEGACY_STAT_ROWS: [StatKey, StatKey][] = [
   ['STR', 'CHA'],
   ['DEX', 'WIS'],
   ['CON', 'INT'],
 ];
 
-const STAT_PAIRED_DOWN: Record<StatKey, StatKey> = {
+const GRAPH_STAT_ROWS: [GraphStatKey, GraphStatKey][] = [
+  ['body', 'agility'],
+  ['mind', 'presence'],
+];
+
+const LEGACY_STAT_PAIRED_DOWN: Record<StatKey, StatKey> = {
   STR: 'CHA', CHA: 'STR', DEX: 'WIS', WIS: 'DEX', CON: 'INT', INT: 'CON',
 };
 
@@ -22,32 +33,37 @@ const STAT_FLOOR = 0;
 
 type Props = {
   hero: Hero;
+  mode: RuntimeMode;
   candidates: SkillCandidate[] | null; // null = loading
-  onCommit: (stat_up: StatKey, skill_id: string | null) => void;
+  onCommit: (stat_up: LevelUpStatKey, skill_id: string | null) => void;
   onCancel: () => void;
 };
 
-export function LevelUpPrompt({ hero, candidates, onCommit, onCancel }: Props) {
-  const [statUp, setStatUp] = React.useState<StatKey | null>(null);
+export function LevelUpPrompt({ hero, mode, candidates, onCommit, onCancel }: Props) {
+  const [statUp, setStatUp] = React.useState<LevelUpStatKey | null>(null);
   const [skillId, setSkillId] = React.useState<string | null>(null);
+  const statRows: [LevelUpStatKey, LevelUpStatKey][] = mode === 'graph'
+    ? GRAPH_STAT_ROWS
+    : LEGACY_STAT_ROWS;
 
-  const statValueOf = (k: StatKey): number => {
+  const statValueOf = (k: LevelUpStatKey): number => {
     const row = hero.stats.find((s) => s.label === ko.ability[k]);
     return row ? row.value : 0;
   };
 
-  const isStatDisabled = (k: StatKey): boolean => {
-    const pairedDown = STAT_PAIRED_DOWN[k];
+  const isStatDisabled = (k: LevelUpStatKey): boolean => {
+    if (mode === 'graph') return statValueOf(k) >= STAT_CAP;
+    const pairedDown = LEGACY_STAT_PAIRED_DOWN[k as StatKey];
     return statValueOf(k) >= STAT_CAP || statValueOf(pairedDown) <= STAT_FLOOR;
   };
 
   const skillRequired = candidates !== null && candidates.length > 0;
   const canCommit = statUp !== null && (!skillRequired || skillId !== null);
 
-  const renderStatButton = (k: StatKey) => {
+  const renderStatButton = (k: LevelUpStatKey) => {
     const isUp = statUp === k;
-    const pairedDown = STAT_PAIRED_DOWN[k];
-    const isPairedDown = statUp === pairedDown;
+    const pairedDown = mode === 'graph' ? null : LEGACY_STAT_PAIRED_DOWN[k as StatKey];
+    const isPairedDown = pairedDown !== null && statUp === pairedDown;
     const disabled = isStatDisabled(k);
     const baseValue = statValueOf(k);
     const previewValue = isUp ? baseValue + 1 : isPairedDown ? baseValue - 1 : baseValue;
@@ -124,9 +140,9 @@ export function LevelUpPrompt({ hero, candidates, onCommit, onCancel }: Props) {
       </View>
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        {/* Left column — stats (3 pair rows × 2 buttons) */}
+        {/* Left column — stat choices */}
         <View style={{ flex: 1, gap: 3 }}>
-          {STAT_PAIRS.map(([a, b]) => (
+          {statRows.map(([a, b]) => (
             <View key={a + b} style={{ flexDirection: 'row', gap: 3 }}>
               {renderStatButton(a)}
               {renderStatButton(b)}

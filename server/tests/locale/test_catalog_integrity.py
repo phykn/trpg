@@ -5,7 +5,7 @@ from pathlib import Path
 
 from typing import get_args
 
-from src.game.domain.types import EncounterRisk, Phase, StatKey, Tier
+from src.game.domain.types import EncounterRisk, GraphStatKey, Phase, StatKey, Tier
 
 
 CATALOG = Path(__file__).resolve().parents[2] / "src" / "locale" / "catalog"
@@ -27,7 +27,7 @@ def test_phase_catalog_covers_enum() -> None:
 
 
 def test_stat_catalog_covers_enum() -> None:
-    expected = set(get_args(StatKey))
+    expected = {*get_args(StatKey), *get_args(GraphStatKey)}
     assert _keys("stat.toml", "stat") == expected
 
 

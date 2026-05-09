@@ -203,7 +203,7 @@ async def test_graph_level_up_commits_and_returns_state(tmp_path):
 
         response = await client.post(
             f"/session/{game_id}/graph/level_up",
-            json={"stat_up": "STR", "skill_id": None, "think": False},
+            json={"stat_up": "body", "skill_id": None, "think": False},
         )
 
     assert response.status_code == 200, response.text
@@ -215,8 +215,8 @@ async def test_graph_level_up_commits_and_returns_state(tmp_path):
 
     assert player_props["level"] == level + 1
     assert player_props["xp_pool"] == 0
-    assert player_props["stats"]["STR"] == 11
-    assert player_props["stats"]["CHA"] == 9
+    assert player_props["stats"]["body"] == 11
+    assert player_props["stats"]["presence"] == 10
     assert body["state"]["hero"]["level"] == level + 1
     assert body["state"]["hero"]["exp"] == 0
     assert body["state"]["log"] == [entry.model_dump() for entry in logs]

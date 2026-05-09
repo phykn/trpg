@@ -13,7 +13,7 @@ from src.game.domain.graph import (
     SetNodePropertyChange,
 )
 from src.game.domain.graph_query import edges_from
-from src.game.domain.types import STAT_PAIRS, StatKey
+from src.game.domain.types import GRAPH_STAT_KEYS, GraphStatKey
 from src.game.engines.growth import calc_max_hp, calc_max_mp, xp_for_next_level
 from src.game.rules import RULES
 
@@ -52,7 +52,7 @@ def plan_xp_grant(
 def plan_level_up(
     graph: Graph,
     character_id: str,
-    stat_up: StatKey,
+    stat_up: GraphStatKey,
 ) -> GraphGrowthResult:
     character = _require_character(graph, character_id)
     level = _int_prop(character, "level")
@@ -64,23 +64,18 @@ def plan_level_up(
     if xp_pool < cost:
         raise GraphGrowthError(f"not enough xp: have {xp_pool}, need {cost}")
 
-    stat_down = STAT_PAIRS.get(stat_up)
-    if stat_down is None:
+    if stat_up not in GRAPH_STAT_KEYS:
         raise GraphGrowthError(f"invalid stat_up: {stat_up}")
     stats = _stats(character)
     up_value = _stat_value(stats, stat_up)
-    down_value = _stat_value(stats, stat_down)
     if up_value >= 20:
         raise GraphGrowthError(f"{stat_up} already at cap 20")
-    if down_value <= 0:
-        raise GraphGrowthError(f"{stat_down} already at floor 0")
 
     next_level = level + 1
     next_stats = dict(stats)
     next_stats[stat_up] = up_value + 1
-    next_stats[stat_down] = down_value - 1
-    max_hp = calc_max_hp(next_level, next_stats["CON"])
-    max_mp = calc_max_mp(next_level, next_stats["INT"])
+    max_hp = calc_max_hp(next_level, next_stats["body"])
+    max_mp = calc_max_mp(next_level, next_stats["mind"])
     hp = min(_int_prop(character, "hp"), max_hp)
     mp = min(_int_prop(character, "mp"), max_mp)
 
@@ -89,7 +84,6 @@ def plan_level_up(
             _set(character_id, "xp_pool", xp_pool - cost),
             _set(character_id, "level", next_level),
             _set(character_id, f"stats.{stat_up}", next_stats[stat_up]),
-            _set(character_id, f"stats.{stat_down}", next_stats[stat_down]),
             _set(character_id, "max_hp", max_hp),
             _set(character_id, "max_mp", max_mp),
             _set(character_id, "hp", hp),
@@ -146,7 +140,7 @@ def _stats(character: GraphNode) -> dict[str, int]:
     raw = character.properties.get("stats")
     if not isinstance(raw, dict):
         raise GraphGrowthError(f"missing stats: {character.id}")
-    return {key: _stat_value(raw, key) for key in STAT_PAIRS}
+    return {key: _stat_value(raw, key) for key in GRAPH_STAT_KEYS}
 
 
 def _stat_value(stats: dict, key: str) -> int:

@@ -18,7 +18,7 @@ import { ko } from '@/locale/ko';
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, storyGraph, log, pending, pendingConfirmation, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onConfirmPending, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp } = game;
+  const { hero, subject, quest, place, combat, storyGraph, log, pending, pendingConfirmation, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onConfirmPending, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp, runtimeMode } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -180,6 +180,7 @@ export function Playing({ game }: Props) {
         ) : levelUpOpen ? (
           <LevelUpPrompt
             hero={hero}
+            mode={runtimeMode}
             candidates={levelUpCandidates}
             onCommit={commitLevelUp}
             onCancel={cancelLevelUp}

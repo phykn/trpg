@@ -215,6 +215,8 @@ export type StreamEvent =
   | { type: 'error'; data: ErrorPayload };
 
 export type StatKey = 'STR' | 'DEX' | 'CON' | 'INT' | 'WIS' | 'CHA';
+export type GraphStatKey = 'body' | 'agility' | 'mind' | 'presence';
+export type LevelUpStatKey = StatKey | GraphStatKey;
 
 export type SkillCandidate = {
   id: string;
@@ -232,6 +234,12 @@ export type LevelUpPreviewResponse = {
 
 export type LevelUpRequest = {
   stat_up: StatKey;
+  skill_id: string | null;
+  think: boolean;
+};
+
+export type GraphLevelUpRequest = {
+  stat_up: GraphStatKey;
   skill_id: string | null;
   think: boolean;
 };

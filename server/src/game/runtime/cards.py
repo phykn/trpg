@@ -4,8 +4,8 @@ from src.game.domain.action import Action
 from src.game.domain.graph import Graph, GraphNode
 from src.game.domain.graph_query import location_of
 from src.game.domain.memory import ActLogEntry
-from src.game.domain.types import STAT_PAIRS, StatKey
-from src.game.flow.format import format_level_up_log
+from src.game.domain.types import GraphStatKey
+from src.locale.labels import stat_label
 
 from .dispatch import GraphActionDispatchResult
 from .state import GameRuntimeState
@@ -39,21 +39,17 @@ def build_graph_quest_offer_card(
 
 def build_graph_level_up_card(
     runtime: GameRuntimeState,
-    stat_up: StatKey,
+    stat_up: GraphStatKey,
     log_id: int,
 ) -> ActLogEntry:
     player = runtime.graph.nodes[runtime.progress.player_id]
+    level = _int_property(player, "level")
+    max_hp = _int_property(player, "max_hp")
+    max_mp = _int_property(player, "max_mp")
     return ActLogEntry(
         id=log_id,
         kind="act",
-        text=format_level_up_log(
-            _label(player),
-            _int_property(player, "level"),
-            stat_up,
-            STAT_PAIRS[stat_up],
-            _int_property(player, "max_hp"),
-            _int_property(player, "max_mp"),
-        ),
+        text=f"{_label(player)}의 레벨이 올랐습니다 (레벨 {level}, {stat_label(stat_up)} ↑, HP {max_hp} / MP {max_mp}).",
     )
 
 

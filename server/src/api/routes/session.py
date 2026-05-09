@@ -47,6 +47,7 @@ from ..deps import (
 from ..schema import (
     GraphActionResponse,
     GraphInputRequest,
+    GraphLevelUpRequest,
     GraphTurnRequest,
     InitRequest,
     InitResponse,
@@ -210,7 +211,7 @@ async def session_graph_input(
 @router.post("/session/{game_id}/graph/level_up", response_model=GraphActionResponse)
 async def session_graph_level_up(
     game_id: str,
-    body: LevelUpRequest,
+    body: GraphLevelUpRequest,
     graph_repo: GraphRepo = Depends(get_graph_repo),
 ) -> GraphActionResponse:
     set_think_override(body.think)

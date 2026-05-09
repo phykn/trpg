@@ -75,6 +75,12 @@ def test_build_seed_graph_creates_nodes_edges_and_progress():
     graph = bundle.graph
 
     assert graph.nodes["player_01"].type == "character"
+    assert graph.nodes["player_01"].properties["stats"] == {
+        "body": 10,
+        "agility": 10,
+        "mind": 10,
+        "presence": 10,
+    }
     assert "default" not in graph.nodes
     assert graph.edges["located_at:player_01:town"].type == "located_at"
     assert graph.edges["belongs_to_race:player_01:human"].type == "belongs_to_race"

@@ -81,18 +81,7 @@ def build_seed_graph(
         add_node(
             character.id,
             "character",
-            character.model_dump(
-                mode="json",
-                exclude={
-                    "location_id",
-                    "equipment",
-                    "inventory_ids",
-                    "relations",
-                    "racial_skill_ids",
-                    "learned_skill_ids",
-                    "companions",
-                }
-            ),
+            _character_graph_properties(character),
         )
     for item in items.values():
         add_node(item.id, "item", item.model_dump(mode="json"))
@@ -254,3 +243,29 @@ def _build_player(
     player_char.mp = player_char.max_mp
     player_char.visited_location_ids.add(location_id)
     return player_char
+
+
+def _character_graph_properties(character: Character) -> dict[str, Any]:
+    properties = character.model_dump(
+        mode="json",
+        exclude={
+            "location_id",
+            "equipment",
+            "inventory_ids",
+            "relations",
+            "racial_skill_ids",
+            "learned_skill_ids",
+            "companions",
+        },
+    )
+    properties["stats"] = _graph_stats(character.stats)
+    return properties
+
+
+def _graph_stats(stats: Stats) -> dict[str, int]:
+    return {
+        "body": (stats.STR + stats.CON) // 2,
+        "agility": stats.DEX,
+        "mind": (stats.INT + stats.WIS) // 2,
+        "presence": stats.CHA,
+    }

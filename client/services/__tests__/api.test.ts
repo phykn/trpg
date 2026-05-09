@@ -99,7 +99,7 @@ describe('graph API helpers', () => {
     });
 
     const result = await sendGraphLevelUp('game-1', {
-      stat_up: 'STR',
+      stat_up: 'body',
       skill_id: null,
       think: false,
     });
@@ -109,7 +109,7 @@ describe('graph API helpers', () => {
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
-          stat_up: 'STR',
+          stat_up: 'body',
           skill_id: null,
           think: false,
         }),
