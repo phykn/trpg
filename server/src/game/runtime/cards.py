@@ -31,7 +31,7 @@ def _card_text(
     if dispatch.kind == "move":
         destination_id = location_of(after.graph, after.progress.player_id)
         destination = _node_label(after.graph, destination_id, fallback="목적지")
-        return f"당신은 {destination}로 이동합니다."
+        return f"당신은 {destination}{_direction_particle(destination)} 이동합니다."
 
     if dispatch.kind == "combat":
         return _combat_text(before, after, action)
@@ -113,6 +113,16 @@ def _label(node: GraphNode) -> str:
     if isinstance(title, str) and title:
         return title
     return node.id
+
+
+def _direction_particle(value: str) -> str:
+    if value == "":
+        return "로"
+    code = ord(value[-1])
+    if code < 0xAC00 or code > 0xD7A3:
+        return "로"
+    final = (code - 0xAC00) % 28
+    return "로" if final in (0, 8) else "으로"
 
 
 def _single(value: object) -> str | None:

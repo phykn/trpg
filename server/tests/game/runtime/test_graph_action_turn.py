@@ -43,7 +43,7 @@ def _graph() -> Graph:
             "forest": GraphNode(
                 id="forest",
                 type="location",
-                properties={"name": "Forest"},
+                properties={"name": "광장"},
             ),
             "player_01": _character("player_01"),
             "goblin_01": _character("goblin_01", hp=24, max_hp=24),
@@ -92,7 +92,7 @@ async def test_run_graph_action_turn_saves_move_and_returns_front_state(tmp_path
     assert saved_progress.next_log_id == 2
     assert len(saved_logs) == 1
     assert saved_logs[0].kind == "act"
-    assert saved_logs[0].text == "당신은 Forest로 이동합니다."
+    assert saved_logs[0].text == "당신은 광장으로 이동합니다."
     assert result.front_state.log == saved_logs
     assert result.front_state.place.id == "forest"
     assert result.runtime.progress.turn_count == 1
