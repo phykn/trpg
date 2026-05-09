@@ -27,9 +27,6 @@ export function buildQuestSlot(quest: Quest | null, opts?: { dot?: boolean }): P
     kind: 'quest_action' as const,
     label: ACTION_LABEL[kind],
     questAction: { kind, quest_id: quest.id },
-    ...(kind === 'abandon'
-      ? { confirm: { title: ko.quest.abandonTitle, blurb: ko.quest.abandonBlurb, confirmLabel: ko.quest.abandon } }
-      : {}),
   }));
   const actions: PanelActions[] = actionItems.length > 0
     ? [{ label: ko.quest.name, items: actionItems }]
