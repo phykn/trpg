@@ -211,6 +211,7 @@ def load_game(saves_dir: str, game_id: str) -> GameState:
         active_quest_id=meta.active_quest_id,
         turn_count=meta.turn_count,
         pending_check=meta.pending_check,
+        pending_confirmation=meta.pending_confirmation,
         combat_state=meta.combat_state,
         previous_phase_signal=meta.previous_phase_signal,
         next_log_id=_resolve_next_log_id(meta.next_log_id, log_entries),

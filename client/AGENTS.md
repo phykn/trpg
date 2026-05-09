@@ -2,7 +2,7 @@
 
 This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
-Reference for working under `client/`. End-user setup, phone testing, and deploy steps live in [README.md](./README.md). The server boundary contract lives in `../docs/04-boundary.md`.
+Reference for working under `client/`. End-user setup, phone testing, and deploy steps live in [README.md](./README.md). The server boundary contract lives in `../docs/05-interfaces.md`.
 
 ## Commands
 

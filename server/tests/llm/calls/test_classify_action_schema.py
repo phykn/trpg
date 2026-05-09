@@ -1,0 +1,39 @@
+import json
+
+import pytest
+from pydantic import ValidationError
+
+from src.llm.calls.classify.schema import validate_judge_output
+
+
+def test_validate_accepts_action_move_json():
+    raw = json.dumps({"actions": [{"verb": "move", "to": "loc_01"}]})
+
+    out = validate_judge_output(raw, in_combat=False)
+
+    assert out.actions[0].name == "move"
+    assert out.actions[0].modifiers["destination"] == "loc_01"
+
+
+def test_validate_accepts_action_pass_json_as_wait():
+    raw = json.dumps({"actions": [{"verb": "pass", "note": "잠시 숨을 고른다."}]})
+
+    out = validate_judge_output(raw, in_combat=False)
+
+    assert out.actions[0].name == "wait"
+    assert out.actions[0].modifiers["tail_intent"] == "잠시 숨을 고른다."
+
+
+def test_validate_accepts_legacy_verb_json_during_migration():
+    raw = json.dumps({"actions": [{"name": "wait"}]})
+
+    out = validate_judge_output(raw, in_combat=False)
+
+    assert out.actions[0].name == "wait"
+
+
+def test_invalid_action_json_raises_validation_error():
+    raw = json.dumps({"actions": [{"verb": "attack", "success": True}]})
+
+    with pytest.raises(ValidationError, match="success"):
+        validate_judge_output(raw, in_combat=False)

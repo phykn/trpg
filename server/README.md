@@ -2,7 +2,7 @@
 
 Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in five Postgres tables keyed on `game_id` (`games / entities / log_entries / history_entries / dialogue_entries`); scenario seeds live in a Supabase Storage bucket.
 
-Design notes start at `../docs/01-overview.md`; the per-turn flow is in `../docs/02-runtime.md`; the module map is in `../docs/05-codemap.md`. The Claude Code guide is [CLAUDE.md](./CLAUDE.md).
+Design notes start at `../docs/README.md`; the per-turn flow is in `../docs/02-runtime.md`; the interface and ownership map is in `../docs/05-interfaces.md`. The Claude Code guide is [CLAUDE.md](./CLAUDE.md).
 
 ## Stack
 
@@ -80,7 +80,7 @@ dotenv loads `server/.env.<APP_ENV>` (default `dev`) automatically and uvicorn b
 | POST | `/session/{id}/intro` | GM intro (SSE, fired once after init) |
 | POST | `/debug/complete` | One-shot LLM call for debugging |
 
-SSE event types: `judge / pending_check / narrative_delta / suggestions / log_entry / state / combat_start / combat_turn / combat_end / done / error`. See `../docs/02-runtime.md` §2.4 for shapes.
+SSE event types and ordering are defined in `../docs/05-interfaces.md`.
 
 ## Tests
 
@@ -98,7 +98,7 @@ server/
   run_api.py                       # entrypoint
   .env.dev                         # required for local dev (.env.release for prod), gitignored
   scripts/                         # one-off tools (judge_stress.py, smoke_judge.py, ...)
-  src/                             # code (layer breakdown in docs/05-codemap.md)
+  src/                             # code (ownership map in ../docs/05-interfaces.md)
   tests/                           # pytest
 ../scenarios/<profile>/            # local seed source (world.md, start.json, player_template.json, races/, locations/, characters/, items/, quests/, chapters/, skills/). Authored locally, uploaded to Supabase Storage; the running server reads from the bucket.
 ```

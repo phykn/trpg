@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException, Request
 
 from src.game.domain.state import GameState
 from src.llm.client import LLMClient
-from src.db.repo import SaveRepo, ScenarioRepo
+from src.db.repo import GraphRepo, SaveRepo, ScenarioRepo
 
 
 def get_save_repo(request: Request) -> SaveRepo:
@@ -14,6 +14,13 @@ def get_save_repo(request: Request) -> SaveRepo:
 
 def get_scenario_repo(request: Request) -> ScenarioRepo:
     return request.app.state.scenario_repo
+
+
+def get_graph_repo(request: Request) -> GraphRepo:
+    repo = getattr(request.app.state, "graph_repo", None)
+    if repo is None:
+        raise HTTPException(status_code=503, detail="graph repo not configured")
+    return repo
 
 
 def get_llm(request: Request) -> LLMClient:

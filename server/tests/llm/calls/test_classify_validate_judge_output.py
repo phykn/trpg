@@ -49,6 +49,12 @@ def test_unknown_verb_rejected():
         validate_judge_output(raw, in_combat=False)
 
 
+def test_query_cannot_be_chained():
+    raw = json.dumps({"actions": [{"name": "query"}, {"name": "wait"}]})
+    with pytest.raises(ValidationError, match="query"):
+        validate_judge_output(raw, in_combat=False)
+
+
 def test_in_combat_move_without_destination():
     raw = json.dumps({"actions": [{"name": "move", "modifiers": {"manner": "hasty"}}]})
     out = validate_judge_output(raw, in_combat=True)

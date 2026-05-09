@@ -49,6 +49,15 @@ class _PostgREST:
         if r.status_code >= 300:
             raise PersistenceFailed(f"insert {table}: {r.status_code} {r.text}")
 
+    async def delete(self, table: str, *, filters: dict[str, str]) -> None:
+        params: list[tuple[str, str]] = []
+        for col, expr in filters.items():
+            params.append((col, expr))
+        url = f"{self._base}/{table}"
+        r = await self._client.delete(url, headers=self._headers, params=params)
+        if r.status_code >= 300:
+            raise PersistenceFailed(f"delete {table}: {r.status_code} {r.text}")
+
     async def select(
         self,
         table: str,

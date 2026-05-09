@@ -161,9 +161,14 @@ def test_load_missing_raises_filenotfound(tmp_data):
         load_game(tmp_data, "nope")
 
 
-async def test_save_to_unwritable_path_raises_persistence_failed(fresh_state):
+async def test_save_to_unwritable_path_raises_persistence_failed(
+    fresh_state, tmp_path
+):
+    not_a_dir = tmp_path / "not_a_dir"
+    not_a_dir.write_text("x", encoding="utf-8")
+
     with pytest.raises(PersistenceFailed):
-        await save_meta(fresh_state, "/proc/no_such_writable")
+        await save_meta(fresh_state, str(not_a_dir))
 
 
 def _write_minimal_seed(profile_dir: Path) -> None:

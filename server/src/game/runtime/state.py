@@ -1,0 +1,17 @@
+from __future__ import annotations
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from src.game.domain.graph import Graph
+from src.game.domain.memory import DialoguePair, LogEntry, TurnLogEntry
+from src.game.domain.progress import GameProgress
+
+
+class GameRuntimeState(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    graph: Graph
+    progress: GameProgress
+    log_entries: list[LogEntry] = Field(default_factory=list)
+    turn_log: list[TurnLogEntry] = Field(default_factory=list)
+    recent_dialogue: list[DialoguePair] = Field(default_factory=list)

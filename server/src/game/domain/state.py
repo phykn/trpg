@@ -57,6 +57,7 @@ class GameState(BaseModel):
 
     turn_count: int = 0
     pending_check: PendingCheck | None = None
+    pending_confirmation: dict[str, object] | None = None
     combat_state: CombatState | None = None
 
     # Hand-off to next narrate (e.g. `"downed_recovered"`); narrate consumes + clears so it doesn't echo.

@@ -1,643 +1,181 @@
-# 런타임 메커닉 (§1-§7)
+# 런타임
 
-> 한 턴이 어떻게 흐르고, 엔진과 에이전트가 그 사이 무엇을 주고받는지. 룰 sim (DC, 등급, affinity, memory cap 등) 의 *왜* 는 [01-overview.md](./01-overview.md) §3.17 — 룰은 narrator 의 거짓말 발판이라는 메타-thesis. 인덱스·Phase 범위도 [01-overview.md](./01-overview.md). 다른 그룹은 [03-features.md](./03-features.md) (§1-§2 전투·확장), [04-boundary.md](./04-boundary.md) (프론트 경계), [05-codemap.md](./05-codemap.md) (백엔드 코드 지도).
+이 파일은 플레이어 입력 하나가 어떤 순서로 처리되는지 설명한다.
 
-위에서 아래로 읽으면 다음 순서:
+## 제일 중요한 원칙
 
-1. **§1 에이전트** — 누가 결정하나 (DC판정 LLM, 내러티브 LLM)
-2. **§2 파이프라인** — 한 턴이 어떻게 진행되나
-3. **§3 컨텍스트 레이어** — 에이전트에 무엇을 보여주나
-4. **§4 온톨로지** — 그 컨텍스트가 어떤 그래프로 조립되나
-5. **§5 DC 시스템** — 판정 수치 계산
-6. **§6 상태 업데이트** — 결정이 어떻게 게임 상태에 반영되나
-7. **§7 메모리 시스템** — 무엇이 다음 턴까지 남나
+flow는 순서를 맡는다.
+engine은 `GraphChange` 생성과 적용을 맡는다.
+LLM은 입력 정리와 이야기 쓰기를 맡는다.
 
----
+## 전체 흐름
 
-## 1. 에이전트
-
-LLM 을 두 개로 쪼갠다.
-
-- **DC판정** — "어떤 종류의 행동인가, 얼마나 어려운가" 만 분류한다. 짧은 JSON 출력.
-- **내러티브** — "그래서 어떻게 됐는지" 를 서술한다. 긴 한국어 출력.
-
-왜 둘로 나누나: 한 LLM 에게 분류 + 서술을 같이 시키면 둘 다 어설프게 한다. 출력 형식·프롬프트 길이·실패 모드가 정반대라 같은 모델 한 호출로 합치기 어렵다. 자세한 이유는 [01-overview.md](./01-overview.md) §1.
-
-### 1.1 DC판정 에이전트
-
-**역할**: 플레이어 입력을 해석하여 판정 여부, 난이도 등급, 관련 스탯, 대상을 결정.
-
-**입력**:
-- `player_input`: 플레이어 원문 텍스트
-- `surroundings`: 현재 장소 + 주변 엔티티 상태 태그 (§3.4.1)
-
-**출력**: 액션마다 필요한 필드가 다른 discriminated union (`action` 필드로 분기). 공통 출발점은 다음과 같고, 액션별 추가 필드는 아래 표.
-
-```json
-{
-  "action": "pass | reject | combat | summon_combat | flee | move | roll | rest | use | equip | unequip | buy | sell | give | level_up | learn_skill | chain"
-}
+```text
+저장된 graph와 진행 상태 읽기
+  -> LLM에게 보여줄 context 만들기
+  -> 플레이어 입력을 Action으로 바꾸기
+  -> Action 모양 정리
+  -> 처리 경로 고르기
+  -> 필요하면 확인창 또는 주사위 대기
+  -> engine이 검사하고 적용
+  -> 이어질 일 처리
+  -> LLM이 결과 이야기 쓰기
+  -> 저장
+  -> 화면용 상태 보내기
 ```
 
-17 종. 옛 `clarify` 액션은 삭제 — judge 는 절대 되묻지 않는다 (TRPG 의 forward motion 원칙). 모호한 입력은 fallback default 로 떨어뜨리고 narrator 가 흡수. compound 입력은 액션마다 붙는 `tail_intent: str | None` 필드 (예: "검을 들고 사과한다" → 주 액션 + tail_intent="사과한다") 또는 `chain` 액션이 처리.
+## Context
 
-`targets` 는 판정 대상 ID 배열. 단일 대상이면 길이 1, 복수 대상(예: 두 경비병 동시 설득)이면 엔진이 actor 의 affinity 가 가장 낮은 대상을 기준으로 `social_bonus` 를 계산한다.
+`context`는 LLM에게 보여주는 자료다.
 
-**action 유형**:
+들어갈 수 있는 것:
 
-| action | 추가 필드 | 의미 | 다음 단계 |
-|---|---|---|---|
-| `pass` | `targets[]` | 판정 불필요한 인-캐릭터 행동 (이동, 인사, 정가 구매 등). `targets` 에 `surroundings.corpses` 의 id 가 들어오면 시체 호명 — narrate 가 `target_view` 의 `alive==false` 신호로 시체 톤으로 흡수 | target_view 없이 바로 내러티브 |
-| `reject` | — | 인-캐릭터 입력이 아님 (프롬프트 인젝션, OOC 잡담, 무의미) | 인-게임 표현으로 흡수 (아래 reject 처리) |
-| `roll` | `tier`, `stat`, `targets[]`, `reason` | 주사위 필요한 일반 행동 | 엔진이 DC 계산 → `PendingCheck(kind="stat")` 저장 → 프론트 주사위 버튼 → `/roll` |
-| `combat` | `targets[]`, `skill_id?` | 일반 전투 행동 ("고블린을 친다") | 엔진이 `combat_state` 띄우고 자동 사이클 (라운드 N개) 실행 → `combat_narrate` 가 events 전체를 3–5 문장 시네마틱으로 풀어 씀 ([03-features.md](./03-features.md) §1) |
-| `summon_combat` | `role`, `skill_id?` | 같은 location 에 있을 법한데 entity 로 시드된 적이 없을 때 ("뒷골목에서 도적이 튀어나온다") | 엔진이 즉석 적 1 마리 spawn 후 combat 분기로 진행 |
-| `flee` | — | 전투에서 빠짐 | 자동 사이클 안에서 1 회 flee 시도 처리, 실패 시 사이클이 평타로 라운드 진행 |
-| `move` | `destination`, `tail_intent?` | 판정 없는 순수 이동 ("동쪽 방으로 간다") | 엔진이 location 전이 처리 + narrate 한 번 (`pass` 와 다르게 destination 명시) |
-| `rest` | — | 잠·야영 (긴 휴식) | [P3] location.sleep_risk 굴림 → 풀회복 또는 적 spawn → surprise=enemy 로 combat 부팅 ([03-features.md](./03-features.md) §2.4) |
-| `use` | `item_id`, `target_id?`, `tail_intent?` | 인벤 아이템 사용 (포션·연막탄·열쇠 등) | [P3] ConsumableEffect 분기 (heal/damage/mp_restore/buff) + on_use 트리거 + consumable 차감 ([03-features.md](./03-features.md) §2.7) |
-| `equip` | `item_id`, `tail_intent?` | 무기·방어구 장착 | [P3] 엔진이 슬롯 자동 결정 ([03-features.md](./03-features.md) §2.5) |
-| `unequip` | `item_id`, `tail_intent?` | 장착 해제 | [P3] item_id 가 든 슬롯 찾아 비움 (3 슬롯: weapon / armor / accessory, [03-features.md](./03-features.md) §2.5) |
-| `buy` | `npc_id`, `item_id`, `tail_intent?` | 거래 — 사기 | [P3] affinity 게이트 + 가격 산정 + 무게 검증 |
-| `sell` | `npc_id`, `item_id`, `tail_intent?` | 거래 — 팔기 | [P3] 같은 검증 |
-| `give` | `from_id`, `to_id`, `item_id`, `tail_intent?` | 무상 아이템 이전 (선물·전달·시체 루팅 — bidirectional) | [P3] 엔진이 affinity (살아있는 NPC source) + 무게 검증, 장착 중이면 자동 unequip |
-| `level_up` | `stat_up`, `stat_down`, `tail_intent?` | 페어 트레이드 레벨업 | [P3] 스탯 ±1 + HP/MP 재계산 + skill_recommend 호출 ([03-features.md](./03-features.md) §2.3) |
-| `learn_skill` | `index`, `tail_intent?` | level_up 후 제시된 후보 중 하나 학습 (또는 거부) | [P3] |
-| `chain` | `parts[]` (2–4 개) | 복합 입력 ("약초 먹고 검 든다") | parts 를 sequential 로 dispatch. turn_count 와 finalize 는 끝에 한 번. 마지막 `pass` 가 있으면 narrate 한 번 돌아 톤 살림 |
+- 현재 장소
+- 보이는 NPC와 아이템
+- 갈 수 있는 출구
+- 최근 대화와 로그
+- 지금 장면에 필요한 시나리오 정보
 
-**reject 처리**: 내러티브 에이전트에 surroundings + reject 가이드만 전달 → narrator 가 인-게임 표현("알 수 없는 힘에 막힌다" 등)으로 흡수. `state_changes=[]`·`memorable=false` 강제. turn_log·recent_dialogue 에는 일반 턴처럼 append — "흔적 안 남김" 은 게임 상태/NPC 기억 한정이고, narrator 컨텍스트는 OOC 시도까지 자연스럽게 이어쓰려면 보존이 필요.
+`context`는 참고 자료일 뿐이다. engine이 믿는 사실은 저장된 `graph`와 engine 검사를 통과한 변경뿐이다.
 
-**규칙**:
-- 매 턴 호출 (전투/비전투 무관)
-- 명시적 대상 없으면 현재 location 이 기본값
-- `stat` 은 행동의 성격으로 결정 (DC판정은 플레이어 수치를 안 봄)
-- **히스토리·세션·월드 레이어를 받지 않는다**. 오직 현재 장면(`surroundings`) 만으로 판정. 장기 맥락·과거 턴 요약·엔티티 메모리는 내러티브 전용 (§3, [01-overview.md](./01-overview.md) §3.12).
-- **judge 는 절대 되묻지 않는다**. 모호한 입력에 대해 `clarify` 같은 액션을 발행하는 통로는 없음. 검증 통과 못 한 targets 는 location 폴백 (§2.3) 으로 떨어지고, 입력의 모호함은 narrator 가 자연스럽게 흡수한다.
+## Classify
 
-### 1.2 내러티브 에이전트
+`classify`는 플레이어 입력을 `Action`으로 바꾸는 LLM 호출이다.
 
-**역할**: 이야기 서술 + 턴 요약 + 메모리 판정.
+후처리가 해도 되는 일:
 
-**입력** (`NarrateInput` 11 필드):
-- `player_input`: 플레이어 원문
-- `player_view`: 플레이어 기준 그래프 뷰 — race / appearance / gender 등 narrator 가 플레이어를 묘사·발화시킬 때 쓰는 정체성 정보
-- `world`: 세계관 (§3.1)
-- `session`: 챕터/퀘스트 진행 상태 (§3.2). `chapter.{title, summary, quests[]}` + `quests[].{title, summary}` + `day_phase` (새벽/오전/오후/밤). progress 숫자는 안 보냄. [P3 에서 Campaign 추가]
-- `history`: 최근 N턴 대화 + 이전 턴 요약 (§3.3)
-- `surroundings`: 현재 장면 — 위치 + 같은 위치의 캐릭터/아이템 (§3.4.1). 모든 분기에서 들어간다.
-- `target_view`: 대상 엔티티 기준 그래프 1-2홉 (§3.4.2). pass·reject 면 생략되고 `surroundings` 만 들어간다. reject 분기에 별도 가이드를 런타임에 끼워 넣지 않는다 — `agents/narrate/prompt.md` 가 모든 분기를 다루는 정적 시스템 프롬프트이고 그 안에 `### action=reject` 브랜치가 baked-in 이라, narrate runner 는 분기마다 프롬프트를 재조립하지 않고 이 한 장만 쓴다 (`agents/narrate/runner.py:stream_narrate`). 본문이 끝난 뒤 `flow/narrate.py:_sterilize_for_reject` 가 reject 본문을 정리하고 `state_changes=[]·memorable=false` 를 강제해 마무리.
-- `judge_result`: DC판정 에이전트 출력
-- `grade`: 주사위 결과 등급 (roll/combat 일 때만, §5.3)
-- `act_log_lines`: chain dispatch 의 비-최종 파트에서 엔진이 남긴 한 줄 알림 (예: "이미 체력 가득", "금화가 부족합니다"). chain 이 아닌 턴은 빈 리스트. narrator 는 본문이 엔진과 어긋나지 않도록 이 줄들을 흡수해야 한다.
-- `previous_phase_signal`: 직전 턴에서 넘어온 일회성 시그널. 현재 값은 `"downed_recovered"` 하나 — 0 HP 로 쓰러졌다 자동 죽음판정으로 깨어난 직후 턴에 본문 첫머리에 회복 비트(깨어남·혼란·시야 회복)를 넣게 강제. 일반 턴은 None, flow 가 narrate 를 거쳐가며 클리어해 다음 턴으로 새지 않는다.
+- 대상을 하나로 알 수 있으면 id를 채우기
+- 칸이 명확히 잘못 들어갔으면 옮기기
+- `query`가 다른 행동과 섞였으면 `query`만 남기거나 거절하기
+- 없는 id나 잘못된 행동은 거절하기
 
-**출력**: 토큰 단위로 흘려보낸다(스트리밍). 한국어 2인칭 본문을 먼저 보내고 (pass/roll/reject 4~7문장, intro 6~9문장 — 첫 장면은 더 길게), 구분자(`---JSON---`) 뒤에 메타 JSON을 붙인다.
+후처리가 하면 안 되는 일:
 
-```
-<서술 본문>
----JSON---
-{
-  "turn_summary": "경비병 설득 성공",
-  "state_changes": [
-    {"type": "affinity", "actor": "player_01", "target": "guard_01", "grade": "success", "intent": "friendly"}
-  ],
-  "memorable": true,
-  "memory_targets": ["guard_01", "player_01"],
-  "memory": {
-    "guard_01": "낯선 자가 뇌물을 찔러 넣고 문을 통과했다.",
-    "player_01": "내가 뇌물을 써서 경비병을 매수하고 통과했다."
-  },
-  "importance": 3,
-  "memory_links": {"guard_01": "player_01", "player_01": "guard_01"}
-}
-```
+- 성공/실패 정하기
+- 난이도 정하기
+- graph 바꾸기
+- 없는 대상을 새로 만들기
 
-**필드**:
-- `turn_summary`: turn_log 에 저장될 이 턴 한 줄 요약 (대상/결과 명시, ~60자). 챕터/퀘스트의 누적 진행 요약(§3.2 의 `summary`) 과 다름 — 이건 turn-level 한 줄.
-- `state_changes`: 엔진에 전달할 상태 변경 목록 (§6)
-- `memorable`: 이 턴이 NPC/장소/플레이어 중 누군가의 장기 기억(§7) 에 남을 만한지
-- `memory_targets`: 기억을 저장할 엔티티 ID 목록 (복수 가능)
-- `memory`: `{entity_id: "한 줄 POV 회상"}` dict. `memory_targets` 의 entity 마다 한 줄. **player 의 항목은 1인칭 ("내가 …"), NPC 의 항목은 그 NPC POV** — 같은 사건을 두 시점에서 따로 적는다 (같은 문자열 복붙 금지). `memorable=true` 일 때 필수. `memory_targets` 가 비면 엔진이 `memorable=false` 로 강등하고 저장 안 함.
-- `importance`: 기억 중요도 (1: 사소, 2: 보통, 3: 중요)
-- `memory_links`: 각 entity 의 기억이 누구를 향한 것인지 매핑 (`{entity_id: target_id}`). `memory_targets` 의 entity 마다 한 줄. 여기 빠진 entity 의 기억은 `target_id=None` 으로 들어가 Subject.known 산출 ([04-boundary.md](./04-boundary.md) §1) 에서 자연스럽게 빠진다. 1명짜리 memory_targets (예: 플레이어 혼자 깨달음) 는 보통 비워둠. 자동 추론 안 함 — 1:1·다대다 모두 narrator 가 명시.
+## Dispatch
 
-**서술 규율**:
-- 수치/확률/DC 를 본문에 노출하지 않음 ("설득을 시도한다" ○, "DC 15 설득" ✗)
-- HP·데미지·XP·금화는 엔진이 이미 적용. 본문에서 숫자로 다시 제시하지 않음.
-- NPC 의 말투·대사는 `target_view` 의 `tone_hint` 만 본다. `disposition` 은 Character 엔티티에는 있지만 target_view 로 투영되지 않으므로 narrator 는 `tone_hint` 한 자리에서 어조를 읽는다.
-- `state_changes` 타입은 `set | move | move_item | affinity` 4종만. 이 4종이 아니거나 형식이 어긋난 항목은 `apply_changes` 가 `rejected[]` 로 따로 빼두고 적용하지 않는다.
+dispatch는 “이 행동을 어디로 보낼지” 고르는 단계다. 여기서 실행하지 않는다.
 
-### 1.3 LLM 런타임
-
-- **agent별 라우팅**. `LLM_ROUTE_<AGENT>` env 가 `<provider>/<model>` 매핑을 만든다 — `dc_judge` / `narrate` / `combat_narrate` / `encounter_summon` / `skill_recommend` 각각이 자기 모델을 쓸 수 있고, 매칭 안 되면 `LLM_ROUTE_DEFAULT` (필수) 로 폴백. provider 블록 (`.env.llama_cpp` / `.env.google`) 이 `LLM_<NAME>_BASE_URL` · `_API_KEYS` (round-robin) · 모델별 thinking 카테고리를 정의. 자세한 env 모양은 [01-overview.md](./01-overview.md) 환경 변수 부록.
-- thinking 동작은 모델의 THINK_* 카테고리가 결정 — `OFF` 는 생각 안 함, `OPT` / `OPT_ON` 은 caller 의 `think` 플래그로 토글, `ON` 은 항상 생각. `/turn` · `/roll` 의 request body 가 받는 `think: bool` 필드는 `OPT` / `OPT_ON` 모델에서만 효과.
-- `src/llm/client.py` 가 `LLMClient` 노출. provider-style 로직은 `src/llm/llama_cpp.py` · `src/llm/gemini.py` 가 따로 들고 `client.py` 는 dispatch 만.
-- 시스템 프롬프트는 각 에이전트 디렉터리의 `prompt.md` 에서 로드 (`src/agents/<agent>/prompt.md`, 예: `src/agents/dc_judge/prompt.md`, `src/agents/narrate/prompt.md`).
-
----
-
-## 2. 파이프라인
-
-위 두 에이전트가 한 턴 안에 어떻게 엮이는지.
-
-### 2.1 1턴 흐름
-
-```
-플레이어 입력
-  ↓
-엔진: surroundings 조립
-  ↓
-DC판정 에이전트 호출
-  │
-  ├─ pass         → target_view 없이 내러티브 호출 (surroundings 만) → 후처리 ↓
-  │
-  ├─ reject       → target_view 없이 내러티브 호출 (surroundings + reject 가이드) → 후처리 ↓
-  │
-  ├─ roll         → 엔진: target 검증 → DC·mod·required_roll 계산
-  │                  → PendingCheck(kind="stat") 저장 → SSE pending_check → 스트림 종료
-  │                  (프론트 주사위 버튼 → 플레이어 굴림 → /roll 진입)
-  │                  /roll: grade 판정 → target_view 조립 → 내러티브 호출 → 후처리 ↓
-  │
-  ├─ combat /     → 엔진: target 검증 (필요 시 즉석 적 spawn for summon_combat)
-  │  summon_combat   → combat_state 부팅 → flow/combat_auto.run_auto_combat 호출
-  │                   → 매 라운드 양쪽 자동 (player 는 입력 행동 반복, NPC 는 pick_npc_target AI)
-  │                   → terminal outcome (victory/defeat/fled/downed) 까지 결판
-  │                   → combat_narrate 가 events 전체를 3–5 문장 시네마틱 스트리밍
-  │                   → numeric summary act_line + SSE combat_end + combat_state 정리
-  │                   → 후처리 ↓
-  │
-  ├─ flee         → 전투 외: "지금은 도망칠 전투가 없습니다" 한 줄
-  │                  전투 중: 자동 사이클의 player 행동을 flee 로 — 성공 시 outcome=fled, 실패 시 평타 폴백
-  │
-  ├─ rest         → [P3] 엔진: location.sleep_risk 굴림
-  │                   → 풀회복 + turn_count 를 다음 새벽 boundary 로 점프, 또는 인카운터로 combat 부팅
-  │                   → 후처리 ↓
-  │
-  ├─ use / equip /  → [P3] 엔진이 그 자리에서 처리 (REST 엔드포인트 없음)
-  │  unequip /        검증 실패는 InventoryInvalid 등 DomainError → format.py 가
-  │  buy / sell /     한국어 한 줄로 변환해 GM log_entry 로 흘림 (HTTP 422 안 일어남)
-  │  level_up /       → 후처리 ↓
-  │  learn_skill
-  │
-  └─ chain        → parts[] 를 순서대로 dispatch (turn_count 와 finalize 는 끝에 한 번).
-                     마지막 part 가 pass 면 narrate 한 번 돌아 톤 살림 → 후처리 ↓
-
-reject 전용 추가 단계 (후처리 직전):
-  엔진이 narrator 출력의 state_changes 를 비우고 memorable=false 로 강제
-
-후처리 (narrator 가 돈 분기 공통):
-  엔진: state_changes 검증 → 유효 변경 적용, 무효는 rejected[] 로깅
-  엔진: turn_summary 를 turn_log 에 저장, (player_input, narrative) 를 recent_dialogue 에 append
-  엔진: memorable 이면 memory 를 memory_targets[].memories[] 에 저장
-  ↓
-  SSE state (전체 슬롯) → save_game → SSE done
-```
-
-### 2.2 두 단계 턴 (pending_check)
-
-stat 굴림이 필요한 분기 (`roll`) 는 **한 턴을 두 HTTP 호출로 쪼갠다** (`/turn` → `/roll`). combat / summon_combat / flee / death_save 는 모두 자동 처리되므로 더 이상 dice 버튼을 띄우지 않는다.
-
-왜 쪼개나: 플레이어가 "주사위 굴리기" 버튼을 누르는 시점이 LLM 응답 사이에 끼어 있다. 한 호출로 끝내려면 서버가 사용자 입력을 기다리며 스트림을 열어둬야 해서 구조가 복잡해진다. 그냥 두 호출로 끊는 게 단순하다. 자세한 이유는 [01-overview.md](./01-overview.md) §3.10.
-
-- `/turn` 이 `RollAction` 으로 끝나면 엔진은 `PendingCheck(kind="stat")` 을 `GameState` 에 저장하고 스트림을 닫는다. 내러티브는 아직 돌지 않음.
-- 프론트는 `pending_check` 이벤트로 받은 `{kind, dc, stat, mod, required_roll, tier, target, reason}` 을 UI 에 띄우고, 플레이어가 버튼을 누르면 **본문 없이** `/roll` 호출. 주사위 눈은 서버가 굴린다 (서버 권위 — 클라이언트가 dice 값을 보내지 않음).
-- `/roll`: 일반 d20 굴림 → grade 계산 → 내러티브 호출 → `pending_check = None`. 전투 중 환경 굴림이었다면 굴림 후 자동 사이클 cap=1 로 NPC 1 라운드 추가 진행.
-- `/turn` 을 `pending_check` 가 활성인 채로 호출하면 `error: PendingCheckActive`. `/roll` 을 `pending_check` 없이 호출하면 `error: PendingCheckExpected`.
-- **프론트 입력 가드**: `pending_check` 활성 동안 텍스트 전송 버튼은 비활성화. 주사위 버튼만 활성. 백엔드 가드(`PendingCheckActive`)와 이중 방어.
-
-```python
-class PendingCheck:
-    player_input: str
-    kind: Literal["stat"] = "stat"
-    tier: Tier
-    stat: StatKey
-    target: str
-    targets: list[str]    # judge 원본 배열. 단일 대상이어도 [id] 로 채움. 폴백(§2.3 step 3) 도 [location_id] 로 채워 None 경로 없음
-    dc: int               # tier 범위에서 균등 샘플링 (§5.2)
-    mod: int              # social_bonus
-    required_roll: int    # DC - stat_modifier, [1, 20] clamp
-    reason: str           # judge 가 RollAction.reason 으로 받은 사유
-    created_at: str       # ISO 8601
-```
-
-`mapping/to_front.py:pending_check_to_front` 가 위 구조를 프론트 wire 형태 (`stat_label`, `stat_value`, `reason`, `tier={value,max,label}` 등) 로 가공해 SSE `pending_check` 이벤트에 싣는다 ([04-boundary.md](./04-boundary.md) §1).
-
-### 2.3 judge 출력 검증과 재시도
-
-dc_judge runner 가 매 호출마다 두 단계 검증:
-
-1. **JSON 파싱** — `JudgeOutput` 스키마 검증 (`server/src/agents/dc_judge/schema.py`).
-2. **semantic 검증** — `targets[]` 의 모든 ID 가 **현재 surroundings 에서 가시인 ID 집합**에 들어 있는지 (`agents/dc_judge/semantics.py:_surroundings_target_ids` — `surroundings.location.id` + `surroundings.entities[*].id`, `action="pass"` 일 때만 추가로 `surroundings.corpses[*].id` 까지 허용). 전역 `state.characters | locations | items` 가 아니라 *지금 이 장면에서 지시 가능한 대상* 만 통과시켜, LLM 이 다른 곳에 있는 NPC·아이템·장소 ID 를 끌어다 쓰는 환각을 차단한다.
-
-둘 중 어느 쪽이 실패해도 직전 응답 본문과 에러 메시지를 messages 에 append 해서 자기 교정 루프로 다시 호출 — 같은 실수를 반복하지 않게 LLM 컨텍스트에 실패 사유를 남겨주는 것. 최대 5 회 재시도 (총 6 번 시도).
-
-5 회 후에도 통과 못하면 마지막 에러 종류로 분기:
-- 마지막이 JSON 파싱 실패 → `JudgeMalformed` 예외 raise ([04-boundary.md](./04-boundary.md) §3 → SSE `error: JudgeMalformed`).
-- 마지막이 semantic 실패 → 폴백: 현재 플레이어가 있는 장소 하나로 (`targets=[location_id]`, `target=location_id`). 예외 안 던짐, 일반 진행 계속.
-
-검증 통과 시 PendingCheck 채우는 규칙:
-- `targets` 단일 대상이면 `PendingCheck.target` 에 그대로.
-- 복수 대상이면 actor 가 가장 싫어하는(affinity 가 가장 낮은) 대상을 기준으로 한 명 골라 `PendingCheck.target` 에 — `social_bonus` 가 한 명 기준으로 계산되기 때문. 원본 배열은 `PendingCheck.targets` 에 함께 둔다.
-
-### 2.4 SSE 이벤트
-
-한 줄 JSON 형식: `data: {"type": "<event>", "data": {...}}\n\n`. 일반 턴은 `done` 또는 `error` 로 종료. **예외 — `pending_check` 분기는 `done` 없이 스트림이 그냥 닫힌다** (클라이언트는 stream-close 자체를 신호로 받음). `_wrap` 이 `done` 을 자동으로 붙이지 않는 의도된 동작.
-
-| type | data | 시점 |
+| 경로 | 쓰는 경우 | 결과 |
 |---|---|---|
-| `judge` | 액션별로 다른 필드 (§1.1 표). `action` 은 항상 존재, 액션마다 `tier` / `stat` / `targets` / `item_id` / `npc_id` / `skill_id` / `tail_intent` / `reason` 등이 선택적으로 채워짐 | judge LLM 직후. §2.3 의 재호출이 일어나도 최종(검증 통과) 결과 1회만 발사 |
-| `pending_check` | `{kind, dc, stat, stat_label, stat_value, mod, required_roll, tier, target, reason}` — `kind` 는 항상 `"stat"`. `stat_label` 은 `stat` 의 한국어 라벨 (`"근력"` 등), `stat_value` 는 그 스탯의 플레이어 점수. `tier` 는 §5.2 의 `{value:1..7, max:7, label}` 형식. `reason` 은 judge `RollAction.reason` 의 자유 텍스트 | `RollAction` 확정. 직후 스트림 종료 |
-| `narrative_delta` | `{text}` | narrate / combat_narrate / intro LLM 청크마다 |
-| `suggestions` | `{items: string[]}` — 0~3 개 한국어 행동 후보 | narrate 본문이 끝나고 메타 JSON 파싱된 직후. `state` 보다 먼저. 빈 배열도 매 턴 발사 (이전 턴 칩을 비워야 함) |
-| `state` | `FrontState` (`{hero, subject, quest, place, combat, log, pendingCheck, storyGraph}`) | apply 후 8 슬롯 통짜 송신. 한 턴에 1회, 파이프라인 말미. 자세한 모양은 [04-boundary.md](./04-boundary.md) §1 |
-| `log_entry` | `LogEntry` (`player \| act \| roll \| gm`) | 플레이어 입력, 시스템 알림, 주사위 결과, 시네마틱 전투의 자체 발행 gm 텍스트. 평시 narrate 의 `gm` 은 `narrative_delta` 축적으로 만들어지므로 이벤트 없음 |
-| `combat_start` | `{turn_order, round, surprise, enemy_ids}` | judge 가 `action="combat"` / `action="summon_combat"` 반환해 엔진이 `combat_state` 를 띄운 직후 |
-| `combat_turn` | `{actor, action: "attack"\|"skill"\|"miss"\|"pass"\|"flee"\|"use"\|"equip"\|"unequip", grade?, damage?, target?, skill_name?, skill_id?, killed?, round?}` | 자동 사이클 안에서 한 actor 의 한 행동 직후 (라운드 단위로 발사). UI 는 보통 무시하고 `state` 와 `log_entry` 를 권위로 봄 (테스트가 관찰 가능 신호로 사용) |
-| `combat_end` | `{outcome: "victory" \| "defeat" \| "fled" \| "downed"}` | 자동 사이클 종료 직후 발사. 사이클은 항상 terminal outcome 까지 가므로 모든 사이클 끝에 한 번씩 나옴. 다음 SSE `done` 이 따라옴 |
-| `done` | `{}` | 턴 종료 |
-| `error` | `{message, code?}` | 복구 불가 오류 |
+| formatter | `query` | 공개 정보만 읽어 답함 |
+| confirmation | 확인이 필요한 행동 | 확인 대기 상태 저장 |
+| check | 주사위가 필요한 행동 | 판정 대기 상태 저장 |
+| engine | 바로 적용 가능한 행동 | 검사 뒤 `GraphChange` 적용 |
+| narrate | 단순 대화나 관찰 | 이야기로 처리하고 작은 변화만 허용 |
+| dedicated flow | 전투, 휴식, 자동 퀘스트 | 전용 순서로 처리 |
 
-### 2.5 세션 생명주기
+`query`는 여기서 끝난다. `query`는 graph, 시간, 대기 상태, 이야기를 바꾸지 않는다.
 
-**프로필 목록** (`GET /profiles`): `scenario_repo.list_profiles()` (운영은 Storage, 테스트는 LocalFs) 로 `[{id, name, description, races: [{id, name, description}]}]` 반환. 프론트 새게임 화면이 이 목록을 카드로 보여주고 사용자가 하나 골라서 시작.
-- 프로필 메타(`id, name, description`)는 `scenarios/{id}/profile.json` 한 파일에 들어 있음. `id` 는 디렉터리 이름과 같아야 (스캐너가 디렉터리명으로 찾고 검증).
-- race 목록은 `scenarios/{id}/races/*.json` 의 각 파일에서 `{id, name, description}` 만 추려서 응답에 포함 (`racial_skill_ids` 는 내부 전용, 프론트로 안 나감).
+전투 중이면 `query`를 뺀 대부분의 행동은 전투 교환으로 처리한다.
 
-**init** (`POST /session/init {profile, player: {name, race_id, gender}}`): `gender ∈ {"male","female"}` 필수 (`persistence/init.py:PlayerInput`). 짐승·괴수 NPC 만 `none` 을 쓰고 플레이어 입력엔 그 값이 없다.
-- 요청 검증: `profile` 이 `scenario_repo.list_profiles()` (운영은 Storage, 테스트는 LocalFs) 에 있는지, `race_id` 가 그 프로필의 race 목록에 있는지. 누락·미스매치는 422.
-- 시드 로딩: `scenarios/{profile}/` 의 `world.md`, `start.json`, `player_template.json`, `characters/`, `locations/`, `quests/`, `items/`, `races/`, `skills/`, `chapters/`, `campaigns/` 를 읽어 초기 `GameState` 조립.
-- 플레이어 캐릭터 합성: `player_template.json` 의 시작 위치·equipment·인벤토리 시드는 그대로 쓰되, `name`·`race_id` 는 요청값으로 덮어쓰기. 스탯 6 개 (`STR/DEX/CON/INT/WIS/CHA`) 모두 10 으로 강제 (player_template 의 stats 는 무시). max_HP / max_MP 는 [03-features.md](./03-features.md) §2.3 의 공식 (level 0, CON 10 → max_HP 20, INT 10 → max_MP 15). race 의 `racial_skill_ids` 자동 부여. `appearance` 는 플레이어 입력으로 받지 않음 — NPC 시드 전용 필드.
-- `game_id` 는 시작 시각으로 할당 (`game_YYMMDD_HHMMSS_<6hex>`, 시각은 UTC, 끝의 6 hex 는 `secrets.token_hex(3)` — 같은 초에 두 게임이 만들어져도 충돌하지 않게 하는 랜덤 꼬리), 최초 저장. `FrontState` 와 함께 반환. 클라이언트가 응답의 `game_id` 를 `localStorage` 에 보관해 다음 부팅 때 자기 게임을 다시 열어준다.
+## Pending 상태
 
-**현재 세션 복원**: 클라이언트는 `localStorage` 에 저장된 game_id 로 `GET /session/{id}/state` 를 호출. id 가 없으면 새게임 화면, 디렉터리가 없으면 (게임 삭제됐거나 saves 폐기) 포인터를 비우고 새게임 화면. 서버가 "최근 게임" 을 추적하지 않으므로 한 서버에 여러 사용자가 붙어도 서로의 마지막 게임을 덮어쓰지 않는다. 게임 목록·이어하기 화면은 P1 에 없음 (사용자 한 명당 한 게임 흐름).
+pending은 “지금 다른 입력을 받기 전에 먼저 끝내야 하는 일”이다.
 
-**load** (`GET /session/{id}/state` 또는 `/turn` · `/roll` 진입): `SaveRepo.load_game` 으로 복원. Supabase 어댑터는 `games.meta` jsonb + `entities` 테이블의 모든 row + `log_entries`/`history_entries`/`dialogue_entries` 의 cap 만큼 꼬리 SELECT 해서 Pydantic 으로 `GameState` 조립. game_id 가 없으면 HTTP 404. 테스트용 LocalFs 어댑터는 같은 형태를 디렉터리 트리에서 읽음.
+한 번에 하나만 있을 수 있다.
 
-**save**: `apply_changes` 이후 파이프라인 말미(`flow/dirty.flush`)에서 호출. 더티 추적 — 한 턴 동안 mutate 된 `(kind, id)` 만 `entities` 에 upsert. log/history/dialogue 는 append-only INSERT. 순서: 엔티티 upsert + jsonl append 먼저, `games.meta` upsert 마지막 — meta 가 commit point 이므로 중간 크래시는 다음 턴 load 가 `next_log_id` self-heal 로 흡수. 저장 실패는 SSE `error: PersistenceFailed` 후 스트림 종료 (메모리 롤백 없음 — 다음 GET 이 다시 로드하면 복구). LocalFs 어댑터는 같은 더티 추적에 atomic `.tmp` → `os.replace` 쓰기를 쓴다.
+| pending | 플레이어가 해야 할 일 |
+|---|---|
+| `pending_confirmation` | 확인 또는 취소 |
+| `pending_check` | 주사위 굴림 |
 
-**인스턴스 단위 게임**: 게임 하나 = `(games)` 한 row + 같은 `game_id` 를 키로 가진 `entities` / `*_entries` 묶음. `games(game_id) ON DELETE CASCADE` 로 한 row 만 지우면 자식 테이블이 자동 정리. LocalFs 모드는 같은 묶음을 한 디렉터리 (`saves/games/{game_id}/`) 에 담아 폴더 이동·복사만으로 세션 이전 가능. 자세한 설명은 [01-overview.md](./01-overview.md) §3.11.
+`pending_confirmation`이 있으면 일반 입력과 주사위 입력을 막는다.
+`pending_check`가 있으면 일반 입력과 확인 입력을 막는다.
 
----
+## Confirmation
 
-## 3. 컨텍스트 레이어
+confirmation은 확인창이다.
 
-내러티브 에이전트에 전달되는 컨텍스트는 4개 레이어. 위에서 아래로 갈수록 자주 바뀐다 — 맨 위 월드 레이어는 게임 한 판 내내 거의 그대로 두고, 맨 아래 장면 레이어는 매 턴 새로 조립한다. 안 바뀌는 건 시스템 프롬프트에 고정해 캐싱하고, 자주 바뀌는 건 매번 다시 만든다.
+```text
+확인이 필요한 Action
+  -> 원래 Action 저장
+  -> 확인창을 화면에 보냄
+  -> 멈춤
 
-### 3.1 월드 레이어 (거의 불변)
+확인
+  -> 저장했던 Action을 다시 처리
 
-게임 세계관, 톤, 시대, 기본 규칙. 프로필별 `world.md` (`scenarios/{name}/world.md`). 시스템 프롬프트에 고정.
-
-```markdown
-# 세계관
-중세 판타지, 어두운 톤. 812년 고블린 침공기.
-인간과 고블린이 대립하는 세계.
-
-# 톤
-진지하고 급박한 분위기. 유머는 절제.
+취소
+  -> 확인 대기만 제거
 ```
 
-### 3.2 세션 레이어 (퀘스트 완료 시 변경)
+확인은 성공이 아니다. 확인 뒤에도 조건이 안 맞으면 행동은 실패하거나 거절될 수 있다.
 
-엔진이 매 턴 조립. 현재 챕터와 그 안의 활성 퀘스트에 대해 **narrator 가 진행을 이어가는 데 필요한 최소 정보**를 넘긴다 — 큰 그림 톤이 아니라 "지금까지 어디까지 왔는지" 한 줄 요약.
+## Check
 
-```json
-{
-  "chapter": {
-    "title": "고블린 침공",
-    "summary": "마을 광장의 고블린 정찰병을 처치하고, 대장장이의 무기 제작을 돕는 중. 마을은 본격적인 침공에 대비하고 있다.",
-    "quests": [
-      {
-        "title": "광장의 고블린 정찰병",
-        "summary": "광장 입구에서 정찰병 한 명을 발견했지만 아직 접근하지 않음."
-      },
-      {
-        "title": "대장장이의 부탁",
-        "summary": "대장장이 군나르가 철광석 5개를 요청. 첫 번째를 동굴에서 발견해 가져온 상태. 4개 남음."
-      }
-    ]
-  },
-  "day_phase": "오후"
-}
+check는 주사위 판정 대기다.
+
+flow는 원래 행동을 저장하고 멈춘다. 플레이어가 주사위를 굴리면 저장된 행동을 다시 읽고 결과를 만든다.
+
+복잡한 행동에 판정이 여러 개 필요하면 한 번에 다 굴리지 않는다. 첫 판정 뒤 다음 행동은 다음 입력으로 넘긴다.
+
+## Engine 적용
+
+engine은 현재 graph에서 그 행동이 가능한지 검사하고 `GraphChange`를 만든다.
+
+```text
+검사
+  -> 안 되면 거절
+  -> 되면 GraphChange 만들기
+  -> GraphChange 검사 규칙 확인
+  -> graph에 적용
+  -> 저장할 변경 모으기
+  -> 이어질 일 모으기
 ```
 
-필드 의미:
+저장할 `GraphChange`와 진행 상태 변경은 `Dirty`라고 부른다. 이어질 일은 `Effect`라고 부른다.
 
-- **`summary`** — "지금까지 진행한 것의 한 줄 요약" (동적). 정적 의뢰 내용이 아니라 챕터/퀘스트가 *어디까지 왔는지* 의 서사적 상태. narrator 가 의미 있는 진행이 있을 때 `{type: "set", entity: "chapters|quests", id, field: "summary", value: "..."}` 로 갱신 (§6.1). 초기값은 시나리오 시드 (`scenarios/{name}/quests/*.json`, `chapters/*.json`) 에 들어 있음 — 보통 "[수락] 마을 장로가 광장의 정찰병 처치를 의뢰" 같은 한 줄.
-- **`title`** — 식별자.
-- **`day_phase`** — 현재 일과 시간대 (`새벽 / 오전 / 오후 / 밤`). session_layer 가 narrator 에게 "지금이 언제쯤인지" 를 넘기는 유일한 경로. `state.turn_count` 에서 파생되며 분/시 단위 시계는 따로 없다.
+## Effect
 
-`giver_id`, `triggers`, `conditions` 같은 필드는 Quest 엔티티(`domain/entities.py`) 에는 있지만 session 레이어에는 투영되지 않는다 — 정적 디테일은 플레이어가 퀘스트 NPC/장소에 닿는 턴의 `target_view` 그래프 탐색으로 들어온다 (§3.4.2).
+`Effect`는 어떤 일이 끝난 뒤 자연스럽게 이어지는 일이다.
 
-구조 결정:
-
-- **정적/동적 분리** — session_layer 는 *동적* (지금까지의 진행). *정적* 디테일 (rewards, difficulty, full triggers, fail_triggers, prerequisite 등) 은 플레이어가 퀘스트 NPC/장소에 닿는 턴에 `target_view` 의 그래프 탐색으로 들어온다 (§3.4.2). session=윤곽·동적, target_view=깊이·정적.
-- **progress 숫자 안 보냄** — `{done, total}` 같은 숫자는 본문에 녹이기 어렵다 ("0/1" 을 어떻게 묘사하나). narrator 가 진행 상태를 알 필요는 `summary` 로 충족된다. progress 자체는 프론트 표시·엔진 트리거 평가에서만 사용.
-- **`active_*` prefix 없음 / `status` 필드 노출 안 함** — 어차피 활성인 것만 들어가므로 잉여 (`status` 필드 자체는 모델에 있고 narrator 가 `set` 으로 갱신함; session_layer 노출에서만 생략).
-- **`chapter.quests[]` 위계** — 퀘스트는 항상 챕터에 속하므로 묶음. P3 의 Campaign 도 동일 패턴 (`campaign.chapters[]`).
-- **`day_phase` 는 라벨 그대로** — 분/시 단위 시계가 없으므로 narrator·프론트 모두 `새벽 / 오전 / 오후 / 밤` 4 값만 본다 ([03-features.md](./03-features.md) §2.1, [04-boundary.md](./04-boundary.md) §1).
-
-모델 정의와 progress 계산은 [03-features.md](./03-features.md) §2.8.
-
-### 3.3 히스토리 레이어 (매 턴 변경)
-
-히스토리는 기본 두 블록 — **이전 요약 (먼 과거, 한 줄)** → **최근 대화 (가까운 과거, 원문)** — 을 한 문자열로 이어붙여 전달한다 (`context/layers.py:build_history_layer`). 같은 location 에 시체(corpses) 가 있을 때만 맨 앞에 `=== 사망 — 다시 등장시키거나 발화시키지 말 것 ===` 블록이 추가로 붙어 세 블록이 된다 — narrator 가 죽은 NPC 를 살리거나 다시 발화시키지 않게 강제하는 안전 띠. **마지막 줄이 곧 직전 턴** — narrator 가 자연스럽게 "지금" 으로 이어쓸 수 있게 한다. 먼 과거는 한 줄로 압축해 컨텍스트를 아끼고, 가까운 과거는 원문 그대로 보여줘서 톤·말투를 잇게 한다.
-
-**턴 로그 (`turn_log`, 이전 요약)**: 전체 턴의 한 줄 요약을 롤링 보관. 상한은 `rules.memory.turn_log_size` (기본 50), 초과 시 오래된 항목부터 drop. 최근 대화에 포함된 턴은 이 블록에서 제외 (중복 방지).
-
-```json
-// 저장 (`TurnLogEntry`): narrator 의 `turn_summary` 가 `summary` 키로 들어가고, 엔진이 메타로 `target` (`pending_check.target`, 없으면 `judge_result.targets[0]`, 둘 다 없으면 생략) 을 함께 넣음 — 메모리 연관·필터링용 [P3]
-{"turn": 17, "target": "goblin_scout", "summary": "정찰병 처치 → 광장 고블린 1/1 완료"}
-
-// 전달 (먼저 등장, 시간 오름차순)
-=== 이전 요약 ===
-[턴 17] — 정찰병 처치 → 광장 고블린 1/1 완료
-[턴 18] — 덩치에 계속 공격, 돌파 실패
-```
-
-**최근 대화 (`recent_dialogue`)**: 최근 N턴의 `(player_input, narrative)` 원문 쌍. narrate 또는 combat_narrate 가 돈 모든 분기에서 append — `/turn` 의 pass·reject, `/roll` 의 stat 해소 (combat·death-save 는 §2.2 의 자동 사이클로 따로 흐름). 주사위 버튼만 누르고 narrate 가 끝까지 안 돈 분기 (예: 에러 종료) 는 append 안 함. 상한은 `rules.memory.recent_dialogue_turns` (기본 10), 초과 시 오래된 항목부터 drop.
-
-```
-=== 최근 대화 ===
-[턴 19]
-  플레이어: 한 걸음 물러서며 사방을 살핀다.
-  서술자: 어둠 속에서 무언가 움직이는 기척이...
-[턴 20]
-  플레이어: 숨을 고르며 눈을 뜨려 한다.
-  서술자: 차가운 돌바닥이 뺨에 닿는다...
-```
-
-**엔티티 메모리**: target 의 `memories[]` 가 `target_view` 에 포함되어 전달 (§7).
-
-### 3.4 장면 레이어 (매 행동 변경)
-
-두 에이전트의 필요가 달라서 두 갈래로 조립된다:
-
-- `surroundings` → DC판정에게: "지금 여기 뭐가 있나" (장소 + 주변 엔티티 상태 태그)
-- `target_view` → 내러티브에게: "이 한 명/한 곳에 대해 알 수 있는 모든 것" (그래프 1~2홉 탐색)
-
-#### 3.4.1 surroundings (판정 결정용)
-
-**목적**: DC판정 에이전트에게 "지금 여기 뭐가 있고 어떤 상태인지" 전달.
-
-**포함**:
-- `in_combat: bool` — dict 최상단에 항상 실린다 (`context/surroundings.py` 의 `build_surroundings`, `state.combat_state is not None` 으로 채움). 전투/비전투 동일 surroundings 빌더가 같은 모양으로 반환하기 때문에 judge 는 이 한 필드로 분기를 안다.
-- 현재 장소 이름 + 설명 + 상태 태그
-- 장소에 놓인 아이템 (visible items)
-- 주변 NPC: 이름 + 상태 태그 (예: "경계중(affinity -25)", "우호적(affinity 70)") — 어떤 affinity 값이 어떤 라벨이 되는지(매핑 규칙)는 §7.4
-- 주변 오브젝트 + 상태 태그 (예: "문: 잠김", "상자: 함정")
-- 인접 장소 이름
-- 장비/기술/인벤/성장(`growth.can_level_up`)/`skill_candidates`/`merchants` — actor 중심 판정 보조
-- `corpses` — 같은 location 의 시체 + history 에 등장한 다른 location 의 시체(`off_screen=true`). target/combat/buy/sell 대상이 아님이라 entities 와 분리해 노출. judge 가 호명을 `pass(targets=[corpse_id])` 로 받아 narrate 가 시체 톤으로 흡수.
-- `recent_npc` — 직전 turn 까지 가장 최근에 말 건 같은 location alive NPC id. 호명 없는 대인 행동의 default target.
-
-#### 3.4.2 target_view (내러티브용)
-
-**목적**: 내러티브 에이전트에게 "이 대상의 관점에서 알 수 있는 정보" 전달.
-
-**조립 방법**: target 하나에 대해서만 조립 (같은 장소의 다른 NPC 정보는 포함하지 않음). 그래프 탐색 규칙(시작 노드·홉 수·엣지 갈아타기)은 §4.2.
-
-**분기 결정**: target ID 가 `state.characters | locations | items` 중 어느 컬렉션에 속하는지로 자동 판별 (§2.3 의 검증 결과 재사용).
-
-**target 이 NPC 일 때** (`ontology/target_view.py:_build_npc_view`): 12 키 dict — `_omit_none` 이 None 값 키를 떨궈내므로 비어 있는 옵셔널은 페이로드에서 사라진다 (예: 기억이 없는 NPC 면 `memories` 키 자체가 안 들어간다).
-- 식별: `type, name`
-- 종족·외양: `race, description, appearance, gender`
-- 상태·태도: `tone_hint` (NPC 진심을 grade 에 따라 마스킹해 narrator 가 어조로 번역), `memories` (§7)
-- 소지품: `equipment` (장착 슬롯), `inventory` — `visible_equipment` 같은 별도 키는 없고 `equipment` 한 자리뿐
-- 퀘스트 hook: `quests_given` (이 NPC 가 의뢰자), `quests_kill_target` (이 NPC 가 처치 대상으로 걸린 quest)
-- `disposition` 은 Character 엔티티에는 있지만 target_view 로 투영되지 않는다 — narrator 는 `tone_hint` 만 본다. `level` / `role` / `hp` / `mp` / `max_hp` / `max_mp` 같은 수치·역할 필드도 NPC view 에 없다.
-
-**target 이 Location 일 때** (`ontology/target_view.py:_build_location_view`):
-- 식별·묘사: `type, name, description, tags`
-- 가시 컨텐츠: `items` (현재 이 장소에 놓인 아이템). `hidden_items` / `hidden_connections` 같은 미발견 컨텐츠는 target_view 에 투영되지 않는다 — 수색·발견은 §4.3 의 location 확장 필드로 따로 다룬다.
-- 퀘스트: `quests` — 이 장소가 trigger 대상이거나 giver 가 머무는 quest 묶음.
-
-**target 이 Item 일 때** (`ontology/target_view.py:_build_item_view`):
-- 식별·묘사: `type, name, description`
-- 효과: `effects` — 사용 시 발생할 효과(heal/damage/buff 등)
-- 그래프 연결: `unlocks` (이 아이템이 열쇠로 걸린 잠긴 connection 의 대상 장소), `reward_of` (이 아이템을 보상으로 거는 quest), `located_in` (놓인 장소).
-- 별도의 `status (잠김·함정 등)` 필드나 `key_item_id` 필드는 target_view 에 없다 — 잠금·열쇠 정보는 connection 쪽 (`Location.connections.key_item_id`, §4.3) 에서 의미적 엣지 `unlocks` 로만 들어온다.
-
-**pass 일 때**: target_view 를 조립하지 않음. 내러티브는 surroundings 만으로 서술.
-
-**reject 일 때**: target_view 없음, surroundings 만 + reject 가이드. narrator 는 플레이어 입력을 인-게임 표현(예: "알 수 없는 힘에 막힌다", "현기증이 일어 그 생각을 잊는다")으로 흡수. `state_changes` 비우기·`memorable=false` 강제는 §1.1 참조.
-
----
-
-## 4. 온톨로지 (그래프)
-
-§3 의 `target_view` 가 어디서 오는지 — 엔티티들은 그래프로 연결돼 있고, 그래프 1-2홉 탐색이 NPC 의 "지식 범위" 를 만든다.
-
-### 4.1 구조
-
-엔티티(캐릭터·아이템·장소) 사이의 연결을 그래프로 본다. 점 하나(노드)가 엔티티 하나, 두 점을 잇는 선(엣지)이 그 사이의 관계.
-
-**노드**: character / item / location / quest / skill / race / chapter. 노드 종류는 `GameGraph.get_node_type(id)` 로 조회.
-
-**구조적 엣지**:
-- `located_at`: NPC → 장소 (`Character.location_id`)
-- `located_in`: 아이템 → 장소 (`Location.item_ids`)
-- `equips`: NPC → 아이템 (`Character.equipment`, `attrs.slot` 에 weapon/armor/accessory)
-- `carries`: NPC → 아이템 (`Character.inventory_ids`)
-- `connects_to`: 장소 → 장소 (`Location.connections`, `attrs.difficulty` / `attrs.key_item_id`)
-- `belongs_to_race`: NPC → 종족 (`Character.race_id`)
-- `knows_skill`: NPC → 기술 (`Character.racial_skill_ids` + `learned_skill_ids`, `attrs.source` = racial / learned)
-- `racial_skill_of`: 기술 → 종족 (`Race.racial_skill_ids` 역방향)
-- `member_of_chapter`: 퀘스트 → 챕터 (`Chapter.quest_ids`)
-
-**의미적 엣지** (init 시 자동 추론):
-- 퀘스트 `triggers[].target_id` → `required_by` 엣지 (트리거 type 무관 — `character_death` / `location_enter` / `item_use` 모두 한 자리)
-- 퀘스트 `triggers[].type == "character_death"` → 추가로 `kill_target_of` 엣지 (NPC view 가 "잡혀야 할 대상" 으로 직접 읽도록 좁힌 자리)
-- 퀘스트 `giver_id` → `gives_quest` 엣지
-- 퀘스트 `rewards.items` → `reward_of` 엣지
-- 아이템의 `key_item_id` (`Location.connections` 에 채워진) → `unlocks` 엣지 (열쇠 → 잠긴 connection 의 target 장소)
-
-**역방향 인덱스**: `GameGraph.get_in_edges(node_id, type?)` 가 같은 정보를 to-side 에서 답한다 — "이 장소에 누가 있나"는 모든 character 풀스캔 없이 `get_in_edges(loc_id, "located_at")` 한 줄.
-
-**런타임 컨텐츠** (엣지 아님 — 엔티티 안에 쌓이는 항목 집합):
-- `memories[]`: 엔티티별 기억 (§7)
-
-### 4.2 target_view 조립
-
-target 노드에서 2홉을 훑어 prompt 가 의뢰 맥락을 그대로 받게 한다.
-
-- **NPC view**: 1홉 `gives_quest` → quest. 그 quest 안으로 한 홉 더 들어가 `kill_target_of`(처치 대상), `required_by`(방문 대상·아이템 사용 대상), `reward_of`(보상 아이템) in-edge 를 모두 이름까지 펼침. 추가로 그 NPC 자신이 `kill_target_of` 인 quest 가 있으면 별도 `quests_kill_target` 필드로 표시 — "이 자를 잡아오라" 의뢰의 *대상* 임을 알림.
-- **Location view**: 1홉 `required_by` → quest. 같은 quest payload 를 펼치되 `giver` 까지 in-edge 로 추가 — narrator 가 "X 영감의 부탁이 떠오릅니다" 식으로 호명 가능.
-- **Item view**: 1홉으로 `unlocks`(잠긴 장소), `reward_of`(보상으로 걸린 quest), `located_in`(놓인 장소) 모두 이름·title 로 resolve. raw id 안 새도록 prompt 가 보기 전에 정리.
-
-예: `chief_01 →(gives_quest)→ q_chief →(kill_target_of)→ goblin_01` — 촌장 view 에 `quests_given:[{title:"촌장의 부탁", kill_targets:[{id:"goblin_01", name:"고블린 두목"}], rewards:[{id:"sword_01", name:"대장의 검"}]}]` 가 그대로 떨어진다.
-
-구현은 `src/ontology/graph.py` 가 `GameState` 에서 그래프를 빌드하고, `state.graph()` 가 lazy cache (`_graph_cache: PrivateAttr`) 로 한 번 빌드한 결과를 한 턴 안 read-only 호출에서 재사용한다. relation 을 바꾸는 mutation 직후에만 `state.invalidate_graph()` 가 호출돼 다음 호출 때 다시 빌드. Pydantic dump 에는 안 실린다. 추가 인덱싱은 P1 이슈 아님.
-
-### 4.3 장소 확장
-
-```python
-Location(
-    hidden_items=[...],         # 수색 성공 시 발견
-    hidden_connections=[...],   # 수색 성공 시 통로 발견
-    difficulty="보통",           # 수색 난이도 tier
-)
-
-Connection(
-    target_id="cellar",
-    difficulty="어려움",         # 자물쇠 난이도 tier
-    key_item_id="iron_key",     # 이 열쇠 보유 시 자동 해제
-    # travel_min: int | None    # per-edge 이동 분 ([03-features.md](./03-features.md) §2.1) [P3]
-)
-```
-
-엔티티 종류가 tier 의 용도를 결정 (장소 → 수색, 통로 → 자물쇠, 아이템 → 잠금/해독 등). `Tier` enum 자체의 정의·매핑은 §5.2 참조.
-
----
-
-## 5. DC 시스템
-
-`{action: "roll"}` 분기에서 엔진이 굴리기 전에 계산하는 수치.
-
-### 5.1 DC vs 스탯
-
-```
-stat_modifier = floor((stat - 10) / 2)                       # D&D 5e
-required_roll = max(1, min(20, DC - stat_modifier))           # [1, 20] clamp
-```
-
-D&D 5e 스타일의 단순 보정. 능력치 10/11 은 mod 0 — `required_roll == DC` 라 어떤 보정도 없다. 12/13 은 +1, 14/15 는 +2, 8/9 는 -1, ... 형태로 점당 0~1 칸 어긋난다. `compute_grade` 가 `total > required_roll` 이면 success, `==` 이면 partial_success 로 묶고, 자연 1·20 은 등급에 상관없이 critical 로 처리.
-
-- d20 기반. 플레이어가 `required_roll` 보다 크게 굴리면 success, 같으면 partial_success.
-- `DC` 와 `stat` 은 모두 정수.
-
-### 5.2 Tier 라벨 / Tier → DC 매핑
-
-판정 난이도는 **7단계 한글 라벨**로 통일 — judge 출력(§1.1), SSE `judge`/`pending_check` 이벤트(§2.4), 장소·통로·아이템 난이도(§4.3), 아래 DC 매핑이 모두 같은 enum 을 공유하는 전역 정의.
-
-```python
-Tier = Literal["매우 쉬움", "쉬움", "보통", "어려움", "매우 어려움", "전설", "신화"]
-```
-
-백엔드는 라벨을 정수 tier (1..7) 와 1:1 매핑하고, SSE `pending_check` 의 `tier` 필드만 `{value: int(1..7), max: 7, label: str}` 형식으로 보낸다 — 굴림 UI 가 progress bar 로 난이도를 시각화하기 때문. 그 외 자리(`Quest.difficulty` 등)는 라벨 문자열 그대로 ([04-boundary.md](./04-boundary.md) §1).
-
-
-| tier | label | DC 범위 |
+| 순서 | Effect | 쉬운 뜻 |
 |---|---|---|
-| 1 | 매우 쉬움 | 2–3 |
-| 2 | 쉬움 | 4–6 |
-| 3 | 보통 | 7–10 |
-| 4 | 어려움 | 11–13 |
-| 5 | 매우 어려움 | 14–16 |
-| 6 | 전설 | 17–18 |
-| 7 | 신화 | 19 |
+| 1 | character defeat / flee | 전투 결과, 처치 상태, loot 정리 |
+| 2 | quest completed / failed | 퀘스트 완료/실패와 보상 처리 |
+| 3 | level ready | 성장 선택지 열기 |
+| 4 | sleep encounter needed | 휴식 중 조우 처리 |
+| 5 | quest needed | 할 일이 부족하면 퀘스트 초안 만들기 |
 
-- "보통" 이 가장 넓고 양 끝(매우 쉬움/신화) 으로 갈수록 범위가 좁아진다. LLM 이 같은 "보통" 을 골라도 실제 DC 는 7~10 사이 어디든 떨어져 결과가 다양해진다.
-- 흐름: judge 가 tier 라벨을 고름 → tier 별 DC 범위 안에서 한 값을 무작위로 뽑아 (`pick_dc`) DC 를 확정 → §5.1 의 선형 클램프 `compute_required_roll(DC, stat)` 로 `required_roll` 산출 → §5.3 등급 판정.
-- DC 양 끝값(1, 20) 은 무작위 추첨에서 뺀다. 이유는 §5.1 의 클램프 자체에 있다 — `required_roll = max(1, min(20, DC - mod))` 라서, DC 1 은 양수 mod 만 있어도 1 로 포화돼 사실상 자동 통과가 되고, DC 20 은 음수 mod 만 있어도 20 으로 포화돼 자연 20 (`critical_hit_threshold`, §5.3) 과 구분이 사라진다. 치명타 판정은 d20 원본 주사위로만 한다는 약속(§5.3) 을 지키려면, 클램프가 끝값으로 *포화되기 전에* tier→DC 풀에서 1·20 을 빼서 saturation 자체가 일어나지 않게 한다.
+전투 결과가 있으면 일반 이야기 호출 대신 `combat_narrate`를 쓴다.
 
-### 5.3 판정 결과 (grade)
+## 새 콘텐츠 넣기
 
-단일 d20 결과는 다음 5등급으로 분류. 등급이 내러티브 톤을 결정.
+새 아이템, 캐릭터, 퀘스트는 바로 게임에 넣지 않는다.
 
-| grade | 조건 | 의미 |
-|---|---|---|
-| critical_success | `dice >= critical_hit_threshold` (기본 20) | 원본 주사위 기준. 추가 보너스 (치명타, 비밀 노출). |
-| critical_failure | `dice <= critical_miss_threshold` (기본 1) | 원본 주사위 기준. 장비 파손/부상. |
-| success | `total > required_roll` | 깔끔한 성공. |
-| partial_success | `total == required_roll` | 대가를 치르는 성공 (소음, 가까스로 성공). |
-| failure | `total < required_roll` | 단순 실패. |
-
-`total = dice + mod`. **표 순서 = 우선순위** (위에서부터 첫 일치): critical 두 행이 dice 만 보고 가장 먼저 잡힌다. `dice == 20` 이고 `total > required_roll` 이면 critical_success, `dice == 1` 이고 `total > required_roll` 이면 critical_failure (큰 mod 가 success 처럼 보이게 하는 걸 의도적으로 막음). **치명타는 원본 주사위로만 판정**: `mod` 가 critical 을 만들거나 지울 수 없음. 프론트 `RollResult` ('success' | 'fail') 는 `grade in (critical_success, success, partial_success)` 로 매핑.
-
-### 5.4 소셜 보정 (social_bonus)
-
-비전투 roll 에는 actor 가 대상을 어떻게 느끼는지(affinity) 에 따라 주사위 결과에 보너스/페널티를 얹는다. 친한 NPC 는 같은 말을 해도 잘 통하고, 사이가 틀어진 NPC 는 안 통한다는 감각을 수치화한 것.
-
-```python
-target_id = pending_check.target            # §2.3 이 고른 한 명. 폴백 시 location_id (§2.3 step 3)
-aff = state.characters[actor].relations.get(target_id, 0)
-mod = 0
-if aff >=  social.friendly_threshold:  mod =  social.roll_bonus  # 친밀: +bonus
-if aff <= -social.friendly_threshold:  mod = -social.roll_bonus  # 적대: -bonus
-# 그 사이(중립)는 mod = 0
-# 이 mod 가 PendingCheck.mod 에 들어가고, /roll 에서 total = dice + mod 로 합산 (§5.3)
-# Location 폴백 시 relations 에 location_id 가 없어 .get 이 0 으로 떨어진다 — 의도된 0(중립) 보정. 대상이 모호한 판정에는 affinity 보너스를 주지 않겠다는 결정.
+```text
+새 내용이 필요함
+  -> engine이 템플릿과 선택지를 정함
+  -> LLM이 짧은 초안을 씀
+  -> engine이 전체를 검사함
+  -> 통과하면 GraphChange로 graph에 넣음
+  -> 실패하면 버림
 ```
 
-위 코드의 `friendly_threshold` · `roll_bonus` 는 `rules.social` config. 같은 `rules.social` 그룹의 `affinity_success/failure/critical` 은 별개 키 — affinity delta 산출용으로 §6.1 에서 사용.
+퀘스트 초안은 특히 한 묶음으로 검사한다. 퀘스트, NPC, 몬스터, 아이템, edge, trigger 중 하나라도 이상하면 전체를 버린다.
 
----
+## 이야기 쓰기
 
-## 6. 상태 업데이트
+`narrate_body`는 플레이어에게 보이는 이야기를 쓴다. 이 글은 graph를 직접 바꾸지 않는다.
 
-내러티브 에이전트가 출력에 실어 보내는 `state_changes` 가 어떻게 게임 상태로 반영되고, 무엇이 프론트로 흘러가는지.
+그 뒤 `narrate_extract`가 아래를 만들 수 있다.
 
-### 6.1 state_changes 형식
+| 출력 | 쉬운 뜻 |
+|---|---|
+| `turn_summary` | 이번 턴 요약 |
+| `memory` | 캐릭터가 기억할 내용 |
+| `suggestions` | 화면에 보여줄 행동 제안 |
+| `NarrateAction` | 허용된 작은 변경 요청 |
 
-내러티브 에이전트가 발행할 수 있는 타입은 **4종** (`Literal["set","move","move_item","affinity"]`):
+`NarrateAction`도 engine 검사를 통과해야 적용된다.
 
-```json
-[
-  {"type": "set",       "entity": "characters", "id": "guard_01", "field": "disposition.aggressive", "value": 80},
-  {"type": "move",      "target": "player_01",  "destination": "plaza_01"},
-  {"type": "move_item", "item":   "iron_key",   "from": "chest_01", "to": "player_01"},
-  {"type": "affinity",  "actor":  "player_01",  "target": "guard_01", "grade": "success", "intent": "friendly"}
-]
-```
+## 저장과 화면 출력
 
-- `set` 권한 매트릭스 — entity 별로 narrator 가 만질 수 있는 field 가 다르다 (예시):
-  - `characters` — `disposition.{lawful, aggressive, moral}`, `tone_hint`, `status` 등 (점 표기로 중첩 필드도 가능).
-  - `items`, `locations` — `weather`, `status` 등.
-  - `chapters`, `quests` — `summary` 와 `status` 만 ([03-features.md](./03-features.md) §2.8).
-- narrator 는 entity 별 금지 목록(`rules/permissions.py:FORBIDDEN_BY_ENTITY`, `chapters`/`quests` 는 `CHAPTER_QUEST_ALLOWED` 화이트리스트로 더 좁힘) 에 걸리지 않은 필드만 `set` 으로 바꿀 수 있다. 검증은 `engines/apply.py:_check_set_permission` 에서 수행 — 스칼라/비스칼라 구분이 아니라 **이름 기반**이라 `status: list[str]` 같은 list 필드도 (이름이 금지 목록에 없으면) 통과한다. 다음 두 묶음은 이 금지 목록에 들어가 있어 손댈 수 없다:
-  - **list 필드** — character 의 `relations`, `inventory_ids`, `memories`, `racial_skill_ids`, `learned_skill_ids`, `companions`, `active_buffs`, `hints`. 추가/제거의 부수효과가 커서 (예: `inventory_ids` 변경은 소지품 수를 흔든다) narrator 가 직접 만지면 일관성이 깨진다. 구조 변경은 백엔드 로직 [P3] 가 한다. quest 의 `triggers`/`conditions` 같은 list 도 같은 이유로 막히지만 — quest 는 위 매트릭스가 이미 `summary`/`status` 만 허용해 자동으로 제외된다.
-  - **엔진 전용 필드** — `HP/MP/exp/gold/alive/death_saves/revive_coins` 등. 전투·레벨업·죽음 처리는 엔진이 독점하고, narrator 는 결과를 받아서 묘사만 한다 (수치를 결정할 권한이 없다). 전투 진입/이탈 자체는 `state.combat_state` 의 turn_order 등재 여부로 표현 — 캐릭터에 별도 `in_combat` 플래그는 두지 않는다.
-- **시간 점프는 별도 타입이 없다** — narrator 는 시간을 직접 만지지 못한다. `state.turn_count` 는 엔진이 매 턴 진입 시 1 씩 늘리고, 휴식 액션만 `next_dawn_turn` 으로 점프한다 ([03-features.md](./03-features.md) §2.1).
-- `affinity` 는 `grade × intent` (× `target.disposition` [P3]) 로 `rules.social` 기반 delta 를 엔진이 산출. narrator 는 숫자를 정하지 않는다 ([03-features.md](./03-features.md) §2.2). 복수 대상 시나리오(예: 두 경비병 동시 설득)에서는 entry 를 대상별로 하나씩 발행 — `target` 단일 필드라 한 entry = 한 대상.
-- `move` / `move_item` / `affinity` 적용 시 엔진이 자동으로 **퀘스트 트리거** 실행 (`location_enter`, `item_use`, `character_death`) [P3].
+flow는 변경된 graph와 진행 상태를 저장한다.
 
-**형식 검사와 `rejected[]`**: `apply_changes` 는 narrator 가 보낸 변경 목록을 Pydantic 의 4종 union 스키마로 한 항목씩 검사한다. 형식이 어긋난 항목 — 잘못된 필드 이름, 모르는 type, narrator 가 못 만지는 엔진 전용 필드를 `set` 한 경우 등 — 은 그 항목만 `rejected[]` 에 따로 담고, 나머지 유효한 변경은 그대로 적용한다. 반환: `{applied, rejected}` — `applied` 는 적용 성공한 변경 수(int), `rejected` 는 `[{index, change, reason}]` 리스트. 파이프라인은 `rejected[]` 를 로그에 남기기만 하고 narrator 를 다시 부르지 않는다 [P3 에서 재호출 루프 검토].
-
-**내부 전용 타입** (엔진/CLI 만 사용, narrator 는 발행 금지):
-- `{"type": "death", "target": "<id>"}` — 캐릭터 사망 처리 + 시체/드랍/퀘스트 연쇄. [P2]
-- `{"type": "create", "entity": "items|characters|locations|races|quests", "data": {...}}` — 런타임 엔티티 생성, ID 자동 부여. [P3]
-
-경계를 둔 이유: 내러티브 에이전트가 직접 엔티티를 생성/살해하지 못하게 해 상태의 결정권을 엔진에 묶어 둠.
-
-### 6.2 프론트 반영
-
-`apply_changes` 후 엔진은 `mapping/to_front.py:to_front_state` 로 **8 슬롯 전체** (`hero / subject / quest / place / combat / log / pendingCheck / storyGraph`) 를 다시 JSON 으로 만들어 `state` 이벤트로 보낸다. 바뀐 부분만 보내는 게 아니라 한 턴에 한 번 통째로 — 프론트는 받은 값으로 그대로 덮어쓴다. 파이프라인 말미에서 단 한 번 발사. Log 는 별도 `log_entry` 이벤트로도 쌓이고, `state.log` 는 영속본 꼬리. [04-boundary.md](./04-boundary.md) §1.
-
-**디스플레이 로그 영속화**: SSE `log_entry` 와 누적된 `narrative_delta` (gm 본문 한 덩이) 는 매 턴 끝에 `GameState.log_entries: list[LogEntry]` 에도 append 된다. 상한 `rules.log.display_turns` (기본 20), 초과 시 가장 오래된 항목부터 evict. `GET /session/{id}/state` (§2.5) 가 응답할 때 이 영속본을 `FrontState.log` 로 그대로 반환 — reload 시 최근 20 턴치 채팅이 화면에 복원된다. LLM 컨텍스트용 `recent_dialogue` 와 turn 단위 요약 `turn_log` (둘 다 §3.3) 와는 별개 cap.
-
----
-
-## 7. 메모리 시스템
-
-§6 의 `state_changes` 가 즉각적인 변경을 다루는 데 비해, 메모리는 다음 턴 이후 narrator 가 인용할 수 있는 **장기 기억**. `Character` (플레이어와 NPC) 만 가진다 — `Location` 에는 `memories` 필드가 없다.
-
-### 7.1 구조
-
-`Character` 전용 (`domain/entities.py`). narrator 가 `memory_targets` 에 캐릭터가 아닌 ID 를 넣으면 `flow/memory_writer.py` 가 조용히 스킵한다.
-
-```python
-class Memory:
-    content: str            # "플레이어가 뇌물을 줘서 통과시켜줌"
-    importance: int         # 1: 사소, 2: 보통, 3: 중요
-    turn: int               # 기록된 턴 번호
-    target_id: str | None   # 이 기억이 향한 entity (NPC/장소/아이템) ID. narrator 의 memory_links (§1.2) 로 채움. None 이면 Subject.known 산출 ([04-boundary.md](./04-boundary.md) §1) 에서 빠짐.
-```
-
-### 7.2 저장
-
-내러티브 에이전트가 `memorable=true` 로 판정하면, 엔진이 `memory_targets` 의 각 캐릭터 `memories[]` 에 저장 — `flow/memory_writer.py` 는 캐릭터가 아닌 ID (장소·아이템 등) 는 조용히 건너뛴다. 각 캐릭터의 `Memory.target_id` 는 narrator 가 함께 출력한 `memory_links` (§1.2) 의 매핑값으로 채운다 — `memory_links[entity_id]` 가 누락이면 `target_id=None`. narrator 는 `memories[]` 필드를 `set` 으로 건드릴 수 없고 (§6), 오직 이 경로로만 추가.
-
-### 7.3 용량 관리
-
-- 엔티티당 최대 N 개 (`rules.memory.cap`, 기본 20).
-- cap 도달 시: importance 낮은 것부터 제거. 같은 importance 면 오래된 것 (turn 작은 것) 부터 제거.
-- 모순되는 메모리는 둘 다 저장. 내러티브 에이전트가 시간순으로 해석 ("예전엔 믿었는데 배신당했다").
-
-### 7.4 활용
-
-- `target_view` 에 target 의 `memories[]` 가 포함 → narrator 는 NPC 기억을 보고 서술에 반영한다 ("아까는 통했지만 이번엔 너를 다시 본다").
-- 스탯 악용(같은 행동을 반복해 쉬운 성공만 뽑아내는 것) 은 다음 돌아가는 경로로 막힌다:
-  1. 같은 시도가 반복되면 narrator 가 그 분위기를 메모리에 적고 (`"또 설득하려 한다"`), 동시에 `affinity` state_change 로 호감도를 깎는다.
-  2. 깎인 affinity 는 다음 턴 `surroundings` 의 상태 태그에 노출된다 (예: `경계중(affinity -25)`). 라벨 매핑은 §5.4 의 `rules.social.friendly_threshold` 를 재사용: `affinity >= friendly_threshold` 면 `우호적`, `affinity <= -friendly_threshold` 면 `경계중`, 그 사이 (중립 구간) 는 affinity 태그를 붙이지 않는다 — 같은 임계값으로 social_bonus mod 와 surroundings 태그가 동시에 갈린다.
-  3. DC판정은 이 태그를 보고 자연스럽게 tier 를 올린다.
-  - 즉 DC판정은 memory 를 직접 읽지 않는다. `memory → narrator → affinity → 태그 → DC판정` 의 우회 경로로만 영향이 흐른다. 이렇게 둔 이유: DC판정에게 메모리까지 직접 보여주면 컨텍스트가 부풀고, 판정이 "이 NPC 의 과거" 같은 서사적 정보에 흔들린다 (§1.1 의 "DC판정은 장기 맥락을 받지 않는다" 원칙).
+화면에 보낼 문장과 label은 server가 만든다. client는 받은 내용을 그대로 보여준다. client가 날짜, 상태 이름, 버튼 문구를 새로 조립하지 않는다.

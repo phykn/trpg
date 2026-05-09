@@ -15,6 +15,7 @@ from .models import (
     LogEntryPayload,
     NarrativeDeltaPayload,
     PendingCheckPayload,
+    PendingConfirmationPayload,
     SuggestionsPayload,
     TierBadge,
 )
@@ -94,6 +95,27 @@ def emit_pending_check(state: "GameState", pending: "PendingCheck") -> dict:
     full {"type": "pending_check", "data": {...}} envelope."""
     payload = _build_pending_check_payload(state, pending)
     return {"type": "pending_check", "data": payload.model_dump()}
+
+
+def emit_confirmation_required(pending: dict[str, object]) -> dict:
+    payload = PendingConfirmationPayload.model_validate(_confirmation_wire(pending))
+    return {"type": "confirmation_required", "data": payload.model_dump()}
+
+
+def _confirmation_wire(pending: dict[str, object]) -> dict[str, object]:
+    return {
+        key: pending[key]
+        for key in (
+            "id",
+            "kind",
+            "title",
+            "body",
+            "confirm_label",
+            "cancel_label",
+            "target_label",
+        )
+        if key in pending
+    }
 
 
 def emit_judge_refuse(refuse: "RefuseReason") -> dict:

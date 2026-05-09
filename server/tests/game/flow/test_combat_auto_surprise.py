@@ -11,6 +11,7 @@ from src.game.flow.combat_auto import PlayerAction, run_auto_combat
 from src.game.flow.dirty import Dirty
 from src.game.engines import combat as combat_engine
 from src.llm.calls.classify.schema import Verb
+from src.game.flow.confirmation import run_confirm
 from src.game.flow.turn import run_turn
 from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 
@@ -117,13 +118,24 @@ async def test_combat_action_surprise_routes_through_to_combat_state(
     judge_returns(
         Verb(name="attack", target_ids=["goblin_01"], modifiers={"surprise": True})
     )
-    events = await collect(
+    await collect(
         run_turn(
             client=None,
             state=two_party_state,
             scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
             save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
             player_input="잠든 고블린을 친다",
+            rng=random.Random(5),
+        )
+    )
+    events = await collect(
+        run_confirm(
+            client=None,
+            state=two_party_state,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
+            confirmation_id=two_party_state.pending_confirmation["id"],
+            decision="confirm",
             rng=random.Random(5),
         )
     )

@@ -59,6 +59,7 @@ __all__ = [
     "to_place",
     "to_combat",
     "pending_check_to_front",
+    "pending_confirmation_to_front",
     "to_front_state",
 ]
 
@@ -387,6 +388,15 @@ def pending_check_to_front(state: GameState, pending: PendingCheck) -> dict:
     return _build_pending_check_payload(state, pending).model_dump()
 
 
+def pending_confirmation_to_front(pending: dict[str, object]) -> dict:
+    from .emit import _confirmation_wire
+    from .models import PendingConfirmationPayload
+
+    return PendingConfirmationPayload.model_validate(
+        _confirmation_wire(pending)
+    ).model_dump()
+
+
 def to_front_state(state: GameState, graph: GameGraph | None = None) -> dict:
     """Assemble the full client-side state payload. `graph` is the relational
     SSOT — flow finalize passes the turn-end graph; tests/api glue can omit
@@ -394,6 +404,7 @@ def to_front_state(state: GameState, graph: GameGraph | None = None) -> dict:
     if graph is None:
         graph = state.graph()
     pending = state.pending_check
+    pending_confirmation = state.pending_confirmation
     return {
         "hero": to_hero(state, graph),
         "subject": to_subject(state, graph),
@@ -402,5 +413,10 @@ def to_front_state(state: GameState, graph: GameGraph | None = None) -> dict:
         "combat": to_combat(state),
         "log": [e.model_dump() for e in state.log_entries],
         "pendingCheck": pending_check_to_front(state, pending) if pending else None,
+        "pendingConfirmation": (
+            pending_confirmation_to_front(pending_confirmation)
+            if pending_confirmation
+            else None
+        ),
         "storyGraph": to_story_graph(state, graph),
     }

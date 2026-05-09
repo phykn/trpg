@@ -1,13 +1,8 @@
-"""quest_action button-only turn must skip the judge LLM call.
+"""quest_action turns must create confirmation without calling the judge LLM.
 
-When the UI sends a button click (accept/abandon quest) with empty
-player_input, the engine has nothing to classify — the state mutation
-is already applied by accept_quest / abandon_quest. Going through
-run_judge would burn one classify call on an empty prompt.
-
-Counterpart: quest_action with non-empty player_input (player both
-clicks the button AND types something) should still call run_judge so
-the typed action gets classified.
+Quest accept/abandon used to mutate immediately. The current contract
+requires an explicit confirmation step first, so the button turn stores
+pending_confirmation and leaves quest status unchanged.
 """
 
 import tempfile
@@ -68,9 +63,7 @@ async def test_button_only_accept_skips_judge(
     tmp_saves,
     monkeypatch,
 ):
-    """quest_action=('accept', qid) with empty player_input: quest gets
-    accepted (status='active'), run_judge is NOT called, finalize emits
-    state + done."""
+    """quest_action=('accept', qid) creates confirmation and skips judge."""
     judge_calls: list = []
 
     async def fake_judge(*a, **kw):
@@ -90,11 +83,10 @@ async def test_button_only_accept_skips_judge(
         )
     )
 
-    # Quest accepted — engine mutated state.
-    assert state_with_pending_quest.quests["q1"].status == "active"
-    # run_judge NOT called (the whole point of the fix).
+    assert state_with_pending_quest.quests["q1"].status == "pending"
+    assert state_with_pending_quest.pending_confirmation["kind"] == "quest_accept"
     assert judge_calls == []
-    # Stream still terminates cleanly with done.
+    assert any(ev.get("type") == "confirmation_required" for ev in events)
     assert events[-1] == {"type": "done", "data": {}}
 
 
@@ -103,7 +95,7 @@ async def test_button_only_abandon_skips_judge(
     tmp_saves,
     monkeypatch,
 ):
-    """abandon variant: status flips to 'abandoned', run_judge skipped."""
+    """abandon variant creates confirmation and skips judge."""
     state_with_pending_quest.quests["q1"].status = "active"
     judge_calls: list = []
 
@@ -124,9 +116,8 @@ async def test_button_only_abandon_skips_judge(
         )
     )
 
-    # abandon_quest routes through _fail_quest → status="failed" with a
-    # localized reason (the abandoned literal stays for scenario authoring).
-    assert state_with_pending_quest.quests["q1"].status == "failed"
+    assert state_with_pending_quest.quests["q1"].status == "active"
+    assert state_with_pending_quest.pending_confirmation["kind"] == "quest_abandon"
     assert judge_calls == []
 
 
@@ -135,9 +126,7 @@ async def test_quest_action_with_player_input_still_calls_judge(
     tmp_saves,
     monkeypatch,
 ):
-    """quest_action + non-empty player_input: state mutation applies AND
-    judge runs on the typed action. Short-circuit must be input-gated, not
-    quest_action-gated."""
+    """quest_action + non-empty player_input still creates confirmation first."""
     judge_calls: list = []
 
     async def fake_judge(*a, **kw):
@@ -164,6 +153,6 @@ async def test_quest_action_with_player_input_still_calls_judge(
         )
     )
 
-    assert state_with_pending_quest.quests["q1"].status == "active"
-    # run_judge was called with the typed input.
-    assert len(judge_calls) == 1
+    assert state_with_pending_quest.quests["q1"].status == "pending"
+    assert state_with_pending_quest.pending_confirmation["kind"] == "quest_accept"
+    assert judge_calls == []

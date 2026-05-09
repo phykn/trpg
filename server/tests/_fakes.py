@@ -57,10 +57,23 @@ class FakePostgREST:
     async def insert(self, table: str, rows: list[dict]) -> None:
         self.calls.append(("insert", table, rows))
         store_ = self.rows.setdefault(table, [])
-        for r in rows:
+        for offset, r in enumerate(rows, start=1):
             if table in ("history_entries", "dialogue_entries") and "seq" not in r:
-                r["seq"] = len(store_) + 1
+                r["seq"] = len(store_) + offset
         store_.extend(rows)
+
+    async def delete(self, table: str, *, filters: dict[str, str]) -> None:
+        self.calls.append(("delete", table, filters))
+        store_ = self.rows.get(table, [])
+
+        def _matches(row: dict) -> bool:
+            for col, expr in filters.items():
+                assert expr.startswith("eq."), f"only eq supported in fake: {expr}"
+                if str(row.get(col)) != expr[3:]:
+                    return False
+            return True
+
+        self.rows[table] = [row for row in store_ if not _matches(row)]
 
     async def select(
         self,

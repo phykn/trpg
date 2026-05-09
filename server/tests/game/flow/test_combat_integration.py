@@ -11,6 +11,7 @@ import pytest
 from src.game.domain.entities import Character, CombatBehavior, Stats
 from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.llm.calls.classify.schema import Verb
+from src.game.flow.confirmation import run_confirm
 from src.game.flow.turn import run_turn
 
 
@@ -42,13 +43,27 @@ def combat_state(fresh_state, tmp_data):
     return fresh_state
 
 
+async def _confirm_pending_attack(state, tmp_data, collect, rng):
+    return await collect(
+        run_confirm(
+            client=None,
+            state=state,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
+            confirmation_id=state.pending_confirmation["id"],
+            decision="confirm",
+            rng=rng,
+        )
+    )
+
+
 async def test_combat_starts_and_runs_auto_sim(
     combat_state, tmp_data, judge_returns, collect
 ):
     """A fresh combat input triggers combat_start + auto-sim — no pending_check."""
     judge_returns(Verb(name="attack", target_ids=["goblin_01"]))
     rng = random.Random(123)
-    events = await collect(
+    first_events = await collect(
         run_turn(
             client=None,
             state=combat_state,
@@ -58,6 +73,8 @@ async def test_combat_starts_and_runs_auto_sim(
             rng=rng,
         )
     )
+    assert any(e["type"] == "confirmation_required" for e in first_events)
+    events = await _confirm_pending_attack(combat_state, tmp_data, collect, rng)
 
     types = [e["type"] for e in events]
     assert "combat_start" in types
@@ -140,6 +157,7 @@ async def test_combat_player_attack_drops_affinity_bidirectional(
             rng=random.Random(7),
         )
     )
+    await _confirm_pending_attack(combat_state, tmp_data, collect, random.Random(7))
     drop = RULES.social.combat_affinity_drop
     assert combat_state.characters["player_01"].relations["goblin_01"] <= -drop
     assert combat_state.characters["goblin_01"].relations["player_01"] <= -drop

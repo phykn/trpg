@@ -1,0 +1,140 @@
+from __future__ import annotations
+
+from typing import Any
+
+from src.game.domain.graph import Graph, GraphNode
+from src.game.domain.graph_query import (
+    characters_at,
+    edges_from,
+    equipment_of,
+    inventory_of,
+    items_at,
+    known_skills_of,
+    location_of,
+)
+from src.game.runtime.state import GameRuntimeState
+
+
+def build_graph_surroundings(runtime: GameRuntimeState) -> dict[str, Any]:
+    graph = runtime.graph
+    player_id = runtime.progress.player_id
+    location_id = location_of(graph, player_id)
+    location = graph.nodes.get(location_id or "")
+
+    return {
+        "in_combat": runtime.progress.graph_combat_state is not None,
+        "location": _location_payload(location),
+        "entities": _entity_payloads(graph, player_id, location_id),
+        "inventory": _inventory_payloads(graph, player_id),
+        "equipment": _equipment_payloads(graph, player_id),
+        "skills": _skill_payloads(graph, player_id),
+        "merchants": [],
+        "corpses": [],
+    }
+
+
+def _entity_payloads(
+    graph: Graph,
+    player_id: str,
+    location_id: str | None,
+) -> list[dict[str, str]]:
+    if location_id is None:
+        return []
+
+    entities: list[dict[str, str]] = []
+    for character_id in characters_at(graph, location_id):
+        node = graph.nodes.get(character_id)
+        if node is None or node.type != "character":
+            continue
+        entity_type = "player" if character_id == player_id else "npc"
+        entities.append({"id": node.id, "name": _label(node), "type": entity_type})
+
+    location = graph.nodes.get(location_id)
+    if location is not None and location.type == "location":
+        for edge in edges_from(graph, location_id, "connects_to"):
+            target = graph.nodes.get(edge.to_node_id)
+            if target is None or target.type != "location":
+                continue
+            entities.append(
+                {"id": target.id, "name": _label(target), "type": "connection"}
+            )
+
+    for item_id in items_at(graph, location_id):
+        item = graph.nodes.get(item_id)
+        if item is None or item.type != "item":
+            continue
+        entities.append({"id": item.id, "name": _label(item), "type": "item"})
+
+    return entities
+
+
+def _inventory_payloads(graph: Graph, player_id: str) -> list[dict[str, str]]:
+    items: list[dict[str, str]] = []
+    for item_id in inventory_of(graph, player_id):
+        item = graph.nodes.get(item_id)
+        if item is None or item.type != "item":
+            continue
+        items.append(
+            {
+                "id": item.id,
+                "name": _label(item),
+                "kind": _kind(item),
+            }
+        )
+    return items
+
+
+def _equipment_payloads(graph: Graph, player_id: str) -> dict[str, dict | None]:
+    equipment: dict[str, dict | None] = {
+        "weapon": None,
+        "armor": None,
+        "accessory": None,
+    }
+    for edge in equipment_of(graph, player_id):
+        slot = edge.properties.get("slot")
+        if slot not in equipment:
+            continue
+        item = graph.nodes.get(edge.to_node_id)
+        if item is None or item.type != "item":
+            continue
+        equipment[slot] = {"id": item.id, "name": _label(item)}
+    return equipment
+
+
+def _skill_payloads(graph: Graph, player_id: str) -> list[dict[str, str]]:
+    skills: list[dict[str, str]] = []
+    for edge in known_skills_of(graph, player_id):
+        skill = graph.nodes.get(edge.to_node_id)
+        if skill is None or skill.type != "skill":
+            continue
+        skills.append(
+            {
+                "id": skill.id,
+                "name": _label(skill),
+                "type": _optional_str(skill.properties.get("type")) or "skill",
+            }
+        )
+    return skills
+
+
+def _location_payload(node: GraphNode | None) -> dict[str, str] | None:
+    if node is None or node.type != "location":
+        return None
+    return {"id": node.id, "name": _label(node)}
+
+
+def _kind(node: GraphNode) -> str:
+    return (
+        _optional_str(node.properties.get("kind"))
+        or _optional_str(node.properties.get("type"))
+        or "item"
+    )
+
+
+def _label(node: GraphNode) -> str:
+    name = node.properties.get("name")
+    return name if isinstance(name, str) and name else node.id
+
+
+def _optional_str(value: object) -> str | None:
+    return value if isinstance(value, str) and value else None

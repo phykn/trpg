@@ -19,6 +19,7 @@ VerbName = Literal[
     "cast",
     "speak",
     "perceive",
+    "query",
     "rest",
     "wait",
 ]
@@ -87,6 +88,13 @@ _MODIFIER_SCHEMAS: dict[VerbName, _ModifierSchema] = {
         required_modifiers=frozenset(),
         optional_modifiers={},
         target_cardinality="optional",
+    ),
+    "query": _ModifierSchema(
+        required_modifiers=frozenset(),
+        optional_modifiers={
+            "topic": ("surroundings", "exits", "inventory", "quests", "status"),
+        },
+        target_cardinality="forbidden",
     ),
     "rest": _ModifierSchema(
         required_modifiers=frozenset(),
@@ -185,4 +193,7 @@ class JudgeOutput(BaseModel):
             raise ValueError(
                 "actions, if set, must contain >=1 verb (use 'wait' for no-op)"
             )
+        if actions_set and any(action.name == "query" for action in self.actions):
+            if len(self.actions) != 1:
+                raise ValueError("query must be the only action")
         return self

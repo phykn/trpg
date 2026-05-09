@@ -8,10 +8,10 @@ trpg/
   client/     Expo (React Native) single-screen client. → client/README.md
   agency/     LLM-staffed office that drives the server in-process (QA + Story teams). → agency/README.md
   scenarios/  Local seed source (one dir per profile). Uploaded to Supabase Storage via agency.story.tool upload (APP_ENV=release).
-  docs/       Design notes (01-overview / 02-runtime / 03-features / 04-boundary / 05-codemap)
+  docs/       Target design contract (01-contract / 02-runtime / 03-world-model / 04-gameplay / 05-interfaces)
 ```
 
-Stack: Python 3.12+ · Pydantic v2 · FastAPI · OpenAI-compatible LLM (llama.cpp local / Gemini hosted) · Supabase Postgres + Storage · Expo SDK 54 / RN 0.81 / React 19 · NativeWind v4. Saves live in Supabase Postgres, not on disk. Setup details in each sub-README; design intent starts at `docs/01-overview.md`.
+Stack: Python 3.12+ · Pydantic v2 · FastAPI · OpenAI-compatible LLM (llama.cpp local / Gemini hosted) · Supabase Postgres + Storage · Expo SDK 54 / RN 0.81 / React 19 · NativeWind v4. Saves live in Supabase Postgres, not on disk. Setup details in each sub-README; design intent starts at `docs/README.md`.
 
 Env files mirror on both sides: `server/.env.dev` + `server/.env.release` and `client/.env.dev` + `client/.env.release`. The active file is picked by mode — `dev` for local work, `release` for prod.
 

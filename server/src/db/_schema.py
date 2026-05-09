@@ -39,6 +39,7 @@ class _Meta(BaseModel):
     active_quest_id: str | None = None
     turn_count: int = 0
     pending_check: PendingCheck | None = None
+    pending_confirmation: dict[str, object] | None = None
     combat_state: CombatState | None = None
     previous_phase_signal: str | None = None
     next_log_id: int = 1
@@ -54,6 +55,7 @@ def _meta_from_state(state: GameState) -> _Meta:
         active_quest_id=state.active_quest_id,
         turn_count=state.turn_count,
         pending_check=state.pending_check,
+        pending_confirmation=state.pending_confirmation,
         combat_state=state.combat_state,
         previous_phase_signal=state.previous_phase_signal,
         next_log_id=state.next_log_id,

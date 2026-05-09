@@ -12,19 +12,43 @@ from src.game.domain.errors import (
 )
 from src.game.domain.state import GameState
 from src.game.flow._diag import diag
+from src.game.flow.init_graph import init_graph_game
 from src.game.flow.intro import run_intro
+from src.game.flow.confirmation import run_confirm
 from src.game.flow.level_up import run_level_up
 from src.game.flow.roll import run_roll
 from src.game.flow.skill_recommend import recommend_skill_candidates
 from src.game.flow.turn import run_turn
+from src.game.runtime.confirmation import (
+    GraphConfirmationActive,
+    GraphConfirmationError,
+    GraphConfirmationExpected,
+    run_graph_action_request,
+    run_graph_confirm,
+)
+from src.game.runtime.input import GraphInputError, run_graph_input_turn
+from src.game.runtime.intro import run_graph_initial_narration
+from src.game.runtime.state import GameRuntimeState
+from src.game.runtime.turn import GraphActionTurnError
 from src.llm.client import LLMClient, set_think_override
+from src.wire.graph_to_front import graph_to_front_state
 from src.wire.to_front import to_front_state
 from src.game.flow.init import init_game
-from src.db.repo import SaveRepo, ScenarioRepo
-from ..deps import get_llm, get_save_repo, get_scenario_repo, get_state
+from src.db.repo import GraphRepo, SaveRepo, ScenarioRepo
+from ..deps import (
+    get_graph_repo,
+    get_llm,
+    get_save_repo,
+    get_scenario_repo,
+    get_state,
+)
 from ..schema import (
+    GraphActionResponse,
+    GraphInputRequest,
+    GraphTurnRequest,
     InitRequest,
     InitResponse,
+    ConfirmRequest,
     LevelUpPreviewResponse,
     LevelUpRequest,
     RollRequest,
@@ -54,9 +78,116 @@ async def session_init(
     return InitResponse(game_id=state.game_id, state=to_front_state(state))
 
 
+@router.post("/session/graph/init", response_model=InitResponse)
+async def session_graph_init(
+    body: InitRequest,
+    llm: LLMClient = Depends(get_llm),
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+) -> InitResponse:
+    try:
+        bundle = await init_graph_game(
+            body.profile, body.player, graph_repo, scenario_repo, locale=body.locale
+        )
+    except ProfileNotFound as e:
+        raise HTTPException(status_code=422, detail=f"profile not found: {e}")
+    except RaceNotFound as e:
+        raise HTTPException(status_code=422, detail=f"race not found: {e}")
+    except ProfileMalformed as e:
+        raise HTTPException(status_code=422, detail=f"profile malformed: {e}")
+    runtime = GameRuntimeState(graph=bundle.graph, progress=bundle.progress)
+    try:
+        runtime = await run_graph_initial_narration(llm, graph_repo, runtime)
+    except (LLMUnavailable, OSError, TimeoutError):
+        pass
+    return InitResponse(
+        game_id=bundle.progress.game_id,
+        state=graph_to_front_state(runtime).model_dump(mode="json", by_alias=True),
+    )
+
+
 @router.get("/session/{game_id}/state")
 async def get_state_route(state: GameState = Depends(get_state)) -> dict:
     return {"game_id": state.game_id, "state": to_front_state(state)}
+
+
+@router.post("/session/{game_id}/graph/turn", response_model=GraphActionResponse)
+async def session_graph_turn(
+    game_id: str,
+    body: GraphTurnRequest,
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+) -> GraphActionResponse:
+    try:
+        result = await run_graph_action_request(graph_repo, game_id, body.action)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="game not found")
+    except GraphConfirmationActive as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except GraphConfirmationError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except GraphActionTurnError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    return GraphActionResponse(
+        game_id=game_id,
+        state=result.front_state.model_dump(mode="json", by_alias=True),
+        status=result.status,
+        message=result.message,
+    )
+
+
+@router.post("/session/{game_id}/graph/confirm", response_model=GraphActionResponse)
+async def session_graph_confirm(
+    game_id: str,
+    body: ConfirmRequest,
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+) -> GraphActionResponse:
+    try:
+        result = await run_graph_confirm(
+            graph_repo,
+            game_id,
+            body.confirmation_id,
+            body.decision,
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="game not found")
+    except GraphConfirmationExpected as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except GraphConfirmationError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    return GraphActionResponse(
+        game_id=game_id,
+        state=result.front_state.model_dump(mode="json", by_alias=True),
+        status=result.status,
+        message=result.message,
+    )
+
+
+@router.post("/session/{game_id}/graph/input", response_model=GraphActionResponse)
+async def session_graph_input(
+    game_id: str,
+    body: GraphInputRequest,
+    llm: LLMClient = Depends(get_llm),
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+) -> GraphActionResponse:
+    try:
+        result = await run_graph_input_turn(
+            llm,
+            graph_repo,
+            game_id,
+            body.player_input,
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="game not found")
+    except GraphConfirmationActive as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except (GraphInputError, GraphConfirmationError, GraphActionTurnError) as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    return GraphActionResponse(
+        game_id=game_id,
+        state=result.front_state.model_dump(mode="json", by_alias=True),
+        status=result.status,
+        message=result.message,
+    )
 
 
 @router.post("/session/{game_id}/turn")
@@ -101,6 +232,28 @@ async def session_roll(
             state,
             scenario_repo,
             save_repo,
+            to_front_fn=to_front_state,
+        )
+    )
+
+
+@router.post("/session/{game_id}/confirm")
+async def session_confirm(
+    body: ConfirmRequest,
+    state: GameState = Depends(get_state),
+    llm: LLMClient = Depends(get_llm),
+    save_repo: SaveRepo = Depends(get_save_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+):
+    set_think_override(body.think)
+    return streaming_response(
+        run_confirm(
+            llm,
+            state,
+            scenario_repo,
+            save_repo,
+            body.confirmation_id,
+            body.decision,
             to_front_fn=to_front_state,
         )
     )

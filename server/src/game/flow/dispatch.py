@@ -196,6 +196,19 @@ async def _dispatch_verb(
             yield ev
         return
 
+    if name == "query":
+        from .query import run_query
+
+        async for ev in run_query(
+            state,
+            save_repo,
+            dirty,
+            to_front_fn,
+            (m.get("topic") if isinstance(m.get("topic"), str) else None),
+        ):
+            yield ev
+        return
+
     if name == "cast":
         skill_id = m.get("skill_id")
         skill = state.skills.get(skill_id) if skill_id else None

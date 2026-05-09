@@ -8,8 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routes import router
 from src.llm import LLMClient
-from src.db.factory import build_save_repo, build_scenario_repo
-from src.db.repo import SaveRepo, ScenarioRepo
+from src.db.factory import build_graph_repo, build_save_repo, build_scenario_repo
+from src.db.repo import GraphRepo, SaveRepo, ScenarioRepo
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SERVER_DIR = Path(__file__).resolve().parent
@@ -30,6 +30,7 @@ def build_app(
     save_repo: SaveRepo,
     scenario_repo: ScenarioRepo,
     cors_origins: list[str],
+    graph_repo: GraphRepo | None = None,
 ) -> FastAPI:
     app = FastAPI(title="TRPG Server API")
     app.add_middleware(
@@ -44,6 +45,7 @@ def build_app(
     app.state.basic_auth_pass = basic_auth_pass
     app.state.save_repo = save_repo
     app.state.scenario_repo = scenario_repo
+    app.state.graph_repo = graph_repo
     app.include_router(router)
     return app
 
@@ -61,6 +63,7 @@ def create_app() -> FastAPI:
     # because the Supabase stubs raise at __init__ until Phase 2.
     save_repo = build_save_repo()
     scenario_repo = build_scenario_repo()
+    graph_repo = build_graph_repo()
 
     llm = LLMClient.from_env(log_dir=REPO_ROOT / "logs")
     return build_app(
@@ -70,6 +73,7 @@ def create_app() -> FastAPI:
         save_repo=save_repo,
         scenario_repo=scenario_repo,
         cors_origins=cors_origins,
+        graph_repo=graph_repo,
     )
 
 

@@ -86,7 +86,7 @@ def grant_xp(
     *,
     dirty: set[tuple[str, str]] | None = None,
 ) -> None:
-    """Add to xp_pool. No automatic level-up (docs §2.3 — explicit endpoint call required)."""
+    """Add to xp_pool. No automatic level-up; choices are an explicit engine flow."""
     if amount < 0:
         raise ValueError(f"xp grant must be non-negative, got {amount}")
     character.xp_pool += amount

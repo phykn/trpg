@@ -13,7 +13,9 @@ from typing import Protocol, Type, TypeVar
 
 from pydantic import BaseModel
 
+from src.game.domain.graph import Graph
 from src.game.domain.memory import DialoguePair, LogEntry, TurnLogEntry
+from src.game.domain.progress import GameProgress
 from src.game.domain.state import GameState
 
 T = TypeVar("T", bound=BaseModel)
@@ -45,6 +47,36 @@ class SaveRepo(Protocol):
     async def copy_seed_into_game(
         self, scenario_repo: "ScenarioRepo", profile: str, game_id: str, player_id: str
     ) -> None: ...
+
+
+class GraphRepo(Protocol):
+    """Graph-native persistence. Not used by legacy live flow until migration."""
+
+    async def save_graph(self, game_id: str, graph: Graph) -> None: ...
+
+    async def load_graph(self, game_id: str) -> Graph: ...
+
+    async def save_progress(self, progress: GameProgress) -> None: ...
+
+    async def load_progress(self, game_id: str) -> GameProgress: ...
+
+    async def append_log_entries(
+        self, game_id: str, entries: list[LogEntry]
+    ) -> None: ...
+
+    async def append_history_entries(
+        self, game_id: str, entries: list[TurnLogEntry]
+    ) -> None: ...
+
+    async def append_dialogue_entries(
+        self, game_id: str, entries: list[DialoguePair]
+    ) -> None: ...
+
+    async def load_log_entries(self, game_id: str) -> list[LogEntry]: ...
+
+    async def load_history_entries(self, game_id: str) -> list[TurnLogEntry]: ...
+
+    async def load_dialogue_entries(self, game_id: str) -> list[DialoguePair]: ...
 
 
 class ScenarioRepo(Protocol):

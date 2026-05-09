@@ -1,0 +1,342 @@
+import json
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from run_api import build_app
+from src.db.graph_local_fs import LocalFsGraphRepo
+from tests._fakes import make_default_storage, make_save_repo, make_scenario_repo
+
+
+class _MockLLM:
+    def __init__(
+        self,
+        payload: dict | None = None,
+        *,
+        intro_answer: str = "당신은 광장에 처음 발을 들입니다.",
+    ) -> None:
+        self.payload = payload or {"actions": [{"verb": "pass"}]}
+        self.intro_answer = intro_answer
+        self.calls: list[dict] = []
+
+    async def chat(
+        self,
+        messages,
+        think=False,
+        agent=None,
+        temperature=None,
+        use_fallback=False,
+    ):
+        self.calls.append({"agent": agent, "messages": messages})
+        if agent == "graph_intro":
+            return {"answer": self.intro_answer, "think": ""}
+        return {"answer": json.dumps(self.payload, ensure_ascii=False), "think": ""}
+
+
+def _extend_default_storage_for_movement(storage) -> None:
+    storage.objects["default/locations/loc_01.json"] = json.dumps(
+        {
+            "id": "loc_01",
+            "name": "광장",
+            "description": "테스트 광장",
+            "connections": [{"target_id": "loc_02"}],
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+    storage.objects["default/locations/loc_02.json"] = json.dumps(
+        {
+            "id": "loc_02",
+            "name": "숲길",
+            "description": "테스트 숲길",
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+
+
+def _build_app(
+    tmp_path,
+    *,
+    llm_payload: dict | None = None,
+    intro_answer: str = "당신은 광장에 처음 발을 들입니다.",
+):
+    save_repo, _ = make_save_repo()
+    storage = make_default_storage()
+    _extend_default_storage_for_movement(storage)
+    scenario_repo, _ = make_scenario_repo(storage)
+    return build_app(
+        llm=_MockLLM(llm_payload, intro_answer=intro_answer),
+        basic_auth_user="t",
+        basic_auth_pass="t",
+        save_repo=save_repo,
+        scenario_repo=scenario_repo,
+        graph_repo=LocalFsGraphRepo(str(tmp_path / "graph")),
+        cors_origins=[],
+    )
+
+
+def _client(app):
+    return AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://t",
+        auth=("t", "t"),
+        timeout=30.0,
+    )
+
+
+async def _init_graph_session(client) -> str:
+    response = await client.post(
+        "/session/graph/init",
+        json={
+            "profile": "default",
+            "player": {"name": "테스터", "race_id": "human", "gender": "female"},
+        },
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["game_id"]
+
+
+@pytest.mark.asyncio
+async def test_graph_init_persists_graph_and_returns_front_state(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        response = await client.post(
+            "/session/graph/init",
+            json={
+                "profile": "default",
+                "player": {
+                    "name": "테스터",
+                    "race_id": "human",
+                    "gender": "female",
+                },
+            },
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    graph = await app.state.graph_repo.load_graph(body["game_id"])
+    progress = await app.state.graph_repo.load_progress(body["game_id"])
+
+    assert graph.nodes["player_01"].properties["name"] == "테스터"
+    assert progress.player_id == "player_01"
+    assert body["state"]["hero"]["id"] == "player_01"
+    assert body["state"]["place"]["id"] == "loc_01"
+
+
+@pytest.mark.asyncio
+async def test_graph_init_adds_intro_narration_but_move_stays_system_card_only(
+    tmp_path,
+):
+    intro = "당신은 광장의 낮은 소음 속에서 첫 발을 내딛습니다."
+    app = _build_app(tmp_path, intro_answer=intro)
+
+    async with _client(app) as client:
+        init_response = await client.post(
+            "/session/graph/init",
+            json={
+                "profile": "default",
+                "player": {
+                    "name": "테스터",
+                    "race_id": "human",
+                    "gender": "female",
+                },
+            },
+        )
+        assert init_response.status_code == 200, init_response.text
+        game_id = init_response.json()["game_id"]
+
+        move_response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "move", "to": "loc_02"}},
+        )
+
+    assert move_response.status_code == 200, move_response.text
+    init_body = init_response.json()
+    move_body = move_response.json()
+    logs = await app.state.graph_repo.load_log_entries(game_id)
+    progress = await app.state.graph_repo.load_progress(game_id)
+
+    assert init_body["state"]["log"] == [{"id": 1, "kind": "gm", "text": intro}]
+    assert [entry.kind for entry in logs] == ["gm", "act"]
+    assert [entry.id for entry in logs] == [1, 2]
+    assert logs[0].text == intro
+    assert logs[1].text == "당신은 숲길로 이동합니다."
+    assert move_body["state"]["log"][-1]["kind"] == "act"
+    assert progress.next_log_id == 3
+    assert [call["agent"] for call in app.state.llm.calls].count("graph_intro") == 1
+
+
+@pytest.mark.asyncio
+async def test_graph_turn_moves_player_and_persists_progress(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "move", "to": "loc_02"}},
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    graph = await app.state.graph_repo.load_graph(game_id)
+    progress = await app.state.graph_repo.load_progress(game_id)
+
+    assert "located_at:player_01:loc_02" in graph.edges
+    assert progress.turn_count == 1
+    assert body["state"]["place"]["id"] == "loc_02"
+
+
+@pytest.mark.asyncio
+async def test_graph_turn_missing_game_returns_404(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        response = await client.post(
+            "/session/missing/graph/turn",
+            json={"action": {"verb": "move", "to": "loc_02"}},
+        )
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_graph_turn_rejects_query_without_advancing_turn(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "query", "what": "status"}},
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    progress = await app.state.graph_repo.load_progress(game_id)
+
+    assert body["status"] == "answered"
+    assert body["message"]
+    assert progress.turn_count == 0
+
+
+@pytest.mark.asyncio
+async def test_graph_turn_attack_returns_confirmation_without_starting_combat(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "attack", "what": "edrik_chief"}},
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    progress = await app.state.graph_repo.load_progress(game_id)
+
+    assert body["state"]["pendingConfirmation"]["kind"] == "attack_start"
+    assert "payload" not in body["state"]["pendingConfirmation"]
+    assert progress.pending_confirmation["kind"] == "attack_start"
+    assert progress.graph_combat_state is None
+    assert progress.turn_count == 0
+
+
+@pytest.mark.asyncio
+async def test_graph_confirm_confirm_executes_pending_attack(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        attack_response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "attack", "what": "edrik_chief"}},
+        )
+        confirmation_id = attack_response.json()["state"]["pendingConfirmation"]["id"]
+        response = await client.post(
+            f"/session/{game_id}/graph/confirm",
+            json={"confirmation_id": confirmation_id, "decision": "confirm"},
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    progress = await app.state.graph_repo.load_progress(game_id)
+
+    assert body["state"]["pendingConfirmation"] is None
+    assert body["state"]["combat"] is not None
+    assert progress.pending_confirmation is None
+    assert progress.graph_combat_state is not None
+    assert progress.turn_count == 1
+
+
+@pytest.mark.asyncio
+async def test_graph_confirm_cancel_clears_pending_attack(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        attack_response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "attack", "what": "edrik_chief"}},
+        )
+        confirmation_id = attack_response.json()["state"]["pendingConfirmation"]["id"]
+        response = await client.post(
+            f"/session/{game_id}/graph/confirm",
+            json={"confirmation_id": confirmation_id, "decision": "cancel"},
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    progress = await app.state.graph_repo.load_progress(game_id)
+
+    assert body["state"]["pendingConfirmation"] is None
+    assert body["state"]["combat"] is None
+    assert progress.pending_confirmation is None
+    assert progress.graph_combat_state is None
+    assert progress.turn_count == 0
+
+
+@pytest.mark.asyncio
+async def test_graph_input_classifies_text_and_returns_confirmation(tmp_path):
+    app = _build_app(
+        tmp_path,
+        llm_payload={"actions": [{"verb": "attack", "what": "edrik_chief"}]},
+    )
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(
+            f"/session/{game_id}/graph/input",
+            json={"player_input": "에드릭을 공격한다"},
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    progress = await app.state.graph_repo.load_progress(game_id)
+
+    assert body["state"]["pendingConfirmation"]["kind"] == "attack_start"
+    assert progress.pending_confirmation["kind"] == "attack_start"
+    assert progress.graph_combat_state is None
+
+
+@pytest.mark.asyncio
+async def test_graph_input_classifies_query_and_returns_message(tmp_path):
+    app = _build_app(
+        tmp_path,
+        llm_payload={"actions": [{"verb": "query", "what": "exits"}]},
+    )
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(
+            f"/session/{game_id}/graph/input",
+            json={"player_input": "어디로 갈 수 있습니까?"},
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    progress = await app.state.graph_repo.load_progress(game_id)
+
+    assert body["status"] == "answered"
+    assert "숲길" in body["message"]
+    assert progress.turn_count == 0

@@ -4,7 +4,11 @@ from collections.abc import AsyncIterator
 from pydantic import ValidationError
 
 from src.llm.calls.classify.schema import JudgeOutput, Verb
-from ..domain.errors import JudgeMalformed, PendingCheckActive
+from ..domain.errors import (
+    JudgeMalformed,
+    PendingCheckActive,
+    PendingConfirmationActive,
+)
 from ..domain.memory import PlayerLogEntry
 from ..domain.state import GameState
 from src.llm.client import LLMClient, set_llm_session_if_unset
@@ -38,7 +42,6 @@ from .narrate import (
     stream_narrate_tail,
 )
 from .subject import refresh_active_subject
-from ..engines.quest import abandon_quest, accept_quest
 
 
 async def run_turn(
@@ -53,6 +56,10 @@ async def run_turn(
     quest_action: tuple[str, str] | None = None,
 ) -> AsyncIterator[dict]:
     set_llm_session_if_unset(state.game_id)
+    if state.pending_confirmation is not None:
+        raise PendingConfirmationActive(
+            "a pending_confirmation is already active; call /confirm instead"
+        )
     if state.pending_check is not None:
         raise PendingCheckActive(
             "a pending_check is already active; call /roll instead"
@@ -91,10 +98,19 @@ async def _run_turn_inner(
     if quest_action is not None:
         kind, qid = quest_action
         diag(state.game_id, state.turn_count, "quest:action", kind=kind, qid=qid)
-        if kind == "accept":
-            accept_quest(state, qid, dirty)
-        elif kind == "abandon":
-            abandon_quest(state, qid, dirty)
+        from .confirmation import build_quest_confirmation
+        from .confirmation import prompt_confirmation_and_finalize
+
+        pending = build_quest_confirmation(state, action=kind, quest_id=qid)
+        async for ev in prompt_confirmation_and_finalize(
+            state,
+            save_repo,
+            dirty,
+            to_front_fn,
+            pending,
+        ):
+            yield ev
+        return
 
     # Skip empty player log entries — quest_action turns can arrive with
     # player_input="" (button-only). An empty 'player' card would render blank.
@@ -211,6 +227,24 @@ async def _run_turn_inner(
             )
             try:
                 yield emit_judge_verb(single_verb)
+                from .confirmation import build_verb_confirmation
+                from .confirmation import prompt_confirmation_and_finalize
+
+                pending_confirmation = build_verb_confirmation(
+                    state,
+                    verb=single_verb,
+                    player_input=player_input,
+                )
+                if pending_confirmation is not None:
+                    async for ev in prompt_confirmation_and_finalize(
+                        state,
+                        save_repo,
+                        dirty,
+                        to_front_fn,
+                        pending_confirmation,
+                    ):
+                        yield ev
+                    return
                 refresh_active_subject(state, [single_verb])
                 async for ev in _dispatch_verb(
                     single_verb,

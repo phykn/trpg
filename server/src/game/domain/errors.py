@@ -10,6 +10,14 @@ class PendingCheckExpected(DomainError):
     pass
 
 
+class PendingConfirmationActive(DomainError):
+    pass
+
+
+class PendingConfirmationExpected(DomainError):
+    pass
+
+
 class JudgeMalformed(DomainError):
     pass
 

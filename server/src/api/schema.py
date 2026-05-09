@@ -2,6 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from src.game.domain.action import Action
 from src.game.domain.types import StatKey
 from src.game.flow.init import PlayerInput
 
@@ -46,13 +47,35 @@ class InitResponse(BaseModel):
     state: dict
 
 
+class GraphActionResponse(BaseModel):
+    game_id: str
+    state: dict
+    status: str | None = None
+    message: str | None = None
+
+
 class TurnRequest(BaseModel):
     player_input: str
     think: bool = False
     quest_action: QuestAction | None = None
 
 
+class GraphTurnRequest(BaseModel):
+    action: Action
+
+
+class GraphInputRequest(BaseModel):
+    player_input: str
+    think: bool = False
+
+
 class RollRequest(BaseModel):
+    think: bool = False
+
+
+class ConfirmRequest(BaseModel):
+    confirmation_id: str
+    decision: Literal["confirm", "cancel"]
     think: bool = False
 
 

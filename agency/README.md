@@ -23,7 +23,7 @@ agency/qa/
     socialite.md        # 친교 → 의뢰·bluff → 적대전환·집착 (호감도 라이프사이클 + combat 가드)
     fighter.md          # victory → broken_off/flee → downed/death_save → non-combat flee 폴백
     shopkeeper.md       # 인벤·거래·장비 → 성장·휴식·기술 학습 → 가드 (장착 중 sell·만피 use·affinity)
-    scout.md            # 6 stat 강제 순환 → 환경 prop 정밀 탐사 (loc-targeted roll prose)
+    scout.md            # 4 stat 강제 순환 → 환경 prop 정밀 탐사 (loc-targeted roll prose)
     caster.md           # skill 의미 매칭 다양화 → MP·회피 표현 평타 폴백 → 회복 사이클
     survivor.md         # rest 분기 (safe → risky → dangerous, sleep_encounter)
     questor.md          # 첫 퀘스트 완료 → 둘째 퀘스트·fail_trigger → 검증 불가 주장·chapter 경계
@@ -121,7 +121,7 @@ Claude reads SKILL.md, drafts `.decomp/{setup,cast,arc}.json`, validates each ph
 
 ### Reference integrity
 
-Cross-ref check rules (per entity kind) and which manifests they validate against — see `agency/CLAUDE.md`. The full design rationale is in `docs/superpowers/specs/2026-05-04-story-skill-rewrite-design.md`.
+Cross-ref check rules (per entity kind) and which manifests they validate against — see `agency/CLAUDE.md`. Product-level seed invariants live in `docs/03-world-model.md`.
 
 ### Limits
 

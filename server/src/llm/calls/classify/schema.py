@@ -3,6 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from src.game.domain.action import ActionOutput, action_output_to_judge_output
 # Verb / RefuseReason / JudgeOutput live in domain/verb.py to break import cycle
 # with domain/memory.py (PendingCheck carries Verb). Re-exported here so call sites
 # can import from either location.
@@ -32,4 +33,18 @@ def validate_judge_output(answer: str, *, in_combat: bool = False) -> JudgeOutpu
     if not answer.strip():
         raise json.JSONDecodeError("empty answer", answer or "", 0)
     raw = json.loads(answer)
+    if _looks_like_action_output(raw):
+        return action_output_to_judge_output(
+            ActionOutput.model_validate(raw),
+            in_combat=in_combat,
+        )
     return JudgeOutput.model_validate(raw, context={"in_combat": in_combat})
+
+
+def _looks_like_action_output(raw: object) -> bool:
+    if not isinstance(raw, dict):
+        return False
+    actions = raw.get("actions")
+    if not isinstance(actions, list):
+        return False
+    return any(isinstance(action, dict) and "verb" in action for action in actions)

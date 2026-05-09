@@ -6,6 +6,7 @@ from src.game.domain.clock import next_dawn_turn
 from src.game.domain.entities import Character, CombatBehavior, Location, Stats
 from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.llm.calls.classify.schema import Verb
+from src.game.flow.confirmation import run_confirm
 from src.game.flow.turn import run_turn
 
 
@@ -22,6 +23,20 @@ def _seed_player(state, *, hp=4, mp=2):
         max_hp=20,
         mp=mp,
         max_mp=15,
+    )
+
+
+async def _confirm_pending_rest(state, tmp_data, collect, rng):
+    return await collect(
+        run_confirm(
+            client=None,
+            state=state,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
+            confirmation_id=state.pending_confirmation["id"],
+            decision="confirm",
+            rng=rng,
+        )
     )
 
 
@@ -86,7 +101,7 @@ async def test_rest_in_dangerous_location_triggers_encounter(
     # Random(seed) is deterministic per seed. Which seed triggers the encounter?
     # Rather than monkeypatch random.random, just try an arbitrary seed.
     rng = random.Random(0)
-    events = await collect(
+    first_events = await collect(
         run_turn(
             client=None,
             state=fresh_state,
@@ -96,6 +111,8 @@ async def test_rest_in_dangerous_location_triggers_encounter(
             rng=rng,
         )
     )
+    assert any(event["type"] == "confirmation_required" for event in first_events)
+    events = await _confirm_pending_rest(fresh_state, tmp_data, collect, rng)
 
     types = [e["type"] for e in events]
     # dangerous=0.6, Random(0).random() ≈ 0.844 → no encounter. Would need a different seed.
@@ -143,7 +160,7 @@ async def test_rest_dangerous_with_low_random_forces_encounter(
             return random.Random(99).randint(a, b)
 
     judge_returns(Verb(name="rest"))
-    events = await collect(
+    first_events = await collect(
         run_turn(
             client=None,
             state=fresh_state,
@@ -153,6 +170,8 @@ async def test_rest_dangerous_with_low_random_forces_encounter(
             rng=_ForceLow(),
         )
     )
+    assert any(event["type"] == "confirmation_required" for event in first_events)
+    events = await _confirm_pending_rest(fresh_state, tmp_data, collect, _ForceLow())
 
     types = [e["type"] for e in events]
     assert "combat_start" in types

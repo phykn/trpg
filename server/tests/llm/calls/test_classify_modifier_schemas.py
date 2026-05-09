@@ -23,6 +23,7 @@ def test_all_nine_verbs_have_schemas():
         "cast",
         "speak",
         "perceive",
+        "query",
         "rest",
         "wait",
     }
@@ -116,6 +117,16 @@ def test_speak_intent_unknown_rejected():
 def test_perceive_optional_target():
     _validate("perceive", target_ids=["loc_01"])
     _validate("perceive")
+
+
+def test_query_accepts_optional_topic():
+    _validate("query")
+    _validate("query", modifiers={"topic": "exits"})
+
+
+def test_query_unknown_topic_rejected():
+    with pytest.raises(ValidationError, match="topic"):
+        _validate("query", modifiers={"topic": "rumors"})
 
 
 def test_rest_no_modifiers():

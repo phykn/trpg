@@ -25,6 +25,7 @@ from .log_entry import (
 )
 from .narrative_delta import NarrativeDeltaPayload
 from .pending_check import PendingCheckPayload, TierBadge
+from .pending_confirmation import PendingConfirmationPayload
 from .place import PlacePayload, PlaceSurrounding, PlaceTarget, RiskBadge
 from .quest import DifficultyBadge, QuestPayload, QuestRewards
 from .subject import SubjectPayload
@@ -53,6 +54,7 @@ __all__ = [
     "LogEntryPayload",
     "NarrativeDeltaPayload",
     "PendingCheckPayload",
+    "PendingConfirmationPayload",
     "PlacePayload",
     "PlaceSurrounding",
     "PlaceTarget",

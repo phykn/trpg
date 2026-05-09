@@ -2,7 +2,7 @@
 
 This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
-User-facing setup (env layout, routes, table schema) is in [README.md](./README.md). Design rationale and per-turn flow live in `../docs/01-overview.md` ~ `../docs/05-codemap.md`.
+User-facing setup (env layout, routes, table schema) is in [README.md](./README.md). Design rationale and per-turn flow live in `../docs/README.md` and `../docs/02-runtime.md`.
 
 ## Working tree layout
 

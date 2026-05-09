@@ -10,7 +10,8 @@ tmp paths, so they bypass this factory and never hit a real Supabase.
 
 import os
 
-from .repo import SaveRepo, ScenarioRepo
+from .graph_supabase import SupabaseGraphRepo
+from .repo import GraphRepo, SaveRepo, ScenarioRepo
 from .supabase import SupabaseSaveRepo, SupabaseStorageScenarioRepo
 
 
@@ -26,4 +27,11 @@ def build_scenario_repo() -> ScenarioRepo:
         url=os.environ["SUPABASE_URL"],
         service_key=os.environ["SUPABASE_SERVICE_KEY"],
         bucket=os.environ["SUPABASE_SCENARIO_BUCKET"],
+    )
+
+
+def build_graph_repo() -> GraphRepo:
+    return SupabaseGraphRepo(
+        url=os.environ["SUPABASE_URL"],
+        service_key=os.environ["SUPABASE_SERVICE_KEY"],
     )

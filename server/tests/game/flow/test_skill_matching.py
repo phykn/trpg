@@ -12,6 +12,7 @@ from src.game.domain.entities import (
 from src.llm.calls.classify.schema import Verb
 from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
 from src.llm.context import build_surroundings
+from src.game.flow.confirmation import run_confirm
 from src.game.flow.turn import run_turn
 
 
@@ -57,6 +58,20 @@ def _seed_skill_state(fresh_state):
     fresh_state.characters["goblin_01"] = g
     fresh_state.locations["plaza_01"] = Location(id="plaza_01", name="광장")
     return fresh_state
+
+
+async def _confirm_pending_attack(state, tmp_data, collect, rng):
+    return await collect(
+        run_confirm(
+            client=None,
+            state=state,
+            scenario_repo=LocalFsScenarioRepo(profile_dir="<unused>"),
+            save_repo=LocalFsSaveRepo(saves_dir=str(tmp_data)),
+            confirmation_id=state.pending_confirmation["id"],
+            decision="confirm",
+            rng=rng,
+        )
+    )
 
 
 # --- surroundings exposure ------------------------------------------------
@@ -119,7 +134,7 @@ async def test_combat_with_skill_id_runs_auto_sim_and_burns_mp(
             name="attack", target_ids=["goblin_01"], modifiers={"skill_id": "fireball"}
         ),
     )
-    events = await collect(
+    await collect(
         run_turn(
             client=None,
             state=state,
@@ -129,6 +144,7 @@ async def test_combat_with_skill_id_runs_auto_sim_and_burns_mp(
             rng=random.Random(0),
         )
     )
+    events = await _confirm_pending_attack(state, tmp_data, collect, random.Random(0))
 
     types = [e["type"] for e in events]
     assert "combat_start" in types
@@ -144,7 +160,7 @@ async def test_combat_without_skill_id_runs_basic_attack_loop(
     untouched."""
     state = _seed_skill_state(fresh_state)
     judge_returns(Verb(name="attack", target_ids=["goblin_01"]))
-    events = await collect(
+    await collect(
         run_turn(
             client=None,
             state=state,
@@ -154,6 +170,7 @@ async def test_combat_without_skill_id_runs_basic_attack_loop(
             rng=random.Random(0),
         )
     )
+    events = await _confirm_pending_attack(state, tmp_data, collect, random.Random(0))
     types = [e["type"] for e in events]
     assert "combat_start" in types
     assert state.pending_check is None
