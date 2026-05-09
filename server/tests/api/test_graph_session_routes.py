@@ -5,6 +5,7 @@ from httpx import ASGITransport, AsyncClient
 
 from run_api import build_app
 from src.db.graph_local_fs import LocalFsGraphRepo
+from src.game.engines.growth import xp_for_next_level
 from tests._fakes import make_default_storage, make_save_repo, make_scenario_repo
 
 
@@ -186,6 +187,42 @@ async def test_graph_turn_moves_player_and_persists_progress(tmp_path):
     assert "located_at:player_01:loc_02" in graph.edges
     assert progress.turn_count == 1
     assert body["state"]["place"]["id"] == "loc_02"
+
+
+@pytest.mark.asyncio
+async def test_graph_level_up_commits_and_returns_state(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        graph = await app.state.graph_repo.load_graph(game_id)
+        player = graph.nodes["player_01"]
+        level = player.properties["level"]
+        player.properties["xp_pool"] = xp_for_next_level(level)
+        await app.state.graph_repo.save_graph(game_id, graph)
+
+        response = await client.post(
+            f"/session/{game_id}/graph/level_up",
+            json={"stat_up": "STR", "skill_id": None, "think": False},
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    graph = await app.state.graph_repo.load_graph(game_id)
+    progress = await app.state.graph_repo.load_progress(game_id)
+    logs = await app.state.graph_repo.load_log_entries(game_id)
+    player_props = graph.nodes["player_01"].properties
+
+    assert player_props["level"] == level + 1
+    assert player_props["xp_pool"] == 0
+    assert player_props["stats"]["STR"] == 11
+    assert player_props["stats"]["CHA"] == 9
+    assert body["state"]["hero"]["level"] == level + 1
+    assert body["state"]["hero"]["exp"] == 0
+    assert body["state"]["log"] == [entry.model_dump() for entry in logs]
+    assert logs[-1].kind == "act"
+    assert "레벨이 올랐습니다" in logs[-1].text
+    assert progress.next_log_id == logs[-1].id + 1
 
 
 @pytest.mark.asyncio

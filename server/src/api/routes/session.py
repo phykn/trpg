@@ -28,6 +28,7 @@ from src.game.runtime.confirmation import (
 )
 from src.game.runtime.input import GraphInputError, run_graph_input_turn
 from src.game.runtime.intro import run_graph_initial_narration
+from src.game.runtime.level_up import GraphLevelUpError, run_graph_level_up
 from src.game.runtime.load import load_runtime_state
 from src.game.runtime.state import GameRuntimeState
 from src.game.runtime.turn import GraphActionTurnError
@@ -203,6 +204,32 @@ async def session_graph_input(
         state=result.front_state.model_dump(mode="json", by_alias=True),
         status=result.status,
         message=result.message,
+    )
+
+
+@router.post("/session/{game_id}/graph/level_up", response_model=GraphActionResponse)
+async def session_graph_level_up(
+    game_id: str,
+    body: LevelUpRequest,
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+) -> GraphActionResponse:
+    set_think_override(body.think)
+    try:
+        result = await run_graph_level_up(
+            graph_repo,
+            game_id,
+            stat_up=body.stat_up,
+            skill_id=body.skill_id,
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="game not found")
+    except GraphLevelUpError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    return GraphActionResponse(
+        game_id=game_id,
+        state=result.front_state.model_dump(mode="json", by_alias=True),
+        status=None,
+        message=None,
     )
 
 

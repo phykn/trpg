@@ -120,6 +120,19 @@ export async function sendGraphAction(
   return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
 }
 
+export async function sendGraphLevelUp(
+  gameId: string,
+  body: LevelUpRequest,
+): Promise<GraphActionClientResponse> {
+  const res = await fetch(`${BASE_URL}/session/${gameId}/graph/level_up`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`sendGraphLevelUp failed: HTTP ${res.status}`);
+  return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
+}
+
 export async function confirmGraphAction(
   gameId: string,
   body: ConfirmRequest,

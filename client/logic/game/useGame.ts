@@ -28,6 +28,7 @@ import {
   streamTurn,
   sendGraphAction,
   sendGraphInput,
+  sendGraphLevelUp,
 } from '@/services';
 import type { CombatBadge } from '@/logic/combat';
 import type { Hero } from '@/logic/hero';
@@ -377,6 +378,10 @@ export function useGame() {
     setLevelUpOpen(true);
     setLevelUpCandidates(null);
     previewAbortRef.current?.abort();
+    if (runtimeMode === 'graph') {
+      setLevelUpCandidates([]);
+      return;
+    }
     const controller = new AbortController();
     previewAbortRef.current = controller;
     try {
@@ -391,7 +396,7 @@ export function useGame() {
         previewAbortRef.current = null;
       }
     }
-  }, [pending, pendingConfirmation]);
+  }, [pending, pendingConfirmation, runtimeMode]);
 
   const cancelLevelUp = React.useCallback(() => {
     previewAbortRef.current?.abort();
@@ -406,11 +411,17 @@ export function useGame() {
       previewAbortRef.current?.abort();
       setLevelUpOpen(false);
       setLevelUpCandidates(null);
+      if (runtimeMode === 'graph') {
+        void runGraphRequest(() =>
+          sendGraphLevelUp(id, { stat_up, skill_id, think: false }),
+        );
+        return;
+      }
       void runStream((signal) =>
         streamLevelUp(id, { stat_up, skill_id, think: false }, handleEvent, signal),
       );
     },
-    [handleEvent, runStream],
+    [handleEvent, runtimeMode, runGraphRequest, runStream],
   );
 
   const goToNewGame = React.useCallback(() => {

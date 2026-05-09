@@ -4,6 +4,8 @@ from src.game.domain.action import Action
 from src.game.domain.graph import Graph, GraphNode
 from src.game.domain.graph_query import location_of
 from src.game.domain.memory import ActLogEntry
+from src.game.domain.types import STAT_PAIRS, StatKey
+from src.game.flow.format import format_level_up_log
 
 from .dispatch import GraphActionDispatchResult
 from .state import GameRuntimeState
@@ -32,6 +34,26 @@ def build_graph_quest_offer_card(
         id=log_id,
         kind="act",
         text=f"새 의뢰가 도착합니다: {quest}.",
+    )
+
+
+def build_graph_level_up_card(
+    runtime: GameRuntimeState,
+    stat_up: StatKey,
+    log_id: int,
+) -> ActLogEntry:
+    player = runtime.graph.nodes[runtime.progress.player_id]
+    return ActLogEntry(
+        id=log_id,
+        kind="act",
+        text=format_level_up_log(
+            _label(player),
+            _int_property(player, "level"),
+            stat_up,
+            STAT_PAIRS[stat_up],
+            _int_property(player, "max_hp"),
+            _int_property(player, "max_mp"),
+        ),
     )
 
 
@@ -126,6 +148,11 @@ def _label(node: GraphNode) -> str:
     if isinstance(title, str) and title:
         return title
     return node.id
+
+
+def _int_property(node: GraphNode, key: str) -> int:
+    value = node.properties.get(key)
+    return value if isinstance(value, int) else 0
 
 
 def _direction_particle(value: str) -> str:

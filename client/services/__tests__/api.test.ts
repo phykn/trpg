@@ -9,7 +9,7 @@ jest.mock('expo/fetch', () => ({
 }));
 
 const { fetch } = require('expo/fetch') as { fetch: jest.Mock };
-const { getGraphSessionById, sendGraphAction } = require('../api') as typeof import('../api');
+const { getGraphSessionById, sendGraphAction, sendGraphLevelUp } = require('../api') as typeof import('../api');
 
 const graphState = (): GraphFrontState => ({
   hero: {
@@ -85,5 +85,36 @@ describe('graph API helpers', () => {
     const result = await getGraphSessionById('game-1');
 
     expect(result?.runtime).toBe('graph');
+  });
+
+  test('posts graph level-up choices to the graph level-up endpoint', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        state: graphState(),
+        status: null,
+        message: null,
+      }),
+    });
+
+    const result = await sendGraphLevelUp('game-1', {
+      stat_up: 'STR',
+      skill_id: null,
+      think: false,
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/graph/level_up',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          stat_up: 'STR',
+          skill_id: null,
+          think: false,
+        }),
+      }),
+    );
+    expect(result.runtime).toBe('graph');
   });
 });
