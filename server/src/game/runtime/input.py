@@ -4,13 +4,12 @@ import asyncio
 import json
 
 from src.db.repo import GraphRepo
-from src.game.domain.action import verb_to_action
 from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph_query import characters_at, location_of
 from src.game.domain.memory import GMLogEntry
 from src.llm.calls.classify.runner import classify
-from src.llm.calls.classify.schema import JudgeInput
+from src.llm.calls.classify.schema import ClassifyInput
 from src.llm.client import LLMClient
 from src.llm.context.graph_surroundings import build_graph_surroundings
 from src.wire.graph_to_front import graph_to_front_state
@@ -35,7 +34,7 @@ async def run_graph_input_turn(
     runtime = await load_runtime_state(repo, game_id)
     output = await classify(
         client,
-        JudgeInput(
+        ClassifyInput(
             player_input=player_input,
             surroundings=build_graph_surroundings(runtime),
         ),
@@ -43,12 +42,12 @@ async def run_graph_input_turn(
     )
 
     if output.refuse is not None:
-        raise GraphInputError(output.refuse.reason)
+        raise GraphInputError(output.refuse.message_hint)
     actions = output.actions or []
     if len(actions) != 1:
         raise GraphInputError("graph input requires exactly one action")
 
-    action = verb_to_action(actions[0])
+    action = actions[0]
     if action.verb in {"speak", "perceive", "pass"}:
         return await _run_graph_narrative_input(
             client,

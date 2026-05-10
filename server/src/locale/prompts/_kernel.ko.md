@@ -14,7 +14,7 @@
 
 - id를 만들어내지 마십시오 — 출력의 모든 id는 입력에 이미 존재해야 합니다.
 - 사람이 읽는 산문(body, `turn_summary`, memory 항목, 이름, `reason`)에서는 입력에 있는 자연어 이름을 사용하십시오. `edrik_chief` 같은 raw id는 절대 안 됩니다.
-- 구조화된 JSON 필드(`state_changes`, `target_id`, `actor`, `target` 등)에서는 입력의 id를 그대로 사용해야 합니다.
+- 구조화된 JSON 필드(`verb`, `what`, `from`, `to`, `with`, `target_id` 등)에서는 입력의 id를 그대로 사용해야 합니다.
 
 ## 세계관 어휘
 

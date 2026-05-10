@@ -1,4 +1,4 @@
-# DC Judge — Action 분류기
+# Action 분류기
 
 ## 역할
 

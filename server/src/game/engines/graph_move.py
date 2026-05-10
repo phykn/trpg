@@ -100,13 +100,13 @@ def _move_one_character(
     destination_id: str,
 ) -> list[GraphChange]:
     changes: list[GraphChange] = []
-    old_location_edges = edges_from(graph, character_id, "located_at")
+    existing_location_edges = edges_from(graph, character_id, "located_at")
     already_at_destination = any(
-        edge.to_node_id == destination_id for edge in old_location_edges
+        edge.to_node_id == destination_id for edge in existing_location_edges
     )
 
     if not already_at_destination:
-        for edge in old_location_edges:
+        for edge in existing_location_edges:
             changes.append(RemoveEdgeChange(type="remove_edge", edge_id=edge.id))
         changes.append(
             AddEdgeChange(

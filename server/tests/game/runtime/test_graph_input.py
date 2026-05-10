@@ -120,7 +120,9 @@ async def test_graph_input_classifies_one_action_and_creates_confirmation(tmp_pa
 
 async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
     repo = await _repo(tmp_path)
-    llm = _FakeLLM({"actions": [{"verb": "speak", "what": "goblin_01"}]})
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]}
+    )
 
     result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 말을 건다")
     logs = await repo.load_log_entries("game-1")
@@ -134,7 +136,7 @@ async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
 
 async def test_graph_input_targetless_speak_defaults_to_nearby_living_npc(tmp_path):
     repo = await _repo(tmp_path)
-    llm = _FakeLLM({"actions": [{"verb": "speak"}]})
+    llm = _FakeLLM({"actions": [{"verb": "speak", "how": "friendly"}]})
 
     await run_graph_input_turn(llm, repo, "game-1", "근처 사람에게 말을 건다")
     progress = await repo.load_progress("game-1")
@@ -160,7 +162,9 @@ async def test_graph_input_speak_times_out_slow_narration_and_uses_fallback(
         raising=False,
     )
     repo = await _repo(tmp_path)
-    llm = _SlowGraphNarrateLLM({"actions": [{"verb": "speak", "what": "goblin_01"}]})
+    llm = _SlowGraphNarrateLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]}
+    )
 
     result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 말을 건다")
     logs = await repo.load_log_entries("game-1")

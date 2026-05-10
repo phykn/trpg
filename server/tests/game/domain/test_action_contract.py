@@ -1,8 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.game.domain.action import Action, action_to_verb, verb_to_action
-from src.game.domain.verb import Verb
+from src.game.domain.action import Action, ActionOutput
 
 
 def test_action_accepts_from_and_with_aliases():
@@ -29,74 +28,37 @@ def test_action_rejects_result_fields():
         Action.model_validate({"verb": "attack", "what": "goblin_01", "success": True})
 
 
-def test_pass_action_converts_to_wait_verb():
-    verb = action_to_verb(Action(verb="pass", note="숨을 고른다."))
+def test_action_output_actions_only():
+    out = ActionOutput(actions=[Action(verb="pass")])
+    assert out.refuse is None
+    assert len(out.actions or []) == 1
 
-    assert verb.name == "wait"
-    assert verb.modifiers["tail_intent"] == "숨을 고른다."
 
-
-def test_transfer_action_converts_to_internal_verb():
-    verb = action_to_verb(
-        Action.model_validate(
-            {
-                "verb": "transfer",
-                "what": "coin_01",
-                "from": "merchant_01",
-                "to": "player_01",
-                "how": "trade",
-            }
-        )
+def test_action_output_refuse_only():
+    out = ActionOutput(
+        refuse={"category": "out_of_game", "message_hint": "범위 밖"}
     )
-
-    assert verb.name == "transfer"
-    assert verb.modifiers == {
-        "from_id": "merchant_01",
-        "to_id": "player_01",
-        "mode": "trade",
-        "item_id": "coin_01",
-    }
+    assert out.actions is None
 
 
-def test_attack_action_converts_targets_and_skill():
-    verb = action_to_verb(
-        Action.model_validate(
-            {
-                "verb": "attack",
-                "what": ["goblin_01", "orc_01"],
-                "with": "fireball",
-                "how": "surprise",
-            }
+def test_action_output_exactly_one_required():
+    with pytest.raises(ValidationError):
+        ActionOutput()
+
+
+def test_action_output_both_set_rejected():
+    with pytest.raises(ValidationError):
+        ActionOutput(
+            actions=[Action(verb="pass")],
+            refuse={"category": "out_of_game", "message_hint": "x"},
         )
-    )
-
-    assert verb.name == "attack"
-    assert verb.target_ids == ["goblin_01", "orc_01"]
-    assert verb.modifiers == {"skill_id": "fireball", "surprise": True}
 
 
-def test_query_action_converts_topic():
-    verb = action_to_verb(Action(verb="query", what="exits"))
-
-    assert verb.name == "query"
-    assert verb.modifiers == {"topic": "exits"}
+def test_action_output_empty_actions_rejected():
+    with pytest.raises(ValidationError):
+        ActionOutput(actions=[])
 
 
-def test_internal_verb_converts_back_to_action():
-    action = verb_to_action(
-        Verb(
-            name="transfer",
-            modifiers={
-                "from_id": "<self>.inventory",
-                "to_id": "<self>.equipped.weapon",
-                "mode": "gift",
-                "item_id": "sword_01",
-            },
-        )
-    )
-
-    assert action.verb == "transfer"
-    assert action.what == "sword_01"
-    assert action.from_ == "<self>.inventory"
-    assert action.to == "<self>.equipped.weapon"
-    assert action.how == "gift"
+def test_action_output_actions_max_length():
+    with pytest.raises(ValidationError):
+        ActionOutput(actions=[Action(verb="pass")] * 5)

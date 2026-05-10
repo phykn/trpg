@@ -1,11 +1,10 @@
 import pytest
 
-from src.game.domain.verb import Verb
+from src.game.domain.action import Action, ActionOutput
 from src.llm.calls.classify.grounding import (
-    JudgeGroundingError,
+    ActionGroundingError,
     validate_grounded_output,
 )
-from src.llm.calls.classify.schema import JudgeOutput
 
 
 def _surroundings() -> dict:
@@ -50,12 +49,12 @@ def _surroundings() -> dict:
 
 
 def test_valid_view_ids_pass():
-    output = JudgeOutput(
+    output = ActionOutput(
         actions=[
-            Verb(name="move", modifiers={"destination": "town_gate"}),
-            Verb(name="use", modifiers={"item_id": "potion_01"}),
-            Verb(name="attack", target_ids=["goblin_01"]),
-            Verb(name="cast", modifiers={"skill_id": "heal_01"}),
+            Action(verb="move", to="town_gate"),
+            Action(verb="use", what="potion_01"),
+            Action(verb="attack", what=["goblin_01"]),
+            Action(verb="cast", with_="heal_01"),
         ]
     )
 
@@ -63,27 +62,23 @@ def test_valid_view_ids_pass():
 
 
 def test_unknown_move_destination_fails():
-    output = JudgeOutput(
-        actions=[Verb(name="move", modifiers={"destination": "missing_loc"})]
-    )
+    output = ActionOutput(actions=[Action(verb="move", to="missing_loc")])
 
-    with pytest.raises(JudgeGroundingError, match="destination"):
+    with pytest.raises(ActionGroundingError, match="to"):
         validate_grounded_output(output, _surroundings())
 
 
 def test_unknown_use_item_fails():
-    output = JudgeOutput(
-        actions=[Verb(name="use", modifiers={"item_id": "missing_item"})]
-    )
+    output = ActionOutput(actions=[Action(verb="use", what="missing_item")])
 
-    with pytest.raises(JudgeGroundingError, match="item_id"):
+    with pytest.raises(ActionGroundingError, match="what"):
         validate_grounded_output(output, _surroundings())
 
 
 def test_attack_cannot_target_player_self():
-    output = JudgeOutput(actions=[Verb(name="attack", target_ids=["player_01"])])
+    output = ActionOutput(actions=[Action(verb="attack", what=["player_01"])])
 
-    with pytest.raises(JudgeGroundingError, match="target_ids"):
+    with pytest.raises(ActionGroundingError, match="what"):
         validate_grounded_output(output, _surroundings())
 
 
@@ -92,45 +87,38 @@ def test_attack_accepts_visible_enemy_entity():
     surroundings["entities"].append(
         {"id": "training_dummy", "name": "훈련용 허수아비", "type": "enemy"}
     )
-    output = JudgeOutput(actions=[Verb(name="attack", target_ids=["training_dummy"])])
+    output = ActionOutput(actions=[Action(verb="attack", what=["training_dummy"])])
 
     assert validate_grounded_output(output, surroundings) is output
 
 
 def test_speak_target_must_be_visible_npc():
-    output = JudgeOutput(
+    output = ActionOutput(
         actions=[
-            Verb(
-                name="speak",
-                modifiers={"intent": "friendly", "target": "missing_npc"},
-            )
+            Action(verb="speak", to="missing_npc", how="friendly")
         ]
     )
 
-    with pytest.raises(JudgeGroundingError, match="target"):
+    with pytest.raises(ActionGroundingError, match="to"):
         validate_grounded_output(output, _surroundings())
 
 
 def test_transfer_accepts_self_refs_and_exposed_item_ids():
-    output = JudgeOutput(
+    output = ActionOutput(
         actions=[
-            Verb(
-                name="transfer",
-                modifiers={
-                    "from_id": "<self>.equipped.weapon",
-                    "to_id": "<self>.inventory",
-                    "mode": "gift",
-                    "item_id": "sword_01",
-                },
+            Action(
+                verb="transfer",
+                from_="<self>.equipped.weapon",
+                to="<self>.inventory",
+                how="gift",
+                what="sword_01",
             ),
-            Verb(
-                name="transfer",
-                modifiers={
-                    "from_id": "goblin_01",
-                    "to_id": "player_01",
-                    "mode": "trade",
-                    "item_id": "bread_01",
-                },
+            Action(
+                verb="transfer",
+                from_="goblin_01",
+                to="player_01",
+                how="trade",
+                what="bread_01",
             ),
         ]
     )

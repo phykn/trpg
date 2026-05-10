@@ -148,7 +148,7 @@ def allowed_slots(item: Item) -> tuple[EquipSlot, ...]:
 def item_kind(
     item: Item,
 ) -> Literal["weapon", "armor", "consumable", "trigger", "misc"]:
-    """Judge prompt / semantics classification. Co-located with `allowed_slots` since both key off `Item.effects`."""
+    """Classify prompt semantics. Co-located with `allowed_slots` since both key off `Item.effects`."""
     eff = item.effects
     if isinstance(eff, ConsumableEffect):
         return "consumable"

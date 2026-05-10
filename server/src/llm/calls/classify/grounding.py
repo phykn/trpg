@@ -3,12 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from src.game.domain.verb import Verb
-
-from .schema import JudgeOutput
+from src.game.domain.action import Action, ActionOutput
 
 
-class JudgeGroundingError(ValueError):
+class ActionGroundingError(ValueError):
     pass
 
 
@@ -52,14 +50,14 @@ class _ViewIds:
 
 
 def validate_grounded_output(
-    output: JudgeOutput,
+    output: ActionOutput,
     surroundings: dict[str, Any],
-) -> JudgeOutput:
+) -> ActionOutput:
     if output.actions is None:
         return output
     view = _collect_view_ids(surroundings)
-    for verb in output.actions:
-        _validate_verb(verb, view)
+    for action in output.actions:
+        _validate_action(action, view)
     return output
 
 
@@ -121,77 +119,79 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
     )
 
 
-def _validate_verb(verb: Verb, view: _ViewIds) -> None:
-    modifiers = verb.modifiers or {}
-    if verb.name == "move":
-        if view.in_combat and modifiers.get("destination") is None:
+def _validate_action(action: Action, view: _ViewIds) -> None:
+    if action.verb == "move":
+        destination = _single(action.to) or _single(action.what)
+        if view.in_combat and destination is None:
             return
         _require_id(
-            modifiers.get("destination"),
+            destination,
             view.connection_ids,
-            verb=verb,
-            field="destination",
+            action=action,
+            field="to",
         )
-    elif verb.name == "use":
-        _require_id(modifiers.get("item_id"), view.inventory_item_ids, verb=verb, field="item_id")
-        target_id = modifiers.get("target_id")
+    elif action.verb == "use":
+        item_id = _single(action.what) or _single(action.with_)
+        _require_id(item_id, view.inventory_item_ids, action=action, field="what")
+        target_id = _single(action.to)
         if target_id is not None:
-            _require_id(target_id, view.character_ids, verb=verb, field="target_id")
-    elif verb.name == "attack":
+            _require_id(target_id, view.character_ids, action=action, field="to")
+    elif action.verb == "attack":
         _require_all_ids(
-            verb.target_ids,
+            _list(action.what),
             view.non_player_character_ids,
-            verb=verb,
-            field="target_ids",
+            action=action,
+            field="what",
         )
-    elif verb.name == "cast":
-        _require_id(modifiers.get("skill_id"), view.skill_ids, verb=verb, field="skill_id")
-        if verb.target_ids:
+    elif action.verb == "cast":
+        skill_id = _single(action.with_) or _single(action.what)
+        _require_id(skill_id, view.skill_ids, action=action, field="with")
+        target_ids = _list(action.to)
+        if target_ids:
             _require_all_ids(
-                verb.target_ids,
+                target_ids,
                 view.character_ids,
-                verb=verb,
-                field="target_ids",
+                action=action,
+                field="to",
             )
-    elif verb.name == "speak":
-        target_id = modifiers.get("target")
+    elif action.verb == "speak":
+        target_id = _single(action.to) or _single(action.what)
         if target_id is not None:
             _require_id(
                 target_id,
                 view.non_player_character_ids,
-                verb=verb,
-                field="target",
+                action=action,
+                field="to",
             )
-    elif verb.name == "transfer":
-        _validate_transfer(verb, view)
-    elif verb.name == "perceive" and verb.target_ids:
+    elif action.verb == "transfer":
+        _validate_transfer(action, view)
+    elif action.verb == "perceive" and _list(action.what):
         _require_all_ids(
-            verb.target_ids,
+            _list(action.what),
             view.perceive_target_ids,
-            verb=verb,
-            field="target_ids",
+            action=action,
+            field="what",
         )
 
 
-def _validate_transfer(verb: Verb, view: _ViewIds) -> None:
-    modifiers = verb.modifiers or {}
-    _require_id(modifiers.get("from_id"), view.actor_refs, verb=verb, field="from_id")
-    _require_id(modifiers.get("to_id"), view.actor_refs, verb=verb, field="to_id")
-    item_id = modifiers.get("item_id")
+def _validate_transfer(action: Action, view: _ViewIds) -> None:
+    _require_id(action.from_, view.actor_refs, action=action, field="from")
+    _require_id(action.to, view.actor_refs, action=action, field="to")
+    item_id = _single(action.what) or _single(action.with_)
     if item_id is not None:
-        _require_id(item_id, view.exposed_item_ids, verb=verb, field="item_id")
+        _require_id(item_id, view.exposed_item_ids, action=action, field="what")
 
 
 def _require_id(
     value: object,
     allowed: set[str],
     *,
-    verb: Verb,
+    action: Action,
     field: str,
 ) -> None:
     if not isinstance(value, str) or value not in allowed:
-        raise JudgeGroundingError(
-            f"ungrounded verb={verb.name} {field}: {value!r}"
+        raise ActionGroundingError(
+            f"ungrounded action={action.verb} {field}: {value!r}"
         )
 
 
@@ -199,13 +199,13 @@ def _require_all_ids(
     values: list[str],
     allowed: set[str],
     *,
-    verb: Verb,
+    action: Action,
     field: str,
 ) -> None:
     missing = [value for value in values if value not in allowed]
     if missing:
-        raise JudgeGroundingError(
-            f"ungrounded verb={verb.name} {field}: {missing!r}"
+        raise ActionGroundingError(
+            f"ungrounded action={action.verb} {field}: {missing!r}"
         )
 
 
@@ -217,6 +217,22 @@ def _dicts(value: object) -> list[dict[str, Any]]:
 
 def _str(value: object) -> str | None:
     return value if isinstance(value, str) and value else None
+
+
+def _single(value: object) -> str | None:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list) and value and isinstance(value[0], str):
+        return value[0]
+    return None
+
+
+def _list(value: object) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, str)]
+    return []
 
 
 def _ids_from_list(value: object) -> set[str]:

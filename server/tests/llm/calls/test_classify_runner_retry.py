@@ -9,7 +9,7 @@ import json
 import pytest
 
 from src.llm.calls._runner import run_with_retries
-from src.llm.calls.classify.schema import validate_judge_output
+from src.llm.calls.classify.schema import validate_action_output_json
 
 
 class _EmptyAnswerClient:
@@ -41,7 +41,7 @@ async def test_retry_loop_5x_empty_answer_raises_jsondecodeerror():
             client,
             system_prompt="sys",
             user_payload="usr",
-            parse=lambda a: validate_judge_output(a, in_combat=False),
+            parse=lambda a: validate_action_output_json(a, in_combat=False),
             retry_on=(json.JSONDecodeError,),
             retries=5,
         )
@@ -73,9 +73,9 @@ async def test_retry_loop_recovers_after_first_empty_answer():
         client,
         system_prompt="sys",
         user_payload="usr",
-        parse=lambda a: validate_judge_output(a, in_combat=False),
+        parse=lambda a: validate_action_output_json(a, in_combat=False),
         retry_on=(json.JSONDecodeError,),
         retries=5,
     )
     assert client.attempts == 2
-    assert out.actions[0].name == "wait"
+    assert out.actions[0].verb == "pass"

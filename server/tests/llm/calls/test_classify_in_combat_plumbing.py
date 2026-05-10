@@ -1,19 +1,19 @@
-"""classify/runner.py passes surroundings["in_combat"] into action normalization."""
+"""classify/runner.py passes surroundings["in_combat"] into action validation."""
 
 import json
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from pydantic import ValidationError
 
-from src.llm.calls.classify.grounding import JudgeGroundingError
+from src.llm.calls.classify.grounding import ActionGroundingError
 from src.llm.calls.classify.runner import classify
-from src.llm.calls.classify.schema import JudgeInput
+from src.llm.calls.classify.schema import ClassifyInput
 
 
 @pytest.mark.asyncio
 async def test_in_combat_true_allows_move_without_destination():
-    input_ = JudgeInput(
+    input_ = ClassifyInput(
         player_input="도망친다",
         surroundings={"in_combat": True, "entities": []},
     )
@@ -23,13 +23,13 @@ async def test_in_combat_true_allows_move_without_destination():
         new=AsyncMock(side_effect=lambda *a, **kw: kw["parse"](fake_answer)),
     ):
         out = await classify(client=None, input_=input_, locale="ko", retries=1)
-    assert out.actions[0].name == "move"
-    assert out.actions[0].modifiers.get("manner") == "hasty"
+    assert out.actions[0].verb == "move"
+    assert out.actions[0].how == "flee"
 
 
 @pytest.mark.asyncio
 async def test_in_combat_false_rejects_move_without_destination():
-    input_ = JudgeInput(
+    input_ = ClassifyInput(
         player_input="도망친다",
         surroundings={"in_combat": False, "entities": []},
     )
@@ -44,9 +44,9 @@ async def test_in_combat_false_rejects_move_without_destination():
 
 @pytest.mark.asyncio
 async def test_in_combat_default_false_when_key_missing():
-    input_ = JudgeInput(
+    input_ = ClassifyInput(
         player_input="도망친다",
-        surroundings={"entities": []},  # no in_combat key
+        surroundings={"entities": []},
     )
     fake_answer = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
     with patch(
@@ -59,7 +59,7 @@ async def test_in_combat_default_false_when_key_missing():
 
 @pytest.mark.asyncio
 async def test_unknown_move_destination_rejected_against_surroundings():
-    input_ = JudgeInput(
+    input_ = ClassifyInput(
         player_input="없는 장소로 간다",
         surroundings={
             "in_combat": False,
@@ -74,5 +74,5 @@ async def test_unknown_move_destination_rejected_against_surroundings():
         "src.llm.calls.classify.runner.run_with_retries",
         new=AsyncMock(side_effect=lambda *a, **kw: kw["parse"](fake_answer)),
     ):
-        with pytest.raises(JudgeGroundingError, match="destination"):
+        with pytest.raises(ActionGroundingError, match="to"):
             await classify(client=None, input_=input_, locale="ko", retries=1)

@@ -42,7 +42,7 @@ def _client(app):
 
 
 @pytest.mark.asyncio
-async def test_old_session_routes_are_not_mounted(tmp_path):
+async def test_removed_session_routes_are_not_mounted(tmp_path):
     app = _build_test_app(tmp_path)
 
     async with _client(app) as client:

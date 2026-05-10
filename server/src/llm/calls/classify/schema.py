@@ -3,31 +3,41 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from src.game.domain.action import ActionOutput, action_output_to_judge_output
-# Re-exported here so classify call sites can import all judge shapes together.
-from src.game.domain.verb import (  # noqa: F401
-    JudgeOutput,
+from src.game.domain.action import (
+    Action,
+    ActionOutput,
+    ActionVerb,
     RefuseCategory,
     RefuseReason,
-    Verb,
-    VerbName,
 )
 
 
-class JudgeInput(BaseModel):
+class ClassifyInput(BaseModel):
     player_input: str
     surroundings: dict[str, Any]
-    # Build-up beats so judge can resolve pronouns ("그것을 든다") and detect surprise attacks.
+    # Build-up beats let classify resolve pronouns and detect surprise attacks.
     history: list[dict] = []
     recent_dialogue: list[dict] = []
 
 
-def validate_judge_output(answer: str, *, in_combat: bool = False) -> JudgeOutput:
-    """Parse classifier JSON and normalize it to the internal JudgeOutput."""
+def validate_action_output_json(
+    answer: str,
+    *,
+    in_combat: bool = False,
+) -> ActionOutput:
+    """Parse classifier JSON into the graph action contract."""
     if not answer.strip():
         raise json.JSONDecodeError("empty answer", answer or "", 0)
     raw = json.loads(answer)
-    return action_output_to_judge_output(
-        ActionOutput.model_validate(raw),
-        in_combat=in_combat,
-    )
+    return ActionOutput.model_validate(raw, context={"in_combat": in_combat})
+
+
+__all__ = [
+    "Action",
+    "ActionOutput",
+    "ActionVerb",
+    "ClassifyInput",
+    "RefuseCategory",
+    "RefuseReason",
+    "validate_action_output_json",
+]
