@@ -22,11 +22,11 @@ describe('adaptGraphState', () => {
           presence: 0,
         },
         equipment: {
-          weapon: { name: '낡은 검' },
+          weapon: { id: 'sword_01', name: '낡은 검' },
           armor: null,
           accessory: null,
         },
-        inventory: [{ name: '회복 물약', qty: 2 }],
+        inventory: [{ id: 'potion_01', name: '회복 물약', qty: 2, canUse: true, equipSlots: [] }],
         skills: ['기본 타격'],
         status: ['축복'],
       },
@@ -102,8 +102,8 @@ describe('adaptGraphState', () => {
     expect(state.hero.expMax).toBe(30);
     expect(state.hero.canLevelUp).toBe(false);
     expect(state.hero.gold).toBe(7);
-    expect(state.hero.equipment.weapon?.name).toBe('낡은 검');
-    expect(state.hero.inventory).toEqual([{ name: '회복 물약', qty: 2 }]);
+    expect(state.hero.equipment.weapon).toEqual({ id: 'sword_01', name: '낡은 검' });
+    expect(state.hero.inventory).toEqual([{ id: 'potion_01', name: '회복 물약', qty: 2, canUse: true, equipSlots: [] }]);
     expect(state.hero.skills).toEqual(['기본 타격']);
     expect(state.hero.status).toEqual(['축복']);
     expect(state.hero.stats).toEqual([

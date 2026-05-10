@@ -54,12 +54,20 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
             "potion_01": GraphNode(
                 id="potion_01",
                 type="item",
-                properties={"name": "회복 물약", "qty": 2},
+                properties={
+                    "name": "회복 물약",
+                    "qty": 2,
+                    "consumable": True,
+                    "effects": {"type": "consumable", "effect": "heal", "amount": 8},
+                },
             ),
             "sword_01": GraphNode(
                 id="sword_01",
                 type="item",
-                properties={"name": "낡은 검"},
+                properties={
+                    "name": "낡은 검",
+                    "effects": {"type": "weapon", "weapon_dice": "1d6"},
+                },
             ),
             "basic_strike": GraphNode(
                 id="basic_strike",
@@ -204,9 +212,13 @@ def test_graph_front_state_builds_hero_assets_from_graph_edges():
 
     payload = graph_to_front_state(runtime)
 
+    assert payload.hero.inventory[0].id == "potion_01"
     assert payload.hero.inventory[0].name == "회복 물약"
     assert payload.hero.inventory[0].qty == 2
+    assert payload.hero.inventory[0].can_use is True
+    assert payload.hero.inventory[0].equip_slots == []
     assert payload.hero.equipment.weapon is not None
+    assert payload.hero.equipment.weapon.id == "sword_01"
     assert payload.hero.equipment.weapon.name == "낡은 검"
     assert payload.hero.equipment.armor is None
     assert payload.hero.skills == ["기본 타격"]

@@ -122,12 +122,18 @@ export type GraphResource = {
 };
 
 export type GraphNamed = {
+  id: string;
   name: string;
 };
 
+export type GraphEquipSlot = 'weapon' | 'armor' | 'accessory';
+
 export type GraphInventoryItem = {
+  id: string;
   name: string;
   qty: number;
+  canUse: boolean;
+  equipSlots: GraphEquipSlot[];
 };
 
 export type GraphEquipment = {

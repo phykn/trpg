@@ -44,12 +44,19 @@ class GraphResourcePayload(_CamelModel):
 
 
 class GraphNamedPayload(_CamelModel):
+    id: str
     name: str
+
+
+EquipSlot = Literal["weapon", "armor", "accessory"]
 
 
 class GraphInventoryItemPayload(_CamelModel):
+    id: str
     name: str
     qty: int
+    can_use: bool
+    equip_slots: list[EquipSlot]
 
 
 class GraphEquipmentPayload(_CamelModel):
@@ -422,7 +429,7 @@ def _equipment_payload(graph: Graph, character_id: str) -> GraphEquipmentPayload
         item = graph.nodes.get(edge.to_node_id)
         if item is None or item.type != "item":
             continue
-        slots[slot] = GraphNamedPayload(name=_name(item))
+        slots[slot] = GraphNamedPayload(id=item.id, name=_name(item))
     return GraphEquipmentPayload.model_validate(slots)
 
 
@@ -434,8 +441,11 @@ def _inventory_payload(graph: Graph, character_id: str) -> list[GraphInventoryIt
             continue
         items.append(
             GraphInventoryItemPayload(
+                id=item.id,
                 name=_name(item),
                 qty=_int_prop_default(item, "qty", 1),
+                can_use=_can_use_item(item),
+                equip_slots=_equip_slots(item),
             )
         )
     return items
@@ -455,6 +465,50 @@ def _status(node: GraphNode) -> list[str]:
     if not isinstance(raw, list):
         return []
     return [item for item in raw if isinstance(item, str)]
+
+
+def _can_use_item(item: GraphNode) -> bool:
+    effects = item.properties.get("effects")
+    if isinstance(effects, dict):
+        return effects.get("type") == "consumable" and effects.get("effect") in {
+            "heal",
+            "mp_restore",
+            "buff",
+        }
+    return _optional_str(item.properties.get("on_use")) is not None
+
+
+def _equip_slots(item: GraphNode) -> list[EquipSlot]:
+    explicit = _explicit_equip_slots(item)
+    if explicit:
+        return explicit
+
+    effects = item.properties.get("effects")
+    if not isinstance(effects, dict):
+        return []
+    effect_type = effects.get("type")
+    if effect_type == "weapon":
+        return ["weapon"]
+    if effect_type == "armor":
+        return ["armor", "accessory"]
+    return []
+
+
+def _explicit_equip_slots(item: GraphNode) -> list[EquipSlot]:
+    raw_slots = item.properties.get("equip_slots")
+    if isinstance(raw_slots, list):
+        slots = [_equip_slot(slot) for slot in raw_slots]
+        return [slot for slot in slots if slot is not None]
+
+    raw_slot = item.properties.get("equip_slot")
+    slot = _equip_slot(raw_slot)
+    return [slot] if slot is not None else []
+
+
+def _equip_slot(value: object) -> EquipSlot | None:
+    if value in ("weapon", "armor", "accessory"):
+        return value
+    return None
 
 
 def _require_node(graph: Graph, node_id: str, node_type: str) -> GraphNode:
