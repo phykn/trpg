@@ -65,7 +65,7 @@ def test_progress_row_round_trips_graph_combat_state():
     assert progress_from_row(row).graph_combat_state == graph_combat_state
 
 
-def test_progress_rejects_legacy_combat_state():
+def test_progress_rejects_old_combat_state():
     with pytest.raises(ValidationError):
         GameProgress(
             game_id="game-1",

@@ -605,7 +605,7 @@ async def test_graph_input_classifies_query_and_returns_message(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_graph_play_loop_reaches_quest_reward_without_legacy_state(tmp_path):
+async def test_graph_play_loop_reaches_quest_reward_without_old_state(tmp_path):
     app = _build_app(tmp_path)
 
     async with _client(app) as client:

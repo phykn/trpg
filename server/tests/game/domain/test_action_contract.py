@@ -36,7 +36,7 @@ def test_pass_action_converts_to_wait_verb():
     assert verb.modifiers["tail_intent"] == "숨을 고른다."
 
 
-def test_transfer_action_converts_to_legacy_verb():
+def test_transfer_action_converts_to_internal_verb():
     verb = action_to_verb(
         Action.model_validate(
             {
@@ -82,7 +82,7 @@ def test_query_action_converts_topic():
     assert verb.modifiers == {"topic": "exits"}
 
 
-def test_legacy_verb_converts_back_to_action():
+def test_internal_verb_converts_back_to_action():
     action = verb_to_action(
         Verb(
             name="transfer",

@@ -7,7 +7,7 @@ from src.llm.calls.classify.schema import validate_judge_output
 
 
 def test_actions_one_verb():
-    raw = json.dumps({"actions": [{"name": "wait"}]})
+    raw = json.dumps({"actions": [{"verb": "pass"}]})
     out = validate_judge_output(raw, in_combat=False)
     assert out.actions[0].name == "wait"
 
@@ -19,50 +19,48 @@ def test_refuse_alone():
 
 
 def test_modifier_violation_raises_validation_error():
-    raw = json.dumps({"actions": [{"name": "move", "modifiers": {}}]})
+    raw = json.dumps({"actions": [{"verb": "move"}]})
     with pytest.raises(ValidationError):
         validate_judge_output(raw, in_combat=False)
 
 
-def test_silent_drop_unknown_modifier():
+def test_unknown_action_field_rejected():
     raw = json.dumps(
         {
             "actions": [
                 {
-                    "name": "speak",
-                    "modifiers": {
-                        "intent": "friendly",
-                        "target": "n",
-                        "ghost_key": "x",
-                    },
+                    "verb": "speak",
+                    "how": "friendly",
+                    "to": "n",
+                    "ghost_key": "x",
                 }
             ]
         }
     )
-    out = validate_judge_output(raw, in_combat=False)
-    assert "ghost_key" not in out.actions[0].modifiers
+    with pytest.raises(ValidationError, match="ghost_key"):
+        validate_judge_output(raw, in_combat=False)
 
 
 def test_unknown_verb_rejected():
-    raw = json.dumps({"actions": [{"name": "fly", "modifiers": {}}]})
+    raw = json.dumps({"actions": [{"verb": "fly"}]})
     with pytest.raises(ValidationError):
         validate_judge_output(raw, in_combat=False)
 
 
 def test_query_cannot_be_chained():
-    raw = json.dumps({"actions": [{"name": "query"}, {"name": "wait"}]})
+    raw = json.dumps({"actions": [{"verb": "query"}, {"verb": "pass"}]})
     with pytest.raises(ValidationError, match="query"):
         validate_judge_output(raw, in_combat=False)
 
 
 def test_in_combat_move_without_destination():
-    raw = json.dumps({"actions": [{"name": "move", "modifiers": {"manner": "hasty"}}]})
+    raw = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
     out = validate_judge_output(raw, in_combat=True)
     assert out.actions[0].name == "move"
 
 
 def test_out_of_combat_move_without_destination_fails():
-    raw = json.dumps({"actions": [{"name": "move", "modifiers": {"manner": "hasty"}}]})
+    raw = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
     with pytest.raises(ValidationError):
         validate_judge_output(raw, in_combat=False)
 

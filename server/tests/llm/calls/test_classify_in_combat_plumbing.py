@@ -1,6 +1,4 @@
-"""classify/runner.py가 surroundings["in_combat"]를 Verb 검증에 전달하는지
-end-to-end 검증. surroundings.in_combat=True면 move(no destination)이
-self-correction retry 없이 통과해야 합니다."""
+"""classify/runner.py passes surroundings["in_combat"] into action normalization."""
 
 import json
 from unittest.mock import patch, AsyncMock
@@ -19,9 +17,7 @@ async def test_in_combat_true_allows_move_without_destination():
         player_input="도망친다",
         surroundings={"in_combat": True, "entities": []},
     )
-    fake_answer = json.dumps(
-        {"actions": [{"name": "move", "modifiers": {"manner": "hasty"}}]}
-    )
+    fake_answer = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
     with patch(
         "src.llm.calls.classify.runner.run_with_retries",
         new=AsyncMock(side_effect=lambda *a, **kw: kw["parse"](fake_answer)),
@@ -37,9 +33,7 @@ async def test_in_combat_false_rejects_move_without_destination():
         player_input="도망친다",
         surroundings={"in_combat": False, "entities": []},
     )
-    fake_answer = json.dumps(
-        {"actions": [{"name": "move", "modifiers": {"manner": "hasty"}}]}
-    )
+    fake_answer = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
     with patch(
         "src.llm.calls.classify.runner.run_with_retries",
         new=AsyncMock(side_effect=lambda *a, **kw: kw["parse"](fake_answer)),
@@ -54,9 +48,7 @@ async def test_in_combat_default_false_when_key_missing():
         player_input="도망친다",
         surroundings={"entities": []},  # no in_combat key
     )
-    fake_answer = json.dumps(
-        {"actions": [{"name": "move", "modifiers": {"manner": "hasty"}}]}
-    )
+    fake_answer = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
     with patch(
         "src.llm.calls.classify.runner.run_with_retries",
         new=AsyncMock(side_effect=lambda *a, **kw: kw["parse"](fake_answer)),
@@ -77,9 +69,7 @@ async def test_unknown_move_destination_rejected_against_surroundings():
             ],
         },
     )
-    fake_answer = json.dumps(
-        {"actions": [{"name": "move", "modifiers": {"destination": "missing_loc"}}]}
-    )
+    fake_answer = json.dumps({"actions": [{"verb": "move", "to": "missing_loc"}]})
     with patch(
         "src.llm.calls.classify.runner.run_with_retries",
         new=AsyncMock(side_effect=lambda *a, **kw: kw["parse"](fake_answer)),

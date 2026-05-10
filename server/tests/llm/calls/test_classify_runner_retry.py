@@ -64,7 +64,7 @@ async def test_retry_loop_recovers_after_first_empty_answer():
             if self.attempts == 1:
                 return {"answer": "", "think": None}
             return {
-                "answer": json.dumps({"actions": [{"name": "wait"}]}),
+                "answer": json.dumps({"actions": [{"verb": "pass"}]}),
                 "think": None,
             }
 
