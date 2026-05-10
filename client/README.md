@@ -8,7 +8,7 @@ Client for a Korean-language TRPG. Single-screen Expo (React Native) app. The se
 - expo-router (file-based routing, `typedRoutes`)
 - NativeWind v4 (Tailwind for RN), with `design/tokens.js` as the single token source
 - TypeScript strict
-- Server calls: `expo/fetch` for SSE streaming (`services/api.ts`)
+- Server calls: `expo/fetch` for graph REST (`services/api.ts`)
 
 ## Setup
 

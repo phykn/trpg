@@ -11,7 +11,7 @@ trpg/
   docs/       Target design contract (01-contract / 02-runtime / 03-world-model / 04-gameplay / 05-interfaces)
 ```
 
-Stack: Python 3.12+ · Pydantic v2 · FastAPI · OpenAI-compatible LLM (llama.cpp local / Gemini hosted) · Supabase Postgres + Storage · Expo SDK 54 / RN 0.81 / React 19 · NativeWind v4. Saves live in Supabase Postgres, not on disk. Setup details in each sub-README; design intent starts at `docs/README.md`.
+Stack: Python 3.12+ · Pydantic v2 · FastAPI · OpenAI-compatible LLM (llama.cpp local / Gemini hosted) · Supabase Postgres + Storage · Expo SDK 54 / RN 0.81 / React 19 · NativeWind v4. Runtime graph saves live in Supabase Postgres by default; dev can use local graph/scenario repos through env. Setup details in each sub-README; design intent starts at `docs/README.md`.
 
 Env files mirror on both sides: `server/.env.dev` + `server/.env.release` and `client/.env.dev` + `client/.env.release`. The active file is picked by mode — `dev` for local work, `release` for prod.
 

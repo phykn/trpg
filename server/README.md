@@ -41,11 +41,12 @@ SUPABASE_SERVICE_KEY=<service-role key>
 SUPABASE_SCENARIO_BUCKET=scenarios
 
 # LLM routing — DEFAULT required; LLM_ROUTE_<AGENT> overrides per agent
-# (matched agents: classify, narrate_body, narrate_extract, combat_narrate,
-# summon, recommend). Optional LLM_ROUTE_<AGENT>_FALLBACK engages on quota.
+# (active graph agents: graph_intro, classify, graph_narrate; other helpers
+# such as combat_narrate, summon, recommend still use the same route format).
+# Optional LLM_ROUTE_<AGENT>_FALLBACK engages on quota.
 LLM_ROUTE_DEFAULT=google/gemma-4-26b-a4b-it
-LLM_ROUTE_NARRATE_BODY=google/gemma-4-31b-it
-LLM_ROUTE_NARRATE_BODY_FALLBACK=google/gemma-4-26b-a4b-it
+LLM_ROUTE_GRAPH_NARRATE=google/gemma-4-31b-it
+LLM_ROUTE_GRAPH_NARRATE_FALLBACK=google/gemma-4-26b-a4b-it
 
 # Provider block(s) — declare each provider referenced by the routes.
 LLM_GOOGLE_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
@@ -106,10 +107,11 @@ Runtime state lives in Supabase Postgres:
 
 | Table | PK | Notes |
 |---|---|---|
-| `games` | `(game_id)` | `meta jsonb` carries session pointers (turn_count, pending_check, combat_state, active_*_id, next_log_id, ...) |
-| `entities` | `(game_id, kind, id)` | one row per entity; `kind ∈ {characters, items, locations, races, skills, quests, chapters, campaigns}` |
+| `game_progress` | `(game_id)` | `progress jsonb` carries player id, locale, active quest, pending confirmation, combat state, and `next_log_id` |
+| `graph_nodes` | `(game_id, node_id)` | one row per graph node |
+| `graph_edges` | `(game_id, edge_id)` | one row per graph edge |
 | `log_entries` | `(game_id, log_id)` | `log_id = entry.id` (app-managed monotonic) |
 | `history_entries` | `(game_id, seq)` | `bigserial`, append-only turn summaries |
 | `dialogue_entries` | `(game_id, seq)` | `bigserial`, append-only dialogue |
 
-All four child tables FK → `games(game_id) ON DELETE CASCADE`. RLS enabled with no policies — the server uses the service-role key, anon/auth keys see nothing.
+Runtime child tables should FK → `game_progress(game_id) ON DELETE CASCADE`. RLS enabled with no policies — the server uses the service-role key, anon/auth keys see nothing.

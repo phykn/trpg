@@ -528,7 +528,7 @@ rg "TurnRequest|RollRequest|LevelUpPreviewResponse|LevelUpRequest|streaming_resp
 
 Expected: no hits.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add server/src/api server/tests/api
@@ -548,7 +548,7 @@ git commit -m "refactor: remove legacy session API surface"
 - Keep as graph replacements: `server/tests/api/test_graph_session_routes.py`
 - Keep as graph replacements: `server/tests/game/runtime/`
 
-- [ ] **Step 1: Categorize legacy flow tests**
+- [x] **Step 1: Categorize legacy flow tests**
 
 ```powershell
 rg "run_turn|run_roll|run_intro|run_level_up|PendingCheck|GameState" server\tests\game\flow server\tests\wire server\tests\game\domain server\tests -n
@@ -560,7 +560,7 @@ Use these categories:
 - already covered: behavior is covered by `test_graph_turn_attack_returns_confirmation_without_starting_combat`, `test_graph_confirm_confirm_executes_pending_attack`, `test_graph_play_loop_reaches_quest_reward_without_legacy_state`, or a focused graph runtime test
 - keep temporarily: shared domain behavior still used by graph
 
-- [ ] **Step 2: Verify graph replacements already pass**
+- [x] **Step 2: Verify graph replacements already pass**
 
 ```powershell
 .venv\Scripts\python.exe -m pytest server\tests\api\test_graph_session_routes.py server\tests\game\runtime -q
@@ -568,7 +568,7 @@ Use these categories:
 
 Expected: pass. These tests cover graph session init, movement, attack confirmation, confirmation resolution, combat progress, flee, item use, equipment, quest reward, and level-up.
 
-- [ ] **Step 3: Delete flow tests that have no graph future**
+- [x] **Step 3: Delete flow tests that have no graph future**
 
 After replacements pass:
 
@@ -580,7 +580,7 @@ git rm server\tests\test_pending_check_kind.py
 
 Continue deleting files only after `rg` confirms they test removed APIs or `PendingCheck`.
 
-- [ ] **Step 4: Run server test suite**
+- [x] **Step 4: Run server test suite**
 
 ```powershell
 .venv\Scripts\python.exe -m pytest -q
@@ -588,7 +588,7 @@ Continue deleting files only after `rg` confirms they test removed APIs or `Pend
 
 Expected: all remaining tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add server/tests
@@ -613,7 +613,7 @@ git commit -m "test: remove legacy flow coverage"
 - Modify: `server/src/wire/models/__init__.py`
 - Modify: `server/src/wire/export.py`
 
-- [ ] **Step 1: Search production imports**
+- [x] **Step 1: Search production imports**
 
 ```powershell
 rg "src\.game\.flow|from src\.wire\.to_front|from src\.wire\.emit|PendingCheckPayload|JudgePayload|NarrativeDeltaPayload|SuggestionsPayload|DonePayload" server\src -n
@@ -621,7 +621,7 @@ rg "src\.game\.flow|from src\.wire\.to_front|from src\.wire\.emit|PendingCheckPa
 
 Expected before deletion: imports from legacy-only modules.
 
-- [ ] **Step 2: Remove legacy-only modules with no production imports**
+- [x] **Step 2: Remove legacy-only modules with no production imports**
 
 Delete modules only after imports are gone:
 
@@ -636,7 +636,7 @@ git rm server\src\wire\models\done.py
 
 Do not delete `server/src/wire/models/hero.py`, `quest.py`, or related display models until graph wire no longer imports them.
 
-- [ ] **Step 3: Prune wire exports**
+- [x] **Step 3: Prune wire exports**
 
 In `server/src/wire/models/__init__.py`, remove deleted model imports and names from `__all__`.
 
@@ -644,7 +644,7 @@ In `server/src/wire/__init__.py`, remove deleted exports.
 
 In `server/src/wire/export.py`, either delete the file if no client generation remains, or reduce `_MODELS` to graph-supported models only.
 
-- [ ] **Step 4: Delete legacy flow package after imports are gone**
+- [x] **Step 4: Delete legacy flow package after imports are gone**
 
 ```powershell
 rg "src\.game\.flow|game\.flow" server\src server\tests -n
@@ -656,7 +656,7 @@ If only historical docs remain, delete:
 git rm -r server\src\game\flow
 ```
 
-- [ ] **Step 5: Run focused import tests**
+- [x] **Step 5: Run focused import tests**
 
 ```powershell
 .venv\Scripts\python.exe -m pytest server\tests\api\test_graph_session_routes.py server\tests\game\runtime server\tests\wire -q
@@ -665,7 +665,7 @@ git rm -r server\src\game\flow
 
 Expected: pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add server/src server/tests
@@ -730,7 +730,7 @@ Keep scenario repo code if graph scenario loading still uses it.
 
 Passed: `87 passed`; `ruff check server` and `ruff check agency\qa` passed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add server/src/db server/run_api.py server/tests/db
@@ -751,13 +751,13 @@ git commit -m "refactor: remove relational save repo"
 - Modify: `client/README.md`
 - Modify: `docs/05-interfaces.md`
 
-- [ ] **Step 1: Search stale terms**
+- [x] **Step 1: Search stale terms**
 
 ```powershell
 rg "legacy|SSE|PendingCheck|RollPrompt|/session/init|/turn|/roll|SaveRepo|GameState|wire.gen" AGENTS.md README.md server client docs -n
 ```
 
-- [ ] **Step 2: Rewrite active guidance**
+- [x] **Step 2: Rewrite active guidance**
 
 Use these replacement rules:
 
@@ -769,15 +769,15 @@ Use these replacement rules:
 
 Do not describe removed code as if it still exists. Historical plan files under `docs/superpowers/plans/` may keep old references.
 
-- [ ] **Step 3: Run doc sanity search**
+- [x] **Step 3: Run doc sanity search**
 
 ```powershell
-rg "PendingCheck|RollPrompt|wire.gen|/session/init|/roll|/turn" AGENTS.md README.md server\README.md client\README.md client\AGENTS.md server\AGENTS.md docs\05-interfaces.md -n
+rg "PendingCheck|RollPrompt|wire.gen|/session/init|/session/\{id\}/turn|/session/\{id\}/roll" AGENTS.md README.md server\README.md client\README.md client\AGENTS.md server\AGENTS.md docs\05-interfaces.md -n
 ```
 
-Expected: no active-doc hits. Historical plan files are allowed.
+Expected: no active-doc hits. `/session/{id}/graph/turn` is active and allowed.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add AGENTS.md README.md server/AGENTS.md server/README.md client/AGENTS.md client/README.md docs/05-interfaces.md
