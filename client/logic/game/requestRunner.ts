@@ -5,6 +5,19 @@ import type { FrontState, GraphActionClientResponse } from '@/services/wire';
 
 type ApplyState = (state: FrontState, gameId?: string | null) => void;
 type SetSuggestions = (next: React.SetStateAction<string[]>) => void;
+type GraphActionCall = (signal: AbortSignal) => Promise<GraphActionClientResponse>;
+
+export type GraphActionRequestRuntime = {
+  requestInFlightRef: React.MutableRefObject<boolean>;
+  abortControllerRef: React.MutableRefObject<AbortController | null>;
+  requestGenerationRef: React.MutableRefObject<number>;
+  setRequestInFlight: (value: boolean) => void;
+  setErrorMessage: (message: string | null) => void;
+  setLog: React.Dispatch<React.SetStateAction<LogEntry[]>>;
+  setSuggestions: SetSuggestions;
+  applyState: ApplyState;
+  isActiveGameId?: (gameId: string) => boolean;
+};
 
 function mergeEntry(log: LogEntry[], entry: LogEntry): LogEntry[] {
   const idx = log.findIndex((e) => e.id === entry.id);
@@ -14,53 +27,122 @@ function mergeEntry(log: LogEntry[], entry: LogEntry): LogEntry[] {
   return next;
 }
 
+function isAbortError(err: unknown): boolean {
+  return err instanceof Error && err.name === 'AbortError';
+}
+
+export function abortGraphActionRequest(runtime: GraphActionRequestRuntime): void {
+  const controller = runtime.abortControllerRef.current;
+  if (!runtime.requestInFlightRef.current && !controller) return;
+  runtime.requestGenerationRef.current += 1;
+  runtime.requestInFlightRef.current = false;
+  runtime.abortControllerRef.current = null;
+  controller?.abort();
+  runtime.setRequestInFlight(false);
+}
+
+export async function runGraphActionRequestOnce(
+  call: GraphActionCall,
+  runtime: GraphActionRequestRuntime,
+): Promise<void> {
+  if (runtime.requestInFlightRef.current) return;
+  const generation = runtime.requestGenerationRef.current + 1;
+  const controller = new AbortController();
+  runtime.requestGenerationRef.current = generation;
+  runtime.abortControllerRef.current = controller;
+  runtime.requestInFlightRef.current = true;
+  runtime.setRequestInFlight(true);
+  runtime.setErrorMessage(null);
+  runtime.setSuggestions([]);
+  try {
+    const response = await call(controller.signal);
+    if (runtime.requestGenerationRef.current !== generation) return;
+    if (runtime.isActiveGameId && !runtime.isActiveGameId(response.game_id)) return;
+    runtime.applyState(response.state, response.game_id);
+    runtime.setSuggestions(response.suggestions);
+    if (response.message) {
+      runtime.setLog((current) =>
+        mergeEntry(current, {
+          id: -Date.now(),
+          kind: 'gm',
+          text: response.message ?? '',
+        }),
+      );
+    }
+  } catch (err) {
+    if (
+      runtime.requestGenerationRef.current !== generation
+      || controller.signal.aborted
+      || isAbortError(err)
+    ) {
+      return;
+    }
+    runtime.setErrorMessage(err instanceof Error ? err.message : String(err));
+  } finally {
+    if (runtime.requestGenerationRef.current === generation) {
+      runtime.abortControllerRef.current = null;
+      runtime.requestInFlightRef.current = false;
+      runtime.setRequestInFlight(false);
+    }
+  }
+}
+
 export function useGraphActionRunner({
   applyState,
   setErrorMessage,
   setLog,
   setSuggestions,
+  isActiveGameId,
 }: {
   applyState: ApplyState;
   setErrorMessage: (message: string | null) => void;
   setLog: React.Dispatch<React.SetStateAction<LogEntry[]>>;
   setSuggestions: SetSuggestions;
+  isActiveGameId?: (gameId: string) => boolean;
 }) {
   const [requestInFlight, setRequestInFlight] = React.useState(false);
   const requestInFlightRef = React.useRef(false);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+  const requestGenerationRef = React.useRef(0);
 
   const runGraphActionRequest = React.useCallback(
-    async (call: () => Promise<GraphActionClientResponse>) => {
-      if (requestInFlightRef.current) return;
-      requestInFlightRef.current = true;
-      setRequestInFlight(true);
-      setErrorMessage(null);
-      setSuggestions([]);
-      try {
-        const response = await call();
-        applyState(response.state, response.game_id);
-        setSuggestions(response.suggestions);
-        if (response.message) {
-          setLog((current) =>
-            mergeEntry(current, {
-              id: -Date.now(),
-              kind: 'gm',
-              text: response.message ?? '',
-            }),
-          );
-        }
-      } catch (err) {
-        setErrorMessage(err instanceof Error ? err.message : String(err));
-      } finally {
-        requestInFlightRef.current = false;
-        setRequestInFlight(false);
-      }
+    async (call: GraphActionCall) => {
+      await runGraphActionRequestOnce(call, {
+        requestInFlightRef,
+        abortControllerRef,
+        requestGenerationRef,
+        setRequestInFlight,
+        setErrorMessage,
+        setLog,
+        setSuggestions,
+        applyState,
+        isActiveGameId,
+      });
     },
-    [applyState, setErrorMessage, setLog, setSuggestions],
+    [applyState, isActiveGameId, setErrorMessage, setLog, setSuggestions],
+  );
+
+  const abortRequest = React.useCallback(
+    () => {
+      abortGraphActionRequest({
+        requestInFlightRef,
+        abortControllerRef,
+        requestGenerationRef,
+        setRequestInFlight,
+        setErrorMessage,
+        setLog,
+        setSuggestions,
+        applyState,
+        isActiveGameId,
+      });
+    },
+    [applyState, isActiveGameId, setErrorMessage, setLog, setSuggestions],
   );
 
   return {
     requestInFlight,
     requestInFlightRef,
     runGraphActionRequest,
+    abortGraphActionRequest: abortRequest,
   };
 }

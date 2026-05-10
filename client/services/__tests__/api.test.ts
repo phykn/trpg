@@ -245,6 +245,29 @@ describe('graph API helpers', () => {
     );
   });
 
+  test('links caller abort signals to graph requests', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        state: graphState(),
+        status: 'executed',
+        message: null,
+      }),
+    });
+
+    const controller = new AbortController();
+    const promise = sendGraphInput('game-1', '마을 주민에게 말을 건다', {
+      signal: controller.signal,
+    });
+    const signal = fetch.mock.calls[0][1].signal as AbortSignal;
+
+    controller.abort();
+
+    expect(signal.aborted).toBe(true);
+    await promise;
+  });
+
   test('posts graph level-up choices to the graph level-up endpoint', async () => {
     fetch.mockResolvedValueOnce({
       ok: true,

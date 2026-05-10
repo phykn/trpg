@@ -25,15 +25,15 @@ npm start -- -c             # clear Metro cache — required after editing token
 - **expo-router** with `typedRoutes`. Add a screen by creating a file under `app/`; don't wire navigation manually. The tab bar is hidden (`tabBarStyle: { display: 'none' }`); the app is single-screen.
 - **NativeWind v4**: write `className="bg-canvas-subtle p-3 rounded-md"`, not `StyleSheet` objects. The `@tailwind` directives load via `global.css`, imported once at the top of `app/_layout.tsx`.
 - **Server calls use `expo/fetch`**, not the global `fetch`. Keep all API calls inside `services/api.ts`.
-- **Korean only — with one design-system exception.** The server composes every display string (including dates, durations, joined lists). The client renders verbatim — do not localize or reformat in `logic/<x>/panel.ts` or `components/<x>/`. **All client-owned Korean labels live in `locale/ko.ts`** (no inline literals); reference them as `ko.<group>.<key>` or `compose.<fn>(...)`. **Exception:** short uppercase English used as a visual atom in the GeistMono type system — narrowly, **form section labels in character creation** (`NAME` / `GENDER` / `WORLD` / `RACE`) — is allowed in client-side code. **Stat keys (체력 / 마나 / 경험 / 소생) come from server payloads** and render verbatim. **Log entry types are distinguished visually** (font size, accent border, mono box) — no inline text label.
+- **Locale-aware UI.** The server composes every game display string for the active locale, including dates, durations, joined lists, stat labels, confirmations, and log entries. The client renders server strings verbatim — do not translate or reformat them in `logic/<x>/panel.ts` or `components/<x>/`. Client-owned labels live in the client locale catalog; today `locale/ko.ts` is the Korean catalog, and new UI locales should add parallel locale modules instead of inline literals. Short uppercase English may be used as a visual atom in the GeistMono type system for form/category markers such as `NAME`, `GENDER`, `WORLD`, `RACE`, and `LANGUAGE`. Log entry types are distinguished visually (font size, accent border, mono box) — no inline text label.
 
 ## Architecture
 
-Single-screen Korean-language TRPG. `app/(tabs)/index.tsx` mounts `<ScreenShell><Shell/></ScreenShell>`; everything else lives under `screens/`, `components/`, `logic/`, or `services/`.
+Single-screen locale-aware TRPG. `app/(tabs)/index.tsx` mounts `<ScreenShell><Shell/></ScreenShell>`; everything else lives under `screens/`, `components/`, `logic/`, or `services/`.
 
 **Layers, top → bottom:**
 
-1. `app/` — expo-router route shell. `_layout.tsx` loads Noto Serif KR (Korean prose / labels / titles) + Geist Mono (ASCII numerics and stat keys), and returns `null` until both font families are ready.
+1. `app/` — expo-router route shell. `_layout.tsx` loads Noto Serif KR (CJK prose / labels / titles) + Geist Mono (ASCII numerics and stat keys), and returns `null` until both font families are ready.
 2. `components/ui/ScreenShell.tsx` — `SafeAreaView` + keyboard-aware bottom padding. Wraps every screen.
 3. `screens/Shell.tsx` — composition root. Branches on `useGame().status` between `loading / no-game / error / ready`. The `ready` branch delegates to `screens/play/Playing`; `no-game` mounts `screens/new-game/NewGame`.
 4. `screens/play/Playing.tsx` — game screen. Owns ephemeral UI state (`activeId`, `menuOpen`, `pendingAction`, BGM toggle, input draft). Uses graph confirmation state to decide whether a modal blocks input.
@@ -44,7 +44,7 @@ Single-screen Korean-language TRPG. `app/(tabs)/index.tsx` mounts `<ScreenShell>
 9. `logic/game/useGame.ts` — single source of truth for graph game state and actions (`onSend / onQuestAction / onGraphAction / onConfirmPending / startNewGame / goToNewGame / refresh`). On mount, restores the last graph game via the `trpg.current_game_id` localStorage key. Graph REST responses carry authoritative state; do not add a second transport path here.
 10. `logic/story-graph/useStoryGraph.ts` — per-`gameId` localStorage merge for the story graph (key prefix `trpg.story_graph.`). Newer server snapshots merge over the cached one rather than replace, so transient absences don't blank the map.
 11. `services/` — data boundary. Surface: `listProfiles / getGraphSessionById / initGraphSession / sendGraphInput / sendGraphAction / confirmGraphAction / sendGraphLevelUp`, plus storage helpers. `services/wire.ts` owns the client network contract (`FrontState`, graph payloads, `SessionPayload`, `InitRequest`, etc.). The server base URL and basic auth header live here only; no other layer should call `fetch` directly. The active `game_id` lives in browser localStorage — the server has no "last game" notion, so two browsers don't fight over a shared pointer.
-12. `locale/ko.ts` — client-side hardcoded label catalog. Many groups (`action` / `form` / `ability` / `panel` / `legend` / `status` / `empty` / `level` / `quest` / `hero` / `subject` / `combat` / `menu` / `shell` / `newGame` / `confirm` / `error` / `roll` / `composer` / `gameOver`) plus a separate `compose` export with dynamic-assembly functions (e.g. `compose.moveTo(name)`, `compose.deceased(name)`). Server-composed strings render verbatim; this file covers labels the client owns.
+12. `locale/ko.ts` — Korean client-owned label catalog. Many groups (`action` / `form` / `ability` / `panel` / `legend` / `status` / `empty` / `level` / `quest` / `hero` / `subject` / `combat` / `menu` / `shell` / `newGame` / `confirm` / `error` / `roll` / `composer` / `gameOver`) plus a separate `compose` export with dynamic-assembly functions (e.g. `compose.moveTo(name)`, `compose.deceased(name)`). Server-composed strings render verbatim; locale files cover labels the client owns.
 13. `design/tokens.js` (+ `tokens.d.ts`) — single source of truth for design tokens: `colors`, `spacing`, `radius`, `fontFamily`, `fontSize`, `toneColor`, `shadow`. Both `tailwind.config.js` (className utilities) and TS code consuming raw values import from here. The file is CJS (`.js`) because Tailwind config runs in Node; types live in the `.d.ts` sibling. **Don't hardcode colors or spacing** — use a className or import from `@/design/tokens`. Color naming follows GitHub Primer (`canvas`, `fg`, `border`, `accent`, ...).
 
 ## Folder rule (MECE)
@@ -57,7 +57,7 @@ Every file lives in exactly one bucket. Decision tree:
 | Screen composition? | `screens/<name>/` |
 | Touches fetch / storage / wire format? | `services/` |
 | Design token? | `design/` |
-| Client-side hardcoded label / storage key? | `locale/ko.ts` |
+| Client-side hardcoded label / storage key? | `locale/` |
 | Domain visual part? | `components/<x>/` |
 | Domain calculation / state / types? | `logic/<x>/` |
 | Game state root or its input boundary? | `logic/game/useGame.ts` |
@@ -75,10 +75,10 @@ A file may not span two buckets. If you're unsure, the file probably wants split
 - **No hand-rolled `bg-canvas-subtle border ... rounded-md` stacks.** Use `<Surface>` (paper or floating, optional `stripeColor`). Use `<Chip>` for clickable pills. New visual atoms go in `components/ui/`.
 - UI consistency fixes are holistic — don't patch only the flagged instance; change the atom.
 - `pendingConfirmation` blocks input with `ConfirmDialog`. Graph action requests must use `/graph/confirm` to resolve it.
-- **Korean only — with one design-system exception.** Client-owned labels live in `locale/ko.ts` (`ko.<group>.<key>` or `compose.<fn>(...)`); never inline a Korean literal in a component, panel, or screen. Server-composed strings render verbatim. **Form section labels** (`NAME` / `GENDER` / `WORLD` / `RACE`) may be uppercase English visual atoms. Stat keys from server (체력 / 마나 / 경험 / 소생) render as-is. Log markers are visual-only.
+- **Locale-aware display text.** Client-owned labels live in `locale/` (`ko.<group>.<key>` or `compose.<fn>(...)` for the current Korean catalog); never inline player-visible prose in a component, panel, or screen. Server-composed strings render verbatim. Form/category labels may be uppercase English visual atoms when they are part of the design system. Stat keys from server render as-is for the active locale. Log markers are visual-only.
 - `LogEntry` is a `kind: 'gm' | 'player' | 'act' | 'roll'` discriminated union — when extending the union, add the case to `components/log/LogItem.tsx`.
 
 ## Misc
 
-- For Playwright / browser-MCP runs, use viewport **412×915** (Pixel 6/7 / Galaxy S25 tall). It stays under the desktop breakpoint, keeps full Korean tab labels visible, and fits typical session content without scrolling.
+- For Playwright / browser-MCP runs, use viewport **412×915** (Pixel 6/7 / Galaxy S25 tall). It stays under the desktop breakpoint, keeps full tab labels visible, and fits typical session content without scrolling.
 - Prefer `npm start -- --host=tunnel` over `--tunnel` (`@expo/ngrok@4.x` flag bug).

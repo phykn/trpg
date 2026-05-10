@@ -38,7 +38,7 @@ export function mergeStoryGraphs(base: StoryGraphModel, next: StoryGraphModel): 
   for (const node of base.nodes) {
     if (nextIds.has(node.id)) continue;
     let demoted: StoryGraphNode = node;
-    if (node.kind === 'place' && !nextPlaceIds.has(node.id)) {
+    if ((node.kind === 'place' || node.kind === 'location') && !nextPlaceIds.has(node.id)) {
       demoted = {
         id: node.id,
         label: node.label,
@@ -47,9 +47,9 @@ export function mergeStoryGraphs(base: StoryGraphModel, next: StoryGraphModel): 
         reachable: false,
         description: node.description,
         risk: node.risk,
-        moveDifficulty: null,
+        moveDifficulty: node.kind === 'location' ? node.moveDifficulty : null,
       };
-    } else if (node.kind === 'subject' && !nextSubjectIds.has(node.id)) {
+    } else if ((node.kind === 'subject' || node.kind === 'target') && !nextSubjectIds.has(node.id)) {
       demoted = {
         id: node.id,
         label: node.label,
