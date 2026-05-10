@@ -6,16 +6,6 @@ GraphStatKey = Literal["body", "agility", "mind", "presence"]
 GRAPH_STAT_KEYS: tuple[GraphStatKey, ...] = ("body", "agility", "mind", "presence")
 
 
-STAT_PAIRS: dict[StatKey, StatKey] = {
-    "STR": "CHA",
-    "CHA": "STR",
-    "DEX": "WIS",
-    "WIS": "DEX",
-    "CON": "INT",
-    "INT": "CON",
-}
-
-
 Tier = Literal[
     "very_easy",
     "easy",

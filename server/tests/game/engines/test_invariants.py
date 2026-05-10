@@ -526,21 +526,3 @@ def test_scenario_player_template_missing_item():
     assert any("player_template" in m and "ghost" in m for m in msgs)
 
 
-# --- check_state (relaxed) ------------------------------------------------
-
-
-def test_state_allows_partial_hp(fresh_state):
-    s = _minimal_scenario()
-    fresh_state.races = s.races
-    fresh_state.locations = s.locations
-    fresh_state.items = s.items
-    fresh_state.characters = s.characters
-    fresh_state.quests = s.quests
-    fresh_state.chapters = s.chapters
-    fresh_state.active_subject_id = "npc1"
-    fresh_state.active_quest_id = "q1"
-    # Damage taken — runtime state, not seed
-    fresh_state.characters["npc1"].hp = 5
-    msgs = check_scenario(Scenario.from_state(fresh_state))
-    # No "seed hp" violation; max_hp formula still holds
-    assert not any("seed hp" in m for m in msgs)

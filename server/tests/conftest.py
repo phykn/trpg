@@ -19,17 +19,6 @@ def _clear_save_locks():
 
 
 @pytest.fixture
-def fresh_state():
-    from src.game.domain.state import GameState
-
-    return GameState(
-        game_id="t",
-        profile="default",
-        player_id="player_01",
-    )
-
-
-@pytest.fixture
 def tmp_data():
     with tempfile.TemporaryDirectory() as d:
         yield d

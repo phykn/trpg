@@ -4,8 +4,8 @@ Functions and module-level constants here only call `render()`. They take
 plain strings or numbers, not domain objects, so locale/ stays foundational
 (no upward dependency on game/).
 
-Wire-side label combiners that *do* read GameState/GameGraph live in
-`wire/labels.py` instead.
+Wire-side label combiners that *do* read GameGraph live in `wire/labels.py`
+instead.
 """
 
 from .render import render
