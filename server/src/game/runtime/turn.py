@@ -9,7 +9,6 @@ from src.game.domain.action import Action
 from src.game.domain.content import merge_content, node_label, node_text
 from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph import GraphNode
-from src.game.domain.graph_query import location_of
 from src.game.domain.memory import GMLogEntry
 from src.game.engines.graph_quest_generation import plan_missing_quest_offer
 from src.llm.calls._runner import get_prompt
