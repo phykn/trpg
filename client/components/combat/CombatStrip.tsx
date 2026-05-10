@@ -1,13 +1,24 @@
-import { Animated, Text, View } from 'react-native';
+import { Animated, Pressable, Text, View } from 'react-native';
 
 import { Bar, Surface, useEntryAnimation } from '@/components/ui';
 import { colors, toneColor } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 
+import { buildCombatActions } from '@/logic/combat/actions';
 import type { CombatBadge } from '@/logic/combat/types';
+import type { PanelAction } from '@/logic/info-panel';
 
-export function CombatStrip({ combat }: { combat: CombatBadge }) {
+export function CombatStrip({
+  combat,
+  onAction,
+  actionDisabled = false,
+}: {
+  combat: CombatBadge;
+  onAction?: (action: PanelAction) => void;
+  actionDisabled?: boolean;
+}) {
   const { scale, opacity } = useEntryAnimation();
+  const actions = buildCombatActions(combat);
   return (
     <Animated.View
       className="mx-5 mt-1"
@@ -63,6 +74,24 @@ export function CombatStrip({ combat }: { combat: CombatBadge }) {
             ))}
           </View>
         )}
+        {actions.length > 0 && onAction ? (
+          <View className="flex-row flex-wrap gap-1.5 pt-1">
+            {actions.map((action) => (
+              <Pressable
+                key={`${action.kind}:${action.label}`}
+                onPress={() => onAction(action)}
+                disabled={actionDisabled}
+                accessibilityRole="button"
+                accessibilityLabel={action.label}
+                className={`rounded-full px-3.5 py-1 ${actionDisabled ? 'bg-danger-muted opacity-60' : 'bg-danger-muted active:opacity-80'}`}
+              >
+                <Text className="font-sans-semibold text-caption text-danger-fg">
+                  {actionDisabled ? ko.status.busy : action.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
       </Surface>
     </Animated.View>
   );

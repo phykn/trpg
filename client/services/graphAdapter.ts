@@ -96,6 +96,7 @@ function adaptCombat(combat: GraphCombatState | null): FrontState['combat'] {
     enemies: combat.participants
       .filter((participant) => participant.side === 'enemy')
       .map((enemy) => ({
+        id: enemy.id,
         name: enemy.name,
         hp: enemy.hp.current,
         hpMax: enemy.hp.maximum,

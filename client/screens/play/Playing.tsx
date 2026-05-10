@@ -159,7 +159,19 @@ export function Playing({ game }: Props) {
         onPickSuggestion={onSend}
       />
 
-      {combat ? <CombatStrip combat={combat} /> : null}
+      {combat ? (
+        <CombatStrip
+          combat={combat}
+          onAction={(action) => {
+            if (action.confirm) {
+              setPendingAction(action);
+            } else {
+              runAction(action);
+            }
+          }}
+          actionDisabled={streaming || pending !== null || pendingConfirmation !== null}
+        />
+      ) : null}
 
       {errorMessage ? (
         <View className="mx-5 rounded-sm border border-danger-fg bg-canvas-subtle px-3 py-2">

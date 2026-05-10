@@ -1,3 +1,13 @@
-import type { CombatBadgePayload } from '@/services/wire.gen';
+export type CombatEnemy = {
+  id?: string;
+  name: string;
+  hp: number;
+  hpMax: number;
+  alive: boolean;
+};
 
-export type CombatBadge = CombatBadgePayload;
+export type CombatBadge = {
+  round: number;
+  turnLabel: string;
+  enemies: CombatEnemy[];
+};

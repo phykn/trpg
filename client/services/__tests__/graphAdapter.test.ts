@@ -108,6 +108,7 @@ describe('adaptGraphState', () => {
     expect(state.questOffers[0]?.actions).toEqual(['accept']);
     expect(state.combat?.round).toBe(2);
     expect(state.combat?.enemies[0]).toMatchObject({
+      id: 'wolf_01',
       name: '늑대',
       hp: 5,
       hpMax: 12,
