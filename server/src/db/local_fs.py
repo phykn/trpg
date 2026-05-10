@@ -1,4 +1,4 @@
-"""LocalFs SaveRepo / ScenarioRepo — sync IO wrapped in async to match the Protocol shared with Supabase."""
+"""Local filesystem ScenarioRepo used by tests and local dev."""
 
 import json
 from pathlib import Path
@@ -6,61 +6,8 @@ from typing import Type, TypeVar
 
 from pydantic import BaseModel
 
-from src.game.domain.memory import DialoguePair, LogEntry, TurnLogEntry
-from src.game.domain.state import GameState
-from . import store
-from ._schema import _ENTITY_MODELS
-from .repo import ScenarioRepo
 
 T = TypeVar("T", bound=BaseModel)
-
-
-class LocalFsSaveRepo:
-    """Filesystem-backed SaveRepo. Delegates to `store.py` module functions."""
-
-    def __init__(self, saves_dir: str) -> None:
-        self.saves_dir = saves_dir
-
-    async def save_meta(self, state: GameState) -> None:
-        await store.save_meta(state, self.saves_dir)
-
-    async def save_entity(self, state: GameState, kind: str, entity_id: str) -> None:
-        await store.save_entity(state, self.saves_dir, kind, entity_id)
-
-    async def append_log_entries(self, game_id: str, entries: list[LogEntry]) -> None:
-        await store.append_log_entries(self.saves_dir, game_id, entries)
-
-    async def append_history_entries(
-        self, game_id: str, entries: list[TurnLogEntry]
-    ) -> None:
-        await store.append_history_entries(self.saves_dir, game_id, entries)
-
-    async def append_dialogue_entries(
-        self, game_id: str, entries: list[DialoguePair]
-    ) -> None:
-        await store.append_dialogue_entries(self.saves_dir, game_id, entries)
-
-    async def load_game(self, game_id: str) -> GameState:
-        return store.load_game(self.saves_dir, game_id)
-
-    async def copy_seed_into_game(
-        self, scenario_repo: ScenarioRepo, profile: str, game_id: str, player_id: str
-    ) -> None:
-        # player_id is unused here — LocalFs has no stub-meta hazard because meta
-        # is only written by save_meta; entity files don't reference it.
-        del player_id
-        game_root = store._game_dir(self.saves_dir, game_id)
-        game_root.mkdir(parents=True, exist_ok=True)
-        for kind, model_cls in _ENTITY_MODELS.items():
-            seed = await scenario_repo.load_seed_entities(profile, kind, model_cls)
-            if not seed:
-                continue
-            kind_dir = game_root / kind
-            kind_dir.mkdir(parents=True, exist_ok=True)
-            for ent_id, obj in seed.items():
-                (kind_dir / f"{ent_id}.json").write_text(
-                    obj.model_dump_json(), encoding="utf-8"
-                )
 
 
 class LocalFsScenarioRepo:

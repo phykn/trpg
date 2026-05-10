@@ -42,9 +42,9 @@ Upper depends on lower, never the reverse. Concretely:
 - `llm/calls/` — LLM call modules (classify, narrate, combat_narrate, summon, recommend) under the `llm/` package. Each module dir = `schema.py` + `runner.py` (+ `semantics.py` where needed). Prompts live separately under `src/locale/prompts/<agent>/prompt.<locale>.md`; `src/locale/prompts/_kernel.<locale>.md` holds universal rules (output language, register, ID hygiene, world vocabulary). `llm/calls/_runner.py:get_prompt(agent, locale)` joins kernel + agent prompt with `---`, cached per (agent, locale). `_runner.py` also owns the shared 3-attempt self-correction loop.
 - `game/ontology/` — derived relational view over `GameState`. **The single source of truth for relations.**
 - `llm/context/` — prompt input builders under the `llm/` package (surroundings for judge, layered context for narrate).
-- `db/` — `SaveRepo` / `ScenarioRepo` Protocols (all-async) + Supabase and LocalFs adapters. Holds all persistence concerns.
-- `wire/` — server↔client interface. `wire/models/` Pydantic payloads (single source of typed shapes), `wire/export.py` JSON-Schema bundle codegen → client `wire.gen.d.ts`, `wire/emit.py` SSE event builders, `wire/to_front.py` GameState → flat dict + typed state-slot models (`hero / subject / quest / place / combat`) the client renders, `wire/labels.py` UI label catalog wrappers + badge combiners, `wire/story_graph.py` reachable-edges shaping. All Korean composed strings end here.
-- `game/flow/` — per-turn orchestration. `turn.py` / `roll.py` / `intro.py` are entrypoints (each yields `AsyncIterator[dict]` of SSE events).
+- `db/` — `GraphRepo` / `ScenarioRepo` Protocols (all-async) + Supabase and LocalFs adapters. Holds persistence concerns.
+- `wire/` — server↔client interface. `wire/models/` Pydantic payloads and `wire/graph_to_front.py` carry the graph runtime state the client renders.
+- `game/runtime/` — graph-native session orchestration for init, input, explicit actions, confirmations, combat, level-up, and state loading.
 - `api/` — thin FastAPI adapter. Glue only, no business logic.
 
 **Import convention:** within a bucket use relative (`from .X` / `from ..X`); cross-bucket use absolute (`from src.<bucket>.X`). The 6-fold partition is the boundary — absolute import is the visible signal that a line crosses it.
@@ -63,19 +63,20 @@ Upper depends on lower, never the reverse. Concretely:
 
 ### Persistence
 
-The repo Protocols (`SaveRepo`, `ScenarioRepo`) are all-async. **The running server always uses Supabase**, regardless of `APP_ENV` — env files differ only in config knobs (basic auth, CORS, LLM routes), not in storage choice. Tests bypass the factory and use `LocalFsSaveRepo` / `LocalFsScenarioRepo` against `tmp_path`.
+The repo Protocols (`GraphRepo`, `ScenarioRepo`) are all-async. Repos default to Supabase; dev can set `GRAPH_REPO=local` or `SCENARIO_REPO=local`. Tests bypass the factory and use LocalFs adapters against `tmp_path`.
 
-Five tables, all keyed on `game_id`:
+Graph runtime tables are all keyed on `game_id`:
 
-- `games(game_id PK, meta jsonb, updated_at)` — `meta` carries `turn_count, pending_check, combat_state, active_*_id, next_log_id`. **`combat_state` must round-trip through meta** — without it, `/turn` reloads as combat-cleared and the engine restarts the fight every turn.
-- `entities(game_id, kind, id, data jsonb)` PK `(game_id, kind, id)` — only entities mutated this turn are upserted.
+- `game_progress(game_id PK, progress jsonb)` — player id, locale, active quest, pending confirmation, combat state, and `next_log_id`.
+- `graph_nodes(game_id, node_id, node_type, properties jsonb)` PK `(game_id, node_id)`.
+- `graph_edges(game_id, edge_id, edge_type, from_node_id, to_node_id, properties jsonb)` PK `(game_id, edge_id)`.
 - `log_entries(game_id, log_id int, entry jsonb)` — `log_id = entry.id` (app-managed monotonic).
 - `history_entries(game_id, seq bigserial, entry jsonb)` — append-only turn summaries.
 - `dialogue_entries(game_id, seq bigserial, entry jsonb)` — append-only dialogue.
 
-All four child tables FK → `games(game_id) ON DELETE CASCADE`. RLS enabled with no policies (server uses service-role key, anon/auth keys see nothing).
+Runtime child tables should FK to `game_progress(game_id) ON DELETE CASCADE`. RLS enabled with no policies (server uses service-role key, anon/auth keys see nothing).
 
-**Per-turn flush order:** entity upserts + jsonl appends → `games.meta` last. A crash mid-flush leaves entity/jsonl committed and only meta stale, recoverable on next reload via `next_log_id` self-heal in `load_game`.
+`load_runtime_state` bumps `next_log_id` past the highest loaded log id so a partial write cannot reuse a log id on the next turn.
 
 `SupabaseStorageScenarioRepo` caches `world.md` per profile (process-lifetime; restart to reload) and lazily materializes `local_profile_path` to a tempdir so `game/engines/invariants.Scenario.from_dir` can walk a real fs tree. `read_world_md(missing_ok=True)` does **not** cache empty results — a strict caller after a missing-ok caller will still raise.
 

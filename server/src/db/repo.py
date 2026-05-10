@@ -1,13 +1,4 @@
-"""Persistence repository Protocols.
-
-Two seams:
-- `SaveRepo`: per-game runtime state (replaces file IO under `saves/games/<game_id>/`).
-- `ScenarioRepo`: read-only seed data (replaces file IO under `scenarios/<profile>/`).
-
-Adapters live in `local_fs.py` (tests only — constructed directly with tmp
-paths) and `supabase.py` (running server, both APP_ENV=dev and =release).
-`factory.py` builds the Supabase pair unconditionally.
-"""
+"""Persistence repository Protocols."""
 
 from typing import Protocol, Type, TypeVar
 
@@ -16,41 +7,12 @@ from pydantic import BaseModel
 from src.game.domain.graph import Graph
 from src.game.domain.memory import DialoguePair, LogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
-from src.game.domain.state import GameState
 
 T = TypeVar("T", bound=BaseModel)
 
 
-class SaveRepo(Protocol):
-    """Per-game runtime persistence. All writes go through this in flow/."""
-
-    async def save_meta(self, state: GameState) -> None: ...
-
-    async def save_entity(
-        self, state: GameState, kind: str, entity_id: str
-    ) -> None: ...
-
-    async def append_log_entries(
-        self, game_id: str, entries: list[LogEntry]
-    ) -> None: ...
-
-    async def append_history_entries(
-        self, game_id: str, entries: list[TurnLogEntry]
-    ) -> None: ...
-
-    async def append_dialogue_entries(
-        self, game_id: str, entries: list[DialoguePair]
-    ) -> None: ...
-
-    async def load_game(self, game_id: str) -> GameState: ...
-
-    async def copy_seed_into_game(
-        self, scenario_repo: "ScenarioRepo", profile: str, game_id: str, player_id: str
-    ) -> None: ...
-
-
 class GraphRepo(Protocol):
-    """Graph-native persistence. Not used by legacy live flow until migration."""
+    """Graph-native runtime persistence."""
 
     async def save_graph(self, game_id: str, graph: Graph) -> None: ...
 

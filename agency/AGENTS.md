@@ -30,7 +30,7 @@ APP_ENV=release .venv/bin/python -m agency.story.tool upload <scenario_dir>
 APP_ENV=release .venv/bin/python -m agency.story.tool download <profile> [--out <dir>]
 ```
 
-Single QA run output lands at the repo root `qa_test/<agent>/` (gitignored): `transcript.md` (human review), `sse.jsonl` (event replay), `final_state.json`, `saves/` (per-agent `LocalFsSaveRepo`), `llm/` (per-call request/response pairs). The runner wipes **only the targeted agent's directory** at session start, so re-running `socialite` doesn't touch `fighter`'s artifacts from an earlier full-suite run.
+Single QA run output lands at the repo root `qa_test/<agent>/` (gitignored): `transcript.md` (human review), `sse.jsonl` (event replay), `final_state.json`, `saves/` (per-agent `LocalFsGraphRepo`), `llm/` (per-call request/response pairs). The runner wipes **only the targeted agent's directory** at session start, so re-running `socialite` doesn't touch `fighter`'s artifacts from an earlier full-suite run.
 
 QA env: needs `BASE_URL` (LLM) plus `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` / `SUPABASE_SCENARIO_BUCKET`. Story tool (`tool.py`): local subcommands need no network; `upload` needs `APP_ENV=release` + Supabase keys.
 
@@ -38,16 +38,16 @@ QA env: needs `BASE_URL` (LLM) plus `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` / `S
 
 ### QA — in-process FastAPI, real LLM
 
-`qa/harness/runner.py` wraps the server with `httpx.ASGITransport(app=build_app(...))`. No port, no second process — the request still travels through the real auth/SSE/error surface, but responses come back in-memory. The LLM stack is the same external server (`BASE_URL`, llama.cpp or Gemini) production uses.
+`qa/harness/runner.py` wraps the server with `httpx.ASGITransport(app=build_app(...))`. No port, no second process — the request still travels through the real auth/error surface, but responses come back in-memory. The LLM stack is the same external server (`BASE_URL`, llama.cpp or Gemini) production uses.
 
 Two hard isolation rules:
 
-- **Saves go to `qa_test/<agent>/saves/` via `LocalFsSaveRepo`.** Production Supabase save tables are never written. The runner builds the app with explicit `save_repo=LocalFsSaveRepo(...)`, bypassing the factory.
+- **Graph saves go to `qa_test/<agent>/saves/` via `LocalFsGraphRepo`.** Production Supabase graph tables are never written. The runner builds the app with explicit `graph_repo=LocalFsGraphRepo(...)`, bypassing the factory.
 - **Scenarios are read from the production Supabase Storage bucket (read-only)** via `SupabaseStorageScenarioRepo`. QA exercises the exact same scenario data the live server sees; do not point this at a different bucket to "fix" a missing profile — upload it to the prod bucket via `APP_ENV=release .venv/bin/python -m agency.story.tool upload scenarios/<profile>`.
 
-There is no automated reviewer. A previous local-LLM reviewer hallucinated turn numbers and misclassified normal `pending_check` waits as desyncs, so it was removed. **Codex reads `qa_test/<agent>/transcript.md` in chat and writes the verdict there** (PASS / WARN / FAIL, 1–3 wins, 1–3 issues with severity + turn-numbered evidence, then a cross-agent summary). When asked to evaluate a QA run, do not skim — open the transcripts directly and cite turn numbers.
+There is no automated reviewer. A previous local-LLM reviewer hallucinated turn numbers and misclassified normal waiting states as desyncs, so it was removed. **Codex reads `qa_test/<agent>/transcript.md` in chat and writes the verdict there** (PASS / WARN / FAIL, 1–3 wins, 1–3 issues with severity + turn-numbered evidence, then a cross-agent summary). When asked to evaluate a QA run, do not skim — open the transcripts directly and cite turn numbers.
 
-Per-turn loop in `runner.py`: read `/state` → `PlayerAgent.next_input(state_summary, last_gm)` → `POST /turn` (drain SSE) → if `pending_check` event seen, auto `POST /roll`. Stops on the first `error` event (continuing past one is meaningless because state diverges from narrative). The agent's system prompt has a **Priority guards** block layered on top of the persona — level-up trigger (`레벨업 가능` in state) and skill-candidate trigger force a one-turn override — so persona schedules never block growth/learning that the engine has already exposed.
+Per-turn loop in `runner.py`: read `/session/{id}/graph/state` → `PlayerAgent.next_input(state_summary, last_gm)` → `POST /session/{id}/graph/input` → if a pending confirmation appears, auto-confirm through `/session/{id}/graph/confirm`. Stops on the first error response because continuing past one would hide the failure point. The agent's system prompt has a **Priority guards** block layered on top of the persona, so persona schedules never block growth/learning that the engine has already exposed.
 
 ### Story — SKILL.md driven scenario build
 
@@ -74,4 +74,4 @@ QA's loop intentionally stops on the first error — do not "retry past it." The
 - **Korean only for everything user-facing.** Persona prompts (`qa/agents/*.md`), the story SKILL (`story/SKILL.md`), and any string that ends up in a transcript or scenario file are Korean. Engine-side narration uses **2인칭 존댓말 합니다체** — `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings — and the user-facing skill term is **기술** (`스킬` survives only as a synonym in the dc_judge prompt). Code text (Python source, exception messages, validation errors) stays English.
 - **Comments minimal, English-only.** Default to no comment — add one only when the *why* is non-obvious. Single short line. Korean is allowed inside an English comment only when quoting an in-game string the comment is reasoning about. No multi-paragraph docstrings, no multi-line `# ...` blocks. `# noqa` / `# type:` / shebangs aren't comments.
 - **env is fail-fast.** `os.environ["BASE_URL"]` etc., never `os.environ.get(..., default)`. Missing keys must raise at startup, not later inside an LLM call.
-- **Save-directory isolation.** QA always writes to `qa_test/<agent>/saves/` via `LocalFsSaveRepo`. Never repoint at production Supabase save tables. Scenarios are read-only from the prod bucket — fine to read, never write.
+- **Save-directory isolation.** QA always writes to `qa_test/<agent>/saves/` via `LocalFsGraphRepo`. Never repoint at production Supabase graph tables. Scenarios are read-only from the prod bucket — fine to read, never write.

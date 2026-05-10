@@ -1,6 +1,6 @@
 # trpg-server
 
-Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in five Postgres tables keyed on `game_id` (`games / entities / log_entries / history_entries / dialogue_entries`); scenario seeds live in a Supabase Storage bucket.
+Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in graph Postgres tables keyed on `game_id` (`game_progress / graph_nodes / graph_edges / log_entries / history_entries / dialogue_entries`); scenario seeds live in a Supabase Storage bucket.
 
 Design notes start at `../docs/README.md`; the per-turn flow is in `../docs/02-runtime.md`; the interface and ownership map is in `../docs/05-interfaces.md`. The Claude Code guide is [CLAUDE.md](./CLAUDE.md).
 
@@ -8,8 +8,8 @@ Design notes start at `../docs/README.md`; the per-turn flow is in `../docs/02-r
 
 - Python 3.12+, Pydantic v2, FastAPI, uvicorn, httpx, async/await
 - OpenAI-compatible LLM via `LLM_ROUTE_<AGENT> = <provider>/<model>` (llama.cpp local or Gemini hosted; provider blocks live alongside the routes in `.env.<APP_ENV>`)
-- **Supabase Postgres + Storage** for saves + scenarios. Both `APP_ENV=dev` and `APP_ENV=release` go through the Supabase adapters; tests bypass the factory and use `LocalFsSaveRepo` / `LocalFsScenarioRepo` against `tmp_path`.
-- Single process. Per-turn flush order is entity upserts + jsonl appends → `games.meta` last, so a crash mid-flush is recoverable on reload via `next_log_id` self-heal.
+- **Supabase Postgres + Storage** for graph saves + scenarios. Dev can set `GRAPH_REPO=local` or `SCENARIO_REPO=local`; tests use LocalFs adapters against `tmp_path`.
+- Single process. LocalFs writes use per-game locks; Supabase deploys need DB-level locking if two requests can mutate the same `game_id` concurrently.
 
 ## Setup
 

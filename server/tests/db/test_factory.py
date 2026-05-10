@@ -1,28 +1,8 @@
-from src.db.factory import build_graph_repo, build_save_repo, build_scenario_repo
+from src.db.factory import build_graph_repo, build_scenario_repo
 from src.db.graph_local_fs import LocalFsGraphRepo
 from src.db.graph_supabase import SupabaseGraphRepo
-from src.db.local_fs import LocalFsSaveRepo, LocalFsScenarioRepo
-from src.db.supabase import SupabaseSaveRepo, SupabaseStorageScenarioRepo
-
-
-def test_build_save_repo_can_use_local_fs_for_dev(monkeypatch, tmp_path):
-    monkeypatch.setenv("SAVE_REPO", "local")
-    monkeypatch.setenv("SAVE_DIR", str(tmp_path))
-
-    repo = build_save_repo()
-
-    assert isinstance(repo, LocalFsSaveRepo)
-    assert repo.saves_dir == str(tmp_path)
-
-
-def test_build_save_repo_defaults_to_supabase(monkeypatch):
-    monkeypatch.delenv("SAVE_REPO", raising=False)
-    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
-    monkeypatch.setenv("SUPABASE_SERVICE_KEY", "secret")
-
-    repo = build_save_repo()
-
-    assert isinstance(repo, SupabaseSaveRepo)
+from src.db.local_fs import LocalFsScenarioRepo
+from src.db.supabase import SupabaseStorageScenarioRepo
 
 
 def test_build_scenario_repo_can_use_local_fs_for_dev(monkeypatch, tmp_path):

@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 def write_sse_jsonl(path: Path, turn_no: int, kind: str, events: list[dict]) -> None:
-    """Append per-turn events to sse.jsonl. `kind` ∈ {'turn', 'roll', 'intro'}."""
+    """Append per-turn API events to sse.jsonl."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as f:
         for ev in events:
@@ -38,10 +38,17 @@ def append_transcript_block(
     if judge:
         parts.append(f"**판단**: `{judge.get('action')}`")
     if pending:
-        parts.append(
-            f"**굴림 대기**: {pending['stat']} · {pending['tier']['label']} "
-            f"(DC {pending['dc']}, mod {pending['mod']:+d}, {pending['required_roll']}+ 필요)"
-        )
+        if "stat" in pending:
+            parts.append(
+                f"**굴림 대기**: {pending['stat']} · {pending['tier']['label']} "
+                f"(DC {pending['dc']}, mod {pending['mod']:+d}, "
+                f"{pending['required_roll']}+ 필요)"
+            )
+        else:
+            parts.append(
+                f"**확인 대기**: {pending.get('title') or '-'} — "
+                f"{pending.get('body') or ''}"
+            )
     if roll_log:
         parts.append(
             f"**판정 결과**: {roll_log['check']} → "

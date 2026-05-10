@@ -3,22 +3,27 @@ def format_state_summary(front_state: dict) -> str:
 
     place = front_state.get("place")
     if place:
-        lines.append(f"장소: {place['name']} ({place['dayPhase']})")
-        if place.get("surroundings"):
-            lines.append("인접: " + ", ".join(s["name"] for s in place["surroundings"]))
-        if place.get("features"):
-            lines.append(f"환경: {', '.join(place['features'])}")
-        if place.get("weather"):
-            lines.append(f"날씨: {', '.join(place['weather'])}")
+        description = place.get("description") or ""
+        lines.append(f"장소: {place['name']} — {description}")
+        exits = place.get("exits") or []
+        if exits:
+            lines.append("이동 가능: " + ", ".join(s["name"] for s in exits))
+        targets = place.get("targets") or []
+        if targets:
+            lines.append(
+                "눈앞 대상: "
+                + ", ".join(f"{target['name']}({target['kind']})" for target in targets)
+            )
 
     hero = front_state.get("hero")
     if hero:
-        can_level = hero["exp"] >= hero["expMax"] and hero["expMax"] > 0
-        level_hint = " — 레벨업 가능" if can_level else ""
+        hp = hero["resources"]["hp"]
+        mp = hero["resources"]["mp"]
+        level_hint = " — 레벨업 가능" if hero.get("canLevelUp") else ""
         lines.append(
-            f"나: {hero['name']} ({hero['raceJob']}) Lv {hero['level']} "
-            f"HP {hero['hp']}/{hero['hpMax']} "
-            f"MP {hero['mp']}/{hero['mpMax']} "
+            f"나: {hero['name']} Lv {hero['level']} "
+            f"HP {hp['current']}/{hp['maximum']} "
+            f"MP {mp['current']}/{mp['maximum']} "
             f"xp {hero['exp']}/{hero['expMax']}{level_hint}"
         )
         skills = hero.get("skills") or []
@@ -34,24 +39,14 @@ def format_state_summary(front_state: dict) -> str:
         else:
             lines.append("인벤토리: (비어 있음)")
 
-    subject = front_state.get("subject")
-    if subject:
-        lines.append(
-            f"눈앞 NPC: {subject['name']} ({subject.get('role') or '-'}) — 친밀도 {subject['trust']}"
-        )
-        known = subject.get("known") or []
-        if known:
-            lines.append("  아는 정보: " + " / ".join(known))
-        sub_inv = subject.get("inventory") or []
-        if sub_inv:
-            lines.append(
-                "  NPC 가 가진 물건: "
-                + ", ".join(f"{i['name']}×{i['qty']}" for i in sub_inv)
-            )
-
     quest = front_state.get("quest")
     if quest:
         lines.append(f"진행 퀘스트: {quest['title']} — {quest.get('summary') or ''}")
+    quest_offers = front_state.get("questOffers") or []
+    if quest_offers:
+        lines.append(
+            "제안 퀘스트: " + ", ".join(quest["title"] for quest in quest_offers)
+        )
 
     return "\n".join(lines) or "(상황 정보 없음)"
 

@@ -9,7 +9,7 @@ from run_api import build_app
 from src.db.graph_local_fs import LocalFsGraphRepo
 from src.game.domain.graph import GraphEdge, GraphNode
 from src.game.engines.growth import xp_for_next_level
-from tests._fakes import make_default_storage, make_save_repo, make_scenario_repo
+from tests._fakes import make_default_storage, make_scenario_repo
 
 
 class _MockLLM:
@@ -70,7 +70,6 @@ def _build_app(
     intro_answer: str = "당신은 광장에 처음 발을 들입니다.",
     intro_delay: float = 0.0,
 ):
-    save_repo, _ = make_save_repo()
     storage = make_default_storage()
     _extend_default_storage_for_movement(storage)
     scenario_repo, _ = make_scenario_repo(storage)
@@ -82,7 +81,6 @@ def _build_app(
         ),
         basic_auth_user="t",
         basic_auth_pass="t",
-        save_repo=save_repo,
         scenario_repo=scenario_repo,
         graph_repo=LocalFsGraphRepo(str(tmp_path / "graph")),
         cors_origins=[],

@@ -1,10 +1,8 @@
-"""One agent's QA session — drives the FastAPI app in-process via ASGI
-and records each SSE stream into transcript / sse.jsonl.
+"""One agent's QA session — drives the FastAPI app in-process via ASGI.
 
-Persistence shape: scenarios are read from Supabase Storage (same source the
-production server uses), but game saves go to a local `LocalFsSaveRepo` rooted
-at `<run_dir>/saves/`, so QA never writes to the production Supabase save
-tables. The per-agent run directory is wiped at session start by the caller.
+Scenarios are read from Supabase Storage. Graph saves go to a local
+`LocalFsGraphRepo` rooted at `<run_dir>/saves/`, so QA never writes runtime
+state to production Supabase tables.
 """
 
 import json
@@ -14,8 +12,10 @@ from pathlib import Path
 from httpx import ASGITransport, AsyncClient
 
 from src.llm import LLMClient, set_llm_session
-from src.db.local_fs import LocalFsSaveRepo
+from src.db.graph_local_fs import LocalFsGraphRepo
 from src.db.supabase import SupabaseStorageScenarioRepo
+from src.game.runtime.load import load_runtime_state
+from src.wire.graph_to_front import graph_to_front_state
 
 from run_api import build_app
 
@@ -26,34 +26,6 @@ from .transcript import (
     write_sse_jsonl,
     write_transcript_header,
 )
-
-
-async def _drain_sse(response) -> tuple[str, list[dict]]:
-    """Drain one SSE response. Returns (gm_body, all_events).
-
-    Body comes from narrative_delta when narrate ran; if narrate was skipped
-    (combat/rest/use), fall back to the gm log_entry text so the transcript
-    isn't blank.
-    """
-    body = ""
-    gm_logs: list[str] = []
-    events: list[dict] = []
-    async for line in response.aiter_lines():
-        if not line.startswith("data: "):
-            continue
-        ev = json.loads(line[6:])
-        events.append(ev)
-        if ev["type"] == "narrative_delta":
-            body += ev["data"]["text"]
-        elif ev["type"] == "log_entry" and ev["data"].get("kind") in ("gm", "act"):
-            # `act` covers engine-side notices ("공격할 수 있는 대상이 없다",
-            # 검증 실패 GM 메시지 등) the player would otherwise miss.
-            text = ev["data"].get("text") or ""
-            if text:
-                gm_logs.append(text)
-    if not body and gm_logs:
-        body = "\n".join(gm_logs)
-    return body, events
 
 
 def _find(events: list[dict], event_type: str) -> dict | None:
@@ -83,7 +55,7 @@ async def run_qa_session(
     sse_path = run_dir / "sse.jsonl"
     final_state_path = run_dir / "final_state.json"
 
-    save_repo = LocalFsSaveRepo(str(saves_dir))
+    graph_repo = LocalFsGraphRepo(str(saves_dir))
     scenario_repo = SupabaseStorageScenarioRepo(
         url=os.environ["SUPABASE_URL"],
         service_key=os.environ["SUPABASE_SERVICE_KEY"],
@@ -94,8 +66,8 @@ async def run_qa_session(
         llm=llm,
         basic_auth_user="qa",
         basic_auth_pass="qa",
-        save_repo=save_repo,
         scenario_repo=scenario_repo,
+        graph_repo=graph_repo,
         cors_origins=[],  # in-process via ASGITransport — no real cross-origin clients
     )
 
@@ -111,7 +83,7 @@ async def run_qa_session(
         timeout=120.0,
     ) as client:
         init_resp = await client.post(
-            "/session/init",
+            "/session/graph/init",
             json={
                 "profile": profile,
                 "player": {
@@ -123,6 +95,7 @@ async def run_qa_session(
         )
         init_resp.raise_for_status()
         game_id = init_resp.json()["game_id"]
+        init_state = init_resp.json()["state"]
 
         write_transcript_header(
             transcript_path,
@@ -133,35 +106,23 @@ async def run_qa_session(
             max_turns=max_turns,
         )
 
-        # intro is optional — swallow failures and continue
-        try:
-            async with client.stream("POST", f"/session/{game_id}/intro") as r:
-                body, events = await _drain_sse(r)
-            write_sse_jsonl(sse_path, 0, "intro", events)
-            err = _find(events, "error")
-            if err:
-                error_count += 1
-            append_transcript_block(
-                transcript_path,
-                turn_no=0,
-                kind="intro",
-                gm_body=body,
-                error=err,
-            )
-            if body:
-                last_gm = body
-        except Exception as e:  # noqa: BLE001
-            error_count += 1
-            append_transcript_block(
-                transcript_path,
-                turn_no=0,
-                kind="intro",
-                error=e,
-            )
+        write_sse_jsonl(
+            sse_path,
+            0,
+            "init",
+            [{"type": "graph_state", "data": init_state}],
+        )
+        last_gm = last_gm_text(init_state.get("log") or [])
+        append_transcript_block(
+            transcript_path,
+            turn_no=0,
+            kind="init",
+            gm_body=last_gm,
+        )
 
         for turn_no in range(1, max_turns + 1):
             try:
-                state_resp = await client.get(f"/session/{game_id}/state")
+                state_resp = await client.get(f"/session/{game_id}/graph/state")
                 state_resp.raise_for_status()
                 front = state_resp.json()["state"]
             except Exception as e:  # noqa: BLE001
@@ -193,12 +154,24 @@ async def run_qa_session(
                 break
 
             try:
-                async with client.stream(
-                    "POST",
-                    f"/session/{game_id}/turn",
+                response = await client.post(
+                    f"/session/{game_id}/graph/input",
                     json={"player_input": player_input},
-                ) as r:
-                    body, events = await _drain_sse(r)
+                )
+                response.raise_for_status()
+                result = response.json()
+                front = result["state"]
+                body = result.get("message") or last_gm_text(front.get("log") or [])
+                events = [
+                    {
+                        "type": "graph_response",
+                        "data": {
+                            "status": result.get("status"),
+                            "message": result.get("message"),
+                            "state": front,
+                        },
+                    }
+                ]
             except Exception as e:  # noqa: BLE001
                 error_count += 1
                 append_transcript_block(
@@ -211,8 +184,8 @@ async def run_qa_session(
                 break
 
             write_sse_jsonl(sse_path, turn_no, "turn", events)
-            judge = _find(events, "judge")
-            pending = _find(events, "pending_check")
+            judge = None
+            pending = front.get("pendingConfirmation")
             err = _find(events, "error")
             if err:
                 error_count += 1
@@ -231,13 +204,31 @@ async def run_qa_session(
             if body:
                 last_gm = body
 
-            # pending_check → auto /roll
             if pending:
                 try:
-                    async with client.stream(
-                        "POST", f"/session/{game_id}/roll", json={}
-                    ) as r:
-                        roll_body, roll_events = await _drain_sse(r)
+                    confirm_response = await client.post(
+                        f"/session/{game_id}/graph/confirm",
+                        json={
+                            "confirmation_id": pending["id"],
+                            "decision": "confirm",
+                        },
+                    )
+                    confirm_response.raise_for_status()
+                    confirm_result = confirm_response.json()
+                    confirm_front = confirm_result["state"]
+                    roll_body = confirm_result.get("message") or last_gm_text(
+                        confirm_front.get("log") or []
+                    )
+                    roll_events = [
+                        {
+                            "type": "graph_confirm",
+                            "data": {
+                                "status": confirm_result.get("status"),
+                                "message": confirm_result.get("message"),
+                                "state": confirm_front,
+                            },
+                        }
+                    ]
                 except Exception as e:  # noqa: BLE001
                     error_count += 1
                     append_transcript_block(
@@ -248,28 +239,18 @@ async def run_qa_session(
                     )
                     break
 
-                write_sse_jsonl(sse_path, turn_no, "roll", roll_events)
+                write_sse_jsonl(sse_path, turn_no, "confirm", roll_events)
                 roll_err = _find(roll_events, "error")
                 if roll_err:
                     error_count += 1
-                roll_log_ev = next(
-                    (
-                        ev["data"]
-                        for ev in roll_events
-                        if ev["type"] == "log_entry"
-                        and ev["data"].get("kind") == "roll"
-                    ),
-                    None,
-                )
                 append_transcript_block(
                     transcript_path,
                     turn_no=turn_no,
-                    kind="roll",
+                    kind="confirm",
                     gm_body=roll_body,
-                    roll_log=roll_log_ev,
                     error=roll_err,
                 )
-                agent.record("(굴림)", roll_body)
+                agent.record("(확인)", roll_body)
                 if roll_body:
                     last_gm = roll_body
 
@@ -280,7 +261,8 @@ async def run_qa_session(
                 break
 
         try:
-            state = await save_repo.load_game(game_id)
+            runtime = await load_runtime_state(graph_repo, game_id)
+            state = graph_to_front_state(runtime)
             final_state_path.write_text(
                 state.model_dump_json(indent=2), encoding="utf-8"
             )

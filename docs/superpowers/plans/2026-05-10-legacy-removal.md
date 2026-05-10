@@ -686,13 +686,13 @@ git commit -m "refactor: delete legacy flow runtime"
 - Review: `server/src/db/factory.py`
 - Review: `server/tests/db/`
 
-- [ ] **Step 1: Find SaveRepo usage**
+- [x] **Step 1: Find SaveRepo usage**
 
 ```powershell
 rg "SaveRepo|build_save_repo|LocalFsSaveRepo|SupabaseSaveRepo|save_repo|GameState" server\src server\tests -n
 ```
 
-- [ ] **Step 2: Remove app startup construction if unused**
+- [x] **Step 2: Remove app startup construction if unused**
 
 If no route depends on `SaveRepo`, update `server/run_api.py`:
 
@@ -702,13 +702,16 @@ from src.db.factory import build_graph_repo, build_scenario_repo
 
 and remove `save_repo` from `build_app(...)`, `create_app()`, and `app.state`.
 
-- [ ] **Step 3: Remove factory branch**
+- [x] **Step 3: Remove factory branch**
 
 If tests no longer instantiate `LocalFsSaveRepo`, remove `build_save_repo()` from `server/src/db/factory.py`.
 
-- [ ] **Step 4: Delete relational save adapters**
+- [x] **Step 4: Delete relational save adapters**
 
-Delete only after import search is clean:
+Removed the `SaveRepo` protocol, app wiring, Supabase save adapter, LocalFs save
+adapter, and relational `_schema.py`. Kept `local_fs.py`, `supabase.py`, and
+`store.py` because graph runtime still uses them for scenario storage or local
+graph JSONL helpers.
 
 ```powershell
 git rm server\src\db\local_fs.py
@@ -718,14 +721,14 @@ git rm server\src\db\store.py
 
 Keep scenario repo code if graph scenario loading still uses it.
 
-- [ ] **Step 5: Run DB and graph tests**
+- [x] **Step 5: Run DB and graph tests**
 
 ```powershell
 .venv\Scripts\python.exe -m pytest server\tests\db server\tests\game\runtime server\tests\api\test_graph_session_routes.py -q
 .venv\Scripts\ruff.exe check server
 ```
 
-Expected: pass.
+Passed: `87 passed`; `ruff check server` and `ruff check agency\qa` passed.
 
 - [ ] **Step 6: Commit**
 

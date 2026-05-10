@@ -8,8 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routes import router
 from src.llm import LLMClient
-from src.db.factory import build_graph_repo, build_save_repo, build_scenario_repo
-from src.db.repo import GraphRepo, SaveRepo, ScenarioRepo
+from src.db.factory import build_graph_repo, build_scenario_repo
+from src.db.repo import GraphRepo, ScenarioRepo
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SERVER_DIR = Path(__file__).resolve().parent
@@ -27,7 +27,6 @@ def build_app(
     llm: LLMClient,
     basic_auth_user: str,
     basic_auth_pass: str,
-    save_repo: SaveRepo,
     scenario_repo: ScenarioRepo,
     cors_origins: list[str],
     graph_repo: GraphRepo | None = None,
@@ -43,7 +42,6 @@ def build_app(
     app.state.llm = llm
     app.state.basic_auth_user = basic_auth_user
     app.state.basic_auth_pass = basic_auth_pass
-    app.state.save_repo = save_repo
     app.state.scenario_repo = scenario_repo
     app.state.graph_repo = graph_repo
     app.include_router(router)
@@ -59,9 +57,6 @@ def create_app() -> FastAPI:
         s.strip() for s in os.environ["CORS_ORIGINS"].split(",") if s.strip()
     ]
 
-    # Build repo adapters via factory — APP_ENV=release fails fast here
-    # because the Supabase stubs raise at __init__ until Phase 2.
-    save_repo = build_save_repo()
     scenario_repo = build_scenario_repo()
     graph_repo = build_graph_repo()
 
@@ -70,7 +65,6 @@ def create_app() -> FastAPI:
         llm=llm,
         basic_auth_user=basic_auth_user,
         basic_auth_pass=basic_auth_pass,
-        save_repo=save_repo,
         scenario_repo=scenario_repo,
         cors_origins=cors_origins,
         graph_repo=graph_repo,

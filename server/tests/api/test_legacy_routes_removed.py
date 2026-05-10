@@ -3,7 +3,7 @@ from httpx import ASGITransport, AsyncClient
 
 from run_api import build_app
 from src.db.graph_local_fs import LocalFsGraphRepo
-from tests._fakes import make_default_storage, make_save_repo, make_scenario_repo
+from tests._fakes import make_default_storage, make_scenario_repo
 
 
 class _NoopLLM:
@@ -21,13 +21,11 @@ class _NoopLLM:
 
 
 def _build_test_app(tmp_path):
-    save_repo, _ = make_save_repo()
     scenario_repo, _ = make_scenario_repo(make_default_storage())
     return build_app(
         llm=_NoopLLM(),
         basic_auth_user="t",
         basic_auth_pass="t",
-        save_repo=save_repo,
         scenario_repo=scenario_repo,
         graph_repo=LocalFsGraphRepo(str(tmp_path / "graph")),
         cors_origins=[],

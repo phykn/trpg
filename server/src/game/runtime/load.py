@@ -2,9 +2,15 @@ from __future__ import annotations
 
 import asyncio
 
-from src.db._schema import _resolve_next_log_id
 from src.db.repo import GraphRepo
+from src.game.domain.memory import LogEntry
 from src.game.runtime.state import GameRuntimeState
+
+
+def _resolve_next_log_id(next_log_id: int, log_entries: list[LogEntry]) -> int:
+    if not log_entries:
+        return next_log_id
+    return max(next_log_id, max(entry.id for entry in log_entries) + 1)
 
 
 async def load_runtime_state(repo: GraphRepo, game_id: str) -> GameRuntimeState:

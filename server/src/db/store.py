@@ -3,17 +3,14 @@ import os
 from collections.abc import Callable
 from pathlib import Path
 
-from pydantic import BaseModel, TypeAdapter, ValidationError
+from pydantic import TypeAdapter, ValidationError
 
+from src.game.domain.errors import PersistenceFailed
 from src.game.domain.memory import (
     DialoguePair,
     LogEntry,
     TurnLogEntry,
 )
-from src.game.domain.errors import PersistenceFailed
-from src.game.rules import RULES
-from src.game.domain.state import GameState
-from ._schema import _ENTITY_MODELS, _Meta, _meta_from_state, _resolve_next_log_id
 
 # Per-game write serialization. A single global lock would funnel unrelated
 # game writes through one queue and — worse — let two requests for the same
@@ -31,14 +28,6 @@ def _lock_for(game_id: str) -> asyncio.Lock:
 
 def _game_dir(saves_dir: str, game_id: str) -> Path:
     return Path(saves_dir) / "games" / game_id
-
-
-def _meta_path(saves_dir: str, game_id: str) -> Path:
-    return _game_dir(saves_dir, game_id) / "meta.json"
-
-
-def _entity_path(saves_dir: str, game_id: str, kind: str, entity_id: str) -> Path:
-    return _game_dir(saves_dir, game_id) / kind / f"{entity_id}.json"
 
 
 def _log_path(saves_dir: str, game_id: str) -> Path:
@@ -80,25 +69,6 @@ def _append_jsonl(path: Path, lines: list[str]) -> None:
         raise PersistenceFailed(str(e)) from e
 
 
-async def save_meta(state: GameState, saves_dir: str) -> None:
-    payload = _meta_from_state(state).model_dump_json(indent=2)
-    path = _meta_path(saves_dir, state.game_id)
-    async with _lock_for(state.game_id):
-        await asyncio.to_thread(_atomic_write, path, payload)
-
-
-async def save_entity(
-    state: GameState, saves_dir: str, kind: str, entity_id: str
-) -> None:
-    container = getattr(state, kind)
-    if entity_id not in container:
-        raise PersistenceFailed(f"unknown {kind} id: {entity_id!r}")
-    payload = container[entity_id].model_dump_json(indent=2)
-    path = _entity_path(saves_dir, state.game_id, kind, entity_id)
-    async with _lock_for(state.game_id):
-        await asyncio.to_thread(_atomic_write, path, payload)
-
-
 async def _append_entries(game_id: str, path: Path, entries: list) -> None:
     if not entries:
         return
@@ -123,22 +93,6 @@ async def append_dialogue_entries(
     saves_dir: str, game_id: str, entries: list[DialoguePair]
 ) -> None:
     await _append_entries(game_id, _dialogue_path(saves_dir, game_id), entries)
-
-
-def _scan_entity_dir(
-    saves_dir: str, game_id: str, kind: str, model_cls: type[BaseModel]
-) -> dict:
-    dir_ = _game_dir(saves_dir, game_id) / kind
-    result: dict[str, BaseModel] = {}
-    if not dir_.is_dir():
-        return result
-    for f in sorted(dir_.glob("*.json")):
-        try:
-            obj = model_cls.model_validate_json(f.read_text(encoding="utf-8"))
-        except (ValidationError, OSError) as e:
-            raise PersistenceFailed(f"{f}: {e}") from e
-        result[obj.id] = obj  # type: ignore[attr-defined]
-    return result
 
 
 def _load_jsonl_tail(
@@ -167,56 +121,3 @@ def _load_jsonl_tail(
 
 
 _LOG_ADAPTER: TypeAdapter[LogEntry] = TypeAdapter(LogEntry)
-
-
-def load_game(saves_dir: str, game_id: str) -> GameState:
-    gdir = _game_dir(saves_dir, game_id)
-    if not gdir.is_dir():
-        raise FileNotFoundError(str(gdir))
-
-    meta_path = _meta_path(saves_dir, game_id)
-    try:
-        meta = _Meta.model_validate_json(meta_path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        raise FileNotFoundError(str(meta_path))
-    except (ValidationError, OSError) as e:
-        raise PersistenceFailed(str(e)) from e
-
-    entities: dict[str, dict] = {}
-    for kind, model_cls in _ENTITY_MODELS.items():
-        entities[kind] = _scan_entity_dir(saves_dir, game_id, kind, model_cls)
-
-    log_entries = _load_jsonl_tail(
-        _log_path(saves_dir, game_id),
-        RULES.log.display_turns,
-        _LOG_ADAPTER.validate_json,
-    )
-    turn_log = _load_jsonl_tail(
-        _history_path(saves_dir, game_id),
-        RULES.memory.turn_log_size,
-        TurnLogEntry.model_validate_json,
-    )
-    recent_dialogue = _load_jsonl_tail(
-        _dialogue_path(saves_dir, game_id),
-        RULES.memory.recent_dialogue_turns,
-        DialoguePair.model_validate_json,
-    )
-
-    return GameState(
-        game_id=meta.game_id,
-        profile=meta.profile,
-        locale=meta.locale,
-        player_id=meta.player_id,
-        active_subject_id=meta.active_subject_id,
-        active_quest_id=meta.active_quest_id,
-        turn_count=meta.turn_count,
-        pending_check=meta.pending_check,
-        pending_confirmation=meta.pending_confirmation,
-        combat_state=meta.combat_state,
-        previous_phase_signal=meta.previous_phase_signal,
-        next_log_id=_resolve_next_log_id(meta.next_log_id, log_entries),
-        turn_log=turn_log,
-        recent_dialogue=recent_dialogue,
-        log_entries=log_entries,
-        **entities,
-    )

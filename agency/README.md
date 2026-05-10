@@ -12,7 +12,7 @@ agency/
 
 ## QA — game testing via AI players
 
-Works like hiring a QA tester to play the game. Each turn an LLM generates the next input, the harness hits the server API in-process via ASGI, and collects SSE events into a transcript. There is no LLM reviewer — Claude Code reads the transcripts in chat and writes the review there (the local model hallucinates turn numbers and misclassifies normal pending_check waits as desyncs, so we removed it).
+Works like hiring a QA tester to play the game. Each turn an LLM generates the next input, the harness hits the graph API in-process via ASGI, and records responses into a transcript. There is no LLM reviewer — Claude Code reads the transcripts in chat and writes the review there.
 
 ### Layout
 
@@ -32,7 +32,7 @@ agency/qa/
   harness/
     agent.py            # PlayerAgent — system prompt + per-turn LLM call
     state_view.py       # front_state → input text for the player LLM
-    transcript.py       # SSE → markdown / jsonl
+    transcript.py       # graph API responses → markdown / jsonl
     runner.py           # runs one session for a single agent
 
 # Run output lands at the repo root under qa_test/<agent>/ (gitignored). Each
@@ -44,10 +44,10 @@ agency/qa/
 
 ### How it works
 
-- `httpx.AsyncClient(transport=ASGITransport(app))` calls the FastAPI app in-process. No port, no separate process, but the HTTP surface (auth/SSE/error) still exercised end-to-end.
+- `httpx.AsyncClient(transport=ASGITransport(app))` calls the FastAPI app in-process. No port, no separate process, but the HTTP surface (auth/error) is still exercised end-to-end.
 - The LLM is the same external server you'd use otherwise (`BASE_URL`, e.g. llama.cpp).
-- Saves are isolated to `qa_test/<agent>/saves/` via the LocalFs adapter — production Supabase is never touched. Scenarios are read directly from the production Supabase Storage bucket (read-only), so QA needs `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` / `SUPABASE_SCENARIO_BUCKET` in env.
-- Per-session flow: `POST /session/init` → `POST /session/{id}/intro` (optional) → `(read state → agent picks the next input → POST /turn → if pending_check, auto POST /roll)` repeated.
+- Graph saves are isolated to `qa_test/<agent>/saves/` via `LocalFsGraphRepo` — production Supabase is never touched. Scenarios are read directly from the production Supabase Storage bucket (read-only), so QA needs `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` / `SUPABASE_SCENARIO_BUCKET` in env.
+- Per-session flow: `POST /session/graph/init` → `(read graph state → agent picks the next input → POST /graph/input → if pending confirmation, auto POST /graph/confirm)` repeated.
 
 ### Run
 
@@ -71,9 +71,9 @@ qa_test/
   index.md                      # per-agent turn count + error count + transcript links
   socialite/
     transcript.md               # human-readable per-turn record
-    sse.jsonl                   # raw SSE events (for replay/debugging)
-    final_state.json            # the full GameState at the end
-    saves/                      # per-agent isolated LocalFs saves (wiped at session start)
+    sse.jsonl                   # raw graph API events (for replay/debugging)
+    final_state.json            # final graph front-state payload
+    saves/                      # per-agent isolated LocalFs graph saves (wiped at session start)
     llm/                        # per-LLM-call request/response JSON pairs (player + server-side agents)
   fighter/...
   scout/...

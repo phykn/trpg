@@ -1,10 +1,8 @@
 """Test-only in-memory fakes for the Supabase HTTP layer.
 
-The Supabase adapter (`SupabaseSaveRepo`, `SupabaseStorageScenarioRepo`)
-talks to two transports — `_PostgREST` and `_Storage` — both of which we
-replace with these fakes in tests. Result: tests exercise the real
-adapter logic (row shaping, cache behavior, ordering, FK ordering)
-without any network IO, credentials, or real DB pollution.
+The Supabase graph and scenario adapters talk to `_PostgREST` and `_Storage`.
+Tests replace both with these fakes so adapter logic runs without network IO,
+credentials, or real DB pollution.
 
 `make_default_storage()` returns a FakeStorage pre-loaded with a
 minimal-but-valid `default` scenario seed (1 race, 1 location, 1 NPC,
@@ -25,10 +23,7 @@ from src.game.domain.entities import (
     Stats,
 )
 from src.game.engines.growth import calc_max_hp, calc_max_mp
-from src.db.supabase import (
-    SupabaseSaveRepo,
-    SupabaseStorageScenarioRepo,
-)
+from src.db.supabase import SupabaseStorageScenarioRepo
 
 
 # ---------------------------------------------------------------------------
@@ -149,15 +144,6 @@ class FakeStorage:
 
 # ---------------------------------------------------------------------------
 # Repo constructors that bypass __init__ (which would try to talk to network)
-
-
-def make_save_repo(
-    db: FakePostgREST | None = None,
-) -> tuple[SupabaseSaveRepo, FakePostgREST]:
-    repo = SupabaseSaveRepo.__new__(SupabaseSaveRepo)
-    db = db or FakePostgREST()
-    repo._db = db  # type: ignore[attr-defined]
-    return repo, db
 
 
 def make_scenario_repo(
