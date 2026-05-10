@@ -1,7 +1,10 @@
+from functools import cached_property
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.game.domain.content import RuntimeContent
 from src.game.domain.graph import Graph
+from src.game.domain.graph_query import GraphIndex
 from src.game.domain.memory import DialoguePair, LogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 
@@ -15,3 +18,7 @@ class GameRuntimeState(BaseModel):
     log_entries: list[LogEntry] = Field(default_factory=list)
     turn_log: list[TurnLogEntry] = Field(default_factory=list)
     recent_dialogue: list[DialoguePair] = Field(default_factory=list)
+
+    @cached_property
+    def graph_index(self) -> GraphIndex:
+        return GraphIndex(self.graph)

@@ -31,6 +31,9 @@ class GraphCombatDispatchResult(BaseModel):
     outcome: str
     started: bool
     applied: int
+    changed_node_ids: list[str]
+    changed_edge_ids: list[str]
+    removed_edge_ids: list[str]
 
 
 def dispatch_graph_combat_action(
@@ -57,6 +60,10 @@ def dispatch_graph_combat_action(
         raise GraphCombatDispatchError(str(exc)) from exc
 
     graph_runtime = applied.runtime
+    applied_count = applied.applied
+    changed_node_ids = set(applied.changed_node_ids)
+    changed_edge_ids = set(applied.changed_edge_ids)
+    removed_edge_ids = set(applied.removed_edge_ids)
     completed_quest_ids: list[str] = []
     if combat_result.state.outcome == "victory":
         for target_id in _victory_target_ids(combat_result.state):
@@ -65,10 +72,15 @@ def dispatch_graph_combat_action(
                 target_id,
             )
             if quest_progress.changes:
-                graph_runtime = apply_runtime_graph_changes(
+                progress_apply = apply_runtime_graph_changes(
                     graph_runtime,
                     quest_progress.changes,
-                ).runtime
+                )
+                graph_runtime = progress_apply.runtime
+                applied_count += progress_apply.applied
+                changed_node_ids.update(progress_apply.changed_node_ids)
+                changed_edge_ids.update(progress_apply.changed_edge_ids)
+                removed_edge_ids.update(progress_apply.removed_edge_ids)
                 completed_quest_ids.extend(quest_progress.completed_quest_ids)
         for quest_id in completed_quest_ids:
             reward = plan_quest_rewards(
@@ -77,10 +89,15 @@ def dispatch_graph_combat_action(
                 graph_runtime.progress.player_id,
             )
             if reward.changes:
-                graph_runtime = apply_runtime_graph_changes(
+                reward_apply = apply_runtime_graph_changes(
                     graph_runtime,
                     reward.changes,
-                ).runtime
+                )
+                graph_runtime = reward_apply.runtime
+                applied_count += reward_apply.applied
+                changed_node_ids.update(reward_apply.changed_node_ids)
+                changed_edge_ids.update(reward_apply.changed_edge_ids)
+                removed_edge_ids.update(reward_apply.removed_edge_ids)
 
     progress_update = {
         "graph_combat_state": (
@@ -95,14 +112,17 @@ def dispatch_graph_combat_action(
         "combat:end",
         started=started,
         outcome=combat_result.state.outcome,
-        applied=applied.applied,
+        applied=applied_count,
     )
     return GraphCombatDispatchResult(
         runtime=next_runtime,
         combat=combat_result,
         outcome=combat_result.state.outcome,
         started=started,
-        applied=applied.applied,
+        applied=applied_count,
+        changed_node_ids=sorted(changed_node_ids),
+        changed_edge_ids=sorted(changed_edge_ids),
+        removed_edge_ids=sorted(removed_edge_ids),
     )
 
 

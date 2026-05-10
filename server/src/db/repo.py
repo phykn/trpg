@@ -12,6 +12,16 @@ class GraphRepo(Protocol):
 
     async def save_graph(self, game_id: str, graph: Graph) -> None: ...
 
+    async def save_graph_changes(
+        self,
+        game_id: str,
+        graph: Graph,
+        *,
+        changed_node_ids: list[str],
+        changed_edge_ids: list[str],
+        removed_edge_ids: list[str],
+    ) -> None: ...
+
     async def load_graph(self, game_id: str) -> Graph: ...
 
     async def save_progress(self, progress: GameProgress) -> None: ...

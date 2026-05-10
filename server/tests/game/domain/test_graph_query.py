@@ -2,6 +2,7 @@ import pytest
 
 from src.game.domain.graph import Graph, GraphEdge, GraphInvariantError, GraphNode
 from src.game.domain.graph_query import (
+    GraphIndex,
     characters_at,
     edges_from,
     edges_to,
@@ -163,3 +164,13 @@ def test_contract_semantic_queries_read_documented_edges():
     assert quest_requirements_of(graph, "quest") == ["hidden_key"]
     assert quest_reward_items_of(graph, "quest") == ["reward_gem"]
     assert quests_in_chapter(graph, "chapter") == ["quest"]
+
+    index = GraphIndex(graph)
+    assert edges_from(index, "player", "located_at") == edges_from(
+        graph, "player", "located_at"
+    )
+    assert edges_to(index, "town", "located_at") == edges_to(
+        graph, "town", "located_at"
+    )
+    assert characters_at(index, "town") == characters_at(graph, "town")
+    assert inventory_of(index, "player") == inventory_of(graph, "player")

@@ -63,6 +63,11 @@ class FakePostgREST:
                     if str(row.get(col)) in values:
                         return False
                     continue
+                if expr.startswith("in.(") and expr.endswith(")"):
+                    values = set(expr[4:-1].split(","))
+                    if str(row.get(col)) not in values:
+                        return False
+                    continue
                 raise AssertionError(f"unsupported fake filter: {expr}")
             return True
 

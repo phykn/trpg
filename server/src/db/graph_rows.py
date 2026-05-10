@@ -31,16 +31,35 @@ def graph_to_rows(
     game_id: str,
     graph: Graph,
 ) -> tuple[list[GraphNodeRow], list[GraphEdgeRow]]:
-    node_rows = [
+    return (
+        graph_node_rows(game_id, graph, graph.nodes.keys()),
+        graph_edge_rows(game_id, graph, graph.edges.keys()),
+    )
+
+
+def graph_node_rows(
+    game_id: str,
+    graph: Graph,
+    node_ids,
+) -> list[GraphNodeRow]:
+    return [
         GraphNodeRow(
             game_id=game_id,
             node_id=node.id,
             node_type=node.type,
             properties=_json_properties(node),
         )
-        for node in graph.nodes.values()
+        for node_id in node_ids
+        if (node := graph.nodes.get(node_id)) is not None
     ]
-    edge_rows = [
+
+
+def graph_edge_rows(
+    game_id: str,
+    graph: Graph,
+    edge_ids,
+) -> list[GraphEdgeRow]:
+    return [
         GraphEdgeRow(
             game_id=game_id,
             edge_id=edge.id,
@@ -49,9 +68,9 @@ def graph_to_rows(
             to_node_id=edge.to_node_id,
             properties=_json_properties(edge),
         )
-        for edge in graph.edges.values()
+        for edge_id in edge_ids
+        if (edge := graph.edges.get(edge_id)) is not None
     ]
-    return node_rows, edge_rows
 
 
 def graph_from_rows(

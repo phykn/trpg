@@ -16,7 +16,7 @@ from src.game.runtime.state import GameRuntimeState
 
 
 def build_graph_surroundings(runtime: GameRuntimeState) -> dict[str, Any]:
-    graph = runtime.graph
+    graph = runtime.graph_index
     player_id = runtime.progress.player_id
     location_id = location_of(graph, player_id)
     location = graph.nodes.get(location_id or "")
@@ -41,7 +41,7 @@ def _entity_payloads(
     if location_id is None:
         return []
 
-    graph = runtime.graph
+    graph = runtime.graph_index
     entities: list[dict[str, str]] = []
     for character_id in characters_at(graph, location_id):
         node = graph.nodes.get(character_id)
@@ -89,7 +89,7 @@ def _inventory_payloads(
     runtime: GameRuntimeState,
     player_id: str,
 ) -> list[dict[str, str]]:
-    graph = runtime.graph
+    graph = runtime.graph_index
     items: list[dict[str, str]] = []
     for item_id in inventory_of(graph, player_id):
         item = graph.nodes.get(item_id)
@@ -109,7 +109,7 @@ def _equipment_payloads(
     runtime: GameRuntimeState,
     player_id: str,
 ) -> dict[str, dict | None]:
-    graph = runtime.graph
+    graph = runtime.graph_index
     equipment: dict[str, dict | None] = {
         "weapon": None,
         "armor": None,
@@ -130,7 +130,7 @@ def _skill_payloads(
     runtime: GameRuntimeState,
     player_id: str,
 ) -> list[dict[str, str]]:
-    graph = runtime.graph
+    graph = runtime.graph_index
     skills: list[dict[str, str]] = []
     for edge in known_skills_of(graph, player_id):
         skill = graph.nodes.get(edge.to_node_id)

@@ -11,7 +11,9 @@ from src.db.graph_progress_rows import (
 from src.db.graph_rows import (
     GraphEdgeRow,
     GraphNodeRow,
+    graph_edge_rows,
     graph_from_rows,
+    graph_node_rows,
     graph_to_rows,
 )
 from src.game.domain.errors import PersistenceFailed
@@ -53,6 +55,34 @@ class SupabaseGraphRepo:
             [row.node_id for row in node_rows],
         )
 
+    async def save_graph_changes(
+        self,
+        game_id: str,
+        graph: Graph,
+        *,
+        changed_node_ids: list[str],
+        changed_edge_ids: list[str],
+        removed_edge_ids: list[str],
+    ) -> None:
+        node_rows = graph_node_rows(game_id, graph, changed_node_ids)
+        edge_rows = graph_edge_rows(game_id, graph, changed_edge_ids)
+        await self._db.upsert(
+            "graph_nodes",
+            [row.model_dump(mode="json") for row in node_rows],
+            on_conflict="game_id,node_id",
+        )
+        await self._db.upsert(
+            "graph_edges",
+            [row.model_dump(mode="json") for row in edge_rows],
+            on_conflict="game_id,edge_id",
+        )
+        await self._delete_rows_by_ids(
+            "graph_edges",
+            "edge_id",
+            game_id,
+            removed_edge_ids,
+        )
+
     async def _delete_stale_rows(
         self,
         table: str,
@@ -64,6 +94,20 @@ class SupabaseGraphRepo:
         if live_ids:
             filters[id_column] = f"not.in.({','.join(live_ids)})"
         await self._db.delete(table, filters=filters)
+
+    async def _delete_rows_by_ids(
+        self,
+        table: str,
+        id_column: str,
+        game_id: str,
+        ids: list[str],
+    ) -> None:
+        if not ids:
+            return
+        await self._db.delete(
+            table,
+            filters={"game_id": f"eq.{game_id}", id_column: f"in.({','.join(ids)})"},
+        )
 
     async def load_graph(self, game_id: str) -> Graph:
         try:

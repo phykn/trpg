@@ -3,15 +3,51 @@
 import json
 from pathlib import Path
 
+FileSignature = tuple[int, int]
+DirectorySignature = tuple[tuple[str, int, int], ...]
+
 
 class LocalFsScenarioRepo:
     """Filesystem-backed ScenarioRepo over a single `profile_dir` root."""
 
     def __init__(self, profile_dir: str) -> None:
         self.profile_dir = profile_dir
+        self._json_cache: dict[Path, tuple[FileSignature, dict]] = {}
+        self._text_cache: dict[Path, tuple[FileSignature, str]] = {}
+        self._records_cache: dict[
+            tuple[str, str],
+            tuple[DirectorySignature, dict[str, dict]],
+        ] = {}
 
     def _root(self, profile: str) -> Path:
         return Path(self.profile_dir) / profile
+
+    @staticmethod
+    def _file_signature(path: Path) -> FileSignature:
+        stat = path.stat()
+        return (stat.st_mtime_ns, stat.st_size)
+
+    @classmethod
+    def _directory_signature(cls, files: list[Path]) -> DirectorySignature:
+        return tuple((path.name, *cls._file_signature(path)) for path in files)
+
+    def _read_json_cached(self, path: Path) -> dict:
+        signature = self._file_signature(path)
+        cached = self._json_cache.get(path)
+        if cached is not None and cached[0] == signature:
+            return cached[1]
+        value = json.loads(path.read_text(encoding="utf-8"))
+        self._json_cache[path] = (signature, value)
+        return value
+
+    def _read_text_cached(self, path: Path) -> str:
+        signature = self._file_signature(path)
+        cached = self._text_cache.get(path)
+        if cached is not None and cached[0] == signature:
+            return cached[1]
+        value = path.read_text(encoding="utf-8")
+        self._text_cache[path] = (signature, value)
+        return value
 
     async def profile_exists(self, profile: str) -> bool:
         return self._root(profile).is_dir()
@@ -25,12 +61,12 @@ class LocalFsScenarioRepo:
             meta_file = sub / "profile.json"
             if not sub.is_dir() or not meta_file.exists():
                 continue
-            meta = json.loads(meta_file.read_text(encoding="utf-8"))
+            meta = self._read_json_cached(meta_file)
             races: list[dict] = []
             races_dir = sub / "races"
             if races_dir.is_dir():
                 for rf in sorted(races_dir.glob("*.json")):
-                    rd = json.loads(rf.read_text(encoding="utf-8"))
+                    rd = self._read_json_cached(rf)
                     if rd.get("playable", True) is False:
                         continue
                     races.append(
@@ -54,26 +90,30 @@ class LocalFsScenarioRepo:
         p = self._root(profile) / "world.md"
         if missing_ok and not p.exists():
             return ""
-        return p.read_text(encoding="utf-8")
+        return self._read_text_cached(p)
 
     async def read_start_json(self, profile: str) -> dict:
-        return json.loads(
-            (self._root(profile) / "start.json").read_text(encoding="utf-8")
-        )
+        return self._read_json_cached(self._root(profile) / "start.json")
 
     async def read_player_template(self, profile: str) -> dict:
-        return json.loads(
-            (self._root(profile) / "player_template.json").read_text(encoding="utf-8")
-        )
+        return self._read_json_cached(self._root(profile) / "player_template.json")
 
     async def load_seed_records(self, profile: str, kind: str) -> dict[str, dict]:
         dirpath = self._root(profile) / kind
-        result: dict[str, dict] = {}
         if not dirpath.is_dir():
-            return result
-        for f in sorted(dirpath.glob("*.json")):
-            obj = json.loads(f.read_text(encoding="utf-8"))
+            return {}
+        files = sorted(dirpath.glob("*.json"))
+        signature = self._directory_signature(files)
+        cache_key = (profile, kind)
+        cached = self._records_cache.get(cache_key)
+        if cached is not None and cached[0] == signature:
+            return dict(cached[1])
+
+        records: dict[str, dict] = {}
+        for f in files:
+            obj = self._read_json_cached(f)
             record_id = obj.get("id")
             if isinstance(record_id, str):
-                result[record_id] = obj
-        return result
+                records[record_id] = obj
+        self._records_cache[cache_key] = (signature, records)
+        return dict(records)

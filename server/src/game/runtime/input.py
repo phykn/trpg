@@ -199,13 +199,14 @@ def _resolve_narrative_subject(runtime, action) -> str | None:
         return target_id
     if action.verb != "speak":
         return None
-    location_id = location_of(runtime.graph, runtime.progress.player_id)
+    graph = runtime.graph_index
+    location_id = location_of(graph, runtime.progress.player_id)
     if location_id is None:
         return None
-    for character_id in characters_at(runtime.graph, location_id):
+    for character_id in characters_at(graph, location_id):
         if character_id == runtime.progress.player_id:
             continue
-        node = runtime.graph.nodes.get(character_id)
+        node = graph.nodes.get(character_id)
         if node is None or node.type != "character":
             continue
         if _node_hp(node) > 0:
@@ -214,10 +215,10 @@ def _resolve_narrative_subject(runtime, action) -> str | None:
 
 
 def _is_at_player_location(runtime, node_id: str) -> bool:
-    player_location = location_of(runtime.graph, runtime.progress.player_id)
+    graph = runtime.graph_index
+    player_location = location_of(graph, runtime.progress.player_id)
     return (
-        player_location is not None
-        and location_of(runtime.graph, node_id) == player_location
+        player_location is not None and location_of(graph, node_id) == player_location
     )
 
 

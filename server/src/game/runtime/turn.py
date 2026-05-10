@@ -86,6 +86,9 @@ async def run_graph_action_turn_from_runtime(
     )
 
     next_runtime = dispatch.runtime
+    changed_node_ids = set(dispatch.changed_node_ids)
+    changed_edge_ids = set(dispatch.changed_edge_ids)
+    removed_edge_ids = set(dispatch.removed_edge_ids)
     offer_quest_id: str | None = None
     if next_runtime.progress.graph_combat_state is None:
         offer = plan_missing_quest_offer(
@@ -94,10 +97,14 @@ async def run_graph_action_turn_from_runtime(
             next_runtime.progress.locale,
         )
         if offer is not None:
-            next_runtime = apply_runtime_graph_changes(
+            offer_apply = apply_runtime_graph_changes(
                 next_runtime,
                 offer.changes,
-            ).runtime
+            )
+            next_runtime = offer_apply.runtime
+            changed_node_ids.update(offer_apply.changed_node_ids)
+            changed_edge_ids.update(offer_apply.changed_edge_ids)
+            removed_edge_ids.update(offer_apply.removed_edge_ids)
             runtime_content = merge_content(
                 next_runtime.progress.runtime_content,
                 offer.content,
@@ -149,7 +156,13 @@ async def run_graph_action_turn_from_runtime(
             "log_entries": [*next_runtime.log_entries, *log_entries],
         }
     )
-    await repo.save_graph(game_id, next_runtime.graph)
+    await repo.save_graph_changes(
+        game_id,
+        next_runtime.graph,
+        changed_node_ids=sorted(changed_node_ids),
+        changed_edge_ids=sorted(changed_edge_ids),
+        removed_edge_ids=sorted(removed_edge_ids),
+    )
     await repo.append_log_entries(game_id, log_entries)
     await repo.save_progress(next_runtime.progress)
     engine_diag(

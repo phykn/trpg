@@ -46,7 +46,8 @@ async def run_graph_level_up(
         engine_diag("levelup:fail", stat=stat_up, err=type(exc).__name__)
         raise GraphLevelUpError(str(exc)) from exc
 
-    next_runtime = apply_runtime_graph_changes(runtime, result.changes).runtime
+    applied = apply_runtime_graph_changes(runtime, result.changes)
+    next_runtime = applied.runtime
     card = build_graph_level_up_card(
         next_runtime,
         stat_up,
@@ -62,7 +63,13 @@ async def run_graph_level_up(
         }
     )
 
-    await repo.save_graph(game_id, next_runtime.graph)
+    await repo.save_graph_changes(
+        game_id,
+        next_runtime.graph,
+        changed_node_ids=applied.changed_node_ids,
+        changed_edge_ids=applied.changed_edge_ids,
+        removed_edge_ids=applied.removed_edge_ids,
+    )
     await repo.append_log_entries(game_id, [card])
     await repo.save_progress(next_runtime.progress)
     player = next_runtime.graph.nodes[next_runtime.progress.player_id]

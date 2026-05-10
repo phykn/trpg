@@ -84,6 +84,58 @@ async def test_supabase_graph_repo_upserts_before_deleting_stale_rows():
     assert first_upsert < first_delete
 
 
+async def test_supabase_graph_repo_saves_partial_graph_changes_only():
+    repo, db = _repo()
+    await repo.save_graph("game-1", _graph())
+    db.calls.clear()
+
+    graph = Graph(
+        nodes={
+            "player": GraphNode(
+                id="player",
+                type="character",
+                properties={"name": "Player", "hp": 12},
+            ),
+            "town": GraphNode(id="town", type="location", properties={"name": "Town"}),
+            "forest": GraphNode(id="forest", type="location"),
+        },
+        edges={
+            "connects_to:town:forest": GraphEdge(
+                id="connects_to:town:forest",
+                type="connects_to",
+                from_node_id="town",
+                to_node_id="forest",
+            )
+        },
+    )
+
+    await repo.save_graph_changes(
+        "game-1",
+        graph,
+        changed_node_ids=["player", "forest"],
+        changed_edge_ids=["connects_to:town:forest"],
+        removed_edge_ids=["located_at:player:town"],
+    )
+
+    upserts = [call for call in db.calls if call[0] == "upsert"]
+    deletes = [call for call in db.calls if call[0] == "delete"]
+
+    assert [call[1] for call in upserts] == ["graph_nodes", "graph_edges"]
+    assert [row["node_id"] for row in upserts[0][2]] == ["player", "forest"]
+    assert [row["edge_id"] for row in upserts[1][2]] == ["connects_to:town:forest"]
+    assert deletes == [
+        (
+            "delete",
+            "graph_edges",
+            {
+                "game_id": "eq.game-1",
+                "edge_id": "in.(located_at:player:town)",
+            },
+        )
+    ]
+    assert await repo.load_graph("game-1") == graph
+
+
 async def test_supabase_graph_repo_missing_rows_raise_filenotfound():
     repo, _ = _repo()
 

@@ -61,12 +61,33 @@ def test_apply_raw_dict_batch_returns_new_runtime_and_touched_ids():
 
     assert result.applied == 3
     assert result.changed_node_ids == ["player"]
-    assert result.changed_edge_ids == [
-        "located_at:player:forest",
-        "located_at:player:town",
-    ]
+    assert result.changed_edge_ids == ["located_at:player:forest"]
+    assert result.removed_edge_ids == ["located_at:player:town"]
     assert result.runtime.graph.nodes["player"].properties["hp"] == 8
     assert "located_at:player:forest" in result.runtime.graph.edges
+
+
+def test_apply_validates_final_batch_instead_of_each_intermediate_graph():
+    runtime = _runtime()
+
+    result = apply_runtime_graph_changes(
+        runtime,
+        [
+            {
+                "type": "add_edge",
+                "edge": {
+                    "id": "located_at:player:forest",
+                    "type": "located_at",
+                    "from": "player",
+                    "to": "forest",
+                },
+            },
+            {"type": "remove_edge", "edge_id": "located_at:player:town"},
+        ],
+    )
+
+    assert "located_at:player:forest" in result.runtime.graph.edges
+    assert "located_at:player:town" not in result.runtime.graph.edges
 
 
 def test_apply_does_not_mutate_original_runtime():

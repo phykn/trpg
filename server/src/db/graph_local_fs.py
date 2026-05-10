@@ -55,6 +55,18 @@ class LocalFsGraphRepo:
             edges_payload,
         )
 
+    async def save_graph_changes(
+        self,
+        game_id: str,
+        graph: Graph,
+        *,
+        changed_node_ids: list[str],
+        changed_edge_ids: list[str],
+        removed_edge_ids: list[str],
+    ) -> None:
+        del changed_node_ids, changed_edge_ids, removed_edge_ids
+        await self.save_graph(game_id, graph)
+
     async def load_graph(self, game_id: str) -> Graph:
         graph_dir = self._graph_dir(game_id)
         nodes_path = graph_dir / "nodes.json"

@@ -10,7 +10,7 @@ from src.game.domain.graph import (
     RemoveEdgeChange,
     SetEdgePropertyChange,
     SetNodePropertyChange,
-    apply_graph_change,
+    apply_graph_changes,
     parse_graph_change,
 )
 
@@ -28,6 +28,7 @@ class GraphRuntimeApplyResult(BaseModel):
     applied: int
     changed_node_ids: list[str]
     changed_edge_ids: list[str]
+    removed_edge_ids: list[str]
 
 
 def apply_runtime_graph_changes(
@@ -38,13 +39,19 @@ def apply_runtime_graph_changes(
     graph = runtime.graph
     changed_node_ids: set[str] = set()
     changed_edge_ids: set[str] = set()
+    removed_edge_ids: set[str] = set()
 
     for change in parsed:
-        _track_changed_ids(change, changed_node_ids, changed_edge_ids)
-        try:
-            graph = apply_graph_change(graph, change)
-        except GraphInvariantError as exc:
-            raise GraphRuntimeApplyError(str(exc)) from exc
+        _track_changed_ids(
+            change,
+            changed_node_ids,
+            changed_edge_ids,
+            removed_edge_ids,
+        )
+    try:
+        graph = apply_graph_changes(graph, parsed)
+    except GraphInvariantError as exc:
+        raise GraphRuntimeApplyError(str(exc)) from exc
 
     next_runtime = runtime.model_copy(update={"graph": graph})
     return GraphRuntimeApplyResult(
@@ -52,6 +59,7 @@ def apply_runtime_graph_changes(
         applied=len(parsed),
         changed_node_ids=sorted(changed_node_ids),
         changed_edge_ids=sorted(changed_edge_ids),
+        removed_edge_ids=sorted(removed_edge_ids),
     )
 
 
@@ -68,6 +76,7 @@ def _track_changed_ids(
     change: GraphChange,
     changed_node_ids: set[str],
     changed_edge_ids: set[str],
+    removed_edge_ids: set[str],
 ) -> None:
     if isinstance(change, AddNodeChange):
         changed_node_ids.add(change.node.id)
@@ -78,7 +87,7 @@ def _track_changed_ids(
     elif isinstance(change, SetEdgePropertyChange):
         changed_edge_ids.add(change.edge_id)
     elif isinstance(change, RemoveEdgeChange):
-        changed_edge_ids.add(change.edge_id)
+        removed_edge_ids.add(change.edge_id)
 
 
 def _format_validation_error(exc: ValidationError) -> str:

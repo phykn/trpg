@@ -16,7 +16,7 @@ from src.wire.models import DifficultyBadge, QuestPayload, QuestRewards
 
 
 def active_quest_payload(runtime: GameRuntimeState) -> QuestPayload | None:
-    graph = runtime.graph
+    graph = runtime.graph_index
     active_quest_id = runtime.progress.active_quest_id
     if active_quest_id is not None:
         quest = graph.nodes.get(active_quest_id)
@@ -34,7 +34,7 @@ def active_quest_payload(runtime: GameRuntimeState) -> QuestPayload | None:
 
 
 def quest_offer_payloads(runtime: GameRuntimeState) -> list[QuestPayload]:
-    graph = runtime.graph
+    graph = runtime.graph_index
     location_id = location_of(graph, runtime.progress.player_id)
     if location_id is None:
         return []

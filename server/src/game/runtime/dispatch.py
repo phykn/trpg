@@ -37,6 +37,7 @@ class GraphActionDispatchResult(BaseModel):
     applied: int
     changed_node_ids: list[str]
     changed_edge_ids: list[str]
+    removed_edge_ids: list[str]
     outcome: str | None = None
 
 
@@ -74,6 +75,7 @@ def dispatch_graph_action(
         applied=applied.applied,
         changed_node_ids=applied.changed_node_ids,
         changed_edge_ids=applied.changed_edge_ids,
+        removed_edge_ids=applied.removed_edge_ids,
     )
 
 
@@ -94,8 +96,9 @@ def _dispatch_combat(
         runtime=next_runtime,
         kind="combat",
         applied=combat.applied,
-        changed_node_ids=[],
-        changed_edge_ids=[],
+        changed_node_ids=combat.changed_node_ids,
+        changed_edge_ids=combat.changed_edge_ids,
+        removed_edge_ids=combat.removed_edge_ids,
         outcome=combat.outcome,
     )
 

@@ -12,7 +12,7 @@ from src.wire.models import (
 
 
 def graph_to_front_state(runtime: GameRuntimeState) -> GraphFrontStatePayload:
-    graph = runtime.graph
+    graph = runtime.graph_index
     player_id = runtime.progress.player_id
     player = require_node(graph, player_id, "character")
     return GraphFrontStatePayload(

@@ -82,6 +82,44 @@ async def _repo(tmp_path) -> LocalFsGraphRepo:
     return repo
 
 
+class _DeltaTrackingRepo(LocalFsGraphRepo):
+    def __init__(self, saves_dir: str) -> None:
+        super().__init__(saves_dir)
+        self.delta_calls: list[dict] = []
+
+    async def save_graph_changes(
+        self,
+        game_id,
+        graph,
+        *,
+        changed_node_ids,
+        changed_edge_ids,
+        removed_edge_ids,
+    ):
+        self.delta_calls.append(
+            {
+                "game_id": game_id,
+                "changed_node_ids": changed_node_ids,
+                "changed_edge_ids": changed_edge_ids,
+                "removed_edge_ids": removed_edge_ids,
+            }
+        )
+        await super().save_graph_changes(
+            game_id,
+            graph,
+            changed_node_ids=changed_node_ids,
+            changed_edge_ids=changed_edge_ids,
+            removed_edge_ids=removed_edge_ids,
+        )
+
+
+async def _tracking_repo(tmp_path) -> _DeltaTrackingRepo:
+    repo = _DeltaTrackingRepo(str(tmp_path))
+    await repo.save_graph("game-1", _graph())
+    await repo.save_progress(GameProgress(game_id="game-1", player_id="player_01"))
+    return repo
+
+
 class _NarrationLLM:
     def __init__(self) -> None:
         self.calls = 0
@@ -119,6 +157,20 @@ async def test_run_graph_action_turn_saves_move_and_returns_front_state(tmp_path
     assert result.front_state.log == saved_logs
     assert result.front_state.place.id == "forest"
     assert result.runtime.progress.turn_count == 1
+
+
+async def test_run_graph_action_turn_persists_only_touched_graph_ids(tmp_path):
+    repo = await _tracking_repo(tmp_path)
+
+    await run_graph_action_turn(repo, "game-1", Action(verb="move", to="forest"))
+
+    assert len(repo.delta_calls) == 1
+    call = repo.delta_calls[0]
+    assert "player_01" in call["changed_node_ids"]
+    assert "auto_quest_001" in call["changed_node_ids"]
+    assert "located_at:player_01:forest" in call["changed_edge_ids"]
+    assert "gives_quest:auto_giver_001:auto_quest_001" in call["changed_edge_ids"]
+    assert call["removed_edge_ids"] == ["located_at:player_01:town"]
 
 
 async def test_run_graph_action_turn_skips_llm_narration_for_plain_move(tmp_path):

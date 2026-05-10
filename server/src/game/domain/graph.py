@@ -155,33 +155,41 @@ def parse_graph_change(data: Any) -> GraphChange:
 
 
 def apply_graph_change(graph: Graph, change: GraphChange) -> Graph:
+    return apply_graph_changes(graph, [change])
+
+
+def apply_graph_changes(graph: Graph, changes: list[GraphChange]) -> Graph:
     next_graph = graph.model_copy(deep=True)
 
+    for change in changes:
+        _apply_graph_change_in_place(next_graph, change)
+    validate_graph(next_graph)
+    return next_graph
+
+
+def _apply_graph_change_in_place(graph: Graph, change: GraphChange) -> None:
     if isinstance(change, AddNodeChange):
-        if change.node.id in next_graph.nodes:
+        if change.node.id in graph.nodes:
             raise GraphInvariantError(f"duplicate node: {change.node.id}")
-        next_graph.nodes[change.node.id] = change.node
+        graph.nodes[change.node.id] = change.node
     elif isinstance(change, SetNodePropertyChange):
-        node = next_graph.nodes.get(change.node_id)
+        node = graph.nodes.get(change.node_id)
         if node is None:
             raise GraphInvariantError(f"missing node: {change.node_id}")
         _set_property(node.properties, change.path, change.value)
     elif isinstance(change, AddEdgeChange):
-        if change.edge.id in next_graph.edges:
+        if change.edge.id in graph.edges:
             raise GraphInvariantError(f"duplicate edge: {change.edge.id}")
-        next_graph.edges[change.edge.id] = change.edge
+        graph.edges[change.edge.id] = change.edge
     elif isinstance(change, SetEdgePropertyChange):
-        edge = next_graph.edges.get(change.edge_id)
+        edge = graph.edges.get(change.edge_id)
         if edge is None:
             raise GraphInvariantError(f"missing edge: {change.edge_id}")
         _set_property(edge.properties, change.path, change.value)
     elif isinstance(change, RemoveEdgeChange):
-        if change.edge_id not in next_graph.edges:
+        if change.edge_id not in graph.edges:
             raise GraphInvariantError(f"missing edge: {change.edge_id}")
-        del next_graph.edges[change.edge_id]
-
-    validate_graph(next_graph)
-    return next_graph
+        del graph.edges[change.edge_id]
 
 
 def validate_graph(graph: Graph) -> None:

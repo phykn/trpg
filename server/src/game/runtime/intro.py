@@ -61,7 +61,7 @@ async def _append_intro_entry(
 
 
 def _fallback_intro_text(runtime: GameRuntimeState) -> str:
-    graph = runtime.graph
+    graph = runtime.graph_index
     place_id = location_of(graph, runtime.progress.player_id)
     if place_id is None:
         return ""
@@ -123,7 +123,7 @@ async def _generate_intro_text(llm: LLMClient, runtime: GameRuntimeState) -> str
 
 
 def _intro_user_prompt(runtime: GameRuntimeState) -> str:
-    graph = runtime.graph
+    graph = runtime.graph_index
     player_id = runtime.progress.player_id
     place_id = location_of(graph, player_id)
     if place_id is None:
