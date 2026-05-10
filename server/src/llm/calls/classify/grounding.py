@@ -80,7 +80,7 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
         if entry_type == "player":
             character_ids.add(entry_id)
             player_ids.add(entry_id)
-        elif entry_type == "npc":
+        elif entry_type in {"npc", "enemy"}:
             character_ids.add(entry_id)
             non_player_character_ids.add(entry_id)
         elif entry_type == "connection":

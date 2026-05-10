@@ -9,7 +9,7 @@ import type { Game } from '@/logic/game/useGame';
 import { buildPanelSlots } from '@/logic/info-panel';
 import type { PanelAction, PanelSlot } from '@/logic/info-panel';
 
-import { Composer, GameOverPanel, LevelUpPrompt, RollPrompt } from '@/logic/composer';
+import { Composer, GameOverPanel, LevelUpPrompt } from '@/logic/composer';
 import { ContextCard } from '@/logic/info-panel';
 import { HeroStrip } from '@/logic/hero';
 import { ConfirmDialog } from '@/components/ui';
@@ -18,7 +18,7 @@ import { ko } from '@/locale/ko';
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, questOffers, place, combat, storyGraph, log, pending, pendingConfirmation, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onConfirmPending, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp, runtimeMode } = game;
+  const { hero, subject, quest, questOffers, place, combat, storyGraph, log, pendingConfirmation, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onConfirmPending, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, openLevelUp, cancelLevelUp, commitLevelUp } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -33,7 +33,7 @@ export function Playing({ game }: Props) {
     if (action.kind === 'text') {
       onSend(action.text);
     } else if (action.kind === 'graph_action') {
-      onGraphAction(action.graphAction, action.textFallback);
+      onGraphAction(action.graphAction);
     } else {
       onQuestAction(action.questAction.kind, action.questAction.quest_id);
     }
@@ -68,8 +68,6 @@ export function Playing({ game }: Props) {
     ...buildPanelSlots({ hero, subject, quest, questOffers }, { onLevelUpOpen: openLevelUp, questDot: hasUnseenQuest, subjectDot: hasUnseenSubject }),
     { id: 'map', chip: { short: ko.panel.neighborhood, dot: hasUnseenLocation }, panel: null },
   ];
-  const rolling = pending !== null && streaming;
-
   return (
     <View className="flex-1 bg-canvas-default py-2.5 gap-2.5">
       <ContextCard
@@ -153,9 +151,8 @@ export function Playing({ game }: Props) {
 
       <Log
         log={log}
-        rolling={rolling}
         typing={awaitingNarration}
-        suggestions={!gameOver && !streaming && !pending && !pendingConfirmation ? suggestions : []}
+        suggestions={!gameOver && !streaming && !pendingConfirmation ? suggestions : []}
         onPickSuggestion={onSend}
       />
 
@@ -169,7 +166,7 @@ export function Playing({ game }: Props) {
               runAction(action);
             }
           }}
-          actionDisabled={streaming || pending !== null || pendingConfirmation !== null}
+          actionDisabled={streaming || pendingConfirmation !== null}
         />
       ) : null}
 
@@ -187,13 +184,9 @@ export function Playing({ game }: Props) {
       >
         {gameOver ? (
           <GameOverPanel onRestart={goToNewGame} />
-        ) : pending ? (
-          <RollPrompt pending={pending} onRoll={onRoll} onStop={onStop} rolling={rolling} />
         ) : levelUpOpen ? (
           <LevelUpPrompt
             hero={hero}
-            mode={runtimeMode}
-            candidates={levelUpCandidates}
             onCommit={commitLevelUp}
             onCancel={cancelLevelUp}
           />

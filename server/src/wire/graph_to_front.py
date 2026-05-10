@@ -24,7 +24,6 @@ from src.llm.context.graph_combat import hp_state, mp_state
 from src.wire.labels import difficulty_badge
 from src.wire.models import (
     DifficultyBadge,
-    PendingConfirmationPayload,
     QuestPayload,
     QuestRewards,
 )
@@ -117,13 +116,23 @@ class GraphCombatPayload(_CamelModel):
     participants: list[GraphCombatParticipantPayload]
 
 
+class GraphPendingConfirmationPayload(_CamelModel):
+    id: str
+    kind: str
+    title: str
+    body: str
+    confirm_label: str
+    cancel_label: str
+    target_label: str
+
+
 class GraphFrontStatePayload(_CamelModel):
     hero: GraphHeroPayload
     quest: QuestPayload | None
     quest_offers: list[QuestPayload]
     place: GraphPlacePayload | None
     combat: GraphCombatPayload | None
-    pending_confirmation: PendingConfirmationPayload | None
+    pending_confirmation: GraphPendingConfirmationPayload | None
     log: list[LogEntry]
 
 
@@ -369,10 +378,10 @@ def _combat_payload(runtime: GameRuntimeState) -> GraphCombatPayload | None:
 
 def _pending_confirmation_payload(
     pending: dict[str, object] | None,
-) -> PendingConfirmationPayload | None:
+) -> GraphPendingConfirmationPayload | None:
     if pending is None:
         return None
-    return PendingConfirmationPayload.model_validate(
+    return GraphPendingConfirmationPayload.model_validate(
         {
             "id": pending.get("id"),
             "kind": pending.get("kind"),

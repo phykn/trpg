@@ -31,7 +31,6 @@ export function adaptGraphState(state: GraphFrontState): FrontState {
     place: adaptPlace(state.place),
     combat: adaptCombat(state.combat),
     log: state.log,
-    pendingCheck: null,
     pendingConfirmation: state.pendingConfirmation,
     storyGraph: buildStoryGraph(state, visibleQuests(state)),
   };

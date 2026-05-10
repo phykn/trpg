@@ -78,7 +78,6 @@ describe('graph API helpers', () => {
         }),
       }),
     );
-    expect(result.runtime).toBe('graph');
     expect(result.status).toBe('confirmation_required');
   });
 
@@ -108,7 +107,6 @@ describe('graph API helpers', () => {
 
     const result = await getGraphSessionById('game-1');
 
-    expect(result?.runtime).toBe('graph');
     expect(result?.suggestions).toEqual([
       '에드릭에게 말을 건다',
       '망루로 이동한다',
@@ -170,6 +168,6 @@ describe('graph API helpers', () => {
         }),
       }),
     );
-    expect(result.runtime).toBe('graph');
+    expect(result.pendingConfirmation).toBeNull();
   });
 });

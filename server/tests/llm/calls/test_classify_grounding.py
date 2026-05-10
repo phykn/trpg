@@ -87,6 +87,16 @@ def test_attack_cannot_target_player_self():
         validate_grounded_output(output, _surroundings())
 
 
+def test_attack_accepts_visible_enemy_entity():
+    surroundings = _surroundings()
+    surroundings["entities"].append(
+        {"id": "training_dummy", "name": "훈련용 허수아비", "type": "enemy"}
+    )
+    output = JudgeOutput(actions=[Verb(name="attack", target_ids=["training_dummy"])])
+
+    assert validate_grounded_output(output, surroundings) is output
+
+
 def test_speak_target_must_be_visible_npc():
     output = JudgeOutput(
         actions=[

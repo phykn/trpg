@@ -1,0 +1,198 @@
+"""Legacy relational session routes kept for server tests and migration."""
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import ValidationError
+
+from src.db.repo import SaveRepo, ScenarioRepo
+from src.game.domain.errors import (
+    LLMUnavailable,
+    ProfileMalformed,
+    ProfileNotFound,
+    RaceNotFound,
+)
+from src.game.domain.state import GameState
+from src.game.flow._diag import diag
+from src.game.flow.confirmation import run_confirm
+from src.game.flow.init import init_game
+from src.game.flow.intro import run_intro
+from src.game.flow.level_up import run_level_up
+from src.game.flow.roll import run_roll
+from src.game.flow.skill_recommend import recommend_skill_candidates
+from src.game.flow.turn import run_turn
+from src.llm.client import LLMClient, set_think_override
+from src.wire.to_front import to_front_state
+
+from ..deps import get_llm, get_save_repo, get_scenario_repo, get_state
+from ..schema import (
+    ConfirmRequest,
+    InitRequest,
+    InitResponse,
+    LevelUpPreviewResponse,
+    LevelUpRequest,
+    RollRequest,
+    TurnRequest,
+)
+from ..sse import streaming_response
+
+router = APIRouter()
+
+
+@router.post("/session/init", response_model=InitResponse)
+async def session_init(
+    body: InitRequest,
+    save_repo: SaveRepo = Depends(get_save_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+) -> InitResponse:
+    try:
+        state = await init_game(
+            body.profile, body.player, save_repo, scenario_repo, locale=body.locale
+        )
+    except ProfileNotFound as e:
+        raise HTTPException(status_code=422, detail=f"profile not found: {e}")
+    except RaceNotFound as e:
+        raise HTTPException(status_code=422, detail=f"race not found: {e}")
+    except ProfileMalformed as e:
+        raise HTTPException(status_code=422, detail=f"profile malformed: {e}")
+    return InitResponse(game_id=state.game_id, state=to_front_state(state))
+
+
+@router.get("/session/{game_id}/state")
+async def get_state_route(state: GameState = Depends(get_state)) -> dict:
+    return {"game_id": state.game_id, "state": to_front_state(state)}
+
+
+@router.post("/session/{game_id}/turn")
+async def session_turn(
+    body: TurnRequest,
+    state: GameState = Depends(get_state),
+    llm: LLMClient = Depends(get_llm),
+    save_repo: SaveRepo = Depends(get_save_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+):
+    set_think_override(body.think)
+    quest_action = (
+        (body.quest_action.kind, body.quest_action.quest_id)
+        if body.quest_action is not None
+        else None
+    )
+    return streaming_response(
+        run_turn(
+            llm,
+            state,
+            scenario_repo,
+            save_repo,
+            body.player_input,
+            to_front_fn=to_front_state,
+            quest_action=quest_action,
+        )
+    )
+
+
+@router.post("/session/{game_id}/roll")
+async def session_roll(
+    body: RollRequest,
+    state: GameState = Depends(get_state),
+    llm: LLMClient = Depends(get_llm),
+    save_repo: SaveRepo = Depends(get_save_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+):
+    set_think_override(body.think)
+    return streaming_response(
+        run_roll(
+            llm,
+            state,
+            scenario_repo,
+            save_repo,
+            to_front_fn=to_front_state,
+        )
+    )
+
+
+@router.post("/session/{game_id}/confirm")
+async def session_confirm(
+    body: ConfirmRequest,
+    state: GameState = Depends(get_state),
+    llm: LLMClient = Depends(get_llm),
+    save_repo: SaveRepo = Depends(get_save_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+):
+    set_think_override(body.think)
+    return streaming_response(
+        run_confirm(
+            llm,
+            state,
+            scenario_repo,
+            save_repo,
+            body.confirmation_id,
+            body.decision,
+            to_front_fn=to_front_state,
+        )
+    )
+
+
+@router.post("/session/{game_id}/intro")
+async def session_intro(
+    state: GameState = Depends(get_state),
+    llm: LLMClient = Depends(get_llm),
+    save_repo: SaveRepo = Depends(get_save_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+):
+    return streaming_response(
+        run_intro(
+            llm,
+            state,
+            scenario_repo,
+            save_repo,
+            to_front_fn=to_front_state,
+        )
+    )
+
+
+@router.get(
+    "/session/{game_id}/level_up_preview", response_model=LevelUpPreviewResponse
+)
+async def session_level_up_preview(
+    state: GameState = Depends(get_state),
+    llm: LLMClient = Depends(get_llm),
+) -> LevelUpPreviewResponse:
+    try:
+        candidates = await recommend_skill_candidates(llm, state)
+    except (ValidationError, LLMUnavailable, OSError, TimeoutError) as e:
+        diag(
+            state.game_id, state.turn_count, "recommend:failed",
+            err=type(e).__name__,
+            memories=len(state.characters[state.player_id].memories),
+            turn_log=len(state.turn_log),
+            msg=str(e)[:200],
+        )
+        candidates = []
+    if 0 < len(candidates) < 3:
+        diag(
+            state.game_id, state.turn_count, "recommend:short",
+            n=len(candidates),
+        )
+    return LevelUpPreviewResponse(
+        skill_candidates=[s.model_dump() for s in candidates],
+    )
+
+
+@router.post("/session/{game_id}/level_up")
+async def session_level_up(
+    body: LevelUpRequest,
+    state: GameState = Depends(get_state),
+    llm: LLMClient = Depends(get_llm),
+    save_repo: SaveRepo = Depends(get_save_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+):
+    set_think_override(body.think)
+    return streaming_response(
+        run_level_up(
+            llm,
+            state,
+            scenario_repo,
+            save_repo,
+            stat_up=body.stat_up,
+            skill_id=body.skill_id,
+            to_front_fn=to_front_state,
+        )
+    )

@@ -325,7 +325,9 @@ def test_graph_front_state_exposes_pending_confirmation_without_payload():
     payload = graph_to_front_state(runtime).model_dump(mode="json", by_alias=True)
 
     assert payload["pendingConfirmation"]["kind"] == "attack_start"
-    assert payload["pendingConfirmation"]["target_label"] == "goblin_01"
+    assert payload["pendingConfirmation"]["confirmLabel"] == "공격"
+    assert payload["pendingConfirmation"]["cancelLabel"] == "취소"
+    assert payload["pendingConfirmation"]["targetLabel"] == "goblin_01"
     assert "payload" not in payload["pendingConfirmation"]
 
 

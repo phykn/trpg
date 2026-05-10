@@ -124,6 +124,25 @@ def test_attack_starts_combat_applies_exchange_and_stores_progress():
     assert runtime.graph.nodes["goblin_01"].properties["hp"] == 24
 
 
+def test_attack_with_weapon_id_starts_as_basic_attack():
+    runtime = _runtime()
+    runtime.graph.nodes["practice_dagger"] = GraphNode(
+        id="practice_dagger",
+        type="item",
+        properties={"name": "훈련 단검"},
+    )
+
+    result = dispatch_graph_combat_action(
+        runtime,
+        Action(verb="attack", what="goblin_01", with_="practice_dagger"),
+    )
+
+    assert result.started is True
+    assert result.outcome == "ongoing"
+    assert result.runtime.progress.graph_combat_state is not None
+    assert result.runtime.graph.nodes["goblin_01"].properties["hp"] < 24
+
+
 def test_attack_can_finish_existing_combat_and_clear_progress():
     runtime = _runtime(
         enemy=_character("goblin_01", hp=8, max_hp=24),

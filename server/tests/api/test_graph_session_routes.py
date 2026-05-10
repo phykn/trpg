@@ -188,7 +188,7 @@ async def test_graph_init_does_not_block_on_slow_intro_narration(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        "src.api.routes.session._GRAPH_INIT_NARRATION_TIMEOUT_SECONDS",
+        "src.api.routes.session_graph._GRAPH_INIT_NARRATION_TIMEOUT_SECONDS",
         0.01,
         raising=False,
     )

@@ -135,7 +135,6 @@ describe('adaptGraphState', () => {
       alive: true,
     });
     expect(state.pendingConfirmation?.confirmLabel).toBe('공격');
-    expect(state.pendingCheck).toBeNull();
     expect(state.subject?.name).toBe('늑대');
     expect(state.subject?.hp).toBe(5);
     expect(state.storyGraph.nodes.map((node) => node.id)).toEqual([

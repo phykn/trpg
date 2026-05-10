@@ -9,13 +9,8 @@ import type {
   GraphLevelUpRequest,
   GraphSessionPayload,
   InitRequest,
-  LevelUpPreviewResponse,
-  LevelUpRequest,
   ProfileCard,
-  RollRequest,
   SessionPayload,
-  StreamEvent,
-  TurnRequest,
 } from '@/services/wire';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -50,14 +45,6 @@ export async function listProfiles(): Promise<ProfileCard[]> {
   return (await res.json()) as ProfileCard[];
 }
 
-export async function getSessionById(gameId: string): Promise<SessionPayload | null> {
-  const res = await fetch(`${BASE_URL}/session/${gameId}/state`, { headers: baseHeaders });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`getSessionById failed: HTTP ${res.status}`);
-  const payload = (await res.json()) as SessionPayload;
-  return { ...payload, runtime: 'legacy' };
-}
-
 export async function getGraphSessionById(gameId: string): Promise<SessionPayload | null> {
   const res = await fetch(`${BASE_URL}/session/${gameId}/graph/state`, { headers: baseHeaders });
   if (res.status === 404) return null;
@@ -67,20 +54,8 @@ export async function getGraphSessionById(gameId: string): Promise<SessionPayloa
   return {
     game_id: payload.game_id,
     state,
-    runtime: 'graph',
     suggestions: deriveGraphSuggestions(payload.state),
   };
-}
-
-export async function initSession(body: InitRequest): Promise<SessionPayload> {
-  const res = await fetch(`${BASE_URL}/session/init`, {
-    method: 'POST',
-    headers: jsonHeaders,
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`initSession failed: HTTP ${res.status}`);
-  const payload = (await res.json()) as SessionPayload;
-  return { ...payload, runtime: 'legacy' };
 }
 
 export async function initGraphSession(body: InitRequest): Promise<SessionPayload> {
@@ -95,7 +70,6 @@ export async function initGraphSession(body: InitRequest): Promise<SessionPayloa
   return {
     game_id: payload.game_id,
     state,
-    runtime: 'graph',
     suggestions: deriveGraphSuggestions(payload.state),
   };
 }
@@ -173,125 +147,8 @@ function adaptGraphActionResponse(
     game_id: payload.game_id,
     state,
     pendingConfirmation: state.pendingConfirmation ?? null,
-    runtime: 'graph',
     status: payload.status,
     message: payload.message,
     suggestions: deriveGraphSuggestions(payload.state),
   };
-}
-
-async function streamSse(
-  url: string,
-  init: { method: 'POST'; body?: string },
-  onEvent: (ev: StreamEvent) => void,
-  signal?: AbortSignal,
-): Promise<void> {
-  const res = await fetch(url, {
-    method: init.method,
-    headers: {
-      ...jsonHeaders,
-      Accept: 'text/event-stream',
-    },
-    body: init.body,
-    signal,
-  });
-  if (!res.ok) {
-    const detail = await res.text();
-    const suffix = detail ? ` — ${detail.slice(0, 300)}` : '';
-    throw new Error(`stream failed: HTTP ${res.status}${suffix}`);
-  }
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error('stream failed: response body is not readable');
-
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  const handleLine = (raw: string) => {
-    const line = raw.trim();
-    if (!line.startsWith('data:')) return;
-    const payload = line.slice(5).trim();
-    if (!payload) return;
-    try {
-      onEvent(JSON.parse(payload) as StreamEvent);
-    } catch (e) {
-      console.warn('streamSse: malformed chunk skipped', e);
-    }
-  };
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() ?? '';
-    for (const raw of lines) handleLine(raw);
-  }
-  if (buffer) handleLine(buffer);
-}
-
-export function streamTurn(
-  gameId: string,
-  body: TurnRequest,
-  onEvent: (ev: StreamEvent) => void,
-  signal?: AbortSignal,
-): Promise<void> {
-  return streamSse(
-    `${BASE_URL}/session/${gameId}/turn`,
-    { method: 'POST', body: JSON.stringify(body) },
-    onEvent,
-    signal,
-  );
-}
-
-export function streamRoll(
-  gameId: string,
-  body: RollRequest,
-  onEvent: (ev: StreamEvent) => void,
-  signal?: AbortSignal,
-): Promise<void> {
-  return streamSse(
-    `${BASE_URL}/session/${gameId}/roll`,
-    { method: 'POST', body: JSON.stringify(body) },
-    onEvent,
-    signal,
-  );
-}
-
-export function streamIntro(
-  gameId: string,
-  onEvent: (ev: StreamEvent) => void,
-  signal?: AbortSignal,
-): Promise<void> {
-  return streamSse(
-    `${BASE_URL}/session/${gameId}/intro`,
-    { method: 'POST' },
-    onEvent,
-    signal,
-  );
-}
-
-export async function getLevelUpPreview(
-  gameId: string,
-  signal?: AbortSignal,
-): Promise<LevelUpPreviewResponse> {
-  const res = await fetch(`${BASE_URL}/session/${gameId}/level_up_preview`, {
-    headers: baseHeaders,
-    signal,
-  });
-  if (!res.ok) throw new Error(`getLevelUpPreview failed: HTTP ${res.status}`);
-  return (await res.json()) as LevelUpPreviewResponse;
-}
-
-export function streamLevelUp(
-  gameId: string,
-  body: LevelUpRequest,
-  onEvent: (ev: StreamEvent) => void,
-  signal?: AbortSignal,
-): Promise<void> {
-  return streamSse(
-    `${BASE_URL}/session/${gameId}/level_up`,
-    { method: 'POST', body: JSON.stringify(body) },
-    onEvent,
-    signal,
-  );
 }

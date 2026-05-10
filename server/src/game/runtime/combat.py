@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict
 
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatAction, GraphCombatState
+from src.game.domain.graph import Graph
 from src.game.engines.graph_combat import (
     GraphCombatError,
     GraphCombatResult,
@@ -39,7 +40,11 @@ def dispatch_graph_combat_action(
 ) -> GraphCombatDispatchResult:
     try:
         state, started = _resolve_state(runtime, action)
-        combat_action = _combat_action_from_action(action, in_combat=not started)
+        combat_action = _combat_action_from_action(
+            runtime.graph,
+            action,
+            in_combat=not started,
+        )
         combat_result = plan_combat_exchange(
             runtime.graph,
             state,
@@ -125,9 +130,14 @@ def _resolve_state(
     return result.state, True
 
 
-def _combat_action_from_action(action: Action, *, in_combat: bool) -> GraphCombatAction:
+def _combat_action_from_action(
+    graph: Graph,
+    action: Action,
+    *,
+    in_combat: bool,
+) -> GraphCombatAction:
     if action.verb == "attack":
-        skill_id = _single(action.with_)
+        skill_id = _skill_id_or_none(graph, _single(action.with_))
         return GraphCombatAction(
             kind="cast" if skill_id else "attack",
             target_id=_single(action.what),
@@ -144,6 +154,15 @@ def _combat_action_from_action(action: Action, *, in_combat: bool) -> GraphComba
     if in_combat and action.verb == "pass":
         return GraphCombatAction(kind="defend")
     raise GraphCombatDispatchError(f"unsupported graph combat action: {action.verb}")
+
+
+def _skill_id_or_none(graph: Graph, node_id: str | None) -> str | None:
+    if node_id is None:
+        return None
+    node = graph.nodes.get(node_id)
+    if node is None or node.type != "skill":
+        return None
+    return node_id
 
 
 def _target_id_for_start(action: Action) -> str:

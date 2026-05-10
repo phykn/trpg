@@ -7,40 +7,6 @@ import { ko } from '@/locale/ko';
 import { LogItem } from './LogItem';
 import type { LogEntry } from '@/logic/log/types';
 
-function Pulse({ color }: { color: string }) {
-  const anim = React.useRef(new Animated.Value(1)).current;
-  React.useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(anim, { toValue: 0.4, duration: 500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(anim, { toValue: 1,   duration: 500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [anim]);
-  return (
-    <Animated.View
-      style={{
-        width: 6, height: 6, borderRadius: 3, backgroundColor: color,
-        opacity: anim,
-        transform: [{ scale: anim.interpolate({ inputRange: [0.4, 1], outputRange: [0.85, 1] }) }],
-      }}
-    />
-  );
-}
-
-function RollingIndicator() {
-  return (
-    <View className="flex-row items-center gap-2.5" style={{ paddingTop: spacing[5] }}>
-      <Pulse color={colors.accent.fg} />
-      <Text className="font-sans text-body text-accent-fg">
-        {ko.roll.rollingLog}
-      </Text>
-    </View>
-  );
-}
-
 function TypingDot({ delay }: { delay: number }) {
   const anim = React.useRef(new Animated.Value(0)).current;
   React.useEffect(() => {
@@ -149,13 +115,11 @@ function SuggestionChips({
 
 export function Log({
   log,
-  rolling,
   typing,
   suggestions,
   onPickSuggestion,
 }: {
   log: LogEntry[];
-  rolling: boolean;
   typing: boolean;
   suggestions: string[];
   onPickSuggestion: (text: string) => void;
@@ -191,9 +155,7 @@ export function Log({
       keyExtractor={(e) => String(e.id)}
       renderItem={({ item }) => <LogItem entry={item} />}
       ListFooterComponent={
-        rolling
-          ? <RollingIndicator />
-          : typing
+        typing
           ? <TypingDots />
           : suggestions.length > 0
           ? <SuggestionChips items={suggestions} onPick={onPickSuggestion} />

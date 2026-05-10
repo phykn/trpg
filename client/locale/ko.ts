@@ -93,8 +93,6 @@ export const ko = {
     stopAction: '행동 중단',
   },
   empty: {
-    loadingSkill: '불러오는 중…',
-    noSkillCandidates: '기술 후보 없음',
     panel: '비어 있음',
     suggestionHint: '아래 입력창에 자유롭게 적어보세요',
   },
@@ -105,7 +103,6 @@ export const ko = {
     confirmAction: '레벨업 확정',
     cancelAction: '레벨업 취소',
     raiseSuffix: '올리기',
-    skillPrefix: '기술',
   },
   gameOver: {
     ending: '이야기는 여기서 끝납니다.',

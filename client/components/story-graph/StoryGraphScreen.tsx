@@ -3,7 +3,7 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { ko } from '@/locale/ko';
 import type { PanelAction } from '@/logic/info-panel';
-import { getSessionById, loadStoredGameId, storeSeenNodes } from '@/services';
+import { getGraphSessionById, loadStoredGameId, storeSeenNodes } from '@/services';
 
 import { MapPanel } from './MapPanel';
 import { EMPTY_STORY_GRAPH } from '@/logic/story-graph/presenters';
@@ -42,7 +42,7 @@ export function StoryGraphScreen({
         return;
       }
       try {
-        const session = await getSessionById(stored);
+        const session = await getGraphSessionById(stored);
         if (!alive) return;
         if (!session) {
           setGraph(EMPTY_STORY_GRAPH);
