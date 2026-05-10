@@ -67,7 +67,9 @@ async def run_graph_level_up(
     await repo.save_progress(next_runtime.progress)
     player = next_runtime.graph.nodes[next_runtime.progress.player_id]
     level = player.properties.get("level")
-    engine_diag("levelup:ok", stat=stat_up, next_level=level if isinstance(level, int) else None)
+    engine_diag(
+        "levelup:ok", stat=stat_up, next_level=level if isinstance(level, int) else None
+    )
     return GraphLevelUpResult(
         runtime=next_runtime,
         front_state=graph_to_front_state(next_runtime),

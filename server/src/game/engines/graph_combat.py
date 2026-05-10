@@ -233,7 +233,10 @@ def _plan_cast(
         raise GraphCombatError(f"missing skill: {action.skill_id}")
     if skill.type != "skill":
         raise GraphCombatError(f"node is not a skill: {action.skill_id}")
-    if not any(edge.to_node_id == action.skill_id for edge in edges_from(graph, player.id, "knows_skill")):
+    if not any(
+        edge.to_node_id == action.skill_id
+        for edge in edges_from(graph, player.id, "knows_skill")
+    ):
         raise GraphCombatError(f"{player.id} does not know skill: {action.skill_id}")
 
     kind = skill.properties.get("kind", skill.properties.get("type"))

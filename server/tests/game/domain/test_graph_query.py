@@ -63,12 +63,8 @@ def test_graph_query_filters_edges_and_resolves_neighbor_nodes():
     assert [edge.id for edge in edges_to(graph, "town", "located_at")] == [
         "located_at:player:town"
     ]
-    assert [node.id for node in target_nodes(graph, "player", "carries")] == [
-        "potion"
-    ]
-    assert [node.id for node in source_nodes(graph, "town", "located_at")] == [
-        "player"
-    ]
+    assert [node.id for node in target_nodes(graph, "player", "carries")] == ["potion"]
+    assert [node.id for node in source_nodes(graph, "town", "located_at")] == ["player"]
 
     assert require_node(graph, "elder").id == "elder"
     with pytest.raises(GraphInvariantError, match="missing node"):

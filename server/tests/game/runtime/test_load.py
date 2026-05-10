@@ -133,7 +133,9 @@ async def test_load_runtime_state_preserves_graph_combat_state(tmp_path):
     assert runtime.progress.graph_combat_state == graph_combat_state
 
 
-async def test_load_runtime_state_loads_scenario_content_when_profile_is_saved(tmp_path):
+async def test_load_runtime_state_loads_scenario_content_when_profile_is_saved(
+    tmp_path,
+):
     repo = LocalFsGraphRepo(str(tmp_path))
     graph = Graph(
         nodes={

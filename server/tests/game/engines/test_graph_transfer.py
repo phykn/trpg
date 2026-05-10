@@ -103,9 +103,7 @@ def test_equip_carried_item_adds_slot_edge():
     changed = _apply_all(_graph(), result.changes)
 
     assert "carries:player_01:shield" not in changed.edges
-    assert changed.edges["equips:player_01:shield"].properties == {
-        "slot": "accessory"
-    }
+    assert changed.edges["equips:player_01:shield"].properties == {"slot": "accessory"}
 
 
 def test_equip_replaces_existing_item_in_slot():

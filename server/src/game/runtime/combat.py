@@ -89,9 +89,7 @@ def dispatch_graph_combat_action(
     }
     if graph_runtime.progress.active_quest_id in completed_quest_ids:
         progress_update["active_quest_id"] = None
-    next_progress = graph_runtime.progress.model_copy(
-        update=progress_update
-    )
+    next_progress = graph_runtime.progress.model_copy(update=progress_update)
     next_runtime = graph_runtime.model_copy(update={"progress": next_progress})
     engine_diag(
         "combat:end",

@@ -265,7 +265,11 @@ async def test_graph_intro_waits_for_llm_answer_instead_of_route_timeout(
 
     assert response.status_code == 200, response.text
     assert response.json()["state"]["log"] == [
-        {"id": 1, "kind": "gm", "text": "느린 LLM 소개도 화면의 대기 표시 뒤에 도착합니다."}
+        {
+            "id": 1,
+            "kind": "gm",
+            "text": "느린 LLM 소개도 화면의 대기 표시 뒤에 도착합니다.",
+        }
     ]
 
 

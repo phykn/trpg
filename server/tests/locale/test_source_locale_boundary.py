@@ -19,7 +19,9 @@ def test_server_source_keeps_korean_text_in_locale_package() -> None:
     offenders = [
         str(path.relative_to(SERVER_SRC))
         for path in _source_files(SERVER_SRC)
-        if any("\uac00" <= char <= "\ud7a3" for char in path.read_text(encoding="utf-8"))
+        if any(
+            "\uac00" <= char <= "\ud7a3" for char in path.read_text(encoding="utf-8")
+        )
     ]
 
     assert offenders == []

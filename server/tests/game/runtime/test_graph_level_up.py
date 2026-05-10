@@ -31,7 +31,9 @@ def _player(*, xp_pool: int | None = None) -> GraphNode:
 
 async def _repo(tmp_path, *, xp_pool: int | None = None) -> LocalFsGraphRepo:
     repo = LocalFsGraphRepo(str(tmp_path))
-    await repo.save_graph("game-1", Graph(nodes={"player_01": _player(xp_pool=xp_pool)}))
+    await repo.save_graph(
+        "game-1", Graph(nodes={"player_01": _player(xp_pool=xp_pool)})
+    )
     await repo.save_progress(GameProgress(game_id="game-1", player_id="player_01"))
     return repo
 
@@ -53,7 +55,10 @@ async def test_run_graph_level_up_commits_choice_and_returns_front_state(tmp_pat
     assert saved_progress.next_log_id == 2
     assert len(saved_logs) == 1
     assert saved_logs[0].kind == "act"
-    assert saved_logs[0].text == "테스터의 레벨이 올랐습니다 (레벨 2, 몸 ↑, HP 35 / MP 25)."
+    assert (
+        saved_logs[0].text
+        == "테스터의 레벨이 올랐습니다 (레벨 2, 몸 ↑, HP 35 / MP 25)."
+    )
     assert result.front_state.hero.level == 2
     assert result.front_state.hero.exp == 0
     assert result.front_state.log == saved_logs

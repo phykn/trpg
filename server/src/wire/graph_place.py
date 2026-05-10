@@ -18,7 +18,11 @@ from src.wire.graph_payload_helpers import (
     resource,
     static_value,
 )
-from src.wire.models import GraphPlaceLinkPayload, GraphPlacePayload, GraphPlaceTargetPayload
+from src.wire.models import (
+    GraphPlaceLinkPayload,
+    GraphPlacePayload,
+    GraphPlaceTargetPayload,
+)
 
 
 def place_payload(

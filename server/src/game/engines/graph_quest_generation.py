@@ -12,7 +12,12 @@ from src.game.domain.graph import (
     GraphEdge,
     GraphNode,
 )
-from src.game.domain.graph_query import characters_at, edges_from, location_of, nodes_of_type
+from src.game.domain.graph_query import (
+    characters_at,
+    edges_from,
+    location_of,
+    nodes_of_type,
+)
 from src.locale.render import render
 
 
@@ -42,7 +47,9 @@ def plan_missing_quest_offer(
         AddNodeChange(type="add_node", node=_giver(giver_id, locale)),
         AddNodeChange(type="add_node", node=_enemy(enemy_id, locale)),
         AddNodeChange(type="add_node", node=_reward(reward_id, locale)),
-        AddNodeChange(type="add_node", node=_quest(quest_id, enemy_id, reward_id, locale)),
+        AddNodeChange(
+            type="add_node", node=_quest(quest_id, enemy_id, reward_id, locale)
+        ),
         AddEdgeChange(type="add_edge", edge=_edge("located_at", giver_id, location_id)),
         AddEdgeChange(type="add_edge", edge=_edge("located_at", enemy_id, location_id)),
         AddEdgeChange(type="add_edge", edge=_edge("gives_quest", giver_id, quest_id)),
@@ -174,8 +181,14 @@ def _content(
 ) -> RuntimeContent:
     return RuntimeContent(
         characters={
-            giver_id: {"id": giver_id, "name": render("runtime.seed.giver.name", locale)},
-            enemy_id: {"id": enemy_id, "name": render("runtime.seed.enemy.name", locale)},
+            giver_id: {
+                "id": giver_id,
+                "name": render("runtime.seed.giver.name", locale),
+            },
+            enemy_id: {
+                "id": enemy_id,
+                "name": render("runtime.seed.enemy.name", locale),
+            },
         },
         items={
             reward_id: {

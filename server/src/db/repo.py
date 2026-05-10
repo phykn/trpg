@@ -6,6 +6,7 @@ from src.game.domain.graph import Graph
 from src.game.domain.memory import DialoguePair, LogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 
+
 class GraphRepo(Protocol):
     """Graph-native runtime persistence."""
 

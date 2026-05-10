@@ -61,9 +61,7 @@ def build_quest_payload(
 ) -> QuestPayload:
     status = quest_status(quest)
     display_status = (
-        status
-        if status in {"pending", "active", "completed", "failed"}
-        else "pending"
+        status if status in {"pending", "active", "completed", "failed"} else "pending"
     )
     actions: list[Literal["accept", "abandon"]] = []
     if status in {"locked", "pending"}:
@@ -114,7 +112,9 @@ def _quest_goals(quest: GraphNode, content: RuntimeContent) -> list[str]:
         name = trigger.get("name")
         if name is None:
             trigger_id = trigger.get("id")
-            name = content_names.get(trigger_id) if isinstance(trigger_id, str) else None
+            name = (
+                content_names.get(trigger_id) if isinstance(trigger_id, str) else None
+            )
         if isinstance(name, str) and name:
             goals.append(name)
     return goals

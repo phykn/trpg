@@ -36,6 +36,7 @@ def _strip_fence(answer: str) -> str:
     smoke script wants a clean view of the first response."""
     return _FENCE_RE.sub("", answer).strip()
 
+
 SURROUNDINGS = {
     "location": {
         "id": "isnar_square",
@@ -171,13 +172,17 @@ async def main() -> int:
             except Exception as e:
                 schema_fail_count += 1
                 raw_collisions.append((player_input, cleaned[:300], str(e)[:200]))
-                print(f"    [{i + 1}] SCHEMA_FAIL  raw={cleaned[:150]!r}  err={type(e).__name__}: {str(e)[:120]}")
+                print(
+                    f"    [{i + 1}] SCHEMA_FAIL  raw={cleaned[:150]!r}  err={type(e).__name__}: {str(e)[:120]}"
+                )
                 continue
             pass_count += 1
             print(f"    [{i + 1}] OK            {parsed.model_dump_json()}")
         print()
 
-    print(f"Result: {pass_count}/{total} validated; {schema_fail_count} schema fails, {transport_fail_count} transport fails.")
+    print(
+        f"Result: {pass_count}/{total} validated; {schema_fail_count} schema fails, {transport_fail_count} transport fails."
+    )
     if raw_collisions:
         print()
         print("=== schema-fail samples (LLM shape vs schema) ===")
@@ -187,7 +192,6 @@ async def main() -> int:
             print(f"    err: {err}")
             print()
     return 0 if (schema_fail_count == 0 and transport_fail_count == 0) else 1
-
 
 
 if __name__ == "__main__":

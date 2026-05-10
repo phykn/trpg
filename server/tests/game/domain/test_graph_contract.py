@@ -198,8 +198,7 @@ def test_graph_accepts_progression_structure_edges():
         )
 
     edge_types = {
-        (edge.type, edge.from_node_id, edge.to_node_id)
-        for edge in graph.edges.values()
+        (edge.type, edge.from_node_id, edge.to_node_id) for edge in graph.edges.values()
     }
 
     assert ("belongs_to_race", "player_01", "human") in edge_types

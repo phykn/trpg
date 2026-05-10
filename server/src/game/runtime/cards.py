@@ -74,7 +74,9 @@ def _card_text(
             destination_id,
             fallback=render("runtime.fallback.destination", after.progress.locale),
         )
-        return render("runtime.card.move", after.progress.locale, destination=destination)
+        return render(
+            "runtime.card.move", after.progress.locale, destination=destination
+        )
 
     if dispatch.kind == "combat":
         return _combat_text(before, after, action)
@@ -128,7 +130,11 @@ def _combat_text(
             fallback=render("runtime.fallback.target", after.progress.locale),
         )
         return render("runtime.combat.start", after.progress.locale, target=target)
-    outcome = after.progress.graph_combat_state.outcome if after.progress.graph_combat_state else "victory"
+    outcome = (
+        after.progress.graph_combat_state.outcome
+        if after.progress.graph_combat_state
+        else "victory"
+    )
     if outcome == "fled":
         return render("runtime.combat.fled", after.progress.locale)
     if outcome == "defeat":

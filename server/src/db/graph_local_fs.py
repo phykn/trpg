@@ -84,16 +84,12 @@ class LocalFsGraphRepo:
         if not path.exists():
             raise FileNotFoundError(game_id)
         try:
-            row = GameProgressRow.model_validate_json(
-                path.read_text(encoding="utf-8")
-            )
+            row = GameProgressRow.model_validate_json(path.read_text(encoding="utf-8"))
             return progress_from_row(row)
         except (ValidationError, OSError, json.JSONDecodeError, ValueError) as e:
             raise PersistenceFailed(str(e)) from e
 
-    async def append_log_entries(
-        self, game_id: str, entries: list[LogEntry]
-    ) -> None:
+    async def append_log_entries(self, game_id: str, entries: list[LogEntry]) -> None:
         await store.append_log_entries(self.saves_dir, game_id, entries)
 
     async def append_history_entries(

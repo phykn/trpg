@@ -35,7 +35,9 @@ def plan_character_move(
 
     current_location_id = location_of(graph, character_id)
     if require_connection:
-        _require_adjacent_destination(graph, character_id, current_location_id, destination_id)
+        _require_adjacent_destination(
+            graph, character_id, current_location_id, destination_id
+        )
 
     moved_ids = _character_and_companions(graph, character_id)
     changes: list[GraphChange] = []
@@ -76,7 +78,8 @@ def _require_adjacent_destination(
     if current_location_id == destination_id:
         return
     reachable = sorted(
-        edge.to_node_id for edge in edges_from(graph, current_location_id, "connects_to")
+        edge.to_node_id
+        for edge in edges_from(graph, current_location_id, "connects_to")
     )
     if destination_id not in reachable:
         raise GraphMoveError(

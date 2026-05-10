@@ -99,8 +99,4 @@ class SupabaseStorageScenarioRepo:
             return json.loads(blob.decode("utf-8"))
 
         objs = await asyncio.gather(*(_load_one(f) for f in json_files))
-        return {
-            obj["id"]: obj
-            for obj in objs
-            if isinstance(obj.get("id"), str)
-        }
+        return {obj["id"]: obj for obj in objs if isinstance(obj.get("id"), str)}

@@ -234,7 +234,11 @@ def _list(value: object) -> list[str]:
 
 
 def _ids_from_list(value: object) -> set[str]:
-    return {entry_id for entry_id in (_str(entry.get("id")) for entry in _dicts(value)) if entry_id}
+    return {
+        entry_id
+        for entry_id in (_str(entry.get("id")) for entry in _dicts(value))
+        if entry_id
+    }
 
 
 def _equipment_item_ids(value: object) -> set[str]:

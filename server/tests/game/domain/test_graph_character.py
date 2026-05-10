@@ -34,5 +34,8 @@ def test_can_character_fight_requires_live_positive_hp():
 
 def test_graph_character_kind_uses_enemy_markers():
     assert graph_character_kind(_character(xp_reward=1)) == "enemy"
-    assert graph_character_kind(_character(combat_behavior={"attack_priority": "nearest"})) == "enemy"
+    assert (
+        graph_character_kind(_character(combat_behavior={"attack_priority": "nearest"}))
+        == "enemy"
+    )
     assert graph_character_kind(_character()) == "npc"

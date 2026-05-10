@@ -1,5 +1,10 @@
 from src.game.runtime.state import GameRuntimeState
-from src.wire.graph_payload_helpers import node_name, optional_resource, require_node, resource
+from src.wire.graph_payload_helpers import (
+    node_name,
+    optional_resource,
+    require_node,
+    resource,
+)
 from src.wire.models import GraphCombatParticipantPayload, GraphCombatPayload
 
 

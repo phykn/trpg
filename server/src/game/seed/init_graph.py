@@ -53,17 +53,15 @@ async def init_graph_game(
     )
     if violations:
         raise ProfileMalformed(
-            f"profile {profile_name!r} invariant violations:\n"
-            + "\n".join(violations)
+            f"profile {profile_name!r} invariant violations:\n" + "\n".join(violations)
         )
 
     if player.race_id not in races:
         raise RaceNotFound(player.race_id)
 
-    game_id = (
-        datetime.now(timezone.utc).strftime("game_%y%m%d_%H%M%S_")
-        + secrets.token_hex(3)
-    )
+    game_id = datetime.now(timezone.utc).strftime(
+        "game_%y%m%d_%H%M%S_"
+    ) + secrets.token_hex(3)
     bundle = build_seed_graph(
         profile_name=profile_name,
         player=player,

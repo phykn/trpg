@@ -20,7 +20,15 @@ ActionValue = str | list[str]
 RefuseCategory = Literal["out_of_game", "meta_breaking"]
 
 _TRANSFER_HOW = {"gift", "trade", "steal", "accept", "abandon", "equip", "unequip"}
-_SPEAK_HOW = {"friendly", "hostile", "deceptive", "recruit", "part", "accept", "abandon"}
+_SPEAK_HOW = {
+    "friendly",
+    "hostile",
+    "deceptive",
+    "recruit",
+    "part",
+    "accept",
+    "abandon",
+}
 _QUERY_TOPICS = {"surroundings", "exits", "inventory", "quests", "status"}
 
 

@@ -56,7 +56,9 @@ def seed_violations(
             )
         for item_id in _str_list(character.get("inventory_ids")):
             if item_id not in items:
-                out.append(f"character {character_id} inventory item={item_id!r} not found")
+                out.append(
+                    f"character {character_id} inventory item={item_id!r} not found"
+                )
         for slot, item_id in _mapping(character.get("equipment")).items():
             if isinstance(item_id, str) and item_id and item_id not in items:
                 out.append(

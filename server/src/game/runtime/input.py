@@ -56,7 +56,9 @@ async def run_graph_input_turn(
     action = actions[0]
     engine_diag("input:classified", action=action.verb)
     if action.verb == "perceive":
-        return await start_graph_roll(repo, game_id, action, scenario_repo=scenario_repo)
+        return await start_graph_roll(
+            repo, game_id, action, scenario_repo=scenario_repo
+        )
 
     if action.verb in {"speak", "pass"}:
         return await _run_graph_narrative_input(
@@ -204,7 +206,10 @@ def _resolve_narrative_subject(runtime, action) -> str | None:
 
 def _is_at_player_location(runtime, node_id: str) -> bool:
     player_location = location_of(runtime.graph, runtime.progress.player_id)
-    return player_location is not None and location_of(runtime.graph, node_id) == player_location
+    return (
+        player_location is not None
+        and location_of(runtime.graph, node_id) == player_location
+    )
 
 
 def _node_name(runtime, node: GraphNode | None) -> str:
@@ -231,5 +236,3 @@ def _clean_narration(text: str) -> str:
     if len(cleaned) <= 220:
         return cleaned
     return cleaned[:220].rstrip()
-
-

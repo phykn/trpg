@@ -155,5 +155,3 @@ def _clean_intro_text(text: str) -> str:
     if len(cleaned) <= _MAX_INTRO_CHARS:
         return cleaned
     return cleaned[:_MAX_INTRO_CHARS].rstrip()
-
-

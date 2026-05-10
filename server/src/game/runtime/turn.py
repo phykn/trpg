@@ -173,7 +173,9 @@ async def _build_graph_action_narration(
     dispatch: GraphActionDispatchResult,
     card_texts: list[str],
 ) -> str:
-    if llm is None or not _needs_graph_action_narration(before, after, action, dispatch):
+    if llm is None or not _needs_graph_action_narration(
+        before, after, action, dispatch
+    ):
         return ""
     prompt = _narration_user_prompt(before, after, card_texts)
     if not prompt:
@@ -254,9 +256,9 @@ def _node_name(runtime: GameRuntimeState, node: GraphNode | None) -> str:
     return node_label(runtime.content, node)
 
 
-def _node_description_value(runtime: GameRuntimeState, node: GraphNode | None) -> str | None:
+def _node_description_value(
+    runtime: GameRuntimeState, node: GraphNode | None
+) -> str | None:
     if node is None:
         return None
     return node_text(runtime.content, node, "description")
-
-

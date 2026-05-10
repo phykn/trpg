@@ -19,7 +19,11 @@ from .dispatch import (
 )
 from .load import load_runtime_state
 from .state import GameRuntimeState
-from .turn import GraphActionTurnError, run_graph_action_turn, run_graph_action_turn_from_runtime
+from .turn import (
+    GraphActionTurnError,
+    run_graph_action_turn,
+    run_graph_action_turn_from_runtime,
+)
 
 
 Decision = Literal["confirm", "cancel"]
@@ -80,7 +84,9 @@ async def run_graph_action_request(
         from .roll import start_graph_roll
 
         engine_diag("action:roll_required", action=action.verb)
-        return await start_graph_roll(repo, game_id, action, scenario_repo=scenario_repo)
+        return await start_graph_roll(
+            repo, game_id, action, scenario_repo=scenario_repo
+        )
 
     if action.verb == "query":
         from .query import answer_graph_query
@@ -240,7 +246,9 @@ def _build_quest_confirmation(
         return _pending(
             kind="quest_accept",
             title=render("runtime.confirmation.quest_accept.title", locale),
-            body=render("runtime.confirmation.quest_accept.body", locale, quest=quest_label),
+            body=render(
+                "runtime.confirmation.quest_accept.body", locale, quest=quest_label
+            ),
             confirm_label=render("runtime.confirmation.quest_accept.confirm", locale),
             target_label=quest_label,
             action=action,
@@ -250,7 +258,9 @@ def _build_quest_confirmation(
     return _pending(
         kind="quest_abandon",
         title=render("runtime.confirmation.quest_abandon.title", locale),
-        body=render("runtime.confirmation.quest_abandon.body", locale, quest=quest_label),
+        body=render(
+            "runtime.confirmation.quest_abandon.body", locale, quest=quest_label
+        ),
         confirm_label=render("runtime.confirmation.quest_abandon.confirm", locale),
         target_label=quest_label,
         action=action,
@@ -350,4 +360,3 @@ def _list(value: object) -> list[str]:
     if isinstance(value, list):
         return [item for item in value if isinstance(item, str)]
     return []
-

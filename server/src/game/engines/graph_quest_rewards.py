@@ -41,11 +41,15 @@ def plan_quest_rewards(
     changes: list[GraphChange] = []
     if gold:
         changes.append(
-            property_change(player_id, "gold", int_value(player.properties.get("gold")) + gold)
+            property_change(
+                player_id, "gold", int_value(player.properties.get("gold")) + gold
+            )
         )
     if exp:
         changes.append(
-            property_change(player_id, "xp_pool", int_value(player.properties.get("xp_pool")) + exp)
+            property_change(
+                player_id, "xp_pool", int_value(player.properties.get("xp_pool")) + exp
+            )
         )
     for item_id in item_ids:
         for edge in edges_to(graph, quest_id, "reward_of"):
@@ -82,7 +86,9 @@ def _reward_item_ids(
     raw_items = reward_data.get("items", [])
     if isinstance(raw_items, list):
         item_ids.extend(item for item in raw_items if isinstance(item, str))
-    item_ids.extend(edge.from_node_id for edge in edges_to(graph, quest_id, "reward_of"))
+    item_ids.extend(
+        edge.from_node_id for edge in edges_to(graph, quest_id, "reward_of")
+    )
     return sorted(set(item_ids))
 
 

@@ -3,7 +3,6 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, Field
 
 
-
 class Memory(BaseModel):
     content: str
     importance: int = Field(ge=1, le=3)

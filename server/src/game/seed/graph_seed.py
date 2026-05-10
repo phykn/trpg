@@ -126,7 +126,8 @@ def build_seed_graph(
         if race_id := _optional_str(character.get("race_id")):
             add_edge("belongs_to_race", character_id, race_id)
         equipped_item_ids = {
-            item_id for _, item_id in _equipped_items(_mapping(character.get("equipment")))
+            item_id
+            for _, item_id in _equipped_items(_mapping(character.get("equipment")))
         }
         for slot, item_id in _equipped_items(_mapping(character.get("equipment"))):
             add_edge("equips", character_id, item_id, {"slot": slot})
@@ -311,7 +312,8 @@ def _add_quest_target_edge(
         type="target_of",
         from_node_id=target_id,
         to_node_id=quest_id,
-        properties=_record_properties(trigger, exclude={"target_id"}) | {"outcome": outcome},
+        properties=_record_properties(trigger, exclude={"target_id"})
+        | {"outcome": outcome},
     )
 
 
@@ -361,10 +363,7 @@ def _record_id(record: SeedRecord) -> str:
 def _graph_stats(value: object) -> dict[str, int]:
     raw = _mapping(value)
     defaults = {"body": 10, "agility": 10, "mind": 10, "presence": 10}
-    return {
-        key: _int_value(raw.get(key), default)
-        for key, default in defaults.items()
-    }
+    return {key: _int_value(raw.get(key), default) for key, default in defaults.items()}
 
 
 def _equipped_items(equipment: dict[str, Any]) -> list[tuple[str, str]]:

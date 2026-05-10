@@ -125,7 +125,9 @@ def _require_participant(graph: Graph, participant_id: str) -> GraphNode:
     if node is None:
         raise GraphCombatContextError(f"missing participant: {participant_id}")
     if node.type != "character":
-        raise GraphCombatContextError(f"participant is not a character: {participant_id}")
+        raise GraphCombatContextError(
+            f"participant is not a character: {participant_id}"
+        )
     return node
 
 

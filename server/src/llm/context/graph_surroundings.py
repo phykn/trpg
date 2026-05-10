@@ -49,9 +49,15 @@ def _entity_payloads(
             continue
         if character_id != player_id and not is_visible_character(node):
             continue
-        entity_type = "player" if character_id == player_id else graph_character_kind(node)
+        entity_type = (
+            "player" if character_id == player_id else graph_character_kind(node)
+        )
         entities.append(
-            {"id": node.id, "name": node_label(runtime.content, node), "type": entity_type}
+            {
+                "id": node.id,
+                "name": node_label(runtime.content, node),
+                "type": entity_type,
+            }
         )
 
     location = graph.nodes.get(location_id)
@@ -72,7 +78,9 @@ def _entity_payloads(
         item = graph.nodes.get(item_id)
         if item is None or item.type != "item":
             continue
-        entities.append({"id": item.id, "name": node_label(runtime.content, item), "type": "item"})
+        entities.append(
+            {"id": item.id, "name": node_label(runtime.content, item), "type": "item"}
+        )
 
     return entities
 

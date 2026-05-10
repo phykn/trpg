@@ -94,9 +94,7 @@ def test_attack_accepts_visible_enemy_entity():
 
 def test_speak_target_must_be_visible_npc():
     output = ActionOutput(
-        actions=[
-            Action(verb="speak", to="missing_npc", how="friendly")
-        ]
+        actions=[Action(verb="speak", to="missing_npc", how="friendly")]
     )
 
     with pytest.raises(ActionGroundingError, match="to"):

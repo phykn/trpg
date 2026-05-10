@@ -211,7 +211,9 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
 
 def _contains_key(value, key: str) -> bool:
     if isinstance(value, dict):
-        return key in value or any(_contains_key(child, key) for child in value.values())
+        return key in value or any(
+            _contains_key(child, key) for child in value.values()
+        )
     if isinstance(value, list):
         return any(_contains_key(child, key) for child in value)
     return False
@@ -321,7 +323,11 @@ def test_graph_front_state_resolves_static_content_from_runtime_content():
             "content": RuntimeContent(
                 locations={
                     "town": {"id": "town", "name": "광장", "description": "넓은 광장."},
-                    "forest": {"id": "forest", "name": "숲", "description": "오래된 숲."},
+                    "forest": {
+                        "id": "forest",
+                        "name": "숲",
+                        "description": "오래된 숲.",
+                    },
                 },
                 characters={
                     "goblin_01": {

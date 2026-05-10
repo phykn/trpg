@@ -86,9 +86,7 @@ def _graph(
         f"located_at:player_01:{player_location}": _located(
             "player_01", player_location
         ),
-        f"located_at:goblin_01:{enemy_location}": _located(
-            "goblin_01", enemy_location
-        ),
+        f"located_at:goblin_01:{enemy_location}": _located("goblin_01", enemy_location),
     }
     if include_skill:
         edges["knows_skill:player_01:fireball"] = GraphEdge(

@@ -14,7 +14,9 @@ def test_main_enables_reload_and_watches_server_entrypoint(monkeypatch):
     _set_required_env(monkeypatch, reload_value="1")
     monkeypatch.setattr(run_api, "_load_env", lambda: None)
     calls = []
-    monkeypatch.setattr(run_api.uvicorn, "run", lambda *args, **kwargs: calls.append((args, kwargs)))
+    monkeypatch.setattr(
+        run_api.uvicorn, "run", lambda *args, **kwargs: calls.append((args, kwargs))
+    )
 
     run_api.main()
 
@@ -33,7 +35,9 @@ def test_main_treats_reload_zero_as_disabled(monkeypatch):
     monkeypatch.setattr(run_api, "_load_env", lambda: None)
     monkeypatch.setattr(run_api, "create_app", lambda: "app")
     calls = []
-    monkeypatch.setattr(run_api.uvicorn, "run", lambda *args, **kwargs: calls.append((args, kwargs)))
+    monkeypatch.setattr(
+        run_api.uvicorn, "run", lambda *args, **kwargs: calls.append((args, kwargs))
+    )
 
     run_api.main()
 

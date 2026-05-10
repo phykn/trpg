@@ -95,7 +95,9 @@ def test_graph_narration_prompt_files_are_packaged():
 async def test_graph_intro_uses_packaged_prompt(monkeypatch, tmp_path):
     import src.game.runtime.intro as intro_module
 
-    monkeypatch.setattr(intro_module, "get_prompt", lambda agent, locale: f"{agent}:{locale}")
+    monkeypatch.setattr(
+        intro_module, "get_prompt", lambda agent, locale: f"{agent}:{locale}"
+    )
     repo = await _repo(tmp_path)
     runtime = GameRuntimeState(
         graph=await repo.load_graph("game-1"),
@@ -112,7 +114,9 @@ async def test_graph_intro_uses_packaged_prompt(monkeypatch, tmp_path):
 async def test_graph_turn_narration_uses_packaged_prompt(monkeypatch, tmp_path):
     import src.game.runtime.turn as turn_module
 
-    monkeypatch.setattr(turn_module, "get_prompt", lambda agent, locale: f"{agent}:{locale}")
+    monkeypatch.setattr(
+        turn_module, "get_prompt", lambda agent, locale: f"{agent}:{locale}"
+    )
     repo = await _repo(tmp_path)
     progress = await repo.load_progress("game-1")
     await repo.save_progress(
@@ -145,7 +149,9 @@ async def test_graph_turn_narration_uses_packaged_prompt(monkeypatch, tmp_path):
 async def test_graph_input_narration_uses_packaged_prompt(monkeypatch, tmp_path):
     import src.game.runtime.input as input_module
 
-    monkeypatch.setattr(input_module, "get_prompt", lambda agent, locale: f"{agent}:{locale}")
+    monkeypatch.setattr(
+        input_module, "get_prompt", lambda agent, locale: f"{agent}:{locale}"
+    )
     repo = await _repo(tmp_path)
     llm = _PromptCaptureLLM()
 

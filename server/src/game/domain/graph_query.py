@@ -40,8 +40,7 @@ def edges_to(
     return [
         edge
         for edge in graph.edges.values()
-        if edge.to_node_id == node_id
-        and (edge_type is None or edge.type == edge_type)
+        if edge.to_node_id == node_id and (edge_type is None or edge.type == edge_type)
     ]
 
 
@@ -147,6 +146,5 @@ def quest_reward_items_of(graph: Graph, quest_id: str) -> list[str]:
 
 def quests_in_chapter(graph: Graph, chapter_id: str) -> list[str]:
     return [
-        edge.from_node_id
-        for edge in edges_to(graph, chapter_id, "part_of_chapter")
+        edge.from_node_id for edge in edges_to(graph, chapter_id, "part_of_chapter")
     ]

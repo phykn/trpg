@@ -81,7 +81,9 @@ def set_diag_context(game_id: str, turn: int) -> None:
     _LAST_T.set(time.monotonic())
 
 
-def _emit(layer: str, gid: str | None, turn: int | None, tag: str, kv: dict[str, Any]) -> None:
+def _emit(
+    layer: str, gid: str | None, turn: int | None, tag: str, kv: dict[str, Any]
+) -> None:
     now_mono = time.monotonic()
     last = _LAST_T.get()
     dt = 0.0 if last is None else (now_mono - last)

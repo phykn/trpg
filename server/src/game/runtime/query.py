@@ -21,14 +21,14 @@ def answer_graph_query(runtime: GameRuntimeState, action: Action) -> str:
 
 def _surroundings_text(surroundings: dict, locale: str) -> str:
     location = surroundings.get("location") or {}
-    location_name = location.get("name") or render("runtime.query.unknown_place", locale)
+    location_name = location.get("name") or render(
+        "runtime.query.unknown_place", locale
+    )
     npcs = _entity_names(surroundings, "npc")
     items = _entity_names(surroundings, "item")
     exits = _entity_names(surroundings, "connection")
 
-    pieces = [
-        render("runtime.query.current_location", locale, location=location_name)
-    ]
+    pieces = [render("runtime.query.current_location", locale, location=location_name)]
     pieces.append(
         render("runtime.query.nearby_entities", locale, names=_join(npcs + items))
         if npcs or items

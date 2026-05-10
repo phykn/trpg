@@ -20,6 +20,7 @@ _FENCE_RE = re.compile(r"^\s*```(?:json)?\s*\n?|\n?\s*```\s*$", re.MULTILINE)
 def _strip_fence(answer: str) -> str:
     return _FENCE_RE.sub("", answer).strip()
 
+
 T = TypeVar("T")
 
 _PROMPTS_ROOT = Path(__file__).resolve().parents[2] / "locale" / "prompts"
@@ -81,7 +82,9 @@ async def run_with_retries(
     # ran retries+1 attempts, costing one extra LLM round per agent.
     fallback_engaged = False
     for attempt in range(1, retries + 1):
-        llm_diag("llm:call", agent=agent, attempt=attempt, fallback=fallback_engaged or None)
+        llm_diag(
+            "llm:call", agent=agent, attempt=attempt, fallback=fallback_engaged or None
+        )
         try:
             result = await client.chat(
                 messages=messages,
@@ -93,17 +96,26 @@ async def run_with_retries(
         except RateLimitError as e:
             fb = client.pick_fallback(agent)
             if not fallback_engaged and fb is not None:
-                llm_diag("llm:fallback", agent=agent, model=fb.model, cause=type(e).__name__)
+                llm_diag(
+                    "llm:fallback", agent=agent, model=fb.model, cause=type(e).__name__
+                )
                 fallback_engaged = True
                 continue
             llm_diag("llm:fail", agent=agent, attempt=attempt, err="RateLimitError")
             raise LLMUnavailable(str(e)) from e
-        except (OSError, asyncio.TimeoutError, InternalServerError, APIConnectionError) as e:
+        except (
+            OSError,
+            asyncio.TimeoutError,
+            InternalServerError,
+            APIConnectionError,
+        ) as e:
             if attempt == retries:
                 llm_diag("llm:fail", agent=agent, attempt=attempt, err=type(e).__name__)
                 raise LLMUnavailable(str(e)) from e
             llm_diag(
-                "llm:retry", agent=agent, attempt=attempt,
+                "llm:retry",
+                agent=agent,
+                attempt=attempt,
                 err=type(e).__name__,
             )
             continue
@@ -120,7 +132,9 @@ async def run_with_retries(
             # leftover thought tags, plain text).
             think_blob = result.get("think") or ""
             llm_diag(
-                "llm:retry", agent=agent, attempt=attempt,
+                "llm:retry",
+                agent=agent,
+                attempt=attempt,
                 err=type(e).__name__,
                 msg=_format_retry_error(e)[:120],
                 answer_len=len(answer),
@@ -140,7 +154,9 @@ async def run_with_retries(
     # surface a head + length so post-mortem doesn't have to read every
     # llm:retry line above.
     llm_diag(
-        "llm:fail", agent=agent, attempts=retries,
+        "llm:fail",
+        agent=agent,
+        attempts=retries,
         err=type(last_error).__name__,
         last_answer_len=len(answer),
         last_answer_head=answer[:200] if answer else None,

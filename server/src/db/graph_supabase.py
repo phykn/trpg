@@ -106,9 +106,7 @@ class SupabaseGraphRepo:
         except ValidationError as e:
             raise PersistenceFailed(str(e)) from e
 
-    async def append_log_entries(
-        self, game_id: str, entries: list[LogEntry]
-    ) -> None:
+    async def append_log_entries(self, game_id: str, entries: list[LogEntry]) -> None:
         if not entries:
             return
         rows = [

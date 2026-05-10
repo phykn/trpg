@@ -48,7 +48,10 @@ SAMPLE_SURROUNDINGS = {
 
 CASES: list[tuple[str, str]] = [
     ("경비병에게 인사한다", "speak(to=guard_01, how=friendly)"),
-    ("회복약을 산다", "transfer(from=merchant_01, to=player_01, how=trade, what=healing_potion_01)"),
+    (
+        "회복약을 산다",
+        "transfer(from=merchant_01, to=player_01, how=trade, what=healing_potion_01)",
+    ),
     ("경비병을 설득해 통과시켜달라", "speak(to=guard_01, how=friendly|deceptive)"),
     ("뭔가 해봐", "pass (vague)"),
 ]
@@ -70,7 +73,9 @@ async def main() -> int:
         try:
             result = await classify(
                 client,
-                ClassifyInput(player_input=player_input, surroundings=SAMPLE_SURROUNDINGS),
+                ClassifyInput(
+                    player_input=player_input, surroundings=SAMPLE_SURROUNDINGS
+                ),
                 locale="ko",
                 retries=2,
             )

@@ -103,7 +103,9 @@ def _collect_providers(csv, collect_modes) -> dict[str, _ProviderEnv]:
     return providers
 
 
-def _collect_routes(parse_spec) -> tuple[dict[str, tuple[str, str]], dict[str, tuple[str, str]]]:
+def _collect_routes(
+    parse_spec,
+) -> tuple[dict[str, tuple[str, str]], dict[str, tuple[str, str]]]:
     routes: dict[str, tuple[str, str]] = {}
     fallback_routes: dict[str, tuple[str, str]] = {}
     for key, value in os.environ.items():

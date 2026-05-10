@@ -100,7 +100,9 @@ class _SlowNarrationLLM:
 async def test_run_graph_action_turn_saves_move_and_returns_front_state(tmp_path):
     repo = await _repo(tmp_path)
 
-    result = await run_graph_action_turn(repo, "game-1", Action(verb="move", to="forest"))
+    result = await run_graph_action_turn(
+        repo, "game-1", Action(verb="move", to="forest")
+    )
     saved_graph = await repo.load_graph("game-1")
     saved_progress = await repo.load_progress("game-1")
     saved_logs = await repo.load_log_entries("game-1")
@@ -139,7 +141,9 @@ async def test_run_graph_action_turn_skips_llm_narration_for_plain_move(tmp_path
 async def test_run_graph_action_turn_generates_offer_when_no_work_exists(tmp_path):
     repo = await _repo(tmp_path)
 
-    result = await run_graph_action_turn(repo, "game-1", Action(verb="move", to="forest"))
+    result = await run_graph_action_turn(
+        repo, "game-1", Action(verb="move", to="forest")
+    )
     saved_graph = await repo.load_graph("game-1")
     saved_progress = await repo.load_progress("game-1")
     saved_logs = await repo.load_log_entries("game-1")
@@ -147,8 +151,14 @@ async def test_run_graph_action_turn_generates_offer_when_no_work_exists(tmp_pat
     assert "auto_quest_001" in saved_graph.nodes
     assert "title" not in saved_graph.nodes["auto_quest_001"].properties
     assert "name" not in saved_graph.nodes["auto_giver_001"].properties
-    assert saved_progress.runtime_content.quests["auto_quest_001"]["title"] == "마을의 부탁"
-    assert saved_progress.runtime_content.characters["auto_giver_001"]["name"] == "마을 주민"
+    assert (
+        saved_progress.runtime_content.quests["auto_quest_001"]["title"]
+        == "마을의 부탁"
+    )
+    assert (
+        saved_progress.runtime_content.characters["auto_giver_001"]["name"]
+        == "마을 주민"
+    )
     assert saved_graph.nodes["auto_quest_001"].properties["status"] == "pending"
     assert result.front_state.quest is None
     assert len(result.front_state.quest_offers) == 1
@@ -175,7 +185,9 @@ async def test_run_graph_action_turn_saves_attack_progress_and_front_combat(tmp_
     assert result.front_state.combat.round == 2
 
 
-async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(tmp_path):
+async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(
+    tmp_path,
+):
     repo = await _repo(tmp_path)
     progress = await repo.load_progress("game-1")
     await repo.save_progress(

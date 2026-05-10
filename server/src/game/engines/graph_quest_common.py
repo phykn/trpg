@@ -15,9 +15,7 @@ QuestStatus = Literal[
 ]
 QuestAction = Literal["accept", "abandon", "complete", "fail"]
 
-TERMINAL_STATUSES: frozenset[str] = frozenset(
-    {"completed", "failed", "abandoned"}
-)
+TERMINAL_STATUSES: frozenset[str] = frozenset({"completed", "failed", "abandoned"})
 
 
 class GraphQuestError(ValueError):

@@ -3,6 +3,7 @@
 Fakes themselves live in `tests/_fakes.py` so other test modules can reuse
 them (e.g. the API integration tests).
 """
+
 import json
 
 import pytest
