@@ -23,6 +23,11 @@ export function loadAndSeedSeenNodes(gameId: string, graph: StoryGraphModel): Se
 
 const STORAGE_PREFIX = 'trpg.story_graph.';
 export const STORY_GRAPH_UPDATED_EVENT = 'trpg:story-graph-updated';
+type StoryGraphEventWindow = {
+  addEventListener?: Window['addEventListener'];
+  removeEventListener?: Window['removeEventListener'];
+  dispatchEvent?: Window['dispatchEvent'];
+};
 
 export function readStoredStoryGraph(gameId: string): StoryGraphModel | null {
   const raw = getStorage()?.getItem(`${STORAGE_PREFIX}${gameId}`);
@@ -48,10 +53,49 @@ export function writeStoredStoryGraph(gameId: string, graph: StoryGraphModel): v
 export function mergeAndStoreStoryGraph(gameId: string, current: StoryGraphModel): StoryGraphModel {
   const next = mergeStoryGraphs(readStoredStoryGraph(gameId) ?? EMPTY_STORY_GRAPH, current);
   writeStoredStoryGraph(gameId, next);
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent(STORY_GRAPH_UPDATED_EVENT, { detail: { gameId } }));
-  }
+  dispatchStoryGraphUpdated(gameId);
   return next;
+}
+
+export function dispatchStoryGraphUpdated(gameId: string): void {
+  const target = storyGraphEventWindow();
+  if (!target?.dispatchEvent) return;
+  const event = createStoryGraphUpdatedEvent(gameId);
+  if (!event) return;
+  target.dispatchEvent(event);
+}
+
+export function subscribeStoryGraphUpdates(
+  onUpdate: (gameId: string) => void,
+): () => void {
+  const target = storyGraphEventWindow();
+  if (!target?.addEventListener || !target.removeEventListener) return () => {};
+  const listener = (event: Event) => {
+    const gameId = storyGraphUpdatedGameId(event);
+    if (gameId) onUpdate(gameId);
+  };
+  target.addEventListener(STORY_GRAPH_UPDATED_EVENT, listener);
+  return () => target.removeEventListener?.(STORY_GRAPH_UPDATED_EVENT, listener);
+}
+
+function storyGraphEventWindow(): StoryGraphEventWindow | null {
+  return typeof window === 'undefined' ? null : window;
+}
+
+function createStoryGraphUpdatedEvent(gameId: string): Event | null {
+  const detail = { gameId };
+  if (typeof CustomEvent === 'function') {
+    return new CustomEvent(STORY_GRAPH_UPDATED_EVENT, { detail });
+  }
+  if (typeof Event !== 'function') return null;
+  const event = new Event(STORY_GRAPH_UPDATED_EVENT);
+  Object.defineProperty(event, 'detail', { value: detail });
+  return event;
+}
+
+function storyGraphUpdatedGameId(event: Event): string | null {
+  const detail = (event as Event & { detail?: { gameId?: unknown } }).detail;
+  return typeof detail?.gameId === 'string' ? detail.gameId : null;
 }
 
 type StoryGraphHookValue = {

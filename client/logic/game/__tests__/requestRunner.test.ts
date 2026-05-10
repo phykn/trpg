@@ -1,4 +1,5 @@
 import type { FrontState, GraphActionClientResponse } from '@/services/wire';
+import type { LogEntry } from '@/logic/log';
 import {
   abortGraphActionRequest,
   runGraphActionRequestOnce,
@@ -30,6 +31,37 @@ function runtime(activeGameId = 'game-1'): GraphActionRequestRuntime {
 }
 
 describe('runGraphActionRequestOnce', () => {
+  test('adds optimistic log entries before the request resolves', async () => {
+    const rt = runtime('game-1');
+    let resolveResponse: (value: GraphActionClientResponse) => void = () => {};
+
+    const pending = runGraphActionRequestOnce(
+      () =>
+        new Promise<GraphActionClientResponse>((resolve) => {
+          resolveResponse = resolve;
+        }),
+      rt,
+      [{ kind: 'player', text: '문을 두드립니다' }],
+    );
+
+    expect(rt.setLog).toHaveBeenCalledTimes(1);
+    const updater = (rt.setLog as jest.Mock).mock.calls[0][0] as (
+      current: LogEntry[],
+    ) => LogEntry[];
+    const nextLog = updater([{ id: 1, kind: 'gm', text: '앞에는 문이 있습니다.' }]);
+    expect(nextLog).toEqual([
+      { id: 1, kind: 'gm', text: '앞에는 문이 있습니다.' },
+      expect.objectContaining({
+        kind: 'player',
+        text: '문을 두드립니다',
+      }),
+    ]);
+    expect((nextLog[1] as { id: number }).id).toBeLessThan(0);
+
+    resolveResponse(response('game-1'));
+    await pending;
+  });
+
   test('ignores a response for a game that is no longer active', async () => {
     const rt = runtime('game-2');
 

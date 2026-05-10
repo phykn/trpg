@@ -6,6 +6,10 @@ import type { FrontState, GraphActionClientResponse } from '@/services/wire';
 type ApplyState = (state: FrontState, gameId?: string | null) => void;
 type SetSuggestions = (next: React.SetStateAction<string[]>) => void;
 type GraphActionCall = (signal: AbortSignal) => Promise<GraphActionClientResponse>;
+export type OptimisticLogEntry =
+  | { kind: 'gm'; text: string }
+  | { kind: 'player'; text: string }
+  | { kind: 'act'; text: string };
 
 export type GraphActionRequestRuntime = {
   requestInFlightRef: React.MutableRefObject<boolean>;
@@ -27,6 +31,29 @@ function mergeEntry(log: LogEntry[], entry: LogEntry): LogEntry[] {
   return next;
 }
 
+function createOptimisticLogEntry(
+  entry: OptimisticLogEntry,
+  generation: number,
+  index: number,
+): LogEntry {
+  return {
+    id: -(generation * 1000 + index + 1),
+    ...entry,
+  };
+}
+
+function appendOptimisticLogEntries(
+  runtime: GraphActionRequestRuntime,
+  generation: number,
+  entries: OptimisticLogEntry[],
+): void {
+  if (entries.length === 0) return;
+  runtime.setLog((current) => [
+    ...current,
+    ...entries.map((entry, index) => createOptimisticLogEntry(entry, generation, index)),
+  ]);
+}
+
 function isAbortError(err: unknown): boolean {
   return err instanceof Error && err.name === 'AbortError';
 }
@@ -44,6 +71,7 @@ export function abortGraphActionRequest(runtime: GraphActionRequestRuntime): voi
 export async function runGraphActionRequestOnce(
   call: GraphActionCall,
   runtime: GraphActionRequestRuntime,
+  optimisticEntries: OptimisticLogEntry[] = [],
 ): Promise<void> {
   if (runtime.requestInFlightRef.current) return;
   const generation = runtime.requestGenerationRef.current + 1;
@@ -54,6 +82,7 @@ export async function runGraphActionRequestOnce(
   runtime.setRequestInFlight(true);
   runtime.setErrorMessage(null);
   runtime.setSuggestions([]);
+  appendOptimisticLogEntries(runtime, generation, optimisticEntries);
   try {
     const response = await call(controller.signal);
     if (runtime.requestGenerationRef.current !== generation) return;
@@ -106,7 +135,7 @@ export function useGraphActionRunner({
   const requestGenerationRef = React.useRef(0);
 
   const runGraphActionRequest = React.useCallback(
-    async (call: GraphActionCall) => {
+    async (call: GraphActionCall, optimisticEntries: OptimisticLogEntry[] = []) => {
       await runGraphActionRequestOnce(call, {
         requestInFlightRef,
         abortControllerRef,
@@ -117,7 +146,7 @@ export function useGraphActionRunner({
         setSuggestions,
         applyState,
         isActiveGameId,
-      });
+      }, optimisticEntries);
     },
     [applyState, isActiveGameId, setErrorMessage, setLog, setSuggestions],
   );

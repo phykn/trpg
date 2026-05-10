@@ -1,9 +1,11 @@
 import asyncio
 import json
+from collections.abc import Sequence
 
 from openai import APIConnectionError, InternalServerError, RateLimitError
 
 from src.db.repo import GraphRepo, ScenarioRepo
+from src.game.domain.action import Action
 from src.game.domain.content import node_label
 from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph import GraphNode
@@ -21,7 +23,6 @@ from src.wire.graph_to_front import graph_to_front_state
 from .confirmation import GraphActionRequestResult, run_graph_action_request
 from .load import load_runtime_state
 from .narration_context import build_input_narration_payload
-from .roll import start_graph_roll
 from .state import GameRuntimeState
 
 
@@ -30,6 +31,7 @@ class GraphInputError(ValueError):
 
 
 _GRAPH_INPUT_NARRATION_TIMEOUT_SECONDS = 6.0
+_MAX_GRAPH_NARRATION_CHARS = 420
 
 
 async def run_graph_input_turn(
@@ -55,32 +57,60 @@ async def run_graph_input_turn(
     if output.refuse is not None:
         raise GraphInputError(output.refuse.message_hint)
     actions = output.actions or []
-    if len(actions) != 1:
-        raise GraphInputError("graph input requires exactly one action")
+    if not actions:
+        raise GraphInputError("graph input requires at least one action")
 
-    action = actions[0]
-    engine_diag("input:classified", action=action.verb)
-    if action.verb == "perceive":
-        return await start_graph_roll(
-            repo, game_id, action, scenario_repo=scenario_repo
-        )
-
-    if action.verb in {"speak", "pass"}:
-        return await _run_graph_narrative_input(
-            client,
-            repo,
-            runtime,
-            player_input,
-            action,
-        )
-
-    return await run_graph_action_request(
+    return await _run_classified_actions(
+        client,
         repo,
-        game_id,
-        action,
-        llm=client,
+        runtime,
+        actions,
+        player_input,
         scenario_repo=scenario_repo,
     )
+
+
+async def _run_classified_actions(
+    client: LLMClient,
+    repo: GraphRepo,
+    runtime: GameRuntimeState,
+    actions: Sequence[Action],
+    player_input: str,
+    *,
+    scenario_repo: ScenarioRepo | None = None,
+) -> GraphActionRequestResult:
+    result: GraphActionRequestResult | None = None
+    for index, action in enumerate(actions):
+        engine_diag(
+            "input:classified",
+            action=action.verb,
+            index=index + 1,
+            total=len(actions),
+        )
+        if action.verb in {"speak", "pass"}:
+            result = await _run_graph_narrative_input(
+                client,
+                repo,
+                runtime,
+                player_input,
+                action,
+            )
+        else:
+            result = await run_graph_action_request(
+                repo,
+                runtime.progress.game_id,
+                action,
+                llm=client,
+                scenario_repo=scenario_repo,
+            )
+
+        runtime = result.runtime
+        if result.status != "executed":
+            return result
+
+    if result is None:
+        raise GraphInputError("graph input requires at least one action")
+    return result
 
 
 async def _append_player_input_log(
@@ -269,6 +299,6 @@ def _single(value: object) -> str | None:
 
 def _clean_narration(text: str) -> str:
     cleaned = " ".join(text.split())
-    if len(cleaned) <= 220:
+    if len(cleaned) <= _MAX_GRAPH_NARRATION_CHARS:
         return cleaned
-    return cleaned[:220].rstrip()
+    return cleaned[:_MAX_GRAPH_NARRATION_CHARS].rstrip()

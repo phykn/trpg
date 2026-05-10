@@ -42,6 +42,7 @@ class GraphActionTurnResult(BaseModel):
 
 
 _GRAPH_ACTION_NARRATION_TIMEOUT_SECONDS = 6.0
+_MAX_GRAPH_NARRATION_CHARS = 420
 
 
 async def run_graph_action_turn(
@@ -264,9 +265,9 @@ def _narration_user_prompt(
 
 def _clean_narration(text: str) -> str:
     cleaned = " ".join(text.split())
-    if len(cleaned) <= 220:
+    if len(cleaned) <= _MAX_GRAPH_NARRATION_CHARS:
         return cleaned
-    return cleaned[:220].rstrip()
+    return cleaned[:_MAX_GRAPH_NARRATION_CHARS].rstrip()
 
 
 def _node_name(runtime: GameRuntimeState, node: GraphNode | None) -> str:

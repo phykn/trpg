@@ -36,9 +36,9 @@ export function Playing({ game }: Props) {
     if (action.kind === 'text') {
       onSend(action.text);
     } else if (action.kind === 'graph_action') {
-      onGraphAction(action.graphAction);
+      onGraphAction(action.graphAction, action.label);
     } else {
-      onQuestAction(action.questAction.kind, action.questAction.quest_id);
+      onQuestAction(action.questAction.kind, action.questAction.quest_id, action.label);
     }
   };
 

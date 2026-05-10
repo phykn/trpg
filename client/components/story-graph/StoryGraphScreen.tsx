@@ -12,7 +12,7 @@ import {
   loadAndSeedSeenNodes,
   mergeAndStoreStoryGraph,
   readStoredStoryGraph,
-  STORY_GRAPH_UPDATED_EVENT,
+  subscribeStoryGraphUpdates,
 } from '@/logic/story-graph/useStoryGraph';
 
 type Status = 'loading' | 'ready' | 'empty' | 'error';
@@ -72,16 +72,10 @@ export function StoryGraphScreen({
   }, [status, graph, selectedNodeId]);
 
   React.useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const onGraphUpdate = (event: Event) => {
-      const detail = (event as CustomEvent<{ gameId?: string }>).detail;
-      const updatedGameId = detail?.gameId;
-      if (!updatedGameId || updatedGameId !== gameIdRef.current) return;
+    return subscribeStoryGraphUpdates((updatedGameId) => {
+      if (updatedGameId !== gameIdRef.current) return;
       setGraph(readStoredStoryGraph(updatedGameId) ?? EMPTY_STORY_GRAPH);
-    };
-
-    window.addEventListener(STORY_GRAPH_UPDATED_EVENT, onGraphUpdate);
-    return () => window.removeEventListener(STORY_GRAPH_UPDATED_EVENT, onGraphUpdate);
+    });
   }, []);
 
   const unseenNodeIds = React.useMemo(() => {

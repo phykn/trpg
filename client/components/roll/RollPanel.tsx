@@ -19,64 +19,63 @@ export function RollPanel({
   const cells = buildDiceCells(roll.requiredRoll);
 
   return (
-    <Animated.View
-      className="mx-5 mt-1"
-      style={{ transform: [{ scale }], opacity }}
-    >
-      <Surface className="px-4 py-3 gap-2.5">
-        <View className="flex-row items-start gap-3">
-          <View className="flex-1 min-w-0">
-            <Text className="font-sans-bold text-title text-fg-default" numberOfLines={1}>
-              {roll.title}
-            </Text>
-            <Text className="font-sans-medium text-caption text-fg-muted" numberOfLines={2}>
-              {roll.body}
-            </Text>
-          </View>
-          <Text
-            className="font-mono-semibold text-title text-accent-fg"
-            style={{ fontVariant: ['tabular-nums'] }}
-          >
-            {roll.requiredRoll} {ko.roll.orMore}
-          </Text>
-        </View>
-
-        <View className="flex-row gap-0.5">
-          {cells.map((cell) => (
-            <View
-              key={cell.value}
-              className="h-7 flex-1 items-center justify-center rounded-sm"
-              style={{
-                backgroundColor:
-                  cell.band === 'success'
-                    ? `${colors.success.fg}${cell.selected ? '55' : '24'}`
-                    : `${colors.danger.fg}${cell.selected ? '66' : '24'}`,
-                borderColor: cell.selected ? colors.accent.fg : 'transparent',
-                borderWidth: cell.selected ? 1 : 0,
-              }}
-            >
-              <Text
-                className="font-mono-semibold text-caption"
-                style={{ color: cell.selected ? colors.fg.default : colors.fg.muted }}
-              >
-                {cell.value}
+    <View className="mx-5 mt-1">
+      <Animated.View style={{ transform: [{ scale }], opacity }}>
+        <Surface className="px-4 py-3 gap-2.5">
+          <View className="flex-row items-start gap-3">
+            <View className="flex-1 min-w-0">
+              <Text className="font-sans-bold text-title text-fg-default" numberOfLines={1}>
+                {roll.title}
+              </Text>
+              <Text className="font-sans-medium text-caption text-fg-muted" numberOfLines={2}>
+                {roll.body}
               </Text>
             </View>
-          ))}
-        </View>
+            <Text
+              className="font-mono-semibold text-title text-accent-fg"
+              style={{ fontVariant: ['tabular-nums'] }}
+            >
+              {roll.requiredRoll} {ko.roll.orMore}
+            </Text>
+          </View>
 
-        <Pressable
-          onPress={() => onRoll(roll.id)}
-          disabled={disabled}
-          accessibilityRole="button"
-          accessibilityLabel={ko.roll.rollLabel}
-          className={`h-10 items-center justify-center rounded-md ${disabled ? 'bg-canvas-inset opacity-60' : 'bg-accent-fg active:opacity-80'}`}
-        >
-          <Text className="font-sans-semibold text-panel text-fg-on-emphasis">
-            {disabled ? ko.status.busy : ko.action.roll}
-          </Text>
-        </Pressable>
-      </Surface>
-    </Animated.View>
+          <View className="flex-row gap-0.5">
+            {cells.map((cell) => (
+              <View
+                key={cell.value}
+                className="h-7 flex-1 items-center justify-center rounded-sm"
+                style={{
+                  backgroundColor:
+                    cell.band === 'success'
+                      ? `${colors.success.fg}${cell.selected ? '55' : '24'}`
+                      : `${colors.danger.fg}${cell.selected ? '66' : '24'}`,
+                  borderColor: cell.selected ? colors.accent.fg : 'transparent',
+                  borderWidth: cell.selected ? 1 : 0,
+                }}
+              >
+                <Text
+                  className="font-mono-semibold text-caption"
+                  style={{ color: cell.selected ? colors.fg.default : colors.fg.muted }}
+                >
+                  {cell.value}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          <Pressable
+            onPress={() => onRoll(roll.id)}
+            disabled={disabled}
+            accessibilityRole="button"
+            accessibilityLabel={ko.roll.rollLabel}
+            className={`h-10 items-center justify-center rounded-md ${disabled ? 'bg-canvas-inset opacity-60' : 'bg-accent-fg active:opacity-80'}`}
+          >
+            <Text className="font-sans-semibold text-panel text-fg-on-emphasis">
+              {disabled ? ko.status.busy : ko.action.roll}
+            </Text>
+          </Pressable>
+        </Surface>
+      </Animated.View>
+    </View>
   );
 }

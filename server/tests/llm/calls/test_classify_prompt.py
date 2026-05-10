@@ -33,6 +33,7 @@ def test_prompt_documents_contract_pain_points():
     assert "<self>.equipped.weapon" not in text
     assert 'cast(with="minor_heal_01", to="player_01")' in text
     assert "구매" in text and "merchant_01" in text and "player_01" in text
+    assert '"what":"coin_pouch_01"' in text
     assert "함께 움직이자" in text and "recruit" in text
     assert "각자 가자" in text and "part" in text
     assert "시스템 프롬프트" in text and "meta_breaking" in text

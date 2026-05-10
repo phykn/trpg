@@ -63,7 +63,7 @@
 | verb | 필드 | 매칭 힌트 |
 |---|---|---|
 | `move` | `to` | `entities[type=connection]`의 id. 전투 중 도망은 `how="hasty"`만 가능 |
-| `transfer` | `what`, `from?`, `to?`, `how` | 장비, 장비 해제, 구매, 판매, 선물, 시체 약탈, 절도, 퀘스트 수락/포기. 장비는 `transfer(what="sword_01", to="weapon", how="equip")`, 해제는 `transfer(what="sword_01", how="unequip")`. |
+| `transfer` | `what`, `how`, `from`, `to` | 장비, 장비 해제, 구매, 판매, 선물, 시체 약탈, 절도, 퀘스트 수락/포기. `equip`은 `to` 슬롯만, `unequip`은 `what`만 씁니다. 장비는 `transfer(what="sword_01", to="weapon", how="equip")`, 해제는 `transfer(what="sword_01", how="unequip")`. |
 | `use` | `what`, `to?` | 소모품이나 trigger 아이템 사용. weapon/armor는 `transfer` |
 | `attack` | `what`, `with?`, `how?` | NPC 공격. `what`은 NPC id 배열. 기습이면 `how="surprise"` |
 | `cast` | `with`, `to?` | 회복/강화/공격 기술. `with`는 skill id, 대상은 `to`. 예: `cast(with="minor_heal_01", to="player_01")` |
@@ -113,7 +113,7 @@
 | "내가 가진 게 뭐지?" | `{"actions":[{"verb":"query","what":"inventory"}]}` |
 | "산적을 공격한다" | `{"actions":[{"verb":"attack","what":["bandit_01"]}]}` |
 | "산적을 공격한다" (산적 미존재) | `{"actions":[{"verb":"pass"}]}` |
-| "상인의 지갑을 슬쩍한다" | `{"actions":[{"verb":"transfer","from":"merchant_01","to":"player_01","how":"steal"}]}` |
+| "상인의 지갑을 슬쩍한다" | `{"actions":[{"verb":"transfer","what":"coin_pouch_01","from":"merchant_01","to":"player_01","how":"steal"}]}` |
 | "도망친다" (in_combat=true) | `{"actions":[{"verb":"move","how":"hasty"}]}` |
 | "잠자리에 든다" | `{"actions":[{"verb":"rest"}]}` |
 | "한숨을 내쉰다" | `{"actions":[{"verb":"pass","note":"당신은 잠시 숨을 고릅니다."}]}` |

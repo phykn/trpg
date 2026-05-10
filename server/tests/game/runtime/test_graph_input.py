@@ -2,14 +2,13 @@ import json
 import asyncio
 
 import httpx
-import pytest
 from openai import RateLimitError
 
 from src.db.graph_local_fs import LocalFsGraphRepo
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.memory import GMLogEntry
 from src.game.domain.progress import GameProgress
-from src.game.runtime.input import GraphInputError, run_graph_input_turn
+from src.game.runtime.input import run_graph_input_turn
 
 
 class _FakeLLM:
@@ -109,6 +108,11 @@ def _graph() -> Graph:
                 type="location",
                 properties={"name": "Town"},
             ),
+            "forest": GraphNode(
+                id="forest",
+                type="location",
+                properties={"name": "광장"},
+            ),
             "player_01": _character("player_01"),
             "goblin_01": _character("goblin_01"),
         },
@@ -124,6 +128,12 @@ def _graph() -> Graph:
                 type="located_at",
                 from_node_id="goblin_01",
                 to_node_id="town",
+            ),
+            "connects_to:town:forest": GraphEdge(
+                id="connects_to:town:forest",
+                type="connects_to",
+                from_node_id="town",
+                to_node_id="forest",
             ),
         },
     )
@@ -265,7 +275,33 @@ async def test_graph_input_speak_rate_limited_narration_uses_fallback(tmp_path):
     assert logs[1].text == "당신의 행동은 조용히 이어집니다."
 
 
-async def test_graph_input_rejects_multi_action_output(tmp_path):
+async def test_graph_input_runs_multiple_actions_in_order(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM(
+        {
+            "actions": [
+                {"verb": "move", "to": "forest"},
+                {"verb": "pass", "note": "주변을 살핀다"},
+            ]
+        },
+        narration="당신은 주변을 살핍니다.",
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "광장으로 가서 주변을 살핀다")
+    graph = await repo.load_graph("game-1")
+    progress = await repo.load_progress("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert "located_at:player_01:forest" in graph.edges
+    assert "located_at:player_01:town" not in graph.edges
+    assert progress.turn_count == 2
+    assert [entry.kind for entry in logs] == ["player", "act", "act", "gm"]
+    assert logs[1].text == "당신은 광장으로 이동합니다."
+    assert logs[-1].text == "당신은 주변을 살핍니다."
+
+
+async def test_graph_input_stops_multiple_actions_at_confirmation(tmp_path):
     repo = await _repo(tmp_path)
     llm = _FakeLLM(
         {
@@ -276,8 +312,12 @@ async def test_graph_input_rejects_multi_action_output(tmp_path):
         }
     )
 
-    with pytest.raises(GraphInputError, match="exactly one"):
-        await run_graph_input_turn(llm, repo, "game-1", "공격하고 기다린다")
+    result = await run_graph_input_turn(llm, repo, "game-1", "공격하고 기다린다")
+    progress = await repo.load_progress("game-1")
     logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "confirmation_required"
+    assert progress.pending_confirmation["kind"] == "attack_start"
+    assert progress.turn_count == 0
     assert [entry.kind for entry in logs] == ["player"]
     assert logs[0].text == "공격하고 기다린다"

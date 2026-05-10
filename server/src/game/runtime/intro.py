@@ -15,7 +15,7 @@ from src.locale.render import render
 from .narration_context import build_intro_narration_payload
 from .state import GameRuntimeState
 
-_MAX_INTRO_CHARS = 240
+_MAX_INTRO_CHARS = 420
 
 
 async def run_graph_initial_narration(
