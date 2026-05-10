@@ -24,7 +24,7 @@ sys.path.insert(0, str(SERVER_DIR))
 load_dotenv(SERVER_DIR / ".env.dev")
 
 from src.llm.calls._runner import get_prompt  # noqa: E402
-from src.llm.calls.classify.schema import JudgeInput, validate_judge_output  # noqa: E402
+from src.llm.calls.classify.schema import ClassifyInput, validate_action_output_json  # noqa: E402
 from src.llm.client import LLMClient  # noqa: E402
 
 _FENCE_RE = re.compile(r"^```(?:json)?\s*\n?|\n?```\s*$", re.MULTILINE)
@@ -133,9 +133,9 @@ async def main() -> int:
     client = LLMClient.from_env()
     providers = client._providers
     default_route = providers["default"].model
-    judge_route = providers.get("classify", providers["default"]).model
+    classify_route = providers.get("classify", providers["default"]).model
     print(f"  default route: {default_route}")
-    print(f"  classify route: {judge_route}")
+    print(f"  classify route: {classify_route}")
     print()
 
     sys_prompt = get_prompt("classify", "ko")
@@ -146,7 +146,7 @@ async def main() -> int:
     raw_collisions: list[tuple[str, str, str]] = []  # (input, raw, error)
     for player_input, expected in CASES:
         print(f"--- INPUT: {player_input!r}  (expect: {expected})")
-        inp = JudgeInput(player_input=player_input, surroundings=SURROUNDINGS)
+        inp = ClassifyInput(player_input=player_input, surroundings=SURROUNDINGS)
         msgs = [
             {"role": "system", "content": sys_prompt},
             {"role": "user", "content": inp.model_dump_json()},
@@ -167,7 +167,7 @@ async def main() -> int:
                 print(f"    [{i + 1}] EMPTY  (think={resp.get('think', '')[:80]!r})")
                 continue
             try:
-                parsed = validate_judge_output(cleaned, in_combat=False)
+                parsed = validate_action_output_json(cleaned, in_combat=False)
             except Exception as e:
                 schema_fail_count += 1
                 raw_collisions.append((player_input, cleaned[:300], str(e)[:200]))

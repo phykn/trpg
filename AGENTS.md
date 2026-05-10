@@ -22,7 +22,7 @@ The venv, pyproject, and requirements are a single set at the repo root. **Never
 ```bash
 # from repo root
 .venv/bin/python -m pytest -q                     # unit. pyproject pins testpaths=server/tests
-.venv/bin/python server/scripts/smoke_judge.py    # one-shot Gemini-routed classify sanity check
+.venv/bin/python server/scripts/smoke_classify.py # one-shot Gemini-routed classify sanity check
 .venv/bin/python -m pytest server/tests/flow/test_turn.py::test_X -q   # single test
 .venv/bin/ruff check server/                      # lint
 bash server/scripts/check_relational_ssot.sh      # graph-SSOT guard (CI-equivalent)

@@ -38,10 +38,10 @@ api → game.runtime → llm.calls/game.engines → llm/wire → db → game.dom
 Upper depends on lower, never the reverse. Concretely:
 
 - `game/domain/` + `game/rules/` — pure data shapes and tunable knobs. No imports outside themselves.
-- `game/engines/` — pure game logic (combat math, apply state_changes, growth, inventory, skill, quest, recovery, invariants). No LLM, no I/O.
+- `game/engines/` — pure game logic (combat math, graph changes, growth, inventory, skill, quest, recovery, invariants). No LLM, no I/O.
 - `llm/calls/` — LLM call modules (classify, narrate, combat_narrate, summon, recommend) under the `llm/` package. Each module dir = `schema.py` + `runner.py` (+ `semantics.py` where needed). Prompts live separately under `src/locale/prompts/<agent>/prompt.<locale>.md`; `src/locale/prompts/_kernel.<locale>.md` holds universal rules (output language, register, ID hygiene, world vocabulary). `llm/calls/_runner.py:get_prompt(agent, locale)` joins kernel + agent prompt with `---`, cached per (agent, locale). `_runner.py` also owns the shared 3-attempt self-correction loop.
 - `game/domain/graph.py` + `game/domain/graph_query.py` — graph data and relation queries. **The graph is the runtime source of truth.**
-- `llm/context/` — prompt input builders under the `llm/` package (surroundings for judge, layered context for narrate).
+- `llm/context/` — prompt input builders under the `llm/` package (graph surroundings for classify and narration).
 - `db/` — `GraphRepo` / `ScenarioRepo` Protocols (all-async) + Supabase and LocalFs adapters. Holds persistence concerns.
 - `wire/` — server↔client interface. `wire/models/` Pydantic payloads and `wire/graph_to_front.py` carry the graph runtime state the client renders.
 - `game/runtime/` — graph-native session orchestration for init, input, explicit actions, confirmations, combat, level-up, and state loading.
@@ -58,7 +58,7 @@ The runtime `Graph` is the single source of truth for relations. Inside `game/ru
 - **Writing** returns or applies `GraphChange` objects; do not mutate client payloads or prompt payloads as state.
 - **Exceptions** that may touch row shapes directly: `db/`, row codec modules, and graph query/building helpers.
 
-`scripts/check_relational_ssot.sh` is kept as a guard while old entity-based modules remain. Prefer deleting stale entity scans over adding new allow comments.
+`scripts/check_relational_ssot.sh` guards graph source-of-truth boundaries. Prefer deleting stale entity scans over adding new allow comments.
 
 ### Persistence
 
@@ -94,10 +94,6 @@ Runtime child tables should FK to `game_progress(game_id) ON DELETE CASCADE`. RL
 ### Agent retry
 
 Each structured agent runs a self-correction loop with `retries=3`. On `ValidationError` or semantic-check failure, the previous response and the error are appended to the message list so the next attempt can correct itself. The same attempt counter also covers transient transport / 5xx errors (`OSError`, `asyncio.TimeoutError`, `openai.InternalServerError`, `openai.APIConnectionError`) — these `continue` instead of raising until the budget is spent, then map to `LLMUnavailable`. After 3 attempts, the loop raises by the last error type; runtime or route code maps that to a domain error.
-
-### Legacy entity modules
-
-Some entity-shaped modules still exist under `game/engines/`, `game/ontology/`, and `llm/context/` while graph replacements continue to land. Do not add new live runtime behavior to those modules. New game actions should enter through `game/runtime/`, operate on `Graph` / `GameProgress`, and persist through `GraphRepo`.
 
 ### Diagnostic logging (`FLOW_DEBUG`)
 
@@ -140,4 +136,4 @@ Pydantic 422 (request-shape) and HTTP 404 (`game_id` not found) go through FastA
 - Pydantic models *are* the schema. Graph rows and progress rows round-trip through row codec models. Don't hand-munge JSON.
 - Single process. Horizontal scaling is out of scope. The LocalFs graph adapter uses one `asyncio.Lock` in `db/store.py`; Supabase relies on per-row PostgREST upserts and should add DB-level locks before multi-isolate writes to one game are allowed.
 - `run_api.py:_load_env` loads `.env.<APP_ENV>` if the file exists (default `APP_ENV=dev`); missing file is tolerated so managed envs (Render) can supply vars via OS env directly. Per-key fail-fast still happens at downstream `os.environ["..."]` reads. `APP_ENV=release` switches to `.env.release`. Supabase mode requires `SUPABASE_URL SUPABASE_SERVICE_KEY SUPABASE_SCENARIO_BUCKET`, plus `HOST PORT BASIC_AUTH_USER BASIC_AUTH_PASS CORS_ORIGINS LLM_ROUTE_DEFAULT` and the `LLM_<NAME>_*` provider block(s) referenced by the routes.
-- End-to-end LLM verification is manual after merge; `scripts/smoke_judge.py` is a one-shot Gemini-routed classify sanity check.
+- End-to-end LLM verification is manual after merge; `scripts/smoke_classify.py` is a one-shot Gemini-routed classify sanity check.

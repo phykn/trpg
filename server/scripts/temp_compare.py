@@ -1,4 +1,4 @@
-"""Temperature comparison for the classify (judge) agent.
+"""Temperature comparison for the classify agent.
 
 Runs STRESS + ADVERSARIAL cases at temp=0.2 and temp=1.0, rate-limited to
 ~10 calls/min to stay under Gemini free-tier quota.
@@ -13,6 +13,7 @@ Run from repo root:
 """
 
 import asyncio
+import json
 import sys
 import time
 from pathlib import Path
@@ -27,14 +28,15 @@ load_dotenv(SERVER_DIR / ".env.dev")
 
 from src.llm.calls._runner import get_prompt, run_with_retries  # noqa: E402
 from src.llm.calls.classify.schema import (  # noqa: E402
-    JudgeInput,
-    validate_judge_output,
+    ActionOutput,
+    ClassifyInput,
+    validate_action_output_json,
 )
-from src.llm.calls.classify.semantics import (  # noqa: E402
-    JudgeSemanticError,
-    check_semantics,
+from src.llm.calls.classify.grounding import (  # noqa: E402
+    ActionGroundingError,
+    validate_grounded_output,
 )
-from scripts.judge_stress import CATEGORIES, CountingClient  # noqa: E402
+from scripts.classify_stress import CATEGORIES, CountingClient  # noqa: E402
 
 _PROMPT = get_prompt("classify", "ko")
 
@@ -51,16 +53,16 @@ CASES_BY_CATEGORY = [
 
 async def classify_with_temp(client, input_, *, temperature, retries=5):
     def parse(answer):
-        out = validate_judge_output(answer)
-        check_semantics(out, input_.surroundings)
-        return out
+        in_combat = bool(input_.surroundings.get("in_combat", False))
+        out = validate_action_output_json(answer, in_combat=in_combat)
+        return validate_grounded_output(out, input_.surroundings)
 
     return await run_with_retries(
         client,
         system_prompt=_PROMPT,
         user_payload=input_.model_dump_json(),
         parse=parse,
-        retry_on=(ValidationError, JudgeSemanticError),
+        retry_on=(ValidationError, json.JSONDecodeError, ActionGroundingError),
         retries=retries,
         agent="classify",
         temperature=temperature,
@@ -74,7 +76,7 @@ async def run_one(client, sc, *, temperature):
     try:
         result = await classify_with_temp(
             client,
-            JudgeInput(
+            ClassifyInput(
                 player_input=sc["player_input"], surroundings=sc["surroundings"]
             ),
             temperature=temperature,
@@ -83,7 +85,7 @@ async def run_one(client, sc, *, temperature):
             "name": sc["name"],
             "attempts": client.calls,
             "elapsed": time.time() - t0,
-            "action": result.action,
+            "action": _action_label(result),
             "error": None,
         }
     except Exception as e:
@@ -94,6 +96,17 @@ async def run_one(client, sc, *, temperature):
             "action": None,
             "error": f"{type(e).__name__}: {str(e)[:160]}",
         }
+
+
+def _action_label(output: ActionOutput) -> str:
+    if output.refuse is not None:
+        return "refuse"
+    actions = output.actions or []
+    if not actions:
+        return "none"
+    if len(actions) == 1:
+        return actions[0].verb
+    return "+".join(action.verb for action in actions)
 
 
 def summarize(label, results):

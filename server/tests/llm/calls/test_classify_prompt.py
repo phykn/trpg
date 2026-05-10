@@ -1,4 +1,4 @@
-"""Smoke test: judge prompt encodes the word-strength-independent attack rule."""
+"""Smoke test: classify prompt encodes the word-strength-independent attack rule."""
 
 from pathlib import Path
 

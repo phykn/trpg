@@ -2,7 +2,7 @@
 
 On by default (set `FLOW_DEBUG=0` to mute). Emits one structured line per
 key event so Render Logs is grep-friendly. Built for intermittent gemma
-stochastic failures where post-mortem needs to see which verb classify
+stochastic failures where post-mortem needs to see which action classify
 produced and which dispatch path ran, and for spotting which step is
 spending the wall-clock time.
 
@@ -121,19 +121,3 @@ def llm_diag(tag: str, **kv: Any) -> None:
     if not _enabled():
         return
     _emit("llm", _GID.get(), _TURN.get(), tag, kv)
-
-
-def fmt_verb(verb: Any) -> str:
-    """Compact one-line verb summary for diag — name + the modifier keys
-    that drive flow decisions (destination/target/item/skill/mode) and
-    target_ids when present."""
-    mods = getattr(verb, "modifiers", None) or {}
-    parts: list[str] = []
-    for k in ("destination", "target", "intent", "item_id", "skill_id", "mode"):
-        if k in mods:
-            parts.append(f"{k}={mods[k]}")
-    targets = list(getattr(verb, "target_ids", []) or [])
-    if targets:
-        parts.append(f"target_ids={targets}")
-    name = getattr(verb, "name", "?")
-    return f"{name}({', '.join(parts)})" if parts else str(name)

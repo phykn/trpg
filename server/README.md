@@ -89,7 +89,7 @@ dotenv loads `server/.env.<APP_ENV>` (default `dev`) automatically and uvicorn b
 .venv/bin/python -m pytest -q                   # unit
 ```
 
-`pytest-asyncio` auto-mode. End-to-end LLM verification is via manual play after merge — see `server/scripts/smoke_judge.py` for a one-shot Gemini-routed sanity check.
+`pytest-asyncio` auto-mode. End-to-end LLM verification is via manual play after merge — see `server/scripts/smoke_classify.py` for a one-shot Gemini-routed sanity check.
 
 ## Layout
 
@@ -97,7 +97,7 @@ dotenv loads `server/.env.<APP_ENV>` (default `dev`) automatically and uvicorn b
 server/
   run_api.py                       # entrypoint
   .env.dev                         # required for local dev (.env.release for prod), gitignored
-  scripts/                         # one-off tools (judge_stress.py, smoke_judge.py, ...)
+  scripts/                         # one-off tools (classify_stress.py, smoke_classify.py, ...)
   src/                             # code (ownership map in ../docs/05-interfaces.md)
   tests/                           # pytest
 ../scenarios/<profile>/            # local seed source (world.md, start.json, player_template.json, races/, locations/, characters/, items/, quests/, chapters/, skills/). Authored locally, uploaded to Supabase Storage; the running server reads from the bucket.
