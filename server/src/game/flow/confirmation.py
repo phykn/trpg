@@ -137,7 +137,7 @@ def _build_dangerous_use_confirmation(
     if not isinstance(item_id, str):
         return None
     player = state.characters[state.player_id]
-    if item_id not in player.inventory_ids:
+    if item_id not in player.inventory_ids:  # ssot-allow: own-inventory confirmation gate
         return None
     item = state.items.get(item_id)
     if item is None:

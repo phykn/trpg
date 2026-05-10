@@ -30,9 +30,7 @@ def _clamp(v: int, lo: int, hi: int) -> int:
 def _recruit_dc(state: GameState, target_id: str) -> int:
     target = state.characters.get(target_id)
     rel = target.relations.get(state.player_id, 0) if target else 0
-    base = (
-        RULES.companions.recruit_base_dc
-    )  # ssot-allow: RULES config attribute, not entity.companions list
+    base = RULES.companions.recruit_base_dc  # ssot-allow: rules config, not entity relation
     return base - _clamp(rel // 10, -5, 5)
 
 
@@ -95,9 +93,7 @@ async def run_dismiss(
     Pushes a system card + fires inline narrate (mirrors recruit roll branch).
     Always emits its own `companion_dismissed:<name>` signal."""
     player = state.characters[state.player_id]
-    if (
-        target_id not in player.companions
-    ):  # ssot-allow: write path guard, not a relation scan
+    if target_id not in player.companions:  # ssot-allow: write path guard
         async for ev in finalize(state, save_repo, dirty, to_front_fn):
             yield ev
         return
@@ -197,9 +193,7 @@ async def handle_recruit_roll_result(
     target_name = target.name
     player = state.characters[state.player_id]
 
-    rules = (
-        RULES.companions
-    )  # ssot-allow: RULES config attribute, not entity.companions list
+    rules = RULES.companions  # ssot-allow: rules config, not entity relation
 
     from ._diag import diag
 
