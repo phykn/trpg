@@ -57,7 +57,7 @@
 | verb | 필드 | 매칭 힌트 |
 |---|---|---|
 | `move` | `to` | `entities[type=connection]`의 id. 전투 중 도망은 `how="hasty"`만 가능 |
-| `transfer` | `what`, `from`, `to`, `how` | 장비, 구매, 판매, 선물, 시체 약탈, 절도. `how`: `gift`, `trade`, `steal` |
+| `transfer` | `what`, `from`, `to`, `how` | 장비, 구매, 판매, 선물, 시체 약탈, 절도, 퀘스트 수락/포기. `how`: `gift`, `trade`, `steal`, `accept`, `abandon`, `equip`, `unequip` |
 | `use` | `what`, `to?` | 소모품이나 trigger 아이템 사용. weapon/armor는 `transfer` |
 | `attack` | `what`, `with?`, `how?` | NPC 공격. `what`은 NPC id 배열. 기습이면 `how="surprise"` |
 | `cast` | `with`, `what?` | 회복/강화 기술. `with`는 skill id |
@@ -96,7 +96,7 @@
 | "약초를 마신다" | `{"actions":[{"verb":"use","what":"herb_01"}]}` |
 | "여관 주인에게 마을 소문을 묻는다" | `{"actions":[{"verb":"speak","to":"innkeeper_01","how":"friendly"}]}` |
 | "동료가 되어달라" | `{"actions":[{"verb":"speak","to":"edrik_01","how":"recruit"}]}` |
-| "의뢰를 수락한다" | `{"actions":[{"verb":"speak","to":"edrik_01","how":"accept"}]}` |
+| "의뢰를 수락한다" | `{"actions":[{"verb":"transfer","what":"q_chief_request","from":"edrik_01","to":"player_01","how":"accept"}]}` |
 | "보이는 출구가 뭐야?" | `{"actions":[{"verb":"query","what":"exits"}]}` |
 | "내가 가진 게 뭐지?" | `{"actions":[{"verb":"query","what":"inventory"}]}` |
 | "산적을 공격한다" | `{"actions":[{"verb":"attack","what":["bandit_01"]}]}` |
