@@ -362,6 +362,64 @@ async def test_graph_confirm_cancel_clears_pending_attack(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_graph_turn_pass_defends_during_existing_combat(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        attack_response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "attack", "what": "edrik_chief"}},
+        )
+        confirmation_id = attack_response.json()["state"]["pendingConfirmation"]["id"]
+        await client.post(
+            f"/session/{game_id}/graph/confirm",
+            json={"confirmation_id": confirmation_id, "decision": "confirm"},
+        )
+        response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "pass"}},
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    progress = await app.state.graph_repo.load_progress(game_id)
+
+    assert body["state"]["combat"] is not None
+    assert body["state"]["combat"]["round"] == 3
+    assert progress.graph_combat_state is not None
+    assert progress.graph_combat_state.round == 3
+
+
+@pytest.mark.asyncio
+async def test_graph_turn_flee_clears_existing_combat(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        attack_response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "attack", "what": "edrik_chief"}},
+        )
+        confirmation_id = attack_response.json()["state"]["pendingConfirmation"]["id"]
+        await client.post(
+            f"/session/{game_id}/graph/confirm",
+            json={"confirmation_id": confirmation_id, "decision": "confirm"},
+        )
+        response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "move", "how": "flee"}},
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    progress = await app.state.graph_repo.load_progress(game_id)
+
+    assert body["state"]["combat"] is None
+    assert progress.graph_combat_state is None
+
+
+@pytest.mark.asyncio
 async def test_graph_input_classifies_text_and_returns_confirmation(tmp_path):
     app = _build_app(
         tmp_path,
