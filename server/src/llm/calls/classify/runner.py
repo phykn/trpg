@@ -15,7 +15,7 @@ async def classify(
     client: LLMClient,
     input_: ClassifyInput,
     locale: str,
-    retries: int = 3,
+    retries: int = 5,
     *,
     strict: bool = False,
 ) -> ActionOutput:

@@ -167,3 +167,22 @@ async def test_strict_classify_still_raises_after_exhausted_retries():
             retries=3,
             strict=True,
         )
+
+
+@pytest.mark.asyncio
+async def test_classify_default_retry_budget_is_five_attempts():
+    input_ = ClassifyInput(
+        player_input="잠깐 기다린다",
+        surroundings={"in_combat": False, "entities": []},
+    )
+    client = _RetryCaptureClient(['{"actions":[{"verb":"pass"}]} trailing text'] * 5)
+
+    with pytest.raises(json.JSONDecodeError):
+        await classify(
+            client=client,
+            input_=input_,
+            locale="ko",
+            strict=True,
+        )
+
+    assert client.thinks == [False, False, False, False, False]
