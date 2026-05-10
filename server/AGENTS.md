@@ -77,7 +77,7 @@ Runtime child tables should FK to `game_progress(game_id) ON DELETE CASCADE`. RL
 
 `load_runtime_state` bumps `next_log_id` past the highest loaded log id so a partial write cannot reuse a log id on the next turn.
 
-`SupabaseStorageScenarioRepo` caches `world.md` per profile (process-lifetime; restart to reload) and lazily materializes `local_profile_path` to a tempdir so `game/engines/invariants.Scenario.from_dir` can walk a real fs tree. `read_world_md(missing_ok=True)` does **not** cache empty results — a strict caller after a missing-ok caller will still raise.
+`SupabaseStorageScenarioRepo` caches `world.md` per profile (process-lifetime; restart to reload). `read_world_md(missing_ok=True)` does **not** cache empty results — a strict caller after a missing-ok caller will still raise.
 
 `game_id` shape: `game_YYMMDD_HHMMSS_<6hex>` (UTC + `secrets.token_hex(3)`) so concurrent inits across isolates can't collide.
 
@@ -115,7 +115,7 @@ Existing tags live where they fire. Read `src/llm/diag.py` before adding new hoo
 
 ## Stats / tiers / grades / prose voice
 
-- Graph-facing stat keys are `body / agility / mind / presence`. Old entity modules may still expose `STR / DEX / CON / INT / WIS / CHA`; do not introduce those into new graph payloads.
+- Graph-facing stat keys are `body / agility / mind / presence`; do not introduce legacy six-stat payloads into graph code, seed data, tests, or client state.
 - Tiers and grades should stay internal unless a graph payload explicitly needs them.
 - All player-facing Korean built by graph runtime, LLM prompts, and `wire/graph_to_front.py` uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings.
 - Canonical user-facing term for skills is **기술**. The classify prompt accepts `스킬` as a synonym from player input, but every other prompt and engine string says `기술`. Code identifiers and the `skills/` entity directory keep the English `skill`.

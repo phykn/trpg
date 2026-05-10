@@ -14,13 +14,15 @@ import { PanelBody } from '@/components/info-panel/PanelBody';
 
 const FLOAT_BUFFER = 540;
 
-export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, onAction }: {
+export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, onAction, leading, trailing }: {
   slots: PanelSlot[];
   miniMapGraph: StoryGraphModel;
   place: Place | null;
   activeId: string | null;
   onSelect: (id: string) => void;
   onAction?: (action: PanelAction) => void;
+  leading?: React.ReactNode;
+  trailing?: React.ReactNode;
 }) {
   const activeSlot = slots.find((s) => s.id === activeId) ?? null;
   const panel = activeSlot?.panel ?? null;
@@ -54,6 +56,7 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, on
         onLayout={(e) => setChipBarHeight(e.nativeEvent.layout.height)}
         className="flex-row p-2 gap-2 items-center"
       >
+        {leading}
         <View className="flex-1 flex-row gap-1">
           {slots.map((s) => (
             <Chip
@@ -66,6 +69,7 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, on
             />
           ))}
         </View>
+        {trailing}
       </Surface>
       {panel && (
         <Surface

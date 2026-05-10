@@ -4,22 +4,15 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from src.game.domain.entities import (
-    Chapter,
-    Character,
-    Equipment,
-    Item,
-    Location,
-    Quest,
-    Race,
-    Skill,
-    Stats,
-)
 from src.game.domain.graph import EdgeType, Graph, GraphEdge, GraphNode, NodeType
 from src.game.domain.progress import GameProgress
 from src.game.engines.growth import calc_max_hp, calc_max_mp
 from src.game.rules.config import RULES
 from src.game.seed.player import PlayerInput
+
+
+SeedRecord = dict[str, Any]
+SeedRecords = dict[str, SeedRecord]
 
 
 class SeedGraphBundle(BaseModel):
@@ -33,13 +26,13 @@ def build_seed_graph(
     *,
     profile_name: str,
     player: PlayerInput,
-    races: dict[str, Race],
-    locations: dict[str, Location],
-    items: dict[str, Item],
-    skills: dict[str, Skill],
-    npcs: dict[str, Character],
-    quests: dict[str, Quest],
-    chapters: dict[str, Chapter],
+    races: SeedRecords,
+    locations: SeedRecords,
+    items: SeedRecords,
+    skills: SeedRecords,
+    npcs: SeedRecords,
+    quests: SeedRecords,
+    chapters: SeedRecords,
     start: dict[str, Any],
     template: dict[str, Any],
     game_id: str,
@@ -47,8 +40,8 @@ def build_seed_graph(
 ) -> SeedGraphBundle:
     del profile_name
 
-    player_char = _build_player(player, races, start, template)
-    characters = {**npcs, player_char.id: player_char}
+    player_record = _build_player(player, races, start, template)
+    characters = {**npcs, _record_id(player_record): player_record}
 
     nodes: dict[str, GraphNode] = {}
     edges: dict[str, GraphEdge] = {}
@@ -79,123 +72,116 @@ def build_seed_graph(
 
     for character in characters.values():
         add_node(
-            character.id,
+            _record_id(character),
             "character",
             _character_graph_properties(character),
         )
     for item in items.values():
-        add_node(item.id, "item", item.model_dump(mode="json"))
+        add_node(_record_id(item), "item", _node_properties(item))
     for location in locations.values():
         add_node(
-            location.id,
+            _record_id(location),
             "location",
-            location.model_dump(mode="json", exclude={"item_ids", "connections"}),
+            _node_properties(location, exclude={"item_ids", "connections"}),
         )
     for quest in quests.values():
         add_node(
-            quest.id,
+            _record_id(quest),
             "quest",
             _quest_graph_properties(quest),
         )
     for skill in skills.values():
-        add_node(skill.id, "skill", skill.model_dump(mode="json"))
+        add_node(_record_id(skill), "skill", _node_properties(skill))
     for race in races.values():
         add_node(
-            race.id,
+            _record_id(race),
             "race",
-            race.model_dump(mode="json", exclude={"racial_skill_ids"}),
+            _node_properties(race, exclude={"racial_skill_ids"}),
         )
     for chapter in chapters.values():
         add_node(
-            chapter.id,
+            _record_id(chapter),
             "chapter",
-            chapter.model_dump(mode="json", exclude={"quest_ids"}),
+            _node_properties(chapter, exclude={"quest_ids"}),
         )
 
     for character in characters.values():
-        if character.location_id:
-            add_edge("located_at", character.id, character.location_id)
-        if character.race_id:
-            add_edge("belongs_to_race", character.id, character.race_id)
+        character_id = _record_id(character)
+        if location_id := _optional_str(character.get("location_id")):
+            add_edge("located_at", character_id, location_id)
+        if race_id := _optional_str(character.get("race_id")):
+            add_edge("belongs_to_race", character_id, race_id)
         equipped_item_ids = {
-            item_id for _, item_id in character.equipment.equipped_items()
+            item_id for _, item_id in _equipped_items(_mapping(character.get("equipment")))
         }
-        for slot, item_id in character.equipment.equipped_items():
-            add_edge("equips", character.id, item_id, {"slot": slot})
-        for item_id in character.inventory_ids:
+        for slot, item_id in _equipped_items(_mapping(character.get("equipment"))):
+            add_edge("equips", character_id, item_id, {"slot": slot})
+        for item_id in _str_list(character.get("inventory_ids")):
             if item_id in equipped_item_ids:
                 continue
-            add_edge("carries", character.id, item_id)
-        for skill_id in character.racial_skill_ids:
+            add_edge("carries", character_id, item_id)
+        for skill_id in _str_list(character.get("racial_skill_ids")):
             add_edge(
                 "knows_skill",
-                character.id,
+                character_id,
                 skill_id,
                 {"source": "racial"},
-                edge_id=f"knows_skill:racial:{character.id}:{skill_id}",
+                edge_id=f"knows_skill:racial:{character_id}:{skill_id}",
             )
-        for skill_id in character.learned_skill_ids:
+        for skill_id in _str_list(character.get("learned_skill_ids")):
             add_edge(
                 "knows_skill",
-                character.id,
+                character_id,
                 skill_id,
                 {"source": "learned"},
-                edge_id=f"knows_skill:learned:{character.id}:{skill_id}",
+                edge_id=f"knows_skill:learned:{character_id}:{skill_id}",
             )
-        for companion_id in character.companions:
-            add_edge("has_companion", character.id, companion_id)
-        for target_id, affinity in character.relations.items():
-            add_edge("relation", character.id, target_id, {"affinity": affinity})
+        for companion_id in _str_list(character.get("companions")):
+            add_edge("has_companion", character_id, companion_id)
+        for target_id, affinity in _mapping(character.get("relations")).items():
+            if isinstance(target_id, str) and isinstance(affinity, int):
+                add_edge("relation", character_id, target_id, {"affinity": affinity})
 
     for location in locations.values():
-        for item_id in location.item_ids:
-            add_edge("located_at", item_id, location.id)
-        for connection in location.connections:
+        location_id = _record_id(location)
+        for item_id in _str_list(location.get("item_ids")):
+            add_edge("located_at", item_id, location_id)
+        for connection in _dict_list(location.get("connections")):
+            target_id = _optional_str(connection.get("target_id"))
+            if target_id is None:
+                continue
             add_edge(
                 "connects_to",
-                location.id,
-                connection.target_id,
-                connection.model_dump(
-                    mode="json",
-                    exclude={"target_id"},
-                    exclude_none=True,
-                ),
+                location_id,
+                target_id,
+                _node_properties(connection, exclude={"target_id"}),
             )
 
     for quest in quests.values():
-        add_edge("gives_quest", quest.giver_id, quest.id)
-        for trigger in quest.triggers:
-            add_edge(
-                "target_of",
-                trigger.target_id,
-                quest.id,
-                trigger.model_dump(mode="json", exclude={"target_id"})
-                | {"outcome": "success"},
-                edge_id=f"target_of:{trigger.id}:{trigger.target_id}:{quest.id}",
-            )
-        for trigger in quest.fail_triggers:
-            add_edge(
-                "target_of",
-                trigger.target_id,
-                quest.id,
-                trigger.model_dump(mode="json", exclude={"target_id"})
-                | {"outcome": "failure"},
-                edge_id=f"target_of:fail:{trigger.id}:{trigger.target_id}:{quest.id}",
-            )
-        for item_id in quest.rewards.items:
-            add_edge("reward_of", item_id, quest.id)
+        quest_id = _record_id(quest)
+        giver_id = _optional_str(quest.get("giver_id"))
+        if giver_id is not None:
+            add_edge("gives_quest", giver_id, quest_id)
+        for trigger in _dict_list(quest.get("triggers")):
+            _add_quest_target_edge(edges, trigger, quest_id, "success")
+        for trigger in _dict_list(quest.get("fail_triggers")):
+            _add_quest_target_edge(edges, trigger, quest_id, "failure")
+        for item_id in _str_list(_mapping(quest.get("rewards")).get("items")):
+            add_edge("reward_of", item_id, quest_id)
 
     for race in races.values():
-        for skill_id in race.racial_skill_ids:
-            add_edge("grants_skill", race.id, skill_id)
+        race_id = _record_id(race)
+        for skill_id in _str_list(race.get("racial_skill_ids")):
+            add_edge("grants_skill", race_id, skill_id)
 
     for chapter in chapters.values():
-        for quest_id in chapter.quest_ids:
-            add_edge("part_of_chapter", quest_id, chapter.id)
+        chapter_id = _record_id(chapter)
+        for quest_id in _str_list(chapter.get("quest_ids")):
+            add_edge("part_of_chapter", quest_id, chapter_id)
 
     progress = GameProgress(
         game_id=game_id,
-        player_id=player_char.id,
+        player_id=_record_id(player_record),
         locale=locale,
         active_subject_id=start.get("active_subject_id"),
         active_quest_id=start.get("active_quest_id"),
@@ -205,51 +191,54 @@ def build_seed_graph(
 
 def _build_player(
     player: PlayerInput,
-    races: dict[str, Race],
+    races: SeedRecords,
     start: dict[str, Any],
     template: dict[str, Any],
-) -> Character:
+) -> SeedRecord:
     player_id = template.get("id", "player_01")
-    stats = Stats()
+    stats = _graph_stats(template.get("stats"))
     chosen_race = races[player.race_id]
     location_id = start["start_location_id"]
+    level = _int_value(template.get("level"), 1)
+    max_hp = calc_max_hp(level, stats["body"])
+    max_mp = calc_max_mp(level, stats["mind"])
+    return {
+        **template,
+        "id": player_id,
+        "name": player.name,
+        "is_player": True,
+        "race_id": player.race_id,
+        "gender": player.gender,
+        "level": level,
+        "stats": stats,
+        "location_id": location_id,
+        "equipment": _mapping(template.get("equipment")),
+        "inventory_ids": _str_list(template.get("inventory_ids")),
+        "gold": _int_value(template.get("gold"), 0),
+        "xp_pool": _int_value(template.get("xp_pool"), 0),
+        "racial_skill_ids": _str_list(chosen_race.get("racial_skill_ids")),
+        "revive_coins": RULES.death.revive_coins,
+        "max_hp": max_hp,
+        "max_mp": max_mp,
+        "hp": max_hp,
+        "mp": max_mp,
+        "alive": True,
+        "visited_location_ids": [location_id],
+    }
 
-    player_char = Character(
-        id=player_id,
-        name=player.name,
-        is_player=True,
-        race_id=player.race_id,
-        gender=player.gender,
-        level=int(template.get("level", 1)),
-        stats=stats,
-        location_id=location_id,
-        equipment=Equipment.model_validate(template.get("equipment", {})),
-        inventory_ids=list(template.get("inventory_ids", [])),
-        gold=int(template.get("gold", 0)),
-        xp_pool=int(template.get("xp_pool", 0)),
-        racial_skill_ids=list(chosen_race.racial_skill_ids),
-        revive_coins=RULES.death.revive_coins,
-    )
-    player_char.max_hp = calc_max_hp(player_char.level, stats.CON)
-    player_char.max_mp = calc_max_mp(player_char.level, stats.INT)
-    player_char.hp = player_char.max_hp
-    player_char.mp = player_char.max_mp
-    player_char.visited_location_ids.add(location_id)
-    return player_char
 
-
-def _quest_graph_properties(quest: Quest) -> dict[str, Any]:
-    properties = quest.model_dump(mode="json", exclude={"giver_id", "rewards"})
-    properties["rewards"] = quest.rewards.model_dump(
-        mode="json",
-        exclude={"items"},
-    )
+def _quest_graph_properties(quest: SeedRecord) -> dict[str, Any]:
+    properties = _node_properties(quest, exclude={"giver_id", "rewards"})
+    rewards = _mapping(quest.get("rewards"))
+    properties["rewards"] = {
+        key: value for key, value in rewards.items() if key != "items"
+    }
     return properties
 
 
-def _character_graph_properties(character: Character) -> dict[str, Any]:
-    properties = character.model_dump(
-        mode="json",
+def _character_graph_properties(character: SeedRecord) -> dict[str, Any]:
+    properties = _node_properties(
+        character,
         exclude={
             "location_id",
             "equipment",
@@ -260,14 +249,86 @@ def _character_graph_properties(character: Character) -> dict[str, Any]:
             "companions",
         },
     )
-    properties["stats"] = _graph_stats(character.stats)
+    properties.setdefault("alive", True)
+    properties.setdefault("status", [])
+    properties.setdefault("level", 0)
+    properties["stats"] = _graph_stats(character.get("stats"))
     return properties
 
 
-def _graph_stats(stats: Stats) -> dict[str, int]:
+def _add_quest_target_edge(
+    edges: dict[str, GraphEdge],
+    trigger: SeedRecord,
+    quest_id: str,
+    outcome: str,
+) -> None:
+    target_id = _optional_str(trigger.get("target_id"))
+    trigger_id = _optional_str(trigger.get("id"))
+    if target_id is None or trigger_id is None:
+        return
+    prefix = "target_of" if outcome == "success" else "target_of:fail"
+    edge_id = f"{prefix}:{trigger_id}:{target_id}:{quest_id}"
+    edges[edge_id] = GraphEdge(
+        id=edge_id,
+        type="target_of",
+        from_node_id=target_id,
+        to_node_id=quest_id,
+        properties=_node_properties(trigger, exclude={"target_id"}) | {"outcome": outcome},
+    )
+
+
+def _node_properties(
+    record: SeedRecord,
+    *,
+    exclude: set[str] | None = None,
+) -> dict[str, Any]:
+    skipped = exclude or set()
+    return {key: value for key, value in record.items() if key not in skipped}
+
+
+def _record_id(record: SeedRecord) -> str:
+    value = record.get("id")
+    if not isinstance(value, str) or not value:
+        raise ValueError("seed record requires a non-empty id")
+    return value
+
+
+def _graph_stats(value: object) -> dict[str, int]:
+    raw = _mapping(value)
+    defaults = {"body": 10, "agility": 10, "mind": 10, "presence": 10}
     return {
-        "body": (stats.STR + stats.CON) // 2,
-        "agility": stats.DEX,
-        "mind": (stats.INT + stats.WIS) // 2,
-        "presence": stats.CHA,
+        key: _int_value(raw.get(key), default)
+        for key, default in defaults.items()
     }
+
+
+def _equipped_items(equipment: dict[str, Any]) -> list[tuple[str, str]]:
+    return [
+        (slot, item_id)
+        for slot, item_id in equipment.items()
+        if isinstance(slot, str) and isinstance(item_id, str) and item_id
+    ]
+
+
+def _mapping(value: object) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _dict_list(value: object) -> list[SeedRecord]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _str_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str)]
+
+
+def _optional_str(value: object) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
+def _int_value(value: object, default: int) -> int:
+    return value if isinstance(value, int) else default

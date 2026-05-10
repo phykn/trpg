@@ -2,12 +2,6 @@
 
 import json
 from pathlib import Path
-from typing import Type, TypeVar
-
-from pydantic import BaseModel
-
-
-T = TypeVar("T", bound=BaseModel)
 
 
 class LocalFsScenarioRepo:
@@ -72,14 +66,14 @@ class LocalFsScenarioRepo:
             (self._root(profile) / "player_template.json").read_text(encoding="utf-8")
         )
 
-    async def load_seed_entities(
-        self, profile: str, kind: str, model_cls: Type[T]
-    ) -> dict[str, T]:
+    async def load_seed_records(self, profile: str, kind: str) -> dict[str, dict]:
         dirpath = self._root(profile) / kind
-        result: dict[str, T] = {}
+        result: dict[str, dict] = {}
         if not dirpath.is_dir():
             return result
         for f in sorted(dirpath.glob("*.json")):
-            obj = model_cls.model_validate_json(f.read_text(encoding="utf-8"))
-            result[obj.id] = obj  # type: ignore[attr-defined]
+            obj = json.loads(f.read_text(encoding="utf-8"))
+            record_id = obj.get("id")
+            if isinstance(record_id, str):
+                result[record_id] = obj
         return result

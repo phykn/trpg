@@ -1,12 +1,9 @@
 """Graph session REST routes."""
 
-import asyncio
-
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.errors import (
-    LLMUnavailable,
     ProfileMalformed,
     ProfileNotFound,
     RaceNotFound,
@@ -19,18 +16,15 @@ from src.game.runtime.confirmation import (
     run_graph_confirm,
 )
 from src.game.runtime.input import GraphInputError, run_graph_input_turn
-from src.game.runtime.intro import (
-    run_graph_initial_fallback_narration,
-    run_graph_initial_narration,
-)
 from src.game.runtime.level_up import GraphLevelUpError, run_graph_level_up
-from src.game.runtime.load import load_runtime_state
 from src.game.runtime.roll import GraphRollError, GraphRollExpected, run_graph_roll
-from src.game.runtime.state import GameRuntimeState
-from src.game.seed.init_graph import init_graph_game
+from src.game.runtime.session import (
+    initialize_graph_session,
+    load_graph_session_state,
+    run_graph_intro_request,
+)
 from src.game.runtime.turn import GraphActionTurnError
 from src.llm.client import LLMClient, set_think_override
-from src.wire.graph_to_front import graph_to_front_state
 
 from ..deps import get_graph_repo, get_llm, get_scenario_repo
 from ..schema import (
@@ -46,18 +40,15 @@ from ..schema import (
 
 router = APIRouter()
 
-_GRAPH_INIT_NARRATION_TIMEOUT_SECONDS = 6.0
-
 
 @router.post("/session/graph/init", response_model=InitResponse)
 async def session_graph_init(
     body: InitRequest,
-    llm: LLMClient = Depends(get_llm),
     graph_repo: GraphRepo = Depends(get_graph_repo),
     scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> InitResponse:
     try:
-        bundle = await init_graph_game(
+        result = await initialize_graph_session(
             body.profile, body.player, graph_repo, scenario_repo, locale=body.locale
         )
     except ProfileNotFound as e:
@@ -66,17 +57,27 @@ async def session_graph_init(
         raise HTTPException(status_code=422, detail=f"race not found: {e}")
     except ProfileMalformed as e:
         raise HTTPException(status_code=422, detail=f"profile malformed: {e}")
-    runtime = GameRuntimeState(graph=bundle.graph, progress=bundle.progress)
-    try:
-        runtime = await asyncio.wait_for(
-            run_graph_initial_narration(llm, graph_repo, runtime),
-            timeout=_GRAPH_INIT_NARRATION_TIMEOUT_SECONDS,
-        )
-    except (LLMUnavailable, OSError, TimeoutError):
-        runtime = await run_graph_initial_fallback_narration(graph_repo, runtime)
     return InitResponse(
-        game_id=bundle.progress.game_id,
-        state=graph_to_front_state(runtime).model_dump(mode="json", by_alias=True),
+        game_id=result.game_id,
+        state=result.front_state.model_dump(mode="json", by_alias=True),
+    )
+
+
+@router.post("/session/{game_id}/graph/intro", response_model=GraphActionResponse)
+async def session_graph_intro(
+    game_id: str,
+    llm: LLMClient = Depends(get_llm),
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+) -> GraphActionResponse:
+    try:
+        result = await run_graph_intro_request(llm, graph_repo, game_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="game not found")
+    return GraphActionResponse(
+        game_id=game_id,
+        state=result.front_state.model_dump(mode="json", by_alias=True),
+        status=result.status,
+        message=result.message,
     )
 
 
@@ -86,12 +87,12 @@ async def get_graph_state_route(
     graph_repo: GraphRepo = Depends(get_graph_repo),
 ) -> InitResponse:
     try:
-        runtime = await load_runtime_state(graph_repo, game_id)
+        result = await load_graph_session_state(graph_repo, game_id)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     return InitResponse(
-        game_id=game_id,
-        state=graph_to_front_state(runtime).model_dump(mode="json", by_alias=True),
+        game_id=result.game_id,
+        state=result.front_state.model_dump(mode="json", by_alias=True),
     )
 
 

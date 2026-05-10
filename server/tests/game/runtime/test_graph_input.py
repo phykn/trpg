@@ -157,12 +157,15 @@ async def test_graph_input_targetless_speak_defaults_to_nearby_living_npc(tmp_pa
     await run_graph_input_turn(llm, repo, "game-1", "근처 사람에게 말을 건다")
     progress = await repo.load_progress("game-1")
     narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
-    user_prompt = narrate_call["messages"][1]["content"]
+    user_prompt = json.loads(narrate_call["messages"][1]["content"])
 
     assert progress.active_subject_id == "goblin_01"
-    assert "대화 대상: goblin_01" in user_prompt
-    assert "대상 상태: 현재 장소에 있음" in user_prompt
-    assert "NPC의 짧은 반응이나 대사를 포함합니다" in narrate_call["messages"][0]["content"]
+    assert user_prompt["dialogue_target"] == {
+        "id": "goblin_01",
+        "name": "goblin_01",
+        "state": "same_place",
+    }
+    assert "NPC의 짧은 반응이나 대사" in narrate_call["messages"][0]["content"]
 
 
 async def test_graph_input_speak_times_out_slow_narration_and_uses_fallback(

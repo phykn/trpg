@@ -8,6 +8,7 @@ from typing import Literal
 from openai import AsyncOpenAI
 
 from src.game.rules.config import RULES
+from src.llm.diag import llm_diag
 from . import gemini, llama_cpp
 from .profiles import LLMProfile, ThinkingMode, parse_env_profiles
 
@@ -51,6 +52,7 @@ class _Provider:
     ):
         if not profile.api_keys:
             raise ValueError(f"profile model={profile.model!r} has no api_keys")
+        self.base_url = profile.base_url
         self.model = profile.model
         self.thinking_mode = profile.thinking_mode
         self.toggle_style: ToggleStyle = (
@@ -265,6 +267,13 @@ class LLMClient:
         use_fallback: bool = False,
     ) -> dict:
         provider = self._pick(agent, fallback=use_fallback)
+        llm_diag(
+            "llm:request",
+            agent=agent,
+            model=provider.model,
+            base_url=getattr(provider, "base_url", "unknown"),
+            fallback=use_fallback or None,
+        )
         base = self._log_basename(agent) if log else None
         self._log_query(base, messages)
         params = self._params(provider, messages, think, temperature)
@@ -297,6 +306,13 @@ class LLMClient:
         use_fallback: bool = False,
     ) -> AsyncIterator[dict]:
         provider = self._pick(agent, fallback=use_fallback)
+        llm_diag(
+            "llm:request",
+            agent=agent,
+            model=provider.model,
+            base_url=getattr(provider, "base_url", "unknown"),
+            fallback=use_fallback or None,
+        )
         base = self._log_basename(agent) if log else None
         self._log_query(base, messages)
         params = self._params(provider, messages, think, temperature)

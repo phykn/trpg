@@ -71,6 +71,17 @@ export async function initGraphSession(body: InitRequest): Promise<SessionPayloa
   };
 }
 
+export async function requestGraphIntro(
+  gameId: string,
+): Promise<GraphActionClientResponse> {
+  const res = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/intro`, {
+    method: 'POST',
+    headers: jsonHeaders,
+  });
+  if (!res.ok) throw new Error(await httpError('requestGraphIntro', res));
+  return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
+}
+
 export async function sendGraphInput(
   gameId: string,
   playerInput: string,

@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 from src.db.repo import GraphRepo
 from src.game.domain.types import GraphStatKey
 from src.game.engines.graph_growth import GraphGrowthError, plan_level_up
+from src.llm.diag import engine_diag, set_diag_context
 from src.wire.graph_to_front import GraphFrontStatePayload, graph_to_front_state
 
 from .apply import apply_runtime_graph_changes
@@ -35,12 +36,15 @@ async def run_graph_level_up(
         raise GraphLevelUpError("graph skill learning is not supported yet")
 
     runtime = await load_runtime_state(repo, game_id)
+    set_diag_context(game_id, runtime.progress.turn_count)
+    engine_diag("levelup:start", stat=stat_up)
     if runtime.progress.pending_confirmation is not None:
         raise GraphLevelUpError("pending confirmation active")
 
     try:
         result = plan_level_up(runtime.graph, runtime.progress.player_id, stat_up)
     except GraphGrowthError as exc:
+        engine_diag("levelup:fail", stat=stat_up, err=type(exc).__name__)
         raise GraphLevelUpError(str(exc)) from exc
 
     next_runtime = apply_runtime_graph_changes(runtime, result.changes).runtime
@@ -62,6 +66,9 @@ async def run_graph_level_up(
     await repo.save_graph(game_id, next_runtime.graph)
     await repo.append_log_entries(game_id, [card])
     await repo.save_progress(next_runtime.progress)
+    player = next_runtime.graph.nodes[next_runtime.progress.player_id]
+    level = player.properties.get("level")
+    engine_diag("levelup:ok", stat=stat_up, next_level=level if isinstance(level, int) else None)
     return GraphLevelUpResult(
         runtime=next_runtime,
         front_state=graph_to_front_state(next_runtime),

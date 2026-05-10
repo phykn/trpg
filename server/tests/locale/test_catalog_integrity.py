@@ -5,15 +5,31 @@ from pathlib import Path
 
 from typing import get_args
 
-from src.game.domain.types import EncounterRisk, GraphStatKey, Phase, StatKey, Tier
+from src.game.domain.types import EncounterRisk, GraphStatKey, Phase, Tier
 
 
 CATALOG = Path(__file__).resolve().parents[2] / "src" / "locale" / "catalog"
+REQUIRED_LOCALES = {"ko", "en"}
 
 
 def _keys(toml_name: str, domain: str) -> set[str]:
     data = tomllib.loads((CATALOG / toml_name).read_text(encoding="utf-8"))
     return set(data.get(domain, {}).keys())
+
+
+def test_every_catalog_entry_has_required_locales() -> None:
+    missing: list[str] = []
+    for path in sorted(CATALOG.glob("*.toml")):
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+        for domain, entries in data.items():
+            for key, locales in entries.items():
+                missing_locales = REQUIRED_LOCALES - set(locales)
+                if missing_locales:
+                    missing.append(
+                        f"{path.name}:{domain}.{key}:{','.join(sorted(missing_locales))}"
+                    )
+
+    assert missing == []
 
 
 def test_tier_catalog_covers_enum() -> None:
@@ -27,7 +43,7 @@ def test_phase_catalog_covers_enum() -> None:
 
 
 def test_stat_catalog_covers_enum() -> None:
-    expected = {*get_args(StatKey), *get_args(GraphStatKey)}
+    expected = set(get_args(GraphStatKey))
     assert _keys("stat.toml", "stat") == expected
 
 

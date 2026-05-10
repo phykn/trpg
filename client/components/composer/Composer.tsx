@@ -24,14 +24,17 @@ const INPUT_MIN_HEIGHT = 40;
 const INPUT_MAX_HEIGHT = 320;
 const IS_WEB = Platform.OS === 'web';
 
-export function Composer({ input, setInput, onSend, onStop, streaming, locked = false, nearby = null, onNearbyAction }: {
+export function Composer({ input, setInput, onSend, onStop, streaming, locked = false, suggestions = [], nearby = null, nearbyOpen, onNearbyOpenChange, onNearbyAction }: {
   input: string;
   setInput: (text: string) => void;
   onSend: (text: string) => void;
   onStop: () => void;
   streaming: boolean;
   locked?: boolean;
+  suggestions?: string[];
   nearby?: NearbyPanelModel | null;
+  nearbyOpen?: boolean;
+  onNearbyOpenChange?: (open: boolean) => void;
   onNearbyAction?: (action: PanelAction) => void;
 }) {
   const inputRef = React.useRef(input);
@@ -39,7 +42,10 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
 
   const textInputRef = React.useRef<TextInput>(null);
   const [inputHeight, setInputHeight] = React.useState(INPUT_MIN_HEIGHT);
-  const [nearbyOpen, setNearbyOpen] = React.useState(false);
+  const [internalNearbyOpen, setInternalNearbyOpen] = React.useState(false);
+  const [expandedNearbyId, setExpandedNearbyId] = React.useState<string | null>(null);
+  const isNearbyOpen = nearbyOpen ?? internalNearbyOpen;
+  const setNearbyOpen = onNearbyOpenChange ?? setInternalNearbyOpen;
 
   // RN-web's onContentSizeChange doesn't fire on shrink — measure scrollHeight after collapsing to 0.
   React.useLayoutEffect(() => {
@@ -97,17 +103,30 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
   };
 
   return (
-    <View className="mx-5 mt-1.5 gap-2">
-      {nearbyOpen && nearby && nearby.items.length > 0 ? (
+    <View className="mx-5 mt-1.5 gap-2" style={{ zIndex: isNearbyOpen ? 8 : 0 }}>
+      {isNearbyOpen && nearby && nearby.items.length > 0 ? (
         <Surface className="px-2.5 py-2 gap-1.5">
-          {nearby.items.map((item) => (
-            <View key={item.id} className="flex-row items-center gap-2 rounded-sm bg-canvas-inset px-2 py-2">
+          {nearby.items.map((item) => {
+            const expanded = expandedNearbyId === item.id;
+            return (
+            <Pressable
+              key={item.id}
+              onPress={() => setExpandedNearbyId((prev) => (prev === item.id ? null : item.id))}
+              accessibilityRole="button"
+              accessibilityLabel={item.title}
+              className="flex-row items-center gap-2 rounded-sm bg-canvas-inset px-2 py-2 active:bg-canvas-subtle"
+            >
               <View className="flex-1 min-w-0">
-                <Text numberOfLines={1} className="font-sans-semibold text-panel text-fg-default">
-                  {item.title}
-                </Text>
+                <View className="flex-row items-baseline gap-1.5">
+                  <Text className="font-sans-semibold text-caption text-accent-fg">
+                    {item.kindLabel}
+                  </Text>
+                  <Text numberOfLines={expanded ? undefined : 1} className="font-sans-semibold text-panel text-fg-default flex-1">
+                    {item.title}
+                  </Text>
+                </View>
                 {item.body ? (
-                  <Text numberOfLines={1} className="font-sans text-caption text-fg-muted">
+                  <Text numberOfLines={expanded ? undefined : 1} className="font-sans text-caption text-fg-muted">
                     {item.body}
                   </Text>
                 ) : null}
@@ -116,6 +135,7 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
                 <Pressable
                   onPress={() => {
                     setNearbyOpen(false);
+                    setExpandedNearbyId(null);
                     onNearbyAction(item.action!);
                   }}
                   accessibilityRole="button"
@@ -127,14 +147,18 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
                   </Text>
                 </Pressable>
               ) : null}
-            </View>
-          ))}
+            </Pressable>
+          );
+          })}
         </Surface>
       ) : null}
       <Surface className="px-2.5 py-2 gap-1.5">
         {nearby ? (
           <Pressable
-            onPress={() => setNearbyOpen((open) => !open)}
+            onPress={() => {
+              setExpandedNearbyId(null);
+              setNearbyOpen(!isNearbyOpen);
+            }}
             accessibilityRole="button"
             accessibilityLabel={nearby.summary}
           >
@@ -142,6 +166,23 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
               {nearby.summary}
             </Text>
           </Pressable>
+        ) : null}
+        {suggestions.length > 0 ? (
+          <View className="flex-row flex-wrap gap-1.5">
+            {suggestions.map((suggestion) => (
+              <Pressable
+                key={suggestion}
+                onPress={() => sendText(suggestion)}
+                accessibilityRole="button"
+                accessibilityLabel={suggestion}
+                className="rounded-full border border-border-default bg-canvas-inset px-3 py-1.5 active:bg-canvas-subtle"
+              >
+                <Text className="font-sans-semibold text-caption text-fg-default">
+                  {suggestion}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         ) : null}
         <View className="flex-row items-end gap-2">
           <TextInput

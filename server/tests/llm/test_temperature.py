@@ -73,3 +73,38 @@ async def test_chat_passes_temperature_when_set(monkeypatch):
         messages=[{"role": "user", "content": "x"}], temperature=0.2, log=False
     )
     assert captured.get("temperature") == 0.2
+
+
+@pytest.mark.asyncio
+async def test_chat_diag_includes_provider_route(monkeypatch, capsys):
+    monkeypatch.setenv("FLOW_DEBUG", "1")
+    client = _client()
+
+    async def fake_create(**kwargs):
+        return MagicMock(
+            choices=[MagicMock(message=MagicMock(content="ok", model_extra=None))]
+        )
+
+    fake_inner = MagicMock()
+    fake_inner.chat.completions.create = fake_create
+    fake_provider = MagicMock()
+    fake_provider.next_chat_client.return_value = fake_inner
+    fake_provider.base_url = "http://127.0.0.1:8000/v1"
+    fake_provider.thinking_mode = "off"
+    fake_provider.toggle_style = "openai"
+    fake_provider.supports_system = True
+    fake_provider.model = "gemma-local.gguf"
+
+    monkeypatch.setattr(client, "_pick", lambda agent, *, fallback=False: fake_provider)
+
+    await client.chat(
+        messages=[{"role": "user", "content": "x"}],
+        agent="classify",
+        log=False,
+    )
+    stderr = capsys.readouterr().err
+
+    assert "llm:request" in stderr
+    assert "agent='classify'" in stderr
+    assert "model='gemma-local.gguf'" in stderr
+    assert "base_url='http://127.0.0.1:8000/v1'" in stderr

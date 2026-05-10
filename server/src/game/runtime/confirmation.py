@@ -11,7 +11,8 @@ from src.game.domain.graph import Graph, GraphNode
 from src.game.domain.graph_character import can_character_fight
 from src.game.domain.graph_query import location_of
 from src.llm.client import LLMClient
-from src.locale.particles import eul_reul
+from src.llm.diag import engine_diag, set_diag_context
+from src.locale.render import render
 from src.wire.graph_to_front import GraphFrontStatePayload, graph_to_front_state
 
 from .dispatch import (
@@ -64,6 +65,8 @@ async def run_graph_action_request(
     llm: LLMClient | None = None,
 ) -> GraphActionRequestResult:
     runtime = await load_runtime_state(repo, game_id)
+    set_diag_context(game_id, runtime.progress.turn_count)
+    engine_diag("action:start", action=action.verb)
     if runtime.progress.pending_confirmation is not None:
         raise GraphConfirmationActive(
             "a pending_confirmation is already active; call graph confirm instead"
@@ -76,11 +79,13 @@ async def run_graph_action_request(
     if action.verb == "perceive":
         from .roll import start_graph_roll
 
+        engine_diag("action:roll_required", action=action.verb)
         return await start_graph_roll(repo, game_id, action)
 
     if action.verb == "query":
         from .query import answer_graph_query
 
+        engine_diag("action:done", status="answered", action=action.verb)
         return GraphActionRequestResult(
             runtime=runtime,
             status="answered",
@@ -91,6 +96,7 @@ async def run_graph_action_request(
     pending = build_graph_action_confirmation(runtime, action)
     if pending is None:
         result = await run_graph_action_turn(repo, game_id, action, llm=llm)
+        engine_diag("action:done", status="executed", action=action.verb)
         return GraphActionRequestResult(
             runtime=result.runtime,
             status="executed",
@@ -103,6 +109,12 @@ async def run_graph_action_request(
     )
     next_runtime = runtime.model_copy(update={"progress": next_progress})
     await repo.save_progress(next_progress)
+    engine_diag(
+        "action:done",
+        status="confirmation_required",
+        action=action.verb,
+        confirmation=pending.get("kind"),
+    )
     return GraphActionRequestResult(
         runtime=next_runtime,
         status="confirmation_required",
@@ -120,7 +132,13 @@ async def run_graph_confirm(
     llm: LLMClient | None = None,
 ) -> GraphActionRequestResult:
     runtime = await load_runtime_state(repo, game_id)
+    set_diag_context(game_id, runtime.progress.turn_count)
     pending = runtime.progress.pending_confirmation
+    engine_diag(
+        "confirm:start",
+        decision=decision,
+        pending=pending.get("kind") if isinstance(pending, dict) else None,
+    )
     if pending is None:
         raise GraphConfirmationExpected("no pending_confirmation")
     if pending.get("id") != confirmation_id:
@@ -132,6 +150,7 @@ async def run_graph_confirm(
     cleared_runtime = runtime.model_copy(update={"progress": cleared_progress})
     if decision == "cancel":
         await repo.save_progress(cleared_progress)
+        engine_diag("confirm:done", status="cancelled")
         return GraphActionRequestResult(
             runtime=cleared_runtime,
             status="cancelled",
@@ -150,6 +169,7 @@ async def run_graph_confirm(
     except GraphActionTurnError as exc:
         raise GraphConfirmationError(str(exc)) from exc
 
+    engine_diag("confirm:done", status="executed")
     return GraphActionRequestResult(
         runtime=result.runtime,
         status="executed",
@@ -169,7 +189,7 @@ def build_graph_action_confirmation(
         return _build_attack_start_confirmation(runtime, action)
 
     if action.verb == "transfer" and action.how in ("accept", "abandon"):
-        return _build_quest_confirmation(runtime.graph, action)
+        return _build_quest_confirmation(runtime.graph, action, runtime.progress.locale)
 
     return None
 
@@ -184,19 +204,22 @@ def _build_attack_start_confirmation(
 
     target = runtime.graph.nodes[target_id]
     target_label = _label(target)
+    locale = runtime.progress.locale
     return _pending(
         kind="attack_start",
-        title="공격하시겠습니까?",
-        body=f"{target_label}{eul_reul(target_label)} 공격해 전투를 시작합니다.",
-        confirm_label="공격",
+        title=render("runtime.confirmation.attack.title", locale),
+        body=render("runtime.confirmation.attack.body", locale, target=target_label),
+        confirm_label=render("runtime.confirmation.attack.confirm", locale),
         target_label=target_label,
         action=_normalize_attack_action(action, target_id),
+        locale=locale,
     )
 
 
 def _build_quest_confirmation(
     graph: Graph,
     action: Action,
+    locale: str,
 ) -> dict[str, Any] | None:
     quest_id = _single(action.what) or _single(action.to)
     if quest_id is None:
@@ -209,20 +232,22 @@ def _build_quest_confirmation(
     if action.how == "accept":
         return _pending(
             kind="quest_accept",
-            title="퀘스트를 시작하시겠습니까?",
-            body=f"{quest_label} 퀘스트를 시작합니다.",
-            confirm_label="시작",
+            title=render("runtime.confirmation.quest_accept.title", locale),
+            body=render("runtime.confirmation.quest_accept.body", locale, quest=quest_label),
+            confirm_label=render("runtime.confirmation.quest_accept.confirm", locale),
             target_label=quest_label,
             action=action,
+            locale=locale,
         )
 
     return _pending(
         kind="quest_abandon",
-        title="퀘스트를 포기하시겠습니까?",
-        body=f"{quest_label} 퀘스트를 포기합니다.",
-        confirm_label="포기",
+        title=render("runtime.confirmation.quest_abandon.title", locale),
+        body=render("runtime.confirmation.quest_abandon.body", locale, quest=quest_label),
+        confirm_label=render("runtime.confirmation.quest_abandon.confirm", locale),
         target_label=quest_label,
         action=action,
+        locale=locale,
     )
 
 
@@ -234,6 +259,7 @@ def _pending(
     confirm_label: str,
     target_label: str,
     action: Action,
+    locale: str,
 ) -> dict[str, Any]:
     return {
         "id": f"confirm_{secrets.token_hex(4)}",
@@ -241,7 +267,7 @@ def _pending(
         "title": title,
         "body": body,
         "confirm_label": confirm_label,
-        "cancel_label": "취소",
+        "cancel_label": render("runtime.confirmation.cancel", locale),
         "target_label": target_label,
         "payload": {
             "kind": "graph_action",

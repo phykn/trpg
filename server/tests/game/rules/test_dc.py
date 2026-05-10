@@ -1,11 +1,9 @@
 import random
 
-from src.game.domain.entities import Character, Stats
 from src.game.rules.dc import (
     compute_grade,
     compute_required_roll,
     pick_dc,
-    social_bonus,
 )
 from src.game.rules import RULES
 
@@ -38,23 +36,6 @@ def test_required_roll_dnd5e_modifier_applied():
 def test_required_roll_clamps_to_one_or_twenty():
     assert compute_required_roll(dc=5, stat=20) == 1  # 5 - 5 = 0 → clamp 1
     assert compute_required_roll(dc=19, stat=0) == 20  # 19 - (-5) = 24 → clamp 20
-
-
-def test_social_bonus_thresholds():
-    """`social_bonus(target, actor_id)` reads how the target views the actor.
-    The character holding the relations dict is the target; we ask "does
-    this target like/dislike actor X enough to shift X's roll?"."""
-    target = Character(
-        id="p",
-        name="x",
-        race_id="human",
-        stats=Stats(),
-        relations={"friend": 70, "foe": -60, "neutral": 10},
-    )
-    assert social_bonus(target, "friend") == RULES.social.roll_bonus
-    assert social_bonus(target, "foe") == -RULES.social.roll_bonus
-    assert social_bonus(target, "neutral") == 0
-    assert social_bonus(target, "unknown") == 0
 
 
 def test_compute_grade_critical_priority():

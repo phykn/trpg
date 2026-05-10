@@ -25,7 +25,7 @@ VALID_SETUP = {
         {
             "id": "barter",
             "role": "흥정 능력",
-            "primary_stat": "CHA",
+            "primary_stat": "presence",
             "type": "buff",
         }
     ],

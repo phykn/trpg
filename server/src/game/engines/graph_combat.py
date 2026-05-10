@@ -256,7 +256,7 @@ def _plan_cast(
 
 
 def _attack_amount(player: GraphNode, enemy_max_hp: int) -> int:
-    stat = _stat_value(player, preferred="body", fallback="STR", default=2)
+    stat = _stat_value(player, preferred="body", default=2)
     return max(1, ceil(enemy_max_hp * 0.38) + max(0, stat - 2))
 
 
@@ -349,13 +349,12 @@ def _stat_value(
     node: GraphNode,
     *,
     preferred: str,
-    fallback: str,
     default: int,
 ) -> int:
     stats = node.properties.get("stats")
     if not isinstance(stats, dict):
         return default
-    value = stats.get(preferred, stats.get(fallback, default))
+    value = stats.get(preferred, default)
     return value if isinstance(value, int) else default
 
 

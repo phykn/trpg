@@ -1,27 +1,14 @@
-from src.game.domain.entities import (
-    Chapter,
-    Character,
-    Connection,
-    Item,
-    Location,
-    Quest,
-    QuestRewards,
-    QuestTrigger,
-    Race,
-    Skill,
-)
 from src.game.seed.graph_seed import build_seed_graph
 from src.game.seed.player import PlayerInput
 
 
-def _skill() -> Skill:
-    return Skill(
-        id="slash",
-        name="베기",
-        type="attack",
-        target="single",
-        primary_stat="STR",
-    )
+def _skill() -> dict:
+    return {
+        "id": "slash",
+        "name": "베기",
+        "kind": "attack",
+        "target": "single",
+    }
 
 
 def test_build_seed_graph_creates_nodes_edges_and_progress():
@@ -29,32 +16,32 @@ def test_build_seed_graph_creates_nodes_edges_and_progress():
         profile_name="default",
         player=PlayerInput(name="테스터", race_id="human", gender="female"),
         races={
-            "human": Race(
-                id="human",
-                name="인간",
-                description="",
-                racial_skill_ids=["slash"],
-            )
+            "human": {
+                "id": "human",
+                "name": "인간",
+                "description": "",
+                "racial_skill_ids": ["slash"],
+            }
         },
         locations={
-            "town": Location(
-                id="town",
-                name="마을",
-                item_ids=["potion"],
-                connections=[Connection(target_id="forest", difficulty="normal")],
-            ),
-            "forest": Location(id="forest", name="숲"),
+            "town": {
+                "id": "town",
+                "name": "마을",
+                "item_ids": ["potion"],
+                "connections": [{"target_id": "forest", "difficulty": "normal"}],
+            },
+            "forest": {"id": "forest", "name": "숲"},
         },
-        items={"potion": Item(id="potion", name="물약")},
+        items={"potion": {"id": "potion", "name": "물약"}},
         skills={"slash": _skill()},
         npcs={},
         quests={},
         chapters={
-            "chapter_01": Chapter(
-                id="chapter_01",
-                title="첫 장",
-                quest_ids=[],
-            )
+            "chapter_01": {
+                "id": "chapter_01",
+                "title": "첫 장",
+                "quest_ids": [],
+            }
         },
         start={
             "start_location_id": "town",
@@ -98,42 +85,42 @@ def test_build_seed_graph_creates_nodes_edges_and_progress():
 
 
 def test_build_seed_graph_keeps_reward_items_out_of_visible_placement():
-    reward = Item(id="reward_sword", name="보상 검")
-    elder = Character(
-        id="elder",
-        name="장로",
-        race_id="human",
-        location_id="town",
-        level=1,
-    )
-    quest = Quest(
-        id="quest_01",
-        title="첫 의뢰",
-        giver_id="elder",
-        difficulty="easy",
-        triggers=[
-            QuestTrigger(
-                id="reach_forest",
-                name="숲 도착",
-                type="location_enter",
-                target_id="forest",
-            )
+    quest = {
+        "id": "quest_01",
+        "title": "첫 의뢰",
+        "giver_id": "elder",
+        "difficulty": "easy",
+        "triggers": [
+            {
+                "id": "reach_forest",
+                "name": "숲 도착",
+                "type": "location_enter",
+                "target_id": "forest",
+            }
         ],
-        rewards=QuestRewards(items=["reward_sword"]),
-        status="pending",
-    )
+        "rewards": {"gold": 0, "exp": 0, "items": ["reward_sword"]},
+        "status": "pending",
+    }
 
     bundle = build_seed_graph(
         profile_name="default",
         player=PlayerInput(name="테스터", race_id="human", gender="female"),
-        races={"human": Race(id="human", name="인간", description="")},
+        races={"human": {"id": "human", "name": "인간", "description": ""}},
         locations={
-            "town": Location(id="town", name="마을"),
-            "forest": Location(id="forest", name="숲"),
+            "town": {"id": "town", "name": "마을"},
+            "forest": {"id": "forest", "name": "숲"},
         },
-        items={"reward_sword": reward},
+        items={"reward_sword": {"id": "reward_sword", "name": "보상 검"}},
         skills={},
-        npcs={"elder": elder},
+        npcs={
+            "elder": {
+                "id": "elder",
+                "name": "장로",
+                "race_id": "human",
+                "location_id": "town",
+                "level": 1,
+            }
+        },
         quests={"quest_01": quest},
         chapters={},
         start={
@@ -165,33 +152,38 @@ def test_build_seed_graph_keeps_reward_items_out_of_visible_placement():
 
 
 def test_build_seed_graph_links_quests_to_chapters():
-    quest = Quest(
-        id="quest_01",
-        title="첫 의뢰",
-        giver_id="elder",
-        difficulty="easy",
-        status="active",
-    )
-    chapter = Chapter(id="chapter_01", title="첫 장", quest_ids=["quest_01"])
-
     bundle = build_seed_graph(
         profile_name="default",
         player=PlayerInput(name="테스터", race_id="human", gender="female"),
-        races={"human": Race(id="human", name="인간", description="")},
-        locations={"town": Location(id="town", name="마을")},
+        races={"human": {"id": "human", "name": "인간", "description": ""}},
+        locations={"town": {"id": "town", "name": "마을"}},
         items={},
         skills={},
         npcs={
-            "elder": Character(
-                id="elder",
-                name="장로",
-                race_id="human",
-                location_id="town",
-                level=1,
-            )
+            "elder": {
+                "id": "elder",
+                "name": "장로",
+                "race_id": "human",
+                "location_id": "town",
+                "level": 1,
+            }
         },
-        quests={"quest_01": quest},
-        chapters={"chapter_01": chapter},
+        quests={
+            "quest_01": {
+                "id": "quest_01",
+                "title": "첫 의뢰",
+                "giver_id": "elder",
+                "difficulty": "easy",
+                "status": "active",
+            }
+        },
+        chapters={
+            "chapter_01": {
+                "id": "chapter_01",
+                "title": "첫 장",
+                "quest_ids": ["quest_01"],
+            }
+        },
         start={
             "start_location_id": "town",
             "active_subject_id": "elder",

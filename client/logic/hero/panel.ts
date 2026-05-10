@@ -1,4 +1,4 @@
-import { characterMeta, formatInventoryItem, joinOrDash, withDeath } from '@/components/ui';
+import { characterMeta, formatGold, formatInventoryItem, joinOrDash, withDeath } from '@/components/ui';
 import { ko } from '@/locale/ko';
 import type { PanelSlot } from '@/logic/info-panel';
 
@@ -27,7 +27,7 @@ export function buildHeroSlot(hero: Hero, opts?: BuildHeroSlotOpts): PanelSlot {
       sections: [
         { label: ko.hero.ability, nodes: hero.stats.map((s): [string, number] => [s.label, s.value]) },
         { label: ko.hero.equip, text: joinOrDash(equipped.map((it) => it.name)) },
-        { label: ko.hero.inventory, text: joinOrDash(hero.inventory.map(formatInventoryItem)) },
+        { label: ko.hero.inventory, text: joinOrDash([formatGold(hero.gold), ...hero.inventory.map(formatInventoryItem)]) },
         { label: ko.hero.skill, text: joinOrDash(hero.skills) },
         { label: ko.hero.companion, text: joinOrDash(hero.companions) },
         { label: ko.panel.traits, text: joinOrDash(hero.status) },

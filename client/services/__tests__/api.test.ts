@@ -13,6 +13,7 @@ const {
   getGraphSessionById,
   initGraphSession,
   listProfiles,
+  requestGraphIntro,
   rollGraphPending,
   sendGraphAction,
   sendGraphInput,
@@ -103,6 +104,16 @@ describe('graph API helpers', () => {
           name: '에드릭',
           kind: 'npc',
           hp: { current: 20, maximum: 20, state: 'healthy' },
+          level: 1,
+          raceJob: '',
+          gender: '',
+          role: '',
+          gold: 0,
+          stats: {},
+          equipment: { weapon: null, armor: null, accessory: null },
+          inventory: [],
+          skills: [],
+          status: [],
         },
       ],
     };
@@ -117,9 +128,9 @@ describe('graph API helpers', () => {
     const result = await getGraphSessionById('game-1');
 
     expect(result?.suggestions).toEqual([
-      '에드릭에게 말을 건다',
-      '망루로 이동한다',
-      '주변을 살펴본다',
+      '에드릭에게 말을 겁니다',
+      '망루로 이동합니다',
+      '주변을 살펴봅니다',
     ]);
   });
 
@@ -163,6 +174,28 @@ describe('graph API helpers', () => {
 
     expect(fetch).toHaveBeenCalledWith(
       'https://api.example.test/session/graph/init',
+      expect.objectContaining({
+        method: 'POST',
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+
+  test('requests initial graph narration through the graph intro endpoint', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        state: graphState(),
+        status: 'executed',
+        message: null,
+      }),
+    });
+
+    await requestGraphIntro('game-1');
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/graph/intro',
       expect.objectContaining({
         method: 'POST',
         signal: expect.any(AbortSignal),

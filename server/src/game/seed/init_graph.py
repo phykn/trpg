@@ -3,19 +3,10 @@ import secrets
 from datetime import datetime, timezone
 
 from src.db.repo import GraphRepo, ScenarioRepo
-from src.game.domain.entities import (
-    Chapter,
-    Character,
-    Item,
-    Location,
-    Quest,
-    Race,
-    Skill as SkillModel,
-)
 from src.game.domain.errors import ProfileMalformed, ProfileNotFound, RaceNotFound
-from src.game.engines.invariants import Scenario, check_scenario
 from src.game.seed.graph_seed import SeedGraphBundle, build_seed_graph
 from src.game.seed.player import PlayerInput
+from src.game.seed.validation import seed_violations
 
 
 async def init_graph_game(
@@ -39,34 +30,31 @@ async def init_graph_game(
         start,
         template,
     ) = await asyncio.gather(
-        scenario_repo.load_seed_entities(profile_name, "races", Race),
-        scenario_repo.load_seed_entities(profile_name, "locations", Location),
-        scenario_repo.load_seed_entities(profile_name, "items", Item),
-        scenario_repo.load_seed_entities(profile_name, "skills", SkillModel),
-        scenario_repo.load_seed_entities(profile_name, "characters", Character),
-        scenario_repo.load_seed_entities(profile_name, "quests", Quest),
-        scenario_repo.load_seed_entities(profile_name, "chapters", Chapter),
+        scenario_repo.load_seed_records(profile_name, "races"),
+        scenario_repo.load_seed_records(profile_name, "locations"),
+        scenario_repo.load_seed_records(profile_name, "items"),
+        scenario_repo.load_seed_records(profile_name, "skills"),
+        scenario_repo.load_seed_records(profile_name, "characters"),
+        scenario_repo.load_seed_records(profile_name, "quests"),
+        scenario_repo.load_seed_records(profile_name, "chapters"),
         scenario_repo.read_start_json(profile_name),
         scenario_repo.read_player_template(profile_name),
     )
 
-    seed_violations = check_scenario(
-        Scenario(
-            races=races,
-            locations=locations,
-            items=items,
-            skills=skills,
-            characters=npcs,
-            quests=quests,
-            chapters=chapters,
-            start=start,
-            player_template=template,
-        )
+    violations = seed_violations(
+        races=races,
+        locations=locations,
+        items=items,
+        skills=skills,
+        npcs=npcs,
+        quests=quests,
+        chapters=chapters,
+        start=start,
     )
-    if seed_violations:
+    if violations:
         raise ProfileMalformed(
             f"profile {profile_name!r} invariant violations:\n"
-            + "\n".join(seed_violations)
+            + "\n".join(violations)
         )
 
     if player.race_id not in races:

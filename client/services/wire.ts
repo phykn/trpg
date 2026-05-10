@@ -153,6 +153,16 @@ export type GraphPlaceTarget = {
   name: string;
   kind: 'npc' | 'enemy';
   hp: GraphResource;
+  level: number;
+  raceJob: string;
+  gender: string;
+  role: string;
+  gold: number;
+  stats: Record<string, number>;
+  equipment: GraphEquipment;
+  inventory: GraphInventoryItem[];
+  skills: string[];
+  status: string[];
 };
 
 export type GraphPlaceState = {

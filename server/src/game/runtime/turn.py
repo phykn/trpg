@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
 from pydantic import BaseModel, ConfigDict
 
@@ -11,7 +12,10 @@ from src.game.domain.graph import GraphNode
 from src.game.domain.graph_query import location_of
 from src.game.domain.memory import GMLogEntry
 from src.game.engines.graph_quest_generation import plan_missing_quest_offer
+from src.llm.calls._runner import get_prompt
 from src.llm.client import LLMClient
+from src.llm.diag import engine_diag, llm_diag, set_diag_context
+from src.locale.render import render
 from src.wire.graph_to_front import GraphFrontStatePayload, graph_to_front_state
 
 from .apply import apply_runtime_graph_changes
@@ -48,6 +52,7 @@ async def run_graph_action_turn(
     llm: LLMClient | None = None,
 ) -> GraphActionTurnResult:
     runtime = await load_runtime_state(repo, game_id)
+    set_diag_context(game_id, runtime.progress.turn_count)
     return await run_graph_action_turn_from_runtime(
         repo,
         game_id,
@@ -65,10 +70,19 @@ async def run_graph_action_turn_from_runtime(
     *,
     llm: LLMClient | None = None,
 ) -> GraphActionTurnResult:
+    set_diag_context(game_id, runtime.progress.turn_count)
+    engine_diag("turn:start", action=action.verb)
     try:
         dispatch = dispatch_graph_action(runtime, action)
     except GraphActionDispatchError as exc:
+        engine_diag("dispatch:fail", action=action.verb, err=type(exc).__name__)
         raise GraphActionTurnError(str(exc)) from exc
+    engine_diag(
+        "dispatch:done",
+        kind=dispatch.kind,
+        applied=dispatch.applied,
+        outcome=dispatch.outcome,
+    )
 
     next_runtime = dispatch.runtime
     offer_quest_id: str | None = None
@@ -76,6 +90,7 @@ async def run_graph_action_turn_from_runtime(
         offer = plan_missing_quest_offer(
             next_runtime.graph,
             next_runtime.progress.player_id,
+            next_runtime.progress.locale,
         )
         if offer is not None:
             next_runtime = apply_runtime_graph_changes(
@@ -83,6 +98,7 @@ async def run_graph_action_turn_from_runtime(
                 offer.changes,
             ).runtime
             offer_quest_id = offer.quest_id
+            engine_diag("quest:offer", quest=offer_quest_id)
     card = build_graph_action_card(runtime, next_runtime, action, dispatch)
     cards = [card]
     if offer_quest_id is not None:
@@ -123,6 +139,12 @@ async def run_graph_action_turn_from_runtime(
     await repo.save_graph(game_id, next_runtime.graph)
     await repo.append_log_entries(game_id, log_entries)
     await repo.save_progress(next_runtime.progress)
+    engine_diag(
+        "turn:done",
+        status="executed",
+        logs=len(log_entries),
+        next_turn=next_runtime.progress.turn_count,
+    )
     return GraphActionTurnResult(
         runtime=next_runtime,
         dispatch=dispatch,
@@ -144,11 +166,15 @@ async def _build_graph_action_narration(
     prompt = _narration_user_prompt(before, after, card_texts)
     if not prompt:
         return ""
+    llm_diag("llm:call", agent="graph_narrate")
     try:
         result = await asyncio.wait_for(
             llm.chat(
                 [
-                    {"role": "system", "content": _NARRATION_SYSTEM_PROMPT},
+                    {
+                        "role": "system",
+                        "content": get_prompt("graph_narrate", before.progress.locale),
+                    },
                     {"role": "user", "content": prompt},
                 ],
                 think=False,
@@ -157,8 +183,10 @@ async def _build_graph_action_narration(
             ),
             timeout=_GRAPH_ACTION_NARRATION_TIMEOUT_SECONDS,
         )
-    except (LLMUnavailable, OSError, TimeoutError):
+    except (LLMUnavailable, OSError, TimeoutError) as exc:
+        llm_diag("llm:fail", agent="graph_narrate", err=type(exc).__name__)
         return ""
+    llm_diag("llm:done", agent="graph_narrate")
     answer = result.get("answer")
     if not isinstance(answer, str):
         return ""
@@ -188,15 +216,17 @@ def _narration_user_prompt(
     player = after.graph.nodes.get(after.progress.player_id)
     place_id = location_of(after.graph, after.progress.player_id)
     place = after.graph.nodes.get(place_id or "")
-    facts = [
-        f"플레이어: {_node_name(player)}",
-        f"현재 장소: {_node_name(place)}",
-        f"장소 설명: {_node_description(place)}",
-        f"처리된 결과: {' / '.join(card_texts)}",
-    ]
-    if before.progress.graph_combat_state is not None or after.progress.graph_combat_state is not None:
-        facts.append("상황: 전투 장면")
-    return "\n".join(facts)
+    return json.dumps(
+        {
+            "player": _node_name(player, after.progress.locale),
+            "current_place": _node_name(place, after.progress.locale),
+            "place_description": _node_description_value(place),
+            "resolved_results": card_texts,
+            "combat_scene": before.progress.graph_combat_state is not None
+            or after.progress.graph_combat_state is not None,
+        },
+        ensure_ascii=False,
+    )
 
 
 def _clean_narration(text: str) -> str:
@@ -206,9 +236,9 @@ def _clean_narration(text: str) -> str:
     return cleaned[:220].rstrip()
 
 
-def _node_name(node: GraphNode | None) -> str:
+def _node_name(node: GraphNode | None, locale: str) -> str:
     if node is None:
-        return "없음"
+        return render("runtime.none", locale)
     name = node.properties.get("name")
     if isinstance(name, str) and name:
         return name
@@ -218,19 +248,10 @@ def _node_name(node: GraphNode | None) -> str:
     return node.id
 
 
-def _node_description(node: GraphNode | None) -> str:
+def _node_description_value(node: GraphNode | None) -> str | None:
     if node is None:
-        return "없음"
+        return None
     description = node.properties.get("description")
-    return description if isinstance(description, str) and description else "없음"
+    return description if isinstance(description, str) and description else None
 
 
-_NARRATION_SYSTEM_PROMPT = """당신은 온톨로지 기반 TRPG의 짧은 GM 나레이션만 씁니다.
-규칙:
-- 한국어로 씁니다.
-- 2인칭 존댓말 합니다체를 사용하고 플레이어는 '당신'이라고 부릅니다.
-- 1~2문장, 최대 220자입니다.
-- 제공된 사실만 사용합니다.
-- 새 인물, 장소, 몬스터, 아이템, 퀘스트, 보상, 숫자를 만들지 않습니다.
-- 행동 결과를 뒤집거나 그래프 상태를 바꾸는 말을 하지 않습니다.
-- 시스템 카드 문장을 그대로 반복하지 말고, 장면의 감각과 반응만 덧붙입니다."""

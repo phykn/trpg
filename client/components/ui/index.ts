@@ -6,7 +6,7 @@ export { ErrorState } from './ErrorState';
 export { ExpandGroup } from './ExpandGroup';
 export { Expandable } from './Expandable';
 export { ExpandableTitle } from './ExpandableTitle';
-export { DASH, SEP, characterMeta, formatInventoryItem, joinOrDash, signed, withDeath } from './format';
+export { DASH, SEP, characterMeta, formatGold, formatInventoryItem, joinOrDash, signed, withDeath } from './format';
 export { Glyph } from './Glyph';
 export { InlineNodes } from './InlineNodes';
 export { InlineParts } from './InlineParts';

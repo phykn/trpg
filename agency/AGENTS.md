@@ -19,7 +19,7 @@ User-facing setup, full directory map, and the per-agent persona summary live in
 # Story building — invoke from a Codex session, no CLI:
 #   "agency/story/SKILL.md 보고 path/to/prose.md 로 scenarios/<name> 만들어줘"
 #
-# Local scenario helper CLI (검사·attach·sweep):
+# Local scenario helper CLI:
 .venv/bin/python -m agency.story.tool decompose-setup <setup.json>
 .venv/bin/python -m agency.story.tool decompose-cast  <setup.json> <cast.json>
 .venv/bin/python -m agency.story.tool decompose-arc   <setup.json> <cast.json> <arc.json>
@@ -59,7 +59,7 @@ Per-turn loop in `runner.py`: read `/session/{id}/graph/state` → `PlayerAgent.
 
 빌드 흐름: decompose 3-phase → world.md → race(full) → location(full) → character(--skeleton) → skill → item → equip-fill → quest → chapter → meta → sweep. Release publish는 별도 `agency.story.tools.storage upload` 단계다.
 
-엔티티 작성자(Codex)가 각 단계에서 `check-entity --decomp .decomp/` 로 자기 글을 검증. 풀-의존 검사(character의 inventory) 는 `--skeleton` 으로 sweep까지 미룸.
+시나리오 작성자(Codex)가 각 단계에서 `check-entity --decomp .decomp/` 로 자기 글을 검증. 풀-의존 검사(character의 inventory) 는 `--skeleton` 으로 sweep까지 미룸.
 
 검사 깨졌을 때: 같은 파일 2회까지만 자동 수정, 그 이상은 사용자에게 보고. 위쪽 단계 실수가 늦게 드러나면 `.decomp/` JSON부터 고치고 영향받는 파일 재검사 — 가짜 ID 같은 우회는 금지.
 
@@ -67,7 +67,7 @@ Per-turn loop in `runner.py`: read `/session/{id}/graph/state` → `PlayerAgent.
 
 ### Boundary
 
-Entity-level rules and the engine's full invariant sweep live in `server/src/game/engines/invariants/`; cross-ref between manifests is the only validation logic that lives here. New entity kinds → server first (model + invariant), then expose via `SPECS` here.
+Scenario files are raw seed records. Cross-ref checks and the final sweep use `server/src/game/seed/validation.py`; runtime behavior starts after those records are converted into the graph seed.
 
 QA's loop intentionally stops on the first error — do not "retry past it." The transcript should reflect what actually happened, including the failure point.
 

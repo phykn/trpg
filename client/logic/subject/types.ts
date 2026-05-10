@@ -13,6 +13,7 @@ export type Subject = {
   level: number;
   hp: number;
   hpMax: number;
+  gold?: number;
   stats: Stat[];
   equipment: Equipment;
   inventory: InventoryItem[];

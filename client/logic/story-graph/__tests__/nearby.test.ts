@@ -86,11 +86,11 @@ describe('buildNearbyPanel', () => {
     const panel = buildNearbyPanel(graph);
 
     expect(panel.summary).toBe('인물 2 · 장소 1 · 할 일 1');
-    expect(panel.items.map((item) => [item.title, item.action?.label])).toEqual([
-      ['여관 주인', '대화'],
-      ['구석의 손님', '접근'],
-      ['뒷문', '이동'],
-      ['낡은 게시판을 살펴본다', '살펴보기'],
+    expect(panel.items.map((item) => [item.kindLabel, item.title, item.action?.label])).toEqual([
+      ['캐릭터', '여관 주인', '대화'],
+      ['캐릭터', '구석의 손님', '접근'],
+      ['장소', '뒷문', '이동'],
+      ['퀘스트', '낡은 게시판을 살펴본다', '살펴보기'],
     ]);
   });
 });

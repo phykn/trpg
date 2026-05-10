@@ -134,7 +134,7 @@ export function PanelBody({ panel, onAction }: {
           <LabeledRow
             key={section.label}
             label={section.label}
-            mono={!!section.nodes}
+            mono={section.mono || !!section.nodes}
             clampLines={section.clampLines}
           >
             {section.nodes ? <InlineNodes entries={section.nodes} /> : section.text}

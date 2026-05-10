@@ -17,6 +17,7 @@ export type PanelSection = {
   label: string;
   text?: string;
   nodes?: [string, string | number][];
+  mono?: boolean;
   clampLines?: number;
 };
 

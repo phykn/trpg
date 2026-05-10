@@ -40,7 +40,7 @@ def _scaffold_minimal_scenario(tmp_path: Path) -> Path:
                 "description": "값을 깎는 능력.",
                 "type": "buff",
                 "target": "single",
-                "primary_stat": "CHA",
+                "primary_stat": "presence",
                 "level": 1,
                 "mp_cost": 0,
                 "special_effect": "",
@@ -63,7 +63,7 @@ def test_check_entity_skill_ok(capsys, tmp_path):
                 "description": "상대를 넘어뜨립니다.",
                 "type": "debuff",
                 "target": "single",
-                "primary_stat": "DEX",
+                "primary_stat": "agility",
                 "level": 1,
                 "mp_cost": 1,
                 "special_effect": "",
@@ -125,11 +125,16 @@ def test_check_entity_with_decomp_pool(capsys, tmp_path):
             },
         ],
         "skills": [
-            {"id": "barter", "role": "흥정", "primary_stat": "CHA", "type": "buff"},
+            {
+                "id": "barter",
+                "role": "흥정",
+                "primary_stat": "presence",
+                "type": "buff",
+            },
             {
                 "id": "fire_breath",
                 "role": "화염숨결",
-                "primary_stat": "INT",
+                "primary_stat": "mind",
                 "type": "attack",
             },
         ],
@@ -196,7 +201,7 @@ def _scaffold_for_character(tmp_path: Path) -> Path:
                 "name": "흥정",
                 "description": "값을 깎는 능력.",
                 "type": "buff",
-                "primary_stat": "CHA",
+                "primary_stat": "presence",
                 "level": 1,
                 "mp_cost": 0,
                 "cooldown": 0,
@@ -225,9 +230,9 @@ def _scaffold_for_character(tmp_path: Path) -> Path:
     return sd
 
 
-# HP/MP formula (server/src/engines/growth.py):
-#   calc_max_hp(level, CON) = (10 + CON) + level * (5 + CON // 4)
-#   calc_max_mp(level, INT) = (5  + INT) + level * (3 + INT // 4)
+# HP/MP formula (server/src/game/engines/growth.py):
+#   calc_max_hp(level, body) = (10 + body) + level * (5 + body // 4)
+#   calc_max_mp(level, mind) = (5 + mind) + level * (3 + mind // 4)
 # For level=1, all stats=10:
 #   max_hp = (10+10) + 1*(5 + 10//4) = 20 + 7 = 27
 #   max_mp = (5+10)  + 1*(3 + 10//4) = 15 + 5 = 20
@@ -240,7 +245,7 @@ CHARACTER_WITH_FUTURE_INV = {
     "race_id": "human",
     "location_id": "town",
     "level": 1,
-    "stats": {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10},
+    "stats": {"body": 10, "agility": 10, "mind": 10, "presence": 10},
     "hp": 27,
     "max_hp": 27,
     "mp": 20,

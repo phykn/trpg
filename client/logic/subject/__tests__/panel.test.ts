@@ -23,4 +23,15 @@ describe('buildSubjectSlot', () => {
     expect(buildSubjectSlot(null).chip.short).toBe('NPC');
     expect(buildSubjectSlot(subject).chip.short).toBe('NPC');
   });
+
+  test('puts owned gold at the front of the inventory row when supplied', () => {
+    const slot = buildSubjectSlot({
+      ...subject,
+      gold: 5,
+      inventory: [{ id: 'charm', name: '집중 부적', qty: 1, canUse: false, equipSlots: [] }],
+    });
+
+    expect(slot.chip).not.toHaveProperty('detail');
+    expect(slot.panel?.sections?.find((section) => section.label === '소지')?.text).toBe('금화(5) · 집중 부적');
+  });
 });

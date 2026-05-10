@@ -1,4 +1,4 @@
-import { ko } from '@/locale/ko';
+import { compose, ko } from '@/locale/ko';
 
 import type {
   FrontState,
@@ -9,7 +9,7 @@ import type {
   GraphPlaceState,
 } from './wire';
 
-const STAT_ORDER = ['body', 'agility', 'mind', 'presence'] as const;
+const STAT_ORDER = ['body', 'mind', 'agility', 'presence'] as const;
 
 const DEFAULT_RISK = {
   label: ko.status.normalRisk,
@@ -45,15 +45,15 @@ export function deriveGraphSuggestions(state: GraphFrontState): string[] {
   const suggestions: string[] = [];
   const livingTargets = state.place?.targets.filter((target) => target.hp.current > 0) ?? [];
   const enemy = livingTargets.find((target) => target.kind === 'enemy');
-  if (enemy) suggestions.push(`${enemy.name}${objectParticle(enemy.name)} 공격한다`);
+  if (enemy) suggestions.push(compose.attack(enemy.name));
 
   for (const npc of livingTargets.filter((target) => target.kind === 'npc')) {
-    suggestions.push(`${npc.name}에게 말을 건다`);
+    suggestions.push(compose.talkTo(npc.name));
   }
   for (const exit of state.place?.exits ?? []) {
-    suggestions.push(`${exit.name}${directionParticle(exit.name)} 이동한다`);
+    suggestions.push(compose.moveTo(exit.name));
   }
-  suggestions.push('주변을 살펴본다');
+  suggestions.push(compose.inspectSurroundings());
   return uniqueFirst(suggestions, 3);
 }
 
@@ -62,8 +62,8 @@ function combatSuggestions(combat: GraphCombatState): string[] {
     (participant) => participant.side === 'enemy' && participant.hp.current > 0,
   );
   const suggestions = enemy
-    ? [`${enemy.name}${objectParticle(enemy.name)} 공격한다`, '방어한다', '도망친다']
-    : ['방어한다', '도망친다'];
+    ? [compose.attack(enemy.name), compose.defend(), compose.flee()]
+    : [compose.defend(), compose.flee()];
   return uniqueFirst(suggestions, 3);
 }
 
@@ -77,22 +77,6 @@ function uniqueFirst(values: string[], limit: number): string[] {
   return result;
 }
 
-function objectParticle(value: string): '을' | '를' {
-  return hasFinalConsonant(value) ? '을' : '를';
-}
-
-function directionParticle(value: string): '으로' | '로' {
-  const code = value.charCodeAt(value.length - 1);
-  const jong = code >= 0xac00 && code <= 0xd7a3 ? (code - 0xac00) % 28 : 0;
-  return jong !== 0 && jong !== 8 ? '으로' : '로';
-}
-
-function hasFinalConsonant(value: string): boolean {
-  const code = value.charCodeAt(value.length - 1);
-  if (code < 0xac00 || code > 0xd7a3) return false;
-  return (code - 0xac00) % 28 !== 0;
-}
-
 function selectSubjectTarget(targets: GraphPlaceTarget[]): GraphPlaceTarget | null {
   return targets.find((target) => target.hp.current > 0) ?? targets[0] ?? null;
 }
@@ -102,18 +86,19 @@ function adaptSubject(target: GraphPlaceTarget | null): FrontState['subject'] {
   return {
     name: target.name,
     alive: target.hp.current > 0,
-    role: '',
-    raceJob: '',
-    gender: '',
+    role: target.role,
+    raceJob: target.raceJob,
+    gender: target.gender,
     trust: 0,
-    known: [],
-    level: 1,
+    known: target.status,
+    level: target.level,
     hp: target.hp.current,
     hpMax: target.hp.maximum,
-    stats: [],
-    equipment: EMPTY_EQUIPMENT,
-    inventory: [],
-    skills: [],
+    gold: target.gold,
+    stats: statEntries(target.stats),
+    equipment: target.equipment ?? EMPTY_EQUIPMENT,
+    inventory: target.inventory ?? [],
+    skills: target.skills ?? [],
   };
 }
 
@@ -255,10 +240,10 @@ function buildStoryGraph(
         kind: 'target' as const,
         status: 'reachable_meet' as const,
         reachable: true,
-        level: 1,
-        raceJob: '',
-        gender: '',
-        role: '',
+        level: target.level,
+        raceJob: target.raceJob,
+        gender: target.gender,
+        role: target.role,
         alive: target.hp.current > 0,
         trust: 0,
       })),

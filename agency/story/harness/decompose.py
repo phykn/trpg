@@ -45,7 +45,7 @@ class DecItem(BaseModel):
 class DecSkill(BaseModel):
     id: str
     role: str
-    primary_stat: Literal["STR", "DEX", "CON", "INT", "WIS", "CHA"]
+    primary_stat: Literal["body", "agility", "mind", "presence"]
     type: Literal["attack", "heal", "buff", "debuff"]
 
 

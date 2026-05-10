@@ -1,15 +1,10 @@
 """Persistence repository Protocols."""
 
-from typing import Protocol, Type, TypeVar
-
-from pydantic import BaseModel
+from typing import Protocol
 
 from src.game.domain.graph import Graph
 from src.game.domain.memory import DialoguePair, LogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
-
-T = TypeVar("T", bound=BaseModel)
-
 
 class GraphRepo(Protocol):
     """Graph-native runtime persistence."""
@@ -54,6 +49,4 @@ class ScenarioRepo(Protocol):
 
     async def read_player_template(self, profile: str) -> dict: ...
 
-    async def load_seed_entities(
-        self, profile: str, kind: str, model_cls: Type[T]
-    ) -> dict[str, T]: ...
+    async def load_seed_records(self, profile: str, kind: str) -> dict[str, dict]: ...

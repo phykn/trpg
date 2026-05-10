@@ -11,21 +11,25 @@ instead.
 from .render import render
 
 
-def stat_label(stat: str) -> str:
-    """Korean display label for a stat key. Falls back to the raw key for unknown values."""
+def stat_label(stat: str, locale: str = "ko") -> str:
+    """Display label for a stat key. Falls back to the raw key for unknown values."""
     try:
-        return render(f"stat.{stat}", "ko")
+        return render(f"stat.{stat}", locale)
     except KeyError:
         return stat
 
 
-def gender_label(gender: str) -> str:
-    """Korean label for display, empty for non-sexed entities."""
+def gender_label(gender: str, locale: str = "ko") -> str:
+    """Display label for gender, empty for non-sexed entities."""
     if gender == "male":
-        return render("ui.gender.male", "ko")
+        return render("ui.gender.male", locale)
     if gender == "female":
-        return render("ui.gender.female", "ko")
+        return render("ui.gender.female", locale)
     return ""
+
+
+def roll_dice_label(locale: str = "ko") -> str:
+    return render("ui.roll.dice_label", locale)
 
 
 # ----- Story-graph edge labels (rendered on client map) -----

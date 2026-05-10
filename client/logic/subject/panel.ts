@@ -1,4 +1,4 @@
-import { DASH, characterMeta, formatInventoryItem, joinOrDash, withDeath } from '@/components/ui';
+import { DASH, characterMeta, formatGold, formatInventoryItem, joinOrDash, withDeath } from '@/components/ui';
 import { ko } from '@/locale/ko';
 import type { EquipItem } from '@/logic/hero';
 import type { PanelSlot } from '@/logic/info-panel';
@@ -34,7 +34,13 @@ export function buildSubjectSlot(subject: Subject | null, opts?: { dot?: boolean
       sections: [
         { label: ko.hero.ability, nodes: subject.stats.map((s): [string, number] => [s.label, s.value]) },
         { label: ko.hero.equip, text: joinOrDash(equipped.map((it) => it.name)) },
-        { label: ko.hero.inventory, text: joinOrDash(subject.inventory.map(formatInventoryItem)) },
+        {
+          label: ko.hero.inventory,
+          text: joinOrDash([
+            ...(subject.gold === undefined ? [] : [formatGold(subject.gold)]),
+            ...subject.inventory.map(formatInventoryItem),
+          ]),
+        },
         { label: ko.hero.skill, text: joinOrDash(subject.skills) },
         { label: ko.panel.role, text: subject.role || DASH },
         { label: ko.panel.traits, text: joinOrDash(subject.known) },

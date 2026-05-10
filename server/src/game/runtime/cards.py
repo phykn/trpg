@@ -6,7 +6,7 @@ from src.game.domain.graph_query import location_of
 from src.game.domain.memory import ActLogEntry
 from src.game.domain.types import GraphStatKey
 from src.locale.labels import stat_label
-from src.locale.particles import eul_reul
+from src.locale.render import render
 
 from .dispatch import GraphActionDispatchResult
 from .state import GameRuntimeState
@@ -30,11 +30,11 @@ def build_graph_quest_offer_card(
     quest_id: str,
     log_id: int,
 ) -> ActLogEntry:
-    quest = _quest_title(runtime.graph, quest_id)
+    quest = _quest_title(runtime.graph, quest_id, runtime.progress.locale)
     return ActLogEntry(
         id=log_id,
         kind="act",
-        text=f"새 의뢰가 도착합니다: {quest}.",
+        text=render("runtime.card.quest_offer", runtime.progress.locale, quest=quest),
     )
 
 
@@ -50,7 +50,15 @@ def build_graph_level_up_card(
     return ActLogEntry(
         id=log_id,
         kind="act",
-        text=f"{_label(player)}의 레벨이 올랐습니다 (레벨 {level}, {stat_label(stat_up)} ↑, HP {max_hp} / MP {max_mp}).",
+        text=render(
+            "runtime.card.level_up",
+            runtime.progress.locale,
+            actor=_label(player),
+            level=level,
+            stat=stat_label(stat_up, runtime.progress.locale),
+            max_hp=max_hp,
+            max_mp=max_mp,
+        ),
     )
 
 
@@ -62,40 +70,52 @@ def _card_text(
 ) -> str:
     if dispatch.kind == "move":
         destination_id = location_of(after.graph, after.progress.player_id)
-        destination = _node_label(after.graph, destination_id, fallback="목적지")
-        return f"당신은 {destination}{_direction_particle(destination)} 이동합니다."
+        destination = _node_label(
+            after.graph,
+            destination_id,
+            fallback=render("runtime.fallback.destination", after.progress.locale),
+        )
+        return render("runtime.card.move", after.progress.locale, destination=destination)
 
     if dispatch.kind == "combat":
         return _combat_text(before, after, action)
 
     if dispatch.kind == "quest_accept":
-        quest = _quest_title(after.graph, _single(action.what) or _single(action.to))
-        return f"당신은 {quest} 퀘스트를 시작합니다."
+        quest = _quest_title(
+            after.graph,
+            _single(action.what) or _single(action.to),
+            after.progress.locale,
+        )
+        return render("runtime.card.quest_accept", after.progress.locale, quest=quest)
 
     if dispatch.kind == "quest_abandon":
-        quest = _quest_title(after.graph, _single(action.what) or _single(action.to))
-        return f"당신은 {quest} 퀘스트를 포기합니다."
+        quest = _quest_title(
+            after.graph,
+            _single(action.what) or _single(action.to),
+            after.progress.locale,
+        )
+        return render("runtime.card.quest_abandon", after.progress.locale, quest=quest)
 
     if dispatch.kind == "rest":
-        return "당신은 휴식을 취합니다."
+        return render("runtime.card.rest", after.progress.locale)
 
     if dispatch.kind == "equip":
-        item = _node_label(after.graph, _single(action.what) or _single(action.with_))
-        return f"당신은 {item}을 장비합니다."
+        item = _node_label(after.graph, _single(action.what) or _single(action.with_), locale=after.progress.locale)
+        return render("runtime.card.equip", after.progress.locale, item=item)
 
     if dispatch.kind == "unequip":
-        item = _node_label(after.graph, _single(action.what) or _single(action.with_))
-        return f"당신은 {item}을 해제합니다."
+        item = _node_label(after.graph, _single(action.what) or _single(action.with_), locale=after.progress.locale)
+        return render("runtime.card.unequip", after.progress.locale, item=item)
 
     if dispatch.kind == "use":
-        item = _node_label(after.graph, _single(action.what) or _single(action.with_))
-        return f"당신은 {item}을 사용합니다."
+        item = _node_label(after.graph, _single(action.what) or _single(action.with_), locale=after.progress.locale)
+        return render("runtime.card.use", after.progress.locale, item=item)
 
     if dispatch.kind == "transfer":
-        item = _node_label(after.graph, _single(action.what) or _single(action.with_))
-        return f"당신은 {item}을 옮깁니다."
+        item = _node_label(after.graph, _single(action.what) or _single(action.with_), locale=after.progress.locale)
+        return render("runtime.card.transfer", after.progress.locale, item=item)
 
-    return "당신의 행동이 처리됩니다."
+    return render("runtime.card.generic", after.progress.locale)
 
 
 def _combat_text(
@@ -105,22 +125,26 @@ def _combat_text(
 ) -> str:
     if before.progress.graph_combat_state is None:
         target_id = _single(action.what) or _single(action.to)
-        target = _node_label(after.graph, target_id, fallback="대상")
-        return f"당신은 {target}{eul_reul(target)} 공격해 전투를 시작합니다."
+        target = _node_label(
+            after.graph,
+            target_id,
+            fallback=render("runtime.fallback.target", after.progress.locale),
+        )
+        return render("runtime.combat.start", after.progress.locale, target=target)
     outcome = after.progress.graph_combat_state.outcome if after.progress.graph_combat_state else "victory"
     if outcome == "fled":
-        return "당신은 전투에서 벗어납니다."
+        return render("runtime.combat.fled", after.progress.locale)
     if outcome == "defeat":
-        return "당신은 전투에서 패배합니다."
+        return render("runtime.combat.defeat", after.progress.locale)
     if outcome == "victory":
-        return "당신은 전투에서 승리합니다."
-    return "당신은 전투를 이어갑니다."
+        return render("runtime.combat.victory", after.progress.locale)
+    return render("runtime.combat.continue", after.progress.locale)
 
 
-def _quest_title(graph: Graph, quest_id: str | None) -> str:
+def _quest_title(graph: Graph, quest_id: str | None, locale: str) -> str:
     node = graph.nodes.get(quest_id or "")
     if node is None or node.type != "quest":
-        return "해당"
+        return render("runtime.fallback.quest", locale)
     title = node.properties.get("title")
     if isinstance(title, str) and title:
         return title
@@ -131,10 +155,11 @@ def _node_label(
     graph: Graph,
     node_id: str | None,
     *,
-    fallback: str = "대상",
+    fallback: str | None = None,
+    locale: str = "ko",
 ) -> str:
     node = graph.nodes.get(node_id or "")
-    return _label(node) if node is not None else fallback
+    return _label(node) if node is not None else fallback or render("runtime.fallback.target", locale)
 
 
 def _label(node: GraphNode) -> str:
@@ -150,16 +175,6 @@ def _label(node: GraphNode) -> str:
 def _int_property(node: GraphNode, key: str) -> int:
     value = node.properties.get(key)
     return value if isinstance(value, int) else 0
-
-
-def _direction_particle(value: str) -> str:
-    if value == "":
-        return "로"
-    code = ord(value[-1])
-    if code < 0xAC00 or code > 0xD7A3:
-        return "로"
-    final = (code - 0xAC00) % 28
-    return "로" if final in (0, 8) else "으로"
 
 
 def _single(value: object) -> str | None:

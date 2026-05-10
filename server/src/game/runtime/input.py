@@ -8,10 +8,13 @@ from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph_query import characters_at, location_of
 from src.game.domain.memory import GMLogEntry
+from src.llm.calls._runner import get_prompt
 from src.llm.calls.classify.runner import classify
 from src.llm.calls.classify.schema import ClassifyInput
 from src.llm.client import LLMClient
 from src.llm.context.graph_surroundings import build_graph_surroundings
+from src.llm.diag import engine_diag, llm_diag, set_diag_context
+from src.locale.render import render
 from src.wire.graph_to_front import graph_to_front_state
 
 from .confirmation import GraphActionRequestResult, run_graph_action_request
@@ -33,6 +36,8 @@ async def run_graph_input_turn(
     player_input: str,
 ) -> GraphActionRequestResult:
     runtime = await load_runtime_state(repo, game_id)
+    set_diag_context(game_id, runtime.progress.turn_count)
+    engine_diag("input:start", chars=len(player_input))
     output = await classify(
         client,
         ClassifyInput(
@@ -49,6 +54,7 @@ async def run_graph_input_turn(
         raise GraphInputError("graph input requires exactly one action")
 
     action = actions[0]
+    engine_diag("input:classified", action=action.verb)
     if action.verb == "perceive":
         return await start_graph_roll(repo, game_id, action)
 
@@ -85,7 +91,7 @@ async def _run_graph_narrative_input(
         subject_id,
     )
     if not text:
-        text = "당신의 행동은 조용히 이어집니다."
+        text = render("runtime.input.quiet", runtime.progress.locale)
     entry = GMLogEntry(
         id=runtime.progress.next_log_id,
         kind="gm",
@@ -106,6 +112,7 @@ async def _run_graph_narrative_input(
     )
     await repo.append_log_entries(runtime.progress.game_id, [entry])
     await repo.save_progress(progress)
+    engine_diag("input:done", status="executed", action=action.verb)
     return GraphActionRequestResult(
         runtime=next_runtime,
         status="executed",
@@ -122,31 +129,39 @@ async def _generate_graph_input_narration(
 ) -> str:
     surroundings = build_graph_surroundings(runtime)
     subject = runtime.graph.nodes.get(subject_id or "")
-    subject_line = (
-        f"대화 대상: {subject_id} / {_node_name(subject)}"
-        if subject_id is not None
-        else "대화 대상: 없음"
-    )
     subject_state = (
-        "대상 상태: 현재 장소에 있음"
+        "same_place"
         if subject_id is not None and _is_at_player_location(runtime, subject_id)
-        else "대상 상태: 지정되지 않음"
+        else None
     )
     try:
+        llm_diag("llm:call", agent="graph_narrate")
         result = await asyncio.wait_for(
             client.chat(
                 [
-                    {"role": "system", "content": _NARRATIVE_INPUT_SYSTEM_PROMPT},
+                    {
+                        "role": "system",
+                        "content": get_prompt("graph_narrate", runtime.progress.locale),
+                    },
                     {
                         "role": "user",
-                        "content": "\n".join(
-                            [
-                                f"플레이어 입력: {player_input}",
-                                f"분류된 행동: {action.verb}",
-                                subject_line,
-                                subject_state,
-                                f"현재 상황: {json.dumps(surroundings, ensure_ascii=False)}",
-                            ]
+                        "content": json.dumps(
+                            {
+                                "player_input": player_input,
+                                "classified_action": action.model_dump(
+                                    mode="json",
+                                    by_alias=True,
+                                ),
+                                "dialogue_target": {
+                                    "id": subject_id,
+                                    "name": _node_name(subject, runtime.progress.locale),
+                                    "state": subject_state,
+                                }
+                                if subject_id is not None
+                                else None,
+                                "surroundings": surroundings,
+                            },
+                            ensure_ascii=False,
                         ),
                     },
                 ],
@@ -156,8 +171,10 @@ async def _generate_graph_input_narration(
             ),
             timeout=_GRAPH_INPUT_NARRATION_TIMEOUT_SECONDS,
         )
-    except (LLMUnavailable, OSError, TimeoutError):
+    except (LLMUnavailable, OSError, TimeoutError) as exc:
+        llm_diag("llm:fail", agent="graph_narrate", err=type(exc).__name__)
         return ""
+    llm_diag("llm:done", agent="graph_narrate")
     answer = result.get("answer")
     if not isinstance(answer, str):
         return ""
@@ -189,9 +206,9 @@ def _is_at_player_location(runtime, node_id: str) -> bool:
     return player_location is not None and location_of(runtime.graph, node_id) == player_location
 
 
-def _node_name(node: GraphNode | None) -> str:
+def _node_name(node: GraphNode | None, locale: str) -> str:
     if node is None:
-        return "없음"
+        return render("runtime.none", locale)
     name = node.properties.get("name")
     return name if isinstance(name, str) and name else node.id
 
@@ -216,12 +233,3 @@ def _clean_narration(text: str) -> str:
     return cleaned[:220].rstrip()
 
 
-_NARRATIVE_INPUT_SYSTEM_PROMPT = """당신은 온톨로지 기반 TRPG의 짧은 GM 나레이션만 씁니다.
-규칙:
-- 한국어로 씁니다.
-- 2인칭 존댓말 합니다체를 사용하고 플레이어는 '당신'이라고 부릅니다.
-- 1~2문장, 최대 220자입니다.
-- 제공된 현재 상황과 플레이어 입력만 사용합니다.
-- 분류된 행동이 speak이고 대화 대상이 있으면 NPC의 짧은 반응이나 대사를 포함합니다.
-- 새 인물, 장소, 몬스터, 아이템, 퀘스트, 보상, 숫자를 만들지 않습니다.
-- 그래프 상태를 바꾸거나 확정되지 않은 보상을 말하지 않습니다."""

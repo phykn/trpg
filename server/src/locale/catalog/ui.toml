@@ -2,63 +2,84 @@
 
 [ui."gender.male"]
 ko = "남성"
+en = "Male"
 
 [ui."gender.female"]
 ko = "여성"
+en = "Female"
 
 [ui."risk.safe.label"]
 ko = "안전"
+en = "Safe"
 
 [ui."risk.risky.label"]
 ko = "주의"
+en = "Caution"
 
 [ui."risk.dangerous.label"]
 ko = "위험"
+en = "Danger"
 
 [ui."story.edge.current"]
 ko = "현재 위치"
+en = "Current location"
 
 [ui."story.edge.observe"]
 ko = "주시"
+en = "Watching"
 
 [ui."story.edge.progress"]
 ko = "진행 중"
+en = "In progress"
 
 [ui."story.edge.move"]
 ko = "이동"
+en = "Move"
 
 [ui."story.edge.meet"]
 ko = "등장"
+en = "Appears"
 
 [ui."story.edge.quest_giver"]
 ko = "의뢰"
+en = "Request"
 
 [ui."story.edge.quest_target"]
 ko = "목표"
+en = "Goal"
 
 [ui."story.summary.hero"]
 ko = "주인공"
+en = "Hero"
 
 [ui."story.summary.empty"]
 ko = "스토리 데이터 없음"
+en = "No story data"
 
 [ui."story.summary.quest"]
 ko = "퀘스트 {title}"
+en = "Quest {title}"
 
 [ui."story.summary.location"]
 ko = "현재 위치 {name}"
+en = "Current location {name}"
 
 [ui."story.summary.entities"]
 ko = "등장인물 {count}"
+en = "Characters {count}"
 
 [ui."story.summary.places"]
 ko = "장소 {count}"
+en = "Places {count}"
 
 [ui."roll.reason_default"]
 ko = "행동 판정"
+en = "Action check"
 
 [ui."roll.dice_label"]
 ko = "주사위"
+en = "Die"
 
 [ui."roll.affinity_label"]
 ko = "호감"
+en = "Affinity"

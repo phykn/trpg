@@ -20,3 +20,4 @@ en = "Cannot respond at the moment. Please try again later."
 
 [error.level_up_invalid_stat]
 ko = "잘못된 능력치입니다: {stat_up}"
+en = "Invalid stat: {stat_up}"

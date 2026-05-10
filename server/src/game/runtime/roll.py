@@ -8,7 +8,9 @@ from src.db.repo import GraphRepo
 from src.game.domain.action import Action
 from src.game.domain.memory import BonusItem, RollLogEntry
 from src.game.rules.dc import compute_grade, compute_required_roll
-from src.locale.labels import ROLL_DICE_LABEL, stat_label
+from src.locale.labels import roll_dice_label, stat_label
+from src.locale.render import render
+from src.llm.diag import engine_diag, set_diag_context
 from src.wire.graph_to_front import graph_to_front_state
 
 from .confirmation import GraphActionRequestResult
@@ -36,15 +38,22 @@ async def start_graph_roll(
     action: Action,
 ) -> GraphActionRequestResult:
     runtime = await load_runtime_state(repo, game_id)
+    set_diag_context(game_id, runtime.progress.turn_count)
+    engine_diag("roll:start", action=action.verb)
     if runtime.progress.pending_roll is not None:
         raise GraphRollActive("a pending_roll is already active")
     if runtime.progress.pending_confirmation is not None:
         raise GraphRollActive("a pending_confirmation is already active")
 
-    pending = build_pending_roll(runtime.graph.nodes[runtime.progress.player_id].properties, action)
+    pending = build_pending_roll(
+        runtime.graph.nodes[runtime.progress.player_id].properties,
+        action,
+        runtime.progress.locale,
+    )
     next_progress = runtime.progress.model_copy(update={"pending_roll": pending})
     next_runtime = runtime.model_copy(update={"progress": next_progress})
     await repo.save_progress(next_progress)
+    engine_diag("roll:pending", kind=pending.get("kind"))
     return GraphActionRequestResult(
         runtime=next_runtime,
         status="roll_required",
@@ -61,6 +70,8 @@ async def run_graph_roll(
     dice: int | None = None,
 ) -> GraphActionRequestResult:
     runtime = await load_runtime_state(repo, game_id)
+    set_diag_context(game_id, runtime.progress.turn_count)
+    engine_diag("roll:resolve", roll=roll_id)
     pending = runtime.progress.pending_roll
     if pending is None:
         raise GraphRollExpected("no pending_roll")
@@ -79,7 +90,12 @@ async def run_graph_roll(
         roll=rolled,
         margin=rolled - required_roll,
         result=_roll_result(grade),
-        bonus_breakdown=[BonusItem(label=ROLL_DICE_LABEL, value=rolled)],
+        bonus_breakdown=[
+            BonusItem(
+                label=roll_dice_label(runtime.progress.locale),
+                value=rolled,
+            )
+        ],
     )
     next_progress = runtime.progress.model_copy(
         update={
@@ -96,6 +112,13 @@ async def run_graph_roll(
     )
     await repo.append_log_entries(game_id, [entry])
     await repo.save_progress(next_progress)
+    engine_diag(
+        "roll:done",
+        result=entry.result,
+        rolled=rolled,
+        required=required_roll,
+        next_turn=next_progress.turn_count,
+    )
     return GraphActionRequestResult(
         runtime=next_runtime,
         status="executed",
@@ -106,17 +129,18 @@ async def run_graph_roll(
 def build_pending_roll(
     player_properties: dict[str, Any],
     action: Action,
+    locale: str = "ko",
 ) -> dict[str, Any]:
     stat = _roll_stat(action)
-    label = stat_label(stat)
+    label = stat_label(stat, locale)
     stats = player_properties.get("stats")
     stat_value = stats.get(stat, 10) if isinstance(stats, dict) else 10
     required_roll = compute_required_roll(DEFAULT_ROLL_DC, _int(stat_value, stat))
     return {
         "id": f"roll_{secrets.token_hex(4)}",
         "kind": action.verb,
-        "title": f"{label} 판정이 필요합니다",
-        "body": _roll_body(action),
+        "title": render("runtime.roll.title", locale, label=label),
+        "body": _roll_body(action, locale),
         "stat": stat,
         "stat_label": label,
         "required_roll": required_roll,
@@ -137,14 +161,14 @@ def _roll_stat(action: Action) -> str:
     return "body"
 
 
-def _roll_body(action: Action) -> str:
+def _roll_body(action: Action, locale: str) -> str:
     if action.verb == "perceive":
-        return "자세히 살펴보려면 집중해야 합니다."
+        return render("runtime.roll.body.perceive", locale)
     if action.verb == "speak":
-        return "상대를 움직이려면 말의 무게를 실어야 합니다."
+        return render("runtime.roll.body.speak", locale)
     if action.verb == "move":
-        return "발소리를 죽이고 미끄러지지 않아야 합니다."
-    return "행동의 결과를 확인해야 합니다."
+        return render("runtime.roll.body.move", locale)
+    return render("runtime.roll.body.default", locale)
 
 
 def _roll_result(grade: str) -> str:

@@ -34,7 +34,7 @@ export function NeighborhoodPanel({
   actionDisabled?: boolean;
 }) {
   const visibleGraph: StoryGraphModel = React.useMemo(() => {
-    // "주변" panel — restrict to the immediate neighborhood so the small
+    // Neighborhood panel — restrict to the immediate neighborhood so the small
     // viewport doesn't get crammed with the full reachable map.
     const allowed = new Set<string>();
     for (const n of graph.nodes) {
@@ -113,7 +113,7 @@ export function NeighborhoodPanel({
   })();
   const metaText = (() => {
     if (!selectedNode) return '';
-    // Dead names carry "(죽음)"; suppress reachability label to avoid "(죽음) · 만남 불가".
+    // Dead names already carry their own status, so suppress reachability metadata.
     if (
       (selectedNode.kind === 'hero'
         || selectedNode.kind === 'subject'

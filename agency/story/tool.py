@@ -11,6 +11,7 @@ argparse skeleton + bootstrap.
 
 import argparse
 import asyncio
+import json
 import os
 import sys
 from pathlib import Path
@@ -32,17 +33,8 @@ from agency.story.harness.decompose import (  # noqa: E402
 )
 from agency.story.harness._common import EntityWriterError  # noqa: E402
 from agency.story.harness.scenario import fill_equipment  # noqa: E402
-from src.game.engines.invariants import Scenario, check_scenario  # noqa: E402
-from src.game.domain.entities import (  # noqa: E402
-    Chapter,
-    Character,
-    Item,
-    Location,
-    Quest,
-    Race,
-    Skill,
-)
 from src.db.local_fs import LocalFsScenarioRepo  # noqa: E402
+from src.game.seed.validation import seed_violations  # noqa: E402
 from agency.story.harness.runner import (  # noqa: E402
     SPECS,
     _check_entity_invariants,
@@ -120,7 +112,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # sweep
     sp_sw = sub.add_parser(
         "sweep",
-        help="최종 시나리오 invariant sweep (engines.invariants.check_scenario)",
+        help="최종 시나리오 graph seed record 검사",
     )
     sp_sw.add_argument("scenario_dir", help="scenario directory")
     sp_sw.set_defaults(func=_cmd_sweep)
@@ -174,16 +166,14 @@ def _cmd_check_entity(args: argparse.Namespace) -> int:
         )
         return 1
     try:
-        entity = spec.model.model_validate_json(
-            Path(args.entity_json).read_text(encoding="utf-8")
-        )
+        entity = json.loads(Path(args.entity_json).read_text(encoding="utf-8"))
         refs = _collect_refs(sd, spec)
         if args.decomp:
             _merge_decomp_pool(refs, Path(args.decomp))
         existing_ids = refs[spec.kind]
         # remove the entity-being-checked id from `existing_ids` so it doesn't
         # trip the collision check against its own future on-disk file.
-        existing_ids.discard(entity.id)
+        existing_ids.discard(entity.get("id"))
         _check_id(entity, existing_ids, force_id=None)
         spec.check_refs(entity, refs)
         _check_entity_invariants(entity, sd, skeleton=args.skeleton)
@@ -250,19 +240,18 @@ def _cmd_equip_fill(args: argparse.Namespace) -> int:
     return 0
 
 
-async def _load_scenario_async(profile: str, profile_root: Path) -> Scenario:
+async def _load_scenario_async(profile: str, profile_root: Path) -> dict:
     repo = LocalFsScenarioRepo(str(profile_root))
-    return Scenario(
-        races=await repo.load_seed_entities(profile, "races", Race),
-        locations=await repo.load_seed_entities(profile, "locations", Location),
-        items=await repo.load_seed_entities(profile, "items", Item),
-        skills=await repo.load_seed_entities(profile, "skills", Skill),
-        characters=await repo.load_seed_entities(profile, "characters", Character),
-        quests=await repo.load_seed_entities(profile, "quests", Quest),
-        chapters=await repo.load_seed_entities(profile, "chapters", Chapter),
-        start=await repo.read_start_json(profile),
-        player_template=await repo.read_player_template(profile),
-    )
+    return {
+        "races": await repo.load_seed_records(profile, "races"),
+        "locations": await repo.load_seed_records(profile, "locations"),
+        "items": await repo.load_seed_records(profile, "items"),
+        "skills": await repo.load_seed_records(profile, "skills"),
+        "npcs": await repo.load_seed_records(profile, "characters"),
+        "quests": await repo.load_seed_records(profile, "quests"),
+        "chapters": await repo.load_seed_records(profile, "chapters"),
+        "start": await _read_optional_start(repo, profile),
+    }
 
 
 def _cmd_sweep(args: argparse.Namespace) -> int:
@@ -272,7 +261,7 @@ def _cmd_sweep(args: argparse.Namespace) -> int:
         return 1
     try:
         scenario = asyncio.run(_load_scenario_async(sd.name, sd.parent))
-        violations = check_scenario(scenario)
+        violations = seed_violations(**scenario)
     except Exception as e:
         return _fail("sweep", e)
     if violations:
@@ -282,6 +271,13 @@ def _cmd_sweep(args: argparse.Namespace) -> int:
         return 1
     print("OK")
     return 0
+
+
+async def _read_optional_start(repo: LocalFsScenarioRepo, profile: str) -> dict:
+    try:
+        return await repo.read_start_json(profile)
+    except FileNotFoundError:
+        return {}
 
 
 def _main(argv: list[str]) -> int:

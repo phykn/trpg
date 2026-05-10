@@ -1,0 +1,243 @@
+[runtime.none]
+ko = "없음"
+en = "none"
+
+[runtime."fallback.destination"]
+ko = "목적지"
+en = "destination"
+
+[runtime."fallback.target"]
+ko = "대상"
+en = "target"
+
+[runtime."fallback.quest"]
+ko = "해당"
+en = "that"
+
+[runtime."card.quest_offer"]
+ko = "새 의뢰가 도착합니다: {quest}."
+en = "A new request arrives: {quest}."
+
+[runtime."card.level_up"]
+ko = "{actor}의 레벨이 올랐습니다 (레벨 {level}, {stat} ↑, HP {max_hp} / MP {max_mp})."
+en = "{actor} leveled up (level {level}, {stat} up, HP {max_hp} / MP {max_mp})."
+
+[runtime."card.move"]
+ko = "당신은 {destination}{으로/로} 이동합니다."
+en = "You move to {destination}."
+
+[runtime."card.quest_accept"]
+ko = "당신은 {quest} 퀘스트를 시작합니다."
+en = "You start the {quest} quest."
+
+[runtime."card.quest_abandon"]
+ko = "당신은 {quest} 퀘스트를 포기합니다."
+en = "You abandon the {quest} quest."
+
+[runtime."card.rest"]
+ko = "당신은 휴식을 취합니다."
+en = "You rest."
+
+[runtime."card.equip"]
+ko = "당신은 {item}{을/를} 장비합니다."
+en = "You equip {item}."
+
+[runtime."card.unequip"]
+ko = "당신은 {item}{을/를} 해제합니다."
+en = "You unequip {item}."
+
+[runtime."card.use"]
+ko = "당신은 {item}{을/를} 사용합니다."
+en = "You use {item}."
+
+[runtime."card.transfer"]
+ko = "당신은 {item}{을/를} 옮깁니다."
+en = "You move {item}."
+
+[runtime."card.generic"]
+ko = "당신의 행동이 처리됩니다."
+en = "Your action is handled."
+
+[runtime."combat.start"]
+ko = "당신은 {target}{을/를} 공격해 전투를 시작합니다."
+en = "You attack {target} and start combat."
+
+[runtime."combat.fled"]
+ko = "당신은 전투에서 벗어납니다."
+en = "You leave combat."
+
+[runtime."combat.defeat"]
+ko = "당신은 전투에서 패배합니다."
+en = "You lose the battle."
+
+[runtime."combat.victory"]
+ko = "당신은 전투에서 승리합니다."
+en = "You win the battle."
+
+[runtime."combat.continue"]
+ko = "당신은 전투를 이어갑니다."
+en = "You continue the battle."
+
+[runtime."confirmation.attack.title"]
+ko = "공격하시겠습니까?"
+en = "Attack?"
+
+[runtime."confirmation.attack.body"]
+ko = "{target}{을/를} 공격해 전투를 시작합니다."
+en = "Attack {target} and start combat."
+
+[runtime."confirmation.attack.confirm"]
+ko = "공격"
+en = "Attack"
+
+[runtime."confirmation.quest_accept.title"]
+ko = "퀘스트를 시작하시겠습니까?"
+en = "Start the quest?"
+
+[runtime."confirmation.quest_accept.body"]
+ko = "{quest} 퀘스트를 시작합니다."
+en = "Start the {quest} quest."
+
+[runtime."confirmation.quest_accept.confirm"]
+ko = "시작"
+en = "Start"
+
+[runtime."confirmation.quest_abandon.title"]
+ko = "퀘스트를 포기하시겠습니까?"
+en = "Abandon the quest?"
+
+[runtime."confirmation.quest_abandon.body"]
+ko = "{quest} 퀘스트를 포기합니다."
+en = "Abandon the {quest} quest."
+
+[runtime."confirmation.quest_abandon.confirm"]
+ko = "포기"
+en = "Abandon"
+
+[runtime."confirmation.cancel"]
+ko = "취소"
+en = "Cancel"
+
+[runtime."input.quiet"]
+ko = "당신의 행동은 조용히 이어집니다."
+en = "Your action continues quietly."
+
+[runtime."intro.arrive"]
+ko = "당신은 {place}에 도착합니다."
+en = "You arrive at {place}."
+
+[runtime."intro.arrive_with_description"]
+ko = "당신은 {place}에 도착합니다. {description}"
+en = "You arrive at {place}. {description}"
+
+[runtime."query.unknown_place"]
+ko = "알 수 없는 곳"
+en = "an unknown place"
+
+[runtime."query.current_location"]
+ko = "현재 위치는 {location}입니다."
+en = "Your current location is {location}."
+
+[runtime."query.nearby_entities"]
+ko = "주변에는 {names}{이/가} 있습니다."
+en = "Nearby: {names}."
+
+[runtime."query.no_nearby_entities"]
+ko = "주변에 눈에 띄는 대상은 없습니다."
+en = "There is nothing notable nearby."
+
+[runtime."query.exits"]
+ko = "이동할 수 있는 곳은 {names}입니다."
+en = "You can move to {names}."
+
+[runtime."query.no_exits"]
+ko = "지금 이동할 수 있는 곳은 없습니다."
+en = "There is nowhere you can move right now."
+
+[runtime."query.no_inventory"]
+ko = "소지품이 없습니다."
+en = "You have no items."
+
+[runtime."query.inventory"]
+ko = "소지품은 {names}입니다."
+en = "Your items are {names}."
+
+[runtime."query.status"]
+ko = "당신의 체력은 {hp} 상태이고 마나는 {mp} 상태입니다."
+en = "Your health is {hp}, and your mana is {mp}."
+
+[runtime."resource.healthy"]
+ko = "양호한"
+en = "healthy"
+
+[runtime."resource.hurt"]
+ko = "다친"
+en = "hurt"
+
+[runtime."resource.critical"]
+ko = "위급한"
+en = "critical"
+
+[runtime."resource.downed"]
+ko = "쓰러진"
+en = "downed"
+
+[runtime."resource.ready"]
+ko = "충분한"
+en = "ready"
+
+[runtime."resource.strained"]
+ko = "부족한"
+en = "strained"
+
+[runtime."resource.drained"]
+ko = "고갈된"
+en = "drained"
+
+[runtime."roll.title"]
+ko = "{label} 판정이 필요합니다"
+en = "{label} check required"
+
+[runtime."roll.body.perceive"]
+ko = "자세히 살펴보려면 집중해야 합니다."
+en = "You need focus to inspect closely."
+
+[runtime."roll.body.speak"]
+ko = "상대를 움직이려면 말의 무게를 실어야 합니다."
+en = "Your words need weight to move the other person."
+
+[runtime."roll.body.move"]
+ko = "발소리를 죽이고 미끄러지지 않아야 합니다."
+en = "You need quiet steps and steady footing."
+
+[runtime."roll.body.default"]
+ko = "행동의 결과를 확인해야 합니다."
+en = "The result of the action needs to be checked."
+
+[runtime."seed.giver.name"]
+ko = "마을 주민"
+en = "Villager"
+
+[runtime."seed.enemy.name"]
+ko = "떠돌이 적"
+en = "Wandering enemy"
+
+[runtime."seed.reward.name"]
+ko = "작은 보상"
+en = "Small reward"
+
+[runtime."seed.reward.description"]
+ko = "의뢰를 마치면 받을 수 있는 보상입니다."
+en = "A reward for completing the request."
+
+[runtime."seed.quest.title"]
+ko = "마을의 부탁"
+en = "A Village Request"
+
+[runtime."seed.quest.summary"]
+ko = "마을 주민은 주변을 위협하는 적을 처리해 달라고 부탁합니다."
+en = "A villager asks you to handle an enemy threatening the area."
+
+[runtime."seed.quest.trigger"]
+ko = "떠돌이 적 물리치기"
+en = "Defeat the wandering enemy"

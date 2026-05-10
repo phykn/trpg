@@ -7,7 +7,6 @@ import json
 
 import pytest
 
-from src.game.domain.entities import Item
 from tests._fakes import make_scenario_repo
 
 
@@ -53,7 +52,7 @@ async def test_read_start_and_player_template():
     assert template["gold"] == 5
 
 
-async def test_load_seed_entities_parses_each_file():
+async def test_load_seed_records_reads_each_file():
     repo, fs = make_scenario_repo()
     fs.objects["default/items/sword.json"] = json.dumps(
         {"id": "sword", "name": "검", "description": "강철", "weight": 1.0}
@@ -61,9 +60,9 @@ async def test_load_seed_entities_parses_each_file():
     fs.objects["default/items/shield.json"] = json.dumps(
         {"id": "shield", "name": "방패", "description": "원형", "weight": 2.0}
     ).encode("utf-8")
-    items = await repo.load_seed_entities("default", "items", Item)
+    items = await repo.load_seed_records("default", "items")
     assert set(items) == {"sword", "shield"}
-    assert items["sword"].name == "검"
+    assert items["sword"]["name"] == "검"
 
 
 async def test_list_profiles_walks_top_level_dirs():

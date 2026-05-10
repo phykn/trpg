@@ -1,33 +1,10 @@
-"""Entity check helpers + spec metadata.
-
-`SPECS` maps entity kinds to their Pydantic model + cross-ref validator,
-used by `agency.story.tool check-entity`. Entity-level rules (stat
-invariants, HP/MP formula, NPC seed extras) live in `src.game.engines.invariants`.
-The LLM-call writer that originally consumed this metadata has been removed —
-Codex now writes entities directly per agency/story/SKILL.md.
-"""
+"""Raw scenario record checks for `agency.story.tool check-entity`."""
 
 import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-
-from pydantic import BaseModel
-
-from src.game.domain.entities import (
-    Chapter,
-    Character,
-    Item,
-    Location,
-    Quest,
-    Race,
-    Skill,
-)
-from src.game.engines.invariants import (
-    check_character,
-    check_item,
-    check_seed_character,
-)
+from typing import Any
 
 from ._common import (
     ID_PATTERN,
@@ -35,244 +12,283 @@ from ._common import (
     EntityWriterError,
 )
 
-# --- types & errors --------------------------------------------------------
+
+Record = dict[str, Any]
 
 
-def _noop_check(entity: BaseModel, refs: dict[str, set[str]]) -> None:
+def _noop_check(entity: Record, refs: dict[str, set[str]]) -> None:
     return None
 
 
 @dataclass(frozen=True)
 class EntitySpec:
     kind: str
-    model: type[BaseModel]
     sub_dir: str
-    fragment: str
     ref_kinds: tuple[str, ...] = ()
-    check_refs: Callable[[BaseModel, dict[str, set[str]]], None] = field(
+    check_refs: Callable[[Record, dict[str, set[str]]], None] = field(
         default=_noop_check
     )
 
 
-# --- manifest cross-ref checks --------------------------------------------
-
-
-def _check_location_refs(loc: Location, refs: dict[str, set[str]]) -> None:
+def _check_location_refs(loc: Record, refs: dict[str, set[str]]) -> None:
     location_ids = refs.get("location", set())
     item_ids = refs.get("item", set())
-    for c in loc.connections:
-        if c.target_id == loc.id:
+    loc_id = _entity_id(loc)
+    for connection in _dict_list(loc.get("connections")):
+        target_id = connection.get("target_id")
+        if target_id == loc_id:
             raise EntityWriterError(
-                f"location.connections points at itself ({loc.id})."
+                f"location.connections points at itself ({loc_id})."
             )
-        if c.target_id not in location_ids:
+        if target_id not in location_ids:
             raise EntityWriterError(
-                f"location.connections.target_id={c.target_id!r} not found in scenario locations. "
+                f"location.connections.target_id={target_id!r} not found in scenario locations. "
                 f"Valid ids: {sorted(location_ids)}"
             )
-    for iid in loc.item_ids:
-        if iid not in item_ids:
+    for item_id in _str_list(loc.get("item_ids")):
+        if item_id not in item_ids:
             raise EntityWriterError(
-                f"location.item_ids entry {iid!r} not found in scenario items."
+                f"location.item_ids entry {item_id!r} not found in scenario items."
             )
 
 
-def _check_character_refs(ch: Character, refs: dict[str, set[str]]) -> None:
-    """Manifest cross-ref only — race_id/location_id/skill_ids pool checks."""
+def _check_character_refs(character: Record, refs: dict[str, set[str]]) -> None:
     races = refs.get("race", set())
-    if ch.race_id not in races:
+    race_id = character.get("race_id")
+    if race_id not in races:
         raise EntityWriterError(
-            f"character.race_id={ch.race_id!r} not found in scenario races. "
+            f"character.race_id={race_id!r} not found in scenario races. "
             f"Valid ids: {sorted(races)}"
         )
     locations = refs.get("location", set())
-    if ch.location_id is not None and ch.location_id not in locations:
+    location_id = character.get("location_id")
+    if location_id is not None and location_id not in locations:
         raise EntityWriterError(
-            f"character.location_id={ch.location_id!r} not found in scenario locations. "
+            f"character.location_id={location_id!r} not found in scenario locations. "
             f"Valid ids: {sorted(locations)}"
         )
     skills = refs.get("skill", set())
-    for sid in (*ch.racial_skill_ids, *ch.learned_skill_ids):
-        if sid not in skills:
+    for skill_id in [
+        *_str_list(character.get("racial_skill_ids")),
+        *_str_list(character.get("learned_skill_ids")),
+    ]:
+        if skill_id not in skills:
             raise EntityWriterError(
-                f"character.skill_id={sid!r} not found in scenario skills. "
+                f"character.skill_id={skill_id!r} not found in scenario skills. "
                 "Create that skill first."
             )
 
 
-def _check_race_refs(r: Race, refs: dict[str, set[str]]) -> None:
+def _check_race_refs(race: Record, refs: dict[str, set[str]]) -> None:
     skills = refs.get("skill", set())
-    for sid in r.racial_skill_ids:
-        if sid not in skills:
+    for skill_id in _str_list(race.get("racial_skill_ids")):
+        if skill_id not in skills:
             raise EntityWriterError(
-                f"race.racial_skill_id={sid!r} not found in scenario skills."
+                f"race.racial_skill_id={skill_id!r} not found in scenario skills."
             )
 
 
-def _check_quest_refs(q: Quest, refs: dict[str, set[str]]) -> None:
+def _check_quest_refs(quest: Record, refs: dict[str, set[str]]) -> None:
     characters = refs.get("character", set())
-    if q.giver_id not in characters:
+    giver_id = quest.get("giver_id")
+    if giver_id is not None and giver_id not in characters:
         raise EntityWriterError(
-            f"quest.giver_id={q.giver_id!r} not found in scenario characters."
+            f"quest.giver_id={giver_id!r} not found in scenario characters."
         )
-    for t in [*q.triggers, *q.fail_triggers]:
-        target_kind = TRIGGER_TARGET_KIND.get(t.type)
+    for trigger in [
+        *_dict_list(quest.get("triggers")),
+        *_dict_list(quest.get("fail_triggers")),
+    ]:
+        target_kind = TRIGGER_TARGET_KIND.get(trigger.get("type"))
         if target_kind is None:
             raise EntityWriterError(
-                f"quest trigger (id={t.id}) type={t.type!r} unknown. "
+                f"quest trigger (id={trigger.get('id')}) type={trigger.get('type')!r} unknown. "
                 f"Valid values: {sorted(TRIGGER_TARGET_KIND)}"
             )
         pool = refs.get(target_kind, set())
-        if t.target_id not in pool:
+        target_id = trigger.get("target_id")
+        if target_id not in pool:
             raise EntityWriterError(
-                f"quest trigger (id={t.id}) target_id={t.target_id!r} not found in the "
+                f"quest trigger (id={trigger.get('id')}) target_id={target_id!r} not found in the "
                 f"{target_kind} pool."
             )
     quests = refs.get("quest", set())
-    for pid in q.prerequisite_ids:
-        if pid not in quests:
+    for prereq_id in _str_list(quest.get("prerequisite_ids")):
+        if prereq_id not in quests:
             raise EntityWriterError(
-                f"quest.prerequisite_ids entry {pid!r} not found in scenario quests."
+                f"quest.prerequisite_ids entry {prereq_id!r} not found in scenario quests."
             )
 
 
-def _check_chapter_refs(ch: Chapter, refs: dict[str, set[str]]) -> None:
+def _check_chapter_refs(chapter: Record, refs: dict[str, set[str]]) -> None:
     quests = refs.get("quest", set())
-    for qid in ch.quest_ids:
-        if qid not in quests:
+    for quest_id in _str_list(chapter.get("quest_ids")):
+        if quest_id not in quests:
             raise EntityWriterError(
-                f"chapter.quest_ids entry {qid!r} not found in scenario quests."
+                f"chapter.quest_ids entry {quest_id!r} not found in scenario quests."
             )
 
-
-# --- spec table ------------------------------------------------------------
 
 SPECS: dict[str, EntitySpec] = {
     "race": EntitySpec(
         kind="race",
-        model=Race,
         sub_dir="races",
-        fragment="race.md",
         ref_kinds=("skill",),
         check_refs=_check_race_refs,
     ),
     "location": EntitySpec(
         kind="location",
-        model=Location,
         sub_dir="locations",
-        fragment="location.md",
         ref_kinds=("location", "item"),
         check_refs=_check_location_refs,
     ),
-    "skill": EntitySpec(
-        kind="skill",
-        model=Skill,
-        sub_dir="skills",
-        fragment="skill.md",
-    ),
-    "item": EntitySpec(
-        kind="item",
-        model=Item,
-        sub_dir="items",
-        fragment="item.md",
-    ),
+    "skill": EntitySpec(kind="skill", sub_dir="skills"),
+    "item": EntitySpec(kind="item", sub_dir="items"),
     "character": EntitySpec(
         kind="character",
-        model=Character,
         sub_dir="characters",
-        fragment="character.md",
         ref_kinds=("race", "location", "item", "skill"),
         check_refs=_check_character_refs,
     ),
     "quest": EntitySpec(
         kind="quest",
-        model=Quest,
         sub_dir="quests",
-        fragment="quest.md",
         ref_kinds=("character", "location", "item", "quest"),
         check_refs=_check_quest_refs,
     ),
     "chapter": EntitySpec(
         kind="chapter",
-        model=Chapter,
         sub_dir="chapters",
-        fragment="chapter.md",
         ref_kinds=("quest",),
         check_refs=_check_chapter_refs,
     ),
 }
 
 
-# --- build helpers ---------------------------------------------------------
-
-
-def _load_dir(scenario_dir: Path, sub_dir: str) -> list[dict]:
-    d = scenario_dir / sub_dir
-    if not d.exists():
+def _load_dir(scenario_dir: Path, sub_dir: str) -> list[Record]:
+    dir_path = scenario_dir / sub_dir
+    if not dir_path.exists():
         return []
-    return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(d.glob("*.json"))]
+    return [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted(dir_path.glob("*.json"))
+    ]
 
 
 def _collect_refs(scenario_dir: Path, spec: EntitySpec) -> dict[str, set[str]]:
     refs: dict[str, set[str]] = {
-        spec.kind: {e["id"] for e in _load_dir(scenario_dir, spec.sub_dir)}
+        spec.kind: {_entity_id(entity) for entity in _load_dir(scenario_dir, spec.sub_dir)}
     }
-    for rk in spec.ref_kinds:
-        if rk == spec.kind:
+    for ref_kind in spec.ref_kinds:
+        if ref_kind == spec.kind:
             continue
-        refs[rk] = {e["id"] for e in _load_dir(scenario_dir, SPECS[rk].sub_dir)}
+        refs[ref_kind] = {
+            _entity_id(entity) for entity in _load_dir(scenario_dir, SPECS[ref_kind].sub_dir)
+        }
     return refs
 
 
-def _items_pool(scenario_dir: Path) -> dict[str, Item]:
-    return {e["id"]: Item.model_validate(e) for e in _load_dir(scenario_dir, "items")}
-
-
-def _skills_pool(scenario_dir: Path) -> dict[str, Skill]:
-    return {e["id"]: Skill.model_validate(e) for e in _load_dir(scenario_dir, "skills")}
-
-
 def _check_entity_invariants(
-    entity: BaseModel, scenario_dir: Path, *, skeleton: bool = False
+    entity: Record, scenario_dir: Path, *, skeleton: bool = False
 ) -> None:
-    """Dispatch to src.game.engines.invariants — all entity-level rules.
-
-    Cross-ref between manifests is already done by spec.check_refs above; this
-    runs the rule layer (stat invariants, HP/MP formula, NPC seed extras, etc).
-
-    skeleton=True: only stateless rules (pair-trade, HP/MP formula). The
-    items/skills pool isn't yet on disk, and character.inventory_ids /
-    skill_ids are intentionally empty — pool-based checks would false-fire.
-    """
-    if isinstance(entity, Character):
-        if skeleton:
-            violations = check_character(entity)
-        else:
-            violations = check_seed_character(
-                entity, _items_pool(scenario_dir), _skills_pool(scenario_dir)
+    kind = _guess_kind(entity)
+    if kind == "skill":
+        primary_stat = entity.get("primary_stat")
+        if primary_stat not in {"body", "agility", "mind", "presence"}:
+            raise EntityWriterError(
+                f"skill.primary_stat={primary_stat!r} must be one of body/agility/mind/presence."
             )
-    elif isinstance(entity, Item):
-        violations = check_item(entity)
-    else:
         return
-    if violations:
-        raise EntityWriterError("invariant violation:\n" + "\n".join(violations))
+    if kind == "character":
+        _check_graph_stats(entity)
+        if not skeleton:
+            _check_character_pools(entity, scenario_dir)
+        return
+    if kind == "item":
+        effect = entity.get("effects")
+        if isinstance(effect, dict) and effect.get("type") not in {
+            "weapon",
+            "armor",
+            "consumable",
+        }:
+            raise EntityWriterError(f"item.effects.type={effect.get('type')!r} unknown.")
 
 
-def _check_id(
-    entity: BaseModel, existing: set[str], force_id: str | None = None
-) -> None:
-    eid: str = entity.id  # type: ignore[attr-defined]
-    if not ID_PATTERN.match(eid):
+def _check_id(entity: Record, existing: set[str], force_id: str | None = None) -> None:
+    entity_id = _entity_id(entity)
+    if not ID_PATTERN.match(entity_id):
         raise EntityWriterError(
-            f"id={eid!r} does not match the required pattern. ASCII snake_case ([a-z][a-z0-9_]{{1,30}}) required."
+            f"id={entity_id!r} does not match the required pattern. ASCII snake_case ([a-z][a-z0-9_]{{1,30}}) required."
         )
-    if force_id is not None and eid != force_id:
+    if force_id is not None and entity_id != force_id:
         raise EntityWriterError(
-            f"id={eid!r} differs from the forced id={force_id!r}. "
-            "Follow the hint's id directive exactly — do not change a single character."
+            f"id={entity_id!r} differs from the forced id={force_id!r}. "
+            "Follow the hint's id directive exactly."
         )
-    if eid in existing:
+    if entity_id in existing:
         raise EntityWriterError(
-            f"id={eid!r} collides with existing ids. Existing: {sorted(existing)}"
+            f"id={entity_id!r} collides with existing ids. Existing: {sorted(existing)}"
         )
+
+
+def _check_graph_stats(entity: Record) -> None:
+    stats = entity.get("stats")
+    if stats is None:
+        return
+    if not isinstance(stats, dict):
+        raise EntityWriterError("character.stats must be an object.")
+    missing = {"body", "agility", "mind", "presence"} - stats.keys()
+    if missing:
+        raise EntityWriterError(
+            f"character.stats missing graph stat keys: {sorted(missing)}"
+        )
+
+
+def _check_character_pools(entity: Record, scenario_dir: Path) -> None:
+    items = {_entity_id(item) for item in _load_dir(scenario_dir, "items")}
+    skills = {_entity_id(skill) for skill in _load_dir(scenario_dir, "skills")}
+    for item_id in _str_list(entity.get("inventory_ids")):
+        if item_id not in items:
+            raise EntityWriterError(f"character.inventory_ids entry {item_id!r} missing.")
+    for item_id in _mapping(entity.get("equipment")).values():
+        if isinstance(item_id, str) and item_id and item_id not in items:
+            raise EntityWriterError(f"character.equipment item {item_id!r} missing.")
+    for skill_id in [
+        *_str_list(entity.get("racial_skill_ids")),
+        *_str_list(entity.get("learned_skill_ids")),
+    ]:
+        if skill_id not in skills:
+            raise EntityWriterError(f"character.skill_id {skill_id!r} missing.")
+
+
+def _guess_kind(entity: Record) -> str:
+    if "primary_stat" in entity:
+        return "skill"
+    if "race_id" in entity and "location_id" in entity:
+        return "character"
+    if "effects" in entity and "weight" in entity:
+        return "item"
+    return "unknown"
+
+
+def _entity_id(entity: Record) -> str:
+    value = entity.get("id")
+    if not isinstance(value, str) or not value:
+        raise EntityWriterError("entity requires a non-empty id.")
+    return value
+
+
+def _mapping(value: object) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _dict_list(value: object) -> list[Record]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _str_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str)]

@@ -15,6 +15,7 @@ from src.game.engines.graph_quest import (
     plan_quest_progress_for_character_defeat,
     plan_quest_rewards,
 )
+from src.llm.diag import engine_diag
 
 from .apply import GraphRuntimeApplyError, apply_runtime_graph_changes
 from .state import GameRuntimeState
@@ -38,6 +39,7 @@ def dispatch_graph_combat_action(
     runtime: GameRuntimeState,
     action: Action,
 ) -> GraphCombatDispatchResult:
+    engine_diag("combat:start", action=action.verb)
     try:
         state, started = _resolve_state(runtime, action)
         combat_action = _combat_action_from_action(
@@ -53,6 +55,7 @@ def dispatch_graph_combat_action(
         )
         applied = apply_runtime_graph_changes(runtime, combat_result.changes)
     except (GraphCombatError, GraphRuntimeApplyError) as exc:
+        engine_diag("combat:fail", action=action.verb, err=type(exc).__name__)
         raise GraphCombatDispatchError(str(exc)) from exc
 
     graph_runtime = applied.runtime
@@ -92,6 +95,12 @@ def dispatch_graph_combat_action(
         update=progress_update
     )
     next_runtime = graph_runtime.model_copy(update={"progress": next_progress})
+    engine_diag(
+        "combat:end",
+        started=started,
+        outcome=combat_result.state.outcome,
+        applied=applied.applied,
+    )
     return GraphCombatDispatchResult(
         runtime=next_runtime,
         combat=combat_result,

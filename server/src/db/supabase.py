@@ -4,13 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Type, TypeVar
-
-from pydantic import BaseModel
 
 from ._supabase_http import _Storage
-
-T = TypeVar("T", bound=BaseModel)
 
 
 class SupabaseStorageScenarioRepo:
@@ -97,15 +92,17 @@ class SupabaseStorageScenarioRepo:
         blob = await self._get_bytes_cached(f"{profile}/player_template.json")
         return json.loads(blob.decode("utf-8"))
 
-    async def load_seed_entities(
-        self, profile: str, kind: str, model_cls: Type[T]
-    ) -> dict[str, T]:
+    async def load_seed_records(self, profile: str, kind: str) -> dict[str, dict]:
         files = await self._list_prefix_cached(f"{profile}/{kind}")
         json_files = sorted(f for f in files if f.endswith(".json"))
 
-        async def _load_one(name: str) -> T:
+        async def _load_one(name: str) -> dict:
             blob = await self._get_bytes_cached(f"{profile}/{kind}/{name}")
-            return model_cls.model_validate_json(blob)
+            return json.loads(blob.decode("utf-8"))
 
         objs = await asyncio.gather(*(_load_one(f) for f in json_files))
-        return {obj.id: obj for obj in objs}  # type: ignore[attr-defined]
+        return {
+            obj["id"]: obj
+            for obj in objs
+            if isinstance(obj.get("id"), str)
+        }

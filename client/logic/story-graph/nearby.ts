@@ -6,6 +6,7 @@ import type { StoryGraphModel, StoryGraphNode } from './types';
 
 export type NearbyItem = {
   id: string;
+  kindLabel: string;
   title: string;
   body: string;
   action?: PanelAction;
@@ -42,6 +43,7 @@ function personItem(node: StoryGraphNode): NearbyItem {
   if (node.kind === 'subject') {
     return {
       id: node.id,
+      kindLabel: ko.legend.character,
       title: node.label,
       body: node.known[0] ?? node.role,
       action: {
@@ -54,6 +56,7 @@ function personItem(node: StoryGraphNode): NearbyItem {
   if (node.kind !== 'target') {
     return {
       id: node.id,
+      kindLabel: ko.legend.character,
       title: node.label,
       body: '',
       action: preferredAction(node),
@@ -61,6 +64,7 @@ function personItem(node: StoryGraphNode): NearbyItem {
   }
   return {
     id: node.id,
+    kindLabel: ko.legend.character,
     title: node.label,
     body: node.role,
     action: preferredAction(node),
@@ -70,6 +74,7 @@ function personItem(node: StoryGraphNode): NearbyItem {
 function placeItem(node: StoryGraphNode): NearbyItem {
   return {
     id: node.id,
+    kindLabel: ko.legend.place,
     title: node.label,
     body: node.kind === 'location' ? node.description : '',
     action: preferredAction(node),
@@ -79,6 +84,7 @@ function placeItem(node: StoryGraphNode): NearbyItem {
 function taskItem(node: StoryGraphNode): NearbyItem {
   return {
     id: node.id,
+    kindLabel: ko.legend.quest,
     title: node.label,
     body: node.kind === 'quest' ? node.summary : '',
     action: {

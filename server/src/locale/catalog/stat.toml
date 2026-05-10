@@ -1,27 +1,3 @@
-[stat.STR]
-ko = "근력"
-en = "Strength"
-
-[stat.DEX]
-ko = "민첩"
-en = "Dexterity"
-
-[stat.CON]
-ko = "건강"
-en = "Constitution"
-
-[stat.INT]
-ko = "지능"
-en = "Intelligence"
-
-[stat.WIS]
-ko = "지혜"
-en = "Wisdom"
-
-[stat.CHA]
-ko = "매력"
-en = "Charisma"
-
 [stat.body]
 ko = "몸"
 en = "Body"

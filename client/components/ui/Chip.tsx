@@ -55,9 +55,9 @@ function ActionChip({ label, onPress }: { label: string; onPress: () => void }) 
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      className="shrink-0 px-3 py-1.5 rounded-full border border-border-default bg-canvas-default active:bg-canvas-inset"
+      className="h-5 shrink-0 items-center justify-center rounded-sm border border-accent-fg bg-accent-muted px-2 active:opacity-80"
     >
-      <Text numberOfLines={1} className="font-sans text-panel text-fg-default">{label}</Text>
+      <Text numberOfLines={1} className="font-sans-semibold text-caption text-accent-fg">{label}</Text>
     </Pressable>
   );
 }

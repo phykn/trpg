@@ -43,12 +43,41 @@ describe('adaptGraphState', () => {
             name: '쓰러진 고블린',
             kind: 'enemy',
             hp: { current: 0, maximum: 10, state: 'down' },
+            level: 1,
+            raceJob: '고블린',
+            gender: '',
+            role: '쓰러진 적',
+            gold: 0,
+            stats: { body: 1, mind: 1, agility: 1, presence: 1 },
+            equipment: { weapon: null, armor: null, accessory: null },
+            inventory: [],
+            skills: [],
+            status: ['쓰러짐'],
           },
           {
             id: 'wolf_01',
             name: '늑대',
             kind: 'enemy',
             hp: { current: 5, maximum: 12, state: 'hurt' },
+            level: 3,
+            raceJob: '야수',
+            gender: '',
+            role: '숲의 포식자',
+            gold: 2,
+            stats: {
+              body: 3,
+              agility: 4,
+              mind: 1,
+              presence: 2,
+            },
+            equipment: {
+              weapon: { id: 'fang_01', name: '날카로운 송곳니' },
+              armor: null,
+              accessory: null,
+            },
+            inventory: [{ id: 'pelt_01', name: '늑대 가죽', qty: 1, canUse: false, equipSlots: [] }],
+            skills: ['물어뜯기'],
+            status: ['경계 중'],
           },
         ],
       },
@@ -123,10 +152,10 @@ describe('adaptGraphState', () => {
     expect(state.hero.skills).toEqual(['기본 타격']);
     expect(state.hero.status).toEqual(['축복']);
     expect(state.hero.stats).toEqual([
-      { label: '몸', value: 3 },
+      { label: '근력', value: 3 },
+      { label: '지력', value: 1 },
       { label: '민첩', value: 2 },
-      { label: '정신', value: 1 },
-      { label: '존재감', value: 0 },
+      { label: '매력', value: 0 },
     ]);
     expect(state.place?.name).toBe('광장');
     expect(state.place?.surroundings[0].name).toBe('숲길');
@@ -147,6 +176,19 @@ describe('adaptGraphState', () => {
     expect(state.pendingRoll?.requiredRoll).toBe(13);
     expect(state.subject?.name).toBe('늑대');
     expect(state.subject?.hp).toBe(5);
+    expect(state.subject?.role).toBe('숲의 포식자');
+    expect(state.subject?.raceJob).toBe('야수');
+    expect(state.subject?.gold).toBe(2);
+    expect(state.subject?.equipment.weapon).toEqual({ id: 'fang_01', name: '날카로운 송곳니' });
+    expect(state.subject?.inventory).toEqual([{ id: 'pelt_01', name: '늑대 가죽', qty: 1, canUse: false, equipSlots: [] }]);
+    expect(state.subject?.skills).toEqual(['물어뜯기']);
+    expect(state.subject?.known).toEqual(['경계 중']);
+    expect(state.subject?.stats).toEqual([
+      { label: '근력', value: 3 },
+      { label: '지력', value: 1 },
+      { label: '민첩', value: 4 },
+      { label: '매력', value: 2 },
+    ]);
     expect(state.storyGraph.nodes.map((node) => node.id)).toEqual([
       'player_01',
       'town',
@@ -188,12 +230,32 @@ describe('adaptGraphState', () => {
             name: '에드릭',
             kind: 'npc',
             hp: { current: 20, maximum: 20, state: 'healthy' },
+            level: 1,
+            raceJob: '',
+            gender: '',
+            role: '',
+            gold: 0,
+            stats: {},
+            equipment: { weapon: null, armor: null, accessory: null },
+            inventory: [],
+            skills: [],
+            status: [],
           },
           {
             id: 'wolf_01',
             name: '늑대',
             kind: 'enemy',
             hp: { current: 8, maximum: 10, state: 'hurt' },
+            level: 1,
+            raceJob: '',
+            gender: '',
+            role: '',
+            gold: 0,
+            stats: {},
+            equipment: { weapon: null, armor: null, accessory: null },
+            inventory: [],
+            skills: [],
+            status: [],
           },
         ],
       },
@@ -206,9 +268,9 @@ describe('adaptGraphState', () => {
     });
 
     expect(suggestions).toEqual([
-      '늑대를 공격한다',
-      '에드릭에게 말을 건다',
-      '망루로 이동한다',
+      '늑대를 공격합니다',
+      '에드릭에게 말을 겁니다',
+      '망루로 이동합니다',
     ]);
   });
 });

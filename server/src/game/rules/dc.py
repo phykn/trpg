@@ -1,6 +1,5 @@
 import random
 
-from ..domain.entities import Character
 from ..domain.types import Grade, Tier
 from .config import RULES
 
@@ -15,24 +14,6 @@ def compute_required_roll(dc: int, stat: int) -> int:
     Stat 10/11 → required = DC (no shift). Clamped to [1, 20]."""
     mod = (stat - 10) // 2
     return max(1, min(20, dc - mod))
-
-
-def social_bonus(target: Character, actor_id: str) -> int:
-    """Roll bonus based on how the *target* views the actor.
-
-    `target` holds the relations dict (the NPC the actor is rolling against);
-    `actor_id` is who's making the roll. A trusted persuader gets +bonus, a
-    despised one gets -bonus, neutral 0. This direction matches the rest of
-    the affinity system — only `npc.relations[player]` is tracked.
-    """
-    aff = target.relations.get(actor_id, 0)
-    threshold = RULES.social.friendly_threshold
-    bonus = RULES.social.roll_bonus
-    if aff >= threshold:
-        return bonus
-    if aff <= -threshold:
-        return -bonus
-    return 0
 
 
 def compute_grade(dice: int, total: int, required_roll: int) -> Grade:

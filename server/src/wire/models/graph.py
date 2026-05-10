@@ -87,6 +87,16 @@ class GraphPlaceTargetPayload(_CamelModel):
     name: str
     kind: Literal["npc", "enemy"]
     hp: GraphResourcePayload
+    level: int
+    race_job: str
+    gender: str
+    role: str
+    gold: int
+    stats: dict[str, int]
+    equipment: GraphEquipmentPayload
+    inventory: list[GraphInventoryItemPayload]
+    skills: list[str]
+    status: list[str]
 
 
 class GraphPlacePayload(_CamelModel):

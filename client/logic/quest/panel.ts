@@ -9,6 +9,10 @@ const ACTION_LABEL: Record<'accept' | 'abandon', string> = {
   abandon: ko.quest.abandon,
 };
 
+function rewardText(quest: Quest): string {
+  return `GOLD ${quest.rewards.gold} · EXP ${quest.rewards.exp}`;
+}
+
 export function buildQuestSlot(quest: Quest | null, opts?: { dot?: boolean }): PanelSlot {
   if (!quest) {
     return {
@@ -40,7 +44,7 @@ export function buildQuestSlot(quest: Quest | null, opts?: { dot?: boolean }): P
       sections: [
         { label: ko.panel.goal, text: joinOrDash(quest.goals) },
         { label: ko.panel.summary, text: quest.summary },
-        { label: ko.panel.reward, nodes: [['GOLD', quest.rewards.gold], ['EXP', quest.rewards.exp]] },
+        { label: ko.panel.reward, text: rewardText(quest), mono: true },
         { label: ko.panel.commission, text: quest.giver },
       ],
       actions: actions.length > 0 ? actions : undefined,
@@ -72,7 +76,7 @@ export function buildQuestOfferSlot(quest: Quest, opts?: { dot?: boolean }): Pan
       sections: [
         { label: ko.panel.goal, text: joinOrDash(quest.goals) },
         { label: ko.panel.summary, text: quest.summary },
-        { label: ko.panel.reward, nodes: [['GOLD', quest.rewards.gold], ['EXP', quest.rewards.exp]] },
+        { label: ko.panel.reward, text: rewardText(quest), mono: true },
         { label: ko.panel.commission, text: quest.giver },
       ],
       actions: actions.length > 0 ? actions : undefined,

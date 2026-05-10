@@ -22,6 +22,9 @@ describe('buildQuestSlot', () => {
 
     expect(items).toHaveLength(2);
     expect(items.every((item) => item.kind === 'quest_action' && item.confirm === undefined)).toBe(true);
+    expect(slot.panel?.sections?.find((section) => section.label === '보상')).toMatchObject({
+      text: 'GOLD 5 · EXP 10',
+    });
   });
 
   test('renders quest offers as a separate accept-only slot', () => {

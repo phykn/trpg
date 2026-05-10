@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import json
+
 from src.db.repo import GraphRepo
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph_query import characters_at, edges_from, location_of
 from src.game.domain.memory import GMLogEntry
+from src.llm.calls._runner import get_prompt
 from src.llm.client import LLMClient
+from src.llm.diag import llm_diag
+from src.locale.render import render
 
 from .state import GameRuntimeState
 
@@ -63,24 +68,42 @@ def _fallback_intro_text(runtime: GameRuntimeState) -> str:
     if place is None or place.type != "location":
         return ""
     description = _description(place)
-    if description == "없음":
-        return _clean_intro_text(f"당신은 {_name(place)}에 도착합니다.")
-    return _clean_intro_text(f"당신은 {_name(place)}에 도착합니다. {description}")
+    if description is None:
+        return _clean_intro_text(
+            render("runtime.intro.arrive", runtime.progress.locale, place=_name(place))
+        )
+    return _clean_intro_text(
+        render(
+            "runtime.intro.arrive_with_description",
+            runtime.progress.locale,
+            place=_name(place),
+            description=description,
+        )
+    )
 
 
 async def _generate_intro_text(llm: LLMClient, runtime: GameRuntimeState) -> str:
     prompt = _intro_user_prompt(runtime)
     if not prompt:
         return ""
-    result = await llm.chat(
-        [
-            {"role": "system", "content": _SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ],
-        think=False,
-        agent="graph_intro",
-        temperature=0.2,
-    )
+    llm_diag("llm:call", agent="graph_intro")
+    try:
+        result = await llm.chat(
+            [
+                {
+                    "role": "system",
+                    "content": get_prompt("graph_intro", runtime.progress.locale),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            think=False,
+            agent="graph_intro",
+            temperature=0.2,
+        )
+    except Exception as exc:
+        llm_diag("llm:fail", agent="graph_intro", err=type(exc).__name__)
+        raise
+    llm_diag("llm:done", agent="graph_intro")
     answer = result.get("answer")
     if not isinstance(answer, str):
         return ""
@@ -109,15 +132,15 @@ def _intro_user_prompt(runtime: GameRuntimeState) -> str:
         if (target := graph.nodes.get(edge.to_node_id)) is not None
         and target.type == "location"
     ]
-    return "\n".join(
-        [
-            f"플레이어: {_name(player)}",
-            f"장소: {_name(place)}",
-            f"장소 설명: {_description(place)}",
-            f"보이는 대상: {_join_or_none(visible_targets)}",
-            f"나갈 수 있는 곳: {_join_or_none(exits)}",
-            "위 사실만 사용해 이 장소에 처음 도착한 느낌을 묘사하십시오.",
-        ]
+    return json.dumps(
+        {
+            "player": _name(player),
+            "place": _name(place),
+            "place_description": _description_value(place),
+            "visible_targets": visible_targets,
+            "exits": exits,
+        },
+        ensure_ascii=False,
     )
 
 
@@ -142,20 +165,13 @@ def _name(node: GraphNode) -> str:
     return node.id
 
 
-def _description(node: GraphNode) -> str:
+def _description(node: GraphNode) -> str | None:
     description = node.properties.get("description")
-    return description if isinstance(description, str) and description else "없음"
+    return description if isinstance(description, str) and description else None
 
 
-def _join_or_none(values: list[str]) -> str:
-    return ", ".join(values) if values else "없음"
+def _description_value(node: GraphNode) -> str | None:
+    description = node.properties.get("description")
+    return description if isinstance(description, str) and description else None
 
 
-_SYSTEM_PROMPT = """당신은 온톨로지 기반 TRPG의 첫 장소 소개만 씁니다.
-규칙:
-- 한국어로 씁니다.
-- 2인칭 존댓말 합니다체를 사용하고 플레이어는 '당신'이라고 부릅니다.
-- 1~2문장으로 씁니다.
-- 제공된 장소, 대상, 출구만 사용합니다.
-- 새 인물, 몬스터, 아이템, 퀘스트, 보상, 전투, 숫자를 만들지 않습니다.
-- 그래프 사실을 바꾸거나 행동 결과를 말하지 않습니다."""

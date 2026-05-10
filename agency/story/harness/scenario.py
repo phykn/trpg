@@ -1,4 +1,4 @@
-"""character.equipment 슬롯 자동 배치 헬퍼.
+"""character.equipment slot derivation helper.
 
 Build pipeline (build_scenario / write_entity / _patch_*) was removed —
 agency/story/SKILL.md + tool.py replace it. This file now contains only
@@ -6,49 +6,43 @@ the deterministic equipment-slot derivation that runs at the equip-fill
 step of the workflow.
 """
 
+import json
 from pathlib import Path
-
-from src.game.domain.entities import (
-    ArmorEffect,
-    Character,
-    Item,
-    WeaponEffect,
-)
 
 
 def fill_equipment(scenario_dir: Path) -> None:
-    """character.equipment 슬롯을 inventory 아이템 effect 보고 자동 배치.
-
-    Slot rules (first wins per slot):
-      WeaponEffect → weapon
-      ArmorEffect  → armor; 이미 차 있으면 accessory로 흘림
-      effects=None (장식품) → accessory
-
-    Pre-existing equipment 값은 보존 (None인 슬롯만 채움).
-    """
     chars_dir = scenario_dir / "characters"
     items_dir = scenario_dir / "items"
     if not chars_dir.exists() or not items_dir.exists():
         return
-    items: dict[str, Item] = {}
+    items: dict[str, dict] = {}
     for path in items_dir.glob("*.json"):
-        items[path.stem] = Item.model_validate_json(path.read_text(encoding="utf-8"))
+        item = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(item.get("id"), str):
+            items[item["id"]] = item
     for char_path in chars_dir.glob("*.json"):
-        char = Character.model_validate_json(char_path.read_text(encoding="utf-8"))
-        for iid in char.inventory_ids:
-            it = items.get(iid)
-            if it is None:
+        char = json.loads(char_path.read_text(encoding="utf-8"))
+        equipment = char.setdefault(
+            "equipment", {"weapon": None, "armor": None, "accessory": None}
+        )
+        for item_id in char.get("inventory_ids", []):
+            if not isinstance(item_id, str):
                 continue
-            eff = it.effects
-            if isinstance(eff, WeaponEffect):
-                if char.equipment.weapon is None:
-                    char.equipment.weapon = it.id
-            elif isinstance(eff, ArmorEffect):
-                if char.equipment.armor is None:
-                    char.equipment.armor = it.id
-                elif char.equipment.accessory is None:
-                    char.equipment.accessory = it.id
-            elif eff is None:
-                if char.equipment.accessory is None:
-                    char.equipment.accessory = it.id
-        char_path.write_text(char.model_dump_json(indent=2), encoding="utf-8")
+            item = items.get(item_id)
+            if item is None:
+                continue
+            effect = item.get("effects")
+            effect_type = effect.get("type") if isinstance(effect, dict) else None
+            if effect_type == "weapon":
+                if equipment.get("weapon") is None:
+                    equipment["weapon"] = item_id
+            elif effect_type == "armor":
+                if equipment.get("armor") is None:
+                    equipment["armor"] = item_id
+                elif equipment.get("accessory") is None:
+                    equipment["accessory"] = item_id
+            elif effect is None and equipment.get("accessory") is None:
+                equipment["accessory"] = item_id
+        char_path.write_text(
+            json.dumps(char, ensure_ascii=False, indent=2), encoding="utf-8"
+        )

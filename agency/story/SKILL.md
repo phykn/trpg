@@ -86,7 +86,7 @@ decompose의 `world_md` 본문을 `scenarios/<name>/world.md`에 쓴다.
 owner character 정보(직업·레벨·역할)를 보고 무기·갑옷의 효과·이름·설명을 맞춘다.
 
 규칙:
-- seed item은 `required` 항상 `null` (Stats 기본값 10이 partial 제약을 full 제약으로 부풀려 owner 통과를 막음)
+- seed item은 `required` 항상 `null`.
 - decomp `kind`가 `"weapon"`이면 `effects.type="weapon"`, `"armor"`면 `effects.type="armor"`, `"consumable"`이면 `effects.type="consumable"`, `"key"`이면 `effects=null`
 
 검사:
@@ -174,7 +174,7 @@ APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload scenarios/
 
 ## 엔티티 카드 (작성 규칙 요약)
 
-(각 카드에는 필수 필드 + 금지사항 + 톤 가이드. 엔티티 모델 정의는 `server/src/game/domain/entities.py` 참조.)
+(각 카드는 시나리오 JSON 레코드 기준입니다. 런타임은 graph seed builder가 이 레코드를 읽어 그래프 노드와 엣지로 변환합니다.)
 
 ### race
 - 필수: `id`, `name`, `description`, `is_humanoid`, `racial_skill_ids` (≥1, 평민 종족도 `barter` 같은 일상 능력 1개 필요 — NPC 시드는 ≥1 스킬 invariant 때문)
@@ -188,13 +188,14 @@ APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload scenarios/
 ### character
 - 필수: `id`, `name`, `description`, `race_id`, `location_id`, `level`, `stats`, `hp`, `max_hp`, `mp`, `max_mp`, `racial_skill_ids`, `learned_skill_ids`, `inventory_ids`, `equipment`, `job`, `gender`, `alive`, `memorable`, `memories`, `relations`, `disposition`, `is_enemy`, `xp_reward`
 - HP/MP는 `server/src/game/engines/growth.py`의 `calc_max_hp` / `calc_max_mp` 공식대로 (level + stat 기반).
-- stats는 짝수 합 = 60 (pair-trade 규칙).
+- `stats`는 `body`, `agility`, `mind`, `presence`만 사용한다.
 - `is_enemy=true`이면 `combat_behavior` 필수 (`{attack_priority, flee_hp_percent}`), `xp_reward > 0` (level 1: 40~80, level 3: 100~200, level 5+: 250+).
 - `is_enemy=false`이면 `combat_behavior` 생략, `xp_reward=0`.
 - 인간형 race는 갑옷 1개 이상 필수, 적이면 무기도 필수.
 
 ### skill
 - 필수: `id`, `name`, `description`, `type`(attack/heal/buff/debuff), `primary_stat`, `level`, `mp_cost`, `cooldown`, `target`, `special_effect`
+- `primary_stat`은 `body`, `agility`, `mind`, `presence` 중 하나.
 - racial 스킬은 `level=1` 강제.
 - 캐릭터가 학습한 스킬은 `level ≤ owner의 character level`.
 
@@ -202,7 +203,6 @@ APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload scenarios/
 - 필수: `id`, `name`, `description`, `weight`, `effects`, `required`
 - `required` 항상 `null` (seed에서). 부분 명시도 금지.
 - effects shape: weapon → `{type, weapon_dice, ...}`; armor → `{type, defense, ...}`; consumable → `{type, ...}`; key → `null`.
-- 정확한 필드는 `server/src/game/domain/entities.py`의 `WeaponEffect`/`ArmorEffect`/`ConsumableEffect` 참조.
 
 ### quest
 - 필수: `id`, `title`, `description`, `giver_id`, `triggers`, `fail_triggers`, `prerequisite_ids`, `status`, `required`, `rewards`

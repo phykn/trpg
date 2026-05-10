@@ -14,6 +14,7 @@ from src.game.domain.graph import (
     GraphNode,
 )
 from src.game.domain.graph_query import characters_at, edges_from, location_of, nodes_of_type
+from src.locale.render import render
 
 
 class GraphQuestOfferPlan(BaseModel):
@@ -26,6 +27,7 @@ class GraphQuestOfferPlan(BaseModel):
 def plan_missing_quest_offer(
     graph: Graph,
     player_id: str,
+    locale: str = "ko",
 ) -> GraphQuestOfferPlan | None:
     location_id = location_of(graph, player_id)
     if location_id is None or _has_open_work(graph, location_id):
@@ -37,10 +39,10 @@ def plan_missing_quest_offer(
     enemy_id = f"auto_enemy_{index:03d}"
     reward_id = f"auto_reward_{index:03d}"
     changes: list[GraphChange] = [
-        AddNodeChange(type="add_node", node=_giver(giver_id)),
-        AddNodeChange(type="add_node", node=_enemy(enemy_id)),
-        AddNodeChange(type="add_node", node=_reward(reward_id)),
-        AddNodeChange(type="add_node", node=_quest(quest_id, enemy_id, reward_id)),
+        AddNodeChange(type="add_node", node=_giver(giver_id, locale)),
+        AddNodeChange(type="add_node", node=_enemy(enemy_id, locale)),
+        AddNodeChange(type="add_node", node=_reward(reward_id, locale)),
+        AddNodeChange(type="add_node", node=_quest(quest_id, enemy_id, reward_id, locale)),
         AddEdgeChange(type="add_edge", edge=_edge("located_at", giver_id, location_id)),
         AddEdgeChange(type="add_edge", edge=_edge("located_at", enemy_id, location_id)),
         AddEdgeChange(type="add_edge", edge=_edge("gives_quest", giver_id, quest_id)),
@@ -78,12 +80,12 @@ def _next_auto_index(graph: Graph) -> int:
     return highest + 1
 
 
-def _giver(giver_id: str) -> GraphNode:
+def _giver(giver_id: str, locale: str) -> GraphNode:
     return GraphNode(
         id=giver_id,
         type="character",
         properties={
-            "name": "마을 주민",
+            "name": render("runtime.seed.giver.name", locale),
             "hp": 10,
             "max_hp": 10,
             "mp": 0,
@@ -95,12 +97,12 @@ def _giver(giver_id: str) -> GraphNode:
     )
 
 
-def _enemy(enemy_id: str) -> GraphNode:
+def _enemy(enemy_id: str, locale: str) -> GraphNode:
     return GraphNode(
         id=enemy_id,
         type="character",
         properties={
-            "name": "떠돌이 적",
+            "name": render("runtime.seed.enemy.name", locale),
             "hp": 28,
             "max_hp": 28,
             "mp": 0,
@@ -116,31 +118,31 @@ def _enemy(enemy_id: str) -> GraphNode:
     )
 
 
-def _reward(reward_id: str) -> GraphNode:
+def _reward(reward_id: str, locale: str) -> GraphNode:
     return GraphNode(
         id=reward_id,
         type="item",
         properties={
-            "name": "작은 보상",
-            "description": "의뢰를 마치면 받을 수 있는 보상입니다.",
+            "name": render("runtime.seed.reward.name", locale),
+            "description": render("runtime.seed.reward.description", locale),
             "consumable": False,
         },
     )
 
 
-def _quest(quest_id: str, enemy_id: str, reward_id: str) -> GraphNode:
+def _quest(quest_id: str, enemy_id: str, reward_id: str, locale: str) -> GraphNode:
     return GraphNode(
         id=quest_id,
         type="quest",
         properties={
-            "title": "마을의 부탁",
-            "summary": "마을 주민은 주변을 위협하는 적을 처리해 달라고 부탁합니다.",
+            "title": render("runtime.seed.quest.title", locale),
+            "summary": render("runtime.seed.quest.summary", locale),
             "difficulty": "normal",
             "status": "pending",
             "triggers": [
                 {
                     "id": f"trigger_{quest_id}_defeat",
-                    "name": "떠돌이 적 물리치기",
+                    "name": render("runtime.seed.quest.trigger", locale),
                     "type": "character_defeat",
                     "target_id": enemy_id,
                 }

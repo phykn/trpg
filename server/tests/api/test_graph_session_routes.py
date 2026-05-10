@@ -137,11 +137,10 @@ async def test_graph_init_persists_graph_and_returns_front_state(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_graph_init_adds_intro_narration_but_move_and_offer_stay_system_card_only(
+async def test_graph_intro_adds_initial_narration_but_move_and_offer_stay_system_card_only(
     tmp_path,
 ):
-    intro = "당신은 광장의 낮은 소음 속에서 첫 발을 내딛습니다."
-    app = _build_app(tmp_path, intro_answer=intro)
+    app = _build_app(tmp_path, intro_answer="LLM 소개는 init 응답을 막지 않습니다.")
 
     async with _client(app) as client:
         init_response = await client.post(
@@ -158,6 +157,9 @@ async def test_graph_init_adds_intro_narration_but_move_and_offer_stay_system_ca
         assert init_response.status_code == 200, init_response.text
         game_id = init_response.json()["game_id"]
 
+        intro_response = await client.post(f"/session/{game_id}/graph/intro")
+        assert intro_response.status_code == 200, intro_response.text
+
         move_response = await client.post(
             f"/session/{game_id}/graph/turn",
             json={"action": {"verb": "move", "to": "loc_02"}},
@@ -165,14 +167,18 @@ async def test_graph_init_adds_intro_narration_but_move_and_offer_stay_system_ca
 
     assert move_response.status_code == 200, move_response.text
     init_body = init_response.json()
+    intro_body = intro_response.json()
     move_body = move_response.json()
     logs = await app.state.graph_repo.load_log_entries(game_id)
     progress = await app.state.graph_repo.load_progress(game_id)
 
-    assert init_body["state"]["log"] == [{"id": 1, "kind": "gm", "text": intro}]
+    assert init_body["state"]["log"] == []
+    assert intro_body["state"]["log"] == [
+        {"id": 1, "kind": "gm", "text": "LLM 소개는 init 응답을 막지 않습니다."}
+    ]
     assert [entry.kind for entry in logs] == ["gm", "act", "act"]
     assert [entry.id for entry in logs] == [1, 2, 3]
-    assert logs[0].text == intro
+    assert logs[0].text == "LLM 소개는 init 응답을 막지 않습니다."
     assert logs[1].text == "당신은 숲길로 이동합니다."
     assert logs[2].text == "새 의뢰가 도착합니다: 마을의 부탁."
     assert move_body["state"]["log"][-1]["kind"] == "act"
@@ -181,15 +187,38 @@ async def test_graph_init_adds_intro_narration_but_move_and_offer_stay_system_ca
 
 
 @pytest.mark.asyncio
+async def test_graph_init_emits_flow_debug_timing_logs(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("FLOW_DEBUG", "1")
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        response = await client.post(
+            "/session/graph/init",
+            json={
+                "profile": "default",
+                "player": {
+                    "name": "테스터",
+                    "race_id": "human",
+                    "gender": "female",
+                },
+            },
+        )
+
+    assert response.status_code == 200, response.text
+    stderr = capsys.readouterr().err
+
+    assert "gid=" in stderr
+    assert "turn=0" in stderr
+    assert "t=" in stderr
+    assert "engine" in stderr
+    assert "graph:init" in stderr
+    assert "graph:init_done" in stderr
+
+
+@pytest.mark.asyncio
 async def test_graph_init_does_not_block_on_slow_intro_narration(
     tmp_path,
-    monkeypatch,
 ):
-    monkeypatch.setattr(
-        "src.api.routes.session_graph._GRAPH_INIT_NARRATION_TIMEOUT_SECONDS",
-        0.01,
-        raising=False,
-    )
     app = _build_app(tmp_path, intro_delay=0.25)
 
     started = time.perf_counter()
@@ -210,8 +239,34 @@ async def test_graph_init_does_not_block_on_slow_intro_narration(
     assert response.status_code == 200, response.text
     assert elapsed < 0.2
     log = response.json()["state"]["log"]
-    assert log[0]["kind"] == "gm"
-    assert "광장" in log[0]["text"]
+    assert log == []
+    assert [call["agent"] for call in app.state.llm.calls].count("graph_intro") == 0
+
+
+@pytest.mark.asyncio
+async def test_graph_intro_waits_for_llm_answer_instead_of_route_timeout(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "src.api.routes.session_graph._GRAPH_INTRO_NARRATION_TIMEOUT_SECONDS",
+        0.001,
+        raising=False,
+    )
+    app = _build_app(
+        tmp_path,
+        intro_answer="느린 LLM 소개도 화면의 대기 표시 뒤에 도착합니다.",
+        intro_delay=0.03,
+    )
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(f"/session/{game_id}/graph/intro")
+
+    assert response.status_code == 200, response.text
+    assert response.json()["state"]["log"] == [
+        {"id": 1, "kind": "gm", "text": "느린 LLM 소개도 화면의 대기 표시 뒤에 도착합니다."}
+    ]
 
 
 @pytest.mark.asyncio
@@ -233,6 +288,31 @@ async def test_graph_turn_moves_player_and_persists_progress(tmp_path):
     assert "located_at:player_01:loc_02" in graph.edges
     assert progress.turn_count == 1
     assert body["state"]["place"]["id"] == "loc_02"
+
+
+@pytest.mark.asyncio
+async def test_graph_turn_emits_flow_debug_timing_logs(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("FLOW_DEBUG", "1")
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        capsys.readouterr()
+        response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "move", "to": "loc_02"}},
+        )
+
+    assert response.status_code == 200, response.text
+    stderr = capsys.readouterr().err
+
+    assert "gid=" in stderr
+    assert "turn=0" in stderr
+    assert "t=" in stderr
+    assert "engine" in stderr
+    assert "turn:start action='move'" in stderr
+    assert "dispatch:done kind='move'" in stderr
+    assert "turn:done status='executed'" in stderr
 
 
 @pytest.mark.asyncio
@@ -285,7 +365,7 @@ async def test_graph_state_route_restores_graph_session(tmp_path):
     assert body["game_id"] == game_id
     assert body["state"]["hero"]["id"] == "player_01"
     assert body["state"]["place"]["id"] == "loc_01"
-    assert body["state"]["log"][0]["kind"] == "gm"
+    assert body["state"]["log"] == []
 
 
 @pytest.mark.asyncio

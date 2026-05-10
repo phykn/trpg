@@ -81,6 +81,19 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
                 mp=0,
                 max_mp=0,
             ),
+            "fang_01": GraphNode(
+                id="fang_01",
+                type="item",
+                properties={
+                    "name": "날카로운 송곳니",
+                    "effects": {"type": "weapon", "weapon_dice": "1d4"},
+                },
+            ),
+            "pelt_01": GraphNode(
+                id="pelt_01",
+                type="item",
+                properties={"name": "늑대 가죽", "qty": 1},
+            ),
             "quest_01": GraphNode(
                 id="quest_01",
                 type="quest",
@@ -159,6 +172,19 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
                 from_node_id="goblin_01",
                 to_node_id="quest_01",
             ),
+            "equips:goblin_01:fang_01": GraphEdge(
+                id="equips:goblin_01:fang_01",
+                type="equips",
+                from_node_id="goblin_01",
+                to_node_id="fang_01",
+                properties={"slot": "weapon"},
+            ),
+            "carries:goblin_01:pelt_01": GraphEdge(
+                id="carries:goblin_01:pelt_01",
+                type="carries",
+                from_node_id="goblin_01",
+                to_node_id="pelt_01",
+            ),
         },
     )
     graph_combat_state = None
@@ -228,13 +254,26 @@ def test_graph_front_state_builds_hero_assets_from_graph_edges():
 def test_graph_front_state_builds_place_from_visible_graph_edges():
     runtime = _runtime()
     runtime.graph.nodes["goblin_01"].properties["xp_reward"] = 10
+    runtime.graph.nodes["goblin_01"].properties["role"] = "숲의 포식자"
+    runtime.graph.nodes["goblin_01"].properties["job"] = "야수"
+    runtime.graph.nodes["goblin_01"].properties["gold"] = 2
+    runtime.graph.nodes["goblin_01"].properties["status"] = ["경계 중"]
     payload = graph_to_front_state(runtime)
 
     assert payload.place is not None
     assert payload.place.id == "town"
     assert [exit_.id for exit_ in payload.place.exits] == ["forest"]
     assert [target.id for target in payload.place.targets] == ["goblin_01"]
-    assert payload.place.targets[0].kind == "enemy"
+    target = payload.place.targets[0]
+    assert target.kind == "enemy"
+    assert target.role == "숲의 포식자"
+    assert target.race_job == "야수"
+    assert target.gold == 2
+    assert target.stats == {"agility": 2, "body": 3, "mind": 1, "presence": 0}
+    assert target.equipment.weapon is not None
+    assert target.equipment.weapon.name == "날카로운 송곳니"
+    assert target.inventory[0].name == "늑대 가죽"
+    assert target.status == ["경계 중"]
 
 
 def test_graph_front_state_hides_defeated_place_targets():

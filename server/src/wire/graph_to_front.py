@@ -21,7 +21,7 @@ def graph_to_front_state(runtime: GameRuntimeState) -> GraphFrontStatePayload:
         hero=hero_payload(graph, player),
         quest=active_quest_payload(runtime),
         quest_offers=quest_offer_payloads(runtime),
-        place=place_payload(graph, player_id),
+        place=place_payload(graph, player_id, runtime.progress.locale),
         combat=combat_payload(runtime),
         pending_confirmation=_pending_confirmation_payload(
             runtime.progress.pending_confirmation

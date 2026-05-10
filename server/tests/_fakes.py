@@ -5,8 +5,8 @@ Tests replace both with these fakes so adapter logic runs without network IO,
 credentials, or real DB pollution.
 
 `make_default_storage()` returns a FakeStorage pre-loaded with a
-minimal-but-valid `default` scenario seed (1 race, 1 location, 1 NPC,
-1 skill) — enough to satisfy `check_scenario` invariants and let
+minimal `default` scenario seed (1 race, 1 location, 1 NPC,
+1 skill) — enough to let
 /session/graph/init succeed end-to-end.
 """
 
@@ -15,15 +15,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from src.game.domain.entities import (
-    Character,
-    Location,
-    Race,
-    Skill,
-    Stats,
-)
-from src.game.engines.growth import calc_max_hp, calc_max_mp
 from src.db.supabase import SupabaseStorageScenarioRepo
+from src.game.engines.growth import calc_max_hp, calc_max_mp
 
 
 # ---------------------------------------------------------------------------
@@ -162,19 +155,14 @@ def make_scenario_repo(
 
 
 def _put_json(fs: FakeStorage, path: str, data: Any) -> None:
-    if hasattr(data, "model_dump_json"):
-        blob = data.model_dump_json().encode("utf-8")
-    else:
-        blob = json.dumps(data, ensure_ascii=False).encode("utf-8")
+    blob = json.dumps(data, ensure_ascii=False).encode("utf-8")
     fs.objects[path] = blob
 
 
 def make_default_storage() -> FakeStorage:
     """A FakeStorage pre-populated with a minimal-but-valid `default` profile.
 
-    Satisfies `check_scenario` invariants (NPC level ≥ 1, NPC has at least
-    one skill, hp == max_hp, race's racial_skills exist in the skills pool,
-    active_subject_id in characters and colocated with start_location_id).
+    Includes enough graph seed data for /session/graph/init to succeed.
     """
     fs = FakeStorage()
 
@@ -200,38 +188,38 @@ def make_default_storage() -> FakeStorage:
         }
     ).encode("utf-8")
 
-    skill = Skill(
-        id="basic_strike",
-        name="기본 타격",
-        description="기본 공격 기술",
-        type="attack",
-        target="single",
-        primary_stat="STR",
-        power=5,
-    )
-    human = Race(
-        id="human",
-        name="인간",
-        description="테스트 인간",
-        racial_skill_ids=["basic_strike"],
-    )
-    loc = Location(id="loc_01", name="광장", description="테스트 광장")
+    skill = {
+        "id": "basic_strike",
+        "name": "기본 타격",
+        "description": "기본 공격 기술",
+        "kind": "attack",
+        "target": "single",
+        "power": 5,
+    }
+    human = {
+        "id": "human",
+        "name": "인간",
+        "description": "테스트 인간",
+        "racial_skill_ids": ["basic_strike"],
+    }
+    loc = {"id": "loc_01", "name": "광장", "description": "테스트 광장"}
 
-    stats = Stats()
-    edric = Character(
-        id="edrik_chief",
-        name="에드릭",
-        race_id="human",
-        gender="male",
-        location_id="loc_01",
-        level=4,
-        stats=stats,
-        racial_skill_ids=["basic_strike"],
-    )
-    edric.max_hp = calc_max_hp(edric.level, stats.CON)
-    edric.max_mp = calc_max_mp(edric.level, stats.INT)
-    edric.hp = edric.max_hp
-    edric.mp = edric.max_mp
+    edric_level = 4
+    edric_stats = {"body": 10, "agility": 10, "mind": 10, "presence": 10}
+    edric = {
+        "id": "edrik_chief",
+        "name": "에드릭",
+        "race_id": "human",
+        "gender": "male",
+        "location_id": "loc_01",
+        "level": edric_level,
+        "stats": edric_stats,
+        "racial_skill_ids": ["basic_strike"],
+        "max_hp": calc_max_hp(edric_level, edric_stats["body"]),
+        "max_mp": calc_max_mp(edric_level, edric_stats["mind"]),
+    }
+    edric["hp"] = edric["max_hp"]
+    edric["mp"] = edric["max_mp"]
 
     _put_json(fs, "default/skills/basic_strike.json", skill)
     _put_json(fs, "default/races/human.json", human)
