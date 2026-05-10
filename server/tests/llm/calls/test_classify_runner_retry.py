@@ -49,6 +49,50 @@ async def test_retry_loop_5x_empty_answer_raises_jsondecodeerror():
 
 
 @pytest.mark.asyncio
+async def test_retry_loop_can_omit_failed_answer_from_next_prompt():
+    class _RecoveringClient:
+        def __init__(self):
+            self.messages_by_attempt = []
+
+        def pick_fallback(self, agent):
+            return None
+
+        async def chat(self, messages, **kw):
+            self.messages_by_attempt.append(messages)
+            if len(self.messages_by_attempt) == 1:
+                return {
+                    "answer": '{"actions":[{"verb":"pass"}]} trailing text',
+                    "think": None,
+                }
+            return {
+                "answer": json.dumps({"actions": [{"verb": "pass"}]}),
+                "think": None,
+            }
+
+    client = _RecoveringClient()
+    out = await run_with_retries(
+        client,
+        system_prompt="sys",
+        user_payload="usr",
+        parse=lambda a: validate_action_output_json(a, in_combat=False),
+        retry_on=(json.JSONDecodeError,),
+        retries=2,
+        include_failed_answer=False,
+    )
+
+    second_messages = client.messages_by_attempt[1]
+    assert out.actions[0].verb == "pass"
+    assert [message["role"] for message in second_messages] == [
+        "system",
+        "user",
+        "user",
+    ]
+    assert "trailing text" not in "\n".join(
+        str(message["content"]) for message in second_messages
+    )
+
+
+@pytest.mark.asyncio
 async def test_retry_loop_recovers_after_first_empty_answer():
     """첫 시도는 빈 응답, 두 번째는 정상 JSON — retry 루프가 회복하는지."""
 
@@ -80,5 +124,5 @@ async def test_retry_loop_recovers_after_first_empty_answer():
         retries=5,
     )
     assert client.attempts == 2
-    assert client.thinks == [False, True]
+    assert client.thinks == [False, False]
     assert out.actions[0].verb == "pass"

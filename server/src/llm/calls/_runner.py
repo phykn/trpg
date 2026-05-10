@@ -66,6 +66,8 @@ async def run_with_retries(
     correction_hint: str = "",
     agent: str | None = None,
     temperature: float | None = None,
+    include_failed_answer: bool = True,
+    think_for_retry: Callable[[Exception | None, int], bool] | None = None,
 ) -> T:
     """LLM call + self-correction retry loop. Transport failures wrap to LLMUnavailable (retries can't fix unreachable)."""
     messages: list[dict] = [
@@ -81,14 +83,20 @@ async def run_with_retries(
     # `retries` is the total attempt budget — initial call counted. Previously
     # ran retries+1 attempts, costing one extra LLM round per agent.
     fallback_engaged = False
+    parse_error: Exception | None = None
     for attempt in range(1, retries + 1):
         llm_diag(
             "llm:call", agent=agent, attempt=attempt, fallback=fallback_engaged or None
         )
         try:
+            think = (
+                think_for_retry(parse_error, attempt)
+                if think_for_retry is not None
+                else False
+            )
             result = await client.chat(
                 messages=messages,
-                think=attempt > 1,
+                think=think,
                 agent=agent,
                 temperature=temperature,
                 use_fallback=fallback_engaged,
@@ -126,6 +134,7 @@ async def run_with_retries(
             return parsed
         except retry_on as e:
             last_error = e
+            parse_error = e
             # Dump answer/think previews so post-mortem can tell the failure
             # mode: empty answer (model silence vs. ThoughtSplitter routing
             # everything to think) vs. non-JSON content (markdown fence,
@@ -145,7 +154,8 @@ async def run_with_retries(
             truncated = answer[:_MAX_RETRY_ANSWER_CHARS]
             if len(answer) > _MAX_RETRY_ANSWER_CHARS:
                 truncated += f"\n... (truncated, original {len(answer)} chars)"
-            messages.append({"role": "assistant", "content": truncated})
+            if include_failed_answer:
+                messages.append({"role": "assistant", "content": truncated})
             messages.append(
                 {"role": "user", "content": nudge.format(error=_format_retry_error(e))}
             )
