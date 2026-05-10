@@ -101,8 +101,8 @@ def _enemy(enemy_id: str) -> GraphNode:
         type="character",
         properties={
             "name": "떠돌이 적",
-            "hp": 12,
-            "max_hp": 12,
+            "hp": 28,
+            "max_hp": 28,
             "mp": 0,
             "max_mp": 0,
             "alive": True,

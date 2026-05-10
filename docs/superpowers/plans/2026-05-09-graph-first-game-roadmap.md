@@ -50,6 +50,7 @@
 - Graph sessions can commit level-up choices through a graph-native route instead of the legacy entity stream.
 - Graph seed and graph level-up now use the target 4-stat model instead of legacy 6-stat growth.
 - Graph wire now separates active quests from visible quest offers.
+- Graph API smoke coverage now proves new game, movement, quest offer, quest accept confirmation, attack confirmation, two-input combat resolution, quest rewards, and next quest offer.
 - The live flow still uses legacy `GameState`, legacy entity tables, and old derived ontology graph in several places.
 
 ## Migration Rule

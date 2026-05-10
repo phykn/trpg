@@ -405,3 +405,79 @@ async def test_graph_input_classifies_query_and_returns_message(tmp_path):
     assert body["status"] == "answered"
     assert "숲길" in body["message"]
     assert progress.turn_count == 0
+
+
+@pytest.mark.asyncio
+async def test_graph_play_loop_reaches_quest_reward_without_legacy_state(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+
+        move_response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "move", "to": "loc_02"}},
+        )
+        assert move_response.status_code == 200, move_response.text
+        move_body = move_response.json()
+        quest_id = move_body["state"]["questOffers"][0]["id"]
+
+        accept_response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "transfer", "what": quest_id, "how": "accept"}},
+        )
+        assert accept_response.status_code == 200, accept_response.text
+        accept_body = accept_response.json()
+        accept_id = accept_body["state"]["pendingConfirmation"]["id"]
+
+        accepted_response = await client.post(
+            f"/session/{game_id}/graph/confirm",
+            json={"confirmation_id": accept_id, "decision": "confirm"},
+        )
+        assert accepted_response.status_code == 200, accepted_response.text
+        accepted_body = accepted_response.json()
+        enemy_id = "auto_enemy_001"
+
+        attack_response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "attack", "what": enemy_id}},
+        )
+        assert attack_response.status_code == 200, attack_response.text
+        attack_body = attack_response.json()
+        attack_id = attack_body["state"]["pendingConfirmation"]["id"]
+
+        first_exchange_response = await client.post(
+            f"/session/{game_id}/graph/confirm",
+            json={"confirmation_id": attack_id, "decision": "confirm"},
+        )
+        assert first_exchange_response.status_code == 200, first_exchange_response.text
+        first_exchange_body = first_exchange_response.json()
+
+        final_response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "attack", "what": enemy_id}},
+        )
+        assert final_response.status_code == 200, final_response.text
+        final_body = final_response.json()
+
+    graph = await app.state.graph_repo.load_graph(game_id)
+    progress = await app.state.graph_repo.load_progress(game_id)
+    logs = await app.state.graph_repo.load_log_entries(game_id)
+
+    assert accepted_body["state"]["quest"]["id"] == quest_id
+    assert accepted_body["state"]["questOffers"] == []
+    assert first_exchange_body["state"]["combat"] is not None
+    assert final_body["state"]["combat"] is None
+    assert final_body["state"]["quest"] is None
+    assert final_body["state"]["questOffers"][0]["id"] == "auto_quest_002"
+    assert final_body["state"]["hero"]["gold"] == 5
+    assert final_body["state"]["hero"]["exp"] == 10
+    assert graph.nodes[quest_id].properties["status"] == "completed"
+    assert graph.nodes[enemy_id].properties["status"] == ["defeated"]
+    assert progress.active_quest_id is None
+    assert progress.graph_combat_state is None
+    assert [entry.kind for entry in logs[-2:]] == ["act", "act"]
+    assert [entry.text for entry in logs[-2:]] == [
+        "당신은 전투에서 승리합니다.",
+        "새 의뢰가 도착합니다: 마을의 부탁.",
+    ]
