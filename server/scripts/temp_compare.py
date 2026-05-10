@@ -1,7 +1,7 @@
 """Temperature comparison for the classify agent.
 
 Runs STRESS + ADVERSARIAL cases at temp=0.2 and temp=1.0, rate-limited to
-~10 calls/min to stay under Gemini free-tier quota.
+~10 calls/min for hosted provider quotas.
 
 DISTINCTION (8 cases) was already covered in the prior run (8/8 tied at both
 temps). This run focuses on the harder categories where temps may diverge.

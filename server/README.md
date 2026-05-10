@@ -2,7 +2,7 @@
 
 Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in graph Postgres tables keyed on `game_id` (`game_progress / graph_nodes / graph_edges / log_entries / history_entries / dialogue_entries`); scenario seeds live in a Supabase Storage bucket.
 
-Design notes start at `../docs/README.md`; the per-turn flow is in `../docs/02-runtime.md`; the interface and ownership map is in `../docs/05-interfaces.md`. The Claude Code guide is [CLAUDE.md](./CLAUDE.md).
+Design notes start at `../docs/README.md`; the per-turn flow is in `../docs/02-runtime.md`; the interface and ownership map is in `../docs/05-interfaces.md`. The server agent guide is [AGENTS.md](./AGENTS.md).
 
 ## Stack
 
@@ -41,8 +41,7 @@ SUPABASE_SERVICE_KEY=<service-role key>
 SUPABASE_SCENARIO_BUCKET=scenarios
 
 # LLM routing — DEFAULT required; LLM_ROUTE_<AGENT> overrides per agent
-# (active graph agents: graph_intro, classify, graph_narrate; other helpers
-# such as combat_narrate, summon, recommend still use the same route format).
+# Active server agents: graph_intro, classify, graph_narrate.
 # Optional LLM_ROUTE_<AGENT>_FALLBACK engages on quota.
 LLM_ROUTE_DEFAULT=google/gemma-4-26b-a4b-it
 LLM_ROUTE_GRAPH_NARRATE=google/gemma-4-31b-it
@@ -89,7 +88,7 @@ dotenv loads `server/.env.<APP_ENV>` (default `dev`) automatically and uvicorn b
 .venv/bin/python -m pytest -q                   # unit
 ```
 
-`pytest-asyncio` auto-mode. End-to-end LLM verification is via manual play after merge — see `server/scripts/smoke_classify.py` for a one-shot Gemini-routed sanity check.
+`pytest-asyncio` auto-mode. End-to-end LLM verification is via manual play after merge — see `server/scripts/smoke_classify.py` for a one-shot env-routed sanity check.
 
 ## Layout
 

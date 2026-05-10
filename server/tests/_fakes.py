@@ -7,7 +7,7 @@ credentials, or real DB pollution.
 `make_default_storage()` returns a FakeStorage pre-loaded with a
 minimal-but-valid `default` scenario seed (1 race, 1 location, 1 NPC,
 1 skill) — enough to satisfy `check_scenario` invariants and let
-/session/init succeed end-to-end.
+/session/graph/init succeed end-to-end.
 """
 
 from __future__ import annotations

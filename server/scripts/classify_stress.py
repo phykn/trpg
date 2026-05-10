@@ -93,12 +93,12 @@ CATEGORIES: list[tuple[str, list[dict]]] = [
                 },
             },
             {
-                "name": "ambiguous: threat (expect roll CHA, not combat)",
+                "name": "ambiguous: threat (expect speak, not combat)",
                 "player_input": "고블린을 노려보며 낮은 목소리로 '다가오면 죽는다'고 말한다",
                 "surroundings": {
                     "location": {"id": "forest", "name": "숲길"},
                     "entities": [
-                        {"id": "goblin_01", "name": "고블린", "type": "monster"}
+                        {"id": "goblin_01", "name": "고블린", "type": "enemy"}
                     ],
                 },
             },
@@ -120,8 +120,8 @@ CATEGORIES: list[tuple[str, list[dict]]] = [
                 "surroundings": {
                     "location": {"id": "cave", "name": "동굴"},
                     "entities": [
-                        {"id": "goblin_01", "name": "고블린", "type": "monster"},
-                        {"id": "goblin_02", "name": "고블린", "type": "monster"},
+                        {"id": "goblin_01", "name": "고블린", "type": "enemy"},
+                        {"id": "goblin_02", "name": "고블린", "type": "enemy"},
                     ],
                 },
             },
@@ -134,14 +134,14 @@ CATEGORIES: list[tuple[str, list[dict]]] = [
                 },
             },
             {
-                "name": "persuade monster",
+                "name": "persuade enemy",
                 "player_input": "오크 대장에게 협상을 제안한다 — 우리를 통과시키면 금화 주겠다",
                 "surroundings": {
                     "location": {"id": "bridge", "name": "낡은 다리"},
                     "entities": [
-                        {"id": "orc_chief", "name": "오크 대장", "type": "monster"},
-                        {"id": "orc_01", "name": "오크 전사", "type": "monster"},
-                        {"id": "orc_02", "name": "오크 전사", "type": "monster"},
+                        {"id": "orc_chief", "name": "오크 대장", "type": "enemy"},
+                        {"id": "orc_01", "name": "오크 전사", "type": "enemy"},
+                        {"id": "orc_02", "name": "오크 전사", "type": "enemy"},
                     ],
                 },
             },

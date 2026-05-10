@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Relational SSOT guard — fails when `game/flow/`, `llm/context/`, or `wire/`
+# Relational SSOT guard — fails when `game/runtime/`, `llm/context/`, or `wire/`
 # code reads an entity's relation field as a *list* (iterating across
 # many ids) instead of asking the graph. Full rule + the value-vs-relation
-# distinction is in server/CLAUDE.md.
+# distinction is in server/AGENTS.md.
 #
 # Run from repo root: bash server/scripts/check_relational_ssot.sh
 # Exits non-zero with a one-line-per-violation summary if anything is found.
@@ -27,7 +27,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SEARCH_DIRS=(
-  "$ROOT/server/src/game/flow"
+  "$ROOT/server/src/game/runtime"
   "$ROOT/server/src/llm/context"
   "$ROOT/server/src/wire"
 )
@@ -65,9 +65,9 @@ done
 
 if [[ $violations -gt 0 ]]; then
   echo
-  echo "❌ relational SSOT guard: $violations direct relation-iteration reads found in game.flow/llm.context/wire."
+  echo "❌ relational SSOT guard: $violations direct relation-iteration reads found in game.runtime/llm.context/wire."
   echo "   Use ontology/graph queries instead, or mark the line with '# ssot-allow: <reason>' if it's a justified exception (write path, attribute-only sweep, etc)."
-  echo "   See server/CLAUDE.md for the full rule."
+  echo "   See server/AGENTS.md for the full rule."
   exit 1
 fi
 

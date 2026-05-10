@@ -106,20 +106,20 @@ SURROUNDINGS = {
 
 CASES: list[tuple[str, str]] = [
     # --- move ---
-    ("셀레나의 약초원으로 이동합니다", "move(destination=herb_garden)"),
-    ("잿빛 까마귀 여관으로 이동합니다", "move(destination=gray_raven_inn)"),
+    ("셀레나의 약초원으로 이동합니다", "move(to=herb_garden)"),
+    ("잿빛 까마귀 여관으로 이동합니다", "move(to=gray_raven_inn)"),
     ("흑탑으로 이동한다", "wait (not in connections)"),
     # --- speak ---
-    ("에드릭에게 인사한다", "speak(intent=friendly, target=edrik_chief)"),
-    ("미라에게 말을 건다", "speak(intent=friendly, target=mira_kid)"),
-    # --- attack (target via target_ids) ---
-    ("산적을 공격한다", "attack(target_ids=[bandit_01])"),
+    ("에드릭에게 인사한다", "speak(to=edrik_chief, how=friendly)"),
+    ("미라에게 말을 건다", "speak(to=mira_kid, how=friendly)"),
+    # --- attack ---
+    ("산적을 공격한다", "attack(what=[bandit_01])"),
     # --- use ---
-    ("약초를 마신다", "use(item_id=herb_01)"),
+    ("약초를 마신다", "use(what=herb_01)"),
     # --- transfer (equip) ---
-    ("단검을 장착한다", "transfer(equip)"),
+    ("단검을 장착한다", "transfer(how=equip, what=shortsword_01)"),
     # --- cast (heal) ---
-    ("소소한 치유를 시전한다", "cast(skill_id=heal_minor)"),
+    ("소소한 치유를 시전한다", "cast(with=heal_minor)"),
     # --- perceive / wait ---
     ("주변을 둘러본다", "perceive"),
     ("한숨을 내쉰다", "wait"),
@@ -129,7 +129,7 @@ REPEATS = 1  # one shot — what does the LLM produce on its first attempt?
 
 
 async def main() -> int:
-    print("Loading LLMClient from env (Gemini routing)...")
+    print("Loading LLMClient from env routing...")
     client = LLMClient.from_env()
     providers = client._providers
     default_route = providers["default"].model
