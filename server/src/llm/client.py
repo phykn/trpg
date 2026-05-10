@@ -1,17 +1,15 @@
 import json
-import os
-import re
 from collections.abc import AsyncIterator
 from contextvars import ContextVar
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Literal, NamedTuple
+from typing import Literal
 
 from openai import AsyncOpenAI
 
 from src.game.rules.config import RULES
 from . import gemini, llama_cpp
+from .profiles import LLMProfile, ThinkingMode, parse_env_profiles
 
 # Logs land under `<log_dir>/<session_id>/<agent>/`; outer callers set this and inner ones can defer.
 _SESSION_ID: ContextVar[str | None] = ContextVar("llm_session_id", default=None)
@@ -35,144 +33,8 @@ def set_think_override(value: bool | None) -> None:
     _THINK_OVERRIDE.set(value)
 
 
-# off / on: forced; opt / opt_on: per-call `think` flag with that default.
-ThinkingMode = Literal["off", "opt", "opt_on", "on"]
-
 # Picks the `extra_body` builder + response parser; derived from base_url.
 ToggleStyle = Literal["llama_cpp", "gemini"]
-
-
-@dataclass(frozen=True)
-class LLMProfile:
-    base_url: str
-    model: str
-    api_keys: tuple[str, ...]
-    thinking_mode: ThinkingMode
-    supports_system: bool
-
-
-_PROVIDER_RE = re.compile(
-    r"^LLM_(?!ROUTE_)([A-Z0-9_]+?)_(BASE_URL|API_KEYS|THINK_OFF|THINK_OPT_ON|THINK_OPT|THINK_ON|NO_SYSTEM)$"
-)
-_ROUTE_RE = re.compile(r"^LLM_ROUTE_([A-Z0-9_]+)$")
-_FALLBACK_RE = re.compile(r"^LLM_ROUTE_([A-Z0-9_]+)_FALLBACK$")
-
-
-class _ProviderEnv(NamedTuple):
-    base_url: str
-    api_keys: tuple[str, ...]
-    modes: dict[str, ThinkingMode]  # model_name → thinking_mode
-    no_system: frozenset[str]  # models that reject `role: system`
-
-
-def _parse_env_profiles() -> tuple[dict[str, LLMProfile], dict[str, LLMProfile]]:
-    """Build agent (primary, fallback) profiles from env.
-
-    `LLM_ROUTE_DEFAULT` is required; unmatched agents fall back to default at
-    call time. Optional `LLM_ROUTE_<AGENT>_FALLBACK` defines a secondary
-    profile reached on quota errors. THINK_* lists per provider are disjoint
-    and together name every model the provider serves.
-    """
-
-    def csv(s: str) -> tuple[str, ...]:
-        return tuple(p.strip() for p in s.split(",") if p.strip())
-
-    def parse_spec(key: str, value: str) -> tuple[str, str]:
-        spec = value.strip()
-        if "/" not in spec:
-            raise ValueError(f"{key} must be '<provider>/<model>' (got {value!r})")
-        prov, model = spec.split("/", 1)
-        return prov.strip(), model.strip()
-
-    def collect_modes(upper: str) -> dict[str, ThinkingMode]:
-        modes: dict[str, ThinkingMode] = {}
-        for suffix, mode in (
-            ("THINK_OFF", "off"),
-            ("THINK_OPT", "opt"),
-            ("THINK_OPT_ON", "opt_on"),
-            ("THINK_ON", "on"),
-        ):
-            for model in csv(os.environ.get(f"LLM_{upper}_{suffix}", "")):
-                if model in modes:
-                    raise ValueError(
-                        f"LLM_{upper}_{suffix} duplicates model {model!r} "
-                        f"already in another THINK_* category"
-                    )
-                modes[model] = mode  # type: ignore[assignment]
-        if not modes:
-            raise ValueError(
-                f"LLM_{upper} must declare at least one of "
-                f"THINK_OFF / THINK_OPT / THINK_OPT_ON / THINK_ON"
-            )
-        return modes
-
-    # Phase 1: read each LLM_<NAME>_* block.
-    providers: dict[str, _ProviderEnv] = {}
-    for upper in {m[1] for k in os.environ if (m := _PROVIDER_RE.match(k))}:
-        api_keys = csv(os.environ[f"LLM_{upper}_API_KEYS"])
-        if not api_keys:
-            raise ValueError(f"LLM_{upper}_API_KEYS must list at least one key")
-        modes = collect_modes(upper)
-        no_system = frozenset(csv(os.environ.get(f"LLM_{upper}_NO_SYSTEM", "")))
-        unknown = no_system - modes.keys()
-        if unknown:
-            raise ValueError(
-                f"LLM_{upper}_NO_SYSTEM lists unknown model(s) "
-                f"{sorted(unknown)} (not in any LLM_{upper}_THINK_* list)"
-            )
-        providers[upper.lower()] = _ProviderEnv(
-            base_url=os.environ[f"LLM_{upper}_BASE_URL"],
-            api_keys=api_keys,
-            modes=modes,
-            no_system=no_system,
-        )
-
-    # Phase 2: read each LLM_ROUTE_<AGENT> = <provider>/<model>; route _FALLBACK
-    # variants to a separate map so the primary regex doesn't capture them.
-    routes: dict[str, tuple[str, str]] = {}
-    fallback_routes: dict[str, tuple[str, str]] = {}
-    for key, value in os.environ.items():
-        m_fb = _FALLBACK_RE.match(key)
-        if m_fb:
-            fallback_routes[m_fb[1].lower()] = parse_spec(key, value)
-            continue
-        m = _ROUTE_RE.match(key)
-        if m:
-            routes[m[1].lower()] = parse_spec(key, value)
-    if "default" not in routes:
-        raise ValueError("LLM_ROUTE_DEFAULT must be set")
-
-    def _resolve(label: str, prov_name: str, model_name: str) -> LLMProfile:
-        if prov_name not in providers:
-            raise ValueError(
-                f"{label} references unknown provider "
-                f"{prov_name!r} (no LLM_{prov_name.upper()}_BASE_URL)"
-            )
-        prov = providers[prov_name]
-        if model_name not in prov.modes:
-            raise ValueError(
-                f"{label} references unknown model "
-                f"{model_name!r} for provider {prov_name!r} (not in any "
-                f"LLM_{prov_name.upper()}_THINK_* list)"
-            )
-        return LLMProfile(
-            base_url=prov.base_url,
-            model=model_name,
-            api_keys=prov.api_keys,
-            thinking_mode=prov.modes[model_name],
-            supports_system=model_name not in prov.no_system,
-        )
-
-    # Phase 3: resolve each route into a profile.
-    profiles: dict[str, LLMProfile] = {
-        agent: _resolve(f"LLM_ROUTE_{agent.upper()}", prov_name, model_name)
-        for agent, (prov_name, model_name) in routes.items()
-    }
-    fallbacks: dict[str, LLMProfile] = {
-        agent: _resolve(f"LLM_ROUTE_{agent.upper()}_FALLBACK", prov_name, model_name)
-        for agent, (prov_name, model_name) in fallback_routes.items()
-    }
-    return profiles, fallbacks
 
 
 class _Provider:
@@ -279,7 +141,7 @@ class LLMClient:
         chat_timeout_s: float | None = None,
         stream_timeout_s: float | None = None,
     ) -> "LLMClient":
-        primary, fallbacks = _parse_env_profiles()
+        primary, fallbacks = parse_env_profiles()
         return cls(
             profiles=primary,
             fallbacks=fallbacks,

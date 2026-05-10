@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .client import ThinkingMode
+    from .profiles import ThinkingMode
 
 
 def extra_body(mode: "ThinkingMode", effective_think: bool) -> dict | None:
