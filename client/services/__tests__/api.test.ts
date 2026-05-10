@@ -9,7 +9,14 @@ jest.mock('expo/fetch', () => ({
 }));
 
 const { fetch } = require('expo/fetch') as { fetch: jest.Mock };
-const { getGraphSessionById, sendGraphAction, sendGraphInput, sendGraphLevelUp } = require('../api') as typeof import('../api');
+const {
+  getGraphSessionById,
+  initGraphSession,
+  listProfiles,
+  sendGraphAction,
+  sendGraphInput,
+  sendGraphLevelUp,
+} = require('../api') as typeof import('../api');
 
 const graphState = (): GraphFrontState => ({
   hero: {
@@ -112,6 +119,69 @@ describe('graph API helpers', () => {
       '망루로 이동한다',
       '주변을 살펴본다',
     ]);
+  });
+
+  test('loads profiles with an abortable request signal', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [
+        {
+          id: 'dev_test',
+          name: '개발 원턴 테스트',
+          description: '',
+          races: [{ id: 'human', name: '인간', description: '' }],
+        },
+      ],
+    });
+
+    await listProfiles();
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/profiles',
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+
+  test('posts graph init with an abortable request signal', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        state: graphState(),
+      }),
+    });
+
+    await initGraphSession({
+      profile: 'dev_test',
+      player: { name: '테스터', race_id: 'human', gender: 'male' },
+      locale: 'ko',
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/graph/init',
+      expect.objectContaining({
+        method: 'POST',
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+
+  test('includes server error detail in graph init failures', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 422,
+      json: async () => ({ detail: 'profile not found: missing' }),
+    });
+
+    await expect(
+      initGraphSession({
+        profile: 'missing',
+        player: { name: '테스터', race_id: 'human', gender: 'male' },
+        locale: 'ko',
+      }),
+    ).rejects.toThrow('profile not found: missing');
   });
 
   test('posts graph text input with an abortable request signal', async () => {

@@ -34,21 +34,19 @@ const jsonHeaders = {
 const GRAPH_REQUEST_TIMEOUT_MS = 90_000;
 
 export async function getVersion(): Promise<{ sha: string }> {
-  const res = await fetch(`${BASE_URL}/version`, { headers: baseHeaders });
-  if (!res.ok) throw new Error(`getVersion failed: HTTP ${res.status}`);
-  return (await res.json()) as { sha: string };
+  return requestJson<{ sha: string }>('getVersion', '/version', { headers: baseHeaders });
 }
 
 export async function listProfiles(): Promise<ProfileCard[]> {
-  const res = await fetch(`${BASE_URL}/profiles`, { headers: baseHeaders });
-  if (!res.ok) throw new Error(`listProfiles failed: HTTP ${res.status}`);
-  return (await res.json()) as ProfileCard[];
+  return requestJson<ProfileCard[]>('listProfiles', '/profiles', { headers: baseHeaders });
 }
 
 export async function getGraphSessionById(gameId: string): Promise<SessionPayload | null> {
-  const res = await fetch(`${BASE_URL}/session/${gameId}/graph/state`, { headers: baseHeaders });
+  const res = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/state`, {
+    headers: baseHeaders,
+  });
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`getGraphSessionById failed: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(await httpError('getGraphSessionById', res));
   const payload = (await res.json()) as GraphSessionPayload;
   const state = adaptGraphState(payload.state);
   return {
@@ -59,13 +57,11 @@ export async function getGraphSessionById(gameId: string): Promise<SessionPayloa
 }
 
 export async function initGraphSession(body: InitRequest): Promise<SessionPayload> {
-  const res = await fetch(`${BASE_URL}/session/graph/init`, {
+  const payload = await requestJson<GraphSessionPayload>('initGraphSession', '/session/graph/init', {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`initGraphSession failed: HTTP ${res.status}`);
-  const payload = (await res.json()) as GraphSessionPayload;
   const state = adaptGraphState(payload.state);
   return {
     game_id: payload.game_id,
@@ -83,7 +79,7 @@ export async function sendGraphInput(
     headers: jsonHeaders,
     body: JSON.stringify({ player_input: playerInput, think: false }),
   });
-  if (!res.ok) throw new Error(`sendGraphInput failed: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(await httpError('sendGraphInput', res));
   return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
 }
 
@@ -96,7 +92,7 @@ export async function sendGraphAction(
     headers: jsonHeaders,
     body: JSON.stringify({ action }),
   });
-  if (!res.ok) throw new Error(`sendGraphAction failed: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(await httpError('sendGraphAction', res));
   return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
 }
 
@@ -109,7 +105,7 @@ export async function sendGraphLevelUp(
     headers: jsonHeaders,
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`sendGraphLevelUp failed: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(await httpError('sendGraphLevelUp', res));
   return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
 }
 
@@ -122,13 +118,29 @@ export async function confirmGraphAction(
     headers: jsonHeaders,
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`confirmGraphAction failed: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(await httpError('confirmGraphAction', res));
   return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
+}
+
+type ApiFetchInit = {
+  method?: 'GET' | 'POST';
+  headers: typeof baseHeaders | typeof jsonHeaders;
+  body?: string;
+};
+
+async function requestJson<T>(
+  operation: string,
+  path: string,
+  init: ApiFetchInit,
+): Promise<T> {
+  const res = await fetchWithTimeout(`${BASE_URL}${path}`, init);
+  if (!res.ok) throw new Error(await httpError(operation, res));
+  return (await res.json()) as T;
 }
 
 async function fetchWithTimeout(
   url: string,
-  init: { method: 'POST'; headers: typeof jsonHeaders; body: string },
+  init: ApiFetchInit,
 ): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), GRAPH_REQUEST_TIMEOUT_MS);
@@ -137,6 +149,27 @@ async function fetchWithTimeout(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function httpError(operation: string, res: Response): Promise<string> {
+  const detail = await readErrorDetail(res);
+  return `${operation} failed: HTTP ${res.status}${detail ? ` (${detail})` : ''}`;
+}
+
+async function readErrorDetail(res: Response): Promise<string> {
+  try {
+    const body = await res.json();
+    if (typeof body?.detail === 'string') return body.detail;
+    if (Array.isArray(body?.detail)) return body.detail.map(String).join(', ');
+    if (typeof body?.message === 'string') return body.message;
+  } catch {
+    try {
+      return (await res.text()).trim();
+    } catch {
+      return '';
+    }
+  }
+  return '';
 }
 
 function adaptGraphActionResponse(
