@@ -27,13 +27,17 @@ function loadEnvFile(path) {
 }
 
 function run(command, args) {
-  const result = spawnSync(command, args, { stdio: 'inherit', shell: false });
+  const result = spawnSync(command, args, {
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
 const isWindows = process.platform === 'win32';
 const npx = isWindows ? 'npx.cmd' : 'npx';
+const wrangler = isWindows ? 'wrangler.cmd' : 'wrangler';
 
 loadEnvFile(join(__dirname, '..', '.env.release'));
 
@@ -47,4 +51,4 @@ process.env.EXPO_PUBLIC_GIT_SHA = sha.stdout.trim();
 
 rmSync(join(__dirname, '..', 'dist'), { recursive: true, force: true });
 run(npx, ['expo', 'export', '-p', 'web']);
-run(npx, ['--yes', 'wrangler', 'deploy']);
+run(wrangler, ['deploy']);
