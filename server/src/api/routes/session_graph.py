@@ -24,7 +24,7 @@ from src.game.runtime.session import (
     run_graph_intro_request,
 )
 from src.game.runtime.turn import GraphActionTurnError
-from src.llm.client import LLMClient, set_think_override
+from src.llm.client import LLMClient, force_think
 
 from ..deps import get_graph_repo, get_llm, get_scenario_repo
 from ..schema import (
@@ -39,6 +39,10 @@ from ..schema import (
 )
 
 router = APIRouter()
+
+
+def _request_thinking(enabled: bool) -> bool | None:
+    return True if enabled else None
 
 
 @router.post("/session/graph/init", response_model=InitResponse)
@@ -107,13 +111,14 @@ async def session_graph_turn(
     scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> GraphActionResponse:
     try:
-        result = await run_graph_action_request(
-            graph_repo,
-            game_id,
-            body.action,
-            llm=llm,
-            scenario_repo=scenario_repo,
-        )
+        with force_think(_request_thinking(body.think)):
+            result = await run_graph_action_request(
+                graph_repo,
+                game_id,
+                body.action,
+                llm=llm,
+                scenario_repo=scenario_repo,
+            )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     except GraphConfirmationActive as e:
@@ -139,14 +144,15 @@ async def session_graph_confirm(
     scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> GraphActionResponse:
     try:
-        result = await run_graph_confirm(
-            graph_repo,
-            game_id,
-            body.confirmation_id,
-            body.decision,
-            llm=llm,
-            scenario_repo=scenario_repo,
-        )
+        with force_think(_request_thinking(body.think)):
+            result = await run_graph_confirm(
+                graph_repo,
+                game_id,
+                body.confirmation_id,
+                body.decision,
+                llm=llm,
+                scenario_repo=scenario_repo,
+            )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     except GraphConfirmationExpected as e:
@@ -198,13 +204,14 @@ async def session_graph_input(
     scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> GraphActionResponse:
     try:
-        result = await run_graph_input_turn(
-            llm,
-            graph_repo,
-            game_id,
-            body.player_input,
-            scenario_repo=scenario_repo,
-        )
+        with force_think(_request_thinking(body.think)):
+            result = await run_graph_input_turn(
+                llm,
+                graph_repo,
+                game_id,
+                body.player_input,
+                scenario_repo=scenario_repo,
+            )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     except GraphConfirmationActive as e:
@@ -226,7 +233,6 @@ async def session_graph_level_up(
     graph_repo: GraphRepo = Depends(get_graph_repo),
     scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> GraphActionResponse:
-    set_think_override(body.think)
     try:
         result = await run_graph_level_up(
             graph_repo,

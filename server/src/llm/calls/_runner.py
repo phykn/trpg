@@ -88,7 +88,7 @@ async def run_with_retries(
         try:
             result = await client.chat(
                 messages=messages,
-                think=False,
+                think=attempt > 1,
                 agent=agent,
                 temperature=temperature,
                 use_fallback=fallback_engaged,

@@ -2,8 +2,10 @@ import json
 import asyncio
 import time
 
+import httpx
 import pytest
 from httpx import ASGITransport, AsyncClient
+from openai import RateLimitError
 
 from run_api import build_app
 from src.db.graph_local_fs import LocalFsGraphRepo
@@ -19,10 +21,12 @@ class _MockLLM:
         *,
         intro_answer: str = "당신은 광장에 처음 발을 들입니다.",
         intro_delay: float = 0.0,
+        intro_error: Exception | None = None,
     ) -> None:
         self.payload = payload or {"actions": [{"verb": "pass"}]}
         self.intro_answer = intro_answer
         self.intro_delay = intro_delay
+        self.intro_error = intro_error
         self.calls: list[dict] = []
 
     async def chat(
@@ -35,6 +39,8 @@ class _MockLLM:
     ):
         self.calls.append({"agent": agent, "messages": messages})
         if agent == "graph_intro":
+            if self.intro_error is not None:
+                raise self.intro_error
             if self.intro_delay:
                 await asyncio.sleep(self.intro_delay)
             return {"answer": self.intro_answer, "think": ""}
@@ -69,6 +75,7 @@ def _build_app(
     llm_payload: dict | None = None,
     intro_answer: str = "당신은 광장에 처음 발을 들입니다.",
     intro_delay: float = 0.0,
+    intro_error: Exception | None = None,
 ):
     storage = make_default_storage()
     _extend_default_storage_for_movement(storage)
@@ -78,6 +85,7 @@ def _build_app(
             llm_payload,
             intro_answer=intro_answer,
             intro_delay=intro_delay,
+            intro_error=intro_error,
         ),
         basic_auth_user="t",
         basic_auth_pass="t",
@@ -94,6 +102,13 @@ def _client(app):
         auth=("t", "t"),
         timeout=30.0,
     )
+
+
+def _rate_limit_error(message: str = "quota exceeded") -> RateLimitError:
+    response = httpx.Response(
+        status_code=429, request=httpx.Request("POST", "http://x")
+    )
+    return RateLimitError(message, response=response, body=None)
 
 
 async def _init_graph_session(client) -> str:
@@ -184,6 +199,25 @@ async def test_graph_intro_adds_initial_narration_but_move_and_offer_stay_system
     assert move_body["state"]["log"][-1]["kind"] == "act"
     assert progress.next_log_id == 4
     assert [call["agent"] for call in app.state.llm.calls].count("graph_intro") == 1
+
+
+@pytest.mark.asyncio
+async def test_graph_intro_rate_limited_llm_uses_fallback_narration(tmp_path):
+    app = _build_app(tmp_path, intro_error=_rate_limit_error())
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(f"/session/{game_id}/graph/intro")
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["state"]["log"] == [
+        {
+            "id": 1,
+            "kind": "gm",
+            "text": "당신은 광장에 도착합니다. 테스트 광장",
+        }
+    ]
 
 
 @pytest.mark.asyncio

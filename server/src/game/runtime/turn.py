@@ -1,6 +1,7 @@
 import asyncio
 import json
 
+from openai import APIConnectionError, InternalServerError, RateLimitError
 from pydantic import BaseModel, ConfigDict
 
 from src.db.repo import GraphRepo, ScenarioRepo
@@ -197,7 +198,14 @@ async def _build_graph_action_narration(
             ),
             timeout=_GRAPH_ACTION_NARRATION_TIMEOUT_SECONDS,
         )
-    except (LLMUnavailable, OSError, TimeoutError) as exc:
+    except (
+        LLMUnavailable,
+        OSError,
+        TimeoutError,
+        InternalServerError,
+        APIConnectionError,
+        RateLimitError,
+    ) as exc:
         llm_diag("llm:fail", agent="graph_narrate", err=type(exc).__name__)
         return ""
     llm_diag("llm:done", agent="graph_narrate")

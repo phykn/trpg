@@ -51,6 +51,7 @@ class GraphActionResponse(BaseModel):
 
 class GraphTurnRequest(BaseModel):
     action: Action
+    think: bool = False
 
 
 class GraphInputRequest(BaseModel):
@@ -66,10 +67,8 @@ class ConfirmRequest(BaseModel):
 
 class GraphRollRequest(BaseModel):
     roll_id: str
-    think: bool = False
 
 
 class GraphLevelUpRequest(BaseModel):
     stat_up: GraphStatKey
     skill_id: str | None = None
-    think: bool = False

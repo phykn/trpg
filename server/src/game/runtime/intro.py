@@ -1,7 +1,10 @@
 import json
 
+from openai import APIConnectionError, InternalServerError, RateLimitError
+
 from src.db.repo import GraphRepo
 from src.game.domain.content import node_label, node_text
+from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph_query import characters_at, edges_from, location_of
 from src.game.domain.memory import GMLogEntry
 from src.llm.calls._runner import get_prompt
@@ -102,9 +105,16 @@ async def _generate_intro_text(llm: LLMClient, runtime: GameRuntimeState) -> str
             agent="graph_intro",
             temperature=0.2,
         )
-    except Exception as exc:
+    except (
+        LLMUnavailable,
+        OSError,
+        TimeoutError,
+        InternalServerError,
+        APIConnectionError,
+        RateLimitError,
+    ) as exc:
         llm_diag("llm:fail", agent="graph_intro", err=type(exc).__name__)
-        raise
+        raise LLMUnavailable(str(exc)) from exc
     llm_diag("llm:done", agent="graph_intro")
     answer = result.get("answer")
     if not isinstance(answer, str):

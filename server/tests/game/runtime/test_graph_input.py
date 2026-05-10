@@ -1,7 +1,9 @@
 import json
 import asyncio
 
+import httpx
 import pytest
+from openai import RateLimitError
 
 from src.db.graph_local_fs import LocalFsGraphRepo
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
@@ -46,6 +48,33 @@ class _SlowGraphNarrateLLM(_FakeLLM):
         if agent == "graph_narrate":
             await asyncio.sleep(0.2)
             return {"answer": "너무 늦게 도착한 나레이션입니다.", "think": ""}
+        return await super().chat(
+            messages,
+            think=think,
+            agent=agent,
+            temperature=temperature,
+            use_fallback=use_fallback,
+        )
+
+
+def _rate_limit_error(message: str = "quota exceeded") -> RateLimitError:
+    response = httpx.Response(
+        status_code=429, request=httpx.Request("POST", "http://x")
+    )
+    return RateLimitError(message, response=response, body=None)
+
+
+class _RateLimitedGraphNarrateLLM(_FakeLLM):
+    async def chat(
+        self,
+        messages,
+        think=False,
+        agent=None,
+        temperature=None,
+        use_fallback=False,
+    ):
+        if agent == "graph_narrate":
+            raise _rate_limit_error()
         return await super().chat(
             messages,
             think=think,
@@ -182,6 +211,19 @@ async def test_graph_input_speak_times_out_slow_narration_and_uses_fallback(
     )
     repo = await _repo(tmp_path)
     llm = _SlowGraphNarrateLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]}
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 말을 건다")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert logs[0].text == "당신의 행동은 조용히 이어집니다."
+
+
+async def test_graph_input_speak_rate_limited_narration_uses_fallback(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _RateLimitedGraphNarrateLLM(
         {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]}
     )
 

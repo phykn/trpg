@@ -55,12 +55,14 @@ async def test_retry_loop_recovers_after_first_empty_answer():
     class _RecoveringClient:
         def __init__(self):
             self.attempts = 0
+            self.thinks = []
 
         def pick_fallback(self, agent):
             return None
 
         async def chat(self, messages, **kw):
             self.attempts += 1
+            self.thinks.append(kw["think"])
             if self.attempts == 1:
                 return {"answer": "", "think": None}
             return {
@@ -78,4 +80,5 @@ async def test_retry_loop_recovers_after_first_empty_answer():
         retries=5,
     )
     assert client.attempts == 2
+    assert client.thinks == [False, True]
     assert out.actions[0].verb == "pass"

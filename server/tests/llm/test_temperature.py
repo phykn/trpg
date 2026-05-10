@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.llm.client import LLMClient, LLMProfile
+from src.llm.client import LLMClient, LLMProfile, force_think
 
 
 def _client(model: str = "test-model") -> LLMClient:
@@ -109,6 +109,48 @@ async def test_chat_passes_local_think_toggle(monkeypatch):
     }
     assert captured[1]["extra_body"] == {
         "chat_template_kwargs": {"enable_thinking": True}
+    }
+
+
+@pytest.mark.asyncio
+async def test_force_think_override_is_scoped(monkeypatch):
+    client = _client()
+    captured: list[dict] = []
+
+    async def fake_create(**kwargs):
+        captured.append(kwargs)
+        return MagicMock(
+            choices=[MagicMock(message=MagicMock(content="ok", model_extra=None))]
+        )
+
+    fake_inner = MagicMock()
+    fake_inner.chat.completions.create = fake_create
+    fake_provider = MagicMock()
+    fake_provider.next_chat_client.return_value = fake_inner
+    fake_provider.thinking_mode = "opt"
+    fake_provider.toggle_style = "local"
+    fake_provider.supports_system = True
+    fake_provider.model = "test-model"
+
+    monkeypatch.setattr(client, "_pick", lambda agent, *, fallback=False: fake_provider)
+
+    with force_think(True):
+        await client.chat(
+            messages=[{"role": "user", "content": "x"}],
+            think=False,
+            log=False,
+        )
+    await client.chat(
+        messages=[{"role": "user", "content": "x"}],
+        think=False,
+        log=False,
+    )
+
+    assert captured[0]["extra_body"] == {
+        "chat_template_kwargs": {"enable_thinking": True}
+    }
+    assert captured[1]["extra_body"] == {
+        "chat_template_kwargs": {"enable_thinking": False}
     }
 
 

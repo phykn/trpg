@@ -1,5 +1,6 @@
 import json
 from collections.abc import AsyncIterator
+from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
@@ -30,8 +31,13 @@ def set_llm_session_if_unset(session_id: str) -> None:
         _SESSION_ID.set(session_id)
 
 
-def set_think_override(value: bool | None) -> None:
-    _THINK_OVERRIDE.set(value)
+@contextmanager
+def force_think(value: bool | None):
+    token = _THINK_OVERRIDE.set(value)
+    try:
+        yield
+    finally:
+        _THINK_OVERRIDE.reset(token)
 
 
 # Picks the `extra_body` builder + response parser; derived from base_url.
