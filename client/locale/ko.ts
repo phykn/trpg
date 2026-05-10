@@ -118,6 +118,7 @@ export const ko = {
     abandonTitle: '퀘스트 포기',
     abandonBlurb: '진행 상황이 사라집니다.',
     name: '퀘스트',
+    offer: '제안',
   },
   hero: {
     ability: '능력',

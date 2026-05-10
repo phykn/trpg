@@ -47,3 +47,35 @@ export function buildQuestSlot(quest: Quest | null, opts?: { dot?: boolean }): P
     },
   };
 }
+
+export function buildQuestOfferSlot(quest: Quest, opts?: { dot?: boolean }): PanelSlot {
+  const meta: MetaSegment[] = [
+    { text: ko.quest.offer },
+    { text: ` · ${quest.difficulty.label}`, tone: quest.difficulty.tone ?? undefined },
+  ];
+  const actionItems: PanelAction[] = quest.actions
+    .filter((kind) => kind === 'accept')
+    .map((kind) => ({
+      kind: 'quest_action' as const,
+      label: ACTION_LABEL[kind],
+      questAction: { kind, quest_id: quest.id },
+    }));
+  const actions: PanelActions[] = actionItems.length > 0
+    ? [{ label: ko.quest.offer, items: actionItems }]
+    : [];
+  return {
+    id: 'quest_offer',
+    chip: { short: ko.quest.offer, dot: opts?.dot },
+    panel: {
+      title: quest.title,
+      meta,
+      sections: [
+        { label: ko.panel.goal, text: joinOrDash(quest.goals) },
+        { label: ko.panel.summary, text: quest.summary },
+        { label: ko.panel.reward, nodes: [['GOLD', quest.rewards.gold], ['EXP', quest.rewards.exp]] },
+        { label: ko.panel.commission, text: quest.giver },
+      ],
+      actions: actions.length > 0 ? actions : undefined,
+    },
+  };
+}

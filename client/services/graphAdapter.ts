@@ -22,17 +22,17 @@ const EMPTY_EQUIPMENT = {
 };
 
 export function adaptGraphState(state: GraphFrontState): FrontState {
-  const displayedQuest = state.quest ?? state.questOffers[0] ?? null;
   return {
     hero: adaptHero(state.hero),
     subject: null,
-    quest: displayedQuest,
+    quest: state.quest,
+    questOffers: state.questOffers,
     place: adaptPlace(state.place),
     combat: adaptCombat(state.combat),
     log: state.log,
     pendingCheck: null,
     pendingConfirmation: state.pendingConfirmation,
-    storyGraph: buildStoryGraph(state, displayedQuest),
+    storyGraph: buildStoryGraph(state, visibleQuests(state)),
   };
 }
 
@@ -106,7 +106,7 @@ function adaptCombat(combat: GraphCombatState | null): FrontState['combat'] {
 
 function buildStoryGraph(
   state: GraphFrontState,
-  displayedQuest: FrontState['quest'],
+  quests: NonNullable<FrontState['quest']>[],
 ): FrontState['storyGraph'] {
   const place = state.place;
   if (place === null) {
@@ -180,22 +180,18 @@ function buildStoryGraph(
         alive: target.hp.current > 0,
         trust: 0,
       })),
-      ...(displayedQuest
-        ? [
-            {
-              id: displayedQuest.id,
-              label: displayedQuest.title,
-              kind: 'quest' as const,
-              status: null,
-              reachable: true as const,
-              questDifficulty: displayedQuest.difficulty.label,
-              rewards: displayedQuest.rewards,
-              giver: displayedQuest.giver,
-              goals: displayedQuest.goals,
-              summary: displayedQuest.summary,
-            },
-          ]
-        : []),
+      ...quests.map((quest) => ({
+        id: quest.id,
+        label: quest.title,
+        kind: 'quest' as const,
+        status: null,
+        reachable: true as const,
+        questDifficulty: quest.difficulty.label,
+        rewards: quest.rewards,
+        giver: quest.giver,
+        goals: quest.goals,
+        summary: quest.summary,
+      })),
     ],
     edges: [
       {
@@ -219,20 +215,25 @@ function buildStoryGraph(
         label: ko.panel.approach,
         kind: 'meet' as const,
       })),
-      ...(displayedQuest
-        ? [
-            {
-              id: `quest:${place.id}:${displayedQuest.id}`,
-              source: place.id,
-              target: displayedQuest.id,
-              label: ko.quest.name,
-              kind: 'quest_giver' as const,
-            },
-          ]
-        : []),
+      ...quests.map((quest) => ({
+        id: `quest:${place.id}:${quest.id}`,
+        source: place.id,
+        target: quest.id,
+        label: quest.status === 'active' ? ko.quest.name : ko.quest.offer,
+        kind: 'quest_giver' as const,
+      })),
     ],
     summary: place.name,
   };
+}
+
+function visibleQuests(state: GraphFrontState): NonNullable<FrontState['quest']>[] {
+  const seen = new Set<string>();
+  return [state.quest, ...state.questOffers].filter((quest): quest is NonNullable<FrontState['quest']> => {
+    if (quest === null || seen.has(quest.id)) return false;
+    seen.add(quest.id);
+    return true;
+  });
 }
 
 function statEntries(stats: Record<string, number>): FrontState['hero']['stats'] {

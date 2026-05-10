@@ -32,6 +32,7 @@ export type FrontState = {
   hero: Hero;
   subject: Subject | null;
   quest: Quest | null;
+  questOffers: Quest[];
   place: Place | null;
   combat: CombatBadge | null;
   log: LogEntry[];

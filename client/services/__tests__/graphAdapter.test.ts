@@ -103,8 +103,9 @@ describe('adaptGraphState', () => {
     expect(state.place?.name).toBe('광장');
     expect(state.place?.surroundings[0].name).toBe('숲길');
     expect(state.place?.targets[0].name).toBe('늑대');
-    expect(state.quest?.title).toBe('첫 의뢰');
-    expect(state.quest?.actions).toEqual(['accept']);
+    expect(state.quest).toBeNull();
+    expect(state.questOffers[0]?.title).toBe('첫 의뢰');
+    expect(state.questOffers[0]?.actions).toEqual(['accept']);
     expect(state.combat?.round).toBe(2);
     expect(state.combat?.enemies[0]).toMatchObject({
       name: '늑대',

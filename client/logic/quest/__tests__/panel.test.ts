@@ -1,4 +1,4 @@
-import { buildQuestSlot } from '../panel';
+import { buildQuestOfferSlot, buildQuestSlot } from '../panel';
 import type { Quest } from '../types';
 
 const quest = (actions: Quest['actions']): Quest => ({
@@ -22,5 +22,20 @@ describe('buildQuestSlot', () => {
 
     expect(items).toHaveLength(2);
     expect(items.every((item) => item.kind === 'quest_action' && item.confirm === undefined)).toBe(true);
+  });
+
+  test('renders quest offers as a separate accept-only slot', () => {
+    const slot = buildQuestOfferSlot(quest(['accept', 'abandon']));
+
+    const items = slot.panel?.actions?.[0]?.items ?? [];
+
+    expect(slot.id).toBe('quest_offer');
+    expect(slot.chip.short).toBe('제안');
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      kind: 'quest_action',
+      label: '수락',
+      questAction: { kind: 'accept', quest_id: 'quest_01' },
+    });
   });
 });

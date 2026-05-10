@@ -18,7 +18,7 @@ import { ko } from '@/locale/ko';
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, place, combat, storyGraph, log, pending, pendingConfirmation, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onConfirmPending, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp, runtimeMode } = game;
+  const { hero, subject, quest, questOffers, place, combat, storyGraph, log, pending, pendingConfirmation, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onConfirmPending, onRoll, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpCandidates, openLevelUp, cancelLevelUp, commitLevelUp, runtimeMode } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -65,7 +65,7 @@ export function Playing({ game }: Props) {
   if (!hero) return null;
 
   const slots: PanelSlot[] = [
-    ...buildPanelSlots({ hero, subject, quest }, { onLevelUpOpen: openLevelUp, questDot: hasUnseenQuest, subjectDot: hasUnseenSubject }),
+    ...buildPanelSlots({ hero, subject, quest, questOffers }, { onLevelUpOpen: openLevelUp, questDot: hasUnseenQuest, subjectDot: hasUnseenSubject }),
     { id: 'map', chip: { short: ko.panel.neighborhood, dot: hasUnseenLocation }, panel: null },
   ];
   const rolling = pending !== null && streaming;
@@ -83,7 +83,7 @@ export function Playing({ game }: Props) {
           setActiveId((prev) => {
             const next = prev === id ? null : id;
             if (id === 'map' && next === id) markLocationSeen();
-            if (id === 'quest' && next === id) markQuestSeen();
+            if ((id === 'quest' || id === 'quest_offer') && next === id) markQuestSeen();
             if (id === 'person' && next === id) markSubjectSeen();
             return next;
           });

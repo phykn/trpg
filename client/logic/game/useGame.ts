@@ -78,6 +78,7 @@ export function useGame() {
   const [hero, setHero] = React.useState<Hero | null>(null);
   const [subject, setSubject] = React.useState<Subject | null>(null);
   const [quest, setQuest] = React.useState<Quest | null>(null);
+  const [questOffers, setQuestOffers] = React.useState<Quest[]>([]);
   const [place, setPlace] = React.useState<Place | null>(null);
   const [log, setLog] = React.useState<LogEntry[]>([]);
 
@@ -139,6 +140,7 @@ export function useGame() {
     setHero(s.hero);
     setSubject(s.subject);
     setQuest(s.quest);
+    setQuestOffers(s.questOffers ?? []);
     setPlace(s.place);
     setCombat(s.combat);
     setLog(s.log);
@@ -472,7 +474,7 @@ export function useGame() {
   }, [placeKey]);
 
   // Quest wire carries `id`, but `title` is the cache key — id can churn across server-side renumbering, while titles are stable per-scenario.
-  const questTitle = quest?.title ?? null;
+  const questTitle = quest?.title ?? questOffers[0]?.title ?? null;
   const hasUnseenQuest = questTitle !== null && questTitle !== lastSeenQuestTitle;
 
   const markQuestSeen = React.useCallback(() => {
@@ -501,6 +503,7 @@ export function useGame() {
     hero,
     subject,
     quest,
+    questOffers,
     place,
     combat,
     storyGraph,
