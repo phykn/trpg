@@ -14,6 +14,10 @@ import type {
   SessionPayload,
 } from '@/services/wire';
 
+type ApiRequestOptions = {
+  signal?: AbortSignal;
+};
+
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 if (!BASE_URL) throw new Error('EXPO_PUBLIC_API_URL is not set');
 
@@ -73,10 +77,12 @@ export async function initGraphSession(body: InitRequest): Promise<SessionPayloa
 
 export async function requestGraphIntro(
   gameId: string,
+  options: ApiRequestOptions = {},
 ): Promise<GraphActionClientResponse> {
   const res = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/intro`, {
     method: 'POST',
     headers: jsonHeaders,
+    signal: options.signal,
   });
   if (!res.ok) throw new Error(await httpError('requestGraphIntro', res));
   return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
@@ -85,11 +91,13 @@ export async function requestGraphIntro(
 export async function sendGraphInput(
   gameId: string,
   playerInput: string,
+  options: ApiRequestOptions = {},
 ): Promise<GraphActionClientResponse> {
   const res = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/input`, {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify({ player_input: playerInput, think: false }),
+    signal: options.signal,
   });
   if (!res.ok) throw new Error(await httpError('sendGraphInput', res));
   return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
@@ -98,11 +106,13 @@ export async function sendGraphInput(
 export async function sendGraphAction(
   gameId: string,
   action: GraphAction,
+  options: ApiRequestOptions = {},
 ): Promise<GraphActionClientResponse> {
   const res = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/turn`, {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify({ action }),
+    signal: options.signal,
   });
   if (!res.ok) throw new Error(await httpError('sendGraphAction', res));
   return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
@@ -111,11 +121,13 @@ export async function sendGraphAction(
 export async function sendGraphLevelUp(
   gameId: string,
   body: GraphLevelUpRequest,
+  options: ApiRequestOptions = {},
 ): Promise<GraphActionClientResponse> {
   const res = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/level_up`, {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify(body),
+    signal: options.signal,
   });
   if (!res.ok) throw new Error(await httpError('sendGraphLevelUp', res));
   return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
@@ -124,11 +136,13 @@ export async function sendGraphLevelUp(
 export async function confirmGraphAction(
   gameId: string,
   body: ConfirmRequest,
+  options: ApiRequestOptions = {},
 ): Promise<GraphActionClientResponse> {
   const res = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/confirm`, {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify(body),
+    signal: options.signal,
   });
   if (!res.ok) throw new Error(await httpError('confirmGraphAction', res));
   return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
@@ -137,11 +151,13 @@ export async function confirmGraphAction(
 export async function rollGraphPending(
   gameId: string,
   body: GraphRollRequest,
+  options: ApiRequestOptions = {},
 ): Promise<GraphActionClientResponse> {
   const res = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/roll`, {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify(body),
+    signal: options.signal,
   });
   if (!res.ok) throw new Error(await httpError('rollGraphPending', res));
   return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
@@ -151,6 +167,7 @@ type ApiFetchInit = {
   method?: 'GET' | 'POST';
   headers: typeof baseHeaders | typeof jsonHeaders;
   body?: string;
+  signal?: AbortSignal;
 };
 
 async function requestJson<T>(
@@ -167,11 +184,19 @@ async function fetchWithTimeout(
   url: string,
   init: ApiFetchInit,
 ): Promise<Response> {
+  const { signal: callerSignal, ...fetchInit } = init;
   const controller = new AbortController();
+  const abort = () => controller.abort();
   const timeout = setTimeout(() => controller.abort(), GRAPH_REQUEST_TIMEOUT_MS);
+  if (callerSignal?.aborted) {
+    abort();
+  } else {
+    callerSignal?.addEventListener('abort', abort, { once: true });
+  }
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    return await fetch(url, { ...fetchInit, signal: controller.signal });
   } finally {
+    callerSignal?.removeEventListener('abort', abort);
     clearTimeout(timeout);
   }
 }

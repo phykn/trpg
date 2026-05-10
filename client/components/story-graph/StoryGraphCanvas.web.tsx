@@ -158,10 +158,14 @@ export function StoryGraphCanvas({
   const lifecycleGraphRef = React.useRef(graph);
   const centerNodeIdRef = React.useRef(centerNodeId);
   const unseenNodeIdsRef = React.useRef(unseenNodeIds);
+  const onNodeSelectRef = React.useRef(onNodeSelect);
+  const clearOnBackgroundTapRef = React.useRef(clearOnBackgroundTap);
 
   lifecycleGraphRef.current = graph;
   centerNodeIdRef.current = centerNodeId;
   unseenNodeIdsRef.current = unseenNodeIds;
+  onNodeSelectRef.current = onNodeSelect;
+  clearOnBackgroundTapRef.current = clearOnBackgroundTap;
 
   const graphIdentityKey = React.useMemo(() => {
     const ns = graph.nodes.map((n) => n.id).sort().join('|');
@@ -170,7 +174,7 @@ export function StoryGraphCanvas({
   }, [graph]);
 
   // Effect 1: cy lifecycle — graph identity + the props that genuinely require
-  // rebuilding (overrides/layout/root). Selection, centerNodeId, and unseenNodeIds
+  // rebuilding (overrides/layout/root). Selection, callbacks, centerNodeId, and unseenNodeIds
   // are intentionally absent; they get their own effects so a tap doesn't reset zoom.
   React.useEffect(() => {
     const lifecycleGraph = lifecycleGraphRef.current;
@@ -343,13 +347,13 @@ export function StoryGraphCanvas({
     });
 
     cy.on('tap', 'node', (event) => {
-      onNodeSelect?.(event.target.id());
+      onNodeSelectRef.current?.(event.target.id());
     });
-    if (clearOnBackgroundTap) {
-      cy.on('tap', (event) => {
-        if (event.target === cy) onNodeSelect?.(null);
-      });
-    }
+    cy.on('tap', (event) => {
+      if (event.target === cy && clearOnBackgroundTapRef.current) {
+        onNodeSelectRef.current?.(null);
+      }
+    });
     // layout runs synchronously when animate:false, so positions are ready here
     if (!hasMountedRef.current) {
       // True first mount — fit + initial center.
@@ -371,7 +375,7 @@ export function StoryGraphCanvas({
       cy.destroy();
       cyRef.current = null;
     };
-  }, [graphIdentityKey, nodeOverrides, layout, rootNodeId, onNodeSelect, clearOnBackgroundTap]);
+  }, [graphIdentityKey, nodeOverrides, layout, rootNodeId]);
 
   // Effect 2: selection — viewport untouched.
   React.useEffect(() => {

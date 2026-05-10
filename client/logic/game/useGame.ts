@@ -71,6 +71,7 @@ export function useGame() {
   const [lastSeenQuestTitle, setLastSeenQuestTitle] = React.useState<string | null>(null);
   const [lastSeenSubjectId, setLastSeenSubjectId] = React.useState<string | null>(null);
   const [levelUpOpen, setLevelUpOpen] = React.useState(false);
+  const gameIdRef = React.useRef<string | null>(null);
 
   const setSuggestions = React.useCallback(
     (next: React.SetStateAction<string[]>) => {
@@ -84,7 +85,7 @@ export function useGame() {
     [],
   );
 
-  const gameIdRef = React.useRef<string | null>(null);
+  const isActiveGameId = React.useCallback((id: string) => gameIdRef.current === id, []);
 
   React.useEffect(() => {
     if (pendingConfirmation || pendingRoll) {
@@ -114,12 +115,13 @@ export function useGame() {
     }
   }, []);
 
-  const { requestInFlight, requestInFlightRef, runGraphActionRequest } =
+  const { requestInFlight, requestInFlightRef, runGraphActionRequest, abortGraphActionRequest } =
     useGraphActionRunner({
       applyState,
       setErrorMessage,
       setLog,
       setSuggestions,
+      isActiveGameId,
     });
 
   const refresh = React.useCallback(async () => {
@@ -170,7 +172,7 @@ export function useGame() {
         setPendingRoll(payload.state.pendingRoll ?? null);
         setSuggestions(payload.suggestions ?? []);
         setStatus('ready');
-        void runGraphActionRequest(() => requestGraphIntro(payload.game_id));
+        void runGraphActionRequest((signal) => requestGraphIntro(payload.game_id, { signal }));
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : String(err));
         setStatus('error');
@@ -183,7 +185,7 @@ export function useGame() {
     (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || !gameId || pendingConfirmation || pendingRoll) return;
-      void runGraphActionRequest(() => sendGraphInput(gameId, trimmed));
+      void runGraphActionRequest((signal) => sendGraphInput(gameId, trimmed, { signal }));
     },
     [gameId, pendingConfirmation, pendingRoll, runGraphActionRequest],
   );
@@ -191,12 +193,12 @@ export function useGame() {
   const onQuestAction = React.useCallback(
     (kind: 'accept' | 'abandon', quest_id: string) => {
       if (!gameId || pendingConfirmation || pendingRoll) return;
-      void runGraphActionRequest(() =>
+      void runGraphActionRequest((signal) =>
         sendGraphAction(gameId, {
           verb: 'transfer',
           what: quest_id,
           how: kind,
-        }),
+        }, { signal }),
       );
     },
     [gameId, pendingConfirmation, pendingRoll, runGraphActionRequest],
@@ -205,7 +207,7 @@ export function useGame() {
   const onGraphAction = React.useCallback(
     (action: GraphAction) => {
       if (!gameId || pendingConfirmation || pendingRoll) return;
-      void runGraphActionRequest(() => sendGraphAction(gameId, action));
+      void runGraphActionRequest((signal) => sendGraphAction(gameId, action, { signal }));
     },
     [gameId, pendingConfirmation, pendingRoll, runGraphActionRequest],
   );
@@ -214,12 +216,12 @@ export function useGame() {
     (decision: 'confirm' | 'cancel') => {
       if (!gameId || !pendingConfirmation) return;
       const confirmationId = pendingConfirmation.id;
-      void runGraphActionRequest(() =>
+      void runGraphActionRequest((signal) =>
         confirmGraphAction(gameId, {
           confirmation_id: confirmationId,
           decision,
           think: false,
-        }),
+        }, { signal }),
       );
     },
     [gameId, pendingConfirmation, runGraphActionRequest],
@@ -228,17 +230,19 @@ export function useGame() {
   const onRollPending = React.useCallback(
     (rollId: string) => {
       if (!gameId || !pendingRoll) return;
-      void runGraphActionRequest(() =>
+      void runGraphActionRequest((signal) =>
         rollGraphPending(gameId, {
           roll_id: rollId,
           think: false,
-        }),
+        }, { signal }),
       );
     },
     [gameId, pendingRoll, runGraphActionRequest],
   );
 
-  const onStop = React.useCallback(() => {}, []);
+  const onStop = React.useCallback(() => {
+    abortGraphActionRequest();
+  }, [abortGraphActionRequest]);
 
   const openLevelUp = React.useCallback(async () => {
     const id = gameIdRef.current;
@@ -259,21 +263,22 @@ export function useGame() {
         setErrorMessage(ko.error.invalidStat);
         return;
       }
-      void runGraphActionRequest(() =>
-        sendGraphLevelUp(id, { stat_up, skill_id: null, think: false }),
+      void runGraphActionRequest((signal) =>
+        sendGraphLevelUp(id, { stat_up, skill_id: null, think: false }, { signal }),
       );
     },
     [runGraphActionRequest],
   );
 
   const goToNewGame = React.useCallback(() => {
+    abortGraphActionRequest();
     const id = gameIdRef.current;
     if (id) clearAllForGame(id);
     clearStoredGameId();
     rememberGameId(null);
     setLevelUpOpen(false);
     setStatus('no-game');
-  }, [rememberGameId]);
+  }, [abortGraphActionRequest, rememberGameId]);
 
   const awaitingNarration = requestInFlight && !pendingConfirmation && !pendingRoll;
 

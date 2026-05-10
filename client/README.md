@@ -1,6 +1,6 @@
 # trpg-client
 
-Client for a Korean-language TRPG. Single-screen Expo (React Native) app. The server lives at `../server/`; the Claude Code guide is in [CLAUDE.md](./CLAUDE.md).
+Client for a locale-aware TRPG. Single-screen Expo (React Native) app. The server lives at `../server/`; the Claude Code guide is in [CLAUDE.md](./CLAUDE.md).
 
 ## Stack
 
@@ -109,7 +109,7 @@ client/
   components/  # domain views (hero, composer, log, combat, info-panel, story-graph) + ui/ primitives
   logic/       # domain calculation, state, hooks (game/useGame.ts is the state root)
   services/    # server boundary — api.ts (graph REST), wire.ts (types), storage.ts (localStorage)
-  locale/      # client-owned Korean labels (ko.ts)
+  locale/      # client-owned locale labels (ko.ts today)
   design/      # design tokens (tokens.js) shared by Tailwind config and TS
   scripts/     # deploy helpers
 ```
