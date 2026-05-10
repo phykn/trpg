@@ -73,14 +73,13 @@ dotenv loads `server/.env.<APP_ENV>` (default `dev`) automatically and uvicorn b
 |---|---|---|
 | GET  | `/health` | Health check (no auth) |
 | GET  | `/profiles` | Scenario + race card list |
-| POST | `/session/init` | New game (profile + player) |
-| GET  | `/session/{id}/state` | Read FrontState |
-| POST | `/session/{id}/turn` | One turn (SSE) |
-| POST | `/session/{id}/roll` | Roll the pending_check (SSE) |
-| POST | `/session/{id}/intro` | GM intro (SSE, fired once after init) |
+| POST | `/session/graph/init` | Create a graph game |
+| GET  | `/session/{game_id}/graph/state` | Load graph game state |
+| POST | `/session/{game_id}/graph/input` | Classify free text and execute graph action |
+| POST | `/session/{game_id}/graph/turn` | Execute explicit graph action |
+| POST | `/session/{game_id}/graph/confirm` | Resolve pending graph confirmation |
+| POST | `/session/{game_id}/graph/level_up` | Apply graph level-up |
 | POST | `/debug/complete` | One-shot LLM call for debugging |
-
-SSE event types and ordering are defined in `../docs/05-interfaces.md`.
 
 ## Tests
 

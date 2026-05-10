@@ -117,7 +117,9 @@ Trade gating: `_merchants_payload` filters out NPCs whose `disposition.aggressiv
 
 There is no minute/hour clock. `state.turn_count` is the sole time variable; `game/domain/clock.py:day_phase` derives one of `새벽 / 오전 / 오후 / 밤` from it (4 phases × `RULES.time.phase_turns = 10` turns each = 40-turn day cycle). Sleep recovery (`game/engines/recovery.py`) jumps `turn_count` to the next 새벽 boundary via `next_dawn_turn`. The narrate prompt sees the current phase only — no absolute date or hour exists.
 
-### SSE event shape
+### Historical SSE event shape
+
+The legacy `/session/{id}/turn` and `/session/{id}/roll` SSE routes are not mounted. Keep this section only as historical context while removing the old flow/runtime code.
 
 `{"type": "...", "data": {...}}` per event. Types: `judge / pending_check / narrative_delta / suggestions / log_entry / state / combat_start / combat_turn / combat_end / done / error`. **`done` is not auto-appended** — `run_turn`'s roll branch ends after `pending_check`, and the client treats stream-close as the signal. The three `combat_*` types come from `combat_phase.py`; the client ignores their payload (state + log_entry are authoritative for UI) but tests use them as observable signals.
 
