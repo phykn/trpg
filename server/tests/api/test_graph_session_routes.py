@@ -5,6 +5,7 @@ from httpx import ASGITransport, AsyncClient
 
 from run_api import build_app
 from src.db.graph_local_fs import LocalFsGraphRepo
+from src.game.domain.graph import GraphEdge, GraphNode
 from src.game.engines.growth import xp_for_next_level
 from tests._fakes import make_default_storage, make_save_repo, make_scenario_repo
 
@@ -420,6 +421,99 @@ async def test_graph_turn_flee_clears_existing_combat(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_graph_turn_equips_carried_item_and_returns_actionable_state(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        graph = await app.state.graph_repo.load_graph(game_id)
+        graph.nodes["training_sword"] = GraphNode(
+            id="training_sword",
+            type="item",
+            properties={
+                "name": "연습검",
+                "effects": {"type": "weapon", "weapon_dice": "1d6"},
+            },
+        )
+        graph.edges["carries:player_01:training_sword"] = GraphEdge(
+            id="carries:player_01:training_sword",
+            type="carries",
+            from_node_id="player_01",
+            to_node_id="training_sword",
+        )
+        await app.state.graph_repo.save_graph(game_id, graph)
+
+        response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={
+                "action": {
+                    "verb": "transfer",
+                    "what": "training_sword",
+                    "how": "equip",
+                    "to": "weapon",
+                }
+            },
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    graph = await app.state.graph_repo.load_graph(game_id)
+    progress = await app.state.graph_repo.load_progress(game_id)
+
+    assert body["state"]["hero"]["equipment"]["weapon"] == {
+        "id": "training_sword",
+        "name": "연습검",
+    }
+    assert body["state"]["hero"]["inventory"] == []
+    assert "equips:player_01:training_sword" in graph.edges
+    assert "carries:player_01:training_sword" not in graph.edges
+    assert progress.turn_count == 1
+
+
+@pytest.mark.asyncio
+async def test_graph_turn_uses_consumable_item_and_consumes_inventory_edge(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        graph = await app.state.graph_repo.load_graph(game_id)
+        player = graph.nodes["player_01"]
+        player.properties["hp"] = player.properties["max_hp"] - 5
+        graph.nodes["healing_potion"] = GraphNode(
+            id="healing_potion",
+            type="item",
+            properties={
+                "name": "회복 물약",
+                "consumable": True,
+                "effects": {"type": "consumable", "effect": "heal", "amount": 8},
+            },
+        )
+        graph.edges["carries:player_01:healing_potion"] = GraphEdge(
+            id="carries:player_01:healing_potion",
+            type="carries",
+            from_node_id="player_01",
+            to_node_id="healing_potion",
+        )
+        await app.state.graph_repo.save_graph(game_id, graph)
+
+        response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "use", "what": "healing_potion"}},
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    graph = await app.state.graph_repo.load_graph(game_id)
+    progress = await app.state.graph_repo.load_progress(game_id)
+
+    hp = body["state"]["hero"]["resources"]["hp"]
+    assert hp["current"] == hp["maximum"]
+    assert body["state"]["hero"]["inventory"] == []
+    assert "carries:player_01:healing_potion" not in graph.edges
+    assert progress.turn_count == 1
+
+
+@pytest.mark.asyncio
 async def test_graph_input_classifies_text_and_returns_confirmation(tmp_path):
     app = _build_app(
         tmp_path,
@@ -531,7 +625,13 @@ async def test_graph_play_loop_reaches_quest_reward_without_legacy_state(tmp_pat
     assert final_body["state"]["hero"]["gold"] == 5
     assert final_body["state"]["hero"]["exp"] == 10
     assert final_body["state"]["hero"]["inventory"] == [
-        {"name": "작은 보상", "qty": 1}
+        {
+            "id": "auto_reward_001",
+            "name": "작은 보상",
+            "qty": 1,
+            "canUse": False,
+            "equipSlots": [],
+        }
     ]
     assert graph.nodes[quest_id].properties["status"] == "completed"
     assert graph.nodes[enemy_id].properties["status"] == ["defeated"]
