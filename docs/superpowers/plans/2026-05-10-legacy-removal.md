@@ -792,23 +792,23 @@ git commit -m "docs: describe graph-only runtime"
 
 - No planned code edits.
 
-- [ ] **Step 1: Run full server tests**
+- [x] **Step 1: Run full server tests**
 
 ```powershell
 .venv\Scripts\python.exe -m pytest -q
 ```
 
-Expected: all tests pass.
+Passed: `650 passed`.
 
-- [ ] **Step 2: Run server lint**
+- [x] **Step 2: Run server lint**
 
 ```powershell
 .venv\Scripts\ruff.exe check server
 ```
 
-Expected: all checks pass.
+Passed.
 
-- [ ] **Step 3: Run client checks**
+- [x] **Step 3: Run client checks**
 
 ```powershell
 cd client
@@ -817,9 +817,9 @@ npx tsc --noEmit
 npm run lint
 ```
 
-Expected: tests and typecheck pass; lint has no errors. Existing hook dependency warning may remain unless fixed in a separate task.
+Passed: Jest `6 passed / 12 tests`; `tsc --noEmit` passed; `npm run lint` had the existing `StoryGraphCanvas.web.tsx` hook dependency warning and no errors.
 
-- [ ] **Step 4: Run SSOT guard**
+- [x] **Step 4: Run SSOT guard**
 
 Use PowerShell equivalent on Windows if `bash server/scripts/check_relational_ssot.sh` hits CRLF:
 
@@ -857,7 +857,7 @@ Write-Output 'relational SSOT guard: clean.'
 
 Expected: clean.
 
-- [ ] **Step 5: Browser smoke**
+- [x] **Step 5: Browser smoke**
 
 With `python run_api.py` running from `server/` and `npm run web` running from `client/`, verify in `http://127.0.0.1:8081/`:
 
@@ -869,6 +869,8 @@ With `python run_api.py` running from `server/` and `npm run web` running from `
 - see combat panel
 - finish combat if quick enough
 - level up if XP allows
+
+Passed on `http://127.0.0.1:8081/` with API running from the root `.venv`: existing dev test game talked to the guide, defeated the training dummy, showed recommendation chips, opened level-up, raised `몸`, and applied level 1.
 
 - [ ] **Step 6: Final legacy search**
 

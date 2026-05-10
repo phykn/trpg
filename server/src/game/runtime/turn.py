@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from pydantic import BaseModel, ConfigDict
 
 from src.db.repo import GraphRepo
@@ -33,6 +35,9 @@ class GraphActionTurnResult(BaseModel):
     runtime: GameRuntimeState
     dispatch: GraphActionDispatchResult
     front_state: GraphFrontStatePayload
+
+
+_GRAPH_ACTION_NARRATION_TIMEOUT_SECONDS = 6.0
 
 
 async def run_graph_action_turn(
@@ -140,14 +145,17 @@ async def _build_graph_action_narration(
     if not prompt:
         return ""
     try:
-        result = await llm.chat(
-            [
-                {"role": "system", "content": _NARRATION_SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-            think=False,
-            agent="graph_narrate",
-            temperature=0.2,
+        result = await asyncio.wait_for(
+            llm.chat(
+                [
+                    {"role": "system", "content": _NARRATION_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                think=False,
+                agent="graph_narrate",
+                temperature=0.2,
+            ),
+            timeout=_GRAPH_ACTION_NARRATION_TIMEOUT_SECONDS,
         )
     except (LLMUnavailable, OSError, TimeoutError):
         return ""

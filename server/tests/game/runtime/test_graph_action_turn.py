@@ -1,3 +1,6 @@
+import asyncio
+import time
+
 import pytest
 
 from src.db.graph_local_fs import LocalFsGraphRepo
@@ -86,6 +89,12 @@ class _NarrationLLM:
     async def chat(self, *args, **kwargs):
         self.calls += 1
         return {"answer": "칼끝이 번뜩이고, 적이 비틀거리며 길 위에 쓰러집니다."}
+
+
+class _SlowNarrationLLM:
+    async def chat(self, *args, **kwargs):
+        await asyncio.sleep(0.2)
+        return {"answer": "너무 늦게 도착한 나레이션입니다."}
 
 
 async def test_run_graph_action_turn_saves_move_and_returns_front_state(tmp_path):
@@ -194,6 +203,35 @@ async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(
     assert saved_logs[-1].text == "칼끝이 번뜩이고, 적이 비틀거리며 길 위에 쓰러집니다."
     assert result.front_state.log == saved_logs
     assert result.runtime.progress.next_log_id == saved_logs[-1].id + 1
+
+
+async def test_run_graph_action_turn_times_out_slow_narration_and_keeps_action(
+    tmp_path,
+    monkeypatch,
+):
+    import src.game.runtime.turn as turn_module
+
+    monkeypatch.setattr(
+        turn_module,
+        "_GRAPH_ACTION_NARRATION_TIMEOUT_SECONDS",
+        0.01,
+        raising=False,
+    )
+    repo = await _repo(tmp_path)
+
+    started = time.perf_counter()
+    result = await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="attack", what="goblin_01"),
+        llm=_SlowNarrationLLM(),  # type: ignore[arg-type]
+    )
+    elapsed = time.perf_counter() - started
+    saved_logs = await repo.load_log_entries("game-1")
+
+    assert elapsed < 0.15
+    assert [entry.kind for entry in saved_logs] == ["act"]
+    assert result.front_state.combat is not None
 
 
 async def test_run_graph_action_turn_rejects_query_without_saving(tmp_path):

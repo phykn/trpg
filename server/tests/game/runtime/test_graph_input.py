@@ -1,4 +1,5 @@
 import json
+import asyncio
 
 import pytest
 
@@ -31,6 +32,27 @@ class _FakeLLM:
         if agent == "graph_narrate":
             return {"answer": self.narration, "think": ""}
         return {"answer": json.dumps(self.payload, ensure_ascii=False), "think": ""}
+
+
+class _SlowGraphNarrateLLM(_FakeLLM):
+    async def chat(
+        self,
+        messages,
+        think=False,
+        agent=None,
+        temperature=None,
+        use_fallback=False,
+    ):
+        if agent == "graph_narrate":
+            await asyncio.sleep(0.2)
+            return {"answer": "너무 늦게 도착한 나레이션입니다.", "think": ""}
+        return await super().chat(
+            messages,
+            think=think,
+            agent=agent,
+            temperature=temperature,
+            use_fallback=use_fallback,
+        )
 
 
 def _character(character_id: str) -> GraphNode:
@@ -123,6 +145,28 @@ async def test_graph_input_targetless_speak_defaults_to_nearby_living_npc(tmp_pa
     assert "대화 대상: goblin_01" in user_prompt
     assert "대상 상태: 현재 장소에 있음" in user_prompt
     assert "NPC의 짧은 반응이나 대사를 포함합니다" in narrate_call["messages"][0]["content"]
+
+
+async def test_graph_input_speak_times_out_slow_narration_and_uses_fallback(
+    tmp_path,
+    monkeypatch,
+):
+    import src.game.runtime.input as input_module
+
+    monkeypatch.setattr(
+        input_module,
+        "_GRAPH_INPUT_NARRATION_TIMEOUT_SECONDS",
+        0.01,
+        raising=False,
+    )
+    repo = await _repo(tmp_path)
+    llm = _SlowGraphNarrateLLM({"actions": [{"verb": "speak", "what": "goblin_01"}]})
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 말을 건다")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert logs[0].text == "당신의 행동은 조용히 이어집니다."
 
 
 async def test_graph_input_rejects_multi_action_output(tmp_path):

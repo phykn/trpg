@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 
 from src.db.repo import GraphRepo
@@ -20,6 +21,9 @@ from .load import load_runtime_state
 
 class GraphInputError(ValueError):
     pass
+
+
+_GRAPH_INPUT_NARRATION_TIMEOUT_SECONDS = 6.0
 
 
 async def run_graph_input_turn(
@@ -126,25 +130,28 @@ async def _generate_graph_input_narration(
         else "대상 상태: 지정되지 않음"
     )
     try:
-        result = await client.chat(
-            [
-                {"role": "system", "content": _NARRATIVE_INPUT_SYSTEM_PROMPT},
-                {
-                    "role": "user",
-                    "content": "\n".join(
-                        [
-                            f"플레이어 입력: {player_input}",
-                            f"분류된 행동: {action.verb}",
-                            subject_line,
-                            subject_state,
-                            f"현재 상황: {json.dumps(surroundings, ensure_ascii=False)}",
-                        ]
-                    ),
-                },
-            ],
-            think=False,
-            agent="graph_narrate",
-            temperature=0.2,
+        result = await asyncio.wait_for(
+            client.chat(
+                [
+                    {"role": "system", "content": _NARRATIVE_INPUT_SYSTEM_PROMPT},
+                    {
+                        "role": "user",
+                        "content": "\n".join(
+                            [
+                                f"플레이어 입력: {player_input}",
+                                f"분류된 행동: {action.verb}",
+                                subject_line,
+                                subject_state,
+                                f"현재 상황: {json.dumps(surroundings, ensure_ascii=False)}",
+                            ]
+                        ),
+                    },
+                ],
+                think=False,
+                agent="graph_narrate",
+                temperature=0.2,
+            ),
+            timeout=_GRAPH_INPUT_NARRATION_TIMEOUT_SECONDS,
         )
     except (LLMUnavailable, OSError, TimeoutError):
         return ""
