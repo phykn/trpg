@@ -10,6 +10,9 @@ from src.game.domain.graph_query import (
     characters_at,
     edges_from,
     edges_to,
+    equipment_of,
+    inventory_of,
+    known_skills_of,
     location_of,
     nodes_of_type,
 )
@@ -40,6 +43,21 @@ class GraphResourcePayload(_CamelModel):
     state: str
 
 
+class GraphNamedPayload(_CamelModel):
+    name: str
+
+
+class GraphInventoryItemPayload(_CamelModel):
+    name: str
+    qty: int
+
+
+class GraphEquipmentPayload(_CamelModel):
+    weapon: GraphNamedPayload | None = None
+    armor: GraphNamedPayload | None = None
+    accessory: GraphNamedPayload | None = None
+
+
 class GraphHeroPayload(_CamelModel):
     id: str
     name: str
@@ -50,6 +68,10 @@ class GraphHeroPayload(_CamelModel):
     can_level_up: bool
     resources: dict[Literal["hp", "mp"], GraphResourcePayload]
     stats: dict[str, int]
+    equipment: GraphEquipmentPayload
+    inventory: list[GraphInventoryItemPayload]
+    status: list[str]
+    skills: list[str]
 
 
 class GraphPlaceLinkPayload(_CamelModel):
@@ -101,7 +123,7 @@ def graph_to_front_state(runtime: GameRuntimeState) -> GraphFrontStatePayload:
     player_id = runtime.progress.player_id
     player = _require_node(graph, player_id, "character")
     return GraphFrontStatePayload(
-        hero=_hero_payload(player),
+        hero=_hero_payload(graph, player),
         quest=_quest_payload(runtime),
         quest_offers=_quest_offer_payloads(runtime),
         place=_place_payload(graph, player_id),
@@ -243,7 +265,7 @@ def _quest_giver_name(graph: Graph, quest_id: str) -> str:
     return ""
 
 
-def _hero_payload(player: GraphNode) -> GraphHeroPayload:
+def _hero_payload(graph: Graph, player: GraphNode) -> GraphHeroPayload:
     level = _int_prop_default(player, "level", 1)
     exp = _int_prop_default(player, "xp_pool", 0)
     exp_max = xp_for_next_level(level)
@@ -260,6 +282,10 @@ def _hero_payload(player: GraphNode) -> GraphHeroPayload:
             "mp": _resource(player, "mp", "max_mp"),
         },
         stats=_stats(player),
+        equipment=_equipment_payload(graph, player.id),
+        inventory=_inventory_payload(graph, player.id),
+        status=_status(player),
+        skills=_skills_payload(graph, player.id),
     )
 
 
@@ -381,6 +407,54 @@ def _optional_resource(
     if not isinstance(current, int) or not isinstance(maximum, int) or maximum <= 0:
         return None
     return _resource(node, current_key, max_key)
+
+
+def _equipment_payload(graph: Graph, character_id: str) -> GraphEquipmentPayload:
+    slots: dict[str, GraphNamedPayload | None] = {
+        "weapon": None,
+        "armor": None,
+        "accessory": None,
+    }
+    for edge in equipment_of(graph, character_id):
+        slot = edge.properties.get("slot")
+        if slot not in slots:
+            continue
+        item = graph.nodes.get(edge.to_node_id)
+        if item is None or item.type != "item":
+            continue
+        slots[slot] = GraphNamedPayload(name=_name(item))
+    return GraphEquipmentPayload.model_validate(slots)
+
+
+def _inventory_payload(graph: Graph, character_id: str) -> list[GraphInventoryItemPayload]:
+    items: list[GraphInventoryItemPayload] = []
+    for item_id in inventory_of(graph, character_id):
+        item = graph.nodes.get(item_id)
+        if item is None or item.type != "item":
+            continue
+        items.append(
+            GraphInventoryItemPayload(
+                name=_name(item),
+                qty=_int_prop_default(item, "qty", 1),
+            )
+        )
+    return items
+
+
+def _skills_payload(graph: Graph, character_id: str) -> list[str]:
+    skills: list[str] = []
+    for edge in known_skills_of(graph, character_id):
+        skill = graph.nodes.get(edge.to_node_id)
+        if skill is not None and skill.type == "skill":
+            skills.append(_name(skill))
+    return skills
+
+
+def _status(node: GraphNode) -> list[str]:
+    raw = node.properties.get("status", [])
+    if not isinstance(raw, list):
+        return []
+    return [item for item in raw if isinstance(item, str)]
 
 
 def _require_node(graph: Graph, node_id: str, node_type: str) -> GraphNode:

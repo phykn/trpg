@@ -121,6 +121,21 @@ export type GraphResource = {
   state: string;
 };
 
+export type GraphNamed = {
+  name: string;
+};
+
+export type GraphInventoryItem = {
+  name: string;
+  qty: number;
+};
+
+export type GraphEquipment = {
+  weapon: GraphNamed | null;
+  armor: GraphNamed | null;
+  accessory: GraphNamed | null;
+};
+
 export type GraphHeroState = {
   id: string;
   name: string;
@@ -134,6 +149,10 @@ export type GraphHeroState = {
     mp: GraphResource;
   };
   stats: Record<string, number>;
+  equipment: GraphEquipment;
+  inventory: GraphInventoryItem[];
+  status: string[];
+  skills: string[];
 };
 
 export type GraphPlaceLink = {

@@ -51,6 +51,21 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
                 mp=2,
                 max_mp=10,
             ),
+            "potion_01": GraphNode(
+                id="potion_01",
+                type="item",
+                properties={"name": "회복 물약", "qty": 2},
+            ),
+            "sword_01": GraphNode(
+                id="sword_01",
+                type="item",
+                properties={"name": "낡은 검"},
+            ),
+            "basic_strike": GraphNode(
+                id="basic_strike",
+                type="skill",
+                properties={"name": "기본 타격"},
+            ),
             "goblin_01": _character(
                 "goblin_01",
                 hp=5,
@@ -111,6 +126,25 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
                 from_node_id="town",
                 to_node_id="forest",
             ),
+            "carries:player_01:potion_01": GraphEdge(
+                id="carries:player_01:potion_01",
+                type="carries",
+                from_node_id="player_01",
+                to_node_id="potion_01",
+            ),
+            "equips:player_01:sword_01": GraphEdge(
+                id="equips:player_01:sword_01",
+                type="equips",
+                from_node_id="player_01",
+                to_node_id="sword_01",
+                properties={"slot": "weapon"},
+            ),
+            "knows_skill:player_01:basic_strike": GraphEdge(
+                id="knows_skill:player_01:basic_strike",
+                type="knows_skill",
+                from_node_id="player_01",
+                to_node_id="basic_strike",
+            ),
             "gives_quest:goblin_01:quest_01": GraphEdge(
                 id="gives_quest:goblin_01:quest_01",
                 type="gives_quest",
@@ -162,6 +196,21 @@ def test_graph_front_state_builds_hero_resource_state_words():
     assert payload.hero.exp_max > payload.hero.exp
     assert payload.hero.stats == {"agility": 2, "body": 3, "mind": 1, "presence": 0}
     assert payload.log[0].text == "당신은 Town에 있습니다."
+
+
+def test_graph_front_state_builds_hero_assets_from_graph_edges():
+    runtime = _runtime()
+    runtime.graph.nodes["player_01"].properties["status"] = ["축복"]
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.hero.inventory[0].name == "회복 물약"
+    assert payload.hero.inventory[0].qty == 2
+    assert payload.hero.equipment.weapon is not None
+    assert payload.hero.equipment.weapon.name == "낡은 검"
+    assert payload.hero.equipment.armor is None
+    assert payload.hero.skills == ["기본 타격"]
+    assert payload.hero.status == ["축복"]
 
 
 def test_graph_front_state_builds_place_from_visible_graph_edges():

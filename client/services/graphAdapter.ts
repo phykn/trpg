@@ -56,11 +56,11 @@ function adaptHero(hero: GraphHeroState): FrontState['hero'] {
     reviveCoinsMax: 0,
     gold: hero.gold,
     stats: statEntries(hero.stats),
-    equipment: EMPTY_EQUIPMENT,
-    inventory: [],
-    status: [],
-    skills: [],
+    equipment: hero.equipment ?? EMPTY_EQUIPMENT,
+    inventory: hero.inventory ?? [],
+    skills: hero.skills ?? [],
     companions: [],
+    status: hero.status ?? [],
   };
 }
 
