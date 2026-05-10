@@ -24,7 +24,14 @@ const INPUT_MIN_HEIGHT = 40;
 const INPUT_MAX_HEIGHT = 320;
 const IS_WEB = Platform.OS === 'web';
 
-export function Composer({ input, setInput, onSend, onStop, streaming, locked = false, suggestions = [], nearby = null, nearbyOpen, onNearbyOpenChange, onNearbyAction }: {
+export type ComposerQuickAction = {
+  id: string;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+};
+
+export function Composer({ input, setInput, onSend, onStop, streaming, locked = false, suggestions = [], quickActions = [], nearby = null, nearbyOpen, onNearbyOpenChange, onNearbyAction }: {
   input: string;
   setInput: (text: string) => void;
   onSend: (text: string) => void;
@@ -32,6 +39,7 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
   streaming: boolean;
   locked?: boolean;
   suggestions?: string[];
+  quickActions?: ComposerQuickAction[];
   nearby?: NearbyPanelModel | null;
   nearbyOpen?: boolean;
   onNearbyOpenChange?: (open: boolean) => void;
@@ -167,8 +175,22 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
             </Text>
           </Pressable>
         ) : null}
-        {suggestions.length > 0 ? (
+        {quickActions.length > 0 || suggestions.length > 0 ? (
           <View className="flex-row flex-wrap gap-1.5">
+            {quickActions.map((action) => (
+              <Pressable
+                key={action.id}
+                onPress={action.disabled ? undefined : action.onPress}
+                disabled={action.disabled}
+                accessibilityRole="button"
+                accessibilityLabel={action.label}
+                className={`rounded-full border border-accent-fg bg-accent-muted px-3 py-1.5 active:opacity-80 ${action.disabled ? 'opacity-50' : ''}`}
+              >
+                <Text className="font-sans-semibold text-caption text-accent-fg">
+                  {action.label}
+                </Text>
+              </Pressable>
+            ))}
             {suggestions.map((suggestion) => (
               <Pressable
                 key={suggestion}

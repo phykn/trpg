@@ -65,7 +65,7 @@ async def test_start_graph_roll_stores_pending_roll_without_log(tmp_path):
 
     assert result.status == "roll_required"
     assert progress.pending_roll["kind"] == "perceive"
-    assert progress.pending_roll["title"] == "정신 판정이 필요합니다"
+    assert progress.pending_roll["title"] == "지력 판정이 필요합니다"
     assert progress.pending_roll["required_roll"] == 13
     assert logs == []
 
@@ -99,7 +99,7 @@ async def test_run_graph_roll_resolves_pending_roll_and_appends_roll_log(tmp_pat
     assert progress.pending_roll is None
     assert progress.turn_count == 1
     assert logs[0].kind == "roll"
-    assert logs[0].check == "정신"
+    assert logs[0].check == "지력"
     assert logs[0].roll == 13
     assert logs[0].result == "success"
     assert result.front_state.pending_roll is None

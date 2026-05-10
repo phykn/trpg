@@ -47,6 +47,12 @@ export function Playing({ game }: Props) {
     setNearbyOpen(false);
   };
 
+  const openLevelUpFromComposer = () => {
+    Keyboard.dismiss();
+    closePopups();
+    openLevelUp();
+  };
+
   React.useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => setTyping(true));
     const hide = Keyboard.addListener('keyboardDidHide', () => setTyping(false));
@@ -68,7 +74,7 @@ export function Playing({ game }: Props) {
   if (!hero) return null;
 
   const slots: PanelSlot[] = [
-    buildHeroSlot(hero, { onLevelUpOpen: openLevelUp }),
+    buildHeroSlot(hero),
     buildSubjectSlot(subject, { dot: hasUnseenSubject }),
     buildQuestSlot(quest ?? questOffers[0] ?? null, { dot: hasUnseenQuest }),
     { id: 'map', chip: { short: ko.panel.miniMap, dot: hasUnseenLocation }, panel: null },
@@ -223,6 +229,12 @@ export function Playing({ game }: Props) {
             onStop={onStop}
             streaming={streaming}
             suggestions={suggestions}
+            quickActions={hero.canLevelUp ? [{
+              id: 'level-up',
+              label: ko.level.title,
+              onPress: openLevelUpFromComposer,
+              disabled: streaming || pendingConfirmation !== null,
+            }] : []}
             nearby={nearby}
             nearbyOpen={nearbyOpen}
             onNearbyOpenChange={setNearbyOpen}

@@ -34,7 +34,6 @@ function run(command, args) {
 
 const isWindows = process.platform === 'win32';
 const npx = isWindows ? 'npx.cmd' : 'npx';
-const wrangler = isWindows ? 'wrangler.cmd' : 'wrangler';
 
 loadEnvFile(join(__dirname, '..', '.env.release'));
 
@@ -48,4 +47,4 @@ process.env.EXPO_PUBLIC_GIT_SHA = sha.stdout.trim();
 
 rmSync(join(__dirname, '..', 'dist'), { recursive: true, force: true });
 run(npx, ['expo', 'export', '-p', 'web']);
-run(wrangler, ['deploy']);
+run(npx, ['--yes', 'wrangler', 'deploy']);

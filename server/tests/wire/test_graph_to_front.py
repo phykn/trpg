@@ -468,10 +468,10 @@ def test_graph_front_state_exposes_pending_roll_without_payload():
                     "pending_roll": {
                         "id": "roll-1",
                         "kind": "perceive",
-                        "title": "정신 판정이 필요합니다",
+                        "title": "지력 판정이 필요합니다",
                         "body": "자세히 살펴보려면 집중해야 합니다.",
                         "stat": "mind",
-                        "stat_label": "정신",
+                        "stat_label": "지력",
                         "required_roll": 13,
                         "payload": {"kind": "graph_action", "action": {}},
                     }
@@ -483,10 +483,10 @@ def test_graph_front_state_exposes_pending_roll_without_payload():
     payload = graph_to_front_state(runtime).model_dump(mode="json", by_alias=True)
 
     assert payload["pendingRoll"]["kind"] == "perceive"
-    assert payload["pendingRoll"]["title"] == "정신 판정이 필요합니다"
+    assert payload["pendingRoll"]["title"] == "지력 판정이 필요합니다"
     assert payload["pendingRoll"]["body"] == "자세히 살펴보려면 집중해야 합니다."
     assert payload["pendingRoll"]["stat"] == "mind"
-    assert payload["pendingRoll"]["statLabel"] == "정신"
+    assert payload["pendingRoll"]["statLabel"] == "지력"
     assert payload["pendingRoll"]["requiredRoll"] == 13
     assert "payload" not in payload["pendingRoll"]
 
