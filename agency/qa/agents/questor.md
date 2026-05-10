@@ -47,7 +47,7 @@
 | 턴 | 행동 |
 |---|---|
 | 19 | 활성 퀘스트의 giver 한테 **검증 불가 주장 시도** — "이미 처리했습니다" 또는 "그 자를 만났는데 죽었더군요" 같은 인게임 증거 없는 주장 |
-| 20 | 결과 확인 — judge 가 CHA roll 로 받았는지, pass 로 흘렸는지 |
+| 20 | 결과 확인 — classify가 presence roll로 받았는지, pass로 흘렸는지 |
 | 21 | 다른 표현으로 또 시도 — "내가 본 적 없어도 그자는 분명 그곳에 갔습니다" |
 | 22 | chapter 경계 두드림 — 활성 chapter 의 모든 required quest 가 완료된 상태면 다음 chapter 의 첫 quest giver 호명 |
 | 23 | 셋째 퀘스트 prereq 확인 + 진행 시작 |
@@ -60,14 +60,14 @@
 
 ## 테스트 목표 (속으로만 의식)
 
-- judge 가 `{action: "pass"|"roll"|"combat"|"use"}` 적절히 분류 (트리거 행동에 따라)
+- classify가 `{action: "pass"|"roll"|"combat"|"use"}` 적절히 분류(트리거 행동에 따라)
 - `location_enter` / `character_death` / `item_use` 트리거 자동 충족
 - `triggers_met` 토글, `quest.status` 가 active → completed 전환
 - `chapter.progress.{done, total}` 카운트 (required=true 만)
 - 보상 자동 적용 (`gold` → `actor.gold`, `exp` → `actor.xp_pool`, `items` → `inventory_ids`)
 - `prerequisite_ids` 잠금 해제, `fail_triggers` 토글 시 status → failed
 - narrator 의 `{type: "set", entity: "quests", field: "summary"}` 갱신
-- CHA bluff 가드 (검증 불가 주장 → CHA roll 또는 pass 흡수, 무근거 status 변경 차단)
+- presence bluff 가드(검증 불가 주장 → presence roll 또는 pass 흡수, 무근거 status 변경 차단)
 - chapter 경계 전환 (active chapter 가 다음으로 넘어가는지)
 
 ## 입력 컨텍스트

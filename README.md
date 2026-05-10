@@ -6,8 +6,8 @@ Korean-language TRPG. The LLM handles narrative and difficulty judgment; the eng
 trpg/
   server/     FastAPI + Pydantic v2 + OpenAI-compatible LLM. Game engine. → server/README.md
   client/     Expo (React Native) single-screen client. → client/README.md
-  agency/     LLM-staffed office that drives the server in-process (QA + Story teams). → agency/README.md
-  scenarios/  Local seed source (one dir per profile). Uploaded to Supabase Storage via agency.story.tool upload (APP_ENV=release).
+  agency/     Local QA + Story tools that drive the server in-process. → agency/README.md
+  scenarios/  Local seed source (one dir per profile). Uploaded to release Storage via agency.story.tools.storage upload.
   docs/       Target design contract (01-contract / 02-runtime / 03-world-model / 04-gameplay / 05-interfaces)
 ```
 
@@ -38,4 +38,4 @@ git push origin main
 npm run deploy
 ```
 
-One-time setup: upload scenarios with `APP_ENV=release .venv/bin/python -m agency.story.tool upload scenarios/<profile>`; install + auth wrangler with `npm install -g wrangler && wrangler login`; add the deploy URL to server `CORS_ORIGINS`.
+One-time setup: upload scenarios with `APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload scenarios/<profile>`; install + auth wrangler with `npm install -g wrangler && wrangler login`; add the deploy URL to server `CORS_ORIGINS`.

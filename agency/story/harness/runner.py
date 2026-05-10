@@ -4,7 +4,7 @@
 used by `agency.story.tool check-entity`. Entity-level rules (stat
 invariants, HP/MP formula, NPC seed extras) live in `src.game.engines.invariants`.
 The LLM-call writer that originally consumed this metadata has been removed —
-Claude Code now writes entities directly per agency/story/SKILL.md.
+Codex now writes entities directly per agency/story/SKILL.md.
 """
 
 import json

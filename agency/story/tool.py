@@ -11,7 +11,6 @@ argparse skeleton + bootstrap.
 
 import argparse
 import asyncio
-import mimetypes
 import os
 import sys
 from pathlib import Path
@@ -23,14 +22,14 @@ sys.path.insert(0, str(ROOT / "server"))
 sys.path.insert(0, str(ROOT))
 
 # sys.path must be set first; decompose.py transitively imports src.llm
-from agency.story.harness.decompose import (
+from agency.story.harness.decompose import (  # noqa: E402
     DecomSetup,
     DecomCast,
     DecomArc,
     _check_setup,
     _check_cast,
     _check_arc,
-)  # noqa: E402
+)
 from agency.story.harness._common import EntityWriterError  # noqa: E402
 from agency.story.harness.scenario import fill_equipment  # noqa: E402
 from src.game.engines.invariants import Scenario, check_scenario  # noqa: E402
@@ -50,7 +49,6 @@ from agency.story.harness.runner import (  # noqa: E402
     _check_id,
     _collect_refs,
 )
-from src.db._supabase_http import _Storage  # noqa: E402
 
 # env loading mirrors run_qa.py / run_story.py so SUPABASE_* / BASE_URL
 # / LLM_ROUTE_* resolve here. Subcommands that don't need env (decompose-*,
@@ -126,26 +124,6 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sp_sw.add_argument("scenario_dir", help="scenario directory")
     sp_sw.set_defaults(func=_cmd_sweep)
-    # upload
-    sp_up = sub.add_parser(
-        "upload",
-        help="prod Supabase Storage bucket에 시나리오 디렉토리 업로드",
-    )
-    sp_up.add_argument("scenario_dir", help="local scenario directory")
-    sp_up.set_defaults(func=_cmd_upload)
-    # download
-    sp_dl = sub.add_parser(
-        "download",
-        help="prod Supabase Storage bucket에서 시나리오 디렉토리 다운로드",
-    )
-    sp_dl.add_argument("profile", help="scenario profile (bucket key prefix)")
-    sp_dl.add_argument(
-        "--out",
-        dest="out",
-        default=None,
-        help="저장 경로 (기본 scenarios/<profile>). 이미 존재하면 실패",
-    )
-    sp_dl.set_defaults(func=_cmd_download)
     return parser
 
 
@@ -302,109 +280,6 @@ def _cmd_sweep(args: argparse.Namespace) -> int:
         for v in violations:
             print(f"  - {v}", file=sys.stderr)
         return 1
-    print("OK")
-    return 0
-
-
-def _content_type(path: Path) -> str:
-    guess, _ = mimetypes.guess_type(path.name)
-    if guess:
-        return guess
-    if path.suffix == ".md":
-        return "text/markdown"
-    return "application/octet-stream"
-
-
-async def _upload_async(local: Path) -> None:
-    url = os.environ["SUPABASE_URL"]
-    key = os.environ["SUPABASE_SERVICE_KEY"]
-    bucket = os.environ["SUPABASE_SCENARIO_BUCKET"]
-    fs = _Storage(url, key, bucket)
-    profile = local.name
-    print(f"uploading {local} -> {bucket}/{profile}/")
-    files = sorted(p for p in local.rglob("*") if p.is_file())
-    if not files:
-        print("  (no files)")
-        await fs.aclose()
-        return
-    for f in files:
-        rel = f.relative_to(local).as_posix()
-        bucket_key = f"{profile}/{rel}"
-        blob = f.read_bytes()
-        await fs.put_bytes(bucket_key, blob, content_type=_content_type(f))
-        print(f"  {bucket_key}  ({len(blob)}B)")
-    await fs.aclose()
-    print(f"done — {len(files)} files uploaded")
-
-
-def _cmd_upload(args: argparse.Namespace) -> int:
-    local = Path(args.scenario_dir).resolve()
-    if not local.is_dir():
-        print(f"upload failed: not a directory: {local}", file=sys.stderr)
-        return 1
-    try:
-        asyncio.run(_upload_async(local))
-    except KeyError as e:
-        print(f"upload failed: missing env var: {e}", file=sys.stderr)
-        return 1
-    except Exception as e:
-        return _fail("upload", e)
-    print("OK")
-    return 0
-
-
-async def _walk_storage(fs: _Storage, prefix: str) -> list[str]:
-    """Recursively list every object key under prefix/ (one prefix per level)."""
-    out: list[str] = []
-    files = await fs.list_prefix(prefix)
-    out.extend(f"{prefix}/{name}" for name in files)
-    for sub in await fs.list_dirs(prefix):
-        out.extend(await _walk_storage(fs, f"{prefix}/{sub}"))
-    return out
-
-
-async def _download_async(profile: str, dest: Path) -> None:
-    url = os.environ["SUPABASE_URL"]
-    key = os.environ["SUPABASE_SERVICE_KEY"]
-    bucket = os.environ["SUPABASE_SCENARIO_BUCKET"]
-    fs = _Storage(url, key, bucket)
-    print(f"downloading {bucket}/{profile}/ -> {dest}")
-    try:
-        keys = await _walk_storage(fs, profile)
-        if not keys:
-            raise FileNotFoundError(f"profile not found in bucket: {profile}")
-        for k in keys:
-            rel = k[len(profile) + 1 :]
-            out = dest / rel
-            out.parent.mkdir(parents=True, exist_ok=True)
-            blob = await fs.get_bytes(k)
-            out.write_bytes(blob)
-            print(f"  {rel}  ({len(blob)}B)")
-        print(f"done — {len(keys)} files downloaded")
-    finally:
-        await fs.aclose()
-
-
-def _cmd_download(args: argparse.Namespace) -> int:
-    profile = args.profile
-    dest = (
-        Path(args.out).resolve()
-        if args.out
-        else (ROOT / "scenarios" / profile).resolve()
-    )
-    if dest.exists():
-        print(
-            f"download failed: dest already exists (remove first to avoid mixing stale files): {dest}",
-            file=sys.stderr,
-        )
-        return 1
-    try:
-        asyncio.run(_download_async(profile, dest))
-    except KeyError as e:
-        print(f"download failed: missing env var: {e}", file=sys.stderr)
-        return 1
-    except Exception as e:
-        return _fail("download", e)
     print("OK")
     return 0
 

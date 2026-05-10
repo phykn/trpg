@@ -20,7 +20,6 @@ def append_transcript_block(
     kind: str,
     player_input: str | None = None,
     gm_body: str = "",
-    judge: dict | None = None,
     pending: dict | None = None,
     roll_log: dict | None = None,
     error: Exception | dict | None = None,
@@ -35,8 +34,6 @@ def append_transcript_block(
 
     if player_input is not None:
         parts.append(f"**플레이어**: {player_input}")
-    if judge:
-        parts.append(f"**판단**: `{judge.get('action')}`")
     if pending:
         if "stat" in pending:
             parts.append(

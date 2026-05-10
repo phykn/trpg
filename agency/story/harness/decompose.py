@@ -3,7 +3,7 @@
 Pydantic models (DecomSetup/Cast/Arc and entity records) plus the per-phase
 validators (_check_setup/_check_cast/_check_arc) used by `agency.story.tool`.
 The LLM call loop that originally produced these decompositions has been
-removed — Claude Code now writes them directly per agency/story/SKILL.md.
+removed — Codex now writes them directly per agency/story/SKILL.md.
 """
 
 from typing import Literal

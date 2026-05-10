@@ -10,10 +10,10 @@ Korean-language TRPG. The LLM handles narrative and difficulty judgment; the eng
 
 - `server/` — FastAPI + Pydantic v2 + OpenAI-compatible LLM. Game engine, Supabase-backed persistence. See [server/AGENTS.md](./server/AGENTS.md).
 - `client/` — Expo (RN 0.81 / React 19) single-screen app. Uses graph REST responses from the server. [client/AGENTS.md](./client/AGENTS.md).
-- `agency/` — LLM-staffed in-process QA + Story harness driving the server with `LocalFsGraphRepo`. See `agency/README.md`.
-- `scenarios/<name>/` — gitignored. Local seed source authored on dev fs and uploaded to a Supabase Storage bucket via `agency.story.tool upload` (run with APP_ENV=release); the running server reads from Storage, not this dir. Tree: `profile.json`, `world.md`, `start.json`, `player_template.json`, `races/`, `characters/`, `locations/`, `items/`, `quests/`, `chapters/`, `skills/`.
+- `agency/` — dev/local in-process QA + Story harness driving the server with `LocalFsGraphRepo` and local scenarios. Release scenario storage helpers live under `agency/story/tools/`. See `agency/README.md`.
+- `scenarios/<name>/` — gitignored. Local seed source authored on dev fs and uploaded to release Supabase Storage via `agency.story.tools.storage upload` (run with APP_ENV=release). Tree: `profile.json`, `world.md`, `start.json`, `player_template.json`, `races/`, `characters/`, `locations/`, `items/`, `quests/`, `chapters/`, `skills/`.
 - `docs/` — target design contract (`01-contract` → `05-interfaces`). Design rationale lives here, not in code.
-- Runtime graph saves live in Supabase Postgres graph tables; scenarios live in Supabase Storage.
+- Release graph saves live in Supabase Postgres graph tables; release scenarios live in Supabase Storage. Dev can use local graph/scenario repos through env.
 
 The venv, pyproject, and requirements are a single set at the repo root. **Never create per-package venvs (`server/.venv`, `agency/.venv`, etc.) — always use the root `.venv/`.**
 
@@ -46,7 +46,7 @@ Apply repo-wide. When a sub-AGENTS.md repeats a rule, the sub version is just mo
 - **Comments minimal, English-only.** Default to no comments — add one only when the *why* is non-obvious (hidden constraint, subtle invariant, bug workaround); single short line. Korean is allowed inside an English comment only when quoting an in-game string the comment is reasoning about; never as the prose. No multi-paragraph docstrings, no multi-line `# ...` blocks. `# type:` / `# noqa` / `# pragma:` directives and shebangs aren't comments — leave them.
 - **env is fail-fast.** No `??` defaults, no silent defaults. Missing keys throw at startup. Applies to both `server/.env` and `client/.env`.
 - **Display data is built on the server and shipped over.** Korean dates, durations, composed strings, conditional labels, confirmations, and log entries are built in the server graph runtime or `server/src/wire/graph_to_front.py`. Client types only carry the fields the UI renders.
-- **Save-directory isolation.** The running server writes graph state to Supabase unless `GRAPH_REPO=local` is set for dev. Local QA harnesses write into `qa_test/<agent>/saves/` via `LocalFsGraphRepo`; never repoint QA at the production Supabase graph tables.
+- **Save-directory isolation.** The running server writes graph state to Supabase unless `GRAPH_REPO=local` is set for dev. Local QA harnesses write into `qa_test/agency/<agent>/saves/` via `LocalFsGraphRepo`; never repoint QA at the production Supabase graph tables.
 
 ## Stack
 

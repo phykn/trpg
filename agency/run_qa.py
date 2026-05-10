@@ -4,12 +4,11 @@ Usage (run from anywhere, repo root included):
     python agency/run_qa.py --agent socialite --turns 25       # single agent
     python agency/run_qa.py --agent all --profile <id>         # all 9 agents x 25T
 
-The runner produces transcripts under qa_test/<agent>/ (transcript.md,
-sse.jsonl, final_state.json) plus qa_test/index.md. Game saves are written
-to qa_test/<agent>/saves/ via the LocalFs adapter — production Supabase
-save tables are never touched. Scenarios are read from Supabase Storage
-(same source the production server uses). There is no automated reviewer —
-Claude Code reads the artifacts in chat and writes the review there.
+The runner produces transcripts under qa_test/agency/<agent>/ (transcript.md,
+sse.jsonl, final_state.json) plus qa_test/agency/index.md. Game saves are
+written to qa_test/agency/<agent>/saves/ via the LocalFs adapter. Scenarios are
+read from local `SCENARIO_DIR`. There is no automated reviewer — Codex reads the
+artifacts in chat and writes the review there.
 """
 
 import argparse
@@ -27,8 +26,8 @@ sys.path.insert(0, str(ROOT))
 
 from dotenv import load_dotenv  # noqa: E402
 
-# Mirror server/run_api.py:_load_env so SUPABASE_* and BASE_URL / LLM_ROUTE_*
-# all resolve here. APP_ENV defaults to dev.
+# Mirror server/run_api.py:_load_env so BASE_URL / LLM_ROUTE_* resolve here.
+# APP_ENV defaults to dev.
 _APP_ENV = os.environ.get("APP_ENV", "dev")
 load_dotenv(ROOT / "server" / f".env.{_APP_ENV}")
 load_dotenv(ROOT / "server" / ".env.llama_cpp")
@@ -52,6 +51,8 @@ AGENTS: list[str] = [
 ]
 
 DEFAULT_TURNS = 25
+DEFAULT_PROFILE = "dev_test"
+QA_RUN_ROOT = ROOT / "qa_test" / "agency"
 
 
 def _agent_prompt_path(name: str) -> Path:
@@ -96,9 +97,7 @@ async def _run_single(
     run_id: str,
 ) -> dict:
     run_dir = run_root / agent_name
-    # Per-agent LLMClient so request/response logs land under
-    # qa_test/<agent>/llm/ — required for qualitative review of each agent's
-    # narrate / dc_judge / etc. exchanges.
+    # Per-agent LLMClient so request/response logs stay with each transcript.
     llm = LLMClient.from_single(
         base_url=base_url, model="local", log_dir=run_dir / "llm"
     )
@@ -122,7 +121,7 @@ async def main_async(args: argparse.Namespace) -> None:
     base_url = os.environ["BASE_URL"]
 
     run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
-    run_root = ROOT / "qa_test"
+    run_root = QA_RUN_ROOT
     run_root.mkdir(parents=True, exist_ok=True)
 
     if args.agent == "all":
@@ -166,7 +165,7 @@ async def main_async(args: argparse.Namespace) -> None:
     print(f"\nDone. Results: {run_root}/index.md", flush=True)
 
 
-def main() -> None:
+def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="TRPG game QA agent runner")
     p.add_argument(
         "--agent",
@@ -181,9 +180,15 @@ def main() -> None:
         help=f"max turns (default: {DEFAULT_TURNS})",
     )
     p.add_argument(
-        "--profile", default="default", help="profile name (default: default)"
+        "--profile",
+        default=DEFAULT_PROFILE,
+        help=f"profile name (default: {DEFAULT_PROFILE})",
     )
-    args = p.parse_args()
+    return p
+
+
+def main() -> None:
+    args = _build_parser().parse_args()
     asyncio.run(main_async(args))
 
 

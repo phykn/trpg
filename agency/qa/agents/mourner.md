@@ -78,7 +78,7 @@
 
 - 죽은 NPC 가 직접 인용 (`「…」`/`『…』`) 으로 다시 발화 안 하는지
   (회귀 신호: GM 본문에서 죽은 NPC 이름 ±30자 안에 `「` 또는 `『` 출현)
-- 시신 호명이 `pass + targets=[corpse_id]` 로 라우팅되는지 (judge 가 reject 안 함)
+- 시신 호명이 `pass + targets=[corpse_id]`로 라우팅되는지(classify가 reject 안 함)
 - 시신 in-world 행동 (검사·파밍·만짐) 입력은 redact 안 되고 narrate 본문이 자연스럽게 나오는지
 - off-screen (다른 location) 죽은 NPC 호명도 회귀 없이 in-world 부재·회상 톤으로 흡수되는지
 - `recent_dialogue` 의 죽은 NPC 살아생전 대사가 다음 턴 prompt 에서 redact 돼 영향 안 주는지

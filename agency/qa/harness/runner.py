@@ -1,8 +1,7 @@
 """One agent's QA session — drives the FastAPI app in-process via ASGI.
 
-Scenarios are read from Supabase Storage. Graph saves go to a local
-`LocalFsGraphRepo` rooted at `<run_dir>/saves/`, so QA never writes runtime
-state to production Supabase tables.
+Scenarios and graph saves are local-only. QA never writes production Supabase
+tables and does not read release scenario storage.
 """
 
 import json
@@ -11,10 +10,10 @@ from pathlib import Path
 
 from httpx import ASGITransport, AsyncClient
 
-from src.llm import LLMClient, set_llm_session
 from src.db.graph_local_fs import LocalFsGraphRepo
-from src.db.supabase import SupabaseStorageScenarioRepo
+from src.db.local_fs import LocalFsScenarioRepo
 from src.game.runtime.load import load_runtime_state
+from src.llm import LLMClient, set_llm_session
 from src.wire.graph_to_front import graph_to_front_state
 
 from run_api import build_app
@@ -27,12 +26,25 @@ from .transcript import (
     write_transcript_header,
 )
 
+ROOT = Path(__file__).resolve().parents[3]
+
 
 def _find(events: list[dict], event_type: str) -> dict | None:
     for ev in events:
         if ev["type"] == event_type:
             return ev["data"]
     return None
+
+
+def _server_relative_env_path(name: str) -> Path:
+    path = Path(os.environ[name])
+    if path.is_absolute():
+        return path
+    return (ROOT / "server" / path).resolve()
+
+
+def _build_scenario_repo() -> LocalFsScenarioRepo:
+    return LocalFsScenarioRepo(str(_server_relative_env_path("SCENARIO_DIR")))
 
 
 async def run_qa_session(
@@ -56,11 +68,7 @@ async def run_qa_session(
     final_state_path = run_dir / "final_state.json"
 
     graph_repo = LocalFsGraphRepo(str(saves_dir))
-    scenario_repo = SupabaseStorageScenarioRepo(
-        url=os.environ["SUPABASE_URL"],
-        service_key=os.environ["SUPABASE_SERVICE_KEY"],
-        bucket=os.environ["SUPABASE_SCENARIO_BUCKET"],
-    )
+    scenario_repo = _build_scenario_repo()
 
     app = build_app(
         llm=llm,
@@ -184,7 +192,6 @@ async def run_qa_session(
                 break
 
             write_sse_jsonl(sse_path, turn_no, "turn", events)
-            judge = None
             pending = front.get("pendingConfirmation")
             err = _find(events, "error")
             if err:
@@ -196,7 +203,6 @@ async def run_qa_session(
                 kind="turn",
                 player_input=player_input,
                 gm_body=body,
-                judge=judge,
                 pending=pending,
                 error=err,
             )

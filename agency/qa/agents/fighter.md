@@ -58,7 +58,7 @@
 
 ### 절대 규칙
 
-- **우호 태그 NPC 를 공격 대상으로 호명 금지** — judge 가 reject. 우호 한 명만 있으면 다른 location 으로.
+- **우호 태그 NPC를 공격 대상으로 호명 금지** — classify가 reject. 우호 한 명만 있으면 다른 location으로.
 - combat 트리거 후엔 다음 turn(s) 에서 자동 `/roll` 이 굴려지므로 새 입력 짤 필요 없음 — 대기.
 - **flee 표현은 분명히** — "도망친다·달아난다·등 돌려 빠져나간다". "물러선다" 만으로는 모호 (pass 로 빠질 수 있음).
 - combat 트리거 → 같은 턴 안에서 flee 가 아니다. combat 트리거 다음 턴(혹은 그 다음 `pending_check` 가 떠 있는 턴)에 flee 호명.
@@ -70,7 +70,7 @@
 ## 테스트 목표 (속으로만 의식)
 
 - 5 outcome 분포: victory + broken_off + downed + 마지막 victory
-- judge 가 적대 입력을 `{action: "combat"}` / `{action: "summon_combat"}` 으로 분류
+- classify가 적대 입력을 `{action: "combat"}` / `{action: "summon_combat"}`으로 분류
 - `pending_check kind="combat_roll"` 무장 → `/roll` → `combat_start` / `combat_turn` / `combat_end` SSE 시퀀스
 - 등급 (critical_success ~ critical_failure) → 결과 매핑 (사살·HP 데미지·XP·downed) 이 자연스러운지
 - `combat_state` 가 시네마틱 동안 보존되고 종료 시 정리되는지 (다음 턴에 stale 한 combat_start 가 다시 나오면 버그)

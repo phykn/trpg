@@ -10,7 +10,7 @@ User-facing setup (env layout, routes, table schema) is in [README.md](./README.
 
 - Run pytest from the repo root (pyproject pins `testpaths=server/tests`).
 - Run `run_api.py` from `server/` so dotenv resolves `server/.env.<APP_ENV>` and `src` imports work.
-- Scenarios are authored at `../scenarios/<profile>/` and uploaded to Supabase Storage via the agency story tool: `APP_ENV=release .venv/bin/python -m agency.story.tool upload scenarios/<profile>` (from repo root). The running server reads from the bucket, never the local tree.
+- Scenarios are authored at `../scenarios/<profile>/`. Dev can read them locally with `SCENARIO_REPO=local`; release reads Supabase Storage after publish via `APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload scenarios/<profile>` (from repo root).
 
 ## Commands
 
@@ -24,7 +24,7 @@ bash server/scripts/check_relational_ssot.sh # graph-SSOT guard (CI-equivalent)
 
 # from server/
 ../.venv/bin/python run_api.py               # cwd must be server/ for dotenv + relative paths
-# upload from repo root: APP_ENV=release .venv/bin/python -m agency.story.tool upload scenarios/<profile>
+# upload from repo root: APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload scenarios/<profile>
 ```
 
 ## Architecture

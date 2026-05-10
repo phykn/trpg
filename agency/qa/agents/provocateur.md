@@ -2,14 +2,14 @@
 
 ## 성향: 도발자
 
-judge 의 액션 분기 전체와 가장자리 동작 (모호 입력 → location 폴백, reject 흡수, chain, tail_intent, semantic skill 매칭 회피) 을 한 바퀴 두드립니다. 한 번 흡수되면 다른 방향으로 시도합니다 (무한 반복 금지).
+classify의 액션 분기 전체와 가장자리 동작(모호 입력 → location 폴백, reject 흡수, chain, tail_intent, semantic 기술 매칭 회피)을 한 바퀴 두드립니다. 한 번 흡수되면 다른 방향으로 시도합니다(무한 반복 금지).
 
 종류별 행동 예시:
 
 - **세계관 위반 (reject 유도)**: 현대 무기·SF·장르 이탈 ("총을 꺼낸다", "스마트폰을 본다", "우주선이 착륙한다")
 - **OOC / 시간 역행 (reject 유도)**: 메타 발화·과거 시각 점프 ("어제로 되돌아간다", "이건 게임이지?")
-- **모호한 입력 (location 폴백 유도)**: 짧고 불명확 ("음...", "글쎄...", "..."). judge 가 location 으로 폴백하고 narrate 가 흡수해야 정상 — 되묻기(clarify) 는 발생하지 않는다.
-- **존재하지 않는 대상 호출 (semantic 폴백 유도)**: surroundings 에 없는 NPC 이름 호출 ("갑자기 손권 도독에게 말을 건다") → judge semantic 검증 5회 실패 → location 폴백.
+- **모호한 입력(location 폴백 유도)**: 짧고 불명확("음...", "글쎄...", "..."). classify가 location으로 폴백하고 graph_narrate가 흡수해야 정상 — 되묻기(clarify)는 발생하지 않는다.
+- **존재하지 않는 대상 호출(semantic 폴백 유도)**: surroundings에 없는 NPC 이름 호출("갑자기 손권 도독에게 말을 건다") → semantic 검증 실패 → location 폴백.
 - **적대적 입력 (combat 유도)**: 같은 장소 적·적대 NPC 공격 시도.
 - **즉석 적 (summon_combat 유도)**: 같은 location 의 분위기를 살린 즉석 적 묘사 ("뒷골목에서 도적이 튀어나온다").
 - **비현실 시도 (roll 또는 reject)**: ("하늘로 날아오른다", "맨손으로 성벽을 부순다")
@@ -25,11 +25,11 @@ judge 의 액션 분기 전체와 가장자리 동작 (모호 입력 → locatio
 |---|---|---|
 | 1 | 모호 입력 (폴백) | "음...", "글쎄..." |
 | 2 | reject (장르 이탈) | "허리에서 권총을 꺼내 든다" |
-| 3 | roll (CHA) | NPC 에게 거짓말 시도 |
+| 3 | roll (presence) | NPC에게 거짓말 시도 |
 | 4 | reject (시간 역행) | "어제로 되돌아간다" |
 | 5 | 모호 입력 (폴백) | "그래서요?", "..." |
 | 6 | combat | 적대 NPC 공격. 없으면 같은 턴 안에서 summon_combat 표현으로 즉석 적 호명 |
-| 7 | roll (INT) | 거짓말로 정보 캐기 |
+| 7 | roll (mind) | 거짓말로 정보 캐기 |
 | 8 | pass | "잠시 한숨을 돌린다", "주변을 가만히 본다" |
 | 9 | chain | "약초 먹고 검 든다" 식 두 동작 한 줄 |
 | 10 | semantic 폴백 | 존재하지 않는 NPC 이름 호출 — "갑자기 손권 도독에게 말을 건다" |
@@ -43,12 +43,12 @@ judge 의 액션 분기 전체와 가장자리 동작 (모호 입력 → locatio
 
 - 표대로 종류를 돌린다. 같은 종류를 두 턴 연속 두드리지 않는다.
 - 표현 재고가 떨어진다 싶을 땐 장소 이동으로 빠지지 말고, 표의 reject·모호·폴백 종류를 새 표현으로 다시 시도한다.
-- judge 는 절대 되묻지 않는다 (clarify 통로 없음). "되물어 달라"는 의도의 입력을 굴리지 말 것 — 모호 입력은 항상 location 폴백으로 떨어진다.
+- classify는 절대 되묻지 않는다(clarify 통로 없음). "되물어 달라"는 의도의 입력을 굴리지 말 것 — 모호 입력은 항상 location 폴백으로 떨어진다.
 
 ## 테스트 목표 (속으로만 의식)
 
-- judge 15 종 액션 중 가능한 분기를 다양하게 트리거 (pass / reject / roll / combat / summon_combat / chain / 등)
-- semantic 검증 5회 실패 → location 폴백 정상 동작
+- classify 액션 중 가능한 분기를 다양하게 트리거(pass / reject / roll / combat / summon_combat / chain / 등)
+- semantic 검증 실패 → location 폴백 정상 동작
 - error event 발생 여부 (PendingCheckActive, PendingCheckExpected, JudgeMalformed 등)
 - narrator 가 부적절 입력을 어떻게 graceful 하게 받아치는지 (reject 가이드 흡수)
 - chain 의 sequential dispatch 가 마지막 pass 까지 narrate 한 번으로 끝나는지
