@@ -22,31 +22,21 @@ spending the wall-clock time.
 
 All three are safe no-ops when `FLOW_DEBUG=0`.
 
-- `diag(game_id, turn, tag, **kv)` — flow code with GameState in scope.
+- `diag(game_id, turn, tag, **kv)` — code with explicit game id and turn.
   Layer = engine.
-- `engine_diag(tag, **kv)` — engine-layer code without GameState (sse,
-  routes/session). gid/turn pulled from contextvars primed by the entry
-  flow's `set_diag_context`. Layer = engine.
+- `engine_diag(tag, **kv)` — engine-layer code without direct progress state.
+  gid/turn are pulled from contextvars primed by the route entrypoint.
+  Layer = engine.
 - `llm_diag(tag, **kv)` — code under `_runner` / `narrate/body/runner`
   that doesn't see GameState. Same contextvar source. Layer = llm.
 
 ## Tag inventory (where each line comes from)
 
-Flow layer (engine):
-- `turn:start` — turn.py, every `/turn` entry
-- `quest:action` — turn.py, accept/abandon path
-- `classify -> {single|chain|refuse|JudgeMalformed}` — turn.py, after run_judge
-- `step:ok` / `step:fail` — dispatch.py, after each emit_*
-- `chain_step:ok` / `chain_step:fail` — chain.py, per chain part
-- `roll:result` — roll.py, dice + grade
-- `levelup:start` / `levelup:ok` / `levelup:fail` — level_up.py
-- `rest:start` / `rest:outcome` — rest.py
-- `combat:start` / `combat:end` — combat_phase.py
-- `recruit:result` — companion.py, recruit roll outcome
-- `narrate:extract` — narrate.py, after apply_changes
-- `narrate:item_locality_repair` — narrate.py, locality auto-repair
-- `recommend:failed` / `recommend:short` — routes/session.py, level-up preview
-- `sse:error` — api/sse.py, unhandled stream exception (traceback follows on stderr)
+Graph runtime layer:
+- `graph:init` / `turn:start` / `input:start` — route/runtime entrypoints.
+- `llm:call` / `llm:done` — model calls under the current route context.
+- `levelup:start` / `levelup:ok` / `levelup:fail` — graph level-up path.
+- `combat:start` / `combat:end` — graph combat path.
 
 LLM layer (via `llm_diag`, gid/turn from contextvars):
 - `llm:call` / `llm:retry` / `llm:fallback` / `llm:done` / `llm:fail` —
@@ -62,8 +52,8 @@ LLM layer (via `llm_diag`, gid/turn from contextvars):
    reasons over flags. Keep each value short; long blobs (raw LLM
    answers, large lists) get truncated by the caller.
 3. Pick the entrypoint that matches your layer + context:
-   - In flow with GameState in scope → `diag(state.game_id, state.turn_count, ...)`.
-   - In engine-layer code without GameState → `engine_diag(...)`.
+   - In code with game id and turn in scope → `diag(game_id, turn, ...)`.
+   - In engine-layer code under a route context → `engine_diag(...)`.
    - In LLM-layer code → `llm_diag(...)`.
    In all three the line is automatically tagged with elapsed `t=` and
    the right LAYER prefix.
@@ -87,7 +77,7 @@ def _enabled() -> bool:
 
 def set_diag_context(game_id: str, turn: int) -> None:
     """Prime gid/turn for `engine_diag` / `llm_diag` and reset the `t=` clock
-    to now. Call at every flow entry (turn / roll / level_up) so per-step
+    to now. Call at every route entry so per-step
     timings restart at the turn boundary."""
     _GID.set(game_id)
     _TURN.set(turn)
@@ -114,7 +104,7 @@ def _emit(layer: str, gid: str | None, turn: int | None, tag: str, kv: dict[str,
 
 
 def diag(game_id: str, turn: int, tag: str, **kv: Any) -> None:
-    """Engine-layer diag with explicit gid/turn (flow code path)."""
+    """Engine-layer diag with explicit gid/turn."""
     if not _enabled():
         return
     _emit("engine", game_id, turn, tag, kv)
@@ -122,8 +112,7 @@ def diag(game_id: str, turn: int, tag: str, **kv: Any) -> None:
 
 def engine_diag(tag: str, **kv: Any) -> None:
     """Engine-layer diag using contextvars set by `set_diag_context`. For
-    code that runs under a flow but doesn't see GameState (sse wrapper,
-    route handlers calling out)."""
+    code that runs under a route but doesn't receive progress directly."""
     if not _enabled():
         return
     _emit("engine", _GID.get(), _TURN.get(), tag, kv)

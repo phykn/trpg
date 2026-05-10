@@ -15,7 +15,6 @@ from ..domain.entities import (
 from ..domain.memory import (
     DialoguePair,
     LogEntry,
-    PendingCheck,
     TurnLogEntry,
 )
 
@@ -30,7 +29,7 @@ class CombatState(BaseModel):
     surprise: Literal["player", "enemy"] | None = None
     enemy_ids: list[str] = []
     damage_dealt: dict[str, int] = {}
-    # Persisted across rounds — cinematic resolves one round per /roll click and rebuilds the action from these.
+    # Persisted across rounds by the old entity combat engine.
     player_target_id: str | None = None
     player_skill_id: str | None = None
     player_skill_used: bool = False
@@ -56,7 +55,6 @@ class GameState(BaseModel):
     active_quest_id: str | None = None
 
     turn_count: int = 0
-    pending_check: PendingCheck | None = None
     pending_confirmation: dict[str, object] | None = None
     combat_state: CombatState | None = None
 

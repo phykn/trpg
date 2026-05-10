@@ -6,7 +6,6 @@ from src.game.domain.memory import (
     GMLogEntry,
     LogEntry,
     Memory,
-    PendingCheck,
     RollLogEntry,
 )
 
@@ -31,23 +30,6 @@ def test_memory_target_id_optional():
     assert m.target_id is None
     m2 = Memory(content="x", importance=1, turn=1, target_id="guard_01")
     assert m2.target_id == "guard_01"
-
-
-def test_pending_check_required_roll_bounds():
-    base = dict(
-        player_input="x",
-        tier="normal",
-        stat="CHA",
-        target="g",
-        targets=["g"],
-        dc=10,
-        mod=0,
-        reason="설득",
-        created_at="2026-04-26",
-    )
-    PendingCheck(required_roll=20, **base)
-    with pytest.raises(ValidationError):
-        PendingCheck(required_roll=21, **base)
 
 
 def test_log_entry_discriminator():

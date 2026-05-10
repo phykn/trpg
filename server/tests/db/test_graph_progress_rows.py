@@ -1,7 +1,9 @@
+import pytest
+from pydantic import ValidationError
+
 from src.db.graph_progress_rows import progress_from_row, progress_to_row
 from src.game.domain.combat import GraphCombatState
 from src.game.domain.progress import GameProgress
-from src.game.domain.state import CombatState
 
 
 def test_progress_row_round_trip():
@@ -12,7 +14,6 @@ def test_progress_row_round_trip():
         active_subject_id="elder",
         active_quest_id="quest",
         turn_count=3,
-        combat_state=CombatState(round=2, enemy_ids=["rat"]),
         next_log_id=9,
     )
 
@@ -20,7 +21,6 @@ def test_progress_row_round_trip():
 
     assert row.game_id == "game-1"
     assert row.progress["player_id"] == "player"
-    assert row.progress["combat_state"]["round"] == 2
 
     restored = progress_from_row(row)
 
@@ -63,3 +63,12 @@ def test_progress_row_round_trips_graph_combat_state():
     assert row.progress["graph_combat_state"]["round"] == 2
     assert row.progress["graph_combat_state"]["enemy_ids"] == ["rat"]
     assert progress_from_row(row).graph_combat_state == graph_combat_state
+
+
+def test_progress_rejects_legacy_combat_state():
+    with pytest.raises(ValidationError):
+        GameProgress(
+            game_id="game-1",
+            player_id="player",
+            combat_state={"round": 2, "enemy_ids": ["rat"]},
+        )

@@ -1,10 +1,4 @@
-"""Verb-grammar primitives.
-
-Lives in `game/domain/` so `game.domain.memory.PendingCheck` can carry `Verb` directly
-without depending on `llm/calls/classify` (cycle through wire/labels →
-game/domain/entities → game/domain/memory). `llm/calls/classify/schema.py` re-exports
-these for call-site convenience.
-"""
+"""Verb-grammar primitives shared by classifier and graph action dispatch."""
 
 from dataclasses import dataclass, field
 from typing import Any, Literal

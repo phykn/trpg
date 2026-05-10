@@ -129,8 +129,8 @@ def transfer(
 
 
 def steal(src: Character, dst: Character, item_id: str, items: dict[str, Item]) -> None:
-    """Forced transfer bypassing the affinity gate — caller (steal /roll
-    handler) has already paid the social cost via the DEX vs DC roll. Equipped
+    """Forced transfer bypassing the affinity gate — caller has already paid
+    the social cost via the DEX vs DC roll. Equipped
     items are excluded by the caller (NPC.carryables filter)."""
     if item_id not in items:
         raise InventoryInvalid(f"unknown item: {item_id}")

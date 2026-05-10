@@ -293,7 +293,7 @@ export function useGame() {
   const awaitingNarration = streaming && !pendingConfirmation;
 
   // Guarded by !streaming because hp can transiently hit 0 before reviveCoins
-  // decrements during a roll/turn stream — wait for the final `state` event.
+  // decrement during a graph action request; wait for the final state payload.
   const gameOver = !!hero && !streaming && hero.hp === 0 && hero.reviveCoins === 0;
 
   // Place wire type has no `id` — use `name` as the cache key (location names are unique per scenario).

@@ -798,7 +798,7 @@ git commit -m "docs: describe graph-only runtime"
 .venv\Scripts\python.exe -m pytest -q
 ```
 
-Passed: `650 passed`.
+Passed: `647 passed` after removing the final PendingCheck-only tests.
 
 - [x] **Step 2: Run server lint**
 
@@ -872,7 +872,7 @@ With `python run_api.py` running from `server/` and `npm run web` running from `
 
 Passed on `http://127.0.0.1:8081/` with API running from the root `.venv`: existing dev test game talked to the guide, defeated the training dummy, showed recommendation chips, opened level-up, raised `몸`, and applied level 1.
 
-- [ ] **Step 6: Final legacy search**
+- [x] **Step 6: Final legacy search**
 
 ```powershell
 rg "session_legacy|streaming_response|PendingCheck|RollPrompt|handleStreamEvent|wire.gen|/session/init|/roll|/turn|SaveRepo|LocalFsSaveRepo|SupabaseSaveRepo" server client AGENTS.md README.md -n
@@ -880,7 +880,9 @@ rg "session_legacy|streaming_response|PendingCheck|RollPrompt|handleStreamEvent|
 
 Expected: no active-code hits. If docs mention historical plans, leave only under `docs/superpowers/plans/`.
 
-- [ ] **Step 7: Commit and push**
+Passed after pruning graph progress leftovers: no active `PendingCheck`, `SaveRepo`, `session_legacy`, SSE stream helper, generated wire type, or removed route implementation remains. Expected `/session/{game_id}/graph/turn` route and tests remain.
+
+- [x] **Step 7: Commit and push**
 
 ```powershell
 git status --short

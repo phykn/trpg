@@ -3,7 +3,6 @@ from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
-from src.game.domain.state import CombatState
 from src.game.runtime import load_runtime_state
 
 
@@ -35,7 +34,6 @@ async def test_load_runtime_state_reads_graph_progress_and_tails(tmp_path):
             "kind": "quest_accept",
             "target_id": "quest-1",
         },
-        combat_state=CombatState(round=2, enemy_ids=["rat"]),
         next_log_id=1,
     )
 
@@ -58,7 +56,6 @@ async def test_load_runtime_state_reads_graph_progress_and_tails(tmp_path):
 
     assert runtime.graph == graph
     assert runtime.progress.pending_confirmation["kind"] == "quest_accept"
-    assert runtime.progress.combat_state.round == 2
     assert runtime.progress.next_log_id == 6
     assert runtime.log_entries[0].text == "도착했습니다."
     assert runtime.turn_log[0].summary == "마을 도착"

@@ -2,8 +2,6 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
-from .types import StatKey, Tier
-from .verb import Verb
 
 
 class Memory(BaseModel):
@@ -23,22 +21,6 @@ class DialoguePair(BaseModel):
     turn: int
     player: str
     narrator: str
-
-
-class PendingCheck(BaseModel):
-    player_input: str
-    kind: Literal["stat", "recruit", "steal"] = "stat"
-    tier: Tier
-    stat: StatKey
-    target: str
-    targets: list[str]
-    dc: int
-    mod: int
-    required_roll: int = Field(ge=1, le=20)
-    reason: str
-    created_at: str
-    triggering_verb: Verb | None = None
-    pending_verbs: list[Verb] = Field(default_factory=list)
 
 
 class GMLogEntry(BaseModel):

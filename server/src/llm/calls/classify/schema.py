@@ -4,9 +4,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from src.game.domain.action import ActionOutput, action_output_to_judge_output
-# Verb / RefuseReason / JudgeOutput live in domain/verb.py to break import cycle
-# with domain/memory.py (PendingCheck carries Verb). Re-exported here so call sites
-# can import from either location.
+# Re-exported here so classify call sites can import all judge shapes together.
 from src.game.domain.verb import (  # noqa: F401
     JudgeOutput,
     RefuseCategory,
