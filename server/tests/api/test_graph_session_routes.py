@@ -472,6 +472,9 @@ async def test_graph_play_loop_reaches_quest_reward_without_legacy_state(tmp_pat
     assert final_body["state"]["questOffers"][0]["id"] == "auto_quest_002"
     assert final_body["state"]["hero"]["gold"] == 5
     assert final_body["state"]["hero"]["exp"] == 10
+    assert final_body["state"]["hero"]["inventory"] == [
+        {"name": "작은 보상", "qty": 1}
+    ]
     assert graph.nodes[quest_id].properties["status"] == "completed"
     assert graph.nodes[enemy_id].properties["status"] == ["defeated"]
     assert progress.active_quest_id is None
