@@ -66,6 +66,37 @@ function ActionScroller({ group, onAction }: {
   );
 }
 
+function HeaderTitleGroup({ panel }: { panel: Panel }) {
+  return (
+    <View
+      className="flex-row items-center gap-2"
+      style={{ minWidth: 0, flexShrink: 1 }}
+    >
+      <ExpandableTitle text={panel.title} pressableClassName="shrink min-w-0" />
+      {panel.titleAction && (
+        <Pressable
+          onPress={panel.titleAction.onPress}
+          accessibilityRole="button"
+          accessibilityLabel={panel.titleAction.label}
+          style={{
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            borderRadius: 9999,
+            backgroundColor: colors.accent.muted,
+            borderWidth: 1,
+            borderColor: colors.accent.fg,
+            flexShrink: 0,
+          }}
+        >
+          <Text className="font-sans-semibold text-caption" style={{ color: colors.accent.fg, letterSpacing: 0.6 }}>
+            {panel.titleAction.label}
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
 export function PanelBody({ panel, onAction }: {
   panel: Panel;
   onAction?: (action: PanelAction) => void;
@@ -89,26 +120,7 @@ export function PanelBody({ panel, onAction }: {
   return (
     <View className="px-4 py-3 gap-2.5" style={{ minHeight: 160 }}>
       <View className="flex-row items-center gap-2" style={{ minHeight: 22 }}>
-        <ExpandableTitle text={panel.title} />
-        {panel.titleAction && (
-          <Pressable
-            onPress={panel.titleAction.onPress}
-            accessibilityRole="button"
-            accessibilityLabel={panel.titleAction.label}
-            style={{
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 9999,
-              backgroundColor: colors.accent.muted,
-              borderWidth: 1,
-              borderColor: colors.accent.fg,
-            }}
-          >
-            <Text className="font-sans-semibold text-caption" style={{ color: colors.accent.fg, letterSpacing: 0.6 }}>
-              {panel.titleAction.label}
-            </Text>
-          </Pressable>
-        )}
+        <HeaderTitleGroup panel={panel} />
         {panel.meta && panel.meta.length > 0 && (
           <View className="flex-1 min-w-0">
             <ExpandableMeta segments={panel.meta} />

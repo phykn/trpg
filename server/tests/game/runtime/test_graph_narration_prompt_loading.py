@@ -111,6 +111,28 @@ async def test_graph_intro_uses_packaged_prompt(monkeypatch, tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_graph_intro_sends_rich_first_scene_payload(tmp_path):
+    import json
+    import src.game.runtime.intro as intro_module
+
+    repo = await _repo(tmp_path)
+    runtime = GameRuntimeState(
+        graph=await repo.load_graph("game-1"),
+        progress=await repo.load_progress("game-1"),
+    )
+    llm = _PromptCaptureLLM()
+
+    await intro_module.run_graph_initial_narration(llm, repo, runtime)  # type: ignore[arg-type]
+
+    payload = json.loads(llm.calls[-1]["messages"][1]["content"])
+    assert "player" in payload
+    assert "place" in payload
+    assert "visible_targets" in payload
+    assert "exits" in payload
+    assert "inventory" in payload
+
+
+@pytest.mark.asyncio
 async def test_graph_turn_narration_uses_packaged_prompt(monkeypatch, tmp_path):
     import src.game.runtime.turn as turn_module
 

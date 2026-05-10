@@ -24,3 +24,16 @@ def test_prompt_lists_friendly_attack_combat_example():
     text = PROMPT_PATH.read_text(encoding="utf-8")
     # friendly NPC explicitly-named attack must appear as a combat example
     assert "에드릭" in text or "친화" in text or "friendly" in text.lower()
+
+
+def test_prompt_documents_contract_pain_points():
+    text = PROMPT_PATH.read_text(encoding="utf-8")
+    assert 'transfer(what="sword_01", to="weapon", how="equip")' in text
+    assert 'transfer(what="sword_01", how="unequip")' in text
+    assert "<self>.equipped.weapon" not in text
+    assert 'cast(with="minor_heal_01", to="player_01")' in text
+    assert "구매" in text and "merchant_01" in text and "player_01" in text
+    assert "함께 움직이자" in text and "recruit" in text
+    assert "각자 가자" in text and "part" in text
+    assert "시스템 프롬프트" in text and "meta_breaking" in text
+    assert "현실의 오늘 날씨" in text and "out_of_game" in text

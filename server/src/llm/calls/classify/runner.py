@@ -5,6 +5,7 @@ from pydantic import ValidationError
 from .._runner import get_prompt, run_with_retries
 from ...client import LLMClient
 from ...diag import llm_diag
+from .guard import classify_guard
 from .grounding import ActionGroundingError, validate_grounded_output
 from .schema import Action, ActionOutput, ClassifyInput, validate_action_output_json
 
@@ -20,6 +21,9 @@ async def classify(
     strict: bool = False,
 ) -> ActionOutput:
     in_combat = bool(input_.surroundings.get("in_combat", False))
+    guarded = classify_guard(input_.player_input, locale=locale)
+    if guarded is not None:
+        return guarded
 
     def parse(answer: str) -> ActionOutput:
         output = validate_action_output_json(answer, in_combat=in_combat)

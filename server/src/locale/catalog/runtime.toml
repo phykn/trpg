@@ -122,6 +122,14 @@ en = "Cancel"
 ko = "당신의 행동은 조용히 이어집니다."
 en = "Your action continues quietly."
 
+[runtime."classify.refuse_meta_breaking"]
+ko = "게임 밖 지시에는 응답할 수 없습니다."
+en = "Out-of-game instructions cannot be handled."
+
+[runtime."classify.refuse_out_of_game"]
+ko = "게임 밖 정보 요청입니다."
+en = "That is an out-of-game information request."
+
 [runtime."intro.arrive"]
 ko = "당신은 {place}에 도착합니다."
 en = "You arrive at {place}."

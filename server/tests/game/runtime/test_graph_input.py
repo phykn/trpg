@@ -7,6 +7,7 @@ from openai import RateLimitError
 
 from src.db.graph_local_fs import LocalFsGraphRepo
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
+from src.game.domain.memory import GMLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime.input import GraphInputError, run_graph_input_turn
 
@@ -141,10 +142,13 @@ async def test_graph_input_classifies_one_action_and_creates_confirmation(tmp_pa
 
     result = await run_graph_input_turn(llm, repo, "game-1", "고블린을 공격한다")
     progress = await repo.load_progress("game-1")
+    logs = await repo.load_log_entries("game-1")
 
     assert result.status == "confirmation_required"
     assert progress.pending_confirmation["kind"] == "attack_start"
     assert progress.graph_combat_state is None
+    assert [entry.kind for entry in logs] == ["player"]
+    assert logs[0].text == "고블린을 공격한다"
 
 
 async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
@@ -158,8 +162,9 @@ async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
     progress = await repo.load_progress("game-1")
 
     assert result.status == "executed"
-    assert [entry.kind for entry in logs] == ["gm"]
-    assert logs[0].text == "상대는 당신의 말을 듣고 잠시 생각에 잠깁니다."
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert logs[0].text == "고블린에게 말을 건다"
+    assert logs[1].text == "상대는 당신의 말을 듣고 잠시 생각에 잠깁니다."
     assert progress.turn_count == 1
 
 
@@ -175,7 +180,8 @@ async def test_graph_input_perceive_creates_pending_roll(tmp_path):
     assert progress.pending_roll["kind"] == "perceive"
     assert progress.pending_roll["stat"] == "mind"
     assert progress.pending_roll["required_roll"] == 13
-    assert logs == []
+    assert [entry.kind for entry in logs] == ["player"]
+    assert logs[0].text == "주변을 자세히 살펴본다"
     assert result.front_state.pending_roll is not None
 
 
@@ -195,6 +201,29 @@ async def test_graph_input_targetless_speak_defaults_to_nearby_living_npc(tmp_pa
         "state": "same_place",
     }
     assert "NPC의 짧은 반응이나 대사" in narrate_call["messages"][0]["content"]
+
+
+async def test_graph_input_narration_payload_includes_recent_log(tmp_path):
+    repo = await _repo(tmp_path)
+    await repo.append_log_entries(
+        "game-1",
+        [
+            GMLogEntry(id=1, kind="gm", text="경비병이 북문을 지킵니다."),
+        ],
+    )
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]}
+    )
+
+    await run_graph_input_turn(llm, repo, "game-1", "경비병에게 인사한다")
+    narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
+    payload = json.loads(narrate_call["messages"][1]["content"])
+
+    assert payload["recent_log"] == [
+        {"kind": "gm", "text": "경비병이 북문을 지킵니다."},
+        {"kind": "player", "text": "경비병에게 인사한다"},
+    ]
+    assert "recent_dialogue" in payload
 
 
 async def test_graph_input_speak_times_out_slow_narration_and_uses_fallback(
@@ -218,7 +247,8 @@ async def test_graph_input_speak_times_out_slow_narration_and_uses_fallback(
     logs = await repo.load_log_entries("game-1")
 
     assert result.status == "executed"
-    assert logs[0].text == "당신의 행동은 조용히 이어집니다."
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert logs[1].text == "당신의 행동은 조용히 이어집니다."
 
 
 async def test_graph_input_speak_rate_limited_narration_uses_fallback(tmp_path):
@@ -231,7 +261,8 @@ async def test_graph_input_speak_rate_limited_narration_uses_fallback(tmp_path):
     logs = await repo.load_log_entries("game-1")
 
     assert result.status == "executed"
-    assert logs[0].text == "당신의 행동은 조용히 이어집니다."
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert logs[1].text == "당신의 행동은 조용히 이어집니다."
 
 
 async def test_graph_input_rejects_multi_action_output(tmp_path):
@@ -247,3 +278,6 @@ async def test_graph_input_rejects_multi_action_output(tmp_path):
 
     with pytest.raises(GraphInputError, match="exactly one"):
         await run_graph_input_turn(llm, repo, "game-1", "공격하고 기다린다")
+    logs = await repo.load_log_entries("game-1")
+    assert [entry.kind for entry in logs] == ["player"]
+    assert logs[0].text == "공격하고 기다린다"

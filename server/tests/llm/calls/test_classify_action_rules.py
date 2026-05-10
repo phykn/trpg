@@ -53,6 +53,21 @@ def test_transfer_unknown_mode_rejected():
         )
 
 
+def test_transfer_equip_uses_slot_destination_without_actor_refs():
+    _validate({"verb": "transfer", "what": "sword_01", "to": "weapon", "how": "equip"})
+
+
+def test_transfer_equip_rejects_unknown_slot():
+    with pytest.raises(ValidationError, match="transfer.to"):
+        _validate(
+            {"verb": "transfer", "what": "sword_01", "to": "backpack", "how": "equip"}
+        )
+
+
+def test_transfer_unequip_requires_item_but_not_actor_refs():
+    _validate({"verb": "transfer", "what": "sword_01", "how": "unequip"})
+
+
 def test_use_requires_item_id():
     with pytest.raises(ValidationError, match="use.what"):
         _validate({"verb": "use"})
@@ -78,6 +93,10 @@ def test_cast_requires_skill_id():
 
 def test_cast_with_skill():
     _validate({"verb": "cast", "with": "heal_01"})
+
+
+def test_cast_accepts_target_in_to_field():
+    _validate({"verb": "cast", "with": "minor_heal_01", "to": "player_01"})
 
 
 def test_speak_requires_intent():

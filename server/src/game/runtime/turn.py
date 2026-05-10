@@ -26,6 +26,7 @@ from .dispatch import (
 )
 from .cards import build_graph_action_card, build_graph_quest_offer_card
 from .load import load_runtime_state
+from .narration_context import build_action_narration_payload
 from .state import GameRuntimeState
 
 
@@ -191,7 +192,7 @@ async def _build_graph_action_narration(
         before, after, action, dispatch
     ):
         return ""
-    prompt = _narration_user_prompt(before, after, card_texts)
+    prompt = _narration_user_prompt(before, after, action, dispatch, card_texts)
     if not prompt:
         return ""
     llm_diag("llm:call", agent="graph_narrate")
@@ -246,22 +247,20 @@ def _needs_graph_action_narration(
 def _narration_user_prompt(
     before: GameRuntimeState,
     after: GameRuntimeState,
+    action: Action,
+    dispatch: GraphActionDispatchResult,
     card_texts: list[str],
 ) -> str:
-    player = after.graph.nodes.get(after.progress.player_id)
-    place_id = location_of(after.graph, after.progress.player_id)
-    place = after.graph.nodes.get(place_id or "")
-    return json.dumps(
-        {
-            "player": _node_name(after, player),
-            "current_place": _node_name(after, place),
-            "place_description": _node_description_value(after, place),
-            "resolved_results": card_texts,
-            "combat_scene": before.progress.graph_combat_state is not None
-            or after.progress.graph_combat_state is not None,
-        },
-        ensure_ascii=False,
+    payload = build_action_narration_payload(
+        before=before,
+        after=after,
+        action=action,
+        dispatch=dispatch,
+        card_texts=card_texts,
     )
+    if payload["current_place"] is None:
+        return ""
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def _clean_narration(text: str) -> str:

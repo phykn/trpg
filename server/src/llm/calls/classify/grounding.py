@@ -8,6 +8,9 @@ class ActionGroundingError(ValueError):
     pass
 
 
+_EQUIP_SLOTS = frozenset({"weapon", "armor", "accessory"})
+
+
 @dataclass(frozen=True)
 class _ViewIds:
     in_combat: bool = False
@@ -173,9 +176,26 @@ def _validate_action(action: Action, view: _ViewIds) -> None:
 
 
 def _validate_transfer(action: Action, view: _ViewIds) -> None:
+    item_id = _single(action.what) or _single(action.with_)
+    if action.how == "equip":
+        _require_id(
+            item_id,
+            view.inventory_item_ids | view.equipment_item_ids,
+            action=action,
+            field="what",
+        )
+        _require_slot(action.to, action=action, field="to")
+        return
+    if action.how == "unequip":
+        _require_id(
+            item_id,
+            view.equipment_item_ids,
+            action=action,
+            field="what",
+        )
+        return
     _require_id(action.from_, view.actor_refs, action=action, field="from")
     _require_id(action.to, view.actor_refs, action=action, field="to")
-    item_id = _single(action.what) or _single(action.with_)
     if item_id is not None:
         _require_id(item_id, view.exposed_item_ids, action=action, field="what")
 
@@ -188,6 +208,13 @@ def _require_id(
     field: str,
 ) -> None:
     if not isinstance(value, str) or value not in allowed:
+        raise ActionGroundingError(
+            f"ungrounded action={action.verb} {field}: {value!r}"
+        )
+
+
+def _require_slot(value: object, *, action: Action, field: str) -> None:
+    if value not in _EQUIP_SLOTS:
         raise ActionGroundingError(
             f"ungrounded action={action.verb} {field}: {value!r}"
         )
