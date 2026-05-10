@@ -39,7 +39,7 @@ Upper depends on lower, never the reverse. Concretely:
 
 - `game/domain/` + `game/rules/` — pure data shapes and tunable knobs. No imports outside themselves.
 - `game/engines/` — pure game logic (combat math, graph changes, growth, inventory, skill, quest, recovery, invariants). No LLM, no I/O.
-- `llm/calls/` — structured LLM call modules under the `llm/` package. `classify` is the only module here right now; graph narration uses runtime prompts with agents `graph_intro` and `graph_narrate`. Structured prompts live under `src/locale/prompts/<agent>/prompt.<locale>.md`; `src/locale/prompts/_kernel.<locale>.md` holds universal rules (output language, register, ID hygiene, world vocabulary). `llm/calls/_runner.py:get_prompt(agent, locale)` joins kernel + agent prompt with `---`, cached per (agent, locale). `_runner.py` also owns the shared 3-attempt self-correction loop.
+- `llm/calls/` — structured LLM call modules under the `llm/` package. `classify` is the only module here right now; graph narration uses runtime prompts with agents `graph_intro` and `graph_narrate`. Structured prompts live under `src/locale/prompts/<agent>/prompt.<locale>.md`; `src/locale/prompts/_kernel.<locale>.md` holds universal rules (output language, register, ID hygiene, world vocabulary). `llm/calls/_runner.py:get_prompt(agent, locale)` joins kernel + agent prompt with `---`, cached per (agent, locale). `_runner.py` also owns the shared 5-attempt self-correction loop.
 - `game/domain/graph.py` + `game/domain/graph_query.py` — graph data and relation queries. **The graph is the runtime source of truth.**
 - `llm/context/` — prompt input builders under the `llm/` package (graph surroundings for classify and narration).
 - `db/` — `GraphRepo` / `ScenarioRepo` Protocols (all-async) + Supabase and LocalFs adapters. Holds persistence concerns.
@@ -93,7 +93,7 @@ Runtime child tables should FK to `game_progress(game_id) ON DELETE CASCADE`. RL
 
 ### Agent retry
 
-Each structured agent runs a self-correction loop with `retries=3`. On `ValidationError` or semantic-check failure, the previous response and the error are appended to the message list so the next attempt can correct itself. The same attempt counter also covers transient transport / 5xx errors (`OSError`, `asyncio.TimeoutError`, `openai.InternalServerError`, `openai.APIConnectionError`) — these `continue` instead of raising until the budget is spent, then map to `LLMUnavailable`. After 3 attempts, the loop raises by the last error type; runtime or route code maps that to a domain error.
+Each structured agent runs a self-correction loop with `retries=5`. On `ValidationError` or semantic-check failure, the previous response and the error are appended to the message list so the next attempt can correct itself. The same attempt counter also covers transient transport / 5xx errors (`OSError`, `asyncio.TimeoutError`, `openai.InternalServerError`, `openai.APIConnectionError`) — these `continue` instead of raising until the budget is spent, then map to `LLMUnavailable`. After 5 attempts, the loop raises by the last error type; runtime or route code maps that to a domain error.
 
 ### Diagnostic logging (`FLOW_DEBUG`)
 
