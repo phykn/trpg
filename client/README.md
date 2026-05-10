@@ -108,10 +108,10 @@ client/
   screens/     # screen composition: Shell, new-game/, play/
   components/  # domain views (hero, composer, log, combat, info-panel, story-graph) + ui/ primitives
   logic/       # domain calculation, state, hooks (game/useGame.ts is the state root)
-  services/    # server boundary — api.ts (REST + SSE), wire.ts (types), storage.ts (localStorage)
+  services/    # server boundary — api.ts (graph REST), wire.ts (types), storage.ts (localStorage)
   locale/      # client-owned Korean labels (ko.ts)
   design/      # design tokens (tokens.js) shared by Tailwind config and TS
-  scripts/     # codegen (wire.schema.json → wire.gen.d.ts)
+  scripts/     # deploy helpers
 ```
 
 Architecture rules (bucket boundaries, import conventions, layer responsibilities) live in [CLAUDE.md](./CLAUDE.md).

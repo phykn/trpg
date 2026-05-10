@@ -9,7 +9,6 @@
     "web": "dotenv -e .env.dev -- expo start --web",
     "lint": "expo lint",
     "test": "jest",
-    "gen": "cd .. && .venv/bin/python server/scripts/gen_wire_schema.py && cd client && node scripts/gen-wire-types.cjs",
     "deploy": "node scripts/deploy.cjs"
   },
   "jest": {
@@ -58,7 +57,6 @@
     "eslint-config-expo": "~10.0.0",
     "jest": "^29.7.0",
     "jest-expo": "^55.0.16",
-    "json-schema-to-typescript": "^15.0.4",
     "typescript": "~5.9.2"
   },
   "private": true

@@ -1,11 +1,33 @@
-import type {
-  PlacePayload,
-  PlaceSurrounding as PlaceSurroundingPayload,
-  PlaceTarget as PlaceTargetPayload,
-  RiskBadge as RiskBadgePayload,
-} from '@/services/wire.gen';
+export type RiskBadge = {
+  label: string;
+  tone: 'good' | 'neutral' | 'bad';
+};
 
-export type RiskBadge = RiskBadgePayload;
+export type PlaceSurrounding = {
+  name: string;
+  blurb: string;
+  difficulty?: string | null;
+  risk: RiskBadge;
+};
+
+export type PlaceTarget = {
+  name: string;
+  level: number;
+  raceJob: string;
+  gender: string;
+  blurb: string;
+  trust: number;
+};
+
+export type Place = {
+  name: string;
+  description: string;
+  dayPhase: string;
+  weather: string[];
+  surroundings: PlaceSurrounding[];
+  targets: PlaceTarget[];
+  risk: RiskBadge;
+};
 
 export type StoryGraphNodeKind =
   | 'hero'
@@ -116,9 +138,3 @@ export type StoryGraphModel = {
   edges: StoryGraphEdge[];
   summary: string;
 };
-
-export type PlaceSurrounding = PlaceSurroundingPayload;
-
-export type PlaceTarget = PlaceTargetPayload;
-
-export type Place = PlacePayload;

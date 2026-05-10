@@ -1,9 +1,15 @@
-import type {
-  LogEntryPayload,
-  RollLogEntry,
-} from '@/services/wire.gen';
+export type RollResult = 'success' | 'partial' | 'fail';
 
-// RollResult uses indexed access so it survives codegen renaming of the
-// `result` literal.
-export type LogEntry = LogEntryPayload;
-export type RollResult = RollLogEntry["result"];
+export type LogEntry =
+  | { id: number; kind: 'gm'; text: string }
+  | { id: number; kind: 'player'; text: string }
+  | { id: number; kind: 'act'; text: string }
+  | {
+      id: number;
+      kind: 'roll';
+      check: string;
+      roll: number;
+      margin: number;
+      result: RollResult;
+      bonus_breakdown?: { label: string; value: number }[];
+    };

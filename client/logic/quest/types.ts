@@ -1,10 +1,17 @@
-import type {
-  DifficultyBadge as DifficultyBadgePayload,
-  QuestPayload,
-} from '@/services/wire.gen';
+export type DifficultyBadge = {
+  label: string;
+  tone?: 'neutral' | 'good' | 'exp' | 'accent' | 'bad' | null;
+};
 
-// Wire `tone` is a 5-literal subset (neutral/good/exp/accent/bad). Client Tone is
-// a 9-literal union — 5 is a strict subset, so the assignment is safe. Expose
-// wire type directly rather than a separate alias.
-export type DifficultyBadge = DifficultyBadgePayload;
-export type Quest = QuestPayload;
+export type Quest = {
+  id: string;
+  title: string;
+  summary: string;
+  giver: string;
+  difficulty: DifficultyBadge;
+  goals: string[];
+  progressLabel: string;
+  rewards: { gold: number; exp: number };
+  status: 'pending' | 'active' | 'completed' | 'failed';
+  actions: ('accept' | 'abandon')[];
+};
