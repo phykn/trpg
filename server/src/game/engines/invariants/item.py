@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, get_args
 
 if TYPE_CHECKING:
@@ -17,12 +18,19 @@ from ...domain.entities import (
 )
 from ...domain.types import StatKey
 from ...rules import RULES
-from ..combat import DICE_RE
-from ..inventory.carry import carry_capacity, current_weight
 from .base import _v, _slot_mismatch_hint
 
 
 _STAT_KEYS: tuple[str, ...] = get_args(StatKey)
+_DICE_RE = re.compile(r"^\s*\d+d\d+\s*([+-]\s*\d+)?\s*$")
+
+
+def _carry_capacity(c: Character) -> float:
+    return RULES.carry.weight_per_strength * c.stats.STR
+
+
+def _current_weight(c: Character, items: dict[str, Item]) -> float:
+    return sum(items[i].weight for i in c.inventory_ids if i in items)
 
 
 def check_item(item: Item) -> list[str]:
@@ -34,7 +42,7 @@ def check_item(item: Item) -> list[str]:
         _v(out, where, f"price={item.price} (must be ≥ 0)")
     eff = item.effects
     if isinstance(eff, WeaponEffect):
-        if not DICE_RE.match(eff.weapon_dice):
+        if not _DICE_RE.match(eff.weapon_dice):
             _v(
                 out,
                 where,
@@ -88,8 +96,8 @@ def check_inventory(c: Character, items: dict[str, Item]) -> list[str]:
                         f"equipment.{slot}={item_id!r} requires {k}≥{need}, character has {k}={have}",
                     )
 
-    cap = carry_capacity(c)
-    total = current_weight(c, items)
+    cap = _carry_capacity(c)
+    total = _current_weight(c, items)
     if total > cap:
         _v(
             out,
