@@ -9,7 +9,7 @@ from openai import APIConnectionError, InternalServerError, RateLimitError
 from pydantic import ValidationError
 
 from src.game.domain.errors import LLMUnavailable
-from src.game.flow._diag import llm_diag
+from src.llm.diag import llm_diag
 from ..client import LLMClient
 
 # Gemma routinely wraps JSON in ```json ... ``` despite the prompt forbidding

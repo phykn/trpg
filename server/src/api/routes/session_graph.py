@@ -11,7 +11,6 @@ from src.game.domain.errors import (
     ProfileNotFound,
     RaceNotFound,
 )
-from src.game.flow.init_graph import init_graph_game
 from src.game.runtime.confirmation import (
     GraphConfirmationActive,
     GraphConfirmationError,
@@ -27,6 +26,7 @@ from src.game.runtime.intro import (
 from src.game.runtime.level_up import GraphLevelUpError, run_graph_level_up
 from src.game.runtime.load import load_runtime_state
 from src.game.runtime.state import GameRuntimeState
+from src.game.seed.init_graph import init_graph_game
 from src.game.runtime.turn import GraphActionTurnError
 from src.llm.client import LLMClient, set_think_override
 from src.wire.graph_to_front import graph_to_front_state

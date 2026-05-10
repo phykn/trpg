@@ -1,6 +1,6 @@
 from pydantic import ValidationError
 
-from src.game.flow._diag import llm_diag
+from src.llm.diag import llm_diag
 from ..._runner import get_prompt_with_perm_subs, run_with_retries
 from ....client import LLMClient
 from ..schema import NarrateOutput

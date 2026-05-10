@@ -1,8 +1,17 @@
 from typing import Literal
 
-from .hero import _CamelModel
+from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
 
 __all__ = ["DifficultyBadge", "QuestPayload", "QuestRewards"]
+
+
+class _CamelModel(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        serialize_by_alias=True,
+    )
 
 
 class DifficultyBadge(_CamelModel):

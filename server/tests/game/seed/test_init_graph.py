@@ -6,8 +6,8 @@ import pytest
 from src.db.graph_local_fs import LocalFsGraphRepo
 from src.db.local_fs import LocalFsScenarioRepo
 from src.game.domain.errors import ProfileMalformed, ProfileNotFound, RaceNotFound
-from src.game.flow.init import PlayerInput
-from src.game.flow.init_graph import init_graph_game
+from src.game.seed.init_graph import init_graph_game
+from src.game.seed.player import PlayerInput
 
 
 def _write_seed(root: Path) -> None:

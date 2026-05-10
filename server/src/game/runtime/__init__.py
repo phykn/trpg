@@ -9,7 +9,6 @@ from .combat import (
     dispatch_graph_combat_action,
 )
 from .load import load_runtime_state
-from .legacy import runtime_to_legacy_state
 from .state import GameRuntimeState
 
 __all__ = [
@@ -24,7 +23,6 @@ __all__ = [
     "dispatch_graph_action",
     "dispatch_graph_combat_action",
     "load_runtime_state",
-    "runtime_to_legacy_state",
 ]
 
 

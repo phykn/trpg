@@ -14,8 +14,8 @@ from src.game.domain.entities import (
 )
 from src.game.domain.errors import ProfileMalformed, ProfileNotFound, RaceNotFound
 from src.game.engines.invariants import Scenario, check_scenario
-from src.game.flow.init import PlayerInput
 from src.game.seed.graph_seed import SeedGraphBundle, build_seed_graph
+from src.game.seed.player import PlayerInput
 
 
 async def init_graph_game(

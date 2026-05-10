@@ -6,7 +6,7 @@ from openai import APIConnectionError, InternalServerError, RateLimitError
 from ..._runner import get_prompt_with_perm_subs
 from ....context.surroundings import surroundings_for_narrate_body
 from src.game.domain.errors import LLMUnavailable
-from src.game.flow._diag import llm_diag
+from src.llm.diag import llm_diag
 from ....client import LLMClient
 from ..schema import NarrateInput
 

@@ -10,8 +10,8 @@ from src.game.domain.entities import (
     Race,
     Skill,
 )
-from src.game.flow.init import PlayerInput
 from src.game.seed.graph_seed import build_seed_graph
+from src.game.seed.player import PlayerInput
 
 
 def _skill() -> Skill:

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from src.game.domain.action import Action
 from src.game.domain.types import GraphStatKey
-from src.game.flow.init import PlayerInput
+from src.game.seed.player import PlayerInput
 
 
 class ChatRequest(BaseModel):

@@ -18,8 +18,8 @@ from src.game.domain.entities import (
 from src.game.domain.graph import EdgeType, Graph, GraphEdge, GraphNode, NodeType
 from src.game.domain.progress import GameProgress
 from src.game.engines.growth import calc_max_hp, calc_max_mp
-from src.game.flow.init import PlayerInput
 from src.game.rules.config import RULES
+from src.game.seed.player import PlayerInput
 
 
 class SeedGraphBundle(BaseModel):
