@@ -66,7 +66,7 @@ def _character(character_id: str) -> GraphNode:
             "mp": 10,
             "max_mp": 10,
             "alive": True,
-            "stats": {"body": 3, "agility": 2, "mind": 2, "presence": 2},
+            "stats": {"body": 10, "agility": 10, "mind": 10, "presence": 10},
         },
     )
 
@@ -132,6 +132,22 @@ async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
     assert [entry.kind for entry in logs] == ["gm"]
     assert logs[0].text == "상대는 당신의 말을 듣고 잠시 생각에 잠깁니다."
     assert progress.turn_count == 1
+
+
+async def test_graph_input_perceive_creates_pending_roll(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM({"actions": [{"verb": "perceive", "what": "town"}]})
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "주변을 자세히 살펴본다")
+    logs = await repo.load_log_entries("game-1")
+    progress = await repo.load_progress("game-1")
+
+    assert result.status == "roll_required"
+    assert progress.pending_roll["kind"] == "perceive"
+    assert progress.pending_roll["stat"] == "mind"
+    assert progress.pending_roll["required_roll"] == 13
+    assert logs == []
+    assert result.front_state.pending_roll is not None
 
 
 async def test_graph_input_targetless_speak_defaults_to_nearby_living_npc(tmp_path):

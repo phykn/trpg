@@ -6,6 +6,8 @@ export type {
   StoryGraphModel,
 } from './types';
 export { EMPTY_STORY_GRAPH } from './presenters';
+export { buildNearbyPanel } from './nearby';
+export type { NearbyItem, NearbyPanelModel } from './nearby';
 export {
   loadAndSeedSeenNodes,
   mergeAndStoreStoryGraph,

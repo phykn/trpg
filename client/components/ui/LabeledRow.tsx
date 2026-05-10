@@ -19,7 +19,7 @@ export function LabeledRow({ label, children, mono = false, clampLines = 3 }: {
   }, [text]);
 
   if (!isText) {
-    return <Row label={label}>{children}</Row>;
+    return <Row label={label} variableHeight>{children}</Row>;
   }
 
   const fontClass = mono ? 'font-mono' : 'font-sans';

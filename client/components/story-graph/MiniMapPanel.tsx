@@ -8,7 +8,7 @@ import type { PanelAction } from '@/logic/info-panel';
 
 import type { Place, StoryGraphModel } from '@/logic/story-graph/types';
 
-import { NeighborhoodPanel } from './NeighborhoodPanel';
+import { MapPanel } from './MapPanel';
 
 export function MiniMapPanel({
   graph,
@@ -66,7 +66,7 @@ export function MiniMapPanel({
           </View>
         </View>
       ) : null}
-      <NeighborhoodPanel
+      <MapPanel
         graph={graph}
         accessibilityLabel={ko.panel.miniMap}
         selectedNodeId={selectedNodeId}

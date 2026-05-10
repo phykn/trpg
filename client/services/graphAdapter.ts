@@ -32,12 +32,14 @@ export function adaptGraphState(state: GraphFrontState): FrontState {
     combat: adaptCombat(state.combat),
     log: state.log,
     pendingConfirmation: state.pendingConfirmation,
+    pendingRoll: state.pendingRoll,
     storyGraph: buildStoryGraph(state, visibleQuests(state)),
   };
 }
 
 export function deriveGraphSuggestions(state: GraphFrontState): string[] {
   if (state.pendingConfirmation !== null) return [];
+  if (state.pendingRoll !== null) return [];
   if (state.combat !== null) return combatSuggestions(state.combat);
 
   const suggestions: string[] = [];

@@ -1,8 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, FlatList, Animated, Easing, Keyboard } from 'react-native';
-import { Glyph } from '@/components/ui';
+import { View, FlatList, Animated, Easing, Keyboard } from 'react-native';
 import { colors, spacing } from '@/design/tokens';
-import { ko } from '@/locale/ko';
 
 import { LogItem } from './LogItem';
 import type { LogEntry } from '@/logic/log/types';
@@ -67,62 +65,12 @@ function TypingDots() {
   );
 }
 
-function EmptySuggestionHint() {
-  return (
-    <View style={{ paddingTop: spacing[3] }}>
-      <View
-        accessibilityElementsHidden
-        importantForAccessibility="no"
-        className="px-3 py-2 rounded-md bg-canvas-subtle border border-border-default flex-row items-center gap-3 opacity-60"
-      >
-        <Glyph kind="outline" tone="muted" size={10} />
-        <Text className="font-sans text-title text-fg-subtle flex-1">
-          {ko.empty.suggestionHint}
-        </Text>
-        <Text className="font-sans text-title text-fg-subtle">↓</Text>
-      </View>
-    </View>
-  );
-}
-
-function SuggestionChips({
-  items,
-  onPick,
-}: {
-  items: string[];
-  onPick: (text: string) => void;
-}) {
-  return (
-    <View style={{ paddingTop: spacing[3], gap: spacing[1.5] }}>
-      {items.map((text, i) => (
-        <Pressable
-          key={`${i}-${text}`}
-          onPress={() => onPick(text)}
-          accessibilityRole="button"
-          accessibilityLabel={text}
-          className="px-3 py-2 rounded-md bg-accent-muted border border-border-default flex-row items-center gap-3"
-          style={(state) => [state.pressed && { opacity: 0.6 }]}
-        >
-          <Glyph kind="outline" tone="accent" size={10} />
-          <Text className="font-sans text-title text-fg-default flex-1">
-            {text}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
 export function Log({
   log,
   typing,
-  suggestions,
-  onPickSuggestion,
 }: {
   log: LogEntry[];
   typing: boolean;
-  suggestions: string[];
-  onPickSuggestion: (text: string) => void;
 }) {
   const ref = React.useRef<FlatList<LogEntry>>(null);
   const [viewportH, setViewportH] = React.useState(0);
@@ -154,13 +102,7 @@ export function Log({
       data={log}
       keyExtractor={(e) => String(e.id)}
       renderItem={({ item }) => <LogItem entry={item} />}
-      ListFooterComponent={
-        typing
-          ? <TypingDots />
-          : suggestions.length > 0
-          ? <SuggestionChips items={suggestions} onPick={onPickSuggestion} />
-          : <EmptySuggestionHint />
-      }
+      ListFooterComponent={typing ? <TypingDots /> : null}
       ItemSeparatorComponent={() => <View style={{ height: spacing[4] }} />}
       onLayout={(ev) => setViewportH(ev.nativeEvent.layout.height)}
       onContentSizeChange={onContentSizeChange}

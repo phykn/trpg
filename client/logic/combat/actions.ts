@@ -26,5 +26,11 @@ export function buildCombatActions(combat: CombatBadge): PanelAction[] {
       graphAction: { verb: 'move', how: 'flee' },
       textFallback: compose.flee(),
     },
+    {
+      kind: 'graph_action',
+      label: ko.combat.persuade,
+      graphAction: { verb: 'speak', to: targetId },
+      textFallback: compose.persuade(target.name),
+    },
   ];
 }

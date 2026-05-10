@@ -64,3 +64,4 @@ def story_summary_places(count: int) -> str:
 # ----- Default fallback for action reasons surfaced in the GM log -----
 
 ROLL_REASON_DEFAULT = render("ui.roll.reason_default", "ko")
+ROLL_DICE_LABEL = render("ui.roll.dice_label", "ko")

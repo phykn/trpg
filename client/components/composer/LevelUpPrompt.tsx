@@ -121,7 +121,7 @@ export function LevelUpPrompt({ hero, onCommit, onCancel }: Props) {
           ]}
         >
           <Text className="font-sans-semibold text-title" style={{ color: colors.accent.fg, letterSpacing: 1.2 }}>
-            ✦ {ko.level.title}
+            {ko.level.title}
           </Text>
         </Pressable>
       </View>

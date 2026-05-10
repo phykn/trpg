@@ -28,9 +28,15 @@ describe('buildCombatActions', () => {
       }),
       expect.objectContaining({
         kind: 'graph_action',
-        label: '도망',
+        label: '도주',
         graphAction: { verb: 'move', how: 'flee' },
         textFallback: '도망칩니다',
+      }),
+      expect.objectContaining({
+        kind: 'graph_action',
+        label: '설득',
+        graphAction: { verb: 'speak', to: 'enemy_01' },
+        textFallback: '늑대를 설득합니다',
       }),
     ]);
   });

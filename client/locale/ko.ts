@@ -49,6 +49,8 @@ export const ko = {
     noStoryData: '스토리 데이터 없음',
     move: '이동',
     approach: '접근',
+    talk: '대화',
+    inspect: '살펴보기',
   },
   legend: {
     place: '장소',
@@ -88,7 +90,8 @@ export const ko = {
   },
   composer: {
     placeholderLocked: '판정을 먼저 굴려주세요',
-    placeholder: '무엇을 하시겠습니까?',
+    placeholder: '당신은 무엇을 합니까?',
+    send: '전송',
     sendAction: '행동 보내기',
     stopAction: '행동 중단',
   },
@@ -118,6 +121,7 @@ export const ko = {
     offer: '제안',
   },
   hero: {
+    chip: '주인공',
     ability: '능력',
     equip: '장비',
     inventory: '소지',
@@ -127,12 +131,14 @@ export const ko = {
     mp: '마나',
     exp: '경험',
     revive: '소생',
+    gold: '소지금',
   },
   combat: {
     label: '전투',
     attack: '공격',
     defend: '방어',
-    flee: '도망',
+    flee: '도주',
+    persuade: '설득',
   },
   menu: {
     newGame: '새로운 이야기',
@@ -141,7 +147,7 @@ export const ko = {
     menuLabel: '메뉴',
   },
   subject: {
-    chip: '상대',
+    chip: 'NPC',
   },
   confirm: {
     ok: '확인',
@@ -150,6 +156,7 @@ export const ko = {
     heading: '오류',
     retry: '다시 시도',
     unknown: '알 수 없는 오류',
+    invalidStat: '잘못된 능력치입니다.',
   },
   shell: {
     loading: [
@@ -184,7 +191,10 @@ export const compose = {
     return `${name}으로 이동합니다`;
   },
   approachTo: (name: string) => `${name}에게 접근합니다`,
+  talkTo: (name: string) => `${name}에게 말을 겁니다`,
+  inspect: (name: string) => `${name}${josaObject(name)} 살펴봅니다`,
   attack: (name: string) => `${name}${josaObject(name)} 공격합니다`,
+  persuade: (name: string) => `${name}${josaObject(name)} 설득합니다`,
   defend: () => '방어합니다',
   flee: () => '도망칩니다',
   useItem: (name: string) => `${name} 사용`,
@@ -195,10 +205,18 @@ export const compose = {
   placeCount: (n: number) => `장소 ${n}곳`,
   reachableCount: (n: number) => `이동 가능 ${n}`,
   affinity: (delta: number) => `호감도 ${delta > 0 ? '+' : ''}${delta}`,
+  nearbySummary: (people: number, places: number, tasks: number) => `인물 ${people} · 장소 ${places} · 할 일 ${tasks}`,
+  combatWith: (name: string) => `${name}${josaWith(name)} 전투 중`,
 };
 
 function josaObject(value: string): '을' | '를' {
   const last = value.charCodeAt(value.length - 1);
   if (last < 0xac00 || last > 0xd7a3) return '를';
   return (last - 0xac00) % 28 === 0 ? '를' : '을';
+}
+
+function josaWith(value: string): '과' | '와' {
+  const last = value.charCodeAt(value.length - 1);
+  if (last < 0xac00 || last > 0xd7a3) return '와';
+  return (last - 0xac00) % 28 === 0 ? '와' : '과';
 }

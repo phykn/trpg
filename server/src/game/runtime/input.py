@@ -16,6 +16,7 @@ from src.wire.graph_to_front import graph_to_front_state
 
 from .confirmation import GraphActionRequestResult, run_graph_action_request
 from .load import load_runtime_state
+from .roll import start_graph_roll
 
 
 class GraphInputError(ValueError):
@@ -48,7 +49,10 @@ async def run_graph_input_turn(
         raise GraphInputError("graph input requires exactly one action")
 
     action = actions[0]
-    if action.verb in {"speak", "perceive", "pass"}:
+    if action.verb == "perceive":
+        return await start_graph_roll(repo, game_id, action)
+
+    if action.verb in {"speak", "pass"}:
         return await _run_graph_narrative_input(
             client,
             repo,

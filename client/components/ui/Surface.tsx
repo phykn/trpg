@@ -11,9 +11,8 @@ type SurfaceProps = {
   children: React.ReactNode;
 } & Omit<ViewProps, 'style' | 'children' | 'className'>;
 
-const PAPER_CLASS = 'bg-canvas-subtle border border-border-default rounded-md';
-// Floating sits above paper and is positioned absolutely over content — must be opaque so underlying text doesn't bleed through. Stronger border + slightly brighter solid bg replaces the (now-invisible) shadow.
-const FLOATING_CLASS = 'bg-[#262931] border border-[rgba(255,255,255,0.18)] rounded-md';
+const PAPER_CLASS = 'bg-canvas-subtle border border-border-default rounded-lg';
+const FLOATING_CLASS = 'bg-canvas-floating border border-border-strong rounded-lg';
 
 export function Surface({
   variant = 'paper',

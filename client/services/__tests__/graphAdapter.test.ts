@@ -96,6 +96,15 @@ describe('adaptGraphState', () => {
         cancelLabel: '취소',
         targetLabel: '늑대',
       },
+      pendingRoll: {
+        id: 'roll-1',
+        kind: 'perceive',
+        title: '정신 판정이 필요합니다',
+        body: '자세히 살펴보려면 집중해야 합니다.',
+        stat: 'mind',
+        statLabel: '정신',
+        requiredRoll: 13,
+      },
       log: [{ id: 1, kind: 'gm', text: '당신은 광장에 섭니다.' }],
     });
 
@@ -135,6 +144,7 @@ describe('adaptGraphState', () => {
       alive: true,
     });
     expect(state.pendingConfirmation?.confirmLabel).toBe('공격');
+    expect(state.pendingRoll?.requiredRoll).toBe(13);
     expect(state.subject?.name).toBe('늑대');
     expect(state.subject?.hp).toBe(5);
     expect(state.storyGraph.nodes.map((node) => node.id)).toEqual([
@@ -191,6 +201,7 @@ describe('adaptGraphState', () => {
       questOffers: [],
       combat: null,
       pendingConfirmation: null,
+      pendingRoll: null,
       log: [{ id: 1, kind: 'gm', text: '당신은 광장에 있습니다.' }],
     });
 

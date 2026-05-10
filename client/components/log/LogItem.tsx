@@ -86,12 +86,12 @@ function PlayerMessage({ text }: { text: string }) {
   return (
     <View
       style={{
-        borderRightWidth: 2,
-        borderRightColor: colors.fg.muted,
-        paddingRight: spacing[3],
+        borderLeftWidth: 2,
+        borderLeftColor: colors.exp.fg,
+        paddingLeft: spacing[3],
       }}
     >
-      <Text className="font-sans-medium text-lead text-fg-default text-right">
+      <Text className="font-serif text-lead text-accent-fg">
         {text}
       </Text>
     </View>

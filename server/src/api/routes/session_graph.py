@@ -25,6 +25,7 @@ from src.game.runtime.intro import (
 )
 from src.game.runtime.level_up import GraphLevelUpError, run_graph_level_up
 from src.game.runtime.load import load_runtime_state
+from src.game.runtime.roll import GraphRollError, GraphRollExpected, run_graph_roll
 from src.game.runtime.state import GameRuntimeState
 from src.game.seed.init_graph import init_graph_game
 from src.game.runtime.turn import GraphActionTurnError
@@ -37,6 +38,7 @@ from ..schema import (
     GraphActionResponse,
     GraphInputRequest,
     GraphLevelUpRequest,
+    GraphRollRequest,
     GraphTurnRequest,
     InitRequest,
     InitResponse,
@@ -143,6 +145,28 @@ async def session_graph_confirm(
     except GraphConfirmationExpected as e:
         raise HTTPException(status_code=422, detail=str(e))
     except GraphConfirmationError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    return GraphActionResponse(
+        game_id=game_id,
+        state=result.front_state.model_dump(mode="json", by_alias=True),
+        status=result.status,
+        message=result.message,
+    )
+
+
+@router.post("/session/{game_id}/graph/roll", response_model=GraphActionResponse)
+async def session_graph_roll(
+    game_id: str,
+    body: GraphRollRequest,
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+) -> GraphActionResponse:
+    try:
+        result = await run_graph_roll(graph_repo, game_id, body.roll_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="game not found")
+    except GraphRollExpected as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except GraphRollError as e:
         raise HTTPException(status_code=422, detail=str(e))
     return GraphActionResponse(
         game_id=game_id,

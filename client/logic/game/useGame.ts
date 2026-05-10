@@ -21,6 +21,7 @@ import {
   storeLastSeenQuestTitle,
   storeLastSeenSubjectId,
   storeSuggestions,
+  rollGraphPending,
   sendGraphAction,
   sendGraphInput,
   sendGraphLevelUp,
@@ -29,6 +30,7 @@ import type { CombatBadge } from '@/logic/combat';
 import type { Hero } from '@/logic/hero';
 import type { LogEntry } from '@/logic/log';
 import type { Quest } from '@/logic/quest';
+import type { PendingRoll } from '@/logic/roll';
 import type { Place } from '@/logic/story-graph';
 import type { Subject } from '@/logic/subject';
 import type {
@@ -39,6 +41,7 @@ import type {
   PendingConfirmation,
   GraphStatKey,
 } from '@/services/wire';
+import { ko } from '@/locale/ko';
 
 export type GameStatus = 'loading' | 'no-game' | 'ready' | 'error';
 
@@ -67,6 +70,7 @@ export function useGame() {
   const [log, setLog] = React.useState<LogEntry[]>([]);
 
   const [pendingConfirmation, setPendingConfirmation] = React.useState<PendingConfirmation | null>(null);
+  const [pendingRoll, setPendingRoll] = React.useState<PendingRoll | null>(null);
   const [combat, setCombat] = React.useState<CombatBadge | null>(null);
   const [storyGraph, setStoryGraph] = React.useState<StoryGraphModel>(EMPTY_STORY_GRAPH);
   const [streaming, setStreaming] = React.useState(false);
@@ -95,10 +99,10 @@ export function useGame() {
   const streamingRef = React.useRef(false);
 
   React.useEffect(() => {
-    if (pendingConfirmation) {
+    if (pendingConfirmation || pendingRoll) {
       setLevelUpOpen(false);
     }
-  }, [pendingConfirmation]);
+  }, [pendingConfirmation, pendingRoll]);
 
   const rememberGameId = React.useCallback((id: string | null) => {
     gameIdRef.current = id;
@@ -114,6 +118,7 @@ export function useGame() {
     setCombat(s.combat);
     setLog(s.log);
     setPendingConfirmation(s.pendingConfirmation ?? null);
+    setPendingRoll(s.pendingRoll ?? null);
     if (stateGameId) {
       setStoryGraph(mergeAndStoreStoryGraph(stateGameId, s.storyGraph));
     } else {
@@ -197,6 +202,7 @@ export function useGame() {
         setLastSeenQuestTitle(null);
         setLastSeenSubjectId(null);
         setPendingConfirmation(payload.state.pendingConfirmation ?? null);
+        setPendingRoll(payload.state.pendingRoll ?? null);
         setSuggestions(payload.suggestions ?? []);
         setStatus('ready');
       } catch (err) {
@@ -210,15 +216,15 @@ export function useGame() {
   const onSend = React.useCallback(
     (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed || !gameId || pendingConfirmation) return;
+      if (!trimmed || !gameId || pendingConfirmation || pendingRoll) return;
       void runGraphRequest(() => sendGraphInput(gameId, trimmed));
     },
-    [gameId, pendingConfirmation, runGraphRequest],
+    [gameId, pendingConfirmation, pendingRoll, runGraphRequest],
   );
 
   const onQuestAction = React.useCallback(
     (kind: 'accept' | 'abandon', quest_id: string) => {
-      if (!gameId || pendingConfirmation) return;
+      if (!gameId || pendingConfirmation || pendingRoll) return;
       void runGraphRequest(() =>
         sendGraphAction(gameId, {
           verb: 'transfer',
@@ -227,15 +233,15 @@ export function useGame() {
         }),
       );
     },
-    [gameId, pendingConfirmation, runGraphRequest],
+    [gameId, pendingConfirmation, pendingRoll, runGraphRequest],
   );
 
   const onGraphAction = React.useCallback(
     (action: GraphAction) => {
-      if (!gameId || pendingConfirmation) return;
+      if (!gameId || pendingConfirmation || pendingRoll) return;
       void runGraphRequest(() => sendGraphAction(gameId, action));
     },
-    [gameId, pendingConfirmation, runGraphRequest],
+    [gameId, pendingConfirmation, pendingRoll, runGraphRequest],
   );
 
   const onConfirmPending = React.useCallback(
@@ -253,13 +259,26 @@ export function useGame() {
     [gameId, pendingConfirmation, runGraphRequest],
   );
 
+  const onRollPending = React.useCallback(
+    (rollId: string) => {
+      if (!gameId || !pendingRoll) return;
+      void runGraphRequest(() =>
+        rollGraphPending(gameId, {
+          roll_id: rollId,
+          think: false,
+        }),
+      );
+    },
+    [gameId, pendingRoll, runGraphRequest],
+  );
+
   const onStop = React.useCallback(() => {}, []);
 
   const openLevelUp = React.useCallback(async () => {
     const id = gameIdRef.current;
-    if (!id || streamingRef.current || pendingConfirmation) return;
+    if (!id || streamingRef.current || pendingConfirmation || pendingRoll) return;
     setLevelUpOpen(true);
-  }, [pendingConfirmation]);
+  }, [pendingConfirmation, pendingRoll]);
 
   const cancelLevelUp = React.useCallback(() => {
     setLevelUpOpen(false);
@@ -271,7 +290,7 @@ export function useGame() {
       if (!id) return;
       setLevelUpOpen(false);
       if (!isGraphStatKey(stat_up)) {
-        setErrorMessage('잘못된 능력치입니다.');
+        setErrorMessage(ko.error.invalidStat);
         return;
       }
       void runGraphRequest(() =>
@@ -290,7 +309,7 @@ export function useGame() {
     setStatus('no-game');
   }, [rememberGameId]);
 
-  const awaitingNarration = streaming && !pendingConfirmation;
+  const awaitingNarration = streaming && !pendingConfirmation && !pendingRoll;
 
   // Guarded by !streaming because hp can transiently hit 0 before reviveCoins
   // decrement during a graph action request; wait for the final state payload.
@@ -342,6 +361,7 @@ export function useGame() {
     storyGraph,
     log,
     pendingConfirmation,
+    pendingRoll,
     streaming,
     awaitingNarration,
     gameOver,
@@ -356,6 +376,7 @@ export function useGame() {
     onQuestAction,
     onGraphAction,
     onConfirmPending,
+    onRollPending,
     onStop,
     levelUpOpen,
     openLevelUp,

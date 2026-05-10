@@ -1,7 +1,7 @@
 export declare const colors: {
-  canvas: { default: string; subtle: string; inset: string };
+  canvas: { default: string; subtle: string; inset: string; floating: string };
   fg: { default: string; muted: string; subtle: string; 'on-emphasis': string };
-  border: { default: string };
+  border: { default: string; strong: string };
   accent: { fg: string; muted: string };
   danger: { fg: string };
   success: { fg: string };

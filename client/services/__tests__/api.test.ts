@@ -13,6 +13,7 @@ const {
   getGraphSessionById,
   initGraphSession,
   listProfiles,
+  rollGraphPending,
   sendGraphAction,
   sendGraphInput,
   sendGraphLevelUp,
@@ -51,6 +52,7 @@ const graphState = (): GraphFrontState => ({
   place: null,
   combat: null,
   pendingConfirmation: null,
+  pendingRoll: null,
   log: [],
 });
 
@@ -239,5 +241,34 @@ describe('graph API helpers', () => {
       }),
     );
     expect(result.pendingConfirmation).toBeNull();
+  });
+
+  test('posts pending roll choices to the graph roll endpoint', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        state: graphState(),
+        status: 'executed',
+        message: null,
+      }),
+    });
+
+    const result = await rollGraphPending('game-1', {
+      roll_id: 'roll-1',
+      think: false,
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/graph/roll',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          roll_id: 'roll-1',
+          think: false,
+        }),
+      }),
+    );
+    expect(result.pendingRoll).toBeNull();
   });
 });

@@ -1,30 +1,32 @@
 // Design tokens consumed by tailwind.config.js (Node/CJS) and TS via tokens.d.ts. Naming follows GitHub Primer.
 const colors = {
   canvas: {
-    default: '#1f2228',
-    subtle: 'rgba(255,255,255,0.03)',
-    inset: 'rgba(255,255,255,0.06)',
+    default: '#14110f',
+    subtle: '#25211d',
+    inset: '#1b1714',
+    floating: '#2b2621',
   },
   fg: {
-    default: '#ffffff',
-    muted: 'rgba(255,255,255,0.7)',
-    subtle: 'rgba(255,255,255,0.5)',
-    'on-emphasis': '#1f2228',
+    default: '#faf9f5',
+    muted: '#a9a099',
+    subtle: '#746d66',
+    'on-emphasis': '#14110f',
   },
   border: {
-    default: 'rgba(255,255,255,0.1)',
+    default: 'rgba(230,223,216,0.14)',
+    strong: 'rgba(230,223,216,0.26)',
   },
   accent: {
-    fg: '#D67A5C',
-    muted: 'rgba(214,122,92,0.12)',
+    fg: '#cc785c',
+    muted: 'rgba(204,120,92,0.16)',
   },
-  danger: { fg: '#E5775A' },
-  success: { fg: '#9DAE92' },
-  hp: { fg: '#E0826A' },
-  mp: { fg: '#9DAE92' },
-  exp: { fg: '#D6A86D' },
-  revival: { fg: '#A698BD' },
-  gold: { fg: '#D4A85A' },
+  danger: { fg: '#b5534a' },
+  success: { fg: '#7b8c70' },
+  hp: { fg: '#df876d' },
+  mp: { fg: '#78b879' },
+  exp: { fg: '#e8a55a' },
+  revival: { fg: '#b39ac8' },
+  gold: { fg: '#d4a85a' },
 };
 
 const spacing = {
@@ -46,10 +48,10 @@ const spacing = {
 
 const radius = {
   none: 0,
-  sm: 2,
-  md: 4,
-  lg: 6,
-  xl: 8,
+  sm: 4,
+  md: 8,
+  lg: 10,
+  xl: 12,
   full: 9999,
 };
 
@@ -73,8 +75,8 @@ const fontSize = {
   panel:     ['12px', { lineHeight: '18px', letterSpacing: '0px' }],
   body:      ['13px', { lineHeight: '20px', letterSpacing: '0px' }],
   title:     ['15px', { lineHeight: '21px', letterSpacing: '-0.1px' }],
-  lead:      ['17px', { lineHeight: '29px', letterSpacing: '-0.2px' }],
-  narration: ['20px', { lineHeight: '34px', letterSpacing: '-0.3px' }],
+  lead:      ['17px', { lineHeight: '28px', letterSpacing: '0px' }],
+  narration: ['20px', { lineHeight: '34px', letterSpacing: '0px' }],
 };
 
 const toneColor = {

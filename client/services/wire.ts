@@ -2,6 +2,7 @@ import type { CombatBadge } from '@/logic/combat';
 import type { Hero } from '@/logic/hero';
 import type { LogEntry } from '@/logic/log';
 import type { Quest } from '@/logic/quest';
+import type { PendingRoll } from '@/logic/roll';
 import type { Place, StoryGraphModel } from '@/logic/story-graph';
 import type { Subject } from '@/logic/subject';
 
@@ -24,6 +25,7 @@ export type FrontState = {
   combat: CombatBadge | null;
   log: LogEntry[];
   pendingConfirmation?: PendingConfirmation | null;
+  pendingRoll?: PendingRoll | null;
   storyGraph: StoryGraphModel;
 };
 
@@ -66,6 +68,11 @@ export type QuestAction = {
 export type ConfirmRequest = {
   confirmation_id: string;
   decision: 'confirm' | 'cancel';
+  think: boolean;
+};
+
+export type GraphRollRequest = {
+  roll_id: string;
   think: boolean;
 };
 
@@ -177,6 +184,7 @@ export type GraphFrontState = {
   place: GraphPlaceState | null;
   combat: GraphCombatState | null;
   pendingConfirmation: PendingConfirmation | null;
+  pendingRoll: PendingRoll | null;
   log: LogEntry[];
 };
 
@@ -196,6 +204,7 @@ export type GraphActionClientResponse = {
   game_id: string;
   state: FrontState;
   pendingConfirmation: PendingConfirmation | null;
+  pendingRoll: PendingRoll | null;
   status?: string | null;
   message?: string | null;
   suggestions: string[];

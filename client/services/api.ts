@@ -7,6 +7,7 @@ import type {
   GraphActionClientResponse,
   GraphActionResponse,
   GraphLevelUpRequest,
+  GraphRollRequest,
   GraphSessionPayload,
   InitRequest,
   ProfileCard,
@@ -122,6 +123,19 @@ export async function confirmGraphAction(
   return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
 }
 
+export async function rollGraphPending(
+  gameId: string,
+  body: GraphRollRequest,
+): Promise<GraphActionClientResponse> {
+  const res = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/roll`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await httpError('rollGraphPending', res));
+  return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
+}
+
 type ApiFetchInit = {
   method?: 'GET' | 'POST';
   headers: typeof baseHeaders | typeof jsonHeaders;
@@ -180,6 +194,7 @@ function adaptGraphActionResponse(
     game_id: payload.game_id,
     state,
     pendingConfirmation: state.pendingConfirmation ?? null,
+    pendingRoll: state.pendingRoll ?? null,
     status: payload.status,
     message: payload.message,
     suggestions: deriveGraphSuggestions(payload.state),

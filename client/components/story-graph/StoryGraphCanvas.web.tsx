@@ -155,6 +155,13 @@ export function StoryGraphCanvas({
   const cyRef = React.useRef<Core | null>(null);
   const hasMountedRef = React.useRef(false);
   const prevViewportRef = React.useRef<{ pan: { x: number; y: number }; zoom: number } | null>(null);
+  const lifecycleGraphRef = React.useRef(graph);
+  const centerNodeIdRef = React.useRef(centerNodeId);
+  const unseenNodeIdsRef = React.useRef(unseenNodeIds);
+
+  lifecycleGraphRef.current = graph;
+  centerNodeIdRef.current = centerNodeId;
+  unseenNodeIdsRef.current = unseenNodeIds;
 
   const graphIdentityKey = React.useMemo(() => {
     const ns = graph.nodes.map((n) => n.id).sort().join('|');
@@ -166,12 +173,16 @@ export function StoryGraphCanvas({
   // rebuilding (overrides/layout/root). Selection, centerNodeId, and unseenNodeIds
   // are intentionally absent; they get their own effects so a tap doesn't reset zoom.
   React.useEffect(() => {
+    const lifecycleGraph = lifecycleGraphRef.current;
+    const lifecycleCenterNodeId = centerNodeIdRef.current;
+    const lifecycleUnseenNodeIds = unseenNodeIdsRef.current;
+
     // Read viewport snapshot stashed by the previous cleanup, then clear it
     // so a stale value can't feed a future run.
     const prev = prevViewportRef.current;
     prevViewportRef.current = null;
 
-    const validIds = new Set(graph.nodes.map((n) => n.id));
+    const validIds = new Set(lifecycleGraph.nodes.map((n) => n.id));
     for (const id of Object.keys(positionStore)) {
       if (!validIds.has(id)) delete positionStore[id];
     }
@@ -181,7 +192,13 @@ export function StoryGraphCanvas({
 
     const cy = cytoscape({
       container,
-      elements: toElements(graph, nodeOverrides, unseenNodeIds, positionStore, centerNodeId),
+      elements: toElements(
+        lifecycleGraph,
+        nodeOverrides,
+        lifecycleUnseenNodeIds,
+        positionStore,
+        lifecycleCenterNodeId,
+      ),
       autoungrabify: true,
       hideEdgesOnViewport: false,
       minZoom: 0.2,
@@ -295,8 +312,8 @@ export function StoryGraphCanvas({
                 levelWidth: () => 1,
               }
             : (() => {
-              const allCached = graph.nodes.every((n) => positionStore[n.id]);
-              const hasNewNodes = unseenNodeIds && unseenNodeIds.size > 0;
+              const allCached = lifecycleGraph.nodes.every((n) => positionStore[n.id]);
+              const hasNewNodes = lifecycleUnseenNodeIds && lifecycleUnseenNodeIds.size > 0;
               return (allCached && !hasNewNodes)
                 ? { name: 'preset', fit: !hasMountedRef.current, padding: 24 }
                 : {
@@ -337,8 +354,8 @@ export function StoryGraphCanvas({
     if (!hasMountedRef.current) {
       // True first mount — fit + initial center.
       cy.fit(undefined, 28);
-      if (centerNodeId) {
-        const node = cy.getElementById(centerNodeId);
+      if (lifecycleCenterNodeId) {
+        const node = cy.getElementById(lifecycleCenterNodeId);
         if (node.length > 0) cy.center(node);
       }
       hasMountedRef.current = true;
@@ -435,7 +452,21 @@ export function StoryGraphCanvas({
           opacity: 0.85,
         }}
       >
-        ⟳
+        <svg
+          aria-hidden="true"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <path
+            d="M20 12a8 8 0 1 1-2.34-5.66M20 4v6h-6"
+            stroke={colors.fg.default}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </button>
     </div>
   );

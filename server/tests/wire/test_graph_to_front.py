@@ -331,6 +331,38 @@ def test_graph_front_state_exposes_pending_confirmation_without_payload():
     assert "payload" not in payload["pendingConfirmation"]
 
 
+def test_graph_front_state_exposes_pending_roll_without_payload():
+    runtime = _runtime()
+    runtime = runtime.model_copy(
+        update={
+            "progress": runtime.progress.model_copy(
+                update={
+                    "pending_roll": {
+                        "id": "roll-1",
+                        "kind": "perceive",
+                        "title": "정신 판정이 필요합니다",
+                        "body": "자세히 살펴보려면 집중해야 합니다.",
+                        "stat": "mind",
+                        "stat_label": "정신",
+                        "required_roll": 13,
+                        "payload": {"kind": "graph_action", "action": {}},
+                    }
+                }
+            )
+        }
+    )
+
+    payload = graph_to_front_state(runtime).model_dump(mode="json", by_alias=True)
+
+    assert payload["pendingRoll"]["kind"] == "perceive"
+    assert payload["pendingRoll"]["title"] == "정신 판정이 필요합니다"
+    assert payload["pendingRoll"]["body"] == "자세히 살펴보려면 집중해야 합니다."
+    assert payload["pendingRoll"]["stat"] == "mind"
+    assert payload["pendingRoll"]["statLabel"] == "정신"
+    assert payload["pendingRoll"]["requiredRoll"] == 13
+    assert "payload" not in payload["pendingRoll"]
+
+
 def test_graph_front_state_omits_internal_change_and_edge_ids():
     dumped = graph_to_front_state(_runtime(combat=True)).model_dump()
 

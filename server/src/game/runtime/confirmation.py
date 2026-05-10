@@ -26,6 +26,7 @@ Decision = Literal["confirm", "cancel"]
 GraphRequestStatus = Literal[
     "executed",
     "confirmation_required",
+    "roll_required",
     "cancelled",
     "answered",
 ]
@@ -50,6 +51,7 @@ class GraphActionRequestResult(BaseModel):
     status: GraphRequestStatus
     front_state: GraphFrontStatePayload
     pending_confirmation: dict[str, Any] | None = None
+    pending_roll: dict[str, Any] | None = None
     dispatch: GraphActionDispatchResult | None = None
     message: str | None = None
 
@@ -66,6 +68,15 @@ async def run_graph_action_request(
         raise GraphConfirmationActive(
             "a pending_confirmation is already active; call graph confirm instead"
         )
+    if runtime.progress.pending_roll is not None:
+        raise GraphConfirmationActive(
+            "a pending_roll is already active; call graph roll instead"
+        )
+
+    if action.verb == "perceive":
+        from .roll import start_graph_roll
+
+        return await start_graph_roll(repo, game_id, action)
 
     if action.verb == "query":
         from .query import answer_graph_query

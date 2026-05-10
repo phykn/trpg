@@ -16,6 +16,7 @@ __all__ = [
     "GraphInventoryItemPayload",
     "GraphNamedPayload",
     "GraphPendingConfirmationPayload",
+    "GraphPendingRollPayload",
     "GraphPlaceLinkPayload",
     "GraphPlacePayload",
     "GraphPlaceTargetPayload",
@@ -120,6 +121,16 @@ class GraphPendingConfirmationPayload(_CamelModel):
     target_label: str
 
 
+class GraphPendingRollPayload(_CamelModel):
+    id: str
+    kind: str
+    title: str
+    body: str
+    stat: str
+    stat_label: str
+    required_roll: int
+
+
 class GraphFrontStatePayload(_CamelModel):
     hero: GraphHeroPayload
     quest: QuestPayload | None
@@ -127,4 +138,5 @@ class GraphFrontStatePayload(_CamelModel):
     place: GraphPlacePayload | None
     combat: GraphCombatPayload | None
     pending_confirmation: GraphPendingConfirmationPayload | None
+    pending_roll: GraphPendingRollPayload | None
     log: list[LogEntry]

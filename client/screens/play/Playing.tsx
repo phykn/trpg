@@ -1,12 +1,13 @@
 import React from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 
-import { useBgm } from '@/logic/audio';
 import { CombatStrip } from '@/logic/combat';
 import { Log } from '@/logic/log';
-import { useStoryGraph } from '@/logic/story-graph';
+import { RollPanel } from '@/components/roll/RollPanel';
+import { buildNearbyPanel, useStoryGraph } from '@/logic/story-graph';
 import type { Game } from '@/logic/game/useGame';
-import { buildPanelSlots } from '@/logic/info-panel';
+import { buildHeroSlot } from '@/logic/hero';
+import { buildSubjectSlot } from '@/logic/subject';
 import type { PanelAction, PanelSlot } from '@/logic/info-panel';
 
 import { Composer, GameOverPanel, LevelUpPrompt } from '@/logic/composer';
@@ -18,15 +19,12 @@ import { ko } from '@/locale/ko';
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, questOffers, place, combat, storyGraph, log, pendingConfirmation, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onConfirmPending, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, openLevelUp, cancelLevelUp, commitLevelUp } = game;
+  const { hero, subject, place, combat, storyGraph, log, pendingConfirmation, pendingRoll, streaming, awaitingNarration, gameOver, errorMessage, onSend, onQuestAction, onGraphAction, onConfirmPending, onRollPending, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, openLevelUp, cancelLevelUp, commitLevelUp } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = React.useState(false);
   const [input, setInput] = React.useState('');
   const [pendingAction, setPendingAction] = React.useState<PanelAction | null>(null);
-  const [newGameConfirmOpen, setNewGameConfirmOpen] = React.useState(false);
-  const { bgmOn, toggle: toggleBgm } = useBgm();
 
   const runAction = (action: PanelAction) => {
     setActiveId(null);
@@ -41,7 +39,6 @@ export function Playing({ game }: Props) {
 
   const closePopups = () => {
     setActiveId(null);
-    setMenuOpen(false);
   };
 
   React.useEffect(() => {
@@ -56,17 +53,18 @@ export function Playing({ game }: Props) {
   React.useEffect(() => {
     if (typing) {
       setActiveId(null);
-      setMenuOpen(false);
     }
   }, [typing]);
 
-  const { graph: miniMapGraph, unseenNodeIds: unseenMapNodeIds, markNodeSeen } = useStoryGraph(game.gameId, storyGraph);
+  const { graph: miniMapGraph } = useStoryGraph(game.gameId, storyGraph);
+  const nearby = React.useMemo(() => buildNearbyPanel(miniMapGraph), [miniMapGraph]);
 
   if (!hero) return null;
 
   const slots: PanelSlot[] = [
-    ...buildPanelSlots({ hero, subject, quest, questOffers }, { onLevelUpOpen: openLevelUp, questDot: hasUnseenQuest, subjectDot: hasUnseenSubject }),
-    { id: 'map', chip: { short: ko.panel.neighborhood, dot: hasUnseenLocation }, panel: null },
+    buildHeroSlot(hero, { onLevelUpOpen: openLevelUp }),
+    buildSubjectSlot(subject, { dot: hasUnseenSubject }),
+    { id: 'map', chip: { short: ko.panel.miniMap, dot: hasUnseenLocation }, panel: null },
   ];
   return (
     <View className="flex-1 bg-canvas-default py-2.5 gap-2.5">
@@ -75,21 +73,14 @@ export function Playing({ game }: Props) {
         miniMapGraph={miniMapGraph}
         place={place}
         activeId={activeId}
-        menuOpen={menuOpen}
-        bgmOn={bgmOn}
         onSelect={(id) => {
           setActiveId((prev) => {
             const next = prev === id ? null : id;
             if (id === 'map' && next === id) markLocationSeen();
-            if ((id === 'quest' || id === 'quest_offer') && next === id) markQuestSeen();
             if (id === 'person' && next === id) markSubjectSeen();
             return next;
           });
         }}
-        onMenuToggle={() => setMenuOpen((v) => !v)}
-        onMenuClose={() => setMenuOpen(false)}
-        onBgmToggle={toggleBgm}
-        onNewGame={() => setNewGameConfirmOpen(true)}
         onAction={(action) => {
           if (action.confirm) {
             setPendingAction(action);
@@ -99,7 +90,7 @@ export function Playing({ game }: Props) {
         }}
       />
 
-      {(activeId !== null || menuOpen) && (
+      {activeId !== null && (
         <Pressable
           onPress={closePopups}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }}
@@ -132,43 +123,12 @@ export function Playing({ game }: Props) {
         />
       )}
 
-      {newGameConfirmOpen && (
-        <ConfirmDialog
-          info={{
-            title: ko.menu.newGame,
-            blurb: ko.newGame.leaveBlurb,
-            confirmLabel: ko.action.start,
-          }}
-          onConfirm={() => {
-            setNewGameConfirmOpen(false);
-            goToNewGame();
-          }}
-          onCancel={() => setNewGameConfirmOpen(false)}
-        />
-      )}
-
       <HeroStrip hero={hero} />
 
       <Log
         log={log}
         typing={awaitingNarration}
-        suggestions={!gameOver && !streaming && !pendingConfirmation ? suggestions : []}
-        onPickSuggestion={onSend}
       />
-
-      {combat ? (
-        <CombatStrip
-          combat={combat}
-          onAction={(action) => {
-            if (action.confirm) {
-              setPendingAction(action);
-            } else {
-              runAction(action);
-            }
-          }}
-          actionDisabled={streaming || pendingConfirmation !== null}
-        />
-      ) : null}
 
       {errorMessage ? (
         <View className="mx-5 rounded-sm border border-danger-fg bg-canvas-subtle px-3 py-2">
@@ -184,6 +144,24 @@ export function Playing({ game }: Props) {
       >
         {gameOver ? (
           <GameOverPanel onRestart={goToNewGame} />
+        ) : pendingRoll ? (
+          <RollPanel
+            roll={pendingRoll}
+            onRoll={onRollPending}
+            disabled={streaming || pendingConfirmation !== null}
+          />
+        ) : combat ? (
+          <CombatStrip
+            combat={combat}
+            onAction={(action) => {
+              if (action.confirm) {
+                setPendingAction(action);
+              } else {
+                runAction(action);
+              }
+            }}
+            actionDisabled={streaming || pendingConfirmation !== null}
+          />
         ) : levelUpOpen ? (
           <LevelUpPrompt
             hero={hero}
@@ -197,6 +175,14 @@ export function Playing({ game }: Props) {
             onSend={onSend}
             onStop={onStop}
             streaming={streaming}
+            nearby={nearby}
+            onNearbyAction={(action) => {
+              if (action.confirm) {
+                setPendingAction(action);
+              } else {
+                runAction(action);
+              }
+            }}
           />
         )}
       </KeyboardAvoidingView>

@@ -1,5 +1,4 @@
-import { Pressable } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { Pressable, Text } from 'react-native';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 
@@ -18,17 +17,12 @@ export function SendButton({ enabled, onPress }: {
       accessibilityLabel={ko.composer.sendAction}
       accessibilityState={{ disabled: !enabled }}
       testID="send-button"
-      className={`items-center justify-center h-8 px-3 rounded-full ${bgClass} ${enabled ? 'active:opacity-80' : ''}`}
+      className={`items-center justify-center h-10 px-3 rounded-md ${bgClass} ${enabled ? 'active:opacity-80' : ''}`}
+      style={{ minWidth: 48 }}
     >
-      <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-        <Path
-          d="M12 19V5M5 12l7-7 7 7"
-          stroke={stroke}
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </Svg>
+      <Text className="font-sans-semibold text-panel" style={{ color: stroke }}>
+        {ko.composer.send}
+      </Text>
     </Pressable>
   );
 }

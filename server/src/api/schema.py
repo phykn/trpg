@@ -64,6 +64,11 @@ class ConfirmRequest(BaseModel):
     think: bool = False
 
 
+class GraphRollRequest(BaseModel):
+    roll_id: str
+    think: bool = False
+
+
 class GraphLevelUpRequest(BaseModel):
     stat_up: GraphStatKey
     skill_id: str | None = None

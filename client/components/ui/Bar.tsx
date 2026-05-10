@@ -16,8 +16,8 @@ export function Bar({ value, max, color, h = 4, signed = false }: Props) {
     const fillPositioning = clamped >= 0 ? { left: '50%' as const } : { right: '50%' as const };
     return (
       <View
-        className="w-full bg-[rgba(255,255,255,0.12)] rounded-full overflow-hidden"
-        style={{ height: h }}
+        className="w-full rounded-full overflow-hidden"
+        style={{ height: h, backgroundColor: colors.border.strong }}
       >
         <View
           className="absolute inset-y-0"
@@ -34,8 +34,8 @@ export function Bar({ value, max, color, h = 4, signed = false }: Props) {
   const pct = max > 0 ? Math.max(0, Math.min(1, value / max)) * 100 : 0;
   return (
     <View
-      className="w-full bg-[rgba(255,255,255,0.12)] rounded-full overflow-hidden"
-      style={{ height: h }}
+      className="w-full rounded-full overflow-hidden"
+      style={{ height: h, backgroundColor: colors.border.strong }}
     >
       {pct > 0 && (
         <View

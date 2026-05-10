@@ -5,12 +5,11 @@ type Entry = [string, string | number | React.ReactNode];
 
 export function InlineNodes({ entries }: { entries: Entry[] }) {
   return (
-    <View className="flex-1 min-w-0 flex-row gap-1 items-center h-5">
+    <View className="flex-1 min-w-0 flex-row flex-wrap gap-1.5 items-center">
       {entries.map(([k, v], i) => (
         <View
           key={i}
-          className="flex-row items-center justify-start gap-1 min-w-0"
-          style={{ flex: 1 }}
+          className="flex-row items-center justify-start gap-1 rounded-full border border-border-default bg-canvas-inset px-2 py-0.5"
         >
           <Text
             numberOfLines={1}

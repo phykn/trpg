@@ -33,27 +33,10 @@ const hero = {
 } as Hero;
 
 describe('buildHeroSlot', () => {
-  test('builds graph actions for usable inventory and equipped items', () => {
+  test('uses a stable top chip label and keeps item actions out of the top panel', () => {
     const slot = buildHeroSlot(hero);
 
-    const actions = slot.panel?.actions?.flatMap((group) => group.items) ?? [];
-
-    expect(actions).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        kind: 'graph_action',
-        label: '회복 물약 사용',
-        graphAction: { verb: 'use', what: 'potion_01' },
-      }),
-      expect.objectContaining({
-        kind: 'graph_action',
-        label: '가죽 갑옷 장비',
-        graphAction: { verb: 'transfer', what: 'armor_01', how: 'equip', to: 'armor' },
-      }),
-      expect.objectContaining({
-        kind: 'graph_action',
-        label: '낡은 검 해제',
-        graphAction: { verb: 'transfer', what: 'sword_01', how: 'unequip' },
-      }),
-    ]));
+    expect(slot.chip.short).toBe('주인공');
+    expect(slot.panel?.actions).toBeUndefined();
   });
 });

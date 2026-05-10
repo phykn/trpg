@@ -17,5 +17,6 @@ class GameProgress(BaseModel):
     active_quest_id: str | None = None
     turn_count: int = 0
     pending_confirmation: dict[str, Any] | None = None
+    pending_roll: dict[str, Any] | None = None
     graph_combat_state: GraphCombatState | None = None
     next_log_id: int = Field(default=1, ge=1)
