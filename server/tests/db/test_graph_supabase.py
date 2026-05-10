@@ -67,6 +67,23 @@ async def test_supabase_graph_repo_replace_save_removes_stale_rows():
     assert any(call[0] == "delete" and call[1] == "graph_nodes" for call in db.calls)
 
 
+async def test_supabase_graph_repo_upserts_before_deleting_stale_rows():
+    repo, db = _repo()
+    await repo.save_graph("game-1", _graph())
+    db.calls.clear()
+
+    smaller = Graph(nodes={"town": GraphNode(id="town", type="location")})
+    await repo.save_graph("game-1", smaller)
+
+    first_upsert = next(
+        index for index, call in enumerate(db.calls) if call[0] == "upsert"
+    )
+    first_delete = next(
+        index for index, call in enumerate(db.calls) if call[0] == "delete"
+    )
+    assert first_upsert < first_delete
+
+
 async def test_supabase_graph_repo_missing_rows_raise_filenotfound():
     repo, _ = _repo()
 

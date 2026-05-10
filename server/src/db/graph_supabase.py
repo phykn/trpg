@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
@@ -32,9 +30,6 @@ class SupabaseGraphRepo:
 
     async def save_graph(self, game_id: str, graph: Graph) -> None:
         node_rows, edge_rows = graph_to_rows(game_id, graph)
-        filters = {"game_id": f"eq.{game_id}"}
-        await self._db.delete("graph_edges", filters=filters)
-        await self._db.delete("graph_nodes", filters=filters)
         await self._db.upsert(
             "graph_nodes",
             [row.model_dump(mode="json") for row in node_rows],
@@ -45,6 +40,30 @@ class SupabaseGraphRepo:
             [row.model_dump(mode="json") for row in edge_rows],
             on_conflict="game_id,edge_id",
         )
+        await self._delete_stale_rows(
+            "graph_edges",
+            "edge_id",
+            game_id,
+            [row.edge_id for row in edge_rows],
+        )
+        await self._delete_stale_rows(
+            "graph_nodes",
+            "node_id",
+            game_id,
+            [row.node_id for row in node_rows],
+        )
+
+    async def _delete_stale_rows(
+        self,
+        table: str,
+        id_column: str,
+        game_id: str,
+        live_ids: list[str],
+    ) -> None:
+        filters = {"game_id": f"eq.{game_id}"}
+        if live_ids:
+            filters[id_column] = f"not.in.({','.join(live_ids)})"
+        await self._db.delete(table, filters=filters)
 
     async def load_graph(self, game_id: str) -> Graph:
         try:

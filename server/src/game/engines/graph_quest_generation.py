@@ -1,10 +1,9 @@
-from __future__ import annotations
-
 import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from src.game.domain.content import RuntimeContent
 from src.game.domain.graph import (
     AddEdgeChange,
     AddNodeChange,
@@ -22,6 +21,7 @@ class GraphQuestOfferPlan(BaseModel):
 
     quest_id: str
     changes: list[GraphChange]
+    content: RuntimeContent
 
 
 def plan_missing_quest_offer(
@@ -49,7 +49,17 @@ def plan_missing_quest_offer(
         AddEdgeChange(type="add_edge", edge=_edge("target_of", enemy_id, quest_id)),
         AddEdgeChange(type="add_edge", edge=_edge("reward_of", reward_id, quest_id)),
     ]
-    return GraphQuestOfferPlan(quest_id=quest_id, changes=changes)
+    return GraphQuestOfferPlan(
+        quest_id=quest_id,
+        changes=changes,
+        content=_content(
+            quest_id=quest_id,
+            giver_id=giver_id,
+            enemy_id=enemy_id,
+            reward_id=reward_id,
+            locale=locale,
+        ),
+    )
 
 
 def _has_open_work(graph: Graph, location_id: str) -> bool:
@@ -81,11 +91,12 @@ def _next_auto_index(graph: Graph) -> int:
 
 
 def _giver(giver_id: str, locale: str) -> GraphNode:
+    del locale
     return GraphNode(
         id=giver_id,
         type="character",
         properties={
-            "name": render("runtime.seed.giver.name", locale),
+            **_source(giver_id),
             "hp": 10,
             "max_hp": 10,
             "mp": 0,
@@ -98,11 +109,12 @@ def _giver(giver_id: str, locale: str) -> GraphNode:
 
 
 def _enemy(enemy_id: str, locale: str) -> GraphNode:
+    del locale
     return GraphNode(
         id=enemy_id,
         type="character",
         properties={
-            "name": render("runtime.seed.enemy.name", locale),
+            **_source(enemy_id),
             "hp": 28,
             "max_hp": 28,
             "mp": 0,
@@ -119,30 +131,29 @@ def _enemy(enemy_id: str, locale: str) -> GraphNode:
 
 
 def _reward(reward_id: str, locale: str) -> GraphNode:
+    del locale
     return GraphNode(
         id=reward_id,
         type="item",
         properties={
-            "name": render("runtime.seed.reward.name", locale),
-            "description": render("runtime.seed.reward.description", locale),
+            **_source(reward_id),
             "consumable": False,
         },
     )
 
 
 def _quest(quest_id: str, enemy_id: str, reward_id: str, locale: str) -> GraphNode:
+    del locale
     return GraphNode(
         id=quest_id,
         type="quest",
         properties={
-            "title": render("runtime.seed.quest.title", locale),
-            "summary": render("runtime.seed.quest.summary", locale),
+            **_source(quest_id),
             "difficulty": "normal",
             "status": "pending",
             "triggers": [
                 {
                     "id": f"trigger_{quest_id}_defeat",
-                    "name": render("runtime.seed.quest.trigger", locale),
                     "type": "character_defeat",
                     "target_id": enemy_id,
                 }
@@ -151,6 +162,46 @@ def _quest(quest_id: str, enemy_id: str, reward_id: str, locale: str) -> GraphNo
             "rewards": {"gold": 5, "exp": 10, "items": [reward_id]},
         },
     )
+
+
+def _content(
+    *,
+    quest_id: str,
+    giver_id: str,
+    enemy_id: str,
+    reward_id: str,
+    locale: str,
+) -> RuntimeContent:
+    return RuntimeContent(
+        characters={
+            giver_id: {"id": giver_id, "name": render("runtime.seed.giver.name", locale)},
+            enemy_id: {"id": enemy_id, "name": render("runtime.seed.enemy.name", locale)},
+        },
+        items={
+            reward_id: {
+                "id": reward_id,
+                "name": render("runtime.seed.reward.name", locale),
+                "description": render("runtime.seed.reward.description", locale),
+            }
+        },
+        quests={
+            quest_id: {
+                "id": quest_id,
+                "title": render("runtime.seed.quest.title", locale),
+                "summary": render("runtime.seed.quest.summary", locale),
+                "triggers": [
+                    {
+                        "id": f"trigger_{quest_id}_defeat",
+                        "name": render("runtime.seed.quest.trigger", locale),
+                    }
+                ],
+            }
+        },
+    )
+
+
+def _source(node_id: str) -> dict[str, str]:
+    return {"source": "runtime", "source_id": node_id}
 
 
 def _edge(

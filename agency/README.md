@@ -45,7 +45,7 @@ agency/qa/
 ### How it works
 
 - `httpx.AsyncClient(transport=ASGITransport(app))` calls the FastAPI app in-process. No port, no separate process, but the HTTP surface (auth/error) is still exercised end-to-end.
-- The LLM is the same external server you'd use otherwise (`BASE_URL`, e.g. llama.cpp).
+- The LLM is the same external server you'd use otherwise (`BASE_URL`, e.g. a local OpenAI-compatible server).
 - Graph saves are isolated to `qa_test/agency/<agent>/saves/` via `LocalFsGraphRepo`; production Supabase is never touched.
 - Scenarios are read from local `SCENARIO_DIR` through `LocalFsScenarioRepo`. The default dev profile is `dev_test`.
 - Per-session flow: `POST /session/graph/init` → `(read graph state → agent picks the next input → POST /graph/input → if pending confirmation, auto POST /graph/confirm)` repeated.
@@ -63,7 +63,7 @@ agency/qa/
 .venv/bin/python agency/run_qa.py --agent all --profile <scenario_id>
 ```
 
-env is auto-loaded from `server/.env.<APP_ENV>` (default `dev`) → `.env.llama_cpp` → `.env.google`, mirroring `server/run_api.py`. QA needs `BASE_URL` for the LLM and `SCENARIO_DIR` for local scenario files. `--profile` defaults to `dev_test`.
+env is auto-loaded from `server/.env.<APP_ENV>` (default `dev`) → `.env.local` → `.env.google`, mirroring `server/run_api.py`. QA needs `BASE_URL` for the LLM and `SCENARIO_DIR` for local scenario files. `--profile` defaults to `dev_test`.
 
 ### Output
 

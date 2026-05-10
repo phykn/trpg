@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.game.domain.graph import Graph, GraphChange
 from src.game.engines.graph_quest_common import (
     TERMINAL_STATUSES,

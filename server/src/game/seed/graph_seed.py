@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
@@ -8,11 +6,28 @@ from src.game.domain.graph import EdgeType, Graph, GraphEdge, GraphNode, NodeTyp
 from src.game.domain.progress import GameProgress
 from src.game.engines.growth import calc_max_hp, calc_max_mp
 from src.game.rules.config import RULES
+from src.game.domain.content import RuntimeContent, runtime_content_from_records
 from src.game.seed.player import PlayerInput
 
 
 SeedRecord = dict[str, Any]
 SeedRecords = dict[str, SeedRecord]
+
+_STATIC_CONTENT_KEYS = frozenset(
+    {
+        "name",
+        "title",
+        "description",
+        "summary",
+        "role",
+        "job",
+        "gender",
+        "memorable",
+        "memories",
+        "disposition",
+        "props",
+    }
+)
 
 
 class SeedGraphBundle(BaseModel):
@@ -20,6 +35,7 @@ class SeedGraphBundle(BaseModel):
 
     graph: Graph
     progress: GameProgress
+    content: RuntimeContent
 
 
 def build_seed_graph(
@@ -38,8 +54,6 @@ def build_seed_graph(
     game_id: str,
     locale: str = "ko",
 ) -> SeedGraphBundle:
-    del profile_name
-
     player_record = _build_player(player, races, start, template)
     characters = {**npcs, _record_id(player_record): player_record}
 
@@ -154,7 +168,7 @@ def build_seed_graph(
                 "connects_to",
                 location_id,
                 target_id,
-                _node_properties(connection, exclude={"target_id"}),
+                _record_properties(connection, exclude={"target_id"}),
             )
 
     for quest in quests.values():
@@ -182,11 +196,25 @@ def build_seed_graph(
     progress = GameProgress(
         game_id=game_id,
         player_id=_record_id(player_record),
+        profile_id=profile_name,
         locale=locale,
         active_subject_id=start.get("active_subject_id"),
         active_quest_id=start.get("active_quest_id"),
     )
-    return SeedGraphBundle(graph=Graph(nodes=nodes, edges=edges), progress=progress)
+    content = runtime_content_from_records(
+        races=races,
+        locations=locations,
+        items=items,
+        skills=skills,
+        characters=npcs,
+        quests=quests,
+        chapters=chapters,
+    )
+    return SeedGraphBundle(
+        graph=Graph(nodes=nodes, edges=edges),
+        progress=progress,
+        content=content,
+    )
 
 
 def _build_player(
@@ -228,7 +256,10 @@ def _build_player(
 
 
 def _quest_graph_properties(quest: SeedRecord) -> dict[str, Any]:
-    properties = _node_properties(quest, exclude={"giver_id", "rewards"})
+    properties = _node_properties(quest, exclude={"giver_id", "rewards", "triggers"})
+    triggers = _trigger_graph_properties(quest.get("triggers"))
+    if triggers:
+        properties["triggers"] = triggers
     rewards = _mapping(quest.get("rewards"))
     properties["rewards"] = {
         key: value for key, value in rewards.items() if key != "items"
@@ -237,6 +268,7 @@ def _quest_graph_properties(quest: SeedRecord) -> dict[str, Any]:
 
 
 def _character_graph_properties(character: SeedRecord) -> dict[str, Any]:
+    is_player = character.get("is_player") is True
     properties = _node_properties(
         character,
         exclude={
@@ -248,7 +280,13 @@ def _character_graph_properties(character: SeedRecord) -> dict[str, Any]:
             "learned_skill_ids",
             "companions",
         },
+        source="runtime" if is_player else "scenario",
     )
+    if is_player:
+        for key in ("name", "gender"):
+            value = character.get(key)
+            if value is not None:
+                properties[key] = value
     properties.setdefault("alive", True)
     properties.setdefault("status", [])
     properties.setdefault("level", 0)
@@ -273,7 +311,7 @@ def _add_quest_target_edge(
         type="target_of",
         from_node_id=target_id,
         to_node_id=quest_id,
-        properties=_node_properties(trigger, exclude={"target_id"}) | {"outcome": outcome},
+        properties=_record_properties(trigger, exclude={"target_id"}) | {"outcome": outcome},
     )
 
 
@@ -281,9 +319,36 @@ def _node_properties(
     record: SeedRecord,
     *,
     exclude: set[str] | None = None,
+    source: str = "scenario",
 ) -> dict[str, Any]:
-    skipped = exclude or set()
+    skipped = {"id", *_STATIC_CONTENT_KEYS, *(exclude or set())}
+    return _source_properties(record, source=source) | {
+        key: value for key, value in record.items() if key not in skipped
+    }
+
+
+def _record_properties(
+    record: SeedRecord,
+    *,
+    exclude: set[str] | None = None,
+) -> dict[str, Any]:
+    skipped = {"id", *(exclude or set())}
     return {key: value for key, value in record.items() if key not in skipped}
+
+
+def _source_properties(record: SeedRecord, *, source: str) -> dict[str, str]:
+    record_id = _record_id(record)
+    return {"source": source, "source_id": record_id}
+
+
+def _trigger_graph_properties(value: object) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    triggers: list[dict[str, Any]] = []
+    for item in value:
+        if isinstance(item, dict):
+            triggers.append({key: val for key, val in item.items() if key != "name"})
+    return triggers
 
 
 def _record_id(record: SeedRecord) -> str:

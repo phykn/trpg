@@ -1,7 +1,6 @@
-from __future__ import annotations
-
 from src.game.domain.action import Action
-from src.game.domain.graph import Graph, GraphNode
+from src.game.domain.content import node_label
+from src.game.domain.graph import GraphNode
 from src.game.domain.graph_query import location_of
 from src.game.domain.memory import ActLogEntry
 from src.game.domain.types import GraphStatKey
@@ -30,7 +29,7 @@ def build_graph_quest_offer_card(
     quest_id: str,
     log_id: int,
 ) -> ActLogEntry:
-    quest = _quest_title(runtime.graph, quest_id, runtime.progress.locale)
+    quest = _quest_title(runtime, quest_id)
     return ActLogEntry(
         id=log_id,
         kind="act",
@@ -53,7 +52,7 @@ def build_graph_level_up_card(
         text=render(
             "runtime.card.level_up",
             runtime.progress.locale,
-            actor=_label(player),
+            actor=node_label(runtime.content, player),
             level=level,
             stat=stat_label(stat_up, runtime.progress.locale),
             max_hp=max_hp,
@@ -71,7 +70,7 @@ def _card_text(
     if dispatch.kind == "move":
         destination_id = location_of(after.graph, after.progress.player_id)
         destination = _node_label(
-            after.graph,
+            after,
             destination_id,
             fallback=render("runtime.fallback.destination", after.progress.locale),
         )
@@ -82,17 +81,15 @@ def _card_text(
 
     if dispatch.kind == "quest_accept":
         quest = _quest_title(
-            after.graph,
+            after,
             _single(action.what) or _single(action.to),
-            after.progress.locale,
         )
         return render("runtime.card.quest_accept", after.progress.locale, quest=quest)
 
     if dispatch.kind == "quest_abandon":
         quest = _quest_title(
-            after.graph,
+            after,
             _single(action.what) or _single(action.to),
-            after.progress.locale,
         )
         return render("runtime.card.quest_abandon", after.progress.locale, quest=quest)
 
@@ -100,19 +97,19 @@ def _card_text(
         return render("runtime.card.rest", after.progress.locale)
 
     if dispatch.kind == "equip":
-        item = _node_label(after.graph, _single(action.what) or _single(action.with_), locale=after.progress.locale)
+        item = _node_label(after, _single(action.what) or _single(action.with_))
         return render("runtime.card.equip", after.progress.locale, item=item)
 
     if dispatch.kind == "unequip":
-        item = _node_label(after.graph, _single(action.what) or _single(action.with_), locale=after.progress.locale)
+        item = _node_label(after, _single(action.what) or _single(action.with_))
         return render("runtime.card.unequip", after.progress.locale, item=item)
 
     if dispatch.kind == "use":
-        item = _node_label(after.graph, _single(action.what) or _single(action.with_), locale=after.progress.locale)
+        item = _node_label(after, _single(action.what) or _single(action.with_))
         return render("runtime.card.use", after.progress.locale, item=item)
 
     if dispatch.kind == "transfer":
-        item = _node_label(after.graph, _single(action.what) or _single(action.with_), locale=after.progress.locale)
+        item = _node_label(after, _single(action.what) or _single(action.with_))
         return render("runtime.card.transfer", after.progress.locale, item=item)
 
     return render("runtime.card.generic", after.progress.locale)
@@ -126,7 +123,7 @@ def _combat_text(
     if before.progress.graph_combat_state is None:
         target_id = _single(action.what) or _single(action.to)
         target = _node_label(
-            after.graph,
+            after,
             target_id,
             fallback=render("runtime.fallback.target", after.progress.locale),
         )
@@ -141,35 +138,23 @@ def _combat_text(
     return render("runtime.combat.continue", after.progress.locale)
 
 
-def _quest_title(graph: Graph, quest_id: str | None, locale: str) -> str:
-    node = graph.nodes.get(quest_id or "")
+def _quest_title(runtime: GameRuntimeState, quest_id: str | None) -> str:
+    node = runtime.graph.nodes.get(quest_id or "")
     if node is None or node.type != "quest":
-        return render("runtime.fallback.quest", locale)
-    title = node.properties.get("title")
-    if isinstance(title, str) and title:
-        return title
-    return _label(node)
+        return render("runtime.fallback.quest", runtime.progress.locale)
+    return node_label(runtime.content, node)
 
 
 def _node_label(
-    graph: Graph,
+    runtime: GameRuntimeState,
     node_id: str | None,
     *,
     fallback: str | None = None,
-    locale: str = "ko",
 ) -> str:
-    node = graph.nodes.get(node_id or "")
-    return _label(node) if node is not None else fallback or render("runtime.fallback.target", locale)
-
-
-def _label(node: GraphNode) -> str:
-    name = node.properties.get("name")
-    if isinstance(name, str) and name:
-        return name
-    title = node.properties.get("title")
-    if isinstance(title, str) and title:
-        return title
-    return node.id
+    node = runtime.graph.nodes.get(node_id or "")
+    if node is not None:
+        return node_label(runtime.content, node)
+    return fallback or render("runtime.fallback.target", runtime.progress.locale)
 
 
 def _int_property(node: GraphNode, key: str) -> int:

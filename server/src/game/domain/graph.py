@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
@@ -63,7 +61,7 @@ class Graph(BaseModel):
     edges: dict[str, GraphEdge] = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def _keys_match_ids(self) -> Graph:
+    def _keys_match_ids(self) -> "Graph":
         for key, node in self.nodes.items():
             if key != node.id:
                 raise ValueError(f"node key {key!r} does not match node id {node.id!r}")
@@ -73,7 +71,7 @@ class Graph(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def _loaded_graph_is_valid(self) -> Graph:
+    def _loaded_graph_is_valid(self) -> "Graph":
         validate_graph(self)
         return self
 

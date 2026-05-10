@@ -8,6 +8,7 @@ from .combat import (
     GraphCombatDispatchResult,
     dispatch_graph_combat_action,
 )
+from src.game.domain.content import RuntimeContent
 from .load import load_runtime_state
 from .state import GameRuntimeState
 
@@ -19,6 +20,7 @@ __all__ = [
     "GraphCombatDispatchResult",
     "GraphRuntimeApplyError",
     "GraphRuntimeApplyResult",
+    "RuntimeContent",
     "apply_runtime_graph_changes",
     "dispatch_graph_action",
     "dispatch_graph_combat_action",

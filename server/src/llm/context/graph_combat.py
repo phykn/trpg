@@ -1,10 +1,9 @@
-from __future__ import annotations
-
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.game.domain.combat import GraphCombatState
+from src.game.domain.content import RuntimeContent, node_label
 from src.game.domain.graph import Graph, GraphNode
 
 
@@ -75,9 +74,10 @@ def mp_state(current: int, maximum: int) -> MpState | None:
 def build_graph_combat_context(
     graph: Graph,
     state: GraphCombatState,
+    content: RuntimeContent | None = None,
 ) -> GraphCombatContext:
     participants = [
-        _participant_view(graph, state, participant_id)
+        _participant_view(graph, state, participant_id, content)
         for participant_id in state.participant_ids
     ]
     return GraphCombatContext(
@@ -101,6 +101,7 @@ def _participant_view(
     graph: Graph,
     state: GraphCombatState,
     participant_id: str,
+    content: RuntimeContent | None,
 ) -> GraphCombatParticipantView:
     node = _require_participant(graph, participant_id)
     side = state.sides.get(participant_id)
@@ -108,7 +109,7 @@ def _participant_view(
         raise GraphCombatContextError(f"missing side for participant: {participant_id}")
     return GraphCombatParticipantView(
         id=participant_id,
-        name=_name(node),
+        name=_name(node, content),
         side=side,
         hp_state=hp_state(
             _int_prop(node, "hp"),
@@ -143,8 +144,8 @@ def _int_prop(node: GraphNode, key: str) -> int:
     return value
 
 
-def _name(node: GraphNode) -> str:
-    return _optional_str(node.properties.get("name")) or node.id
+def _name(node: GraphNode, content: RuntimeContent | None) -> str:
+    return node_label(content or RuntimeContent(), node)
 
 
 def _optional_str(value: object) -> str | None:

@@ -1,7 +1,5 @@
 """Shared graph progression formulas."""
 
-from __future__ import annotations
-
 from ..rules import RULES
 
 

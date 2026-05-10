@@ -1,7 +1,6 @@
-from __future__ import annotations
-
 from typing import Literal
 
+from src.game.domain.content import RuntimeContent, node_record
 from src.game.domain.graph import Graph, GraphNode
 from src.game.domain.graph_character import is_visible_character
 from src.game.domain.graph_query import (
@@ -11,7 +10,7 @@ from src.game.domain.graph_query import (
     nodes_of_type,
 )
 from src.game.runtime.state import GameRuntimeState
-from src.wire.graph_payload_helpers import node_name, optional_str
+from src.wire.graph_payload_helpers import node_name, optional_str, static_value
 from src.wire.labels import difficulty_badge
 from src.wire.models import DifficultyBadge, QuestPayload, QuestRewards
 
@@ -26,11 +25,11 @@ def active_quest_payload(runtime: GameRuntimeState) -> QuestPayload | None:
             and quest.type == "quest"
             and quest_status(quest) == "active"
         ):
-            return build_quest_payload(graph, quest)
+            return build_quest_payload(graph, quest, runtime)
 
     active = _first_quest_with_status(graph, "active")
     if active is not None:
-        return build_quest_payload(graph, active)
+        return build_quest_payload(graph, active, runtime)
     return None
 
 
@@ -51,11 +50,15 @@ def quest_offer_payloads(runtime: GameRuntimeState) -> list[QuestPayload]:
         if quest is None or quest.type != "quest":
             continue
         if quest_status(quest) in {"locked", "pending"}:
-            offers.append(build_quest_payload(graph, quest))
+            offers.append(build_quest_payload(graph, quest, runtime))
     return offers
 
 
-def build_quest_payload(graph: Graph, quest: GraphNode) -> QuestPayload:
+def build_quest_payload(
+    graph: Graph,
+    quest: GraphNode,
+    runtime: GameRuntimeState,
+) -> QuestPayload:
     status = quest_status(quest)
     display_status = (
         status
@@ -68,15 +71,16 @@ def build_quest_payload(graph: Graph, quest: GraphNode) -> QuestPayload:
     elif status == "active":
         actions.append("abandon")
 
-    tier = optional_str(quest.properties.get("difficulty")) or "normal"
+    content = runtime.content
+    tier = optional_str(static_value(quest, "difficulty", content)) or "normal"
     badge = difficulty_badge(tier)
-    goals = _quest_goals(quest)
+    goals = _quest_goals(quest, content)
     done, total = _quest_progress(quest)
     return QuestPayload(
         id=quest.id,
-        title=optional_str(quest.properties.get("title")) or quest.id,
-        summary=optional_str(quest.properties.get("summary")) or "",
-        giver=_quest_giver_name(graph, quest.id),
+        title=optional_str(static_value(quest, "title", content)) or quest.id,
+        summary=optional_str(static_value(quest, "summary", content)) or "",
+        giver=_quest_giver_name(graph, quest.id, runtime),
         difficulty=DifficultyBadge(label=badge["label"], tone=badge["tone"]),
         goals=goals,
         progress_label=_progress_label(done, total),
@@ -98,18 +102,37 @@ def _first_quest_with_status(graph: Graph, status: str) -> GraphNode | None:
     return None
 
 
-def _quest_goals(quest: GraphNode) -> list[str]:
+def _quest_goals(quest: GraphNode, content: RuntimeContent) -> list[str]:
     raw = quest.properties.get("triggers", [])
     if not isinstance(raw, list):
         return []
+    content_names = _trigger_names_by_id(content, quest)
     goals: list[str] = []
     for trigger in raw:
         if not isinstance(trigger, dict):
             continue
         name = trigger.get("name")
+        if name is None:
+            trigger_id = trigger.get("id")
+            name = content_names.get(trigger_id) if isinstance(trigger_id, str) else None
         if isinstance(name, str) and name:
             goals.append(name)
     return goals
+
+
+def _trigger_names_by_id(content: RuntimeContent, quest: GraphNode) -> dict[str, str]:
+    raw = node_record(content, quest).get("triggers", [])
+    if not isinstance(raw, list):
+        return {}
+    names: dict[str, str] = {}
+    for trigger in raw:
+        if not isinstance(trigger, dict):
+            continue
+        trigger_id = trigger.get("id")
+        name = trigger.get("name")
+        if isinstance(trigger_id, str) and isinstance(name, str) and name:
+            names[trigger_id] = name
+    return names
 
 
 def _quest_progress(quest: GraphNode) -> tuple[int, int]:
@@ -141,9 +164,9 @@ def _quest_rewards(quest: GraphNode) -> QuestRewards:
     )
 
 
-def _quest_giver_name(graph: Graph, quest_id: str) -> str:
+def _quest_giver_name(graph: Graph, quest_id: str, runtime: GameRuntimeState) -> str:
     for edge in edges_to(graph, quest_id, "gives_quest"):
         giver = graph.nodes.get(edge.from_node_id)
         if giver is not None:
-            return node_name(giver)
+            return node_name(giver, runtime.content)
     return ""

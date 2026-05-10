@@ -1,7 +1,5 @@
 """httpx wrappers around Supabase PostgREST + Storage; supabase-py would pull deps that don't fit Pyodide. Non-2xx → PersistenceFailed."""
 
-from __future__ import annotations
-
 import json
 from typing import Any
 from urllib.parse import quote

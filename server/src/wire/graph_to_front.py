@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.game.runtime.state import GameRuntimeState
 from src.wire.graph_combat import combat_payload
 from src.wire.graph_hero import hero_payload
@@ -18,10 +16,10 @@ def graph_to_front_state(runtime: GameRuntimeState) -> GraphFrontStatePayload:
     player_id = runtime.progress.player_id
     player = require_node(graph, player_id, "character")
     return GraphFrontStatePayload(
-        hero=hero_payload(graph, player),
+        hero=hero_payload(graph, player, runtime.content),
         quest=active_quest_payload(runtime),
         quest_offers=quest_offer_payloads(runtime),
-        place=place_payload(graph, player_id, runtime.progress.locale),
+        place=place_payload(graph, player_id, runtime.progress.locale, runtime.content),
         combat=combat_payload(runtime),
         pending_confirmation=_pending_confirmation_payload(
             runtime.progress.pending_confirmation

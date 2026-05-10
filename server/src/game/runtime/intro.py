@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 import json
 
 from src.db.repo import GraphRepo
-from src.game.domain.graph import GraphNode
+from src.game.domain.content import node_label, node_text
 from src.game.domain.graph_query import characters_at, edges_from, location_of
 from src.game.domain.memory import GMLogEntry
 from src.llm.calls._runner import get_prompt
@@ -67,16 +65,20 @@ def _fallback_intro_text(runtime: GameRuntimeState) -> str:
     place = graph.nodes.get(place_id)
     if place is None or place.type != "location":
         return ""
-    description = _description(place)
+    description = node_text(runtime.content, place, "description")
     if description is None:
         return _clean_intro_text(
-            render("runtime.intro.arrive", runtime.progress.locale, place=_name(place))
+            render(
+                "runtime.intro.arrive",
+                runtime.progress.locale,
+                place=node_label(runtime.content, place),
+            )
         )
     return _clean_intro_text(
         render(
             "runtime.intro.arrive_with_description",
             runtime.progress.locale,
-            place=_name(place),
+            place=node_label(runtime.content, place),
             description=description,
         )
     )
@@ -122,21 +124,21 @@ def _intro_user_prompt(runtime: GameRuntimeState) -> str:
         return ""
 
     visible_targets = [
-        _name(graph.nodes[target_id])
+        node_label(runtime.content, graph.nodes[target_id])
         for target_id in characters_at(graph, place_id)
         if target_id != player_id and target_id in graph.nodes
     ]
     exits = [
-        _name(target)
+        node_label(runtime.content, target)
         for edge in edges_from(graph, place_id, "connects_to")
         if (target := graph.nodes.get(edge.to_node_id)) is not None
         and target.type == "location"
     ]
     return json.dumps(
         {
-            "player": _name(player),
-            "place": _name(place),
-            "place_description": _description_value(place),
+            "player": node_label(runtime.content, player),
+            "place": node_label(runtime.content, place),
+            "place_description": node_text(runtime.content, place, "description"),
             "visible_targets": visible_targets,
             "exits": exits,
         },
@@ -153,25 +155,5 @@ def _clean_intro_text(text: str) -> str:
     if len(cleaned) <= _MAX_INTRO_CHARS:
         return cleaned
     return cleaned[:_MAX_INTRO_CHARS].rstrip()
-
-
-def _name(node: GraphNode) -> str:
-    name = node.properties.get("name")
-    if isinstance(name, str) and name:
-        return name
-    title = node.properties.get("title")
-    if isinstance(title, str) and title:
-        return title
-    return node.id
-
-
-def _description(node: GraphNode) -> str | None:
-    description = node.properties.get("description")
-    return description if isinstance(description, str) and description else None
-
-
-def _description_value(node: GraphNode) -> str | None:
-    description = node.properties.get("description")
-    return description if isinstance(description, str) and description else None
 
 

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.game.domain.action import Action
 from src.llm.context.graph_surroundings import build_graph_surroundings
 from src.locale.render import render

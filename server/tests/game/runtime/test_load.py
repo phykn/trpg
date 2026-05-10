@@ -6,6 +6,23 @@ from src.game.domain.progress import GameProgress
 from src.game.runtime import load_runtime_state
 
 
+class FakeScenarioRepo:
+    def __init__(self) -> None:
+        self.records = {
+            "locations": {"town": {"id": "town", "name": "마을"}},
+            "characters": {"guide": {"id": "guide", "name": "가이드"}},
+            "items": {},
+            "skills": {},
+            "races": {},
+            "quests": {},
+            "chapters": {},
+        }
+
+    async def load_seed_records(self, profile: str, kind: str) -> dict[str, dict]:
+        assert profile == "default"
+        return self.records[kind]
+
+
 def _graph() -> Graph:
     return Graph(
         nodes={
@@ -114,3 +131,36 @@ async def test_load_runtime_state_preserves_graph_combat_state(tmp_path):
     runtime = await load_runtime_state(repo, "game-1")
 
     assert runtime.progress.graph_combat_state == graph_combat_state
+
+
+async def test_load_runtime_state_loads_scenario_content_when_profile_is_saved(tmp_path):
+    repo = LocalFsGraphRepo(str(tmp_path))
+    graph = Graph(
+        nodes={
+            "player": GraphNode(
+                id="player",
+                type="character",
+                properties={"source": "runtime", "source_id": "player"},
+            ),
+            "town": GraphNode(
+                id="town",
+                type="location",
+                properties={"source": "scenario", "source_id": "town"},
+            ),
+            "guide": GraphNode(
+                id="guide",
+                type="character",
+                properties={"source": "scenario", "source_id": "guide"},
+            ),
+        },
+        edges={},
+    )
+    await repo.save_graph("game-1", graph)
+    await repo.save_progress(
+        GameProgress(game_id="game-1", player_id="player", profile_id="default")
+    )
+
+    runtime = await load_runtime_state(repo, "game-1", FakeScenarioRepo())
+
+    assert runtime.content.locations["town"]["name"] == "마을"
+    assert runtime.content.characters["guide"]["name"] == "가이드"

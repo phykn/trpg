@@ -10,8 +10,6 @@ minimal `default` scenario seed (1 race, 1 location, 1 NPC,
 /session/graph/init succeed end-to-end.
 """
 
-from __future__ import annotations
-
 import json
 from typing import Any
 
@@ -56,9 +54,16 @@ class FakePostgREST:
 
         def _matches(row: dict) -> bool:
             for col, expr in filters.items():
-                assert expr.startswith("eq."), f"only eq supported in fake: {expr}"
-                if str(row.get(col)) != expr[3:]:
-                    return False
+                if expr.startswith("eq."):
+                    if str(row.get(col)) != expr[3:]:
+                        return False
+                    continue
+                if expr.startswith("not.in.(") and expr.endswith(")"):
+                    values = set(expr[8:-1].split(","))
+                    if str(row.get(col)) in values:
+                        return False
+                    continue
+                raise AssertionError(f"unsupported fake filter: {expr}")
             return True
 
         self.rows[table] = [row for row in store_ if not _matches(row)]

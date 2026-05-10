@@ -74,9 +74,16 @@ def test_generates_pending_hunt_offer_when_no_work_exists():
     quest = graph.nodes[result.quest_id]
     enemy = graph.nodes["auto_enemy_001"]
     assert quest.type == "quest"
+    assert "title" not in quest.properties
+    assert "summary" not in quest.properties
+    assert "name" not in enemy.properties
     assert quest.properties["status"] == "pending"
     assert quest.properties["triggers"][0]["type"] == "character_defeat"
+    assert "name" not in quest.properties["triggers"][0]
     assert quest.properties["triggers_met"] == [False]
+    assert result.content.quests[result.quest_id]["title"]
+    assert result.content.quests[result.quest_id]["triggers"][0]["name"]
+    assert result.content.characters["auto_enemy_001"]["name"]
     assert enemy.properties["combat_behavior"] is not None
     assert any(
         edge.type == "gives_quest" and edge.to_node_id == result.quest_id

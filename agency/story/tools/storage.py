@@ -17,7 +17,7 @@ from src.db._supabase_http import _Storage  # noqa: E402
 
 _APP_ENV = os.environ.get("APP_ENV", "dev")
 load_dotenv(ROOT / "server" / f".env.{_APP_ENV}")
-load_dotenv(ROOT / "server" / ".env.llama_cpp")
+load_dotenv(ROOT / "server" / ".env.local")
 load_dotenv(ROOT / "server" / ".env.google")
 
 

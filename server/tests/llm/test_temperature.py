@@ -36,7 +36,7 @@ async def test_chat_omits_temperature_when_none(monkeypatch):
     fake_provider = MagicMock()
     fake_provider.next_chat_client.return_value = fake_inner
     fake_provider.thinking_mode = "off"
-    fake_provider.toggle_style = "openai"
+    fake_provider.toggle_style = "local"
     fake_provider.supports_system = True
     fake_provider.model = "test-model"
 
@@ -63,7 +63,7 @@ async def test_chat_passes_temperature_when_set(monkeypatch):
     fake_provider = MagicMock()
     fake_provider.next_chat_client.return_value = fake_inner
     fake_provider.thinking_mode = "off"
-    fake_provider.toggle_style = "openai"
+    fake_provider.toggle_style = "local"
     fake_provider.supports_system = True
     fake_provider.model = "test-model"
 
@@ -73,6 +73,43 @@ async def test_chat_passes_temperature_when_set(monkeypatch):
         messages=[{"role": "user", "content": "x"}], temperature=0.2, log=False
     )
     assert captured.get("temperature") == 0.2
+
+
+@pytest.mark.asyncio
+async def test_chat_passes_local_think_toggle(monkeypatch):
+    client = _client()
+    captured: list[dict] = []
+
+    async def fake_create(**kwargs):
+        captured.append(kwargs)
+        return MagicMock(
+            choices=[MagicMock(message=MagicMock(content="ok", model_extra=None))]
+        )
+
+    fake_inner = MagicMock()
+    fake_inner.chat.completions.create = fake_create
+    fake_provider = MagicMock()
+    fake_provider.next_chat_client.return_value = fake_inner
+    fake_provider.thinking_mode = "opt"
+    fake_provider.toggle_style = "local"
+    fake_provider.supports_system = True
+    fake_provider.model = "test-model"
+
+    monkeypatch.setattr(client, "_pick", lambda agent, *, fallback=False: fake_provider)
+
+    await client.chat(
+        messages=[{"role": "user", "content": "x"}], think=False, log=False
+    )
+    await client.chat(
+        messages=[{"role": "user", "content": "x"}], think=True, log=False
+    )
+
+    assert captured[0]["extra_body"] == {
+        "chat_template_kwargs": {"enable_thinking": False}
+    }
+    assert captured[1]["extra_body"] == {
+        "chat_template_kwargs": {"enable_thinking": True}
+    }
 
 
 @pytest.mark.asyncio
@@ -91,7 +128,7 @@ async def test_chat_diag_includes_provider_route(monkeypatch, capsys):
     fake_provider.next_chat_client.return_value = fake_inner
     fake_provider.base_url = "http://127.0.0.1:8000/v1"
     fake_provider.thinking_mode = "off"
-    fake_provider.toggle_style = "openai"
+    fake_provider.toggle_style = "local"
     fake_provider.supports_system = True
     fake_provider.model = "gemma-local.gguf"
 
@@ -108,3 +145,5 @@ async def test_chat_diag_includes_provider_route(monkeypatch, capsys):
     assert "agent='classify'" in stderr
     assert "model='gemma-local.gguf'" in stderr
     assert "base_url='http://127.0.0.1:8000/v1'" in stderr
+    assert "thinking_mode='off'" in stderr
+    assert "think_requested=True" in stderr

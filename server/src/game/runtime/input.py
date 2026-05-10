@@ -1,9 +1,8 @@
-from __future__ import annotations
-
 import asyncio
 import json
 
-from src.db.repo import GraphRepo
+from src.db.repo import GraphRepo, ScenarioRepo
+from src.game.domain.content import node_label
 from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph_query import characters_at, location_of
@@ -34,8 +33,9 @@ async def run_graph_input_turn(
     repo: GraphRepo,
     game_id: str,
     player_input: str,
+    scenario_repo: ScenarioRepo | None = None,
 ) -> GraphActionRequestResult:
-    runtime = await load_runtime_state(repo, game_id)
+    runtime = await load_runtime_state(repo, game_id, scenario_repo)
     set_diag_context(game_id, runtime.progress.turn_count)
     engine_diag("input:start", chars=len(player_input))
     output = await classify(
@@ -56,7 +56,7 @@ async def run_graph_input_turn(
     action = actions[0]
     engine_diag("input:classified", action=action.verb)
     if action.verb == "perceive":
-        return await start_graph_roll(repo, game_id, action)
+        return await start_graph_roll(repo, game_id, action, scenario_repo=scenario_repo)
 
     if action.verb in {"speak", "pass"}:
         return await _run_graph_narrative_input(
@@ -72,6 +72,7 @@ async def run_graph_input_turn(
         game_id,
         action,
         llm=client,
+        scenario_repo=scenario_repo,
     )
 
 
@@ -154,7 +155,7 @@ async def _generate_graph_input_narration(
                                 ),
                                 "dialogue_target": {
                                     "id": subject_id,
-                                    "name": _node_name(subject, runtime.progress.locale),
+                                    "name": _node_name(runtime, subject),
                                     "state": subject_state,
                                 }
                                 if subject_id is not None
@@ -206,11 +207,10 @@ def _is_at_player_location(runtime, node_id: str) -> bool:
     return player_location is not None and location_of(runtime.graph, node_id) == player_location
 
 
-def _node_name(node: GraphNode | None, locale: str) -> str:
+def _node_name(runtime, node: GraphNode | None) -> str:
     if node is None:
-        return render("runtime.none", locale)
-    name = node.properties.get("name")
-    return name if isinstance(name, str) and name else node.id
+        return render("runtime.none", runtime.progress.locale)
+    return node_label(runtime.content, node)
 
 
 def _node_hp(node: GraphNode) -> int:

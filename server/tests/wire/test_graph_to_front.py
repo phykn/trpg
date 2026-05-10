@@ -3,6 +3,7 @@ from src.game.domain.memory import ActLogEntry
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
+from src.game.domain.content import RuntimeContent
 from src.wire.graph_to_front import graph_to_front_state
 
 
@@ -274,6 +275,88 @@ def test_graph_front_state_builds_place_from_visible_graph_edges():
     assert target.equipment.weapon.name == "날카로운 송곳니"
     assert target.inventory[0].name == "늑대 가죽"
     assert target.status == ["경계 중"]
+
+
+def test_graph_front_state_resolves_static_content_from_runtime_content():
+    runtime = _runtime()
+    runtime.graph.nodes["town"].properties = {
+        "source": "scenario",
+        "source_id": "town",
+    }
+    runtime.graph.nodes["forest"].properties = {
+        "source": "scenario",
+        "source_id": "forest",
+    }
+    runtime.graph.nodes["goblin_01"].properties = {
+        **{
+            key: runtime.graph.nodes["goblin_01"].properties[key]
+            for key in ("hp", "max_hp", "mp", "max_mp", "stats", "level")
+        },
+        "source": "scenario",
+        "source_id": "goblin_01",
+        "xp_reward": 10,
+    }
+    runtime.graph.nodes["fang_01"].properties = {
+        "source": "scenario",
+        "source_id": "fang_01",
+        "effects": {"type": "weapon", "weapon_dice": "1d4"},
+    }
+    runtime.graph.nodes["quest_01"].properties = {
+        "source": "scenario",
+        "source_id": "quest_01",
+        "status": "pending",
+        "triggers": [
+            {
+                "id": "trigger_01",
+                "name": "늑대 쫓아내기",
+                "type": "character_defeat",
+                "target_id": "goblin_01",
+            }
+        ],
+        "triggers_met": [False],
+        "rewards": {"gold": 5, "exp": 10, "items": []},
+    }
+    runtime = runtime.model_copy(
+        update={
+            "content": RuntimeContent(
+                locations={
+                    "town": {"id": "town", "name": "광장", "description": "넓은 광장."},
+                    "forest": {"id": "forest", "name": "숲", "description": "오래된 숲."},
+                },
+                characters={
+                    "goblin_01": {
+                        "id": "goblin_01",
+                        "name": "떠돌이 적",
+                        "role": "숲의 포식자",
+                        "job": "야수",
+                    }
+                },
+                items={"fang_01": {"id": "fang_01", "name": "날카로운 송곳니"}},
+                quests={
+                    "quest_01": {
+                        "id": "quest_01",
+                        "title": "첫 의뢰",
+                        "summary": "광장의 문제를 해결합니다.",
+                        "difficulty": "normal",
+                    }
+                },
+            )
+        }
+    )
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.place is not None
+    assert payload.place.name == "광장"
+    assert payload.place.description == "넓은 광장."
+    assert payload.place.exits[0].name == "숲"
+    assert payload.place.targets[0].name == "떠돌이 적"
+    assert payload.place.targets[0].role == "숲의 포식자"
+    assert payload.place.targets[0].race_job == "야수"
+    assert payload.place.targets[0].equipment.weapon is not None
+    assert payload.place.targets[0].equipment.weapon.name == "날카로운 송곳니"
+    assert payload.quest_offers[0].title == "첫 의뢰"
+    assert payload.quest_offers[0].summary == "광장의 문제를 해결합니다."
 
 
 def test_graph_front_state_hides_defeated_place_targets():

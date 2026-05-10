@@ -1,12 +1,11 @@
-from __future__ import annotations
-
 import asyncio
 import json
 
 from pydantic import BaseModel, ConfigDict
 
-from src.db.repo import GraphRepo
+from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
+from src.game.domain.content import merge_content, node_label, node_text
 from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph_query import location_of
@@ -50,8 +49,9 @@ async def run_graph_action_turn(
     action: Action,
     *,
     llm: LLMClient | None = None,
+    scenario_repo: ScenarioRepo | None = None,
 ) -> GraphActionTurnResult:
-    runtime = await load_runtime_state(repo, game_id)
+    runtime = await load_runtime_state(repo, game_id, scenario_repo)
     set_diag_context(game_id, runtime.progress.turn_count)
     return await run_graph_action_turn_from_runtime(
         repo,
@@ -97,6 +97,18 @@ async def run_graph_action_turn_from_runtime(
                 next_runtime,
                 offer.changes,
             ).runtime
+            runtime_content = merge_content(
+                next_runtime.progress.runtime_content,
+                offer.content,
+            )
+            next_runtime = next_runtime.model_copy(
+                update={
+                    "content": merge_content(next_runtime.content, offer.content),
+                    "progress": next_runtime.progress.model_copy(
+                        update={"runtime_content": runtime_content}
+                    ),
+                }
+            )
             offer_quest_id = offer.quest_id
             engine_diag("quest:offer", quest=offer_quest_id)
     card = build_graph_action_card(runtime, next_runtime, action, dispatch)
@@ -218,9 +230,9 @@ def _narration_user_prompt(
     place = after.graph.nodes.get(place_id or "")
     return json.dumps(
         {
-            "player": _node_name(player, after.progress.locale),
-            "current_place": _node_name(place, after.progress.locale),
-            "place_description": _node_description_value(place),
+            "player": _node_name(after, player),
+            "current_place": _node_name(after, place),
+            "place_description": _node_description_value(after, place),
             "resolved_results": card_texts,
             "combat_scene": before.progress.graph_combat_state is not None
             or after.progress.graph_combat_state is not None,
@@ -236,22 +248,15 @@ def _clean_narration(text: str) -> str:
     return cleaned[:220].rstrip()
 
 
-def _node_name(node: GraphNode | None, locale: str) -> str:
+def _node_name(runtime: GameRuntimeState, node: GraphNode | None) -> str:
     if node is None:
-        return render("runtime.none", locale)
-    name = node.properties.get("name")
-    if isinstance(name, str) and name:
-        return name
-    title = node.properties.get("title")
-    if isinstance(title, str) and title:
-        return title
-    return node.id
+        return render("runtime.none", runtime.progress.locale)
+    return node_label(runtime.content, node)
 
 
-def _node_description_value(node: GraphNode | None) -> str | None:
+def _node_description_value(runtime: GameRuntimeState, node: GraphNode | None) -> str | None:
     if node is None:
         return None
-    description = node.properties.get("description")
-    return description if isinstance(description, str) and description else None
+    return node_text(runtime.content, node, "description")
 
 

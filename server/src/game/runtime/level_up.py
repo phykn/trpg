@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 from pydantic import BaseModel, ConfigDict
 
-from src.db.repo import GraphRepo
+from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.types import GraphStatKey
 from src.game.engines.graph_growth import GraphGrowthError, plan_level_up
 from src.llm.diag import engine_diag, set_diag_context
@@ -31,11 +29,12 @@ async def run_graph_level_up(
     *,
     stat_up: GraphStatKey,
     skill_id: str | None,
+    scenario_repo: ScenarioRepo | None = None,
 ) -> GraphLevelUpResult:
     if skill_id is not None:
         raise GraphLevelUpError("graph skill learning is not supported yet")
 
-    runtime = await load_runtime_state(repo, game_id)
+    runtime = await load_runtime_state(repo, game_id, scenario_repo)
     set_diag_context(game_id, runtime.progress.turn_count)
     engine_diag("levelup:start", stat=stat_up)
     if runtime.progress.pending_confirmation is not None:

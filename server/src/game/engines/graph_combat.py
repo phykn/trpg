@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from math import ceil
 from pydantic import BaseModel, ConfigDict
 

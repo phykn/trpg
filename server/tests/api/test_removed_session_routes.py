@@ -52,6 +52,7 @@ async def test_removed_session_routes_are_not_mounted(tmp_path):
         intro_response = await client.post("/session/game-1/intro", json={})
         preview_response = await client.get("/session/game-1/level_up_preview")
         level_up_response = await client.post("/session/game-1/level_up", json={})
+        debug_response = await client.post("/debug/complete", json={"query": "ping"})
 
     assert init_response.status_code == 404
     assert turn_response.status_code == 404
@@ -59,6 +60,7 @@ async def test_removed_session_routes_are_not_mounted(tmp_path):
     assert intro_response.status_code == 404
     assert preview_response.status_code == 404
     assert level_up_response.status_code == 404
+    assert debug_response.status_code == 404
 
 
 @pytest.mark.asyncio

@@ -26,11 +26,11 @@ sys.path.insert(0, str(ROOT))
 
 from dotenv import load_dotenv  # noqa: E402
 
-# Mirror server/run_api.py:_load_env so BASE_URL / LLM_ROUTE_* resolve here.
+# Load server env plus optional local provider overlays for QA.
 # APP_ENV defaults to dev.
 _APP_ENV = os.environ.get("APP_ENV", "dev")
 load_dotenv(ROOT / "server" / f".env.{_APP_ENV}")
-load_dotenv(ROOT / "server" / ".env.llama_cpp")
+load_dotenv(ROOT / "server" / ".env.local")
 load_dotenv(ROOT / "server" / ".env.google")
 
 from src.llm import LLMClient  # noqa: E402

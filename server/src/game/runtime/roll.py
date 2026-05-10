@@ -1,10 +1,8 @@
-from __future__ import annotations
-
 import random
 import secrets
 from typing import Any
 
-from src.db.repo import GraphRepo
+from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
 from src.game.domain.memory import BonusItem, RollLogEntry
 from src.game.rules.dc import compute_grade, compute_required_roll
@@ -36,8 +34,10 @@ async def start_graph_roll(
     repo: GraphRepo,
     game_id: str,
     action: Action,
+    *,
+    scenario_repo: ScenarioRepo | None = None,
 ) -> GraphActionRequestResult:
-    runtime = await load_runtime_state(repo, game_id)
+    runtime = await load_runtime_state(repo, game_id, scenario_repo)
     set_diag_context(game_id, runtime.progress.turn_count)
     engine_diag("roll:start", action=action.verb)
     if runtime.progress.pending_roll is not None:
@@ -68,8 +68,9 @@ async def run_graph_roll(
     roll_id: str,
     *,
     dice: int | None = None,
+    scenario_repo: ScenarioRepo | None = None,
 ) -> GraphActionRequestResult:
-    runtime = await load_runtime_state(repo, game_id)
+    runtime = await load_runtime_state(repo, game_id, scenario_repo)
     set_diag_context(game_id, runtime.progress.turn_count)
     engine_diag("roll:resolve", roll=roll_id)
     pending = runtime.progress.pending_roll

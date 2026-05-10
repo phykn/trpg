@@ -765,7 +765,7 @@ Use these replacement rules:
 - save runtime: `GraphRepo`
 - client state: `FrontState` from `client/services/wire.ts`
 - scenario in dev: local scenario repo
-- LLM in dev: local OpenAI-compatible llama.cpp
+- LLM in dev: local OpenAI-compatible server
 
 Do not describe removed code as if it still exists. Historical plan files under `docs/superpowers/plans/` may keep old references.
 

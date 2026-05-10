@@ -9,7 +9,7 @@ from openai import AsyncOpenAI
 
 from src.game.rules.config import RULES
 from src.llm.diag import llm_diag
-from . import gemini, llama_cpp
+from . import gemini, local
 from .profiles import LLMProfile, ThinkingMode, parse_env_profiles
 
 # Logs land under `<log_dir>/<session_id>/<agent>/`; outer callers set this and inner ones can defer.
@@ -35,7 +35,7 @@ def set_think_override(value: bool | None) -> None:
 
 
 # Picks the `extra_body` builder + response parser; derived from base_url.
-ToggleStyle = Literal["llama_cpp", "gemini"]
+ToggleStyle = Literal["local", "gemini"]
 
 
 class _Provider:
@@ -56,7 +56,7 @@ class _Provider:
         self.model = profile.model
         self.thinking_mode = profile.thinking_mode
         self.toggle_style: ToggleStyle = (
-            "gemini" if "googleapis.com" in profile.base_url else "llama_cpp"
+            "gemini" if "googleapis.com" in profile.base_url else "local"
         )
         self.supports_system = profile.supports_system
         self._chat_clients = [
@@ -195,7 +195,7 @@ class LLMClient:
 
     @staticmethod
     def _toggle(provider: _Provider):
-        return gemini if provider.toggle_style == "gemini" else llama_cpp
+        return gemini if provider.toggle_style == "gemini" else local
 
     def _params(
         self,
@@ -267,11 +267,16 @@ class LLMClient:
         use_fallback: bool = False,
     ) -> dict:
         provider = self._pick(agent, fallback=use_fallback)
+        effective_think = self._effective_think(think)
         llm_diag(
             "llm:request",
             agent=agent,
             model=provider.model,
             base_url=getattr(provider, "base_url", "unknown"),
+            thinking_mode=provider.thinking_mode,
+            toggle_style=provider.toggle_style,
+            think_requested=think,
+            think_effective=effective_think,
             fallback=use_fallback or None,
         )
         base = self._log_basename(agent) if log else None
@@ -283,7 +288,7 @@ class LLMClient:
         thought = extra.get("reasoning_content")
         answer = msg.content or ""
         sp = self._toggle(provider).make_splitter(
-            provider.thinking_mode, self._effective_think(think)
+            provider.thinking_mode, effective_think
         )
         if sp is not None:
             t1, a1 = sp.feed(answer)
@@ -306,11 +311,16 @@ class LLMClient:
         use_fallback: bool = False,
     ) -> AsyncIterator[dict]:
         provider = self._pick(agent, fallback=use_fallback)
+        effective_think = self._effective_think(think)
         llm_diag(
             "llm:request",
             agent=agent,
             model=provider.model,
             base_url=getattr(provider, "base_url", "unknown"),
+            thinking_mode=provider.thinking_mode,
+            toggle_style=provider.toggle_style,
+            think_requested=think,
+            think_effective=effective_think,
             fallback=use_fallback or None,
         )
         base = self._log_basename(agent) if log else None
@@ -320,7 +330,7 @@ class LLMClient:
             **params, stream=True
         )
         splitter = self._toggle(provider).make_splitter(
-            provider.thinking_mode, self._effective_think(think)
+            provider.thinking_mode, effective_think
         )
         accum_answer: list[str] = []
         try:

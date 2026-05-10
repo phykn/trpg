@@ -6,7 +6,7 @@ User-facing setup, full directory map, and the per-agent persona summary live in
 
 ## Working tree
 
-`agency/` is a Python package that imports the server's `src.*` directly. `run_qa.py` injects the repo root and `server/` into `sys.path` and reads `server/.env.<APP_ENV>` → `.env.llama_cpp` → `.env.google` (mirrors `server/run_api.py`). The venv, `pyproject.toml`, and `requirements.txt` live at the repo root — invoke Python via `.venv/bin/python` from the repo root. **Never create `agency/.venv`.**
+`agency/` is a Python package that imports the server's `src.*` directly. `run_qa.py` injects the repo root and `server/` into `sys.path` and reads `server/.env.<APP_ENV>` plus optional `.env.local` / `.env.google` provider overlays. The venv, `pyproject.toml`, and `requirements.txt` live at the repo root — invoke Python via `.venv/bin/python` from the repo root. **Never create `agency/.venv`.**
 
 ## Commands
 
@@ -40,7 +40,7 @@ QA env: needs `BASE_URL` (LLM) and local scenario env from `server/.env.dev` (`S
 
 ### QA — in-process FastAPI, real LLM
 
-`qa/harness/runner.py` wraps the server with `httpx.ASGITransport(app=build_app(...))`. No port, no second process — the request still travels through the real auth/error surface, but responses come back in-memory. The LLM stack is the same external server (`BASE_URL`, llama.cpp or Gemini) production uses.
+`qa/harness/runner.py` wraps the server with `httpx.ASGITransport(app=build_app(...))`. No port, no second process — the request still travels through the real auth/error surface, but responses come back in-memory. The LLM stack is the same external server (`BASE_URL`, local OpenAI-compatible server or Gemini) production uses.
 
 Two hard isolation rules:
 

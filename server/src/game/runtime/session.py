@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Literal
 
@@ -48,7 +46,11 @@ async def initialize_graph_session(
         scenario_repo,
         locale=locale,
     )
-    runtime = GameRuntimeState(graph=bundle.graph, progress=bundle.progress)
+    runtime = GameRuntimeState(
+        graph=bundle.graph,
+        progress=bundle.progress,
+        content=bundle.content,
+    )
     set_diag_context(bundle.progress.game_id, bundle.progress.turn_count)
     engine_diag("graph:init_seed_done", profile=profile)
     engine_diag("graph:init_done", logs=len(runtime.log_entries))
@@ -61,10 +63,11 @@ async def initialize_graph_session(
 async def load_graph_session_state(
     repo: GraphRepo,
     game_id: str,
+    scenario_repo: ScenarioRepo | None = None,
 ) -> GraphSessionSnapshot:
     set_diag_context(game_id, 0)
     engine_diag("state:load")
-    runtime = await load_runtime_state(repo, game_id)
+    runtime = await load_runtime_state(repo, game_id, scenario_repo)
     set_diag_context(game_id, runtime.progress.turn_count)
     engine_diag("state:done", logs=len(runtime.log_entries))
     return GraphSessionSnapshot(
@@ -77,10 +80,11 @@ async def run_graph_intro_request(
     llm: LLMClient,
     repo: GraphRepo,
     game_id: str,
+    scenario_repo: ScenarioRepo | None = None,
 ) -> GraphSessionIntroResult:
     set_diag_context(game_id, 0)
     engine_diag("intro:load")
-    runtime = await load_runtime_state(repo, game_id)
+    runtime = await load_runtime_state(repo, game_id, scenario_repo)
     set_diag_context(game_id, runtime.progress.turn_count)
     engine_diag("intro:start")
     runtime = await _run_intro_or_fallback(llm, repo, runtime)

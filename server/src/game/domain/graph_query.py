@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.game.domain.graph import (
     EdgeType,
     Graph,

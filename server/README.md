@@ -7,7 +7,7 @@ Design notes start at `../docs/README.md`; the per-turn flow is in `../docs/02-r
 ## Stack
 
 - Python 3.12+, Pydantic v2, FastAPI, uvicorn, httpx, async/await
-- OpenAI-compatible LLM via `LLM_ROUTE_<AGENT> = <provider>/<model>` (llama.cpp local or Gemini hosted; provider blocks live alongside the routes in `.env.<APP_ENV>`)
+- OpenAI-compatible LLM via `LLM_ROUTE_<AGENT> = <provider>/<model>` (local OpenAI-compatible server or Gemini hosted; provider blocks live alongside the routes in `.env.<APP_ENV>`)
 - **Supabase Postgres + Storage** for graph saves + scenarios. Dev can set `GRAPH_REPO=local` or `SCENARIO_REPO=local`; tests use LocalFs adapters against `tmp_path`.
 - Single process. LocalFs writes use per-game locks; Supabase deploys need DB-level locking if two requests can mutate the same `game_id` concurrently.
 
@@ -56,7 +56,7 @@ LLM_GOOGLE_THINK_OPT_ON=gemma-4-31b-it,gemma-4-26b-a4b-it
 LLM_GOOGLE_NO_SYSTEM=gemma-3-27b-it
 ```
 
-For local llama.cpp, add an `LLM_LLAMA_CPP_*` block with the same shape and set `LLM_ROUTE_DEFAULT = llama_cpp/<model>`, then run the LLM server alongside (e.g. `llama-server -m <model.gguf> -c 8192 --port 8000`).
+For a local OpenAI-compatible server, add an `LLM_LOCAL_*` block with the same shape and set `LLM_ROUTE_DEFAULT = local/<model>`, then run the model server alongside.
 
 ## Run
 

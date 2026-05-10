@@ -80,8 +80,94 @@ def test_build_seed_graph_creates_nodes_edges_and_progress():
     assert graph.edges["located_at:potion:town"].type == "located_at"
     assert graph.edges["connects_to:town:forest"].properties["difficulty"] == "normal"
     assert bundle.progress.game_id == "game-1"
+    assert bundle.progress.profile_id == "default"
     assert bundle.progress.player_id == "player_01"
     assert bundle.progress.locale == "ko"
+
+
+def test_build_seed_graph_keeps_static_content_out_of_seed_nodes():
+    bundle = build_seed_graph(
+        profile_name="default",
+        player=PlayerInput(name="테스터", race_id="human", gender="female"),
+        races={
+            "human": {
+                "id": "human",
+                "name": "인간",
+                "description": "사람입니다.",
+                "racial_skill_ids": ["slash"],
+            }
+        },
+        locations={
+            "town": {
+                "id": "town",
+                "name": "마을",
+                "description": "작은 마을입니다.",
+                "item_ids": ["potion"],
+            }
+        },
+        items={
+            "potion": {
+                "id": "potion",
+                "name": "물약",
+                "description": "붉은 회복 물약입니다.",
+            }
+        },
+        skills={
+            "slash": {
+                "id": "slash",
+                "name": "베기",
+                "description": "검으로 벱니다.",
+                "kind": "attack",
+            }
+        },
+        npcs={
+            "elder": {
+                "id": "elder",
+                "name": "장로",
+                "description": "마을의 장로입니다.",
+                "race_id": "human",
+                "location_id": "town",
+                "level": 1,
+            }
+        },
+        quests={
+            "quest_01": {
+                "id": "quest_01",
+                "title": "첫 의뢰",
+                "summary": "마을 일을 돕습니다.",
+                "description": "장로의 부탁을 해결합니다.",
+                "giver_id": "elder",
+                "status": "pending",
+            }
+        },
+        chapters={
+            "chapter_01": {
+                "id": "chapter_01",
+                "title": "첫 장",
+                "description": "시작 장입니다.",
+                "quest_ids": ["quest_01"],
+            }
+        },
+        start={
+            "start_location_id": "town",
+            "active_subject_id": "elder",
+            "active_quest_id": "quest_01",
+        },
+        template={"id": "player_01"},
+        game_id="game-1",
+        locale="ko",
+    )
+
+    for node_id in ("town", "potion", "slash", "elder", "quest_01", "chapter_01"):
+        properties = bundle.graph.nodes[node_id].properties
+        assert properties["source"] == "scenario"
+        assert properties["source_id"] == node_id
+        for static_key in ("name", "title", "description", "summary"):
+            assert static_key not in properties
+
+    assert bundle.content.locations["town"]["name"] == "마을"
+    assert bundle.content.items["potion"]["description"] == "붉은 회복 물약입니다."
+    assert bundle.content.quests["quest_01"]["title"] == "첫 의뢰"
 
 
 def test_build_seed_graph_keeps_reward_items_out_of_visible_placement():
@@ -143,11 +229,11 @@ def test_build_seed_graph_keeps_reward_items_out_of_visible_placement():
     assert quest_node.properties["triggers"] == [
         {
             "id": "reach_forest",
-            "name": "숲 도착",
             "type": "location_enter",
             "target_id": "forest",
         }
     ]
+    assert bundle.content.quests["quest_01"]["triggers"][0]["name"] == "숲 도착"
     assert quest_node.properties["rewards"] == {"gold": 0, "exp": 0}
 
 

@@ -1,13 +1,12 @@
-from __future__ import annotations
-
 import secrets
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from src.db.repo import GraphRepo
+from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
-from src.game.domain.graph import Graph, GraphNode
+from src.game.domain.content import node_label
+from src.game.domain.graph import Graph
 from src.game.domain.graph_character import can_character_fight
 from src.game.domain.graph_query import location_of
 from src.llm.client import LLMClient
@@ -63,8 +62,9 @@ async def run_graph_action_request(
     action: Action,
     *,
     llm: LLMClient | None = None,
+    scenario_repo: ScenarioRepo | None = None,
 ) -> GraphActionRequestResult:
-    runtime = await load_runtime_state(repo, game_id)
+    runtime = await load_runtime_state(repo, game_id, scenario_repo)
     set_diag_context(game_id, runtime.progress.turn_count)
     engine_diag("action:start", action=action.verb)
     if runtime.progress.pending_confirmation is not None:
@@ -80,7 +80,7 @@ async def run_graph_action_request(
         from .roll import start_graph_roll
 
         engine_diag("action:roll_required", action=action.verb)
-        return await start_graph_roll(repo, game_id, action)
+        return await start_graph_roll(repo, game_id, action, scenario_repo=scenario_repo)
 
     if action.verb == "query":
         from .query import answer_graph_query
@@ -95,7 +95,13 @@ async def run_graph_action_request(
 
     pending = build_graph_action_confirmation(runtime, action)
     if pending is None:
-        result = await run_graph_action_turn(repo, game_id, action, llm=llm)
+        result = await run_graph_action_turn(
+            repo,
+            game_id,
+            action,
+            llm=llm,
+            scenario_repo=scenario_repo,
+        )
         engine_diag("action:done", status="executed", action=action.verb)
         return GraphActionRequestResult(
             runtime=result.runtime,
@@ -130,8 +136,9 @@ async def run_graph_confirm(
     decision: Decision,
     *,
     llm: LLMClient | None = None,
+    scenario_repo: ScenarioRepo | None = None,
 ) -> GraphActionRequestResult:
-    runtime = await load_runtime_state(repo, game_id)
+    runtime = await load_runtime_state(repo, game_id, scenario_repo)
     set_diag_context(game_id, runtime.progress.turn_count)
     pending = runtime.progress.pending_confirmation
     engine_diag(
@@ -189,7 +196,7 @@ def build_graph_action_confirmation(
         return _build_attack_start_confirmation(runtime, action)
 
     if action.verb == "transfer" and action.how in ("accept", "abandon"):
-        return _build_quest_confirmation(runtime.graph, action, runtime.progress.locale)
+        return _build_quest_confirmation(runtime, action)
 
     return None
 
@@ -203,7 +210,7 @@ def _build_attack_start_confirmation(
         return None
 
     target = runtime.graph.nodes[target_id]
-    target_label = _label(target)
+    target_label = node_label(runtime.content, target)
     locale = runtime.progress.locale
     return _pending(
         kind="attack_start",
@@ -217,18 +224,18 @@ def _build_attack_start_confirmation(
 
 
 def _build_quest_confirmation(
-    graph: Graph,
+    runtime: GameRuntimeState,
     action: Action,
-    locale: str,
 ) -> dict[str, Any] | None:
     quest_id = _single(action.what) or _single(action.to)
     if quest_id is None:
         return None
-    quest = graph.nodes.get(quest_id)
+    quest = runtime.graph.nodes.get(quest_id)
     if quest is None or quest.type != "quest":
         return None
 
-    quest_label = _title(quest)
+    locale = runtime.progress.locale
+    quest_label = node_label(runtime.content, quest)
     if action.how == "accept":
         return _pending(
             kind="quest_accept",
@@ -327,18 +334,6 @@ def _can_target_start_combat(
         and player_location is not None
         and target_location == player_location
     )
-
-
-def _title(node: GraphNode) -> str:
-    title = node.properties.get("title")
-    if isinstance(title, str) and title:
-        return title
-    return _label(node)
-
-
-def _label(node: GraphNode) -> str:
-    name = node.properties.get("name")
-    return name if isinstance(name, str) and name else node.id
 
 
 def _single(value: object) -> str | None:

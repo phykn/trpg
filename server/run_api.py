@@ -3,10 +3,12 @@ from pathlib import Path
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.api.auth import require_basic_auth
 from src.api.routes import router
+from src.api.routes import debug
 from src.llm import LLMClient
 from src.db.factory import build_graph_repo, build_scenario_repo
 from src.db.repo import GraphRepo, ScenarioRepo
@@ -45,6 +47,7 @@ def build_app(
     scenario_repo: ScenarioRepo,
     cors_origins: list[str],
     graph_repo: GraphRepo | None = None,
+    enable_debug: bool = False,
 ) -> FastAPI:
     app = FastAPI(title="TRPG Server API")
     app.add_middleware(
@@ -60,6 +63,8 @@ def build_app(
     app.state.scenario_repo = scenario_repo
     app.state.graph_repo = graph_repo
     app.include_router(router)
+    if enable_debug:
+        app.include_router(debug.router, dependencies=[Depends(require_basic_auth)])
     return app
 
 
@@ -83,6 +88,7 @@ def create_app() -> FastAPI:
         scenario_repo=scenario_repo,
         cors_origins=cors_origins,
         graph_repo=graph_repo,
+        enable_debug=os.environ.get("APP_ENV", "dev") != "release",
     )
 
 

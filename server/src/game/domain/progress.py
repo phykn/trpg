@@ -1,10 +1,9 @@
-from __future__ import annotations
-
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.game.domain.combat import GraphCombatState
+from src.game.domain.content import RuntimeContent
 
 
 class GameProgress(BaseModel):
@@ -12,6 +11,8 @@ class GameProgress(BaseModel):
 
     game_id: str
     player_id: str
+    profile_id: str | None = None
+    runtime_content: RuntimeContent = Field(default_factory=RuntimeContent)
     locale: str = "ko"
     active_subject_id: str | None = None
     active_quest_id: str | None = None

@@ -68,9 +68,10 @@ async def session_graph_intro(
     game_id: str,
     llm: LLMClient = Depends(get_llm),
     graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> GraphActionResponse:
     try:
-        result = await run_graph_intro_request(llm, graph_repo, game_id)
+        result = await run_graph_intro_request(llm, graph_repo, game_id, scenario_repo)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     return GraphActionResponse(
@@ -85,9 +86,10 @@ async def session_graph_intro(
 async def get_graph_state_route(
     game_id: str,
     graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> InitResponse:
     try:
-        result = await load_graph_session_state(graph_repo, game_id)
+        result = await load_graph_session_state(graph_repo, game_id, scenario_repo)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     return InitResponse(
@@ -102,6 +104,7 @@ async def session_graph_turn(
     body: GraphTurnRequest,
     llm: LLMClient = Depends(get_llm),
     graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> GraphActionResponse:
     try:
         result = await run_graph_action_request(
@@ -109,6 +112,7 @@ async def session_graph_turn(
             game_id,
             body.action,
             llm=llm,
+            scenario_repo=scenario_repo,
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
@@ -132,6 +136,7 @@ async def session_graph_confirm(
     body: ConfirmRequest,
     llm: LLMClient = Depends(get_llm),
     graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> GraphActionResponse:
     try:
         result = await run_graph_confirm(
@@ -140,6 +145,7 @@ async def session_graph_confirm(
             body.confirmation_id,
             body.decision,
             llm=llm,
+            scenario_repo=scenario_repo,
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
@@ -160,9 +166,15 @@ async def session_graph_roll(
     game_id: str,
     body: GraphRollRequest,
     graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> GraphActionResponse:
     try:
-        result = await run_graph_roll(graph_repo, game_id, body.roll_id)
+        result = await run_graph_roll(
+            graph_repo,
+            game_id,
+            body.roll_id,
+            scenario_repo=scenario_repo,
+        )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     except GraphRollExpected as e:
@@ -183,6 +195,7 @@ async def session_graph_input(
     body: GraphInputRequest,
     llm: LLMClient = Depends(get_llm),
     graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> GraphActionResponse:
     try:
         result = await run_graph_input_turn(
@@ -190,6 +203,7 @@ async def session_graph_input(
             graph_repo,
             game_id,
             body.player_input,
+            scenario_repo=scenario_repo,
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
@@ -210,6 +224,7 @@ async def session_graph_level_up(
     game_id: str,
     body: GraphLevelUpRequest,
     graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> GraphActionResponse:
     set_think_override(body.think)
     try:
@@ -218,6 +233,7 @@ async def session_graph_level_up(
             game_id,
             stat_up=body.stat_up,
             skill_id=body.skill_id,
+            scenario_repo=scenario_repo,
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")

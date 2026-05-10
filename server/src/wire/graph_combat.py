@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.game.runtime.state import GameRuntimeState
 from src.wire.graph_payload_helpers import node_name, optional_resource, require_node, resource
 from src.wire.models import GraphCombatParticipantPayload, GraphCombatPayload
@@ -17,7 +15,7 @@ def combat_payload(runtime: GameRuntimeState) -> GraphCombatPayload | None:
         participants.append(
             GraphCombatParticipantPayload(
                 id=node.id,
-                name=node_name(node),
+                name=node_name(node, runtime.content),
                 side=side,
                 hp=resource(node, "hp", "max_hp"),
                 mp=optional_resource(node, "mp", "max_mp"),

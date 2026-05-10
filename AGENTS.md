@@ -52,7 +52,7 @@ Apply repo-wide. When a sub-AGENTS.md repeats a rule, the sub version is just mo
 
 - Python 3.12+, Pydantic v2, FastAPI, async/await throughout, uvicorn, httpx.
 - **Supabase Postgres + Storage** is the runtime store. Graph saves use `game_progress`, `graph_nodes`, `graph_edges`, `log_entries`, `history_entries`, and `dialogue_entries`; scenarios use a Storage bucket mirroring the local `scenarios/<profile>/...` tree 1:1. The running server goes through `SupabaseGraphRepo` + `SupabaseStorageScenarioRepo` unless dev env sets `GRAPH_REPO=local` or `SCENARIO_REPO=local`.
-- LLM is OpenAI-compatible. `LLM_ROUTE_<AGENT> = <provider>/<model>` per agent; active server agents are `classify`, `graph_intro`, and `graph_narrate`. Unmatched agents fall back to `default`. Provider blocks (llama.cpp local, Gemini hosted) layer on top of `.env.<APP_ENV>`.
+- LLM is OpenAI-compatible. `LLM_ROUTE_<AGENT> = <provider>/<model>` per agent; active server agents are `classify`, `graph_intro`, and `graph_narrate`. Unmatched agents fall back to `default`. Provider blocks (local OpenAI-compatible server, Gemini hosted) layer on top of `.env.<APP_ENV>`.
 - Expo SDK 54 / RN 0.81 / React 19, NativeWind v4, expo-router with typedRoutes, `expo/fetch` for server calls. Web export deploys to Cloudflare Workers via `npm run deploy`.
 
 The persistence seam is `GraphRepo` / `ScenarioRepo` in `server/src/db/repo.py`. `asyncio.Lock` serialization in the LocalFs graph adapter is single-process only; multi-isolate Supabase deploys need DB-level locking if two requests can mutate the same `game_id` concurrently.

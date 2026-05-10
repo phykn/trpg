@@ -1,7 +1,6 @@
-from __future__ import annotations
-
 from typing import Literal
 
+from src.game.domain.content import RuntimeContent, node_label, node_value
 from src.game.domain.graph import GraphNode
 from src.llm.context.graph_combat import hp_state, mp_state
 from src.wire.models import GraphResourcePayload
@@ -59,8 +58,20 @@ def int_prop_default(node: GraphNode, key: str, default: int) -> int:
     return value if isinstance(value, int) else default
 
 
-def node_name(node: GraphNode) -> str:
+def node_name(node: GraphNode, content: RuntimeContent | None = None) -> str:
+    if content is not None:
+        return node_label(content, node)
     return optional_str(node.properties.get("name")) or node.id
+
+
+def static_value(
+    node: GraphNode,
+    key: str,
+    content: RuntimeContent | None = None,
+) -> object:
+    if content is not None:
+        return node_value(content, node, key)
+    return node.properties.get(key)
 
 
 def optional_str(value: object) -> str | None:
