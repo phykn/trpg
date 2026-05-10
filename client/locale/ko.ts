@@ -133,6 +133,7 @@ export const ko = {
   },
   combat: {
     label: '전투',
+    attack: '공격',
   },
   menu: {
     newGame: '새로운 이야기',
@@ -184,9 +185,16 @@ export const compose = {
     return `${name}으로 이동합니다`;
   },
   approachTo: (name: string) => `${name}에게 접근합니다`,
+  attack: (name: string) => `${name}${josaObject(name)} 공격합니다`,
   deceased: (name: string) => `${name} (죽음)`,
   here: (label: string) => `현재 ${label}`,
   placeCount: (n: number) => `장소 ${n}곳`,
   reachableCount: (n: number) => `이동 가능 ${n}`,
   affinity: (delta: number) => `호감도 ${delta > 0 ? '+' : ''}${delta}`,
 };
+
+function josaObject(value: string): '을' | '를' {
+  const last = value.charCodeAt(value.length - 1);
+  if (last < 0xac00 || last > 0xd7a3) return '를';
+  return (last - 0xac00) % 28 === 0 ? '를' : '을';
+}

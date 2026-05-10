@@ -1,9 +1,9 @@
-import { actionForNode } from '../_nodeActions';
+import { actionsForNode } from '../_nodeActions';
 import type { LocationNode, TargetNode } from '../types';
 
-describe('actionForNode', () => {
+describe('actionsForNode', () => {
   test('uses an explicit graph move action for reachable locations', () => {
-    const action = actionForNode({
+    const actions = actionsForNode({
       id: 'forest',
       label: '숲길',
       kind: 'location',
@@ -14,15 +14,16 @@ describe('actionForNode', () => {
       moveDifficulty: null,
     } satisfies LocationNode);
 
-    expect(action).toMatchObject({
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toMatchObject({
       kind: 'graph_action',
       graphAction: { verb: 'move', to: 'forest' },
       textFallback: '숲길로 이동합니다',
     });
   });
 
-  test('keeps reachable targets as text because approach is narrative input', () => {
-    const action = actionForNode({
+  test('offers both attack and approach for reachable targets', () => {
+    const actions = actionsForNode({
       id: 'wolf_01',
       label: '늑대',
       kind: 'target',
@@ -36,9 +37,18 @@ describe('actionForNode', () => {
       trust: 0,
     } satisfies TargetNode);
 
-    expect(action).toMatchObject({
-      kind: 'text',
-      text: '늑대에게 접근합니다',
-    });
+    expect(actions).toEqual([
+      expect.objectContaining({
+        kind: 'graph_action',
+        label: '공격',
+        graphAction: { verb: 'attack', what: 'wolf_01' },
+        textFallback: '늑대를 공격합니다',
+      }),
+      expect.objectContaining({
+        kind: 'text',
+        label: '접근',
+        text: '늑대에게 접근합니다',
+      }),
+    ]);
   });
 });

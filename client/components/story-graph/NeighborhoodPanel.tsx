@@ -8,7 +8,7 @@ import type { PanelAction } from '@/logic/info-panel';
 
 import type { StoryGraphEdge, StoryGraphModel } from '@/logic/story-graph/types';
 import { StoryGraphCanvas } from './StoryGraphCanvas';
-import { actionForNode } from '@/logic/story-graph/_nodeActions';
+import { actionsForNode } from '@/logic/story-graph/_nodeActions';
 
 const LEGEND: { key: string; label: string; color: string }[] = [
   { key: 'place', label: ko.legend.place, color: colors.exp.fg },
@@ -62,7 +62,7 @@ export function NeighborhoodPanel({
   );
 
   const selectedNode = visibleGraph.nodes.find((node) => node.id === selectedNodeId) ?? null;
-  const selectedAction = selectedNode ? actionForNode(selectedNode) : null;
+  const selectedActions = selectedNode ? actionsForNode(selectedNode) : [];
   const isPlaceKind = !!selectedNode && (selectedNode.kind === 'place' || selectedNode.kind === 'location');
   const isCharacterKind = !!selectedNode && (selectedNode.kind === 'subject' || selectedNode.kind === 'target' || selectedNode.kind === 'hero');
   const isQuestKind = !!selectedNode && selectedNode.kind === 'quest';
@@ -124,7 +124,7 @@ export function NeighborhoodPanel({
     }
     if (selectedNode.kind === 'place') return ko.panel.here;
     if (selectedNode.kind === 'subject') return ko.status.facing;
-    if (selectedNode.kind === 'location' && !selectedAction) return ko.status.moveBlocked;
+    if (selectedNode.kind === 'location' && selectedActions.length === 0) return ko.status.moveBlocked;
     if (selectedNode.kind === 'target' && !selectedNode.reachable) return ko.status.approachBlocked;
     if (selectedNode.kind === 'quest') return selectedNode.questDifficulty;
     return '';
@@ -169,18 +169,23 @@ export function NeighborhoodPanel({
               style={{ minHeight: 22 }}
             >
               <ExpandableTitle text={selectedLabel} />
-              {selectedAction && onAction ? (
-                <Pressable
-                  onPress={() => onAction(selectedAction)}
-                  disabled={actionDisabled}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${selectedNode.label} ${selectedAction.label}`}
-                  className={`rounded-full px-3.5 py-1 ${actionDisabled ? 'bg-accent-muted opacity-60' : 'bg-accent-muted active:opacity-80'}`}
-                >
-                  <Text className="font-sans-semibold text-caption text-accent-fg">
-                    {actionDisabled ? ko.status.busy : selectedAction.label}
-                  </Text>
-                </Pressable>
+              {selectedActions.length > 0 && onAction ? (
+                <View className="flex-row flex-wrap items-center gap-1.5">
+                  {selectedActions.map((action) => (
+                    <Pressable
+                      key={`${action.kind}:${action.label}`}
+                      onPress={() => onAction(action)}
+                      disabled={actionDisabled}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${selectedNode.label} ${action.label}`}
+                      className={`rounded-full px-3.5 py-1 ${actionDisabled ? 'bg-accent-muted opacity-60' : 'bg-accent-muted active:opacity-80'}`}
+                    >
+                      <Text className="font-sans-semibold text-caption text-accent-fg">
+                        {actionDisabled ? ko.status.busy : action.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
               ) : metaText ? (
                 <Text
                   numberOfLines={1}

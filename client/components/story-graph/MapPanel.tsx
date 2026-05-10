@@ -8,7 +8,7 @@ import type { PanelAction } from '@/logic/info-panel';
 
 import type { StoryGraphEdge, StoryGraphModel } from '@/logic/story-graph/types';
 import { StoryGraphCanvas } from './StoryGraphCanvas';
-import { actionForNode } from '@/logic/story-graph/_nodeActions';
+import { actionsForNode } from '@/logic/story-graph/_nodeActions';
 
 type PlaceState = 'current' | 'reachable' | 'unreachable';
 
@@ -82,7 +82,7 @@ export function MapPanel({
   );
 
   const selectedNode = visibleGraph.nodes.find((node) => node.id === selectedNodeId) ?? null;
-  const selectedAction = selectedNode ? actionForNode(selectedNode) : null;
+  const selectedActions = selectedNode ? actionsForNode(selectedNode) : [];
   const placeFeatures = (() => {
     if (!selectedNode) return null;
     if (!('risk' in selectedNode) || !selectedNode.risk) return null;
@@ -96,7 +96,7 @@ export function MapPanel({
   const metaText = (() => {
     if (!selectedNode) return '';
     if (selectedNode.kind === 'place') return ko.panel.here;
-    if (selectedNode.kind === 'location' && !selectedAction) return ko.status.moveBlocked;
+    if (selectedNode.kind === 'location' && selectedActions.length === 0) return ko.status.moveBlocked;
     return '';
   })();
 
@@ -136,18 +136,23 @@ export function MapPanel({
                 style={{ minHeight: 22 }}
               >
                 <ExpandableTitle text={selectedNode.label} />
-                {selectedAction && onAction ? (
-                  <Pressable
-                    onPress={() => onAction(selectedAction)}
-                    disabled={actionDisabled}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${selectedNode.label} ${selectedAction.label}`}
-                    className={`rounded-full px-3.5 py-1 ${actionDisabled ? 'bg-accent-muted opacity-60' : 'bg-accent-muted active:opacity-80'}`}
-                  >
-                    <Text className="font-sans-semibold text-caption text-accent-fg">
-                      {actionDisabled ? ko.status.busy : selectedAction.label}
-                    </Text>
-                  </Pressable>
+                {selectedActions.length > 0 && onAction ? (
+                  <View className="flex-row flex-wrap items-center gap-1.5">
+                    {selectedActions.map((action) => (
+                      <Pressable
+                        key={`${action.kind}:${action.label}`}
+                        onPress={() => onAction(action)}
+                        disabled={actionDisabled}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${selectedNode.label} ${action.label}`}
+                        className={`rounded-full px-3.5 py-1 ${actionDisabled ? 'bg-accent-muted opacity-60' : 'bg-accent-muted active:opacity-80'}`}
+                      >
+                        <Text className="font-sans-semibold text-caption text-accent-fg">
+                          {actionDisabled ? ko.status.busy : action.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
                 ) : metaText ? (
                   <Text
                     numberOfLines={1}
