@@ -46,6 +46,14 @@ def _graph() -> Graph:
             ),
             "player_01": _character("player_01"),
             "goblin_01": _character("goblin_01", hp=24, max_hp=24),
+            "goblin_named": GraphNode(
+                id="goblin_named",
+                type="character",
+                properties={
+                    **_character("goblin_named", hp=24, max_hp=24).properties,
+                    "name": "고블린 약탈자",
+                },
+            ),
             "quest_01": GraphNode(
                 id="quest_01",
                 type="quest",
@@ -63,6 +71,12 @@ def _graph() -> Graph:
                 id="located_at:goblin_01:town",
                 type="located_at",
                 from_node_id="goblin_01",
+                to_node_id="town",
+            ),
+            "located_at:goblin_named:town": GraphEdge(
+                id="located_at:goblin_named:town",
+                type="located_at",
+                from_node_id="goblin_named",
                 to_node_id="town",
             ),
         },
@@ -91,6 +105,41 @@ async def test_attack_start_stores_confirmation_without_starting_combat(tmp_path
     assert saved_progress.pending_confirmation["payload"]["kind"] == "graph_action"
     assert saved_progress.graph_combat_state is None
     assert saved_progress.turn_count == 0
+
+
+async def test_attack_start_confirmation_uses_korean_object_particle(tmp_path):
+    repo = await _repo(tmp_path)
+
+    result = await run_graph_action_request(
+        repo,
+        "game-1",
+        Action(verb="attack", what="goblin_named"),
+    )
+
+    assert result.front_state.pending_confirmation is not None
+    assert (
+        result.front_state.pending_confirmation.body
+        == "고블린 약탈자를 공격해 전투를 시작합니다."
+    )
+
+
+async def test_attack_start_uses_live_target_from_multiple_candidates(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["goblin_01"].properties["hp"] = 0
+    graph.nodes["goblin_01"].properties["status"] = ["defeated"]
+    graph.nodes["goblin_named"].properties["name"] = "고블린"
+    await repo.save_graph("game-1", graph)
+
+    await run_graph_action_request(
+        repo,
+        "game-1",
+        Action(verb="attack", what=["goblin_01", "goblin_named"]),
+    )
+    pending = (await repo.load_progress("game-1")).pending_confirmation
+
+    assert pending["target_label"] == "고블린"
+    assert pending["payload"]["action"]["what"] == ["goblin_named"]
 
 
 async def test_action_request_is_blocked_while_confirmation_is_pending(tmp_path):
@@ -150,6 +199,21 @@ async def test_confirm_attack_executes_stored_action(tmp_path):
     assert saved_logs[0].kind == "act"
     assert "전투를 시작합니다" in saved_logs[0].text
     assert result.front_state.log == saved_logs
+
+
+async def test_confirm_attack_log_uses_korean_object_particle(tmp_path):
+    repo = await _repo(tmp_path)
+    await run_graph_action_request(
+        repo,
+        "game-1",
+        Action(verb="attack", what="goblin_named"),
+    )
+    pending = (await repo.load_progress("game-1")).pending_confirmation
+
+    await run_graph_confirm(repo, "game-1", pending["id"], "confirm")
+    saved_logs = await repo.load_log_entries("game-1")
+
+    assert saved_logs[0].text == "당신은 고블린 약탈자를 공격해 전투를 시작합니다."
 
 
 async def test_confirm_quest_accept_executes_stored_action(tmp_path):

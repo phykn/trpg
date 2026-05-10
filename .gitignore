@@ -6,6 +6,8 @@ __pycache__/
 
 # Local environment / tooling
 .venv/
+server/.env*
+client/.env*
 .claude/
 .tmux-agent-bridge/
 .playwright-mcp/

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from src.game.domain.graph import Graph, GraphNode
+from src.game.domain.graph_character import graph_character_kind, is_visible_character
 from src.game.domain.graph_query import (
     characters_at,
     edges_from,
@@ -46,7 +47,9 @@ def _entity_payloads(
         node = graph.nodes.get(character_id)
         if node is None or node.type != "character":
             continue
-        entity_type = "player" if character_id == player_id else "npc"
+        if character_id != player_id and not is_visible_character(node):
+            continue
+        entity_type = "player" if character_id == player_id else graph_character_kind(node)
         entities.append({"id": node.id, "name": _label(node), "type": entity_type})
 
     location = graph.nodes.get(location_id)

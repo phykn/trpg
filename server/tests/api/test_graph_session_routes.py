@@ -1,4 +1,6 @@
 import json
+import asyncio
+import time
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -16,9 +18,11 @@ class _MockLLM:
         payload: dict | None = None,
         *,
         intro_answer: str = "당신은 광장에 처음 발을 들입니다.",
+        intro_delay: float = 0.0,
     ) -> None:
         self.payload = payload or {"actions": [{"verb": "pass"}]}
         self.intro_answer = intro_answer
+        self.intro_delay = intro_delay
         self.calls: list[dict] = []
 
     async def chat(
@@ -31,7 +35,11 @@ class _MockLLM:
     ):
         self.calls.append({"agent": agent, "messages": messages})
         if agent == "graph_intro":
+            if self.intro_delay:
+                await asyncio.sleep(self.intro_delay)
             return {"answer": self.intro_answer, "think": ""}
+        if agent == "graph_narrate":
+            return {"answer": "장면의 긴장이 짧게 가라앉습니다.", "think": ""}
         return {"answer": json.dumps(self.payload, ensure_ascii=False), "think": ""}
 
 
@@ -60,13 +68,18 @@ def _build_app(
     *,
     llm_payload: dict | None = None,
     intro_answer: str = "당신은 광장에 처음 발을 들입니다.",
+    intro_delay: float = 0.0,
 ):
     save_repo, _ = make_save_repo()
     storage = make_default_storage()
     _extend_default_storage_for_movement(storage)
     scenario_repo, _ = make_scenario_repo(storage)
     return build_app(
-        llm=_MockLLM(llm_payload, intro_answer=intro_answer),
+        llm=_MockLLM(
+            llm_payload,
+            intro_answer=intro_answer,
+            intro_delay=intro_delay,
+        ),
         basic_auth_user="t",
         basic_auth_pass="t",
         save_repo=save_repo,
@@ -167,6 +180,40 @@ async def test_graph_init_adds_intro_narration_but_move_and_offer_stay_system_ca
     assert move_body["state"]["log"][-1]["kind"] == "act"
     assert progress.next_log_id == 4
     assert [call["agent"] for call in app.state.llm.calls].count("graph_intro") == 1
+
+
+@pytest.mark.asyncio
+async def test_graph_init_does_not_block_on_slow_intro_narration(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "src.api.routes.session._GRAPH_INIT_NARRATION_TIMEOUT_SECONDS",
+        0.01,
+        raising=False,
+    )
+    app = _build_app(tmp_path, intro_delay=0.25)
+
+    started = time.perf_counter()
+    async with _client(app) as client:
+        response = await client.post(
+            "/session/graph/init",
+            json={
+                "profile": "default",
+                "player": {
+                    "name": "테스터",
+                    "race_id": "human",
+                    "gender": "female",
+                },
+            },
+        )
+    elapsed = time.perf_counter() - started
+
+    assert response.status_code == 200, response.text
+    assert elapsed < 0.2
+    log = response.json()["state"]["log"]
+    assert log[0]["kind"] == "gm"
+    assert "광장" in log[0]["text"]
 
 
 @pytest.mark.asyncio
@@ -637,8 +684,9 @@ async def test_graph_play_loop_reaches_quest_reward_without_legacy_state(tmp_pat
     assert graph.nodes[enemy_id].properties["status"] == ["defeated"]
     assert progress.active_quest_id is None
     assert progress.graph_combat_state is None
-    assert [entry.kind for entry in logs[-2:]] == ["act", "act"]
-    assert [entry.text for entry in logs[-2:]] == [
+    assert [entry.kind for entry in logs[-3:]] == ["act", "act", "gm"]
+    assert [entry.text for entry in logs[-3:]] == [
         "당신은 전투에서 승리합니다.",
         "새 의뢰가 도착합니다: 마을의 부탁.",
+        "장면의 긴장이 짧게 가라앉습니다.",
     ]

@@ -8,7 +8,10 @@ from pydantic import BaseModel, ConfigDict
 from src.db.repo import GraphRepo
 from src.game.domain.action import Action
 from src.game.domain.graph import Graph, GraphNode
+from src.game.domain.graph_character import can_character_fight
 from src.game.domain.graph_query import location_of
+from src.llm.client import LLMClient
+from src.locale.particles import eul_reul
 from src.wire.graph_to_front import GraphFrontStatePayload, graph_to_front_state
 
 from .dispatch import (
@@ -55,6 +58,8 @@ async def run_graph_action_request(
     repo: GraphRepo,
     game_id: str,
     action: Action,
+    *,
+    llm: LLMClient | None = None,
 ) -> GraphActionRequestResult:
     runtime = await load_runtime_state(repo, game_id)
     if runtime.progress.pending_confirmation is not None:
@@ -74,7 +79,7 @@ async def run_graph_action_request(
 
     pending = build_graph_action_confirmation(runtime, action)
     if pending is None:
-        result = await run_graph_action_turn(repo, game_id, action)
+        result = await run_graph_action_turn(repo, game_id, action, llm=llm)
         return GraphActionRequestResult(
             runtime=result.runtime,
             status="executed",
@@ -100,6 +105,8 @@ async def run_graph_confirm(
     game_id: str,
     confirmation_id: str,
     decision: Decision,
+    *,
+    llm: LLMClient | None = None,
 ) -> GraphActionRequestResult:
     runtime = await load_runtime_state(repo, game_id)
     pending = runtime.progress.pending_confirmation
@@ -127,6 +134,7 @@ async def run_graph_confirm(
             game_id,
             cleared_runtime,
             action,
+            llm=llm,
         )
     except GraphActionTurnError as exc:
         raise GraphConfirmationError(str(exc)) from exc
@@ -159,12 +167,8 @@ def _build_attack_start_confirmation(
     runtime: GameRuntimeState,
     action: Action,
 ) -> dict[str, Any] | None:
-    target_id = _attack_target_id(action)
-    if target_id is None or not _can_target_start_combat(
-        runtime.graph,
-        runtime.progress.player_id,
-        target_id,
-    ):
+    target_id = _attack_target_id(runtime.graph, runtime.progress.player_id, action)
+    if target_id is None:
         return None
 
     target = runtime.graph.nodes[target_id]
@@ -172,10 +176,10 @@ def _build_attack_start_confirmation(
     return _pending(
         kind="attack_start",
         title="공격하시겠습니까?",
-        body=f"{target_label}을 공격해 전투를 시작합니다.",
+        body=f"{target_label}{eul_reul(target_label)} 공격해 전투를 시작합니다.",
         confirm_label="공격",
         target_label=target_label,
-        action=action,
+        action=_normalize_attack_action(action, target_id),
     )
 
 
@@ -245,12 +249,29 @@ def _pending_action(pending: dict[str, Any]) -> Action:
     return Action.model_validate(action_data)
 
 
-def _attack_target_id(action: Action) -> str | None:
+def _attack_target_id(
+    graph: Graph,
+    player_id: str,
+    action: Action,
+) -> str | None:
     if action.verb == "attack":
-        return _single(action.what)
-    if action.verb == "cast":
-        return _single(action.to)
+        candidates = _list(action.what)
+    elif action.verb == "cast":
+        candidates = _list(action.to)
+    else:
+        return None
+    for target_id in candidates:
+        if _can_target_start_combat(graph, player_id, target_id):
+            return target_id
     return None
+
+
+def _normalize_attack_action(action: Action, target_id: str) -> Action:
+    if action.verb == "attack":
+        return action.model_copy(update={"what": [target_id]})
+    if action.verb == "cast":
+        return action.model_copy(update={"to": target_id})
+    return action
 
 
 def _can_target_start_combat(
@@ -265,7 +286,7 @@ def _can_target_start_combat(
         target is not None
         and target.type == "character"
         and target_id != player_id
-        and target.properties.get("alive") is not False
+        and can_character_fight(target)
         and player_location is not None
         and target_location == player_location
     )
@@ -289,3 +310,12 @@ def _single(value: object) -> str | None:
     if isinstance(value, list) and value and isinstance(value[0], str):
         return value[0]
     return None
+
+
+def _list(value: object) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, str)]
+    return []
+

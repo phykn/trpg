@@ -5,6 +5,7 @@ import type {
   GraphCombatState,
   GraphFrontState,
   GraphHeroState,
+  GraphPlaceTarget,
   GraphPlaceState,
 } from './wire';
 
@@ -24,7 +25,7 @@ const EMPTY_EQUIPMENT = {
 export function adaptGraphState(state: GraphFrontState): FrontState {
   return {
     hero: adaptHero(state.hero),
-    subject: null,
+    subject: adaptSubject(selectSubjectTarget(state.place?.targets ?? [])),
     quest: state.quest,
     questOffers: state.questOffers,
     place: adaptPlace(state.place),
@@ -33,6 +34,85 @@ export function adaptGraphState(state: GraphFrontState): FrontState {
     pendingCheck: null,
     pendingConfirmation: state.pendingConfirmation,
     storyGraph: buildStoryGraph(state, visibleQuests(state)),
+  };
+}
+
+export function deriveGraphSuggestions(state: GraphFrontState): string[] {
+  if (state.pendingConfirmation !== null) return [];
+  if (state.combat !== null) return combatSuggestions(state.combat);
+
+  const suggestions: string[] = [];
+  const livingTargets = state.place?.targets.filter((target) => target.hp.current > 0) ?? [];
+  const enemy = livingTargets.find((target) => target.kind === 'enemy');
+  if (enemy) suggestions.push(`${enemy.name}${objectParticle(enemy.name)} 공격한다`);
+
+  for (const npc of livingTargets.filter((target) => target.kind === 'npc')) {
+    suggestions.push(`${npc.name}에게 말을 건다`);
+  }
+  for (const exit of state.place?.exits ?? []) {
+    suggestions.push(`${exit.name}${directionParticle(exit.name)} 이동한다`);
+  }
+  suggestions.push('주변을 살펴본다');
+  return uniqueFirst(suggestions, 3);
+}
+
+function combatSuggestions(combat: GraphCombatState): string[] {
+  const enemy = combat.participants.find(
+    (participant) => participant.side === 'enemy' && participant.hp.current > 0,
+  );
+  const suggestions = enemy
+    ? [`${enemy.name}${objectParticle(enemy.name)} 공격한다`, '방어한다', '도망친다']
+    : ['방어한다', '도망친다'];
+  return uniqueFirst(suggestions, 3);
+}
+
+function uniqueFirst(values: string[], limit: number): string[] {
+  const result: string[] = [];
+  for (const value of values) {
+    if (result.includes(value)) continue;
+    result.push(value);
+    if (result.length >= limit) break;
+  }
+  return result;
+}
+
+function objectParticle(value: string): '을' | '를' {
+  return hasFinalConsonant(value) ? '을' : '를';
+}
+
+function directionParticle(value: string): '으로' | '로' {
+  const code = value.charCodeAt(value.length - 1);
+  const jong = code >= 0xac00 && code <= 0xd7a3 ? (code - 0xac00) % 28 : 0;
+  return jong !== 0 && jong !== 8 ? '으로' : '로';
+}
+
+function hasFinalConsonant(value: string): boolean {
+  const code = value.charCodeAt(value.length - 1);
+  if (code < 0xac00 || code > 0xd7a3) return false;
+  return (code - 0xac00) % 28 !== 0;
+}
+
+function selectSubjectTarget(targets: GraphPlaceTarget[]): GraphPlaceTarget | null {
+  return targets.find((target) => target.hp.current > 0) ?? targets[0] ?? null;
+}
+
+function adaptSubject(target: GraphPlaceTarget | null): FrontState['subject'] {
+  if (target === null) return null;
+  return {
+    name: target.name,
+    alive: target.hp.current > 0,
+    role: '',
+    raceJob: '',
+    gender: '',
+    trust: 0,
+    known: [],
+    level: 1,
+    hp: target.hp.current,
+    hpMax: target.hp.maximum,
+    stats: [],
+    equipment: EMPTY_EQUIPMENT,
+    inventory: [],
+    skills: [],
   };
 }
 

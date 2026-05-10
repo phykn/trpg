@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
 from src.game.domain.graph import Graph, GraphNode
+from src.game.domain.graph_character import graph_character_kind, is_visible_character
 from src.game.domain.graph_query import (
     characters_at,
     edges_from,
@@ -90,6 +91,7 @@ class GraphPlaceLinkPayload(_CamelModel):
 class GraphPlaceTargetPayload(_CamelModel):
     id: str
     name: str
+    kind: Literal["npc", "enemy"]
     hp: GraphResourcePayload
 
 
@@ -169,6 +171,9 @@ def _quest_offer_payloads(runtime: GameRuntimeState) -> list[QuestPayload]:
     offers: list[QuestPayload] = []
     for edge in graph.edges.values():
         if edge.type != "gives_quest" or edge.from_node_id not in visible_characters:
+            continue
+        giver = graph.nodes.get(edge.from_node_id)
+        if giver is None or not is_visible_character(giver):
             continue
         quest = graph.nodes.get(edge.to_node_id)
         if quest is None or quest.type != "quest":
@@ -316,10 +321,13 @@ def _place_payload(graph: Graph, player_id: str) -> GraphPlacePayload | None:
         if character_id == player_id:
             continue
         target = _require_node(graph, character_id, "character")
+        if not is_visible_character(target):
+            continue
         targets.append(
             GraphPlaceTargetPayload(
                 id=target.id,
                 name=_name(target),
+                kind=graph_character_kind(target),
                 hp=_resource(target, "hp", "max_hp"),
             )
         )

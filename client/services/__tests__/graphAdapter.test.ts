@@ -1,4 +1,4 @@
-import { adaptGraphState } from '../graphAdapter';
+import { adaptGraphState, deriveGraphSuggestions } from '../graphAdapter';
 
 describe('adaptGraphState', () => {
   test('maps graph state into the existing display state shape', () => {
@@ -39,8 +39,15 @@ describe('adaptGraphState', () => {
         ],
         targets: [
           {
+            id: 'goblin_01',
+            name: '쓰러진 고블린',
+            kind: 'enemy',
+            hp: { current: 0, maximum: 10, state: 'down' },
+          },
+          {
             id: 'wolf_01',
             name: '늑대',
+            kind: 'enemy',
             hp: { current: 5, maximum: 12, state: 'hurt' },
           },
         ],
@@ -114,7 +121,8 @@ describe('adaptGraphState', () => {
     ]);
     expect(state.place?.name).toBe('광장');
     expect(state.place?.surroundings[0].name).toBe('숲길');
-    expect(state.place?.targets[0].name).toBe('늑대');
+    expect(state.place?.targets[0].name).toBe('쓰러진 고블린');
+    expect(state.place?.targets[1].name).toBe('늑대');
     expect(state.quest).toBeNull();
     expect(state.questOffers[0]?.title).toBe('첫 의뢰');
     expect(state.questOffers[0]?.actions).toEqual(['accept']);
@@ -128,13 +136,69 @@ describe('adaptGraphState', () => {
     });
     expect(state.pendingConfirmation?.confirmLabel).toBe('공격');
     expect(state.pendingCheck).toBeNull();
-    expect(state.subject).toBeNull();
+    expect(state.subject?.name).toBe('늑대');
+    expect(state.subject?.hp).toBe(5);
     expect(state.storyGraph.nodes.map((node) => node.id)).toEqual([
       'player_01',
       'town',
       'forest',
+      'goblin_01',
       'wolf_01',
       'quest_01',
+    ]);
+  });
+
+  test('derives graph suggestions from visible targets and exits', () => {
+    const suggestions = deriveGraphSuggestions({
+      hero: {
+        id: 'player_01',
+        name: '테스터',
+        level: 1,
+        exp: 0,
+        expMax: 20,
+        canLevelUp: false,
+        gold: 0,
+        resources: {
+          hp: { current: 20, maximum: 20, state: 'healthy' },
+          mp: { current: 10, maximum: 10, state: 'ready' },
+        },
+        stats: {},
+        equipment: { weapon: null, armor: null, accessory: null },
+        inventory: [],
+        skills: [],
+        status: [],
+      },
+      place: {
+        id: 'town',
+        name: '광장',
+        description: '',
+        exits: [{ id: 'watch', name: '망루', description: '' }],
+        targets: [
+          {
+            id: 'edrik_chief',
+            name: '에드릭',
+            kind: 'npc',
+            hp: { current: 20, maximum: 20, state: 'healthy' },
+          },
+          {
+            id: 'wolf_01',
+            name: '늑대',
+            kind: 'enemy',
+            hp: { current: 8, maximum: 10, state: 'hurt' },
+          },
+        ],
+      },
+      quest: null,
+      questOffers: [],
+      combat: null,
+      pendingConfirmation: null,
+      log: [{ id: 1, kind: 'gm', text: '당신은 광장에 있습니다.' }],
+    });
+
+    expect(suggestions).toEqual([
+      '늑대를 공격한다',
+      '에드릭에게 말을 건다',
+      '망루로 이동한다',
     ]);
   });
 });

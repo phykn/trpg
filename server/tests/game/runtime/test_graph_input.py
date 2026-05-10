@@ -9,8 +9,15 @@ from src.game.runtime.input import GraphInputError, run_graph_input_turn
 
 
 class _FakeLLM:
-    def __init__(self, payload: dict) -> None:
+    def __init__(
+        self,
+        payload: dict,
+        *,
+        narration: str = "상대는 당신의 말을 듣고 잠시 생각에 잠깁니다.",
+    ) -> None:
         self.payload = payload
+        self.narration = narration
+        self.calls = []
 
     async def chat(
         self,
@@ -20,6 +27,9 @@ class _FakeLLM:
         temperature=None,
         use_fallback=False,
     ):
+        self.calls.append({"messages": messages, "agent": agent})
+        if agent == "graph_narrate":
+            return {"answer": self.narration, "think": ""}
         return {"answer": json.dumps(self.payload, ensure_ascii=False), "think": ""}
 
 
@@ -84,6 +94,35 @@ async def test_graph_input_classifies_one_action_and_creates_confirmation(tmp_pa
     assert result.status == "confirmation_required"
     assert progress.pending_confirmation["kind"] == "attack_start"
     assert progress.graph_combat_state is None
+
+
+async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM({"actions": [{"verb": "speak", "what": "goblin_01"}]})
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 말을 건다")
+    logs = await repo.load_log_entries("game-1")
+    progress = await repo.load_progress("game-1")
+
+    assert result.status == "executed"
+    assert [entry.kind for entry in logs] == ["gm"]
+    assert logs[0].text == "상대는 당신의 말을 듣고 잠시 생각에 잠깁니다."
+    assert progress.turn_count == 1
+
+
+async def test_graph_input_targetless_speak_defaults_to_nearby_living_npc(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM({"actions": [{"verb": "speak"}]})
+
+    await run_graph_input_turn(llm, repo, "game-1", "근처 사람에게 말을 건다")
+    progress = await repo.load_progress("game-1")
+    narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
+    user_prompt = narrate_call["messages"][1]["content"]
+
+    assert progress.active_subject_id == "goblin_01"
+    assert "대화 대상: goblin_01" in user_prompt
+    assert "대상 상태: 현재 장소에 있음" in user_prompt
+    assert "NPC의 짧은 반응이나 대사를 포함합니다" in narrate_call["messages"][0]["content"]
 
 
 async def test_graph_input_rejects_multi_action_output(tmp_path):

@@ -6,6 +6,7 @@ from src.game.domain.graph_query import location_of
 from src.game.domain.memory import ActLogEntry
 from src.game.domain.types import GraphStatKey
 from src.locale.labels import stat_label
+from src.locale.particles import eul_reul
 
 from .dispatch import GraphActionDispatchResult
 from .state import GameRuntimeState
@@ -105,7 +106,7 @@ def _combat_text(
     if before.progress.graph_combat_state is None:
         target_id = _single(action.what) or _single(action.to)
         target = _node_label(after.graph, target_id, fallback="대상")
-        return f"당신은 {target}을 공격해 전투를 시작합니다."
+        return f"당신은 {target}{eul_reul(target)} 공격해 전투를 시작합니다."
     outcome = after.progress.graph_combat_state.outcome if after.progress.graph_combat_state else "victory"
     if outcome == "fled":
         return "당신은 전투에서 벗어납니다."

@@ -3,14 +3,14 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
+    "start": "dotenv -e .env.dev -- expo start",
+    "android": "dotenv -e .env.dev -- expo start --android",
+    "ios": "dotenv -e .env.dev -- expo start --ios",
+    "web": "dotenv -e .env.dev -- expo start --web",
     "lint": "expo lint",
     "test": "jest",
     "gen": "cd .. && .venv/bin/python server/scripts/gen_wire_schema.py && cd client && node scripts/gen-wire-types.cjs",
-    "deploy": "rm -rf dist && cp .env .env.bak && cp .env.release .env && echo \"EXPO_PUBLIC_GIT_SHA=$(git rev-parse --short HEAD)\" >> .env && (expo export -p web && wrangler deploy); status=$?; cp .env.bak .env && rm .env.bak; exit $status"
+    "deploy": "node scripts/deploy.cjs"
   },
   "jest": {
     "preset": "jest-expo"

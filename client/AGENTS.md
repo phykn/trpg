@@ -6,15 +6,15 @@ Reference for working under `client/`. End-user setup, phone testing, and deploy
 
 ## Commands
 
-Run everything from `client/`. The active environment file is `.env`; `npm run deploy` temporarily swaps in `.env.release` and restores `.env` on exit.
+Run everything from `client/`. Development scripts load `.env.dev`; `npm run deploy` loads `.env.release`.
 
 ```bash
 npm start                   # Expo Go via QR (LAN / Tailscale Funnel — see README)
 npm run web                 # web on localhost:8081
 npm run lint                # expo lint (eslint flat config, dist/ ignored)
-npm run deploy              # rm dist/ → swap .env.release → expo export -p web → wrangler deploy
+npm run deploy              # load .env.release → expo export -p web → wrangler deploy
 npx tsc --noEmit            # type-check (strict, extends expo/tsconfig.base)
-npx expo start -c           # clear Metro cache — required after editing tokens / tailwind / babel / metro config
+npm start -- -c             # clear Metro cache — required after editing tokens / tailwind / babel / metro config
 ```
 
 `@/*` resolves to this directory. Prefer `@/components/...` over relative paths.
@@ -81,4 +81,4 @@ A file may not span two buckets. If you're unsure, the file probably wants split
 ## Misc
 
 - For Playwright / browser-MCP runs, use viewport **412×915** (Pixel 6/7 / Galaxy S25 tall). It stays under the desktop breakpoint, keeps full Korean tab labels visible, and fits typical session content without scrolling.
-- Prefer `npx expo start --host=tunnel` over `--tunnel` (`@expo/ngrok@4.x` flag bug).
+- Prefer `npm start -- --host=tunnel` over `--tunnel` (`@expo/ngrok@4.x` flag bug).

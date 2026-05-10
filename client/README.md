@@ -16,7 +16,7 @@ Client for a Korean-language TRPG. Single-screen Expo (React Native) app. The se
 npm install
 ```
 
-Write `client/.env`:
+Write `client/.env.dev`:
 
 ```
 EXPO_PUBLIC_API_URL=<server URL>
@@ -25,6 +25,8 @@ EXPO_PUBLIC_API_PASS=<basic auth pass>
 ```
 
 `<server URL>` is either a LAN address (`http://<windows-lan-ip>:8001`) or a Tailscale Funnel domain (`https://<machine>.<tailnet>.ts.net`), depending on the test mode below.
+
+`npm start`, `npm run web`, `npm run android`, and `npm run ios` load `client/.env.dev`. `npm run deploy` loads `client/.env.release`.
 
 ## Phone testing
 
@@ -36,7 +38,7 @@ Install **Expo Go** on the phone (Play Store / App Store).
 2. Phone on the same Wi-Fi as the laptop.
 3. From `client/`:
    ```bash
-   npx expo start
+   npm start
    ```
 4. Android: Expo Go → "Scan QR code". iOS: scan the QR with the Camera app, then tap the "Open in Expo Go" notification.
 
@@ -54,7 +56,7 @@ Install **Expo Go** on the phone (Play Store / App Store).
 3. Make sure `EXPO_PUBLIC_API_URL` matches the funnel domain.
 4. From `client/`:
    ```bash
-   npx expo start --host=tunnel -c
+   npm start -- --host=tunnel -c
    ```
 5. Scan the QR with Expo Go (same as step 4 of the LAN flow).
 
@@ -82,7 +84,7 @@ This wipes `dist/`, runs `expo export -p web`, then `wrangler deploy` — chaine
 ## Other commands
 
 ```bash
-npx expo start -c   # clear Metro cache (after editing tokens / tailwind / babel / metro config)
+npm start -- -c   # clear Metro cache (after editing tokens / tailwind / babel / metro config)
 npm run lint
 ```
 
@@ -95,7 +97,7 @@ The bundled `@expo/ngrok` cache gets into a bad state intermittently. Wipe it an
 ```bash
 rm -rf ~/.expo node_modules/@expo/ngrok
 npx expo install @expo/ngrok
-npx expo start --host=tunnel -c
+npm start -- --host=tunnel -c
 ```
 
 ## Layout

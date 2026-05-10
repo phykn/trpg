@@ -1,6 +1,8 @@
 """Session lifecycle — init/state and the streaming entries
 (turn / roll / intro)."""
 
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ValidationError
 
@@ -27,7 +29,10 @@ from src.game.runtime.confirmation import (
     run_graph_confirm,
 )
 from src.game.runtime.input import GraphInputError, run_graph_input_turn
-from src.game.runtime.intro import run_graph_initial_narration
+from src.game.runtime.intro import (
+    run_graph_initial_fallback_narration,
+    run_graph_initial_narration,
+)
 from src.game.runtime.level_up import GraphLevelUpError, run_graph_level_up
 from src.game.runtime.load import load_runtime_state
 from src.game.runtime.state import GameRuntimeState
@@ -60,6 +65,8 @@ from ..schema import (
 from ..sse import streaming_response
 
 router = APIRouter()
+
+_GRAPH_INIT_NARRATION_TIMEOUT_SECONDS = 6.0
 
 
 @router.post("/session/init", response_model=InitResponse)
@@ -100,9 +107,12 @@ async def session_graph_init(
         raise HTTPException(status_code=422, detail=f"profile malformed: {e}")
     runtime = GameRuntimeState(graph=bundle.graph, progress=bundle.progress)
     try:
-        runtime = await run_graph_initial_narration(llm, graph_repo, runtime)
+        runtime = await asyncio.wait_for(
+            run_graph_initial_narration(llm, graph_repo, runtime),
+            timeout=_GRAPH_INIT_NARRATION_TIMEOUT_SECONDS,
+        )
     except (LLMUnavailable, OSError, TimeoutError):
-        pass
+        runtime = await run_graph_initial_fallback_narration(graph_repo, runtime)
     return InitResponse(
         game_id=bundle.progress.game_id,
         state=graph_to_front_state(runtime).model_dump(mode="json", by_alias=True),
@@ -133,10 +143,16 @@ async def get_graph_state_route(
 async def session_graph_turn(
     game_id: str,
     body: GraphTurnRequest,
+    llm: LLMClient = Depends(get_llm),
     graph_repo: GraphRepo = Depends(get_graph_repo),
 ) -> GraphActionResponse:
     try:
-        result = await run_graph_action_request(graph_repo, game_id, body.action)
+        result = await run_graph_action_request(
+            graph_repo,
+            game_id,
+            body.action,
+            llm=llm,
+        )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     except GraphConfirmationActive as e:
@@ -157,6 +173,7 @@ async def session_graph_turn(
 async def session_graph_confirm(
     game_id: str,
     body: ConfirmRequest,
+    llm: LLMClient = Depends(get_llm),
     graph_repo: GraphRepo = Depends(get_graph_repo),
 ) -> GraphActionResponse:
     try:
@@ -165,6 +182,7 @@ async def session_graph_confirm(
             game_id,
             body.confirmation_id,
             body.decision,
+            llm=llm,
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")

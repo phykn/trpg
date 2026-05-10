@@ -21,8 +21,26 @@ async def run_graph_initial_narration(
 
     text = await _generate_intro_text(llm, runtime)
     if not text:
-        return runtime
+        text = _fallback_intro_text(runtime)
+    return await _append_intro_entry(repo, runtime, text)
 
+
+async def run_graph_initial_fallback_narration(
+    repo: GraphRepo,
+    runtime: GameRuntimeState,
+) -> GameRuntimeState:
+    if _already_has_gm_log(runtime) or runtime.progress.turn_count != 0:
+        return runtime
+    return await _append_intro_entry(repo, runtime, _fallback_intro_text(runtime))
+
+
+async def _append_intro_entry(
+    repo: GraphRepo,
+    runtime: GameRuntimeState,
+    text: str,
+) -> GameRuntimeState:
+    if not text:
+        return runtime
     entry = GMLogEntry(id=runtime.progress.next_log_id, kind="gm", text=text)
     progress = runtime.progress.model_copy(update={"next_log_id": entry.id + 1})
     next_runtime = runtime.model_copy(
@@ -34,6 +52,20 @@ async def run_graph_initial_narration(
     await repo.append_log_entries(runtime.progress.game_id, [entry])
     await repo.save_progress(progress)
     return next_runtime
+
+
+def _fallback_intro_text(runtime: GameRuntimeState) -> str:
+    graph = runtime.graph
+    place_id = location_of(graph, runtime.progress.player_id)
+    if place_id is None:
+        return ""
+    place = graph.nodes.get(place_id)
+    if place is None or place.type != "location":
+        return ""
+    description = _description(place)
+    if description == "없음":
+        return _clean_intro_text(f"당신은 {_name(place)}에 도착합니다.")
+    return _clean_intro_text(f"당신은 {_name(place)}에 도착합니다. {description}")
 
 
 async def _generate_intro_text(llm: LLMClient, runtime: GameRuntimeState) -> str:

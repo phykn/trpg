@@ -226,12 +226,26 @@ def test_graph_front_state_builds_hero_assets_from_graph_edges():
 
 
 def test_graph_front_state_builds_place_from_visible_graph_edges():
-    payload = graph_to_front_state(_runtime())
+    runtime = _runtime()
+    runtime.graph.nodes["goblin_01"].properties["xp_reward"] = 10
+    payload = graph_to_front_state(runtime)
 
     assert payload.place is not None
     assert payload.place.id == "town"
     assert [exit_.id for exit_ in payload.place.exits] == ["forest"]
     assert [target.id for target in payload.place.targets] == ["goblin_01"]
+    assert payload.place.targets[0].kind == "enemy"
+
+
+def test_graph_front_state_hides_defeated_place_targets():
+    runtime = _runtime()
+    runtime.graph.nodes["goblin_01"].properties["hp"] = 0
+    runtime.graph.nodes["goblin_01"].properties["status"] = ["defeated"]
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.place is not None
+    assert payload.place.targets == []
 
 
 def test_graph_front_state_builds_visible_quest_offer():

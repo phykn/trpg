@@ -72,6 +72,7 @@ export type SessionPayload = {
   game_id: string;
   state: FrontState;
   runtime?: RuntimeMode;
+  suggestions?: string[];
 };
 
 export type QuestAction = {
@@ -170,6 +171,7 @@ export type GraphPlaceLink = {
 export type GraphPlaceTarget = {
   id: string;
   name: string;
+  kind: 'npc' | 'enemy';
   hp: GraphResource;
 };
 
@@ -224,6 +226,7 @@ export type GraphActionClientResponse = {
   runtime: 'graph';
   status?: string | null;
   message?: string | null;
+  suggestions: string[];
 };
 
 // `combat_*` and `judge` events are observability-only — the dispatch

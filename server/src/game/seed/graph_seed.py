@@ -95,15 +95,7 @@ def build_seed_graph(
         add_node(
             quest.id,
             "quest",
-            quest.model_dump(
-                mode="json",
-                exclude={
-                    "giver_id",
-                    "triggers",
-                    "fail_triggers",
-                    "rewards",
-                }
-            ),
+            _quest_graph_properties(quest),
         )
     for skill in skills.values():
         add_node(skill.id, "skill", skill.model_dump(mode="json"))
@@ -228,6 +220,7 @@ def _build_player(
         is_player=True,
         race_id=player.race_id,
         gender=player.gender,
+        level=int(template.get("level", 1)),
         stats=stats,
         location_id=location_id,
         equipment=Equipment.model_validate(template.get("equipment", {})),
@@ -243,6 +236,15 @@ def _build_player(
     player_char.mp = player_char.max_mp
     player_char.visited_location_ids.add(location_id)
     return player_char
+
+
+def _quest_graph_properties(quest: Quest) -> dict[str, Any]:
+    properties = quest.model_dump(mode="json", exclude={"giver_id", "rewards"})
+    properties["rewards"] = quest.rewards.model_dump(
+        mode="json",
+        exclude={"items"},
+    )
+    return properties
 
 
 def _character_graph_properties(character: Character) -> dict[str, Any]:

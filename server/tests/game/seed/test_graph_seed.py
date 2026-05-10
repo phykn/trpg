@@ -81,6 +81,7 @@ def test_build_seed_graph_creates_nodes_edges_and_progress():
         "mind": 10,
         "presence": 10,
     }
+    assert graph.nodes["player_01"].properties["level"] == 1
     assert "default" not in graph.nodes
     assert graph.edges["located_at:player_01:town"].type == "located_at"
     assert graph.edges["belongs_to_race:player_01:human"].type == "belongs_to_race"
@@ -151,6 +152,16 @@ def test_build_seed_graph_keeps_reward_items_out_of_visible_placement():
         if edge.from_node_id == "reward_sword"
     }
     assert edge_types == {"reward_of"}
+    quest_node = bundle.graph.nodes["quest_01"]
+    assert quest_node.properties["triggers"] == [
+        {
+            "id": "reach_forest",
+            "name": "숲 도착",
+            "type": "location_enter",
+            "target_id": "forest",
+        }
+    ]
+    assert quest_node.properties["rewards"] == {"gold": 0, "exp": 0}
 
 
 def test_build_seed_graph_links_quests_to_chapters():

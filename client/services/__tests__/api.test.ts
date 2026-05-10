@@ -9,7 +9,7 @@ jest.mock('expo/fetch', () => ({
 }));
 
 const { fetch } = require('expo/fetch') as { fetch: jest.Mock };
-const { getGraphSessionById, sendGraphAction, sendGraphLevelUp } = require('../api') as typeof import('../api');
+const { getGraphSessionById, sendGraphAction, sendGraphInput, sendGraphLevelUp } = require('../api') as typeof import('../api');
 
 const graphState = (): GraphFrontState => ({
   hero: {
@@ -83,17 +83,63 @@ describe('graph API helpers', () => {
   });
 
   test('tags restored graph sessions as graph runtime payloads', async () => {
+    const state = graphState();
+    state.place = {
+      id: 'town',
+      name: '광장',
+      description: '',
+      exits: [{ id: 'watch', name: '망루', description: '' }],
+      targets: [
+        {
+          id: 'edrik_chief',
+          name: '에드릭',
+          kind: 'npc',
+          hp: { current: 20, maximum: 20, state: 'healthy' },
+        },
+      ],
+    };
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         game_id: 'game-1',
-        state: graphState(),
+        state,
       }),
     });
 
     const result = await getGraphSessionById('game-1');
 
     expect(result?.runtime).toBe('graph');
+    expect(result?.suggestions).toEqual([
+      '에드릭에게 말을 건다',
+      '망루로 이동한다',
+      '주변을 살펴본다',
+    ]);
+  });
+
+  test('posts graph text input with an abortable request signal', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        state: graphState(),
+        status: 'executed',
+        message: null,
+      }),
+    });
+
+    await sendGraphInput('game-1', '마을 주민에게 말을 건다');
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/graph/input',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          player_input: '마을 주민에게 말을 건다',
+          think: false,
+        }),
+        signal: expect.any(AbortSignal),
+      }),
+    );
   });
 
   test('posts graph level-up choices to the graph level-up endpoint', async () => {

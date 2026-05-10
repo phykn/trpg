@@ -179,6 +179,7 @@ export function useGame() {
       try {
         const response = await call();
         applyState(response.state, response.game_id);
+        setSuggestions(response.suggestions);
         if (response.message) {
           setLog((current) =>
             mergeEntry(current, {
@@ -257,7 +258,7 @@ export function useGame() {
       setRuntimeMode(payload.runtime ?? 'legacy');
       rememberGameId(payload.game_id);
       applyState(payload.state, payload.game_id);
-      setSuggestionsRaw(loadSuggestions(payload.game_id));
+      setSuggestionsRaw(payload.suggestions ?? loadSuggestions(payload.game_id));
       setLastSeenLocation(loadLastSeenLocation(payload.game_id));
       setLastSeenQuestTitle(loadLastSeenQuestTitle(payload.game_id));
       setLastSeenSubjectId(loadLastSeenSubjectId(payload.game_id));
@@ -288,7 +289,7 @@ export function useGame() {
         setPending(null);
         setPendingConfirmation(payload.state.pendingConfirmation ?? null);
         setStreamingText('');
-        setSuggestions([]);
+        setSuggestions(payload.suggestions ?? []);
         setStatus('ready');
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : String(err));
