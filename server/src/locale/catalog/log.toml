@@ -93,9 +93,6 @@ ko = "당신의 이야기가 여기서 끝납니다."
 [log.no_combat_targets]
 ko = "공격할 수 있는 대상이 없습니다."
 
-[log.summon_failed]
-ko = "허공을 가르지만 적은 보이지 않습니다."
-
 [log.flee_outside_combat]
 ko = "지금은 도망칠 전투가 없습니다."
 
@@ -392,9 +389,6 @@ ko = "동료 영입"
 
 [log."roll.synthetic_environment"]
 ko = "환경 굴림 후 한 박자 쉬며 적의 움직임을 살핍니다"
-
-[log."narrate.fallback"]
-ko = "잠시 정적이 흐릅니다."
 
 [log."use.item_fallback"]
 ko = "아이템"

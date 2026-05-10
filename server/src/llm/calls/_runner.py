@@ -13,9 +13,7 @@ from src.llm.diag import llm_diag
 from ..client import LLMClient
 
 # Gemma routinely wraps JSON in ```json ... ``` despite the prompt forbidding
-# code fences. Stripping here covers all run_with_retries callers (classify,
-# narrate_extract, summon, recommend, combat_narrate) in one place.
-# narrate_body streams prose and never goes through this runner.
+# code fences. Stripping here covers structured run_with_retries callers.
 _FENCE_RE = re.compile(r"^\s*```(?:json)?\s*\n?|\n?\s*```\s*$", re.MULTILINE)
 
 
@@ -31,8 +29,7 @@ _PROMPTS_ROOT = Path(__file__).resolve().parents[2] / "locale" / "prompts"
 def get_prompt(agent: str, locale: str) -> str:
     """Load `_kernel.<locale>.md` + `<agent>/prompt.<locale>.md` joined by `---`.
 
-    `agent` is a slash-delimited path under `src/locale/prompts/`
-    (e.g. `"classify"`, `"narrate/body"`). Cached per (agent, locale) so the
+    `agent` is a path under `src/locale/prompts/`. Cached per (agent, locale) so the
     rendered prompt is byte-stable across calls — keeps Gemini implicit cache hot.
     """
     own = (_PROMPTS_ROOT / agent / f"prompt.{locale}.md").read_text(encoding="utf-8")
@@ -40,16 +37,6 @@ def get_prompt(agent: str, locale: str) -> str:
     if kernel_path.exists():
         return f"{kernel_path.read_text(encoding='utf-8')}\n\n---\n\n{own}"
     return own
-
-
-def get_prompt_with_perm_subs(agent: str, locale: str) -> str:
-    """get_prompt + permission-table {{KEY}} placeholder substitution. Used by narrate."""
-    from src.game.rules.permissions import render_for_prompt
-
-    base = get_prompt(agent, locale)
-    for k, v in render_for_prompt(locale).items():
-        base = base.replace("{{" + k + "}}", v)
-    return base
 
 
 # Truncate long thinking-text dumps so retries don't blow past the model's ctx window.

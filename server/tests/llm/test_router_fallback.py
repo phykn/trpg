@@ -20,8 +20,8 @@ def _set_env(monkeypatch, **overrides):
         "LLM_GOOGLE_THINK_OPT": "model_a",
         "LLM_GOOGLE_THINK_OPT_ON": "model_b",
         "LLM_ROUTE_DEFAULT": "google/model_a",
-        "LLM_ROUTE_NARRATE_BODY": "google/model_a",
-        "LLM_ROUTE_NARRATE_BODY_FALLBACK": "google/model_b",
+        "LLM_ROUTE_CLASSIFY": "google/model_a",
+        "LLM_ROUTE_CLASSIFY_FALLBACK": "google/model_b",
     }
     base.update(overrides)
     # Strip any pre-existing LLM_* env so the parser sees only what we set.
@@ -42,16 +42,16 @@ def _rate_limit_error(message: str = "quota exceeded") -> RateLimitError:
 def test_parse_fallback_creates_secondary_profile(monkeypatch):
     _set_env(monkeypatch)
     c = LLMClient.from_env()
-    fallback = c.pick_fallback("narrate_body")
+    fallback = c.pick_fallback("classify")
     assert fallback is not None
     assert fallback.model == "model_b"
 
 
 def test_pick_fallback_returns_none_when_unset(monkeypatch):
     _set_env(monkeypatch)
-    monkeypatch.delenv("LLM_ROUTE_NARRATE_BODY_FALLBACK", raising=False)
+    monkeypatch.delenv("LLM_ROUTE_CLASSIFY_FALLBACK", raising=False)
     c = LLMClient.from_env()
-    assert c.pick_fallback("narrate_body") is None
+    assert c.pick_fallback("classify") is None
 
 
 def test_pick_fallback_returns_none_for_unknown_agent(monkeypatch):
@@ -62,11 +62,11 @@ def test_pick_fallback_returns_none_for_unknown_agent(monkeypatch):
 
 
 def test_primary_route_regex_does_not_eat_fallback(monkeypatch):
-    """LLM_ROUTE_NARRATE_BODY_FALLBACK must not be parsed as a primary agent
-    'narrate_body_fallback' — it'd shadow real agents and break dispatch."""
+    """LLM_ROUTE_CLASSIFY_FALLBACK must not be parsed as a primary agent
+    'classify_fallback' — it'd shadow real agents and break dispatch."""
     _set_env(monkeypatch)
     c = LLMClient.from_env()
-    assert "narrate_body_fallback" not in c._providers
+    assert "classify_fallback" not in c._providers
 
 
 @pytest.mark.asyncio
@@ -75,8 +75,8 @@ async def test_rate_limit_engages_fallback(monkeypatch):
     _set_env(monkeypatch)
     c = LLMClient.from_env()
 
-    primary = c._providers["narrate_body"]
-    fallback = c._fallbacks["narrate_body"]
+    primary = c._providers["classify"]
+    fallback = c._fallbacks["classify"]
     seen_models: list[str] = []
 
     async def fake_create(**kwargs):
@@ -97,7 +97,7 @@ async def test_rate_limit_engages_fallback(monkeypatch):
         system_prompt="sys",
         user_payload="usr",
         parse=lambda s: s,
-        agent="narrate_body",
+        agent="classify",
     )
     assert result == '{"ok":true}'
     assert seen_models == [primary.model, fallback.model]
@@ -107,10 +107,10 @@ async def test_rate_limit_engages_fallback(monkeypatch):
 async def test_no_fallback_raises_llm_unavailable(monkeypatch):
     """Primary RateLimitError with no fallback configured → LLMUnavailable."""
     _set_env(monkeypatch)
-    monkeypatch.delenv("LLM_ROUTE_NARRATE_BODY_FALLBACK", raising=False)
+    monkeypatch.delenv("LLM_ROUTE_CLASSIFY_FALLBACK", raising=False)
     c = LLMClient.from_env()
 
-    primary = c._providers["narrate_body"]
+    primary = c._providers["classify"]
     seen_models: list[str] = []
 
     async def fake_create(**kwargs):
@@ -126,7 +126,7 @@ async def test_no_fallback_raises_llm_unavailable(monkeypatch):
             system_prompt="sys",
             user_payload="usr",
             parse=lambda s: s,
-            agent="narrate_body",
+            agent="classify",
         )
     assert seen_models == [primary.model]
 
@@ -137,8 +137,8 @@ async def test_fallback_also_rate_limited_raises_llm_unavailable(monkeypatch):
     _set_env(monkeypatch)
     c = LLMClient.from_env()
 
-    primary = c._providers["narrate_body"]
-    fallback = c._fallbacks["narrate_body"]
+    primary = c._providers["classify"]
+    fallback = c._fallbacks["classify"]
     seen_models: list[str] = []
 
     async def fake_create(**kwargs):
@@ -154,7 +154,7 @@ async def test_fallback_also_rate_limited_raises_llm_unavailable(monkeypatch):
             system_prompt="sys",
             user_payload="usr",
             parse=lambda s: s,
-            agent="narrate_body",
+            agent="classify",
         )
     assert seen_models == [primary.model, fallback.model]
 
@@ -167,8 +167,8 @@ async def test_validation_error_does_not_engage_fallback(monkeypatch):
     _set_env(monkeypatch)
     c = LLMClient.from_env()
 
-    primary = c._providers["narrate_body"]
-    fallback = c._fallbacks["narrate_body"]
+    primary = c._providers["classify"]
+    fallback = c._fallbacks["classify"]
     seen_models: list[str] = []
 
     async def fake_create(**kwargs):
@@ -192,7 +192,7 @@ async def test_validation_error_does_not_engage_fallback(monkeypatch):
             system_prompt="sys",
             user_payload="usr",
             parse=parse,
-            agent="narrate_body",
+            agent="classify",
             retries=3,
         )
     assert seen_models == [primary.model] * 3

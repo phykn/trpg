@@ -84,8 +84,6 @@ class SkillConfig(_F):
         "failure": 0.0,
         "critical_failure": 0.0,
     }
-    recommend_recent_turns: int = 10
-    recommend_recent_inputs: int = 5
 
 
 class CarryConfig(_F):

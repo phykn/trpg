@@ -27,8 +27,8 @@ All three are safe no-ops when `FLOW_DEBUG=0`.
 - `engine_diag(tag, **kv)` — engine-layer code without direct progress state.
   gid/turn are pulled from contextvars primed by the route entrypoint.
   Layer = engine.
-- `llm_diag(tag, **kv)` — code under `_runner` / `narrate/body/runner`
-  that doesn't see GameState. Same contextvar source. Layer = llm.
+- `llm_diag(tag, **kv)` — LLM helper code that doesn't see progress state.
+  Same contextvar source. Layer = llm.
 
 ## Tag inventory (where each line comes from)
 
@@ -40,10 +40,7 @@ Graph runtime layer:
 
 LLM layer (via `llm_diag`, gid/turn from contextvars):
 - `llm:call` / `llm:retry` / `llm:fallback` / `llm:done` / `llm:fail` —
-  `_runner.run_with_retries` covers classify, narrate_extract, summon,
-  recommend, combat_narrate. `narrate/body/runner` adds the same five
-  for its streaming path; `llm:done` there carries `chunks` + `chars`.
-- `extract:fallback_empty` — narrate/extract/runner.py, retries exhausted
+  `_runner.run_with_retries` covers structured classify calls.
 
 ## Adding a hook
 

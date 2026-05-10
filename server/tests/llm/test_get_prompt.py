@@ -61,11 +61,6 @@ def test_packaged_prompts_load_for_every_agent():
     """Every shipped agent under src/locale/prompts/ has a working ko build."""
     agents = [
         "classify",
-        "recommend",
-        "summon",
-        "combat_narrate",
-        "narrate/body",
-        "narrate/extract",
     ]
     get_prompt.cache_clear()
     for agent in agents:
@@ -74,13 +69,6 @@ def test_packaged_prompts_load_for_every_agent():
         assert "당신" in text or "합니다체" in text, (
             f"{agent} ko build missing 합니다체 register marker"
         )
-
-
-def test_render_for_prompt_accepts_locale():
-    from src.game.rules.permissions import render_for_prompt
-
-    assert "CHAR_FORBIDDEN" in render_for_prompt("ko")
-    assert "CHAR_FORBIDDEN" in render_for_prompt("en")
 
 
 def test_prompts_root_resolves_to_repo_path():

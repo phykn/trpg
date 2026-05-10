@@ -14,14 +14,6 @@ en = "Could not interpret the action. Please try again."
 ko = "행동을 해석하지 못했습니다. 다시 시도해 주세요."
 en = "Could not interpret the action. Please try again."
 
-[error.narrate_malformed]
-ko = "이야기 한 줄을 마저 잇지 못했습니다. 다시 시도해 주세요."
-en = "Could not finish the story line. Please try again."
-
-[error.narrate_unavailable]
-ko = "이야기꾼이 잠시 길을 잃었습니다. 다시 시도해 주세요."
-en = "The storyteller is briefly lost. Please try again."
-
 [error.persistence_failed]
 ko = "저장 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요."
 en = "A problem occurred while saving. Please try again later."
