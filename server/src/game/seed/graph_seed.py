@@ -140,7 +140,7 @@ def build_seed_graph(
                 "knows_skill",
                 character_id,
                 skill_id,
-                {"source": "racial"},
+                {"source": "racial", "tier": 1},
                 edge_id=f"knows_skill:racial:{character_id}:{skill_id}",
             )
         for skill_id in _str_list(character.get("learned_skill_ids")):
@@ -148,7 +148,7 @@ def build_seed_graph(
                 "knows_skill",
                 character_id,
                 skill_id,
-                {"source": "learned"},
+                {"source": "learned", "tier": 1},
                 edge_id=f"knows_skill:learned:{character_id}:{skill_id}",
             )
         for companion_id in _str_list(character.get("companions")):

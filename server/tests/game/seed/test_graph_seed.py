@@ -69,6 +69,10 @@ def test_build_seed_graph_creates_nodes_edges_and_progress():
         "presence": 10,
     }
     assert graph.nodes["player_01"].properties["level"] == 1
+    assert graph.nodes["player_01"].properties["max_hp"] == 5
+    assert graph.nodes["player_01"].properties["hp"] == 5
+    assert graph.nodes["player_01"].properties["max_mp"] == 5
+    assert graph.nodes["player_01"].properties["mp"] == 5
     assert "default" not in graph.nodes
     assert graph.edges["located_at:player_01:town"].type == "located_at"
     assert graph.edges["belongs_to_race:player_01:human"].type == "belongs_to_race"
@@ -76,6 +80,7 @@ def test_build_seed_graph_creates_nodes_edges_and_progress():
         graph.edges["knows_skill:racial:player_01:slash"].properties["source"]
         == "racial"
     )
+    assert graph.edges["knows_skill:racial:player_01:slash"].properties["tier"] == 1
     assert graph.edges["grants_skill:human:slash"].type == "grants_skill"
     assert graph.edges["located_at:potion:town"].type == "located_at"
     assert graph.edges["connects_to:town:forest"].properties["difficulty"] == "normal"
