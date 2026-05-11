@@ -62,7 +62,7 @@ def _graph(*, quest_status: str = "pending", quest_props=None, edges=None) -> Gr
     )
 
 
-def _apply(graph: Graph, target_id: str, how: str, text: str) -> Graph:
+def _apply(graph: Graph, target_id: str | None, how: str, text: str) -> Graph:
     result = plan_social_quest_speak(
         graph,
         player_id="player_01",
@@ -101,6 +101,46 @@ def test_mediation_first_records_resident_reason_without_completing():
     assert quest["status"] == "pending"
     assert quest["resident_reason_known"] is True
     assert "resolution_route" not in quest
+    assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == 2
+
+
+def test_generic_resident_speech_does_not_mutate_quest():
+    for how in ("friendly", "hostile"):
+        result = plan_social_quest_speak(
+            _graph(),
+            player_id="player_01",
+            target_id="village_resident",
+            how=how,
+            player_input="오늘 날씨 이야기를 나눕니다",
+        )
+
+        assert result is None
+
+
+def test_generic_quartermaster_speech_does_not_block_or_resolve():
+    result = plan_social_quest_speak(
+        _graph(),
+        player_id="player_01",
+        target_id="quartermaster_npc",
+        how="friendly",
+        player_input="보급 담당자에게 안부를 묻습니다",
+    )
+
+    assert result is None
+
+
+def test_active_and_locked_quests_can_be_planned():
+    for status in ("active", "locked"):
+        result = plan_social_quest_speak(
+            _graph(quest_status=status),
+            player_id="player_01",
+            target_id="village_resident",
+            how="friendly",
+            player_input="누락된 보급품을 가져간 이유를 묻습니다",
+        )
+
+        assert result is not None
+        assert result.kind == "reason_known"
 
 
 def test_mediation_route_requires_reason_flag():
@@ -147,6 +187,64 @@ def test_quiet_return_route_records_help_flag():
     resident_relation = graph.edges["relation:village_resident:player_01"].properties
     assert resident_relation["affinity"] == 6
     assert resident_relation["flags"] == ["helped_quietly"]
+
+
+def test_quiet_return_route_uses_wording_without_target():
+    graph = _apply(
+        _graph(),
+        None,
+        "deceptive",
+        "보급품을 조용히 돌려놓습니다",
+    )
+
+    assert graph.nodes["q_missing_supplies"].properties["resolution_route"] == "quiet_return"
+    assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == 6
+
+
+def test_quiet_return_creates_one_resident_relation_when_missing():
+    graph = _graph()
+    del graph.edges["relation:village_resident:player_01"]
+
+    graph = _apply(
+        graph,
+        None,
+        "deceptive",
+        "quietly return the supplies",
+    )
+
+    relation_edges = [
+        edge
+        for edge in graph.edges.values()
+        if edge.type == "relation"
+        and {edge.from_node_id, edge.to_node_id} == {"village_resident", "player_01"}
+    ]
+    assert len(relation_edges) == 1
+    assert relation_edges[0].properties["affinity"] == 6
+    assert relation_edges[0].properties["flags"] == ["helped_quietly"]
+
+
+def test_reverse_resident_relation_is_updated_instead_of_duplicated():
+    graph = _graph()
+    del graph.edges["relation:village_resident:player_01"]
+    graph.edges["relation:player_01:village_resident"] = GraphEdge(
+        id="relation:player_01:village_resident",
+        type="relation",
+        from_node_id="player_01",
+        to_node_id="village_resident",
+        properties={"affinity": 4, "flags": ["known"]},
+    )
+
+    graph = _apply(
+        graph,
+        None,
+        "deceptive",
+        "quietly return the supplies",
+    )
+
+    assert "relation:village_resident:player_01" not in graph.edges
+    relation = graph.edges["relation:player_01:village_resident"].properties
+    assert relation["affinity"] == 10
+    assert relation["flags"] == ["known", "helped_quietly"]
 
 
 def test_completed_quest_does_not_apply_again():
