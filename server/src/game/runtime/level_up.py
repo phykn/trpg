@@ -3,9 +3,11 @@ from pydantic import BaseModel, ConfigDict
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.engines.graph_growth import (
     GraphGrowthError,
+    GraphGrowthResult,
     plan_level_up,
     plan_skill_level_up,
 )
+from src.locale.render import render
 from src.llm.diag import engine_diag, set_diag_context
 from src.wire.graph_to_front import GraphFrontStatePayload, graph_to_front_state
 
@@ -88,7 +90,8 @@ async def run_graph_level_up(
 def _plan_growth_choice(
     runtime: GameRuntimeState,
     growth: dict[str, str],
-) -> tuple[object, str]:
+) -> tuple[GraphGrowthResult, str]:
+    locale = runtime.progress.locale
     kind = growth.get("kind")
     if kind == "max_hp":
         result = plan_level_up(
@@ -96,14 +99,14 @@ def _plan_growth_choice(
             runtime.progress.player_id,
             {"kind": "max_hp"},
         )
-        return result, "최대 HP +1"
+        return result, render("runtime.level_growth.max_hp", locale)
     if kind == "max_mp":
         result = plan_level_up(
             runtime.graph,
             runtime.progress.player_id,
             {"kind": "max_mp"},
         )
-        return result, "최대 MP +1"
+        return result, render("runtime.level_growth.max_mp", locale)
     if kind == "learn_skill":
         skill_id = _require_skill_id(growth)
         result = plan_skill_level_up(
@@ -111,7 +114,11 @@ def _plan_growth_choice(
             runtime.progress.player_id,
             learn_skill_id=skill_id,
         )
-        return result, f"{_skill_label(runtime, skill_id)} 습득"
+        return result, render(
+            "runtime.level_growth.learn_skill",
+            locale,
+            skill=_skill_label(runtime, skill_id),
+        )
     if kind == "upgrade_skill":
         skill_id = _require_skill_id(growth)
         result = plan_skill_level_up(
@@ -119,7 +126,11 @@ def _plan_growth_choice(
             runtime.progress.player_id,
             upgrade_skill_id=skill_id,
         )
-        return result, f"{_skill_label(runtime, skill_id)} 강화"
+        return result, render(
+            "runtime.level_growth.upgrade_skill",
+            locale,
+            skill=_skill_label(runtime, skill_id),
+        )
     raise GraphLevelUpError(f"unknown growth kind: {kind}")
 
 

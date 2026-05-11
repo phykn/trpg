@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 CombatActionKind = Literal["attack", "defend", "flee", "social"]
@@ -32,7 +32,7 @@ class GraphCombatState(BaseModel):
 
     location_id: str
     player_id: str
-    active_enemy_id: str
+    active_enemy_id: str = ""
     enemy_ids: list[str]
     participant_ids: list[str]
     sides: dict[str, CombatSide]
@@ -46,3 +46,9 @@ class GraphCombatState(BaseModel):
     last_dc: int | None = None
     trace: list[GraphCombatTraceEvent] = Field(default_factory=list)
     outcome: CombatOutcome = "ongoing"
+
+    @model_validator(mode="after")
+    def _backfill_active_enemy(self) -> "GraphCombatState":
+        if not self.active_enemy_id and self.enemy_ids:
+            self.active_enemy_id = self.enemy_ids[0]
+        return self

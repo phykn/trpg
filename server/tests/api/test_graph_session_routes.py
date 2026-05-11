@@ -662,7 +662,8 @@ async def test_graph_turn_pass_defends_during_existing_combat(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_graph_turn_flee_clears_existing_combat(tmp_path):
+async def test_graph_turn_flee_clears_existing_combat(tmp_path, monkeypatch):
+    monkeypatch.setattr("src.game.engines.graph_combat.randint", lambda _a, _b: 20)
     app = _build_app(tmp_path)
 
     async with _client(app) as client:
@@ -901,7 +902,8 @@ async def test_graph_input_returns_reflected_suggestions(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_graph_play_loop_reaches_quest_reward_with_graph_state(tmp_path):
+async def test_graph_play_loop_reaches_quest_reward_with_graph_state(tmp_path, monkeypatch):
+    monkeypatch.setattr("src.game.engines.graph_combat.randint", lambda _a, _b: 20)
     app = _build_app(tmp_path)
 
     async with _client(app) as client:
@@ -945,6 +947,12 @@ async def test_graph_play_loop_reaches_quest_reward_with_graph_state(tmp_path):
         )
         assert first_exchange_response.status_code == 200, first_exchange_response.text
         first_exchange_body = first_exchange_response.json()
+
+        second_exchange_response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "attack", "what": enemy_id}},
+        )
+        assert second_exchange_response.status_code == 200, second_exchange_response.text
 
         final_response = await client.post(
             f"/session/{game_id}/graph/turn",

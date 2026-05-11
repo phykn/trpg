@@ -248,7 +248,9 @@ async def test_run_graph_action_turn_saves_attack_progress_and_front_combat(tmp_
 
 async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(
     tmp_path,
+    monkeypatch,
 ):
+    monkeypatch.setattr("src.game.engines.graph_combat.randint", lambda _a, _b: 20)
     repo = await _repo(tmp_path)
     progress = await repo.load_progress("game-1")
     await repo.save_progress(
@@ -260,6 +262,7 @@ async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(
                     enemy_ids=["goblin_01"],
                     participant_ids=["player_01", "goblin_01"],
                     sides={"player_01": "player", "goblin_01": "enemy"},
+                    enemy_hearts=1,
                     round=3,
                 )
             }
@@ -283,7 +286,11 @@ async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(
     assert result.runtime.progress.next_log_id == saved_logs[-1].id + 1
 
 
-async def test_run_graph_action_turn_logs_fled_combat_as_fled_not_victory(tmp_path):
+async def test_run_graph_action_turn_logs_fled_combat_as_fled_not_victory(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr("src.game.engines.graph_combat.randint", lambda _a, _b: 20)
     repo = await _repo(tmp_path)
     llm = _NarrationLLM()
     progress = await repo.load_progress("game-1")

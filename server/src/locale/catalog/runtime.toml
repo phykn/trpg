@@ -22,6 +22,22 @@ en = "A new request arrives: {quest}."
 ko = "{actor}의 레벨이 올랐습니다 (레벨 {level}, {growth}, HP {max_hp} / MP {max_mp})."
 en = "{actor} leveled up (level {level}, {growth}, HP {max_hp} / MP {max_mp})."
 
+[runtime."level_growth.max_hp"]
+ko = "최대 HP +1"
+en = "Max HP +1"
+
+[runtime."level_growth.max_mp"]
+ko = "최대 MP +1"
+en = "Max MP +1"
+
+[runtime."level_growth.learn_skill"]
+ko = "{skill} 습득"
+en = "Learn {skill}"
+
+[runtime."level_growth.upgrade_skill"]
+ko = "{skill} 강화"
+en = "Upgrade {skill}"
+
 [runtime."card.move"]
 ko = "당신은 {destination}{으로/로} 이동합니다."
 en = "You move to {destination}."
@@ -79,7 +95,7 @@ ko = "당신은 {target}{을/를} 공격해 전투를 시작합니다."
 en = "You attack {target} and start combat."
 
 [runtime."combat.skill_start"]
-ko = "당신은 {skill}{을/를} 사용해 {target}{와/과} 전투를 시작합니다 (MP {mp_cost})."
+ko = "당신은 {skill}{을/를} 사용해 {target}{과/와} 전투를 시작합니다 (MP {mp_cost})."
 en = "You use {skill} and start combat with {target} (MP {mp_cost})."
 
 [runtime."combat.skill_continue"]
