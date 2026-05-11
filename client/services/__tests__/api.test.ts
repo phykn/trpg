@@ -321,6 +321,27 @@ describe('graph API helpers', () => {
     expect(result.status).toBe('executed');
   });
 
+  test('uses server graph suggestions when an action response includes them', async () => {
+    fetch.mockResolvedValueOnce(
+      streamResponse([
+        JSON.stringify({
+          type: 'final',
+          payload: {
+            game_id: 'game-1',
+            state: graphState(),
+            status: 'executed',
+            message: null,
+            suggestions: ['북문으로 이동합니다', '발자국을 자세히 살펴봅니다'],
+          },
+        }),
+      ]),
+    );
+
+    const result = await sendGraphInput('game-1', '북문 이야기를 듣는다');
+
+    expect(result.suggestions).toEqual(['북문으로 이동합니다', '발자국을 자세히 살펴봅니다']);
+  });
+
   test('falls back to the plain graph input endpoint when the stream route is unavailable', async () => {
     fetch.mockResolvedValueOnce({
       ok: false,

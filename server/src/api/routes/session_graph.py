@@ -92,6 +92,7 @@ async def session_graph_intro(
         state=result.front_state.model_dump(mode="json", by_alias=True),
         status=result.status,
         message=result.message,
+        suggestions=result.suggestions,
     )
 
 
@@ -141,6 +142,7 @@ async def session_graph_turn(
         state=result.front_state.model_dump(mode="json", by_alias=True),
         status=result.status,
         message=result.message,
+        suggestions=result.suggestions,
     )
 
 
@@ -195,6 +197,7 @@ async def session_graph_confirm(
         state=result.front_state.model_dump(mode="json", by_alias=True),
         status=result.status,
         message=result.message,
+        suggestions=result.suggestions,
     )
 
 
@@ -246,6 +249,7 @@ async def session_graph_roll(
         state=result.front_state.model_dump(mode="json", by_alias=True),
         status=result.status,
         message=result.message,
+        suggestions=result.suggestions,
     )
 
 
@@ -277,6 +281,7 @@ async def session_graph_input(
         state=result.front_state.model_dump(mode="json", by_alias=True),
         status=result.status,
         message=result.message,
+        suggestions=result.suggestions,
     )
 
 
@@ -335,6 +340,7 @@ def _stream_event(game_id: str, event) -> str:
             ),
             status=result.status,
             message=result.message,
+            suggestions=result.suggestions,
         )
         payload = {
             "type": "final",

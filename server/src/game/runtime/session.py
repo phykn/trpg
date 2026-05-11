@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 
 from src.db.repo import GraphRepo, ScenarioRepo
@@ -27,6 +27,7 @@ class GraphSessionIntroResult:
     front_state: GraphFrontStatePayload
     status: Literal["executed"] = "executed"
     message: str | None = None
+    suggestions: list[str] = field(default_factory=list)
 
 
 async def initialize_graph_session(

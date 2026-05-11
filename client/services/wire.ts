@@ -201,6 +201,7 @@ export type GraphFrontState = {
 export type GraphSessionPayload = {
   game_id: string;
   state: GraphFrontState;
+  suggestions?: string[];
 };
 
 export type GraphActionResponse = {
@@ -208,6 +209,7 @@ export type GraphActionResponse = {
   state: GraphFrontState;
   status?: string | null;
   message?: string | null;
+  suggestions?: string[];
 };
 
 export type GraphActionClientResponse = {

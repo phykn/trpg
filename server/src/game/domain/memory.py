@@ -14,6 +14,7 @@ class TurnLogEntry(BaseModel):
     turn: int
     target: str | None = None
     summary: str
+    importance: int = Field(default=1, ge=1, le=3)
 
 
 class DialoguePair(BaseModel):

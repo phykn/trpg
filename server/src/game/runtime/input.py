@@ -22,7 +22,14 @@ from src.wire.graph_to_front import graph_to_front_state
 
 from .confirmation import GraphActionRequestResult, run_graph_action_request
 from .load import load_runtime_state
+from .memory_context import important_history_payload, recent_dialogue_payload
 from .narration_context import build_input_narration_payload
+from .narration_result import (
+    GraphNarrationResult,
+    VisibleNarrationStream,
+    parse_graph_narration_answer,
+    persist_graph_narration_result,
+)
 from .state import GameRuntimeState
 
 
@@ -49,6 +56,8 @@ async def run_graph_input_turn(
         ClassifyInput(
             player_input=player_input,
             surroundings=build_graph_surroundings(runtime),
+            history=important_history_payload(runtime),
+            recent_dialogue=recent_dialogue_payload(runtime),
         ),
         locale=runtime.progress.locale,
     )
@@ -85,6 +94,8 @@ async def run_graph_input_turn_stream(
         ClassifyInput(
             player_input=player_input,
             surroundings=build_graph_surroundings(runtime),
+            history=important_history_payload(runtime),
+            recent_dialogue=recent_dialogue_payload(runtime),
         ),
         locale=runtime.progress.locale,
     )
@@ -231,15 +242,17 @@ async def _run_graph_narrative_input(
     action,
 ) -> GraphActionRequestResult:
     subject_id = _resolve_narrative_subject(runtime, action)
-    text = await _generate_graph_input_narration(
+    narration_result = await _generate_graph_input_narration(
         client,
         runtime,
         player_input,
         action,
         subject_id,
     )
+    text = narration_result.narration
     if not text:
         text = _fallback_input_narration(runtime, subject_id)
+        narration_result = GraphNarrationResult(narration=text)
     entry = GMLogEntry(
         id=runtime.progress.next_log_id,
         kind="gm",
@@ -260,11 +273,19 @@ async def _run_graph_narrative_input(
     )
     await repo.append_log_entries(runtime.progress.game_id, [entry])
     await repo.save_progress(progress)
+    next_runtime = await persist_graph_narration_result(
+        repo,
+        next_runtime,
+        narration_result,
+        player_input=player_input,
+        target_id=subject_id,
+    )
     engine_diag("input:done", status="executed", action=action.verb)
     return GraphActionRequestResult(
         runtime=next_runtime,
         status="executed",
         front_state=graph_to_front_state(next_runtime),
+        suggestions=narration_result.suggestions,
     )
 
 
@@ -276,7 +297,7 @@ async def _run_graph_narrative_input_stream(
     action,
 ) -> AsyncIterator[dict[str, object]]:
     subject_id = _resolve_narrative_subject(runtime, action)
-    chunks: list[str] = []
+    stream = VisibleNarrationStream()
     async for chunk in _stream_graph_input_narration(
         client,
         runtime,
@@ -284,15 +305,16 @@ async def _run_graph_narrative_input_stream(
         action,
         subject_id,
     ):
-        chunks.append(chunk)
-        yield {"type": "delta", "text": chunk}
+        for visible in stream.push(chunk):
+            yield {"type": "delta", "text": visible}
+    for visible in stream.finish():
+        yield {"type": "delta", "text": visible}
 
-    text = _clean_narration(
-        "".join(chunks),
-        recent_texts=_recent_gm_texts(runtime),
-    )
+    narration_result = parse_graph_narration_answer(stream.answer())
+    text = narration_result.narration
     if not text:
         text = _fallback_input_narration(runtime, subject_id)
+        narration_result = GraphNarrationResult(narration=text)
     entry = GMLogEntry(
         id=runtime.progress.next_log_id,
         kind="gm",
@@ -313,6 +335,13 @@ async def _run_graph_narrative_input_stream(
     )
     await repo.append_log_entries(runtime.progress.game_id, [entry])
     await repo.save_progress(progress)
+    next_runtime = await persist_graph_narration_result(
+        repo,
+        next_runtime,
+        narration_result,
+        player_input=player_input,
+        target_id=subject_id,
+    )
     engine_diag("input:done", status="executed", action=action.verb)
     yield {
         "type": "final",
@@ -320,6 +349,7 @@ async def _run_graph_narrative_input_stream(
             runtime=next_runtime,
             status="executed",
             front_state=graph_to_front_state(next_runtime),
+            suggestions=narration_result.suggestions,
         ),
     }
 
@@ -330,7 +360,7 @@ async def _generate_graph_input_narration(
     player_input: str,
     action,
     subject_id: str | None,
-) -> str:
+) -> GraphNarrationResult:
     messages = _graph_input_narration_messages(
         runtime,
         player_input,
@@ -357,12 +387,14 @@ async def _generate_graph_input_narration(
         RateLimitError,
     ) as exc:
         llm_diag("llm:fail", agent="graph_narrate", err=type(exc).__name__)
-        return ""
+        return GraphNarrationResult()
     llm_diag("llm:done", agent="graph_narrate")
     answer = result.get("answer")
     if not isinstance(answer, str):
-        return ""
-    return _clean_narration(answer, recent_texts=_recent_gm_texts(runtime))
+        return GraphNarrationResult()
+    return parse_graph_narration_answer(
+        _clean_narration(answer, recent_texts=_recent_gm_texts(runtime))
+    )
 
 
 async def _stream_graph_input_narration(

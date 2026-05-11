@@ -22,11 +22,13 @@ class _MockLLM:
         intro_answer: str = "당신은 광장에 처음 발을 들입니다.",
         intro_delay: float = 0.0,
         intro_error: Exception | None = None,
+        narration_meta: dict | None = None,
     ) -> None:
         self.payload = payload or {"actions": [{"verb": "pass"}]}
         self.intro_answer = intro_answer
         self.intro_delay = intro_delay
         self.intro_error = intro_error
+        self.narration_meta = narration_meta
         self.calls: list[dict] = []
 
     async def chat(
@@ -45,7 +47,7 @@ class _MockLLM:
                 await asyncio.sleep(self.intro_delay)
             return {"answer": self.intro_answer, "think": ""}
         if agent == "graph_narrate":
-            return {"answer": "장면의 긴장이 짧게 가라앉습니다.", "think": ""}
+            return {"answer": self._narration_answer(), "think": ""}
         return {"answer": json.dumps(self.payload, ensure_ascii=False), "think": ""}
 
     async def chat_stream(
@@ -58,13 +60,27 @@ class _MockLLM:
     ):
         self.calls.append({"agent": agent, "messages": messages})
         if agent == "graph_narrate":
-            for chunk in ("장면의 긴장이 ", "짧게 가라앉습니다."):
+            answer = self._narration_answer()
+            midpoint = max(1, len(answer) // 2)
+            for chunk in (answer[:midpoint], answer[midpoint:]):
                 yield {"answer": chunk, "think": None}
             return
         yield {
             "answer": json.dumps(self.payload, ensure_ascii=False),
             "think": None,
         }
+
+    def _narration_answer(self) -> str:
+        narration = "장면의 긴장이 짧게 가라앉습니다."
+        if self.narration_meta is None:
+            return narration
+        return "\n".join(
+            [
+                narration,
+                "---TRPG_META---",
+                json.dumps(self.narration_meta, ensure_ascii=False),
+            ]
+        )
 
 
 def _extend_default_storage_for_movement(storage) -> None:
@@ -94,6 +110,7 @@ def _build_app(
     intro_answer: str = "당신은 광장에 처음 발을 들입니다.",
     intro_delay: float = 0.0,
     intro_error: Exception | None = None,
+    narration_meta: dict | None = None,
 ):
     storage = make_default_storage()
     _extend_default_storage_for_movement(storage)
@@ -104,6 +121,7 @@ def _build_app(
             intro_answer=intro_answer,
             intro_delay=intro_delay,
             intro_error=intro_error,
+            narration_meta=narration_meta,
         ),
         basic_auth_user="t",
         basic_auth_pass="t",
@@ -791,6 +809,34 @@ async def test_graph_input_stream_returns_narration_deltas_before_final_state(tm
         "kind": "gm",
         "text": "장면의 긴장이 짧게 가라앉습니다.",
     }
+
+
+@pytest.mark.asyncio
+async def test_graph_input_returns_reflected_suggestions(tmp_path):
+    app = _build_app(
+        tmp_path,
+        llm_payload={"actions": [{"verb": "speak", "what": "edrik_chief"}]},
+        narration_meta={
+            "turn_summary": "에드릭이 숲길의 의뢰를 암시했습니다.",
+            "importance": 2,
+            "suggestions": ["숲길로 이동합니다", "에드릭에게 보상을 묻습니다"],
+        },
+    )
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(
+            f"/session/{game_id}/graph/input",
+            json={"player_input": "에드릭에게 말을 건다", "think": False},
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    history = await app.state.graph_repo.load_history_entries(game_id)
+
+    assert body["suggestions"] == ["숲길로 이동합니다", "에드릭에게 보상을 묻습니다"]
+    assert history[0].summary == "에드릭이 숲길의 의뢰를 암시했습니다."
+    assert history[0].importance == 2
 
 
 @pytest.mark.asyncio

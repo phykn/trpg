@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.game.domain.action import Action
 from src.game.domain.types import GraphStatKey
@@ -40,6 +40,7 @@ class InitRequest(BaseModel):
 class InitResponse(BaseModel):
     game_id: str
     state: dict
+    suggestions: list[str] = Field(default_factory=list)
 
 
 class GraphActionResponse(BaseModel):
@@ -47,6 +48,7 @@ class GraphActionResponse(BaseModel):
     state: dict
     status: str | None = None
     message: str | None = None
+    suggestions: list[str] = Field(default_factory=list)
 
 
 class GraphTurnRequest(BaseModel):

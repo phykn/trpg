@@ -347,7 +347,7 @@ async def test_run_graph_action_turn_sends_combat_trace_to_narration(tmp_path):
         llm=llm,  # type: ignore[arg-type]
     )
 
-    call = llm.calls[-1]
+    call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
     import json
 
     payload = json.loads(call["messages"][1]["content"])

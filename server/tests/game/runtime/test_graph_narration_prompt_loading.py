@@ -209,7 +209,9 @@ async def test_graph_turn_narration_uses_packaged_prompt(monkeypatch, tmp_path):
         llm=llm,  # type: ignore[arg-type]
     )
 
-    assert llm.calls[-1]["messages"][0]["content"] == "graph_narrate:ko"
+    call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
+
+    assert call["messages"][0]["content"] == "graph_narrate:ko"
 
 
 @pytest.mark.asyncio

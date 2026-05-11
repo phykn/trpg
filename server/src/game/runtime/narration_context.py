@@ -15,6 +15,7 @@ from src.game.domain.graph_query import (
 from src.locale.render import render
 
 from .dispatch import GraphActionDispatchResult
+from .memory_context import important_history_payload, recent_dialogue_payload
 from .state import GameRuntimeState
 
 
@@ -71,6 +72,8 @@ def build_action_narration_payload(
         "visible_items": _visible_item_payloads(after, place_id),
         "exits": _exit_payloads(after, place_id),
         "recent_log": _recent_log_payload(before, include_gm=False),
+        "important_history": important_history_payload(before),
+        "recent_dialogue": recent_dialogue_payload(before),
         "combat": _combat_payload(after, dispatch),
     }
 
@@ -93,9 +96,8 @@ def build_input_narration_payload(
         "dialogue_target": dialogue_target,
         "surroundings": surroundings,
         "recent_log": _recent_log_payload(runtime),
-        "recent_dialogue": [
-            entry.model_dump(mode="json") for entry in runtime.recent_dialogue[-4:]
-        ],
+        "important_history": important_history_payload(runtime),
+        "recent_dialogue": recent_dialogue_payload(runtime),
     }
 
 

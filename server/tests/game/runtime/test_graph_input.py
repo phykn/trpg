@@ -6,7 +6,7 @@ from openai import RateLimitError
 
 from src.db.graph_local_fs import LocalFsGraphRepo
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.memory import GMLogEntry
+from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime.input import run_graph_input_turn, run_graph_input_turn_stream
 
@@ -17,9 +17,15 @@ class _FakeLLM:
         payload: dict,
         *,
         narration: str = "상대는 당신의 말을 듣고 잠시 생각에 잠깁니다.",
+        turn_summary: str = "",
+        importance: int = 1,
+        suggestions: list[str] | None = None,
     ) -> None:
         self.payload = payload
         self.narration = narration
+        self.turn_summary = turn_summary
+        self.importance = importance
+        self.suggestions = suggestions or []
         self.calls = []
 
     async def chat(
@@ -32,7 +38,7 @@ class _FakeLLM:
     ):
         self.calls.append({"messages": messages, "agent": agent})
         if agent == "graph_narrate":
-            return {"answer": self.narration, "think": ""}
+            return {"answer": self._narration_answer(), "think": ""}
         return {"answer": json.dumps(self.payload, ensure_ascii=False), "think": ""}
 
     async def chat_stream(
@@ -45,14 +51,33 @@ class _FakeLLM:
     ):
         self.calls.append({"messages": messages, "agent": agent})
         if agent == "graph_narrate":
-            midpoint = max(1, len(self.narration) // 2)
-            for chunk in (self.narration[:midpoint], self.narration[midpoint:]):
+            answer = self._narration_answer()
+            midpoint = max(1, len(answer) // 2)
+            for chunk in (answer[:midpoint], answer[midpoint:]):
                 yield {"answer": chunk, "think": None}
             return
         yield {
             "answer": json.dumps(self.payload, ensure_ascii=False),
             "think": None,
         }
+
+    def _narration_answer(self) -> str:
+        if not self.turn_summary and not self.suggestions and self.importance == 1:
+            return self.narration
+        return "\n".join(
+            [
+                self.narration,
+                "---TRPG_META---",
+                json.dumps(
+                    {
+                        "turn_summary": self.turn_summary,
+                        "importance": self.importance,
+                        "suggestions": self.suggestions,
+                    },
+                    ensure_ascii=False,
+                ),
+            ]
+        )
 
 
 class _SlowGraphNarrateLLM(_FakeLLM):
@@ -195,6 +220,130 @@ async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
     assert logs[0].text == "고블린에게 말을 건다"
     assert logs[1].text == "상대는 당신의 말을 듣고 잠시 생각에 잠깁니다."
     assert progress.turn_count == 1
+
+
+async def test_graph_input_reflects_speak_turn_into_memory_dialogue_and_suggestions(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]},
+        narration="고블린은 북문에 낯선 발자국이 있다고 말합니다.",
+        turn_summary="고블린에게서 북문의 낯선 발자국 정보를 들었습니다.",
+        importance=3,
+        suggestions=[
+            "북문으로 이동합니다",
+            "발자국을 자세히 살펴봅니다",
+        ],
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 북문을 묻는다")
+    history = await repo.load_history_entries("game-1")
+    dialogue = await repo.load_dialogue_entries("game-1")
+
+    assert result.suggestions == ["북문으로 이동합니다", "발자국을 자세히 살펴봅니다"]
+    assert history == [
+        TurnLogEntry(
+            turn=1,
+            target="goblin_01",
+            summary="고블린에게서 북문의 낯선 발자국 정보를 들었습니다.",
+            importance=3,
+        )
+    ]
+    assert dialogue == [
+        DialoguePair(
+            turn=1,
+            player="고블린에게 북문을 묻는다",
+            narrator="고블린은 북문에 낯선 발자국이 있다고 말합니다.",
+        )
+    ]
+    assert [call["agent"] for call in llm.calls].count("graph_narrate") == 1
+    assert "graph_reflect" not in [call["agent"] for call in llm.calls]
+
+
+async def test_graph_input_passes_important_memory_and_recent_dialogue_to_classify(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    await repo.append_history_entries(
+        "game-1",
+        [
+            TurnLogEntry(turn=1, summary="중요하지 않은 소문입니다.", importance=1),
+            TurnLogEntry(
+                turn=2,
+                target="goblin_01",
+                summary="고블린은 북문에 낯선 발자국이 있다고 말했습니다.",
+                importance=3,
+            ),
+        ],
+    )
+    await repo.append_dialogue_entries(
+        "game-1",
+        [
+            DialoguePair(
+                turn=2,
+                player="북문에 대해 묻는다",
+                narrator="고블린은 발자국을 보았다고 말합니다.",
+            )
+        ],
+    )
+    llm = _FakeLLM({"actions": [{"verb": "pass"}]}, narration="당신은 잠시 생각합니다.")
+
+    await run_graph_input_turn(llm, repo, "game-1", "그걸 따라간다")
+    classify_call = [call for call in llm.calls if call["agent"] == "classify"][0]
+    payload = json.loads(classify_call["messages"][1]["content"])
+
+    assert payload["history"] == [
+        {
+            "turn": 1,
+            "target": None,
+            "summary": "중요하지 않은 소문입니다.",
+            "importance": 1,
+        },
+        {
+            "turn": 2,
+            "target": "goblin_01",
+            "summary": "고블린은 북문에 낯선 발자국이 있다고 말했습니다.",
+            "importance": 3,
+        }
+    ]
+    assert payload["recent_dialogue"] == [
+        {
+            "turn": 2,
+            "player": "북문에 대해 묻는다",
+            "narrator": "고블린은 발자국을 보았다고 말합니다.",
+        }
+    ]
+
+
+async def test_graph_input_memory_context_keeps_twenty_summaries_by_importance(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    entries = [
+        TurnLogEntry(turn=1, summary="낮은 중요도 오래된 기억입니다.", importance=1),
+        TurnLogEntry(turn=2, summary="낮은 중요도 최근 기억입니다.", importance=1),
+        *[
+            TurnLogEntry(
+                turn=turn,
+                summary=f"중요한 기억 {turn}",
+                importance=2,
+            )
+            for turn in range(3, 22)
+        ],
+    ]
+    await repo.append_history_entries("game-1", entries)
+    llm = _FakeLLM({"actions": [{"verb": "pass"}]}, narration="당신은 잠시 생각합니다.")
+
+    await run_graph_input_turn(llm, repo, "game-1", "기억을 떠올린다")
+    classify_call = [call for call in llm.calls if call["agent"] == "classify"][0]
+    payload = json.loads(classify_call["messages"][1]["content"])
+    summaries = [entry["summary"] for entry in payload["history"]]
+
+    assert len(summaries) == 20
+    assert "낮은 중요도 오래된 기억입니다." not in summaries
+    assert "낮은 중요도 최근 기억입니다." in summaries
+    assert "중요한 기억 21" in summaries
 
 
 async def test_graph_input_streams_speak_narration_before_final(tmp_path):

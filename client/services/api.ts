@@ -63,7 +63,7 @@ export async function getGraphSessionById(gameId: string): Promise<SessionPayloa
   return {
     game_id: payload.game_id,
     state,
-    suggestions: deriveGraphSuggestions(payload.state),
+    suggestions: adaptSuggestions(payload.suggestions, payload.state),
   };
 }
 
@@ -77,7 +77,7 @@ export async function initGraphSession(body: InitRequest): Promise<SessionPayloa
   return {
     game_id: payload.game_id,
     state,
-    suggestions: deriveGraphSuggestions(payload.state),
+    suggestions: adaptSuggestions(payload.suggestions, payload.state),
   };
 }
 
@@ -337,6 +337,16 @@ function adaptGraphActionResponse(
     pendingRoll: state.pendingRoll ?? null,
     status: payload.status,
     message: payload.message,
-    suggestions: deriveGraphSuggestions(payload.state),
+    suggestions: adaptSuggestions(payload.suggestions, payload.state),
   };
+}
+
+function adaptSuggestions(
+  suggestions: string[] | undefined,
+  state: GraphActionResponse['state'],
+): string[] {
+  const clean = Array.isArray(suggestions)
+    ? suggestions.filter((suggestion) => typeof suggestion === 'string' && suggestion.trim())
+    : [];
+  return clean.length > 0 ? clean : deriveGraphSuggestions(state);
 }

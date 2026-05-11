@@ -2,7 +2,7 @@ import secrets
 from collections.abc import AsyncIterator
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
@@ -60,6 +60,7 @@ class GraphActionRequestResult(BaseModel):
     pending_roll: dict[str, Any] | None = None
     dispatch: GraphActionDispatchResult | None = None
     message: str | None = None
+    suggestions: list[str] = Field(default_factory=list)
 
 
 async def run_graph_action_request(
@@ -116,6 +117,7 @@ async def run_graph_action_request(
             status="executed",
             front_state=result.front_state,
             dispatch=result.dispatch,
+            suggestions=result.suggestions,
         )
 
     next_progress = runtime.progress.model_copy(
@@ -201,6 +203,7 @@ async def run_graph_action_request_stream(
                         status="executed",
                         front_state=turn_result.front_state,
                         dispatch=turn_result.dispatch,
+                        suggestions=turn_result.suggestions,
                     ),
                 }
             else:
@@ -282,6 +285,7 @@ async def run_graph_confirm(
         status="executed",
         front_state=result.front_state,
         dispatch=result.dispatch,
+        suggestions=result.suggestions,
     )
 
 
@@ -343,6 +347,7 @@ async def run_graph_confirm_stream(
                         status="executed",
                         front_state=turn_result.front_state,
                         dispatch=turn_result.dispatch,
+                        suggestions=turn_result.suggestions,
                     ),
                 }
             else:

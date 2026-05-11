@@ -3,7 +3,7 @@ import json
 from collections.abc import AsyncIterator
 
 from openai import APIConnectionError, InternalServerError, RateLimitError
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
@@ -27,6 +27,12 @@ from .dispatch import (
 from .cards import build_graph_action_card, build_graph_quest_offer_card
 from .load import load_runtime_state
 from .narration_context import build_action_narration_payload
+from .narration_result import (
+    GraphNarrationResult,
+    VisibleNarrationStream,
+    parse_graph_narration_answer,
+    persist_graph_narration_result,
+)
 from .state import GameRuntimeState
 
 
@@ -40,6 +46,7 @@ class GraphActionTurnResult(BaseModel):
     runtime: GameRuntimeState
     dispatch: GraphActionDispatchResult
     front_state: GraphFrontStatePayload
+    suggestions: list[str] = Field(default_factory=list)
 
 
 _GRAPH_ACTION_NARRATION_TIMEOUT_SECONDS = 6.0
@@ -130,7 +137,7 @@ async def run_graph_action_turn_from_runtime(
                 card.id + 1,
             )
         )
-    narration = await _build_graph_action_narration(
+    narration_result = await _build_graph_action_narration(
         llm,
         before=runtime,
         after=next_runtime,
@@ -138,6 +145,7 @@ async def run_graph_action_turn_from_runtime(
         dispatch=dispatch,
         card_texts=[card.text for card in cards],
     )
+    narration = narration_result.narration
     log_entries = [*cards]
     if narration:
         log_entries.append(
@@ -166,6 +174,12 @@ async def run_graph_action_turn_from_runtime(
     )
     await repo.append_log_entries(game_id, log_entries)
     await repo.save_progress(next_runtime.progress)
+    next_runtime = await persist_graph_narration_result(
+        repo,
+        next_runtime,
+        narration_result,
+        target_id=_action_target_id(action),
+    )
     engine_diag(
         "turn:done",
         status="executed",
@@ -176,6 +190,7 @@ async def run_graph_action_turn_from_runtime(
         runtime=next_runtime,
         dispatch=dispatch,
         front_state=graph_to_front_state(next_runtime),
+        suggestions=narration_result.suggestions,
     )
 
 
@@ -245,7 +260,7 @@ async def run_graph_action_turn_from_runtime_stream(
                 card.id + 1,
             )
         )
-    narration_chunks: list[str] = []
+    stream = VisibleNarrationStream()
     async for chunk in _stream_graph_action_narration(
         llm,
         before=runtime,
@@ -254,12 +269,14 @@ async def run_graph_action_turn_from_runtime_stream(
         dispatch=dispatch,
         card_texts=[card.text for card in cards],
     ):
-        narration_chunks.append(chunk)
-        yield {"type": "delta", "text": chunk}
-    narration = _clean_narration(
-        "".join(narration_chunks),
-        recent_texts=_recent_gm_texts(runtime),
+        for visible in stream.push(chunk):
+            yield {"type": "delta", "text": visible}
+    for visible in stream.finish():
+        yield {"type": "delta", "text": visible}
+    narration_result = parse_graph_narration_answer(
+        _clean_narration(stream.answer(), recent_texts=_recent_gm_texts(runtime))
     )
+    narration = narration_result.narration
     log_entries = [*cards]
     if narration:
         log_entries.append(
@@ -288,6 +305,12 @@ async def run_graph_action_turn_from_runtime_stream(
     )
     await repo.append_log_entries(game_id, log_entries)
     await repo.save_progress(next_runtime.progress)
+    next_runtime = await persist_graph_narration_result(
+        repo,
+        next_runtime,
+        narration_result,
+        target_id=_action_target_id(action),
+    )
     engine_diag(
         "turn:done",
         status="executed",
@@ -300,6 +323,7 @@ async def run_graph_action_turn_from_runtime_stream(
             runtime=next_runtime,
             dispatch=dispatch,
             front_state=graph_to_front_state(next_runtime),
+            suggestions=narration_result.suggestions,
         ),
     }
 
@@ -312,7 +336,7 @@ async def _build_graph_action_narration(
     action: Action,
     dispatch: GraphActionDispatchResult,
     card_texts: list[str],
-) -> str:
+) -> GraphNarrationResult:
     messages = _graph_action_narration_messages(
         llm,
         before=before,
@@ -322,7 +346,7 @@ async def _build_graph_action_narration(
         card_texts=card_texts,
     )
     if messages is None:
-        return ""
+        return GraphNarrationResult()
     llm_diag("llm:call", agent="graph_narrate")
     try:
         result = await asyncio.wait_for(
@@ -343,12 +367,14 @@ async def _build_graph_action_narration(
         RateLimitError,
     ) as exc:
         llm_diag("llm:fail", agent="graph_narrate", err=type(exc).__name__)
-        return ""
+        return GraphNarrationResult()
     llm_diag("llm:done", agent="graph_narrate")
     answer = result.get("answer")
     if not isinstance(answer, str):
-        return ""
-    return _clean_narration(answer, recent_texts=_recent_gm_texts(before))
+        return GraphNarrationResult()
+    return parse_graph_narration_answer(
+        _clean_narration(answer, recent_texts=_recent_gm_texts(before))
+    )
 
 
 async def _stream_graph_action_narration(
@@ -466,6 +492,15 @@ def _recent_gm_texts(runtime: GameRuntimeState) -> list[str]:
         for entry in runtime.log_entries[-4:]
         if getattr(entry, "kind", None) == "gm" and hasattr(entry, "text")
     ]
+
+
+def _action_target_id(action: Action) -> str | None:
+    for value in (action.what, action.to):
+        if isinstance(value, str):
+            return value
+        if isinstance(value, list) and value and isinstance(value[0], str):
+            return value[0]
+    return None
 
 
 def _node_name(runtime: GameRuntimeState, node: GraphNode | None) -> str:
