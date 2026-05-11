@@ -48,6 +48,24 @@ class _MockLLM:
             return {"answer": "장면의 긴장이 짧게 가라앉습니다.", "think": ""}
         return {"answer": json.dumps(self.payload, ensure_ascii=False), "think": ""}
 
+    async def chat_stream(
+        self,
+        messages,
+        think=False,
+        agent=None,
+        temperature=None,
+        use_fallback=False,
+    ):
+        self.calls.append({"agent": agent, "messages": messages})
+        if agent == "graph_narrate":
+            for chunk in ("장면의 긴장이 ", "짧게 가라앉습니다."):
+                yield {"answer": chunk, "think": None}
+            return
+        yield {
+            "answer": json.dumps(self.payload, ensure_ascii=False),
+            "think": None,
+        }
+
 
 def _extend_default_storage_for_movement(storage) -> None:
     storage.objects["default/locations/loc_01.json"] = json.dumps(
@@ -499,6 +517,31 @@ async def test_graph_confirm_confirm_executes_pending_attack(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_graph_confirm_stream_returns_narration_deltas_before_final_state(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        attack_response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "attack", "what": "edrik_chief"}},
+        )
+        confirmation_id = attack_response.json()["state"]["pendingConfirmation"]["id"]
+        response = await client.post(
+            f"/session/{game_id}/graph/confirm/stream",
+            json={"confirmation_id": confirmation_id, "decision": "confirm"},
+        )
+
+    assert response.status_code == 200, response.text
+    events = [json.loads(line) for line in response.text.splitlines()]
+
+    assert [event["type"] for event in events] == ["delta", "delta", "final"]
+    assert "".join(event["text"] for event in events[:-1]) == "장면의 긴장이 짧게 가라앉습니다."
+    assert events[-1]["payload"]["status"] == "executed"
+    assert events[-1]["payload"]["state"]["log"][-1]["text"] == "장면의 긴장이 짧게 가라앉습니다."
+
+
+@pytest.mark.asyncio
 async def test_graph_confirm_cancel_clears_pending_attack(tmp_path):
     app = _build_app(tmp_path)
 
@@ -720,6 +763,34 @@ async def test_graph_input_classifies_query_and_returns_message(tmp_path):
     assert body["status"] == "answered"
     assert "숲길" in body["message"]
     assert progress.turn_count == 0
+
+
+@pytest.mark.asyncio
+async def test_graph_input_stream_returns_narration_deltas_before_final_state(tmp_path):
+    app = _build_app(
+        tmp_path,
+        llm_payload={"actions": [{"verb": "speak", "what": "edrik_chief"}]},
+    )
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(
+            f"/session/{game_id}/graph/input/stream",
+            json={"player_input": "에드릭에게 말을 건다", "think": False},
+        )
+
+    assert response.status_code == 200, response.text
+    events = [json.loads(line) for line in response.text.splitlines()]
+
+    assert [event["type"] for event in events] == ["delta", "delta", "final"]
+    assert "".join(event["text"] for event in events[:-1]) == "장면의 긴장이 짧게 가라앉습니다."
+    assert events[-1]["payload"]["game_id"] == game_id
+    assert events[-1]["payload"]["status"] == "executed"
+    assert events[-1]["payload"]["state"]["log"][-1] == {
+        "id": 2,
+        "kind": "gm",
+        "text": "장면의 긴장이 짧게 가라앉습니다.",
+    }
 
 
 @pytest.mark.asyncio

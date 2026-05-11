@@ -8,7 +8,7 @@ from src.db.graph_local_fs import LocalFsGraphRepo
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.memory import GMLogEntry
 from src.game.domain.progress import GameProgress
-from src.game.runtime.input import run_graph_input_turn
+from src.game.runtime.input import run_graph_input_turn, run_graph_input_turn_stream
 
 
 class _FakeLLM:
@@ -34,6 +34,25 @@ class _FakeLLM:
         if agent == "graph_narrate":
             return {"answer": self.narration, "think": ""}
         return {"answer": json.dumps(self.payload, ensure_ascii=False), "think": ""}
+
+    async def chat_stream(
+        self,
+        messages,
+        think=False,
+        agent=None,
+        temperature=None,
+        use_fallback=False,
+    ):
+        self.calls.append({"messages": messages, "agent": agent})
+        if agent == "graph_narrate":
+            midpoint = max(1, len(self.narration) // 2)
+            for chunk in (self.narration[:midpoint], self.narration[midpoint:]):
+                yield {"answer": chunk, "think": None}
+            return
+        yield {
+            "answer": json.dumps(self.payload, ensure_ascii=False),
+            "think": None,
+        }
 
 
 class _SlowGraphNarrateLLM(_FakeLLM):
@@ -176,6 +195,31 @@ async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
     assert logs[0].text == "고블린에게 말을 건다"
     assert logs[1].text == "상대는 당신의 말을 듣고 잠시 생각에 잠깁니다."
     assert progress.turn_count == 1
+
+
+async def test_graph_input_streams_speak_narration_before_final(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]},
+        narration="상대는 당신의 말을 듣습니다.",
+    )
+
+    events = [
+        event
+        async for event in run_graph_input_turn_stream(
+            llm,
+            repo,
+            "game-1",
+            "고블린에게 말을 건다",
+        )
+    ]
+    logs = await repo.load_log_entries("game-1")
+
+    assert [event["type"] for event in events] == ["delta", "delta", "final"]
+    assert "".join(event["text"] for event in events[:-1]) == "상대는 당신의 말을 듣습니다."
+    assert events[-1]["result"].status == "executed"
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert logs[-1].text == "상대는 당신의 말을 듣습니다."
 
 
 async def test_graph_input_perceive_creates_pending_roll(tmp_path):

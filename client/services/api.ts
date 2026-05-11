@@ -16,6 +16,7 @@ import type {
 
 type ApiRequestOptions = {
   signal?: AbortSignal;
+  onNarrationDelta?: (text: string) => void;
 };
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -29,10 +30,15 @@ if (!API_PASS) throw new Error('EXPO_PUBLIC_API_PASS is not set');
 
 const AUTH_HEADER = `Basic ${btoa(`${API_USER}:${API_PASS}`)}`;
 
-const baseHeaders = {
+const localTunnelHeaders: Record<string, string> = BASE_URL.includes('.loca.lt')
+  ? { 'bypass-tunnel-reminder': 'true' }
+  : {};
+
+const baseHeaders: Record<string, string> = {
   Authorization: AUTH_HEADER,
+  ...localTunnelHeaders,
 };
-const jsonHeaders = {
+const jsonHeaders: Record<string, string> = {
   ...baseHeaders,
   'Content-Type': 'application/json',
 };
@@ -93,14 +99,114 @@ export async function sendGraphInput(
   playerInput: string,
   options: ApiRequestOptions = {},
 ): Promise<GraphActionClientResponse> {
-  const res = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/input`, {
+  return requestGraphActionWithOptionalStream(
+    'sendGraphInput',
+    `/session/${gameId}/graph/input/stream`,
+    `/session/${gameId}/graph/input`,
+    { player_input: playerInput, think: false },
+    options,
+  );
+}
+
+async function requestGraphActionWithOptionalStream(
+  operation: string,
+  streamPath: string,
+  plainPath: string,
+  bodyPayload: object,
+  options: ApiRequestOptions = {},
+): Promise<GraphActionClientResponse> {
+  if (typeof TextDecoder === 'undefined') {
+    return requestGraphActionPlain(operation, plainPath, bodyPayload, options);
+  }
+  const body = JSON.stringify(bodyPayload);
+  const res = await fetchWithTimeout(`${BASE_URL}${streamPath}`, {
     method: 'POST',
     headers: jsonHeaders,
-    body: JSON.stringify({ player_input: playerInput, think: false }),
+    body,
     signal: options.signal,
   });
-  if (!res.ok) throw new Error(await httpError('sendGraphInput', res));
+  if (res.status === 404) {
+    return requestGraphActionPlain(operation, plainPath, bodyPayload, options);
+  }
+  if (!res.ok) throw new Error(await httpError(operation, res));
+  return readGraphActionStream(operation, res, options);
+}
+
+async function requestGraphActionPlain(
+  operation: string,
+  path: string,
+  bodyPayload: object,
+  options: ApiRequestOptions = {},
+): Promise<GraphActionClientResponse> {
+  const res = await fetchWithTimeout(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(bodyPayload),
+    signal: options.signal,
+  });
+  if (!res.ok) throw new Error(await httpError(operation, res));
   return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
+}
+
+type GraphInputStreamEvent =
+  | { type: 'delta'; text?: unknown }
+  | { type: 'final'; payload?: unknown }
+  | { type: 'error'; status?: unknown; message?: unknown };
+
+async function readGraphActionStream(
+  operation: string,
+  res: Response,
+  options: ApiRequestOptions,
+): Promise<GraphActionClientResponse> {
+  const reader = res.body?.getReader?.();
+  let finalPayload: GraphActionResponse | null = null;
+  const consumeLine = (line: string) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    const event = JSON.parse(trimmed) as GraphInputStreamEvent;
+    if (event.type === 'delta') {
+      if (typeof event.text === 'string' && event.text) {
+        options.onNarrationDelta?.(event.text);
+      }
+      return;
+    }
+    if (event.type === 'final') {
+      finalPayload = event.payload as GraphActionResponse;
+      return;
+    }
+    if (event.type === 'error') {
+      const status = typeof event.status === 'number' ? event.status : res.status;
+      const detail = typeof event.message === 'string' ? event.message : 'stream error';
+      throw new Error(`${operation} failed: HTTP ${status} (${detail})`);
+    }
+  };
+
+  if (reader) {
+    const decoder = new TextDecoder();
+    let buffer = '';
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() ?? '';
+        for (const line of lines) consumeLine(line);
+      }
+      buffer += decoder.decode();
+      consumeLine(buffer);
+    } finally {
+      reader.releaseLock?.();
+    }
+  } else {
+    const text = await res.text();
+    for (const line of text.split(/\r?\n/)) consumeLine(line);
+  }
+
+  if (!finalPayload) {
+    throw new Error(`${operation} failed: stream ended without final payload`);
+  }
+  return adaptGraphActionResponse(finalPayload);
 }
 
 export async function sendGraphAction(
@@ -108,14 +214,13 @@ export async function sendGraphAction(
   action: GraphAction,
   options: ApiRequestOptions = {},
 ): Promise<GraphActionClientResponse> {
-  const res = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/turn`, {
-    method: 'POST',
-    headers: jsonHeaders,
-    body: JSON.stringify({ action }),
-    signal: options.signal,
-  });
-  if (!res.ok) throw new Error(await httpError('sendGraphAction', res));
-  return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
+  return requestGraphActionWithOptionalStream(
+    'sendGraphAction',
+    `/session/${gameId}/graph/turn/stream`,
+    `/session/${gameId}/graph/turn`,
+    { action },
+    options,
+  );
 }
 
 export async function sendGraphLevelUp(
@@ -138,14 +243,13 @@ export async function confirmGraphAction(
   body: ConfirmRequest,
   options: ApiRequestOptions = {},
 ): Promise<GraphActionClientResponse> {
-  const res = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/confirm`, {
-    method: 'POST',
-    headers: jsonHeaders,
-    body: JSON.stringify(body),
-    signal: options.signal,
-  });
-  if (!res.ok) throw new Error(await httpError('confirmGraphAction', res));
-  return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
+  return requestGraphActionWithOptionalStream(
+    'confirmGraphAction',
+    `/session/${gameId}/graph/confirm/stream`,
+    `/session/${gameId}/graph/confirm`,
+    body,
+    options,
+  );
 }
 
 export async function rollGraphPending(
@@ -165,7 +269,7 @@ export async function rollGraphPending(
 
 type ApiFetchInit = {
   method?: 'GET' | 'POST';
-  headers: typeof baseHeaders | typeof jsonHeaders;
+  headers: Record<string, string>;
   body?: string;
   signal?: AbortSignal;
 };

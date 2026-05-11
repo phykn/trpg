@@ -5,7 +5,13 @@ import type { FrontState, GraphActionClientResponse } from '@/services/wire';
 
 type ApplyState = (state: FrontState, gameId?: string | null) => void;
 type SetSuggestions = (next: React.SetStateAction<string[]>) => void;
-type GraphActionCall = (signal: AbortSignal) => Promise<GraphActionClientResponse>;
+type GraphActionRequestEvents = {
+  onNarrationDelta: (text: string) => void;
+};
+type GraphActionCall = (
+  signal: AbortSignal,
+  events: GraphActionRequestEvents,
+) => Promise<GraphActionClientResponse>;
 export type OptimisticLogEntry =
   | { kind: 'gm'; text: string }
   | { kind: 'player'; text: string }
@@ -54,6 +60,24 @@ function appendOptimisticLogEntries(
   ]);
 }
 
+function appendStreamingNarration(
+  runtime: GraphActionRequestRuntime,
+  generation: number,
+  optimisticEntryCount: number,
+  text: string,
+): void {
+  if (!text) return;
+  const id = -(generation * 1000 + optimisticEntryCount + 1);
+  runtime.setLog((current) => {
+    const existing = current.find((entry) => entry.id === id);
+    return mergeEntry(current, {
+      id,
+      kind: 'gm',
+      text: `${existing?.kind === 'gm' ? existing.text : ''}${text}`,
+    });
+  });
+}
+
 function isAbortError(err: unknown): boolean {
   return err instanceof Error && err.name === 'AbortError';
 }
@@ -84,7 +108,17 @@ export async function runGraphActionRequestOnce(
   runtime.setSuggestions([]);
   appendOptimisticLogEntries(runtime, generation, optimisticEntries);
   try {
-    const response = await call(controller.signal);
+    const response = await call(controller.signal, {
+      onNarrationDelta: (text: string) => {
+        if (
+          runtime.requestGenerationRef.current !== generation
+          || controller.signal.aborted
+        ) {
+          return;
+        }
+        appendStreamingNarration(runtime, generation, optimisticEntries.length, text);
+      },
+    });
     if (runtime.requestGenerationRef.current !== generation) return;
     if (runtime.isActiveGameId && !runtime.isActiveGameId(response.game_id)) return;
     runtime.applyState(response.state, response.game_id);

@@ -190,7 +190,11 @@ export function useGame() {
       const trimmed = text.trim();
       if (!trimmed || !gameId || pendingConfirmation || pendingRoll) return;
       void runGraphActionRequest(
-        (signal) => sendGraphInput(gameId, trimmed, { signal }),
+        (signal, events) =>
+          sendGraphInput(gameId, trimmed, {
+            signal,
+            onNarrationDelta: events.onNarrationDelta,
+          }),
         [{ kind: 'player', text: trimmed }],
       );
     },
@@ -200,12 +204,15 @@ export function useGame() {
   const onQuestAction = React.useCallback(
     (kind: 'accept' | 'abandon', quest_id: string, label?: string) => {
       if (!gameId || pendingConfirmation || pendingRoll) return;
-      void runGraphActionRequest((signal) =>
+      void runGraphActionRequest((signal, events) =>
         sendGraphAction(gameId, {
           verb: 'transfer',
           what: quest_id,
           how: kind,
-        }, { signal }),
+        }, {
+          signal,
+          onNarrationDelta: events.onNarrationDelta,
+        }),
         optimisticAct(label),
       );
     },
@@ -216,7 +223,11 @@ export function useGame() {
     (action: GraphAction, label?: string) => {
       if (!gameId || pendingConfirmation || pendingRoll) return;
       void runGraphActionRequest(
-        (signal) => sendGraphAction(gameId, action, { signal }),
+        (signal, events) =>
+          sendGraphAction(gameId, action, {
+            signal,
+            onNarrationDelta: events.onNarrationDelta,
+          }),
         optimisticAct(label),
       );
     },
@@ -228,12 +239,15 @@ export function useGame() {
       if (!gameId || !pendingConfirmation) return;
       const confirmationId = pendingConfirmation.id;
       setPendingConfirmation(null);
-      void runGraphActionRequest((signal) =>
+      void runGraphActionRequest((signal, events) =>
         confirmGraphAction(gameId, {
           confirmation_id: confirmationId,
           decision,
           think: false,
-        }, { signal }),
+        }, {
+          signal,
+          onNarrationDelta: events.onNarrationDelta,
+        }),
       );
     },
     [gameId, pendingConfirmation, runGraphActionRequest],

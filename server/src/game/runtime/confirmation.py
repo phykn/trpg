@@ -1,4 +1,5 @@
 import secrets
+from collections.abc import AsyncIterator
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -23,6 +24,7 @@ from .turn import (
     GraphActionTurnError,
     run_graph_action_turn,
     run_graph_action_turn_from_runtime,
+    run_graph_action_turn_from_runtime_stream,
 )
 
 
@@ -135,6 +137,98 @@ async def run_graph_action_request(
     )
 
 
+async def run_graph_action_request_stream(
+    repo: GraphRepo,
+    game_id: str,
+    action: Action,
+    *,
+    llm: LLMClient | None = None,
+    scenario_repo: ScenarioRepo | None = None,
+) -> AsyncIterator[dict[str, object]]:
+    runtime = await load_runtime_state(repo, game_id, scenario_repo)
+    set_diag_context(game_id, runtime.progress.turn_count)
+    engine_diag("action:start", action=action.verb)
+    if runtime.progress.pending_confirmation is not None:
+        raise GraphConfirmationActive(
+            "a pending_confirmation is already active; call graph confirm instead"
+        )
+    if runtime.progress.pending_roll is not None:
+        raise GraphConfirmationActive(
+            "a pending_roll is already active; call graph roll instead"
+        )
+
+    if action.verb == "perceive":
+        from .roll import start_graph_roll
+
+        engine_diag("action:roll_required", action=action.verb)
+        result = await start_graph_roll(
+            repo, game_id, action, scenario_repo=scenario_repo
+        )
+        yield {"type": "final", "result": result}
+        return
+
+    if action.verb == "query":
+        from .query import answer_graph_query
+
+        engine_diag("action:done", status="answered", action=action.verb)
+        yield {
+            "type": "final",
+            "result": GraphActionRequestResult(
+                runtime=runtime,
+                status="answered",
+                front_state=graph_to_front_state(runtime),
+                message=answer_graph_query(runtime, action),
+            ),
+        }
+        return
+
+    pending = build_graph_action_confirmation(runtime, action)
+    if pending is None:
+        async for event in run_graph_action_turn_from_runtime_stream(
+            repo,
+            game_id,
+            runtime,
+            action,
+            llm=llm,
+        ):
+            if event["type"] == "final":
+                turn_result = event["result"]
+                engine_diag("action:done", status="executed", action=action.verb)
+                yield {
+                    "type": "final",
+                    "result": GraphActionRequestResult(
+                        runtime=turn_result.runtime,
+                        status="executed",
+                        front_state=turn_result.front_state,
+                        dispatch=turn_result.dispatch,
+                    ),
+                }
+            else:
+                yield event
+        return
+
+    next_progress = runtime.progress.model_copy(
+        update={"pending_confirmation": pending}
+    )
+    next_runtime = runtime.model_copy(update={"progress": next_progress})
+    await repo.save_progress(next_progress)
+    engine_diag(
+        "action:done",
+        status="confirmation_required",
+        action=action.verb,
+        confirmation=pending.get("kind"),
+    )
+    yield {
+        "type": "final",
+        "result": GraphActionRequestResult(
+            runtime=next_runtime,
+            status="confirmation_required",
+            front_state=graph_to_front_state(next_runtime),
+            pending_confirmation=pending,
+        ),
+    }
+
+
 async def run_graph_confirm(
     repo: GraphRepo,
     game_id: str,
@@ -189,6 +283,72 @@ async def run_graph_confirm(
         front_state=result.front_state,
         dispatch=result.dispatch,
     )
+
+
+async def run_graph_confirm_stream(
+    repo: GraphRepo,
+    game_id: str,
+    confirmation_id: str,
+    decision: Decision,
+    *,
+    llm: LLMClient | None = None,
+    scenario_repo: ScenarioRepo | None = None,
+) -> AsyncIterator[dict[str, object]]:
+    runtime = await load_runtime_state(repo, game_id, scenario_repo)
+    set_diag_context(game_id, runtime.progress.turn_count)
+    pending = runtime.progress.pending_confirmation
+    engine_diag(
+        "confirm:start",
+        decision=decision,
+        pending=pending.get("kind") if isinstance(pending, dict) else None,
+    )
+    if pending is None:
+        raise GraphConfirmationExpected("no pending_confirmation")
+    if pending.get("id") != confirmation_id:
+        raise GraphConfirmationExpected("confirmation id mismatch")
+
+    cleared_progress = runtime.progress.model_copy(
+        update={"pending_confirmation": None}
+    )
+    cleared_runtime = runtime.model_copy(update={"progress": cleared_progress})
+    if decision == "cancel":
+        await repo.save_progress(cleared_progress)
+        engine_diag("confirm:done", status="cancelled")
+        yield {
+            "type": "final",
+            "result": GraphActionRequestResult(
+                runtime=cleared_runtime,
+                status="cancelled",
+                front_state=graph_to_front_state(cleared_runtime),
+            ),
+        }
+        return
+
+    action = _pending_action(pending)
+    try:
+        async for event in run_graph_action_turn_from_runtime_stream(
+            repo,
+            game_id,
+            cleared_runtime,
+            action,
+            llm=llm,
+        ):
+            if event["type"] == "final":
+                turn_result = event["result"]
+                engine_diag("confirm:done", status="executed")
+                yield {
+                    "type": "final",
+                    "result": GraphActionRequestResult(
+                        runtime=turn_result.runtime,
+                        status="executed",
+                        front_state=turn_result.front_state,
+                        dispatch=turn_result.dispatch,
+                    ),
+                }
+            else:
+                yield event
+    except GraphActionTurnError as exc:
+        raise GraphConfirmationError(str(exc)) from exc
 
 
 def build_graph_action_confirmation(

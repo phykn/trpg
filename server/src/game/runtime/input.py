@@ -1,6 +1,6 @@
 import asyncio
 import json
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
 
 from openai import APIConnectionError, InternalServerError, RateLimitError
 
@@ -70,6 +70,43 @@ async def run_graph_input_turn(
     )
 
 
+async def run_graph_input_turn_stream(
+    client: LLMClient,
+    repo: GraphRepo,
+    game_id: str,
+    player_input: str,
+    scenario_repo: ScenarioRepo | None = None,
+) -> AsyncIterator[dict[str, object]]:
+    runtime = await load_runtime_state(repo, game_id, scenario_repo)
+    set_diag_context(game_id, runtime.progress.turn_count)
+    engine_diag("input:start", chars=len(player_input))
+    runtime = await _append_player_input_log(repo, runtime, player_input)
+    output = await classify(
+        client,
+        ClassifyInput(
+            player_input=player_input,
+            surroundings=build_graph_surroundings(runtime),
+        ),
+        locale=runtime.progress.locale,
+    )
+
+    if output.refuse is not None:
+        raise GraphInputError(output.refuse.message_hint)
+    actions = output.actions or []
+    if not actions:
+        raise GraphInputError("graph input requires at least one action")
+
+    async for event in _run_classified_actions_stream(
+        client,
+        repo,
+        runtime,
+        actions,
+        player_input,
+        scenario_repo=scenario_repo,
+    ):
+        yield event
+
+
 async def _run_classified_actions(
     client: LLMClient,
     repo: GraphRepo,
@@ -111,6 +148,56 @@ async def _run_classified_actions(
     if result is None:
         raise GraphInputError("graph input requires at least one action")
     return result
+
+
+async def _run_classified_actions_stream(
+    client: LLMClient,
+    repo: GraphRepo,
+    runtime: GameRuntimeState,
+    actions: Sequence[Action],
+    player_input: str,
+    *,
+    scenario_repo: ScenarioRepo | None = None,
+) -> AsyncIterator[dict[str, object]]:
+    result: GraphActionRequestResult | None = None
+    for index, action in enumerate(actions):
+        engine_diag(
+            "input:classified",
+            action=action.verb,
+            index=index + 1,
+            total=len(actions),
+        )
+        if action.verb in {"speak", "pass"}:
+            async for event in _run_graph_narrative_input_stream(
+                client,
+                repo,
+                runtime,
+                player_input,
+                action,
+            ):
+                if event["type"] == "final":
+                    result = event["result"]  # type: ignore[assignment]
+                else:
+                    yield event
+        else:
+            result = await run_graph_action_request(
+                repo,
+                runtime.progress.game_id,
+                action,
+                llm=client,
+                scenario_repo=scenario_repo,
+            )
+
+        if result is None:
+            raise GraphInputError("graph input requires at least one action")
+        runtime = result.runtime
+        if result.status != "executed":
+            yield {"type": "final", "result": result}
+            return
+
+    if result is None:
+        raise GraphInputError("graph input requires at least one action")
+    yield {"type": "final", "result": result}
 
 
 async def _append_player_input_log(
@@ -182,6 +269,59 @@ async def _run_graph_narrative_input(
     )
 
 
+async def _run_graph_narrative_input_stream(
+    client: LLMClient,
+    repo: GraphRepo,
+    runtime,
+    player_input: str,
+    action,
+) -> AsyncIterator[dict[str, object]]:
+    subject_id = _resolve_narrative_subject(runtime, action)
+    chunks: list[str] = []
+    async for chunk in _stream_graph_input_narration(
+        client,
+        runtime,
+        player_input,
+        action,
+        subject_id,
+    ):
+        chunks.append(chunk)
+        yield {"type": "delta", "text": chunk}
+
+    text = _clean_narration("".join(chunks))
+    if not text:
+        text = render("runtime.input.quiet", runtime.progress.locale)
+    entry = GMLogEntry(
+        id=runtime.progress.next_log_id,
+        kind="gm",
+        text=text,
+    )
+    progress = runtime.progress.model_copy(
+        update={
+            "turn_count": runtime.progress.turn_count + 1,
+            "next_log_id": entry.id + 1,
+            "active_subject_id": subject_id or runtime.progress.active_subject_id,
+        }
+    )
+    next_runtime = runtime.model_copy(
+        update={
+            "progress": progress,
+            "log_entries": [*runtime.log_entries, entry],
+        }
+    )
+    await repo.append_log_entries(runtime.progress.game_id, [entry])
+    await repo.save_progress(progress)
+    engine_diag("input:done", status="executed", action=action.verb)
+    yield {
+        "type": "final",
+        "result": GraphActionRequestResult(
+            runtime=next_runtime,
+            status="executed",
+            front_state=graph_to_front_state(next_runtime),
+        ),
+    }
+
+
 async def _generate_graph_input_narration(
     client: LLMClient,
     runtime,
@@ -189,6 +329,84 @@ async def _generate_graph_input_narration(
     action,
     subject_id: str | None,
 ) -> str:
+    messages = _graph_input_narration_messages(
+        runtime,
+        player_input,
+        action,
+        subject_id,
+    )
+    try:
+        llm_diag("llm:call", agent="graph_narrate")
+        result = await asyncio.wait_for(
+            client.chat(
+                messages,
+                think=False,
+                agent="graph_narrate",
+                temperature=0.2,
+            ),
+            timeout=_GRAPH_INPUT_NARRATION_TIMEOUT_SECONDS,
+        )
+    except (
+        LLMUnavailable,
+        OSError,
+        TimeoutError,
+        InternalServerError,
+        APIConnectionError,
+        RateLimitError,
+    ) as exc:
+        llm_diag("llm:fail", agent="graph_narrate", err=type(exc).__name__)
+        return ""
+    llm_diag("llm:done", agent="graph_narrate")
+    answer = result.get("answer")
+    if not isinstance(answer, str):
+        return ""
+    return _clean_narration(answer)
+
+
+async def _stream_graph_input_narration(
+    client: LLMClient,
+    runtime,
+    player_input: str,
+    action,
+    subject_id: str | None,
+) -> AsyncIterator[str]:
+    messages = _graph_input_narration_messages(
+        runtime,
+        player_input,
+        action,
+        subject_id,
+    )
+    try:
+        llm_diag("llm:call", agent="graph_narrate")
+        async with asyncio.timeout(_GRAPH_INPUT_NARRATION_TIMEOUT_SECONDS):
+            async for part in client.chat_stream(
+                messages,
+                think=False,
+                agent="graph_narrate",
+                temperature=0.2,
+            ):
+                answer = part.get("answer")
+                if isinstance(answer, str) and answer:
+                    yield answer
+    except (
+        LLMUnavailable,
+        OSError,
+        TimeoutError,
+        InternalServerError,
+        APIConnectionError,
+        RateLimitError,
+    ) as exc:
+        llm_diag("llm:fail", agent="graph_narrate", err=type(exc).__name__)
+        return
+    llm_diag("llm:done", agent="graph_narrate")
+
+
+def _graph_input_narration_messages(
+    runtime,
+    player_input: str,
+    action,
+    subject_id: str | None,
+) -> list[dict[str, str]]:
     surroundings = build_graph_surroundings(runtime)
     subject = runtime.graph.nodes.get(subject_id or "")
     subject_state = (
@@ -212,41 +430,16 @@ async def _generate_graph_input_narration(
         dialogue_target=dialogue_target,
         surroundings=surroundings,
     )
-    try:
-        llm_diag("llm:call", agent="graph_narrate")
-        result = await asyncio.wait_for(
-            client.chat(
-                [
-                    {
-                        "role": "system",
-                        "content": get_prompt("graph_narrate", runtime.progress.locale),
-                    },
-                    {
-                        "role": "user",
-                        "content": json.dumps(payload, ensure_ascii=False),
-                    },
-                ],
-                think=False,
-                agent="graph_narrate",
-                temperature=0.2,
-            ),
-            timeout=_GRAPH_INPUT_NARRATION_TIMEOUT_SECONDS,
-        )
-    except (
-        LLMUnavailable,
-        OSError,
-        TimeoutError,
-        InternalServerError,
-        APIConnectionError,
-        RateLimitError,
-    ) as exc:
-        llm_diag("llm:fail", agent="graph_narrate", err=type(exc).__name__)
-        return ""
-    llm_diag("llm:done", agent="graph_narrate")
-    answer = result.get("answer")
-    if not isinstance(answer, str):
-        return ""
-    return _clean_narration(answer)
+    return [
+        {
+            "role": "system",
+            "content": get_prompt("graph_narrate", runtime.progress.locale),
+        },
+        {
+            "role": "user",
+            "content": json.dumps(payload, ensure_ascii=False),
+        },
+    ]
 
 
 def _resolve_narrative_subject(runtime, action) -> str | None:

@@ -55,7 +55,12 @@ def build_app(
         allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "Accept"],
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "Accept",
+            "bypass-tunnel-reminder",
+        ],
     )
     app.state.llm = llm
     app.state.basic_auth_user = basic_auth_user

@@ -62,6 +62,45 @@ describe('runGraphActionRequestOnce', () => {
     await pending;
   });
 
+  test('streams narration into one temporary gm log entry before final state', async () => {
+    const rt = runtime('game-1');
+
+    await runGraphActionRequestOnce(
+      async (_signal, events) => {
+        events.onNarrationDelta('당신은 ');
+        events.onNarrationDelta('문을 봅니다.');
+        return response('game-1');
+      },
+      rt,
+      [{ kind: 'player', text: '문을 본다' }],
+    );
+
+    expect(rt.setLog).toHaveBeenCalledTimes(3);
+    const appendPlayer = (rt.setLog as jest.Mock).mock.calls[0][0] as (
+      current: LogEntry[],
+    ) => LogEntry[];
+    const appendFirstDelta = (rt.setLog as jest.Mock).mock.calls[1][0] as (
+      current: LogEntry[],
+    ) => LogEntry[];
+    const appendSecondDelta = (rt.setLog as jest.Mock).mock.calls[2][0] as (
+      current: LogEntry[],
+    ) => LogEntry[];
+
+    const withPlayer = appendPlayer([]);
+    const withFirstDelta = appendFirstDelta(withPlayer);
+    const withSecondDelta = appendSecondDelta(withFirstDelta);
+
+    expect(withFirstDelta).toEqual([
+      expect.objectContaining({ kind: 'player', text: '문을 본다' }),
+      expect.objectContaining({ kind: 'gm', text: '당신은 ' }),
+    ]);
+    expect(withSecondDelta).toEqual([
+      expect.objectContaining({ kind: 'player', text: '문을 본다' }),
+      expect.objectContaining({ kind: 'gm', text: '당신은 문을 봅니다.' }),
+    ]);
+    expect(withSecondDelta[1].id).toBe(withFirstDelta[1].id);
+  });
+
   test('ignores a response for a game that is no longer active', async () => {
     const rt = runtime('game-2');
 

@@ -57,21 +57,44 @@ const graphState = (): GraphFrontState => ({
   log: [],
 });
 
+function streamResponse(lines: string[]) {
+  const chunks = lines.map((line) => new TextEncoder().encode(`${line}\n`));
+  let index = 0;
+  return {
+    ok: true,
+    status: 200,
+    body: {
+      getReader: () => ({
+        read: jest.fn(async () => {
+          const value = chunks[index];
+          index += 1;
+          return value ? { done: false, value } : { done: true, value: undefined };
+        }),
+        releaseLock: jest.fn(),
+      }),
+    },
+  };
+}
+
 describe('graph API helpers', () => {
   beforeEach(() => {
     fetch.mockReset();
   });
 
   test('posts explicit graph actions to the graph turn endpoint', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        game_id: 'game-1',
-        state: graphState(),
-        status: 'confirmation_required',
-        message: null,
-      }),
-    });
+    fetch.mockResolvedValueOnce(
+      streamResponse([
+        JSON.stringify({
+          type: 'final',
+          payload: {
+            game_id: 'game-1',
+            state: graphState(),
+            status: 'confirmation_required',
+            message: null,
+          },
+        }),
+      ]),
+    );
 
     const result = await sendGraphAction('game-1', {
       verb: 'transfer',
@@ -80,7 +103,7 @@ describe('graph API helpers', () => {
     });
 
     expect(fetch).toHaveBeenCalledWith(
-      'https://api.example.test/session/game-1/graph/turn',
+      'https://api.example.test/session/game-1/graph/turn/stream',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
@@ -89,6 +112,30 @@ describe('graph API helpers', () => {
       }),
     );
     expect(result.status).toBe('confirmation_required');
+  });
+
+  test('streams graph action narration deltas before the final payload', async () => {
+    const onNarrationDelta = jest.fn();
+    fetch.mockResolvedValueOnce(
+      streamResponse([
+        JSON.stringify({ type: 'delta', text: '검이 ' }),
+        JSON.stringify({ type: 'delta', text: '허공을 가릅니다.' }),
+        JSON.stringify({
+          type: 'final',
+          payload: {
+            game_id: 'game-1',
+            state: graphState(),
+            status: 'executed',
+            message: null,
+          },
+        }),
+      ]),
+    );
+
+    await sendGraphAction('game-1', { verb: 'attack', what: 'dummy' }, { onNarrationDelta });
+
+    expect(onNarrationDelta).toHaveBeenNthCalledWith(1, '검이 ');
+    expect(onNarrationDelta).toHaveBeenNthCalledWith(2, '허공을 가릅니다.');
   });
 
   test('tags restored graph sessions as graph runtime payloads', async () => {
@@ -220,6 +267,66 @@ describe('graph API helpers', () => {
   });
 
   test('posts graph text input with an abortable request signal', async () => {
+    fetch.mockResolvedValueOnce(
+      streamResponse([
+        JSON.stringify({
+          type: 'final',
+          payload: {
+            game_id: 'game-1',
+            state: graphState(),
+            status: 'executed',
+            message: null,
+          },
+        }),
+      ]),
+    );
+
+    await sendGraphInput('game-1', '마을 주민에게 말을 건다');
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/graph/input/stream',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          player_input: '마을 주민에게 말을 건다',
+          think: false,
+        }),
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+
+  test('streams graph text input narration deltas before the final payload', async () => {
+    const onNarrationDelta = jest.fn();
+    fetch.mockResolvedValueOnce(
+      streamResponse([
+        JSON.stringify({ type: 'delta', text: '당신은 ' }),
+        JSON.stringify({ type: 'delta', text: '문을 봅니다.' }),
+        JSON.stringify({
+          type: 'final',
+          payload: {
+            game_id: 'game-1',
+            state: graphState(),
+            status: 'executed',
+            message: null,
+          },
+        }),
+      ]),
+    );
+
+    const result = await sendGraphInput('game-1', '문을 본다', { onNarrationDelta });
+
+    expect(onNarrationDelta).toHaveBeenNthCalledWith(1, '당신은 ');
+    expect(onNarrationDelta).toHaveBeenNthCalledWith(2, '문을 봅니다.');
+    expect(result.status).toBe('executed');
+  });
+
+  test('falls back to the plain graph input endpoint when the stream route is unavailable', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      json: async () => ({ detail: 'not found' }),
+    });
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -232,7 +339,15 @@ describe('graph API helpers', () => {
 
     await sendGraphInput('game-1', '마을 주민에게 말을 건다');
 
-    expect(fetch).toHaveBeenCalledWith(
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      'https://api.example.test/session/game-1/graph/input/stream',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
       'https://api.example.test/session/game-1/graph/input',
       expect.objectContaining({
         method: 'POST',
@@ -246,15 +361,19 @@ describe('graph API helpers', () => {
   });
 
   test('links caller abort signals to graph requests', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        game_id: 'game-1',
-        state: graphState(),
-        status: 'executed',
-        message: null,
-      }),
-    });
+    fetch.mockResolvedValueOnce(
+      streamResponse([
+        JSON.stringify({
+          type: 'final',
+          payload: {
+            game_id: 'game-1',
+            state: graphState(),
+            status: 'executed',
+            message: null,
+          },
+        }),
+      ]),
+    );
 
     const controller = new AbortController();
     const promise = sendGraphInput('game-1', '마을 주민에게 말을 건다', {
