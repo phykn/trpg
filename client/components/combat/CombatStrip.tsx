@@ -42,10 +42,10 @@ export function CombatStrip({
             {target ? (
               <View className="items-end gap-1">
                 <Text className="font-sans-semibold text-caption text-fg-default">
-                  내 하트 {combat.playerHearts.current}/{combat.playerHearts.maximum}
+                  {ko.combat.playerHearts} {combat.playerHearts.current}/{combat.playerHearts.maximum}
                 </Text>
                 <Text className="font-sans-semibold text-caption text-fg-default">
-                  적 하트 {combat.enemyHearts.current}/{combat.enemyHearts.maximum}
+                  {ko.combat.enemyHearts} {combat.enemyHearts.current}/{combat.enemyHearts.maximum}
                 </Text>
               </View>
             ) : null}

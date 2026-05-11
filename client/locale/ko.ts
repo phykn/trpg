@@ -99,6 +99,8 @@ export const ko = {
     permanent: '영구 적용',
     confirmAction: '레벨업 확정',
     cancelAction: '레벨업 취소',
+    maxHpChoice: '최대 HP +1',
+    maxMpChoice: '최대 MP +1',
     raiseSuffix: '올리기',
   },
   gameOver: {
@@ -134,6 +136,8 @@ export const ko = {
     defend: '방어',
     flee: '도주',
     persuade: '설득',
+    playerHearts: '내 하트',
+    enemyHearts: '적 하트',
   },
   menu: {
     newGame: '새로운 이야기',

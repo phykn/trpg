@@ -14,8 +14,8 @@ type GrowthChoice = {
 };
 
 const CHOICES: GrowthChoice[] = [
-  { id: 'max_hp', label: '최대 HP +1', growth: { kind: 'max_hp' } },
-  { id: 'max_mp', label: '최대 MP +1', growth: { kind: 'max_mp' } },
+  { id: 'max_hp', label: ko.level.maxHpChoice, growth: { kind: 'max_hp' } },
+  { id: 'max_mp', label: ko.level.maxMpChoice, growth: { kind: 'max_mp' } },
 ];
 
 type Props = {
