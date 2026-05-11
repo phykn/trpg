@@ -1,6 +1,9 @@
 """Graph session REST routes."""
 
+import json
+
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.errors import (
@@ -13,9 +16,15 @@ from src.game.runtime.confirmation import (
     GraphConfirmationError,
     GraphConfirmationExpected,
     run_graph_action_request,
+    run_graph_action_request_stream,
     run_graph_confirm,
+    run_graph_confirm_stream,
 )
-from src.game.runtime.input import GraphInputError, run_graph_input_turn
+from src.game.runtime.input import (
+    GraphInputError,
+    run_graph_input_turn,
+    run_graph_input_turn_stream,
+)
 from src.game.runtime.level_up import GraphLevelUpError, run_graph_level_up
 from src.game.runtime.roll import GraphRollError, GraphRollExpected, run_graph_roll
 from src.game.runtime.session import (
@@ -135,6 +144,28 @@ async def session_graph_turn(
     )
 
 
+@router.post("/session/{game_id}/graph/turn/stream")
+async def session_graph_turn_stream(
+    game_id: str,
+    body: GraphTurnRequest,
+    llm: LLMClient = Depends(get_llm),
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+) -> StreamingResponse:
+    async def source():
+        with force_think(_request_thinking(body.think)):
+            async for event in run_graph_action_request_stream(
+                graph_repo,
+                game_id,
+                body.action,
+                llm=llm,
+                scenario_repo=scenario_repo,
+            ):
+                yield event
+
+    return _graph_action_streaming_response(game_id, source)
+
+
 @router.post("/session/{game_id}/graph/confirm", response_model=GraphActionResponse)
 async def session_graph_confirm(
     game_id: str,
@@ -165,6 +196,29 @@ async def session_graph_confirm(
         status=result.status,
         message=result.message,
     )
+
+
+@router.post("/session/{game_id}/graph/confirm/stream")
+async def session_graph_confirm_stream(
+    game_id: str,
+    body: ConfirmRequest,
+    llm: LLMClient = Depends(get_llm),
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+) -> StreamingResponse:
+    async def source():
+        with force_think(_request_thinking(body.think)):
+            async for event in run_graph_confirm_stream(
+                graph_repo,
+                game_id,
+                body.confirmation_id,
+                body.decision,
+                llm=llm,
+                scenario_repo=scenario_repo,
+            ):
+                yield event
+
+    return _graph_action_streaming_response(game_id, source)
 
 
 @router.post("/session/{game_id}/graph/roll", response_model=GraphActionResponse)
@@ -224,6 +278,78 @@ async def session_graph_input(
         status=result.status,
         message=result.message,
     )
+
+
+@router.post("/session/{game_id}/graph/input/stream")
+async def session_graph_input_stream(
+    game_id: str,
+    body: GraphInputRequest,
+    llm: LLMClient = Depends(get_llm),
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+) -> StreamingResponse:
+    async def source():
+        with force_think(_request_thinking(body.think)):
+            async for event in run_graph_input_turn_stream(
+                llm,
+                graph_repo,
+                game_id,
+                body.player_input,
+                scenario_repo=scenario_repo,
+            ):
+                yield event
+
+    return _graph_action_streaming_response(game_id, source)
+
+
+def _graph_action_streaming_response(game_id, source) -> StreamingResponse:
+    async def event_lines():
+        try:
+            async for event in source():
+                yield _stream_event(game_id, event)
+        except FileNotFoundError:
+            yield _stream_error(404, "game not found")
+        except GraphConfirmationActive as e:
+            yield _stream_error(409, str(e))
+        except GraphConfirmationExpected as e:
+            yield _stream_error(422, str(e))
+        except (
+            GraphInputError,
+            GraphConfirmationError,
+            GraphActionTurnError,
+            GraphRollError,
+        ) as e:
+            yield _stream_error(422, str(e))
+
+    return StreamingResponse(event_lines(), media_type="application/x-ndjson")
+
+
+def _stream_event(game_id: str, event) -> str:
+    if event["type"] == "final":
+        result = event["result"]
+        response = GraphActionResponse(
+            game_id=game_id,
+            state=result.front_state.model_dump(
+                mode="json",
+                by_alias=True,
+            ),
+            status=result.status,
+            message=result.message,
+        )
+        payload = {
+            "type": "final",
+            "payload": response.model_dump(mode="json"),
+        }
+    else:
+        payload = event
+    return json.dumps(payload, ensure_ascii=False) + "\n"
+
+
+def _stream_error(status: int, message: str) -> str:
+    return json.dumps(
+        {"type": "error", "status": status, "message": message},
+        ensure_ascii=False,
+    ) + "\n"
 
 
 @router.post("/session/{game_id}/graph/level_up", response_model=GraphActionResponse)

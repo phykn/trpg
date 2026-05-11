@@ -122,10 +122,10 @@ async def _tracking_repo(tmp_path) -> _DeltaTrackingRepo:
 
 class _NarrationLLM:
     def __init__(self) -> None:
-        self.calls = 0
+        self.calls = []
 
-    async def chat(self, *args, **kwargs):
-        self.calls += 1
+    async def chat(self, messages, **kwargs):
+        self.calls.append({"messages": messages, **kwargs})
         return {"answer": "칼끝이 번뜩이고, 적이 비틀거리며 길 위에 쓰러집니다."}
 
 
@@ -185,7 +185,7 @@ async def test_run_graph_action_turn_skips_llm_narration_for_plain_move(tmp_path
     )
     saved_logs = await repo.load_log_entries("game-1")
 
-    assert llm.calls == 0
+    assert len(llm.calls) == 0
     assert [entry.kind for entry in saved_logs] == ["act", "act"]
     assert result.front_state.log == saved_logs
 
@@ -272,6 +272,26 @@ async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(
     assert saved_logs[-1].text == "칼끝이 번뜩이고, 적이 비틀거리며 길 위에 쓰러집니다."
     assert result.front_state.log == saved_logs
     assert result.runtime.progress.next_log_id == saved_logs[-1].id + 1
+
+
+async def test_run_graph_action_turn_sends_combat_trace_to_narration(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _NarrationLLM()
+
+    await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="attack", what="goblin_01"),
+        llm=llm,  # type: ignore[arg-type]
+    )
+
+    call = llm.calls[-1]
+    import json
+
+    payload = json.loads(call["messages"][1]["content"])
+    assert payload["action"]["verb"] == "attack"
+    assert payload["combat"]["trace"]
+    assert payload["visible_targets"]
 
 
 async def test_run_graph_action_turn_times_out_slow_narration_and_keeps_action(

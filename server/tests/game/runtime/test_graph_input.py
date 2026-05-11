@@ -2,13 +2,13 @@ import json
 import asyncio
 
 import httpx
-import pytest
 from openai import RateLimitError
 
 from src.db.graph_local_fs import LocalFsGraphRepo
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
+from src.game.domain.memory import GMLogEntry
 from src.game.domain.progress import GameProgress
-from src.game.runtime.input import GraphInputError, run_graph_input_turn
+from src.game.runtime.input import run_graph_input_turn, run_graph_input_turn_stream
 
 
 class _FakeLLM:
@@ -34,6 +34,25 @@ class _FakeLLM:
         if agent == "graph_narrate":
             return {"answer": self.narration, "think": ""}
         return {"answer": json.dumps(self.payload, ensure_ascii=False), "think": ""}
+
+    async def chat_stream(
+        self,
+        messages,
+        think=False,
+        agent=None,
+        temperature=None,
+        use_fallback=False,
+    ):
+        self.calls.append({"messages": messages, "agent": agent})
+        if agent == "graph_narrate":
+            midpoint = max(1, len(self.narration) // 2)
+            for chunk in (self.narration[:midpoint], self.narration[midpoint:]):
+                yield {"answer": chunk, "think": None}
+            return
+        yield {
+            "answer": json.dumps(self.payload, ensure_ascii=False),
+            "think": None,
+        }
 
 
 class _SlowGraphNarrateLLM(_FakeLLM):
@@ -108,6 +127,11 @@ def _graph() -> Graph:
                 type="location",
                 properties={"name": "Town"},
             ),
+            "forest": GraphNode(
+                id="forest",
+                type="location",
+                properties={"name": "광장"},
+            ),
             "player_01": _character("player_01"),
             "goblin_01": _character("goblin_01"),
         },
@@ -123,6 +147,12 @@ def _graph() -> Graph:
                 type="located_at",
                 from_node_id="goblin_01",
                 to_node_id="town",
+            ),
+            "connects_to:town:forest": GraphEdge(
+                id="connects_to:town:forest",
+                type="connects_to",
+                from_node_id="town",
+                to_node_id="forest",
             ),
         },
     )
@@ -141,10 +171,13 @@ async def test_graph_input_classifies_one_action_and_creates_confirmation(tmp_pa
 
     result = await run_graph_input_turn(llm, repo, "game-1", "고블린을 공격한다")
     progress = await repo.load_progress("game-1")
+    logs = await repo.load_log_entries("game-1")
 
     assert result.status == "confirmation_required"
     assert progress.pending_confirmation["kind"] == "attack_start"
     assert progress.graph_combat_state is None
+    assert [entry.kind for entry in logs] == ["player"]
+    assert logs[0].text == "고블린을 공격한다"
 
 
 async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
@@ -158,9 +191,35 @@ async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
     progress = await repo.load_progress("game-1")
 
     assert result.status == "executed"
-    assert [entry.kind for entry in logs] == ["gm"]
-    assert logs[0].text == "상대는 당신의 말을 듣고 잠시 생각에 잠깁니다."
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert logs[0].text == "고블린에게 말을 건다"
+    assert logs[1].text == "상대는 당신의 말을 듣고 잠시 생각에 잠깁니다."
     assert progress.turn_count == 1
+
+
+async def test_graph_input_streams_speak_narration_before_final(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]},
+        narration="상대는 당신의 말을 듣습니다.",
+    )
+
+    events = [
+        event
+        async for event in run_graph_input_turn_stream(
+            llm,
+            repo,
+            "game-1",
+            "고블린에게 말을 건다",
+        )
+    ]
+    logs = await repo.load_log_entries("game-1")
+
+    assert [event["type"] for event in events] == ["delta", "delta", "final"]
+    assert "".join(event["text"] for event in events[:-1]) == "상대는 당신의 말을 듣습니다."
+    assert events[-1]["result"].status == "executed"
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert logs[-1].text == "상대는 당신의 말을 듣습니다."
 
 
 async def test_graph_input_perceive_creates_pending_roll(tmp_path):
@@ -175,7 +234,8 @@ async def test_graph_input_perceive_creates_pending_roll(tmp_path):
     assert progress.pending_roll["kind"] == "perceive"
     assert progress.pending_roll["stat"] == "mind"
     assert progress.pending_roll["required_roll"] == 13
-    assert logs == []
+    assert [entry.kind for entry in logs] == ["player"]
+    assert logs[0].text == "주변을 자세히 살펴본다"
     assert result.front_state.pending_roll is not None
 
 
@@ -195,6 +255,29 @@ async def test_graph_input_targetless_speak_defaults_to_nearby_living_npc(tmp_pa
         "state": "same_place",
     }
     assert "NPC의 짧은 반응이나 대사" in narrate_call["messages"][0]["content"]
+
+
+async def test_graph_input_narration_payload_includes_recent_log(tmp_path):
+    repo = await _repo(tmp_path)
+    await repo.append_log_entries(
+        "game-1",
+        [
+            GMLogEntry(id=1, kind="gm", text="경비병이 북문을 지킵니다."),
+        ],
+    )
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]}
+    )
+
+    await run_graph_input_turn(llm, repo, "game-1", "경비병에게 인사한다")
+    narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
+    payload = json.loads(narrate_call["messages"][1]["content"])
+
+    assert payload["recent_log"] == [
+        {"kind": "gm", "text": "경비병이 북문을 지킵니다."},
+        {"kind": "player", "text": "경비병에게 인사한다"},
+    ]
+    assert "recent_dialogue" in payload
 
 
 async def test_graph_input_speak_times_out_slow_narration_and_uses_fallback(
@@ -218,7 +301,8 @@ async def test_graph_input_speak_times_out_slow_narration_and_uses_fallback(
     logs = await repo.load_log_entries("game-1")
 
     assert result.status == "executed"
-    assert logs[0].text == "당신의 행동은 조용히 이어집니다."
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert logs[1].text == "당신의 행동은 조용히 이어집니다."
 
 
 async def test_graph_input_speak_rate_limited_narration_uses_fallback(tmp_path):
@@ -231,10 +315,37 @@ async def test_graph_input_speak_rate_limited_narration_uses_fallback(tmp_path):
     logs = await repo.load_log_entries("game-1")
 
     assert result.status == "executed"
-    assert logs[0].text == "당신의 행동은 조용히 이어집니다."
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert logs[1].text == "당신의 행동은 조용히 이어집니다."
 
 
-async def test_graph_input_rejects_multi_action_output(tmp_path):
+async def test_graph_input_runs_multiple_actions_in_order(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM(
+        {
+            "actions": [
+                {"verb": "move", "to": "forest"},
+                {"verb": "pass", "note": "주변을 살핀다"},
+            ]
+        },
+        narration="당신은 주변을 살핍니다.",
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "광장으로 가서 주변을 살핀다")
+    graph = await repo.load_graph("game-1")
+    progress = await repo.load_progress("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert "located_at:player_01:forest" in graph.edges
+    assert "located_at:player_01:town" not in graph.edges
+    assert progress.turn_count == 2
+    assert [entry.kind for entry in logs] == ["player", "act", "act", "gm"]
+    assert logs[1].text == "당신은 광장으로 이동합니다."
+    assert logs[-1].text == "당신은 주변을 살핍니다."
+
+
+async def test_graph_input_stops_multiple_actions_at_confirmation(tmp_path):
     repo = await _repo(tmp_path)
     llm = _FakeLLM(
         {
@@ -245,5 +356,12 @@ async def test_graph_input_rejects_multi_action_output(tmp_path):
         }
     )
 
-    with pytest.raises(GraphInputError, match="exactly one"):
-        await run_graph_input_turn(llm, repo, "game-1", "공격하고 기다린다")
+    result = await run_graph_input_turn(llm, repo, "game-1", "공격하고 기다린다")
+    progress = await repo.load_progress("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "confirmation_required"
+    assert progress.pending_confirmation["kind"] == "attack_start"
+    assert progress.turn_count == 0
+    assert [entry.kind for entry in logs] == ["player"]
+    assert logs[0].text == "공격하고 기다린다"

@@ -91,6 +91,51 @@ def test_graph_narration_prompt_files_are_packaged():
     assert get_prompt("graph_narrate", "ko")
 
 
+def test_graph_narration_prompts_encode_style_without_source_title():
+    intro_prompt = get_prompt("graph_intro", "ko")
+    narrate_prompt = get_prompt("graph_narrate", "ko")
+    combined = f"{intro_prompt}\n{narrate_prompt}"
+
+    assert "문체 목표" in intro_prompt
+    assert "문체 목표" in narrate_prompt
+    assert "감각" in combined
+    assert "선택" in combined
+    assert "냉소" in combined
+    assert "선택하지 않은 행동" in intro_prompt
+    assert "나쁜 예" in combined
+    assert "좋은 예" in combined
+    assert "한자" in combined
+    assert "문장 수를 강제하지 않습니다" in intro_prompt
+    assert "문장 수를 강제하지 않습니다" in narrate_prompt
+    assert "최대 420자" in intro_prompt
+    assert "최대 420자" in narrate_prompt
+    assert "「」" in narrate_prompt
+    assert "「멈추십시오」" in narrate_prompt
+    assert "「허가는 받았습니다」" in narrate_prompt
+    assert "직접 발화" in narrate_prompt
+    assert "NPC 직접 발화" in narrate_prompt
+    assert "당신의 새 대사" in narrate_prompt
+    assert "combat.outcome" in narrate_prompt
+    assert "1~2문장" not in combined
+    assert "2~3문장" not in combined
+    assert "한 문장" not in intro_prompt
+    assert "Baldur" not in combined
+    assert "발더" not in combined
+    assert "발게" not in combined
+
+
+def test_graph_narration_prompt_limits_match_runtime_cleaners():
+    from src.game.runtime.input import _clean_narration as clean_input
+    from src.game.runtime.intro import _clean_intro_text
+    from src.game.runtime.turn import _clean_narration as clean_action
+
+    long_text = "가" * 450
+
+    assert len(_clean_intro_text(long_text)) == 420
+    assert len(clean_action(long_text)) == 420
+    assert len(clean_input(long_text)) == 420
+
+
 @pytest.mark.asyncio
 async def test_graph_intro_uses_packaged_prompt(monkeypatch, tmp_path):
     import src.game.runtime.intro as intro_module
@@ -108,6 +153,28 @@ async def test_graph_intro_uses_packaged_prompt(monkeypatch, tmp_path):
     await run_graph_initial_narration(llm, repo, runtime)  # type: ignore[arg-type]
 
     assert llm.calls[-1]["messages"][0]["content"] == "graph_intro:ko"
+
+
+@pytest.mark.asyncio
+async def test_graph_intro_sends_rich_first_scene_payload(tmp_path):
+    import json
+    import src.game.runtime.intro as intro_module
+
+    repo = await _repo(tmp_path)
+    runtime = GameRuntimeState(
+        graph=await repo.load_graph("game-1"),
+        progress=await repo.load_progress("game-1"),
+    )
+    llm = _PromptCaptureLLM()
+
+    await intro_module.run_graph_initial_narration(llm, repo, runtime)  # type: ignore[arg-type]
+
+    payload = json.loads(llm.calls[-1]["messages"][1]["content"])
+    assert "player" in payload
+    assert "place" in payload
+    assert "visible_targets" in payload
+    assert "exits" in payload
+    assert "inventory" in payload
 
 
 @pytest.mark.asyncio

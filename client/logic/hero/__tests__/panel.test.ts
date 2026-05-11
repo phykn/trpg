@@ -39,6 +39,14 @@ describe('buildHeroSlot', () => {
     expect(slot.chip.short).toBe('주인공');
     expect(slot.chip).not.toHaveProperty('detail');
     expect(slot.panel?.actions).toBeUndefined();
+    expect(slot.panel?.meta?.[0]?.text).toBe('Lv 1');
     expect(slot.panel?.sections?.find((section) => section.label === '소지')?.text).toBe('금화(0) · 회복 물약 · 가죽 갑옷');
+  });
+
+  test('keeps level-up out of the hero panel title actions', () => {
+    const slot = buildHeroSlot({ ...hero, canLevelUp: true });
+
+    expect(slot.chip.dot).toBe(true);
+    expect(slot.panel?.titleAction).toBeUndefined();
   });
 });

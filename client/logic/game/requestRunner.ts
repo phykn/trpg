@@ -5,7 +5,17 @@ import type { FrontState, GraphActionClientResponse } from '@/services/wire';
 
 type ApplyState = (state: FrontState, gameId?: string | null) => void;
 type SetSuggestions = (next: React.SetStateAction<string[]>) => void;
-type GraphActionCall = (signal: AbortSignal) => Promise<GraphActionClientResponse>;
+type GraphActionRequestEvents = {
+  onNarrationDelta: (text: string) => void;
+};
+type GraphActionCall = (
+  signal: AbortSignal,
+  events: GraphActionRequestEvents,
+) => Promise<GraphActionClientResponse>;
+export type OptimisticLogEntry =
+  | { kind: 'gm'; text: string }
+  | { kind: 'player'; text: string }
+  | { kind: 'act'; text: string };
 
 export type GraphActionRequestRuntime = {
   requestInFlightRef: React.MutableRefObject<boolean>;
@@ -27,6 +37,47 @@ function mergeEntry(log: LogEntry[], entry: LogEntry): LogEntry[] {
   return next;
 }
 
+function createOptimisticLogEntry(
+  entry: OptimisticLogEntry,
+  generation: number,
+  index: number,
+): LogEntry {
+  return {
+    id: -(generation * 1000 + index + 1),
+    ...entry,
+  };
+}
+
+function appendOptimisticLogEntries(
+  runtime: GraphActionRequestRuntime,
+  generation: number,
+  entries: OptimisticLogEntry[],
+): void {
+  if (entries.length === 0) return;
+  runtime.setLog((current) => [
+    ...current,
+    ...entries.map((entry, index) => createOptimisticLogEntry(entry, generation, index)),
+  ]);
+}
+
+function appendStreamingNarration(
+  runtime: GraphActionRequestRuntime,
+  generation: number,
+  optimisticEntryCount: number,
+  text: string,
+): void {
+  if (!text) return;
+  const id = -(generation * 1000 + optimisticEntryCount + 1);
+  runtime.setLog((current) => {
+    const existing = current.find((entry) => entry.id === id);
+    return mergeEntry(current, {
+      id,
+      kind: 'gm',
+      text: `${existing?.kind === 'gm' ? existing.text : ''}${text}`,
+    });
+  });
+}
+
 function isAbortError(err: unknown): boolean {
   return err instanceof Error && err.name === 'AbortError';
 }
@@ -44,6 +95,7 @@ export function abortGraphActionRequest(runtime: GraphActionRequestRuntime): voi
 export async function runGraphActionRequestOnce(
   call: GraphActionCall,
   runtime: GraphActionRequestRuntime,
+  optimisticEntries: OptimisticLogEntry[] = [],
 ): Promise<void> {
   if (runtime.requestInFlightRef.current) return;
   const generation = runtime.requestGenerationRef.current + 1;
@@ -54,8 +106,19 @@ export async function runGraphActionRequestOnce(
   runtime.setRequestInFlight(true);
   runtime.setErrorMessage(null);
   runtime.setSuggestions([]);
+  appendOptimisticLogEntries(runtime, generation, optimisticEntries);
   try {
-    const response = await call(controller.signal);
+    const response = await call(controller.signal, {
+      onNarrationDelta: (text: string) => {
+        if (
+          runtime.requestGenerationRef.current !== generation
+          || controller.signal.aborted
+        ) {
+          return;
+        }
+        appendStreamingNarration(runtime, generation, optimisticEntries.length, text);
+      },
+    });
     if (runtime.requestGenerationRef.current !== generation) return;
     if (runtime.isActiveGameId && !runtime.isActiveGameId(response.game_id)) return;
     runtime.applyState(response.state, response.game_id);
@@ -106,7 +169,7 @@ export function useGraphActionRunner({
   const requestGenerationRef = React.useRef(0);
 
   const runGraphActionRequest = React.useCallback(
-    async (call: GraphActionCall) => {
+    async (call: GraphActionCall, optimisticEntries: OptimisticLogEntry[] = []) => {
       await runGraphActionRequestOnce(call, {
         requestInFlightRef,
         abortControllerRef,
@@ -117,7 +180,7 @@ export function useGraphActionRunner({
         setSuggestions,
         applyState,
         isActiveGameId,
-      });
+      }, optimisticEntries);
     },
     [applyState, isActiveGameId, setErrorMessage, setLog, setSuggestions],
   );

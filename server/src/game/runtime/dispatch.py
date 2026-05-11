@@ -1,8 +1,9 @@
 from typing import Any, cast
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.game.domain.action import Action
+from src.game.domain.combat import GraphCombatTraceEvent
 from src.game.domain.graph import GraphChange
 from src.game.engines.graph_item_use import GraphItemUseError, plan_item_use
 from src.game.engines.graph_move import GraphMoveError, plan_character_move
@@ -39,6 +40,7 @@ class GraphActionDispatchResult(BaseModel):
     changed_edge_ids: list[str]
     removed_edge_ids: list[str]
     outcome: str | None = None
+    combat_trace: list[GraphCombatTraceEvent] = Field(default_factory=list)
 
 
 def dispatch_graph_action(
@@ -100,6 +102,7 @@ def _dispatch_combat(
         changed_edge_ids=combat.changed_edge_ids,
         removed_edge_ids=combat.removed_edge_ids,
         outcome=combat.outcome,
+        combat_trace=combat.combat.state.trace,
     )
 
 

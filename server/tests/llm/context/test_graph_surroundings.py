@@ -164,6 +164,23 @@ def test_graph_surroundings_exposes_grounded_visible_ids():
     assert surroundings["in_combat"] is False
 
 
+def test_graph_surroundings_includes_location_description():
+    graph = _grounded_graph()
+    graph.nodes["town"].properties["description"] = "돌길과 낮은 담장이 이어집니다."
+    runtime = GameRuntimeState(
+        graph=graph,
+        progress=GameProgress(game_id="game-1", player_id="player_01"),
+    )
+
+    surroundings = build_graph_surroundings(runtime)
+
+    assert surroundings["location"] == {
+        "id": "town",
+        "name": "마을",
+        "description": "돌길과 낮은 담장이 이어집니다.",
+    }
+
+
 def test_graph_surroundings_marks_enemies_and_omits_defeated_characters():
     payload = build_graph_surroundings(_runtime())
 

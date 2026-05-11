@@ -103,7 +103,6 @@ function ActDivider({ text }: { text: string }) {
   return (
     <Animated.View style={{ transform: [{ scale }], opacity }}>
       <Surface
-        stripeColor={colors.accent.fg}
         className="px-3 py-2.5 flex-row items-start gap-2"
       >
         <Glyph kind="filled" tone="accent" size={11} style={{ lineHeight: 20 }} />

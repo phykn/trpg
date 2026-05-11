@@ -122,3 +122,37 @@ def test_transfer_accepts_self_refs_and_exposed_item_ids():
     )
 
     assert validate_grounded_output(output, _surroundings()) is output
+
+
+def test_transfer_equip_grounds_item_and_slot_without_actor_refs():
+    output = ActionOutput(
+        actions=[
+            Action(verb="transfer", what="potion_01", how="equip", to="weapon"),
+        ]
+    )
+
+    assert validate_grounded_output(output, _surroundings()) is output
+
+
+def test_transfer_unequip_grounds_equipped_item_without_actor_refs():
+    output = ActionOutput(
+        actions=[
+            Action(verb="transfer", what="sword_01", how="unequip"),
+        ]
+    )
+
+    assert validate_grounded_output(output, _surroundings()) is output
+
+
+def test_transfer_equip_rejects_non_slot_destination():
+    output = ActionOutput.model_construct(
+        actions=[
+            Action.model_construct(
+                verb="transfer", what="potion_01", how="equip", to="goblin_01"
+            ),
+        ],
+        refuse=None,
+    )
+
+    with pytest.raises(ActionGroundingError, match="to"):
+        validate_grounded_output(output, _surroundings())

@@ -153,7 +153,11 @@ def _location_payload(
 ) -> dict[str, str] | None:
     if node is None or node.type != "location":
         return None
-    return {"id": node.id, "name": node_label(runtime.content, node)}
+    payload = {"id": node.id, "name": node_label(runtime.content, node)}
+    description = node_value(runtime.content, node, "description")
+    if isinstance(description, str) and description:
+        payload["description"] = description
+    return payload
 
 
 def _kind(runtime: GameRuntimeState, node: GraphNode) -> str:

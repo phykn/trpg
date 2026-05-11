@@ -1,5 +1,6 @@
 import asyncio
 import json
+from collections.abc import AsyncIterator
 
 from openai import APIConnectionError, InternalServerError, RateLimitError
 from pydantic import BaseModel, ConfigDict
@@ -9,7 +10,6 @@ from src.game.domain.action import Action
 from src.game.domain.content import merge_content, node_label, node_text
 from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph import GraphNode
-from src.game.domain.graph_query import location_of
 from src.game.domain.memory import GMLogEntry
 from src.game.engines.graph_quest_generation import plan_missing_quest_offer
 from src.llm.calls._runner import get_prompt
@@ -26,6 +26,7 @@ from .dispatch import (
 )
 from .cards import build_graph_action_card, build_graph_quest_offer_card
 from .load import load_runtime_state
+from .narration_context import build_action_narration_payload
 from .state import GameRuntimeState
 
 
@@ -42,6 +43,7 @@ class GraphActionTurnResult(BaseModel):
 
 
 _GRAPH_ACTION_NARRATION_TIMEOUT_SECONDS = 6.0
+_MAX_GRAPH_NARRATION_CHARS = 420
 
 
 async def run_graph_action_turn(
@@ -178,6 +180,128 @@ async def run_graph_action_turn_from_runtime(
     )
 
 
+async def run_graph_action_turn_from_runtime_stream(
+    repo: GraphRepo,
+    game_id: str,
+    runtime: GameRuntimeState,
+    action: Action,
+    *,
+    llm: LLMClient | None = None,
+) -> AsyncIterator[dict[str, object]]:
+    set_diag_context(game_id, runtime.progress.turn_count)
+    engine_diag("turn:start", action=action.verb)
+    try:
+        dispatch = dispatch_graph_action(runtime, action)
+    except GraphActionDispatchError as exc:
+        engine_diag("dispatch:fail", action=action.verb, err=type(exc).__name__)
+        raise GraphActionTurnError(str(exc)) from exc
+    engine_diag(
+        "dispatch:done",
+        kind=dispatch.kind,
+        applied=dispatch.applied,
+        outcome=dispatch.outcome,
+    )
+
+    next_runtime = dispatch.runtime
+    changed_node_ids = set(dispatch.changed_node_ids)
+    changed_edge_ids = set(dispatch.changed_edge_ids)
+    removed_edge_ids = set(dispatch.removed_edge_ids)
+    offer_quest_id: str | None = None
+    if next_runtime.progress.graph_combat_state is None:
+        offer = plan_missing_quest_offer(
+            next_runtime.graph,
+            next_runtime.progress.player_id,
+            next_runtime.progress.locale,
+        )
+        if offer is not None:
+            offer_apply = apply_runtime_graph_changes(
+                next_runtime,
+                offer.changes,
+            )
+            next_runtime = offer_apply.runtime
+            changed_node_ids.update(offer_apply.changed_node_ids)
+            changed_edge_ids.update(offer_apply.changed_edge_ids)
+            removed_edge_ids.update(offer_apply.removed_edge_ids)
+            runtime_content = merge_content(
+                next_runtime.progress.runtime_content,
+                offer.content,
+            )
+            next_runtime = next_runtime.model_copy(
+                update={
+                    "content": merge_content(next_runtime.content, offer.content),
+                    "progress": next_runtime.progress.model_copy(
+                        update={"runtime_content": runtime_content}
+                    ),
+                }
+            )
+            offer_quest_id = offer.quest_id
+            engine_diag("quest:offer", quest=offer_quest_id)
+    card = build_graph_action_card(runtime, next_runtime, action, dispatch)
+    cards = [card]
+    if offer_quest_id is not None:
+        cards.append(
+            build_graph_quest_offer_card(
+                next_runtime,
+                offer_quest_id,
+                card.id + 1,
+            )
+        )
+    narration_chunks: list[str] = []
+    async for chunk in _stream_graph_action_narration(
+        llm,
+        before=runtime,
+        after=next_runtime,
+        action=action,
+        dispatch=dispatch,
+        card_texts=[card.text for card in cards],
+    ):
+        narration_chunks.append(chunk)
+        yield {"type": "delta", "text": chunk}
+    narration = _clean_narration("".join(narration_chunks))
+    log_entries = [*cards]
+    if narration:
+        log_entries.append(
+            GMLogEntry(
+                id=card.id + len(cards),
+                kind="gm",
+                text=narration,
+            )
+        )
+
+    next_progress = next_runtime.progress.model_copy(
+        update={"next_log_id": card.id + len(log_entries)}
+    )
+    next_runtime = next_runtime.model_copy(
+        update={
+            "progress": next_progress,
+            "log_entries": [*next_runtime.log_entries, *log_entries],
+        }
+    )
+    await repo.save_graph_changes(
+        game_id,
+        next_runtime.graph,
+        changed_node_ids=sorted(changed_node_ids),
+        changed_edge_ids=sorted(changed_edge_ids),
+        removed_edge_ids=sorted(removed_edge_ids),
+    )
+    await repo.append_log_entries(game_id, log_entries)
+    await repo.save_progress(next_runtime.progress)
+    engine_diag(
+        "turn:done",
+        status="executed",
+        logs=len(log_entries),
+        next_turn=next_runtime.progress.turn_count,
+    )
+    yield {
+        "type": "final",
+        "result": GraphActionTurnResult(
+            runtime=next_runtime,
+            dispatch=dispatch,
+            front_state=graph_to_front_state(next_runtime),
+        ),
+    }
+
+
 async def _build_graph_action_narration(
     llm: LLMClient | None,
     *,
@@ -187,24 +311,21 @@ async def _build_graph_action_narration(
     dispatch: GraphActionDispatchResult,
     card_texts: list[str],
 ) -> str:
-    if llm is None or not _needs_graph_action_narration(
-        before, after, action, dispatch
-    ):
-        return ""
-    prompt = _narration_user_prompt(before, after, card_texts)
-    if not prompt:
+    messages = _graph_action_narration_messages(
+        llm,
+        before=before,
+        after=after,
+        action=action,
+        dispatch=dispatch,
+        card_texts=card_texts,
+    )
+    if messages is None:
         return ""
     llm_diag("llm:call", agent="graph_narrate")
     try:
         result = await asyncio.wait_for(
             llm.chat(
-                [
-                    {
-                        "role": "system",
-                        "content": get_prompt("graph_narrate", before.progress.locale),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
+                messages,
                 think=False,
                 agent="graph_narrate",
                 temperature=0.2,
@@ -228,6 +349,75 @@ async def _build_graph_action_narration(
     return _clean_narration(answer)
 
 
+async def _stream_graph_action_narration(
+    llm: LLMClient | None,
+    *,
+    before: GameRuntimeState,
+    after: GameRuntimeState,
+    action: Action,
+    dispatch: GraphActionDispatchResult,
+    card_texts: list[str],
+) -> AsyncIterator[str]:
+    messages = _graph_action_narration_messages(
+        llm,
+        before=before,
+        after=after,
+        action=action,
+        dispatch=dispatch,
+        card_texts=card_texts,
+    )
+    if messages is None or llm is None:
+        return
+    llm_diag("llm:call", agent="graph_narrate")
+    try:
+        async with asyncio.timeout(_GRAPH_ACTION_NARRATION_TIMEOUT_SECONDS):
+            async for part in llm.chat_stream(
+                messages,
+                think=False,
+                agent="graph_narrate",
+                temperature=0.2,
+            ):
+                answer = part.get("answer")
+                if isinstance(answer, str) and answer:
+                    yield answer
+    except (
+        LLMUnavailable,
+        OSError,
+        TimeoutError,
+        InternalServerError,
+        APIConnectionError,
+        RateLimitError,
+    ) as exc:
+        llm_diag("llm:fail", agent="graph_narrate", err=type(exc).__name__)
+        return
+    llm_diag("llm:done", agent="graph_narrate")
+
+
+def _graph_action_narration_messages(
+    llm: LLMClient | None,
+    *,
+    before: GameRuntimeState,
+    after: GameRuntimeState,
+    action: Action,
+    dispatch: GraphActionDispatchResult,
+    card_texts: list[str],
+) -> list[dict[str, str]] | None:
+    if llm is None or not _needs_graph_action_narration(
+        before, after, action, dispatch
+    ):
+        return None
+    prompt = _narration_user_prompt(before, after, action, dispatch, card_texts)
+    if not prompt:
+        return None
+    return [
+        {
+            "role": "system",
+            "content": get_prompt("graph_narrate", before.progress.locale),
+        },
+        {"role": "user", "content": prompt},
+    ]
+
+
 def _needs_graph_action_narration(
     before: GameRuntimeState,
     after: GameRuntimeState,
@@ -246,29 +436,27 @@ def _needs_graph_action_narration(
 def _narration_user_prompt(
     before: GameRuntimeState,
     after: GameRuntimeState,
+    action: Action,
+    dispatch: GraphActionDispatchResult,
     card_texts: list[str],
 ) -> str:
-    player = after.graph.nodes.get(after.progress.player_id)
-    place_id = location_of(after.graph, after.progress.player_id)
-    place = after.graph.nodes.get(place_id or "")
-    return json.dumps(
-        {
-            "player": _node_name(after, player),
-            "current_place": _node_name(after, place),
-            "place_description": _node_description_value(after, place),
-            "resolved_results": card_texts,
-            "combat_scene": before.progress.graph_combat_state is not None
-            or after.progress.graph_combat_state is not None,
-        },
-        ensure_ascii=False,
+    payload = build_action_narration_payload(
+        before=before,
+        after=after,
+        action=action,
+        dispatch=dispatch,
+        card_texts=card_texts,
     )
+    if payload["current_place"] is None:
+        return ""
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def _clean_narration(text: str) -> str:
     cleaned = " ".join(text.split())
-    if len(cleaned) <= 220:
+    if len(cleaned) <= _MAX_GRAPH_NARRATION_CHARS:
         return cleaned
-    return cleaned[:220].rstrip()
+    return cleaned[:_MAX_GRAPH_NARRATION_CHARS].rstrip()
 
 
 def _node_name(runtime: GameRuntimeState, node: GraphNode | None) -> str:

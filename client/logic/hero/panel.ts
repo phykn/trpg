@@ -4,22 +4,14 @@ import type { PanelSlot } from '@/logic/info-panel';
 
 import type { EquipItem, Hero } from './types';
 
-export type BuildHeroSlotOpts = {
-  onLevelUpOpen?: () => void;
-};
-
-export function buildHeroSlot(hero: Hero, opts?: BuildHeroSlotOpts): PanelSlot {
+export function buildHeroSlot(hero: Hero): PanelSlot {
   const equipped = Object.values(hero.equipment).filter((it): it is EquipItem => it != null);
-  const titleAction = hero.canLevelUp && opts?.onLevelUpOpen
-    ? { label: ko.level.title, onPress: opts.onLevelUpOpen }
-    : undefined;
   return {
     id: 'hero',
     chip: { short: ko.hero.chip, dot: hero.canLevelUp },
     panel: {
       title: withDeath(hero.name, hero.alive),
       meta: [{ text: characterMeta(hero.level, hero.raceJob, hero.gender) }],
-      titleAction,
       barSplit: [
         { label: 'HP', value: hero.hp, max: hero.hpMax, tone: 'hp', display: `${hero.hp}/${hero.hpMax}` },
         { label: 'MP', value: hero.mp, max: hero.mpMax, tone: 'mp', display: `${hero.mp}/${hero.mpMax}` },

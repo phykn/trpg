@@ -5,16 +5,17 @@ from openai import APIConnectionError, InternalServerError, RateLimitError
 from src.db.repo import GraphRepo
 from src.game.domain.content import node_label, node_text
 from src.game.domain.errors import LLMUnavailable
-from src.game.domain.graph_query import characters_at, edges_from, location_of
+from src.game.domain.graph_query import location_of
 from src.game.domain.memory import GMLogEntry
 from src.llm.calls._runner import get_prompt
 from src.llm.client import LLMClient
 from src.llm.diag import llm_diag
 from src.locale.render import render
 
+from .narration_context import build_intro_narration_payload
 from .state import GameRuntimeState
 
-_MAX_INTRO_CHARS = 240
+_MAX_INTRO_CHARS = 420
 
 
 async def run_graph_initial_narration(
@@ -123,37 +124,10 @@ async def _generate_intro_text(llm: LLMClient, runtime: GameRuntimeState) -> str
 
 
 def _intro_user_prompt(runtime: GameRuntimeState) -> str:
-    graph = runtime.graph_index
-    player_id = runtime.progress.player_id
-    place_id = location_of(graph, player_id)
-    if place_id is None:
+    payload = build_intro_narration_payload(runtime)
+    if payload["place"] is None:
         return ""
-    place = graph.nodes.get(place_id)
-    player = graph.nodes.get(player_id)
-    if place is None or place.type != "location" or player is None:
-        return ""
-
-    visible_targets = [
-        node_label(runtime.content, graph.nodes[target_id])
-        for target_id in characters_at(graph, place_id)
-        if target_id != player_id and target_id in graph.nodes
-    ]
-    exits = [
-        node_label(runtime.content, target)
-        for edge in edges_from(graph, place_id, "connects_to")
-        if (target := graph.nodes.get(edge.to_node_id)) is not None
-        and target.type == "location"
-    ]
-    return json.dumps(
-        {
-            "player": node_label(runtime.content, player),
-            "place": node_label(runtime.content, place),
-            "place_description": node_text(runtime.content, place, "description"),
-            "visible_targets": visible_targets,
-            "exits": exits,
-        },
-        ensure_ascii=False,
-    )
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def _already_has_gm_log(runtime: GameRuntimeState) -> bool:

@@ -21,8 +21,7 @@ export function signed(n: number): string {
 }
 
 export function characterMeta(level: number, raceJob: string, gender: string): string {
-  const parts = [`Lv ${level}`, raceJob];
-  if (gender) parts.push(gender);
+  const parts = [`Lv ${level}`, raceJob, gender].filter((part) => part.trim().length > 0);
   return parts.join(SEP);
 }
 

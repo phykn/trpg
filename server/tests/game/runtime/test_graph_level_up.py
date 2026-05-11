@@ -57,7 +57,7 @@ async def test_run_graph_level_up_commits_choice_and_returns_front_state(tmp_pat
     assert saved_logs[0].kind == "act"
     assert (
         saved_logs[0].text
-        == "테스터의 레벨이 올랐습니다 (레벨 2, 몸 ↑, HP 35 / MP 25)."
+        == "테스터의 레벨이 올랐습니다 (레벨 2, 근력 ↑, HP 35 / MP 25)."
     )
     assert result.front_state.hero.level == 2
     assert result.front_state.hero.exp == 0

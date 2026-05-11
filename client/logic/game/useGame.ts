@@ -42,13 +42,17 @@ import type {
   GraphStatKey,
 } from '@/services/wire';
 import { ko } from '@/locale/ko';
-import { useGraphActionRunner } from './requestRunner';
+import { useGraphActionRunner, type OptimisticLogEntry } from './requestRunner';
 
 export type GameStatus = 'loading' | 'no-game' | 'ready' | 'error';
 
 export type Game = ReturnType<typeof useGame>;
 
 const GRAPH_STAT_KEYS = new Set<GraphStatKey>(['body', 'agility', 'mind', 'presence']);
+
+function optimisticAct(label?: string): OptimisticLogEntry[] {
+  return label ? [{ kind: 'act', text: label }] : [];
+}
 
 export function useGame() {
   const [status, setStatus] = React.useState<GameStatus>('loading');
@@ -185,29 +189,47 @@ export function useGame() {
     (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || !gameId || pendingConfirmation || pendingRoll) return;
-      void runGraphActionRequest((signal) => sendGraphInput(gameId, trimmed, { signal }));
+      void runGraphActionRequest(
+        (signal, events) =>
+          sendGraphInput(gameId, trimmed, {
+            signal,
+            onNarrationDelta: events.onNarrationDelta,
+          }),
+        [{ kind: 'player', text: trimmed }],
+      );
     },
     [gameId, pendingConfirmation, pendingRoll, runGraphActionRequest],
   );
 
   const onQuestAction = React.useCallback(
-    (kind: 'accept' | 'abandon', quest_id: string) => {
+    (kind: 'accept' | 'abandon', quest_id: string, label?: string) => {
       if (!gameId || pendingConfirmation || pendingRoll) return;
-      void runGraphActionRequest((signal) =>
+      void runGraphActionRequest((signal, events) =>
         sendGraphAction(gameId, {
           verb: 'transfer',
           what: quest_id,
           how: kind,
-        }, { signal }),
+        }, {
+          signal,
+          onNarrationDelta: events.onNarrationDelta,
+        }),
+        optimisticAct(label),
       );
     },
     [gameId, pendingConfirmation, pendingRoll, runGraphActionRequest],
   );
 
   const onGraphAction = React.useCallback(
-    (action: GraphAction) => {
+    (action: GraphAction, label?: string) => {
       if (!gameId || pendingConfirmation || pendingRoll) return;
-      void runGraphActionRequest((signal) => sendGraphAction(gameId, action, { signal }));
+      void runGraphActionRequest(
+        (signal, events) =>
+          sendGraphAction(gameId, action, {
+            signal,
+            onNarrationDelta: events.onNarrationDelta,
+          }),
+        optimisticAct(label),
+      );
     },
     [gameId, pendingConfirmation, pendingRoll, runGraphActionRequest],
   );
@@ -216,12 +238,16 @@ export function useGame() {
     (decision: 'confirm' | 'cancel') => {
       if (!gameId || !pendingConfirmation) return;
       const confirmationId = pendingConfirmation.id;
-      void runGraphActionRequest((signal) =>
+      setPendingConfirmation(null);
+      void runGraphActionRequest((signal, events) =>
         confirmGraphAction(gameId, {
           confirmation_id: confirmationId,
           decision,
           think: false,
-        }, { signal }),
+        }, {
+          signal,
+          onNarrationDelta: events.onNarrationDelta,
+        }),
       );
     },
     [gameId, pendingConfirmation, runGraphActionRequest],

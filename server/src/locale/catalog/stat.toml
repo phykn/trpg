@@ -1,5 +1,5 @@
 [stat.body]
-ko = "몸"
+ko = "근력"
 en = "Body"
 
 [stat.agility]
@@ -7,9 +7,9 @@ ko = "민첩"
 en = "Agility"
 
 [stat.mind]
-ko = "정신"
+ko = "지력"
 en = "Mind"
 
 [stat.presence]
-ko = "존재감"
+ko = "매력"
 en = "Presence"

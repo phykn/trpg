@@ -20,6 +20,7 @@ ActionValue = str | list[str]
 RefuseCategory = Literal["out_of_game", "meta_breaking"]
 
 _TRANSFER_HOW = {"gift", "trade", "steal", "accept", "abandon", "equip", "unequip"}
+_EQUIP_SLOTS = {"weapon", "armor", "accessory"}
 _SPEAK_HOW = {
     "friendly",
     "hostile",
@@ -89,9 +90,17 @@ def _validate_classifier_action(action: Action, *, in_combat: bool) -> None:
         return
 
     if action.verb == "transfer":
+        _require_enum(action.how, _TRANSFER_HOW, "transfer.how")
+        item_id = _single(action.what) or _single(action.with_)
+        if action.how == "equip":
+            _require_string(item_id, "transfer.what")
+            _require_enum(action.to, _EQUIP_SLOTS, "transfer.to")
+            return
+        if action.how == "unequip":
+            _require_string(item_id, "transfer.what")
+            return
         _require_string(action.from_, "transfer.from")
         _require_string(action.to, "transfer.to")
-        _require_enum(action.how, _TRANSFER_HOW, "transfer.how")
         return
 
     if action.verb == "use":
