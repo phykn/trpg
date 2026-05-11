@@ -1,13 +1,28 @@
-from math import ceil
+from random import randint
+
 from pydantic import BaseModel, ConfigDict
 
 from src.game.domain.combat import (
+    CombatActionKind,
+    CombatSupportKind,
     GraphCombatAction,
     GraphCombatState,
     GraphCombatTraceEvent,
 )
-from src.game.domain.graph import Graph, GraphChange, GraphNode, SetNodePropertyChange
+from src.game.domain.graph import (
+    Graph,
+    GraphChange,
+    GraphNode,
+    RemoveEdgeChange,
+    SetNodePropertyChange,
+)
 from src.game.domain.graph_query import edges_from, location_of
+
+
+BASE_COMBAT_DC = 11
+MIN_COMBAT_DC = 6
+MAX_COMBAT_DC = 18
+STARTING_HEARTS = 3
 
 
 class GraphCombatError(ValueError):
@@ -19,6 +34,17 @@ class GraphCombatResult(BaseModel):
 
     changes: list[GraphChange]
     state: GraphCombatState
+
+
+class _SupportPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    support_id: str
+    support_kind: CombatSupportKind
+    support_bonus: int
+    mp_cost: int = 0
+    consume_edge_id: str | None = None
+    effect_template: str | None = None
 
 
 def plan_combat_start(
@@ -43,9 +69,12 @@ def plan_combat_start(
     state = GraphCombatState(
         location_id=player_location,
         player_id=player_id,
+        active_enemy_id=enemy_id,
         enemy_ids=[enemy_id],
         participant_ids=[player_id, enemy_id],
         sides={player_id: "player", enemy_id: "enemy"},
+        player_hearts=STARTING_HEARTS,
+        enemy_hearts=STARTING_HEARTS,
         trace=[
             GraphCombatTraceEvent(
                 kind="combat_started",
@@ -62,6 +91,8 @@ def plan_combat_exchange(
     state: GraphCombatState,
     actor_id: str,
     action: GraphCombatAction,
+    *,
+    dice: int | None = None,
 ) -> GraphCombatResult:
     if state.outcome != "ongoing":
         raise GraphCombatError(f"combat is already resolved: {state.outcome}")
@@ -70,57 +101,215 @@ def plan_combat_exchange(
 
     player = _require_character(graph, state.player_id)
     _require_can_fight(player)
-    target_id = action.target_id or _first_live_enemy_id(graph, state)
+    target_id = action.target_id or state.active_enemy_id
     enemy = _require_enemy(graph, state, target_id)
     _require_can_fight(enemy)
 
-    changes: list[GraphChange] = []
+    support = _resolve_support(graph, player, action)
+    changes = _resource_changes(player, support)
+    roll = _normalize_roll(dice)
+    dc = _combat_dc(player, enemy, action.kind, support)
+    success = roll >= dc
+
     next_state = state.model_copy(deep=True)
+    next_state.active_enemy_id = enemy.id
     next_state.last_action = action.kind
+    next_state.last_support_id = action.support_id
+    next_state.last_support_kind = action.support_kind
+    next_state.last_roll = roll
+    next_state.last_dc = dc
 
-    if action.kind == "flee":
-        next_state.outcome = "fled"
-        next_state.trace.append(
-            GraphCombatTraceEvent(kind="player_fled", actor_id=actor_id)
-        )
-        return GraphCombatResult(changes=[], state=next_state)
+    _apply_heart_result(next_state, actor_id, enemy.id, action.kind, success, support)
+    _apply_terminal_result(changes, graph, next_state, player, enemy)
 
-    player_hp = _int_prop(player, "hp")
-    player_max_hp = _int_prop(player, "max_hp")
-    enemy_hp = _int_prop(enemy, "hp")
-    enemy_max_hp = _int_prop(enemy, "max_hp")
+    if next_state.outcome == "ongoing":
+        next_state.round = state.round + 1
 
-    enemy_hp_after = enemy_hp
-    player_hp_after = player_hp
+    return GraphCombatResult(changes=changes, state=next_state)
 
-    if action.kind == "attack":
-        amount = _attack_amount(player, enemy_max_hp)
-        enemy_hp_after = _plan_hp_loss(changes, enemy.id, enemy_hp, amount)
-        next_state.trace.append(
-            GraphCombatTraceEvent(
-                kind="player_attacked",
-                actor_id=actor_id,
-                target_id=enemy.id,
-                state=_hp_state(enemy_hp_after, enemy_max_hp),
+
+def _resolve_support(
+    graph: Graph,
+    player: GraphNode,
+    action: GraphCombatAction,
+) -> _SupportPlan | None:
+    if action.support_id is None and action.support_kind is None:
+        return None
+    if action.support_id is None or action.support_kind is None:
+        raise GraphCombatError("support_id and support_kind must be provided together")
+    if action.support_kind == "skill":
+        return _resolve_skill_support(graph, player, action)
+    return _resolve_item_support(graph, player, action)
+
+
+def _resolve_skill_support(
+    graph: Graph,
+    player: GraphNode,
+    action: GraphCombatAction,
+) -> _SupportPlan:
+    assert action.support_id is not None
+    skill = graph.nodes.get(action.support_id)
+    if skill is None:
+        raise GraphCombatError(f"missing skill: {action.support_id}")
+    if skill.type != "skill":
+        raise GraphCombatError(f"node is not a skill: {action.support_id}")
+    if not any(
+        edge.to_node_id == action.support_id
+        for edge in edges_from(graph, player.id, "knows_skill")
+    ):
+        raise GraphCombatError(f"{player.id} does not know skill: {action.support_id}")
+
+    supported_action = _string_prop(
+        skill,
+        "action",
+        fallback=_string_prop(skill, "kind", fallback=_string_prop(skill, "type")),
+    )
+    if supported_action != action.kind:
+        raise GraphCombatError(f"skill does not support action: {action.support_id}")
+
+    mp_cost = _int_value(skill.properties.get("mp_cost"), default=0)
+    current_mp = _int_prop(player, "mp")
+    if current_mp < mp_cost:
+        raise GraphCombatError(f"not enough mp: {current_mp} < {mp_cost}")
+
+    return _SupportPlan(
+        support_id=action.support_id,
+        support_kind="skill",
+        support_bonus=_bounded_bonus(skill.properties.get("support_bonus")),
+        mp_cost=mp_cost,
+        effect_template=_string_prop(skill, "effect_template"),
+    )
+
+
+def _resolve_item_support(
+    graph: Graph,
+    player: GraphNode,
+    action: GraphCombatAction,
+) -> _SupportPlan:
+    assert action.support_id is not None
+    item = graph.nodes.get(action.support_id)
+    if item is None:
+        raise GraphCombatError(f"missing item: {action.support_id}")
+    if item.type != "item":
+        raise GraphCombatError(f"node is not an item: {action.support_id}")
+
+    placement_edge = next(
+        (
+            edge
+            for edge in edges_from(graph, player.id)
+            if edge.to_node_id == action.support_id
+            and edge.type in {"carries", "equips"}
+        ),
+        None,
+    )
+    if placement_edge is None:
+        raise GraphCombatError(f"{player.id} does not have item: {action.support_id}")
+
+    supported_action = _string_prop(
+        item,
+        "support_action",
+        fallback=_string_prop(item, "action"),
+    )
+    if supported_action != action.kind:
+        raise GraphCombatError(f"item does not support action: {action.support_id}")
+
+    return _SupportPlan(
+        support_id=action.support_id,
+        support_kind="item",
+        support_bonus=_bounded_bonus(item.properties.get("support_bonus")),
+        consume_edge_id=placement_edge.id
+        if item.properties.get("consumable") is True
+        else None,
+        effect_template=_string_prop(item, "effect_template"),
+    )
+
+
+def _resource_changes(
+    player: GraphNode,
+    support: _SupportPlan | None,
+) -> list[GraphChange]:
+    if support is None:
+        return []
+
+    changes: list[GraphChange] = []
+    if support.mp_cost > 0:
+        changes.append(_set(player.id, "mp", _int_prop(player, "mp") - support.mp_cost))
+    if support.consume_edge_id is not None:
+        changes.append(
+            RemoveEdgeChange(
+                type="remove_edge",
+                edge_id=support.consume_edge_id,
             )
         )
-    elif action.kind == "cast":
-        amount = _plan_cast(changes, graph, player, enemy, action)
-        enemy_hp_after = _plan_hp_loss(changes, enemy.id, enemy_hp, amount)
-        next_state.trace.append(
+    return changes
+
+
+def _combat_dc(
+    player: GraphNode,
+    enemy: GraphNode,
+    action: CombatActionKind,
+    support: _SupportPlan | None,
+) -> int:
+    del action
+    raw_dc = BASE_COMBAT_DC + _level(enemy) - _level(player)
+    if support is not None and support.effect_template in {"dc_down", "escape_boost"}:
+        raw_dc -= support.support_bonus
+    return min(MAX_COMBAT_DC, max(MIN_COMBAT_DC, raw_dc))
+
+
+def _apply_heart_result(
+    state: GraphCombatState,
+    actor_id: str,
+    enemy_id: str,
+    kind: CombatActionKind,
+    success: bool,
+    support: _SupportPlan | None,
+) -> None:
+    if success:
+        if kind in {"attack", "social"}:
+            damage = 1
+            if support is not None and support.effect_template == "extra_heart_damage":
+                damage += 1
+            state.enemy_hearts = max(0, state.enemy_hearts - damage)
+            target_id = enemy_id
+        elif kind == "defend":
+            state.player_hearts = min(STARTING_HEARTS, state.player_hearts + 1)
+            target_id = actor_id
+        else:
+            state.outcome = "fled"
+            target_id = actor_id
+        state.trace.append(
             GraphCombatTraceEvent(
-                kind="player_cast",
+                kind=f"player_{kind}_success",
                 actor_id=actor_id,
-                target_id=enemy.id,
-                state=_hp_state(enemy_hp_after, enemy_max_hp),
+                target_id=target_id,
+                state=_heart_state(state),
             )
         )
-    elif action.kind == "defend":
-        next_state.trace.append(
-            GraphCombatTraceEvent(kind="player_defended", actor_id=actor_id)
-        )
+        return
 
-    if enemy_hp_after <= 0:
+    if support is None or support.effect_template != "prevent_heart_loss":
+        state.player_hearts = max(0, state.player_hearts - 1)
+    state.trace.append(
+        GraphCombatTraceEvent(
+            kind=f"player_{kind}_failure",
+            actor_id=actor_id,
+            target_id=enemy_id if kind in {"attack", "social"} else actor_id,
+            state=_heart_state(state),
+        )
+    )
+
+
+def _apply_terminal_result(
+    changes: list[GraphChange],
+    graph: Graph,
+    state: GraphCombatState,
+    player: GraphNode,
+    enemy: GraphNode,
+) -> None:
+    if state.outcome == "fled":
+        return
+    if state.enemy_hearts <= 0:
         _plan_defeat(
             changes,
             enemy,
@@ -128,59 +317,36 @@ def plan_combat_exchange(
             marker="defeated",
             set_hp_zero=False,
         )
-        next_state.outcome = "victory"
-        next_state.trace.append(
+        state.outcome = "victory"
+        state.trace.append(
             GraphCombatTraceEvent(
                 kind="enemy_defeated",
-                actor_id=actor_id,
+                actor_id=state.player_id,
                 target_id=enemy.id,
-                state="downed",
+                state="hearts:0",
             )
         )
-        return GraphCombatResult(changes=changes, state=next_state)
-
-    if state.round >= 4:
-        _force_terminal_outcome(
-            changes,
-            next_state,
-            player=player,
-            enemy=enemy,
-            player_hp=player_hp_after,
-            enemy_hp=enemy_hp_after,
-        )
-        return GraphCombatResult(changes=changes, state=next_state)
-
-    incoming = _enemy_response_amount(player_max_hp, defended=action.kind == "defend")
-    player_hp_after = _plan_hp_loss(changes, player.id, player_hp, incoming)
-    next_state.trace.append(
-        GraphCombatTraceEvent(
-            kind="enemy_pressed",
-            actor_id=enemy.id,
-            target_id=player.id,
-            state=_hp_state(player_hp_after, player_max_hp),
-        )
-    )
-    if player_hp_after <= 0:
+        return
+    if state.player_hearts <= 0:
+        hp_loss = max(0, state.enemy_hearts)
+        current_hp = _int_prop(player, "hp")
+        changes.append(_set(player.id, "hp", max(0, current_hp - hp_loss)))
         _plan_defeat(
             changes,
-            player,
+            graph.nodes[player.id],
             mode="downed",
             marker="downed",
             set_hp_zero=False,
         )
-        next_state.outcome = "defeat"
-        next_state.trace.append(
+        state.outcome = "defeat"
+        state.trace.append(
             GraphCombatTraceEvent(
                 kind="player_downed",
                 actor_id=enemy.id,
                 target_id=player.id,
-                state="downed",
+                state=f"hp_loss:{hp_loss}",
             )
         )
-        return GraphCombatResult(changes=changes, state=next_state)
-
-    next_state.round = min(4, state.round + 1)
-    return GraphCombatResult(changes=changes, state=next_state)
 
 
 def _require_character(graph: Graph, character_id: str) -> GraphNode:
@@ -211,112 +377,6 @@ def _require_can_fight(node: GraphNode) -> None:
         raise GraphCombatError(f"character cannot fight: {node.id}")
 
 
-def _first_live_enemy_id(graph: Graph, state: GraphCombatState) -> str:
-    for enemy_id in state.enemy_ids:
-        enemy = _require_character(graph, enemy_id)
-        if enemy.properties.get("alive") is not False and _int_prop(enemy, "hp") > 0:
-            return enemy_id
-    raise GraphCombatError("combat has no live enemy")
-
-
-def _plan_cast(
-    changes: list[GraphChange],
-    graph: Graph,
-    player: GraphNode,
-    enemy: GraphNode,
-    action: GraphCombatAction,
-) -> int:
-    if action.skill_id is None:
-        raise GraphCombatError("skill_id is required for cast")
-    skill = graph.nodes.get(action.skill_id)
-    if skill is None:
-        raise GraphCombatError(f"missing skill: {action.skill_id}")
-    if skill.type != "skill":
-        raise GraphCombatError(f"node is not a skill: {action.skill_id}")
-    if not any(
-        edge.to_node_id == action.skill_id
-        for edge in edges_from(graph, player.id, "knows_skill")
-    ):
-        raise GraphCombatError(f"{player.id} does not know skill: {action.skill_id}")
-
-    kind = skill.properties.get("kind", skill.properties.get("type"))
-    if kind != "attack":
-        raise GraphCombatError(f"skill is not a combat attack: {action.skill_id}")
-
-    mp_cost = _int_value(skill.properties.get("mp_cost"), default=0)
-    current_mp = _int_prop(player, "mp")
-    if current_mp < mp_cost:
-        raise GraphCombatError(f"not enough mp: {current_mp} < {mp_cost}")
-    if mp_cost:
-        changes.append(_set(player.id, "mp", current_mp - mp_cost))
-
-    power = _int_value(skill.properties.get("power"), default=0)
-    if power > 0:
-        return power
-    return max(1, ceil(_int_prop(enemy, "max_hp") * 0.55))
-
-
-def _attack_amount(player: GraphNode, enemy_max_hp: int) -> int:
-    stat = _stat_value(player, preferred="body", default=2)
-    return max(1, ceil(enemy_max_hp * 0.38) + max(0, stat - 2))
-
-
-def _enemy_response_amount(player_max_hp: int, *, defended: bool) -> int:
-    ratio = 0.10 if defended else 0.25
-    return max(1, ceil(player_max_hp * ratio))
-
-
-def _force_terminal_outcome(
-    changes: list[GraphChange],
-    state: GraphCombatState,
-    *,
-    player: GraphNode,
-    enemy: GraphNode,
-    player_hp: int,
-    enemy_hp: int,
-) -> None:
-    player_ratio = player_hp / max(1, _int_prop(player, "max_hp"))
-    enemy_ratio = enemy_hp / max(1, _int_prop(enemy, "max_hp"))
-    if player_ratio >= enemy_ratio:
-        _plan_defeat(
-            changes,
-            enemy,
-            mode="escaped",
-            marker="defeated",
-            set_hp_zero=False,
-        )
-        state.outcome = "victory"
-        target_id = enemy.id
-    else:
-        _plan_defeat(
-            changes,
-            player,
-            mode="downed",
-            marker="downed",
-            set_hp_zero=True,
-        )
-        state.outcome = "defeat"
-        target_id = player.id
-    state.trace.append(
-        GraphCombatTraceEvent(
-            kind="forced_end",
-            actor_id=state.player_id,
-            target_id=target_id,
-        )
-    )
-
-
-def _plan_hp_loss(
-    changes: list[GraphChange],
-    node_id: str,
-    current_hp: int,
-    amount: int,
-) -> int:
-    next_hp = max(0, current_hp - amount)
-    changes.append(_set(node_id, "hp", next_hp))
-    return next_hp
-
-
 def _plan_defeat(
     changes: list[GraphChange],
     node: GraphNode,
@@ -335,28 +395,34 @@ def _plan_defeat(
     changes.append(_set(node.id, "status", next_status))
 
 
-def _hp_state(hp: int, max_hp: int) -> str:
-    if hp <= 0:
-        return "downed"
-    ratio = hp / max(1, max_hp)
-    if ratio <= 0.25:
-        return "critical"
-    if ratio <= 0.65:
-        return "hurt"
-    return "healthy"
+def _normalize_roll(dice: int | None) -> int:
+    roll = randint(1, 20) if dice is None else dice
+    if roll < 1 or roll > 20:
+        raise GraphCombatError(f"dice roll must be between 1 and 20: {roll}")
+    return roll
 
 
-def _stat_value(
+def _heart_state(state: GraphCombatState) -> str:
+    return f"player:{state.player_hearts},enemy:{state.enemy_hearts},dc:{state.last_dc},roll:{state.last_roll}"
+
+
+def _level(node: GraphNode) -> int:
+    return _int_value(node.properties.get("level"), default=1)
+
+
+def _bounded_bonus(value: object) -> int:
+    bonus = _int_value(value, default=0)
+    return min(4, max(0, bonus))
+
+
+def _string_prop(
     node: GraphNode,
+    key: str,
     *,
-    preferred: str,
-    default: int,
-) -> int:
-    stats = node.properties.get("stats")
-    if not isinstance(stats, dict):
-        return default
-    value = stats.get(preferred, default)
-    return value if isinstance(value, int) else default
+    fallback: str | None = None,
+) -> str | None:
+    value = node.properties.get(key)
+    return value if isinstance(value, str) else fallback
 
 
 def _int_prop(node: GraphNode, key: str) -> int:
