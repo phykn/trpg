@@ -19,12 +19,8 @@ ko = "새 의뢰가 도착합니다: {quest}."
 en = "A new request arrives: {quest}."
 
 [runtime."card.level_up"]
-ko = "{actor}의 레벨이 올랐습니다 (레벨 {level}, {stat} ↑, HP {max_hp} / MP {max_mp})."
-en = "{actor} leveled up (level {level}, {stat} up, HP {max_hp} / MP {max_mp})."
-
-[runtime."card.level_up_with_skill"]
-ko = "{base} {skill}{을/를} 배웠습니다."
-en = "{base} Learned {skill}."
+ko = "{actor}의 레벨이 올랐습니다 (레벨 {level}, {growth}, HP {max_hp} / MP {max_mp})."
+en = "{actor} leveled up (level {level}, {growth}, HP {max_hp} / MP {max_mp})."
 
 [runtime."card.move"]
 ko = "당신은 {destination}{으로/로} 이동합니다."

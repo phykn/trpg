@@ -1,11 +1,10 @@
 from pydantic import BaseModel, ConfigDict
 
 from src.db.repo import GraphRepo, ScenarioRepo
-from src.game.domain.types import GraphStatKey
 from src.game.engines.graph_growth import (
     GraphGrowthError,
     plan_level_up,
-    plan_skill_learn,
+    plan_skill_level_up,
 )
 from src.llm.diag import engine_diag, set_diag_context
 from src.wire.graph_to_front import GraphFrontStatePayload, graph_to_front_state
@@ -31,37 +30,27 @@ async def run_graph_level_up(
     repo: GraphRepo,
     game_id: str,
     *,
-    stat_up: GraphStatKey,
-    skill_id: str | None,
+    growth: dict[str, str],
     scenario_repo: ScenarioRepo | None = None,
 ) -> GraphLevelUpResult:
     runtime = await load_runtime_state(repo, game_id, scenario_repo)
     set_diag_context(game_id, runtime.progress.turn_count)
-    engine_diag("levelup:start", stat=stat_up)
+    engine_diag("levelup:start", growth=growth.get("kind"))
     if runtime.progress.pending_confirmation is not None:
         raise GraphLevelUpError("pending confirmation active")
 
     try:
-        result = plan_level_up(runtime.graph, runtime.progress.player_id, stat_up)
-        skill_result = (
-            plan_skill_learn(runtime.graph, runtime.progress.player_id, skill_id)
-            if skill_id is not None
-            else None
-        )
+        result, growth_label = _plan_growth_choice(runtime, growth)
     except GraphGrowthError as exc:
-        engine_diag("levelup:fail", stat=stat_up, err=type(exc).__name__)
+        engine_diag("levelup:fail", growth=growth.get("kind"), err=type(exc).__name__)
         raise GraphLevelUpError(str(exc)) from exc
 
-    changes = [
-        *result.changes,
-        *(skill_result.changes if skill_result is not None else []),
-    ]
+    changes = result.changes
     applied = apply_runtime_graph_changes(runtime, changes)
     next_runtime = applied.runtime
     card = build_graph_level_up_card(
         next_runtime,
-        stat_up,
-        skill_id,
+        growth_label,
         next_runtime.progress.next_log_id,
     )
     next_progress = next_runtime.progress.model_copy(
@@ -86,9 +75,64 @@ async def run_graph_level_up(
     player = next_runtime.graph.nodes[next_runtime.progress.player_id]
     level = player.properties.get("level")
     engine_diag(
-        "levelup:ok", stat=stat_up, next_level=level if isinstance(level, int) else None
+        "levelup:ok",
+        growth=growth.get("kind"),
+        next_level=level if isinstance(level, int) else None,
     )
     return GraphLevelUpResult(
         runtime=next_runtime,
         front_state=graph_to_front_state(next_runtime),
     )
+
+
+def _plan_growth_choice(
+    runtime: GameRuntimeState,
+    growth: dict[str, str],
+) -> tuple[object, str]:
+    kind = growth.get("kind")
+    if kind == "max_hp":
+        result = plan_level_up(
+            runtime.graph,
+            runtime.progress.player_id,
+            {"kind": "max_hp"},
+        )
+        return result, "최대 HP +1"
+    if kind == "max_mp":
+        result = plan_level_up(
+            runtime.graph,
+            runtime.progress.player_id,
+            {"kind": "max_mp"},
+        )
+        return result, "최대 MP +1"
+    if kind == "learn_skill":
+        skill_id = _require_skill_id(growth)
+        result = plan_skill_level_up(
+            runtime.graph,
+            runtime.progress.player_id,
+            learn_skill_id=skill_id,
+        )
+        return result, f"{_skill_label(runtime, skill_id)} 습득"
+    if kind == "upgrade_skill":
+        skill_id = _require_skill_id(growth)
+        result = plan_skill_level_up(
+            runtime.graph,
+            runtime.progress.player_id,
+            upgrade_skill_id=skill_id,
+        )
+        return result, f"{_skill_label(runtime, skill_id)} 강화"
+    raise GraphLevelUpError(f"unknown growth kind: {kind}")
+
+
+def _require_skill_id(growth: dict[str, str]) -> str:
+    skill_id = growth.get("skill_id")
+    if not isinstance(skill_id, str) or not skill_id:
+        raise GraphLevelUpError("skill_id is required")
+    return skill_id
+
+
+def _skill_label(runtime: GameRuntimeState, skill_id: str) -> str:
+    node = runtime.graph.nodes.get(skill_id)
+    if node is None:
+        return skill_id
+    name = node.properties.get("name")
+    return name if isinstance(name, str) and name else skill_id
