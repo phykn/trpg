@@ -1875,7 +1875,240 @@ git commit -m "Update level-up growth API"
 
 Expected: commit succeeds.
 
-## Task 7: Documentation And Full Regression
+## Task 7: Dev Test Scenario And Tester Guide
+
+**Files:**
+- Modify: `scenarios/dev_test/player_template.json`
+- Modify: `scenarios/dev_test/skills/training_strike.json`
+- Modify: `scenarios/dev_test/skills/focus_bolt.json`
+- Modify: `scenarios/dev_test/items/practice_dagger.json`
+- Modify: `scenarios/dev_test/items/focus_charm.json`
+- Create: `scenarios/dev_test/items/smoke_bomb.json`
+- Create: `scenarios/dev_test/items/throwing_knife.json`
+- Modify: `tester.md`
+- Test: `server/tests/game/seed/test_graph_seed.py`
+
+- [ ] **Step 1: Update dev_test starting resources**
+
+In `scenarios/dev_test/player_template.json`, change `xp_pool` from `100` to `1` so the new `xp_pool >= current_level` level-up rule is still immediately testable at level 1:
+
+```json
+{
+  "id": "player_01",
+  "level": 1,
+  "equipment": {
+    "weapon": "practice_dagger"
+  },
+  "inventory_ids": [
+    "practice_dagger",
+    "focus_charm",
+    "smoke_bomb",
+    "throwing_knife",
+    "training_vest",
+    "copper_ring",
+    "healing_herb",
+    "mana_draught"
+  ],
+  "gold": 10,
+  "xp_pool": 1
+}
+```
+
+- [ ] **Step 2: Convert dev_test skills into support templates**
+
+Replace `scenarios/dev_test/skills/training_strike.json` with:
+
+```json
+{
+  "id": "training_strike",
+  "name": "훈련 일격",
+  "description": "공격 판정을 안정시키는 시작 기술.",
+  "level": 1,
+  "kind": "support",
+  "action": "attack",
+  "effect_template": "dc_down",
+  "support_bonus": 2,
+  "mp_cost": 2,
+  "tier": 1,
+  "tags": ["starter", "melee", "training"]
+}
+```
+
+Replace `scenarios/dev_test/skills/focus_bolt.json` with:
+
+```json
+{
+  "id": "focus_bolt",
+  "name": "집중 화살",
+  "description": "공격 성공 뒤 적 하트를 하나 더 깎는 업그레이드 후보 기술.",
+  "level": 1,
+  "kind": "support",
+  "action": "attack",
+  "effect_template": "extra_heart_damage",
+  "support_bonus": 0,
+  "mp_cost": 3,
+  "tier": 1,
+  "tags": ["learnable", "focus", "burst"]
+}
+```
+
+- [ ] **Step 3: Convert dev_test items into combat supports**
+
+Update `scenarios/dev_test/items/practice_dagger.json` so equipped dagger can support attack:
+
+```json
+{
+  "id": "practice_dagger",
+  "name": "훈련 단검",
+  "description": "장비한 동안 공격 판정을 조금 돕는 가벼운 단검.",
+  "weight": 1.0,
+  "price": 10,
+  "effects": {
+    "type": "weapon",
+    "weapon_dice": "1d4",
+    "range": 1.5
+  },
+  "support_action": "attack",
+  "effect_template": "dc_down",
+  "support_bonus": 1,
+  "required": null,
+  "consumable": false,
+  "on_use": null
+}
+```
+
+Update `scenarios/dev_test/items/focus_charm.json` so it tests post-roll failure prevention:
+
+```json
+{
+  "id": "focus_charm",
+  "name": "집중 부적",
+  "description": "실패했을 때 하트 손실을 한 번 막는 일회용 부적.",
+  "weight": 0.1,
+  "price": 5,
+  "effects": {
+    "type": "consumable",
+    "effect": "buff",
+    "amount": 0,
+    "description": "집중",
+    "duration": 2
+  },
+  "support_action": "defend",
+  "effect_template": "prevent_heart_loss",
+  "support_bonus": 0,
+  "required": null,
+  "consumable": true,
+  "on_use": null
+}
+```
+
+Create `scenarios/dev_test/items/smoke_bomb.json`:
+
+```json
+{
+  "id": "smoke_bomb",
+  "name": "연막탄",
+  "description": "도주 판정을 크게 돕는 일회용 도구.",
+  "weight": 0.2,
+  "price": 8,
+  "support_action": "flee",
+  "effect_template": "escape_boost",
+  "support_bonus": 4,
+  "required": null,
+  "consumable": true,
+  "on_use": null
+}
+```
+
+Create `scenarios/dev_test/items/throwing_knife.json`:
+
+```json
+{
+  "id": "throwing_knife",
+  "name": "투척 단검",
+  "description": "공격 판정을 크게 돕고 소모되는 단검.",
+  "weight": 0.5,
+  "price": 6,
+  "support_action": "attack",
+  "effect_template": "dc_down",
+  "support_bonus": 3,
+  "required": null,
+  "consumable": true,
+  "on_use": null
+}
+```
+
+- [ ] **Step 4: Verify dev_test seed integrity**
+
+Run:
+
+```powershell
+.\.venv\Scripts\python.exe -m server.scripts.check_seed scenarios/dev_test
+.\.venv\Scripts\python -m pytest server/tests/game/seed/test_graph_seed.py server/tests/game/seed/test_init_graph.py -q
+```
+
+Expected: seed check and selected seed tests pass.
+
+- [ ] **Step 5: Update tester.md for heart combat QA**
+
+In `tester.md`, update the combat and level-up sections so manual QA covers the new features:
+
+```markdown
+### 하트 전투와 스킬/아이템 보조
+
+1. 새 게임을 시작한다.
+2. `훈련 일격으로 훈련용 허수아비를 공격한다`
+3. 공격 시작 확인창을 승인한다.
+
+기대값: 전투 패널은 HP 피해가 아니라 내 하트 3/3, 적 하트 3/3에서 시작한다. `훈련 일격`은 MP 2를 소모하고 공격 판정 DC를 낮춘다. 성공하면 적 하트가 줄고, 승리해도 실제 HP는 줄지 않는다.
+
+아이템 보조:
+
+1. 새 게임을 다시 시작한다.
+2. `투척 단검으로 훈련용 허수아비를 공격한다`
+3. 공격 시작 확인창을 승인한다.
+
+기대값: 투척 단검은 공격 보조로 쓰이고, 사용 뒤 인벤토리에서 사라진다. 스킬과 아이템을 한 턴에 동시에 붙일 수 없어야 한다.
+
+방어 보조:
+
+1. `위험 훈련장으로 이동한다`
+2. `중장 훈련 골렘을 공격한다`
+3. 공격 시작 확인창을 승인한다.
+4. 전투 중 `집중 부적으로 방어한다`
+
+기대값: 집중 부적은 실패 후 하트 손실 방지 효과를 테스트한다. 사용 뒤 소모된다.
+
+도주 보조:
+
+1. `위험 훈련장으로 이동한다`
+2. `중장 훈련 골렘을 공격한다`
+3. 공격 시작 확인창을 승인한다.
+4. `연막탄으로 도주한다`
+
+기대값: 연막탄은 도주 DC를 크게 낮추고 사용 뒤 소모된다. 도주 성공 시 combat 상태가 해제되고 실제 HP 손실은 없다.
+```
+
+Replace the old `판정과 레벨업` level-up expectation with:
+
+```markdown
+기대값: 레벨업은 시작 경험치 `1`로 바로 가능하다. 첫 레벨업 선택지는 최대 HP +1 또는 최대 MP +1을 적용하고, 레벨은 2가 되며 선택한 최대 자원만 1 오른다.
+```
+
+Remove the sentence that says skill selection level-up is outside the manual test range.
+
+- [ ] **Step 6: Commit dev_test QA updates**
+
+Run:
+
+```powershell
+git add scenarios/dev_test tester.md
+git commit -m "Update dev_test for heart combat QA"
+```
+
+Expected: commit succeeds.
+
+## Task 8: Documentation And Full Regression
 
 **Files:**
 - Modify: `docs/04-gameplay.md`
@@ -1976,7 +2209,8 @@ Spec coverage:
 - Starting skill and scenario migration are covered in Task 4.
 - Front-state and client heart display are covered in Task 5.
 - API request shape and level-up UI are covered in Task 6.
-- Gameplay docs and regression verification are covered in Task 7.
+- `dev_test` and `tester.md` QA coverage are covered in Task 7.
+- Gameplay docs and regression verification are covered in Task 8.
 
 Placeholder scan:
 
