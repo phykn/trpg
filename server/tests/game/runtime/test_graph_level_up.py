@@ -5,6 +5,23 @@ from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.engines.growth import xp_for_next_level
 from src.game.runtime.level_up import GraphLevelUpError, run_graph_level_up
+from src.game.runtime.level_up_choices import build_level_up_choices
+from src.game.runtime.load import load_runtime_state
+
+
+class _SkillCandidateLLM:
+    def pick_fallback(self, agent):
+        return None
+
+    async def chat(self, messages, **kw):
+        return {
+            "answer": (
+                '{"skills":[{"name":"그림자 찌르기","description":"공격 DC를 낮춘다.",'
+                '"action":"attack","effect_template":"dc_down","support_bonus":2,'
+                '"mp_cost":2,"tags":["stealth","attack"]}]}'
+            ),
+            "think": None,
+        }
 
 
 def _player(*, xp_pool: int | None = None) -> GraphNode:
@@ -125,6 +142,40 @@ async def test_run_graph_level_up_can_upgrade_known_skill(tmp_path):
     edge = saved_graph.edges["knows_skill:learned:player_01:fireball"]
     assert edge.properties["tier"] == 2
     assert "화염구 강화" in saved_logs[0].text
+
+
+async def test_level_up_options_include_llm_skill_candidate(tmp_path):
+    repo = await _repo(tmp_path)
+    runtime = await load_runtime_state(repo, "game-1")
+
+    choices = await build_level_up_choices(runtime, llm=_SkillCandidateLLM())
+
+    learn = next(choice for choice in choices if choice["id"].startswith("learn_skill:"))
+    assert learn["label"] == "그림자 찌르기 습득"
+    assert learn["growth"]["kind"] == "learn_skill"
+    assert learn["growth"]["skill"]["effect_template"] == "dc_down"
+    assert learn["growth"]["skill"]["mp_cost"] == 2
+
+
+async def test_run_graph_level_up_can_learn_generated_skill(tmp_path):
+    repo = await _repo(tmp_path)
+    runtime = await load_runtime_state(repo, "game-1")
+    choices = await build_level_up_choices(runtime, llm=_SkillCandidateLLM())
+    growth = next(
+        choice["growth"]
+        for choice in choices
+        if choice["id"].startswith("learn_skill:")
+    )
+
+    await run_graph_level_up(repo, "game-1", growth=growth)
+    saved_graph = await repo.load_graph("game-1")
+    skill_id = growth["skill_id"]
+
+    assert saved_graph.nodes[skill_id].type == "skill"
+    assert saved_graph.nodes[skill_id].properties["name"] == "그림자 찌르기"
+    assert saved_graph.edges[f"knows_skill:learned:player_01:{skill_id}"].properties[
+        "tier"
+    ] == 1
 
 
 async def test_run_graph_level_up_rejects_insufficient_xp_without_saving(tmp_path):

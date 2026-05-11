@@ -5,11 +5,12 @@ import { Surface } from '@/components/ui';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import type { Hero } from '@/logic/hero';
-import type { GraphLevelUpGrowth } from '@/services/wire';
+import type { GraphLevelUpChoice, GraphLevelUpGrowth } from '@/services/wire';
 
 type GrowthChoice = {
-  id: 'max_hp' | 'max_mp';
+  id: string;
   label: string;
+  description?: string;
   growth: GraphLevelUpGrowth;
 };
 
@@ -20,13 +21,19 @@ const CHOICES: GrowthChoice[] = [
 
 type Props = {
   hero: Hero;
+  choices?: GraphLevelUpChoice[];
+  loading?: boolean;
   onCommit: (growth: GraphLevelUpGrowth) => void;
   onCancel: () => void;
 };
 
-export function LevelUpPrompt({ hero, onCommit, onCancel }: Props) {
-  const [selectedId, setSelectedId] = React.useState<GrowthChoice['id']>('max_hp');
-  const selected = CHOICES.find((choice) => choice.id === selectedId) ?? CHOICES[0];
+export function LevelUpPrompt({ hero, choices = [], loading = false, onCommit, onCancel }: Props) {
+  const growthChoices = choices.length > 0 ? choices : CHOICES;
+  const [selectedId, setSelectedId] = React.useState<GrowthChoice['id']>(growthChoices[0]?.id ?? 'max_hp');
+  React.useEffect(() => {
+    setSelectedId(growthChoices[0]?.id ?? 'max_hp');
+  }, [growthChoices]);
+  const selected = growthChoices.find((choice) => choice.id === selectedId) ?? growthChoices[0] ?? CHOICES[0];
 
   const renderChoiceButton = (choice: GrowthChoice) => {
     const active = selectedId === choice.id;
@@ -75,9 +82,21 @@ export function LevelUpPrompt({ hero, onCommit, onCancel }: Props) {
         <Text className="font-sans text-caption text-fg-muted">{ko.level.permanent}</Text>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: 6 }}>
-        {CHOICES.map(renderChoiceButton)}
+      {loading ? (
+        <Text className="font-sans text-caption text-fg-muted" style={{ marginBottom: 6 }}>
+          {ko.level.loadingChoices}
+        </Text>
+      ) : null}
+
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+        {growthChoices.map(renderChoiceButton)}
       </View>
+
+      {selected.description ? (
+        <Text className="font-sans text-caption text-fg-muted" style={{ marginTop: 6 }} numberOfLines={2}>
+          {selected.description}
+        </Text>
+      ) : null}
 
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
         <Pressable

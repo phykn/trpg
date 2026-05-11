@@ -101,6 +101,7 @@ export const ko = {
     cancelAction: '레벨업 취소',
     maxHpChoice: '최대 HP +1',
     maxMpChoice: '최대 MP +1',
+    loadingChoices: '성장 선택지를 준비 중입니다',
     raiseSuffix: '올리기',
   },
   gameOver: {

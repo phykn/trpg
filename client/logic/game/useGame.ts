@@ -10,6 +10,7 @@ import {
   clearStoredGameId,
   confirmGraphAction,
   getGraphSessionById,
+  getGraphLevelUpOptions,
   initGraphSession,
   loadLastSeenLocation,
   loadLastSeenQuestTitle,
@@ -37,6 +38,7 @@ import type { Subject } from '@/logic/subject';
 import type {
   FrontState,
   GraphAction,
+  GraphLevelUpChoice,
   GraphLevelUpGrowth,
   InitRequest,
   PendingConfirmation,
@@ -73,6 +75,8 @@ export function useGame() {
   const [lastSeenQuestTitle, setLastSeenQuestTitle] = React.useState<string | null>(null);
   const [lastSeenSubjectId, setLastSeenSubjectId] = React.useState<string | null>(null);
   const [levelUpOpen, setLevelUpOpen] = React.useState(false);
+  const [levelUpChoices, setLevelUpChoices] = React.useState<GraphLevelUpChoice[]>([]);
+  const [levelUpLoading, setLevelUpLoading] = React.useState(false);
   const gameIdRef = React.useRef<string | null>(null);
 
   const setSuggestions = React.useCallback(
@@ -277,10 +281,27 @@ export function useGame() {
     const id = gameIdRef.current;
     if (!id || requestInFlightRef.current || pendingConfirmation || pendingRoll) return;
     setLevelUpOpen(true);
+    setLevelUpLoading(true);
+    setErrorMessage(null);
+    try {
+      const choices = await getGraphLevelUpOptions(id);
+      if (gameIdRef.current === id) {
+        setLevelUpChoices(choices);
+      }
+    } catch (err) {
+      if (gameIdRef.current === id) {
+        setErrorMessage(err instanceof Error ? err.message : String(err));
+      }
+    } finally {
+      if (gameIdRef.current === id) {
+        setLevelUpLoading(false);
+      }
+    }
   }, [pendingConfirmation, pendingRoll]);
 
   const cancelLevelUp = React.useCallback(() => {
     setLevelUpOpen(false);
+    setLevelUpChoices([]);
   }, []);
 
   const commitLevelUp = React.useCallback(
@@ -288,6 +309,7 @@ export function useGame() {
       const id = gameIdRef.current;
       if (!id) return;
       setLevelUpOpen(false);
+      setLevelUpChoices([]);
       void runGraphActionRequest((signal) =>
         sendGraphLevelUp(id, { growth, think: false }, { signal }),
       );
@@ -302,6 +324,7 @@ export function useGame() {
     clearStoredGameId();
     rememberGameId(null);
     setLevelUpOpen(false);
+    setLevelUpChoices([]);
     setStatus('no-game');
   }, [abortGraphActionRequest, rememberGameId]);
 
@@ -375,6 +398,8 @@ export function useGame() {
     onRollPending,
     onStop,
     levelUpOpen,
+    levelUpChoices,
+    levelUpLoading,
     openLevelUp,
     cancelLevelUp,
     commitLevelUp,

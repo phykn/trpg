@@ -38,6 +38,50 @@ en = "Learn {skill}"
 ko = "{skill} 강화"
 en = "Upgrade {skill}"
 
+[runtime."level_choice.max_hp"]
+ko = "실제 HP와 최대 HP가 함께 1 오릅니다."
+en = "Current and maximum HP both increase by 1."
+
+[runtime."level_choice.max_mp"]
+ko = "스킬 사용 여유가 1 오릅니다."
+en = "Maximum MP increases by 1."
+
+[runtime."level_choice.upgrade_skill"]
+ko = "tier {tier}에서 tier {next_tier}로 올립니다."
+en = "Raise from tier {tier} to tier {next_tier}."
+
+[runtime."level_choice.fallback.agile_attack.name"]
+ko = "빈틈 찌르기"
+en = "Opening Thrust"
+
+[runtime."level_choice.fallback.agile_attack.description"]
+ko = "공격 판정의 DC를 낮추는 날렵한 전투 보조 기술."
+en = "An agile combat support skill that lowers attack DC."
+
+[runtime."level_choice.fallback.quick_flee.name"]
+ko = "빠른 이탈"
+en = "Quick Breakaway"
+
+[runtime."level_choice.fallback.quick_flee.description"]
+ko = "도주 판정의 DC를 낮추는 이동 보조 기술."
+en = "A movement support skill that lowers flee DC."
+
+[runtime."level_choice.fallback.focus_attack.name"]
+ko = "집중 타격"
+en = "Focused Strike"
+
+[runtime."level_choice.fallback.focus_attack.description"]
+ko = "공격 판정의 DC를 낮추는 집중형 전투 보조 기술."
+en = "A focused combat support skill that lowers attack DC."
+
+[runtime."level_choice.fallback.calm_defend.name"]
+ko = "침착한 방어"
+en = "Calm Guard"
+
+[runtime."level_choice.fallback.calm_defend.description"]
+ko = "방어 실패 때 하트 손실을 막는 방어 보조 기술."
+en = "A defensive support skill that prevents heart loss on a failed defense."
+
 [runtime."card.move"]
 ko = "당신은 {destination}{으로/로} 이동합니다."
 en = "You move to {destination}."

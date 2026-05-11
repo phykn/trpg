@@ -237,7 +237,31 @@ export type GraphLevelUpGrowth =
   | { kind: 'max_hp' }
   | { kind: 'max_mp' }
   | { kind: 'learn_skill'; skill_id: string }
+  | { kind: 'learn_skill'; skill_id: string; skill: GraphLevelUpSkillSpec }
   | { kind: 'upgrade_skill'; skill_id: string };
+
+export type GraphLevelUpSkillSpec = {
+  id: string;
+  name: string;
+  description: string;
+  kind: 'support';
+  action: 'attack' | 'defend' | 'flee' | 'social';
+  mp_cost: number;
+  effect_template: 'dc_down' | 'extra_heart_damage' | 'prevent_heart_loss' | 'escape_boost';
+  support_bonus: number;
+  tags: string[];
+};
+
+export type GraphLevelUpChoice = {
+  id: string;
+  label: string;
+  description: string;
+  growth: GraphLevelUpGrowth;
+};
+
+export type GraphLevelUpChoicesResponse = {
+  choices: GraphLevelUpChoice[];
+};
 
 export type GraphLevelUpRequest = {
   growth: GraphLevelUpGrowth;

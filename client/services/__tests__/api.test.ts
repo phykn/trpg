@@ -11,6 +11,7 @@ jest.mock('expo/fetch', () => ({
 const { fetch } = require('expo/fetch') as { fetch: jest.Mock };
 const {
   getGraphSessionById,
+  getGraphLevelUpOptions,
   initGraphSession,
   listProfiles,
   requestGraphIntro,
@@ -530,6 +531,42 @@ describe('graph API helpers', () => {
       }),
     );
     expect(result.pendingConfirmation).toBeNull();
+  });
+
+  test('loads graph level-up options from the options endpoint', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{
+          id: 'learn_skill:skill_gen_attack_1',
+          label: '그림자 찌르기 습득',
+          description: '공격 DC를 낮춘다.',
+          growth: {
+            kind: 'learn_skill',
+            skill_id: 'skill_gen_attack_1',
+            skill: {
+              id: 'skill_gen_attack_1',
+              name: '그림자 찌르기',
+              description: '공격 DC를 낮춘다.',
+              kind: 'support',
+              action: 'attack',
+              mp_cost: 2,
+              effect_template: 'dc_down',
+              support_bonus: 2,
+              tags: ['attack'],
+            },
+          },
+        }],
+      }),
+    });
+
+    const result = await getGraphLevelUpOptions('game-1');
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/graph/level_up/options',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(result[0].growth.kind).toBe('learn_skill');
   });
 
   test('posts pending roll choices to the graph roll endpoint', async () => {

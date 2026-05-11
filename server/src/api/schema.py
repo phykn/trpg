@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -51,6 +51,19 @@ class GraphActionResponse(BaseModel):
     suggestions: list[GraphSuggestionValue] = Field(default_factory=list)
 
 
+class GraphLevelUpChoice(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    label: str
+    description: str = ""
+    growth: dict[str, Any]
+
+
+class GraphLevelUpChoicesResponse(BaseModel):
+    choices: list[GraphLevelUpChoice]
+
+
 class GraphTurnRequest(BaseModel):
     action: Action
     think: bool = False
@@ -74,5 +87,5 @@ class GraphRollRequest(BaseModel):
 class GraphLevelUpRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    growth: dict[str, str]
+    growth: dict[str, Any]
     think: bool = False

@@ -1,6 +1,9 @@
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict
 
 from src.db.repo import GraphRepo, ScenarioRepo
+from src.game.domain.graph import AddNodeChange, GraphNode, apply_graph_change
 from src.game.engines.graph_growth import (
     GraphGrowthError,
     GraphGrowthResult,
@@ -32,7 +35,7 @@ async def run_graph_level_up(
     repo: GraphRepo,
     game_id: str,
     *,
-    growth: dict[str, str],
+    growth: dict[str, Any],
     scenario_repo: ScenarioRepo | None = None,
 ) -> GraphLevelUpResult:
     runtime = await load_runtime_state(repo, game_id, scenario_repo)
@@ -89,7 +92,7 @@ async def run_graph_level_up(
 
 def _plan_growth_choice(
     runtime: GameRuntimeState,
-    growth: dict[str, str],
+    growth: dict[str, Any],
 ) -> tuple[GraphGrowthResult, str]:
     locale = runtime.progress.locale
     kind = growth.get("kind")
@@ -109,11 +112,17 @@ def _plan_growth_choice(
         return result, render("runtime.level_growth.max_mp", locale)
     if kind == "learn_skill":
         skill_id = _require_skill_id(growth)
+        seed_change = _generated_skill_change(runtime, growth)
+        graph = runtime.graph
+        if seed_change is not None:
+            graph = apply_graph_change(graph, seed_change)
         result = plan_skill_level_up(
-            runtime.graph,
+            graph,
             runtime.progress.player_id,
             learn_skill_id=skill_id,
         )
+        if seed_change is not None:
+            result = result.model_copy(update={"changes": [seed_change, *result.changes]})
         return result, render(
             "runtime.level_growth.learn_skill",
             locale,
@@ -134,11 +143,82 @@ def _plan_growth_choice(
     raise GraphLevelUpError(f"unknown growth kind: {kind}")
 
 
-def _require_skill_id(growth: dict[str, str]) -> str:
+def _require_skill_id(growth: dict[str, Any]) -> str:
     skill_id = growth.get("skill_id")
     if not isinstance(skill_id, str) or not skill_id:
         raise GraphLevelUpError("skill_id is required")
     return skill_id
+
+
+def _generated_skill_change(
+    runtime: GameRuntimeState,
+    growth: dict[str, Any],
+) -> AddNodeChange | None:
+    skill = growth.get("skill")
+    if not isinstance(skill, dict):
+        return None
+    skill_id = _require_skill_id(growth)
+    if skill_id in runtime.graph.nodes:
+        return None
+    if skill.get("id") != skill_id:
+        raise GraphLevelUpError("generated skill id mismatch")
+    return AddNodeChange(
+        type="add_node",
+        node=GraphNode(
+            id=skill_id,
+            type="skill",
+            properties={
+                "name": _require_str(skill, "name"),
+                "description": _require_str(skill, "description"),
+                "kind": "support",
+                "action": _require_choice(
+                    skill,
+                    "action",
+                    {"attack", "defend", "flee", "social"},
+                ),
+                "mp_cost": _require_int(skill, "mp_cost", 1, 3),
+                "effect_template": _require_choice(
+                    skill,
+                    "effect_template",
+                    {
+                        "dc_down",
+                        "extra_heart_damage",
+                        "prevent_heart_loss",
+                        "escape_boost",
+                    },
+                ),
+                "support_bonus": _require_int(skill, "support_bonus", 1, 3),
+                "tags": _tags(skill.get("tags")),
+            },
+        ),
+    )
+
+
+def _require_str(data: dict[str, Any], key: str) -> str:
+    value = data.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise GraphLevelUpError(f"generated skill {key} is required")
+    return value.strip()
+
+
+def _require_choice(data: dict[str, Any], key: str, choices: set[str]) -> str:
+    value = _require_str(data, key)
+    if value not in choices:
+        raise GraphLevelUpError(f"invalid generated skill {key}: {value}")
+    return value
+
+
+def _require_int(data: dict[str, Any], key: str, minimum: int, maximum: int) -> int:
+    value = data.get(key)
+    if not isinstance(value, int) or value < minimum or value > maximum:
+        raise GraphLevelUpError(f"invalid generated skill {key}: {value}")
+    return value
+
+
+def _tags(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [tag for tag in value if isinstance(tag, str) and tag][:4]
 
 
 def _skill_label(runtime: GameRuntimeState, skill_id: str) -> str:
