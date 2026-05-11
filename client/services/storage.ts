@@ -1,3 +1,5 @@
+import { normalizeStoredSuggestion, type SuggestionChip } from './suggestions';
+
 // Browser localStorage adapter; `getStorage()` returns null on RN/SSR so callers no-op gracefully off-web.
 export function getStorage(): Storage | null {
   if (typeof window === 'undefined') return null;
@@ -26,18 +28,23 @@ const LAST_SEEN_QUEST_TITLE_PREFIX = 'trpg.last_seen_quest_title.';
 const LAST_SEEN_SUBJECT_ID_PREFIX = 'trpg.last_seen_subject_id.';
 const SEEN_NODES_PREFIX = 'trpg.seen_nodes.';
 
-export function loadSuggestions(gameId: string): string[] {
+export function loadSuggestions(gameId: string): SuggestionChip[] {
   const raw = getStorage()?.getItem(`${SUGGESTIONS_PREFIX}${gameId}`);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.every((s) => typeof s === 'string') ? parsed : [];
+    return Array.isArray(parsed)
+      ? parsed.flatMap((item) => {
+          const normalized = normalizeStoredSuggestion(item);
+          return normalized ? [normalized] : [];
+        })
+      : [];
   } catch {
     return [];
   }
 }
 
-export function storeSuggestions(gameId: string, suggestions: string[]): void {
+export function storeSuggestions(gameId: string, suggestions: SuggestionChip[]): void {
   if (suggestions.length === 0) {
     getStorage()?.removeItem(`${SUGGESTIONS_PREFIX}${gameId}`);
     return;

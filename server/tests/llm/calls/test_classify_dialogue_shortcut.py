@@ -4,6 +4,36 @@ from src.llm.calls.classify.runner import classify
 from src.llm.calls.classify.schema import ClassifyInput
 
 
+def _classify_test_context(surroundings: dict) -> dict:
+    entities = surroundings.get("entities", [])
+    return {
+        "mode": "combat" if surroundings.get("in_combat") else "exploration",
+        "identity": {
+            "location": surroundings.get("location") or {},
+            "visible_targets": [
+                entity
+                for entity in entities
+                if entity.get("type") in {"npc", "enemy"}
+            ],
+            "exits": [
+                {"id": entity["id"], "name": entity["name"]}
+                for entity in entities
+                if entity.get("type") == "connection"
+            ],
+            "inventory": surroundings.get("inventory", []),
+            "equipment": surroundings.get("equipment", {}),
+            "skills": surroundings.get("skills", []),
+            "active_quest": None,
+        },
+        "affordances": {},
+        "references": {
+            "last_npc": surroundings.get("recent_npc"),
+            "recent_dialogue": [],
+        },
+        "budget": {},
+    }
+
+
 class _NoLLM:
     def pick_fallback(self, agent):
         return None
@@ -18,13 +48,15 @@ async def test_korean_question_to_visible_npc_shortcuts_to_speak():
         _NoLLM(),  # type: ignore[arg-type]
         ClassifyInput(
             player_input="테스트 가이드에게 허수아비 훈련 방법을 물어봅니다.",
-            surroundings={
-                "in_combat": False,
-                "entities": [
-                    {"id": "player_01", "name": "주인공", "type": "player"},
-                    {"id": "guide_01", "name": "테스트 가이드", "type": "npc"},
-                ],
-            },
+            context=_classify_test_context(
+                {
+                    "in_combat": False,
+                    "entities": [
+                        {"id": "player_01", "name": "주인공", "type": "player"},
+                        {"id": "guide_01", "name": "테스트 가이드", "type": "npc"},
+                    ],
+                }
+            ),
         ),
         locale="ko",
     )

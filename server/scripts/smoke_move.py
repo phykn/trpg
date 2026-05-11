@@ -34,7 +34,7 @@ def _strip_fence(answer: str) -> str:
     """Some Gemma routes wrap the JSON in a markdown code fence. Strip it
     before json.loads — production sees this through the retry loop, but a
     smoke script wants a clean view of the first response."""
-    return _FENCE_RE.sub("", answer).strip()
+    return _FENCE_RE.sub("", answer).strip().strip("`").strip()
 
 
 SURROUNDINGS = {
@@ -129,6 +129,50 @@ CASES: list[tuple[str, str]] = [
 REPEATS = 1  # one shot — what does the LLM produce on its first attempt?
 
 
+def _classify_context(player_input: str, surroundings: dict) -> dict:
+    entities = surroundings.get("entities", [])
+    targets = [
+        entity for entity in entities if entity.get("type") in {"npc", "enemy"}
+    ]
+    exits = [
+        {"id": entity["id"], "name": entity["name"]}
+        for entity in entities
+        if entity.get("type") == "connection"
+    ]
+    inventory = surroundings.get("inventory", [])
+    return {
+        "player_input": player_input,
+        "mode": "combat" if surroundings.get("in_combat") else "exploration",
+        "identity": {
+            "location": surroundings.get("location") or {},
+            "visible_targets": targets,
+            "exits": exits,
+            "inventory": inventory,
+            "equipment": surroundings.get("equipment", {}),
+            "skills": surroundings.get("skills", []),
+            "active_quest": None,
+            "merchants": surroundings.get("merchants", []),
+            "corpses": surroundings.get("corpses", []),
+        },
+        "affordances": {
+            "can_speak_to": [target["id"] for target in targets],
+            "can_attack": [
+                target["id"] for target in targets if target.get("type") == "enemy"
+            ],
+            "can_move_to": [exit_["id"] for exit_ in exits],
+            "can_use": [item["id"] for item in inventory],
+            "can_accept_or_abandon_quest": [],
+        },
+        "references": {
+            "last_npc": None,
+            "last_target": None,
+            "last_item": None,
+            "recent_dialogue": [],
+        },
+        "budget": {},
+    }
+
+
 async def main() -> int:
     print("Loading LLMClient from env routing...")
     client = LLMClient.from_env()
@@ -147,7 +191,10 @@ async def main() -> int:
     raw_collisions: list[tuple[str, str, str]] = []  # (input, raw, error)
     for player_input, expected in CASES:
         print(f"--- INPUT: {player_input!r}  (expect: {expected})")
-        inp = ClassifyInput(player_input=player_input, surroundings=SURROUNDINGS)
+        inp = ClassifyInput(
+            player_input=player_input,
+            context=_classify_context(player_input, SURROUNDINGS),
+        )
         msgs = [
             {"role": "system", "content": sys_prompt},
             {"role": "user", "content": inp.model_dump_json()},

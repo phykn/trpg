@@ -20,5 +20,7 @@ describe('suggestion chip wiring', () => {
 
     expect(composer).toContain('suggestions');
     expect(composer).toContain('suggestions.map');
+    expect(composer).toContain('suggestion.label');
+    expect(composer).toContain('suggestion.inputText');
   });
 });

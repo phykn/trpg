@@ -1,10 +1,10 @@
 import React from 'react';
 
 import type { LogEntry } from '@/logic/log';
-import type { FrontState, GraphActionClientResponse } from '@/services/wire';
+import type { FrontState, GraphActionClientResponse, SuggestionChip } from '@/services/wire';
 
 type ApplyState = (state: FrontState, gameId?: string | null) => void;
-type SetSuggestions = (next: React.SetStateAction<string[]>) => void;
+type SetSuggestions = (next: React.SetStateAction<SuggestionChip[]>) => void;
 type GraphActionRequestEvents = {
   onNarrationDelta: (text: string) => void;
 };

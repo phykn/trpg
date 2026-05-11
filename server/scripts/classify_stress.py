@@ -367,6 +367,50 @@ CATEGORIES: list[tuple[str, list[dict]]] = [
 ]
 
 
+def _classify_context(player_input: str, surroundings: dict) -> dict:
+    entities = surroundings.get("entities", [])
+    targets = [
+        entity for entity in entities if entity.get("type") in {"npc", "enemy"}
+    ]
+    exits = [
+        {"id": entity["id"], "name": entity["name"]}
+        for entity in entities
+        if entity.get("type") == "connection"
+    ]
+    inventory = surroundings.get("inventory", [])
+    return {
+        "player_input": player_input,
+        "mode": "combat" if surroundings.get("in_combat") else "exploration",
+        "identity": {
+            "location": surroundings.get("location") or {},
+            "visible_targets": targets,
+            "exits": exits,
+            "inventory": inventory,
+            "equipment": surroundings.get("equipment", {}),
+            "skills": surroundings.get("skills", []),
+            "active_quest": None,
+            "merchants": surroundings.get("merchants", []),
+            "corpses": surroundings.get("corpses", []),
+        },
+        "affordances": {
+            "can_speak_to": [target["id"] for target in targets],
+            "can_attack": [
+                target["id"] for target in targets if target.get("type") == "enemy"
+            ],
+            "can_move_to": [exit_["id"] for exit_ in exits],
+            "can_use": [item["id"] for item in inventory],
+            "can_accept_or_abandon_quest": [],
+        },
+        "references": {
+            "last_npc": None,
+            "last_target": None,
+            "last_item": None,
+            "recent_dialogue": [],
+        },
+        "budget": {},
+    }
+
+
 def _actual_label(output: ActionOutput) -> str:
     if output.refuse is not None:
         return "refuse"
@@ -387,7 +431,8 @@ async def run(client: CountingClient, sc: dict) -> dict:
         result = await classify(
             client,
             ClassifyInput(
-                player_input=sc["player_input"], surroundings=sc["surroundings"]
+                player_input=sc["player_input"],
+                context=_classify_context(sc["player_input"], sc["surroundings"]),
             ),
             locale="ko",
         )

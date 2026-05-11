@@ -12,7 +12,7 @@ function response(gameId: string): GraphActionClientResponse {
     state: {} as FrontState,
     pendingConfirmation: null,
     pendingRoll: null,
-    suggestions: ['next'],
+    suggestions: [{ label: '다음', inputText: '다음 행동을 합니다' }],
   };
 }
 
@@ -109,7 +109,9 @@ describe('runGraphActionRequestOnce', () => {
     expect(rt.applyState).not.toHaveBeenCalled();
     expect(rt.setLog).not.toHaveBeenCalled();
     expect(rt.setSuggestions).toHaveBeenCalledWith([]);
-    expect(rt.setSuggestions).not.toHaveBeenCalledWith(['next']);
+    expect(rt.setSuggestions).not.toHaveBeenCalledWith([
+      { label: '다음', inputText: '다음 행동을 합니다' },
+    ]);
   });
 
   test('aborts the current request without surfacing an error', async () => {

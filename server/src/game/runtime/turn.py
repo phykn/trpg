@@ -34,6 +34,7 @@ from .narration_result import (
     persist_graph_narration_result,
 )
 from .state import GameRuntimeState
+from .suggestions import GraphSuggestionValue
 
 
 class GraphActionTurnError(ValueError):
@@ -46,10 +47,10 @@ class GraphActionTurnResult(BaseModel):
     runtime: GameRuntimeState
     dispatch: GraphActionDispatchResult
     front_state: GraphFrontStatePayload
-    suggestions: list[str] = Field(default_factory=list)
+    suggestions: list[GraphSuggestionValue] = Field(default_factory=list)
 
 
-_GRAPH_ACTION_NARRATION_TIMEOUT_SECONDS = 6.0
+_GRAPH_ACTION_NARRATION_TIMEOUT_SECONDS = 30.0
 
 
 async def run_graph_action_turn(

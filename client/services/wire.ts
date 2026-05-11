@@ -5,6 +5,9 @@ import type { Quest } from '@/logic/quest';
 import type { PendingRoll } from '@/logic/roll';
 import type { Place, StoryGraphModel } from '@/logic/story-graph';
 import type { Subject } from '@/logic/subject';
+import type { GraphSuggestion, SuggestionChip } from './suggestions';
+
+export type { GraphSuggestion, SuggestionChip } from './suggestions';
 
 export type PendingConfirmation = {
   id: string;
@@ -57,7 +60,7 @@ export type InitRequest = {
 export type SessionPayload = {
   game_id: string;
   state: FrontState;
-  suggestions?: string[];
+  suggestions?: SuggestionChip[];
 };
 
 export type QuestAction = {
@@ -201,7 +204,7 @@ export type GraphFrontState = {
 export type GraphSessionPayload = {
   game_id: string;
   state: GraphFrontState;
-  suggestions?: string[];
+  suggestions?: GraphSuggestion[];
 };
 
 export type GraphActionResponse = {
@@ -209,7 +212,7 @@ export type GraphActionResponse = {
   state: GraphFrontState;
   status?: string | null;
   message?: string | null;
-  suggestions?: string[];
+  suggestions?: GraphSuggestion[];
 };
 
 export type GraphActionClientResponse = {
@@ -219,7 +222,7 @@ export type GraphActionClientResponse = {
   pendingRoll: PendingRoll | null;
   status?: string | null;
   message?: string | null;
-  suggestions: string[];
+  suggestions: SuggestionChip[];
 };
 
 export type GraphStatKey = 'body' | 'agility' | 'mind' | 'presence';

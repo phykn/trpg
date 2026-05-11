@@ -9,6 +9,7 @@ from src.game.runtime.intro import (
 )
 from src.game.runtime.load import load_runtime_state
 from src.game.runtime.state import GameRuntimeState
+from src.game.runtime.suggestions import GraphSuggestionValue
 from src.game.seed.init_graph import init_graph_game
 from src.game.seed.player import PlayerInput
 from src.llm.client import LLMClient
@@ -27,7 +28,7 @@ class GraphSessionIntroResult:
     front_state: GraphFrontStatePayload
     status: Literal["executed"] = "executed"
     message: str | None = None
-    suggestions: list[str] = field(default_factory=list)
+    suggestions: list[GraphSuggestionValue] = field(default_factory=list)
 
 
 async def initialize_graph_session(

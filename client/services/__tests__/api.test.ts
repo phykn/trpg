@@ -175,9 +175,9 @@ describe('graph API helpers', () => {
     const result = await getGraphSessionById('game-1');
 
     expect(result?.suggestions).toEqual([
-      '에드릭에게 말을 겁니다',
-      '망루로 이동합니다',
-      '주변을 살펴봅니다',
+      { label: '에드릭에게 말을 겁니다', inputText: '에드릭에게 말을 겁니다' },
+      { label: '망루로 이동합니다', inputText: '망루로 이동합니다' },
+      { label: '주변을 살펴봅니다', inputText: '주변을 살펴봅니다' },
     ]);
   });
 
@@ -321,7 +321,7 @@ describe('graph API helpers', () => {
     expect(result.status).toBe('executed');
   });
 
-  test('uses server graph suggestions when an action response includes them', async () => {
+  test('uses server graph suggestions when an action response includes legacy strings', async () => {
     fetch.mockResolvedValueOnce(
       streamResponse([
         JSON.stringify({
@@ -339,7 +339,40 @@ describe('graph API helpers', () => {
 
     const result = await sendGraphInput('game-1', '북문 이야기를 듣는다');
 
-    expect(result.suggestions).toEqual(['북문으로 이동합니다', '발자국을 자세히 살펴봅니다']);
+    expect(result.suggestions).toEqual([
+      { label: '북문으로 이동합니다', inputText: '북문으로 이동합니다' },
+      { label: '발자국을 자세히 살펴봅니다', inputText: '발자국을 자세히 살펴봅니다' },
+    ]);
+  });
+
+  test('uses structured server graph suggestions as short chips with longer input', async () => {
+    fetch.mockResolvedValueOnce(
+      streamResponse([
+        JSON.stringify({
+          type: 'final',
+          payload: {
+            game_id: 'game-1',
+            state: graphState(),
+            status: 'executed',
+            message: null,
+            suggestions: [
+              {
+                label: '북문으로',
+                input_text: '북문으로 이동합니다',
+                intent: 'move',
+                action: null,
+              },
+            ],
+          },
+        }),
+      ]),
+    );
+
+    const result = await sendGraphInput('game-1', '북문 이야기를 듣는다');
+
+    expect(result.suggestions).toEqual([
+      { label: '북문으로', inputText: '북문으로 이동합니다', intent: 'move' },
+    ]);
   });
 
   test('falls back to the plain graph input endpoint when the stream route is unavailable', async () => {

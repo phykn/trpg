@@ -5,6 +5,7 @@ from pydantic import ValidationError
 from .._runner import get_prompt, run_with_retries
 from ...client import LLMClient
 from ...diag import llm_diag
+from ...context.classify_view import classify_context_to_grounding_view
 from .dialogue import classify_dialogue_shortcut
 from .guard import classify_guard
 from .grounding import ActionGroundingError, validate_grounded_output
@@ -21,17 +22,18 @@ async def classify(
     *,
     strict: bool = False,
 ) -> ActionOutput:
-    in_combat = bool(input_.surroundings.get("in_combat", False))
+    grounding_view = classify_context_to_grounding_view(input_.context)
+    in_combat = input_.context.get("mode") == "combat"
     guarded = classify_guard(input_.player_input, locale=locale)
     if guarded is not None:
         return guarded
-    dialogue = classify_dialogue_shortcut(input_.player_input, input_.surroundings)
+    dialogue = classify_dialogue_shortcut(input_.player_input, grounding_view)
     if dialogue is not None:
-        return validate_grounded_output(dialogue, input_.surroundings)
+        return validate_grounded_output(dialogue, grounding_view)
 
     def parse(answer: str) -> ActionOutput:
         output = validate_action_output_json(answer, in_combat=in_combat)
-        return validate_grounded_output(output, input_.surroundings)
+        return validate_grounded_output(output, grounding_view)
 
     try:
         return await run_with_retries(
@@ -43,7 +45,7 @@ async def classify(
             retries=retries,
             agent="classify",
             temperature=_CLASSIFY_TEMPERATURE,
-            correction_hint="re-check the action catalog (required ids, enum fields) and that every id exists in surroundings",
+            correction_hint="re-check the action catalog (required ids, enum fields) and that every id exists in context",
             include_failed_answer=False,
         )
     except (ValidationError, json.JSONDecodeError, ActionGroundingError) as e:

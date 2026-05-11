@@ -40,6 +40,7 @@ import type {
   InitRequest,
   PendingConfirmation,
   GraphStatKey,
+  SuggestionChip,
 } from '@/services/wire';
 import { ko } from '@/locale/ko';
 import { useGraphActionRunner, type OptimisticLogEntry } from './requestRunner';
@@ -70,7 +71,7 @@ export function useGame() {
   const [pendingRoll, setPendingRoll] = React.useState<PendingRoll | null>(null);
   const [combat, setCombat] = React.useState<CombatBadge | null>(null);
   const [storyGraph, setStoryGraph] = React.useState<StoryGraphModel>(EMPTY_STORY_GRAPH);
-  const [suggestions, setSuggestionsRaw] = React.useState<string[]>([]);
+  const [suggestions, setSuggestionsRaw] = React.useState<SuggestionChip[]>([]);
   const [lastSeenLocation, setLastSeenLocation] = React.useState<string | null>(null);
   const [lastSeenQuestTitle, setLastSeenQuestTitle] = React.useState<string | null>(null);
   const [lastSeenSubjectId, setLastSeenSubjectId] = React.useState<string | null>(null);
@@ -78,9 +79,9 @@ export function useGame() {
   const gameIdRef = React.useRef<string | null>(null);
 
   const setSuggestions = React.useCallback(
-    (next: React.SetStateAction<string[]>) => {
+    (next: React.SetStateAction<SuggestionChip[]>) => {
       setSuggestionsRaw((prev) => {
-        const value = typeof next === 'function' ? (next as (p: string[]) => string[])(prev) : next;
+        const value = typeof next === 'function' ? (next as (p: SuggestionChip[]) => SuggestionChip[])(prev) : next;
         const id = gameIdRef.current;
         if (id) storeSuggestions(id, value);
         return value;

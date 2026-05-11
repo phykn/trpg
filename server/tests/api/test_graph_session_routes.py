@@ -819,7 +819,15 @@ async def test_graph_input_returns_reflected_suggestions(tmp_path):
         narration_meta={
             "turn_summary": "에드릭이 숲길의 의뢰를 암시했습니다.",
             "importance": 2,
-            "suggestions": ["숲길로 이동합니다", "에드릭에게 보상을 묻습니다"],
+            "suggestions": [
+                {
+                    "label": "숲길로",
+                    "input_text": "숲길로 이동합니다",
+                    "intent": "move",
+                    "action": None,
+                },
+                "에드릭에게 보상을 묻습니다",
+            ],
         },
     )
 
@@ -834,7 +842,15 @@ async def test_graph_input_returns_reflected_suggestions(tmp_path):
     body = response.json()
     history = await app.state.graph_repo.load_history_entries(game_id)
 
-    assert body["suggestions"] == ["숲길로 이동합니다", "에드릭에게 보상을 묻습니다"]
+    assert body["suggestions"] == [
+        {
+            "label": "숲길로",
+            "input_text": "숲길로 이동합니다",
+            "intent": "move",
+            "action": None,
+        },
+        "에드릭에게 보상을 묻습니다",
+    ]
     assert history[0].summary == "에드릭이 숲길의 의뢰를 암시했습니다."
     assert history[0].importance == 2
 

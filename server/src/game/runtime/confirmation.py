@@ -20,6 +20,7 @@ from .dispatch import (
 )
 from .load import load_runtime_state
 from .state import GameRuntimeState
+from .suggestions import GraphSuggestionValue
 from .turn import (
     GraphActionTurnError,
     run_graph_action_turn,
@@ -60,7 +61,7 @@ class GraphActionRequestResult(BaseModel):
     pending_roll: dict[str, Any] | None = None
     dispatch: GraphActionDispatchResult | None = None
     message: str | None = None
-    suggestions: list[str] = Field(default_factory=list)
+    suggestions: list[GraphSuggestionValue] = Field(default_factory=list)
 
 
 async def run_graph_action_request(

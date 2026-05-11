@@ -8,6 +8,7 @@ import type {
   GraphPlaceTarget,
   GraphPlaceState,
 } from './wire';
+import type { SuggestionChip } from './suggestions';
 
 const STAT_ORDER = ['body', 'mind', 'agility', 'presence'] as const;
 
@@ -37,40 +38,44 @@ export function adaptGraphState(state: GraphFrontState): FrontState {
   };
 }
 
-export function deriveGraphSuggestions(state: GraphFrontState): string[] {
+export function deriveGraphSuggestions(state: GraphFrontState): SuggestionChip[] {
   if (state.pendingConfirmation !== null) return [];
   if (state.pendingRoll !== null) return [];
   if (state.combat !== null) return combatSuggestions(state.combat);
 
-  const suggestions: string[] = [];
+  const suggestions: SuggestionChip[] = [];
   const livingTargets = state.place?.targets.filter((target) => target.hp.current > 0) ?? [];
   const enemy = livingTargets.find((target) => target.kind === 'enemy');
-  if (enemy) suggestions.push(compose.attack(enemy.name));
+  if (enemy) suggestions.push(chip(compose.attack(enemy.name)));
 
   for (const npc of livingTargets.filter((target) => target.kind === 'npc')) {
-    suggestions.push(compose.talkTo(npc.name));
+    suggestions.push(chip(compose.talkTo(npc.name)));
   }
   for (const exit of state.place?.exits ?? []) {
-    suggestions.push(compose.moveTo(exit.name));
+    suggestions.push(chip(compose.moveTo(exit.name)));
   }
-  suggestions.push(compose.inspectSurroundings());
+  suggestions.push(chip(compose.inspectSurroundings()));
   return uniqueFirst(suggestions, 3);
 }
 
-function combatSuggestions(combat: GraphCombatState): string[] {
+function combatSuggestions(combat: GraphCombatState): SuggestionChip[] {
   const enemy = combat.participants.find(
     (participant) => participant.side === 'enemy' && participant.hp.current > 0,
   );
   const suggestions = enemy
-    ? [compose.attack(enemy.name), compose.defend(), compose.flee()]
-    : [compose.defend(), compose.flee()];
+    ? [chip(compose.attack(enemy.name)), chip(compose.defend()), chip(compose.flee())]
+    : [chip(compose.defend()), chip(compose.flee())];
   return uniqueFirst(suggestions, 3);
 }
 
-function uniqueFirst(values: string[], limit: number): string[] {
-  const result: string[] = [];
+function chip(text: string): SuggestionChip {
+  return { label: text, inputText: text };
+}
+
+function uniqueFirst(values: SuggestionChip[], limit: number): SuggestionChip[] {
+  const result: SuggestionChip[] = [];
   for (const value of values) {
-    if (result.includes(value)) continue;
+    if (result.some((item) => item.inputText === value.inputText)) continue;
     result.push(value);
     if (result.length >= limit) break;
   }

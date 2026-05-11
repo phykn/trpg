@@ -115,7 +115,10 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "직접 발화" in narrate_prompt
     assert "NPC 직접 발화" in narrate_prompt
     assert "당신의 새 대사" in narrate_prompt
-    assert "combat.outcome" in narrate_prompt
+    assert "payload.combat_view" in narrate_prompt
+    assert "tone.lethality" in narrate_prompt
+    assert "훈련 충격" in narrate_prompt
+    assert "닫는 기호는 반드시" in narrate_prompt
     assert "1~2문장" not in combined
     assert "2~3문장" not in combined
     assert "한 문장" not in intro_prompt

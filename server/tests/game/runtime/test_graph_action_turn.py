@@ -351,9 +351,13 @@ async def test_run_graph_action_turn_sends_combat_trace_to_narration(tmp_path):
     import json
 
     payload = json.loads(call["messages"][1]["content"])
-    assert payload["action"]["verb"] == "attack"
-    assert payload["combat"]["trace"]
-    assert payload["visible_targets"]
+    encoded = json.dumps(payload, ensure_ascii=False)
+
+    assert payload["current_event"]["action"]["verb"] == "attack"
+    assert payload["combat_view"]["events"]
+    assert payload["scene_anchor"]["visible_names"]
+    assert "combat_started" not in encoded
+    assert "player_attacked" not in encoded
 
 
 async def test_run_graph_action_turn_times_out_slow_narration_and_keeps_action(

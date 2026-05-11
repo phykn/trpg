@@ -1,0 +1,261 @@
+from __future__ import annotations
+
+from typing import Any
+
+from src.game.domain.content import node_label, node_value
+from src.game.domain.graph import GraphNode
+from src.game.domain.graph_character import graph_character_kind, is_visible_character
+from src.game.domain.graph_query import (
+    characters_at,
+    edges_from,
+    equipment_of,
+    inventory_of,
+    known_skills_of,
+    location_of,
+)
+from src.game.runtime.state import GameRuntimeState
+
+
+MAX_CLASSIFY_VISIBLE_TARGETS = 8
+MAX_CLASSIFY_EXITS = 6
+MAX_CLASSIFY_INVENTORY = 10
+MAX_CLASSIFY_SKILLS = 8
+MAX_CLASSIFY_RECENT_DIALOGUE = 5
+
+
+def build_classify_context_view(
+    runtime: GameRuntimeState,
+    player_input: str,
+) -> dict[str, Any]:
+    graph = runtime.graph_index
+    player_id = runtime.progress.player_id
+    location_id = location_of(graph, player_id)
+    location = graph.nodes.get(location_id or "")
+    all_visible_targets = _visible_targets(runtime, location_id)
+    all_exits = _exits(runtime, location_id)
+    all_inventory = _inventory(runtime, player_id)
+    all_skills = _skills(runtime, player_id)
+
+    visible_targets = all_visible_targets[:MAX_CLASSIFY_VISIBLE_TARGETS]
+    exits = all_exits[:MAX_CLASSIFY_EXITS]
+    inventory = all_inventory[:MAX_CLASSIFY_INVENTORY]
+    skills = all_skills[:MAX_CLASSIFY_SKILLS]
+
+    return {
+        "player_input": player_input,
+        "mode": (
+            "combat" if runtime.progress.graph_combat_state is not None else "exploration"
+        ),
+        "identity": {
+            "location": _node_ref(runtime, location),
+            "visible_targets": visible_targets,
+            "exits": exits,
+            "inventory": inventory,
+            "equipment": _equipment(runtime, player_id),
+            "skills": skills,
+            "active_quest": _active_quest(runtime),
+        },
+        "affordances": {
+            "can_speak_to": [
+                target["id"]
+                for target in visible_targets
+                if target["type"] in {"npc", "enemy"}
+            ],
+            "can_attack": _attackable_ids(visible_targets),
+            "can_move_to": [exit_["id"] for exit_ in exits],
+            "can_use": [item["id"] for item in inventory],
+            "can_accept_or_abandon_quest": _quest_ids(runtime),
+        },
+        "references": {
+            "last_npc": _last_entity_ref(runtime, entity_types={"character"}),
+            "last_target": _last_entity_ref(runtime),
+            "last_item": _last_entity_ref(runtime, entity_types={"item"}),
+            "recent_dialogue": _recent_dialogue(runtime),
+        },
+        "budget": {
+            "visible_targets_omitted": max(
+                0,
+                len(all_visible_targets) - MAX_CLASSIFY_VISIBLE_TARGETS,
+            ),
+            "exits_omitted": max(0, len(all_exits) - MAX_CLASSIFY_EXITS),
+            "inventory_omitted": max(0, len(all_inventory) - MAX_CLASSIFY_INVENTORY),
+            "skills_omitted": max(0, len(all_skills) - MAX_CLASSIFY_SKILLS),
+        },
+    }
+
+
+def classify_context_to_grounding_view(context: dict[str, Any]) -> dict[str, Any]:
+    identity = context.get("identity") if isinstance(context.get("identity"), dict) else {}
+    references = (
+        context.get("references") if isinstance(context.get("references"), dict) else {}
+    )
+    visible_targets = _dicts(identity.get("visible_targets"))
+    exits = _dicts(identity.get("exits"))
+
+    grounding_targets = [
+        {
+            **target,
+            "type": target["type"] if target.get("type") in {"npc", "enemy"} else "npc",
+        }
+        for target in visible_targets
+        if isinstance(target.get("id"), str) and isinstance(target.get("name"), str)
+    ]
+
+    return {
+        "in_combat": context.get("mode") == "combat",
+        "location": identity.get("location") or {},
+        "entities": [
+            *grounding_targets,
+            *[
+                {"id": exit_["id"], "name": exit_["name"], "type": "connection"}
+                for exit_ in exits
+                if isinstance(exit_.get("id"), str)
+                and isinstance(exit_.get("name"), str)
+            ],
+        ],
+        "inventory": _dicts(identity.get("inventory")),
+        "equipment": identity.get("equipment") or {},
+        "skills": _dicts(identity.get("skills")),
+        "merchants": _dicts(identity.get("merchants")),
+        "corpses": _dicts(identity.get("corpses")),
+        "recent_npc": references.get("last_npc"),
+    }
+
+
+def _visible_targets(
+    runtime: GameRuntimeState,
+    location_id: str | None,
+) -> list[dict[str, str]]:
+    if location_id is None:
+        return []
+    out: list[dict[str, str]] = []
+    for character_id in characters_at(runtime.graph_index, location_id):
+        if character_id == runtime.progress.player_id:
+            continue
+        node = runtime.graph.nodes.get(character_id)
+        if node is None or node.type != "character" or not is_visible_character(node):
+            continue
+        out.append(
+            {
+                "id": node.id,
+                "name": node_label(runtime.content, node),
+                "type": graph_character_kind(node),
+            }
+        )
+    return out
+
+
+def _exits(runtime: GameRuntimeState, location_id: str | None) -> list[dict[str, str]]:
+    if location_id is None:
+        return []
+    out: list[dict[str, str]] = []
+    for edge in edges_from(runtime.graph_index, location_id, "connects_to"):
+        node = runtime.graph.nodes.get(edge.to_node_id)
+        if node is not None and node.type == "location":
+            out.append({"id": node.id, "name": node_label(runtime.content, node)})
+    return out
+
+
+def _inventory(runtime: GameRuntimeState, player_id: str) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    for item_id in inventory_of(runtime.graph_index, player_id):
+        node = runtime.graph.nodes.get(item_id)
+        if node is None or node.type != "item":
+            continue
+        out.append(
+            {
+                "id": node.id,
+                "name": node_label(runtime.content, node),
+                "kind": _kind(runtime, node),
+            }
+        )
+    return out
+
+
+def _equipment(
+    runtime: GameRuntimeState,
+    player_id: str,
+) -> dict[str, dict[str, str] | None]:
+    equipment: dict[str, dict[str, str] | None] = {
+        "weapon": None,
+        "armor": None,
+        "accessory": None,
+    }
+    for edge in equipment_of(runtime.graph_index, player_id):
+        slot = edge.properties.get("slot")
+        if slot not in equipment:
+            continue
+        node = runtime.graph.nodes.get(edge.to_node_id)
+        if node is not None and node.type == "item":
+            equipment[slot] = {"id": node.id, "name": node_label(runtime.content, node)}
+    return equipment
+
+
+def _skills(runtime: GameRuntimeState, player_id: str) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    for edge in known_skills_of(runtime.graph_index, player_id):
+        node = runtime.graph.nodes.get(edge.to_node_id)
+        if node is not None and node.type == "skill":
+            out.append({"id": node.id, "name": node_label(runtime.content, node)})
+    return out
+
+
+def _active_quest(runtime: GameRuntimeState) -> dict[str, str] | None:
+    quest_id = runtime.progress.active_quest_id
+    node = runtime.graph.nodes.get(quest_id or "")
+    if node is None or node.type != "quest":
+        return None
+    return _node_ref(runtime, node)
+
+
+def _quest_ids(runtime: GameRuntimeState) -> list[str]:
+    return [runtime.progress.active_quest_id] if runtime.progress.active_quest_id else []
+
+
+def _attackable_ids(visible_targets: list[dict[str, str]]) -> list[str]:
+    return [target["id"] for target in visible_targets if target["type"] == "enemy"]
+
+
+def _last_entity_ref(
+    runtime: GameRuntimeState,
+    *,
+    entity_types: set[str] | None = None,
+) -> dict[str, str] | None:
+    subject_id = runtime.progress.active_subject_id
+    node = runtime.graph.nodes.get(subject_id or "")
+    if node is None:
+        return None
+    if entity_types is not None and node.type not in entity_types:
+        return None
+    return _node_ref(runtime, node)
+
+
+def _recent_dialogue(runtime: GameRuntimeState) -> list[dict[str, Any]]:
+    return [
+        {"turn": pair.turn, "player": pair.player, "summary": pair.narrator}
+        for pair in runtime.recent_dialogue[-MAX_CLASSIFY_RECENT_DIALOGUE:]
+    ]
+
+
+def _node_ref(
+    runtime: GameRuntimeState,
+    node: GraphNode | None,
+) -> dict[str, str] | None:
+    if node is None:
+        return None
+    return {"id": node.id, "name": node_label(runtime.content, node)}
+
+
+def _kind(runtime: GameRuntimeState, node: GraphNode) -> str:
+    value = node_value(runtime.content, node, "kind") or node_value(
+        runtime.content,
+        node,
+        "type",
+    )
+    return value if isinstance(value, str) and value else "item"
+
+
+def _dicts(value: object) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [entry for entry in value if isinstance(entry, dict)]

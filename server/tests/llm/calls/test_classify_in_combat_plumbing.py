@@ -11,6 +11,43 @@ from src.llm.calls.classify.runner import classify
 from src.llm.calls.classify.schema import ClassifyInput
 
 
+def _classify_test_context(surroundings: dict) -> dict:
+    entities = surroundings.get("entities", [])
+    return {
+        "mode": "combat" if surroundings.get("in_combat") else "exploration",
+        "identity": {
+            "location": surroundings.get("location") or {},
+            "visible_targets": [
+                entity
+                for entity in entities
+                if entity.get("type") in {"npc", "enemy"}
+            ],
+            "exits": [
+                {"id": entity["id"], "name": entity["name"]}
+                for entity in entities
+                if entity.get("type") == "connection"
+            ],
+            "inventory": surroundings.get("inventory", []),
+            "equipment": surroundings.get("equipment", {}),
+            "skills": surroundings.get("skills", []),
+            "active_quest": None,
+        },
+        "affordances": {},
+        "references": {
+            "last_npc": surroundings.get("recent_npc"),
+            "recent_dialogue": [],
+        },
+        "budget": {},
+    }
+
+
+def _input(player_input: str, surroundings: dict) -> ClassifyInput:
+    return ClassifyInput(
+        player_input=player_input,
+        context=_classify_test_context(surroundings),
+    )
+
+
 class _RetryCaptureClient:
     def __init__(self, answers: list[str]):
         self.answers = answers
@@ -31,10 +68,7 @@ class _RetryCaptureClient:
 
 @pytest.mark.asyncio
 async def test_in_combat_true_allows_move_without_destination():
-    input_ = ClassifyInput(
-        player_input="도망친다",
-        surroundings={"in_combat": True, "entities": []},
-    )
+    input_ = _input("도망친다", {"in_combat": True, "entities": []})
     fake_answer = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
     with patch(
         "src.llm.calls.classify.runner.run_with_retries",
@@ -47,10 +81,7 @@ async def test_in_combat_true_allows_move_without_destination():
 
 @pytest.mark.asyncio
 async def test_in_combat_false_rejects_move_without_destination():
-    input_ = ClassifyInput(
-        player_input="도망친다",
-        surroundings={"in_combat": False, "entities": []},
-    )
+    input_ = _input("도망친다", {"in_combat": False, "entities": []})
     fake_answer = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
     with patch(
         "src.llm.calls.classify.runner.run_with_retries",
@@ -68,10 +99,7 @@ async def test_in_combat_false_rejects_move_without_destination():
 
 @pytest.mark.asyncio
 async def test_in_combat_default_false_when_key_missing():
-    input_ = ClassifyInput(
-        player_input="도망친다",
-        surroundings={"entities": []},
-    )
+    input_ = _input("도망친다", {"entities": []})
     fake_answer = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
     with patch(
         "src.llm.calls.classify.runner.run_with_retries",
@@ -89,9 +117,9 @@ async def test_in_combat_default_false_when_key_missing():
 
 @pytest.mark.asyncio
 async def test_unknown_move_destination_rejected_against_surroundings():
-    input_ = ClassifyInput(
-        player_input="없는 장소로 간다",
-        surroundings={
+    input_ = _input(
+        "없는 장소로 간다",
+        {
             "in_combat": False,
             "entities": [
                 {"id": "player_01", "name": "주인공", "type": "player"},
@@ -116,10 +144,7 @@ async def test_unknown_move_destination_rejected_against_surroundings():
 
 @pytest.mark.asyncio
 async def test_json_decode_failures_retry_without_thinking_and_fall_back_to_pass():
-    input_ = ClassifyInput(
-        player_input="잠깐 기다린다",
-        surroundings={"in_combat": False, "entities": []},
-    )
+    input_ = _input("잠깐 기다린다", {"in_combat": False, "entities": []})
     client = _RetryCaptureClient(['{"actions":[{"verb":"pass"}]} trailing text'] * 3)
 
     out = await classify(client=client, input_=input_, locale="ko", retries=3)
@@ -134,10 +159,7 @@ async def test_json_decode_failures_retry_without_thinking_and_fall_back_to_pass
 
 @pytest.mark.asyncio
 async def test_validation_failure_retry_stays_non_thinking():
-    input_ = ClassifyInput(
-        player_input="도망친다",
-        surroundings={"in_combat": False, "entities": []},
-    )
+    input_ = _input("도망친다", {"in_combat": False, "entities": []})
     client = _RetryCaptureClient(
         [
             json.dumps({"actions": [{"verb": "move"}]}),
@@ -153,10 +175,7 @@ async def test_validation_failure_retry_stays_non_thinking():
 
 @pytest.mark.asyncio
 async def test_strict_classify_still_raises_after_exhausted_retries():
-    input_ = ClassifyInput(
-        player_input="잠깐 기다린다",
-        surroundings={"in_combat": False, "entities": []},
-    )
+    input_ = _input("잠깐 기다린다", {"in_combat": False, "entities": []})
     client = _RetryCaptureClient(['{"actions":[{"verb":"pass"}]} trailing text'] * 3)
 
     with pytest.raises(json.JSONDecodeError):
@@ -171,10 +190,7 @@ async def test_strict_classify_still_raises_after_exhausted_retries():
 
 @pytest.mark.asyncio
 async def test_classify_default_retry_budget_is_five_attempts():
-    input_ = ClassifyInput(
-        player_input="잠깐 기다린다",
-        surroundings={"in_combat": False, "entities": []},
-    )
+    input_ = _input("잠깐 기다린다", {"in_combat": False, "entities": []})
     client = _RetryCaptureClient(['{"actions":[{"verb":"pass"}]} trailing text'] * 5)
 
     with pytest.raises(json.JSONDecodeError):

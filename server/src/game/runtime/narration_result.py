@@ -6,6 +6,7 @@ from src.db.repo import GraphRepo
 from src.game.domain.memory import DialoguePair, TurnLogEntry
 
 from .state import GameRuntimeState
+from .suggestions import GraphSuggestion, GraphSuggestionValue, normalize_suggestion
 
 
 NARRATION_META_MARKER = "---TRPG_META---"
@@ -17,7 +18,7 @@ class GraphNarrationResult(BaseModel):
     narration: str = ""
     turn_summary: str = ""
     importance: int = Field(default=1, ge=1, le=3)
-    suggestions: list[str] = Field(default_factory=list)
+    suggestions: list[GraphSuggestionValue] = Field(default_factory=list)
 
 
 class VisibleNarrationStream:
@@ -134,15 +135,31 @@ def _dialogue_entries(
     ]
 
 
-def _clean_suggestions(values: list[str]) -> list[str]:
-    out: list[str] = []
+def _clean_suggestions(
+    values: list[GraphSuggestionValue],
+) -> list[GraphSuggestionValue]:
+    out: list[GraphSuggestionValue] = []
     seen: set[str] = set()
     for value in values:
-        suggestion = value.strip()
-        if not suggestion or suggestion in seen:
+        suggestion = normalize_suggestion(value)
+        if suggestion is None:
             continue
-        seen.add(suggestion)
-        out.append(suggestion[:_MAX_SUGGESTION_CHARS])
+        key = suggestion if isinstance(suggestion, str) else suggestion.input_text
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(_truncate_suggestion(suggestion))
         if len(out) == _MAX_SUGGESTIONS:
             break
     return out
+
+
+def _truncate_suggestion(value: GraphSuggestionValue) -> GraphSuggestionValue:
+    if isinstance(value, str):
+        return value[:_MAX_SUGGESTION_CHARS]
+    return GraphSuggestion(
+        label=value.label[:32],
+        input_text=value.input_text[:_MAX_SUGGESTION_CHARS],
+        intent=value.intent,
+        action=value.action,
+    )

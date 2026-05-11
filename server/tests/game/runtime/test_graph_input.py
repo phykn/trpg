@@ -19,7 +19,7 @@ class _FakeLLM:
         narration: str = "상대는 당신의 말을 듣고 잠시 생각에 잠깁니다.",
         turn_summary: str = "",
         importance: int = 1,
-        suggestions: list[str] | None = None,
+        suggestions: list[object] | None = None,
     ) -> None:
         self.payload = payload
         self.narration = narration
@@ -261,7 +261,7 @@ async def test_graph_input_reflects_speak_turn_into_memory_dialogue_and_suggesti
     assert "graph_reflect" not in [call["agent"] for call in llm.calls]
 
 
-async def test_graph_input_passes_important_memory_and_recent_dialogue_to_classify(
+async def test_graph_input_passes_focused_context_to_classify(
     tmp_path,
 ):
     repo = await _repo(tmp_path)
@@ -293,30 +293,20 @@ async def test_graph_input_passes_important_memory_and_recent_dialogue_to_classi
     classify_call = [call for call in llm.calls if call["agent"] == "classify"][0]
     payload = json.loads(classify_call["messages"][1]["content"])
 
-    assert payload["history"] == [
-        {
-            "turn": 1,
-            "target": None,
-            "summary": "중요하지 않은 소문입니다.",
-            "importance": 1,
-        },
-        {
-            "turn": 2,
-            "target": "goblin_01",
-            "summary": "고블린은 북문에 낯선 발자국이 있다고 말했습니다.",
-            "importance": 3,
-        }
-    ]
-    assert payload["recent_dialogue"] == [
+    assert set(payload) == {"player_input", "context"}
+    assert payload["context"]["player_input"] == "그걸 따라간다"
+    assert "history" not in payload
+    assert "recent_dialogue" not in payload
+    assert payload["context"]["references"]["recent_dialogue"] == [
         {
             "turn": 2,
             "player": "북문에 대해 묻는다",
-            "narrator": "고블린은 발자국을 보았다고 말합니다.",
+            "summary": "고블린은 발자국을 보았다고 말합니다.",
         }
     ]
 
 
-async def test_graph_input_memory_context_keeps_twenty_summaries_by_importance(
+async def test_graph_input_classify_context_omits_global_importance_history(
     tmp_path,
 ):
     repo = await _repo(tmp_path)
@@ -338,12 +328,11 @@ async def test_graph_input_memory_context_keeps_twenty_summaries_by_importance(
     await run_graph_input_turn(llm, repo, "game-1", "기억을 떠올린다")
     classify_call = [call for call in llm.calls if call["agent"] == "classify"][0]
     payload = json.loads(classify_call["messages"][1]["content"])
-    summaries = [entry["summary"] for entry in payload["history"]]
+    encoded = json.dumps(payload, ensure_ascii=False)
 
-    assert len(summaries) == 20
-    assert "낮은 중요도 오래된 기억입니다." not in summaries
-    assert "낮은 중요도 최근 기억입니다." in summaries
-    assert "중요한 기억 21" in summaries
+    assert "history" not in payload
+    assert "중요한 기억" not in encoded
+    assert payload["context"]["budget"]["visible_targets_omitted"] == 0
 
 
 async def test_graph_input_streams_speak_narration_before_final(tmp_path):
@@ -398,15 +387,13 @@ async def test_graph_input_targetless_speak_defaults_to_nearby_living_npc(tmp_pa
     user_prompt = json.loads(narrate_call["messages"][1]["content"])
 
     assert progress.active_subject_id == "goblin_01"
-    assert user_prompt["dialogue_target"] == {
-        "id": "goblin_01",
-        "name": "goblin_01",
-        "state": "same_place",
-    }
+    assert user_prompt["target_view"]["id"] == "goblin_01"
+    assert user_prompt["target_view"]["name"] == "goblin_01"
+    assert user_prompt["current_event"]["kind"] == "dialogue"
     assert "NPC의 짧은 반응이나 대사" in narrate_call["messages"][0]["content"]
 
 
-async def test_graph_input_narration_payload_includes_recent_log(tmp_path):
+async def test_graph_input_narration_payload_excludes_recent_log(tmp_path):
     repo = await _repo(tmp_path)
     await repo.append_log_entries(
         "game-1",
@@ -421,11 +408,10 @@ async def test_graph_input_narration_payload_includes_recent_log(tmp_path):
     await run_graph_input_turn(llm, repo, "game-1", "경비병에게 인사한다")
     narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
     payload = json.loads(narrate_call["messages"][1]["content"])
+    encoded = json.dumps(payload, ensure_ascii=False)
 
-    assert payload["recent_log"] == [
-        {"kind": "gm", "text": "경비병이 북문을 지킵니다."},
-        {"kind": "player", "text": "경비병에게 인사한다"},
-    ]
+    assert "recent_log" not in payload
+    assert "경비병이 북문을 지킵니다." not in encoded
     assert "recent_dialogue" in payload
 
 

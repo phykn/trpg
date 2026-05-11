@@ -14,15 +14,14 @@ from src.game.domain.memory import GMLogEntry, PlayerLogEntry
 from src.llm.calls._runner import get_prompt
 from src.llm.calls.classify.runner import classify
 from src.llm.calls.classify.schema import ClassifyInput
+from src.llm.context.classify_view import build_classify_context_view
 from src.llm.client import LLMClient
-from src.llm.context.graph_surroundings import build_graph_surroundings
 from src.llm.diag import engine_diag, llm_diag, set_diag_context
 from src.locale.render import render
 from src.wire.graph_to_front import graph_to_front_state
 
 from .confirmation import GraphActionRequestResult, run_graph_action_request
 from .load import load_runtime_state
-from .memory_context import important_history_payload, recent_dialogue_payload
 from .narration_context import build_input_narration_payload
 from .narration_result import (
     GraphNarrationResult,
@@ -37,7 +36,7 @@ class GraphInputError(ValueError):
     pass
 
 
-_GRAPH_INPUT_NARRATION_TIMEOUT_SECONDS = 6.0
+_GRAPH_INPUT_NARRATION_TIMEOUT_SECONDS = 30.0
 
 
 async def run_graph_input_turn(
@@ -55,9 +54,7 @@ async def run_graph_input_turn(
         client,
         ClassifyInput(
             player_input=player_input,
-            surroundings=build_graph_surroundings(runtime),
-            history=important_history_payload(runtime),
-            recent_dialogue=recent_dialogue_payload(runtime),
+            context=build_classify_context_view(runtime, player_input),
         ),
         locale=runtime.progress.locale,
     )
@@ -93,9 +90,7 @@ async def run_graph_input_turn_stream(
         client,
         ClassifyInput(
             player_input=player_input,
-            surroundings=build_graph_surroundings(runtime),
-            history=important_history_payload(runtime),
-            recent_dialogue=recent_dialogue_payload(runtime),
+            context=build_classify_context_view(runtime, player_input),
         ),
         locale=runtime.progress.locale,
     )
@@ -441,28 +436,12 @@ def _graph_input_narration_messages(
     action,
     subject_id: str | None,
 ) -> list[dict[str, str]]:
-    surroundings = build_graph_surroundings(runtime)
     subject = runtime.graph.nodes.get(subject_id or "")
-    subject_state = (
-        "same_place"
-        if subject_id is not None and _is_at_player_location(runtime, subject_id)
-        else None
-    )
-    dialogue_target = (
-        {
-            "id": subject_id,
-            "name": _node_name(runtime, subject),
-            "state": subject_state,
-        }
-        if subject_id is not None
-        else None
-    )
     payload = build_input_narration_payload(
         runtime=runtime,
         player_input=player_input,
         action=action,
-        dialogue_target=dialogue_target,
-        surroundings=surroundings,
+        dialogue_target=subject if subject_id is not None else None,
     )
     return [
         {

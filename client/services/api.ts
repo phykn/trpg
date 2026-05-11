@@ -1,17 +1,20 @@
 import { fetch } from 'expo/fetch';
 
 import { adaptGraphState, deriveGraphSuggestions } from './graphAdapter';
+import { normalizeGraphSuggestion } from './suggestions';
 import type {
   ConfirmRequest,
   GraphAction,
   GraphActionClientResponse,
   GraphActionResponse,
+  GraphSuggestion,
   GraphLevelUpRequest,
   GraphRollRequest,
   GraphSessionPayload,
   InitRequest,
   ProfileCard,
   SessionPayload,
+  SuggestionChip,
 } from '@/services/wire';
 
 type ApiRequestOptions = {
@@ -342,11 +345,14 @@ function adaptGraphActionResponse(
 }
 
 function adaptSuggestions(
-  suggestions: string[] | undefined,
+  suggestions: GraphSuggestion[] | undefined,
   state: GraphActionResponse['state'],
-): string[] {
+): SuggestionChip[] {
   const clean = Array.isArray(suggestions)
-    ? suggestions.filter((suggestion) => typeof suggestion === 'string' && suggestion.trim())
+    ? suggestions.flatMap((suggestion) => {
+        const normalized = normalizeGraphSuggestion(suggestion);
+        return normalized ? [normalized] : [];
+      })
     : [];
   return clean.length > 0 ? clean : deriveGraphSuggestions(state);
 }

@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 from src.game.domain.action import Action
 from src.game.domain.types import GraphStatKey
+from src.game.runtime.suggestions import GraphSuggestionValue
 from src.game.seed.player import PlayerInput
 
 
@@ -40,7 +41,7 @@ class InitRequest(BaseModel):
 class InitResponse(BaseModel):
     game_id: str
     state: dict
-    suggestions: list[str] = Field(default_factory=list)
+    suggestions: list[GraphSuggestionValue] = Field(default_factory=list)
 
 
 class GraphActionResponse(BaseModel):
@@ -48,7 +49,7 @@ class GraphActionResponse(BaseModel):
     state: dict
     status: str | None = None
     message: str | None = None
-    suggestions: list[str] = Field(default_factory=list)
+    suggestions: list[GraphSuggestionValue] = Field(default_factory=list)
 
 
 class GraphTurnRequest(BaseModel):

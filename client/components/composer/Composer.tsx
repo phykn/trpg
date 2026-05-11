@@ -16,6 +16,7 @@ import { ko } from '@/locale/ko';
 import { Surface } from '@/components/ui';
 import type { PanelAction } from '@/logic/info-panel';
 import type { NearbyPanelModel } from '@/logic/story-graph';
+import type { SuggestionChip } from '@/services/wire';
 
 import { SendButton } from './SendButton';
 import { StopButton } from './StopButton';
@@ -38,7 +39,7 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
   onStop: () => void;
   streaming: boolean;
   locked?: boolean;
-  suggestions?: string[];
+  suggestions?: SuggestionChip[];
   quickActions?: ComposerQuickAction[];
   nearby?: NearbyPanelModel | null;
   nearbyOpen?: boolean;
@@ -193,14 +194,14 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
             ))}
             {suggestions.map((suggestion) => (
               <Pressable
-                key={suggestion}
-                onPress={() => sendText(suggestion)}
+                key={`${suggestion.label}:${suggestion.inputText}`}
+                onPress={() => sendText(suggestion.inputText)}
                 accessibilityRole="button"
-                accessibilityLabel={suggestion}
+                accessibilityLabel={suggestion.label}
                 className="rounded-full border border-border-default bg-canvas-inset px-3 py-1.5 active:bg-canvas-subtle"
               >
                 <Text className="font-sans-semibold text-caption text-fg-default">
-                  {suggestion}
+                  {suggestion.label}
                 </Text>
               </Pressable>
             ))}

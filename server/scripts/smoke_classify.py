@@ -57,6 +57,57 @@ CASES: list[tuple[str, str]] = [
 ]
 
 
+def _classify_context(surroundings: dict) -> dict:
+    entities = surroundings.get("entities", [])
+    targets = [
+        entity for entity in entities if entity.get("type") in {"npc", "enemy"}
+    ]
+    exits = [
+        {"id": entity["id"], "name": entity["name"]}
+        for entity in entities
+        if entity.get("type") == "connection"
+    ]
+    inventory = surroundings.get("inventory", [])
+    recent_npc = surroundings.get("recent_npc")
+    last_npc = None
+    if isinstance(recent_npc, str):
+        last_npc = next(
+            (entity for entity in targets if entity.get("id") == recent_npc),
+            None,
+        )
+    return {
+        "player_input": "",
+        "mode": "combat" if surroundings.get("in_combat") else "exploration",
+        "identity": {
+            "location": surroundings.get("location") or {},
+            "visible_targets": targets,
+            "exits": exits,
+            "inventory": inventory,
+            "equipment": surroundings.get("equipment", {}),
+            "skills": surroundings.get("skills", []),
+            "active_quest": None,
+            "merchants": surroundings.get("merchants", []),
+            "corpses": surroundings.get("corpses", []),
+        },
+        "affordances": {
+            "can_speak_to": [target["id"] for target in targets],
+            "can_attack": [
+                target["id"] for target in targets if target.get("type") == "enemy"
+            ],
+            "can_move_to": [exit_["id"] for exit_ in exits],
+            "can_use": [item["id"] for item in inventory],
+            "can_accept_or_abandon_quest": [],
+        },
+        "references": {
+            "last_npc": last_npc,
+            "last_target": last_npc,
+            "last_item": None,
+            "recent_dialogue": [],
+        },
+        "budget": {},
+    }
+
+
 async def main() -> int:
     print("Loading LLMClient from env routing...")
     client = LLMClient.from_env()
@@ -74,7 +125,11 @@ async def main() -> int:
             result = await classify(
                 client,
                 ClassifyInput(
-                    player_input=player_input, surroundings=SAMPLE_SURROUNDINGS
+                    player_input=player_input,
+                    context={
+                        **_classify_context(SAMPLE_SURROUNDINGS),
+                        "player_input": player_input,
+                    },
                 ),
                 locale="ko",
                 retries=2,

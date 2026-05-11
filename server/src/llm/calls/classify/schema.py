@@ -14,10 +14,7 @@ from src.game.domain.action import (
 
 class ClassifyInput(BaseModel):
     player_input: str
-    surroundings: dict[str, Any]
-    # Build-up beats let classify resolve pronouns and detect surprise attacks.
-    history: list[dict] = []
-    recent_dialogue: list[dict] = []
+    context: dict[str, Any]
 
 
 def validate_action_output_json(
