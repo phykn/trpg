@@ -26,6 +26,7 @@ from .dispatch import (
 )
 from .cards import build_graph_action_card, build_graph_quest_offer_card
 from .load import load_runtime_state
+from .narration_clean import clean_narration
 from .narration_context import build_action_narration_payload
 from .state import GameRuntimeState
 
@@ -257,7 +258,10 @@ async def run_graph_action_turn_from_runtime_stream(
     ):
         narration_chunks.append(chunk)
         yield {"type": "delta", "text": chunk}
-    narration = _clean_narration("".join(narration_chunks))
+    narration = _clean_narration(
+        "".join(narration_chunks),
+        recent_texts=_recent_gm_texts(runtime),
+    )
     log_entries = [*cards]
     if narration:
         log_entries.append(
@@ -346,7 +350,7 @@ async def _build_graph_action_narration(
     answer = result.get("answer")
     if not isinstance(answer, str):
         return ""
-    return _clean_narration(answer)
+    return _clean_narration(answer, recent_texts=_recent_gm_texts(before))
 
 
 async def _stream_graph_action_narration(
@@ -452,11 +456,20 @@ def _narration_user_prompt(
     return json.dumps(payload, ensure_ascii=False)
 
 
-def _clean_narration(text: str) -> str:
-    cleaned = " ".join(text.split())
-    if len(cleaned) <= _MAX_GRAPH_NARRATION_CHARS:
-        return cleaned
-    return cleaned[:_MAX_GRAPH_NARRATION_CHARS].rstrip()
+def _clean_narration(text: str, *, recent_texts=()) -> str:
+    return clean_narration(
+        text,
+        max_chars=_MAX_GRAPH_NARRATION_CHARS,
+        recent_texts=recent_texts,
+    )
+
+
+def _recent_gm_texts(runtime: GameRuntimeState) -> list[str]:
+    return [
+        entry.text
+        for entry in runtime.log_entries[-4:]
+        if getattr(entry, "kind", None) == "gm" and hasattr(entry, "text")
+    ]
 
 
 def _node_name(runtime: GameRuntimeState, node: GraphNode | None) -> str:

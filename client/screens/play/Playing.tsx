@@ -193,7 +193,7 @@ export function Playing({ game }: Props) {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
-        style={{ zIndex: nearbyOpen ? 8 : 0 }}
+        style={{ zIndex: activeId !== null || nearbyOpen ? 10 : 0 }}
       >
         {gameOver ? (
           <GameOverPanel onRestart={goToNewGame} />

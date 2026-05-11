@@ -57,6 +57,11 @@ def build_action_narration_payload(
             "outcome": dispatch.outcome,
             "applied": dispatch.applied,
         },
+        "current_event": {
+            "kind": dispatch.kind,
+            "outcome": dispatch.outcome,
+            "resolved_results": card_texts,
+        },
         "resolved_results": card_texts,
         "visible_targets": _visible_character_payloads(
             after,

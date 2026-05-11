@@ -79,7 +79,7 @@ def _card_text(
         )
 
     if dispatch.kind == "combat":
-        return _combat_text(before, after, action)
+        return _combat_text(before, after, action, dispatch)
 
     if dispatch.kind == "quest_accept":
         quest = _quest_title(
@@ -121,6 +121,7 @@ def _combat_text(
     before: GameRuntimeState,
     after: GameRuntimeState,
     action: Action,
+    dispatch: GraphActionDispatchResult,
 ) -> str:
     if before.progress.graph_combat_state is None:
         target_id = _single(action.what) or _single(action.to)
@@ -130,11 +131,9 @@ def _combat_text(
             fallback=render("runtime.fallback.target", after.progress.locale),
         )
         return render("runtime.combat.start", after.progress.locale, target=target)
-    outcome = (
-        after.progress.graph_combat_state.outcome
-        if after.progress.graph_combat_state
-        else "victory"
-    )
+    outcome = dispatch.outcome
+    if outcome is None and after.progress.graph_combat_state is not None:
+        outcome = after.progress.graph_combat_state.outcome
     if outcome == "fled":
         return render("runtime.combat.fled", after.progress.locale)
     if outcome == "defeat":

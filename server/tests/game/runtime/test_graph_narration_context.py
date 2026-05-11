@@ -129,6 +129,11 @@ def test_action_payload_contains_recent_log_and_named_combat_trace():
     )
 
     assert payload["action"]["verb"] == "attack"
+    assert payload["current_event"] == {
+        "kind": "combat",
+        "outcome": "ongoing",
+        "resolved_results": ["전투가 이어집니다."],
+    }
     assert payload["resolved_results"] == ["전투가 이어집니다."]
     assert payload["recent_log"] == [
         {"kind": "gm", "text": "경비병이 북문을 지킵니다."}

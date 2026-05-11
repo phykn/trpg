@@ -7,6 +7,7 @@ from src.db.graph_local_fs import LocalFsGraphRepo
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
+from src.game.domain.memory import GMLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime.turn import GraphActionTurnError, run_graph_action_turn
 
@@ -133,6 +134,14 @@ class _SlowNarrationLLM:
     async def chat(self, *args, **kwargs):
         await asyncio.sleep(0.2)
         return {"answer": "너무 늦게 도착한 나레이션입니다."}
+
+
+class _RepeatNarrationLLM:
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+    async def chat(self, messages, **kwargs):
+        return {"answer": self.text}
 
 
 async def test_run_graph_action_turn_saves_move_and_returns_front_state(tmp_path):
@@ -272,6 +281,51 @@ async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(
     assert saved_logs[-1].text == "칼끝이 번뜩이고, 적이 비틀거리며 길 위에 쓰러집니다."
     assert result.front_state.log == saved_logs
     assert result.runtime.progress.next_log_id == saved_logs[-1].id + 1
+
+
+async def test_run_graph_action_turn_logs_fled_combat_as_fled_not_victory(tmp_path):
+    repo = await _repo(tmp_path)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(
+            update={
+                "graph_combat_state": GraphCombatState(
+                    location_id="town",
+                    player_id="player_01",
+                    enemy_ids=["goblin_01"],
+                    participant_ids=["player_01", "goblin_01"],
+                    sides={"player_01": "player", "goblin_01": "enemy"},
+                    round=2,
+                )
+            }
+        )
+    )
+
+    await run_graph_action_turn(repo, "game-1", Action(verb="move", how="flee"))
+    saved_logs = await repo.load_log_entries("game-1")
+
+    assert saved_logs[0].text == "당신은 전투에서 벗어납니다."
+
+
+async def test_run_graph_action_turn_drops_repeated_recent_gm_narration(tmp_path):
+    repo = await _repo(tmp_path)
+    repeated = "테스트 가이드는 대답하지 않고 당신을 다시 봅니다."
+    await repo.append_log_entries(
+        "game-1",
+        [GMLogEntry(id=1, kind="gm", text=repeated)],
+    )
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(progress.model_copy(update={"next_log_id": 2}))
+
+    await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="attack", what="goblin_01"),
+        llm=_RepeatNarrationLLM(repeated),  # type: ignore[arg-type]
+    )
+    saved_logs = await repo.load_log_entries("game-1")
+
+    assert [entry.kind for entry in saved_logs] == ["gm", "act"]
 
 
 async def test_run_graph_action_turn_sends_combat_trace_to_narration(tmp_path):

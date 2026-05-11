@@ -22,6 +22,7 @@ from src.wire.graph_to_front import graph_to_front_state
 
 from .confirmation import GraphActionRequestResult, run_graph_action_request
 from .load import load_runtime_state
+from .narration_clean import clean_narration
 from .narration_context import build_input_narration_payload
 from .state import GameRuntimeState
 
@@ -288,7 +289,10 @@ async def _run_graph_narrative_input_stream(
         chunks.append(chunk)
         yield {"type": "delta", "text": chunk}
 
-    text = _clean_narration("".join(chunks))
+    text = _clean_narration(
+        "".join(chunks),
+        recent_texts=_recent_gm_texts(runtime),
+    )
     if not text:
         text = render("runtime.input.quiet", runtime.progress.locale)
     entry = GMLogEntry(
@@ -360,7 +364,7 @@ async def _generate_graph_input_narration(
     answer = result.get("answer")
     if not isinstance(answer, str):
         return ""
-    return _clean_narration(answer)
+    return _clean_narration(answer, recent_texts=_recent_gm_texts(runtime))
 
 
 async def _stream_graph_input_narration(
@@ -490,8 +494,17 @@ def _single(value: object) -> str | None:
     return None
 
 
-def _clean_narration(text: str) -> str:
-    cleaned = " ".join(text.split())
-    if len(cleaned) <= _MAX_GRAPH_NARRATION_CHARS:
-        return cleaned
-    return cleaned[:_MAX_GRAPH_NARRATION_CHARS].rstrip()
+def _clean_narration(text: str, *, recent_texts=()) -> str:
+    return clean_narration(
+        text,
+        max_chars=_MAX_GRAPH_NARRATION_CHARS,
+        recent_texts=recent_texts,
+    )
+
+
+def _recent_gm_texts(runtime: GameRuntimeState) -> list[str]:
+    return [
+        entry.text
+        for entry in runtime.log_entries[-4:]
+        if getattr(entry, "kind", None) == "gm" and hasattr(entry, "text")
+    ]
