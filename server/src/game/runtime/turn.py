@@ -429,6 +429,8 @@ def _needs_graph_action_narration(
     dispatch: GraphActionDispatchResult,
 ) -> bool:
     if dispatch.kind == "combat":
+        if dispatch.outcome == "fled":
+            return False
         return True
     if dispatch.kind in {"quest_accept", "quest_abandon"}:
         return True

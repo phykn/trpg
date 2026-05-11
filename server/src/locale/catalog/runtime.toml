@@ -122,6 +122,10 @@ en = "Cancel"
 ko = "당신의 행동은 조용히 이어집니다."
 en = "Your action continues quietly."
 
+[runtime."input.dialogue_quiet"]
+ko = "{target}{은/는} 당신의 말을 듣고 잠시 침묵합니다."
+en = "{target} listens to you and stays quiet for a moment."
+
 [runtime."classify.refuse_meta_breaking"]
 ko = "게임 밖 지시에는 응답할 수 없습니다."
 en = "Out-of-game instructions cannot be handled."

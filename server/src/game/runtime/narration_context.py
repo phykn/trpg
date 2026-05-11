@@ -70,7 +70,7 @@ def build_action_narration_payload(
         ),
         "visible_items": _visible_item_payloads(after, place_id),
         "exits": _exit_payloads(after, place_id),
-        "recent_log": _recent_log_payload(before),
+        "recent_log": _recent_log_payload(before, include_gm=False),
         "combat": _combat_payload(after, dispatch),
     }
 
@@ -197,11 +197,16 @@ def _node_ref(runtime: GameRuntimeState, node: GraphNode | None) -> dict[str, st
     return {"id": node.id, "name": node_label(runtime.content, node)}
 
 
-def _recent_log_payload(runtime: GameRuntimeState) -> list[dict[str, str]]:
+def _recent_log_payload(
+    runtime: GameRuntimeState,
+    *,
+    include_gm: bool = True,
+) -> list[dict[str, str]]:
     return [
         {"kind": entry.kind, "text": entry.text}
         for entry in runtime.log_entries[-4:]
         if hasattr(entry, "text")
+        and (include_gm or getattr(entry, "kind", None) != "gm")
     ]
 
 

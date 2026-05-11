@@ -241,7 +241,7 @@ async def _run_graph_narrative_input(
         subject_id,
     )
     if not text:
-        text = render("runtime.input.quiet", runtime.progress.locale)
+        text = _fallback_input_narration(runtime, subject_id)
     entry = GMLogEntry(
         id=runtime.progress.next_log_id,
         kind="gm",
@@ -294,7 +294,7 @@ async def _run_graph_narrative_input_stream(
         recent_texts=_recent_gm_texts(runtime),
     )
     if not text:
-        text = render("runtime.input.quiet", runtime.progress.locale)
+        text = _fallback_input_narration(runtime, subject_id)
     entry = GMLogEntry(
         id=runtime.progress.next_log_id,
         kind="gm",
@@ -484,6 +484,17 @@ def _node_name(runtime, node: GraphNode | None) -> str:
 def _node_hp(node: GraphNode) -> int:
     hp = node.properties.get("hp")
     return hp if isinstance(hp, int) else 0
+
+
+def _fallback_input_narration(runtime: GameRuntimeState, subject_id: str | None) -> str:
+    subject = runtime.graph.nodes.get(subject_id or "")
+    if subject is not None:
+        return render(
+            "runtime.input.dialogue_quiet",
+            runtime.progress.locale,
+            target=_node_name(runtime, subject),
+        )
+    return render("runtime.input.quiet", runtime.progress.locale)
 
 
 def _single(value: object) -> str | None:

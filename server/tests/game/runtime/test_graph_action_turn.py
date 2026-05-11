@@ -285,6 +285,7 @@ async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(
 
 async def test_run_graph_action_turn_logs_fled_combat_as_fled_not_victory(tmp_path):
     repo = await _repo(tmp_path)
+    llm = _NarrationLLM()
     progress = await repo.load_progress("game-1")
     await repo.save_progress(
         progress.model_copy(
@@ -301,10 +302,16 @@ async def test_run_graph_action_turn_logs_fled_combat_as_fled_not_victory(tmp_pa
         )
     )
 
-    await run_graph_action_turn(repo, "game-1", Action(verb="move", how="flee"))
+    await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="move", how="flee"),
+        llm=llm,  # type: ignore[arg-type]
+    )
     saved_logs = await repo.load_log_entries("game-1")
 
     assert saved_logs[0].text == "당신은 전투에서 벗어납니다."
+    assert len(llm.calls) == 0
 
 
 async def test_run_graph_action_turn_drops_repeated_recent_gm_narration(tmp_path):

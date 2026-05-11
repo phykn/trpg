@@ -21,6 +21,7 @@
 - 새 인물, 장소, 몬스터, 아이템, 퀘스트, 보상, 숫자, 물리적 부품, 소리를 만들지 않습니다.
 - 행동 결과를 뒤집거나 그래프 상태를 바꾸는 말을 하지 않습니다.
 - `current_event`가 있으면 이번 응답의 중심 사실입니다. `recent_log`보다 먼저 반영합니다.
+- 액션 내레이션에서는 이전 GM 문단을 다시 쓰지 않습니다. 장소 분위기보다 `current_event`, `resolved_results`, `combat.trace`의 새 변화만 씁니다.
 - 시스템 카드 문장을 그대로 반복하지 말고, 결과가 장면에 남긴 감각이나 반응을 씁니다.
 - `combat.trace`가 있으면 actor와 target의 이름, kind, state를 우선하고, 전투 결말은 `combat.outcome`에서만 읽습니다.
 - `player_input`과 `dialogue_target`이 있으면 NPC의 짧은 반응이나 대사를 포함할 수 있습니다.
