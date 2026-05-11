@@ -10,6 +10,7 @@ import {
   clearStoredGameId,
   confirmGraphAction,
   getGraphSessionById,
+  getGraphLevelUpOptions,
   initGraphSession,
   loadLastSeenLocation,
   loadLastSeenQuestTitle,
@@ -37,19 +38,17 @@ import type { Subject } from '@/logic/subject';
 import type {
   FrontState,
   GraphAction,
+  GraphLevelUpChoice,
+  GraphLevelUpGrowth,
   InitRequest,
   PendingConfirmation,
-  GraphStatKey,
   SuggestionChip,
 } from '@/services/wire';
-import { ko } from '@/locale/ko';
 import { useGraphActionRunner, type OptimisticLogEntry } from './requestRunner';
 
 export type GameStatus = 'loading' | 'no-game' | 'ready' | 'error';
 
 export type Game = ReturnType<typeof useGame>;
-
-const GRAPH_STAT_KEYS = new Set<GraphStatKey>(['body', 'agility', 'mind', 'presence']);
 
 function optimisticAct(label?: string): OptimisticLogEntry[] {
   return label ? [{ kind: 'act', text: label }] : [];
@@ -76,6 +75,8 @@ export function useGame() {
   const [lastSeenQuestTitle, setLastSeenQuestTitle] = React.useState<string | null>(null);
   const [lastSeenSubjectId, setLastSeenSubjectId] = React.useState<string | null>(null);
   const [levelUpOpen, setLevelUpOpen] = React.useState(false);
+  const [levelUpChoices, setLevelUpChoices] = React.useState<GraphLevelUpChoice[]>([]);
+  const [levelUpLoading, setLevelUpLoading] = React.useState(false);
   const gameIdRef = React.useRef<string | null>(null);
 
   const setSuggestions = React.useCallback(
@@ -280,23 +281,37 @@ export function useGame() {
     const id = gameIdRef.current;
     if (!id || requestInFlightRef.current || pendingConfirmation || pendingRoll) return;
     setLevelUpOpen(true);
+    setLevelUpLoading(true);
+    setErrorMessage(null);
+    try {
+      const choices = await getGraphLevelUpOptions(id);
+      if (gameIdRef.current === id) {
+        setLevelUpChoices(choices);
+      }
+    } catch (err) {
+      if (gameIdRef.current === id) {
+        setErrorMessage(err instanceof Error ? err.message : String(err));
+      }
+    } finally {
+      if (gameIdRef.current === id) {
+        setLevelUpLoading(false);
+      }
+    }
   }, [pendingConfirmation, pendingRoll]);
 
   const cancelLevelUp = React.useCallback(() => {
     setLevelUpOpen(false);
+    setLevelUpChoices([]);
   }, []);
 
   const commitLevelUp = React.useCallback(
-    (stat_up: GraphStatKey) => {
+    (growth: GraphLevelUpGrowth) => {
       const id = gameIdRef.current;
       if (!id) return;
       setLevelUpOpen(false);
-      if (!isGraphStatKey(stat_up)) {
-        setErrorMessage(ko.error.invalidStat);
-        return;
-      }
+      setLevelUpChoices([]);
       void runGraphActionRequest((signal) =>
-        sendGraphLevelUp(id, { stat_up, skill_id: null, think: false }, { signal }),
+        sendGraphLevelUp(id, { growth, think: false }, { signal }),
       );
     },
     [runGraphActionRequest],
@@ -309,6 +324,7 @@ export function useGame() {
     clearStoredGameId();
     rememberGameId(null);
     setLevelUpOpen(false);
+    setLevelUpChoices([]);
     setStatus('no-game');
   }, [abortGraphActionRequest, rememberGameId]);
 
@@ -382,6 +398,8 @@ export function useGame() {
     onRollPending,
     onStop,
     levelUpOpen,
+    levelUpChoices,
+    levelUpLoading,
     openLevelUp,
     cancelLevelUp,
     commitLevelUp,
@@ -389,8 +407,4 @@ export function useGame() {
     goToNewGame,
     refresh,
   };
-}
-
-function isGraphStatKey(value: GraphStatKey): value is GraphStatKey {
-  return GRAPH_STAT_KEYS.has(value);
 }

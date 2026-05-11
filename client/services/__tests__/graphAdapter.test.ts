@@ -99,6 +99,9 @@ describe('adaptGraphState', () => {
       combat: {
         round: 2,
         outcome: 'ongoing',
+        playerHearts: { current: 2, maximum: 3 },
+        enemyHearts: { current: 1, maximum: 3 },
+        activeEnemyId: 'wolf_01',
         participants: [
           {
             id: 'player_01',
@@ -165,11 +168,11 @@ describe('adaptGraphState', () => {
     expect(state.questOffers[0]?.title).toBe('첫 의뢰');
     expect(state.questOffers[0]?.actions).toEqual(['accept']);
     expect(state.combat?.round).toBe(2);
+    expect(state.combat?.playerHearts.current).toBe(2);
+    expect(state.combat?.enemyHearts.current).toBe(1);
     expect(state.combat?.enemies[0]).toMatchObject({
       id: 'wolf_01',
       name: '늑대',
-      hp: 5,
-      hpMax: 12,
       alive: true,
     });
     expect(state.pendingConfirmation?.confirmLabel).toBe('공격');

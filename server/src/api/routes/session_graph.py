@@ -26,6 +26,8 @@ from src.game.runtime.input import (
     run_graph_input_turn_stream,
 )
 from src.game.runtime.level_up import GraphLevelUpError, run_graph_level_up
+from src.game.runtime.level_up_choices import build_level_up_choices
+from src.game.runtime.load import load_runtime_state
 from src.game.runtime.roll import GraphRollError, GraphRollExpected, run_graph_roll
 from src.game.runtime.session import (
     initialize_graph_session,
@@ -41,6 +43,7 @@ from ..schema import (
     ConfirmRequest,
     GraphActionResponse,
     GraphInputRequest,
+    GraphLevelUpChoicesResponse,
     GraphLevelUpRequest,
     GraphRollRequest,
     GraphTurnRequest,
@@ -378,6 +381,24 @@ def _stream_error(status: int, message: str) -> str:
     ) + "\n"
 
 
+@router.get(
+    "/session/{game_id}/graph/level_up/options",
+    response_model=GraphLevelUpChoicesResponse,
+)
+async def session_graph_level_up_options(
+    game_id: str,
+    llm: LLMClient = Depends(get_llm),
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+) -> GraphLevelUpChoicesResponse:
+    try:
+        runtime = await load_runtime_state(graph_repo, game_id, scenario_repo)
+        choices = await build_level_up_choices(runtime, llm=llm)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="game not found")
+    return GraphLevelUpChoicesResponse(choices=choices)
+
+
 @router.post("/session/{game_id}/graph/level_up", response_model=GraphActionResponse)
 async def session_graph_level_up(
     game_id: str,
@@ -389,8 +410,7 @@ async def session_graph_level_up(
         result = await run_graph_level_up(
             graph_repo,
             game_id,
-            stat_up=body.stat_up,
-            skill_id=body.skill_id,
+            growth=body.growth,
             scenario_repo=scenario_repo,
         )
     except FileNotFoundError:

@@ -162,17 +162,20 @@ def _combat_action_from_action(
     in_combat: bool,
 ) -> GraphCombatAction:
     if action.verb == "attack":
-        skill_id = _skill_id_or_none(graph, _single(action.with_))
+        support_id = _single(action.with_)
+        support_kind = _support_kind_or_none(graph, support_id)
         return GraphCombatAction(
-            kind="cast" if skill_id else "attack",
+            kind="attack",
             target_id=_single(action.what),
-            skill_id=skill_id,
+            support_id=support_id if support_kind else None,
+            support_kind=support_kind,
         )
     if action.verb == "cast":
         return GraphCombatAction(
-            kind="cast",
+            kind="attack",
             target_id=_single(action.to),
-            skill_id=_single(action.with_) or _single(action.what),
+            support_id=_single(action.with_) or _single(action.what),
+            support_kind="skill",
         )
     if in_combat and action.verb == "move" and action.how in ("flee", "hasty"):
         return GraphCombatAction(kind="flee")
@@ -181,13 +184,19 @@ def _combat_action_from_action(
     raise GraphCombatDispatchError(f"unsupported graph combat action: {action.verb}")
 
 
-def _skill_id_or_none(graph: Graph, node_id: str | None) -> str | None:
+def _support_kind_or_none(graph: Graph, node_id: str | None) -> str | None:
     if node_id is None:
         return None
     node = graph.nodes.get(node_id)
-    if node is None or node.type != "skill":
+    if node is None:
         return None
-    return node_id
+    if node.type == "skill":
+        return "skill"
+    if node.type == "item" and (
+        "support_action" in node.properties or "action" in node.properties
+    ):
+        return "item"
+    return None
 
 
 def _target_id_for_start(action: Action) -> str:

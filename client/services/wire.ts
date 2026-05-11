@@ -105,6 +105,11 @@ export type GraphResource = {
   state: string;
 };
 
+export type GraphHeart = {
+  current: number;
+  maximum: number;
+};
+
 export type GraphNamed = {
   id: string;
   name: string;
@@ -187,6 +192,9 @@ export type GraphCombatParticipant = {
 export type GraphCombatState = {
   round: number;
   outcome: 'ongoing' | 'victory' | 'defeat' | 'fled';
+  playerHearts: GraphHeart;
+  enemyHearts: GraphHeart;
+  activeEnemyId: string;
   participants: GraphCombatParticipant[];
 };
 
@@ -225,10 +233,37 @@ export type GraphActionClientResponse = {
   suggestions: SuggestionChip[];
 };
 
-export type GraphStatKey = 'body' | 'agility' | 'mind' | 'presence';
+export type GraphLevelUpGrowth =
+  | { kind: 'max_hp' }
+  | { kind: 'max_mp' }
+  | { kind: 'learn_skill'; skill_id: string }
+  | { kind: 'learn_skill'; skill_id: string; skill: GraphLevelUpSkillSpec }
+  | { kind: 'upgrade_skill'; skill_id: string };
+
+export type GraphLevelUpSkillSpec = {
+  id: string;
+  name: string;
+  description: string;
+  kind: 'support';
+  action: 'attack' | 'defend' | 'flee' | 'social';
+  mp_cost: number;
+  effect_template: 'dc_down' | 'extra_heart_damage' | 'prevent_heart_loss' | 'escape_boost';
+  support_bonus: number;
+  tags: string[];
+};
+
+export type GraphLevelUpChoice = {
+  id: string;
+  label: string;
+  description: string;
+  growth: GraphLevelUpGrowth;
+};
+
+export type GraphLevelUpChoicesResponse = {
+  choices: GraphLevelUpChoice[];
+};
 
 export type GraphLevelUpRequest = {
-  stat_up: GraphStatKey;
-  skill_id: string | null;
+  growth: GraphLevelUpGrowth;
   think: boolean;
 };

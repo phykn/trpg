@@ -5,7 +5,11 @@ from src.wire.graph_payload_helpers import (
     require_node,
     resource,
 )
-from src.wire.models import GraphCombatParticipantPayload, GraphCombatPayload
+from src.wire.models import (
+    GraphCombatParticipantPayload,
+    GraphCombatPayload,
+    GraphHeartPayload,
+)
 
 
 def combat_payload(runtime: GameRuntimeState) -> GraphCombatPayload | None:
@@ -30,5 +34,8 @@ def combat_payload(runtime: GameRuntimeState) -> GraphCombatPayload | None:
     return GraphCombatPayload(
         round=state.round,
         outcome=state.outcome,
+        player_hearts=GraphHeartPayload(current=state.player_hearts, maximum=3),
+        enemy_hearts=GraphHeartPayload(current=state.enemy_hearts, maximum=3),
+        active_enemy_id=state.active_enemy_id,
         participants=participants,
     )

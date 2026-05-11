@@ -65,8 +65,8 @@ class RecoveryConfig(_F):
 
 
 class GrowthConfig(_F):
-    base_xp: int = 100
-    max_level: int = 20
+    base_xp: int = 1
+    max_level: int = 10
     roll_xp: dict[Grade, int] = {
         "critical_success": 25,
         "success": 8,

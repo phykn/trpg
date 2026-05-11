@@ -232,7 +232,8 @@ async def test_confirm_attack_log_uses_korean_object_particle(tmp_path):
     assert saved_logs[0].text == "당신은 고블린 약탈자를 공격해 전투를 시작합니다."
 
 
-async def test_confirm_skill_attack_logs_mp_spend_and_terminal_victory(tmp_path):
+async def test_confirm_skill_attack_logs_mp_spend(tmp_path, monkeypatch):
+    monkeypatch.setattr("src.game.engines.graph_combat.randint", lambda _a, _b: 20)
     repo = await _repo(tmp_path)
     await run_graph_action_request(
         repo,
@@ -247,12 +248,13 @@ async def test_confirm_skill_attack_logs_mp_spend_and_terminal_victory(tmp_path)
     saved_logs = await repo.load_log_entries("game-1")
 
     assert result.status == "executed"
-    assert saved_progress.graph_combat_state is None
+    assert saved_progress.graph_combat_state is not None
+    assert saved_progress.graph_combat_state.enemy_hearts == 2
     assert saved_graph.nodes["player_01"].properties["mp"] == 8
-    assert saved_graph.nodes["goblin_01"].properties["status"] == ["defeated"]
+    assert saved_graph.nodes["goblin_01"].properties["status"] == []
     assert "훈련 일격" in saved_logs[0].text
     assert "MP 2" in saved_logs[0].text
-    assert "쓰러뜨립니다" in saved_logs[0].text
+    assert "전투를 시작합니다" in saved_logs[0].text
 
 
 async def test_confirm_quest_accept_executes_stored_action(tmp_path):

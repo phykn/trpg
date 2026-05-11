@@ -1,7 +1,6 @@
 import { Animated, Pressable, Text, View } from 'react-native';
 
-import { Bar, Surface, useEntryAnimation } from '@/components/ui';
-import { toneColor } from '@/design/tokens';
+import { Surface, useEntryAnimation } from '@/components/ui';
 import { compose, ko } from '@/locale/ko';
 
 import { buildCombatActions } from '@/logic/combat/actions';
@@ -41,17 +40,13 @@ export function CombatStrip({
               </Text>
             </View>
             {target ? (
-              <View style={{ width: 88 }}>
-                <View className="flex-row items-baseline justify-between">
-                  <Text className="font-sans-semibold text-caption text-fg-muted">HP</Text>
-                  <Text
-                    className="font-mono-semibold text-caption text-fg-default"
-                    style={{ fontVariant: ['tabular-nums'] }}
-                  >
-                    {target.hp}/{target.hpMax}
-                  </Text>
-                </View>
-                <Bar value={target.hp} max={target.hpMax} color={toneColor.hp} h={4} />
+              <View className="items-end gap-1">
+                <Text className="font-sans-semibold text-caption text-fg-default">
+                  {ko.combat.playerHearts} {combat.playerHearts.current}/{combat.playerHearts.maximum}
+                </Text>
+                <Text className="font-sans-semibold text-caption text-fg-default">
+                  {ko.combat.enemyHearts} {combat.enemyHearts.current}/{combat.enemyHearts.maximum}
+                </Text>
               </View>
             ) : null}
           </View>

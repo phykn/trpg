@@ -8,6 +8,8 @@ import type {
   GraphActionClientResponse,
   GraphActionResponse,
   GraphSuggestion,
+  GraphLevelUpChoice,
+  GraphLevelUpChoicesResponse,
   GraphLevelUpRequest,
   GraphRollRequest,
   GraphSessionPayload,
@@ -245,6 +247,22 @@ export async function sendGraphLevelUp(
   });
   if (!res.ok) throw new Error(await httpError('sendGraphLevelUp', res));
   return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
+}
+
+export async function getGraphLevelUpOptions(
+  gameId: string,
+  options: ApiRequestOptions = {},
+): Promise<GraphLevelUpChoice[]> {
+  const payload = await requestJson<GraphLevelUpChoicesResponse>(
+    'getGraphLevelUpOptions',
+    `/session/${gameId}/graph/level_up/options`,
+    {
+      method: 'GET',
+      headers: baseHeaders,
+      signal: options.signal,
+    },
+  );
+  return payload.choices;
 }
 
 export async function confirmGraphAction(

@@ -3,8 +3,6 @@ from src.game.domain.content import node_label
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph_query import location_of
 from src.game.domain.memory import ActLogEntry
-from src.game.domain.types import GraphStatKey
-from src.locale.labels import stat_label
 from src.locale.render import render
 
 from .dispatch import GraphActionDispatchResult
@@ -39,34 +37,22 @@ def build_graph_quest_offer_card(
 
 def build_graph_level_up_card(
     runtime: GameRuntimeState,
-    stat_up: GraphStatKey,
-    skill_id: str | None,
+    growth_label: str,
     log_id: int,
 ) -> ActLogEntry:
     player = runtime.graph.nodes[runtime.progress.player_id]
-    level = _int_property(player, "level")
-    max_hp = _int_property(player, "max_hp")
-    max_mp = _int_property(player, "max_mp")
-    text = render(
-        "runtime.card.level_up",
-        runtime.progress.locale,
-        actor=node_label(runtime.content, player),
-        level=level,
-        stat=stat_label(stat_up, runtime.progress.locale),
-        max_hp=max_hp,
-        max_mp=max_mp,
-    )
-    if skill_id is not None:
-        text = render(
-            "runtime.card.level_up_with_skill",
-            runtime.progress.locale,
-            base=text,
-            skill=_node_label(runtime, skill_id),
-        )
     return ActLogEntry(
         id=log_id,
         kind="act",
-        text=text,
+        text=render(
+            "runtime.card.level_up",
+            runtime.progress.locale,
+            actor=node_label(runtime.content, player),
+            level=_int_property(player, "level"),
+            growth=growth_label,
+            max_hp=_int_property(player, "max_hp"),
+            max_mp=_int_property(player, "max_mp"),
+        ),
     )
 
 

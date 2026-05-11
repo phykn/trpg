@@ -31,7 +31,7 @@ def hero_payload(
         gold=int_prop_default(player, "gold", 0),
         exp=exp,
         exp_max=exp_max,
-        can_level_up=exp >= exp_max,
+        can_level_up=exp_max > 0 and exp >= exp_max,
         resources={
             "hp": resource(player, "hp", "max_hp"),
             "mp": resource(player, "mp", "max_mp"),

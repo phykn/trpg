@@ -1,7 +1,11 @@
 import pytest
 from pydantic import ValidationError
 
-from src.db.graph_progress_rows import progress_from_row, progress_to_row
+from src.db.graph_progress_rows import (
+    GameProgressRow,
+    progress_from_row,
+    progress_to_row,
+)
 from src.game.domain.combat import GraphCombatState
 from src.game.domain.progress import GameProgress
 
@@ -47,9 +51,12 @@ def test_progress_row_round_trips_graph_combat_state():
     graph_combat_state = GraphCombatState(
         location_id="town",
         player_id="player",
+        active_enemy_id="rat",
         enemy_ids=["rat"],
         participant_ids=["player", "rat"],
         sides={"player": "player", "rat": "enemy"},
+        player_hearts=2,
+        enemy_hearts=1,
         round=2,
     )
     progress = GameProgress(
@@ -62,7 +69,32 @@ def test_progress_row_round_trips_graph_combat_state():
 
     assert row.progress["graph_combat_state"]["round"] == 2
     assert row.progress["graph_combat_state"]["enemy_ids"] == ["rat"]
+    assert row.progress["graph_combat_state"]["player_hearts"] == 2
     assert progress_from_row(row).graph_combat_state == graph_combat_state
+
+
+def test_progress_from_row_backfills_legacy_graph_combat_state():
+    row = GameProgressRow(
+        game_id="game-1",
+        progress={
+            "player_id": "player",
+            "graph_combat_state": {
+                "location_id": "town",
+                "player_id": "player",
+                "enemy_ids": ["rat"],
+                "participant_ids": ["player", "rat"],
+                "sides": {"player": "player", "rat": "enemy"},
+                "round": 2,
+            },
+        },
+    )
+
+    restored = progress_from_row(row)
+
+    assert restored.graph_combat_state is not None
+    assert restored.graph_combat_state.active_enemy_id == "rat"
+    assert restored.graph_combat_state.player_hearts == 3
+    assert restored.graph_combat_state.enemy_hearts == 3
 
 
 def test_progress_rejects_removed_combat_state_field():

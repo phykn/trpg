@@ -14,10 +14,11 @@ from src.game.runtime.combat import (
 def _character(
     character_id: str,
     *,
-    hp: int = 30,
-    max_hp: int = 30,
-    mp: int = 10,
-    max_mp: int = 10,
+    hp: int = 5,
+    max_hp: int = 5,
+    mp: int = 5,
+    max_mp: int = 5,
+    level: int = 1,
 ) -> GraphNode:
     return GraphNode(
         id=character_id,
@@ -30,6 +31,7 @@ def _character(
             "max_hp": max_hp,
             "mp": mp,
             "max_mp": max_mp,
+            "level": level,
             "alive": hp > 0,
             "stats": {"body": 3, "agility": 2, "mind": 3, "presence": 2},
             "status": [],
@@ -43,27 +45,48 @@ def _skill(skill_id: str = "fireball") -> GraphNode:
         type="skill",
         properties={
             "name": skill_id,
-            "kind": "attack",
-            "type": "attack",
-            "mp_cost": 4,
-            "power": 16,
+            "action": "attack",
+            "mp_cost": 2,
+            "support_bonus": 2,
+            "effect_template": "dc_down",
         },
     )
+
+
+def _item(item_id: str = "bomb") -> GraphNode:
+    return GraphNode(
+        id=item_id,
+        type="item",
+        properties={
+            "name": item_id,
+            "support_action": "attack",
+            "effect_template": "extra_heart_damage",
+            "consumable": True,
+        },
+    )
+
+
+@pytest.fixture(autouse=True)
+def _fixed_combat_roll(monkeypatch):
+    monkeypatch.setattr("src.game.engines.graph_combat.randint", lambda _a, _b: 11)
 
 
 def _runtime(
     *,
     enemy: GraphNode | None = None,
     include_skill: bool = False,
+    include_item: bool = False,
     graph_combat_state: GraphCombatState | None = None,
 ) -> GameRuntimeState:
     nodes = {
         "town_gate": GraphNode(id="town_gate", type="location", properties={}),
         "player_01": _character("player_01"),
-        "goblin_01": enemy or _character("goblin_01", hp=24, max_hp=24),
+        "goblin_01": enemy or _character("goblin_01"),
     }
     if include_skill:
         nodes["fireball"] = _skill()
+    if include_item:
+        nodes["bomb"] = _item()
     edges = {
         "located_at:player_01:town_gate": GraphEdge(
             id="located_at:player_01:town_gate",
@@ -85,6 +108,13 @@ def _runtime(
             from_node_id="player_01",
             to_node_id="fireball",
         )
+    if include_item:
+        edges["carries:player_01:bomb"] = GraphEdge(
+            id="carries:player_01:bomb",
+            type="carries",
+            from_node_id="player_01",
+            to_node_id="bomb",
+        )
     return GameRuntimeState(
         graph=Graph(nodes=nodes, edges=edges),
         progress=GameProgress(
@@ -99,9 +129,12 @@ def _ongoing_state(round_no: int = 2) -> GraphCombatState:
     return GraphCombatState(
         location_id="town_gate",
         player_id="player_01",
+        active_enemy_id="goblin_01",
         enemy_ids=["goblin_01"],
         participant_ids=["player_01", "goblin_01"],
         sides={"player_01": "player", "goblin_01": "enemy"},
+        player_hearts=3,
+        enemy_hearts=3,
         round=round_no,
     )
 
@@ -118,10 +151,11 @@ def test_attack_starts_combat_applies_exchange_and_stores_progress():
     assert result.outcome == "ongoing"
     assert result.runtime.progress.graph_combat_state is not None
     assert result.runtime.progress.graph_combat_state.round == 2
-    assert result.runtime.graph.nodes["goblin_01"].properties["hp"] < 24
-    assert result.runtime.graph.nodes["player_01"].properties["hp"] < 30
+    assert result.runtime.progress.graph_combat_state.enemy_hearts == 2
+    assert result.runtime.graph.nodes["goblin_01"].properties["hp"] == 5
+    assert result.runtime.graph.nodes["player_01"].properties["hp"] == 5
     assert runtime.progress.graph_combat_state is None
-    assert runtime.graph.nodes["goblin_01"].properties["hp"] == 24
+    assert runtime.graph.nodes["goblin_01"].properties["hp"] == 5
 
 
 def test_attack_with_weapon_id_starts_as_basic_attack():
@@ -140,13 +174,27 @@ def test_attack_with_weapon_id_starts_as_basic_attack():
     assert result.started is True
     assert result.outcome == "ongoing"
     assert result.runtime.progress.graph_combat_state is not None
-    assert result.runtime.graph.nodes["goblin_01"].properties["hp"] < 24
+    assert result.runtime.progress.graph_combat_state.enemy_hearts == 2
+
+
+def test_attack_with_carried_item_uses_item_support_and_consumes_it():
+    runtime = _runtime(include_item=True)
+
+    result = dispatch_graph_combat_action(
+        runtime,
+        Action(verb="attack", what="goblin_01", with_="bomb"),
+    )
+
+    assert result.runtime.progress.graph_combat_state is not None
+    assert result.runtime.progress.graph_combat_state.enemy_hearts == 1
+    assert "carries:player_01:bomb" not in result.runtime.graph.edges
 
 
 def test_attack_can_finish_existing_combat_and_clear_progress():
     runtime = _runtime(
-        enemy=_character("goblin_01", hp=8, max_hp=24),
-        graph_combat_state=_ongoing_state(round_no=3),
+        graph_combat_state=_ongoing_state(round_no=3).model_copy(
+            update={"enemy_hearts": 1}
+        ),
     )
 
     result = dispatch_graph_combat_action(
@@ -158,14 +206,15 @@ def test_attack_can_finish_existing_combat_and_clear_progress():
     assert result.outcome == "victory"
     assert result.runtime.progress.graph_combat_state is None
     enemy = result.runtime.graph.nodes["goblin_01"].properties
-    assert enemy["hp"] == 0
+    assert enemy["hp"] == 5
     assert enemy["defeat_mode"] == "unconscious"
 
 
 def test_victory_completes_matching_active_quest_and_clears_active_id():
     runtime = _runtime(
-        enemy=_character("goblin_01", hp=8, max_hp=24),
-        graph_combat_state=_ongoing_state(round_no=3),
+        graph_combat_state=_ongoing_state(round_no=3).model_copy(
+            update={"enemy_hearts": 1}
+        ),
     )
     runtime.graph.nodes["quest_01"] = GraphNode(
         id="quest_01",
@@ -235,7 +284,6 @@ def test_flee_clears_existing_graph_combat_state_without_graph_changes():
 
 def test_pass_maps_to_defend_and_advances_round():
     runtime = _runtime(
-        enemy=_character("goblin_01", hp=80, max_hp=80),
         graph_combat_state=_ongoing_state(),
     )
 
@@ -246,8 +294,8 @@ def test_pass_maps_to_defend_and_advances_round():
 
     assert result.outcome == "ongoing"
     assert result.runtime.progress.graph_combat_state.round == 3
-    player_hp = result.runtime.graph.nodes["player_01"].properties["hp"]
-    assert player_hp == 27
+    assert result.runtime.progress.graph_combat_state.player_hearts == 3
+    assert result.runtime.graph.nodes["player_01"].properties["hp"] == 5
 
 
 def test_cast_starts_combat_and_deducts_mp():
@@ -260,8 +308,9 @@ def test_cast_starts_combat_and_deducts_mp():
 
     assert result.started is True
     assert result.outcome == "ongoing"
-    assert result.runtime.graph.nodes["player_01"].properties["mp"] == 6
-    assert result.runtime.graph.nodes["goblin_01"].properties["hp"] == 8
+    assert result.runtime.graph.nodes["player_01"].properties["mp"] == 3
+    assert result.runtime.progress.graph_combat_state is not None
+    assert result.runtime.progress.graph_combat_state.enemy_hearts == 2
 
 
 def test_unsupported_action_raises_dispatch_error():

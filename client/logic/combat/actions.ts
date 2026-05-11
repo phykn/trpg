@@ -17,7 +17,7 @@ export function buildCombatActions(combat: CombatBadge): PanelAction[] {
     {
       kind: 'graph_action',
       label: ko.combat.defend,
-      graphAction: { verb: 'pass' },
+      graphAction: { verb: 'pass', how: 'defend' },
       textFallback: compose.defend(),
     },
     {
