@@ -60,7 +60,7 @@ export function deriveGraphSuggestions(state: GraphFrontState): SuggestionChip[]
 
 function combatSuggestions(combat: GraphCombatState): SuggestionChip[] {
   const enemy = combat.participants.find(
-    (participant) => participant.side === 'enemy' && participant.hp.current > 0,
+    (participant) => participant.side === 'enemy' && participant.id === combat.activeEnemyId && combat.enemyHearts.current > 0,
   );
   const suggestions = enemy
     ? [chip(compose.attack(enemy.name)), chip(compose.defend()), chip(compose.flee())]
@@ -164,14 +164,14 @@ function adaptCombat(combat: GraphCombatState | null): FrontState['combat'] {
   return {
     round: combat.round,
     turnLabel: ko.combat.label,
+    playerHearts: combat.playerHearts,
+    enemyHearts: combat.enemyHearts,
     enemies: combat.participants
       .filter((participant) => participant.side === 'enemy')
       .map((enemy) => ({
         id: enemy.id,
         name: enemy.name,
-        hp: enemy.hp.current,
-        hpMax: enemy.hp.maximum,
-        alive: enemy.hp.current > 0,
+        alive: enemy.id === combat.activeEnemyId && combat.enemyHearts.current > 0,
       })),
   };
 }

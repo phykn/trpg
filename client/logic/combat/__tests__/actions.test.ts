@@ -6,8 +6,10 @@ describe('buildCombatActions', () => {
     const combat: CombatBadge = {
       round: 2,
       turnLabel: '전투 중',
+      playerHearts: { current: 3, maximum: 3 },
+      enemyHearts: { current: 2, maximum: 3 },
       enemies: [
-        { id: 'enemy_01', name: '늑대', hp: 9, hpMax: 28, alive: true },
+        { id: 'enemy_01', name: '늑대', alive: true },
       ],
     };
 
@@ -23,7 +25,7 @@ describe('buildCombatActions', () => {
       expect.objectContaining({
         kind: 'graph_action',
         label: '방어',
-        graphAction: { verb: 'pass' },
+        graphAction: { verb: 'pass', how: 'defend' },
         textFallback: '방어합니다',
       }),
       expect.objectContaining({

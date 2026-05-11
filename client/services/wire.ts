@@ -105,6 +105,11 @@ export type GraphResource = {
   state: string;
 };
 
+export type GraphHeart = {
+  current: number;
+  maximum: number;
+};
+
 export type GraphNamed = {
   id: string;
   name: string;
@@ -187,6 +192,9 @@ export type GraphCombatParticipant = {
 export type GraphCombatState = {
   round: number;
   outcome: 'ongoing' | 'victory' | 'defeat' | 'fled';
+  playerHearts: GraphHeart;
+  enemyHearts: GraphHeart;
+  activeEnemyId: string;
   participants: GraphCombatParticipant[];
 };
 

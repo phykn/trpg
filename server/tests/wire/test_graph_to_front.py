@@ -193,9 +193,12 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
         graph_combat_state = GraphCombatState(
             location_id="town",
             player_id="player_01",
+            active_enemy_id="goblin_01",
             enemy_ids=["goblin_01"],
             participant_ids=["player_01", "goblin_01"],
             sides={"player_01": "player", "goblin_01": "enemy"},
+            player_hearts=2,
+            enemy_hearts=1,
             round=2,
         )
     return GameRuntimeState(
@@ -230,7 +233,8 @@ def test_graph_front_state_builds_hero_resource_state_words():
     assert payload.hero.level == 2
     assert payload.hero.gold == 7
     assert payload.hero.exp == 11
-    assert payload.hero.exp_max > payload.hero.exp
+    assert payload.hero.exp_max == 2
+    assert payload.hero.can_level_up is True
     assert payload.hero.stats == {"agility": 2, "body": 3, "mind": 1, "presence": 0}
     assert payload.log[0].text == "당신은 Town에 있습니다."
 
@@ -425,6 +429,11 @@ def test_graph_front_state_builds_combat_view_when_progress_exists():
     assert payload.combat is not None
     assert payload.combat.round == 2
     assert payload.combat.outcome == "ongoing"
+    assert payload.combat.active_enemy_id == "goblin_01"
+    assert payload.combat.player_hearts.current == 2
+    assert payload.combat.player_hearts.maximum == 3
+    assert payload.combat.enemy_hearts.current == 1
+    assert payload.combat.enemy_hearts.maximum == 3
     assert [p.id for p in payload.combat.participants] == ["player_01", "goblin_01"]
     assert payload.combat.participants[1].hp.state == "critical"
 

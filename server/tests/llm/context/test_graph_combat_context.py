@@ -90,6 +90,7 @@ def test_build_graph_combat_context_exposes_state_words_without_raw_numbers():
         state,
         "player_01",
         GraphCombatAction(kind="attack"),
+        dice=11,
     )
     changed = _apply_all(graph, result.changes)
 
@@ -98,6 +99,8 @@ def test_build_graph_combat_context_exposes_state_words_without_raw_numbers():
 
     assert context.location_id == "town_gate"
     assert context.round == 2
+    assert context.player_hearts == 3
+    assert context.enemy_hearts == 2
     assert context.outcome == "ongoing"
     assert [participant.id for participant in context.participants] == [
         "player_01",
@@ -105,10 +108,23 @@ def test_build_graph_combat_context_exposes_state_words_without_raw_numbers():
     ]
     assert context.participants[0].hp_state == "healthy"
     assert context.participants[0].mp_state == "ready"
-    assert context.participants[1].hp_state == "hurt"
+    assert context.participants[1].hp_state == "healthy"
     assert context.participants[1].mp_state is None
-    assert context.trace[-1].kind == "enemy_pressed"
+    assert context.trace[-1].kind == "player_attack_success"
     assert _forbidden_keys(dumped) == set()
+
+
+def test_combat_context_exposes_hearts_not_damage_numbers():
+    graph = _graph()
+    state = plan_combat_start(graph, "player_01", "goblin_01").state.model_copy(
+        update={"player_hearts": 2, "enemy_hearts": 1}
+    )
+
+    context = build_graph_combat_context(graph, state)
+
+    assert context.player_hearts == 2
+    assert context.enemy_hearts == 1
+    assert context.round >= 1
 
 
 def test_resource_state_thresholds():

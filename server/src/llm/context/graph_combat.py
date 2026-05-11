@@ -39,7 +39,9 @@ class GraphCombatContext(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     location_id: str
-    round: int = Field(ge=1, le=4)
+    round: int = Field(ge=1)
+    player_hearts: int = Field(ge=0, le=3)
+    enemy_hearts: int = Field(ge=0, le=3)
     outcome: Literal["ongoing", "victory", "defeat", "fled"]
     participants: list[GraphCombatParticipantView]
     trace: list[GraphCombatTraceView]
@@ -83,6 +85,8 @@ def build_graph_combat_context(
     return GraphCombatContext(
         location_id=state.location_id,
         round=state.round,
+        player_hearts=state.player_hearts,
+        enemy_hearts=state.enemy_hearts,
         outcome=state.outcome,
         participants=participants,
         trace=[

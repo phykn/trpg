@@ -10,6 +10,7 @@ __all__ = [
     "EquipSlot",
     "GraphCombatParticipantPayload",
     "GraphCombatPayload",
+    "GraphHeartPayload",
     "GraphEquipmentPayload",
     "GraphFrontStatePayload",
     "GraphHeroPayload",
@@ -115,9 +116,17 @@ class GraphCombatParticipantPayload(_CamelModel):
     mp: GraphResourcePayload | None = None
 
 
+class GraphHeartPayload(_CamelModel):
+    current: int
+    maximum: int
+
+
 class GraphCombatPayload(_CamelModel):
     round: int
     outcome: Literal["ongoing", "victory", "defeat", "fled"]
+    player_hearts: GraphHeartPayload
+    enemy_hearts: GraphHeartPayload
+    active_enemy_id: str
     participants: list[GraphCombatParticipantPayload]
 
 
