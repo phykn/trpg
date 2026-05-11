@@ -434,7 +434,7 @@ async def test_graph_level_up_commits_and_returns_state(tmp_path):
 
         response = await client.post(
             f"/session/{game_id}/graph/level_up",
-            json={"stat_up": "body", "skill_id": None, "think": False},
+            json={"growth": {"kind": "max_hp"}, "think": False},
         )
 
     assert response.status_code == 200, response.text
@@ -446,14 +446,28 @@ async def test_graph_level_up_commits_and_returns_state(tmp_path):
 
     assert player_props["level"] == level + 1
     assert player_props["xp_pool"] == 0
-    assert player_props["stats"]["body"] == 11
-    assert player_props["stats"]["presence"] == 10
+    assert player_props["max_hp"] == 6
+    assert player_props["hp"] == 6
     assert body["state"]["hero"]["level"] == level + 1
     assert body["state"]["hero"]["exp"] == 0
     assert body["state"]["log"] == [entry.model_dump() for entry in logs]
     assert logs[-1].kind == "act"
     assert "레벨이 올랐습니다" in logs[-1].text
     assert progress.next_log_id == logs[-1].id + 1
+
+
+@pytest.mark.asyncio
+async def test_graph_level_up_rejects_legacy_stat_payload(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(
+            f"/session/{game_id}/graph/level_up",
+            json={"growth": {"kind": "stat", "stat_up": "body"}, "think": False},
+        )
+
+    assert response.status_code == 422
 
 
 @pytest.mark.asyncio

@@ -5,64 +5,57 @@ import { Surface } from '@/components/ui';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import type { Hero } from '@/logic/hero';
-import type { GraphStatKey } from '@/services/wire';
+import type { GraphLevelUpGrowth } from '@/services/wire';
 
-const GRAPH_STAT_ROWS: [GraphStatKey, GraphStatKey][] = [
-  ['body', 'agility'],
-  ['mind', 'presence'],
+type GrowthChoice = {
+  id: 'max_hp' | 'max_mp';
+  label: string;
+  growth: GraphLevelUpGrowth;
+};
+
+const CHOICES: GrowthChoice[] = [
+  { id: 'max_hp', label: '최대 HP +1', growth: { kind: 'max_hp' } },
+  { id: 'max_mp', label: '최대 MP +1', growth: { kind: 'max_mp' } },
 ];
-
-const STAT_CAP = 20;
 
 type Props = {
   hero: Hero;
-  onCommit: (stat_up: GraphStatKey) => void;
+  onCommit: (growth: GraphLevelUpGrowth) => void;
   onCancel: () => void;
 };
 
 export function LevelUpPrompt({ hero, onCommit, onCancel }: Props) {
-  const [statUp, setStatUp] = React.useState<GraphStatKey | null>(null);
+  const [selectedId, setSelectedId] = React.useState<GrowthChoice['id']>('max_hp');
+  const selected = CHOICES.find((choice) => choice.id === selectedId) ?? CHOICES[0];
 
-  const statValueOf = (k: GraphStatKey): number => {
-    const row = hero.stats.find((s) => s.label === ko.ability[k]);
-    return row ? row.value : 0;
-  };
-
-  const isStatDisabled = (k: GraphStatKey): boolean => statValueOf(k) >= STAT_CAP;
-
-  const canCommit = statUp !== null;
-
-  const renderStatButton = (k: GraphStatKey) => {
-    const isUp = statUp === k;
-    const disabled = isStatDisabled(k);
-    const baseValue = statValueOf(k);
-    const previewValue = isUp ? baseValue + 1 : baseValue;
-
-    let style: object = { borderWidth: 1, borderColor: colors.border.default };
-    let textColor = colors.fg.default;
-    if (isUp) {
-      style = { backgroundColor: colors.accent.fg };
-      textColor = colors.canvas.default;
-    }
-    if (disabled && !isUp) {
-      style = { ...style, opacity: 0.4 };
-    }
+  const renderChoiceButton = (choice: GrowthChoice) => {
+    const active = selectedId === choice.id;
+    const style = active
+      ? { backgroundColor: colors.accent.fg, borderColor: colors.accent.fg }
+      : { borderColor: colors.border.default };
+    const textColor = active ? colors.canvas.default : colors.fg.default;
 
     return (
       <Pressable
-        key={k}
-        testID={`level-stat-${k}`}
-        onPress={disabled ? undefined : () => { setStatUp(k); }}
-        disabled={disabled}
+        key={choice.id}
+        testID={`level-growth-${choice.id}`}
+        onPress={() => { setSelectedId(choice.id); }}
         accessibilityRole="button"
-        accessibilityLabel={`${ko.ability[k]} ${ko.level.raiseSuffix}`}
+        accessibilityLabel={choice.label}
         style={[
-          { flex: 1, paddingVertical: 6, paddingHorizontal: 4, borderRadius: 3, alignItems: 'center', justifyContent: 'center' },
+          {
+            flex: 1,
+            height: 34,
+            borderRadius: 6,
+            borderWidth: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
           style,
         ]}
       >
-        <Text className="font-sans-medium" style={{ color: textColor, fontSize: 11 }}>
-          {ko.ability[k]} <Text style={{ fontVariant: ['tabular-nums'] }}>{previewValue}</Text>
+        <Text className="font-sans-semibold text-panel" style={{ color: textColor }}>
+          {choice.label}
         </Text>
       </Pressable>
     );
@@ -82,13 +75,8 @@ export function LevelUpPrompt({ hero, onCommit, onCancel }: Props) {
         <Text className="font-sans text-caption text-fg-muted">{ko.level.permanent}</Text>
       </View>
 
-      <View style={{ gap: 3 }}>
-        {GRAPH_STAT_ROWS.map(([a, b]) => (
-          <View key={a + b} style={{ flexDirection: 'row', gap: 3 }}>
-            {renderStatButton(a)}
-            {renderStatButton(b)}
-          </View>
-        ))}
+      <View style={{ flexDirection: 'row', gap: 6 }}>
+        {CHOICES.map(renderChoiceButton)}
       </View>
 
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
@@ -109,19 +97,15 @@ export function LevelUpPrompt({ hero, onCommit, onCancel }: Props) {
         </Pressable>
         <Pressable
           testID="level-confirm"
-          onPress={canCommit ? () => onCommit(statUp!) : undefined}
-          disabled={!canCommit}
+          onPress={() => onCommit(selected.growth)}
           accessibilityRole="button"
           accessibilityLabel={ko.level.confirmAction}
-          style={[
-            {
-              flex: 1, height: 36, borderRadius: 6,
-              alignItems: 'center', justifyContent: 'center',
-              borderWidth: 1, borderColor: colors.accent.fg,
-              backgroundColor: 'rgba(214,122,92,0.15)',
-            },
-            !canCommit ? { opacity: 0.55 } : null,
-          ]}
+          style={{
+            flex: 1, height: 36, borderRadius: 6,
+            alignItems: 'center', justifyContent: 'center',
+            borderWidth: 1, borderColor: colors.accent.fg,
+            backgroundColor: 'rgba(214,122,92,0.15)',
+          }}
         >
           <Text className="font-sans-semibold text-title" style={{ color: colors.accent.fg, letterSpacing: 1.2 }}>
             {ko.level.title}

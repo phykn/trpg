@@ -37,19 +37,16 @@ import type { Subject } from '@/logic/subject';
 import type {
   FrontState,
   GraphAction,
+  GraphLevelUpGrowth,
   InitRequest,
   PendingConfirmation,
-  GraphStatKey,
   SuggestionChip,
 } from '@/services/wire';
-import { ko } from '@/locale/ko';
 import { useGraphActionRunner, type OptimisticLogEntry } from './requestRunner';
 
 export type GameStatus = 'loading' | 'no-game' | 'ready' | 'error';
 
 export type Game = ReturnType<typeof useGame>;
-
-const GRAPH_STAT_KEYS = new Set<GraphStatKey>(['body', 'agility', 'mind', 'presence']);
 
 function optimisticAct(label?: string): OptimisticLogEntry[] {
   return label ? [{ kind: 'act', text: label }] : [];
@@ -287,16 +284,12 @@ export function useGame() {
   }, []);
 
   const commitLevelUp = React.useCallback(
-    (stat_up: GraphStatKey) => {
+    (growth: GraphLevelUpGrowth) => {
       const id = gameIdRef.current;
       if (!id) return;
       setLevelUpOpen(false);
-      if (!isGraphStatKey(stat_up)) {
-        setErrorMessage(ko.error.invalidStat);
-        return;
-      }
       void runGraphActionRequest((signal) =>
-        sendGraphLevelUp(id, { stat_up, skill_id: null, think: false }, { signal }),
+        sendGraphLevelUp(id, { growth, think: false }, { signal }),
       );
     },
     [runGraphActionRequest],
@@ -389,8 +382,4 @@ export function useGame() {
     goToNewGame,
     refresh,
   };
-}
-
-function isGraphStatKey(value: GraphStatKey): value is GraphStatKey {
-  return GRAPH_STAT_KEYS.has(value);
 }

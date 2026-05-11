@@ -233,10 +233,13 @@ export type GraphActionClientResponse = {
   suggestions: SuggestionChip[];
 };
 
-export type GraphStatKey = 'body' | 'agility' | 'mind' | 'presence';
+export type GraphLevelUpGrowth =
+  | { kind: 'max_hp' }
+  | { kind: 'max_mp' }
+  | { kind: 'learn_skill'; skill_id: string }
+  | { kind: 'upgrade_skill'; skill_id: string };
 
 export type GraphLevelUpRequest = {
-  stat_up: GraphStatKey;
-  skill_id: string | null;
+  growth: GraphLevelUpGrowth;
   think: boolean;
 };

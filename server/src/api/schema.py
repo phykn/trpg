@@ -1,9 +1,8 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.game.domain.action import Action
-from src.game.domain.types import GraphStatKey
 from src.game.runtime.suggestions import GraphSuggestionValue
 from src.game.seed.player import PlayerInput
 
@@ -73,5 +72,7 @@ class GraphRollRequest(BaseModel):
 
 
 class GraphLevelUpRequest(BaseModel):
-    stat_up: GraphStatKey
-    skill_id: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    growth: dict[str, str]
+    think: bool = False

@@ -389,8 +389,7 @@ async def session_graph_level_up(
         result = await run_graph_level_up(
             graph_repo,
             game_id,
-            stat_up=body.stat_up,
-            skill_id=body.skill_id,
+            growth=body.growth,
             scenario_repo=scenario_repo,
         )
     except FileNotFoundError:
