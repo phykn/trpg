@@ -59,6 +59,16 @@ def _graph() -> Graph:
                 type="quest",
                 properties={"title": "첫 의뢰", "status": "pending"},
             ),
+            "training_strike": GraphNode(
+                id="training_strike",
+                type="skill",
+                properties={
+                    "name": "훈련 일격",
+                    "kind": "attack",
+                    "mp_cost": 2,
+                    "power": 40,
+                },
+            ),
         },
         edges={
             "located_at:player_01:town": GraphEdge(
@@ -78,6 +88,12 @@ def _graph() -> Graph:
                 type="located_at",
                 from_node_id="goblin_named",
                 to_node_id="town",
+            ),
+            "knows_skill:player_01:training_strike": GraphEdge(
+                id="knows_skill:player_01:training_strike",
+                type="knows_skill",
+                from_node_id="player_01",
+                to_node_id="training_strike",
             ),
         },
     )
@@ -214,6 +230,29 @@ async def test_confirm_attack_log_uses_korean_object_particle(tmp_path):
     saved_logs = await repo.load_log_entries("game-1")
 
     assert saved_logs[0].text == "당신은 고블린 약탈자를 공격해 전투를 시작합니다."
+
+
+async def test_confirm_skill_attack_logs_mp_spend_and_terminal_victory(tmp_path):
+    repo = await _repo(tmp_path)
+    await run_graph_action_request(
+        repo,
+        "game-1",
+        Action(verb="attack", what="goblin_01", with_="training_strike"),
+    )
+    pending = (await repo.load_progress("game-1")).pending_confirmation
+
+    result = await run_graph_confirm(repo, "game-1", pending["id"], "confirm")
+    saved_progress = await repo.load_progress("game-1")
+    saved_graph = await repo.load_graph("game-1")
+    saved_logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert saved_progress.graph_combat_state is None
+    assert saved_graph.nodes["player_01"].properties["mp"] == 8
+    assert saved_graph.nodes["goblin_01"].properties["status"] == ["defeated"]
+    assert "훈련 일격" in saved_logs[0].text
+    assert "MP 2" in saved_logs[0].text
+    assert "쓰러뜨립니다" in saved_logs[0].text
 
 
 async def test_confirm_quest_accept_executes_stored_action(tmp_path):

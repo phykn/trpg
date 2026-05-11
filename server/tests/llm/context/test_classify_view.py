@@ -214,6 +214,30 @@ def test_classify_context_to_grounding_view_preserves_optional_trade_candidates(
     ]
 
 
+def test_classify_context_exposes_items_at_current_location():
+    runtime = _runtime()
+    runtime.graph.nodes["ground_item"] = GraphNode(
+        id="ground_item",
+        type="item",
+        properties={"name": "바닥 표식", "kind": "token"},
+    )
+    runtime.graph.edges["located_at:ground_item:town"] = GraphEdge(
+        id="located_at:ground_item:town",
+        type="located_at",
+        from_node_id="ground_item",
+        to_node_id="town",
+    )
+
+    context = build_classify_context_view(runtime, "바닥 표식을 줍는다")
+    grounding = classify_context_to_grounding_view(context)
+
+    assert context["identity"]["location_items"] == [
+        {"id": "ground_item", "name": "바닥 표식", "kind": "token"}
+    ]
+    assert context["affordances"]["can_pick_up"] == ["ground_item"]
+    assert grounding["location_items"] == context["identity"]["location_items"]
+
+
 def test_classify_context_exposes_transfer_and_protected_candidates():
     nodes = {
         "town": GraphNode(id="town", type="location", properties={"name": "마을"}),

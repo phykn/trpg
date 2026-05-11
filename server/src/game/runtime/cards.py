@@ -130,6 +130,8 @@ def _card_text(
 
     if dispatch.kind == "transfer":
         item = _node_label(after, _single(action.what) or _single(action.with_))
+        if _is_location_pickup(before, action):
+            return render("runtime.card.pickup", after.progress.locale, item=item)
         return render("runtime.card.transfer", after.progress.locale, item=item)
 
     if dispatch.kind == "trade_buy":
@@ -149,6 +151,10 @@ def _combat_text(
     action: Action,
     dispatch: GraphActionDispatchResult,
 ) -> str:
+    skill_id = _combat_skill_id(action)
+    if skill_id is not None:
+        return _skill_combat_text(before, after, action, dispatch, skill_id)
+
     if before.progress.graph_combat_state is None:
         target_id = _single(action.what) or _single(action.to)
         target = _node_label(
@@ -167,6 +173,70 @@ def _combat_text(
     if outcome == "victory":
         return render("runtime.combat.victory", after.progress.locale)
     return render("runtime.combat.continue", after.progress.locale)
+
+
+def _skill_combat_text(
+    before: GameRuntimeState,
+    after: GameRuntimeState,
+    action: Action,
+    dispatch: GraphActionDispatchResult,
+    skill_id: str,
+) -> str:
+    target_id = _single(action.what) if action.verb == "attack" else _single(action.to)
+    target = _node_label(
+        after,
+        target_id,
+        fallback=render("runtime.fallback.target", after.progress.locale),
+    )
+    skill = _node_label(after, skill_id)
+    mp_cost = _skill_mp_cost(before, skill_id)
+    if dispatch.outcome == "victory":
+        return render(
+            "runtime.combat.skill_victory",
+            after.progress.locale,
+            skill=skill,
+            target=target,
+            mp_cost=mp_cost,
+        )
+    if before.progress.graph_combat_state is None:
+        return render(
+            "runtime.combat.skill_start",
+            after.progress.locale,
+            skill=skill,
+            target=target,
+            mp_cost=mp_cost,
+        )
+    return render(
+        "runtime.combat.skill_continue",
+        after.progress.locale,
+        skill=skill,
+        target=target,
+        mp_cost=mp_cost,
+    )
+
+
+def _combat_skill_id(action: Action) -> str | None:
+    if action.verb == "attack":
+        return _single(action.with_)
+    if action.verb == "cast":
+        return _single(action.with_) or _single(action.what)
+    return None
+
+
+def _skill_mp_cost(runtime: GameRuntimeState, skill_id: str) -> int:
+    node = runtime.graph.nodes.get(skill_id)
+    if node is None:
+        return 0
+    value = node.properties.get("mp_cost")
+    return value if isinstance(value, int) else 0
+
+
+def _is_location_pickup(runtime: GameRuntimeState, action: Action) -> bool:
+    item_id = _single(action.what) or _single(action.with_)
+    source_id = _single(action.from_)
+    if item_id is None or source_id is None:
+        return False
+    return location_of(runtime.graph, item_id) == source_id
 
 
 def _quest_title(runtime: GameRuntimeState, quest_id: str | None) -> str:

@@ -10,6 +10,7 @@ from src.game.domain.graph_query import (
     edges_from,
     equipment_of,
     inventory_of,
+    items_at,
     known_skills_of,
     location_of,
 )
@@ -20,6 +21,7 @@ MAX_CLASSIFY_VISIBLE_TARGETS = 8
 MAX_CLASSIFY_EXITS = 6
 MAX_CLASSIFY_INVENTORY = 10
 MAX_CLASSIFY_SKILLS = 8
+MAX_CLASSIFY_LOCATION_ITEMS = 8
 MAX_CLASSIFY_RECENT_DIALOGUE = 5
 MAX_CLASSIFY_TARGET_CARRYABLES = 6
 MAX_CLASSIFY_MERCHANT_STOCK = 8
@@ -39,12 +41,14 @@ def build_classify_context_view(
     all_exits = _exits(runtime, location_id)
     all_inventory = _inventory(runtime, player_id)
     all_skills = _skills(runtime, player_id)
+    all_location_items = _location_items(runtime, location_id)
     all_corpses = _corpses(runtime, location_id)
 
     visible_targets = all_visible_targets[:MAX_CLASSIFY_VISIBLE_TARGETS]
     exits = all_exits[:MAX_CLASSIFY_EXITS]
     inventory = all_inventory[:MAX_CLASSIFY_INVENTORY]
     skills = all_skills[:MAX_CLASSIFY_SKILLS]
+    location_items = all_location_items[:MAX_CLASSIFY_LOCATION_ITEMS]
     corpses = all_corpses[:MAX_CLASSIFY_CORPSES]
 
     return {
@@ -62,6 +66,7 @@ def build_classify_context_view(
             "inventory": inventory,
             "equipment": _equipment(runtime, player_id),
             "skills": skills,
+            "location_items": location_items,
             "active_quest": _active_quest(runtime),
             "merchants": _merchants(runtime, visible_targets),
             "corpses": corpses,
@@ -75,6 +80,7 @@ def build_classify_context_view(
             "can_attack": _attackable_ids(visible_targets),
             "can_move_to": [exit_["id"] for exit_ in exits],
             "can_use": [item["id"] for item in inventory],
+            "can_pick_up": [item["id"] for item in location_items],
             "can_accept_or_abandon_quest": _quest_ids(runtime),
         },
         "references": {
@@ -91,6 +97,10 @@ def build_classify_context_view(
             "exits_omitted": max(0, len(all_exits) - MAX_CLASSIFY_EXITS),
             "inventory_omitted": max(0, len(all_inventory) - MAX_CLASSIFY_INVENTORY),
             "skills_omitted": max(0, len(all_skills) - MAX_CLASSIFY_SKILLS),
+            "location_items_omitted": max(
+                0,
+                len(all_location_items) - MAX_CLASSIFY_LOCATION_ITEMS,
+            ),
             "corpses_omitted": max(0, len(all_corpses) - MAX_CLASSIFY_CORPSES),
         },
     }
@@ -145,6 +155,7 @@ def classify_context_to_grounding_view(context: dict[str, Any]) -> dict[str, Any
         "inventory": _dicts(identity.get("inventory")),
         "equipment": identity.get("equipment") or {},
         "skills": _dicts(identity.get("skills")),
+        "location_items": _dicts(identity.get("location_items")),
         "merchants": _dicts(identity.get("merchants")),
         "corpses": _dicts(identity.get("corpses")),
         "quests": [active_quest] if active_quest is not None else [],
@@ -243,6 +254,20 @@ def _skills(runtime: GameRuntimeState, player_id: str) -> list[dict[str, str]]:
         node = runtime.graph.nodes.get(edge.to_node_id)
         if node is not None and node.type == "skill":
             out.append({"id": node.id, "name": node_label(runtime.content, node)})
+    return out
+
+
+def _location_items(
+    runtime: GameRuntimeState,
+    location_id: str | None,
+) -> list[dict[str, Any]]:
+    if location_id is None:
+        return []
+    out: list[dict[str, Any]] = []
+    for item_id in items_at(runtime.graph_index, location_id):
+        node = runtime.graph.nodes.get(item_id)
+        if node is not None and node.type == "item":
+            out.append(_item_payload(runtime, node))
     return out
 
 

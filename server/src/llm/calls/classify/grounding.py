@@ -21,6 +21,7 @@ class _ViewIds:
     connection_ids: set[str] = field(default_factory=set)
     location_ids: set[str] = field(default_factory=set)
     inventory_item_ids: set[str] = field(default_factory=set)
+    location_item_ids: set[str] = field(default_factory=set)
     equipment_item_ids: set[str] = field(default_factory=set)
     visible_item_ids: set[str] = field(default_factory=set)
     skill_ids: set[str] = field(default_factory=set)
@@ -40,6 +41,7 @@ class _ViewIds:
     def exposed_item_ids(self) -> set[str]:
         return (
             self.inventory_item_ids
+            | self.location_item_ids
             | self.equipment_item_ids
             | self.visible_item_ids
             | self.merchant_stock_item_ids
@@ -98,6 +100,7 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
         if location_id is not None
     }
     inventory_item_ids = _ids_from_list(surroundings.get("inventory"))
+    location_item_ids = _ids_from_list(surroundings.get("location_items"))
     equipment_item_ids = _equipment_item_ids(surroundings.get("equipment"))
     skill_ids = _ids_from_list(surroundings.get("skills"))
     merchant_ids, merchant_stock_item_ids = _merchant_ids(surroundings.get("merchants"))
@@ -115,6 +118,7 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
         connection_ids=connection_ids,
         location_ids=location_ids,
         inventory_item_ids=inventory_item_ids,
+        location_item_ids=location_item_ids,
         equipment_item_ids=equipment_item_ids,
         visible_item_ids=visible_item_ids,
         skill_ids=skill_ids,
@@ -201,6 +205,15 @@ def _validate_transfer(action: Action, view: _ViewIds) -> None:
             action=action,
             field="what",
         )
+        return
+    if item_id in view.location_item_ids:
+        _require_id(
+            action.from_,
+            view.location_ids,
+            action=action,
+            field="from",
+        )
+        _require_id(action.to, view.self_refs, action=action, field="to")
         return
     _require_id(action.from_, view.actor_refs, action=action, field="from")
     _require_id(action.to, view.actor_refs, action=action, field="to")

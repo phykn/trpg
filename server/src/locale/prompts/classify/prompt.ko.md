@@ -34,6 +34,7 @@
 - `context.identity.player`: 플레이어 id와 이름입니다. 플레이어에게 주거나 플레이어가 받는 행동에는 이 id를 씁니다.
 - `context.identity`: 현재 장소, 눈앞 대상, 이동 후보, 소지품, 장비, 기술, 활성 퀘스트입니다.
 - `context.identity.visible_targets`: 눈앞 NPC/적입니다. `protected=true`이면 공격하지 말고 `pass`입니다. `carryables`가 있으면 절도나 선물 후보로 쓸 수 있습니다.
+- `context.identity.location_items`: 현재 장소에 놓인 획득 가능 아이템입니다. 줍기/획득은 `from`에 현재 장소 id, `to`에 플레이어 id를 씁니다.
 - `context.identity.merchants`: 거래 가능한 대상과 `stock`입니다. 구매는 `stock`의 item id를 `what`으로 씁니다.
 - `context.identity.corpses`: 약탈 가능한 시체와 `inventory`입니다. 약탈은 corpse id를 `from`으로 씁니다.
 - `context.affordances`: 현재 그래프에서 가능한 말걸기, 공격, 이동, 사용, 퀘스트 조작 후보입니다.
@@ -62,7 +63,7 @@
 | verb | 필드 | 매칭 힌트 |
 |---|---|---|
 | `move` | `to` | `context.identity.exits`의 id. 전투 중 도망은 `how="hasty"`만 가능 |
-| `transfer` | `what`, `how`, `from`, `to` | 장비, 장비 해제, 구매, 판매, 선물, 시체 약탈, 절도, 퀘스트 수락/포기. `equip`은 `to` 슬롯만, `unequip`은 `what`만 씁니다. 장비는 `transfer(what="sword_01", to="weapon", how="equip")`, 해제는 `transfer(what="sword_01", how="unequip")`. |
+| `transfer` | `what`, `how`, `from`, `to` | 장비, 장비 해제, 바닥 아이템 획득, 구매, 판매, 선물, 시체 약탈, 절도, 퀘스트 수락/포기. `equip`은 `to` 슬롯만, `unequip`은 `what`만 씁니다. 장비는 `transfer(what="sword_01", to="weapon", how="equip")`, 해제는 `transfer(what="sword_01", how="unequip")`. |
 | `use` | `what`, `to?` | 소모품이나 trigger 아이템 사용. weapon/armor는 `transfer` |
 | `attack` | `what`, `with?`, `how?` | NPC 공격. `what`은 NPC id 배열. 기습이면 `how="surprise"` |
 | `cast` | `with`, `to?` | 회복/강화/공격 기술. `with`는 skill id, 대상은 `to`. 예: `cast(with="minor_heal_01", to="player_01")` |

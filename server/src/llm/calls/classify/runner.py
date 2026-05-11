@@ -10,6 +10,7 @@ from .dialogue import classify_dialogue_shortcut
 from .guard import classify_guard
 from .grounding import ActionGroundingError, validate_grounded_output
 from .schema import Action, ActionOutput, ClassifyInput, validate_action_output_json
+from .shortcuts import classify_action_shortcut
 
 _CLASSIFY_TEMPERATURE = 0.0
 
@@ -27,6 +28,9 @@ async def classify(
     guarded = classify_guard(input_.player_input, locale=locale)
     if guarded is not None:
         return guarded
+    action_shortcut = classify_action_shortcut(input_.player_input, grounding_view)
+    if action_shortcut is not None:
+        return validate_grounded_output(action_shortcut, grounding_view)
     dialogue = classify_dialogue_shortcut(input_.player_input, grounding_view)
     if dialogue is not None:
         return validate_grounded_output(dialogue, grounding_view)

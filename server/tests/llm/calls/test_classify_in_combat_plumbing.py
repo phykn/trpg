@@ -68,7 +68,7 @@ class _RetryCaptureClient:
 
 @pytest.mark.asyncio
 async def test_in_combat_true_allows_move_without_destination():
-    input_ = _input("도망친다", {"in_combat": True, "entities": []})
+    input_ = _input("뒤로 물러선다", {"in_combat": True, "entities": []})
     fake_answer = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
     with patch(
         "src.llm.calls.classify.runner.run_with_retries",

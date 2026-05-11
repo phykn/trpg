@@ -25,6 +25,10 @@ def _surroundings() -> dict:
             {"id": "potion_01", "name": "치유 물약", "kind": "consumable"},
             {"id": "bomb_01", "name": "폭탄", "kind": "consumable"},
         ],
+        "location": {"id": "town", "name": "마을"},
+        "location_items": [
+            {"id": "loose_key", "name": "열쇠", "kind": "key"},
+        ],
         "equipment": {
             "weapon": {"id": "sword_01", "name": "검"},
             "armor": None,
@@ -184,6 +188,22 @@ def test_transfer_accepts_active_quest_ids():
                 to="player_01",
                 how="accept",
                 what="quest_01",
+            ),
+        ]
+    )
+
+    assert validate_grounded_output(output, _surroundings()) is output
+
+
+def test_transfer_accepts_current_location_item_pickup():
+    output = ActionOutput(
+        actions=[
+            Action(
+                verb="transfer",
+                from_="town",
+                to="player_01",
+                how="gift",
+                what="loose_key",
             ),
         ]
     )

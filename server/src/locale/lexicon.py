@@ -39,6 +39,9 @@ PART_TERMS = (
 )
 ACCEPT_TERMS = ("수락", "받아들")
 ABANDON_TERMS = ("포기", "거절", "취소")
+ACTION_ATTACK_TERMS = ("공격", "때리", "친다", "공세")
+ACTION_PICKUP_TERMS = ("획득", "줍", "주워", "가져", "챙")
+ACTION_FLEE_TERMS = ("도망", "도주", "달아")
 
 NONLETHAL_MARKERS_BY_LOCALE = {
     "en": frozenset(

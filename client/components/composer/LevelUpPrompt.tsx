@@ -51,6 +51,7 @@ export function LevelUpPrompt({ hero, onCommit, onCancel }: Props) {
     return (
       <Pressable
         key={k}
+        testID={`level-stat-${k}`}
         onPress={disabled ? undefined : () => { setStatUp(k); }}
         disabled={disabled}
         accessibilityRole="button"
@@ -92,6 +93,7 @@ export function LevelUpPrompt({ hero, onCommit, onCancel }: Props) {
 
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
         <Pressable
+          testID="level-cancel"
           onPress={onCancel}
           accessibilityRole="button"
           accessibilityLabel={ko.level.cancelAction}
@@ -106,6 +108,7 @@ export function LevelUpPrompt({ hero, onCommit, onCancel }: Props) {
           </Text>
         </Pressable>
         <Pressable
+          testID="level-confirm"
           onPress={canCommit ? () => onCommit(statUp!) : undefined}
           disabled={!canCommit}
           accessibilityRole="button"

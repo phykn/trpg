@@ -224,7 +224,7 @@ def test_flee_clears_existing_graph_combat_state_without_graph_changes():
 
     result = dispatch_graph_combat_action(
         runtime,
-        Action(verb="move", how="flee"),
+        Action(verb="move", how="hasty"),
     )
 
     assert result.outcome == "fled"

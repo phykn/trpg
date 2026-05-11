@@ -310,7 +310,7 @@ async def test_run_graph_action_turn_logs_fled_combat_as_fled_not_victory(tmp_pa
     )
     saved_logs = await repo.load_log_entries("game-1")
 
-    assert saved_logs[0].text == "당신은 전투에서 벗어납니다."
+    assert saved_logs[0].text == "당신은 전투에서 물러납니다."
     assert len(llm.calls) == 0
 
 

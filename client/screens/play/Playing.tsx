@@ -6,10 +6,7 @@ import { Log } from '@/logic/log';
 import { RollPanel } from '@/components/roll/RollPanel';
 import { buildNearbyPanel, useStoryGraph } from '@/logic/story-graph';
 import type { Game } from '@/logic/game/useGame';
-import { buildHeroSlot } from '@/logic/hero';
-import { buildSubjectSlot } from '@/logic/subject';
-import { buildQuestSlot } from '@/logic/quest';
-import type { PanelAction, PanelSlot } from '@/logic/info-panel';
+import { buildPanelSlots, type PanelAction, type PanelSlot } from '@/logic/info-panel';
 
 import { Composer, GameOverPanel, LevelUpPrompt } from '@/logic/composer';
 import { ContextCard, IconButton, ICON_PATH } from '@/logic/info-panel';
@@ -74,9 +71,10 @@ export function Playing({ game }: Props) {
   if (!hero) return null;
 
   const slots: PanelSlot[] = [
-    buildHeroSlot(hero),
-    buildSubjectSlot(subject, { dot: hasUnseenSubject }),
-    buildQuestSlot(quest ?? questOffers[0] ?? null, { dot: hasUnseenQuest }),
+    ...buildPanelSlots(
+      { hero, subject, quest, questOffers },
+      { questDot: hasUnseenQuest, subjectDot: hasUnseenSubject },
+    ),
     { id: 'map', chip: { short: ko.panel.miniMap, dot: hasUnseenLocation }, panel: null },
   ];
   return (

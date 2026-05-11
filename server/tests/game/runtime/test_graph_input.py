@@ -159,6 +159,11 @@ def _graph() -> Graph:
             ),
             "player_01": _character("player_01"),
             "goblin_01": _character("goblin_01"),
+            "supply_token": GraphNode(
+                id="supply_token",
+                type="item",
+                properties={"name": "보급 표식"},
+            ),
         },
         edges={
             "located_at:player_01:town": GraphEdge(
@@ -178,6 +183,12 @@ def _graph() -> Graph:
                 type="connects_to",
                 from_node_id="town",
                 to_node_id="forest",
+            ),
+            "located_at:supply_token:town": GraphEdge(
+                id="located_at:supply_token:town",
+                type="located_at",
+                from_node_id="supply_token",
+                to_node_id="town",
             ),
         },
     )
@@ -375,6 +386,21 @@ async def test_graph_input_perceive_creates_pending_roll(tmp_path):
     assert [entry.kind for entry in logs] == ["player"]
     assert logs[0].text == "주변을 자세히 살펴본다"
     assert result.front_state.pending_roll is not None
+
+
+async def test_graph_input_pickup_visible_location_item_transfers_to_inventory(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM({"actions": [{"verb": "pass"}]})
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "보급 표식을 획득한다")
+    graph = await repo.load_graph("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert "located_at:supply_token:town" not in graph.edges
+    assert "carries:player_01:supply_token" in graph.edges
+    assert logs[-2].text == "당신은 보급 표식을 챙깁니다."
+    assert llm.calls == []
 
 
 async def test_graph_input_targetless_speak_defaults_to_nearby_living_npc(tmp_path):

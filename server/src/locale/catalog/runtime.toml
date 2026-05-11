@@ -62,6 +62,10 @@ en = "You use {item}."
 ko = "당신은 {item}{을/를} 옮깁니다."
 en = "You move {item}."
 
+[runtime."card.pickup"]
+ko = "당신은 {item}{을/를} 챙깁니다."
+en = "You pick up {item}."
+
 [runtime."card.trade_buy"]
 ko = "당신은 {item}{을/를} 구매합니다."
 en = "You buy {item}."
@@ -78,9 +82,21 @@ en = "Your action is handled."
 ko = "당신은 {target}{을/를} 공격해 전투를 시작합니다."
 en = "You attack {target} and start combat."
 
+[runtime."combat.skill_start"]
+ko = "당신은 {skill}{을/를} 사용해 {target}{와/과} 전투를 시작합니다 (MP {mp_cost})."
+en = "You use {skill} and start combat with {target} (MP {mp_cost})."
+
+[runtime."combat.skill_continue"]
+ko = "당신은 {skill}{을/를} 사용해 {target}{을/를} 압박합니다 (MP {mp_cost})."
+en = "You use {skill} against {target} (MP {mp_cost})."
+
+[runtime."combat.skill_victory"]
+ko = "당신은 {skill}{을/를} 사용해 {target}{을/를} 쓰러뜨립니다 (MP {mp_cost})."
+en = "You use {skill} and drop {target} (MP {mp_cost})."
+
 [runtime."combat.fled"]
-ko = "당신은 전투에서 벗어납니다."
-en = "You leave combat."
+ko = "당신은 전투에서 물러납니다."
+en = "You pull back from combat."
 
 [runtime."combat.defeat"]
 ko = "당신은 전투에서 패배합니다."
