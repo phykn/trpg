@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from src.db.repo import GraphRepo
 from src.game.domain.memory import DialoguePair, TurnLogEntry
+from src.llm.diag import llm_diag
 
 from .state import GameRuntimeState
 from .suggestions import GraphSuggestion, GraphSuggestionValue, normalize_suggestion
@@ -58,18 +59,24 @@ class VisibleNarrationStream:
 def parse_graph_narration_answer(answer: str) -> GraphNarrationResult:
     marker_at = answer.find(NARRATION_META_MARKER)
     if marker_at < 0:
+        llm_diag("llm:graph_narrate_meta_missing", answer_len=len(answer))
         return GraphNarrationResult(narration=answer)
 
     narration = answer[:marker_at].rstrip("\r\n")
     meta_text = answer[marker_at + len(NARRATION_META_MARKER) :].strip()
     try:
         raw = json.loads(meta_text)
-        parsed = GraphNarrationResult.model_validate(
-            {"narration": narration, **raw}
+        parsed = GraphNarrationResult.model_validate({"narration": narration, **raw})
+    except (json.JSONDecodeError, TypeError, ValidationError) as exc:
+        llm_diag(
+            "llm:graph_narrate_meta_invalid",
+            err=type(exc).__name__,
+            meta_len=len(meta_text),
         )
-    except (json.JSONDecodeError, TypeError, ValidationError):
         return GraphNarrationResult(narration=narration)
-    return parsed.model_copy(update={"suggestions": _clean_suggestions(parsed.suggestions)})
+    return parsed.model_copy(
+        update={"suggestions": _clean_suggestions(parsed.suggestions)}
+    )
 
 
 async def persist_graph_narration_result(

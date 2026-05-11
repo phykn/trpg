@@ -22,6 +22,10 @@ en = "A new request arrives: {quest}."
 ko = "{actor}의 레벨이 올랐습니다 (레벨 {level}, {stat} ↑, HP {max_hp} / MP {max_mp})."
 en = "{actor} leveled up (level {level}, {stat} up, HP {max_hp} / MP {max_mp})."
 
+[runtime."card.level_up_with_skill"]
+ko = "{base} {skill}{을/를} 배웠습니다."
+en = "{base} Learned {skill}."
+
 [runtime."card.move"]
 ko = "당신은 {destination}{으로/로} 이동합니다."
 en = "You move to {destination}."
@@ -38,6 +42,10 @@ en = "You abandon the {quest} quest."
 ko = "당신은 휴식을 취합니다."
 en = "You rest."
 
+[runtime."card.rest_encounter"]
+ko = "휴식하려는 순간 {target}{이/가} 나타납니다."
+en = "{target} appears as you try to rest."
+
 [runtime."card.equip"]
 ko = "당신은 {item}{을/를} 장비합니다."
 en = "You equip {item}."
@@ -53,6 +61,14 @@ en = "You use {item}."
 [runtime."card.transfer"]
 ko = "당신은 {item}{을/를} 옮깁니다."
 en = "You move {item}."
+
+[runtime."card.trade_buy"]
+ko = "당신은 {item}{을/를} 구매합니다."
+en = "You buy {item}."
+
+[runtime."card.trade_sell"]
+ko = "당신은 {item}{을/를} 판매합니다."
+en = "You sell {item}."
 
 [runtime."card.generic"]
 ko = "당신의 행동이 처리됩니다."
@@ -77,6 +93,86 @@ en = "You win the battle."
 [runtime."combat.continue"]
 ko = "당신은 전투를 이어갑니다."
 en = "You continue the battle."
+
+[runtime."combat.condition.healthy"]
+ko = "버티고 있음"
+en = "holding"
+
+[runtime."combat.condition.hurt"]
+ko = "흔들림"
+en = "shaken"
+
+[runtime."combat.condition.critical"]
+ko = "위태로움"
+en = "unsteady"
+
+[runtime."combat.condition.downed"]
+ko = "쓰러짐"
+en = "downed"
+
+[runtime."combat.condition.changed"]
+ko = "상태가 바뀜"
+en = "changed"
+
+[runtime."combat.motion.combat_started"]
+ko = "교전이 시작됨"
+en = "combat started"
+
+[runtime."combat.motion.player_attacked"]
+ko = "공격을 시도함"
+en = "attacked"
+
+[runtime."combat.motion.player_cast"]
+ko = "기술을 사용함"
+en = "used a technique"
+
+[runtime."combat.motion.player_defended"]
+ko = "방어 자세를 취함"
+en = "defended"
+
+[runtime."combat.motion.player_fled"]
+ko = "거리를 벌림"
+en = "pulled away"
+
+[runtime."combat.motion.enemy_pressed"]
+ko = "압박함"
+en = "pressed forward"
+
+[runtime."combat.motion.enemy_defeated"]
+ko = "상대가 쓰러짐"
+en = "opponent fell"
+
+[runtime."combat.motion.player_downed"]
+ko = "플레이어가 쓰러짐"
+en = "player fell"
+
+[runtime."combat.motion.forced_end"]
+ko = "교전이 멈춤"
+en = "combat stopped"
+
+[runtime."combat.motion.changed"]
+ko = "상황이 바뀜"
+en = "situation changed"
+
+[runtime."combat.action.attack"]
+ko = "공격"
+en = "attack"
+
+[runtime."combat.action.cast"]
+ko = "기술"
+en = "technique"
+
+[runtime."combat.action.defend"]
+ko = "방어"
+en = "defend"
+
+[runtime."combat.action.flee"]
+ko = "이탈"
+en = "leave"
+
+[runtime."combat.action.generic"]
+ko = "행동"
+en = "action"
 
 [runtime."confirmation.attack.title"]
 ko = "공격하시겠습니까?"

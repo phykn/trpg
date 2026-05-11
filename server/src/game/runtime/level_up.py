@@ -2,7 +2,11 @@ from pydantic import BaseModel, ConfigDict
 
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.types import GraphStatKey
-from src.game.engines.graph_growth import GraphGrowthError, plan_level_up
+from src.game.engines.graph_growth import (
+    GraphGrowthError,
+    plan_level_up,
+    plan_skill_learn,
+)
 from src.llm.diag import engine_diag, set_diag_context
 from src.wire.graph_to_front import GraphFrontStatePayload, graph_to_front_state
 
@@ -31,9 +35,6 @@ async def run_graph_level_up(
     skill_id: str | None,
     scenario_repo: ScenarioRepo | None = None,
 ) -> GraphLevelUpResult:
-    if skill_id is not None:
-        raise GraphLevelUpError("graph skill learning is not supported yet")
-
     runtime = await load_runtime_state(repo, game_id, scenario_repo)
     set_diag_context(game_id, runtime.progress.turn_count)
     engine_diag("levelup:start", stat=stat_up)
@@ -42,15 +43,25 @@ async def run_graph_level_up(
 
     try:
         result = plan_level_up(runtime.graph, runtime.progress.player_id, stat_up)
+        skill_result = (
+            plan_skill_learn(runtime.graph, runtime.progress.player_id, skill_id)
+            if skill_id is not None
+            else None
+        )
     except GraphGrowthError as exc:
         engine_diag("levelup:fail", stat=stat_up, err=type(exc).__name__)
         raise GraphLevelUpError(str(exc)) from exc
 
-    applied = apply_runtime_graph_changes(runtime, result.changes)
+    changes = [
+        *result.changes,
+        *(skill_result.changes if skill_result is not None else []),
+    ]
+    applied = apply_runtime_graph_changes(runtime, changes)
     next_runtime = applied.runtime
     card = build_graph_level_up_card(
         next_runtime,
         stat_up,
+        skill_id,
         next_runtime.progress.next_log_id,
     )
     next_progress = next_runtime.progress.model_copy(

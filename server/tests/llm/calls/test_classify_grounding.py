@@ -45,6 +45,7 @@ def _surroundings() -> dict:
                 "inventory": [{"id": "ring_01", "name": "반지"}],
             }
         ],
+        "quests": [{"id": "quest_01", "name": "통행 의뢰"}],
     }
 
 
@@ -90,6 +91,22 @@ def test_attack_accepts_visible_enemy_entity():
     output = ActionOutput(actions=[Action(verb="attack", what=["training_dummy"])])
 
     assert validate_grounded_output(output, surroundings) is output
+
+
+def test_attack_rejects_protected_visible_target():
+    surroundings = _surroundings()
+    surroundings["entities"].append(
+        {
+            "id": "protected_guard",
+            "name": "경비병",
+            "type": "enemy",
+            "protected": True,
+        }
+    )
+    output = ActionOutput(actions=[Action(verb="attack", what=["protected_guard"])])
+
+    with pytest.raises(ActionGroundingError, match="what"):
+        validate_grounded_output(output, surroundings)
 
 
 def test_speak_target_must_be_visible_npc():
@@ -156,3 +173,19 @@ def test_transfer_equip_rejects_non_slot_destination():
 
     with pytest.raises(ActionGroundingError, match="to"):
         validate_grounded_output(output, _surroundings())
+
+
+def test_transfer_accepts_active_quest_ids():
+    output = ActionOutput(
+        actions=[
+            Action(
+                verb="transfer",
+                from_="goblin_01",
+                to="player_01",
+                how="accept",
+                what="quest_01",
+            ),
+        ]
+    )
+
+    assert validate_grounded_output(output, _surroundings()) is output

@@ -10,7 +10,9 @@ from src.llm.context.classify_view import (
 )
 
 
-def _character(character_id: str, *, name: str | None = None, xp_reward: int = 0) -> GraphNode:
+def _character(
+    character_id: str, *, name: str | None = None, xp_reward: int = 0
+) -> GraphNode:
     return GraphNode(
         id=character_id,
         type="character",
@@ -34,6 +36,7 @@ def _runtime(
     visible_character_count: int = 1,
     inventory_count: int = 1,
     skill_count: int = 1,
+    active_quest: bool = False,
     gm_log_text: str = "GM 원문이 여기 들어가면 실패합니다.",
     dialogue_count: int = 1,
 ) -> GameRuntimeState:
@@ -49,6 +52,12 @@ def _runtime(
         "forest": GraphNode(id="forest", type="location", properties={"name": "숲"}),
         "player_01": _character("player_01", name="당신"),
     }
+    if active_quest:
+        nodes["quest_01"] = GraphNode(
+            id="quest_01",
+            type="quest",
+            properties={"name": "통행 의뢰", "description": "숨겨야 할 퀘스트 설명"},
+        )
     edges: dict[str, GraphEdge] = {
         "located_at:player_01:town": GraphEdge(
             id="located_at:player_01:town",
@@ -77,7 +86,11 @@ def _runtime(
         nodes[node_id] = GraphNode(
             id=node_id,
             type="item",
-            properties={"name": f"물건 {index}", "kind": "tool", "description": "숨겨야 할 물건 설명"},
+            properties={
+                "name": f"물건 {index}",
+                "kind": "tool",
+                "description": "숨겨야 할 물건 설명",
+            },
         )
         edges[f"carries:player_01:{node_id}"] = GraphEdge(
             id=f"carries:player_01:{node_id}",
@@ -101,7 +114,11 @@ def _runtime(
 
     return GameRuntimeState(
         graph=Graph(nodes=nodes, edges=edges),
-        progress=GameProgress(game_id="game-1", player_id="player_01"),
+        progress=GameProgress(
+            game_id="game-1",
+            player_id="player_01",
+            active_quest_id="quest_01" if active_quest else None,
+        ),
         log_entries=[GMLogEntry(id=1, kind="gm", text=gm_log_text)],
         recent_dialogue=[
             DialoguePair(turn=turn, player=f"질문 {turn}", narrator=f"요약 {turn}")
@@ -141,10 +158,27 @@ def test_classify_context_to_grounding_view_preserves_grounding_ids():
     grounding = classify_context_to_grounding_view(context)
 
     assert grounding["location"] == {"id": "town", "name": "마을"}
+    assert grounding["entities"][0] == {
+        "id": "player_01",
+        "name": "당신",
+        "type": "player",
+    }
     assert {"id": "npc_0", "name": "상인 0", "type": "npc"} in grounding["entities"]
     assert {"id": "forest", "name": "숲", "type": "connection"} in grounding["entities"]
-    assert grounding["inventory"] == [{"id": "item_0", "name": "물건 0", "kind": "tool"}]
+    assert grounding["inventory"] == [
+        {"id": "item_0", "name": "물건 0", "kind": "tool"}
+    ]
     assert grounding["skills"] == [{"id": "skill_0", "name": "기술 0"}]
+
+
+def test_classify_context_to_grounding_view_preserves_active_quest_id():
+    context = build_classify_context_view(
+        _runtime(active_quest=True), "의뢰를 수락한다"
+    )
+
+    grounding = classify_context_to_grounding_view(context)
+
+    assert grounding["quests"] == [{"id": "quest_01", "name": "통행 의뢰"}]
 
 
 def test_classify_context_to_grounding_view_preserves_optional_trade_candidates():
@@ -178,3 +212,121 @@ def test_classify_context_to_grounding_view_preserves_optional_trade_candidates(
             "stock": [{"id": "potion_01", "name": "물약", "price": 5}],
         }
     ]
+
+
+def test_classify_context_exposes_transfer_and_protected_candidates():
+    nodes = {
+        "town": GraphNode(id="town", type="location", properties={"name": "마을"}),
+        "player_01": _character("player_01", name="당신"),
+        "merchant_01": _character("merchant_01", name="상인"),
+        "guard_01": _character("guard_01", name="경비병", xp_reward=1),
+        "corpse_01": _character("corpse_01", name="쓰러진 산적"),
+        "potion_01": GraphNode(
+            id="potion_01",
+            type="item",
+            properties={"name": "물약", "kind": "consumable", "price": 5},
+        ),
+        "coin_pouch_01": GraphNode(
+            id="coin_pouch_01",
+            type="item",
+            properties={"name": "동전 주머니"},
+        ),
+        "ring_01": GraphNode(
+            id="ring_01",
+            type="item",
+            properties={"name": "반지"},
+        ),
+    }
+    nodes["merchant_01"].properties["gold"] = 20
+    nodes["guard_01"].properties["protected"] = True
+    nodes["corpse_01"].properties["alive"] = False
+    nodes["corpse_01"].properties["hp"] = 0
+    edges = {
+        "located_at:player_01:town": GraphEdge(
+            id="located_at:player_01:town",
+            type="located_at",
+            from_node_id="player_01",
+            to_node_id="town",
+        ),
+        "located_at:merchant_01:town": GraphEdge(
+            id="located_at:merchant_01:town",
+            type="located_at",
+            from_node_id="merchant_01",
+            to_node_id="town",
+        ),
+        "located_at:guard_01:town": GraphEdge(
+            id="located_at:guard_01:town",
+            type="located_at",
+            from_node_id="guard_01",
+            to_node_id="town",
+        ),
+        "located_at:corpse_01:town": GraphEdge(
+            id="located_at:corpse_01:town",
+            type="located_at",
+            from_node_id="corpse_01",
+            to_node_id="town",
+        ),
+        "carries:merchant_01:potion_01": GraphEdge(
+            id="carries:merchant_01:potion_01",
+            type="carries",
+            from_node_id="merchant_01",
+            to_node_id="potion_01",
+        ),
+        "carries:merchant_01:coin_pouch_01": GraphEdge(
+            id="carries:merchant_01:coin_pouch_01",
+            type="carries",
+            from_node_id="merchant_01",
+            to_node_id="coin_pouch_01",
+        ),
+        "carries:corpse_01:ring_01": GraphEdge(
+            id="carries:corpse_01:ring_01",
+            type="carries",
+            from_node_id="corpse_01",
+            to_node_id="ring_01",
+        ),
+    }
+    runtime = GameRuntimeState(
+        graph=Graph(nodes=nodes, edges=edges),
+        progress=GameProgress(game_id="game-1", player_id="player_01"),
+    )
+
+    context = build_classify_context_view(
+        runtime, "상인에게 물약을 사고 경비병을 공격한다"
+    )
+    grounding = classify_context_to_grounding_view(context)
+
+    assert {
+        "id": "merchant_01",
+        "name": "상인",
+        "type": "npc",
+        "carryables": [
+            {"id": "potion_01", "name": "물약", "kind": "consumable", "price": 5},
+            {"id": "coin_pouch_01", "name": "동전 주머니", "kind": "item"},
+        ],
+    } in context["identity"]["visible_targets"]
+    assert {
+        "id": "guard_01",
+        "name": "경비병",
+        "type": "enemy",
+        "protected": True,
+    } in context["identity"]["visible_targets"]
+    assert context["affordances"]["can_attack"] == []
+    assert context["identity"]["merchants"] == [
+        {
+            "id": "merchant_01",
+            "name": "상인",
+            "stock": [
+                {"id": "potion_01", "name": "물약", "kind": "consumable", "price": 5},
+                {"id": "coin_pouch_01", "name": "동전 주머니", "kind": "item"},
+            ],
+        }
+    ]
+    assert context["identity"]["corpses"] == [
+        {
+            "id": "corpse_01",
+            "name": "쓰러진 산적",
+            "inventory": [{"id": "ring_01", "name": "반지", "kind": "item"}],
+        }
+    ]
+    assert grounding["merchants"] == context["identity"]["merchants"]
+    assert grounding["corpses"] == context["identity"]["corpses"]

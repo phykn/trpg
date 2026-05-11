@@ -228,7 +228,63 @@ describe('graph API helpers', () => {
     );
   });
 
-  test('requests initial graph narration through the graph intro endpoint', async () => {
+  test('requests initial graph narration through the graph intro stream endpoint', async () => {
+    fetch.mockResolvedValueOnce(
+      streamResponse([
+        JSON.stringify({
+          type: 'final',
+          payload: {
+            game_id: 'game-1',
+            state: graphState(),
+            status: 'executed',
+            message: null,
+          },
+        }),
+      ]),
+    );
+
+    await requestGraphIntro('game-1');
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/graph/intro/stream',
+      expect.objectContaining({
+        method: 'POST',
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+
+  test('streams graph intro narration deltas before the final payload', async () => {
+    const onNarrationDelta = jest.fn();
+    fetch.mockResolvedValueOnce(
+      streamResponse([
+        JSON.stringify({ type: 'delta', text: '문이 ' }),
+        JSON.stringify({ type: 'delta', text: '열립니다.' }),
+        JSON.stringify({
+          type: 'final',
+          payload: {
+            game_id: 'game-1',
+            state: graphState(),
+            status: 'executed',
+            message: null,
+          },
+        }),
+      ]),
+    );
+
+    const result = await requestGraphIntro('game-1', { onNarrationDelta });
+
+    expect(onNarrationDelta).toHaveBeenNthCalledWith(1, '문이 ');
+    expect(onNarrationDelta).toHaveBeenNthCalledWith(2, '열립니다.');
+    expect(result.status).toBe('executed');
+  });
+
+  test('falls back to the plain graph intro endpoint when the stream route is unavailable', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      json: async () => ({ detail: 'not found' }),
+    });
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -241,7 +297,13 @@ describe('graph API helpers', () => {
 
     await requestGraphIntro('game-1');
 
-    expect(fetch).toHaveBeenCalledWith(
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      'https://api.example.test/session/game-1/graph/intro/stream',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
       'https://api.example.test/session/game-1/graph/intro',
       expect.objectContaining({
         method: 'POST',

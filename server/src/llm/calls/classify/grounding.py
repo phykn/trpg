@@ -17,6 +17,7 @@ class _ViewIds:
     entity_ids: set[str] = field(default_factory=set)
     character_ids: set[str] = field(default_factory=set)
     non_player_character_ids: set[str] = field(default_factory=set)
+    attackable_character_ids: set[str] = field(default_factory=set)
     connection_ids: set[str] = field(default_factory=set)
     location_ids: set[str] = field(default_factory=set)
     inventory_item_ids: set[str] = field(default_factory=set)
@@ -28,6 +29,7 @@ class _ViewIds:
     carryable_item_ids: set[str] = field(default_factory=set)
     corpse_ids: set[str] = field(default_factory=set)
     corpse_inventory_item_ids: set[str] = field(default_factory=set)
+    quest_ids: set[str] = field(default_factory=set)
     self_refs: set[str] = field(default_factory=set)
 
     @property
@@ -66,6 +68,7 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
     entity_ids: set[str] = set()
     character_ids: set[str] = set()
     non_player_character_ids: set[str] = set()
+    attackable_character_ids: set[str] = set()
     connection_ids: set[str] = set()
     visible_item_ids: set[str] = set()
     player_ids: set[str] = set()
@@ -82,6 +85,8 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
         elif entry_type in {"npc", "enemy"}:
             character_ids.add(entry_id)
             non_player_character_ids.add(entry_id)
+            if entry.get("protected") is not True:
+                attackable_character_ids.add(entry_id)
         elif entry_type == "connection":
             connection_ids.add(entry_id)
         elif entry_type == "item":
@@ -98,6 +103,7 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
     merchant_ids, merchant_stock_item_ids = _merchant_ids(surroundings.get("merchants"))
     carryable_item_ids = _carryable_item_ids(surroundings.get("entities"))
     corpse_ids, corpse_inventory_item_ids = _corpse_ids(surroundings.get("corpses"))
+    quest_ids = _ids_from_list(surroundings.get("quests"))
     self_refs = _self_refs(player_ids)
 
     return _ViewIds(
@@ -105,6 +111,7 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
         entity_ids=entity_ids,
         character_ids=character_ids,
         non_player_character_ids=non_player_character_ids,
+        attackable_character_ids=attackable_character_ids,
         connection_ids=connection_ids,
         location_ids=location_ids,
         inventory_item_ids=inventory_item_ids,
@@ -116,6 +123,7 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
         carryable_item_ids=carryable_item_ids,
         corpse_ids=corpse_ids,
         corpse_inventory_item_ids=corpse_inventory_item_ids,
+        quest_ids=quest_ids,
         self_refs=self_refs,
     )
 
@@ -140,7 +148,7 @@ def _validate_action(action: Action, view: _ViewIds) -> None:
     elif action.verb == "attack":
         _require_all_ids(
             _list(action.what),
-            view.non_player_character_ids,
+            view.attackable_character_ids,
             action=action,
             field="what",
         )
@@ -197,7 +205,10 @@ def _validate_transfer(action: Action, view: _ViewIds) -> None:
     _require_id(action.from_, view.actor_refs, action=action, field="from")
     _require_id(action.to, view.actor_refs, action=action, field="to")
     if item_id is not None:
-        _require_id(item_id, view.exposed_item_ids, action=action, field="what")
+        allowed_ids = view.exposed_item_ids
+        if action.how in {"accept", "abandon"}:
+            allowed_ids = allowed_ids | view.quest_ids
+        _require_id(item_id, allowed_ids, action=action, field="what")
 
 
 def _require_id(

@@ -31,6 +31,7 @@ from src.game.runtime.session import (
     initialize_graph_session,
     load_graph_session_state,
     run_graph_intro_request,
+    run_graph_intro_request_stream,
 )
 from src.game.runtime.turn import GraphActionTurnError
 from src.llm.client import LLMClient, force_think
@@ -94,6 +95,25 @@ async def session_graph_intro(
         message=result.message,
         suggestions=result.suggestions,
     )
+
+
+@router.post("/session/{game_id}/graph/intro/stream")
+async def session_graph_intro_stream(
+    game_id: str,
+    llm: LLMClient = Depends(get_llm),
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+) -> StreamingResponse:
+    async def source():
+        async for event in run_graph_intro_request_stream(
+            llm,
+            graph_repo,
+            game_id,
+            scenario_repo,
+        ):
+            yield event
+
+    return _graph_action_streaming_response(game_id, source)
 
 
 @router.get("/session/{game_id}/graph/state", response_model=InitResponse)

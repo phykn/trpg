@@ -8,7 +8,7 @@ The HTML files under `.superpowers/brainstorm/.../content/` are design reference
 
 ## Reference Files
 
-- Root visual reference: `design.md`
+- Visual reference: `client-product-style.md`
 - Current main state-gallery prototype: `.superpowers/brainstorm/manual-20260510132903/content/existing-ui-state-gallery.html`
 - Current simple single-state prototype: `.superpowers/brainstorm/manual-20260510132903/content/existing-ui-warm-tone.html`
 - Rejected/older exploration files remain in `.superpowers/brainstorm/manual-20260510132903/content/`
@@ -18,7 +18,7 @@ The HTML files under `.superpowers/brainstorm/.../content/` are design reference
 
 Keep the existing TRPG play UI structure. Do not redesign it into a dashboard, landing page, illustrated RPG screen, or Zelda-style inventory clone.
 
-Use `design.md` as the tone reference:
+Use `client-product-style.md` as the tone reference:
 
 - Warm cream outer canvas.
 - Dark product surface inside the phone.
@@ -203,7 +203,7 @@ Before changing production code, read `client/AGENTS.md`.
 
 Likely production touch points:
 
-- `client/design/tokens.js` for the `design.md`-based color and surface tuning.
+- `client/design/tokens.js` for the `client-product-style.md`-based color and surface tuning.
 - `client/components/ui/Surface.tsx`, `Chip.tsx`, `Bar.tsx`, `Row.tsx`, `StatRow.tsx` for shared visual atoms.
 - `client/components/info-panel/ContextCard.tsx` for floating top-pill overlay behavior.
 - `client/components/info-panel/PanelBody.tsx` for hero/NPC panel detail layout.

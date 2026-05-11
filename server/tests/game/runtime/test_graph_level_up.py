@@ -1,7 +1,7 @@
 import pytest
 
 from src.db.graph_local_fs import LocalFsGraphRepo
-from src.game.domain.graph import Graph, GraphNode
+from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.engines.growth import calc_max_hp, calc_max_mp, xp_for_next_level
 from src.game.runtime.level_up import GraphLevelUpError, run_graph_level_up
@@ -32,7 +32,17 @@ def _player(*, xp_pool: int | None = None) -> GraphNode:
 async def _repo(tmp_path, *, xp_pool: int | None = None) -> LocalFsGraphRepo:
     repo = LocalFsGraphRepo(str(tmp_path))
     await repo.save_graph(
-        "game-1", Graph(nodes={"player_01": _player(xp_pool=xp_pool)})
+        "game-1",
+        Graph(
+            nodes={
+                "player_01": _player(xp_pool=xp_pool),
+                "fireball": GraphNode(
+                    id="fireball",
+                    type="skill",
+                    properties={"name": "화염구", "kind": "attack"},
+                ),
+            }
+        ),
     )
     await repo.save_progress(GameProgress(game_id="game-1", player_id="player_01"))
     return repo
@@ -62,6 +72,25 @@ async def test_run_graph_level_up_commits_choice_and_returns_front_state(tmp_pat
     assert result.front_state.hero.level == 2
     assert result.front_state.hero.exp == 0
     assert result.front_state.log == saved_logs
+
+
+async def test_run_graph_level_up_can_learn_selected_skill(tmp_path):
+    repo = await _repo(tmp_path)
+
+    await run_graph_level_up(repo, "game-1", stat_up="mind", skill_id="fireball")
+    saved_graph = await repo.load_graph("game-1")
+    saved_logs = await repo.load_log_entries("game-1")
+
+    edge = saved_graph.edges["knows_skill:learned:player_01:fireball"]
+    assert edge == GraphEdge(
+        id="knows_skill:learned:player_01:fireball",
+        type="knows_skill",
+        from_node_id="player_01",
+        to_node_id="fireball",
+        properties={"source": "learned"},
+    )
+    assert saved_logs[0].kind == "act"
+    assert "화염구" in saved_logs[0].text
 
 
 async def test_run_graph_level_up_rejects_insufficient_xp_without_saving(tmp_path):

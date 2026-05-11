@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from src.game.runtime.narration_result import parse_graph_narration_answer
 
 
@@ -58,3 +60,25 @@ def test_parse_graph_narration_answer_keeps_legacy_string_suggestions():
         "intent": None,
         "action": None,
     }
+
+
+def test_parse_graph_narration_answer_logs_missing_meta_marker():
+    with patch("src.game.runtime.narration_result.llm_diag") as diag:
+        result = parse_graph_narration_answer("당신은 잠시 기다립니다.")
+
+    assert result.narration == "당신은 잠시 기다립니다."
+    diag.assert_called_once_with("llm:graph_narrate_meta_missing", answer_len=13)
+
+
+def test_parse_graph_narration_answer_logs_invalid_meta_json():
+    answer = "당신은 잠시 기다립니다.\n---TRPG_META---\n{"
+
+    with patch("src.game.runtime.narration_result.llm_diag") as diag:
+        result = parse_graph_narration_answer(answer)
+
+    assert result.narration == "당신은 잠시 기다립니다."
+    diag.assert_called_once_with(
+        "llm:graph_narrate_meta_invalid",
+        err="JSONDecodeError",
+        meta_len=1,
+    )

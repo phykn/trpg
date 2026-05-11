@@ -31,7 +31,11 @@
 ## 입력 컨텍스트
 
 - `context.player_input`: 플레이어 원문입니다.
+- `context.identity.player`: 플레이어 id와 이름입니다. 플레이어에게 주거나 플레이어가 받는 행동에는 이 id를 씁니다.
 - `context.identity`: 현재 장소, 눈앞 대상, 이동 후보, 소지품, 장비, 기술, 활성 퀘스트입니다.
+- `context.identity.visible_targets`: 눈앞 NPC/적입니다. `protected=true`이면 공격하지 말고 `pass`입니다. `carryables`가 있으면 절도나 선물 후보로 쓸 수 있습니다.
+- `context.identity.merchants`: 거래 가능한 대상과 `stock`입니다. 구매는 `stock`의 item id를 `what`으로 씁니다.
+- `context.identity.corpses`: 약탈 가능한 시체와 `inventory`입니다. 약탈은 corpse id를 `from`으로 씁니다.
 - `context.affordances`: 현재 그래프에서 가능한 말걸기, 공격, 이동, 사용, 퀘스트 조작 후보입니다.
 - `context.references`: 최근 지칭 대상입니다. "그 사람", "아까 그 상인" 같은 표현을 해소할 때만 사용합니다.
 - `context.budget`: 잘린 후보 수입니다. 생략된 후보가 있으면 모호성을 낮게 확신하지 마십시오.
@@ -103,7 +107,8 @@
 | "경비병에게 함께 움직이자고 권한다" | `{"actions":[{"verb":"speak","to":"guard_01","how":"recruit"}]}` |
 | "경비병에게 이제 각자 가자고 말한다" | `{"actions":[{"verb":"speak","to":"guard_01","how":"part"}]}` |
 | "의뢰를 수락한다" | `{"actions":[{"verb":"transfer","what":"q_chief_request","from":"edrik_01","to":"player_01","how":"accept"}]}` |
-| "상인에게 돈을 내고 회복약을 산다" | `{"actions":[{"verb":"transfer","what":"healing_potion_01","from":"merchant_01","to":"player_01","how":"trade"},{"verb":"transfer","what":"coin_pouch_01","from":"player_01","to":"merchant_01","how":"trade"}]}` |
+| "상인에게 돈을 내고 회복약을 산다" | `{"actions":[{"verb":"transfer","what":"healing_potion_01","from":"merchant_01","to":"player_01","how":"trade"}]}` |
+| "상인에게 단검을 판다" | `{"actions":[{"verb":"transfer","what":"dagger_01","from":"player_01","to":"merchant_01","how":"trade"}]}` |
 | "보이는 출구가 뭐야?" | `{"actions":[{"verb":"query","what":"exits"}]}` |
 | "내가 가진 게 뭐지?" | `{"actions":[{"verb":"query","what":"inventory"}]}` |
 | "산적을 공격한다" | `{"actions":[{"verb":"attack","what":["bandit_01"]}]}` |

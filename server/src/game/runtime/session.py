@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from collections.abc import AsyncIterator
 from typing import Literal
 
 from src.db.repo import GraphRepo, ScenarioRepo
@@ -6,6 +7,7 @@ from src.game.domain.errors import LLMUnavailable
 from src.game.runtime.intro import (
     run_graph_initial_fallback_narration,
     run_graph_initial_narration,
+    run_graph_initial_narration_stream,
 )
 from src.game.runtime.load import load_runtime_state
 from src.game.runtime.state import GameRuntimeState
@@ -92,6 +94,42 @@ async def run_graph_intro_request(
     runtime = await _run_intro_or_fallback(llm, repo, runtime)
     engine_diag("intro:done", logs=len(runtime.log_entries))
     return GraphSessionIntroResult(front_state=graph_to_front_state(runtime))
+
+
+async def run_graph_intro_request_stream(
+    llm: LLMClient,
+    repo: GraphRepo,
+    game_id: str,
+    scenario_repo: ScenarioRepo | None = None,
+) -> AsyncIterator[dict[str, object]]:
+    set_diag_context(game_id, 0)
+    engine_diag("intro:load")
+    runtime = await load_runtime_state(repo, game_id, scenario_repo)
+    set_diag_context(game_id, runtime.progress.turn_count)
+    engine_diag("intro:start")
+    try:
+        async for event in run_graph_initial_narration_stream(llm, repo, runtime):
+            if event["type"] != "final":
+                yield event
+                continue
+            next_runtime = event["runtime"]
+            if not isinstance(next_runtime, GameRuntimeState):
+                continue
+            engine_diag("intro:done", logs=len(next_runtime.log_entries))
+            yield {
+                "type": "final",
+                "result": GraphSessionIntroResult(
+                    front_state=graph_to_front_state(next_runtime)
+                ),
+            }
+    except (LLMUnavailable, OSError, TimeoutError) as exc:
+        engine_diag("intro:fallback", err=type(exc).__name__)
+        runtime = await run_graph_initial_fallback_narration(repo, runtime)
+        engine_diag("intro:done", logs=len(runtime.log_entries))
+        yield {
+            "type": "final",
+            "result": GraphSessionIntroResult(front_state=graph_to_front_state(runtime)),
+        }
 
 
 async def _run_intro_or_fallback(

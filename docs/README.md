@@ -35,11 +35,17 @@ engine은 게임에서 실제로 일어난 일을 정한다.
 | 4 | `04-gameplay.md` | 전투, 성장, 휴식, 퀘스트 |
 | 5 | `05-interfaces.md` | LLM 호출, 화면 데이터, API, 테스트 |
 
+## 참고 문서
+
+| 파일 | 내용 |
+|---|---|
+| `client-product-style.md` | TRPG client UI의 제품 스타일 기준 |
+| `ui-session-notes.md` | 2026-05-10 UI 방향 결정과 구현 메모 |
+| `qa-report.md` | 2026-05-11 graph/LLM context QA 결과 |
+
 ## 구현 시작 순서
 
 처음부터 모든 게임 기능을 만들지 않는다. graph가 원천이라는 약속부터 코드로 고정한다.
-
-전체 구현 로드맵은 `docs/superpowers/plans/2026-05-09-graph-first-game-roadmap.md`를 기준으로 한다.
 
 1. `Graph`, `Node`, `Edge`, `GraphChange` 모양을 만든다.
 2. Supabase에 `graph_nodes`, `graph_edges`, `game_progress` 저장 방식을 만든다.

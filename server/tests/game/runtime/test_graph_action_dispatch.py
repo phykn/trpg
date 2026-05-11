@@ -63,6 +63,14 @@ def _runtime() -> GameRuntimeState:
             nodes={
                 "town": GraphNode(id="town", type="location", properties={}),
                 "forest": GraphNode(id="forest", type="location", properties={}),
+                "danger_room": GraphNode(
+                    id="danger_room",
+                    type="location",
+                    properties={
+                        "sleep_risk": "dangerous",
+                        "sleep_encounters": ["goblin_01"],
+                    },
+                ),
                 "player_01": _character(
                     "player_01",
                     hp=12,
@@ -72,6 +80,7 @@ def _runtime() -> GameRuntimeState:
                     gold=RULES.recovery.cost_gold,
                 ),
                 "goblin_01": _character("goblin_01", hp=24, max_hp=24),
+                "merchant_01": _character("merchant_01", gold=0),
                 "quest_rat": GraphNode(
                     id="quest_rat",
                     type="quest",
@@ -79,6 +88,11 @@ def _runtime() -> GameRuntimeState:
                 ),
                 "sword": _item("sword"),
                 "potion": _item("potion", effect="heal", amount=10),
+                "merchant_potion": GraphNode(
+                    id="merchant_potion",
+                    type="item",
+                    properties={"price": 4},
+                ),
             },
             edges={
                 "located_at:player_01:town": GraphEdge(
@@ -93,11 +107,23 @@ def _runtime() -> GameRuntimeState:
                     from_node_id="goblin_01",
                     to_node_id="town",
                 ),
+                "located_at:merchant_01:town": GraphEdge(
+                    id="located_at:merchant_01:town",
+                    type="located_at",
+                    from_node_id="merchant_01",
+                    to_node_id="town",
+                ),
                 "connects_to:town:forest": GraphEdge(
                     id="connects_to:town:forest",
                     type="connects_to",
                     from_node_id="town",
                     to_node_id="forest",
+                ),
+                "connects_to:town:danger_room": GraphEdge(
+                    id="connects_to:town:danger_room",
+                    type="connects_to",
+                    from_node_id="town",
+                    to_node_id="danger_room",
                 ),
                 "carries:player_01:sword": GraphEdge(
                     id="carries:player_01:sword",
@@ -110,6 +136,12 @@ def _runtime() -> GameRuntimeState:
                     type="carries",
                     from_node_id="player_01",
                     to_node_id="potion",
+                ),
+                "carries:merchant_01:merchant_potion": GraphEdge(
+                    id="carries:merchant_01:merchant_potion",
+                    type="carries",
+                    from_node_id="merchant_01",
+                    to_node_id="merchant_potion",
                 ),
             },
         ),
@@ -137,6 +169,24 @@ def test_transfer_equip_dispatch_equips_carried_item():
     edge = result.runtime.graph.edges["equips:player_01:sword"]
     assert edge.properties == {"slot": "weapon"}
     assert "carries:player_01:sword" not in result.runtime.graph.edges
+
+
+def test_transfer_trade_dispatch_buys_item_and_advances_turn():
+    result = dispatch_graph_action(
+        _runtime(),
+        Action(
+            verb="transfer",
+            what="merchant_potion",
+            how="trade",
+            from_="merchant_01",
+            to="player_01",
+        ),
+    )
+
+    assert result.kind == "trade_buy"
+    assert result.runtime.progress.turn_count == 6
+    assert "carries:player_01:merchant_potion" in result.runtime.graph.edges
+    assert result.runtime.graph.nodes["player_01"].properties["gold"] == 6
 
 
 def test_use_dispatch_applies_healing_and_consumes_item():
@@ -190,6 +240,31 @@ def test_rest_dispatch_restores_resources_and_jumps_turn_count():
     assert player["hp"] == 30
     assert player["mp"] == 10
     assert result.runtime.progress.turn_count == next_dawn_turn(5)
+
+
+def test_rest_dispatch_in_danger_starts_encounter_instead_of_recovery():
+    runtime = _runtime()
+    runtime.graph.edges.pop("located_at:player_01:town")
+    runtime.graph.edges["located_at:player_01:danger_room"] = GraphEdge(
+        id="located_at:player_01:danger_room",
+        type="located_at",
+        from_node_id="player_01",
+        to_node_id="danger_room",
+    )
+    runtime.graph.edges.pop("located_at:goblin_01:town")
+    runtime.graph.edges["located_at:goblin_01:danger_room"] = GraphEdge(
+        id="located_at:goblin_01:danger_room",
+        type="located_at",
+        from_node_id="goblin_01",
+        to_node_id="danger_room",
+    )
+
+    result = dispatch_graph_action(runtime, Action(verb="rest"))
+
+    assert result.kind == "rest_encounter"
+    assert result.runtime.progress.graph_combat_state is not None
+    assert result.runtime.progress.graph_combat_state.enemy_ids == ["goblin_01"]
+    assert result.runtime.graph.nodes["player_01"].properties["hp"] == 12
 
 
 def test_attack_dispatch_delegates_to_graph_combat_dispatch():

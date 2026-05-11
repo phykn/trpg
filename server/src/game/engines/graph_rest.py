@@ -2,9 +2,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from src.game.domain.combat import GraphCombatState
 from src.game.domain.clock import next_dawn_turn
 from src.game.domain.graph import Graph, GraphChange, GraphNode, SetNodePropertyChange
 from src.game.domain.graph_query import location_of
+from src.game.engines.graph_combat import GraphCombatError, plan_combat_start
 from src.game.rules import RULES
 from src.game.runtime.state import GameRuntimeState
 
@@ -18,17 +20,28 @@ class GraphRestResult(BaseModel):
 
     changes: list[GraphChange]
     actor_id: str
-    kind: Literal["full_recovery"]
+    kind: Literal["full_recovery", "encounter"]
     next_turn_count: int
     cost_gold: int
+    encounter_id: str | None = None
+    state: GraphCombatState | None = None
 
 
 def plan_safe_rest(runtime: GameRuntimeState, actor_id: str) -> GraphRestResult:
+    result = plan_rest(runtime, actor_id)
+    if result.kind != "full_recovery":
+        raise GraphRestError("unsafe rest requires encounter resolver")
+    return result
+
+
+def plan_rest(runtime: GameRuntimeState, actor_id: str) -> GraphRestResult:
     graph = runtime.graph
     actor = _require_character(graph, actor_id)
     if actor.properties.get("alive") is False:
         raise GraphRestError(f"dead character cannot rest: {actor_id}")
-    _require_safe_location(graph, actor_id)
+    location = _rest_location(graph, actor_id)
+    if location is not None and location.properties.get("sleep_risk", "safe") != "safe":
+        return _plan_encounter_rest(runtime, actor_id, location)
 
     cost = RULES.recovery.cost_gold
     gold = _int_prop(actor, "gold")
@@ -58,16 +71,50 @@ def _require_character(graph: Graph, character_id: str) -> GraphNode:
     return node
 
 
-def _require_safe_location(graph: Graph, actor_id: str) -> None:
+def _rest_location(graph: Graph, actor_id: str) -> GraphNode | None:
     location_id = location_of(graph, actor_id)
     if location_id is None:
-        return
+        return None
     location = graph.nodes.get(location_id)
     if location is None:
         raise GraphRestError(f"missing location: {location_id}")
-    risk = location.properties.get("sleep_risk", "safe")
-    if risk != "safe":
+    if location.type != "location":
+        raise GraphRestError(f"node is not a location: {location_id}")
+    return location
+
+
+def _plan_encounter_rest(
+    runtime: GameRuntimeState,
+    actor_id: str,
+    location: GraphNode,
+) -> GraphRestResult:
+    encounter_id = _first_encounter_id(location)
+    if encounter_id is None:
+        risk = location.properties.get("sleep_risk", "unsafe")
         raise GraphRestError(f"unsafe rest requires encounter resolver: {risk}")
+    try:
+        combat = plan_combat_start(runtime.graph, actor_id, encounter_id)
+    except GraphCombatError as exc:
+        raise GraphRestError(str(exc)) from exc
+    return GraphRestResult(
+        changes=[],
+        actor_id=actor_id,
+        kind="encounter",
+        next_turn_count=runtime.progress.turn_count + 1,
+        cost_gold=0,
+        encounter_id=encounter_id,
+        state=combat.state,
+    )
+
+
+def _first_encounter_id(location: GraphNode) -> str | None:
+    encounters = location.properties.get("sleep_encounters", [])
+    if not isinstance(encounters, list):
+        return None
+    for encounter_id in encounters:
+        if isinstance(encounter_id, str) and encounter_id:
+            return encounter_id
+    return None
 
 
 def _int_prop(node: GraphNode, key: str) -> int:

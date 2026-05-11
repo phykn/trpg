@@ -88,13 +88,19 @@ export async function requestGraphIntro(
   gameId: string,
   options: ApiRequestOptions = {},
 ): Promise<GraphActionClientResponse> {
-  const res = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/intro`, {
+  if (typeof TextDecoder === 'undefined') {
+    return requestGraphActionPlain('requestGraphIntro', `/session/${gameId}/graph/intro`, undefined, options);
+  }
+  const streamResponse = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/intro/stream`, {
     method: 'POST',
     headers: jsonHeaders,
     signal: options.signal,
   });
-  if (!res.ok) throw new Error(await httpError('requestGraphIntro', res));
-  return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
+  if (streamResponse.status !== 404) {
+    if (!streamResponse.ok) throw new Error(await httpError('requestGraphIntro', streamResponse));
+    return readGraphActionStream('requestGraphIntro', streamResponse, options);
+  }
+  return requestGraphActionPlain('requestGraphIntro', `/session/${gameId}/graph/intro`, undefined, options);
 }
 
 export async function sendGraphInput(
@@ -138,13 +144,13 @@ async function requestGraphActionWithOptionalStream(
 async function requestGraphActionPlain(
   operation: string,
   path: string,
-  bodyPayload: object,
+  bodyPayload: object | undefined,
   options: ApiRequestOptions = {},
 ): Promise<GraphActionClientResponse> {
   const res = await fetchWithTimeout(`${BASE_URL}${path}`, {
     method: 'POST',
     headers: jsonHeaders,
-    body: JSON.stringify(bodyPayload),
+    body: bodyPayload === undefined ? undefined : JSON.stringify(bodyPayload),
     signal: options.signal,
   });
   if (!res.ok) throw new Error(await httpError(operation, res));

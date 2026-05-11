@@ -177,7 +177,12 @@ export function useGame() {
         setPendingRoll(payload.state.pendingRoll ?? null);
         setSuggestions(payload.suggestions ?? []);
         setStatus('ready');
-        void runGraphActionRequest((signal) => requestGraphIntro(payload.game_id, { signal }));
+        void runGraphActionRequest((signal, events) =>
+          requestGraphIntro(payload.game_id, {
+            signal,
+            onNarrationDelta: events.onNarrationDelta,
+          }),
+        );
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : String(err));
         setStatus('error');

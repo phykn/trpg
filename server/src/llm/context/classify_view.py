@@ -21,6 +21,10 @@ MAX_CLASSIFY_EXITS = 6
 MAX_CLASSIFY_INVENTORY = 10
 MAX_CLASSIFY_SKILLS = 8
 MAX_CLASSIFY_RECENT_DIALOGUE = 5
+MAX_CLASSIFY_TARGET_CARRYABLES = 6
+MAX_CLASSIFY_MERCHANT_STOCK = 8
+MAX_CLASSIFY_CORPSES = 4
+MAX_CLASSIFY_CORPSE_ITEMS = 6
 
 
 def build_classify_context_view(
@@ -35,18 +39,23 @@ def build_classify_context_view(
     all_exits = _exits(runtime, location_id)
     all_inventory = _inventory(runtime, player_id)
     all_skills = _skills(runtime, player_id)
+    all_corpses = _corpses(runtime, location_id)
 
     visible_targets = all_visible_targets[:MAX_CLASSIFY_VISIBLE_TARGETS]
     exits = all_exits[:MAX_CLASSIFY_EXITS]
     inventory = all_inventory[:MAX_CLASSIFY_INVENTORY]
     skills = all_skills[:MAX_CLASSIFY_SKILLS]
+    corpses = all_corpses[:MAX_CLASSIFY_CORPSES]
 
     return {
         "player_input": player_input,
         "mode": (
-            "combat" if runtime.progress.graph_combat_state is not None else "exploration"
+            "combat"
+            if runtime.progress.graph_combat_state is not None
+            else "exploration"
         ),
         "identity": {
+            "player": _node_ref(runtime, runtime.graph.nodes.get(player_id)),
             "location": _node_ref(runtime, location),
             "visible_targets": visible_targets,
             "exits": exits,
@@ -54,6 +63,8 @@ def build_classify_context_view(
             "equipment": _equipment(runtime, player_id),
             "skills": skills,
             "active_quest": _active_quest(runtime),
+            "merchants": _merchants(runtime, visible_targets),
+            "corpses": corpses,
         },
         "affordances": {
             "can_speak_to": [
@@ -80,14 +91,25 @@ def build_classify_context_view(
             "exits_omitted": max(0, len(all_exits) - MAX_CLASSIFY_EXITS),
             "inventory_omitted": max(0, len(all_inventory) - MAX_CLASSIFY_INVENTORY),
             "skills_omitted": max(0, len(all_skills) - MAX_CLASSIFY_SKILLS),
+            "corpses_omitted": max(0, len(all_corpses) - MAX_CLASSIFY_CORPSES),
         },
     }
 
 
 def classify_context_to_grounding_view(context: dict[str, Any]) -> dict[str, Any]:
-    identity = context.get("identity") if isinstance(context.get("identity"), dict) else {}
+    identity = (
+        context.get("identity") if isinstance(context.get("identity"), dict) else {}
+    )
     references = (
         context.get("references") if isinstance(context.get("references"), dict) else {}
+    )
+    player = (
+        identity.get("player") if isinstance(identity.get("player"), dict) else None
+    )
+    active_quest = (
+        identity.get("active_quest")
+        if isinstance(identity.get("active_quest"), dict)
+        else None
     )
     visible_targets = _dicts(identity.get("visible_targets"))
     exits = _dicts(identity.get("exits"))
@@ -105,6 +127,13 @@ def classify_context_to_grounding_view(context: dict[str, Any]) -> dict[str, Any
         "in_combat": context.get("mode") == "combat",
         "location": identity.get("location") or {},
         "entities": [
+            *(
+                [{"id": player["id"], "name": player["name"], "type": "player"}]
+                if isinstance(player, dict)
+                and isinstance(player.get("id"), str)
+                and isinstance(player.get("name"), str)
+                else []
+            ),
             *grounding_targets,
             *[
                 {"id": exit_["id"], "name": exit_["name"], "type": "connection"}
@@ -118,6 +147,7 @@ def classify_context_to_grounding_view(context: dict[str, Any]) -> dict[str, Any
         "skills": _dicts(identity.get("skills")),
         "merchants": _dicts(identity.get("merchants")),
         "corpses": _dicts(identity.get("corpses")),
+        "quests": [active_quest] if active_quest is not None else [],
         "recent_npc": references.get("last_npc"),
     }
 
@@ -125,23 +155,29 @@ def classify_context_to_grounding_view(context: dict[str, Any]) -> dict[str, Any
 def _visible_targets(
     runtime: GameRuntimeState,
     location_id: str | None,
-) -> list[dict[str, str]]:
+) -> list[dict[str, Any]]:
     if location_id is None:
         return []
-    out: list[dict[str, str]] = []
+    out: list[dict[str, Any]] = []
     for character_id in characters_at(runtime.graph_index, location_id):
         if character_id == runtime.progress.player_id:
             continue
         node = runtime.graph.nodes.get(character_id)
         if node is None or node.type != "character" or not is_visible_character(node):
             continue
-        out.append(
-            {
-                "id": node.id,
-                "name": node_label(runtime.content, node),
-                "type": graph_character_kind(node),
-            }
+        payload: dict[str, Any] = {
+            "id": node.id,
+            "name": node_label(runtime.content, node),
+            "type": graph_character_kind(node),
+        }
+        if node.properties.get("protected") is True:
+            payload["protected"] = True
+        carryables = _limited_inventory(
+            runtime, node.id, MAX_CLASSIFY_TARGET_CARRYABLES
         )
+        if carryables:
+            payload["carryables"] = carryables
+        out.append(payload)
     return out
 
 
@@ -156,19 +192,29 @@ def _exits(runtime: GameRuntimeState, location_id: str | None) -> list[dict[str,
     return out
 
 
-def _inventory(runtime: GameRuntimeState, player_id: str) -> list[dict[str, str]]:
-    out: list[dict[str, str]] = []
+def _inventory(runtime: GameRuntimeState, player_id: str) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
     for item_id in inventory_of(runtime.graph_index, player_id):
         node = runtime.graph.nodes.get(item_id)
         if node is None or node.type != "item":
             continue
-        out.append(
-            {
-                "id": node.id,
-                "name": node_label(runtime.content, node),
-                "kind": _kind(runtime, node),
-            }
-        )
+        out.append(_item_payload(runtime, node))
+    return out
+
+
+def _limited_inventory(
+    runtime: GameRuntimeState,
+    owner_id: str,
+    limit: int,
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for item_id in inventory_of(runtime.graph_index, owner_id):
+        node = runtime.graph.nodes.get(item_id)
+        if node is None or node.type != "item":
+            continue
+        out.append(_item_payload(runtime, node))
+        if len(out) == limit:
+            break
     return out
 
 
@@ -209,11 +255,70 @@ def _active_quest(runtime: GameRuntimeState) -> dict[str, str] | None:
 
 
 def _quest_ids(runtime: GameRuntimeState) -> list[str]:
-    return [runtime.progress.active_quest_id] if runtime.progress.active_quest_id else []
+    return (
+        [runtime.progress.active_quest_id] if runtime.progress.active_quest_id else []
+    )
 
 
-def _attackable_ids(visible_targets: list[dict[str, str]]) -> list[str]:
-    return [target["id"] for target in visible_targets if target["type"] == "enemy"]
+def _attackable_ids(visible_targets: list[dict[str, Any]]) -> list[str]:
+    return [
+        target["id"]
+        for target in visible_targets
+        if target["type"] == "enemy" and target.get("protected") is not True
+    ]
+
+
+def _merchants(
+    runtime: GameRuntimeState,
+    visible_targets: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for target in visible_targets:
+        node = runtime.graph.nodes.get(target["id"])
+        if node is None or node.type != "character":
+            continue
+        if not isinstance(node.properties.get("gold"), int):
+            continue
+        stock = _limited_inventory(runtime, node.id, MAX_CLASSIFY_MERCHANT_STOCK)
+        out.append({"id": node.id, "name": target["name"], "stock": stock})
+    return out
+
+
+def _corpses(
+    runtime: GameRuntimeState,
+    location_id: str | None,
+) -> list[dict[str, Any]]:
+    if location_id is None:
+        return []
+    out: list[dict[str, Any]] = []
+    for character_id in characters_at(runtime.graph_index, location_id):
+        if character_id == runtime.progress.player_id:
+            continue
+        node = runtime.graph.nodes.get(character_id)
+        if node is None or node.type != "character" or is_visible_character(node):
+            continue
+        inventory = _limited_inventory(runtime, node.id, MAX_CLASSIFY_CORPSE_ITEMS)
+        if inventory:
+            out.append(
+                {
+                    "id": node.id,
+                    "name": node_label(runtime.content, node),
+                    "inventory": inventory,
+                }
+            )
+    return out
+
+
+def _item_payload(runtime: GameRuntimeState, node: GraphNode) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "id": node.id,
+        "name": node_label(runtime.content, node),
+        "kind": _kind(runtime, node),
+    }
+    price = node.properties.get("price")
+    if isinstance(price, int):
+        payload["price"] = price
+    return payload
 
 
 def _last_entity_ref(

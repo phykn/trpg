@@ -40,24 +40,33 @@ def build_graph_quest_offer_card(
 def build_graph_level_up_card(
     runtime: GameRuntimeState,
     stat_up: GraphStatKey,
+    skill_id: str | None,
     log_id: int,
 ) -> ActLogEntry:
     player = runtime.graph.nodes[runtime.progress.player_id]
     level = _int_property(player, "level")
     max_hp = _int_property(player, "max_hp")
     max_mp = _int_property(player, "max_mp")
+    text = render(
+        "runtime.card.level_up",
+        runtime.progress.locale,
+        actor=node_label(runtime.content, player),
+        level=level,
+        stat=stat_label(stat_up, runtime.progress.locale),
+        max_hp=max_hp,
+        max_mp=max_mp,
+    )
+    if skill_id is not None:
+        text = render(
+            "runtime.card.level_up_with_skill",
+            runtime.progress.locale,
+            base=text,
+            skill=_node_label(runtime, skill_id),
+        )
     return ActLogEntry(
         id=log_id,
         kind="act",
-        text=render(
-            "runtime.card.level_up",
-            runtime.progress.locale,
-            actor=node_label(runtime.content, player),
-            level=level,
-            stat=stat_label(stat_up, runtime.progress.locale),
-            max_hp=max_hp,
-            max_mp=max_mp,
-        ),
+        text=text,
     )
 
 
@@ -98,6 +107,15 @@ def _card_text(
     if dispatch.kind == "rest":
         return render("runtime.card.rest", after.progress.locale)
 
+    if dispatch.kind == "rest_encounter":
+        state = after.progress.graph_combat_state
+        target = _node_label(after, state.enemy_ids[0] if state else None)
+        return render(
+            "runtime.card.rest_encounter",
+            after.progress.locale,
+            target=target,
+        )
+
     if dispatch.kind == "equip":
         item = _node_label(after, _single(action.what) or _single(action.with_))
         return render("runtime.card.equip", after.progress.locale, item=item)
@@ -113,6 +131,14 @@ def _card_text(
     if dispatch.kind == "transfer":
         item = _node_label(after, _single(action.what) or _single(action.with_))
         return render("runtime.card.transfer", after.progress.locale, item=item)
+
+    if dispatch.kind == "trade_buy":
+        item = _node_label(after, _single(action.what) or _single(action.with_))
+        return render("runtime.card.trade_buy", after.progress.locale, item=item)
+
+    if dispatch.kind == "trade_sell":
+        item = _node_label(after, _single(action.what) or _single(action.with_))
+        return render("runtime.card.trade_sell", after.progress.locale, item=item)
 
     return render("runtime.card.generic", after.progress.locale)
 

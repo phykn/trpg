@@ -12,11 +12,12 @@ from src.game.engines.graph_quest import (
     plan_quest_abandon,
     plan_quest_accept,
 )
-from src.game.engines.graph_rest import GraphRestError, plan_safe_rest
+from src.game.engines.graph_rest import GraphRestError, plan_rest
 from src.game.engines.graph_transfer import (
     EquipSlot,
     GraphTransferError,
     plan_item_equip,
+    plan_item_trade,
     plan_item_transfer,
     plan_item_unequip,
 )
@@ -160,6 +161,15 @@ def _plan_non_combat(
         if mode == "unequip":
             result = plan_item_unequip(runtime.graph, player_id, item_id)
             return "unequip", result.changes, _advance_turn(runtime)
+        if mode == "trade":
+            result = plan_item_trade(
+                runtime.graph,
+                item_id,
+                from_character_id=_single(action.from_) or player_id,
+                to_character_id=_single(action.to) or player_id,
+                player_id=player_id,
+            )
+            return f"trade_{result.action}", result.changes, _advance_turn(runtime)
         result = plan_item_transfer(
             runtime.graph,
             item_id,
@@ -181,8 +191,12 @@ def _plan_non_combat(
         return "use", result.changes, _advance_turn(runtime)
 
     if action.verb == "rest":
-        result = plan_safe_rest(runtime, player_id)
-        return "rest", result.changes, {"turn_count": result.next_turn_count}
+        result = plan_rest(runtime, player_id)
+        progress_update: dict[str, Any] = {"turn_count": result.next_turn_count}
+        if result.kind == "encounter":
+            progress_update["graph_combat_state"] = result.state
+            return "rest_encounter", result.changes, progress_update
+        return "rest", result.changes, progress_update
 
     if action.verb == "pass":
         raise GraphActionDispatchError("pass outside combat is a narrative no-op")

@@ -2,35 +2,25 @@ from typing import Any
 
 from src.game.domain.combat import GraphCombatTraceEvent
 from src.game.domain.content import node_label
+from src.locale.lexicon import nonlethal_markers
+from src.locale.render import render
 
 from .state import GameRuntimeState
 
 
-COMBAT_CONDITION_LABELS = {
-    "healthy": "버티고 있음",
-    "hurt": "흔들림",
-    "critical": "위태로움",
-    "downed": "쓰러짐",
+COMBAT_CONDITION_KEYS = {"healthy", "hurt", "critical", "downed"}
+COMBAT_MOTION_KEYS = {
+    "combat_started",
+    "player_attacked",
+    "player_cast",
+    "player_defended",
+    "player_fled",
+    "enemy_pressed",
+    "enemy_defeated",
+    "player_downed",
+    "forced_end",
 }
-
-COMBAT_MOTION_LABELS = {
-    "combat_started": "교전이 시작됨",
-    "player_attacked": "공격을 시도함",
-    "player_cast": "기술을 사용함",
-    "player_defended": "방어 자세를 취함",
-    "player_fled": "거리를 벌림",
-    "enemy_pressed": "압박함",
-    "enemy_defeated": "상대가 쓰러짐",
-    "player_downed": "플레이어가 쓰러짐",
-    "forced_end": "교전이 멈춤",
-}
-
-COMBAT_ACTION_LABELS = {
-    "attack": "공격",
-    "cast": "기술",
-    "defend": "방어",
-    "flee": "이탈",
-}
+COMBAT_ACTION_KEYS = {"attack", "cast", "defend", "flee"}
 
 
 def combat_narration_view(
@@ -46,7 +36,10 @@ def combat_narration_view(
     return {
         "kind": "combat_exchange",
         "round": state.round if state is not None else None,
-        "player_action": _action_label(state.last_action if state is not None else None),
+        "player_action": _action_label(
+            runtime.progress.locale,
+            state.last_action if state is not None else None,
+        ),
         "outcome": outcome or (state.outcome if state is not None else None),
         "events": [_event_view(runtime, event) for event in events],
         "tone": _combat_tone(runtime),
@@ -60,8 +53,8 @@ def _event_view(
     return {
         "actor": _node_ref(runtime, event.actor_id),
         "target": _node_ref(runtime, event.target_id),
-        "motion": COMBAT_MOTION_LABELS.get(event.kind, "상황이 바뀜"),
-        "target_condition": _condition_label(event.state),
+        "motion": _motion_label(runtime.progress.locale, event.kind),
+        "target_condition": _condition_label(runtime.progress.locale, event.state),
     }
 
 
@@ -72,16 +65,23 @@ def _node_ref(runtime: GameRuntimeState, node_id: str | None) -> dict[str, str] 
     return {"id": node.id, "name": node_label(runtime.content, node)}
 
 
-def _condition_label(value: str | None) -> str | None:
+def _condition_label(locale: str, value: str | None) -> str | None:
     if value is None:
         return None
-    return COMBAT_CONDITION_LABELS.get(value, "상태가 바뀜")
+    key = value if value in COMBAT_CONDITION_KEYS else "changed"
+    return render(f"runtime.combat.condition.{key}", locale)
 
 
-def _action_label(value: str | None) -> str | None:
+def _motion_label(locale: str, value: str) -> str:
+    key = value if value in COMBAT_MOTION_KEYS else "changed"
+    return render(f"runtime.combat.motion.{key}", locale)
+
+
+def _action_label(locale: str, value: str | None) -> str | None:
     if value is None:
         return None
-    return COMBAT_ACTION_LABELS.get(value, "행동")
+    key = value if value in COMBAT_ACTION_KEYS else "generic"
+    return render(f"runtime.combat.action.{key}", locale)
 
 
 def _combat_tone(runtime: GameRuntimeState) -> dict[str, str]:
@@ -91,32 +91,28 @@ def _combat_tone(runtime: GameRuntimeState) -> dict[str, str]:
         node = runtime.graph.nodes.get(participant_id)
         if node is None:
             continue
-        if _has_nonlethal_marker(node.properties):
+        if _has_nonlethal_marker(node.properties, runtime.progress.locale):
             return {"lethality": "nonlethal", "style": "training"}
     return {"lethality": "dangerous", "style": "adventure"}
 
 
-def _has_nonlethal_marker(properties: dict[str, Any]) -> bool:
-    markers = {
-        "training",
-        "sparring",
-        "tutorial",
-        "practice",
-        "nonlethal",
-        "non-lethal",
-    }
-    korean_markers = {"훈련", "대련", "연습", "허수아비"}
+def _has_nonlethal_marker(properties: dict[str, Any], locale: str) -> bool:
+    markers = nonlethal_markers(locale)
+    lower_markers = {marker.lower() for marker in markers}
     for key, value in properties.items():
         lowered_key = key.lower()
-        if lowered_key in markers and value:
+        if lowered_key in lower_markers and value:
             return True
-        if isinstance(value, str) and value.lower() in markers:
+        if isinstance(value, str) and value.lower() in lower_markers:
             return True
-        if isinstance(value, str) and any(marker in value for marker in korean_markers):
+        if isinstance(value, str) and any(marker in value for marker in markers):
             return True
         if isinstance(value, list) and any(
             isinstance(item, str)
-            and (item.lower() in markers or any(marker in item for marker in korean_markers))
+            and (
+                item.lower() in lower_markers
+                or any(marker in item for marker in markers)
+            )
             for item in value
         ):
             return True

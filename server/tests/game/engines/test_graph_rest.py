@@ -3,7 +3,7 @@ import pytest
 from src.game.domain.clock import next_dawn_turn
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
-from src.game.engines.graph_rest import GraphRestError, plan_safe_rest
+from src.game.engines.graph_rest import GraphRestError, plan_rest, plan_safe_rest
 from src.game.rules import RULES
 from src.game.runtime import GameRuntimeState
 from src.game.runtime.apply import apply_runtime_graph_changes
@@ -21,7 +21,10 @@ def _runtime(
         "inn": GraphNode(
             id="inn",
             type="location",
-            properties={"sleep_risk": sleep_risk},
+            properties={
+                "sleep_risk": sleep_risk,
+                "sleep_encounters": ["goblin_01"],
+            },
         )
     }
     if include_actor:
@@ -37,12 +40,31 @@ def _runtime(
                 "gold": gold,
             },
         )
+        nodes["goblin_01"] = GraphNode(
+            id="goblin_01",
+            type="character",
+            properties={
+                "alive": True,
+                "hp": 12,
+                "max_hp": 12,
+                "mp": 0,
+                "max_mp": 0,
+                "stats": {"body": 3, "agility": 1, "mind": 1, "presence": 1},
+                "status": [],
+            },
+        )
     edges = {}
     if include_actor:
         edges["located_at:player_01:inn"] = GraphEdge(
             id="located_at:player_01:inn",
             type="located_at",
             from_node_id="player_01",
+            to_node_id="inn",
+        )
+        edges["located_at:goblin_01:inn"] = GraphEdge(
+            id="located_at:goblin_01:inn",
+            type="located_at",
+            from_node_id="goblin_01",
             to_node_id="inn",
         )
     return GameRuntimeState(
@@ -73,6 +95,18 @@ def test_safe_rest_reports_next_dawn_turn():
 def test_unsafe_location_is_rejected():
     with pytest.raises(GraphRestError, match="unsafe"):
         plan_safe_rest(_runtime(sleep_risk="dangerous"), "player_01")
+
+
+def test_risky_rest_starts_listed_encounter_without_recovery():
+    runtime = _runtime(sleep_risk="dangerous")
+
+    result = plan_rest(runtime, "player_01")
+
+    assert result.kind == "encounter"
+    assert result.encounter_id == "goblin_01"
+    assert result.changes == []
+    assert result.state is not None
+    assert result.state.enemy_ids == ["goblin_01"]
 
 
 def test_insufficient_gold_is_rejected():

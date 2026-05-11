@@ -59,6 +59,15 @@ class _MockLLM:
         use_fallback=False,
     ):
         self.calls.append({"agent": agent, "messages": messages})
+        if agent == "graph_intro":
+            if self.intro_error is not None:
+                raise self.intro_error
+            if self.intro_delay:
+                await asyncio.sleep(self.intro_delay)
+            midpoint = max(1, len(self.intro_answer) // 2)
+            for chunk in (self.intro_answer[:midpoint], self.intro_answer[midpoint:]):
+                yield {"answer": chunk, "think": None}
+            return
         if agent == "graph_narrate":
             answer = self._narration_answer()
             midpoint = max(1, len(answer) // 2)
@@ -340,6 +349,28 @@ async def test_graph_intro_waits_for_llm_answer_instead_of_route_timeout(
             "kind": "gm",
             "text": "느린 LLM 소개도 화면의 대기 표시 뒤에 도착합니다.",
         }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_graph_intro_streams_initial_narration_before_final_payload(tmp_path):
+    app = _build_app(tmp_path, intro_answer="문이 열리고 광장이 드러납니다.")
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(f"/session/{game_id}/graph/intro/stream")
+
+    assert response.status_code == 200, response.text
+    lines = [
+        json.loads(line)
+        for line in response.text.splitlines()
+        if line.strip()
+    ]
+
+    assert [line["type"] for line in lines] == ["delta", "delta", "final"]
+    assert "".join(line["text"] for line in lines[:2]) == "문이 열리고 광장이 드러납니다."
+    assert lines[-1]["payload"]["state"]["log"] == [
+        {"id": 1, "kind": "gm", "text": "문이 열리고 광장이 드러납니다."}
     ]
 
 
