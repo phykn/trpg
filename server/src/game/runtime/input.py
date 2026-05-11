@@ -22,7 +22,6 @@ from src.wire.graph_to_front import graph_to_front_state
 
 from .confirmation import GraphActionRequestResult, run_graph_action_request
 from .load import load_runtime_state
-from .narration_clean import clean_narration
 from .narration_context import build_input_narration_payload
 from .state import GameRuntimeState
 
@@ -32,7 +31,6 @@ class GraphInputError(ValueError):
 
 
 _GRAPH_INPUT_NARRATION_TIMEOUT_SECONDS = 6.0
-_MAX_GRAPH_NARRATION_CHARS = 420
 
 
 async def run_graph_input_turn(
@@ -506,11 +504,7 @@ def _single(value: object) -> str | None:
 
 
 def _clean_narration(text: str, *, recent_texts=()) -> str:
-    return clean_narration(
-        text,
-        max_chars=_MAX_GRAPH_NARRATION_CHARS,
-        recent_texts=recent_texts,
-    )
+    return text
 
 
 def _recent_gm_texts(runtime: GameRuntimeState) -> list[str]:

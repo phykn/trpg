@@ -105,10 +105,10 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "나쁜 예" in combined
     assert "좋은 예" in combined
     assert "한자" in combined
-    assert "문장 수를 강제하지 않습니다" in intro_prompt
-    assert "문장 수를 강제하지 않습니다" in narrate_prompt
-    assert "최대 420자" in intro_prompt
-    assert "최대 420자" in narrate_prompt
+    assert "문장 수와 길이를 강제하지 않습니다" in intro_prompt
+    assert "문장 수와 길이를 강제하지 않습니다" in narrate_prompt
+    assert "문장 수와 길이를 강제하지 않습니다" in intro_prompt
+    assert "문장 수와 길이를 강제하지 않습니다" in narrate_prompt
     assert "「」" in narrate_prompt
     assert "「멈추십시오」" in narrate_prompt
     assert "「허가는 받았습니다」" in narrate_prompt
@@ -124,16 +124,16 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "발게" not in combined
 
 
-def test_graph_narration_prompt_limits_match_runtime_cleaners():
+def test_graph_narration_runtime_preserves_llm_text():
     from src.game.runtime.input import _clean_narration as clean_input
     from src.game.runtime.intro import _clean_intro_text
     from src.game.runtime.turn import _clean_narration as clean_action
 
-    long_text = "가" * 450
+    long_text = "  긴 문장입니다.\n\n" + ("가" * 450)
 
-    assert len(_clean_intro_text(long_text)) == 420
-    assert len(clean_action(long_text)) == 420
-    assert len(clean_input(long_text)) == 420
+    assert _clean_intro_text(long_text) == long_text
+    assert clean_action(long_text) == long_text
+    assert clean_input(long_text) == long_text
 
 
 @pytest.mark.asyncio

@@ -26,7 +26,6 @@ from .dispatch import (
 )
 from .cards import build_graph_action_card, build_graph_quest_offer_card
 from .load import load_runtime_state
-from .narration_clean import clean_narration
 from .narration_context import build_action_narration_payload
 from .state import GameRuntimeState
 
@@ -44,7 +43,6 @@ class GraphActionTurnResult(BaseModel):
 
 
 _GRAPH_ACTION_NARRATION_TIMEOUT_SECONDS = 6.0
-_MAX_GRAPH_NARRATION_CHARS = 420
 
 
 async def run_graph_action_turn(
@@ -459,11 +457,7 @@ def _narration_user_prompt(
 
 
 def _clean_narration(text: str, *, recent_texts=()) -> str:
-    return clean_narration(
-        text,
-        max_chars=_MAX_GRAPH_NARRATION_CHARS,
-        recent_texts=recent_texts,
-    )
+    return text
 
 
 def _recent_gm_texts(runtime: GameRuntimeState) -> list[str]:

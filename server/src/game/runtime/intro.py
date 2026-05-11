@@ -15,8 +15,6 @@ from src.locale.render import render
 from .narration_context import build_intro_narration_payload
 from .state import GameRuntimeState
 
-_MAX_INTRO_CHARS = 420
-
 
 async def run_graph_initial_narration(
     llm: LLMClient,
@@ -135,7 +133,4 @@ def _already_has_gm_log(runtime: GameRuntimeState) -> bool:
 
 
 def _clean_intro_text(text: str) -> str:
-    cleaned = " ".join(text.split())
-    if len(cleaned) <= _MAX_INTRO_CHARS:
-        return cleaned
-    return cleaned[:_MAX_INTRO_CHARS].rstrip()
+    return text

@@ -314,7 +314,7 @@ async def test_run_graph_action_turn_logs_fled_combat_as_fled_not_victory(tmp_pa
     assert len(llm.calls) == 0
 
 
-async def test_run_graph_action_turn_drops_repeated_recent_gm_narration(tmp_path):
+async def test_run_graph_action_turn_preserves_repeated_llm_narration(tmp_path):
     repo = await _repo(tmp_path)
     repeated = "테스트 가이드는 대답하지 않고 당신을 다시 봅니다."
     await repo.append_log_entries(
@@ -332,7 +332,8 @@ async def test_run_graph_action_turn_drops_repeated_recent_gm_narration(tmp_path
     )
     saved_logs = await repo.load_log_entries("game-1")
 
-    assert [entry.kind for entry in saved_logs] == ["gm", "act"]
+    assert [entry.kind for entry in saved_logs] == ["gm", "act", "gm"]
+    assert saved_logs[-1].text == repeated
 
 
 async def test_run_graph_action_turn_sends_combat_trace_to_narration(tmp_path):
