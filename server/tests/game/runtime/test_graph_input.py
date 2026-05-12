@@ -128,6 +128,36 @@ class _RateLimitedGraphNarrateLLM(_FakeLLM):
         )
 
 
+class _TrackingGraphRepo(LocalFsGraphRepo):
+    def __init__(self, saves_dir: str) -> None:
+        super().__init__(saves_dir)
+        self.graph_change_saves = []
+
+    async def save_graph_changes(
+        self,
+        game_id: str,
+        graph: Graph,
+        *,
+        changed_node_ids: list[str],
+        changed_edge_ids: list[str],
+        removed_edge_ids: list[str],
+    ) -> None:
+        self.graph_change_saves.append(
+            {
+                "changed_node_ids": changed_node_ids,
+                "changed_edge_ids": changed_edge_ids,
+                "removed_edge_ids": removed_edge_ids,
+            }
+        )
+        await super().save_graph_changes(
+            game_id,
+            graph,
+            changed_node_ids=changed_node_ids,
+            changed_edge_ids=changed_edge_ids,
+            removed_edge_ids=removed_edge_ids,
+        )
+
+
 def _character(character_id: str) -> GraphNode:
     return GraphNode(
         id=character_id,
@@ -194,9 +224,93 @@ def _graph() -> Graph:
     )
 
 
+def _social_quest_graph(*, resident_reason_known: bool = False) -> Graph:
+    graph = _graph().model_copy(deep=True)
+    graph.nodes.update(
+        {
+            "quartermaster_npc": _character("quartermaster_npc"),
+            "village_resident": _character("village_resident"),
+            "guide_npc": _character("guide_npc"),
+            "q_missing_supplies": GraphNode(
+                id="q_missing_supplies",
+                type="quest",
+                properties={
+                    "status": "pending",
+                    "triggers": [],
+                    "triggers_met": [],
+                    "rewards": {"gold": 1, "exp": 0},
+                    **(
+                        {"resident_reason_known": True}
+                        if resident_reason_known
+                        else {}
+                    ),
+                },
+            ),
+        }
+    )
+    graph.edges.update(
+        {
+            "located_at:quartermaster_npc:town": GraphEdge(
+                id="located_at:quartermaster_npc:town",
+                type="located_at",
+                from_node_id="quartermaster_npc",
+                to_node_id="town",
+            ),
+            "located_at:village_resident:town": GraphEdge(
+                id="located_at:village_resident:town",
+                type="located_at",
+                from_node_id="village_resident",
+                to_node_id="town",
+            ),
+            "located_at:guide_npc:town": GraphEdge(
+                id="located_at:guide_npc:town",
+                type="located_at",
+                from_node_id="guide_npc",
+                to_node_id="town",
+            ),
+            "relation:quartermaster_npc:player_01": GraphEdge(
+                id="relation:quartermaster_npc:player_01",
+                type="relation",
+                from_node_id="quartermaster_npc",
+                to_node_id="player_01",
+                properties={"affinity": 20},
+            ),
+            "relation:village_resident:player_01": GraphEdge(
+                id="relation:village_resident:player_01",
+                type="relation",
+                from_node_id="village_resident",
+                to_node_id="player_01",
+                properties={"affinity": 0},
+            ),
+            "relation:guide_npc:player_01": GraphEdge(
+                id="relation:guide_npc:player_01",
+                type="relation",
+                from_node_id="guide_npc",
+                to_node_id="player_01",
+                properties={"affinity": 0},
+            ),
+        }
+    )
+    return graph
+
+
 async def _repo(tmp_path) -> LocalFsGraphRepo:
     repo = LocalFsGraphRepo(str(tmp_path))
     await repo.save_graph("game-1", _graph())
+    await repo.save_progress(GameProgress(game_id="game-1", player_id="player_01"))
+    return repo
+
+
+async def _social_quest_repo(
+    tmp_path,
+    *,
+    resident_reason_known: bool = False,
+) -> _TrackingGraphRepo:
+    repo = _TrackingGraphRepo(str(tmp_path))
+    await repo.save_graph(
+        "game-1",
+        _social_quest_graph(resident_reason_known=resident_reason_known),
+    )
     await repo.save_progress(GameProgress(game_id="game-1", player_id="player_01"))
     return repo
 
@@ -270,6 +384,116 @@ async def test_graph_input_reflects_speak_turn_into_memory_dialogue_and_suggesti
     ]
     assert [call["agent"] for call in llm.calls].count("graph_narrate") == 1
     assert "graph_reflect" not in [call["agent"] for call in llm.calls]
+
+
+async def test_graph_input_social_reason_speak_persists_fixed_gm_log_without_narrate(
+    tmp_path,
+):
+    repo = await _social_quest_repo(tmp_path)
+    llm = _FakeLLM(
+        {
+            "actions": [
+                {"verb": "speak", "what": "village_resident", "how": "friendly"}
+            ]
+        }
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "누락된 보급품의 이유를 묻는다")
+    graph = await repo.load_graph("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert result.suggestions == []
+    assert graph.nodes["q_missing_supplies"].properties["resident_reason_known"] is True
+    assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == 2
+    assert logs[-1].kind == "gm"
+    assert logs[-1].text == "주민은 보급품이 사라진 이유를 조심스럽게 털어놓습니다."
+    assert repo.graph_change_saves == [
+        {
+            "changed_node_ids": ["q_missing_supplies"],
+            "changed_edge_ids": ["relation:village_resident:player_01"],
+            "removed_edge_ids": [],
+        }
+    ]
+    assert [call["agent"] for call in llm.calls] == ["classify"]
+
+
+async def test_graph_input_social_blocked_mediation_logs_need_reason_without_mutation(
+    tmp_path,
+):
+    repo = await _social_quest_repo(tmp_path)
+    llm = _FakeLLM(
+        {
+            "actions": [
+                {
+                    "verb": "speak",
+                    "what": "quartermaster_npc",
+                    "how": "friendly",
+                }
+            ]
+        }
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "주민의 사정을 봐 달라고 설득한다")
+    graph = await repo.load_graph("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert "resident_reason_known" not in graph.nodes["q_missing_supplies"].properties
+    assert graph.nodes["q_missing_supplies"].properties["status"] == "pending"
+    assert graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 20
+    assert logs[-1].text == "먼저 주민에게 사라진 보급품의 사정을 들어야 합니다."
+    assert repo.graph_change_saves == []
+    assert [call["agent"] for call in llm.calls] == ["classify"]
+
+
+async def test_graph_input_social_quiet_return_streams_fixed_text_and_persists(
+    tmp_path,
+):
+    repo = await _social_quest_repo(tmp_path)
+    llm = _FakeLLM(
+        {
+            "actions": [
+                {
+                    "verb": "speak",
+                    "what": "quartermaster_npc",
+                    "how": "deceptive",
+                }
+            ]
+        }
+    )
+
+    events = [
+        event
+        async for event in run_graph_input_turn_stream(
+            llm,
+            repo,
+            "game-1",
+            "보급품을 조용히 돌려놓는다",
+        )
+    ]
+    graph = await repo.load_graph("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert [event["type"] for event in events] == ["delta", "final"]
+    assert events[0]["text"] == "보급품은 조용히 제자리로 돌아가고 주민은 안도합니다."
+    assert events[-1]["result"].status == "executed"
+    assert events[-1]["result"].suggestions == []
+    assert graph.nodes["q_missing_supplies"].properties["status"] == "completed"
+    assert graph.nodes["q_missing_supplies"].properties["resolution_route"] == "quiet_return"
+    assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == 6
+    assert graph.edges["relation:village_resident:player_01"].properties["flags"] == [
+        "helped_quietly"
+    ]
+    assert logs[-1].text == "보급품은 조용히 제자리로 돌아가고 주민은 안도합니다."
+    assert repo.graph_change_saves == [
+        {
+            "changed_node_ids": ["q_missing_supplies"],
+            "changed_edge_ids": ["relation:village_resident:player_01"],
+            "removed_edge_ids": [],
+        }
+    ]
+    assert [call["agent"] for call in llm.calls] == ["classify"]
 
 
 async def test_graph_input_passes_focused_context_to_classify(
