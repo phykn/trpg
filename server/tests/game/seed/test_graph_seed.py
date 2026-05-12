@@ -291,3 +291,105 @@ def test_build_seed_graph_links_quests_to_chapters():
     )
     assert bundle.progress.active_subject_id == "elder"
     assert bundle.progress.active_quest_id == "quest_01"
+
+
+def test_build_seed_graph_links_missing_supplies_social_quest():
+    bundle = build_seed_graph(
+        profile_name="default",
+        player=PlayerInput(name="테스터", race_id="human", gender="female"),
+        races={"human": {"id": "human", "name": "인간", "description": ""}},
+        locations={"hub": {"id": "hub", "name": "허브"}},
+        items={
+            "missing_supply_bundle": {
+                "id": "missing_supply_bundle",
+                "name": "누락된 보급품",
+            }
+        },
+        skills={},
+        npcs={
+            "quartermaster_npc": {
+                "id": "quartermaster_npc",
+                "name": "보급 담당자",
+                "race_id": "human",
+                "location_id": "hub",
+                "level": 1,
+                "relations": {"player_01": 20},
+            },
+            "village_resident": {
+                "id": "village_resident",
+                "name": "마을 주민",
+                "race_id": "human",
+                "location_id": "hub",
+                "level": 1,
+                "relations": {"player_01": 0},
+            },
+            "guide_npc": {
+                "id": "guide_npc",
+                "name": "테스트 가이드",
+                "race_id": "human",
+                "location_id": "hub",
+                "level": 1,
+                "relations": {"player_01": 0},
+            },
+        },
+        quests={
+            "q_missing_supplies": {
+                "id": "q_missing_supplies",
+                "title": "보급품 누락",
+                "summary": "보급품 누락을 관계 선택으로 해결합니다.",
+                "giver_id": "quartermaster_npc",
+                "difficulty": "easy",
+                "status": "pending",
+                "triggers": [
+                    {
+                        "id": "resolve_missing_supplies",
+                        "name": "보급품 누락 해결",
+                        "type": "item_use",
+                        "target_id": "missing_supply_bundle",
+                    }
+                ],
+                "rewards": {"gold": 1, "exp": 0},
+            }
+        },
+        chapters={
+            "ch_dev_test": {
+                "id": "ch_dev_test",
+                "title": "개발 테스트",
+                "quest_ids": ["q_missing_supplies"],
+            }
+        },
+        start={
+            "start_location_id": "hub",
+            "active_subject_id": None,
+            "active_quest_id": None,
+        },
+        template={"id": "player_01"},
+        game_id="game-1",
+        locale="ko",
+    )
+
+    graph = bundle.graph
+    assert (
+        graph.edges["gives_quest:quartermaster_npc:q_missing_supplies"].type
+        == "gives_quest"
+    )
+    assert (
+        graph.edges[
+            "target_of:resolve_missing_supplies:missing_supply_bundle:"
+            "q_missing_supplies"
+        ].type
+        == "target_of"
+    )
+    assert (
+        graph.edges["part_of_chapter:q_missing_supplies:ch_dev_test"].type
+        == "part_of_chapter"
+    )
+    assert (
+        graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"]
+        == 20
+    )
+    assert (
+        graph.edges["relation:village_resident:player_01"].properties["affinity"]
+        == 0
+    )
+    assert graph.edges["relation:guide_npc:player_01"].properties["affinity"] == 0
