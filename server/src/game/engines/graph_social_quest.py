@@ -240,12 +240,12 @@ def _mentions_reason(text: str) -> bool:
     return _has_any(
         text,
         (
-            "이유",
-            "사정",
-            "왜",
-            "무슨 일",
-            "누락된 보급품",
-            "보급품을 묻",
+            _chars(0xC774, 0xC720),
+            _chars(0xC0AC, 0xC815),
+            _chars(0xC65C),
+            _chars(0xBB34, 0xC2A8, 0x20, 0xC77C),
+            _chars(0xB204, 0xB77D, 0xB41C, 0x20, 0xBCF4, 0xAE09, 0xD488),
+            _chars(0xBCF4, 0xAE09, 0xD488, 0xC744, 0x20, 0xBB3B),
             "missing supplies",
             "reason",
             "why",
@@ -258,12 +258,12 @@ def _mentions_report(text: str) -> bool:
     return _has_any(
         text,
         (
-            "고발",
-            "보고",
-            "알립니다",
-            "알린다",
-            "훔쳤",
-            "훔친",
+            _chars(0xACE0, 0xBC1C),
+            _chars(0xBCF4, 0xACE0),
+            _chars(0xC54C, 0xB9BD, 0xB2C8, 0xB2E4),
+            _chars(0xC54C, 0xB9B0, 0xB2E4),
+            _chars(0xD6D4, 0xCCE4),
+            _chars(0xD6D4, 0xCE5C),
             "stole",
             "stolen",
             "report",
@@ -277,11 +277,11 @@ def _mentions_mediate(text: str) -> bool:
     return _has_any(
         text,
         (
-            "설득",
-            "봐 달",
-            "용서",
-            "중재",
-            "사정",
+            _chars(0xC124, 0xB4DD),
+            _chars(0xBD10, 0x20, 0xB2EC),
+            _chars(0xC6A9, 0xC11C),
+            _chars(0xC911, 0xC7AC),
+            _chars(0xC0AC, 0xC815),
             "mediate",
             "persuade",
             "forgive",
@@ -295,10 +295,10 @@ def _mentions_quiet_return(text: str) -> bool:
     return _has_any(
         text,
         (
-            "조용히",
-            "몰래",
-            "돌려놓",
-            "반납",
+            _chars(0xC870, 0xC6A9, 0xD788),
+            _chars(0xBAB0, 0xB798),
+            _chars(0xB3CC, 0xB824, 0xB193),
+            _chars(0xBC18, 0xB0A9),
             "quietly return",
             "quiet return",
             "return the supplies",
@@ -310,3 +310,7 @@ def _mentions_quiet_return(text: str) -> bool:
 def _has_any(text: str, terms: tuple[str, ...]) -> bool:
     normalized = text.casefold()
     return any(term.casefold() in normalized for term in terms)
+
+
+def _chars(*codepoints: int) -> str:
+    return "".join(chr(codepoint) for codepoint in codepoints)
