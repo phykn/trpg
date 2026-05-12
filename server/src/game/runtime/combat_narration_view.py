@@ -2,7 +2,7 @@ from typing import Any
 
 from src.game.domain.combat import GraphCombatTraceEvent
 from src.game.domain.content import node_label
-from src.locale.lexicon import nonlethal_markers
+from src.locale.lexicon import downed_markers, nonlethal_markers
 from src.locale.render import render
 
 from .state import GameRuntimeState
@@ -107,8 +107,9 @@ def _player_can_act(runtime: GameRuntimeState) -> bool:
     if isinstance(hp, int | float) and hp <= 0:
         return False
     status = player.properties.get("status")
+    markers = downed_markers(runtime.progress.locale)
     if isinstance(status, list) and any(
-        isinstance(item, str) and item.lower() in {"downed", "쓰러짐", "전투불능"}
+        isinstance(item, str) and item.lower() in markers
         for item in status
     ):
         return False

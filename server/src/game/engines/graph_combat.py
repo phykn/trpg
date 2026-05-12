@@ -56,8 +56,8 @@ def plan_combat_start(
     enemy = _require_character(graph, enemy_id)
     if player_id == enemy_id:
         raise GraphCombatError("combat requires different characters")
-    _require_can_fight(player)
-    _require_can_fight(enemy)
+    _require_player_can_fight(player)
+    _require_combatant_can_fight(enemy)
 
     player_location = location_of(graph, player_id)
     enemy_location = location_of(graph, enemy_id)
@@ -100,10 +100,10 @@ def plan_combat_exchange(
         raise GraphCombatError("only the player actor can drive this combat slice")
 
     player = _require_character(graph, state.player_id)
-    _require_can_fight(player)
+    _require_player_can_fight(player)
     target_id = action.target_id or state.active_enemy_id
     enemy = _require_enemy(graph, state, target_id)
-    _require_can_fight(enemy)
+    _require_combatant_can_fight(enemy)
 
     support = _resolve_support(graph, player, action)
     changes = _resource_changes(player, support)
@@ -368,9 +368,18 @@ def _require_enemy(
     return _require_character(graph, target_id)
 
 
-def _require_can_fight(node: GraphNode) -> None:
+def _require_combatant_can_fight(node: GraphNode) -> None:
     if node.properties.get("alive") is False:
         raise GraphCombatError(f"character cannot fight: {node.id}")
+    status = node.properties.get("status", [])
+    if isinstance(status, list) and any(
+        item in {"defeated", "downed"} for item in status
+    ):
+        raise GraphCombatError(f"character cannot fight: {node.id}")
+
+
+def _require_player_can_fight(node: GraphNode) -> None:
+    _require_combatant_can_fight(node)
     hp = _int_prop(node, "hp")
     max_hp = _int_prop(node, "max_hp")
     if hp <= 0 or max_hp <= 0:

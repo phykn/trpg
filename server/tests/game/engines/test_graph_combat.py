@@ -167,6 +167,18 @@ def test_combat_start_builds_heart_state_without_graph_changes():
     assert result.state.trace[-1].kind == "combat_started"
 
 
+def test_combat_start_allows_enemy_without_hp_or_mp_resources():
+    graph = _graph()
+    enemy = graph.nodes["goblin_01"].properties
+    for key in ("hp", "max_hp", "mp", "max_mp"):
+        enemy.pop(key)
+
+    result = plan_combat_start(graph, "player_01", "goblin_01")
+
+    assert result.state.enemy_hearts == 3
+    assert result.state.outcome == "ongoing"
+
+
 def test_combat_start_validates_target_and_location():
     with pytest.raises(GraphCombatError, match="missing character"):
         plan_combat_start(_graph(), "player_01", "ghost")
@@ -358,6 +370,29 @@ def test_victory_marks_enemy_defeated_without_forced_round_limit():
     assert enemy["defeat_mode"] == "unconscious"
     assert "defeated" in enemy["status"]
     assert result.state.trace[-1].kind == "enemy_defeated"
+
+
+def test_victory_marks_enemy_without_hp_resource_defeated():
+    graph = _graph()
+    enemy = graph.nodes["goblin_01"].properties
+    for key in ("hp", "max_hp", "mp", "max_mp"):
+        enemy.pop(key)
+    state = _started(graph).model_copy(update={"enemy_hearts": 1})
+
+    result = plan_combat_exchange(
+        graph,
+        state,
+        "player_01",
+        GraphCombatAction(kind="attack"),
+        dice=11,
+    )
+    changed = _apply_all(graph, result.changes)
+
+    enemy = changed.nodes["goblin_01"].properties
+    assert result.state.outcome == "victory"
+    assert "hp" not in enemy
+    assert enemy["defeat_mode"] == "unconscious"
+    assert "defeated" in enemy["status"]
 
 
 def test_defeat_deducts_hp_by_remaining_enemy_hearts():

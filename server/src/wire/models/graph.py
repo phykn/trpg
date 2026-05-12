@@ -87,7 +87,7 @@ class GraphPlaceTargetPayload(_CamelModel):
     id: str
     name: str
     kind: Literal["npc", "enemy"]
-    hp: GraphResourcePayload
+    alive: bool
     level: int
     race_job: str
     gender: str
@@ -112,7 +112,7 @@ class GraphCombatParticipantPayload(_CamelModel):
     id: str
     name: str
     side: Literal["player", "enemy"]
-    hp: GraphResourcePayload
+    hp: GraphResourcePayload | None = None
     mp: GraphResourcePayload | None = None
 
 

@@ -291,7 +291,8 @@ def _item_mentioned(player_input: str, item_name: str, item_id: str) -> bool:
 
 
 def _normalize_for_match(text: str) -> str:
-    return re.sub(r"[^0-9A-Za-z가-힣]+", "", text).lower()
+    hangul_range = f"{chr(0xAC00)}-{chr(0xD7A3)}"
+    return re.sub(fr"[^0-9A-Za-z{hangul_range}]+", "", text).lower()
 
 
 def _string_list_value(

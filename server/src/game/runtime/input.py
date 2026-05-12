@@ -9,6 +9,7 @@ from src.game.domain.action import Action
 from src.game.domain.content import node_label
 from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph import GraphNode
+from src.game.domain.graph_character import is_visible_character
 from src.game.domain.graph_query import characters_at, location_of
 from src.game.domain.memory import GMLogEntry, PlayerLogEntry
 from src.llm.calls._runner import get_prompt
@@ -718,7 +719,7 @@ def _resolve_narrative_subject(runtime, action) -> str | None:
         node = graph.nodes.get(character_id)
         if node is None or node.type != "character":
             continue
-        if _node_hp(node) > 0:
+        if is_visible_character(node):
             return character_id
     return None
 
@@ -735,11 +736,6 @@ def _node_name(runtime, node: GraphNode | None) -> str:
     if node is None:
         return render("runtime.none", runtime.progress.locale)
     return node_label(runtime.content, node)
-
-
-def _node_hp(node: GraphNode) -> int:
-    hp = node.properties.get("hp")
-    return hp if isinstance(hp, int) else 0
 
 
 def _fallback_input_narration(runtime: GameRuntimeState, subject_id: str | None) -> str:

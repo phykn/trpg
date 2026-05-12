@@ -160,7 +160,7 @@ export type GraphPlaceTarget = {
   id: string;
   name: string;
   kind: 'npc' | 'enemy';
-  hp: GraphResource;
+  alive: boolean;
   level: number;
   raceJob: string;
   gender: string;
@@ -185,7 +185,7 @@ export type GraphCombatParticipant = {
   id: string;
   name: string;
   side: 'player' | 'enemy';
-  hp: GraphResource;
+  hp: GraphResource | null;
   mp: GraphResource | null;
 };
 

@@ -10,8 +10,6 @@ const subject: Subject = {
   trust: 4,
   known: ['불안한 표정으로 뒷문을 살핍니다.'],
   level: 1,
-  hp: 18,
-  hpMax: 18,
   stats: [{ label: '몸', value: 9 }],
   equipment: { weapon: null, armor: null, accessory: null },
   inventory: [],

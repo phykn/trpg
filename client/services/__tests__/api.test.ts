@@ -151,7 +151,7 @@ describe('graph API helpers', () => {
           id: 'edrik_chief',
           name: '에드릭',
           kind: 'npc',
-          hp: { current: 20, maximum: 20, state: 'healthy' },
+          alive: true,
           level: 1,
           raceJob: '',
           gender: '',

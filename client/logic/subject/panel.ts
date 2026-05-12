@@ -20,17 +20,14 @@ export function buildSubjectSlot(subject: Subject | null, opts?: { dot?: boolean
     panel: {
       title: withDeath(subject.name, subject.alive),
       meta: [{ text: characterMeta(subject.level, subject.raceJob, subject.gender) }],
-      barSplit: [
-        { label: 'HP', value: subject.hp, max: subject.hpMax, tone: 'hp', display: `${subject.hp}/${subject.hpMax}` },
-        {
-          label: ko.panel.affinity,
-          value: subject.trust,
-          max: 100,
-          tone: subject.trust > 0 ? 'good' : subject.trust < 0 ? 'bad' : 'neutral',
-          display: subject.trust > 0 ? `+${subject.trust}` : `${subject.trust}`,
-          signed: true,
-        },
-      ],
+      bar: {
+        label: ko.panel.affinity,
+        value: subject.trust,
+        max: 100,
+        tone: subject.trust > 0 ? 'good' : subject.trust < 0 ? 'bad' : 'neutral',
+        display: subject.trust > 0 ? `+${subject.trust}` : `${subject.trust}`,
+        signed: true,
+      },
       sections: [
         { label: ko.hero.ability, nodes: subject.stats.map((s): [string, number] => [s.label, s.value]) },
         { label: ko.hero.equip, text: joinOrDash(equipped.map((it) => it.name)) },

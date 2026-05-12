@@ -104,10 +104,6 @@ def _giver(giver_id: str, locale: str) -> GraphNode:
         type="character",
         properties={
             **_source(giver_id),
-            "hp": 10,
-            "max_hp": 10,
-            "mp": 0,
-            "max_mp": 0,
             "alive": True,
             "stats": {"body": 0, "agility": 0, "mind": 1, "presence": 1},
             "status": [],
@@ -122,16 +118,11 @@ def _enemy(enemy_id: str, locale: str) -> GraphNode:
         type="character",
         properties={
             **_source(enemy_id),
-            "hp": 28,
-            "max_hp": 28,
-            "mp": 0,
-            "max_mp": 0,
             "alive": True,
             "stats": {"body": 2, "agility": 1, "mind": 0, "presence": 0},
             "status": [],
             "combat_behavior": {
                 "attack_priority": "nearest",
-                "flee_hp_percent": 0,
             },
         },
     )

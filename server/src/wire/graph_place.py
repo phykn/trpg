@@ -1,6 +1,10 @@
 from src.game.domain.content import RuntimeContent
 from src.game.domain.graph import Graph, GraphNode
-from src.game.domain.graph_character import graph_character_kind, is_visible_character
+from src.game.domain.graph_character import (
+    can_character_fight,
+    graph_character_kind,
+    is_visible_character,
+)
 from src.game.domain.graph_query import characters_at, edges_from, location_of
 from src.wire.graph_character_view import (
     character_equipment,
@@ -15,7 +19,6 @@ from src.wire.graph_payload_helpers import (
     node_name,
     optional_str,
     require_node,
-    resource,
     static_value,
 )
 from src.wire.models import (
@@ -57,7 +60,7 @@ def place_payload(
                 id=target.id,
                 name=node_name(target, content),
                 kind=graph_character_kind(target),
-                hp=resource(target, "hp", "max_hp"),
+                alive=can_character_fight(target),
                 level=_int_prop_default(target, "level", 1),
                 race_job=character_race_job(target, content),
                 gender=character_gender(target, locale, content),

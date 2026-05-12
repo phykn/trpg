@@ -21,7 +21,7 @@ class GraphCombatParticipantView(BaseModel):
     id: str
     name: str
     side: Literal["player", "enemy"]
-    hp_state: HpState
+    hp_state: HpState | None = None
     mp_state: MpState | None = None
     defeat_mode: str | None = None
 
@@ -115,11 +115,8 @@ def _participant_view(
         id=participant_id,
         name=_name(node, content),
         side=side,
-        hp_state=hp_state(
-            _int_prop(node, "hp"),
-            _int_prop(node, "max_hp"),
-        ),
-        mp_state=_node_mp_state(node),
+        hp_state=_node_hp_state(node) if side == "player" else None,
+        mp_state=_node_mp_state(node) if side == "player" else None,
         defeat_mode=_optional_str(node.properties.get("defeat_mode")),
     )
 
@@ -141,6 +138,14 @@ def _node_mp_state(node: GraphNode) -> MpState | None:
     if not isinstance(current, int) or not isinstance(maximum, int):
         return None
     return mp_state(current, maximum)
+
+
+def _node_hp_state(node: GraphNode) -> HpState | None:
+    current = node.properties.get("hp")
+    maximum = node.properties.get("max_hp")
+    if not isinstance(current, int) or not isinstance(maximum, int):
+        return None
+    return hp_state(current, maximum)
 
 
 def _int_prop(node: GraphNode, key: str) -> int:

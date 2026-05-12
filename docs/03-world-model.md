@@ -11,7 +11,7 @@ graph는 node와 edge로 이루어진다.
 
 - node는 캐릭터, 아이템, 장소, 퀘스트, 기술 같은 대상이다.
 - edge는 대상 사이의 관계다. 예: 위치, 소유, 장착, 동료, 퀘스트 목표, 보상.
-- HP/MP, 4-stat, 퀘스트 상태 같은 값은 node나 edge의 속성이다.
+- 플레이어 HP/MP, 4-stat, 퀘스트 상태 같은 값은 node나 edge의 속성이다.
 
 `state`는 graph와 현재 턴, 확인 대기, 판정 대기, 전투 임시 상태, locale을 담는 저장 봉투다.
 
@@ -121,7 +121,7 @@ LLM이 만들 수 없는 것:
 | `role_tags` | 의뢰자, 상인, 적, 동료 후보 같은 역할 |
 | `name`, `description`, `tone` | 이름, 설명, 말투 |
 | `located_at` edge | 현재 위치 |
-| `stats`, `resources` | 능력치, HP, MP 같은 node 속성 |
+| `stats`, `resources` | 능력치, 플레이어 HP/MP 같은 node 속성 |
 | `carries`, `equips` edge | 들고 있는 것과 장착한 것 |
 | relation edge | 다른 캐릭터와의 관계 |
 | `combat_profile` | 전투에 들어갈 수 있는지와 전투 성향 |
@@ -136,7 +136,7 @@ LLM이 할 수 있는 일:
 
 engine이 정하는 일:
 
-- HP, MP, 4-stat
+- 플레이어 HP/MP, 4-stat
 - 위치 edge
 - 소지품과 장비 edge
 - 관계 edge의 수치
@@ -170,7 +170,7 @@ LLM은 표현만 채운다. 수치와 보상은 만들지 않는다.
 | `mind` | 보고, 알고, 집중하는 힘 |
 | `presence` | 말과 태도로 밀어붙이는 힘 |
 
-HP/MP는 숫자로 저장하지만, LLM에게는 상태 말도 같이 준다.
+HP/MP는 플레이어의 장기 자원이다. NPC와 몬스터는 HP/MP를 갖지 않고, 전투 안에서는 하트와 패배 상태로 처리한다. LLM에게는 플레이어 HP/MP 상태 말만 준다.
 
 | resource | 상태 |
 |---|---|

@@ -73,6 +73,7 @@ def test_generates_pending_hunt_offer_when_no_work_exists():
     graph = _apply_all(_graph_without_work(), result.changes)
     quest = graph.nodes[result.quest_id]
     enemy = graph.nodes["auto_enemy_001"]
+    giver = graph.nodes["auto_giver_001"]
     assert quest.type == "quest"
     assert "title" not in quest.properties
     assert "summary" not in quest.properties
@@ -85,6 +86,9 @@ def test_generates_pending_hunt_offer_when_no_work_exists():
     assert result.content.quests[result.quest_id]["triggers"][0]["name"]
     assert result.content.characters["auto_enemy_001"]["name"]
     assert enemy.properties["combat_behavior"] is not None
+    for key in ("hp", "max_hp", "mp", "max_mp"):
+        assert key not in enemy.properties
+        assert key not in giver.properties
     assert any(
         edge.type == "gives_quest" and edge.to_node_id == result.quest_id
         for edge in graph.edges.values()

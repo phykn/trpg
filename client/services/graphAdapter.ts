@@ -44,7 +44,7 @@ export function deriveGraphSuggestions(state: GraphFrontState): SuggestionChip[]
   if (state.combat !== null) return combatSuggestions(state.combat);
 
   const suggestions: SuggestionChip[] = [];
-  const livingTargets = state.place?.targets.filter((target) => target.hp.current > 0) ?? [];
+  const livingTargets = state.place?.targets.filter((target) => target.alive) ?? [];
   const enemy = livingTargets.find((target) => target.kind === 'enemy');
   if (enemy) suggestions.push(chip(compose.attack(enemy.name)));
 
@@ -83,22 +83,20 @@ function uniqueFirst(values: SuggestionChip[], limit: number): SuggestionChip[] 
 }
 
 function selectSubjectTarget(targets: GraphPlaceTarget[]): GraphPlaceTarget | null {
-  return targets.find((target) => target.hp.current > 0) ?? targets[0] ?? null;
+  return targets.find((target) => target.alive) ?? targets[0] ?? null;
 }
 
 function adaptSubject(target: GraphPlaceTarget | null): FrontState['subject'] {
   if (target === null) return null;
   return {
     name: target.name,
-    alive: target.hp.current > 0,
+    alive: target.alive,
     role: target.role,
     raceJob: target.raceJob,
     gender: target.gender,
     trust: 0,
     known: target.status,
     level: target.level,
-    hp: target.hp.current,
-    hpMax: target.hp.maximum,
     gold: target.gold,
     stats: statEntries(target.stats),
     equipment: target.equipment ?? EMPTY_EQUIPMENT,
@@ -249,7 +247,7 @@ function buildStoryGraph(
         raceJob: target.raceJob,
         gender: target.gender,
         role: target.role,
-        alive: target.hp.current > 0,
+        alive: target.alive,
         trust: 0,
       })),
       ...quests.map((quest) => ({

@@ -57,6 +57,11 @@ NONLETHAL_MARKERS_BY_LOCALE = {
     "ko": frozenset({"훈련", "대련", "연습", "허수아비"}),
 }
 
+DOWNED_MARKERS_BY_LOCALE = {
+    "en": frozenset({"downed"}),
+    "ko": frozenset({"쓰러짐", "전투불능"}),
+}
+
 META_BREAKING_TERMS = (
     "시스템 프롬프트",
     "프롬프트 원문",
@@ -71,6 +76,12 @@ WEATHER_TERM = "날씨"
 def nonlethal_markers(locale: str) -> frozenset[str]:
     markers: set[str] = set(_terms_for_locale("en", NONLETHAL_MARKERS_BY_LOCALE))
     markers.update(_terms_for_locale(locale, NONLETHAL_MARKERS_BY_LOCALE))
+    return frozenset(markers)
+
+
+def downed_markers(locale: str) -> frozenset[str]:
+    markers: set[str] = set(_terms_for_locale("en", DOWNED_MARKERS_BY_LOCALE))
+    markers.update(_terms_for_locale(locale, DOWNED_MARKERS_BY_LOCALE))
     return frozenset(markers)
 
 

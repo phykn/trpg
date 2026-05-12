@@ -42,7 +42,7 @@ describe('adaptGraphState', () => {
             id: 'goblin_01',
             name: '쓰러진 고블린',
             kind: 'enemy',
-            hp: { current: 0, maximum: 10, state: 'down' },
+            alive: false,
             level: 1,
             raceJob: '고블린',
             gender: '',
@@ -58,7 +58,7 @@ describe('adaptGraphState', () => {
             id: 'wolf_01',
             name: '늑대',
             kind: 'enemy',
-            hp: { current: 5, maximum: 12, state: 'hurt' },
+            alive: true,
             level: 3,
             raceJob: '야수',
             gender: '',
@@ -114,7 +114,7 @@ describe('adaptGraphState', () => {
             id: 'wolf_01',
             name: '늑대',
             side: 'enemy',
-            hp: { current: 5, maximum: 12, state: 'hurt' },
+            hp: null,
             mp: null,
           },
         ],
@@ -178,7 +178,7 @@ describe('adaptGraphState', () => {
     expect(state.pendingConfirmation?.confirmLabel).toBe('공격');
     expect(state.pendingRoll?.requiredRoll).toBe(13);
     expect(state.subject?.name).toBe('늑대');
-    expect(state.subject?.hp).toBe(5);
+    expect(state.subject?.alive).toBe(true);
     expect(state.subject?.role).toBe('숲의 포식자');
     expect(state.subject?.raceJob).toBe('야수');
     expect(state.subject?.gold).toBe(2);
@@ -232,7 +232,7 @@ describe('adaptGraphState', () => {
             id: 'edrik_chief',
             name: '에드릭',
             kind: 'npc',
-            hp: { current: 20, maximum: 20, state: 'healthy' },
+            alive: true,
             level: 1,
             raceJob: '',
             gender: '',
@@ -248,7 +248,7 @@ describe('adaptGraphState', () => {
             id: 'wolf_01',
             name: '늑대',
             kind: 'enemy',
-            hp: { current: 8, maximum: 10, state: 'hurt' },
+            alive: true,
             level: 1,
             raceJob: '',
             gender: '',

@@ -29,7 +29,7 @@ This section adapts the warm editorial reference below to the actual TRPG play c
 
 ### Combat And Roll
 
-- Combat replaces the composer while active. The combat panel shows the opponent name, current exchange/range context, enemy HP on the right, and full-width balanced action buttons.
+- Combat replaces the composer while active. The combat panel shows the opponent name, current exchange/range context, player/enemy hearts on the right, and full-width balanced action buttons.
 - Combat action buttons are `공격 / 방어 / 도주 / 설득` when an enemy is available.
 - Roll replaces the composer while active. The roll panel shows title, short reason, `13 이상` in the header, a tight 1-20 dice strip, and a single full-width `굴리기` button.
 - The dice strip has no outer sub-card, no `필요 주사위` label, and no marker above the strip. The required cell itself is highlighted.

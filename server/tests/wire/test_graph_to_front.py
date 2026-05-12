@@ -371,13 +371,25 @@ def test_graph_front_state_resolves_static_content_from_runtime_content():
 
 def test_graph_front_state_hides_defeated_place_targets():
     runtime = _runtime()
-    runtime.graph.nodes["goblin_01"].properties["hp"] = 0
     runtime.graph.nodes["goblin_01"].properties["status"] = ["defeated"]
 
     payload = graph_to_front_state(runtime)
 
     assert payload.place is not None
     assert payload.place.targets == []
+
+
+def test_graph_front_state_exposes_non_player_target_without_resources():
+    runtime = _runtime()
+    target = runtime.graph.nodes["goblin_01"].properties
+    for key in ("hp", "max_hp", "mp", "max_mp"):
+        target.pop(key)
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.place is not None
+    assert payload.place.targets[0].id == "goblin_01"
+    assert payload.place.targets[0].alive is True
 
 
 def test_graph_front_state_builds_visible_quest_offer():
@@ -424,7 +436,11 @@ def test_graph_front_state_prefers_progress_active_quest():
 
 
 def test_graph_front_state_builds_combat_view_when_progress_exists():
-    payload = graph_to_front_state(_runtime(combat=True))
+    runtime = _runtime(combat=True)
+    target = runtime.graph.nodes["goblin_01"].properties
+    for key in ("hp", "max_hp", "mp", "max_mp"):
+        target.pop(key)
+    payload = graph_to_front_state(runtime)
 
     assert payload.combat is not None
     assert payload.combat.round == 2
@@ -435,7 +451,9 @@ def test_graph_front_state_builds_combat_view_when_progress_exists():
     assert payload.combat.enemy_hearts.current == 1
     assert payload.combat.enemy_hearts.maximum == 3
     assert [p.id for p in payload.combat.participants] == ["player_01", "goblin_01"]
-    assert payload.combat.participants[1].hp.state == "critical"
+    assert payload.combat.participants[0].hp is not None
+    assert payload.combat.participants[1].hp is None
+    assert payload.combat.participants[1].mp is None
 
 
 def test_graph_front_state_exposes_pending_confirmation_without_payload():

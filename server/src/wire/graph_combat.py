@@ -26,8 +26,10 @@ def combat_payload(runtime: GameRuntimeState) -> GraphCombatPayload | None:
                 id=node.id,
                 name=node_name(node, runtime.content),
                 side=side,
-                hp=resource(node, "hp", "max_hp"),
-                mp=optional_resource(node, "mp", "max_mp"),
+                hp=resource(node, "hp", "max_hp") if side == "player" else None,
+                mp=optional_resource(node, "mp", "max_mp")
+                if side == "player"
+                else None,
             )
         )
 

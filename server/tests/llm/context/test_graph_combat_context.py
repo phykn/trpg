@@ -108,7 +108,7 @@ def test_build_graph_combat_context_exposes_state_words_without_raw_numbers():
     ]
     assert context.participants[0].hp_state == "healthy"
     assert context.participants[0].mp_state == "ready"
-    assert context.participants[1].hp_state == "healthy"
+    assert context.participants[1].hp_state is None
     assert context.participants[1].mp_state is None
     assert context.trace[-1].kind == "player_attack_success"
     assert _forbidden_keys(dumped) == set()

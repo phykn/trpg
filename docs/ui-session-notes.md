@@ -154,7 +154,7 @@ Combat panel rules:
 
 - Show who the player is fighting, e.g. `어둠 속의 습격자와 전투 중`.
 - Show combat context, e.g. `2번째 교환 · 가까운 거리`.
-- Show enemy/NPC HP on the right side of the combat panel header.
+- Show player/enemy hearts on the right side of the combat panel header.
 - No extra instruction line like `다음 행동을 고르거나 직접 입력합니다.`
 - Action buttons should evenly fill the width: `공격`, `방어`, `도주`, `설득`.
 
@@ -231,7 +231,7 @@ Implemented touch points:
 - `client/components/hero/HeroStrip.tsx` shows hero name/meta, 소지금, and numbered `체력 / 마나 / 경험 / 소생` meters.
 - `client/components/composer/Composer.tsx` owns the nearby summary line and expands a nearby panel above the composer without covering the input.
 - `client/logic/story-graph/nearby.ts` builds the one-hop nearby summary and action rows from the story graph.
-- `client/components/combat/CombatStrip.tsx` replaces the composer during combat, shows opponent context and enemy HP, and stretches `공격 / 방어 / 도주 / 설득` evenly.
+- `client/components/combat/CombatStrip.tsx` replaces the composer during combat, shows opponent context and hearts, and stretches `공격 / 방어 / 도주 / 설득` evenly.
 - `client/components/log/Log.tsx` and `LogItem.tsx` remove bottom suggestion strips and make player log entries follow the GM narration rhythm.
 
 Implemented pending-roll contract:
@@ -247,7 +247,7 @@ The latest prototype feedback applied here:
 
 - Remove the `주인공` panel action row.
 - Keep the nearby panel above the composer without covering it, and add right-side action buttons per nearby item.
-- Add enemy HP to the right side of the combat panel header.
+- Add player/enemy hearts to the right side of the combat panel header.
 - Replace the roll requirement text-only row with the old client-style 1-20 square dice strip. Highlight the required roll cell; do not add an extra marker above it.
 - Keep the roll strip tight: no `필요 주사위` label inside the strip and no separate strip boundary. Move `13 이상` up into the roll header.
 - Apply the design to the real `client/` app. The user explicitly said the implementation does not need to be minimal and can change as much as needed.
