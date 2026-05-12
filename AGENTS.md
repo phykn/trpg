@@ -1,65 +1,62 @@
-# AGENTS.md
+# trpg Agent Guide
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+This repository is a Korean-language TRPG split into a FastAPI server, an Expo client, local QA/story tooling, scenario seeds, and design docs. General coding behavior lives in the global `C:\Users\KN\.codex\AGENTS.md`; this file covers repo-specific routing and verification.
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+## Read First
 
-## 1. Think Before Coding
+- Root overview and dev/deploy commands: `README.md`.
+- Product and runtime contracts: `docs/README.md`, `docs/02-runtime.md`, `docs/03-world-model.md`, `docs/05-interfaces.md`.
+- Backend work: `server/AGENTS.md`.
+- Client work: `client/AGENTS.md`.
+- QA and scenario authoring: `agency/AGENTS.md`.
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
+Use the deepest applicable `AGENTS.md` as the source of truth. If instructions conflict, prefer the file closest to the code being edited, then this file, then the global file.
 
-Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+## Boundaries
 
-## 2. Simplicity First
+- `server/` owns graph runtime, persistence, LLM calls, API routes, and server-composed Korean game text.
+- `client/` owns the Expo UI, client state, local storage pointer, and client-owned Korean labels.
+- `agency/` owns local QA runs and story/scenario build tooling.
+- `scenarios/` is seed content. Validate seed edits instead of treating JSON changes as harmless text edits.
+- `docs/` records design contracts. Update it only when behavior or public contracts change.
 
-**Minimum code that solves the problem. Nothing speculative.**
+Do not duplicate rules across layers. When a change crosses server/client/agency, verify each touched boundary with the narrowest useful command.
 
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
+## Commands
 
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+From the repo root:
 
-## 3. Surgical Changes
-
-**Touch only what you must. Clean up only your own mess.**
-
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
-
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
-
-## 4. Goal-Driven Execution
-
-**Define success criteria. Loop until verified.**
-
-Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
+```bash
+.venv/bin/python -m pytest -q
+.venv/bin/python -m pytest server/tests/path/to/test_file.py::test_name -q
+.venv/bin/ruff check server/ agency/
+.venv/bin/python agency/run_qa.py --agent socialite --turns 25
 ```
 
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+From `server/`:
 
----
+```bash
+../.venv/bin/python run_api.py
+```
 
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+From `client/`:
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm test -- --runInBand
+npm run web
+```
+
+Use Windows PowerShell path forms when running directly in this workspace if the Unix-style examples fail, e.g. `.\.venv\Scripts\python.exe -m pytest -q`.
+
+## Language and Text
+
+- Player-facing Korean uses 2nd-person polite `합니다체`: `당신`, `~합니다`, `~입니다`.
+- The canonical player-facing term for skills is `기술`; keep `스킬` only where accepting player input synonyms.
+- Client components render server-composed strings verbatim. Client-owned labels belong in `client/locale/`, not inline JSX.
+- Code comments and validation errors stay English unless quoting in-game Korean text.
+
+## Verification
+
+For Python behavior, add or update focused pytest coverage before broad runs. For client behavior, run the relevant Jest test or type/lint command. For scenario edits, run the story tool checks or seed validation named in the local guide. For QA claims, read transcripts under `qa_test/agency/<agent>/` and cite turn numbers.

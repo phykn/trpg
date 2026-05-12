@@ -100,6 +100,20 @@ def test_heal_consumable_caps_hp_and_removes_item():
     assert "carries:player_01:heal" not in changed.edges
 
 
+def test_heal_consumable_clears_downed_status():
+    graph = _graph()
+    graph.nodes["player_01"].properties["hp"] = 1
+    graph.nodes["player_01"].properties["status"] = ["downed", "축복"]
+    graph.nodes["player_01"].properties["defeat_mode"] = "downed"
+
+    result = plan_item_use(graph, "player_01", "heal")
+    changed = _apply_all(graph, result.changes)
+
+    assert changed.nodes["player_01"].properties["hp"] == 16
+    assert changed.nodes["player_01"].properties["status"] == ["축복"]
+    assert changed.nodes["player_01"].properties["defeat_mode"] is None
+
+
 def test_mp_restore_caps_mp():
     result = plan_item_use(_graph(), "player_01", "mana")
     changed = _apply_all(_graph(), result.changes)

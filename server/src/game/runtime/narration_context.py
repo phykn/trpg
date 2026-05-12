@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from src.game.domain.action import Action
@@ -92,7 +93,11 @@ def build_input_narration_payload(
         "player_input": player_input,
         "current_event": _input_current_event(runtime, action, dialogue_target),
         "scene_anchor": _scene_anchor(runtime),
-        "target_view": _target_view(runtime, dialogue_target),
+        "target_view": _target_view(
+            runtime,
+            dialogue_target,
+            player_input=player_input,
+        ),
         "result_cards": [],
         "related_memory": related_memory_payload(
             runtime,
@@ -225,7 +230,9 @@ def _scene_anchor(runtime: GameRuntimeState) -> dict[str, Any]:
 def _target_view(
     runtime: GameRuntimeState,
     node: GraphNode | None,
-) -> dict[str, str] | None:
+    *,
+    player_input: str | None = None,
+) -> dict[str, Any] | None:
     if node is None:
         return None
     payload = _node_ref(runtime, node)
@@ -233,7 +240,69 @@ def _target_view(
     role = node_value(runtime.content, node, "role")
     if isinstance(role, str) and role:
         payload["known_role"] = role
+    tone_hint = node_text(runtime.content, node, "tone_hint")
+    if tone_hint:
+        payload["tone_hint"] = tone_hint
+    hints = _string_list_value(runtime, node, "hints")
+    if hints:
+        payload["known_hints"] = hints[:3]
+    available_items = _mentioned_inventory_payloads(runtime, node, player_input)
+    if available_items:
+        payload["available_items"] = available_items
     return payload
+
+
+def _mentioned_inventory_payloads(
+    runtime: GameRuntimeState,
+    node: GraphNode,
+    player_input: str | None,
+) -> list[dict[str, Any]]:
+    if node.type != "character" or not player_input:
+        return []
+    out: list[dict[str, Any]] = []
+    for item_id in inventory_of(runtime.graph_index, node.id):
+        item = runtime.graph.nodes.get(item_id)
+        if item is None or item.type != "item":
+            continue
+        if not _item_mentioned(player_input, node_label(runtime.content, item), item.id):
+            continue
+        payload: dict[str, Any] = _item_payload(runtime, item)
+        price = node_value(runtime.content, item, "price")
+        if isinstance(price, int | float):
+            payload["price"] = price
+        out.append(payload)
+    return out
+
+
+def _item_mentioned(player_input: str, item_name: str, item_id: str) -> bool:
+    normalized_input = _normalize_for_match(player_input)
+    normalized_name = _normalize_for_match(item_name)
+    if normalized_name and normalized_name in normalized_input:
+        return True
+    normalized_id = _normalize_for_match(item_id)
+    if normalized_id and normalized_id in normalized_input:
+        return True
+    name_tokens = [
+        _normalize_for_match(token)
+        for token in re.split(r"\s+", item_name)
+        if len(_normalize_for_match(token)) >= 2
+    ]
+    return sum(1 for token in name_tokens if token in normalized_input) >= 2
+
+
+def _normalize_for_match(text: str) -> str:
+    return re.sub(r"[^0-9A-Za-z가-힣]+", "", text).lower()
+
+
+def _string_list_value(
+    runtime: GameRuntimeState,
+    node: GraphNode,
+    key: str,
+) -> list[str]:
+    value = node_value(runtime.content, node, key)
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str) and item]
 
 
 def _input_current_event(

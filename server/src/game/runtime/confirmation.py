@@ -36,6 +36,7 @@ GraphRequestStatus = Literal[
     "roll_required",
     "cancelled",
     "answered",
+    "rejected",
 ]
 
 

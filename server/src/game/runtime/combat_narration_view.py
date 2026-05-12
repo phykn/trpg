@@ -36,6 +36,7 @@ def combat_narration_view(
     return {
         "kind": "combat_exchange",
         "round": state.round if state is not None else None,
+        "player_can_act": _player_can_act(runtime),
         "player_action": _action_label(
             runtime.progress.locale,
             state.last_action if state is not None else None,
@@ -94,6 +95,24 @@ def _combat_tone(runtime: GameRuntimeState) -> dict[str, str]:
         if _has_nonlethal_marker(node.properties, runtime.progress.locale):
             return {"lethality": "nonlethal", "style": "training"}
     return {"lethality": "dangerous", "style": "adventure"}
+
+
+def _player_can_act(runtime: GameRuntimeState) -> bool:
+    player = runtime.graph.nodes.get(runtime.progress.player_id)
+    if player is None:
+        return False
+    if player.properties.get("alive") is False:
+        return False
+    hp = player.properties.get("hp")
+    if isinstance(hp, int | float) and hp <= 0:
+        return False
+    status = player.properties.get("status")
+    if isinstance(status, list) and any(
+        isinstance(item, str) and item.lower() in {"downed", "쓰러짐", "전투불능"}
+        for item in status
+    ):
+        return False
+    return True
 
 
 def _has_nonlethal_marker(properties: dict[str, Any], locale: str) -> bool:

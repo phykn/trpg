@@ -85,7 +85,12 @@ async def run_graph_action_turn_from_runtime(
     try:
         dispatch = dispatch_graph_action(runtime, action)
     except GraphActionDispatchError as exc:
-        engine_diag("dispatch:fail", action=action.verb, err=type(exc).__name__)
+        engine_diag(
+            "dispatch:fail",
+            action=action.verb,
+            err=type(exc).__name__,
+            reason=str(exc),
+        )
         raise GraphActionTurnError(str(exc)) from exc
     engine_diag(
         "dispatch:done",
@@ -208,7 +213,12 @@ async def run_graph_action_turn_from_runtime_stream(
     try:
         dispatch = dispatch_graph_action(runtime, action)
     except GraphActionDispatchError as exc:
-        engine_diag("dispatch:fail", action=action.verb, err=type(exc).__name__)
+        engine_diag(
+            "dispatch:fail",
+            action=action.verb,
+            err=type(exc).__name__,
+            reason=str(exc),
+        )
         raise GraphActionTurnError(str(exc)) from exc
     engine_diag(
         "dispatch:done",

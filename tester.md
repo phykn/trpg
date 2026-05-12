@@ -1,6 +1,126 @@
 # dev_test Tester
 
-`scenarios/dev_test`는 로컬 수동 QA용 시드다. 한 기능을 짧게 확인한 뒤 새 게임을 다시 시작하는 방식으로 쓰면 상태 오염을 피할 수 있다.
+`scenarios/dev_test`는 로컬 QA용 시드다. 한 기능을 짧게 확인한 뒤 새 게임을 다시 시작하는 방식으로 쓰면 상태 오염을 피할 수 있다.
+
+## 실행 원칙
+
+이 문서에 따른 테스트는 **백그라운드 CLI 자동화**로 실행한다.
+
+금지:
+
+- Codex in-app browser로 클릭하며 진행
+- Chrome 원격 조작으로 클릭하며 진행
+- 사람이 화면을 보면서 수동 클릭
+- Playwright spec 없이 임의 브라우저 세션에서 단계별 조작
+
+반복 실행자는 아래 순서를 그대로 따른다.
+
+1. PowerShell에서 시드 검증을 실행한다.
+2. 서버와 클라이언트를 `Start-Process`로 백그라운드 실행한다.
+3. `agency\qa\run_dev_test.ps1`를 실행해 기능 QA와 10-15개 플레이어 행동의 재미 플레이테스트를 한 번에 진행한다.
+4. Playwright가 생성한 `output/tester/fun_playtest_transcript.json`을 읽어 재미 플레이테스트를 평가한다.
+5. 결과는 로그 파일, Playwright 출력, 서버 저장 그래프 JSON, 재미 플레이테스트 transcript로 판정한다.
+6. 기능 QA와 재미 플레이테스트가 모두 끝나면 repo 루트에 `report_{note}.md` 형식의 리포트를 작성한다.
+
+완료 조건:
+
+- 사용자가 `tester.md에 따라 테스트`, `테스트 진행`, `dev_test QA`처럼 말하면 기능 Playwright QA와 재미 플레이테스트를 모두 수행해야 한다.
+- 기능 Playwright QA만 통과한 상태로 테스트가 끝났다고 말하거나 리포트를 마감하지 않는다.
+- 재미 플레이테스트를 생략하려면 사용자가 먼저 명시적으로 제외해야 한다.
+
+화면을 직접 조작해야 하는 예외는 "재현 영상이나 스크린샷이 필요한 시각 결함"뿐이다. 그 경우에도 먼저 CLI 자동화 실패 로그를 남긴 뒤 보조 확인으로만 화면을 연다.
+
+## 고정 실행 명령
+
+아래 명령은 repo 루트(`D:\code\trpg`)에서 실행한다. 포트가 이미 떠 있으면 기존 프로세스를 확인하고, 다른 테스트가 아닌 이전 QA 프로세스라고 판단될 때만 종료한다.
+
+다음 명령 하나로 시드 검증, 서버/클라이언트 백그라운드 실행, readiness 대기, headless Playwright 기능 QA, 10-15개 플레이어 행동의 재미 플레이테스트, transcript 생성, 프로세스 정리까지 수행한다.
+
+```powershell
+.\agency\qa\run_dev_test.ps1
+```
+
+이 명령은 임시 자동화 파일을 새로 만들지 않는다. 고정 파일인 `agency/qa/dev_test.spec.ts`와 `agency/qa/run_dev_test.ps1`만 사용한다.
+
+세부 실행이 필요할 때만 아래 개별 명령을 사용한다.
+
+```powershell
+.\.venv\Scripts\python.exe -m server.scripts.check_seed scenarios/dev_test
+```
+
+```powershell
+$out = Join-Path (Get-Location) "output\tester"
+New-Item -ItemType Directory -Force $out | Out-Null
+
+$server = Start-Process `
+  -FilePath "D:\code\trpg\.venv\Scripts\python.exe" `
+  -ArgumentList "run_api.py" `
+  -WorkingDirectory "D:\code\trpg\server" `
+  -RedirectStandardOutput "$out\server.stdout.log" `
+  -RedirectStandardError "$out\server.stderr.log" `
+  -WindowStyle Hidden `
+  -PassThru
+
+$client = Start-Process `
+  -FilePath "npm.cmd" `
+  -ArgumentList "run","web" `
+  -WorkingDirectory "D:\code\trpg\client" `
+  -RedirectStandardOutput "$out\client.stdout.log" `
+  -RedirectStandardError "$out\client.stderr.log" `
+  -WindowStyle Hidden `
+  -PassThru
+
+$server.Id
+$client.Id
+
+$deadline = (Get-Date).AddSeconds(90)
+do {
+  Start-Sleep -Seconds 2
+  $serverReady = $false
+  $clientReady = $false
+  try { $serverReady = (Invoke-WebRequest -Uri "http://127.0.0.1:8001/docs" -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200 } catch {}
+  try { $clientReady = (Invoke-WebRequest -Uri "http://localhost:8081" -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200 } catch {}
+} until (($serverReady -and $clientReady) -or (Get-Date) -gt $deadline)
+
+if (-not ($serverReady -and $clientReady)) {
+  throw "server/client did not become ready within 90 seconds"
+}
+```
+
+```powershell
+playwright --version
+Test-Path .\agency\qa\dev_test.spec.ts
+Test-Path .\agency\qa\run_dev_test.ps1
+.\agency\qa\run_dev_test.ps1
+```
+
+`Test-Path`가 `False`를 출력하면 테스트를 중단한다. spec이나 runner를 `output/tester/`에 새로 만들지 않는다.
+
+QA가 끝나면 이 실행에서 받은 `$server.Id`, `$client.Id`만 종료한다.
+
+```powershell
+Stop-Process -Id $server.Id,$client.Id
+```
+
+테스트 스크립트는 repo 루트에 `package.json`, `package-lock.json`, `node_modules`를 만들지 않는다. dev_test 자동화는 `agency/qa/dev_test.spec.ts`와 `agency/qa/run_dev_test.ps1`만 표준으로 사용한다.
+
+## 리포트 작성
+
+QA가 끝나면 성공/실패와 관계없이 repo 루트에 `report_{note}.md`를 작성한다. `{note}`는 짧은 영문 소문자/숫자/밑줄 이름으로 쓰고, 예시는 `report_dev_test.md`, `report_item_guard.md`다.
+
+리포트는 기능 QA와 재미 플레이테스트를 모두 포함해야 한다. 기능 QA만 적은 리포트는 완료 리포트가 아니다.
+
+리포트에는 아래 항목을 포함한다.
+
+- 실행 일시와 실행 명령
+- 시드 검증 결과
+- Playwright 요약: 통과/실패 개수
+- 실패 항목: 테스트명, 기대값, 실제값, 관련 로그 또는 error-context 경로
+- 생성된 `game_id`가 확인되면 해당 ID
+- 재미 플레이테스트 실행 방식과 `game_id`
+- 재미 플레이테스트 transcript 요약: 턴 번호, 입력 또는 action payload, 핵심 GM 반응, 상태 변화
+- 재미 플레이테스트 점수표: 다음 행동 욕구, 세계 반응성, 실패의 맛, 나레이션 다양성, 상태 변화 체감, 다시 하고 싶은 정도
+- 다음 수정으로 이어질 원인 메모. 기능 실패와 재미/몰입 개선 메모가 있으면 분리해서 쓴다.
 
 ## 준비
 
@@ -31,7 +151,9 @@ GRAPH_REPO=local
 GRAPH_SAVE_DIR=../qa_test/local_graph
 ```
 
-서버와 클라이언트를 각각 실행한다.
+현재 repo의 `server/.env.dev`가 다른 `GRAPH_SAVE_DIR`을 쓰면 그 값을 따른다. 판정용 JSON 경로도 같은 디렉터리 아래의 `games/<game_id>/`를 읽는다.
+
+개발 중 사람이 직접 띄울 때만 아래 명령을 쓴다. 자동 QA에서는 위의 `Start-Process` 고정 명령을 사용한다.
 
 ```powershell
 cd server
@@ -45,7 +167,31 @@ npm start
 
 새 게임은 `dev_test` 프로필, `human` 종족으로 시작한다. 이름은 자유롭게 넣고, 성별은 UI에서 제공하는 값 중 하나를 고른다.
 
-## 수동 체크리스트
+## CLI 체크리스트
+
+아래 체크리스트는 사람이 화면을 보며 클릭하라는 뜻이 아니다. Playwright spec에서 각 단계를 함수로 만들고, 액션 전후의 UI 텍스트와 `/session/{game_id}/graph/state` 응답 또는 `GRAPH_SAVE_DIR/games/<game_id>/` JSON을 함께 검증한다.
+
+각 기능 묶음은 가능한 한 새 게임과 독립 test 또는 독립 블록으로 나눈다. 한 체크가 실패해도 뒤 체크가 가려지지 않도록 상태 검증에는 `expect.soft`를 우선 사용하고, 다음 블록을 계속 실행한다. 단, 서버 시작 실패, spec 파일 없음, HTTP 5xx처럼 테스트 환경 자체가 무너진 경우만 즉시 중단한다.
+
+권장 spec 구조:
+
+```ts
+import { test, expect } from "playwright/test";
+
+test.describe("dev_test QA", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("http://localhost:8081");
+    await page.setViewportSize({ width: 412, height: 915 });
+    await page.evaluate(() => localStorage.clear());
+  });
+
+  test("시작과 대화", async ({ page }) => {
+    // 새 게임 생성, 인트로 스트리밍, 대화/이동 검증
+  });
+});
+```
+
+텍스트 액션은 가능하면 UI 입력창을 통해 보내서 실제 클라이언트 경로를 검증한다. LLM 분류가 흔들려 기능 검증이 막힐 때만 이 문서의 "정확한 Action Payload"를 API에 직접 보낸다.
 
 각 묶음은 새 게임에서 시작하는 것을 권장한다.
 실패하거나 거부된 행동도 조용히 끝나지 않고, 실패 이유나 장면 반응을 담은 GM 나레이션 로그가 따라와야 한다.
@@ -124,7 +270,7 @@ npm start
 3. 공격 시작 확인창을 승인한다.
 4. 전투 패널의 `도주` 버튼을 누른다.
 
-기대값: 골렘 전투는 즉시 끝나지 않고 진행 중 상태가 된다. 도주 후 combat 상태가 해제된다.
+기대값: 골렘 전투는 즉시 끝나지 않고 진행 중 상태가 된다. 맨몸 도주는 판정형이므로 성공하면 combat 상태가 해제되고, 실패하면 combat 상태가 유지되며 player heart가 줄어든다. 전체 자동 QA에서는 둘 중 하나를 정상 결과로 인정하고, 도주 성공 자체를 고정 검증해야 할 때는 `연막탄으로 도주한다` 보조 흐름을 사용한다.
 
 ### 휴식
 
@@ -196,7 +342,16 @@ MP 회복 성공:
 
 ## 재미 플레이테스트
 
-기능 체크리스트와 별도로, 한 캐릭터로 10-15턴을 이어서 플레이한다. 목표는 기능 성공 여부보다 플레이어가 계속 행동하고 싶어지는지 확인하는 것이다.
+기능 체크리스트와 별도로, 한 캐릭터로 10-15개 플레이어 행동을 이어서 플레이한다. 이 단계는 기본 테스트 완료 조건에 포함된다. 목표는 기능 성공 여부보다 플레이어가 계속 행동하고 싶어지는지 확인하는 것이다.
+
+진행 방식:
+
+- 사람이 화면을 보며 클릭하지 않는다.
+- 백그라운드 서버에서 CLI/API/Playwright 자동화로 입력을 보낸다.
+- 각 플레이어 행동의 입력 또는 정확한 action payload, 핵심 GM 로그, HP/MP/골드/장비/퀘스트/combat 변화 중 의미 있는 것을 transcript로 남긴다.
+- 인트로, 공격 확인 승인, 판정 굴림, pending 상태 정리처럼 플레이어 행동을 보조하는 행은 transcript에 남겨도 된다. 이 보조 행 때문에 전체 transcript row 수가 15를 넘었다는 이유만으로 실패 처리하지 않는다.
+- LLM 분류가 흔들려 진행이 막히면 "정확한 Action Payload"를 사용하되, 리포트에 어느 턴에서 API payload로 전환했는지 적는다.
+- 10개 플레이어 행동 이전에 캐릭터가 진행 불능 상태가 되면 그 자체를 재미/진행성 이슈로 기록하고, 새 게임을 시작해 남은 행동 수를 채운다.
 
 플레이 중에는 아래를 메모한다.
 

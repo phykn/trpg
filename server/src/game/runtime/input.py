@@ -30,6 +30,7 @@ from .narration_result import (
     persist_graph_narration_result,
 )
 from .state import GameRuntimeState
+from .turn import GraphActionTurnError
 
 
 class GraphInputError(ValueError):
@@ -138,13 +139,23 @@ async def _run_classified_actions(
                 action,
             )
         else:
-            result = await run_graph_action_request(
-                repo,
-                runtime.progress.game_id,
-                action,
-                llm=client,
-                scenario_repo=scenario_repo,
-            )
+            try:
+                result = await run_graph_action_request(
+                    repo,
+                    runtime.progress.game_id,
+                    action,
+                    llm=client,
+                    scenario_repo=scenario_repo,
+                )
+            except GraphActionTurnError as exc:
+                result = await _run_graph_rejected_input(
+                    client,
+                    repo,
+                    runtime,
+                    player_input,
+                    action,
+                    exc,
+                )
 
         runtime = result.runtime
         if result.status != "executed":
@@ -185,13 +196,27 @@ async def _run_classified_actions_stream(
                 else:
                     yield event
         else:
-            result = await run_graph_action_request(
-                repo,
-                runtime.progress.game_id,
-                action,
-                llm=client,
-                scenario_repo=scenario_repo,
-            )
+            try:
+                result = await run_graph_action_request(
+                    repo,
+                    runtime.progress.game_id,
+                    action,
+                    llm=client,
+                    scenario_repo=scenario_repo,
+                )
+            except GraphActionTurnError as exc:
+                async for event in _run_graph_rejected_input_stream(
+                    client,
+                    repo,
+                    runtime,
+                    player_input,
+                    action,
+                    exc,
+                ):
+                    if event["type"] == "final":
+                        result = event["result"]  # type: ignore[assignment]
+                    else:
+                        yield event
 
         if result is None:
             raise GraphInputError("graph input requires at least one action")
@@ -203,6 +228,114 @@ async def _run_classified_actions_stream(
     if result is None:
         raise GraphInputError("graph input requires at least one action")
     yield {"type": "final", "result": result}
+
+
+async def _run_graph_rejected_input(
+    client: LLMClient,
+    repo: GraphRepo,
+    runtime: GameRuntimeState,
+    player_input: str,
+    action: Action,
+    exc: GraphActionTurnError,
+) -> GraphActionRequestResult:
+    reason = str(exc)
+    engine_diag("input:action_rejected", action=action.verb, reason=reason)
+    public_reason = _public_action_rejection_reason(runtime, reason)
+    narration_result = await _generate_graph_input_rejection_narration(
+        client,
+        runtime,
+        player_input,
+        action,
+        public_reason,
+    )
+    text = narration_result.narration or public_reason
+    narration_result = narration_result.model_copy(update={"narration": text})
+    return await _persist_graph_rejected_input(
+        repo,
+        runtime,
+        player_input,
+        action,
+        narration_result,
+    )
+
+
+async def _run_graph_rejected_input_stream(
+    client: LLMClient,
+    repo: GraphRepo,
+    runtime: GameRuntimeState,
+    player_input: str,
+    action: Action,
+    exc: GraphActionTurnError,
+) -> AsyncIterator[dict[str, object]]:
+    reason = str(exc)
+    engine_diag("input:action_rejected", action=action.verb, reason=reason)
+    public_reason = _public_action_rejection_reason(runtime, reason)
+    stream = VisibleNarrationStream()
+    async for chunk in _stream_graph_input_rejection_narration(
+        client,
+        runtime,
+        player_input,
+        action,
+        public_reason,
+    ):
+        for visible in stream.push(chunk):
+            yield {"type": "delta", "text": visible}
+    for visible in stream.finish():
+        yield {"type": "delta", "text": visible}
+
+    narration_result = parse_graph_narration_answer(stream.answer())
+    text = narration_result.narration or public_reason
+    narration_result = narration_result.model_copy(update={"narration": text})
+    result = await _persist_graph_rejected_input(
+        repo,
+        runtime,
+        player_input,
+        action,
+        narration_result,
+    )
+    yield {"type": "final", "result": result}
+
+
+async def _persist_graph_rejected_input(
+    repo: GraphRepo,
+    runtime: GameRuntimeState,
+    player_input: str,
+    action: Action,
+    narration_result: GraphNarrationResult,
+) -> GraphActionRequestResult:
+    entry = GMLogEntry(
+        id=runtime.progress.next_log_id,
+        kind="gm",
+        text=narration_result.narration,
+    )
+    progress = runtime.progress.model_copy(
+        update={
+            "turn_count": runtime.progress.turn_count + 1,
+            "next_log_id": entry.id + 1,
+        }
+    )
+    next_runtime = runtime.model_copy(
+        update={
+            "progress": progress,
+            "log_entries": [*runtime.log_entries, entry],
+        }
+    )
+    await repo.append_log_entries(runtime.progress.game_id, [entry])
+    await repo.save_progress(progress)
+    next_runtime = await persist_graph_narration_result(
+        repo,
+        next_runtime,
+        narration_result,
+        player_input=player_input,
+        target_id=_action_target_id(action),
+    )
+    engine_diag("input:done", status="rejected", action=action.verb)
+    return GraphActionRequestResult(
+        runtime=next_runtime,
+        status="rejected",
+        front_state=graph_to_front_state(next_runtime),
+        suggestions=narration_result.suggestions,
+    )
 
 
 async def _append_player_input_log(
@@ -392,6 +525,49 @@ async def _generate_graph_input_narration(
     )
 
 
+async def _generate_graph_input_rejection_narration(
+    client: LLMClient,
+    runtime: GameRuntimeState,
+    player_input: str,
+    action: Action,
+    public_reason: str,
+) -> GraphNarrationResult:
+    messages = _graph_input_rejection_narration_messages(
+        runtime,
+        player_input,
+        action,
+        public_reason,
+    )
+    try:
+        llm_diag("llm:call", agent="graph_narrate")
+        result = await asyncio.wait_for(
+            client.chat(
+                messages,
+                think=False,
+                agent="graph_narrate",
+                temperature=0.2,
+            ),
+            timeout=_GRAPH_INPUT_NARRATION_TIMEOUT_SECONDS,
+        )
+    except (
+        LLMUnavailable,
+        OSError,
+        TimeoutError,
+        InternalServerError,
+        APIConnectionError,
+        RateLimitError,
+    ) as exc:
+        llm_diag("llm:fail", agent="graph_narrate", err=type(exc).__name__)
+        return GraphNarrationResult()
+    llm_diag("llm:done", agent="graph_narrate")
+    answer = result.get("answer")
+    if not isinstance(answer, str):
+        return GraphNarrationResult()
+    return parse_graph_narration_answer(
+        _clean_narration(answer, recent_texts=_recent_gm_texts(runtime))
+    )
+
+
 async def _stream_graph_input_narration(
     client: LLMClient,
     runtime,
@@ -404,6 +580,44 @@ async def _stream_graph_input_narration(
         player_input,
         action,
         subject_id,
+    )
+    try:
+        llm_diag("llm:call", agent="graph_narrate")
+        async with asyncio.timeout(_GRAPH_INPUT_NARRATION_TIMEOUT_SECONDS):
+            async for part in client.chat_stream(
+                messages,
+                think=False,
+                agent="graph_narrate",
+                temperature=0.2,
+            ):
+                answer = part.get("answer")
+                if isinstance(answer, str) and answer:
+                    yield answer
+    except (
+        LLMUnavailable,
+        OSError,
+        TimeoutError,
+        InternalServerError,
+        APIConnectionError,
+        RateLimitError,
+    ) as exc:
+        llm_diag("llm:fail", agent="graph_narrate", err=type(exc).__name__)
+        return
+    llm_diag("llm:done", agent="graph_narrate")
+
+
+async def _stream_graph_input_rejection_narration(
+    client: LLMClient,
+    runtime: GameRuntimeState,
+    player_input: str,
+    action: Action,
+    public_reason: str,
+) -> AsyncIterator[str]:
+    messages = _graph_input_rejection_narration_messages(
+        runtime,
+        player_input,
+        action,
+        public_reason,
     )
     try:
         llm_diag("llm:call", agent="graph_narrate")
@@ -443,6 +657,39 @@ def _graph_input_narration_messages(
         action=action,
         dialogue_target=subject if subject_id is not None else None,
     )
+    return [
+        {
+            "role": "system",
+            "content": get_prompt("graph_narrate", runtime.progress.locale),
+        },
+        {
+            "role": "user",
+            "content": json.dumps(payload, ensure_ascii=False),
+        },
+    ]
+
+
+def _graph_input_rejection_narration_messages(
+    runtime: GameRuntimeState,
+    player_input: str,
+    action: Action,
+    public_reason: str,
+) -> list[dict[str, str]]:
+    target = _action_target_node(runtime, action)
+    payload = build_input_narration_payload(
+        runtime=runtime,
+        player_input=player_input,
+        action=action,
+        dialogue_target=target,
+    )
+    payload["current_event"] = {
+        "kind": "action_rejected",
+        "outcome": "action_rejected",
+        "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
+        "target": payload["target_view"],
+        "resolved_results": [public_reason],
+    }
+    payload["result_cards"] = [{"text": public_reason}]
     return [
         {
             "role": "system",
@@ -504,6 +751,41 @@ def _fallback_input_narration(runtime: GameRuntimeState, subject_id: str | None)
             target=_node_name(runtime, subject),
         )
     return render("runtime.input.quiet", runtime.progress.locale)
+
+
+def _public_action_rejection_reason(runtime: GameRuntimeState, reason: str) -> str:
+    text = reason.lower()
+    locale = runtime.progress.locale
+    phrase_keys = (
+        ("hp already full", "log.error.hp_full"),
+        ("mp already full", "log.error.mp_full"),
+        ("item is not carried", "log.error.item_not_in_inventory"),
+        ("missing item", "log.error.unknown_item"),
+        ("item is not consumable", "log.error.not_consumable"),
+        ("not enough gold", "log.error.not_enough_gold"),
+        ("affinity", "log.error.affinity_too_low"),
+        ("equipped item", "log.error.cant_sell_equipped"),
+        ("max level", "log.error.max_level"),
+        ("not enough experience", "log.error.not_enough_xp"),
+    )
+    for phrase, key in phrase_keys:
+        if phrase in text:
+            return render(key, locale)
+    return render("log.error.generic_block", locale)
+
+
+def _action_target_id(action: Action) -> str | None:
+    return _single(action.what) or _single(action.to) or _single(action.with_)
+
+
+def _action_target_node(
+    runtime: GameRuntimeState,
+    action: Action,
+) -> GraphNode | None:
+    target_id = _action_target_id(action)
+    if target_id is None:
+        return None
+    return runtime.graph.nodes.get(target_id)
 
 
 def _single(value: object) -> str | None:

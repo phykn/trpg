@@ -2,6 +2,7 @@ import json
 import asyncio
 
 import httpx
+import pytest
 from openai import RateLimitError
 
 from src.db.graph_local_fs import LocalFsGraphRepo
@@ -164,6 +165,32 @@ def _graph() -> Graph:
                 type="item",
                 properties={"name": "보급 표식"},
             ),
+            "healing_herb": GraphNode(
+                id="healing_herb",
+                type="item",
+                properties={
+                    "name": "회복 약초",
+                    "consumable": True,
+                    "effects": {
+                        "type": "consumable",
+                        "effect": "heal",
+                        "amount": 5,
+                    },
+                },
+            ),
+            "mana_vial": GraphNode(
+                id="mana_vial",
+                type="item",
+                properties={
+                    "name": "마나 시약",
+                    "consumable": True,
+                    "effects": {
+                        "type": "consumable",
+                        "effect": "mp_restore",
+                        "amount": 5,
+                    },
+                },
+            ),
         },
         edges={
             "located_at:player_01:town": GraphEdge(
@@ -189,6 +216,18 @@ def _graph() -> Graph:
                 type="located_at",
                 from_node_id="supply_token",
                 to_node_id="town",
+            ),
+            "carries:player_01:healing_herb": GraphEdge(
+                id="carries:player_01:healing_herb",
+                type="carries",
+                from_node_id="player_01",
+                to_node_id="healing_herb",
+            ),
+            "carries:player_01:mana_vial": GraphEdge(
+                id="carries:player_01:mana_vial",
+                type="carries",
+                from_node_id="player_01",
+                to_node_id="mana_vial",
             ),
         },
     )
@@ -369,6 +408,52 @@ async def test_graph_input_streams_speak_narration_before_final(tmp_path):
     assert events[-1]["result"].status == "executed"
     assert [entry.kind for entry in logs] == ["player", "gm"]
     assert logs[-1].text == "상대는 당신의 말을 듣습니다."
+
+
+@pytest.mark.parametrize(
+    ("item_id", "player_input", "raw_error"),
+    [
+        ("healing_herb", "회복 약초를 사용한다", "hp already full"),
+        ("mana_vial", "마나 시약을 사용한다", "mp already full"),
+    ],
+)
+async def test_graph_input_streams_item_use_rejection_as_gm_narration(
+    tmp_path,
+    item_id,
+    player_input,
+    raw_error,
+):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM(
+        {"actions": [{"verb": "use", "what": item_id}]},
+        narration="당신은 손을 멈춥니다. 지금은 그 물건을 쓸 이유가 없습니다.",
+    )
+
+    events = [
+        event
+        async for event in run_graph_input_turn_stream(
+            llm,
+            repo,
+            "game-1",
+            player_input,
+        )
+    ]
+    graph = await repo.load_graph("game-1")
+    logs = await repo.load_log_entries("game-1")
+    progress = await repo.load_progress("game-1")
+
+    assert events[-1]["type"] == "final"
+    assert all(event["type"] == "delta" for event in events[:-1])
+    assert "".join(event["text"] for event in events[:-1]) == (
+        "당신은 손을 멈춥니다. 지금은 그 물건을 쓸 이유가 없습니다."
+    )
+    assert events[-1]["result"].status == "rejected"
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert logs[0].text == player_input
+    assert logs[1].text == "당신은 손을 멈춥니다. 지금은 그 물건을 쓸 이유가 없습니다."
+    assert raw_error not in logs[1].text
+    assert f"carries:player_01:{item_id}" in graph.edges
+    assert progress.turn_count == 1
 
 
 async def test_graph_input_perceive_creates_pending_roll(tmp_path):

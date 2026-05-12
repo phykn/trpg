@@ -50,6 +50,15 @@ def _runtime() -> GameRuntimeState:
                 ),
                 "player_01": _character("player_01", name="당신"),
                 "guard_01": _character("guard_01", name="경비병"),
+                "shop_herb": GraphNode(
+                    id="shop_herb",
+                    type="item",
+                    properties={
+                        "name": "상점 회복 약초",
+                        "price": 3,
+                        "kind": "consumable",
+                    },
+                ),
                 "sword_01": GraphNode(
                     id="sword_01",
                     type="item",
@@ -68,6 +77,12 @@ def _runtime() -> GameRuntimeState:
                     type="located_at",
                     from_node_id="guard_01",
                     to_node_id="square",
+                ),
+                "carries:guard_01:shop_herb": GraphEdge(
+                    id="carries:guard_01:shop_herb",
+                    type="carries",
+                    from_node_id="guard_01",
+                    to_node_id="shop_herb",
                 ),
                 "connects_to:square:north_gate": GraphEdge(
                     id="connects_to:square:north_gate",
@@ -143,6 +158,38 @@ def test_input_payload_excludes_recent_log_and_keeps_player_input():
     ]
 
 
+def test_input_payload_includes_target_hints_and_mentioned_inventory():
+    runtime = _runtime()
+    guard = runtime.graph.nodes["guard_01"].model_copy(
+        update={
+            "properties": {
+                **runtime.graph.nodes["guard_01"].properties,
+                "tone_hint": "짧게 가격과 이용 조건만 말한다.",
+                "hints": ["북문은 실제 연결된 출구다."],
+            }
+        }
+    )
+    runtime.graph.nodes["guard_01"] = guard
+
+    payload = build_input_narration_payload(
+        runtime=runtime,
+        player_input="경비병에게 회복 약초 가격을 묻습니다",
+        action=Action(verb="speak", to="guard_01", how="friendly"),
+        dialogue_target=runtime.graph.nodes["guard_01"],
+    )
+
+    assert payload["target_view"]["tone_hint"] == "짧게 가격과 이용 조건만 말한다."
+    assert payload["target_view"]["known_hints"] == ["북문은 실제 연결된 출구다."]
+    assert payload["target_view"]["available_items"] == [
+        {
+            "id": "shop_herb",
+            "name": "상점 회복 약초",
+            "kind": "consumable",
+            "price": 3,
+        }
+    ]
+
+
 def test_action_payload_contains_safe_current_event_and_combat_view():
     runtime = _runtime()
     dispatch = GraphActionDispatchResult(
@@ -179,6 +226,7 @@ def test_action_payload_contains_safe_current_event_and_combat_view():
     assert payload["result_cards"] == [{"text": "전투가 이어집니다."}]
     assert "recent_log" not in payload
     assert payload["combat_view"]["kind"] == "combat_exchange"
+    assert payload["combat_view"]["player_can_act"] is True
     assert payload["combat_view"]["events"]
     assert "player_attacked" not in encoded
     assert "hurt" not in encoded

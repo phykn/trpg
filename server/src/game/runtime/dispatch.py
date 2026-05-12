@@ -114,6 +114,7 @@ def _plan_non_combat(
     player_id = runtime.progress.player_id
 
     if action.verb == "move":
+        _require_player_can_move(runtime)
         destination_id = _single(action.to) or _single(action.what)
         if destination_id is None:
             raise GraphActionDispatchError("move destination is required")
@@ -212,6 +213,17 @@ def _plan_non_combat(
 
 def _advance_turn(runtime: GameRuntimeState) -> dict[str, int]:
     return {"turn_count": runtime.progress.turn_count + 1}
+
+
+def _require_player_can_move(runtime: GameRuntimeState) -> None:
+    player = runtime.graph.nodes.get(runtime.progress.player_id)
+    if player is None:
+        raise GraphActionDispatchError("missing player")
+    status = player.properties.get("status")
+    if player.properties.get("defeat_mode") == "downed" or (
+        isinstance(status, list) and "downed" in status
+    ):
+        raise GraphActionDispatchError("player is downed and cannot move")
 
 
 def _single(value: object) -> str | None:
