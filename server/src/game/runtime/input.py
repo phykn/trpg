@@ -244,18 +244,21 @@ async def _run_graph_narrative_input(
     subject_id = _resolve_narrative_subject(runtime, action)
     social_result = _plan_social_quest_speak(runtime, player_input, action, subject_id)
     if social_result is not None:
-        next_runtime = await _apply_social_quest_speak_result(
+        runtime = await _apply_social_quest_speak_result(
             repo,
             runtime,
             social_result,
         )
-        return await _finish_fixed_graph_narrative_input(
-            repo,
-            next_runtime,
-            action,
-            subject_id,
-            render(social_result.message_key, runtime.progress.locale),
-        )
+        if social_result.kind == "blocked":
+            fixed_text = render(social_result.message_key, runtime.progress.locale)
+            return await _finish_graph_narrative_input(
+                repo,
+                runtime,
+                action,
+                subject_id,
+                GraphNarrationResult(narration=fixed_text),
+                player_input=player_input,
+            )
 
     narration_result = await _generate_graph_input_narration(
         client,
@@ -268,39 +271,14 @@ async def _run_graph_narrative_input(
     if not text:
         text = _fallback_input_narration(runtime, subject_id)
         narration_result = GraphNarrationResult(narration=text)
-    entry = GMLogEntry(
-        id=runtime.progress.next_log_id,
-        kind="gm",
-        text=text,
-    )
-    progress = runtime.progress.model_copy(
-        update={
-            "turn_count": runtime.progress.turn_count + 1,
-            "next_log_id": entry.id + 1,
-            "active_subject_id": subject_id or runtime.progress.active_subject_id,
-        }
-    )
-    next_runtime = runtime.model_copy(
-        update={
-            "progress": progress,
-            "log_entries": [*runtime.log_entries, entry],
-        }
-    )
-    await repo.append_log_entries(runtime.progress.game_id, [entry])
-    await repo.save_progress(progress)
-    next_runtime = await persist_graph_narration_result(
+
+    return await _finish_graph_narrative_input(
         repo,
-        next_runtime,
+        runtime,
+        action,
+        subject_id,
         narration_result,
         player_input=player_input,
-        target_id=subject_id,
-    )
-    engine_diag("input:done", status="executed", action=action.verb)
-    return GraphActionRequestResult(
-        runtime=next_runtime,
-        status="executed",
-        front_state=graph_to_front_state(next_runtime),
-        suggestions=narration_result.suggestions,
     )
 
 
@@ -314,22 +292,24 @@ async def _run_graph_narrative_input_stream(
     subject_id = _resolve_narrative_subject(runtime, action)
     social_result = _plan_social_quest_speak(runtime, player_input, action, subject_id)
     if social_result is not None:
-        next_runtime = await _apply_social_quest_speak_result(
+        runtime = await _apply_social_quest_speak_result(
             repo,
             runtime,
             social_result,
         )
-        text = render(social_result.message_key, runtime.progress.locale)
-        yield {"type": "delta", "text": text}
-        result = await _finish_fixed_graph_narrative_input(
-            repo,
-            next_runtime,
-            action,
-            subject_id,
-            text,
-        )
-        yield {"type": "final", "result": result}
-        return
+        if social_result.kind == "blocked":
+            text = render(social_result.message_key, runtime.progress.locale)
+            yield {"type": "delta", "text": text}
+            result = await _finish_graph_narrative_input(
+                repo,
+                runtime,
+                action,
+                subject_id,
+                GraphNarrationResult(narration=text),
+                player_input=player_input,
+            )
+            yield {"type": "final", "result": result}
+            return
 
     stream = VisibleNarrationStream()
     async for chunk in _stream_graph_input_narration(
@@ -349,43 +329,16 @@ async def _run_graph_narrative_input_stream(
     if not text:
         text = _fallback_input_narration(runtime, subject_id)
         narration_result = GraphNarrationResult(narration=text)
-    entry = GMLogEntry(
-        id=runtime.progress.next_log_id,
-        kind="gm",
-        text=text,
-    )
-    progress = runtime.progress.model_copy(
-        update={
-            "turn_count": runtime.progress.turn_count + 1,
-            "next_log_id": entry.id + 1,
-            "active_subject_id": subject_id or runtime.progress.active_subject_id,
-        }
-    )
-    next_runtime = runtime.model_copy(
-        update={
-            "progress": progress,
-            "log_entries": [*runtime.log_entries, entry],
-        }
-    )
-    await repo.append_log_entries(runtime.progress.game_id, [entry])
-    await repo.save_progress(progress)
-    next_runtime = await persist_graph_narration_result(
+
+    result = await _finish_graph_narrative_input(
         repo,
-        next_runtime,
+        runtime,
+        action,
+        subject_id,
         narration_result,
         player_input=player_input,
-        target_id=subject_id,
     )
-    engine_diag("input:done", status="executed", action=action.verb)
-    yield {
-        "type": "final",
-        "result": GraphActionRequestResult(
-            runtime=next_runtime,
-            status="executed",
-            front_state=graph_to_front_state(next_runtime),
-            suggestions=narration_result.suggestions,
-        ),
-    }
+    yield {"type": "final", "result": result}
 
 
 def _plan_social_quest_speak(
@@ -423,13 +376,16 @@ async def _apply_social_quest_speak_result(
     return apply_result.runtime
 
 
-async def _finish_fixed_graph_narrative_input(
+async def _finish_graph_narrative_input(
     repo: GraphRepo,
     runtime: GameRuntimeState,
     action: Action,
     subject_id: str | None,
-    text: str,
+    narration_result: GraphNarrationResult,
+    *,
+    player_input: str,
 ) -> GraphActionRequestResult:
+    text = narration_result.narration
     entry = GMLogEntry(
         id=runtime.progress.next_log_id,
         kind="gm",
@@ -450,12 +406,19 @@ async def _finish_fixed_graph_narrative_input(
     )
     await repo.append_log_entries(runtime.progress.game_id, [entry])
     await repo.save_progress(progress)
+    next_runtime = await persist_graph_narration_result(
+        repo,
+        next_runtime,
+        narration_result,
+        player_input=player_input,
+        target_id=subject_id,
+    )
     engine_diag("input:done", status="executed", action=action.verb)
     return GraphActionRequestResult(
         runtime=next_runtime,
         status="executed",
         front_state=graph_to_front_state(next_runtime),
-        suggestions=[],
+        suggestions=narration_result.suggestions,
     )
 
 

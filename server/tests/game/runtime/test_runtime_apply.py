@@ -1,6 +1,7 @@
 import pytest
 
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
+from src.game.domain.graph_query import location_of
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.game.runtime.apply import (
@@ -108,6 +109,29 @@ def test_apply_does_not_mutate_original_runtime():
     assert runtime.graph.nodes["player"].properties["hp"] == 5
     assert result.runtime is not runtime
     assert result.runtime.graph is not runtime.graph
+
+
+def test_apply_refreshes_cached_graph_index():
+    runtime = _runtime()
+    assert location_of(runtime.graph_index, "player") == "town"
+
+    result = apply_runtime_graph_changes(
+        runtime,
+        [
+            {"type": "remove_edge", "edge_id": "located_at:player:town"},
+            {
+                "type": "add_edge",
+                "edge": {
+                    "id": "located_at:player:forest",
+                    "type": "located_at",
+                    "from": "player",
+                    "to": "forest",
+                },
+            },
+        ],
+    )
+
+    assert location_of(result.runtime.graph_index, "player") == "forest"
 
 
 def test_invalid_later_change_raises_and_original_runtime_stays_unchanged():

@@ -53,7 +53,14 @@ def apply_runtime_graph_changes(
     except GraphInvariantError as exc:
         raise GraphRuntimeApplyError(str(exc)) from exc
 
-    next_runtime = runtime.model_copy(update={"graph": graph})
+    next_runtime = GameRuntimeState(
+        graph=graph,
+        progress=runtime.progress,
+        content=runtime.content,
+        log_entries=list(runtime.log_entries),
+        turn_log=list(runtime.turn_log),
+        recent_dialogue=list(runtime.recent_dialogue),
+    )
     return GraphRuntimeApplyResult(
         runtime=next_runtime,
         applied=len(parsed),
