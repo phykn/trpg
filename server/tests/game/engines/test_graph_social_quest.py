@@ -89,6 +89,18 @@ def test_report_route_completes_quest_and_changes_affinity():
     assert graph.edges["relation:guide_npc:player_01"].properties["affinity"] == 0
 
 
+def test_theft_accusation_wording_reports_resident():
+    graph = _apply(
+        _graph(),
+        "village_resident",
+        "hostile",
+        "주민이 보급품을 훔쳤다고 말합니다",
+    )
+
+    assert graph.nodes["q_missing_supplies"].properties["resolution_route"] == "report"
+    assert graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 25
+
+
 def test_mediation_first_records_resident_reason_without_completing():
     graph = _apply(
         _graph(),
@@ -101,6 +113,19 @@ def test_mediation_first_records_resident_reason_without_completing():
     assert quest["status"] == "pending"
     assert quest["resident_reason_known"] is True
     assert "resolution_route" not in quest
+    assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == 2
+
+
+def test_missing_supplies_question_records_resident_reason():
+    graph = _apply(
+        _graph(),
+        "village_resident",
+        "friendly",
+        "마을 주민에게 누락된 보급품을 묻습니다",
+    )
+
+    quest = graph.nodes["q_missing_supplies"].properties
+    assert quest["resident_reason_known"] is True
     assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == 2
 
 
