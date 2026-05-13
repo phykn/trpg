@@ -46,7 +46,7 @@ class _MockLLM:
             if self.intro_delay:
                 await asyncio.sleep(self.intro_delay)
             return {"answer": self.intro_answer, "think": ""}
-        if agent == "graph_narrate":
+        if agent in {"graph_narrate", "combat_narrate"}:
             return {"answer": self._narration_answer(), "think": ""}
         return {"answer": json.dumps(self.payload, ensure_ascii=False), "think": ""}
 
@@ -68,7 +68,7 @@ class _MockLLM:
             for chunk in (self.intro_answer[:midpoint], self.intro_answer[midpoint:]):
                 yield {"answer": chunk, "think": None}
             return
-        if agent == "graph_narrate":
+        if agent in {"graph_narrate", "combat_narrate"}:
             answer = self._narration_answer()
             midpoint = max(1, len(answer) // 2)
             for chunk in (answer[:midpoint], answer[midpoint:]):

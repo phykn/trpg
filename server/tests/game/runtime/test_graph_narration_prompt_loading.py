@@ -89,6 +89,7 @@ async def _repo(tmp_path) -> LocalFsGraphRepo:
 def test_graph_narration_prompt_files_are_packaged():
     assert get_prompt("graph_intro", "ko")
     assert get_prompt("graph_narrate", "ko")
+    assert get_prompt("combat_narrate", "ko")
 
 
 def test_graph_narration_prompts_encode_style_without_source_title():
@@ -212,9 +213,9 @@ async def test_graph_turn_narration_uses_packaged_prompt(monkeypatch, tmp_path):
         llm=llm,  # type: ignore[arg-type]
     )
 
-    call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
+    call = [call for call in llm.calls if call["agent"] == "combat_narrate"][0]
 
-    assert call["messages"][0]["content"] == "graph_narrate:ko"
+    assert call["messages"][0]["content"] == "combat_narrate:ko"
 
 
 @pytest.mark.asyncio
