@@ -24,7 +24,9 @@ from src.locale.render import render
 class GraphQuestOfferPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    template: Literal["hunt"]
     quest_id: str
+    generated_ids: dict[Literal["quest", "giver", "enemy", "reward"], str]
     changes: list[GraphChange]
     content: RuntimeContent
 
@@ -57,7 +59,14 @@ def plan_missing_quest_offer(
         AddEdgeChange(type="add_edge", edge=_edge("reward_of", reward_id, quest_id)),
     ]
     return GraphQuestOfferPlan(
+        template="hunt",
         quest_id=quest_id,
+        generated_ids={
+            "quest": quest_id,
+            "giver": giver_id,
+            "enemy": enemy_id,
+            "reward": reward_id,
+        },
         changes=changes,
         content=_content(
             quest_id=quest_id,
