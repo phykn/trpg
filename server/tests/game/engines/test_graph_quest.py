@@ -36,6 +36,11 @@ def _graph() -> Graph:
                 type="character",
                 properties={"gold": 1, "xp_pool": 2},
             ),
+            "goblin_01": GraphNode(
+                id="goblin_01",
+                type="character",
+                properties={},
+            ),
             "reward_sword": GraphNode(
                 id="reward_sword",
                 type="item",

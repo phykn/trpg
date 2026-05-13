@@ -242,3 +242,24 @@ def test_graph_constructor_validates_loaded_edge_invariants():
                 ),
             },
         )
+
+
+def test_quest_trigger_target_must_exist_in_graph():
+    with pytest.raises(ValidationError, match="quest trigger target missing"):
+        Graph(
+            nodes={
+                "quest_01": GraphNode(
+                    id="quest_01",
+                    type="quest",
+                    properties={
+                        "triggers": [
+                            {
+                                "id": "trigger_01",
+                                "type": "character_defeat",
+                                "target_id": "ghost_01",
+                            }
+                        ]
+                    },
+                )
+            }
+        )
