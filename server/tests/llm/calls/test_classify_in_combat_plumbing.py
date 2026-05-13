@@ -13,9 +13,11 @@ from src.llm.calls.classify.schema import ClassifyInput
 
 def _classify_test_context(surroundings: dict) -> dict:
     entities = surroundings.get("entities", [])
+    player = next((entity for entity in entities if entity.get("type") == "player"), None)
     return {
         "mode": "combat" if surroundings.get("in_combat") else "exploration",
         "identity": {
+            "player": player,
             "location": surroundings.get("location") or {},
             "visible_targets": [
                 entity
@@ -30,6 +32,8 @@ def _classify_test_context(surroundings: dict) -> dict:
             "inventory": surroundings.get("inventory", []),
             "equipment": surroundings.get("equipment", {}),
             "skills": surroundings.get("skills", []),
+            "merchants": surroundings.get("merchants", []),
+            "corpses": surroundings.get("corpses", []),
             "active_quest": None,
         },
         "affordances": {},
@@ -140,6 +144,51 @@ async def test_unknown_move_destination_rejected_against_surroundings():
                 retries=1,
                 strict=True,
             )
+
+
+@pytest.mark.asyncio
+async def test_classify_runner_accepts_intent_json_and_builds_actions():
+    input_ = _input(
+        "상인에게 회복약을 산다",
+        {
+            "in_combat": False,
+            "entities": [
+                {"id": "player_01", "name": "주인공", "type": "player"},
+                {"id": "merchant_01", "name": "상인", "type": "npc"},
+            ],
+            "merchants": [
+                {
+                    "id": "merchant_01",
+                    "name": "상인",
+                    "stock": [{"id": "potion_01", "name": "회복약"}],
+                }
+            ],
+        },
+    )
+    fake_answer = json.dumps(
+        {
+            "intents": [
+                {
+                    "intent": "buy",
+                    "merchant_id": "merchant_01",
+                    "item_id": "potion_01",
+                }
+            ]
+        }
+    )
+    with patch(
+        "src.llm.calls.classify.runner.run_with_retries",
+        new=AsyncMock(side_effect=lambda *a, **kw: kw["parse"](fake_answer)),
+    ):
+        out = await classify(client=None, input_=input_, locale="ko", retries=1)
+
+    assert out.actions[0].model_dump(mode="json", by_alias=True, exclude_none=True) == {
+        "verb": "transfer",
+        "what": "potion_01",
+        "from": "merchant_01",
+        "to": "player_01",
+        "how": "trade",
+    }
 
 
 @pytest.mark.asyncio
