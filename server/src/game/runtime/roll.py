@@ -11,8 +11,12 @@ from src.locale.render import render
 from src.llm.diag import engine_diag, set_diag_context
 from src.wire.graph_to_front import graph_to_front_state
 
-from .confirmation import GraphActionRequestResult
 from .load import load_runtime_state
+from .request_result import (
+    GraphActionRequestResult,
+    executed_result,
+    roll_required_result,
+)
 
 
 class GraphRollError(ValueError):
@@ -54,11 +58,10 @@ async def start_graph_roll(
     next_runtime = runtime.model_copy(update={"progress": next_progress})
     await repo.save_progress(next_progress)
     engine_diag("roll:pending", kind=pending.get("kind"))
-    return GraphActionRequestResult(
-        runtime=next_runtime,
-        status="roll_required",
-        front_state=graph_to_front_state(next_runtime),
-        pending_roll=pending,
+    return roll_required_result(
+        next_runtime,
+        graph_to_front_state(next_runtime),
+        pending,
     )
 
 
@@ -120,10 +123,9 @@ async def run_graph_roll(
         required=required_roll,
         next_turn=next_progress.turn_count,
     )
-    return GraphActionRequestResult(
-        runtime=next_runtime,
-        status="executed",
-        front_state=graph_to_front_state(next_runtime),
+    return executed_result(
+        next_runtime,
+        graph_to_front_state(next_runtime),
     )
 
 

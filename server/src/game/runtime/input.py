@@ -26,7 +26,7 @@ from src.locale.render import render
 from src.wire.graph_to_front import graph_to_front_state
 
 from .apply import GraphRuntimeApplyResult, apply_runtime_graph_changes
-from .confirmation import GraphActionRequestResult, run_graph_action_request
+from .confirmation import run_graph_action_request
 from .load import load_runtime_state
 from .narration_context import build_input_narration_payload
 from .narration_result import (
@@ -35,6 +35,7 @@ from .narration_result import (
     parse_graph_narration_answer,
     persist_graph_narration_result,
 )
+from .request_result import GraphActionRequestResult, rejected_result
 from .state import GameRuntimeState
 from .turn import GraphActionTurnError
 
@@ -336,10 +337,9 @@ async def _persist_graph_rejected_input(
         target_id=_action_target_id(action),
     )
     engine_diag("input:done", status="rejected", action=action.verb)
-    return GraphActionRequestResult(
-        runtime=next_runtime,
-        status="rejected",
-        front_state=graph_to_front_state(next_runtime),
+    return rejected_result(
+        next_runtime,
+        graph_to_front_state(next_runtime),
         suggestions=narration_result.suggestions,
     )
 

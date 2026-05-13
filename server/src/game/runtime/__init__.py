@@ -10,10 +10,12 @@ from .combat import (
 )
 from src.game.domain.content import RuntimeContent
 from .load import load_runtime_state
+from .request_result import GraphActionRequestResult
 from .state import GameRuntimeState
 
 __all__ = [
     "GameRuntimeState",
+    "GraphActionRequestResult",
     "GraphActionDispatchError",
     "GraphActionDispatchResult",
     "GraphCombatDispatchError",
