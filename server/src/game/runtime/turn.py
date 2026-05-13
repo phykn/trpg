@@ -358,13 +358,14 @@ async def _build_graph_action_narration(
     )
     if messages is None:
         return GraphNarrationResult()
-    llm_diag("llm:call", agent="graph_narrate")
+    agent = _graph_action_narration_agent(dispatch)
+    llm_diag("llm:call", agent=agent)
     try:
         result = await asyncio.wait_for(
             llm.chat(
                 messages,
                 think=False,
-                agent="graph_narrate",
+                agent=agent,
                 temperature=0.2,
             ),
             timeout=_GRAPH_ACTION_NARRATION_TIMEOUT_SECONDS,
@@ -377,9 +378,9 @@ async def _build_graph_action_narration(
         APIConnectionError,
         RateLimitError,
     ) as exc:
-        llm_diag("llm:fail", agent="graph_narrate", err=type(exc).__name__)
+        llm_diag("llm:fail", agent=agent, err=type(exc).__name__)
         return GraphNarrationResult()
-    llm_diag("llm:done", agent="graph_narrate")
+    llm_diag("llm:done", agent=agent)
     answer = result.get("answer")
     if not isinstance(answer, str):
         return GraphNarrationResult()
@@ -407,13 +408,14 @@ async def _stream_graph_action_narration(
     )
     if messages is None or llm is None:
         return
-    llm_diag("llm:call", agent="graph_narrate")
+    agent = _graph_action_narration_agent(dispatch)
+    llm_diag("llm:call", agent=agent)
     try:
         async with asyncio.timeout(_GRAPH_ACTION_NARRATION_TIMEOUT_SECONDS):
             async for part in llm.chat_stream(
                 messages,
                 think=False,
-                agent="graph_narrate",
+                agent=agent,
                 temperature=0.2,
             ):
                 answer = part.get("answer")
@@ -427,9 +429,9 @@ async def _stream_graph_action_narration(
         APIConnectionError,
         RateLimitError,
     ) as exc:
-        llm_diag("llm:fail", agent="graph_narrate", err=type(exc).__name__)
+        llm_diag("llm:fail", agent=agent, err=type(exc).__name__)
         return
-    llm_diag("llm:done", agent="graph_narrate")
+    llm_diag("llm:done", agent=agent)
 
 
 def _graph_action_narration_messages(
@@ -448,13 +450,20 @@ def _graph_action_narration_messages(
     prompt = _narration_user_prompt(before, after, action, dispatch, card_texts)
     if not prompt:
         return None
+    agent = _graph_action_narration_agent(dispatch)
     return [
         {
             "role": "system",
-            "content": get_prompt("graph_narrate", before.progress.locale),
+            "content": get_prompt(agent, before.progress.locale),
         },
         {"role": "user", "content": prompt},
     ]
+
+
+def _graph_action_narration_agent(dispatch: GraphActionDispatchResult) -> str:
+    if dispatch.kind == "combat":
+        return "combat_narrate"
+    return "graph_narrate"
 
 
 def _needs_graph_action_narration(
