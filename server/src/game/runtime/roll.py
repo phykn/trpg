@@ -12,6 +12,7 @@ from src.llm.diag import engine_diag, set_diag_context
 from src.wire.graph_to_front import graph_to_front_state
 
 from .load import load_runtime_state
+from .pending_action import build_pending_action_payload, load_pending_action
 from .request_result import (
     GraphActionRequestResult,
     executed_result,
@@ -82,7 +83,7 @@ async def run_graph_roll(
     if pending.get("id") != roll_id:
         raise GraphRollExpected("roll id mismatch")
 
-    action = _pending_action(pending)
+    action = load_pending_action(pending, error_type=GraphRollExpected)
     required_roll = _int(pending.get("required_roll"), "required_roll")
     rolled = dice if dice is not None else random.randint(1, 20)
     if rolled < 1 or rolled > 20:
@@ -149,10 +150,7 @@ def build_pending_roll(
         "stat": stat,
         "stat_label": label,
         "required_roll": required_roll,
-        "payload": {
-            "kind": "graph_action",
-            "action": action.model_dump(mode="json", by_alias=True),
-        },
+        "payload": build_pending_action_payload(action),
     }
 
 
@@ -182,16 +180,6 @@ def _roll_result(grade: str) -> str:
     if grade == "partial_success":
         return "partial"
     return "fail"
-
-
-def _pending_action(pending: dict[str, Any]) -> Action:
-    payload = pending.get("payload")
-    if not isinstance(payload, dict) or payload.get("kind") != "graph_action":
-        raise GraphRollExpected("pending graph action missing")
-    action_data = payload.get("action")
-    if not isinstance(action_data, dict):
-        raise GraphRollExpected("pending action missing")
-    return Action.model_validate(action_data)
 
 
 def _int(value: object, field: str) -> int:

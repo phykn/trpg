@@ -21,6 +21,7 @@ from .request_result import (
     confirmation_required_result,
     executed_result,
 )
+from .pending_action import build_pending_action_payload, load_pending_action
 from .state import GameRuntimeState
 from .turn import (
     GraphActionTurnError,
@@ -242,7 +243,7 @@ async def run_graph_confirm(
             graph_to_front_state(cleared_runtime),
         )
 
-    action = _pending_action(pending)
+    action = load_pending_action(pending, error_type=GraphConfirmationExpected)
     try:
         result = await run_graph_action_turn_from_runtime(
             repo,
@@ -301,7 +302,7 @@ async def run_graph_confirm_stream(
         }
         return
 
-    action = _pending_action(pending)
+    action = load_pending_action(pending, error_type=GraphConfirmationExpected)
     try:
         async for event in run_graph_action_turn_from_runtime_stream(
             repo,
@@ -423,21 +424,8 @@ def _pending(
         "confirm_label": confirm_label,
         "cancel_label": render("runtime.confirmation.cancel", locale),
         "target_label": target_label,
-        "payload": {
-            "kind": "graph_action",
-            "action": action.model_dump(mode="json", by_alias=True),
-        },
+        "payload": build_pending_action_payload(action),
     }
-
-
-def _pending_action(pending: dict[str, Any]) -> Action:
-    payload = pending.get("payload")
-    if not isinstance(payload, dict) or payload.get("kind") != "graph_action":
-        raise GraphConfirmationExpected("pending graph action missing")
-    action_data = payload.get("action")
-    if not isinstance(action_data, dict):
-        raise GraphConfirmationExpected("pending action missing")
-    return Action.model_validate(action_data)
 
 
 def _attack_target_id(
