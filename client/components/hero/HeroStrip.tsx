@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
 
-import { Bar, Surface } from '@/components/ui';
+import { Bar } from '@/components/ui';
 import { toneColor } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import type { Hero } from '@/logic/hero/types';
@@ -56,7 +56,7 @@ function Meter({ label, value, max, tone, display = 'fraction' }: {
 
 export function HeroStrip({ hero }: { hero: Hero }) {
   return (
-    <Surface className="mx-5 px-3 py-2">
+    <View className="mx-5 px-0 py-0">
       <View className="flex-row gap-3">
         <Meter label={ko.hero.hp} value={hero.hp} max={hero.hpMax} tone="hp" />
         <Meter label={ko.hero.mp} value={hero.mp} max={hero.mpMax} tone="mp" />
@@ -75,6 +75,6 @@ export function HeroStrip({ hero }: { hero: Hero }) {
           display="current"
         />
       </View>
-    </Surface>
+    </View>
   );
 }

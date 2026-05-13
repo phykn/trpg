@@ -106,125 +106,127 @@ export function NewGame({ onSubmit }: Props) {
   return (
     <ScrollView
       className="flex-1 bg-canvas-default"
-      contentContainerClassName="px-5 py-6 gap-6"
+      contentContainerClassName="px-4 py-5"
       keyboardShouldPersistTaps="handled"
     >
-      <View className="gap-2">
-        <View className="flex-row items-center gap-2.5">
-          <Text className="font-mono text-meta text-accent-fg uppercase">
-            CHARACTER · NEW
+      <View className="border border-border-strong bg-canvas-default px-4 py-4 gap-5">
+        <View className="gap-2 border-b border-border-default pb-4">
+          <View className="flex-row items-center gap-2.5">
+            <Text className="font-mono text-meta text-accent-fg uppercase">
+              CHARACTER · NEW
+            </Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default }} />
+            <Glyph kind="outline" tone="accent" size={10} />
+          </View>
+          <Text className="font-serif-medium text-narration text-fg-default">{ko.menu.newGame}</Text>
+          <Text className="font-sans text-body text-fg-muted">
+            {ko.newGame.hint}
           </Text>
-          <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default }} />
-          <Glyph kind="outline" tone="accent" size={10} />
         </View>
-        <Text className="font-serif-medium text-narration text-fg-default">{ko.menu.newGame}</Text>
-        <Text className="font-sans text-body text-fg-muted">
-          {ko.newGame.hint}
-        </Text>
-      </View>
 
-      <Pressable
-        onPress={submit}
-        disabled={!canSubmit}
-        accessibilityRole="button"
-        accessibilityLabel={ko.action.start}
-        accessibilityState={{ disabled: !canSubmit }}
-        className={`h-10 rounded-md items-center justify-center ${
-          canSubmit ? 'bg-accent-fg active:opacity-80' : 'bg-canvas-inset border border-border-default'
-        }`}
-      >
-        <Text
-          className={`font-sans-semibold text-title ${
-            canSubmit ? 'text-fg-on-emphasis' : 'text-fg-subtle'
+        <Pressable
+          onPress={submit}
+          disabled={!canSubmit}
+          accessibilityRole="button"
+          accessibilityLabel={ko.action.start}
+          accessibilityState={{ disabled: !canSubmit }}
+          className={`h-10 rounded-sm items-center justify-center ${
+            canSubmit ? 'bg-accent-fg active:opacity-80' : 'bg-canvas-inset border border-border-default'
           }`}
         >
-          {submitting ? ko.newGame.creating : ko.action.start}
-        </Text>
-      </Pressable>
+          <Text
+            className={`font-sans-semibold text-title ${
+              canSubmit ? 'text-fg-on-emphasis' : 'text-fg-subtle'
+            }`}
+          >
+            {submitting ? ko.newGame.creating : ko.action.start}
+          </Text>
+        </Pressable>
 
-      <Section label={ko.form.name}>
-        <Input value={name} onChangeText={setName} placeholder={ko.newGame.namePlaceholder} />
-      </Section>
-
-      <Section label={ko.form.gender}>
-        <View className="flex-row gap-2">
-          <View className="flex-1">
-            <SelectCard
-              title={ko.newGame.male}
-              selected={gender === 'male'}
-              onPress={() => setGender('male')}
-              dense
-            />
-          </View>
-          <View className="flex-1">
-            <SelectCard
-              title={ko.newGame.female}
-              selected={gender === 'female'}
-              onPress={() => setGender('female')}
-              dense
-            />
-          </View>
-        </View>
-      </Section>
-
-      <Section label={ko.form.world}>
-        {profiles.map((p) => (
-          <SelectCard
-            key={p.id}
-            title={p.name}
-            description={p.description}
-            selected={profileId === p.id}
-            onPress={() => {
-              setProfileId(p.id);
-              setRaceId(p.races[0]?.id ?? null);
-            }}
-          />
-        ))}
-      </Section>
-
-      {selectedProfile && (
-        <Section label={ko.form.race}>
-          {races.length === 0 ? (
-            <Text className="font-sans text-body text-fg-muted">{ko.newGame.noRaces}</Text>
-          ) : (
-            races.map((r: RaceCard) => (
-              <SelectCard
-                key={r.id}
-                title={r.name}
-                description={r.description}
-                selected={raceId === r.id}
-                onPress={() => setRaceId(r.id)}
-              />
-            ))
-          )}
+        <Section label={ko.form.name}>
+          <Input value={name} onChangeText={setName} placeholder={ko.newGame.namePlaceholder} />
         </Section>
-      )}
 
-      <Section label={ko.form.language}>
-        <View className="flex-row gap-2">
-          <View className="flex-1">
-            <SelectCard
-              title={ko.newGame.korean}
-              selected={locale === 'ko'}
-              onPress={() => setLocale('ko')}
-              dense
-            />
+        <Section label={ko.form.gender}>
+          <View className="flex-row gap-2">
+            <View className="flex-1">
+              <SelectCard
+                title={ko.newGame.male}
+                selected={gender === 'male'}
+                onPress={() => setGender('male')}
+                dense
+              />
+            </View>
+            <View className="flex-1">
+              <SelectCard
+                title={ko.newGame.female}
+                selected={gender === 'female'}
+                onPress={() => setGender('female')}
+                dense
+              />
+            </View>
           </View>
-          <View className="flex-1">
+        </Section>
+
+        <Section label={ko.form.world}>
+          {profiles.map((p) => (
             <SelectCard
-              title={ko.newGame.english}
-              selected={locale === 'en'}
-              onPress={() => setLocale('en')}
-              dense
+              key={p.id}
+              title={p.name}
+              description={p.description}
+              selected={profileId === p.id}
+              onPress={() => {
+                setProfileId(p.id);
+                setRaceId(p.races[0]?.id ?? null);
+              }}
             />
+          ))}
+        </Section>
+
+        {selectedProfile && (
+          <Section label={ko.form.race}>
+            {races.length === 0 ? (
+              <Text className="font-sans text-body text-fg-muted">{ko.newGame.noRaces}</Text>
+            ) : (
+              races.map((r: RaceCard) => (
+                <SelectCard
+                  key={r.id}
+                  title={r.name}
+                  description={r.description}
+                  selected={raceId === r.id}
+                  onPress={() => setRaceId(r.id)}
+                />
+              ))
+            )}
+          </Section>
+        )}
+
+        <Section label={ko.form.language}>
+          <View className="flex-row gap-2">
+            <View className="flex-1">
+              <SelectCard
+                title={ko.newGame.korean}
+                selected={locale === 'ko'}
+                onPress={() => setLocale('ko')}
+                dense
+              />
+            </View>
+            <View className="flex-1">
+              <SelectCard
+                title={ko.newGame.english}
+                selected={locale === 'en'}
+                onPress={() => setLocale('en')}
+                dense
+              />
+            </View>
           </View>
+        </Section>
+
+        <View className="items-center pt-2">
+          <Text className="font-mono text-meta text-fg-subtle">
+            client: {CLIENT_SHA}  ·  server: {serverSha}
+          </Text>
         </View>
-      </Section>
-
-      <View className="items-center pt-2">
-        <Text className="font-mono text-meta text-fg-subtle">
-          client: {CLIENT_SHA}  ·  server: {serverSha}
-        </Text>
       </View>
     </ScrollView>
   );

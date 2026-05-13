@@ -25,6 +25,7 @@ import {
   requestGraphIntro,
   rollGraphPending,
   sendGraphAction,
+  sendGraphCombatCommand,
   sendGraphInput,
   sendGraphLevelUp,
 } from '@/services';
@@ -36,6 +37,7 @@ import type { PendingRoll } from '@/logic/roll';
 import type { Place } from '@/logic/story-graph';
 import type { Subject } from '@/logic/subject';
 import type {
+  CombatCommand,
   FrontState,
   GraphAction,
   GraphLevelUpChoice,
@@ -44,15 +46,11 @@ import type {
   PendingConfirmation,
   SuggestionChip,
 } from '@/services/wire';
-import { useGraphActionRunner, type OptimisticLogEntry } from './requestRunner';
+import { useGraphActionRunner } from './requestRunner';
 
 export type GameStatus = 'loading' | 'no-game' | 'ready' | 'error';
 
 export type Game = ReturnType<typeof useGame>;
-
-function optimisticAct(label?: string): OptimisticLogEntry[] {
-  return label ? [{ kind: 'act', text: label }] : [];
-}
 
 export function useGame() {
   const [status, setStatus] = React.useState<GameStatus>('loading');
@@ -220,7 +218,6 @@ export function useGame() {
           signal,
           onNarrationDelta: events.onNarrationDelta,
         }),
-        optimisticAct(label),
       );
     },
     [gameId, pendingConfirmation, pendingRoll, runGraphActionRequest],
@@ -234,8 +231,21 @@ export function useGame() {
           sendGraphAction(gameId, action, {
             signal,
             onNarrationDelta: events.onNarrationDelta,
+        }),
+      );
+    },
+    [gameId, pendingConfirmation, pendingRoll, runGraphActionRequest],
+  );
+
+  const onCombatCommand = React.useCallback(
+    (command: CombatCommand, label?: string) => {
+      if (!gameId || pendingConfirmation || pendingRoll) return;
+      void runGraphActionRequest(
+        (signal, events) =>
+          sendGraphCombatCommand(gameId, command, {
+            signal,
+            onNarrationDelta: events.onNarrationDelta,
           }),
-        optimisticAct(label),
       );
     },
     [gameId, pendingConfirmation, pendingRoll, runGraphActionRequest],
@@ -394,6 +404,7 @@ export function useGame() {
     onSend,
     onQuestAction,
     onGraphAction,
+    onCombatCommand,
     onConfirmPending,
     onRollPending,
     onStop,

@@ -18,7 +18,7 @@ import { ko } from '@/locale/ko';
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, questOffers, place, combat, storyGraph, log, pendingConfirmation, pendingRoll, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onConfirmPending, onRollPending, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpChoices, levelUpLoading, openLevelUp, cancelLevelUp, commitLevelUp } = game;
+  const { hero, subject, quest, questOffers, place, combat, storyGraph, log, pendingConfirmation, pendingRoll, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onCombatCommand, onConfirmPending, onRollPending, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpChoices, levelUpLoading, openLevelUp, cancelLevelUp, commitLevelUp } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -34,6 +34,8 @@ export function Playing({ game }: Props) {
       onSend(action.text);
     } else if (action.kind === 'graph_action') {
       onGraphAction(action.graphAction, action.label);
+    } else if (action.kind === 'combat_command') {
+      onCombatCommand(action.combatCommand, action.label);
     } else {
       onQuestAction(action.questAction.kind, action.questAction.quest_id, action.label);
     }
@@ -71,14 +73,16 @@ export function Playing({ game }: Props) {
   if (!hero) return null;
 
   const slots: PanelSlot[] = [
+    { id: 'map', chip: { short: ko.table.map, dot: hasUnseenLocation }, panel: null },
     ...buildPanelSlots(
       { hero, subject, quest, questOffers },
       { questDot: hasUnseenQuest, subjectDot: hasUnseenSubject },
     ),
-    { id: 'map', chip: { short: ko.panel.miniMap, dot: hasUnseenLocation }, panel: null },
   ];
   return (
     <View className="flex-1 bg-canvas-default py-2.5 gap-2.5">
+      <HeroStrip hero={hero} />
+
       <ContextCard
         slots={slots}
         miniMapGraph={miniMapGraph}
@@ -103,8 +107,10 @@ export function Playing({ game }: Props) {
           setActiveId((prev) => {
             const next = prev === id ? null : id;
             if (id === 'map' && next === id) markLocationSeen();
-            if (id === 'quest' && next === id) markQuestSeen();
-            if (id === 'person' && next === id) markSubjectSeen();
+            if (id === 'notes' && next === id) {
+              markQuestSeen();
+              markSubjectSeen();
+            }
             return next;
           });
         }}
@@ -172,8 +178,6 @@ export function Playing({ game }: Props) {
           onCancel={() => onConfirmPending('cancel')}
         />
       )}
-
-      <HeroStrip hero={hero} />
 
       <Log
         log={log}

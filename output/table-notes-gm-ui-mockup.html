@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>테이블 노트형 GM UI 목업</title>
+    <style>
+      :root {
+        --canvas: #faf9f5;
+        --surface: #181715;
+        --surface-2: #211f1c;
+        --surface-3: #2a2723;
+        --line: #3a352f;
+        --line-soft: #2f2b27;
+        --ink: #faf9f5;
+        --muted: #a09d96;
+        --dim: #777169;
+        --accent: #cc785c;
+        --accent-strong: #df9279;
+        --teal: #5db8a6;
+        --amber: #e8a55a;
+        --danger: #c64545;
+        --cream: #efe9de;
+        --font-ui: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --font-prose: "Times New Roman", Georgia, serif;
+        --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--canvas);
+        color: #141413;
+        font-family: var(--font-ui);
+      }
+
+      .page {
+        width: min(1500px, calc(100vw - 40px));
+        margin: 0 auto;
+        padding: 32px 0 44px;
+      }
+
+      .header {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid #e6dfd8;
+        padding-bottom: 18px;
+      }
+
+      h1 {
+        margin: 0;
+        font-family: var(--font-prose);
+        font-size: clamp(28px, 4vw, 46px);
+        font-weight: 400;
+        line-height: 1.1;
+        letter-spacing: 0;
+      }
+
+      .header p {
+        max-width: 560px;
+        margin: 0;
+        color: #6c6a64;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .mockups {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(300px, 1fr));
+        gap: 20px;
+        align-items: start;
+      }
+
+      .shot {
+        min-width: 0;
+      }
+
+      .shot-title {
+        margin: 0 0 10px;
+        color: #3d3d3a;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .phone {
+        height: 760px;
+        border: 1px solid #d8d0c5;
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--ink);
+        overflow: hidden;
+        box-shadow: 0 18px 44px rgba(28, 24, 18, 0.18);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .top {
+        border-bottom: 1px solid var(--line-soft);
+        padding: 14px 14px 10px;
+      }
+
+      .hud {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .stat {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 7px 8px;
+        background: var(--surface-2);
+      }
+
+      .stat span {
+        display: block;
+        color: var(--muted);
+        font-size: 10px;
+        line-height: 1;
+        margin-bottom: 5px;
+      }
+
+      .stat strong {
+        display: block;
+        color: var(--ink);
+        font-family: var(--font-mono);
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .tools {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .tool {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: transparent;
+        color: var(--muted);
+        font: 600 12px / 1 var(--font-ui);
+        padding: 8px 9px;
+        text-align: center;
+      }
+
+      .tool.active {
+        border-color: rgba(204, 120, 92, 0.65);
+        background: rgba(204, 120, 92, 0.12);
+        color: var(--accent-strong);
+      }
+
+      .tool.notice {
+        color: var(--cream);
+      }
+
+      .log {
+        position: relative;
+        flex: 1;
+        overflow: hidden;
+        padding: 18px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .entry {
+        padding-left: 13px;
+        border-left: 3px solid var(--accent);
+      }
+
+      .entry.player {
+        border-left-color: var(--teal);
+      }
+
+      .speaker {
+        display: block;
+        margin-bottom: 7px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .entry p {
+        margin: 0;
+        font-family: var(--font-prose);
+        color: #f4eee5;
+        font-size: 18px;
+        line-height: 1.58;
+        letter-spacing: 0;
+      }
+
+      .entry.player p {
+        color: #d7eee8;
+      }
+
+      .quiet-line {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .roll-panel {
+        border-top: 1px solid var(--line-soft);
+        padding: 12px 14px 14px;
+        background: #151411;
+      }
+
+      .roll-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .roll-title {
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.25;
+      }
+
+      .roll-target {
+        color: var(--accent-strong);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .dice-row {
+        display: grid;
+        grid-template-columns: 58px 1fr;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .d20 {
+        position: relative;
+        width: 56px;
+        height: 56px;
+        border: 1px solid rgba(204, 120, 92, 0.7);
+        border-radius: 15px;
+        background:
+          linear-gradient(135deg, rgba(204, 120, 92, 0.34), transparent 42%),
+          var(--surface-2);
+        display: grid;
+        place-items: center;
+        color: #fff5ed;
+        font: 800 19px / 1 var(--font-mono);
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.3);
+        transform: rotate(-8deg);
+        animation: table-roll 1200ms cubic-bezier(0.2, 0.8, 0.18, 1) infinite;
+      }
+
+      .d20::before,
+      .d20::after {
+        content: "";
+        position: absolute;
+        inset: 8px;
+        border: 1px solid rgba(250, 249, 245, 0.15);
+        transform: rotate(45deg);
+      }
+
+      .d20::after {
+        inset: 16px;
+        border-color: rgba(250, 249, 245, 0.08);
+      }
+
+      .dice-copy {
+        min-width: 0;
+      }
+
+      .dice-copy strong {
+        display: block;
+        color: var(--ink);
+        font-size: 13px;
+        line-height: 1.35;
+        margin-bottom: 4px;
+      }
+
+      .dice-copy span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .combat-roll {
+        margin: -2px 0 12px;
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        padding: 9px;
+        background: rgba(33, 31, 28, 0.62);
+      }
+
+      @keyframes table-roll {
+        0% {
+          transform: translateX(0) rotate(-10deg);
+        }
+        34% {
+          transform: translateX(7px) rotate(15deg);
+        }
+        68% {
+          transform: translateX(-4px) rotate(-5deg);
+        }
+        100% {
+          transform: translateX(0) rotate(-10deg);
+        }
+      }
+
+      .composer {
+        border-top: 1px solid var(--line-soft);
+        padding: 12px 14px 14px;
+        background: #151411;
+      }
+
+      .nearby {
+        margin-bottom: 10px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1;
+      }
+
+      .input-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+      }
+
+      .input {
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface-2);
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        font-size: 14px;
+      }
+
+      .send,
+      .combat-button {
+        border: 0;
+        border-radius: 8px;
+        background: var(--accent);
+        color: white;
+        font: 700 13px / 1 var(--font-ui);
+        padding: 0 16px;
+      }
+
+      .sheet {
+        position: absolute;
+        left: 14px;
+        right: 14px;
+        top: 12px;
+        border: 1px solid rgba(204, 120, 92, 0.35);
+        border-radius: 8px;
+        background: rgba(33, 31, 28, 0.98);
+        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.35);
+        padding: 14px;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .panel-head h2 {
+        margin: 0;
+        color: var(--ink);
+        font-size: 15px;
+        line-height: 1.2;
+      }
+
+      .panel-head span {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .note-list {
+        display: grid;
+        gap: 9px;
+      }
+
+      .note-item {
+        border-top: 1px solid var(--line-soft);
+        padding-top: 9px;
+      }
+
+      .note-item:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .note-label {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--accent-strong);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .note-item p {
+        margin: 0;
+        color: #e7e0d7;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .map-panel {
+        position: absolute;
+        left: 14px;
+        right: 14px;
+        top: 12px;
+        border: 1px solid rgba(93, 184, 166, 0.38);
+        border-radius: 8px;
+        background: rgba(33, 31, 28, 0.98);
+        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.35);
+        padding: 14px;
+      }
+
+      .map-canvas {
+        height: 280px;
+        border: 1px solid var(--line-soft);
+        border-radius: 8px;
+        background: #171512;
+      }
+
+      .legend {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .combat-card {
+        border-top: 1px solid var(--line-soft);
+        padding: 12px 14px 14px;
+        background: #151411;
+      }
+
+      .combat-card header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        align-items: start;
+        margin-bottom: 12px;
+      }
+
+      .combat-title {
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.25;
+      }
+
+      .combat-context {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .hearts {
+        display: grid;
+        gap: 5px;
+        min-width: 92px;
+      }
+
+      .heart-line {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 10px;
+      }
+
+      .heart-dots {
+        display: flex;
+        gap: 3px;
+      }
+
+      .heart-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: var(--accent);
+      }
+
+      .heart-dot.empty {
+        background: #4b433c;
+      }
+
+      .combat-actions {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .combat-button {
+        min-height: 40px;
+        padding: 0 8px;
+      }
+
+      .combat-button.secondary {
+        background: var(--surface-3);
+        border: 1px solid var(--line);
+        color: var(--ink);
+      }
+
+      .node-label {
+        font: 600 12px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        fill: #f4eee5;
+      }
+
+      .node-label.muted {
+        fill: #a09d96;
+      }
+
+      @media (max-width: 1340px) {
+        .mockups {
+          grid-template-columns: repeat(2, minmax(300px, 1fr));
+        }
+      }
+
+      @media (max-width: 720px) {
+        .page {
+          width: min(390px, calc(100vw - 24px));
+          padding-top: 20px;
+        }
+
+        .header {
+          display: block;
+        }
+
+        .header p {
+          margin-top: 12px;
+        }
+
+        .mockups {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="header">
+        <h1>테이블 노트형 GM UI 목업</h1>
+        <p>
+          기본 화면은 GM 대화에 집중하고, 지도와 노트와 시트는 접힌 도구로 둡니다.
+          판정과 전투 공격은 같은 작은 d20 연출을 쓰고, 결과는 GM 묘사로 이어집니다.
+        </p>
+      </header>
+
+      <section class="mockups" aria-label="UI 상태 목업">
+        <article class="shot">
+          <h2 class="shot-title">기본 대화</h2>
+          <div class="phone">
+            <div class="top">
+              <div class="hud">
+                <div class="stat"><span>HP</span><strong>5/5</strong></div>
+                <div class="stat"><span>MP</span><strong>3/5</strong></div>
+                <div class="stat"><span>경험</span><strong>12/20</strong></div>
+                <div class="stat"><span>소생</span><strong>1</strong></div>
+              </div>
+              <div class="tools">
+                <div class="tool">지도</div>
+                <div class="tool notice">노트 · 새 단서</div>
+                <div class="tool">시트</div>
+              </div>
+            </div>
+            <div class="log">
+              <div class="entry">
+                <span class="speaker">GM</span>
+                <p>
+                  당신이 상인의 말을 끊자, 그는 웃음을 지우고 계산대 아래로 손을 내립니다.
+                  시장의 소음은 여전하지만, 근처 경비병 하나가 이쪽을 흘깃 봅니다.
+                </p>
+              </div>
+              <div class="entry player">
+                <span class="speaker">당신</span>
+                <p>“그 이름을 어디서 들었는지부터 말해보세요.”</p>
+              </div>
+              <div class="entry">
+                <span class="speaker">GM</span>
+                <p>
+                  상인은 바로 대답하지 않습니다. 대신 손끝으로 낡은 장부를 한 번 누릅니다.
+                  당신의 추궁이 먹히고 있지만, 지금 더 몰아붙이면 장터 전체의 시선을 끌 수 있습니다.
+                </p>
+              </div>
+            </div>
+            <div class="composer">
+              <div class="nearby">인물 1 · 장소 2 · 할 일 1</div>
+              <div class="input-row">
+                <div class="input">당신은 무엇을 합니까?</div>
+                <button class="send">전송</button>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="shot">
+          <h2 class="shot-title">판정 중</h2>
+          <div class="phone">
+            <div class="top">
+              <div class="hud">
+                <div class="stat"><span>HP</span><strong>5/5</strong></div>
+                <div class="stat"><span>MP</span><strong>3/5</strong></div>
+                <div class="stat"><span>경험</span><strong>12/20</strong></div>
+                <div class="stat"><span>소생</span><strong>1</strong></div>
+              </div>
+              <div class="tools">
+                <div class="tool">지도</div>
+                <div class="tool notice">노트 · 새 단서</div>
+                <div class="tool">시트</div>
+              </div>
+            </div>
+            <div class="log">
+              <div class="entry">
+                <span class="speaker">GM</span>
+                <p>
+                  당신이 장부를 향해 손을 뻗자, 상인은 몸을 틀어 가리려 합니다.
+                  종이 사이에 끼워진 얇은 봉인이 잠깐 빛을 받습니다.
+                </p>
+              </div>
+              <div class="entry player">
+                <span class="speaker">당신</span>
+                <p>상인의 손목 움직임을 피해 장부 안쪽을 빠르게 확인합니다.</p>
+              </div>
+            </div>
+            <div class="roll-panel">
+              <div class="roll-head">
+                <div class="roll-title">민첩 판정</div>
+                <div class="roll-target">13 이상</div>
+              </div>
+              <div class="dice-row">
+                <div class="d20">16</div>
+                <div class="dice-copy">
+                  <strong>주사위가 구르고 있습니다</strong>
+                  <span>결과는 별도 카드가 아니라 다음 GM 묘사로 이어집니다.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="shot">
+          <h2 class="shot-title">지도 펼침</h2>
+          <div class="phone">
+            <div class="top">
+              <div class="hud">
+                <div class="stat"><span>HP</span><strong>5/5</strong></div>
+                <div class="stat"><span>MP</span><strong>3/5</strong></div>
+                <div class="stat"><span>경험</span><strong>12/20</strong></div>
+                <div class="stat"><span>소생</span><strong>1</strong></div>
+              </div>
+              <div class="tools">
+                <div class="tool active">지도</div>
+                <div class="tool notice">노트 · 새 단서</div>
+                <div class="tool">시트</div>
+              </div>
+            </div>
+            <div class="log">
+              <div class="map-panel">
+                <div class="panel-head">
+                  <h2>시장 주변 지도</h2>
+                  <span>현재 위치 · 중앙 장터</span>
+                </div>
+                <svg class="map-canvas" viewBox="0 0 340 280" role="img" aria-label="시장 주변 지도">
+                  <line x1="170" y1="130" x2="72" y2="72" stroke="#5c554d" stroke-width="2" />
+                  <line x1="170" y1="130" x2="282" y2="76" stroke="#5c554d" stroke-width="2" />
+                  <line x1="170" y1="130" x2="95" y2="216" stroke="#5c554d" stroke-width="2" />
+                  <line x1="170" y1="130" x2="264" y2="210" stroke="#3a352f" stroke-width="2" stroke-dasharray="6 6" />
+                  <circle cx="170" cy="130" r="34" fill="#cc785c" opacity="0.95" />
+                  <text x="170" y="126" text-anchor="middle" class="node-label">중앙</text>
+                  <text x="170" y="142" text-anchor="middle" class="node-label">장터</text>
+                  <circle cx="72" cy="72" r="29" fill="#2a2723" stroke="#5db8a6" />
+                  <text x="72" y="76" text-anchor="middle" class="node-label">골목</text>
+                  <circle cx="282" cy="76" r="29" fill="#2a2723" stroke="#5db8a6" />
+                  <text x="282" y="80" text-anchor="middle" class="node-label">경비소</text>
+                  <circle cx="95" cy="216" r="29" fill="#2a2723" stroke="#e8a55a" />
+                  <text x="95" y="220" text-anchor="middle" class="node-label">창고</text>
+                  <circle cx="264" cy="210" r="29" fill="#1b1916" stroke="#4b433c" />
+                  <text x="264" y="214" text-anchor="middle" class="node-label muted">폐문</text>
+                </svg>
+                <div class="legend">
+                  <span>이동 가능 3</span>
+                  <span>위험 경로 1</span>
+                  <span>막힘 1</span>
+                </div>
+              </div>
+              <div class="entry">
+                <span class="speaker">GM</span>
+                <p>
+                  상인은 바로 대답하지 않습니다. 대신 손끝으로 낡은 장부를 한 번 누릅니다.
+                </p>
+              </div>
+            </div>
+            <div class="composer">
+              <div class="nearby">인물 1 · 장소 2 · 할 일 1</div>
+              <div class="input-row">
+                <div class="input">당신은 무엇을 합니까?</div>
+                <button class="send">전송</button>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="shot">
+          <h2 class="shot-title">노트 펼침</h2>
+          <div class="phone">
+            <div class="top">
+              <div class="hud">
+                <div class="stat"><span>HP</span><strong>5/5</strong></div>
+                <div class="stat"><span>MP</span><strong>3/5</strong></div>
+                <div class="stat"><span>경험</span><strong>12/20</strong></div>
+                <div class="stat"><span>소생</span><strong>1</strong></div>
+              </div>
+              <div class="tools">
+                <div class="tool">지도</div>
+                <div class="tool active">노트</div>
+                <div class="tool">시트</div>
+              </div>
+            </div>
+            <div class="log">
+              <div class="sheet">
+                <div class="panel-head">
+                  <h2>노트</h2>
+                  <span>최근 정리</span>
+                </div>
+                <div class="note-list">
+                  <div class="note-item">
+                    <span class="note-label">목표</span>
+                    <p>상인이 숨긴 이름의 출처를 알아냅니다.</p>
+                  </div>
+                  <div class="note-item">
+                    <span class="note-label">단서</span>
+                    <p>장부에는 같은 문장이 여러 번 지워진 흔적이 있습니다.</p>
+                  </div>
+                  <div class="note-item">
+                    <span class="note-label">관계</span>
+                    <p>상인은 당신을 경계하지만, 아직 대화를 끊지는 않았습니다.</p>
+                  </div>
+                  <div class="note-item">
+                    <span class="note-label">로그</span>
+                    <p>상인의 태도가 굳고, 근처 경비병이 장터를 살피기 시작했습니다.</p>
+                  </div>
+                </div>
+              </div>
+              <div class="entry">
+                <span class="speaker">GM</span>
+                <p>
+                  상인은 장부 위에 손을 얹은 채 눈을 피합니다. 당신은 그가 시간을 벌고 있다는 것을 압니다.
+                </p>
+              </div>
+            </div>
+            <div class="composer">
+              <div class="nearby">인물 1 · 장소 2 · 할 일 1</div>
+              <div class="input-row">
+                <div class="input">당신은 무엇을 합니까?</div>
+                <button class="send">전송</button>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="shot">
+          <h2 class="shot-title">전투 중</h2>
+          <div class="phone">
+            <div class="top">
+              <div class="hud">
+                <div class="stat"><span>HP</span><strong>4/5</strong></div>
+                <div class="stat"><span>MP</span><strong>2/5</strong></div>
+                <div class="stat"><span>경험</span><strong>12/20</strong></div>
+                <div class="stat"><span>소생</span><strong>1</strong></div>
+              </div>
+              <div class="tools">
+                <div class="tool">지도</div>
+                <div class="tool">노트</div>
+                <div class="tool">시트</div>
+              </div>
+            </div>
+            <div class="log">
+              <div class="entry">
+                <span class="speaker">GM</span>
+                <p>
+                  상인은 장부를 밀쳐내고 단검을 뽑습니다. 그는 싸움에 익숙하지는 않지만,
+                  당신이 한 걸음 더 다가오면 먼저 찌를 태세입니다.
+                </p>
+              </div>
+              <div class="entry player">
+                <span class="speaker">당신</span>
+                <p>검을 뽑고 상인과 계산대 사이를 막아섭니다.</p>
+              </div>
+              <div class="entry">
+                <span class="speaker">GM</span>
+                <p>
+                  당신의 검끝이 장부를 가리키자, 상인의 시선이 짧게 흔들립니다.
+                  이 싸움은 길게 끌면 경비병의 귀에 들어갈 것입니다.
+                </p>
+              </div>
+            </div>
+            <div class="combat-card">
+              <header>
+                <div>
+                  <div class="combat-title">상인과 전투 중</div>
+                  <div class="combat-context">1번째 교환 · 계산대 앞</div>
+                </div>
+                <div class="hearts">
+                  <div class="heart-line">
+                    <span>당신</span>
+                    <span class="heart-dots"><span class="heart-dot"></span><span class="heart-dot"></span><span class="heart-dot empty"></span></span>
+                  </div>
+                  <div class="heart-line">
+                    <span>상인</span>
+                    <span class="heart-dots"><span class="heart-dot"></span><span class="heart-dot"></span><span class="heart-dot"></span></span>
+                  </div>
+                </div>
+              </header>
+              <div class="combat-roll">
+                <div class="dice-row">
+                  <div class="d20">16</div>
+                  <div class="dice-copy">
+                    <strong>공격 판정</strong>
+                    <span>같은 d20 연출을 전투 카드 안에서 사용합니다.</span>
+                  </div>
+                </div>
+              </div>
+              <div class="combat-actions">
+                <button class="combat-button">공격</button>
+                <button class="combat-button secondary">막기</button>
+                <button class="combat-button secondary">기술</button>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

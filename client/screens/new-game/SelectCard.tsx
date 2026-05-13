@@ -11,7 +11,7 @@ type Props = {
 };
 
 export function SelectCard({ title, description, selected, onPress, dense }: Props) {
-  const bg = selected ? 'bg-accent-muted' : 'bg-canvas-subtle active:bg-canvas-inset';
+  const bg = selected ? 'bg-accent-muted' : 'bg-canvas-inset active:bg-canvas-subtle';
   const borderClass = selected ? 'border-accent-fg' : 'border-border-default';
   const sizing = dense ? 'h-10 items-center justify-center' : 'py-3';
   const accentEdge = selected && !dense;
@@ -21,7 +21,7 @@ export function SelectCard({ title, description, selected, onPress, dense }: Pro
       accessibilityRole="button"
       accessibilityLabel={title}
       accessibilityState={{ selected }}
-      className={`px-4 ${sizing} rounded-md border ${borderClass} ${bg}`}
+      className={`px-4 ${sizing} rounded-sm border ${borderClass} ${bg}`}
       style={accentEdge ? { borderLeftWidth: 2, borderLeftColor: colors.accent.fg } : undefined}
     >
       <Text

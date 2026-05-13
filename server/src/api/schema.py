@@ -69,6 +69,14 @@ class GraphTurnRequest(BaseModel):
     think: bool = False
 
 
+class GraphCombatCommandRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    command: Literal["attack", "skill", "defend", "flee"]
+    target_id: str | None = None
+    think: bool = False
+
+
 class GraphInputRequest(BaseModel):
     player_input: str
     think: bool = False

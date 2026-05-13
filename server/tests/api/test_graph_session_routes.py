@@ -553,6 +553,37 @@ async def test_graph_turn_attack_returns_confirmation_without_starting_combat(tm
 
 
 @pytest.mark.asyncio
+async def test_graph_combat_rejects_when_not_in_combat(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(
+            f"/session/{game_id}/graph/combat",
+            json={"command": "defend"},
+        )
+
+    assert response.status_code == 422
+    assert "combat is not active" in response.text
+
+
+@pytest.mark.asyncio
+async def test_graph_combat_stream_rejects_when_not_in_combat(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(
+            f"/session/{game_id}/graph/combat/stream",
+            json={"command": "defend"},
+        )
+
+    assert response.status_code == 200
+    assert '"type": "error"' in response.text
+    assert "combat is not active" in response.text
+
+
+@pytest.mark.asyncio
 async def test_graph_confirm_confirm_executes_pending_attack(tmp_path):
     app = _build_app(tmp_path)
 
@@ -659,6 +690,38 @@ async def test_graph_turn_pass_defends_during_existing_combat(tmp_path):
     assert body["state"]["combat"]["round"] == 3
     assert progress.graph_combat_state is not None
     assert progress.graph_combat_state.round == 3
+
+
+@pytest.mark.asyncio
+async def test_graph_turn_auto_cast_uses_known_skill_during_existing_combat(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr("src.game.engines.graph_combat.randint", lambda _a, _b: 20)
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        attack_response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "attack", "what": "edrik_chief"}},
+        )
+        confirmation_id = attack_response.json()["state"]["pendingConfirmation"]["id"]
+        await client.post(
+            f"/session/{game_id}/graph/confirm",
+            json={"confirmation_id": confirmation_id, "decision": "confirm"},
+        )
+        response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "cast", "to": "edrik_chief", "how": "auto"}},
+        )
+
+    assert response.status_code == 200, response.text
+    progress = await app.state.graph_repo.load_progress(game_id)
+
+    assert progress.graph_combat_state is not None
+    assert progress.graph_combat_state.last_support_id == "basic_strike"
+    assert progress.graph_combat_state.last_support_kind == "skill"
 
 
 @pytest.mark.asyncio

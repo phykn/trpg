@@ -79,6 +79,12 @@ export type GraphRollRequest = {
   think: boolean;
 };
 
+export type CombatCommand =
+  | { command: 'attack'; target_id: string }
+  | { command: 'skill'; target_id: string }
+  | { command: 'defend' }
+  | { command: 'flee' };
+
 export type GraphAction = {
   verb:
     | 'move'
@@ -196,6 +202,8 @@ export type GraphCombatState = {
   enemyHearts: GraphHeart;
   activeEnemyId: string;
   participants: GraphCombatParticipant[];
+  lastRoll?: number | null;
+  lastDc?: number | null;
 };
 
 export type GraphFrontState = {

@@ -200,6 +200,8 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
             player_hearts=2,
             enemy_hearts=1,
             round=2,
+            last_roll=16,
+            last_dc=12,
         )
     return GameRuntimeState(
         graph=graph,
@@ -450,6 +452,8 @@ def test_graph_front_state_builds_combat_view_when_progress_exists():
     assert payload.combat.player_hearts.maximum == 3
     assert payload.combat.enemy_hearts.current == 1
     assert payload.combat.enemy_hearts.maximum == 3
+    assert payload.combat.last_roll == 16
+    assert payload.combat.last_dc == 12
     assert [p.id for p in payload.combat.participants] == ["player_01", "goblin_01"]
     assert payload.combat.participants[0].hp is not None
     assert payload.combat.participants[1].hp is None

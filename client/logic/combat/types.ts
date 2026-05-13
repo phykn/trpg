@@ -15,4 +15,6 @@ export type CombatBadge = {
   playerHearts: CombatHeart;
   enemyHearts: CombatHeart;
   enemies: CombatEnemy[];
+  lastRoll?: number | null;
+  lastDc?: number | null;
 };

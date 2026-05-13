@@ -54,7 +54,7 @@ export function StoryGraphCanvas({
     <View
       onLayout={onLayout}
       accessibilityLabel={`${accessibilityLabel}. ${graph.summary}`}
-      className="flex-1 overflow-hidden rounded-md border border-border-default bg-canvas-inset"
+      className="flex-1 overflow-hidden rounded-sm border border-border-default bg-canvas-inset"
       style={containerStyle}
     >
       {layout && graph.nodes.length > 0 ? (

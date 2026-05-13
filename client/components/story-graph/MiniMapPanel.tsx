@@ -1,9 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 
-import { SEP } from '@/components/ui';
-import { toneColor } from '@/design/tokens';
-import { ko } from '@/locale/ko';
+import { compose, ko } from '@/locale/ko';
 import type { PanelAction } from '@/logic/info-panel';
 
 import type { Place, StoryGraphModel } from '@/logic/story-graph/types';
@@ -31,10 +29,6 @@ export function MiniMapPanel({
     }
   }, [graph.nodes, selectedNodeId, currentPlaceId]);
 
-  const dayWeather = place
-    ? [place.dayPhase, ...place.weather].filter(Boolean).join(SEP)
-    : '';
-
   return (
     <View>
       {place ? (
@@ -47,21 +41,15 @@ export function MiniMapPanel({
               numberOfLines={1}
               className="font-serif-medium text-title text-fg-default"
             >
-              {place.name}
+              {compose.neighborhoodMap(place.name)}
             </Text>
           </View>
           <View className="flex-1 min-w-0">
             <Text
               numberOfLines={1}
-              className="font-sans text-caption italic text-right text-fg-muted"
+              className="font-sans text-caption text-right text-fg-muted"
             >
-              {dayWeather ? `${dayWeather}${SEP}` : ''}
-              <Text
-                className="font-sans-semibold"
-                style={{ color: toneColor[place.risk.tone] }}
-              >
-                {place.risk.label}
-              </Text>
+              {compose.currentLocation(place.name)}
             </Text>
           </View>
         </View>
@@ -72,6 +60,9 @@ export function MiniMapPanel({
         selectedNodeId={selectedNodeId}
         onNodeSelect={setSelectedNodeId}
         onAction={onAction}
+        framed
+        showSelectedDetails={false}
+        frameTopBorder={false}
       />
     </View>
   );

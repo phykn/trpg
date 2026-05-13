@@ -11,6 +11,10 @@ from src.game.domain.errors import (
     ProfileNotFound,
     RaceNotFound,
 )
+from src.game.runtime.combat_command import (
+    CombatCommandError,
+    build_combat_command_action,
+)
 from src.game.runtime.confirmation import (
     GraphConfirmationActive,
     GraphConfirmationError,
@@ -42,6 +46,7 @@ from ..deps import get_graph_repo, get_llm, get_scenario_repo
 from ..schema import (
     ConfirmRequest,
     GraphActionResponse,
+    GraphCombatCommandRequest,
     GraphInputRequest,
     GraphLevelUpChoicesResponse,
     GraphLevelUpRequest,
@@ -183,6 +188,70 @@ async def session_graph_turn_stream(
                 graph_repo,
                 game_id,
                 body.action,
+                llm=llm,
+                scenario_repo=scenario_repo,
+            ):
+                yield event
+
+    return _graph_action_streaming_response(game_id, source)
+
+
+@router.post("/session/{game_id}/graph/combat", response_model=GraphActionResponse)
+async def session_graph_combat(
+    game_id: str,
+    body: GraphCombatCommandRequest,
+    llm: LLMClient = Depends(get_llm),
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+) -> GraphActionResponse:
+    try:
+        runtime = await load_runtime_state(graph_repo, game_id, scenario_repo)
+        action = build_combat_command_action(
+            runtime,
+            body.model_dump(exclude={"think"}),
+        )
+        with force_think(_request_thinking(body.think)):
+            result = await run_graph_action_request(
+                graph_repo,
+                game_id,
+                action,
+                llm=llm,
+                scenario_repo=scenario_repo,
+            )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="game not found")
+    except GraphConfirmationActive as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except (CombatCommandError, GraphConfirmationError, GraphActionTurnError) as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    return GraphActionResponse(
+        game_id=game_id,
+        state=result.front_state.model_dump(mode="json", by_alias=True),
+        status=result.status,
+        message=result.message,
+        suggestions=result.suggestions,
+    )
+
+
+@router.post("/session/{game_id}/graph/combat/stream")
+async def session_graph_combat_stream(
+    game_id: str,
+    body: GraphCombatCommandRequest,
+    llm: LLMClient = Depends(get_llm),
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+) -> StreamingResponse:
+    async def source():
+        runtime = await load_runtime_state(graph_repo, game_id, scenario_repo)
+        action = build_combat_command_action(
+            runtime,
+            body.model_dump(exclude={"think"}),
+        )
+        with force_think(_request_thinking(body.think)):
+            async for event in run_graph_action_request_stream(
+                graph_repo,
+                game_id,
+                action,
                 llm=llm,
                 scenario_repo=scenario_repo,
             ):
@@ -342,6 +411,7 @@ def _graph_action_streaming_response(game_id, source) -> StreamingResponse:
         except GraphConfirmationExpected as e:
             yield _stream_error(422, str(e))
         except (
+            CombatCommandError,
             GraphInputError,
             GraphConfirmationError,
             GraphActionTurnError,

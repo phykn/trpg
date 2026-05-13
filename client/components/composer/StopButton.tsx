@@ -9,7 +9,7 @@ export function StopButton({ onPress }: { onPress: () => void }) {
       accessibilityRole="button"
       accessibilityLabel={ko.composer.stopAction}
       testID="stop-button"
-      className="items-center justify-center h-8 px-3 rounded-full bg-accent-fg active:opacity-80"
+      className="items-center justify-center h-8 px-3 rounded-sm bg-accent-fg active:opacity-80"
     >
       <View style={{ width: 11, height: 11, borderRadius: 2, backgroundColor: colors['fg']['on-emphasis'] }} />
     </Pressable>

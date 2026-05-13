@@ -133,7 +133,7 @@ export function NeighborhoodPanel({
   return (
     <View
       accessibilityLabel={`${accessibilityLabel}. ${visibleGraph.summary}`}
-      className={`${framed ? 'border border-border-default rounded-md bg-canvas-subtle px-3 py-3' : 'px-4 pt-2 pb-3'} gap-2`}
+      className={`${framed ? 'border border-border-default rounded-sm bg-canvas-inset px-3 py-3' : 'px-4 pt-2 pb-3'} gap-2`}
     >
       <View style={{ aspectRatio: 1.618 }}>
         <StoryGraphCanvas
@@ -178,7 +178,7 @@ export function NeighborhoodPanel({
                       disabled={actionDisabled}
                       accessibilityRole="button"
                       accessibilityLabel={`${selectedNode.label} ${action.label}`}
-                      className={`rounded-full px-3.5 py-1 ${actionDisabled ? 'bg-accent-muted opacity-60' : 'bg-accent-muted active:opacity-80'}`}
+                      className={`rounded-sm border border-accent-fg px-3 py-1 ${actionDisabled ? 'bg-accent-muted opacity-60' : 'bg-accent-muted active:opacity-80'}`}
                     >
                       <Text className="font-sans-semibold text-caption text-accent-fg">
                         {actionDisabled ? ko.status.busy : action.label}

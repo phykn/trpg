@@ -9,7 +9,7 @@ export function GameOverPanel({ onRestart }: Props) {
     <View className="px-4 py-6 items-center gap-4">
       <Text className="font-sans text-body text-fg-muted">{ko.gameOver.ending}</Text>
       <Pressable
-        className="px-6 py-3 rounded-md bg-accent-fg active:opacity-80"
+        className="px-6 py-3 rounded-sm bg-accent-fg active:opacity-80"
         onPress={onRestart}
         accessibilityRole="button"
         accessibilityLabel={ko.gameOver.restartAction}

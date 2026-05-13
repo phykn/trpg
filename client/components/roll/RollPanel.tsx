@@ -1,6 +1,6 @@
 import { Animated, Pressable, Text, View } from 'react-native';
 
-import { Surface, useEntryAnimation } from '@/components/ui';
+import { RollingD20, Surface, useEntryAnimation } from '@/components/ui';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import { buildDiceCells } from '@/logic/roll/panel';
@@ -39,41 +39,49 @@ export function RollPanel({
             </Text>
           </View>
 
-          <View className="flex-row gap-0.5">
-            {cells.map((cell) => (
-              <View
-                key={cell.value}
-                className="h-7 flex-1 items-center justify-center rounded-sm"
-                style={{
-                  backgroundColor:
-                    cell.band === 'success'
-                      ? `${colors.success.fg}${cell.selected ? '55' : '24'}`
-                      : `${colors.danger.fg}${cell.selected ? '66' : '24'}`,
-                  borderColor: cell.selected ? colors.accent.fg : 'transparent',
-                  borderWidth: cell.selected ? 1 : 0,
-                }}
-              >
-                <Text
-                  className="font-mono-semibold text-caption"
-                  style={{ color: cell.selected ? colors.fg.default : colors.fg.muted }}
-                >
-                  {cell.value}
-                </Text>
+          {disabled ? (
+            <RollingD20
+              label={ko.roll.rollingLabel}
+              detail={ko.roll.rollingDetail}
+            />
+          ) : (
+            <>
+              <View className="flex-row gap-0.5">
+                {cells.map((cell) => (
+                  <View
+                    key={cell.value}
+                    className="h-7 flex-1 items-center justify-center rounded-sm"
+                    style={{
+                      backgroundColor:
+                        cell.band === 'success'
+                          ? `${colors.success.fg}${cell.selected ? '55' : '24'}`
+                          : `${colors.danger.fg}${cell.selected ? '66' : '24'}`,
+                      borderColor: cell.selected ? colors.accent.fg : 'transparent',
+                      borderWidth: cell.selected ? 1 : 0,
+                    }}
+                  >
+                    <Text
+                      className="font-mono-semibold text-caption"
+                      style={{ color: cell.selected ? colors.fg.default : colors.fg.muted }}
+                    >
+                      {cell.value}
+                    </Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
 
-          <Pressable
-            onPress={() => onRoll(roll.id)}
-            disabled={disabled}
-            accessibilityRole="button"
-            accessibilityLabel={ko.roll.rollLabel}
-            className={`h-10 items-center justify-center rounded-md ${disabled ? 'bg-canvas-inset opacity-60' : 'bg-accent-fg active:opacity-80'}`}
-          >
-            <Text className="font-sans-semibold text-panel text-fg-on-emphasis">
-              {disabled ? ko.status.busy : ko.action.roll}
-            </Text>
-          </Pressable>
+              <Pressable
+                onPress={() => onRoll(roll.id)}
+                accessibilityRole="button"
+                accessibilityLabel={ko.roll.rollLabel}
+                className="h-10 items-center justify-center rounded-sm bg-accent-fg active:opacity-80"
+              >
+                <Text className="font-sans-semibold text-panel text-fg-on-emphasis">
+                  {ko.action.roll}
+                </Text>
+              </Pressable>
+            </>
+          )}
         </Surface>
       </Animated.View>
     </View>

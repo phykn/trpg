@@ -128,6 +128,8 @@ class GraphCombatPayload(_CamelModel):
     enemy_hearts: GraphHeartPayload
     active_enemy_id: str
     participants: list[GraphCombatParticipantPayload]
+    last_roll: int | None = None
+    last_dc: int | None = None
 
 
 class GraphPendingConfirmationPayload(_CamelModel):

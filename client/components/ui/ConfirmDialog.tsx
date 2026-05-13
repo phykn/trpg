@@ -26,7 +26,7 @@ export function ConfirmDialog({ info, onConfirm, onCancel }: {
       >
         <Pressable
           onPress={(e) => e.stopPropagation()}
-          className="bg-canvas-floating border border-border-strong rounded-lg p-4 gap-3 w-full"
+          className="bg-canvas-floating border border-border-strong rounded-sm p-4 gap-3 w-full"
           style={{ maxWidth: 320, ...shadow.floating }}
         >
           <View className="gap-1">

@@ -52,9 +52,9 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, on
         floating ? { paddingBottom: FLOAT_BUFFER, marginBottom: -FLOAT_BUFFER } : null,
       ]}
     >
-      <Surface
+      <View
         onLayout={(e) => setChipBarHeight(e.nativeEvent.layout.height)}
-        className="flex-row p-2 gap-2 items-center"
+        className="flex-row gap-2 items-center"
       >
         {leading}
         <View className="flex-1 flex-row gap-1">
@@ -70,7 +70,7 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, on
           ))}
         </View>
         {trailing}
-      </Surface>
+      </View>
       {panel && (
         <Surface
           variant="floating"
