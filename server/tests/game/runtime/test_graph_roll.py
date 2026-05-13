@@ -5,7 +5,12 @@ from src.game.domain.action import Action
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.runtime.confirmation import run_graph_action_request
-from src.game.runtime.roll import GraphRollExpected, run_graph_roll, start_graph_roll
+from src.game.runtime.roll import (
+    GraphRollExpected,
+    build_pending_roll,
+    run_graph_roll,
+    start_graph_roll,
+)
 
 
 def _character(character_id: str) -> GraphNode:
@@ -70,6 +75,26 @@ async def test_start_graph_roll_stores_pending_roll_without_log(tmp_path):
     assert logs == []
 
 
+def test_build_pending_roll_stores_original_action_payload():
+    pending = build_pending_roll(
+        _character("player_01").properties,
+        Action(verb="perceive", what="town"),
+    )
+
+    assert pending["payload"] == {
+        "kind": "graph_action",
+        "action": {
+            "verb": "perceive",
+            "what": "town",
+            "from": None,
+            "to": None,
+            "with": None,
+            "how": None,
+            "note": None,
+        },
+    }
+
+
 async def test_graph_action_request_perceive_creates_pending_roll(tmp_path):
     repo = await _repo(tmp_path)
 
@@ -110,3 +135,26 @@ async def test_run_graph_roll_requires_matching_pending_id(tmp_path):
 
     with pytest.raises(GraphRollExpected):
         await run_graph_roll(repo, "game-1", "missing", dice=13)
+
+
+async def test_run_graph_roll_requires_stored_action_payload(tmp_path):
+    repo = await _repo(tmp_path)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(
+            update={
+                "pending_roll": {
+                    "id": "roll_1",
+                    "kind": "perceive",
+                    "title": "지력 판정이 필요합니다",
+                    "body": "주변을 자세히 살핍니다.",
+                    "stat": "mind",
+                    "stat_label": "지력",
+                    "required_roll": 13,
+                }
+            }
+        )
+    )
+
+    with pytest.raises(GraphRollExpected, match="pending graph action missing"):
+        await run_graph_roll(repo, "game-1", "roll_1", dice=13)

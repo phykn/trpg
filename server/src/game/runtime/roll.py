@@ -82,6 +82,7 @@ async def run_graph_roll(
     if pending.get("id") != roll_id:
         raise GraphRollExpected("roll id mismatch")
 
+    action = _pending_action(pending)
     required_roll = _int(pending.get("required_roll"), "required_roll")
     rolled = dice if dice is not None else random.randint(1, 20)
     if rolled < 1 or rolled > 20:
@@ -118,6 +119,7 @@ async def run_graph_roll(
     await repo.save_progress(next_progress)
     engine_diag(
         "roll:done",
+        action=action.verb,
         result=entry.result,
         rolled=rolled,
         required=required_roll,
@@ -180,6 +182,16 @@ def _roll_result(grade: str) -> str:
     if grade == "partial_success":
         return "partial"
     return "fail"
+
+
+def _pending_action(pending: dict[str, Any]) -> Action:
+    payload = pending.get("payload")
+    if not isinstance(payload, dict) or payload.get("kind") != "graph_action":
+        raise GraphRollExpected("pending graph action missing")
+    action_data = payload.get("action")
+    if not isinstance(action_data, dict):
+        raise GraphRollExpected("pending action missing")
+    return Action.model_validate(action_data)
 
 
 def _int(value: object, field: str) -> int:
