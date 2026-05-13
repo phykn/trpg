@@ -2,8 +2,6 @@ import secrets
 from collections.abc import AsyncIterator
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
-
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
 from src.game.domain.content import node_label
@@ -13,14 +11,17 @@ from src.game.domain.graph_query import location_of
 from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, set_diag_context
 from src.locale.render import render
-from src.wire.graph_to_front import GraphFrontStatePayload, graph_to_front_state
+from src.wire.graph_to_front import graph_to_front_state
 
-from .dispatch import (
-    GraphActionDispatchResult,
-)
 from .load import load_runtime_state
+from .request_result import (
+    GraphActionRequestResult,
+    answered_result,
+    cancelled_result,
+    confirmation_required_result,
+    executed_result,
+)
 from .state import GameRuntimeState
-from .suggestions import GraphSuggestionValue
 from .turn import (
     GraphActionTurnError,
     run_graph_action_turn,
@@ -30,14 +31,6 @@ from .turn import (
 
 
 Decision = Literal["confirm", "cancel"]
-GraphRequestStatus = Literal[
-    "executed",
-    "confirmation_required",
-    "roll_required",
-    "cancelled",
-    "answered",
-    "rejected",
-]
 
 
 class GraphConfirmationError(ValueError):
@@ -50,19 +43,6 @@ class GraphConfirmationActive(GraphConfirmationError):
 
 class GraphConfirmationExpected(GraphConfirmationError):
     pass
-
-
-class GraphActionRequestResult(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    runtime: GameRuntimeState
-    status: GraphRequestStatus
-    front_state: GraphFrontStatePayload
-    pending_confirmation: dict[str, Any] | None = None
-    pending_roll: dict[str, Any] | None = None
-    dispatch: GraphActionDispatchResult | None = None
-    message: str | None = None
-    suggestions: list[GraphSuggestionValue] = Field(default_factory=list)
 
 
 async def run_graph_action_request(
@@ -97,11 +77,10 @@ async def run_graph_action_request(
         from .query import answer_graph_query
 
         engine_diag("action:done", status="answered", action=action.verb)
-        return GraphActionRequestResult(
-            runtime=runtime,
-            status="answered",
-            front_state=graph_to_front_state(runtime),
-            message=answer_graph_query(runtime, action),
+        return answered_result(
+            runtime,
+            graph_to_front_state(runtime),
+            answer_graph_query(runtime, action),
         )
 
     pending = build_graph_action_confirmation(runtime, action)
@@ -114,10 +93,9 @@ async def run_graph_action_request(
             scenario_repo=scenario_repo,
         )
         engine_diag("action:done", status="executed", action=action.verb)
-        return GraphActionRequestResult(
-            runtime=result.runtime,
-            status="executed",
-            front_state=result.front_state,
+        return executed_result(
+            result.runtime,
+            result.front_state,
             dispatch=result.dispatch,
             suggestions=result.suggestions,
         )
@@ -133,11 +111,10 @@ async def run_graph_action_request(
         action=action.verb,
         confirmation=pending.get("kind"),
     )
-    return GraphActionRequestResult(
-        runtime=next_runtime,
-        status="confirmation_required",
-        front_state=graph_to_front_state(next_runtime),
-        pending_confirmation=pending,
+    return confirmation_required_result(
+        next_runtime,
+        graph_to_front_state(next_runtime),
+        pending,
     )
 
 
@@ -177,11 +154,10 @@ async def run_graph_action_request_stream(
         engine_diag("action:done", status="answered", action=action.verb)
         yield {
             "type": "final",
-            "result": GraphActionRequestResult(
-                runtime=runtime,
-                status="answered",
-                front_state=graph_to_front_state(runtime),
-                message=answer_graph_query(runtime, action),
+            "result": answered_result(
+                runtime,
+                graph_to_front_state(runtime),
+                answer_graph_query(runtime, action),
             ),
         }
         return
@@ -200,10 +176,9 @@ async def run_graph_action_request_stream(
                 engine_diag("action:done", status="executed", action=action.verb)
                 yield {
                     "type": "final",
-                    "result": GraphActionRequestResult(
-                        runtime=turn_result.runtime,
-                        status="executed",
-                        front_state=turn_result.front_state,
+                    "result": executed_result(
+                        turn_result.runtime,
+                        turn_result.front_state,
                         dispatch=turn_result.dispatch,
                         suggestions=turn_result.suggestions,
                     ),
@@ -225,11 +200,10 @@ async def run_graph_action_request_stream(
     )
     yield {
         "type": "final",
-        "result": GraphActionRequestResult(
-            runtime=next_runtime,
-            status="confirmation_required",
-            front_state=graph_to_front_state(next_runtime),
-            pending_confirmation=pending,
+        "result": confirmation_required_result(
+            next_runtime,
+            graph_to_front_state(next_runtime),
+            pending,
         ),
     }
 
@@ -263,10 +237,9 @@ async def run_graph_confirm(
     if decision == "cancel":
         await repo.save_progress(cleared_progress)
         engine_diag("confirm:done", status="cancelled")
-        return GraphActionRequestResult(
-            runtime=cleared_runtime,
-            status="cancelled",
-            front_state=graph_to_front_state(cleared_runtime),
+        return cancelled_result(
+            cleared_runtime,
+            graph_to_front_state(cleared_runtime),
         )
 
     action = _pending_action(pending)
@@ -282,10 +255,9 @@ async def run_graph_confirm(
         raise GraphConfirmationError(str(exc)) from exc
 
     engine_diag("confirm:done", status="executed")
-    return GraphActionRequestResult(
-        runtime=result.runtime,
-        status="executed",
-        front_state=result.front_state,
+    return executed_result(
+        result.runtime,
+        result.front_state,
         dispatch=result.dispatch,
         suggestions=result.suggestions,
     )
@@ -322,10 +294,9 @@ async def run_graph_confirm_stream(
         engine_diag("confirm:done", status="cancelled")
         yield {
             "type": "final",
-            "result": GraphActionRequestResult(
-                runtime=cleared_runtime,
-                status="cancelled",
-                front_state=graph_to_front_state(cleared_runtime),
+            "result": cancelled_result(
+                cleared_runtime,
+                graph_to_front_state(cleared_runtime),
             ),
         }
         return
@@ -344,10 +315,9 @@ async def run_graph_confirm_stream(
                 engine_diag("confirm:done", status="executed")
                 yield {
                     "type": "final",
-                    "result": GraphActionRequestResult(
-                        runtime=turn_result.runtime,
-                        status="executed",
-                        front_state=turn_result.front_state,
+                    "result": executed_result(
+                        turn_result.runtime,
+                        turn_result.front_state,
                         dispatch=turn_result.dispatch,
                         suggestions=turn_result.suggestions,
                     ),
