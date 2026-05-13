@@ -69,6 +69,13 @@ def test_generates_pending_hunt_offer_when_no_work_exists():
     result = plan_missing_quest_offer(_graph_without_work(), "player_01")
 
     assert result is not None
+    assert result.template == "hunt"
+    assert result.generated_ids == {
+        "quest": "auto_quest_001",
+        "giver": "auto_giver_001",
+        "enemy": "auto_enemy_001",
+        "reward": "auto_reward_001",
+    }
     assert {change.type for change in result.changes} == {"add_node", "add_edge"}
     graph = _apply_all(_graph_without_work(), result.changes)
     quest = graph.nodes[result.quest_id]
