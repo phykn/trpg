@@ -9,28 +9,28 @@ export function buildCombatActions(combat: CombatBadge): PanelAction[] {
   const targetId = typeof target.id === 'string' && target.id ? target.id : target.name;
   return [
     {
-      kind: 'graph_action',
+      kind: 'combat_command',
       label: ko.combat.attack,
-      graphAction: { verb: 'attack', what: targetId },
+      combatCommand: { command: 'attack', target_id: targetId },
       textFallback: compose.attack(target.name),
     },
     {
-      kind: 'graph_action',
+      kind: 'combat_command',
+      label: ko.combat.skill,
+      combatCommand: { command: 'skill', target_id: targetId },
+      textFallback: ko.combat.skillFallback,
+    },
+    {
+      kind: 'combat_command',
       label: ko.combat.defend,
-      graphAction: { verb: 'pass', how: 'defend' },
+      combatCommand: { command: 'defend' },
       textFallback: compose.defend(),
     },
     {
-      kind: 'graph_action',
+      kind: 'combat_command',
       label: ko.combat.flee,
-      graphAction: { verb: 'move', how: 'flee' },
+      combatCommand: { command: 'flee' },
       textFallback: compose.flee(),
-    },
-    {
-      kind: 'graph_action',
-      label: ko.combat.persuade,
-      graphAction: { verb: 'speak', to: targetId },
-      textFallback: compose.persuade(target.name),
     },
   ];
 }

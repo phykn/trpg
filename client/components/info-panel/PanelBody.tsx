@@ -81,7 +81,7 @@ function HeaderTitleGroup({ panel }: { panel: Panel }) {
           style={{
             paddingHorizontal: 10,
             paddingVertical: 4,
-            borderRadius: 9999,
+            borderRadius: 2,
             backgroundColor: colors.accent.muted,
             borderWidth: 1,
             borderColor: colors.accent.fg,

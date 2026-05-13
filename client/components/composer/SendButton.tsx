@@ -17,7 +17,7 @@ export function SendButton({ enabled, onPress }: {
       accessibilityLabel={ko.composer.sendAction}
       accessibilityState={{ disabled: !enabled }}
       testID="send-button"
-      className={`items-center justify-center h-10 px-3 rounded-md ${bgClass} ${enabled ? 'active:opacity-80' : ''}`}
+      className={`items-center justify-center h-10 px-3 rounded-sm ${bgClass} ${enabled ? 'active:opacity-80' : ''}`}
       style={{ minWidth: 48 }}
     >
       <Text className="font-sans-semibold text-panel" style={{ color: stroke }}>

@@ -164,6 +164,8 @@ function adaptCombat(combat: GraphCombatState | null): FrontState['combat'] {
     turnLabel: ko.combat.label,
     playerHearts: combat.playerHearts,
     enemyHearts: combat.enemyHearts,
+    lastRoll: combat.lastRoll ?? null,
+    lastDc: combat.lastDc ?? null,
     enemies: combat.participants
       .filter((participant) => participant.side === 'enemy')
       .map((enemy) => ({

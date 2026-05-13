@@ -2,7 +2,7 @@ import { buildCombatActions } from '../actions';
 import type { CombatBadge } from '../types';
 
 describe('buildCombatActions', () => {
-  test('builds simple graph actions for the first live enemy', () => {
+  test('builds four combat command actions for the first live enemy', () => {
     const combat: CombatBadge = {
       round: 2,
       turnLabel: '전투 중',
@@ -17,28 +17,28 @@ describe('buildCombatActions', () => {
 
     expect(actions).toEqual([
       expect.objectContaining({
-        kind: 'graph_action',
+        kind: 'combat_command',
         label: '공격',
-        graphAction: { verb: 'attack', what: 'enemy_01' },
+        combatCommand: { command: 'attack', target_id: 'enemy_01' },
         textFallback: '늑대를 공격합니다',
       }),
       expect.objectContaining({
-        kind: 'graph_action',
+        kind: 'combat_command',
+        label: '기술',
+        combatCommand: { command: 'skill', target_id: 'enemy_01' },
+        textFallback: '기술을 사용합니다',
+      }),
+      expect.objectContaining({
+        kind: 'combat_command',
         label: '방어',
-        graphAction: { verb: 'pass', how: 'defend' },
+        combatCommand: { command: 'defend' },
         textFallback: '방어합니다',
       }),
       expect.objectContaining({
-        kind: 'graph_action',
+        kind: 'combat_command',
         label: '도주',
-        graphAction: { verb: 'move', how: 'flee' },
+        combatCommand: { command: 'flee' },
         textFallback: '도망칩니다',
-      }),
-      expect.objectContaining({
-        kind: 'graph_action',
-        label: '설득',
-        graphAction: { verb: 'speak', to: 'enemy_01' },
-        textFallback: '늑대를 설득합니다',
       }),
     ]);
   });

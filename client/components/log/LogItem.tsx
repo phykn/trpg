@@ -1,6 +1,5 @@
-import { Animated, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { Glyph, Surface, useEntryAnimation } from '@/components/ui';
 import { colors, spacing } from '@/design/tokens';
 
 import { RollResult } from './RollResult';
@@ -13,7 +12,7 @@ export function LogItem({ entry }: { entry: LogEntry }) {
     case 'player':
       return <PlayerMessage text={entry.text} />;
     case 'act':
-      return <ActDivider text={entry.text} />;
+      return null;
     case 'roll':
       return <RollResult entry={entry} />;
     default:
@@ -95,21 +94,5 @@ function PlayerMessage({ text }: { text: string }) {
         {text}
       </Text>
     </View>
-  );
-}
-
-function ActDivider({ text }: { text: string }) {
-  const { scale, opacity } = useEntryAnimation();
-  return (
-    <Animated.View style={{ transform: [{ scale }], opacity }}>
-      <Surface
-        className="px-3 py-2.5 flex-row items-start gap-2"
-      >
-        <Glyph kind="filled" tone="accent" size={11} style={{ lineHeight: 20 }} />
-        <Text className="font-sans-medium text-body text-fg-default flex-1">
-          {text}
-        </Text>
-      </Surface>
-    </Animated.View>
   );
 }

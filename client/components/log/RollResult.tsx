@@ -1,6 +1,6 @@
 import { Animated, Text, View } from 'react-native';
 
-import { Glyph, Surface, signed, useEntryAnimation } from '@/components/ui';
+import { signed, useEntryAnimation } from '@/components/ui';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 
@@ -31,62 +31,49 @@ export function RollResult({ entry }: { entry: RollEntry }) {
 
   return (
     <Animated.View style={{ transform: [{ scale }], opacity }}>
-      <Surface
-        stripeColor={tone.color}
-        className="px-3 py-2.5"
+      <View
+        className="flex-row items-center"
+        style={{
+          borderLeftWidth: 2,
+          borderLeftColor: tone.color,
+          paddingLeft: 12,
+          gap: 8,
+        }}
       >
-        <View className="flex-row items-center" style={{ gap: 8 }}>
-          <View
-            className="px-2 py-0.5 rounded-full flex-row items-center"
-            style={{ backgroundColor: `${tone.color}26`, gap: 5 }}
-          >
-            <Glyph kind="filled" color={tone.color} size={8} />
-            <Text
-              className={`font-sans-bold text-caption uppercase ${tone.cls}`}
-              style={{ letterSpacing: 1.2 }}
-            >
-              {tone.label}
-            </Text>
-          </View>
+        <Text
+          className={`font-sans-bold text-caption ${tone.cls}`}
+        >
+          {tone.label}
+        </Text>
+        <Text
+          className="font-sans-semibold text-caption text-fg-muted flex-1"
+          numberOfLines={1}
+        >
+          {entry.check}
+        </Text>
+        <Text
+          className="font-mono-semibold text-caption text-fg-default"
+          style={{ fontVariant: ['tabular-nums'] }}
+        >
+          d20 {entry.roll}
+        </Text>
+        {totalBonus !== 0 && (
           <Text
-            className="font-sans-semibold text-panel text-fg-subtle"
-            style={{ letterSpacing: 1.2 }}
-            numberOfLines={1}
-          >
-            {entry.check}
-          </Text>
-          <Text className="font-mono text-panel text-fg-subtle">·</Text>
-          <Text
-            className="font-sans-semibold text-panel text-fg-subtle"
-            style={{ letterSpacing: 1.2 }}
-          >
-            {ko.roll.die}
-          </Text>
-          <Text
-            className="font-mono-semibold text-panel text-fg-default"
+            className="font-mono text-caption text-fg-muted"
             style={{ fontVariant: ['tabular-nums'] }}
           >
-            {entry.roll}
+            ({signed(totalBonus)})
           </Text>
-          {totalBonus !== 0 && (
-            <Text
-              className="font-mono text-panel text-fg-muted"
-              style={{ fontVariant: ['tabular-nums'] }}
-            >
-              ({signed(totalBonus)})
-            </Text>
-          )}
-          <View style={{ flex: 1 }} />
-          {margin !== null && (
-            <Text
-              className={`font-sans-medium text-caption ${tone.cls}`}
-              style={{ fontVariant: ['tabular-nums'] }}
-            >
-              {margin}
-            </Text>
-          )}
-        </View>
-      </Surface>
+        )}
+        {margin !== null && (
+          <Text
+            className={`font-sans-medium text-caption ${tone.cls}`}
+            style={{ fontVariant: ['tabular-nums'] }}
+          >
+            {margin}
+          </Text>
+        )}
+      </View>
     </Animated.View>
   );
 }

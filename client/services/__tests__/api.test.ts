@@ -17,6 +17,7 @@ const {
   requestGraphIntro,
   rollGraphPending,
   sendGraphAction,
+  sendGraphCombatCommand,
   sendGraphInput,
   sendGraphLevelUp,
 } = require('../api') as typeof import('../api');
@@ -113,6 +114,36 @@ describe('graph API helpers', () => {
       }),
     );
     expect(result.status).toBe('confirmation_required');
+  });
+
+  test('posts combat commands to the graph combat endpoint', async () => {
+    fetch.mockResolvedValueOnce(
+      streamResponse([
+        JSON.stringify({
+          type: 'final',
+          payload: {
+            game_id: 'game-1',
+            state: graphState(),
+            status: 'executed',
+            message: null,
+          },
+        }),
+      ]),
+    );
+
+    const result = await sendGraphCombatCommand('game-1', {
+      command: 'attack',
+      target_id: 'enemy_01',
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/graph/combat/stream',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ command: 'attack', target_id: 'enemy_01' }),
+      }),
+    );
+    expect(result.status).toBe('executed');
   });
 
   test('streams graph action narration deltas before the final payload', async () => {

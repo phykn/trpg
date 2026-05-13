@@ -1,24 +1,24 @@
 // Design tokens consumed by tailwind.config.js (Node/CJS) and TS via tokens.d.ts. Naming follows GitHub Primer.
 const colors = {
   canvas: {
-    default: '#14110f',
-    subtle: '#25211d',
-    inset: '#1b1714',
-    floating: '#2b2621',
+    default: '#0b0c0a',
+    subtle: '#12110e',
+    inset: '#0f0e0c',
+    floating: '#12110e',
   },
   fg: {
-    default: '#faf9f5',
-    muted: '#a9a099',
-    subtle: '#746d66',
-    'on-emphasis': '#14110f',
+    default: '#f7efe4',
+    muted: '#9c9184',
+    subtle: '#6f675f',
+    'on-emphasis': '#0b0c0a',
   },
   border: {
-    default: 'rgba(230,223,216,0.14)',
-    strong: 'rgba(230,223,216,0.26)',
+    default: 'rgba(236,225,211,0.16)',
+    strong: 'rgba(236,225,211,0.32)',
   },
   accent: {
-    fg: '#cc785c',
-    muted: 'rgba(204,120,92,0.16)',
+    fg: '#d27d5f',
+    muted: 'rgba(210,125,95,0.14)',
   },
   danger: { fg: '#b5534a' },
   success: { fg: '#7b8c70' },
@@ -48,10 +48,10 @@ const spacing = {
 
 const radius = {
   none: 0,
-  sm: 4,
-  md: 8,
-  lg: 10,
-  xl: 12,
+  sm: 2,
+  md: 2,
+  lg: 2,
+  xl: 2,
   full: 9999,
 };
 
@@ -70,11 +70,11 @@ const fontFamily = {
 };
 
 const fontSize = {
-  meta:      ['10px', { lineHeight: '12px', letterSpacing: '1.2px' }],
-  caption:   ['11px', { lineHeight: '14px', letterSpacing: '0.3px' }],
+  meta:      ['10px', { lineHeight: '12px', letterSpacing: '0px' }],
+  caption:   ['11px', { lineHeight: '14px', letterSpacing: '0px' }],
   panel:     ['12px', { lineHeight: '18px', letterSpacing: '0px' }],
   body:      ['13px', { lineHeight: '20px', letterSpacing: '0px' }],
-  title:     ['15px', { lineHeight: '21px', letterSpacing: '-0.1px' }],
+  title:     ['15px', { lineHeight: '21px', letterSpacing: '0px' }],
   lead:      ['17px', { lineHeight: '28px', letterSpacing: '0px' }],
   narration: ['20px', { lineHeight: '34px', letterSpacing: '0px' }],
 };

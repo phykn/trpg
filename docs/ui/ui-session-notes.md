@@ -44,13 +44,13 @@ The screen should feel like a polished text TRPG client, not a fantasy illustrat
 
 ## Top Pill Behavior
 
-Top pills are `주인공 / NPC / 미니맵`. The old `주변` pill should not return.
+Top tools are `지도 / 노트 / 시트`. The old `주변` pill should not return, and NPC/quest detail should stay folded inside `노트`.
 
 When a top pill is opened, its panel overlays the existing screen. It must not push the hero strip, log, or composer down. The background remains the normal play screen behind the opened panel.
 
 The panel should feel like it opens from the top chip row, not like a separate modal window. Use a floating surface positioned below the chips.
 
-### 주인공 Panel
+### 시트 Panel
 
 Use the original client structure as the source of truth. The relevant code path is:
 
@@ -70,11 +70,21 @@ The panel should show:
 - Companions.
 - Traits/status.
 
-Do not show inventory/equipment action buttons inside the main `주인공` top-pill panel for this design pass. The user explicitly asked to delete the sample `집중 부적 사용` / `훈련 단검 해제` action row from the top panel.
+Do not show inventory/equipment action buttons inside the main `시트` panel for this design pass. The user explicitly asked to delete the sample `집중 부적 사용` / `훈련 단검 해제` action row from the top panel.
 
 The compact always-visible hero strip can still show `체력`, `마나`, `경험`, `소생` with numbers and bars.
 
-### NPC Panel
+### 노트 Panel
+
+The note panel folds current NPC, active quest, and quest offer information into one reference surface. It should read like a quick notebook, not a separate dashboard.
+
+The panel should show:
+
+- Current NPC summary and known facts, when a subject exists.
+- Active quest goals and summary, when a quest exists.
+- First available quest offer summary and accept action, when no active quest exists.
+
+### Legacy NPC Panel Reference
 
 Use the original client subject panel structure as the source of truth. The relevant code path is:
 
@@ -97,7 +107,7 @@ The panel should show:
 
 Do not reduce this to a list of NPC cards. The user specifically wants the stat/inventory/detail shape from the original client.
 
-### 미니맵 Panel
+### 지도 Panel
 
 The minimap should be a visual map, not a grid of place cards.
 
@@ -156,11 +166,13 @@ Combat panel rules:
 - Show combat context, e.g. `2번째 교환 · 가까운 거리`.
 - Show player/enemy hearts on the right side of the combat panel header.
 - No extra instruction line like `다음 행동을 고르거나 직접 입력합니다.`
-- Action buttons should evenly fill the width: `공격`, `방어`, `도주`, `설득`.
+- Action buttons should evenly fill the width: `공격`, `기술`, `방어`, `도주`.
+- `기술` should execute immediately and let the server choose a usable scene-fitting skill automatically.
+- Roll panels and resolving combat actions should use the same compact animated d20 treatment.
 
 ## System Cards
 
-System cards remain in the log stream, not in the composer area.
+Server action logs remain available as history data, but the main conversation should not render them as visible system cards.
 
 Use them for:
 
@@ -224,14 +236,14 @@ Implemented touch points:
 
 - `client/design/tokens.js` now uses a warm dark product surface, muted coral accent, warm borders, and larger but still restrained radii.
 - `client/components/ui/Surface.tsx`, `Chip.tsx`, `Bar.tsx`, `InlineNodes.tsx`, and `LabeledRow.tsx` were adjusted so the shared atoms support the warmer direction and wrapped stat pills.
-- `client/components/info-panel/ContextCard.tsx` shows only `주인공 / NPC / 미니맵` and opens panels as floating overlays below the chip row.
-- `client/logic/hero/panel.ts` keeps the detailed hero panel but removes inventory/equipment action rows from the top-pill panel.
-- `client/logic/subject/panel.ts` remains the source for the detailed NPC panel; its chip label is now `NPC`.
+- `client/components/info-panel/ContextCard.tsx` shows only `지도 / 노트 / 시트` and opens panels as floating overlays below the chip row.
+- `client/logic/hero/panel.ts` keeps the detailed hero panel under the `시트` chip and removes inventory/equipment action rows from the top panel.
+- `client/logic/info-panel/panels.ts` folds NPC and quest details into the `노트` chip.
 - `client/components/story-graph/MiniMapPanel.tsx` uses the full map panel instead of the neighborhood card list.
 - `client/components/hero/HeroStrip.tsx` shows hero name/meta, 소지금, and numbered `체력 / 마나 / 경험 / 소생` meters.
 - `client/components/composer/Composer.tsx` owns the nearby summary line and expands a nearby panel above the composer without covering the input.
 - `client/logic/story-graph/nearby.ts` builds the one-hop nearby summary and action rows from the story graph.
-- `client/components/combat/CombatStrip.tsx` replaces the composer during combat, shows opponent context and hearts, and stretches `공격 / 방어 / 도주 / 설득` evenly.
+- `client/components/combat/CombatStrip.tsx` replaces the composer during combat, shows opponent context and hearts, stretches `공격 / 기술 / 방어 / 도주` evenly, shows the compact d20 while an action is resolving, and shows the latest success/fail result inline after the server returns `lastRoll` and `lastDc`.
 - `client/components/log/Log.tsx` and `LogItem.tsx` remove bottom suggestion strips and make player log entries follow the GM narration rhythm.
 
 Implemented pending-roll contract:

@@ -14,7 +14,7 @@ export function ErrorState({ message, onRetry }: Props) {
       <View className="items-center gap-1">
         <Text
           className="font-sans-semibold text-meta text-danger-fg"
-          style={{ letterSpacing: 1.2 }}
+          style={{ letterSpacing: 0 }}
         >
           {ko.error.heading}
         </Text>
@@ -26,7 +26,7 @@ export function ErrorState({ message, onRetry }: Props) {
         onPress={onRetry}
         accessibilityRole="button"
         accessibilityLabel={ko.error.retry}
-        className="px-4 h-9 mt-2 rounded-md bg-canvas-inset border border-border-default items-center justify-center active:bg-border-default"
+        className="px-4 h-9 mt-2 rounded-sm bg-canvas-inset border border-border-default items-center justify-center active:bg-border-default"
       >
         <Text className="font-sans-medium text-body text-fg-default">{ko.error.retry}</Text>
       </Pressable>

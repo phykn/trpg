@@ -112,7 +112,7 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
   };
 
   return (
-    <View className="mx-5 mt-1.5 gap-2" style={{ zIndex: isNearbyOpen ? 8 : 0 }}>
+    <View className="mt-1.5 gap-2 border-t border-border-default bg-canvas-default px-5 pt-2.5 pb-3" style={{ zIndex: isNearbyOpen ? 8 : 0 }}>
       {isNearbyOpen && nearby && nearby.items.length > 0 ? (
         <Surface className="px-2.5 py-2 gap-1.5">
           {nearby.items.map((item) => {
@@ -149,7 +149,7 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
                   }}
                   accessibilityRole="button"
                   accessibilityLabel={`${item.title} ${item.action.label}`}
-                  className="min-w-14 items-center rounded-full border border-accent-fg bg-accent-muted px-3 py-1.5 active:opacity-80"
+                  className="min-w-14 items-center rounded-sm border border-accent-fg bg-accent-muted px-3 py-1.5 active:opacity-80"
                 >
                   <Text className="font-sans-semibold text-caption text-accent-fg">
                     {item.action.label}
@@ -161,7 +161,7 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
           })}
         </Surface>
       ) : null}
-      <Surface className="px-2.5 py-2 gap-1.5">
+      <View className="gap-2">
         {nearby ? (
           <Pressable
             onPress={() => {
@@ -185,7 +185,7 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
                 disabled={action.disabled}
                 accessibilityRole="button"
                 accessibilityLabel={action.label}
-                className={`rounded-full border border-accent-fg bg-accent-muted px-3 py-1.5 active:opacity-80 ${action.disabled ? 'opacity-50' : ''}`}
+                className={`rounded-sm border border-accent-fg bg-accent-muted px-3 py-1.5 active:opacity-80 ${action.disabled ? 'opacity-50' : ''}`}
               >
                 <Text className="font-sans-semibold text-caption text-accent-fg">
                   {action.label}
@@ -198,7 +198,7 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
                 onPress={() => sendText(suggestion.inputText)}
                 accessibilityRole="button"
                 accessibilityLabel={suggestion.label}
-                className="rounded-full border border-border-default bg-canvas-inset px-3 py-1.5 active:bg-canvas-subtle"
+                className="rounded-sm border border-border-default bg-canvas-inset px-3 py-1.5 active:bg-canvas-subtle"
               >
                 <Text className="font-sans-semibold text-caption text-fg-default">
                   {suggestion.label}
@@ -239,7 +239,7 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
             <SendButton enabled={hasText} onPress={submit} />
           )}
         </View>
-      </Surface>
+      </View>
     </View>
   );
 }

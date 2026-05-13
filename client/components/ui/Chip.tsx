@@ -18,7 +18,7 @@ function TabChip({ label, active, dot, onPress }: {
   dot?: boolean;
   onPress: () => void;
 }) {
-  const bg = active ? 'bg-accent-muted border-accent-fg' : 'bg-canvas-inset border-border-default active:bg-canvas-subtle';
+  const bg = active ? 'bg-accent-muted border-accent-fg' : 'bg-transparent border-border-default active:bg-canvas-subtle';
   const fontWeight = active ? 'font-sans-semibold' : 'font-sans-medium';
   const color = active ? 'text-fg-default' : 'text-fg-muted';
   return (
@@ -27,7 +27,7 @@ function TabChip({ label, active, dot, onPress }: {
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected: active }}
-      className={`flex-1 min-w-0 h-8 px-2 flex-row items-center justify-center gap-1.5 rounded-full border ${bg}`}
+      className={`flex-1 min-w-0 h-8 px-2 flex-row items-center justify-center gap-1.5 rounded-sm border ${bg}`}
     >
       <Text numberOfLines={1} className={`text-caption ${fontWeight} ${color}`}>
         {label}

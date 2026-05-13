@@ -11,8 +11,8 @@ type SurfaceProps = {
   children: React.ReactNode;
 } & Omit<ViewProps, 'style' | 'children' | 'className'>;
 
-const PAPER_CLASS = 'bg-canvas-subtle border border-border-default rounded-lg';
-const FLOATING_CLASS = 'bg-canvas-floating border border-border-strong rounded-lg';
+const PAPER_CLASS = 'bg-canvas-subtle border border-border-default rounded-sm';
+const FLOATING_CLASS = 'bg-canvas-floating border border-border-strong rounded-sm';
 
 export function Surface({
   variant = 'paper',

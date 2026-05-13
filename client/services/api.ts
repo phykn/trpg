@@ -3,6 +3,7 @@ import { fetch } from 'expo/fetch';
 import { adaptGraphState, deriveGraphSuggestions } from './graphAdapter';
 import { normalizeGraphSuggestion } from './suggestions';
 import type {
+  CombatCommand,
   ConfirmRequest,
   GraphAction,
   GraphActionClientResponse,
@@ -230,6 +231,20 @@ export async function sendGraphAction(
     `/session/${gameId}/graph/turn/stream`,
     `/session/${gameId}/graph/turn`,
     { action },
+    options,
+  );
+}
+
+export async function sendGraphCombatCommand(
+  gameId: string,
+  command: CombatCommand,
+  options: ApiRequestOptions = {},
+): Promise<GraphActionClientResponse> {
+  return requestGraphActionWithOptionalStream(
+    'sendGraphCombatCommand',
+    `/session/${gameId}/graph/combat/stream`,
+    `/session/${gameId}/graph/combat`,
+    command,
     options,
   );
 }

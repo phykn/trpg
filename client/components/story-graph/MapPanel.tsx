@@ -22,6 +22,8 @@ export function MapPanel({
   actionDisabled = false,
   unseenNodeIds,
   onNodeSeen,
+  showSelectedDetails = true,
+  frameTopBorder = true,
 }: {
   graph: StoryGraphModel;
   framed?: boolean;
@@ -32,6 +34,8 @@ export function MapPanel({
   actionDisabled?: boolean;
   unseenNodeIds?: Set<string>;
   onNodeSeen?: (id: string) => void;
+  showSelectedDetails?: boolean;
+  frameTopBorder?: boolean;
 }) {
   const placeStates = React.useMemo<Record<string, PlaceState>>(() => {
     return Object.fromEntries(
@@ -100,6 +104,10 @@ export function MapPanel({
     return '';
   })();
 
+  const framedClass = frameTopBorder
+    ? 'border border-border-default'
+    : 'border-l border-r border-b border-border-default';
+
   return (
     <View>
       {!framed && (
@@ -112,7 +120,7 @@ export function MapPanel({
       )}
       <View
         accessibilityLabel={`${accessibilityLabel}. ${visibleGraph.summary}`}
-        className={`${framed ? 'border border-border-default rounded-md bg-canvas-subtle px-3 py-3' : 'px-4 pt-2 pb-3'} gap-2`}
+        className={`${framed ? `${framedClass} rounded-sm bg-canvas-inset px-3 py-3` : 'px-4 pt-2 pb-3'} gap-2`}
       >
         <View style={{ aspectRatio: 1.618 }}>
           <StoryGraphCanvas
@@ -128,7 +136,7 @@ export function MapPanel({
           />
         </View>
 
-        {selectedNode ? (
+        {showSelectedDetails && selectedNode ? (
           <View className="border-t border-border-default pt-2.5 gap-2">
             <View className="gap-2.5">
               <View
@@ -145,7 +153,7 @@ export function MapPanel({
                         disabled={actionDisabled}
                         accessibilityRole="button"
                         accessibilityLabel={`${selectedNode.label} ${action.label}`}
-                        className={`rounded-full px-3.5 py-1 ${actionDisabled ? 'bg-accent-muted opacity-60' : 'bg-accent-muted active:opacity-80'}`}
+                        className={`rounded-sm border border-accent-fg px-3 py-1 ${actionDisabled ? 'bg-accent-muted opacity-60' : 'bg-accent-muted active:opacity-80'}`}
                       >
                         <Text className="font-sans-semibold text-caption text-accent-fg">
                           {actionDisabled ? ko.status.busy : action.label}

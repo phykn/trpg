@@ -46,6 +46,12 @@ export const ko = {
     talk: '대화',
     inspect: '살펴보기',
   },
+  table: {
+    map: '지도',
+    notes: '노트',
+    sheet: '시트',
+    noNotes: '기록된 노트가 없습니다',
+  },
   legend: {
     place: '장소',
     character: '캐릭터',
@@ -73,6 +79,7 @@ export const ko = {
     rolling: '굴리는 중…',
     rollingLog: '주사위를 굴리는 중…',
     rollingLabel: '주사위 굴리는 중',
+    rollingDetail: '결과는 다음 GM 묘사로 이어집니다.',
     rollLabel: '주사위 굴리기',
     halt: '정지',
     success: '성공',
@@ -135,10 +142,15 @@ export const ko = {
     label: '전투',
     attack: '공격',
     defend: '방어',
+    skill: '기술',
+    skillFallback: '기술을 사용합니다',
+    attackRoll: '공격 판정',
+    actionRollDetail: '같은 d20 연출을 전투 카드 안에서 사용합니다.',
     flee: '도주',
     persuade: '설득',
     playerHearts: '내 하트',
     enemyHearts: '적 하트',
+    player: '당신',
   },
   menu: {
     newGame: '새로운 이야기',
@@ -203,11 +215,14 @@ export const compose = {
   unequipItem: (name: string) => `${name} 해제`,
   deceased: (name: string) => `${name} (죽음)`,
   here: (label: string) => `현재 ${label}`,
+  currentLocation: (label: string) => `현재 위치 · ${label}`,
+  neighborhoodMap: (label: string) => `${label} 주변 지도`,
   placeCount: (n: number) => `장소 ${n}곳`,
   reachableCount: (n: number) => `이동 가능 ${n}`,
   affinity: (delta: number) => `호감도 ${delta > 0 ? '+' : ''}${delta}`,
   nearbySummary: (people: number, places: number, tasks: number) => `인물 ${people} · 장소 ${places} · 할 일 ${tasks}`,
   combatWith: (name: string) => `${name}${josaWith(name)} 전투 중`,
+  combatExchange: (round: number) => `${round}번째 교환`,
 };
 
 function josaObject(value: string): '을' | '를' {

@@ -99,7 +99,7 @@ The card shows:
 - revive count
 - current opponent
 - a short combat context line
-- three action buttons: `공격`, `막기`, `기술`
+- four action buttons: `공격`, `기술`, `방어`, `도주`
 
 Hearts are temporary combat resources. They should be visible only during combat.
 
@@ -108,14 +108,23 @@ Hearts are temporary combat resources. They should be visible only during combat
 Combat buttons execute immediately.
 
 - `공격` runs the basic attack.
-- `막기` runs the basic defense action.
 - `기술` automatically selects and uses the skill that best fits the current scene.
+- `방어` runs the basic defense action.
+- `도주` tries to leave combat.
 
 The `기술` button prioritizes scene fit over numerical efficiency. It should choose the skill that makes the current moment feel coherent. It should avoid clearly invalid choices, such as using a skill the player cannot afford, but it should not behave like an optimization engine.
 
 After a combat action resolves, the result appears as GM narration. The UI should not insert a separate result card such as `attack success` or `enemy hearts -1` into the conversation.
 
 The combat card quietly updates hearts and resources after the GM narration.
+
+## Dice Motion
+
+All d20 checks use one shared table-dice treatment.
+
+During a normal DC check, the roll panel shows a small animated d20 while the roll request is resolving. During combat, the same d20 appears inside the combat card while an action is resolving.
+
+The die should create tension without becoming a separate result card. The resolved number, success, and failure details may be stored in notes or logs, but the player-facing result should continue through GM narration.
 
 ## GM Narration Contract
 
@@ -130,7 +139,7 @@ Good:
 Bad:
 
 ```text
-막기 성공. 플레이어 하트 +1.
+방어 성공. 플레이어 하트 +1.
 ```
 
 The engine may still produce structured results internally, but the player-facing conversation should prioritize scene language.
@@ -197,5 +206,6 @@ The design is successful when:
 - combat visibly enters a separate mode with hearts and three buttons
 - combat buttons execute immediately
 - `기술` chooses a scene-fitting usable skill
+- normal checks and combat actions use the same compact d20 motion while resolving
 - combat results are narrated by the GM, not displayed as standalone result cards
 - detailed logs remain accessible from notes

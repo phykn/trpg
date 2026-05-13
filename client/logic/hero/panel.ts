@@ -4,11 +4,11 @@ import type { PanelSlot } from '@/logic/info-panel';
 
 import type { EquipItem, Hero } from './types';
 
-export function buildHeroSlot(hero: Hero): PanelSlot {
+export function buildHeroSlot(hero: Hero, opts?: { chipShort?: string }): PanelSlot {
   const equipped = Object.values(hero.equipment).filter((it): it is EquipItem => it != null);
   return {
     id: 'hero',
-    chip: { short: ko.hero.chip, dot: hero.canLevelUp },
+    chip: { short: opts?.chipShort ?? ko.hero.chip, dot: hero.canLevelUp },
     panel: {
       title: withDeath(hero.name, hero.alive),
       meta: [{ text: characterMeta(hero.level, hero.raceJob, hero.gender) }],

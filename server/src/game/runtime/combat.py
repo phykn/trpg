@@ -3,6 +3,7 @@ from pydantic import BaseModel, ConfigDict
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatAction, GraphCombatState
 from src.game.domain.graph import Graph
+from src.game.domain.graph_query import edges_from
 from src.game.engines.graph_combat import (
     GraphCombatError,
     GraphCombatResult,
@@ -46,6 +47,7 @@ def dispatch_graph_combat_action(
         combat_action = _combat_action_from_action(
             runtime.graph,
             action,
+            player_id=state.player_id,
             in_combat=not started,
         )
         combat_result = plan_combat_exchange(
@@ -159,6 +161,7 @@ def _combat_action_from_action(
     graph: Graph,
     action: Action,
     *,
+    player_id: str,
     in_combat: bool,
 ) -> GraphCombatAction:
     if action.verb == "attack":
@@ -171,11 +174,14 @@ def _combat_action_from_action(
             support_kind=support_kind,
         )
     if action.verb == "cast":
+        support_id = _single(action.with_) or _single(action.what)
+        if support_id is None and action.how == "auto":
+            support_id = _auto_skill_support_id(graph, player_id, "attack")
         return GraphCombatAction(
             kind="attack",
             target_id=_single(action.to),
-            support_id=_single(action.with_) or _single(action.what),
-            support_kind="skill",
+            support_id=support_id,
+            support_kind="skill" if support_id is not None else None,
         )
     if in_combat and action.verb == "move" and action.how in ("flee", "hasty"):
         return GraphCombatAction(kind="flee")
@@ -199,6 +205,30 @@ def _support_kind_or_none(graph: Graph, node_id: str | None) -> str | None:
     return None
 
 
+def _auto_skill_support_id(graph: Graph, player_id: str, action_kind: str) -> str | None:
+    player = graph.nodes.get(player_id)
+    if player is None:
+        return None
+    current_mp = _int_value(player.properties.get("mp"), default=0)
+    for edge in edges_from(graph, player_id, "knows_skill"):
+        skill = graph.nodes.get(edge.to_node_id)
+        if skill is None or skill.type != "skill":
+            continue
+        supported_action = _string_prop(
+            skill,
+            "action",
+            fallback=_string_prop(
+                skill,
+                "kind",
+                fallback=_string_prop(skill, "type"),
+            ),
+        )
+        mp_cost = _int_value(skill.properties.get("mp_cost"), default=0)
+        if supported_action == action_kind and current_mp >= mp_cost:
+            return skill.id
+    return None
+
+
 def _target_id_for_start(action: Action) -> str:
     if action.verb == "attack":
         target_id = _single(action.what)
@@ -217,3 +247,19 @@ def _single(value: object) -> str | None:
     if isinstance(value, list) and value and isinstance(value[0], str):
         return value[0]
     return None
+
+
+def _string_prop(node: object, key: str, *, fallback: str | None = None) -> str | None:
+    properties = getattr(node, "properties", None)
+    if not isinstance(properties, dict):
+        return fallback
+    value = properties.get(key)
+    return value if isinstance(value, str) and value else fallback
+
+
+def _int_value(value: object, *, default: int) -> int:
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    return default

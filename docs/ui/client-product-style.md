@@ -13,11 +13,11 @@ This section adapts the warm editorial reference below to the actual TRPG play c
 ### Play Screen Structure
 
 - The log remains the center of the screen.
-- The top pill row is `주인공 / NPC / 미니맵`. Do not restore a separate `주변` pill.
+- The top tool row is `지도 / 노트 / 시트`. Do not restore separate always-visible `NPC`, `퀘스트`, or `주변` pills.
 - Top pill panels open as floating surfaces below the pill row and overlay the existing screen. Opening them must not push the hero strip, log, or composer down.
-- `주인공` and `NPC` panels show detailed stat/inventory/skill information using the existing info-panel structure.
-- The `주인공` panel does not show inventory/equipment action buttons in this pass.
-- `미니맵` shows the visual story map, not a grid of cards.
+- `시트` shows detailed hero stat/inventory/skill information using the existing info-panel structure.
+- `노트` folds current NPC and quest/offer information into one reference panel.
+- `지도` shows the visual story map, not a grid of cards.
 
 ### Composer And Nearby
 
@@ -30,7 +30,9 @@ This section adapts the warm editorial reference below to the actual TRPG play c
 ### Combat And Roll
 
 - Combat replaces the composer while active. The combat panel shows the opponent name, current exchange/range context, player/enemy hearts on the right, and full-width balanced action buttons.
-- Combat action buttons are `공격 / 방어 / 도주 / 설득` when an enemy is available.
+- Combat action buttons are `공격 / 기술 / 방어 / 도주` when an enemy is available. `기술` asks the server to choose a usable scene-fitting skill automatically.
+- Roll and combat action requests use the same compact animated d20 while the request is resolving.
+- Once the server resolves a combat exchange, the combat panel may show the latest success/fail result inline from `lastRoll` and `lastDc`. Do not show it as a standalone system card in the GM conversation.
 - Roll replaces the composer while active. The roll panel shows title, short reason, `13 이상` in the header, a tight 1-20 dice strip, and a single full-width `굴리기` button.
 - The dice strip has no outer sub-card, no `필요 주사위` label, and no marker above the strip. The required cell itself is highlighted.
 
