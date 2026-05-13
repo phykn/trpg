@@ -36,7 +36,11 @@ async def classify(
         return validate_grounded_output(dialogue, grounding_view)
 
     def parse(answer: str) -> ActionOutput:
-        output = validate_action_output_json(answer, in_combat=in_combat)
+        output = validate_action_output_json(
+            answer,
+            in_combat=in_combat,
+            surroundings=grounding_view,
+        )
         return validate_grounded_output(output, grounding_view)
 
     try:

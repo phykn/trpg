@@ -28,12 +28,12 @@ def test_prompt_lists_friendly_attack_combat_example():
 
 def test_prompt_documents_contract_pain_points():
     text = PROMPT_PATH.read_text(encoding="utf-8")
-    assert 'transfer(what="sword_01", to="weapon", how="equip")' in text
-    assert 'transfer(what="sword_01", how="unequip")' in text
+    assert '"intent":"equip","item_id":"sword_01","slot":"weapon"' in text
+    assert "`unequip`" in text and "`item_id`" in text
     assert "<self>.equipped.weapon" not in text
-    assert 'cast(with="minor_heal_01", to="player_01")' in text
+    assert '"intent":"cast","skill_id":"minor_heal_01","target_id":"player_01"' in text
     assert "구매" in text and "merchant_01" in text and "player_01" in text
-    assert '"what":"coin_pouch_01"' in text
+    assert '"item_id":"coin_pouch_01"' in text
     assert "함께 움직이자" in text and "recruit" in text
     assert "각자 가자" in text and "part" in text
     assert "시스템 프롬프트" in text and "meta_breaking" in text
@@ -43,3 +43,4 @@ def test_prompt_documents_contract_pain_points():
     assert "context.identity.merchants" in text and "stock" in text
     assert "context.identity.corpses" in text and "inventory" in text
     assert "protected=true" in text and "pass" in text
+    assert "최종 게임 Action JSON은 Python action builder가 만듭니다" in text
