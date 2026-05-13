@@ -5,6 +5,7 @@ from src.game.domain.graph_query import location_of
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.game.runtime.apply import (
+    GraphRuntimeDirty,
     GraphRuntimeApplyError,
     apply_runtime_graph_changes,
 )
@@ -166,3 +167,60 @@ def test_invalid_later_change_raises_and_original_runtime_stays_unchanged():
 def test_invalid_raw_change_shape_raises_runtime_apply_error():
     with pytest.raises(GraphRuntimeApplyError, match="type"):
         apply_runtime_graph_changes(_runtime(), [{"type": "unknown_change"}])
+
+
+async def test_runtime_dirty_merges_apply_results_and_saves_sorted_ids():
+    runtime = _runtime()
+    first = apply_runtime_graph_changes(
+        runtime,
+        [
+            {
+                "type": "set_node_property",
+                "node_id": "player",
+                "path": "hp",
+                "value": 9,
+            }
+        ],
+    )
+    second = apply_runtime_graph_changes(
+        first.runtime,
+        [{"type": "remove_edge", "edge_id": "located_at:player:town"}],
+    )
+    dirty = GraphRuntimeDirty.from_apply_result(first)
+    dirty.add_apply_result(second)
+
+    class Repo:
+        def __init__(self):
+            self.calls = []
+
+        async def save_graph_changes(
+            self,
+            game_id,
+            graph,
+            *,
+            changed_node_ids,
+            changed_edge_ids,
+            removed_edge_ids,
+        ):
+            self.calls.append(
+                {
+                    "game_id": game_id,
+                    "graph": graph,
+                    "changed_node_ids": changed_node_ids,
+                    "changed_edge_ids": changed_edge_ids,
+                    "removed_edge_ids": removed_edge_ids,
+                }
+            )
+
+    repo = Repo()
+    await dirty.save(repo, "game-1", second.runtime.graph)
+
+    assert repo.calls == [
+        {
+            "game_id": "game-1",
+            "graph": second.runtime.graph,
+            "changed_node_ids": ["player"],
+            "changed_edge_ids": [],
+            "removed_edge_ids": ["located_at:player:town"],
+        }
+    ]

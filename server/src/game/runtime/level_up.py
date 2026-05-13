@@ -14,7 +14,7 @@ from src.locale.render import render
 from src.llm.diag import engine_diag, set_diag_context
 from src.wire.graph_to_front import GraphFrontStatePayload, graph_to_front_state
 
-from .apply import apply_runtime_graph_changes
+from .apply import GraphRuntimeDirty, apply_runtime_graph_changes
 from .cards import build_graph_level_up_card
 from .load import load_runtime_state
 from .state import GameRuntimeState
@@ -68,12 +68,10 @@ async def run_graph_level_up(
         }
     )
 
-    await repo.save_graph_changes(
+    await GraphRuntimeDirty.from_apply_result(applied).save(
+        repo,
         game_id,
         next_runtime.graph,
-        changed_node_ids=applied.changed_node_ids,
-        changed_edge_ids=applied.changed_edge_ids,
-        removed_edge_ids=applied.removed_edge_ids,
     )
     await repo.append_log_entries(game_id, [card])
     await repo.save_progress(next_runtime.progress)

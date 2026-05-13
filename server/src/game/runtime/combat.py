@@ -16,7 +16,7 @@ from src.game.engines.graph_quest import (
 )
 from src.llm.diag import engine_diag
 
-from .apply import GraphRuntimeApplyError, apply_runtime_graph_changes
+from .apply import GraphRuntimeApplyError, GraphRuntimeDirty, apply_runtime_graph_changes
 from .state import GameRuntimeState
 
 
@@ -63,9 +63,7 @@ def dispatch_graph_combat_action(
 
     graph_runtime = applied.runtime
     applied_count = applied.applied
-    changed_node_ids = set(applied.changed_node_ids)
-    changed_edge_ids = set(applied.changed_edge_ids)
-    removed_edge_ids = set(applied.removed_edge_ids)
+    dirty = GraphRuntimeDirty.from_apply_result(applied)
     completed_quest_ids: list[str] = []
     if combat_result.state.outcome == "victory":
         for target_id in _victory_target_ids(combat_result.state):
@@ -80,9 +78,7 @@ def dispatch_graph_combat_action(
                 )
                 graph_runtime = progress_apply.runtime
                 applied_count += progress_apply.applied
-                changed_node_ids.update(progress_apply.changed_node_ids)
-                changed_edge_ids.update(progress_apply.changed_edge_ids)
-                removed_edge_ids.update(progress_apply.removed_edge_ids)
+                dirty.add_apply_result(progress_apply)
                 completed_quest_ids.extend(quest_progress.completed_quest_ids)
         for quest_id in completed_quest_ids:
             reward = plan_quest_rewards(
@@ -97,9 +93,7 @@ def dispatch_graph_combat_action(
                 )
                 graph_runtime = reward_apply.runtime
                 applied_count += reward_apply.applied
-                changed_node_ids.update(reward_apply.changed_node_ids)
-                changed_edge_ids.update(reward_apply.changed_edge_ids)
-                removed_edge_ids.update(reward_apply.removed_edge_ids)
+                dirty.add_apply_result(reward_apply)
 
     progress_update = {
         "graph_combat_state": (
@@ -122,9 +116,9 @@ def dispatch_graph_combat_action(
         outcome=combat_result.state.outcome,
         started=started,
         applied=applied_count,
-        changed_node_ids=sorted(changed_node_ids),
-        changed_edge_ids=sorted(changed_edge_ids),
-        removed_edge_ids=sorted(removed_edge_ids),
+        changed_node_ids=sorted(dirty.changed_node_ids),
+        changed_edge_ids=sorted(dirty.changed_edge_ids),
+        removed_edge_ids=sorted(dirty.removed_edge_ids),
     )
 
 
