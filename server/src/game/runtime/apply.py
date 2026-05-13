@@ -2,6 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from src.db.repo import GraphRepo
 from src.game.domain.graph import (
     AddEdgeChange,
     AddNodeChange,
@@ -29,6 +30,42 @@ class GraphRuntimeApplyResult(BaseModel):
     changed_node_ids: list[str]
     changed_edge_ids: list[str]
     removed_edge_ids: list[str]
+
+
+class GraphRuntimeDirty:
+    def __init__(
+        self,
+        *,
+        changed_node_ids: set[str] | None = None,
+        changed_edge_ids: set[str] | None = None,
+        removed_edge_ids: set[str] | None = None,
+    ) -> None:
+        self.changed_node_ids = changed_node_ids or set()
+        self.changed_edge_ids = changed_edge_ids or set()
+        self.removed_edge_ids = removed_edge_ids or set()
+
+    @classmethod
+    def from_apply_result(
+        cls,
+        result: GraphRuntimeApplyResult,
+    ) -> "GraphRuntimeDirty":
+        dirty = cls()
+        dirty.add_apply_result(result)
+        return dirty
+
+    def add_apply_result(self, result: GraphRuntimeApplyResult) -> None:
+        self.changed_node_ids.update(result.changed_node_ids)
+        self.changed_edge_ids.update(result.changed_edge_ids)
+        self.removed_edge_ids.update(result.removed_edge_ids)
+
+    async def save(self, repo: GraphRepo, game_id: str, graph) -> None:
+        await repo.save_graph_changes(
+            game_id,
+            graph,
+            changed_node_ids=sorted(self.changed_node_ids),
+            changed_edge_ids=sorted(self.changed_edge_ids),
+            removed_edge_ids=sorted(self.removed_edge_ids),
+        )
 
 
 def apply_runtime_graph_changes(

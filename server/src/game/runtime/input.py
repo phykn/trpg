@@ -25,7 +25,11 @@ from src.llm.diag import engine_diag, llm_diag, set_diag_context
 from src.locale.render import render
 from src.wire.graph_to_front import graph_to_front_state
 
-from .apply import GraphRuntimeApplyResult, apply_runtime_graph_changes
+from .apply import (
+    GraphRuntimeApplyResult,
+    GraphRuntimeDirty,
+    apply_runtime_graph_changes,
+)
 from .confirmation import run_graph_action_request
 from .load import load_runtime_state
 from .narration_context import build_input_narration_payload
@@ -533,12 +537,10 @@ async def _finish_graph_narrative_input(
         }
     )
     if graph_apply_result is not None:
-        await repo.save_graph_changes(
+        await GraphRuntimeDirty.from_apply_result(graph_apply_result).save(
+            repo,
             runtime.progress.game_id,
             next_runtime.graph,
-            changed_node_ids=graph_apply_result.changed_node_ids,
-            changed_edge_ids=graph_apply_result.changed_edge_ids,
-            removed_edge_ids=graph_apply_result.removed_edge_ids,
         )
     await repo.append_log_entries(runtime.progress.game_id, [entry])
     await repo.save_progress(progress)
