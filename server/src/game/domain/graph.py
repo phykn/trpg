@@ -197,6 +197,7 @@ def validate_graph(graph: Graph) -> None:
     _validate_edge_node_types(graph)
     _validate_item_placement(graph)
     _validate_character_location(graph)
+    _validate_quest_trigger_targets(graph)
 
 
 def _set_property(properties: dict[str, Any], path: str, value: Any) -> None:
@@ -268,3 +269,21 @@ def _validate_character_location(graph: Graph) -> None:
             raise GraphInvariantError(
                 f"character location conflict: {character_id} ({joined})"
             )
+
+
+def _validate_quest_trigger_targets(graph: Graph) -> None:
+    for quest in graph.nodes.values():
+        if quest.type != "quest":
+            continue
+        for trigger in _dicts(quest.properties.get("triggers")):
+            target_id = trigger.get("target_id")
+            if isinstance(target_id, str) and target_id not in graph.nodes:
+                raise GraphInvariantError(
+                    f"quest trigger target missing: {quest.id} -> {target_id}"
+                )
+
+
+def _dicts(value: object) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [entry for entry in value if isinstance(entry, dict)]
