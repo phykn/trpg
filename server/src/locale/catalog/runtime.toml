@@ -394,6 +394,26 @@ en = "You need quiet steps and steady footing."
 ko = "행동의 결과를 확인해야 합니다."
 en = "The result of the action needs to be checked."
 
+[runtime."social.missing_supplies.reason_known"]
+ko = "주민은 보급품이 사라진 이유를 조심스럽게 털어놓습니다."
+en = "The resident carefully explains why the supplies went missing."
+
+[runtime."social.missing_supplies.need_reason"]
+ko = "먼저 주민에게 사라진 보급품의 사정을 들어야 합니다."
+en = "You need to hear the resident's reason for the missing supplies first."
+
+[runtime."social.missing_supplies.report"]
+ko = "주민의 일을 보고하자 보급 담당자는 즉시 보급품 문제를 정리합니다."
+en = "After your report, the quartermaster quickly settles the missing supplies issue."
+
+[runtime."social.missing_supplies.mediate"]
+ko = "당신의 중재로 보급 담당자와 주민은 서로의 사정을 받아들입니다."
+en = "Your mediation helps the quartermaster and resident accept each other's situation."
+
+[runtime."social.missing_supplies.quiet_return"]
+ko = "보급품은 조용히 제자리로 돌아가고 주민은 안도합니다."
+en = "The supplies quietly return to their place, and the resident is relieved."
+
 [runtime."seed.giver.name"]
 ko = "마을 주민"
 en = "Villager"
