@@ -47,6 +47,7 @@ class GraphActionResponse(BaseModel):
     game_id: str
     state: dict
     status: str | None = None
+    event_kind: Literal["result", "narration"] = "result"
     message: str | None = None
     suggestions: list[GraphSuggestionValue] = Field(default_factory=list)
 

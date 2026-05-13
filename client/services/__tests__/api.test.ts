@@ -92,6 +92,7 @@ describe('graph API helpers', () => {
             game_id: 'game-1',
             state: graphState(),
             status: 'confirmation_required',
+            event_kind: 'result',
             message: null,
           },
         }),
@@ -114,6 +115,7 @@ describe('graph API helpers', () => {
       }),
     );
     expect(result.status).toBe('confirmation_required');
+    expect(result.eventKind).toBe('result');
   });
 
   test('posts combat commands to the graph combat endpoint', async () => {

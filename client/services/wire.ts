@@ -227,6 +227,7 @@ export type GraphActionResponse = {
   game_id: string;
   state: GraphFrontState;
   status?: string | null;
+  event_kind?: 'result' | 'narration' | null;
   message?: string | null;
   suggestions?: GraphSuggestion[];
 };
@@ -237,6 +238,7 @@ export type GraphActionClientResponse = {
   pendingConfirmation: PendingConfirmation | null;
   pendingRoll: PendingRoll | null;
   status?: string | null;
+  eventKind?: 'result' | 'narration' | null;
   message?: string | null;
   suggestions: SuggestionChip[];
 };
