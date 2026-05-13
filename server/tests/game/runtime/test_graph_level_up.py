@@ -10,10 +10,14 @@ from src.game.runtime.load import load_runtime_state
 
 
 class _SkillCandidateLLM:
+    def __init__(self):
+        self.calls = []
+
     def pick_fallback(self, agent):
         return None
 
     async def chat(self, messages, **kw):
+        self.calls.append({"messages": messages, **kw})
         return {
             "answer": (
                 '{"skills":[{"name":"그림자 찌르기","description":"공격 DC를 낮춘다.",'
@@ -147,14 +151,16 @@ async def test_run_graph_level_up_can_upgrade_known_skill(tmp_path):
 async def test_level_up_options_include_llm_skill_candidate(tmp_path):
     repo = await _repo(tmp_path)
     runtime = await load_runtime_state(repo, "game-1")
+    llm = _SkillCandidateLLM()
 
-    choices = await build_level_up_choices(runtime, llm=_SkillCandidateLLM())
+    choices = await build_level_up_choices(runtime, llm=llm)
 
     learn = next(choice for choice in choices if choice["id"].startswith("learn_skill:"))
     assert learn["label"] == "그림자 찌르기 습득"
     assert learn["growth"]["kind"] == "learn_skill"
     assert learn["growth"]["skill"]["effect_template"] == "dc_down"
     assert learn["growth"]["skill"]["mp_cost"] == 2
+    assert llm.calls[0]["agent"] == "recommend"
 
 
 async def test_run_graph_level_up_can_learn_generated_skill(tmp_path):

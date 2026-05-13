@@ -127,7 +127,7 @@ async def _skill_candidates(
     if llm is None:
         return _fallback_candidates(runtime)
     try:
-        prompt = get_prompt("skill_candidates", runtime.progress.locale)
+        prompt = get_prompt("recommend", runtime.progress.locale)
         payload = _candidate_payload(runtime)
         out = await run_with_retries(
             llm,
@@ -136,7 +136,7 @@ async def _skill_candidates(
             parse=lambda text: _CANDIDATE_ADAPTER.validate_json(text),
             retry_on=(ValidationError, json.JSONDecodeError),
             retries=3,
-            agent="skill_candidates",
+            agent="recommend",
             temperature=0.8,
         )
         return out.skills
