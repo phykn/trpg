@@ -1,6 +1,6 @@
 """render() 조사 토큰 처리 + 변수 치환 단위 테스트."""
 
-from src.locale.particles import has_jongseong
+from src.locale.ko.particles import has_jongseong
 from src.locale.render import render
 
 

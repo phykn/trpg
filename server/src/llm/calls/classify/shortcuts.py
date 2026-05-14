@@ -1,7 +1,7 @@
 from typing import Any
 
 from src.game.domain.action import Action, ActionOutput, RefuseReason
-from src.locale.lexicon import (
+from src.locale.terms import (
     ABANDON_TERMS,
     ACCEPT_TERMS,
     ACTION_ATTACK_TERMS,

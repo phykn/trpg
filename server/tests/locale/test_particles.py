@@ -1,4 +1,4 @@
-from src.locale.particles import (
+from src.locale.ko.particles import (
     eu_ro,
     eul_reul,
     eun_neun,

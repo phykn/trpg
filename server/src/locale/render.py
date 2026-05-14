@@ -11,7 +11,7 @@ import re
 import tomllib
 from pathlib import Path
 
-from .particles import eu_ro, eul_reul, eun_neun, gwa_wa, i_ga
+from .ko.particles import eu_ro, eul_reul, eun_neun, gwa_wa, i_ga
 
 _CATALOG_DIR = Path(__file__).parent / "catalog"
 _CACHE: dict[str, dict] = {}

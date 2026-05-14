@@ -2,7 +2,7 @@ from typing import Any
 
 from src.game.domain.combat import GraphCombatTraceEvent
 from src.game.domain.content import node_label
-from src.locale.lexicon import downed_markers, nonlethal_markers
+from src.locale.terms import downed_markers, nonlethal_markers
 from src.locale.render import render
 
 from .state import GameRuntimeState
