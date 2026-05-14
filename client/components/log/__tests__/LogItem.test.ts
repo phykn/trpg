@@ -11,6 +11,16 @@ describe('LogItem act entries', () => {
   });
 });
 
+describe('LogItem GM entries', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '..', 'LogItem.tsx'), 'utf8');
+
+  test('colors GM narration by outcome', () => {
+    expect(source).toContain('entry.outcome');
+    expect(source).toContain('text-success-fg');
+    expect(source).toContain('text-danger-fg');
+  });
+});
+
 describe('RollResult entries', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '..', 'RollResult.tsx'), 'utf8');
 

@@ -8,7 +8,7 @@ import type { LogEntry } from '@/logic/log/types';
 export function LogItem({ entry }: { entry: LogEntry }) {
   switch (entry.kind) {
     case 'gm':
-      return <GMNarration text={entry.text} />;
+      return <GMNarration entry={entry} />;
     case 'player':
       return <PlayerMessage text={entry.text} />;
     case 'act':
@@ -56,8 +56,15 @@ function NarrationParts({ segments }: { segments: Segment[] }) {
   );
 }
 
-function GMNarration({ text }: { text: string }) {
-  const paragraphs = text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+function gmTextClass(entry: Extract<LogEntry, { kind: 'gm' }>): string {
+  if (entry.outcome === 'success') return 'text-success-fg';
+  if (entry.outcome === 'failure') return 'text-danger-fg';
+  return 'text-fg-default';
+}
+
+function GMNarration({ entry }: { entry: Extract<LogEntry, { kind: 'gm' }> }) {
+  const paragraphs = entry.text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  const textClass = gmTextClass(entry);
   return (
     <View
       style={{
@@ -70,7 +77,7 @@ function GMNarration({ text }: { text: string }) {
         return (
           <Text
             key={i}
-            className="font-serif text-narration text-fg-default"
+            className={`font-serif text-narration ${textClass}`}
             style={{ marginTop: i === 0 ? 0 : spacing[3] }}
           >
             <NarrationParts segments={splitDialogue(p)} />
