@@ -19,6 +19,10 @@ sys.path.insert(0, str(SERVER_DIR))
 
 load_dotenv(SERVER_DIR / ".env.dev")
 
+from src.game.domain.graph import Graph, GraphEdge, GraphNode  # noqa: E402
+from src.game.domain.progress import GameProgress  # noqa: E402
+from src.game.runtime.state import GameRuntimeState  # noqa: E402
+from src.llm.context.classify_view import build_classify_context_view  # noqa: E402
 from src.llm.calls.classify import classify  # noqa: E402
 from src.llm.calls.classify.schema import ClassifyInput  # noqa: E402
 from src.llm.client import LLMClient  # noqa: E402
@@ -57,55 +61,122 @@ CASES: list[tuple[str, str]] = [
 ]
 
 
-def _classify_context(surroundings: dict) -> dict:
-    entities = surroundings.get("entities", [])
-    targets = [
-        entity for entity in entities if entity.get("type") in {"npc", "enemy"}
-    ]
-    exits = [
-        {"id": entity["id"], "name": entity["name"]}
-        for entity in entities
-        if entity.get("type") == "connection"
-    ]
-    inventory = surroundings.get("inventory", [])
-    recent_npc = surroundings.get("recent_npc")
-    last_npc = None
-    if isinstance(recent_npc, str):
-        last_npc = next(
-            (entity for entity in targets if entity.get("id") == recent_npc),
-            None,
+def _classify_context(player_input: str, scene: dict) -> dict:
+    return build_classify_context_view(_runtime_from_scene(scene), player_input)
+
+
+def _runtime_from_scene(scene: dict) -> GameRuntimeState:
+    graph = _graph_from_scene(scene)
+    player_id = _player_id(scene)
+    progress = GameProgress(
+        game_id="smoke",
+        player_id=player_id,
+        locale="ko",
+        active_subject_id=scene.get("recent_npc"),
+    )
+    return GameRuntimeState(graph=graph, progress=progress)
+
+
+def _graph_from_scene(scene: dict) -> Graph:
+    nodes: dict[str, GraphNode] = {}
+    edges: dict[str, GraphEdge] = {}
+    location = scene["location"]
+    location_id = location["id"]
+    nodes[location_id] = GraphNode(
+        id=location_id,
+        type="location",
+        properties=_properties(location),
+    )
+    player_id = _player_id(scene)
+
+    for entity in scene.get("entities", []):
+        entity_id = entity["id"]
+        if entity["type"] == "connection":
+            nodes[entity_id] = GraphNode(
+                id=entity_id,
+                type="location",
+                properties=_properties(entity),
+            )
+            _edge(edges, "connects_to", location_id, entity_id)
+        elif entity["type"] == "item":
+            nodes[entity_id] = GraphNode(
+                id=entity_id,
+                type="item",
+                properties=_properties(entity),
+            )
+            _edge(edges, "located_at", entity_id, location_id)
+        else:
+            nodes[entity_id] = GraphNode(
+                id=entity_id,
+                type="character",
+                properties=_character_properties(entity),
+            )
+            _edge(edges, "located_at", entity_id, location_id)
+
+    for item in scene.get("inventory", []):
+        _add_item(nodes, item)
+        _edge(edges, "carries", player_id, item["id"])
+    for skill in scene.get("skills", []):
+        nodes[skill["id"]] = GraphNode(
+            id=skill["id"],
+            type="skill",
+            properties=_properties(skill),
         )
-    return {
-        "player_input": "",
-        "mode": "combat" if surroundings.get("in_combat") else "exploration",
-        "identity": {
-            "location": surroundings.get("location") or {},
-            "visible_targets": targets,
-            "exits": exits,
-            "inventory": inventory,
-            "equipment": surroundings.get("equipment", {}),
-            "skills": surroundings.get("skills", []),
-            "active_quest": None,
-            "merchants": surroundings.get("merchants", []),
-            "corpses": surroundings.get("corpses", []),
-        },
-        "affordances": {
-            "can_speak_to": [target["id"] for target in targets],
-            "can_attack": [
-                target["id"] for target in targets if target.get("type") == "enemy"
-            ],
-            "can_move_to": [exit_["id"] for exit_ in exits],
-            "can_use": [item["id"] for item in inventory],
-            "can_accept_or_abandon_quest": [],
-        },
-        "references": {
-            "last_npc": last_npc,
-            "last_target": last_npc,
-            "last_item": None,
-            "recent_dialogue": [],
-        },
-        "budget": {},
+        _edge(edges, "knows_skill", player_id, skill["id"])
+    for merchant in scene.get("merchants", []):
+        if merchant["id"] in nodes:
+            nodes[merchant["id"]].properties["gold"] = 999
+        for item in merchant.get("stock", []):
+            _add_item(nodes, item)
+            _edge(edges, "carries", merchant["id"], item["id"])
+    return Graph(nodes=nodes, edges=edges)
+
+
+def _player_id(scene: dict) -> str:
+    for entity in scene.get("entities", []):
+        if entity.get("type") == "player":
+            return entity["id"]
+    return "player_01"
+
+
+def _add_item(nodes: dict[str, GraphNode], item: dict) -> None:
+    nodes[item["id"]] = GraphNode(
+        id=item["id"],
+        type="item",
+        properties=_properties(item),
+    )
+
+
+def _edge(edges: dict[str, GraphEdge], edge_type: str, source: str, target: str) -> None:
+    edge_id = f"{edge_type}:{source}:{target}"
+    edges[edge_id] = GraphEdge(
+        id=edge_id,
+        type=edge_type,
+        from_node_id=source,
+        to_node_id=target,
+    )
+
+
+def _character_properties(entity: dict) -> dict:
+    props = {
+        **_properties(entity),
+        "alive": True,
+        "status": [],
+        "hp": 10,
+        "max_hp": 10,
+        "mp": 5,
+        "max_mp": 5,
+        "stats": {"body": 3, "agility": 3, "mind": 3, "presence": 3},
     }
+    if entity.get("type") == "enemy":
+        props["xp_reward"] = 1
+    if "merchant" in entity.get("roles", []):
+        props["gold"] = 999
+    return props
+
+
+def _properties(data: dict) -> dict:
+    return {key: value for key, value in data.items() if key != "id"}
 
 
 async def main() -> int:
@@ -126,10 +197,7 @@ async def main() -> int:
                 client,
                 ClassifyInput(
                     player_input=player_input,
-                    context={
-                        **_classify_context(SAMPLE_SURROUNDINGS),
-                        "player_input": player_input,
-                    },
+                    context=_classify_context(player_input, SAMPLE_SURROUNDINGS),
                 ),
                 locale="ko",
                 retries=2,

@@ -96,7 +96,7 @@ dotenv loads `server/.env.<APP_ENV>` (default `dev`) automatically and uvicorn b
 server/
   run_api.py                       # entrypoint
   .env.dev                         # required for local dev (.env.release for prod), gitignored
-  scripts/                         # one-off tools (classify_stress.py, smoke_classify.py, ...)
+  scripts/                         # seed checks and one-off LLM smoke tools
   src/                             # code (ownership map in ../docs/05-interfaces.md)
   tests/                           # pytest
 ../scenarios/<profile>/            # local seed source (world.md, start.json, player_template.json, races/, locations/, characters/, items/, quests/, chapters/, skills/). Authored locally, uploaded to Supabase Storage; the running server reads from the bucket.

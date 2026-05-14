@@ -23,9 +23,16 @@ sys.path.insert(0, str(SERVER_DIR))
 
 load_dotenv(SERVER_DIR / ".env.dev")
 
+from src.game.domain.graph import Graph, GraphEdge, GraphNode  # noqa: E402
+from src.game.domain.progress import GameProgress  # noqa: E402
+from src.game.runtime.state import GameRuntimeState  # noqa: E402
 from src.llm.calls._runner import get_prompt  # noqa: E402
 from src.llm.calls.classify.schema import ClassifyInput, validate_action_output_json  # noqa: E402
 from src.llm.client import LLMClient  # noqa: E402
+from src.llm.context.classify_view import (  # noqa: E402
+    build_classify_context_view,
+    classify_context_to_grounding_view,
+)
 
 _FENCE_RE = re.compile(r"^```(?:json)?\s*\n?|\n?```\s*$", re.MULTILINE)
 
@@ -129,48 +136,109 @@ CASES: list[tuple[str, str]] = [
 REPEATS = 1  # one shot — what does the LLM produce on its first attempt?
 
 
-def _classify_context(player_input: str, surroundings: dict) -> dict:
-    entities = surroundings.get("entities", [])
-    targets = [
-        entity for entity in entities if entity.get("type") in {"npc", "enemy"}
-    ]
-    exits = [
-        {"id": entity["id"], "name": entity["name"]}
-        for entity in entities
-        if entity.get("type") == "connection"
-    ]
-    inventory = surroundings.get("inventory", [])
-    return {
-        "player_input": player_input,
-        "mode": "combat" if surroundings.get("in_combat") else "exploration",
-        "identity": {
-            "location": surroundings.get("location") or {},
-            "visible_targets": targets,
-            "exits": exits,
-            "inventory": inventory,
-            "equipment": surroundings.get("equipment", {}),
-            "skills": surroundings.get("skills", []),
-            "active_quest": None,
-            "merchants": surroundings.get("merchants", []),
-            "corpses": surroundings.get("corpses", []),
-        },
-        "affordances": {
-            "can_speak_to": [target["id"] for target in targets],
-            "can_attack": [
-                target["id"] for target in targets if target.get("type") == "enemy"
-            ],
-            "can_move_to": [exit_["id"] for exit_ in exits],
-            "can_use": [item["id"] for item in inventory],
-            "can_accept_or_abandon_quest": [],
-        },
-        "references": {
-            "last_npc": None,
-            "last_target": None,
-            "last_item": None,
-            "recent_dialogue": [],
-        },
-        "budget": {},
+def _classify_context(player_input: str, scene: dict) -> dict:
+    return build_classify_context_view(_runtime_from_scene(scene), player_input)
+
+
+def _runtime_from_scene(scene: dict) -> GameRuntimeState:
+    graph = _graph_from_scene(scene)
+    progress = GameProgress(game_id="smoke", player_id=_player_id(scene), locale="ko")
+    return GameRuntimeState(graph=graph, progress=progress)
+
+
+def _graph_from_scene(scene: dict) -> Graph:
+    nodes: dict[str, GraphNode] = {}
+    edges: dict[str, GraphEdge] = {}
+    location = scene["location"]
+    location_id = location["id"]
+    nodes[location_id] = GraphNode(
+        id=location_id,
+        type="location",
+        properties=_properties(location),
+    )
+    player_id = _player_id(scene)
+
+    for entity in scene.get("entities", []):
+        entity_id = entity["id"]
+        if entity["type"] == "connection":
+            nodes[entity_id] = GraphNode(
+                id=entity_id,
+                type="location",
+                properties=_properties(entity),
+            )
+            _edge(edges, "connects_to", location_id, entity_id)
+        else:
+            nodes[entity_id] = GraphNode(
+                id=entity_id,
+                type="character",
+                properties=_character_properties(entity),
+            )
+            _edge(edges, "located_at", entity_id, location_id)
+
+    for item in scene.get("inventory", []):
+        _add_item(nodes, item)
+        _edge(edges, "carries", player_id, item["id"])
+    for skill in scene.get("skills", []):
+        nodes[skill["id"]] = GraphNode(
+            id=skill["id"],
+            type="skill",
+            properties=_properties(skill),
+        )
+        _edge(edges, "knows_skill", player_id, skill["id"])
+    for merchant in scene.get("merchants", []):
+        if merchant["id"] in nodes:
+            nodes[merchant["id"]].properties["gold"] = 999
+        for item in merchant.get("stock", []):
+            _add_item(nodes, item)
+            _edge(edges, "carries", merchant["id"], item["id"])
+    return Graph(nodes=nodes, edges=edges)
+
+
+def _player_id(scene: dict) -> str:
+    for entity in scene.get("entities", []):
+        if entity.get("type") == "player":
+            return entity["id"]
+    return "player_01"
+
+
+def _add_item(nodes: dict[str, GraphNode], item: dict) -> None:
+    nodes[item["id"]] = GraphNode(
+        id=item["id"],
+        type="item",
+        properties=_properties(item),
+    )
+
+
+def _edge(edges: dict[str, GraphEdge], edge_type: str, source: str, target: str) -> None:
+    edge_id = f"{edge_type}:{source}:{target}"
+    edges[edge_id] = GraphEdge(
+        id=edge_id,
+        type=edge_type,
+        from_node_id=source,
+        to_node_id=target,
+    )
+
+
+def _character_properties(entity: dict) -> dict:
+    props = {
+        **_properties(entity),
+        "alive": True,
+        "status": [],
+        "hp": 10,
+        "max_hp": 10,
+        "mp": 5,
+        "max_mp": 5,
+        "stats": {"body": 3, "agility": 3, "mind": 3, "presence": 3},
     }
+    if entity.get("type") == "enemy":
+        props["xp_reward"] = 1
+    if "merchant" in entity.get("roles", []):
+        props["gold"] = 999
+    return props
+
+
+def _properties(data: dict) -> dict:
+    return {key: value for key, value in data.items() if key != "id"}
 
 
 async def main() -> int:
@@ -191,9 +259,10 @@ async def main() -> int:
     raw_collisions: list[tuple[str, str, str]] = []  # (input, raw, error)
     for player_input, expected in CASES:
         print(f"--- INPUT: {player_input!r}  (expect: {expected})")
+        context = _classify_context(player_input, SURROUNDINGS)
         inp = ClassifyInput(
             player_input=player_input,
-            context=_classify_context(player_input, SURROUNDINGS),
+            context=context,
         )
         msgs = [
             {"role": "system", "content": sys_prompt},
@@ -215,7 +284,11 @@ async def main() -> int:
                 print(f"    [{i + 1}] EMPTY  (think={resp.get('think', '')[:80]!r})")
                 continue
             try:
-                parsed = validate_action_output_json(cleaned, in_combat=False)
+                parsed = validate_action_output_json(
+                    cleaned,
+                    in_combat=context.get("mode") == "combat",
+                    surroundings=classify_context_to_grounding_view(context),
+                )
             except Exception as e:
                 schema_fail_count += 1
                 raw_collisions.append((player_input, cleaned[:300], str(e)[:200]))
