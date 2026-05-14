@@ -302,8 +302,6 @@ async def _commit_graph_action_narration(
         )
         await repo.append_log_entries(game_id, log_entries)
         await repo.save_progress(next_runtime.progress)
-    else:
-        await repo.save_progress(next_runtime.progress)
 
     next_runtime = await persist_graph_narration_result(
         repo,
