@@ -598,9 +598,7 @@ async def _generate_graph_input_narration(
     answer = result.get("answer")
     if not isinstance(answer, str):
         return GraphNarrationResult()
-    return parse_graph_narration_answer(
-        _clean_narration(answer, recent_texts=_recent_gm_texts(runtime))
-    )
+    return parse_graph_narration_answer(answer)
 
 
 async def _generate_graph_input_rejection_narration(
@@ -641,9 +639,7 @@ async def _generate_graph_input_rejection_narration(
     answer = result.get("answer")
     if not isinstance(answer, str):
         return GraphNarrationResult()
-    return parse_graph_narration_answer(
-        _clean_narration(answer, recent_texts=_recent_gm_texts(runtime))
-    )
+    return parse_graph_narration_answer(answer)
 
 
 async def _stream_graph_input_narration(
@@ -867,15 +863,3 @@ def _single(value: object) -> str | None:
     if isinstance(value, list) and value and isinstance(value[0], str):
         return value[0]
     return None
-
-
-def _clean_narration(text: str, *, recent_texts=()) -> str:
-    return text
-
-
-def _recent_gm_texts(runtime: GameRuntimeState) -> list[str]:
-    return [
-        entry.text
-        for entry in runtime.log_entries[-4:]
-        if getattr(entry, "kind", None) == "gm" and hasattr(entry, "text")
-    ]

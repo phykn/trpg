@@ -129,15 +129,11 @@ def test_graph_narration_prompts_encode_style_without_source_title():
 
 
 def test_graph_narration_runtime_preserves_llm_text():
-    from src.game.runtime.input import _clean_narration as clean_input
     from src.game.runtime.intro import _clean_intro_text
-    from src.game.runtime.turn import _clean_narration as clean_action
 
     long_text = "  긴 문장입니다.\n\n" + ("가" * 450)
 
     assert _clean_intro_text(long_text) == long_text
-    assert clean_action(long_text) == long_text
-    assert clean_input(long_text) == long_text
 
 
 @pytest.mark.asyncio

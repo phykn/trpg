@@ -39,12 +39,12 @@ def executed_result(
     dispatch: GraphActionDispatchResult | None = None,
     suggestions: list[GraphSuggestionValue] | None = None,
 ) -> GraphActionRequestResult:
-    return GraphActionRequestResult(
+    return _result(
         runtime=runtime,
         status="executed",
         front_state=front_state,
         dispatch=dispatch,
-        suggestions=suggestions or [],
+        suggestions=suggestions,
     )
 
 
@@ -55,12 +55,12 @@ def rejected_result(
     *,
     suggestions: list[GraphSuggestionValue] | None = None,
 ) -> GraphActionRequestResult:
-    return GraphActionRequestResult(
+    return _result(
         runtime=runtime,
         status="rejected",
         front_state=front_state,
         message=message,
-        suggestions=suggestions or [],
+        suggestions=suggestions,
     )
 
 
@@ -69,7 +69,7 @@ def answered_result(
     front_state: GraphFrontStatePayload,
     message: str,
 ) -> GraphActionRequestResult:
-    return GraphActionRequestResult(
+    return _result(
         runtime=runtime,
         status="answered",
         front_state=front_state,
@@ -82,7 +82,7 @@ def roll_required_result(
     front_state: GraphFrontStatePayload,
     pending_roll: dict[str, Any],
 ) -> GraphActionRequestResult:
-    return GraphActionRequestResult(
+    return _result(
         runtime=runtime,
         status="roll_required",
         front_state=front_state,
@@ -95,7 +95,7 @@ def confirmation_required_result(
     front_state: GraphFrontStatePayload,
     pending_confirmation: dict[str, Any],
 ) -> GraphActionRequestResult:
-    return GraphActionRequestResult(
+    return _result(
         runtime=runtime,
         status="confirmation_required",
         front_state=front_state,
@@ -107,8 +107,31 @@ def cancelled_result(
     runtime: GameRuntimeState,
     front_state: GraphFrontStatePayload,
 ) -> GraphActionRequestResult:
-    return GraphActionRequestResult(
+    return _result(
         runtime=runtime,
         status="cancelled",
         front_state=front_state,
+    )
+
+
+def _result(
+    runtime: GameRuntimeState,
+    front_state: GraphFrontStatePayload,
+    *,
+    status: GraphRequestStatus,
+    pending_confirmation: dict[str, Any] | None = None,
+    pending_roll: dict[str, Any] | None = None,
+    dispatch: GraphActionDispatchResult | None = None,
+    message: str | None = None,
+    suggestions: list[GraphSuggestionValue] | None = None,
+) -> GraphActionRequestResult:
+    return GraphActionRequestResult(
+        runtime=runtime,
+        status=status,
+        front_state=front_state,
+        pending_confirmation=pending_confirmation,
+        pending_roll=pending_roll,
+        dispatch=dispatch,
+        message=message,
+        suggestions=suggestions or [],
     )
