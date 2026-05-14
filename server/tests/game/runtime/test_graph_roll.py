@@ -130,6 +130,20 @@ async def test_run_graph_roll_resolves_pending_roll_and_appends_roll_log(tmp_pat
     assert result.front_state.pending_roll is None
 
 
+async def test_run_graph_roll_logs_one_short_roll_as_fail(tmp_path):
+    repo = await _repo(tmp_path)
+    pending = (
+        await start_graph_roll(repo, "game-1", Action(verb="perceive", what="town"))
+    ).pending_roll
+
+    await run_graph_roll(repo, "game-1", pending["id"], dice=12)
+    logs = await repo.load_log_entries("game-1")
+
+    assert logs[0].kind == "roll"
+    assert logs[0].margin == -1
+    assert logs[0].result == "fail"
+
+
 async def test_run_graph_roll_requires_matching_pending_id(tmp_path):
     repo = await _repo(tmp_path)
 

@@ -52,7 +52,7 @@ class RollLogEntry(BaseModel):
     check: str
     roll: int
     margin: int
-    result: Literal["success", "partial", "fail"]
+    result: Literal["success", "fail"]
     # Player-facing breakdown of (die + bonuses) → total. Stat is folded
     # into required_roll on the engine side; we surface the equivalent
     # +mod here so the result label tells the same story.

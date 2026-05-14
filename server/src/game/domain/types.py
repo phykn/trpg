@@ -26,7 +26,6 @@ def tier_to_int(tier: Tier) -> int:
 Grade = Literal[
     "critical_success",
     "success",
-    "partial_success",
     "failure",
     "critical_failure",
 ]

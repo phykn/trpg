@@ -10,7 +10,6 @@ type RollEntry = Extract<LogEntry, { kind: 'roll' }>;
 
 const TONE = {
   success: { color: colors.success.fg, label: ko.roll.success, cls: 'text-success-fg' },
-  partial: { color: colors.exp.fg,     label: ko.roll.partial, cls: 'text-exp-fg'     },
   fail:    { color: colors.danger.fg,  label: ko.roll.fail,    cls: 'text-danger-fg'  },
 } as const;
 

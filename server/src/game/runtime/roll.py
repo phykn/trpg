@@ -177,8 +177,6 @@ def _roll_body(action: Action, locale: str) -> str:
 def _roll_result(grade: str) -> str:
     if grade in {"critical_success", "success"}:
         return "success"
-    if grade == "partial_success":
-        return "partial"
     return "fail"
 
 

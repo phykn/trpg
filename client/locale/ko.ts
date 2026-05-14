@@ -83,7 +83,6 @@ export const ko = {
     rollLabel: '주사위 굴리기',
     halt: '정지',
     success: '성공',
-    partial: '절반',
     fail: '실패',
     exceed: '초과',
     short: '부족',

@@ -70,7 +70,6 @@ class GrowthConfig(_F):
     roll_xp: dict[Grade, int] = {
         "critical_success": 25,
         "success": 8,
-        "partial_success": 3,
         "failure": 0,
         "critical_failure": 0,
     }
@@ -80,7 +79,6 @@ class SkillConfig(_F):
     grade_multipliers: dict[Grade, float] = {
         "critical_success": 2.0,
         "success": 1.0,
-        "partial_success": 0.5,
         "failure": 0.0,
         "critical_failure": 0.0,
     }

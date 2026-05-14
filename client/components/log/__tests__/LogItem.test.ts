@@ -19,4 +19,8 @@ describe('RollResult entries', () => {
     expect(source).toContain('borderLeftWidth');
     expect(source).toContain('tone.label');
   });
+
+  test('does not include partial roll outcome handling', () => {
+    expect(source).not.toContain('partial');
+  });
 });

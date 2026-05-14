@@ -24,6 +24,4 @@ def compute_grade(dice: int, total: int, required_roll: int) -> Grade:
         return "critical_failure"
     if total >= required_roll:
         return "success"
-    if total == required_roll - 1:
-        return "partial_success"
     return "failure"
