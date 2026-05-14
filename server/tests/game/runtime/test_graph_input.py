@@ -6,10 +6,13 @@ import pytest
 from openai import RateLimitError
 
 from src.db.graph_local_fs import LocalFsGraphRepo
+from src.game.domain.action import Action
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
+from src.game.runtime.confirmation import GraphConfirmationActive
 from src.game.runtime.input import run_graph_input_turn, run_graph_input_turn_stream
+from src.game.runtime.roll import build_pending_roll
 
 
 class _FakeLLM:
@@ -356,6 +359,59 @@ async def _social_quest_repo(
     )
     await repo.save_progress(GameProgress(game_id="game-1", player_id="player_01"))
     return repo
+
+
+async def test_graph_input_pending_confirmation_blocks_before_classify_or_log(tmp_path):
+    repo = await _repo(tmp_path)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(
+            update={
+                "pending_confirmation": {
+                    "id": "confirm_1",
+                    "kind": "attack_start",
+                    "title": "전투를 시작하시겠습니까?",
+                    "body": "goblin_01을 공격해 전투를 시작합니다.",
+                    "confirm_label": "공격합니다",
+                    "cancel_label": "취소",
+                    "target_label": "goblin_01",
+                    "payload": {
+                        "kind": "graph_action",
+                        "action": Action(
+                            verb="attack",
+                            what="goblin_01",
+                        ).model_dump(mode="json", by_alias=True),
+                    },
+                }
+            }
+        )
+    )
+    llm = _FakeLLM({"actions": [{"verb": "attack", "what": "goblin_01"}]})
+
+    with pytest.raises(GraphConfirmationActive, match="pending_confirmation"):
+        await run_graph_input_turn(llm, repo, "game-1", "고블린을 공격한다")
+
+    assert llm.calls == []
+    assert await repo.load_log_entries("game-1") == []
+
+
+async def test_graph_input_pending_roll_blocks_before_classify_or_log(tmp_path):
+    repo = await _repo(tmp_path)
+    progress = await repo.load_progress("game-1")
+    pending_roll = build_pending_roll(
+        _character("player_01").properties,
+        Action(verb="perceive", what="town"),
+    )
+    await repo.save_progress(
+        progress.model_copy(update={"pending_roll": pending_roll})
+    )
+    llm = _FakeLLM({"actions": [{"verb": "attack", "what": "goblin_01"}]})
+
+    with pytest.raises(GraphConfirmationActive, match="pending_roll"):
+        await run_graph_input_turn(llm, repo, "game-1", "고블린을 공격한다")
+
+    assert llm.calls == []
+    assert await repo.load_log_entries("game-1") == []
 
 
 async def test_graph_input_classifies_one_action_and_creates_confirmation(tmp_path):

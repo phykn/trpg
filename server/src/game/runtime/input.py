@@ -34,7 +34,7 @@ from .apply import (
     GraphRuntimeDirty,
     apply_runtime_graph_changes,
 )
-from .confirmation import run_graph_action_request
+from .confirmation import GraphConfirmationActive, run_graph_action_request
 from .load import load_runtime_state
 from .narration_context import build_input_narration_payload
 from .narration_result import (
@@ -86,6 +86,7 @@ async def run_graph_input_turn(
     scenario_repo: ScenarioRepo | None = None,
 ) -> GraphActionRequestResult:
     runtime = await load_runtime_state(repo, game_id, scenario_repo)
+    _raise_if_pending_input_blocked(runtime)
     set_diag_context(game_id, runtime.progress.turn_count)
     engine_diag("input:start", chars=len(player_input))
     runtime = await _append_player_input_log(repo, runtime, player_input)
@@ -127,6 +128,7 @@ async def run_graph_input_turn_stream(
     scenario_repo: ScenarioRepo | None = None,
 ) -> AsyncIterator[dict[str, object]]:
     runtime = await load_runtime_state(repo, game_id, scenario_repo)
+    _raise_if_pending_input_blocked(runtime)
     set_diag_context(game_id, runtime.progress.turn_count)
     engine_diag("input:start", chars=len(player_input))
     runtime = await _append_player_input_log(repo, runtime, player_input)
@@ -276,6 +278,17 @@ async def _run_classified_actions_stream(
     if result is None:
         raise GraphInputError("graph input requires at least one action")
     yield {"type": "final", "result": result}
+
+
+def _raise_if_pending_input_blocked(runtime: GameRuntimeState) -> None:
+    if runtime.progress.pending_confirmation is not None:
+        raise GraphConfirmationActive(
+            "a pending_confirmation is already active; call graph confirm instead"
+        )
+    if runtime.progress.pending_roll is not None:
+        raise GraphConfirmationActive(
+            "a pending_roll is already active; call graph roll instead"
+        )
 
 
 async def _run_graph_rejected_input(
