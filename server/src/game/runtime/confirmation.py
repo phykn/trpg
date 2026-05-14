@@ -11,7 +11,7 @@ from src.game.domain.graph_query import location_of
 from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, set_diag_context
 from src.locale.render import render
-from src.wire.graph_to_front import graph_to_front_state
+from src.wire.graph.to_front import graph_to_front_state
 
 from .load import load_runtime_state
 from .request_result import (

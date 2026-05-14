@@ -6,7 +6,7 @@ from src.game.domain.graph_character import (
     is_visible_character,
 )
 from src.game.domain.graph_query import characters_at, edges_from, location_of
-from src.wire.graph_character_view import (
+from .character_view import (
     character_equipment,
     character_gender,
     character_inventory,
@@ -15,7 +15,8 @@ from src.wire.graph_character_view import (
     character_stats,
     character_status,
 )
-from src.wire.graph_payload_helpers import (
+from .values import (
+    int_prop_default,
     node_name,
     optional_str,
     require_node,
@@ -61,11 +62,11 @@ def place_payload(
                 name=node_name(target, content),
                 kind=graph_character_kind(target),
                 alive=can_character_fight(target),
-                level=_int_prop_default(target, "level", 1),
+                level=int_prop_default(target, "level", 1),
                 race_job=character_race_job(target, content),
                 gender=character_gender(target, locale, content),
                 role=optional_str(static_value(target, "role", content)) or "",
-                gold=_int_prop_default(target, "gold", 0),
+                gold=int_prop_default(target, "gold", 0),
                 stats=character_stats(target),
                 equipment=character_equipment(graph, target.id, content),
                 inventory=character_inventory(graph, target.id, content),
@@ -92,8 +93,3 @@ def _place_link(
         name=node_name(location, content),
         description=optional_str(static_value(location, "description", content)) or "",
     )
-
-
-def _int_prop_default(node: GraphNode, key: str, default: int) -> int:
-    value = node.properties.get(key)
-    return value if isinstance(value, int) else default

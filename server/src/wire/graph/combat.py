@@ -1,5 +1,5 @@
 from src.game.runtime.state import GameRuntimeState
-from src.wire.graph_payload_helpers import (
+from .values import (
     node_name,
     optional_resource,
     require_node,

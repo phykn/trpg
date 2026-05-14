@@ -4,7 +4,7 @@ from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.game.domain.content import RuntimeContent
-from src.wire.graph_to_front import graph_to_front_state
+from src.wire.graph.to_front import graph_to_front_state
 
 
 def _character(

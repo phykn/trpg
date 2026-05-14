@@ -1,14 +1,14 @@
 from src.game.domain.content import RuntimeContent
 from src.game.domain.graph import Graph, GraphNode
 from src.game.engines.growth import xp_for_next_level
-from src.wire.graph_character_view import (
+from .character_view import (
     character_equipment,
     character_inventory,
     character_skills,
     character_stats,
     character_status,
 )
-from src.wire.graph_payload_helpers import (
+from .values import (
     int_prop_default,
     node_name,
     resource,

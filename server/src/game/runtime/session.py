@@ -16,7 +16,7 @@ from src.game.seed.init_graph import init_graph_game
 from src.game.seed.player import PlayerInput
 from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, set_diag_context
-from src.wire.graph_to_front import GraphFrontStatePayload, graph_to_front_state
+from src.wire.graph.to_front import GraphFrontStatePayload, graph_to_front_state
 
 
 @dataclass(frozen=True)

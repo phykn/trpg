@@ -12,7 +12,7 @@ from src.game.engines.graph_growth import (
 )
 from src.locale.render import render
 from src.llm.diag import engine_diag, set_diag_context
-from src.wire.graph_to_front import GraphFrontStatePayload, graph_to_front_state
+from src.wire.graph.to_front import GraphFrontStatePayload, graph_to_front_state
 
 from .apply import GraphRuntimeDirty, apply_runtime_graph_changes
 from .cards import build_graph_level_up_card

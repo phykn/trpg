@@ -1,7 +1,7 @@
 from src.game.domain.action import Action
 from src.llm.context.query_view import build_query_context_view
 from src.locale.render import render
-from src.wire.graph_to_front import graph_to_front_state
+from src.wire.graph.to_front import graph_to_front_state
 
 from .state import GameRuntimeState
 

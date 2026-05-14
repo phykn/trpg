@@ -27,7 +27,7 @@ from src.llm.context.classify_view import (
 from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, llm_diag, set_diag_context
 from src.locale.render import render
-from src.wire.graph_to_front import graph_to_front_state
+from src.wire.graph.to_front import graph_to_front_state
 
 from .apply import (
     GraphRuntimeApplyResult,

@@ -10,7 +10,7 @@ from src.game.domain.graph_query import (
     nodes_of_type,
 )
 from src.game.runtime.state import GameRuntimeState
-from src.wire.graph_payload_helpers import node_name, optional_str, static_value
+from .values import node_name, optional_str, static_value
 from src.wire.labels import difficulty_badge
 from src.wire.models import DifficultyBadge, QuestPayload, QuestRewards
 

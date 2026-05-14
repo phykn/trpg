@@ -4,15 +4,15 @@ from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
 from src.game.domain.memory import LogEntry
-from src.wire.models.quest import QuestPayload
 
 __all__ = [
+    "DifficultyBadge",
     "EquipSlot",
     "GraphCombatParticipantPayload",
     "GraphCombatPayload",
-    "GraphHeartPayload",
     "GraphEquipmentPayload",
     "GraphFrontStatePayload",
+    "GraphHeartPayload",
     "GraphHeroPayload",
     "GraphInventoryItemPayload",
     "GraphNamedPayload",
@@ -22,6 +22,8 @@ __all__ = [
     "GraphPlacePayload",
     "GraphPlaceTargetPayload",
     "GraphResourcePayload",
+    "QuestPayload",
+    "QuestRewards",
 ]
 
 
@@ -31,6 +33,29 @@ class _CamelModel(BaseModel):
         populate_by_name=True,
         serialize_by_alias=True,
     )
+
+
+class DifficultyBadge(_CamelModel):
+    label: str
+    tone: Literal["neutral", "good", "exp", "accent", "bad"] | None = None
+
+
+class QuestRewards(_CamelModel):
+    gold: int
+    exp: int
+
+
+class QuestPayload(_CamelModel):
+    id: str
+    title: str
+    summary: str
+    giver: str
+    difficulty: DifficultyBadge
+    goals: list[str]
+    progress_label: str
+    rewards: QuestRewards
+    status: Literal["pending", "active", "completed", "failed"]
+    actions: list[Literal["accept", "abandon"]]
 
 
 class GraphResourcePayload(_CamelModel):
@@ -161,3 +186,4 @@ class GraphFrontStatePayload(_CamelModel):
     pending_confirmation: GraphPendingConfirmationPayload | None
     pending_roll: GraphPendingRollPayload | None
     log: list[LogEntry]
+

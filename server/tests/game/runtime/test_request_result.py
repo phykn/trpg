@@ -13,7 +13,7 @@ from src.game.runtime.request_result import (
     roll_required_result,
 )
 from src.game.runtime.state import GameRuntimeState
-from src.wire.graph_to_front import graph_to_front_state
+from src.wire.graph.to_front import graph_to_front_state
 
 
 def _runtime() -> GameRuntimeState:

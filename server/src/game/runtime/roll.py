@@ -9,7 +9,7 @@ from src.game.rules.dc import compute_grade, compute_required_roll
 from src.locale.labels import roll_dice_label, stat_label
 from src.locale.render import render
 from src.llm.diag import engine_diag, set_diag_context
-from src.wire.graph_to_front import graph_to_front_state
+from src.wire.graph.to_front import graph_to_front_state
 
 from .load import load_runtime_state
 from .pending_action import build_pending_action_payload, load_pending_action

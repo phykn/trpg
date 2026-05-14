@@ -15,7 +15,7 @@ from src.game.engines.graph_quest_generation import plan_missing_quest_offer
 from src.llm.calls.runner import get_prompt
 from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, llm_diag, set_diag_context
-from src.wire.graph_to_front import GraphFrontStatePayload, graph_to_front_state
+from src.wire.graph.to_front import GraphFrontStatePayload, graph_to_front_state
 
 from .apply import GraphRuntimeDirty, apply_runtime_graph_changes
 from .dispatch import (
