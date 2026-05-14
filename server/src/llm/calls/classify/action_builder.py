@@ -3,7 +3,9 @@ from typing import Any
 from src.game.domain.action import Action, ActionOutput, RefuseReason
 
 
-def build_action_output(raw: dict[str, Any], surroundings: dict[str, Any]) -> ActionOutput:
+def build_action_output(
+    raw: dict[str, Any], surroundings: dict[str, Any]
+) -> ActionOutput:
     if isinstance(raw.get("refuse"), dict):
         return ActionOutput(refuse=RefuseReason.model_validate(raw["refuse"]))
 
@@ -13,7 +15,11 @@ def build_action_output(raw: dict[str, Any], surroundings: dict[str, Any]) -> Ac
 
     actions = [_build_action(intent, surroundings) for intent in intents]
     return ActionOutput.model_validate(
-        {"actions": [action.model_dump(mode="json", by_alias=True) for action in actions]},
+        {
+            "actions": [
+                action.model_dump(mode="json", by_alias=True) for action in actions
+            ]
+        },
         context={"in_combat": bool(surroundings.get("in_combat", False))},
     )
 

@@ -147,7 +147,9 @@ def _add_item(nodes: dict[str, GraphNode], item: dict) -> None:
     )
 
 
-def _edge(edges: dict[str, GraphEdge], edge_type: str, source: str, target: str) -> None:
+def _edge(
+    edges: dict[str, GraphEdge], edge_type: str, source: str, target: str
+) -> None:
     edge_id = f"{edge_type}:{source}:{target}"
     edges[edge_id] = GraphEdge(
         id=edge_id,

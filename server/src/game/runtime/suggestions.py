@@ -32,6 +32,8 @@ def normalize_suggestion(value: object) -> GraphSuggestionValue | None:
             label=label,
             input_text=input_text,
             intent=str(value["intent"]).strip() if value.get("intent") else None,
-            action=value.get("action") if isinstance(value.get("action"), dict) else None,
+            action=value.get("action")
+            if isinstance(value.get("action"), dict)
+            else None,
         )
     return None

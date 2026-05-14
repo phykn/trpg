@@ -128,9 +128,7 @@ def test_intro_payload_contains_grounded_first_scene_context():
         {"id": "guard_01", "name": "경비병", "type": "npc"}
     ]
     assert payload["exits"] == [{"id": "north_gate", "name": "북문"}]
-    assert payload["inventory"] == [
-        {"id": "sword_01", "name": "검", "kind": "weapon"}
-    ]
+    assert payload["inventory"] == [{"id": "sword_01", "name": "검", "kind": "weapon"}]
 
 
 def test_input_payload_excludes_recent_log_and_keeps_player_input():

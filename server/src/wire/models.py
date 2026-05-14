@@ -186,4 +186,3 @@ class GraphFrontStatePayload(_CamelModel):
     pending_confirmation: GraphPendingConfirmationPayload | None
     pending_roll: GraphPendingRollPayload | None
     log: list[LogEntry]
-

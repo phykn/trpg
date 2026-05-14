@@ -264,7 +264,9 @@ def _mentioned_inventory_payloads(
         item = runtime.graph.nodes.get(item_id)
         if item is None or item.type != "item":
             continue
-        if not _item_mentioned(player_input, node_label(runtime.content, item), item.id):
+        if not _item_mentioned(
+            player_input, node_label(runtime.content, item), item.id
+        ):
             continue
         payload: dict[str, Any] = _item_payload(runtime, item)
         price = node_value(runtime.content, item, "price")
@@ -292,7 +294,7 @@ def _item_mentioned(player_input: str, item_name: str, item_id: str) -> bool:
 
 def _normalize_for_match(text: str) -> str:
     hangul_range = f"{chr(0xAC00)}-{chr(0xD7A3)}"
-    return re.sub(fr"[^0-9A-Za-z{hangul_range}]+", "", text).lower()
+    return re.sub(rf"[^0-9A-Za-z{hangul_range}]+", "", text).lower()
 
 
 def _string_list_value(
@@ -330,7 +332,11 @@ def _result_cards(card_texts: list[str]) -> list[dict[str, str]]:
 def _narrate_budget(runtime: GameRuntimeState) -> dict[str, int]:
     place_id = location_of(runtime.graph_index, runtime.progress.player_id)
     visible_count = (
-        len(_visible_character_payloads(runtime, place_id, exclude_id=runtime.progress.player_id))
+        len(
+            _visible_character_payloads(
+                runtime, place_id, exclude_id=runtime.progress.player_id
+            )
+        )
         + len(_visible_item_payloads(runtime, place_id))
         + len(_exit_payloads(runtime, place_id))
     )

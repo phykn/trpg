@@ -453,10 +453,13 @@ def _stream_event(game_id: str, event) -> str:
 
 
 def _stream_error(status: int, message: str) -> str:
-    return json.dumps(
-        {"type": "error", "status": status, "message": message},
-        ensure_ascii=False,
-    ) + "\n"
+    return (
+        json.dumps(
+            {"type": "error", "status": status, "message": message},
+            ensure_ascii=False,
+        )
+        + "\n"
+    )
 
 
 @router.get(

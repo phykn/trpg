@@ -13,16 +13,16 @@ from src.llm.calls.classify.schema import ClassifyInput
 
 def _classify_test_context(surroundings: dict) -> dict:
     entities = surroundings.get("entities", [])
-    player = next((entity for entity in entities if entity.get("type") == "player"), None)
+    player = next(
+        (entity for entity in entities if entity.get("type") == "player"), None
+    )
     return {
         "mode": "combat" if surroundings.get("in_combat") else "exploration",
         "identity": {
             "player": player,
             "location": surroundings.get("location") or {},
             "visible_targets": [
-                entity
-                for entity in entities
-                if entity.get("type") in {"npc", "enemy"}
+                entity for entity in entities if entity.get("type") in {"npc", "enemy"}
             ],
             "exits": [
                 {"id": entity["id"], "name": entity["name"]}

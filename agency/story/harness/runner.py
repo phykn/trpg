@@ -177,13 +177,16 @@ def _load_dir(scenario_dir: Path, sub_dir: str) -> list[Record]:
 
 def _collect_refs(scenario_dir: Path, spec: EntitySpec) -> dict[str, set[str]]:
     refs: dict[str, set[str]] = {
-        spec.kind: {_entity_id(entity) for entity in _load_dir(scenario_dir, spec.sub_dir)}
+        spec.kind: {
+            _entity_id(entity) for entity in _load_dir(scenario_dir, spec.sub_dir)
+        }
     }
     for ref_kind in spec.ref_kinds:
         if ref_kind == spec.kind:
             continue
         refs[ref_kind] = {
-            _entity_id(entity) for entity in _load_dir(scenario_dir, SPECS[ref_kind].sub_dir)
+            _entity_id(entity)
+            for entity in _load_dir(scenario_dir, SPECS[ref_kind].sub_dir)
         }
     return refs
 
@@ -211,7 +214,9 @@ def _check_entity_invariants(
             "armor",
             "consumable",
         }:
-            raise EntityWriterError(f"item.effects.type={effect.get('type')!r} unknown.")
+            raise EntityWriterError(
+                f"item.effects.type={effect.get('type')!r} unknown."
+            )
 
 
 def _check_id(entity: Record, existing: set[str], force_id: str | None = None) -> None:
@@ -249,7 +254,9 @@ def _check_character_pools(entity: Record, scenario_dir: Path) -> None:
     skills = {_entity_id(skill) for skill in _load_dir(scenario_dir, "skills")}
     for item_id in _str_list(entity.get("inventory_ids")):
         if item_id not in items:
-            raise EntityWriterError(f"character.inventory_ids entry {item_id!r} missing.")
+            raise EntityWriterError(
+                f"character.inventory_ids entry {item_id!r} missing."
+            )
     for item_id in _mapping(entity.get("equipment")).values():
         if isinstance(item_id, str) and item_id and item_id not in items:
             raise EntityWriterError(f"character.equipment item {item_id!r} missing.")

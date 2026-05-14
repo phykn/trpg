@@ -364,11 +364,7 @@ async def test_graph_intro_streams_result_before_initial_narration(tmp_path):
         response = await client.post(f"/session/{game_id}/graph/intro/stream")
 
     assert response.status_code == 200, response.text
-    lines = [
-        json.loads(line)
-        for line in response.text.splitlines()
-        if line.strip()
-    ]
+    lines = [json.loads(line) for line in response.text.splitlines() if line.strip()]
 
     assert [line["type"] for line in lines] == [
         "result",
@@ -379,7 +375,9 @@ async def test_graph_intro_streams_result_before_initial_narration(tmp_path):
     assert lines[0]["payload"]["status"] == "executed"
     assert lines[0]["payload"]["outcome"] == "neutral"
     assert lines[0]["payload"]["state"]["log"] == []
-    assert "".join(line["text"] for line in lines[1:3]) == "문이 열리고 광장이 드러납니다."
+    assert (
+        "".join(line["text"] for line in lines[1:3]) == "문이 열리고 광장이 드러납니다."
+    )
     assert lines[-1]["payload"]["state"]["log"] == [
         {"id": 1, "kind": "gm", "text": "문이 열리고 광장이 드러납니다."}
     ]
@@ -423,7 +421,9 @@ async def test_graph_turn_stream_returns_result_then_final_without_narration(tmp
     assert [event["type"] for event in events] == ["result", "final"]
     assert events[0]["payload"]["status"] == "executed"
     assert events[0]["payload"]["outcome"] == "neutral"
-    assert events[0]["payload"]["state"]["log"][0]["text"] == "당신은 숲길로 이동합니다."
+    assert (
+        events[0]["payload"]["state"]["log"][0]["text"] == "당신은 숲길로 이동합니다."
+    )
     assert events[-1]["payload"]["status"] == "executed"
     assert events[-1]["payload"]["outcome"] == "neutral"
     assert events[-1]["payload"]["state"]["log"] == events[0]["payload"]["state"]["log"]
@@ -676,10 +676,16 @@ async def test_graph_confirm_stream_returns_result_before_narration_deltas(tmp_p
     assert events[0]["payload"]["status"] == "executed"
     assert events[0]["payload"]["outcome"] == "neutral"
     assert events[0]["payload"]["state"]["log"][-1]["kind"] == "act"
-    assert "".join(event["text"] for event in events[1:3]) == "장면의 긴장이 짧게 가라앉습니다."
+    assert (
+        "".join(event["text"] for event in events[1:3])
+        == "장면의 긴장이 짧게 가라앉습니다."
+    )
     assert events[-1]["payload"]["status"] == "executed"
     assert events[-1]["payload"]["outcome"] == "neutral"
-    assert events[-1]["payload"]["state"]["log"][-1]["text"] == "장면의 긴장이 짧게 가라앉습니다."
+    assert (
+        events[-1]["payload"]["state"]["log"][-1]["text"]
+        == "장면의 긴장이 짧게 가라앉습니다."
+    )
 
 
 @pytest.mark.asyncio
@@ -973,7 +979,10 @@ async def test_graph_input_stream_returns_result_before_narration_deltas(tmp_pat
             "text": "에드릭에게 말을 건다",
         }
     ]
-    assert "".join(event["text"] for event in events[1:3]) == "장면의 긴장이 짧게 가라앉습니다."
+    assert (
+        "".join(event["text"] for event in events[1:3])
+        == "장면의 긴장이 짧게 가라앉습니다."
+    )
     assert events[-1]["payload"]["game_id"] == game_id
     assert events[-1]["payload"]["status"] == "executed"
     assert events[-1]["payload"]["state"]["log"][-1] == {
@@ -1028,7 +1037,9 @@ async def test_graph_input_returns_reflected_suggestions(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_graph_play_loop_reaches_quest_reward_with_graph_state(tmp_path, monkeypatch):
+async def test_graph_play_loop_reaches_quest_reward_with_graph_state(
+    tmp_path, monkeypatch
+):
     monkeypatch.setattr("src.game.engines.graph_combat.randint", lambda _a, _b: 20)
     app = _build_app(tmp_path)
 
@@ -1078,7 +1089,9 @@ async def test_graph_play_loop_reaches_quest_reward_with_graph_state(tmp_path, m
             f"/session/{game_id}/graph/turn",
             json={"action": {"verb": "attack", "what": enemy_id}},
         )
-        assert second_exchange_response.status_code == 200, second_exchange_response.text
+        assert second_exchange_response.status_code == 200, (
+            second_exchange_response.text
+        )
 
         final_response = await client.post(
             f"/session/{game_id}/graph/turn",

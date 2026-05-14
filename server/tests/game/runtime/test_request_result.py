@@ -73,7 +73,10 @@ def test_result_helpers_set_only_the_relevant_pending_payload():
     )
 
     assert confirmation.status == "confirmation_required"
-    assert confirmation.pending_confirmation == {"id": "confirm_1", "kind": "quest_accept"}
+    assert confirmation.pending_confirmation == {
+        "id": "confirm_1",
+        "kind": "quest_accept",
+    }
     assert confirmation.pending_roll is None
     assert roll.status == "roll_required"
     assert roll.pending_roll == {"id": "roll_1", "kind": "perceive"}
@@ -86,7 +89,9 @@ def test_result_helpers_set_response_level_outcome():
 
     assert executed_result(runtime, front_state).outcome == "success"
     assert rejected_result(runtime, front_state).outcome == "failure"
-    assert answered_result(runtime, front_state, "주변은 조용합니다.").outcome == "neutral"
+    assert (
+        answered_result(runtime, front_state, "주변은 조용합니다.").outcome == "neutral"
+    )
     assert cancelled_result(runtime, front_state).outcome == "neutral"
     assert (
         confirmation_required_result(

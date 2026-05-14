@@ -84,8 +84,12 @@ def test_report_route_completes_quest_and_changes_affinity():
 
     assert graph.nodes["q_missing_supplies"].properties["status"] == "completed"
     assert graph.nodes["q_missing_supplies"].properties["resolution_route"] == "report"
-    assert graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 25
-    assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == -5
+    assert (
+        graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 25
+    )
+    assert (
+        graph.edges["relation:village_resident:player_01"].properties["affinity"] == -5
+    )
     assert graph.edges["relation:guide_npc:player_01"].properties["affinity"] == 0
 
 
@@ -98,7 +102,9 @@ def test_theft_accusation_wording_reports_resident():
     )
 
     assert graph.nodes["q_missing_supplies"].properties["resolution_route"] == "report"
-    assert graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 25
+    assert (
+        graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 25
+    )
 
 
 def test_mediation_first_records_resident_reason_without_completing():
@@ -113,7 +119,9 @@ def test_mediation_first_records_resident_reason_without_completing():
     assert quest["status"] == "pending"
     assert quest["resident_reason_known"] is True
     assert "resolution_route" not in quest
-    assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == 2
+    assert (
+        graph.edges["relation:village_resident:player_01"].properties["affinity"] == 2
+    )
 
 
 def test_missing_supplies_question_records_resident_reason():
@@ -126,7 +134,9 @@ def test_missing_supplies_question_records_resident_reason():
 
     quest = graph.nodes["q_missing_supplies"].properties
     assert quest["resident_reason_known"] is True
-    assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == 2
+    assert (
+        graph.edges["relation:village_resident:player_01"].properties["affinity"] == 2
+    )
 
 
 def test_generic_resident_speech_does_not_mutate_quest():
@@ -193,8 +203,12 @@ def test_mediation_route_completes_after_reason_flag():
 
     assert graph.nodes["q_missing_supplies"].properties["status"] == "completed"
     assert graph.nodes["q_missing_supplies"].properties["resolution_route"] == "mediate"
-    assert graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 23
-    assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == 8
+    assert (
+        graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 23
+    )
+    assert (
+        graph.edges["relation:village_resident:player_01"].properties["affinity"] == 8
+    )
     assert graph.edges["relation:guide_npc:player_01"].properties["affinity"] == 5
 
 
@@ -207,8 +221,13 @@ def test_quiet_return_route_records_help_flag():
     )
 
     assert graph.nodes["q_missing_supplies"].properties["status"] == "completed"
-    assert graph.nodes["q_missing_supplies"].properties["resolution_route"] == "quiet_return"
-    assert graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 20
+    assert (
+        graph.nodes["q_missing_supplies"].properties["resolution_route"]
+        == "quiet_return"
+    )
+    assert (
+        graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 20
+    )
     resident_relation = graph.edges["relation:village_resident:player_01"].properties
     assert resident_relation["affinity"] == 6
     assert resident_relation["flags"] == ["helped_quietly"]
@@ -222,8 +241,13 @@ def test_quiet_return_route_uses_wording_without_target():
         "보급품을 조용히 돌려놓습니다",
     )
 
-    assert graph.nodes["q_missing_supplies"].properties["resolution_route"] == "quiet_return"
-    assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == 6
+    assert (
+        graph.nodes["q_missing_supplies"].properties["resolution_route"]
+        == "quiet_return"
+    )
+    assert (
+        graph.edges["relation:village_resident:player_01"].properties["affinity"] == 6
+    )
 
 
 def test_quiet_return_creates_one_resident_relation_when_missing():

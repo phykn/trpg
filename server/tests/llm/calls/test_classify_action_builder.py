@@ -51,7 +51,9 @@ def test_build_action_output_converts_buy_intent_to_transfer_action():
     )
 
     assert output.actions is not None
-    assert output.actions[0].model_dump(mode="json", by_alias=True, exclude_none=True) == {
+    assert output.actions[0].model_dump(
+        mode="json", by_alias=True, exclude_none=True
+    ) == {
         "verb": "transfer",
         "what": "potion_01",
         "from": "merchant_01",
@@ -161,7 +163,11 @@ def test_build_action_output_supports_existing_intent_catalog():
             },
         ),
         (
-            {"intent": "abandon_quest", "quest_id": "quest_01", "target_id": "guard_01"},
+            {
+                "intent": "abandon_quest",
+                "quest_id": "quest_01",
+                "target_id": "guard_01",
+            },
             {
                 "verb": "transfer",
                 "what": "quest_01",

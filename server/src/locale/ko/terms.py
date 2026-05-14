@@ -50,4 +50,3 @@ KO_META_BREAKING_TERMS = (
 )
 KO_REAL_WORLD_TERMS = ("현실", "실제")
 WEATHER_TERM = "날씨"
-

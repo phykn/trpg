@@ -16,7 +16,11 @@ from src.game.engines.graph_quest import (
 )
 from src.llm.diag import engine_diag
 
-from .apply import GraphRuntimeApplyError, GraphRuntimeDirty, apply_runtime_graph_changes
+from .apply import (
+    GraphRuntimeApplyError,
+    GraphRuntimeDirty,
+    apply_runtime_graph_changes,
+)
 from .state import GameRuntimeState
 
 
@@ -199,7 +203,9 @@ def _support_kind_or_none(graph: Graph, node_id: str | None) -> str | None:
     return None
 
 
-def _auto_skill_support_id(graph: Graph, player_id: str, action_kind: str) -> str | None:
+def _auto_skill_support_id(
+    graph: Graph, player_id: str, action_kind: str
+) -> str | None:
     player = graph.nodes.get(player_id)
     if player is None:
         return None

@@ -9,7 +9,9 @@ def test_combat_narration_view_marks_korean_training_dummy_nonlethal():
     runtime = GameRuntimeState(
         graph=Graph(
             nodes={
-                "player_01": GraphNode(id="player_01", type="character", properties={"name": "당신"}),
+                "player_01": GraphNode(
+                    id="player_01", type="character", properties={"name": "당신"}
+                ),
                 "training_dummy": GraphNode(
                     id="training_dummy",
                     type="character",

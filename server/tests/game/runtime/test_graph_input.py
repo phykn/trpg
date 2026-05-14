@@ -286,9 +286,7 @@ def _social_quest_graph(*, resident_reason_known: bool = False) -> Graph:
                     "triggers_met": [],
                     "rewards": {"gold": 1, "exp": 0},
                     **(
-                        {"resident_reason_known": True}
-                        if resident_reason_known
-                        else {}
+                        {"resident_reason_known": True} if resident_reason_known else {}
                     ),
                 },
             ),
@@ -402,9 +400,7 @@ async def test_graph_input_pending_roll_blocks_before_classify_or_log(tmp_path):
         _character("player_01").properties,
         Action(verb="perceive", what="town"),
     )
-    await repo.save_progress(
-        progress.model_copy(update={"pending_roll": pending_roll})
-    )
+    await repo.save_progress(progress.model_copy(update={"pending_roll": pending_roll}))
     llm = _FakeLLM({"actions": [{"verb": "attack", "what": "goblin_01"}]})
 
     with pytest.raises(GraphConfirmationActive, match="pending_roll"):
@@ -490,18 +486,16 @@ async def test_graph_input_social_reason_speak_persists_then_uses_narration_meta
 ):
     repo = await _social_quest_repo(tmp_path)
     llm = _FakeLLM(
-        {
-            "actions": [
-                {"verb": "speak", "what": "village_resident", "how": "friendly"}
-            ]
-        },
+        {"actions": [{"verb": "speak", "what": "village_resident", "how": "friendly"}]},
         narration="주민은 보급품을 가져간 이유를 낮게 설명합니다.",
         turn_summary="주민에게서 보급품이 사라진 이유를 들었습니다.",
         importance=3,
         suggestions=["보급 담당자에게 중재를 제안합니다"],
     )
 
-    result = await run_graph_input_turn(llm, repo, "game-1", "누락된 보급품의 이유를 묻는다")
+    result = await run_graph_input_turn(
+        llm, repo, "game-1", "누락된 보급품의 이유를 묻는다"
+    )
     graph = await repo.load_graph("game-1")
     logs = await repo.load_log_entries("game-1")
     history = await repo.load_history_entries("game-1")
@@ -510,7 +504,9 @@ async def test_graph_input_social_reason_speak_persists_then_uses_narration_meta
     assert result.status == "executed"
     assert result.suggestions == ["보급 담당자에게 중재를 제안합니다"]
     assert graph.nodes["q_missing_supplies"].properties["resident_reason_known"] is True
-    assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == 2
+    assert (
+        graph.edges["relation:village_resident:player_01"].properties["affinity"] == 2
+    )
     assert logs[-1].kind == "gm"
     assert logs[-1].text == "주민은 보급품을 가져간 이유를 낮게 설명합니다."
     assert history == [
@@ -554,7 +550,9 @@ async def test_graph_input_social_blocked_mediation_logs_need_reason_without_mut
         }
     )
 
-    result = await run_graph_input_turn(llm, repo, "game-1", "주민의 사정을 봐 달라고 설득한다")
+    result = await run_graph_input_turn(
+        llm, repo, "game-1", "주민의 사정을 봐 달라고 설득한다"
+    )
     graph = await repo.load_graph("game-1")
     logs = await repo.load_log_entries("game-1")
     history = await repo.load_history_entries("game-1")
@@ -563,7 +561,9 @@ async def test_graph_input_social_blocked_mediation_logs_need_reason_without_mut
     assert result.status == "executed"
     assert "resident_reason_known" not in graph.nodes["q_missing_supplies"].properties
     assert graph.nodes["q_missing_supplies"].properties["status"] == "pending"
-    assert graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 20
+    assert (
+        graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 20
+    )
     assert logs[-1].text == "먼저 주민에게 사라진 보급품의 사정을 들어야 합니다."
     assert history == []
     assert dialogue == [
@@ -615,12 +615,20 @@ async def test_graph_input_social_quiet_return_streams_narration_after_persistin
     ]
     assert events[0]["result"].status == "executed"
     assert events[0]["result"].outcome == "neutral"
-    assert "".join(event["text"] for event in events[1:-1]) == "당신은 보급품을 조용히 되돌려 놓습니다."
+    assert (
+        "".join(event["text"] for event in events[1:-1])
+        == "당신은 보급품을 조용히 되돌려 놓습니다."
+    )
     assert events[-1]["result"].status == "executed"
     assert events[-1]["result"].suggestions == ["주민에게 결과를 알립니다"]
     assert graph.nodes["q_missing_supplies"].properties["status"] == "completed"
-    assert graph.nodes["q_missing_supplies"].properties["resolution_route"] == "quiet_return"
-    assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == 6
+    assert (
+        graph.nodes["q_missing_supplies"].properties["resolution_route"]
+        == "quiet_return"
+    )
+    assert (
+        graph.edges["relation:village_resident:player_01"].properties["affinity"] == 6
+    )
     assert graph.edges["relation:village_resident:player_01"].properties["flags"] == [
         "helped_quietly"
     ]
@@ -667,8 +675,14 @@ async def test_graph_input_social_stream_persists_result_before_narration(tmp_pa
             "removed_edge_ids": [],
         }
     ]
-    assert graph_after_result.nodes["q_missing_supplies"].properties["status"] == "completed"
-    assert graph_after_result.nodes["q_missing_supplies"].properties["resolution_route"] == "quiet_return"
+    assert (
+        graph_after_result.nodes["q_missing_supplies"].properties["status"]
+        == "completed"
+    )
+    assert (
+        graph_after_result.nodes["q_missing_supplies"].properties["resolution_route"]
+        == "quiet_return"
+    )
     remaining = [event async for event in stream]
     assert remaining[0]["type"] == "narration_delta"
     assert remaining[-1]["type"] == "final"
@@ -678,24 +692,26 @@ async def test_graph_input_social_stream_persists_result_before_narration(tmp_pa
 async def test_graph_input_social_report_route_persists_then_narrates(tmp_path):
     repo = await _social_quest_repo(tmp_path)
     llm = _FakeLLM(
-        {
-            "actions": [
-                {"verb": "speak", "what": "village_resident", "how": "hostile"}
-            ]
-        },
+        {"actions": [{"verb": "speak", "what": "village_resident", "how": "hostile"}]},
         narration="당신은 주민의 일을 보급 담당자에게 넘깁니다.",
         suggestions=["보급 담당자에게 보상을 확인합니다"],
     )
 
-    result = await run_graph_input_turn(llm, repo, "game-1", "이 일을 보급 담당자에게 보고한다")
+    result = await run_graph_input_turn(
+        llm, repo, "game-1", "이 일을 보급 담당자에게 보고한다"
+    )
     graph = await repo.load_graph("game-1")
     logs = await repo.load_log_entries("game-1")
 
     assert result.suggestions == ["보급 담당자에게 보상을 확인합니다"]
     assert graph.nodes["q_missing_supplies"].properties["status"] == "completed"
     assert graph.nodes["q_missing_supplies"].properties["resolution_route"] == "report"
-    assert graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 25
-    assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == -5
+    assert (
+        graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 25
+    )
+    assert (
+        graph.edges["relation:village_resident:player_01"].properties["affinity"] == -5
+    )
     assert logs[-1].text == "당신은 주민의 일을 보급 담당자에게 넘깁니다."
     assert repo.graph_change_saves == [
         {
@@ -726,15 +742,21 @@ async def test_graph_input_social_mediation_route_persists_then_narrates(tmp_pat
         suggestions=["길잡이에게 다음 길을 묻습니다"],
     )
 
-    result = await run_graph_input_turn(llm, repo, "game-1", "주민의 사정을 봐 달라고 설득한다")
+    result = await run_graph_input_turn(
+        llm, repo, "game-1", "주민의 사정을 봐 달라고 설득한다"
+    )
     graph = await repo.load_graph("game-1")
     logs = await repo.load_log_entries("game-1")
 
     assert result.suggestions == ["길잡이에게 다음 길을 묻습니다"]
     assert graph.nodes["q_missing_supplies"].properties["status"] == "completed"
     assert graph.nodes["q_missing_supplies"].properties["resolution_route"] == "mediate"
-    assert graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 23
-    assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == 8
+    assert (
+        graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 23
+    )
+    assert (
+        graph.edges["relation:village_resident:player_01"].properties["affinity"] == 8
+    )
     assert graph.edges["relation:guide_npc:player_01"].properties["affinity"] == 5
     assert logs[-1].text == "당신은 양쪽의 사정을 이어 합의를 이끕니다."
     assert repo.graph_change_saves == [
@@ -781,13 +803,20 @@ async def test_graph_input_social_quiet_return_repeat_does_not_apply_deltas_twic
     )
 
     await run_graph_input_turn(first_llm, repo, "game-1", "보급품을 조용히 돌려놓는다")
-    result = await run_graph_input_turn(second_llm, repo, "game-1", "보급품을 조용히 돌려놓는다")
+    result = await run_graph_input_turn(
+        second_llm, repo, "game-1", "보급품을 조용히 돌려놓는다"
+    )
     graph = await repo.load_graph("game-1")
 
     assert result.status == "executed"
     assert graph.nodes["q_missing_supplies"].properties["status"] == "completed"
-    assert graph.nodes["q_missing_supplies"].properties["resolution_route"] == "quiet_return"
-    assert graph.edges["relation:village_resident:player_01"].properties["affinity"] == 6
+    assert (
+        graph.nodes["q_missing_supplies"].properties["resolution_route"]
+        == "quiet_return"
+    )
+    assert (
+        graph.edges["relation:village_resident:player_01"].properties["affinity"] == 6
+    )
     assert graph.edges["relation:village_resident:player_01"].properties["flags"] == [
         "helped_quietly"
     ]
@@ -920,7 +949,10 @@ async def test_graph_input_streams_result_before_speak_narration(tmp_path):
     assert all(event["type"] == "narration_delta" for event in events[1:-1])
     assert events[0]["result"].status == "executed"
     assert events[0]["result"].outcome == "neutral"
-    assert "".join(event["text"] for event in events[1:-1]) == "상대는 당신의 말을 듣습니다."
+    assert (
+        "".join(event["text"] for event in events[1:-1])
+        == "상대는 당신의 말을 듣습니다."
+    )
     assert events[-1]["result"].status == "executed"
     assert [entry.kind for entry in logs] == ["player", "gm"]
     assert logs[-1].text == "상대는 당신의 말을 듣습니다."
@@ -953,7 +985,9 @@ async def test_graph_input_streams_single_result_for_multiple_actions(tmp_path):
     assert events[-1]["type"] == "final"
     assert [event["type"] for event in events].count("result") == 1
     assert all(event["type"] == "narration_delta" for event in events[1:-1])
-    assert "".join(event["text"] for event in events[1:-1]) == "상대는 고개를 끄덕입니다."
+    assert (
+        "".join(event["text"] for event in events[1:-1]) == "상대는 고개를 끄덕입니다."
+    )
     assert events[-1]["result"].front_state.place.id == "forest"
     assert [entry.kind for entry in logs] == ["player", "gm", "act", "act"]
 
@@ -1024,7 +1058,9 @@ async def test_graph_input_perceive_creates_pending_roll(tmp_path):
     assert result.front_state.pending_roll is not None
 
 
-async def test_graph_input_pickup_visible_location_item_transfers_to_inventory(tmp_path):
+async def test_graph_input_pickup_visible_location_item_transfers_to_inventory(
+    tmp_path,
+):
     repo = await _repo(tmp_path)
     llm = _FakeLLM({"actions": [{"verb": "pass"}]})
 
@@ -1128,7 +1164,9 @@ async def test_graph_input_runs_multiple_actions_in_order(tmp_path):
         narration="당신은 주변을 살핍니다.",
     )
 
-    result = await run_graph_input_turn(llm, repo, "game-1", "광장으로 가서 주변을 살핀다")
+    result = await run_graph_input_turn(
+        llm, repo, "game-1", "광장으로 가서 주변을 살핀다"
+    )
     graph = await repo.load_graph("game-1")
     progress = await repo.load_progress("game-1")
     logs = await repo.load_log_entries("game-1")

@@ -1,2 +1,1 @@
 """Korean locale helpers."""
-

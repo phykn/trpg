@@ -64,9 +64,7 @@ def test_rejects_when_not_in_combat():
     runtime = _runtime()
     runtime = runtime.model_copy(
         update={
-            "progress": runtime.progress.model_copy(
-                update={"graph_combat_state": None}
-            )
+            "progress": runtime.progress.model_copy(update={"graph_combat_state": None})
         }
     )
 

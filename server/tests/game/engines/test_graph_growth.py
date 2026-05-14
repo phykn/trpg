@@ -202,8 +202,7 @@ def test_skill_level_up_learns_or_upgrades_and_consumes_xp_once():
 
     assert upgraded.nodes["player_01"].properties["level"] == 3
     assert (
-        upgraded.edges["knows_skill:learned:player_01:fireball"].properties["tier"]
-        == 2
+        upgraded.edges["knows_skill:learned:player_01:fireball"].properties["tier"] == 2
     )
 
 

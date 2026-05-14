@@ -92,7 +92,9 @@ def plan_item_trade(
     if placement.type == "equips":
         raise GraphTransferError(f"equipped item cannot be traded: {item_id}")
 
-    merchant_id = to_character_id if from_character_id == player_id else from_character_id
+    merchant_id = (
+        to_character_id if from_character_id == player_id else from_character_id
+    )
     _require_trade_affinity(graph, merchant_id, player_id)
 
     price = _int_value(item.properties.get("price"), default=0)
@@ -260,7 +262,9 @@ def _require_gold(node, label: str) -> int:
 def _require_gold_at_least(node, amount: int, label: str) -> int:
     gold = _require_gold(node, label)
     if gold < amount:
-        raise GraphTransferError(f"{label} does not have enough gold: {gold} < {amount}")
+        raise GraphTransferError(
+            f"{label} does not have enough gold: {gold} < {amount}"
+        )
     return gold
 
 

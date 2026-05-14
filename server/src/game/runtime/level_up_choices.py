@@ -73,7 +73,9 @@ async def build_level_up_choices(
             }
         )
 
-    known_edges = list(edges_from(runtime.graph, runtime.progress.player_id, "knows_skill"))
+    known_edges = list(
+        edges_from(runtime.graph, runtime.progress.player_id, "knows_skill")
+    )
     for edge in known_edges:
         tier = edge.properties.get("tier", 1)
         if not isinstance(tier, int) or tier >= 3:
@@ -85,7 +87,9 @@ async def build_level_up_choices(
         choices.append(
             {
                 "id": f"upgrade_skill:{edge.to_node_id}",
-                "label": render("runtime.level_growth.upgrade_skill", locale, skill=label),
+                "label": render(
+                    "runtime.level_growth.upgrade_skill", locale, skill=label
+                ),
                 "description": render(
                     "runtime.level_choice.upgrade_skill",
                     locale,

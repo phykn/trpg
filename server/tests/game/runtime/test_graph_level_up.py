@@ -155,7 +155,9 @@ async def test_level_up_options_include_llm_skill_candidate(tmp_path):
 
     choices = await build_level_up_choices(runtime, llm=llm)
 
-    learn = next(choice for choice in choices if choice["id"].startswith("learn_skill:"))
+    learn = next(
+        choice for choice in choices if choice["id"].startswith("learn_skill:")
+    )
     assert learn["label"] == "그림자 찌르기 습득"
     assert learn["growth"]["kind"] == "learn_skill"
     assert learn["growth"]["skill"]["effect_template"] == "dc_down"
@@ -179,9 +181,12 @@ async def test_run_graph_level_up_can_learn_generated_skill(tmp_path):
 
     assert saved_graph.nodes[skill_id].type == "skill"
     assert saved_graph.nodes[skill_id].properties["name"] == "그림자 찌르기"
-    assert saved_graph.edges[f"knows_skill:learned:player_01:{skill_id}"].properties[
-        "tier"
-    ] == 1
+    assert (
+        saved_graph.edges[f"knows_skill:learned:player_01:{skill_id}"].properties[
+            "tier"
+        ]
+        == 1
+    )
 
 
 async def test_run_graph_level_up_rejects_insufficient_xp_without_saving(tmp_path):

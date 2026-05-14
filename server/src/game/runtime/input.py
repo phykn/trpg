@@ -430,9 +430,7 @@ async def _append_player_input_log(
         kind="player",
         text=player_input,
     )
-    progress = runtime.progress.model_copy(
-        update={"next_log_id": entry.id + 1}
-    )
+    progress = runtime.progress.model_copy(update={"next_log_id": entry.id + 1})
     next_runtime = runtime.model_copy(
         update={
             "progress": progress,

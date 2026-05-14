@@ -27,9 +27,9 @@ def test_server_source_keeps_korean_text_in_locale_package() -> None:
 
 
 def test_combat_nonlethal_markers_live_in_locale_package() -> None:
-    source = (
-        SERVER_SRC / "game" / "runtime" / "combat_narration_view.py"
-    ).read_text(encoding="utf-8")
+    source = (SERVER_SRC / "game" / "runtime" / "combat_narration_view.py").read_text(
+        encoding="utf-8"
+    )
 
     assert re.search(r"(?m)^\s*markers\s*=\s*\{", source) is None
     assert "KOREAN_NONLETHAL_MARKERS" not in source

@@ -14,7 +14,9 @@ def _runtime(*, dialogue_count: int = 0) -> GameRuntimeState:
     return GameRuntimeState(
         graph=Graph(
             nodes={
-                "town": GraphNode(id="town", type="location", properties={"name": "마을"}),
+                "town": GraphNode(
+                    id="town", type="location", properties={"name": "마을"}
+                ),
                 "player_01": GraphNode(id="player_01", type="character"),
                 "npc_merchant": GraphNode(
                     id="npc_merchant",
@@ -48,7 +50,9 @@ def _runtime(*, dialogue_count: int = 0) -> GameRuntimeState:
 def test_related_memory_prefers_relevance_before_importance():
     runtime = _runtime()
     runtime.turn_log.append(
-        TurnLogEntry(turn=1, target="unrelated", summary="중요하지만 무관합니다.", importance=3)
+        TurnLogEntry(
+            turn=1, target="unrelated", summary="중요하지만 무관합니다.", importance=3
+        )
     )
     runtime.turn_log.append(
         TurnLogEntry(

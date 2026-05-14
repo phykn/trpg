@@ -134,7 +134,9 @@ async def run_graph_intro_request_stream(
         engine_diag("intro:done", logs=len(runtime.log_entries))
         yield {
             "type": "final",
-            "result": GraphSessionIntroResult(front_state=graph_to_front_state(runtime)),
+            "result": GraphSessionIntroResult(
+                front_state=graph_to_front_state(runtime)
+            ),
         }
 
 

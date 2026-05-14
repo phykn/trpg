@@ -120,7 +120,9 @@ def _plan_growth_choice(
             learn_skill_id=skill_id,
         )
         if seed_change is not None:
-            result = result.model_copy(update={"changes": [seed_change, *result.changes]})
+            result = result.model_copy(
+                update={"changes": [seed_change, *result.changes]}
+            )
         return result, render(
             "runtime.level_growth.learn_skill",
             locale,

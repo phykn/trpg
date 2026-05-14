@@ -49,7 +49,11 @@ def plan_social_quest_speak(
     if quest.properties.get("status") not in ELIGIBLE_STATUSES:
         return None
 
-    if target_id == RESIDENT_ID and how == "friendly" and _mentions_reason(player_input):
+    if (
+        target_id == RESIDENT_ID
+        and how == "friendly"
+        and _mentions_reason(player_input)
+    ):
         if quest.properties.get("resident_reason_known") is True:
             return None
         return SocialQuestResult(
@@ -73,7 +77,11 @@ def plan_social_quest_speak(
             },
         )
 
-    if target_id == QUARTERMASTER_ID and how == "friendly" and _mentions_mediate(player_input):
+    if (
+        target_id == QUARTERMASTER_ID
+        and how == "friendly"
+        and _mentions_mediate(player_input)
+    ):
         if quest.properties.get("resident_reason_known") is not True:
             return SocialQuestResult(
                 kind="blocked",
@@ -121,7 +129,9 @@ def _resolve(
     for actor_id, delta in affinity.items():
         if actor_id == RESIDENT_ID and resident_flag is not None:
             continue
-        changes.extend(_relation_changes(graph, actor_id, player_id, affinity_delta=delta))
+        changes.extend(
+            _relation_changes(graph, actor_id, player_id, affinity_delta=delta)
+        )
     if resident_flag is not None:
         changes.extend(
             _relation_changes(

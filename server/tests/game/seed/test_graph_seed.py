@@ -385,11 +385,9 @@ def test_build_seed_graph_links_missing_supplies_social_quest():
         == "part_of_chapter"
     )
     assert (
-        graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"]
-        == 20
+        graph.edges["relation:quartermaster_npc:player_01"].properties["affinity"] == 20
     )
     assert (
-        graph.edges["relation:village_resident:player_01"].properties["affinity"]
-        == 0
+        graph.edges["relation:village_resident:player_01"].properties["affinity"] == 0
     )
     assert graph.edges["relation:guide_npc:player_01"].properties["affinity"] == 0

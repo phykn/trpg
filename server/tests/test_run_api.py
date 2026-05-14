@@ -78,6 +78,7 @@ async def test_build_app_allows_localtunnel_bypass_cors_header():
     assert response.headers["access-control-allow-origin"] == (
         "https://trpg.example.test"
     )
-    assert "bypass-tunnel-reminder" in response.headers[
-        "access-control-allow-headers"
-    ].lower()
+    assert (
+        "bypass-tunnel-reminder"
+        in response.headers["access-control-allow-headers"].lower()
+    )

@@ -107,7 +107,9 @@ def plan_skill_level_up(
     if learn_skill_id is not None:
         skill_result = plan_skill_learn(progressed, character_id, learn_skill_id)
     else:
-        skill_result = plan_skill_upgrade(progressed, character_id, upgrade_skill_id or "")
+        skill_result = plan_skill_upgrade(
+            progressed, character_id, upgrade_skill_id or ""
+        )
 
     return GraphGrowthResult(
         changes=[*level_changes, *skill_result.changes],

@@ -109,8 +109,7 @@ def _player_can_act(runtime: GameRuntimeState) -> bool:
     status = player.properties.get("status")
     markers = downed_markers(runtime.progress.locale)
     if isinstance(status, list) and any(
-        isinstance(item, str) and item.lower() in markers
-        for item in status
+        isinstance(item, str) and item.lower() in markers for item in status
     ):
         return False
     return True

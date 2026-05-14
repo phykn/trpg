@@ -50,7 +50,9 @@ def classify_action_shortcut(
     player_input: str,
     surroundings: dict[str, Any],
 ) -> ActionOutput | None:
-    if surroundings.get("in_combat") is True and _has_any(player_input, ACTION_FLEE_TERMS):
+    if surroundings.get("in_combat") is True and _has_any(
+        player_input, ACTION_FLEE_TERMS
+    ):
         return _action_output(
             [Action(verb="move", how="hasty")],
             in_combat=True,

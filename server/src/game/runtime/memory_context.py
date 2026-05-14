@@ -30,9 +30,7 @@ def recent_dialogue_payload(
     *,
     limit: int = 5,
 ) -> list[dict]:
-    return [
-        entry.model_dump(mode="json") for entry in runtime.recent_dialogue[-limit:]
-    ]
+    return [entry.model_dump(mode="json") for entry in runtime.recent_dialogue[-limit:]]
 
 
 def classify_recent_dialogue_payload(

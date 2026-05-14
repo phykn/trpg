@@ -11,9 +11,7 @@ def _classify_test_context(surroundings: dict) -> dict:
         "identity": {
             "location": surroundings.get("location") or {},
             "visible_targets": [
-                entity
-                for entity in entities
-                if entity.get("type") in {"npc", "enemy"}
+                entity for entity in entities if entity.get("type") in {"npc", "enemy"}
             ],
             "exits": [
                 {"id": entity["id"], "name": entity["name"]}
