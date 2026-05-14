@@ -1,12 +1,17 @@
 import React from 'react';
 
 import type { LogEntry } from '@/logic/log';
-import type { FrontState, GraphActionClientResponse, SuggestionChip } from '@/services/wire';
+import type {
+  FrontState,
+  GraphActionClientResponse,
+  GraphResultOutcome,
+  SuggestionChip,
+} from '@/services/wire';
 
 type ApplyState = (state: FrontState, gameId?: string | null) => void;
 type SetSuggestions = (next: React.SetStateAction<SuggestionChip[]>) => void;
 type GraphActionRequestEvents = {
-  onNarrationDelta: (text: string) => void;
+  onNarrationDelta: (text: string, outcome: GraphResultOutcome) => void;
 };
 type GraphActionCall = (
   signal: AbortSignal,
@@ -65,6 +70,7 @@ function appendStreamingNarration(
   generation: number,
   optimisticEntryCount: number,
   text: string,
+  outcome: GraphResultOutcome,
 ): void {
   if (!text) return;
   const id = -(generation * 1000 + optimisticEntryCount + 1);
@@ -74,6 +80,7 @@ function appendStreamingNarration(
       id,
       kind: 'gm',
       text: `${existing?.kind === 'gm' ? existing.text : ''}${text}`,
+      outcome,
     });
   });
 }
@@ -109,14 +116,14 @@ export async function runGraphActionRequestOnce(
   appendOptimisticLogEntries(runtime, generation, optimisticEntries);
   try {
     const response = await call(controller.signal, {
-      onNarrationDelta: (text: string) => {
+      onNarrationDelta: (text: string, outcome: GraphResultOutcome) => {
         if (
           runtime.requestGenerationRef.current !== generation
           || controller.signal.aborted
         ) {
           return;
         }
-        appendStreamingNarration(runtime, generation, optimisticEntries.length, text);
+        appendStreamingNarration(runtime, generation, optimisticEntries.length, text, outcome);
       },
     });
     if (runtime.requestGenerationRef.current !== generation) return;

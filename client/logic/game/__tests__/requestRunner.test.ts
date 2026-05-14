@@ -68,8 +68,8 @@ describe('runGraphActionRequestOnce', () => {
 
     await runGraphActionRequestOnce(
       async (_signal, events) => {
-        events.onNarrationDelta('당신은 ');
-        events.onNarrationDelta('문을 봅니다.');
+        events.onNarrationDelta('당신은 ', 'success');
+        events.onNarrationDelta('문을 봅니다.', 'success');
         return response('game-1');
       },
       rt,
@@ -93,11 +93,11 @@ describe('runGraphActionRequestOnce', () => {
 
     expect(withFirstDelta).toEqual([
       expect.objectContaining({ kind: 'player', text: '문을 본다' }),
-      expect.objectContaining({ kind: 'gm', text: '당신은 ' }),
+      expect.objectContaining({ kind: 'gm', text: '당신은 ', outcome: 'success' }),
     ]);
     expect(withSecondDelta).toEqual([
       expect.objectContaining({ kind: 'player', text: '문을 본다' }),
-      expect.objectContaining({ kind: 'gm', text: '당신은 문을 봅니다.' }),
+      expect.objectContaining({ kind: 'gm', text: '당신은 문을 봅니다.', outcome: 'success' }),
     ]);
     expect(withSecondDelta[1].id).toBe(withFirstDelta[1].id);
   });

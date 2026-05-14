@@ -13,6 +13,7 @@ import type {
   GraphLevelUpChoicesResponse,
   GraphLevelUpRequest,
   GraphRollRequest,
+  GraphResultOutcome,
   GraphSessionPayload,
   InitRequest,
   ProfileCard,
@@ -22,7 +23,7 @@ import type {
 
 type ApiRequestOptions = {
   signal?: AbortSignal;
-  onNarrationDelta?: (text: string) => void;
+  onNarrationDelta?: (text: string, outcome: GraphResultOutcome) => void;
 };
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -161,7 +162,8 @@ async function requestGraphActionPlain(
 }
 
 type GraphInputStreamEvent =
-  | { type: 'delta'; text?: unknown }
+  | { type: 'result'; payload?: unknown }
+  | { type: 'narration_delta'; text?: unknown }
   | { type: 'final'; payload?: unknown }
   | { type: 'error'; status?: unknown; message?: unknown };
 
@@ -172,13 +174,19 @@ async function readGraphActionStream(
 ): Promise<GraphActionClientResponse> {
   const reader = res.body?.getReader?.();
   let finalPayload: GraphActionResponse | null = null;
+  let resultOutcome: GraphResultOutcome = 'neutral';
   const consumeLine = (line: string) => {
     const trimmed = line.trim();
     if (!trimmed) return;
     const event = JSON.parse(trimmed) as GraphInputStreamEvent;
-    if (event.type === 'delta') {
+    if (event.type === 'result') {
+      const payload = event.payload as Partial<GraphActionResponse> | null | undefined;
+      resultOutcome = payload?.outcome ?? 'neutral';
+      return;
+    }
+    if (event.type === 'narration_delta') {
       if (typeof event.text === 'string' && event.text) {
-        options.onNarrationDelta?.(event.text);
+        options.onNarrationDelta?.(event.text, resultOutcome);
       }
       return;
     }

@@ -150,26 +150,30 @@ describe('graph API helpers', () => {
 
   test('streams graph action narration deltas before the final payload', async () => {
     const onNarrationDelta = jest.fn();
+    const response = {
+      game_id: 'game-1',
+      state: graphState(),
+      status: 'executed',
+      outcome: 'success',
+      message: null,
+    };
     fetch.mockResolvedValueOnce(
       streamResponse([
-        JSON.stringify({ type: 'delta', text: '검이 ' }),
-        JSON.stringify({ type: 'delta', text: '허공을 가릅니다.' }),
+        JSON.stringify({ type: 'result', payload: response }),
+        JSON.stringify({ type: 'narration_delta', text: '검이 ' }),
+        JSON.stringify({ type: 'narration_delta', text: '허공을 가릅니다.' }),
         JSON.stringify({
           type: 'final',
-          payload: {
-            game_id: 'game-1',
-            state: graphState(),
-            status: 'executed',
-            message: null,
-          },
+          payload: response,
         }),
       ]),
     );
 
-    await sendGraphAction('game-1', { verb: 'attack', what: 'dummy' }, { onNarrationDelta });
+    const result = await sendGraphAction('game-1', { verb: 'attack', what: 'dummy' }, { onNarrationDelta });
 
-    expect(onNarrationDelta).toHaveBeenNthCalledWith(1, '검이 ');
-    expect(onNarrationDelta).toHaveBeenNthCalledWith(2, '허공을 가릅니다.');
+    expect(onNarrationDelta).toHaveBeenNthCalledWith(1, '검이 ', 'success');
+    expect(onNarrationDelta).toHaveBeenNthCalledWith(2, '허공을 가릅니다.', 'success');
+    expect(result.outcome).toBe('success');
   });
 
   test('tags restored graph sessions as graph runtime payloads', async () => {
@@ -290,27 +294,31 @@ describe('graph API helpers', () => {
 
   test('streams graph intro narration deltas before the final payload', async () => {
     const onNarrationDelta = jest.fn();
+    const response = {
+      game_id: 'game-1',
+      state: graphState(),
+      status: 'executed',
+      outcome: 'success',
+      message: null,
+    };
     fetch.mockResolvedValueOnce(
       streamResponse([
-        JSON.stringify({ type: 'delta', text: '문이 ' }),
-        JSON.stringify({ type: 'delta', text: '열립니다.' }),
+        JSON.stringify({ type: 'result', payload: response }),
+        JSON.stringify({ type: 'narration_delta', text: '문이 ' }),
+        JSON.stringify({ type: 'narration_delta', text: '열립니다.' }),
         JSON.stringify({
           type: 'final',
-          payload: {
-            game_id: 'game-1',
-            state: graphState(),
-            status: 'executed',
-            message: null,
-          },
+          payload: response,
         }),
       ]),
     );
 
     const result = await requestGraphIntro('game-1', { onNarrationDelta });
 
-    expect(onNarrationDelta).toHaveBeenNthCalledWith(1, '문이 ');
-    expect(onNarrationDelta).toHaveBeenNthCalledWith(2, '열립니다.');
+    expect(onNarrationDelta).toHaveBeenNthCalledWith(1, '문이 ', 'success');
+    expect(onNarrationDelta).toHaveBeenNthCalledWith(2, '열립니다.', 'success');
     expect(result.status).toBe('executed');
+    expect(result.outcome).toBe('success');
   });
 
   test('falls back to the plain graph intro endpoint when the stream route is unavailable', async () => {
@@ -394,27 +402,31 @@ describe('graph API helpers', () => {
 
   test('streams graph text input narration deltas before the final payload', async () => {
     const onNarrationDelta = jest.fn();
+    const response = {
+      game_id: 'game-1',
+      state: graphState(),
+      status: 'executed',
+      outcome: 'success',
+      message: null,
+    };
     fetch.mockResolvedValueOnce(
       streamResponse([
-        JSON.stringify({ type: 'delta', text: '당신은 ' }),
-        JSON.stringify({ type: 'delta', text: '문을 봅니다.' }),
+        JSON.stringify({ type: 'result', payload: response }),
+        JSON.stringify({ type: 'narration_delta', text: '당신은 ' }),
+        JSON.stringify({ type: 'narration_delta', text: '문을 봅니다.' }),
         JSON.stringify({
           type: 'final',
-          payload: {
-            game_id: 'game-1',
-            state: graphState(),
-            status: 'executed',
-            message: null,
-          },
+          payload: response,
         }),
       ]),
     );
 
     const result = await sendGraphInput('game-1', '문을 본다', { onNarrationDelta });
 
-    expect(onNarrationDelta).toHaveBeenNthCalledWith(1, '당신은 ');
-    expect(onNarrationDelta).toHaveBeenNthCalledWith(2, '문을 봅니다.');
+    expect(onNarrationDelta).toHaveBeenNthCalledWith(1, '당신은 ', 'success');
+    expect(onNarrationDelta).toHaveBeenNthCalledWith(2, '문을 봅니다.', 'success');
     expect(result.status).toBe('executed');
+    expect(result.outcome).toBe('success');
   });
 
   test('uses server graph suggestions when an action response includes legacy strings', async () => {

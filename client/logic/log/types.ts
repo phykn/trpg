@@ -1,7 +1,8 @@
 export type RollResult = 'success' | 'fail';
+export type LogOutcome = 'success' | 'failure' | 'neutral';
 
 export type LogEntry =
-  | { id: number; kind: 'gm'; text: string }
+  | { id: number; kind: 'gm'; text: string; outcome?: LogOutcome }
   | { id: number; kind: 'player'; text: string }
   | { id: number; kind: 'act'; text: string }
   | {
