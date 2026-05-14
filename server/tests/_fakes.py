@@ -13,7 +13,7 @@ minimal `default` scenario seed (1 race, 1 location, 1 NPC,
 import json
 from typing import Any
 
-from src.db.supabase import SupabaseStorageScenarioRepo
+from src.db.scenario_supabase import SupabaseStorageScenarioRepo
 from src.game.engines.growth import calc_max_hp, calc_max_mp
 
 

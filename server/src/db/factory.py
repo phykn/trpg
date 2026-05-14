@@ -11,9 +11,9 @@ import os
 
 from .graph_local_fs import LocalFsGraphRepo
 from .graph_supabase import SupabaseGraphRepo
-from .local_fs import LocalFsScenarioRepo
 from .repo import GraphRepo, ScenarioRepo
-from .supabase import SupabaseStorageScenarioRepo
+from .scenario_local_fs import LocalFsScenarioRepo
+from .scenario_supabase import SupabaseStorageScenarioRepo
 
 
 def build_scenario_repo() -> ScenarioRepo:
