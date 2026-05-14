@@ -6,7 +6,7 @@ from src.game.domain.graph_character import (
     is_visible_character,
 )
 from src.game.domain.graph_query import characters_at, edges_from, location_of
-from .characher import (
+from .character import (
     character_equipment,
     character_gender,
     character_inventory,
