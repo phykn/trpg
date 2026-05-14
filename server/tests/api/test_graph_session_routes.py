@@ -236,6 +236,8 @@ async def test_graph_intro_adds_initial_narration_but_move_and_offer_stay_system
     assert intro_body["state"]["log"] == [
         {"id": 1, "kind": "gm", "text": "LLM 소개는 init 응답을 막지 않습니다."}
     ]
+    assert intro_body["outcome"] == "neutral"
+    assert move_body["outcome"] == "neutral"
     assert [entry.kind for entry in logs] == ["gm", "act", "act"]
     assert [entry.id for entry in logs] == [1, 2, 3]
     assert logs[0].text == "LLM 소개는 init 응답을 막지 않습니다."
@@ -263,6 +265,7 @@ async def test_graph_intro_rate_limited_llm_uses_fallback_narration(tmp_path):
             "text": "당신은 광장에 도착합니다. 테스트 광장",
         }
     ]
+    assert body["outcome"] == "neutral"
 
 
 @pytest.mark.asyncio
@@ -448,6 +451,7 @@ async def test_graph_level_up_commits_and_returns_state(tmp_path):
     assert player_props["xp_pool"] == 0
     assert player_props["max_hp"] == 6
     assert player_props["hp"] == 6
+    assert body["outcome"] == "success"
     assert body["state"]["hero"]["level"] == level + 1
     assert body["state"]["hero"]["exp"] == 0
     assert body["state"]["log"] == [entry.model_dump() for entry in logs]
@@ -526,6 +530,7 @@ async def test_graph_turn_rejects_query_without_advancing_turn(tmp_path):
     progress = await app.state.graph_repo.load_progress(game_id)
 
     assert body["status"] == "answered"
+    assert body["outcome"] == "neutral"
     assert body["message"]
     assert progress.turn_count == 0
 
@@ -546,6 +551,7 @@ async def test_graph_turn_attack_returns_confirmation_without_starting_combat(tm
     progress = await app.state.graph_repo.load_progress(game_id)
 
     assert body["state"]["pendingConfirmation"]["kind"] == "attack_start"
+    assert body["outcome"] == "neutral"
     assert "payload" not in body["state"]["pendingConfirmation"]
     assert progress.pending_confirmation["kind"] == "attack_start"
     assert progress.graph_combat_state is None
@@ -632,6 +638,7 @@ async def test_graph_confirm_stream_returns_narration_deltas_before_final_state(
     assert [event["type"] for event in events] == ["delta", "delta", "final"]
     assert "".join(event["text"] for event in events[:-1]) == "장면의 긴장이 짧게 가라앉습니다."
     assert events[-1]["payload"]["status"] == "executed"
+    assert events[-1]["payload"]["outcome"] == "neutral"
     assert events[-1]["payload"]["state"]["log"][-1]["text"] == "장면의 긴장이 짧게 가라앉습니다."
 
 
@@ -888,6 +895,7 @@ async def test_graph_input_classifies_query_and_returns_message(tmp_path):
     progress = await app.state.graph_repo.load_progress(game_id)
 
     assert body["status"] == "answered"
+    assert body["outcome"] == "neutral"
     assert "숲길" in body["message"]
     assert progress.turn_count == 0
 
@@ -1035,6 +1043,7 @@ async def test_graph_play_loop_reaches_quest_reward_with_graph_state(tmp_path, m
     assert final_body["state"]["quest"] is None
     assert final_body["state"]["questOffers"][0]["id"] == "auto_quest_002"
     assert final_body["state"]["hero"]["gold"] == 5
+    assert final_body["outcome"] == "success"
     assert final_body["state"]["hero"]["exp"] == 10
     assert final_body["state"]["hero"]["inventory"] == [
         {

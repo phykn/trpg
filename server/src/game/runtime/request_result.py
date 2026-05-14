@@ -17,6 +17,7 @@ GraphRequestStatus = Literal[
     "answered",
     "rejected",
 ]
+GraphResultOutcome = Literal["success", "failure", "neutral"]
 
 
 class GraphActionRequestResult(BaseModel):
@@ -24,6 +25,7 @@ class GraphActionRequestResult(BaseModel):
 
     runtime: GameRuntimeState
     status: GraphRequestStatus
+    outcome: GraphResultOutcome = "neutral"
     front_state: GraphFrontStatePayload
     pending_confirmation: dict[str, Any] | None = None
     pending_roll: dict[str, Any] | None = None
@@ -37,11 +39,13 @@ def executed_result(
     front_state: GraphFrontStatePayload,
     *,
     dispatch: GraphActionDispatchResult | None = None,
+    outcome: GraphResultOutcome = "success",
     suggestions: list[GraphSuggestionValue] | None = None,
 ) -> GraphActionRequestResult:
     return _result(
         runtime=runtime,
         status="executed",
+        outcome=outcome_from_dispatch(dispatch) if dispatch is not None else outcome,
         front_state=front_state,
         dispatch=dispatch,
         suggestions=suggestions,
@@ -58,6 +62,7 @@ def rejected_result(
     return _result(
         runtime=runtime,
         status="rejected",
+        outcome="failure",
         front_state=front_state,
         message=message,
         suggestions=suggestions,
@@ -72,6 +77,7 @@ def answered_result(
     return _result(
         runtime=runtime,
         status="answered",
+        outcome="neutral",
         front_state=front_state,
         message=message,
     )
@@ -85,6 +91,7 @@ def roll_required_result(
     return _result(
         runtime=runtime,
         status="roll_required",
+        outcome="neutral",
         front_state=front_state,
         pending_roll=pending_roll,
     )
@@ -98,6 +105,7 @@ def confirmation_required_result(
     return _result(
         runtime=runtime,
         status="confirmation_required",
+        outcome="neutral",
         front_state=front_state,
         pending_confirmation=pending_confirmation,
     )
@@ -110,8 +118,21 @@ def cancelled_result(
     return _result(
         runtime=runtime,
         status="cancelled",
+        outcome="neutral",
         front_state=front_state,
     )
+
+
+def outcome_from_dispatch(dispatch: GraphActionDispatchResult) -> GraphResultOutcome:
+    if dispatch.kind == "combat":
+        if dispatch.outcome == "victory":
+            return "success"
+        if dispatch.outcome == "defeat":
+            return "failure"
+        return "neutral"
+    if dispatch.kind == "move":
+        return "neutral"
+    return "success"
 
 
 def _result(
@@ -119,6 +140,7 @@ def _result(
     front_state: GraphFrontStatePayload,
     *,
     status: GraphRequestStatus,
+    outcome: GraphResultOutcome,
     pending_confirmation: dict[str, Any] | None = None,
     pending_roll: dict[str, Any] | None = None,
     dispatch: GraphActionDispatchResult | None = None,
@@ -128,6 +150,7 @@ def _result(
     return GraphActionRequestResult(
         runtime=runtime,
         status=status,
+        outcome=outcome,
         front_state=front_state,
         pending_confirmation=pending_confirmation,
         pending_roll=pending_roll,

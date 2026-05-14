@@ -92,7 +92,7 @@ describe('graph API helpers', () => {
             game_id: 'game-1',
             state: graphState(),
             status: 'confirmation_required',
-            event_kind: 'result',
+            outcome: 'neutral',
             message: null,
           },
         }),
@@ -115,7 +115,7 @@ describe('graph API helpers', () => {
       }),
     );
     expect(result.status).toBe('confirmation_required');
-    expect(result.eventKind).toBe('result');
+    expect(result.outcome).toBe('neutral');
   });
 
   test('posts combat commands to the graph combat endpoint', async () => {
@@ -629,5 +629,6 @@ describe('graph API helpers', () => {
       }),
     );
     expect(result.pendingRoll).toBeNull();
+    expect(result.outcome).toBe('neutral');
   });
 });

@@ -100,6 +100,7 @@ async def session_graph_intro(
         game_id=game_id,
         state=result.front_state.model_dump(mode="json", by_alias=True),
         status=result.status,
+        outcome=result.outcome,
         message=result.message,
         suggestions=result.suggestions,
     )
@@ -169,6 +170,7 @@ async def session_graph_turn(
         game_id=game_id,
         state=result.front_state.model_dump(mode="json", by_alias=True),
         status=result.status,
+        outcome=result.outcome,
         message=result.message,
         suggestions=result.suggestions,
     )
@@ -228,6 +230,7 @@ async def session_graph_combat(
         game_id=game_id,
         state=result.front_state.model_dump(mode="json", by_alias=True),
         status=result.status,
+        outcome=result.outcome,
         message=result.message,
         suggestions=result.suggestions,
     )
@@ -288,6 +291,7 @@ async def session_graph_confirm(
         game_id=game_id,
         state=result.front_state.model_dump(mode="json", by_alias=True),
         status=result.status,
+        outcome=result.outcome,
         message=result.message,
         suggestions=result.suggestions,
     )
@@ -340,6 +344,7 @@ async def session_graph_roll(
         game_id=game_id,
         state=result.front_state.model_dump(mode="json", by_alias=True),
         status=result.status,
+        outcome=result.outcome,
         message=result.message,
         suggestions=result.suggestions,
     )
@@ -372,6 +377,7 @@ async def session_graph_input(
         game_id=game_id,
         state=result.front_state.model_dump(mode="json", by_alias=True),
         status=result.status,
+        outcome=result.outcome,
         message=result.message,
         suggestions=result.suggestions,
     )
@@ -432,6 +438,7 @@ def _stream_event(game_id: str, event) -> str:
                 by_alias=True,
             ),
             status=result.status,
+            outcome=getattr(result, "outcome", "neutral"),
             message=result.message,
             suggestions=result.suggestions,
         )
@@ -491,5 +498,6 @@ async def session_graph_level_up(
         game_id=game_id,
         state=result.front_state.model_dump(mode="json", by_alias=True),
         status=None,
+        outcome="success",
         message=None,
     )

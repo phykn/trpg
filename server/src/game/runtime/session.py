@@ -10,6 +10,7 @@ from src.game.runtime.intro import (
     run_graph_initial_narration_stream,
 )
 from src.game.runtime.load import load_runtime_state
+from src.game.runtime.request_result import GraphResultOutcome
 from src.game.runtime.state import GameRuntimeState
 from src.game.runtime.suggestions import GraphSuggestionValue
 from src.game.seed.init_graph import init_graph_game
@@ -29,6 +30,7 @@ class GraphSessionSnapshot:
 class GraphSessionIntroResult:
     front_state: GraphFrontStatePayload
     status: Literal["executed"] = "executed"
+    outcome: GraphResultOutcome = "neutral"
     message: str | None = None
     suggestions: list[GraphSuggestionValue] = field(default_factory=list)
 

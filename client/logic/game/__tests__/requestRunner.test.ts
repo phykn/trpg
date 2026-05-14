@@ -12,6 +12,7 @@ function response(gameId: string): GraphActionClientResponse {
     state: {} as FrontState,
     pendingConfirmation: null,
     pendingRoll: null,
+    outcome: 'neutral',
     suggestions: [{ label: '다음', inputText: '다음 행동을 합니다' }],
   };
 }

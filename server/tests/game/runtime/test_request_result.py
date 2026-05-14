@@ -2,6 +2,7 @@ from typing import get_args
 
 from src.game.domain.progress import GameProgress
 from src.game.domain.graph import Graph, GraphNode
+from src.game.runtime.dispatch import GraphActionDispatchResult
 from src.game.runtime.request_result import (
     GraphActionRequestResult,
     GraphRequestStatus,
@@ -9,6 +10,7 @@ from src.game.runtime.request_result import (
     cancelled_result,
     confirmation_required_result,
     executed_result,
+    outcome_from_dispatch,
     rejected_result,
     roll_required_result,
 )
@@ -76,6 +78,53 @@ def test_result_helpers_set_only_the_relevant_pending_payload():
     assert roll.status == "roll_required"
     assert roll.pending_roll == {"id": "roll_1", "kind": "perceive"}
     assert roll.pending_confirmation is None
+
+
+def test_result_helpers_set_response_level_outcome():
+    runtime = _runtime()
+    front_state = graph_to_front_state(runtime)
+
+    assert executed_result(runtime, front_state).outcome == "success"
+    assert rejected_result(runtime, front_state).outcome == "failure"
+    assert answered_result(runtime, front_state, "주변은 조용합니다.").outcome == "neutral"
+    assert cancelled_result(runtime, front_state).outcome == "neutral"
+    assert (
+        confirmation_required_result(
+            runtime,
+            front_state,
+            {"id": "confirm_1", "kind": "quest_accept"},
+        ).outcome
+        == "neutral"
+    )
+    assert (
+        roll_required_result(
+            runtime,
+            front_state,
+            {"id": "roll_1", "kind": "perceive"},
+        ).outcome
+        == "neutral"
+    )
+
+
+def test_outcome_from_dispatch_maps_combat_and_move_results():
+    runtime = _runtime()
+
+    def dispatch(kind: str, outcome: str | None = None) -> GraphActionDispatchResult:
+        return GraphActionDispatchResult(
+            runtime=runtime,
+            kind=kind,
+            applied=0,
+            changed_node_ids=[],
+            changed_edge_ids=[],
+            removed_edge_ids=[],
+            outcome=outcome,
+        )
+
+    assert outcome_from_dispatch(dispatch("combat", "victory")) == "success"
+    assert outcome_from_dispatch(dispatch("combat", "defeat")) == "failure"
+    assert outcome_from_dispatch(dispatch("combat", "fled")) == "neutral"
+    assert outcome_from_dispatch(dispatch("move")) == "neutral"
+    assert outcome_from_dispatch(dispatch("quest_accept")) == "success"
 
 
 def test_terminal_result_helpers_keep_existing_response_shape():

@@ -36,7 +36,7 @@ class GraphActionResponse(BaseModel):
     game_id: str
     state: dict
     status: str | None = None
-    event_kind: Literal["result", "narration"] = "result"
+    outcome: Literal["success", "failure", "neutral"] = "neutral"
     message: str | None = None
     suggestions: list[GraphSuggestionValue] = Field(default_factory=list)
 

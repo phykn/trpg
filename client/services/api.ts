@@ -378,7 +378,7 @@ function adaptGraphActionResponse(
     pendingConfirmation: state.pendingConfirmation ?? null,
     pendingRoll: state.pendingRoll ?? null,
     status: payload.status,
-    eventKind: payload.event_kind ?? null,
+    outcome: payload.outcome ?? 'neutral',
     message: payload.message,
     suggestions: adaptSuggestions(payload.suggestions, payload.state),
   };

@@ -129,6 +129,7 @@ async def run_graph_roll(
     return executed_result(
         next_runtime,
         graph_to_front_state(next_runtime),
+        outcome="success" if entry.result == "success" else "failure",
     )
 
 
