@@ -10,9 +10,10 @@ from src.game.domain.graph_query import (
     nodes_of_type,
 )
 from src.game.runtime.state import GameRuntimeState
-from .values import node_name, optional_str, static_value
-from src.wire.labels import difficulty_badge
+from src.locale import render
 from src.wire.models import DifficultyBadge, QuestPayload, QuestRewards
+
+from .values import node_name, optional_str, static_value
 
 
 def active_quest_payload(runtime: GameRuntimeState) -> QuestPayload | None:
@@ -71,7 +72,6 @@ def build_quest_payload(
 
     content = runtime.content
     tier = optional_str(static_value(quest, "difficulty", content)) or "normal"
-    badge = difficulty_badge(tier)
     goals = _quest_goals(quest, content)
     done, total = _quest_progress(quest)
     return QuestPayload(
@@ -79,7 +79,7 @@ def build_quest_payload(
         title=optional_str(static_value(quest, "title", content)) or quest.id,
         summary=optional_str(static_value(quest, "summary", content)) or "",
         giver=_quest_giver_name(graph, quest.id, runtime),
-        difficulty=DifficultyBadge(label=badge["label"], tone=badge["tone"]),
+        difficulty=_difficulty_badge(tier),
         goals=goals,
         progress_label=_progress_label(done, total),
         rewards=_quest_rewards(quest),
@@ -91,6 +91,10 @@ def build_quest_payload(
 def quest_status(quest: GraphNode) -> str:
     status = quest.properties.get("status")
     return status if isinstance(status, str) else "locked"
+
+
+def _difficulty_badge(tier: str) -> DifficultyBadge:
+    return DifficultyBadge(label=render(f"tier.{tier}", "ko"))
 
 
 def _first_quest_with_status(graph: Graph, status: str) -> GraphNode | None:
