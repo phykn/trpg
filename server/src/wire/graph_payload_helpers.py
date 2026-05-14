@@ -2,7 +2,7 @@ from typing import Literal
 
 from src.game.domain.content import RuntimeContent, node_label, node_value
 from src.game.domain.graph import GraphNode
-from src.llm.context.graph_combat import hp_state, mp_state
+from src.game.domain.resource_state import hp_state, mp_state
 from src.wire.models import GraphResourcePayload
 
 

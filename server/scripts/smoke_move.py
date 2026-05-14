@@ -26,7 +26,7 @@ load_dotenv(SERVER_DIR / ".env.dev")
 from src.game.domain.graph import Graph, GraphEdge, GraphNode  # noqa: E402
 from src.game.domain.progress import GameProgress  # noqa: E402
 from src.game.runtime.state import GameRuntimeState  # noqa: E402
-from src.llm.calls._runner import get_prompt  # noqa: E402
+from src.llm.calls.runner import get_prompt  # noqa: E402
 from src.llm.calls.classify.schema import ClassifyInput, validate_action_output_json  # noqa: E402
 from src.llm.client import LLMClient  # noqa: E402
 from src.llm.context.classify_view import (  # noqa: E402

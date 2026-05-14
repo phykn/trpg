@@ -5,6 +5,7 @@ from src.game.domain.memory import DialoguePair, GMLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.llm.context.classify_view import (
+    ClassifyContextLimits,
     build_classify_context_view,
     classify_context_to_grounding_view,
 )
@@ -150,6 +151,37 @@ def test_classify_context_tracks_omitted_candidates():
     assert context["budget"]["visible_targets_omitted"] == 2
     assert context["budget"]["inventory_omitted"] == 2
     assert context["budget"]["skills_omitted"] == 1
+
+
+def test_classify_context_accepts_view_limits_as_input():
+    runtime = _runtime(
+        visible_character_count=5,
+        inventory_count=4,
+        skill_count=3,
+        dialogue_count=4,
+    )
+
+    context = build_classify_context_view(
+        runtime,
+        "주변을 살핍니다",
+        limits=ClassifyContextLimits(
+            visible_targets=2,
+            inventory=2,
+            skills=1,
+            recent_dialogue=2,
+        ),
+    )
+
+    assert len(context["identity"]["visible_targets"]) == 2
+    assert len(context["identity"]["inventory"]) == 2
+    assert len(context["identity"]["skills"]) == 1
+    assert context["references"]["recent_dialogue"] == [
+        {"turn": 3, "player": "질문 3", "summary": "요약 3"},
+        {"turn": 4, "player": "질문 4", "summary": "요약 4"},
+    ]
+    assert context["budget"]["visible_targets_omitted"] == 3
+    assert context["budget"]["inventory_omitted"] == 2
+    assert context["budget"]["skills_omitted"] == 2
 
 
 def test_classify_context_to_grounding_view_preserves_grounding_ids():

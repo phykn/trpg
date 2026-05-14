@@ -9,7 +9,7 @@ from src.game.runtime.input import run_graph_input_turn
 from src.game.runtime.intro import run_graph_initial_narration
 from src.game.runtime.state import GameRuntimeState
 from src.game.runtime.turn import run_graph_action_turn
-from src.llm.calls._runner import get_prompt
+from src.llm.calls.runner import get_prompt
 
 
 class _PromptCaptureLLM:

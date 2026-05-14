@@ -9,8 +9,6 @@ from src.game.engines.graph_combat import (
 from src.llm.context.graph_combat import (
     GraphCombatContextError,
     build_graph_combat_context,
-    hp_state,
-    mp_state,
 )
 
 
@@ -125,19 +123,6 @@ def test_combat_context_exposes_hearts_not_damage_numbers():
     assert context.player_hearts == 2
     assert context.enemy_hearts == 1
     assert context.round >= 1
-
-
-def test_resource_state_thresholds():
-    assert hp_state(10, 10) == "healthy"
-    assert hp_state(6, 10) == "hurt"
-    assert hp_state(2, 10) == "critical"
-    assert hp_state(0, 10) == "downed"
-
-    assert mp_state(10, 10) == "ready"
-    assert mp_state(5, 10) == "strained"
-    assert mp_state(2, 10) == "drained"
-    assert mp_state(0, 10) == "drained"
-    assert mp_state(0, 0) is None
 
 
 def test_context_rejects_missing_participant():

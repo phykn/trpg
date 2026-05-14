@@ -5,10 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from src.game.domain.combat import GraphCombatState
 from src.game.domain.content import RuntimeContent, node_label
 from src.game.domain.graph import Graph, GraphNode
-
-
-HpState = Literal["healthy", "hurt", "critical", "downed"]
-MpState = Literal["ready", "strained", "drained"]
+from src.game.domain.resource_state import HpState, MpState, hp_state, mp_state
 
 
 class GraphCombatContextError(ValueError):
@@ -45,32 +42,6 @@ class GraphCombatContext(BaseModel):
     outcome: Literal["ongoing", "victory", "defeat", "fled"]
     participants: list[GraphCombatParticipantView]
     trace: list[GraphCombatTraceView]
-
-
-def hp_state(current: int, maximum: int) -> HpState:
-    if current <= 0:
-        return "downed"
-    if maximum <= 0:
-        return "healthy"
-    ratio = current / maximum
-    if ratio <= 0.25:
-        return "critical"
-    if ratio <= 0.65:
-        return "hurt"
-    return "healthy"
-
-
-def mp_state(current: int, maximum: int) -> MpState | None:
-    if maximum <= 0:
-        return None
-    if current <= 0:
-        return "drained"
-    ratio = current / maximum
-    if ratio <= 0.20:
-        return "drained"
-    if ratio <= 0.50:
-        return "strained"
-    return "ready"
 
 
 def build_graph_combat_context(

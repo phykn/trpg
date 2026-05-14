@@ -2,17 +2,17 @@ import json
 
 from pydantic import ValidationError
 
-from .._runner import get_prompt, run_with_retries
+from ..runner import get_prompt, run_with_retries
 from ...client import LLMClient
 from ...diag import llm_diag
 from ...context.classify_view import classify_context_to_grounding_view
-from .dialogue import classify_dialogue_shortcut
-from .guard import classify_guard
 from .grounding import ActionGroundingError, validate_grounded_output
 from .schema import Action, ActionOutput, ClassifyInput, validate_action_output_json
-from .shortcuts import classify_action_shortcut
-
-_CLASSIFY_TEMPERATURE = 0.0
+from .shortcuts import (
+    classify_action_shortcut,
+    classify_dialogue_shortcut,
+    classify_guard,
+)
 
 
 async def classify(
@@ -22,6 +22,7 @@ async def classify(
     retries: int = 5,
     *,
     strict: bool = False,
+    temperature: float = 0.0,
 ) -> ActionOutput:
     grounding_view = classify_context_to_grounding_view(input_.context)
     in_combat = input_.context.get("mode") == "combat"
@@ -52,7 +53,7 @@ async def classify(
             retry_on=(ValidationError, json.JSONDecodeError, ActionGroundingError),
             retries=retries,
             agent="classify",
-            temperature=_CLASSIFY_TEMPERATURE,
+            temperature=temperature,
             correction_hint="re-check the action catalog (required ids, enum fields) and that every id exists in context",
             include_failed_answer=False,
         )

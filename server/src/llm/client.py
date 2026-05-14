@@ -10,8 +10,8 @@ from openai import AsyncOpenAI
 
 from src.game.rules.config import RULES
 from src.llm.diag import llm_diag
-from . import gemini, local
 from .profiles import LLMProfile, ThinkingMode, parse_env_profiles
+from .providers import gemini, local
 
 # Logs land under `<log_dir>/<session_id>/<agent>/`; outer callers set this and inner ones can defer.
 _SESSION_ID: ContextVar[str | None] = ContextVar("llm_session_id", default=None)

@@ -1,7 +1,7 @@
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
-from src.llm.context.graph_surroundings import build_graph_surroundings
+from src.llm.context.query_view import build_query_context_view
 
 
 def _character(
@@ -139,13 +139,13 @@ def _grounded_graph() -> Graph:
     )
 
 
-def test_graph_surroundings_exposes_grounded_visible_ids():
+def test_query_context_view_exposes_grounded_visible_ids():
     runtime = GameRuntimeState(
         graph=_grounded_graph(),
         progress=GameProgress(game_id="game-1", player_id="player_01"),
     )
 
-    surroundings = build_graph_surroundings(runtime)
+    surroundings = build_query_context_view(runtime)
 
     assert surroundings["location"] == {"id": "town", "name": "마을"}
     assert {"id": "player_01", "name": "주인공", "type": "player"} in surroundings[
@@ -164,7 +164,7 @@ def test_graph_surroundings_exposes_grounded_visible_ids():
     assert surroundings["in_combat"] is False
 
 
-def test_graph_surroundings_includes_location_description():
+def test_query_context_view_includes_location_description():
     graph = _grounded_graph()
     graph.nodes["town"].properties["description"] = "돌길과 낮은 담장이 이어집니다."
     runtime = GameRuntimeState(
@@ -172,7 +172,7 @@ def test_graph_surroundings_includes_location_description():
         progress=GameProgress(game_id="game-1", player_id="player_01"),
     )
 
-    surroundings = build_graph_surroundings(runtime)
+    surroundings = build_query_context_view(runtime)
 
     assert surroundings["location"] == {
         "id": "town",
@@ -181,8 +181,8 @@ def test_graph_surroundings_includes_location_description():
     }
 
 
-def test_graph_surroundings_marks_enemies_and_omits_defeated_characters():
-    payload = build_graph_surroundings(_runtime())
+def test_query_context_view_marks_enemies_and_omits_defeated_characters():
+    payload = build_query_context_view(_runtime())
 
     entities = payload["entities"]
     assert {"id": "enemy_live", "name": "enemy_live", "type": "enemy"} in entities

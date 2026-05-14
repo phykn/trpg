@@ -1,5 +1,5 @@
 from src.game.domain.action import Action
-from src.llm.context.graph_surroundings import build_graph_surroundings
+from src.llm.context.query_view import build_query_context_view
 from src.locale.render import render
 from src.wire.graph_to_front import graph_to_front_state
 
@@ -8,7 +8,7 @@ from .state import GameRuntimeState
 
 def answer_graph_query(runtime: GameRuntimeState, action: Action) -> str:
     topic = _single(action.what) or "surroundings"
-    surroundings = build_graph_surroundings(runtime)
+    surroundings = build_query_context_view(runtime)
     locale = runtime.progress.locale
     if topic == "exits":
         return _exits_text(surroundings, locale)

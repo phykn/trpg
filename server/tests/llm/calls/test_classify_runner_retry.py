@@ -1,6 +1,6 @@
 """classify retry 그물(`json.JSONDecodeError` 추가) 통합 검증.
 
-LLM이 빈 응답을 5회 연속 주면 _runner의 retry 루프가 마지막 JSONDecodeError를
+LLM이 빈 응답을 5회 연속 주면 runner의 retry 루프가 마지막 JSONDecodeError를
 escape하는지 — Phase 0 retry 그물이 의도대로 동작하는지 확인.
 """
 
@@ -8,7 +8,7 @@ import json
 
 import pytest
 
-from src.llm.calls._runner import run_with_retries
+from src.llm.calls.runner import run_with_retries
 from src.llm.calls.classify.schema import validate_action_output_json
 
 

@@ -37,7 +37,9 @@ class _FakeLLM:
         temperature=None,
         use_fallback=False,
     ):
-        self.calls.append({"messages": messages, "agent": agent})
+        self.calls.append(
+            {"messages": messages, "agent": agent, "temperature": temperature}
+        )
         if agent == "graph_narrate":
             return {"answer": self._narration_answer(), "think": ""}
         return {"answer": json.dumps(self.payload, ensure_ascii=False), "think": ""}
@@ -50,7 +52,9 @@ class _FakeLLM:
         temperature=None,
         use_fallback=False,
     ):
-        self.calls.append({"messages": messages, "agent": agent})
+        self.calls.append(
+            {"messages": messages, "agent": agent, "temperature": temperature}
+        )
         if agent == "graph_narrate":
             answer = self._narration_answer()
             midpoint = max(1, len(answer) // 2)
@@ -733,6 +737,33 @@ async def test_graph_input_passes_focused_context_to_classify(
             "summary": "고블린은 발자국을 보았다고 말합니다.",
         }
     ]
+
+
+async def test_graph_input_passes_env_classify_temperature(tmp_path, monkeypatch):
+    monkeypatch.setenv("LLM_CLASSIFY_TEMPERATURE", "0.25")
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM({"actions": [{"verb": "pass"}]}, narration="당신은 잠시 생각합니다.")
+
+    await run_graph_input_turn(llm, repo, "game-1", "잠시 기다린다")
+
+    classify_call = [call for call in llm.calls if call["agent"] == "classify"][0]
+    assert classify_call["temperature"] == 0.25
+
+
+async def test_graph_input_passes_env_classify_context_limits(tmp_path, monkeypatch):
+    monkeypatch.setenv("LLM_CLASSIFY_LIMIT_VISIBLE_TARGETS", "1")
+    monkeypatch.setenv("LLM_CLASSIFY_LIMIT_INVENTORY", "0")
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM({"actions": [{"verb": "pass"}]}, narration="당신은 잠시 생각합니다.")
+
+    await run_graph_input_turn(llm, repo, "game-1", "잠시 기다린다")
+
+    classify_call = [call for call in llm.calls if call["agent"] == "classify"][0]
+    payload = json.loads(classify_call["messages"][1]["content"])
+    context = payload["context"]
+    assert len(context["identity"]["visible_targets"]) == 1
+    assert context["identity"]["inventory"] == []
+    assert context["budget"]["inventory_omitted"] > 0
 
 
 async def test_graph_input_classify_context_omits_global_importance_history(

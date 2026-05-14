@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 from collections.abc import AsyncIterator, Sequence
 
 from openai import APIConnectionError, InternalServerError, RateLimitError
@@ -16,10 +17,13 @@ from src.game.engines.graph_social_quest import (
     SocialQuestResult,
     plan_social_quest_speak,
 )
-from src.llm.calls._runner import get_prompt
+from src.llm.calls.runner import get_prompt
 from src.llm.calls.classify.runner import classify
 from src.llm.calls.classify.schema import ClassifyInput
-from src.llm.context.classify_view import build_classify_context_view
+from src.llm.context.classify_view import (
+    ClassifyContextLimits,
+    build_classify_context_view,
+)
 from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, llm_diag, set_diag_context
 from src.locale.render import render
@@ -51,6 +55,29 @@ class GraphInputError(ValueError):
 _GRAPH_INPUT_NARRATION_TIMEOUT_SECONDS = 30.0
 
 
+def _classify_temperature() -> float:
+    return float(os.environ.get("LLM_CLASSIFY_TEMPERATURE") or "0.0")
+
+
+def _classify_context_limits() -> ClassifyContextLimits:
+    return ClassifyContextLimits(
+        visible_targets=_classify_limit("VISIBLE_TARGETS", 8),
+        exits=_classify_limit("EXITS", 6),
+        inventory=_classify_limit("INVENTORY", 10),
+        skills=_classify_limit("SKILLS", 8),
+        location_items=_classify_limit("LOCATION_ITEMS", 8),
+        recent_dialogue=_classify_limit("RECENT_DIALOGUE", 5),
+        target_carryables=_classify_limit("TARGET_CARRYABLES", 6),
+        merchant_stock=_classify_limit("MERCHANT_STOCK", 8),
+        corpses=_classify_limit("CORPSES", 4),
+        corpse_items=_classify_limit("CORPSE_ITEMS", 6),
+    )
+
+
+def _classify_limit(name: str, default: int) -> int:
+    return int(os.environ.get(f"LLM_CLASSIFY_LIMIT_{name}") or str(default))
+
+
 async def run_graph_input_turn(
     client: LLMClient,
     repo: GraphRepo,
@@ -66,9 +93,14 @@ async def run_graph_input_turn(
         client,
         ClassifyInput(
             player_input=player_input,
-            context=build_classify_context_view(runtime, player_input),
+            context=build_classify_context_view(
+                runtime,
+                player_input,
+                limits=_classify_context_limits(),
+            ),
         ),
         locale=runtime.progress.locale,
+        temperature=_classify_temperature(),
     )
 
     if output.refuse is not None:
@@ -102,9 +134,14 @@ async def run_graph_input_turn_stream(
         client,
         ClassifyInput(
             player_input=player_input,
-            context=build_classify_context_view(runtime, player_input),
+            context=build_classify_context_view(
+                runtime,
+                player_input,
+                limits=_classify_context_limits(),
+            ),
         ),
         locale=runtime.progress.locale,
+        temperature=_classify_temperature(),
     )
 
     if output.refuse is not None:

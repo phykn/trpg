@@ -12,7 +12,7 @@ from src.game.domain.content import merge_content
 from src.game.domain.errors import LLMUnavailable
 from src.game.domain.memory import GMLogEntry, LogEntry
 from src.game.engines.graph_quest_generation import plan_missing_quest_offer
-from src.llm.calls._runner import get_prompt
+from src.llm.calls.runner import get_prompt
 from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, llm_diag, set_diag_context
 from src.wire.graph_to_front import GraphFrontStatePayload, graph_to_front_state

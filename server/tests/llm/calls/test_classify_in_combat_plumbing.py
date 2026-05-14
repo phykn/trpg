@@ -207,6 +207,23 @@ async def test_json_decode_failures_retry_without_thinking_and_fall_back_to_pass
 
 
 @pytest.mark.asyncio
+async def test_classify_temperature_can_be_passed_by_caller():
+    input_ = _input("잠깐 기다린다", {"in_combat": False, "entities": []})
+    client = _RetryCaptureClient(['{"actions":[{"verb":"pass"}]} trailing text'] * 2)
+
+    out = await classify(
+        client=client,
+        input_=input_,
+        locale="ko",
+        retries=2,
+        temperature=0.25,
+    )
+
+    assert out.actions[0].verb == "pass"
+    assert client.temperatures == [0.25, 0.25]
+
+
+@pytest.mark.asyncio
 async def test_validation_failure_retry_stays_non_thinking():
     input_ = _input("도망친다", {"in_combat": False, "entities": []})
     client = _RetryCaptureClient(

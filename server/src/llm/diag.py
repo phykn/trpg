@@ -40,7 +40,7 @@ Graph runtime layer:
 
 LLM layer (via `llm_diag`, gid/turn from contextvars):
 - `llm:call` / `llm:retry` / `llm:fallback` / `llm:done` / `llm:fail` —
-  `_runner.run_with_retries` covers structured classify calls.
+  `runner.run_with_retries` covers structured classify calls.
 
 ## Adding a hook
 

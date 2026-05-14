@@ -8,7 +8,7 @@ from src.game.domain.content import node_label, node_text
 from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph_query import location_of
 from src.game.domain.memory import GMLogEntry
-from src.llm.calls._runner import get_prompt
+from src.llm.calls.runner import get_prompt
 from src.llm.client import LLMClient
 from src.llm.diag import llm_diag
 from src.locale.render import render

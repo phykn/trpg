@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from src.game.domain.content import node_label, node_value
@@ -17,39 +18,44 @@ from src.game.domain.graph_query import (
 from src.game.runtime.state import GameRuntimeState
 
 
-MAX_CLASSIFY_VISIBLE_TARGETS = 8
-MAX_CLASSIFY_EXITS = 6
-MAX_CLASSIFY_INVENTORY = 10
-MAX_CLASSIFY_SKILLS = 8
-MAX_CLASSIFY_LOCATION_ITEMS = 8
-MAX_CLASSIFY_RECENT_DIALOGUE = 5
-MAX_CLASSIFY_TARGET_CARRYABLES = 6
-MAX_CLASSIFY_MERCHANT_STOCK = 8
-MAX_CLASSIFY_CORPSES = 4
-MAX_CLASSIFY_CORPSE_ITEMS = 6
+@dataclass(frozen=True)
+class ClassifyContextLimits:
+    visible_targets: int = 8
+    exits: int = 6
+    inventory: int = 10
+    skills: int = 8
+    location_items: int = 8
+    recent_dialogue: int = 5
+    target_carryables: int = 6
+    merchant_stock: int = 8
+    corpses: int = 4
+    corpse_items: int = 6
 
 
 def build_classify_context_view(
     runtime: GameRuntimeState,
     player_input: str,
+    *,
+    limits: ClassifyContextLimits | None = None,
 ) -> dict[str, Any]:
+    limits = limits or ClassifyContextLimits()
     graph = runtime.graph_index
     player_id = runtime.progress.player_id
     location_id = location_of(graph, player_id)
     location = graph.nodes.get(location_id or "")
-    all_visible_targets = _visible_targets(runtime, location_id)
+    all_visible_targets = _visible_targets(runtime, location_id, limits)
     all_exits = _exits(runtime, location_id)
     all_inventory = _inventory(runtime, player_id)
     all_skills = _skills(runtime, player_id)
     all_location_items = _location_items(runtime, location_id)
-    all_corpses = _corpses(runtime, location_id)
+    all_corpses = _corpses(runtime, location_id, limits)
 
-    visible_targets = all_visible_targets[:MAX_CLASSIFY_VISIBLE_TARGETS]
-    exits = all_exits[:MAX_CLASSIFY_EXITS]
-    inventory = all_inventory[:MAX_CLASSIFY_INVENTORY]
-    skills = all_skills[:MAX_CLASSIFY_SKILLS]
-    location_items = all_location_items[:MAX_CLASSIFY_LOCATION_ITEMS]
-    corpses = all_corpses[:MAX_CLASSIFY_CORPSES]
+    visible_targets = all_visible_targets[: limits.visible_targets]
+    exits = all_exits[: limits.exits]
+    inventory = all_inventory[: limits.inventory]
+    skills = all_skills[: limits.skills]
+    location_items = all_location_items[: limits.location_items]
+    corpses = all_corpses[: limits.corpses]
 
     return {
         "player_input": player_input,
@@ -68,7 +74,7 @@ def build_classify_context_view(
             "skills": skills,
             "location_items": location_items,
             "active_quest": _active_quest(runtime),
-            "merchants": _merchants(runtime, visible_targets),
+            "merchants": _merchants(runtime, visible_targets, limits),
             "corpses": corpses,
         },
         "affordances": {
@@ -87,21 +93,21 @@ def build_classify_context_view(
             "last_npc": _last_entity_ref(runtime, entity_types={"character"}),
             "last_target": _last_entity_ref(runtime),
             "last_item": _last_entity_ref(runtime, entity_types={"item"}),
-            "recent_dialogue": _recent_dialogue(runtime),
+            "recent_dialogue": _recent_dialogue(runtime, limits),
         },
         "budget": {
             "visible_targets_omitted": max(
                 0,
-                len(all_visible_targets) - MAX_CLASSIFY_VISIBLE_TARGETS,
+                len(all_visible_targets) - limits.visible_targets,
             ),
-            "exits_omitted": max(0, len(all_exits) - MAX_CLASSIFY_EXITS),
-            "inventory_omitted": max(0, len(all_inventory) - MAX_CLASSIFY_INVENTORY),
-            "skills_omitted": max(0, len(all_skills) - MAX_CLASSIFY_SKILLS),
+            "exits_omitted": max(0, len(all_exits) - limits.exits),
+            "inventory_omitted": max(0, len(all_inventory) - limits.inventory),
+            "skills_omitted": max(0, len(all_skills) - limits.skills),
             "location_items_omitted": max(
                 0,
-                len(all_location_items) - MAX_CLASSIFY_LOCATION_ITEMS,
+                len(all_location_items) - limits.location_items,
             ),
-            "corpses_omitted": max(0, len(all_corpses) - MAX_CLASSIFY_CORPSES),
+            "corpses_omitted": max(0, len(all_corpses) - limits.corpses),
         },
     }
 
@@ -166,6 +172,7 @@ def classify_context_to_grounding_view(context: dict[str, Any]) -> dict[str, Any
 def _visible_targets(
     runtime: GameRuntimeState,
     location_id: str | None,
+    limits: ClassifyContextLimits,
 ) -> list[dict[str, Any]]:
     if location_id is None:
         return []
@@ -183,9 +190,7 @@ def _visible_targets(
         }
         if node.properties.get("protected") is True:
             payload["protected"] = True
-        carryables = _limited_inventory(
-            runtime, node.id, MAX_CLASSIFY_TARGET_CARRYABLES
-        )
+        carryables = _limited_inventory(runtime, node.id, limits.target_carryables)
         if carryables:
             payload["carryables"] = carryables
         out.append(payload)
@@ -296,6 +301,7 @@ def _attackable_ids(visible_targets: list[dict[str, Any]]) -> list[str]:
 def _merchants(
     runtime: GameRuntimeState,
     visible_targets: list[dict[str, Any]],
+    limits: ClassifyContextLimits,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for target in visible_targets:
@@ -304,7 +310,7 @@ def _merchants(
             continue
         if not isinstance(node.properties.get("gold"), int):
             continue
-        stock = _limited_inventory(runtime, node.id, MAX_CLASSIFY_MERCHANT_STOCK)
+        stock = _limited_inventory(runtime, node.id, limits.merchant_stock)
         out.append({"id": node.id, "name": target["name"], "stock": stock})
     return out
 
@@ -312,6 +318,7 @@ def _merchants(
 def _corpses(
     runtime: GameRuntimeState,
     location_id: str | None,
+    limits: ClassifyContextLimits,
 ) -> list[dict[str, Any]]:
     if location_id is None:
         return []
@@ -322,7 +329,7 @@ def _corpses(
         node = runtime.graph.nodes.get(character_id)
         if node is None or node.type != "character" or is_visible_character(node):
             continue
-        inventory = _limited_inventory(runtime, node.id, MAX_CLASSIFY_CORPSE_ITEMS)
+        inventory = _limited_inventory(runtime, node.id, limits.corpse_items)
         if inventory:
             out.append(
                 {
@@ -360,10 +367,13 @@ def _last_entity_ref(
     return _node_ref(runtime, node)
 
 
-def _recent_dialogue(runtime: GameRuntimeState) -> list[dict[str, Any]]:
+def _recent_dialogue(
+    runtime: GameRuntimeState,
+    limits: ClassifyContextLimits,
+) -> list[dict[str, Any]]:
     return [
         {"turn": pair.turn, "player": pair.player, "summary": pair.narrator}
-        for pair in runtime.recent_dialogue[-MAX_CLASSIFY_RECENT_DIALOGUE:]
+        for pair in runtime.recent_dialogue[-limits.recent_dialogue :]
     ]
 
 

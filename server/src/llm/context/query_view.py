@@ -15,7 +15,7 @@ from src.game.domain.graph_query import (
 from src.game.runtime.state import GameRuntimeState
 
 
-def build_graph_surroundings(runtime: GameRuntimeState) -> dict[str, Any]:
+def build_query_context_view(runtime: GameRuntimeState) -> dict[str, Any]:
     graph = runtime.graph_index
     player_id = runtime.progress.player_id
     location_id = location_of(graph, player_id)

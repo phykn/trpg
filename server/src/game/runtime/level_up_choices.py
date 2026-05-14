@@ -9,7 +9,7 @@ from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph_query import edges_from
 from src.game.runtime.state import GameRuntimeState
 from src.locale.render import render
-from src.llm.calls._runner import get_prompt, run_with_retries
+from src.llm.calls.runner import get_prompt, run_with_retries
 from src.llm.client import LLMClient
 
 

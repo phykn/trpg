@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .profiles import ThinkingMode
+    from src.llm.profiles import ThinkingMode
 
 
 def extra_body(mode: "ThinkingMode", effective_think: bool) -> dict | None:
