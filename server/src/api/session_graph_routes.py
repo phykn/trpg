@@ -42,8 +42,8 @@ from src.game.runtime.session import (
 from src.game.runtime.turn import GraphActionTurnError
 from src.llm.client import LLMClient, force_think
 
-from ..deps import get_graph_repo, get_llm, get_scenario_repo
-from ..schema import (
+from .deps import get_graph_repo, get_llm, get_scenario_repo
+from .schema import (
     ConfirmRequest,
     GraphActionResponse,
     GraphCombatCommandRequest,

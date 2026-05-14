@@ -7,17 +7,6 @@ from src.game.runtime.suggestions import GraphSuggestionValue
 from src.game.seed.player import PlayerInput
 
 
-class ChatRequest(BaseModel):
-    system: str | None = None
-    query: str
-    think: bool = True
-
-
-class ChatResponse(BaseModel):
-    think: str | None = None
-    answer: str | None = None
-
-
 class RaceCard(BaseModel):
     id: str
     name: str

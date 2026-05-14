@@ -328,7 +328,7 @@ async def test_graph_intro_waits_for_llm_answer_instead_of_route_timeout(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        "src.api.routes.session_graph._GRAPH_INTRO_NARRATION_TIMEOUT_SECONDS",
+        "src.api.session_graph_routes._GRAPH_INTRO_NARRATION_TIMEOUT_SECONDS",
         0.001,
         raising=False,
     )
