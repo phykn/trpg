@@ -18,6 +18,7 @@ from .request_result import (
     executed_result,
     roll_required_result,
 )
+from .turn import run_graph_action_turn_from_runtime
 
 
 class GraphRollError(ValueError):
@@ -126,11 +127,20 @@ async def run_graph_roll(
         required=required_roll,
         next_turn=next_progress.turn_count,
     )
-    return executed_result(
+    turn_result = await run_graph_action_turn_from_runtime(
+        repo,
+        game_id,
         next_runtime,
-        graph_to_front_state(next_runtime),
-        outcome="success" if entry.result == "success" else "failure",
+        action,
+        llm=None,
     )
+    result = executed_result(
+        turn_result.runtime,
+        turn_result.front_state,
+        outcome="success" if entry.result == "success" else "failure",
+        suggestions=turn_result.suggestions,
+    )
+    return result.model_copy(update={"dispatch": turn_result.dispatch})
 
 
 def build_pending_roll(

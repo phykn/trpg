@@ -37,6 +37,11 @@ def _graph() -> Graph:
                 type="location",
                 properties={"name": "Town"},
             ),
+            "forest": GraphNode(
+                id="forest",
+                type="location",
+                properties={"name": "Forest"},
+            ),
             "player_01": _character("player_01"),
         },
         edges={
@@ -45,6 +50,12 @@ def _graph() -> Graph:
                 type="located_at",
                 from_node_id="player_01",
                 to_node_id="town",
+            ),
+            "connects_to:town:forest": GraphEdge(
+                id="connects_to:town:forest",
+                type="connects_to",
+                from_node_id="town",
+                to_node_id="forest",
             ),
         },
     )
@@ -113,7 +124,7 @@ async def test_graph_action_request_perceive_creates_pending_roll(tmp_path):
 async def test_run_graph_roll_resolves_pending_roll_and_appends_roll_log(tmp_path):
     repo = await _repo(tmp_path)
     pending = (
-        await start_graph_roll(repo, "game-1", Action(verb="perceive", what="town"))
+        await start_graph_roll(repo, "game-1", Action(verb="move", to="forest"))
     ).pending_roll
 
     result = await run_graph_roll(repo, "game-1", pending["id"], dice=13)
@@ -122,19 +133,40 @@ async def test_run_graph_roll_resolves_pending_roll_and_appends_roll_log(tmp_pat
 
     assert result.status == "executed"
     assert progress.pending_roll is None
-    assert progress.turn_count == 1
+    assert progress.turn_count == 2
     assert logs[0].kind == "roll"
-    assert logs[0].check == "지력"
+    assert [entry.id for entry in logs] == list(range(1, len(logs) + 1))
+    assert progress.next_log_id == logs[-1].id + 1
+    assert logs[0].check == "민첩"
     assert logs[0].roll == 13
     assert logs[0].result == "success"
     assert result.outcome == "success"
     assert result.front_state.pending_roll is None
 
 
+async def test_run_graph_roll_continues_stored_action(tmp_path):
+    repo = await _repo(tmp_path)
+    action = Action(verb="move", to="forest")
+    pending = build_pending_roll(_character("player_01").properties, action)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(progress.model_copy(update={"pending_roll": pending}))
+
+    result = await run_graph_roll(repo, "game-1", pending["id"], dice=13)
+    progress = await repo.load_progress("game-1")
+    graph = await repo.load_graph("game-1")
+
+    assert result.status == "executed"
+    assert progress.pending_roll is None
+    assert result.dispatch is not None
+    assert result.dispatch.kind == "move"
+    assert result.front_state.place.id == "forest"
+    assert "located_at:player_01:forest" in graph.edges
+
+
 async def test_run_graph_roll_logs_one_short_roll_as_fail(tmp_path):
     repo = await _repo(tmp_path)
     pending = (
-        await start_graph_roll(repo, "game-1", Action(verb="perceive", what="town"))
+        await start_graph_roll(repo, "game-1", Action(verb="move", to="forest"))
     ).pending_roll
 
     result = await run_graph_roll(repo, "game-1", pending["id"], dice=12)
