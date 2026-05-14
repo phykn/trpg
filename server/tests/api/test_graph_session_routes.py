@@ -356,7 +356,7 @@ async def test_graph_intro_waits_for_llm_answer_instead_of_route_timeout(
 
 
 @pytest.mark.asyncio
-async def test_graph_intro_streams_initial_narration_before_final_payload(tmp_path):
+async def test_graph_intro_streams_result_before_initial_narration(tmp_path):
     app = _build_app(tmp_path, intro_answer="문이 열리고 광장이 드러납니다.")
 
     async with _client(app) as client:
@@ -370,8 +370,16 @@ async def test_graph_intro_streams_initial_narration_before_final_payload(tmp_pa
         if line.strip()
     ]
 
-    assert [line["type"] for line in lines] == ["delta", "delta", "final"]
-    assert "".join(line["text"] for line in lines[:2]) == "문이 열리고 광장이 드러납니다."
+    assert [line["type"] for line in lines] == [
+        "result",
+        "narration_delta",
+        "narration_delta",
+        "final",
+    ]
+    assert lines[0]["payload"]["status"] == "executed"
+    assert lines[0]["payload"]["outcome"] == "neutral"
+    assert lines[0]["payload"]["state"]["log"] == []
+    assert "".join(line["text"] for line in lines[1:3]) == "문이 열리고 광장이 드러납니다."
     assert lines[-1]["payload"]["state"]["log"] == [
         {"id": 1, "kind": "gm", "text": "문이 열리고 광장이 드러납니다."}
     ]
@@ -396,6 +404,30 @@ async def test_graph_turn_moves_player_and_persists_progress(tmp_path):
     assert "located_at:player_01:loc_02" in graph.edges
     assert progress.turn_count == 1
     assert body["state"]["place"]["id"] == "loc_02"
+
+
+@pytest.mark.asyncio
+async def test_graph_turn_stream_returns_result_then_final_without_narration(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(
+            f"/session/{game_id}/graph/turn/stream",
+            json={"action": {"verb": "move", "to": "loc_02"}},
+        )
+
+    assert response.status_code == 200, response.text
+    events = [json.loads(line) for line in response.text.splitlines()]
+
+    assert [event["type"] for event in events] == ["result", "final"]
+    assert events[0]["payload"]["status"] == "executed"
+    assert events[0]["payload"]["outcome"] == "neutral"
+    assert events[0]["payload"]["state"]["log"][0]["text"] == "당신은 숲길로 이동합니다."
+    assert events[-1]["payload"]["status"] == "executed"
+    assert events[-1]["payload"]["outcome"] == "neutral"
+    assert events[-1]["payload"]["state"]["log"] == events[0]["payload"]["state"]["log"]
+    assert events[-1]["payload"]["state"]["place"]["id"] == "loc_02"
 
 
 @pytest.mark.asyncio
@@ -617,7 +649,7 @@ async def test_graph_confirm_confirm_executes_pending_attack(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_graph_confirm_stream_returns_narration_deltas_before_final_state(tmp_path):
+async def test_graph_confirm_stream_returns_result_before_narration_deltas(tmp_path):
     app = _build_app(tmp_path)
 
     async with _client(app) as client:
@@ -635,8 +667,16 @@ async def test_graph_confirm_stream_returns_narration_deltas_before_final_state(
     assert response.status_code == 200, response.text
     events = [json.loads(line) for line in response.text.splitlines()]
 
-    assert [event["type"] for event in events] == ["delta", "delta", "final"]
-    assert "".join(event["text"] for event in events[:-1]) == "장면의 긴장이 짧게 가라앉습니다."
+    assert [event["type"] for event in events] == [
+        "result",
+        "narration_delta",
+        "narration_delta",
+        "final",
+    ]
+    assert events[0]["payload"]["status"] == "executed"
+    assert events[0]["payload"]["outcome"] == "neutral"
+    assert events[0]["payload"]["state"]["log"][-1]["kind"] == "act"
+    assert "".join(event["text"] for event in events[1:3]) == "장면의 긴장이 짧게 가라앉습니다."
     assert events[-1]["payload"]["status"] == "executed"
     assert events[-1]["payload"]["outcome"] == "neutral"
     assert events[-1]["payload"]["state"]["log"][-1]["text"] == "장면의 긴장이 짧게 가라앉습니다."
@@ -901,7 +941,7 @@ async def test_graph_input_classifies_query_and_returns_message(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_graph_input_stream_returns_narration_deltas_before_final_state(tmp_path):
+async def test_graph_input_stream_returns_result_before_narration_deltas(tmp_path):
     app = _build_app(
         tmp_path,
         llm_payload={"actions": [{"verb": "speak", "what": "edrik_chief"}]},
@@ -917,8 +957,23 @@ async def test_graph_input_stream_returns_narration_deltas_before_final_state(tm
     assert response.status_code == 200, response.text
     events = [json.loads(line) for line in response.text.splitlines()]
 
-    assert [event["type"] for event in events] == ["delta", "delta", "final"]
-    assert "".join(event["text"] for event in events[:-1]) == "장면의 긴장이 짧게 가라앉습니다."
+    assert [event["type"] for event in events] == [
+        "result",
+        "narration_delta",
+        "narration_delta",
+        "final",
+    ]
+    assert events[0]["payload"]["game_id"] == game_id
+    assert events[0]["payload"]["status"] == "executed"
+    assert events[0]["payload"]["outcome"] == "neutral"
+    assert events[0]["payload"]["state"]["log"] == [
+        {
+            "id": 1,
+            "kind": "player",
+            "text": "에드릭에게 말을 건다",
+        }
+    ]
+    assert "".join(event["text"] for event in events[1:3]) == "장면의 긴장이 짧게 가라앉습니다."
     assert events[-1]["payload"]["game_id"] == game_id
     assert events[-1]["payload"]["status"] == "executed"
     assert events[-1]["payload"]["state"]["log"][-1] == {

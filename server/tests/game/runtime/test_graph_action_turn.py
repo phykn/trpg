@@ -9,7 +9,12 @@ from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.memory import GMLogEntry
 from src.game.domain.progress import GameProgress
-from src.game.runtime.turn import GraphActionTurnError, run_graph_action_turn
+from src.game.runtime.load import load_runtime_state
+from src.game.runtime.turn import (
+    GraphActionTurnError,
+    run_graph_action_turn,
+    run_graph_action_turn_from_runtime_stream,
+)
 
 
 def _character(
@@ -144,6 +149,17 @@ class _RepeatNarrationLLM:
         return {"answer": self.text}
 
 
+class _PersistCheckingStreamLLM:
+    def __init__(self, repo: LocalFsGraphRepo) -> None:
+        self.repo = repo
+        self.logs_before_narration: list[str] | None = None
+
+    async def chat_stream(self, messages, **kwargs):
+        logs = await self.repo.load_log_entries("game-1")
+        self.logs_before_narration = [entry.kind for entry in logs]
+        yield {"answer": "전투가 시작됩니다.", "think": None}
+
+
 async def test_run_graph_action_turn_saves_move_and_returns_front_state(tmp_path):
     repo = await _repo(tmp_path)
 
@@ -197,6 +213,38 @@ async def test_run_graph_action_turn_skips_llm_narration_for_plain_move(tmp_path
     assert len(llm.calls) == 0
     assert [entry.kind for entry in saved_logs] == ["act", "act"]
     assert result.front_state.log == saved_logs
+
+
+async def test_run_graph_action_turn_stream_emits_result_before_narration(tmp_path):
+    repo = await _repo(tmp_path)
+    runtime = await load_runtime_state(repo, "game-1")
+    llm = _PersistCheckingStreamLLM(repo)
+
+    events = [
+        event
+        async for event in run_graph_action_turn_from_runtime_stream(
+            repo,
+            "game-1",
+            runtime,
+            Action(verb="attack", what="goblin_01"),
+            llm=llm,  # type: ignore[arg-type]
+        )
+    ]
+    saved_logs = await repo.load_log_entries("game-1")
+
+    assert [event["type"] for event in events] == [
+        "result",
+        "narration_delta",
+        "final",
+    ]
+    assert llm.logs_before_narration == ["act"]
+    assert [entry.kind for entry in events[0]["result"].front_state.log] == ["act"]
+    assert [entry.kind for entry in saved_logs] == ["act", "gm"]
+    assert saved_logs[-1].text == "전투가 시작됩니다."
+    assert [entry.kind for entry in events[-1]["result"].front_state.log] == [
+        "act",
+        "gm",
+    ]
 
 
 async def test_run_graph_action_turn_generates_offer_when_no_work_exists(tmp_path):

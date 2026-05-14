@@ -608,8 +608,14 @@ async def test_graph_input_social_quiet_return_streams_narration_after_persistin
     graph = await repo.load_graph("game-1")
     logs = await repo.load_log_entries("game-1")
 
-    assert [event["type"] for event in events] == ["delta", "final"]
-    assert "".join(event["text"] for event in events[:-1]) == "당신은 보급품을 조용히 되돌려 놓습니다."
+    assert [event["type"] for event in events] == [
+        "result",
+        "narration_delta",
+        "final",
+    ]
+    assert events[0]["result"].status == "executed"
+    assert events[0]["result"].outcome == "neutral"
+    assert "".join(event["text"] for event in events[1:-1]) == "당신은 보급품을 조용히 되돌려 놓습니다."
     assert events[-1]["result"].status == "executed"
     assert events[-1]["result"].suggestions == ["주민에게 결과를 알립니다"]
     assert graph.nodes["q_missing_supplies"].properties["status"] == "completed"
@@ -627,6 +633,46 @@ async def test_graph_input_social_quiet_return_streams_narration_after_persistin
         }
     ]
     assert [call["agent"] for call in llm.calls] == ["classify", "graph_narrate"]
+
+
+async def test_graph_input_social_stream_persists_result_before_narration(tmp_path):
+    repo = await _social_quest_repo(tmp_path)
+    llm = _FakeLLM(
+        {
+            "actions": [
+                {
+                    "verb": "speak",
+                    "what": "quartermaster_npc",
+                    "how": "deceptive",
+                }
+            ]
+        },
+        narration="당신은 보급품을 조용히 되돌려 놓습니다.",
+    )
+
+    stream = run_graph_input_turn_stream(
+        llm,
+        repo,
+        "game-1",
+        "보급품을 조용히 돌려놓는다",
+    )
+    first = await anext(stream)
+    graph_after_result = await repo.load_graph("game-1")
+
+    assert first["type"] == "result"
+    assert repo.graph_change_saves == [
+        {
+            "changed_node_ids": ["q_missing_supplies"],
+            "changed_edge_ids": ["relation:village_resident:player_01"],
+            "removed_edge_ids": [],
+        }
+    ]
+    assert graph_after_result.nodes["q_missing_supplies"].properties["status"] == "completed"
+    assert graph_after_result.nodes["q_missing_supplies"].properties["resolution_route"] == "quiet_return"
+    remaining = [event async for event in stream]
+    assert remaining[0]["type"] == "narration_delta"
+    assert remaining[-1]["type"] == "final"
+    assert [event["type"] for event in [first, *remaining]].count("result") == 1
 
 
 async def test_graph_input_social_report_route_persists_then_narrates(tmp_path):
@@ -851,7 +897,7 @@ async def test_graph_input_classify_context_omits_global_importance_history(
     assert payload["context"]["budget"]["visible_targets_omitted"] == 0
 
 
-async def test_graph_input_streams_speak_narration_before_final(tmp_path):
+async def test_graph_input_streams_result_before_speak_narration(tmp_path):
     repo = await _repo(tmp_path)
     llm = _FakeLLM(
         {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]},
@@ -869,11 +915,47 @@ async def test_graph_input_streams_speak_narration_before_final(tmp_path):
     ]
     logs = await repo.load_log_entries("game-1")
 
-    assert [event["type"] for event in events] == ["delta", "delta", "final"]
-    assert "".join(event["text"] for event in events[:-1]) == "상대는 당신의 말을 듣습니다."
+    assert events[0]["type"] == "result"
+    assert events[-1]["type"] == "final"
+    assert all(event["type"] == "narration_delta" for event in events[1:-1])
+    assert events[0]["result"].status == "executed"
+    assert events[0]["result"].outcome == "neutral"
+    assert "".join(event["text"] for event in events[1:-1]) == "상대는 당신의 말을 듣습니다."
     assert events[-1]["result"].status == "executed"
     assert [entry.kind for entry in logs] == ["player", "gm"]
     assert logs[-1].text == "상대는 당신의 말을 듣습니다."
+
+
+async def test_graph_input_streams_single_result_for_multiple_actions(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM(
+        {
+            "actions": [
+                {"verb": "speak", "what": "goblin_01", "how": "friendly"},
+                {"verb": "move", "to": "forest"},
+            ]
+        },
+        narration="상대는 고개를 끄덕입니다.",
+    )
+
+    events = [
+        event
+        async for event in run_graph_input_turn_stream(
+            llm,
+            repo,
+            "game-1",
+            "multi action regression",
+        )
+    ]
+    logs = await repo.load_log_entries("game-1")
+
+    assert events[0]["type"] == "result"
+    assert events[-1]["type"] == "final"
+    assert [event["type"] for event in events].count("result") == 1
+    assert all(event["type"] == "narration_delta" for event in events[1:-1])
+    assert "".join(event["text"] for event in events[1:-1]) == "상대는 고개를 끄덕입니다."
+    assert events[-1]["result"].front_state.place.id == "forest"
+    assert [entry.kind for entry in logs] == ["player", "gm", "act", "act"]
 
 
 @pytest.mark.parametrize(
@@ -908,9 +990,12 @@ async def test_graph_input_streams_item_use_rejection_as_gm_narration(
     logs = await repo.load_log_entries("game-1")
     progress = await repo.load_progress("game-1")
 
+    assert events[0]["type"] == "result"
     assert events[-1]["type"] == "final"
-    assert all(event["type"] == "delta" for event in events[:-1])
-    assert "".join(event["text"] for event in events[:-1]) == (
+    assert all(event["type"] == "narration_delta" for event in events[1:-1])
+    assert events[0]["result"].status == "executed"
+    assert events[0]["result"].outcome == "neutral"
+    assert "".join(event["text"] for event in events[1:-1]) == (
         "당신은 손을 멈춥니다. 지금은 그 물건을 쓸 이유가 없습니다."
     )
     assert events[-1]["result"].status == "rejected"

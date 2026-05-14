@@ -44,9 +44,9 @@ async def run_graph_initial_narration_stream(
     stream = VisibleNarrationStream()
     async for chunk in _stream_intro_text(llm, runtime):
         for visible in stream.push(chunk):
-            yield {"type": "delta", "text": visible}
+            yield {"type": "narration_delta", "text": visible}
     for visible in stream.finish():
-        yield {"type": "delta", "text": visible}
+        yield {"type": "narration_delta", "text": visible}
 
     text = _clean_intro_text(stream.answer())
     if not text:

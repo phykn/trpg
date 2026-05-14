@@ -34,7 +34,11 @@ from .apply import (
     GraphRuntimeDirty,
     apply_runtime_graph_changes,
 )
-from .confirmation import GraphConfirmationActive, run_graph_action_request
+from .confirmation import (
+    GraphConfirmationActive,
+    run_graph_action_request,
+    run_graph_action_request_stream,
+)
 from .load import load_runtime_state
 from .narration_context import build_input_narration_payload
 from .narration_result import (
@@ -226,6 +230,7 @@ async def _run_classified_actions_stream(
     scenario_repo: ScenarioRepo | None = None,
 ) -> AsyncIterator[dict[str, object]]:
     result: GraphActionRequestResult | None = None
+    emitted_result = False
     for index, action in enumerate(actions):
         engine_diag(
             "input:classified",
@@ -243,17 +248,29 @@ async def _run_classified_actions_stream(
             ):
                 if event["type"] == "final":
                     result = event["result"]  # type: ignore[assignment]
+                elif event["type"] == "result":
+                    if not emitted_result:
+                        yield event
+                        emitted_result = True
                 else:
                     yield event
         else:
             try:
-                result = await run_graph_action_request(
+                async for event in run_graph_action_request_stream(
                     repo,
                     runtime.progress.game_id,
                     action,
                     llm=client,
                     scenario_repo=scenario_repo,
-                )
+                ):
+                    if event["type"] == "final":
+                        result = event["result"]  # type: ignore[assignment]
+                    elif event["type"] == "result":
+                        if not emitted_result:
+                            yield event
+                            emitted_result = True
+                    else:
+                        yield event
             except GraphActionTurnError as exc:
                 async for event in _run_graph_rejected_input_stream(
                     client,
@@ -265,6 +282,10 @@ async def _run_classified_actions_stream(
                 ):
                     if event["type"] == "final":
                         result = event["result"]  # type: ignore[assignment]
+                    elif event["type"] == "result":
+                        if not emitted_result:
+                            yield event
+                            emitted_result = True
                     else:
                         yield event
 
@@ -331,6 +352,7 @@ async def _run_graph_rejected_input_stream(
     reason = str(exc)
     engine_diag("input:action_rejected", action=action.verb, reason=reason)
     public_reason = _public_action_rejection_reason(runtime, reason)
+    yield {"type": "result", "result": _neutral_stream_result(runtime)}
     stream = VisibleNarrationStream()
     async for chunk in _stream_graph_input_rejection_narration(
         client,
@@ -340,9 +362,9 @@ async def _run_graph_rejected_input_stream(
         public_reason,
     ):
         for visible in stream.push(chunk):
-            yield {"type": "delta", "text": visible}
+            yield {"type": "narration_delta", "text": visible}
     for visible in stream.finish():
-        yield {"type": "delta", "text": visible}
+        yield {"type": "narration_delta", "text": visible}
 
     narration_result = parse_graph_narration_answer(stream.answer())
     text = narration_result.narration or public_reason
@@ -485,9 +507,16 @@ async def _run_graph_narrative_input_stream(
         social_apply_result = _apply_social_quest_speak_result(runtime, social_result)
         if social_apply_result is not None:
             runtime = social_apply_result.runtime
+            await _save_graph_narrative_apply_result(
+                repo,
+                runtime,
+                social_apply_result,
+            )
+            social_apply_result = None
         if social_result.kind == "blocked":
             text = render(social_result.message_key, runtime.progress.locale)
-            yield {"type": "delta", "text": text}
+            yield {"type": "result", "result": _neutral_stream_result(runtime)}
+            yield {"type": "narration_delta", "text": text}
             result = await _finish_graph_narrative_input(
                 repo,
                 runtime,
@@ -500,6 +529,7 @@ async def _run_graph_narrative_input_stream(
             yield {"type": "final", "result": result}
             return
 
+    yield {"type": "result", "result": _neutral_stream_result(runtime)}
     stream = VisibleNarrationStream()
     async for chunk in _stream_graph_input_narration(
         client,
@@ -509,9 +539,9 @@ async def _run_graph_narrative_input_stream(
         subject_id,
     ):
         for visible in stream.push(chunk):
-            yield {"type": "delta", "text": visible}
+            yield {"type": "narration_delta", "text": visible}
     for visible in stream.finish():
-        yield {"type": "delta", "text": visible}
+        yield {"type": "narration_delta", "text": visible}
 
     narration_result = parse_graph_narration_answer(stream.answer())
     text = narration_result.narration
@@ -529,6 +559,27 @@ async def _run_graph_narrative_input_stream(
         graph_apply_result=social_apply_result,
     )
     yield {"type": "final", "result": result}
+
+
+def _neutral_stream_result(runtime: GameRuntimeState) -> GraphActionRequestResult:
+    return GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        outcome="neutral",
+        front_state=graph_to_front_state(runtime),
+    )
+
+
+async def _save_graph_narrative_apply_result(
+    repo: GraphRepo,
+    runtime: GameRuntimeState,
+    graph_apply_result: GraphRuntimeApplyResult,
+) -> None:
+    await GraphRuntimeDirty.from_apply_result(graph_apply_result).save(
+        repo,
+        runtime.progress.game_id,
+        runtime.graph,
+    )
 
 
 def _plan_social_quest_speak(

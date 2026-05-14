@@ -146,6 +146,7 @@ async def run_graph_action_request_stream(
         result = await start_graph_roll(
             repo, game_id, action, scenario_repo=scenario_repo
         )
+        yield {"type": "result", "result": result}
         yield {"type": "final", "result": result}
         return
 
@@ -153,14 +154,13 @@ async def run_graph_action_request_stream(
         from .query import answer_graph_query
 
         engine_diag("action:done", status="answered", action=action.verb)
-        yield {
-            "type": "final",
-            "result": answered_result(
-                runtime,
-                graph_to_front_state(runtime),
-                answer_graph_query(runtime, action),
-            ),
-        }
+        result = answered_result(
+            runtime,
+            graph_to_front_state(runtime),
+            answer_graph_query(runtime, action),
+        )
+        yield {"type": "result", "result": result}
+        yield {"type": "final", "result": result}
         return
 
     pending = build_graph_action_confirmation(runtime, action)
@@ -173,19 +173,8 @@ async def run_graph_action_request_stream(
             llm=llm,
         ):
             if event["type"] == "final":
-                turn_result = event["result"]
                 engine_diag("action:done", status="executed", action=action.verb)
-                yield {
-                    "type": "final",
-                    "result": executed_result(
-                        turn_result.runtime,
-                        turn_result.front_state,
-                        dispatch=turn_result.dispatch,
-                        suggestions=turn_result.suggestions,
-                    ),
-                }
-            else:
-                yield event
+            yield event
         return
 
     next_progress = runtime.progress.model_copy(
@@ -199,14 +188,13 @@ async def run_graph_action_request_stream(
         action=action.verb,
         confirmation=pending.get("kind"),
     )
-    yield {
-        "type": "final",
-        "result": confirmation_required_result(
-            next_runtime,
-            graph_to_front_state(next_runtime),
-            pending,
-        ),
-    }
+    result = confirmation_required_result(
+        next_runtime,
+        graph_to_front_state(next_runtime),
+        pending,
+    )
+    yield {"type": "result", "result": result}
+    yield {"type": "final", "result": result}
 
 
 async def run_graph_confirm(
@@ -293,13 +281,12 @@ async def run_graph_confirm_stream(
     if decision == "cancel":
         await repo.save_progress(cleared_progress)
         engine_diag("confirm:done", status="cancelled")
-        yield {
-            "type": "final",
-            "result": cancelled_result(
-                cleared_runtime,
-                graph_to_front_state(cleared_runtime),
-            ),
-        }
+        result = cancelled_result(
+            cleared_runtime,
+            graph_to_front_state(cleared_runtime),
+        )
+        yield {"type": "result", "result": result}
+        yield {"type": "final", "result": result}
         return
 
     action = load_pending_action(pending, error_type=GraphConfirmationExpected)
@@ -312,19 +299,8 @@ async def run_graph_confirm_stream(
             llm=llm,
         ):
             if event["type"] == "final":
-                turn_result = event["result"]
                 engine_diag("confirm:done", status="executed")
-                yield {
-                    "type": "final",
-                    "result": executed_result(
-                        turn_result.runtime,
-                        turn_result.front_state,
-                        dispatch=turn_result.dispatch,
-                        suggestions=turn_result.suggestions,
-                    ),
-                }
-            else:
-                yield event
+            yield event
     except GraphActionTurnError as exc:
         raise GraphConfirmationError(str(exc)) from exc
 

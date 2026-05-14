@@ -429,7 +429,8 @@ def _graph_action_streaming_response(game_id, source) -> StreamingResponse:
 
 
 def _stream_event(game_id: str, event) -> str:
-    if event["type"] == "final":
+    event_type = event["type"]
+    if event_type in {"result", "final"}:
         result = event["result"]
         response = GraphActionResponse(
             game_id=game_id,
@@ -438,12 +439,12 @@ def _stream_event(game_id: str, event) -> str:
                 by_alias=True,
             ),
             status=result.status,
-            outcome=getattr(result, "outcome", "neutral"),
+            outcome=result.outcome,
             message=result.message,
             suggestions=result.suggestions,
         )
         payload = {
-            "type": "final",
+            "type": event_type,
             "payload": response.model_dump(mode="json"),
         }
     else:

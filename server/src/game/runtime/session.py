@@ -109,6 +109,10 @@ async def run_graph_intro_request_stream(
     runtime = await load_runtime_state(repo, game_id, scenario_repo)
     set_diag_context(game_id, runtime.progress.turn_count)
     engine_diag("intro:start")
+    yield {
+        "type": "result",
+        "result": GraphSessionIntroResult(front_state=graph_to_front_state(runtime)),
+    }
     try:
         async for event in run_graph_initial_narration_stream(llm, repo, runtime):
             if event["type"] != "final":
