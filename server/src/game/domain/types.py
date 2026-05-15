@@ -5,15 +5,7 @@ GraphStatKey = Literal["body", "agility", "mind", "presence"]
 GRAPH_STAT_KEYS: tuple[GraphStatKey, ...] = ("body", "agility", "mind", "presence")
 
 
-Tier = Literal[
-    "very_easy",
-    "easy",
-    "normal",
-    "hard",
-    "very_hard",
-    "legend",
-    "myth",
-]
+Tier = Literal["easy", "normal", "hard"]
 
 
 _TIER_ORDER: tuple[str, ...] = get_args(Tier)

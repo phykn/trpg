@@ -19,13 +19,9 @@ class DifficultyClass(_F):
     critical_hit_threshold: int = 20
     critical_miss_threshold: int = 1
     tier_dc_ranges: dict[Tier, tuple[int, int]] = {
-        "very_easy": (2, 3),
-        "easy": (4, 6),
-        "normal": (7, 10),
-        "hard": (11, 13),
-        "very_hard": (14, 16),
-        "legend": (17, 18),
-        "myth": (19, 19),
+        "easy": (2, 7),
+        "normal": (8, 13),
+        "hard": (14, 19),
     }
 
 

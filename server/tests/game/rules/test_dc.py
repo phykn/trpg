@@ -10,7 +10,7 @@ from src.game.rules import RULES
 
 def test_pick_dc_within_range_excludes_bounds():
     rng = random.Random(0)
-    for tier in ("very_easy", "easy", "normal", "hard", "very_hard", "legend", "myth"):
+    for tier in ("easy", "normal", "hard"):
         lo, hi = RULES.difficulty_class.tier_dc_ranges[tier]
         for _ in range(50):
             dc = pick_dc(tier, rng)
