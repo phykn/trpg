@@ -472,7 +472,7 @@ def test_graph_front_state_exposes_pending_confirmation_without_payload():
                         "kind": "attack_start",
                         "title": "공격하시겠습니까?",
                         "body": "goblin_01 공격해 전투를 시작합니다.",
-                        "confirm_label": "공격",
+                        "confirm_label": "전투",
                         "cancel_label": "취소",
                         "target_label": "goblin_01",
                         "payload": {"kind": "graph_action", "action": {}},
@@ -485,7 +485,7 @@ def test_graph_front_state_exposes_pending_confirmation_without_payload():
     payload = graph_to_front_state(runtime).model_dump(mode="json", by_alias=True)
 
     assert payload["pendingConfirmation"]["kind"] == "attack_start"
-    assert payload["pendingConfirmation"]["confirmLabel"] == "공격"
+    assert payload["pendingConfirmation"]["confirmLabel"] == "전투"
     assert payload["pendingConfirmation"]["cancelLabel"] == "취소"
     assert payload["pendingConfirmation"]["targetLabel"] == "goblin_01"
     assert "payload" not in payload["pendingConfirmation"]

@@ -137,10 +137,6 @@ def _combat_text(
     action: Action,
     dispatch: GraphActionDispatchResult,
 ) -> str:
-    skill_id = _combat_skill_id(action)
-    if skill_id is not None:
-        return _skill_combat_text(before, after, action, dispatch, skill_id)
-
     if before.progress.graph_combat_state is None:
         target_id = _single(action.what) or _single(action.to)
         target = _node_label(
@@ -149,6 +145,10 @@ def _combat_text(
             fallback=render("runtime.fallback.target", after.progress.locale),
         )
         return render("runtime.combat.start", after.progress.locale, target=target)
+
+    skill_id = _combat_skill_id(action)
+    if skill_id is not None:
+        return _skill_combat_text(before, after, action, dispatch, skill_id)
     outcome = dispatch.outcome
     if outcome is None and after.progress.graph_combat_state is not None:
         outcome = after.progress.graph_combat_state.outcome

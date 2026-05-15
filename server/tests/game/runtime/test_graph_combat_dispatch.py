@@ -146,7 +146,7 @@ def _ongoing_state(round_no: int = 2) -> GraphCombatState:
     )
 
 
-def test_attack_starts_combat_applies_exchange_and_stores_progress():
+def test_attack_starts_combat_without_spending_first_exchange():
     runtime = _runtime()
 
     result = dispatch_graph_combat_action(
@@ -157,15 +157,16 @@ def test_attack_starts_combat_applies_exchange_and_stores_progress():
     assert result.started is True
     assert result.outcome == "ongoing"
     assert result.runtime.progress.graph_combat_state is not None
-    assert result.runtime.progress.graph_combat_state.round == 2
-    assert result.runtime.progress.graph_combat_state.enemy_hearts == 2
+    assert result.runtime.progress.graph_combat_state.round == 1
+    assert result.runtime.progress.graph_combat_state.enemy_hearts == 3
+    assert result.runtime.progress.graph_combat_state.last_roll is None
     assert "hp" not in result.runtime.graph.nodes["goblin_01"].properties
     assert result.runtime.graph.nodes["player_01"].properties["hp"] == 5
     assert runtime.progress.graph_combat_state is None
     assert "hp" not in runtime.graph.nodes["goblin_01"].properties
 
 
-def test_attack_with_weapon_id_starts_as_basic_attack():
+def test_attack_with_weapon_id_starts_combat_without_exchange():
     runtime = _runtime()
     runtime.graph.nodes["practice_dagger"] = GraphNode(
         id="practice_dagger",
@@ -181,10 +182,12 @@ def test_attack_with_weapon_id_starts_as_basic_attack():
     assert result.started is True
     assert result.outcome == "ongoing"
     assert result.runtime.progress.graph_combat_state is not None
-    assert result.runtime.progress.graph_combat_state.enemy_hearts == 2
+    assert result.runtime.progress.graph_combat_state.round == 1
+    assert result.runtime.progress.graph_combat_state.enemy_hearts == 3
+    assert result.runtime.progress.graph_combat_state.last_roll is None
 
 
-def test_attack_with_carried_item_uses_item_support_and_consumes_it():
+def test_attack_with_carried_item_does_not_consume_support_on_start():
     runtime = _runtime(include_item=True)
 
     result = dispatch_graph_combat_action(
@@ -193,8 +196,8 @@ def test_attack_with_carried_item_uses_item_support_and_consumes_it():
     )
 
     assert result.runtime.progress.graph_combat_state is not None
-    assert result.runtime.progress.graph_combat_state.enemy_hearts == 1
-    assert "carries:player_01:bomb" not in result.runtime.graph.edges
+    assert result.runtime.progress.graph_combat_state.enemy_hearts == 3
+    assert "carries:player_01:bomb" in result.runtime.graph.edges
 
 
 def test_attack_can_finish_existing_combat_and_clear_progress():
@@ -307,7 +310,7 @@ def test_pass_maps_to_defend_and_advances_round():
     assert result.runtime.graph.nodes["player_01"].properties["hp"] == 5
 
 
-def test_cast_starts_combat_and_deducts_mp():
+def test_cast_starts_combat_without_spending_first_exchange():
     runtime = _runtime(include_skill=True)
 
     result = dispatch_graph_combat_action(
@@ -317,9 +320,10 @@ def test_cast_starts_combat_and_deducts_mp():
 
     assert result.started is True
     assert result.outcome == "ongoing"
-    assert result.runtime.graph.nodes["player_01"].properties["mp"] == 3
+    assert result.runtime.graph.nodes["player_01"].properties["mp"] == 5
     assert result.runtime.progress.graph_combat_state is not None
-    assert result.runtime.progress.graph_combat_state.enemy_hearts == 2
+    assert result.runtime.progress.graph_combat_state.round == 1
+    assert result.runtime.progress.graph_combat_state.enemy_hearts == 3
 
 
 def test_unsupported_action_raises_dispatch_error():

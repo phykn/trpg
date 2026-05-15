@@ -233,7 +233,7 @@ async def test_confirm_attack_log_uses_korean_object_particle(tmp_path):
     assert saved_logs[0].text == "당신은 고블린 약탈자를 공격해 전투를 시작합니다."
 
 
-async def test_confirm_skill_attack_logs_mp_spend(tmp_path, monkeypatch):
+async def test_confirm_skill_attack_starts_combat_without_spending_mp(tmp_path, monkeypatch):
     monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 20)
     repo = await _repo(tmp_path)
     await run_graph_action_request(
@@ -250,11 +250,12 @@ async def test_confirm_skill_attack_logs_mp_spend(tmp_path, monkeypatch):
 
     assert result.status == "executed"
     assert saved_progress.graph_combat_state is not None
-    assert saved_progress.graph_combat_state.enemy_hearts == 2
-    assert saved_graph.nodes["player_01"].properties["mp"] == 8
+    assert saved_progress.graph_combat_state.enemy_hearts == 3
+    assert saved_progress.graph_combat_state.last_roll is None
+    assert saved_graph.nodes["player_01"].properties["mp"] == 10
     assert saved_graph.nodes["goblin_01"].properties["status"] == []
-    assert "훈련 일격" in saved_logs[0].text
-    assert "MP 2" in saved_logs[0].text
+    assert "훈련 일격" not in saved_logs[0].text
+    assert "MP 2" not in saved_logs[0].text
     assert "전투를 시작합니다" in saved_logs[0].text
 
 

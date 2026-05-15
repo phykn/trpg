@@ -289,9 +289,11 @@ async def test_run_graph_action_turn_saves_attack_progress_and_front_combat(tmp_
     saved_progress = await repo.load_progress("game-1")
 
     assert saved_progress.graph_combat_state is not None
-    assert saved_progress.graph_combat_state.round == 2
+    assert saved_progress.graph_combat_state.round == 1
+    assert saved_progress.graph_combat_state.last_roll is None
     assert result.front_state.combat is not None
-    assert result.front_state.combat.round == 2
+    assert result.front_state.combat.round == 1
+    assert result.front_state.combat.last_roll is None
 
 
 async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(

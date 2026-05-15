@@ -637,8 +637,12 @@ async def test_graph_confirm_confirm_executes_pending_attack(tmp_path):
 
     assert body["state"]["pendingConfirmation"] is None
     assert body["state"]["combat"] is not None
+    assert body["state"]["combat"]["round"] == 1
+    assert body["state"]["combat"]["lastRoll"] is None
     assert progress.pending_confirmation is None
     assert progress.graph_combat_state is not None
+    assert progress.graph_combat_state.round == 1
+    assert progress.graph_combat_state.last_roll is None
     assert progress.turn_count == 1
 
 
@@ -734,9 +738,9 @@ async def test_graph_turn_pass_defends_during_existing_combat(tmp_path):
     progress = await app.state.graph_repo.load_progress(game_id)
 
     assert body["state"]["combat"] is not None
-    assert body["state"]["combat"]["round"] == 3
+    assert body["state"]["combat"]["round"] == 2
     assert progress.graph_combat_state is not None
-    assert progress.graph_combat_state.round == 3
+    assert progress.graph_combat_state.round == 2
 
 
 @pytest.mark.asyncio
@@ -1077,20 +1081,24 @@ async def test_graph_play_loop_reaches_quest_reward_with_graph_state(
         attack_body = attack_response.json()
         attack_id = attack_body["state"]["pendingConfirmation"]["id"]
 
-        first_exchange_response = await client.post(
+        combat_start_response = await client.post(
             f"/session/{game_id}/graph/confirm",
             json={"confirmation_id": attack_id, "decision": "confirm"},
         )
+        assert combat_start_response.status_code == 200, combat_start_response.text
+        combat_start_body = combat_start_response.json()
+
+        first_exchange_response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "attack", "what": enemy_id}},
+        )
         assert first_exchange_response.status_code == 200, first_exchange_response.text
-        first_exchange_body = first_exchange_response.json()
 
         second_exchange_response = await client.post(
             f"/session/{game_id}/graph/turn",
             json={"action": {"verb": "attack", "what": enemy_id}},
         )
-        assert second_exchange_response.status_code == 200, (
-            second_exchange_response.text
-        )
+        assert second_exchange_response.status_code == 200, second_exchange_response.text
 
         final_response = await client.post(
             f"/session/{game_id}/graph/turn",
@@ -1105,7 +1113,8 @@ async def test_graph_play_loop_reaches_quest_reward_with_graph_state(
 
     assert accepted_body["state"]["quest"]["id"] == quest_id
     assert accepted_body["state"]["questOffers"] == []
-    assert first_exchange_body["state"]["combat"] is not None
+    assert combat_start_body["state"]["combat"] is not None
+    assert combat_start_body["state"]["combat"]["lastRoll"] is None
     assert final_body["state"]["combat"] is None
     assert final_body["state"]["quest"] is None
     assert final_body["state"]["questOffers"][0]["id"] == "auto_quest_002"

@@ -126,7 +126,7 @@ describe('adaptGraphState', () => {
         kind: 'attack_start',
         title: '공격하시겠습니까?',
         body: '늑대를 공격해 전투를 시작합니다.',
-        confirmLabel: '공격',
+        confirmLabel: '전투',
         cancelLabel: '취소',
         targetLabel: '늑대',
       },
@@ -179,7 +179,7 @@ describe('adaptGraphState', () => {
       name: '늑대',
       alive: true,
     });
-    expect(state.pendingConfirmation?.confirmLabel).toBe('공격');
+    expect(state.pendingConfirmation?.confirmLabel).toBe('전투');
     expect(state.pendingRoll?.requiredRoll).toBe(13);
     expect(state.subject?.name).toBe('늑대');
     expect(state.subject?.alive).toBe(true);

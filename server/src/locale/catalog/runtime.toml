@@ -255,8 +255,8 @@ ko = "{target}{을/를} 공격해 전투를 시작합니다."
 en = "Attack {target} and start combat."
 
 [runtime."confirmation.attack.confirm"]
-ko = "공격"
-en = "Attack"
+ko = "전투"
+en = "Combat"
 
 [runtime."confirmation.quest_accept.title"]
 ko = "퀘스트를 시작하시겠습니까?"

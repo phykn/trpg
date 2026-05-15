@@ -48,18 +48,21 @@ def dispatch_graph_combat_action(
     engine_diag("combat:start", action=action.verb)
     try:
         state, started = _resolve_state(runtime, action)
-        combat_action = _combat_action_from_action(
-            runtime.graph,
-            action,
-            player_id=state.player_id,
-            in_combat=not started,
-        )
-        combat_result = plan_combat_exchange(
-            runtime.graph,
-            state,
-            runtime.progress.player_id,
-            combat_action,
-        )
+        if started:
+            combat_result = GraphCombatResult(changes=[], state=state)
+        else:
+            combat_action = _combat_action_from_action(
+                runtime.graph,
+                action,
+                player_id=state.player_id,
+                in_combat=True,
+            )
+            combat_result = plan_combat_exchange(
+                runtime.graph,
+                state,
+                runtime.progress.player_id,
+                combat_action,
+            )
         applied = apply_runtime_graph_changes(runtime, combat_result.changes)
     except (GraphCombatError, GraphRuntimeApplyError) as exc:
         engine_diag("combat:fail", action=action.verb, err=type(exc).__name__)
