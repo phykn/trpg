@@ -18,6 +18,49 @@ def _client(model: str = "test-model") -> LLMClient:
     return LLMClient(profiles={"default": profile})
 
 
+def test_client_uses_env_timeouts(monkeypatch):
+    captured: list[float] = []
+
+    class _FakeOpenAI:
+        def __init__(self, *, base_url, api_key, timeout):
+            captured.append(timeout)
+
+    monkeypatch.setenv("LLM_CHAT_TIMEOUT_S", "12.5")
+    monkeypatch.setenv("LLM_STREAM_TIMEOUT_S", "45.5")
+    monkeypatch.setattr("src.llm.client.AsyncOpenAI", _FakeOpenAI)
+
+    _client()
+
+    assert captured == [12.5, 45.5]
+
+
+def test_client_explicit_timeouts_override_env(monkeypatch):
+    captured: list[float] = []
+
+    class _FakeOpenAI:
+        def __init__(self, *, base_url, api_key, timeout):
+            captured.append(timeout)
+
+    monkeypatch.setenv("LLM_CHAT_TIMEOUT_S", "12.5")
+    monkeypatch.setenv("LLM_STREAM_TIMEOUT_S", "45.5")
+    monkeypatch.setattr("src.llm.client.AsyncOpenAI", _FakeOpenAI)
+
+    profile = LLMProfile(
+        base_url="http://localhost",
+        model="test-model",
+        api_keys=("k",),
+        thinking_mode="off",
+        supports_system=True,
+    )
+    LLMClient(
+        profiles={"default": profile},
+        chat_timeout_s=3.0,
+        stream_timeout_s=4.0,
+    )
+
+    assert captured == [3.0, 4.0]
+
+
 @pytest.mark.asyncio
 async def test_chat_omits_temperature_when_none(monkeypatch):
     """When temperature is None (default), the param dict has no 'temperature' key.

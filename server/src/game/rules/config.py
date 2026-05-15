@@ -121,12 +121,6 @@ class DeathConfig(_F):
     auto_revive_hp: int = 1
 
 
-class LLMConfig(_F):
-    # Override the OpenAI client's ~10min default so a stalled LLM can't hang the whole turn.
-    chat_timeout_s: float = 60.0
-    stream_timeout_s: float = 180.0
-
-
 class Rules(_F):
     difficulty_class: DifficultyClass = DifficultyClass()
     social: Social = Social()
@@ -140,7 +134,6 @@ class Rules(_F):
     recovery: RecoveryConfig = RecoveryConfig()
     growth: GrowthConfig = GrowthConfig()
     skill: SkillConfig = SkillConfig()
-    llm: LLMConfig = LLMConfig()
     companions: CompanionRules = CompanionRules()
 
 

@@ -1,4 +1,5 @@
 import json
+import os
 from collections.abc import AsyncIterator
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -8,7 +9,6 @@ from typing import Literal
 
 from openai import AsyncOpenAI
 
-from src.game.rules.config import RULES
 from src.llm.diag import llm_diag
 from .profiles import LLMProfile, ThinkingMode, parse_env_profiles
 from .providers import gemini, local
@@ -38,6 +38,13 @@ def force_think(value: bool | None):
         yield
     finally:
         _THINK_OVERRIDE.reset(token)
+
+
+def _env_float(name: str, default: float) -> float:
+    raw = os.environ.get(name)
+    if raw is None or raw == "":
+        return default
+    return float(raw)
 
 
 # Picks the `extra_body` builder + response parser; derived from base_url.
@@ -103,8 +110,16 @@ class LLMClient:
     ):
         if "default" not in profiles:
             raise ValueError("profiles must include a 'default' entry")
-        chat_t = chat_timeout_s or RULES.llm.chat_timeout_s
-        stream_t = stream_timeout_s or RULES.llm.stream_timeout_s
+        chat_t = (
+            chat_timeout_s
+            if chat_timeout_s is not None
+            else _env_float("LLM_CHAT_TIMEOUT_S", 60.0)
+        )
+        stream_t = (
+            stream_timeout_s
+            if stream_timeout_s is not None
+            else _env_float("LLM_STREAM_TIMEOUT_S", 180.0)
+        )
         self._providers: dict[str, _Provider] = {
             name: _Provider(p, chat_t, stream_t) for name, p in profiles.items()
         }
