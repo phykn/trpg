@@ -10,6 +10,7 @@ from src.game.engines.graph.combat import (
     plan_combat_exchange,
     plan_combat_start,
 )
+from src.game.engines.graph.growth import plan_xp_grant
 from src.game.engines.graph.quest import (
     plan_quest_progress_for_character_death,
     plan_quest_rewards,
@@ -74,6 +75,19 @@ def dispatch_graph_combat_action(
     completed_quest_ids: list[str] = []
     if combat_result.state.outcome == "victory":
         for target_id in _victory_target_ids(combat_result.state):
+            reward_xp = _xp_reward(graph_runtime.graph, target_id)
+            if reward_xp > 0:
+                xp_apply = apply_runtime_graph_changes(
+                    graph_runtime,
+                    plan_xp_grant(
+                        graph_runtime.graph,
+                        graph_runtime.progress.player_id,
+                        reward_xp,
+                    ).changes,
+                )
+                graph_runtime = xp_apply.runtime
+                applied_count += xp_apply.applied
+                dirty.add_apply_result(xp_apply)
             quest_progress = plan_quest_progress_for_character_death(
                 graph_runtime.graph,
                 target_id,
@@ -137,6 +151,14 @@ def _victory_target_ids(state: GraphCombatState) -> list[str]:
         if event.kind in {"enemy_defeated", "forced_end"}:
             target_ids.append(event.target_id)
     return target_ids
+
+
+def _xp_reward(graph: Graph, character_id: str) -> int:
+    node = graph.nodes.get(character_id)
+    if node is None:
+        return 0
+    value = node.properties.get("xp_reward")
+    return value if isinstance(value, int) and value > 0 else 0
 
 
 def _resolve_state(

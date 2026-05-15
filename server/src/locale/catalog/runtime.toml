@@ -135,12 +135,12 @@ ko = "당신의 행동이 처리됩니다."
 en = "Your action is handled."
 
 [runtime."combat.start"]
-ko = "당신은 {target}{을/를} 공격해 전투를 시작합니다."
-en = "You attack {target} and start combat."
+ko = "당신은 {target}{과/와} 대치합니다."
+en = "You face off against {target}."
 
 [runtime."combat.skill_start"]
-ko = "당신은 {skill}{을/를} 사용해 {target}{과/와} 전투를 시작합니다 (MP {mp_cost})."
-en = "You use {skill} and start combat with {target} (MP {mp_cost})."
+ko = "당신은 {skill}{을/를} 준비하며 {target}{과/와} 대치합니다 (MP {mp_cost})."
+en = "You ready {skill} and face off against {target} (MP {mp_cost})."
 
 [runtime."combat.skill_continue"]
 ko = "당신은 {skill}{을/를} 사용해 {target}{을/를} 압박합니다 (MP {mp_cost})."
@@ -178,10 +178,6 @@ en = "shaken"
 ko = "위태로움"
 en = "unsteady"
 
-[runtime."combat.condition.downed"]
-ko = "쓰러짐"
-en = "downed"
-
 [runtime."combat.condition.changed"]
 ko = "상태가 바뀜"
 en = "changed"
@@ -214,9 +210,9 @@ en = "pressed forward"
 ko = "상대가 쓰러짐"
 en = "opponent fell"
 
-[runtime."combat.motion.player_downed"]
-ko = "플레이어가 쓰러짐"
-en = "player fell"
+[runtime."combat.motion.player_defeated"]
+ko = "패배함"
+en = "defeated"
 
 [runtime."combat.motion.forced_end"]
 ko = "교전이 멈춤"
@@ -294,6 +290,22 @@ en = "Your action continues quietly."
 ko = "{target}{은/는} 당신의 말을 듣고 잠시 침묵합니다."
 en = "{target} listens to you and stays quiet for a moment."
 
+[runtime."narration.repeat.neutral"]
+ko = "장면의 긴장은 그대로 남고, 다음 선택이 조용히 당신을 기다립니다."
+en = "The tension remains, and the next choice waits quietly."
+
+[runtime."narration.repeat.combat_neutral"]
+ko = "대치가 이어지고, 서로의 다음 움직임이 아직 정해지지 않습니다."
+en = "The standoff continues, and neither next move is settled yet."
+
+[runtime."narration.repeat.combat_success"]
+ko = "공격의 여파가 남고, 상대는 흐트러진 자세를 다시 붙잡으려 합니다."
+en = "The impact lingers, and the opponent tries to recover their stance."
+
+[runtime."narration.repeat.combat_failure"]
+ko = "공격의 흐름이 끊기고, 상대가 그 빈틈을 놓치지 않습니다."
+en = "The attack loses its line, and the opponent catches the opening."
+
 [runtime."classify.refuse_meta_breaking"]
 ko = "게임 밖 지시에는 응답할 수 없습니다."
 en = "Out-of-game instructions cannot be handled."
@@ -358,10 +370,6 @@ en = "hurt"
 ko = "위급한"
 en = "critical"
 
-[runtime."resource.downed"]
-ko = "쓰러진"
-en = "downed"
-
 [runtime."resource.ready"]
 ko = "충분한"
 en = "ready"
@@ -379,20 +387,44 @@ ko = "{label} 판정이 필요합니다"
 en = "{label} check required"
 
 [runtime."roll.body.perceive"]
-ko = "자세히 살펴보려면 집중해야 합니다."
-en = "You need focus to inspect closely."
+ko = "당신은 눈앞의 흔적과 기척을 더 깊이 읽으려 합니다. 성공하면 숨은 단서나 위험을 알아차립니다."
+en = "You study the signs and sounds before you more closely. On success, you notice hidden clues or danger."
 
 [runtime."roll.body.speak"]
-ko = "상대를 움직이려면 말의 무게를 실어야 합니다."
-en = "Your words need weight to move the other person."
+ko = "당신은 상대의 마음이 흔들릴 틈을 찾아 말을 고릅니다. 성공하면 상대가 더 분명한 반응이나 양보를 보입니다."
+en = "You choose words that can move the other person. On success, they give a clearer reaction or concession."
 
 [runtime."roll.body.move"]
-ko = "발소리를 죽이고 미끄러지지 않아야 합니다."
-en = "You need quiet steps and steady footing."
+ko = "당신은 몸을 낮추고 위험한 길을 넘으려 합니다. 성공하면 원하는 곳까지 무사히 움직입니다."
+en = "You lower your body and cross dangerous ground. On success, you reach where you mean to go safely."
 
 [runtime."roll.body.default"]
-ko = "행동의 결과를 확인해야 합니다."
-en = "The result of the action needs to be checked."
+ko = "당신은 결과가 갈릴 행동에 힘을 싣습니다. 성공하면 의도한 성과를 얻습니다."
+en = "You commit to an uncertain action. On success, you gain the intended result."
+
+[runtime."roll.resolve.perceive.success"]
+ko = "당신은 살핀 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다."
+en = "You study the scene and catch a meaningful clue or sign of danger."
+
+[runtime."roll.resolve.perceive.failure"]
+ko = "당신은 살피지만, 눈앞의 흔적은 뚜렷한 답을 내주지 않습니다."
+en = "You study the scene, but the traces before you do not yield a clear answer."
+
+[runtime."roll.resolve.speak.success"]
+ko = "당신의 말은 상대에게 닿고, 상대는 더 분명한 반응을 보입니다."
+en = "Your words reach the other person, drawing a clearer response."
+
+[runtime."roll.resolve.speak.failure"]
+ko = "당신의 말은 닿지만, 상대는 쉽게 마음을 열지 않습니다."
+en = "Your words reach the other person, but they do not open up easily."
+
+[runtime."roll.resolve.default.success"]
+ko = "당신의 시도는 의도한 성과로 이어집니다."
+en = "Your attempt leads to the intended result."
+
+[runtime."roll.resolve.default.failure"]
+ko = "당신의 시도는 원하는 성과로 이어지지 않습니다."
+en = "Your attempt does not lead to the result you wanted."
 
 [runtime."social.missing_supplies.reason_known"]
 ko = "주민은 보급품이 사라진 이유를 조심스럽게 털어놓습니다."

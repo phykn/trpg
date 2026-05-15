@@ -1,15 +1,15 @@
 from typing import Literal
 
 
-HpState = Literal["healthy", "hurt", "critical", "downed"]
+HpState = Literal["healthy", "hurt", "critical"]
 MpState = Literal["ready", "strained", "drained"]
 
 
 def hp_state(current: int, maximum: int) -> HpState:
-    if current <= 0:
-        return "downed"
     if maximum <= 0:
         return "healthy"
+    if current <= 0:
+        return "critical"
     ratio = current / maximum
     if ratio <= 0.25:
         return "critical"

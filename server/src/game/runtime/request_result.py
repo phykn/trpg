@@ -129,10 +129,17 @@ def outcome_from_dispatch(dispatch: GraphActionDispatchResult) -> GraphResultOut
             return "success"
         if dispatch.outcome == "defeat":
             return "failure"
+        state = dispatch.runtime.progress.graph_combat_state
+        if (
+            state is not None
+            and state.last_roll is not None
+            and state.last_dc is not None
+        ):
+            return "success" if state.last_roll >= state.last_dc else "failure"
         return "neutral"
     if dispatch.kind == "move":
         return "neutral"
-    return "success"
+    return "neutral"
 
 
 def _result(

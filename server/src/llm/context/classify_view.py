@@ -294,7 +294,7 @@ def _attackable_ids(visible_targets: list[dict[str, Any]]) -> list[str]:
     return [
         target["id"]
         for target in visible_targets
-        if target["type"] == "enemy" and target.get("protected") is not True
+        if target["type"] in {"npc", "enemy"} and target.get("protected") is not True
     ]
 
 

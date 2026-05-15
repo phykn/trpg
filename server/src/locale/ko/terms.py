@@ -40,9 +40,9 @@ ABANDON_TERMS = ("포기", "거절", "취소")
 ACTION_ATTACK_TERMS = ("공격", "때리", "친다", "공세")
 ACTION_PICKUP_TERMS = ("획득", "줍", "주워", "가져", "챙")
 ACTION_FLEE_TERMS = ("도망", "도주", "달아")
+LOOT_TERMS = ("조사", "수색", "뒤져", "루팅")
 
 KO_NONLETHAL_MARKERS = frozenset({"훈련", "대련", "연습", "허수아비"})
-KO_DOWNED_MARKERS = frozenset({"쓰러짐", "전투불능"})
 KO_META_BREAKING_TERMS = (
     "시스템 프롬프트",
     "프롬프트 원문",

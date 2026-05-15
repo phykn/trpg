@@ -130,9 +130,6 @@ def _enemy(enemy_id: str, locale: str) -> GraphNode:
             "alive": True,
             "stats": {"body": 2, "agility": 1, "mind": 0, "presence": 0},
             "status": [],
-            "combat_behavior": {
-                "attack_priority": "nearest",
-            },
         },
     )
 

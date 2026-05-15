@@ -72,6 +72,7 @@ def build_action_narration_payload(
             action=action,
             target=target,
         ),
+        "recent_narration": _recent_narration_payload(before),
         "recent_dialogue": narrate_recent_dialogue_payload(after),
         "combat_view": combat_narration_view(
             after,
@@ -327,6 +328,26 @@ def _input_current_event(
 
 def _result_cards(card_texts: list[str]) -> list[dict[str, str]]:
     return [{"text": text} for text in card_texts if text]
+
+
+def _recent_narration_payload(
+    runtime: GameRuntimeState,
+    *,
+    limit: int = 4,
+    max_chars: int = 220,
+) -> list[dict[str, Any]]:
+    entries = [
+        entry
+        for entry in runtime.log_entries
+        if entry.kind == "gm" and entry.text.strip()
+    ][-limit:]
+    return [
+        {
+            "text": entry.text.strip()[:max_chars],
+            "outcome": entry.outcome,
+        }
+        for entry in entries
+    ]
 
 
 def _narrate_budget(runtime: GameRuntimeState) -> dict[str, int]:

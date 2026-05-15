@@ -10,6 +10,7 @@ from src.locale.terms import (
     DECEPTIVE_TERMS,
     DIALOGUE_TERMS,
     HOSTILE_TERMS,
+    LOOT_TERMS,
     META_BREAKING_TERMS,
     PART_TERMS,
     REAL_WORLD_TERMS,
@@ -67,9 +68,16 @@ def classify_action_shortcut(
             )
 
     if _has_any(player_input, ACTION_PICKUP_TERMS):
+        loot = _corpse_loot_action(player_input, surroundings)
+        if loot is not None:
+            return _action_output([loot])
         pickup = _pickup_action(player_input, surroundings)
         if pickup is not None:
             return _action_output([pickup])
+    if _looks_like_loot(player_input):
+        loot = _corpse_loot_action(player_input, surroundings)
+        if loot is not None:
+            return _action_output([loot])
 
     return None
 
@@ -118,7 +126,8 @@ def _attack_action(
         [
             entry
             for entry in _dicts(surroundings.get("entities"))
-            if entry.get("type") == "enemy" and entry.get("protected") is not True
+            if entry.get("type") in {"npc", "enemy"}
+            and entry.get("protected") is not True
         ],
     )
     if target is None:
@@ -154,6 +163,43 @@ def _pickup_action(
     )
 
 
+def _corpse_loot_action(
+    player_input: str,
+    surroundings: dict[str, Any],
+) -> Action | None:
+    corpse = _named_entry(player_input, _dicts(surroundings.get("corpses")))
+    corpses = _dicts(surroundings.get("corpses"))
+    if corpse is None and len(corpses) == 1:
+        corpse = _entry_ref(corpses[0])
+    if corpse is None:
+        return None
+
+    corpse_payload = next(
+        (
+            entry
+            for entry in corpses
+            if isinstance(entry.get("id"), str) and entry.get("id") == corpse["id"]
+        ),
+        None,
+    )
+    if corpse_payload is None:
+        return None
+    inventory = _dicts(corpse_payload.get("inventory"))
+    item = _named_entry(player_input, inventory)
+    if item is None and len(inventory) == 1:
+        item = _entry_ref(inventory[0])
+    player = _player(surroundings)
+    if item is None or player is None:
+        return None
+    return Action(
+        verb="transfer",
+        what=item["id"],
+        from_=corpse["id"],
+        to=player["id"],
+        how="gift",
+    )
+
+
 def _player(surroundings: dict[str, Any]) -> dict[str, str] | None:
     for entry in _dicts(surroundings.get("entities")):
         if entry.get("type") != "player":
@@ -166,6 +212,10 @@ def _player(surroundings: dict[str, Any]) -> dict[str, str] | None:
 
 def _looks_like_dialogue(player_input: str) -> bool:
     return any(term in player_input for term in DIALOGUE_TERMS)
+
+
+def _looks_like_loot(player_input: str) -> bool:
+    return any(term in player_input for term in LOOT_TERMS)
 
 
 def _find_dialogue_target(
@@ -220,6 +270,14 @@ def _named_entry(
         name = entry.get("name")
         if isinstance(entry_id, str) and isinstance(name, str) and name in player_input:
             return {"id": entry_id, "name": name}
+    return None
+
+
+def _entry_ref(entry: dict[str, Any]) -> dict[str, str] | None:
+    entry_id = entry.get("id")
+    name = entry.get("name")
+    if isinstance(entry_id, str) and isinstance(name, str):
+        return {"id": entry_id, "name": name}
     return None
 
 

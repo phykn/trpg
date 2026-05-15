@@ -68,7 +68,7 @@ async def _repo(tmp_path) -> LocalFsGraphRepo:
     return repo
 
 
-async def test_start_graph_roll_stores_pending_roll_without_log(tmp_path):
+async def test_start_graph_roll_stores_pending_roll_with_gm_narration(tmp_path):
     repo = await _repo(tmp_path)
 
     result = await start_graph_roll(
@@ -82,8 +82,13 @@ async def test_start_graph_roll_stores_pending_roll_without_log(tmp_path):
     assert result.status == "roll_required"
     assert progress.pending_roll["kind"] == "perceive"
     assert progress.pending_roll["title"] == "지력 판정이 필요합니다"
+    assert progress.pending_roll["body"] == (
+        "당신은 눈앞의 흔적과 기척을 더 깊이 읽으려 합니다. "
+        "성공하면 숨은 단서나 위험을 알아차립니다."
+    )
     assert progress.pending_roll["required_roll"] == 13
-    assert logs == []
+    assert [entry.kind for entry in logs] == ["gm"]
+    assert logs[0].text == progress.pending_roll["body"]
 
 
 def test_build_pending_roll_stores_original_action_payload():
@@ -134,12 +139,13 @@ async def test_run_graph_roll_resolves_pending_roll_and_appends_roll_log(tmp_pat
     assert result.status == "executed"
     assert progress.pending_roll is None
     assert progress.turn_count == 2
-    assert logs[0].kind == "roll"
+    assert logs[0].kind == "gm"
+    assert logs[1].kind == "roll"
     assert [entry.id for entry in logs] == list(range(1, len(logs) + 1))
     assert progress.next_log_id == logs[-1].id + 1
-    assert logs[0].check == "민첩"
-    assert logs[0].roll == 13
-    assert logs[0].result == "success"
+    assert logs[1].check == "민첩"
+    assert logs[1].roll == 13
+    assert logs[1].result == "success"
     assert result.outcome == "success"
     assert result.front_state.pending_roll is None
 
@@ -163,6 +169,48 @@ async def test_run_graph_roll_continues_stored_action(tmp_path):
     assert "located_at:player_01:forest" in graph.edges
 
 
+async def test_run_graph_roll_resolves_narrative_perceive_without_dispatch(tmp_path):
+    repo = await _repo(tmp_path)
+    pending = (
+        await start_graph_roll(repo, "game-1", Action(verb="perceive", what="town"))
+    ).pending_roll
+
+    result = await run_graph_roll(repo, "game-1", pending["id"], dice=13)
+    progress = await repo.load_progress("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert result.outcome == "success"
+    assert result.dispatch is None
+    assert progress.pending_roll is None
+    assert logs[1].kind == "roll"
+    assert logs[1].result == "success"
+    assert logs[2].kind == "gm"
+    assert logs[2].outcome == "success"
+    assert logs[2].text == "당신은 살핀 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다."
+
+
+async def test_run_graph_roll_resolves_failed_narrative_perceive_without_dispatch(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    pending = (
+        await start_graph_roll(repo, "game-1", Action(verb="perceive", what="town"))
+    ).pending_roll
+
+    result = await run_graph_roll(repo, "game-1", pending["id"], dice=12)
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert result.outcome == "failure"
+    assert result.dispatch is None
+    assert logs[1].kind == "roll"
+    assert logs[1].result == "fail"
+    assert logs[2].kind == "gm"
+    assert logs[2].outcome == "failure"
+    assert logs[2].text == "당신은 살피지만, 눈앞의 흔적은 뚜렷한 답을 내주지 않습니다."
+
+
 async def test_run_graph_roll_logs_one_short_roll_as_fail(tmp_path):
     repo = await _repo(tmp_path)
     pending = (
@@ -172,9 +220,9 @@ async def test_run_graph_roll_logs_one_short_roll_as_fail(tmp_path):
     result = await run_graph_roll(repo, "game-1", pending["id"], dice=12)
     logs = await repo.load_log_entries("game-1")
 
-    assert logs[0].kind == "roll"
-    assert logs[0].margin == -1
-    assert logs[0].result == "fail"
+    assert logs[1].kind == "roll"
+    assert logs[1].margin == -1
+    assert logs[1].result == "fail"
     assert result.outcome == "failure"
 
 

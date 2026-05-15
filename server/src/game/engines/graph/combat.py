@@ -329,17 +329,10 @@ def _apply_terminal_result(
         hp_loss = max(0, state.enemy_hearts)
         current_hp = _int_prop(player, "hp")
         changes.append(_set(player.id, "hp", max(0, current_hp - hp_loss)))
-        _plan_defeat(
-            changes,
-            graph.nodes[player.id],
-            mode="downed",
-            marker="downed",
-            set_alive_false=False,
-        )
         state.outcome = "defeat"
         state.trace.append(
             GraphCombatTraceEvent(
-                kind="player_downed",
+                kind="player_defeated",
                 actor_id=enemy.id,
                 target_id=player.id,
                 state=f"hp_loss:{hp_loss}",
@@ -370,7 +363,7 @@ def _require_combatant_can_fight(node: GraphNode) -> None:
     if node.properties.get("alive") is False:
         raise GraphCombatError(f"character cannot fight: {node.id}")
     status = node.properties.get("status", [])
-    if isinstance(status, list) and any(item in {"dead", "downed"} for item in status):
+    if isinstance(status, list) and "dead" in status:
         raise GraphCombatError(f"character cannot fight: {node.id}")
 
 

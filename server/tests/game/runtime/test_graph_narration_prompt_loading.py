@@ -111,11 +111,12 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "문장 수와 길이를 강제하지 않습니다" in intro_prompt
     assert "문장 수와 길이를 강제하지 않습니다" in narrate_prompt
     assert "「」" in narrate_prompt
-    assert "「멈추십시오」" in narrate_prompt
     assert "「허가는 받았습니다」" in narrate_prompt
     assert "직접 발화" in narrate_prompt
     assert "NPC 직접 발화" in narrate_prompt
-    assert "당신의 새 대사" in narrate_prompt
+    assert "짧은 반응으로만" not in narrate_prompt
+    assert "짧은 말" not in narrate_prompt
+    assert "당신의 새 대사" not in narrate_prompt
     assert "payload.combat_view" in narrate_prompt
     assert "tone.lethality" in narrate_prompt
     assert "훈련 충격" in narrate_prompt

@@ -34,9 +34,11 @@ def _character(
             "max_hp": max_hp,
             "mp": mp,
             "max_mp": max_mp,
+            "gold": 20,
             "alive": hp > 0,
             "stats": {"body": 3, "agility": 2, "mind": 2, "presence": 2},
             "status": [],
+            "active_buffs": [],
             "visited_location_ids": [],
         },
     )
@@ -57,6 +59,40 @@ def _graph() -> Graph:
             ),
             "player_01": _character("player_01"),
             "goblin_01": _character("goblin_01", hp=24, max_hp=24),
+            "loose_herb": GraphNode(
+                id="loose_herb",
+                type="item",
+                properties={"name": "loose_herb"},
+            ),
+            "gift_apple": GraphNode(
+                id="gift_apple",
+                type="item",
+                properties={"name": "gift_apple"},
+            ),
+            "player_gift": GraphNode(
+                id="player_gift",
+                type="item",
+                properties={"name": "player_gift"},
+            ),
+            "shop_potion": GraphNode(
+                id="shop_potion",
+                type="item",
+                properties={"name": "shop_potion", "price": 6},
+            ),
+            "old_coin": GraphNode(
+                id="old_coin",
+                type="item",
+                properties={"name": "old_coin", "price": 6},
+            ),
+            "healing_herb": GraphNode(
+                id="healing_herb",
+                type="item",
+                properties={
+                    "name": "healing_herb",
+                    "consumable": False,
+                    "on_use": "test_trigger",
+                },
+            ),
         },
         edges={
             "located_at:player_01:town": GraphEdge(
@@ -70,6 +106,42 @@ def _graph() -> Graph:
                 type="located_at",
                 from_node_id="goblin_01",
                 to_node_id="town",
+            ),
+            "located_at:loose_herb:town": GraphEdge(
+                id="located_at:loose_herb:town",
+                type="located_at",
+                from_node_id="loose_herb",
+                to_node_id="town",
+            ),
+            "carries:goblin_01:gift_apple": GraphEdge(
+                id="carries:goblin_01:gift_apple",
+                type="carries",
+                from_node_id="goblin_01",
+                to_node_id="gift_apple",
+            ),
+            "carries:goblin_01:shop_potion": GraphEdge(
+                id="carries:goblin_01:shop_potion",
+                type="carries",
+                from_node_id="goblin_01",
+                to_node_id="shop_potion",
+            ),
+            "carries:player_01:old_coin": GraphEdge(
+                id="carries:player_01:old_coin",
+                type="carries",
+                from_node_id="player_01",
+                to_node_id="old_coin",
+            ),
+            "carries:player_01:player_gift": GraphEdge(
+                id="carries:player_01:player_gift",
+                type="carries",
+                from_node_id="player_01",
+                to_node_id="player_gift",
+            ),
+            "carries:player_01:healing_herb": GraphEdge(
+                id="carries:player_01:healing_herb",
+                type="carries",
+                from_node_id="player_01",
+                to_node_id="healing_herb",
             ),
             "connects_to:town:forest": GraphEdge(
                 id="connects_to:town:forest",
@@ -141,11 +213,22 @@ class _SlowNarrationLLM:
         return {"answer": "너무 늦게 도착한 나레이션입니다."}
 
 
+class _EmptyNarrationLLM:
+    def __init__(self) -> None:
+        self.calls = []
+
+    async def chat(self, messages, **kwargs):
+        self.calls.append({"messages": messages, **kwargs})
+        return {"answer": ""}
+
+
 class _RepeatNarrationLLM:
     def __init__(self, text: str) -> None:
         self.text = text
+        self.calls = []
 
     async def chat(self, messages, **kwargs):
+        self.calls.append({"messages": messages, **kwargs})
         return {"answer": self.text}
 
 
@@ -198,7 +281,7 @@ async def test_run_graph_action_turn_persists_only_touched_graph_ids(tmp_path):
     assert call["removed_edge_ids"] == ["located_at:player_01:town"]
 
 
-async def test_run_graph_action_turn_skips_llm_narration_for_plain_move(tmp_path):
+async def test_run_graph_action_turn_adds_gm_narration_for_first_visit_move(tmp_path):
     repo = await _repo(tmp_path)
     llm = _NarrationLLM()
 
@@ -210,9 +293,162 @@ async def test_run_graph_action_turn_skips_llm_narration_for_plain_move(tmp_path
     )
     saved_logs = await repo.load_log_entries("game-1")
 
-    assert len(llm.calls) == 0
-    assert [entry.kind for entry in saved_logs] == ["act", "act"]
+    assert [call["agent"] for call in llm.calls] == ["graph_narrate"]
+    assert [entry.kind for entry in saved_logs] == ["act", "act", "gm"]
+    assert saved_logs[-1].text == "칼끝이 번뜩이고, 적이 비틀거리며 길 위에 쓰러집니다."
+    assert saved_logs[-1].outcome == "neutral"
     assert result.front_state.log == saved_logs
+
+
+async def test_run_graph_action_turn_skips_llm_narration_for_revisited_move(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["player_01"].properties["visited_location_ids"] = ["town", "forest"]
+    graph.nodes["active_quest"] = GraphNode(
+        id="active_quest",
+        type="quest",
+        properties={"status": "active"},
+    )
+    await repo.save_graph("game-1", graph)
+    llm = _NarrationLLM()
+
+    result = await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="move", to="forest"),
+        llm=llm,  # type: ignore[arg-type]
+    )
+    saved_logs = await repo.load_log_entries("game-1")
+
+    assert len(llm.calls) == 0
+    assert [entry.kind for entry in saved_logs] == ["act"]
+    assert result.front_state.log == saved_logs
+
+
+@pytest.mark.parametrize(
+    ("action", "kind"),
+    [
+        (Action(verb="transfer", what="loose_herb", from_="town"), "transfer"),
+        (
+            Action(
+                verb="transfer",
+                what="player_gift",
+                from_="player_01",
+                to="goblin_01",
+            ),
+            "transfer",
+        ),
+        (
+            Action(
+                verb="transfer",
+                what="gift_apple",
+                from_="goblin_01",
+                to="player_01",
+            ),
+            "transfer",
+        ),
+        (
+            Action(
+                verb="transfer",
+                what="shop_potion",
+                from_="goblin_01",
+                to="player_01",
+                how="trade",
+            ),
+            "trade_buy",
+        ),
+        (
+            Action(
+                verb="transfer",
+                what="old_coin",
+                from_="player_01",
+                to="goblin_01",
+                how="trade",
+            ),
+            "trade_sell",
+        ),
+        (Action(verb="use", what="healing_herb"), "use"),
+        (Action(verb="rest"), "rest"),
+    ],
+)
+async def test_run_graph_action_turn_narrates_item_and_rest_actions(
+    tmp_path,
+    action,
+    kind,
+):
+    repo = await _repo(tmp_path)
+    llm = _NarrationLLM()
+
+    result = await run_graph_action_turn(
+        repo,
+        "game-1",
+        action,
+        llm=llm,  # type: ignore[arg-type]
+    )
+    saved_logs = await repo.load_log_entries("game-1")
+
+    assert result.dispatch.kind == kind
+    assert llm.calls[-1]["agent"] == "graph_narrate"
+    assert saved_logs[-1].kind == "gm"
+
+
+async def test_run_graph_action_turn_narrates_rest_encounter(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["town"].properties["sleep_risk"] = "dangerous"
+    graph.nodes["town"].properties["sleep_encounters"] = ["goblin_01"]
+    await repo.save_graph("game-1", graph)
+    llm = _NarrationLLM()
+
+    result = await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="rest"),
+        llm=llm,  # type: ignore[arg-type]
+    )
+    saved_logs = await repo.load_log_entries("game-1")
+
+    assert result.dispatch.kind == "rest_encounter"
+    assert llm.calls[-1]["agent"] == "graph_narrate"
+    assert saved_logs[-1].kind == "gm"
+
+
+async def test_run_graph_action_turn_narrates_automatic_quest_offer_on_revisited_move(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["player_01"].properties["visited_location_ids"] = ["town", "forest"]
+    await repo.save_graph("game-1", graph)
+    llm = _NarrationLLM()
+
+    await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="move", to="forest"),
+        llm=llm,  # type: ignore[arg-type]
+    )
+    saved_logs = await repo.load_log_entries("game-1")
+
+    assert [entry.kind for entry in saved_logs] == ["act", "act", "gm"]
+    assert llm.calls[-1]["agent"] == "graph_narrate"
+
+
+async def test_run_graph_action_turn_uses_pass_style_fallback_for_empty_narration(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+
+    await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="use", what="healing_herb"),
+        llm=_EmptyNarrationLLM(),  # type: ignore[arg-type]
+    )
+    saved_logs = await repo.load_log_entries("game-1")
+
+    assert saved_logs[-1].kind == "gm"
+    assert saved_logs[-1].text == "당신의 행동은 조용히 이어집니다."
 
 
 async def test_run_graph_action_turn_stream_emits_result_before_narration(tmp_path):
@@ -287,10 +523,12 @@ async def test_run_graph_action_turn_saves_attack_progress_and_front_combat(tmp_
         Action(verb="attack", what="goblin_01"),
     )
     saved_progress = await repo.load_progress("game-1")
+    saved_logs = await repo.load_log_entries("game-1")
 
     assert saved_progress.graph_combat_state is not None
     assert saved_progress.graph_combat_state.round == 1
     assert saved_progress.graph_combat_state.last_roll is None
+    assert saved_logs[0].text == "당신은 goblin_01와 대치합니다."
     assert result.front_state.combat is not None
     assert result.front_state.combat.round == 1
     assert result.front_state.combat.last_roll is None
@@ -332,6 +570,7 @@ async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(
 
     assert [entry.kind for entry in saved_logs] == ["act", "act", "gm"]
     assert saved_logs[-1].text == "칼끝이 번뜩이고, 적이 비틀거리며 길 위에 쓰러집니다."
+    assert saved_logs[-1].outcome == "success"
     assert result.front_state.log == saved_logs
     assert result.runtime.progress.next_log_id == saved_logs[-1].id + 1
 
@@ -368,7 +607,9 @@ async def test_run_graph_action_turn_logs_fled_combat_as_fled_not_victory(
     saved_logs = await repo.load_log_entries("game-1")
 
     assert saved_logs[0].text == "당신은 전투에서 물러납니다."
-    assert len(llm.calls) == 0
+    assert [entry.kind for entry in saved_logs] == ["act", "act", "gm"]
+    assert len(llm.calls) == 1
+    assert llm.calls[0]["agent"] == "combat_narrate"
 
 
 async def test_run_graph_action_turn_preserves_repeated_llm_narration(tmp_path):
@@ -380,17 +621,27 @@ async def test_run_graph_action_turn_preserves_repeated_llm_narration(tmp_path):
     )
     progress = await repo.load_progress("game-1")
     await repo.save_progress(progress.model_copy(update={"next_log_id": 2}))
+    llm = _RepeatNarrationLLM(repeated)
 
     await run_graph_action_turn(
         repo,
         "game-1",
         Action(verb="attack", what="goblin_01"),
-        llm=_RepeatNarrationLLM(repeated),  # type: ignore[arg-type]
+        llm=llm,  # type: ignore[arg-type]
     )
     saved_logs = await repo.load_log_entries("game-1")
 
     assert [entry.kind for entry in saved_logs] == ["gm", "act", "gm"]
-    assert saved_logs[-1].text == repeated
+    assert saved_logs[-1].text == (
+        "대치가 이어지고, 서로의 다음 움직임이 아직 정해지지 않습니다."
+    )
+    assert saved_logs[-1].outcome == "neutral"
+    import json
+
+    payload = json.loads(llm.calls[0]["messages"][1]["content"])
+    assert payload["recent_narration"] == [
+        {"text": repeated, "outcome": None},
+    ]
 
 
 async def test_run_graph_action_turn_sends_combat_trace_to_narration(tmp_path):
@@ -435,7 +686,8 @@ async def test_run_graph_action_turn_times_out_slow_narration_and_keeps_action(
     saved_logs = await repo.load_log_entries("game-1")
 
     assert elapsed < 0.15
-    assert [entry.kind for entry in saved_logs] == ["act"]
+    assert [entry.kind for entry in saved_logs] == ["act", "gm"]
+    assert saved_logs[-1].text == "당신의 행동은 조용히 이어집니다."
     assert result.front_state.combat is not None
 
 

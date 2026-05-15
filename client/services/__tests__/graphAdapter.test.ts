@@ -41,7 +41,7 @@ describe('adaptGraphState', () => {
           {
             id: 'goblin_01',
             name: '쓰러진 고블린',
-            kind: 'enemy',
+            kind: 'npc',
             alive: false,
             level: 1,
             raceJob: '고블린',
@@ -57,7 +57,7 @@ describe('adaptGraphState', () => {
           {
             id: 'wolf_01',
             name: '늑대',
-            kind: 'enemy',
+            kind: 'npc',
             alive: true,
             level: 3,
             raceJob: '야수',
@@ -139,7 +139,7 @@ describe('adaptGraphState', () => {
         statLabel: '정신',
         requiredRoll: 13,
       },
-      log: [{ id: 1, kind: 'gm', text: '당신은 광장에 섭니다.' }],
+      log: [{ id: 1, kind: 'gm', text: '당신은 광장에 섭니다.', outcome: 'success' }],
     });
 
     expect(state.hero.name).toBe('테스터');
@@ -163,6 +163,7 @@ describe('adaptGraphState', () => {
       { label: '매력', value: 0 },
     ]);
     expect(state.place?.name).toBe('광장');
+    expect(state.log[0]).toEqual({ id: 1, kind: 'gm', text: '당신은 광장에 섭니다.', outcome: 'success' });
     expect(state.place?.surroundings[0].name).toBe('숲길');
     expect(state.place?.targets[0].name).toBe('쓰러진 고블린');
     expect(state.place?.targets[1].name).toBe('늑대');
@@ -251,7 +252,7 @@ describe('adaptGraphState', () => {
           {
             id: 'wolf_01',
             name: '늑대',
-            kind: 'enemy',
+            kind: 'npc',
             alive: true,
             level: 1,
             raceJob: '',
@@ -275,8 +276,8 @@ describe('adaptGraphState', () => {
     });
 
     expect(suggestions).toEqual([
-      { label: '늑대를 공격합니다', inputText: '늑대를 공격합니다' },
       { label: '에드릭에게 말을 겁니다', inputText: '에드릭에게 말을 겁니다' },
+      { label: '늑대에게 말을 겁니다', inputText: '늑대에게 말을 겁니다' },
       { label: '망루로 이동합니다', inputText: '망루로 이동합니다' },
     ]);
   });

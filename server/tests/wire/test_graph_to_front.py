@@ -1,5 +1,5 @@
 from src.game.domain.combat import GraphCombatState
-from src.game.domain.memory import ActLogEntry
+from src.game.domain.memory import ActLogEntry, GMLogEntry
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
@@ -210,7 +210,10 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
             player_id="player_01",
             graph_combat_state=graph_combat_state,
         ),
-        log_entries=[ActLogEntry(id=1, kind="act", text="당신은 Town에 있습니다.")],
+        log_entries=[
+            ActLogEntry(id=1, kind="act", text="당신은 Town에 있습니다."),
+            GMLogEntry(id=2, kind="gm", text="나레이션입니다.", outcome="success"),
+        ],
     )
 
 
@@ -239,6 +242,7 @@ def test_graph_front_state_builds_hero_resource_state_words():
     assert payload.hero.can_level_up is True
     assert payload.hero.stats == {"agility": 2, "body": 3, "mind": 1, "presence": 0}
     assert payload.log[0].text == "당신은 Town에 있습니다."
+    assert payload.log[1].outcome == "success"
 
 
 def test_graph_front_state_builds_hero_assets_from_graph_edges():
@@ -274,7 +278,7 @@ def test_graph_front_state_builds_place_from_visible_graph_edges():
     assert [exit_.id for exit_ in payload.place.exits] == ["forest"]
     assert [target.id for target in payload.place.targets] == ["goblin_01"]
     target = payload.place.targets[0]
-    assert target.kind == "enemy"
+    assert target.kind == "npc"
     assert target.role == "숲의 포식자"
     assert target.race_job == "야수"
     assert target.gold == 2

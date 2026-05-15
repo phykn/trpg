@@ -93,7 +93,7 @@ def test_generates_pending_hunt_offer_when_no_work_exists():
     assert result.content.quests[result.quest_id]["title"]
     assert result.content.quests[result.quest_id]["triggers"][0]["name"]
     assert result.content.characters["auto_enemy_001"]["name"]
-    assert enemy.properties["combat_behavior"] is not None
+    assert "combat_behavior" not in enemy.properties
     for key in ("hp", "max_hp", "mp", "max_mp"):
         assert key not in enemy.properties
         assert key not in giver.properties

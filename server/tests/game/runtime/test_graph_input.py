@@ -572,11 +572,11 @@ async def test_graph_input_streams_single_result_for_multiple_actions(tmp_path):
     assert events[-1]["type"] == "final"
     assert [event["type"] for event in events].count("result") == 1
     assert all(event["type"] == "narration_delta" for event in events[1:-1])
-    assert (
-        "".join(event["text"] for event in events[1:-1]) == "상대는 고개를 끄덕입니다."
+    assert "".join(event["text"] for event in events[1:-1]) == (
+        "상대는 고개를 끄덕입니다.상대는 고개를 끄덕입니다."
     )
     assert events[-1]["result"].front_state.place.id == "forest"
-    assert [entry.kind for entry in logs] == ["player", "gm", "act", "act"]
+    assert [entry.kind for entry in logs] == ["player", "gm", "act", "act", "gm"]
 
 
 @pytest.mark.parametrize(
@@ -640,8 +640,9 @@ async def test_graph_input_perceive_creates_pending_roll(tmp_path):
     assert progress.pending_roll["kind"] == "perceive"
     assert progress.pending_roll["stat"] == "mind"
     assert progress.pending_roll["required_roll"] == 13
-    assert [entry.kind for entry in logs] == ["player"]
+    assert [entry.kind for entry in logs] == ["player", "gm"]
     assert logs[0].text == "주변을 자세히 살펴본다"
+    assert logs[1].text == progress.pending_roll["body"]
     assert result.front_state.pending_roll is not None
 
 
@@ -658,8 +659,9 @@ async def test_graph_input_pickup_visible_location_item_transfers_to_inventory(
     assert result.status == "executed"
     assert "located_at:supply_token:town" not in graph.edges
     assert "carries:player_01:supply_token" in graph.edges
-    assert logs[-2].text == "당신은 보급 표식을 챙깁니다."
-    assert llm.calls == []
+    assert logs[-3].text == "당신은 보급 표식을 챙깁니다."
+    assert logs[-1].kind == "gm"
+    assert [call["agent"] for call in llm.calls] == ["graph_narrate"]
 
 
 async def test_graph_input_targetless_speak_defaults_to_nearby_living_npc(tmp_path):
@@ -675,7 +677,7 @@ async def test_graph_input_targetless_speak_defaults_to_nearby_living_npc(tmp_pa
     assert user_prompt["target_view"]["id"] == "goblin_01"
     assert user_prompt["target_view"]["name"] == "goblin_01"
     assert user_prompt["current_event"]["kind"] == "dialogue"
-    assert "NPC의 짧은 반응이나 대사" in narrate_call["messages"][0]["content"]
+    assert "NPC가 직접 반응" in narrate_call["messages"][0]["content"]
 
 
 async def test_graph_input_narration_payload_excludes_recent_log(tmp_path):
@@ -755,7 +757,7 @@ async def test_graph_input_runs_multiple_actions_in_order(tmp_path):
     assert "located_at:player_01:forest" in graph.edges
     assert "located_at:player_01:town" not in graph.edges
     assert progress.turn_count == 2
-    assert [entry.kind for entry in logs] == ["player", "act", "act", "gm"]
+    assert [entry.kind for entry in logs] == ["player", "act", "act", "gm", "gm"]
     assert logs[1].text == "당신은 광장으로 이동합니다."
     assert logs[-1].text == "당신은 주변을 살핍니다."
 

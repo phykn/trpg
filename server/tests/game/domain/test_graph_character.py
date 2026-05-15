@@ -45,10 +45,10 @@ def test_non_player_character_visibility_does_not_require_hp():
     assert is_visible_character(node) is True
 
 
-def test_graph_character_kind_uses_enemy_markers():
-    assert graph_character_kind(_character(xp_reward=1)) == "enemy"
+def test_graph_character_kind_unifies_non_player_characters():
+    assert graph_character_kind(_character(xp_reward=1)) == "npc"
     assert (
         graph_character_kind(_character(combat_behavior={"attack_priority": "nearest"}))
-        == "enemy"
+        == "npc"
     )
     assert graph_character_kind(_character()) == "npc"

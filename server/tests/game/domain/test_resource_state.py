@@ -5,7 +5,7 @@ def test_hp_state_thresholds():
     assert hp_state(10, 10) == "healthy"
     assert hp_state(6, 10) == "hurt"
     assert hp_state(2, 10) == "critical"
-    assert hp_state(0, 10) == "downed"
+    assert hp_state(0, 10) == "critical"
 
 
 def test_mp_state_thresholds():

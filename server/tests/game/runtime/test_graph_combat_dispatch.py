@@ -222,6 +222,38 @@ def test_attack_can_finish_existing_combat_and_clear_progress():
     assert "dead" in enemy["status"]
 
 
+def test_victory_grants_xp_reward_but_leaves_carried_items_on_corpse():
+    enemy = _enemy()
+    enemy.properties["xp_reward"] = 4
+    runtime = _runtime(
+        enemy=enemy,
+        graph_combat_state=_ongoing_state(round_no=3).model_copy(
+            update={"enemy_hearts": 1}
+        ),
+    )
+    runtime.graph.nodes["fang_01"] = GraphNode(
+        id="fang_01",
+        type="item",
+        properties={"name": "송곳니"},
+    )
+    runtime.graph.edges["carries:goblin_01:fang_01"] = GraphEdge(
+        id="carries:goblin_01:fang_01",
+        type="carries",
+        from_node_id="goblin_01",
+        to_node_id="fang_01",
+    )
+
+    result = dispatch_graph_combat_action(
+        runtime,
+        Action(verb="attack", what="goblin_01"),
+    )
+
+    player = result.runtime.graph.nodes["player_01"].properties
+    assert player["xp_pool"] == 4
+    assert "carries:goblin_01:fang_01" in result.runtime.graph.edges
+    assert "carries:player_01:fang_01" not in result.runtime.graph.edges
+
+
 def test_victory_completes_matching_active_quest_and_clears_active_id():
     runtime = _runtime(
         graph_combat_state=_ongoing_state(round_no=3).model_copy(

@@ -27,7 +27,9 @@ def test_server_source_keeps_korean_text_in_locale_package() -> None:
 
 
 def test_combat_nonlethal_markers_live_in_locale_package() -> None:
-    source = (SERVER_SRC / "game" / "runtime" / "combat_narration_view.py").read_text(
+    source = (
+        SERVER_SRC / "game" / "runtime" / "narration" / "combat_view.py"
+    ).read_text(
         encoding="utf-8"
     )
 

@@ -1,6 +1,6 @@
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_serializer
 
 
 class Memory(BaseModel):
@@ -27,6 +27,14 @@ class GMLogEntry(BaseModel):
     id: int
     kind: Literal["gm"]
     text: str
+    outcome: Literal["success", "failure", "neutral"] | None = None
+
+    @model_serializer(mode="wrap")
+    def _serialize(self, handler):
+        data = handler(self)
+        if data.get("outcome") is None:
+            data.pop("outcome", None)
+        return data
 
 
 class PlayerLogEntry(BaseModel):

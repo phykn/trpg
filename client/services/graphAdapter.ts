@@ -45,10 +45,7 @@ export function deriveGraphSuggestions(state: GraphFrontState): SuggestionChip[]
 
   const suggestions: SuggestionChip[] = [];
   const livingTargets = state.place?.targets.filter((target) => target.alive) ?? [];
-  const enemy = livingTargets.find((target) => target.kind === 'enemy');
-  if (enemy) suggestions.push(chip(compose.attack(enemy.name)));
-
-  for (const npc of livingTargets.filter((target) => target.kind === 'npc')) {
+  for (const npc of livingTargets) {
     suggestions.push(chip(compose.talkTo(npc.name)));
   }
   for (const exit of state.place?.exits ?? []) {

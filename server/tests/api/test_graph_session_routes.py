@@ -197,7 +197,7 @@ async def test_graph_init_persists_graph_and_returns_front_state(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_graph_intro_adds_initial_narration_but_move_and_offer_stay_system_card_only(
+async def test_graph_intro_adds_initial_narration_and_first_visit_move_narration(
     tmp_path,
 ):
     app = _build_app(tmp_path, intro_answer="LLM 소개는 init 응답을 막지 않습니다.")
@@ -238,14 +238,15 @@ async def test_graph_intro_adds_initial_narration_but_move_and_offer_stay_system
     ]
     assert intro_body["outcome"] == "neutral"
     assert move_body["outcome"] == "neutral"
-    assert [entry.kind for entry in logs] == ["gm", "act", "act"]
-    assert [entry.id for entry in logs] == [1, 2, 3]
+    assert [entry.kind for entry in logs] == ["gm", "act", "act", "gm"]
+    assert [entry.id for entry in logs] == [1, 2, 3, 4]
     assert logs[0].text == "LLM 소개는 init 응답을 막지 않습니다."
     assert logs[1].text == "당신은 숲길로 이동합니다."
     assert logs[2].text == "새 의뢰가 도착합니다: 마을의 부탁."
-    assert move_body["state"]["log"][-1]["kind"] == "act"
-    assert progress.next_log_id == 4
+    assert move_body["state"]["log"][-1]["kind"] == "gm"
+    assert progress.next_log_id == 5
     assert [call["agent"] for call in app.state.llm.calls].count("graph_intro") == 1
+    assert [call["agent"] for call in app.state.llm.calls].count("graph_narrate") == 1
 
 
 @pytest.mark.asyncio
@@ -399,7 +400,7 @@ async def test_graph_turn_moves_player_and_persists_progress(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_graph_turn_stream_returns_result_then_final_without_narration(tmp_path):
+async def test_graph_turn_stream_returns_result_then_first_visit_move_narration(tmp_path):
     app = _build_app(tmp_path)
 
     async with _client(app) as client:
@@ -412,7 +413,12 @@ async def test_graph_turn_stream_returns_result_then_final_without_narration(tmp
     assert response.status_code == 200, response.text
     events = [json.loads(line) for line in response.text.splitlines()]
 
-    assert [event["type"] for event in events] == ["result", "final"]
+    assert [event["type"] for event in events] == [
+        "result",
+        "narration_delta",
+        "narration_delta",
+        "final",
+    ]
     assert events[0]["payload"]["status"] == "executed"
     assert events[0]["payload"]["outcome"] == "neutral"
     assert (
@@ -420,7 +426,7 @@ async def test_graph_turn_stream_returns_result_then_final_without_narration(tmp
     )
     assert events[-1]["payload"]["status"] == "executed"
     assert events[-1]["payload"]["outcome"] == "neutral"
-    assert events[-1]["payload"]["state"]["log"] == events[0]["payload"]["state"]["log"]
+    assert events[-1]["payload"]["state"]["log"][-1]["kind"] == "gm"
     assert events[-1]["payload"]["state"]["place"]["id"] == "loc_02"
 
 
@@ -1139,5 +1145,5 @@ async def test_graph_play_loop_reaches_quest_reward_with_graph_state(
     assert [entry.text for entry in logs[-3:]] == [
         "당신은 전투에서 승리합니다.",
         "새 의뢰가 도착합니다: 마을의 부탁.",
-        "장면의 긴장이 짧게 가라앉습니다.",
+        "공격의 여파가 남고, 상대는 흐트러진 자세를 다시 붙잡으려 합니다.",
     ]

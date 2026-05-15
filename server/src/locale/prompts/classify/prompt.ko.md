@@ -46,7 +46,7 @@
 
 - `context.player_input`: 플레이어 원문입니다.
 - `context.identity.player`: 플레이어 id와 이름입니다.
-- `context.identity.visible_targets`: 눈앞 NPC/적입니다. `protected=true`이면 공격하지 말고 `pass`입니다. `carryables`가 있으면 절도나 선물 후보로 쓸 수 있습니다.
+- `context.identity.visible_targets`: 눈앞 비플레이어 캐릭터입니다. `protected=true`이면 공격하지 말고 `pass`입니다. `carryables`가 있으면 절도나 선물 후보로 쓸 수 있습니다.
 - `context.identity.exits`: 이동 후보입니다.
 - `context.identity.inventory`: 플레이어 소지품입니다.
 - `context.identity.equipment`: 장비 중인 아이템입니다.

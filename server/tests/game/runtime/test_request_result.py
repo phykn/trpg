@@ -1,5 +1,6 @@
 from typing import get_args
 
+from src.game.domain.combat import GraphCombatState
 from src.game.domain.progress import GameProgress
 from src.game.domain.graph import Graph, GraphNode
 from src.game.runtime.action.dispatch import GraphActionDispatchResult
@@ -129,7 +130,39 @@ def test_outcome_from_dispatch_maps_combat_and_move_results():
     assert outcome_from_dispatch(dispatch("combat", "defeat")) == "failure"
     assert outcome_from_dispatch(dispatch("combat", "fled")) == "neutral"
     assert outcome_from_dispatch(dispatch("move")) == "neutral"
-    assert outcome_from_dispatch(dispatch("quest_accept")) == "success"
+    assert outcome_from_dispatch(dispatch("quest_accept")) == "neutral"
+
+    combat_runtime = runtime.model_copy(
+        update={
+            "progress": runtime.progress.model_copy(
+                update={
+                    "graph_combat_state": GraphCombatState(
+                        location_id="town",
+                        player_id="player_01",
+                        enemy_ids=["goblin_01"],
+                        participant_ids=["player_01", "goblin_01"],
+                        sides={"player_01": "player", "goblin_01": "enemy"},
+                        last_roll=15,
+                        last_dc=11,
+                    )
+                }
+            )
+        }
+    )
+    assert (
+        outcome_from_dispatch(
+            GraphActionDispatchResult(
+                runtime=combat_runtime,
+                kind="combat",
+                applied=0,
+                changed_node_ids=[],
+                changed_edge_ids=[],
+                removed_edge_ids=[],
+                outcome="ongoing",
+            )
+        )
+        == "success"
+    )
 
 
 def test_terminal_result_helpers_keep_existing_response_shape():

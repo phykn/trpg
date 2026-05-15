@@ -5,7 +5,7 @@ from typing import Any
 
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
-from src.game.domain.memory import BonusItem, RollLogEntry
+from src.game.domain.memory import BonusItem, GMLogEntry, RollLogEntry
 from src.game.rules.dc import compute_grade, compute_required_roll
 from src.locale.labels import roll_dice_label, stat_label
 from src.locale.render import render
@@ -16,9 +16,11 @@ from ..load import load_runtime_state
 from ..pending_action import build_pending_action_payload, load_pending_action
 from ..request_result import (
     GraphActionRequestResult,
+    GraphResultOutcome,
     executed_result,
     roll_required_result,
 )
+from ..state import GameRuntimeState
 from .turn import run_graph_action_turn_from_runtime
 
 
@@ -58,8 +60,24 @@ async def start_graph_roll(
         action,
         runtime.progress.locale,
     )
-    next_progress = runtime.progress.model_copy(update={"pending_roll": pending})
-    next_runtime = runtime.model_copy(update={"progress": next_progress})
+    entry = GMLogEntry(
+        id=runtime.progress.next_log_id,
+        kind="gm",
+        text=_str(pending.get("body"), "body"),
+    )
+    next_progress = runtime.progress.model_copy(
+        update={
+            "pending_roll": pending,
+            "next_log_id": entry.id + 1,
+        }
+    )
+    next_runtime = runtime.model_copy(
+        update={
+            "progress": next_progress,
+            "log_entries": [*runtime.log_entries, entry],
+        }
+    )
+    await repo.append_log_entries(game_id, [entry])
     await repo.save_progress(next_progress)
     engine_diag("roll:pending", kind=pending.get("kind"))
     return roll_required_result(
@@ -129,17 +147,30 @@ async def run_graph_roll(
         required=required_roll,
         next_turn=next_progress.turn_count,
     )
+    roll_outcome: GraphResultOutcome = (
+        "success" if entry.result == "success" else "failure"
+    )
+    if _is_narrative_roll_action(action):
+        return await _finish_narrative_roll(
+            repo,
+            game_id,
+            next_runtime,
+            action,
+            outcome=roll_outcome,
+        )
+
     turn_result = await run_graph_action_turn_from_runtime(
         repo,
         game_id,
         next_runtime,
         action,
         llm=None,
+        narration_outcome=roll_outcome,
     )
     result = executed_result(
         turn_result.runtime,
         turn_result.front_state,
-        outcome="success" if entry.result == "success" else "failure",
+        outcome=roll_outcome,
         suggestions=turn_result.suggestions,
     )
     return result.model_copy(update={"dispatch": turn_result.dispatch})
@@ -185,6 +216,50 @@ def _roll_body(action: Action, locale: str) -> str:
     if action.verb == "move":
         return render("runtime.roll.body.move", locale)
     return render("runtime.roll.body.default", locale)
+
+
+async def _finish_narrative_roll(
+    repo: GraphRepo,
+    game_id: str,
+    runtime: GameRuntimeState,
+    action: Action,
+    *,
+    outcome: GraphResultOutcome,
+) -> GraphActionRequestResult:
+    entry = GMLogEntry(
+        id=runtime.progress.next_log_id,
+        kind="gm",
+        text=render(_roll_resolution_key(action, outcome), runtime.progress.locale),
+        outcome=outcome,
+    )
+    next_progress = runtime.progress.model_copy(
+        update={"next_log_id": entry.id + 1}
+    )
+    next_runtime = runtime.model_copy(
+        update={
+            "progress": next_progress,
+            "log_entries": [*runtime.log_entries, entry],
+        }
+    )
+    await repo.append_log_entries(game_id, [entry])
+    await repo.save_progress(next_progress)
+    return executed_result(
+        next_runtime,
+        graph_to_front_state(next_runtime),
+        outcome=outcome,
+    )
+
+
+def _is_narrative_roll_action(action: Action) -> bool:
+    return action.verb in {"perceive", "speak"}
+
+
+def _roll_resolution_key(action: Action, outcome: GraphResultOutcome) -> str:
+    if action.verb == "perceive":
+        return f"runtime.roll.resolve.perceive.{outcome}"
+    if action.verb == "speak":
+        return f"runtime.roll.resolve.speak.{outcome}"
+    return f"runtime.roll.resolve.default.{outcome}"
 
 
 def _roll_result(grade: str) -> str:

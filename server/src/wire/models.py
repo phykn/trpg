@@ -111,7 +111,7 @@ class GraphPlaceLinkPayload(_CamelModel):
 class GraphPlaceTargetPayload(_CamelModel):
     id: str
     name: str
-    kind: Literal["npc", "enemy"]
+    kind: Literal["npc"]
     alive: bool
     level: int
     race_job: str

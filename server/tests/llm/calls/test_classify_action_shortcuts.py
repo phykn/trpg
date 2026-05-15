@@ -19,12 +19,12 @@ def _context(*, mode: str = "exploration") -> dict:
                 {
                     "id": "training_dummy",
                     "name": "훈련용 허수아비",
-                    "type": "enemy",
+                    "type": "npc",
                 },
                 {
                     "id": "heavy_training_golem",
                     "name": "중장 훈련 골렘",
-                    "type": "enemy",
+                    "type": "npc",
                 },
             ],
             "exits": [],
@@ -56,7 +56,7 @@ def _context(*, mode: str = "exploration") -> dict:
         ("중장 훈련 골렘을 공격한다", "heavy_training_golem"),
     ],
 )
-async def test_korean_attack_to_visible_enemy_shortcuts_without_llm(
+async def test_korean_attack_to_visible_character_shortcuts_without_llm(
     player_input,
     target_id,
 ):
@@ -100,6 +100,31 @@ async def test_korean_pickup_location_item_shortcuts_without_llm():
     assert action.verb == "transfer"
     assert action.what == "supply_token"
     assert action.from_ == "test_hub"
+    assert action.to == "player_01"
+    assert action.how == "gift"
+
+
+async def test_korean_corpse_inspect_loots_single_carried_item_without_llm():
+    context = _context()
+    context["identity"]["corpses"] = [
+        {
+            "id": "corpse_01",
+            "name": "쓰러진 허수아비",
+            "inventory": [{"id": "reward_badge", "name": "검증 배지", "kind": "item"}],
+        }
+    ]
+
+    output = await classify(
+        _NoCallLLM(),
+        ClassifyInput(player_input="쓰러진 허수아비를 조사한다", context=context),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    action = output.actions[0]
+    assert action.verb == "transfer"
+    assert action.what == "reward_badge"
+    assert action.from_ == "corpse_01"
     assert action.to == "player_01"
     assert action.how == "gift"
 

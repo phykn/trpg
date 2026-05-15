@@ -20,12 +20,10 @@ FORBIDDEN_CONTEXT_TOKENS = [
     "player_fled",
     "enemy_pressed",
     "enemy_defeated",
-    "player_downed",
     "forced_end",
     "critical",
     "hurt",
     "healthy",
-    "downed",
     '"hp"',
     '"damage"',
 ]

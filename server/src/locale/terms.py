@@ -11,7 +11,7 @@ from .ko.terms import (
     DECEPTIVE_TERMS,
     DIALOGUE_TERMS,
     HOSTILE_TERMS,
-    KO_DOWNED_MARKERS,
+    LOOT_TERMS,
     KO_META_BREAKING_TERMS,
     KO_NONLETHAL_MARKERS,
     KO_REAL_WORLD_TERMS,
@@ -34,11 +34,6 @@ NONLETHAL_MARKERS_BY_LOCALE = {
     "ko": KO_NONLETHAL_MARKERS,
 }
 
-DOWNED_MARKERS_BY_LOCALE = {
-    "en": frozenset({"downed"}),
-    "ko": KO_DOWNED_MARKERS,
-}
-
 META_BREAKING_TERMS = (*KO_META_BREAKING_TERMS, "ignore previous", "system prompt")
 REAL_WORLD_TERMS = (*KO_REAL_WORLD_TERMS, "real world")
 
@@ -50,15 +45,14 @@ __all__ = [
     "ACTION_PICKUP_TERMS",
     "DECEPTIVE_TERMS",
     "DIALOGUE_TERMS",
-    "DOWNED_MARKERS_BY_LOCALE",
     "HOSTILE_TERMS",
+    "LOOT_TERMS",
     "META_BREAKING_TERMS",
     "NONLETHAL_MARKERS_BY_LOCALE",
     "PART_TERMS",
     "REAL_WORLD_TERMS",
     "RECRUIT_TERMS",
     "WEATHER_TERM",
-    "downed_markers",
     "nonlethal_markers",
 ]
 
@@ -66,12 +60,6 @@ __all__ = [
 def nonlethal_markers(locale: str) -> frozenset[str]:
     markers: set[str] = set(_terms_for_locale("en", NONLETHAL_MARKERS_BY_LOCALE))
     markers.update(_terms_for_locale(locale, NONLETHAL_MARKERS_BY_LOCALE))
-    return frozenset(markers)
-
-
-def downed_markers(locale: str) -> frozenset[str]:
-    markers: set[str] = set(_terms_for_locale("en", DOWNED_MARKERS_BY_LOCALE))
-    markers.update(_terms_for_locale(locale, DOWNED_MARKERS_BY_LOCALE))
     return frozenset(markers)
 
 

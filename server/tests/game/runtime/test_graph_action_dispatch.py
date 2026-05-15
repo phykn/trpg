@@ -158,13 +158,14 @@ def test_move_dispatch_applies_location_change_and_advances_turn():
     assert "located_at:player_01:town" not in result.runtime.graph.edges
 
 
-def test_move_dispatch_rejects_downed_player():
+def test_move_dispatch_allows_zero_hp_player_after_combat_defeat():
     runtime = _runtime()
-    runtime.graph.nodes["player_01"].properties["status"] = ["downed"]
-    runtime.graph.nodes["player_01"].properties["defeat_mode"] = "downed"
+    runtime.graph.nodes["player_01"].properties["hp"] = 0
 
-    with pytest.raises(GraphActionDispatchError, match="downed"):
-        dispatch_graph_action(runtime, Action(verb="move", to="forest"))
+    result = dispatch_graph_action(runtime, Action(verb="move", to="forest"))
+
+    assert result.kind == "move"
+    assert "located_at:player_01:forest" in result.runtime.graph.edges
 
 
 def test_transfer_equip_dispatch_equips_carried_item():

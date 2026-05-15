@@ -2,13 +2,13 @@ from typing import Any
 
 from src.game.domain.combat import GraphCombatTraceEvent
 from src.game.domain.content import node_label
-from src.locale.terms import downed_markers, nonlethal_markers
+from src.locale.terms import nonlethal_markers
 from src.locale.render import render
 
 from ..state import GameRuntimeState
 
 
-COMBAT_CONDITION_KEYS = {"healthy", "hurt", "critical", "downed"}
+COMBAT_CONDITION_KEYS = {"healthy", "hurt", "critical"}
 COMBAT_MOTION_KEYS = {
     "combat_started",
     "player_attacked",
@@ -17,7 +17,7 @@ COMBAT_MOTION_KEYS = {
     "player_fled",
     "enemy_pressed",
     "enemy_defeated",
-    "player_downed",
+    "player_defeated",
     "forced_end",
 }
 COMBAT_ACTION_KEYS = {"attack", "cast", "defend", "flee"}
@@ -105,12 +105,6 @@ def _player_can_act(runtime: GameRuntimeState) -> bool:
         return False
     hp = player.properties.get("hp")
     if isinstance(hp, int | float) and hp <= 0:
-        return False
-    status = player.properties.get("status")
-    markers = downed_markers(runtime.progress.locale)
-    if isinstance(status, list) and any(
-        isinstance(item, str) and item.lower() in markers for item in status
-    ):
         return False
     return True
 

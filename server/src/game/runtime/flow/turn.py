@@ -21,6 +21,7 @@ from ..action.dispatch import (
 )
 from ..narration.action import (
     build_graph_action_narration,
+    ensure_graph_action_narration,
     stream_graph_action_narration,
 )
 from ..narration.cards import build_graph_action_card, build_graph_quest_offer_card
@@ -31,7 +32,7 @@ from ..narration.result import (
     parse_graph_narration_answer,
     persist_graph_narration_result,
 )
-from ..request_result import executed_result, outcome_from_dispatch
+from ..request_result import GraphResultOutcome, executed_result, outcome_from_dispatch
 from ..state import GameRuntimeState
 from ..narration.suggestions import GraphSuggestion
 
@@ -92,6 +93,7 @@ async def run_graph_action_turn_from_runtime(
     action: Action,
     *,
     llm: LLMClient | None = None,
+    narration_outcome: GraphResultOutcome | None = None,
 ) -> GraphActionTurnResult:
     prepared = _prepare_graph_action_turn(game_id, runtime, action)
     result = await _commit_graph_action_result(repo, game_id, prepared)
@@ -110,6 +112,7 @@ async def run_graph_action_turn_from_runtime(
         prepared,
         result,
         narration_result,
+        narration_outcome=narration_outcome,
     )
 
 
@@ -147,7 +150,15 @@ async def run_graph_action_turn_from_runtime_stream(
             yield {"type": "narration_delta", "text": visible}
     for visible in stream.finish():
         yield {"type": "narration_delta", "text": visible}
-    narration_result = parse_graph_narration_answer(stream.answer())
+    narration_result = ensure_graph_action_narration(
+        before=prepared.before,
+        after=prepared.after,
+        action=prepared.action,
+        dispatch=prepared.dispatch,
+        card_texts=[card.text for card in prepared.cards],
+        result=parse_graph_narration_answer(stream.answer()),
+        llm_available=llm is not None,
+    )
     final = await _commit_graph_action_narration(
         repo,
         game_id,
@@ -292,6 +303,8 @@ async def _commit_graph_action_narration(
     prepared: _PreparedGraphActionTurn,
     result: GraphActionTurnResult,
     narration_result: GraphNarrationResult,
+    *,
+    narration_outcome: GraphResultOutcome | None = None,
 ) -> GraphActionTurnResult:
     next_runtime = result.runtime
     log_entries: list[LogEntry] = []
@@ -300,6 +313,7 @@ async def _commit_graph_action_narration(
             id=next_runtime.progress.next_log_id,
             kind="gm",
             text=narration_result.narration,
+            outcome=narration_outcome or outcome_from_dispatch(prepared.dispatch),
         )
         log_entries.append(entry)
         next_progress = next_runtime.progress.model_copy(

@@ -43,6 +43,11 @@ def _runtime() -> GameRuntimeState:
                 alive=False,
                 status=["dead"],
             ),
+            "fang_01": GraphNode(
+                id="fang_01",
+                type="item",
+                properties={"name": "송곳니"},
+            ),
         },
         edges={
             "located_at:player_01:town": GraphEdge(
@@ -62,6 +67,12 @@ def _runtime() -> GameRuntimeState:
                 type="located_at",
                 from_node_id="enemy_dead",
                 to_node_id="town",
+            ),
+            "carries:enemy_dead:fang_01": GraphEdge(
+                id="carries:enemy_dead:fang_01",
+                type="carries",
+                from_node_id="enemy_dead",
+                to_node_id="fang_01",
             ),
         },
     )
@@ -183,9 +194,16 @@ def test_query_context_view_includes_location_description():
     }
 
 
-def test_query_context_view_marks_enemies_and_omits_dead_characters():
+def test_query_context_view_unifies_characters_and_exposes_corpse_inventory():
     payload = build_query_context_view(_runtime())
 
     entities = payload["entities"]
-    assert {"id": "enemy_live", "name": "enemy_live", "type": "enemy"} in entities
+    assert {"id": "enemy_live", "name": "enemy_live", "type": "npc"} in entities
     assert all(entity["id"] != "enemy_dead" for entity in entities)
+    assert payload["corpses"] == [
+        {
+            "id": "enemy_dead",
+            "name": "enemy_dead",
+            "inventory": [{"id": "fang_01", "name": "송곳니", "kind": "item"}],
+        }
+    ]

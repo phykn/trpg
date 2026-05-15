@@ -416,9 +416,9 @@ def test_defeat_deducts_hp_by_remaining_enemy_hearts():
     assert result.state.outcome == "defeat"
     assert result.state.player_hearts == 0
     assert player["hp"] == 3
-    assert player["defeat_mode"] == "downed"
-    assert "downed" in player["status"]
-    assert result.state.trace[-1].kind == "player_downed"
+    assert player.get("defeat_mode") is None
+    assert player["status"] == []
+    assert result.state.trace[-1].kind == "player_defeated"
 
 
 def test_dc_uses_level_difference_support_bonus_and_clamp():

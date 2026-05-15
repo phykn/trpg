@@ -147,6 +147,7 @@ def test_input_payload_excludes_recent_log_and_keeps_player_input():
     assert payload["target_view"]["id"] == "guard_01"
     assert "recent_log" not in payload
     assert "경비병이 북문을 지킵니다." not in encoded
+    assert "recent_narration" not in payload
     assert payload["recent_dialogue"] == [
         {
             "turn": 1,
@@ -190,6 +191,14 @@ def test_input_payload_includes_target_hints_and_mentioned_inventory():
 
 def test_action_payload_contains_safe_current_event_and_combat_view():
     runtime = _runtime()
+    runtime.log_entries.append(
+        GMLogEntry(
+            id=2,
+            kind="gm",
+            text="당신의 공격이 허수아비에게 닿습니다. 교전은 이어집니다.",
+            outcome="success",
+        )
+    )
     dispatch = GraphActionDispatchResult(
         runtime=runtime,
         kind="combat",
@@ -222,6 +231,16 @@ def test_action_payload_contains_safe_current_event_and_combat_view():
     assert payload["current_event"]["kind"] == "combat"
     assert payload["current_event"]["outcome"] == "ongoing"
     assert payload["result_cards"] == [{"text": "전투가 이어집니다."}]
+    assert payload["recent_narration"] == [
+        {
+            "text": "경비병이 북문을 지킵니다.",
+            "outcome": None,
+        },
+        {
+            "text": "당신의 공격이 허수아비에게 닿습니다. 교전은 이어집니다.",
+            "outcome": "success",
+        },
+    ]
     assert "recent_log" not in payload
     assert payload["combat_view"]["kind"] == "combat_exchange"
     assert payload["combat_view"]["player_can_act"] is True
@@ -267,7 +286,7 @@ def test_action_payload_keeps_terminal_combat_trace_after_state_clears():
                 kind="enemy_defeated",
                 actor_id="player_01",
                 target_id="guard_01",
-                state="downed",
+                state="critical",
             )
         ],
     )
@@ -284,4 +303,4 @@ def test_action_payload_keeps_terminal_combat_trace_after_state_clears():
     assert payload["combat_view"]["outcome"] == "victory"
     assert payload["combat_view"]["events"]
     assert "enemy_defeated" not in encoded
-    assert "downed" not in encoded
+    assert "critical" not in encoded

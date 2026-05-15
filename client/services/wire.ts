@@ -165,7 +165,7 @@ export type GraphPlaceLink = {
 export type GraphPlaceTarget = {
   id: string;
   name: string;
-  kind: 'npc' | 'enemy';
+  kind: 'npc';
   alive: boolean;
   level: number;
   raceJob: string;

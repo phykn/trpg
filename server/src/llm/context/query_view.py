@@ -29,7 +29,7 @@ def build_query_context_view(runtime: GameRuntimeState) -> dict[str, Any]:
         "equipment": _equipment_payloads(runtime, player_id),
         "skills": _skill_payloads(runtime, player_id),
         "merchants": [],
-        "corpses": [],
+        "corpses": _corpse_payloads(runtime, location_id),
     }
 
 
@@ -145,6 +145,30 @@ def _skill_payloads(
             }
         )
     return skills
+
+
+def _corpse_payloads(
+    runtime: GameRuntimeState,
+    location_id: str | None,
+) -> list[dict[str, object]]:
+    if location_id is None:
+        return []
+    graph = runtime.graph_index
+    corpses: list[dict[str, object]] = []
+    for character_id in characters_at(graph, location_id):
+        node = graph.nodes.get(character_id)
+        if node is None or node.type != "character" or is_visible_character(node):
+            continue
+        inventory = _inventory_payloads(runtime, character_id)
+        if inventory:
+            corpses.append(
+                {
+                    "id": node.id,
+                    "name": node_label(runtime.content, node),
+                    "inventory": inventory,
+                }
+            )
+    return corpses
 
 
 def _location_payload(

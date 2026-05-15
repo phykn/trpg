@@ -363,10 +363,10 @@ def test_classify_context_exposes_transfer_and_protected_candidates():
     assert {
         "id": "guard_01",
         "name": "경비병",
-        "type": "enemy",
+        "type": "npc",
         "protected": True,
     } in context["identity"]["visible_targets"]
-    assert context["affordances"]["can_attack"] == []
+    assert context["affordances"]["can_attack"] == ["merchant_01"]
     assert context["identity"]["merchants"] == [
         {
             "id": "merchant_01",

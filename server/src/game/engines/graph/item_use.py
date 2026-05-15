@@ -97,8 +97,6 @@ def _plan_consumable_effect(
             amount=_int_effect(effects, "amount"),
             changes=changes,
         )
-        if restored > 0:
-            _plan_recovery_from_downed(target_props, target_id, changes)
         return "heal", restored
     if effect == "mp_restore":
         return "mp_restore", _plan_resource_restore(
@@ -166,32 +164,6 @@ def _plan_buff(
             value=buffs,
         )
     )
-
-
-def _plan_recovery_from_downed(
-    target_props: dict,
-    target_id: str,
-    changes: list[GraphChange],
-) -> None:
-    status = target_props.get("status")
-    if isinstance(status, list) and "downed" in status:
-        changes.append(
-            SetNodePropertyChange(
-                type="set_node_property",
-                node_id=target_id,
-                path="status",
-                value=[item for item in status if item != "downed"],
-            )
-        )
-    if target_props.get("defeat_mode") == "downed":
-        changes.append(
-            SetNodePropertyChange(
-                type="set_node_property",
-                node_id=target_id,
-                path="defeat_mode",
-                value=None,
-            )
-        )
 
 
 def _require_item(graph: Graph, item_id: str):
