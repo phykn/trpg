@@ -4,8 +4,8 @@ from src.db.graph_local_fs import LocalFsGraphRepo
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.engines.growth import xp_for_next_level
-from src.game.runtime.level_up import GraphLevelUpError, run_graph_level_up
-from src.game.runtime.level_up_choices import build_level_up_choices
+from src.game.runtime.flow.level_up import GraphLevelUpError, run_graph_level_up
+from src.game.runtime.flow.level_up_choices import build_level_up_choices
 from src.game.runtime.load import load_runtime_state
 
 

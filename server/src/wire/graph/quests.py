@@ -2,8 +2,8 @@ from typing import Literal
 
 from src.game.domain.content import RuntimeContent, node_record
 from src.game.domain.graph import Graph, GraphNode
-from src.game.domain.graph_character import is_visible_character
-from src.game.domain.graph_query import (
+from src.game.domain.graph.character import is_visible_character
+from src.game.domain.graph.query import (
     characters_at,
     edges_to,
     location_of,

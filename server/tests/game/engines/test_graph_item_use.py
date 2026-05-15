@@ -1,7 +1,8 @@
 import pytest
 
-from src.game.domain.graph import Graph, GraphEdge, GraphNode, apply_graph_change
-from src.game.engines.graph_item_use import GraphItemUseError, plan_item_use
+from src.game.domain.graph import Graph, GraphEdge, GraphNode
+from src.game.domain.graph.apply import apply_graph_change
+from src.game.engines.graph.item_use import GraphItemUseError, plan_item_use
 
 
 def _item(

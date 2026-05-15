@@ -4,9 +4,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.wire.graph.to_front import GraphFrontStatePayload
 
-from .dispatch import GraphActionDispatchResult
+from .action.dispatch import GraphActionDispatchResult
 from .state import GameRuntimeState
-from .suggestions import GraphSuggestionValue
+from .narration.suggestions import GraphSuggestion
 
 
 GraphRequestStatus = Literal[
@@ -31,7 +31,7 @@ class GraphActionRequestResult(BaseModel):
     pending_roll: dict[str, Any] | None = None
     dispatch: GraphActionDispatchResult | None = None
     message: str | None = None
-    suggestions: list[GraphSuggestionValue] = Field(default_factory=list)
+    suggestions: list[GraphSuggestion] = Field(default_factory=list)
 
 
 def executed_result(
@@ -40,7 +40,7 @@ def executed_result(
     *,
     dispatch: GraphActionDispatchResult | None = None,
     outcome: GraphResultOutcome = "success",
-    suggestions: list[GraphSuggestionValue] | None = None,
+    suggestions: list[GraphSuggestion] | None = None,
 ) -> GraphActionRequestResult:
     return _result(
         runtime=runtime,
@@ -57,7 +57,7 @@ def rejected_result(
     front_state: GraphFrontStatePayload,
     message: str | None = None,
     *,
-    suggestions: list[GraphSuggestionValue] | None = None,
+    suggestions: list[GraphSuggestion] | None = None,
 ) -> GraphActionRequestResult:
     return _result(
         runtime=runtime,
@@ -145,7 +145,7 @@ def _result(
     pending_roll: dict[str, Any] | None = None,
     dispatch: GraphActionDispatchResult | None = None,
     message: str | None = None,
-    suggestions: list[GraphSuggestionValue] | None = None,
+    suggestions: list[GraphSuggestion] | None = None,
 ) -> GraphActionRequestResult:
     return GraphActionRequestResult(
         runtime=runtime,

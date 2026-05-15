@@ -10,6 +10,7 @@ def _character(
     hp: int = 10,
     max_hp: int = 10,
     xp_reward: int = 0,
+    alive: bool = True,
     status: list[str] | None = None,
 ) -> GraphNode:
     return GraphNode(
@@ -21,7 +22,7 @@ def _character(
             "max_hp": max_hp,
             "mp": 0,
             "max_mp": 0,
-            "alive": True,
+            "alive": alive,
             "xp_reward": xp_reward,
             "stats": {"body": 1, "agility": 1, "mind": 1, "presence": 1},
             "status": status or [],
@@ -35,11 +36,12 @@ def _runtime() -> GameRuntimeState:
             "town": GraphNode(id="town", type="location", properties={"name": "마을"}),
             "player_01": _character("player_01"),
             "enemy_live": _character("enemy_live", xp_reward=5),
-            "enemy_defeated": _character(
-                "enemy_defeated",
+            "enemy_dead": _character(
+                "enemy_dead",
                 hp=0,
                 xp_reward=5,
-                status=["defeated"],
+                alive=False,
+                status=["dead"],
             ),
         },
         edges={
@@ -55,10 +57,10 @@ def _runtime() -> GameRuntimeState:
                 from_node_id="enemy_live",
                 to_node_id="town",
             ),
-            "located_at:enemy_defeated:town": GraphEdge(
-                id="located_at:enemy_defeated:town",
+            "located_at:enemy_dead:town": GraphEdge(
+                id="located_at:enemy_dead:town",
                 type="located_at",
-                from_node_id="enemy_defeated",
+                from_node_id="enemy_dead",
                 to_node_id="town",
             ),
         },
@@ -181,9 +183,9 @@ def test_query_context_view_includes_location_description():
     }
 
 
-def test_query_context_view_marks_enemies_and_omits_defeated_characters():
+def test_query_context_view_marks_enemies_and_omits_dead_characters():
     payload = build_query_context_view(_runtime())
 
     entities = payload["entities"]
     assert {"id": "enemy_live", "name": "enemy_live", "type": "enemy"} in entities
-    assert all(entity["id"] != "enemy_defeated" for entity in entities)
+    assert all(entity["id"] != "enemy_dead" for entity in entities)

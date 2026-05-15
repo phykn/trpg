@@ -2,8 +2,8 @@ from src.db.graph_local_fs import LocalFsGraphRepo
 from src.game.domain.action import Action
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
-from src.game.runtime.confirmation import run_graph_action_request
-from src.game.runtime.query import answer_graph_query
+from src.game.runtime.flow.confirmation import run_graph_action_request
+from src.game.runtime.action.query import answer_graph_query
 from src.game.runtime.state import GameRuntimeState
 
 

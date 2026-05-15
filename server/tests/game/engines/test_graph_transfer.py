@@ -1,7 +1,8 @@
 import pytest
 
-from src.game.domain.graph import Graph, GraphEdge, GraphNode, apply_graph_change
-from src.game.engines.graph_transfer import (
+from src.game.domain.graph import Graph, GraphEdge, GraphNode
+from src.game.domain.graph.apply import apply_graph_change
+from src.game.engines.graph.transfer import (
     GraphTransferError,
     plan_item_equip,
     plan_item_trade,

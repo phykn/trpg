@@ -1,11 +1,11 @@
 from src.game.domain.content import RuntimeContent
 from src.game.domain.graph import Graph, GraphNode
-from src.game.domain.graph_character import (
+from src.game.domain.graph.character import (
     can_character_fight,
     graph_character_kind,
     is_visible_character,
 )
-from src.game.domain.graph_query import characters_at, edges_from, location_of
+from src.game.domain.graph.query import characters_at, edges_from, location_of
 from .character import (
     character_equipment,
     character_gender,

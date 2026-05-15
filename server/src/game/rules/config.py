@@ -102,6 +102,10 @@ class UnarmedConfig(_F):
 
 
 class CombatConfig(_F):
+    base_dc: int = 11
+    min_dc: int = 6
+    max_dc: int = 18
+    starting_hearts: int = 3
     flee: FleeConfig = FleeConfig()
     unarmed: UnarmedConfig = UnarmedConfig()
 

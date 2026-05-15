@@ -4,7 +4,7 @@ from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.memory import DialoguePair, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
-from src.game.runtime.memory_context import (
+from src.game.runtime.narration.memory_context import (
     classify_recent_dialogue_payload,
     related_memory_payload,
 )
@@ -92,3 +92,31 @@ def test_recent_dialogue_is_limited_and_does_not_pull_turn_log():
     assert all(set(item) == {"turn", "player", "summary"} for item in payload)
     assert payload[0]["turn"] == 3
     assert "중요 기억" not in json.dumps(payload, ensure_ascii=False)
+
+
+def test_recent_dialogue_limit_can_come_from_env(monkeypatch):
+    monkeypatch.setenv("MAX_RECENT_DIALOGUE", "2")
+    runtime = _runtime(dialogue_count=7)
+
+    payload = classify_recent_dialogue_payload(runtime)
+
+    assert [item["turn"] for item in payload] == [6, 7]
+
+
+def test_related_memory_limit_can_come_from_env(monkeypatch):
+    monkeypatch.setenv("MAX_NARRATE_RELATED_MEMORY", "1")
+    runtime = _runtime()
+    runtime.turn_log.extend(
+        [
+            TurnLogEntry(turn=1, target="npc_merchant", summary="첫 기억", importance=2),
+            TurnLogEntry(turn=2, target="npc_merchant", summary="둘째 기억", importance=2),
+        ]
+    )
+
+    payload = related_memory_payload(
+        runtime,
+        action=None,
+        target=runtime.graph.nodes["npc_merchant"],
+    )
+
+    assert len(payload) == 1

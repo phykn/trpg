@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.game.domain.content import RuntimeContent
 from src.game.domain.graph import Graph
-from src.game.domain.graph_query import GraphIndex
+from src.game.domain.graph.query import GraphIndex
 from src.game.domain.memory import DialoguePair, LogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 

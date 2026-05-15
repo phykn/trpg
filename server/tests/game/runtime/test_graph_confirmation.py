@@ -4,7 +4,7 @@ from src.db.graph_local_fs import LocalFsGraphRepo
 from src.game.domain.action import Action
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
-from src.game.runtime.confirmation import (
+from src.game.runtime.flow.confirmation import (
     GraphConfirmationActive,
     run_graph_action_request,
     run_graph_confirm,
@@ -143,7 +143,8 @@ async def test_attack_start_uses_live_target_from_multiple_candidates(tmp_path):
     repo = await _repo(tmp_path)
     graph = await repo.load_graph("game-1")
     graph.nodes["goblin_01"].properties["hp"] = 0
-    graph.nodes["goblin_01"].properties["status"] = ["defeated"]
+    graph.nodes["goblin_01"].properties["alive"] = False
+    graph.nodes["goblin_01"].properties["status"] = ["dead"]
     graph.nodes["goblin_named"].properties["name"] = "고블린"
     await repo.save_graph("game-1", graph)
 
@@ -233,7 +234,7 @@ async def test_confirm_attack_log_uses_korean_object_particle(tmp_path):
 
 
 async def test_confirm_skill_attack_logs_mp_spend(tmp_path, monkeypatch):
-    monkeypatch.setattr("src.game.engines.graph_combat.randint", lambda _a, _b: 20)
+    monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 20)
     repo = await _repo(tmp_path)
     await run_graph_action_request(
         repo,

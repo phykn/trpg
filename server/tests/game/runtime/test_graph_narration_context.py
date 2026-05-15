@@ -6,8 +6,8 @@ from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
-from src.game.runtime.dispatch import GraphActionDispatchResult
-from src.game.runtime.narration_context import (
+from src.game.runtime.action.dispatch import GraphActionDispatchResult
+from src.game.runtime.narration.context import (
     build_action_narration_payload,
     build_input_narration_payload,
     build_intro_narration_payload,

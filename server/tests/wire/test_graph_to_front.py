@@ -107,7 +107,7 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
                         {
                             "id": "trigger_01",
                             "name": "늑대 쫓아내기",
-                            "type": "character_defeat",
+                            "type": "character_death",
                             "target_id": "goblin_01",
                         }
                     ],
@@ -317,7 +317,7 @@ def test_graph_front_state_resolves_static_content_from_runtime_content():
             {
                 "id": "trigger_01",
                 "name": "늑대 쫓아내기",
-                "type": "character_defeat",
+                "type": "character_death",
                 "target_id": "goblin_01",
             }
         ],
@@ -371,9 +371,10 @@ def test_graph_front_state_resolves_static_content_from_runtime_content():
     assert payload.quest_offers[0].summary == "광장의 문제를 해결합니다."
 
 
-def test_graph_front_state_hides_defeated_place_targets():
+def test_graph_front_state_hides_dead_place_targets():
     runtime = _runtime()
-    runtime.graph.nodes["goblin_01"].properties["status"] = ["defeated"]
+    runtime.graph.nodes["goblin_01"].properties["alive"] = False
+    runtime.graph.nodes["goblin_01"].properties["status"] = ["dead"]
 
     payload = graph_to_front_state(runtime)
 

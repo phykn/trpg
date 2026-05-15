@@ -5,7 +5,7 @@ from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
-from src.game.runtime.combat import (
+from src.game.runtime.action.combat import (
     GraphCombatDispatchError,
     dispatch_graph_combat_action,
 )
@@ -39,6 +39,13 @@ def _character(
     )
 
 
+def _enemy(character_id: str = "goblin_01", *, level: int = 1) -> GraphNode:
+    node = _character(character_id, level=level)
+    for key in ("hp", "max_hp", "mp", "max_mp"):
+        node.properties.pop(key)
+    return node
+
+
 def _skill(skill_id: str = "fireball") -> GraphNode:
     return GraphNode(
         id=skill_id,
@@ -68,7 +75,7 @@ def _item(item_id: str = "bomb") -> GraphNode:
 
 @pytest.fixture(autouse=True)
 def _fixed_combat_roll(monkeypatch):
-    monkeypatch.setattr("src.game.engines.graph_combat.randint", lambda _a, _b: 11)
+    monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 11)
 
 
 def _runtime(
@@ -81,7 +88,7 @@ def _runtime(
     nodes = {
         "town_gate": GraphNode(id="town_gate", type="location", properties={}),
         "player_01": _character("player_01"),
-        "goblin_01": enemy or _character("goblin_01"),
+        "goblin_01": enemy or _enemy(),
     }
     if include_skill:
         nodes["fireball"] = _skill()
@@ -152,10 +159,10 @@ def test_attack_starts_combat_applies_exchange_and_stores_progress():
     assert result.runtime.progress.graph_combat_state is not None
     assert result.runtime.progress.graph_combat_state.round == 2
     assert result.runtime.progress.graph_combat_state.enemy_hearts == 2
-    assert result.runtime.graph.nodes["goblin_01"].properties["hp"] == 5
+    assert "hp" not in result.runtime.graph.nodes["goblin_01"].properties
     assert result.runtime.graph.nodes["player_01"].properties["hp"] == 5
     assert runtime.progress.graph_combat_state is None
-    assert runtime.graph.nodes["goblin_01"].properties["hp"] == 5
+    assert "hp" not in runtime.graph.nodes["goblin_01"].properties
 
 
 def test_attack_with_weapon_id_starts_as_basic_attack():
@@ -206,8 +213,10 @@ def test_attack_can_finish_existing_combat_and_clear_progress():
     assert result.outcome == "victory"
     assert result.runtime.progress.graph_combat_state is None
     enemy = result.runtime.graph.nodes["goblin_01"].properties
-    assert enemy["hp"] == 5
-    assert enemy["defeat_mode"] == "unconscious"
+    assert "hp" not in enemy
+    assert enemy["alive"] is False
+    assert enemy["defeat_mode"] == "dead"
+    assert "dead" in enemy["status"]
 
 
 def test_victory_completes_matching_active_quest_and_clears_active_id():
@@ -226,7 +235,7 @@ def test_victory_completes_matching_active_quest_and_clears_active_id():
                 {
                     "id": "trigger_01",
                     "name": "고블린 물리치기",
-                    "type": "character_defeat",
+                    "type": "character_death",
                     "target_id": "goblin_01",
                 }
             ],

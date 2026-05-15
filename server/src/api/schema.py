@@ -3,7 +3,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.game.domain.action import Action
-from src.game.runtime.suggestions import GraphSuggestionValue
+from src.game.runtime.narration.suggestions import GraphSuggestion
 from src.game.seed.player import PlayerInput
 
 
@@ -29,7 +29,7 @@ class InitRequest(BaseModel):
 class InitResponse(BaseModel):
     game_id: str
     state: dict
-    suggestions: list[GraphSuggestionValue] = Field(default_factory=list)
+    suggestions: list[GraphSuggestion] = Field(default_factory=list)
 
 
 class GraphActionResponse(BaseModel):
@@ -38,7 +38,7 @@ class GraphActionResponse(BaseModel):
     status: str | None = None
     outcome: Literal["success", "failure", "neutral"] = "neutral"
     message: str | None = None
-    suggestions: list[GraphSuggestionValue] = Field(default_factory=list)
+    suggestions: list[GraphSuggestion] = Field(default_factory=list)
 
 
 class GraphLevelUpChoice(BaseModel):

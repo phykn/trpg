@@ -328,13 +328,7 @@ async def test_graph_init_does_not_block_on_slow_intro_narration(
 @pytest.mark.asyncio
 async def test_graph_intro_waits_for_llm_answer_instead_of_route_timeout(
     tmp_path,
-    monkeypatch,
 ):
-    monkeypatch.setattr(
-        "src.api.session_graph_routes._GRAPH_INTRO_NARRATION_TIMEOUT_SECONDS",
-        0.001,
-        raising=False,
-    )
     app = _build_app(
         tmp_path,
         intro_answer="느린 LLM 소개도 화면의 대기 표시 뒤에 도착합니다.",
@@ -750,7 +744,7 @@ async def test_graph_turn_auto_cast_uses_known_skill_during_existing_combat(
     tmp_path,
     monkeypatch,
 ):
-    monkeypatch.setattr("src.game.engines.graph_combat.randint", lambda _a, _b: 20)
+    monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 20)
     app = _build_app(tmp_path)
 
     async with _client(app) as client:
@@ -779,7 +773,7 @@ async def test_graph_turn_auto_cast_uses_known_skill_during_existing_combat(
 
 @pytest.mark.asyncio
 async def test_graph_turn_flee_clears_existing_combat(tmp_path, monkeypatch):
-    monkeypatch.setattr("src.game.engines.graph_combat.randint", lambda _a, _b: 20)
+    monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 20)
     app = _build_app(tmp_path)
 
     async with _client(app) as client:
@@ -1030,7 +1024,12 @@ async def test_graph_input_returns_reflected_suggestions(tmp_path):
             "intent": "move",
             "action": None,
         },
-        "에드릭에게 보상을 묻습니다",
+        {
+            "label": "에드릭에게 보상을 묻습니다",
+            "input_text": "에드릭에게 보상을 묻습니다",
+            "intent": None,
+            "action": None,
+        },
     ]
     assert history[0].summary == "에드릭이 숲길의 의뢰를 암시했습니다."
     assert history[0].importance == 2
@@ -1040,7 +1039,7 @@ async def test_graph_input_returns_reflected_suggestions(tmp_path):
 async def test_graph_play_loop_reaches_quest_reward_with_graph_state(
     tmp_path, monkeypatch
 ):
-    monkeypatch.setattr("src.game.engines.graph_combat.randint", lambda _a, _b: 20)
+    monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 20)
     app = _build_app(tmp_path)
 
     async with _client(app) as client:
@@ -1123,7 +1122,8 @@ async def test_graph_play_loop_reaches_quest_reward_with_graph_state(
         }
     ]
     assert graph.nodes[quest_id].properties["status"] == "completed"
-    assert graph.nodes[enemy_id].properties["status"] == ["defeated"]
+    assert graph.nodes[enemy_id].properties["alive"] is False
+    assert graph.nodes[enemy_id].properties["status"] == ["dead"]
     assert progress.active_quest_id is None
     assert progress.graph_combat_state is None
     assert [entry.kind for entry in logs[-3:]] == ["act", "act", "gm"]

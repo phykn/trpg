@@ -5,10 +5,10 @@ from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
-from src.game.runtime.input import run_graph_input_turn
-from src.game.runtime.intro import run_graph_initial_narration
+from src.game.runtime.flow.input import run_graph_input_turn
+from src.game.runtime.flow.intro import run_graph_initial_narration
 from src.game.runtime.state import GameRuntimeState
-from src.game.runtime.turn import run_graph_action_turn
+from src.game.runtime.flow.turn import run_graph_action_turn
 from src.llm.calls.runner import get_prompt
 
 
@@ -129,7 +129,7 @@ def test_graph_narration_prompts_encode_style_without_source_title():
 
 
 def test_graph_narration_runtime_preserves_llm_text():
-    from src.game.runtime.intro import _clean_intro_text
+    from src.game.runtime.flow.intro import _clean_intro_text
 
     long_text = "  긴 문장입니다.\n\n" + ("가" * 450)
 
@@ -138,7 +138,7 @@ def test_graph_narration_runtime_preserves_llm_text():
 
 @pytest.mark.asyncio
 async def test_graph_intro_uses_packaged_prompt(monkeypatch, tmp_path):
-    import src.game.runtime.intro as intro_module
+    import src.game.runtime.flow.intro as intro_module
 
     monkeypatch.setattr(
         intro_module, "get_prompt", lambda agent, locale: f"{agent}:{locale}"
@@ -158,7 +158,7 @@ async def test_graph_intro_uses_packaged_prompt(monkeypatch, tmp_path):
 @pytest.mark.asyncio
 async def test_graph_intro_sends_rich_first_scene_payload(tmp_path):
     import json
-    import src.game.runtime.intro as intro_module
+    import src.game.runtime.flow.intro as intro_module
 
     repo = await _repo(tmp_path)
     runtime = GameRuntimeState(
@@ -179,10 +179,10 @@ async def test_graph_intro_sends_rich_first_scene_payload(tmp_path):
 
 @pytest.mark.asyncio
 async def test_graph_turn_narration_uses_packaged_prompt(monkeypatch, tmp_path):
-    import src.game.runtime.turn as turn_module
+    import src.game.runtime.narration.action as action_narration
 
     monkeypatch.setattr(
-        turn_module, "get_prompt", lambda agent, locale: f"{agent}:{locale}"
+        action_narration, "get_prompt", lambda agent, locale: f"{agent}:{locale}"
     )
     repo = await _repo(tmp_path)
     progress = await repo.load_progress("game-1")
@@ -216,10 +216,10 @@ async def test_graph_turn_narration_uses_packaged_prompt(monkeypatch, tmp_path):
 
 @pytest.mark.asyncio
 async def test_graph_input_narration_uses_packaged_prompt(monkeypatch, tmp_path):
-    import src.game.runtime.input as input_module
+    import src.game.runtime.narration.input as input_narration
 
     monkeypatch.setattr(
-        input_module, "get_prompt", lambda agent, locale: f"{agent}:{locale}"
+        input_narration, "get_prompt", lambda agent, locale: f"{agent}:{locale}"
     )
     repo = await _repo(tmp_path)
     llm = _PromptCaptureLLM()

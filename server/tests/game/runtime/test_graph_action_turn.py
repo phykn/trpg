@@ -10,7 +10,7 @@ from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.memory import GMLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime.load import load_runtime_state
-from src.game.runtime.turn import (
+from src.game.runtime.flow.turn import (
     GraphActionTurnError,
     run_graph_action_turn,
     run_graph_action_turn_from_runtime_stream,
@@ -298,7 +298,7 @@ async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(
     tmp_path,
     monkeypatch,
 ):
-    monkeypatch.setattr("src.game.engines.graph_combat.randint", lambda _a, _b: 20)
+    monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 20)
     repo = await _repo(tmp_path)
     progress = await repo.load_progress("game-1")
     await repo.save_progress(
@@ -338,7 +338,7 @@ async def test_run_graph_action_turn_logs_fled_combat_as_fled_not_victory(
     tmp_path,
     monkeypatch,
 ):
-    monkeypatch.setattr("src.game.engines.graph_combat.randint", lambda _a, _b: 20)
+    monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 20)
     repo = await _repo(tmp_path)
     llm = _NarrationLLM()
     progress = await repo.load_progress("game-1")
@@ -419,14 +419,7 @@ async def test_run_graph_action_turn_times_out_slow_narration_and_keeps_action(
     tmp_path,
     monkeypatch,
 ):
-    import src.game.runtime.turn as turn_module
-
-    monkeypatch.setattr(
-        turn_module,
-        "_GRAPH_ACTION_NARRATION_TIMEOUT_SECONDS",
-        0.01,
-        raising=False,
-    )
+    monkeypatch.setenv("GRAPH_ACTION_NARRATION_TIMEOUT_S", "0.01")
     repo = await _repo(tmp_path)
 
     started = time.perf_counter()

@@ -1,7 +1,7 @@
 import pytest
 
 from src.game.domain.graph import Graph, GraphEdge, GraphInvariantError, GraphNode
-from src.game.domain.graph_query import (
+from src.game.domain.graph.query import (
     GraphIndex,
     characters_at,
     edges_from,

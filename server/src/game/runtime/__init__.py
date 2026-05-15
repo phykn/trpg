@@ -1,9 +1,9 @@
-from .apply import (
+from .action.apply import (
     GraphRuntimeApplyError,
     GraphRuntimeApplyResult,
     apply_runtime_graph_changes,
 )
-from .combat import (
+from .action.combat import (
     GraphCombatDispatchError,
     GraphCombatDispatchResult,
     dispatch_graph_combat_action,
@@ -36,7 +36,7 @@ def __getattr__(name: str):
         "GraphActionDispatchResult",
         "dispatch_graph_action",
     }:
-        from . import dispatch
+        from .action import dispatch
 
         return getattr(dispatch, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

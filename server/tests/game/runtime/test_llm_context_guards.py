@@ -6,7 +6,7 @@ from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.memory import DialoguePair, GMLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
-from src.game.runtime.narration_context import build_input_narration_payload
+from src.game.runtime.narration.context import build_input_narration_payload
 from src.llm.context.classify_view import build_classify_context_view
 
 

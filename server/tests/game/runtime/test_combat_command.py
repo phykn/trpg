@@ -4,7 +4,7 @@ from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphNode
 from src.game.domain.progress import GameProgress
-from src.game.runtime.combat_command import (
+from src.game.runtime.action.combat_command import (
     CombatCommandError,
     build_combat_command_action,
 )

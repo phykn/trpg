@@ -293,7 +293,7 @@ def test_build_seed_graph_links_quests_to_chapters():
     assert bundle.progress.active_quest_id == "quest_01"
 
 
-def test_build_seed_graph_links_missing_supplies_social_quest():
+def test_build_seed_graph_links_missing_supplies_quest():
     bundle = build_seed_graph(
         profile_name="default",
         player=PlayerInput(name="테스터", race_id="human", gender="female"),

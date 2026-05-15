@@ -2,7 +2,7 @@ from typing import get_args
 
 from src.game.domain.progress import GameProgress
 from src.game.domain.graph import Graph, GraphNode
-from src.game.runtime.dispatch import GraphActionDispatchResult
+from src.game.runtime.action.dispatch import GraphActionDispatchResult
 from src.game.runtime.request_result import (
     GraphActionRequestResult,
     GraphRequestStatus,

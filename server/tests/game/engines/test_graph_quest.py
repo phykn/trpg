@@ -1,13 +1,14 @@
 import pytest
 
-from src.game.domain.graph import Graph, GraphEdge, GraphNode, apply_graph_change
-from src.game.engines.graph_quest import (
+from src.game.domain.graph import Graph, GraphEdge, GraphNode
+from src.game.domain.graph.apply import apply_graph_change
+from src.game.engines.graph.quest import (
     GraphQuestError,
     plan_quest_abandon,
     plan_quest_accept,
     plan_quest_complete,
     plan_quest_fail,
-    plan_quest_progress_for_character_defeat,
+    plan_quest_progress_for_character_death,
     plan_quest_rewards,
 )
 
@@ -98,7 +99,7 @@ def test_fail_active_quest_sets_status_and_reason():
     assert changed.nodes["quest_active"].properties["fail_reason"] == "target escaped"
 
 
-def test_character_defeat_trigger_completes_active_quest():
+def test_character_death_trigger_completes_active_quest():
     graph = _graph()
     graph.nodes["quest_active"].properties.update(
         {
@@ -106,7 +107,7 @@ def test_character_defeat_trigger_completes_active_quest():
                 {
                     "id": "trigger_01",
                     "name": "고블린 물리치기",
-                    "type": "character_defeat",
+                    "type": "character_death",
                     "target_id": "goblin_01",
                 }
             ],
@@ -114,7 +115,7 @@ def test_character_defeat_trigger_completes_active_quest():
         }
     )
 
-    result = plan_quest_progress_for_character_defeat(graph, "goblin_01")
+    result = plan_quest_progress_for_character_death(graph, "goblin_01")
     changed = _apply_all(graph, result.changes)
 
     assert result.completed_quest_ids == ["quest_active"]

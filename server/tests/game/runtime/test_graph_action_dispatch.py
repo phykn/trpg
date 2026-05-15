@@ -5,7 +5,7 @@ from src.game.domain.clock import next_dawn_turn
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
-from src.game.runtime.dispatch import (
+from src.game.runtime.action.dispatch import (
     GraphActionDispatchError,
     dispatch_graph_action,
 )

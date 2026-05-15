@@ -1,4 +1,5 @@
 import asyncio
+import os
 import re
 from collections.abc import Callable
 from functools import lru_cache
@@ -40,8 +41,8 @@ def get_prompt(agent: str, locale: str) -> str:
     return own
 
 
-# Truncate long thinking-text dumps so retries don't blow past the model's ctx window.
-_MAX_RETRY_ANSWER_CHARS = 1500
+def _retry_answer_chars(default: int = 1500) -> int:
+    return _env_int("LLM_RETRY_ANSWER_CHARS", default)
 
 
 def _format_retry_error(e: Exception) -> str:
@@ -151,8 +152,9 @@ async def run_with_retries(
                 think_len=len(think_blob),
                 think_head=think_blob[:200] if think_blob else None,
             )
-            truncated = answer[:_MAX_RETRY_ANSWER_CHARS]
-            if len(answer) > _MAX_RETRY_ANSWER_CHARS:
+            retry_answer_chars = _retry_answer_chars()
+            truncated = answer[:retry_answer_chars]
+            if len(answer) > retry_answer_chars:
                 truncated += f"\n... (truncated, original {len(answer)} chars)"
             if include_failed_answer:
                 messages.append({"role": "assistant", "content": truncated})
@@ -172,3 +174,13 @@ async def run_with_retries(
         last_answer_head=answer[:200] if answer else None,
     )
     raise last_error
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return default

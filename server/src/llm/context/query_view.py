@@ -2,8 +2,8 @@ from typing import Any
 
 from src.game.domain.content import node_label, node_value
 from src.game.domain.graph import GraphNode
-from src.game.domain.graph_character import graph_character_kind, is_visible_character
-from src.game.domain.graph_query import (
+from src.game.domain.graph.character import graph_character_kind, is_visible_character
+from src.game.domain.graph.query import (
     characters_at,
     edges_from,
     equipment_of,

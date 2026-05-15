@@ -1,6 +1,6 @@
 from src.game.domain.content import RuntimeContent
 from src.game.domain.graph import Graph, GraphNode
-from src.game.domain.graph_query import equipment_of, inventory_of, known_skills_of
+from src.game.domain.graph.query import equipment_of, inventory_of, known_skills_of
 from src.locale.labels import gender_label
 from .values import (
     int_prop_default,

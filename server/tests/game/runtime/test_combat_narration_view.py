@@ -2,7 +2,7 @@ from src.game.domain.combat import GraphCombatState, GraphCombatTraceEvent
 from src.game.domain.graph import Graph, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
-from src.game.runtime.combat_narration_view import combat_narration_view
+from src.game.runtime.narration.combat_view import combat_narration_view
 
 
 def test_combat_narration_view_marks_korean_training_dummy_nonlethal():

@@ -1,7 +1,8 @@
 import pytest
 
-from src.game.domain.graph import Graph, GraphEdge, GraphNode, apply_graph_change
-from src.game.engines.graph_combat import (
+from src.game.domain.graph import Graph, GraphEdge, GraphNode
+from src.game.domain.graph.apply import apply_graph_change
+from src.game.engines.graph.combat import (
     GraphCombatAction,
     GraphCombatError,
     GraphCombatState,
@@ -43,6 +44,13 @@ def _character(
             "status": status or [],
         },
     )
+
+
+def _enemy(character_id: str = "goblin_01", *, level: int = 1) -> GraphNode:
+    node = _character(character_id, level=level)
+    for key in ("hp", "max_hp", "mp", "max_mp"):
+        node.properties.pop(key)
+    return node
 
 
 def _skill(
@@ -111,7 +119,7 @@ def _graph(
         "town_gate": GraphNode(id="town_gate", type="location", properties={}),
         "forest": GraphNode(id="forest", type="location", properties={}),
         "player_01": player or _character("player_01"),
-        "goblin_01": enemy or _character("goblin_01"),
+        "goblin_01": enemy or _enemy(),
     }
     if include_skill:
         nodes["focus"] = skill or _skill("focus")
@@ -169,9 +177,6 @@ def test_combat_start_builds_heart_state_without_graph_changes():
 
 def test_combat_start_allows_enemy_without_hp_or_mp_resources():
     graph = _graph()
-    enemy = graph.nodes["goblin_01"].properties
-    for key in ("hp", "max_hp", "mp", "max_mp"):
-        enemy.pop(key)
 
     result = plan_combat_start(graph, "player_01", "goblin_01")
 
@@ -366,17 +371,15 @@ def test_victory_marks_enemy_defeated_without_forced_round_limit():
     assert result.state.round == 12
     assert result.state.outcome == "victory"
     assert result.state.enemy_hearts == 0
-    assert enemy["hp"] == 5
-    assert enemy["defeat_mode"] == "unconscious"
-    assert "defeated" in enemy["status"]
+    assert "hp" not in enemy
+    assert enemy["alive"] is False
+    assert enemy["defeat_mode"] == "dead"
+    assert "dead" in enemy["status"]
     assert result.state.trace[-1].kind == "enemy_defeated"
 
 
-def test_victory_marks_enemy_without_hp_resource_defeated():
+def test_victory_marks_enemy_without_hp_resource_dead():
     graph = _graph()
-    enemy = graph.nodes["goblin_01"].properties
-    for key in ("hp", "max_hp", "mp", "max_mp"):
-        enemy.pop(key)
     state = _started(graph).model_copy(update={"enemy_hearts": 1})
 
     result = plan_combat_exchange(
@@ -391,8 +394,9 @@ def test_victory_marks_enemy_without_hp_resource_defeated():
     enemy = changed.nodes["goblin_01"].properties
     assert result.state.outcome == "victory"
     assert "hp" not in enemy
-    assert enemy["defeat_mode"] == "unconscious"
-    assert "defeated" in enemy["status"]
+    assert enemy["alive"] is False
+    assert enemy["defeat_mode"] == "dead"
+    assert "dead" in enemy["status"]
 
 
 def test_defeat_deducts_hp_by_remaining_enemy_hearts():

@@ -1,5 +1,5 @@
 from src.game.domain.graph import GraphNode
-from src.game.domain.graph_character import (
+from src.game.domain.graph.character import (
     can_character_fight,
     graph_character_kind,
     is_visible_character,
@@ -20,9 +20,9 @@ def _character(**properties) -> GraphNode:
     )
 
 
-def test_character_visibility_excludes_defeated_characters():
+def test_character_visibility_excludes_dead_characters():
     assert is_visible_character(_character()) is True
-    assert is_visible_character(_character(hp=0, status=["defeated"])) is False
+    assert is_visible_character(_character(alive=False, status=["dead"])) is False
     assert is_visible_character(_character(alive=False)) is False
 
 
@@ -31,7 +31,7 @@ def test_can_character_fight_uses_life_and_defeat_status_not_hp():
     assert can_character_fight(_character(hp=0)) is True
     assert can_character_fight(_character(max_hp=0)) is True
     assert can_character_fight(_character(alive=False)) is False
-    assert can_character_fight(_character(status=["defeated"])) is False
+    assert can_character_fight(_character(status=["dead"])) is False
 
 
 def test_non_player_character_visibility_does_not_require_hp():

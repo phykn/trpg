@@ -3,10 +3,10 @@ import pytest
 from src.game.domain.clock import next_dawn_turn
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
-from src.game.engines.graph_rest import GraphRestError, plan_rest, plan_safe_rest
+from src.game.engines.graph.rest import GraphRestError, plan_rest, plan_safe_rest
 from src.game.rules import RULES
 from src.game.runtime import GameRuntimeState
-from src.game.runtime.apply import apply_runtime_graph_changes
+from src.game.runtime.action.apply import apply_runtime_graph_changes
 
 
 def _runtime(

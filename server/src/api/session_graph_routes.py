@@ -11,11 +11,11 @@ from src.game.domain.errors import (
     ProfileNotFound,
     RaceNotFound,
 )
-from src.game.runtime.combat_command import (
+from src.game.runtime.action.combat_command import (
     CombatCommandError,
     build_combat_command_action,
 )
-from src.game.runtime.confirmation import (
+from src.game.runtime.flow.confirmation import (
     GraphConfirmationActive,
     GraphConfirmationError,
     GraphConfirmationExpected,
@@ -24,22 +24,22 @@ from src.game.runtime.confirmation import (
     run_graph_confirm,
     run_graph_confirm_stream,
 )
-from src.game.runtime.input import (
+from src.game.runtime.flow.input import (
     GraphInputError,
     run_graph_input_turn,
     run_graph_input_turn_stream,
 )
-from src.game.runtime.level_up import GraphLevelUpError, run_graph_level_up
-from src.game.runtime.level_up_choices import build_level_up_choices
+from src.game.runtime.flow.level_up import GraphLevelUpError, run_graph_level_up
+from src.game.runtime.flow.level_up_choices import build_level_up_choices
 from src.game.runtime.load import load_runtime_state
-from src.game.runtime.roll import GraphRollError, GraphRollExpected, run_graph_roll
-from src.game.runtime.session import (
+from src.game.runtime.flow.roll import GraphRollError, GraphRollExpected, run_graph_roll
+from src.game.runtime.flow.session import (
     initialize_graph_session,
     load_graph_session_state,
     run_graph_intro_request,
     run_graph_intro_request_stream,
 )
-from src.game.runtime.turn import GraphActionTurnError
+from src.game.runtime.flow.turn import GraphActionTurnError
 from src.llm.client import LLMClient, force_think
 
 from .deps import get_graph_repo, get_llm, get_scenario_repo

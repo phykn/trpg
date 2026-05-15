@@ -1,5 +1,6 @@
-from src.game.domain.graph import Graph, GraphEdge, GraphNode, apply_graph_change
-from src.game.engines.graph_quest_generation import plan_missing_quest_offer
+from src.game.domain.graph import Graph, GraphEdge, GraphNode
+from src.game.domain.graph.apply import apply_graph_change
+from src.game.engines.graph.quest_generation import plan_missing_quest_offer
 
 
 def _character(character_id: str) -> GraphNode:
@@ -86,7 +87,7 @@ def test_generates_pending_hunt_offer_when_no_work_exists():
     assert "summary" not in quest.properties
     assert "name" not in enemy.properties
     assert quest.properties["status"] == "pending"
-    assert quest.properties["triggers"][0]["type"] == "character_defeat"
+    assert quest.properties["triggers"][0]["type"] == "character_death"
     assert "name" not in quest.properties["triggers"][0]
     assert quest.properties["triggers_met"] == [False]
     assert result.content.quests[result.quest_id]["title"]

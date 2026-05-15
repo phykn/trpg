@@ -1,10 +1,10 @@
 import pytest
 
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.graph_query import location_of
+from src.game.domain.graph.query import location_of
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
-from src.game.runtime.apply import (
+from src.game.runtime.action.apply import (
     GraphRuntimeDirty,
     GraphRuntimeApplyError,
     apply_runtime_graph_changes,

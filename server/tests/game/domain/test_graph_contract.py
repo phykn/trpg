@@ -6,9 +6,8 @@ from src.game.domain.graph import (
     GraphEdge,
     GraphInvariantError,
     GraphNode,
-    apply_graph_change,
-    parse_graph_change,
 )
+from src.game.domain.graph.apply import apply_graph_change, parse_graph_change
 
 
 def test_graph_edge_accepts_contract_aliases():
@@ -255,7 +254,7 @@ def test_quest_trigger_target_must_exist_in_graph():
                         "triggers": [
                             {
                                 "id": "trigger_01",
-                                "type": "character_defeat",
+                                "type": "character_death",
                                 "target_id": "ghost_01",
                             }
                         ]

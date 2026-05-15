@@ -1,7 +1,8 @@
 import pytest
 
-from src.game.domain.graph import Graph, GraphEdge, GraphNode, apply_graph_change
-from src.game.engines.graph_combat import (
+from src.game.domain.graph import Graph, GraphEdge, GraphNode
+from src.game.domain.graph.apply import apply_graph_change
+from src.game.engines.graph.combat import (
     GraphCombatAction,
     plan_combat_exchange,
     plan_combat_start,
