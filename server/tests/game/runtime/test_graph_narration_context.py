@@ -131,7 +131,7 @@ def test_intro_payload_contains_grounded_first_scene_context():
     assert payload["inventory"] == [{"id": "sword_01", "name": "검", "kind": "weapon"}]
 
 
-def test_input_payload_excludes_recent_log_and_keeps_player_input():
+def test_input_payload_includes_recent_context_and_keeps_player_input():
     runtime = _runtime()
 
     payload = build_input_narration_payload(
@@ -146,15 +146,20 @@ def test_input_payload_excludes_recent_log_and_keeps_player_input():
     assert payload["current_event"]["kind"] == "dialogue"
     assert payload["target_view"]["id"] == "guard_01"
     assert "recent_log" not in payload
-    assert "경비병이 북문을 지킵니다." not in encoded
-    assert "recent_narration" not in payload
+    assert payload["recent_narration"] == [
+        {
+            "text": "경비병이 북문을 지킵니다.",
+            "outcome": None,
+        }
+    ]
     assert payload["recent_dialogue"] == [
         {
             "turn": 1,
             "player": "북문에 대해 묻습니다.",
-            "summary": "경비병은 북문 쪽을 봅니다.",
+            "narrator": "경비병은 북문 쪽을 봅니다.",
         }
     ]
+    assert "recent_log" not in encoded
 
 
 def test_input_payload_includes_target_hints_and_mentioned_inventory():

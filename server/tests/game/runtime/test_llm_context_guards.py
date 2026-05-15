@@ -12,7 +12,6 @@ from src.llm.context.classify_view import build_classify_context_view
 
 FORBIDDEN_CONTEXT_TOKENS = [
     "recent_log",
-    "GM 원문",
     "combat_started",
     "player_attacked",
     "player_cast",
@@ -26,6 +25,11 @@ FORBIDDEN_CONTEXT_TOKENS = [
     "healthy",
     '"hp"',
     '"damage"',
+]
+
+CLASSIFY_FORBIDDEN_CONTEXT_TOKENS = [
+    *FORBIDDEN_CONTEXT_TOKENS,
+    "GM 원문",
 ]
 
 
@@ -158,7 +162,7 @@ def test_classify_context_forbidden_tokens():
         ensure_ascii=False,
     )
 
-    for token in FORBIDDEN_CONTEXT_TOKENS:
+    for token in CLASSIFY_FORBIDDEN_CONTEXT_TOKENS:
         assert token not in payload
 
 
@@ -176,6 +180,7 @@ def test_narrate_context_forbidden_tokens():
 
     for token in FORBIDDEN_CONTEXT_TOKENS:
         assert token not in payload
+    assert "GM 원문이 새면 실패합니다." in payload
 
 
 def test_context_payloads_stay_compact():

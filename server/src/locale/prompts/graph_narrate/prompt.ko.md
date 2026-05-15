@@ -23,7 +23,7 @@
 - `payload.player_input`이 문자열이면 플레이어가 방금 입력한 원문입니다. 이때는 원문에 직접 반응하십시오.
 - `payload.player_input`이 `null`이면 이미 engine이 처리한 action 결과입니다. 이때는 `payload.current_event.action`, `payload.current_event.resolved_results`, `payload.result_cards`를 기준으로 쓰고 플레이어 원문을 지어내지 마십시오.
 - `payload.target_view`, `payload.result_cards`, `payload.combat_view`는 이번 턴 결과를 보강하는 근거입니다. `target_view`에 `tone_hint`, `known_hints`, `available_items`가 있으면 NPC 반응의 근거로 사용합니다.
-- `payload.related_memory`, `payload.recent_dialogue`, `payload.recent_narration`은 연속성을 위한 맥락입니다. `recent_narration`의 문장 구조, 첫 문장, 결말 표현을 반복하지 마십시오.
+- `payload.related_memory`, `payload.recent_dialogue`, `payload.recent_narration`은 연속성을 위한 맥락입니다. `recent_dialogue[].narrator`와 `recent_narration[].text`의 문장 구조, 첫 문장, 결말 표현을 반복하지 마십시오.
 - `payload.scene_anchor.visible_names`는 배경 고정용 이름 목록입니다. 모든 이름을 나열하지 마십시오.
 - 시스템 카드 문장을 그대로 반복하지 말고, 결과가 장면에 남긴 감각이나 반응을 씁니다.
 - `payload.combat_view`는 플레이어에게 보여줄 수 있는 전투 요약입니다. 내부 상태명, 수치, 피해량을 만들지 마십시오. `player_can_act`가 참이면 행동 여지를 닫지 않습니다.

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 from collections.abc import AsyncIterator
 
 from openai import APIConnectionError, InternalServerError, RateLimitError
@@ -14,6 +15,10 @@ from src.llm.diag import llm_diag
 from ..state import GameRuntimeState
 from .context import build_input_narration_payload
 from .result import GraphNarrationResult, parse_graph_narration_answer
+
+
+def _narration_temperature(default: float = 1.0) -> float:
+    return float(os.environ.get("LLM_GRAPH_NARRATE_TEMPERATURE") or str(default))
 
 
 async def generate_graph_input_narration(
@@ -31,6 +36,7 @@ async def generate_graph_input_narration(
         action,
         subject_id,
     )
+    temperature = _narration_temperature()
     try:
         llm_diag("llm:call", agent="graph_narrate")
         result = await asyncio.wait_for(
@@ -38,7 +44,7 @@ async def generate_graph_input_narration(
                 messages,
                 think=False,
                 agent="graph_narrate",
-                temperature=0.2,
+                temperature=temperature,
             ),
             timeout=timeout_s,
         )
@@ -74,6 +80,7 @@ async def generate_graph_input_rejection_narration(
         action,
         public_reason,
     )
+    temperature = _narration_temperature()
     try:
         llm_diag("llm:call", agent="graph_narrate")
         result = await asyncio.wait_for(
@@ -81,7 +88,7 @@ async def generate_graph_input_rejection_narration(
                 messages,
                 think=False,
                 agent="graph_narrate",
-                temperature=0.2,
+                temperature=temperature,
             ),
             timeout=timeout_s,
         )
@@ -117,6 +124,7 @@ async def stream_graph_input_narration(
         action,
         subject_id,
     )
+    temperature = _narration_temperature()
     try:
         llm_diag("llm:call", agent="graph_narrate")
         async with asyncio.timeout(timeout_s):
@@ -124,7 +132,7 @@ async def stream_graph_input_narration(
                 messages,
                 think=False,
                 agent="graph_narrate",
-                temperature=0.2,
+                temperature=temperature,
             ):
                 answer = part.get("answer")
                 if isinstance(answer, str) and answer:
@@ -157,6 +165,7 @@ async def stream_graph_input_rejection_narration(
         action,
         public_reason,
     )
+    temperature = _narration_temperature()
     try:
         llm_diag("llm:call", agent="graph_narrate")
         async with asyncio.timeout(timeout_s):
@@ -164,7 +173,7 @@ async def stream_graph_input_rejection_narration(
                 messages,
                 think=False,
                 agent="graph_narrate",
-                temperature=0.2,
+                temperature=temperature,
             ):
                 answer = part.get("answer")
                 if isinstance(answer, str) and answer:

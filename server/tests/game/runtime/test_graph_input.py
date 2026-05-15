@@ -358,6 +358,24 @@ async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
     assert logs[0].text == "고블린에게 말을 건다"
     assert logs[1].text == "상대는 당신의 말을 듣고 잠시 생각에 잠깁니다."
     assert progress.turn_count == 1
+    narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
+    assert narrate_call["temperature"] == 1.0
+
+
+async def test_graph_input_passes_env_graph_narrate_temperature(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setenv("LLM_GRAPH_NARRATE_TEMPERATURE", "0.7")
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]}
+    )
+
+    await run_graph_input_turn(llm, repo, "game-1", "고블린에게 말을 건다")
+    narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
+
+    assert narrate_call["temperature"] == 0.7
 
 
 async def test_graph_input_reflects_speak_turn_into_memory_dialogue_and_suggestions(
@@ -680,7 +698,7 @@ async def test_graph_input_targetless_speak_defaults_to_nearby_living_npc(tmp_pa
     assert "NPC가 직접 반응" in narrate_call["messages"][0]["content"]
 
 
-async def test_graph_input_narration_payload_excludes_recent_log(tmp_path):
+async def test_graph_input_narration_payload_includes_recent_narration(tmp_path):
     repo = await _repo(tmp_path)
     await repo.append_log_entries(
         "game-1",
@@ -698,7 +716,10 @@ async def test_graph_input_narration_payload_excludes_recent_log(tmp_path):
     encoded = json.dumps(payload, ensure_ascii=False)
 
     assert "recent_log" not in payload
-    assert "경비병이 북문을 지킵니다." not in encoded
+    assert payload["recent_narration"] == [
+        {"text": "경비병이 북문을 지킵니다.", "outcome": None}
+    ]
+    assert "경비병이 북문을 지킵니다." in encoded
     assert "recent_dialogue" in payload
 
 

@@ -105,6 +105,7 @@ def build_input_narration_payload(
             action=action,
             target=dialogue_target,
         ),
+        "recent_narration": _recent_narration_payload(runtime),
         "recent_dialogue": narrate_recent_dialogue_payload(runtime),
         "combat_view": combat_narration_view(runtime),
         "budget": _narrate_budget(runtime),

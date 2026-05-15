@@ -47,7 +47,11 @@ def narrate_recent_dialogue_payload(
     *,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
-    return classify_recent_dialogue_payload(runtime, limit=limit)
+    limit = _env_int("MAX_RECENT_DIALOGUE", 5) if limit is None else limit
+    return [
+        {"turn": entry.turn, "player": entry.player, "narrator": entry.narrator}
+        for entry in runtime.recent_dialogue[-limit:]
+    ]
 
 
 def related_memory_payload(

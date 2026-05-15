@@ -6,6 +6,7 @@ from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.game.runtime.narration.memory_context import (
     classify_recent_dialogue_payload,
+    narrate_recent_dialogue_payload,
     related_memory_payload,
 )
 
@@ -101,6 +102,18 @@ def test_recent_dialogue_limit_can_come_from_env(monkeypatch):
     payload = classify_recent_dialogue_payload(runtime)
 
     assert [item["turn"] for item in payload] == [6, 7]
+
+
+def test_narrate_recent_dialogue_uses_narrator_original_text(monkeypatch):
+    monkeypatch.setenv("MAX_RECENT_DIALOGUE", "2")
+    runtime = _runtime(dialogue_count=3)
+
+    payload = narrate_recent_dialogue_payload(runtime)
+
+    assert payload == [
+        {"turn": 2, "player": "질문 2", "narrator": "응답 2"},
+        {"turn": 3, "player": "질문 3", "narrator": "응답 3"},
+    ]
 
 
 def test_related_memory_limit_can_come_from_env(monkeypatch):

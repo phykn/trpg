@@ -27,7 +27,9 @@ class _PromptCaptureLLM:
         temperature=None,
         use_fallback=False,
     ):
-        self.calls.append({"agent": agent, "messages": messages})
+        self.calls.append(
+            {"agent": agent, "messages": messages, "temperature": temperature}
+        )
         if agent == "classify":
             import json
 
@@ -213,6 +215,7 @@ async def test_graph_turn_narration_uses_packaged_prompt(monkeypatch, tmp_path):
     call = [call for call in llm.calls if call["agent"] == "combat_narrate"][0]
 
     assert call["messages"][0]["content"] == "combat_narrate:ko"
+    assert call["temperature"] == 1.0
 
 
 @pytest.mark.asyncio
@@ -229,3 +232,4 @@ async def test_graph_input_narration_uses_packaged_prompt(monkeypatch, tmp_path)
 
     narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
     assert narrate_call["messages"][0]["content"] == "graph_narrate:ko"
+    assert narrate_call["temperature"] == 1.0

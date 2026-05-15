@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 from collections.abc import AsyncIterator
 
 from openai import APIConnectionError, InternalServerError, RateLimitError
@@ -15,6 +16,10 @@ from ..action.dispatch import GraphActionDispatchResult
 from ..state import GameRuntimeState
 from .context import build_action_narration_payload
 from .result import GraphNarrationResult, parse_graph_narration_answer
+
+
+def _narration_temperature(default: float = 1.0) -> float:
+    return float(os.environ.get("LLM_GRAPH_NARRATE_TEMPERATURE") or str(default))
 
 
 async def build_graph_action_narration(
@@ -38,6 +43,7 @@ async def build_graph_action_narration(
     if messages is None:
         return GraphNarrationResult()
     agent = _graph_action_narration_agent(dispatch)
+    temperature = _narration_temperature()
     llm_diag("llm:call", agent=agent)
     try:
         result = await asyncio.wait_for(
@@ -45,7 +51,7 @@ async def build_graph_action_narration(
                 messages,
                 think=False,
                 agent=agent,
-                temperature=0.2,
+                temperature=temperature,
             ),
             timeout=timeout_s,
         )
@@ -95,6 +101,7 @@ async def stream_graph_action_narration(
     if messages is None or llm is None:
         return
     agent = _graph_action_narration_agent(dispatch)
+    temperature = _narration_temperature()
     llm_diag("llm:call", agent=agent)
     try:
         async with asyncio.timeout(timeout_s):
@@ -102,7 +109,7 @@ async def stream_graph_action_narration(
                 messages,
                 think=False,
                 agent=agent,
-                temperature=0.2,
+                temperature=temperature,
             ):
                 answer = part.get("answer")
                 if isinstance(answer, str) and answer:
