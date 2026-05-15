@@ -47,6 +47,7 @@ LLM_ROUTE_DEFAULT=google/gemma-4-26b-a4b-it
 LLM_ROUTE_GRAPH_NARRATE=google/gemma-4-31b-it
 LLM_ROUTE_GRAPH_NARRATE_FALLBACK=google/gemma-4-26b-a4b-it
 LLM_CLASSIFY_TEMPERATURE=0.0              # optional; default 0.0
+LLM_GRAPH_NARRATE_TEMPERATURE=1.0         # optional; default 1.0
 LLM_CLASSIFY_LIMIT_VISIBLE_TARGETS=8      # optional classify context caps
 LLM_CLASSIFY_LIMIT_EXITS=6
 LLM_CLASSIFY_LIMIT_INVENTORY=10
