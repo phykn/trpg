@@ -184,33 +184,14 @@ async def _run_classified_actions(
             index=index + 1,
             total=len(actions),
         )
-        if action.verb in {"speak", "pass"}:
-            result = await _run_graph_narrative_input(
-                client,
-                repo,
-                runtime,
-                player_input,
-                action,
-            )
-        else:
-            try:
-                result = await run_graph_action_request(
-                    repo,
-                    runtime.progress.game_id,
-                    action,
-                    llm=client,
-                    scenario_repo=scenario_repo,
-                )
-            except GraphActionTurnError as exc:
-                result = await _run_graph_rejected_input(
-                    client,
-                    repo,
-                    runtime,
-                    player_input,
-                    action,
-                    exc,
-                )
-
+        result = await _run_classified_action(
+            client,
+            repo,
+            runtime,
+            player_input,
+            action,
+            scenario_repo=scenario_repo,
+        )
         runtime = result.runtime
         if result.status != "executed":
             return result
@@ -238,56 +219,22 @@ async def _run_classified_actions_stream(
             index=index + 1,
             total=len(actions),
         )
-        if action.verb in {"speak", "pass"}:
-            async for event in _run_graph_narrative_input_stream(
-                client,
-                repo,
-                runtime,
-                player_input,
-                action,
-            ):
-                if event["type"] == "final":
-                    result = event["result"]  # type: ignore[assignment]
-                elif event["type"] == "result":
-                    if not emitted_result:
-                        yield event
-                        emitted_result = True
-                else:
+        async for event in _run_classified_action_stream(
+            client,
+            repo,
+            runtime,
+            player_input,
+            action,
+            scenario_repo=scenario_repo,
+        ):
+            if event["type"] == "final":
+                result = _event_result(event)
+            elif event["type"] == "result":
+                if not emitted_result:
                     yield event
-        else:
-            try:
-                async for event in run_graph_action_request_stream(
-                    repo,
-                    runtime.progress.game_id,
-                    action,
-                    llm=client,
-                    scenario_repo=scenario_repo,
-                ):
-                    if event["type"] == "final":
-                        result = event["result"]  # type: ignore[assignment]
-                    elif event["type"] == "result":
-                        if not emitted_result:
-                            yield event
-                            emitted_result = True
-                    else:
-                        yield event
-            except GraphActionTurnError as exc:
-                async for event in _run_graph_rejected_input_stream(
-                    client,
-                    repo,
-                    runtime,
-                    player_input,
-                    action,
-                    exc,
-                ):
-                    if event["type"] == "final":
-                        result = event["result"]  # type: ignore[assignment]
-                    elif event["type"] == "result":
-                        if not emitted_result:
-                            yield event
-                            emitted_result = True
-                    else:
-                        yield event
+                    emitted_result = True
+            else:
+                yield event
 
         if result is None:
             raise GraphInputError("graph input requires at least one action")
@@ -299,6 +246,89 @@ async def _run_classified_actions_stream(
     if result is None:
         raise GraphInputError("graph input requires at least one action")
     yield {"type": "final", "result": result}
+
+
+async def _run_classified_action(
+    client: LLMClient,
+    repo: GraphRepo,
+    runtime: GameRuntimeState,
+    player_input: str,
+    action: Action,
+    *,
+    scenario_repo: ScenarioRepo | None = None,
+) -> GraphActionRequestResult:
+    if action.verb in {"speak", "pass"}:
+        return await _run_graph_narrative_input(
+            client,
+            repo,
+            runtime,
+            player_input,
+            action,
+        )
+    try:
+        return await run_graph_action_request(
+            repo,
+            runtime.progress.game_id,
+            action,
+            llm=client,
+            scenario_repo=scenario_repo,
+        )
+    except GraphActionTurnError as exc:
+        return await _run_graph_rejected_input(
+            client,
+            repo,
+            runtime,
+            player_input,
+            action,
+            exc,
+        )
+
+
+async def _run_classified_action_stream(
+    client: LLMClient,
+    repo: GraphRepo,
+    runtime: GameRuntimeState,
+    player_input: str,
+    action: Action,
+    *,
+    scenario_repo: ScenarioRepo | None = None,
+) -> AsyncIterator[dict[str, object]]:
+    if action.verb in {"speak", "pass"}:
+        async for event in _run_graph_narrative_input_stream(
+            client,
+            repo,
+            runtime,
+            player_input,
+            action,
+        ):
+            yield event
+        return
+    try:
+        async for event in run_graph_action_request_stream(
+            repo,
+            runtime.progress.game_id,
+            action,
+            llm=client,
+            scenario_repo=scenario_repo,
+        ):
+            yield event
+    except GraphActionTurnError as exc:
+        async for event in _run_graph_rejected_input_stream(
+            client,
+            repo,
+            runtime,
+            player_input,
+            action,
+            exc,
+        ):
+            yield event
+
+
+def _event_result(event: dict[str, object]) -> GraphActionRequestResult:
+    result = event.get("result")
+    if not isinstance(result, GraphActionRequestResult):
+        raise GraphInputError("graph input stream requires result events")
+    return result
 
 
 def _raise_if_pending_input_blocked(runtime: GameRuntimeState) -> None:
