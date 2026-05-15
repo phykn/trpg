@@ -1,11 +1,9 @@
-export type GraphSuggestion =
-  | string
-  | {
-      label: string;
-      input_text: string;
-      intent?: string | null;
-      action?: Record<string, unknown> | null;
-    };
+export type GraphSuggestion = {
+  label: string;
+  input_text: string;
+  intent?: string | null;
+  action?: Record<string, unknown> | null;
+};
 
 export type SuggestionChip = {
   label: string;
@@ -14,10 +12,6 @@ export type SuggestionChip = {
 };
 
 export function normalizeGraphSuggestion(value: GraphSuggestion): SuggestionChip | null {
-  if (typeof value === 'string') {
-    const text = value.trim();
-    return text ? { label: text, inputText: text } : null;
-  }
   const label = value.label.trim();
   const inputText = value.input_text.trim();
   if (!label || !inputText) return null;

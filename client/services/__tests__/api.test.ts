@@ -429,7 +429,7 @@ describe('graph API helpers', () => {
     expect(result.outcome).toBe('success');
   });
 
-  test('uses server graph suggestions when an action response includes legacy strings', async () => {
+  test('uses server graph suggestions from an action response', async () => {
     fetch.mockResolvedValueOnce(
       streamResponse([
         JSON.stringify({
@@ -439,7 +439,20 @@ describe('graph API helpers', () => {
             state: graphState(),
             status: 'executed',
             message: null,
-            suggestions: ['북문으로 이동합니다', '발자국을 자세히 살펴봅니다'],
+            suggestions: [
+              {
+                label: '북문으로 이동합니다',
+                input_text: '북문으로 이동합니다',
+                intent: null,
+                action: null,
+              },
+              {
+                label: '발자국을 자세히 살펴봅니다',
+                input_text: '발자국을 자세히 살펴봅니다',
+                intent: null,
+                action: null,
+              },
+            ],
           },
         }),
       ]),
@@ -448,8 +461,8 @@ describe('graph API helpers', () => {
     const result = await sendGraphInput('game-1', '북문 이야기를 듣는다');
 
     expect(result.suggestions).toEqual([
-      { label: '북문으로 이동합니다', inputText: '북문으로 이동합니다' },
-      { label: '발자국을 자세히 살펴봅니다', inputText: '발자국을 자세히 살펴봅니다' },
+      { label: '북문으로 이동합니다', inputText: '북문으로 이동합니다', intent: null },
+      { label: '발자국을 자세히 살펴봅니다', inputText: '발자국을 자세히 살펴봅니다', intent: null },
     ]);
   });
 
