@@ -145,7 +145,12 @@ def _validate_action(action: Action, view: _ViewIds) -> None:
         )
     elif action.verb == "use":
         item_id = _single(action.what) or _single(action.with_)
-        _require_id(item_id, view.inventory_item_ids, action=action, field="what")
+        _require_id(
+            item_id,
+            view.inventory_item_ids | view.skill_ids,
+            action=action,
+            field="what",
+        )
         target_id = _single(action.to)
         if target_id is not None:
             _require_id(target_id, view.character_ids, action=action, field="to")
@@ -156,17 +161,6 @@ def _validate_action(action: Action, view: _ViewIds) -> None:
             action=action,
             field="what",
         )
-    elif action.verb == "cast":
-        skill_id = _single(action.with_) or _single(action.what)
-        _require_id(skill_id, view.skill_ids, action=action, field="with")
-        target_ids = _list(action.to)
-        if target_ids:
-            _require_all_ids(
-                target_ids,
-                view.character_ids,
-                action=action,
-                field="to",
-            )
     elif action.verb == "speak":
         target_id = _single(action.to) or _single(action.what)
         if target_id is not None:

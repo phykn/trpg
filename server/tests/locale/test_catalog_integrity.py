@@ -5,7 +5,7 @@ from pathlib import Path
 
 from typing import get_args
 
-from src.game.domain.types import EncounterRisk, GraphStatKey, Phase, Tier
+from src.game.domain.types import EncounterRisk, GraphStatKey, Tier
 
 
 CATALOG = Path(__file__).resolve().parents[2] / "src" / "locale" / "catalog"
@@ -35,11 +35,6 @@ def test_every_catalog_entry_has_required_locales() -> None:
 def test_tier_catalog_covers_enum() -> None:
     expected = set(get_args(Tier))
     assert _keys("tier.toml", "tier") == expected
-
-
-def test_phase_catalog_covers_enum() -> None:
-    expected = set(get_args(Phase))
-    assert _keys("phase.toml", "phase") == expected
 
 
 def test_stat_catalog_covers_enum() -> None:

@@ -36,3 +36,5 @@ def _backfill_graph_combat_state(payload: dict[str, Any]) -> None:
             state["active_enemy_id"] = first_enemy
     state.setdefault("player_hearts", 3)
     state.setdefault("enemy_hearts", 3)
+    state.setdefault("escape_ready", False)
+    state.setdefault("enemy_pressure", 0)

@@ -6,14 +6,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
-from src.game.domain.content import merge_content
 from src.game.domain.memory import GMLogEntry, LogEntry
-from src.game.engines.graph.quest_generation import plan_missing_quest_offer
 from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, set_diag_context
 from src.wire.graph.to_front import GraphFrontStatePayload, graph_to_front_state
 
-from ..action.apply import GraphRuntimeDirty, apply_runtime_graph_changes
+from ..action.apply import GraphRuntimeDirty
 from ..action.dispatch import (
     GraphActionDispatchError,
     GraphActionDispatchResult,
@@ -21,10 +19,9 @@ from ..action.dispatch import (
 )
 from ..narration.action import (
     build_graph_action_narration,
-    ensure_graph_action_narration,
     stream_graph_action_narration,
 )
-from ..narration.cards import build_graph_action_card, build_graph_quest_offer_card
+from ..narration.cards import build_graph_action_card
 from ..load import load_runtime_state
 from ..narration.result import (
     GraphNarrationResult,
@@ -123,18 +120,19 @@ async def run_graph_action_turn_from_runtime_stream(
     action: Action,
     *,
     llm: LLMClient | None = None,
+    result_outcome: GraphResultOutcome | None = None,
+    narration_outcome: GraphResultOutcome | None = None,
 ) -> AsyncIterator[dict[str, object]]:
     prepared = _prepare_graph_action_turn(game_id, runtime, action)
     result = await _commit_graph_action_result(repo, game_id, prepared)
-    outcome = outcome_from_dispatch(prepared.dispatch)
+    outcome = result_outcome or outcome_from_dispatch(prepared.dispatch)
     yield {
         "type": "result",
         "result": executed_result(
             result.runtime,
             result.front_state,
-            dispatch=prepared.dispatch,
             outcome=outcome,
-        ),
+        ).model_copy(update={"dispatch": prepared.dispatch}),
     }
     stream = VisibleNarrationStream()
     async for chunk in stream_graph_action_narration(
@@ -150,31 +148,23 @@ async def run_graph_action_turn_from_runtime_stream(
             yield {"type": "narration_delta", "text": visible}
     for visible in stream.finish():
         yield {"type": "narration_delta", "text": visible}
-    narration_result = ensure_graph_action_narration(
-        before=prepared.before,
-        after=prepared.after,
-        action=prepared.action,
-        dispatch=prepared.dispatch,
-        card_texts=[card.text for card in prepared.cards],
-        result=parse_graph_narration_answer(stream.answer()),
-        llm_available=llm is not None,
-    )
+    narration_result = parse_graph_narration_answer(stream.answer())
     final = await _commit_graph_action_narration(
         repo,
         game_id,
         prepared,
         result,
         narration_result,
+        narration_outcome=narration_outcome or result_outcome,
     )
     yield {
         "type": "final",
         "result": executed_result(
             final.runtime,
             final.front_state,
-            dispatch=prepared.dispatch,
             outcome=outcome,
             suggestions=final.suggestions,
-        ),
+        ).model_copy(update={"dispatch": prepared.dispatch}),
     }
 
 
@@ -211,15 +201,8 @@ def _prepare_graph_action_turn(
         changed_edge_ids=set(dispatch.changed_edge_ids),
         removed_edge_ids=set(dispatch.removed_edge_ids),
     )
-    offer = _apply_missing_quest_offer(next_runtime, dirty)
-    if offer is None:
-        quest_id = None
-    else:
-        next_runtime, quest_id = offer
     card = build_graph_action_card(runtime, next_runtime, action, dispatch)
     cards = [card]
-    if quest_id is not None:
-        cards.append(build_graph_quest_offer_card(next_runtime, quest_id, card.id + 1))
     return _PreparedGraphActionTurn(
         before=runtime,
         after=next_runtime,
@@ -228,38 +211,6 @@ def _prepare_graph_action_turn(
         dirty=dirty,
         cards=cards,
     )
-
-
-def _apply_missing_quest_offer(
-    runtime: GameRuntimeState,
-    dirty: GraphRuntimeDirty,
-) -> tuple[GameRuntimeState, str] | None:
-    if runtime.progress.graph_combat_state is not None:
-        return None
-    offer = plan_missing_quest_offer(
-        runtime.graph,
-        runtime.progress.player_id,
-        runtime.progress.locale,
-    )
-    if offer is None:
-        return None
-    offer_apply = apply_runtime_graph_changes(runtime, offer.changes)
-    next_runtime = offer_apply.runtime
-    dirty.add_apply_result(offer_apply)
-    runtime_content = merge_content(
-        next_runtime.progress.runtime_content,
-        offer.content,
-    )
-    next_runtime = next_runtime.model_copy(
-        update={
-            "content": merge_content(next_runtime.content, offer.content),
-            "progress": next_runtime.progress.model_copy(
-                update={"runtime_content": runtime_content}
-            ),
-        }
-    )
-    engine_diag("quest:offer", quest=offer.quest_id)
-    return next_runtime, offer.quest_id
 
 
 # Persistence

@@ -190,10 +190,6 @@ en = "combat started"
 ko = "공격을 시도함"
 en = "attacked"
 
-[runtime."combat.motion.player_cast"]
-ko = "기술을 사용함"
-en = "used a technique"
-
 [runtime."combat.motion.player_defended"]
 ko = "방어 자세를 취함"
 en = "defended"
@@ -226,10 +222,6 @@ en = "situation changed"
 ko = "공격"
 en = "attack"
 
-[runtime."combat.action.cast"]
-ko = "기술"
-en = "technique"
-
 [runtime."combat.action.defend"]
 ko = "방어"
 en = "defend"
@@ -242,6 +234,14 @@ en = "leave"
 ko = "행동"
 en = "action"
 
+[runtime."roll.result.success"]
+ko = "{check} 판정 성공"
+en = "{check} check success"
+
+[runtime."roll.result.failure"]
+ko = "{check} 판정 실패"
+en = "{check} check failure"
+
 [runtime."confirmation.attack.title"]
 ko = "공격하시겠습니까?"
 en = "Attack?"
@@ -253,6 +253,18 @@ en = "Attack {target} and start combat."
 [runtime."confirmation.attack.confirm"]
 ko = "전투"
 en = "Combat"
+
+[runtime."confirmation.steal.title"]
+ko = "몰래 가져가시겠습니까?"
+en = "Steal it?"
+
+[runtime."confirmation.steal.body"]
+ko = "{target}에게서 {item}{을/를} 몰래 가져가려 합니다."
+en = "Try to steal {item} from {target}."
+
+[runtime."confirmation.steal.confirm"]
+ko = "시도"
+en = "Try"
 
 [runtime."confirmation.quest_accept.title"]
 ko = "퀘스트를 시작하시겠습니까?"

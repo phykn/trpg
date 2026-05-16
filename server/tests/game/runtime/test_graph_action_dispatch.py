@@ -1,7 +1,6 @@
 import pytest
 
 from src.game.domain.action import Action
-from src.game.domain.clock import next_dawn_turn
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
@@ -240,7 +239,7 @@ def test_quest_abandon_dispatch_clears_active_quest():
     assert result.runtime.graph.nodes["quest_rat"].properties["status"] == "abandoned"
 
 
-def test_rest_dispatch_restores_resources_and_jumps_turn_count():
+def test_rest_dispatch_restores_resources_and_advances_one_turn():
     runtime = _runtime()
 
     result = dispatch_graph_action(runtime, Action(verb="rest"))
@@ -249,7 +248,7 @@ def test_rest_dispatch_restores_resources_and_jumps_turn_count():
     assert result.kind == "rest"
     assert player["hp"] == 30
     assert player["mp"] == 10
-    assert result.runtime.progress.turn_count == next_dawn_turn(5)
+    assert result.runtime.progress.turn_count == 6
 
 
 def test_rest_dispatch_in_danger_starts_encounter_instead_of_recovery():

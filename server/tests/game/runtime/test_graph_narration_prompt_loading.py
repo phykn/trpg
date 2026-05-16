@@ -97,23 +97,21 @@ def test_graph_narration_prompt_files_are_packaged():
 def test_graph_narration_prompts_encode_style_without_source_title():
     intro_prompt = get_prompt("graph_intro", "ko")
     narrate_prompt = get_prompt("graph_narrate", "ko")
-    combined = f"{intro_prompt}\n{narrate_prompt}"
+    combat_prompt = get_prompt("combat_narrate", "ko")
+    combined = f"{intro_prompt}\n{narrate_prompt}\n{combat_prompt}"
 
     assert "문체 목표" in intro_prompt
-    assert "문체 목표" in narrate_prompt
+    assert "본문 문체" in narrate_prompt
     assert "감각" in combined
     assert "선택" in combined
     assert "냉소" in combined
     assert "선택하지 않은 행동" in intro_prompt
-    assert "나쁜 예" in combined
+    assert "금지 예" in intro_prompt
     assert "좋은 예" in combined
     assert "한자" in combined
-    assert "문장 수와 길이를 강제하지 않습니다" in intro_prompt
-    assert "문장 수와 길이를 강제하지 않습니다" in narrate_prompt
-    assert "문장 수와 길이를 강제하지 않습니다" in intro_prompt
-    assert "문장 수와 길이를 강제하지 않습니다" in narrate_prompt
+    assert "문장 수와 길이를 엄격히 고정하지 않지만" in intro_prompt
+    assert "장황하게 설명하지 않습니다" in narrate_prompt
     assert "「」" in narrate_prompt
-    assert "「허가는 받았습니다」" in narrate_prompt
     assert "직접 발화" in narrate_prompt
     assert "NPC 직접 발화" in narrate_prompt
     assert "짧은 반응으로만" not in narrate_prompt
@@ -121,8 +119,8 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "당신의 새 대사" not in narrate_prompt
     assert "payload.combat_view" in narrate_prompt
     assert "tone.lethality" in narrate_prompt
-    assert "훈련 충격" in narrate_prompt
-    assert "닫는 기호는 반드시" in narrate_prompt
+    assert "훈련 충격" in combat_prompt
+    assert "recent_narration" in combat_prompt
     assert "1~2문장" not in combined
     assert "2~3문장" not in combined
     assert "한 문장" not in intro_prompt

@@ -1,6 +1,6 @@
 # trpg
 
-Korean-language TRPG. The LLM handles narrative and difficulty judgment; the engine handles state, rules, and time.
+Korean-language TRPG. The LLM classifies player intent and writes narration; the engine handles state, rules, rolls, and time.
 
 ```
 trpg/
@@ -8,7 +8,7 @@ trpg/
   client/     Expo (React Native) single-screen client. → client/README.md
   agency/     Local QA + Story tools that drive the server in-process. → agency/README.md
   scenarios/  Local seed source (one dir per profile). Uploaded to release Storage via agency.story.tools.storage upload.
-  docs/       Target design contract (01-contract / 02-runtime / 03-world-model / 04-gameplay / 05-interfaces)
+  docs/       Target design contract and rebuild plan. Start at docs/plan.md.
 ```
 
 Stack: Python 3.12+ · Pydantic v2 · FastAPI · OpenAI-compatible LLM (local OpenAI-compatible server / Gemini hosted) · Supabase Postgres + Storage · Expo SDK 54 / RN 0.81 / React 19 · NativeWind v4. Runtime graph saves live in Supabase Postgres by default; dev can use local graph/scenario repos through env. Setup details in each sub-README; design intent starts at `docs/README.md`.

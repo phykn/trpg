@@ -38,6 +38,8 @@ class GraphCombatState(BaseModel):
     sides: dict[str, CombatSide]
     player_hearts: int = Field(default=3, ge=0)
     enemy_hearts: int = Field(default=3, ge=0)
+    escape_ready: bool = False
+    enemy_pressure: int = Field(default=0, ge=0)
     round: int = Field(default=1, ge=1)
     last_action: CombatActionKind | None = None
     last_support_id: str | None = None

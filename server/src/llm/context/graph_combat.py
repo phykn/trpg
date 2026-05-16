@@ -39,6 +39,8 @@ class GraphCombatContext(BaseModel):
     round: int = Field(ge=1)
     player_hearts: int = Field(ge=0, le=3)
     enemy_hearts: int = Field(ge=0, le=3)
+    escape_ready: bool = False
+    enemy_pressure: int = Field(default=0, ge=0)
     outcome: Literal["ongoing", "victory", "defeat", "fled"]
     participants: list[GraphCombatParticipantView]
     trace: list[GraphCombatTraceView]
@@ -58,6 +60,8 @@ def build_graph_combat_context(
         round=state.round,
         player_hearts=state.player_hearts,
         enemy_hearts=state.enemy_hearts,
+        escape_ready=state.escape_ready,
+        enemy_pressure=state.enemy_pressure,
         outcome=state.outcome,
         participants=participants,
         trace=[

@@ -124,7 +124,7 @@ Codex reads SKILL.md, drafts `.decomp/{setup,cast,arc}.json`, validates each pha
 
 ### Reference integrity
 
-Cross-ref check rules live in `agency/story/harness/runner.py`. Product-level seed invariants live in `docs/03-world-model.md`.
+Cross-ref check rules live in `agency/story/harness/runner.py`. Product-level seed invariants live in `docs/plan.md`.
 
 ### Limits
 

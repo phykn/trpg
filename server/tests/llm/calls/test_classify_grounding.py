@@ -59,7 +59,7 @@ def test_valid_view_ids_pass():
             Action(verb="move", to="town_gate"),
             Action(verb="use", what="potion_01"),
             Action(verb="attack", what=["goblin_01"]),
-            Action(verb="cast", with_="heal_01"),
+            Action(verb="use", with_="heal_01", to="player_01"),
         ]
     )
 
@@ -129,7 +129,7 @@ def test_transfer_accepts_self_refs_and_exposed_item_ids():
                 verb="transfer",
                 from_="<self>.equipped.weapon",
                 to="<self>.inventory",
-                how="gift",
+                how="free",
                 what="sword_01",
             ),
             Action(
@@ -202,7 +202,7 @@ def test_transfer_accepts_current_location_item_pickup():
                 verb="transfer",
                 from_="town",
                 to="player_01",
-                how="gift",
+                how="free",
                 what="loose_key",
             ),
         ]

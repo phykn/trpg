@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Literal
 from pydantic import BaseModel, ConfigDict
 
 from src.game.domain.combat import GraphCombatState
-from src.game.domain.clock import next_dawn_turn
 from src.game.domain.graph import Graph, GraphChange, GraphNode, SetNodePropertyChange
 from src.game.domain.graph.query import location_of
 from src.game.engines.graph.combat import GraphCombatError, plan_combat_start
@@ -61,7 +60,7 @@ def plan_rest(runtime: GameRuntimeState, actor_id: str) -> GraphRestResult:
         changes=changes,
         actor_id=actor_id,
         kind="full_recovery",
-        next_turn_count=next_dawn_turn(runtime.progress.turn_count),
+        next_turn_count=runtime.progress.turn_count + 1,
         cost_gold=cost,
     )
 

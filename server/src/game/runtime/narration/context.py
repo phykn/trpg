@@ -5,6 +5,7 @@ from src.game.domain.action import Action
 from src.game.domain.content import node_label, node_text, node_value
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph.character import graph_character_kind, is_visible_character
+from src.game.domain.memory import RollLogEntry
 from src.game.domain.graph.query import (
     characters_at,
     edges_from,
@@ -73,13 +74,62 @@ def build_action_narration_payload(
             target=target,
         ),
         "recent_narration": _recent_narration_payload(before),
-        "recent_dialogue": narrate_recent_dialogue_payload(after),
+        "recent_dialogue": narrate_recent_dialogue_payload(
+            after,
+            target_id=target.id if target is not None else None,
+        ),
         "combat_view": combat_narration_view(
             after,
             trace=dispatch.combat_trace,
             outcome=dispatch.outcome,
         ),
         "budget": _narrate_budget(after),
+    }
+
+
+def build_roll_narration_payload(
+    *,
+    runtime: GameRuntimeState,
+    action: Action,
+    pending: dict[str, Any],
+    roll_entry: RollLogEntry,
+    outcome: str,
+) -> dict[str, Any]:
+    target = _action_target(runtime, action)
+    check_reason = pending.get("body")
+    return {
+        "player_input": None,
+        "current_event": {
+            "kind": "roll",
+            "outcome": outcome,
+            "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
+            "check_reason": check_reason if isinstance(check_reason, str) else "",
+            "roll": {
+                "check": roll_entry.check,
+                "result": roll_entry.result,
+                "margin": roll_entry.margin,
+            },
+            "resolved_results": [
+                _roll_result_card(roll_entry, outcome, runtime.progress.locale)
+            ],
+        },
+        "scene_anchor": _scene_anchor(runtime),
+        "target_view": _target_view(runtime, target),
+        "result_cards": _result_cards(
+            [_roll_result_card(roll_entry, outcome, runtime.progress.locale)]
+        ),
+        "related_memory": related_memory_payload(
+            runtime,
+            action=action,
+            target=target,
+        ),
+        "recent_narration": _recent_narration_payload(runtime),
+        "recent_dialogue": narrate_recent_dialogue_payload(
+            runtime,
+            target_id=target.id if target is not None else None,
+        ),
+        "combat_view": combat_narration_view(runtime),
+        "budget": _narrate_budget(runtime),
     }
 
 
@@ -106,7 +156,10 @@ def build_input_narration_payload(
             target=dialogue_target,
         ),
         "recent_narration": _recent_narration_payload(runtime),
-        "recent_dialogue": narrate_recent_dialogue_payload(runtime),
+        "recent_dialogue": narrate_recent_dialogue_payload(
+            runtime,
+            target_id=dialogue_target.id if dialogue_target is not None else None,
+        ),
         "combat_view": combat_narration_view(runtime),
         "budget": _narrate_budget(runtime),
     }
@@ -329,6 +382,15 @@ def _input_current_event(
 
 def _result_cards(card_texts: list[str]) -> list[dict[str, str]]:
     return [{"text": text} for text in card_texts if text]
+
+
+def _roll_result_card(roll_entry: RollLogEntry, outcome: str, locale: str) -> str:
+    key = (
+        "runtime.roll.result.success"
+        if outcome == "success"
+        else "runtime.roll.result.failure"
+    )
+    return render(key, locale, check=roll_entry.check)
 
 
 def _recent_narration_payload(

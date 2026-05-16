@@ -8,7 +8,6 @@ ActionVerb = Literal[
     "transfer",
     "use",
     "attack",
-    "cast",
     "speak",
     "perceive",
     "query",
@@ -19,7 +18,7 @@ ActionVerb = Literal[
 ActionValue = str | list[str]
 RefuseCategory = Literal["out_of_game", "meta_breaking"]
 
-_TRANSFER_HOW = {"gift", "trade", "steal", "accept", "abandon", "equip", "unequip"}
+_TRANSFER_HOW = {"free", "trade", "steal", "accept", "abandon", "equip", "unequip"}
 _EQUIP_SLOTS = {"weapon", "armor", "accessory"}
 _SPEAK_HOW = {
     "friendly",
@@ -52,10 +51,24 @@ class Action(BaseModel):
     note: str | None = None
 
 
+class ActionCheckHint(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    required: bool = False
+    reason: str | None = Field(default=None, max_length=120)
+
+    @model_validator(mode="after")
+    def _check_reason(self) -> "ActionCheckHint":
+        if self.required and not self.reason:
+            raise ValueError("check reason is required when check is required")
+        return self
+
+
 class ActionOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     actions: list[Action] | None = Field(default=None, max_length=4)
+    action_checks: list[ActionCheckHint] = Field(default_factory=list, max_length=4)
     refuse: RefuseReason | None = None
 
     @model_validator(mode="after")
@@ -74,6 +87,12 @@ class ActionOutput(BaseModel):
         if actions_set and any(action.verb == "query" for action in self.actions):
             if len(self.actions) != 1:
                 raise ValueError("query must be the only action")
+        if not actions_set and self.action_checks:
+            raise ValueError("action_checks requires actions")
+        if actions_set and self.action_checks and len(self.action_checks) != len(
+            self.actions
+        ):
+            raise ValueError("action_checks must match actions length")
         if actions_set:
             in_combat = bool((info.context or {}).get("in_combat", False))
             for action in self.actions:
@@ -110,11 +129,6 @@ def _validate_classifier_action(action: Action, *, in_combat: bool) -> None:
     if action.verb == "attack":
         _require_targets(action.what, "attack.what", required=True)
         _require_enum(action.how, {"surprise"}, "attack.how", optional=True)
-        return
-
-    if action.verb == "cast":
-        _require_string(_single(action.with_) or _single(action.what), "cast.with")
-        _require_targets(action.to, "cast.to", required=False)
         return
 
     if action.verb == "speak":

@@ -113,6 +113,7 @@ def _runtime() -> GameRuntimeState:
                 turn=1,
                 player="북문에 대해 묻습니다.",
                 narrator="경비병은 북문 쪽을 봅니다.",
+                target_id="guard_01",
             )
         ],
     )
@@ -157,6 +158,7 @@ def test_input_payload_includes_recent_context_and_keeps_player_input():
             "turn": 1,
             "player": "북문에 대해 묻습니다.",
             "narrator": "경비병은 북문 쪽을 봅니다.",
+            "target_id": "guard_01",
         }
     ]
     assert "recent_log" not in encoded

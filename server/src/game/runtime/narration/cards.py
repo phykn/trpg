@@ -204,8 +204,6 @@ def _skill_combat_text(
 def _combat_skill_id(action: Action) -> str | None:
     if action.verb == "attack":
         return _single(action.with_)
-    if action.verb == "cast":
-        return _single(action.with_) or _single(action.what)
     return None
 
 

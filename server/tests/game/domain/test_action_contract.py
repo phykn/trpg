@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.game.domain.action import Action, ActionOutput
+from src.game.domain.action import Action, ActionCheckHint, ActionOutput
 
 
 def test_action_accepts_from_and_with_aliases():
@@ -12,7 +12,7 @@ def test_action_accepts_from_and_with_aliases():
             "from": "<self>.inventory",
             "to": "<self>.equipped.weapon",
             "with": "both_hands",
-            "how": "gift",
+            "how": "free",
         }
     )
 
@@ -26,6 +26,11 @@ def test_action_accepts_from_and_with_aliases():
 def test_action_rejects_result_fields():
     with pytest.raises(ValidationError, match="success"):
         Action.model_validate({"verb": "attack", "what": "goblin_01", "success": True})
+
+
+def test_action_rejects_legacy_cast_as_top_level_action():
+    with pytest.raises(ValidationError):
+        Action.model_validate({"verb": "cast", "with": "minor_heal_01"})
 
 
 def test_action_output_actions_only():
@@ -60,3 +65,8 @@ def test_action_output_empty_actions_rejected():
 def test_action_output_actions_max_length():
     with pytest.raises(ValidationError):
         ActionOutput(actions=[Action(verb="pass")] * 5)
+
+
+def test_action_check_hint_requires_reason_when_required():
+    with pytest.raises(ValidationError):
+        ActionCheckHint(required=True)

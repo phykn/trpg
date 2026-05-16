@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make graph action streams send engine result and success/failure outcome before narration, remove partial roll outcomes, and align server/client behavior with `docs/plan/00-llm-pipeline.md`.
+**Goal:** Make graph action streams send engine result and success/failure outcome before narration, remove partial roll outcomes, and align server/client behavior with `docs/plan.md`.
 
 **Architecture:** The server becomes result-first: engine state is committed before narration, stream endpoints emit `result`, then `narration_delta`, then `final`. Response-level `outcome` is computed by Python/runtime code, never by the LLM. The client stores that outcome from `result` and uses it to style temporary streamed narration.
 

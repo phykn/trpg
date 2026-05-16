@@ -95,6 +95,8 @@ def test_progress_from_row_backfills_legacy_graph_combat_state():
     assert restored.graph_combat_state.active_enemy_id == "rat"
     assert restored.graph_combat_state.player_hearts == 3
     assert restored.graph_combat_state.enemy_hearts == 3
+    assert restored.graph_combat_state.escape_ready is False
+    assert restored.graph_combat_state.enemy_pressure == 0
 
 
 def test_progress_rejects_removed_combat_state_field():

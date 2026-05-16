@@ -31,7 +31,8 @@ def test_prompt_documents_contract_pain_points():
     assert '"intent":"equip","item_id":"sword_01","slot":"weapon"' in text
     assert "`unequip`" in text and "`item_id`" in text
     assert "<self>.equipped.weapon" not in text
-    assert '"intent":"cast","skill_id":"minor_heal_01","target_id":"player_01"' in text
+    assert '"intent":"use","skill_id":"minor_heal_01","target_id":"player_01"' in text
+    assert '"intent":"cast"' not in text
     assert "구매" in text and "merchant_01" in text and "player_01" in text
     assert '"item_id":"coin_pouch_01"' in text
     assert "함께 움직이자" in text and "recruit" in text

@@ -174,8 +174,6 @@ def _needs_graph_action_narration(
         "quest_accept",
         "quest_abandon",
         "transfer",
-        "equip",
-        "unequip",
         "trade_buy",
         "trade_sell",
         "use",

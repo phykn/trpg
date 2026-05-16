@@ -12,7 +12,6 @@ COMBAT_CONDITION_KEYS = {"healthy", "hurt", "critical"}
 COMBAT_MOTION_KEYS = {
     "combat_started",
     "player_attacked",
-    "player_cast",
     "player_defended",
     "player_fled",
     "enemy_pressed",
@@ -20,7 +19,7 @@ COMBAT_MOTION_KEYS = {
     "player_defeated",
     "forced_end",
 }
-COMBAT_ACTION_KEYS = {"attack", "cast", "defend", "flee"}
+COMBAT_ACTION_KEYS = {"attack", "defend", "flee"}
 
 
 def combat_narration_view(
@@ -41,6 +40,8 @@ def combat_narration_view(
             runtime.progress.locale,
             state.last_action if state is not None else None,
         ),
+        "escape_ready": state.escape_ready if state is not None else False,
+        "enemy_pressure": state.enemy_pressure if state is not None else 0,
         "outcome": outcome or (state.outcome if state is not None else None),
         "events": [_event_view(runtime, event) for event in events],
         "tone": _combat_tone(runtime),

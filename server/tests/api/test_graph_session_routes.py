@@ -238,13 +238,12 @@ async def test_graph_intro_adds_initial_narration_and_first_visit_move_narration
     ]
     assert intro_body["outcome"] == "neutral"
     assert move_body["outcome"] == "neutral"
-    assert [entry.kind for entry in logs] == ["gm", "act", "act", "gm"]
-    assert [entry.id for entry in logs] == [1, 2, 3, 4]
+    assert [entry.kind for entry in logs] == ["gm", "act", "gm"]
+    assert [entry.id for entry in logs] == [1, 2, 3]
     assert logs[0].text == "LLM 소개는 init 응답을 막지 않습니다."
     assert logs[1].text == "당신은 숲길로 이동합니다."
-    assert logs[2].text == "새 의뢰가 도착합니다: 마을의 부탁."
     assert move_body["state"]["log"][-1]["kind"] == "gm"
-    assert progress.next_log_id == 5
+    assert progress.next_log_id == 4
     assert [call["agent"] for call in app.state.llm.calls].count("graph_intro") == 1
     assert [call["agent"] for call in app.state.llm.calls].count("graph_narrate") == 1
 
@@ -428,6 +427,52 @@ async def test_graph_turn_stream_returns_result_then_first_visit_move_narration(
     assert events[-1]["payload"]["outcome"] == "neutral"
     assert events[-1]["payload"]["state"]["log"][-1]["kind"] == "gm"
     assert events[-1]["payload"]["state"]["place"]["id"] == "loc_02"
+
+
+@pytest.mark.asyncio
+async def test_graph_roll_stream_returns_result_then_roll_narration(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr("src.game.runtime.flow.roll.random.randint", lambda _a, _b: 13)
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        pending_response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "perceive", "what": "loc_01"}},
+        )
+        assert pending_response.status_code == 200, pending_response.text
+        roll_id = pending_response.json()["state"]["pendingRoll"]["id"]
+        response = await client.post(
+            f"/session/{game_id}/graph/roll/stream",
+            json={"roll_id": roll_id},
+        )
+
+    assert response.status_code == 200, response.text
+    events = [json.loads(line) for line in response.text.splitlines()]
+
+    assert events[0]["type"] == "result"
+    assert events[-1]["type"] == "final"
+    assert all(event["type"] == "narration_delta" for event in events[1:-1])
+    assert events[0]["payload"]["status"] == "executed"
+    assert events[0]["payload"]["outcome"] == "success"
+    assert events[0]["payload"]["state"]["pendingRoll"] is None
+    assert [entry["kind"] for entry in events[0]["payload"]["state"]["log"]] == [
+        "gm",
+        "roll",
+    ]
+    assert (
+        "".join(event["text"] for event in events[1:-1])
+        == "장면의 긴장이 짧게 가라앉습니다."
+    )
+    assert events[-1]["payload"]["state"]["log"][-1] == {
+        "id": 3,
+        "kind": "gm",
+        "text": "장면의 긴장이 짧게 가라앉습니다.",
+        "outcome": "success",
+    }
 
 
 @pytest.mark.asyncio
@@ -750,7 +795,7 @@ async def test_graph_turn_pass_defends_during_existing_combat(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_graph_turn_auto_cast_uses_known_skill_during_existing_combat(
+async def test_graph_turn_auto_skill_uses_known_skill_during_existing_combat(
     tmp_path,
     monkeypatch,
 ):
@@ -770,7 +815,7 @@ async def test_graph_turn_auto_cast_uses_known_skill_during_existing_combat(
         )
         response = await client.post(
             f"/session/{game_id}/graph/turn",
-            json={"action": {"verb": "cast", "to": "edrik_chief", "how": "auto"}},
+            json={"action": {"verb": "attack", "what": "edrik_chief", "how": "auto"}},
         )
 
     assert response.status_code == 200, response.text
@@ -1046,10 +1091,7 @@ async def test_graph_input_returns_reflected_suggestions(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_graph_play_loop_reaches_quest_reward_with_graph_state(
-    tmp_path, monkeypatch
-):
-    monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 20)
+async def test_graph_move_does_not_generate_auto_quest_with_graph_state(tmp_path):
     app = _build_app(tmp_path)
 
     async with _client(app) as client:
@@ -1061,89 +1103,15 @@ async def test_graph_play_loop_reaches_quest_reward_with_graph_state(
         )
         assert move_response.status_code == 200, move_response.text
         move_body = move_response.json()
-        quest_id = move_body["state"]["questOffers"][0]["id"]
-
-        accept_response = await client.post(
-            f"/session/{game_id}/graph/turn",
-            json={"action": {"verb": "transfer", "what": quest_id, "how": "accept"}},
-        )
-        assert accept_response.status_code == 200, accept_response.text
-        accept_body = accept_response.json()
-        accept_id = accept_body["state"]["pendingConfirmation"]["id"]
-
-        accepted_response = await client.post(
-            f"/session/{game_id}/graph/confirm",
-            json={"confirmation_id": accept_id, "decision": "confirm"},
-        )
-        assert accepted_response.status_code == 200, accepted_response.text
-        accepted_body = accepted_response.json()
-        enemy_id = "auto_enemy_001"
-
-        attack_response = await client.post(
-            f"/session/{game_id}/graph/turn",
-            json={"action": {"verb": "attack", "what": enemy_id}},
-        )
-        assert attack_response.status_code == 200, attack_response.text
-        attack_body = attack_response.json()
-        attack_id = attack_body["state"]["pendingConfirmation"]["id"]
-
-        combat_start_response = await client.post(
-            f"/session/{game_id}/graph/confirm",
-            json={"confirmation_id": attack_id, "decision": "confirm"},
-        )
-        assert combat_start_response.status_code == 200, combat_start_response.text
-        combat_start_body = combat_start_response.json()
-
-        first_exchange_response = await client.post(
-            f"/session/{game_id}/graph/turn",
-            json={"action": {"verb": "attack", "what": enemy_id}},
-        )
-        assert first_exchange_response.status_code == 200, first_exchange_response.text
-
-        second_exchange_response = await client.post(
-            f"/session/{game_id}/graph/turn",
-            json={"action": {"verb": "attack", "what": enemy_id}},
-        )
-        assert second_exchange_response.status_code == 200, second_exchange_response.text
-
-        final_response = await client.post(
-            f"/session/{game_id}/graph/turn",
-            json={"action": {"verb": "attack", "what": enemy_id}},
-        )
-        assert final_response.status_code == 200, final_response.text
-        final_body = final_response.json()
 
     graph = await app.state.graph_repo.load_graph(game_id)
     progress = await app.state.graph_repo.load_progress(game_id)
     logs = await app.state.graph_repo.load_log_entries(game_id)
 
-    assert accepted_body["state"]["quest"]["id"] == quest_id
-    assert accepted_body["state"]["questOffers"] == []
-    assert combat_start_body["state"]["combat"] is not None
-    assert combat_start_body["state"]["combat"]["lastRoll"] is None
-    assert final_body["state"]["combat"] is None
-    assert final_body["state"]["quest"] is None
-    assert final_body["state"]["questOffers"][0]["id"] == "auto_quest_002"
-    assert final_body["state"]["hero"]["gold"] == 5
-    assert final_body["outcome"] == "success"
-    assert final_body["state"]["hero"]["exp"] == 10
-    assert final_body["state"]["hero"]["inventory"] == [
-        {
-            "id": "auto_reward_001",
-            "name": "작은 보상",
-            "qty": 1,
-            "canUse": False,
-            "equipSlots": [],
-        }
-    ]
-    assert graph.nodes[quest_id].properties["status"] == "completed"
-    assert graph.nodes[enemy_id].properties["alive"] is False
-    assert graph.nodes[enemy_id].properties["status"] == ["dead"]
+    assert move_body["state"]["quest"] is None
+    assert move_body["state"]["questOffers"] == []
+    assert not any(node_id.startswith("auto_") for node_id in graph.nodes)
     assert progress.active_quest_id is None
     assert progress.graph_combat_state is None
-    assert [entry.kind for entry in logs[-3:]] == ["act", "act", "gm"]
-    assert [entry.text for entry in logs[-3:]] == [
-        "당신은 전투에서 승리합니다.",
-        "새 의뢰가 도착합니다: 마을의 부탁.",
-        "공격의 여파가 남고, 상대는 흐트러진 자세를 다시 붙잡으려 합니다.",
-    ]
+    assert [entry.kind for entry in logs] == ["act", "gm"]
+    assert logs[0].text == "당신은 숲길로 이동합니다."

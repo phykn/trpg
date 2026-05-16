@@ -235,6 +235,19 @@ async def run_graph_confirm(
         )
 
     action = load_pending_action(pending, error_type=GraphConfirmationExpected)
+    if _requires_roll_after_confirmation(action):
+        await repo.save_progress(cleared_progress)
+        from .roll import start_graph_roll
+
+        result = await start_graph_roll(
+            repo,
+            game_id,
+            action,
+            scenario_repo=scenario_repo,
+        )
+        engine_diag("confirm:done", status="roll_required")
+        return result
+
     try:
         result = await run_graph_action_turn_from_runtime(
             repo,
@@ -293,6 +306,21 @@ async def run_graph_confirm_stream(
         return
 
     action = load_pending_action(pending, error_type=GraphConfirmationExpected)
+    if _requires_roll_after_confirmation(action):
+        await repo.save_progress(cleared_progress)
+        from .roll import start_graph_roll
+
+        result = await start_graph_roll(
+            repo,
+            game_id,
+            action,
+            scenario_repo=scenario_repo,
+        )
+        engine_diag("confirm:done", status="roll_required")
+        yield {"type": "result", "result": result}
+        yield {"type": "final", "result": result}
+        return
+
     try:
         async for event in run_graph_action_turn_from_runtime_stream(
             repo,
@@ -315,11 +343,11 @@ def build_graph_action_confirmation(
     runtime: GameRuntimeState,
     action: Action,
 ) -> dict[str, Any] | None:
-    if runtime.progress.graph_combat_state is None and action.verb in (
-        "attack",
-        "cast",
-    ):
+    if runtime.progress.graph_combat_state is None and action.verb == "attack":
         return _build_attack_start_confirmation(runtime, action)
+
+    if action.verb == "transfer" and action.how == "steal":
+        return _build_steal_confirmation(runtime, action)
 
     if action.verb == "transfer" and action.how in ("accept", "abandon"):
         return _build_quest_confirmation(runtime, action)
@@ -388,6 +416,38 @@ def _build_quest_confirmation(
     )
 
 
+def _build_steal_confirmation(
+    runtime: GameRuntimeState,
+    action: Action,
+) -> dict[str, Any] | None:
+    item_id = _single(action.what) or _single(action.with_)
+    target_id = _single(action.from_) or _single(action.to)
+    if item_id is None or target_id is None:
+        return None
+    item = runtime.graph.nodes.get(item_id)
+    target = runtime.graph.nodes.get(target_id)
+    if item is None or target is None:
+        return None
+
+    locale = runtime.progress.locale
+    item_label = node_label(runtime.content, item)
+    target_label = node_label(runtime.content, target)
+    return _pending(
+        kind="steal",
+        title=render("runtime.confirmation.steal.title", locale),
+        body=render(
+            "runtime.confirmation.steal.body",
+            locale,
+            item=item_label,
+            target=target_label,
+        ),
+        confirm_label=render("runtime.confirmation.steal.confirm", locale),
+        target_label=target_label,
+        action=action,
+        locale=locale,
+    )
+
+
 def _pending(
     *,
     kind: str,
@@ -410,6 +470,10 @@ def _pending(
     }
 
 
+def _requires_roll_after_confirmation(action: Action) -> bool:
+    return action.verb == "transfer" and action.how == "steal"
+
+
 def _attack_target_id(
     graph: Graph,
     player_id: str,
@@ -417,8 +481,6 @@ def _attack_target_id(
 ) -> str | None:
     if action.verb == "attack":
         candidates = _list(action.what)
-    elif action.verb == "cast":
-        candidates = _list(action.to)
     else:
         return None
     for target_id in candidates:
@@ -430,8 +492,6 @@ def _attack_target_id(
 def _normalize_attack_action(action: Action, target_id: str) -> Action:
     if action.verb == "attack":
         return action.model_copy(update={"what": [target_id]})
-    if action.verb == "cast":
-        return action.model_copy(update={"to": target_id})
     return action
 
 

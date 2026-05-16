@@ -43,12 +43,11 @@ def _graph() -> Graph:
                 from_node_id="npc_01",
                 to_node_id="potion",
             ),
-            "equips:npc_01:axe": GraphEdge(
-                id="equips:npc_01:axe",
-                type="equips",
+            "carries:npc_01:axe": GraphEdge(
+                id="carries:npc_01:axe",
+                type="carries",
                 from_node_id="npc_01",
                 to_node_id="axe",
-                properties={"slot": "weapon"},
             ),
             "carries:player_01:shield": GraphEdge(
                 id="carries:player_01:shield",
@@ -100,7 +99,7 @@ def test_transfer_moves_carried_item_between_characters():
     assert changed.edges["carries:player_01:potion"].from_node_id == "player_01"
 
 
-def test_transfer_from_equipment_unequips_source_item():
+def test_transfer_from_npc_inventory_moves_source_item():
     result = plan_item_transfer(
         _graph(),
         "axe",
@@ -109,7 +108,7 @@ def test_transfer_from_equipment_unequips_source_item():
     )
     changed = _apply_all(_graph(), result.changes)
 
-    assert "equips:npc_01:axe" not in changed.edges
+    assert "carries:npc_01:axe" not in changed.edges
     assert changed.edges["carries:player_01:axe"].to_node_id == "axe"
 
 

@@ -7,12 +7,18 @@ from openai import RateLimitError
 
 from src.db.graph_local_fs import LocalFsGraphRepo
 from src.game.domain.action import Action
+from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime.flow.confirmation import GraphConfirmationActive
 from src.game.runtime.flow.input import run_graph_input_turn, run_graph_input_turn_stream
 from src.game.runtime.flow.roll import build_pending_roll
+
+
+@pytest.fixture(autouse=True)
+def _fixed_roll_dc(monkeypatch):
+    monkeypatch.setenv("GRAPH_DEFAULT_ROLL_DC", "13")
 
 
 class _FakeLLM:
@@ -43,7 +49,7 @@ class _FakeLLM:
         self.calls.append(
             {"messages": messages, "agent": agent, "temperature": temperature}
         )
-        if agent == "graph_narrate":
+        if agent in {"graph_narrate", "combat_narrate"}:
             return {"answer": self._narration_answer(), "think": ""}
         return {"answer": json.dumps(self.payload, ensure_ascii=False), "think": ""}
 
@@ -58,7 +64,7 @@ class _FakeLLM:
         self.calls.append(
             {"messages": messages, "agent": agent, "temperature": temperature}
         )
-        if agent == "graph_narrate":
+        if agent in {"graph_narrate", "combat_narrate"}:
             answer = self._narration_answer()
             midpoint = max(1, len(answer) // 2)
             for chunk in (answer[:midpoint], answer[midpoint:]):
@@ -362,6 +368,67 @@ async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
     assert narrate_call["temperature"] == 1.0
 
 
+async def test_graph_input_speak_check_hint_creates_pending_roll(tmp_path):
+    repo = await _repo(tmp_path)
+    reason = "경비병을 설득하려면 믿을 만한 말을 해야 합니다."
+    llm = _FakeLLM(
+        {
+            "actions": [
+                {"verb": "speak", "what": "goblin_01", "how": "friendly"},
+            ],
+            "action_checks": [{"required": True, "reason": reason}],
+        }
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "고블린을 설득한다")
+    logs = await repo.load_log_entries("game-1")
+    progress = await repo.load_progress("game-1")
+
+    assert result.status == "roll_required"
+    assert progress.pending_roll["kind"] == "speak"
+    assert progress.pending_roll["stat"] == "presence"
+    assert progress.pending_roll["body"] == reason
+    assert progress.pending_roll["check_reason"] == reason
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert logs[1].text == reason
+    assert [call["agent"] for call in llm.calls] == ["classify"]
+
+
+async def test_graph_input_in_combat_speak_runs_social_exchange(tmp_path, monkeypatch):
+    monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 20)
+    repo = await _repo(tmp_path)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(
+            update={
+                "graph_combat_state": GraphCombatState(
+                    location_id="town",
+                    player_id="player_01",
+                    active_enemy_id="goblin_01",
+                    enemy_ids=["goblin_01"],
+                    participant_ids=["player_01", "goblin_01"],
+                    sides={"player_01": "player", "goblin_01": "enemy"},
+                    player_hearts=3,
+                    enemy_hearts=3,
+                )
+            }
+        )
+    )
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "to": "goblin_01", "how": "hostile"}]},
+        narration="당신의 말이 전투의 흐름을 흔듭니다.",
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "고블린을 도발한다")
+    saved = await repo.load_progress("game-1")
+
+    assert result.status == "executed"
+    assert saved.graph_combat_state is not None
+    assert saved.graph_combat_state.last_action == "social"
+    assert saved.graph_combat_state.enemy_hearts == 2
+    assert "combat_narrate" in [call["agent"] for call in llm.calls]
+
+
 async def test_graph_input_passes_env_graph_narrate_temperature(
     tmp_path,
     monkeypatch,
@@ -424,6 +491,7 @@ async def test_graph_input_reflects_speak_turn_into_memory_dialogue_and_suggesti
             turn=1,
             player="고블린에게 북문을 묻는다",
             narrator="고블린은 북문에 낯선 발자국이 있다고 말합니다.",
+            target_id="goblin_01",
         )
     ]
     assert [call["agent"] for call in llm.calls].count("graph_narrate") == 1
@@ -594,7 +662,7 @@ async def test_graph_input_streams_single_result_for_multiple_actions(tmp_path):
         "상대는 고개를 끄덕입니다.상대는 고개를 끄덕입니다."
     )
     assert events[-1]["result"].front_state.place.id == "forest"
-    assert [entry.kind for entry in logs] == ["player", "gm", "act", "act", "gm"]
+    assert [entry.kind for entry in logs] == ["player", "gm", "act", "gm"]
 
 
 @pytest.mark.parametrize(
@@ -677,7 +745,7 @@ async def test_graph_input_pickup_visible_location_item_transfers_to_inventory(
     assert result.status == "executed"
     assert "located_at:supply_token:town" not in graph.edges
     assert "carries:player_01:supply_token" in graph.edges
-    assert logs[-3].text == "당신은 보급 표식을 챙깁니다."
+    assert logs[-2].text == "당신은 보급 표식을 챙깁니다."
     assert logs[-1].kind == "gm"
     assert [call["agent"] for call in llm.calls] == ["graph_narrate"]
 
@@ -778,7 +846,7 @@ async def test_graph_input_runs_multiple_actions_in_order(tmp_path):
     assert "located_at:player_01:forest" in graph.edges
     assert "located_at:player_01:town" not in graph.edges
     assert progress.turn_count == 2
-    assert [entry.kind for entry in logs] == ["player", "act", "act", "gm", "gm"]
+    assert [entry.kind for entry in logs] == ["player", "act", "gm", "gm"]
     assert logs[1].text == "당신은 광장으로 이동합니다."
     assert logs[-1].text == "당신은 주변을 살핍니다."
 

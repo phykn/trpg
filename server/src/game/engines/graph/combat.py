@@ -266,6 +266,8 @@ def _apply_heart_result(
             if support is not None and support.effect_template == "extra_heart_damage":
                 damage += 1
             state.enemy_hearts = max(0, state.enemy_hearts - damage)
+            if kind == "social":
+                state.enemy_pressure += 1
             target_id = enemy_id
         elif kind == "defend":
             state.player_hearts = min(
@@ -274,6 +276,7 @@ def _apply_heart_result(
             )
             target_id = actor_id
         else:
+            state.escape_ready = True
             state.outcome = "fled"
             target_id = actor_id
         state.trace.append(

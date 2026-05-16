@@ -169,7 +169,7 @@ def _resolve_state(
     if state is not None:
         return state, False
 
-    if action.verb not in ("attack", "cast"):
+    if action.verb != "attack":
         raise GraphCombatDispatchError(f"cannot start graph combat with {action.verb}")
 
     target_id = _target_id_for_start(action)
@@ -189,6 +189,8 @@ def _combat_action_from_action(
 ) -> GraphCombatAction:
     if action.verb == "attack":
         support_id = _single(action.with_)
+        if support_id is None and action.how == "auto":
+            support_id = _auto_skill_support_id(graph, player_id, "attack")
         support_kind = _support_kind_or_none(graph, support_id)
         return GraphCombatAction(
             kind="attack",
@@ -196,18 +198,13 @@ def _combat_action_from_action(
             support_id=support_id if support_kind else None,
             support_kind=support_kind,
         )
-    if action.verb == "cast":
-        support_id = _single(action.with_) or _single(action.what)
-        if support_id is None and action.how == "auto":
-            support_id = _auto_skill_support_id(graph, player_id, "attack")
-        return GraphCombatAction(
-            kind="attack",
-            target_id=_single(action.to),
-            support_id=support_id,
-            support_kind="skill" if support_id is not None else None,
-        )
     if in_combat and action.verb == "move" and action.how in ("flee", "hasty"):
         return GraphCombatAction(kind="flee")
+    if in_combat and action.verb == "speak":
+        return GraphCombatAction(
+            kind="social",
+            target_id=_single(action.to) or _single(action.what),
+        )
     if in_combat and action.verb == "pass":
         return GraphCombatAction(kind="defend")
     raise GraphCombatDispatchError(f"unsupported graph combat action: {action.verb}")
@@ -257,8 +254,6 @@ def _auto_skill_support_id(
 def _target_id_for_start(action: Action) -> str:
     if action.verb == "attack":
         target_id = _single(action.what)
-    elif action.verb == "cast":
-        target_id = _single(action.to)
     else:
         target_id = None
     if target_id is None:

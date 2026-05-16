@@ -4,13 +4,45 @@ from src.db.graph_local_fs import LocalFsGraphRepo
 from src.game.domain.action import Action
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
+from src.game.rules import RULES
 from src.game.runtime.flow.confirmation import run_graph_action_request
+from src.game.runtime.flow.confirmation import run_graph_confirm
 from src.game.runtime.flow.roll import (
     GraphRollExpected,
     build_pending_roll,
     run_graph_roll,
+    run_graph_roll_stream,
     start_graph_roll,
 )
+
+
+@pytest.fixture(autouse=True)
+def _fixed_roll_dc(monkeypatch):
+    monkeypatch.setenv("GRAPH_DEFAULT_ROLL_DC", "13")
+
+
+class _RollStreamLLM:
+    def __init__(self, narration: str = "판정의 여파가 짧게 남습니다.") -> None:
+        self.narration = narration
+        self.calls: list[dict] = []
+
+    async def chat_stream(
+        self,
+        messages,
+        think=False,
+        agent=None,
+        temperature=None,
+        use_fallback=False,
+    ):
+        del think, temperature, use_fallback
+        self.calls.append({"agent": agent, "messages": messages})
+        yield {"answer": self.narration}
+        yield {
+            "answer": (
+                '\n---TRPG_META---\n'
+                '{"turn_summary":"","importance":1,"suggestions":[]}'
+            )
+        }
 
 
 def _character(character_id: str) -> GraphNode:
@@ -24,6 +56,8 @@ def _character(character_id: str) -> GraphNode:
             "mp": 10,
             "max_mp": 10,
             "alive": True,
+            "level": 1,
+            "xp_pool": 0,
             "stats": {"body": 10, "agility": 10, "mind": 10, "presence": 10},
         },
     )
@@ -66,6 +100,62 @@ async def _repo(tmp_path) -> LocalFsGraphRepo:
     await repo.save_graph("game-1", _graph())
     await repo.save_progress(GameProgress(game_id="game-1", player_id="player_01"))
     return repo
+
+
+async def _add_guard_with_affinity(
+    repo: LocalFsGraphRepo,
+    affinity: int,
+) -> None:
+    graph = await repo.load_graph("game-1")
+    graph.nodes["guard_01"] = _character("guard_01")
+    graph.edges["located_at:guard_01:town"] = GraphEdge(
+        id="located_at:guard_01:town",
+        type="located_at",
+        from_node_id="guard_01",
+        to_node_id="town",
+    )
+    graph.edges["relation:guard_01:player_01"] = GraphEdge(
+        id="relation:guard_01:player_01",
+        type="relation",
+        from_node_id="guard_01",
+        to_node_id="player_01",
+        properties={"affinity": affinity},
+    )
+    await repo.save_graph("game-1", graph)
+
+
+async def _add_guard_coin(
+    repo: LocalFsGraphRepo,
+    *,
+    affinity: int = 0,
+) -> None:
+    graph = await repo.load_graph("game-1")
+    graph.nodes["guard_01"] = _character("guard_01")
+    graph.nodes["coin_01"] = GraphNode(
+        id="coin_01",
+        type="item",
+        properties={"name": "coin_01"},
+    )
+    graph.edges["located_at:guard_01:town"] = GraphEdge(
+        id="located_at:guard_01:town",
+        type="located_at",
+        from_node_id="guard_01",
+        to_node_id="town",
+    )
+    graph.edges["carries:guard_01:coin_01"] = GraphEdge(
+        id="carries:guard_01:coin_01",
+        type="carries",
+        from_node_id="guard_01",
+        to_node_id="coin_01",
+    )
+    graph.edges["relation:guard_01:player_01"] = GraphEdge(
+        id="relation:guard_01:player_01",
+        type="relation",
+        from_node_id="guard_01",
+        to_node_id="player_01",
+        properties={"affinity": affinity},
+    )
+    await repo.save_graph("game-1", graph)
 
 
 async def test_start_graph_roll_stores_pending_roll_with_gm_narration(tmp_path):
@@ -111,6 +201,176 @@ def test_build_pending_roll_stores_original_action_payload():
     }
 
 
+def test_build_pending_roll_uses_normal_tier_base_dc_when_not_overridden(monkeypatch):
+    monkeypatch.delenv("GRAPH_DEFAULT_ROLL_DC", raising=False)
+    monkeypatch.setattr("src.game.runtime.flow.roll.pick_dc", lambda tier: 9)
+
+    pending = build_pending_roll(
+        _character("player_01").properties,
+        Action(verb="perceive", what="town"),
+    )
+
+    assert pending["base_dc"] == 9
+    assert pending["required_roll"] == 9
+
+
+@pytest.mark.parametrize(
+    ("action", "expected_stat"),
+    [
+        (Action(verb="speak", to="guard_01", how="friendly"), "presence"),
+        (Action(verb="perceive", what="town"), "mind"),
+        (Action(verb="move", to="forest"), "agility"),
+        (Action(verb="use", what="healing_herb"), "mind"),
+        (
+            Action(
+                verb="transfer",
+                what="coin_01",
+                from_="guard_01",
+                to="player_01",
+                how="steal",
+            ),
+            "agility",
+        ),
+        (
+            Action(
+                verb="transfer",
+                what="coin_01",
+                from_="player_01",
+                to="guard_01",
+                how="free",
+            ),
+            "presence",
+        ),
+    ],
+)
+def test_build_pending_roll_uses_action_specific_stat(action, expected_stat):
+    pending = build_pending_roll(_character("player_01").properties, action)
+
+    assert pending["stat"] == expected_stat
+
+
+async def test_start_graph_roll_lowers_npc_check_dc_for_positive_affinity(tmp_path):
+    repo = await _repo(tmp_path)
+    await _add_guard_with_affinity(repo, 20)
+
+    result = await start_graph_roll(
+        repo,
+        "game-1",
+        Action(verb="speak", to="guard_01", how="friendly"),
+    )
+
+    assert result.pending_roll["required_roll"] == 11
+
+
+async def test_start_graph_roll_raises_npc_check_dc_for_negative_affinity(tmp_path):
+    repo = await _repo(tmp_path)
+    await _add_guard_with_affinity(repo, -10)
+
+    result = await start_graph_roll(
+        repo,
+        "game-1",
+        Action(verb="speak", to="guard_01", how="friendly"),
+    )
+
+    assert result.pending_roll["required_roll"] == 14
+
+
+async def test_run_graph_roll_failure_lowers_npc_affinity_and_next_dc_gets_harder(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    await _add_guard_with_affinity(repo, -9)
+    pending = (
+        await start_graph_roll(
+            repo,
+            "game-1",
+            Action(verb="speak", to="guard_01", how="friendly"),
+        )
+    ).pending_roll
+
+    result = await run_graph_roll(repo, "game-1", pending["id"], dice=12)
+    graph = await repo.load_graph("game-1")
+    next_pending = (
+        await start_graph_roll(
+            repo,
+            "game-1",
+            Action(verb="speak", to="guard_01", how="friendly"),
+        )
+    ).pending_roll
+
+    assert result.outcome == "failure"
+    assert graph.edges["relation:guard_01:player_01"].properties["affinity"] == (
+        -9 + RULES.social.affinity_failure
+    )
+    assert next_pending["required_roll"] == 14
+
+
+async def test_run_graph_roll_friendly_success_raises_npc_affinity(tmp_path):
+    repo = await _repo(tmp_path)
+    await _add_guard_with_affinity(repo, 0)
+    pending = (
+        await start_graph_roll(
+            repo,
+            "game-1",
+            Action(verb="speak", to="guard_01", how="friendly"),
+        )
+    ).pending_roll
+
+    result = await run_graph_roll(repo, "game-1", pending["id"], dice=13)
+    graph = await repo.load_graph("game-1")
+
+    assert result.outcome == "success"
+    assert graph.edges["relation:guard_01:player_01"].properties["affinity"] == (
+        RULES.social.affinity_success
+    )
+
+
+async def test_run_graph_roll_success_grants_roll_xp_once_per_award_key(tmp_path):
+    repo = await _repo(tmp_path)
+    pending = (
+        await start_graph_roll(repo, "game-1", Action(verb="perceive", what="town"))
+    ).pending_roll
+
+    await run_graph_roll(repo, "game-1", pending["id"], dice=13)
+    graph = await repo.load_graph("game-1")
+    next_pending = (
+        await start_graph_roll(repo, "game-1", Action(verb="perceive", what="town"))
+    ).pending_roll
+    await run_graph_roll(repo, "game-1", next_pending["id"], dice=13)
+    graph_after_repeat = await repo.load_graph("game-1")
+
+    assert graph.nodes["player_01"].properties["xp_pool"] == 1
+    assert graph_after_repeat.nodes["player_01"].properties["xp_pool"] == 1
+    assert graph_after_repeat.nodes["player_01"].properties["xp_award_keys"] == [
+        "roll:perceive:town"
+    ]
+
+
+async def test_run_graph_roll_critical_success_grants_more_roll_xp(tmp_path):
+    repo = await _repo(tmp_path)
+    pending = (
+        await start_graph_roll(repo, "game-1", Action(verb="perceive", what="town"))
+    ).pending_roll
+
+    await run_graph_roll(repo, "game-1", pending["id"], dice=20)
+    graph = await repo.load_graph("game-1")
+
+    assert graph.nodes["player_01"].properties["xp_pool"] == 2
+
+
+async def test_run_graph_roll_failure_grants_no_roll_xp(tmp_path):
+    repo = await _repo(tmp_path)
+    pending = (
+        await start_graph_roll(repo, "game-1", Action(verb="perceive", what="town"))
+    ).pending_roll
+
+    await run_graph_roll(repo, "game-1", pending["id"], dice=12)
+    graph = await repo.load_graph("game-1")
+
+    assert graph.nodes["player_01"].properties["xp_pool"] == 0
+    assert "xp_award_keys" not in graph.nodes["player_01"].properties
+
+
 async def test_graph_action_request_perceive_creates_pending_roll(tmp_path):
     repo = await _repo(tmp_path)
 
@@ -124,6 +384,40 @@ async def test_graph_action_request_perceive_creates_pending_roll(tmp_path):
     assert result.status == "roll_required"
     assert progress.pending_roll["kind"] == "perceive"
     assert result.front_state.pending_roll is not None
+
+
+async def test_steal_requires_confirmation_then_roll_and_failure_does_not_transfer(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    await _add_guard_coin(repo)
+
+    confirmation = await run_graph_action_request(
+        repo,
+        "game-1",
+        Action(
+            verb="transfer",
+            what="coin_01",
+            from_="guard_01",
+            to="player_01",
+            how="steal",
+        ),
+    )
+    confirmation_id = confirmation.pending_confirmation["id"]
+    roll = await run_graph_confirm(repo, "game-1", confirmation_id, "confirm")
+    result = await run_graph_roll(repo, "game-1", roll.pending_roll["id"], dice=12)
+    graph = await repo.load_graph("game-1")
+
+    assert confirmation.status == "confirmation_required"
+    assert confirmation.pending_confirmation["kind"] == "steal"
+    assert roll.status == "roll_required"
+    assert roll.pending_roll["stat"] == "agility"
+    assert result.outcome == "failure"
+    assert "carries:guard_01:coin_01" in graph.edges
+    assert "carries:player_01:coin_01" not in graph.edges
+    assert graph.edges["relation:guard_01:player_01"].properties["affinity"] == (
+        RULES.social.affinity_failure
+    )
 
 
 async def test_run_graph_roll_resolves_pending_roll_and_appends_roll_log(tmp_path):
@@ -219,11 +513,78 @@ async def test_run_graph_roll_logs_one_short_roll_as_fail(tmp_path):
 
     result = await run_graph_roll(repo, "game-1", pending["id"], dice=12)
     logs = await repo.load_log_entries("game-1")
+    graph = await repo.load_graph("game-1")
 
     assert logs[1].kind == "roll"
     assert logs[1].margin == -1
     assert logs[1].result == "fail"
     assert result.outcome == "failure"
+    assert "located_at:player_01:town" in graph.edges
+    assert "located_at:player_01:forest" not in graph.edges
+    assert result.dispatch is None
+
+
+async def test_run_graph_roll_stream_narrates_failed_roll_without_dispatch(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _RollStreamLLM("발밑의 길이 선뜻 열리지 않습니다.")
+    pending = (
+        await start_graph_roll(repo, "game-1", Action(verb="move", to="forest"))
+    ).pending_roll
+
+    events = [
+        event
+        async for event in run_graph_roll_stream(
+            llm,
+            repo,
+            "game-1",
+            pending["id"],
+            dice=12,
+        )
+    ]
+    graph = await repo.load_graph("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert events[0]["type"] == "result"
+    assert events[-1]["type"] == "final"
+    assert all(event["type"] == "narration_delta" for event in events[1:-1])
+    assert events[0]["result"].outcome == "failure"
+    assert events[-1]["result"].outcome == "failure"
+    assert "".join(event["text"] for event in events[1:-1]) == (
+        "발밑의 길이 선뜻 열리지 않습니다."
+    )
+    assert "located_at:player_01:town" in graph.edges
+    assert "located_at:player_01:forest" not in graph.edges
+    assert [entry.kind for entry in logs] == ["gm", "roll", "gm"]
+    assert logs[-1].text == "발밑의 길이 선뜻 열리지 않습니다."
+    assert llm.calls[0]["agent"] == "graph_narrate"
+
+
+async def test_run_graph_roll_stream_executes_success_action_before_result(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _RollStreamLLM("숲길이 눈앞으로 가까워집니다.")
+    pending = (
+        await start_graph_roll(repo, "game-1", Action(verb="move", to="forest"))
+    ).pending_roll
+
+    events = [
+        event
+        async for event in run_graph_roll_stream(
+            llm,
+            repo,
+            "game-1",
+            pending["id"],
+            dice=13,
+        )
+    ]
+    logs = await repo.load_log_entries("game-1")
+
+    assert events[0]["type"] == "result"
+    assert events[-1]["type"] == "final"
+    assert all(event["type"] == "narration_delta" for event in events[1:-1])
+    assert events[0]["result"].outcome == "success"
+    assert events[0]["result"].front_state.place.id == "forest"
+    assert events[-1]["result"].outcome == "success"
+    assert [entry.kind for entry in logs] == ["gm", "roll", "act", "gm"]
 
 
 async def test_run_graph_roll_requires_matching_pending_id(tmp_path):

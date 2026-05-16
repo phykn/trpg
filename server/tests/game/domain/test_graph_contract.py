@@ -243,6 +243,24 @@ def test_graph_constructor_validates_loaded_edge_invariants():
         )
 
 
+def test_graph_constructor_rejects_non_player_equipment():
+    with pytest.raises(ValidationError, match="equips owner must be player"):
+        Graph(
+            nodes={
+                "npc_01": GraphNode(id="npc_01", type="character"),
+                "sword_01": GraphNode(id="sword_01", type="item"),
+            },
+            edges={
+                "equips:npc_01:sword_01": GraphEdge(
+                    id="equips:npc_01:sword_01",
+                    type="equips",
+                    from_node_id="npc_01",
+                    to_node_id="sword_01",
+                )
+            },
+        )
+
+
 def test_quest_trigger_target_must_exist_in_graph():
     with pytest.raises(ValidationError, match="quest trigger target missing"):
         Graph(

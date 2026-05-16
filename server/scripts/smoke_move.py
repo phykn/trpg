@@ -21,8 +21,6 @@ from dotenv import load_dotenv
 SERVER_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SERVER_DIR))
 
-load_dotenv(SERVER_DIR / ".env.dev")
-
 from src.game.domain.graph import Graph, GraphEdge, GraphNode  # noqa: E402
 from src.game.domain.progress import GameProgress  # noqa: E402
 from src.game.runtime.state import GameRuntimeState  # noqa: E402
@@ -126,8 +124,8 @@ CASES: list[tuple[str, str]] = [
     ("약초를 마신다", "use(what=herb_01)"),
     # --- transfer (equip) ---
     ("단검을 장착한다", "transfer(how=equip, what=shortsword_01)"),
-    # --- cast (heal) ---
-    ("소소한 치유를 시전한다", "cast(with=heal_minor)"),
+    # --- use (non-combat skill) ---
+    ("소소한 치유를 시전한다", "use(with=heal_minor)"),
     # --- perceive / wait ---
     ("주변을 둘러본다", "perceive"),
     ("한숨을 내쉰다", "wait"),
@@ -244,6 +242,7 @@ def _properties(data: dict) -> dict:
 
 
 async def main() -> int:
+    load_dotenv(SERVER_DIR / ".env.dev")
     print("Loading LLMClient from env routing...")
     client = LLMClient.from_env()
     providers = client._providers

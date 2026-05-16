@@ -48,10 +48,7 @@ def dispatch_graph_action(
     runtime: GameRuntimeState,
     action: Action,
 ) -> GraphActionDispatchResult:
-    if runtime.progress.graph_combat_state is not None or action.verb in (
-        "attack",
-        "cast",
-    ):
+    if runtime.progress.graph_combat_state is not None or action.verb == "attack":
         return _dispatch_combat(runtime, action)
 
     if action.verb == "query":

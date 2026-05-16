@@ -101,7 +101,7 @@ async def test_korean_pickup_location_item_shortcuts_without_llm():
     assert action.what == "supply_token"
     assert action.from_ == "test_hub"
     assert action.to == "player_01"
-    assert action.how == "gift"
+    assert action.how == "free"
 
 
 async def test_korean_corpse_inspect_loots_single_carried_item_without_llm():
@@ -126,7 +126,7 @@ async def test_korean_corpse_inspect_loots_single_carried_item_without_llm():
     assert action.what == "reward_badge"
     assert action.from_ == "corpse_01"
     assert action.to == "player_01"
-    assert action.how == "gift"
+    assert action.how == "free"
 
 
 async def test_korean_flee_in_combat_shortcuts_without_llm():

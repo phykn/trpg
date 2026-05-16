@@ -342,12 +342,12 @@ def test_pass_maps_to_defend_and_advances_round():
     assert result.runtime.graph.nodes["player_01"].properties["hp"] == 5
 
 
-def test_cast_starts_combat_without_spending_first_exchange():
+def test_attack_with_skill_starts_combat_without_spending_first_exchange():
     runtime = _runtime(include_skill=True)
 
     result = dispatch_graph_combat_action(
         runtime,
-        Action(verb="cast", what="fireball", to="goblin_01"),
+        Action(verb="attack", what="goblin_01", with_="fireball"),
     )
 
     assert result.started is True
@@ -365,5 +365,5 @@ def test_unsupported_action_raises_dispatch_error():
     with pytest.raises(GraphCombatDispatchError, match="unsupported"):
         dispatch_graph_combat_action(
             _runtime(graph_combat_state=_ongoing_state()),
-            Action(verb="speak", what="goblin_01"),
+            Action(verb="query", what="status"),
         )

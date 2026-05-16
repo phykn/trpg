@@ -2,7 +2,7 @@
 
 ## Goal
 
-Align the server and client with `docs/plan/00-llm-pipeline.md`.
+Align the server and client with `docs/plan.md`.
 
 The player-facing reason for this work is simple: the client must know whether a result succeeded or failed before streamed narration text arrives, so it can color that narration immediately.
 
@@ -164,4 +164,3 @@ Full verification:
 
 - Server: `.\.venv\Scripts\python.exe -m pytest server\tests -q`
 - Client: `npm run lint`, `npx tsc --noEmit`, and focused Jest tests for `services/api` and log rendering.
-

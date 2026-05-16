@@ -40,6 +40,8 @@ def combat_payload(runtime: GameRuntimeState) -> GraphCombatPayload | None:
         enemy_hearts=GraphHeartPayload(current=state.enemy_hearts, maximum=3),
         active_enemy_id=state.active_enemy_id,
         participants=participants,
+        escape_ready=state.escape_ready,
+        enemy_pressure=state.enemy_pressure,
         last_roll=state.last_roll,
         last_dc=state.last_dc,
     )

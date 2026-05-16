@@ -232,6 +232,16 @@ class _RepeatNarrationLLM:
         return {"answer": self.text}
 
 
+class _RepeatStreamNarrationLLM:
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+    async def chat_stream(self, messages, **kwargs):
+        midpoint = max(1, len(self.text) // 2)
+        for chunk in (self.text[:midpoint], self.text[midpoint:]):
+            yield {"answer": chunk, "think": None}
+
+
 class _PersistCheckingStreamLLM:
     def __init__(self, repo: LocalFsGraphRepo) -> None:
         self.repo = repo
@@ -256,15 +266,14 @@ async def test_run_graph_action_turn_saves_move_and_returns_front_state(tmp_path
     assert "located_at:player_01:forest" in saved_graph.edges
     assert "located_at:player_01:town" not in saved_graph.edges
     assert saved_progress.turn_count == 1
-    assert saved_progress.next_log_id == 3
-    assert len(saved_logs) == 2
+    assert saved_progress.next_log_id == 2
+    assert len(saved_logs) == 1
     assert saved_logs[0].kind == "act"
     assert saved_logs[0].text == "당신은 광장으로 이동합니다."
-    assert saved_logs[1].kind == "act"
-    assert saved_logs[1].text == "새 의뢰가 도착합니다: 마을의 부탁."
     assert result.front_state.log == saved_logs
     assert result.front_state.place.id == "forest"
     assert result.runtime.progress.turn_count == 1
+    assert result.front_state.quest_offers == []
 
 
 async def test_run_graph_action_turn_persists_only_touched_graph_ids(tmp_path):
@@ -275,9 +284,7 @@ async def test_run_graph_action_turn_persists_only_touched_graph_ids(tmp_path):
     assert len(repo.delta_calls) == 1
     call = repo.delta_calls[0]
     assert "player_01" in call["changed_node_ids"]
-    assert "auto_quest_001" in call["changed_node_ids"]
     assert "located_at:player_01:forest" in call["changed_edge_ids"]
-    assert "gives_quest:auto_giver_001:auto_quest_001" in call["changed_edge_ids"]
     assert call["removed_edge_ids"] == ["located_at:player_01:town"]
 
 
@@ -294,9 +301,26 @@ async def test_run_graph_action_turn_adds_gm_narration_for_first_visit_move(tmp_
     saved_logs = await repo.load_log_entries("game-1")
 
     assert [call["agent"] for call in llm.calls] == ["graph_narrate"]
-    assert [entry.kind for entry in saved_logs] == ["act", "act", "gm"]
+    assert [entry.kind for entry in saved_logs] == ["act", "gm"]
     assert saved_logs[-1].text == "칼끝이 번뜩이고, 적이 비틀거리며 길 위에 쓰러집니다."
     assert saved_logs[-1].outcome == "neutral"
+    assert result.front_state.log == saved_logs
+
+
+async def test_run_graph_action_turn_skips_llm_narration_for_equip(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _NarrationLLM()
+
+    result = await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="transfer", what="old_coin", how="equip", to="accessory"),
+        llm=llm,  # type: ignore[arg-type]
+    )
+    saved_logs = await repo.load_log_entries("game-1")
+
+    assert llm.calls == []
+    assert [entry.kind for entry in saved_logs] == ["act"]
     assert result.front_state.log == saved_logs
 
 
@@ -413,7 +437,7 @@ async def test_run_graph_action_turn_narrates_rest_encounter(tmp_path):
     assert saved_logs[-1].kind == "gm"
 
 
-async def test_run_graph_action_turn_narrates_automatic_quest_offer_on_revisited_move(
+async def test_run_graph_action_turn_does_not_generate_quest_offer_on_revisited_move(
     tmp_path,
 ):
     repo = await _repo(tmp_path)
@@ -422,7 +446,7 @@ async def test_run_graph_action_turn_narrates_automatic_quest_offer_on_revisited
     await repo.save_graph("game-1", graph)
     llm = _NarrationLLM()
 
-    await run_graph_action_turn(
+    result = await run_graph_action_turn(
         repo,
         "game-1",
         Action(verb="move", to="forest"),
@@ -430,8 +454,9 @@ async def test_run_graph_action_turn_narrates_automatic_quest_offer_on_revisited
     )
     saved_logs = await repo.load_log_entries("game-1")
 
-    assert [entry.kind for entry in saved_logs] == ["act", "act", "gm"]
-    assert llm.calls[-1]["agent"] == "graph_narrate"
+    assert [entry.kind for entry in saved_logs] == ["act"]
+    assert llm.calls == []
+    assert result.front_state.quest_offers == []
 
 
 async def test_run_graph_action_turn_uses_pass_style_fallback_for_empty_narration(
@@ -483,34 +508,19 @@ async def test_run_graph_action_turn_stream_emits_result_before_narration(tmp_pa
     ]
 
 
-async def test_run_graph_action_turn_generates_offer_when_no_work_exists(tmp_path):
+async def test_run_graph_action_turn_does_not_generate_offer_when_no_work_exists(tmp_path):
     repo = await _repo(tmp_path)
 
     result = await run_graph_action_turn(
         repo, "game-1", Action(verb="move", to="forest")
     )
     saved_graph = await repo.load_graph("game-1")
-    saved_progress = await repo.load_progress("game-1")
     saved_logs = await repo.load_log_entries("game-1")
 
-    assert "auto_quest_001" in saved_graph.nodes
-    assert "title" not in saved_graph.nodes["auto_quest_001"].properties
-    assert "name" not in saved_graph.nodes["auto_giver_001"].properties
-    assert (
-        saved_progress.runtime_content.quests["auto_quest_001"]["title"]
-        == "마을의 부탁"
-    )
-    assert (
-        saved_progress.runtime_content.characters["auto_giver_001"]["name"]
-        == "마을 주민"
-    )
-    assert saved_graph.nodes["auto_quest_001"].properties["status"] == "pending"
+    assert not any(node_id.startswith("auto_") for node_id in saved_graph.nodes)
     assert result.front_state.quest is None
-    assert len(result.front_state.quest_offers) == 1
-    assert result.front_state.quest_offers[0].id == "auto_quest_001"
-    assert result.front_state.quest_offers[0].actions == ["accept"]
-    assert [entry.kind for entry in saved_logs] == ["act", "act"]
-    assert saved_logs[1].text == "새 의뢰가 도착합니다: 마을의 부탁."
+    assert result.front_state.quest_offers == []
+    assert [entry.kind for entry in saved_logs] == ["act"]
     assert result.front_state.log == saved_logs
 
 
@@ -568,7 +578,7 @@ async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(
     )
     saved_logs = await repo.load_log_entries("game-1")
 
-    assert [entry.kind for entry in saved_logs] == ["act", "act", "gm"]
+    assert [entry.kind for entry in saved_logs] == ["act", "gm"]
     assert saved_logs[-1].text == "칼끝이 번뜩이고, 적이 비틀거리며 길 위에 쓰러집니다."
     assert saved_logs[-1].outcome == "success"
     assert result.front_state.log == saved_logs
@@ -607,7 +617,7 @@ async def test_run_graph_action_turn_logs_fled_combat_as_fled_not_victory(
     saved_logs = await repo.load_log_entries("game-1")
 
     assert saved_logs[0].text == "당신은 전투에서 물러납니다."
-    assert [entry.kind for entry in saved_logs] == ["act", "act", "gm"]
+    assert [entry.kind for entry in saved_logs] == ["act", "gm"]
     assert len(llm.calls) == 1
     assert llm.calls[0]["agent"] == "combat_narrate"
 
@@ -642,6 +652,40 @@ async def test_run_graph_action_turn_preserves_repeated_llm_narration(tmp_path):
     assert payload["recent_narration"] == [
         {"text": repeated, "outcome": None},
     ]
+
+
+async def test_run_graph_action_turn_stream_persists_streamed_repeated_narration(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    repeated = "테스트 가이드는 대답하지 않고 당신을 다시 봅니다."
+    await repo.append_log_entries(
+        "game-1",
+        [GMLogEntry(id=1, kind="gm", text=repeated)],
+    )
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(progress.model_copy(update={"next_log_id": 2}))
+    runtime = await load_runtime_state(repo, "game-1")
+
+    events = [
+        event
+        async for event in run_graph_action_turn_from_runtime_stream(
+            repo,
+            "game-1",
+            runtime,
+            Action(verb="attack", what="goblin_01"),
+            llm=_RepeatStreamNarrationLLM(repeated),  # type: ignore[arg-type]
+        )
+    ]
+    saved_logs = await repo.load_log_entries("game-1")
+    streamed = "".join(
+        event["text"] for event in events if event["type"] == "narration_delta"
+    )
+
+    assert streamed == repeated
+    assert saved_logs[-1].kind == "gm"
+    assert saved_logs[-1].text == repeated
+    assert events[-1]["result"].front_state.log[-1].text == repeated
 
 
 async def test_run_graph_action_turn_sends_combat_trace_to_narration(tmp_path):

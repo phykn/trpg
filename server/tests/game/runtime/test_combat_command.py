@@ -50,7 +50,7 @@ def _runtime() -> GameRuntimeState:
         ),
         (
             {"command": "skill", "target_id": "enemy_01"},
-            Action(verb="cast", to="enemy_01", how="auto"),
+            Action(verb="attack", what="enemy_01", how="auto"),
         ),
         ({"command": "defend"}, Action(verb="pass", how="defend")),
         ({"command": "flee"}, Action(verb="move", how="flee")),

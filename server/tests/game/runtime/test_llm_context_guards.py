@@ -14,7 +14,6 @@ FORBIDDEN_CONTEXT_TOKENS = [
     "recent_log",
     "combat_started",
     "player_attacked",
-    "player_cast",
     "player_defended",
     "player_fled",
     "enemy_pressed",

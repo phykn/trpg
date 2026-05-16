@@ -111,9 +111,25 @@ def test_narrate_recent_dialogue_uses_narrator_original_text(monkeypatch):
     payload = narrate_recent_dialogue_payload(runtime)
 
     assert payload == [
-        {"turn": 2, "player": "질문 2", "narrator": "응답 2"},
-        {"turn": 3, "player": "질문 3", "narrator": "응답 3"},
+        {"turn": 2, "player": "질문 2", "narrator": "응답 2", "target_id": None},
+        {"turn": 3, "player": "질문 3", "narrator": "응답 3", "target_id": None},
     ]
+
+
+def test_narrate_recent_dialogue_prefers_same_target_then_fills_recent(monkeypatch):
+    monkeypatch.setenv("MAX_RECENT_DIALOGUE", "3")
+    runtime = _runtime()
+    runtime.recent_dialogue = [
+        DialoguePair(turn=1, player="상인 질문", narrator="상인 답", target_id="npc_merchant"),
+        DialoguePair(turn=2, player="다른 질문", narrator="다른 답", target_id="npc_other"),
+        DialoguePair(turn=3, player="상인 재질문", narrator="상인 재답", target_id="npc_merchant"),
+        DialoguePair(turn=4, player="마지막 질문", narrator="마지막 답", target_id=None),
+    ]
+
+    payload = narrate_recent_dialogue_payload(runtime, target_id="npc_merchant")
+
+    assert [item["turn"] for item in payload] == [1, 3, 4]
+    assert payload[1]["target_id"] == "npc_merchant"
 
 
 def test_related_memory_limit_can_come_from_env(monkeypatch):

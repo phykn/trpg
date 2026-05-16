@@ -173,12 +173,11 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
                 from_node_id="goblin_01",
                 to_node_id="quest_01",
             ),
-            "equips:goblin_01:fang_01": GraphEdge(
-                id="equips:goblin_01:fang_01",
-                type="equips",
+            "carries:goblin_01:fang_01": GraphEdge(
+                id="carries:goblin_01:fang_01",
+                type="carries",
                 from_node_id="goblin_01",
                 to_node_id="fang_01",
-                properties={"slot": "weapon"},
             ),
             "carries:goblin_01:pelt_01": GraphEdge(
                 id="carries:goblin_01:pelt_01",
@@ -283,9 +282,8 @@ def test_graph_front_state_builds_place_from_visible_graph_edges():
     assert target.race_job == "야수"
     assert target.gold == 2
     assert target.stats == {"agility": 2, "body": 3, "mind": 1, "presence": 0}
-    assert target.equipment.weapon is not None
-    assert target.equipment.weapon.name == "날카로운 송곳니"
-    assert target.inventory[0].name == "늑대 가죽"
+    assert target.equipment.weapon is None
+    assert [item.name for item in target.inventory] == ["날카로운 송곳니", "늑대 가죽"]
     assert target.status == ["경계 중"]
 
 
@@ -369,8 +367,8 @@ def test_graph_front_state_resolves_static_content_from_runtime_content():
     assert payload.place.targets[0].name == "떠돌이 적"
     assert payload.place.targets[0].role == "숲의 포식자"
     assert payload.place.targets[0].race_job == "야수"
-    assert payload.place.targets[0].equipment.weapon is not None
-    assert payload.place.targets[0].equipment.weapon.name == "날카로운 송곳니"
+    assert payload.place.targets[0].equipment.weapon is None
+    assert payload.place.targets[0].inventory[0].name == "날카로운 송곳니"
     assert payload.quest_offers[0].title == "첫 의뢰"
     assert payload.quest_offers[0].summary == "광장의 문제를 해결합니다."
 

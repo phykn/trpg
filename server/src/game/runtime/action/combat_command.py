@@ -31,7 +31,7 @@ def build_combat_command_action(
     if command == "attack":
         return Action(verb="attack", what=target_id)
     if command == "skill":
-        return Action(verb="cast", to=target_id, how="auto")
+        return Action(verb="attack", what=target_id, how="auto")
     if command == "defend":
         return Action(verb="pass", how="defend")
     return Action(verb="move", how="flee")

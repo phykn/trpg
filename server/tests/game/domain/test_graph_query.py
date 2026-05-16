@@ -26,7 +26,11 @@ from src.game.domain.graph.query import (
 def test_graph_query_filters_edges_and_resolves_neighbor_nodes():
     graph = Graph(
         nodes={
-            "player": GraphNode(id="player", type="character"),
+            "player": GraphNode(
+                id="player",
+                type="character",
+                properties={"is_player": True},
+            ),
             "elder": GraphNode(id="elder", type="character"),
             "town": GraphNode(id="town", type="location"),
             "potion": GraphNode(id="potion", type="item"),
@@ -75,7 +79,11 @@ def test_graph_query_filters_edges_and_resolves_neighbor_nodes():
 def test_contract_semantic_queries_read_documented_edges():
     graph = Graph(
         nodes={
-            "player": GraphNode(id="player", type="character"),
+            "player": GraphNode(
+                id="player",
+                type="character",
+                properties={"is_player": True},
+            ),
             "elder": GraphNode(id="elder", type="character"),
             "town": GraphNode(id="town", type="location"),
             "potion": GraphNode(id="potion", type="item"),

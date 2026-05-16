@@ -2,7 +2,7 @@
 
 Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in graph Postgres tables keyed on `game_id` (`game_progress / graph_nodes / graph_edges / log_entries / history_entries / dialogue_entries`); scenario seeds live in a Supabase Storage bucket.
 
-Design notes start at `../docs/README.md`; the per-turn flow is in `../docs/02-runtime.md`; the interface and ownership map is in `../docs/05-interfaces.md`. The server agent guide is [AGENTS.md](./AGENTS.md).
+Design notes start at `../docs/README.md`; the per-turn flow, interface, and ownership map are in `../docs/plan.md`. The server agent guide is [AGENTS.md](./AGENTS.md).
 
 ## Stack
 
@@ -109,7 +109,7 @@ server/
   run_api.py                       # entrypoint
   .env.dev                         # required for local dev (.env.release for prod), gitignored
   scripts/                         # seed checks and one-off LLM smoke tools
-  src/                             # code (ownership map in ../docs/05-interfaces.md)
+  src/                             # code (ownership map in ../docs/plan.md)
   tests/                           # pytest
 ../scenarios/<profile>/            # local seed source (world.md, start.json, player_template.json, races/, locations/, characters/, items/, quests/, chapters/, skills/). Authored locally, uploaded to Supabase Storage; the running server reads from the bucket.
 ```

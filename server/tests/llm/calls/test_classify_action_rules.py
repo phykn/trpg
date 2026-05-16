@@ -86,17 +86,9 @@ def test_attack_with_target():
     _validate({"verb": "attack", "what": ["goblin_01"]})
 
 
-def test_cast_requires_skill_id():
-    with pytest.raises(ValidationError, match="cast.with"):
-        _validate({"verb": "cast"})
-
-
-def test_cast_with_skill():
-    _validate({"verb": "cast", "with": "heal_01"})
-
-
-def test_cast_accepts_target_in_to_field():
-    _validate({"verb": "cast", "with": "minor_heal_01", "to": "player_01"})
+def test_cast_is_rejected_as_legacy_top_level_action():
+    with pytest.raises(ValidationError):
+        _validate({"verb": "cast", "with": "heal_01"})
 
 
 def test_speak_requires_intent():

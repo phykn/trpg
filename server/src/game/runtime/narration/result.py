@@ -107,6 +107,7 @@ async def persist_graph_narration_result(
         runtime,
         result,
         player_input=player_input,
+        target_id=target_id,
     )
     if history_entries:
         await repo.append_history_entries(runtime.progress.game_id, history_entries)
@@ -145,6 +146,7 @@ def _dialogue_entries(
     result: GraphNarrationResult,
     *,
     player_input: str | None,
+    target_id: str | None,
 ) -> list[DialoguePair]:
     if not player_input or not result.narration:
         return []
@@ -153,6 +155,7 @@ def _dialogue_entries(
             turn=runtime.progress.turn_count,
             player=player_input,
             narrator=result.narration,
+            target_id=target_id,
         )
     ]
 

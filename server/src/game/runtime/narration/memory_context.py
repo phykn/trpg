@@ -4,6 +4,7 @@ from typing import Any
 from src.game.domain.action import Action
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph.query import location_of
+from src.game.domain.memory import DialoguePair
 
 from ..state import GameRuntimeState
 
@@ -45,13 +46,43 @@ def classify_recent_dialogue_payload(
 def narrate_recent_dialogue_payload(
     runtime: GameRuntimeState,
     *,
+    target_id: str | None = None,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
     limit = _env_int("MAX_RECENT_DIALOGUE", 5) if limit is None else limit
+    entries = _target_first_dialogue(runtime, target_id, limit)
     return [
-        {"turn": entry.turn, "player": entry.player, "narrator": entry.narrator}
-        for entry in runtime.recent_dialogue[-limit:]
+        {
+            "turn": entry.turn,
+            "player": entry.player,
+            "narrator": entry.narrator,
+            "target_id": entry.target_id,
+        }
+        for entry in entries
     ]
+
+
+def _target_first_dialogue(
+    runtime: GameRuntimeState,
+    target_id: str | None,
+    limit: int,
+) -> list[DialoguePair]:
+    if target_id is None:
+        return runtime.recent_dialogue[-limit:]
+    recent = list(runtime.recent_dialogue)
+    targeted = [entry for entry in recent if entry.target_id == target_id]
+    selected = targeted[-limit:]
+    if len(selected) < limit:
+        seen = {(entry.turn, entry.player, entry.narrator) for entry in selected}
+        for entry in reversed(recent):
+            key = (entry.turn, entry.player, entry.narrator)
+            if key in seen:
+                continue
+            selected.append(entry)
+            seen.add(key)
+            if len(selected) == limit:
+                break
+    return sorted(selected[-limit:], key=lambda entry: entry.turn)
 
 
 def related_memory_payload(

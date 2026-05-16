@@ -47,10 +47,6 @@ class LogConfig(_F):
     display_turns: int = 20
 
 
-class TimeConfig(_F):
-    phase_turns: int = 10
-
-
 class RecoveryConfig(_F):
     encounter_chance: dict[EncounterRisk, float] = {
         "safe": 0.0,
@@ -64,8 +60,8 @@ class GrowthConfig(_F):
     base_xp: int = 1
     max_level: int = 10
     roll_xp: dict[Grade, int] = {
-        "critical_success": 25,
-        "success": 8,
+        "critical_success": 2,
+        "success": 1,
         "failure": 0,
         "critical_failure": 0,
     }
@@ -126,7 +122,6 @@ class Rules(_F):
     social: Social = Social()
     memory: MemoryConfig = MemoryConfig()
     log: LogConfig = LogConfig()
-    time: TimeConfig = TimeConfig()
     carry: CarryConfig = CarryConfig()
     trade: TradeConfig = TradeConfig()
     combat: CombatConfig = CombatConfig()

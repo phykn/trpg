@@ -5,7 +5,7 @@ This repository is a Korean-language TRPG split into a FastAPI server, an Expo c
 ## Read First
 
 - Root overview and dev/deploy commands: `README.md`.
-- Product and runtime contracts: `docs/README.md`, `docs/02-runtime.md`, `docs/03-world-model.md`, `docs/05-interfaces.md`.
+- Product and runtime contracts: `docs/README.md`, `docs/plan.md`.
 - Backend work: `server/AGENTS.md`.
 - Client work: `client/AGENTS.md`.
 - QA and scenario authoring: `agency/AGENTS.md`.

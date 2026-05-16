@@ -73,6 +73,51 @@ def test_build_action_output_converts_move_intent_to_move_action():
     assert output.actions[0].to == "north_gate"
 
 
+def test_build_action_output_converts_non_combat_skill_use_intent():
+    output = build_action_output(
+        {
+            "intents": [
+                {
+                    "intent": "use",
+                    "skill_id": "minor_heal_01",
+                    "target_id": "player_01",
+                }
+            ]
+        },
+        _surroundings(),
+    )
+
+    assert output.actions is not None
+    assert output.actions[0].model_dump(
+        mode="json", by_alias=True, exclude_none=True
+    ) == {
+        "verb": "use",
+        "to": "player_01",
+        "with": "minor_heal_01",
+    }
+
+
+def test_build_action_output_carries_check_hint_separately_from_action():
+    output = build_action_output(
+        {
+            "intents": [
+                {
+                    "intent": "move",
+                    "destination_id": "north_gate",
+                    "check_required": True,
+                    "check_reason": "무너진 길을 조심히 건너야 합니다.",
+                }
+            ]
+        },
+        _surroundings(),
+    )
+
+    assert output.actions is not None
+    assert output.actions[0].verb == "move"
+    assert output.action_checks[0].required is True
+    assert output.action_checks[0].reason == "무너진 길을 조심히 건너야 합니다."
+
+
 def test_validate_action_output_json_accepts_intent_json():
     raw = json.dumps(
         {
@@ -120,7 +165,11 @@ def test_build_action_output_supports_existing_intent_catalog():
         ),
         (
             {"intent": "cast", "skill_id": "slash_01", "target_id": "goblin_01"},
-            {"verb": "cast", "with": "slash_01", "to": "goblin_01"},
+            {"verb": "attack", "what": ["goblin_01"], "with": "slash_01"},
+        ),
+        (
+            {"intent": "cast", "skill_id": "heal_01", "target_id": "player_01"},
+            {"verb": "use", "with": "heal_01", "to": "player_01"},
         ),
         (
             {"intent": "give", "item_id": "dagger_01", "target_id": "guard_01"},
@@ -129,7 +178,7 @@ def test_build_action_output_supports_existing_intent_catalog():
                 "what": "dagger_01",
                 "from": "player_01",
                 "to": "guard_01",
-                "how": "gift",
+                "how": "free",
             },
         ),
         (
@@ -149,7 +198,7 @@ def test_build_action_output_supports_existing_intent_catalog():
                 "what": "fang_01",
                 "from": "corpse_01",
                 "to": "player_01",
-                "how": "gift",
+                "how": "free",
             },
         ),
         (
@@ -183,7 +232,7 @@ def test_build_action_output_supports_existing_intent_catalog():
                 "what": "coin_01",
                 "from": "loc_01",
                 "to": "player_01",
-                "how": "gift",
+                "how": "free",
             },
         ),
         ({"intent": "flee"}, {"verb": "move", "how": "hasty"}, {"in_combat": True}),

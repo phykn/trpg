@@ -21,6 +21,7 @@ class DialoguePair(BaseModel):
     turn: int
     player: str
     narrator: str
+    target_id: str | None = None
 
 
 class GMLogEntry(BaseModel):

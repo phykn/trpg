@@ -1,6 +1,4 @@
 import pytest
-
-from src.game.domain.clock import next_dawn_turn
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.engines.graph.rest import GraphRestError, plan_rest, plan_safe_rest
@@ -85,11 +83,11 @@ def test_safe_rest_restores_hp_mp_and_deducts_gold():
     assert player["gold"] == 5
 
 
-def test_safe_rest_reports_next_dawn_turn():
+def test_safe_rest_advances_one_turn_without_time_phase():
     runtime = _runtime()
     result = plan_safe_rest(runtime, "player_01")
 
-    assert result.next_turn_count == next_dawn_turn(runtime.progress.turn_count)
+    assert result.next_turn_count == runtime.progress.turn_count + 1
 
 
 def test_unsafe_location_is_rejected():

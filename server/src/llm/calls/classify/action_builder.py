@@ -1,6 +1,6 @@
 from typing import Any
 
-from src.game.domain.action import Action, ActionOutput, RefuseReason
+from src.game.domain.action import Action, ActionCheckHint, ActionOutput, RefuseReason
 
 
 def build_action_output(
@@ -14,14 +14,24 @@ def build_action_output(
         raise ValueError("intent output requires non-empty intents")
 
     actions = [_build_action(intent, surroundings) for intent in intents]
+    checks = [_build_check_hint(intent) for intent in intents]
     return ActionOutput.model_validate(
         {
             "actions": [
                 action.model_dump(mode="json", by_alias=True) for action in actions
-            ]
+            ],
+            "action_checks": [check.model_dump(mode="json") for check in checks],
         },
         context={"in_combat": bool(surroundings.get("in_combat", False))},
     )
+
+
+def _build_check_hint(intent: object) -> ActionCheckHint:
+    if not isinstance(intent, dict):
+        raise ValueError("intent must be an object")
+    required = intent.get("check_required") is True
+    reason = _optional_str(intent, "check_reason")
+    return ActionCheckHint(required=required, reason=reason)
 
 
 def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
@@ -53,7 +63,7 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
             what=_required_str(intent, "item_id"),
             from_=_location_id(surroundings),
             to=_player_id(surroundings),
-            how="gift",
+            how="free",
         )
     if name == "give":
         return Action(
@@ -61,7 +71,7 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
             what=_required_str(intent, "item_id"),
             from_=_player_id(surroundings),
             to=_first_str(intent, "target_id", "recipient_id"),
-            how="gift",
+            how="free",
         )
     if name == "steal":
         return Action(
@@ -77,7 +87,7 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
             what=_required_str(intent, "item_id"),
             from_=_first_str(intent, "source_id", "corpse_id"),
             to=_player_id(surroundings),
-            how="gift",
+            how="free",
         )
     if name == "equip":
         return Action(
@@ -111,7 +121,8 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
     if name == "use":
         return Action(
             verb="use",
-            what=_required_str(intent, "item_id"),
+            what=_optional_str(intent, "item_id"),
+            with_=_optional_str(intent, "skill_id"),
             to=_optional_str(intent, "target_id"),
         )
     if name == "attack":
@@ -121,10 +132,14 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
             with_=_optional_str(intent, "skill_id"),
         )
     if name == "cast":
+        skill_id = _required_str(intent, "skill_id")
+        target_id = _optional_str(intent, "target_id")
+        if target_id is not None and _is_attack_target(surroundings, target_id):
+            return Action(verb="attack", what=[target_id], with_=skill_id)
         return Action(
-            verb="cast",
-            with_=_required_str(intent, "skill_id"),
-            to=_optional_str(intent, "target_id"),
+            verb="use",
+            with_=skill_id,
+            to=target_id,
         )
     if name == "flee":
         return Action(verb="move", how="hasty")
@@ -181,3 +196,11 @@ def _dicts(value: object) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         return []
     return [entry for entry in value if isinstance(entry, dict)]
+
+
+def _is_attack_target(surroundings: dict[str, Any], target_id: str) -> bool:
+    for entry in _dicts(surroundings.get("entities")):
+        if entry.get("id") != target_id:
+            continue
+        return entry.get("type") in {"enemy", "monster", "hostile"}
+    return bool(surroundings.get("in_combat", False))

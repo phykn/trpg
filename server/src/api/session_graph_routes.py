@@ -32,7 +32,12 @@ from src.game.runtime.flow.input import (
 from src.game.runtime.flow.level_up import GraphLevelUpError, run_graph_level_up
 from src.game.runtime.flow.level_up_choices import build_level_up_choices
 from src.game.runtime.load import load_runtime_state
-from src.game.runtime.flow.roll import GraphRollError, GraphRollExpected, run_graph_roll
+from src.game.runtime.flow.roll import (
+    GraphRollError,
+    GraphRollExpected,
+    run_graph_roll,
+    run_graph_roll_stream,
+)
 from src.game.runtime.flow.session import (
     initialize_graph_session,
     load_graph_session_state,
@@ -348,6 +353,27 @@ async def session_graph_roll(
         message=result.message,
         suggestions=result.suggestions,
     )
+
+
+@router.post("/session/{game_id}/graph/roll/stream")
+async def session_graph_roll_stream(
+    game_id: str,
+    body: GraphRollRequest,
+    llm: LLMClient = Depends(get_llm),
+    graph_repo: GraphRepo = Depends(get_graph_repo),
+    scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
+) -> StreamingResponse:
+    async def source():
+        async for event in run_graph_roll_stream(
+            llm,
+            graph_repo,
+            game_id,
+            body.roll_id,
+            scenario_repo=scenario_repo,
+        ):
+            yield event
+
+    return _graph_action_streaming_response(game_id, source)
 
 
 @router.post("/session/{game_id}/graph/input", response_model=GraphActionResponse)

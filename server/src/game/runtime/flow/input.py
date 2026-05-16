@@ -2,7 +2,7 @@ import os
 from collections.abc import AsyncIterator, Sequence
 
 from src.db.repo import GraphRepo, ScenarioRepo
-from src.game.domain.action import Action
+from src.game.domain.action import Action, ActionCheckHint
 from src.game.domain.content import node_label
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph.character import is_visible_character
@@ -116,6 +116,7 @@ async def run_graph_input_turn(
         repo,
         runtime,
         actions,
+        output.action_checks,
         player_input,
         scenario_repo=scenario_repo,
     )
@@ -158,6 +159,7 @@ async def run_graph_input_turn_stream(
         repo,
         runtime,
         actions,
+        output.action_checks,
         player_input,
         scenario_repo=scenario_repo,
     ):
@@ -172,6 +174,7 @@ async def _run_classified_actions(
     repo: GraphRepo,
     runtime: GameRuntimeState,
     actions: Sequence[Action],
+    action_checks: Sequence[ActionCheckHint],
     player_input: str,
     *,
     scenario_repo: ScenarioRepo | None = None,
@@ -190,6 +193,7 @@ async def _run_classified_actions(
             runtime,
             player_input,
             action,
+            _check_hint_at(action_checks, index),
             scenario_repo=scenario_repo,
         )
         runtime = result.runtime
@@ -206,6 +210,7 @@ async def _run_classified_actions_stream(
     repo: GraphRepo,
     runtime: GameRuntimeState,
     actions: Sequence[Action],
+    action_checks: Sequence[ActionCheckHint],
     player_input: str,
     *,
     scenario_repo: ScenarioRepo | None = None,
@@ -225,6 +230,7 @@ async def _run_classified_actions_stream(
             runtime,
             player_input,
             action,
+            _check_hint_at(action_checks, index),
             scenario_repo=scenario_repo,
         ):
             if event["type"] == "final":
@@ -254,10 +260,24 @@ async def _run_classified_action(
     runtime: GameRuntimeState,
     player_input: str,
     action: Action,
+    check_hint: ActionCheckHint | None,
     *,
     scenario_repo: ScenarioRepo | None = None,
 ) -> GraphActionRequestResult:
-    if action.verb in {"speak", "pass"}:
+    if _should_start_check_roll(action, check_hint):
+        from .roll import start_graph_roll
+
+        return await start_graph_roll(
+            repo,
+            runtime.progress.game_id,
+            action,
+            reason=check_hint.reason if check_hint is not None else None,
+            scenario_repo=scenario_repo,
+        )
+    if (
+        action.verb in {"speak", "pass"}
+        and runtime.progress.graph_combat_state is None
+    ):
         return await _run_graph_narrative_input(
             client,
             repo,
@@ -290,10 +310,27 @@ async def _run_classified_action_stream(
     runtime: GameRuntimeState,
     player_input: str,
     action: Action,
+    check_hint: ActionCheckHint | None,
     *,
     scenario_repo: ScenarioRepo | None = None,
 ) -> AsyncIterator[dict[str, object]]:
-    if action.verb in {"speak", "pass"}:
+    if _should_start_check_roll(action, check_hint):
+        from .roll import start_graph_roll
+
+        result = await start_graph_roll(
+            repo,
+            runtime.progress.game_id,
+            action,
+            reason=check_hint.reason if check_hint is not None else None,
+            scenario_repo=scenario_repo,
+        )
+        yield {"type": "result", "result": result}
+        yield {"type": "final", "result": result}
+        return
+    if (
+        action.verb in {"speak", "pass"}
+        and runtime.progress.graph_combat_state is None
+    ):
         async for event in _run_graph_narrative_input_stream(
             client,
             repo,
@@ -329,6 +366,26 @@ def _event_result(event: dict[str, object]) -> GraphActionRequestResult:
     if not isinstance(result, GraphActionRequestResult):
         raise GraphInputError("graph input stream requires result events")
     return result
+
+
+def _check_hint_at(
+    action_checks: Sequence[ActionCheckHint],
+    index: int,
+) -> ActionCheckHint | None:
+    if index >= len(action_checks):
+        return None
+    return action_checks[index]
+
+
+def _should_start_check_roll(
+    action: Action,
+    check_hint: ActionCheckHint | None,
+) -> bool:
+    if check_hint is None or not check_hint.required:
+        return False
+    if action.verb in {"move", "use", "speak", "perceive"}:
+        return True
+    return False
 
 
 def _raise_if_pending_input_blocked(runtime: GameRuntimeState) -> None:

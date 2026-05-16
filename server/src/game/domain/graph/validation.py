@@ -30,6 +30,7 @@ _ITEM_PLACEMENT_TO_ITEM: frozenset[EdgeType] = frozenset({"carries", "equips"})
 def validate_graph(graph: Graph) -> None:
     _validate_edge_endpoints(graph)
     _validate_edge_node_types(graph)
+    _validate_equips_owner(graph)
     _validate_item_placement(graph)
     _validate_character_location(graph)
     _validate_quest_trigger_targets(graph)
@@ -53,6 +54,16 @@ def _validate_edge_node_types(graph: Graph) -> None:
                 "edge type mismatch: "
                 f"{edge.type} cannot connect {from_type} to {to_type}"
             )
+
+
+def _validate_equips_owner(graph: Graph) -> None:
+    for edge in graph.edges.values():
+        if edge.type != "equips":
+            continue
+        owner = graph.nodes[edge.from_node_id]
+        if owner.properties.get("is_player") is True or owner.id == "player_01":
+            continue
+        raise GraphInvariantError(f"equips owner must be player: {edge.id}")
 
 
 def _validate_item_placement(graph: Graph) -> None:

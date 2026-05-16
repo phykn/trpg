@@ -159,7 +159,7 @@ def _pickup_action(
         what=item["id"],
         from_=location_id,
         to=player["id"],
-        how="gift",
+        how="free",
     )
 
 
@@ -196,7 +196,7 @@ def _corpse_loot_action(
         what=item["id"],
         from_=corpse["id"],
         to=player["id"],
-        how="gift",
+        how="free",
     )
 
 

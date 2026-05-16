@@ -349,6 +349,7 @@ def test_social_success_and_failure_use_hearts():
     )
 
     assert success.state.enemy_hearts == 2
+    assert success.state.enemy_pressure == 1
     assert success.state.trace[-1].kind == "player_social_success"
     assert failure.state.player_hearts == 2
     assert failure.state.trace[-1].kind == "player_social_failure"
