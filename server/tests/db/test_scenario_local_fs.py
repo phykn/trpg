@@ -37,6 +37,23 @@ async def test_local_seed_records_reuse_cached_files(tmp_path, monkeypatch):
     assert read_count == 1
 
 
+async def test_local_seed_records_can_read_aggregate_kind_file(tmp_path):
+    items_file = tmp_path / "default" / "items.json"
+    _write_json(
+        items_file,
+        {
+            "sword": {"id": "sword", "name": "검"},
+            "shield": {"id": "shield", "name": "방패"},
+        },
+    )
+    repo = LocalFsScenarioRepo(str(tmp_path))
+
+    items = await repo.load_seed_records("default", "items")
+
+    assert set(items) == {"sword", "shield"}
+    assert items["shield"]["name"] == "방패"
+
+
 async def test_local_seed_records_reload_when_file_changes(tmp_path):
     item_file = tmp_path / "default" / "items" / "sword.json"
     _write_json(item_file, {"id": "sword", "name": "검"})
@@ -49,6 +66,24 @@ async def test_local_seed_records_reload_when_file_changes(tmp_path):
 
     assert first["sword"]["name"] == "검"
     assert second["sword"]["name"] == "긴 훈련용 검"
+
+
+async def test_list_profiles_reads_races_from_aggregate_file(tmp_path):
+    _write_json(
+        tmp_path / "default" / "profile.json",
+        {"id": "default", "name": "기본", "description": ""},
+    )
+    _write_json(
+        tmp_path / "default" / "races.json",
+        {"human": {"id": "human", "name": "인간", "description": "다재다능"}},
+    )
+    repo = LocalFsScenarioRepo(str(tmp_path))
+
+    profiles = await repo.list_profiles()
+
+    assert profiles[0]["races"] == [
+        {"id": "human", "name": "인간", "description": "다재다능"}
+    ]
 
 
 async def test_local_json_content_cache_reloads_when_file_changes(tmp_path):

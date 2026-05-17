@@ -1,6 +1,9 @@
 from unittest.mock import patch
 
-from src.game.runtime.narration.result import parse_graph_narration_answer
+from src.game.runtime.narration.result import (
+    VisibleNarrationStream,
+    parse_graph_narration_answer,
+)
 
 
 def test_parse_graph_narration_answer_accepts_structured_suggestions():
@@ -119,3 +122,32 @@ def test_parse_graph_narration_answer_logs_invalid_meta_json():
         err="JSONDecodeError",
         meta_len=1,
     )
+
+
+def test_parse_graph_narration_answer_drops_private_patch_blocks():
+    answer = "\n".join(
+        [
+            "경비가 창고 쪽으로 다가옵니다.",
+            "<STATE_PATCH>",
+            '{"guard_alert": 3}',
+            "</STATE_PATCH>",
+            "---TRPG_META---",
+            '{"suggestions": []}',
+        ]
+    )
+
+    result = parse_graph_narration_answer(answer)
+
+    assert result.narration == "경비가 창고 쪽으로 다가옵니다."
+
+
+def test_visible_narration_stream_stops_before_split_private_marker():
+    stream = VisibleNarrationStream()
+
+    visible = [
+        *stream.push("경비가 다가옵니다.\n<STA"),
+        *stream.push("TE_PATCH>{}"),
+        *stream.finish(),
+    ]
+
+    assert "".join(visible) == "경비가 다가옵니다."

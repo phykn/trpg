@@ -5,6 +5,7 @@ from pathlib import Path
 
 FileSignature = tuple[int, int]
 DirectorySignature = tuple[tuple[str, int, int], ...]
+RecordsSignature = tuple[str, FileSignature | DirectorySignature]
 
 
 class LocalFsScenarioRepo:
@@ -16,7 +17,7 @@ class LocalFsScenarioRepo:
         self._text_cache: dict[Path, tuple[FileSignature, str]] = {}
         self._records_cache: dict[
             tuple[str, str],
-            tuple[DirectorySignature, dict[str, dict]],
+            tuple[RecordsSignature, dict[str, dict]],
         ] = {}
 
     def _root(self, profile: str) -> Path:
@@ -62,20 +63,15 @@ class LocalFsScenarioRepo:
             if not sub.is_dir() or not meta_file.exists():
                 continue
             meta = self._read_json_cached(meta_file)
-            races: list[dict] = []
-            races_dir = sub / "races"
-            if races_dir.is_dir():
-                for rf in sorted(races_dir.glob("*.json")):
-                    rd = self._read_json_cached(rf)
-                    if rd.get("playable", True) is False:
-                        continue
-                    races.append(
-                        {
-                            "id": rd.get("id"),
-                            "name": rd.get("name"),
-                            "description": rd.get("description", ""),
-                        }
-                    )
+            races = [
+                {
+                    "id": rd.get("id"),
+                    "name": rd.get("name"),
+                    "description": rd.get("description", ""),
+                }
+                for rd in (await self.load_seed_records(sub.name, "races")).values()
+                if rd.get("playable", True) is not False
+            ]
             out.append(
                 {
                     "id": meta.get("id", sub.name),
@@ -99,11 +95,26 @@ class LocalFsScenarioRepo:
         return self._read_json_cached(self._root(profile) / "player_template.json")
 
     async def load_seed_records(self, profile: str, kind: str) -> dict[str, dict]:
+        aggregate_path = self._root(profile) / f"{kind}.json"
+        if aggregate_path.is_file():
+            signature: RecordsSignature = (
+                "file",
+                self._file_signature(aggregate_path),
+            )
+            cache_key = (profile, kind)
+            cached = self._records_cache.get(cache_key)
+            if cached is not None and cached[0] == signature:
+                return dict(cached[1])
+
+            records = _records_from_json(self._read_json_cached(aggregate_path))
+            self._records_cache[cache_key] = (signature, records)
+            return dict(records)
+
         dirpath = self._root(profile) / kind
         if not dirpath.is_dir():
             return {}
         files = sorted(dirpath.glob("*.json"))
-        signature = self._directory_signature(files)
+        signature = ("directory", self._directory_signature(files))
         cache_key = (profile, kind)
         cached = self._records_cache.get(cache_key)
         if cached is not None and cached[0] == signature:
@@ -117,3 +128,21 @@ class LocalFsScenarioRepo:
                 records[record_id] = obj
         self._records_cache[cache_key] = (signature, records)
         return dict(records)
+
+
+def _records_from_json(value: object) -> dict[str, dict]:
+    if isinstance(value, list):
+        candidates = value
+    elif isinstance(value, dict):
+        candidates = list(value.values())
+    else:
+        return {}
+
+    records: dict[str, dict] = {}
+    for obj in candidates:
+        if not isinstance(obj, dict):
+            continue
+        record_id = obj.get("id")
+        if isinstance(record_id, str):
+            records[record_id] = obj
+    return records

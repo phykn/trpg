@@ -50,6 +50,32 @@ def test_main_treats_reload_zero_as_disabled(monkeypatch):
     assert kwargs == {"host": "127.0.0.1", "port": 8123}
 
 
+def test_load_env_normalizes_local_repo_paths(monkeypatch):
+    monkeypatch.setenv("SCENARIO_DIR", "../scenarios")
+    monkeypatch.setenv("GRAPH_SAVE_DIR", "../qa_test/dev_graph_saves")
+
+    run_api._normalize_local_paths()
+
+    assert run_api.os.environ["SCENARIO_DIR"] == str(
+        (run_api.SERVER_DIR / "../scenarios").resolve()
+    )
+    assert run_api.os.environ["GRAPH_SAVE_DIR"] == str(
+        (run_api.SERVER_DIR / "../qa_test/dev_graph_saves").resolve()
+    )
+
+
+def test_load_env_leaves_absolute_local_repo_paths(monkeypatch, tmp_path):
+    scenario_dir = tmp_path / "scenarios"
+    graph_dir = tmp_path / "saves"
+    monkeypatch.setenv("SCENARIO_DIR", str(scenario_dir))
+    monkeypatch.setenv("GRAPH_SAVE_DIR", str(graph_dir))
+
+    run_api._normalize_local_paths()
+
+    assert run_api.os.environ["SCENARIO_DIR"] == str(scenario_dir)
+    assert run_api.os.environ["GRAPH_SAVE_DIR"] == str(graph_dir)
+
+
 @pytest.mark.asyncio
 async def test_build_app_allows_localtunnel_bypass_cors_header():
     app = run_api.build_app(

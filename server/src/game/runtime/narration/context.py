@@ -97,13 +97,15 @@ def build_roll_narration_payload(
 ) -> dict[str, Any]:
     target = _action_target(runtime, action)
     check_reason = pending.get("body")
+    player_input = pending.get("player_input")
     return {
-        "player_input": None,
+        "player_input": player_input if isinstance(player_input, str) else None,
         "current_event": {
             "kind": "roll",
             "outcome": outcome,
             "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
             "check_reason": check_reason if isinstance(check_reason, str) else "",
+            "preroll_narration": check_reason if isinstance(check_reason, str) else "",
             "roll": {
                 "check": roll_entry.check,
                 "result": roll_entry.result,
@@ -168,13 +170,15 @@ def build_input_narration_payload(
 def _place_payload(
     runtime: GameRuntimeState,
     node: GraphNode | None,
-) -> dict[str, str] | None:
+) -> dict[str, Any] | None:
     if node is None or node.type != "location":
         return None
     payload = {"id": node.id, "name": node_label(runtime.content, node)}
     description = node_text(runtime.content, node, "description")
     if description:
         payload["description"] = description
+    _add_text_field(runtime, node, payload, "mood")
+    _add_list_field(runtime, node, payload, "traits")
     return payload
 
 
@@ -183,7 +187,7 @@ def _visible_character_payloads(
     place_id: str | None,
     *,
     exclude_id: str,
-) -> list[dict[str, str]]:
+) -> list[dict[str, Any]]:
     if place_id is None:
         return []
     out: list[dict[str, str]] = []
@@ -193,20 +197,26 @@ def _visible_character_payloads(
         node = runtime.graph.nodes.get(character_id)
         if node is None or node.type != "character" or not is_visible_character(node):
             continue
-        out.append(
-            {
-                "id": node.id,
-                "name": node_label(runtime.content, node),
-                "type": graph_character_kind(node),
-            }
-        )
+        payload: dict[str, Any] = {
+            "id": node.id,
+            "name": node_label(runtime.content, node),
+            "type": graph_character_kind(node),
+        }
+        _add_character_style_fields(runtime, node, payload)
+        dialogue_style = _dialogue_style_payload(runtime, node)
+        if dialogue_style:
+            payload["dialogue_style"] = dialogue_style
+        mbti = _mbti_payload(runtime, node)
+        if mbti:
+            payload["mbti"] = mbti
+        out.append(payload)
     return out
 
 
 def _visible_item_payloads(
     runtime: GameRuntimeState,
     place_id: str | None,
-) -> list[dict[str, str]]:
+) -> list[dict[str, Any]]:
     if place_id is None:
         return []
     out: list[dict[str, str]] = []
@@ -244,17 +254,22 @@ def _inventory_payloads(
     return out
 
 
-def _item_payload(runtime: GameRuntimeState, item: GraphNode) -> dict[str, str]:
+def _item_payload(runtime: GameRuntimeState, item: GraphNode) -> dict[str, Any]:
     kind = node_value(runtime.content, item, "kind") or node_value(
         runtime.content,
         item,
         "type",
     )
-    return {
+    payload: dict[str, Any] = {
         "id": item.id,
         "name": node_label(runtime.content, item),
         "kind": kind if isinstance(kind, str) and kind else "item",
     }
+    description = node_text(runtime.content, item, "description")
+    if description:
+        payload["description"] = description
+    _add_list_field(runtime, item, payload, "traits")
+    return payload
 
 
 def _node_ref(runtime: GameRuntimeState, node: GraphNode | None) -> dict[str, str]:
@@ -298,6 +313,19 @@ def _target_view(
     tone_hint = node_text(runtime.content, node, "tone_hint")
     if tone_hint:
         payload["tone_hint"] = tone_hint
+    _add_character_style_fields(runtime, node, payload)
+    faction = _faction_payload(runtime, node)
+    if faction:
+        payload["faction"] = faction
+    dialogue_style = _dialogue_style_payload(runtime, node)
+    if dialogue_style:
+        payload["dialogue_style"] = dialogue_style
+    mbti = _mbti_payload(runtime, node)
+    if mbti:
+        payload["mbti"] = mbti
+    public_knowledge = _public_knowledge_payloads(runtime, node)
+    if public_knowledge:
+        payload["public_knowledge"] = public_knowledge
     hints = _string_list_value(runtime, node, "hints")
     if hints:
         payload["known_hints"] = hints[:3]
@@ -361,6 +389,135 @@ def _string_list_value(
     if not isinstance(value, list):
         return []
     return [item for item in value if isinstance(item, str) and item]
+
+
+def _add_text_field(
+    runtime: GameRuntimeState,
+    node: GraphNode,
+    payload: dict[str, Any],
+    key: str,
+) -> None:
+    value = node_text(runtime.content, node, key)
+    if value:
+        payload[key] = value
+
+
+def _add_list_field(
+    runtime: GameRuntimeState,
+    node: GraphNode,
+    payload: dict[str, Any],
+    key: str,
+) -> None:
+    values = _string_list_value(runtime, node, key)
+    if values:
+        payload[key] = values
+
+
+def _add_character_style_fields(
+    runtime: GameRuntimeState,
+    node: GraphNode,
+    payload: dict[str, Any],
+) -> None:
+    for key in ("personality", "traits"):
+        _add_list_field(runtime, node, payload, key)
+    for key in ("appearance", "personal_boundary", "private_hint"):
+        _add_text_field(runtime, node, payload, key)
+
+
+def _faction_payload(
+    runtime: GameRuntimeState,
+    node: GraphNode,
+) -> dict[str, Any] | None:
+    if node.type != "character":
+        return None
+    for edge in edges_from(runtime.graph_index, node.id, "member_of_faction"):
+        faction = runtime.graph.nodes.get(edge.to_node_id)
+        if faction is None or faction.type != "faction":
+            continue
+        payload: dict[str, Any] = {
+            "id": faction.id,
+            "name": node_label(runtime.content, faction),
+        }
+        description = node_text(runtime.content, faction, "description")
+        if description:
+            payload["description"] = description
+        _add_list_field(runtime, faction, payload, "traits")
+        return payload
+    return None
+
+
+def _dialogue_style_payload(
+    runtime: GameRuntimeState,
+    node: GraphNode,
+) -> dict[str, Any] | None:
+    if node.type != "character":
+        return None
+    for edge in edges_from(runtime.graph_index, node.id, "uses_dialogue_style"):
+        style = runtime.graph.nodes.get(edge.to_node_id)
+        if style is None or style.type != "dialogue_style":
+            continue
+        payload: dict[str, Any] = {
+            "id": style.id,
+            "name": node_label(runtime.content, style),
+        }
+        for key in ("speech_style", "humor_style"):
+            _add_text_field(runtime, style, payload, key)
+        _add_list_field(runtime, style, payload, "traits")
+        return payload
+    return None
+
+
+def _mbti_payload(
+    runtime: GameRuntimeState,
+    node: GraphNode,
+) -> dict[str, Any] | None:
+    if node.type != "character":
+        return None
+    for edge in edges_from(runtime.graph_index, node.id, "has_mbti"):
+        mbti = runtime.graph.nodes.get(edge.to_node_id)
+        if mbti is None or mbti.type != "mbti":
+            continue
+        payload: dict[str, Any] = {"id": mbti.id}
+        for key in (
+            "attitude",
+            "speech_style",
+            "personality",
+            "boundary_style",
+            "humor_style",
+            "decision_style",
+            "stress_response",
+            "trust_response",
+            "conflict_style",
+        ):
+            _add_text_field(runtime, mbti, payload, key)
+        for key in ("roleplay_cues", "avoid"):
+            _add_list_field(runtime, mbti, payload, key)
+        return payload
+    return None
+
+
+def _public_knowledge_payloads(
+    runtime: GameRuntimeState,
+    node: GraphNode,
+) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    for edge in edges_from(runtime.graph_index, node.id, "has_knowledge"):
+        knowledge = runtime.graph.nodes.get(edge.to_node_id)
+        if knowledge is None or knowledge.type != "knowledge":
+            continue
+        visibility = node_value(runtime.content, knowledge, "visibility")
+        if visibility != "public":
+            continue
+        payload: dict[str, str] = {"id": knowledge.id}
+        title = node_value(runtime.content, knowledge, "title")
+        if isinstance(title, str) and title:
+            payload["title"] = title
+        summary = node_value(runtime.content, knowledge, "summary")
+        if isinstance(summary, str) and summary:
+            payload["summary"] = summary
+        if len(payload) > 1:
+            out.append(payload)
+    return out
 
 
 def _input_current_event(

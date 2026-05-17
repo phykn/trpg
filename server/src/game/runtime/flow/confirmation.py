@@ -143,14 +143,17 @@ async def run_graph_action_request_stream(
         )
 
     if should_start_graph_roll(runtime, action):
-        from .roll import start_graph_roll
+        from .roll import run_graph_preroll_stream
 
         engine_diag("action:roll_required", action=action.verb)
-        result = await start_graph_roll(
-            repo, game_id, action, scenario_repo=scenario_repo
-        )
-        yield {"type": "result", "result": result}
-        yield {"type": "final", "result": result}
+        async for event in run_graph_preroll_stream(
+            llm,
+            repo,
+            game_id,
+            action,
+            scenario_repo=scenario_repo,
+        ):
+            yield event
         return
 
     if action.verb == "query":
@@ -308,17 +311,17 @@ async def run_graph_confirm_stream(
     action = load_pending_action(pending, error_type=GraphConfirmationExpected)
     if _requires_roll_after_confirmation(action):
         await repo.save_progress(cleared_progress)
-        from .roll import start_graph_roll
+        from .roll import run_graph_preroll_stream
 
-        result = await start_graph_roll(
+        engine_diag("confirm:done", status="roll_required")
+        async for event in run_graph_preroll_stream(
+            llm,
             repo,
             game_id,
             action,
             scenario_repo=scenario_repo,
-        )
-        engine_diag("confirm:done", status="roll_required")
-        yield {"type": "result", "result": result}
-        yield {"type": "final", "result": result}
+        ):
+            yield event
         return
 
     try:

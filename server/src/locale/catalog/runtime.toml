@@ -435,8 +435,8 @@ ko = "게임 밖 지시에는 응답할 수 없습니다."
 en = "Out-of-game instructions cannot be handled."
 
 [runtime."classify.refuse_out_of_game"]
-ko = "게임 밖 정보 요청입니다."
-en = "That is an out-of-game information request."
+ko = "지금 장면 안에서는 바로 이어가기 어려운 요청입니다."
+en = "That is hard to continue inside the current scene."
 
 [runtime."intro.arrive"]
 ko = "당신은 {place}에 도착합니다."

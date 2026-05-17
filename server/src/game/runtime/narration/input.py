@@ -191,6 +191,47 @@ async def stream_graph_input_rejection_narration(
     llm_diag("llm:done", agent="graph_narrate")
 
 
+async def stream_graph_preroll_narration(
+    client: LLMClient,
+    runtime: GameRuntimeState,
+    player_input: str | None,
+    action: Action,
+    pending_roll: dict[str, object],
+    *,
+    timeout_s: float,
+) -> AsyncIterator[str]:
+    messages = _graph_preroll_narration_messages(
+        runtime,
+        player_input,
+        action,
+        pending_roll,
+    )
+    temperature = _narration_temperature()
+    try:
+        llm_diag("llm:call", agent="graph_narrate")
+        async with asyncio.timeout(timeout_s):
+            async for part in client.chat_stream(
+                messages,
+                think=False,
+                agent="graph_narrate",
+                temperature=temperature,
+            ):
+                answer = part.get("answer")
+                if isinstance(answer, str) and answer:
+                    yield answer
+    except (
+        LLMUnavailable,
+        OSError,
+        TimeoutError,
+        InternalServerError,
+        APIConnectionError,
+        RateLimitError,
+    ) as exc:
+        llm_diag("llm:fail", agent="graph_narrate", err=type(exc).__name__)
+        return
+    llm_diag("llm:done", agent="graph_narrate")
+
+
 def _graph_input_narration_messages(
     runtime: GameRuntimeState,
     player_input: str,
@@ -204,6 +245,44 @@ def _graph_input_narration_messages(
         action=action,
         dialogue_target=subject if subject_id is not None else None,
     )
+    return [
+        {
+            "role": "system",
+            "content": get_prompt("graph_narrate", runtime.progress.locale),
+        },
+        {
+            "role": "user",
+            "content": json.dumps(payload, ensure_ascii=False),
+        },
+    ]
+
+
+def _graph_preroll_narration_messages(
+    runtime: GameRuntimeState,
+    player_input: str | None,
+    action: Action,
+    pending_roll: dict[str, object],
+) -> list[dict[str, str]]:
+    target = _action_target_node(runtime, action)
+    payload = build_input_narration_payload(
+        runtime=runtime,
+        player_input=player_input or "",
+        action=action,
+        dialogue_target=target,
+    )
+    payload["player_input"] = player_input
+    body = pending_roll.get("body")
+    title = pending_roll.get("title")
+    payload["current_event"] = {
+        "kind": "roll_prompt",
+        "outcome": "pending_roll",
+        "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
+        "check_reason": body if isinstance(body, str) else "",
+        "resolved_results": [title, body],
+    }
+    payload["result_cards"] = [
+        {"text": body if isinstance(body, str) else ""},
+    ]
     return [
         {
             "role": "system",

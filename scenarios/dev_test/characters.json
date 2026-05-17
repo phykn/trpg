@@ -1,0 +1,498 @@
+{
+  "archive_clerk_npc": {
+    "id": "archive_clerk_npc",
+    "name": "기록 담당자",
+    "description": "다른 장소의 NPC 대화와 단서 회수 안내를 확인하기 위한 기록 담당자.",
+    "appearance": "책상 옆에서 봉인 표식을 정리하는 담당자입니다.",
+    "private_hint": "봉인된 보고서의 분류 번호가 맞지 않는 것을 이미 눈치챘지만, 확정 전에는 말하기를 꺼립니다.",
+    "traits": [
+      "보고서와 봉인 표식을 관리합니다",
+      "확인되지 않은 말은 조심합니다",
+      "단서 획득 흐름을 안내합니다"
+    ],
+    "is_player": false,
+    "role": "기록 안내",
+    "race_id": "human",
+    "job": "기록 담당",
+    "gender": "none",
+    "level": 1,
+    "stats": {
+      "body": 8,
+      "agility": 8,
+      "mind": 12,
+      "presence": 10
+    },
+    "alive": true,
+    "location_id": "archive_room",
+    "inventory_ids": [],
+    "gold": 0,
+    "xp_pool": 0,
+    "xp_reward": 0,
+    "disposition": {
+      "lawful": 70,
+      "moral": 60,
+      "aggressive": 0
+    },
+    "relations": {
+      "player_01": 15
+    },
+    "hints": [
+      "밀봉된 보고서를 가져가면 획득 퀘스트를 확인할 수 있습니다.",
+      "함정 통로를 지나 기록 보관실로 들어오는 이동도 확인할 수 있습니다."
+    ],
+    "knowledge_ids": [
+      "report_public_clue",
+      "report_private_note"
+    ],
+    "racial_skill_ids": [],
+    "learned_skill_ids": [],
+    "status": [
+      "대화 가능",
+      "기록 안내"
+    ],
+    "active_buffs": [],
+    "memories": [],
+    "death_saves": null,
+    "revive_coins": 0,
+    "protected": true,
+    "companions": [],
+    "mbti": "ISTJ"
+  },
+  "companion_probe_npc": {
+    "id": "companion_probe_npc",
+    "name": "동행 점검자",
+    "description": "동료 표시와 동행 이동을 확인하기 위한 테스트 동료. 활발하고 솔직해서 테스트 상황에 바로 반응합니다.",
+    "appearance": "작은 체크리스트를 들고 당신 옆에 바짝 서 있는 점검자입니다. 말하고 싶은 것을 참지 못하는 표정입니다.",
+    "private_hint": "사실 혼자 남아서 테스트 로그만 정리하는 일을 지루해합니다. 누군가 함께 움직여 주는 동행 테스트를 꽤 좋아합니다.",
+    "traits": [
+      "동행 상태를 관찰합니다",
+      "전투보다 이동과 위치 확인에 관심이 많습니다",
+      "플레이어의 질문에 에둘러 말하지 않습니다",
+      "어색한 침묵을 오래 견디지 못합니다"
+    ],
+    "is_player": false,
+    "role": "동행 테스트 동료",
+    "faction_id": "test_staff",
+    "race_id": "human",
+    "job": "점검자",
+    "gender": "none",
+    "level": 1,
+    "stats": {
+      "body": 8,
+      "agility": 10,
+      "mind": 10,
+      "presence": 10
+    },
+    "alive": true,
+    "location_id": "test_hub",
+    "inventory_ids": [],
+    "gold": 0,
+    "xp_pool": 0,
+    "xp_reward": 0,
+    "disposition": {
+      "lawful": 60,
+      "moral": 60,
+      "aggressive": 0
+    },
+    "relations": {
+      "player_01": 40
+    },
+    "hints": [
+      "준비실로 이동하면 동행 점검자도 함께 이동해야 합니다.",
+      "동행 점검자는 전투보다 이동과 인물 패널 확인에 쓰입니다."
+    ],
+    "racial_skill_ids": [],
+    "learned_skill_ids": [],
+    "status": [
+      "동행",
+      "대화 가능"
+    ],
+    "active_buffs": [],
+    "memories": [],
+    "death_saves": null,
+    "revive_coins": 0,
+    "protected": true,
+    "companions": [],
+    "mbti": "ENFP"
+  },
+  "guide_npc": {
+    "id": "guide_npc",
+    "name": "테스트 가이드",
+    "description": "개발 테스트를 안내하는 NPC. 대화와 퀘스트 제안을 확인하기 위해 배치되어 있습니다.",
+    "appearance": "단정한 회색 코트를 입은 안내자. 손에는 작은 기록판을 들고 있습니다.",
+    "private_hint": "이전 테스트에서 안내 순서가 꼬인 일을 아직 신경 쓰고 있습니다. 그래서 절차가 흐트러지는 질문에 더 빨리 반응합니다.",
+    "traits": [
+      "테스트 가능한 행동을 안내합니다",
+      "직접 파티원이 되지는 않습니다"
+    ],
+    "is_player": false,
+    "role": "기능 테스트 안내자",
+    "faction_id": "test_staff",
+    "race_id": "human",
+    "job": "가이드",
+    "gender": "none",
+    "level": 1,
+    "stats": {
+      "body": 10,
+      "agility": 10,
+      "mind": 10,
+      "presence": 10
+    },
+    "alive": true,
+    "location_id": "test_hub",
+    "inventory_ids": [
+      "guide_pointer",
+      "guide_note"
+    ],
+    "gold": 5,
+    "xp_pool": 0,
+    "xp_reward": 0,
+    "disposition": {
+      "lawful": 70,
+      "moral": 70,
+      "aggressive": 5
+    },
+    "relations": {
+      "player_01": 0
+    },
+    "hints": [
+      "훈련 전투 퀘스트를 시작하면 허수아비를 처치하는 흐름을 확인할 수 있습니다.",
+      "처음부터 레벨업에 필요한 경험치를 가지고 있습니다.",
+      "보급 표식을 줍고, 부상 점검자에게 회복 약초를 쓰고, 준비실로 이동하면 짧은 완료형 테스트를 확인할 수 있습니다.",
+      "보급품 누락 퀘스트는 마을 주민에게 보급품을 받은 뒤 반납 처리로 확인할 수 있습니다."
+    ],
+    "racial_skill_ids": [
+      "training_strike"
+    ],
+    "learned_skill_ids": [],
+    "status": [
+      "대화 가능",
+      "퀘스트 안내"
+    ],
+    "active_buffs": [],
+    "memories": [],
+    "death_saves": null,
+    "revive_coins": 0,
+    "protected": true,
+    "companions": [],
+    "mbti": "ESTJ"
+  },
+  "heavy_training_golem": {
+    "id": "heavy_training_golem",
+    "name": "중장 훈련 골렘",
+    "description": "도주, 방어, 장기 전투, 패배 가능성을 확인하기 위한 튼튼한 훈련 적.",
+    "appearance": "두꺼운 목재 판과 충격 완화 장치를 두른 훈련용 골렘입니다.",
+    "traits": [
+      "말하지 않습니다",
+      "두꺼운 목재 판으로 보호되어 있습니다",
+      "강한 충격과 압박을 테스트합니다"
+    ],
+    "is_player": false,
+    "role": "강한 전투 테스트 대상",
+    "race_id": "human",
+    "job": "훈련 대상",
+    "gender": "none",
+    "level": 2,
+    "stats": {
+      "body": 16,
+      "agility": 6,
+      "mind": 1,
+      "presence": 1
+    },
+    "alive": true,
+    "location_id": "hazard_yard",
+    "inventory_ids": [],
+    "gold": 0,
+    "xp_pool": 0,
+    "xp_reward": 30,
+    "disposition": {
+      "lawful": 0,
+      "moral": 0,
+      "aggressive": 95
+    },
+    "relations": {},
+    "hints": [],
+    "racial_skill_ids": [],
+    "learned_skill_ids": [],
+    "status": [
+      "훈련 대상"
+    ],
+    "active_buffs": [],
+    "memories": [],
+    "death_saves": null,
+    "revive_coins": 0,
+    "protected": false,
+    "companions": [],
+    "mbti": "ISTP"
+  },
+  "injured_tester_npc": {
+    "id": "injured_tester_npc",
+    "name": "부상 점검자",
+    "description": "다른 대상에게 회복 아이템을 사용하는 흐름을 확인하기 위한 NPC.",
+    "appearance": "팔에 붕대를 감고 의자에 앉아 있는 점검자입니다.",
+    "private_hint": "다친 이유를 대수롭지 않게 말하지만, 사실은 같은 실수를 또 할까 봐 걱정하고 있습니다.",
+    "traits": [
+      "회복 아이템 사용 결과에 민감하게 반응합니다",
+      "현재 부상 상태입니다"
+    ],
+    "is_player": false,
+    "role": "회복 대상",
+    "race_id": "human",
+    "job": "부상 점검자",
+    "gender": "none",
+    "level": 1,
+    "stats": {
+      "body": 8,
+      "agility": 8,
+      "mind": 8,
+      "presence": 8
+    },
+    "hp": 2,
+    "max_hp": 5,
+    "mp": 1,
+    "max_mp": 3,
+    "alive": true,
+    "location_id": "test_hub",
+    "inventory_ids": [],
+    "gold": 0,
+    "xp_pool": 0,
+    "xp_reward": 0,
+    "disposition": {
+      "lawful": 50,
+      "moral": 60,
+      "aggressive": 0
+    },
+    "relations": {
+      "player_01": 10
+    },
+    "hints": [
+      "회복 약초를 부상 점검자에게 사용하면 대상 지정 아이템 사용을 확인할 수 있습니다."
+    ],
+    "racial_skill_ids": [],
+    "learned_skill_ids": [],
+    "status": [
+      "부상",
+      "대화 가능"
+    ],
+    "active_buffs": [],
+    "memories": [],
+    "death_saves": null,
+    "revive_coins": 0,
+    "protected": true,
+    "companions": [],
+    "mbti": "ISFJ"
+  },
+  "quartermaster_npc": {
+    "id": "quartermaster_npc",
+    "name": "보급 담당자",
+    "description": "아이템, 장비, 휴식 관련 QA 입력을 받아 주는 보급 NPC.",
+    "appearance": "짧은 앞치마를 두르고 보급 선반 앞에 서 있습니다.",
+    "private_hint": "누락된 보급품 때문에 장부 숫자가 맞지 않아 신경이 예민해져 있습니다.",
+    "traits": [
+      "보급품 수량을 자주 확인합니다",
+      "거래와 아이템 사용을 안내합니다",
+      "불필요한 낭비를 싫어합니다"
+    ],
+    "is_player": false,
+    "role": "보급 안내",
+    "faction_id": "supply_team",
+    "race_id": "human",
+    "job": "보급 담당",
+    "gender": "none",
+    "level": 1,
+    "stats": {
+      "body": 8,
+      "agility": 8,
+      "mind": 12,
+      "presence": 12
+    },
+    "alive": true,
+    "location_id": "supply_corner",
+    "inventory_ids": [
+      "shop_healing_herb",
+      "shop_mana_draught"
+    ],
+    "gold": 20,
+    "xp_pool": 0,
+    "xp_reward": 0,
+    "disposition": {
+      "lawful": 60,
+      "moral": 60,
+      "aggressive": 0
+    },
+    "relations": {
+      "player_01": 20
+    },
+    "hints": [
+      "회복 약초와 마나 시약은 사용 흐름을 확인하는 아이템입니다.",
+      "훈련 조끼와 구리 반지는 장비 슬롯 확인에 쓰입니다.",
+      "보급품 누락을 물으면 반납 처리 퀘스트를 시작할 수 있습니다."
+    ],
+    "racial_skill_ids": [],
+    "learned_skill_ids": [],
+    "status": [
+      "대화 가능",
+      "보급 안내"
+    ],
+    "active_buffs": [],
+    "memories": [],
+    "death_saves": null,
+    "revive_coins": 0,
+    "protected": true,
+    "companions": [],
+    "mbti": "ESTJ"
+  },
+  "training_dummy": {
+    "id": "training_dummy",
+    "name": "훈련용 허수아비",
+    "description": "전투 시작, 공격 확인창, 승리 처리, 퀘스트 완료를 빠르게 확인하기 위한 훈련용 적.",
+    "appearance": "낡은 천과 나무 막대로 만든 허수아비. 가슴에는 붉은 표식이 그려져 있습니다.",
+    "traits": [
+      "움직이지 않습니다",
+      "말하지 않습니다",
+      "타격 테스트용 대상입니다"
+    ],
+    "is_player": false,
+    "role": "전투 테스트 대상",
+    "race_id": "human",
+    "job": "훈련 대상",
+    "gender": "none",
+    "level": 1,
+    "stats": {
+      "body": 4,
+      "agility": 6,
+      "mind": 1,
+      "presence": 1
+    },
+    "alive": true,
+    "location_id": "test_hub",
+    "inventory_ids": [],
+    "gold": 0,
+    "xp_pool": 0,
+    "xp_reward": 20,
+    "disposition": {
+      "lawful": 10,
+      "moral": 10,
+      "aggressive": 90
+    },
+    "relations": {},
+    "hints": [],
+    "racial_skill_ids": [
+      "training_strike"
+    ],
+    "learned_skill_ids": [],
+    "status": [],
+    "active_buffs": [],
+    "memories": [],
+    "death_saves": null,
+    "revive_coins": 0,
+    "protected": false,
+    "companions": [],
+    "mbti": "ISTP"
+  },
+  "village_resident": {
+    "id": "village_resident",
+    "name": "마을 주민",
+    "description": "다중 NPC 패널, 대화 기억, 대명사 추정 방지를 확인하기 위한 중립 주민.",
+    "appearance": "작은 천 가방을 들고 테스트 허브 가장자리에 서 있습니다.",
+    "private_hint": "누락된 보급품을 들고 있는 것이 부담스럽지만, 직접 보급 담당자에게 가기는 어색해합니다.",
+    "traits": [
+      "누락된 보급품을 가지고 있습니다",
+      "성별 대명사 없이 묘사합니다",
+      "보급품 반납 흐름을 시작할 수 있습니다"
+    ],
+    "is_player": false,
+    "role": "대화 테스트 주민",
+    "faction_id": "village_locals",
+    "race_id": "human",
+    "job": "주민",
+    "gender": "none",
+    "level": 1,
+    "stats": {
+      "body": 8,
+      "agility": 8,
+      "mind": 10,
+      "presence": 10
+    },
+    "alive": true,
+    "location_id": "test_hub",
+    "inventory_ids": [
+      "missing_supply_bundle"
+    ],
+    "gold": 0,
+    "xp_pool": 0,
+    "xp_reward": 0,
+    "disposition": {
+      "lawful": 50,
+      "moral": 50,
+      "aggressive": 5
+    },
+    "relations": {
+      "player_01": 0
+    },
+    "hints": [
+      "테스트 허브에는 가이드, 주민, 허수아비가 함께 있습니다.",
+      "테스트 허브는 이동, 대화, 전투, 보급 흐름을 확인하는 장소입니다.",
+      "누락된 보급품에는 주민의 사정이 연결되어 있습니다.",
+      "누락된 보급품을 달라고 하면 보급품 반납 흐름을 확인할 수 있습니다."
+    ],
+    "racial_skill_ids": [],
+    "learned_skill_ids": [],
+    "status": [
+      "대화 가능"
+    ],
+    "active_buffs": [],
+    "memories": [],
+    "death_saves": null,
+    "revive_coins": 0,
+    "protected": true,
+    "companions": [],
+    "mbti": "ISFJ"
+  },
+  "weak_training_rat": {
+    "id": "weak_training_rat",
+    "name": "훈련 들쥐",
+    "description": "짧은 일반 공격과 즉시 승리 흐름을 확인하기 위한 약한 적.",
+    "appearance": "작은 천 꼬리표를 단 훈련용 들쥐입니다.",
+    "traits": [
+      "말하지 않습니다",
+      "작고 빠릅니다",
+      "짧은 전투 테스트에 쓰입니다"
+    ],
+    "is_player": false,
+    "role": "약한 전투 테스트 대상",
+    "race_id": "human",
+    "job": "훈련 대상",
+    "gender": "none",
+    "level": 1,
+    "stats": {
+      "body": 4,
+      "agility": 8,
+      "mind": 1,
+      "presence": 1
+    },
+    "alive": true,
+    "location_id": "test_hub",
+    "inventory_ids": [],
+    "gold": 0,
+    "xp_pool": 0,
+    "xp_reward": 5,
+    "disposition": {
+      "lawful": 0,
+      "moral": 0,
+      "aggressive": 70
+    },
+    "relations": {},
+    "hints": [],
+    "racial_skill_ids": [],
+    "learned_skill_ids": [],
+    "status": [],
+    "active_buffs": [],
+    "memories": [],
+    "death_saves": null,
+    "revive_coins": 0,
+    "protected": false,
+    "companions": [],
+    "mbti": "ISFP"
+  }
+}

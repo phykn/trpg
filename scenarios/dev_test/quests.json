@@ -1,0 +1,239 @@
+{
+  "q_archive_report": {
+    "id": "q_archive_report",
+    "title": "보고서 회수",
+    "summary": "기록 보관실의 밀봉된 보고서를 주워 장소 이동, 아이템 획득, 기록 NPC 대화를 확인합니다.",
+    "giver_id": "archive_clerk_npc",
+    "difficulty": "easy",
+    "prerequisite_ids": [],
+    "triggers": [
+      {
+        "id": "obtain_sealed_report",
+        "name": "밀봉된 보고서 줍기",
+        "type": "item_obtained",
+        "target_id": "sealed_report"
+      }
+    ],
+    "fail_triggers": [],
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    },
+    "status": "pending",
+    "required": false,
+    "requires_acceptance": false,
+    "triggers_met": [
+      false
+    ],
+    "fail_triggers_met": []
+  },
+  "q_companion_move": {
+    "id": "q_companion_move",
+    "title": "동행 이동 확인",
+    "summary": "준비실로 이동해 동행 점검자도 함께 이동하는지 확인합니다.",
+    "giver_id": "guide_npc",
+    "difficulty": "easy",
+    "prerequisite_ids": [],
+    "triggers": [
+      {
+        "id": "enter_test_room_with_companion",
+        "name": "준비실로 이동",
+        "type": "location_enter",
+        "target_id": "test_room"
+      }
+    ],
+    "fail_triggers": [],
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    },
+    "status": "pending",
+    "required": false,
+    "requires_acceptance": false,
+    "triggers_met": [
+      false
+    ],
+    "fail_triggers_met": []
+  },
+  "q_first_aid": {
+    "id": "q_first_aid",
+    "title": "응급 처치 확인",
+    "summary": "부상 점검자에게 회복 약초를 사용해 대상 지정 아이템 사용과 보상 지급을 확인합니다.",
+    "giver_id": "guide_npc",
+    "difficulty": "easy",
+    "prerequisite_ids": [],
+    "triggers": [
+      {
+        "id": "use_healing_herb",
+        "name": "회복 약초 사용",
+        "type": "item_use",
+        "target_id": "healing_herb"
+      }
+    ],
+    "fail_triggers": [],
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": [
+        "first_aid_badge"
+      ]
+    },
+    "status": "pending",
+    "required": false,
+    "requires_acceptance": false,
+    "triggers_met": [
+      false
+    ],
+    "fail_triggers_met": []
+  },
+  "q_hazard_scout": {
+    "id": "q_hazard_scout",
+    "title": "함정 통로 정찰",
+    "summary": "함정 통로에 들어가 위험 장소 진입, 휴식 위험, 환경 아이템 노출을 확인합니다.",
+    "giver_id": "guide_npc",
+    "difficulty": "easy",
+    "prerequisite_ids": [],
+    "triggers": [
+      {
+        "id": "enter_trap_corridor",
+        "name": "함정 통로 진입",
+        "type": "location_enter",
+        "target_id": "trap_corridor"
+      }
+    ],
+    "fail_triggers": [],
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    },
+    "status": "pending",
+    "required": false,
+    "requires_acceptance": false,
+    "triggers_met": [
+      false
+    ],
+    "fail_triggers_met": []
+  },
+  "q_heavy_golem_badge": {
+    "id": "q_heavy_golem_badge",
+    "title": "중장 골렘 검증",
+    "summary": "위험 훈련장의 중장 훈련 골렘을 제압해 강한 전투와 보상 아이템 지급을 확인합니다.",
+    "giver_id": "quartermaster_npc",
+    "difficulty": "hard",
+    "prerequisite_ids": [],
+    "triggers": [
+      {
+        "id": "defeat_heavy_training_golem",
+        "name": "중장 훈련 골렘 제압",
+        "type": "character_death",
+        "target_id": "heavy_training_golem"
+      }
+    ],
+    "fail_triggers": [],
+    "rewards": {
+      "gold": 2,
+      "exp": 20,
+      "items": [
+        "reward_badge"
+      ]
+    },
+    "status": "pending",
+    "required": false,
+    "requires_acceptance": true,
+    "triggers_met": [
+      false
+    ],
+    "fail_triggers_met": []
+  },
+  "q_missing_supplies": {
+    "id": "q_missing_supplies",
+    "title": "보급품 누락",
+    "summary": "마을 주민에게서 누락된 보급품을 받은 뒤 사용해 반납 처리와 퀘스트 완료를 확인합니다.",
+    "description": "보급 담당자는 누락된 보급품을 찾고 있고, 마을 주민은 사정이 있어 그것을 잠시 들고 있습니다.",
+    "giver_id": "quartermaster_npc",
+    "difficulty": "easy",
+    "prerequisite_ids": [],
+    "triggers": [
+      {
+        "id": "resolve_missing_supplies",
+        "name": "누락된 보급품 반납",
+        "type": "item_use",
+        "target_id": "missing_supply_bundle"
+      }
+    ],
+    "fail_triggers": [],
+    "rewards": {
+      "gold": 1,
+      "exp": 0,
+      "items": []
+    },
+    "status": "pending",
+    "required": false,
+    "requires_acceptance": false,
+    "triggers_met": [
+      false
+    ],
+    "fail_triggers_met": []
+  },
+  "q_supply_pickup": {
+    "id": "q_supply_pickup",
+    "title": "바닥 아이템 회수",
+    "summary": "테스트 허브의 보급 표식을 주워 바닥 아이템 획득과 보상 처리를 확인합니다.",
+    "giver_id": "guide_npc",
+    "difficulty": "easy",
+    "prerequisite_ids": [],
+    "triggers": [
+      {
+        "id": "obtain_supply_token",
+        "name": "보급 표식 줍기",
+        "type": "item_obtained",
+        "target_id": "supply_token"
+      }
+    ],
+    "fail_triggers": [],
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    },
+    "status": "pending",
+    "required": false,
+    "requires_acceptance": false,
+    "triggers_met": [
+      false
+    ],
+    "fail_triggers_met": []
+  },
+  "q_training_combat": {
+    "id": "q_training_combat",
+    "title": "훈련 전투",
+    "summary": "훈련용 허수아비를 쓰러뜨려 전투 시작, 승리, 보상 지급 흐름을 확인합니다.",
+    "giver_id": "guide_npc",
+    "difficulty": "easy",
+    "prerequisite_ids": [],
+    "triggers": [
+      {
+        "id": "defeat_training_dummy",
+        "name": "훈련용 허수아비 쓰러뜨리기",
+        "type": "character_death",
+        "target_id": "training_dummy"
+      }
+    ],
+    "fail_triggers": [],
+    "rewards": {
+      "gold": 1,
+      "exp": 10,
+      "items": []
+    },
+    "status": "pending",
+    "required": false,
+    "requires_acceptance": true,
+    "triggers_met": [
+      false
+    ],
+    "fail_triggers_met": []
+  }
+}

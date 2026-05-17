@@ -2,6 +2,7 @@ from typing import Any
 
 from src.game.domain.combat import GraphCombatTraceEvent
 from src.game.domain.content import node_label
+from src.game.domain.graph import GraphNode
 from src.locale.terms import nonlethal_markers
 from src.locale.render import render
 
@@ -69,6 +70,8 @@ def combat_narration_view(
         "enemy_pressure": state.enemy_pressure if state is not None else 0,
         "outcome": outcome or (state.outcome if state is not None else None),
         "events": [_event_view(runtime, event) for event in events],
+        "support_effect": _support_effect_view(runtime),
+        "statuses": _status_views(runtime),
         "tone": _combat_tone(runtime),
     }
 
@@ -88,6 +91,70 @@ def _event_view(
         ),
         "target_condition": _condition_label(runtime.progress.locale, event.state),
     }
+
+
+def _support_effect_view(runtime: GameRuntimeState) -> dict[str, Any] | None:
+    state = runtime.progress.graph_combat_state
+    if state is None or state.last_support_id is None:
+        return None
+    support = runtime.graph.nodes.get(state.last_support_id)
+    if support is None:
+        return None
+    effect_id = support.properties.get("effect_template")
+    if not isinstance(effect_id, str) or not effect_id:
+        return None
+    effect = runtime.graph.nodes.get(effect_id)
+    if effect is None or effect.type != "support_effect":
+        return None
+    payload: dict[str, Any] = {
+        "id": effect.id,
+        "name": node_label(runtime.content, effect),
+    }
+    record = runtime.content.support_effects.get(effect.id, {})
+    description = record.get("description")
+    if isinstance(description, str) and description:
+        payload["description"] = description
+    traits = record.get("traits")
+    if isinstance(traits, list):
+        payload["traits"] = [item for item in traits if isinstance(item, str) and item]
+    return payload
+
+
+def _status_views(runtime: GameRuntimeState) -> list[dict[str, Any]]:
+    state = runtime.progress.graph_combat_state
+    if state is None or state.last_support_id is None:
+        return []
+    support = runtime.graph.nodes.get(state.last_support_id)
+    if support is None:
+        return []
+    statuses: list[dict[str, Any]] = []
+    for status_id in _str_list(support.properties.get("status_ids")):
+        status = runtime.graph.nodes.get(status_id)
+        if status is None or status.type != "status":
+            continue
+        statuses.append(_status_view(runtime, status))
+    return statuses
+
+
+def _status_view(runtime: GameRuntimeState, status: GraphNode) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "id": status.id,
+        "name": node_label(runtime.content, status),
+    }
+    record = runtime.content.statuses.get(status.id, {})
+    description = record.get("description")
+    if isinstance(description, str) and description:
+        payload["description"] = description
+    traits = record.get("traits")
+    if isinstance(traits, list):
+        payload["traits"] = [item for item in traits if isinstance(item, str) and item]
+    return payload
+
+
+def _str_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str)]
 
 
 def _exchange_result(events: list[GraphCombatTraceEvent]) -> str:

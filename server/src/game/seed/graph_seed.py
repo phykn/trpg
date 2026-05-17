@@ -53,9 +53,23 @@ def build_seed_graph(
     template: dict[str, Any],
     game_id: str,
     locale: str = "ko",
+    support_effects: SeedRecords | None = None,
+    statuses: SeedRecords | None = None,
+    factions: SeedRecords | None = None,
+    action_categories: SeedRecords | None = None,
+    knowledge: SeedRecords | None = None,
+    dialogue_styles: SeedRecords | None = None,
+    mbti: SeedRecords | None = None,
 ) -> SeedGraphBundle:
     player_record = _build_player(player, races, start, template)
     characters = {**npcs, _record_id(player_record): player_record}
+    support_effect_records = support_effects or {}
+    status_records = statuses or {}
+    faction_records = factions or {}
+    action_category_records = action_categories or {}
+    knowledge_records = knowledge or {}
+    dialogue_style_records = dialogue_styles or {}
+    mbti_records = mbti or {}
 
     nodes: dict[str, GraphNode] = {}
     edges: dict[str, GraphEdge] = {}
@@ -106,6 +120,48 @@ def build_seed_graph(
         )
     for skill in skills.values():
         add_node(_record_id(skill), "skill", _node_properties(skill))
+    for support_effect in support_effect_records.values():
+        add_node(
+            _record_id(support_effect),
+            "support_effect",
+            _node_properties(support_effect),
+        )
+    for status in status_records.values():
+        add_node(
+            _record_id(status),
+            "status",
+            _node_properties(status),
+        )
+    for faction in faction_records.values():
+        add_node(
+            _record_id(faction),
+            "faction",
+            _node_properties(faction, exclude={"relations"}),
+        )
+    for action_category in action_category_records.values():
+        add_node(
+            _record_id(action_category),
+            "action_category",
+            _node_properties(action_category),
+        )
+    for knowledge_record in knowledge_records.values():
+        add_node(
+            _record_id(knowledge_record),
+            "knowledge",
+            _node_properties(knowledge_record),
+        )
+    for dialogue_style in dialogue_style_records.values():
+        add_node(
+            _record_id(dialogue_style),
+            "dialogue_style",
+            _node_properties(dialogue_style),
+        )
+    for mbti_record in mbti_records.values():
+        add_node(
+            _record_id(mbti_record),
+            "mbti",
+            _node_properties(mbti_record),
+        )
     for race in races.values():
         add_node(
             _record_id(race),
@@ -156,9 +212,20 @@ def build_seed_graph(
         for target_id, affinity in _mapping(character.get("relations")).items():
             if isinstance(target_id, str) and isinstance(affinity, int):
                 add_edge("relation", character_id, target_id, {"affinity": affinity})
+        if faction_id := _optional_str(character.get("faction_id")):
+            if faction_id in faction_records:
+                add_edge("member_of_faction", character_id, faction_id)
+        if dialogue_style_id := _optional_str(character.get("dialogue_style_id")):
+            if dialogue_style_id in dialogue_style_records:
+                add_edge("uses_dialogue_style", character_id, dialogue_style_id)
+        if mbti_id := _optional_str(character.get("mbti")):
+            if mbti_id in mbti_records:
+                add_edge("has_mbti", character_id, mbti_id)
+        _add_knowledge_edges(add_edge, character, knowledge_records)
 
     for location in locations.values():
         location_id = _record_id(location)
+        _add_knowledge_edges(add_edge, location, knowledge_records)
         for item_id in _str_list(location.get("item_ids")):
             add_edge("located_at", item_id, location_id)
         for connection in _dict_list(location.get("connections")):
@@ -189,10 +256,27 @@ def build_seed_graph(
         for skill_id in _str_list(race.get("racial_skill_ids")):
             add_edge("grants_skill", race_id, skill_id)
 
+    for item in items.values():
+        _add_support_effect_edge(add_edge, item, "item", support_effect_records)
+        _add_status_edges(add_edge, item, "item", status_records)
+        _add_knowledge_edges(add_edge, item, knowledge_records)
+    for skill in skills.values():
+        _add_support_effect_edge(add_edge, skill, "skill", support_effect_records)
+        _add_status_edges(add_edge, skill, "skill", status_records)
+        _add_action_category_edge(add_edge, skill, action_category_records)
+
     for chapter in chapters.values():
         chapter_id = _record_id(chapter)
         for quest_id in _str_list(chapter.get("quest_ids")):
             add_edge("part_of_chapter", quest_id, chapter_id)
+
+    for faction in faction_records.values():
+        faction_id = _record_id(faction)
+        for target_id, relation in _mapping(faction.get("relations")).items():
+            if not isinstance(target_id, str) or target_id not in faction_records:
+                continue
+            properties = {"relation": relation} if isinstance(relation, str) else {}
+            add_edge("faction_relation", faction_id, target_id, properties)
 
     progress = GameProgress(
         game_id=game_id,
@@ -207,6 +291,13 @@ def build_seed_graph(
         locations=locations,
         items=items,
         skills=skills,
+        support_effects=support_effect_records,
+        statuses=status_records,
+        factions=faction_records,
+        action_categories=action_category_records,
+        knowledge=knowledge_records,
+        dialogue_styles=dialogue_style_records,
+        mbti=mbti_records,
         characters=npcs,
         quests=quests,
         chapters=chapters,
@@ -268,6 +359,65 @@ def _quest_graph_properties(quest: SeedRecord) -> dict[str, Any]:
     return properties
 
 
+def _add_support_effect_edge(
+    add_edge,
+    record: SeedRecord,
+    source_type: str,
+    support_effects: SeedRecords,
+) -> None:
+    effect_id = _optional_str(record.get("effect_template"))
+    if effect_id is None or effect_id not in support_effects:
+        return
+    source_id = _record_id(record)
+    add_edge(
+        "uses_support_effect",
+        source_id,
+        effect_id,
+        {"source_type": source_type},
+    )
+
+
+def _add_status_edges(
+    add_edge,
+    record: SeedRecord,
+    source_type: str,
+    statuses: SeedRecords,
+) -> None:
+    source_id = _record_id(record)
+    for status_id in _str_list(record.get("status_ids")):
+        if status_id not in statuses:
+            continue
+        add_edge(
+            "applies_status",
+            source_id,
+            status_id,
+            {"source_type": source_type},
+        )
+
+
+def _add_action_category_edge(
+    add_edge,
+    skill: SeedRecord,
+    action_categories: SeedRecords,
+) -> None:
+    action_category_id = _optional_str(skill.get("action_category_id"))
+    if action_category_id is None or action_category_id not in action_categories:
+        return
+    add_edge("uses_action_category", _record_id(skill), action_category_id)
+
+
+def _add_knowledge_edges(
+    add_edge,
+    record: SeedRecord,
+    knowledge: SeedRecords,
+) -> None:
+    source_id = _record_id(record)
+    for knowledge_id in _str_list(record.get("knowledge_ids")):
+        if knowledge_id not in knowledge:
+            continue
+        add_edge("has_knowledge", source_id, knowledge_id)
+
+
 def _character_graph_properties(character: SeedRecord) -> dict[str, Any]:
     is_player = character.get("is_player") is True
     properties = _node_properties(
@@ -277,6 +427,8 @@ def _character_graph_properties(character: SeedRecord) -> dict[str, Any]:
             "equipment",
             "inventory_ids",
             "relations",
+            "faction_id",
+            "dialogue_style_id",
             "racial_skill_ids",
             "learned_skill_ids",
             "companions",

@@ -1,0 +1,22 @@
+{
+  "id": "player_01",
+  "level": 1,
+  "equipment": {
+    "weapon": "practice_dagger"
+  },
+  "inventory_ids": [
+    "practice_dagger",
+    "focus_charm",
+    "smoke_bomb",
+    "throwing_knife",
+    "training_vest",
+    "copper_ring",
+    "healing_herb",
+    "mana_draught"
+  ],
+  "companions": [
+    "companion_probe_npc"
+  ],
+  "gold": 10,
+  "xp_pool": 1
+}

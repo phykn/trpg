@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "server"))
 
 from src.db.scenario.local_fs import LocalFsScenarioRepo  # noqa: E402
-from src.game.seed.validation import seed_violations  # noqa: E402
+from src.game.seed.validation import seed_violations, seed_warnings  # noqa: E402
 
 
 def main(argv: list[str]) -> int:
@@ -30,32 +30,55 @@ def main(argv: list[str]) -> int:
         return 2
 
     repo = LocalFsScenarioRepo(str(scenario_dir.parent))
-    violations = _load_violations(repo, scenario_dir.name)
+    violations, warnings = _load_checks(repo, scenario_dir.name)
     if not violations:
-        print(f"OK: {scenario_dir} ({len(violations)} violations)")
+        print(
+            f"OK: {scenario_dir} ({len(violations)} violations, "
+            f"{len(warnings)} warnings)"
+        )
+        for warning in warnings:
+            print(f"  warning: {warning}")
         return 0
-    print(f"FAIL: {scenario_dir} ({len(violations)} violations)")
+    print(
+        f"FAIL: {scenario_dir} ({len(violations)} violations, "
+        f"{len(warnings)} warnings)"
+    )
     for v in violations:
         print(f"  {v}")
+    for warning in warnings:
+        print(f"  warning: {warning}")
     return 1
 
 
-def _load_violations(repo: LocalFsScenarioRepo, profile: str) -> list[str]:
-    async def _load() -> list[str]:
+def _load_checks(
+    repo: LocalFsScenarioRepo,
+    profile: str,
+) -> tuple[list[str], list[str]]:
+    async def _load() -> tuple[list[str], list[str]]:
         try:
             start = await repo.read_start_json(profile)
         except FileNotFoundError:
             start = {}
-        return seed_violations(
+        records = dict(
             races=await repo.load_seed_records(profile, "races"),
             locations=await repo.load_seed_records(profile, "locations"),
             items=await repo.load_seed_records(profile, "items"),
             skills=await repo.load_seed_records(profile, "skills"),
+            support_effects=await repo.load_seed_records(profile, "support_effects"),
+            statuses=await repo.load_seed_records(profile, "statuses"),
+            factions=await repo.load_seed_records(profile, "factions"),
+            action_categories=await repo.load_seed_records(
+                profile, "action_categories"
+            ),
+            knowledge=await repo.load_seed_records(profile, "knowledge"),
+            dialogue_styles=await repo.load_seed_records(profile, "dialogue_styles"),
+            mbti=await repo.load_seed_records(profile, "mbti"),
             npcs=await repo.load_seed_records(profile, "characters"),
             quests=await repo.load_seed_records(profile, "quests"),
             chapters=await repo.load_seed_records(profile, "chapters"),
             start=start,
         )
+        return seed_violations(**records), seed_warnings(**records)
 
     return asyncio.run(_load())
 

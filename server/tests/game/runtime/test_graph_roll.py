@@ -6,7 +6,11 @@ from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.rules import RULES
 from src.game.runtime.flow.confirmation import run_graph_action_request
-from src.game.runtime.flow.confirmation import run_graph_confirm
+from src.game.runtime.flow.confirmation import (
+    run_graph_action_request_stream,
+    run_graph_confirm,
+    run_graph_confirm_stream,
+)
 from src.game.runtime.flow.roll import (
     GraphRollExpected,
     build_pending_roll,
@@ -212,6 +216,39 @@ async def test_graph_action_request_difficult_move_creates_pending_roll(tmp_path
 
     assert result.status == "roll_required"
     assert progress.pending_roll["kind"] == "move"
+
+
+async def test_graph_action_request_stream_roll_uses_llm_preroll_narration(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.edges["connects_to:town:forest"].properties["difficulty"] = "easy"
+    await repo.save_graph("game-1", graph)
+    llm = _RollStreamLLM("숲길 입구의 흙이 발끝에서 살짝 밀립니다.")
+
+    events = [
+        event
+        async for event in run_graph_action_request_stream(
+            repo,
+            "game-1",
+            Action(verb="move", to="forest"),
+            llm=llm,
+        )
+    ]
+    progress = await repo.load_progress("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert events[0]["type"] == "result"
+    assert events[-1]["type"] == "final"
+    deltas = [event for event in events[1:-1] if event["type"] == "narration_delta"]
+    assert len(deltas) >= 1
+    assert events[0]["result"].status == "roll_required"
+    assert events[0]["result"].front_state.pending_roll.body == ""
+    assert events[-1]["result"].front_state.pending_roll.body == llm.narration
+    assert "".join(event["text"] for event in deltas) == llm.narration
+    assert progress.pending_roll["body"] == llm.narration
+    assert [entry.kind for entry in logs] == ["gm"]
+    assert logs[0].text == llm.narration
+    assert llm.calls[0]["agent"] == "graph_narrate"
 
 
 def test_build_pending_roll_stores_original_action_payload():
@@ -498,6 +535,49 @@ async def test_steal_requires_confirmation_then_roll_and_failure_does_not_transf
     assert graph.edges["relation:guard_01:player_01"].properties["affinity"] == (
         RULES.social.affinity_failure
     )
+
+
+async def test_graph_confirm_stream_roll_uses_llm_preroll_narration(tmp_path):
+    repo = await _repo(tmp_path)
+    await _add_guard_coin(repo)
+    confirmation = await run_graph_action_request(
+        repo,
+        "game-1",
+        Action(
+            verb="transfer",
+            what="coin_01",
+            from_="guard_01",
+            to="player_01",
+            how="steal",
+        ),
+    )
+    llm = _RollStreamLLM("경비병의 손이 주머니 근처에서 멈춥니다.")
+
+    events = [
+        event
+        async for event in run_graph_confirm_stream(
+            repo,
+            "game-1",
+            confirmation.pending_confirmation["id"],
+            "confirm",
+            llm=llm,
+        )
+    ]
+    progress = await repo.load_progress("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert events[0]["type"] == "result"
+    assert events[-1]["type"] == "final"
+    deltas = [event for event in events[1:-1] if event["type"] == "narration_delta"]
+    assert len(deltas) >= 1
+    assert events[0]["result"].status == "roll_required"
+    assert events[0]["result"].front_state.pending_roll.body == ""
+    assert events[-1]["result"].front_state.pending_roll.body == llm.narration
+    assert "".join(event["text"] for event in deltas) == llm.narration
+    assert progress.pending_confirmation is None
+    assert progress.pending_roll["body"] == llm.narration
+    assert logs[-1].text == llm.narration
+    assert llm.calls[0]["agent"] == "graph_narrate"
 
 
 async def test_run_graph_roll_resolves_pending_roll_and_appends_roll_log(tmp_path):

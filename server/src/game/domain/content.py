@@ -14,6 +14,13 @@ _NODE_COLLECTIONS = {
     "location": "locations",
     "quest": "quests",
     "skill": "skills",
+    "support_effect": "support_effects",
+    "status": "statuses",
+    "faction": "factions",
+    "action_category": "action_categories",
+    "knowledge": "knowledge",
+    "dialogue_style": "dialogue_styles",
+    "mbti": "mbti",
     "race": "races",
     "chapter": "chapters",
 }
@@ -26,6 +33,13 @@ class RuntimeContent(BaseModel):
     locations: SeedRecords = Field(default_factory=dict)
     items: SeedRecords = Field(default_factory=dict)
     skills: SeedRecords = Field(default_factory=dict)
+    support_effects: SeedRecords = Field(default_factory=dict)
+    statuses: SeedRecords = Field(default_factory=dict)
+    factions: SeedRecords = Field(default_factory=dict)
+    action_categories: SeedRecords = Field(default_factory=dict)
+    knowledge: SeedRecords = Field(default_factory=dict)
+    dialogue_styles: SeedRecords = Field(default_factory=dict)
+    mbti: SeedRecords = Field(default_factory=dict)
     characters: SeedRecords = Field(default_factory=dict)
     quests: SeedRecords = Field(default_factory=dict)
     chapters: SeedRecords = Field(default_factory=dict)
@@ -40,12 +54,26 @@ def runtime_content_from_records(
     characters: SeedRecords,
     quests: SeedRecords,
     chapters: SeedRecords,
+    support_effects: SeedRecords | None = None,
+    statuses: SeedRecords | None = None,
+    factions: SeedRecords | None = None,
+    action_categories: SeedRecords | None = None,
+    knowledge: SeedRecords | None = None,
+    dialogue_styles: SeedRecords | None = None,
+    mbti: SeedRecords | None = None,
 ) -> RuntimeContent:
     return RuntimeContent(
         races=races,
         locations=locations,
         items=items,
         skills=skills,
+        support_effects=support_effects or {},
+        statuses=statuses or {},
+        factions=factions or {},
+        action_categories=action_categories or {},
+        knowledge=knowledge or {},
+        dialogue_styles=dialogue_styles or {},
+        mbti=mbti or {},
         characters=characters,
         quests=quests,
         chapters=chapters,
@@ -58,6 +86,16 @@ def merge_content(base: RuntimeContent, overlay: RuntimeContent) -> RuntimeConte
         locations={**base.locations, **overlay.locations},
         items={**base.items, **overlay.items},
         skills={**base.skills, **overlay.skills},
+        support_effects={**base.support_effects, **overlay.support_effects},
+        statuses={**base.statuses, **overlay.statuses},
+        factions={**base.factions, **overlay.factions},
+        action_categories={
+            **base.action_categories,
+            **overlay.action_categories,
+        },
+        knowledge={**base.knowledge, **overlay.knowledge},
+        dialogue_styles={**base.dialogue_styles, **overlay.dialogue_styles},
+        mbti={**base.mbti, **overlay.mbti},
         characters={**base.characters, **overlay.characters},
         quests={**base.quests, **overlay.quests},
         chapters={**base.chapters, **overlay.chapters},

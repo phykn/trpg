@@ -66,6 +66,22 @@ async def test_load_seed_records_reads_each_file():
     assert items["sword"]["name"] == "검"
 
 
+async def test_load_seed_records_reads_aggregate_kind_file():
+    repo, fs = make_scenario_repo()
+    fs.objects["default/items.json"] = json.dumps(
+        {
+            "sword": {"id": "sword", "name": "검"},
+            "shield": {"id": "shield", "name": "방패"},
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+
+    items = await repo.load_seed_records("default", "items")
+
+    assert set(items) == {"sword", "shield"}
+    assert items["shield"]["name"] == "방패"
+
+
 async def test_list_profiles_walks_top_level_dirs():
     repo, fs = make_scenario_repo()
     fs.objects["default/profile.json"] = json.dumps(
@@ -84,3 +100,25 @@ async def test_list_profiles_walks_top_level_dirs():
     default = next(p for p in profiles if p["id"] == "default")
     assert default["name"] == "기본"
     assert [r["id"] for r in default["races"]] == ["human"]
+
+
+async def test_list_profiles_reads_races_from_aggregate_file():
+    repo, fs = make_scenario_repo()
+    fs.objects["default/profile.json"] = json.dumps(
+        {"id": "default", "name": "기본", "description": ""}
+    ).encode("utf-8")
+    fs.objects["default/races.json"] = json.dumps(
+        {"human": {"id": "human", "name": "인간", "description": "다재다능"}},
+        ensure_ascii=False,
+    ).encode("utf-8")
+
+    profiles = await repo.list_profiles()
+
+    assert profiles == [
+        {
+            "id": "default",
+            "name": "기본",
+            "description": "",
+            "races": [{"id": "human", "name": "인간", "description": "다재다능"}],
+        }
+    ]

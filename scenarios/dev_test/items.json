@@ -1,0 +1,345 @@
+{
+  "copper_ring": {
+    "id": "copper_ring",
+    "name": "구리 반지",
+    "description": "장신구 슬롯과 인벤토리 표시를 확인하기 위한 단순한 반지.",
+    "traits": [
+      "구리빛이 납니다",
+      "장신구 슬롯 확인에 쓰입니다",
+      "마법 효과는 없습니다"
+    ],
+    "weight": 0.1,
+    "price": 4,
+    "slot_hint": "accessory",
+    "effects": {
+      "type": "accessory"
+    },
+    "required": null,
+    "consumable": false,
+    "on_use": null
+  },
+  "first_aid_badge": {
+    "id": "first_aid_badge",
+    "name": "응급 처치 표식",
+    "description": "부상 점검자 회복 흐름을 완료했을 때 지급되는 확인용 표식.",
+    "traits": [
+      "응급 처치 완료를 표시합니다",
+      "작고 가벼운 배지입니다",
+      "보상 지급 확인에 쓰입니다"
+    ],
+    "weight": 0.1,
+    "price": 1,
+    "effects": null,
+    "required": null,
+    "consumable": false,
+    "on_use": null
+  },
+  "focus_charm": {
+    "id": "focus_charm",
+    "name": "집중 부적",
+    "description": "실패했을 때 하트 손실을 한 번 막는 일회용 부적.",
+    "traits": [
+      "손에 쥐면 차갑습니다",
+      "방어적인 지원 행동에 어울립니다",
+      "사용하면 사라지는 일회용 부적입니다"
+    ],
+    "weight": 0.1,
+    "price": 5,
+    "effects": {
+      "type": "consumable",
+      "effect": "buff",
+      "amount": 0,
+      "description": "집중",
+      "duration": 2
+    },
+    "support_action": "defend",
+    "effect_template": "prevent_heart_loss",
+    "status_ids": [
+      "focused"
+    ],
+    "support_bonus": 0,
+    "required": null,
+    "consumable": true,
+    "on_use": null
+  },
+  "guide_note": {
+    "id": "guide_note",
+    "name": "안내 기록판",
+    "description": "테스트 가이드의 소지품 표시를 확인하기 위한 얇은 기록판.",
+    "traits": [
+      "점검 항목이 빽빽하게 적혀 있습니다",
+      "테스트 가이드의 소지품입니다",
+      "대화 중 절차적인 분위기를 만듭니다"
+    ],
+    "weight": 0.3,
+    "price": 2,
+    "effects": null,
+    "required": null,
+    "consumable": false,
+    "on_use": null
+  },
+  "guide_pointer": {
+    "id": "guide_pointer",
+    "name": "안내 지휘봉",
+    "description": "테스트 가이드의 장비 표시를 확인하기 위한 짧은 지휘봉.",
+    "traits": [
+      "짧고 단단합니다",
+      "대상을 가리키는 안내 도구입니다",
+      "가벼운 훈련용 무기로도 쓸 수 있습니다"
+    ],
+    "weight": 0.5,
+    "price": 3,
+    "effects": {
+      "type": "weapon",
+      "weapon_dice": "1d4",
+      "range": 1.5
+    },
+    "required": null,
+    "consumable": false,
+    "on_use": null
+  },
+  "healing_herb": {
+    "id": "healing_herb",
+    "name": "회복 약초",
+    "description": "HP 회복 아이템 사용과 만피 사용 가드를 확인하기 위한 약초.",
+    "traits": [
+      "씁쓸한 약초 냄새가 납니다",
+      "HP 회복에 쓰입니다",
+      "이미 건강한 대상에게는 낭비될 수 있습니다"
+    ],
+    "weight": 0.1,
+    "price": 3,
+    "effects": {
+      "type": "consumable",
+      "effect": "heal",
+      "amount": 8
+    },
+    "required": null,
+    "consumable": true,
+    "on_use": null
+  },
+  "loose_wire": {
+    "id": "loose_wire",
+    "name": "느슨한 철사",
+    "description": "함정 통로에서 획득, 환경 단서, 위험물 확인을 테스트하기 위한 철사 조각.",
+    "traits": [
+      "바닥에서 반짝입니다",
+      "함정 단서처럼 보입니다",
+      "조심하지 않으면 발에 걸릴 수 있습니다"
+    ],
+    "weight": 0.2,
+    "price": 1,
+    "effects": null,
+    "required": null,
+    "consumable": false,
+    "on_use": null
+  },
+  "mana_draught": {
+    "id": "mana_draught",
+    "name": "마나 시약",
+    "description": "MP 회복 아이템 사용과 만마 사용 가드를 확인하기 위한 작은 시약.",
+    "traits": [
+      "병 안쪽에서 푸른빛이 돕니다",
+      "MP 회복에 쓰입니다",
+      "이미 마나가 충분하면 쓸 필요가 없습니다"
+    ],
+    "weight": 0.1,
+    "price": 3,
+    "effects": {
+      "type": "consumable",
+      "effect": "mp_restore",
+      "amount": 6
+    },
+    "required": null,
+    "consumable": true,
+    "on_use": null
+  },
+  "missing_supply_bundle": {
+    "id": "missing_supply_bundle",
+    "name": "누락된 보급품",
+    "description": "보급품 누락 퀘스트에 쓰는 작은 꾸러미입니다. 마을 주민에게서 받아 보급 담당자 앞에서 반납할 수 있습니다.",
+    "traits": [
+      "끈이 급하게 묶여 있습니다",
+      "보급 담당자에게 반납할 물건입니다",
+      "마을 주민의 부탁과 연결되어 있습니다"
+    ],
+    "weight": 1,
+    "price": 0,
+    "effects": null,
+    "required": null,
+    "consumable": true,
+    "on_use": "누락된 보급품을 보급 담당자에게 반납합니다."
+  },
+  "practice_dagger": {
+    "id": "practice_dagger",
+    "name": "훈련 단검",
+    "description": "장비한 동안 공격 판정을 조금 돕는 가벼운 단검.",
+    "traits": [
+      "날이 무디게 처리되어 있습니다",
+      "가벼운 공격 테스트에 어울립니다",
+      "장비 슬롯 확인에 쓰입니다"
+    ],
+    "weight": 1.0,
+    "price": 10,
+    "effects": {
+      "type": "weapon",
+      "weapon_dice": "1d4",
+      "range": 1.5
+    },
+    "support_action": "attack",
+    "effect_template": "dc_down",
+    "support_bonus": 1,
+    "required": null,
+    "consumable": false,
+    "on_use": null
+  },
+  "reward_badge": {
+    "id": "reward_badge",
+    "name": "검증 배지",
+    "description": "퀘스트 완료 후 보상 아이템 지급을 확인하기 위한 작은 배지.",
+    "traits": [
+      "완료 확인용 표식입니다",
+      "작고 가볍습니다",
+      "퀘스트 보상 지급 확인에 쓰입니다"
+    ],
+    "weight": 0.1,
+    "price": 1,
+    "effects": null,
+    "required": null,
+    "consumable": false,
+    "on_use": null
+  },
+  "sealed_report": {
+    "id": "sealed_report",
+    "name": "밀봉된 보고서",
+    "description": "기록 보관실에서 줍는 단서 아이템. 획득 퀘스트와 노트 갱신 흐름을 확인합니다.",
+    "traits": [
+      "봉인 표식이 붙어 있습니다",
+      "기록 보관실의 단서입니다",
+      "획득 퀘스트와 연결됩니다"
+    ],
+    "knowledge_ids": [
+      "report_public_clue"
+    ],
+    "weight": 0.1,
+    "price": 0,
+    "effects": null,
+    "required": null,
+    "consumable": false,
+    "on_use": null
+  },
+  "shop_healing_herb": {
+    "id": "shop_healing_herb",
+    "name": "상점 회복 약초",
+    "description": "보급 담당자에게서 구매하는 HP 회복 아이템.",
+    "traits": [
+      "상점 판매용으로 묶여 있습니다",
+      "HP 회복에 쓰입니다",
+      "보급 담당자의 거래 흐름을 확인합니다"
+    ],
+    "weight": 0.1,
+    "price": 3,
+    "effects": {
+      "type": "consumable",
+      "effect": "heal",
+      "amount": 8
+    },
+    "required": null,
+    "consumable": true,
+    "on_use": null
+  },
+  "shop_mana_draught": {
+    "id": "shop_mana_draught",
+    "name": "상점 마나 시약",
+    "description": "보급 담당자에게서 구매하는 MP 회복 아이템.",
+    "traits": [
+      "상점 판매용 라벨이 붙어 있습니다",
+      "MP 회복에 쓰입니다",
+      "보급 담당자의 거래 흐름을 확인합니다"
+    ],
+    "weight": 0.1,
+    "price": 3,
+    "effects": {
+      "type": "consumable",
+      "effect": "mp_restore",
+      "amount": 6
+    },
+    "required": null,
+    "consumable": true,
+    "on_use": null
+  },
+  "smoke_bomb": {
+    "id": "smoke_bomb",
+    "name": "연막탄",
+    "description": "도주 판정을 크게 돕는 일회용 도구.",
+    "traits": [
+      "작은 원통형 도구입니다",
+      "도주를 돕는 지원 아이템입니다",
+      "사용하면 사라지는 일회용 도구입니다"
+    ],
+    "weight": 0.2,
+    "price": 8,
+    "support_action": "flee",
+    "effect_template": "escape_boost",
+    "support_bonus": 4,
+    "required": null,
+    "consumable": true,
+    "on_use": null
+  },
+  "supply_token": {
+    "id": "supply_token",
+    "name": "보급 표식",
+    "description": "바닥 아이템 획득 흐름을 확인하기 위한 작은 표식.",
+    "traits": [
+      "바닥에 희미하게 표시되어 있습니다",
+      "상호작용 가능한 보급 표시입니다"
+    ],
+    "weight": 0.1,
+    "price": 1,
+    "effects": null,
+    "required": null,
+    "consumable": false,
+    "on_use": null
+  },
+  "throwing_knife": {
+    "id": "throwing_knife",
+    "name": "투척 단검",
+    "description": "공격 판정을 크게 돕고 소모되는 단검.",
+    "traits": [
+      "손에 쥐기 좋은 균형입니다",
+      "공격을 돕는 소모성 도구입니다",
+      "멀리 던지는 행동에 어울립니다"
+    ],
+    "weight": 0.5,
+    "price": 6,
+    "support_action": "attack",
+    "effect_template": "dc_down",
+    "support_bonus": 3,
+    "required": null,
+    "consumable": true,
+    "on_use": null
+  },
+  "training_vest": {
+    "id": "training_vest",
+    "name": "훈련 조끼",
+    "description": "장비 슬롯 교체와 방어구 표시를 확인하기 위한 가벼운 조끼.",
+    "traits": [
+      "충격을 조금 흡수합니다",
+      "방어구 슬롯 확인에 쓰입니다",
+      "훈련용이라 움직임을 크게 방해하지 않습니다"
+    ],
+    "weight": 1.5,
+    "price": 8,
+    "slot_hint": "armor",
+    "effects": {
+      "type": "armor",
+      "armor": 1
+    },
+    "status_ids": [
+      "guarded"
+    ],
+    "required": null,
+    "consumable": false,
+    "on_use": null
+  }
+}

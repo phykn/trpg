@@ -391,3 +391,353 @@ def test_build_seed_graph_links_missing_supplies_quest():
         graph.edges["relation:village_resident:player_01"].properties["affinity"] == 0
     )
     assert graph.edges["relation:guide_npc:player_01"].properties["affinity"] == 0
+
+
+def test_build_seed_graph_links_support_effects_from_skills_and_items():
+    bundle = build_seed_graph(
+        profile_name="default",
+        player=PlayerInput(name="테스터", race_id="human", gender="female"),
+        races={"human": {"id": "human", "name": "인간", "description": ""}},
+        locations={"town": {"id": "town", "name": "마을"}},
+        items={
+            "practice_dagger": {
+                "id": "practice_dagger",
+                "name": "훈련 단검",
+                "support_action": "attack",
+                "effect_template": "dc_down",
+            }
+        },
+        skills={
+            "training_strike": {
+                "id": "training_strike",
+                "name": "훈련 일격",
+                "action": "attack",
+                "effect_template": "dc_down",
+            }
+        },
+        support_effects={
+            "dc_down": {
+                "id": "dc_down",
+                "name": "난이도 감소",
+                "description": "판정 난이도를 낮춥니다.",
+            }
+        },
+        npcs={},
+        quests={},
+        chapters={},
+        start={
+            "start_location_id": "town",
+            "active_subject_id": None,
+            "active_quest_id": None,
+        },
+        template={
+            "id": "player_01",
+            "inventory_ids": ["practice_dagger"],
+            "equipment": {},
+        },
+        game_id="game-1",
+        locale="ko",
+    )
+
+    graph = bundle.graph
+    assert graph.nodes["dc_down"].type == "support_effect"
+    assert (
+        graph.edges["uses_support_effect:practice_dagger:dc_down"].type
+        == "uses_support_effect"
+    )
+    assert (
+        graph.edges["uses_support_effect:training_strike:dc_down"].type
+        == "uses_support_effect"
+    )
+    assert bundle.content.support_effects["dc_down"]["name"] == "난이도 감소"
+
+
+def test_build_seed_graph_links_statuses_from_skills_and_items():
+    bundle = build_seed_graph(
+        profile_name="default",
+        player=PlayerInput(name="테스터", race_id="human", gender="female"),
+        races={"human": {"id": "human", "name": "인간", "description": ""}},
+        locations={"town": {"id": "town", "name": "마을"}},
+        items={
+            "focus_charm": {
+                "id": "focus_charm",
+                "name": "집중 부적",
+                "status_ids": ["focused"],
+            }
+        },
+        skills={
+            "focus_bolt": {
+                "id": "focus_bolt",
+                "name": "집중 화살",
+                "status_ids": ["focused"],
+            }
+        },
+        statuses={
+            "focused": {
+                "id": "focused",
+                "name": "집중",
+                "description": "주의가 흐트러지지 않은 상태입니다.",
+            }
+        },
+        npcs={},
+        quests={},
+        chapters={},
+        start={
+            "start_location_id": "town",
+            "active_subject_id": None,
+            "active_quest_id": None,
+        },
+        template={
+            "id": "player_01",
+            "inventory_ids": ["focus_charm"],
+            "equipment": {},
+        },
+        game_id="game-1",
+        locale="ko",
+    )
+
+    graph = bundle.graph
+    assert graph.nodes["focused"].type == "status"
+    assert graph.edges["applies_status:focus_charm:focused"].type == "applies_status"
+    assert graph.edges["applies_status:focus_bolt:focused"].type == "applies_status"
+    assert bundle.content.statuses["focused"]["name"] == "집중"
+
+
+def test_build_seed_graph_links_characters_to_factions():
+    bundle = build_seed_graph(
+        profile_name="default",
+        player=PlayerInput(name="테스터", race_id="human", gender="female"),
+        races={"human": {"id": "human", "name": "인간", "description": ""}},
+        locations={"town": {"id": "town", "name": "마을"}},
+        items={},
+        skills={},
+        factions={
+            "test_staff": {
+                "id": "test_staff",
+                "name": "테스트 직원단",
+                "description": "테스트 절차를 관리하는 사람들.",
+                "relations": {"supply_team": "cooperative"},
+            },
+            "supply_team": {
+                "id": "supply_team",
+                "name": "보급팀",
+            },
+        },
+        npcs={
+            "guide": {
+                "id": "guide",
+                "name": "가이드",
+                "race_id": "human",
+                "location_id": "town",
+                "faction_id": "test_staff",
+            }
+        },
+        quests={},
+        chapters={},
+        start={
+            "start_location_id": "town",
+            "active_subject_id": None,
+            "active_quest_id": None,
+        },
+        template={"id": "player_01"},
+        game_id="game-1",
+        locale="ko",
+    )
+
+    graph = bundle.graph
+    assert graph.nodes["test_staff"].type == "faction"
+    assert graph.nodes["supply_team"].type == "faction"
+    assert graph.edges["member_of_faction:guide:test_staff"].type == (
+        "member_of_faction"
+    )
+    assert graph.edges["faction_relation:test_staff:supply_team"].properties == {
+        "relation": "cooperative"
+    }
+    assert bundle.content.factions["test_staff"]["name"] == "테스트 직원단"
+
+
+def test_build_seed_graph_links_skills_to_action_categories():
+    bundle = build_seed_graph(
+        profile_name="default",
+        player=PlayerInput(name="테스터", race_id="human", gender="female"),
+        races={"human": {"id": "human", "name": "인간", "description": ""}},
+        locations={"town": {"id": "town", "name": "마을"}},
+        items={},
+        skills={
+            "spark": {
+                "id": "spark",
+                "name": "불꽃",
+                "action_category_id": "combat_attack",
+            }
+        },
+        action_categories={
+            "combat_attack": {
+                "id": "combat_attack",
+                "name": "공격",
+                "default_stat": "body",
+            }
+        },
+        npcs={},
+        quests={},
+        chapters={},
+        start={
+            "start_location_id": "town",
+            "active_subject_id": None,
+            "active_quest_id": None,
+        },
+        template={"id": "player_01", "learned_skill_ids": ["spark"]},
+        game_id="game-1",
+        locale="ko",
+    )
+
+    graph = bundle.graph
+    assert graph.nodes["combat_attack"].type == "action_category"
+    assert graph.edges["uses_action_category:spark:combat_attack"].type == (
+        "uses_action_category"
+    )
+    assert bundle.content.action_categories["combat_attack"]["default_stat"] == "body"
+
+
+def test_build_seed_graph_links_knowledge_from_world_records():
+    bundle = build_seed_graph(
+        profile_name="default",
+        player=PlayerInput(name="테스터", race_id="human", gender="female"),
+        races={"human": {"id": "human", "name": "인간", "description": ""}},
+        locations={
+            "archive": {
+                "id": "archive",
+                "name": "기록실",
+                "knowledge_ids": ["report_clue"],
+            }
+        },
+        items={
+            "sealed_report": {
+                "id": "sealed_report",
+                "name": "밀봉된 보고서",
+                "knowledge_ids": ["report_clue"],
+            }
+        },
+        skills={},
+        knowledge={
+            "report_clue": {
+                "id": "report_clue",
+                "title": "보고서 단서",
+                "visibility": "public",
+            }
+        },
+        npcs={
+            "clerk": {
+                "id": "clerk",
+                "name": "기록 담당자",
+                "race_id": "human",
+                "location_id": "archive",
+                "knowledge_ids": ["report_clue"],
+            }
+        },
+        quests={},
+        chapters={},
+        start={
+            "start_location_id": "archive",
+            "active_subject_id": None,
+            "active_quest_id": None,
+        },
+        template={"id": "player_01"},
+        game_id="game-1",
+        locale="ko",
+    )
+
+    graph = bundle.graph
+    assert graph.nodes["report_clue"].type == "knowledge"
+    assert graph.edges["has_knowledge:archive:report_clue"].type == "has_knowledge"
+    assert graph.edges["has_knowledge:sealed_report:report_clue"].type == (
+        "has_knowledge"
+    )
+    assert graph.edges["has_knowledge:clerk:report_clue"].type == "has_knowledge"
+    assert bundle.content.knowledge["report_clue"]["title"] == "보고서 단서"
+
+
+def test_build_seed_graph_links_characters_to_dialogue_styles():
+    bundle = build_seed_graph(
+        profile_name="default",
+        player=PlayerInput(name="테스터", race_id="human", gender="female"),
+        races={"human": {"id": "human", "name": "인간", "description": ""}},
+        locations={"town": {"id": "town", "name": "마을"}},
+        items={},
+        skills={},
+        dialogue_styles={
+            "procedural": {
+                "id": "procedural",
+                "name": "절차형 말투",
+                "speech_style": "짧고 기록문 같은 말투",
+            }
+        },
+        npcs={
+            "guide": {
+                "id": "guide",
+                "name": "가이드",
+                "race_id": "human",
+                "location_id": "town",
+                "dialogue_style_id": "procedural",
+            }
+        },
+        quests={},
+        chapters={},
+        start={
+            "start_location_id": "town",
+            "active_subject_id": None,
+            "active_quest_id": None,
+        },
+        template={"id": "player_01"},
+        game_id="game-1",
+        locale="ko",
+    )
+
+    graph = bundle.graph
+    assert graph.nodes["procedural"].type == "dialogue_style"
+    assert graph.edges["uses_dialogue_style:guide:procedural"].type == (
+        "uses_dialogue_style"
+    )
+    assert bundle.content.dialogue_styles["procedural"]["name"] == "절차형 말투"
+
+
+def test_build_seed_graph_links_characters_to_mbti_records():
+    bundle = build_seed_graph(
+        profile_name="default",
+        player=PlayerInput(name="테스터", race_id="human", gender="female"),
+        races={"human": {"id": "human", "name": "인간", "description": ""}},
+        locations={"town": {"id": "town", "name": "마을"}},
+        items={},
+        skills={},
+        mbti={
+            "ENFP": {
+                "id": "ENFP",
+                "speech_style": "말이 빠르고 감탄이 많습니다.",
+            }
+        },
+        npcs={
+            "guide": {
+                "id": "guide",
+                "name": "가이드",
+                "race_id": "human",
+                "location_id": "town",
+                "mbti": "ENFP",
+            }
+        },
+        quests={},
+        chapters={},
+        start={
+            "start_location_id": "town",
+            "active_subject_id": None,
+            "active_quest_id": None,
+        },
+        template={"id": "player_01"},
+        game_id="game-1",
+        locale="ko",
+    )
+
+    graph = bundle.graph
+    assert graph.nodes["ENFP"].type == "mbti"
+    assert graph.edges["has_mbti:guide:ENFP"].type == "has_mbti"
+    assert bundle.content.mbti["ENFP"]["speech_style"] == (
+        "말이 빠르고 감탄이 많습니다."
+    )

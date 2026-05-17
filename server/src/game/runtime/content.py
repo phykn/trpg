@@ -11,6 +11,19 @@ async def load_runtime_content(
         locations=await scenario_repo.load_seed_records(profile_id, "locations"),
         items=await scenario_repo.load_seed_records(profile_id, "items"),
         skills=await scenario_repo.load_seed_records(profile_id, "skills"),
+        support_effects=await scenario_repo.load_seed_records(
+            profile_id, "support_effects"
+        ),
+        statuses=await scenario_repo.load_seed_records(profile_id, "statuses"),
+        factions=await scenario_repo.load_seed_records(profile_id, "factions"),
+        action_categories=await scenario_repo.load_seed_records(
+            profile_id, "action_categories"
+        ),
+        knowledge=await scenario_repo.load_seed_records(profile_id, "knowledge"),
+        dialogue_styles=await scenario_repo.load_seed_records(
+            profile_id, "dialogue_styles"
+        ),
+        mbti=await scenario_repo.load_seed_records(profile_id, "mbti"),
         characters=await scenario_repo.load_seed_records(profile_id, "characters"),
         quests=await scenario_repo.load_seed_records(profile_id, "quests"),
         chapters=await scenario_repo.load_seed_records(profile_id, "chapters"),

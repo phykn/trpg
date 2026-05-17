@@ -201,10 +201,12 @@ def make_default_storage() -> FakeStorage:
     skill = {
         "id": "basic_strike",
         "name": "기본 타격",
-        "description": "기본 공격 기술",
-        "kind": "attack",
-        "target": "single",
-        "power": 5,
+        "description": "공격 판정을 안정시키는 테스트 기술.",
+        "kind": "support",
+        "action": "attack",
+        "effect_template": "dc_down",
+        "support_bonus": 2,
+        "mp_cost": 0,
     }
     human = {
         "id": "human",

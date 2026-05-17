@@ -1,0 +1,11 @@
+{
+  "human": {
+    "id": "human",
+    "name": "인간",
+    "description": "개발 테스트용 기본 종족. 특별한 배경보다 기능 확인을 우선합니다.",
+    "playable": true,
+    "racial_skill_ids": [
+      "training_strike"
+    ]
+  }
+}

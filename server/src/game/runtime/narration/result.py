@@ -15,6 +15,14 @@ def _narration_meta_marker(default: str = "---TRPG_META---") -> str:
     return os.getenv("GRAPH_NARRATION_META_MARKER") or default
 
 
+def _private_narration_markers() -> tuple[str, ...]:
+    return ("<GM_PLAN>", "<RESULT_PLAN>", "<GM_DATA>", "<STATE_PATCH>")
+
+
+def _visible_stop_markers() -> tuple[str, ...]:
+    return (_narration_meta_marker(), *_private_narration_markers())
+
+
 def _max_suggestions(default: int = 3) -> int:
     return _env_int("GRAPH_NARRATION_MAX_SUGGESTIONS", default)
 
@@ -35,21 +43,22 @@ class VisibleNarrationStream:
         self._raw: list[str] = []
         self._pending = ""
         self._found_marker = False
-        self._marker = _narration_meta_marker()
+        self._markers = _visible_stop_markers()
+        self._keep_len = max(len(marker) for marker in self._markers) - 1
 
     def push(self, chunk: str) -> list[str]:
         self._raw.append(chunk)
         if self._found_marker:
             return []
         combined = f"{self._pending}{chunk}"
-        marker_at = combined.find(self._marker)
+        marker_at = _first_marker_at(combined, self._markers)
         if marker_at >= 0:
             self._found_marker = True
             self._pending = ""
             visible = combined[:marker_at].rstrip("\r\n")
             return [visible] if visible else []
 
-        keep = min(len(combined), len(self._marker) - 1)
+        keep = min(len(combined), self._keep_len)
         visible = combined[:-keep] if keep else combined
         self._pending = combined[-keep:] if keep else ""
         return [visible] if visible else []
@@ -68,11 +77,15 @@ class VisibleNarrationStream:
 def parse_graph_narration_answer(answer: str) -> GraphNarrationResult:
     marker = _narration_meta_marker()
     marker_at = answer.find(marker)
+    visible_marker_at = _first_marker_at(answer, _visible_stop_markers())
+    narration_end = visible_marker_at if visible_marker_at >= 0 else marker_at
     if marker_at < 0:
         llm_diag("llm:graph_narrate_meta_missing", answer_len=len(answer))
+        if narration_end >= 0:
+            return GraphNarrationResult(narration=answer[:narration_end].rstrip("\r\n"))
         return GraphNarrationResult(narration=answer)
 
-    narration = answer[:marker_at].rstrip("\r\n")
+    narration = answer[:narration_end].rstrip("\r\n")
     meta_text = answer[marker_at + len(marker) :].strip()
     try:
         raw = json.loads(meta_text)
@@ -92,6 +105,11 @@ def parse_graph_narration_answer(answer: str) -> GraphNarrationResult:
         )
         return GraphNarrationResult(narration=narration)
     return parsed
+
+
+def _first_marker_at(text: str, markers: tuple[str, ...]) -> int:
+    positions = [index for marker in markers if (index := text.find(marker)) >= 0]
+    return min(positions) if positions else -1
 
 
 async def persist_graph_narration_result(

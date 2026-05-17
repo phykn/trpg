@@ -24,6 +24,18 @@ def _load_env() -> None:
     env_path = SERVER_DIR / f".env.{app_env}"
     if env_path.is_file():
         load_dotenv(env_path)
+    _normalize_local_paths()
+
+
+def _normalize_local_paths() -> None:
+    for key in ("SCENARIO_DIR", "GRAPH_SAVE_DIR"):
+        value = os.environ.get(key)
+        if not value:
+            continue
+        path = Path(value)
+        if path.is_absolute():
+            continue
+        os.environ[key] = str((SERVER_DIR / path).resolve())
 
 
 def _env_flag(name: str) -> bool:

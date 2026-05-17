@@ -20,6 +20,5 @@ reports/
 qa_test/
 
 # Local-only (not part of the repo)
-scenarios/
 .superpowers/
 .worktrees/

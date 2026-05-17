@@ -1,0 +1,24 @@
+{
+  "ch_dev_test": {
+    "id": "ch_dev_test",
+    "title": "개발 원턴 테스트",
+    "summary": "짧은 입력으로 핵심 기능을 확인하기 위한 개발용 장.",
+    "quest_ids": [
+      "q_training_combat",
+      "q_heavy_golem_badge",
+      "q_missing_supplies",
+      "q_supply_pickup",
+      "q_first_aid",
+      "q_companion_move",
+      "q_hazard_scout",
+      "q_archive_report"
+    ],
+    "prerequisite_ids": [],
+    "status": "active",
+    "required": false,
+    "progress": {
+      "done": 0,
+      "total": 1
+    }
+  }
+}

@@ -25,6 +25,7 @@ from .confirmation import (
     run_graph_action_request_stream,
     should_start_graph_roll,
 )
+from .roll import run_graph_preroll_stream
 from ..load import load_runtime_state
 from ..narration.input import (
     generate_graph_input_narration,
@@ -327,17 +328,16 @@ async def _run_classified_action_stream(
     scenario_repo: ScenarioRepo | None = None,
 ) -> AsyncIterator[dict[str, object]]:
     if _should_start_check_roll(runtime, action, check_hint):
-        from .roll import start_graph_roll
-
-        result = await start_graph_roll(
+        async for event in run_graph_preroll_stream(
+            client,
             repo,
             runtime.progress.game_id,
             action,
+            player_input=player_input,
             reason=check_hint.reason if check_hint is not None else None,
             scenario_repo=scenario_repo,
-        )
-        yield {"type": "result", "result": result}
-        yield {"type": "final", "result": result}
+        ):
+            yield event
         return
     if action.verb in {"speak", "pass"} and runtime.progress.graph_combat_state is None:
         async for event in _run_graph_narrative_input_stream(

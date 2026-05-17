@@ -1,0 +1,44 @@
+{
+  "supply_team": {
+    "id": "supply_team",
+    "name": "보급팀",
+    "description": "물자, 장비, 회복품을 관리하는 실무 조직.",
+    "traits": [
+      "재고와 장부를 중요하게 봅니다",
+      "낭비를 싫어합니다",
+      "실용적인 도움에는 빠르게 반응합니다"
+    ],
+    "relations": {
+      "test_staff": "cooperative",
+      "village_locals": "strained"
+    }
+  },
+  "test_staff": {
+    "id": "test_staff",
+    "name": "테스트 직원단",
+    "description": "훈련실의 절차, 안내, 기록을 맡는 느슨한 직원 조직.",
+    "traits": [
+      "절차를 중요하게 봅니다",
+      "기능 점검을 우선합니다",
+      "규정과 농담이 자주 충돌합니다"
+    ],
+    "relations": {
+      "supply_team": "cooperative",
+      "village_locals": "neutral"
+    }
+  },
+  "village_locals": {
+    "id": "village_locals",
+    "name": "마을 사람들",
+    "description": "테스트 허브 주변에서 생활하며 보급과 안내를 조심스럽게 지켜보는 사람들.",
+    "traits": [
+      "직접 충돌을 피합니다",
+      "부탁을 돌려 말합니다",
+      "보급 절차에는 조금 어색해합니다"
+    ],
+    "relations": {
+      "test_staff": "neutral",
+      "supply_team": "strained"
+    }
+  }
+}

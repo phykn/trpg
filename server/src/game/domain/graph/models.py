@@ -9,6 +9,13 @@ NodeType = Literal[
     "location",
     "quest",
     "skill",
+    "support_effect",
+    "status",
+    "faction",
+    "action_category",
+    "knowledge",
+    "dialogue_style",
+    "mbti",
     "race",
     "chapter",
 ]
@@ -29,6 +36,14 @@ EdgeType = Literal[
     "reward_of",
     "part_of_chapter",
     "relation",
+    "uses_support_effect",
+    "applies_status",
+    "member_of_faction",
+    "faction_relation",
+    "uses_action_category",
+    "has_knowledge",
+    "uses_dialogue_style",
+    "has_mbti",
 ]
 
 

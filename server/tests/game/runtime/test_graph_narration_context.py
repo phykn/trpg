@@ -3,7 +3,7 @@ import json
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatState, GraphCombatTraceEvent
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
+from src.game.domain.memory import DialoguePair, GMLogEntry, RollLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.game.runtime.action.dispatch import GraphActionDispatchResult
@@ -11,6 +11,7 @@ from src.game.runtime.narration.context import (
     build_action_narration_payload,
     build_input_narration_payload,
     build_intro_narration_payload,
+    build_roll_narration_payload,
 )
 
 
@@ -50,6 +51,55 @@ def _runtime() -> GameRuntimeState:
                 ),
                 "player_01": _character("player_01", name="당신"),
                 "guard_01": _character("guard_01", name="경비병"),
+                "city_watch": GraphNode(
+                    id="city_watch",
+                    type="faction",
+                    properties={
+                        "name": "도시 경비대",
+                        "description": "북문을 지키는 경비 조직입니다.",
+                    },
+                ),
+                "public_clue": GraphNode(
+                    id="public_clue",
+                    type="knowledge",
+                    properties={
+                        "title": "북문 단서",
+                        "summary": "북문 교대 기록이 비어 있습니다.",
+                        "visibility": "public",
+                    },
+                ),
+                "private_clue": GraphNode(
+                    id="private_clue",
+                    type="knowledge",
+                    properties={
+                        "title": "숨은 단서",
+                        "summary": "payload에 나오면 안 됩니다.",
+                        "visibility": "private",
+                    },
+                ),
+                "procedural_style": GraphNode(
+                    id="procedural_style",
+                    type="dialogue_style",
+                    properties={
+                        "name": "절차형 말투",
+                        "speech_style": "짧고 기록문 같은 말투",
+                        "humor_style": "농담을 보고서 항목처럼 분류함",
+                        "traits": ["업무적", "간결함"],
+                    },
+                ),
+                "ENFP": GraphNode(
+                    id="ENFP",
+                    type="mbti",
+                    properties={
+                        "attitude": "밝고 즉흥적으로 반응합니다.",
+                        "speech_style": "말이 빠르고 감탄이 많습니다.",
+                        "personality": "솔직하고 호기심이 많습니다.",
+                        "boundary_style": "개인 질문에도 장난스럽게 받아칩니다.",
+                        "humor_style": "어색함을 바로 짚어 웃음으로 바꿉니다.",
+                        "roleplay_cues": ["상대 말에 바로 반응합니다"],
+                        "avoid": ["차갑게 반복하지 않습니다"],
+                    },
+                ),
                 "shop_herb": GraphNode(
                     id="shop_herb",
                     type="item",
@@ -83,6 +133,36 @@ def _runtime() -> GameRuntimeState:
                     type="carries",
                     from_node_id="guard_01",
                     to_node_id="shop_herb",
+                ),
+                "member_of_faction:guard_01:city_watch": GraphEdge(
+                    id="member_of_faction:guard_01:city_watch",
+                    type="member_of_faction",
+                    from_node_id="guard_01",
+                    to_node_id="city_watch",
+                ),
+                "has_knowledge:guard_01:public_clue": GraphEdge(
+                    id="has_knowledge:guard_01:public_clue",
+                    type="has_knowledge",
+                    from_node_id="guard_01",
+                    to_node_id="public_clue",
+                ),
+                "has_knowledge:guard_01:private_clue": GraphEdge(
+                    id="has_knowledge:guard_01:private_clue",
+                    type="has_knowledge",
+                    from_node_id="guard_01",
+                    to_node_id="private_clue",
+                ),
+                "uses_dialogue_style:guard_01:procedural_style": GraphEdge(
+                    id="uses_dialogue_style:guard_01:procedural_style",
+                    type="uses_dialogue_style",
+                    from_node_id="guard_01",
+                    to_node_id="procedural_style",
+                ),
+                "has_mbti:guard_01:ENFP": GraphEdge(
+                    id="has_mbti:guard_01:ENFP",
+                    type="has_mbti",
+                    from_node_id="guard_01",
+                    to_node_id="ENFP",
                 ),
                 "connects_to:square:north_gate": GraphEdge(
                     id="connects_to:square:north_gate",
@@ -126,7 +206,28 @@ def test_intro_payload_contains_grounded_first_scene_context():
     assert payload["place"]["name"] == "광장"
     assert payload["place"]["description"] == "차가운 돌바닥이 이어집니다."
     assert payload["visible_targets"] == [
-        {"id": "guard_01", "name": "경비병", "type": "npc"}
+        {
+            "id": "guard_01",
+            "name": "경비병",
+            "type": "npc",
+            "dialogue_style": {
+                "id": "procedural_style",
+                "name": "절차형 말투",
+                "speech_style": "짧고 기록문 같은 말투",
+                "humor_style": "농담을 보고서 항목처럼 분류함",
+                "traits": ["업무적", "간결함"],
+            },
+            "mbti": {
+                "id": "ENFP",
+                "attitude": "밝고 즉흥적으로 반응합니다.",
+                "speech_style": "말이 빠르고 감탄이 많습니다.",
+                "personality": "솔직하고 호기심이 많습니다.",
+                "boundary_style": "개인 질문에도 장난스럽게 받아칩니다.",
+                "humor_style": "어색함을 바로 짚어 웃음으로 바꿉니다.",
+                "roleplay_cues": ["상대 말에 바로 반응합니다"],
+                "avoid": ["차갑게 반복하지 않습니다"],
+            },
+        }
     ]
     assert payload["exits"] == [{"id": "north_gate", "name": "북문"}]
     assert payload["inventory"] == [{"id": "sword_01", "name": "검", "kind": "weapon"}]
@@ -162,6 +263,63 @@ def test_input_payload_includes_recent_context_and_keeps_player_input():
         }
     ]
     assert "recent_log" not in encoded
+
+
+def test_roll_payload_keeps_original_player_input_and_marks_preroll_text():
+    runtime = _runtime()
+    runtime.log_entries.append(
+        GMLogEntry(
+            id=2,
+            kind="gm",
+            text="경비병의 표정을 읽으려 합니다.",
+        )
+    )
+    pending = {
+        "body": "경비병의 표정을 읽으려 합니다.",
+        "player_input": "경비병에게 취미가 뭐냐고 묻습니다",
+    }
+
+    payload = build_roll_narration_payload(
+        runtime=runtime,
+        action=Action(verb="speak", to="guard_01", how="friendly"),
+        pending=pending,
+        roll_entry=RollLogEntry(
+            id=3,
+            kind="roll",
+            check="매력",
+            roll=18,
+            margin=5,
+            result="success",
+        ),
+        outcome="success",
+    )
+
+    assert payload["player_input"] == "경비병에게 취미가 뭐냐고 묻습니다"
+    assert payload["current_event"]["check_reason"] == "경비병의 표정을 읽으려 합니다."
+    assert payload["current_event"]["preroll_narration"] == (
+        "경비병의 표정을 읽으려 합니다."
+    )
+    assert payload["target_view"]["id"] == "guard_01"
+    assert payload["target_view"]["faction"] == {
+        "id": "city_watch",
+        "name": "도시 경비대",
+        "description": "북문을 지키는 경비 조직입니다.",
+    }
+    assert payload["target_view"]["public_knowledge"] == [
+        {
+            "id": "public_clue",
+            "title": "북문 단서",
+            "summary": "북문 교대 기록이 비어 있습니다.",
+        }
+    ]
+    assert payload["target_view"]["dialogue_style"] == {
+        "id": "procedural_style",
+        "name": "절차형 말투",
+        "speech_style": "짧고 기록문 같은 말투",
+        "humor_style": "농담을 보고서 항목처럼 분류함",
+        "traits": ["업무적", "간결함"],
+    }
+    assert "숨은 단서" not in json.dumps(payload, ensure_ascii=False)
 
 
 def test_input_payload_includes_target_hints_and_mentioned_inventory():

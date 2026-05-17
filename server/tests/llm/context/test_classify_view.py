@@ -104,7 +104,11 @@ def _runtime(
         nodes[node_id] = GraphNode(
             id=node_id,
             type="skill",
-            properties={"name": f"기술 {index}", "description": "숨겨야 할 기술 설명"},
+            properties={
+                "name": f"기술 {index}",
+                "description": "숨겨야 할 기술 설명",
+                "action_category_id": "combat_attack",
+            },
         )
         edges[f"knows_skill:player_01:{node_id}"] = GraphEdge(
             id=f"knows_skill:player_01:{node_id}",
@@ -200,7 +204,13 @@ def test_classify_context_to_grounding_view_preserves_grounding_ids():
     assert grounding["inventory"] == [
         {"id": "item_0", "name": "물건 0", "kind": "tool"}
     ]
-    assert grounding["skills"] == [{"id": "skill_0", "name": "기술 0"}]
+    assert grounding["skills"] == [
+        {
+            "id": "skill_0",
+            "name": "기술 0",
+            "action_category_id": "combat_attack",
+        }
+    ]
 
 
 def test_classify_context_to_grounding_view_preserves_active_quest_id():

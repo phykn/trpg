@@ -1,0 +1,41 @@
+{
+  "focus_bolt": {
+    "id": "focus_bolt",
+    "name": "집중 화살",
+    "description": "공격 성공 뒤 적 하트를 하나 더 깎는 업그레이드 후보 기술.",
+    "level": 1,
+    "kind": "support",
+    "action": "attack",
+    "action_category_id": "combat_attack",
+    "effect_template": "extra_heart_damage",
+    "support_bonus": 0,
+    "mp_cost": 3,
+    "tier": 1,
+    "tags": [
+      "learnable",
+      "focus",
+      "burst"
+    ]
+  },
+  "training_strike": {
+    "id": "training_strike",
+    "name": "훈련 일격",
+    "description": "공격 판정을 안정시키는 시작 기술.",
+    "level": 1,
+    "kind": "support",
+    "action": "attack",
+    "action_category_id": "combat_support",
+    "effect_template": "dc_down",
+    "status_ids": [
+      "focused"
+    ],
+    "support_bonus": 2,
+    "mp_cost": 2,
+    "tier": 1,
+    "tags": [
+      "starter",
+      "melee",
+      "training"
+    ]
+  }
+}

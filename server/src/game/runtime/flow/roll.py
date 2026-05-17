@@ -30,6 +30,7 @@ from src.wire.graph.to_front import graph_to_front_state
 from ..action.apply import GraphRuntimeDirty, apply_runtime_graph_changes
 from ..load import load_runtime_state
 from ..narration.context import build_roll_narration_payload
+from ..narration.input import stream_graph_preroll_narration
 from ..narration.result import (
     GraphNarrationResult,
     VisibleNarrationStream,
@@ -97,6 +98,7 @@ async def start_graph_roll(
     *,
     reason: str | None = None,
     scenario_repo: ScenarioRepo | None = None,
+    append_body_log: bool = True,
 ) -> GraphActionRequestResult:
     runtime = await load_runtime_state(repo, game_id, scenario_repo)
     set_diag_context(game_id, runtime.progress.turn_count)
@@ -114,12 +116,121 @@ async def start_graph_roll(
         player_id=runtime.progress.player_id,
         reason=reason,
     )
+    progress_update: dict[str, Any] = {"pending_roll": pending}
+    next_log_entries = list(runtime.log_entries)
+    entries: list[LogEntry] = []
+    if append_body_log:
+        entry = GMLogEntry(
+            id=runtime.progress.next_log_id,
+            kind="gm",
+            text=_str(pending.get("body"), "body"),
+        )
+        progress_update["next_log_id"] = entry.id + 1
+        next_log_entries.append(entry)
+        entries.append(entry)
+    next_progress = runtime.progress.model_copy(update=progress_update)
+    next_runtime = runtime.model_copy(
+        update={
+            "progress": next_progress,
+            "log_entries": next_log_entries,
+        }
+    )
+    await repo.append_log_entries(game_id, entries)
+    await repo.save_progress(next_progress)
+    engine_diag("roll:pending", kind=pending.get("kind"))
+    return roll_required_result(
+        next_runtime,
+        graph_to_front_state(next_runtime),
+        pending,
+    )
+
+
+async def run_graph_preroll_stream(
+    llm: LLMClient | None,
+    repo: GraphRepo,
+    game_id: str,
+    action: Action,
+    *,
+    player_input: str | None = None,
+    reason: str | None = None,
+    scenario_repo: ScenarioRepo | None = None,
+) -> AsyncIterator[dict[str, object]]:
+    result = await start_graph_roll(
+        repo,
+        game_id,
+        action,
+        reason=reason,
+        scenario_repo=scenario_repo,
+        append_body_log=False,
+    )
+    yield {"type": "result", "result": _without_pending_roll_body(result)}
+    stream = VisibleNarrationStream()
+    if result.pending_roll is not None and llm is not None:
+        async for chunk in stream_graph_preroll_narration(
+            llm,
+            result.runtime,
+            player_input,
+            action,
+            result.pending_roll,
+            timeout_s=_roll_narration_timeout_s(),
+        ):
+            for visible in stream.push(chunk):
+                yield {"type": "narration_delta", "text": visible}
+        for visible in stream.finish():
+            yield {"type": "narration_delta", "text": visible}
+
+    narration_result = parse_graph_narration_answer(stream.answer())
+    body = result.pending_roll.get("body") if result.pending_roll is not None else ""
+    if not narration_result.narration and isinstance(body, str) and body:
+        narration_result = GraphNarrationResult(narration=body)
+        yield {"type": "narration_delta", "text": body}
+    final_result = await finish_graph_preroll(
+        repo,
+        result,
+        narration_result,
+        player_input=player_input,
+    )
+    yield {"type": "final", "result": final_result}
+
+
+def _without_pending_roll_body(
+    result: GraphActionRequestResult,
+) -> GraphActionRequestResult:
+    if result.pending_roll is None or result.front_state.pending_roll is None:
+        return result
+    return result.model_copy(
+        update={
+            "front_state": result.front_state.model_copy(
+                update={
+                    "pending_roll": result.front_state.pending_roll.model_copy(
+                        update={"body": ""}
+                    ),
+                }
+            ),
+        }
+    )
+
+
+async def finish_graph_preroll(
+    repo: GraphRepo,
+    result: GraphActionRequestResult,
+    narration_result: GraphNarrationResult,
+    *,
+    player_input: str | None,
+) -> GraphActionRequestResult:
+    runtime = result.runtime
+    pending = dict(result.pending_roll or {})
+    text = narration_result.narration
+    if text:
+        pending["body"] = text
+    if player_input:
+        pending["player_input"] = player_input
     entry = GMLogEntry(
         id=runtime.progress.next_log_id,
         kind="gm",
-        text=_str(pending.get("body"), "body"),
+        text=str(pending.get("body") or ""),
     )
-    next_progress = runtime.progress.model_copy(
+    progress = runtime.progress.model_copy(
         update={
             "pending_roll": pending,
             "next_log_id": entry.id + 1,
@@ -127,17 +238,18 @@ async def start_graph_roll(
     )
     next_runtime = runtime.model_copy(
         update={
-            "progress": next_progress,
+            "progress": progress,
             "log_entries": [*runtime.log_entries, entry],
         }
     )
-    await repo.append_log_entries(game_id, [entry])
-    await repo.save_progress(next_progress)
-    engine_diag("roll:pending", kind=pending.get("kind"))
-    return roll_required_result(
-        next_runtime,
-        graph_to_front_state(next_runtime),
-        pending,
+    await repo.append_log_entries(runtime.progress.game_id, [entry])
+    await repo.save_progress(progress)
+    return GraphActionRequestResult(
+        runtime=next_runtime,
+        status="roll_required",
+        outcome=result.outcome,
+        front_state=graph_to_front_state(next_runtime),
+        pending_roll=pending,
     )
 
 

@@ -44,14 +44,8 @@ class SupabaseStorageScenarioRepo:
             except FileNotFoundError:
                 return None
             meta = json.loads(meta_blob.decode("utf-8"))
-            race_files = await self._list_prefix_cached(f"{pid}/races")
-            json_races = sorted(f for f in race_files if f.endswith(".json"))
-            race_blobs = await asyncio.gather(
-                *(self._get_bytes_cached(f"{pid}/races/{rf}") for rf in json_races)
-            )
             races: list[dict] = []
-            for blob in race_blobs:
-                rd = json.loads(blob.decode("utf-8"))
+            for rd in (await self.load_seed_records(pid, "races")).values():
                 if rd.get("playable", True) is False:
                     continue
                 races.append(
@@ -91,6 +85,13 @@ class SupabaseStorageScenarioRepo:
         return json.loads(blob.decode("utf-8"))
 
     async def load_seed_records(self, profile: str, kind: str) -> dict[str, dict]:
+        try:
+            blob = await self._get_bytes_cached(f"{profile}/{kind}.json")
+        except FileNotFoundError:
+            pass
+        else:
+            return _records_from_json(json.loads(blob.decode("utf-8")))
+
         files = await self._list_prefix_cached(f"{profile}/{kind}")
         json_files = sorted(f for f in files if f.endswith(".json"))
 
@@ -100,3 +101,21 @@ class SupabaseStorageScenarioRepo:
 
         objs = await asyncio.gather(*(_load_one(f) for f in json_files))
         return {obj["id"]: obj for obj in objs if isinstance(obj.get("id"), str)}
+
+
+def _records_from_json(value: object) -> dict[str, dict]:
+    if isinstance(value, list):
+        candidates = value
+    elif isinstance(value, dict):
+        candidates = list(value.values())
+    else:
+        return {}
+
+    records: dict[str, dict] = {}
+    for obj in candidates:
+        if not isinstance(obj, dict):
+            continue
+        record_id = obj.get("id")
+        if isinstance(record_id, str):
+            records[record_id] = obj
+    return records

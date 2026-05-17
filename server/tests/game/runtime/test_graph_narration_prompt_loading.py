@@ -7,6 +7,10 @@ from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.runtime.flow.input import run_graph_input_turn
 from src.game.runtime.flow.intro import run_graph_initial_narration
+from src.game.runtime.narration.context import (
+    build_input_narration_payload,
+    build_intro_narration_payload,
+)
 from src.game.runtime.state import GameRuntimeState
 from src.game.runtime.flow.turn import run_graph_action_turn
 from src.llm.calls.runner import get_prompt
@@ -59,10 +63,44 @@ def _graph() -> Graph:
             "town": GraphNode(
                 id="town",
                 type="location",
-                properties={"name": "Town", "description": "A quiet place."},
+                properties={
+                    "name": "Town",
+                    "description": "A quiet place.",
+                    "mood": "quiet but procedural",
+                    "traits": ["safe", "orderly"],
+                },
             ),
             "player_01": _character("player_01"),
-            "goblin_01": _character("goblin_01", hp=8),
+            "goblin_01": GraphNode(
+                id="goblin_01",
+                type="character",
+                properties={
+                    **_character("goblin_01", hp=8).properties,
+                    "personality": ["dry", "watchful"],
+                    "personal_boundary": "deflects personal questions politely",
+                    "private_hint": "secretly enjoys practical jokes",
+                    "traits": ["can speak", "does not rush"],
+                },
+            ),
+            "dry_report_style": GraphNode(
+                id="dry_report_style",
+                type="dialogue_style",
+                properties={
+                    "name": "Dry report style",
+                    "speech_style": "short report-like replies",
+                    "humor_style": "treats jokes as report categories",
+                    "traits": ["dry delivery"],
+                },
+            ),
+            "marker_01": GraphNode(
+                id="marker_01",
+                type="item",
+                properties={
+                    "name": "Marker",
+                    "description": "A small floor marker.",
+                    "traits": ["flat", "interactive"],
+                },
+            ),
         },
         edges={
             "located_at:player_01:town": GraphEdge(
@@ -75,6 +113,18 @@ def _graph() -> Graph:
                 id="located_at:goblin_01:town",
                 type="located_at",
                 from_node_id="goblin_01",
+                to_node_id="town",
+            ),
+            "uses_dialogue_style:goblin_01:dry_report_style": GraphEdge(
+                id="uses_dialogue_style:goblin_01:dry_report_style",
+                type="uses_dialogue_style",
+                from_node_id="goblin_01",
+                to_node_id="dry_report_style",
+            ),
+            "located_at:marker_01:town": GraphEdge(
+                id="located_at:marker_01:town",
+                type="located_at",
+                from_node_id="marker_01",
                 to_node_id="town",
             ),
         },
@@ -122,6 +172,38 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "당신의 새 대사" not in narrate_prompt
     assert "payload.combat_view" in narrate_prompt
     assert "tone.lethality" in narrate_prompt
+    assert "STATE_PATCH" in narrate_prompt
+    assert "GraphChange" in narrate_prompt
+    assert "USER_STREAM" in narrate_prompt
+    assert "판정 결과 장면화" in narrate_prompt
+    assert "payload에 없는 단서" in narrate_prompt
+    assert "실패여도 장면은 멈추지 않습니다" in narrate_prompt
+    assert "기척이 선명해집니다" in narrate_prompt
+    assert "물건의 상태" in narrate_prompt
+    assert "mbti" in narrate_prompt
+    assert "boundary_style" in narrate_prompt
+    assert "speech_style" in narrate_prompt
+    assert "traits" in narrate_prompt
+    assert "판정 후 나레이션" in narrate_prompt
+    assert "preroll_narration" in narrate_prompt
+    assert "판정 전 문장을 반복하지 않습니다" in narrate_prompt
+    assert "private_hint" in narrate_prompt
+    assert "개인적인 내용을 캐면" in narrate_prompt
+    assert "faction" in narrate_prompt
+    assert "새로운 소속, 명령, 관계 변화는 만들지 않습니다" in narrate_prompt
+    assert "dialogue_style" not in narrate_prompt
+    assert "character-specific" not in narrate_prompt
+    assert "게임 밖 요청" in narrate_prompt
+    assert "그대로 출력하지 않습니다" in narrate_prompt
+    assert "combat_view.support_effect" in narrate_prompt
+    assert "지원 효과 이름, 원리, 추가 효과를 지어내지 않습니다" in narrate_prompt
+    assert "combat_view.statuses" in narrate_prompt
+    assert "상태 효과 이름, 원리, 추가 효과를 지어내지 않습니다" in narrate_prompt
+    assert "STATE_PATCH" in intro_prompt
+    assert "제공된 성격" in intro_prompt
+    assert "훈련, 점검, 안내" not in intro_prompt
+    assert "추상적인 분위기만 쓰지 말고" in intro_prompt
+    assert "STATE_PATCH" in combat_prompt
     assert "훈련 충격" in combat_prompt
     assert "recent_narration" in combat_prompt
     assert "1~2문장" not in combined
@@ -130,6 +212,58 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "Baldur" not in combined
     assert "발더" not in combined
     assert "발게" not in combined
+
+
+@pytest.mark.asyncio
+async def test_graph_intro_payload_exposes_scene_and_actor_traits(tmp_path):
+    repo = await _repo(tmp_path)
+    runtime = GameRuntimeState(
+        graph=await repo.load_graph("game-1"),
+        progress=await repo.load_progress("game-1"),
+    )
+
+    payload = build_intro_narration_payload(runtime)
+
+    assert payload["place"]["mood"] == "quiet but procedural"
+    assert payload["place"]["traits"] == ["safe", "orderly"]
+    assert "speech_style" not in payload["visible_targets"][0]
+    assert payload["visible_targets"][0]["dialogue_style"]["speech_style"] == (
+        "short report-like replies"
+    )
+    assert payload["visible_targets"][0]["personality"] == ["dry", "watchful"]
+    assert payload["visible_items"][0]["traits"] == ["flat", "interactive"]
+
+
+@pytest.mark.asyncio
+async def test_graph_input_payload_exposes_target_traits(tmp_path):
+    repo = await _repo(tmp_path)
+    runtime = GameRuntimeState(
+        graph=await repo.load_graph("game-1"),
+        progress=await repo.load_progress("game-1"),
+    )
+    target = runtime.graph.nodes["goblin_01"]
+
+    payload = build_input_narration_payload(
+        runtime=runtime,
+        player_input="고블린에게 농담을 건넨다",
+        action=Action(verb="speak", what="goblin_01"),
+        dialogue_target=target,
+    )
+
+    assert payload["target_view"]["personality"] == ["dry", "watchful"]
+    assert "speech_style" not in payload["target_view"]
+    assert "humor_style" not in payload["target_view"]
+    assert payload["target_view"]["dialogue_style"]["speech_style"] == (
+        "short report-like replies"
+    )
+    assert payload["target_view"]["dialogue_style"]["humor_style"] == (
+        "treats jokes as report categories"
+    )
+    assert payload["target_view"]["personal_boundary"] == (
+        "deflects personal questions politely"
+    )
+    assert payload["target_view"]["private_hint"] == "secretly enjoys practical jokes"
+    assert payload["target_view"]["traits"] == ["can speak", "does not rush"]
 
 
 def test_graph_narration_runtime_preserves_llm_text():

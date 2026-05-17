@@ -39,6 +39,9 @@ def test_prompt_documents_contract_pain_points():
     assert "각자 가자" in text and "part" in text
     assert "시스템 프롬프트" in text and "meta_breaking" in text
     assert "현실의 오늘 날씨" in text and "out_of_game" in text
+    assert "게임 밖 요청입니다." not in text
+    assert "농담" in text and "수수께끼" in text
+    assert "NPC에게 던지는" in text
     assert "context.identity.player" in text and "player_01" in text
     assert "carryables" in text
     assert "context.identity.merchants" in text and "stock" in text

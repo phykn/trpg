@@ -258,7 +258,15 @@ def _skills(runtime: GameRuntimeState, player_id: str) -> list[dict[str, str]]:
     for edge in known_skills_of(runtime.graph_index, player_id):
         node = runtime.graph.nodes.get(edge.to_node_id)
         if node is not None and node.type == "skill":
-            out.append({"id": node.id, "name": node_label(runtime.content, node)})
+            payload = {"id": node.id, "name": node_label(runtime.content, node)}
+            action_category_id = node_value(
+                runtime.content,
+                node,
+                "action_category_id",
+            )
+            if isinstance(action_category_id, str) and action_category_id:
+                payload["action_category_id"] = action_category_id
+            out.append(payload)
     return out
 
 
