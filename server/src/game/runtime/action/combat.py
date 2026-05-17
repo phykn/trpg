@@ -240,7 +240,7 @@ def _support_kind(graph: Graph, node_id: str | None) -> str | None:
     if node.type == "skill":
         return "skill"
     if node.type == "item" and (
-        "support_action" in node.properties or "action" in node.properties
+        "action" in node.properties or "action" in node.properties
     ):
         return "item"
     raise GraphCombatDispatchError(f"unsupported combat support: {node_id}")
@@ -257,7 +257,7 @@ def _auto_skill_support_id(
         skill = graph.nodes.get(edge.to_node_id)
         if skill is None or skill.type != "skill":
             continue
-        supported_action = _string_prop(skill, "action_id")
+        supported_action = _string_prop(skill, "action")
         mp_cost = _int_value(skill.properties.get("mp_cost"), default=0)
         if _supports_action(supported_action, action_kind) and current_mp >= mp_cost:
             return skill.id

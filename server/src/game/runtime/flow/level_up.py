@@ -189,9 +189,9 @@ def _generated_skill_change(
             properties={
                 "name": _require_str(skill, "name"),
                 "description": _require_str(skill, "description"),
-                "action_id": _require_choice(
+                "action": _require_choice(
                     skill,
-                    "action_id",
+                    "action",
                     {"attack", "defend", "flee", "social"},
                 ),
                 "mp_cost": _require_int(skill, "mp_cost", 1, 3),

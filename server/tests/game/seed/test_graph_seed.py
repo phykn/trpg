@@ -7,7 +7,7 @@ def _skill() -> dict:
     return {
         "id": "slash",
         "name": "베기",
-        "action_id": "attack",
+        "action": "attack",
         "bonus": 2,
     }
 
@@ -21,15 +21,15 @@ def test_build_seed_graph_creates_nodes_edges_and_progress():
                 "id": "human",
                 "name": "인간",
                 "description": "",
-                "racial_skill_ids": ["slash"],
+                "racial_skills": ["slash"],
             }
         },
         locations={
             "town": {
                 "id": "town",
                 "name": "마을",
-                "item_ids": ["potion"],
-                "connections": [{"target_id": "forest", "difficulty": "normal"}],
+                "items": ["potion"],
+                "connections": [{"target": "forest", "difficulty": "normal"}],
             },
             "forest": {"id": "forest", "name": "숲"},
         },
@@ -41,17 +41,17 @@ def test_build_seed_graph_creates_nodes_edges_and_progress():
             "chapter_01": {
                 "id": "chapter_01",
                 "title": "첫 장",
-                "quest_ids": [],
+                "quests": [],
             }
         },
         start={
-            "start_location_id": "town",
-            "active_subject_id": None,
-            "active_quest_id": None,
+            "start_location": "town",
+            "active_subject": None,
+            "active_quest": None,
         },
         template={
             "id": "player_01",
-            "inventory_ids": [],
+            "inventory": [],
             "equipment": {},
             "gold": 0,
             "xp_pool": 0,
@@ -103,17 +103,17 @@ def test_build_seed_graph_marks_seed_characters_as_non_players():
             "elder": {
                 "id": "elder",
                 "name": "장로",
-                "race_id": "human",
-                "location_id": "town",
+                "race": "human",
+                "location": "town",
                 "stats": {"body": 99, "agility": 99, "mind": 99, "presence": 99},
             }
         },
         quests={},
         chapters={},
         start={
-            "start_location_id": "town",
-            "active_subject_id": None,
-            "active_quest_id": None,
+            "start_location": "town",
+            "active_subject": None,
+            "active_quest": None,
         },
         template={"id": "player_01"},
         game_id="game-1",
@@ -135,7 +135,7 @@ def test_build_seed_graph_keeps_static_content_out_of_seed_nodes():
                 "id": "human",
                 "name": "인간",
                 "description": "사람입니다.",
-                "racial_skill_ids": ["slash"],
+                "racial_skills": ["slash"],
             }
         },
         locations={
@@ -143,7 +143,7 @@ def test_build_seed_graph_keeps_static_content_out_of_seed_nodes():
                 "id": "town",
                 "name": "마을",
                 "description": "작은 마을입니다.",
-                "item_ids": ["potion"],
+                "items": ["potion"],
             }
         },
         items={
@@ -158,7 +158,7 @@ def test_build_seed_graph_keeps_static_content_out_of_seed_nodes():
                 "id": "slash",
                 "name": "베기",
                 "description": "검으로 벱니다.",
-                "action_id": "attack",
+                "action": "attack",
             }
         },
         npcs={
@@ -166,8 +166,8 @@ def test_build_seed_graph_keeps_static_content_out_of_seed_nodes():
                 "id": "elder",
                 "name": "장로",
                 "description": "마을의 장로입니다.",
-                "race_id": "human",
-                "location_id": "town",
+                "race": "human",
+                "location": "town",
                 "level": 1,
             }
         },
@@ -177,7 +177,7 @@ def test_build_seed_graph_keeps_static_content_out_of_seed_nodes():
                 "title": "첫 의뢰",
                 "summary": "마을 일을 돕습니다.",
                 "description": "장로의 부탁을 해결합니다.",
-                "giver_id": "elder",
+                "giver": "elder",
                 "status": "pending",
             }
         },
@@ -186,13 +186,13 @@ def test_build_seed_graph_keeps_static_content_out_of_seed_nodes():
                 "id": "chapter_01",
                 "title": "첫 장",
                 "description": "시작 장입니다.",
-                "quest_ids": ["quest_01"],
+                "quests": ["quest_01"],
             }
         },
         start={
-            "start_location_id": "town",
-            "active_subject_id": "elder",
-            "active_quest_id": "quest_01",
+            "start_location": "town",
+            "active_subject": "elder",
+            "active_quest": "quest_01",
         },
         template={"id": "player_01"},
         game_id="game-1",
@@ -215,14 +215,14 @@ def test_build_seed_graph_keeps_reward_items_out_of_visible_placement():
     quest = {
         "id": "quest_01",
         "title": "첫 의뢰",
-        "giver_id": "elder",
+        "giver": "elder",
         "difficulty": "easy",
         "triggers": [
             {
                 "id": "reach_forest",
                 "name": "숲 도착",
                 "type": "location_enter",
-                "target_id": "forest",
+                "target": "forest",
             }
         ],
         "rewards": {"gold": 0, "exp": 0, "items": ["reward_sword"]},
@@ -243,17 +243,17 @@ def test_build_seed_graph_keeps_reward_items_out_of_visible_placement():
             "elder": {
                 "id": "elder",
                 "name": "장로",
-                "race_id": "human",
-                "location_id": "town",
+                "race": "human",
+                "location": "town",
                 "level": 1,
             }
         },
         quests={"quest_01": quest},
         chapters={},
         start={
-            "start_location_id": "town",
-            "active_subject_id": "elder",
-            "active_quest_id": None,
+            "start_location": "town",
+            "active_subject": "elder",
+            "active_quest": None,
         },
         template={"id": "player_01"},
         game_id="game-1",
@@ -271,7 +271,7 @@ def test_build_seed_graph_keeps_reward_items_out_of_visible_placement():
         {
             "id": "reach_forest",
             "type": "location_enter",
-            "target_id": "forest",
+            "target": "forest",
         }
     ]
     assert bundle.content.quests["quest_01"]["triggers"][0]["name"] == "숲 도착"
@@ -290,8 +290,8 @@ def test_build_seed_graph_links_quests_to_chapters():
             "elder": {
                 "id": "elder",
                 "name": "장로",
-                "race_id": "human",
-                "location_id": "town",
+                "race": "human",
+                "location": "town",
                 "level": 1,
             }
         },
@@ -299,7 +299,7 @@ def test_build_seed_graph_links_quests_to_chapters():
             "quest_01": {
                 "id": "quest_01",
                 "title": "첫 의뢰",
-                "giver_id": "elder",
+                "giver": "elder",
                 "difficulty": "easy",
                 "status": "active",
             }
@@ -308,13 +308,13 @@ def test_build_seed_graph_links_quests_to_chapters():
             "chapter_01": {
                 "id": "chapter_01",
                 "title": "첫 장",
-                "quest_ids": ["quest_01"],
+                "quests": ["quest_01"],
             }
         },
         start={
-            "start_location_id": "town",
-            "active_subject_id": "elder",
-            "active_quest_id": "quest_01",
+            "start_location": "town",
+            "active_subject": "elder",
+            "active_quest": "quest_01",
         },
         template={"id": "player_01"},
         game_id="game-1",
@@ -346,24 +346,24 @@ def test_build_seed_graph_links_missing_supplies_quest():
             "quartermaster_npc": {
                 "id": "quartermaster_npc",
                 "name": "보급 담당자",
-                "race_id": "human",
-                "location_id": "hub",
+                "race": "human",
+                "location": "hub",
                 "level": 1,
                 "relations": {"player_01": 20},
             },
             "village_resident": {
                 "id": "village_resident",
                 "name": "마을 주민",
-                "race_id": "human",
-                "location_id": "hub",
+                "race": "human",
+                "location": "hub",
                 "level": 1,
                 "relations": {"player_01": 0},
             },
             "guide_npc": {
                 "id": "guide_npc",
                 "name": "테스트 가이드",
-                "race_id": "human",
-                "location_id": "hub",
+                "race": "human",
+                "location": "hub",
                 "level": 1,
                 "relations": {"player_01": 0},
             },
@@ -373,7 +373,7 @@ def test_build_seed_graph_links_missing_supplies_quest():
                 "id": "q_missing_supplies",
                 "title": "보급품 누락",
                 "summary": "보급품 누락을 관계 선택으로 해결합니다.",
-                "giver_id": "quartermaster_npc",
+                "giver": "quartermaster_npc",
                 "difficulty": "easy",
                 "status": "pending",
                 "triggers": [
@@ -381,7 +381,7 @@ def test_build_seed_graph_links_missing_supplies_quest():
                         "id": "resolve_missing_supplies",
                         "name": "보급품 누락 해결",
                         "type": "item_use",
-                        "target_id": "missing_supply_bundle",
+                        "target": "missing_supply_bundle",
                     }
                 ],
                 "rewards": {"gold": 1, "exp": 0},
@@ -391,13 +391,13 @@ def test_build_seed_graph_links_missing_supplies_quest():
             "ch_dev_test": {
                 "id": "ch_dev_test",
                 "title": "개발 테스트",
-                "quest_ids": ["q_missing_supplies"],
+                "quests": ["q_missing_supplies"],
             }
         },
         start={
-            "start_location_id": "hub",
-            "active_subject_id": None,
-            "active_quest_id": None,
+            "start_location": "hub",
+            "active_subject": None,
+            "active_quest": None,
         },
         template={"id": "player_01"},
         game_id="game-1",
@@ -429,7 +429,7 @@ def test_build_seed_graph_links_missing_supplies_quest():
     assert graph.edges["relation:guide_npc:player_01"].properties["affinity"] == 0
 
 
-def test_build_seed_graph_links_support_effects_from_items():
+def test_build_seed_graph_links_effects_from_items():
     bundle = build_seed_graph(
         profile_name="default",
         player=PlayerInput(name="테스터", race_id="human", gender="female"),
@@ -439,19 +439,19 @@ def test_build_seed_graph_links_support_effects_from_items():
             "practice_dagger": {
                 "id": "practice_dagger",
                 "name": "훈련 단검",
-                "support_action": "attack",
-                "effect_template": "dc_down",
+                "action": "attack",
+                "effect": "dc_down",
             }
         },
         skills={
             "training_strike": {
                 "id": "training_strike",
                 "name": "훈련 일격",
-                "action_id": "attack",
+                "action": "attack",
                 "bonus": 2,
             }
         },
-        support_effects={
+        effects={
             "dc_down": {
                 "id": "dc_down",
                 "name": "난이도 감소",
@@ -462,13 +462,13 @@ def test_build_seed_graph_links_support_effects_from_items():
         quests={},
         chapters={},
         start={
-            "start_location_id": "town",
-            "active_subject_id": None,
-            "active_quest_id": None,
+            "start_location": "town",
+            "active_subject": None,
+            "active_quest": None,
         },
         template={
             "id": "player_01",
-            "inventory_ids": ["practice_dagger"],
+            "inventory": ["practice_dagger"],
             "equipment": {},
         },
         game_id="game-1",
@@ -476,16 +476,16 @@ def test_build_seed_graph_links_support_effects_from_items():
     )
 
     graph = bundle.graph
-    assert graph.nodes["dc_down"].type == "support_effect"
+    assert graph.nodes["dc_down"].type == "effect"
     assert (
-        graph.edges["uses_support_effect:practice_dagger:dc_down"].type
-        == "uses_support_effect"
+        graph.edges["uses_effect:practice_dagger:dc_down"].type
+        == "uses_effect"
     )
-    assert "uses_support_effect:training_strike:dc_down" not in graph.edges
-    assert bundle.content.support_effects["dc_down"]["name"] == "난이도 감소"
+    assert "uses_effect:training_strike:dc_down" not in graph.edges
+    assert bundle.content.effects["dc_down"]["name"] == "난이도 감소"
 
 
-def test_build_seed_graph_links_statuses_from_items():
+def test_build_seed_graph_keeps_status_records_without_legacy_item_links():
     bundle = build_seed_graph(
         profile_name="default",
         player=PlayerInput(name="테스터", race_id="human", gender="female"),
@@ -495,14 +495,13 @@ def test_build_seed_graph_links_statuses_from_items():
             "focus_charm": {
                 "id": "focus_charm",
                 "name": "집중 부적",
-                "status_ids": ["focused"],
             }
         },
         skills={
             "focus_bolt": {
                 "id": "focus_bolt",
                 "name": "집중 화살",
-                "action_id": "attack",
+                "action": "attack",
                 "bonus": 2,
             }
         },
@@ -517,13 +516,13 @@ def test_build_seed_graph_links_statuses_from_items():
         quests={},
         chapters={},
         start={
-            "start_location_id": "town",
-            "active_subject_id": None,
-            "active_quest_id": None,
+            "start_location": "town",
+            "active_subject": None,
+            "active_quest": None,
         },
         template={
             "id": "player_01",
-            "inventory_ids": ["focus_charm"],
+            "inventory": ["focus_charm"],
             "equipment": {},
         },
         game_id="game-1",
@@ -532,8 +531,7 @@ def test_build_seed_graph_links_statuses_from_items():
 
     graph = bundle.graph
     assert graph.nodes["focused"].type == "status"
-    assert graph.edges["applies_status:focus_charm:focused"].type == "applies_status"
-    assert "applies_status:focus_bolt:focused" not in graph.edges
+    assert "applies_status:focus_charm:focused" not in graph.edges
     assert bundle.content.statuses["focused"]["name"] == "집중"
 
 
@@ -561,17 +559,17 @@ def test_build_seed_graph_links_characters_to_factions():
             "guide": {
                 "id": "guide",
                 "name": "가이드",
-                "race_id": "human",
-                "location_id": "town",
-                "faction_id": "test_staff",
+                "race": "human",
+                "location": "town",
+                "faction": "test_staff",
             }
         },
         quests={},
         chapters={},
         start={
-            "start_location_id": "town",
-            "active_subject_id": None,
-            "active_quest_id": None,
+            "start_location": "town",
+            "active_subject": None,
+            "active_quest": None,
         },
         template={"id": "player_01"},
         game_id="game-1",
@@ -601,7 +599,7 @@ def test_build_seed_graph_links_skills_to_actions():
             "spark": {
                 "id": "spark",
                 "name": "불꽃",
-                "action_id": "attack",
+                "action": "attack",
             }
         },
         actions={
@@ -614,11 +612,11 @@ def test_build_seed_graph_links_skills_to_actions():
         quests={},
         chapters={},
         start={
-            "start_location_id": "town",
-            "active_subject_id": None,
-            "active_quest_id": None,
+            "start_location": "town",
+            "active_subject": None,
+            "active_quest": None,
         },
-        template={"id": "player_01", "learned_skill_ids": ["spark"]},
+        template={"id": "player_01", "learned_skills": ["spark"]},
         game_id="game-1",
         locale="ko",
     )
@@ -627,6 +625,45 @@ def test_build_seed_graph_links_skills_to_actions():
     assert graph.nodes["attack"].type == "action"
     assert graph.edges["uses_action:spark:attack"].type == "uses_action"
     assert bundle.content.actions["attack"]["name"] == "공격"
+
+
+def test_build_seed_graph_links_items_to_slots():
+    bundle = build_seed_graph(
+        profile_name="default",
+        player=PlayerInput(name="테스터", race_id="human", gender="female"),
+        races={"human": {"id": "human", "name": "인간", "description": ""}},
+        locations={"town": {"id": "town", "name": "마을"}},
+        items={
+            "ring": {
+                "id": "ring",
+                "name": "반지",
+                "slot": "accessory",
+            }
+        },
+        slots={
+            "accessory": {
+                "id": "accessory",
+                "name": "장신구",
+            }
+        },
+        skills={},
+        npcs={},
+        quests={},
+        chapters={},
+        start={
+            "start_location": "town",
+            "active_subject": None,
+            "active_quest": None,
+        },
+        template={"id": "player_01", "inventory": ["ring"]},
+        game_id="game-1",
+        locale="ko",
+    )
+
+    graph = bundle.graph
+    assert graph.nodes["accessory"].type == "slot"
+    assert graph.edges["uses_slot:ring:accessory"].type == "uses_slot"
+    assert bundle.content.slots["accessory"]["name"] == "장신구"
 
 
 def test_build_seed_graph_links_knowledge_from_world_records():
@@ -638,14 +675,14 @@ def test_build_seed_graph_links_knowledge_from_world_records():
             "archive": {
                 "id": "archive",
                 "name": "기록실",
-                "knowledge_ids": ["report_clue"],
+                "knowledge": ["report_clue"],
             }
         },
         items={
             "sealed_report": {
                 "id": "sealed_report",
                 "name": "밀봉된 보고서",
-                "knowledge_ids": ["report_clue"],
+                "knowledge": ["report_clue"],
             }
         },
         skills={},
@@ -660,17 +697,17 @@ def test_build_seed_graph_links_knowledge_from_world_records():
             "clerk": {
                 "id": "clerk",
                 "name": "기록 담당자",
-                "race_id": "human",
-                "location_id": "archive",
-                "knowledge_ids": ["report_clue"],
+                "race": "human",
+                "location": "archive",
+                "knowledge": ["report_clue"],
             }
         },
         quests={},
         chapters={},
         start={
-            "start_location_id": "archive",
-            "active_subject_id": None,
-            "active_quest_id": None,
+            "start_location": "archive",
+            "active_subject": None,
+            "active_quest": None,
         },
         template={"id": "player_01"},
         game_id="game-1",
@@ -706,17 +743,17 @@ def test_build_seed_graph_links_characters_to_dialogue_styles():
             "guide": {
                 "id": "guide",
                 "name": "가이드",
-                "race_id": "human",
-                "location_id": "town",
-                "dialogue_style_id": "procedural",
+                "race": "human",
+                "location": "town",
+                "dialogue_style": "procedural",
             }
         },
         quests={},
         chapters={},
         start={
-            "start_location_id": "town",
-            "active_subject_id": None,
-            "active_quest_id": None,
+            "start_location": "town",
+            "active_subject": None,
+            "active_quest": None,
         },
         template={"id": "player_01"},
         game_id="game-1",
@@ -749,17 +786,17 @@ def test_build_seed_graph_links_characters_to_mbti_records():
             "guide": {
                 "id": "guide",
                 "name": "가이드",
-                "race_id": "human",
-                "location_id": "town",
+                "race": "human",
+                "location": "town",
                 "mbti": "ENFP",
             }
         },
         quests={},
         chapters={},
         start={
-            "start_location_id": "town",
-            "active_subject_id": None,
-            "active_quest_id": None,
+            "start_location": "town",
+            "active_subject": None,
+            "active_quest": None,
         },
         template={"id": "player_01"},
         game_id="game-1",

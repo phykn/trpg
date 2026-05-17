@@ -4,7 +4,7 @@
   "equipment": {
     "weapon": "practice_dagger"
   },
-  "inventory_ids": [
+  "inventory": [
     "practice_dagger",
     "focus_charm",
     "smoke_bomb",

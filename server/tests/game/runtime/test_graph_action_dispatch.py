@@ -42,17 +42,23 @@ def _item(
     effect: str | None = None,
     amount: int = 0,
 ) -> GraphNode:
-    effects = None
-    if effect is not None:
-        effects = {"type": "consumable", "effect": effect, "amount": amount}
     return GraphNode(
         id=item_id,
         type="item",
         properties={
             "name": item_id,
             "consumable": effect is not None,
-            "effects": effects,
+            "effect": effect,
+            "amount": amount,
         },
+    )
+
+
+def _effect(effect_id: str, *, kind: str) -> GraphNode:
+    return GraphNode(
+        id=effect_id,
+        type="effect",
+        properties={"kind": kind},
     )
 
 
@@ -87,6 +93,7 @@ def _runtime() -> GameRuntimeState:
                 ),
                 "sword": _item("sword"),
                 "potion": _item("potion", effect="heal", amount=10),
+                "heal": _effect("heal", kind="heal"),
                 "merchant_potion": GraphNode(
                     id="merchant_potion",
                     type="item",

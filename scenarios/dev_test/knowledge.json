@@ -1,18 +1,18 @@
 {
   "report_private_note": {
     "id": "report_private_note",
-    "title": "보고서의 비공개 메모",
-    "summary": "기록 담당자가 아직 확정하지 않은 내부 분류 오류입니다.",
+    "title": "보고서 비공개 메모",
+    "summary": "기록 담당자가 아직 확정하지 않은 내부 분류 오류",
     "visibility": "private",
     "traits": [
       "직접 공개하지 않습니다",
-      "성공한 조사나 신뢰 변화가 있을 때만 간접 반응 재료로 씁니다"
+      "조사에 성공하거나 신뢰가 변했을 때만 간접 반응 재료로 사용합니다"
     ]
   },
   "report_public_clue": {
     "id": "report_public_clue",
     "title": "밀봉된 보고서의 공개 단서",
-    "summary": "보고서 봉인 표식의 날짜가 기록 보관실의 분류 순서와 맞지 않습니다.",
+    "summary": "보고서의 봉인 표식 날짜가 기록 보관실의 분류 순서와 맞지 않습니다",
     "visibility": "public",
     "traits": [
       "조사 성공 시 다음 행동으로 이어질 수 있습니다",

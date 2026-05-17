@@ -25,23 +25,22 @@ def fill_equipment(scenario_dir: Path) -> None:
         equipment = char.setdefault(
             "equipment", {"weapon": None, "armor": None, "accessory": None}
         )
-        for item_id in char.get("inventory_ids", []):
+        for item_id in char.get("inventory", []):
             if not isinstance(item_id, str):
                 continue
             item = items.get(item_id)
             if item is None:
                 continue
-            effect = item.get("effects")
-            effect_type = effect.get("type") if isinstance(effect, dict) else None
-            if effect_type == "weapon":
+            slot = item.get("slot")
+            if slot == "weapon":
                 if equipment.get("weapon") is None:
                     equipment["weapon"] = item_id
-            elif effect_type == "armor":
+            elif slot == "armor":
                 if equipment.get("armor") is None:
                     equipment["armor"] = item_id
                 elif equipment.get("accessory") is None:
                     equipment["accessory"] = item_id
-            elif effect is None and equipment.get("accessory") is None:
+            elif slot == "accessory" and equipment.get("accessory") is None:
                 equipment["accessory"] = item_id
         char_path.write_text(
             json.dumps(char, ensure_ascii=False, indent=2), encoding="utf-8"

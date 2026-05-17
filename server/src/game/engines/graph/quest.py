@@ -170,9 +170,10 @@ def plan_quest_progress_for_trigger(
         for index, trigger in enumerate(triggers):
             if triggers_met[index]:
                 continue
+            trigger_target = trigger.get("target") or trigger.get("target_id")
             if (
                 trigger.get("type") in _trigger_type_aliases(trigger_type)
-                and trigger.get("target_id") == target_id
+                and trigger_target == target_id
             ):
                 triggers_met[index] = True
                 changed = True

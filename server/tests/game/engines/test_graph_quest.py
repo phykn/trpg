@@ -118,7 +118,7 @@ def test_character_death_trigger_completes_active_quest():
                     "id": "trigger_01",
                     "name": "고블린 물리치기",
                     "type": "character_death",
-                    "target_id": "goblin_01",
+                    "target": "goblin_01",
                 }
             ],
             "triggers_met": [False],
@@ -142,7 +142,7 @@ def test_character_defeat_trigger_alias_completes_active_quest():
                     "id": "trigger_01",
                     "name": "고블린 물리치기",
                     "type": "character_defeat",
-                    "target_id": "goblin_01",
+                    "target": "goblin_01",
                 }
             ],
             "triggers_met": [False],
@@ -165,7 +165,7 @@ def test_location_enter_trigger_completes_active_quest():
                     "id": "trigger_01",
                     "name": "마을 도착",
                     "type": "location_enter",
-                    "target_id": "town",
+                    "target": "town",
                 }
             ],
             "triggers_met": [False],

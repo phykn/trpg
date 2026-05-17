@@ -1,9 +1,9 @@
 {
   "ch_dev_test": {
     "id": "ch_dev_test",
-    "title": "개발 원턴 테스트",
-    "summary": "짧은 입력으로 핵심 기능을 확인하기 위한 개발용 장.",
-    "quest_ids": [
+    "title": "개발용 원턴 테스트",
+    "summary": "짧은 입력만으로 핵심 기능을 확인하는 개발용 장",
+    "quests": [
       "q_training_combat",
       "q_heavy_golem_badge",
       "q_missing_supplies",
@@ -13,7 +13,7 @@
       "q_hazard_scout",
       "q_archive_report"
     ],
-    "prerequisite_ids": [],
+    "prerequisites": [],
     "status": "active",
     "required": false,
     "progress": {

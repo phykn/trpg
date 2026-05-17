@@ -102,7 +102,7 @@ def test_combat_narration_view_exposes_latest_exchange_result():
     assert payload["events"][-1]["result_label"] == "이번 교환은 실패입니다"
 
 
-def test_combat_narration_view_exposes_support_effect_context():
+def test_combat_narration_view_exposes_effect_context():
     runtime = GameRuntimeState(
         graph=Graph(
             nodes={
@@ -117,11 +117,11 @@ def test_combat_narration_view_exposes_support_effect_context():
                 "training_strike": GraphNode(
                     id="training_strike",
                     type="skill",
-                    properties={"effect_template": "dc_down"},
+                    properties={"effect": "dc_down"},
                 ),
                 "dc_down": GraphNode(
                     id="dc_down",
-                    type="support_effect",
+                    type="effect",
                     properties={},
                 ),
             },
@@ -129,7 +129,7 @@ def test_combat_narration_view_exposes_support_effect_context():
         ),
         content=RuntimeContent(
             skills={"training_strike": {"id": "training_strike", "name": "훈련 일격"}},
-            support_effects={
+            effects={
                 "dc_down": {
                     "id": "dc_down",
                     "name": "판정 난이도 감소",
@@ -164,7 +164,7 @@ def test_combat_narration_view_exposes_support_effect_context():
     payload = combat_narration_view(runtime)
 
     assert payload is not None
-    assert payload["support_effect"] == {
+    assert payload["effect"] == {
         "id": "dc_down",
         "name": "판정 난이도 감소",
         "description": "판정 난이도를 낮춥니다.",

@@ -111,7 +111,7 @@ server/
   scripts/                         # seed checks and one-off LLM smoke tools
   src/                             # code (ownership map in ../docs/plan.md)
   tests/                           # pytest
-../scenarios/<profile>/            # local seed source (world.md, start.json, player_template.json, races/, locations/, characters/, items/, quests/, chapters/, skills/). Authored locally, uploaded to Supabase Storage; the running server reads from the bucket.
+../scenarios/<profile>/            # local seed source (world.md, start.json, player.json, races/, locations/, characters/, items/, quests/, chapters/, skills/). Authored locally, uploaded to Supabase Storage; the running server reads from the bucket.
 ```
 
 Runtime state lives in Supabase Postgres:

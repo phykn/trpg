@@ -98,7 +98,7 @@ def _extend_default_storage_for_movement(storage) -> None:
             "id": "loc_01",
             "name": "광장",
             "description": "테스트 광장",
-            "connections": [{"target_id": "loc_02"}],
+            "connections": [{"target": "loc_02"}],
         },
         ensure_ascii=False,
     ).encode("utf-8")
@@ -877,7 +877,7 @@ async def test_graph_turn_equips_carried_item_and_returns_actionable_state(tmp_p
             type="item",
             properties={
                 "name": "연습검",
-                "effects": {"type": "weapon", "weapon_dice": "1d6"},
+                "slot": "weapon",
             },
         )
         graph.edges["carries:player_01:training_sword"] = GraphEdge(
@@ -930,8 +930,14 @@ async def test_graph_turn_uses_consumable_item_and_consumes_inventory_edge(tmp_p
             properties={
                 "name": "회복 물약",
                 "consumable": True,
-                "effects": {"type": "consumable", "effect": "heal", "amount": 8},
+                "effect": "heal",
+                "amount": 8,
             },
+        )
+        graph.nodes["heal"] = GraphNode(
+            id="heal",
+            type="effect",
+            properties={"kind": "heal"},
         )
         graph.edges["carries:player_01:healing_potion"] = GraphEdge(
             id="carries:player_01:healing_potion",

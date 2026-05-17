@@ -279,12 +279,9 @@ export type GraphLevelUpSkillSpec = {
   id: string;
   name: string;
   description: string;
-  kind: 'support';
   action: 'attack' | 'defend' | 'flee' | 'social';
+  bonus: number;
   mp_cost: number;
-  effect_template: 'dc_down' | 'extra_heart_damage' | 'prevent_heart_loss' | 'escape_boost';
-  support_bonus: number;
-  tags: string[];
 };
 
 export type GraphLevelUpChoice = {

@@ -80,8 +80,8 @@ class SupabaseStorageScenarioRepo:
         blob = await self._get_bytes_cached(f"{profile}/start.json")
         return json.loads(blob.decode("utf-8"))
 
-    async def read_player_template(self, profile: str) -> dict:
-        blob = await self._get_bytes_cached(f"{profile}/player_template.json")
+    async def read_player(self, profile: str) -> dict:
+        blob = await self._get_bytes_cached(f"{profile}/player.json")
         return json.loads(blob.decode("utf-8"))
 
     async def load_seed_records(self, profile: str, kind: str) -> dict[str, dict]:

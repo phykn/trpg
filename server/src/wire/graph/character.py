@@ -109,13 +109,10 @@ def _can_use_item(
     item: GraphNode,
     content: RuntimeContent | None = None,
 ) -> bool:
-    effects = static_value(item, "effects", content)
-    if isinstance(effects, dict):
-        return effects.get("type") == "consumable" and effects.get("effect") in {
-            "heal",
-            "mp_restore",
-            "buff",
-        }
+    effect_id = optional_str(static_value(item, "effect", content))
+    effect = content.effects.get(effect_id, {}) if content is not None and effect_id else {}
+    if isinstance(effect, dict) and effect.get("kind") in {"heal", "mp_restore", "buff"}:
+        return True
     return optional_str(static_value(item, "on_use", content)) is not None
 
 
@@ -123,18 +120,13 @@ def _equip_slots(
     item: GraphNode,
     content: RuntimeContent | None = None,
 ) -> list[EquipSlot]:
+    slot_id = _equip_slot(static_value(item, "slot", content))
+    if slot_id is not None:
+        return [slot_id]
+
     explicit = _explicit_equip_slots(item, content)
     if explicit:
         return explicit
-
-    effects = static_value(item, "effects", content)
-    if not isinstance(effects, dict):
-        return []
-    effect_type = effects.get("type")
-    if effect_type == "weapon":
-        return ["weapon"]
-    if effect_type == "armor":
-        return ["armor", "accessory"]
     return []
 
 

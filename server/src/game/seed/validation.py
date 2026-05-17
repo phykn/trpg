@@ -4,6 +4,40 @@ from typing import Any
 SeedRecords = dict[str, dict[str, Any]]
 
 
+_LEGACY_KEY_RENAMES = {
+    "action_category_id": "action",
+    "action_id": "action",
+    "dialogue_style_id": "dialogue_style",
+    "effect_template": "effect",
+    "faction_id": "faction",
+    "giver_id": "giver",
+    "inventory_ids": "inventory",
+    "item_ids": "items",
+    "knowledge_ids": "knowledge",
+    "learned_skill_ids": "learned_skills",
+    "location_id": "location",
+    "prerequisite_ids": "prerequisites",
+    "private_hint": "secrets",
+    "quest_ids": "quests",
+    "race_id": "race",
+    "racial_skill_ids": "racial_skills",
+    "slot_id": "slot",
+    "support_action": "action",
+    "target_id": "target",
+}
+_FORBIDDEN_SEED_KEYS = {
+    *(_LEGACY_KEY_RENAMES),
+    "disposition",
+    "hp",
+    "job",
+    "max_hp",
+    "max_mp",
+    "mp",
+    "stats",
+    "status_ids",
+    "tags",
+    "weather",
+}
 _RECOMMENDED_FIELDS = {
     "location": ("mood", "traits"),
     "item": ("traits",),
@@ -28,23 +62,49 @@ def seed_violations(
     quests: SeedRecords,
     chapters: SeedRecords,
     start: dict[str, Any],
-    support_effects: SeedRecords | None = None,
+    effects: SeedRecords | None = None,
     statuses: SeedRecords | None = None,
+    slots: SeedRecords | None = None,
     factions: SeedRecords | None = None,
     actions: SeedRecords | None = None,
     knowledge: SeedRecords | None = None,
     dialogue_styles: SeedRecords | None = None,
     mbti: SeedRecords | None = None,
+    player: dict[str, Any] | None = None,
 ) -> list[str]:
     out: list[str] = []
+    _check_forbidden_seed_shape(
+        records={
+            "race": races,
+            "location": locations,
+            "item": items,
+            "skill": skills,
+            "effect": effects or {},
+            "status": statuses or {},
+            "slot": slots or {},
+            "faction": factions or {},
+            "action": actions or {},
+            "knowledge": knowledge or {},
+            "dialogue_style": dialogue_styles or {},
+            "mbti": mbti or {},
+            "character": npcs,
+            "quest": quests,
+            "chapter": chapters,
+        },
+        start=start,
+        player=player,
+        out=out,
+    )
     _check_key_id("race", races, out)
     _check_key_id("location", locations, out)
     _check_key_id("item", items, out)
     _check_key_id("skill", skills, out)
-    if support_effects:
-        _check_key_id("support_effect", support_effects, out)
+    if effects:
+        _check_key_id("effect", effects, out)
     if statuses:
         _check_key_id("status", statuses, out)
+    if slots:
+        _check_key_id("slot", slots, out)
     if factions:
         _check_key_id("faction", factions, out)
     if actions:
@@ -59,81 +119,86 @@ def seed_violations(
     _check_key_id("quest", quests, out)
     _check_key_id("chapter", chapters, out)
 
-    start_location_id = start.get("start_location_id")
+    start_location_id = start.get("start_location")
     if not isinstance(start_location_id, str) or start_location_id not in locations:
-        out.append("start_location_id must reference an existing location")
-    active_subject_id = start.get("active_subject_id")
+        out.append("start_location must reference an existing location")
+    active_subject_id = start.get("active_subject")
     if active_subject_id is not None and active_subject_id not in npcs:
-        out.append("active_subject_id must reference an existing character")
-    active_quest_id = start.get("active_quest_id")
+        out.append("active_subject must reference an existing character")
+    active_quest_id = start.get("active_quest")
     if active_quest_id is not None and active_quest_id not in quests:
-        out.append("active_quest_id must reference an existing quest")
+        out.append("active_quest must reference an existing quest")
 
     for location_id, location in locations.items():
         _check_knowledge_references(
-            "location", location_id, location.get("knowledge_ids"), knowledge, out
+            "location", location_id, location.get("knowledge"), knowledge, out
         )
-        for item_id in _str_list(location.get("item_ids")):
+        for item_id in _str_list(location.get("items")):
             if item_id not in items:
-                out.append(f"location {location_id} item_id={item_id!r} not found")
+                out.append(f"location {location_id} item={item_id!r} not found")
         for connection in _dict_list(location.get("connections")):
-            target_id = connection.get("target_id")
+            target_id = connection.get("target")
             if target_id not in locations:
                 out.append(
-                    f"location {location_id} connection target_id={target_id!r} not found"
+                    f"location {location_id} connection target={target_id!r} not found"
                 )
 
     for item_id, item in items.items():
-        _check_support_action(
-            "item", item_id, "support_action", item.get("support_action"), out
+        _check_action(
+            "item", item_id, "action", item.get("action"), out
         )
-        _check_effect_template(
-            "item", item_id, item.get("effect_template"), support_effects, out
+        _check_effect(
+            "item", item_id, item.get("effect"), effects, out
         )
-        _check_status_references("item", item_id, item.get("status_ids"), statuses, out)
+        _check_item_effect_fields(item_id, item, effects, out)
+        slot_id = item.get("slot")
+        if slot_id is not None and (
+            not isinstance(slot_id, str) or not slots or slot_id not in slots
+        ):
+            out.append(f"item {item_id} slot={slot_id!r} not found")
         _check_knowledge_references(
-            "item", item_id, item.get("knowledge_ids"), knowledge, out
+            "item", item_id, item.get("knowledge"), knowledge, out
         )
 
     for skill_id, skill in skills.items():
-        action_id = skill.get("action_id")
-        if action_id is None:
-            out.append(f"skill {skill_id} action_id is required")
+        action = skill.get("action")
+        if action is None:
+            out.append(f"skill {skill_id} action is required")
             continue
-        _check_support_action("skill", skill_id, "action_id", action_id, out)
+        _check_action("skill", skill_id, "action", action, out)
         if (
-            action_id is not None
+            action is not None
             and actions
-            and isinstance(action_id, str)
-            and action_id in _SUPPORT_ACTIONS
-            and action_id not in actions
+            and isinstance(action, str)
+            and action in _SUPPORT_ACTIONS
+            and action not in actions
         ):
-            out.append(f"skill {skill_id} action_id={action_id!r} not found")
+            out.append(f"skill {skill_id} action={action!r} not found")
 
     for character_id, character in npcs.items():
-        race_id = character.get("race_id")
+        race_id = character.get("race")
         if race_id not in races:
-            out.append(f"character {character_id} race_id={race_id!r} not found")
-        location_id = character.get("location_id")
+            out.append(f"character {character_id} race={race_id!r} not found")
+        location_id = character.get("location")
         if location_id is not None and location_id not in locations:
             out.append(
-                f"character {character_id} location_id={location_id!r} not found"
+                f"character {character_id} location={location_id!r} not found"
             )
-        faction_id = character.get("faction_id")
+        faction_id = character.get("faction")
         if faction_id is not None and (
             not isinstance(faction_id, str)
             or not factions
             or faction_id not in factions
         ):
-            out.append(f"character {character_id} faction_id={faction_id!r} not found")
-        dialogue_style_id = character.get("dialogue_style_id")
+            out.append(f"character {character_id} faction={faction_id!r} not found")
+        dialogue_style_id = character.get("dialogue_style")
         if dialogue_style_id is not None and (
             not isinstance(dialogue_style_id, str)
             or not dialogue_styles
             or dialogue_style_id not in dialogue_styles
         ):
             out.append(
-                f"character {character_id} dialogue_style_id={dialogue_style_id!r} "
+                f"character {character_id} dialogue_style={dialogue_style_id!r} "
                 "not found"
             )
         mbti_id = character.get("mbti")
@@ -144,11 +209,11 @@ def seed_violations(
         _check_knowledge_references(
             "character",
             character_id,
-            character.get("knowledge_ids"),
+            character.get("knowledge"),
             knowledge,
             out,
         )
-        for item_id in _str_list(character.get("inventory_ids")):
+        for item_id in _str_list(character.get("inventory")):
             if item_id not in items:
                 out.append(
                     f"character {character_id} inventory item={item_id!r} not found"
@@ -158,19 +223,19 @@ def seed_violations(
                 out.append(
                     f"character {character_id} equipment.{slot}={item_id!r} not found"
                 )
-        for skill_id in _str_list(character.get("learned_skill_ids")):
+        for skill_id in _str_list(character.get("learned_skills")):
             if skill_id not in skills:
-                out.append(f"character {character_id} skill_id={skill_id!r} not found")
+                out.append(f"character {character_id} skill={skill_id!r} not found")
 
     for race_id, race in races.items():
-        for skill_id in _str_list(race.get("racial_skill_ids")):
+        for skill_id in _str_list(race.get("racial_skills")):
             if skill_id not in skills:
-                out.append(f"race {race_id} racial_skill_id={skill_id!r} not found")
+                out.append(f"race {race_id} racial_skills={skill_id!r} not found")
 
     for quest_id, quest in quests.items():
-        giver_id = quest.get("giver_id")
+        giver_id = quest.get("giver")
         if giver_id is not None and giver_id not in npcs:
-            out.append(f"quest {quest_id} giver_id={giver_id!r} not found")
+            out.append(f"quest {quest_id} giver={giver_id!r} not found")
         for trigger in [
             *_dict_list(quest.get("triggers")),
             *_dict_list(quest.get("fail_triggers")),
@@ -179,18 +244,18 @@ def seed_violations(
         for item_id in _str_list(_mapping(quest.get("rewards")).get("items")):
             if item_id not in items:
                 out.append(f"quest {quest_id} reward item={item_id!r} not found")
-        for prereq_id in _str_list(quest.get("prerequisite_ids")):
+        for prereq_id in _str_list(quest.get("prerequisites")):
             if prereq_id not in quests:
-                out.append(f"quest {quest_id} prerequisite_id={prereq_id!r} not found")
+                out.append(f"quest {quest_id} prerequisite={prereq_id!r} not found")
 
     for chapter_id, chapter in chapters.items():
-        for quest_id in _str_list(chapter.get("quest_ids")):
+        for quest_id in _str_list(chapter.get("quests")):
             if quest_id not in quests:
-                out.append(f"chapter {chapter_id} quest_id={quest_id!r} not found")
-        for prereq_id in _str_list(chapter.get("prerequisite_ids")):
+                out.append(f"chapter {chapter_id} quest={quest_id!r} not found")
+        for prereq_id in _str_list(chapter.get("prerequisites")):
             if prereq_id not in chapters:
                 out.append(
-                    f"chapter {chapter_id} prerequisite_id={prereq_id!r} not found"
+                    f"chapter {chapter_id} prerequisite={prereq_id!r} not found"
                 )
 
     for faction_id, faction in (factions or {}).items():
@@ -213,19 +278,22 @@ def seed_warnings(
     quests: SeedRecords,
     chapters: SeedRecords,
     start: dict[str, Any],
-    support_effects: SeedRecords | None = None,
+    effects: SeedRecords | None = None,
     statuses: SeedRecords | None = None,
+    slots: SeedRecords | None = None,
     factions: SeedRecords | None = None,
     actions: SeedRecords | None = None,
     knowledge: SeedRecords | None = None,
     dialogue_styles: SeedRecords | None = None,
     mbti: SeedRecords | None = None,
+    player: dict[str, Any] | None = None,
 ) -> list[str]:
     del (
         races,
         skills,
-        support_effects,
+        effects,
         statuses,
+        slots,
         factions,
         actions,
         knowledge,
@@ -234,6 +302,7 @@ def seed_warnings(
         quests,
         chapters,
         start,
+        player,
     )
     out: list[str] = []
     _check_recommended_fields("location", locations, out)
@@ -248,7 +317,53 @@ def _check_key_id(kind: str, records: SeedRecords, out: list[str]) -> None:
             out.append(f"{kind} key/id mismatch: {key}")
 
 
-def _check_support_action(
+def _check_forbidden_seed_shape(
+    *,
+    records: dict[str, SeedRecords],
+    start: dict[str, Any],
+    player: dict[str, Any] | None,
+    out: list[str],
+) -> None:
+    for kind, by_id in records.items():
+        for record_id, record in by_id.items():
+            _walk_forbidden_shape(record, f"{kind} {record_id}", out)
+            if kind == "location" and "difficulty" in record:
+                out.append(
+                    f"location {record_id} difficulty is a connection field, "
+                    "not a location field"
+                )
+    _walk_forbidden_shape(start, "start", out)
+    if player is not None:
+        _walk_forbidden_shape(player, "player", out)
+
+
+def _walk_forbidden_shape(value: object, path: str, out: list[str]) -> None:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            child_path = f"{path}.{key}"
+            if key in _LEGACY_KEY_RENAMES:
+                out.append(
+                    f"{child_path} uses legacy key; use "
+                    f"{_LEGACY_KEY_RENAMES[key]!r}"
+                )
+            elif key in _FORBIDDEN_SEED_KEYS:
+                out.append(f"{child_path} is not allowed in seed data")
+            elif key != "id" and (key.endswith("_id") or key.endswith("_ids")):
+                out.append(f"{child_path} uses legacy *_id/*_ids naming")
+
+            if key == "on_use" and child is None:
+                out.append(f"{child_path} must be omitted when empty")
+            if key in {"difficulty", "key_item"} and child is None:
+                out.append(f"{child_path} must be omitted when empty")
+
+            _walk_forbidden_shape(child, child_path, out)
+        return
+    if isinstance(value, list):
+        for index, child in enumerate(value):
+            _walk_forbidden_shape(child, f"{path}[{index}]", out)
+
+
+def _check_action(
     kind: str,
     record_id: str,
     field: str,
@@ -261,49 +376,41 @@ def _check_support_action(
         out.append(f"{kind} {record_id} {field}={value!r} unknown")
 
 
-def _check_effect_template(
+def _check_effect(
     kind: str,
     record_id: str,
     value: object,
-    support_effects: SeedRecords | None,
+    effects: SeedRecords | None,
     out: list[str],
 ) -> None:
     if value is None:
         return
-    if support_effects:
-        if value not in support_effects:
+    if effects:
+        if value not in effects:
             out.append(
-                f"{kind} {record_id} effect_template={value!r} "
-                "not found in support_effects"
+                f"{kind} {record_id} effect={value!r} "
+                "not found in effects"
             )
         return
     if value not in _EFFECT_TEMPLATES:
-        out.append(f"{kind} {record_id} effect_template={value!r} unknown")
+        out.append(f"{kind} {record_id} effect={value!r} unknown")
 
 
-def _check_status_references(
-    kind: str,
-    record_id: str,
-    value: object,
-    statuses: SeedRecords | None,
+def _check_item_effect_fields(
+    item_id: str,
+    item: dict[str, Any],
+    effects: SeedRecords | None,
     out: list[str],
 ) -> None:
-    if value is None:
+    effect_id = item.get("effect")
+    if not isinstance(effect_id, str) or not effects:
         return
-    status_ids = _str_list(value)
-    if not statuses:
-        for status_id in status_ids:
-            out.append(
-                f"{kind} {record_id} status_id={status_id!r} "
-                "not found in statuses"
-            )
+    effect = effects.get(effect_id)
+    if not isinstance(effect, dict):
         return
-    for status_id in status_ids:
-        if status_id not in statuses:
-            out.append(
-                f"{kind} {record_id} status_id={status_id!r} "
-                "not found in statuses"
-            )
+    effect_kind = effect.get("kind")
+    if effect_kind in {"heal", "mp_restore"} and not isinstance(item.get("amount"), int):
+        out.append(f"item {item_id} amount is required for effect={effect_id!r}")
 
 
 def _check_knowledge_references(
@@ -351,7 +458,7 @@ def _check_trigger_target(
     out: list[str],
 ) -> None:
     target_type = trigger.get("type")
-    target_id = trigger.get("target_id")
+    target_id = trigger.get("target")
     pools = {
         "location_enter": locations,
         "item_use": items,
@@ -365,7 +472,7 @@ def _check_trigger_target(
         out.append(f"quest {quest_id} trigger type={target_type!r} unknown")
         return
     if target_id not in pool:
-        out.append(f"quest {quest_id} trigger target_id={target_id!r} not found")
+        out.append(f"quest {quest_id} trigger target={target_id!r} not found")
 
 
 def _mapping(value: object) -> dict[str, Any]:

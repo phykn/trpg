@@ -19,8 +19,9 @@ _EDGE_NODE_TYPES: dict[EdgeType, tuple[set[NodeType], set[NodeType]]] = {
     "reward_of": ({"item"}, {"quest"}),
     "part_of_chapter": ({"quest"}, {"chapter"}),
     "relation": ({"character"}, {"character"}),
-    "uses_support_effect": ({"item", "skill"}, {"support_effect"}),
+    "uses_effect": ({"item", "skill"}, {"effect"}),
     "applies_status": ({"item", "skill", "character", "location"}, {"status"}),
+    "uses_slot": ({"item"}, {"slot"}),
     "member_of_faction": ({"character"}, {"faction"}),
     "faction_relation": ({"faction"}, {"faction"}),
     "uses_action": ({"skill"}, {"action"}),
@@ -115,7 +116,7 @@ def _validate_quest_trigger_targets(graph: Graph) -> None:
         if quest.type != "quest":
             continue
         for trigger in _dicts(quest.properties.get("triggers")):
-            target_id = trigger.get("target_id")
+            target_id = trigger.get("target")
             if isinstance(target_id, str) and target_id not in graph.nodes:
                 raise GraphInvariantError(
                     f"quest trigger target missing: {quest.id} -> {target_id}"

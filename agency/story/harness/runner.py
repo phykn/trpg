@@ -35,62 +35,62 @@ def _check_location_refs(loc: Record, refs: dict[str, set[str]]) -> None:
     item_ids = refs.get("item", set())
     loc_id = _entity_id(loc)
     for connection in _dict_list(loc.get("connections")):
-        target_id = connection.get("target_id")
+        target_id = connection.get("target")
         if target_id == loc_id:
             raise EntityWriterError(
                 f"location.connections points at itself ({loc_id})."
             )
         if target_id not in location_ids:
             raise EntityWriterError(
-                f"location.connections.target_id={target_id!r} not found in scenario locations. "
+                f"location.connections.target={target_id!r} not found in scenario locations. "
                 f"Valid ids: {sorted(location_ids)}"
             )
-    for item_id in _str_list(loc.get("item_ids")):
+    for item_id in _str_list(loc.get("items")):
         if item_id not in item_ids:
             raise EntityWriterError(
-                f"location.item_ids entry {item_id!r} not found in scenario items."
+                f"location.items entry {item_id!r} not found in scenario items."
             )
 
 
 def _check_character_refs(character: Record, refs: dict[str, set[str]]) -> None:
     races = refs.get("race", set())
-    race_id = character.get("race_id")
+    race_id = character.get("race")
     if race_id not in races:
         raise EntityWriterError(
-            f"character.race_id={race_id!r} not found in scenario races. "
+            f"character.race={race_id!r} not found in scenario races. "
             f"Valid ids: {sorted(races)}"
         )
     locations = refs.get("location", set())
-    location_id = character.get("location_id")
+    location_id = character.get("location")
     if location_id is not None and location_id not in locations:
         raise EntityWriterError(
-            f"character.location_id={location_id!r} not found in scenario locations. "
+            f"character.location={location_id!r} not found in scenario locations. "
             f"Valid ids: {sorted(locations)}"
         )
     skills = refs.get("skill", set())
-    for skill_id in _str_list(character.get("learned_skill_ids")):
+    for skill_id in _str_list(character.get("learned_skills")):
         if skill_id not in skills:
             raise EntityWriterError(
-                f"character.skill_id={skill_id!r} not found in scenario skills. "
+                f"character.skill={skill_id!r} not found in scenario skills. "
                 "Create that skill first."
             )
 
 
 def _check_race_refs(race: Record, refs: dict[str, set[str]]) -> None:
     skills = refs.get("skill", set())
-    for skill_id in _str_list(race.get("racial_skill_ids")):
+    for skill_id in _str_list(race.get("racial_skills")):
         if skill_id not in skills:
             raise EntityWriterError(
-                f"race.racial_skill_id={skill_id!r} not found in scenario skills."
+                f"race.racial_skills={skill_id!r} not found in scenario skills."
             )
 
 
 def _check_quest_refs(quest: Record, refs: dict[str, set[str]]) -> None:
     characters = refs.get("character", set())
-    giver_id = quest.get("giver_id")
+    giver_id = quest.get("giver")
     if giver_id is not None and giver_id not in characters:
         raise EntityWriterError(
-            f"quest.giver_id={giver_id!r} not found in scenario characters."
+            f"quest.giver={giver_id!r} not found in scenario characters."
         )
     for trigger in [
         *_dict_list(quest.get("triggers")),
@@ -103,26 +103,26 @@ def _check_quest_refs(quest: Record, refs: dict[str, set[str]]) -> None:
                 f"Valid values: {sorted(TRIGGER_TARGET_KIND)}"
             )
         pool = refs.get(target_kind, set())
-        target_id = trigger.get("target_id")
+        target_id = trigger.get("target")
         if target_id not in pool:
             raise EntityWriterError(
-                f"quest trigger (id={trigger.get('id')}) target_id={target_id!r} not found in the "
+                f"quest trigger (id={trigger.get('id')}) target={target_id!r} not found in the "
                 f"{target_kind} pool."
             )
     quests = refs.get("quest", set())
-    for prereq_id in _str_list(quest.get("prerequisite_ids")):
+    for prereq_id in _str_list(quest.get("prerequisites")):
         if prereq_id not in quests:
             raise EntityWriterError(
-                f"quest.prerequisite_ids entry {prereq_id!r} not found in scenario quests."
+                f"quest.prerequisites entry {prereq_id!r} not found in scenario quests."
             )
 
 
 def _check_chapter_refs(chapter: Record, refs: dict[str, set[str]]) -> None:
     quests = refs.get("quest", set())
-    for quest_id in _str_list(chapter.get("quest_ids")):
+    for quest_id in _str_list(chapter.get("quests")):
         if quest_id not in quests:
             raise EntityWriterError(
-                f"chapter.quest_ids entry {quest_id!r} not found in scenario quests."
+                f"chapter.quests entry {quest_id!r} not found in scenario quests."
             )
 
 
@@ -193,26 +193,22 @@ def _check_entity_invariants(
 ) -> None:
     kind = _guess_kind(entity)
     if kind == "skill":
-        primary_stat = entity.get("primary_stat")
-        if primary_stat not in {"body", "agility", "mind", "presence"}:
-            raise EntityWriterError(
-                f"skill.primary_stat={primary_stat!r} must be one of body/agility/mind/presence."
-            )
+        action = entity.get("action")
+        if action is not None and not isinstance(action, str):
+            raise EntityWriterError("skill.action must be an action id string.")
+        effect = entity.get("effect")
+        if effect is not None and not isinstance(effect, str):
+            raise EntityWriterError("skill.effect must be an effect id string.")
         return
     if kind == "character":
-        _check_graph_stats(entity)
         if not skeleton:
             _check_character_pools(entity, scenario_dir)
         return
     if kind == "item":
-        effect = entity.get("effects")
-        if isinstance(effect, dict) and effect.get("type") not in {
-            "weapon",
-            "armor",
-            "consumable",
-        }:
+        effect = entity.get("effect")
+        if effect is not None and not isinstance(effect, str):
             raise EntityWriterError(
-                f"item.effects.type={effect.get('type')!r} unknown."
+                f"item.effect={effect!r} must be an effect id string or null."
             )
 
 
@@ -233,41 +229,28 @@ def _check_id(entity: Record, existing: set[str], force_id: str | None = None) -
         )
 
 
-def _check_graph_stats(entity: Record) -> None:
-    stats = entity.get("stats")
-    if stats is None:
-        return
-    if not isinstance(stats, dict):
-        raise EntityWriterError("character.stats must be an object.")
-    missing = {"body", "agility", "mind", "presence"} - stats.keys()
-    if missing:
-        raise EntityWriterError(
-            f"character.stats missing graph stat keys: {sorted(missing)}"
-        )
-
-
 def _check_character_pools(entity: Record, scenario_dir: Path) -> None:
     items = {_entity_id(item) for item in _load_dir(scenario_dir, "items")}
     skills = {_entity_id(skill) for skill in _load_dir(scenario_dir, "skills")}
-    for item_id in _str_list(entity.get("inventory_ids")):
+    for item_id in _str_list(entity.get("inventory")):
         if item_id not in items:
             raise EntityWriterError(
-                f"character.inventory_ids entry {item_id!r} missing."
+                f"character.inventory entry {item_id!r} missing."
             )
     for item_id in _mapping(entity.get("equipment")).values():
         if isinstance(item_id, str) and item_id and item_id not in items:
             raise EntityWriterError(f"character.equipment item {item_id!r} missing.")
-    for skill_id in _str_list(entity.get("learned_skill_ids")):
+    for skill_id in _str_list(entity.get("learned_skills")):
         if skill_id not in skills:
-            raise EntityWriterError(f"character.skill_id {skill_id!r} missing.")
+            raise EntityWriterError(f"character.skill {skill_id!r} missing.")
 
 
 def _guess_kind(entity: Record) -> str:
-    if "primary_stat" in entity:
+    if "action" in entity and ("mp_cost" in entity or "level" in entity):
         return "skill"
-    if "race_id" in entity and "location_id" in entity:
+    if "race" in entity and "location" in entity:
         return "character"
-    if "effects" in entity and "weight" in entity:
+    if "effect" in entity or "slot" in entity:
         return "item"
     return "unknown"
 

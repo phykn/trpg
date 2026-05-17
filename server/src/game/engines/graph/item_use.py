@@ -46,20 +46,19 @@ def plan_item_use(
     carry_edge = _require_carried_by(graph, actor_id, item_id)
 
     item_props = item.properties
-    effects = item_props.get("effects")
+    effect_id = _optional_str(item_props.get("effect"))
+    effect = _effect_properties(graph, effect_id) if effect_id is not None else None
     on_use = _optional_str(item_props.get("on_use"))
     changes: list[GraphChange] = []
     amount: int | None = None
 
-    if effects is None:
+    if effect is None:
         kind: ItemUseKind = "trigger"
-    elif not isinstance(effects, dict) or effects.get("type") != "consumable":
-        raise GraphItemUseError(f"item is not consumable: {item_id}")
     else:
         kind, amount = _plan_consumable_effect(
             target.properties,
             item_props,
-            effects,
+            effect,
             resolved_target_id,
             changes,
         )
@@ -83,36 +82,36 @@ def plan_item_use(
 def _plan_consumable_effect(
     target_props: dict,
     item_props: dict,
-    effects: dict,
+    effect_props: dict,
     target_id: str,
     changes: list[GraphChange],
 ) -> tuple[ItemUseKind, int | None]:
-    effect = effects.get("effect")
-    if effect == "heal":
+    kind = effect_props.get("kind") or effect_props.get("effect")
+    if kind == "heal":
         restored = _plan_resource_restore(
             target_props,
             target_id,
             current_key="hp",
             max_key="max_hp",
-            amount=_int_effect(effects, "amount"),
+            amount=_int_item_effect(item_props, "amount"),
             changes=changes,
         )
         return "heal", restored
-    if effect == "mp_restore":
+    if kind == "mp_restore":
         return "mp_restore", _plan_resource_restore(
             target_props,
             target_id,
             current_key="mp",
             max_key="max_mp",
-            amount=_int_effect(effects, "amount"),
+            amount=_int_item_effect(item_props, "amount"),
             changes=changes,
         )
-    if effect == "buff":
-        _plan_buff(target_props, item_props, effects, target_id, changes)
+    if kind == "buff":
+        _plan_buff(target_props, item_props, effect_props, target_id, changes)
         return "buff", None
-    if effect == "damage":
+    if kind == "damage":
         raise GraphItemUseError("damage item use belongs to graph-native combat")
-    raise GraphItemUseError(f"unsupported consumable effect: {effect}")
+    raise GraphItemUseError(f"unsupported item use effect: {kind}")
 
 
 def _plan_resource_restore(
@@ -191,6 +190,15 @@ def _require_carried_by(graph: Graph, actor_id: str, item_id: str) -> GraphEdge:
     raise GraphItemUseError(f"item is not carried by {actor_id}: {item_id}")
 
 
+def _effect_properties(graph: Graph, effect_id: str) -> dict:
+    node = graph.nodes.get(effect_id)
+    if node is None:
+        raise GraphItemUseError(f"missing effect: {effect_id}")
+    if node.type != "effect":
+        raise GraphItemUseError(f"node is not an effect: {effect_id}")
+    return node.properties
+
+
 def _int_prop(props: dict, key: str, node_id: str) -> int:
     value = props.get(key)
     if not isinstance(value, int):
@@ -202,6 +210,14 @@ def _int_effect(effects: dict, key: str) -> int:
     value = effects.get(key)
     if not isinstance(value, int):
         raise GraphItemUseError(f"missing numeric effect field: {key}")
+    return value
+
+
+def _int_item_effect(item_props: dict, key: str) -> int:
+    value = item_props.get(key)
+    if not isinstance(value, int):
+        item_name = item_props.get("name") or "item"
+        raise GraphItemUseError(f"missing numeric item effect field: {item_name}.{key}")
     return value
 
 

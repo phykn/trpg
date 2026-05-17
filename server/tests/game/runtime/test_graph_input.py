@@ -217,11 +217,8 @@ def _graph() -> Graph:
                 properties={
                     "name": "회복 약초",
                     "consumable": True,
-                    "effects": {
-                        "type": "consumable",
-                        "effect": "heal",
-                        "amount": 5,
-                    },
+                    "effect": "heal",
+                    "amount": 5,
                 },
             ),
             "mana_vial": GraphNode(
@@ -230,12 +227,19 @@ def _graph() -> Graph:
                 properties={
                     "name": "마나 시약",
                     "consumable": True,
-                    "effects": {
-                        "type": "consumable",
-                        "effect": "mp_restore",
-                        "amount": 5,
-                    },
+                    "effect": "mp_restore",
+                    "amount": 5,
                 },
+            ),
+            "heal": GraphNode(
+                id="heal",
+                type="effect",
+                properties={"kind": "heal"},
+            ),
+            "mp_restore": GraphNode(
+                id="mp_restore",
+                type="effect",
+                properties={"kind": "mp_restore"},
             ),
         },
         edges={
@@ -412,8 +416,7 @@ async def test_graph_input_speak_check_hint_creates_pending_roll(tmp_path):
     assert progress.pending_roll["stat"] == "presence"
     assert progress.pending_roll["body"] == reason
     assert progress.pending_roll["check_reason"] == reason
-    assert [entry.kind for entry in logs] == ["player", "gm"]
-    assert logs[1].text == reason
+    assert [entry.kind for entry in logs] == ["player"]
     assert [call["agent"] for call in llm.calls] == ["classify"]
 
 
@@ -780,13 +783,12 @@ async def test_graph_input_perceive_creates_pending_roll(tmp_path):
     assert progress.pending_roll["kind"] == "perceive"
     assert progress.pending_roll["stat"] == "mind"
     assert progress.pending_roll["required_roll"] == 13
-    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert [entry.kind for entry in logs] == ["player"]
     assert logs[0].text == "주변을 자세히 살펴본다"
-    assert logs[1].text == progress.pending_roll["body"]
     assert result.front_state.pending_roll is not None
 
 
-async def test_graph_input_stream_perceive_streams_preroll_narration_before_final(
+async def test_graph_input_stream_perceive_waits_for_roll_without_preroll_log(
     tmp_path,
 ):
     repo = await _repo(tmp_path)
@@ -809,19 +811,17 @@ async def test_graph_input_stream_perceive_streams_preroll_narration_before_fina
 
     assert events[0]["type"] == "result"
     assert events[-1]["type"] == "final"
-    deltas = [event for event in events[1:-1] if event["type"] == "narration_delta"]
-    assert len(deltas) == 2
+    assert [event["type"] for event in events] == ["result", "final"]
     assert events[0]["result"].status == "roll_required"
     assert events[0]["result"].front_state.pending_roll is not None
-    assert events[0]["result"].front_state.pending_roll.body == ""
     assert events[0]["result"].front_state.log == [logs[0]]
     assert events[-1]["result"].status == "roll_required"
-    assert "".join(event["text"] for event in deltas) == llm.narration
-    assert progress.pending_roll["body"] == llm.narration
+    assert progress.pending_roll["body"] != llm.narration
     assert progress.pending_roll["player_input"] == "주변을 자세히 살펴본다"
-    assert events[-1]["result"].front_state.pending_roll.body == llm.narration
-    assert events[-1]["result"].front_state.log[-1].text == llm.narration
-    assert [call["agent"] for call in llm.calls] == ["classify", "graph_narrate"]
+    assert events[-1]["result"].front_state.pending_roll.body == progress.pending_roll["body"]
+    assert events[-1]["result"].front_state.log == [logs[0]]
+    assert [entry.kind for entry in logs] == ["player"]
+    assert [call["agent"] for call in llm.calls] == ["classify"]
 
 
 async def test_graph_input_pickup_visible_location_item_transfers_to_inventory(

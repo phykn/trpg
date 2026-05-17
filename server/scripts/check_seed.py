@@ -59,13 +59,18 @@ def _load_checks(
             start = await repo.read_start_json(profile)
         except FileNotFoundError:
             start = {}
+        try:
+            player = await repo.read_player(profile)
+        except FileNotFoundError:
+            player = None
         records = dict(
             races=await repo.load_seed_records(profile, "races"),
             locations=await repo.load_seed_records(profile, "locations"),
             items=await repo.load_seed_records(profile, "items"),
             skills=await repo.load_seed_records(profile, "skills"),
-            support_effects=await repo.load_seed_records(profile, "support_effects"),
+            effects=await repo.load_seed_records(profile, "effects"),
             statuses=await repo.load_seed_records(profile, "statuses"),
+            slots=await repo.load_seed_records(profile, "slots"),
             factions=await repo.load_seed_records(profile, "factions"),
             actions=await repo.load_seed_records(profile, "actions"),
             knowledge=await repo.load_seed_records(profile, "knowledge"),
@@ -75,6 +80,7 @@ def _load_checks(
             quests=await repo.load_seed_records(profile, "quests"),
             chapters=await repo.load_seed_records(profile, "chapters"),
             start=start,
+            player=player,
         )
         return seed_violations(**records), seed_warnings(**records)
 

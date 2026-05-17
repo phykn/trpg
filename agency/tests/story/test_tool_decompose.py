@@ -17,7 +17,7 @@ VALID_SETUP = {
         {
             "id": "human",
             "role": "마을 주민",
-            "racial_skill_ids": ["barter"],
+            "racial_skills": ["barter"],
             "is_humanoid": True,
         }
     ],
@@ -29,8 +29,8 @@ VALID_SETUP = {
             "type": "buff",
         }
     ],
-    "locations": [{"id": "town", "role": "시작 광장", "connection_ids": []}],
-    "start_location_id": "town",
+    "locations": [{"id": "town", "role": "시작 광장", "connections": []}],
+    "start_location": "town",
 }
 
 
@@ -44,7 +44,7 @@ def test_decompose_setup_ok(capsys, tmp_path):
 
 def test_decompose_setup_missing_skill_in_pool(capsys, tmp_path):
     bad = json.loads(json.dumps(VALID_SETUP))
-    bad["races"][0]["racial_skill_ids"] = ["nonexistent_skill"]
+    bad["races"][0]["racial_skills"] = ["nonexistent_skill"]
     p = tmp_path / "setup.json"
     p.write_text(json.dumps(bad, ensure_ascii=False), encoding="utf-8")
     rc = tool._main(["decompose-setup", str(p)])
@@ -59,9 +59,9 @@ VALID_CAST = {
             "id": "villager_01",
             "role": "마을 주민",
             "is_enemy": False,
-            "location_id": "town",
-            "race_id": "human",
-            "learned_skill_ids": [],
+            "location": "town",
+            "race": "human",
+            "learned_skills": [],
         }
     ],
     "items": [
@@ -69,10 +69,10 @@ VALID_CAST = {
             "id": "robe_01",
             "kind": "armor",
             "role": "주민 평상복",
-            "owner_character_id": "villager_01",
+            "owner_character": "villager_01",
         }
     ],
-    "start_subject_id": "villager_01",
+    "start_subject": "villager_01",
 }
 
 
@@ -86,9 +86,9 @@ def test_decompose_cast_ok(capsys, tmp_path):
     assert capsys.readouterr().out.strip() == "OK"
 
 
-def test_decompose_cast_bad_race_id(capsys, tmp_path):
+def test_decompose_cast_bad_race(capsys, tmp_path):
     bad = json.loads(json.dumps(VALID_CAST))
-    bad["characters"][0]["race_id"] = "elf"  # not in setup
+    bad["characters"][0]["race"] = "elf"  # not in setup
     sp = tmp_path / "setup.json"
     sp.write_text(json.dumps(VALID_SETUP, ensure_ascii=False), encoding="utf-8")
     cp = tmp_path / "cast.json"
@@ -106,9 +106,9 @@ ENEMY_CAST["characters"].append(
         "id": "bandit_01",
         "role": "산적",
         "is_enemy": True,
-        "location_id": "town",
-        "race_id": "human",
-        "learned_skill_ids": [],
+        "location": "town",
+        "race": "human",
+        "learned_skills": [],
     }
 )
 ENEMY_CAST["items"].append(
@@ -116,7 +116,7 @@ ENEMY_CAST["items"].append(
         "id": "robe_02",
         "kind": "armor",
         "role": "산적 옷",
-        "owner_character_id": "bandit_01",
+        "owner_character": "bandit_01",
     }
 )
 ENEMY_CAST["items"].append(
@@ -124,7 +124,7 @@ ENEMY_CAST["items"].append(
         "id": "blade_01",
         "kind": "weapon",
         "role": "산적 단검",
-        "owner_character_id": "bandit_01",
+        "owner_character": "bandit_01",
     }
 )
 
@@ -135,10 +135,10 @@ VALID_ARC = {
             "id": "quest_01",
             "title": "산적 처치",
             "trigger_kind": "character_death",
-            "target_id": "bandit_01",
-            "giver_id": "villager_01",
+            "target": "bandit_01",
+            "giver": "villager_01",
             "role": "시작 퀘스트",
-            "prerequisite_ids": [],
+            "prerequisites": [],
             "required": True,
         }
     ],
@@ -147,11 +147,11 @@ VALID_ARC = {
             "id": "chapter_01",
             "title": "1장",
             "role": "오프닝",
-            "quest_ids": ["quest_01"],
-            "prerequisite_ids": [],
+            "quests": ["quest_01"],
+            "prerequisites": [],
         }
     ],
-    "start_quest_id": "quest_01",
+    "start_quest": "quest_01",
 }
 
 
@@ -169,7 +169,7 @@ def test_decompose_arc_ok(capsys, tmp_path):
 
 def test_decompose_arc_unknown_target(capsys, tmp_path):
     bad = json.loads(json.dumps(VALID_ARC))
-    bad["quests"][0]["target_id"] = "phantom_01"
+    bad["quests"][0]["target"] = "phantom_01"
     sp = tmp_path / "setup.json"
     cp = tmp_path / "cast.json"
     ap = tmp_path / "arc.json"

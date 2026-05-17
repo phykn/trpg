@@ -13,8 +13,9 @@ class FakeScenarioRepo:
             "characters": {"guide": {"id": "guide", "name": "가이드"}},
             "items": {},
             "skills": {},
-            "support_effects": {},
+            "effects": {},
             "statuses": {"focused": {"id": "focused", "name": "집중"}},
+            "slots": {"accessory": {"id": "accessory", "name": "장신구"}},
             "factions": {"guides": {"id": "guides", "name": "안내팀"}},
             "actions": {
                 "social": {"id": "social", "name": "사회"}
@@ -189,6 +190,7 @@ async def test_load_runtime_state_loads_scenario_content_when_profile_is_saved(
     assert runtime.content.locations["town"]["name"] == "마을"
     assert runtime.content.characters["guide"]["name"] == "가이드"
     assert runtime.content.statuses["focused"]["name"] == "집중"
+    assert runtime.content.slots["accessory"]["name"] == "장신구"
     assert runtime.content.factions["guides"]["name"] == "안내팀"
     assert runtime.content.actions["social"]["name"] == "사회"
     assert runtime.content.knowledge["clue"]["title"] == "단서"

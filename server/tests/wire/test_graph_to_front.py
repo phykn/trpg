@@ -59,15 +59,21 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
                     "name": "회복 물약",
                     "qty": 2,
                     "consumable": True,
-                    "effects": {"type": "consumable", "effect": "heal", "amount": 8},
+                    "effect": "heal",
+                    "amount": 8,
                 },
+            ),
+            "heal": GraphNode(
+                id="heal",
+                type="effect",
+                properties={"kind": "heal"},
             ),
             "sword_01": GraphNode(
                 id="sword_01",
                 type="item",
                 properties={
                     "name": "낡은 검",
-                    "effects": {"type": "weapon", "weapon_dice": "1d6"},
+                    "slot": "weapon",
                 },
             ),
             "basic_strike": GraphNode(
@@ -87,7 +93,7 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
                 type="item",
                 properties={
                     "name": "날카로운 송곳니",
-                    "effects": {"type": "weapon", "weapon_dice": "1d4"},
+                    "slot": "weapon",
                 },
             ),
             "pelt_01": GraphNode(
@@ -108,7 +114,7 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
                             "id": "trigger_01",
                             "name": "늑대 쫓아내기",
                             "type": "character_death",
-                            "target_id": "goblin_01",
+                            "target": "goblin_01",
                         }
                     ],
                     "triggers_met": [False],
@@ -204,6 +210,15 @@ def _runtime(*, combat: bool = False) -> GameRuntimeState:
         )
     return GameRuntimeState(
         graph=graph,
+        content=RuntimeContent(
+            effects={
+                "heal": {
+                    "id": "heal",
+                    "name": "HP 회복",
+                    "kind": "heal",
+                }
+            }
+        ),
         progress=GameProgress(
             game_id="game-1",
             player_id="player_01",
@@ -346,7 +361,7 @@ def test_graph_front_state_resolves_static_content_from_runtime_content():
     runtime.graph.nodes["fang_01"].properties = {
         "source": "scenario",
         "source_id": "fang_01",
-        "effects": {"type": "weapon", "weapon_dice": "1d4"},
+        "slot": "weapon",
     }
     runtime.graph.nodes["quest_01"].properties = {
         "source": "scenario",
@@ -357,7 +372,7 @@ def test_graph_front_state_resolves_static_content_from_runtime_content():
                 "id": "trigger_01",
                 "name": "늑대 쫓아내기",
                 "type": "character_death",
-                "target_id": "goblin_01",
+                "target": "goblin_01",
             }
         ],
         "triggers_met": [False],
@@ -382,6 +397,13 @@ def test_graph_front_state_resolves_static_content_from_runtime_content():
                     }
                 },
                 items={"fang_01": {"id": "fang_01", "name": "날카로운 송곳니"}},
+                effects={
+                    "heal": {
+                        "id": "heal",
+                        "name": "HP 회복",
+                        "kind": "heal",
+                    }
+                },
                 quests={
                     "quest_01": {
                         "id": "quest_01",
@@ -504,7 +526,7 @@ def test_graph_front_state_exposes_usable_combat_skill_supports():
     runtime.graph.nodes["basic_strike"].properties.update(
         {
             "name": "그림자 찌르기",
-            "action_id": "attack",
+            "action": "attack",
             "mp_cost": 2,
         }
     )

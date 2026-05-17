@@ -70,7 +70,7 @@ def combat_narration_view(
         "enemy_pressure": state.enemy_pressure if state is not None else 0,
         "outcome": outcome or (state.outcome if state is not None else None),
         "events": [_event_view(runtime, event) for event in events],
-        "support_effect": _support_effect_view(runtime),
+        "effect": _effect_view(runtime),
         "statuses": _status_views(runtime),
         "tone": _combat_tone(runtime),
     }
@@ -93,24 +93,24 @@ def _event_view(
     }
 
 
-def _support_effect_view(runtime: GameRuntimeState) -> dict[str, Any] | None:
+def _effect_view(runtime: GameRuntimeState) -> dict[str, Any] | None:
     state = runtime.progress.graph_combat_state
     if state is None or state.last_support_id is None:
         return None
     support = runtime.graph.nodes.get(state.last_support_id)
     if support is None:
         return None
-    effect_id = support.properties.get("effect_template")
+    effect_id = support.properties.get("effect")
     if not isinstance(effect_id, str) or not effect_id:
         return None
     effect = runtime.graph.nodes.get(effect_id)
-    if effect is None or effect.type != "support_effect":
+    if effect is None or effect.type != "effect":
         return None
     payload: dict[str, Any] = {
         "id": effect.id,
         "name": node_label(runtime.content, effect),
     }
-    record = runtime.content.support_effects.get(effect.id, {})
+    record = runtime.content.effects.get(effect.id, {})
     description = record.get("description")
     if isinstance(description, str) and description:
         payload["description"] = description

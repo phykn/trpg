@@ -7,20 +7,20 @@ def _records() -> dict:
         "locations": {"town": {"id": "town"}},
         "items": {"badge": {"id": "badge"}},
         "skills": {},
-        "support_effects": {},
+        "effects": {},
         "statuses": {},
         "factions": {},
         "actions": {},
         "knowledge": {},
         "dialogue_styles": {},
         "mbti": {},
-        "npcs": {"guard_01": {"id": "guard_01", "race_id": "human"}},
+        "npcs": {"guard_01": {"id": "guard_01", "race": "human"}},
         "quests": {},
         "chapters": {},
         "start": {
-            "start_location_id": "town",
-            "active_subject_id": None,
-            "active_quest_id": None,
+            "start_location": "town",
+            "active_subject": None,
+            "active_quest": None,
         },
     }
 
@@ -34,17 +34,17 @@ def test_seed_validation_accepts_engine_quest_trigger_types():
                 {
                     "id": "obtain_badge",
                     "type": "item_obtained",
-                    "target_id": "badge",
+                    "target": "badge",
                 },
                 {
                     "id": "talk_guard",
                     "type": "social_check",
-                    "target_id": "guard_01",
+                    "target": "guard_01",
                 },
                 {
                     "id": "defeat_guard",
                     "type": "character_defeat",
-                    "target_id": "guard_01",
+                    "target": "guard_01",
                 },
             ],
         }
@@ -53,51 +53,51 @@ def test_seed_validation_accepts_engine_quest_trigger_types():
     assert seed_violations(**records) == []
 
 
-def test_seed_validation_rejects_unknown_support_actions_and_item_effect_templates():
+def test_seed_validation_rejects_unknown_actions_and_item_effects():
     records = _records()
     records["items"] = {
         "badge": {
             "id": "badge",
-            "support_action": "dance",
-            "effect_template": "mystery_boost",
+            "action": "dance",
+            "effect": "mystery_boost",
         }
     }
     records["skills"] = {
         "spark": {
             "id": "spark",
-            "action_id": "sing",
+            "action": "sing",
         }
     }
 
     assert seed_violations(**records) == [
-        "item badge support_action='dance' unknown",
-        "item badge effect_template='mystery_boost' unknown",
-        "skill spark action_id='sing' unknown",
+        "item badge action='dance' unknown",
+        "item badge effect='mystery_boost' unknown",
+        "skill spark action='sing' unknown",
     ]
 
 
-def test_seed_validation_accepts_known_support_actions_and_item_effect_templates():
+def test_seed_validation_accepts_known_actions_and_item_effects():
     records = _records()
     records["items"] = {
         "badge": {
             "id": "badge",
-            "support_action": "attack",
-            "effect_template": "dc_down",
+            "action": "attack",
+            "effect": "dc_down",
         }
     }
     records["skills"] = {
         "spark": {
             "id": "spark",
-            "action_id": "defend",
+            "action": "defend",
         }
     }
 
     assert seed_violations(**records) == []
 
 
-def test_seed_validation_uses_support_effect_records_when_present():
+def test_seed_validation_uses_effect_records_when_present():
     records = _records()
-    records["support_effects"] = {
+    records["effects"] = {
         "dc_down": {
             "id": "dc_down",
             "name": "DC Down",
@@ -106,19 +106,19 @@ def test_seed_validation_uses_support_effect_records_when_present():
     records["items"] = {
         "badge": {
             "id": "badge",
-            "support_action": "attack",
-            "effect_template": "mystery_boost",
+            "action": "attack",
+            "effect": "mystery_boost",
         }
     }
 
     assert seed_violations(**records) == [
-        "item badge effect_template='mystery_boost' not found in support_effects"
+        "item badge effect='mystery_boost' not found in effects"
     ]
 
 
-def test_seed_validation_accepts_support_effect_record_references():
+def test_seed_validation_accepts_effect_record_references():
     records = _records()
-    records["support_effects"] = {
+    records["effects"] = {
         "dc_down": {
             "id": "dc_down",
             "name": "DC Down",
@@ -127,8 +127,8 @@ def test_seed_validation_accepts_support_effect_record_references():
     records["items"] = {
         "badge": {
             "id": "badge",
-            "support_action": "attack",
-            "effect_template": "dc_down",
+            "action": "attack",
+            "effect": "dc_down",
         }
     }
 
@@ -151,11 +151,11 @@ def test_seed_validation_rejects_unknown_status_references():
     }
 
     assert seed_violations(**records) == [
-        "item badge status_id='missing_status' not found in statuses",
+        "item badge.status_ids is not allowed in seed data",
     ]
 
 
-def test_seed_validation_accepts_status_references():
+def test_seed_validation_rejects_legacy_status_ids_even_when_references_exist():
     records = _records()
     records["items"] = {
         "badge": {
@@ -170,7 +170,70 @@ def test_seed_validation_accepts_status_references():
         }
     }
 
-    assert seed_violations(**records) == []
+    assert seed_violations(**records) == [
+        "item badge.status_ids is not allowed in seed data",
+    ]
+
+
+def test_seed_validation_rejects_legacy_seed_keys_and_empty_nulls():
+    records = _records()
+    records["locations"] = {
+        "town": {
+            "id": "town",
+            "item_ids": ["badge"],
+            "tags": ["legacy"],
+            "weather": ["clear"],
+            "difficulty": None,
+            "connections": [
+                {
+                    "target_id": "forest",
+                    "key_item": None,
+                    "difficulty": None,
+                }
+            ],
+        },
+        "forest": {"id": "forest"},
+    }
+    records["items"] = {
+        "badge": {
+            "id": "badge",
+            "on_use": None,
+            "effect_template": "dc_down",
+        }
+    }
+    records["npcs"] = {
+        "guard_01": {
+            "id": "guard_01",
+            "race_id": "human",
+            "location_id": "town",
+            "private_hint": "secret",
+            "stats": {"body": 1},
+        }
+    }
+    records["player"] = {
+        "id": "player_01",
+        "inventory_ids": ["badge"],
+    }
+
+    assert seed_violations(**records) == [
+        "location town.item_ids uses legacy key; use 'items'",
+        "location town.tags is not allowed in seed data",
+        "location town.weather is not allowed in seed data",
+        "location town.difficulty must be omitted when empty",
+        "location town.connections[0].target_id uses legacy key; use 'target'",
+        "location town.connections[0].key_item must be omitted when empty",
+        "location town.connections[0].difficulty must be omitted when empty",
+        "location town difficulty is a connection field, not a location field",
+        "item badge.on_use must be omitted when empty",
+        "item badge.effect_template uses legacy key; use 'effect'",
+        "character guard_01.race_id uses legacy key; use 'race'",
+        "character guard_01.location_id uses legacy key; use 'location'",
+        "character guard_01.private_hint uses legacy key; use 'secrets'",
+        "character guard_01.stats is not allowed in seed data",
+        "player.inventory_ids uses legacy key; use 'inventory'",
+        "location town connection target=None not found",
+        "character guard_01 race=None not found",
+    ]
 
 
 def test_seed_validation_rejects_unknown_faction_references():
@@ -178,8 +241,8 @@ def test_seed_validation_rejects_unknown_faction_references():
     records["npcs"] = {
         "guard_01": {
             "id": "guard_01",
-            "race_id": "human",
-            "faction_id": "missing_faction",
+            "race": "human",
+            "faction": "missing_faction",
         }
     }
     records["factions"] = {
@@ -191,7 +254,7 @@ def test_seed_validation_rejects_unknown_faction_references():
     }
 
     assert seed_violations(**records) == [
-        "character guard_01 faction_id='missing_faction' not found",
+        "character guard_01 faction='missing_faction' not found",
         "faction guild relation target='missing_faction' not found",
     ]
 
@@ -201,8 +264,8 @@ def test_seed_validation_accepts_faction_references():
     records["npcs"] = {
         "guard_01": {
             "id": "guard_01",
-            "race_id": "human",
-            "faction_id": "guides",
+            "race": "human",
+            "faction": "guides",
         }
     }
     records["factions"] = {
@@ -222,12 +285,12 @@ def test_seed_validation_rejects_unknown_action_references():
     records["skills"] = {
         "spark": {
             "id": "spark",
-            "action_id": "attack",
+            "action": "attack",
         }
     }
     records["actions"] = {"defend": {"id": "defend", "name": "Defend"}}
 
-    assert seed_violations(**records) == ["skill spark action_id='attack' not found"]
+    assert seed_violations(**records) == ["skill spark action='attack' not found"]
 
 
 def test_seed_validation_accepts_action_references():
@@ -235,7 +298,7 @@ def test_seed_validation_accepts_action_references():
     records["skills"] = {
         "spark": {
             "id": "spark",
-            "action_id": "attack",
+            "action": "attack",
         }
     }
     records["actions"] = {
@@ -248,19 +311,47 @@ def test_seed_validation_accepts_action_references():
     assert seed_violations(**records) == []
 
 
+def test_seed_validation_rejects_unknown_slot_references():
+    records = _records()
+    records["items"] = {
+        "badge": {
+            "id": "badge",
+            "slot": "missing_slot",
+        }
+    }
+    records["slots"] = {"accessory": {"id": "accessory", "name": "Accessory"}}
+
+    assert seed_violations(**records) == [
+        "item badge slot='missing_slot' not found"
+    ]
+
+
+def test_seed_validation_accepts_slot_references():
+    records = _records()
+    records["items"] = {
+        "badge": {
+            "id": "badge",
+            "slot": "accessory",
+        }
+    }
+    records["slots"] = {"accessory": {"id": "accessory", "name": "Accessory"}}
+
+    assert seed_violations(**records) == []
+
+
 def test_seed_validation_rejects_unknown_knowledge_references():
     records = _records()
     records["locations"] = {
-        "town": {"id": "town", "knowledge_ids": ["missing_knowledge"]}
+        "town": {"id": "town", "knowledge": ["missing_knowledge"]}
     }
     records["items"] = {
-        "badge": {"id": "badge", "knowledge_ids": ["missing_knowledge"]}
+        "badge": {"id": "badge", "knowledge": ["missing_knowledge"]}
     }
     records["npcs"] = {
         "guard_01": {
             "id": "guard_01",
-            "race_id": "human",
-            "knowledge_ids": ["missing_knowledge"],
+            "race": "human",
+            "knowledge": ["missing_knowledge"],
         }
     }
 
@@ -280,13 +371,13 @@ def test_seed_validation_accepts_knowledge_references():
             "visibility": "public",
         }
     }
-    records["locations"] = {"town": {"id": "town", "knowledge_ids": ["clue_01"]}}
-    records["items"] = {"badge": {"id": "badge", "knowledge_ids": ["clue_01"]}}
+    records["locations"] = {"town": {"id": "town", "knowledge": ["clue_01"]}}
+    records["items"] = {"badge": {"id": "badge", "knowledge": ["clue_01"]}}
     records["npcs"] = {
         "guard_01": {
             "id": "guard_01",
-            "race_id": "human",
-            "knowledge_ids": ["clue_01"],
+            "race": "human",
+            "knowledge": ["clue_01"],
         }
     }
 
@@ -298,13 +389,13 @@ def test_seed_validation_rejects_unknown_dialogue_style_references():
     records["npcs"] = {
         "guard_01": {
             "id": "guard_01",
-            "race_id": "human",
-            "dialogue_style_id": "missing_style",
+            "race": "human",
+            "dialogue_style": "missing_style",
         }
     }
 
     assert seed_violations(**records) == [
-        "character guard_01 dialogue_style_id='missing_style' not found"
+        "character guard_01 dialogue_style='missing_style' not found"
     ]
 
 
@@ -320,8 +411,8 @@ def test_seed_validation_accepts_dialogue_style_references():
     records["npcs"] = {
         "guard_01": {
             "id": "guard_01",
-            "race_id": "human",
-            "dialogue_style_id": "procedural",
+            "race": "human",
+            "dialogue_style": "procedural",
         }
     }
 
@@ -333,7 +424,7 @@ def test_seed_validation_rejects_unknown_mbti_references():
     records["npcs"] = {
         "guard_01": {
             "id": "guard_01",
-            "race_id": "human",
+            "race": "human",
             "mbti": "XXXX",
         }
     }
@@ -354,7 +445,7 @@ def test_seed_validation_accepts_mbti_references():
     records["npcs"] = {
         "guard_01": {
             "id": "guard_01",
-            "race_id": "human",
+            "race": "human",
             "mbti": "ENFP",
         }
     }

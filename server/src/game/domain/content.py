@@ -14,8 +14,9 @@ _NODE_COLLECTIONS = {
     "location": "locations",
     "quest": "quests",
     "skill": "skills",
-    "support_effect": "support_effects",
+    "effect": "effects",
     "status": "statuses",
+    "slot": "slots",
     "faction": "factions",
     "action": "actions",
     "knowledge": "knowledge",
@@ -33,8 +34,9 @@ class RuntimeContent(BaseModel):
     locations: SeedRecords = Field(default_factory=dict)
     items: SeedRecords = Field(default_factory=dict)
     skills: SeedRecords = Field(default_factory=dict)
-    support_effects: SeedRecords = Field(default_factory=dict)
+    effects: SeedRecords = Field(default_factory=dict)
     statuses: SeedRecords = Field(default_factory=dict)
+    slots: SeedRecords = Field(default_factory=dict)
     factions: SeedRecords = Field(default_factory=dict)
     actions: SeedRecords = Field(default_factory=dict)
     knowledge: SeedRecords = Field(default_factory=dict)
@@ -54,8 +56,9 @@ def runtime_content_from_records(
     characters: SeedRecords,
     quests: SeedRecords,
     chapters: SeedRecords,
-    support_effects: SeedRecords | None = None,
+    effects: SeedRecords | None = None,
     statuses: SeedRecords | None = None,
+    slots: SeedRecords | None = None,
     factions: SeedRecords | None = None,
     actions: SeedRecords | None = None,
     knowledge: SeedRecords | None = None,
@@ -67,8 +70,9 @@ def runtime_content_from_records(
         locations=locations,
         items=items,
         skills=skills,
-        support_effects=support_effects or {},
+        effects=effects or {},
         statuses=statuses or {},
+        slots=slots or {},
         factions=factions or {},
         actions=actions or {},
         knowledge=knowledge or {},
@@ -86,8 +90,9 @@ def merge_content(base: RuntimeContent, overlay: RuntimeContent) -> RuntimeConte
         locations={**base.locations, **overlay.locations},
         items={**base.items, **overlay.items},
         skills={**base.skills, **overlay.skills},
-        support_effects={**base.support_effects, **overlay.support_effects},
+        effects={**base.effects, **overlay.effects},
         statuses={**base.statuses, **overlay.statuses},
+        slots={**base.slots, **overlay.slots},
         factions={**base.factions, **overlay.factions},
         actions={**base.actions, **overlay.actions},
         knowledge={**base.knowledge, **overlay.knowledge},

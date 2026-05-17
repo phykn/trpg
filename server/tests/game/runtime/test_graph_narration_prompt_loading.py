@@ -196,7 +196,7 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "character-specific" not in narrate_prompt
     assert "게임 밖 요청" in narrate_prompt
     assert "그대로 출력하지 않습니다" in narrate_prompt
-    assert "combat_view.support_effect" in narrate_prompt
+    assert "combat_view.effect" in narrate_prompt
     assert "지원 효과 이름, 원리, 추가 효과를 지어내지 않습니다" in narrate_prompt
     assert "combat_view.statuses" in narrate_prompt
     assert "상태 효과 이름, 원리, 추가 효과를 지어내지 않습니다" in narrate_prompt

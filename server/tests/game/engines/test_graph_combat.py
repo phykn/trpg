@@ -56,7 +56,7 @@ def _enemy(character_id: str = "goblin_01", *, level: int = 1) -> GraphNode:
 def _skill(
     skill_id: str,
     *,
-    action_id: str = "attack",
+    action: str = "attack",
     mp_cost: int = 2,
     bonus: int = 2,
 ) -> GraphNode:
@@ -65,7 +65,7 @@ def _skill(
         type="skill",
         properties={
             "name": skill_id,
-            "action_id": action_id,
+            "action": action,
             "mp_cost": mp_cost,
             "bonus": bonus,
         },
@@ -76,8 +76,8 @@ def _item(
     item_id: str,
     *,
     action: str = "attack",
-    support_bonus: int = 0,
-    effect_template: str = "extra_heart_damage",
+    bonus: int = 0,
+    effect: str = "extra_heart_damage",
     consumable: bool = True,
 ) -> GraphNode:
     return GraphNode(
@@ -85,9 +85,9 @@ def _item(
         type="item",
         properties={
             "name": item_id,
-            "support_action": action,
-            "support_bonus": support_bonus,
-            "effect_template": effect_template,
+            "action": action,
+            "bonus": bonus,
+            "effect": effect,
             "consumable": consumable,
         },
     )
@@ -575,7 +575,7 @@ def test_skill_support_requires_known_skill_and_mp():
 
     mismatch_graph = _graph(
         include_skill=True,
-        skill=_skill("focus", action_id="defend"),
+        skill=_skill("focus", action="defend"),
     )
     with pytest.raises(GraphCombatError, match="does not support action"):
         plan_combat_exchange(
@@ -618,7 +618,7 @@ def test_guard_item_can_prevent_failure_heart_loss():
         item=_item(
             "bomb",
             action="defend",
-            effect_template="prevent_heart_loss",
+            effect="prevent_heart_loss",
             consumable=True,
         ),
     )

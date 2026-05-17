@@ -91,8 +91,8 @@ class LocalFsScenarioRepo:
     async def read_start_json(self, profile: str) -> dict:
         return self._read_json_cached(self._root(profile) / "start.json")
 
-    async def read_player_template(self, profile: str) -> dict:
-        return self._read_json_cached(self._root(profile) / "player_template.json")
+    async def read_player(self, profile: str) -> dict:
+        return self._read_json_cached(self._root(profile) / "player.json")
 
     async def load_seed_records(self, profile: str, kind: str) -> dict[str, dict]:
         aggregate_path = self._root(profile) / f"{kind}.json"

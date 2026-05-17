@@ -36,10 +36,10 @@ class _SupportPlan(BaseModel):
 
     support_id: str
     support_kind: CombatSupportKind
-    support_bonus: int
+    bonus: int
     mp_cost: int = 0
     consume_edge_id: str | None = None
-    effect_template: str | None = None
+    effect: str | None = None
 
 
 def plan_combat_start(
@@ -154,7 +154,7 @@ def _resolve_skill_support(
     ):
         raise GraphCombatError(f"{player.id} does not know skill: {action.support_id}")
 
-    supported_action = _string_prop(skill, "action_id")
+    supported_action = _string_prop(skill, "action")
     if not _supports_action(supported_action, action.kind):
         raise GraphCombatError(f"skill does not support action: {action.support_id}")
 
@@ -166,7 +166,7 @@ def _resolve_skill_support(
     return _SupportPlan(
         support_id=action.support_id,
         support_kind="skill",
-        support_bonus=_bounded_bonus(skill.properties.get("bonus")),
+        bonus=_bounded_bonus(skill.properties.get("bonus")),
         mp_cost=mp_cost,
     )
 
@@ -197,7 +197,7 @@ def _resolve_item_support(
 
     supported_action = _string_prop(
         item,
-        "support_action",
+        "action",
         fallback=_string_prop(item, "action"),
     )
     if not _supports_action(supported_action, action.kind):
@@ -206,11 +206,11 @@ def _resolve_item_support(
     return _SupportPlan(
         support_id=action.support_id,
         support_kind="item",
-        support_bonus=_bounded_bonus(item.properties.get("support_bonus")),
+        bonus=_bounded_bonus(item.properties.get("bonus")),
         consume_edge_id=placement_edge.id
         if item.properties.get("consumable") is True
         else None,
-        effect_template=_string_prop(item, "effect_template"),
+        effect=_string_prop(item, "effect"),
     )
 
 
@@ -246,9 +246,9 @@ def _combat_dc(
     elif action == "reckless":
         raw_dc += 2
     if support is not None and support.support_kind == "skill":
-        raw_dc -= support.support_bonus
-    elif support is not None and support.effect_template in {"dc_down", "escape_boost"}:
-        raw_dc -= support.support_bonus
+        raw_dc -= support.bonus
+    elif support is not None and support.effect in {"dc_down", "escape_boost"}:
+        raw_dc -= support.bonus
     return min(RULES.combat.max_dc, max(RULES.combat.min_dc, raw_dc))
 
 
@@ -263,7 +263,7 @@ def _apply_heart_result(
     if success:
         if kind in {"attack", "social", "precise", "guarded", "reckless"}:
             damage = 2 if kind == "reckless" else 1
-            if support is not None and support.effect_template == "extra_heart_damage":
+            if support is not None and support.effect == "extra_heart_damage":
                 damage += 1
             state.enemy_hearts = max(0, state.enemy_hearts - damage)
             if kind == "social":
@@ -310,7 +310,7 @@ def _apply_heart_result(
         return
 
     if kind != "guarded" and (
-        support is None or support.effect_template != "prevent_heart_loss"
+        support is None or support.effect != "prevent_heart_loss"
     ):
         state.player_hearts = max(0, state.player_hearts - 1)
     state.trace.append(

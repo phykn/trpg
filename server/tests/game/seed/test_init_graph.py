@@ -15,10 +15,10 @@ def _write_seed(root: Path) -> None:
     pdir.mkdir(parents=True)
     (pdir / "world.md").write_text("world", encoding="utf-8")
     (pdir / "start.json").write_text(
-        json.dumps({"start_location_id": "town"}),
+        json.dumps({"start_location": "town"}),
         encoding="utf-8",
     )
-    (pdir / "player_template.json").write_text(
+    (pdir / "player.json").write_text(
         json.dumps({"id": "player_01"}),
         encoding="utf-8",
     )
@@ -89,11 +89,11 @@ async def test_init_graph_game_rejects_malformed_seed(tmp_path):
     profiles = tmp_path / "profiles"
     _write_seed(profiles)
     (profiles / "default" / "start.json").write_text(
-        json.dumps({"start_location_id": "missing"}),
+        json.dumps({"start_location": "missing"}),
         encoding="utf-8",
     )
 
-    with pytest.raises(ProfileMalformed, match="start_location_id"):
+    with pytest.raises(ProfileMalformed, match="start_location"):
         await init_graph_game(
             "default",
             PlayerInput(name="테스터", race_id="human", gender="female"),

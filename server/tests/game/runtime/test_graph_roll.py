@@ -161,7 +161,7 @@ async def _add_guard_coin(
     await repo.save_graph("game-1", graph)
 
 
-async def test_start_graph_roll_stores_pending_roll_with_gm_narration(tmp_path):
+async def test_start_graph_roll_stores_pending_roll_without_gm_narration(tmp_path):
     repo = await _repo(tmp_path)
 
     result = await start_graph_roll(
@@ -180,8 +180,7 @@ async def test_start_graph_roll_stores_pending_roll_with_gm_narration(tmp_path):
         "성공하면 숨은 단서나 위험을 알아차립니다."
     )
     assert progress.pending_roll["required_roll"] == 13
-    assert [entry.kind for entry in logs] == ["gm"]
-    assert logs[0].text == progress.pending_roll["body"]
+    assert logs == []
 
 
 async def test_graph_action_request_hasty_move_creates_pending_roll(tmp_path):
@@ -218,7 +217,7 @@ async def test_graph_action_request_difficult_move_creates_pending_roll(tmp_path
     assert progress.pending_roll["kind"] == "move"
 
 
-async def test_graph_action_request_stream_roll_uses_llm_preroll_narration(tmp_path):
+async def test_graph_action_request_stream_roll_waits_without_preroll_narration(tmp_path):
     repo = await _repo(tmp_path)
     graph = await repo.load_graph("game-1")
     graph.edges["connects_to:town:forest"].properties["difficulty"] = "easy"
@@ -239,16 +238,12 @@ async def test_graph_action_request_stream_roll_uses_llm_preroll_narration(tmp_p
 
     assert events[0]["type"] == "result"
     assert events[-1]["type"] == "final"
-    deltas = [event for event in events[1:-1] if event["type"] == "narration_delta"]
-    assert len(deltas) >= 1
+    assert [event["type"] for event in events] == ["result", "final"]
     assert events[0]["result"].status == "roll_required"
-    assert events[0]["result"].front_state.pending_roll.body == ""
-    assert events[-1]["result"].front_state.pending_roll.body == llm.narration
-    assert "".join(event["text"] for event in deltas) == llm.narration
-    assert progress.pending_roll["body"] == llm.narration
-    assert [entry.kind for entry in logs] == ["gm"]
-    assert logs[0].text == llm.narration
-    assert llm.calls[0]["agent"] == "graph_narrate"
+    assert events[-1]["result"].front_state.pending_roll.body == progress.pending_roll["body"]
+    assert progress.pending_roll["body"] != llm.narration
+    assert logs == []
+    assert llm.calls == []
 
 
 def test_build_pending_roll_stores_original_action_payload():
@@ -537,7 +532,7 @@ async def test_steal_requires_confirmation_then_roll_and_failure_does_not_transf
     )
 
 
-async def test_graph_confirm_stream_roll_uses_llm_preroll_narration(tmp_path):
+async def test_graph_confirm_stream_roll_waits_without_preroll_narration(tmp_path):
     repo = await _repo(tmp_path)
     await _add_guard_coin(repo)
     confirmation = await run_graph_action_request(
@@ -568,16 +563,13 @@ async def test_graph_confirm_stream_roll_uses_llm_preroll_narration(tmp_path):
 
     assert events[0]["type"] == "result"
     assert events[-1]["type"] == "final"
-    deltas = [event for event in events[1:-1] if event["type"] == "narration_delta"]
-    assert len(deltas) >= 1
+    assert [event["type"] for event in events] == ["result", "final"]
     assert events[0]["result"].status == "roll_required"
-    assert events[0]["result"].front_state.pending_roll.body == ""
-    assert events[-1]["result"].front_state.pending_roll.body == llm.narration
-    assert "".join(event["text"] for event in deltas) == llm.narration
+    assert events[-1]["result"].front_state.pending_roll.body == progress.pending_roll["body"]
     assert progress.pending_confirmation is None
-    assert progress.pending_roll["body"] == llm.narration
-    assert logs[-1].text == llm.narration
-    assert llm.calls[0]["agent"] == "graph_narrate"
+    assert progress.pending_roll["body"] != llm.narration
+    assert logs == []
+    assert llm.calls == []
 
 
 async def test_run_graph_roll_resolves_pending_roll_and_appends_roll_log(tmp_path):
@@ -593,13 +585,12 @@ async def test_run_graph_roll_resolves_pending_roll_and_appends_roll_log(tmp_pat
     assert result.status == "executed"
     assert progress.pending_roll is None
     assert progress.turn_count == 2
-    assert logs[0].kind == "gm"
-    assert logs[1].kind == "roll"
+    assert logs[0].kind == "roll"
     assert [entry.id for entry in logs] == list(range(1, len(logs) + 1))
     assert progress.next_log_id == logs[-1].id + 1
-    assert logs[1].check == "민첩"
-    assert logs[1].roll == 13
-    assert logs[1].result == "success"
+    assert logs[0].check == "민첩"
+    assert logs[0].roll == 13
+    assert logs[0].result == "success"
     assert result.outcome == "success"
     assert result.front_state.pending_roll is None
 
@@ -637,11 +628,11 @@ async def test_run_graph_roll_resolves_narrative_perceive_without_dispatch(tmp_p
     assert result.outcome == "success"
     assert result.dispatch is None
     assert progress.pending_roll is None
-    assert logs[1].kind == "roll"
-    assert logs[1].result == "success"
-    assert logs[2].kind == "gm"
-    assert logs[2].outcome == "success"
-    assert logs[2].text == "당신은 살핀 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다."
+    assert logs[0].kind == "roll"
+    assert logs[0].result == "success"
+    assert logs[1].kind == "gm"
+    assert logs[1].outcome == "success"
+    assert logs[1].text == "당신은 살핀 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다."
 
 
 async def test_run_graph_roll_resolves_failed_narrative_perceive_without_dispatch(
@@ -658,11 +649,11 @@ async def test_run_graph_roll_resolves_failed_narrative_perceive_without_dispatc
     assert result.status == "executed"
     assert result.outcome == "failure"
     assert result.dispatch is None
-    assert logs[1].kind == "roll"
-    assert logs[1].result == "fail"
-    assert logs[2].kind == "gm"
-    assert logs[2].outcome == "failure"
-    assert logs[2].text == "당신은 살피지만, 눈앞의 흔적은 뚜렷한 답을 내주지 않습니다."
+    assert logs[0].kind == "roll"
+    assert logs[0].result == "fail"
+    assert logs[1].kind == "gm"
+    assert logs[1].outcome == "failure"
+    assert logs[1].text == "당신은 살피지만, 눈앞의 흔적은 뚜렷한 답을 내주지 않습니다."
 
 
 async def test_run_graph_roll_logs_one_short_roll_as_fail(tmp_path):
@@ -675,9 +666,9 @@ async def test_run_graph_roll_logs_one_short_roll_as_fail(tmp_path):
     logs = await repo.load_log_entries("game-1")
     graph = await repo.load_graph("game-1")
 
-    assert logs[1].kind == "roll"
-    assert logs[1].margin == -1
-    assert logs[1].result == "fail"
+    assert logs[0].kind == "roll"
+    assert logs[0].margin == -1
+    assert logs[0].result == "fail"
     assert result.outcome == "failure"
     assert "located_at:player_01:town" in graph.edges
     assert "located_at:player_01:forest" not in graph.edges
@@ -714,7 +705,7 @@ async def test_run_graph_roll_stream_narrates_failed_roll_without_dispatch(tmp_p
     )
     assert "located_at:player_01:town" in graph.edges
     assert "located_at:player_01:forest" not in graph.edges
-    assert [entry.kind for entry in logs] == ["gm", "roll", "gm"]
+    assert [entry.kind for entry in logs] == ["roll", "gm"]
     assert logs[-1].text == "발밑의 길이 선뜻 열리지 않습니다."
     assert llm.calls[0]["agent"] == "graph_narrate"
 
@@ -744,7 +735,7 @@ async def test_run_graph_roll_stream_executes_success_action_before_result(tmp_p
     assert events[0]["result"].outcome == "success"
     assert events[0]["result"].front_state.place.id == "forest"
     assert events[-1]["result"].outcome == "success"
-    assert [entry.kind for entry in logs] == ["gm", "roll", "act", "gm"]
+    assert [entry.kind for entry in logs] == ["roll", "act", "gm"]
 
 
 async def test_run_graph_roll_requires_matching_pending_id(tmp_path):

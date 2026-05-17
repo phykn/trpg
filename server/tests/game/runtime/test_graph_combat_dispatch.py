@@ -52,7 +52,7 @@ def _skill(skill_id: str = "fireball") -> GraphNode:
         type="skill",
         properties={
             "name": skill_id,
-            "action_id": "attack",
+            "action": "attack",
             "mp_cost": 2,
             "bonus": 2,
         },
@@ -65,8 +65,8 @@ def _item(item_id: str = "bomb") -> GraphNode:
         type="item",
         properties={
             "name": item_id,
-            "support_action": "attack",
-            "effect_template": "extra_heart_damage",
+            "action": "attack",
+            "effect": "extra_heart_damage",
             "consumable": True,
         },
     )
@@ -357,7 +357,7 @@ def test_pass_with_skill_support_attaches_guarded_support():
         graph_combat_state=_ongoing_state(),
     )
     runtime.graph.nodes["fireball"].properties.update(
-        {"action_id": "defend", "bonus": 1}
+        {"action": "defend", "bonus": 1}
     )
 
     result = dispatch_graph_combat_action(
@@ -379,7 +379,7 @@ def test_move_with_skill_support_attaches_create_distance_support():
         graph_combat_state=_ongoing_state(),
     )
     runtime.graph.nodes["fireball"].properties.update(
-        {"action_id": "flee", "bonus": 2}
+        {"action": "flee", "bonus": 2}
     )
 
     result = dispatch_graph_combat_action(

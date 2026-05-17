@@ -288,6 +288,7 @@ async def _run_classified_action(
             runtime.progress.game_id,
             action,
             reason=check_hint.reason if check_hint is not None else None,
+            player_input=player_input,
             scenario_repo=scenario_repo,
         )
     if action.verb in {"speak", "pass"} and runtime.progress.graph_combat_state is None:

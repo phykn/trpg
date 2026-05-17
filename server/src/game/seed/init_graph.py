@@ -24,8 +24,9 @@ async def init_graph_game(
         locations,
         items,
         skills,
-        support_effects,
+        effects,
         statuses,
+        slots,
         factions,
         actions,
         knowledge,
@@ -41,8 +42,9 @@ async def init_graph_game(
         scenario_repo.load_seed_records(profile_name, "locations"),
         scenario_repo.load_seed_records(profile_name, "items"),
         scenario_repo.load_seed_records(profile_name, "skills"),
-        scenario_repo.load_seed_records(profile_name, "support_effects"),
+        scenario_repo.load_seed_records(profile_name, "effects"),
         scenario_repo.load_seed_records(profile_name, "statuses"),
+        scenario_repo.load_seed_records(profile_name, "slots"),
         scenario_repo.load_seed_records(profile_name, "factions"),
         scenario_repo.load_seed_records(profile_name, "actions"),
         scenario_repo.load_seed_records(profile_name, "knowledge"),
@@ -52,7 +54,7 @@ async def init_graph_game(
         scenario_repo.load_seed_records(profile_name, "quests"),
         scenario_repo.load_seed_records(profile_name, "chapters"),
         scenario_repo.read_start_json(profile_name),
-        scenario_repo.read_player_template(profile_name),
+        scenario_repo.read_player(profile_name),
     )
 
     violations = seed_violations(
@@ -60,8 +62,9 @@ async def init_graph_game(
         locations=locations,
         items=items,
         skills=skills,
-        support_effects=support_effects,
+        effects=effects,
         statuses=statuses,
+        slots=slots,
         factions=factions,
         actions=actions,
         knowledge=knowledge,
@@ -71,6 +74,7 @@ async def init_graph_game(
         quests=quests,
         chapters=chapters,
         start=start,
+        player=template,
     )
     if violations:
         raise ProfileMalformed(
@@ -90,8 +94,9 @@ async def init_graph_game(
         locations=locations,
         items=items,
         skills=skills,
-        support_effects=support_effects,
+        effects=effects,
         statuses=statuses,
+        slots=slots,
         factions=factions,
         actions=actions,
         knowledge=knowledge,

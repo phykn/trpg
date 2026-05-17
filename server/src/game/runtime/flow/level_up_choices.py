@@ -189,7 +189,7 @@ def _candidate_payload(
         "skills": [
             {
                 "index": index,
-                "action_id": template.action,
+                "action": template.action,
                 "description_hint": template.description,
             }
             for index, template in enumerate(templates)
@@ -279,7 +279,7 @@ def _skill_spec(
                     "level", 1
                 ),
                 "name": candidate.name,
-                "action_id": candidate.action,
+                "action": candidate.action,
                 "bonus": candidate.bonus,
             },
             ensure_ascii=False,
@@ -291,7 +291,7 @@ def _skill_spec(
         "id": f"skill_gen_{slug}_{digest}",
         "name": candidate.name,
         "description": candidate.description,
-        "action_id": candidate.action,
+        "action": candidate.action,
         "bonus": candidate.bonus,
         "mp_cost": candidate.mp_cost,
     }

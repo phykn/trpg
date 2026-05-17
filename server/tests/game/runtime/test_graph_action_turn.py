@@ -473,7 +473,7 @@ async def test_run_graph_action_turn_completes_location_enter_quest_and_rewards(
                 {
                     "id": "reach_forest",
                     "type": "location_enter",
-                    "target_id": "forest",
+                    "target": "forest",
                 }
             ],
             "triggers_met": [False],

@@ -273,7 +273,7 @@ def test_quest_trigger_target_must_exist_in_graph():
                             {
                                 "id": "trigger_01",
                                 "type": "character_death",
-                                "target_id": "ghost_01",
+                                "target": "ghost_01",
                             }
                         ]
                     },

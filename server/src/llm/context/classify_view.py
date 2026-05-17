@@ -259,13 +259,13 @@ def _skills(runtime: GameRuntimeState, player_id: str) -> list[dict[str, str]]:
         node = runtime.graph.nodes.get(edge.to_node_id)
         if node is not None and node.type == "skill":
             payload = {"id": node.id, "name": node_label(runtime.content, node)}
-            action_id = node_value(
+            action = node_value(
                 runtime.content,
                 node,
-                "action_id",
+                "action",
             )
-            if isinstance(action_id, str) and action_id:
-                payload["action_id"] = action_id
+            if isinstance(action, str) and action:
+                payload["action"] = action
             out.append(payload)
     return out
 

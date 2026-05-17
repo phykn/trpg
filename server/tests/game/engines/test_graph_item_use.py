@@ -9,35 +9,45 @@ def _item(
     item_id: str,
     *,
     consumable: bool = True,
-    effect: str | None = None,
-    amount: int = 0,
-    description: str | None = None,
-    duration: int | None = None,
+    effect_id: str | None = None,
+    amount: int | None = None,
     on_use: str | None = None,
 ) -> GraphNode:
-    effects = None
-    if effect is not None:
-        effects = {
-            "type": "consumable",
-            "effect": effect,
-            "amount": amount,
-            "description": description,
-            "duration": duration,
-        }
+    properties = {
+        "name": item_id,
+        "consumable": consumable,
+        "effect": effect_id,
+        "on_use": on_use,
+    }
+    if amount is not None:
+        properties["amount"] = amount
     return GraphNode(
         id=item_id,
         type="item",
+        properties=properties,
+    )
+
+
+def _effect(
+    effect_id: str,
+    *,
+    kind: str,
+    description: str | None = None,
+    duration: int | None = None,
+) -> GraphNode:
+    return GraphNode(
+        id=effect_id,
+        type="effect",
         properties={
-            "name": item_id,
-            "consumable": consumable,
-            "effects": effects,
-            "on_use": on_use,
+            "kind": kind,
+            "description": description,
+            "duration": duration,
         },
     )
 
 
 def _graph() -> Graph:
-    item_ids = ["heal", "mana", "scroll", "key", "bomb", "uncarried"]
+    item_ids = ["potion", "mana", "scroll", "key", "bomb", "uncarried"]
     nodes = {
         "player_01": GraphNode(
             id="player_01",
@@ -55,21 +65,25 @@ def _graph() -> Graph:
             type="character",
             properties={"hp": 18, "max_hp": 20, "active_buffs": []},
         ),
-        "heal": _item("heal", effect="heal", amount=15),
-        "mana": _item("mana", effect="mp_restore", amount=5),
-        "scroll": _item(
-            "scroll",
-            effect="buff",
-            description="근력 일시 강화",
-            duration=5,
-        ),
+        "potion": _item("potion", effect_id="heal", amount=15),
+        "mana": _item("mana", effect_id="mp_restore", amount=5),
+        "scroll": _item("scroll", effect_id="strength_buff"),
         "key": _item(
             "key",
             consumable=False,
             on_use="open_ancient_door",
         ),
-        "bomb": _item("bomb", effect="damage", amount=10),
-        "uncarried": _item("uncarried", effect="heal", amount=5),
+        "bomb": _item("bomb", effect_id="damage", amount=10),
+        "uncarried": _item("uncarried", effect_id="heal", amount=5),
+        "heal": _effect("heal", kind="heal"),
+        "mp_restore": _effect("mp_restore", kind="mp_restore"),
+        "strength_buff": _effect(
+            "strength_buff",
+            kind="buff",
+            description="근력 일시 강화",
+            duration=5,
+        ),
+        "damage": _effect("damage", kind="damage"),
     }
     edges = {
         f"carries:player_01:{item_id}": GraphEdge(
@@ -91,14 +105,14 @@ def _apply_all(graph: Graph, changes) -> Graph:
 
 
 def test_heal_consumable_caps_hp_and_removes_item():
-    result = plan_item_use(_graph(), "player_01", "heal")
+    result = plan_item_use(_graph(), "player_01", "potion")
     changed = _apply_all(_graph(), result.changes)
 
     assert result.kind == "heal"
     assert result.amount == 10
     assert result.consumed is True
     assert changed.nodes["player_01"].properties["hp"] == 20
-    assert "carries:player_01:heal" not in changed.edges
+    assert "carries:player_01:potion" not in changed.edges
 
 
 def test_mp_restore_caps_mp():
@@ -135,7 +149,7 @@ def test_validation_rejects_missing_and_not_carried_items():
     with pytest.raises(GraphItemUseError, match="missing item"):
         plan_item_use(_graph(), "player_01", "ghost")
     with pytest.raises(GraphItemUseError, match="missing character"):
-        plan_item_use(_graph(), "ghost", "heal")
+        plan_item_use(_graph(), "ghost", "potion")
     with pytest.raises(GraphItemUseError, match="not carried"):
         plan_item_use(_graph(), "player_01", "uncarried")
 
@@ -144,14 +158,14 @@ def test_full_hp_heal_and_damage_consumable_are_rejected():
     graph = _graph()
     graph.nodes["player_01"].properties["hp"] = 20
     with pytest.raises(GraphItemUseError, match="hp already full"):
-        plan_item_use(graph, "player_01", "heal")
+        plan_item_use(graph, "player_01", "potion")
     with pytest.raises(GraphItemUseError, match="combat"):
         plan_item_use(_graph(), "player_01", "bomb", target_id="ally_01")
 
 
 def test_item_use_changes_are_individually_valid_graph_changes():
     graph = _graph()
-    result = plan_item_use(graph, "player_01", "heal")
+    result = plan_item_use(graph, "player_01", "potion")
 
     for change in result.changes:
         graph = apply_graph_change(graph, change)

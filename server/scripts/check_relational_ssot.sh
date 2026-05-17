@@ -8,13 +8,13 @@
 # Exits non-zero with a one-line-per-violation summary if anything is found.
 #
 # Scope of forbidden patterns:
-# - List-shaped relation fields (inventory_ids, racial_skill_ids,
-#   learned_skill_ids, connections, item_ids, quest_ids, companions,
+# - List-shaped relation fields (inventory, racial_skills,
+#   learned_skills, connections, items, quests, companions,
 #   triggers[]) — iterating these is the same shape as a graph scan.
 # - state.characters.items() / .values() — iterating *all* characters
 #   to filter by relation is the textbook fullscan.
 #
-# Scalar id pointers (location_id, race_id, giver_id) are NOT in the list:
+# Scalar pointers (location, race, giver) are NOT in the list:
 # reading "what's this one entity's own location" is the entity's own
 # value-attribute and typically used as the start key for a graph query.
 # Same for `equipment.<slot>` — single slot pickup, not iteration.
@@ -33,12 +33,12 @@ SEARCH_DIRS=(
 )
 
 FORBIDDEN_PATTERNS=(
-  '\.inventory_ids\b'
-  '\.racial_skill_ids\b'
-  '\.learned_skill_ids\b'
+  '\.inventory\b'
+  '\.racial_skills\b'
+  '\.learned_skills\b'
   '\.connections\b'
-  '\.item_ids\b'
-  '\.quest_ids\b'
+  '\.items\b'
+  '\.quests\b'
   '\.companions\b'
   '\.triggers\['
   'state\.characters\.items\(\)'

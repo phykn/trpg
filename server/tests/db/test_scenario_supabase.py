@@ -39,16 +39,16 @@ async def test_read_world_md_missing_ok_returns_empty():
         await repo.read_world_md("absent")
 
 
-async def test_read_start_and_player_template():
+async def test_read_start_and_player():
     repo, fs = make_scenario_repo()
     fs.objects["default/start.json"] = json.dumps(
         {"start_location_id": "loc_01"}
     ).encode("utf-8")
-    fs.objects["default/player_template.json"] = json.dumps(
+    fs.objects["default/player.json"] = json.dumps(
         {"id": "player_01", "gold": 5}
     ).encode("utf-8")
     start = await repo.read_start_json("default")
-    template = await repo.read_player_template("default")
+    template = await repo.read_player("default")
     assert start["start_location_id"] == "loc_01"
     assert template["gold"] == 5
 

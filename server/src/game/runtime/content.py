@@ -11,10 +11,11 @@ async def load_runtime_content(
         locations=await scenario_repo.load_seed_records(profile_id, "locations"),
         items=await scenario_repo.load_seed_records(profile_id, "items"),
         skills=await scenario_repo.load_seed_records(profile_id, "skills"),
-        support_effects=await scenario_repo.load_seed_records(
-            profile_id, "support_effects"
+        effects=await scenario_repo.load_seed_records(
+            profile_id, "effects"
         ),
         statuses=await scenario_repo.load_seed_records(profile_id, "statuses"),
+        slots=await scenario_repo.load_seed_records(profile_id, "slots"),
         factions=await scenario_repo.load_seed_records(profile_id, "factions"),
         actions=await scenario_repo.load_seed_records(profile_id, "actions"),
         knowledge=await scenario_repo.load_seed_records(profile_id, "knowledge"),

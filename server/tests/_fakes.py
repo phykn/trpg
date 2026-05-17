@@ -183,16 +183,16 @@ def make_default_storage() -> FakeStorage:
     fs.objects["default/world.md"] = "테스트 세계".encode("utf-8")
     fs.objects["default/start.json"] = json.dumps(
         {
-            "start_location_id": "loc_01",
-            "active_subject_id": "edrik_chief",
-            "active_quest_id": None,
+            "start_location": "loc_01",
+            "active_subject": "edrik_chief",
+            "active_quest": None,
         }
     ).encode("utf-8")
-    fs.objects["default/player_template.json"] = json.dumps(
+    fs.objects["default/player.json"] = json.dumps(
         {
             "id": "player_01",
             "equipment": {},
-            "inventory_ids": [],
+            "inventory": [],
             "gold": 0,
             "xp_pool": 0,
         }
@@ -202,7 +202,7 @@ def make_default_storage() -> FakeStorage:
         "id": "basic_strike",
         "name": "기본 타격",
         "description": "공격 판정을 안정시키는 테스트 기술.",
-        "action_id": "attack",
+        "action": "attack",
         "bonus": 2,
         "mp_cost": 0,
     }
@@ -210,7 +210,7 @@ def make_default_storage() -> FakeStorage:
         "id": "human",
         "name": "인간",
         "description": "테스트 인간",
-        "racial_skill_ids": ["basic_strike"],
+        "racial_skills": ["basic_strike"],
     }
     loc = {"id": "loc_01", "name": "광장", "description": "테스트 광장"}
 
@@ -219,9 +219,9 @@ def make_default_storage() -> FakeStorage:
     edric = {
         "id": "edrik_chief",
         "name": "에드릭",
-        "race_id": "human",
+        "race": "human",
         "gender": "male",
-        "location_id": "loc_01",
+        "location": "loc_01",
         "level": edric_level,
         "stats": edric_stats,
         "max_hp": calc_max_hp(edric_level, edric_stats["body"]),
