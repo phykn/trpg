@@ -89,8 +89,10 @@ class ActionOutput(BaseModel):
                 raise ValueError("query must be the only action")
         if not actions_set and self.action_checks:
             raise ValueError("action_checks requires actions")
-        if actions_set and self.action_checks and len(self.action_checks) != len(
-            self.actions
+        if (
+            actions_set
+            and self.action_checks
+            and len(self.action_checks) != len(self.actions)
         ):
             raise ValueError("action_checks must match actions length")
         if actions_set:
@@ -105,7 +107,10 @@ def _validate_classifier_action(action: Action, *, in_combat: bool) -> None:
         destination = _single(action.to) or _single(action.what)
         if destination is None and not in_combat:
             raise ValueError("action=move requires to or what outside combat")
-        _require_enum(action.how, {"hasty", "flee"}, "move.how", optional=True)
+        move_how = (
+            {"hasty", "flee", "create_distance"} if in_combat else {"hasty", "flee"}
+        )
+        _require_enum(action.how, move_how, "move.how", optional=True)
         return
 
     if action.verb == "transfer":
@@ -128,7 +133,12 @@ def _validate_classifier_action(action: Action, *, in_combat: bool) -> None:
 
     if action.verb == "attack":
         _require_targets(action.what, "attack.what", required=True)
-        _require_enum(action.how, {"surprise"}, "attack.how", optional=True)
+        attack_how = (
+            {"precise", "guarded", "reckless", "surprise"}
+            if in_combat
+            else {"surprise"}
+        )
+        _require_enum(action.how, attack_how, "attack.how", optional=True)
         return
 
     if action.verb == "speak":

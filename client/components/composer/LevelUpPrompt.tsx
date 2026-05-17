@@ -28,12 +28,15 @@ type Props = {
 };
 
 export function LevelUpPrompt({ hero, choices = [], loading = false, onCommit, onCancel }: Props) {
-  const growthChoices = choices.length > 0 ? choices : CHOICES;
+  const growthChoices = React.useMemo(
+    () => (choices.length > 0 ? choices : loading ? [] : CHOICES),
+    [choices, loading],
+  );
   const [selectedId, setSelectedId] = React.useState<GrowthChoice['id']>(growthChoices[0]?.id ?? 'max_hp');
   React.useEffect(() => {
     setSelectedId(growthChoices[0]?.id ?? 'max_hp');
   }, [growthChoices]);
-  const selected = growthChoices.find((choice) => choice.id === selectedId) ?? growthChoices[0] ?? CHOICES[0];
+  const selected = growthChoices.find((choice) => choice.id === selectedId) ?? growthChoices[0];
 
   const renderChoiceButton = (choice: GrowthChoice) => {
     const active = selectedId === choice.id;
@@ -92,7 +95,7 @@ export function LevelUpPrompt({ hero, choices = [], loading = false, onCommit, o
         {growthChoices.map(renderChoiceButton)}
       </View>
 
-      {selected.description ? (
+      {selected?.description ? (
         <Text className="font-sans text-caption text-fg-muted" style={{ marginTop: 6 }} numberOfLines={2}>
           {selected.description}
         </Text>
@@ -116,7 +119,10 @@ export function LevelUpPrompt({ hero, choices = [], loading = false, onCommit, o
         </Pressable>
         <Pressable
           testID="level-confirm"
-          onPress={() => onCommit(selected.growth)}
+          onPress={() => {
+            if (selected) onCommit(selected.growth);
+          }}
+          disabled={!selected || loading}
           accessibilityRole="button"
           accessibilityLabel={ko.level.confirmAction}
           style={{
@@ -124,6 +130,7 @@ export function LevelUpPrompt({ hero, choices = [], loading = false, onCommit, o
             alignItems: 'center', justifyContent: 'center',
             borderWidth: 1, borderColor: colors.accent.fg,
             backgroundColor: 'rgba(214,122,92,0.15)',
+            opacity: selected && !loading ? 1 : 0.5,
           }}
         >
           <Text className="font-sans-semibold text-title" style={{ color: colors.accent.fg, letterSpacing: 1.2 }}>

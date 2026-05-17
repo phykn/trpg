@@ -69,7 +69,7 @@ async def run_graph_action_request(
             "a pending_roll is already active; call graph roll instead"
         )
 
-    if action.verb == "perceive":
+    if should_start_graph_roll(runtime, action):
         from .roll import start_graph_roll
 
         engine_diag("action:roll_required", action=action.verb)
@@ -142,7 +142,7 @@ async def run_graph_action_request_stream(
             "a pending_roll is already active; call graph roll instead"
         )
 
-    if action.verb == "perceive":
+    if should_start_graph_roll(runtime, action):
         from .roll import start_graph_roll
 
         engine_diag("action:roll_required", action=action.verb)
@@ -472,6 +472,93 @@ def _pending(
 
 def _requires_roll_after_confirmation(action: Action) -> bool:
     return action.verb == "transfer" and action.how == "steal"
+
+
+def should_start_graph_roll(
+    runtime: GameRuntimeState,
+    action: Action,
+    *,
+    check_required: bool = False,
+) -> bool:
+    if _roll_forbidden(runtime, action):
+        return False
+    if runtime.progress.graph_combat_state is not None:
+        return False
+    if _roll_required_by_server(runtime, action):
+        return True
+    if not check_required:
+        return False
+    return _roll_allowed_from_check_hint(runtime, action)
+
+
+def _roll_forbidden(runtime: GameRuntimeState, action: Action) -> bool:
+    if action.verb in {"query", "attack", "rest", "pass"}:
+        return True
+    if action.verb != "transfer":
+        return False
+    if action.how in {"accept", "abandon", "equip", "unequip", "steal", "trade"}:
+        return True
+    return _is_public_pickup(runtime, action)
+
+
+def _roll_required_by_server(runtime: GameRuntimeState, action: Action) -> bool:
+    if action.verb == "perceive":
+        return True
+    if action.verb == "move":
+        return _is_risky_move(runtime, action)
+    if action.verb == "speak":
+        return action.how in {"hostile", "deceptive", "recruit"}
+    return False
+
+
+def _roll_allowed_from_check_hint(runtime: GameRuntimeState, action: Action) -> bool:
+    if action.verb in {"move", "use", "speak", "perceive"}:
+        return True
+    if action.verb != "transfer":
+        return False
+    if action.how != "free":
+        return False
+    return not _is_public_pickup(runtime, action)
+
+
+def _is_risky_move(runtime: GameRuntimeState, action: Action) -> bool:
+    if action.how in {"hasty", "flee"}:
+        return True
+    source_id = location_of(runtime.graph, runtime.progress.player_id)
+    destination_id = _single(action.to) or _single(action.what)
+    if source_id is None or destination_id is None:
+        return False
+    for edge in runtime.graph.edges.values():
+        if (
+            edge.type == "connects_to"
+            and edge.from_node_id == source_id
+            and edge.to_node_id == destination_id
+        ):
+            return edge.properties.get("difficulty") is not None
+    return False
+
+
+def _is_public_pickup(runtime: GameRuntimeState, action: Action) -> bool:
+    item_id = _single(action.what) or _single(action.with_)
+    if item_id is None:
+        return False
+    to_id = _single(action.to) or runtime.progress.player_id
+    if to_id != runtime.progress.player_id:
+        return False
+    source_id = _single(action.from_) or _item_owner(runtime.graph, item_id)
+    if source_id is None:
+        return False
+    source = runtime.graph.nodes.get(source_id)
+    return source is not None and source.type == "location"
+
+
+def _item_owner(graph: Graph, item_id: str) -> str | None:
+    for edge in graph.edges.values():
+        if edge.type in {"located_at", "hidden_at", "reward_of"} and edge.from_node_id == item_id:
+            return edge.to_node_id
+        if edge.type in {"carries", "equips"} and edge.to_node_id == item_id:
+            return edge.from_node_id
+    return None
 
 
 def _attack_target_id(

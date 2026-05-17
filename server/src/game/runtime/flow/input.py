@@ -23,6 +23,7 @@ from .confirmation import (
     GraphConfirmationActive,
     run_graph_action_request,
     run_graph_action_request_stream,
+    should_start_graph_roll,
 )
 from ..load import load_runtime_state
 from ..narration.input import (
@@ -106,7 +107,13 @@ async def run_graph_input_turn(
     )
 
     if output.refuse is not None:
-        raise GraphInputError(output.refuse.message_hint)
+        return await _run_graph_refused_input(
+            client,
+            repo,
+            runtime,
+            player_input,
+            output.refuse.message_hint,
+        )
     actions = output.actions or []
     if not actions:
         raise GraphInputError("graph input requires at least one action")
@@ -149,7 +156,15 @@ async def run_graph_input_turn_stream(
     )
 
     if output.refuse is not None:
-        raise GraphInputError(output.refuse.message_hint)
+        async for event in _run_graph_refused_input_stream(
+            client,
+            repo,
+            runtime,
+            player_input,
+            output.refuse.message_hint,
+        ):
+            yield event
+        return
     actions = output.actions or []
     if not actions:
         raise GraphInputError("graph input requires at least one action")
@@ -264,7 +279,7 @@ async def _run_classified_action(
     *,
     scenario_repo: ScenarioRepo | None = None,
 ) -> GraphActionRequestResult:
-    if _should_start_check_roll(action, check_hint):
+    if _should_start_check_roll(runtime, action, check_hint):
         from .roll import start_graph_roll
 
         return await start_graph_roll(
@@ -274,10 +289,7 @@ async def _run_classified_action(
             reason=check_hint.reason if check_hint is not None else None,
             scenario_repo=scenario_repo,
         )
-    if (
-        action.verb in {"speak", "pass"}
-        and runtime.progress.graph_combat_state is None
-    ):
+    if action.verb in {"speak", "pass"} and runtime.progress.graph_combat_state is None:
         return await _run_graph_narrative_input(
             client,
             repo,
@@ -314,7 +326,7 @@ async def _run_classified_action_stream(
     *,
     scenario_repo: ScenarioRepo | None = None,
 ) -> AsyncIterator[dict[str, object]]:
-    if _should_start_check_roll(action, check_hint):
+    if _should_start_check_roll(runtime, action, check_hint):
         from .roll import start_graph_roll
 
         result = await start_graph_roll(
@@ -327,10 +339,7 @@ async def _run_classified_action_stream(
         yield {"type": "result", "result": result}
         yield {"type": "final", "result": result}
         return
-    if (
-        action.verb in {"speak", "pass"}
-        and runtime.progress.graph_combat_state is None
-    ):
+    if action.verb in {"speak", "pass"} and runtime.progress.graph_combat_state is None:
         async for event in _run_graph_narrative_input_stream(
             client,
             repo,
@@ -378,14 +387,15 @@ def _check_hint_at(
 
 
 def _should_start_check_roll(
+    runtime: GameRuntimeState,
     action: Action,
     check_hint: ActionCheckHint | None,
 ) -> bool:
-    if check_hint is None or not check_hint.required:
-        return False
-    if action.verb in {"move", "use", "speak", "perceive"}:
-        return True
-    return False
+    return should_start_graph_roll(
+        runtime,
+        action,
+        check_required=check_hint is not None and check_hint.required,
+    )
 
 
 def _raise_if_pending_input_blocked(runtime: GameRuntimeState) -> None:
@@ -413,6 +423,43 @@ async def _run_graph_rejected_input(
     reason = str(exc)
     engine_diag("input:action_rejected", action=action.verb, reason=reason)
     public_reason = _public_action_rejection_reason(runtime, reason)
+    return await _run_graph_rejected_reason_input(
+        client,
+        repo,
+        runtime,
+        player_input,
+        action,
+        public_reason,
+    )
+
+
+async def _run_graph_refused_input(
+    client: LLMClient,
+    repo: GraphRepo,
+    runtime: GameRuntimeState,
+    player_input: str,
+    public_reason: str,
+) -> GraphActionRequestResult:
+    action = Action(verb="pass")
+    engine_diag("input:refused", reason=public_reason)
+    return await _run_graph_rejected_reason_input(
+        client,
+        repo,
+        runtime,
+        player_input,
+        action,
+        public_reason,
+    )
+
+
+async def _run_graph_rejected_reason_input(
+    client: LLMClient,
+    repo: GraphRepo,
+    runtime: GameRuntimeState,
+    player_input: str,
+    action: Action,
+    public_reason: str,
+) -> GraphActionRequestResult:
     narration_result = await generate_graph_input_rejection_narration(
         client,
         runtime,
@@ -443,6 +490,45 @@ async def _run_graph_rejected_input_stream(
     reason = str(exc)
     engine_diag("input:action_rejected", action=action.verb, reason=reason)
     public_reason = _public_action_rejection_reason(runtime, reason)
+    async for event in _run_graph_rejected_reason_input_stream(
+        client,
+        repo,
+        runtime,
+        player_input,
+        action,
+        public_reason,
+    ):
+        yield event
+
+
+async def _run_graph_refused_input_stream(
+    client: LLMClient,
+    repo: GraphRepo,
+    runtime: GameRuntimeState,
+    player_input: str,
+    public_reason: str,
+) -> AsyncIterator[dict[str, object]]:
+    action = Action(verb="pass")
+    engine_diag("input:refused", reason=public_reason)
+    async for event in _run_graph_rejected_reason_input_stream(
+        client,
+        repo,
+        runtime,
+        player_input,
+        action,
+        public_reason,
+    ):
+        yield event
+
+
+async def _run_graph_rejected_reason_input_stream(
+    client: LLMClient,
+    repo: GraphRepo,
+    runtime: GameRuntimeState,
+    player_input: str,
+    action: Action,
+    public_reason: str,
+) -> AsyncIterator[dict[str, object]]:
     yield {"type": "result", "result": _neutral_stream_result(runtime)}
     stream = VisibleNarrationStream()
     async for chunk in stream_graph_input_rejection_narration(

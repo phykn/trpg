@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from src.db.graph_local_fs import LocalFsGraphRepo
+from src.db.graph.local_fs import LocalFsGraphRepo
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
@@ -459,6 +459,50 @@ async def test_run_graph_action_turn_does_not_generate_quest_offer_on_revisited_
     assert result.front_state.quest_offers == []
 
 
+async def test_run_graph_action_turn_completes_location_enter_quest_and_rewards(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["quest_forest"] = GraphNode(
+        id="quest_forest",
+        type="quest",
+        properties={
+            "status": "active",
+            "triggers": [
+                {
+                    "id": "reach_forest",
+                    "type": "location_enter",
+                    "target_id": "forest",
+                }
+            ],
+            "triggers_met": [False],
+            "rewards": {"gold": 3, "exp": 2},
+        },
+    )
+    await repo.save_graph("game-1", graph)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(update={"active_quest_id": "quest_forest"})
+    )
+
+    result = await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="move", to="forest"),
+    )
+    saved_graph = await repo.load_graph("game-1")
+    saved_progress = await repo.load_progress("game-1")
+    player = saved_graph.nodes["player_01"].properties
+
+    assert saved_graph.nodes["quest_forest"].properties["status"] == "completed"
+    assert saved_graph.nodes["quest_forest"].properties["triggers_met"] == [True]
+    assert player["gold"] == 23
+    assert player["xp_pool"] == 2
+    assert saved_progress.active_quest_id is None
+    assert result.front_state.quest is None
+
+
 async def test_run_graph_action_turn_uses_pass_style_fallback_for_empty_narration(
     tmp_path,
 ):
@@ -508,7 +552,9 @@ async def test_run_graph_action_turn_stream_emits_result_before_narration(tmp_pa
     ]
 
 
-async def test_run_graph_action_turn_does_not_generate_offer_when_no_work_exists(tmp_path):
+async def test_run_graph_action_turn_does_not_generate_offer_when_no_work_exists(
+    tmp_path,
+):
     repo = await _repo(tmp_path)
 
     result = await run_graph_action_turn(
@@ -538,7 +584,9 @@ async def test_run_graph_action_turn_saves_attack_progress_and_front_combat(tmp_
     assert saved_progress.graph_combat_state is not None
     assert saved_progress.graph_combat_state.round == 1
     assert saved_progress.graph_combat_state.last_roll is None
-    assert saved_logs[0].text == "당신은 goblin_01와 대치합니다."
+    assert saved_logs[0].text == (
+        "goblin_01가 정면을 막아서고, 당신은 발을 낮게 깔아 싸움의 중심을 잡습니다."
+    )
     assert result.front_state.combat is not None
     assert result.front_state.combat.round == 1
     assert result.front_state.combat.last_roll is None
@@ -585,7 +633,7 @@ async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(
     assert result.runtime.progress.next_log_id == saved_logs[-1].id + 1
 
 
-async def test_run_graph_action_turn_logs_fled_combat_as_fled_not_victory(
+async def test_run_graph_action_turn_logs_escaped_combat_as_neutral(
     tmp_path,
     monkeypatch,
 ):
@@ -608,6 +656,12 @@ async def test_run_graph_action_turn_logs_fled_combat_as_fled_not_victory(
         )
     )
 
+    first = await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="move", how="flee"),
+        llm=llm,  # type: ignore[arg-type]
+    )
     await run_graph_action_turn(
         repo,
         "game-1",
@@ -616,9 +670,13 @@ async def test_run_graph_action_turn_logs_fled_combat_as_fled_not_victory(
     )
     saved_logs = await repo.load_log_entries("game-1")
 
-    assert saved_logs[0].text == "당신은 전투에서 물러납니다."
-    assert [entry.kind for entry in saved_logs] == ["act", "gm"]
-    assert len(llm.calls) == 1
+    assert first.runtime.progress.graph_combat_state is not None
+    assert first.runtime.progress.graph_combat_state.escape_ready is True
+    assert saved_logs[2].text == (
+        "벌어진 찰나를 놓치지 않고, 당신은 전투선 밖으로 빠져나옵니다."
+    )
+    assert [entry.kind for entry in saved_logs] == ["act", "gm", "act", "gm"]
+    assert len(llm.calls) == 2
     assert llm.calls[0]["agent"] == "combat_narrate"
 
 
@@ -654,6 +712,44 @@ async def test_run_graph_action_turn_preserves_repeated_llm_narration(tmp_path):
     ]
 
 
+async def test_run_graph_action_turn_uses_safe_combat_failure_narration(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 1)
+    repo = await _repo(tmp_path)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(
+            update={
+                "graph_combat_state": GraphCombatState(
+                    location_id="town",
+                    player_id="player_01",
+                    enemy_ids=["goblin_01"],
+                    participant_ids=["player_01", "goblin_01"],
+                    sides={"player_01": "player", "goblin_01": "enemy"},
+                    round=2,
+                )
+            }
+        )
+    )
+    llm = _NarrationLLM()
+
+    await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="attack", what="goblin_01", how="precise"),
+        llm=llm,  # type: ignore[arg-type]
+    )
+    saved_logs = await repo.load_log_entries("game-1")
+
+    assert saved_logs[-1].text == (
+        "일격이 닿기 직전, 상대가 몸을 틀어 흐름을 끊습니다."
+    )
+    assert saved_logs[-1].outcome == "failure"
+    assert llm.calls == []
+
+
 async def test_run_graph_action_turn_stream_persists_streamed_repeated_narration(
     tmp_path,
 ):
@@ -686,6 +782,49 @@ async def test_run_graph_action_turn_stream_persists_streamed_repeated_narration
     assert saved_logs[-1].kind == "gm"
     assert saved_logs[-1].text == repeated
     assert events[-1]["result"].front_state.log[-1].text == repeated
+
+
+async def test_run_graph_action_turn_stream_uses_safe_combat_failure_narration(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 1)
+    repo = await _repo(tmp_path)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(
+            update={
+                "graph_combat_state": GraphCombatState(
+                    location_id="town",
+                    player_id="player_01",
+                    enemy_ids=["goblin_01"],
+                    participant_ids=["player_01", "goblin_01"],
+                    sides={"player_01": "player", "goblin_01": "enemy"},
+                    round=2,
+                )
+            }
+        )
+    )
+    runtime = await load_runtime_state(repo, "game-1")
+
+    events = [
+        event
+        async for event in run_graph_action_turn_from_runtime_stream(
+            repo,
+            "game-1",
+            runtime,
+            Action(verb="move", how="create_distance"),
+            llm=_RepeatStreamNarrationLLM("잘못된 성공 묘사"),  # type: ignore[arg-type]
+        )
+    ]
+    saved_logs = await repo.load_log_entries("game-1")
+    streamed = "".join(
+        event["text"] for event in events if event["type"] == "narration_delta"
+    )
+
+    assert streamed == "발끝이 길을 찾는 순간, 상대가 먼저 붙어 거리를 지워 버립니다."
+    assert saved_logs[-1].text == streamed
+    assert saved_logs[-1].outcome == "failure"
 
 
 async def test_run_graph_action_turn_sends_combat_trace_to_narration(tmp_path):

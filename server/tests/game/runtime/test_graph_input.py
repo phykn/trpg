@@ -5,14 +5,17 @@ import httpx
 import pytest
 from openai import RateLimitError
 
-from src.db.graph_local_fs import LocalFsGraphRepo
+from src.db.graph.local_fs import LocalFsGraphRepo
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime.flow.confirmation import GraphConfirmationActive
-from src.game.runtime.flow.input import run_graph_input_turn, run_graph_input_turn_stream
+from src.game.runtime.flow.input import (
+    run_graph_input_turn,
+    run_graph_input_turn_stream,
+)
 from src.game.runtime.flow.roll import build_pending_roll
 
 
@@ -394,6 +397,36 @@ async def test_graph_input_speak_check_hint_creates_pending_roll(tmp_path):
     assert [call["agent"] for call in llm.calls] == ["classify"]
 
 
+async def test_graph_input_social_transfer_check_hint_creates_presence_roll(tmp_path):
+    repo = await _repo(tmp_path)
+    reason = "상대가 선물을 받아들일지 확인해야 합니다."
+    llm = _FakeLLM(
+        {
+            "actions": [
+                {
+                    "verb": "transfer",
+                    "what": "healing_herb",
+                    "from": "player_01",
+                    "to": "goblin_01",
+                    "how": "free",
+                },
+            ],
+            "action_checks": [{"required": True, "reason": reason}],
+        }
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 약초를 건넨다")
+    progress = await repo.load_progress("game-1")
+    graph = await repo.load_graph("game-1")
+
+    assert result.status == "roll_required"
+    assert progress.pending_roll["kind"] == "transfer"
+    assert progress.pending_roll["stat"] == "presence"
+    assert progress.pending_roll["body"] == reason
+    assert "carries:player_01:healing_herb" in graph.edges
+    assert "carries:goblin_01:healing_herb" not in graph.edges
+
+
 async def test_graph_input_in_combat_speak_runs_social_exchange(tmp_path, monkeypatch):
     monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 20)
     repo = await _repo(tmp_path)
@@ -424,8 +457,9 @@ async def test_graph_input_in_combat_speak_runs_social_exchange(tmp_path, monkey
 
     assert result.status == "executed"
     assert saved.graph_combat_state is not None
-    assert saved.graph_combat_state.last_action == "social"
-    assert saved.graph_combat_state.enemy_hearts == 2
+    assert saved.graph_combat_state.last_action == "talk"
+    assert saved.graph_combat_state.enemy_hearts == 3
+    assert saved.graph_combat_state.enemy_pressure == 1
     assert "combat_narrate" in [call["agent"] for call in llm.calls]
 
 

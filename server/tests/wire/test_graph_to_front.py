@@ -287,6 +287,43 @@ def test_graph_front_state_builds_place_from_visible_graph_edges():
     assert target.status == ["경계 중"]
 
 
+def test_graph_front_state_exposes_visible_place_items_and_hides_hidden_items():
+    runtime = _runtime()
+    runtime.graph.nodes["supply_token"] = GraphNode(
+        id="supply_token",
+        type="item",
+        properties={
+            "name": "보급 표식",
+            "description": "바닥에 놓인 작은 표식입니다.",
+        },
+    )
+    runtime.graph.nodes["hidden_wire"] = GraphNode(
+        id="hidden_wire",
+        type="item",
+        properties={"name": "숨은 철사"},
+    )
+    runtime.graph.edges["located_at:supply_token:town"] = GraphEdge(
+        id="located_at:supply_token:town",
+        type="located_at",
+        from_node_id="supply_token",
+        to_node_id="town",
+    )
+    runtime.graph.edges["hidden_at:hidden_wire:town"] = GraphEdge(
+        id="hidden_at:hidden_wire:town",
+        type="hidden_at",
+        from_node_id="hidden_wire",
+        to_node_id="town",
+    )
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.place is not None
+    assert [item.id for item in payload.place.items] == ["supply_token"]
+    assert payload.place.items[0].name == "보급 표식"
+    assert payload.place.items[0].description == "바닥에 놓인 작은 표식입니다."
+    assert not _contains_key(payload.model_dump(mode="json"), "hidden_wire")
+
+
 def test_graph_front_state_resolves_static_content_from_runtime_content():
     runtime = _runtime()
     runtime.graph.nodes["town"].properties = {
@@ -461,6 +498,45 @@ def test_graph_front_state_builds_combat_view_when_progress_exists():
     assert payload.combat.participants[0].hp is not None
     assert payload.combat.participants[1].hp is None
     assert payload.combat.participants[1].mp is None
+
+
+def test_graph_front_state_exposes_usable_combat_skill_supports():
+    runtime = _runtime(combat=True)
+    runtime.graph.nodes["basic_strike"].properties.update(
+        {
+            "name": "그림자 찌르기",
+            "action": "attack",
+            "mp_cost": 2,
+        }
+    )
+
+    payload = graph_to_front_state(runtime).model_dump(mode="json", by_alias=True)
+
+    assert payload["combat"]["availableSupports"] == [
+        {
+            "id": "basic_strike",
+            "kind": "skill",
+            "name": "그림자 찌르기",
+            "tactic": "precise",
+            "mpCost": 2,
+            "usable": True,
+        }
+    ]
+
+
+def test_graph_front_state_omits_unusable_combat_skill_supports():
+    runtime = _runtime(combat=True)
+    runtime.graph.nodes["basic_strike"].properties.update(
+        {
+            "name": "그림자 찌르기",
+            "action": "attack",
+            "mp_cost": 3,
+        }
+    )
+
+    payload = graph_to_front_state(runtime).model_dump(mode="json", by_alias=True)
+
+    assert payload["combat"]["availableSupports"] == []
 
 
 def test_graph_front_state_exposes_pending_confirmation_without_payload():

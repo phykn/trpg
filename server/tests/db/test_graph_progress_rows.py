@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.db.graph_progress_rows import (
+from src.db.graph.progress_rows import (
     GameProgressRow,
     progress_from_row,
     progress_to_row,

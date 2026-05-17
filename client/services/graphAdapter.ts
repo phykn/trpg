@@ -158,9 +158,13 @@ function adaptCombat(combat: GraphCombatState | null): FrontState['combat'] {
   if (combat === null) return null;
   return {
     round: combat.round,
+    outcome: combat.outcome,
     turnLabel: ko.combat.label,
     playerHearts: combat.playerHearts,
     enemyHearts: combat.enemyHearts,
+    availableSupports: combat.availableSupports ?? [],
+    escapeReady: combat.escapeReady ?? false,
+    enemyPressure: combat.enemyPressure ?? 0,
     lastRoll: combat.lastRoll ?? null,
     lastDc: combat.lastDc ?? null,
     enemies: combat.participants
@@ -199,6 +203,7 @@ function buildStoryGraph(
       summary: state.hero.name,
     };
   }
+  const placeItems = place.items ?? [];
 
   return {
     nodes: [
@@ -235,6 +240,14 @@ function buildStoryGraph(
         description: exit.description,
         risk: DEFAULT_RISK,
         moveDifficulty: null,
+      })),
+      ...placeItems.map((item) => ({
+        id: item.id,
+        label: item.name,
+        kind: 'item' as const,
+        status: 'reachable_item' as const,
+        reachable: true as const,
+        description: item.description,
       })),
       ...place.targets.map((target) => ({
         id: target.id,
@@ -276,6 +289,13 @@ function buildStoryGraph(
         target: exit.id,
         label: ko.panel.move,
         kind: 'move' as const,
+      })),
+      ...placeItems.map((item) => ({
+        id: `item:${place.id}:${item.id}`,
+        source: place.id,
+        target: item.id,
+        label: ko.panel.pickup,
+        kind: 'item' as const,
       })),
       ...place.targets.map((target) => ({
         id: `meet:${place.id}:${target.id}`,

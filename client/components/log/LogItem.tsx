@@ -12,7 +12,7 @@ export function LogItem({ entry }: { entry: LogEntry }) {
     case 'player':
       return <PlayerMessage text={entry.text} />;
     case 'act':
-      return null;
+      return <ActMessage text={entry.text} />;
     case 'roll':
       return <RollResult entry={entry} />;
     default:
@@ -98,6 +98,22 @@ function PlayerMessage({ text }: { text: string }) {
       }}
     >
       <Text className="font-serif text-lead text-accent-fg">
+        {text}
+      </Text>
+    </View>
+  );
+}
+
+function ActMessage({ text }: { text: string }) {
+  return (
+    <View
+      style={{
+        borderLeftWidth: 2,
+        borderLeftColor: colors.fg.muted,
+        paddingLeft: spacing[3],
+      }}
+    >
+      <Text className="font-sans text-caption text-fg-muted">
         {text}
       </Text>
     </View>

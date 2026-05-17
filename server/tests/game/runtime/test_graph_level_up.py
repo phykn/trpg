@@ -1,6 +1,9 @@
+import json
+
 import pytest
 
-from src.db.graph_local_fs import LocalFsGraphRepo
+from src.game.domain.content import RuntimeContent
+from src.db.graph.local_fs import LocalFsGraphRepo
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.engines.growth import xp_for_next_level
@@ -20,9 +23,8 @@ class _SkillCandidateLLM:
         self.calls.append({"messages": messages, **kw})
         return {
             "answer": (
-                '{"skills":[{"name":"그림자 찌르기","description":"공격 DC를 낮춘다.",'
-                '"action":"attack","effect_template":"dc_down","support_bonus":2,'
-                '"mp_cost":2,"tags":["stealth","attack"]}]}'
+                '{"skills":[{"name":"그림자 찌르기",'
+                '"description":"공격 흐름을 잡을 때 판정을 보조합니다."}]}'
             ),
             "think": None,
         }
@@ -102,11 +104,30 @@ async def test_run_graph_level_up_consumes_current_level_xp_and_raises_hp(tmp_pa
     assert saved_logs[0].kind == "act"
     assert (
         saved_logs[0].text
-        == "테스터의 레벨이 올랐습니다 (레벨 2, 최대 HP +1, HP 6 / MP 5)."
+        == "당신의 레벨이 올랐습니다 (레벨 2, 최대 HP +1, HP 6 / MP 5)."
     )
     assert result.front_state.hero.level == 2
     assert result.front_state.hero.exp == 0
     assert result.front_state.log == saved_logs
+
+
+async def test_run_graph_level_up_can_raise_stat(tmp_path):
+    repo = await _repo(tmp_path)
+
+    result = await run_graph_level_up(
+        repo,
+        "game-1",
+        growth={"kind": "stat", "stat": "presence"},
+    )
+    saved_graph = await repo.load_graph("game-1")
+    saved_logs = await repo.load_log_entries("game-1")
+    player = saved_graph.nodes["player_01"].properties
+
+    assert player["level"] == 2
+    assert player["xp_pool"] == 0
+    assert player["stats"]["presence"] == 11
+    assert "매력 +1" in saved_logs[0].text
+    assert result.front_state.hero.stats["presence"] == 11
 
 
 async def test_run_graph_level_up_can_learn_selected_skill(tmp_path):
@@ -148,6 +169,65 @@ async def test_run_graph_level_up_can_upgrade_known_skill(tmp_path):
     assert "화염구 강화" in saved_logs[0].text
 
 
+async def test_level_up_upgrade_uses_runtime_content_skill_name(tmp_path):
+    repo = LocalFsGraphRepo(str(tmp_path))
+    await repo.save_graph(
+        "game-1",
+        Graph(
+            nodes={
+                "player_01": _player(),
+                "training_strike": GraphNode(
+                    id="training_strike",
+                    type="skill",
+                    properties={
+                        "source": "scenario",
+                        "source_id": "training_strike",
+                        "action": "attack",
+                    },
+                ),
+            },
+            edges={
+                "knows_skill:learned:player_01:training_strike": GraphEdge(
+                    id="knows_skill:learned:player_01:training_strike",
+                    type="knows_skill",
+                    from_node_id="player_01",
+                    to_node_id="training_strike",
+                    properties={"source": "learned", "tier": 1},
+                )
+            },
+        ),
+    )
+    await repo.save_progress(
+        GameProgress(
+            game_id="game-1",
+            player_id="player_01",
+            runtime_content=RuntimeContent(
+                skills={
+                    "training_strike": {
+                        "id": "training_strike",
+                        "name": "훈련 일격",
+                    }
+                }
+            ),
+        )
+    )
+    runtime = await load_runtime_state(repo, "game-1")
+
+    choices = await build_level_up_choices(runtime, llm=None)
+    upgrade = next(choice for choice in choices if choice["id"].startswith("upgrade_skill:"))
+
+    assert upgrade["label"] == "훈련 일격 강화"
+
+    await run_graph_level_up(
+        repo,
+        "game-1",
+        growth={"kind": "upgrade_skill", "skill_id": "training_strike"},
+    )
+    saved_logs = await repo.load_log_entries("game-1")
+
+    assert "훈련 일격 강화" in saved_logs[0].text
+
+
 async def test_level_up_options_include_llm_skill_candidate(tmp_path):
     repo = await _repo(tmp_path)
     runtime = await load_runtime_state(repo, "game-1")
@@ -162,7 +242,26 @@ async def test_level_up_options_include_llm_skill_candidate(tmp_path):
     assert learn["growth"]["kind"] == "learn_skill"
     assert learn["growth"]["skill"]["effect_template"] == "dc_down"
     assert learn["growth"]["skill"]["mp_cost"] == 2
+    assert (
+        "support_bonus"
+        not in json.loads(llm.calls[0]["messages"][1]["content"])["skills"][0]
+    )
     assert llm.calls[0]["agent"] == "recommend"
+
+
+async def test_level_up_options_are_capped_and_balanced(tmp_path):
+    repo = await _repo(tmp_path, known_skill=True)
+    runtime = await load_runtime_state(repo, "game-1")
+
+    choices = await build_level_up_choices(runtime, llm=_SkillCandidateLLM())
+
+    assert len(choices) <= 3
+    assert any(choice["id"].startswith("stat:") for choice in choices)
+    assert any(choice["id"] in {"max_hp", "max_mp"} for choice in choices)
+    assert any(
+        choice["id"].startswith(("upgrade_skill:", "learn_skill:"))
+        for choice in choices
+    )
 
 
 async def test_run_graph_level_up_can_learn_generated_skill(tmp_path):

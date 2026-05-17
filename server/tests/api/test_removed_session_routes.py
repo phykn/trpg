@@ -2,7 +2,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from run_api import build_app
-from src.db.graph_local_fs import LocalFsGraphRepo
+from src.db.graph.local_fs import LocalFsGraphRepo
 from tests._fakes import make_default_storage, make_scenario_repo
 
 

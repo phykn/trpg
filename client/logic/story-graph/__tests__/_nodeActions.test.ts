@@ -51,4 +51,23 @@ describe('actionsForNode', () => {
       }),
     ]);
   });
+
+  test('offers a pickup text action for reachable items', () => {
+    const actions = actionsForNode({
+      id: 'supply_token',
+      label: '보급 표식',
+      kind: 'item',
+      status: 'reachable_item',
+      reachable: true,
+      description: '바닥에 놓인 작은 표식입니다.',
+    } as any);
+
+    expect(actions).toEqual([
+      expect.objectContaining({
+        kind: 'text',
+        label: '줍기',
+        text: '보급 표식을 줍습니다',
+      }),
+    ]);
+  });
 });

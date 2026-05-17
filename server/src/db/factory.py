@@ -9,11 +9,11 @@ factory and never hit a real Supabase.
 
 import os
 
-from .graph_local_fs import LocalFsGraphRepo
-from .graph_supabase import SupabaseGraphRepo
+from .graph.local_fs import LocalFsGraphRepo
+from .graph.supabase import SupabaseGraphRepo
 from .repo import GraphRepo, ScenarioRepo
-from .scenario_local_fs import LocalFsScenarioRepo
-from .scenario_supabase import SupabaseStorageScenarioRepo
+from .scenario.local_fs import LocalFsScenarioRepo
+from .scenario.supabase import SupabaseStorageScenarioRepo
 
 
 def build_scenario_repo() -> ScenarioRepo:

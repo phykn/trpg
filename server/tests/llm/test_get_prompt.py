@@ -57,6 +57,26 @@ def test_get_prompt_caches_per_locale(tmp_path, monkeypatch):
     assert a != c
 
 
+def test_get_prompt_reloads_when_prompt_file_changes(tmp_path, monkeypatch):
+    agent_dir = tmp_path / "agentHot"
+    agent_dir.mkdir()
+    prompt_path = agent_dir / "prompt.ko.md"
+    prompt_path.write_text("ONE\n", encoding="utf-8")
+
+    monkeypatch.setattr(runner, "_PROMPTS_ROOT", tmp_path)
+    get_prompt.cache_clear()
+
+    assert get_prompt("agentHot", "ko") == "ONE\n"
+
+    prompt_path.write_text("TWO\n", encoding="utf-8")
+    current = prompt_path.stat().st_mtime + 2
+    import os
+
+    os.utime(prompt_path, (current, current))
+
+    assert get_prompt("agentHot", "ko") == "TWO\n"
+
+
 def test_packaged_prompts_load_for_every_agent():
     """Every shipped agent under src/locale/prompts/ has a working ko build."""
     agents = [

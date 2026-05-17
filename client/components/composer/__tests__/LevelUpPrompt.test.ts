@@ -11,4 +11,9 @@ describe('LevelUpPrompt mobile selectors', () => {
     expect(source).toContain('testID="level-cancel"');
     expect(source).toContain('testID="level-confirm"');
   });
+
+  test('does not flash fallback choices while server choices are loading', () => {
+    expect(source).toContain('choices.length > 0 ? choices : loading ? [] : CHOICES');
+    expect(source).toContain('disabled={!selected || loading}');
+  });
 });

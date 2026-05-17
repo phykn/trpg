@@ -251,6 +251,7 @@ def test_action_payload_contains_safe_current_event_and_combat_view():
     assert "recent_log" not in payload
     assert payload["combat_view"]["kind"] == "combat_exchange"
     assert payload["combat_view"]["player_can_act"] is True
+    assert payload["combat_view"]["exchange_result"] == "neutral"
     assert payload["combat_view"]["events"]
     assert "player_attacked" not in encoded
     assert "hurt" not in encoded
@@ -308,6 +309,7 @@ def test_action_payload_keeps_terminal_combat_trace_after_state_clears():
     encoded = json.dumps(payload["combat_view"], ensure_ascii=False)
 
     assert payload["combat_view"]["outcome"] == "victory"
+    assert payload["combat_view"]["exchange_result"] == "success"
     assert payload["combat_view"]["events"]
     assert "enemy_defeated" not in encoded
     assert "critical" not in encoded

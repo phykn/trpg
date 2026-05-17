@@ -19,19 +19,40 @@ def build_combat_command_action(
 
     command = payload.get("command")
     target_id = payload.get("target_id")
+    support_id = payload.get("support_id")
+    support_kind = payload.get("support_kind")
 
-    if command in ("attack", "skill"):
+    targeted_commands = {"precise", "reckless", "talk"}
+    untargeted_commands = {"guarded", "create_distance"}
+
+    if command in targeted_commands:
         if not isinstance(target_id, str) or not target_id:
             raise CombatCommandError("target_id is required")
         if target_id not in state.enemy_ids:
             raise CombatCommandError("target is not active enemy")
-    elif command not in ("defend", "flee"):
+    elif command not in untargeted_commands:
         raise CombatCommandError("unsupported combat command")
 
-    if command == "attack":
-        return Action(verb="attack", what=target_id)
-    if command == "skill":
-        return Action(verb="attack", what=target_id, how="auto")
-    if command == "defend":
-        return Action(verb="pass", how="defend")
-    return Action(verb="move", how="flee")
+    support = _support_id(support_id, support_kind)
+
+    if command == "precise":
+        return Action(verb="attack", what=target_id, how="precise", with_=support)
+    if command == "reckless":
+        return Action(verb="attack", what=target_id, how="reckless", with_=support)
+    if command == "talk":
+        return Action(verb="speak", to=target_id, with_=support)
+    if command == "guarded":
+        return Action(verb="pass", how="guarded", with_=support)
+    return Action(verb="move", how="create_distance", with_=support)
+
+
+def _support_id(support_id: object, support_kind: object) -> str | None:
+    if support_id is None and support_kind is None:
+        return None
+    if support_id is None or support_kind is None:
+        raise CombatCommandError("support_id and support_kind must be provided together")
+    if support_kind != "skill":
+        raise CombatCommandError("unsupported support kind")
+    if not isinstance(support_id, str) or not support_id:
+        raise CombatCommandError("support_id is required")
+    return support_id

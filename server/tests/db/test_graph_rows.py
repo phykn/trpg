@@ -1,4 +1,4 @@
-from src.db.graph_rows import graph_from_rows, graph_to_rows
+from src.db.graph.rows import graph_from_rows, graph_to_rows
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 
 

@@ -4,7 +4,7 @@ import { Animated, Easing, Text, View } from 'react-native';
 import { colors } from '@/design/tokens';
 
 export function RollingD20({
-  value = 20,
+  value,
   label,
   detail,
 }: {
@@ -37,18 +37,18 @@ export function RollingD20({
 
   const translateX = motion.interpolate({
     inputRange: [0, 0.5, 1],
-    outputRange: [0, 7, -3],
+    outputRange: [0, 4, -2],
   });
   const rotate = motion.interpolate({
     inputRange: [0, 0.5, 1],
-    outputRange: ['-10deg', '16deg', '-5deg'],
+    outputRange: ['-5deg', '7deg', '-3deg'],
   });
 
   return (
     <View className="flex-row items-center gap-3">
       <Animated.View
         accessibilityLabel={label}
-        className="h-14 w-14 items-center justify-center rounded-xl border border-accent-fg bg-canvas-inset"
+        className="h-12 w-12 items-center justify-center rounded-sm border border-accent-fg bg-canvas-inset"
         style={{
           opacity: 0.98,
           transform: [{ translateX }, { rotate }],
@@ -58,26 +58,17 @@ export function RollingD20({
           pointerEvents="none"
           style={{
             position: 'absolute',
-            width: 31,
-            height: 31,
+            left: 7,
+            right: 7,
+            top: 7,
+            bottom: 7,
             borderWidth: 1,
-            borderColor: `${colors.fg.default}26`,
-            transform: [{ rotate: '45deg' }],
-          }}
-        />
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            width: 18,
-            height: 18,
-            borderWidth: 1,
-            borderColor: `${colors.fg.default}16`,
-            transform: [{ rotate: '45deg' }],
+            borderRadius: 7,
+            borderColor: `${colors.fg.default}18`,
           }}
         />
         <Text className="font-mono-semibold text-title text-fg-default">
-          {value}
+          {value ?? 'd20'}
         </Text>
       </Animated.View>
       <View className="flex-1 min-w-0">

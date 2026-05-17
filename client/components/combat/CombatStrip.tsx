@@ -76,8 +76,7 @@ export function CombatStrip({
           {actionDisabled ? (
             <View className="rounded-sm border border-border-default bg-canvas-inset px-3 py-2">
               <RollingD20
-                label={ko.combat.attackRoll}
-                detail={ko.combat.actionRollDetail}
+                label={ko.roll.rolling}
               />
             </View>
           ) : rollResolved ? (
@@ -87,9 +86,6 @@ export function CombatStrip({
                 style={{ color: rollTone }}
               >
                 {rollSuccess ? ko.roll.success : ko.roll.fail}
-              </Text>
-              <Text className="font-sans-medium text-caption text-fg-muted">
-                {ko.combat.attackRoll}
               </Text>
               <Text
                 className="font-mono-semibold text-caption text-fg-default"
@@ -107,20 +103,23 @@ export function CombatStrip({
           ) : null}
           {actions.length > 0 && onAction ? (
             <View className="flex-row gap-2">
-              {actions.map((action) => (
+              {actions.map((action, index) => {
+                const primary = index === 0;
+                return (
                 <Pressable
                   key={`${action.kind}:${action.label}`}
                   onPress={() => onAction(action)}
                   disabled={actionDisabled}
                   accessibilityRole="button"
                   accessibilityLabel={action.label}
-                  className={`h-10 flex-1 items-center justify-center rounded-sm border ${action.label === ko.combat.attack ? 'border-accent-fg bg-accent-fg' : 'border-border-default bg-canvas-inset'} ${actionDisabled ? 'opacity-60' : 'active:opacity-80'}`}
+                  className={`h-10 flex-1 items-center justify-center rounded-sm border ${primary ? 'border-accent-fg bg-accent-fg' : 'border-border-default bg-canvas-inset'} ${actionDisabled ? 'opacity-60' : 'active:opacity-80'}`}
                 >
-                  <Text className={`font-sans-semibold text-panel ${action.label === ko.combat.attack ? 'text-fg-on-emphasis' : 'text-fg-default'}`}>
+                  <Text className={`font-sans-semibold text-panel ${primary ? 'text-fg-on-emphasis' : 'text-fg-default'}`} numberOfLines={1}>
                     {action.label}
                   </Text>
                 </Pressable>
-              ))}
+              );
+              })}
             </View>
           ) : null}
         </View>

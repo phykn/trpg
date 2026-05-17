@@ -10,11 +10,11 @@ from pathlib import Path
 
 from httpx import ASGITransport, AsyncClient
 
-from src.db.graph_local_fs import LocalFsGraphRepo
-from src.db.local_fs import LocalFsScenarioRepo
+from src.db.graph.local_fs import LocalFsGraphRepo
+from src.db.scenario.local_fs import LocalFsScenarioRepo
 from src.game.runtime.load import load_runtime_state
 from src.llm import LLMClient, set_llm_session
-from src.wire.graph_to_front import graph_to_front_state
+from src.wire.graph.to_front import graph_to_front_state
 
 from run_api import build_app
 
@@ -33,6 +33,33 @@ def _find(events: list[dict], event_type: str) -> dict | None:
     for ev in events:
         if ev["type"] == event_type:
             return ev["data"]
+    return None
+
+
+def _pending_resolution_request(
+    game_id: str, front: dict
+) -> tuple[str, str, dict, dict] | None:
+    pending_roll = front.get("pendingRoll")
+    if pending_roll:
+        return (
+            "roll",
+            f"/session/{game_id}/graph/roll",
+            {"roll_id": pending_roll["id"]},
+            pending_roll,
+        )
+
+    pending_confirmation = front.get("pendingConfirmation")
+    if pending_confirmation:
+        return (
+            "confirm",
+            f"/session/{game_id}/graph/confirm",
+            {
+                "confirmation_id": pending_confirmation["id"],
+                "decision": "confirm",
+            },
+            pending_confirmation,
+        )
+
     return None
 
 
@@ -192,7 +219,8 @@ async def run_qa_session(
                 break
 
             write_sse_jsonl(sse_path, turn_no, "turn", events)
-            pending = front.get("pendingConfirmation")
+            pending_request = _pending_resolution_request(game_id, front)
+            pending = pending_request[3] if pending_request is not None else None
             err = _find(events, "error")
             if err:
                 error_count += 1
@@ -210,28 +238,32 @@ async def run_qa_session(
             if body:
                 last_gm = body
 
-            if pending:
+            pending_failed = False
+            while True:
+                pending_request = _pending_resolution_request(game_id, front)
+                if pending_request is None:
+                    break
+
+                pending_kind, pending_path, pending_payload, _pending_payload = (
+                    pending_request
+                )
                 try:
-                    confirm_response = await client.post(
-                        f"/session/{game_id}/graph/confirm",
-                        json={
-                            "confirmation_id": pending["id"],
-                            "decision": "confirm",
-                        },
+                    pending_response = await client.post(
+                        pending_path, json=pending_payload
                     )
-                    confirm_response.raise_for_status()
-                    confirm_result = confirm_response.json()
-                    confirm_front = confirm_result["state"]
-                    roll_body = confirm_result.get("message") or last_gm_text(
-                        confirm_front.get("log") or []
+                    pending_response.raise_for_status()
+                    pending_result = pending_response.json()
+                    front = pending_result["state"]
+                    pending_body = pending_result.get("message") or last_gm_text(
+                        front.get("log") or []
                     )
-                    roll_events = [
+                    pending_events = [
                         {
-                            "type": "graph_confirm",
+                            "type": f"graph_{pending_kind}",
                             "data": {
-                                "status": confirm_result.get("status"),
-                                "message": confirm_result.get("message"),
-                                "state": confirm_front,
+                                "status": pending_result.get("status"),
+                                "message": pending_result.get("message"),
+                                "state": front,
                             },
                         }
                     ]
@@ -240,29 +272,33 @@ async def run_qa_session(
                     append_transcript_block(
                         transcript_path,
                         turn_no=turn_no,
-                        kind="roll-error",
+                        kind=f"{pending_kind}-error",
                         error=e,
                     )
+                    pending_failed = True
                     break
 
-                write_sse_jsonl(sse_path, turn_no, "confirm", roll_events)
-                roll_err = _find(roll_events, "error")
-                if roll_err:
+                write_sse_jsonl(sse_path, turn_no, pending_kind, pending_events)
+                pending_err = _find(pending_events, "error")
+                if pending_err:
                     error_count += 1
                 append_transcript_block(
                     transcript_path,
                     turn_no=turn_no,
-                    kind="confirm",
-                    gm_body=roll_body,
-                    error=roll_err,
+                    kind=pending_kind,
+                    gm_body=pending_body,
+                    error=pending_err,
                 )
-                agent.record("(확인)", roll_body)
-                if roll_body:
-                    last_gm = roll_body
+                agent.record(
+                    "(판정)" if pending_kind == "roll" else "(확인)",
+                    pending_body,
+                )
+                if pending_body:
+                    last_gm = pending_body
 
             completed_turns = turn_no
 
-            if err:
+            if err or pending_failed:
                 # stop on error — continuing would be meaningless
                 break
 

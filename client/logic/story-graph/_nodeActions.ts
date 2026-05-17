@@ -27,5 +27,8 @@ export function actionsForNode(node: StoryGraphNode): PanelAction[] {
       { kind: 'text', label: ko.panel.approach, text: compose.approachTo(node.label) },
     ];
   }
+  if (node.status === 'reachable_item') {
+    return [{ kind: 'text', label: ko.panel.pickup, text: compose.pickUp(node.label) }];
+  }
   return [];
 }

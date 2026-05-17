@@ -18,10 +18,12 @@ from src.game.rules import RULES
 
 
 GrowthKind = Literal["xp_grant", "level_up", "skill_learn", "skill_upgrade"]
+GraphStat = Literal["body", "agility", "mind", "presence"]
 
 
-class LevelGrowthChoice(TypedDict):
-    kind: Literal["max_hp", "max_mp"]
+class LevelGrowthChoice(TypedDict, total=False):
+    kind: Literal["max_hp", "max_mp", "stat"]
+    stat: GraphStat
 
 
 class GraphGrowthError(ValueError):
@@ -79,6 +81,17 @@ def plan_level_up(
                 _set(character_id, "mp", min(10, _int_prop(character, "mp") + 1)),
             ]
         )
+    elif kind == "stat":
+        stat = growth.get("stat")
+        if stat not in {"body", "agility", "mind", "presence"}:
+            raise GraphGrowthError(f"unknown stat: {stat}")
+        stats = character.properties.get("stats")
+        if not isinstance(stats, dict):
+            raise GraphGrowthError(f"missing stats: {character_id}")
+        value = stats.get(stat)
+        if not isinstance(value, int):
+            raise GraphGrowthError(f"missing stat {stat}: {character_id}")
+        changes.append(_set(character_id, f"stats.{stat}", value + 1))
     else:
         raise GraphGrowthError(f"unknown growth kind: {kind}")
 

@@ -1,6 +1,6 @@
 import pytest
 
-from src.db.graph_local_fs import LocalFsGraphRepo
+from src.db.graph.local_fs import LocalFsGraphRepo
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
@@ -104,7 +104,10 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "본문 문체" in narrate_prompt
     assert "감각" in combined
     assert "선택" in combined
-    assert "냉소" in combined
+    assert "플레이어의 팬인 GM" in combined
+    assert "플레이어를 우습게 만들지" in combined
+    assert "결과 라벨" in combat_prompt
+    assert "이번 교환은 성공적으로 이루어졌습니다" in combat_prompt
     assert "선택하지 않은 행동" in intro_prompt
     assert "금지 예" in intro_prompt
     assert "좋은 예" in combined
@@ -182,6 +185,7 @@ async def test_graph_intro_sends_rich_first_scene_payload(tmp_path):
 async def test_graph_turn_narration_uses_packaged_prompt(monkeypatch, tmp_path):
     import src.game.runtime.narration.action as action_narration
 
+    monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 20)
     monkeypatch.setattr(
         action_narration, "get_prompt", lambda agent, locale: f"{agent}:{locale}"
     )

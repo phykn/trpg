@@ -130,6 +130,7 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
             verb="attack",
             what=[_first_str(intent, "target_id", "enemy_id")],
             with_=_optional_str(intent, "skill_id"),
+            how=_optional_str(intent, "tactic"),
         )
     if name == "cast":
         skill_id = _required_str(intent, "skill_id")
@@ -142,7 +143,7 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
             to=target_id,
         )
     if name == "flee":
-        return Action(verb="move", how="hasty")
+        return Action(verb="move", how="create_distance")
     if name == "talk":
         return Action(
             verb="speak",

@@ -240,6 +240,26 @@ async def test_validation_failure_retry_stays_non_thinking():
 
 
 @pytest.mark.asyncio
+async def test_intent_builder_value_failure_retries_and_falls_back_to_pass():
+    input_ = _input(
+        "적을 찾아 이동한다",
+        {
+            "in_combat": False,
+            "entities": [
+                {"id": "player_01", "name": "당신", "type": "player"},
+                {"id": "town_gate", "name": "성문", "type": "connection"},
+            ],
+        },
+    )
+    client = _RetryCaptureClient([json.dumps({"intents": [{"intent": "move"}]})] * 2)
+
+    out = await classify(client=client, input_=input_, locale="ko", retries=2)
+
+    assert out.actions[0].verb == "pass"
+    assert client.thinks == [False, False]
+
+
+@pytest.mark.asyncio
 async def test_strict_classify_still_raises_after_exhausted_retries():
     input_ = _input("잠깐 기다린다", {"in_combat": False, "entities": []})
     client = _RetryCaptureClient(['{"actions":[{"verb":"pass"}]} trailing text'] * 3)

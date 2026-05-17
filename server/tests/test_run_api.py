@@ -30,6 +30,7 @@ def test_main_enables_reload_and_watches_server_entrypoint(monkeypatch):
     assert kwargs["factory"] is True
     assert kwargs["reload"] is True
     assert str(run_api.SERVER_DIR) in kwargs["reload_dirs"]
+    assert kwargs["reload_includes"] == ["*.py", "*.toml", "*.md"]
 
 
 def test_main_treats_reload_zero_as_disabled(monkeypatch):

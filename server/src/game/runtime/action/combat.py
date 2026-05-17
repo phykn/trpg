@@ -188,41 +188,62 @@ def _combat_action_from_action(
     in_combat: bool,
 ) -> GraphCombatAction:
     if action.verb == "attack":
+        tactic = _attack_tactic(action.how)
         support_id = _single(action.with_)
         if support_id is None and action.how == "auto":
-            support_id = _auto_skill_support_id(graph, player_id, "attack")
-        support_kind = _support_kind_or_none(graph, support_id)
+            support_id = _auto_skill_support_id(graph, player_id, tactic)
+        support_kind = _support_kind(graph, support_id)
         return GraphCombatAction(
-            kind="attack",
+            kind=tactic,
             target_id=_single(action.what),
             support_id=support_id if support_kind else None,
             support_kind=support_kind,
         )
-    if in_combat and action.verb == "move" and action.how in ("flee", "hasty"):
-        return GraphCombatAction(kind="flee")
-    if in_combat and action.verb == "speak":
+    if (
+        in_combat
+        and action.verb == "move"
+        and action.how in ("flee", "hasty", "create_distance")
+    ):
+        support_id = _single(action.with_)
+        support_kind = _support_kind(graph, support_id)
         return GraphCombatAction(
-            kind="social",
+            kind="create_distance",
+            support_id=support_id if support_kind else None,
+            support_kind=support_kind,
+        )
+    if in_combat and action.verb == "speak":
+        support_id = _single(action.with_)
+        support_kind = _support_kind(graph, support_id)
+        return GraphCombatAction(
+            kind="talk",
             target_id=_single(action.to) or _single(action.what),
+            support_id=support_id if support_kind else None,
+            support_kind=support_kind,
         )
     if in_combat and action.verb == "pass":
-        return GraphCombatAction(kind="defend")
+        support_id = _single(action.with_)
+        support_kind = _support_kind(graph, support_id)
+        return GraphCombatAction(
+            kind="guarded",
+            support_id=support_id if support_kind else None,
+            support_kind=support_kind,
+        )
     raise GraphCombatDispatchError(f"unsupported graph combat action: {action.verb}")
 
 
-def _support_kind_or_none(graph: Graph, node_id: str | None) -> str | None:
+def _support_kind(graph: Graph, node_id: str | None) -> str | None:
     if node_id is None:
         return None
     node = graph.nodes.get(node_id)
     if node is None:
-        return None
+        raise GraphCombatDispatchError(f"missing combat support: {node_id}")
     if node.type == "skill":
         return "skill"
     if node.type == "item" and (
         "support_action" in node.properties or "action" in node.properties
     ):
         return "item"
-    return None
+    raise GraphCombatDispatchError(f"unsupported combat support: {node_id}")
 
 
 def _auto_skill_support_id(
@@ -246,9 +267,29 @@ def _auto_skill_support_id(
             ),
         )
         mp_cost = _int_value(skill.properties.get("mp_cost"), default=0)
-        if supported_action == action_kind and current_mp >= mp_cost:
+        if _supports_action(supported_action, action_kind) and current_mp >= mp_cost:
             return skill.id
     return None
+
+
+def _attack_tactic(how: str | None) -> str:
+    if how == "reckless":
+        return "reckless"
+    if how == "guarded":
+        return "guarded"
+    return "precise"
+
+
+def _supports_action(supported_action: str | None, action_kind: str) -> bool:
+    if supported_action == action_kind:
+        return True
+    legacy = {
+        "attack": {"precise", "reckless"},
+        "defend": {"guarded"},
+        "flee": {"create_distance"},
+        "social": {"talk"},
+    }
+    return action_kind in legacy.get(supported_action or "", set())
 
 
 def _target_id_for_start(action: Action) -> str:

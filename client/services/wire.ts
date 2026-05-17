@@ -71,19 +71,23 @@ export type QuestAction = {
 export type ConfirmRequest = {
   confirmation_id: string;
   decision: 'confirm' | 'cancel';
-  think: boolean;
 };
 
 export type GraphRollRequest = {
   roll_id: string;
-  think: boolean;
+};
+
+type CombatSupportCommandFields = {
+  support_id?: string;
+  support_kind?: 'skill';
 };
 
 export type CombatCommand =
-  | { command: 'attack'; target_id: string }
-  | { command: 'skill'; target_id: string }
-  | { command: 'defend' }
-  | { command: 'flee' };
+  | ({ command: 'precise'; target_id: string } & CombatSupportCommandFields)
+  | ({ command: 'reckless'; target_id: string } & CombatSupportCommandFields)
+  | ({ command: 'talk'; target_id: string } & CombatSupportCommandFields)
+  | ({ command: 'guarded' } & CombatSupportCommandFields)
+  | ({ command: 'create_distance' } & CombatSupportCommandFields);
 
 export type GraphAction = {
   verb:
@@ -91,7 +95,6 @@ export type GraphAction = {
     | 'transfer'
     | 'use'
     | 'attack'
-    | 'cast'
     | 'speak'
     | 'perceive'
     | 'query'
@@ -162,6 +165,12 @@ export type GraphPlaceLink = {
   description: string;
 };
 
+export type GraphPlaceItem = {
+  id: string;
+  name: string;
+  description: string;
+};
+
 export type GraphPlaceTarget = {
   id: string;
   name: string;
@@ -184,6 +193,7 @@ export type GraphPlaceState = {
   name: string;
   description: string;
   exits: GraphPlaceLink[];
+  items: GraphPlaceItem[];
   targets: GraphPlaceTarget[];
 };
 
@@ -195,13 +205,25 @@ export type GraphCombatParticipant = {
   mp: GraphResource | null;
 };
 
+export type GraphCombatSupport = {
+  id: string;
+  kind: 'skill';
+  name: string;
+  tactic: 'precise' | 'guarded' | 'reckless' | 'create_distance' | 'talk';
+  mpCost: number;
+  usable: boolean;
+};
+
 export type GraphCombatState = {
   round: number;
-  outcome: 'ongoing' | 'victory' | 'defeat' | 'fled';
+  outcome: 'ongoing' | 'victory' | 'defeat' | 'fled' | 'escaped' | 'surrendered' | 'combat_stopped';
   playerHearts: GraphHeart;
   enemyHearts: GraphHeart;
   activeEnemyId: string;
   participants: GraphCombatParticipant[];
+  availableSupports?: GraphCombatSupport[];
+  escapeReady?: boolean;
+  enemyPressure?: number;
   lastRoll?: number | null;
   lastDc?: number | null;
 };
@@ -248,6 +270,7 @@ export type GraphActionClientResponse = {
 export type GraphLevelUpGrowth =
   | { kind: 'max_hp' }
   | { kind: 'max_mp' }
+  | { kind: 'stat'; stat: 'body' | 'agility' | 'mind' | 'presence' }
   | { kind: 'learn_skill'; skill_id: string }
   | { kind: 'learn_skill'; skill_id: string; skill: GraphLevelUpSkillSpec }
   | { kind: 'upgrade_skill'; skill_id: string };
@@ -277,5 +300,4 @@ export type GraphLevelUpChoicesResponse = {
 
 export type GraphLevelUpRequest = {
   growth: GraphLevelUpGrowth;
-  think: boolean;
 };

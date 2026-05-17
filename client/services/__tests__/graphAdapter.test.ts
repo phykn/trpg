@@ -37,6 +37,9 @@ describe('adaptGraphState', () => {
         exits: [
           { id: 'forest', name: '숲길', description: '나무가 빽빽합니다.' },
         ],
+        items: [
+          { id: 'supply_token', name: '보급 표식', description: '바닥에 놓인 작은 표식입니다.' },
+        ],
         targets: [
           {
             id: 'goblin_01',
@@ -102,6 +105,18 @@ describe('adaptGraphState', () => {
         playerHearts: { current: 2, maximum: 3 },
         enemyHearts: { current: 1, maximum: 3 },
         activeEnemyId: 'wolf_01',
+        escapeReady: true,
+        enemyPressure: 1,
+        availableSupports: [
+          {
+            id: 'skill_shadow_thrust',
+            kind: 'skill',
+            name: '그림자 찌르기',
+            tactic: 'precise',
+            mpCost: 2,
+            usable: true,
+          },
+        ],
         lastRoll: 16,
         lastDc: 12,
         participants: [
@@ -175,6 +190,18 @@ describe('adaptGraphState', () => {
     expect(state.combat?.enemyHearts.current).toBe(1);
     expect(state.combat?.lastRoll).toBe(16);
     expect(state.combat?.lastDc).toBe(12);
+    expect(state.combat?.escapeReady).toBe(true);
+    expect(state.combat?.enemyPressure).toBe(1);
+    expect(state.combat?.availableSupports).toEqual([
+      {
+        id: 'skill_shadow_thrust',
+        kind: 'skill',
+        name: '그림자 찌르기',
+        tactic: 'precise',
+        mpCost: 2,
+        usable: true,
+      },
+    ]);
     expect(state.combat?.enemies[0]).toMatchObject({
       id: 'wolf_01',
       name: '늑대',
@@ -201,6 +228,7 @@ describe('adaptGraphState', () => {
       'player_01',
       'town',
       'forest',
+      'supply_token',
       'goblin_01',
       'wolf_01',
       'quest_01',
@@ -232,6 +260,7 @@ describe('adaptGraphState', () => {
         name: '광장',
         description: '',
         exits: [{ id: 'watch', name: '망루', description: '' }],
+        items: [],
         targets: [
           {
             id: 'edrik_chief',

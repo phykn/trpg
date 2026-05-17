@@ -6,6 +6,7 @@ import {
   Pressable,
   Keyboard,
   Platform,
+  ScrollView,
   type NativeSyntheticEvent,
   type TextInputContentSizeChangeEventData,
   type TextInputSubmitEditingEventData,
@@ -23,6 +24,7 @@ import { StopButton } from './StopButton';
 
 const INPUT_MIN_HEIGHT = 40;
 const INPUT_MAX_HEIGHT = 320;
+const NEARBY_PANEL_MAX_HEIGHT = 360;
 const IS_WEB = Platform.OS === 'web';
 
 export type ComposerQuickAction = {
@@ -114,51 +116,58 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
   return (
     <View className="mt-1.5 gap-2 border-t border-border-default bg-canvas-default px-5 pt-2.5 pb-3" style={{ zIndex: isNearbyOpen ? 8 : 0 }}>
       {isNearbyOpen && nearby && nearby.items.length > 0 ? (
-        <Surface className="px-2.5 py-2 gap-1.5">
-          {nearby.items.map((item) => {
-            const expanded = expandedNearbyId === item.id;
-            return (
-            <Pressable
-              key={item.id}
-              onPress={() => setExpandedNearbyId((prev) => (prev === item.id ? null : item.id))}
-              accessibilityRole="button"
-              accessibilityLabel={item.title}
-              className="flex-row items-center gap-2 rounded-sm bg-canvas-inset px-2 py-2 active:bg-canvas-subtle"
-            >
-              <View className="flex-1 min-w-0">
-                <View className="flex-row items-baseline gap-1.5">
-                  <Text className="font-sans-semibold text-caption text-accent-fg">
-                    {item.kindLabel}
-                  </Text>
-                  <Text numberOfLines={expanded ? undefined : 1} className="font-sans-semibold text-panel text-fg-default flex-1">
-                    {item.title}
-                  </Text>
+        <Surface className="px-2.5 py-2">
+          <ScrollView
+            style={{ maxHeight: NEARBY_PANEL_MAX_HEIGHT }}
+            contentContainerStyle={{ gap: 6 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {nearby.items.map((item) => {
+              const expanded = expandedNearbyId === item.id;
+              return (
+              <Pressable
+                key={item.id}
+                onPress={() => setExpandedNearbyId((prev) => (prev === item.id ? null : item.id))}
+                accessibilityRole="button"
+                accessibilityLabel={item.title}
+                className="flex-row items-center gap-2 rounded-sm bg-canvas-inset px-2 py-2 active:bg-canvas-subtle"
+              >
+                <View className="flex-1 min-w-0">
+                  <View className="flex-row items-baseline gap-1.5">
+                    <Text className="font-sans-semibold text-caption text-accent-fg">
+                      {item.kindLabel}
+                    </Text>
+                    <Text numberOfLines={expanded ? undefined : 1} className="font-sans-semibold text-panel text-fg-default flex-1">
+                      {item.title}
+                    </Text>
+                  </View>
+                  {item.body ? (
+                    <Text numberOfLines={expanded ? undefined : 1} className="font-sans text-caption text-fg-muted">
+                      {item.body}
+                    </Text>
+                  ) : null}
                 </View>
-                {item.body ? (
-                  <Text numberOfLines={expanded ? undefined : 1} className="font-sans text-caption text-fg-muted">
-                    {item.body}
-                  </Text>
+                {item.action && onNearbyAction ? (
+                  <Pressable
+                    onPress={() => {
+                      setNearbyOpen(false);
+                      setExpandedNearbyId(null);
+                      onNearbyAction(item.action!);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${item.title} ${item.action.label}`}
+                    className="min-w-14 items-center rounded-sm border border-accent-fg bg-accent-muted px-3 py-1.5 active:opacity-80"
+                  >
+                    <Text className="font-sans-semibold text-caption text-accent-fg">
+                      {item.action.label}
+                    </Text>
+                  </Pressable>
                 ) : null}
-              </View>
-              {item.action && onNearbyAction ? (
-                <Pressable
-                  onPress={() => {
-                    setNearbyOpen(false);
-                    setExpandedNearbyId(null);
-                    onNearbyAction(item.action!);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${item.title} ${item.action.label}`}
-                  className="min-w-14 items-center rounded-sm border border-accent-fg bg-accent-muted px-3 py-1.5 active:opacity-80"
-                >
-                  <Text className="font-sans-semibold text-caption text-accent-fg">
-                    {item.action.label}
-                  </Text>
-                </Pressable>
-              ) : null}
-            </Pressable>
-          );
-          })}
+              </Pressable>
+            );
+            })}
+          </ScrollView>
         </Surface>
       ) : null}
       <View className="gap-2">

@@ -11,6 +11,7 @@ import type {
 type ApplyState = (state: FrontState, gameId?: string | null) => void;
 type SetSuggestions = (next: React.SetStateAction<SuggestionChip[]>) => void;
 type GraphActionRequestEvents = {
+  onResult: (response: GraphActionClientResponse) => void;
   onNarrationDelta: (text: string, outcome: GraphResultOutcome) => void;
 };
 type GraphActionCall = (
@@ -116,6 +117,16 @@ export async function runGraphActionRequestOnce(
   appendOptimisticLogEntries(runtime, generation, optimisticEntries);
   try {
     const response = await call(controller.signal, {
+      onResult: (result: GraphActionClientResponse) => {
+        if (
+          runtime.requestGenerationRef.current !== generation
+          || controller.signal.aborted
+        ) {
+          return;
+        }
+        if (runtime.isActiveGameId && !runtime.isActiveGameId(result.game_id)) return;
+        runtime.applyState(result.state, result.game_id);
+      },
       onNarrationDelta: (text: string, outcome: GraphResultOutcome) => {
         if (
           runtime.requestGenerationRef.current !== generation

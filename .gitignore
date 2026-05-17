@@ -11,6 +11,7 @@ client/.env*
 .claude/
 .tmux-agent-bridge/
 .playwright-mcp/
+.codex-live/
 
 # Runtime data
 saves/

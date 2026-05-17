@@ -42,7 +42,6 @@ export function RollPanel({
           {disabled ? (
             <RollingD20
               label={ko.roll.rollingLabel}
-              detail={ko.roll.rollingDetail}
             />
           ) : (
             <>

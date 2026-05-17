@@ -3,6 +3,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from src.db.repo import GraphRepo, ScenarioRepo
+from src.game.domain.content import node_label
 from src.game.domain.graph import AddNodeChange, GraphNode
 from src.game.domain.graph.apply import apply_graph_change
 from src.game.engines.graph.growth import (
@@ -11,6 +12,7 @@ from src.game.engines.graph.growth import (
     plan_level_up,
     plan_skill_level_up,
 )
+from src.locale.labels import stat_label
 from src.locale.render import render
 from src.llm.diag import engine_diag, set_diag_context
 from src.wire.graph.to_front import GraphFrontStatePayload, graph_to_front_state
@@ -109,6 +111,22 @@ def _plan_growth_choice(
             {"kind": "max_mp"},
         )
         return result, render("runtime.level_growth.max_mp", locale)
+    if kind == "stat":
+        stat = _require_choice(
+            growth,
+            "stat",
+            {"body", "agility", "mind", "presence"},
+        )
+        result = plan_level_up(
+            runtime.graph,
+            runtime.progress.player_id,
+            {"kind": "stat", "stat": stat},
+        )
+        return result, render(
+            "runtime.level_growth.stat",
+            locale,
+            stat=stat_label(stat, locale),
+        )
     if kind == "learn_skill":
         skill_id = _require_skill_id(growth)
         seed_change = _generated_skill_change(runtime, growth)
@@ -226,5 +244,4 @@ def _skill_label(runtime: GameRuntimeState, skill_id: str) -> str:
     node = runtime.graph.nodes.get(skill_id)
     if node is None:
         return skill_id
-    name = node.properties.get("name")
-    return name if isinstance(name, str) and name else skill_id
+    return node_label(runtime.content, node)

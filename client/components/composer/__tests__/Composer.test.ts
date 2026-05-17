@@ -12,4 +12,11 @@ describe('Composer quick actions', () => {
     expect(suggestionsIndex).toBeGreaterThan(-1);
     expect(quickActionsIndex).toBeLessThan(suggestionsIndex);
   });
+
+  test('keeps the nearby panel scrollable when many items are listed', () => {
+    expect(source).toContain('ScrollView');
+    expect(source).toContain('NEARBY_PANEL_MAX_HEIGHT');
+    expect(source).toContain('keyboardShouldPersistTaps="handled"');
+    expect(source).toContain('showsVerticalScrollIndicator={false}');
+  });
 });

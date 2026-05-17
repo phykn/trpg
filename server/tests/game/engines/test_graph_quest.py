@@ -8,6 +8,7 @@ from src.game.engines.graph.quest import (
     plan_quest_accept,
     plan_quest_complete,
     plan_quest_fail,
+    plan_quest_progress_for_trigger,
     plan_quest_progress_for_character_death,
     plan_quest_rewards,
 )
@@ -66,6 +67,15 @@ def test_accept_pending_quest_sets_active():
     assert changed.nodes["quest_pending"].properties["status"] == "active"
 
 
+def test_accept_pending_quest_rejects_when_another_quest_is_active():
+    with pytest.raises(GraphQuestError, match="active quest already exists"):
+        plan_quest_accept(
+            _graph(),
+            "quest_pending",
+            active_quest_id="quest_active",
+        )
+
+
 def test_abandon_active_quest_sets_abandoned():
     result = plan_quest_abandon(_graph(), "quest_active")
     changed = _apply_all(_graph(), result.changes)
@@ -116,6 +126,53 @@ def test_character_death_trigger_completes_active_quest():
     )
 
     result = plan_quest_progress_for_character_death(graph, "goblin_01")
+    changed = _apply_all(graph, result.changes)
+
+    assert result.completed_quest_ids == ["quest_active"]
+    assert changed.nodes["quest_active"].properties["triggers_met"] == [True]
+    assert changed.nodes["quest_active"].properties["status"] == "completed"
+
+
+def test_character_defeat_trigger_alias_completes_active_quest():
+    graph = _graph()
+    graph.nodes["quest_active"].properties.update(
+        {
+            "triggers": [
+                {
+                    "id": "trigger_01",
+                    "name": "고블린 물리치기",
+                    "type": "character_defeat",
+                    "target_id": "goblin_01",
+                }
+            ],
+            "triggers_met": [False],
+        }
+    )
+
+    result = plan_quest_progress_for_character_death(graph, "goblin_01")
+    changed = _apply_all(graph, result.changes)
+
+    assert result.completed_quest_ids == ["quest_active"]
+    assert changed.nodes["quest_active"].properties["status"] == "completed"
+
+
+def test_location_enter_trigger_completes_active_quest():
+    graph = _graph()
+    graph.nodes["quest_active"].properties.update(
+        {
+            "triggers": [
+                {
+                    "id": "trigger_01",
+                    "name": "마을 도착",
+                    "type": "location_enter",
+                    "target_id": "town",
+                }
+            ],
+            "triggers_met": [False],
+        }
+    )
+
+    result = plan_quest_progress_for_trigger(graph, "location_enter", "town")
     changed = _apply_all(graph, result.changes)
 
     assert result.completed_quest_ids == ["quest_active"]

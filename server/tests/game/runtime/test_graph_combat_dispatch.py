@@ -312,21 +312,30 @@ def test_victory_completes_matching_active_quest_and_clears_active_id():
     assert result.runtime.progress.active_quest_id is None
 
 
-def test_flee_clears_existing_graph_combat_state_without_graph_changes():
+def test_flee_builds_distance_before_escape_without_graph_changes():
     runtime = _runtime(graph_combat_state=_ongoing_state())
 
-    result = dispatch_graph_combat_action(
+    ready = dispatch_graph_combat_action(
         runtime,
         Action(verb="move", how="hasty"),
     )
+    escaped = dispatch_graph_combat_action(
+        ready.runtime,
+        Action(verb="move", how="flee"),
+    )
 
-    assert result.outcome == "fled"
-    assert result.runtime.progress.graph_combat_state is None
-    assert result.applied == 0
-    assert result.runtime.graph == runtime.graph
+    assert ready.outcome == "ongoing"
+    assert ready.runtime.progress.graph_combat_state is not None
+    assert ready.runtime.progress.graph_combat_state.last_action == "create_distance"
+    assert ready.runtime.progress.graph_combat_state.escape_ready is True
+    assert escaped.outcome == "escaped"
+    assert escaped.runtime.progress.graph_combat_state is None
+    assert ready.applied == 0
+    assert escaped.applied == 0
+    assert escaped.runtime.graph == runtime.graph
 
 
-def test_pass_maps_to_defend_and_advances_round():
+def test_pass_maps_to_guarded_and_advances_round():
     runtime = _runtime(
         graph_combat_state=_ongoing_state(),
     )
@@ -338,8 +347,96 @@ def test_pass_maps_to_defend_and_advances_round():
 
     assert result.outcome == "ongoing"
     assert result.runtime.progress.graph_combat_state.round == 3
+    assert result.runtime.progress.graph_combat_state.last_action == "guarded"
     assert result.runtime.progress.graph_combat_state.player_hearts == 3
     assert result.runtime.graph.nodes["player_01"].properties["hp"] == 5
+
+
+def test_pass_with_skill_support_attaches_guarded_support():
+    runtime = _runtime(
+        include_skill=True,
+        graph_combat_state=_ongoing_state(),
+    )
+    runtime.graph.nodes["fireball"].properties.update(
+        {"action": "defend", "effect_template": "prevent_heart_loss"}
+    )
+
+    result = dispatch_graph_combat_action(
+        runtime,
+        Action(verb="pass", how="guarded", with_="fireball"),
+    )
+
+    state = result.runtime.progress.graph_combat_state
+    assert state is not None
+    assert state.last_action == "guarded"
+    assert state.last_support_id == "fireball"
+    assert state.last_support_kind == "skill"
+    assert result.runtime.graph.nodes["player_01"].properties["mp"] == 3
+
+
+def test_move_with_skill_support_attaches_create_distance_support():
+    runtime = _runtime(
+        include_skill=True,
+        graph_combat_state=_ongoing_state(),
+    )
+    runtime.graph.nodes["fireball"].properties.update(
+        {"action": "flee", "effect_template": "escape_boost"}
+    )
+
+    result = dispatch_graph_combat_action(
+        runtime,
+        Action(verb="move", how="create_distance", with_="fireball"),
+    )
+
+    state = result.runtime.progress.graph_combat_state
+    assert state is not None
+    assert state.last_action == "create_distance"
+    assert state.last_support_id == "fireball"
+    assert state.last_support_kind == "skill"
+    assert result.runtime.graph.nodes["player_01"].properties["mp"] == 3
+
+
+def test_missing_combat_support_raises_dispatch_error():
+    runtime = _runtime(graph_combat_state=_ongoing_state())
+
+    with pytest.raises(GraphCombatDispatchError, match="missing combat support"):
+        dispatch_graph_combat_action(
+            runtime,
+            Action(verb="attack", what="goblin_01", with_="missing_skill"),
+        )
+
+
+def test_attack_auto_skill_uses_precise_tactic_with_legacy_attack_skill():
+    runtime = _runtime(
+        include_skill=True,
+        graph_combat_state=_ongoing_state(),
+    )
+
+    result = dispatch_graph_combat_action(
+        runtime,
+        Action(verb="attack", what="goblin_01", how="auto"),
+    )
+
+    state = result.runtime.progress.graph_combat_state
+    assert state is not None
+    assert state.last_action == "precise"
+    assert state.last_support_id == "fireball"
+    assert state.last_dc == 9
+    assert result.runtime.graph.nodes["player_01"].properties["mp"] == 3
+
+
+def test_speak_maps_to_talk_and_can_stop_combat():
+    runtime = _runtime(
+        graph_combat_state=_ongoing_state().model_copy(update={"enemy_pressure": 1}),
+    )
+
+    result = dispatch_graph_combat_action(
+        runtime,
+        Action(verb="speak", to="goblin_01"),
+    )
+
+    assert result.outcome == "combat_stopped"
+    assert result.runtime.progress.graph_combat_state is None
 
 
 def test_attack_with_skill_starts_combat_without_spending_first_exchange():

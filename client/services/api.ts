@@ -23,6 +23,7 @@ import type {
 
 type ApiRequestOptions = {
   signal?: AbortSignal;
+  onResult?: (response: GraphActionClientResponse) => void;
   onNarrationDelta?: (text: string, outcome: GraphResultOutcome) => void;
 };
 
@@ -116,7 +117,7 @@ export async function sendGraphInput(
     'sendGraphInput',
     `/session/${gameId}/graph/input/stream`,
     `/session/${gameId}/graph/input`,
-    { player_input: playerInput, think: false },
+    { player_input: playerInput },
     options,
   );
 }
@@ -180,8 +181,10 @@ async function readGraphActionStream(
     if (!trimmed) return;
     const event = JSON.parse(trimmed) as GraphInputStreamEvent;
     if (event.type === 'result') {
-      const payload = event.payload as Partial<GraphActionResponse> | null | undefined;
-      resultOutcome = payload?.outcome ?? 'neutral';
+      const payload = event.payload as GraphActionResponse;
+      const response = adaptGraphActionResponse(payload);
+      resultOutcome = response.outcome;
+      options.onResult?.(response);
       return;
     }
     if (event.type === 'narration_delta') {
@@ -307,14 +310,13 @@ export async function rollGraphPending(
   body: GraphRollRequest,
   options: ApiRequestOptions = {},
 ): Promise<GraphActionClientResponse> {
-  const res = await fetchWithTimeout(`${BASE_URL}/session/${gameId}/graph/roll`, {
-    method: 'POST',
-    headers: jsonHeaders,
-    body: JSON.stringify(body),
-    signal: options.signal,
-  });
-  if (!res.ok) throw new Error(await httpError('rollGraphPending', res));
-  return adaptGraphActionResponse((await res.json()) as GraphActionResponse);
+  return requestGraphActionWithOptionalStream(
+    'rollGraphPending',
+    `/session/${gameId}/graph/roll/stream`,
+    `/session/${gameId}/graph/roll`,
+    body,
+    options,
+  );
 }
 
 type ApiFetchInit = {

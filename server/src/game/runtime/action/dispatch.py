@@ -11,6 +11,8 @@ from src.game.engines.graph.quest import (
     GraphQuestError,
     plan_quest_abandon,
     plan_quest_accept,
+    plan_quest_progress_for_trigger,
+    plan_quest_rewards,
 )
 from src.game.engines.graph.rest import GraphRestError, plan_rest
 from src.game.engines.graph.transfer import (
@@ -23,7 +25,11 @@ from src.game.engines.graph.transfer import (
 )
 
 from ..state import GameRuntimeState
-from .apply import GraphRuntimeApplyError, apply_runtime_graph_changes
+from .apply import (
+    GraphRuntimeApplyError,
+    GraphRuntimeDirty,
+    apply_runtime_graph_changes,
+)
 from .combat import GraphCombatDispatchError, dispatch_graph_combat_action
 
 
@@ -57,6 +63,17 @@ def dispatch_graph_action(
     try:
         kind, changes, progress_update = _plan_non_combat(runtime, action)
         applied = apply_runtime_graph_changes(runtime, changes)
+        dirty = GraphRuntimeDirty.from_apply_result(applied)
+        next_runtime = applied.runtime
+        applied_count = applied.applied
+        completed_quest_ids: list[str] = []
+        quest_apply = _apply_quest_progress_for_action(next_runtime, action, kind)
+        if quest_apply is not None:
+            next_runtime, quest_dirty, quest_applied, completed_quest_ids = quest_apply
+            dirty.changed_node_ids.update(quest_dirty.changed_node_ids)
+            dirty.changed_edge_ids.update(quest_dirty.changed_edge_ids)
+            dirty.removed_edge_ids.update(quest_dirty.removed_edge_ids)
+            applied_count += quest_applied
     except (
         GraphMoveError,
         GraphTransferError,
@@ -67,15 +84,17 @@ def dispatch_graph_action(
     ) as exc:
         raise GraphActionDispatchError(str(exc)) from exc
 
-    next_progress = applied.runtime.progress.model_copy(update=progress_update)
-    next_runtime = applied.runtime.model_copy(update={"progress": next_progress})
+    if next_runtime.progress.active_quest_id in completed_quest_ids:
+        progress_update = {**progress_update, "active_quest_id": None}
+    next_progress = next_runtime.progress.model_copy(update=progress_update)
+    next_runtime = next_runtime.model_copy(update={"progress": next_progress})
     return GraphActionDispatchResult(
         runtime=next_runtime,
         kind=kind,
-        applied=applied.applied,
-        changed_node_ids=applied.changed_node_ids,
-        changed_edge_ids=applied.changed_edge_ids,
-        removed_edge_ids=applied.removed_edge_ids,
+        applied=applied_count,
+        changed_node_ids=sorted(dirty.changed_node_ids),
+        changed_edge_ids=sorted(dirty.changed_edge_ids),
+        removed_edge_ids=sorted(dirty.removed_edge_ids),
     )
 
 
@@ -129,7 +148,11 @@ def _plan_non_combat(
             if quest_id is None:
                 raise GraphActionDispatchError("quest id is required")
             if action.how == "accept":
-                result = plan_quest_accept(runtime.graph, quest_id)
+                result = plan_quest_accept(
+                    runtime.graph,
+                    quest_id,
+                    active_quest_id=runtime.progress.active_quest_id,
+                )
                 return (
                     "quest_accept",
                     result.changes,
@@ -210,6 +233,59 @@ def _plan_non_combat(
 
 def _advance_turn(runtime: GameRuntimeState) -> dict[str, int]:
     return {"turn_count": runtime.progress.turn_count + 1}
+
+
+def _apply_quest_progress_for_action(
+    runtime: GameRuntimeState,
+    action: Action,
+    kind: str,
+) -> tuple[GameRuntimeState, GraphRuntimeDirty, int, list[str]] | None:
+    trigger = _quest_trigger_for_action(runtime, action, kind)
+    if trigger is None:
+        return None
+    trigger_type, target_id = trigger
+    progress = plan_quest_progress_for_trigger(runtime.graph, trigger_type, target_id)
+    if not progress.changes:
+        return None
+
+    applied = apply_runtime_graph_changes(runtime, progress.changes)
+    next_runtime = applied.runtime
+    dirty = GraphRuntimeDirty.from_apply_result(applied)
+    applied_count = applied.applied
+    for quest_id in progress.completed_quest_ids:
+        reward = plan_quest_rewards(
+            next_runtime.graph,
+            quest_id,
+            next_runtime.progress.player_id,
+        )
+        if not reward.changes:
+            continue
+        reward_applied = apply_runtime_graph_changes(next_runtime, reward.changes)
+        next_runtime = reward_applied.runtime
+        dirty.add_apply_result(reward_applied)
+        applied_count += reward_applied.applied
+    return next_runtime, dirty, applied_count, progress.completed_quest_ids
+
+
+def _quest_trigger_for_action(
+    runtime: GameRuntimeState,
+    action: Action,
+    kind: str,
+) -> tuple[str, str] | None:
+    if kind == "move":
+        destination_id = _single(action.to) or _single(action.what)
+        if destination_id is not None:
+            return "location_enter", destination_id
+    if kind == "use":
+        item_id = _single(action.what) or _single(action.with_)
+        if item_id is not None:
+            return "item_use", item_id
+    if kind in {"transfer", "trade_buy"}:
+        item_id = _single(action.what) or _single(action.with_)
+        target_id = _single(action.to) or runtime.progress.player_id
+        if item_id is not None and target_id == runtime.progress.player_id:
+            return "item_obtained", item_id
+    return None
 
 
 def _require_player_can_move(runtime: GameRuntimeState) -> None:

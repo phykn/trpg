@@ -10,9 +10,9 @@
 
 ## 출력 형식
 
-반드시 다음 형태만 출력합니다.
+반드시 다음 형태만 출력합니다. 입력 `skills` 배열의 순서에 맞춰 이름과 설명만 씁니다.
 
-{"skills":[{"name":"","description":"","action":"attack","effect_template":"dc_down","support_bonus":2,"mp_cost":2,"tags":[""]}]}
+{"skills":[{"name":"","description":""}]}
 
 ## 출력 규칙
 
@@ -22,6 +22,7 @@
 - JSON 외의 텍스트를 쓰지 않습니다.
 - 모든 문자열은 한국어로 씁니다.
 - 단, JSON key와 enum 값은 지정된 영어 값을 그대로 씁니다.
+- `action`, `effect_template`, `support_bonus`, `mp_cost`, `tags` 같은 수치/규칙 필드는 출력하지 않습니다. 서버가 입력 `skills` 순서에 따라 정합니다.
 
 ## 입력으로 사용할 수 있는 정보
 
@@ -55,85 +56,17 @@
 - 구체적인 수치를 설명문에 다시 쓰지 않습니다.
 - 기술은 행동을 대체하지 않고 판정에 붙는 보조임을 유지합니다.
 
-`action`:
-
-다음 중 하나만 사용합니다.
-
-- `attack`
-- `defend`
-- `flee`
-- `social`
-
-`effect_template`:
-
-다음 중 하나만 사용합니다.
-
-- `dc_down`
-- `extra_heart_damage`
-- `prevent_heart_loss`
-- `escape_boost`
-
-`support_bonus`:
-
-- 1부터 3까지의 정수입니다.
-- 평범한 후보는 1 또는 2를 사용합니다.
-- 3은 조건이 좁고 플레이어의 최근 행동과 강하게 맞을 때만 사용합니다.
-
-`mp_cost`:
-
-- 1부터 3까지의 정수입니다.
-- 강한 효과일수록 더 높게 설정합니다.
-- `support_bonus`가 3이면 `mp_cost`도 3으로 둡니다.
-- `extra_heart_damage`와 `prevent_heart_loss`는 보통 `mp_cost`를 2 이상으로 둡니다.
-- `support_bonus:3`과 `mp_cost:1` 조합은 만들지 않습니다.
-
-`tags`:
-
-- 기술의 성격을 나타내는 짧은 한국어 태그 배열입니다.
-- 1개에서 3개까지 씁니다.
-- 이미 배운 기술과 역할이 겹치지 않도록 태그도 다르게 잡습니다.
-- 예: `["근접"]`, `["방어","균형"]`, `["도주","거리"]`, `["대화","압박"]`
-
-## action과 effect_template 조합 규칙
-
-`attack`에 어울리는 효과:
-
-- `dc_down`
-- `extra_heart_damage`
-
-`defend`에 어울리는 효과:
-
-- `dc_down`
-- `prevent_heart_loss`
-
-`flee`에 어울리는 효과:
-
-- `escape_boost`
-- `dc_down`
-
-`social`에 어울리는 효과:
-
-- `dc_down`
-
-어울리지 않는 조합은 만들지 않습니다.
-
-예:
-
-- `social` + `extra_heart_damage`는 만들지 않습니다.
-- `flee` + `extra_heart_damage`는 만들지 않습니다.
-- `attack` + `escape_boost`는 만들지 않습니다.
-
 ## 중복 방지 규칙
 
 이미 배운 기술과 다음이 겹치면 후보로 만들지 않습니다.
 
 - 이름이 같음
 - 이름만 다르고 역할이 같음
-- 같은 action과 같은 effect_template으로 같은 상황을 보조함
+- 같은 상황을 같은 방식으로 보조함
 - 설명만 바꾼 사실상 같은 기술
 - 같은 플레이 패턴을 같은 방식으로 보상함
 
-이미 배운 기술과 비슷한 후보밖에 떠오르지 않으면, 최근 행동 중 덜 보상받은 행동 유형을 찾아 다른 action으로 만듭니다.
+이미 배운 기술과 비슷한 후보밖에 떠오르지 않으면, 최근 행동 중 덜 보상받은 행동 유형을 찾아 다른 방향으로 만듭니다.
 
 예:
 
@@ -203,16 +136,16 @@
 최근 근접 공격을 자주 했고, 힘이 높으며, 이미 배운 공격 기술이 없다.
 
 출력:
-{"skills":[{"name":"밀어붙이기","description":"근접 공격을 이어 갈 때 판정을 보조합니다.","action":"attack","effect_template":"dc_down","support_bonus":2,"mp_cost":2,"tags":["근접","압박"]}]}
+{"skills":[{"name":"밀어붙이기","description":"근접 공격을 이어 갈 때 판정을 보조합니다."}]}
 
 입력 경향:
 최근 방어와 버티기를 자주 했고, 이미 공격 기술은 있다.
 
 출력:
-{"skills":[{"name":"버티는 자세","description":"방어 자세를 유지할 때 손실을 줄이는 데 도움을 줍니다.","action":"defend","effect_template":"prevent_heart_loss","support_bonus":2,"mp_cost":2,"tags":["방어","균형"]}]}
+{"skills":[{"name":"버티는 자세","description":"방어 자세를 유지할 때 손실을 줄이는 데 도움을 줍니다."}]}
 
 입력 경향:
 최근 대화로 상황을 풀려는 행동이 많고, 사회 능력치가 높다.
 
 출력:
-{"skills":[{"name":"침착한 설득","description":"차분하게 상대를 설득할 때 대화 판정을 보조합니다.","action":"social","effect_template":"dc_down","support_bonus":2,"mp_cost":2,"tags":["대화","설득"]}]}
+{"skills":[{"name":"침착한 설득","description":"차분하게 상대를 설득할 때 대화 판정을 보조합니다."}]}

@@ -2,7 +2,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.wire.graph.to_front import GraphFrontStatePayload
+from src.wire.models import GraphFrontStatePayload
 
 from .action.dispatch import GraphActionDispatchResult
 from .state import GameRuntimeState

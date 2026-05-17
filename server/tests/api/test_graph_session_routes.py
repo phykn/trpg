@@ -8,7 +8,7 @@ from httpx import ASGITransport, AsyncClient
 from openai import RateLimitError
 
 from run_api import build_app
-from src.db.graph_local_fs import LocalFsGraphRepo
+from src.db.graph.local_fs import LocalFsGraphRepo
 from src.game.domain.graph import GraphEdge, GraphNode
 from src.game.engines.growth import xp_for_next_level
 from tests._fakes import make_default_storage, make_scenario_repo
@@ -399,7 +399,9 @@ async def test_graph_turn_moves_player_and_persists_progress(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_graph_turn_stream_returns_result_then_first_visit_move_narration(tmp_path):
+async def test_graph_turn_stream_returns_result_then_first_visit_move_narration(
+    tmp_path,
+):
     app = _build_app(tmp_path)
 
     async with _client(app) as client:
@@ -643,7 +645,7 @@ async def test_graph_combat_rejects_when_not_in_combat(tmp_path):
         game_id = await _init_graph_session(client)
         response = await client.post(
             f"/session/{game_id}/graph/combat",
-            json={"command": "defend"},
+            json={"command": "guarded"},
         )
 
     assert response.status_code == 422
@@ -658,7 +660,7 @@ async def test_graph_combat_stream_rejects_when_not_in_combat(tmp_path):
         game_id = await _init_graph_session(client)
         response = await client.post(
             f"/session/{game_id}/graph/combat/stream",
-            json={"command": "defend"},
+            json={"command": "guarded"},
         )
 
     assert response.status_code == 200
@@ -827,7 +829,7 @@ async def test_graph_turn_auto_skill_uses_known_skill_during_existing_combat(
 
 
 @pytest.mark.asyncio
-async def test_graph_turn_flee_clears_existing_combat(tmp_path, monkeypatch):
+async def test_graph_turn_flee_requires_distance_before_escape(tmp_path, monkeypatch):
     monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 20)
     app = _build_app(tmp_path)
 
@@ -842,15 +844,23 @@ async def test_graph_turn_flee_clears_existing_combat(tmp_path, monkeypatch):
             f"/session/{game_id}/graph/confirm",
             json={"confirmation_id": confirmation_id, "decision": "confirm"},
         )
+        ready_response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "move", "how": "flee"}},
+        )
         response = await client.post(
             f"/session/{game_id}/graph/turn",
             json={"action": {"verb": "move", "how": "flee"}},
         )
 
+    assert ready_response.status_code == 200, ready_response.text
     assert response.status_code == 200, response.text
+    ready_body = ready_response.json()
     body = response.json()
     progress = await app.state.graph_repo.load_progress(game_id)
 
+    assert ready_body["state"]["combat"] is not None
+    assert ready_body["state"]["combat"]["escapeReady"] is True
     assert body["state"]["combat"] is None
     assert progress.graph_combat_state is None
 
@@ -993,6 +1003,36 @@ async def test_graph_input_classifies_query_and_returns_message(tmp_path):
     assert body["outcome"] == "neutral"
     assert "숲길" in body["message"]
     assert progress.turn_count == 0
+
+
+@pytest.mark.asyncio
+async def test_graph_input_refuse_returns_in_game_rejection_not_http_error(tmp_path):
+    app = _build_app(
+        tmp_path,
+        llm_payload={
+            "refuse": {
+                "category": "out_of_game",
+                "message_hint": "그 행동은 이 세계에서 처리할 수 없습니다.",
+            }
+        },
+    )
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(
+            f"/session/{game_id}/graph/input",
+            json={"player_input": "허리에서 권총을 꺼내 든다"},
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    progress = await app.state.graph_repo.load_progress(game_id)
+
+    assert body["status"] == "rejected"
+    assert body["outcome"] == "failure"
+    assert body["state"]["pendingConfirmation"] is None
+    assert body["state"]["pendingRoll"] is None
+    assert progress.turn_count == 1
 
 
 @pytest.mark.asyncio

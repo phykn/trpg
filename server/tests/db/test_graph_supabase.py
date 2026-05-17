@@ -1,4 +1,4 @@
-from src.db.graph_supabase import SupabaseGraphRepo
+from src.db.graph.supabase import SupabaseGraphRepo
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress

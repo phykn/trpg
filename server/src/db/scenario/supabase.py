@@ -3,7 +3,7 @@
 import asyncio
 import json
 
-from ._supabase_http import _Storage
+from .._supabase_http import _Storage
 
 
 class SupabaseStorageScenarioRepo:

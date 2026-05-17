@@ -17,6 +17,7 @@ const NODE_COLOR: Record<StoryGraphNodeKind, string> = {
   quest: colors.danger.fg,
   location: colors.exp.fg,
   target: colors.success.fg,
+  item: colors.accent.fg,
 };
 
 const NODE_SIZE: Record<StoryGraphNodeKind, number> = {
@@ -26,6 +27,7 @@ const NODE_SIZE: Record<StoryGraphNodeKind, number> = {
   quest: 30,
   location: 22,
   target: 24,
+  item: 22,
 };
 
 type NodeOverride = {

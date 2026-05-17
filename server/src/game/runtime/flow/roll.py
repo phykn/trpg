@@ -14,6 +14,10 @@ from src.game.domain.action import Action
 from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph import Graph, GraphEdge
 from src.game.domain.memory import BonusItem, GMLogEntry, LogEntry, RollLogEntry
+from src.game.engines.graph.quest import (
+    plan_quest_progress_for_trigger,
+    plan_quest_rewards,
+)
 from src.game.rules import RULES
 from src.game.rules.dc import compute_grade, compute_required_roll, pick_dc
 from src.locale.labels import roll_dice_label, stat_label
@@ -23,6 +27,7 @@ from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, set_diag_context
 from src.wire.graph.to_front import graph_to_front_state
 
+from ..action.apply import GraphRuntimeDirty, apply_runtime_graph_changes
 from ..load import load_runtime_state
 from ..narration.context import build_roll_narration_payload
 from ..narration.result import (
@@ -151,9 +156,7 @@ async def run_graph_roll(
         dice=dice,
         scenario_repo=scenario_repo,
     )
-    if resolved.outcome == "failure" and not _is_narrative_roll_action(
-        resolved.action
-    ):
+    if resolved.outcome == "failure" and not _is_narrative_roll_action(resolved.action):
         return executed_result(
             resolved.runtime,
             graph_to_front_state(resolved.runtime),
@@ -202,9 +205,7 @@ async def run_graph_roll_stream(
         dice=dice,
         scenario_repo=scenario_repo,
     )
-    if resolved.outcome == "success" and not _is_narrative_roll_action(
-        resolved.action
-    ):
+    if resolved.outcome == "success" and not _is_narrative_roll_action(resolved.action):
         async for event in run_graph_action_turn_from_runtime_stream(
             repo,
             game_id,
@@ -315,14 +316,29 @@ async def _resolve_graph_roll(
         grade,
         roll_outcome=outcome,
     )
-    if changed_edge_ids or changed_node_ids:
+    (
+        next_runtime,
+        quest_dirty,
+        completed_quest_ids,
+    ) = _apply_roll_quest_effect(next_runtime, action, roll_outcome=outcome)
+    changed_node_ids.extend(quest_dirty.changed_node_ids)
+    changed_edge_ids.extend(quest_dirty.changed_edge_ids)
+    removed_edge_ids = list(quest_dirty.removed_edge_ids)
+
+    if changed_edge_ids or changed_node_ids or removed_edge_ids:
         await repo.save_graph_changes(
             game_id,
             next_runtime.graph,
-            changed_node_ids=changed_node_ids,
-            changed_edge_ids=changed_edge_ids,
-            removed_edge_ids=[],
+            changed_node_ids=sorted(set(changed_node_ids)),
+            changed_edge_ids=sorted(set(changed_edge_ids)),
+            removed_edge_ids=sorted(set(removed_edge_ids)),
         )
+    if next_runtime.progress.active_quest_id in completed_quest_ids:
+        next_progress = next_runtime.progress.model_copy(
+            update={"active_quest_id": None}
+        )
+        next_runtime = next_runtime.model_copy(update={"progress": next_progress})
+        await repo.save_progress(next_progress)
     return _ResolvedGraphRoll(
         runtime=next_runtime,
         action=action,
@@ -562,6 +578,69 @@ def _apply_roll_xp_effect(
     return runtime.model_copy(update={"graph": graph}), [player_id]
 
 
+def _apply_roll_quest_effect(
+    runtime: GameRuntimeState,
+    action: Action,
+    *,
+    roll_outcome: GraphResultOutcome,
+) -> tuple[GameRuntimeState, GraphRuntimeDirty, list[str]]:
+    dirty = GraphRuntimeDirty()
+    if roll_outcome != "success":
+        return runtime, dirty, []
+    trigger = _roll_quest_trigger(runtime, action)
+    if trigger is None:
+        return runtime, dirty, []
+
+    trigger_type, target_id = trigger
+    progress = plan_quest_progress_for_trigger(runtime.graph, trigger_type, target_id)
+    if not progress.changes:
+        return runtime, dirty, []
+
+    progress_apply = apply_runtime_graph_changes(runtime, progress.changes)
+    next_runtime = progress_apply.runtime
+    dirty.add_apply_result(progress_apply)
+    for quest_id in progress.completed_quest_ids:
+        reward = plan_quest_rewards(
+            next_runtime.graph,
+            quest_id,
+            next_runtime.progress.player_id,
+        )
+        if not reward.changes:
+            continue
+        reward_apply = apply_runtime_graph_changes(next_runtime, reward.changes)
+        next_runtime = reward_apply.runtime
+        dirty.add_apply_result(reward_apply)
+    return next_runtime, dirty, progress.completed_quest_ids
+
+
+def _roll_quest_trigger(
+    runtime: GameRuntimeState,
+    action: Action,
+) -> tuple[str, str] | None:
+    if action.verb == "speak":
+        target_id = _roll_npc_target_id(
+            runtime.graph,
+            runtime.progress.player_id,
+            action,
+        )
+        return ("social_check", target_id) if target_id is not None else None
+    if action.verb == "transfer" and action.how not in {
+        "accept",
+        "abandon",
+        "equip",
+        "trade",
+        "steal",
+        "unequip",
+    }:
+        target_id = _roll_npc_target_id(
+            runtime.graph,
+            runtime.progress.player_id,
+            action,
+        )
+        return ("social_check", target_id) if target_id is not None else None
+    return None
+
+
 def _roll_affinity_delta(
     action: Action,
     grade: str,
@@ -648,9 +727,7 @@ async def _finish_narrative_roll(
         text=render(_roll_resolution_key(action, outcome), runtime.progress.locale),
         outcome=outcome,
     )
-    next_progress = runtime.progress.model_copy(
-        update={"next_log_id": entry.id + 1}
-    )
+    next_progress = runtime.progress.model_copy(update={"next_log_id": entry.id + 1})
     next_runtime = runtime.model_copy(
         update={
             "progress": next_progress,

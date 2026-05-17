@@ -12,4 +12,10 @@ describe('Playing overlay layering', () => {
     expect(source).toContain('buildPanelSlots');
     expect(source).not.toContain('quest ?? questOffers[0] ?? null');
   });
+
+  test('keeps free text composer available during combat', () => {
+    expect(source).toContain('combat ? (');
+    expect(source).toContain('<CombatStrip');
+    expect(source).toContain('locked={pendingConfirmation !== null}');
+  });
 });

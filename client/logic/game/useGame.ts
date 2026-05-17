@@ -180,6 +180,7 @@ export function useGame() {
           requestGraphIntro(payload.game_id, {
             signal,
             onNarrationDelta: events.onNarrationDelta,
+            onResult: events.onResult,
           }),
         );
       } catch (err) {
@@ -199,6 +200,7 @@ export function useGame() {
           sendGraphInput(gameId, trimmed, {
             signal,
             onNarrationDelta: events.onNarrationDelta,
+            onResult: events.onResult,
           }),
         [{ kind: 'player', text: trimmed }],
       );
@@ -217,6 +219,7 @@ export function useGame() {
         }, {
           signal,
           onNarrationDelta: events.onNarrationDelta,
+          onResult: events.onResult,
         }),
       );
     },
@@ -231,6 +234,7 @@ export function useGame() {
           sendGraphAction(gameId, action, {
             signal,
             onNarrationDelta: events.onNarrationDelta,
+            onResult: events.onResult,
         }),
       );
     },
@@ -245,6 +249,7 @@ export function useGame() {
           sendGraphCombatCommand(gameId, command, {
             signal,
             onNarrationDelta: events.onNarrationDelta,
+            onResult: events.onResult,
           }),
       );
     },
@@ -260,10 +265,10 @@ export function useGame() {
         confirmGraphAction(gameId, {
           confirmation_id: confirmationId,
           decision,
-          think: false,
         }, {
           signal,
           onNarrationDelta: events.onNarrationDelta,
+          onResult: events.onResult,
         }),
       );
     },
@@ -273,11 +278,14 @@ export function useGame() {
   const onRollPending = React.useCallback(
     (rollId: string) => {
       if (!gameId || !pendingRoll) return;
-      void runGraphActionRequest((signal) =>
+      void runGraphActionRequest((signal, events) =>
         rollGraphPending(gameId, {
           roll_id: rollId,
-          think: false,
-        }, { signal }),
+        }, {
+          signal,
+          onNarrationDelta: events.onNarrationDelta,
+          onResult: events.onResult,
+        }),
       );
     },
     [gameId, pendingRoll, runGraphActionRequest],
@@ -321,7 +329,7 @@ export function useGame() {
       setLevelUpOpen(false);
       setLevelUpChoices([]);
       void runGraphActionRequest((signal) =>
-        sendGraphLevelUp(id, { growth, think: false }, { signal }),
+        sendGraphLevelUp(id, { growth }, { signal }),
       );
     },
     [runGraphActionRequest],

@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from src.game.domain.action import Action
 from src.game.runtime.narration.suggestions import GraphSuggestion
@@ -62,9 +62,23 @@ class GraphTurnRequest(BaseModel):
 class GraphCombatCommandRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    command: Literal["attack", "skill", "defend", "flee"]
+    command: Literal[
+        "precise",
+        "guarded",
+        "reckless",
+        "create_distance",
+        "talk",
+    ]
     target_id: str | None = None
+    support_id: str | None = None
+    support_kind: Literal["skill"] | None = None
     think: bool = False
+
+    @model_validator(mode="after")
+    def _support_pair(self) -> "GraphCombatCommandRequest":
+        if (self.support_id is None) != (self.support_kind is None):
+            raise ValueError("support_id and support_kind must be provided together")
+        return self
 
 
 class GraphInputRequest(BaseModel):

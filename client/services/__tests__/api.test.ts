@@ -134,7 +134,7 @@ describe('graph API helpers', () => {
     );
 
     const result = await sendGraphCombatCommand('game-1', {
-      command: 'attack',
+      command: 'precise',
       target_id: 'enemy_01',
     });
 
@@ -142,7 +142,7 @@ describe('graph API helpers', () => {
       'https://api.example.test/session/game-1/graph/combat/stream',
       expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify({ command: 'attack', target_id: 'enemy_01' }),
+        body: JSON.stringify({ command: 'precise', target_id: 'enemy_01' }),
       }),
     );
     expect(result.status).toBe('executed');
@@ -183,6 +183,7 @@ describe('graph API helpers', () => {
       name: '광장',
       description: '',
       exits: [{ id: 'watch', name: '망루', description: '' }],
+      items: [],
       targets: [
         {
           id: 'edrik_chief',
@@ -393,7 +394,6 @@ describe('graph API helpers', () => {
         method: 'POST',
         body: JSON.stringify({
           player_input: '마을 주민에게 말을 건다',
-          think: false,
         }),
         signal: expect.any(AbortSignal),
       }),
@@ -421,10 +421,18 @@ describe('graph API helpers', () => {
       ]),
     );
 
-    const result = await sendGraphInput('game-1', '문을 본다', { onNarrationDelta });
+    const events: string[] = [];
+    const result = await sendGraphInput('game-1', '문을 본다', {
+      onResult: () => { events.push('result'); },
+      onNarrationDelta: (text, outcome) => {
+        events.push('delta');
+        onNarrationDelta(text, outcome);
+      },
+    });
 
     expect(onNarrationDelta).toHaveBeenNthCalledWith(1, '당신은 ', 'success');
     expect(onNarrationDelta).toHaveBeenNthCalledWith(2, '문을 봅니다.', 'success');
+    expect(events).toEqual(['result', 'delta', 'delta']);
     expect(result.status).toBe('executed');
     expect(result.outcome).toBe('success');
   });
@@ -528,7 +536,6 @@ describe('graph API helpers', () => {
         method: 'POST',
         body: JSON.stringify({
           player_input: '마을 주민에게 말을 건다',
-          think: false,
         }),
         signal: expect.any(AbortSignal),
       }),
@@ -575,7 +582,6 @@ describe('graph API helpers', () => {
 
     const result = await sendGraphLevelUp('game-1', {
       growth: { kind: 'max_hp' },
-      think: false,
     });
 
     expect(fetch).toHaveBeenCalledWith(
@@ -584,7 +590,6 @@ describe('graph API helpers', () => {
         method: 'POST',
         body: JSON.stringify({
           growth: { kind: 'max_hp' },
-          think: false,
         }),
       }),
     );
@@ -627,7 +632,44 @@ describe('graph API helpers', () => {
     expect(result[0].growth.kind).toBe('learn_skill');
   });
 
-  test('posts pending roll choices to the graph roll endpoint', async () => {
+  test('posts pending roll choices to the graph roll stream endpoint', async () => {
+    fetch.mockResolvedValueOnce(
+      streamResponse([
+        JSON.stringify({
+          type: 'final',
+          payload: {
+            game_id: 'game-1',
+            state: graphState(),
+            status: 'executed',
+            message: null,
+          },
+        }),
+      ]),
+    );
+
+    const result = await rollGraphPending('game-1', {
+      roll_id: 'roll-1',
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/graph/roll/stream',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          roll_id: 'roll-1',
+        }),
+      }),
+    );
+    expect(result.pendingRoll).toBeNull();
+    expect(result.outcome).toBe('neutral');
+  });
+
+  test('falls back to the plain graph roll endpoint when the stream route is unavailable', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      json: async () => ({ detail: 'not found' }),
+    });
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -638,22 +680,29 @@ describe('graph API helpers', () => {
       }),
     });
 
-    const result = await rollGraphPending('game-1', {
+    await rollGraphPending('game-1', {
       roll_id: 'roll-1',
-      think: false,
     });
 
-    expect(fetch).toHaveBeenCalledWith(
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      'https://api.example.test/session/game-1/graph/roll/stream',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          roll_id: 'roll-1',
+        }),
+      }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
       'https://api.example.test/session/game-1/graph/roll',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
           roll_id: 'roll-1',
-          think: false,
         }),
       }),
     );
-    expect(result.pendingRoll).toBeNull();
-    expect(result.outcome).toBe('neutral');
   });
 });

@@ -102,6 +102,26 @@ describe('runGraphActionRequestOnce', () => {
     expect(withSecondDelta[1].id).toBe(withFirstDelta[1].id);
   });
 
+  test('applies result state before the final response updates suggestions', async () => {
+    const rt = runtime('game-1');
+    const resultResponse = response('game-1');
+    const finalResponse = response('game-1');
+    resultResponse.state = { result: true } as unknown as FrontState;
+    finalResponse.state = { final: true } as unknown as FrontState;
+
+    await runGraphActionRequestOnce(
+      async (_signal, events) => {
+        (events as { onResult: (value: GraphActionClientResponse) => void }).onResult(resultResponse);
+        return finalResponse;
+      },
+      rt,
+    );
+
+    expect(rt.applyState).toHaveBeenNthCalledWith(1, resultResponse.state, 'game-1');
+    expect(rt.applyState).toHaveBeenNthCalledWith(2, finalResponse.state, 'game-1');
+    expect(rt.setSuggestions).toHaveBeenLastCalledWith(finalResponse.suggestions);
+  });
+
   test('ignores a response for a game that is no longer active', async () => {
     const rt = runtime('game-2');
 

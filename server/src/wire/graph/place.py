@@ -5,7 +5,7 @@ from src.game.domain.graph.character import (
     graph_character_kind,
     is_visible_character,
 )
-from src.game.domain.graph.query import characters_at, edges_from, location_of
+from src.game.domain.graph.query import characters_at, edges_from, items_at, location_of
 from .character import (
     character_equipment,
     character_gender,
@@ -24,6 +24,7 @@ from .values import (
 )
 from src.wire.models import (
     GraphPlaceLinkPayload,
+    GraphPlaceItemPayload,
     GraphPlacePayload,
     GraphPlaceTargetPayload,
 )
@@ -48,6 +49,13 @@ def place_payload(
         if target is None or target.type != "location":
             continue
         exits.append(_place_link(target, content))
+
+    items: list[GraphPlaceItemPayload] = []
+    for item_id in items_at(graph, location_id):
+        item = graph.nodes.get(item_id)
+        if item is None or item.type != "item":
+            continue
+        items.append(_place_item(item, content))
 
     targets: list[GraphPlaceTargetPayload] = []
     for character_id in characters_at(graph, location_id):
@@ -80,6 +88,7 @@ def place_payload(
         name=node_name(location, content),
         description=optional_str(static_value(location, "description", content)) or "",
         exits=exits,
+        items=items,
         targets=targets,
     )
 
@@ -92,4 +101,15 @@ def _place_link(
         id=location.id,
         name=node_name(location, content),
         description=optional_str(static_value(location, "description", content)) or "",
+    )
+
+
+def _place_item(
+    item: GraphNode,
+    content: RuntimeContent | None = None,
+) -> GraphPlaceItemPayload:
+    return GraphPlaceItemPayload(
+        id=item.id,
+        name=node_name(item, content),
+        description=optional_str(static_value(item, "description", content)) or "",
     )

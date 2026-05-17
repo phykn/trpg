@@ -36,11 +36,18 @@ def append_transcript_block(
         parts.append(f"**플레이어**: {player_input}")
     if pending:
         if "stat" in pending:
-            parts.append(
-                f"**굴림 대기**: {pending['stat']} · {pending['tier']['label']} "
-                f"(DC {pending['dc']}, mod {pending['mod']:+d}, "
-                f"{pending['required_roll']}+ 필요)"
-            )
+            stat_label = pending.get("statLabel") or pending.get("stat_label") or pending["stat"]
+            required = pending.get("requiredRoll") or pending.get("required_roll")
+            if {"tier", "dc", "mod", "required_roll"}.issubset(pending):
+                parts.append(
+                    f"**굴림 대기**: {stat_label} · {pending['tier']['label']} "
+                    f"(DC {pending['dc']}, mod {pending['mod']:+d}, "
+                    f"{pending['required_roll']}+ 필요)"
+                )
+            else:
+                suffix = f" ({required}+ 필요)" if required is not None else ""
+                body = pending.get("body") or pending.get("title") or ""
+                parts.append(f"**굴림 대기**: {stat_label}{suffix} — {body}")
         else:
             parts.append(
                 f"**확인 대기**: {pending.get('title') or '-'} — "

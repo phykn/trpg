@@ -33,7 +33,7 @@ from agency.story.harness.decompose import (  # noqa: E402
 )
 from agency.story.harness._common import EntityWriterError  # noqa: E402
 from agency.story.harness.scenario import fill_equipment  # noqa: E402
-from src.db.local_fs import LocalFsScenarioRepo  # noqa: E402
+from src.db.scenario.local_fs import LocalFsScenarioRepo  # noqa: E402
 from src.game.seed.validation import seed_violations  # noqa: E402
 from agency.story.harness.runner import (  # noqa: E402
     SPECS,

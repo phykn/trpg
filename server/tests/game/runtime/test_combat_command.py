@@ -1,8 +1,10 @@
 import pytest
+from pydantic import ValidationError
 
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphNode
+from src.api.schema import GraphCombatCommandRequest
 from src.game.domain.progress import GameProgress
 from src.game.runtime.action.combat_command import (
     CombatCommandError,
@@ -34,6 +36,7 @@ def _runtime() -> GameRuntimeState:
         graph=Graph(
             nodes={
                 "player_01": GraphNode(id="player_01", type="character"),
+                "basic_strike": GraphNode(id="basic_strike", type="skill"),
                 "enemy_01": GraphNode(id="enemy_01", type="character"),
             }
         ),
@@ -45,15 +48,28 @@ def _runtime() -> GameRuntimeState:
     ("payload", "expected"),
     [
         (
-            {"command": "attack", "target_id": "enemy_01"},
-            Action(verb="attack", what="enemy_01"),
+            {"command": "precise", "target_id": "enemy_01"},
+            Action(verb="attack", what="enemy_01", how="precise"),
         ),
         (
-            {"command": "skill", "target_id": "enemy_01"},
-            Action(verb="attack", what="enemy_01", how="auto"),
+            {
+                "command": "precise",
+                "target_id": "enemy_01",
+                "support_id": "basic_strike",
+                "support_kind": "skill",
+            },
+            Action(verb="attack", what="enemy_01", how="precise", with_="basic_strike"),
         ),
-        ({"command": "defend"}, Action(verb="pass", how="defend")),
-        ({"command": "flee"}, Action(verb="move", how="flee")),
+        (
+            {"command": "reckless", "target_id": "enemy_01"},
+            Action(verb="attack", what="enemy_01", how="reckless"),
+        ),
+        ({"command": "guarded"}, Action(verb="pass", how="guarded")),
+        ({"command": "create_distance"}, Action(verb="move", how="create_distance")),
+        (
+            {"command": "talk", "target_id": "enemy_01"},
+            Action(verb="speak", to="enemy_01"),
+        ),
     ],
 )
 def test_build_combat_command_action(payload, expected):
@@ -69,12 +85,29 @@ def test_rejects_when_not_in_combat():
     )
 
     with pytest.raises(CombatCommandError, match="combat is not active"):
-        build_combat_command_action(runtime, {"command": "defend"})
+        build_combat_command_action(runtime, {"command": "guarded"})
 
 
 def test_rejects_wrong_target():
     with pytest.raises(CombatCommandError, match="target is not active enemy"):
         build_combat_command_action(
             _runtime(),
-            {"command": "attack", "target_id": "enemy_02"},
+            {"command": "precise", "target_id": "enemy_02"},
+        )
+
+
+@pytest.mark.parametrize("command", ["attack", "skill", "defend", "flee"])
+def test_graph_combat_command_request_rejects_legacy_commands(command):
+    with pytest.raises(ValidationError):
+        GraphCombatCommandRequest.model_validate({"command": command})
+
+
+def test_graph_combat_command_request_requires_support_pair():
+    with pytest.raises(ValidationError):
+        GraphCombatCommandRequest.model_validate(
+            {
+                "command": "precise",
+                "target_id": "enemy_01",
+                "support_id": "basic_strike",
+            }
         )

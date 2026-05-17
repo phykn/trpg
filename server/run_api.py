@@ -105,6 +105,7 @@ def main() -> None:
             factory=True,
             reload=True,
             reload_dirs=[str(SERVER_DIR)],
+            reload_includes=["*.py", "*.toml", "*.md"],
         )
     else:
         uvicorn.run(create_app(), host=host, port=port)

@@ -66,6 +66,14 @@ const graph: StoryGraphModel = {
       moveDifficulty: null,
     },
     {
+      id: 'supply_token',
+      label: '보급 표식',
+      kind: 'item',
+      status: 'reachable_item',
+      reachable: true,
+      description: '바닥에 놓인 작은 표식입니다.',
+    } as any,
+    {
       id: 'notice',
       label: '낡은 게시판을 살펴본다',
       kind: 'quest',
@@ -85,11 +93,12 @@ describe('buildNearbyPanel', () => {
   test('summarizes one-hop people, places, and tasks with actionable rows', () => {
     const panel = buildNearbyPanel(graph);
 
-    expect(panel.summary).toBe('인물 2 · 장소 1 · 할 일 1');
+    expect(panel.summary).toBe('인물 2 · 장소 1 · 물품 1 · 할 일 1');
     expect(panel.items.map((item) => [item.kindLabel, item.title, item.action?.label])).toEqual([
       ['캐릭터', '여관 주인', '대화'],
       ['캐릭터', '구석의 손님', '접근'],
       ['장소', '뒷문', '이동'],
+      ['물품', '보급 표식', '줍기'],
       ['퀘스트', '낡은 게시판을 살펴본다', '살펴보기'],
     ]);
   });

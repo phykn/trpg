@@ -355,6 +355,89 @@ def test_social_success_and_failure_use_hearts():
     assert failure.state.trace[-1].kind == "player_social_failure"
 
 
+def test_guarded_tactic_lowers_dc_and_prevents_failure_heart_loss():
+    graph = _graph()
+    state = _started(graph)
+
+    success = plan_combat_exchange(
+        graph,
+        state,
+        "player_01",
+        GraphCombatAction(kind="guarded"),
+        dice=9,
+    )
+    failure = plan_combat_exchange(
+        graph,
+        state,
+        "player_01",
+        GraphCombatAction(kind="guarded"),
+        dice=8,
+    )
+
+    assert success.state.last_dc == 9
+    assert success.state.enemy_hearts == 2
+    assert failure.state.player_hearts == 3
+    assert failure.state.trace[-1].kind == "player_guarded_failure"
+
+
+def test_reckless_tactic_deals_two_hearts_on_success():
+    graph = _graph()
+    state = _started(graph)
+
+    result = plan_combat_exchange(
+        graph,
+        state,
+        "player_01",
+        GraphCombatAction(kind="reckless"),
+        dice=13,
+    )
+
+    assert result.state.last_dc == 13
+    assert result.state.enemy_hearts == 1
+    assert result.state.trace[-1].kind == "player_reckless_success"
+
+
+def test_create_distance_requires_escape_ready_before_escape():
+    graph = _graph()
+    state = _started(graph)
+
+    ready = plan_combat_exchange(
+        graph,
+        state,
+        "player_01",
+        GraphCombatAction(kind="create_distance"),
+        dice=11,
+    )
+    escaped = plan_combat_exchange(
+        graph,
+        ready.state,
+        "player_01",
+        GraphCombatAction(kind="create_distance"),
+        dice=11,
+    )
+
+    assert ready.state.outcome == "ongoing"
+    assert ready.state.escape_ready is True
+    assert escaped.state.outcome == "escaped"
+
+
+def test_talk_tactic_can_stop_combat_after_pressure():
+    graph = _graph()
+    state = _started(graph).model_copy(update={"enemy_pressure": 1})
+
+    result = plan_combat_exchange(
+        graph,
+        state,
+        "player_01",
+        GraphCombatAction(kind="talk"),
+        dice=11,
+    )
+
+    assert result.state.enemy_pressure == 2
+    assert result.state.outcome == "combat_stopped"
+    assert result.state.trace[-1].kind == "combat_stopped"
+
+
 def test_victory_marks_enemy_defeated_without_forced_round_limit():
     graph = _graph()
     state = _started(graph).model_copy(update={"enemy_hearts": 1, "round": 12})

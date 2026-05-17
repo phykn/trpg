@@ -4,10 +4,11 @@ import * as path from 'path';
 describe('LogItem act entries', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '..', 'LogItem.tsx'), 'utf8');
 
-  test('does not render server act entries as visible system cards', () => {
+  test('renders server act entries as visible status lines', () => {
     expect(source).toContain("case 'act'");
-    expect(source).toContain('return null');
-    expect(source).not.toContain('ActDivider');
+    expect(source).toContain('return <ActMessage text={entry.text} />');
+    expect(source).toContain('function ActMessage');
+    expect(source).toContain('text-fg-muted');
   });
 });
 

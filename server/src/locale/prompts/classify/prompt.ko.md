@@ -11,7 +11,7 @@
 
 다음 중 정확히 하나만 출력합니다.
 
-{"intents":[{"intent":"...","target_id":"...","destination_id":"...","item_id":"...","merchant_id":"...","source_id":"...","recipient_id":"...","skill_id":"...","quest_id":"...","topic":"...","manner":"...","slot":"...","note":"...","check_required":false,"check_reason":"..."}]}
+{"intents":[{"intent":"...","target_id":"...","destination_id":"...","item_id":"...","merchant_id":"...","source_id":"...","recipient_id":"...","skill_id":"...","quest_id":"...","topic":"...","manner":"...","tactic":"...","slot":"...","note":"...","check_required":false,"check_reason":"..."}]}
 
 또는
 
@@ -43,6 +43,7 @@
 - `quest_id`: 퀘스트 id
 - `topic`: 질문 주제
 - `manner`: 말투나 대화 의도
+- `tactic`: 전투 중 공격 또는 이탈 전술
 - `slot`: 장비 칸
 - `note`: 짧은 입력 요약
 - `check_required`: 판정이 필요하면 `true`, 아니면 생략하거나 `false`
@@ -137,7 +138,7 @@ context에 없는 id는 출력하지 마십시오.
 
 - `move`: 출구로 이동. 필요: `destination_id`
 - `talk`: NPC와 말하기. 필요: `target_id`. 선택: `manner`, `note`
-- `attack`: 대상 공격. 필요: `target_id`. 선택: `skill_id`
+- `attack`: 대상 공격. 필요: `target_id`. 선택: `skill_id`, `tactic`
 - `buy`: 상점 아이템 구매. 필요: `merchant_id`, `item_id`
 - `sell`: 소지품 판매. 필요: `merchant_id`, `item_id`
 - `pickup`: 장소 아이템 줍기. 필요: `item_id`
@@ -164,6 +165,14 @@ context에 없는 id는 출력하지 마십시오.
 - `part`
 - `accept`
 - `abandon`
+
+허용 `tactic`:
+
+- `precise`: 정확히 공격
+- `guarded`: 방어적으로 압박
+- `reckless`: 무모하게 밀어붙임
+- `create_distance`: 거리 벌리기
+- `talk`: 전투 중 대화로 압박
 
 허용 `topic`:
 
@@ -304,6 +313,9 @@ protected가 아니면 친근한 NPC라도 공격 의도는 `attack`입니다.
 - 이미 장비 중인 무기로 공격하면 `equip` 없이 `attack`.
 - 기술이 불명확한 공격은 `attack`.
 - 전투 중 도망 의도는 `flee`.
+- 전투 중 "신중하게", "방어하며", "거리를 재며" 공격하면 `attack` + `tactic:"guarded"`.
+- 전투 중 "무모하게", "전력으로", "위험을 감수하고" 공격하면 `attack` + `tactic:"reckless"`.
+- 전투 중 공격 전술이 뚜렷하지 않으면 `tactic`을 생략합니다.
 - active_quest 수락은 `accept_quest`.
 - active_quest 포기는 `abandon_quest`.
 - 퀘스트 상태 질문은 `query` + `topic:"quests"`.

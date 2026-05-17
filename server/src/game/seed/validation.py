@@ -124,7 +124,10 @@ def _check_trigger_target(
     pools = {
         "location_enter": locations,
         "item_use": items,
+        "item_obtained": items,
         "character_death": npcs,
+        "character_defeat": npcs,
+        "social_check": npcs,
     }
     pool = pools.get(target_type)
     if pool is None:

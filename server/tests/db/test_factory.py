@@ -1,8 +1,8 @@
 from src.db.factory import build_graph_repo, build_scenario_repo
-from src.db.graph_local_fs import LocalFsGraphRepo
-from src.db.graph_supabase import SupabaseGraphRepo
-from src.db.scenario_local_fs import LocalFsScenarioRepo
-from src.db.scenario_supabase import SupabaseStorageScenarioRepo
+from src.db.graph.local_fs import LocalFsGraphRepo
+from src.db.graph.supabase import SupabaseGraphRepo
+from src.db.scenario.local_fs import LocalFsScenarioRepo
+from src.db.scenario.supabase import SupabaseStorageScenarioRepo
 
 
 def test_build_scenario_repo_can_use_local_fs_for_dev(monkeypatch, tmp_path):

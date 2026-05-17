@@ -23,6 +23,7 @@ __all__ = [
     "plan_quest_complete",
     "plan_quest_fail",
     "plan_quest_progress_for_character_death",
+    "plan_quest_progress_for_trigger",
     "plan_quest_rewards",
 ]
 
@@ -75,13 +76,26 @@ class GraphQuestRewardResult(BaseModel):
 # Status transitions
 
 
-def plan_quest_accept(graph: Graph, quest_id: str) -> GraphQuestResult:
+def plan_quest_accept(
+    graph: Graph,
+    quest_id: str,
+    *,
+    active_quest_id: str | None = None,
+) -> GraphQuestResult:
     quest = require_quest(graph, quest_id)
     status = quest_status(quest)
     if _is_terminal_status(status):
         raise GraphQuestError(f"terminal quest cannot change state: {quest_id}")
     if status == "active":
         return _result(quest_id, "accept", status, "active", [])
+    if active_quest_id is not None and active_quest_id != quest_id:
+        active = graph.nodes.get(active_quest_id)
+        if (
+            active is not None
+            and active.type == "quest"
+            and quest_status(active) == "active"
+        ):
+            raise GraphQuestError("active quest already exists")
     if status not in {"locked", "pending"}:
         raise GraphQuestError(f"quest cannot be accepted from {status}: {quest_id}")
     return _status_result(quest_id, "accept", status, "active")
@@ -137,6 +151,14 @@ def plan_quest_progress_for_character_death(
     graph: Graph,
     character_id: str,
 ) -> GraphQuestProgressResult:
+    return plan_quest_progress_for_trigger(graph, "character_death", character_id)
+
+
+def plan_quest_progress_for_trigger(
+    graph: Graph,
+    trigger_type: str,
+    target_id: str,
+) -> GraphQuestProgressResult:
     changes: list[GraphChange] = []
     completed_quest_ids: list[str] = []
     for quest in graph.nodes.values():
@@ -149,8 +171,8 @@ def plan_quest_progress_for_character_death(
             if triggers_met[index]:
                 continue
             if (
-                trigger.get("type") == "character_death"
-                and trigger.get("target_id") == character_id
+                trigger.get("type") in _trigger_type_aliases(trigger_type)
+                and trigger.get("target_id") == target_id
             ):
                 triggers_met[index] = True
                 changed = True
@@ -317,6 +339,12 @@ def _quest_triggers_met(quest: GraphNode, total: int) -> list[bool]:
     values = raw if isinstance(raw, list) else []
     padded = [*values[:total], *([False] * max(0, total - len(values)))]
     return [item if isinstance(item, bool) else False for item in padded]
+
+
+def _trigger_type_aliases(trigger_type: str) -> set[str]:
+    if trigger_type in {"character_death", "character_defeat"}:
+        return {"character_death", "character_defeat"}
+    return {trigger_type}
 
 
 def _reward_item_ids(

@@ -6,6 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
 from src.game.domain.errors import LLMUnavailable
+from src.game.domain.content import node_label
 from src.game.domain.graph.query import edges_from
 from ..state import GameRuntimeState
 from src.locale.render import render
@@ -34,14 +35,22 @@ class LevelUpSkillCandidate(BaseModel):
     tags: list[str] = Field(default_factory=list, max_length=4)
 
 
+class LevelUpSkillFlavor(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=24)
+    description: str = Field(min_length=1, max_length=96)
+
+
 class _CandidateOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    skills: list[LevelUpSkillCandidate] = Field(min_length=1, max_length=2)
+    skills: list[LevelUpSkillFlavor] = Field(min_length=1, max_length=2)
 
 
 _CANDIDATE_ADAPTER = TypeAdapter(_CandidateOutput)
 _SLUG_RE = re.compile(r"[^a-z0-9_]+")
+_MAX_LEVEL_UP_CHOICES = 3
 
 
 async def build_level_up_choices(
@@ -72,6 +81,23 @@ async def build_level_up_choices(
                 "growth": {"kind": "max_mp"},
             }
         )
+    for stat in ("body", "agility", "mind", "presence"):
+        choices.append(
+            {
+                "id": f"stat:{stat}",
+                "label": render(
+                    "runtime.level_growth.stat",
+                    locale,
+                    stat=render(f"stat.{stat}", locale),
+                ),
+                "description": render(
+                    "runtime.level_choice.stat",
+                    locale,
+                    stat=render(f"stat.{stat}", locale),
+                ),
+                "growth": {"kind": "stat", "stat": stat},
+            }
+        )
 
     known_edges = list(
         edges_from(runtime.graph, runtime.progress.player_id, "knows_skill")
@@ -83,7 +109,7 @@ async def build_level_up_choices(
         skill = runtime.graph.nodes.get(edge.to_node_id)
         if skill is None:
             continue
-        label = _skill_name(skill.properties, edge.to_node_id)
+        label = _skill_name(runtime, skill)
         choices.append(
             {
                 "id": f"upgrade_skill:{edge.to_node_id}",
@@ -120,7 +146,7 @@ async def build_level_up_choices(
                 }
             )
 
-    return choices
+    return _limit_level_up_choices(choices)
 
 
 async def _skill_candidates(
@@ -128,11 +154,12 @@ async def _skill_candidates(
     *,
     llm: LLMClient | None,
 ) -> list[LevelUpSkillCandidate]:
+    templates = _candidate_templates(runtime)
     if llm is None:
-        return _fallback_candidates(runtime)
+        return templates
     try:
         prompt = get_prompt("recommend", runtime.progress.locale)
-        payload = _candidate_payload(runtime)
+        payload = _candidate_payload(runtime, templates)
         out = await run_with_retries(
             llm,
             system_prompt=prompt,
@@ -143,18 +170,21 @@ async def _skill_candidates(
             agent="recommend",
             temperature=0.8,
         )
-        return out.skills
+        return _apply_flavors(templates, out.skills)
     except (LLMUnavailable, ValidationError, json.JSONDecodeError, OSError):
-        return _fallback_candidates(runtime)
+        return templates
 
 
-def _candidate_payload(runtime: GameRuntimeState) -> dict[str, Any]:
+def _candidate_payload(
+    runtime: GameRuntimeState,
+    templates: list[LevelUpSkillCandidate],
+) -> dict[str, Any]:
     player = runtime.graph.nodes[runtime.progress.player_id]
     known = []
     for edge in edges_from(runtime.graph, runtime.progress.player_id, "knows_skill"):
         skill = runtime.graph.nodes.get(edge.to_node_id)
         if skill is not None:
-            known.append(_skill_name(skill.properties, edge.to_node_id))
+            known.append(_skill_name(runtime, skill))
     recent = [entry.text for entry in runtime.log_entries[-8:]]
     return {
         "player": {
@@ -164,17 +194,19 @@ def _candidate_payload(runtime: GameRuntimeState) -> dict[str, Any]:
             "known_skills": known,
         },
         "recent_log": recent,
-        "allowed_actions": ["attack", "defend", "flee", "social"],
-        "allowed_effects": [
-            "dc_down",
-            "extra_heart_damage",
-            "prevent_heart_loss",
-            "escape_boost",
+        "skills": [
+            {
+                "index": index,
+                "action": template.action,
+                "tags": template.tags,
+                "description_hint": template.description,
+            }
+            for index, template in enumerate(templates)
         ],
     }
 
 
-def _fallback_candidates(runtime: GameRuntimeState) -> list[LevelUpSkillCandidate]:
+def _candidate_templates(runtime: GameRuntimeState) -> list[LevelUpSkillCandidate]:
     player = runtime.graph.nodes[runtime.progress.player_id]
     locale = runtime.progress.locale
     stats = player.properties.get("stats", {})
@@ -235,6 +267,23 @@ def _fallback_candidates(runtime: GameRuntimeState) -> list[LevelUpSkillCandidat
     ]
 
 
+def _apply_flavors(
+    templates: list[LevelUpSkillCandidate],
+    flavors: list[LevelUpSkillFlavor],
+) -> list[LevelUpSkillCandidate]:
+    out: list[LevelUpSkillCandidate] = []
+    for template, flavor in zip(templates, flavors, strict=False):
+        out.append(
+            template.model_copy(
+                update={
+                    "name": flavor.name,
+                    "description": flavor.description,
+                }
+            )
+        )
+    return out or templates
+
+
 def _skill_spec(
     runtime: GameRuntimeState,
     candidate: LevelUpSkillCandidate,
@@ -267,9 +316,35 @@ def _skill_spec(
     }
 
 
-def _skill_name(properties: dict[str, Any], fallback: str) -> str:
-    name = properties.get("name")
-    return name if isinstance(name, str) and name else fallback
+def _skill_name(runtime: GameRuntimeState, skill) -> str:
+    return node_label(runtime.content, skill)
+
+
+def _limit_level_up_choices(choices: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if len(choices) <= _MAX_LEVEL_UP_CHOICES:
+        return choices
+
+    picked: list[dict[str, Any]] = []
+
+    def add_first(match) -> None:
+        for choice in choices:
+            if match(choice) and choice not in picked:
+                picked.append(choice)
+                return
+
+    add_first(lambda choice: str(choice.get("id", "")).startswith("stat:"))
+    add_first(lambda choice: choice.get("id") in {"max_hp", "max_mp"})
+    add_first(
+        lambda choice: str(choice.get("id", "")).startswith(
+            ("upgrade_skill:", "learn_skill:")
+        )
+    )
+    for choice in choices:
+        if len(picked) >= _MAX_LEVEL_UP_CHOICES:
+            break
+        if choice not in picked:
+            picked.append(choice)
+    return picked[:_MAX_LEVEL_UP_CHOICES]
 
 
 def _int_prop(properties: dict[str, Any], key: str) -> int:

@@ -19,8 +19,8 @@ ko = "새 의뢰가 도착합니다: {quest}."
 en = "A new request arrives: {quest}."
 
 [runtime."card.level_up"]
-ko = "{actor}의 레벨이 올랐습니다 (레벨 {level}, {growth}, HP {max_hp} / MP {max_mp})."
-en = "{actor} leveled up (level {level}, {growth}, HP {max_hp} / MP {max_mp})."
+ko = "당신의 레벨이 올랐습니다 (레벨 {level}, {growth}, HP {max_hp} / MP {max_mp})."
+en = "You leveled up (level {level}, {growth}, HP {max_hp} / MP {max_mp})."
 
 [runtime."level_growth.max_hp"]
 ko = "최대 HP +1"
@@ -29,6 +29,10 @@ en = "Max HP +1"
 [runtime."level_growth.max_mp"]
 ko = "최대 MP +1"
 en = "Max MP +1"
+
+[runtime."level_growth.stat"]
+ko = "{stat} +1"
+en = "{stat} +1"
 
 [runtime."level_growth.learn_skill"]
 ko = "{skill} 습득"
@@ -43,8 +47,12 @@ ko = "실제 HP와 최대 HP가 함께 1 오릅니다."
 en = "Current and maximum HP both increase by 1."
 
 [runtime."level_choice.max_mp"]
-ko = "스킬 사용 여유가 1 오릅니다."
+ko = "기술 사용 여유가 1 오릅니다."
 en = "Maximum MP increases by 1."
+
+[runtime."level_choice.stat"]
+ko = "{stat} 능력치가 1 오릅니다."
+en = "{stat} increases by 1."
 
 [runtime."level_choice.upgrade_skill"]
 ko = "tier {tier}에서 tier {next_tier}로 올립니다."
@@ -135,35 +143,47 @@ ko = "당신의 행동이 처리됩니다."
 en = "Your action is handled."
 
 [runtime."combat.start"]
-ko = "당신은 {target}{과/와} 대치합니다."
+ko = "{target}{이/가} 정면을 막아서고, 당신은 발을 낮게 깔아 싸움의 중심을 잡습니다."
 en = "You face off against {target}."
 
 [runtime."combat.skill_start"]
-ko = "당신은 {skill}{을/를} 준비하며 {target}{과/와} 대치합니다 (MP {mp_cost})."
+ko = "{skill}{을/를} 끌어올리며 {target}의 거리 안으로 파고듭니다 (MP {mp_cost})."
 en = "You ready {skill} and face off against {target} (MP {mp_cost})."
 
 [runtime."combat.skill_continue"]
-ko = "당신은 {skill}{을/를} 사용해 {target}{을/를} 압박합니다 (MP {mp_cost})."
+ko = "{skill}{으로/로} 흐름을 당겨 {target}의 빈틈을 겨냥합니다 (MP {mp_cost})."
 en = "You use {skill} against {target} (MP {mp_cost})."
 
 [runtime."combat.skill_victory"]
-ko = "당신은 {skill}{을/를} 사용해 {target}{을/를} 쓰러뜨립니다 (MP {mp_cost})."
+ko = "{skill}{이/가} 끝까지 밀고 들어가 {target}{을/를} 무너뜨립니다 (MP {mp_cost})."
 en = "You use {skill} and drop {target} (MP {mp_cost})."
 
 [runtime."combat.fled"]
-ko = "당신은 전투에서 물러납니다."
+ko = "당신은 압박이 비는 순간을 잡아 교전권 밖으로 물러납니다."
 en = "You pull back from combat."
 
+[runtime."combat.escaped"]
+ko = "벌어진 찰나를 놓치지 않고, 당신은 전투선 밖으로 빠져나옵니다."
+en = "You create enough distance to escape combat."
+
+[runtime."combat.surrendered"]
+ko = "상대가 자세를 풀고 싸움을 멈춥니다."
+en = "The opponent stops fighting and backs down."
+
+[runtime."combat.stopped"]
+ko = "팽팽하던 대치가 끊기고 전투가 끝납니다."
+en = "The standoff breaks, and combat ends."
+
 [runtime."combat.defeat"]
-ko = "당신은 전투에서 패배합니다."
+ko = "버티던 자세가 무너지고, 당신은 전투에서 패배합니다."
 en = "You lose the battle."
 
 [runtime."combat.victory"]
-ko = "당신은 전투에서 승리합니다."
+ko = "마지막 틈을 놓치지 않고, 당신은 전투를 끝냅니다."
 en = "You win the battle."
 
 [runtime."combat.continue"]
-ko = "당신은 전투를 이어갑니다."
+ko = "발끝을 다시 고정하고, 다음 틈을 향해 호흡을 맞춥니다."
 en = "You continue the battle."
 
 [runtime."combat.condition.healthy"]
@@ -198,6 +218,46 @@ en = "defended"
 ko = "거리를 벌림"
 en = "pulled away"
 
+[runtime."combat.motion.player_precise_success"]
+ko = "정확히 압박함"
+en = "pressed with precision"
+
+[runtime."combat.motion.player_precise_failure"]
+ko = "공격 흐름을 놓침"
+en = "lost the attack line"
+
+[runtime."combat.motion.player_guarded_success"]
+ko = "조심스럽게 압박함"
+en = "pressed carefully"
+
+[runtime."combat.motion.player_guarded_failure"]
+ko = "방어하며 버팀"
+en = "held guard"
+
+[runtime."combat.motion.player_reckless_success"]
+ko = "거칠게 밀어붙임"
+en = "pressed recklessly"
+
+[runtime."combat.motion.player_reckless_failure"]
+ko = "무리하다가 빈틈이 생김"
+en = "overextended"
+
+[runtime."combat.motion.player_create_distance_success"]
+ko = "거리를 벌림"
+en = "created distance"
+
+[runtime."combat.motion.player_create_distance_failure"]
+ko = "빠져나갈 틈을 놓침"
+en = "missed the opening"
+
+[runtime."combat.motion.player_talk_success"]
+ko = "말로 흔듦"
+en = "pressed with words"
+
+[runtime."combat.motion.player_talk_failure"]
+ko = "말이 닿지 않음"
+en = "words failed to land"
+
 [runtime."combat.motion.enemy_pressed"]
 ko = "압박함"
 en = "pressed forward"
@@ -214,9 +274,25 @@ en = "defeated"
 ko = "교전이 멈춤"
 en = "combat stopped"
 
+[runtime."combat.motion.combat_stopped"]
+ko = "교전이 멈춤"
+en = "combat stopped"
+
 [runtime."combat.motion.changed"]
 ko = "상황이 바뀜"
 en = "situation changed"
+
+[runtime."combat.exchange_result.success"]
+ko = "이번 교환은 성공입니다"
+en = "this exchange succeeded"
+
+[runtime."combat.exchange_result.failure"]
+ko = "이번 교환은 실패입니다"
+en = "this exchange failed"
+
+[runtime."combat.exchange_result.neutral"]
+ko = "이번 교환은 아직 결과가 없습니다"
+en = "this exchange has no result yet"
 
 [runtime."combat.action.attack"]
 ko = "공격"
@@ -229,6 +305,26 @@ en = "defend"
 [runtime."combat.action.flee"]
 ko = "이탈"
 en = "leave"
+
+[runtime."combat.action.precise"]
+ko = "정확한 공격"
+en = "precise"
+
+[runtime."combat.action.guarded"]
+ko = "신중한 압박"
+en = "guarded"
+
+[runtime."combat.action.reckless"]
+ko = "무모한 공격"
+en = "reckless"
+
+[runtime."combat.action.create_distance"]
+ko = "거리 벌리기"
+en = "create distance"
+
+[runtime."combat.action.talk"]
+ko = "대화"
+en = "talk"
 
 [runtime."combat.action.generic"]
 ko = "행동"
@@ -311,12 +407,28 @@ ko = "대치가 이어지고, 서로의 다음 움직임이 아직 정해지지 
 en = "The standoff continues, and neither next move is settled yet."
 
 [runtime."narration.repeat.combat_success"]
-ko = "공격의 여파가 남고, 상대는 흐트러진 자세를 다시 붙잡으려 합니다."
+ko = "충돌의 맛이 남고, 상대는 무너진 균형을 가까스로 붙잡습니다."
 en = "The impact lingers, and the opponent tries to recover their stance."
 
 [runtime."narration.repeat.combat_failure"]
-ko = "공격의 흐름이 끊기고, 상대가 그 빈틈을 놓치지 않습니다."
+ko = "기세가 맞물리기 직전, 상대의 움직임이 한 박자 먼저 틈을 꿰찹니다."
 en = "The attack loses its line, and the opponent catches the opening."
+
+[runtime."narration.combat_failure.attack"]
+ko = "일격이 닿기 직전, 상대가 몸을 틀어 흐름을 끊습니다."
+en = "The attack loses its line, and the opponent catches the opening."
+
+[runtime."narration.combat_failure.guarded"]
+ko = "단단히 버티며 충격을 흘리지만, 반격으로 잇기에는 한 박자 모자랍니다."
+en = "The guard holds, but this move does not become pressure."
+
+[runtime."narration.combat_failure.create_distance"]
+ko = "발끝이 길을 찾는 순간, 상대가 먼저 붙어 거리를 지워 버립니다."
+en = "No opening appears, and the distance stays tight."
+
+[runtime."narration.combat_failure.talk"]
+ko = "말끝은 날카롭게 들어가지만, 상대는 아직 싸움의 기세를 내려놓지 않습니다."
+en = "The words do not change the flow, and the clash continues."
 
 [runtime."classify.refuse_meta_breaking"]
 ko = "게임 밖 지시에는 응답할 수 없습니다."

@@ -3,9 +3,27 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
-CombatActionKind = Literal["attack", "defend", "flee", "social"]
+CombatActionKind = Literal[
+    "attack",
+    "defend",
+    "flee",
+    "social",
+    "precise",
+    "guarded",
+    "reckless",
+    "create_distance",
+    "talk",
+]
 CombatSupportKind = Literal["skill", "item"]
-CombatOutcome = Literal["ongoing", "victory", "defeat", "fled"]
+CombatOutcome = Literal[
+    "ongoing",
+    "victory",
+    "defeat",
+    "fled",
+    "escaped",
+    "surrendered",
+    "combat_stopped",
+]
 CombatSide = Literal["player", "enemy"]
 
 

@@ -1,6 +1,6 @@
 import pytest
 
-from src.db.graph_local_fs import LocalFsGraphRepo
+from src.db.graph.local_fs import LocalFsGraphRepo
 from src.game.domain.action import Action
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
@@ -39,8 +39,7 @@ class _RollStreamLLM:
         yield {"answer": self.narration}
         yield {
             "answer": (
-                '\n---TRPG_META---\n'
-                '{"turn_summary":"","importance":1,"suggestions":[]}'
+                '\n---TRPG_META---\n{"turn_summary":"","importance":1,"suggestions":[]}'
             )
         }
 
@@ -179,6 +178,40 @@ async def test_start_graph_roll_stores_pending_roll_with_gm_narration(tmp_path):
     assert progress.pending_roll["required_roll"] == 13
     assert [entry.kind for entry in logs] == ["gm"]
     assert logs[0].text == progress.pending_roll["body"]
+
+
+async def test_graph_action_request_hasty_move_creates_pending_roll(tmp_path):
+    repo = await _repo(tmp_path)
+
+    result = await run_graph_action_request(
+        repo,
+        "game-1",
+        Action(verb="move", to="forest", how="hasty"),
+    )
+    progress = await repo.load_progress("game-1")
+    graph = await repo.load_graph("game-1")
+
+    assert result.status == "roll_required"
+    assert progress.pending_roll["kind"] == "move"
+    assert progress.pending_roll["stat"] == "agility"
+    assert graph.edges["located_at:player_01:town"].to_node_id == "town"
+
+
+async def test_graph_action_request_difficult_move_creates_pending_roll(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.edges["connects_to:town:forest"].properties["difficulty"] = "easy"
+    await repo.save_graph("game-1", graph)
+
+    result = await run_graph_action_request(
+        repo,
+        "game-1",
+        Action(verb="move", to="forest"),
+    )
+    progress = await repo.load_progress("game-1")
+
+    assert result.status == "roll_required"
+    assert progress.pending_roll["kind"] == "move"
 
 
 def test_build_pending_roll_stores_original_action_payload():
@@ -323,6 +356,53 @@ async def test_run_graph_roll_friendly_success_raises_npc_affinity(tmp_path):
     assert graph.edges["relation:guard_01:player_01"].properties["affinity"] == (
         RULES.social.affinity_success
     )
+
+
+async def test_run_graph_roll_success_completes_social_check_quest(tmp_path):
+    repo = await _repo(tmp_path)
+    await _add_guard_with_affinity(repo, 0)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["quest_social"] = GraphNode(
+        id="quest_social",
+        type="quest",
+        properties={
+            "status": "active",
+            "triggers": [
+                {
+                    "id": "talk_guard",
+                    "type": "social_check",
+                    "target_id": "guard_01",
+                }
+            ],
+            "triggers_met": [False],
+            "rewards": {"gold": 2, "exp": 4},
+        },
+    )
+    await repo.save_graph("game-1", graph)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(update={"active_quest_id": "quest_social"})
+    )
+    pending = (
+        await start_graph_roll(
+            repo,
+            "game-1",
+            Action(verb="speak", to="guard_01", how="friendly"),
+        )
+    ).pending_roll
+
+    result = await run_graph_roll(repo, "game-1", pending["id"], dice=13)
+    saved_graph = await repo.load_graph("game-1")
+    saved_progress = await repo.load_progress("game-1")
+    player = saved_graph.nodes["player_01"].properties
+
+    assert result.outcome == "success"
+    assert saved_graph.nodes["quest_social"].properties["status"] == "completed"
+    assert saved_graph.nodes["quest_social"].properties["triggers_met"] == [True]
+    assert player["gold"] == 2
+    assert player["xp_pool"] == 5
+    assert saved_progress.active_quest_id is None
+    assert result.front_state.quest is None
 
 
 async def test_run_graph_roll_success_grants_roll_xp_once_per_award_key(tmp_path):

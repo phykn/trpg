@@ -159,7 +159,7 @@ def _resolve_skill_support(
         "action",
         fallback=_string_prop(skill, "kind", fallback=_string_prop(skill, "type")),
     )
-    if supported_action != action.kind:
+    if not _supports_action(supported_action, action.kind):
         raise GraphCombatError(f"skill does not support action: {action.support_id}")
 
     mp_cost = _int_value(skill.properties.get("mp_cost"), default=0)
@@ -205,7 +205,7 @@ def _resolve_item_support(
         "support_action",
         fallback=_string_prop(item, "action"),
     )
-    if supported_action != action.kind:
+    if not _supports_action(supported_action, action.kind):
         raise GraphCombatError(f"item does not support action: {action.support_id}")
 
     return _SupportPlan(
@@ -245,8 +245,11 @@ def _combat_dc(
     action: CombatActionKind,
     support: _SupportPlan | None,
 ) -> int:
-    del action
     raw_dc = RULES.combat.base_dc + _level(enemy) - _level(player)
+    if action == "guarded":
+        raw_dc -= 2
+    elif action == "reckless":
+        raw_dc += 2
     if support is not None and support.effect_template in {"dc_down", "escape_boost"}:
         raw_dc -= support.support_bonus
     return min(RULES.combat.max_dc, max(RULES.combat.min_dc, raw_dc))
@@ -261,8 +264,8 @@ def _apply_heart_result(
     support: _SupportPlan | None,
 ) -> None:
     if success:
-        if kind in {"attack", "social"}:
-            damage = 1
+        if kind in {"attack", "social", "precise", "guarded", "reckless"}:
+            damage = 2 if kind == "reckless" else 1
             if support is not None and support.effect_template == "extra_heart_damage":
                 damage += 1
             state.enemy_hearts = max(0, state.enemy_hearts - damage)
@@ -275,6 +278,26 @@ def _apply_heart_result(
                 state.player_hearts + 1,
             )
             target_id = actor_id
+        elif kind == "talk":
+            state.enemy_pressure += 1
+            target_id = enemy_id
+            if state.enemy_pressure >= 2 or state.enemy_hearts <= 1:
+                state.outcome = "combat_stopped"
+                state.trace.append(
+                    GraphCombatTraceEvent(
+                        kind="combat_stopped",
+                        actor_id=actor_id,
+                        target_id=enemy_id,
+                        state=_heart_state(state),
+                    )
+                )
+                return
+        elif kind == "create_distance":
+            target_id = actor_id
+            if state.escape_ready:
+                state.outcome = "escaped"
+            else:
+                state.escape_ready = True
         else:
             state.escape_ready = True
             state.outcome = "fled"
@@ -289,7 +312,9 @@ def _apply_heart_result(
         )
         return
 
-    if support is None or support.effect_template != "prevent_heart_loss":
+    if kind != "guarded" and (
+        support is None or support.effect_template != "prevent_heart_loss"
+    ):
         state.player_hearts = max(0, state.player_hearts - 1)
     state.trace.append(
         GraphCombatTraceEvent(
@@ -308,7 +333,7 @@ def _apply_terminal_result(
     player: GraphNode,
     enemy: GraphNode,
 ) -> None:
-    if state.outcome == "fled":
+    if state.outcome in {"fled", "escaped", "surrendered", "combat_stopped"}:
         return
     if state.enemy_hearts <= 0:
         _plan_defeat(
@@ -414,6 +439,20 @@ def _level(node: GraphNode) -> int:
 def _bounded_bonus(value: object) -> int:
     bonus = _int_value(value, default=0)
     return min(4, max(0, bonus))
+
+
+def _supports_action(
+    supported_action: str | None, action_kind: CombatActionKind
+) -> bool:
+    if supported_action == action_kind:
+        return True
+    legacy = {
+        "attack": {"precise", "reckless"},
+        "defend": {"guarded"},
+        "flee": {"create_distance"},
+        "social": {"talk"},
+    }
+    return action_kind in legacy.get(supported_action or "", set())
 
 
 def _string_prop(

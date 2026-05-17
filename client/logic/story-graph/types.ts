@@ -35,13 +35,15 @@ export type StoryGraphNodeKind =
   | 'subject'
   | 'quest'
   | 'location'
-  | 'target';
+  | 'target'
+  | 'item';
 
 export type NodeStatus =
   | 'current'
   | 'engaged'
   | 'reachable_move'
   | 'reachable_meet'
+  | 'reachable_item'
   | 'unreachable_move'
   | 'unreachable_meet';
 
@@ -51,6 +53,7 @@ export type EdgeKind =
   | 'progress'
   | 'move'
   | 'meet'
+  | 'item'
   | 'quest_giver'
   | 'quest_target';
 
@@ -106,6 +109,13 @@ export type LocationNode = BaseNode & {
   moveDifficulty: string | null;
 };
 
+export type ItemNode = BaseNode & {
+  kind: 'item';
+  status: 'reachable_item';
+  reachable: true;
+  description: string;
+};
+
 export type QuestNode = BaseNode & {
   kind: 'quest';
   status: null;
@@ -121,6 +131,7 @@ export type StoryGraphNode =
   | HeroNode
   | PlaceNode
   | LocationNode
+  | ItemNode
   | SubjectNode
   | TargetNode
   | QuestNode;

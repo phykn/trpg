@@ -15,6 +15,7 @@ from .ko.particles import eu_ro, eul_reul, eun_neun, gwa_wa, i_ga
 
 _CATALOG_DIR = Path(__file__).parent / "catalog"
 _CACHE: dict[str, dict] = {}
+_CACHE_MTIME: dict[str, int] = {}
 
 _PARTICLES = {
     "이/가": i_ga,
@@ -28,9 +29,12 @@ _TOKEN = re.compile(r"\{([^}]+)\}")
 
 
 def _load(name: str) -> dict:
-    if name not in _CACHE:
-        with (_CATALOG_DIR / f"{name}.toml").open("rb") as f:
+    path = _CATALOG_DIR / f"{name}.toml"
+    mtime = path.stat().st_mtime_ns
+    if name not in _CACHE or _CACHE_MTIME.get(name) != mtime:
+        with path.open("rb") as f:
             _CACHE[name] = tomllib.load(f)
+        _CACHE_MTIME[name] = mtime
     return _CACHE[name]
 
 

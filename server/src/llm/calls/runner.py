@@ -27,8 +27,19 @@ T = TypeVar("T")
 _PROMPTS_ROOT = Path(__file__).resolve().parents[2] / "locale" / "prompts"
 
 
+def _prompt_mtime(path: Path) -> int | None:
+    if not path.exists():
+        return None
+    return path.stat().st_mtime_ns
+
+
 @lru_cache(maxsize=None)
-def get_prompt(agent: str, locale: str) -> str:
+def _get_prompt_cached(
+    agent: str,
+    locale: str,
+    own_mtime: int,
+    kernel_mtime: int | None,
+) -> str:
     """Load `_kernel.<locale>.md` + `<agent>/prompt.<locale>.md` joined by `---`.
 
     `agent` is a path under `src/locale/prompts/`. Cached per (agent, locale) so the
@@ -36,9 +47,19 @@ def get_prompt(agent: str, locale: str) -> str:
     """
     own = (_PROMPTS_ROOT / agent / f"prompt.{locale}.md").read_text(encoding="utf-8")
     kernel_path = _PROMPTS_ROOT / f"_kernel.{locale}.md"
-    if kernel_path.exists():
+    if kernel_mtime is not None:
         return f"{kernel_path.read_text(encoding='utf-8')}\n\n---\n\n{own}"
     return own
+
+
+def get_prompt(agent: str, locale: str) -> str:
+    own_path = _PROMPTS_ROOT / agent / f"prompt.{locale}.md"
+    own_mtime = own_path.stat().st_mtime_ns
+    kernel_mtime = _prompt_mtime(_PROMPTS_ROOT / f"_kernel.{locale}.md")
+    return _get_prompt_cached(agent, locale, own_mtime, kernel_mtime)
+
+
+get_prompt.cache_clear = _get_prompt_cached.cache_clear  # type: ignore[attr-defined]
 
 
 def _retry_answer_chars(default: int = 1500) -> int:

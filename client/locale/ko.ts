@@ -45,6 +45,7 @@ export const ko = {
     approach: '접근',
     talk: '대화',
     inspect: '살펴보기',
+    pickup: '줍기',
   },
   table: {
     map: '지도',
@@ -55,6 +56,7 @@ export const ko = {
   legend: {
     place: '장소',
     character: '캐릭터',
+    item: '물품',
     quest: '퀘스트',
     currentLocation: '현재 위치',
     reachable: '갈 수 있는 곳',
@@ -79,7 +81,6 @@ export const ko = {
     rolling: '굴리는 중…',
     rollingLog: '주사위를 굴리는 중…',
     rollingLabel: '주사위 굴리는 중',
-    rollingDetail: '결과는 다음 GM 묘사로 이어집니다.',
     rollLabel: '주사위 굴리기',
     halt: '정지',
     success: '성공',
@@ -140,11 +141,16 @@ export const ko = {
   combat: {
     label: '전투',
     attack: '공격',
+    precise: '정밀',
+    guarded: '방어',
+    reckless: '무모',
+    createDistance: '거리',
+    escape: '이탈',
+    talk: '대화',
+    pressure: '압박',
     defend: '방어',
     skill: '기술',
     skillFallback: '기술을 사용합니다',
-    attackRoll: '공격 판정',
-    actionRollDetail: '같은 d20 연출을 전투 카드 안에서 사용합니다.',
     flee: '도주',
     persuade: '설득',
     playerHearts: '내 하트',
@@ -203,12 +209,19 @@ export const compose = {
   },
   approachTo: (name: string) => `${name}에게 접근합니다`,
   talkTo: (name: string) => `${name}에게 말을 겁니다`,
+  pickUp: (name: string) => `${name}${josaObject(name)} 줍습니다`,
   inspect: (name: string) => `${name}${josaObject(name)} 살펴봅니다`,
   attack: (name: string) => `${name}${josaObject(name)} 공격합니다`,
   persuade: (name: string) => `${name}${josaObject(name)} 설득합니다`,
   inspectSurroundings: () => '주변을 살펴봅니다',
   defend: () => '방어합니다',
   flee: () => '도망칩니다',
+  createDistance: () => '거리를 벌립니다',
+  escape: () => '빠져나갑니다',
+  guarded: () => '방어적으로 움직입니다',
+  preciseAttack: (name: string) => `${name}${josaObject(name)} 정밀하게 공격합니다`,
+  recklessAttack: (name: string) => `${name}${josaObject(name)} 거세게 몰아붙입니다`,
+  useSkill: (name: string) => `${name}${josaObject(name)} 사용합니다`,
   useItem: (name: string) => `${name} 사용`,
   equipItem: (name: string) => `${name} 장비`,
   unequipItem: (name: string) => `${name} 해제`,
@@ -219,7 +232,12 @@ export const compose = {
   placeCount: (n: number) => `장소 ${n}곳`,
   reachableCount: (n: number) => `이동 가능 ${n}`,
   affinity: (delta: number) => `호감도 ${delta > 0 ? '+' : ''}${delta}`,
-  nearbySummary: (people: number, places: number, tasks: number) => `인물 ${people} · 장소 ${places} · 할 일 ${tasks}`,
+  nearbySummary: (people: number, places: number, tasks: number, items = 0) => {
+    const parts = [`인물 ${people}`, `장소 ${places}`];
+    if (items > 0) parts.push(`물품 ${items}`);
+    parts.push(`할 일 ${tasks}`);
+    return parts.join(' · ');
+  },
   combatWith: (name: string) => `${name}${josaWith(name)} 전투 중`,
   combatExchange: (round: number) => `${round}번째 교환`,
 };

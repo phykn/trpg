@@ -41,7 +41,15 @@ class GraphCombatContext(BaseModel):
     enemy_hearts: int = Field(ge=0, le=3)
     escape_ready: bool = False
     enemy_pressure: int = Field(default=0, ge=0)
-    outcome: Literal["ongoing", "victory", "defeat", "fled"]
+    outcome: Literal[
+        "ongoing",
+        "victory",
+        "defeat",
+        "fled",
+        "escaped",
+        "surrendered",
+        "combat_stopped",
+    ]
     participants: list[GraphCombatParticipantView]
     trace: list[GraphCombatTraceView]
 

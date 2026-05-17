@@ -139,6 +139,25 @@ def test_validate_action_output_json_accepts_intent_json():
     assert out.actions[0].with_ == "slash_01"
 
 
+def test_build_action_output_keeps_combat_tactic_separate_from_intent():
+    output = build_action_output(
+        {
+            "intents": [
+                {
+                    "intent": "attack",
+                    "target_id": "goblin_01",
+                    "tactic": "reckless",
+                }
+            ]
+        },
+        {**_surroundings(), "in_combat": True},
+    )
+
+    assert output.actions is not None
+    assert output.actions[0].verb == "attack"
+    assert output.actions[0].how == "reckless"
+
+
 def test_build_action_output_supports_existing_intent_catalog():
     cases = [
         (
@@ -235,7 +254,11 @@ def test_build_action_output_supports_existing_intent_catalog():
                 "how": "free",
             },
         ),
-        ({"intent": "flee"}, {"verb": "move", "how": "hasty"}, {"in_combat": True}),
+        (
+            {"intent": "flee"},
+            {"verb": "move", "how": "create_distance"},
+            {"in_combat": True},
+        ),
         ({"intent": "rest"}, {"verb": "rest"}),
     ]
 

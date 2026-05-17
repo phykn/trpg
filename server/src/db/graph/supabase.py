@@ -3,12 +3,12 @@ import json
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from src.db._supabase_http import _PostgREST
-from src.db.graph_progress_rows import (
+from src.db.graph.progress_rows import (
     GameProgressRow,
     progress_from_row,
     progress_to_row,
 )
-from src.db.graph_rows import (
+from src.db.graph.rows import (
     GraphEdgeRow,
     GraphNodeRow,
     graph_edge_rows,

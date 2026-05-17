@@ -14,12 +14,32 @@ COMBAT_MOTION_KEYS = {
     "player_attacked",
     "player_defended",
     "player_fled",
+    "player_precise_success",
+    "player_precise_failure",
+    "player_guarded_success",
+    "player_guarded_failure",
+    "player_reckless_success",
+    "player_reckless_failure",
+    "player_create_distance_success",
+    "player_create_distance_failure",
+    "player_talk_success",
+    "player_talk_failure",
     "enemy_pressed",
     "enemy_defeated",
     "player_defeated",
     "forced_end",
+    "combat_stopped",
 }
-COMBAT_ACTION_KEYS = {"attack", "defend", "flee"}
+COMBAT_ACTION_KEYS = {
+    "attack",
+    "defend",
+    "flee",
+    "precise",
+    "guarded",
+    "reckless",
+    "create_distance",
+    "talk",
+}
 
 
 def combat_narration_view(
@@ -40,6 +60,11 @@ def combat_narration_view(
             runtime.progress.locale,
             state.last_action if state is not None else None,
         ),
+        "exchange_result": _exchange_result(events),
+        "exchange_result_label": _exchange_result_label(
+            runtime.progress.locale,
+            _exchange_result(events),
+        ),
         "escape_ready": state.escape_ready if state is not None else False,
         "enemy_pressure": state.enemy_pressure if state is not None else 0,
         "outcome": outcome or (state.outcome if state is not None else None),
@@ -56,8 +81,34 @@ def _event_view(
         "actor": _node_ref(runtime, event.actor_id),
         "target": _node_ref(runtime, event.target_id),
         "motion": _motion_label(runtime.progress.locale, event.kind),
+        "result": _event_result(event.kind),
+        "result_label": _exchange_result_label(
+            runtime.progress.locale,
+            _event_result(event.kind),
+        ),
         "target_condition": _condition_label(runtime.progress.locale, event.state),
     }
+
+
+def _exchange_result(events: list[GraphCombatTraceEvent]) -> str:
+    for event in reversed(events):
+        result = _event_result(event.kind)
+        if result != "neutral":
+            return result
+    return "neutral"
+
+
+def _event_result(kind: str) -> str:
+    if kind.endswith("_success") or kind in {"enemy_defeated", "combat_stopped"}:
+        return "success"
+    if kind.endswith("_failure") or kind == "player_defeated":
+        return "failure"
+    return "neutral"
+
+
+def _exchange_result_label(locale: str, result: str) -> str:
+    key = result if result in {"success", "failure"} else "neutral"
+    return render(f"runtime.combat.exchange_result.{key}", locale)
 
 
 def _node_ref(runtime: GameRuntimeState, node_id: str | None) -> dict[str, str] | None:

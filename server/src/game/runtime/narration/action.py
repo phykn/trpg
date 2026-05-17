@@ -32,6 +32,9 @@ async def build_graph_action_narration(
     card_texts: list[str],
     timeout_s: float,
 ) -> GraphNarrationResult:
+    deterministic = _deterministic_graph_action_narration(before, dispatch)
+    if deterministic is not None:
+        return deterministic
     messages = _graph_action_narration_messages(
         llm,
         before=before,
@@ -90,6 +93,10 @@ async def stream_graph_action_narration(
     card_texts: list[str],
     timeout_s: float,
 ) -> AsyncIterator[str]:
+    deterministic = _deterministic_graph_action_narration(before, dispatch)
+    if deterministic is not None:
+        yield deterministic.narration
+        return
     messages = _graph_action_narration_messages(
         llm,
         before=before,
@@ -196,6 +203,9 @@ def ensure_graph_action_narration(
     result: GraphNarrationResult,
     llm_available: bool,
 ) -> GraphNarrationResult:
+    deterministic = _deterministic_graph_action_narration(before, dispatch)
+    if deterministic is not None:
+        return deterministic
     if result.narration:
         return _replace_repeated_graph_action_narration(before, dispatch, result)
     if not llm_available:
@@ -209,6 +219,71 @@ def _fallback_graph_action_narration(runtime: GameRuntimeState) -> GraphNarratio
     return GraphNarrationResult(
         narration=render("runtime.input.quiet", runtime.progress.locale)
     )
+
+
+def _deterministic_graph_action_narration(
+    runtime: GameRuntimeState,
+    dispatch: GraphActionDispatchResult,
+) -> GraphNarrationResult | None:
+    if dispatch.kind != "combat":
+        return None
+    if _combat_exchange_result(dispatch) != "failure":
+        return None
+    return GraphNarrationResult(
+        narration=render(_combat_failure_fallback_key(dispatch), runtime.progress.locale)
+    )
+
+
+def _combat_exchange_result(dispatch: GraphActionDispatchResult) -> str:
+    state = dispatch.runtime.progress.graph_combat_state
+    if state is not None and state.last_roll is not None and state.last_dc is not None:
+        return "success" if state.last_roll >= state.last_dc else "failure"
+    if dispatch.outcome in {"victory", "escaped", "surrendered", "combat_stopped"}:
+        return "success"
+    if dispatch.outcome == "defeat":
+        return "failure"
+    for event in reversed(dispatch.combat_trace):
+        if event.kind.endswith("_success") or event.kind in {
+            "enemy_defeated",
+            "combat_stopped",
+        }:
+            return "success"
+        if event.kind.endswith("_failure") or event.kind == "player_defeated":
+            return "failure"
+    return "neutral"
+
+
+def _combat_failure_fallback_key(dispatch: GraphActionDispatchResult) -> str:
+    action = _latest_combat_action(dispatch)
+    if action in {"create_distance", "flee"}:
+        return "runtime.narration.combat_failure.create_distance"
+    if action in {"talk", "social"}:
+        return "runtime.narration.combat_failure.talk"
+    if action in {"guarded", "defend"}:
+        return "runtime.narration.combat_failure.guarded"
+    return "runtime.narration.combat_failure.attack"
+
+
+def _latest_combat_action(dispatch: GraphActionDispatchResult) -> str | None:
+    state = dispatch.runtime.progress.graph_combat_state
+    if state is not None and state.last_action:
+        return state.last_action
+    for event in reversed(dispatch.combat_trace):
+        kind = event.kind
+        for action in (
+            "create_distance",
+            "reckless",
+            "guarded",
+            "precise",
+            "talk",
+            "social",
+            "flee",
+            "defend",
+            "attack",
+        ):
+            if action in kind:
+                return action
+    return None
 
 
 def _replace_repeated_graph_action_narration(

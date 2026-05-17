@@ -50,14 +50,24 @@ async def classify(
             system_prompt=get_prompt("classify", locale),
             user_payload=input_.model_dump_json(),
             parse=parse,
-            retry_on=(ValidationError, json.JSONDecodeError, ActionGroundingError),
+            retry_on=(
+                ValidationError,
+                json.JSONDecodeError,
+                ActionGroundingError,
+                ValueError,
+            ),
             retries=retries,
             agent="classify",
             temperature=temperature,
             correction_hint="re-check the action catalog (required ids, enum fields) and that every id exists in context",
             include_failed_answer=False,
         )
-    except (ValidationError, json.JSONDecodeError, ActionGroundingError) as e:
+    except (
+        ValidationError,
+        json.JSONDecodeError,
+        ActionGroundingError,
+        ValueError,
+    ) as e:
         if strict:
             raise
         llm_diag("llm:classify_fallback", err=type(e).__name__, msg=str(e)[:120])

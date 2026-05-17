@@ -13,6 +13,7 @@ const NODE_KIND = new Set<StoryGraphNodeKind>([
   'quest',
   'location',
   'target',
+  'item',
 ]);
 
 export const EMPTY_STORY_GRAPH: StoryGraphModel = {
@@ -107,6 +108,9 @@ function isValidStoredNode(raw: unknown): raw is StoryGraphNode {
     return typeof raw.level === 'number' && typeof raw.raceJob === 'string';
   }
   if (raw.kind === 'place' || raw.kind === 'location') {
+    return typeof raw.description === 'string';
+  }
+  if (raw.kind === 'item') {
     return typeof raw.description === 'string';
   }
   if (raw.kind === 'hero') {

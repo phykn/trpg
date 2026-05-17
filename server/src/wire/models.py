@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 from src.game.domain.memory import LogEntry
@@ -10,6 +10,7 @@ __all__ = [
     "EquipSlot",
     "GraphCombatParticipantPayload",
     "GraphCombatPayload",
+    "GraphCombatSupportPayload",
     "GraphEquipmentPayload",
     "GraphFrontStatePayload",
     "GraphHeartPayload",
@@ -18,6 +19,7 @@ __all__ = [
     "GraphNamedPayload",
     "GraphPendingConfirmationPayload",
     "GraphPendingRollPayload",
+    "GraphPlaceItemPayload",
     "GraphPlaceLinkPayload",
     "GraphPlacePayload",
     "GraphPlaceTargetPayload",
@@ -108,6 +110,12 @@ class GraphPlaceLinkPayload(_CamelModel):
     description: str
 
 
+class GraphPlaceItemPayload(_CamelModel):
+    id: str
+    name: str
+    description: str
+
+
 class GraphPlaceTargetPayload(_CamelModel):
     id: str
     name: str
@@ -130,6 +138,7 @@ class GraphPlacePayload(_CamelModel):
     name: str
     description: str
     exits: list[GraphPlaceLinkPayload]
+    items: list[GraphPlaceItemPayload]
     targets: list[GraphPlaceTargetPayload]
 
 
@@ -146,13 +155,31 @@ class GraphHeartPayload(_CamelModel):
     maximum: int
 
 
+class GraphCombatSupportPayload(_CamelModel):
+    id: str
+    kind: Literal["skill"]
+    name: str
+    tactic: Literal["precise", "guarded", "reckless", "create_distance", "talk"]
+    mp_cost: int
+    usable: bool = True
+
+
 class GraphCombatPayload(_CamelModel):
     round: int
-    outcome: Literal["ongoing", "victory", "defeat", "fled"]
+    outcome: Literal[
+        "ongoing",
+        "victory",
+        "defeat",
+        "fled",
+        "escaped",
+        "surrendered",
+        "combat_stopped",
+    ]
     player_hearts: GraphHeartPayload
     enemy_hearts: GraphHeartPayload
     active_enemy_id: str
     participants: list[GraphCombatParticipantPayload]
+    available_supports: list[GraphCombatSupportPayload] = Field(default_factory=list)
     escape_ready: bool = False
     enemy_pressure: int = 0
     last_roll: int | None = None

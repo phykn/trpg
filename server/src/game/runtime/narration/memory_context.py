@@ -92,7 +92,7 @@ def related_memory_payload(
     target: GraphNode | None,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
-    limit = _env_int("MAX_NARRATE_RELATED_MEMORY", 8) if limit is None else limit
+    limit = _env_int("MAX_NARRATE_RELATED_MEMORY", 15) if limit is None else limit
     related_ids = _related_ids(runtime, action=action, target=target)
     ranked = sorted(
         runtime.turn_log,

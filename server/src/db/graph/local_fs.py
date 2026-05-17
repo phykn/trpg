@@ -4,13 +4,13 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from src.db import store
-from src.db.graph_progress_rows import (
+from src.db.graph import store
+from src.db.graph.progress_rows import (
     GameProgressRow,
     progress_from_row,
     progress_to_row,
 )
-from src.db.graph_rows import (
+from src.db.graph.rows import (
     GraphEdgeRow,
     GraphNodeRow,
     graph_from_rows,

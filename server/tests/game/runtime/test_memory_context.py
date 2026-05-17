@@ -120,10 +120,18 @@ def test_narrate_recent_dialogue_prefers_same_target_then_fills_recent(monkeypat
     monkeypatch.setenv("MAX_RECENT_DIALOGUE", "3")
     runtime = _runtime()
     runtime.recent_dialogue = [
-        DialoguePair(turn=1, player="상인 질문", narrator="상인 답", target_id="npc_merchant"),
-        DialoguePair(turn=2, player="다른 질문", narrator="다른 답", target_id="npc_other"),
-        DialoguePair(turn=3, player="상인 재질문", narrator="상인 재답", target_id="npc_merchant"),
-        DialoguePair(turn=4, player="마지막 질문", narrator="마지막 답", target_id=None),
+        DialoguePair(
+            turn=1, player="상인 질문", narrator="상인 답", target_id="npc_merchant"
+        ),
+        DialoguePair(
+            turn=2, player="다른 질문", narrator="다른 답", target_id="npc_other"
+        ),
+        DialoguePair(
+            turn=3, player="상인 재질문", narrator="상인 재답", target_id="npc_merchant"
+        ),
+        DialoguePair(
+            turn=4, player="마지막 질문", narrator="마지막 답", target_id=None
+        ),
     ]
 
     payload = narrate_recent_dialogue_payload(runtime, target_id="npc_merchant")
@@ -137,8 +145,12 @@ def test_related_memory_limit_can_come_from_env(monkeypatch):
     runtime = _runtime()
     runtime.turn_log.extend(
         [
-            TurnLogEntry(turn=1, target="npc_merchant", summary="첫 기억", importance=2),
-            TurnLogEntry(turn=2, target="npc_merchant", summary="둘째 기억", importance=2),
+            TurnLogEntry(
+                turn=1, target="npc_merchant", summary="첫 기억", importance=2
+            ),
+            TurnLogEntry(
+                turn=2, target="npc_merchant", summary="둘째 기억", importance=2
+            ),
         ]
     )
 
@@ -149,3 +161,26 @@ def test_related_memory_limit_can_come_from_env(monkeypatch):
     )
 
     assert len(payload) == 1
+
+
+def test_related_memory_default_limit_matches_plan():
+    runtime = _runtime()
+    runtime.turn_log.extend(
+        [
+            TurnLogEntry(
+                turn=turn,
+                target="npc_merchant",
+                summary=f"기억 {turn}",
+                importance=2,
+            )
+            for turn in range(1, 18)
+        ]
+    )
+
+    payload = related_memory_payload(
+        runtime,
+        action=None,
+        target=runtime.graph.nodes["npc_merchant"],
+    )
+
+    assert len(payload) == 15

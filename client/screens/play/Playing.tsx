@@ -206,17 +206,27 @@ export function Playing({ game }: Props) {
             disabled={streaming || pendingConfirmation !== null}
           />
         ) : combat ? (
-          <CombatStrip
-            combat={combat}
-            onAction={(action) => {
-              if (action.confirm) {
-                setPendingAction(action);
-              } else {
-                runAction(action);
-              }
-            }}
-            actionDisabled={streaming || pendingConfirmation !== null}
-          />
+          <View>
+            <CombatStrip
+              combat={combat}
+              onAction={(action) => {
+                if (action.confirm) {
+                  setPendingAction(action);
+                } else {
+                  runAction(action);
+                }
+              }}
+              actionDisabled={streaming || pendingConfirmation !== null}
+            />
+            <Composer
+              input={input}
+              setInput={setInput}
+              onSend={onSend}
+              onStop={onStop}
+              streaming={streaming}
+              locked={pendingConfirmation !== null}
+            />
+          </View>
         ) : levelUpOpen ? (
           <LevelUpPrompt
             hero={hero}

@@ -59,6 +59,22 @@ def test_in_combat_move_without_destination():
     assert out.actions[0].verb == "move"
 
 
+def test_in_combat_attack_accepts_tactic():
+    raw = json.dumps(
+        {"actions": [{"verb": "attack", "what": "enemy_01", "how": "reckless"}]}
+    )
+    out = validate_action_output_json(raw, in_combat=True)
+    assert out.actions[0].how == "reckless"
+
+
+def test_out_of_combat_attack_rejects_tactic():
+    raw = json.dumps(
+        {"actions": [{"verb": "attack", "what": "enemy_01", "how": "reckless"}]}
+    )
+    with pytest.raises(ValidationError):
+        validate_action_output_json(raw, in_combat=False)
+
+
 def test_out_of_combat_move_without_destination_fails():
     raw = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
     with pytest.raises(ValidationError):

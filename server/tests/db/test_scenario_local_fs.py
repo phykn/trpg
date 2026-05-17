@@ -2,7 +2,7 @@ import json
 import os
 from pathlib import Path
 
-from src.db.scenario_local_fs import LocalFsScenarioRepo
+from src.db.scenario.local_fs import LocalFsScenarioRepo
 
 
 def _write_json(path: Path, value: dict) -> None:

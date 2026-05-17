@@ -20,12 +20,14 @@ export type NearbyPanelModel = {
 export function buildNearbyPanel(graph: StoryGraphModel): NearbyPanelModel {
   const people = graph.nodes.filter(isNearbyPerson);
   const places = graph.nodes.filter(isNearbyPlace);
+  const items = graph.nodes.filter(isNearbyItem);
   const tasks = graph.nodes.filter((node) => node.kind === 'quest');
   return {
-    summary: compose.nearbySummary(people.length, places.length, tasks.length),
+    summary: compose.nearbySummary(people.length, places.length, tasks.length, items.length),
     items: [
       ...people.map(personItem),
       ...places.map(placeItem),
+      ...items.map(itemItem),
       ...tasks.map(taskItem),
     ],
   };
@@ -37,6 +39,10 @@ function isNearbyPerson(node: StoryGraphNode): boolean {
 
 function isNearbyPlace(node: StoryGraphNode): boolean {
   return node.kind === 'location' && node.reachable;
+}
+
+function isNearbyItem(node: StoryGraphNode): boolean {
+  return node.kind === 'item' && node.reachable;
 }
 
 function personItem(node: StoryGraphNode): NearbyItem {
@@ -77,6 +83,16 @@ function placeItem(node: StoryGraphNode): NearbyItem {
     kindLabel: ko.legend.place,
     title: node.label,
     body: node.kind === 'location' ? node.description : '',
+    action: preferredAction(node),
+  };
+}
+
+function itemItem(node: StoryGraphNode): NearbyItem {
+  return {
+    id: node.id,
+    kindLabel: ko.legend.item,
+    title: node.label,
+    body: node.kind === 'item' ? node.description : '',
     action: preferredAction(node),
   };
 }
