@@ -183,7 +183,7 @@ ko = "마지막 틈을 놓치지 않고, 당신은 전투를 끝냅니다."
 en = "You win the battle."
 
 [runtime."combat.continue"]
-ko = "발끝을 다시 고정하고, 다음 틈을 향해 호흡을 맞춥니다."
+ko = "전투 행동을 이어갑니다."
 en = "You continue the battle."
 
 [runtime."combat.condition.healthy"]

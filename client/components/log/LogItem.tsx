@@ -12,7 +12,7 @@ export function LogItem({ entry }: { entry: LogEntry }) {
     case 'player':
       return <PlayerMessage text={entry.text} />;
     case 'act':
-      return <ActMessage text={entry.text} />;
+      return isCombatActSummary(entry.text) ? null : <ActMessage text={entry.text} />;
     case 'roll':
       return <RollResult entry={entry} />;
     default:
@@ -23,6 +23,19 @@ export function LogItem({ entry }: { entry: LogEntry }) {
 }
 
 type Segment = { text: string; kind: 'plain' | 'mark' | 'speech' };
+
+function isCombatActSummary(text: string): boolean {
+  return [
+    '싸움의 중심을 잡습니다',
+    '전투 행동을 이어갑니다',
+    '전투에서 패배합니다',
+    '전투를 끝냅니다',
+    '교전권 밖으로 물러납니다',
+    '전투선 밖으로 빠져나옵니다',
+    '싸움을 멈춥니다',
+    '전투가 끝납니다',
+  ].some((phrase) => text.includes(phrase));
+}
 
 function splitDialogue(text: string): Segment[] {
   const re = /「([^」]*)」/g;

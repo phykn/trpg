@@ -12,7 +12,6 @@ export { InlineNodes } from './InlineNodes';
 export { InlineParts } from './InlineParts';
 export { LabeledRow } from './LabeledRow';
 export { Row } from './Row';
-export { RollingD20 } from './RollingD20';
 export { ScreenShell } from './ScreenShell';
 export { StatRow } from './StatRow';
 export { Surface } from './Surface';

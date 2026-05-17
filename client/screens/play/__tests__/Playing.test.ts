@@ -18,4 +18,9 @@ describe('Playing overlay layering', () => {
     expect(source).toContain('<CombatStrip');
     expect(source).toContain('locked={pendingConfirmation !== null}');
   });
+
+  test('does not show the roll panel while pre-roll narration is streaming', () => {
+    expect(source).toContain('const showRollPanel = pendingRoll !== null && !streaming;');
+    expect(source).toContain(') : showRollPanel ? (');
+  });
 });

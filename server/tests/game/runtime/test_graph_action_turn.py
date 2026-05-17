@@ -199,12 +199,13 @@ async def _tracking_repo(tmp_path) -> _DeltaTrackingRepo:
 
 
 class _NarrationLLM:
-    def __init__(self) -> None:
+    def __init__(self, text: str | None = None) -> None:
+        self.text = text or "칼끝이 번뜩이고, 적이 비틀거리며 길 위에 쓰러집니다."
         self.calls = []
 
     async def chat(self, messages, **kwargs):
         self.calls.append({"messages": messages, **kwargs})
-        return {"answer": "칼끝이 번뜩이고, 적이 비틀거리며 길 위에 쓰러집니다."}
+        return {"answer": self.text}
 
 
 class _SlowNarrationLLM:
@@ -235,8 +236,10 @@ class _RepeatNarrationLLM:
 class _RepeatStreamNarrationLLM:
     def __init__(self, text: str) -> None:
         self.text = text
+        self.calls = []
 
     async def chat_stream(self, messages, **kwargs):
+        self.calls.append({"messages": messages, **kwargs})
         midpoint = max(1, len(self.text) // 2)
         for chunk in (self.text[:midpoint], self.text[midpoint:]):
             yield {"answer": chunk, "think": None}
@@ -712,7 +715,7 @@ async def test_run_graph_action_turn_preserves_repeated_llm_narration(tmp_path):
     ]
 
 
-async def test_run_graph_action_turn_uses_safe_combat_failure_narration(
+async def test_run_graph_action_turn_uses_llm_for_combat_failure_narration(
     tmp_path,
     monkeypatch,
 ):
@@ -733,7 +736,7 @@ async def test_run_graph_action_turn_uses_safe_combat_failure_narration(
             }
         )
     )
-    llm = _NarrationLLM()
+    llm = _NarrationLLM("상대가 먼저 각도를 지우고, 당신의 공격선은 짧게 빗나갑니다.")
 
     await run_graph_action_turn(
         repo,
@@ -743,11 +746,10 @@ async def test_run_graph_action_turn_uses_safe_combat_failure_narration(
     )
     saved_logs = await repo.load_log_entries("game-1")
 
-    assert saved_logs[-1].text == (
-        "일격이 닿기 직전, 상대가 몸을 틀어 흐름을 끊습니다."
-    )
+    assert saved_logs[-1].text == "상대가 먼저 각도를 지우고, 당신의 공격선은 짧게 빗나갑니다."
     assert saved_logs[-1].outcome == "failure"
-    assert llm.calls == []
+    assert len(llm.calls) == 1
+    assert llm.calls[0]["agent"] == "combat_narrate"
 
 
 async def test_run_graph_action_turn_stream_persists_streamed_repeated_narration(
@@ -784,7 +786,7 @@ async def test_run_graph_action_turn_stream_persists_streamed_repeated_narration
     assert events[-1]["result"].front_state.log[-1].text == repeated
 
 
-async def test_run_graph_action_turn_stream_uses_safe_combat_failure_narration(
+async def test_run_graph_action_turn_stream_uses_llm_for_combat_failure_narration(
     tmp_path,
     monkeypatch,
 ):
@@ -807,6 +809,9 @@ async def test_run_graph_action_turn_stream_uses_safe_combat_failure_narration(
     )
     runtime = await load_runtime_state(repo, "game-1")
 
+    llm = _RepeatStreamNarrationLLM(
+        "발을 빼려는 순간 상대가 간격을 좁히고, 당신은 다시 선 안에 붙잡힙니다."
+    )
     events = [
         event
         async for event in run_graph_action_turn_from_runtime_stream(
@@ -814,7 +819,7 @@ async def test_run_graph_action_turn_stream_uses_safe_combat_failure_narration(
             "game-1",
             runtime,
             Action(verb="move", how="create_distance"),
-            llm=_RepeatStreamNarrationLLM("잘못된 성공 묘사"),  # type: ignore[arg-type]
+            llm=llm,  # type: ignore[arg-type]
         )
     ]
     saved_logs = await repo.load_log_entries("game-1")
@@ -822,9 +827,10 @@ async def test_run_graph_action_turn_stream_uses_safe_combat_failure_narration(
         event["text"] for event in events if event["type"] == "narration_delta"
     )
 
-    assert streamed == "발끝이 길을 찾는 순간, 상대가 먼저 붙어 거리를 지워 버립니다."
+    assert streamed == "발을 빼려는 순간 상대가 간격을 좁히고, 당신은 다시 선 안에 붙잡힙니다."
     assert saved_logs[-1].text == streamed
     assert saved_logs[-1].outcome == "failure"
+    assert len(llm.calls) == 1
 
 
 async def test_run_graph_action_turn_sends_combat_trace_to_narration(tmp_path):

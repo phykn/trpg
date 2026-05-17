@@ -1,7 +1,6 @@
 import { Animated, Pressable, Text, View } from 'react-native';
 
-import { RollingD20, useEntryAnimation } from '@/components/ui';
-import { colors } from '@/design/tokens';
+import { useEntryAnimation } from '@/components/ui';
 import { compose, ko } from '@/locale/ko';
 
 import { buildCombatActions } from '@/logic/combat/actions';
@@ -33,9 +32,6 @@ export function CombatStrip({
   const { scale, opacity } = useEntryAnimation();
   const actions = buildCombatActions(combat);
   const target = combat.enemies.find((enemy) => enemy.alive) ?? combat.enemies[0] ?? null;
-  const rollResolved = combat.lastRoll != null && combat.lastDc != null;
-  const rollSuccess = rollResolved ? combat.lastRoll! >= combat.lastDc! : false;
-  const rollTone = rollSuccess ? colors.success.fg : colors.danger.fg;
   return (
     <View className="mt-1 border-t border-border-default bg-canvas-default px-5 pt-2.5 pb-3">
       <Animated.View style={{ transform: [{ scale }], opacity }}>
@@ -73,34 +69,6 @@ export function CombatStrip({
               </View>
             ) : null}
           </View>
-          {actionDisabled ? (
-            <View className="rounded-sm border border-border-default bg-canvas-inset px-3 py-2">
-              <RollingD20
-                label={ko.roll.rolling}
-              />
-            </View>
-          ) : rollResolved ? (
-            <View className="flex-row items-center gap-2">
-              <Text
-                className="font-sans-bold text-caption"
-                style={{ color: rollTone }}
-              >
-                {rollSuccess ? ko.roll.success : ko.roll.fail}
-              </Text>
-              <Text
-                className="font-mono-semibold text-caption text-fg-default"
-                style={{ fontVariant: ['tabular-nums'] }}
-              >
-                d20 {combat.lastRoll}
-              </Text>
-              <Text
-                className="font-mono text-caption text-fg-muted"
-                style={{ fontVariant: ['tabular-nums'] }}
-              >
-                / {combat.lastDc}
-              </Text>
-            </View>
-          ) : null}
           {actions.length > 0 && onAction ? (
             <View className="flex-row gap-2">
               {actions.map((action, index) => {

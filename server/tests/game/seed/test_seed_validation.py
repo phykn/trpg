@@ -186,7 +186,7 @@ def test_seed_validation_rejects_legacy_seed_keys_and_empty_nulls():
             "difficulty": None,
             "connections": [
                 {
-                    "target_id": "forest",
+                    "legacy_ref_id": "forest",
                     "key_item": None,
                     "difficulty": None,
                 }
@@ -220,7 +220,7 @@ def test_seed_validation_rejects_legacy_seed_keys_and_empty_nulls():
         "location town.tags is not allowed in seed data",
         "location town.weather is not allowed in seed data",
         "location town.difficulty must be omitted when empty",
-        "location town.connections[0].target_id uses legacy key; use 'target'",
+        "location town.connections[0].legacy_ref_id uses legacy *_id/*_ids naming",
         "location town.connections[0].key_item must be omitted when empty",
         "location town.connections[0].difficulty must be omitted when empty",
         "location town difficulty is a connection field, not a location field",

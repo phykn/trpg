@@ -4,11 +4,17 @@ import * as path from 'path';
 describe('LogItem act entries', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '..', 'LogItem.tsx'), 'utf8');
 
-  test('renders server act entries as visible status lines', () => {
+  test('renders non-combat server act entries as visible status lines', () => {
     expect(source).toContain("case 'act'");
-    expect(source).toContain('return <ActMessage text={entry.text} />');
+    expect(source).toContain('isCombatActSummary(entry.text) ? null : <ActMessage text={entry.text} />');
     expect(source).toContain('function ActMessage');
     expect(source).toContain('text-fg-muted');
+  });
+
+  test('hides combat act summaries already narrated by the combat panel and GM text', () => {
+    expect(source).toContain('function isCombatActSummary');
+    expect(source).toContain('싸움의 중심을 잡습니다');
+    expect(source).toContain('전투 행동을 이어갑니다');
   });
 });
 

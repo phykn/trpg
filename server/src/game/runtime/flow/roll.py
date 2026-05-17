@@ -30,6 +30,7 @@ from src.wire.graph.to_front import graph_to_front_state
 from ..action.apply import GraphRuntimeDirty, apply_runtime_graph_changes
 from ..load import load_runtime_state
 from ..narration.context import build_roll_narration_payload
+from ..narration.input import stream_graph_preroll_narration
 from ..narration.result import (
     GraphNarrationResult,
     VisibleNarrationStream,
@@ -148,7 +149,7 @@ async def start_graph_roll(
 
 
 async def run_graph_preroll_stream(
-    _llm: LLMClient | None,
+    llm: LLMClient | None,
     repo: GraphRepo,
     game_id: str,
     action: Action,
@@ -166,7 +167,68 @@ async def run_graph_preroll_stream(
         scenario_repo=scenario_repo,
     )
     yield {"type": "result", "result": result}
-    yield {"type": "final", "result": result}
+
+    stream = VisibleNarrationStream()
+    if result.pending_roll is not None and llm is not None:
+        async for chunk in stream_graph_preroll_narration(
+            llm,
+            result.runtime,
+            player_input,
+            action,
+            result.pending_roll,
+            timeout_s=_roll_narration_timeout_s(),
+        ):
+            for visible in stream.push(chunk):
+                yield {"type": "narration_delta", "text": visible}
+        for visible in stream.finish():
+            yield {"type": "narration_delta", "text": visible}
+
+    narration_result = parse_graph_narration_answer(stream.answer())
+    body = result.pending_roll.get("body") if result.pending_roll is not None else ""
+    if not narration_result.narration and isinstance(body, str) and body:
+        narration_result = GraphNarrationResult(narration=body)
+        yield {"type": "narration_delta", "text": body}
+    final_result = await _finish_preroll_body(repo, result, narration_result)
+    yield {"type": "final", "result": final_result}
+
+
+async def _finish_preroll_body(
+    repo: GraphRepo,
+    result: GraphActionRequestResult,
+    narration_result: GraphNarrationResult,
+) -> GraphActionRequestResult:
+    if not narration_result.narration or result.pending_roll is None:
+        return result
+    runtime = result.runtime
+    pending = dict(result.pending_roll)
+    pending["body"] = narration_result.narration
+    entry = GMLogEntry(
+        id=runtime.progress.next_log_id,
+        kind="gm",
+        text=narration_result.narration,
+    )
+    progress = runtime.progress.model_copy(
+        update={
+            "pending_roll": pending,
+            "next_log_id": entry.id + 1,
+        }
+    )
+    next_runtime = runtime.model_copy(
+        update={
+            "progress": progress,
+            "log_entries": [*runtime.log_entries, entry],
+        }
+    )
+    await repo.append_log_entries(runtime.progress.game_id, [entry])
+    await repo.save_progress(progress)
+    return GraphActionRequestResult(
+        runtime=next_runtime,
+        status=result.status,
+        outcome=result.outcome,
+        front_state=graph_to_front_state(next_runtime),
+        pending_roll=pending,
+        suggestions=result.suggestions,
+    )
 
 
 async def run_graph_roll(
@@ -175,6 +237,7 @@ async def run_graph_roll(
     roll_id: str,
     *,
     dice: int | None = None,
+    llm: LLMClient | None = None,
     scenario_repo: ScenarioRepo | None = None,
 ) -> GraphActionRequestResult:
     resolved = await _resolve_graph_roll(
@@ -198,6 +261,8 @@ async def run_graph_roll(
             resolved.runtime,
             resolved.action,
             outcome=resolved.outcome,
+            resolved=resolved,
+            llm=llm,
         )
 
     turn_result = await run_graph_action_turn_from_runtime(
@@ -417,6 +482,51 @@ async def _stream_roll_narration(
         RateLimitError,
     ):
         return
+
+
+async def _build_roll_narration(
+    llm: LLMClient | None,
+    resolved: _ResolvedGraphRoll,
+) -> GraphNarrationResult:
+    if llm is None:
+        return GraphNarrationResult()
+    payload = build_roll_narration_payload(
+        runtime=resolved.runtime,
+        action=resolved.action,
+        pending=resolved.pending,
+        roll_entry=resolved.roll_entry,
+        outcome=resolved.outcome,
+    )
+    messages = [
+        {
+            "role": "system",
+            "content": get_prompt("graph_narrate", resolved.runtime.progress.locale),
+        },
+        {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+    ]
+    try:
+        result = await asyncio.wait_for(
+            llm.chat(
+                messages,
+                think=False,
+                agent="graph_narrate",
+                temperature=_narration_temperature(),
+            ),
+            timeout=_roll_narration_timeout_s(),
+        )
+    except (
+        LLMUnavailable,
+        OSError,
+        TimeoutError,
+        InternalServerError,
+        APIConnectionError,
+        RateLimitError,
+    ):
+        return GraphNarrationResult()
+    answer = result.get("answer")
+    if not isinstance(answer, str):
+        return GraphNarrationResult()
+    return parse_graph_narration_answer(answer)
 
 
 async def _commit_roll_narration(
@@ -748,11 +858,18 @@ async def _finish_narrative_roll(
     action: Action,
     *,
     outcome: GraphResultOutcome,
+    resolved: _ResolvedGraphRoll,
+    llm: LLMClient | None,
 ) -> GraphActionRequestResult:
+    narration_result = await _build_roll_narration(llm, resolved)
+    text = narration_result.narration or render(
+        _roll_resolution_key(action, outcome),
+        runtime.progress.locale,
+    )
     entry = GMLogEntry(
         id=runtime.progress.next_log_id,
         kind="gm",
-        text=render(_roll_resolution_key(action, outcome), runtime.progress.locale),
+        text=text,
         outcome=outcome,
     )
     next_progress = runtime.progress.model_copy(update={"next_log_id": entry.id + 1})
@@ -764,11 +881,12 @@ async def _finish_narrative_roll(
     )
     await repo.append_log_entries(game_id, [entry])
     await repo.save_progress(next_progress)
-    return executed_result(
+    final = executed_result(
         next_runtime,
         graph_to_front_state(next_runtime),
         outcome=outcome,
     )
+    return final.model_copy(update={"suggestions": narration_result.suggestions})
 
 
 def _is_narrative_roll_action(action: Action) -> bool:

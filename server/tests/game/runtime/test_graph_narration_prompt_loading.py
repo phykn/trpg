@@ -187,6 +187,14 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "판정 후 나레이션" in narrate_prompt
     assert "preroll_narration" in narrate_prompt
     assert "판정 전 문장을 반복하지 않습니다" in narrate_prompt
+    assert "본문을 두 번 쓰지 않습니다" in narrate_prompt
+    assert "조사 실패" in narrate_prompt
+    assert "대화 실패" in narrate_prompt
+    assert "실패이면 LLM이 장면을 씁니다" in narrate_prompt
+    assert "성공처럼 읽히는 단서 획득" in narrate_prompt
+    assert "payload.current_event.kind`가 `roll_prompt`" in narrate_prompt
+    assert "발견해냈습니다" in narrate_prompt
+    assert "포착해냅니다" in narrate_prompt
     assert "secrets" in narrate_prompt
     assert "여러 개일 수 있으므로" in narrate_prompt
     assert "개인적인 내용을 캐면" in narrate_prompt
@@ -207,6 +215,12 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "STATE_PATCH" in combat_prompt
     assert "훈련 충격" in combat_prompt
     assert "recent_narration" in combat_prompt
+    assert "행동 요약" in combat_prompt
+    assert "결과 카드와 같은 문장으로 시작하지 않습니다" in combat_prompt
+    assert "전투가 끝났으면" in combat_prompt
+    assert "다음 공격이나 다음 틈을 유도하지 않습니다" in combat_prompt
+    assert "전투 시작" in combat_prompt
+    assert "아직 명중하지 않았습니다" in combat_prompt
     assert "1~2문장" not in combined
     assert "2~3문장" not in combined
     assert "한 문장" not in intro_prompt

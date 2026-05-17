@@ -79,6 +79,7 @@ export function Playing({ game }: Props) {
       { questDot: hasUnseenQuest, subjectDot: hasUnseenSubject },
     ),
   ];
+  const showRollPanel = pendingRoll !== null && !streaming;
   return (
     <View className="flex-1 bg-canvas-default py-2.5 gap-2.5">
       <HeroStrip hero={hero} />
@@ -199,11 +200,11 @@ export function Playing({ game }: Props) {
       >
         {gameOver ? (
           <GameOverPanel onRestart={goToNewGame} />
-        ) : pendingRoll ? (
+        ) : showRollPanel ? (
           <RollPanel
             roll={pendingRoll}
             onRoll={onRollPending}
-            disabled={streaming || pendingConfirmation !== null}
+            disabled={pendingConfirmation !== null}
           />
         ) : combat ? (
           <View>

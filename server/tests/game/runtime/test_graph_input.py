@@ -788,7 +788,7 @@ async def test_graph_input_perceive_creates_pending_roll(tmp_path):
     assert result.front_state.pending_roll is not None
 
 
-async def test_graph_input_stream_perceive_waits_for_roll_without_preroll_log(
+async def test_graph_input_stream_perceive_streams_preroll_before_roll(
     tmp_path,
 ):
     repo = await _repo(tmp_path)
@@ -811,17 +811,19 @@ async def test_graph_input_stream_perceive_waits_for_roll_without_preroll_log(
 
     assert events[0]["type"] == "result"
     assert events[-1]["type"] == "final"
-    assert [event["type"] for event in events] == ["result", "final"]
+    deltas = [event for event in events[1:-1] if event["type"] == "narration_delta"]
+    assert len(deltas) == 2
     assert events[0]["result"].status == "roll_required"
     assert events[0]["result"].front_state.pending_roll is not None
     assert events[0]["result"].front_state.log == [logs[0]]
     assert events[-1]["result"].status == "roll_required"
-    assert progress.pending_roll["body"] != llm.narration
+    assert "".join(event["text"] for event in deltas) == llm.narration
+    assert progress.pending_roll["body"] == llm.narration
     assert progress.pending_roll["player_input"] == "주변을 자세히 살펴본다"
     assert events[-1]["result"].front_state.pending_roll.body == progress.pending_roll["body"]
-    assert events[-1]["result"].front_state.log == [logs[0]]
-    assert [entry.kind for entry in logs] == ["player"]
-    assert [call["agent"] for call in llm.calls] == ["classify"]
+    assert events[-1]["result"].front_state.log[-1].text == llm.narration
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert [call["agent"] for call in llm.calls] == ["classify", "graph_narrate"]
 
 
 async def test_graph_input_pickup_visible_location_item_transfers_to_inventory(

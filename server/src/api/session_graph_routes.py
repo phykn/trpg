@@ -329,6 +329,7 @@ async def session_graph_confirm_stream(
 async def session_graph_roll(
     game_id: str,
     body: GraphRollRequest,
+    llm: LLMClient = Depends(get_llm),
     graph_repo: GraphRepo = Depends(get_graph_repo),
     scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> GraphActionResponse:
@@ -337,6 +338,7 @@ async def session_graph_roll(
             graph_repo,
             game_id,
             body.roll_id,
+            llm=llm,
             scenario_repo=scenario_repo,
         )
     except FileNotFoundError:

@@ -23,7 +23,6 @@ _LEGACY_KEY_RENAMES = {
     "racial_skill_ids": "racial_skills",
     "slot_id": "slot",
     "support_action": "action",
-    "target_id": "target",
 }
 _FORBIDDEN_SEED_KEYS = {
     *(_LEGACY_KEY_RENAMES),
@@ -137,10 +136,10 @@ def seed_violations(
             if item_id not in items:
                 out.append(f"location {location_id} item={item_id!r} not found")
         for connection in _dict_list(location.get("connections")):
-            target_id = connection.get("target")
-            if target_id not in locations:
+            target = connection.get("target")
+            if target not in locations:
                 out.append(
-                    f"location {location_id} connection target={target_id!r} not found"
+                    f"location {location_id} connection target={target!r} not found"
                 )
 
     for item_id, item in items.items():
@@ -259,10 +258,10 @@ def seed_violations(
                 )
 
     for faction_id, faction in (factions or {}).items():
-        for target_id in _mapping(faction.get("relations")):
-            if target_id not in (factions or {}):
+        for target in _mapping(faction.get("relations")):
+            if target not in (factions or {}):
                 out.append(
-                    f"faction {faction_id} relation target={target_id!r} not found"
+                    f"faction {faction_id} relation target={target!r} not found"
                 )
 
     return out
@@ -458,7 +457,7 @@ def _check_trigger_target(
     out: list[str],
 ) -> None:
     target_type = trigger.get("type")
-    target_id = trigger.get("target")
+    target = trigger.get("target")
     pools = {
         "location_enter": locations,
         "item_use": items,
@@ -471,8 +470,8 @@ def _check_trigger_target(
     if pool is None:
         out.append(f"quest {quest_id} trigger type={target_type!r} unknown")
         return
-    if target_id not in pool:
-        out.append(f"quest {quest_id} trigger target={target_id!r} not found")
+    if target not in pool:
+        out.append(f"quest {quest_id} trigger target={target!r} not found")
 
 
 def _mapping(value: object) -> dict[str, Any]:

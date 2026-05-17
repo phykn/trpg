@@ -32,9 +32,10 @@ async def build_graph_action_narration(
     card_texts: list[str],
     timeout_s: float,
 ) -> GraphNarrationResult:
-    deterministic = _deterministic_graph_action_narration(before, dispatch)
-    if deterministic is not None:
-        return deterministic
+    if llm is None:
+        deterministic = _deterministic_graph_action_narration(before, dispatch)
+        if deterministic is not None:
+            return deterministic
     messages = _graph_action_narration_messages(
         llm,
         before=before,
@@ -93,10 +94,11 @@ async def stream_graph_action_narration(
     card_texts: list[str],
     timeout_s: float,
 ) -> AsyncIterator[str]:
-    deterministic = _deterministic_graph_action_narration(before, dispatch)
-    if deterministic is not None:
-        yield deterministic.narration
-        return
+    if llm is None:
+        deterministic = _deterministic_graph_action_narration(before, dispatch)
+        if deterministic is not None:
+            yield deterministic.narration
+            return
     messages = _graph_action_narration_messages(
         llm,
         before=before,
@@ -204,7 +206,7 @@ def ensure_graph_action_narration(
     llm_available: bool,
 ) -> GraphNarrationResult:
     deterministic = _deterministic_graph_action_narration(before, dispatch)
-    if deterministic is not None:
+    if deterministic is not None and not llm_available:
         return deterministic
     if result.narration:
         return _replace_repeated_graph_action_narration(before, dispatch, result)

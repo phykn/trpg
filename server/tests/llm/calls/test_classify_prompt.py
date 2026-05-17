@@ -48,3 +48,9 @@ def test_prompt_documents_contract_pain_points():
     assert "context.identity.corpses" in text and "inventory" in text
     assert "protected=true" in text and "pass" in text
     assert "최종 게임 Action JSON은 Python action builder가 만듭니다" in text
+
+
+def test_prompt_examples_use_allowed_manner_field_for_talk():
+    text = PROMPT_PATH.read_text(encoding="utf-8")
+    assert '"tone":"friendly"' not in text
+    assert '"manner":"friendly"' in text

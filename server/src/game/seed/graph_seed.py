@@ -208,9 +208,9 @@ def build_seed_graph(
             )
         for companion_id in _str_list(character.get("companions")):
             add_edge("has_companion", character_id, companion_id)
-        for target_id, affinity in _mapping(character.get("relations")).items():
-            if isinstance(target_id, str) and isinstance(affinity, int):
-                add_edge("relation", character_id, target_id, {"affinity": affinity})
+        for target, affinity in _mapping(character.get("relations")).items():
+            if isinstance(target, str) and isinstance(affinity, int):
+                add_edge("relation", character_id, target, {"affinity": affinity})
         if faction_id := _optional_str(character.get("faction")):
             if faction_id in faction_records:
                 add_edge("member_of_faction", character_id, faction_id)
@@ -228,13 +228,13 @@ def build_seed_graph(
         for item_id in _str_list(location.get("items")):
             add_edge("located_at", item_id, location_id)
         for connection in _dict_list(location.get("connections")):
-            target_id = _optional_str(connection.get("target"))
-            if target_id is None:
+            target = _optional_str(connection.get("target"))
+            if target is None:
                 continue
             add_edge(
                 "connects_to",
                 location_id,
-                target_id,
+                target,
                 _record_properties(connection, exclude={"target"}),
             )
 
@@ -269,11 +269,11 @@ def build_seed_graph(
 
     for faction in faction_records.values():
         faction_id = _record_id(faction)
-        for target_id, relation in _mapping(faction.get("relations")).items():
-            if not isinstance(target_id, str) or target_id not in faction_records:
+        for target, relation in _mapping(faction.get("relations")).items():
+            if not isinstance(target, str) or target not in faction_records:
                 continue
             properties = {"relation": relation} if isinstance(relation, str) else {}
-            add_edge("faction_relation", faction_id, target_id, properties)
+            add_edge("faction_relation", faction_id, target, properties)
 
     progress = GameProgress(
         game_id=game_id,
@@ -443,16 +443,16 @@ def _add_quest_target_edge(
     quest_id: str,
     outcome: str,
 ) -> None:
-    target_id = _optional_str(trigger.get("target"))
+    target = _optional_str(trigger.get("target"))
     trigger_id = _optional_str(trigger.get("id"))
-    if target_id is None or trigger_id is None:
+    if target is None or trigger_id is None:
         return
     prefix = "target_of" if outcome == "success" else "target_of:fail"
-    edge_id = f"{prefix}:{trigger_id}:{target_id}:{quest_id}"
+    edge_id = f"{prefix}:{trigger_id}:{target}:{quest_id}"
     edges[edge_id] = GraphEdge(
         id=edge_id,
         type="target_of",
-        from_node_id=target_id,
+        from_node_id=target,
         to_node_id=quest_id,
         properties=_record_properties(trigger, exclude={"target"})
         | {"outcome": outcome},

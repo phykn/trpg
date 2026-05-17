@@ -35,14 +35,14 @@ def _check_location_refs(loc: Record, refs: dict[str, set[str]]) -> None:
     item_ids = refs.get("item", set())
     loc_id = _entity_id(loc)
     for connection in _dict_list(loc.get("connections")):
-        target_id = connection.get("target")
-        if target_id == loc_id:
+        target = connection.get("target")
+        if target == loc_id:
             raise EntityWriterError(
                 f"location.connections points at itself ({loc_id})."
             )
-        if target_id not in location_ids:
+        if target not in location_ids:
             raise EntityWriterError(
-                f"location.connections.target={target_id!r} not found in scenario locations. "
+                f"location.connections.target={target!r} not found in scenario locations. "
                 f"Valid ids: {sorted(location_ids)}"
             )
     for item_id in _str_list(loc.get("items")):
@@ -103,10 +103,10 @@ def _check_quest_refs(quest: Record, refs: dict[str, set[str]]) -> None:
                 f"Valid values: {sorted(TRIGGER_TARGET_KIND)}"
             )
         pool = refs.get(target_kind, set())
-        target_id = trigger.get("target")
-        if target_id not in pool:
+        target = trigger.get("target")
+        if target not in pool:
             raise EntityWriterError(
-                f"quest trigger (id={trigger.get('id')}) target={target_id!r} not found in the "
+                f"quest trigger (id={trigger.get('id')}) target={target!r} not found in the "
                 f"{target_kind} pool."
             )
     quests = refs.get("quest", set())
