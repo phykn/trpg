@@ -109,7 +109,7 @@ def test_attack_rejects_protected_visible_target():
     )
     output = ActionOutput(actions=[Action(verb="attack", what=["protected_guard"])])
 
-    with pytest.raises(ActionGroundingError, match="what"):
+    with pytest.raises(ActionGroundingError, match="protected target cannot be attacked"):
         validate_grounded_output(output, surroundings)
 
 

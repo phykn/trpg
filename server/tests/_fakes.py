@@ -202,10 +202,8 @@ def make_default_storage() -> FakeStorage:
         "id": "basic_strike",
         "name": "기본 타격",
         "description": "공격 판정을 안정시키는 테스트 기술.",
-        "kind": "support",
-        "action": "attack",
-        "effect_template": "dc_down",
-        "support_bonus": 2,
+        "action_id": "attack",
+        "bonus": 2,
         "mp_cost": 0,
     }
     human = {
@@ -226,7 +224,6 @@ def make_default_storage() -> FakeStorage:
         "location_id": "loc_01",
         "level": edric_level,
         "stats": edric_stats,
-        "racial_skill_ids": ["basic_strike"],
         "max_hp": calc_max_hp(edric_level, edric_stats["body"]),
         "max_mp": calc_max_mp(edric_level, edric_stats["mind"]),
     }

@@ -802,6 +802,7 @@ def _public_action_rejection_reason(runtime: GameRuntimeState, reason: str) -> s
     text = reason.lower()
     locale = runtime.progress.locale
     phrase_keys = (
+        ("protected target cannot be attacked", "log.error.protected_target"),
         ("hp already full", "log.error.hp_full"),
         ("mp already full", "log.error.mp_full"),
         ("item is not carried", "log.error.item_not_in_inventory"),

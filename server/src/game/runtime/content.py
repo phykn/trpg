@@ -16,9 +16,7 @@ async def load_runtime_content(
         ),
         statuses=await scenario_repo.load_seed_records(profile_id, "statuses"),
         factions=await scenario_repo.load_seed_records(profile_id, "factions"),
-        action_categories=await scenario_repo.load_seed_records(
-            profile_id, "action_categories"
-        ),
+        actions=await scenario_repo.load_seed_records(profile_id, "actions"),
         knowledge=await scenario_repo.load_seed_records(profile_id, "knowledge"),
         dialogue_styles=await scenario_repo.load_seed_records(
             profile_id, "dialogue_styles"

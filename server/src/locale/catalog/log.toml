@@ -88,6 +88,10 @@ en = "Carry weight limit exceeded"
 ko = "성장에 필요한 경험이 부족합니다"
 en = "Not enough experience to grow"
 
+[log."error.protected_target"]
+ko = "그 대상은 공격할 수 없습니다."
+en = "That target cannot be attacked."
+
 [log."error.max_level"]
 ko = "이미 최고 레벨입니다"
 en = "Already at maximum level"

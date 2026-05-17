@@ -352,6 +352,26 @@ async def test_graph_input_classifies_one_action_and_creates_confirmation(tmp_pa
     assert logs[0].text == "고블린을 공격한다"
 
 
+async def test_graph_input_protected_target_attack_is_clear_rejection(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["goblin_01"].properties["protected"] = True
+    await repo.save_graph("game-1", graph)
+    llm = _FakeLLM(
+        {"actions": [{"verb": "pass"}]},
+        narration="",
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "goblin_01을 공격한다")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "rejected"
+    assert logs[-1].text == "그 대상은 공격할 수 없습니다."
+    assert "공격" in logs[-1].text
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert logs[0].text == "goblin_01을 공격한다"
+
+
 async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
     repo = await _repo(tmp_path)
     llm = _FakeLLM(

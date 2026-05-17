@@ -29,7 +29,11 @@ async def classify(
     guarded = classify_guard(input_.player_input, locale=locale)
     if guarded is not None:
         return guarded
-    action_shortcut = classify_action_shortcut(input_.player_input, grounding_view)
+    action_shortcut = classify_action_shortcut(
+        input_.player_input,
+        grounding_view,
+        locale=locale,
+    )
     if action_shortcut is not None:
         return validate_grounded_output(action_shortcut, grounding_view)
     dialogue = classify_dialogue_shortcut(input_.player_input, grounding_view)

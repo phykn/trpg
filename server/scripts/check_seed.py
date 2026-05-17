@@ -67,9 +67,7 @@ def _load_checks(
             support_effects=await repo.load_seed_records(profile, "support_effects"),
             statuses=await repo.load_seed_records(profile, "statuses"),
             factions=await repo.load_seed_records(profile, "factions"),
-            action_categories=await repo.load_seed_records(
-                profile, "action_categories"
-            ),
+            actions=await repo.load_seed_records(profile, "actions"),
             knowledge=await repo.load_seed_records(profile, "knowledge"),
             dialogue_styles=await repo.load_seed_records(profile, "dialogue_styles"),
             mbti=await repo.load_seed_records(profile, "mbti"),

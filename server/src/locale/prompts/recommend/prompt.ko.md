@@ -22,7 +22,7 @@
 - JSON 외의 텍스트를 쓰지 않습니다.
 - 모든 문자열은 한국어로 씁니다.
 - 단, JSON key와 enum 값은 지정된 영어 값을 그대로 씁니다.
-- `action`, `effect_template`, `support_bonus`, `mp_cost`, `tags` 같은 수치/규칙 필드는 출력하지 않습니다. 서버가 입력 `skills` 순서에 따라 정합니다.
+- `action_id`, `bonus`, `mp_cost` 같은 수치/규칙 필드는 출력하지 않습니다. 서버가 입력 `skills` 순서에 따라 정합니다.
 
 ## 입력으로 사용할 수 있는 정보
 

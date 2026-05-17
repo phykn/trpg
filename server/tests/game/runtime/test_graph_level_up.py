@@ -76,7 +76,7 @@ async def _repo(
                 "fireball": GraphNode(
                     id="fireball",
                     type="skill",
-                    properties={"name": "화염구", "action": "attack"},
+                    properties={"name": "화염구", "action_id": "attack"},
                 ),
             },
             edges=edges,
@@ -182,7 +182,7 @@ async def test_level_up_upgrade_uses_runtime_content_skill_name(tmp_path):
                     properties={
                         "source": "scenario",
                         "source_id": "training_strike",
-                        "action": "attack",
+                        "action_id": "attack",
                     },
                 ),
             },
@@ -240,12 +240,15 @@ async def test_level_up_options_include_llm_skill_candidate(tmp_path):
     )
     assert learn["label"] == "그림자 찌르기 습득"
     assert learn["growth"]["kind"] == "learn_skill"
-    assert learn["growth"]["skill"]["effect_template"] == "dc_down"
+    assert learn["growth"]["skill"]["bonus"] == 2
     assert learn["growth"]["skill"]["mp_cost"] == 2
     assert (
-        "support_bonus"
-        not in json.loads(llm.calls[0]["messages"][1]["content"])["skills"][0]
+        json.loads(llm.calls[0]["messages"][1]["content"])["skills"][0][
+            "action_id"
+        ]
+        == "attack"
     )
+    assert "bonus" not in json.loads(llm.calls[0]["messages"][1]["content"])["skills"][0]
     assert llm.calls[0]["agent"] == "recommend"
 
 

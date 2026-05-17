@@ -50,6 +50,8 @@ def classify_guard(player_input: str, *, locale: str = "ko") -> ActionOutput | N
 def classify_action_shortcut(
     player_input: str,
     surroundings: dict[str, Any],
+    *,
+    locale: str = "ko",
 ) -> ActionOutput | None:
     if surroundings.get("in_combat") is True and _has_any(
         player_input, ACTION_FLEE_TERMS
@@ -60,6 +62,9 @@ def classify_action_shortcut(
         )
 
     if _has_any(player_input, ACTION_ATTACK_TERMS):
+        protected = _protected_attack_refusal(player_input, surroundings, locale=locale)
+        if protected is not None:
+            return protected
         attack = _attack_action(player_input, surroundings)
         if attack is not None:
             return _action_output(
@@ -80,6 +85,36 @@ def classify_action_shortcut(
             return _action_output([loot])
 
     return None
+
+
+def _protected_attack_refusal(
+    player_input: str,
+    surroundings: dict[str, Any],
+    *,
+    locale: str,
+) -> ActionOutput | None:
+    protected_targets = [
+        entry
+        for entry in _dicts(surroundings.get("entities"))
+        if entry.get("type") in {"npc", "enemy"} and entry.get("protected") is True
+    ]
+    target = _named_entry(player_input, protected_targets)
+    if target is None and len(protected_targets) == 1:
+        has_attackable_target = any(
+            entry.get("type") in {"npc", "enemy"}
+            and entry.get("protected") is not True
+            for entry in _dicts(surroundings.get("entities"))
+        )
+        if not has_attackable_target:
+            target = _entry_ref(protected_targets[0])
+    if target is None:
+        return None
+    return ActionOutput(
+        refuse=RefuseReason(
+            category="meta_breaking",
+            message_hint=render("log.error.protected_target", locale),
+        )
+    )
 
 
 def classify_dialogue_shortcut(

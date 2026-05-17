@@ -267,7 +267,7 @@ def test_graph_front_state_builds_place_from_visible_graph_edges():
     runtime = _runtime()
     runtime.graph.nodes["goblin_01"].properties["xp_reward"] = 10
     runtime.graph.nodes["goblin_01"].properties["role"] = "숲의 포식자"
-    runtime.graph.nodes["goblin_01"].properties["job"] = "야수"
+    runtime.graph.nodes["goblin_01"].properties["job"] = "레거시 직업"
     runtime.graph.nodes["goblin_01"].properties["gold"] = 2
     runtime.graph.nodes["goblin_01"].properties["status"] = ["경계 중"]
     payload = graph_to_front_state(runtime)
@@ -279,7 +279,7 @@ def test_graph_front_state_builds_place_from_visible_graph_edges():
     target = payload.place.targets[0]
     assert target.kind == "npc"
     assert target.role == "숲의 포식자"
-    assert target.race_job == "야수"
+    assert target.race_job == "숲의 포식자"
     assert target.gold == 2
     assert target.stats == {"agility": 2, "body": 3, "mind": 1, "presence": 0}
     assert target.equipment.weapon is None
@@ -379,7 +379,6 @@ def test_graph_front_state_resolves_static_content_from_runtime_content():
                         "id": "goblin_01",
                         "name": "떠돌이 적",
                         "role": "숲의 포식자",
-                        "job": "야수",
                     }
                 },
                 items={"fang_01": {"id": "fang_01", "name": "날카로운 송곳니"}},
@@ -403,7 +402,7 @@ def test_graph_front_state_resolves_static_content_from_runtime_content():
     assert payload.place.exits[0].name == "숲"
     assert payload.place.targets[0].name == "떠돌이 적"
     assert payload.place.targets[0].role == "숲의 포식자"
-    assert payload.place.targets[0].race_job == "야수"
+    assert payload.place.targets[0].race_job == "숲의 포식자"
     assert payload.place.targets[0].equipment.weapon is None
     assert payload.place.targets[0].inventory[0].name == "날카로운 송곳니"
     assert payload.quest_offers[0].title == "첫 의뢰"
@@ -505,7 +504,7 @@ def test_graph_front_state_exposes_usable_combat_skill_supports():
     runtime.graph.nodes["basic_strike"].properties.update(
         {
             "name": "그림자 찌르기",
-            "action": "attack",
+            "action_id": "attack",
             "mp_cost": 2,
         }
     )

@@ -18,13 +18,12 @@ _STATIC_CONTENT_KEYS = frozenset(
         "name",
         "title",
         "description",
+        "background",
         "summary",
         "role",
-        "job",
         "gender",
         "memorable",
         "memories",
-        "disposition",
         "props",
     }
 )
@@ -56,7 +55,7 @@ def build_seed_graph(
     support_effects: SeedRecords | None = None,
     statuses: SeedRecords | None = None,
     factions: SeedRecords | None = None,
-    action_categories: SeedRecords | None = None,
+    actions: SeedRecords | None = None,
     knowledge: SeedRecords | None = None,
     dialogue_styles: SeedRecords | None = None,
     mbti: SeedRecords | None = None,
@@ -66,7 +65,7 @@ def build_seed_graph(
     support_effect_records = support_effects or {}
     status_records = statuses or {}
     faction_records = factions or {}
-    action_category_records = action_categories or {}
+    action_records = actions or {}
     knowledge_records = knowledge or {}
     dialogue_style_records = dialogue_styles or {}
     mbti_records = mbti or {}
@@ -138,11 +137,11 @@ def build_seed_graph(
             "faction",
             _node_properties(faction, exclude={"relations"}),
         )
-    for action_category in action_category_records.values():
+    for action in action_records.values():
         add_node(
-            _record_id(action_category),
-            "action_category",
-            _node_properties(action_category),
+            _record_id(action),
+            "action",
+            _node_properties(action),
         )
     for knowledge_record in knowledge_records.values():
         add_node(
@@ -191,14 +190,6 @@ def build_seed_graph(
             if item_id in equipped_item_ids:
                 continue
             add_edge("carries", character_id, item_id)
-        for skill_id in _str_list(character.get("racial_skill_ids")):
-            add_edge(
-                "knows_skill",
-                character_id,
-                skill_id,
-                {"source": "racial", "tier": 1},
-                edge_id=f"knows_skill:racial:{character_id}:{skill_id}",
-            )
         for skill_id in _str_list(character.get("learned_skill_ids")):
             add_edge(
                 "knows_skill",
@@ -261,9 +252,7 @@ def build_seed_graph(
         _add_status_edges(add_edge, item, "item", status_records)
         _add_knowledge_edges(add_edge, item, knowledge_records)
     for skill in skills.values():
-        _add_support_effect_edge(add_edge, skill, "skill", support_effect_records)
-        _add_status_edges(add_edge, skill, "skill", status_records)
-        _add_action_category_edge(add_edge, skill, action_category_records)
+        _add_action_edge(add_edge, skill, action_records)
 
     for chapter in chapters.values():
         chapter_id = _record_id(chapter)
@@ -294,7 +283,7 @@ def build_seed_graph(
         support_effects=support_effect_records,
         statuses=status_records,
         factions=faction_records,
-        action_categories=action_category_records,
+        actions=action_records,
         knowledge=knowledge_records,
         dialogue_styles=dialogue_style_records,
         mbti=mbti_records,
@@ -317,7 +306,6 @@ def _build_player(
 ) -> SeedRecord:
     player_id = template.get("id", "player_01")
     stats = _graph_stats(template.get("stats"))
-    chosen_race = races[player.race_id]
     location_id = start["start_location_id"]
     level = _int_value(template.get("level"), 1)
     max_hp = calc_max_hp(level, stats["body"])
@@ -336,7 +324,6 @@ def _build_player(
         "inventory_ids": _str_list(template.get("inventory_ids")),
         "gold": _int_value(template.get("gold"), 0),
         "xp_pool": _int_value(template.get("xp_pool"), 0),
-        "racial_skill_ids": _str_list(chosen_race.get("racial_skill_ids")),
         "revive_coins": RULES.death.revive_coins,
         "max_hp": max_hp,
         "max_mp": max_mp,
@@ -395,15 +382,15 @@ def _add_status_edges(
         )
 
 
-def _add_action_category_edge(
+def _add_action_edge(
     add_edge,
     skill: SeedRecord,
-    action_categories: SeedRecords,
+    actions: SeedRecords,
 ) -> None:
-    action_category_id = _optional_str(skill.get("action_category_id"))
-    if action_category_id is None or action_category_id not in action_categories:
+    action_id = _optional_str(skill.get("action_id"))
+    if action_id is None or action_id not in actions:
         return
-    add_edge("uses_action_category", _record_id(skill), action_category_id)
+    add_edge("uses_action", _record_id(skill), action_id)
 
 
 def _add_knowledge_edges(
@@ -429,21 +416,22 @@ def _character_graph_properties(character: SeedRecord) -> dict[str, Any]:
             "relations",
             "faction_id",
             "dialogue_style_id",
-            "racial_skill_ids",
             "learned_skill_ids",
             "companions",
+            *(() if is_player else ("stats",)),
         },
         source="runtime" if is_player else "scenario",
     )
+    properties["is_player"] = is_player
     if is_player:
         for key in ("name", "gender"):
             value = character.get(key)
             if value is not None:
                 properties[key] = value
     properties.setdefault("alive", True)
-    properties.setdefault("status", [])
     properties.setdefault("level", 0)
-    properties["stats"] = _graph_stats(character.get("stats"))
+    if is_player:
+        properties["stats"] = _graph_stats(character.get("stats"))
     return properties
 
 

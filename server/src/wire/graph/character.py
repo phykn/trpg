@@ -102,7 +102,7 @@ def character_race_job(
     node: GraphNode,
     content: RuntimeContent | None = None,
 ) -> str:
-    return optional_str(static_value(node, "job", content)) or ""
+    return optional_str(static_value(node, "role", content)) or ""
 
 
 def _can_use_item(

@@ -3,7 +3,7 @@ from pydantic import BaseModel, ConfigDict
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatAction, GraphCombatState
 from src.game.domain.graph import Graph
-from src.game.domain.graph.query import edges_from
+from src.game.domain.graph.query import known_skills_of
 from src.game.engines.graph.combat import (
     GraphCombatError,
     GraphCombatResult,
@@ -253,19 +253,11 @@ def _auto_skill_support_id(
     if player is None:
         return None
     current_mp = _int_value(player.properties.get("mp"), default=0)
-    for edge in edges_from(graph, player_id, "knows_skill"):
+    for edge in known_skills_of(graph, player_id):
         skill = graph.nodes.get(edge.to_node_id)
         if skill is None or skill.type != "skill":
             continue
-        supported_action = _string_prop(
-            skill,
-            "action",
-            fallback=_string_prop(
-                skill,
-                "kind",
-                fallback=_string_prop(skill, "type"),
-            ),
-        )
+        supported_action = _string_prop(skill, "action_id")
         mp_cost = _int_value(skill.properties.get("mp_cost"), default=0)
         if _supports_action(supported_action, action_kind) and current_mp >= mp_cost:
             return skill.id

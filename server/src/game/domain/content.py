@@ -17,7 +17,7 @@ _NODE_COLLECTIONS = {
     "support_effect": "support_effects",
     "status": "statuses",
     "faction": "factions",
-    "action_category": "action_categories",
+    "action": "actions",
     "knowledge": "knowledge",
     "dialogue_style": "dialogue_styles",
     "mbti": "mbti",
@@ -36,7 +36,7 @@ class RuntimeContent(BaseModel):
     support_effects: SeedRecords = Field(default_factory=dict)
     statuses: SeedRecords = Field(default_factory=dict)
     factions: SeedRecords = Field(default_factory=dict)
-    action_categories: SeedRecords = Field(default_factory=dict)
+    actions: SeedRecords = Field(default_factory=dict)
     knowledge: SeedRecords = Field(default_factory=dict)
     dialogue_styles: SeedRecords = Field(default_factory=dict)
     mbti: SeedRecords = Field(default_factory=dict)
@@ -57,7 +57,7 @@ def runtime_content_from_records(
     support_effects: SeedRecords | None = None,
     statuses: SeedRecords | None = None,
     factions: SeedRecords | None = None,
-    action_categories: SeedRecords | None = None,
+    actions: SeedRecords | None = None,
     knowledge: SeedRecords | None = None,
     dialogue_styles: SeedRecords | None = None,
     mbti: SeedRecords | None = None,
@@ -70,7 +70,7 @@ def runtime_content_from_records(
         support_effects=support_effects or {},
         statuses=statuses or {},
         factions=factions or {},
-        action_categories=action_categories or {},
+        actions=actions or {},
         knowledge=knowledge or {},
         dialogue_styles=dialogue_styles or {},
         mbti=mbti or {},
@@ -89,10 +89,7 @@ def merge_content(base: RuntimeContent, overlay: RuntimeContent) -> RuntimeConte
         support_effects={**base.support_effects, **overlay.support_effects},
         statuses={**base.statuses, **overlay.statuses},
         factions={**base.factions, **overlay.factions},
-        action_categories={
-            **base.action_categories,
-            **overlay.action_categories,
-        },
+        actions={**base.actions, **overlay.actions},
         knowledge={**base.knowledge, **overlay.knowledge},
         dialogue_styles={**base.dialogue_styles, **overlay.dialogue_styles},
         mbti={**base.mbti, **overlay.mbti},

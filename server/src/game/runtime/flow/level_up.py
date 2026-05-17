@@ -189,25 +189,13 @@ def _generated_skill_change(
             properties={
                 "name": _require_str(skill, "name"),
                 "description": _require_str(skill, "description"),
-                "kind": "support",
-                "action": _require_choice(
+                "action_id": _require_choice(
                     skill,
-                    "action",
+                    "action_id",
                     {"attack", "defend", "flee", "social"},
                 ),
                 "mp_cost": _require_int(skill, "mp_cost", 1, 3),
-                "effect_template": _require_choice(
-                    skill,
-                    "effect_template",
-                    {
-                        "dc_down",
-                        "extra_heart_damage",
-                        "prevent_heart_loss",
-                        "escape_boost",
-                    },
-                ),
-                "support_bonus": _require_int(skill, "support_bonus", 1, 3),
-                "tags": _tags(skill.get("tags")),
+                "bonus": _require_int(skill, "bonus", 1, 3),
             },
         ),
     )
@@ -232,12 +220,6 @@ def _require_int(data: dict[str, Any], key: str, minimum: int, maximum: int) -> 
     if not isinstance(value, int) or value < minimum or value > maximum:
         raise GraphLevelUpError(f"invalid generated skill {key}: {value}")
     return value
-
-
-def _tags(value: Any) -> list[str]:
-    if not isinstance(value, list):
-        return []
-    return [tag for tag in value if isinstance(tag, str) and tag][:4]
 
 
 def _skill_label(runtime: GameRuntimeState, skill_id: str) -> str:

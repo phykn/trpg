@@ -26,6 +26,7 @@ def _character(node_id: str, *, name: str) -> GraphNode:
             "mp": 5,
             "max_mp": 5,
             "alive": True,
+            "background": "경비병은 북문 앞에서 교대 기록을 관리합니다.",
             "stats": {"body": 3, "agility": 2, "mind": 2, "presence": 2},
             "status": [],
         },
@@ -210,6 +211,7 @@ def test_intro_payload_contains_grounded_first_scene_context():
             "id": "guard_01",
             "name": "경비병",
             "type": "npc",
+            "background": "경비병은 북문 앞에서 교대 기록을 관리합니다.",
             "dialogue_style": {
                 "id": "procedural_style",
                 "name": "절차형 말투",
@@ -322,14 +324,13 @@ def test_roll_payload_keeps_original_player_input_and_marks_preroll_text():
     assert "숨은 단서" not in json.dumps(payload, ensure_ascii=False)
 
 
-def test_input_payload_includes_target_hints_and_mentioned_inventory():
+def test_input_payload_includes_target_public_knowledge_and_mentioned_inventory():
     runtime = _runtime()
     guard = runtime.graph.nodes["guard_01"].model_copy(
         update={
             "properties": {
                 **runtime.graph.nodes["guard_01"].properties,
                 "tone_hint": "짧게 가격과 이용 조건만 말한다.",
-                "hints": ["북문은 실제 연결된 출구다."],
             }
         }
     )
@@ -343,7 +344,13 @@ def test_input_payload_includes_target_hints_and_mentioned_inventory():
     )
 
     assert payload["target_view"]["tone_hint"] == "짧게 가격과 이용 조건만 말한다."
-    assert payload["target_view"]["known_hints"] == ["북문은 실제 연결된 출구다."]
+    assert payload["target_view"]["public_knowledge"] == [
+        {
+            "id": "public_clue",
+            "title": "북문 단서",
+            "summary": "북문 교대 기록이 비어 있습니다.",
+        }
+    ]
     assert payload["target_view"]["available_items"] == [
         {
             "id": "shop_herb",

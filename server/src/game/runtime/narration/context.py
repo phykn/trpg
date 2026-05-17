@@ -326,9 +326,6 @@ def _target_view(
     public_knowledge = _public_knowledge_payloads(runtime, node)
     if public_knowledge:
         payload["public_knowledge"] = public_knowledge
-    hints = _string_list_value(runtime, node, "hints")
-    if hints:
-        payload["known_hints"] = hints[:3]
     available_items = _mentioned_inventory_payloads(runtime, node, player_input)
     if available_items:
         payload["available_items"] = available_items
@@ -418,9 +415,9 @@ def _add_character_style_fields(
     node: GraphNode,
     payload: dict[str, Any],
 ) -> None:
-    for key in ("personality", "traits"):
+    for key in ("personality", "traits", "secrets"):
         _add_list_field(runtime, node, payload, key)
-    for key in ("appearance", "personal_boundary", "private_hint"):
+    for key in ("background", "appearance", "personal_boundary"):
         _add_text_field(runtime, node, payload, key)
 
 

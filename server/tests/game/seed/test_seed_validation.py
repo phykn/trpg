@@ -10,7 +10,7 @@ def _records() -> dict:
         "support_effects": {},
         "statuses": {},
         "factions": {},
-        "action_categories": {},
+        "actions": {},
         "knowledge": {},
         "dialogue_styles": {},
         "mbti": {},
@@ -53,7 +53,7 @@ def test_seed_validation_accepts_engine_quest_trigger_types():
     assert seed_violations(**records) == []
 
 
-def test_seed_validation_rejects_unknown_support_actions_and_effect_templates():
+def test_seed_validation_rejects_unknown_support_actions_and_item_effect_templates():
     records = _records()
     records["items"] = {
         "badge": {
@@ -65,20 +65,18 @@ def test_seed_validation_rejects_unknown_support_actions_and_effect_templates():
     records["skills"] = {
         "spark": {
             "id": "spark",
-            "action": "sing",
-            "effect_template": "unknown_effect",
+            "action_id": "sing",
         }
     }
 
     assert seed_violations(**records) == [
         "item badge support_action='dance' unknown",
         "item badge effect_template='mystery_boost' unknown",
-        "skill spark action='sing' unknown",
-        "skill spark effect_template='unknown_effect' unknown",
+        "skill spark action_id='sing' unknown",
     ]
 
 
-def test_seed_validation_accepts_known_support_actions_and_effect_templates():
+def test_seed_validation_accepts_known_support_actions_and_item_effect_templates():
     records = _records()
     records["items"] = {
         "badge": {
@@ -90,8 +88,7 @@ def test_seed_validation_accepts_known_support_actions_and_effect_templates():
     records["skills"] = {
         "spark": {
             "id": "spark",
-            "action": "defend",
-            "effect_template": "prevent_heart_loss",
+            "action_id": "defend",
         }
     }
 
@@ -146,12 +143,6 @@ def test_seed_validation_rejects_unknown_status_references():
             "status_ids": ["focused", "missing_status"],
         }
     }
-    records["skills"] = {
-        "spark": {
-            "id": "spark",
-            "status_ids": ["missing_status"],
-        }
-    }
     records["statuses"] = {
         "focused": {
             "id": "focused",
@@ -161,7 +152,6 @@ def test_seed_validation_rejects_unknown_status_references():
 
     assert seed_violations(**records) == [
         "item badge status_id='missing_status' not found in statuses",
-        "skill spark status_id='missing_status' not found in statuses",
     ]
 
 
@@ -170,12 +160,6 @@ def test_seed_validation_accepts_status_references():
     records["items"] = {
         "badge": {
             "id": "badge",
-            "status_ids": ["focused"],
-        }
-    }
-    records["skills"] = {
-        "spark": {
-            "id": "spark",
             "status_ids": ["focused"],
         }
     }
@@ -233,33 +217,31 @@ def test_seed_validation_accepts_faction_references():
     assert seed_violations(**records) == []
 
 
-def test_seed_validation_rejects_unknown_action_category_references():
+def test_seed_validation_rejects_unknown_action_references():
     records = _records()
     records["skills"] = {
         "spark": {
             "id": "spark",
-            "action_category_id": "missing_category",
+            "action_id": "attack",
         }
     }
+    records["actions"] = {"defend": {"id": "defend", "name": "Defend"}}
 
-    assert seed_violations(**records) == [
-        "skill spark action_category_id='missing_category' not found"
-    ]
+    assert seed_violations(**records) == ["skill spark action_id='attack' not found"]
 
 
-def test_seed_validation_accepts_action_category_references():
+def test_seed_validation_accepts_action_references():
     records = _records()
     records["skills"] = {
         "spark": {
             "id": "spark",
-            "action_category_id": "combat_attack",
+            "action_id": "attack",
         }
     }
-    records["action_categories"] = {
-        "combat_attack": {
-            "id": "combat_attack",
-            "name": "Combat attack",
-            "default_stat": "body",
+    records["actions"] = {
+        "attack": {
+            "id": "attack",
+            "name": "Attack",
         }
     }
 

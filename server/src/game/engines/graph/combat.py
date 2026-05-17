@@ -16,7 +16,7 @@ from src.game.domain.graph import (
     RemoveEdgeChange,
     SetNodePropertyChange,
 )
-from src.game.domain.graph.query import edges_from, location_of
+from src.game.domain.graph.query import edges_from, known_skills_of, location_of
 from src.game.rules import RULES
 
 
@@ -150,15 +150,11 @@ def _resolve_skill_support(
         raise GraphCombatError(f"node is not a skill: {action.support_id}")
     if not any(
         edge.to_node_id == action.support_id
-        for edge in edges_from(graph, player.id, "knows_skill")
+        for edge in known_skills_of(graph, player.id)
     ):
         raise GraphCombatError(f"{player.id} does not know skill: {action.support_id}")
 
-    supported_action = _string_prop(
-        skill,
-        "action",
-        fallback=_string_prop(skill, "kind", fallback=_string_prop(skill, "type")),
-    )
+    supported_action = _string_prop(skill, "action_id")
     if not _supports_action(supported_action, action.kind):
         raise GraphCombatError(f"skill does not support action: {action.support_id}")
 
@@ -170,9 +166,8 @@ def _resolve_skill_support(
     return _SupportPlan(
         support_id=action.support_id,
         support_kind="skill",
-        support_bonus=_bounded_bonus(skill.properties.get("support_bonus")),
+        support_bonus=_bounded_bonus(skill.properties.get("bonus")),
         mp_cost=mp_cost,
-        effect_template=_string_prop(skill, "effect_template"),
     )
 
 
@@ -250,7 +245,9 @@ def _combat_dc(
         raw_dc -= 2
     elif action == "reckless":
         raw_dc += 2
-    if support is not None and support.effect_template in {"dc_down", "escape_boost"}:
+    if support is not None and support.support_kind == "skill":
+        raw_dc -= support.support_bonus
+    elif support is not None and support.effect_template in {"dc_down", "escape_boost"}:
         raw_dc -= support.support_bonus
     return min(RULES.combat.max_dc, max(RULES.combat.min_dc, raw_dc))
 

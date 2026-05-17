@@ -2,10 +2,37 @@
   "human": {
     "id": "human",
     "name": "인간",
-    "description": "개발 테스트용 기본 종족. 특별한 배경보다 기능 확인을 우선합니다.",
+    "description": "가장 넓은 환경에 적응해 살아가는 종족입니다. 특별한 신체 능력보다 판단력과 임기응변으로 상황을 풀어 갑니다.",
     "playable": true,
     "racial_skill_ids": [
-      "training_strike"
+      "human_adaptability"
+    ]
+  },
+  "training_construct": {
+    "id": "training_construct",
+    "name": "훈련 구조체",
+    "description": "훈련과 점검을 위해 만들어진 인공 구조체입니다. 말하거나 숨 쉬지는 않지만, 정해진 움직임으로 충격과 압박을 재현합니다.",
+    "playable": false,
+    "racial_skill_ids": [
+      "construct_bracing"
+    ]
+  },
+  "training_dummy_race": {
+    "id": "training_dummy_race",
+    "name": "훈련 허수아비",
+    "description": "타격 연습을 위해 세워 둔 훈련용 대상입니다. 움직이거나 말하지 않고, 제자리에서 공격을 받아냅니다.",
+    "playable": false,
+    "racial_skill_ids": [
+      "dummy_stance"
+    ]
+  },
+  "small_beast": {
+    "id": "small_beast",
+    "name": "작은 짐승",
+    "description": "작고 빠른 동물형 대상입니다. 복잡한 대화는 하지 않지만, 날랜 움직임과 본능적인 반응으로 장면에 영향을 줍니다.",
+    "playable": false,
+    "racial_skill_ids": [
+      "quick_scurry"
     ]
   }
 }

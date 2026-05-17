@@ -70,7 +70,7 @@ decompose의 `world_md` 본문을 `scenarios/<name>/world.md`에 쓴다.
 
 ### 6. skill × N
 
-이 시점에 `characters/`가 디스크에 있다. 각 skill의 owner(race 또는 character)를 `racial_skill_ids` / `learned_skill_ids`에서 역추적해서, owner의 직업·레벨·역할을 보고 이름·설명·special_effect를 자연스럽게 맞춘다.
+이 시점에 `characters/`가 디스크에 있다. 각 skill의 owner(race 또는 character)를 race의 `racial_skill_ids` / character의 `learned_skill_ids`에서 역추적해서, owner의 직업·레벨·역할을 보고 이름·설명·special_effect를 자연스럽게 맞춘다.
 
 규칙:
 - racial 스킬: `level` 항상 1
@@ -186,7 +186,7 @@ APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload scenarios/
 - props는 캐릭터가 상호작용할 만한 정적 환경 요소 (등불, 우물, 벤치 등).
 
 ### character
-- 필수: `id`, `name`, `description`, `race_id`, `location_id`, `level`, `stats`, `racial_skill_ids`, `learned_skill_ids`, `inventory_ids`, `equipment`, `job`, `gender`, `alive`, `memorable`, `memories`, `relations`, `disposition`, `is_enemy`, `xp_reward`
+- 필수: `id`, `name`, `description`, `race_id`, `location_id`, `level`, `stats`, `racial_skill_ids`, `learned_skill_ids`, `inventory_ids`, `equipment`, `job`, `gender`, `alive`, `memorable`, `memories`, `relations`, `is_enemy`, `xp_reward`
 - NPC와 적은 HP/MP를 쓰지 않는다. 플레이어 HP/MP는 `player_template.json`에서 engine이 계산한다.
 - `stats`는 `body`, `agility`, `mind`, `presence`만 사용한다.
 - `is_enemy=true`이면 `combat_behavior` 필수 (`{attack_priority}`), `xp_reward > 0` (level 1: 40~80, level 3: 100~200, level 5+: 250+).

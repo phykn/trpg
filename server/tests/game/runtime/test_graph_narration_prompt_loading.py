@@ -78,7 +78,7 @@ def _graph() -> Graph:
                     **_character("goblin_01", hp=8).properties,
                     "personality": ["dry", "watchful"],
                     "personal_boundary": "deflects personal questions politely",
-                    "private_hint": "secretly enjoys practical jokes",
+                    "secrets": ["secretly enjoys practical jokes"],
                     "traits": ["can speak", "does not rush"],
                 },
             ),
@@ -187,7 +187,8 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "판정 후 나레이션" in narrate_prompt
     assert "preroll_narration" in narrate_prompt
     assert "판정 전 문장을 반복하지 않습니다" in narrate_prompt
-    assert "private_hint" in narrate_prompt
+    assert "secrets" in narrate_prompt
+    assert "여러 개일 수 있으므로" in narrate_prompt
     assert "개인적인 내용을 캐면" in narrate_prompt
     assert "faction" in narrate_prompt
     assert "새로운 소속, 명령, 관계 변화는 만들지 않습니다" in narrate_prompt
@@ -262,7 +263,7 @@ async def test_graph_input_payload_exposes_target_traits(tmp_path):
     assert payload["target_view"]["personal_boundary"] == (
         "deflects personal questions politely"
     )
-    assert payload["target_view"]["private_hint"] == "secretly enjoys practical jokes"
+    assert payload["target_view"]["secrets"] == ["secretly enjoys practical jokes"]
     assert payload["target_view"]["traits"] == ["can speak", "does not rush"]
 
 

@@ -170,7 +170,25 @@ def equipment_of(graph: GraphLike, character_id: str) -> list[GraphEdge]:
 
 
 def known_skills_of(graph: GraphLike, character_id: str) -> list[GraphEdge]:
-    return edges_from(graph, character_id, "knows_skill")
+    direct_edges = edges_from(graph, character_id, "knows_skill")
+    known_skill_ids = {edge.to_node_id for edge in direct_edges}
+    inherited_edges: list[GraphEdge] = []
+    race_id = race_of(graph, character_id)
+    if race_id is not None:
+        for edge in edges_from(graph, race_id, "grants_skill"):
+            if edge.to_node_id in known_skill_ids:
+                continue
+            known_skill_ids.add(edge.to_node_id)
+            inherited_edges.append(
+                GraphEdge(
+                    id=f"knows_skill:race:{character_id}:{edge.to_node_id}",
+                    type="knows_skill",
+                    from_node_id=character_id,
+                    to_node_id=edge.to_node_id,
+                    properties={"source": "race", "race_id": race_id},
+                )
+            )
+    return [*direct_edges, *inherited_edges]
 
 
 def race_of(graph: GraphLike, character_id: str) -> str | None:

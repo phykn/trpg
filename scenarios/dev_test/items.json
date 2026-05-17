@@ -49,14 +49,11 @@
       "type": "consumable",
       "effect": "buff",
       "amount": 0,
-      "description": "집중",
+      "description": "하트 손실 방지",
       "duration": 2
     },
     "support_action": "defend",
     "effect_template": "prevent_heart_loss",
-    "status_ids": [
-      "focused"
-    ],
     "support_bonus": 0,
     "required": null,
     "consumable": true,
@@ -335,9 +332,6 @@
       "type": "armor",
       "armor": 1
     },
-    "status_ids": [
-      "guarded"
-    ],
     "required": null,
     "consumable": false,
     "on_use": null

@@ -2,40 +2,41 @@
   "focus_bolt": {
     "id": "focus_bolt",
     "name": "집중 화살",
-    "description": "공격 성공 뒤 적 하트를 하나 더 깎는 업그레이드 후보 기술.",
-    "level": 1,
-    "kind": "support",
-    "action": "attack",
-    "action_category_id": "combat_attack",
-    "effect_template": "extra_heart_damage",
-    "support_bonus": 0,
-    "mp_cost": 3,
-    "tier": 1,
-    "tags": [
-      "learnable",
-      "focus",
-      "burst"
-    ]
+    "description": "공격 전에 시선을 한곳에 모아 명중 가능성을 높입니다.",
+    "action_id": "attack",
+    "bonus": 2,
+    "mp_cost": 3
   },
-  "training_strike": {
-    "id": "training_strike",
-    "name": "훈련 일격",
-    "description": "공격 판정을 안정시키는 시작 기술.",
-    "level": 1,
-    "kind": "support",
-    "action": "attack",
-    "action_category_id": "combat_support",
-    "effect_template": "dc_down",
-    "status_ids": [
-      "focused"
-    ],
-    "support_bonus": 2,
-    "mp_cost": 2,
-    "tier": 1,
-    "tags": [
-      "starter",
-      "melee",
-      "training"
-    ]
+  "human_adaptability": {
+    "id": "human_adaptability",
+    "name": "임기응변",
+    "description": "뜻밖의 질문이나 어색한 대화 흐름에서 말과 판단을 빠르게 맞추는 인간의 기본 대응력.",
+    "action_id": "social",
+    "bonus": 2,
+    "mp_cost": 2
+  },
+  "construct_bracing": {
+    "id": "construct_bracing",
+    "name": "완충 골격",
+    "description": "강한 충격을 받기 전 몸체의 완충 장치를 굳혀 손상을 줄이는 구조체의 기본 방어력.",
+    "action_id": "defend",
+    "bonus": 1,
+    "mp_cost": 0
+  },
+  "dummy_stance": {
+    "id": "dummy_stance",
+    "name": "고정 자세",
+    "description": "움직이지 않는 대신 흔들림을 줄여 타격을 안정적으로 받아내는 허수아비의 기본 자세.",
+    "action_id": "defend",
+    "bonus": 1,
+    "mp_cost": 0
+  },
+  "quick_scurry": {
+    "id": "quick_scurry",
+    "name": "재빠른 몸놀림",
+    "description": "작은 몸집과 빠른 발을 이용해 위험한 거리에서 벗어나려는 작은 짐승의 본능적인 움직임.",
+    "action_id": "flee",
+    "bonus": 2,
+    "mp_cost": 0
   }
 }

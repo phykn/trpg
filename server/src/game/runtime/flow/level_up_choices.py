@@ -15,12 +15,6 @@ from src.llm.client import LLMClient
 
 
 SkillAction = Literal["attack", "defend", "flee", "social"]
-SkillEffect = Literal[
-    "dc_down",
-    "extra_heart_damage",
-    "prevent_heart_loss",
-    "escape_boost",
-]
 
 
 class LevelUpSkillCandidate(BaseModel):
@@ -29,10 +23,8 @@ class LevelUpSkillCandidate(BaseModel):
     name: str = Field(min_length=1, max_length=24)
     description: str = Field(min_length=1, max_length=96)
     action: SkillAction
-    effect_template: SkillEffect
-    support_bonus: int = Field(ge=1, le=3)
+    bonus: int = Field(ge=1, le=3)
     mp_cost: int = Field(ge=1, le=3)
-    tags: list[str] = Field(default_factory=list, max_length=4)
 
 
 class LevelUpSkillFlavor(BaseModel):
@@ -197,8 +189,7 @@ def _candidate_payload(
         "skills": [
             {
                 "index": index,
-                "action": template.action,
-                "tags": template.tags,
+                "action_id": template.action,
                 "description_hint": template.description,
             }
             for index, template in enumerate(templates)
@@ -221,10 +212,8 @@ def _candidate_templates(runtime: GameRuntimeState) -> list[LevelUpSkillCandidat
                     locale,
                 ),
                 action="attack",
-                effect_template="dc_down",
-                support_bonus=2,
+                bonus=2,
                 mp_cost=2,
-                tags=["agility", "attack"],
             ),
             LevelUpSkillCandidate(
                 name=render("runtime.level_choice.fallback.quick_flee.name", locale),
@@ -233,10 +222,8 @@ def _candidate_templates(runtime: GameRuntimeState) -> list[LevelUpSkillCandidat
                     locale,
                 ),
                 action="flee",
-                effect_template="escape_boost",
-                support_bonus=3,
+                bonus=3,
                 mp_cost=2,
-                tags=["agility", "flee"],
             ),
         ]
     return [
@@ -247,10 +234,8 @@ def _candidate_templates(runtime: GameRuntimeState) -> list[LevelUpSkillCandidat
                 locale,
             ),
             action="attack",
-            effect_template="dc_down",
-            support_bonus=2,
+            bonus=2,
             mp_cost=2,
-            tags=["mind", "attack"],
         ),
         LevelUpSkillCandidate(
             name=render("runtime.level_choice.fallback.calm_defend.name", locale),
@@ -259,10 +244,8 @@ def _candidate_templates(runtime: GameRuntimeState) -> list[LevelUpSkillCandidat
                 locale,
             ),
             action="defend",
-            effect_template="prevent_heart_loss",
-            support_bonus=1,
+            bonus=1,
             mp_cost=3,
-            tags=["mind", "defend"],
         ),
     ]
 
@@ -296,7 +279,8 @@ def _skill_spec(
                     "level", 1
                 ),
                 "name": candidate.name,
-                "effect": candidate.effect_template,
+                "action_id": candidate.action,
+                "bonus": candidate.bonus,
             },
             ensure_ascii=False,
             sort_keys=True,
@@ -307,12 +291,9 @@ def _skill_spec(
         "id": f"skill_gen_{slug}_{digest}",
         "name": candidate.name,
         "description": candidate.description,
-        "kind": "support",
-        "action": candidate.action,
+        "action_id": candidate.action,
+        "bonus": candidate.bonus,
         "mp_cost": candidate.mp_cost,
-        "effect_template": candidate.effect_template,
-        "support_bonus": candidate.support_bonus,
-        "tags": list(candidate.tags[:4]),
     }
 
 

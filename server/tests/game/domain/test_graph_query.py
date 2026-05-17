@@ -92,6 +92,7 @@ def test_contract_semantic_queries_read_documented_edges():
             "reward_gem": GraphNode(id="reward_gem", type="item"),
             "human": GraphNode(id="human", type="race"),
             "slash": GraphNode(id="slash", type="skill"),
+            "focus": GraphNode(id="focus", type="skill"),
             "quest": GraphNode(id="quest", type="quest"),
             "chapter": GraphNode(id="chapter", type="chapter"),
         },
@@ -133,6 +134,12 @@ def test_contract_semantic_queries_read_documented_edges():
                 from_node_id="player",
                 to_node_id="slash",
             ),
+            "grants_skill:human:focus": GraphEdge(
+                id="grants_skill:human:focus",
+                type="grants_skill",
+                from_node_id="human",
+                to_node_id="focus",
+            ),
             "target_of:elder:quest": GraphEdge(
                 id="target_of:elder:quest",
                 type="target_of",
@@ -167,7 +174,10 @@ def test_contract_semantic_queries_read_documented_edges():
     assert inventory_of(graph, "player") == []
     assert [edge.to_node_id for edge in equipment_of(graph, "player")] == ["sword"]
     assert race_of(graph, "player") == "human"
-    assert [edge.to_node_id for edge in known_skills_of(graph, "player")] == ["slash"]
+    assert [edge.to_node_id for edge in known_skills_of(graph, "player")] == [
+        "slash",
+        "focus",
+    ]
     assert quest_targets_of(graph, "quest") == ["elder"]
     assert quest_requirements_of(graph, "quest") == ["hidden_key"]
     assert quest_reward_items_of(graph, "quest") == ["reward_gem"]

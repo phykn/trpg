@@ -31,7 +31,7 @@ def seed_violations(
     support_effects: SeedRecords | None = None,
     statuses: SeedRecords | None = None,
     factions: SeedRecords | None = None,
-    action_categories: SeedRecords | None = None,
+    actions: SeedRecords | None = None,
     knowledge: SeedRecords | None = None,
     dialogue_styles: SeedRecords | None = None,
     mbti: SeedRecords | None = None,
@@ -47,8 +47,8 @@ def seed_violations(
         _check_key_id("status", statuses, out)
     if factions:
         _check_key_id("faction", factions, out)
-    if action_categories:
-        _check_key_id("action_category", action_categories, out)
+    if actions:
+        _check_key_id("action", actions, out)
     if knowledge:
         _check_key_id("knowledge", knowledge, out)
     if dialogue_styles:
@@ -96,23 +96,19 @@ def seed_violations(
         )
 
     for skill_id, skill in skills.items():
-        _check_support_action("skill", skill_id, "action", skill.get("action"), out)
-        _check_effect_template(
-            "skill", skill_id, skill.get("effect_template"), support_effects, out
-        )
-        _check_status_references(
-            "skill", skill_id, skill.get("status_ids"), statuses, out
-        )
-        action_category_id = skill.get("action_category_id")
-        if action_category_id is not None and (
-            not isinstance(action_category_id, str)
-            or not action_categories
-            or action_category_id not in action_categories
+        action_id = skill.get("action_id")
+        if action_id is None:
+            out.append(f"skill {skill_id} action_id is required")
+            continue
+        _check_support_action("skill", skill_id, "action_id", action_id, out)
+        if (
+            action_id is not None
+            and actions
+            and isinstance(action_id, str)
+            and action_id in _SUPPORT_ACTIONS
+            and action_id not in actions
         ):
-            out.append(
-                f"skill {skill_id} action_category_id={action_category_id!r} "
-                "not found"
-            )
+            out.append(f"skill {skill_id} action_id={action_id!r} not found")
 
     for character_id, character in npcs.items():
         race_id = character.get("race_id")
@@ -162,10 +158,7 @@ def seed_violations(
                 out.append(
                     f"character {character_id} equipment.{slot}={item_id!r} not found"
                 )
-        for skill_id in [
-            *_str_list(character.get("racial_skill_ids")),
-            *_str_list(character.get("learned_skill_ids")),
-        ]:
+        for skill_id in _str_list(character.get("learned_skill_ids")):
             if skill_id not in skills:
                 out.append(f"character {character_id} skill_id={skill_id!r} not found")
 
@@ -223,7 +216,7 @@ def seed_warnings(
     support_effects: SeedRecords | None = None,
     statuses: SeedRecords | None = None,
     factions: SeedRecords | None = None,
-    action_categories: SeedRecords | None = None,
+    actions: SeedRecords | None = None,
     knowledge: SeedRecords | None = None,
     dialogue_styles: SeedRecords | None = None,
     mbti: SeedRecords | None = None,
@@ -234,7 +227,7 @@ def seed_warnings(
         support_effects,
         statuses,
         factions,
-        action_categories,
+        actions,
         knowledge,
         dialogue_styles,
         mbti,

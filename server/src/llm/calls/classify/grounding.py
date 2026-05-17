@@ -18,6 +18,7 @@ class _ViewIds:
     character_ids: set[str] = field(default_factory=set)
     non_player_character_ids: set[str] = field(default_factory=set)
     attackable_character_ids: set[str] = field(default_factory=set)
+    protected_character_ids: set[str] = field(default_factory=set)
     connection_ids: set[str] = field(default_factory=set)
     location_ids: set[str] = field(default_factory=set)
     inventory_item_ids: set[str] = field(default_factory=set)
@@ -71,6 +72,7 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
     character_ids: set[str] = set()
     non_player_character_ids: set[str] = set()
     attackable_character_ids: set[str] = set()
+    protected_character_ids: set[str] = set()
     connection_ids: set[str] = set()
     visible_item_ids: set[str] = set()
     player_ids: set[str] = set()
@@ -87,7 +89,9 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
         elif entry_type in {"npc", "enemy"}:
             character_ids.add(entry_id)
             non_player_character_ids.add(entry_id)
-            if entry.get("protected") is not True:
+            if entry.get("protected") is True:
+                protected_character_ids.add(entry_id)
+            else:
                 attackable_character_ids.add(entry_id)
         elif entry_type == "connection":
             connection_ids.add(entry_id)
@@ -115,6 +119,7 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
         character_ids=character_ids,
         non_player_character_ids=non_player_character_ids,
         attackable_character_ids=attackable_character_ids,
+        protected_character_ids=protected_character_ids,
         connection_ids=connection_ids,
         location_ids=location_ids,
         inventory_item_ids=inventory_item_ids,
@@ -155,6 +160,7 @@ def _validate_action(action: Action, view: _ViewIds) -> None:
         if target_id is not None:
             _require_id(target_id, view.character_ids, action=action, field="to")
     elif action.verb == "attack":
+        _reject_protected_attack(_list(action.what), view, action=action)
         _require_all_ids(
             _list(action.what),
             view.attackable_character_ids,
@@ -178,6 +184,20 @@ def _validate_action(action: Action, view: _ViewIds) -> None:
             view.perceive_target_ids,
             action=action,
             field="what",
+        )
+
+
+def _reject_protected_attack(
+    values: list[str],
+    view: _ViewIds,
+    *,
+    action: Action,
+) -> None:
+    protected = [value for value in values if value in view.protected_character_ids]
+    if protected:
+        raise ActionGroundingError(
+            f"protected target cannot be attacked action={action.verb} "
+            f"what: {protected!r}"
         )
 
 

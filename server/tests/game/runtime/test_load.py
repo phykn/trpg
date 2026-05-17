@@ -16,8 +16,8 @@ class FakeScenarioRepo:
             "support_effects": {},
             "statuses": {"focused": {"id": "focused", "name": "집중"}},
             "factions": {"guides": {"id": "guides", "name": "안내팀"}},
-            "action_categories": {
-                "social": {"id": "social", "name": "사회", "default_stat": "presence"}
+            "actions": {
+                "social": {"id": "social", "name": "사회"}
             },
             "knowledge": {
                 "clue": {"id": "clue", "title": "단서", "visibility": "public"}
@@ -190,7 +190,7 @@ async def test_load_runtime_state_loads_scenario_content_when_profile_is_saved(
     assert runtime.content.characters["guide"]["name"] == "가이드"
     assert runtime.content.statuses["focused"]["name"] == "집중"
     assert runtime.content.factions["guides"]["name"] == "안내팀"
-    assert runtime.content.action_categories["social"]["default_stat"] == "presence"
+    assert runtime.content.actions["social"]["name"] == "사회"
     assert runtime.content.knowledge["clue"]["title"] == "단서"
     assert runtime.content.dialogue_styles["procedural"]["speech_style"] == (
         "짧고 기록문 같은 말투"

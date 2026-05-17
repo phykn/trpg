@@ -147,6 +147,56 @@ async def test_unknown_move_destination_rejected_against_surroundings():
 
 
 @pytest.mark.asyncio
+async def test_protected_target_attack_shortcut_returns_refusal():
+    input_ = _input(
+        "경비병을 공격한다",
+        {
+            "in_combat": False,
+            "entities": [
+                {"id": "player_01", "name": "주인공", "type": "player"},
+                {
+                    "id": "protected_guard",
+                    "name": "경비병",
+                    "type": "npc",
+                    "protected": True,
+                },
+            ],
+        },
+    )
+
+    out = await classify(client=None, input_=input_, locale="ko", retries=1)
+
+    assert out.actions is None
+    assert out.refuse is not None
+    assert out.refuse.message_hint == "그 대상은 공격할 수 없습니다."
+
+
+@pytest.mark.asyncio
+async def test_single_protected_target_attack_shortcut_returns_refusal_without_name():
+    input_ = _input(
+        "공격한다",
+        {
+            "in_combat": False,
+            "entities": [
+                {"id": "player_01", "name": "주인공", "type": "player"},
+                {
+                    "id": "protected_guard",
+                    "name": "경비병",
+                    "type": "npc",
+                    "protected": True,
+                },
+            ],
+        },
+    )
+
+    out = await classify(client=None, input_=input_, locale="ko", retries=1)
+
+    assert out.actions is None
+    assert out.refuse is not None
+    assert out.refuse.message_hint == "그 대상은 공격할 수 없습니다."
+
+
+@pytest.mark.asyncio
 async def test_classify_runner_accepts_intent_json_and_builds_actions():
     input_ = _input(
         "상인에게 회복약을 산다",

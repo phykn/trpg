@@ -68,10 +68,7 @@ def _check_character_refs(character: Record, refs: dict[str, set[str]]) -> None:
             f"Valid ids: {sorted(locations)}"
         )
     skills = refs.get("skill", set())
-    for skill_id in [
-        *_str_list(character.get("racial_skill_ids")),
-        *_str_list(character.get("learned_skill_ids")),
-    ]:
+    for skill_id in _str_list(character.get("learned_skill_ids")):
         if skill_id not in skills:
             raise EntityWriterError(
                 f"character.skill_id={skill_id!r} not found in scenario skills. "
@@ -260,10 +257,7 @@ def _check_character_pools(entity: Record, scenario_dir: Path) -> None:
     for item_id in _mapping(entity.get("equipment")).values():
         if isinstance(item_id, str) and item_id and item_id not in items:
             raise EntityWriterError(f"character.equipment item {item_id!r} missing.")
-    for skill_id in [
-        *_str_list(entity.get("racial_skill_ids")),
-        *_str_list(entity.get("learned_skill_ids")),
-    ]:
+    for skill_id in _str_list(entity.get("learned_skill_ids")):
         if skill_id not in skills:
             raise EntityWriterError(f"character.skill_id {skill_id!r} missing.")
 

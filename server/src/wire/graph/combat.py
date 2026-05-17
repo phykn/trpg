@@ -100,8 +100,6 @@ def _support_tactic(
     skill: GraphNode,
     runtime: GameRuntimeState,
 ) -> str | None:
-    action = optional_str(static_value(skill, "action", runtime.content))
-    if action is None:
-        action = optional_str(static_value(skill, "kind", runtime.content))
+    action = optional_str(static_value(skill, "action_id", runtime.content))
     tactic = _TACTIC_BY_ACTION.get(action or "")
     return tactic

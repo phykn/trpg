@@ -1,3 +1,4 @@
+from src.game.domain.graph.query import known_skills_of
 from src.game.seed.graph_seed import build_seed_graph
 from src.game.seed.player import PlayerInput
 
@@ -6,8 +7,8 @@ def _skill() -> dict:
     return {
         "id": "slash",
         "name": "베기",
-        "kind": "attack",
-        "target": "single",
+        "action_id": "attack",
+        "bonus": 2,
     }
 
 
@@ -62,6 +63,7 @@ def test_build_seed_graph_creates_nodes_edges_and_progress():
     graph = bundle.graph
 
     assert graph.nodes["player_01"].type == "character"
+    assert graph.nodes["player_01"].properties["is_player"] is True
     assert graph.nodes["player_01"].properties["stats"] == {
         "body": 10,
         "agility": 10,
@@ -76,18 +78,52 @@ def test_build_seed_graph_creates_nodes_edges_and_progress():
     assert "default" not in graph.nodes
     assert graph.edges["located_at:player_01:town"].type == "located_at"
     assert graph.edges["belongs_to_race:player_01:human"].type == "belongs_to_race"
-    assert (
-        graph.edges["knows_skill:racial:player_01:slash"].properties["source"]
-        == "racial"
-    )
-    assert graph.edges["knows_skill:racial:player_01:slash"].properties["tier"] == 1
     assert graph.edges["grants_skill:human:slash"].type == "grants_skill"
+    assert "knows_skill:racial:player_01:slash" not in graph.edges
+    assert [edge.to_node_id for edge in known_skills_of(graph, "player_01")] == [
+        "slash"
+    ]
     assert graph.edges["located_at:potion:town"].type == "located_at"
     assert graph.edges["connects_to:town:forest"].properties["difficulty"] == "normal"
     assert bundle.progress.game_id == "game-1"
     assert bundle.progress.profile_id == "default"
     assert bundle.progress.player_id == "player_01"
     assert bundle.progress.locale == "ko"
+
+
+def test_build_seed_graph_marks_seed_characters_as_non_players():
+    bundle = build_seed_graph(
+        profile_name="default",
+        player=PlayerInput(name="테스터", race_id="human", gender="female"),
+        races={"human": {"id": "human", "name": "인간", "description": ""}},
+        locations={"town": {"id": "town", "name": "마을"}},
+        items={},
+        skills={},
+        npcs={
+            "elder": {
+                "id": "elder",
+                "name": "장로",
+                "race_id": "human",
+                "location_id": "town",
+                "stats": {"body": 99, "agility": 99, "mind": 99, "presence": 99},
+            }
+        },
+        quests={},
+        chapters={},
+        start={
+            "start_location_id": "town",
+            "active_subject_id": None,
+            "active_quest_id": None,
+        },
+        template={"id": "player_01"},
+        game_id="game-1",
+        locale="ko",
+    )
+
+    assert "is_player" not in bundle.content.characters["elder"]
+    assert bundle.graph.nodes["elder"].properties["is_player"] is False
+    assert "stats" not in bundle.graph.nodes["elder"].properties
+    assert "status" not in bundle.graph.nodes["elder"].properties
 
 
 def test_build_seed_graph_keeps_static_content_out_of_seed_nodes():
@@ -122,7 +158,7 @@ def test_build_seed_graph_keeps_static_content_out_of_seed_nodes():
                 "id": "slash",
                 "name": "베기",
                 "description": "검으로 벱니다.",
-                "kind": "attack",
+                "action_id": "attack",
             }
         },
         npcs={
@@ -393,7 +429,7 @@ def test_build_seed_graph_links_missing_supplies_quest():
     assert graph.edges["relation:guide_npc:player_01"].properties["affinity"] == 0
 
 
-def test_build_seed_graph_links_support_effects_from_skills_and_items():
+def test_build_seed_graph_links_support_effects_from_items():
     bundle = build_seed_graph(
         profile_name="default",
         player=PlayerInput(name="테스터", race_id="human", gender="female"),
@@ -411,8 +447,8 @@ def test_build_seed_graph_links_support_effects_from_skills_and_items():
             "training_strike": {
                 "id": "training_strike",
                 "name": "훈련 일격",
-                "action": "attack",
-                "effect_template": "dc_down",
+                "action_id": "attack",
+                "bonus": 2,
             }
         },
         support_effects={
@@ -445,14 +481,11 @@ def test_build_seed_graph_links_support_effects_from_skills_and_items():
         graph.edges["uses_support_effect:practice_dagger:dc_down"].type
         == "uses_support_effect"
     )
-    assert (
-        graph.edges["uses_support_effect:training_strike:dc_down"].type
-        == "uses_support_effect"
-    )
+    assert "uses_support_effect:training_strike:dc_down" not in graph.edges
     assert bundle.content.support_effects["dc_down"]["name"] == "난이도 감소"
 
 
-def test_build_seed_graph_links_statuses_from_skills_and_items():
+def test_build_seed_graph_links_statuses_from_items():
     bundle = build_seed_graph(
         profile_name="default",
         player=PlayerInput(name="테스터", race_id="human", gender="female"),
@@ -469,7 +502,8 @@ def test_build_seed_graph_links_statuses_from_skills_and_items():
             "focus_bolt": {
                 "id": "focus_bolt",
                 "name": "집중 화살",
-                "status_ids": ["focused"],
+                "action_id": "attack",
+                "bonus": 2,
             }
         },
         statuses={
@@ -499,7 +533,7 @@ def test_build_seed_graph_links_statuses_from_skills_and_items():
     graph = bundle.graph
     assert graph.nodes["focused"].type == "status"
     assert graph.edges["applies_status:focus_charm:focused"].type == "applies_status"
-    assert graph.edges["applies_status:focus_bolt:focused"].type == "applies_status"
+    assert "applies_status:focus_bolt:focused" not in graph.edges
     assert bundle.content.statuses["focused"]["name"] == "집중"
 
 
@@ -556,7 +590,7 @@ def test_build_seed_graph_links_characters_to_factions():
     assert bundle.content.factions["test_staff"]["name"] == "테스트 직원단"
 
 
-def test_build_seed_graph_links_skills_to_action_categories():
+def test_build_seed_graph_links_skills_to_actions():
     bundle = build_seed_graph(
         profile_name="default",
         player=PlayerInput(name="테스터", race_id="human", gender="female"),
@@ -567,14 +601,13 @@ def test_build_seed_graph_links_skills_to_action_categories():
             "spark": {
                 "id": "spark",
                 "name": "불꽃",
-                "action_category_id": "combat_attack",
+                "action_id": "attack",
             }
         },
-        action_categories={
-            "combat_attack": {
-                "id": "combat_attack",
+        actions={
+            "attack": {
+                "id": "attack",
                 "name": "공격",
-                "default_stat": "body",
             }
         },
         npcs={},
@@ -591,11 +624,9 @@ def test_build_seed_graph_links_skills_to_action_categories():
     )
 
     graph = bundle.graph
-    assert graph.nodes["combat_attack"].type == "action_category"
-    assert graph.edges["uses_action_category:spark:combat_attack"].type == (
-        "uses_action_category"
-    )
-    assert bundle.content.action_categories["combat_attack"]["default_stat"] == "body"
+    assert graph.nodes["attack"].type == "action"
+    assert graph.edges["uses_action:spark:attack"].type == "uses_action"
+    assert bundle.content.actions["attack"]["name"] == "공격"
 
 
 def test_build_seed_graph_links_knowledge_from_world_records():

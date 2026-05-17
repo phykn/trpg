@@ -23,7 +23,7 @@ _EDGE_NODE_TYPES: dict[EdgeType, tuple[set[NodeType], set[NodeType]]] = {
     "applies_status": ({"item", "skill", "character", "location"}, {"status"}),
     "member_of_faction": ({"character"}, {"faction"}),
     "faction_relation": ({"faction"}, {"faction"}),
-    "uses_action_category": ({"skill"}, {"action_category"}),
+    "uses_action": ({"skill"}, {"action"}),
     "has_knowledge": ({"character", "item", "location", "quest"}, {"knowledge"}),
     "uses_dialogue_style": ({"character"}, {"dialogue_style"}),
     "has_mbti": ({"character"}, {"mbti"}),

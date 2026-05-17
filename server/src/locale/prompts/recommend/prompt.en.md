@@ -9,7 +9,7 @@ Return exactly one JSON object.
 Rules:
 - Match the order of the input `skills` array.
 - Output only the skill name and description.
-- Do not output rule fields such as `action`, `effect_template`, `support_bonus`, `mp_cost`, or `tags`; the server chooses them from the input order.
+- Do not output rule fields such as `action_id`, `bonus`, or `mp_cost`; the server chooses them from the input order.
 - Do not create damage numbers, healing numbers, cooldowns, or target counts.
 - Skills support a combat roll; they do not replace the action.
 - Avoid names or roles that duplicate known skills.

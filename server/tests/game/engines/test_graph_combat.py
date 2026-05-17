@@ -56,20 +56,18 @@ def _enemy(character_id: str = "goblin_01", *, level: int = 1) -> GraphNode:
 def _skill(
     skill_id: str,
     *,
-    action: str = "attack",
+    action_id: str = "attack",
     mp_cost: int = 2,
-    support_bonus: int = 2,
-    effect_template: str = "dc_down",
+    bonus: int = 2,
 ) -> GraphNode:
     return GraphNode(
         id=skill_id,
         type="skill",
         properties={
             "name": skill_id,
-            "action": action,
+            "action_id": action_id,
             "mp_cost": mp_cost,
-            "support_bonus": support_bonus,
-            "effect_template": effect_template,
+            "bonus": bonus,
         },
     )
 
@@ -505,11 +503,11 @@ def test_defeat_deducts_hp_by_remaining_enemy_hearts():
     assert result.state.trace[-1].kind == "player_defeated"
 
 
-def test_dc_uses_level_difference_support_bonus_and_clamp():
+def test_dc_uses_level_difference_skill_bonus_and_clamp():
     graph = _graph(
         include_skill=True,
         enemy=_character("goblin_01", level=20),
-        skill=_skill("focus", support_bonus=2),
+        skill=_skill("focus", bonus=2),
     )
     state = _started(graph)
 
@@ -577,7 +575,7 @@ def test_skill_support_requires_known_skill_and_mp():
 
     mismatch_graph = _graph(
         include_skill=True,
-        skill=_skill("focus", action="defend"),
+        skill=_skill("focus", action_id="defend"),
     )
     with pytest.raises(GraphCombatError, match="does not support action"):
         plan_combat_exchange(
