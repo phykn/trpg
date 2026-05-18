@@ -1,10 +1,11 @@
 import json
 import os
+from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
 from src.db.repo import GraphRepo
-from src.game.domain.memory import DialoguePair, TurnLogEntry
+from src.game.domain.memory import DialoguePair, GMLogEntry, NarrationCue, TurnLogEntry
 from src.llm.diag import llm_diag
 
 from ..state import GameRuntimeState
@@ -31,11 +32,20 @@ def _max_suggestion_chars(default: int = 80) -> int:
     return _env_int("GRAPH_NARRATION_MAX_SUGGESTION_CHARS", default)
 
 
+def _max_ui_cues(default: int = 3) -> int:
+    return _env_int("GRAPH_NARRATION_MAX_UI_CUES", default)
+
+
+def _max_ui_cue_chars(default: int = 48) -> int:
+    return _env_int("GRAPH_NARRATION_MAX_UI_CUE_CHARS", default)
+
+
 class GraphNarrationResult(BaseModel):
     narration: str = ""
     turn_summary: str = ""
     importance: int = Field(default=1, ge=1, le=3)
     suggestions: list[GraphSuggestion] = Field(default_factory=list)
+    ui_cues: list[NarrationCue] = Field(default_factory=list)
 
 
 class VisibleNarrationStream:
@@ -90,11 +100,13 @@ def parse_graph_narration_answer(answer: str) -> GraphNarrationResult:
     try:
         raw = json.loads(meta_text)
         suggestions = raw.pop("suggestions", [])
+        ui_cues = raw.pop("ui_cues", [])
         parsed = GraphNarrationResult.model_validate(
             {
                 "narration": narration,
                 **raw,
                 "suggestions": _clean_suggestions(suggestions),
+                "ui_cues": _clean_ui_cues(ui_cues),
             }
         )
     except (json.JSONDecodeError, TypeError, ValidationError) as exc:
@@ -110,6 +122,21 @@ def parse_graph_narration_answer(answer: str) -> GraphNarrationResult:
 def _first_marker_at(text: str, markers: tuple[str, ...]) -> int:
     positions = [index for marker in markers if (index := text.find(marker)) >= 0]
     return min(positions) if positions else -1
+
+
+def gm_log_entry_from_narration(
+    log_id: int,
+    result: GraphNarrationResult,
+    *,
+    outcome: Literal["success", "failure", "neutral"] | None = None,
+) -> GMLogEntry:
+    return GMLogEntry(
+        id=log_id,
+        kind="gm",
+        text=result.narration,
+        outcome=outcome,
+        cues=result.ui_cues,
+    )
 
 
 async def persist_graph_narration_result(
@@ -207,6 +234,49 @@ def _truncate_suggestion(value: GraphSuggestion) -> GraphSuggestion:
         intent=value.intent,
         action=value.action,
     )
+
+
+def _clean_ui_cues(values: object) -> list[NarrationCue]:
+    if not isinstance(values, list):
+        return []
+    max_cues = _max_ui_cues()
+    if max_cues <= 0:
+        return []
+    out: list[NarrationCue] = []
+    seen: set[tuple[str, str]] = set()
+    for value in values:
+        cue = _normalize_ui_cue(value)
+        if cue is None:
+            continue
+        key = (cue.kind, cue.text)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(cue)
+        if len(out) == max_cues:
+            break
+    return out
+
+
+def _normalize_ui_cue(value: object) -> NarrationCue | None:
+    if not isinstance(value, dict):
+        return None
+    kind = value.get("kind")
+    label = value.get("label")
+    text = value.get("text")
+    scope = value.get("scope", "delta")
+    if not isinstance(kind, str) or not isinstance(label, str):
+        return None
+    if not isinstance(text, str) or not isinstance(scope, str):
+        return None
+    label = label.strip()[:12]
+    text = text.strip()[: _max_ui_cue_chars()]
+    if not label or not text:
+        return None
+    try:
+        return NarrationCue(kind=kind, label=label, text=text, scope=scope)
+    except ValidationError:
+        return None
 
 
 def _env_int(name: str, default: int) -> int:

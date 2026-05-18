@@ -1,7 +1,9 @@
 from unittest.mock import patch
 
 from src.game.runtime.narration.result import (
+    GraphNarrationResult,
     VisibleNarrationStream,
+    gm_log_entry_from_narration,
     parse_graph_narration_answer,
 )
 
@@ -35,6 +37,177 @@ def test_parse_graph_narration_answer_accepts_structured_suggestions():
         "input_text": "북문으로 이동합니다",
         "intent": "move",
         "action": None,
+    }
+
+
+def test_parse_graph_narration_answer_accepts_ui_cues():
+    answer = "\n".join(
+        [
+            "당신은 경비병의 움직임을 살핍니다.",
+            "---TRPG_META---",
+            """
+            {
+              "ui_cues": [
+                {
+                  "kind": "change",
+                  "label": "변화",
+                  "text": "경비병이 문 앞에서 멈춤",
+                  "scope": "delta"
+                },
+                {
+                  "kind": "opportunity",
+                  "label": "기회",
+                  "text": "짧게 말을 걸 수 있음",
+                  "scope": "temporary"
+                }
+              ]
+            }
+            """,
+        ]
+    )
+
+    result = parse_graph_narration_answer(answer)
+
+    assert result.narration == "당신은 경비병의 움직임을 살핍니다."
+    assert [cue.model_dump() for cue in result.ui_cues] == [
+        {
+            "kind": "change",
+            "label": "변화",
+            "text": "경비병이 문 앞에서 멈춤",
+            "scope": "delta",
+        },
+        {
+            "kind": "opportunity",
+            "label": "기회",
+            "text": "짧게 말을 걸 수 있음",
+            "scope": "temporary",
+        },
+    ]
+
+
+def test_parse_graph_narration_answer_ignores_invalid_ui_cues():
+    answer = "\n".join(
+        [
+            "당신은 잠시 숨을 고릅니다.",
+            "---TRPG_META---",
+            """
+            {
+              "ui_cues": [
+                {
+                  "kind": "change",
+                  "label": "변화",
+                  "text": "복도 끝의 불빛이 약해짐",
+                  "scope": "delta"
+                },
+                "not a cue",
+                {
+                  "kind": "mood",
+                  "label": "분위기",
+                  "text": "긴장감이 감돎",
+                  "scope": "delta"
+                },
+                {
+                  "kind": "warning",
+                  "label": "",
+                  "text": "문 너머에서 발소리가 들림",
+                  "scope": "temporary"
+                },
+                {
+                  "kind": "warning",
+                  "label": "경고",
+                  "text": "문 너머에서 발소리가 들림",
+                  "scope": "temporary"
+                }
+              ]
+            }
+            """,
+        ]
+    )
+
+    result = parse_graph_narration_answer(answer)
+
+    assert [cue.model_dump() for cue in result.ui_cues] == [
+        {
+            "kind": "change",
+            "label": "변화",
+            "text": "복도 끝의 불빛이 약해짐",
+            "scope": "delta",
+        },
+        {
+            "kind": "warning",
+            "label": "경고",
+            "text": "문 너머에서 발소리가 들림",
+            "scope": "temporary",
+        },
+    ]
+
+
+def test_parse_graph_narration_answer_respects_zero_ui_cue_limit(monkeypatch):
+    monkeypatch.setenv("GRAPH_NARRATION_MAX_UI_CUES", "0")
+    answer = "\n".join(
+        [
+            "당신은 경비병의 움직임을 살핍니다.",
+            "---TRPG_META---",
+            """
+            {
+              "ui_cues": [
+                {
+                  "kind": "change",
+                  "label": "변화",
+                  "text": "경비병이 문 앞에서 멈춤",
+                  "scope": "delta"
+                }
+              ]
+            }
+            """,
+        ]
+    )
+
+    result = parse_graph_narration_answer(answer)
+
+    assert result.ui_cues == []
+
+
+def test_gm_log_entry_from_narration_serializes_non_empty_ui_cues():
+    result = GraphNarrationResult(
+        narration="당신은 북문 앞에 섭니다.",
+        ui_cues=[
+            {
+                "kind": "opportunity",
+                "label": "기회",
+                "text": "경비 교대가 곧 시작됨",
+                "scope": "temporary",
+            }
+        ],
+    )
+
+    entry = gm_log_entry_from_narration(7, result, outcome="neutral")
+
+    assert entry.model_dump() == {
+        "id": 7,
+        "kind": "gm",
+        "text": "당신은 북문 앞에 섭니다.",
+        "outcome": "neutral",
+        "cues": [
+            {
+                "kind": "opportunity",
+                "label": "기회",
+                "text": "경비 교대가 곧 시작됨",
+                "scope": "temporary",
+            }
+        ],
+    }
+
+
+def test_gm_log_entry_from_narration_omits_empty_ui_cues():
+    result = GraphNarrationResult(narration="당신은 잠시 기다립니다.")
+
+    entry = gm_log_entry_from_narration(8, result)
+
+    assert entry.model_dump() == {
+        "id": 8,
+        "kind": "gm",
+        "text": "당신은 잠시 기다립니다.",
     }
 
 

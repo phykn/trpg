@@ -24,17 +24,27 @@ class DialoguePair(BaseModel):
     target: str | None = None
 
 
+class NarrationCue(BaseModel):
+    kind: Literal["change", "constraint", "opportunity", "warning"]
+    label: str
+    text: str
+    scope: Literal["delta", "temporary"] = "delta"
+
+
 class GMLogEntry(BaseModel):
     id: int
     kind: Literal["gm"]
     text: str
     outcome: Literal["success", "failure", "neutral"] | None = None
+    cues: list[NarrationCue] = []
 
     @model_serializer(mode="wrap")
     def _serialize(self, handler):
         data = handler(self)
         if data.get("outcome") is None:
             data.pop("outcome", None)
+        if not data.get("cues"):
+            data.pop("cues", None)
         return data
 
 
