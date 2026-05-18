@@ -34,6 +34,14 @@ preserved player agency, and test or QA evidence.
 
 ## Slice Template
 
+Before implementing any slice, read:
+
+- `docs/research/THEORY.md`
+- this design spec
+
+Do not start code changes until the slice has a written acceptance check
+against all three theory conditions and evidence.
+
 Each slice must include these sections before implementation:
 
 1. Play Situation
