@@ -114,6 +114,7 @@ async def run_graph_input_turn(
             runtime,
             player_input,
             output.refuse.message_hint,
+            target=output.refuse.target,
         )
     actions = output.actions or []
     if not actions:
@@ -163,6 +164,7 @@ async def run_graph_input_turn_stream(
             runtime,
             player_input,
             output.refuse.message_hint,
+            target=output.refuse.target,
         ):
             yield event
         return
@@ -440,8 +442,10 @@ async def _run_graph_refused_input(
     runtime: GameRuntimeState,
     player_input: str,
     public_reason: str,
+    *,
+    target: str | None = None,
 ) -> GraphActionRequestResult:
-    action = Action(verb="pass")
+    action = Action(verb="pass", to=target)
     engine_diag("input:refused", reason=public_reason)
     return await _run_graph_rejected_reason_input(
         client,
@@ -508,8 +512,10 @@ async def _run_graph_refused_input_stream(
     runtime: GameRuntimeState,
     player_input: str,
     public_reason: str,
+    *,
+    target: str | None = None,
 ) -> AsyncIterator[dict[str, object]]:
-    action = Action(verb="pass")
+    action = Action(verb="pass", to=target)
     engine_diag("input:refused", reason=public_reason)
     async for event in _run_graph_rejected_reason_input_stream(
         client,
@@ -589,7 +595,7 @@ async def _persist_graph_rejected_input(
         next_runtime,
         narration_result,
         player_input=player_input,
-        target_id=_action_target_id(action),
+        target=_action_target(action),
     )
     engine_diag("input:done", status="rejected", action=action.verb)
     return rejected_result(
@@ -739,7 +745,7 @@ async def _finish_graph_narrative_input(
         next_runtime,
         narration_result,
         player_input=player_input,
-        target_id=subject_id,
+        target=subject_id,
     )
     engine_diag("input:done", status="executed", action=action.verb)
     return GraphActionRequestResult(
@@ -754,9 +760,9 @@ async def _finish_graph_narrative_input(
 
 
 def _resolve_narrative_subject(runtime, action) -> str | None:
-    target_id = _single(action.what) or _single(action.to)
-    if isinstance(target_id, str) and _is_at_player_location(runtime, target_id):
-        return target_id
+    target = _single(action.what) or _single(action.to)
+    if isinstance(target, str) and _is_at_player_location(runtime, target):
+        return target
     if action.verb != "speak":
         return None
     graph = runtime.graph_index
@@ -821,7 +827,7 @@ def _public_action_rejection_reason(runtime: GameRuntimeState, reason: str) -> s
     return render("log.error.generic_block", locale)
 
 
-def _action_target_id(action: Action) -> str | None:
+def _action_target(action: Action) -> str | None:
     return _single(action.what) or _single(action.to) or _single(action.with_)
 
 
@@ -829,10 +835,10 @@ def _action_target_node(
     runtime: GameRuntimeState,
     action: Action,
 ) -> GraphNode | None:
-    target_id = _action_target_id(action)
-    if target_id is None:
+    target = _action_target(action)
+    if target is None:
         return None
-    return runtime.graph.nodes.get(target_id)
+    return runtime.graph.nodes.get(target)
 
 
 def _single(value: object) -> str | None:

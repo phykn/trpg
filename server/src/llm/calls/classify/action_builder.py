@@ -40,11 +40,11 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
     name = _required_str(intent, "intent")
 
     if name == "move":
-        return Action(verb="move", to=_first_str(intent, "destination_id", "target_id"))
+        return Action(verb="move", to=_first_str(intent, "destination_id", "target"))
     if name == "buy":
         return Action(
             verb="transfer",
-            what=_first_str(intent, "item_id", "target_id"),
+            what=_first_str(intent, "item_id", "target"),
             from_=_required_str(intent, "merchant_id"),
             to=_player_id(surroundings),
             how="trade",
@@ -52,7 +52,7 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
     if name == "sell":
         return Action(
             verb="transfer",
-            what=_first_str(intent, "item_id", "target_id"),
+            what=_first_str(intent, "item_id", "target"),
             from_=_player_id(surroundings),
             to=_required_str(intent, "merchant_id"),
             how="trade",
@@ -70,14 +70,14 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
             verb="transfer",
             what=_required_str(intent, "item_id"),
             from_=_player_id(surroundings),
-            to=_first_str(intent, "target_id", "recipient_id"),
+            to=_first_str(intent, "target", "recipient_id"),
             how="free",
         )
     if name == "steal":
         return Action(
             verb="transfer",
             what=_required_str(intent, "item_id"),
-            from_=_first_str(intent, "source_id", "target_id"),
+            from_=_first_str(intent, "source_id", "target"),
             to=_player_id(surroundings),
             how="steal",
         )
@@ -106,7 +106,7 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
         return Action(
             verb="transfer",
             what=_required_str(intent, "quest_id"),
-            from_=_first_str(intent, "source_id", "target_id"),
+            from_=_first_str(intent, "source_id", "target"),
             to=_player_id(surroundings),
             how="accept",
         )
@@ -115,7 +115,7 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
             verb="transfer",
             what=_required_str(intent, "quest_id"),
             from_=_player_id(surroundings),
-            to=_first_str(intent, "target_id", "source_id"),
+            to=_first_str(intent, "target", "source_id"),
             how="abandon",
         )
     if name == "use":
@@ -123,37 +123,37 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
             verb="use",
             what=_optional_str(intent, "item_id"),
             with_=_optional_str(intent, "skill_id"),
-            to=_optional_str(intent, "target_id"),
+            to=_optional_str(intent, "target"),
         )
     if name == "attack":
         return Action(
             verb="attack",
-            what=[_first_str(intent, "target_id", "enemy_id")],
+            what=[_first_str(intent, "target", "enemy_id")],
             with_=_optional_str(intent, "skill_id"),
             how=_optional_str(intent, "tactic"),
         )
     if name == "cast":
         skill_id = _required_str(intent, "skill_id")
-        target_id = _optional_str(intent, "target_id")
-        if target_id is not None and _is_attack_target(surroundings, target_id):
-            return Action(verb="attack", what=[target_id], with_=skill_id)
+        target = _optional_str(intent, "target")
+        if target is not None and _is_attack_target(surroundings, target):
+            return Action(verb="attack", what=[target], with_=skill_id)
         return Action(
             verb="use",
             with_=skill_id,
-            to=target_id,
+            to=target,
         )
     if name == "flee":
         return Action(verb="move", how="create_distance")
     if name == "talk":
         return Action(
             verb="speak",
-            to=_optional_str(intent, "target_id"),
+            to=_optional_str(intent, "target"),
             how=_optional_str(intent, "manner") or "friendly",
         )
     if name == "query":
         return Action(verb="query", what=_optional_str(intent, "topic"))
     if name == "inspect":
-        return Action(verb="perceive", what=_optional_str(intent, "target_id"))
+        return Action(verb="perceive", what=_optional_str(intent, "target"))
     if name == "pass":
         return Action(verb="pass", note=_optional_str(intent, "note"))
     if name == "rest":
@@ -199,9 +199,9 @@ def _dicts(value: object) -> list[dict[str, Any]]:
     return [entry for entry in value if isinstance(entry, dict)]
 
 
-def _is_attack_target(surroundings: dict[str, Any], target_id: str) -> bool:
+def _is_attack_target(surroundings: dict[str, Any], target: str) -> bool:
     for entry in _dicts(surroundings.get("entities")):
-        if entry.get("id") != target_id:
+        if entry.get("id") != target:
             continue
         return entry.get("type") in {"enemy", "monster", "hostile"}
     return bool(surroundings.get("in_combat", False))

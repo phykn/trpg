@@ -50,7 +50,7 @@ def _context(*, mode: str = "exploration") -> dict:
 
 
 @pytest.mark.parametrize(
-    ("player_input", "target_id"),
+    ("player_input", "target"),
     [
         ("훈련용 허수아비를 공격한다", "training_dummy"),
         ("중장 훈련 골렘을 공격한다", "heavy_training_golem"),
@@ -58,7 +58,7 @@ def _context(*, mode: str = "exploration") -> dict:
 )
 async def test_korean_attack_to_visible_character_shortcuts_without_llm(
     player_input,
-    target_id,
+    target,
 ):
     output = await classify(
         _NoCallLLM(),
@@ -68,7 +68,7 @@ async def test_korean_attack_to_visible_character_shortcuts_without_llm(
 
     assert output.actions is not None
     assert output.actions[0].verb == "attack"
-    assert output.actions[0].what == [target_id]
+    assert output.actions[0].what == [target]
 
 
 async def test_korean_skill_attack_keeps_skill_and_target_without_llm():

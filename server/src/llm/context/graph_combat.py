@@ -28,7 +28,7 @@ class GraphCombatTraceView(BaseModel):
 
     kind: str
     actor_id: str | None = None
-    target_id: str | None = None
+    target: str | None = None
     state: str | None = None
 
 
@@ -76,7 +76,7 @@ def build_graph_combat_context(
             GraphCombatTraceView(
                 kind=event.kind,
                 actor_id=event.actor_id,
-                target_id=event.target_id,
+                target=event.target,
                 state=event.state,
             )
             for event in state.trace

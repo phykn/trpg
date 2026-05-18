@@ -283,7 +283,7 @@ async def _commit_graph_action_narration(
         repo,
         next_runtime,
         narration_result,
-        target_id=_action_target_id(prepared.action),
+        target=_action_target(prepared.action),
     )
     engine_diag(
         "turn:done",
@@ -299,7 +299,7 @@ async def _commit_graph_action_narration(
     )
 
 
-def _action_target_id(action: Action) -> str | None:
+def _action_target(action: Action) -> str | None:
     for value in (action.what, action.to):
         if isinstance(value, str):
             return value

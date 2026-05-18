@@ -270,7 +270,7 @@ def test_victory_completes_matching_active_quest_and_clears_active_id():
                     "id": "trigger_01",
                     "name": "고블린 물리치기",
                     "type": "character_death",
-                    "target_id": "goblin_01",
+                    "target": "goblin_01",
                 }
             ],
             "triggers_met": [False],

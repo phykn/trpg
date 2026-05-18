@@ -77,7 +77,7 @@ def test_use_with_item_id():
     _validate({"verb": "use", "what": "potion_01"})
 
 
-def test_attack_requires_target_ids():
+def test_attack_requires_targets():
     with pytest.raises(ValidationError, match="attack.what"):
         _validate({"verb": "attack", "what": []})
 

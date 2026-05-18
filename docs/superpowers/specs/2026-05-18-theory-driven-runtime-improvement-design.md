@@ -83,10 +83,10 @@ The player or client names a target for an action, combat command, memory entry,
 or narration payload.
 
 Theory Risk:
-If some layers say `target_id` while others say `target`, the system has two
-parallel contracts for the same concept. That makes grounding and narration
-harder to reason about, and future slices can accidentally preserve one path
-while breaking the other.
+If some layers use the legacy target-id spelling while others use `target`, the
+system has two parallel contracts for the same concept. That makes grounding
+and narration harder to reason about, and future slices can accidentally
+preserve one path while breaking the other.
 
 Code Scope:
 
@@ -113,9 +113,9 @@ use only `target`.
 
 Evidence:
 Focused server and client tests should prove combat commands, classify intents,
-memory payloads, combat narration payloads, and prompt text no longer require
-`target_id`. A repository search for `target_id` should return no source or test
-hits after the slice is complete.
+memory payloads, combat narration payloads, and prompt text use `target` only.
+A repository search for the legacy target-id spelling should return no source
+or test hits after the slice is complete.
 
 ### 1. Protected Target Attack Rejection
 

@@ -74,8 +74,8 @@ def dispatch_graph_combat_action(
     dirty = GraphRuntimeDirty.from_apply_result(applied)
     completed_quest_ids: list[str] = []
     if combat_result.state.outcome == "victory":
-        for target_id in _victory_target_ids(combat_result.state):
-            reward_xp = _xp_reward(graph_runtime.graph, target_id)
+        for target in _victory_targets(combat_result.state):
+            reward_xp = _xp_reward(graph_runtime.graph, target)
             if reward_xp > 0:
                 xp_apply = apply_runtime_graph_changes(
                     graph_runtime,
@@ -90,7 +90,7 @@ def dispatch_graph_combat_action(
                 dirty.add_apply_result(xp_apply)
             quest_progress = plan_quest_progress_for_character_death(
                 graph_runtime.graph,
-                target_id,
+                target,
             )
             if quest_progress.changes:
                 progress_apply = apply_runtime_graph_changes(
@@ -143,14 +143,14 @@ def dispatch_graph_combat_action(
     )
 
 
-def _victory_target_ids(state: GraphCombatState) -> list[str]:
-    target_ids: list[str] = []
+def _victory_targets(state: GraphCombatState) -> list[str]:
+    targets: list[str] = []
     for event in state.trace:
-        if event.target_id is None or event.target_id not in state.enemy_ids:
+        if event.target is None or event.target not in state.enemy_ids:
             continue
         if event.kind in {"enemy_defeated", "forced_end"}:
-            target_ids.append(event.target_id)
-    return target_ids
+            targets.append(event.target)
+    return targets
 
 
 def _xp_reward(graph: Graph, character_id: str) -> int:
@@ -172,9 +172,9 @@ def _resolve_state(
     if action.verb != "attack":
         raise GraphCombatDispatchError(f"cannot start graph combat with {action.verb}")
 
-    target_id = _target_id_for_start(action)
+    target = _target_for_start(action)
     try:
-        result = plan_combat_start(runtime.graph, runtime.progress.player_id, target_id)
+        result = plan_combat_start(runtime.graph, runtime.progress.player_id, target)
     except GraphCombatError as exc:
         raise GraphCombatDispatchError(str(exc)) from exc
     return result.state, True
@@ -195,7 +195,7 @@ def _combat_action_from_action(
         support_kind = _support_kind(graph, support_id)
         return GraphCombatAction(
             kind=tactic,
-            target_id=_single(action.what),
+            target=_single(action.what),
             support_id=support_id if support_kind else None,
             support_kind=support_kind,
         )
@@ -216,7 +216,7 @@ def _combat_action_from_action(
         support_kind = _support_kind(graph, support_id)
         return GraphCombatAction(
             kind="talk",
-            target_id=_single(action.to) or _single(action.what),
+            target=_single(action.to) or _single(action.what),
             support_id=support_id if support_kind else None,
             support_kind=support_kind,
         )
@@ -284,14 +284,14 @@ def _supports_action(supported_action: str | None, action_kind: str) -> bool:
     return action_kind in legacy.get(supported_action or "", set())
 
 
-def _target_id_for_start(action: Action) -> str:
+def _target_for_start(action: Action) -> str:
     if action.verb == "attack":
-        target_id = _single(action.what)
+        target = _single(action.what)
     else:
-        target_id = None
-    if target_id is None:
+        target = None
+    if target is None:
         raise GraphCombatDispatchError("graph combat target is required")
-    return target_id
+    return target
 
 
 def _single(value: object) -> str | None:

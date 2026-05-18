@@ -37,6 +37,7 @@ class RefuseReason(BaseModel):
 
     category: RefuseCategory
     message_hint: str = Field(min_length=1, max_length=120)
+    target: str | None = None
 
 
 class Action(BaseModel):

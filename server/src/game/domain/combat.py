@@ -32,7 +32,7 @@ class GraphCombatTraceEvent(BaseModel):
 
     kind: str
     actor_id: str | None = None
-    target_id: str | None = None
+    target: str | None = None
     state: str | None = None
 
 
@@ -40,7 +40,7 @@ class GraphCombatAction(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     kind: CombatActionKind
-    target_id: str | None = None
+    target: str | None = None
     support_id: str | None = None
     support_kind: CombatSupportKind | None = None
 

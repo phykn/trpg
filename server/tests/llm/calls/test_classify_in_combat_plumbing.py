@@ -11,6 +11,12 @@ from src.llm.calls.classify.runner import classify
 from src.llm.calls.classify.schema import ClassifyInput
 
 
+PROTECTED_TARGET_REASON = (
+    "보호받는 대상이라 지금은 공격할 수 없습니다. "
+    "대화하거나 주변을 살피면 다른 방법을 찾을 수 있습니다."
+)
+
+
 def _classify_test_context(surroundings: dict) -> dict:
     entities = surroundings.get("entities", [])
     player = next(
@@ -168,7 +174,8 @@ async def test_protected_target_attack_shortcut_returns_refusal():
 
     assert out.actions is None
     assert out.refuse is not None
-    assert out.refuse.message_hint == "그 대상은 공격할 수 없습니다."
+    assert out.refuse.message_hint == PROTECTED_TARGET_REASON
+    assert out.refuse.target == "protected_guard"
 
 
 @pytest.mark.asyncio
@@ -193,7 +200,8 @@ async def test_single_protected_target_attack_shortcut_returns_refusal_without_n
 
     assert out.actions is None
     assert out.refuse is not None
-    assert out.refuse.message_hint == "그 대상은 공격할 수 없습니다."
+    assert out.refuse.message_hint == PROTECTED_TARGET_REASON
+    assert out.refuse.target == "protected_guard"
 
 
 @pytest.mark.asyncio

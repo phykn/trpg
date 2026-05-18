@@ -74,7 +74,7 @@ def plan_combat_start(
             GraphCombatTraceEvent(
                 kind="combat_started",
                 actor_id=player_id,
-                target_id=enemy_id,
+                target=enemy_id,
             )
         ],
     )
@@ -96,8 +96,8 @@ def plan_combat_exchange(
 
     player = _require_character(graph, state.player_id)
     _require_player_can_fight(player)
-    target_id = action.target_id or state.active_enemy_id
-    enemy = _require_enemy(graph, state, target_id)
+    target = action.target or state.active_enemy_id
+    enemy = _require_enemy(graph, state, target)
     _require_combatant_can_fight(enemy)
 
     support = _resolve_support(graph, player, action)
@@ -268,29 +268,29 @@ def _apply_heart_result(
             state.enemy_hearts = max(0, state.enemy_hearts - damage)
             if kind == "social":
                 state.enemy_pressure += 1
-            target_id = enemy_id
+            target = enemy_id
         elif kind == "defend":
             state.player_hearts = min(
                 RULES.combat.starting_hearts,
                 state.player_hearts + 1,
             )
-            target_id = actor_id
+            target = actor_id
         elif kind == "talk":
             state.enemy_pressure += 1
-            target_id = enemy_id
+            target = enemy_id
             if state.enemy_pressure >= 2 or state.enemy_hearts <= 1:
                 state.outcome = "combat_stopped"
                 state.trace.append(
                     GraphCombatTraceEvent(
                         kind="combat_stopped",
                         actor_id=actor_id,
-                        target_id=enemy_id,
+                        target=enemy_id,
                         state=_heart_state(state),
                     )
                 )
                 return
         elif kind == "create_distance":
-            target_id = actor_id
+            target = actor_id
             if state.escape_ready:
                 state.outcome = "escaped"
             else:
@@ -298,12 +298,12 @@ def _apply_heart_result(
         else:
             state.escape_ready = True
             state.outcome = "fled"
-            target_id = actor_id
+            target = actor_id
         state.trace.append(
             GraphCombatTraceEvent(
                 kind=f"player_{kind}_success",
                 actor_id=actor_id,
-                target_id=target_id,
+                target=target,
                 state=_heart_state(state),
             )
         )
@@ -317,7 +317,7 @@ def _apply_heart_result(
         GraphCombatTraceEvent(
             kind=f"player_{kind}_failure",
             actor_id=actor_id,
-            target_id=enemy_id if kind in {"attack", "social"} else actor_id,
+            target=enemy_id if kind in {"attack", "social"} else actor_id,
             state=_heart_state(state),
         )
     )
@@ -345,7 +345,7 @@ def _apply_terminal_result(
             GraphCombatTraceEvent(
                 kind="enemy_defeated",
                 actor_id=state.player_id,
-                target_id=enemy.id,
+                target=enemy.id,
                 state="hearts:0",
             )
         )
@@ -359,7 +359,7 @@ def _apply_terminal_result(
             GraphCombatTraceEvent(
                 kind="player_defeated",
                 actor_id=enemy.id,
-                target_id=player.id,
+                target=player.id,
                 state=f"hp_loss:{hp_loss}",
             )
         )
@@ -377,11 +377,11 @@ def _require_character(graph: Graph, character_id: str) -> GraphNode:
 def _require_enemy(
     graph: Graph,
     state: GraphCombatState,
-    target_id: str,
+    target: str,
 ) -> GraphNode:
-    if target_id not in state.enemy_ids:
-        raise GraphCombatError(f"target is not an enemy in this combat: {target_id}")
-    return _require_character(graph, target_id)
+    if target not in state.enemy_ids:
+        raise GraphCombatError(f"target is not an enemy in this combat: {target}")
+    return _require_character(graph, target)
 
 
 def _require_combatant_can_fight(node: GraphNode) -> None:

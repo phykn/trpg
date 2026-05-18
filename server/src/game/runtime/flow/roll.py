@@ -560,7 +560,7 @@ async def _commit_roll_narration(
         repo,
         runtime,
         narration_result,
-        target_id=_action_target_id(resolved.action),
+        target=_action_target(resolved.action),
     )
     return executed_result(
         runtime,
@@ -636,10 +636,10 @@ def _effective_roll_dc(
 ) -> int:
     if graph is None or player_id is None:
         return base_dc
-    target_id = _roll_npc_target_id(graph, player_id, action)
-    if target_id is None:
+    target = _roll_npc_target(graph, player_id, action)
+    if target is None:
         return base_dc
-    affinity = _relation_affinity(graph, target_id, player_id)
+    affinity = _relation_affinity(graph, target, player_id)
     affinity_band = int(affinity / 10)
     return max(1, min(20, base_dc - affinity_band))
 
@@ -651,25 +651,25 @@ def _apply_roll_relation_effect(
     *,
     roll_outcome: GraphResultOutcome,
 ) -> tuple[GameRuntimeState, list[str]]:
-    target_id = _roll_npc_target_id(
+    target = _roll_npc_target(
         runtime.graph,
         runtime.progress.player_id,
         action,
     )
-    if target_id is None:
+    if target is None:
         return runtime, []
     delta = _roll_affinity_delta(action, grade, roll_outcome)
     if delta == 0:
         return runtime, []
 
     graph = runtime.graph.model_copy(deep=True)
-    edge_id = _relation_edge_id(target_id, runtime.progress.player_id)
+    edge_id = _relation_edge_id(target, runtime.progress.player_id)
     edge = graph.edges.get(edge_id)
     if edge is None:
         edge = GraphEdge(
             id=edge_id,
             type="relation",
-            from_node_id=target_id,
+            from_node_id=target,
             to_node_id=runtime.progress.player_id,
             properties={"affinity": 0},
         )
@@ -729,8 +729,8 @@ def _apply_roll_quest_effect(
     if trigger is None:
         return runtime, dirty, []
 
-    trigger_type, target_id = trigger
-    progress = plan_quest_progress_for_trigger(runtime.graph, trigger_type, target_id)
+    trigger_type, target = trigger
+    progress = plan_quest_progress_for_trigger(runtime.graph, trigger_type, target)
     if not progress.changes:
         return runtime, dirty, []
 
@@ -756,12 +756,12 @@ def _roll_quest_trigger(
     action: Action,
 ) -> tuple[str, str] | None:
     if action.verb == "speak":
-        target_id = _roll_npc_target_id(
+        target = _roll_npc_target(
             runtime.graph,
             runtime.progress.player_id,
             action,
         )
-        return ("social_check", target_id) if target_id is not None else None
+        return ("social_check", target) if target is not None else None
     if action.verb == "transfer" and action.how not in {
         "accept",
         "abandon",
@@ -770,12 +770,12 @@ def _roll_quest_trigger(
         "steal",
         "unequip",
     }:
-        target_id = _roll_npc_target_id(
+        target = _roll_npc_target(
             runtime.graph,
             runtime.progress.player_id,
             action,
         )
-        return ("social_check", target_id) if target_id is not None else None
+        return ("social_check", target) if target is not None else None
     return None
 
 
@@ -796,7 +796,7 @@ def _roll_affinity_delta(
 
 
 def _roll_xp_award_key(action: Action) -> str:
-    return f"roll:{action.verb}:{_action_target_id(action) or 'none'}"
+    return f"roll:{action.verb}:{_action_target(action) or 'none'}"
 
 
 def _is_positive_social_success(action: Action) -> bool:
@@ -815,7 +815,7 @@ def _relation_edge_id(npc_id: str, player_id: str) -> str:
     return f"relation:{npc_id}:{player_id}"
 
 
-def _roll_npc_target_id(
+def _roll_npc_target(
     graph: Graph,
     player_id: str,
     action: Action,
@@ -835,7 +835,7 @@ def _roll_target_candidates(action: Action) -> list[str]:
     return _strings(action.to) + _strings(action.what) + _strings(action.with_)
 
 
-def _action_target_id(action: Action) -> str | None:
+def _action_target(action: Action) -> str | None:
     for value in (action.what, action.to, action.from_, action.with_):
         strings = _strings(value)
         if strings:

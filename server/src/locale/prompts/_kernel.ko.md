@@ -43,7 +43,7 @@ id를 만들지 마십시오.
 구조화 JSON 필드에서는 raw id를 그대로 씁니다.
 
 예:
-`target_id`, `item_id`, `source_id`, `destination_id`, `merchant_id`, `quest_id`, `skill_id`
+`target`, `item_id`, `source_id`, `destination_id`, `merchant_id`, `quest_id`, `skill_id`
 
 사람이 읽는 자연어에서는 raw id를 쓰지 말고 입력의 표시 이름을 씁니다.
 

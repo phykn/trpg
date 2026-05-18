@@ -72,7 +72,7 @@ async def test_load_runtime_state_reads_graph_progress_and_tails(tmp_path):
         pending_confirmation={
             "id": "confirm-1",
             "kind": "quest_accept",
-            "target_id": "quest-1",
+            "target": "quest-1",
         },
         next_log_id=1,
     )

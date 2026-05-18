@@ -48,26 +48,26 @@ def _runtime() -> GameRuntimeState:
     ("payload", "expected"),
     [
         (
-            {"command": "precise", "target_id": "enemy_01"},
+            {"command": "precise", "target": "enemy_01"},
             Action(verb="attack", what="enemy_01", how="precise"),
         ),
         (
             {
                 "command": "precise",
-                "target_id": "enemy_01",
+                "target": "enemy_01",
                 "support_id": "basic_strike",
                 "support_kind": "skill",
             },
             Action(verb="attack", what="enemy_01", how="precise", with_="basic_strike"),
         ),
         (
-            {"command": "reckless", "target_id": "enemy_01"},
+            {"command": "reckless", "target": "enemy_01"},
             Action(verb="attack", what="enemy_01", how="reckless"),
         ),
         ({"command": "guarded"}, Action(verb="pass", how="guarded")),
         ({"command": "create_distance"}, Action(verb="move", how="create_distance")),
         (
-            {"command": "talk", "target_id": "enemy_01"},
+            {"command": "talk", "target": "enemy_01"},
             Action(verb="speak", to="enemy_01"),
         ),
     ],
@@ -92,7 +92,7 @@ def test_rejects_wrong_target():
     with pytest.raises(CombatCommandError, match="target is not active enemy"):
         build_combat_command_action(
             _runtime(),
-            {"command": "precise", "target_id": "enemy_02"},
+            {"command": "precise", "target": "enemy_02"},
         )
 
 
@@ -107,7 +107,7 @@ def test_graph_combat_command_request_requires_support_pair():
         GraphCombatCommandRequest.model_validate(
             {
                 "command": "precise",
-                "target_id": "enemy_01",
+                "target": "enemy_01",
                 "support_id": "basic_strike",
             }
         )

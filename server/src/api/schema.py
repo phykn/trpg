@@ -69,7 +69,7 @@ class GraphCombatCommandRequest(BaseModel):
         "create_distance",
         "talk",
     ]
-    target_id: str | None = None
+    target: str | None = None
     support_id: str | None = None
     support_kind: Literal["skill"] | None = None
     think: bool = False

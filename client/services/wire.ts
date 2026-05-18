@@ -83,9 +83,9 @@ type CombatSupportCommandFields = {
 };
 
 export type CombatCommand =
-  | ({ command: 'precise'; target_id: string } & CombatSupportCommandFields)
-  | ({ command: 'reckless'; target_id: string } & CombatSupportCommandFields)
-  | ({ command: 'talk'; target_id: string } & CombatSupportCommandFields)
+  | ({ command: 'precise'; target: string } & CombatSupportCommandFields)
+  | ({ command: 'reckless'; target: string } & CombatSupportCommandFields)
+  | ({ command: 'talk'; target: string } & CombatSupportCommandFields)
   | ({ command: 'guarded' } & CombatSupportCommandFields)
   | ({ command: 'create_distance' } & CombatSupportCommandFields);
 

@@ -46,17 +46,17 @@ def classify_recent_dialogue_payload(
 def narrate_recent_dialogue_payload(
     runtime: GameRuntimeState,
     *,
-    target_id: str | None = None,
+    target: str | None = None,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
     limit = _env_int("MAX_RECENT_DIALOGUE", 5) if limit is None else limit
-    entries = _target_first_dialogue(runtime, target_id, limit)
+    entries = _target_first_dialogue(runtime, target, limit)
     return [
         {
             "turn": entry.turn,
             "player": entry.player,
             "narrator": entry.narrator,
-            "target_id": entry.target_id,
+            "target": entry.target,
         }
         for entry in entries
     ]
@@ -64,13 +64,13 @@ def narrate_recent_dialogue_payload(
 
 def _target_first_dialogue(
     runtime: GameRuntimeState,
-    target_id: str | None,
+    target: str | None,
     limit: int,
 ) -> list[DialoguePair]:
-    if target_id is None:
+    if target is None:
         return runtime.recent_dialogue[-limit:]
     recent = list(runtime.recent_dialogue)
-    targeted = [entry for entry in recent if entry.target_id == target_id]
+    targeted = [entry for entry in recent if entry.target == target]
     selected = targeted[-limit:]
     if len(selected) < limit:
         seen = {(entry.turn, entry.player, entry.narrator) for entry in selected}

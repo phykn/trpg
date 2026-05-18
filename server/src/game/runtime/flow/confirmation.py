@@ -362,11 +362,11 @@ def _build_attack_start_confirmation(
     runtime: GameRuntimeState,
     action: Action,
 ) -> dict[str, Any] | None:
-    target_id = _attack_target_id(runtime.graph, runtime.progress.player_id, action)
-    if target_id is None:
+    target_ref = _attack_target(runtime.graph, runtime.progress.player_id, action)
+    if target_ref is None:
         return None
 
-    target = runtime.graph.nodes[target_id]
+    target = runtime.graph.nodes[target_ref]
     target_label = node_label(runtime.content, target)
     locale = runtime.progress.locale
     return _pending(
@@ -375,7 +375,7 @@ def _build_attack_start_confirmation(
         body=render("runtime.confirmation.attack.body", locale, target=target_label),
         confirm_label=render("runtime.confirmation.attack.confirm", locale),
         target_label=target_label,
-        action=_normalize_attack_action(action, target_id),
+        action=_normalize_attack_action(action, target_ref),
         locale=locale,
     )
 
@@ -424,11 +424,11 @@ def _build_steal_confirmation(
     action: Action,
 ) -> dict[str, Any] | None:
     item_id = _single(action.what) or _single(action.with_)
-    target_id = _single(action.from_) or _single(action.to)
-    if item_id is None or target_id is None:
+    target = _single(action.from_) or _single(action.to)
+    if item_id is None or target is None:
         return None
     item = runtime.graph.nodes.get(item_id)
-    target = runtime.graph.nodes.get(target_id)
+    target = runtime.graph.nodes.get(target)
     if item is None or target is None:
         return None
 
@@ -564,7 +564,7 @@ def _item_owner(graph: Graph, item_id: str) -> str | None:
     return None
 
 
-def _attack_target_id(
+def _attack_target(
     graph: Graph,
     player_id: str,
     action: Action,
@@ -573,30 +573,30 @@ def _attack_target_id(
         candidates = _list(action.what)
     else:
         return None
-    for target_id in candidates:
-        if _can_target_start_combat(graph, player_id, target_id):
-            return target_id
+    for target in candidates:
+        if _can_target_start_combat(graph, player_id, target):
+            return target
     return None
 
 
-def _normalize_attack_action(action: Action, target_id: str) -> Action:
+def _normalize_attack_action(action: Action, target: str) -> Action:
     if action.verb == "attack":
-        return action.model_copy(update={"what": [target_id]})
+        return action.model_copy(update={"what": [target]})
     return action
 
 
 def _can_target_start_combat(
     graph: Graph,
     player_id: str,
-    target_id: str,
+    target: str,
 ) -> bool:
     player_location = location_of(graph, player_id)
-    target_location = location_of(graph, target_id)
-    target = graph.nodes.get(target_id)
+    target_location = location_of(graph, target)
+    target = graph.nodes.get(target)
     return (
         target is not None
         and target.type == "character"
-        and target_id != player_id
+        and target != player_id
         and can_character_fight(target)
         and player_location is not None
         and target_location == player_location

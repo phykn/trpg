@@ -116,10 +116,10 @@ def _validate_quest_trigger_targets(graph: Graph) -> None:
         if quest.type != "quest":
             continue
         for trigger in _dicts(quest.properties.get("triggers")):
-            target_id = trigger.get("target")
-            if isinstance(target_id, str) and target_id not in graph.nodes:
+            target = trigger.get("target")
+            if isinstance(target, str) and target not in graph.nodes:
                 raise GraphInvariantError(
-                    f"quest trigger target missing: {quest.id} -> {target_id}"
+                    f"quest trigger target missing: {quest.id} -> {target}"
                 )
 
 

@@ -27,7 +27,7 @@ describe('buildCombatActions', () => {
       expect.objectContaining({
         kind: 'combat_command',
         label: '정밀',
-        combatCommand: { command: 'precise', target_id: 'enemy_01' },
+        combatCommand: { command: 'precise', target: 'enemy_01' },
       }),
       expect.objectContaining({
         kind: 'combat_command',
@@ -68,7 +68,7 @@ describe('buildCombatActions', () => {
       label: '그림자 찌르기',
       combatCommand: {
         command: 'precise',
-        target_id: 'enemy_01',
+        target: 'enemy_01',
         support_id: 'skill_shadow',
         support_kind: 'skill',
       },
@@ -99,7 +99,7 @@ describe('buildCombatActions', () => {
     expect(actions).toHaveLength(3);
     expect(actions[2]).toMatchObject({
       label: '대화',
-      combatCommand: { command: 'talk', target_id: 'enemy_01' },
+      combatCommand: { command: 'talk', target: 'enemy_01' },
     });
   });
 });

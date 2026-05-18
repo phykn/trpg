@@ -207,7 +207,7 @@ def _plan_non_combat(
             runtime.graph,
             player_id,
             item_id,
-            target_id=_single(action.to),
+            target=_single(action.to),
         )
         return "use", result.changes, _advance_turn(runtime)
 
@@ -243,8 +243,8 @@ def _apply_quest_progress_for_action(
     trigger = _quest_trigger_for_action(runtime, action, kind)
     if trigger is None:
         return None
-    trigger_type, target_id = trigger
-    progress = plan_quest_progress_for_trigger(runtime.graph, trigger_type, target_id)
+    trigger_type, target = trigger
+    progress = plan_quest_progress_for_trigger(runtime.graph, trigger_type, target)
     if not progress.changes:
         return None
 
@@ -282,8 +282,8 @@ def _quest_trigger_for_action(
             return "item_use", item_id
     if kind in {"transfer", "trade_buy"}:
         item_id = _single(action.what) or _single(action.with_)
-        target_id = _single(action.to) or runtime.progress.player_id
-        if item_id is not None and target_id == runtime.progress.player_id:
+        target = _single(action.to) or runtime.progress.player_id
+        if item_id is not None and target == runtime.progress.player_id:
             return "item_obtained", item_id
     return None
 

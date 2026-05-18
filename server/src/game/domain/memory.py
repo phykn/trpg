@@ -7,7 +7,7 @@ class Memory(BaseModel):
     content: str
     importance: int = Field(ge=1, le=3)
     turn: int
-    target_id: str | None = None
+    target: str | None = None
 
 
 class TurnLogEntry(BaseModel):
@@ -21,7 +21,7 @@ class DialoguePair(BaseModel):
     turn: int
     player: str
     narrator: str
-    target_id: str | None = None
+    target: str | None = None
 
 
 class GMLogEntry(BaseModel):

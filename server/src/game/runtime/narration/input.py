@@ -332,10 +332,10 @@ def _action_target_node(
     runtime: GameRuntimeState,
     action: Action,
 ) -> GraphNode | None:
-    target_id = _single(action.what) or _single(action.to) or _single(action.with_)
-    if target_id is None:
+    target = _single(action.what) or _single(action.to) or _single(action.with_)
+    if target is None:
         return None
-    return runtime.graph.nodes.get(target_id)
+    return runtime.graph.nodes.get(target)
 
 
 def _single(value: object) -> str | None:

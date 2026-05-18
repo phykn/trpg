@@ -113,6 +113,7 @@ def _protected_attack_refusal(
         refuse=RefuseReason(
             category="meta_breaking",
             message_hint=render("log.error.protected_target", locale),
+            target=target["id"],
         )
     )
 

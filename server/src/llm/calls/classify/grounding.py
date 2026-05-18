@@ -51,7 +51,7 @@ class _ViewIds:
         )
 
     @property
-    def perceive_target_ids(self) -> set[str]:
+    def perceive_targets(self) -> set[str]:
         return self.entity_ids | self.corpse_ids | self.location_ids
 
 
@@ -156,9 +156,9 @@ def _validate_action(action: Action, view: _ViewIds) -> None:
             action=action,
             field="what",
         )
-        target_id = _single(action.to)
-        if target_id is not None:
-            _require_id(target_id, view.character_ids, action=action, field="to")
+        target = _single(action.to)
+        if target is not None:
+            _require_id(target, view.character_ids, action=action, field="to")
     elif action.verb == "attack":
         _reject_protected_attack(_list(action.what), view, action=action)
         _require_all_ids(
@@ -168,10 +168,10 @@ def _validate_action(action: Action, view: _ViewIds) -> None:
             field="what",
         )
     elif action.verb == "speak":
-        target_id = _single(action.to) or _single(action.what)
-        if target_id is not None:
+        target = _single(action.to) or _single(action.what)
+        if target is not None:
             _require_id(
-                target_id,
+                target,
                 view.non_player_character_ids,
                 action=action,
                 field="to",
@@ -181,7 +181,7 @@ def _validate_action(action: Action, view: _ViewIds) -> None:
     elif action.verb == "perceive" and _list(action.what):
         _require_all_ids(
             _list(action.what),
-            view.perceive_target_ids,
+            view.perceive_targets,
             action=action,
             field="what",
         )

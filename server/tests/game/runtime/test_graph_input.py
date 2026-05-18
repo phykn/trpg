@@ -370,10 +370,19 @@ async def test_graph_input_protected_target_attack_is_clear_rejection(tmp_path):
     logs = await repo.load_log_entries("game-1")
 
     assert result.status == "rejected"
-    assert logs[-1].text == "그 대상은 공격할 수 없습니다."
+    assert (
+        logs[-1].text
+        == "보호받는 대상이라 지금은 공격할 수 없습니다. "
+        "대화하거나 주변을 살피면 다른 방법을 찾을 수 있습니다."
+    )
     assert "공격" in logs[-1].text
     assert [entry.kind for entry in logs] == ["player", "gm"]
     assert logs[0].text == "goblin_01을 공격한다"
+    narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
+    payload = json.loads(narrate_call["messages"][1]["content"])
+    assert payload["current_event"]["outcome"] == "action_rejected"
+    assert payload["current_event"]["target"]["id"] == "goblin_01"
+    assert payload["target_view"]["id"] == "goblin_01"
 
 
 async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
@@ -548,7 +557,7 @@ async def test_graph_input_reflects_speak_turn_into_memory_dialogue_and_suggesti
             turn=1,
             player="고블린에게 북문을 묻는다",
             narrator="고블린은 북문에 낯선 발자국이 있다고 말합니다.",
-            target_id="goblin_01",
+            target="goblin_01",
         )
     ]
     assert [call["agent"] for call in llm.calls].count("graph_narrate") == 1

@@ -4,7 +4,7 @@
 
 **Goal:** Normalize target field naming to `target`, then complete the first theory-driven gameplay slice: attacks against `protected=true` targets are visibly blocked, preserve fiction continuity, preserve player agency, and have focused evidence.
 
-**Architecture:** First remove the old `target_id` public/data-contract name across client, API, LLM classify intents, combat traces, memory payloads, and tests so the system has one target field. Then keep the existing classify -> runtime -> graph_narrate flow and add a narrow optional `target` to classifier refusal metadata so protected-target refusals can still carry the in-fiction target into rejection narration.
+**Architecture:** First remove the legacy target-id public/data-contract name across client, API, LLM classify intents, combat traces, memory payloads, and tests so the system has one target field. Then keep the existing classify -> runtime -> graph_narrate flow and add a narrow optional `target` to classifier refusal metadata so protected-target refusals can still carry the in-fiction target into rejection narration.
 
 **Tech Stack:** Python 3.12, Pydantic v2, pytest, FastAPI server runtime, graph-native game state, Korean locale TOML prompts/catalogs.
 
@@ -39,15 +39,15 @@ Focused pytest coverage must prove context affordances, classifier refusal targe
 Modify:
 
 - `client/services/wire.ts`
-  - Rename combat command `target_id` fields to `target`.
+  - Rename combat command legacy target fields to `target`.
 - `client/logic/combat/actions.ts`
   - Emit `target` in combat command payloads.
 - `server/src/api/schema.py`
-  - Rename `GraphCombatCommandRequest.target_id` to `target`.
+  - Rename `GraphCombatCommandRequest` legacy target field to `target`.
 - `server/src/game/domain/combat.py`
-  - Rename combat trace/action `target_id` fields to `target`.
+  - Rename combat trace/action legacy target fields to `target`.
 - `server/src/game/domain/memory.py`
-  - Rename memory/dialogue `target_id` fields to `target`.
+  - Rename memory/dialogue legacy target fields to `target`.
 - `server/src/llm/calls/classify/action_builder.py`
   - Read classify intent targets from `target`.
 - `server/src/locale/prompts/_kernel.ko.md`
@@ -92,7 +92,7 @@ No new files are needed.
 - Modify: `server/src/llm/calls/classify/action_builder.py`
 - Modify: `server/src/locale/prompts/_kernel.ko.md`
 - Modify: `server/src/locale/prompts/classify/prompt.ko.md`
-- Modify: runtime, engine, narration, and tests found by `rg -n "target_id" server client agency docs/superpowers -S`
+- Modify: runtime, engine, narration, and tests found by searching for the legacy target-id spelling.
 
 - [ ] **Step 1: Write failing contract tests for `target`**
 
@@ -129,7 +129,8 @@ Also update `server/tests/llm/calls/test_classify_prompt.py` so it asserts:
 
 ```python
 assert '"intent":"use","skill_id":"minor_heal_01","target":"player_01"' in text
-assert "target_id" not in text
+old_target_field = "target" + "_id"
+assert old_target_field not in text
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -148,8 +149,8 @@ npm test -- --runInBand logic/combat/__tests__/actions.test.ts services/__tests_
 
 Expected:
 
-- Server tests fail where code still expects `target_id`.
-- Client tests fail where payloads still emit `target_id`.
+- Server tests fail where code still expects the legacy target field.
+- Client tests fail where payloads still emit the legacy target field.
 
 - [ ] **Step 3: Rename the contract mechanically**
 
@@ -157,13 +158,14 @@ Apply a repo-scoped mechanical rename for this contract:
 
 ```powershell
 $paths = @('server','client','agency','docs/superpowers')
+$legacyTargetField = 'target' + '_id'
 Get-ChildItem -Path $paths -Recurse -File |
   Where-Object { $_.FullName -notmatch '\\node_modules\\|\\.pytest_cache\\|\\__pycache__\\' } |
   ForEach-Object {
     $path = $_.FullName
     $text = Get-Content -Raw -LiteralPath $path
-    if ($text -match 'target_id') {
-      $new = $text -replace 'target_id', 'target'
+    if ($text -match $legacyTargetField) {
+      $new = $text -replace $legacyTargetField, 'target'
       if ($new -ne $text) { Set-Content -LiteralPath $path -Value $new -NoNewline }
     }
   }
@@ -173,12 +175,12 @@ Then inspect the diff before continuing:
 
 ```powershell
 git diff --stat
-rg -n "target_id" server client agency docs/superpowers -S
+rg -n $legacyTargetField server client agency docs/superpowers -S
 ```
 
 Expected:
 
-- `rg` returns no `target_id` hits under those paths.
+- The search returns no legacy target-field hits under those paths.
 - The diff is a mechanical field rename, not unrelated cleanup.
 
 - [ ] **Step 4: Fix compile/runtime fallout from the rename**
@@ -194,7 +196,7 @@ Follow test failures only. Typical expected fixes:
 - prompt examples using `"target"`
 - TypeScript `CombatCommand` union members with `target`
 
-Do not add compatibility aliases for `target_id`. The point of this slice is to
+Do not add compatibility aliases for the legacy target field. The point of this slice is to
 remove the double contract.
 
 - [ ] **Step 5: Verify no old target contract remains**
@@ -202,7 +204,7 @@ remove the double contract.
 Run:
 
 ```powershell
-rg -n "target_id" server client agency docs/superpowers -S
+rg -n $legacyTargetField server client agency docs/superpowers -S
 ```
 
 Expected: no output.

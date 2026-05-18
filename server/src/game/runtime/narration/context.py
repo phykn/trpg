@@ -76,7 +76,7 @@ def build_action_narration_payload(
         "recent_narration": _recent_narration_payload(before),
         "recent_dialogue": narrate_recent_dialogue_payload(
             after,
-            target_id=target.id if target is not None else None,
+            target=target.id if target is not None else None,
         ),
         "combat_view": combat_narration_view(
             after,
@@ -128,7 +128,7 @@ def build_roll_narration_payload(
         "recent_narration": _recent_narration_payload(runtime),
         "recent_dialogue": narrate_recent_dialogue_payload(
             runtime,
-            target_id=target.id if target is not None else None,
+            target=target.id if target is not None else None,
         ),
         "combat_view": combat_narration_view(runtime),
         "budget": _narrate_budget(runtime),
@@ -160,7 +160,7 @@ def build_input_narration_payload(
         "recent_narration": _recent_narration_payload(runtime),
         "recent_dialogue": narrate_recent_dialogue_payload(
             runtime,
-            target_id=dialogue_target.id if dialogue_target is not None else None,
+            target=dialogue_target.id if dialogue_target is not None else None,
         ),
         "combat_view": combat_narration_view(runtime),
         "budget": _narrate_budget(runtime),
@@ -587,8 +587,8 @@ def _narrate_budget(runtime: GameRuntimeState) -> dict[str, int]:
 
 
 def _action_target(runtime: GameRuntimeState, action: Action) -> GraphNode | None:
-    target_id = _single(action.what) or _single(action.to)
-    return runtime.graph.nodes.get(target_id or "")
+    target = _single(action.what) or _single(action.to)
+    return runtime.graph.nodes.get(target or "")
 
 
 def _single(value: object) -> str | None:

@@ -80,7 +80,7 @@ def test_build_action_output_converts_non_combat_skill_use_intent():
                 {
                     "intent": "use",
                     "skill_id": "minor_heal_01",
-                    "target_id": "player_01",
+                    "target": "player_01",
                 }
             ]
         },
@@ -124,7 +124,7 @@ def test_validate_action_output_json_accepts_intent_json():
             "intents": [
                 {
                     "intent": "attack",
-                    "target_id": "goblin_01",
+                    "target": "goblin_01",
                     "skill_id": "slash_01",
                 }
             ]
@@ -145,7 +145,7 @@ def test_build_action_output_keeps_combat_tactic_separate_from_intent():
             "intents": [
                 {
                     "intent": "attack",
-                    "target_id": "goblin_01",
+                    "target": "goblin_01",
                     "tactic": "reckless",
                 }
             ]
@@ -179,19 +179,19 @@ def test_build_action_output_supports_existing_intent_catalog():
             {"verb": "transfer", "what": "sword_01", "how": "unequip"},
         ),
         (
-            {"intent": "use", "item_id": "dagger_01", "target_id": "player_01"},
+            {"intent": "use", "item_id": "dagger_01", "target": "player_01"},
             {"verb": "use", "what": "dagger_01", "to": "player_01"},
         ),
         (
-            {"intent": "cast", "skill_id": "slash_01", "target_id": "goblin_01"},
+            {"intent": "cast", "skill_id": "slash_01", "target": "goblin_01"},
             {"verb": "attack", "what": ["goblin_01"], "with": "slash_01"},
         ),
         (
-            {"intent": "cast", "skill_id": "heal_01", "target_id": "player_01"},
+            {"intent": "cast", "skill_id": "heal_01", "target": "player_01"},
             {"verb": "use", "with": "heal_01", "to": "player_01"},
         ),
         (
-            {"intent": "give", "item_id": "dagger_01", "target_id": "guard_01"},
+            {"intent": "give", "item_id": "dagger_01", "target": "guard_01"},
             {
                 "verb": "transfer",
                 "what": "dagger_01",
@@ -201,7 +201,7 @@ def test_build_action_output_supports_existing_intent_catalog():
             },
         ),
         (
-            {"intent": "steal", "item_id": "dagger_01", "target_id": "guard_01"},
+            {"intent": "steal", "item_id": "dagger_01", "target": "guard_01"},
             {
                 "verb": "transfer",
                 "what": "dagger_01",
@@ -221,7 +221,7 @@ def test_build_action_output_supports_existing_intent_catalog():
             },
         ),
         (
-            {"intent": "accept_quest", "quest_id": "quest_01", "target_id": "guard_01"},
+            {"intent": "accept_quest", "quest_id": "quest_01", "target": "guard_01"},
             {
                 "verb": "transfer",
                 "what": "quest_01",
@@ -234,7 +234,7 @@ def test_build_action_output_supports_existing_intent_catalog():
             {
                 "intent": "abandon_quest",
                 "quest_id": "quest_01",
-                "target_id": "guard_01",
+                "target": "guard_01",
             },
             {
                 "verb": "transfer",

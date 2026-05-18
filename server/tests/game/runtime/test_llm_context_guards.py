@@ -129,13 +129,13 @@ def _runtime(
                         GraphCombatTraceEvent(
                             kind="combat_started",
                             actor_id="npc_0",
-                            target_id="player_01",
+                            target="player_01",
                             state="healthy",
                         ),
                         GraphCombatTraceEvent(
                             kind="player_attacked",
                             actor_id="player_01",
-                            target_id="npc_0",
+                            target="npc_0",
                             state="hurt",
                         ),
                     ],

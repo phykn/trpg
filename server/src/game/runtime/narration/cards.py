@@ -138,10 +138,10 @@ def _combat_text(
     dispatch: GraphActionDispatchResult,
 ) -> str:
     if before.progress.graph_combat_state is None:
-        target_id = _single(action.what) or _single(action.to)
+        target = _single(action.what) or _single(action.to)
         target = _node_label(
             after,
-            target_id,
+            target,
             fallback=render("runtime.fallback.target", after.progress.locale),
         )
         return render("runtime.combat.start", after.progress.locale, target=target)
@@ -174,10 +174,10 @@ def _skill_combat_text(
     dispatch: GraphActionDispatchResult,
     skill_id: str,
 ) -> str:
-    target_id = _single(action.what) if action.verb == "attack" else _single(action.to)
+    target = _single(action.what) if action.verb == "attack" else _single(action.to)
     target = _node_label(
         after,
-        target_id,
+        target,
         fallback=render("runtime.fallback.target", after.progress.locale),
     )
     skill = _node_label(after, skill_id)

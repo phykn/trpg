@@ -135,14 +135,14 @@ describe('graph API helpers', () => {
 
     const result = await sendGraphCombatCommand('game-1', {
       command: 'precise',
-      target_id: 'enemy_01',
+      target: 'enemy_01',
     });
 
     expect(fetch).toHaveBeenCalledWith(
       'https://api.example.test/session/game-1/graph/combat/stream',
       expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify({ command: 'precise', target_id: 'enemy_01' }),
+        body: JSON.stringify({ command: 'precise', target: 'enemy_01' }),
       }),
     );
     expect(result.status).toBe('executed');

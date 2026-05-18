@@ -69,9 +69,9 @@ function commandForTactic(
   tactic: CombatSupport['tactic'],
   target: Target,
 ): Extract<PanelAction, { kind: 'combat_command' }>['combatCommand'] {
-  if (tactic === 'precise') return { command: 'precise', target_id: target.id };
-  if (tactic === 'reckless') return { command: 'reckless', target_id: target.id };
-  if (tactic === 'talk') return { command: 'talk', target_id: target.id };
+  if (tactic === 'precise') return { command: 'precise', target: target.id };
+  if (tactic === 'reckless') return { command: 'reckless', target: target.id };
+  if (tactic === 'talk') return { command: 'talk', target: target.id };
   if (tactic === 'guarded') return { command: 'guarded' };
   return { command: 'create_distance' };
 }
@@ -80,7 +80,7 @@ function plainPrecise(target: Target): PanelAction {
   return {
     kind: 'combat_command',
     label: ko.combat.precise,
-    combatCommand: { command: 'precise', target_id: target.id },
+    combatCommand: { command: 'precise', target: target.id },
     textFallback: compose.preciseAttack(target.name),
   };
 }
@@ -107,7 +107,7 @@ function plainTalk(target: Target): PanelAction {
   return {
     kind: 'combat_command',
     label: ko.combat.talk,
-    combatCommand: { command: 'talk', target_id: target.id },
+    combatCommand: { command: 'talk', target: target.id },
     textFallback: compose.talkTo(target.name),
   };
 }

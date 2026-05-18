@@ -25,7 +25,7 @@ class GraphItemUseResult(BaseModel):
     changes: list[GraphChange]
     item_id: str
     actor_id: str
-    target_id: str
+    target: str
     kind: ItemUseKind
     amount: int | None = None
     consumed: bool = False
@@ -37,12 +37,12 @@ def plan_item_use(
     actor_id: str,
     item_id: str,
     *,
-    target_id: str | None = None,
+    target: str | None = None,
 ) -> GraphItemUseResult:
     item = _require_item(graph, item_id)
     _require_character(graph, actor_id)
-    resolved_target_id = target_id or actor_id
-    target = _require_character(graph, resolved_target_id)
+    resolved_target = target or actor_id
+    target = _require_character(graph, resolved_target)
     carry_edge = _require_carried_by(graph, actor_id, item_id)
 
     item_props = item.properties
@@ -59,7 +59,7 @@ def plan_item_use(
             target.properties,
             item_props,
             effect,
-            resolved_target_id,
+            resolved_target,
             changes,
         )
 
@@ -71,7 +71,7 @@ def plan_item_use(
         changes=changes,
         item_id=item_id,
         actor_id=actor_id,
-        target_id=resolved_target_id,
+        target=resolved_target,
         kind=kind,
         amount=amount,
         consumed=consumed,
@@ -83,14 +83,14 @@ def _plan_consumable_effect(
     target_props: dict,
     item_props: dict,
     effect_props: dict,
-    target_id: str,
+    target: str,
     changes: list[GraphChange],
 ) -> tuple[ItemUseKind, int | None]:
     kind = effect_props.get("kind") or effect_props.get("effect")
     if kind == "heal":
         restored = _plan_resource_restore(
             target_props,
-            target_id,
+            target,
             current_key="hp",
             max_key="max_hp",
             amount=_int_item_effect(item_props, "amount"),
@@ -100,14 +100,14 @@ def _plan_consumable_effect(
     if kind == "mp_restore":
         return "mp_restore", _plan_resource_restore(
             target_props,
-            target_id,
+            target,
             current_key="mp",
             max_key="max_mp",
             amount=_int_item_effect(item_props, "amount"),
             changes=changes,
         )
     if kind == "buff":
-        _plan_buff(target_props, item_props, effect_props, target_id, changes)
+        _plan_buff(target_props, item_props, effect_props, target, changes)
         return "buff", None
     if kind == "damage":
         raise GraphItemUseError("damage item use belongs to graph-native combat")
@@ -116,22 +116,22 @@ def _plan_consumable_effect(
 
 def _plan_resource_restore(
     target_props: dict,
-    target_id: str,
+    target: str,
     *,
     current_key: Literal["hp", "mp"],
     max_key: Literal["max_hp", "max_mp"],
     amount: int,
     changes: list[GraphChange],
 ) -> int:
-    current = _int_prop(target_props, current_key, target_id)
-    maximum = _int_prop(target_props, max_key, target_id)
+    current = _int_prop(target_props, current_key, target)
+    maximum = _int_prop(target_props, max_key, target)
     if current >= maximum:
-        raise GraphItemUseError(f"{current_key} already full: {target_id}")
+        raise GraphItemUseError(f"{current_key} already full: {target}")
     restored = min(maximum, current + amount) - current
     changes.append(
         SetNodePropertyChange(
             type="set_node_property",
-            node_id=target_id,
+            node_id=target,
             path=current_key,
             value=current + restored,
         )
@@ -143,7 +143,7 @@ def _plan_buff(
     target_props: dict,
     item_props: dict,
     effects: dict,
-    target_id: str,
+    target: str,
     changes: list[GraphChange],
 ) -> None:
     duration = _int_effect(effects, "duration")
@@ -158,7 +158,7 @@ def _plan_buff(
     changes.append(
         SetNodePropertyChange(
             type="set_node_property",
-            node_id=target_id,
+            node_id=target,
             path="active_buffs",
             value=buffs,
         )

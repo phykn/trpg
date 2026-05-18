@@ -157,7 +157,7 @@ def plan_quest_progress_for_character_death(
 def plan_quest_progress_for_trigger(
     graph: Graph,
     trigger_type: str,
-    target_id: str,
+    target: str,
 ) -> GraphQuestProgressResult:
     changes: list[GraphChange] = []
     completed_quest_ids: list[str] = []
@@ -172,7 +172,7 @@ def plan_quest_progress_for_trigger(
                 continue
             if (
                 trigger.get("type") in _trigger_type_aliases(trigger_type)
-                and trigger.get("target") == target_id
+                and trigger.get("target") == target
             ):
                 triggers_met[index] = True
                 changed = True

@@ -40,8 +40,16 @@ def test_action_output_actions_only():
 
 
 def test_action_output_refuse_only():
-    out = ActionOutput(refuse={"category": "out_of_game", "message_hint": "범위 밖"})
+    out = ActionOutput(
+        refuse={
+            "category": "out_of_game",
+            "message_hint": "범위 밖",
+            "target": "npc_01",
+        }
+    )
     assert out.actions is None
+    assert out.refuse is not None
+    assert out.refuse.target == "npc_01"
 
 
 def test_action_output_exactly_one_required():

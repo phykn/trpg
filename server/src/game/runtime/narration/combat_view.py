@@ -82,7 +82,7 @@ def _event_view(
 ) -> dict[str, Any]:
     return {
         "actor": _node_ref(runtime, event.actor_id),
-        "target": _node_ref(runtime, event.target_id),
+        "target": _node_ref(runtime, event.target),
         "motion": _motion_label(runtime.progress.locale, event.kind),
         "result": _event_result(event.kind),
         "result_label": _exchange_result_label(

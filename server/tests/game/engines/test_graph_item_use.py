@@ -160,7 +160,7 @@ def test_full_hp_heal_and_damage_consumable_are_rejected():
     with pytest.raises(GraphItemUseError, match="hp already full"):
         plan_item_use(graph, "player_01", "potion")
     with pytest.raises(GraphItemUseError, match="combat"):
-        plan_item_use(_graph(), "player_01", "bomb", target_id="ally_01")
+        plan_item_use(_graph(), "player_01", "bomb", target="ally_01")
 
 
 def test_item_use_changes_are_individually_valid_graph_changes():

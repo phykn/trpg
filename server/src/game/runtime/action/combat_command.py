@@ -18,7 +18,7 @@ def build_combat_command_action(
         raise CombatCommandError("combat is not active")
 
     command = payload.get("command")
-    target_id = payload.get("target_id")
+    target = payload.get("target")
     support_id = payload.get("support_id")
     support_kind = payload.get("support_kind")
 
@@ -26,9 +26,9 @@ def build_combat_command_action(
     untargeted_commands = {"guarded", "create_distance"}
 
     if command in targeted_commands:
-        if not isinstance(target_id, str) or not target_id:
-            raise CombatCommandError("target_id is required")
-        if target_id not in state.enemy_ids:
+        if not isinstance(target, str) or not target:
+            raise CombatCommandError("target is required")
+        if target not in state.enemy_ids:
             raise CombatCommandError("target is not active enemy")
     elif command not in untargeted_commands:
         raise CombatCommandError("unsupported combat command")
@@ -36,11 +36,11 @@ def build_combat_command_action(
     support = _support_id(support_id, support_kind)
 
     if command == "precise":
-        return Action(verb="attack", what=target_id, how="precise", with_=support)
+        return Action(verb="attack", what=target, how="precise", with_=support)
     if command == "reckless":
-        return Action(verb="attack", what=target_id, how="reckless", with_=support)
+        return Action(verb="attack", what=target, how="reckless", with_=support)
     if command == "talk":
-        return Action(verb="speak", to=target_id, with_=support)
+        return Action(verb="speak", to=target, with_=support)
     if command == "guarded":
         return Action(verb="pass", how="guarded", with_=support)
     return Action(verb="move", how="create_distance", with_=support)
