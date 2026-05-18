@@ -1219,6 +1219,64 @@ async def test_graph_input_runs_multiple_actions_in_order(tmp_path):
     assert logs[-1].text == "당신은 주변을 살핍니다."
 
 
+async def test_graph_input_executes_valid_parts_of_mixed_multi_intent(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM(
+        {
+            "actions": [
+                {"verb": "move", "to": "forest"},
+                {"verb": "use", "what": "ghost_item"},
+            ]
+        },
+        narration="당신은 가능한 행동만 이어 갑니다.",
+    )
+
+    result = await run_graph_input_turn(
+        llm,
+        repo,
+        "game-1",
+        "광장으로 가서 유령 물건을 사용한다",
+    )
+    graph = await repo.load_graph("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert "located_at:player_01:forest" in graph.edges
+    assert "located_at:player_01:town" not in graph.edges
+    assert [entry.kind for entry in logs] == ["player", "act", "gm", "gm"]
+    assert "유령 물건" in logs[0].text
+    assert "carries:player_01:ghost_item" not in graph.edges
+
+
+async def test_graph_input_executes_later_valid_part_after_invalid_multi_intent(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM(
+        {
+            "actions": [
+                {"verb": "use", "what": "ghost_item"},
+                {"verb": "move", "to": "forest"},
+            ]
+        },
+        narration="당신은 가능한 행동만 이어 갑니다.",
+    )
+
+    result = await run_graph_input_turn(
+        llm,
+        repo,
+        "game-1",
+        "유령 물건을 사용하고 광장으로 간다",
+    )
+    graph = await repo.load_graph("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert "located_at:player_01:forest" in graph.edges
+    assert [entry.kind for entry in logs] == ["player", "gm", "act", "gm"]
+    assert "carries:player_01:ghost_item" not in graph.edges
+
+
 async def test_graph_input_stops_multiple_actions_at_confirmation(tmp_path):
     repo = await _repo(tmp_path)
     llm = _FakeLLM(

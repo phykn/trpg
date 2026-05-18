@@ -47,7 +47,7 @@ async def classify(
             in_combat=in_combat,
             surroundings=grounding_view,
         )
-        return validate_grounded_output(output, grounding_view)
+        return validate_grounded_output(output, grounding_view, allow_partial=not strict)
 
     try:
         return await run_with_retries(
