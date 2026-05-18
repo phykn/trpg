@@ -324,6 +324,40 @@ def test_roll_payload_keeps_original_player_input_and_marks_preroll_text():
     assert "숨은 단서" not in json.dumps(payload, ensure_ascii=False)
 
 
+def test_roll_payload_keeps_check_reason_separate_from_preroll_narration():
+    runtime = _runtime()
+    pending = {
+        "check_reason": "경비병을 설득하려면 믿을 만한 말을 해야 합니다.",
+        "body": "경비병은 답하기 전에 주변의 시선을 먼저 살핍니다.",
+        "player_input": "경비병에게 북문 기록을 보여 달라고 설득합니다",
+    }
+
+    payload = build_roll_narration_payload(
+        runtime=runtime,
+        action=Action(verb="speak", to="guard_01", how="friendly"),
+        pending=pending,
+        roll_entry=RollLogEntry(
+            id=3,
+            kind="roll",
+            check="매력",
+            roll=12,
+            margin=-1,
+            result="fail",
+        ),
+        outcome="failure",
+    )
+
+    assert payload["player_input"] == "경비병에게 북문 기록을 보여 달라고 설득합니다"
+    assert (
+        payload["current_event"]["check_reason"]
+        == "경비병을 설득하려면 믿을 만한 말을 해야 합니다."
+    )
+    assert (
+        payload["current_event"]["preroll_narration"]
+        == "경비병은 답하기 전에 주변의 시선을 먼저 살핍니다."
+    )
+
+
 def test_input_payload_includes_target_public_knowledge_and_mentioned_inventory():
     runtime = _runtime()
     guard = runtime.graph.nodes["guard_01"].model_copy(

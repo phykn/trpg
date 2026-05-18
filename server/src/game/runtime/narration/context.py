@@ -96,7 +96,10 @@ def build_roll_narration_payload(
     outcome: str,
 ) -> dict[str, Any]:
     target = _action_target(runtime, action)
-    check_reason = pending.get("body")
+    check_reason = pending.get("check_reason")
+    if not isinstance(check_reason, str):
+        check_reason = pending.get("body")
+    preroll_narration = pending.get("body")
     player_input = pending.get("player_input")
     return {
         "player_input": player_input if isinstance(player_input, str) else None,
@@ -105,7 +108,9 @@ def build_roll_narration_payload(
             "outcome": outcome,
             "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
             "check_reason": check_reason if isinstance(check_reason, str) else "",
-            "preroll_narration": check_reason if isinstance(check_reason, str) else "",
+            "preroll_narration": (
+                preroll_narration if isinstance(preroll_narration, str) else ""
+            ),
             "roll": {
                 "check": roll_entry.check,
                 "result": roll_entry.result,

@@ -14,6 +14,7 @@ from src.game.runtime.flow.confirmation import (
 from src.game.runtime.flow.roll import (
     GraphRollExpected,
     build_pending_roll,
+    run_graph_preroll_stream,
     run_graph_roll,
     run_graph_roll_stream,
     start_graph_roll,
@@ -264,6 +265,29 @@ async def test_graph_action_request_stream_roll_streams_preroll_before_roll(tmp_
     assert [entry.kind for entry in logs] == ["gm"]
     assert logs[0].text == llm.narration
     assert llm.calls[0]["agent"] == "graph_narrate"
+
+
+async def test_preroll_stream_preserves_check_reason_after_body_narration(tmp_path):
+    repo = await _repo(tmp_path)
+    await _add_guard_with_affinity(repo, 0)
+    llm = _RollStreamLLM("경비병은 답하기 전에 주변의 시선을 먼저 살핍니다.")
+    reason = "경비병을 설득하려면 믿을 만한 말을 해야 합니다."
+
+    events = [
+        event
+        async for event in run_graph_preroll_stream(
+            llm,
+            repo,
+            "game-1",
+            Action(verb="speak", to="guard_01", how="friendly"),
+            reason=reason,
+        )
+    ]
+    progress = await repo.load_progress("game-1")
+
+    assert events[0]["result"].pending_roll["check_reason"] != llm.narration
+    assert progress.pending_roll["body"] == llm.narration
+    assert progress.pending_roll["check_reason"] == reason
 
 
 def test_build_pending_roll_stores_original_action_payload():
