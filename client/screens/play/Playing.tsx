@@ -2,6 +2,7 @@ import React from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 
 import { CombatStrip } from '@/logic/combat';
+import { buildDecisionState, DecisionStateStrip } from '@/logic/decision-state';
 import { Log } from '@/logic/log';
 import { RollPanel } from '@/components/roll/RollPanel';
 import { buildNearbyPanel, useStoryGraph } from '@/logic/story-graph';
@@ -69,6 +70,23 @@ export function Playing({ game }: Props) {
 
   const { graph: miniMapGraph } = useStoryGraph(game.gameId, storyGraph);
   const nearby = React.useMemo(() => buildNearbyPanel(miniMapGraph), [miniMapGraph]);
+  const latestGm = React.useMemo(() => {
+    for (let i = log.length - 1; i >= 0; i -= 1) {
+      const entry = log[i];
+      if (entry?.kind === 'gm') return entry;
+    }
+    return null;
+  }, [log]);
+  const decisionStateItems = React.useMemo(
+    () => buildDecisionState({
+      place,
+      quest,
+      combat,
+      heroStatus: hero?.status ?? [],
+      latestCues: latestGm?.cues ?? [],
+    }),
+    [combat, hero?.status, latestGm?.cues, place, quest],
+  );
 
   if (!hero) return null;
 
@@ -192,6 +210,8 @@ export function Playing({ game }: Props) {
           </Text>
         </View>
       ) : null}
+
+      <DecisionStateStrip items={decisionStateItems} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
