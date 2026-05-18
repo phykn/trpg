@@ -780,6 +780,42 @@ async def test_graph_input_streams_item_use_rejection_as_gm_narration(
     assert progress.turn_count == 1
 
 
+@pytest.mark.parametrize(
+    ("item_id", "player_input", "expected"),
+    [
+        (
+            "ghost_item",
+            "유령 물건을 사용한다",
+            "그런 물건은 없습니다. 주변이나 소지품을 살펴보고 실제로 보이는 물건을 사용해야 합니다.",
+        ),
+        (
+            "supply_token",
+            "보급 표식을 사용한다",
+            "그 물건을 가지고 있지 않습니다. 주변에 보이는 물건이라면 먼저 줍거나 챙겨야 합니다.",
+        ),
+    ],
+)
+async def test_graph_input_rejects_unusable_item_intent_with_public_next_step(
+    tmp_path,
+    item_id,
+    player_input,
+    expected,
+):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM({"actions": [{"verb": "use", "what": item_id}]}, narration="")
+
+    result = await run_graph_input_turn(llm, repo, "game-1", player_input)
+    graph = await repo.load_graph("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "rejected"
+    assert logs[-1].text == expected
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert logs[0].text == player_input
+    assert "carries:player_01:supply_token" not in graph.edges
+    assert "located_at:supply_token:town" in graph.edges
+
+
 async def test_graph_input_perceive_creates_pending_roll(tmp_path):
     repo = await _repo(tmp_path)
     llm = _FakeLLM({"actions": [{"verb": "perceive", "what": "town"}]})

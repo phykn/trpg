@@ -76,7 +76,14 @@ def test_unknown_move_destination_fails():
 def test_unknown_use_item_fails():
     output = ActionOutput(actions=[Action(verb="use", what="missing_item")])
 
-    with pytest.raises(ActionGroundingError, match="what"):
+    with pytest.raises(ActionGroundingError, match="missing item"):
+        validate_grounded_output(output, _surroundings())
+
+
+def test_visible_but_uncarried_use_item_fails_with_repairable_reason():
+    output = ActionOutput(actions=[Action(verb="use", what="loose_key")])
+
+    with pytest.raises(ActionGroundingError, match="item is not carried"):
         validate_grounded_output(output, _surroundings())
 
 

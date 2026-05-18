@@ -6,6 +6,7 @@ from ..runner import get_prompt, run_with_retries
 from ...client import LLMClient
 from ...diag import llm_diag
 from ...context.classify_view import classify_context_to_grounding_view
+from src.locale.render import render
 from .grounding import ActionGroundingError, validate_grounded_output
 from .schema import Action, ActionOutput, ClassifyInput, validate_action_output_json
 from .shortcuts import (
@@ -74,5 +75,23 @@ async def classify(
     ) as e:
         if strict:
             raise
+        if isinstance(e, ActionGroundingError):
+            return ActionOutput(
+                refuse={
+                    "category": "out_of_game",
+                    "message_hint": _grounding_rejection_message(str(e), locale),
+                }
+            )
         llm_diag("llm:classify_fallback", err=type(e).__name__, msg=str(e)[:120])
         return ActionOutput(actions=[Action(verb="pass")])
+
+
+def _grounding_rejection_message(reason: str, locale: str) -> str:
+    text = reason.lower()
+    if "protected target cannot be attacked" in text:
+        return render("log.error.protected_target", locale)
+    if "item is not carried" in text:
+        return render("log.error.item_not_in_inventory", locale)
+    if "missing item" in text or "ungrounded action=use" in text:
+        return render("log.error.unknown_item", locale)
+    return render("log.error.generic_block", locale)

@@ -33,20 +33,20 @@ ko = "그쪽은 그 물건을 가지고 있지 않습니다"
 en = "They do not have that item"
 
 [log."error.player_no_such_item"]
-ko = "그 물건을 가지고 있지 않습니다"
-en = "You do not have that item"
+ko = "그 물건을 가지고 있지 않습니다. 주변에 보이는 물건이라면 먼저 줍거나 챙겨야 합니다."
+en = "You do not have that item. If it is visible nearby, pick it up first."
 
 [log."error.item_not_in_inventory"]
-ko = "그 물건을 가지고 있지 않습니다"
-en = "You do not have that item"
+ko = "그 물건을 가지고 있지 않습니다. 주변에 보이는 물건이라면 먼저 줍거나 챙겨야 합니다."
+en = "You do not have that item. If it is visible nearby, pick it up first."
 
 [log."error.unknown_item"]
-ko = "그런 물건은 없습니다"
-en = "That item does not exist"
+ko = "그런 물건은 없습니다. 주변이나 소지품을 살펴보고 실제로 보이는 물건을 사용해야 합니다."
+en = "That item does not exist. Check your surroundings or inventory and use an item that is actually visible."
 
 [log."error.not_consumable"]
-ko = "소모할 수 있는 물건이 아닙니다"
-en = "That item cannot be consumed"
+ko = "이 물건은 지금 그런 방식으로 쓸 수 없습니다. 다른 물건을 고르거나 주변을 살펴보십시오."
+en = "That item cannot be used this way right now. Choose another item or look around."
 
 [log."error.damage_needs_target"]
 ko = "대상을 지정해야 합니다"

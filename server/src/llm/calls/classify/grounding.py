@@ -150,12 +150,7 @@ def _validate_action(action: Action, view: _ViewIds) -> None:
         )
     elif action.verb == "use":
         item_id = _single(action.what) or _single(action.with_)
-        _require_id(
-            item_id,
-            view.inventory_item_ids | view.skill_ids,
-            action=action,
-            field="what",
-        )
+        _validate_use_item(item_id, view, action=action)
         target = _single(action.to)
         if target is not None:
             _require_id(target, view.character_ids, action=action, field="to")
@@ -236,6 +231,30 @@ def _validate_transfer(action: Action, view: _ViewIds) -> None:
         if action.how in {"accept", "abandon"}:
             allowed_ids = allowed_ids | view.quest_ids
         _require_id(item_id, allowed_ids, action=action, field="what")
+
+
+def _validate_use_item(
+    item_id: str | None,
+    view: _ViewIds,
+    *,
+    action: Action,
+) -> None:
+    if item_id in view.inventory_item_ids or item_id in view.skill_ids:
+        return
+    visible_uncarried = (
+        view.location_item_ids
+        | view.visible_item_ids
+        | view.carryable_item_ids
+        | view.merchant_stock_item_ids
+        | view.corpse_inventory_item_ids
+    )
+    if item_id in visible_uncarried:
+        raise ActionGroundingError(
+            f"item is not carried action={action.verb} what: {item_id!r}"
+        )
+    raise ActionGroundingError(
+        f"missing item action={action.verb} what: {item_id!r}"
+    )
 
 
 def _require_id(
