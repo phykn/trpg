@@ -1107,6 +1107,33 @@ async def test_graph_input_targetless_speak_defaults_to_nearby_living_npc(tmp_pa
     assert "NPC가 직접 반응" in narrate_call["messages"][0]["content"]
 
 
+async def test_graph_input_targetless_repeated_speak_prefers_active_subject(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["merchant_01"] = _character("merchant_01")
+    graph.edges["located_at:merchant_01:town"] = GraphEdge(
+        id="located_at:merchant_01:town",
+        type="located_at",
+        from_node_id="merchant_01",
+        to_node_id="town",
+    )
+    await repo.save_graph("game-1", graph)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(update={"active_subject_id": "merchant_01"})
+    )
+    llm = _FakeLLM({"actions": [{"verb": "speak", "how": "friendly"}]})
+
+    await run_graph_input_turn(llm, repo, "game-1", "그에게 다시 묻는다")
+    saved = await repo.load_progress("game-1")
+    narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
+    user_prompt = json.loads(narrate_call["messages"][1]["content"])
+
+    assert saved.active_subject_id == "merchant_01"
+    assert user_prompt["target_view"]["id"] == "merchant_01"
+    assert user_prompt["current_event"]["target"]["id"] == "merchant_01"
+
+
 async def test_graph_input_narration_payload_includes_recent_narration(tmp_path):
     repo = await _repo(tmp_path)
     await repo.append_log_entries(
