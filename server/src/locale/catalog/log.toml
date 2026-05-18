@@ -9,24 +9,28 @@ ko = "이미 마력이 가득해 마력 음료를 쓸 필요가 없습니다"
 en = "Mana is already full, so a mana drink is not needed"
 
 [log."error.affinity_too_low"]
-ko = "친밀도가 부족해 거래가 되지 않습니다"
-en = "Affinity is too low to trade"
+ko = "친밀도가 부족해 거래가 되지 않습니다. 먼저 대화하거나 신뢰를 얻어야 합니다."
+en = "Affinity is too low to trade. Talk first or earn their trust."
 
 [log."error.cant_sell_equipped"]
-ko = "장착 중인 물건은 팔 수 없습니다 (먼저 해제하셔야 합니다)"
-en = "Equipped items cannot be sold (unequip them first)"
+ko = "장착 중인 물건은 팔 수 없습니다. 먼저 장착을 해제해야 합니다."
+en = "Equipped items cannot be sold. Unequip them first."
 
 [log."error.npc_not_enough_gold"]
-ko = "상대의 금화가 부족합니다"
-en = "The other party does not have enough gold"
+ko = "상대의 금화가 부족해 거래할 수 없습니다. 다른 물건을 고르거나 나중에 다시 거래해야 합니다."
+en = "The other party does not have enough gold to trade. Choose another item or trade later."
 
 [log."error.rest_insufficient_gold"]
 ko = "여관에 묵을 금화가 부족합니다"
 en = "You do not have enough gold to stay at the inn"
 
 [log."error.not_enough_gold"]
-ko = "금화가 부족합니다"
-en = "Not enough gold"
+ko = "금화가 부족해 거래할 수 없습니다. 금화를 더 모으거나 다른 물건을 고르셔야 합니다."
+en = "You do not have enough gold to trade. Earn more gold or choose another item."
+
+[log."error.trade_item_unavailable"]
+ko = "상대가 그 물건을 가지고 있지 않습니다. 다른 물건을 고르거나 거래 가능한 물건을 확인해야 합니다."
+en = "They do not have that item. Choose another item or check what is available for trade."
 
 [log."error.npc_no_such_item"]
 ko = "그쪽은 그 물건을 가지고 있지 않습니다"

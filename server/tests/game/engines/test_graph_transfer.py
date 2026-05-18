@@ -206,6 +206,46 @@ def test_trade_sell_rejects_equipped_item():
         )
 
 
+def test_trade_buy_rejects_when_player_lacks_gold():
+    graph = _graph()
+    graph.nodes["player_01"].properties["gold"] = 3
+
+    with pytest.raises(GraphTransferError, match="player does not have enough gold"):
+        plan_item_trade(
+            graph,
+            "potion",
+            from_character_id="npc_01",
+            to_character_id="player_01",
+            player_id="player_01",
+        )
+
+
+def test_trade_sell_rejects_when_merchant_lacks_gold():
+    graph = _graph()
+    graph.nodes["shield"].properties["price"] = 20
+    graph.nodes["npc_01"].properties["gold"] = 1
+
+    with pytest.raises(GraphTransferError, match="merchant does not have enough gold"):
+        plan_item_trade(
+            graph,
+            "shield",
+            from_character_id="player_01",
+            to_character_id="npc_01",
+            player_id="player_01",
+        )
+
+
+def test_trade_rejects_item_not_in_source_stock():
+    with pytest.raises(GraphTransferError, match="source mismatch"):
+        plan_item_trade(
+            _graph(),
+            "shield",
+            from_character_id="npc_01",
+            to_character_id="player_01",
+            player_id="player_01",
+        )
+
+
 def test_trade_rejects_low_affinity():
     graph = _graph()
     graph.edges["relation:npc_01:player_01"] = GraphEdge(

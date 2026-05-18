@@ -290,6 +290,49 @@ async def _repo(tmp_path) -> LocalFsGraphRepo:
     return repo
 
 
+async def _repo_with_trade_fixture(tmp_path) -> LocalFsGraphRepo:
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["player_01"].properties["gold"] = 2
+    graph.nodes["goblin_01"].properties["gold"] = 1
+    graph.nodes["potion"] = GraphNode(
+        id="potion",
+        type="item",
+        properties={"name": "회복 물약", "price": 6},
+    )
+    graph.nodes["gem"] = GraphNode(
+        id="gem",
+        type="item",
+        properties={"name": "보석", "price": 20},
+    )
+    graph.nodes["dagger"] = GraphNode(
+        id="dagger",
+        type="item",
+        properties={"name": "단검", "price": 4},
+    )
+    graph.edges["carries:goblin_01:potion"] = GraphEdge(
+        id="carries:goblin_01:potion",
+        type="carries",
+        from_node_id="goblin_01",
+        to_node_id="potion",
+    )
+    graph.edges["carries:player_01:gem"] = GraphEdge(
+        id="carries:player_01:gem",
+        type="carries",
+        from_node_id="player_01",
+        to_node_id="gem",
+    )
+    graph.edges["equips:player_01:dagger"] = GraphEdge(
+        id="equips:player_01:dagger",
+        type="equips",
+        from_node_id="player_01",
+        to_node_id="dagger",
+        properties={"slot": "weapon"},
+    )
+    await repo.save_graph("game-1", graph)
+    return repo
+
+
 async def test_graph_input_pending_confirmation_blocks_before_classify_or_log(tmp_path):
     repo = await _repo(tmp_path)
     progress = await repo.load_progress("game-1")
@@ -814,6 +857,123 @@ async def test_graph_input_rejects_unusable_item_intent_with_public_next_step(
     assert logs[0].text == player_input
     assert "carries:player_01:supply_token" not in graph.edges
     assert "located_at:supply_token:town" in graph.edges
+
+
+@pytest.mark.parametrize(
+    ("action", "player_input", "expected"),
+    [
+        (
+            {
+                "verb": "transfer",
+                "what": "potion",
+                "from": "goblin_01",
+                "to": "player_01",
+                "how": "trade",
+            },
+            "고블린에게 회복 물약을 산다",
+            "금화가 부족해 거래할 수 없습니다. 금화를 더 모으거나 다른 물건을 고르셔야 합니다.",
+        ),
+        (
+            {
+                "verb": "transfer",
+                "what": "gem",
+                "from": "player_01",
+                "to": "goblin_01",
+                "how": "trade",
+            },
+            "고블린에게 보석을 판다",
+            "상대의 금화가 부족해 거래할 수 없습니다. 다른 물건을 고르거나 나중에 다시 거래해야 합니다.",
+        ),
+        (
+            {
+                "verb": "transfer",
+                "what": "dagger",
+                "from": "player_01",
+                "to": "goblin_01",
+                "how": "trade",
+            },
+            "장착한 단검을 판다",
+            "장착 중인 물건은 팔 수 없습니다. 먼저 장착을 해제해야 합니다.",
+        ),
+        (
+            {
+                "verb": "transfer",
+                "what": "gem",
+                "from": "goblin_01",
+                "to": "player_01",
+                "how": "trade",
+            },
+            "고블린에게 보석을 산다",
+            "상대가 그 물건을 가지고 있지 않습니다. 다른 물건을 고르거나 거래 가능한 물건을 확인해야 합니다.",
+        ),
+    ],
+)
+async def test_graph_input_rejects_blocked_trade_with_public_repair_path(
+    tmp_path,
+    action,
+    player_input,
+    expected,
+):
+    repo = await _repo_with_trade_fixture(tmp_path)
+    llm = _FakeLLM({"actions": [action]}, narration="")
+
+    result = await run_graph_input_turn(llm, repo, "game-1", player_input)
+    graph = await repo.load_graph("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "rejected"
+    assert logs[-1].text == expected
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert logs[0].text == player_input
+    assert graph.nodes["player_01"].properties["gold"] == 2
+    assert graph.nodes["goblin_01"].properties["gold"] == 1
+    assert "carries:goblin_01:potion" in graph.edges
+    assert "carries:player_01:gem" in graph.edges
+    assert "equips:player_01:dagger" in graph.edges
+    assert "carries:player_01:potion" not in graph.edges
+
+
+async def test_graph_input_rejects_low_affinity_trade_with_public_repair_path(
+    tmp_path,
+):
+    repo = await _repo_with_trade_fixture(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["player_01"].properties["gold"] = 20
+    graph.edges["relation:goblin_01:player_01"] = GraphEdge(
+        id="relation:goblin_01:player_01",
+        type="relation",
+        from_node_id="goblin_01",
+        to_node_id="player_01",
+        properties={"affinity": -1},
+    )
+    await repo.save_graph("game-1", graph)
+    llm = _FakeLLM(
+        {
+            "actions": [
+                {
+                    "verb": "transfer",
+                    "what": "potion",
+                    "from": "goblin_01",
+                    "to": "player_01",
+                    "how": "trade",
+                }
+            ]
+        },
+        narration="",
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 회복 물약을 산다")
+    graph = await repo.load_graph("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "rejected"
+    assert (
+        logs[-1].text
+        == "친밀도가 부족해 거래가 되지 않습니다. 먼저 대화하거나 신뢰를 얻어야 합니다."
+    )
+    assert graph.nodes["player_01"].properties["gold"] == 20
+    assert graph.nodes["goblin_01"].properties["gold"] == 1
+    assert "carries:goblin_01:potion" in graph.edges
 
 
 async def test_graph_input_perceive_creates_pending_roll(tmp_path):
