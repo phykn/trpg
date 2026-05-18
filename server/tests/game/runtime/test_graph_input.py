@@ -976,6 +976,48 @@ async def test_graph_input_rejects_low_affinity_trade_with_public_repair_path(
     assert "carries:goblin_01:potion" in graph.edges
 
 
+async def test_graph_input_query_answers_public_state_without_roll_or_narration(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM({"actions": [{"verb": "query", "what": "exits"}]})
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "출구가 어디인지 알려줘")
+    progress = await repo.load_progress("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "answered"
+    assert "광장" in result.message
+    assert progress.turn_count == 0
+    assert progress.pending_roll is None
+    assert [entry.kind for entry in logs] == ["player"]
+    assert [call["agent"] for call in llm.calls] == ["classify"]
+
+
+async def test_graph_input_uncertain_inspection_preserves_reason_and_original_input(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    reason = "광장의 흔적이 서로 맞물리는지 자세히 살펴야 합니다."
+    llm = _FakeLLM(
+        {
+            "actions": [{"verb": "perceive", "what": "town"}],
+            "action_checks": [{"required": True, "reason": reason}],
+        }
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "광장의 흔적을 자세히 조사한다")
+    progress = await repo.load_progress("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "roll_required"
+    assert progress.pending_roll["kind"] == "perceive"
+    assert progress.pending_roll["body"] == reason
+    assert progress.pending_roll["check_reason"] == reason
+    assert progress.pending_roll["player_input"] == "광장의 흔적을 자세히 조사한다"
+    assert [entry.kind for entry in logs] == ["player"]
+
+
 async def test_graph_input_perceive_creates_pending_roll(tmp_path):
     repo = await _repo(tmp_path)
     llm = _FakeLLM({"actions": [{"verb": "perceive", "what": "town"}]})

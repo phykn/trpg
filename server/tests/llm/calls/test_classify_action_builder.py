@@ -118,6 +118,56 @@ def test_build_action_output_carries_check_hint_separately_from_action():
     assert output.action_checks[0].reason == "무너진 길을 조심히 건너야 합니다."
 
 
+def test_build_action_output_converts_uncertain_inspect_to_perceive_with_check_reason():
+    output = build_action_output(
+        {
+            "intents": [
+                {
+                    "intent": "inspect",
+                    "target": "guard_01",
+                    "check_required": True,
+                    "check_reason": "경비병의 말투에서 숨긴 뜻을 읽어야 합니다.",
+                }
+            ]
+        },
+        _surroundings(),
+    )
+
+    assert output.actions is not None
+    assert output.actions[0].model_dump(
+        mode="json", by_alias=True, exclude_none=True
+    ) == {
+        "verb": "perceive",
+        "what": "guard_01",
+    }
+    assert output.action_checks[0].required is True
+    assert output.action_checks[0].reason == "경비병의 말투에서 숨긴 뜻을 읽어야 합니다."
+
+
+def test_build_action_output_converts_public_info_request_to_query_without_check():
+    output = build_action_output(
+        {
+            "intents": [
+                {
+                    "intent": "query",
+                    "topic": "exits",
+                    "check_required": False,
+                }
+            ]
+        },
+        _surroundings(),
+    )
+
+    assert output.actions is not None
+    assert output.actions[0].model_dump(
+        mode="json", by_alias=True, exclude_none=True
+    ) == {
+        "verb": "query",
+        "what": "exits",
+    }
+    assert output.action_checks[0].required is False
+
+
 def test_validate_action_output_json_accepts_intent_json():
     raw = json.dumps(
         {
