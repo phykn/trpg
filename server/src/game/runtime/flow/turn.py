@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
-from src.game.domain.memory import GMLogEntry, LogEntry
+from src.game.domain.memory import LogEntry
 from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, set_diag_context
 from src.wire.graph.to_front import GraphFrontStatePayload, graph_to_front_state
@@ -26,6 +26,7 @@ from ..load import load_runtime_state
 from ..narration.result import (
     GraphNarrationResult,
     VisibleNarrationStream,
+    gm_log_entry_from_narration,
     parse_graph_narration_answer,
     persist_graph_narration_result,
 )
@@ -260,10 +261,9 @@ async def _commit_graph_action_narration(
     next_runtime = result.runtime
     log_entries: list[LogEntry] = []
     if narration_result.narration:
-        entry = GMLogEntry(
-            id=next_runtime.progress.next_log_id,
-            kind="gm",
-            text=narration_result.narration,
+        entry = gm_log_entry_from_narration(
+            next_runtime.progress.next_log_id,
+            narration_result,
             outcome=narration_outcome or outcome_from_dispatch(prepared.dispatch),
         )
         log_entries.append(entry)

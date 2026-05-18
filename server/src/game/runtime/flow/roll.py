@@ -34,6 +34,7 @@ from ..narration.input import stream_graph_preroll_narration
 from ..narration.result import (
     GraphNarrationResult,
     VisibleNarrationStream,
+    gm_log_entry_from_narration,
     parse_graph_narration_answer,
     persist_graph_narration_result,
 )
@@ -202,10 +203,9 @@ async def _finish_preroll_body(
     runtime = result.runtime
     pending = dict(result.pending_roll)
     pending["body"] = narration_result.narration
-    entry = GMLogEntry(
-        id=runtime.progress.next_log_id,
-        kind="gm",
-        text=narration_result.narration,
+    entry = gm_log_entry_from_narration(
+        runtime.progress.next_log_id,
+        narration_result,
     )
     progress = runtime.progress.model_copy(
         update={
@@ -538,10 +538,9 @@ async def _commit_roll_narration(
     runtime = resolved.runtime
     log_entries: list[LogEntry] = []
     if narration_result.narration:
-        entry = GMLogEntry(
-            id=runtime.progress.next_log_id,
-            kind="gm",
-            text=narration_result.narration,
+        entry = gm_log_entry_from_narration(
+            runtime.progress.next_log_id,
+            narration_result,
             outcome=resolved.outcome,
         )
         log_entries.append(entry)
@@ -866,10 +865,10 @@ async def _finish_narrative_roll(
         _roll_resolution_key(action, outcome),
         runtime.progress.locale,
     )
-    entry = GMLogEntry(
-        id=runtime.progress.next_log_id,
-        kind="gm",
-        text=text,
+    narration_result = narration_result.model_copy(update={"narration": text})
+    entry = gm_log_entry_from_narration(
+        runtime.progress.next_log_id,
+        narration_result,
         outcome=outcome,
     )
     next_progress = runtime.progress.model_copy(update={"next_log_id": entry.id + 1})

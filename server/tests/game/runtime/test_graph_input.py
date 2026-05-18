@@ -33,12 +33,14 @@ class _FakeLLM:
         turn_summary: str = "",
         importance: int = 1,
         suggestions: list[object] | None = None,
+        ui_cues: list[object] | None = None,
     ) -> None:
         self.payload = payload
         self.narration = narration
         self.turn_summary = turn_summary
         self.importance = importance
         self.suggestions = suggestions or []
+        self.ui_cues = ui_cues or []
         self.calls = []
 
     async def chat(
@@ -79,7 +81,12 @@ class _FakeLLM:
         }
 
     def _narration_answer(self) -> str:
-        if not self.turn_summary and not self.suggestions and self.importance == 1:
+        if (
+            not self.turn_summary
+            and not self.suggestions
+            and not self.ui_cues
+            and self.importance == 1
+        ):
             return self.narration
         return "\n".join(
             [
@@ -90,6 +97,7 @@ class _FakeLLM:
                         "turn_summary": self.turn_summary,
                         "importance": self.importance,
                         "suggestions": self.suggestions,
+                        "ui_cues": self.ui_cues,
                     },
                     ensure_ascii=False,
                 ),
@@ -445,6 +453,29 @@ async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
     assert progress.turn_count == 1
     narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
     assert narrate_call["temperature"] == 1.0
+
+
+async def test_graph_input_persists_narration_ui_cues(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]},
+        narration="고블린이 문틈 너머의 그림자를 가리킵니다.",
+        ui_cues=[
+            {
+                "kind": "opportunity",
+                "label": "기회",
+                "text": "문틈을 살필 수 있음",
+            }
+        ],
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 말을 건다")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert isinstance(logs[1], GMLogEntry)
+    assert logs[1].cues[0].text == "문틈을 살필 수 있음"
 
 
 async def test_graph_input_speak_check_hint_creates_pending_roll(tmp_path):

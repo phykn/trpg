@@ -7,7 +7,7 @@ from src.game.domain.content import node_label
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph.character import is_visible_character
 from src.game.domain.graph.query import characters_at, location_of
-from src.game.domain.memory import GMLogEntry, PlayerLogEntry
+from src.game.domain.memory import PlayerLogEntry
 from src.llm.calls.classify.runner import classify
 from src.llm.calls.classify.schema import ClassifyInput
 from src.llm.context.classify_view import (
@@ -36,6 +36,7 @@ from ..narration.input import (
 from ..narration.result import (
     GraphNarrationResult,
     VisibleNarrationStream,
+    gm_log_entry_from_narration,
     parse_graph_narration_answer,
     persist_graph_narration_result,
 )
@@ -571,10 +572,9 @@ async def _persist_graph_rejected_input(
     action: Action,
     narration_result: GraphNarrationResult,
 ) -> GraphActionRequestResult:
-    entry = GMLogEntry(
-        id=runtime.progress.next_log_id,
-        kind="gm",
-        text=narration_result.narration,
+    entry = gm_log_entry_from_narration(
+        runtime.progress.next_log_id,
+        narration_result,
     )
     progress = runtime.progress.model_copy(
         update={
@@ -719,11 +719,9 @@ async def _finish_graph_narrative_input(
     *,
     player_input: str,
 ) -> GraphActionRequestResult:
-    text = narration_result.narration
-    entry = GMLogEntry(
-        id=runtime.progress.next_log_id,
-        kind="gm",
-        text=text,
+    entry = gm_log_entry_from_narration(
+        runtime.progress.next_log_id,
+        narration_result,
     )
     progress = runtime.progress.model_copy(
         update={
