@@ -26,6 +26,14 @@ describe('LogItem GM entries', () => {
     expect(source).toContain('text-success-fg');
     expect(source).toContain('text-danger-fg');
   });
+
+  test('renders narration cues from server-composed GM entries', () => {
+    expect(source).toContain('function NarrationCues');
+    expect(source).toContain('entry.cues');
+    expect(source).toContain('ko.cue.groupLabel');
+    expect(source).toContain('cue.label');
+    expect(source).toContain('cue.text');
+  });
 });
 
 describe('RollResult entries', () => {

@@ -86,6 +86,17 @@ export const ko = {
     short: '부족',
     die: '주사위',
   },
+  cue: {
+    groupLabel: '장면 변화',
+  },
+  decision: {
+    title: '현재 판단 기준',
+    place: '장소',
+    goal: '목표',
+    risk: '위험',
+    status: '상태',
+    temporary: '이번 선택',
+  },
   composer: {
     placeholderLocked: '판정을 먼저 굴려주세요',
     placeholder: '당신은 무엇을 합니까?',

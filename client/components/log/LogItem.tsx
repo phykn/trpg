@@ -1,9 +1,10 @@
 import { Text, View } from 'react-native';
 
 import { colors, spacing } from '@/design/tokens';
+import { ko } from '@/locale/ko';
 
 import { RollResult } from './RollResult';
-import type { LogEntry } from '@/logic/log/types';
+import type { LogEntry, NarrationCue } from '@/logic/log/types';
 
 export function LogItem({ entry }: { entry: LogEntry }) {
   switch (entry.kind) {
@@ -75,6 +76,33 @@ function gmTextClass(entry: Extract<LogEntry, { kind: 'gm' }>): string {
   return 'text-fg-default';
 }
 
+function cueToneClass(cue: NarrationCue): { box: string; text: string } {
+  if (cue.kind === 'warning') return { box: 'border-danger-fg bg-canvas-subtle', text: 'text-danger-fg' };
+  if (cue.kind === 'opportunity') return { box: 'border-success-fg bg-canvas-subtle', text: 'text-success-fg' };
+  if (cue.kind === 'change') return { box: 'border-accent-fg bg-accent-muted', text: 'text-accent-fg' };
+  return { box: 'border-border-default bg-canvas-inset', text: 'text-fg-muted' };
+}
+
+function NarrationCues({ cues }: { cues: NarrationCue[] }) {
+  return (
+    <View
+      accessible
+      accessibilityLabel={ko.cue.groupLabel}
+      className="mt-3 gap-1.5"
+    >
+      {cues.map((cue, i) => {
+        const toneClass = cueToneClass(cue);
+        return (
+          <View key={`${cue.kind}-${i}`} className={`rounded-sm border px-2.5 py-1.5 ${toneClass.box}`}>
+            <Text className={`font-sans-semibold text-caption ${toneClass.text}`}>{cue.label}</Text>
+            <Text className={`font-serif text-body ${toneClass.text}`}>{cue.text}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 function GMNarration({ entry }: { entry: Extract<LogEntry, { kind: 'gm' }> }) {
   const paragraphs = entry.text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
   const textClass = gmTextClass(entry);
@@ -97,6 +125,7 @@ function GMNarration({ entry }: { entry: Extract<LogEntry, { kind: 'gm' }> }) {
           </Text>
         );
       })}
+      {entry.cues && entry.cues.length > 0 ? <NarrationCues cues={entry.cues} /> : null}
     </View>
   );
 }
