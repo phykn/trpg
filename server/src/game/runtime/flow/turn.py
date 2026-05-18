@@ -31,7 +31,7 @@ from ..narration.result import (
 )
 from ..request_result import GraphResultOutcome, executed_result, outcome_from_dispatch
 from ..state import GameRuntimeState
-from ..narration.suggestions import GraphSuggestion
+from ..narration.suggestions import GraphSuggestion, filter_grounded_suggestions
 
 
 class GraphActionTurnError(ValueError):
@@ -295,7 +295,10 @@ async def _commit_graph_action_narration(
         runtime=next_runtime,
         dispatch=prepared.dispatch,
         front_state=graph_to_front_state(next_runtime),
-        suggestions=narration_result.suggestions,
+        suggestions=filter_grounded_suggestions(
+            next_runtime,
+            narration_result.suggestions,
+        ),
     )
 
 

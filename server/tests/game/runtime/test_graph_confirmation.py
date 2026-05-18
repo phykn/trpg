@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from src.db.graph.local_fs import LocalFsGraphRepo
@@ -9,6 +11,37 @@ from src.game.runtime.flow.confirmation import (
     run_graph_action_request,
     run_graph_confirm,
 )
+
+
+class _NarrationLLM:
+    def __init__(self, suggestions: list[object]) -> None:
+        self.suggestions = suggestions
+
+    async def chat(
+        self,
+        messages,
+        think=False,
+        agent=None,
+        temperature=None,
+        use_fallback=False,
+    ):
+        del messages, think, agent, temperature, use_fallback
+        return {
+            "answer": "\n".join(
+                [
+                    "의뢰 상태가 바뀝니다.",
+                    "---TRPG_META---",
+                    json.dumps(
+                        {
+                            "turn_summary": "",
+                            "importance": 1,
+                            "suggestions": self.suggestions,
+                        },
+                        ensure_ascii=False,
+                    ),
+                ]
+            )
+        }
 
 
 def _character(
@@ -283,3 +316,86 @@ async def test_confirm_quest_accept_executes_stored_action(tmp_path):
     assert saved_graph.nodes["quest_01"].properties["status"] == "active"
     assert saved_progress.pending_confirmation is None
     assert saved_progress.turn_count == 1
+
+
+async def test_confirm_quest_accept_filters_impossible_quest_suggestions(tmp_path):
+    repo = await _repo(tmp_path)
+    confirmation = await run_graph_action_request(
+        repo,
+        "game-1",
+        Action(verb="transfer", what="quest_01", how="accept"),
+    )
+    llm = _NarrationLLM(
+        [
+            {
+                "label": "의뢰 수락",
+                "input_text": "첫 의뢰를 수락합니다",
+                "intent": "quest",
+                "action": None,
+            },
+            {
+                "label": "의뢰 포기",
+                "input_text": "첫 의뢰를 포기합니다",
+                "intent": "quest",
+                "action": None,
+            },
+        ]
+    )
+
+    result = await run_graph_confirm(
+        repo,
+        "game-1",
+        confirmation.pending_confirmation["id"],
+        "confirm",
+        llm=llm,
+    )
+
+    assert result.front_state.quest is not None
+    assert result.front_state.quest.actions == ["abandon"]
+    assert [suggestion.input_text for suggestion in result.suggestions] == [
+        "첫 의뢰를 포기합니다"
+    ]
+
+
+async def test_confirm_quest_abandon_filters_impossible_quest_suggestions(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["quest_01"].properties["status"] = "active"
+    await repo.save_graph("game-1", graph)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(progress.model_copy(update={"active_quest_id": "quest_01"}))
+    confirmation = await run_graph_action_request(
+        repo,
+        "game-1",
+        Action(verb="transfer", what="quest_01", how="abandon"),
+    )
+    llm = _NarrationLLM(
+        [
+            {
+                "label": "의뢰 포기",
+                "input_text": "첫 의뢰를 포기합니다",
+                "intent": "quest",
+                "action": None,
+            },
+            {
+                "label": "주변 확인",
+                "input_text": "주변을 확인합니다",
+                "intent": "inspect",
+                "action": None,
+            },
+        ]
+    )
+
+    result = await run_graph_confirm(
+        repo,
+        "game-1",
+        confirmation.pending_confirmation["id"],
+        "confirm",
+        llm=llm,
+    )
+
+    assert result.front_state.quest is None
+    assert result.front_state.quest_offers == []
+    assert [suggestion.input_text for suggestion in result.suggestions] == [
+        "주변을 확인합니다"
+    ]
