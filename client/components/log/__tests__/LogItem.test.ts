@@ -13,8 +13,7 @@ describe('LogItem act entries', () => {
 
   test('hides combat act summaries already narrated by the combat panel and GM text', () => {
     expect(source).toContain('function isCombatActSummary');
-    expect(source).toContain('싸움의 중심을 잡습니다');
-    expect(source).toContain('전투 행동을 이어갑니다');
+    expect(source).toContain('ko.log.combatActSummaries');
   });
 });
 

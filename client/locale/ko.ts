@@ -89,6 +89,18 @@ export const ko = {
   cue: {
     groupLabel: '장면 변화',
   },
+  log: {
+    combatActSummaries: [
+      '싸움의 중심을 잡습니다',
+      '전투 행동을 이어갑니다',
+      '전투에서 패배합니다',
+      '전투를 끝냅니다',
+      '교전권 밖으로 물러납니다',
+      '전투선 밖으로 빠져나옵니다',
+      '싸움을 멈춥니다',
+      '전투가 끝납니다',
+    ] as readonly string[],
+  },
   decision: {
     title: '현재 판단 기준',
     place: '장소',
