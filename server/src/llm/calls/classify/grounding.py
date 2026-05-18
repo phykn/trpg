@@ -31,6 +31,7 @@ class _ViewIds:
     carryable_item_ids: set[str] = field(default_factory=set)
     corpse_ids: set[str] = field(default_factory=set)
     corpse_inventory_item_ids: set[str] = field(default_factory=set)
+    corpse_inventory_by_corpse: dict[str, set[str]] = field(default_factory=dict)
     quest_ids: set[str] = field(default_factory=set)
     self_refs: set[str] = field(default_factory=set)
 
@@ -109,7 +110,11 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
     skill_ids = _ids_from_list(surroundings.get("skills"))
     merchant_ids, merchant_stock_item_ids = _merchant_ids(surroundings.get("merchants"))
     carryable_item_ids = _carryable_item_ids(surroundings.get("entities"))
-    corpse_ids, corpse_inventory_item_ids = _corpse_ids(surroundings.get("corpses"))
+    (
+        corpse_ids,
+        corpse_inventory_item_ids,
+        corpse_inventory_by_corpse,
+    ) = _corpse_ids(surroundings.get("corpses"))
     quest_ids = _ids_from_list(surroundings.get("quests"))
     self_refs = _self_refs(player_ids)
 
@@ -132,6 +137,7 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
         carryable_item_ids=carryable_item_ids,
         corpse_ids=corpse_ids,
         corpse_inventory_item_ids=corpse_inventory_item_ids,
+        corpse_inventory_by_corpse=corpse_inventory_by_corpse,
         quest_ids=quest_ids,
         self_refs=self_refs,
     )
@@ -223,6 +229,16 @@ def _validate_transfer(action: Action, view: _ViewIds) -> None:
             field="from",
         )
         _require_id(action.to, view.self_refs, action=action, field="to")
+        return
+    source = _single(action.from_)
+    if source in view.corpse_ids:
+        _require_id(source, view.corpse_ids, action=action, field="from")
+        _require_id(action.to, view.self_refs, action=action, field="to")
+        if item_id not in view.corpse_inventory_by_corpse.get(source, set()):
+            raise ActionGroundingError(
+                f"corpse item mismatch action={action.verb} "
+                f"from: {source!r} what: {item_id!r}"
+            )
         return
     _require_id(action.from_, view.actor_refs, action=action, field="from")
     _require_id(action.to, view.actor_refs, action=action, field="to")
@@ -355,15 +371,18 @@ def _carryable_item_ids(value: object) -> set[str]:
     return item_ids
 
 
-def _corpse_ids(value: object) -> tuple[set[str], set[str]]:
+def _corpse_ids(value: object) -> tuple[set[str], set[str], dict[str, set[str]]]:
     corpse_ids: set[str] = set()
     item_ids: set[str] = set()
+    by_corpse: dict[str, set[str]] = {}
     for corpse in _dicts(value):
         corpse_id = _str(corpse.get("id"))
+        corpse_item_ids = _ids_from_list(corpse.get("inventory"))
         if corpse_id is not None:
             corpse_ids.add(corpse_id)
-        item_ids |= _ids_from_list(corpse.get("inventory"))
-    return corpse_ids, item_ids
+            by_corpse[corpse_id] = corpse_item_ids
+        item_ids |= corpse_item_ids
+    return corpse_ids, item_ids, by_corpse
 
 
 def _self_refs(player_ids: set[str]) -> set[str]:

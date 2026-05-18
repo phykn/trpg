@@ -129,6 +129,35 @@ async def test_korean_corpse_inspect_loots_single_carried_item_without_llm():
     assert action.how == "free"
 
 
+async def test_korean_ambiguous_corpse_loot_does_not_choose_without_llm():
+    context = _context()
+    context["identity"]["corpses"] = [
+        {
+            "id": "corpse_01",
+            "name": "쓰러진 허수아비",
+            "inventory": [{"id": "reward_badge", "name": "검증 배지", "kind": "item"}],
+        },
+        {
+            "id": "corpse_02",
+            "name": "쓰러진 골렘",
+            "inventory": [{"id": "gear_01", "name": "기어", "kind": "item"}],
+        },
+    ]
+
+    class _FallbackLLM:
+        async def chat(self, *args, **kwargs):
+            return {"answer": '{"intents":[{"intent":"pass","note":"대상을 더 특정해야 합니다."}]}'}
+
+    output = await classify(
+        _FallbackLLM(),
+        ClassifyInput(player_input="시체를 조사한다", context=context),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    assert output.actions[0].verb == "pass"
+
+
 async def test_korean_flee_in_combat_shortcuts_without_llm():
     output = await classify(
         _NoCallLLM(),

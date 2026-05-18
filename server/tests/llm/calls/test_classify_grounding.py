@@ -216,3 +216,28 @@ def test_transfer_accepts_current_location_item_pickup():
     )
 
     assert validate_grounded_output(output, _surroundings()) is output
+
+
+def test_transfer_rejects_loot_item_from_wrong_corpse():
+    surroundings = _surroundings()
+    surroundings["corpses"].append(
+        {
+            "id": "corpse_02",
+            "name": "다른 시체",
+            "inventory": [{"id": "amulet_01", "name": "부적"}],
+        }
+    )
+    output = ActionOutput(
+        actions=[
+            Action(
+                verb="transfer",
+                from_="corpse_02",
+                to="player_01",
+                how="free",
+                what="ring_01",
+            )
+        ]
+    )
+
+    with pytest.raises(ActionGroundingError, match="corpse item mismatch"):
+        validate_grounded_output(output, surroundings)
