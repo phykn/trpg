@@ -461,16 +461,13 @@ async def test_graph_roll_stream_returns_result_then_roll_narration(
     assert events[0]["payload"]["status"] == "executed"
     assert events[0]["payload"]["outcome"] == "success"
     assert events[0]["payload"]["state"]["pendingRoll"] is None
-    assert [entry["kind"] for entry in events[0]["payload"]["state"]["log"]] == [
-        "gm",
-        "roll",
-    ]
+    assert [entry["kind"] for entry in events[0]["payload"]["state"]["log"]] == ["roll"]
     assert (
         "".join(event["text"] for event in events[1:-1])
         == "장면의 긴장이 짧게 가라앉습니다."
     )
     assert events[-1]["payload"]["state"]["log"][-1] == {
-        "id": 3,
+        "id": 2,
         "kind": "gm",
         "text": "장면의 긴장이 짧게 가라앉습니다.",
         "outcome": "success",

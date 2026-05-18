@@ -14,7 +14,6 @@ import json
 from typing import Any
 
 from src.db.scenario.supabase import SupabaseStorageScenarioRepo
-from src.game.engines.growth import calc_max_hp, calc_max_mp
 
 
 # ---------------------------------------------------------------------------
@@ -214,21 +213,14 @@ def make_default_storage() -> FakeStorage:
     }
     loc = {"id": "loc_01", "name": "광장", "description": "테스트 광장"}
 
-    edric_level = 4
-    edric_stats = {"body": 10, "agility": 10, "mind": 10, "presence": 10}
     edric = {
         "id": "edrik_chief",
         "name": "에드릭",
         "race": "human",
         "gender": "male",
         "location": "loc_01",
-        "level": edric_level,
-        "stats": edric_stats,
-        "max_hp": calc_max_hp(edric_level, edric_stats["body"]),
-        "max_mp": calc_max_mp(edric_level, edric_stats["mind"]),
+        "level": 4,
     }
-    edric["hp"] = edric["max_hp"]
-    edric["mp"] = edric["max_mp"]
 
     _put_json(fs, "default/skills/basic_strike.json", skill)
     _put_json(fs, "default/races/human.json", human)
