@@ -76,6 +76,47 @@ Each slice must include these sections before implementation:
 
 ## Slice Order
 
+### 0. Target Field Contract Normalization
+
+Play Situation:
+The player or client names a target for an action, combat command, memory entry,
+or narration payload.
+
+Theory Risk:
+If some layers say `target_id` while others say `target`, the system has two
+parallel contracts for the same concept. That makes grounding and narration
+harder to reason about, and future slices can accidentally preserve one path
+while breaking the other.
+
+Code Scope:
+
+- Client combat command payloads
+- Server API combat command schema
+- LLM classify intent contract and examples
+- Action builder intent parsing
+- Combat trace/action domain models
+- Runtime narration, memory, and related tests that serialize target fields
+
+ExposedTransitionValidity:
+There should be one public field for the selected target: `target`. The value is
+still an existing raw id, but the field name is consistent across boundaries.
+
+FictionContinuity:
+Memory and narration payloads should preserve the same target under `target`
+instead of splitting recent dialogue, combat traces, and rejection payloads
+between two names.
+
+AgencyContinuity:
+Player intent should not depend on whether a caller used the old or new target
+field. After this normalization, new prompts, client payloads, and tests should
+use only `target`.
+
+Evidence:
+Focused server and client tests should prove combat commands, classify intents,
+memory payloads, combat narration payloads, and prompt text no longer require
+`target_id`. A repository search for `target_id` should return no source or test
+hits after the slice is complete.
+
 ### 1. Protected Target Attack Rejection
 
 Play Situation:

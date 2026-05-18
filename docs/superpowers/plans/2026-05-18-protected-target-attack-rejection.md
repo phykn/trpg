@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Complete the first theory-driven gameplay slice: attacks against `protected=true` targets are visibly blocked, preserve fiction continuity, preserve player agency, and have focused evidence.
+**Goal:** Normalize target field naming to `target`, then complete the first theory-driven gameplay slice: attacks against `protected=true` targets are visibly blocked, preserve fiction continuity, preserve player agency, and have focused evidence.
 
-**Architecture:** Keep the existing classify -> runtime -> graph_narrate flow. Add a narrow optional `target_id` to classifier refusal metadata so protected-target refusals can still carry the in-fiction target into rejection narration. Strengthen the public Korean reason and tests without rebuilding action or grounding contracts.
+**Architecture:** First remove the old `target_id` public/data-contract name across client, API, LLM classify intents, combat traces, memory payloads, and tests so the system has one target field. Then keep the existing classify -> runtime -> graph_narrate flow and add a narrow optional `target` to classifier refusal metadata so protected-target refusals can still carry the in-fiction target into rejection narration.
 
 **Tech Stack:** Python 3.12, Pydantic v2, pytest, FastAPI server runtime, graph-native game state, Korean locale TOML prompts/catalogs.
 
@@ -38,13 +38,31 @@ Focused pytest coverage must prove context affordances, classifier refusal targe
 
 Modify:
 
+- `client/services/wire.ts`
+  - Rename combat command `target_id` fields to `target`.
+- `client/logic/combat/actions.ts`
+  - Emit `target` in combat command payloads.
+- `server/src/api/schema.py`
+  - Rename `GraphCombatCommandRequest.target_id` to `target`.
+- `server/src/game/domain/combat.py`
+  - Rename combat trace/action `target_id` fields to `target`.
+- `server/src/game/domain/memory.py`
+  - Rename memory/dialogue `target_id` fields to `target`.
+- `server/src/llm/calls/classify/action_builder.py`
+  - Read classify intent targets from `target`.
+- `server/src/locale/prompts/_kernel.ko.md`
+  - Document `target` as the target id field.
+- `server/src/locale/prompts/classify/prompt.ko.md`
+  - Replace classify intent contract and examples with `target`.
+- Runtime and engine modules that consume combat trace, combat command, memory,
+  narration, or classify target fields.
 - `server/src/game/domain/action.py`
-  - Add optional `target_id` to `RefuseReason`.
+  - Add optional `target` to `RefuseReason`.
 - `server/src/llm/calls/classify/shortcuts.py`
-  - Populate `RefuseReason.target_id` for protected target attack refusals.
+  - Populate `RefuseReason.target` for protected target attack refusals.
 - `server/src/game/runtime/flow/input.py`
-  - Pass `output.refuse.target_id` into refused-input handling.
-  - Build the rejection narration action with `to=target_id` when present.
+  - Pass `output.refuse.target` into refused-input handling.
+  - Build the rejection narration action with `to=target` when present.
 - `server/src/locale/catalog/log.toml`
   - Strengthen `log.error.protected_target` in Korean and English.
 - `server/src/locale/prompts/graph_narrate/prompt.ko.md`
@@ -59,6 +77,149 @@ Test:
 - Existing coverage in `server/tests/llm/calls/test_classify_grounding.py`
 
 No new files are needed.
+
+## Task 0: Normalize Target Field Contract
+
+**Files:**
+
+- Modify: `client/services/wire.ts`
+- Modify: `client/logic/combat/actions.ts`
+- Modify: `client/logic/combat/__tests__/actions.test.ts`
+- Modify: `client/services/__tests__/api.test.ts`
+- Modify: `server/src/api/schema.py`
+- Modify: `server/src/game/domain/combat.py`
+- Modify: `server/src/game/domain/memory.py`
+- Modify: `server/src/llm/calls/classify/action_builder.py`
+- Modify: `server/src/locale/prompts/_kernel.ko.md`
+- Modify: `server/src/locale/prompts/classify/prompt.ko.md`
+- Modify: runtime, engine, narration, and tests found by `rg -n "target_id" server client agency docs/superpowers -S`
+
+- [ ] **Step 1: Write failing contract tests for `target`**
+
+Update existing tests so new public/data contracts use `target` only:
+
+```python
+# server/tests/llm/calls/test_classify_action_builder.py
+output = build_action_output(
+    {"intents": [{"intent": "attack", "target": "goblin_01"}]},
+    _surroundings(),
+)
+assert output.actions is not None
+assert output.actions[0].what == ["goblin_01"]
+```
+
+```python
+# server/tests/game/runtime/test_combat_command.py
+action = build_combat_command_action(
+    _runtime(),
+    {"command": "precise", "target": "enemy_01"},
+)
+assert action.what == "enemy_01"
+```
+
+```typescript
+// client/logic/combat/__tests__/actions.test.ts
+expect(action.combatCommand).toEqual({
+  command: 'precise',
+  target: 'enemy_01',
+});
+```
+
+Also update `server/tests/llm/calls/test_classify_prompt.py` so it asserts:
+
+```python
+assert '"intent":"use","skill_id":"minor_heal_01","target":"player_01"' in text
+assert "target_id" not in text
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest server/tests/llm/calls/test_classify_action_builder.py server/tests/game/runtime/test_combat_command.py server/tests/llm/calls/test_classify_prompt.py -q
+```
+
+From `client/` run:
+
+```powershell
+npm test -- --runInBand logic/combat/__tests__/actions.test.ts services/__tests__/api.test.ts
+```
+
+Expected:
+
+- Server tests fail where code still expects `target_id`.
+- Client tests fail where payloads still emit `target_id`.
+
+- [ ] **Step 3: Rename the contract mechanically**
+
+Apply a repo-scoped mechanical rename for this contract:
+
+```powershell
+$paths = @('server','client','agency','docs/superpowers')
+Get-ChildItem -Path $paths -Recurse -File |
+  Where-Object { $_.FullName -notmatch '\\node_modules\\|\\.pytest_cache\\|\\__pycache__\\' } |
+  ForEach-Object {
+    $path = $_.FullName
+    $text = Get-Content -Raw -LiteralPath $path
+    if ($text -match 'target_id') {
+      $new = $text -replace 'target_id', 'target'
+      if ($new -ne $text) { Set-Content -LiteralPath $path -Value $new -NoNewline }
+    }
+  }
+```
+
+Then inspect the diff before continuing:
+
+```powershell
+git diff --stat
+rg -n "target_id" server client agency docs/superpowers -S
+```
+
+Expected:
+
+- `rg` returns no `target_id` hits under those paths.
+- The diff is a mechanical field rename, not unrelated cleanup.
+
+- [ ] **Step 4: Fix compile/runtime fallout from the rename**
+
+Follow test failures only. Typical expected fixes:
+
+- `GraphCombatTraceEvent.target`
+- `GraphCombatAction.target`
+- `GraphCombatCommandRequest.target`
+- `DialoguePair.target`
+- `Memory.target`
+- `narrate_recent_dialogue_payload(..., target=...)`
+- prompt examples using `"target"`
+- TypeScript `CombatCommand` union members with `target`
+
+Do not add compatibility aliases for `target_id`. The point of this slice is to
+remove the double contract.
+
+- [ ] **Step 5: Verify no old target contract remains**
+
+Run:
+
+```powershell
+rg -n "target_id" server client agency docs/superpowers -S
+```
+
+Expected: no output.
+
+Run:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest server/tests/llm/calls/test_classify_action_builder.py server/tests/game/runtime/test_combat_command.py server/tests/llm/calls/test_classify_prompt.py server/tests/game/runtime/test_memory_context.py server/tests/game/runtime/test_combat_narration_view.py -q
+```
+
+From `client/` run:
+
+```powershell
+npm test -- --runInBand logic/combat/__tests__/actions.test.ts services/__tests__/api.test.ts
+```
+
+Expected: all selected tests pass.
 
 ## Task 1: Preserve Protected Refusal Target
 
@@ -79,12 +240,12 @@ def test_action_output_refuse_only():
         refuse={
             "category": "out_of_game",
             "message_hint": "범위 밖",
-            "target_id": "npc_01",
+            "target": "npc_01",
         }
     )
     assert out.actions is None
     assert out.refuse is not None
-    assert out.refuse.target_id == "npc_01"
+    assert out.refuse.target == "npc_01"
 ```
 
 In `server/tests/llm/calls/test_classify_in_combat_plumbing.py`, add this constant near the imports:
@@ -100,7 +261,7 @@ Then update both protected shortcut tests:
 
 ```python
     assert out.refuse.message_hint == PROTECTED_TARGET_REASON
-    assert out.refuse.target_id == "protected_guard"
+    assert out.refuse.target == "protected_guard"
 ```
 
 Apply that replacement in:
@@ -118,10 +279,10 @@ Run:
 
 Expected:
 
-- `test_action_output_refuse_only` fails because `target_id` is forbidden or absent.
-- The two classify shortcut tests fail because the message is still `"그 대상은 공격할 수 없습니다."` and `target_id` is absent.
+- `test_action_output_refuse_only` fails because `target` is forbidden or absent.
+- The two classify shortcut tests fail because the message is still `"그 대상은 공격할 수 없습니다."` and `target` is absent.
 
-- [ ] **Step 3: Add `target_id` to `RefuseReason`**
+- [ ] **Step 3: Add `target` to `RefuseReason`**
 
 In `server/src/game/domain/action.py`, change `RefuseReason` to:
 
@@ -131,7 +292,7 @@ class RefuseReason(BaseModel):
 
     category: RefuseCategory
     message_hint: str = Field(min_length=1, max_length=120)
-    target_id: str | None = Field(default=None, min_length=1)
+    target: str | None = Field(default=None, min_length=1)
 ```
 
 - [ ] **Step 4: Populate target metadata in protected shortcut**
@@ -143,7 +304,7 @@ In `server/src/llm/calls/classify/shortcuts.py`, update `_protected_attack_refus
         refuse=RefuseReason(
             category="meta_breaking",
             message_hint=render("log.error.protected_target", locale),
-            target_id=target["id"],
+            target=target["id"],
         )
     )
 ```
@@ -314,7 +475,7 @@ with:
             runtime,
             player_input,
             output.refuse.message_hint,
-            target_id=output.refuse.target_id,
+            target=output.refuse.target,
         )
 ```
 
@@ -339,7 +500,7 @@ with:
             runtime,
             player_input,
             output.refuse.message_hint,
-            target_id=output.refuse.target_id,
+            target=output.refuse.target,
         ):
 ```
 
@@ -355,9 +516,9 @@ async def _run_graph_refused_input(
     player_input: str,
     public_reason: str,
     *,
-    target_id: str | None = None,
+    target: str | None = None,
 ) -> GraphActionRequestResult:
-    action = Action(verb="pass", to=target_id)
+    action = Action(verb="pass", to=target)
     engine_diag("input:refused", reason=public_reason)
     return await _run_graph_rejected_reason_input(
         client,
@@ -379,9 +540,9 @@ async def _run_graph_refused_input_stream(
     player_input: str,
     public_reason: str,
     *,
-    target_id: str | None = None,
+    target: str | None = None,
 ) -> AsyncIterator[dict[str, object]]:
-    action = Action(verb="pass", to=target_id)
+    action = Action(verb="pass", to=target)
     engine_diag("input:refused", reason=public_reason)
     async for event in _run_graph_rejected_reason_input_stream(
         client,
@@ -488,7 +649,7 @@ Expected: all tests pass.
 Run:
 
 ```powershell
-.\.venv\Scripts\ruff.exe check server/src/game/domain/action.py server/src/llm/calls/classify/shortcuts.py server/src/game/runtime/flow/input.py server/tests/game/domain/test_action_contract.py server/tests/llm/calls/test_classify_in_combat_plumbing.py server/tests/game/runtime/test_graph_input.py
+.\.venv\Scripts\ruff.exe check server/src/game/domain/action.py server/src/game/domain/combat.py server/src/game/domain/memory.py server/src/api/schema.py server/src/llm/calls/classify/action_builder.py server/src/llm/calls/classify/shortcuts.py server/src/game/runtime/flow/input.py server/src/game/runtime/action/combat_command.py server/tests/game/domain/test_action_contract.py server/tests/llm/calls/test_classify_action_builder.py server/tests/llm/calls/test_classify_in_combat_plumbing.py server/tests/game/runtime/test_graph_input.py server/tests/game/runtime/test_combat_command.py
 ```
 
 Expected: no lint errors.
@@ -528,7 +689,7 @@ Expected:
 Run:
 
 ```powershell
-git add -- server/src/game/domain/action.py server/src/llm/calls/classify/shortcuts.py server/src/game/runtime/flow/input.py server/src/locale/catalog/log.toml server/src/locale/prompts/graph_narrate/prompt.ko.md server/tests/game/domain/test_action_contract.py server/tests/llm/calls/test_classify_in_combat_plumbing.py server/tests/game/runtime/test_graph_input.py
+git add -- client/logic/combat/__tests__/actions.test.ts client/logic/combat/actions.ts client/services/__tests__/api.test.ts client/services/wire.ts server/src/api/schema.py server/src/game/domain/action.py server/src/game/domain/combat.py server/src/game/domain/memory.py server/src/llm/calls/classify/action_builder.py server/src/llm/calls/classify/shortcuts.py server/src/game/runtime/flow/input.py server/src/game/runtime/action/combat_command.py server/src/locale/catalog/log.toml server/src/locale/prompts/_kernel.ko.md server/src/locale/prompts/classify/prompt.ko.md server/src/locale/prompts/graph_narrate/prompt.ko.md server/tests/game/domain/test_action_contract.py server/tests/game/runtime/test_combat_command.py server/tests/llm/calls/test_classify_action_builder.py server/tests/llm/calls/test_classify_in_combat_plumbing.py server/tests/llm/calls/test_classify_prompt.py server/tests/game/runtime/test_graph_input.py
 ```
 
 - [ ] **Step 3: Commit**
@@ -556,6 +717,6 @@ Placeholder scan:
 
 Type consistency:
 
-- `RefuseReason.target_id` is optional and defaults to `None`, so existing refusal outputs remain valid.
-- Runtime passes `target_id` only through refused-input paths.
+- `RefuseReason.target` is optional and defaults to `None`, so existing refusal outputs remain valid.
+- Runtime passes `target` only through refused-input paths.
 - Rejection narration still receives an `Action`; it is `pass` with optional `to`, which keeps existing action validation untouched.
