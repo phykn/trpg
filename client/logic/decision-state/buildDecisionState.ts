@@ -6,16 +6,12 @@ import type { Place } from '@/logic/story-graph/types';
 
 import type { DecisionStateItem, DecisionStateTone } from './types';
 
-type DecisionCue = Pick<NarrationCue, 'text'> & Partial<Pick<NarrationCue, 'kind' | 'label' | 'scope'>> & {
-  tone?: NarrationCue['kind'];
-};
-
 type BuildDecisionStateInput = {
   place: Place | null;
   quest: Quest | null;
   combat: CombatBadge | null;
   heroStatus: string[];
-  latestCues: DecisionCue[];
+  latestCues: NarrationCue[];
 };
 
 const MAX_ITEMS = 5;
@@ -59,7 +55,7 @@ export function buildDecisionState(input: BuildDecisionStateInput): DecisionStat
     });
   });
 
-  input.latestCues.forEach((cue, index) => {
+  input.latestCues.filter((cue) => cue.scope === 'temporary').forEach((cue, index) => {
     items.push({
       id: `cue:${index}`,
       label: ko.decision.temporary,
@@ -72,6 +68,6 @@ export function buildDecisionState(input: BuildDecisionStateInput): DecisionStat
   return items.slice(0, MAX_ITEMS);
 }
 
-function cueTone(cue: DecisionCue): DecisionStateTone {
-  return (cue.kind === 'warning' || cue.tone === 'warning') ? 'danger' : 'accent';
+function cueTone(cue: NarrationCue): DecisionStateTone {
+  return cue.kind === 'warning' ? 'danger' : 'accent';
 }

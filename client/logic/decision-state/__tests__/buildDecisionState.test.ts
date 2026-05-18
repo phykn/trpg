@@ -1,4 +1,5 @@
 import { buildDecisionState } from '../buildDecisionState';
+import type { NarrationCue } from '@/logic/log/types';
 import type { Quest } from '@/logic/quest/types';
 import type { Place } from '@/logic/story-graph/types';
 
@@ -39,12 +40,19 @@ describe('buildDecisionState', () => {
   });
 
   test('promotes a temporary opportunity cue', () => {
+    const cue: NarrationCue = {
+      kind: 'opportunity',
+      label: '기회',
+      text: '문틈을 살필 수 있음',
+      scope: 'temporary',
+    };
+
     const items = buildDecisionState({
       place: null,
       quest: null,
       combat: null,
       heroStatus: [],
-      latestCues: [{ text: '문틈을 살필 수 있음', tone: 'opportunity' }],
+      latestCues: [cue],
     });
 
     expect(items).toEqual([
@@ -56,5 +64,24 @@ describe('buildDecisionState', () => {
         temporary: true,
       },
     ]);
+  });
+
+  test('does not promote delta cues into the temporary decision strip', () => {
+    const cue: NarrationCue = {
+      kind: 'change',
+      label: '변화',
+      text: '평판이 흔들립니다',
+      scope: 'delta',
+    };
+
+    const items = buildDecisionState({
+      place: null,
+      quest: null,
+      combat: null,
+      heroStatus: [],
+      latestCues: [cue],
+    });
+
+    expect(items).toEqual([]);
   });
 });

@@ -86,7 +86,6 @@ function cueToneClass(cue: NarrationCue): { box: string; text: string } {
 function NarrationCues({ cues }: { cues: NarrationCue[] }) {
   return (
     <View
-      accessible
       accessibilityLabel={ko.cue.groupLabel}
       className="mt-3 gap-1.5"
     >

@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
 import type { DecisionStateItem, DecisionStateTone } from '@/logic/decision-state/types';
 
@@ -20,14 +20,20 @@ export function DecisionStateStrip({ items }: { items: DecisionStateItem[] }) {
   if (items.length === 0) return null;
 
   return (
-    <View className="mx-5 flex-row gap-1.5">
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      className="mx-5"
+      contentContainerStyle={{ flexDirection: 'row', gap: 6, paddingRight: 20 }}
+    >
       {items.map((item) => {
         const containerClasses = containerToneClass(item.tone);
         const textClasses = textToneClass(item.tone);
         return (
           <View
             key={item.id}
-            className={`min-w-0 flex-1 rounded-sm border px-2 py-1.5 ${containerClasses}`}
+            className={`flex-row flex-wrap items-baseline gap-x-1.5 gap-y-0.5 rounded-sm border px-2 py-1 ${containerClasses}`}
+            style={{ maxWidth: 220, flexShrink: 0 }}
           >
             <Text
               className={`font-sans-semibold text-caption ${textClasses}`}
@@ -37,13 +43,14 @@ export function DecisionStateStrip({ items }: { items: DecisionStateItem[] }) {
             </Text>
             <Text
               className={`font-sans-medium text-caption ${textClasses}`}
-              numberOfLines={1}
+              numberOfLines={2}
+              style={{ flexShrink: 1, minWidth: 0 }}
             >
               {item.text}
             </Text>
           </View>
         );
       })}
-    </View>
+    </ScrollView>
   );
 }

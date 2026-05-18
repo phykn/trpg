@@ -70,22 +70,17 @@ export function Playing({ game }: Props) {
 
   const { graph: miniMapGraph } = useStoryGraph(game.gameId, storyGraph);
   const nearby = React.useMemo(() => buildNearbyPanel(miniMapGraph), [miniMapGraph]);
-  const latestGm = React.useMemo(() => {
-    for (let i = log.length - 1; i >= 0; i -= 1) {
-      const entry = log[i];
-      if (entry?.kind === 'gm') return entry;
-    }
-    return null;
-  }, [log]);
+  const lastLogEntry = log[log.length - 1];
+  const latestCues = lastLogEntry?.kind === 'gm' ? lastLogEntry.cues ?? [] : [];
   const decisionStateItems = React.useMemo(
     () => buildDecisionState({
       place,
       quest,
       combat,
       heroStatus: hero?.status ?? [],
-      latestCues: latestGm?.cues ?? [],
+      latestCues,
     }),
-    [combat, hero?.status, latestGm?.cues, place, quest],
+    [combat, hero?.status, latestCues, place, quest],
   );
 
   if (!hero) return null;

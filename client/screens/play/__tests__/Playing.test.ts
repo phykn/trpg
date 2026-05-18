@@ -23,4 +23,11 @@ describe('Playing overlay layering', () => {
     expect(source).toContain('const showRollPanel = pendingRoll !== null && !streaming;');
     expect(source).toContain(') : showRollPanel ? (');
   });
+
+  test('only uses cues from the last log entry when it is GM narration', () => {
+    expect(source).toContain('const lastLogEntry = log[log.length - 1];');
+    expect(source).toContain("const latestCues = lastLogEntry?.kind === 'gm' ? lastLogEntry.cues ?? [] : [];");
+    expect(source).toContain('latestCues,');
+    expect(source).not.toContain('for (let i = log.length - 1; i >= 0; i -= 1)');
+  });
 });
