@@ -170,7 +170,7 @@ async def session_graph_turn(
     except GraphConfirmationError as e:
         raise HTTPException(status_code=422, detail=_player_error_detail(e))
     except GraphActionTurnError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=_player_error_detail(e))
     return GraphActionResponse(
         game_id=game_id,
         state=result.front_state.model_dump(mode="json", by_alias=True),
@@ -474,6 +474,12 @@ def _player_error_detail(error: Exception) -> str:
         return "현재 판정 선택지가 없습니다."
     if message == "roll id mismatch":
         return "현재 판정 선택지가 바뀌었습니다. 화면의 판정을 다시 선택해야 합니다."
+    if message.startswith("missing location:"):
+        return "지금은 그 장소로 이동할 수 없습니다. 화면에 보이는 이동 경로를 선택해야 합니다."
+    if "is not adjacent to current location" in message:
+        return "지금은 그 장소로 이동할 수 없습니다. 화면에 보이는 이동 경로를 선택해야 합니다."
+    if message.startswith("not enough xp:"):
+        return "아직 레벨을 올릴 만큼 경험치가 충분하지 않습니다."
     return message
 
 
@@ -546,7 +552,7 @@ async def session_graph_level_up(
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     except GraphLevelUpError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=_player_error_detail(e))
     return GraphActionResponse(
         game_id=game_id,
         state=result.front_state.model_dump(mode="json", by_alias=True),

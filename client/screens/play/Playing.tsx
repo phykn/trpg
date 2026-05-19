@@ -69,7 +69,7 @@ export function Playing({ game }: Props) {
   }, [typing]);
 
   const { graph: miniMapGraph } = useStoryGraph(game.gameId, storyGraph);
-  const nearby = React.useMemo(() => buildNearbyPanel(miniMapGraph), [miniMapGraph]);
+  const nearby = React.useMemo(() => buildNearbyPanel(storyGraph), [storyGraph]);
   const lastLogEntry = log[log.length - 1];
   const latestCues = lastLogEntry?.kind === 'gm' ? lastLogEntry.cues ?? [] : [];
   const decisionStateItems = React.useMemo(
@@ -102,6 +102,7 @@ export function Playing({ game }: Props) {
         miniMapGraph={miniMapGraph}
         place={place}
         activeId={activeId}
+        actionDisabled={streaming || pendingConfirmation !== null || pendingRoll !== null}
         leading={(
           <IconButton
             d={ICON_PATH.newGame}
@@ -232,7 +233,7 @@ export function Playing({ game }: Props) {
                   runAction(action);
                 }
               }}
-              actionDisabled={streaming || pendingConfirmation !== null}
+              actionDisabled={streaming || pendingConfirmation !== null || pendingRoll !== null}
             />
             <Composer
               input={input}
@@ -240,7 +241,7 @@ export function Playing({ game }: Props) {
               onSend={onSend}
               onStop={onStop}
               streaming={streaming}
-              locked={pendingConfirmation !== null}
+              locked={pendingConfirmation !== null || pendingRoll !== null}
             />
           </View>
         ) : levelUpOpen ? (
@@ -263,7 +264,7 @@ export function Playing({ game }: Props) {
               id: 'level-up',
               label: ko.level.title,
               onPress: openLevelUpFromComposer,
-              disabled: streaming || pendingConfirmation !== null,
+              disabled: streaming || pendingConfirmation !== null || pendingRoll !== null,
             }] : []}
             nearby={nearby}
             nearbyOpen={nearbyOpen}

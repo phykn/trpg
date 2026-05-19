@@ -200,7 +200,7 @@ async function readGraphActionStream(
     if (event.type === 'error') {
       const status = typeof event.status === 'number' ? event.status : res.status;
       const detail = typeof event.message === 'string' ? event.message : 'stream error';
-      throw new Error(`${operation} failed: HTTP ${status} (${detail})`);
+      throw new Error(displayError(operation, status, detail));
     }
   };
 
@@ -359,7 +359,11 @@ async function fetchWithTimeout(
 
 async function httpError(operation: string, res: Response): Promise<string> {
   const detail = await readErrorDetail(res);
-  return `${operation} failed: HTTP ${res.status}${detail ? ` (${detail})` : ''}`;
+  return displayError(operation, res.status, detail);
+}
+
+function displayError(operation: string, status: number, detail: string): string {
+  return detail || `${operation} failed: HTTP ${status}`;
 }
 
 async function readErrorDetail(res: Response): Promise<string> {

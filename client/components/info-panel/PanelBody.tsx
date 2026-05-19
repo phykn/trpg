@@ -35,9 +35,10 @@ function ExpandableMeta({ segments }: { segments: MetaSegment[] }) {
   );
 }
 
-function ActionScroller({ group, onAction }: {
+function ActionScroller({ group, onAction, actionDisabled = false }: {
   group: PanelActions;
   onAction?: (action: PanelAction) => void;
+  actionDisabled?: boolean;
 }) {
   const [width, setWidth] = React.useState(0);
   return (
@@ -58,6 +59,7 @@ function ActionScroller({ group, onAction }: {
               variant="action"
               label={it.label}
               onPress={() => onAction?.(it)}
+              disabled={actionDisabled}
             />
           ))}
         </ScrollView>
@@ -97,9 +99,10 @@ function HeaderTitleGroup({ panel }: { panel: Panel }) {
   );
 }
 
-export function PanelBody({ panel, onAction }: {
+export function PanelBody({ panel, onAction, actionDisabled = false }: {
   panel: Panel;
   onAction?: (action: PanelAction) => void;
+  actionDisabled?: boolean;
 }) {
   if (panel.empty) {
     return (
@@ -157,7 +160,11 @@ export function PanelBody({ panel, onAction }: {
       {(panel.actions || []).map((group) =>
         group.items.length > 0 ? (
           <Row key={group.label} label={group.label} variableHeight>
-            <ActionScroller group={group} onAction={onAction} />
+            <ActionScroller
+              group={group}
+              onAction={onAction}
+              actionDisabled={actionDisabled}
+            />
           </Row>
         ) : (
           <LabeledRow key={group.label} label={group.label}>—</LabeledRow>

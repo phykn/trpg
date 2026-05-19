@@ -365,6 +365,20 @@ describe('graph API helpers', () => {
     ).rejects.toThrow('profile not found: missing');
   });
 
+  test('uses server error detail without transport prefix in action failures', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 422,
+      json: async () => ({
+        detail: '지금은 그 장소로 이동할 수 없습니다. 화면에 보이는 이동 경로를 선택해야 합니다.',
+      }),
+    });
+
+    await expect(
+      sendGraphAction('game-1', { verb: 'move', to: 'missing_place' }),
+    ).rejects.toThrow(/^지금은 그 장소로 이동할 수 없습니다\. 화면에 보이는 이동 경로를 선택해야 합니다\.$/);
+  });
+
   test('posts graph text input with an abortable request signal', async () => {
     fetch.mockResolvedValueOnce(
       streamResponse([

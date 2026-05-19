@@ -5,7 +5,7 @@ import { colors } from '@/design/tokens';
 
 type ChipProps =
   | { variant: 'tab'; label: string; active: boolean; dot?: boolean; onPress: () => void }
-  | { variant: 'action'; label: string; onPress: () => void };
+  | { variant: 'action'; label: string; onPress: () => void; disabled?: boolean };
 
 export function Chip(props: ChipProps) {
   if (props.variant === 'tab') return <TabChip {...props} />;
@@ -49,13 +49,15 @@ function TabChip({ label, active, dot, onPress }: {
   );
 }
 
-function ActionChip({ label, onPress }: { label: string; onPress: () => void }) {
+function ActionChip({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) {
   return (
     <Pressable
-      onPress={onPress}
+      onPress={disabled ? undefined : onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
-      className="h-5 shrink-0 items-center justify-center rounded-sm border border-accent-fg bg-accent-muted px-2 active:opacity-80"
+      accessibilityState={{ disabled }}
+      className={`h-5 shrink-0 items-center justify-center rounded-sm border border-accent-fg bg-accent-muted px-2 ${disabled ? 'opacity-50' : 'active:opacity-80'}`}
     >
       <Text numberOfLines={1} className="font-sans-semibold text-caption text-accent-fg">{label}</Text>
     </Pressable>

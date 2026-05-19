@@ -14,13 +14,14 @@ import { PanelBody } from '@/components/info-panel/PanelBody';
 
 const FLOAT_BUFFER = 540;
 
-export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, onAction, leading, trailing }: {
+export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, onAction, actionDisabled = false, leading, trailing }: {
   slots: PanelSlot[];
   miniMapGraph: StoryGraphModel;
   place: Place | null;
   activeId: string | null;
   onSelect: (id: string) => void;
   onAction?: (action: PanelAction) => void;
+  actionDisabled?: boolean;
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
 }) {
@@ -78,7 +79,11 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, on
           style={{ position: 'absolute', top: chipBarHeight + 4, left: 0, right: 0, maxHeight: FLOAT_BUFFER }}
           {...panResponder.panHandlers}
         >
-          <PanelBody panel={panel} onAction={onAction} />
+          <PanelBody
+            panel={panel}
+            onAction={onAction}
+            actionDisabled={actionDisabled}
+          />
         </Surface>
       )}
       {miniMapOpen && (
@@ -92,6 +97,7 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, on
             graph={miniMapGraph}
             place={place}
             onAction={onAction}
+            actionDisabled={actionDisabled}
           />
         </Surface>
       )}

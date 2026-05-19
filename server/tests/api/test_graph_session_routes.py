@@ -551,6 +551,23 @@ async def test_graph_level_up_rejects_legacy_stat_payload(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_graph_level_up_insufficient_xp_error_is_player_facing(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(
+            f"/session/{game_id}/graph/level_up",
+            json={"growth": {"kind": "max_hp"}, "think": False},
+        )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail == "아직 레벨을 올릴 만큼 경험치가 충분하지 않습니다."
+    assert "not enough xp" not in detail
+
+
+@pytest.mark.asyncio
 async def test_graph_state_route_restores_graph_session(tmp_path):
     app = _build_app(tmp_path)
 
@@ -588,6 +605,23 @@ async def test_graph_turn_missing_game_returns_404(tmp_path):
         )
 
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_graph_turn_invalid_move_error_is_player_facing(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "move", "to": "missing_place"}},
+        )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail == "지금은 그 장소로 이동할 수 없습니다. 화면에 보이는 이동 경로를 선택해야 합니다."
+    assert "not adjacent" not in detail
 
 
 @pytest.mark.asyncio

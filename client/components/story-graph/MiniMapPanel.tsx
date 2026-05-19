@@ -12,10 +12,12 @@ export function MiniMapPanel({
   graph,
   place,
   onAction,
+  actionDisabled = false,
 }: {
   graph: StoryGraphModel;
   place: Place | null;
   onAction?: (action: PanelAction) => void;
+  actionDisabled?: boolean;
 }) {
   const currentPlaceId = React.useMemo(
     () => graph.nodes.find((n) => n.kind === 'place')?.id ?? null,
@@ -60,6 +62,7 @@ export function MiniMapPanel({
         selectedNodeId={selectedNodeId}
         onNodeSelect={setSelectedNodeId}
         onAction={onAction}
+        actionDisabled={actionDisabled}
         framed
         showSelectedDetails={false}
         frameTopBorder={false}
