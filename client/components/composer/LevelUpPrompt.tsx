@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View, type DimensionValue } from 'react-native';
 
 import { Surface } from '@/components/ui';
 import { colors } from '@/design/tokens';
@@ -20,17 +20,17 @@ const CHOICES: GrowthChoice[] = [
 ];
 
 const STAT_CHOICE_ORDER: Record<string, number> = {
-  body: 0,
-  agility: 1,
-  mind: 2,
-  presence: 3,
+  body: 2,
+  agility: 3,
+  mind: 4,
+  presence: 5,
 };
 
 function growthChoiceRank(choice: GrowthChoice): number {
   const growth = choice.growth;
+  if (growth.kind === 'max_hp') return 0;
+  if (growth.kind === 'max_mp') return 1;
   if (growth.kind === 'stat') return STAT_CHOICE_ORDER[growth.stat] ?? 99;
-  if (growth.kind === 'max_hp') return 4;
-  if (growth.kind === 'max_mp') return 5;
   if (growth.kind === 'upgrade_skill') return 6;
   if (growth.kind === 'learn_skill') return 7;
   return 99;
@@ -38,6 +38,22 @@ function growthChoiceRank(choice: GrowthChoice): number {
 
 function sortGrowthChoices(choices: GrowthChoice[]): GrowthChoice[] {
   return [...choices].sort((a, b) => growthChoiceRank(a) - growthChoiceRank(b));
+}
+
+function groupGrowthChoices(choices: GrowthChoice[]): GrowthChoice[][] {
+  const resources = choices.filter((choice) => (
+    choice.growth.kind === 'max_hp' || choice.growth.kind === 'max_mp'
+  ));
+  const stats = choices.filter((choice) => choice.growth.kind === 'stat');
+  const skills = choices.filter((choice) => (
+    choice.growth.kind === 'upgrade_skill' || choice.growth.kind === 'learn_skill'
+  ));
+  return [resources, stats, skills].filter((row) => row.length > 0);
+}
+
+function choiceButtonFlexBasis(count: number): DimensionValue {
+  if (count >= 4) return '23.5%';
+  return '48%';
 }
 
 type Props = {
@@ -53,13 +69,14 @@ export function LevelUpPrompt({ hero, choices = [], loading = false, onCommit, o
     () => sortGrowthChoices(choices.length > 0 ? choices : loading ? [] : CHOICES),
     [choices, loading],
   );
+  const choiceRows = React.useMemo(() => groupGrowthChoices(growthChoices), [growthChoices]);
   const [selectedId, setSelectedId] = React.useState<GrowthChoice['id']>(growthChoices[0]?.id ?? 'max_hp');
   React.useEffect(() => {
     setSelectedId(growthChoices[0]?.id ?? 'max_hp');
   }, [growthChoices]);
   const selected = growthChoices.find((choice) => choice.id === selectedId) ?? growthChoices[0];
 
-  const renderChoiceButton = (choice: GrowthChoice) => {
+  const renderChoiceButton = (choice: GrowthChoice, flexBasis: DimensionValue) => {
     const active = selectedId === choice.id;
     const style = active
       ? { backgroundColor: colors.accent.fg, borderColor: colors.accent.fg }
@@ -76,7 +93,7 @@ export function LevelUpPrompt({ hero, choices = [], loading = false, onCommit, o
         style={[
           {
             flexGrow: 0,
-            flexBasis: '23.5%',
+            flexBasis,
             minHeight: 36,
             borderRadius: 6,
             borderWidth: 1,
@@ -119,8 +136,12 @@ export function LevelUpPrompt({ hero, choices = [], loading = false, onCommit, o
         </Text>
       ) : null}
 
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-        {growthChoices.map(renderChoiceButton)}
+      <View style={{ gap: 6 }}>
+        {choiceRows.map((row) => (
+          <View key={row.map((choice) => choice.id).join(':')} style={{ flexDirection: 'row', gap: 6 }}>
+            {row.map((choice) => renderChoiceButton(choice, choiceButtonFlexBasis(row.length)))}
+          </View>
+        ))}
       </View>
 
       {selected?.description ? (

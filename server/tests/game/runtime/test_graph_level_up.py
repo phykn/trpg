@@ -268,12 +268,12 @@ async def test_level_up_options_include_all_growth_choices(tmp_path):
         "stat:presence",
     }
     assert choice_ids[:6] == [
+        "max_hp",
+        "max_mp",
         "stat:body",
         "stat:agility",
         "stat:mind",
         "stat:presence",
-        "max_hp",
-        "max_mp",
     ]
     assert any(
         choice["id"].startswith(("upgrade_skill:", "learn_skill:"))

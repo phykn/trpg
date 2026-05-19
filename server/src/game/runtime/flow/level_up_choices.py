@@ -54,23 +54,6 @@ async def build_level_up_choices(
     locale = runtime.progress.locale
     choices: list[dict[str, Any]] = []
 
-    for stat in ("body", "agility", "mind", "presence"):
-        choices.append(
-            {
-                "id": f"stat:{stat}",
-                "label": render(
-                    "runtime.level_growth.stat",
-                    locale,
-                    stat=render(f"stat.{stat}", locale),
-                ),
-                "description": render(
-                    "runtime.level_choice.stat",
-                    locale,
-                    stat=render(f"stat.{stat}", locale),
-                ),
-                "growth": {"kind": "stat", "stat": stat},
-            }
-        )
     if _int_prop(props, "max_hp") < 10:
         choices.append(
             {
@@ -87,6 +70,23 @@ async def build_level_up_choices(
                 "label": render("runtime.level_growth.max_mp", locale),
                 "description": render("runtime.level_choice.max_mp", locale),
                 "growth": {"kind": "max_mp"},
+            }
+        )
+    for stat in ("body", "agility", "mind", "presence"):
+        choices.append(
+            {
+                "id": f"stat:{stat}",
+                "label": render(
+                    "runtime.level_growth.stat",
+                    locale,
+                    stat=render(f"stat.{stat}", locale),
+                ),
+                "description": render(
+                    "runtime.level_choice.stat",
+                    locale,
+                    stat=render(f"stat.{stat}", locale),
+                ),
+                "growth": {"kind": "stat", "stat": stat},
             }
         )
 

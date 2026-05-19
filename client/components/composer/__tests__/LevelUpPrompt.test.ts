@@ -18,17 +18,19 @@ describe('LevelUpPrompt mobile selectors', () => {
   });
 
   test('keeps many growth choices readable on mobile', () => {
-    expect(source).toContain("flexBasis: '23.5%'");
-    expect(source).toContain('flexGrow: 0');
+    expect(source).toContain('choiceButtonFlexBasis(row.length)');
+    expect(source).toContain("return '23.5%'");
+    expect(source).toContain("return '48%'");
     expect(source).toContain('numberOfLines={2}');
     expect(source).not.toContain('flex: 1,\n            height: 34');
   });
 
-  test('groups stat choices before resource and skill choices', () => {
+  test('groups resource choices before stat and skill choices', () => {
     expect(source).toContain('STAT_CHOICE_ORDER');
     expect(source).toContain('sortGrowthChoices');
+    expect(source).toContain('groupGrowthChoices');
     expect(source).toContain("if (growth.kind === 'stat')");
-    expect(source).toContain("if (growth.kind === 'max_hp') return 4");
-    expect(source).toContain("if (growth.kind === 'max_mp') return 5");
+    expect(source).toContain("if (growth.kind === 'max_hp') return 0");
+    expect(source).toContain("if (growth.kind === 'max_mp') return 1");
   });
 });
