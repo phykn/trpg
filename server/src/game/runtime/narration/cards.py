@@ -224,8 +224,10 @@ def _skill_mp_cost(runtime: GameRuntimeState, skill_id: str) -> int:
 def _is_location_pickup(runtime: GameRuntimeState, action: Action) -> bool:
     item_id = _single(action.what) or _single(action.with_)
     source_id = _single(action.from_)
-    if item_id is None or source_id is None:
+    if item_id is None:
         return False
+    if source_id is None:
+        source_id = location_of(runtime.graph, runtime.progress.player_id)
     return location_of(runtime.graph, item_id) == source_id
 
 
