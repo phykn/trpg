@@ -307,11 +307,11 @@ ko = "이탈"
 en = "leave"
 
 [runtime."combat.action.precise"]
-ko = "정확한 공격"
+ko = "공격"
 en = "precise"
 
 [runtime."combat.action.guarded"]
-ko = "신중한 압박"
+ko = "방어"
 en = "guarded"
 
 [runtime."combat.action.reckless"]
@@ -319,7 +319,7 @@ ko = "무모한 공격"
 en = "reckless"
 
 [runtime."combat.action.create_distance"]
-ko = "거리 벌리기"
+ko = "도망"
 en = "create distance"
 
 [runtime."combat.action.talk"]

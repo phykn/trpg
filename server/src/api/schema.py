@@ -64,6 +64,7 @@ class GraphCombatCommandRequest(BaseModel):
 
     command: Literal[
         "precise",
+        "defend",
         "guarded",
         "reckless",
         "create_distance",

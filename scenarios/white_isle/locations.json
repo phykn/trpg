@@ -1,0 +1,191 @@
+{
+  "abandoned_village": {
+    "id": "abandoned_village",
+    "name": "버려진 어촌",
+    "description": "집들은 오래 비어 있었지만 무너지지 않았습니다. 벽에는 수많은 이름과 칭호가 칼끝으로 새겨져 있고, 어떤 이름은 중간에 긁혀 지워져 있습니다.",
+    "mood": "잠들 수 없는 밤처럼 조용하고 무겁습니다.",
+    "traits": [
+      "벽의 글자들은 불빛이 닿을 때마다 다르게 보입니다.",
+      "누군가의 고백이 아직 방 안에 남아 있습니다."
+    ],
+    "knowledge": [
+      "wall_names"
+    ],
+    "connections": [
+      {
+        "target": "fog_forest"
+      },
+      {
+        "target": "hollow_theater"
+      },
+      {
+        "target": "white_market"
+      }
+    ],
+    "items": []
+  },
+  "fog_forest": {
+    "id": "fog_forest",
+    "name": "칭호의 안개 숲",
+    "description": "새소리도 벌레 소리도 거의 없는 숲입니다. 나뭇가지마다 하얀 천 조각이 묶여 있고, 천에는 기사, 어머니, 죄인, 영웅 같은 말들이 희미하게 적혀 있습니다.",
+    "mood": "섬 전체가 당신이 입을 열 때까지 기다리는 듯합니다.",
+    "traits": [
+      "하얀 천 조각들이 바람 없이 흔들립니다.",
+      "갈라진 종소리가 숲 안쪽에서 들립니다."
+    ],
+    "knowledge": [
+      "island_rule"
+    ],
+    "connections": [
+      {
+        "target": "old_pier"
+      },
+      {
+        "target": "abandoned_village"
+      },
+      {
+        "target": "sword_clearing"
+      }
+    ],
+    "items": [
+      "cracked_bell"
+    ]
+  },
+  "hollow_theater": {
+    "id": "hollow_theater",
+    "name": "빈 객석의 극장",
+    "description": "숲속에 있을 리 없는 천장 없는 극장입니다. 빈 객석에는 얼굴 없는 관객들이 앉아 있고, 무대 위에는 웃는 가면 하나가 놓여 있습니다.",
+    "mood": "웃음을 기다리는 침묵이 무대 위에 걸려 있습니다.",
+    "traits": [
+      "무대 뒤에서 아이의 목소리가 들립니다.",
+      "가면의 웃음은 조금씩 금이 갑니다."
+    ],
+    "knowledge": [
+      "miel_mask"
+    ],
+    "connections": [
+      {
+        "target": "abandoned_village"
+      },
+      {
+        "target": "white_market"
+      }
+    ],
+    "items": []
+  },
+  "old_pier": {
+    "id": "old_pier",
+    "name": "흰섬 선착장",
+    "description": "바닷물에 젖은 나무판이 삐걱거리고 하얗게 바랜 조개껍데기가 기둥마다 붙어 있습니다. 배는 이미 멀어졌고, 돌아갈 길은 안개 속으로 사라졌습니다.",
+    "mood": "막 도착한 이들의 침묵과 두려움이 선착장 위에 내려앉아 있습니다.",
+    "traits": [
+      "멀리 꺼진 등대의 그림자가 보입니다.",
+      "두고 온 물건들의 빈자리가 몸에 선명합니다."
+    ],
+    "connections": [
+      {
+        "target": "fog_forest"
+      }
+    ],
+    "items": []
+  },
+  "sword_clearing": {
+    "id": "sword_clearing",
+    "name": "녹슨 검의 공터",
+    "description": "숲 한가운데 녹슨 검들이 꽂혀 있고, 검마다 작은 천 조각이 묶여 있습니다. 로안은 그 천에 적힌 이름들 중 몇몇을 알아봅니다.",
+    "mood": "늦은 명령과 죽은 부하들의 이름이 공터를 짓누릅니다.",
+    "traits": [
+      "갑옷 입은 환영이 명령을 기다립니다.",
+      "천 조각들은 풀려나고 싶어 하는 듯 떨립니다."
+    ],
+    "knowledge": [
+      "roan_order"
+    ],
+    "connections": [
+      {
+        "target": "fog_forest"
+      },
+      {
+        "target": "title_graveyard"
+      }
+    ],
+    "items": []
+  },
+  "title_graveyard": {
+    "id": "title_graveyard",
+    "name": "칭호의 묘지",
+    "description": "흰 돌들이 줄지어 서 있고, 돌에는 이름이 아니라 죄인, 반역자, 도둑, 배신자 같은 칭호만 적혀 있습니다. 묘지 가운데에는 낡은 교수대가 바람에 흔들립니다.",
+    "mood": "잊은 이름들이 다시 불리기를 기다립니다.",
+    "traits": [
+      "밧줄 아래에 흐릿한 얼굴들이 서 있습니다.",
+      "빈 묘비 하나가 오르트를 기다립니다."
+    ],
+    "knowledge": [
+      "ort_names"
+    ],
+    "connections": [
+      {
+        "target": "sword_clearing"
+      },
+      {
+        "target": "white_market"
+      },
+      {
+        "target": "white_lighthouse"
+      }
+    ],
+    "items": []
+  },
+  "white_lighthouse": {
+    "id": "white_lighthouse",
+    "name": "흰 등대",
+    "description": "흰 돌로 지어진 듯 보이지만, 가까이서 보면 수많은 이름표와 칭호패, 부서진 훈장과 가면 조각, 성표와 동전과 인장이 겹겹이 붙어 굳어진 등대입니다.",
+    "mood": "불 꺼진 등불은 끝났다고 믿는 마음을 기다립니다.",
+    "traits": [
+      "등불 안에는 기름도 심지도 없고 검은 재만 담겨 있습니다.",
+      "아래쪽 문 너머에서 왕국 회수대의 발소리가 들립니다."
+    ],
+    "knowledge": [
+      "lighthouse_fire",
+      "reclaimer_order"
+    ],
+    "connections": [
+      {
+        "target": "title_graveyard"
+      }
+    ],
+    "items": [
+      "roan_medal",
+      "miel_smiling_mask",
+      "ort_black_gloves",
+      "selin_cracked_symbol",
+      "var_first_coin",
+      "yuna_red_seal"
+    ]
+  },
+  "white_market": {
+    "id": "white_market",
+    "name": "흰 모래 시장터",
+    "description": "가게들은 열려 있지만 물건은 없고, 진열대마다 가격표만 붙어 있습니다. 첫 번째 웃음, 어머니의 마지막 편지, 아직 하지 않은 사과 같은 말들이 가격처럼 걸려 있습니다.",
+    "mood": "값을 매길 수 없는 것들이 바르의 시선을 붙잡습니다.",
+    "traits": [
+      "어린 시절의 바르가 빵 하나를 들고 서 있습니다.",
+      "뒤집힌 가격표의 뒷면에는 아무것도 적혀 있지 않습니다."
+    ],
+    "knowledge": [
+      "var_price"
+    ],
+    "connections": [
+      {
+        "target": "abandoned_village"
+      },
+      {
+        "target": "hollow_theater"
+      },
+      {
+        "target": "title_graveyard"
+      }
+    ],
+    "items": []
+  }
+}

@@ -6,7 +6,7 @@ Korean-language TRPG. The LLM classifies player intent and writes narration; the
 trpg/
   server/     FastAPI + Pydantic v2 + OpenAI-compatible LLM. Game engine. → server/README.md
   client/     Expo (React Native) single-screen client. → client/README.md
-  agency/     Local QA + Story tools that drive the server in-process. → agency/README.md
+  agency/     Browser QA skill + local Story tools. → agency/README.md
   scenarios/  Local seed source (one dir per profile). Uploaded to release Storage via agency.story.tools.storage upload.
   docs/       Target design contract and rebuild plan. Start at docs/plan.md.
 ```

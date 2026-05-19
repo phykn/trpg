@@ -395,28 +395,20 @@ def test_reckless_tactic_deals_two_hearts_on_success():
     assert result.state.trace[-1].kind == "player_reckless_success"
 
 
-def test_create_distance_requires_escape_ready_before_escape():
+def test_create_distance_success_escapes_combat():
     graph = _graph()
     state = _started(graph)
 
-    ready = plan_combat_exchange(
+    result = plan_combat_exchange(
         graph,
         state,
         "player_01",
         GraphCombatAction(kind="create_distance"),
         dice=11,
     )
-    escaped = plan_combat_exchange(
-        graph,
-        ready.state,
-        "player_01",
-        GraphCombatAction(kind="create_distance"),
-        dice=11,
-    )
 
-    assert ready.state.outcome == "ongoing"
-    assert ready.state.escape_ready is True
-    assert escaped.state.outcome == "escaped"
+    assert result.state.outcome == "escaped"
+    assert result.state.escape_ready is True
 
 
 def test_talk_tactic_can_stop_combat_after_pressure():

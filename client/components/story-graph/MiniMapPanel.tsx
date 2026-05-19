@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { compose, ko } from '@/locale/ko';
 import type { PanelAction } from '@/logic/info-panel';
 
+import { currentPlaceId as getCurrentPlaceId, resolvePlaceSelection } from '@/logic/story-graph/presenters';
 import type { Place, StoryGraphModel } from '@/logic/story-graph/types';
 
 import { MapPanel } from './MapPanel';
@@ -20,14 +21,22 @@ export function MiniMapPanel({
   actionDisabled?: boolean;
 }) {
   const currentPlaceId = React.useMemo(
-    () => graph.nodes.find((n) => n.kind === 'place')?.id ?? null,
-    [graph.nodes],
+    () => getCurrentPlaceId(graph) ?? null,
+    [graph],
   );
   const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(currentPlaceId);
+  const previousCurrentPlaceId = React.useRef<string | null>(currentPlaceId);
 
   React.useEffect(() => {
-    if (!selectedNodeId || !graph.nodes.some((node) => node.id === selectedNodeId)) {
-      setSelectedNodeId(currentPlaceId);
+    const nextSelectedNodeId = resolvePlaceSelection({
+      selectedNodeId,
+      previousCurrentPlaceId: previousCurrentPlaceId.current,
+      nextCurrentPlaceId: currentPlaceId,
+      nextNodeIds: new Set(graph.nodes.map((node) => node.id)),
+    });
+    previousCurrentPlaceId.current = currentPlaceId;
+    if (nextSelectedNodeId !== selectedNodeId) {
+      setSelectedNodeId(nextSelectedNodeId);
     }
   }, [graph.nodes, selectedNodeId, currentPlaceId]);
 

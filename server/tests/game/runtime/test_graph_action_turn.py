@@ -653,7 +653,7 @@ async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(
     assert result.runtime.progress.next_log_id == saved_logs[-1].id + 1
 
 
-async def test_run_graph_action_turn_logs_escaped_combat_as_neutral(
+async def test_run_graph_action_turn_escapes_combat_on_success(
     tmp_path,
     monkeypatch,
 ):
@@ -676,13 +676,7 @@ async def test_run_graph_action_turn_logs_escaped_combat_as_neutral(
         )
     )
 
-    first = await run_graph_action_turn(
-        repo,
-        "game-1",
-        Action(verb="move", how="flee"),
-        llm=llm,  # type: ignore[arg-type]
-    )
-    await run_graph_action_turn(
+    result = await run_graph_action_turn(
         repo,
         "game-1",
         Action(verb="move", how="flee"),
@@ -690,13 +684,11 @@ async def test_run_graph_action_turn_logs_escaped_combat_as_neutral(
     )
     saved_logs = await repo.load_log_entries("game-1")
 
-    assert first.runtime.progress.graph_combat_state is not None
-    assert first.runtime.progress.graph_combat_state.escape_ready is True
-    assert saved_logs[2].text == (
-        "벌어진 찰나를 놓치지 않고, 당신은 전투선 밖으로 빠져나옵니다."
-    )
-    assert [entry.kind for entry in saved_logs] == ["act", "gm", "act", "gm"]
-    assert len(llm.calls) == 2
+    assert result.runtime.progress.graph_combat_state is None
+    assert saved_logs[-1].text == "칼끝이 번뜩이고, 적이 비틀거리며 길 위에 쓰러집니다."
+    assert saved_logs[-1].outcome == "neutral"
+    assert [entry.kind for entry in saved_logs] == ["act", "gm"]
+    assert len(llm.calls) == 1
     assert llm.calls[0]["agent"] == "combat_narrate"
 
 

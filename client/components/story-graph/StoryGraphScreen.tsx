@@ -6,7 +6,7 @@ import type { PanelAction } from '@/logic/info-panel';
 import { getGraphSessionById, loadStoredGameId, storeSeenNodes } from '@/services';
 
 import { MapPanel } from './MapPanel';
-import { EMPTY_STORY_GRAPH } from '@/logic/story-graph/presenters';
+import { EMPTY_STORY_GRAPH, currentPlaceId, resolvePlaceSelection } from '@/logic/story-graph/presenters';
 import type { StoryGraphModel } from '@/logic/story-graph/types';
 import {
   loadAndSeedSeenNodes,
@@ -28,6 +28,7 @@ export function StoryGraphScreen({
   const [message, setMessage] = React.useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(null);
   const [seen, setSeen] = React.useState<Set<string>>(() => new Set());
+  const previousCurrentPlaceId = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     let alive = true;
@@ -66,9 +67,17 @@ export function StoryGraphScreen({
 
   React.useEffect(() => {
     if (status !== 'ready') return;
-    if (selectedNodeId && graph.nodes.some((node) => node.id === selectedNodeId)) return;
-    const currentPlace = graph.nodes.find((node) => node.kind === 'place');
-    setSelectedNodeId(currentPlace ? currentPlace.id : null);
+    const nextCurrentPlaceId = currentPlaceId(graph) ?? null;
+    const nextSelectedNodeId = resolvePlaceSelection({
+      selectedNodeId,
+      previousCurrentPlaceId: previousCurrentPlaceId.current,
+      nextCurrentPlaceId,
+      nextNodeIds: new Set(graph.nodes.map((node) => node.id)),
+    });
+    previousCurrentPlaceId.current = nextCurrentPlaceId;
+    if (nextSelectedNodeId !== selectedNodeId) {
+      setSelectedNodeId(nextSelectedNodeId);
+    }
   }, [status, graph, selectedNodeId]);
 
   React.useEffect(() => {

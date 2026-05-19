@@ -64,6 +64,7 @@ def _runtime() -> GameRuntimeState:
             {"command": "reckless", "target": "enemy_01"},
             Action(verb="attack", what="enemy_01", how="reckless"),
         ),
+        ({"command": "defend"}, Action(verb="pass", how="defend")),
         ({"command": "guarded"}, Action(verb="pass", how="guarded")),
         ({"command": "create_distance"}, Action(verb="move", how="create_distance")),
         (
@@ -96,7 +97,7 @@ def test_rejects_wrong_target():
         )
 
 
-@pytest.mark.parametrize("command", ["attack", "skill", "defend", "flee"])
+@pytest.mark.parametrize("command", ["attack", "skill", "flee"])
 def test_graph_combat_command_request_rejects_legacy_commands(command):
     with pytest.raises(ValidationError):
         GraphCombatCommandRequest.model_validate({"command": command})

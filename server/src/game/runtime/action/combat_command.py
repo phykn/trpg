@@ -23,7 +23,7 @@ def build_combat_command_action(
     support_kind = payload.get("support_kind")
 
     targeted_commands = {"precise", "reckless", "talk"}
-    untargeted_commands = {"guarded", "create_distance"}
+    untargeted_commands = {"defend", "guarded", "create_distance"}
 
     if command in targeted_commands:
         if not isinstance(target, str) or not target:
@@ -41,6 +41,8 @@ def build_combat_command_action(
         return Action(verb="attack", what=target, how="reckless", with_=support)
     if command == "talk":
         return Action(verb="speak", to=target, with_=support)
+    if command == "defend":
+        return Action(verb="pass", how="defend", with_=support)
     if command == "guarded":
         return Action(verb="pass", how="guarded", with_=support)
     return Action(verb="move", how="create_distance", with_=support)

@@ -1,0 +1,50 @@
+{
+  "island_rule": {
+    "id": "island_rule",
+    "title": "흰섬의 규칙",
+    "summary": "흰섬은 두 번째 이름을 주지 않습니다. 버리는 것도, 줍는 것도 결국 자신이 해야 합니다.",
+    "visibility": "public"
+  },
+  "wall_names": {
+    "id": "wall_names",
+    "title": "벽에 새겨진 이름들",
+    "summary": "버려진 어촌의 벽에는 끝까지 적힌 이름과 중간에 긁혀 지워진 이름이 함께 남아 있습니다.",
+    "visibility": "public"
+  },
+  "roan_order": {
+    "id": "roan_order",
+    "title": "늦은 퇴각 명령",
+    "summary": "로안은 왕의 명령 뒤에 숨었지만, 죽은 부하들의 이름 앞에서는 자신이 했어야 할 말을 압니다.",
+    "visibility": "public"
+  },
+  "miel_mask": {
+    "id": "miel_mask",
+    "title": "웃지 않는 얼굴",
+    "summary": "미엘은 사람들을 웃기기 위해 슬픔을 삼켰고, 어느 순간 웃는 얼굴이 자신을 대신 살고 있다고 느꼈습니다.",
+    "visibility": "public"
+  },
+  "var_price": {
+    "id": "var_price",
+    "title": "값 없는 것",
+    "summary": "바르는 값을 매기면 무서운 것이 줄어든다고 믿었지만, 값이 없는 것을 잃을까 봐 두려웠습니다.",
+    "visibility": "public"
+  },
+  "ort_names": {
+    "id": "ort_names",
+    "title": "죄목 뒤의 이름",
+    "summary": "오르트는 죄목과 날짜는 기억하지만, 죽은 사람들의 이름은 많이 잊었습니다.",
+    "visibility": "public"
+  },
+  "lighthouse_fire": {
+    "id": "lighthouse_fire",
+    "title": "등대의 불",
+    "summary": "흰 등대의 불은 물건을 태워 켜지지 않습니다. 끝났다고 믿는 마음을 내려놓을 때 빛이 생깁니다.",
+    "visibility": "public"
+  },
+  "reclaimer_order": {
+    "id": "reclaimer_order",
+    "title": "왕국의 회수 명령",
+    "summary": "왕국은 칭호 없이도 사람이 무너지지 않을 수 있다는 가능성을 두려워합니다.",
+    "visibility": "public"
+  }
+}

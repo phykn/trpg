@@ -311,30 +311,21 @@ def test_victory_completes_matching_active_quest_and_clears_active_id():
     assert result.runtime.progress.active_quest_id is None
 
 
-def test_flee_builds_distance_before_escape_without_graph_changes():
+def test_flee_success_escapes_without_graph_changes():
     runtime = _runtime(graph_combat_state=_ongoing_state())
 
-    ready = dispatch_graph_combat_action(
+    result = dispatch_graph_combat_action(
         runtime,
         Action(verb="move", how="hasty"),
     )
-    escaped = dispatch_graph_combat_action(
-        ready.runtime,
-        Action(verb="move", how="flee"),
-    )
 
-    assert ready.outcome == "ongoing"
-    assert ready.runtime.progress.graph_combat_state is not None
-    assert ready.runtime.progress.graph_combat_state.last_action == "create_distance"
-    assert ready.runtime.progress.graph_combat_state.escape_ready is True
-    assert escaped.outcome == "escaped"
-    assert escaped.runtime.progress.graph_combat_state is None
-    assert ready.applied == 0
-    assert escaped.applied == 0
-    assert escaped.runtime.graph == runtime.graph
+    assert result.outcome == "escaped"
+    assert result.runtime.progress.graph_combat_state is None
+    assert result.applied == 0
+    assert result.runtime.graph == runtime.graph
 
 
-def test_pass_maps_to_guarded_and_advances_round():
+def test_pass_defend_advances_round():
     runtime = _runtime(
         graph_combat_state=_ongoing_state(),
     )
@@ -346,9 +337,25 @@ def test_pass_maps_to_guarded_and_advances_round():
 
     assert result.outcome == "ongoing"
     assert result.runtime.progress.graph_combat_state.round == 3
-    assert result.runtime.progress.graph_combat_state.last_action == "guarded"
+    assert result.runtime.progress.graph_combat_state.last_action == "defend"
     assert result.runtime.progress.graph_combat_state.player_hearts == 3
     assert result.runtime.graph.nodes["player_01"].properties["hp"] == 5
+
+
+def test_pass_defend_failure_loses_player_heart(monkeypatch):
+    monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 1)
+    runtime = _runtime(
+        graph_combat_state=_ongoing_state(),
+    )
+
+    result = dispatch_graph_combat_action(
+        runtime,
+        Action(verb="pass", how="defend"),
+    )
+
+    assert result.outcome == "ongoing"
+    assert result.runtime.progress.graph_combat_state.player_hearts == 2
+    assert result.runtime.progress.graph_combat_state.last_action == "defend"
 
 
 def test_pass_with_skill_support_attaches_guarded_support():
@@ -387,8 +394,10 @@ def test_move_with_skill_support_attaches_create_distance_support():
         Action(verb="move", how="create_distance", with_="fireball"),
     )
 
-    state = result.runtime.progress.graph_combat_state
+    state = result.combat.state
     assert state is not None
+    assert result.runtime.progress.graph_combat_state is None
+    assert result.outcome == "escaped"
     assert state.last_action == "create_distance"
     assert state.last_support_id == "fireball"
     assert state.last_support_kind == "skill"

@@ -102,6 +102,49 @@ def test_combat_narration_view_exposes_latest_exchange_result():
     assert payload["events"][-1]["result_label"] == "이번 교환은 실패입니다"
 
 
+def test_combat_narration_view_uses_player_facing_action_labels():
+    runtime = GameRuntimeState(
+        graph=Graph(
+            nodes={
+                "player_01": GraphNode(
+                    id="player_01", type="character", properties={"name": "당신"}
+                ),
+                "training_dummy": GraphNode(
+                    id="training_dummy",
+                    type="character",
+                    properties={"name": "훈련용 허수아비"},
+                ),
+            },
+            edges={},
+        ),
+        progress=GameProgress(
+            game_id="game-1",
+            player_id="player_01",
+            graph_combat_state=GraphCombatState(
+                location_id="test_hub",
+                player_id="player_01",
+                enemy_ids=["training_dummy"],
+                participant_ids=["player_01", "training_dummy"],
+                sides={"player_01": "player", "training_dummy": "enemy"},
+                last_action="guarded",
+                trace=[
+                    GraphCombatTraceEvent(
+                        kind="player_guarded_failure",
+                        actor_id="player_01",
+                        target="player_01",
+                        state="healthy",
+                    ),
+                ],
+            ),
+        ),
+    )
+
+    payload = combat_narration_view(runtime)
+
+    assert payload is not None
+    assert payload["player_action"] == "방어"
+
+
 def test_combat_narration_view_exposes_effect_context():
     runtime = GameRuntimeState(
         graph=Graph(

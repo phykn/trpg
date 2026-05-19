@@ -61,7 +61,14 @@ class DecCharacter(BaseModel):
 class DecQuest(BaseModel):
     id: str
     title: str
-    trigger_kind: Literal["character_death", "location_enter", "item_use"]
+    trigger_kind: Literal[
+        "character_death",
+        "character_defeat",
+        "location_enter",
+        "item_obtained",
+        "item_use",
+        "social_check",
+    ]
     target: str
     giver: str
     role: str
@@ -416,12 +423,12 @@ def _check_arc(s: DecomSetup, c: DecomCast, a: DecomArc) -> None:
                 f"quest {q.id} giver={q.giver!r} is a hostile character (is_enemy=true). "
                 "Quest givers must be non-hostile."
             )
-        if q.trigger_kind == "character_death":
+        if q.trigger_kind in {"character_death", "character_defeat"}:
             target_char = char_by_id.get(q.target)
             if target_char is not None and not target_char.is_enemy:
                 raise EntityWriterError(
-                    f"quest {q.id}'s character_death trigger target={q.target!r} is a "
-                    "non-hostile character. Death triggers may only point at hostile characters (is_enemy=true) "
+                    f"quest {q.id}'s {q.trigger_kind} trigger target={q.target!r} is a "
+                    "non-hostile character. Defeat/death triggers may only point at hostile characters (is_enemy=true) "
                     "(non-hostile NPCs do not die in normal play, so the quest would stay incomplete forever)."
                 )
 

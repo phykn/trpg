@@ -1,0 +1,76 @@
+{
+  "world_md": "흰섬은 지도에 없고, 안개와 밀물이 겹치는 밤 낡은 부두에만 배가 닿는 섬입니다. 칭호대로 살 수 없게 된 이들은 자신이 두고 온 물건을 배삯으로 내고 섬에 오지만, 섬은 새 이름을 주지 않습니다. 섬은 버린 칭호와 아직 끝나지 않은 마음을 장소와 환영으로 드러내고, 꺼진 흰 등대에 불이 켜질 때에만 돌아갈 배를 부릅니다.",
+  "profile_name": "흰섬",
+  "profile_description": "칭호를 버린 이들이 안개 섬에서 자신이 끝나지 않았음을 인정하는 이야기입니다.",
+  "races": [
+    {
+      "id": "human",
+      "role": "칭호를 짊어진 왕국 사람",
+      "racial_skills": ["hold_name"],
+      "is_humanoid": true
+    }
+  ],
+  "skills": [
+    {
+      "id": "hold_name",
+      "role": "자기 이름을 붙잡고 흔들림을 견딥니다.",
+      "primary_stat": "presence",
+      "type": "buff"
+    },
+    {
+      "id": "calm_testimony",
+      "role": "흔들리는 사람 앞에서 차분히 증언합니다.",
+      "primary_stat": "presence",
+      "type": "buff"
+    },
+    {
+      "id": "empty_hand_guard",
+      "role": "무기 없이도 앞을 막아 지킵니다.",
+      "primary_stat": "body",
+      "type": "buff"
+    }
+  ],
+  "locations": [
+    {
+      "id": "old_pier",
+      "role": "돌아갈 배가 사라지는 낡은 선착장",
+      "connections": ["fog_forest"]
+    },
+    {
+      "id": "fog_forest",
+      "role": "칭호가 적힌 천 조각이 걸린 안개 숲",
+      "connections": ["old_pier", "abandoned_village", "sword_clearing"]
+    },
+    {
+      "id": "abandoned_village",
+      "role": "벽마다 이름과 칭호가 새겨진 버려진 어촌",
+      "connections": ["fog_forest", "hollow_theater", "white_market"]
+    },
+    {
+      "id": "sword_clearing",
+      "role": "로안의 부하 이름이 검에 묶인 공터",
+      "connections": ["fog_forest", "title_graveyard"]
+    },
+    {
+      "id": "hollow_theater",
+      "role": "미엘의 웃는 가면이 놓인 숲속 극장",
+      "connections": ["abandoned_village", "white_market"]
+    },
+    {
+      "id": "white_market",
+      "role": "값을 매길 수 없는 것들의 가격표가 붙은 시장터",
+      "connections": ["abandoned_village", "hollow_theater", "title_graveyard"]
+    },
+    {
+      "id": "title_graveyard",
+      "role": "이름 대신 칭호만 적힌 묘지",
+      "connections": ["sword_clearing", "white_market", "white_lighthouse"]
+    },
+    {
+      "id": "white_lighthouse",
+      "role": "버린 물건들이 겹겹이 굳어 만들어진 꺼진 등대",
+      "connections": ["title_graveyard"]
+    }
+  ],
+  "start_location": "old_pier"
+}

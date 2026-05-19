@@ -1,0 +1,18 @@
+{
+  "title_castaways": {
+    "id": "title_castaways",
+    "name": "칭호를 두고 온 사람들",
+    "description": "왕국의 칭호대로 살 수 없어 흰섬으로 온 이들입니다."
+  },
+  "white_isle": {
+    "id": "white_isle",
+    "name": "흰섬의 잔류자",
+    "description": "흰섬에 오래 머물며 섬의 규칙을 아는 이들입니다."
+  },
+  "kingdom_reclaimers": {
+    "id": "kingdom_reclaimers",
+    "name": "왕국 회수대",
+    "description": "칭호를 버린 사람들을 왕국의 자리로 되돌리려는 이들입니다.",
+    "hostile_to": ["title_castaways"]
+  }
+}

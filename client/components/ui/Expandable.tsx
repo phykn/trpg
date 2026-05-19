@@ -45,7 +45,7 @@ export function Expandable({
         {!overflow && !expanded && (
           <View
             className="absolute inset-x-0 opacity-0"
-            pointerEvents="none"
+            style={{ pointerEvents: 'none' }}
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
             onLayout={(e) => {

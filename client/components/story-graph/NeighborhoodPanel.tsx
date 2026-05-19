@@ -6,7 +6,8 @@ import { colors, toneColor } from '@/design/tokens';
 import { compose, ko } from '@/locale/ko';
 import type { PanelAction } from '@/logic/info-panel';
 
-import type { StoryGraphEdge, StoryGraphModel } from '@/logic/story-graph/types';
+import { buildNeighborhoodGraph, currentPlaceId } from '@/logic/story-graph/presenters';
+import type { StoryGraphModel } from '@/logic/story-graph/types';
 import { StoryGraphCanvas } from './StoryGraphCanvas';
 import { actionsForNode } from '@/logic/story-graph/_nodeActions';
 
@@ -33,33 +34,8 @@ export function NeighborhoodPanel({
   onAction?: (action: PanelAction) => void;
   actionDisabled?: boolean;
 }) {
-  const visibleGraph: StoryGraphModel = React.useMemo(() => {
-    // Neighborhood panel — restrict to the immediate neighborhood so the small
-    // viewport doesn't get crammed with the full reachable map.
-    const allowed = new Set<string>();
-    for (const n of graph.nodes) {
-      if (n.kind === 'place' || n.kind === 'hero' || n.kind === 'subject' || n.kind === 'quest') {
-        allowed.add(n.id);
-      } else if ((n.kind === 'location' || n.kind === 'target') && n.reachable) {
-        allowed.add(n.id);
-      }
-    }
-    const filteredNodes = graph.nodes.filter((n) => allowed.has(n.id));
-    const pairToEdge = new Map<string, StoryGraphEdge>();
-    for (const e of graph.edges) {
-      if (!allowed.has(e.source) || !allowed.has(e.target)) continue;
-      const pair = e.source < e.target ? `${e.source}|${e.target}` : `${e.target}|${e.source}`;
-      if (!pairToEdge.has(pair)) {
-        pairToEdge.set(pair, e);
-      }
-    }
-    return { ...graph, nodes: filteredNodes, edges: Array.from(pairToEdge.values()) };
-  }, [graph]);
-
-  const currentPlaceId = React.useMemo(
-    () => visibleGraph.nodes.find((n) => n.kind === 'place')?.id ?? undefined,
-    [visibleGraph.nodes],
-  );
+  const visibleGraph = React.useMemo(() => buildNeighborhoodGraph(graph), [graph]);
+  const centerNodeId = React.useMemo(() => currentPlaceId(visibleGraph), [visibleGraph]);
 
   const selectedNode = visibleGraph.nodes.find((node) => node.id === selectedNodeId) ?? null;
   const selectedActions = selectedNode ? actionsForNode(selectedNode) : [];
@@ -135,7 +111,7 @@ export function NeighborhoodPanel({
           accessibilityLabel={accessibilityLabel}
           selectedNodeId={selectedNodeId}
           onNodeSelect={onNodeSelect}
-          centerNodeId={currentPlaceId}
+          centerNodeId={centerNodeId}
         />
       </View>
 

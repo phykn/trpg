@@ -2,15 +2,14 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { toneColor } from '@/design/tokens';
-import { ExpandableTitle, ExpandGroup, LabeledRow, Row, SEP } from '@/components/ui';
-import { compose, ko } from '@/locale/ko';
+import { ExpandableTitle, ExpandGroup, LabeledRow, Row } from '@/components/ui';
+import { ko } from '@/locale/ko';
 import type { PanelAction } from '@/logic/info-panel';
 
-import type { StoryGraphEdge, StoryGraphModel } from '@/logic/story-graph/types';
+import { buildPlaceMapGraph, currentPlaceId } from '@/logic/story-graph/presenters';
+import type { StoryGraphModel } from '@/logic/story-graph/types';
 import { StoryGraphCanvas } from './StoryGraphCanvas';
 import { actionsForNode } from '@/logic/story-graph/_nodeActions';
-
-type PlaceState = 'current' | 'reachable' | 'unreachable';
 
 export function MapPanel({
   graph,
@@ -37,53 +36,8 @@ export function MapPanel({
   showSelectedDetails?: boolean;
   frameTopBorder?: boolean;
 }) {
-  const placeStates = React.useMemo<Record<string, PlaceState>>(() => {
-    return Object.fromEntries(
-      graph.nodes
-        .filter((n) => n.kind === 'place' || n.kind === 'location')
-        .map((n) => {
-          const state: PlaceState =
-            n.kind === 'place'
-              ? 'current'
-              : n.reachable
-                ? 'reachable'
-                : 'unreachable';
-          return [n.id, state];
-        }),
-    );
-  }, [graph]);
-
-  const visibleGraph: StoryGraphModel = React.useMemo(() => {
-    const placeNodes = graph.nodes.filter((n) => n.kind === 'place' || n.kind === 'location');
-    const placeIds = new Set(placeNodes.map((n) => n.id));
-    const seenPair = new Set<string>();
-    const placeEdges: StoryGraphEdge[] = [];
-    for (const e of graph.edges) {
-      if (e.kind !== 'move') continue;
-      if (!placeIds.has(e.source) || !placeIds.has(e.target)) continue;
-      const pair = e.source < e.target ? `${e.source}|${e.target}` : `${e.target}|${e.source}`;
-      if (seenPair.has(pair)) continue;
-      seenPair.add(pair);
-      placeEdges.push(e);
-    }
-    const currentPlace = placeNodes.find((n) => n.kind === 'place');
-    const reachableCount = placeNodes.filter(
-      (n) => n.kind === 'location' && placeStates[n.id] === 'reachable',
-    ).length;
-    const summary = [
-      currentPlace ? compose.here(currentPlace.label) : null,
-      compose.placeCount(placeNodes.length),
-      compose.reachableCount(reachableCount),
-    ]
-      .filter(Boolean)
-      .join(SEP);
-    return { nodes: placeNodes, edges: placeEdges, summary };
-  }, [graph, placeStates]);
-
-  const currentPlaceId = React.useMemo(
-    () => visibleGraph.nodes.find((n) => n.kind === 'place')?.id ?? undefined,
-    [visibleGraph.nodes],
-  );
+  const visibleGraph = React.useMemo(() => buildPlaceMapGraph(graph), [graph]);
+  const centerNodeId = React.useMemo(() => currentPlaceId(visibleGraph), [visibleGraph]);
 
   const selectedNode = visibleGraph.nodes.find((node) => node.id === selectedNodeId) ?? null;
   const selectedActions = selectedNode ? actionsForNode(selectedNode) : [];
@@ -132,7 +86,7 @@ export function MapPanel({
               onNodeSelect?.(id);
             }}
             unseenNodeIds={unseenNodeIds}
-            centerNodeId={currentPlaceId}
+            centerNodeId={centerNodeId}
           />
         </View>
 

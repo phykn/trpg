@@ -31,7 +31,7 @@ from agency.story.harness.decompose import (  # noqa: E402
     _check_arc,
 )
 from agency.story.harness._common import EntityWriterError  # noqa: E402
-from agency.story.harness.scenario import fill_equipment  # noqa: E402
+from agency.story.harness.scenario import copy_fixed_catalogs, fill_equipment  # noqa: E402
 from src.db.scenario.local_fs import LocalFsScenarioRepo  # noqa: E402
 from src.env import load_server_env  # noqa: E402
 from src.game.seed.validation import seed_violations  # noqa: E402
@@ -42,9 +42,9 @@ from agency.story.harness.runner import (  # noqa: E402
     _collect_refs,
 )
 
-# env loading mirrors run_qa.py / run_story.py so SUPABASE_* / LLM_ROUTE_*
-# provider keys resolve here. Subcommands that don't need env (decompose-*,
-# check-entity, equip-fill, sweep) still pay this cheap one-time cost.
+# env loading mirrors server startup so SUPABASE_* / LLM_ROUTE_* provider keys
+# resolve here. Subcommands that don't need env (decompose-*, check-entity,
+# equip-fill, sweep) still pay this cheap one-time cost.
 load_server_env(ROOT / "server")
 load_dotenv(ROOT / "server" / ".env.local")
 load_dotenv(ROOT / "server" / ".env.google")
@@ -104,10 +104,17 @@ def _build_parser() -> argparse.ArgumentParser:
     # equip-fill
     sp_eq = sub.add_parser(
         "equip-fill",
-        help="character.equipment 슬롯을 inventory 아이템 effect 보고 자동 배치",
+        help="NPC character.equipment를 서버 규칙에 맞게 비움",
     )
     sp_eq.add_argument("scenario_dir", help="scenario directory")
     sp_eq.set_defaults(func=_cmd_equip_fill)
+    # catalog-fill
+    sp_cat = sub.add_parser(
+        "catalog-fill",
+        help="story 고정 support catalog(actions/effects/mbti/slots)를 복사",
+    )
+    sp_cat.add_argument("scenario_dir", help="scenario directory")
+    sp_cat.set_defaults(func=_cmd_catalog_fill)
     # sweep
     sp_sw = sub.add_parser(
         "sweep",
@@ -154,6 +161,7 @@ def _merge_decomp_pool(refs: dict, decomp_dir: Path) -> None:
     if arc_path.is_file():
         a = DecomArc.model_validate_json(arc_path.read_text(encoding="utf-8"))
         refs.setdefault("quest", set()).update(q.id for q in a.quests)
+        refs.setdefault("chapter", set()).update(ch.id for ch in a.chapters)
 
 
 def _cmd_check_entity(args: argparse.Namespace) -> int:
@@ -175,7 +183,7 @@ def _cmd_check_entity(args: argparse.Namespace) -> int:
         existing_ids.discard(entity.get("id"))
         _check_id(entity, existing_ids, force_id=None)
         spec.check_refs(entity, refs)
-        _check_entity_invariants(entity, sd, skeleton=args.skeleton)
+        _check_entity_invariants(entity, sd, kind=args.kind, skeleton=args.skeleton)
     except Exception as e:
         return _fail("check-entity", e)
     print("OK")
@@ -239,6 +247,22 @@ def _cmd_equip_fill(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_catalog_fill(args: argparse.Namespace) -> int:
+    sd = Path(args.scenario_dir)
+    if not sd.is_dir():
+        print(
+            f"catalog-fill failed: scenario_dir not a directory: {sd}",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        copy_fixed_catalogs(sd, ROOT / "agency" / "story" / "catalogs")
+    except Exception as e:
+        return _fail("catalog-fill", e)
+    print("OK")
+    return 0
+
+
 async def _load_scenario_async(profile: str, profile_root: Path) -> dict:
     repo = LocalFsScenarioRepo(str(profile_root))
     return {
@@ -246,10 +270,19 @@ async def _load_scenario_async(profile: str, profile_root: Path) -> dict:
         "locations": await repo.load_seed_records(profile, "locations"),
         "items": await repo.load_seed_records(profile, "items"),
         "skills": await repo.load_seed_records(profile, "skills"),
+        "effects": await repo.load_seed_records(profile, "effects"),
+        "statuses": await repo.load_seed_records(profile, "statuses"),
+        "slots": await repo.load_seed_records(profile, "slots"),
+        "factions": await repo.load_seed_records(profile, "factions"),
+        "actions": await repo.load_seed_records(profile, "actions"),
+        "knowledge": await repo.load_seed_records(profile, "knowledge"),
+        "dialogue_styles": await repo.load_seed_records(profile, "dialogue_styles"),
+        "mbti": await repo.load_seed_records(profile, "mbti"),
         "npcs": await repo.load_seed_records(profile, "characters"),
         "quests": await repo.load_seed_records(profile, "quests"),
         "chapters": await repo.load_seed_records(profile, "chapters"),
         "start": await _read_optional_start(repo, profile),
+        "player": await _read_optional_player(repo, profile),
     }
 
 
@@ -277,6 +310,13 @@ async def _read_optional_start(repo: LocalFsScenarioRepo, profile: str) -> dict:
         return await repo.read_start_json(profile)
     except FileNotFoundError:
         return {}
+
+
+async def _read_optional_player(repo: LocalFsScenarioRepo, profile: str) -> dict | None:
+    try:
+        return await repo.read_player(profile)
+    except FileNotFoundError:
+        return None
 
 
 def _main(argv: list[str]) -> int:

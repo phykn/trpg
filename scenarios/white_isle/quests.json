@@ -1,0 +1,193 @@
+{
+  "face_miel_tears": {
+    "id": "face_miel_tears",
+    "title": "웃지 않는 무대",
+    "description": "빈 객석의 극장에서 미엘이 사람들을 웃기는 대신 자신의 슬픔을 말합니다.",
+    "giver": "miel",
+    "triggers": [
+      {
+        "id": "enter_theater",
+        "type": "location_enter",
+        "target": "hollow_theater"
+      }
+    ],
+    "fail_triggers": [],
+    "prerequisites": [
+      "hear_the_island_rule"
+    ],
+    "status": "locked",
+    "required": true,
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    }
+  },
+  "face_ort_names": {
+    "id": "face_ort_names",
+    "title": "죄목 뒤의 이름",
+    "description": "칭호의 묘지에서 오르트가 죄목 뒤에 있던 사람들의 이름을 새기기 시작합니다.",
+    "giver": "ort",
+    "triggers": [
+      {
+        "id": "enter_graveyard",
+        "type": "location_enter",
+        "target": "title_graveyard"
+      }
+    ],
+    "fail_triggers": [],
+    "prerequisites": [
+      "face_roan_order",
+      "face_var_price"
+    ],
+    "status": "locked",
+    "required": true,
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    }
+  },
+  "face_roan_order": {
+    "id": "face_roan_order",
+    "title": "늦은 퇴각 명령",
+    "description": "녹슨 검의 공터에서 로안이 부하들의 이름 앞에 무릎을 꿇고, 너무 늦은 퇴각 명령을 말합니다.",
+    "giver": "roan",
+    "triggers": [
+      {
+        "id": "enter_sword_clearing",
+        "type": "location_enter",
+        "target": "sword_clearing"
+      }
+    ],
+    "fail_triggers": [],
+    "prerequisites": [
+      "hear_the_island_rule"
+    ],
+    "status": "locked",
+    "required": true,
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    }
+  },
+  "face_var_price": {
+    "id": "face_var_price",
+    "title": "값 없는 빵",
+    "description": "흰 모래 시장터에서 바르가 모든 것에 값을 붙이지 않아도 된다는 사실을 인정합니다.",
+    "giver": "var",
+    "triggers": [
+      {
+        "id": "enter_market",
+        "type": "location_enter",
+        "target": "white_market"
+      }
+    ],
+    "fail_triggers": [],
+    "prerequisites": [
+      "face_miel_tears"
+    ],
+    "status": "locked",
+    "required": true,
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    }
+  },
+  "hear_the_island_rule": {
+    "id": "hear_the_island_rule",
+    "title": "섬의 규칙을 듣습니다",
+    "description": "흰 머리 여인에게 흰섬이 새 이름을 주는 곳이 아니라, 붙잡고 있는 이름을 보여주는 곳이라는 말을 듣습니다.",
+    "giver": "nameless_woman",
+    "triggers": [
+      {
+        "id": "ask_woman",
+        "type": "social_check",
+        "target": "nameless_woman"
+      }
+    ],
+    "fail_triggers": [],
+    "prerequisites": [
+      "leave_the_pier"
+    ],
+    "status": "locked",
+    "required": true,
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    }
+  },
+  "leave_the_pier": {
+    "id": "leave_the_pier",
+    "title": "돌아갈 배는 없습니다",
+    "description": "선장이 말한 돌아갈 배의 조건을 뒤로하고, 안개 숲으로 들어갑니다.",
+    "giver": "boat_captain",
+    "triggers": [
+      {
+        "id": "enter_forest",
+        "type": "location_enter",
+        "target": "fog_forest"
+      }
+    ],
+    "fail_triggers": [],
+    "prerequisites": [],
+    "status": "active",
+    "required": true,
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    }
+  },
+  "light_the_lighthouse": {
+    "id": "light_the_lighthouse",
+    "title": "끝나지 않았다는 불",
+    "description": "흰 등대에 도착해 끝났다고 믿는 마음을 내려놓고 등불을 켭니다.",
+    "giver": "selin",
+    "triggers": [
+      {
+        "id": "enter_lighthouse",
+        "type": "location_enter",
+        "target": "white_lighthouse"
+      }
+    ],
+    "fail_triggers": [],
+    "prerequisites": [
+      "face_ort_names"
+    ],
+    "status": "locked",
+    "required": true,
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    }
+  },
+  "refuse_the_reclaimer": {
+    "id": "refuse_the_reclaimer",
+    "title": "회수대 거부",
+    "description": "왕국 법관의 회수 명령 앞에서 물러서지 않고, 칭호가 사람을 끝낼 수 없다는 사실을 말로 증명합니다.",
+    "giver": "yuna",
+    "triggers": [
+      {
+        "id": "refute_captain",
+        "type": "social_check",
+        "target": "reclaimer_captain"
+      }
+    ],
+    "fail_triggers": [],
+    "prerequisites": [
+      "light_the_lighthouse"
+    ],
+    "status": "locked",
+    "required": true,
+    "rewards": {
+      "gold": 0,
+      "exp": 120,
+      "items": []
+    }
+  }
+}

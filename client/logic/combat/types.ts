@@ -13,7 +13,7 @@ export type CombatSupport = {
   id: string;
   kind: 'skill';
   name: string;
-  tactic: 'precise' | 'guarded' | 'reckless' | 'create_distance' | 'talk';
+  tactic: 'precise' | 'defend' | 'guarded' | 'reckless' | 'create_distance' | 'talk';
   mpCost: number;
   usable: boolean;
 };

@@ -4,7 +4,7 @@ import { Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, View } from 
 import { CombatStrip } from '@/logic/combat';
 import { buildDecisionState, DecisionStateStrip } from '@/logic/decision-state';
 import { Log } from '@/logic/log';
-import { RollPanel } from '@/components/roll/RollPanel';
+import { RollPanel } from '@/logic/roll';
 import { buildNearbyPanel, useStoryGraph } from '@/logic/story-graph';
 import type { Game } from '@/logic/game/useGame';
 import { buildPanelSlots, type PanelAction, type PanelSlot } from '@/logic/info-panel';

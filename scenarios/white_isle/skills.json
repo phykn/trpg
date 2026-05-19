@@ -1,0 +1,29 @@
+{
+  "calm_testimony": {
+    "id": "calm_testimony",
+    "name": "차분한 증언",
+    "description": "당신은 불완전한 기억도 외면하지 않고 차분히 말합니다.",
+    "level": 1,
+    "action": "social",
+    "bonus": 1,
+    "mp_cost": 0
+  },
+  "empty_hand_guard": {
+    "id": "empty_hand_guard",
+    "name": "빈손의 수호",
+    "description": "당신은 무기보다 먼저 몸을 내밀어 쓰러지는 사람을 지킵니다.",
+    "level": 1,
+    "action": "defend",
+    "bonus": 1,
+    "mp_cost": 0
+  },
+  "hold_name": {
+    "id": "hold_name",
+    "name": "이름 붙잡기",
+    "description": "당신은 흔들리는 순간에도 칭호가 아닌 자신의 이름을 떠올립니다.",
+    "level": 1,
+    "action": "defend",
+    "bonus": 1,
+    "mp_cost": 0
+  }
+}

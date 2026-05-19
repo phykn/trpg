@@ -167,6 +167,22 @@ def test_decompose_arc_ok(capsys, tmp_path):
     assert capsys.readouterr().out.strip() == "OK"
 
 
+def test_decompose_arc_accepts_character_defeat_trigger(capsys, tmp_path):
+    arc = json.loads(json.dumps(VALID_ARC))
+    arc["quests"][0]["trigger_kind"] = "character_defeat"
+    sp = tmp_path / "setup.json"
+    cp = tmp_path / "cast.json"
+    ap = tmp_path / "arc.json"
+    sp.write_text(json.dumps(VALID_SETUP, ensure_ascii=False), encoding="utf-8")
+    cp.write_text(json.dumps(ENEMY_CAST, ensure_ascii=False), encoding="utf-8")
+    ap.write_text(json.dumps(arc, ensure_ascii=False), encoding="utf-8")
+
+    rc = tool._main(["decompose-arc", str(sp), str(cp), str(ap)])
+
+    assert rc == 0
+    assert capsys.readouterr().out.strip() == "OK"
+
+
 def test_decompose_arc_unknown_target(capsys, tmp_path):
     bad = json.loads(json.dumps(VALID_ARC))
     bad["quests"][0]["target"] = "phantom_01"

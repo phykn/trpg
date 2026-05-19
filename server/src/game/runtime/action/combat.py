@@ -228,7 +228,7 @@ def _combat_action_from_action(
         support_id = _single(action.with_)
         support_kind = _support_kind(graph, support_id)
         return GraphCombatAction(
-            kind="guarded",
+            kind="defend" if action.how == "defend" else "guarded",
             support_id=support_id if support_kind else None,
             support_kind=support_kind,
         )

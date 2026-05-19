@@ -46,12 +46,12 @@ export function deriveGraphSuggestions(state: GraphFrontState): SuggestionChip[]
   const suggestions: SuggestionChip[] = [];
   const livingTargets = state.place?.targets.filter((target) => target.alive) ?? [];
   for (const npc of livingTargets) {
-    suggestions.push(chip(compose.talkTo(npc.name)));
+    suggestions.push(talkChip(npc.name));
   }
   for (const exit of state.place?.exits ?? []) {
-    suggestions.push(chip(compose.moveTo(exit.name)));
+    suggestions.push(chip(moveLabel(exit.name), compose.moveTo(exit.name)));
   }
-  suggestions.push(chip(compose.inspectSurroundings()));
+  suggestions.push(chip(ko.panel.inspect, compose.inspectSurroundings()));
   return uniqueFirst(suggestions, 3);
 }
 
@@ -60,13 +60,28 @@ function combatSuggestions(combat: GraphCombatState): SuggestionChip[] {
     (participant) => participant.side === 'enemy' && participant.id === combat.activeEnemyId && combat.enemyHearts.current > 0,
   );
   const suggestions = enemy
-    ? [chip(compose.attack(enemy.name)), chip(compose.defend()), chip(compose.flee())]
-    : [chip(compose.defend()), chip(compose.flee())];
+    ? [
+      chip(ko.combat.attack, compose.attack(enemy.name)),
+      chip(ko.combat.defend, compose.defend()),
+      chip(ko.combat.flee, compose.flee()),
+    ]
+    : [
+      chip(ko.combat.defend, compose.defend()),
+      chip(ko.combat.flee, compose.flee()),
+    ];
   return uniqueFirst(suggestions, 3);
 }
 
-function chip(text: string): SuggestionChip {
-  return { label: text, inputText: text };
+function chip(label: string, inputText: string): SuggestionChip {
+  return { label, inputText };
+}
+
+function talkChip(name: string): SuggestionChip {
+  return { label: `${name}에게 묻기`, inputText: compose.talkTo(name) };
+}
+
+function moveLabel(name: string): string {
+  return compose.moveTo(name).replace(/합니다$/, '');
 }
 
 function uniqueFirst(values: SuggestionChip[], limit: number): SuggestionChip[] {

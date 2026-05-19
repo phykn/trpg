@@ -1,0 +1,113 @@
+{
+  "quests": [
+    {
+      "id": "leave_the_pier",
+      "title": "돌아갈 배는 없습니다",
+      "trigger_kind": "location_enter",
+      "target": "fog_forest",
+      "giver": "boat_captain",
+      "role": "선착장을 떠나 안개 숲으로 들어갑니다.",
+      "prerequisites": [],
+      "required": true
+    },
+    {
+      "id": "hear_the_island_rule",
+      "title": "섬의 규칙을 듣습니다",
+      "trigger_kind": "social_check",
+      "target": "nameless_woman",
+      "giver": "nameless_woman",
+      "role": "흰 머리 여인에게 등대와 두 번째 이름의 진실을 듣습니다.",
+      "prerequisites": ["leave_the_pier"],
+      "required": true
+    },
+    {
+      "id": "face_roan_order",
+      "title": "늦은 퇴각 명령",
+      "trigger_kind": "location_enter",
+      "target": "sword_clearing",
+      "giver": "roan",
+      "role": "로안이 부하들의 이름 앞에서 늦은 퇴각 명령을 인정합니다.",
+      "prerequisites": ["hear_the_island_rule"],
+      "required": true
+    },
+    {
+      "id": "face_miel_tears",
+      "title": "웃지 않는 무대",
+      "trigger_kind": "location_enter",
+      "target": "hollow_theater",
+      "giver": "miel",
+      "role": "미엘이 무대에서 웃음 대신 슬픔을 말합니다.",
+      "prerequisites": ["hear_the_island_rule"],
+      "required": true
+    },
+    {
+      "id": "face_var_price",
+      "title": "값 없는 빵",
+      "trigger_kind": "location_enter",
+      "target": "white_market",
+      "giver": "var",
+      "role": "바르가 모든 것에 값을 붙이지 않겠다고 인정합니다.",
+      "prerequisites": ["face_miel_tears"],
+      "required": true
+    },
+    {
+      "id": "face_ort_names",
+      "title": "죄목 뒤의 이름",
+      "trigger_kind": "location_enter",
+      "target": "title_graveyard",
+      "giver": "ort",
+      "role": "오르트가 자신이 잊은 이름들을 새기기 시작합니다.",
+      "prerequisites": ["face_roan_order", "face_var_price"],
+      "required": true
+    },
+    {
+      "id": "light_the_lighthouse",
+      "title": "끝나지 않았다는 불",
+      "trigger_kind": "location_enter",
+      "target": "white_lighthouse",
+      "giver": "selin",
+      "role": "등대에 불을 켜고 각자가 칭호 너머의 마음을 말합니다.",
+      "prerequisites": ["face_ort_names"],
+      "required": true
+    },
+    {
+      "id": "refuse_the_reclaimer",
+      "title": "회수대 거부",
+      "trigger_kind": "social_check",
+      "target": "reclaimer_captain",
+      "giver": "yuna",
+      "role": "왕국 법관의 회수 명령을 말로 거부하고 돌아갈 배를 부릅니다.",
+      "prerequisites": ["light_the_lighthouse"],
+      "required": true
+    }
+  ],
+  "chapters": [
+    {
+      "id": "chapter_01",
+      "title": "돌아갈 배는 없었다",
+      "role": "선착장과 숲에서 흰섬의 규칙을 깨닫습니다.",
+      "quests": ["leave_the_pier", "hear_the_island_rule"],
+      "prerequisites": []
+    },
+    {
+      "id": "chapter_02",
+      "title": "버린 이름들",
+      "role": "각자의 칭호와 상처가 장소로 드러나는 섬 안쪽을 지납니다.",
+      "quests": [
+        "face_roan_order",
+        "face_miel_tears",
+        "face_var_price",
+        "face_ort_names"
+      ],
+      "prerequisites": ["chapter_01"]
+    },
+    {
+      "id": "chapter_03",
+      "title": "흰 등대",
+      "role": "등대에 불을 켜고 회수대의 명령을 거부합니다.",
+      "quests": ["light_the_lighthouse", "refuse_the_reclaimer"],
+      "prerequisites": ["chapter_02"]
+    }
+  ],
+  "start_quest": "leave_the_pier"
+}

@@ -14,7 +14,7 @@ export function buildCombatActions(combat: CombatBadge): PanelAction[] {
 
   const precise = supportAction(combat, 'precise', target)
     ?? plainPrecise(target);
-  const guarded = supportAction(combat, 'guarded', target)
+  const guarded = supportAction(combat, 'defend', target)
     ?? plainGuarded();
   const situation = situationAction(combat, target);
 
@@ -72,6 +72,7 @@ function commandForTactic(
   if (tactic === 'precise') return { command: 'precise', target: target.id };
   if (tactic === 'reckless') return { command: 'reckless', target: target.id };
   if (tactic === 'talk') return { command: 'talk', target: target.id };
+  if (tactic === 'defend') return { command: 'defend' };
   if (tactic === 'guarded') return { command: 'guarded' };
   return { command: 'create_distance' };
 }
@@ -89,7 +90,7 @@ function plainGuarded(): PanelAction {
   return {
     kind: 'combat_command',
     label: ko.combat.guarded,
-    combatCommand: { command: 'guarded' },
+    combatCommand: { command: 'defend' },
     textFallback: compose.guarded(),
   };
 }

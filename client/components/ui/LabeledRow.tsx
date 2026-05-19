@@ -39,7 +39,7 @@ export function LabeledRow({ label, children, mono = false, clampLines = 3 }: {
         {!overflow && !expanded && (
           <View
             className="absolute inset-x-0 opacity-0"
-            pointerEvents="none"
+            style={{ pointerEvents: 'none' }}
             onLayout={(e) => {
               // onTextLayout doesn't fire on react-native-web, so measure the unclamped height (line-height = 18px).
               if (e.nativeEvent.layout.height > 18 * clampLines + 1) setOverflow(true);

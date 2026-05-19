@@ -45,8 +45,7 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, on
   return (
     <View
       className="mx-5"
-      pointerEvents="box-none"
-      style={{ zIndex: 10 }}
+      style={{ zIndex: 10, pointerEvents: 'box-none' }}
     >
       <View
         className="flex-row gap-2 items-center"

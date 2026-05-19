@@ -208,9 +208,9 @@ describe('graph API helpers', () => {
     const result = await getGraphSessionById('game-1');
 
     expect(result?.suggestions).toEqual([
-      { label: '에드릭에게 말을 겁니다', inputText: '에드릭에게 말을 겁니다' },
-      { label: '망루로 이동합니다', inputText: '망루로 이동합니다' },
-      { label: '주변을 살펴봅니다', inputText: '주변을 살펴봅니다' },
+      { label: '에드릭에게 묻기', inputText: '에드릭에게 「무슨 일이 있었나요?」라고 묻습니다' },
+      { label: '망루로 이동', inputText: '망루로 이동합니다' },
+      { label: '살펴보기', inputText: '주변을 살펴봅니다' },
     ]);
   });
 

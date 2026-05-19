@@ -86,6 +86,7 @@ export type CombatCommand =
   | ({ command: 'precise'; target: string } & CombatSupportCommandFields)
   | ({ command: 'reckless'; target: string } & CombatSupportCommandFields)
   | ({ command: 'talk'; target: string } & CombatSupportCommandFields)
+  | ({ command: 'defend' } & CombatSupportCommandFields)
   | ({ command: 'guarded' } & CombatSupportCommandFields)
   | ({ command: 'create_distance' } & CombatSupportCommandFields);
 
@@ -203,7 +204,7 @@ export type GraphCombatSupport = {
   id: string;
   kind: 'skill';
   name: string;
-  tactic: 'precise' | 'guarded' | 'reckless' | 'create_distance' | 'talk';
+  tactic: 'precise' | 'defend' | 'guarded' | 'reckless' | 'create_distance' | 'talk';
   mpCost: number;
   usable: boolean;
 };

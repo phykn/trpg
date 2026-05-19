@@ -20,7 +20,7 @@ from src.wire.models import (
 
 _TACTIC_BY_ACTION = {
     "attack": "precise",
-    "defend": "guarded",
+    "defend": "defend",
     "flee": "create_distance",
     "social": "talk",
     "precise": "precise",

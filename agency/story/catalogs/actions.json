@@ -1,0 +1,22 @@
+{
+  "attack": {
+    "id": "attack",
+    "name": "공격",
+    "description": "대상을 직접 압박하거나 피해를 주기 위한 행동"
+  },
+  "defend": {
+    "id": "defend",
+    "name": "방어",
+    "description": "피해를 줄이거나 다음 행동을 준비할 여유를 확보하는 행동"
+  },
+  "flee": {
+    "id": "flee",
+    "name": "도주",
+    "description": "위험한 상황이나 거리에서 벗어나 전투에서 이탈하려는 행동"
+  },
+  "social": {
+    "id": "social",
+    "name": "사회적 행동",
+    "description": "대화, 설득, 농담, 사적인 질문처럼 NPC의 반응이 중요한 행동"
+  }
+}

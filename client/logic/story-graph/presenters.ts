@@ -1,4 +1,4 @@
-import { ko } from '@/locale/ko';
+import { compose, ko } from '@/locale/ko';
 import type {
   StoryGraphEdge,
   StoryGraphModel,
@@ -21,6 +21,8 @@ export const EMPTY_STORY_GRAPH: StoryGraphModel = {
   edges: [],
   summary: ko.panel.noStoryData,
 };
+
+const PLACE_SUMMARY_SEP = ' · ';
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -98,6 +100,88 @@ export function storyGraphFingerprint(graph: StoryGraphModel): string {
     .sort()
     .join('|');
   return `${graph.summary}::${nodes}::${edges}`;
+}
+
+export function currentPlaceId(graph: StoryGraphModel): string | undefined {
+  return graph.nodes.find((node) => node.kind === 'place')?.id;
+}
+
+export function resolvePlaceSelection({
+  selectedNodeId,
+  previousCurrentPlaceId,
+  nextCurrentPlaceId,
+  nextNodeIds,
+}: {
+  selectedNodeId: string | null;
+  previousCurrentPlaceId: string | null;
+  nextCurrentPlaceId: string | null;
+  nextNodeIds: Set<string>;
+}): string | null {
+  const currentChanged = previousCurrentPlaceId !== nextCurrentPlaceId;
+  if (currentChanged && (!selectedNodeId || selectedNodeId === previousCurrentPlaceId)) {
+    return nextCurrentPlaceId;
+  }
+  if (selectedNodeId && nextNodeIds.has(selectedNodeId)) return selectedNodeId;
+  return nextCurrentPlaceId;
+}
+
+export function buildPlaceMapGraph(graph: StoryGraphModel): StoryGraphModel {
+  const placeNodes = graph.nodes.filter((node) => node.kind === 'place' || node.kind === 'location');
+  const placeIds = new Set(placeNodes.map((node) => node.id));
+  const placeEdges = dedupeUndirectedEdges(
+    graph.edges.filter(
+      (edge) => edge.kind === 'move' && placeIds.has(edge.source) && placeIds.has(edge.target),
+    ),
+  );
+  const currentPlace = placeNodes.find((node) => node.kind === 'place');
+  const reachableCount = placeNodes.filter(
+    (node) => node.kind === 'location' && node.reachable,
+  ).length;
+  const summary = [
+    currentPlace ? compose.here(currentPlace.label) : null,
+    compose.placeCount(placeNodes.length),
+    compose.reachableCount(reachableCount),
+  ]
+    .filter(Boolean)
+    .join(PLACE_SUMMARY_SEP);
+
+  return { nodes: placeNodes, edges: placeEdges, summary };
+}
+
+export function buildNeighborhoodGraph(graph: StoryGraphModel): StoryGraphModel {
+  const allowed = new Set<string>();
+  for (const node of graph.nodes) {
+    if (
+      node.kind === 'place'
+      || node.kind === 'hero'
+      || node.kind === 'subject'
+      || node.kind === 'quest'
+      || ((node.kind === 'location' || node.kind === 'target') && node.reachable)
+    ) {
+      allowed.add(node.id);
+    }
+  }
+
+  return {
+    ...graph,
+    nodes: graph.nodes.filter((node) => allowed.has(node.id)),
+    edges: dedupeUndirectedEdges(
+      graph.edges.filter((edge) => allowed.has(edge.source) && allowed.has(edge.target)),
+    ),
+  };
+}
+
+function dedupeUndirectedEdges(edges: StoryGraphEdge[]): StoryGraphEdge[] {
+  const pairToEdge = new Map<string, StoryGraphEdge>();
+  for (const edge of edges) {
+    const pair = edge.source < edge.target
+      ? `${edge.source}|${edge.target}`
+      : `${edge.target}|${edge.source}`;
+    if (!pairToEdge.has(pair)) {
+      pairToEdge.set(pair, edge);
+    }
+  }
+  return Array.from(pairToEdge.values());
 }
 
 function isValidStoredNode(raw: unknown): raw is StoryGraphNode {

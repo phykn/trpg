@@ -1,4 +1,10 @@
-import { mergeStoryGraphs } from '../presenters';
+import {
+  buildNeighborhoodGraph,
+  buildPlaceMapGraph,
+  currentPlaceId,
+  mergeStoryGraphs,
+  resolvePlaceSelection,
+} from '../presenters';
 import type { StoryGraphModel } from '../types';
 
 const risk = { label: '보통', tone: 'neutral' as const };
@@ -130,5 +136,92 @@ describe('mergeStoryGraphs', () => {
 
     expect(merged.nodes.some((node) => node.id === 'supply_token')).toBe(false);
     expect(merged.edges.some((edge) => edge.target === 'supply_token')).toBe(false);
+  });
+});
+
+describe('story graph view presenters', () => {
+  test('moves selection to the new current place when the selected node was the previous place', () => {
+    const nextNodeIds = new Set(['town', 'archive']);
+
+    expect(resolvePlaceSelection({
+      selectedNodeId: 'town',
+      previousCurrentPlaceId: 'town',
+      nextCurrentPlaceId: 'archive',
+      nextNodeIds,
+    })).toBe('archive');
+  });
+
+  test('keeps an intentional non-current selection across place changes', () => {
+    const nextNodeIds = new Set(['town', 'archive', 'gate']);
+
+    expect(resolvePlaceSelection({
+      selectedNodeId: 'gate',
+      previousCurrentPlaceId: 'town',
+      nextCurrentPlaceId: 'archive',
+      nextNodeIds,
+    })).toBe('gate');
+  });
+
+  test('buildPlaceMapGraph keeps only place movement nodes and summarizes reachability', () => {
+    const graph = {
+      ...baseGraph(),
+      edges: [
+        { id: 'move:town:gate', source: 'town', target: 'gate', label: '이동', kind: 'move' as const },
+        { id: 'move:gate:town', source: 'gate', target: 'town', label: '이동', kind: 'move' as const },
+        { id: 'meet:town:guard', source: 'town', target: 'guard', label: '접근', kind: 'meet' as const },
+      ],
+    };
+
+    const placeMap = buildPlaceMapGraph(graph);
+
+    expect(placeMap.summary).toBe('현재 광장 · 장소 2곳 · 이동 가능 1');
+    expect(placeMap.nodes.map((node) => node.id)).toEqual(['town', 'gate']);
+    expect(placeMap.edges.map((edge) => edge.id)).toEqual(['move:town:gate']);
+    expect(currentPlaceId(placeMap)).toBe('town');
+  });
+
+  test('buildNeighborhoodGraph hides unreachable target nodes and dedupes undirected edges', () => {
+    const graph: StoryGraphModel = {
+      ...baseGraph(),
+      nodes: [
+        ...baseGraph().nodes,
+        {
+          id: 'cellar',
+          label: '지하실',
+          kind: 'location',
+          status: 'unreachable_move',
+          reachable: false,
+          description: '닫혀 있습니다.',
+          risk,
+          moveDifficulty: null,
+        },
+        {
+          id: 'stranger',
+          label: '낯선 사람',
+          kind: 'target',
+          status: 'unreachable_meet',
+          reachable: false,
+          level: 1,
+          raceJob: '',
+          gender: '',
+          role: '',
+          alive: true,
+        },
+      ],
+      edges: [
+        { id: 'move:town:gate', source: 'town', target: 'gate', label: '이동', kind: 'move' },
+        { id: 'meet:town:guard', source: 'town', target: 'guard', label: '접근', kind: 'meet' },
+        { id: 'meet:guard:town', source: 'guard', target: 'town', label: '접근', kind: 'meet' },
+        { id: 'move:town:cellar', source: 'town', target: 'cellar', label: '이동', kind: 'move' },
+      ],
+    };
+
+    const neighborhood = buildNeighborhoodGraph(graph);
+
+    expect(neighborhood.nodes.map((node) => node.id)).toEqual(['town', 'gate', 'guard']);
+    expect(neighborhood.edges.map((edge) => edge.id)).toEqual([
+      'move:town:gate',
+      'meet:town:guard',
+    ]);
   });
 });

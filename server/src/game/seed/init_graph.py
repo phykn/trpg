@@ -111,6 +111,6 @@ async def init_graph_game(
         locale=locale,
     )
 
-    await graph_repo.save_graph(bundle.progress.game_id, bundle.graph)
     await graph_repo.save_progress(bundle.progress)
+    await graph_repo.save_graph(bundle.progress.game_id, bundle.graph)
     return bundle

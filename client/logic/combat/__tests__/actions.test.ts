@@ -26,23 +26,26 @@ describe('buildCombatActions', () => {
     expect(actions).toEqual([
       expect.objectContaining({
         kind: 'combat_command',
-        label: '정밀',
+        label: '공격',
         combatCommand: { command: 'precise', target: 'enemy_01' },
+        textFallback: '늑대를 정밀하게 공격합니다',
       }),
       expect.objectContaining({
         kind: 'combat_command',
         label: '방어',
-        combatCommand: { command: 'guarded' },
+        combatCommand: { command: 'defend' },
+        textFallback: '상대의 움직임을 받아낼 준비를 합니다',
       }),
       expect.objectContaining({
         kind: 'combat_command',
-        label: '거리',
+        label: '도망',
         combatCommand: { command: 'create_distance' },
+        textFallback: '거리를 벌립니다',
       }),
     ]);
   });
 
-  test('uses skill names in attack and guarded slots', () => {
+  test('uses skill names in attack and defense slots', () => {
     const actions = buildCombatActions(combat({
       availableSupports: [
         {
@@ -57,7 +60,7 @@ describe('buildCombatActions', () => {
           id: 'skill_calm_guard',
           kind: 'skill',
           name: '침착한 방어',
-          tactic: 'guarded',
+          tactic: 'defend',
           mpCost: 2,
           usable: true,
         },
@@ -76,7 +79,7 @@ describe('buildCombatActions', () => {
     expect(actions[1]).toMatchObject({
       label: '침착한 방어',
       combatCommand: {
-        command: 'guarded',
+        command: 'defend',
         support_id: 'skill_calm_guard',
         support_kind: 'skill',
       },
@@ -88,7 +91,7 @@ describe('buildCombatActions', () => {
 
     expect(actions).toHaveLength(3);
     expect(actions[2]).toMatchObject({
-      label: '이탈',
+      label: '도망',
       combatCommand: { command: 'create_distance' },
     });
   });

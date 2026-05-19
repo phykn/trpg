@@ -292,10 +292,8 @@ def _apply_heart_result(
                 return
         elif kind == "create_distance":
             target = actor_id
-            if state.escape_ready:
-                state.outcome = "escaped"
-            else:
-                state.escape_ready = True
+            state.escape_ready = True
+            state.outcome = "escaped"
         else:
             state.escape_ready = True
             state.outcome = "fled"

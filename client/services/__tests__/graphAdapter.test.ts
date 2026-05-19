@@ -261,9 +261,9 @@ describe('adaptGraphState', () => {
     });
 
     expect(suggestions).toEqual([
-      { label: '에드릭에게 말을 겁니다', inputText: '에드릭에게 말을 겁니다' },
-      { label: '늑대에게 말을 겁니다', inputText: '늑대에게 말을 겁니다' },
-      { label: '망루로 이동합니다', inputText: '망루로 이동합니다' },
+      { label: '에드릭에게 묻기', inputText: '에드릭에게 「무슨 일이 있었나요?」라고 묻습니다' },
+      { label: '늑대에게 묻기', inputText: '늑대에게 「무슨 일이 있었나요?」라고 묻습니다' },
+      { label: '망루로 이동', inputText: '망루로 이동합니다' },
     ]);
   });
 });

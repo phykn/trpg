@@ -38,12 +38,10 @@ def _scaffold_minimal_scenario(tmp_path: Path) -> Path:
                 "id": "barter",
                 "name": "흥정",
                 "description": "값을 깎는 능력.",
-                "type": "buff",
-                "target": "single",
-                "primary_stat": "presence",
                 "level": 1,
+                "action": "social",
+                "bonus": 1,
                 "mp_cost": 0,
-                "special_effect": "",
             },
             ensure_ascii=False,
         ),
@@ -61,12 +59,10 @@ def test_check_entity_skill_ok(capsys, tmp_path):
                 "id": "trip",
                 "name": "발걸기",
                 "description": "상대를 넘어뜨립니다.",
-                "type": "debuff",
-                "target": "single",
-                "primary_stat": "agility",
                 "level": 1,
+                "action": "attack",
+                "bonus": 1,
                 "mp_cost": 1,
-                "special_effect": "",
             },
             ensure_ascii=False,
         ),
@@ -200,13 +196,10 @@ def _scaffold_for_character(tmp_path: Path) -> Path:
                 "id": "barter",
                 "name": "흥정",
                 "description": "값을 깎는 능력.",
-                "type": "buff",
-                "primary_stat": "presence",
                 "level": 1,
+                "action": "social",
+                "bonus": 1,
                 "mp_cost": 0,
-                "cooldown": 0,
-                "target": "single",
-                "special_effect": "",
             },
             ensure_ascii=False,
         ),
@@ -219,9 +212,10 @@ def _scaffold_for_character(tmp_path: Path) -> Path:
                 "id": "town",
                 "name": "광장",
                 "description": "마을 광장.",
+                "mood": "조용합니다.",
+                "traits": ["열린 공간입니다"],
                 "connections": [],
                 "items": [],
-                "props": [],
             },
             ensure_ascii=False,
         ),
@@ -230,14 +224,6 @@ def _scaffold_for_character(tmp_path: Path) -> Path:
     return sd
 
 
-# HP/MP formula (server/src/game/engines/growth.py):
-#   calc_max_hp(level, body) = (10 + body) + level * (5 + body // 4)
-#   calc_max_mp(level, mind) = (5 + mind) + level * (3 + mind // 4)
-# For level=1, all stats=10:
-#   max_hp = (10+10) + 1*(5 + 10//4) = 20 + 7 = 27
-#   max_mp = (5+10)  + 1*(3 + 10//4) = 15 + 5 = 20
-# The fixture must pass `check_character` (skeleton=True) but FAIL `check_seed_character`
-# (skeleton=False) because robe_99 isn't in the items pool.
 CHARACTER_WITH_FUTURE_INV = {
     "id": "villager_01",
     "name": "철수",
@@ -245,19 +231,19 @@ CHARACTER_WITH_FUTURE_INV = {
     "race": "human",
     "location": "town",
     "level": 1,
-    "stats": {"body": 10, "agility": 10, "mind": 10, "presence": 10},
-    "hp": 27,
-    "max_hp": 27,
-    "mp": 20,
-    "max_mp": 20,
-    "racial_skills": ["barter"],
+    "alive": True,
     "learned_skills": [],
     "inventory": ["robe_99"],  # 디스크에 없음 — skeleton 모드에서 통과해야 함
     "equipment": {"weapon": None, "armor": None, "accessory": None},
-    "job": "주민",
     "gender": "male",
-    "alive": True,
+    "traits": ["차분합니다"],
+    "mbti": "ISFJ",
+    "relations": {},
     "xp_reward": 0,
+    "protected": False,
+    "gold": 0,
+    "active_buffs": [],
+    "memories": [],
 }
 
 
@@ -298,3 +284,358 @@ def test_check_entity_character_full_catches_missing_inventory(capsys, tmp_path)
     err = capsys.readouterr().err
     # 풀-의존 검사가 robe_99 누락을 잡아야 함
     assert "robe_99" in err or "inventory" in err.lower()
+
+
+def test_check_entity_character_rejects_npc_equipment(capsys, tmp_path):
+    sd = _scaffold_for_character(tmp_path)
+    char = dict(CHARACTER_WITH_FUTURE_INV)
+    char["inventory"] = []
+    char["equipment"] = {"weapon": "sword"}
+    cp = tmp_path / "villager.json"
+    cp.write_text(json.dumps(char, ensure_ascii=False), encoding="utf-8")
+
+    rc = tool._main(["check-entity", "character", str(sd), str(cp)])
+
+    assert rc == 1
+    assert "character.equipment is player-only" in capsys.readouterr().err
+
+
+def test_check_entity_quest_accepts_runtime_trigger_kinds(capsys, tmp_path):
+    sd = _scaffold_for_character(tmp_path)
+    (sd / "items").mkdir()
+    (sd / "items" / "badge.json").write_text(
+        json.dumps(
+            {
+                "id": "badge",
+                "name": "배지",
+                "description": "확인용 배지.",
+                "price": 1,
+                "consumable": False,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (sd / "characters").mkdir()
+    (sd / "characters" / "villager_01.json").write_text(
+        json.dumps(
+            {
+                "id": "villager_01",
+                "name": "주민",
+                "race": "human",
+                "gender": "female",
+                "location": "town",
+                "level": 1,
+                "alive": True,
+                "inventory": [],
+                "equipment": {},
+                "learned_skills": [],
+                "relations": {},
+                "xp_reward": 0,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (sd / "quests").mkdir()
+    qp = tmp_path / "quest.json"
+    qp.write_text(
+        json.dumps(
+            {
+                "id": "quest_01",
+                "title": "확인",
+                "description": "확인합니다.",
+                "giver": "villager_01",
+                "triggers": [
+                    {"id": "got_badge", "type": "item_obtained", "target": "badge"},
+                    {"id": "asked", "type": "social_check", "target": "villager_01"},
+                ],
+                "fail_triggers": [],
+                "prerequisites": [],
+                "status": "active",
+                "required": True,
+                "rewards": {"gold": 0, "exp": 0, "items": []},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool._main(["check-entity", "quest", str(sd), str(qp)])
+
+    assert rc == 0, capsys.readouterr().err
+    assert capsys.readouterr().out.strip() == "OK"
+
+
+def test_check_entity_chapter_uses_decomp_chapter_pool(capsys, tmp_path):
+    sd = _scaffold_for_character(tmp_path)
+    (sd / "quests").mkdir()
+    (sd / "quests" / "quest_01.json").write_text(
+        json.dumps(
+            {
+                "id": "quest_01",
+                "title": "확인",
+                "description": "확인합니다.",
+                "giver": None,
+                "triggers": [],
+                "fail_triggers": [],
+                "prerequisites": [],
+                "status": "active",
+                "required": True,
+                "rewards": {"gold": 0, "exp": 0, "items": []},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (sd / "chapters").mkdir()
+    decomp_dir = tmp_path / ".decomp"
+    decomp_dir.mkdir()
+    (decomp_dir / "arc.json").write_text(
+        json.dumps(
+            {
+                "quests": [
+                    {
+                        "id": "quest_01",
+                        "title": "확인",
+                        "trigger_kind": "location_enter",
+                        "target": "town",
+                        "giver": "villager_01",
+                        "role": "시작",
+                        "prerequisites": [],
+                        "required": True,
+                    }
+                ],
+                "chapters": [
+                    {
+                        "id": "chapter_01",
+                        "title": "1장",
+                        "role": "시작",
+                        "quests": ["quest_01"],
+                        "prerequisites": [],
+                    },
+                    {
+                        "id": "chapter_02",
+                        "title": "2장",
+                        "role": "후속",
+                        "quests": [],
+                        "prerequisites": ["chapter_01"],
+                    },
+                ],
+                "start_quest": "quest_01",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    cp = tmp_path / "chapter_02.json"
+    cp.write_text(
+        json.dumps(
+            {
+                "id": "chapter_02",
+                "title": "2장",
+                "description": "후속 장입니다.",
+                "quests": [],
+                "prerequisites": ["chapter_01"],
+                "status": "locked",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool._main(
+        ["check-entity", "chapter", str(sd), str(cp), "--decomp", str(decomp_dir)]
+    )
+
+    assert rc == 0, capsys.readouterr().err
+    assert capsys.readouterr().out.strip() == "OK"
+
+
+def test_check_entity_chapter_rejects_unknown_prerequisite(capsys, tmp_path):
+    sd = _scaffold_for_character(tmp_path)
+    (sd / "quests").mkdir()
+    (sd / "quests" / "quest_01.json").write_text(
+        json.dumps(
+            {
+                "id": "quest_01",
+                "title": "확인",
+                "description": "확인합니다.",
+                "giver": None,
+                "triggers": [],
+                "fail_triggers": [],
+                "prerequisites": [],
+                "status": "active",
+                "required": True,
+                "rewards": {"gold": 0, "exp": 0, "items": []},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (sd / "chapters").mkdir()
+    cp = tmp_path / "chapter_02.json"
+    cp.write_text(
+        json.dumps(
+            {
+                "id": "chapter_02",
+                "title": "2장",
+                "description": "후속 장입니다.",
+                "quests": ["quest_01"],
+                "prerequisites": ["missing_chapter"],
+                "status": "locked",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool._main(["check-entity", "chapter", str(sd), str(cp)])
+
+    assert rc == 1
+    assert "missing_chapter" in capsys.readouterr().err
+
+
+def test_check_entity_rejects_forbidden_seed_shape(capsys, tmp_path):
+    sd = _scaffold_for_character(tmp_path)
+    item_path = tmp_path / "badge.json"
+    item_path.write_text(
+        json.dumps(
+            {
+                "id": "badge",
+                "name": "배지",
+                "description": "확인용 배지.",
+                "price": 1,
+                "consumable": False,
+                "slot_id": "accessory",
+                "required": None,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool._main(["check-entity", "item", str(sd), str(item_path)])
+
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "slot_id" in err
+    assert "required" in err
+
+
+def test_check_entity_item_checks_support_catalog_refs(capsys, tmp_path):
+    sd = _scaffold_for_character(tmp_path)
+    (sd / "slots.json").write_text(
+        json.dumps({"accessory": {"id": "accessory", "name": "장신구"}}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (sd / "knowledge.json").write_text(
+        json.dumps({"clue": {"id": "clue", "title": "단서"}}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    item_path = tmp_path / "badge.json"
+    item_path.write_text(
+        json.dumps(
+            {
+                "id": "badge",
+                "name": "배지",
+                "description": "확인용 배지.",
+                "price": 1,
+                "consumable": False,
+                "slot": "missing_slot",
+                "knowledge": ["missing_clue"],
+                "action": "dance",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool._main(["check-entity", "item", str(sd), str(item_path)])
+
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "missing_slot" in err
+    assert "missing_clue" in err
+    assert "dance" in err
+
+
+def test_check_entity_location_checks_knowledge_catalog(capsys, tmp_path):
+    sd = _scaffold_for_character(tmp_path)
+    (sd / "knowledge.json").write_text(
+        json.dumps({"clue": {"id": "clue", "title": "단서"}}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    lp = tmp_path / "town_square.json"
+    lp.write_text(
+        json.dumps(
+            {
+                "id": "town_square",
+                "name": "광장",
+                "description": "작은 광장입니다.",
+                "mood": "조용합니다.",
+                "traits": ["열린 공간입니다"],
+                "knowledge": ["missing_clue"],
+                "connections": [{"target": "town"}],
+                "items": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool._main(["check-entity", "location", str(sd), str(lp)])
+
+    assert rc == 1
+    assert "missing_clue" in capsys.readouterr().err
+
+
+def test_check_entity_quest_checks_reward_items(capsys, tmp_path):
+    sd = _scaffold_for_character(tmp_path)
+    (sd / "characters").mkdir()
+    (sd / "characters" / "villager_01.json").write_text(
+        json.dumps(
+            {
+                "id": "villager_01",
+                "name": "주민",
+                "race": "human",
+                "gender": "female",
+                "location": "town",
+                "level": 1,
+                "alive": True,
+                "inventory": [],
+                "equipment": {},
+                "learned_skills": [],
+                "relations": {},
+                "xp_reward": 0,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (sd / "items").mkdir()
+    (sd / "quests").mkdir()
+    qp = tmp_path / "quest.json"
+    qp.write_text(
+        json.dumps(
+            {
+                "id": "quest_01",
+                "title": "확인",
+                "description": "확인합니다.",
+                "giver": "villager_01",
+                "triggers": [],
+                "fail_triggers": [],
+                "prerequisites": [],
+                "status": "active",
+                "required": True,
+                "rewards": {"gold": 0, "exp": 0, "items": ["missing_badge"]},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool._main(["check-entity", "quest", str(sd), str(qp)])
+
+    assert rc == 1
+    assert "missing_badge" in capsys.readouterr().err

@@ -940,7 +940,7 @@ async def test_graph_turn_auto_skill_uses_known_skill_during_existing_combat(
 
 
 @pytest.mark.asyncio
-async def test_graph_turn_flee_requires_distance_before_escape(tmp_path, monkeypatch):
+async def test_graph_turn_flee_success_ends_combat(tmp_path, monkeypatch):
     monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 20)
     app = _build_app(tmp_path)
 
@@ -955,23 +955,15 @@ async def test_graph_turn_flee_requires_distance_before_escape(tmp_path, monkeyp
             f"/session/{game_id}/graph/confirm",
             json={"confirmation_id": confirmation_id, "decision": "confirm"},
         )
-        ready_response = await client.post(
-            f"/session/{game_id}/graph/turn",
-            json={"action": {"verb": "move", "how": "flee"}},
-        )
         response = await client.post(
             f"/session/{game_id}/graph/turn",
             json={"action": {"verb": "move", "how": "flee"}},
         )
 
-    assert ready_response.status_code == 200, ready_response.text
     assert response.status_code == 200, response.text
-    ready_body = ready_response.json()
     body = response.json()
     progress = await app.state.graph_repo.load_progress(game_id)
 
-    assert ready_body["state"]["combat"] is not None
-    assert ready_body["state"]["combat"]["escapeReady"] is True
     assert body["state"]["combat"] is None
     assert progress.graph_combat_state is None
 

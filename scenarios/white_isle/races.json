@@ -1,0 +1,11 @@
+{
+  "human": {
+    "id": "human",
+    "name": "인간",
+    "description": "왕국의 칭호와 삶을 짊어진 사람입니다. 흰섬에서는 칭호 뒤에 남은 이름을 마주해야 합니다.",
+    "is_humanoid": true,
+    "racial_skills": [
+      "hold_name"
+    ]
+  }
+}

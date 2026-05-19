@@ -153,7 +153,14 @@ class GraphCombatSupportPayload(_CamelModel):
     id: str
     kind: Literal["skill"]
     name: str
-    tactic: Literal["precise", "guarded", "reckless", "create_distance", "talk"]
+    tactic: Literal[
+        "precise",
+        "defend",
+        "guarded",
+        "reckless",
+        "create_distance",
+        "talk",
+    ]
     mp_cost: int
     usable: bool = True
 
