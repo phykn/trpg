@@ -23,4 +23,12 @@ describe('LevelUpPrompt mobile selectors', () => {
     expect(source).toContain('numberOfLines={2}');
     expect(source).not.toContain('flex: 1,\n            height: 34');
   });
+
+  test('groups stat choices before resource and skill choices', () => {
+    expect(source).toContain('STAT_CHOICE_ORDER');
+    expect(source).toContain('sortGrowthChoices');
+    expect(source).toContain("if (growth.kind === 'stat')");
+    expect(source).toContain("if (growth.kind === 'max_hp') return 4");
+    expect(source).toContain("if (growth.kind === 'max_mp') return 5");
+  });
 });

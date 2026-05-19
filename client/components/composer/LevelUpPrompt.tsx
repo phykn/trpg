@@ -19,6 +19,27 @@ const CHOICES: GrowthChoice[] = [
   { id: 'max_mp', label: ko.level.maxMpChoice, growth: { kind: 'max_mp' } },
 ];
 
+const STAT_CHOICE_ORDER: Record<string, number> = {
+  body: 0,
+  agility: 1,
+  mind: 2,
+  presence: 3,
+};
+
+function growthChoiceRank(choice: GrowthChoice): number {
+  const growth = choice.growth;
+  if (growth.kind === 'stat') return STAT_CHOICE_ORDER[growth.stat] ?? 99;
+  if (growth.kind === 'max_hp') return 4;
+  if (growth.kind === 'max_mp') return 5;
+  if (growth.kind === 'upgrade_skill') return 6;
+  if (growth.kind === 'learn_skill') return 7;
+  return 99;
+}
+
+function sortGrowthChoices(choices: GrowthChoice[]): GrowthChoice[] {
+  return [...choices].sort((a, b) => growthChoiceRank(a) - growthChoiceRank(b));
+}
+
 type Props = {
   hero: Hero;
   choices?: GraphLevelUpChoice[];
@@ -29,7 +50,7 @@ type Props = {
 
 export function LevelUpPrompt({ hero, choices = [], loading = false, onCommit, onCancel }: Props) {
   const growthChoices = React.useMemo(
-    () => (choices.length > 0 ? choices : loading ? [] : CHOICES),
+    () => sortGrowthChoices(choices.length > 0 ? choices : loading ? [] : CHOICES),
     [choices, loading],
   );
   const [selectedId, setSelectedId] = React.useState<GrowthChoice['id']>(growthChoices[0]?.id ?? 'max_hp');
