@@ -24,7 +24,7 @@ export function DecisionStateStrip({ items }: { items: DecisionStateItem[] }) {
       horizontal
       showsHorizontalScrollIndicator={false}
       className="mx-5"
-      contentContainerStyle={{ flexDirection: 'row', gap: 6, paddingRight: 20 }}
+      contentContainerStyle={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingRight: 20 }}
     >
       {items.map((item) => {
         const containerClasses = containerToneClass(item.tone);
