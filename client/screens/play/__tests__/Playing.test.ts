@@ -37,6 +37,13 @@ describe('Playing overlay layering', () => {
     expect(source).toContain('buildNearbyPanel(storyGraph)');
   });
 
+  test('keeps context panels and nearby panel mutually exclusive', () => {
+    expect(source).toContain('const setNearbyOpenFromComposer = (open: boolean) => {');
+    expect(source).toContain('if (open) setActiveId(null);');
+    expect(source).toContain('onNearbyOpenChange={setNearbyOpenFromComposer}');
+    expect(source).toContain('setNearbyOpen(false);');
+  });
+
   test('only uses cues from the last log entry when it is GM narration', () => {
     expect(source).toContain('const lastLogEntry = log[log.length - 1];');
     expect(source).toContain("const latestCues = lastLogEntry?.kind === 'gm' ? lastLogEntry.cues ?? [] : [];");

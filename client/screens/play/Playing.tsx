@@ -47,6 +47,11 @@ export function Playing({ game }: Props) {
     setNearbyOpen(false);
   };
 
+  const setNearbyOpenFromComposer = (open: boolean) => {
+    if (open) setActiveId(null);
+    setNearbyOpen(open);
+  };
+
   const openLevelUpFromComposer = () => {
     Keyboard.dismiss();
     closePopups();
@@ -119,6 +124,7 @@ export function Playing({ game }: Props) {
           />
         )}
         onSelect={(id) => {
+          setNearbyOpen(false);
           setActiveId((prev) => {
             const next = prev === id ? null : id;
             if (id === 'map' && next === id) markLocationSeen();
@@ -268,7 +274,7 @@ export function Playing({ game }: Props) {
             }] : []}
             nearby={nearby}
             nearbyOpen={nearbyOpen}
-            onNearbyOpenChange={setNearbyOpen}
+            onNearbyOpenChange={setNearbyOpenFromComposer}
             onNearbyAction={(action) => {
               if (action.confirm) {
                 setPendingAction(action);
