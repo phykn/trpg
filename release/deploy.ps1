@@ -1,5 +1,5 @@
 param(
-    [switch]$StartLocalLlm,
+    [switch]$ClientOnly,
     [string]$CommitMessage
 )
 
@@ -8,34 +8,37 @@ $ErrorActionPreference = "Stop"
 $ReleaseDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = Split-Path -Parent $ReleaseDir
 $ClientDir = Join-Path $RepoRoot "client"
-$LocalLlmLauncher = "C:\Users\KN\Desktop\LLM\run_llm.bat"
+$LlmLauncher = Join-Path $ReleaseDir "run_llm.bat"
+$LocalWrangler = Join-Path $ClientDir "node_modules\.bin\wrangler.cmd"
 
-function Run-Step {
-    param(
-        [string]$Title,
-        [scriptblock]$Body
-    )
-
+function Step {
+    param([string]$Title, [scriptblock]$Body)
     Write-Host ""
     Write-Host "==> $Title"
     & $Body
 }
 
-function Require-Command {
+function Need {
     param([string]$Name)
     if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
         throw "Required command not found: $Name"
     }
 }
 
-function Run-Command {
-    param(
-        [string]$Command,
-        [string[]]$Arguments,
-        [string]$WorkingDirectory = $RepoRoot
-    )
+function Resolve-Command {
+    param([string]$Name, [string]$FallbackPath)
+    if (Get-Command $Name -ErrorAction SilentlyContinue) {
+        return $Name
+    }
+    if ($FallbackPath -and (Test-Path -LiteralPath $FallbackPath)) {
+        return $FallbackPath
+    }
+    throw "Required command not found: $Name"
+}
 
-    Push-Location $WorkingDirectory
+function Run {
+    param([string]$Command, [string[]]$Arguments, [string]$Cwd = $RepoRoot)
+    Push-Location $Cwd
     try {
         & $Command @Arguments
         if ($LASTEXITCODE -ne 0) {
@@ -47,57 +50,99 @@ function Run-Command {
     }
 }
 
-Run-Step "Preflight" {
-    Require-Command "git"
-    Require-Command "npm"
-    if (-not (Test-Path -LiteralPath $ClientDir)) {
-        throw "Client directory is missing: $ClientDir"
+function Load-EnvFile {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path)) {
+        throw "$Path is missing"
     }
+    foreach ($rawLine in Get-Content -LiteralPath $Path) {
+        $line = $rawLine.Trim()
+        if (-not $line -or $line.StartsWith("#")) { continue }
+        $index = $line.IndexOf("=")
+        if ($index -lt 1) { continue }
+        $key = $line.Substring(0, $index).Trim()
+        $value = $line.Substring($index + 1).Trim()
+        if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
+            $value = $value.Substring(1, $value.Length - 2)
+        }
+        Set-Item -Path "Env:$key" -Value $value
+    }
+}
+
+function Deploy-Client {
+    Step "Build and deploy client" {
+        Load-EnvFile (Join-Path $ClientDir ".env.shared")
+        Load-EnvFile (Join-Path $ClientDir ".env.release")
+
+        $sha = (& git -C $RepoRoot rev-parse --short HEAD).Trim()
+        if (-not $sha) { throw "Could not resolve git sha" }
+        $env:EXPO_PUBLIC_GIT_SHA = $sha
+
+        Remove-Item -LiteralPath (Join-Path $ClientDir "dist") -Recurse -Force -ErrorAction SilentlyContinue
+        Run -Command "npx" -Arguments @("expo", "export", "-p", "web", "--clear") -Cwd $ClientDir
+
+        $jsDir = Join-Path $ClientDir "dist\_expo\static\js\web"
+        $entry = Get-ChildItem -LiteralPath $jsDir -Filter "entry-*.js" | Select-Object -First 1
+        if (-not $entry) { throw "Expo export is missing the web entry bundle" }
+        $source = Get-Content -LiteralPath $entry.FullName -Raw
+        if (-not $source.Contains($env:EXPO_PUBLIC_API_URL)) {
+            throw "Expo export did not inline EXPO_PUBLIC_API_URL"
+        }
+        if ($source.Contains("EXPO_PUBLIC_API_URL is not set")) {
+            throw "Expo export contains a missing EXPO_PUBLIC_API_URL guard"
+        }
+
+        Run -Command $script:WranglerCommand -Arguments @("deploy") -Cwd $ClientDir
+    }
+}
+
+Step "Preflight" {
+    Need "git"
+    Need "npm"
+    Need "npx"
+    $script:WranglerCommand = Resolve-Command "wrangler" $LocalWrangler
     if (-not (Test-Path -LiteralPath (Join-Path $ClientDir "package.json"))) {
         throw "client/package.json is missing"
     }
-    if ($StartLocalLlm -and -not (Test-Path -LiteralPath $LocalLlmLauncher)) {
-        throw "Local LLM launcher is missing: $LocalLlmLauncher"
+    if (-not (Test-Path -LiteralPath $LlmLauncher)) {
+        throw "release/run_llm.bat is missing"
     }
 }
 
-if ($StartLocalLlm) {
-    Run-Step "Start local LLM tunnel" {
-        Start-Process -FilePath $LocalLlmLauncher -WorkingDirectory (Split-Path -Parent $LocalLlmLauncher)
-        Write-Host "Started local LLM launcher in a separate window."
-    }
+Step "Start local LLM tunnel" {
+    Start-Process -FilePath $LlmLauncher -WorkingDirectory $ReleaseDir
+    Write-Host "Started release/run_llm.bat in a separate window."
+    Write-Host "That window must stay open while Render uses the local LLM."
+    Start-Sleep -Seconds 10
 }
 
-Run-Step "Capture current worktree in a release commit" {
-    $branch = (& git -C $RepoRoot branch --show-current).Trim()
-    if (-not $branch) {
-        throw "Cannot determine current git branch"
-    }
-    Write-Host "Branch: $branch"
+if (-not $ClientOnly) {
+    Step "Commit current workspace" {
+        $branch = (& git -C $RepoRoot branch --show-current).Trim()
+        if (-not $branch) { throw "Cannot determine current git branch" }
+        Write-Host "Branch: $branch"
 
-    Run-Command "git" @("add", "-A")
-    $dirty = (& git -C $RepoRoot status --porcelain)
-    if ($dirty) {
-        $message = $CommitMessage
-        if (-not $message) {
-            $stamp = Get-Date -Format "yyyy-MM-dd HH:mm"
-            $message = "chore: release $stamp"
+        Run -Command "git" -Arguments @("add", "-A")
+        $dirty = (& git -C $RepoRoot status --porcelain)
+        if ($dirty) {
+            $message = $CommitMessage
+            if (-not $message) {
+                $message = "chore: release $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+            }
+            Run -Command "git" -Arguments @("commit", "-m", $message)
         }
-        Run-Command "git" @("commit", "-m", $message)
+        else {
+            Write-Host "No tracked changes to commit."
+        }
     }
-    else {
-        Write-Host "No tracked changes to commit."
+
+    Step "Push current branch" {
+        $branch = (& git -C $RepoRoot branch --show-current).Trim()
+        Run -Command "git" -Arguments @("push", "origin", $branch)
     }
 }
 
-Run-Step "Push current branch to origin" {
-    $branch = (& git -C $RepoRoot branch --show-current).Trim()
-    Run-Command "git" @("push", "origin", $branch)
-}
-
-Run-Step "Deploy client to Cloudflare" {
-    Run-Command "npm" @("run", "deploy") $ClientDir
-}
+Deploy-Client
 
 Write-Host ""
 Write-Host "Release deploy completed."
