@@ -1,4 +1,3 @@
-import os
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
@@ -33,6 +32,7 @@ from ..narration.result import (
 from ..request_result import GraphResultOutcome, executed_result, outcome_from_dispatch
 from ..state import GameRuntimeState
 from ..narration.suggestions import GraphSuggestion, filter_grounded_suggestions
+from ..env import env_float
 
 
 class GraphActionTurnError(ValueError):
@@ -59,7 +59,7 @@ class _PreparedGraphActionTurn:
 
 
 def _action_narration_timeout_s(default: float = 30.0) -> float:
-    return float(os.environ.get("GRAPH_ACTION_NARRATION_TIMEOUT_S") or str(default))
+    return env_float("GRAPH_ACTION_NARRATION_TIMEOUT_S", default)
 
 
 # Public flow

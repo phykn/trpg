@@ -8,7 +8,11 @@ if not defined PORT set "PORT=8000"
 set "CTX=16384"
 set "IMG=ghcr.io/ggml-org/llama.cpp:server-cuda"
 set "MODELPATH=/models/gemma-4-E4B-it-Q4_K_M.gguf"
-set "PASS=0706"
+
+if not defined LLAMA_CPP_SUDO_PASSWORD (
+  echo LLAMA_CPP_SUDO_PASSWORD is not set. Add it to server\.env.release before running release deploy.
+  exit /b 1
+)
 
 set "TEMP=1.0"
 set "TOPK=20"
@@ -32,16 +36,16 @@ set "DRUN=%DRUN% -v /home/kn/models:/models"
 set "DRUN=%DRUN% -p %PORT%:%PORT%"
 set "DRUN=%DRUN% %IMG% %ARGS%"
 
-set "SH=echo %PASS% | sudo -S -v 2>/dev/null"
+set "SH=echo %LLAMA_CPP_SUDO_PASSWORD% | sudo -S -v 2>/dev/null"
 set "SH=%SH% && sudo service docker start >/dev/null 2>&1"
 set "SH=%SH% && (sudo docker rm -f %NAME% >/dev/null 2>&1 || true)"
-set "SH=%SH% && cleanup() { echo %PASS% | sudo -S docker rm -f %NAME% >/dev/null 2>&1 || true; exit 0; }"
+set "SH=%SH% && cleanup() { echo %LLAMA_CPP_SUDO_PASSWORD% | sudo -S docker rm -f %NAME% >/dev/null 2>&1 || true; exit 0; }"
 set "SH=%SH% && trap cleanup EXIT HUP INT TERM"
 set "SH=%SH% && %DRUN%"
 
 wsl -- bash -lc "%SH%"
 
-wsl -- bash -lc "echo %PASS% | sudo -S docker rm -f %NAME% >/dev/null 2>&1 || true"
+wsl -- bash -lc "echo %LLAMA_CPP_SUDO_PASSWORD% | sudo -S docker rm -f %NAME% >/dev/null 2>&1 || true"
 
 if errorlevel 1 pause
 endlocal

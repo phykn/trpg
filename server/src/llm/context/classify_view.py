@@ -51,7 +51,7 @@ def build_classify_context_view(
 
     visible_targets = all_visible_targets[: limits.visible_targets]
     exits = all_exits[: limits.exits]
-    inventory = all_inventory[: limits.inventory]
+    inventory = all_inventory[: limits.inventory]  # ssot-allow: graph-query result slice
     skills = all_skills[: limits.skills]
     location_items = all_location_items[: limits.location_items]
     corpses = all_corpses[: limits.corpses]
@@ -100,7 +100,7 @@ def build_classify_context_view(
                 len(all_visible_targets) - limits.visible_targets,
             ),
             "exits_omitted": max(0, len(all_exits) - limits.exits),
-            "inventory_omitted": max(0, len(all_inventory) - limits.inventory),
+            "inventory_omitted": max(0, len(all_inventory) - limits.inventory),  # ssot-allow: graph-query result count
             "skills_omitted": max(0, len(all_skills) - limits.skills),
             "location_items_omitted": max(
                 0,

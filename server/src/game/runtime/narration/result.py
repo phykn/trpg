@@ -8,6 +8,7 @@ from src.db.repo import GraphRepo
 from src.game.domain.memory import DialoguePair, GMLogEntry, NarrationCue, TurnLogEntry
 from src.llm.diag import llm_diag
 
+from ..env import env_nonnegative_int
 from ..state import GameRuntimeState
 from .suggestions import GraphSuggestion, normalize_suggestion
 
@@ -25,19 +26,19 @@ def _visible_stop_markers() -> tuple[str, ...]:
 
 
 def _max_suggestions(default: int = 3) -> int:
-    return _env_int("GRAPH_NARRATION_MAX_SUGGESTIONS", default)
+    return env_nonnegative_int("GRAPH_NARRATION_MAX_SUGGESTIONS", default)
 
 
 def _max_suggestion_chars(default: int = 80) -> int:
-    return _env_int("GRAPH_NARRATION_MAX_SUGGESTION_CHARS", default)
+    return env_nonnegative_int("GRAPH_NARRATION_MAX_SUGGESTION_CHARS", default)
 
 
 def _max_ui_cues(default: int = 3) -> int:
-    return _env_int("GRAPH_NARRATION_MAX_UI_CUES", default)
+    return env_nonnegative_int("GRAPH_NARRATION_MAX_UI_CUES", default)
 
 
 def _max_ui_cue_chars(default: int = 48) -> int:
-    return _env_int("GRAPH_NARRATION_MAX_UI_CUE_CHARS", default)
+    return env_nonnegative_int("GRAPH_NARRATION_MAX_UI_CUE_CHARS", default)
 
 
 class GraphNarrationResult(BaseModel):
@@ -279,11 +280,3 @@ def _normalize_ui_cue(value: object) -> NarrationCue | None:
         return None
 
 
-def _env_int(name: str, default: int) -> int:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-    try:
-        return max(0, int(raw))
-    except ValueError:
-        return default

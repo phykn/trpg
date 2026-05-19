@@ -8,6 +8,7 @@ from src.game.domain.combat import (
     GraphCombatAction,
     GraphCombatState,
     GraphCombatTraceEvent,
+    supports_combat_action,
 )
 from src.game.domain.graph import (
     Graph,
@@ -441,15 +442,7 @@ def _bounded_bonus(value: object) -> int:
 def _supports_action(
     supported_action: str | None, action_kind: CombatActionKind
 ) -> bool:
-    if supported_action == action_kind:
-        return True
-    legacy = {
-        "attack": {"precise", "reckless"},
-        "defend": {"guarded"},
-        "flee": {"create_distance"},
-        "social": {"talk"},
-    }
-    return action_kind in legacy.get(supported_action or "", set())
+    return supports_combat_action(supported_action, action_kind)
 
 
 def _string_prop(

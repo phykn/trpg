@@ -2,7 +2,7 @@ from src.game.runtime.state import GameRuntimeState
 from .combat import combat_payload
 from .hero import hero_payload
 from .place import place_payload
-from .quests import active_quest_payload, quest_offer_payloads
+from .quests import active_quest_payload, quest_offer_payloads  # ssot-allow: module import
 from .values import require_node
 from src.wire.models import (
     GraphFrontStatePayload,

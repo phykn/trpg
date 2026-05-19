@@ -74,17 +74,24 @@ export function Log({
 }) {
   const ref = React.useRef<FlatList<LogEntry>>(null);
   const [viewportH, setViewportH] = React.useState(0);
+  const contentH = React.useRef(0);
   const initialized = React.useRef(false);
 
-  const onContentSizeChange = (_w: number, h: number) => {
-    if (h <= viewportH) {
+  const syncScrollPosition = React.useCallback((h = contentH.current, v = viewportH) => {
+    if (v <= 0) return;
+    if (h <= v) {
       ref.current?.scrollToOffset({ offset: 0, animated: false });
       initialized.current = true;
       return;
     }
-    const offset = h - viewportH;
+    const offset = h - v;
     ref.current?.scrollToOffset({ offset, animated: initialized.current });
     initialized.current = true;
+  }, [viewportH]);
+
+  const onContentSizeChange = (_w: number, h: number) => {
+    contentH.current = h;
+    syncScrollPosition(h);
   };
 
   React.useEffect(() => {
@@ -93,12 +100,6 @@ export function Log({
     });
     return () => show.remove();
   }, []);
-
-  React.useEffect(() => {
-    if (initialized.current && viewportH > 0) {
-      ref.current?.scrollToOffset({ offset: 0, animated: false });
-    }
-  }, [viewportH]);
 
   return (
     <FlatList
@@ -109,7 +110,11 @@ export function Log({
       renderItem={({ item }) => <LogItem entry={item} />}
       ListFooterComponent={typing ? <TypingDots /> : null}
       ItemSeparatorComponent={() => <View style={{ height: spacing[4] }} />}
-      onLayout={(ev) => setViewportH(ev.nativeEvent.layout.height)}
+      onLayout={(ev) => {
+        const nextViewportH = ev.nativeEvent.layout.height;
+        setViewportH(nextViewportH);
+        syncScrollPosition(contentH.current, nextViewportH);
+      }}
       onContentSizeChange={onContentSizeChange}
       contentContainerStyle={{
         paddingHorizontal: spacing[5],

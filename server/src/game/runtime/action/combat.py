@@ -1,7 +1,11 @@
 from pydantic import BaseModel, ConfigDict
 
 from src.game.domain.action import Action
-from src.game.domain.combat import GraphCombatAction, GraphCombatState
+from src.game.domain.combat import (
+    GraphCombatAction,
+    GraphCombatState,
+    supports_combat_action,
+)
 from src.game.domain.graph import Graph
 from src.game.domain.graph.query import known_skills_of
 from src.game.engines.graph.combat import (
@@ -273,15 +277,7 @@ def _attack_tactic(how: str | None) -> str:
 
 
 def _supports_action(supported_action: str | None, action_kind: str) -> bool:
-    if supported_action == action_kind:
-        return True
-    legacy = {
-        "attack": {"precise", "reckless"},
-        "defend": {"guarded"},
-        "flee": {"create_distance"},
-        "social": {"talk"},
-    }
-    return action_kind in legacy.get(supported_action or "", set())
+    return supports_combat_action(supported_action, action_kind)
 
 
 def _target_for_start(action: Action) -> str:

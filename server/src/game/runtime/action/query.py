@@ -53,7 +53,7 @@ def _inventory_text(surroundings: dict, locale: str) -> str:
     names = _names_from_entries(surroundings.get("inventory"))
     if not names:
         return render("runtime.query.no_inventory", locale)
-    return render("runtime.query.inventory", locale, names=_join(names))
+    return render("runtime.query.inventory", locale, names=_join(names))  # ssot-allow: locale key, not relation read
 
 
 def _status_text(runtime: GameRuntimeState) -> str:

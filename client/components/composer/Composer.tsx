@@ -24,7 +24,7 @@ import { StopButton } from './StopButton';
 
 const INPUT_MIN_HEIGHT = 40;
 const INPUT_MAX_HEIGHT = 320;
-const NEARBY_PANEL_MAX_HEIGHT = 360;
+const NEARBY_PANEL_MAX_HEIGHT = 240;
 const IS_WEB = Platform.OS === 'web';
 
 export type ComposerQuickAction = {
@@ -87,6 +87,8 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
     inputRef.current = '';
     setInput('');
     setInputHeight(INPUT_MIN_HEIGHT);
+    setNearbyOpen(false);
+    setExpandedNearbyId(null);
     Keyboard.dismiss();
   };
 

@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 from collections.abc import AsyncIterator
 
 from openai import APIConnectionError, InternalServerError, RateLimitError
@@ -13,13 +12,14 @@ from src.llm.client import LLMClient
 from src.llm.diag import llm_diag
 
 from ..action.dispatch import GraphActionDispatchResult
+from ..env import graph_narration_temperature
 from ..state import GameRuntimeState
 from .context import build_action_narration_payload
 from .result import GraphNarrationResult, parse_graph_narration_answer
 
 
 def _narration_temperature(default: float = 1.0) -> float:
-    return float(os.environ.get("LLM_GRAPH_NARRATE_TEMPERATURE") or str(default))
+    return graph_narration_temperature(default)
 
 
 async def build_graph_action_narration(

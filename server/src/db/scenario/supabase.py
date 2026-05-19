@@ -88,8 +88,9 @@ class SupabaseStorageScenarioRepo:
         try:
             blob = await self._get_bytes_cached(f"{profile}/{kind}.json")
         except FileNotFoundError:
-            pass
-        else:
+            blob = None
+
+        if blob is not None:
             return _records_from_json(json.loads(blob.decode("utf-8")))
 
         files = await self._list_prefix_cached(f"{profile}/{kind}")

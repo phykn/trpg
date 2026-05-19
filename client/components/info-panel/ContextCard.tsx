@@ -1,5 +1,5 @@
 import React from 'react';
-import { PanResponder, View } from 'react-native';
+import { PanResponder, ScrollView, View } from 'react-native';
 
 import { Chip, Surface } from '@/components/ui';
 import {
@@ -12,7 +12,7 @@ import type { PanelAction, PanelSlot } from '@/logic/info-panel/types';
 
 import { PanelBody } from '@/components/info-panel/PanelBody';
 
-const FLOAT_BUFFER = 540;
+const CONTEXT_PANEL_MAX_HEIGHT = 340;
 
 export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, onAction, actionDisabled = false, leading, trailing }: {
   slots: PanelSlot[];
@@ -28,8 +28,6 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, on
   const activeSlot = slots.find((s) => s.id === activeId) ?? null;
   const panel = activeSlot?.panel ?? null;
   const miniMapOpen = activeId === 'map';
-  const [chipBarHeight, setChipBarHeight] = React.useState(48);
-  const floating = panel || miniMapOpen;
 
   const panResponder = React.useMemo(
     () =>
@@ -48,13 +46,9 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, on
     <View
       className="mx-5"
       pointerEvents="box-none"
-      style={[
-        { zIndex: 10 },
-        floating ? { paddingBottom: FLOAT_BUFFER, marginBottom: -FLOAT_BUFFER } : null,
-      ]}
+      style={{ zIndex: 10 }}
     >
       <View
-        onLayout={(e) => setChipBarHeight(e.nativeEvent.layout.height)}
         className="flex-row gap-2 items-center"
       >
         {leading}
@@ -75,30 +69,34 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, on
       {panel && (
         <Surface
           variant="floating"
-          className="overflow-hidden"
-          style={{ position: 'absolute', top: chipBarHeight + 4, left: 0, right: 0, maxHeight: FLOAT_BUFFER }}
+          className="mt-1 overflow-hidden"
+          style={{ maxHeight: CONTEXT_PANEL_MAX_HEIGHT }}
           {...panResponder.panHandlers}
         >
-          <PanelBody
-            panel={panel}
-            onAction={onAction}
-            actionDisabled={actionDisabled}
-          />
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <PanelBody
+              panel={panel}
+              onAction={onAction}
+              actionDisabled={actionDisabled}
+            />
+          </ScrollView>
         </Surface>
       )}
       {miniMapOpen && (
         <Surface
           variant="floating"
-          className="overflow-hidden"
-          style={{ position: 'absolute', top: chipBarHeight + 4, left: 0, right: 0, maxHeight: FLOAT_BUFFER }}
+          className="mt-1 overflow-hidden"
+          style={{ maxHeight: CONTEXT_PANEL_MAX_HEIGHT }}
           {...panResponder.panHandlers}
         >
-          <MiniMapPanel
-            graph={miniMapGraph}
-            place={place}
-            onAction={onAction}
-            actionDisabled={actionDisabled}
-          />
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <MiniMapPanel
+              graph={miniMapGraph}
+              place={place}
+              onAction={onAction}
+              actionDisabled={actionDisabled}
+            />
+          </ScrollView>
         </Surface>
       )}
     </View>

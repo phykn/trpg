@@ -1,7 +1,7 @@
 param(
     [int]$Port = 8000,
     [string]$ModelId = "gemma4",
-    [string]$CloudflaredLogDir = $PSScriptRoot,
+    [string]$CloudflaredLogDir = (Join-Path $env:TEMP "trpg-release"),
     [int]$TimeoutSeconds = 90
 )
 
@@ -13,6 +13,29 @@ if (-not $env:RENDER_API_KEY) {
 if (-not $env:RENDER_SERVICE_ID) {
     throw "RENDER_SERVICE_ID is not set. Set it to your Render backend service id before running this script."
 }
+
+function Get-FileText {
+    param([string]$Path)
+    if (Test-Path -LiteralPath $Path) {
+        return Get-Content -LiteralPath $Path -Raw
+    }
+    return ""
+}
+
+function Invoke-RenderApi {
+    param([string]$Method, [string]$Path, [object]$Body)
+    $request = @{
+        Method = $Method
+        Uri = "https://api.render.com/v1/services/$serviceId/$Path"
+        Headers = $headers
+    }
+    if ($null -ne $Body) {
+        $request.Body = $Body | ConvertTo-Json -Compress
+    }
+    Invoke-RestMethod @request | Out-Null
+}
+
+New-Item -ItemType Directory -Path $CloudflaredLogDir -Force | Out-Null
 
 $outLog = Join-Path $CloudflaredLogDir "cloudflared.out.log"
 $errLog = Join-Path $CloudflaredLogDir "cloudflared.err.log"
@@ -33,13 +56,7 @@ try {
     $tunnelUrl = $null
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Seconds 1
-        $text = ""
-        if (Test-Path -LiteralPath $outLog) {
-            $text += Get-Content -LiteralPath $outLog -Raw
-        }
-        if (Test-Path -LiteralPath $errLog) {
-            $text += Get-Content -LiteralPath $errLog -Raw
-        }
+        $text = (Get-FileText $outLog) + (Get-FileText $errLog)
 
         $match = [regex]::Match($text, "https://[a-zA-Z0-9-]+\.trycloudflare\.com")
         if ($match.Success) {
@@ -71,20 +88,10 @@ try {
     }
 
     foreach ($name in $envVars.Keys) {
-        $body = @{ value = $envVars[$name] } | ConvertTo-Json -Compress
-        Invoke-RestMethod `
-            -Method Put `
-            -Uri "https://api.render.com/v1/services/$serviceId/env-vars/$name" `
-            -Headers $headers `
-            -Body $body | Out-Null
+        Invoke-RenderApi -Method Put -Path "env-vars/$name" -Body @{ value = $envVars[$name] }
     }
 
-    $deployBody = @{ deployMode = "deploy_only" } | ConvertTo-Json -Compress
-    Invoke-RestMethod `
-        -Method Post `
-        -Uri "https://api.render.com/v1/services/$serviceId/deploys" `
-        -Headers $headers `
-        -Body $deployBody | Out-Null
+    Invoke-RenderApi -Method Post -Path "deploys" -Body @{ deployMode = "deploy_only" }
 
     Write-Host "Render LLM URL updated: $llmBaseUrl"
     Write-Host "Model route: local/$ModelId"

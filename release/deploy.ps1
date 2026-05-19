@@ -77,6 +77,12 @@ function Load-OptionalEnvFile {
     }
 }
 
+function Get-CurrentBranch {
+    $branch = (& git -C $RepoRoot branch --show-current).Trim()
+    if (-not $branch) { throw "Cannot determine current git branch" }
+    return $branch
+}
+
 function Deploy-Client {
     Step "Build and deploy client" {
         Load-EnvFile (Join-Path $ClientDir ".env.shared")
@@ -134,8 +140,7 @@ if (-not $ClientOnly) {
     }
 
     Step "Commit current workspace" {
-        $branch = (& git -C $RepoRoot branch --show-current).Trim()
-        if (-not $branch) { throw "Cannot determine current git branch" }
+        $branch = Get-CurrentBranch
         Write-Host "Branch: $branch"
 
         Run -Command "git" -Arguments @("add", "-A")
@@ -153,7 +158,7 @@ if (-not $ClientOnly) {
     }
 
     Step "Push current branch" {
-        $branch = (& git -C $RepoRoot branch --show-current).Trim()
+        $branch = Get-CurrentBranch
         Run -Command "git" -Arguments @("push", "origin", $branch)
     }
 }

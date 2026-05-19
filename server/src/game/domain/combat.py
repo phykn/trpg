@@ -26,6 +26,22 @@ CombatOutcome = Literal[
 ]
 CombatSide = Literal["player", "enemy"]
 
+_LEGACY_COMBAT_ACTIONS: dict[str, frozenset[CombatActionKind]] = {
+    "attack": frozenset({"precise", "reckless"}),
+    "defend": frozenset({"guarded"}),
+    "flee": frozenset({"create_distance"}),
+    "social": frozenset({"talk"}),
+}
+
+
+def supports_combat_action(
+    supported_action: str | None,
+    action_kind: str,
+) -> bool:
+    if supported_action == action_kind:
+        return True
+    return action_kind in _LEGACY_COMBAT_ACTIONS.get(supported_action or "", ())
+
 
 class GraphCombatTraceEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")

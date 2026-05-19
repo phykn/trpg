@@ -22,7 +22,7 @@ def character_stats(node: GraphNode) -> dict[str, int]:
         return {}
     return {
         key: value
-        for key, value in sorted(raw.items())
+        for key, value in sorted(raw.items())  # ssot-allow: stats attribute sweep
         if isinstance(key, str) and isinstance(value, int)
     }
 

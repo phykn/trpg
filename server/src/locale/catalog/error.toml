@@ -21,3 +21,35 @@ en = "Cannot respond at the moment. Please try again later."
 [error.level_up_invalid_stat]
 ko = "잘못된 능력치입니다: {stat_up}"
 en = "Invalid stat: {stat_up}"
+
+[error.graph_pending_confirmation_active]
+ko = "먼저 현재 확인 선택지를 결정해야 합니다."
+en = "Resolve the current confirmation choice first."
+
+[error.graph_pending_roll_active]
+ko = "먼저 현재 판정을 굴려야 합니다."
+en = "Roll the current check first."
+
+[error.graph_no_pending_confirmation]
+ko = "현재 결정할 확인 선택지가 없습니다."
+en = "There is no confirmation choice to resolve."
+
+[error.graph_confirmation_id_mismatch]
+ko = "현재 확인 선택지가 바뀌었습니다. 화면의 선택지를 다시 결정해야 합니다."
+en = "The confirmation choice changed. Choose again from the current screen."
+
+[error.graph_no_pending_roll]
+ko = "현재 판정 선택지가 없습니다."
+en = "There is no pending roll."
+
+[error.graph_roll_id_mismatch]
+ko = "현재 판정 선택지가 바뀌었습니다. 화면의 판정을 다시 선택해야 합니다."
+en = "The pending roll changed. Choose again from the current screen."
+
+[error.graph_location_unreachable]
+ko = "지금은 그 장소로 이동할 수 없습니다. 화면에 보이는 이동 경로를 선택해야 합니다."
+en = "You cannot move there right now. Choose a visible route from the screen."
+
+[error.graph_not_enough_xp]
+ko = "아직 레벨을 올릴 만큼 경험치가 충분하지 않습니다."
+en = "You do not have enough experience to level up yet."

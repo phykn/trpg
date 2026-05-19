@@ -83,12 +83,13 @@ class _Provider:
         self._idx = 0
 
     def next_chat_client(self) -> AsyncOpenAI:
-        c = self._chat_clients[self._idx % len(self._chat_clients)]
-        self._idx += 1
-        return c
+        return self._next_client(self._chat_clients)
 
     def next_stream_client(self) -> AsyncOpenAI:
-        c = self._stream_clients[self._idx % len(self._stream_clients)]
+        return self._next_client(self._stream_clients)
+
+    def _next_client(self, clients: list[AsyncOpenAI]) -> AsyncOpenAI:
+        c = clients[self._idx % len(clients)]
         self._idx += 1
         return c
 
@@ -278,6 +279,27 @@ class LLMClient:
             self._pretty(answer), encoding="utf-8"
         )
 
+    def _log_request_diag(
+        self,
+        provider: _Provider,
+        *,
+        agent: str | None,
+        think: bool,
+        effective_think: bool,
+        use_fallback: bool,
+    ) -> None:
+        llm_diag(
+            "llm:request",
+            agent=agent,
+            model=provider.model,
+            base_url=provider.base_url,
+            thinking_mode=provider.thinking_mode,
+            toggle_style=provider.toggle_style,
+            think_requested=think,
+            think_effective=effective_think,
+            fallback=use_fallback or None,
+        )
+
     async def chat(
         self,
         messages: list[dict],
@@ -289,16 +311,12 @@ class LLMClient:
     ) -> dict:
         provider = self._pick(agent, fallback=use_fallback)
         effective_think = self._effective_think(think)
-        llm_diag(
-            "llm:request",
+        self._log_request_diag(
+            provider,
             agent=agent,
-            model=provider.model,
-            base_url=getattr(provider, "base_url", "unknown"),
-            thinking_mode=provider.thinking_mode,
-            toggle_style=provider.toggle_style,
-            think_requested=think,
-            think_effective=effective_think,
-            fallback=use_fallback or None,
+            think=think,
+            effective_think=effective_think,
+            use_fallback=use_fallback,
         )
         base = self._log_basename(agent) if log else None
         self._log_query(base, messages)
@@ -333,16 +351,12 @@ class LLMClient:
     ) -> AsyncIterator[dict]:
         provider = self._pick(agent, fallback=use_fallback)
         effective_think = self._effective_think(think)
-        llm_diag(
-            "llm:request",
+        self._log_request_diag(
+            provider,
             agent=agent,
-            model=provider.model,
-            base_url=getattr(provider, "base_url", "unknown"),
-            thinking_mode=provider.thinking_mode,
-            toggle_style=provider.toggle_style,
-            think_requested=think,
-            think_effective=effective_think,
-            fallback=use_fallback or None,
+            think=think,
+            effective_think=effective_think,
+            use_fallback=use_fallback,
         )
         base = self._log_basename(agent) if log else None
         self._log_query(base, messages)

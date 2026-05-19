@@ -45,6 +45,7 @@ from src.game.runtime.flow.session import (
     run_graph_intro_request_stream,
 )
 from src.game.runtime.flow.turn import GraphActionTurnError
+from src.locale.render import render
 from src.llm.client import LLMClient, force_think
 
 from .deps import get_graph_repo, get_llm, get_scenario_repo
@@ -62,6 +63,24 @@ from .schema import (
 )
 
 router = APIRouter()
+
+_PLAYER_ERROR_KEYS = {
+    "a pending_confirmation is already active; call graph confirm instead": (
+        "error.graph_pending_confirmation_active"
+    ),
+    "a pending_roll is already active; call graph roll instead": (
+        "error.graph_pending_roll_active"
+    ),
+    "a pending_confirmation is already active": (
+        "error.graph_pending_confirmation_active"
+    ),
+    "a pending_roll is already active": "error.graph_pending_roll_active",
+    "no pending_confirmation": "error.graph_no_pending_confirmation",
+    "confirmation id mismatch": "error.graph_confirmation_id_mismatch",
+    "no pending_roll": "error.graph_no_pending_roll",
+    "roll id mismatch": "error.graph_roll_id_mismatch",
+    "not enough xp:": "error.graph_not_enough_xp",
+}
 
 
 def _request_thinking(enabled: bool) -> bool | None:
@@ -101,14 +120,7 @@ async def session_graph_intro(
         result = await run_graph_intro_request(llm, graph_repo, game_id, scenario_repo)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
-    return GraphActionResponse(
-        game_id=game_id,
-        state=result.front_state.model_dump(mode="json", by_alias=True),
-        status=result.status,
-        outcome=result.outcome,
-        message=result.message,
-        suggestions=result.suggestions,
-    )
+    return _graph_action_response(game_id, result)
 
 
 @router.post("/session/{game_id}/graph/intro/stream")
@@ -171,14 +183,7 @@ async def session_graph_turn(
         raise HTTPException(status_code=422, detail=_player_error_detail(e))
     except GraphActionTurnError as e:
         raise HTTPException(status_code=422, detail=_player_error_detail(e))
-    return GraphActionResponse(
-        game_id=game_id,
-        state=result.front_state.model_dump(mode="json", by_alias=True),
-        status=result.status,
-        outcome=result.outcome,
-        message=result.message,
-        suggestions=result.suggestions,
-    )
+    return _graph_action_response(game_id, result)
 
 
 @router.post("/session/{game_id}/graph/turn/stream")
@@ -231,14 +236,7 @@ async def session_graph_combat(
         raise HTTPException(status_code=409, detail=_player_error_detail(e))
     except (CombatCommandError, GraphConfirmationError, GraphActionTurnError) as e:
         raise HTTPException(status_code=422, detail=_player_error_detail(e))
-    return GraphActionResponse(
-        game_id=game_id,
-        state=result.front_state.model_dump(mode="json", by_alias=True),
-        status=result.status,
-        outcome=result.outcome,
-        message=result.message,
-        suggestions=result.suggestions,
-    )
+    return _graph_action_response(game_id, result)
 
 
 @router.post("/session/{game_id}/graph/combat/stream")
@@ -292,14 +290,7 @@ async def session_graph_confirm(
         raise HTTPException(status_code=422, detail=_player_error_detail(e))
     except GraphConfirmationError as e:
         raise HTTPException(status_code=422, detail=_player_error_detail(e))
-    return GraphActionResponse(
-        game_id=game_id,
-        state=result.front_state.model_dump(mode="json", by_alias=True),
-        status=result.status,
-        outcome=result.outcome,
-        message=result.message,
-        suggestions=result.suggestions,
-    )
+    return _graph_action_response(game_id, result)
 
 
 @router.post("/session/{game_id}/graph/confirm/stream")
@@ -347,14 +338,7 @@ async def session_graph_roll(
         raise HTTPException(status_code=422, detail=_player_error_detail(e))
     except GraphRollError as e:
         raise HTTPException(status_code=422, detail=_player_error_detail(e))
-    return GraphActionResponse(
-        game_id=game_id,
-        state=result.front_state.model_dump(mode="json", by_alias=True),
-        status=result.status,
-        outcome=result.outcome,
-        message=result.message,
-        suggestions=result.suggestions,
-    )
+    return _graph_action_response(game_id, result)
 
 
 @router.post("/session/{game_id}/graph/roll/stream")
@@ -401,14 +385,7 @@ async def session_graph_input(
         raise HTTPException(status_code=409, detail=_player_error_detail(e))
     except (GraphInputError, GraphConfirmationError, GraphActionTurnError) as e:
         raise HTTPException(status_code=422, detail=_player_error_detail(e))
-    return GraphActionResponse(
-        game_id=game_id,
-        state=result.front_state.model_dump(mode="json", by_alias=True),
-        status=result.status,
-        outcome=result.outcome,
-        message=result.message,
-        suggestions=result.suggestions,
-    )
+    return _graph_action_response(game_id, result)
 
 
 @router.post("/session/{game_id}/graph/input/stream")
@@ -458,46 +435,20 @@ def _graph_action_streaming_response(game_id, source) -> StreamingResponse:
 
 def _player_error_detail(error: Exception) -> str:
     message = str(error)
-    if message == "a pending_confirmation is already active; call graph confirm instead":
-        return "먼저 현재 확인 선택지를 결정해야 합니다."
-    if message == "a pending_roll is already active; call graph roll instead":
-        return "먼저 현재 판정을 굴려야 합니다."
-    if message == "a pending_confirmation is already active":
-        return "먼저 현재 확인 선택지를 결정해야 합니다."
-    if message == "a pending_roll is already active":
-        return "먼저 현재 판정을 굴려야 합니다."
-    if message == "no pending_confirmation":
-        return "현재 결정할 확인 선택지가 없습니다."
-    if message == "confirmation id mismatch":
-        return "현재 확인 선택지가 바뀌었습니다. 화면의 선택지를 다시 결정해야 합니다."
-    if message == "no pending_roll":
-        return "현재 판정 선택지가 없습니다."
-    if message == "roll id mismatch":
-        return "현재 판정 선택지가 바뀌었습니다. 화면의 판정을 다시 선택해야 합니다."
     if message.startswith("missing location:"):
-        return "지금은 그 장소로 이동할 수 없습니다. 화면에 보이는 이동 경로를 선택해야 합니다."
+        return render("error.graph_location_unreachable", "ko")
     if "is not adjacent to current location" in message:
-        return "지금은 그 장소로 이동할 수 없습니다. 화면에 보이는 이동 경로를 선택해야 합니다."
-    if message.startswith("not enough xp:"):
-        return "아직 레벨을 올릴 만큼 경험치가 충분하지 않습니다."
+        return render("error.graph_location_unreachable", "ko")
+    for prefix, key in _PLAYER_ERROR_KEYS.items():
+        if message.startswith(prefix):
+            return render(key, "ko")
     return message
 
 
 def _stream_event(game_id: str, event) -> str:
     event_type = event["type"]
     if event_type in {"result", "final"}:
-        result = event["result"]
-        response = GraphActionResponse(
-            game_id=game_id,
-            state=result.front_state.model_dump(
-                mode="json",
-                by_alias=True,
-            ),
-            status=result.status,
-            outcome=result.outcome,
-            message=result.message,
-            suggestions=result.suggestions,
-        )
+        response = _graph_action_response(game_id, event["result"])
         payload = {
             "type": event_type,
             "payload": response.model_dump(mode="json"),
@@ -514,6 +465,17 @@ def _stream_error(status: int, message: str) -> str:
             ensure_ascii=False,
         )
         + "\n"
+    )
+
+
+def _graph_action_response(game_id: str, result) -> GraphActionResponse:
+    return GraphActionResponse(
+        game_id=game_id,
+        state=result.front_state.model_dump(mode="json", by_alias=True),
+        status=result.status,
+        outcome=result.outcome,
+        message=result.message,
+        suggestions=result.suggestions,
     )
 
 

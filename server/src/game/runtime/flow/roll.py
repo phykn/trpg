@@ -46,6 +46,7 @@ from ..request_result import (
     roll_required_result,
 )
 from ..state import GameRuntimeState
+from ..env import env_float, graph_narration_temperature
 from .turn import (
     run_graph_action_turn_from_runtime,
     run_graph_action_turn_from_runtime_stream,
@@ -85,11 +86,11 @@ def _default_roll_dc(default: int = 13) -> int:
 
 
 def _roll_narration_timeout_s(default: float = 30.0) -> float:
-    return float(os.environ.get("GRAPH_ROLL_NARRATION_TIMEOUT_S") or str(default))
+    return env_float("GRAPH_ROLL_NARRATION_TIMEOUT_S", default)
 
 
 def _narration_temperature(default: float = 1.0) -> float:
-    return float(os.environ.get("LLM_GRAPH_NARRATE_TEMPERATURE") or str(default))
+    return graph_narration_temperature(default)
 
 
 async def start_graph_roll(

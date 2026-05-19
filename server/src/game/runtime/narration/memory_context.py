@@ -1,4 +1,3 @@
-import os
 from typing import Any
 
 from src.game.domain.action import Action
@@ -6,6 +5,7 @@ from src.game.domain.graph import GraphNode
 from src.game.domain.graph.query import location_of
 from src.game.domain.memory import DialoguePair
 
+from ..env import env_nonnegative_int
 from ..state import GameRuntimeState
 
 
@@ -36,7 +36,7 @@ def classify_recent_dialogue_payload(
     *,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
-    limit = _env_int("MAX_RECENT_DIALOGUE", 5) if limit is None else limit
+    limit = env_nonnegative_int("MAX_RECENT_DIALOGUE", 5) if limit is None else limit
     return [
         {"turn": entry.turn, "player": entry.player, "summary": entry.narrator}
         for entry in runtime.recent_dialogue[-limit:]
@@ -49,7 +49,7 @@ def narrate_recent_dialogue_payload(
     target: str | None = None,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
-    limit = _env_int("MAX_RECENT_DIALOGUE", 5) if limit is None else limit
+    limit = env_nonnegative_int("MAX_RECENT_DIALOGUE", 5) if limit is None else limit
     entries = _target_first_dialogue(runtime, target, limit)
     return [
         {
@@ -92,7 +92,11 @@ def related_memory_payload(
     target: GraphNode | None,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
-    limit = _env_int("MAX_NARRATE_RELATED_MEMORY", 15) if limit is None else limit
+    limit = (
+        env_nonnegative_int("MAX_NARRATE_RELATED_MEMORY", 15)
+        if limit is None
+        else limit
+    )
     related_ids = _related_ids(runtime, action=action, target=target)
     ranked = sorted(
         runtime.turn_log,
@@ -146,11 +150,3 @@ def _related_ids(
     return ids
 
 
-def _env_int(name: str, default: int) -> int:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-    try:
-        return max(0, int(raw))
-    except ValueError:
-        return default

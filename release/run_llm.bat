@@ -12,6 +12,6 @@ echo Loading LLM...
 wsl -- bash -c "until curl -sf http://localhost:%PORT%/health >/dev/null 2>&1; do sleep 1; done; curl -s -o /dev/null http://localhost:%PORT%/v1/chat/completions -H 'Content-Type: application/json' -d '%TBODY%'"
 
 echo Opening Cloudflare tunnel and updating Render release env...
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0update_render_llm_url.ps1" -Port %PORT% -ModelId "%MODEL_ID%" -CloudflaredLogDir "%~dp0"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0update_render_llm_url.ps1" -Port %PORT% -ModelId "%MODEL_ID%"
 
 endlocal

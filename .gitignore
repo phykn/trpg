@@ -10,6 +10,7 @@ server/.env*
 client/.env*
 release/.env*
 !release/.env.example
+release/*.log
 .claude/
 .tmux-agent-bridge/
 .playwright-mcp/

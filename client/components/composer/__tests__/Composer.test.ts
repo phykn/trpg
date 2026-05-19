@@ -13,6 +13,14 @@ describe('Composer quick actions', () => {
     expect(quickActionsIndex).toBeLessThan(suggestionsIndex);
   });
 
+  test('closes the nearby panel when free text or a suggestion is sent', () => {
+    expect(source).toContain('setNearbyOpen(false);');
+    expect(source).toContain('setExpandedNearbyId(null);');
+    expect(source.indexOf('const sendText = (raw: string) => {')).toBeLessThan(
+      source.indexOf('Keyboard.dismiss();'),
+    );
+  });
+
   test('keeps the nearby panel scrollable when many items are listed', () => {
     expect(source).toContain('ScrollView');
     expect(source).toContain('NEARBY_PANEL_MAX_HEIGHT');

@@ -196,6 +196,8 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "발견해냈습니다" in narrate_prompt
     assert "포착해냅니다" in narrate_prompt
     assert "개인적인 내용을 캐면" in narrate_prompt
+    assert "최근에 같은 NPC가 이미 말한 직접 발화를 그대로 다시 쓰지 않습니다" in narrate_prompt
+    assert "자연스러운 한국어 구어" in narrate_prompt
     assert "faction" in narrate_prompt
     assert "새로운 소속, 명령, 관계 변화는 만들지 않습니다" in narrate_prompt
     assert "dialogue_style" not in narrate_prompt

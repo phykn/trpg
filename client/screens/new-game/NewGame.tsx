@@ -31,7 +31,6 @@ export function NewGame({ onSubmit }: Props) {
   const [profileId, setProfileId] = React.useState<string | null>(null);
   const [raceId, setRaceId] = React.useState<string | null>(null);
   const [gender, setGender] = React.useState<'male' | 'female'>('male');
-  const [locale, setLocale] = React.useState<'ko' | 'en'>('ko');
   const [name, setName] = React.useState<string>(ko.newGame.defaultName);
   const [submitting, setSubmitting] = React.useState(false);
   const [serverSha, setServerSha] = React.useState<string>('?');
@@ -74,7 +73,7 @@ export function NewGame({ onSubmit }: Props) {
       await onSubmit({
         profile: profileId,
         player: { name: trimmedName, race_id: raceId, gender },
-        locale,
+        locale: 'ko',
       });
     } finally {
       setSubmitting(false);
@@ -123,25 +122,6 @@ export function NewGame({ onSubmit }: Props) {
             {ko.newGame.hint}
           </Text>
         </View>
-
-        <Pressable
-          onPress={submit}
-          disabled={!canSubmit}
-          accessibilityRole="button"
-          accessibilityLabel={ko.action.start}
-          accessibilityState={{ disabled: !canSubmit }}
-          className={`h-10 rounded-sm items-center justify-center ${
-            canSubmit ? 'bg-accent-fg active:opacity-80' : 'bg-canvas-inset border border-border-default'
-          }`}
-        >
-          <Text
-            className={`font-sans-semibold text-title ${
-              canSubmit ? 'text-fg-on-emphasis' : 'text-fg-subtle'
-            }`}
-          >
-            {submitting ? ko.newGame.creating : ko.action.start}
-          </Text>
-        </Pressable>
 
         <Section label={ko.form.name}>
           <Input value={name} onChangeText={setName} placeholder={ko.newGame.namePlaceholder} />
@@ -202,25 +182,32 @@ export function NewGame({ onSubmit }: Props) {
         )}
 
         <Section label={ko.form.language}>
-          <View className="flex-row gap-2">
-            <View className="flex-1">
-              <SelectCard
-                title={ko.newGame.korean}
-                selected={locale === 'ko'}
-                onPress={() => setLocale('ko')}
-                dense
-              />
-            </View>
-            <View className="flex-1">
-              <SelectCard
-                title={ko.newGame.english}
-                selected={locale === 'en'}
-                onPress={() => setLocale('en')}
-                dense
-              />
-            </View>
-          </View>
+          <SelectCard
+            title={ko.newGame.korean}
+            selected
+            onPress={() => {}}
+            dense
+          />
         </Section>
+
+        <Pressable
+          onPress={submit}
+          disabled={!canSubmit}
+          accessibilityRole="button"
+          accessibilityLabel={ko.action.start}
+          accessibilityState={{ disabled: !canSubmit }}
+          className={`h-10 rounded-sm items-center justify-center ${
+            canSubmit ? 'bg-accent-fg active:opacity-80' : 'bg-canvas-inset border border-border-default'
+          }`}
+        >
+          <Text
+            className={`font-sans-semibold text-title ${
+              canSubmit ? 'text-fg-on-emphasis' : 'text-fg-subtle'
+            }`}
+          >
+            {submitting ? ko.newGame.creating : ko.action.start}
+          </Text>
+        </Pressable>
 
         <View className="items-center pt-2">
           <Text className="font-mono text-meta text-fg-subtle">

@@ -231,7 +231,7 @@ def _player_can_act(runtime: GameRuntimeState) -> bool:
 def _has_nonlethal_marker(properties: dict[str, Any], locale: str) -> bool:
     markers = nonlethal_markers(locale)
     lower_markers = {marker.lower() for marker in markers}
-    for key, value in properties.items():
+    for key, value in properties.items():  # ssot-allow: attribute-only property sweep
         lowered_key = key.lower()
         if lowered_key in lower_markers and value:
             return True

@@ -42,6 +42,7 @@ from ..narration.result import (
 )
 from ..request_result import GraphActionRequestResult, rejected_result
 from ..state import GameRuntimeState
+from ..env import env_float
 from .turn import GraphActionTurnError
 
 
@@ -57,7 +58,7 @@ def _classify_temperature() -> float:
 
 
 def _input_narration_timeout_s(default: float = 30.0) -> float:
-    return float(os.environ.get("GRAPH_INPUT_NARRATION_TIMEOUT_S") or str(default))
+    return env_float("GRAPH_INPUT_NARRATION_TIMEOUT_S", default)
 
 
 def _classify_context_limits() -> ClassifyContextLimits:
