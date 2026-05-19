@@ -77,7 +77,12 @@ export function Log({
   const initialized = React.useRef(false);
 
   const onContentSizeChange = (_w: number, h: number) => {
-    const offset = Math.max(0, h - viewportH);
+    if (h <= viewportH) {
+      ref.current?.scrollToOffset({ offset: 0, animated: false });
+      initialized.current = true;
+      return;
+    }
+    const offset = h - viewportH;
     ref.current?.scrollToOffset({ offset, animated: initialized.current });
     initialized.current = true;
   };
@@ -91,7 +96,7 @@ export function Log({
 
   React.useEffect(() => {
     if (initialized.current && viewportH > 0) {
-      ref.current?.scrollToEnd({ animated: false });
+      ref.current?.scrollToOffset({ offset: 0, animated: false });
     }
   }, [viewportH]);
 

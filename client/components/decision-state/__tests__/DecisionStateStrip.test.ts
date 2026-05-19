@@ -6,5 +6,6 @@ describe('DecisionStateStrip layout', () => {
 
   test('keeps horizontal strip items at content height', () => {
     expect(source).toContain("alignItems: 'flex-start'");
+    expect(source).toContain('style={{ flexGrow: 0, flexShrink: 0 }}');
   });
 });

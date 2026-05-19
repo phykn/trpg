@@ -33,6 +33,12 @@ describe('Playing overlay layering', () => {
     expect(source).toContain('actionDisabled={streaming || pendingConfirmation !== null || pendingRoll !== null}');
   });
 
+  test('keeps decision chips above the narration log', () => {
+    expect(source.indexOf('<DecisionStateStrip items={decisionStateItems} />')).toBeLessThan(
+      source.indexOf('<Log'),
+    );
+  });
+
   test('builds nearby actions from the current server snapshot, not the merged map history', () => {
     expect(source).toContain('buildNearbyPanel(storyGraph)');
   });

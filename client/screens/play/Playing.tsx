@@ -144,6 +144,8 @@ export function Playing({ game }: Props) {
         }}
       />
 
+      <DecisionStateStrip items={decisionStateItems} />
+
       {activeId !== null && (
         <Pressable
           onPress={closePopups}
@@ -212,8 +214,6 @@ export function Playing({ game }: Props) {
           </Text>
         </View>
       ) : null}
-
-      <DecisionStateStrip items={decisionStateItems} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
