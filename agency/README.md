@@ -63,7 +63,7 @@ agency/qa/
 .venv/bin/python agency/run_qa.py --agent all --profile <scenario_id>
 ```
 
-env is auto-loaded from `server/.env.<APP_ENV>` (default `dev`) → `.env.local` → `.env.google`, mirroring `server/run_api.py`. QA needs `LLM_ROUTE_DEFAULT` and the referenced provider block (`LLM_<PROVIDER>_BASE_URL`, `LLM_<PROVIDER>_API_KEYS`, and THINK_* model lists), plus `SCENARIO_DIR` for local scenario files. `--profile` defaults to `dev_test`.
+env is auto-loaded from `server/.env.shared` → `server/.env.<APP_ENV>` (default `dev`) → `.env.local` → `.env.google`, mirroring `server/run_api.py`. QA needs `LLM_ROUTE_DEFAULT` and the referenced provider block (`LLM_<PROVIDER>_BASE_URL`, `LLM_<PROVIDER>_API_KEYS`, and THINK_* model lists), plus `SCENARIO_DIR` for local scenario files. `--profile` defaults to `dev_test`.
 
 ### Output
 
@@ -120,7 +120,7 @@ Codex reads SKILL.md, drafts `.decomp/{setup,cast,arc}.json`, validates each pha
 
 ### env
 
-`tool.py` loads `server/.env.<APP_ENV>` (default `dev`). Local story subcommands need no network. Release publish/download uses `APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload|download ...` and requires `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` / `SUPABASE_SCENARIO_BUCKET`.
+`tool.py` loads `server/.env.shared` and `server/.env.<APP_ENV>` (default `dev`). Local story subcommands need no network. Release publish/download uses `APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload|download ...` and requires `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` / `SUPABASE_SCENARIO_BUCKET`.
 
 ### Reference integrity
 

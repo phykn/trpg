@@ -12,7 +12,6 @@ argparse skeleton + bootstrap.
 import argparse
 import asyncio
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -34,6 +33,7 @@ from agency.story.harness.decompose import (  # noqa: E402
 from agency.story.harness._common import EntityWriterError  # noqa: E402
 from agency.story.harness.scenario import fill_equipment  # noqa: E402
 from src.db.scenario.local_fs import LocalFsScenarioRepo  # noqa: E402
+from src.env import load_server_env  # noqa: E402
 from src.game.seed.validation import seed_violations  # noqa: E402
 from agency.story.harness.runner import (  # noqa: E402
     SPECS,
@@ -45,8 +45,7 @@ from agency.story.harness.runner import (  # noqa: E402
 # env loading mirrors run_qa.py / run_story.py so SUPABASE_* / LLM_ROUTE_*
 # provider keys resolve here. Subcommands that don't need env (decompose-*,
 # check-entity, equip-fill, sweep) still pay this cheap one-time cost.
-_APP_ENV = os.environ.get("APP_ENV", "dev")
-load_dotenv(ROOT / "server" / f".env.{_APP_ENV}")
+load_server_env(ROOT / "server")
 load_dotenv(ROOT / "server" / ".env.local")
 load_dotenv(ROOT / "server" / ".env.google")
 

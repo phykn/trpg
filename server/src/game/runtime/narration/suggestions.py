@@ -2,6 +2,16 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from src.game.domain.content import node_label
+from src.game.domain.graph.character import is_visible_character
+from src.game.domain.graph.query import (
+    characters_at,
+    edges_from,
+    inventory_of,
+    known_skills_of,
+    location_of,
+)
+
 from ..state import GameRuntimeState
 
 
@@ -20,6 +30,8 @@ def filter_grounded_suggestions(
     can_abandon_quest = _has_quest_status(runtime, {"active"})
     out: list[GraphSuggestion] = []
     for suggestion in suggestions:
+        if not _is_grounded_suggestion(runtime, suggestion):
+            continue
         if suggestion.intent != "quest":
             out.append(suggestion)
             continue
@@ -32,6 +44,79 @@ def filter_grounded_suggestions(
             continue
         out.append(suggestion)
     return out
+
+
+def _is_grounded_suggestion(
+    runtime: GameRuntimeState,
+    suggestion: GraphSuggestion,
+) -> bool:
+    if suggestion.intent is None:
+        return True
+    intent = suggestion.intent.strip().lower()
+    if intent == "move":
+        return _mentions_any(suggestion, _visible_exit_refs(runtime))
+    if intent == "talk":
+        return _mentions_any(suggestion, _visible_character_refs(runtime))
+    if intent == "use":
+        return _mentions_any(suggestion, _usable_refs(runtime))
+    if intent == "combat":
+        return runtime.progress.graph_combat_state is not None
+    if intent in {"inspect", "quest"}:
+        return True
+    return False
+
+
+def _visible_exit_refs(runtime: GameRuntimeState) -> set[str]:
+    place_id = location_of(runtime.graph_index, runtime.progress.player_id)
+    if place_id is None:
+        return set()
+    refs: set[str] = set()
+    for edge in edges_from(runtime.graph_index, place_id, "connects_to"):
+        node = runtime.graph.nodes.get(edge.to_node_id)
+        if node is not None and node.type == "location":
+            refs.update(_node_refs(runtime, node.id))
+    return refs
+
+
+def _visible_character_refs(runtime: GameRuntimeState) -> set[str]:
+    place_id = location_of(runtime.graph_index, runtime.progress.player_id)
+    if place_id is None:
+        return set()
+    refs: set[str] = set()
+    for character_id in characters_at(runtime.graph_index, place_id):
+        if character_id == runtime.progress.player_id:
+            continue
+        node = runtime.graph.nodes.get(character_id)
+        if node is None or node.type != "character" or not is_visible_character(node):
+            continue
+        refs.update(_node_refs(runtime, character_id))
+    return refs
+
+
+def _usable_refs(runtime: GameRuntimeState) -> set[str]:
+    refs: set[str] = set()
+    player_id = runtime.progress.player_id
+    for item_id in inventory_of(runtime.graph_index, player_id):
+        refs.update(_node_refs(runtime, item_id))
+    for skill_edge in known_skills_of(runtime.graph_index, player_id):
+        refs.update(_node_refs(runtime, skill_edge.to_node_id))
+    return refs
+
+
+def _node_refs(runtime: GameRuntimeState, node_id: str) -> set[str]:
+    node = runtime.graph.nodes.get(node_id)
+    if node is None:
+        return {node_id}
+    return {node_id, node_label(runtime.content, node)}
+
+
+def _mentions_any(suggestion: GraphSuggestion, refs: set[str]) -> bool:
+    text = _normalize(f"{suggestion.label} {suggestion.input_text}")
+    return any(_normalize(ref) in text for ref in refs if _normalize(ref))
+
+
+def _normalize(value: str) -> str:
+    return "".join(ch for ch in value.lower() if ch.isalnum())
 
 
 def normalize_suggestion(value: object) -> GraphSuggestion | None:

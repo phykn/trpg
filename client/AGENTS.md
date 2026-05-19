@@ -6,7 +6,7 @@ Reference for working under `client/`. End-user setup, phone testing, and deploy
 
 ## Commands
 
-Run everything from `client/`. Development scripts load `.env.dev`; `npm run deploy` loads `.env.release`.
+Run everything from `client/`. Development scripts load `.env.shared` then `.env.dev`; `npm run deploy` loads `.env.shared` then `.env.release`.
 
 ```bash
 npm start                   # Expo Go via QR (LAN / Tailscale Funnel — see README)

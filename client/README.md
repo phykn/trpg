@@ -16,17 +16,22 @@ Client for a locale-aware TRPG. Single-screen Expo (React Native) app. The serve
 npm install
 ```
 
-Write `client/.env.dev`:
+Write `client/.env.shared` for common values:
 
 ```
-EXPO_PUBLIC_API_URL=<server URL>
 EXPO_PUBLIC_API_USER=<basic auth user>
 EXPO_PUBLIC_API_PASS=<basic auth pass>
 ```
 
+Write `client/.env.dev` for the local server URL:
+
+```
+EXPO_PUBLIC_API_URL=<server URL>
+```
+
 `<server URL>` is either a LAN address (`http://<windows-lan-ip>:8001`) or a Tailscale Funnel domain (`https://<machine>.<tailnet>.ts.net`), depending on the test mode below.
 
-`npm start`, `npm run web`, `npm run android`, and `npm run ios` load `client/.env.dev`. `npm run deploy` loads `client/.env.release`.
+`npm start`, `npm run web`, `npm run android`, and `npm run ios` load `client/.env.shared` then `client/.env.dev`. `npm run deploy` loads `client/.env.shared` then `client/.env.release`.
 
 ## Phone testing
 

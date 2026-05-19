@@ -635,6 +635,86 @@ async def test_graph_turn_attack_returns_confirmation_without_starting_combat(tm
 
 
 @pytest.mark.asyncio
+async def test_graph_turn_pending_confirmation_error_is_player_facing(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "attack", "what": "edrik_chief"}},
+        )
+        response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "move", "to": "loc_02"}},
+        )
+
+    assert response.status_code == 409
+    detail = response.json()["detail"]
+    assert detail == "먼저 현재 확인 선택지를 결정해야 합니다."
+    assert "pending_confirmation" not in detail
+
+
+@pytest.mark.asyncio
+async def test_graph_input_pending_roll_error_is_player_facing(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "perceive", "what": "loc_01"}},
+        )
+        response = await client.post(
+            f"/session/{game_id}/graph/input",
+            json={"player_input": "일단 숲길로 간다"},
+        )
+
+    assert response.status_code == 409
+    detail = response.json()["detail"]
+    assert detail == "먼저 현재 판정을 굴려야 합니다."
+    assert "pending_roll" not in detail
+
+
+@pytest.mark.asyncio
+async def test_graph_confirm_missing_pending_error_is_player_facing(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        response = await client.post(
+            f"/session/{game_id}/graph/confirm",
+            json={"confirmation_id": "missing", "decision": "confirm"},
+        )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail == "현재 결정할 확인 선택지가 없습니다."
+    assert "pending_confirmation" not in detail
+
+
+@pytest.mark.asyncio
+async def test_graph_roll_mismatch_error_is_player_facing(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "perceive", "what": "loc_01"}},
+        )
+        response = await client.post(
+            f"/session/{game_id}/graph/roll",
+            json={"roll_id": "stale"},
+        )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail == "현재 판정 선택지가 바뀌었습니다. 화면의 판정을 다시 선택해야 합니다."
+    assert "roll id mismatch" not in detail
+
+
+@pytest.mark.asyncio
 async def test_graph_combat_rejects_when_not_in_combat(tmp_path):
     app = _build_app(tmp_path)
 

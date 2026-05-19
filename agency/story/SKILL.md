@@ -255,4 +255,4 @@ APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload scenarios/
 - 모든 한국어 텍스트는 **2인칭 존댓말 합니다체**(`당신` / `~합니다 / ~ㅂ니다 / ~입니다`).
 - 사용자에게 보이는 스킬 이름은 **기술** (`스킬`은 classify 프롬프트에서만 동의어로 받음 — 시드 텍스트는 `기술`).
 - 작업 디렉토리는 항상 repo root.
-- 환경 변수 부팅: `agency.story.tool`과 `agency.story.tools.storage`가 자체적으로 `server/.env.<APP_ENV>`를 로드한다. `APP_ENV` 미지정시 `dev`. publish 단계에서만 `APP_ENV=release` 명시.
+- 환경 변수 부팅: `agency.story.tool`과 `agency.story.tools.storage`가 자체적으로 `server/.env.shared`와 `server/.env.<APP_ENV>`를 로드한다. `APP_ENV` 미지정시 `dev`. publish 단계에서만 `APP_ENV=release` 명시.

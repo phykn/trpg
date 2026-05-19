@@ -13,7 +13,6 @@ artifacts in chat and writes the review there.
 
 import argparse
 import asyncio
-import os
 import shutil
 import sys
 from datetime import datetime
@@ -25,11 +24,11 @@ sys.path.insert(0, str(ROOT / "server"))
 sys.path.insert(0, str(ROOT))
 
 from dotenv import load_dotenv  # noqa: E402
+from src.env import load_server_env  # noqa: E402
 
 # Load server env plus optional local provider overlays for QA.
 # APP_ENV defaults to dev.
-_APP_ENV = os.environ.get("APP_ENV", "dev")
-load_dotenv(ROOT / "server" / f".env.{_APP_ENV}")
+load_server_env(ROOT / "server")
 load_dotenv(ROOT / "server" / ".env.local")
 load_dotenv(ROOT / "server" / ".env.google")
 

@@ -33,6 +33,13 @@ def test_no_vars_no_kwargs_call():
     )
 
 
+def test_generic_action_block_points_to_repair_path():
+    message = render("log.error.generic_block", "ko")
+
+    assert "통하지 않습니다" in message
+    assert any(word in message for word in ("주변", "대상", "소지품", "다른 방법"))
+
+
 def test_render_reloads_catalog_when_file_changes(tmp_path, monkeypatch):
     import os
     import sys

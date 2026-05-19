@@ -4,7 +4,7 @@ verify the production prompt path (kernel + agent rules + substitutions) works.
 Run from repo root:
   .venv/bin/python server/scripts/smoke_classify.py
 
-Loads .env.dev to mirror run_api.py.
+Loads .env.shared and .env.dev to mirror run_api.py.
 Exits 0 if every case parses to a valid action; non-zero otherwise.
 """
 
@@ -12,12 +12,12 @@ import asyncio
 import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 SERVER_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SERVER_DIR))
 
-load_dotenv(SERVER_DIR / ".env.dev")
+from src.env import load_server_env  # noqa: E402
+
+load_server_env(SERVER_DIR, "dev")
 
 from src.game.domain.graph import Graph, GraphEdge, GraphNode  # noqa: E402
 from src.game.domain.progress import GameProgress  # noqa: E402

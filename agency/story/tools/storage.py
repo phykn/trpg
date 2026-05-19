@@ -14,9 +14,9 @@ sys.path.insert(0, str(ROOT / "server"))
 sys.path.insert(0, str(ROOT))
 
 from src.db._supabase_http import _Storage  # noqa: E402
+from src.env import load_server_env  # noqa: E402
 
-_APP_ENV = os.environ.get("APP_ENV", "dev")
-load_dotenv(ROOT / "server" / f".env.{_APP_ENV}")
+load_server_env(ROOT / "server")
 load_dotenv(ROOT / "server" / ".env.local")
 load_dotenv(ROOT / "server" / ".env.google")
 

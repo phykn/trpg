@@ -32,6 +32,10 @@ en = "You do not have enough gold to trade. Earn more gold or choose another ite
 ko = "상대가 그 물건을 가지고 있지 않습니다. 다른 물건을 고르거나 거래 가능한 물건을 확인해야 합니다."
 en = "They do not have that item. Choose another item or check what is available for trade."
 
+[log."error.move_unavailable"]
+ko = "그곳으로 가는 길이 보이지 않습니다. 보이는 출구를 확인하고 이동해야 합니다."
+en = "No visible path leads there. Check the visible exits before moving."
+
 [log."error.npc_no_such_item"]
 ko = "그쪽은 그 물건을 가지고 있지 않습니다"
 en = "They do not have that item"
@@ -121,8 +125,8 @@ ko = "그런 기술은 시나리오에 없습니다"
 en = "That technique is not in the scenario"
 
 [log."error.generic_block"]
-ko = "지금은 그 행동이 통하지 않습니다"
-en = "That action does not work right now"
+ko = "지금은 그 행동이 통하지 않습니다. 주변, 대상, 소지품을 확인하거나 다른 방법을 시도해야 합니다."
+en = "That action does not work right now. Check your surroundings, target, or inventory, or try another approach."
 
 [log.game_over]
 ko = "당신의 이야기가 여기서 끝납니다."

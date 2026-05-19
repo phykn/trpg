@@ -9,7 +9,7 @@ User-facing setup (env layout, routes, table schema) is in [README.md](./README.
 `server/` is the FastAPI service. The venv, `pyproject.toml`, and `requirements.txt` live at the repo root — always invoke Python via `../.venv/bin/python` from `server/` (or `.venv/bin/python` from root). **Never create `server/.venv`.**
 
 - Run pytest from the repo root (pyproject pins `testpaths=server/tests`).
-- Run `run_api.py` from `server/` so dotenv resolves `server/.env.<APP_ENV>` and `src` imports work.
+- Run `run_api.py` from `server/` so dotenv resolves `server/.env.shared` + `server/.env.<APP_ENV>` and `src` imports work.
 - Scenarios are authored at `../scenarios/<profile>/`. Dev can read them locally with `SCENARIO_REPO=local`; release reads Supabase Storage after publish via `APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload scenarios/<profile>` (from repo root).
 
 ## Commands
@@ -84,7 +84,8 @@ Runtime child tables should FK to `game_progress(game_id) ON DELETE CASCADE`. RL
 ### LLM routing and thinking modes
 
 - `LLM_ROUTE_<AGENT> = <provider>/<model>` resolves to an `LLMProfile` keyed by lowercased agent name. `LLM_ROUTE_DEFAULT` is required; graph runtime currently calls `graph_intro`, `classify`, and `graph_narrate`. Optional `LLM_ROUTE_<AGENT>_FALLBACK = <provider>/<model>` declares a secondary profile that engages once on `RateLimitError` (quota) and stays for the rest of that agent's retry loop.
-- Provider blocks (`LLM_<NAME>_*` keys) live in the same `.env.<APP_ENV>` file and declare each provider's `BASE_URL`, `API_KEYS` (comma-separated, rotated round-robin per call), and `_THINK_OFF / _THINK_OPT / _THINK_ON` model lists. The three lists must be disjoint and together name every model the provider serves. Listed names must appear in exactly one THINK_* list.
+- Server env loads `server/.env.shared` first, then `server/.env.<APP_ENV>`; OS/Render dashboard env still has priority over both files. Put common server defaults and shared local LLM routing in `.env.shared`, and keep environment-specific repo/CORS details in `.env.dev` / `.env.release`.
+- Provider blocks (`LLM_<NAME>_*` keys) can live in either loaded server env file and declare each provider's `BASE_URL`, `API_KEYS` (comma-separated, rotated round-robin per call), and `_THINK_OFF / _THINK_OPT / _THINK_ON` model lists. The three lists must be disjoint and together name every model the provider serves. Listed names must appear in exactly one THINK_* list.
 - `LLM_<NAME>_NO_SYSTEM` lists models that reject `role: system` (Gemma via Gemini OpenAI-compat returns "Developer instruction is not enabled"); `LLMClient` folds the system prompt into the first user message for them.
 - Per-call thinking behavior is driven by the model's THINK_* category: `OFF` sends no `extra_body`; `OPT` honors caller's `think` flag (default off) via `extra_body.chat_template_kwargs.enable_thinking` (local OpenAI-compatible servers) or `extra_body.reasoning_effort=medium` (Gemini 3.x, detected from `googleapis.com` in `base_url`); `OPT_ON` is the inverse (default on, opt out via `extra_body.reasoning_effort=minimal` on Gemini — Gemma 4 via Gemini lives here because it accepts only `minimal` to disable); `ON` always thinks.
 - Provider-style logic lives in `src/llm/local.py` and `src/llm/gemini.py`; `client.py` only dispatches.
@@ -135,5 +136,5 @@ Pydantic 422 (request-shape) and HTTP 404 (`game_id` not found) go through FastA
 - Python 3.12+, Pydantic v2, FastAPI, uvicorn, httpx, async/await throughout.
 - Pydantic models *are* the schema. Graph rows and progress rows round-trip through row codec models. Don't hand-munge JSON.
 - Single process. Horizontal scaling is out of scope. The LocalFs graph adapter uses one `asyncio.Lock` in `db/store.py`; Supabase relies on per-row PostgREST upserts and should add DB-level locks before multi-isolate writes to one game are allowed.
-- `run_api.py:_load_env` loads `.env.<APP_ENV>` if the file exists (default `APP_ENV=dev`); missing file is tolerated so managed envs (Render) can supply vars via OS env directly. Per-key fail-fast still happens at downstream `os.environ["..."]` reads. `APP_ENV=release` switches to `.env.release`. Supabase mode requires `SUPABASE_URL SUPABASE_SERVICE_KEY SUPABASE_SCENARIO_BUCKET`, plus `HOST PORT BASIC_AUTH_USER BASIC_AUTH_PASS CORS_ORIGINS LLM_ROUTE_DEFAULT` and the `LLM_<NAME>_*` provider block(s) referenced by the routes.
+- `run_api.py:_load_env` loads `.env.shared` then `.env.<APP_ENV>` if the files exist (default `APP_ENV=dev`); missing files are tolerated so managed envs (Render) can supply vars via OS env directly. Per-key fail-fast still happens at downstream `os.environ["..."]` reads. `APP_ENV=release` switches to `.env.release`. Supabase mode requires `SUPABASE_URL SUPABASE_SERVICE_KEY SUPABASE_SCENARIO_BUCKET`, plus `HOST PORT BASIC_AUTH_USER BASIC_AUTH_PASS CORS_ORIGINS LLM_ROUTE_DEFAULT` and the `LLM_<NAME>_*` provider block(s) referenced by the routes.
 - End-to-end LLM verification is manual after merge; `scripts/smoke_classify.py` is a one-shot env-routed classify sanity check.

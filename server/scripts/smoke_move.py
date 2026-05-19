@@ -5,7 +5,7 @@ fires for adjacent connections.
 Run from repo root:
   .venv/bin/python server/scripts/smoke_move.py
 
-Loads .env.dev. Surroundings mirror the isnar_square seed (player_01 standing
+Loads .env.shared and .env.dev. Surroundings mirror the isnar_square seed (player_01 standing
 at the village square, six connections including gray_raven_inn and
 herb_garden). Calls the classify runner directly so the markdown-fence /
 retry handling matches production.
@@ -16,11 +16,10 @@ import re
 import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 SERVER_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SERVER_DIR))
 
+from src.env import load_server_env  # noqa: E402
 from src.game.domain.graph import Graph, GraphEdge, GraphNode  # noqa: E402
 from src.game.domain.progress import GameProgress  # noqa: E402
 from src.game.runtime.state import GameRuntimeState  # noqa: E402
@@ -242,7 +241,7 @@ def _properties(data: dict) -> dict:
 
 
 async def main() -> int:
-    load_dotenv(SERVER_DIR / ".env.dev")
+    load_server_env(SERVER_DIR, "dev")
     print("Loading LLMClient from env routing...")
     client = LLMClient.from_env()
     providers = client._providers

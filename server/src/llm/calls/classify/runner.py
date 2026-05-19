@@ -1,4 +1,5 @@
 import json
+import re
 
 from pydantic import ValidationError
 
@@ -78,8 +79,9 @@ async def classify(
         if isinstance(e, ActionGroundingError):
             return ActionOutput(
                 refuse={
-                    "category": "out_of_game",
+                    "category": "invalid_transition",
                     "message_hint": _grounding_rejection_message(str(e), locale),
+                    "target": _grounding_rejection_target(str(e)),
                 }
             )
         llm_diag("llm:classify_fallback", err=type(e).__name__, msg=str(e)[:120])
@@ -90,8 +92,17 @@ def _grounding_rejection_message(reason: str, locale: str) -> str:
     text = reason.lower()
     if "protected target cannot be attacked" in text:
         return render("log.error.protected_target", locale)
+    if "ungrounded action=move" in text:
+        return render("log.error.move_unavailable", locale)
     if "item is not carried" in text:
         return render("log.error.item_not_in_inventory", locale)
     if "missing item" in text or "ungrounded action=use" in text:
         return render("log.error.unknown_item", locale)
     return render("log.error.generic_block", locale)
+
+
+def _grounding_rejection_target(reason: str) -> str | None:
+    if "protected target cannot be attacked" not in reason.lower():
+        return None
+    match = re.search(r"what:\s*\[['\"]([^'\"]+)['\"]\]", reason)
+    return match.group(1) if match is not None else None

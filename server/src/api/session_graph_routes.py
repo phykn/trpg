@@ -166,9 +166,9 @@ async def session_graph_turn(
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     except GraphConfirmationActive as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=_player_error_detail(e))
     except GraphConfirmationError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=_player_error_detail(e))
     except GraphActionTurnError as e:
         raise HTTPException(status_code=422, detail=str(e))
     return GraphActionResponse(
@@ -228,9 +228,9 @@ async def session_graph_combat(
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     except GraphConfirmationActive as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=_player_error_detail(e))
     except (CombatCommandError, GraphConfirmationError, GraphActionTurnError) as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=_player_error_detail(e))
     return GraphActionResponse(
         game_id=game_id,
         state=result.front_state.model_dump(mode="json", by_alias=True),
@@ -289,9 +289,9 @@ async def session_graph_confirm(
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     except GraphConfirmationExpected as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=_player_error_detail(e))
     except GraphConfirmationError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=_player_error_detail(e))
     return GraphActionResponse(
         game_id=game_id,
         state=result.front_state.model_dump(mode="json", by_alias=True),
@@ -344,9 +344,9 @@ async def session_graph_roll(
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     except GraphRollExpected as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=_player_error_detail(e))
     except GraphRollError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=_player_error_detail(e))
     return GraphActionResponse(
         game_id=game_id,
         state=result.front_state.model_dump(mode="json", by_alias=True),
@@ -398,9 +398,9 @@ async def session_graph_input(
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     except GraphConfirmationActive as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=_player_error_detail(e))
     except (GraphInputError, GraphConfirmationError, GraphActionTurnError) as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=_player_error_detail(e))
     return GraphActionResponse(
         game_id=game_id,
         state=result.front_state.model_dump(mode="json", by_alias=True),
@@ -441,9 +441,9 @@ def _graph_action_streaming_response(game_id, source) -> StreamingResponse:
         except FileNotFoundError:
             yield _stream_error(404, "game not found")
         except GraphConfirmationActive as e:
-            yield _stream_error(409, str(e))
+            yield _stream_error(409, _player_error_detail(e))
         except GraphConfirmationExpected as e:
-            yield _stream_error(422, str(e))
+            yield _stream_error(422, _player_error_detail(e))
         except (
             CombatCommandError,
             GraphInputError,
@@ -451,9 +451,30 @@ def _graph_action_streaming_response(game_id, source) -> StreamingResponse:
             GraphActionTurnError,
             GraphRollError,
         ) as e:
-            yield _stream_error(422, str(e))
+            yield _stream_error(422, _player_error_detail(e))
 
     return StreamingResponse(event_lines(), media_type="application/x-ndjson")
+
+
+def _player_error_detail(error: Exception) -> str:
+    message = str(error)
+    if message == "a pending_confirmation is already active; call graph confirm instead":
+        return "먼저 현재 확인 선택지를 결정해야 합니다."
+    if message == "a pending_roll is already active; call graph roll instead":
+        return "먼저 현재 판정을 굴려야 합니다."
+    if message == "a pending_confirmation is already active":
+        return "먼저 현재 확인 선택지를 결정해야 합니다."
+    if message == "a pending_roll is already active":
+        return "먼저 현재 판정을 굴려야 합니다."
+    if message == "no pending_confirmation":
+        return "현재 결정할 확인 선택지가 없습니다."
+    if message == "confirmation id mismatch":
+        return "현재 확인 선택지가 바뀌었습니다. 화면의 선택지를 다시 결정해야 합니다."
+    if message == "no pending_roll":
+        return "현재 판정 선택지가 없습니다."
+    if message == "roll id mismatch":
+        return "현재 판정 선택지가 바뀌었습니다. 화면의 판정을 다시 선택해야 합니다."
+    return message
 
 
 def _stream_event(game_id: str, event) -> str:

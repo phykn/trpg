@@ -1,11 +1,142 @@
 from unittest.mock import patch
 
+from src.game.domain.combat import GraphCombatState
+from src.game.domain.graph import Graph, GraphEdge, GraphNode
+from src.game.domain.progress import GameProgress
+from src.game.runtime import GameRuntimeState
+from src.game.runtime.narration.suggestions import (
+    GraphSuggestion,
+    filter_grounded_suggestions,
+)
 from src.game.runtime.narration.result import (
     GraphNarrationResult,
     VisibleNarrationStream,
     gm_log_entry_from_narration,
     parse_graph_narration_answer,
 )
+
+
+def _runtime_for_suggestions(*, in_combat: bool = False) -> GameRuntimeState:
+    progress = GameProgress(game_id="game-1", player_id="player_01")
+    if in_combat:
+        progress = progress.model_copy(
+            update={
+                "graph_combat_state": GraphCombatState(
+                    location_id="town",
+                    player_id="player_01",
+                    active_enemy_id="goblin_01",
+                    enemy_ids=["goblin_01"],
+                    participant_ids=["player_01", "goblin_01"],
+                    sides={"player_01": "player", "goblin_01": "enemy"},
+                    player_hearts=3,
+                    enemy_hearts=3,
+                )
+            }
+        )
+    return GameRuntimeState(
+        graph=Graph(
+            nodes={
+                "town": GraphNode(id="town", type="location", properties={"name": "마을"}),
+                "forest": GraphNode(id="forest", type="location", properties={"name": "숲"}),
+                "player_01": GraphNode(id="player_01", type="character"),
+                "merchant_01": GraphNode(
+                    id="merchant_01",
+                    type="character",
+                    properties={"name": "상인", "alive": True},
+                ),
+                "goblin_01": GraphNode(
+                    id="goblin_01",
+                    type="character",
+                    properties={"name": "고블린", "alive": True},
+                ),
+                "healing_herb": GraphNode(
+                    id="healing_herb",
+                    type="item",
+                    properties={"name": "회복 약초"},
+                ),
+            },
+            edges={
+                "located_at:player_01:town": GraphEdge(
+                    id="located_at:player_01:town",
+                    type="located_at",
+                    from_node_id="player_01",
+                    to_node_id="town",
+                ),
+                "located_at:merchant_01:town": GraphEdge(
+                    id="located_at:merchant_01:town",
+                    type="located_at",
+                    from_node_id="merchant_01",
+                    to_node_id="town",
+                ),
+                "located_at:goblin_01:town": GraphEdge(
+                    id="located_at:goblin_01:town",
+                    type="located_at",
+                    from_node_id="goblin_01",
+                    to_node_id="town",
+                ),
+                "connects_to:town:forest": GraphEdge(
+                    id="connects_to:town:forest",
+                    type="connects_to",
+                    from_node_id="town",
+                    to_node_id="forest",
+                ),
+                "carries:player_01:healing_herb": GraphEdge(
+                    id="carries:player_01:healing_herb",
+                    type="carries",
+                    from_node_id="player_01",
+                    to_node_id="healing_herb",
+                ),
+            },
+        ),
+        progress=progress,
+    )
+
+
+def test_filter_grounded_suggestions_drops_unavailable_move_talk_and_use_targets():
+    runtime = _runtime_for_suggestions()
+
+    result = filter_grounded_suggestions(
+        runtime,
+        [
+            GraphSuggestion(label="숲으로", input_text="숲으로 이동합니다", intent="move"),
+            GraphSuggestion(label="북문으로", input_text="북문으로 이동합니다", intent="move"),
+            GraphSuggestion(label="상인에게", input_text="상인에게 말을 겁니다", intent="talk"),
+            GraphSuggestion(label="용에게", input_text="용에게 말을 겁니다", intent="talk"),
+            GraphSuggestion(label="약초 사용", input_text="회복 약초를 사용합니다", intent="use"),
+            GraphSuggestion(label="열쇠 사용", input_text="은열쇠를 사용합니다", intent="use"),
+        ],
+    )
+
+    assert [suggestion.input_text for suggestion in result] == [
+        "숲으로 이동합니다",
+        "상인에게 말을 겁니다",
+        "회복 약초를 사용합니다",
+    ]
+
+
+def test_filter_grounded_suggestions_drops_combat_when_not_in_combat():
+    runtime = _runtime_for_suggestions()
+
+    result = filter_grounded_suggestions(
+        runtime,
+        [
+            GraphSuggestion(label="공격", input_text="고블린을 공격합니다", intent="combat"),
+            GraphSuggestion(label="확인", input_text="주변을 살핍니다", intent="inspect"),
+        ],
+    )
+
+    assert [suggestion.input_text for suggestion in result] == ["주변을 살핍니다"]
+
+
+def test_filter_grounded_suggestions_keeps_combat_when_in_combat():
+    runtime = _runtime_for_suggestions(in_combat=True)
+
+    result = filter_grounded_suggestions(
+        runtime,
+        [GraphSuggestion(label="공격", input_text="고블린을 공격합니다", intent="combat")],
+    )
+
+    assert [suggestion.input_text for suggestion in result] == ["고블린을 공격합니다"]
 
 
 def test_parse_graph_narration_answer_accepts_structured_suggestions():

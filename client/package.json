@@ -3,10 +3,10 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "dotenv -e .env.dev -- expo start",
-    "android": "dotenv -e .env.dev -- expo start --android",
-    "ios": "dotenv -e .env.dev -- expo start --ios",
-    "web": "dotenv -e .env.dev -- expo start --web",
+    "start": "dotenv -e .env.shared -e .env.dev -- expo start",
+    "android": "dotenv -e .env.shared -e .env.dev -- expo start --android",
+    "ios": "dotenv -e .env.shared -e .env.dev -- expo start --ios",
+    "web": "dotenv -e .env.shared -e .env.dev -- expo start --web",
     "lint": "expo lint",
     "test": "jest",
     "deploy": "node scripts/deploy.cjs"

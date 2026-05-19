@@ -7,7 +7,7 @@ Design notes start at `../docs/README.md`; the per-turn flow, interface, and own
 ## Stack
 
 - Python 3.12+, Pydantic v2, FastAPI, uvicorn, httpx, async/await
-- OpenAI-compatible LLM via `LLM_ROUTE_<AGENT> = <provider>/<model>` (local OpenAI-compatible server or Gemini hosted; provider blocks live alongside the routes in `.env.<APP_ENV>`)
+- OpenAI-compatible LLM via `LLM_ROUTE_<AGENT> = <provider>/<model>` (local OpenAI-compatible server or Gemini hosted; provider blocks live in the loaded server env files)
 - **Supabase Postgres + Storage** for graph saves + scenarios. Dev can set `GRAPH_REPO=local` or `SCENARIO_REPO=local`; tests use LocalFs adapters against `tmp_path`.
 - Single process. LocalFs writes use per-game locks; Supabase deploys need DB-level locking if two requests can mutate the same `game_id` concurrently.
 
@@ -26,7 +26,7 @@ Set up Supabase: apply the schema (table list under "Layout" below) via the dash
 APP_ENV=release .venv/bin/python -m agency.story.tool upload scenarios/<profile>
 ```
 
-Write `server/.env.dev` (required for local dev — `APP_ENV=release` switches to `.env.release` for prod; no fallbacks, missing keys raise `KeyError` at startup):
+Write `server/.env.shared` for common server defaults and `server/.env.dev` for local dev. `APP_ENV=release` switches the environment-specific file to `.env.release`; no fallbacks, missing keys raise `KeyError` at startup. OS/Render dashboard env values have priority over dotenv files.
 
 ```
 HOST=0.0.0.0
@@ -77,7 +77,7 @@ For a local OpenAI-compatible server, add an `LLM_LOCAL_*` block with the same s
 ../.venv/bin/python run_api.py
 ```
 
-dotenv loads `server/.env.<APP_ENV>` (default `dev`) automatically and uvicorn binds to `HOST:PORT`.
+dotenv loads `server/.env.shared` then `server/.env.<APP_ENV>` (default `dev`) automatically and uvicorn binds to `HOST:PORT`.
 
 ### Routes (Basic Auth required)
 
@@ -107,6 +107,7 @@ dotenv loads `server/.env.<APP_ENV>` (default `dev`) automatically and uvicorn b
 ```
 server/
   run_api.py                       # entrypoint
+  .env.shared                      # shared server defaults, gitignored
   .env.dev                         # required for local dev (.env.release for prod), gitignored
   scripts/                         # seed checks and one-off LLM smoke tools
   src/                             # code (ownership map in ../docs/plan.md)

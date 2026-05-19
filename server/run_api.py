@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 
 import uvicorn
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -10,6 +9,7 @@ from src.api.routes import router
 from src.llm import LLMClient
 from src.db.factory import build_graph_repo, build_scenario_repo
 from src.db.repo import GraphRepo, ScenarioRepo
+from src.env import load_server_env
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SERVER_DIR = Path(__file__).resolve().parent
@@ -19,11 +19,8 @@ _FALSE_ENV_VALUES = {"", "0", "false", "no", "off"}
 
 
 def _load_env() -> None:
-    """Load .env.<APP_ENV> if present (default 'dev'). Missing file is OK — OS env vars (e.g. Render dashboard) suffice; per-key fail-fast still happens at downstream os.environ[...] reads."""
-    app_env = os.environ.get("APP_ENV", "dev")
-    env_path = SERVER_DIR / f".env.{app_env}"
-    if env_path.is_file():
-        load_dotenv(env_path)
+    """Load .env.shared then .env.<APP_ENV> if present (default 'dev'). Missing files are OK — OS env vars (e.g. Render dashboard) suffice; per-key fail-fast still happens at downstream os.environ[...] reads."""
+    load_server_env(SERVER_DIR)
     _normalize_local_paths()
 
 

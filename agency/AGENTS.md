@@ -6,7 +6,7 @@ User-facing setup, full directory map, and the per-agent persona summary live in
 
 ## Working tree
 
-`agency/` is a Python package that imports the server's `src.*` directly. `run_qa.py` injects the repo root and `server/` into `sys.path` and reads `server/.env.<APP_ENV>` plus optional `.env.local` / `.env.google` provider overlays. The venv, `pyproject.toml`, and `requirements.txt` live at the repo root — invoke Python via `.venv/bin/python` from the repo root. **Never create `agency/.venv`.**
+`agency/` is a Python package that imports the server's `src.*` directly. `run_qa.py` injects the repo root and `server/` into `sys.path` and reads `server/.env.shared`, `server/.env.<APP_ENV>`, plus optional `.env.local` / `.env.google` provider overlays. The venv, `pyproject.toml`, and `requirements.txt` live at the repo root — invoke Python via `.venv/bin/python` from the repo root. **Never create `agency/.venv`.**
 
 ## Commands
 

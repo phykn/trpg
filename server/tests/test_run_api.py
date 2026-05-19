@@ -1,6 +1,7 @@
 import run_api
 import pytest
 from httpx import ASGITransport, AsyncClient
+from src.env import load_server_env
 
 
 def _set_required_env(monkeypatch, *, reload_value: str | None) -> None:
@@ -74,6 +75,29 @@ def test_load_env_leaves_absolute_local_repo_paths(monkeypatch, tmp_path):
 
     assert run_api.os.environ["SCENARIO_DIR"] == str(scenario_dir)
     assert run_api.os.environ["GRAPH_SAVE_DIR"] == str(graph_dir)
+
+
+def test_load_server_env_layers_shared_then_app_env(monkeypatch, tmp_path):
+    monkeypatch.delenv("APP_ENV", raising=False)
+    monkeypatch.delenv("SHARED_ONLY", raising=False)
+    monkeypatch.delenv("OVERRIDDEN", raising=False)
+    monkeypatch.delenv("OS_ONLY", raising=False)
+    monkeypatch.setenv("OS_ONLY", "from-os")
+
+    (tmp_path / ".env.shared").write_text(
+        "SHARED_ONLY=shared\nOVERRIDDEN=shared\nOS_ONLY=from-shared\n",
+        encoding="utf-8",
+    )
+    (tmp_path / ".env.dev").write_text(
+        "OVERRIDDEN=dev\nOS_ONLY=from-dev\n",
+        encoding="utf-8",
+    )
+
+    load_server_env(tmp_path)
+
+    assert run_api.os.environ["SHARED_ONLY"] == "shared"
+    assert run_api.os.environ["OVERRIDDEN"] == "dev"
+    assert run_api.os.environ["OS_ONLY"] == "from-os"
 
 
 @pytest.mark.asyncio

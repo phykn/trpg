@@ -207,6 +207,68 @@ async def test_single_protected_target_attack_shortcut_returns_refusal_without_n
 
 
 @pytest.mark.asyncio
+async def test_protected_target_grounding_fallback_preserves_invalid_transition_target():
+    input_ = _input(
+        "그 행동을 한다",
+        {
+            "in_combat": False,
+            "entities": [
+                {"id": "player_01", "name": "주인공", "type": "player"},
+                {
+                    "id": "protected_guard",
+                    "name": "경비병",
+                    "type": "npc",
+                    "protected": True,
+                },
+            ],
+        },
+    )
+    with patch(
+        "src.llm.calls.classify.runner.run_with_retries",
+        new=AsyncMock(side_effect=ActionGroundingError(
+            "protected target cannot be attacked action=attack what: ['protected_guard']"
+        )),
+    ):
+        out = await classify(client=None, input_=input_, locale="ko", retries=1)
+
+    assert out.actions is None
+    assert out.refuse is not None
+    assert out.refuse.category == "invalid_transition"
+    assert out.refuse.message_hint == PROTECTED_TARGET_REASON
+    assert out.refuse.target == "protected_guard"
+
+
+@pytest.mark.asyncio
+async def test_move_grounding_fallback_explains_visible_exit_repair_path():
+    input_ = _input(
+        "사라진 길로 간다",
+        {
+            "in_combat": False,
+            "entities": [
+                {"id": "player_01", "name": "주인공", "type": "player"},
+                {"id": "town_gate", "name": "성문", "type": "connection"},
+            ],
+        },
+    )
+    with patch(
+        "src.llm.calls.classify.runner.run_with_retries",
+        new=AsyncMock(
+            side_effect=ActionGroundingError(
+                "ungrounded action=move to: 'missing_exit'"
+            )
+        ),
+    ):
+        out = await classify(client=None, input_=input_, locale="ko", retries=1)
+
+    assert out.actions is None
+    assert out.refuse is not None
+    assert out.refuse.category == "invalid_transition"
+    assert out.refuse.message_hint == (
+        "그곳으로 가는 길이 보이지 않습니다. 보이는 출구를 확인하고 이동해야 합니다."
+    )
+
+
+@pytest.mark.asyncio
 async def test_classify_runner_accepts_intent_json_and_builds_actions():
     input_ = _input(
         "상인에게 회복약을 산다",

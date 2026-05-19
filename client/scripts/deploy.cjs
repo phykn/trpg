@@ -56,6 +56,7 @@ const isWindows = process.platform === 'win32';
 const npx = isWindows ? 'npx.cmd' : 'npx';
 const wrangler = isWindows ? 'wrangler.cmd' : 'wrangler';
 
+loadEnvFile(join(__dirname, '..', '.env.shared'));
 loadEnvFile(join(__dirname, '..', '.env.release'));
 
 const sha = spawnSync('git', ['rev-parse', '--short', 'HEAD'], {
