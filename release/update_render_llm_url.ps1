@@ -1,6 +1,6 @@
 param(
     [int]$Port = 8000,
-    [string]$ModelId = "qwen35-9b",
+    [string]$ModelId = "gemma4",
     [string]$CloudflaredLogDir = $PSScriptRoot,
     [int]$TimeoutSeconds = 90
 )

@@ -31,3 +31,5 @@
 2026-05-19T10:39:25Z ERR Register tunnel error from server side error="Unauthorized: Tunnel not found" connIndex=0 event=0 ip=198.41.200.193
 2026-05-19T10:39:25Z INF Retrying connection in up to 16s connIndex=0 event=0 ip=198.41.200.193
 2026-05-19T10:39:32Z INF Registered tunnel connection connIndex=0 connection=55ce0bf1-f193-4880-8711-14955f87f594 event=0 ip=198.41.200.193 location=icn05 protocol=http2
+2026-05-19T10:56:05Z ERR  error="Incoming request ended abruptly: context canceled" connIndex=0 event=1 ingressRule=0 originService=http://127.0.0.1:8000
+2026-05-19T10:56:05Z ERR failed to serve incoming request error="Failed to proxy HTTP: Incoming request ended abruptly: context canceled"

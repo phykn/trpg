@@ -2,9 +2,9 @@
 setlocal
 title Local LLM
 
-set "NAME=qwen35-9b"
-set "MODEL_ID=qwen35-9b"
-set "PORT=8000"
+if not defined MODEL_ID set "MODEL_ID=gemma4"
+if not defined NAME set "NAME=%MODEL_ID%"
+if not defined PORT set "PORT=8000"
 set "CTX=16384"
 set "IMG=ghcr.io/ggml-org/llama.cpp:server-cuda"
 set "MODELPATH=/models/gemma-4-E4B-it-Q4_K_M.gguf"
