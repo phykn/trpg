@@ -16,4 +16,11 @@ describe('LevelUpPrompt mobile selectors', () => {
     expect(source).toContain('choices.length > 0 ? choices : loading ? [] : CHOICES');
     expect(source).toContain('disabled={!selected || loading}');
   });
+
+  test('keeps many growth choices readable on mobile', () => {
+    expect(source).toContain('minWidth: 96');
+    expect(source).toContain('flexGrow: 1');
+    expect(source).toContain('numberOfLines={2}');
+    expect(source).not.toContain('flex: 1,\n            height: 34');
+  });
 });

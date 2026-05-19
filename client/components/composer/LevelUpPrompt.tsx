@@ -54,17 +54,25 @@ export function LevelUpPrompt({ hero, choices = [], loading = false, onCommit, o
         accessibilityLabel={choice.label}
         style={[
           {
-            flex: 1,
-            height: 34,
+            flexGrow: 1,
+            flexBasis: '30%',
+            minWidth: 96,
+            minHeight: 36,
             borderRadius: 6,
             borderWidth: 1,
             alignItems: 'center',
             justifyContent: 'center',
+            paddingHorizontal: 8,
+            paddingVertical: 6,
           },
           style,
         ]}
       >
-        <Text className="font-sans-semibold text-panel" style={{ color: textColor }}>
+        <Text
+          className="font-sans-semibold text-panel"
+          numberOfLines={2}
+          style={{ color: textColor, textAlign: 'center' }}
+        >
           {choice.label}
         </Text>
       </Pressable>
