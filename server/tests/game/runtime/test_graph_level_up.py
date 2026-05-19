@@ -257,8 +257,9 @@ async def test_level_up_options_include_all_growth_choices(tmp_path):
     runtime = await load_runtime_state(repo, "game-1")
 
     choices = await build_level_up_choices(runtime, llm=_SkillCandidateLLM())
+    choice_ids = [choice["id"] for choice in choices]
 
-    assert {choice["id"] for choice in choices} >= {
+    assert set(choice_ids) >= {
         "max_hp",
         "max_mp",
         "stat:body",
@@ -266,6 +267,14 @@ async def test_level_up_options_include_all_growth_choices(tmp_path):
         "stat:mind",
         "stat:presence",
     }
+    assert choice_ids[:6] == [
+        "stat:body",
+        "stat:agility",
+        "stat:mind",
+        "stat:presence",
+        "max_hp",
+        "max_mp",
+    ]
     assert any(
         choice["id"].startswith(("upgrade_skill:", "learn_skill:"))
         for choice in choices

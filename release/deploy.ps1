@@ -10,6 +10,7 @@ $RepoRoot = Split-Path -Parent $ReleaseDir
 $ClientDir = Join-Path $RepoRoot "client"
 $LlmLauncher = Join-Path $ReleaseDir "run_llm.bat"
 $LocalWrangler = Join-Path $ClientDir "node_modules\.bin\wrangler.cmd"
+$ServerReleaseEnv = Join-Path $RepoRoot "server\.env.release"
 
 function Step {
     param([string]$Title, [scriptblock]$Body)
@@ -69,6 +70,13 @@ function Load-EnvFile {
     }
 }
 
+function Load-OptionalEnvFile {
+    param([string]$Path)
+    if (Test-Path -LiteralPath $Path) {
+        Load-EnvFile $Path
+    }
+}
+
 function Deploy-Client {
     Step "Build and deploy client" {
         Load-EnvFile (Join-Path $ClientDir ".env.shared")
@@ -96,11 +104,19 @@ function Deploy-Client {
     }
 }
 
+Load-OptionalEnvFile $ServerReleaseEnv
+
 Step "Preflight" {
     Need "git"
     Need "npm"
     Need "npx"
     $script:WranglerCommand = Resolve-Command "wrangler" $LocalWrangler
+    if (-not $env:RENDER_API_KEY) {
+        throw "RENDER_API_KEY is not set. Render LLM env cannot be updated."
+    }
+    if (-not $env:RENDER_SERVICE_ID) {
+        throw "RENDER_SERVICE_ID is not set. Render LLM env cannot be updated."
+    }
     if (-not (Test-Path -LiteralPath (Join-Path $ClientDir "package.json"))) {
         throw "client/package.json is missing"
     }
@@ -109,14 +125,14 @@ Step "Preflight" {
     }
 }
 
-Step "Start local LLM tunnel" {
-    Start-Process -FilePath $LlmLauncher -WorkingDirectory $ReleaseDir
-    Write-Host "Started release/run_llm.bat in a separate window."
-    Write-Host "That window must stay open while Render uses the local LLM."
-    Start-Sleep -Seconds 10
-}
-
 if (-not $ClientOnly) {
+    Step "Start local LLM tunnel" {
+        Start-Process -FilePath $LlmLauncher -WorkingDirectory $ReleaseDir
+        Write-Host "Started release/run_llm.bat in a separate window."
+        Write-Host "That window must stay open while Render uses the local LLM."
+        Start-Sleep -Seconds 10
+    }
+
     Step "Commit current workspace" {
         $branch = (& git -C $RepoRoot branch --show-current).Trim()
         if (-not $branch) { throw "Cannot determine current git branch" }

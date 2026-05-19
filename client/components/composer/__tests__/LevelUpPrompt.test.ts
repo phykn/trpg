@@ -18,8 +18,8 @@ describe('LevelUpPrompt mobile selectors', () => {
   });
 
   test('keeps many growth choices readable on mobile', () => {
-    expect(source).toContain('minWidth: 96');
-    expect(source).toContain('flexGrow: 1');
+    expect(source).toContain("flexBasis: '23.5%'");
+    expect(source).toContain('flexGrow: 0');
     expect(source).toContain('numberOfLines={2}');
     expect(source).not.toContain('flex: 1,\n            height: 34');
   });

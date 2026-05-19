@@ -24,6 +24,6 @@ Required local setup:
 - Git remote `origin` is configured.
 - `client/.env.shared` and `client/.env.release` exist.
 - Wrangler is authenticated or `CLOUDFLARE_API_TOKEN` is available to `npm run deploy`.
-- `RENDER_API_KEY` and `RENDER_SERVICE_ID` are set.
+- `RENDER_API_KEY` and `RENDER_SERVICE_ID` are set in `server/.env.release`.
 - WSL, Docker, `cloudflared`, and the llama.cpp model path in `run_llama_cpp.bat` are available.
 - Render backend auto-deploy is enabled for the pushed branch, or Render is otherwise configured to deploy after push.

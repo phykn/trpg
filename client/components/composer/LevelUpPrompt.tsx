@@ -54,9 +54,8 @@ export function LevelUpPrompt({ hero, choices = [], loading = false, onCommit, o
         accessibilityLabel={choice.label}
         style={[
           {
-            flexGrow: 1,
-            flexBasis: '30%',
-            minWidth: 96,
+            flexGrow: 0,
+            flexBasis: '23.5%',
             minHeight: 36,
             borderRadius: 6,
             borderWidth: 1,

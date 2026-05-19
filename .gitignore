@@ -8,6 +8,8 @@ __pycache__/
 .venv/
 server/.env*
 client/.env*
+release/.env*
+!release/.env.example
 .claude/
 .tmux-agent-bridge/
 .playwright-mcp/
