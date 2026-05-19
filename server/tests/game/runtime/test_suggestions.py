@@ -374,6 +374,49 @@ def test_parse_graph_narration_answer_normalizes_legacy_string_suggestions():
     }
 
 
+def test_parse_graph_narration_answer_drops_json_fragment_suggestions():
+    answer = "\n".join(
+        [
+            "루카가 짧게 고개를 끄덕입니다.",
+            "---TRPG_META---",
+            """
+            {
+              "suggestions": [
+                "{\\"label\\":\\"루카에게 말을 겁니다\\",\\"input_te",
+                {"label": "다시 묻기", "input_text": "루카에게 다시 묻습니다"}
+              ]
+            }
+            """,
+        ]
+    )
+
+    result = parse_graph_narration_answer(answer)
+
+    assert [suggestion.input_text for suggestion in result.suggestions] == [
+        "루카에게 다시 묻습니다"
+    ]
+
+
+def test_parse_graph_narration_answer_removes_empty_direct_speech_lines():
+    answer = "\n".join(
+        [
+            "루카가 체크리스트를 접습니다.",
+            "「」",
+            "「   」",
+            '""',
+            "그는 문가로 한 걸음 물러섭니다.",
+            "---TRPG_META---",
+            '{"suggestions": []}',
+        ]
+    )
+
+    result = parse_graph_narration_answer(answer)
+
+    assert result.narration == (
+        "루카가 체크리스트를 접습니다.\n그는 문가로 한 걸음 물러섭니다."
+    )
+
+
 def test_parse_graph_narration_answer_uses_env_marker(monkeypatch):
     monkeypatch.setenv("GRAPH_NARRATION_META_MARKER", "---META---")
     answer = "\n".join(

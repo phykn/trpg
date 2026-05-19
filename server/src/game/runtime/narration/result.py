@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError
@@ -93,10 +94,12 @@ def parse_graph_narration_answer(answer: str) -> GraphNarrationResult:
     if marker_at < 0:
         llm_diag("llm:graph_narrate_meta_missing", answer_len=len(answer))
         if narration_end >= 0:
-            return GraphNarrationResult(narration=answer[:narration_end].rstrip("\r\n"))
-        return GraphNarrationResult(narration=answer)
+            return GraphNarrationResult(
+                narration=_clean_narration(answer[:narration_end].rstrip("\r\n"))
+            )
+        return GraphNarrationResult(narration=_clean_narration(answer))
 
-    narration = answer[:narration_end].rstrip("\r\n")
+    narration = _clean_narration(answer[:narration_end].rstrip("\r\n"))
     meta_text = answer[marker_at + len(marker) :].strip()
     try:
         raw = json.loads(meta_text)
@@ -118,6 +121,15 @@ def parse_graph_narration_answer(answer: str) -> GraphNarrationResult:
         )
         return GraphNarrationResult(narration=narration)
     return parsed
+
+
+def _clean_narration(text: str) -> str:
+    lines = [
+        line
+        for line in text.splitlines()
+        if not re.fullmatch(r'(?:「\s*」|"\s*")', line.strip())
+    ]
+    return "\n".join(lines).strip()
 
 
 def _first_marker_at(text: str, markers: tuple[str, ...]) -> int:

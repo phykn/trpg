@@ -122,7 +122,7 @@ def _normalize(value: str) -> str:
 def normalize_suggestion(value: object) -> GraphSuggestion | None:
     if isinstance(value, str):
         text = value.strip()
-        if not text:
+        if not text or _looks_like_json_fragment(text):
             return None
         return GraphSuggestion(label=text, input_text=text)
     if isinstance(value, GraphSuggestion):
@@ -132,19 +132,33 @@ def normalize_suggestion(value: object) -> GraphSuggestion | None:
             return None
         return value.model_copy(update={"label": label, "input_text": input_text})
     if isinstance(value, dict):
-        label = str(value.get("label", "")).strip()
-        input_text = str(value.get("input_text", "")).strip()
+        raw_label = value.get("label")
+        raw_input_text = value.get("input_text")
+        if not isinstance(raw_label, str) or not isinstance(raw_input_text, str):
+            return None
+        label = raw_label.strip()
+        input_text = raw_input_text.strip()
         if not label or not input_text:
             return None
+        if _looks_like_json_fragment(label) or _looks_like_json_fragment(input_text):
+            return None
+        intent = value.get("intent")
         return GraphSuggestion(
             label=label,
             input_text=input_text,
-            intent=str(value["intent"]).strip() if value.get("intent") else None,
+            intent=intent.strip() if isinstance(intent, str) and intent.strip() else None,
             action=value.get("action")
             if isinstance(value.get("action"), dict)
             else None,
         )
     return None
+
+
+def _looks_like_json_fragment(text: str) -> bool:
+    if text.startswith(("{", "[")):
+        return True
+    lowered = text.lower()
+    return '"label"' in lowered or '"input_text"' in lowered or '"input_te' in lowered
 
 
 def _has_quest_status(runtime: GameRuntimeState, statuses: set[str]) -> bool:

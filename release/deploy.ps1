@@ -26,6 +26,13 @@ function Need {
     }
 }
 
+function Need-Env {
+    param([string]$Name, [string]$Message)
+    if (-not (Get-Item -Path "Env:$Name" -ErrorAction SilentlyContinue).Value) {
+        throw $Message
+    }
+}
+
 function Resolve-Command {
     param([string]$Name, [string]$FallbackPath)
     if (Get-Command $Name -ErrorAction SilentlyContinue) {
@@ -48,6 +55,27 @@ function Run {
     }
     finally {
         Pop-Location
+    }
+}
+
+function Run-Retry {
+    param(
+        [string]$Command,
+        [string[]]$Arguments,
+        [string]$Cwd = $RepoRoot,
+        [int]$Attempts = 2
+    )
+
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        try {
+            Run -Command $Command -Arguments $Arguments -Cwd $Cwd
+            return
+        }
+        catch {
+            if ($attempt -ge $Attempts) { throw }
+            Write-Host "$Command $($Arguments -join ' ') failed; retrying ($($attempt + 1)/$Attempts)."
+            Start-Sleep -Seconds 3
+        }
     }
 }
 
@@ -106,28 +134,29 @@ function Deploy-Client {
             throw "Expo export contains a missing EXPO_PUBLIC_API_URL guard"
         }
 
-        Run -Command $script:WranglerCommand -Arguments @("deploy") -Cwd $ClientDir
+        Run-Retry -Command $script:WranglerCommand -Arguments @("deploy") -Cwd $ClientDir
     }
 }
-
-Load-OptionalEnvFile $ServerReleaseEnv
 
 Step "Preflight" {
     Need "git"
     Need "npm"
     Need "npx"
     $script:WranglerCommand = Resolve-Command "wrangler" $LocalWrangler
-    if (-not $env:RENDER_API_KEY) {
-        throw "RENDER_API_KEY is not set. Render LLM env cannot be updated."
-    }
-    if (-not $env:RENDER_SERVICE_ID) {
-        throw "RENDER_SERVICE_ID is not set. Render LLM env cannot be updated."
-    }
     if (-not (Test-Path -LiteralPath (Join-Path $ClientDir "package.json"))) {
         throw "client/package.json is missing"
     }
-    if (-not (Test-Path -LiteralPath $LlmLauncher)) {
-        throw "release/run_llm.bat is missing"
+
+    if (-not $ClientOnly) {
+        Need "cloudflared"
+        Need "wsl"
+        Load-OptionalEnvFile $ServerReleaseEnv
+        Need-Env "RENDER_API_KEY" "RENDER_API_KEY is not set. Render LLM env cannot be updated."
+        Need-Env "RENDER_SERVICE_ID" "RENDER_SERVICE_ID is not set. Render LLM env cannot be updated."
+        Need-Env "LLAMA_CPP_SUDO_PASSWORD" "LLAMA_CPP_SUDO_PASSWORD is not set. Local llama.cpp cannot start through WSL Docker."
+        if (-not (Test-Path -LiteralPath $LlmLauncher)) {
+            throw "release/run_llm.bat is missing"
+        }
     }
 }
 

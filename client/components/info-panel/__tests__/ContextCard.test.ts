@@ -11,4 +11,8 @@ describe('ContextCard panel layout', () => {
     expect(source).not.toContain('marginBottom: -FLOAT_BUFFER');
     expect(source).not.toContain("position: 'absolute'");
   });
+
+  test('ties tab selected state directly to the active panel id', () => {
+    expect(source).toContain('active={s.id === activeId}');
+  });
 });

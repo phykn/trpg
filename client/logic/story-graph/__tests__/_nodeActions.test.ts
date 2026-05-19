@@ -51,7 +51,7 @@ describe('actionsForNode', () => {
     ]);
   });
 
-  test('offers a pickup text action for reachable items', () => {
+  test('offers a pickup graph action for reachable items', () => {
     const actions = actionsForNode({
       id: 'supply_token',
       label: '보급 표식',
@@ -63,9 +63,10 @@ describe('actionsForNode', () => {
 
     expect(actions).toEqual([
       expect.objectContaining({
-        kind: 'text',
+        kind: 'graph_action',
         label: '줍기',
-        text: '보급 표식을 줍습니다',
+        graphAction: { verb: 'transfer', what: 'supply_token' },
+        textFallback: '보급 표식을 줍습니다',
       }),
     ]);
   });

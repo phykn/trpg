@@ -46,6 +46,8 @@ export function Expandable({
           <View
             className="absolute inset-x-0 opacity-0"
             pointerEvents="none"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
             onLayout={(e) => {
               if (e.nativeEvent.layout.height > lineHeight * clampLines + 1) {
                 setOverflow(true);

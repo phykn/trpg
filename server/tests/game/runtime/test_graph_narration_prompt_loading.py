@@ -198,6 +198,11 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "개인적인 내용을 캐면" in narrate_prompt
     assert "최근에 같은 NPC가 이미 말한 직접 발화를 그대로 다시 쓰지 않습니다" in narrate_prompt
     assert "자연스러운 한국어 구어" in narrate_prompt
+    assert "빈 직접 발화" in narrate_prompt
+    assert "현재 장소의 visible targets" in narrate_prompt
+    assert "이전 기억에 있어도 현재 주변에 있다고 쓰지 않습니다" in narrate_prompt
+    assert "현재 목표와 다음 행동" in narrate_prompt
+    assert "새로운 여정" in narrate_prompt
     assert "faction" in narrate_prompt
     assert "새로운 소속, 명령, 관계 변화는 만들지 않습니다" in narrate_prompt
     assert "dialogue_style" not in narrate_prompt

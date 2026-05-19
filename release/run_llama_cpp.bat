@@ -14,7 +14,7 @@ if not defined LLAMA_CPP_SUDO_PASSWORD (
   exit /b 1
 )
 
-set "TEMP=1.0"
+set "LLM_TEMP=1.0"
 set "TOPK=20"
 set "TOPP=0.9"
 set "MINP=0.0"
@@ -27,7 +27,7 @@ set "ARGS=%ARGS% --flash-attn on"
 set "ARGS=%ARGS% --cache-type-k q4_0 --cache-type-v q4_0"
 set "ARGS=%ARGS% -b 128 -ub 128"
 set "ARGS=%ARGS% -t 12 -tb 12"
-set "ARGS=%ARGS% --temp %TEMP% --top-k %TOPK% --top-p %TOPP% --min-p %MINP%"
+set "ARGS=%ARGS% --temp %LLM_TEMP% --top-k %TOPK% --top-p %TOPP% --min-p %MINP%"
 set "ARGS=%ARGS% --presence-penalty %PRESENCE% --repeat-penalty %REPEAT%"
 set "ARGS=%ARGS% --jinja"
 

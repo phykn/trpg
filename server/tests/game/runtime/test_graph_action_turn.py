@@ -419,6 +419,23 @@ async def test_run_graph_action_turn_narrates_item_and_rest_actions(
     assert saved_logs[-1].kind == "gm"
 
 
+async def test_run_graph_action_turn_labels_targetless_location_transfer_as_pickup(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    llm = _NarrationLLM()
+
+    await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="transfer", what="loose_herb"),
+        llm=llm,  # type: ignore[arg-type]
+    )
+    saved_logs = await repo.load_log_entries("game-1")
+
+    assert saved_logs[-2].text == "당신은 loose_herb를 챙깁니다."
+
+
 async def test_run_graph_action_turn_narrates_rest_encounter(tmp_path):
     repo = await _repo(tmp_path)
     graph = await repo.load_graph("game-1")

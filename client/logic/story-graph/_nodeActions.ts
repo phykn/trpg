@@ -28,7 +28,12 @@ export function actionsForNode(node: StoryGraphNode): PanelAction[] {
     ];
   }
   if (node.status === 'reachable_item') {
-    return [{ kind: 'text', label: ko.panel.pickup, text: compose.pickUp(node.label) }];
+    return [{
+      kind: 'graph_action',
+      label: ko.panel.pickup,
+      graphAction: { verb: 'transfer', what: node.id },
+      textFallback: compose.pickUp(node.label),
+    }];
   }
   return [];
 }

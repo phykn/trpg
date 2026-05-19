@@ -38,6 +38,7 @@ export function mergeStoryGraphs(base: StoryGraphModel, next: StoryGraphModel): 
   const nodes = new Map<string, StoryGraphNode>();
   for (const node of base.nodes) {
     if (nextIds.has(node.id)) continue;
+    if (node.kind === 'item') continue;
     let demoted: StoryGraphNode = node;
     if ((node.kind === 'place' || node.kind === 'location') && !nextPlaceIds.has(node.id)) {
       demoted = {

@@ -70,7 +70,21 @@ try {
     }
 
     $modelsUrl = "$tunnelUrl/v1/models"
-    Invoke-RestMethod -Method Get -Uri $modelsUrl -TimeoutSec 20 | Out-Null
+    $ready = $false
+    while ((Get-Date) -lt $deadline) {
+        try {
+            Invoke-RestMethod -Method Get -Uri $modelsUrl -TimeoutSec 20 | Out-Null
+            $ready = $true
+            break
+        }
+        catch {
+            Start-Sleep -Seconds 2
+        }
+    }
+
+    if (-not $ready) {
+        throw "Cloudflare tunnel URL was created, but $modelsUrl did not become reachable."
+    }
 
     $llmBaseUrl = "$tunnelUrl/v1"
     $headers = @{
