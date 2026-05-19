@@ -252,15 +252,20 @@ async def test_level_up_options_include_llm_skill_candidate(tmp_path):
     assert llm.calls[0]["agent"] == "recommend"
 
 
-async def test_level_up_options_are_capped_and_balanced(tmp_path):
+async def test_level_up_options_include_all_growth_choices(tmp_path):
     repo = await _repo(tmp_path, known_skill=True)
     runtime = await load_runtime_state(repo, "game-1")
 
     choices = await build_level_up_choices(runtime, llm=_SkillCandidateLLM())
 
-    assert len(choices) <= 3
-    assert any(choice["id"].startswith("stat:") for choice in choices)
-    assert any(choice["id"] in {"max_hp", "max_mp"} for choice in choices)
+    assert {choice["id"] for choice in choices} >= {
+        "max_hp",
+        "max_mp",
+        "stat:body",
+        "stat:agility",
+        "stat:mind",
+        "stat:presence",
+    }
     assert any(
         choice["id"].startswith(("upgrade_skill:", "learn_skill:"))
         for choice in choices

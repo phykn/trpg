@@ -42,7 +42,6 @@ class _CandidateOutput(BaseModel):
 
 _CANDIDATE_ADAPTER = TypeAdapter(_CandidateOutput)
 _SLUG_RE = re.compile(r"[^a-z0-9_]+")
-_MAX_LEVEL_UP_CHOICES = 3
 
 
 async def build_level_up_choices(
@@ -138,7 +137,7 @@ async def build_level_up_choices(
                 }
             )
 
-    return _limit_level_up_choices(choices)
+    return choices
 
 
 async def _skill_candidates(
@@ -299,33 +298,6 @@ def _skill_spec(
 
 def _skill_name(runtime: GameRuntimeState, skill) -> str:
     return node_label(runtime.content, skill)
-
-
-def _limit_level_up_choices(choices: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    if len(choices) <= _MAX_LEVEL_UP_CHOICES:
-        return choices
-
-    picked: list[dict[str, Any]] = []
-
-    def add_first(match) -> None:
-        for choice in choices:
-            if match(choice) and choice not in picked:
-                picked.append(choice)
-                return
-
-    add_first(lambda choice: str(choice.get("id", "")).startswith("stat:"))
-    add_first(lambda choice: choice.get("id") in {"max_hp", "max_mp"})
-    add_first(
-        lambda choice: str(choice.get("id", "")).startswith(
-            ("upgrade_skill:", "learn_skill:")
-        )
-    )
-    for choice in choices:
-        if len(picked) >= _MAX_LEVEL_UP_CHOICES:
-            break
-        if choice not in picked:
-            picked.append(choice)
-    return picked[:_MAX_LEVEL_UP_CHOICES]
 
 
 def _int_prop(properties: dict[str, Any], key: str) -> int:
