@@ -194,12 +194,6 @@ describe('graph API helpers', () => {
           raceJob: '',
           gender: '',
           role: '',
-          gold: 0,
-          stats: {},
-          equipment: { weapon: null, armor: null, accessory: null },
-          inventory: [],
-          skills: [],
-          status: [],
         },
       ],
     };

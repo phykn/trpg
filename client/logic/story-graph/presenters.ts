@@ -62,7 +62,6 @@ export function mergeStoryGraphs(base: StoryGraphModel, next: StoryGraphModel): 
         raceJob: node.raceJob,
         gender: node.gender,
         role: node.role,
-        trust: node.trust,
       };
     }
     nodes.set(demoted.id, demoted);

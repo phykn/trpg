@@ -26,7 +26,6 @@ class ClassifyContextLimits:
     skills: int = 8
     location_items: int = 8
     recent_dialogue: int = 5
-    target_carryables: int = 6
     merchant_stock: int = 8
     corpses: int = 4
     corpse_items: int = 6
@@ -190,9 +189,6 @@ def _visible_targets(
         }
         if node.properties.get("protected") is True:
             payload["protected"] = True
-        carryables = _limited_inventory(runtime, node.id, limits.target_carryables)
-        if carryables:
-            payload["carryables"] = carryables
         out.append(payload)
     return out
 
@@ -319,6 +315,8 @@ def _merchants(
         if not isinstance(node.properties.get("gold"), int):
             continue
         stock = _limited_inventory(runtime, node.id, limits.merchant_stock)
+        if not stock:
+            continue
         out.append({"id": node.id, "name": target["name"], "stock": stock})
     return out
 

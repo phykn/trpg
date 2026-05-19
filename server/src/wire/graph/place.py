@@ -7,13 +7,8 @@ from src.game.domain.graph.character import (
 )
 from src.game.domain.graph.query import characters_at, edges_from, items_at, location_of
 from .character import (
-    character_equipment,
     character_gender,
-    character_inventory,
     character_race_job,
-    character_skills,
-    character_stats,
-    character_status,
 )
 from .values import (
     int_prop_default,
@@ -74,12 +69,6 @@ def place_payload(
                 race_job=character_race_job(target, content),
                 gender=character_gender(target, locale, content),
                 role=optional_str(static_value(target, "role", content)) or "",
-                gold=int_prop_default(target, "gold", 0),
-                stats=character_stats(target),
-                equipment=character_equipment(graph, target.id, content),
-                inventory=character_inventory(graph, target.id, content),
-                skills=character_skills(graph, target.id, content),
-                status=character_status(target),
             )
         )
 

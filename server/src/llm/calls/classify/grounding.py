@@ -28,7 +28,6 @@ class _ViewIds:
     skill_ids: set[str] = field(default_factory=set)
     merchant_ids: set[str] = field(default_factory=set)
     merchant_stock_item_ids: set[str] = field(default_factory=set)
-    carryable_item_ids: set[str] = field(default_factory=set)
     corpse_ids: set[str] = field(default_factory=set)
     corpse_inventory_item_ids: set[str] = field(default_factory=set)
     corpse_inventory_by_corpse: dict[str, set[str]] = field(default_factory=dict)
@@ -47,7 +46,6 @@ class _ViewIds:
             | self.equipment_item_ids
             | self.visible_item_ids
             | self.merchant_stock_item_ids
-            | self.carryable_item_ids
             | self.corpse_inventory_item_ids
         )
 
@@ -156,7 +154,6 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
     equipment_item_ids = _equipment_item_ids(surroundings.get("equipment"))
     skill_ids = _ids_from_list(surroundings.get("skills"))
     merchant_ids, merchant_stock_item_ids = _merchant_ids(surroundings.get("merchants"))
-    carryable_item_ids = _carryable_item_ids(surroundings.get("entities"))
     (
         corpse_ids,
         corpse_inventory_item_ids,
@@ -181,7 +178,6 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
         skill_ids=skill_ids,
         merchant_ids=merchant_ids,
         merchant_stock_item_ids=merchant_stock_item_ids,
-        carryable_item_ids=carryable_item_ids,
         corpse_ids=corpse_ids,
         corpse_inventory_item_ids=corpse_inventory_item_ids,
         corpse_inventory_by_corpse=corpse_inventory_by_corpse,
@@ -307,7 +303,6 @@ def _validate_use_item(
     visible_uncarried = (
         view.location_item_ids
         | view.visible_item_ids
-        | view.carryable_item_ids
         | view.merchant_stock_item_ids
         | view.corpse_inventory_item_ids
     )
@@ -409,13 +404,6 @@ def _merchant_ids(value: object) -> tuple[set[str], set[str]]:
             merchant_ids.add(merchant_id)
         item_ids |= _ids_from_list(merchant.get("stock"))
     return merchant_ids, item_ids
-
-
-def _carryable_item_ids(value: object) -> set[str]:
-    item_ids: set[str] = set()
-    for entity in _dicts(value):
-        item_ids |= _ids_from_list(entity.get("carryables"))
-    return item_ids
 
 
 def _corpse_ids(value: object) -> tuple[set[str], set[str], dict[str, set[str]]]:

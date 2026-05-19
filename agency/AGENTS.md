@@ -34,13 +34,13 @@ APP_ENV=release .venv/bin/python -m agency.story.tools.storage download <profile
 
 Single QA run output lands at the repo root `qa_test/agency/<agent>/` (gitignored): `transcript.md` (human review), `sse.jsonl` (event replay), `final_state.json`, `saves/` (per-agent `LocalFsGraphRepo`), `llm/` (per-call request/response pairs). The runner wipes **only the targeted agent's directory** at session start, so re-running `socialite` doesn't touch `fighter`'s artifacts from an earlier full-suite run.
 
-QA env: needs `BASE_URL` (LLM) and local scenario env from `server/.env.dev` (`SCENARIO_REPO=local`, `SCENARIO_DIR=../scenarios`). Story tool (`tool.py`) is local-only. Release storage publish/download lives in `agency.story.tools.storage` and needs `APP_ENV=release` + Supabase keys.
+QA env: needs the server LLM profile env (`LLM_ROUTE_DEFAULT` plus the referenced `LLM_<PROVIDER>_*` block) and local scenario env from `server/.env.dev` (`SCENARIO_REPO=local`, `SCENARIO_DIR=../scenarios`). Story tool (`tool.py`) is local-only. Release storage publish/download lives in `agency.story.tools.storage` and needs `APP_ENV=release` + Supabase keys.
 
 ## Architecture
 
 ### QA — in-process FastAPI, real LLM
 
-`qa/harness/runner.py` wraps the server with `httpx.ASGITransport(app=build_app(...))`. No port, no second process — the request still travels through the real auth/error surface, but responses come back in-memory. The LLM stack is the same external server (`BASE_URL`, local OpenAI-compatible server or Gemini) production uses.
+`qa/harness/runner.py` wraps the server with `httpx.ASGITransport(app=build_app(...))`. No port, no second process — the request still travels through the real auth/error surface, but responses come back in-memory. The LLM stack uses the same env-profile routing (`LLM_ROUTE_*` plus `LLM_<PROVIDER>_*`) production uses.
 
 Two hard isolation rules:
 
@@ -75,5 +75,5 @@ QA's loop intentionally stops on the first error — do not "retry past it." The
 
 - **Korean only for everything user-facing.** Persona prompts (`qa/agents/*.md`), the story SKILL (`story/SKILL.md`), and any string that ends up in a transcript or scenario file are Korean. Engine-side narration uses **2인칭 존댓말 합니다체** — `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings — and the user-facing skill term is **기술** (`스킬` survives only as a synonym in the classify prompt). Code text (Python source, exception messages, validation errors) stays English.
 - **Comments minimal, English-only.** Default to no comment — add one only when the *why* is non-obvious. Single short line. Korean is allowed inside an English comment only when quoting an in-game string the comment is reasoning about. No multi-paragraph docstrings, no multi-line `# ...` blocks. `# noqa` / `# type:` / shebangs aren't comments.
-- **env is fail-fast.** `os.environ["BASE_URL"]` etc., never `os.environ.get(..., default)`. Missing keys must raise at startup, not later inside an LLM call.
+- **env is fail-fast.** Required keys should be read through strict env/profile parsing, never `os.environ.get(..., default)`. Missing keys must raise at startup, not later inside an LLM call.
 - **Save-directory isolation.** QA always writes to `qa_test/agency/<agent>/saves/` via `LocalFsGraphRepo`. Never repoint at production Supabase graph tables. Scenarios are read from local `SCENARIO_DIR`.

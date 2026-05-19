@@ -42,8 +42,8 @@ from agency.story.harness.runner import (  # noqa: E402
     _collect_refs,
 )
 
-# env loading mirrors run_qa.py / run_story.py so SUPABASE_* / BASE_URL
-# / LLM_ROUTE_* resolve here. Subcommands that don't need env (decompose-*,
+# env loading mirrors run_qa.py / run_story.py so SUPABASE_* / LLM_ROUTE_*
+# provider keys resolve here. Subcommands that don't need env (decompose-*,
 # check-entity, equip-fill, sweep) still pay this cheap one-time cost.
 _APP_ENV = os.environ.get("APP_ENV", "dev")
 load_dotenv(ROOT / "server" / f".env.{_APP_ENV}")

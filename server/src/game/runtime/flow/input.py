@@ -68,7 +68,6 @@ def _classify_context_limits() -> ClassifyContextLimits:
         skills=_classify_limit("SKILLS", 8),
         location_items=_classify_limit("LOCATION_ITEMS", 8),
         recent_dialogue=_classify_limit("RECENT_DIALOGUE", 5),
-        target_carryables=_classify_limit("TARGET_CARRYABLES", 6),
         merchant_stock=_classify_limit("MERCHANT_STOCK", 8),
         corpses=_classify_limit("CORPSES", 4),
         corpse_items=_classify_limit("CORPSE_ITEMS", 6),

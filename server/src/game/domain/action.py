@@ -16,7 +16,7 @@ ActionVerb = Literal[
 ]
 
 ActionValue = str | list[str]
-RefuseCategory = Literal["out_of_game", "meta_breaking"]
+RefuseCategory = Literal["out_of_game", "meta_breaking", "invalid_transition"]
 
 _TRANSFER_HOW = {"free", "trade", "steal", "accept", "abandon", "equip", "unequip"}
 _EQUIP_SLOTS = {"weapon", "armor", "accessory"}

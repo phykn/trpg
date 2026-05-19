@@ -34,7 +34,6 @@ describe('actionsForNode', () => {
       gender: '',
       role: '',
       alive: true,
-      trust: 0,
     } satisfies TargetNode);
 
     expect(actions).toEqual([

@@ -45,10 +45,12 @@ def test_prompt_documents_contract_pain_points():
     assert "농담" in text and "수수께끼" in text
     assert "NPC에게 던지는" in text
     assert "context.identity.player" in text and "player_01" in text
-    assert "carryables" in text
+    assert "carryables" not in text
     assert "context.identity.merchants" in text and "stock" in text
     assert "context.identity.corpses" in text and "inventory" in text
-    assert "protected=true" in text and "pass" in text
+    assert "protected=true" in text and "invalid_transition" in text
+    assert "보호 대상 공격 시도" not in text
+    assert '"note":"보호 대상 공격 시도"' not in text
     assert "최종 게임 Action JSON은 Python action builder가 만듭니다" in text
 
 

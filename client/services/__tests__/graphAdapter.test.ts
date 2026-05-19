@@ -50,37 +50,15 @@ describe('adaptGraphState', () => {
             raceJob: '고블린',
             gender: '',
             role: '쓰러진 적',
-            gold: 0,
-            stats: { body: 1, mind: 1, agility: 1, presence: 1 },
-            equipment: { weapon: null, armor: null, accessory: null },
-            inventory: [],
-            skills: [],
-            status: ['쓰러짐'],
           },
           {
             id: 'wolf_01',
             name: '늑대',
             kind: 'npc',
             alive: true,
-            level: 3,
             raceJob: '야수',
             gender: '',
             role: '숲의 포식자',
-            gold: 2,
-            stats: {
-              body: 3,
-              agility: 4,
-              mind: 1,
-              presence: 2,
-            },
-            equipment: {
-              weapon: { id: 'fang_01', name: '날카로운 송곳니' },
-              armor: null,
-              accessory: null,
-            },
-            inventory: [{ id: 'pelt_01', name: '늑대 가죽', qty: 1, canUse: false, equipSlots: [] }],
-            skills: ['물어뜯기'],
-            status: ['경계 중'],
           },
         ],
       },
@@ -213,17 +191,7 @@ describe('adaptGraphState', () => {
     expect(state.subject?.alive).toBe(true);
     expect(state.subject?.role).toBe('숲의 포식자');
     expect(state.subject?.raceJob).toBe('야수');
-    expect(state.subject?.gold).toBe(2);
-    expect(state.subject?.equipment.weapon).toEqual({ id: 'fang_01', name: '날카로운 송곳니' });
-    expect(state.subject?.inventory).toEqual([{ id: 'pelt_01', name: '늑대 가죽', qty: 1, canUse: false, equipSlots: [] }]);
-    expect(state.subject?.skills).toEqual(['물어뜯기']);
-    expect(state.subject?.known).toEqual(['경계 중']);
-    expect(state.subject?.stats).toEqual([
-      { label: '근력', value: 3 },
-      { label: '지력', value: 1 },
-      { label: '민첩', value: 4 },
-      { label: '매력', value: 2 },
-    ]);
+    expect(state.subject?.level).toBe(1);
     expect(state.storyGraph.nodes.map((node) => node.id)).toEqual([
       'player_01',
       'town',
@@ -271,12 +239,6 @@ describe('adaptGraphState', () => {
             raceJob: '',
             gender: '',
             role: '',
-            gold: 0,
-            stats: {},
-            equipment: { weapon: null, armor: null, accessory: null },
-            inventory: [],
-            skills: [],
-            status: [],
           },
           {
             id: 'wolf_01',
@@ -287,12 +249,6 @@ describe('adaptGraphState', () => {
             raceJob: '',
             gender: '',
             role: '',
-            gold: 0,
-            stats: {},
-            equipment: { weapon: null, armor: null, accessory: null },
-            inventory: [],
-            skills: [],
-            status: [],
           },
         ],
       },

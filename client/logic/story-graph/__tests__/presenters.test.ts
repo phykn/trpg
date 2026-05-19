@@ -39,7 +39,6 @@ function baseGraph(): StoryGraphModel {
         gender: '',
         role: '문지기',
         alive: true,
-        trust: 0,
       },
     ],
     edges: [

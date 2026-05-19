@@ -27,6 +27,7 @@ def _character(node_id: str, *, name: str) -> GraphNode:
             "max_mp": 5,
             "alive": True,
             "background": "경비병은 북문 앞에서 교대 기록을 관리합니다.",
+            "secrets": ["숨은 단서가 있습니다."],
             "stats": {"body": 3, "agility": 2, "mind": 2, "presence": 2},
             "status": [],
         },
@@ -265,6 +266,7 @@ def test_input_payload_includes_recent_context_and_keeps_player_input():
         }
     ]
     assert "recent_log" not in encoded
+    assert "숨은 단서가 있습니다." not in encoded
 
 
 def test_roll_payload_keeps_original_player_input_and_marks_preroll_text():

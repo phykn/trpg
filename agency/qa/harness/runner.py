@@ -63,6 +63,14 @@ def _pending_resolution_request(
     return None
 
 
+def _turn_body(result: dict, front: dict) -> str:
+    if result.get("message"):
+        return result["message"]
+    if _pending_resolution_request("", front) is not None:
+        return ""
+    return last_gm_text(front.get("log") or [])
+
+
 def _server_relative_env_path(name: str) -> Path:
     path = Path(os.environ[name])
     if path.is_absolute():
@@ -196,7 +204,7 @@ async def run_qa_session(
                 response.raise_for_status()
                 result = response.json()
                 front = result["state"]
-                body = result.get("message") or last_gm_text(front.get("log") or [])
+                body = _turn_body(result, front)
                 events = [
                     {
                         "type": "graph_response",

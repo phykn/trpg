@@ -174,6 +174,7 @@ async def test_protected_target_attack_shortcut_returns_refusal():
 
     assert out.actions is None
     assert out.refuse is not None
+    assert out.refuse.category == "invalid_transition"
     assert out.refuse.message_hint == PROTECTED_TARGET_REASON
     assert out.refuse.target == "protected_guard"
 
@@ -200,6 +201,7 @@ async def test_single_protected_target_attack_shortcut_returns_refusal_without_n
 
     assert out.actions is None
     assert out.refuse is not None
+    assert out.refuse.category == "invalid_transition"
     assert out.refuse.message_hint == PROTECTED_TARGET_REASON
     assert out.refuse.target == "protected_guard"
 

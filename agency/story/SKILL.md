@@ -188,6 +188,7 @@ APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload scenarios/
 ### character
 - 필수: `id`, `name`, `race`, `gender`, `mbti`, `role`, `background`, `appearance`, `traits`, `secrets`, `level`, `location`, `alive`, `inventory`, `equipment`, `learned_skills`, `relations`, `is_enemy`, `xp_reward`
 - NPC와 적은 HP/MP, stats, job을 쓰지 않는다. 강함은 `level`, 말투와 태도는 `mbti`와 `traits`로 표현한다.
+- `secrets`는 비공개 seed 정보다. 플레이어에게 바로 보일 성격·단서는 `traits`, `background`, 공개 `knowledge`로 둔다.
 - `is_enemy=true`이면 `combat_behavior` 필수 (`{attack_priority}`), `xp_reward > 0` (level 1: 40~80, level 3: 100~200, level 5+: 250+).
 - `is_enemy=false`이면 `combat_behavior` 생략, `xp_reward=0`.
 - 인간형 race는 갑옷 1개 이상 필수, 적이면 무기도 필수.

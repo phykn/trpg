@@ -16,7 +16,6 @@ def _surroundings() -> dict:
                 "id": "goblin_01",
                 "name": "고블린",
                 "type": "npc",
-                "carryables": [{"id": "coin_01", "name": "동전"}],
             },
             {"id": "town_gate", "name": "성문", "type": "connection"},
             {"id": "loose_key", "name": "열쇠", "type": "item"},

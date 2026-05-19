@@ -110,7 +110,7 @@ def related_memory_payload(
             "importance": entry.importance,
         }
         for entry in ranked
-        if entry.target in related_ids or entry.importance >= 3
+        if entry.target in related_ids
     ][:limit]
 
 

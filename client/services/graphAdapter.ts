@@ -91,14 +91,7 @@ function adaptSubject(target: GraphPlaceTarget | null): FrontState['subject'] {
     role: target.role,
     raceJob: target.raceJob,
     gender: target.gender,
-    trust: 0,
-    known: target.status,
-    level: target.level,
-    gold: target.gold,
-    stats: statEntries(target.stats),
-    equipment: target.equipment ?? EMPTY_EQUIPMENT,
-    inventory: target.inventory ?? [],
-    skills: target.skills ?? [],
+    level: target.level ?? 1,
   };
 }
 
@@ -148,7 +141,6 @@ function adaptPlace(place: GraphPlaceState | null): FrontState['place'] {
       raceJob: '',
       gender: '',
       blurb: '',
-      trust: 0,
     })),
     risk: DEFAULT_RISK,
   };
@@ -196,7 +188,6 @@ function buildStoryGraph(
           gender: '',
           role: '',
           alive: state.hero.resources.hp.current > 0,
-          known: [],
         },
       ],
       edges: [],
@@ -218,7 +209,6 @@ function buildStoryGraph(
         gender: '',
         role: '',
         alive: state.hero.resources.hp.current > 0,
-        known: [],
       },
       {
         id: place.id,
@@ -255,12 +245,11 @@ function buildStoryGraph(
         kind: 'target' as const,
         status: 'reachable_meet' as const,
         reachable: true,
-        level: target.level,
+        level: target.level ?? 1,
         raceJob: target.raceJob,
         gender: target.gender,
         role: target.role,
         alive: target.alive,
-        trust: 0,
       })),
       ...quests.map((quest) => ({
         id: quest.id,

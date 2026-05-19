@@ -420,7 +420,7 @@ def _add_character_style_fields(
     node: GraphNode,
     payload: dict[str, Any],
 ) -> None:
-    for key in ("personality", "traits", "secrets"):
+    for key in ("personality", "traits"):
         _add_list_field(runtime, node, payload, key)
     for key in ("background", "appearance", "personal_boundary"):
         _add_text_field(runtime, node, payload, key)

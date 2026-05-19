@@ -34,13 +34,7 @@ const subject: Subject = {
   role: '주인',
   raceJob: '인간',
   gender: '남성',
-  trust: 4,
-  known: ['뒷문을 자주 살핍니다.'],
   level: 1,
-  stats: [],
-  equipment: { weapon: null, armor: null, accessory: null },
-  inventory: [],
-  skills: [],
 };
 
 const quest: Quest = {

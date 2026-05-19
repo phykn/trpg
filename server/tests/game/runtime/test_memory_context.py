@@ -81,6 +81,42 @@ def test_related_memory_prefers_relevance_before_importance():
     ]
 
 
+def test_related_memory_excludes_unrelated_high_importance_entries():
+    runtime = _runtime()
+    runtime.turn_log.extend(
+        [
+            TurnLogEntry(
+                turn=1,
+                target="unrelated",
+                summary="멀리 떨어진 사건입니다.",
+                importance=3,
+            ),
+            TurnLogEntry(
+                turn=2,
+                target="npc_merchant",
+                summary="상인이 장부를 잃어버렸습니다.",
+                importance=2,
+            ),
+        ]
+    )
+
+    payload = related_memory_payload(
+        runtime,
+        action=None,
+        target=runtime.graph.nodes["npc_merchant"],
+        limit=10,
+    )
+
+    assert payload == [
+        {
+            "turn": 2,
+            "target": "npc_merchant",
+            "summary": "상인이 장부를 잃어버렸습니다.",
+            "importance": 2,
+        }
+    ]
+
+
 def test_recent_dialogue_is_limited_and_does_not_pull_turn_log():
     runtime = _runtime(dialogue_count=7)
     runtime.turn_log.append(

@@ -48,7 +48,6 @@ function buildNotesPanel(state: GameSnapshot): Panel {
       text: joinOrDash([
         state.subject.name,
         state.subject.role,
-        ...state.subject.known,
       ]),
       clampLines: 3,
     });

@@ -285,6 +285,7 @@ def test_classify_context_exposes_transfer_and_protected_candidates():
         "town": GraphNode(id="town", type="location", properties={"name": "마을"}),
         "player_01": _character("player_01", name="당신"),
         "merchant_01": _character("merchant_01", name="상인"),
+        "bystander_01": _character("bystander_01", name="구경꾼"),
         "guard_01": _character("guard_01", name="경비병", xp_reward=1),
         "corpse_01": _character("corpse_01", name="쓰러진 산적"),
         "potion_01": GraphNode(
@@ -304,6 +305,7 @@ def test_classify_context_exposes_transfer_and_protected_candidates():
         ),
     }
     nodes["merchant_01"].properties["gold"] = 20
+    nodes["bystander_01"].properties["gold"] = 0
     nodes["guard_01"].properties["protected"] = True
     nodes["corpse_01"].properties["alive"] = False
     nodes["corpse_01"].properties["hp"] = 0
@@ -324,6 +326,12 @@ def test_classify_context_exposes_transfer_and_protected_candidates():
             id="located_at:guard_01:town",
             type="located_at",
             from_node_id="guard_01",
+            to_node_id="town",
+        ),
+        "located_at:bystander_01:town": GraphEdge(
+            id="located_at:bystander_01:town",
+            type="located_at",
+            from_node_id="bystander_01",
             to_node_id="town",
         ),
         "located_at:corpse_01:town": GraphEdge(
@@ -365,10 +373,6 @@ def test_classify_context_exposes_transfer_and_protected_candidates():
         "id": "merchant_01",
         "name": "상인",
         "type": "npc",
-        "carryables": [
-            {"id": "potion_01", "name": "물약", "kind": "consumable", "price": 5},
-            {"id": "coin_pouch_01", "name": "동전 주머니", "kind": "item"},
-        ],
     } in context["identity"]["visible_targets"]
     assert {
         "id": "guard_01",
@@ -376,7 +380,7 @@ def test_classify_context_exposes_transfer_and_protected_candidates():
         "type": "npc",
         "protected": True,
     } in context["identity"]["visible_targets"]
-    assert context["affordances"]["can_attack"] == ["merchant_01"]
+    assert context["affordances"]["can_attack"] == ["merchant_01", "bystander_01"]
     assert context["identity"]["merchants"] == [
         {
             "id": "merchant_01",

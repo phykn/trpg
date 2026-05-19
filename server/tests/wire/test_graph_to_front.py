@@ -308,11 +308,19 @@ def test_graph_front_state_builds_place_from_visible_graph_edges():
     assert target.kind == "npc"
     assert target.role == "숲의 포식자"
     assert target.race_job == "숲의 포식자"
-    assert target.gold == 2
-    assert target.stats == {"agility": 2, "body": 3, "mind": 1, "presence": 0}
-    assert target.equipment.weapon is None
-    assert [item.name for item in target.inventory] == ["날카로운 송곳니", "늑대 가죽"]
-    assert target.status == ["경계 중"]
+    assert target.model_dump(
+        by_alias=True,
+        exclude_none=True,
+    ) == {
+        "id": "goblin_01",
+        "name": "goblin_01",
+        "kind": "npc",
+        "alive": True,
+        "level": 2,
+        "raceJob": "숲의 포식자",
+        "gender": "",
+        "role": "숲의 포식자",
+    }
 
 
 def test_graph_front_state_exposes_visible_place_items_and_hides_hidden_items():
@@ -438,8 +446,6 @@ def test_graph_front_state_resolves_static_content_from_runtime_content():
     assert payload.place.targets[0].name == "떠돌이 적"
     assert payload.place.targets[0].role == "숲의 포식자"
     assert payload.place.targets[0].race_job == "숲의 포식자"
-    assert payload.place.targets[0].equipment.weapon is None
-    assert payload.place.targets[0].inventory[0].name == "날카로운 송곳니"
     assert payload.quest_offers[0].title == "첫 의뢰"
     assert payload.quest_offers[0].summary == "광장의 문제를 해결합니다."
 

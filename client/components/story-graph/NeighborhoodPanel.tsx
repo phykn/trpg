@@ -92,15 +92,9 @@ export function NeighborhoodPanel({
   const characterSections = (() => {
     if (!selectedNode) return null;
     if (selectedNode.kind !== 'subject' && selectedNode.kind !== 'target' && selectedNode.kind !== 'hero') return null;
-    const known = selectedNode.kind === 'target'
-      ? ''
-      : selectedNode.known.length > 0 ? joinOrDash(selectedNode.known) : '';
-    const trust = selectedNode.kind === 'hero' ? 0 : selectedNode.trust;
     return {
       desc: characterMeta(selectedNode.level, selectedNode.raceJob, selectedNode.gender),
       role: selectedNode.role || '',
-      known,
-      trust,
     };
   })();
   const questSections = (() => {
@@ -228,21 +222,6 @@ export function NeighborhoodPanel({
                     <LabeledRow label={ko.panel.role}>
                       {characterSections.role}
                     </LabeledRow>
-                  ) : null}
-                  {characterSections.known ? (
-                    <LabeledRow label={ko.panel.traits}>
-                      {characterSections.known}
-                    </LabeledRow>
-                  ) : null}
-                  {characterSections.trust !== 0 ? (
-                    <Row label={ko.panel.affinity}>
-                      <Text
-                        className="font-sans-semibold text-panel"
-                        style={{ color: toneColor[characterSections.trust >= 0 ? 'good' : 'bad'] }}
-                      >
-                        {characterSections.trust > 0 ? `+${characterSections.trust}` : `${characterSections.trust}`}
-                      </Text>
-                    </Row>
                   ) : null}
                 </>
               ) : isQuestKind && questSections ? (

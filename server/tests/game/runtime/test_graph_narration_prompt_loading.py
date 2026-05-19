@@ -195,8 +195,6 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "payload.current_event.kind`가 `roll_prompt`" in narrate_prompt
     assert "발견해냈습니다" in narrate_prompt
     assert "포착해냅니다" in narrate_prompt
-    assert "secrets" in narrate_prompt
-    assert "여러 개일 수 있으므로" in narrate_prompt
     assert "개인적인 내용을 캐면" in narrate_prompt
     assert "faction" in narrate_prompt
     assert "새로운 소속, 명령, 관계 변화는 만들지 않습니다" in narrate_prompt
@@ -277,7 +275,7 @@ async def test_graph_input_payload_exposes_target_traits(tmp_path):
     assert payload["target_view"]["personal_boundary"] == (
         "deflects personal questions politely"
     )
-    assert payload["target_view"]["secrets"] == ["secretly enjoys practical jokes"]
+    assert "secrets" not in payload["target_view"]
     assert payload["target_view"]["traits"] == ["can speak", "does not rush"]
 
 

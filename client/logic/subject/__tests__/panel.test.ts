@@ -7,13 +7,7 @@ const subject: Subject = {
   role: '주인',
   raceJob: '인간',
   gender: '남성',
-  trust: 4,
-  known: ['불안한 표정으로 뒷문을 살핍니다.'],
   level: 1,
-  stats: [{ label: '몸', value: 9 }],
-  equipment: { weapon: null, armor: null, accessory: null },
-  inventory: [],
-  skills: [],
 };
 
 describe('buildSubjectSlot', () => {
@@ -22,14 +16,11 @@ describe('buildSubjectSlot', () => {
     expect(buildSubjectSlot(subject).chip.short).toBe('NPC');
   });
 
-  test('puts owned gold at the front of the inventory row when supplied', () => {
-    const slot = buildSubjectSlot({
-      ...subject,
-      gold: 5,
-      inventory: [{ id: 'charm', name: '집중 부적', qty: 1, canUse: false, equipSlots: [] }],
-    });
+  test('shows only public subject summary fields', () => {
+    const slot = buildSubjectSlot(subject);
 
     expect(slot.chip).not.toHaveProperty('detail');
-    expect(slot.panel?.sections?.find((section) => section.label === '소지')?.text).toBe('금화(5) · 집중 부적');
+    expect(slot.panel?.bar).toBeUndefined();
+    expect(slot.panel?.sections?.map((section) => section.label)).toEqual(['역할']);
   });
 });

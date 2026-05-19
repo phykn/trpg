@@ -111,7 +111,7 @@ def _protected_attack_refusal(
         return None
     return ActionOutput(
         refuse=RefuseReason(
-            category="meta_breaking",
+            category="invalid_transition",
             message_hint=render("log.error.protected_target", locale),
             target=target["id"],
         )

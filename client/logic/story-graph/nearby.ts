@@ -51,7 +51,7 @@ function personItem(node: StoryGraphNode): NearbyItem {
       id: node.id,
       kindLabel: ko.legend.character,
       title: node.label,
-      body: node.known[0] ?? node.role,
+      body: node.role,
       action: {
         kind: 'text',
         label: ko.panel.talk,

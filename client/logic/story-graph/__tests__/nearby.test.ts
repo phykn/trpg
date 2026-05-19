@@ -15,7 +15,6 @@ const graph: StoryGraphModel = {
       gender: '',
       role: '',
       alive: true,
-      known: [],
     },
     {
       id: 'hall',
@@ -39,8 +38,6 @@ const graph: StoryGraphModel = {
       gender: '',
       role: '주인',
       alive: true,
-      trust: 0,
-      known: ['불안한 표정으로 뒷문을 살핍니다.'],
     },
     {
       id: 'guest',
@@ -53,7 +50,6 @@ const graph: StoryGraphModel = {
       gender: '',
       role: '수상한 손님',
       alive: true,
-      trust: -12,
     },
     {
       id: 'backdoor',
@@ -101,5 +97,6 @@ describe('buildNearbyPanel', () => {
       ['물품', '보급 표식', '줍기'],
       ['퀘스트', '낡은 게시판을 살펴본다', '살펴보기'],
     ]);
+    expect(panel.items[0].body).toBe('주인');
   });
 });

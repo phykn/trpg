@@ -16,7 +16,6 @@ export type PlaceTarget = {
   raceJob: string;
   gender: string;
   blurb: string;
-  trust: number;
 };
 
 export type Place = {
@@ -72,22 +71,18 @@ export type HeroNode = BaseNode & CharacterFields & {
   kind: 'hero';
   status: null;
   reachable: true;
-  known: string[];
 };
 
 export type SubjectNode = BaseNode & CharacterFields & {
   kind: 'subject';
   status: 'engaged';
   reachable: true;
-  trust: number;
-  known: string[];
 };
 
 export type TargetNode = BaseNode & CharacterFields & {
   kind: 'target';
   status: 'reachable_meet' | 'unreachable_meet';
   reachable: boolean;
-  trust: number;
 };
 
 export type PlaceNode = BaseNode & {

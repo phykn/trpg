@@ -93,14 +93,11 @@ async def _run_single(
     run_root: Path,
     profile: str,
     max_turns: int,
-    base_url: str,
     run_id: str,
 ) -> dict:
     run_dir = run_root / agent_name
     # Per-agent LLMClient so request/response logs stay with each transcript.
-    llm = LLMClient.from_single(
-        base_url=base_url, model="local", log_dir=run_dir / "llm"
-    )
+    llm = LLMClient.from_env(log_dir=run_dir / "llm")
     agent = PlayerAgent(
         name=agent_name,
         prompt_path=_agent_prompt_path(agent_name),
@@ -118,8 +115,6 @@ async def _run_single(
 
 
 async def main_async(args: argparse.Namespace) -> None:
-    base_url = os.environ["BASE_URL"]
-
     run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     run_root = QA_RUN_ROOT
     run_root.mkdir(parents=True, exist_ok=True)
@@ -146,7 +141,6 @@ async def main_async(args: argparse.Namespace) -> None:
             run_root=run_root,
             profile=args.profile,
             max_turns=args.turns,
-            base_url=base_url,
             run_id=run_id,
         )
         print(
