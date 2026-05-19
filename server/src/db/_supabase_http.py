@@ -107,7 +107,7 @@ class _Storage:
         encoded = "/".join(quote(seg, safe="") for seg in path.split("/"))
         url = f"{self._base}/object/{self._bucket}/{encoded}"
         r = await self._client.get(url, headers=self._headers)
-        if r.status_code == 404:
+        if r.status_code == 404 or _is_storage_not_found(r):
             raise FileNotFoundError(path)
         if r.status_code >= 300:
             raise PersistenceFailed(f"storage get {path}: {r.status_code} {r.text}")
@@ -168,3 +168,13 @@ class _Storage:
         returned by Storage with `metadata: null`."""
         objs = await self._list_objects(prefix, label="list-dirs")
         return [obj["name"] for obj in objs if obj.get("metadata") is None]
+
+
+def _is_storage_not_found(response: httpx.Response) -> bool:
+    if response.status_code != 400:
+        return False
+    try:
+        body = response.json()
+    except json.JSONDecodeError:
+        return False
+    return body.get("statusCode") == "404" or body.get("error") == "not_found"

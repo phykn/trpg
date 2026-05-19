@@ -6,8 +6,10 @@ them (e.g. the API integration tests).
 
 import json
 
+import httpx
 import pytest
 
+from src.db._supabase_http import _is_storage_not_found
 from tests._fakes import make_scenario_repo
 
 
@@ -80,6 +82,21 @@ async def test_load_seed_records_reads_aggregate_kind_file():
 
     assert set(items) == {"sword", "shield"}
     assert items["shield"]["name"] == "방패"
+
+
+async def test_load_seed_records_missing_kind_returns_empty():
+    repo, _ = make_scenario_repo()
+
+    assert await repo.load_seed_records("default", "statuses") == {}
+
+
+def test_storage_not_found_accepts_supabase_400_not_found_shape():
+    response = httpx.Response(
+        400,
+        json={"statusCode": "404", "error": "not_found", "message": "Object not found"},
+    )
+
+    assert _is_storage_not_found(response) is True
 
 
 async def test_list_profiles_walks_top_level_dirs():
