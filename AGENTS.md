@@ -4,7 +4,6 @@ This repository is a Korean-language TRPG split into a FastAPI server, an Expo c
 
 ## Read First
 
-- Temporary theory work rule: read `THEORY_LOOP.md` before theory/research tasks and before starting each theory cycle.
 - Root overview and dev/deploy commands: `README.md`.
 - Product and runtime contracts: `docs/README.md`, `docs/plan.md`.
 - Backend work: `server/AGENTS.md`.
