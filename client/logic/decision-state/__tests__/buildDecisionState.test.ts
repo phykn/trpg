@@ -27,16 +27,34 @@ const quest: Quest = {
 };
 
 describe('buildDecisionState', () => {
-  test('includes place and first active quest goal', () => {
+  test('shows compact place and goal without labels', () => {
     const items = buildDecisionState({
-      place,
-      quest,
+      place: { ...place, name: '칭호의 안개 숲' },
+      quest: {
+        ...quest,
+        goals: ['버려진 어촌을 거쳐 빈 객석의 극장으로 향합니다'],
+      },
       combat: null,
       heroStatus: [],
       latestCues: [],
     });
 
-    expect(items.map((item) => item.text)).toEqual(['마을', '북문 흔적 확인']);
+    expect(items.map((item) => [item.label, item.text])).toEqual([
+      ['', '칭호의 안개 숲'],
+      ['', '버려진 어촌을 거쳐 빈 객석...'],
+    ]);
+  });
+
+  test('shows place when no active goal is available', () => {
+    const items = buildDecisionState({
+      place,
+      quest: null,
+      combat: null,
+      heroStatus: [],
+      latestCues: [],
+    });
+
+    expect(items.map((item) => item.text)).toEqual(['마을']);
   });
 
   test('shows scenario completion when no active quest remains', () => {
@@ -52,7 +70,7 @@ describe('buildDecisionState', () => {
     expect(items).toEqual([
       {
         id: 'scenario:completed',
-        label: '목표',
+        label: '',
         text: '이야기 완료',
         tone: 'accent',
       },

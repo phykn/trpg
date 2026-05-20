@@ -124,11 +124,15 @@ def normalize_suggestion(value: object) -> GraphSuggestion | None:
         text = value.strip()
         if not text or _looks_like_json_fragment(text):
             return None
+        if _is_targetless_generic_suggestion(text, text):
+            return None
         return GraphSuggestion(label=text, input_text=text)
     if isinstance(value, GraphSuggestion):
         label = value.label.strip()
         input_text = value.input_text.strip()
         if not label or not input_text:
+            return None
+        if _is_targetless_generic_suggestion(label, input_text):
             return None
         return value.model_copy(update={"label": label, "input_text": input_text})
     if isinstance(value, dict):
@@ -141,6 +145,8 @@ def normalize_suggestion(value: object) -> GraphSuggestion | None:
         if not label or not input_text:
             return None
         if _looks_like_json_fragment(label) or _looks_like_json_fragment(input_text):
+            return None
+        if _is_targetless_generic_suggestion(label, input_text):
             return None
         intent = value.get("intent")
         return GraphSuggestion(
@@ -159,6 +165,21 @@ def _looks_like_json_fragment(text: str) -> bool:
         return True
     lowered = text.lower()
     return '"label"' in lowered or '"input_text"' in lowered or '"input_te' in lowered
+
+
+def _is_targetless_generic_suggestion(label: str, input_text: str) -> bool:
+    generic = {
+        _codepoint_text(0xB300, 0xD654, 0xC2DC, 0xC791, 0xD558, 0xAE30),
+        _codepoint_text(0xB300, 0xD654, 0xC2DC, 0xB3C4, 0xD558, 0xAE30),
+        _codepoint_text(0xB9D0, 0xAC78, 0xAE30),
+        _codepoint_text(0xB9D0, 0xC744, 0xAC74, 0xB2E4),
+        _codepoint_text(0xC0C1, 0xD669, 0xD30C, 0xC545, 0xD558, 0xAE30),
+    }
+    return _normalize(label) in generic and _normalize(input_text) in generic
+
+
+def _codepoint_text(*values: int) -> str:
+    return "".join(chr(value) for value in values)
 
 
 def _has_quest_status(runtime: GameRuntimeState, statuses: set[str]) -> bool:

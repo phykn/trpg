@@ -33,18 +33,20 @@ export function DecisionStateStrip({ items }: { items: DecisionStateItem[] }) {
         return (
           <View
             key={item.id}
-            className={`flex-row flex-wrap items-baseline gap-x-1.5 gap-y-0.5 rounded-sm border px-2 py-1 ${containerClasses}`}
-            style={{ maxWidth: 220, flexShrink: 0 }}
+            className={`flex-row items-baseline gap-x-1.5 rounded-sm border px-2 py-1 ${containerClasses}`}
+            style={{ maxWidth: 180, flexShrink: 0 }}
           >
-            <Text
-              className={`font-sans-semibold text-caption ${textClasses}`}
-              numberOfLines={1}
-            >
-              {item.label}
-            </Text>
+            {item.label ? (
+              <Text
+                className={`font-sans-semibold text-caption ${textClasses}`}
+                numberOfLines={1}
+              >
+                {item.label}
+              </Text>
+            ) : null}
             <Text
               className={`font-sans-medium text-caption ${textClasses}`}
-              numberOfLines={2}
+              numberOfLines={1}
               style={{ flexShrink: 1, minWidth: 0 }}
             >
               {item.text}

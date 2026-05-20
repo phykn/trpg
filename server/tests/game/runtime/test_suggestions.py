@@ -397,6 +397,30 @@ def test_parse_graph_narration_answer_drops_json_fragment_suggestions():
     ]
 
 
+def test_parse_graph_narration_answer_drops_targetless_generic_suggestions():
+    answer = "\n".join(
+        [
+            "흰 머리 여인이 아직 말을 아낍니다.",
+            "---TRPG_META---",
+            """
+            {
+              "suggestions": [
+                {"label": "대화 시작하기", "input_text": "대화 시작하기"},
+                {"label": "상황 파악하기", "input_text": "상황 파악하기"},
+                {"label": "흰 머리 여인에게 묻기", "input_text": "흰 머리 여인에게 섬의 규칙을 묻습니다"}
+              ]
+            }
+            """,
+        ]
+    )
+
+    result = parse_graph_narration_answer(answer)
+
+    assert [suggestion.input_text for suggestion in result.suggestions] == [
+        "흰 머리 여인에게 섬의 규칙을 묻습니다"
+    ]
+
+
 def test_parse_graph_narration_answer_removes_empty_direct_speech_lines():
     answer = "\n".join(
         [

@@ -16,6 +16,7 @@ type BuildDecisionStateInput = {
 };
 
 const MAX_ITEMS = 5;
+const COMPACT_TEXT_MAX_CHARS = 15;
 
 export function buildDecisionState(input: BuildDecisionStateInput): DecisionStateItem[] {
   const items: DecisionStateItem[] = [];
@@ -23,8 +24,8 @@ export function buildDecisionState(input: BuildDecisionStateInput): DecisionStat
   if (input.place) {
     items.push({
       id: 'place',
-      label: ko.decision.place,
-      text: input.place.name,
+      label: '',
+      text: compactText(input.place.name),
       tone: 'neutral',
     });
   }
@@ -32,15 +33,15 @@ export function buildDecisionState(input: BuildDecisionStateInput): DecisionStat
   if (input.quest?.status === 'active' && input.quest.goals[0]) {
     items.push({
       id: `quest:${input.quest.id}:goal`,
-      label: ko.decision.goal,
-      text: input.quest.goals[0],
+      label: '',
+      text: compactText(input.quest.goals[0]),
       tone: 'accent',
     });
   } else if (input.scenarioCompleted) {
     items.push({
       id: 'scenario:completed',
-      label: ko.decision.goal,
-      text: ko.quest.completed,
+      label: '',
+      text: compactText(ko.quest.completed),
       tone: 'accent',
     });
   }
@@ -78,4 +79,10 @@ export function buildDecisionState(input: BuildDecisionStateInput): DecisionStat
 
 function cueTone(cue: NarrationCue): DecisionStateTone {
   return cue.kind === 'warning' ? 'danger' : 'accent';
+}
+
+function compactText(value: string): string {
+  return value.length > COMPACT_TEXT_MAX_CHARS
+    ? `${value.slice(0, COMPACT_TEXT_MAX_CHARS)}...`
+    : value;
 }
