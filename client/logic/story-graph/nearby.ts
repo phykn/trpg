@@ -103,11 +103,13 @@ function taskItem(node: StoryGraphNode): NearbyItem {
     kindLabel: ko.legend.quest,
     title: node.label,
     body: node.kind === 'quest' ? node.summary : '',
-    action: {
-      kind: 'text',
-      label: ko.panel.inspect,
-      text: compose.inspect(node.label),
-    },
+    action: node.kind === 'quest' && node.reachable
+      ? {
+          kind: 'text',
+          label: ko.panel.inspect,
+          text: compose.inspect(node.label),
+        }
+      : undefined,
   };
 }
 

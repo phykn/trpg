@@ -1,4 +1,5 @@
 import { buildNearbyPanel } from '../nearby';
+import { mergeStoryGraphs } from '../presenters';
 import type { StoryGraphModel } from '../types';
 
 const graph: StoryGraphModel = {
@@ -98,5 +99,22 @@ describe('buildNearbyPanel', () => {
       ['퀘스트', '낡은 게시판을 살펴본다', '살펴보기'],
     ]);
     expect(panel.items[0].body).toBe('주인');
+  });
+
+  test('does not create one-tap actions for quest nodes kept only from cache', () => {
+    const merged = mergeStoryGraphs(graph, {
+      summary: '비 내리는 여관',
+      nodes: graph.nodes.filter((node) => node.kind !== 'quest'),
+      edges: [],
+    });
+
+    const panel = buildNearbyPanel(merged);
+    const staleQuest = panel.items.find((item) => item.id === 'notice');
+
+    expect(staleQuest).toMatchObject({
+      kindLabel: '퀘스트',
+      title: '낡은 게시판을 살펴본다',
+      action: undefined,
+    });
   });
 });

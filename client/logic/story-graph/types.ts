@@ -114,7 +114,7 @@ export type ItemNode = BaseNode & {
 export type QuestNode = BaseNode & {
   kind: 'quest';
   status: null;
-  reachable: true;
+  reachable: boolean;
   questDifficulty: string;
   rewards: { gold: number; exp: number };
   giver: string;

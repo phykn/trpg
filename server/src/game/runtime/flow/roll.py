@@ -12,15 +12,19 @@ from openai import APIConnectionError, InternalServerError, RateLimitError
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
 from src.game.domain.errors import LLMUnavailable
-from src.game.domain.graph import Graph, GraphEdge
+from src.game.domain.graph import Graph
 from src.game.domain.memory import BonusItem, GMLogEntry, LogEntry, RollLogEntry
+from src.game.engines.graph.roll import (
+    plan_roll_check,
+    plan_roll_graph_effects,
+    plan_roll_quest_trigger,
+)
 from src.game.engines.graph.progression import plan_progression_after_quest_completion
 from src.game.engines.graph.quest import (
     plan_quest_progress_for_trigger,
     plan_quest_rewards,
 )
-from src.game.rules import RULES
-from src.game.rules.dc import compute_grade, compute_required_roll, pick_dc
+from src.game.rules.dc import compute_grade, pick_dc
 from src.locale.labels import roll_dice_label, stat_label
 from src.locale.render import render
 from src.llm.calls.runner import get_prompt
@@ -413,18 +417,23 @@ async def _resolve_graph_roll(
         next_turn=next_progress.turn_count,
     )
     outcome: GraphResultOutcome = "success" if entry.result == "success" else "failure"
-    next_runtime, changed_edge_ids = _apply_roll_relation_effect(
-        next_runtime,
-        action,
-        grade,
+    effect = plan_roll_graph_effects(
+        next_runtime.graph,
+        player_id=next_runtime.progress.player_id,
+        action=action,
+        grade=grade,
         roll_outcome=outcome,
     )
-    next_runtime, changed_node_ids = _apply_roll_xp_effect(
-        next_runtime,
-        action,
-        grade,
-        roll_outcome=outcome,
-    )
+    if effect.changes:
+        effect_apply = apply_runtime_graph_changes(next_runtime, effect.changes)
+        next_runtime = effect_apply.runtime
+        changed_node_ids = list(effect_apply.changed_node_ids)
+        changed_edge_ids = list(effect_apply.changed_edge_ids)
+        removed_edge_ids = list(effect_apply.removed_edge_ids)
+    else:
+        changed_node_ids = []
+        changed_edge_ids = []
+        removed_edge_ids = []
     (
         next_runtime,
         quest_dirty,
@@ -432,7 +441,7 @@ async def _resolve_graph_roll(
     ) = _apply_roll_quest_effect(next_runtime, action, roll_outcome=outcome)
     changed_node_ids.extend(quest_dirty.changed_node_ids)
     changed_edge_ids.extend(quest_dirty.changed_edge_ids)
-    removed_edge_ids = list(quest_dirty.removed_edge_ids)
+    removed_edge_ids.extend(quest_dirty.removed_edge_ids)
     next_active_quest_id = next_runtime.progress.active_quest_id
     if completed_quest_ids:
         progression = plan_progression_after_quest_completion(
@@ -611,13 +620,16 @@ def build_pending_roll(
     player_id: str | None = None,
     reason: str | None = None,
 ) -> dict[str, Any]:
-    stat = _roll_stat(action)
-    label = stat_label(stat, locale)
-    stats = player_properties.get("stats")
-    stat_value = stats.get(stat, 10) if isinstance(stats, dict) else 10
     base_dc = _default_roll_dc()
-    effective_dc = _effective_roll_dc(base_dc, graph, player_id, action)
-    required_roll = compute_required_roll(effective_dc, _int(stat_value, stat))
+    check = plan_roll_check(
+        graph,
+        player_properties=player_properties,
+        player_id=player_id,
+        action=action,
+        base_dc=base_dc,
+    )
+    stat = check.stat
+    label = stat_label(stat, locale)
     body = reason or _roll_body(action, locale)
     return {
         "id": f"roll_{secrets.token_hex(4)}",
@@ -627,27 +639,11 @@ def build_pending_roll(
         "check_reason": body,
         "stat": stat,
         "stat_label": label,
-        "required_roll": required_roll,
+        "required_roll": check.required_roll,
         "base_dc": base_dc,
-        "effective_dc": effective_dc,
+        "effective_dc": check.effective_dc,
         "payload": build_pending_action_payload(action),
     }
-
-
-def _roll_stat(action: Action) -> str:
-    if action.verb == "perceive":
-        return "mind"
-    if action.verb == "speak":
-        return "presence"
-    if action.verb == "move":
-        return "agility"
-    if action.verb == "use":
-        return "mind"
-    if action.verb == "transfer":
-        if action.how == "steal":
-            return "agility"
-        return "presence"
-    return "body"
 
 
 def _roll_body(action: Action, locale: str) -> str:
@@ -660,94 +656,6 @@ def _roll_body(action: Action, locale: str) -> str:
     return render("runtime.roll.body.default", locale)
 
 
-def _effective_roll_dc(
-    base_dc: int,
-    graph: Graph | None,
-    player_id: str | None,
-    action: Action,
-) -> int:
-    if graph is None or player_id is None:
-        return base_dc
-    target = _roll_npc_target(graph, player_id, action)
-    if target is None:
-        return base_dc
-    affinity = _relation_affinity(graph, target, player_id)
-    affinity_band = int(affinity / 10)
-    return max(1, min(20, base_dc - affinity_band))
-
-
-def _apply_roll_relation_effect(
-    runtime: GameRuntimeState,
-    action: Action,
-    grade: str,
-    *,
-    roll_outcome: GraphResultOutcome,
-) -> tuple[GameRuntimeState, list[str]]:
-    target = _roll_npc_target(
-        runtime.graph,
-        runtime.progress.player_id,
-        action,
-    )
-    if target is None:
-        return runtime, []
-    delta = _roll_affinity_delta(action, grade, roll_outcome)
-    if delta == 0:
-        return runtime, []
-
-    graph = runtime.graph.model_copy(deep=True)
-    edge_id = _relation_edge_id(target, runtime.progress.player_id)
-    edge = graph.edges.get(edge_id)
-    if edge is None:
-        edge = GraphEdge(
-            id=edge_id,
-            type="relation",
-            from_node_id=target,
-            to_node_id=runtime.progress.player_id,
-            properties={"affinity": 0},
-        )
-        graph.edges[edge_id] = edge
-
-    affinity = edge.properties.get("affinity")
-    current = affinity if isinstance(affinity, int) else 0
-    edge.properties["affinity"] = current + delta
-    return runtime.model_copy(update={"graph": graph}), [edge_id]
-
-
-def _apply_roll_xp_effect(
-    runtime: GameRuntimeState,
-    action: Action,
-    grade: str,
-    *,
-    roll_outcome: GraphResultOutcome,
-) -> tuple[GameRuntimeState, list[str]]:
-    if roll_outcome != "success":
-        return runtime, []
-    amount = RULES.growth.roll_xp.get(grade, 0)
-    if amount <= 0:
-        return runtime, []
-    player_id = runtime.progress.player_id
-    player = runtime.graph.nodes.get(player_id)
-    if player is None:
-        return runtime, []
-    key = _roll_xp_award_key(action)
-    existing = player.properties.get("xp_award_keys")
-    keys = (
-        [item for item in existing if isinstance(item, str)]
-        if isinstance(existing, list)
-        else []
-    )
-    if key in keys:
-        return runtime, []
-
-    graph = runtime.graph.model_copy(deep=True)
-    next_player = graph.nodes[player_id]
-    current_xp = next_player.properties.get("xp_pool")
-    xp_pool = current_xp if isinstance(current_xp, int) else 0
-    next_player.properties["xp_pool"] = xp_pool + amount
-    next_player.properties["xp_award_keys"] = [*keys, key]
-    return runtime.model_copy(update={"graph": graph}), [player_id]
-
-
 def _apply_roll_quest_effect(
     runtime: GameRuntimeState,
     action: Action,
@@ -757,7 +665,11 @@ def _apply_roll_quest_effect(
     dirty = GraphRuntimeDirty()
     if roll_outcome != "success":
         return runtime, dirty, []
-    trigger = _roll_quest_trigger(runtime, action)
+    trigger = plan_roll_quest_trigger(
+        runtime.graph,
+        player_id=runtime.progress.player_id,
+        action=action,
+    )
     if trigger is None:
         return runtime, dirty, []
 
@@ -781,90 +693,6 @@ def _apply_roll_quest_effect(
         next_runtime = reward_apply.runtime
         dirty.add_apply_result(reward_apply)
     return next_runtime, dirty, progress.completed_quest_ids
-
-
-def _roll_quest_trigger(
-    runtime: GameRuntimeState,
-    action: Action,
-) -> tuple[str, str] | None:
-    if action.verb == "speak":
-        target = _roll_npc_target(
-            runtime.graph,
-            runtime.progress.player_id,
-            action,
-        )
-        return ("social_check", target) if target is not None else None
-    if action.verb == "transfer" and action.how not in {
-        "accept",
-        "abandon",
-        "equip",
-        "trade",
-        "steal",
-        "unequip",
-    }:
-        target = _roll_npc_target(
-            runtime.graph,
-            runtime.progress.player_id,
-            action,
-        )
-        return ("social_check", target) if target is not None else None
-    return None
-
-
-def _roll_affinity_delta(
-    action: Action,
-    grade: str,
-    roll_outcome: GraphResultOutcome,
-) -> int:
-    if roll_outcome == "failure":
-        if grade == "critical_failure":
-            return -RULES.social.affinity_critical
-        return RULES.social.affinity_failure
-    if not _is_positive_social_success(action):
-        return 0
-    if grade == "critical_success":
-        return RULES.social.affinity_critical
-    return RULES.social.affinity_success
-
-
-def _roll_xp_award_key(action: Action) -> str:
-    return f"roll:{action.verb}:{_action_target(action) or 'none'}"
-
-
-def _is_positive_social_success(action: Action) -> bool:
-    return action.verb == "speak" and action.how in {"friendly", "recruit"}
-
-
-def _relation_affinity(graph: Graph, npc_id: str, player_id: str) -> int:
-    edge = graph.edges.get(_relation_edge_id(npc_id, player_id))
-    if edge is None:
-        return 0
-    affinity = edge.properties.get("affinity")
-    return affinity if isinstance(affinity, int) else 0
-
-
-def _relation_edge_id(npc_id: str, player_id: str) -> str:
-    return f"relation:{npc_id}:{player_id}"
-
-
-def _roll_npc_target(
-    graph: Graph,
-    player_id: str,
-    action: Action,
-) -> str | None:
-    for candidate in _roll_target_candidates(action):
-        node = graph.nodes.get(candidate)
-        if node is not None and node.type == "character" and candidate != player_id:
-            return candidate
-    return None
-
-
-def _roll_target_candidates(action: Action) -> list[str]:
-    if action.verb == "speak":
-        return _strings(action.to) + _strings(action.what)
-    if action.verb == "transfer":
-        return _strings(action.from_) + _strings(action.to) + _strings(action.what)
-    return _strings(action.to) + _strings(action.what) + _strings(action.with_)
 
 
 def _action_target(action: Action) -> str | None:

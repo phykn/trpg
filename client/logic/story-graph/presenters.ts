@@ -66,6 +66,11 @@ export function mergeStoryGraphs(base: StoryGraphModel, next: StoryGraphModel): 
         gender: node.gender,
         role: node.role,
       };
+    } else if (node.kind === 'quest') {
+      demoted = {
+        ...node,
+        reachable: false,
+      };
     }
     nodes.set(demoted.id, demoted);
   }
