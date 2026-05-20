@@ -8,6 +8,7 @@ from src.game.domain.graph.query import (
     characters_at,
     edges_from,
     inventory_of,
+    items_at,
     known_skills_of,
     location_of,
 )
@@ -61,8 +62,49 @@ def _is_grounded_suggestion(
         return _mentions_any(suggestion, _usable_refs(runtime))
     if intent == "combat":
         return runtime.progress.graph_combat_state is not None
-    if intent in {"inspect", "quest"}:
+    if intent == "inspect":
+        return _is_grounded_inspect_suggestion(runtime, suggestion)
+    if intent == "quest":
         return True
+    return False
+
+
+def _is_grounded_inspect_suggestion(
+    runtime: GameRuntimeState,
+    suggestion: GraphSuggestion,
+) -> bool:
+    raw_text = suggestion.input_text
+    text = _normalize(raw_text)
+    if _normalize(_ko_surroundings()) in text:
+        return True
+    return _input_mentions_any(suggestion, _inspect_target_refs(runtime)) or (
+        _mentions_current_place(runtime, raw_text)
+    )
+
+
+def _inspect_target_refs(runtime: GameRuntimeState) -> set[str]:
+    refs: set[str] = set()
+    place_id = location_of(runtime.graph_index, runtime.progress.player_id)
+    if place_id is None:
+        return refs
+    refs.update(_visible_exit_refs(runtime))
+    refs.update(_visible_character_refs(runtime))
+    for item_id in items_at(runtime.graph_index, place_id):
+        refs.update(_node_refs(runtime, item_id))
+    return refs
+
+
+def _mentions_current_place(runtime: GameRuntimeState, raw_text: str) -> bool:
+    place_id = location_of(runtime.graph_index, runtime.progress.player_id)
+    if place_id is None:
+        return False
+    lowered = raw_text.lower()
+    for ref in _node_refs(runtime, place_id):
+        ref = ref.strip().lower()
+        if not ref:
+            continue
+        if ref in lowered and f"{ref}{_ko_possessive()}" not in lowered:
+            return True
     return False
 
 
@@ -112,6 +154,11 @@ def _node_refs(runtime: GameRuntimeState, node_id: str) -> set[str]:
 
 def _mentions_any(suggestion: GraphSuggestion, refs: set[str]) -> bool:
     text = _normalize(f"{suggestion.label} {suggestion.input_text}")
+    return any(_normalize(ref) in text for ref in refs if _normalize(ref))
+
+
+def _input_mentions_any(suggestion: GraphSuggestion, refs: set[str]) -> bool:
+    text = _normalize(suggestion.input_text)
     return any(_normalize(ref) in text for ref in refs if _normalize(ref))
 
 
@@ -198,3 +245,11 @@ def _ko_accept() -> str:
 
 def _ko_abandon() -> str:
     return chr(0xD3EC) + chr(0xAE30)
+
+
+def _ko_surroundings() -> str:
+    return chr(0xC8FC) + chr(0xBCC0)
+
+
+def _ko_possessive() -> str:
+    return chr(0xC758)

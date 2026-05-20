@@ -122,10 +122,33 @@ def test_filter_grounded_suggestions_drops_combat_when_not_in_combat():
         [
             GraphSuggestion(label="공격", input_text="고블린을 공격합니다", intent="combat"),
             GraphSuggestion(label="확인", input_text="주변을 살핍니다", intent="inspect"),
+            GraphSuggestion(label="용 확인", input_text="용을 살핍니다", intent="inspect"),
         ],
     )
 
     assert [suggestion.input_text for suggestion in result] == ["주변을 살핍니다"]
+
+
+def test_filter_grounded_suggestions_keeps_inspect_for_visible_scene_refs():
+    runtime = _runtime_for_suggestions()
+
+    result = filter_grounded_suggestions(
+        runtime,
+        [
+            GraphSuggestion(label="마을 살피기", input_text="마을을 살핍니다", intent="inspect"),
+            GraphSuggestion(label="상인 살피기", input_text="상인을 살핍니다", intent="inspect"),
+            GraphSuggestion(label="숲 살피기", input_text="숲을 살핍니다", intent="inspect"),
+            GraphSuggestion(label="약초 살피기", input_text="회복 약초를 살핍니다", intent="inspect"),
+            GraphSuggestion(label="용 살피기", input_text="마을의 용을 살핍니다", intent="inspect"),
+            GraphSuggestion(label="마을", input_text="용을 살핍니다", intent="inspect"),
+        ],
+    )
+
+    assert [suggestion.input_text for suggestion in result] == [
+        "마을을 살핍니다",
+        "상인을 살핍니다",
+        "숲을 살핍니다",
+    ]
 
 
 def test_filter_grounded_suggestions_keeps_combat_when_in_combat():

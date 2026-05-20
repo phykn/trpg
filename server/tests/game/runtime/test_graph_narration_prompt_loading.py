@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from src.db.graph.local_fs import LocalFsGraphRepo
@@ -14,6 +16,9 @@ from src.game.runtime.narration.context import (
 from src.game.runtime.state import GameRuntimeState
 from src.game.runtime.flow.turn import run_graph_action_turn
 from src.llm.calls.runner import get_prompt
+
+
+PROMPT_ROOT = Path(__file__).resolve().parents[3] / "src" / "locale" / "prompts"
 
 
 class _PromptCaptureLLM:
@@ -282,6 +287,11 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "플레이어 원문이 단순히 말을 건다는 뜻이면" in narrate_prompt
     assert "무슨 일이신가요" in narrate_prompt
     assert "현재 장소의 visible targets" in narrate_prompt
+    assert "`payload.target_view`는 현재 처리 대상의 세부 묘사" in narrate_prompt
+    assert "`payload.scene_anchor.visible_names`는 현재 배경을 고정하는 이름 목록" in narrate_prompt
+    assert "이름만 보고 세부 묘사, 답변, 단서, 행동 가능성을 만들지 않습니다" in narrate_prompt
+    assert "`target_view.public_knowledge`와 `target_view.available_items`" in narrate_prompt
+    assert "장소 전체의 지식이나 모든 행동 가능성으로 넓히지 않습니다" in narrate_prompt
     assert "이전 기억에 있어도 현재 주변에 있다고 쓰지 않습니다" in narrate_prompt
     assert "현재 목표와 다음 행동" in narrate_prompt
     assert "새로운 여정" in narrate_prompt
@@ -308,6 +318,8 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "보이는 대상 이름과 실제로 꺼낼 말을 함께 씁니다" in narrate_prompt
     assert "루카에게 「이상하다는 동선 기록이 어느 구간이었나요?」라고 묻습니다." in narrate_prompt
     assert "말할 내용이 떠오르지 않으면 `talk` 제안을 만들지 않습니다" in narrate_prompt
+    assert "출력 형식이 틀려도 시스템이 고쳐 준다고 가정하지 말고" in narrate_prompt
+    assert "visible_names에 이름만 있는 대상은 제안 후보가 될 수 있지만" in narrate_prompt
     assert "STATE_PATCH" in intro_prompt
     assert "제공된 성격" in intro_prompt
     assert "훈련, 점검, 안내" not in intro_prompt
@@ -343,6 +355,28 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "Baldur" not in combined
     assert "발더" not in combined
     assert "발게" not in combined
+
+
+def test_graph_narrate_prompt_prefers_grounded_natural_prose_over_hype():
+    prompt = (PROMPT_ROOT / "graph_narrate" / "prompt.ko.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "조금 과장해서 씁니다" not in prompt
+    assert "플레이어의 팬인 GM" not in prompt
+    assert "과장보다 관찰 가능한 변화" in prompt
+    assert "번역투처럼 명사를 겹쳐 설명하지 않습니다" in prompt
+    assert "결과를 칭찬하지 말고 장면이 반응하게 합니다" in prompt
+
+
+def test_graph_narrate_prompt_treats_rhythm_as_order_not_template():
+    prompt = (PROMPT_ROOT / "graph_narrate" / "prompt.ko.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "같은 리듬은 고정 문장틀이 아닙니다" in prompt
+    assert "문장 시작, 서술어, 닫는 초점을 바꿉니다" in prompt
+    assert "이번 턴에서 가장 압력이 큰 대상 하나" in prompt
 
 
 @pytest.mark.asyncio
