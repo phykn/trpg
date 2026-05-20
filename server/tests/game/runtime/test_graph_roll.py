@@ -443,6 +443,7 @@ async def test_run_graph_roll_success_completes_social_check_quest(tmp_path):
         type="quest",
         properties={
             "status": "active",
+            "required": True,
             "triggers": [
                 {
                     "id": "talk_guard",
@@ -452,6 +453,15 @@ async def test_run_graph_roll_success_completes_social_check_quest(tmp_path):
             ],
             "triggers_met": [False],
             "rewards": {"gold": 2, "exp": 4},
+        },
+    )
+    graph.nodes["quest_next"] = GraphNode(
+        id="quest_next",
+        type="quest",
+        properties={
+            "status": "locked",
+            "required": True,
+            "prerequisites": ["quest_social"],
         },
     )
     await repo.save_graph("game-1", graph)
@@ -475,10 +485,11 @@ async def test_run_graph_roll_success_completes_social_check_quest(tmp_path):
     assert result.outcome == "success"
     assert saved_graph.nodes["quest_social"].properties["status"] == "completed"
     assert saved_graph.nodes["quest_social"].properties["triggers_met"] == [True]
+    assert saved_graph.nodes["quest_next"].properties["status"] == "active"
     assert player["gold"] == 2
     assert player["xp_pool"] == 5
-    assert saved_progress.active_quest_id is None
-    assert result.front_state.quest is None
+    assert saved_progress.active_quest_id == "quest_next"
+    assert result.front_state.quest.id == "quest_next"
 
 
 async def test_run_graph_roll_success_grants_roll_xp_once_per_award_key(tmp_path):

@@ -40,6 +40,7 @@ from ..narration.result import (
     parse_graph_narration_answer,
     persist_graph_narration_result,
 )
+from ..narration.safety import guard_speak_narration_player_quote
 from ..request_result import GraphActionRequestResult, rejected_result
 from ..state import GameRuntimeState
 from ..env import env_float
@@ -650,6 +651,13 @@ async def _run_graph_narrative_input(
     if not text:
         text = _fallback_input_narration(runtime, subject_id)
         narration_result = GraphNarrationResult(narration=text)
+    narration_result = guard_speak_narration_player_quote(
+        runtime,
+        action,
+        subject_id,
+        narration_result,
+        player_input,
+    )
 
     return await _finish_graph_narrative_input(
         repo,
@@ -689,6 +697,13 @@ async def _run_graph_narrative_input_stream(
     if not text:
         text = _fallback_input_narration(runtime, subject_id)
         narration_result = GraphNarrationResult(narration=text)
+    narration_result = guard_speak_narration_player_quote(
+        runtime,
+        action,
+        subject_id,
+        narration_result,
+        player_input,
+    )
 
     result = await _finish_graph_narrative_input(
         repo,

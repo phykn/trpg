@@ -14,6 +14,7 @@ from src.game.domain.action import Action
 from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph import Graph, GraphEdge
 from src.game.domain.memory import BonusItem, GMLogEntry, LogEntry, RollLogEntry
+from src.game.engines.graph.progression import plan_progression_after_quest_completion
 from src.game.engines.graph.quest import (
     plan_quest_progress_for_trigger,
     plan_quest_rewards,
@@ -38,6 +39,7 @@ from ..narration.result import (
     parse_graph_narration_answer,
     persist_graph_narration_result,
 )
+from ..narration.safety import guard_speak_narration_player_quote
 from ..pending_action import build_pending_action_payload, load_pending_action
 from ..request_result import (
     GraphActionRequestResult,
@@ -171,6 +173,7 @@ async def run_graph_preroll_stream(
     yield {"type": "result", "result": result}
 
     stream = VisibleNarrationStream()
+    defer_visible_narration = action.verb == "speak"
     if result.pending_roll is not None and llm is not None:
         async for chunk in stream_graph_preroll_narration(
             llm,
@@ -181,15 +184,27 @@ async def run_graph_preroll_stream(
             timeout_s=_roll_narration_timeout_s(),
         ):
             for visible in stream.push(chunk):
-                yield {"type": "narration_delta", "text": visible}
+                if not defer_visible_narration:
+                    yield {"type": "narration_delta", "text": visible}
         for visible in stream.finish():
-            yield {"type": "narration_delta", "text": visible}
+            if not defer_visible_narration:
+                yield {"type": "narration_delta", "text": visible}
 
     narration_result = parse_graph_narration_answer(stream.answer())
     body = result.pending_roll.get("body") if result.pending_roll is not None else ""
     if not narration_result.narration and isinstance(body, str) and body:
         narration_result = GraphNarrationResult(narration=body)
-        yield {"type": "narration_delta", "text": body}
+        if not defer_visible_narration:
+            yield {"type": "narration_delta", "text": body}
+    narration_result = guard_speak_narration_player_quote(
+        result.runtime,
+        action,
+        _action_target(action),
+        narration_result,
+        player_input,
+    )
+    if defer_visible_narration and narration_result.narration:
+        yield {"type": "narration_delta", "text": narration_result.narration}
     final_result = await _finish_preroll_body(repo, result, narration_result)
     yield {"type": "final", "result": final_result}
 
@@ -418,6 +433,23 @@ async def _resolve_graph_roll(
     changed_node_ids.extend(quest_dirty.changed_node_ids)
     changed_edge_ids.extend(quest_dirty.changed_edge_ids)
     removed_edge_ids = list(quest_dirty.removed_edge_ids)
+    next_active_quest_id = next_runtime.progress.active_quest_id
+    if completed_quest_ids:
+        progression = plan_progression_after_quest_completion(
+            next_runtime.graph,
+            completed_quest_ids=completed_quest_ids,
+            active_quest_id=next_runtime.progress.active_quest_id,
+        )
+        if progression.changes:
+            progression_apply = apply_runtime_graph_changes(
+                next_runtime,
+                progression.changes,
+            )
+            next_runtime = progression_apply.runtime
+            changed_node_ids.extend(progression_apply.changed_node_ids)
+            changed_edge_ids.extend(progression_apply.changed_edge_ids)
+            removed_edge_ids.extend(progression_apply.removed_edge_ids)
+        next_active_quest_id = progression.next_active_quest_id
 
     if changed_edge_ids or changed_node_ids or removed_edge_ids:
         await repo.save_graph_changes(
@@ -427,9 +459,9 @@ async def _resolve_graph_roll(
             changed_edge_ids=sorted(set(changed_edge_ids)),
             removed_edge_ids=sorted(set(removed_edge_ids)),
         )
-    if next_runtime.progress.active_quest_id in completed_quest_ids:
+    if completed_quest_ids:
         next_progress = next_runtime.progress.model_copy(
-            update={"active_quest_id": None}
+            update={"active_quest_id": next_active_quest_id}
         )
         next_runtime = next_runtime.model_copy(update={"progress": next_progress})
         await repo.save_progress(next_progress)

@@ -1,5 +1,5 @@
 from src.game.domain.combat import GraphCombatState
-from src.game.domain.memory import ActLogEntry, GMLogEntry, NarrationCue
+from src.game.domain.memory import ActLogEntry, GMLogEntry, NarrationCue, RollLogEntry
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
@@ -515,6 +515,222 @@ def test_graph_front_state_prefers_progress_active_quest():
 
     assert payload.quest is not None
     assert payload.quest.id == "quest_02"
+
+
+def test_graph_front_state_includes_route_step_for_non_adjacent_location_goal():
+    runtime = _runtime()
+    runtime.graph.nodes["forest"].properties["name"] = "숲"
+    runtime.graph.nodes["market"] = GraphNode(
+        id="market",
+        type="location",
+        properties={"name": "시장", "description": "Stalls."},
+    )
+    runtime.graph.edges["connects_to:forest:market"] = GraphEdge(
+        id="connects_to:forest:market",
+        type="connects_to",
+        from_node_id="forest",
+        to_node_id="market",
+    )
+    runtime.graph.nodes["quest_01"].properties["status"] = "active"
+    runtime.graph.nodes["quest_01"].properties["triggers"] = [
+        {
+            "id": "enter_market",
+            "type": "location_enter",
+            "target": "market",
+            "name": "시장으로 향합니다",
+        }
+    ]
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.quest is not None
+    assert payload.quest.goals == ["숲을 거쳐 시장으로 향합니다"]
+
+
+def test_graph_front_state_keeps_direct_location_goal_label():
+    runtime = _runtime()
+    runtime.graph.nodes["forest"].properties["name"] = "숲"
+    runtime.graph.nodes["quest_01"].properties["status"] = "active"
+    runtime.graph.nodes["quest_01"].properties["triggers"] = [
+        {
+            "id": "enter_forest",
+            "type": "location_enter",
+            "target": "forest",
+            "name": "숲으로 향합니다",
+        }
+    ]
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.quest is not None
+    assert payload.quest.goals == ["숲으로 향합니다"]
+
+
+def test_graph_front_state_marks_failed_social_check_goal_as_retryable():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"].properties["status"] = "active"
+    runtime.graph.nodes["quest_01"].properties["triggers"] = [
+        {
+            "id": "convince_goblin",
+            "type": "social_check",
+            "target": "goblin_01",
+            "name": "고블린을 설득합니다",
+        }
+    ]
+    runtime.graph.nodes["quest_01"].properties["triggers_met"] = [False]
+    runtime = runtime.model_copy(
+        update={
+            "log_entries": [
+                *runtime.log_entries,
+                RollLogEntry(
+                    id=3,
+                    kind="roll",
+                    check="매력",
+                    roll=2,
+                    margin=-8,
+                    result="fail",
+                ),
+            ]
+        }
+    )
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.quest is not None
+    assert payload.quest.goals == ["다시 고블린을 설득합니다"]
+
+
+def test_graph_front_state_keeps_failed_social_check_retry_after_narration():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"].properties["status"] = "active"
+    runtime.graph.nodes["quest_01"].properties["triggers"] = [
+        {
+            "id": "convince_goblin",
+            "type": "social_check",
+            "target": "goblin_01",
+            "name": "고블린을 설득합니다",
+        }
+    ]
+    runtime.graph.nodes["quest_01"].properties["triggers_met"] = [False]
+    runtime = runtime.model_copy(
+        update={
+            "log_entries": [
+                *runtime.log_entries,
+                RollLogEntry(
+                    id=3,
+                    kind="roll",
+                    check="매력",
+                    roll=2,
+                    margin=-8,
+                    result="fail",
+                ),
+                GMLogEntry(
+                    id=4,
+                    kind="gm",
+                    text="고블린은 아직 마음을 열지 않습니다.",
+                    outcome="failure",
+                ),
+            ]
+        }
+    )
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.quest is not None
+    assert payload.quest.goals == ["다시 고블린을 설득합니다"]
+
+
+def test_graph_front_state_marks_scenario_completed_when_required_quests_are_done():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"].properties["status"] = "completed"
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.scenario_completed is True
+    assert payload.quest is None
+
+
+def test_graph_front_state_does_not_add_scenario_completion_log_line():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"].properties["status"] = "completed"
+
+    payload = graph_to_front_state(runtime)
+
+    assert all(
+        entry.text
+        != "모든 이야기가 끝났습니다. 원한다면 이 세계에 머물러 더 이어갈 수 있습니다."
+        for entry in payload.log
+    )
+
+
+def test_graph_front_state_preserves_roll_entries_after_completion():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"].properties["status"] = "completed"
+    runtime = runtime.model_copy(
+        update={
+            "log_entries": [
+                *runtime.log_entries,
+                RollLogEntry(
+                    id=3,
+                    kind="roll",
+                    check="매력",
+                    roll=17,
+                    margin=7,
+                    result="success",
+                ),
+            ]
+        }
+    )
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.log[-1].kind == "roll"
+    assert all(
+        getattr(entry, "text", None)
+        != "모든 이야기가 끝났습니다. 원한다면 이 세계에 머물러 더 이어갈 수 있습니다."
+        for entry in payload.log
+    )
+
+
+def test_graph_front_state_exposes_active_chapter():
+    runtime = _runtime()
+    runtime.graph.nodes["chapter_01"] = GraphNode(
+        id="chapter_01",
+        type="chapter",
+        properties={
+            "title": "돌아갈 배는 없었다",
+            "summary": "당신은 안개 숲에서 흰섬의 규칙을 듣습니다.",
+            "status": "active",
+        },
+    )
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.chapter is not None
+    assert payload.chapter.id == "chapter_01"
+    assert payload.chapter.title == "돌아갈 배는 없었다"
+    assert payload.chapter.summary == "당신은 안개 숲에서 흰섬의 규칙을 듣습니다."
+    assert payload.chapter.status == "active"
+
+
+def test_graph_front_state_uses_chapter_description_as_summary_fallback():
+    runtime = _runtime()
+    runtime.graph.nodes["chapter_01"] = GraphNode(
+        id="chapter_01",
+        type="chapter",
+        properties={
+            "title": "돌아갈 배는 없었다",
+            "description": "당신은 선착장에 남겨지고, 안개 숲에서 흰섬의 규칙을 듣습니다.",
+            "status": "active",
+        },
+    )
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.chapter is not None
+    assert payload.chapter.summary == (
+        "당신은 선착장에 남겨지고, 안개 숲에서 흰섬의 규칙을 듣습니다."
+    )
 
 
 def test_graph_front_state_builds_combat_view_when_progress_exists():

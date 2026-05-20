@@ -417,6 +417,20 @@ def test_parse_graph_narration_answer_removes_empty_direct_speech_lines():
     )
 
 
+def test_parse_graph_narration_answer_strips_trailing_ascii_quote_junk():
+    answer = "\n".join(
+        [
+            '선장이 낮게 말합니다. 「돌아갈 배라... 조건이 까다롭지.\\"\\"\\"',
+            "---TRPG_META---",
+            '{"suggestions": []}',
+        ]
+    )
+
+    result = parse_graph_narration_answer(answer)
+
+    assert result.narration == "선장이 낮게 말합니다. 「돌아갈 배라... 조건이 까다롭지."
+
+
 def test_parse_graph_narration_answer_uses_env_marker(monkeypatch):
     monkeypatch.setenv("GRAPH_NARRATION_META_MARKER", "---META---")
     answer = "\n".join(

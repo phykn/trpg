@@ -27,4 +27,9 @@ describe('Composer quick actions', () => {
     expect(source).toContain('keyboardShouldPersistTaps="handled"');
     expect(source).toContain('showsVerticalScrollIndicator={false}');
   });
+
+  test('keeps nearby row expansion separate from nested action buttons', () => {
+    expect(source).toContain('className="flex-row items-center gap-2 rounded-sm bg-canvas-inset px-2 py-2"');
+    expect(source).toContain('accessibilityLabel={`${item.title} ${item.action.label}`}');
+  });
 });

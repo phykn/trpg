@@ -62,6 +62,13 @@ describe('adaptGraphState', () => {
           },
         ],
       },
+      chapter: {
+        id: 'chapter_01',
+        title: '돌아갈 배는 없었다',
+        summary: '흰섬의 첫 장입니다.',
+        status: 'active',
+      },
+      scenarioCompleted: false,
       quest: null,
       questOffers: [
         {
@@ -161,6 +168,8 @@ describe('adaptGraphState', () => {
     expect(state.place?.targets[0].name).toBe('쓰러진 고블린');
     expect(state.place?.targets[1].name).toBe('늑대');
     expect(state.quest).toBeNull();
+    expect(state.chapter?.title).toBe('돌아갈 배는 없었다');
+    expect(state.scenarioCompleted).toBe(false);
     expect(state.questOffers[0]?.title).toBe('첫 의뢰');
     expect(state.questOffers[0]?.actions).toEqual(['accept']);
     expect(state.combat?.round).toBe(2);
@@ -252,6 +261,8 @@ describe('adaptGraphState', () => {
           },
         ],
       },
+      chapter: null,
+      scenarioCompleted: false,
       quest: null,
       questOffers: [],
       combat: null,
@@ -261,8 +272,8 @@ describe('adaptGraphState', () => {
     });
 
     expect(suggestions).toEqual([
-      { label: '에드릭에게 묻기', inputText: '에드릭에게 「무슨 일이 있었나요?」라고 묻습니다' },
-      { label: '늑대에게 묻기', inputText: '늑대에게 「무슨 일이 있었나요?」라고 묻습니다' },
+      { label: '에드릭에게 말걸기', inputText: '에드릭에게 말을 겁니다' },
+      { label: '늑대에게 말걸기', inputText: '늑대에게 말을 겁니다' },
       { label: '망루로 이동', inputText: '망루로 이동합니다' },
     ]);
   });

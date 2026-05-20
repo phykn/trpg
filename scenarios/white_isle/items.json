@@ -92,7 +92,7 @@
   "roan_medal": {
     "id": "roan_medal",
     "name": "로안의 훈장",
-    "description": "로안이 살아남았다는 이유로 받았고, 배삯으로 두고 온 훈장입니다. 버려야만 자유로운 것은 아니라는 질문을 남깁니다.",
+    "description": "기사 로안이 살아남았다는 이유로 받았고, 배삯으로 두고 온 훈장입니다. 버려야만 자유로운 것은 아니라는 질문을 남깁니다.",
     "price": 0,
     "consumable": false,
     "knowledge": [
@@ -102,7 +102,7 @@
   "roan_weathered_mail": {
     "id": "roan_weathered_mail",
     "name": "낡은 쇠사슬 갑옷",
-    "description": "로안이 전장에서 살아남은 뒤에도 벗지 못한 낡은 갑옷입니다.",
+    "description": "기사 로안이 전장에서 살아남은 뒤에도 벗지 못한 낡은 갑옷입니다.",
     "price": 12,
     "consumable": false,
     "slot": "armor",
@@ -132,7 +132,7 @@
   "var_first_coin": {
     "id": "var_first_coin",
     "name": "바르의 첫 금화",
-    "description": "바르가 세상을 이길 수 있다고 믿게 만든 첫 금화입니다. 마지막에는 투자가 아니라 그냥 주는 것이 됩니다.",
+    "description": "바르가 세상을 이길 수 있다고 믿게 만든 첫 금화입니다. 손때가 묻은 가장자리에 오래 쥔 흔적이 남아 있습니다.",
     "price": 0,
     "consumable": false,
     "knowledge": [
@@ -172,7 +172,7 @@
   "yuna_red_seal": {
     "id": "yuna_red_seal",
     "name": "유나의 붉은 인장",
-    "description": "유나가 왕국의 공식 기록을 남기던 붉은 인장입니다. 이제는 빈 종이 위에, 사람을 끝내지 않는 기록을 시작하게 합니다.",
+    "description": "유나가 왕국의 공식 기록을 남기던 붉은 인장입니다. 마른 잉크 자국이 빈 종이를 향해 남아 있습니다.",
     "price": 0,
     "consumable": false,
     "knowledge": [

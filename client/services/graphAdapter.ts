@@ -27,6 +27,8 @@ export function adaptGraphState(state: GraphFrontState): FrontState {
   return {
     hero: adaptHero(state.hero),
     subject: adaptSubject(selectSubjectTarget(state.place?.targets ?? [])),
+    chapter: state.chapter,
+    scenarioCompleted: state.scenarioCompleted,
     quest: state.quest,
     questOffers: state.questOffers,
     place: adaptPlace(state.place),
@@ -77,11 +79,11 @@ function chip(label: string, inputText: string): SuggestionChip {
 }
 
 function talkChip(name: string): SuggestionChip {
-  return { label: `${name}에게 묻기`, inputText: compose.talkTo(name) };
+  return { label: compose.talkLabel(name), inputText: compose.talkTo(name) };
 }
 
 function moveLabel(name: string): string {
-  return compose.moveTo(name).replace(/합니다$/, '');
+  return compose.moveLabel(name);
 }
 
 function uniqueFirst(values: SuggestionChip[], limit: number): SuggestionChip[] {

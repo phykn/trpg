@@ -398,6 +398,10 @@ en = "Your action continues quietly."
 ko = "{target}{은/는} 당신의 말을 듣고 잠시 침묵합니다."
 en = "{target} listens to you and stays quiet for a moment."
 
+[runtime."input.speak_generic"]
+ko = "{target}에게 말을 겁니다."
+en = "You speak to {target}."
+
 [runtime."narration.repeat.neutral"]
 ko = "장면의 긴장은 그대로 남고, 다음 선택이 조용히 당신을 기다립니다."
 en = "The tension remains, and the next choice waits quietly."

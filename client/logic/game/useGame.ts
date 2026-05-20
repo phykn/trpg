@@ -38,6 +38,7 @@ import type { Place } from '@/logic/story-graph';
 import type { Subject } from '@/logic/subject';
 import type {
   CombatCommand,
+  Chapter,
   FrontState,
   GraphAction,
   GraphLevelUpChoice,
@@ -59,6 +60,8 @@ export function useGame() {
   const [gameId, setGameId] = React.useState<string | null>(null);
   const [hero, setHero] = React.useState<Hero | null>(null);
   const [subject, setSubject] = React.useState<Subject | null>(null);
+  const [chapter, setChapter] = React.useState<Chapter | null>(null);
+  const [scenarioCompleted, setScenarioCompleted] = React.useState(false);
   const [quest, setQuest] = React.useState<Quest | null>(null);
   const [questOffers, setQuestOffers] = React.useState<Quest[]>([]);
   const [place, setPlace] = React.useState<Place | null>(null);
@@ -105,6 +108,8 @@ export function useGame() {
   const applyState = React.useCallback((s: FrontState, stateGameId = gameIdRef.current) => {
     setHero(s.hero);
     setSubject(s.subject);
+    setChapter(s.chapter);
+    setScenarioCompleted(s.scenarioCompleted);
     setQuest(s.quest);
     setQuestOffers(s.questOffers ?? []);
     setPlace(s.place);
@@ -391,6 +396,8 @@ export function useGame() {
     gameId,
     hero,
     subject,
+    chapter,
+    scenarioCompleted,
     quest,
     questOffers,
     place,

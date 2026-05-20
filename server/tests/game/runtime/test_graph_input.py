@@ -16,7 +16,7 @@ from src.game.runtime.flow.input import (
     run_graph_input_turn,
     run_graph_input_turn_stream,
 )
-from src.game.runtime.flow.roll import build_pending_roll
+from src.game.runtime.flow.roll import build_pending_roll, run_graph_preroll_stream
 
 
 @pytest.fixture(autouse=True)
@@ -455,6 +455,27 @@ async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
     assert narrate_call["temperature"] == 1.0
 
 
+async def test_graph_input_speak_does_not_store_invented_player_question(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["goblin_01"].properties["name"] = "고블린"
+    await repo.save_graph("game-1", graph)
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]},
+        narration=(
+            "고블린에게 「무슨 일이신가요?」라고 묻습니다.\n"
+            "고블린은 눈을 가늘게 뜨고 당신의 말을 기다립니다."
+        ),
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 말을 건다")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert logs[1].text.startswith("고블린에게 말을 겁니다.")
+    assert "무슨 일이신가요" not in logs[1].text
+
+
 async def test_graph_input_persists_narration_ui_cues(tmp_path):
     repo = await _repo(tmp_path)
     llm = _FakeLLM(
@@ -501,6 +522,114 @@ async def test_graph_input_speak_check_hint_creates_pending_roll(tmp_path):
     assert progress.pending_roll["check_reason"] == reason
     assert [entry.kind for entry in logs] == ["player"]
     assert [call["agent"] for call in llm.calls] == ["classify"]
+
+
+async def test_graph_input_preroll_speak_does_not_store_invented_player_question(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["goblin_01"].properties["name"] = "고블린"
+    await repo.save_graph("game-1", graph)
+    llm = _FakeLLM(
+        {"actions": [{"verb": "pass"}]},
+        narration=(
+            "고블린에게 「무슨 일이신가요?」라고 묻습니다.\n"
+            "고블린은 눈을 가늘게 뜨고 당신의 말을 기다립니다."
+        ),
+    )
+
+    events = [
+        event
+        async for event in run_graph_preroll_stream(
+            llm,
+            repo,
+            "game-1",
+            Action(verb="speak", what="goblin_01", how="friendly"),
+            reason="고블린을 설득하려면 먼저 말을 꺼내야 합니다.",
+            player_input="고블린에게 말을 건다",
+        )
+    ]
+    logs = await repo.load_log_entries("game-1")
+    final = events[-1]["result"]
+    deltas = [event["text"] for event in events if event["type"] == "narration_delta"]
+
+    assert final.status == "roll_required"
+    assert deltas == [
+        "고블린에게 말을 겁니다.\n고블린은 눈을 가늘게 뜨고 당신의 말을 기다립니다."
+    ]
+    assert logs[0].text.startswith("고블린에게 말을 겁니다.")
+    assert "무슨 일이신가요" not in logs[0].text
+    assert final.pending_roll["body"].startswith("고블린에게 말을 겁니다.")
+
+
+async def test_graph_input_speak_for_active_social_check_quest_creates_pending_roll(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["quest_social"] = GraphNode(
+        id="quest_social",
+        type="quest",
+        properties={
+            "title": "섬의 규칙을 듣습니다",
+            "status": "active",
+            "triggers": [
+                {
+                    "id": "ask_goblin",
+                    "type": "social_check",
+                    "target": "goblin_01",
+                }
+            ],
+            "triggers_met": [False],
+        },
+    )
+    await repo.save_graph("game-1", graph)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(update={"active_quest_id": "quest_social"})
+    )
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]}
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 규칙을 묻는다")
+    saved = await repo.load_progress("game-1")
+
+    assert result.status == "roll_required"
+    assert saved.pending_roll["kind"] == "speak"
+    assert saved.pending_roll["stat"] == "presence"
+
+
+async def test_graph_input_speak_for_visible_active_social_check_infers_target(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["quest_social"] = GraphNode(
+        id="quest_social",
+        type="quest",
+        properties={
+            "title": "섬의 규칙을 듣습니다",
+            "status": "active",
+            "triggers": [
+                {
+                    "id": "ask_goblin",
+                    "type": "social_check",
+                    "target": "goblin_01",
+                }
+            ],
+            "triggers_met": [False],
+        },
+    )
+    await repo.save_graph("game-1", graph)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(update={"active_quest_id": "quest_social"})
+    )
+    llm = _FakeLLM({"actions": [{"verb": "speak", "how": "friendly"}]})
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "규칙을 묻는다")
+    saved = await repo.load_progress("game-1")
+
+    assert result.status == "roll_required"
+    assert saved.pending_roll["kind"] == "speak"
 
 
 async def test_graph_input_social_transfer_check_hint_creates_presence_roll(tmp_path):

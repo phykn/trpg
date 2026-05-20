@@ -1,3 +1,5 @@
+import { ko } from '@/locale/ko';
+
 export type GraphSuggestion = {
   label: string;
   input_text: string;
@@ -12,10 +14,11 @@ export type SuggestionChip = {
 };
 
 export function normalizeGraphSuggestion(value: GraphSuggestion): SuggestionChip | null {
-  const label = value.label.trim();
+  const rawLabel = value.label.trim();
   const inputText = value.input_text.trim();
-  if (!label || !inputText) return null;
-  return { label, inputText, intent: value.intent ?? null };
+  if (!rawLabel || !inputText) return null;
+  const intent = value.intent ?? null;
+  return { label: displayLabel(rawLabel, intent), inputText, intent };
 }
 
 export function normalizeStoredSuggestion(value: unknown): SuggestionChip | null {
@@ -37,8 +40,19 @@ export function normalizeStoredSuggestion(value: unknown): SuggestionChip | null
   const inputText = rawInput.trim();
   if (!label || !inputText) return null;
   return {
-    label,
+    label: displayLabel(label, typeof item.intent === 'string' ? item.intent : null),
     inputText,
     intent: typeof item.intent === 'string' ? item.intent : null,
   };
+}
+
+function displayLabel(label: string, intent: string | null): string {
+  const normalized = label.trim().toLowerCase();
+  if (intent === 'inspect' && normalized === 'inspect') return ko.suggestionIntent.inspect;
+  if (intent === 'move' && normalized === 'move') return ko.suggestionIntent.move;
+  if (intent === 'talk' && normalized === 'talk') return ko.suggestionIntent.talk;
+  if (intent === 'use' && normalized === 'use') return ko.suggestionIntent.use;
+  if (intent === 'combat' && normalized === 'combat') return ko.suggestionIntent.combat;
+  if (intent === 'quest' && normalized === 'quest') return ko.suggestionIntent.quest;
+  return label;
 }

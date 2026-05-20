@@ -6,6 +6,7 @@ from pydantic.alias_generators import to_camel
 from src.game.domain.memory import LogEntry
 
 __all__ = [
+    "ChapterPayload",
     "DifficultyBadge",
     "EquipSlot",
     "GraphCombatParticipantPayload",
@@ -58,6 +59,13 @@ class QuestPayload(_CamelModel):
     rewards: QuestRewards
     status: Literal["pending", "active", "completed", "failed"]
     actions: list[Literal["accept", "abandon"]]
+
+
+class ChapterPayload(_CamelModel):
+    id: str
+    title: str
+    summary: str
+    status: Literal["locked", "active", "completed"]
 
 
 class GraphResourcePayload(_CamelModel):
@@ -209,6 +217,8 @@ class GraphPendingRollPayload(_CamelModel):
 
 class GraphFrontStatePayload(_CamelModel):
     hero: GraphHeroPayload
+    chapter: ChapterPayload | None
+    scenario_completed: bool = False
     quest: QuestPayload | None
     quest_offers: list[QuestPayload]
     place: GraphPlacePayload | None

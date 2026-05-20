@@ -183,7 +183,9 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "`ui_cues`와 `suggestions`의 기본값은 빈 배열입니다" in narrate_prompt
     assert "suggestions는 새 행동을 창작하는 기능이 아닙니다" in narrate_prompt
     assert "payload에 이미 드러난 대상, 장소, 물건, 목표를 플레이어 입력문으로 바꾸는 기능입니다" in narrate_prompt
-    assert "조금이라도 추론이 필요하면 빈 배열입니다" in narrate_prompt
+    assert "payload.scene_anchor.visible_names에 명시된 대상과 장소는 제안할 수 있습니다" in narrate_prompt
+    assert "현재 목표가 바로 보이면 목표를 수행하는 입력문을 제안할 수 있습니다" in narrate_prompt
+    assert "`대화 시도하기`, `상황 파악하기`처럼 대상이나 목적이 없는 label은 쓰지 않습니다" in narrate_prompt
     assert "손맛" in narrate_prompt
     assert "손끝에 먼지만 묻어납니다" in narrate_prompt
     assert "플레이어의 팬인 GM" in combined
@@ -263,6 +265,8 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "판정 후 나레이션" in narrate_prompt
     assert "preroll_narration" in narrate_prompt
     assert "판정 전 문장을 반복하지 않습니다" in narrate_prompt
+    assert "critical_success" in narrate_prompt
+    assert "다음 행동 가능성" in narrate_prompt
     assert "본문을 두 번 쓰지 않습니다" in narrate_prompt
     assert "조사 실패" in narrate_prompt
     assert "대화 실패" in narrate_prompt
@@ -275,6 +279,8 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "최근에 같은 NPC가 이미 말한 직접 발화를 그대로 다시 쓰지 않습니다" in narrate_prompt
     assert "자연스러운 한국어 구어" in narrate_prompt
     assert "빈 직접 발화" in narrate_prompt
+    assert "플레이어 원문이 단순히 말을 건다는 뜻이면" in narrate_prompt
+    assert "무슨 일이신가요" in narrate_prompt
     assert "현재 장소의 visible targets" in narrate_prompt
     assert "이전 기억에 있어도 현재 주변에 있다고 쓰지 않습니다" in narrate_prompt
     assert "현재 목표와 다음 행동" in narrate_prompt

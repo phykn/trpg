@@ -1,6 +1,6 @@
 import { fetch } from 'expo/fetch';
 
-import { adaptGraphState, deriveGraphSuggestions } from './graphAdapter';
+import { adaptGraphState } from './graphAdapter';
 import { normalizeGraphSuggestion } from './suggestions';
 import type {
   CombatCommand,
@@ -71,7 +71,7 @@ export async function getGraphSessionById(gameId: string): Promise<SessionPayloa
   return {
     game_id: payload.game_id,
     state,
-    suggestions: adaptSuggestions(payload.suggestions, payload.state),
+    suggestions: adaptSuggestions(payload.suggestions),
   };
 }
 
@@ -85,7 +85,7 @@ export async function initGraphSession(body: InitRequest): Promise<SessionPayloa
   return {
     game_id: payload.game_id,
     state,
-    suggestions: adaptSuggestions(payload.suggestions, payload.state),
+    suggestions: adaptSuggestions(payload.suggestions),
   };
 }
 
@@ -394,19 +394,19 @@ function adaptGraphActionResponse(
     status: payload.status,
     outcome: payload.outcome ?? 'neutral',
     message: payload.message,
-    suggestions: adaptSuggestions(payload.suggestions, payload.state),
+    suggestions: adaptSuggestions(payload.suggestions),
   };
 }
 
-function adaptSuggestions(
-  suggestions: GraphSuggestion[] | undefined,
-  state: GraphActionResponse['state'],
-): SuggestionChip[] {
+function adaptSuggestions(suggestions: GraphSuggestion[] | undefined): SuggestionChip[] {
+  if (!Array.isArray(suggestions)) {
+    return [];
+  }
   const clean = Array.isArray(suggestions)
     ? suggestions.flatMap((suggestion) => {
         const normalized = normalizeGraphSuggestion(suggestion);
         return normalized ? [normalized] : [];
       })
     : [];
-  return clean.length > 0 ? clean : deriveGraphSuggestions(state);
+  return clean;
 }

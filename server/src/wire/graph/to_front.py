@@ -1,4 +1,5 @@
 from src.game.runtime.state import GameRuntimeState
+from .chapters import active_chapter_payload
 from .combat import combat_payload
 from .hero import hero_payload
 from .place import place_payload
@@ -15,8 +16,11 @@ def graph_to_front_state(runtime: GameRuntimeState) -> GraphFrontStatePayload:
     graph = runtime.graph_index
     player_id = runtime.progress.player_id
     player = require_node(graph, player_id, "character")
+    scenario_completed = _scenario_completed(runtime)
     return GraphFrontStatePayload(
         hero=hero_payload(graph, player, runtime.content),
+        chapter=active_chapter_payload(runtime),
+        scenario_completed=scenario_completed,
         quest=active_quest_payload(runtime),
         quest_offers=quest_offer_payloads(runtime),
         place=place_payload(graph, player_id, runtime.progress.locale, runtime.content),
@@ -26,6 +30,17 @@ def graph_to_front_state(runtime: GameRuntimeState) -> GraphFrontStatePayload:
         ),
         pending_roll=_pending_roll_payload(runtime.progress.pending_roll),
         log=list(runtime.log_entries),
+    )
+
+
+def _scenario_completed(runtime: GameRuntimeState) -> bool:
+    required_quests = [
+        node
+        for node in runtime.graph_index.nodes.values()
+        if node.type == "quest" and node.properties.get("required") is not False
+    ]
+    return bool(required_quests) and all(
+        node.properties.get("status") == "completed" for node in required_quests
     )
 
 

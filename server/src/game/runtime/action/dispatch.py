@@ -7,6 +7,7 @@ from src.game.domain.combat import GraphCombatTraceEvent
 from src.game.domain.graph import GraphChange
 from src.game.engines.graph.item_use import GraphItemUseError, plan_item_use
 from src.game.engines.graph.move import GraphMoveError, plan_character_move
+from src.game.engines.graph.progression import plan_progression_after_quest_completion
 from src.game.engines.graph.quest import (
     GraphQuestError,
     plan_quest_abandon,
@@ -84,8 +85,24 @@ def dispatch_graph_action(
     ) as exc:
         raise GraphActionDispatchError(str(exc)) from exc
 
-    if next_runtime.progress.active_quest_id in completed_quest_ids:
-        progress_update = {**progress_update, "active_quest_id": None}
+    if completed_quest_ids:
+        progression = plan_progression_after_quest_completion(
+            next_runtime.graph,
+            completed_quest_ids=completed_quest_ids,
+            active_quest_id=next_runtime.progress.active_quest_id,
+        )
+        if progression.changes:
+            progression_apply = apply_runtime_graph_changes(
+                next_runtime,
+                progression.changes,
+            )
+            next_runtime = progression_apply.runtime
+            dirty.add_apply_result(progression_apply)
+            applied_count += progression_apply.applied
+        progress_update = {
+            **progress_update,
+            "active_quest_id": progression.next_active_quest_id,
+        }
     next_progress = next_runtime.progress.model_copy(update=progress_update)
     next_runtime = next_runtime.model_copy(update={"progress": next_progress})
     return GraphActionDispatchResult(

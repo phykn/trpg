@@ -72,6 +72,14 @@ en = "Characters {count}"
 ko = "장소 {count}"
 en = "Places {count}"
 
+[ui."quest.goal_via"]
+ko = "{via}{을/를} 거쳐 {target}{으로/로} 향합니다"
+en = "Go to {target} via {via}"
+
+[ui."quest.goal_retry"]
+ko = "다시 {goal}"
+en = "Try again: {goal}"
+
 [ui."roll.reason_default"]
 ko = "행동 판정"
 en = "Action check"

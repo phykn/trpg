@@ -53,7 +53,13 @@ const quest: Quest = {
 describe('buildPanelSlots', () => {
   test('collapses contextual system panels into notes and keeps the hero as sheet', () => {
     const slots = buildPanelSlots(
-      { hero, subject, quest, questOffers: [] },
+      {
+        hero,
+        subject,
+        chapter: { title: '돌아갈 배는 없었다', summary: '흰섬의 첫 장입니다.' },
+        quest,
+        questOffers: [],
+      },
       { questDot: true, subjectDot: true },
     );
 
@@ -62,10 +68,31 @@ describe('buildPanelSlots', () => {
     expect(slots[0].chip.dot).toBe(true);
     expect(slots[0].panel?.sections?.map((section) => section.label)).toEqual([
       'NPC',
+      '챕터',
+      '요약',
       '목표',
       '요약',
     ]);
+    expect(slots[0].panel?.sections?.[1]?.text).toBe('돌아갈 배는 없었다');
+    expect(slots[0].panel?.sections?.[2]?.text).toBe('흰섬의 첫 장입니다.');
     expect(slots[1].id).toBe('hero');
     expect(slots[1].chip.short).toBe('시트');
+  });
+
+  test('shows scenario completion when no active quest remains', () => {
+    const slots = buildPanelSlots({
+      hero,
+      subject: null,
+      chapter: { title: '끝나지 않았다는 불', summary: '' },
+      scenarioCompleted: true,
+      quest: null,
+      questOffers: [],
+    });
+
+    expect(slots[0].panel?.sections?.map((section) => [section.label, section.text])).toEqual([
+      ['챕터', '끝나지 않았다는 불'],
+      ['목표', '이야기 완료'],
+      ['요약', '이야기는 여기서 끝납니다.'],
+    ]);
   });
 });

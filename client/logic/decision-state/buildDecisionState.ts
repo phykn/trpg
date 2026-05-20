@@ -12,6 +12,7 @@ type BuildDecisionStateInput = {
   combat: CombatBadge | null;
   heroStatus: string[];
   latestCues: NarrationCue[];
+  scenarioCompleted?: boolean;
 };
 
 const MAX_ITEMS = 5;
@@ -33,6 +34,13 @@ export function buildDecisionState(input: BuildDecisionStateInput): DecisionStat
       id: `quest:${input.quest.id}:goal`,
       label: ko.decision.goal,
       text: input.quest.goals[0],
+      tone: 'accent',
+    });
+  } else if (input.scenarioCompleted) {
+    items.push({
+      id: 'scenario:completed',
+      label: ko.decision.goal,
+      text: ko.quest.completed,
       tone: 'accent',
     });
   }

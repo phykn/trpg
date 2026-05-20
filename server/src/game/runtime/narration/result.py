@@ -125,11 +125,15 @@ def parse_graph_narration_answer(answer: str) -> GraphNarrationResult:
 
 def _clean_narration(text: str) -> str:
     lines = [
-        line
+        _strip_trailing_ascii_quote_junk(line)
         for line in text.splitlines()
         if not re.fullmatch(r'(?:「\s*」|"\s*")', line.strip())
     ]
     return "\n".join(lines).strip()
+
+
+def _strip_trailing_ascii_quote_junk(line: str) -> str:
+    return re.sub(r'(?:\\?["`])+$', "", line.rstrip())
 
 
 def _first_marker_at(text: str, markers: tuple[str, ...]) -> int:

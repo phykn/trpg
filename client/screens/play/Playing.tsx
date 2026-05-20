@@ -19,7 +19,7 @@ import { ko } from '@/locale/ko';
 type Props = { game: Game };
 
 export function Playing({ game }: Props) {
-  const { hero, subject, quest, questOffers, place, combat, storyGraph, log, pendingConfirmation, pendingRoll, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onCombatCommand, onConfirmPending, onRollPending, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpChoices, levelUpLoading, openLevelUp, cancelLevelUp, commitLevelUp } = game;
+  const { hero, subject, chapter, quest, questOffers, place, combat, storyGraph, log, pendingConfirmation, pendingRoll, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onCombatCommand, onConfirmPending, onRollPending, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpChoices, levelUpLoading, openLevelUp, cancelLevelUp, commitLevelUp } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -84,8 +84,9 @@ export function Playing({ game }: Props) {
       combat,
       heroStatus: hero?.status ?? [],
       latestCues,
+      scenarioCompleted: game.scenarioCompleted,
     }),
-    [combat, hero?.status, latestCues, place, quest],
+    [combat, game.scenarioCompleted, hero?.status, latestCues, place, quest],
   );
 
   if (!hero) return null;
@@ -93,7 +94,7 @@ export function Playing({ game }: Props) {
   const slots: PanelSlot[] = [
     { id: 'map', chip: { short: ko.table.map, dot: hasUnseenLocation }, panel: null },
     ...buildPanelSlots(
-      { hero, subject, quest, questOffers },
+      { hero, subject, chapter, scenarioCompleted: game.scenarioCompleted, quest, questOffers },
       { questDot: hasUnseenQuest, subjectDot: hasUnseenSubject },
     ),
   ];

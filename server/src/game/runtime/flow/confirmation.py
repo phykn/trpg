@@ -510,8 +510,32 @@ def _roll_required_by_server(runtime: GameRuntimeState, action: Action) -> bool:
     if action.verb == "move":
         return _is_risky_move(runtime, action)
     if action.verb == "speak":
-        return action.how in {"hostile", "deceptive", "recruit"}
+        return action.how in {"hostile", "deceptive", "recruit"} or _matches_active_social_check(
+            runtime,
+            action,
+        )
     return False
+
+
+def _matches_active_social_check(runtime: GameRuntimeState, action: Action) -> bool:
+    target = _single(action.what) or _single(action.to)
+    if target is None:
+        return False
+    active_id = runtime.progress.active_quest_id
+    if active_id is None:
+        return False
+    quest = runtime.graph.nodes.get(active_id)
+    if quest is None or quest.type != "quest":
+        return False
+    triggers = quest.properties.get("triggers", [])
+    if not isinstance(triggers, list):
+        return False
+    return any(
+        isinstance(trigger, dict)
+        and trigger.get("type") == "social_check"
+        and trigger.get("target") == target
+        for trigger in triggers
+    )
 
 
 def _roll_allowed_from_check_hint(runtime: GameRuntimeState, action: Action) -> bool:

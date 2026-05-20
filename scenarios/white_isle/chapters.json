@@ -2,7 +2,7 @@
   "chapter_01": {
     "id": "chapter_01",
     "title": "돌아갈 배는 없었다",
-    "description": "당신은 로안 일행과 선착장에 남겨지고, 안개 숲에서 흰섬의 규칙을 듣습니다.",
+    "description": "당신은 선착장에 남겨지고, 안개 숲에서 흰섬의 규칙을 듣습니다.",
     "quests": [
       "leave_the_pier",
       "hear_the_island_rule"
@@ -13,7 +13,7 @@
   "chapter_02": {
     "id": "chapter_02",
     "title": "버린 이름들",
-    "description": "당신은 동행들과 섬 안쪽의 장소들을 지나며 로안, 미엘, 바르, 오르트가 각자의 칭호 뒤에 숨은 마음을 마주하게 돕습니다.",
+    "description": "당신은 섬 안쪽의 장소들을 지나며 각자의 칭호 뒤에 숨은 마음을 마주하게 돕습니다.",
     "quests": [
       "face_roan_order",
       "face_miel_tears",

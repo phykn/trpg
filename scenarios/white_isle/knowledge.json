@@ -14,7 +14,7 @@
   "roan_order": {
     "id": "roan_order",
     "title": "늦은 퇴각 명령",
-    "summary": "로안은 왕의 명령 뒤에 숨었지만, 죽은 부하들의 이름 앞에서는 자신이 했어야 할 말을 압니다.",
+    "summary": "기사 로안은 왕의 명령 뒤에 숨었지만, 죽은 부하들의 이름 앞에서는 자신이 했어야 할 말을 압니다.",
     "visibility": "public"
   },
   "miel_mask": {

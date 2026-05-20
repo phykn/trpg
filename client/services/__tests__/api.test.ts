@@ -50,6 +50,8 @@ const graphState = (): GraphFrontState => ({
     status: [],
     skills: [],
   },
+  chapter: null,
+  scenarioCompleted: false,
   quest: null,
   questOffers: [],
   place: null,
@@ -176,7 +178,7 @@ describe('graph API helpers', () => {
     expect(result.outcome).toBe('success');
   });
 
-  test('tags restored graph sessions as graph runtime payloads', async () => {
+  test('does not derive fallback suggestions when restored graph session omits suggestions', async () => {
     const state = graphState();
     state.place = {
       id: 'town',
@@ -207,11 +209,42 @@ describe('graph API helpers', () => {
 
     const result = await getGraphSessionById('game-1');
 
-    expect(result?.suggestions).toEqual([
-      { label: '에드릭에게 묻기', inputText: '에드릭에게 「무슨 일이 있었나요?」라고 묻습니다' },
-      { label: '망루로 이동', inputText: '망루로 이동합니다' },
-      { label: '살펴보기', inputText: '주변을 살펴봅니다' },
-    ]);
+    expect(result?.suggestions).toEqual([]);
+  });
+
+  test('does not derive fallback suggestions when server sends an empty list', async () => {
+    const state = graphState();
+    state.place = {
+      id: 'town',
+      name: '광장',
+      description: '',
+      exits: [{ id: 'watch', name: '망루', description: '' }],
+      items: [],
+      targets: [
+        {
+          id: 'edrik_chief',
+          name: '에드릭',
+          kind: 'npc',
+          alive: true,
+          level: 1,
+          raceJob: '',
+          gender: '',
+          role: '',
+        },
+      ],
+    };
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        state,
+        suggestions: [],
+      }),
+    });
+
+    const result = await getGraphSessionById('game-1');
+
+    expect(result?.suggestions).toEqual([]);
   });
 
   test('loads profiles with an abortable request signal', async () => {
@@ -509,6 +542,43 @@ describe('graph API helpers', () => {
 
     expect(result.suggestions).toEqual([
       { label: '북문으로', inputText: '북문으로 이동합니다', intent: 'move' },
+    ]);
+  });
+
+  test('localizes internal server suggestion labels by intent', async () => {
+    fetch.mockResolvedValueOnce(
+      streamResponse([
+        JSON.stringify({
+          type: 'final',
+          payload: {
+            game_id: 'game-1',
+            state: graphState(),
+            status: 'executed',
+            message: null,
+            suggestions: [
+              {
+                label: 'inspect',
+                input_text: '발자국을 자세히 살펴봅니다',
+                intent: 'inspect',
+                action: null,
+              },
+              {
+                label: 'move',
+                input_text: '북문으로 이동합니다',
+                intent: 'move',
+                action: null,
+              },
+            ],
+          },
+        }),
+      ]),
+    );
+
+    const result = await sendGraphInput('game-1', '주변을 확인한다');
+
+    expect(result.suggestions).toEqual([
+      { label: '살펴보기', inputText: '발자국을 자세히 살펴봅니다', intent: 'inspect' },
+      { label: '이동', inputText: '북문으로 이동합니다', intent: 'move' },
     ]);
   });
 

@@ -39,6 +39,26 @@ describe('buildDecisionState', () => {
     expect(items.map((item) => item.text)).toEqual(['마을', '북문 흔적 확인']);
   });
 
+  test('shows scenario completion when no active quest remains', () => {
+    const items = buildDecisionState({
+      place: null,
+      quest: null,
+      combat: null,
+      heroStatus: [],
+      latestCues: [],
+      scenarioCompleted: true,
+    });
+
+    expect(items).toEqual([
+      {
+        id: 'scenario:completed',
+        label: '목표',
+        text: '이야기 완료',
+        tone: 'accent',
+      },
+    ]);
+  });
+
   test('promotes a temporary opportunity cue', () => {
     const cue: NarrationCue = {
       kind: 'opportunity',

@@ -10,6 +10,8 @@ import type { Panel, PanelAction, PanelActions, PanelSlot } from './types';
 type GameSnapshot = {
   hero: Hero;
   subject: Subject | null;
+  chapter?: { title: string; summary: string } | null;
+  scenarioCompleted?: boolean;
   quest: Quest | null;
   questOffers?: Quest[];
 };
@@ -55,6 +57,20 @@ function buildNotesPanel(state: GameSnapshot): Panel {
 
   const activeQuest = state.quest ?? null;
   const firstOffer = state.questOffers?.[0] ?? null;
+  if (state.chapter) {
+    sections.push({
+      label: ko.quest.chapter,
+      text: state.chapter.title,
+      clampLines: 1,
+    });
+    if (state.chapter.summary) {
+      sections.push({
+        label: ko.panel.summary,
+        text: state.chapter.summary,
+        clampLines: 2,
+      });
+    }
+  }
   if (activeQuest) {
     sections.push(
       { label: ko.panel.goal, text: joinOrDash(activeQuest.goals), clampLines: 2 },
@@ -73,6 +89,11 @@ function buildNotesPanel(state: GameSnapshot): Panel {
     if (offerActions.length > 0) {
       actions.push({ label: ko.quest.offer, items: offerActions });
     }
+  } else if (state.scenarioCompleted) {
+    sections.push(
+      { label: ko.panel.goal, text: ko.quest.completed, clampLines: 1 },
+      { label: ko.panel.summary, text: ko.gameOver.ending, clampLines: 2 },
+    );
   }
 
   if (sections.length === 0) {

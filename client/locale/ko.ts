@@ -120,6 +120,14 @@ export const ko = {
     panel: '비어 있음',
     suggestionHint: '아래 입력창에 자유롭게 적어보세요',
   },
+  suggestionIntent: {
+    combat: '전투',
+    inspect: '살펴보기',
+    move: '이동',
+    quest: '퀘스트',
+    talk: '대화',
+    use: '사용',
+  },
   level: {
     title: '레벨업',
     cancel: '취소',
@@ -141,6 +149,8 @@ export const ko = {
     abandon: '포기',
     abandonTitle: '퀘스트 포기',
     abandonBlurb: '진행 상황이 사라집니다.',
+    chapter: '챕터',
+    completed: '이야기 완료',
     name: '퀘스트',
     offer: '제안',
   },
@@ -220,6 +230,7 @@ export const ko = {
 } as const;
 
 export const compose = {
+  talkLabel: (name: string) => `${name}에게 말걸기`,
   moveTo: (name: string) => {
     const last = name.charCodeAt(name.length - 1);
     if (last < 0xac00 || last > 0xd7a3) return `${name}(으)로 이동합니다`;
@@ -227,8 +238,9 @@ export const compose = {
     if (final === 0 || final === 8) return `${name}로 이동합니다`;
     return `${name}으로 이동합니다`;
   },
+  moveLabel: (name: string) => compose.moveTo(name).replace(/합니다$/, ''),
   approachTo: (name: string) => `${name}에게 접근합니다`,
-  talkTo: (name: string) => `${name}에게 「무슨 일이 있었나요?」라고 묻습니다`,
+  talkTo: (name: string) => `${name}에게 말을 겁니다`,
   pickUp: (name: string) => `${name}${josaObject(name)} 줍습니다`,
   inspect: (name: string) => `${name}${josaObject(name)} 살펴봅니다`,
   attack: (name: string) => `${name}${josaObject(name)} 공격합니다`,

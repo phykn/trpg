@@ -22,6 +22,8 @@ export type PendingConfirmation = {
 export type FrontState = {
   hero: Hero;
   subject: Subject | null;
+  chapter: Chapter | null;
+  scenarioCompleted: boolean;
   quest: Quest | null;
   questOffers: Quest[];
   place: Place | null;
@@ -125,6 +127,13 @@ export type GraphNamed = {
   name: string;
 };
 
+export type Chapter = {
+  id: string;
+  title: string;
+  summary: string;
+  status: 'locked' | 'active' | 'completed';
+};
+
 export type GraphEquipSlot = 'weapon' | 'armor' | 'accessory';
 
 export type GraphInventoryItem = {
@@ -225,6 +234,8 @@ export type GraphCombatState = {
 
 export type GraphFrontState = {
   hero: GraphHeroState;
+  chapter: Chapter | null;
+  scenarioCompleted: boolean;
   quest: Quest | null;
   questOffers: Quest[];
   place: GraphPlaceState | null;

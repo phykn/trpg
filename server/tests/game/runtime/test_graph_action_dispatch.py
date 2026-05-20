@@ -246,6 +246,76 @@ def test_quest_abandon_dispatch_clears_active_quest():
     assert result.runtime.graph.nodes["quest_rat"].properties["status"] == "abandoned"
 
 
+def test_move_dispatch_completes_quest_and_activates_next_required_quest():
+    runtime = _runtime()
+    runtime.graph.nodes["chapter_01"] = GraphNode(
+        id="chapter_01",
+        type="chapter",
+        properties={"status": "active", "quests": ["quest_forest"]},
+    )
+    runtime.graph.nodes["chapter_02"] = GraphNode(
+        id="chapter_02",
+        type="chapter",
+        properties={
+            "status": "locked",
+            "quests": ["quest_next"],
+            "prerequisites": ["chapter_01"],
+        },
+    )
+    runtime.graph.nodes["quest_forest"] = GraphNode(
+        id="quest_forest",
+        type="quest",
+        properties={
+            "status": "active",
+            "required": True,
+            "triggers": [
+                {
+                    "id": "reach_forest",
+                    "type": "location_enter",
+                    "target": "forest",
+                }
+            ],
+            "triggers_met": [False],
+        },
+    )
+    runtime.graph.nodes["quest_next"] = GraphNode(
+        id="quest_next",
+        type="quest",
+        properties={
+            "status": "locked",
+            "required": True,
+            "prerequisites": ["quest_forest"],
+        },
+    )
+    runtime.graph.edges["part_of_chapter:quest_forest:chapter_01"] = GraphEdge(
+        id="part_of_chapter:quest_forest:chapter_01",
+        type="part_of_chapter",
+        from_node_id="quest_forest",
+        to_node_id="chapter_01",
+    )
+    runtime.graph.edges["part_of_chapter:quest_next:chapter_02"] = GraphEdge(
+        id="part_of_chapter:quest_next:chapter_02",
+        type="part_of_chapter",
+        from_node_id="quest_next",
+        to_node_id="chapter_02",
+    )
+    runtime = runtime.model_copy(
+        update={
+            "progress": runtime.progress.model_copy(
+                update={"active_quest_id": "quest_forest"}
+            )
+        }
+    )
+
+    result = dispatch_graph_action(runtime, Action(verb="move", to="forest"))
+
+    assert result.runtime.graph.nodes["quest_forest"].properties["status"] == "completed"
+    assert result.runtime.graph.nodes["quest_next"].properties["status"] == "active"
+    assert result.runtime.graph.nodes["chapter_01"].properties["status"] == "completed"
+    assert result.runtime.graph.nodes["chapter_02"].properties["status"] == "active"
+    assert result.runtime.progress.active_quest_id == "quest_next"
+
+
 def test_rest_dispatch_restores_resources_and_advances_one_turn():
     runtime = _runtime()
 

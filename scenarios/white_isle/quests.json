@@ -8,7 +8,8 @@
       {
         "id": "enter_theater",
         "type": "location_enter",
-        "target": "hollow_theater"
+        "target": "hollow_theater",
+        "name": "빈 객석의 극장으로 향합니다"
       }
     ],
     "fail_triggers": [],
@@ -32,7 +33,8 @@
       {
         "id": "enter_graveyard",
         "type": "location_enter",
-        "target": "title_graveyard"
+        "target": "title_graveyard",
+        "name": "칭호의 묘지로 향합니다"
       }
     ],
     "fail_triggers": [],
@@ -51,13 +53,14 @@
   "face_roan_order": {
     "id": "face_roan_order",
     "title": "늦은 퇴각 명령",
-    "description": "녹슨 검의 공터에서 로안이 부하들의 이름 앞에 무릎을 꿇고, 너무 늦은 퇴각 명령을 말합니다.",
+    "description": "녹슨 검의 공터에서 기사 로안의 너무 늦은 퇴각 명령과 남겨진 이름들을 마주합니다.",
     "giver": "roan",
     "triggers": [
       {
         "id": "enter_sword_clearing",
         "type": "location_enter",
-        "target": "sword_clearing"
+        "target": "sword_clearing",
+        "name": "녹슨 검의 공터로 향합니다"
       }
     ],
     "fail_triggers": [],
@@ -81,7 +84,8 @@
       {
         "id": "enter_market",
         "type": "location_enter",
-        "target": "white_market"
+        "target": "white_market",
+        "name": "흰 모래 시장터로 향합니다"
       }
     ],
     "fail_triggers": [],
@@ -105,7 +109,8 @@
       {
         "id": "ask_woman",
         "type": "social_check",
-        "target": "nameless_woman"
+        "target": "nameless_woman",
+        "name": "흰 머리 여인에게 섬의 규칙을 묻습니다"
       }
     ],
     "fail_triggers": [],
@@ -129,7 +134,8 @@
       {
         "id": "enter_forest",
         "type": "location_enter",
-        "target": "fog_forest"
+        "target": "fog_forest",
+        "name": "안개 숲으로 들어갑니다"
       }
     ],
     "fail_triggers": [],
@@ -151,7 +157,8 @@
       {
         "id": "enter_lighthouse",
         "type": "location_enter",
-        "target": "white_lighthouse"
+        "target": "white_lighthouse",
+        "name": "흰 등대에 도착합니다"
       }
     ],
     "fail_triggers": [],
@@ -175,7 +182,8 @@
       {
         "id": "refute_captain",
         "type": "social_check",
-        "target": "reclaimer_captain"
+        "target": "reclaimer_captain",
+        "name": "회수대의 명령에 맞섭니다"
       }
     ],
     "fail_triggers": [],

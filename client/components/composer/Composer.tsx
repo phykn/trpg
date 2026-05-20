@@ -128,46 +128,48 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
             {nearby.items.map((item) => {
               const expanded = expandedNearbyId === item.id;
               return (
-              <Pressable
-                key={item.id}
-                onPress={() => setExpandedNearbyId((prev) => (prev === item.id ? null : item.id))}
-                accessibilityRole="button"
-                accessibilityLabel={item.title}
-                className="flex-row items-center gap-2 rounded-sm bg-canvas-inset px-2 py-2 active:bg-canvas-subtle"
-              >
-                <View className="flex-1 min-w-0">
-                  <View className="flex-row items-baseline gap-1.5">
-                    <Text className="font-sans-semibold text-caption text-accent-fg">
-                      {item.kindLabel}
-                    </Text>
-                    <Text numberOfLines={expanded ? undefined : 1} className="font-sans-semibold text-panel text-fg-default flex-1">
-                      {item.title}
-                    </Text>
-                  </View>
-                  {item.body ? (
-                    <Text numberOfLines={expanded ? undefined : 1} className="font-sans text-caption text-fg-muted">
-                      {item.body}
-                    </Text>
+                <View
+                  key={item.id}
+                  className="flex-row items-center gap-2 rounded-sm bg-canvas-inset px-2 py-2"
+                >
+                  <Pressable
+                    onPress={() => setExpandedNearbyId((prev) => (prev === item.id ? null : item.id))}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.title}
+                    className="flex-1 min-w-0 active:opacity-80"
+                  >
+                    <View className="flex-row items-baseline gap-1.5">
+                      <Text className="font-sans-semibold text-caption text-accent-fg">
+                        {item.kindLabel}
+                      </Text>
+                      <Text numberOfLines={expanded ? undefined : 1} className="font-sans-semibold text-panel text-fg-default flex-1">
+                        {item.title}
+                      </Text>
+                    </View>
+                    {item.body ? (
+                      <Text numberOfLines={expanded ? undefined : 1} className="font-sans text-caption text-fg-muted">
+                        {item.body}
+                      </Text>
+                    ) : null}
+                  </Pressable>
+                  {item.action && onNearbyAction ? (
+                    <Pressable
+                      onPress={() => {
+                        setNearbyOpen(false);
+                        setExpandedNearbyId(null);
+                        onNearbyAction(item.action!);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${item.title} ${item.action.label}`}
+                      className="min-w-14 items-center rounded-sm border border-accent-fg bg-accent-muted px-3 py-1.5 active:opacity-80"
+                    >
+                      <Text className="font-sans-semibold text-caption text-accent-fg">
+                        {item.action.label}
+                      </Text>
+                    </Pressable>
                   ) : null}
                 </View>
-                {item.action && onNearbyAction ? (
-                  <Pressable
-                    onPress={() => {
-                      setNearbyOpen(false);
-                      setExpandedNearbyId(null);
-                      onNearbyAction(item.action!);
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${item.title} ${item.action.label}`}
-                    className="min-w-14 items-center rounded-sm border border-accent-fg bg-accent-muted px-3 py-1.5 active:opacity-80"
-                  >
-                    <Text className="font-sans-semibold text-caption text-accent-fg">
-                      {item.action.label}
-                    </Text>
-                  </Pressable>
-                ) : null}
-              </Pressable>
-            );
+              );
             })}
           </ScrollView>
         </Surface>
