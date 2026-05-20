@@ -6,11 +6,11 @@ param(
 $ErrorActionPreference = "Stop"
 
 $ReleaseDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-. (Join-Path $ReleaseDir "_common.ps1")
+. (Join-Path $ReleaseDir "lib.ps1")
 
 $RepoRoot = Split-Path -Parent $ReleaseDir
 $ClientDir = Join-Path $RepoRoot "client"
-$LlmLauncher = Join-Path $ReleaseDir "run_llm.bat"
+$LlmLauncher = Join-Path $ReleaseDir "llm.bat"
 $LocalWrangler = Join-Path $ClientDir "node_modules\.bin\wrangler.cmd"
 $ServerReleaseEnv = Join-Path $RepoRoot "server\.env.release"
 
@@ -64,7 +64,7 @@ Invoke-Step "Preflight" {
         Assert-Env "RENDER_SERVICE_ID" "RENDER_SERVICE_ID is not set. Render LLM env cannot be updated."
         Assert-Env "LLAMA_CPP_SUDO_PASSWORD" "LLAMA_CPP_SUDO_PASSWORD is not set. Local llama.cpp cannot start through WSL Docker."
         if (-not (Test-Path -LiteralPath $LlmLauncher)) {
-            throw "release/run_llm.bat is missing"
+            throw "release/llm.bat is missing"
         }
     }
 }
@@ -72,7 +72,7 @@ Invoke-Step "Preflight" {
 if (-not $ClientOnly) {
     Invoke-Step "Start local LLM tunnel" {
         Start-Process -FilePath $LlmLauncher -WorkingDirectory $ReleaseDir
-        Write-Host "Started release/run_llm.bat in a separate window."
+        Write-Host "Started release/llm.bat in a separate window."
         Write-Host "That window must stay open while Render uses the local LLM."
         Start-Sleep -Seconds 10
     }

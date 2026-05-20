@@ -7,7 +7,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-. (Join-Path $PSScriptRoot "_common.ps1")
+. (Join-Path $PSScriptRoot "lib.ps1")
 
 Assert-Env "RENDER_API_KEY" "RENDER_API_KEY is not set. Set it to your Render API key before running this script."
 Assert-Env "RENDER_SERVICE_ID" "RENDER_SERVICE_ID is not set. Set it to your Render backend service id before running this script."

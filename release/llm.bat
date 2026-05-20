@@ -1,17 +1,17 @@
 @echo off
 setlocal
 
-set "SERVER=run_llama_cpp.bat"
-set "PORT=8000"
-set "MODEL_ID=gemma4"
+if not defined LLM_SERVER set "LLM_SERVER=llama.bat"
+if not defined PORT set "PORT=8000"
+if not defined MODEL_ID set "MODEL_ID=gemma4"
 set "TBODY={\"model\":\"%MODEL_ID%\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":4}"
 
-start "LLM Server" cmd /c "%~dp0%SERVER%"
+start "LLM Server" cmd /c "%~dp0%LLM_SERVER%"
 
 echo Loading LLM...
 wsl -- bash -c "until curl -sf http://localhost:%PORT%/health >/dev/null 2>&1; do sleep 1; done; curl -s -o /dev/null http://localhost:%PORT%/v1/chat/completions -H 'Content-Type: application/json' -d '%TBODY%'"
 
 echo Opening Cloudflare tunnel and updating Render release env...
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0update_render_llm_url.ps1" -Port %PORT% -ModelId "%MODEL_ID%"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0render_tunnel.ps1" -Port %PORT% -ModelId "%MODEL_ID%"
 
 endlocal

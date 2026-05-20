@@ -14,10 +14,10 @@ Files in this folder:
 
 - `deploy.bat` - double-click entrypoint.
 - `deploy.ps1` - release orchestration.
-- `_common.ps1` - shared PowerShell helpers for env loading, preflight checks, and native command execution.
-- `run_llm.bat` - starts llama.cpp, waits for readiness, opens the Render URL updater.
-- `run_llama_cpp.bat` - starts the local llama.cpp Docker server through WSL.
-- `update_render_llm_url.ps1` - opens a Cloudflare quick tunnel and updates Render LLM env.
+- `lib.ps1` - shared PowerShell helpers for env loading, preflight checks, and native command execution.
+- `llm.bat` - starts llama.cpp, waits for readiness, opens the Render tunnel updater.
+- `llama.bat` - starts the local llama.cpp Docker server through WSL.
+- `render_tunnel.ps1` - opens a Cloudflare quick tunnel and updates Render LLM env.
 - `README.md` - this guide.
 
 Required local setup:
@@ -26,11 +26,11 @@ Required local setup:
 - `client/.env.shared` and `client/.env.release` exist.
 - Wrangler is authenticated or `CLOUDFLARE_API_TOKEN` is available to `npm run deploy`.
 - `RENDER_API_KEY`, `RENDER_SERVICE_ID`, and `LLAMA_CPP_SUDO_PASSWORD` are set in `server/.env.release`.
-- WSL, Docker, `cloudflared`, and the llama.cpp model path in `run_llama_cpp.bat` are available.
+- WSL, Docker, `cloudflared`, and the llama.cpp model path in `llama.bat` are available.
 - Render backend auto-deploy is enabled for the pushed branch, or Render is otherwise configured to deploy after push.
 
-Optional llama.cpp overrides can also live in `server/.env.release` before running `deploy.bat`:
+Optional LLM overrides can also live in `server/.env.release` before running `deploy.bat`:
 
-- `MODEL_ID`, `PORT`
+- `LLM_SERVER`, `MODEL_ID`, `PORT`
 - `LLAMA_CPP_IMAGE`, `LLAMA_CPP_MODEL_PATH`, `LLAMA_CPP_MODEL_VOLUME`, `LLAMA_CPP_CTX`
 - `LLM_TEMP`, `TOPK`, `TOPP`, `MINP`, `PRESENCE`, `REPEAT`
