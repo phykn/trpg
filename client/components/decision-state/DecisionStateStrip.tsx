@@ -6,6 +6,7 @@ function containerToneClass(tone: DecisionStateTone): string {
   if (tone === 'danger') return 'border-danger-fg bg-canvas-subtle';
   if (tone === 'warning') return 'border-accent-fg bg-canvas-subtle';
   if (tone === 'accent') return 'border-accent-fg bg-accent-muted';
+  if (tone === 'level' || tone === 'hp' || tone === 'mp') return 'border-border-default bg-canvas-inset';
   return 'border-border-default bg-canvas-inset';
 }
 
@@ -13,6 +14,9 @@ function textToneClass(tone: DecisionStateTone): string {
   if (tone === 'danger') return 'text-danger-fg';
   if (tone === 'warning') return 'text-accent-fg';
   if (tone === 'accent') return 'text-accent-fg';
+  if (tone === 'level') return 'text-exp-fg';
+  if (tone === 'hp') return 'text-hp-fg';
+  if (tone === 'mp') return 'text-mp-fg';
   return 'text-fg-muted';
 }
 
@@ -33,9 +37,15 @@ export function DecisionStateStrip({ items }: { items: DecisionStateItem[] }) {
         return (
           <View
             key={item.id}
-            className={`flex-row items-baseline gap-x-1.5 rounded-sm border px-2 py-1 ${containerClasses}`}
+            className={`flex-row items-baseline gap-x-1.5 overflow-hidden rounded-sm border px-2 py-1 ${containerClasses}`}
             style={{ maxWidth: 180, flexShrink: 0 }}
           >
+            {item.progress !== undefined ? (
+              <View
+                className="absolute inset-y-0 left-0 bg-exp-fg opacity-20"
+                style={{ width: `${Math.round(item.progress * 100)}%` }}
+              />
+            ) : null}
             {item.label ? (
               <Text
                 className={`font-sans-semibold text-caption ${textClasses}`}

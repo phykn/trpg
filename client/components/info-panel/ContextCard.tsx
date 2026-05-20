@@ -1,23 +1,15 @@
 import React from 'react';
-import { PanResponder, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { Chip, Surface } from '@/components/ui';
-import {
-  MiniMapPanel,
-  type StoryGraphModel,
-  type Place,
-} from '@/logic/story-graph';
-
-import type { PanelAction, PanelSlot } from '@/logic/info-panel/types';
 
 import { PanelBody } from '@/components/info-panel/PanelBody';
+import type { PanelAction, PanelSlot } from '@/logic/info-panel/types';
 
-const CONTEXT_PANEL_MAX_HEIGHT = 340;
+const CONTEXT_PANEL_MAX_HEIGHT = 260;
 
-export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, onAction, actionDisabled = false, leading, trailing }: {
+export function ContextCard({ slots, activeId, onSelect, onAction, actionDisabled = false, leading, trailing }: {
   slots: PanelSlot[];
-  miniMapGraph: StoryGraphModel;
-  place: Place | null;
   activeId: string | null;
   onSelect: (id: string) => void;
   onAction?: (action: PanelAction) => void;
@@ -25,22 +17,7 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, on
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
 }) {
-  const activeSlot = slots.find((s) => s.id === activeId) ?? null;
-  const panel = activeSlot?.panel ?? null;
-  const miniMapOpen = activeId === 'map';
-
-  const panResponder = React.useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => false,
-        onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 8 || Math.abs(g.dy) > 8,
-        onPanResponderTerminationRequest: () => false,
-        onPanResponderMove: () => {},
-        onPanResponderRelease: () => {},
-        onPanResponderTerminate: () => {},
-      }),
-    [],
-  );
+  const panel = slots.find((s) => s.id === activeId)?.panel ?? null;
 
   return (
     <View
@@ -58,7 +35,6 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, on
               variant="tab"
               label={s.chip.short}
               active={s.id === activeId}
-              dot={s.chip.dot}
               onPress={() => onSelect(s.id)}
             />
           ))}
@@ -68,30 +44,12 @@ export function ContextCard({ slots, miniMapGraph, place, activeId, onSelect, on
       {panel && (
         <Surface
           variant="floating"
-          className="mt-1 overflow-hidden"
-          style={{ maxHeight: CONTEXT_PANEL_MAX_HEIGHT }}
-          {...panResponder.panHandlers}
+          className="absolute left-0 right-0 top-10 overflow-hidden"
+          style={{ maxHeight: CONTEXT_PANEL_MAX_HEIGHT, zIndex: 20 }}
         >
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <PanelBody
               panel={panel}
-              onAction={onAction}
-              actionDisabled={actionDisabled}
-            />
-          </ScrollView>
-        </Surface>
-      )}
-      {miniMapOpen && (
-        <Surface
-          variant="floating"
-          className="mt-1 overflow-hidden"
-          style={{ maxHeight: CONTEXT_PANEL_MAX_HEIGHT }}
-          {...panResponder.panHandlers}
-        >
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <MiniMapPanel
-              graph={miniMapGraph}
-              place={place}
               onAction={onAction}
               actionDisabled={actionDisabled}
             />

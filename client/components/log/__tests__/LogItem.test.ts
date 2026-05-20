@@ -40,7 +40,7 @@ describe('RollResult entries', () => {
 
   test('renders roll outcomes as inline result lines, not system cards', () => {
     expect(source).not.toContain('Surface');
-    expect(source).toContain('borderLeftWidth');
+    expect(source).not.toContain('borderLeftWidth');
     expect(source).toContain('tone.label');
   });
 

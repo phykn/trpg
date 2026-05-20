@@ -120,6 +120,7 @@ export type QuestNode = BaseNode & {
   giver: string;
   goals: string[];
   summary: string;
+  actions: ('accept' | 'abandon')[];
 };
 
 export type StoryGraphNode =

@@ -3,6 +3,7 @@ import type { CombatBadge } from '@/logic/combat/types';
 import type { NarrationCue } from '@/logic/log/types';
 import type { Quest } from '@/logic/quest/types';
 import type { Place } from '@/logic/story-graph/types';
+import type { Subject } from '@/logic/subject/types';
 
 import type { DecisionStateItem, DecisionStateTone } from './types';
 
@@ -10,16 +11,50 @@ type BuildDecisionStateInput = {
   place: Place | null;
   quest: Quest | null;
   combat: CombatBadge | null;
+  subject?: Subject | null;
+  heroVitals?: {
+    level: number;
+    exp: number;
+    expMax: number;
+    hp: number;
+    hpMax: number;
+    mp: number;
+    mpMax: number;
+  };
   heroStatus: string[];
   latestCues: NarrationCue[];
   scenarioCompleted?: boolean;
 };
 
-const MAX_ITEMS = 5;
+const MAX_ITEMS = 7;
 const COMPACT_TEXT_MAX_CHARS = 15;
 
 export function buildDecisionState(input: BuildDecisionStateInput): DecisionStateItem[] {
   const items: DecisionStateItem[] = [];
+
+  if (input.heroVitals) {
+    items.push(
+      {
+        id: 'hero:level',
+        label: 'LV',
+        text: `${input.heroVitals.level}`,
+        tone: 'level',
+        progress: progressRatio(input.heroVitals.exp, input.heroVitals.expMax),
+      },
+      {
+        id: 'hero:hp',
+        label: 'HP',
+        text: `${input.heroVitals.hp}/${input.heroVitals.hpMax}`,
+        tone: 'hp',
+      },
+      {
+        id: 'hero:mp',
+        label: 'MP',
+        text: `${input.heroVitals.mp}/${input.heroVitals.mpMax}`,
+        tone: 'mp',
+      },
+    );
+  }
 
   if (input.place) {
     items.push({
@@ -30,14 +65,17 @@ export function buildDecisionState(input: BuildDecisionStateInput): DecisionStat
     });
   }
 
-  if (input.quest?.status === 'active' && input.quest.goals[0]) {
+  const facedName = facedSubjectName(input.combat, input.subject ?? null);
+  if (facedName) {
     items.push({
-      id: `quest:${input.quest.id}:goal`,
+      id: 'subject:faced',
       label: '',
-      text: compactText(input.quest.goals[0]),
+      text: compactText(facedName),
       tone: 'accent',
     });
-  } else if (input.scenarioCompleted) {
+  }
+
+  if (input.scenarioCompleted) {
     items.push({
       id: 'scenario:completed',
       label: '',
@@ -85,4 +123,15 @@ function compactText(value: string): string {
   return value.length > COMPACT_TEXT_MAX_CHARS
     ? `${value.slice(0, COMPACT_TEXT_MAX_CHARS)}...`
     : value;
+}
+
+function progressRatio(value: number, max: number): number {
+  if (max <= 0) return 0;
+  return Math.max(0, Math.min(1, value / max));
+}
+
+function facedSubjectName(combat: CombatBadge | null, subject: Subject | null): string | null {
+  const enemy = combat?.enemies.find((it) => it.alive) ?? combat?.enemies[0] ?? null;
+  if (enemy) return enemy.name;
+  return subject?.alive ? subject.name : null;
 }

@@ -1,5 +1,4 @@
 import { buildNearbyPanel } from '../nearby';
-import { mergeStoryGraphs } from '../presenters';
 import type { StoryGraphModel } from '../types';
 
 const graph: StoryGraphModel = {
@@ -81,6 +80,7 @@ const graph: StoryGraphModel = {
       giver: '',
       goals: ['젖은 의뢰서가 한 장 남아 있습니다.'],
       summary: '젖은 의뢰서가 한 장 남아 있습니다.',
+      actions: ['accept'],
     },
   ],
   edges: [],
@@ -91,30 +91,57 @@ describe('buildNearbyPanel', () => {
     const panel = buildNearbyPanel(graph);
 
     expect(panel.summary).toBe('인물 2 · 장소 1 · 물품 1 · 할 일 1');
-    expect(panel.items.map((item) => [item.kindLabel, item.title, item.action?.label])).toEqual([
-      ['캐릭터', '여관 주인', '대화'],
-      ['캐릭터', '구석의 손님', '접근'],
-      ['장소', '뒷문', '이동'],
-      ['물품', '보급 표식', '줍기'],
-      ['퀘스트', '낡은 게시판을 살펴본다', '살펴보기'],
+    expect(panel.items.map((item) => [item.kindLabel, item.title, item.action?.label, item.actions?.map((action) => action.label)])).toEqual([
+      ['캐릭터', '여관 주인', '대화', undefined],
+      ['캐릭터', '구석의 손님', '접근', undefined],
+      ['장소', '뒷문', '이동', undefined],
+      ['물품', '보급 표식', '줍기', undefined],
+      ['퀘스트', '낡은 게시판을 살펴본다', undefined, ['수락']],
     ]);
     expect(panel.items[0].body).toBe('주인');
+    expect(panel.items[4].body).toBe('젖은 의뢰서가 한 장 남아 있습니다.');
   });
 
-  test('does not create one-tap actions for quest nodes kept only from cache', () => {
-    const merged = mergeStoryGraphs(graph, {
-      summary: '비 내리는 여관',
-      nodes: graph.nodes.filter((node) => node.kind !== 'quest'),
-      edges: [],
+  test('shows quest goals in nearby task rows before falling back to summary', () => {
+    const panel = buildNearbyPanel({
+      ...graph,
+      nodes: graph.nodes.map((node) => node.kind === 'quest'
+        ? {
+            ...node,
+            goals: ['선착장으로 돌아갈 방법 확인', '안개 숲의 표식을 조사'],
+            summary: '돌아갈 배는 없습니다.',
+          }
+        : node),
     });
 
-    const panel = buildNearbyPanel(merged);
+    expect(panel.items.find((item) => item.id === 'notice')?.body).toBe(
+      '선착장으로 돌아갈 방법 확인 · 안개 숲의 표식을 조사',
+    );
+  });
+
+  test('shows abandon as the only task action for accepted quests', () => {
+    const panel = buildNearbyPanel({
+      ...graph,
+      nodes: graph.nodes.map((node) => node.kind === 'quest'
+        ? { ...node, actions: ['abandon'] }
+        : node),
+    });
+
+    expect(panel.items.find((item) => item.id === 'notice')?.actions?.map((action) => action.label)).toEqual(['포기']);
+  });
+
+  test('hides completed or non-actionable quest nodes from nearby tasks', () => {
+    const completed = {
+      ...graph,
+      nodes: graph.nodes.map((node) => node.kind === 'quest'
+        ? { ...node, actions: [] }
+        : node),
+    };
+
+    const panel = buildNearbyPanel(completed);
     const staleQuest = panel.items.find((item) => item.id === 'notice');
 
-    expect(staleQuest).toMatchObject({
-      kindLabel: '퀘스트',
-      title: '낡은 게시판을 살펴본다',
-      action: undefined,
-    });
+    expect(panel.summary).toBe('인물 2 · 장소 1 · 물품 1 · 할 일 0');
+    expect(staleQuest).toBeUndefined();
   });
 });

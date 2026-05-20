@@ -51,32 +51,37 @@ const quest: Quest = {
 };
 
 describe('buildPanelSlots', () => {
-  test('collapses contextual system panels into notes and keeps the hero as sheet', () => {
-    const slots = buildPanelSlots(
-      {
-        hero,
-        subject,
-        chapter: { title: '돌아갈 배는 없었다', summary: '흰섬의 첫 장입니다.' },
-        quest,
-        questOffers: [],
-      },
-      { questDot: true, subjectDot: true },
-    );
+  test('keeps info and adds a hero-named top button with hero sheet details', () => {
+    const slots = buildPanelSlots({
+      hero,
+      subject,
+      chapter: { title: '돌아갈 배는 없었다', summary: '흰섬의 첫 장입니다.' },
+      quest,
+      questOffers: [],
+    });
 
-    expect(slots.map((slot) => slot.chip.short)).toEqual(['노트', '시트']);
-    expect(slots[0].id).toBe('notes');
-    expect(slots[0].chip.dot).toBe(true);
+    expect(slots.map((slot) => slot.chip.short)).toEqual(['테스터', '챕터']);
+    expect(slots[0].id).toBe('hero');
+    expect(slots[0].panel?.title).toBe('');
+    expect(slots[0].panel?.meta).toBeUndefined();
     expect(slots[0].panel?.sections?.map((section) => section.label)).toEqual([
-      'NPC',
+      '능력',
+      '장비',
+      '소지',
+      '기술',
+      '동료',
+      '특징',
+    ]);
+    expect(slots[0].panel?.actions).toBeUndefined();
+    expect(slots[0].panel?.barSplit).toBeUndefined();
+    expect(slots[1].id).toBe('notes');
+    expect(slots[1].panel?.title).toBe('');
+    expect(slots[1].panel?.meta).toBeUndefined();
+    expect(slots[1].panel?.sections?.map((section) => section.label)).toEqual([
       '챕터',
       '요약',
-      '목표',
-      '요약',
     ]);
-    expect(slots[0].panel?.sections?.[1]?.text).toBe('돌아갈 배는 없었다');
-    expect(slots[0].panel?.sections?.[2]?.text).toBe('흰섬의 첫 장입니다.');
-    expect(slots[1].id).toBe('hero');
-    expect(slots[1].chip.short).toBe('시트');
+    expect(slots[1].panel?.actions).toBeUndefined();
   });
 
   test('shows scenario completion when no active quest remains', () => {
@@ -89,10 +94,9 @@ describe('buildPanelSlots', () => {
       questOffers: [],
     });
 
-    expect(slots[0].panel?.sections?.map((section) => [section.label, section.text])).toEqual([
-      ['챕터', '끝나지 않았다는 불'],
-      ['목표', '이야기 완료'],
-      ['요약', '이야기는 여기서 끝납니다.'],
+    expect(slots[0].panel?.sections?.slice(0, 2).map((section) => [section.label, section.text])).toEqual([
+      ['능력', undefined],
+      ['장비', '—'],
     ]);
   });
 });

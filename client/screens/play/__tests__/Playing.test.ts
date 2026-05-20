@@ -8,6 +8,13 @@ describe('Playing overlay layering', () => {
     expect(source).toContain('activeId !== null || nearbyOpen ? 10 : 0');
   });
 
+  test('keeps bottom controls as an overlay instead of keyboard-avoiding the log', () => {
+    expect(source).not.toContain('KeyboardAvoidingView');
+    expect(source).toContain("position: 'absolute'");
+    expect(source).toContain('bottomInset={bottomOverlayHeight}');
+    expect(source).toContain('setBottomOverlayHeight(ev.nativeEvent.layout.height)');
+  });
+
   test('uses shared panel slot builder so active quests and offers stay separate', () => {
     expect(source).toContain('buildPanelSlots');
     expect(source).not.toContain('quest ?? questOffers[0] ?? null');

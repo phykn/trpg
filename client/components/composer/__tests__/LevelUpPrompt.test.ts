@@ -8,13 +8,21 @@ describe('LevelUpPrompt mobile selectors', () => {
     expect(source).toContain('testID={`level-growth-${choice.id}`}');
     expect(source).toContain("id: 'max_hp'");
     expect(source).toContain("id: 'max_mp'");
+    expect(source).toContain("id: 'stat:body'");
+    expect(source).toContain("id: 'stat:presence'");
     expect(source).toContain('testID="level-cancel"');
     expect(source).toContain('testID="level-confirm"');
   });
 
   test('does not flash fallback choices while server choices are loading', () => {
-    expect(source).toContain('choices.length > 0 ? choices : loading ? [] : CHOICES');
+    expect(source).toContain('if (loading) return [];');
     expect(source).toContain('disabled={!selected || loading}');
+  });
+
+  test('keeps stat choices available even when the options response is incomplete', () => {
+    expect(source).toContain('withRequiredFallbackChoices');
+    expect(source).toContain('STAT_FALLBACK_CHOICES.filter');
+    expect(source).toContain("growth.kind === 'stat' && !existingStats.has(choice.growth.stat)");
   });
 
   test('keeps many growth choices readable on mobile', () => {

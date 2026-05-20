@@ -2,6 +2,8 @@ import { buildDecisionState } from '../buildDecisionState';
 import type { NarrationCue } from '@/logic/log/types';
 import type { Quest } from '@/logic/quest/types';
 import type { Place } from '@/logic/story-graph/types';
+import type { CombatBadge } from '@/logic/combat/types';
+import type { Subject } from '@/logic/subject/types';
 
 const place: Place = {
   name: '마을',
@@ -26,8 +28,29 @@ const quest: Quest = {
   actions: ['abandon'],
 };
 
+const subject: Subject = {
+  name: '말없는 선장',
+  alive: true,
+  role: '선장',
+  raceJob: '인간',
+  gender: '남성',
+  level: 1,
+};
+
+const combat: CombatBadge = {
+  round: 1,
+  outcome: 'ongoing',
+  turnLabel: '전투',
+  playerHearts: { current: 3, maximum: 3 },
+  enemyHearts: { current: 2, maximum: 2 },
+  enemies: [{ id: 'wolf', name: '안개 늑대', alive: true }],
+  availableSupports: [],
+  escapeReady: false,
+  enemyPressure: 0,
+};
+
 describe('buildDecisionState', () => {
-  test('shows compact place and goal without labels', () => {
+  test('shows compact place without duplicating quest goals', () => {
     const items = buildDecisionState({
       place: { ...place, name: '칭호의 안개 숲' },
       quest: {
@@ -41,8 +64,59 @@ describe('buildDecisionState', () => {
 
     expect(items.map((item) => [item.label, item.text])).toEqual([
       ['', '칭호의 안개 숲'],
-      ['', '버려진 어촌을 거쳐 빈 객석...'],
     ]);
+  });
+
+  test('adds compact hero level, HP, and MP when vitals are available', () => {
+    const items = buildDecisionState({
+      place,
+      quest: null,
+      combat: null,
+      heroVitals: { level: 4, exp: 6, expMax: 10, hp: 8, hpMax: 12, mp: 3, mpMax: 5 },
+      heroStatus: [],
+      latestCues: [],
+    });
+
+    expect(items.map((item) => [item.id, item.label, item.text, item.tone, item.progress])).toEqual([
+      ['hero:level', 'LV', '4', 'level', 0.6],
+      ['hero:hp', 'HP', '8/12', 'hp', undefined],
+      ['hero:mp', 'MP', '3/5', 'mp', undefined],
+      ['place', '', '마을', 'neutral', undefined],
+    ]);
+  });
+
+  test('shows the faced subject after place', () => {
+    const items = buildDecisionState({
+      place,
+      quest: null,
+      combat: null,
+      subject,
+      heroVitals: { level: 4, exp: 6, expMax: 10, hp: 8, hpMax: 12, mp: 3, mpMax: 5 },
+      heroStatus: [],
+      latestCues: [],
+    });
+
+    expect(items.map((item) => [item.id, item.label, item.text, item.tone])).toEqual([
+      ['hero:level', 'LV', '4', 'level'],
+      ['hero:hp', 'HP', '8/12', 'hp'],
+      ['hero:mp', 'MP', '3/5', 'mp'],
+      ['place', '', '마을', 'neutral'],
+      ['subject:faced', '', '말없는 선장', 'accent'],
+    ]);
+  });
+
+  test('prefers the active combat enemy over the faced subject', () => {
+    const items = buildDecisionState({
+      place,
+      quest: null,
+      combat,
+      subject,
+      heroVitals: { level: 4, exp: 6, expMax: 10, hp: 8, hpMax: 12, mp: 3, mpMax: 5 },
+      heroStatus: [],
+      latestCues: [],
+    });
+
+    expect(items.find((item) => item.id === 'subject:faced')?.text).toBe('안개 늑대');
   });
 
   test('shows place when no active goal is available', () => {

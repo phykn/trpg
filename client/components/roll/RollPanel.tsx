@@ -1,9 +1,7 @@
 import { Animated, Pressable, Text, View } from 'react-native';
 
 import { Surface, useEntryAnimation } from '@/components/ui';
-import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
-import { buildDiceCells } from '@/logic/roll/panel';
 import type { PendingRoll } from '@/logic/roll/types';
 
 export function RollPanel({
@@ -16,7 +14,6 @@ export function RollPanel({
   disabled?: boolean;
 }) {
   const { scale, opacity } = useEntryAnimation();
-  const cells = buildDiceCells(roll.requiredRoll);
 
   return (
     <View className="mx-5 mt-1">
@@ -32,30 +29,6 @@ export function RollPanel({
             >
               {roll.requiredRoll} {ko.roll.orMore}
             </Text>
-          </View>
-
-          <View className="flex-row gap-0.5">
-            {cells.map((cell) => (
-              <View
-                key={cell.value}
-                className="h-7 flex-1 items-center justify-center rounded-sm"
-                style={{
-                  backgroundColor:
-                    cell.band === 'success'
-                      ? `${colors.success.fg}${cell.selected ? '55' : '24'}`
-                      : `${colors.danger.fg}${cell.selected ? '66' : '24'}`,
-                  borderColor: cell.selected ? colors.accent.fg : 'transparent',
-                  borderWidth: cell.selected ? 1 : 0,
-                }}
-              >
-                <Text
-                  className="font-mono-semibold text-caption"
-                  style={{ color: cell.selected ? colors.fg.default : colors.fg.muted }}
-                >
-                  {cell.value}
-                </Text>
-              </View>
-            ))}
           </View>
 
           <Pressable

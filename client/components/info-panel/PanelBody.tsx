@@ -119,17 +119,20 @@ export function PanelBody({ panel, onAction, actionDisabled = false }: {
   }
 
   const sections = panel.sections || [];
+  const showHeader = panel.title.length > 0 || !!panel.titleAction || !!(panel.meta && panel.meta.length > 0);
 
   return (
     <View className="px-4 py-3 gap-2.5" style={{ minHeight: 160 }}>
-      <View className="flex-row items-center gap-2" style={{ minHeight: 22 }}>
-        <HeaderTitleGroup panel={panel} />
-        {panel.meta && panel.meta.length > 0 && (
-          <View className="flex-1 min-w-0">
-            <ExpandableMeta segments={panel.meta} />
-          </View>
-        )}
-      </View>
+      {showHeader && (
+        <View className="flex-row items-center gap-2" style={{ minHeight: 22 }}>
+          <HeaderTitleGroup panel={panel} />
+          {panel.meta && panel.meta.length > 0 && (
+            <View className="flex-1 min-w-0">
+              <ExpandableMeta segments={panel.meta} />
+            </View>
+          )}
+        </View>
+      )}
 
       {panel.bar && <StatRow {...panel.bar} />}
       {panel.barSplit && (

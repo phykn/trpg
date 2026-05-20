@@ -14,9 +14,16 @@ type GrowthChoice = {
   growth: GraphLevelUpGrowth;
 };
 
-const CHOICES: GrowthChoice[] = [
+const RESOURCE_FALLBACK_CHOICES: GrowthChoice[] = [
   { id: 'max_hp', label: ko.level.maxHpChoice, growth: { kind: 'max_hp' } },
   { id: 'max_mp', label: ko.level.maxMpChoice, growth: { kind: 'max_mp' } },
+];
+
+const STAT_FALLBACK_CHOICES: GrowthChoice[] = [
+  { id: 'stat:body', label: `${ko.ability.body} +1`, growth: { kind: 'stat', stat: 'body' } },
+  { id: 'stat:agility', label: `${ko.ability.agility} +1`, growth: { kind: 'stat', stat: 'agility' } },
+  { id: 'stat:mind', label: `${ko.ability.mind} +1`, growth: { kind: 'stat', stat: 'mind' } },
+  { id: 'stat:presence', label: `${ko.ability.presence} +1`, growth: { kind: 'stat', stat: 'presence' } },
 ];
 
 const STAT_CHOICE_ORDER: Record<string, number> = {
@@ -38,6 +45,23 @@ function growthChoiceRank(choice: GrowthChoice): number {
 
 function sortGrowthChoices(choices: GrowthChoice[]): GrowthChoice[] {
   return [...choices].sort((a, b) => growthChoiceRank(a) - growthChoiceRank(b));
+}
+
+function withRequiredFallbackChoices(choices: GraphLevelUpChoice[], loading: boolean): GrowthChoice[] {
+  if (loading) return [];
+  const base = choices.length > 0 ? [...choices] : [...RESOURCE_FALLBACK_CHOICES];
+  const existingStats = new Set(
+    base.flatMap((choice) => {
+      const growth = choice.growth;
+      return growth.kind === 'stat' ? [growth.stat] : [];
+    }),
+  );
+  return [
+    ...base,
+    ...STAT_FALLBACK_CHOICES.filter((choice) => (
+      choice.growth.kind === 'stat' && !existingStats.has(choice.growth.stat)
+    )),
+  ];
 }
 
 function groupGrowthChoices(choices: GrowthChoice[]): GrowthChoice[][] {
@@ -66,7 +90,7 @@ type Props = {
 
 export function LevelUpPrompt({ hero, choices = [], loading = false, onCommit, onCancel }: Props) {
   const growthChoices = React.useMemo(
-    () => sortGrowthChoices(choices.length > 0 ? choices : loading ? [] : CHOICES),
+    () => sortGrowthChoices(withRequiredFallbackChoices(choices, loading)),
     [choices, loading],
   );
   const choiceRows = React.useMemo(() => groupGrowthChoices(growthChoices), [growthChoices]);

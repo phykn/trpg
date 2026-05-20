@@ -279,6 +279,7 @@ function buildStoryGraph(
         giver: quest.giver,
         goals: quest.goals,
         summary: quest.summary,
+        actions: quest.actions,
       })),
     ],
     edges: [

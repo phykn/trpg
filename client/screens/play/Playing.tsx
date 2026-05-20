@@ -1,28 +1,24 @@
 import React from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
+import { Keyboard, Pressable, Text, View } from 'react-native';
 
 import { CombatStrip } from '@/logic/combat';
 import { buildDecisionState, DecisionStateStrip } from '@/logic/decision-state';
 import { Log } from '@/logic/log';
 import { RollPanel } from '@/logic/roll';
-import { buildNearbyPanel, useStoryGraph } from '@/logic/story-graph';
+import { buildNearbyPanel } from '@/logic/story-graph';
 import type { Game } from '@/logic/game/useGame';
-import type { NarrationCue } from '@/logic/log/types';
 import { buildPanelSlots, type PanelAction, type PanelSlot } from '@/logic/info-panel';
 
 import { Composer, GameOverPanel, LevelUpPrompt } from '@/logic/composer';
 import { ContextCard, IconButton, ICON_PATH } from '@/logic/info-panel';
-import { HeroStrip } from '@/logic/hero';
 import { useBgm } from '@/logic/audio';
 import { ConfirmDialog } from '@/components/ui';
 import { ko } from '@/locale/ko';
 
 type Props = { game: Game };
 
-const EMPTY_CUES: NarrationCue[] = [];
-
 export function Playing({ game }: Props) {
-  const { hero, subject, chapter, quest, questOffers, place, combat, storyGraph, log, pendingConfirmation, pendingRoll, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onCombatCommand, onConfirmPending, onRollPending, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpChoices, levelUpLoading, openLevelUp, cancelLevelUp, commitLevelUp } = game;
+  const { hero, subject, chapter, quest, questOffers, place, combat, storyGraph, log, pendingConfirmation, pendingRoll, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onCombatCommand, onConfirmPending, onRollPending, onStop, goToNewGame, levelUpOpen, levelUpChoices, levelUpLoading, openLevelUp, cancelLevelUp, commitLevelUp } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -30,6 +26,7 @@ export function Playing({ game }: Props) {
   const [pendingAction, setPendingAction] = React.useState<PanelAction | null>(null);
   const [newGameConfirmOpen, setNewGameConfirmOpen] = React.useState(false);
   const [nearbyOpen, setNearbyOpen] = React.useState(false);
+  const [bottomOverlayHeight, setBottomOverlayHeight] = React.useState(0);
   const { bgmOn, toggle: toggleBgm } = useBgm();
 
   const runAction = (action: PanelAction) => {
@@ -61,6 +58,14 @@ export function Playing({ game }: Props) {
     openLevelUp();
   };
 
+  const runPanelAction = (action: PanelAction) => {
+    if (action.confirm) {
+      setPendingAction(action);
+    } else {
+      runAction(action);
+    }
+  };
+
   React.useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => setTyping(true));
     const hide = Keyboard.addListener('keyboardDidHide', () => setTyping(false));
@@ -76,38 +81,55 @@ export function Playing({ game }: Props) {
     }
   }, [typing]);
 
-  const { graph: miniMapGraph } = useStoryGraph(game.gameId, storyGraph);
   const nearby = React.useMemo(() => buildNearbyPanel(storyGraph), [storyGraph]);
   const lastLogEntry = log[log.length - 1];
-  const latestCues = lastLogEntry?.kind === 'gm' ? lastLogEntry.cues ?? EMPTY_CUES : EMPTY_CUES;
+  const latestCues = lastLogEntry?.kind === 'gm' ? lastLogEntry.cues ?? [] : [];
   const decisionStateItems = React.useMemo(
     () => buildDecisionState({
       place,
       quest,
       combat,
+      subject,
+      heroVitals: hero ? {
+        level: hero.level,
+        exp: hero.exp,
+        expMax: hero.expMax,
+        hp: hero.hp,
+        hpMax: hero.hpMax,
+        mp: hero.mp,
+        mpMax: hero.mpMax,
+      } : undefined,
       heroStatus: hero?.status ?? [],
       latestCues,
       scenarioCompleted: game.scenarioCompleted,
     }),
-    [combat, game.scenarioCompleted, hero?.status, latestCues, place, quest],
+    [
+      combat,
+      game.scenarioCompleted,
+      hero?.hp,
+      hero?.hpMax,
+      hero?.level,
+      hero?.exp,
+      hero?.expMax,
+      hero?.mp,
+      hero?.mpMax,
+      hero?.status,
+      latestCues,
+      place,
+      quest,
+      subject,
+    ],
   );
   const slots: PanelSlot[] = React.useMemo(
     () => {
       if (!hero) return [];
       return [
-        { id: 'map', chip: { short: ko.table.map, dot: hasUnseenLocation }, panel: null },
-        ...buildPanelSlots(
-          { hero, subject, chapter, scenarioCompleted: game.scenarioCompleted, quest, questOffers },
-          { questDot: hasUnseenQuest, subjectDot: hasUnseenSubject },
-        ),
+        ...buildPanelSlots({ hero, subject, chapter, scenarioCompleted: game.scenarioCompleted, quest, questOffers }),
       ];
     },
     [
       chapter,
       game.scenarioCompleted,
-      hasUnseenLocation,
-      hasUnseenQuest,
-      hasUnseenSubject,
       hero,
       quest,
       questOffers,
@@ -119,14 +141,11 @@ export function Playing({ game }: Props) {
   const showRollPanel = pendingRoll !== null && !streaming;
   return (
     <View className="flex-1 bg-canvas-default py-2.5 gap-2.5">
-      <HeroStrip hero={hero} />
-
       <ContextCard
         slots={slots}
-        miniMapGraph={miniMapGraph}
-        place={place}
         activeId={activeId}
         actionDisabled={streaming || pendingConfirmation !== null || pendingRoll !== null}
+        onAction={runPanelAction}
         leading={(
           <IconButton
             d={ICON_PATH.newGame}
@@ -146,20 +165,8 @@ export function Playing({ game }: Props) {
           setNearbyOpen(false);
           setActiveId((prev) => {
             const next = prev === id ? null : id;
-            if (id === 'map' && next === id) markLocationSeen();
-            if (id === 'notes' && next === id) {
-              markQuestSeen();
-              markSubjectSeen();
-            }
             return next;
           });
-        }}
-        onAction={(action) => {
-          if (action.confirm) {
-            setPendingAction(action);
-          } else {
-            runAction(action);
-          }
         }}
       />
 
@@ -224,6 +231,7 @@ export function Playing({ game }: Props) {
       <Log
         log={log}
         typing={awaitingNarration}
+        bottomInset={bottomOverlayHeight}
       />
 
       {errorMessage ? (
@@ -234,10 +242,15 @@ export function Playing({ game }: Props) {
         </View>
       ) : null}
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
-        style={{ zIndex: activeId !== null || nearbyOpen ? 10 : 0 }}
+      <View
+        onLayout={(ev) => setBottomOverlayHeight(ev.nativeEvent.layout.height)}
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: activeId !== null || nearbyOpen ? 10 : 0,
+        }}
       >
         {gameOver ? (
           <GameOverPanel onRestart={goToNewGame} />
@@ -295,15 +308,11 @@ export function Playing({ game }: Props) {
             nearbyOpen={nearbyOpen}
             onNearbyOpenChange={setNearbyOpenFromComposer}
             onNearbyAction={(action) => {
-              if (action.confirm) {
-                setPendingAction(action);
-              } else {
-                runAction(action);
-              }
+              runPanelAction(action);
             }}
           />
         )}
-      </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }

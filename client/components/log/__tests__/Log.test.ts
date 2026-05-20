@@ -16,4 +16,10 @@ describe('Log scroll behavior', () => {
     expect(source).toContain('onLayout={(ev) => {');
     expect(source).not.toContain('React.useEffect(() => {\n    if (initialized.current && viewportH > 0)');
   });
+
+  test('does not react to keyboard show events', () => {
+    expect(source).not.toContain('Keyboard.addListener');
+    expect(source).toContain('bottomInset = 0');
+    expect(source).toContain('paddingBottom: spacing[6] + bottomInset');
+  });
 });

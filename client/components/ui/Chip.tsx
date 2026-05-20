@@ -1,10 +1,8 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
-
-import { colors } from '@/design/tokens';
+import { Pressable, Text } from 'react-native';
 
 type ChipProps =
-  | { variant: 'tab'; label: string; active: boolean; dot?: boolean; onPress: () => void }
+  | { variant: 'tab'; label: string; active: boolean; onPress: () => void }
   | { variant: 'action'; label: string; onPress: () => void; disabled?: boolean };
 
 export function Chip(props: ChipProps) {
@@ -12,10 +10,9 @@ export function Chip(props: ChipProps) {
   return <ActionChip {...props} />;
 }
 
-function TabChip({ label, active, dot, onPress }: {
+function TabChip({ label, active, onPress }: {
   label: string;
   active: boolean;
-  dot?: boolean;
   onPress: () => void;
 }) {
   const bg = active ? 'bg-accent-muted border-accent-fg' : 'bg-transparent border-border-default active:bg-canvas-subtle';
@@ -32,19 +29,6 @@ function TabChip({ label, active, dot, onPress }: {
       <Text numberOfLines={1} className={`text-caption ${fontWeight} ${color}`}>
         {label}
       </Text>
-      {dot && (
-        <View
-          style={{
-            position: 'absolute',
-            top: 6,
-            right: 6,
-            width: 6,
-            height: 6,
-            borderRadius: 3,
-            backgroundColor: colors.accent.fg,
-          }}
-        />
-      )}
     </Pressable>
   );
 }

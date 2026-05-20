@@ -33,9 +33,6 @@ export function RollResult({ entry }: { entry: RollEntry }) {
       <View
         className="flex-row items-center"
         style={{
-          borderLeftWidth: 2,
-          borderLeftColor: tone.color,
-          paddingLeft: 12,
           gap: 8,
         }}
       >

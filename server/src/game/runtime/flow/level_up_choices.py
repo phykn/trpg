@@ -10,6 +10,7 @@ from src.game.domain.content import node_label
 from src.game.domain.graph.query import edges_from
 from ..state import GameRuntimeState
 from src.locale.render import render
+from src.llm.diag import engine_diag
 from src.llm.calls.runner import get_prompt, run_with_retries
 from src.llm.client import LLMClient
 
@@ -136,6 +137,12 @@ async def build_level_up_choices(
                     },
                 }
             )
+    else:
+        engine_diag(
+            "levelup:choices_llm_skip",
+            reason="known_skill_limit",
+            known_skills=len(known_edges),
+        )
 
     return choices
 
@@ -147,8 +154,10 @@ async def _skill_candidates(
 ) -> list[LevelUpSkillCandidate]:
     templates = _candidate_templates(runtime)
     if llm is None:
+        engine_diag("levelup:choices_llm_skip", reason="no_llm")
         return templates
     try:
+        engine_diag("levelup:choices_llm_start", templates=len(templates))
         prompt = get_prompt("recommend", runtime.progress.locale)
         payload = _candidate_payload(runtime, templates)
         out = await run_with_retries(
@@ -161,8 +170,11 @@ async def _skill_candidates(
             agent="recommend",
             temperature=0.8,
         )
-        return _apply_flavors(templates, out.skills)
-    except (LLMUnavailable, ValidationError, json.JSONDecodeError, OSError):
+        candidates = _apply_flavors(templates, out.skills)
+        engine_diag("levelup:choices_llm_ok", candidates=len(candidates))
+        return candidates
+    except (LLMUnavailable, ValidationError, json.JSONDecodeError, OSError) as exc:
+        engine_diag("levelup:choices_llm_fallback", err=type(exc).__name__)
         return templates
 
 

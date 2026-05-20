@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
 
-import { colors, spacing } from '@/design/tokens';
+import { spacing } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 
 import { RollResult } from './RollResult';
@@ -97,13 +97,7 @@ function GMNarration({ entry }: { entry: Extract<LogEntry, { kind: 'gm' }> }) {
   const paragraphs = entry.text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
   const textClass = gmTextClass(entry);
   return (
-    <View
-      style={{
-        borderLeftWidth: 2,
-        borderLeftColor: colors.accent.fg,
-        paddingLeft: spacing[3],
-      }}
-    >
+    <View>
       {paragraphs.map((p, i) => {
         return (
           <Text
@@ -122,13 +116,7 @@ function GMNarration({ entry }: { entry: Extract<LogEntry, { kind: 'gm' }> }) {
 
 function PlayerMessage({ text }: { text: string }) {
   return (
-    <View
-      style={{
-        borderLeftWidth: 2,
-        borderLeftColor: colors.exp.fg,
-        paddingLeft: spacing[3],
-      }}
-    >
+    <View>
       <Text className="font-serif text-lead text-accent-fg">
         {text}
       </Text>
@@ -138,14 +126,8 @@ function PlayerMessage({ text }: { text: string }) {
 
 function ActMessage({ text }: { text: string }) {
   return (
-    <View
-      style={{
-        borderLeftWidth: 2,
-        borderLeftColor: colors.fg.muted,
-        paddingLeft: spacing[3],
-      }}
-    >
-      <Text className="font-sans text-caption text-fg-muted">
+    <View>
+      <Text className="font-serif text-lead text-fg-muted">
         {text}
       </Text>
     </View>

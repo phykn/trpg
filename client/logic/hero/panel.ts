@@ -8,7 +8,7 @@ export function buildHeroSlot(hero: Hero, opts?: { chipShort?: string }): PanelS
   const equipped = Object.values(hero.equipment).filter((it): it is EquipItem => it != null);
   return {
     id: 'hero',
-    chip: { short: opts?.chipShort ?? ko.hero.chip, dot: hero.canLevelUp },
+    chip: { short: opts?.chipShort ?? ko.hero.chip },
     panel: {
       title: withDeath(hero.name, hero.alive),
       meta: [{ text: characterMeta(hero.level, hero.raceJob, hero.gender) }],

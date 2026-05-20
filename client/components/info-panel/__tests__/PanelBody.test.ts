@@ -15,16 +15,10 @@ describe('PanelBody header layout', () => {
       titleGroup.indexOf('panel.titleAction'),
     );
 
-    const header = source.match(
-      /<View className="flex-row items-center gap-2" style=\{\{ minHeight: 22 \}\}>[\s\S]*?\n      <\/View>/,
-    )?.[0];
-
-    expect(header).toBeDefined();
-    if (!header) {
-      throw new Error('Panel header is missing');
-    }
-    expect(header.indexOf('<HeaderTitleGroup')).toBeLessThan(
-      header.indexOf('<ExpandableMeta'),
+    expect(source).toContain('{showHeader && (');
+    expect(source).toContain('<View className="flex-row items-center gap-2" style={{ minHeight: 22 }}>');
+    expect(source.indexOf('<HeaderTitleGroup panel={panel} />')).toBeLessThan(
+      source.indexOf('<ExpandableMeta segments={panel.meta} />'),
     );
   });
 });

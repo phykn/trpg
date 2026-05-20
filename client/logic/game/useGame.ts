@@ -2,7 +2,6 @@ import React from 'react';
 
 import {
   EMPTY_STORY_GRAPH,
-  mergeAndStoreStoryGraph,
   type StoryGraphModel,
 } from '@/logic/story-graph';
 import {
@@ -12,15 +11,9 @@ import {
   getGraphSessionById,
   getGraphLevelUpOptions,
   initGraphSession,
-  loadLastSeenLocation,
-  loadLastSeenQuestTitle,
-  loadLastSeenSubjectId,
   loadStoredGameId,
   loadSuggestions,
   storeGameId,
-  storeLastSeenLocation,
-  storeLastSeenQuestTitle,
-  storeLastSeenSubjectId,
   storeSuggestions,
   requestGraphIntro,
   rollGraphPending,
@@ -72,9 +65,6 @@ export function useGame() {
   const [combat, setCombat] = React.useState<CombatBadge | null>(null);
   const [storyGraph, setStoryGraph] = React.useState<StoryGraphModel>(EMPTY_STORY_GRAPH);
   const [suggestions, setSuggestionsRaw] = React.useState<SuggestionChip[]>([]);
-  const [lastSeenLocation, setLastSeenLocation] = React.useState<string | null>(null);
-  const [lastSeenQuestTitle, setLastSeenQuestTitle] = React.useState<string | null>(null);
-  const [lastSeenSubjectId, setLastSeenSubjectId] = React.useState<string | null>(null);
   const [levelUpOpen, setLevelUpOpen] = React.useState(false);
   const [levelUpChoices, setLevelUpChoices] = React.useState<GraphLevelUpChoice[]>([]);
   const [levelUpLoading, setLevelUpLoading] = React.useState(false);
@@ -105,7 +95,7 @@ export function useGame() {
     setGameId(id);
   }, []);
 
-  const applyState = React.useCallback((s: FrontState, stateGameId = gameIdRef.current) => {
+  const applyState = React.useCallback((s: FrontState) => {
     setHero(s.hero);
     setSubject(s.subject);
     setChapter(s.chapter);
@@ -117,11 +107,7 @@ export function useGame() {
     setLog(s.log);
     setPendingConfirmation(s.pendingConfirmation ?? null);
     setPendingRoll(s.pendingRoll ?? null);
-    if (stateGameId) {
-      setStoryGraph(mergeAndStoreStoryGraph(stateGameId, s.storyGraph));
-    } else {
-      setStoryGraph(s.storyGraph);
-    }
+    setStoryGraph(s.storyGraph);
   }, []);
 
   const { requestInFlight, requestInFlightRef, runGraphActionRequest, abortGraphActionRequest } =
@@ -150,11 +136,8 @@ export function useGame() {
         return;
       }
       rememberGameId(payload.game_id);
-      applyState(payload.state, payload.game_id);
+      applyState(payload.state);
       setSuggestionsRaw(payload.suggestions ?? loadSuggestions(payload.game_id));
-      setLastSeenLocation(loadLastSeenLocation(payload.game_id));
-      setLastSeenQuestTitle(loadLastSeenQuestTitle(payload.game_id));
-      setLastSeenSubjectId(loadLastSeenSubjectId(payload.game_id));
       setStatus('ready');
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : String(err));
@@ -173,10 +156,7 @@ export function useGame() {
         const payload = await initGraphSession(body);
         storeGameId(payload.game_id);
         rememberGameId(payload.game_id);
-        applyState(payload.state, payload.game_id);
-        setLastSeenLocation(null);
-        setLastSeenQuestTitle(null);
-        setLastSeenSubjectId(null);
+        applyState(payload.state);
         setPendingConfirmation(payload.state.pendingConfirmation ?? null);
         setPendingRoll(payload.state.pendingRoll ?? null);
         setSuggestions(payload.suggestions ?? []);
@@ -357,39 +337,6 @@ export function useGame() {
   // decrement during a graph action request; wait for the final state payload.
   const gameOver = !!hero && !requestInFlight && hero.hp === 0 && hero.reviveCoins === 0;
 
-  // Place wire type has no `id` — use `name` as the cache key (location names are unique per scenario).
-  const placeKey = place?.name ?? null;
-  const hasUnseenLocation = placeKey !== null && placeKey !== lastSeenLocation;
-
-  const markLocationSeen = React.useCallback(() => {
-    const id = gameIdRef.current;
-    if (!id || !placeKey) return;
-    setLastSeenLocation(placeKey);
-    storeLastSeenLocation(id, placeKey);
-  }, [placeKey]);
-
-  // Quest wire carries `id`, but `title` is the cache key — id can churn across server-side renumbering, while titles are stable per-scenario.
-  const questTitle = quest?.title ?? questOffers[0]?.title ?? null;
-  const hasUnseenQuest = questTitle !== null && questTitle !== lastSeenQuestTitle;
-
-  const markQuestSeen = React.useCallback(() => {
-    const id = gameIdRef.current;
-    if (!id || !questTitle) return;
-    setLastSeenQuestTitle(questTitle);
-    storeLastSeenQuestTitle(id, questTitle);
-  }, [questTitle]);
-
-  // Subject wire type has no `id` — use `name` as the cache key.
-  const subjectName = subject?.name ?? null;
-  const hasUnseenSubject = subjectName !== null && subjectName !== lastSeenSubjectId;
-
-  const markSubjectSeen = React.useCallback(() => {
-    const id = gameIdRef.current;
-    if (!id || !subjectName) return;
-    setLastSeenSubjectId(subjectName);
-    storeLastSeenSubjectId(id, subjectName);
-  }, [subjectName]);
-
   return {
     status,
     errorMessage,
@@ -410,12 +357,6 @@ export function useGame() {
     awaitingNarration,
     gameOver,
     suggestions,
-    hasUnseenLocation,
-    markLocationSeen,
-    hasUnseenQuest,
-    markQuestSeen,
-    hasUnseenSubject,
-    markSubjectSeen,
     onSend,
     onQuestAction,
     onGraphAction,

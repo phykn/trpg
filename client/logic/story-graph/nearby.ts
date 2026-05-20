@@ -10,6 +10,7 @@ export type NearbyItem = {
   title: string;
   body: string;
   action?: PanelAction;
+  actions?: PanelAction[];
 };
 
 export type NearbyPanelModel = {
@@ -21,7 +22,7 @@ export function buildNearbyPanel(graph: StoryGraphModel): NearbyPanelModel {
   const people = graph.nodes.filter(isNearbyPerson);
   const places = graph.nodes.filter(isNearbyPlace);
   const items = graph.nodes.filter(isNearbyItem);
-  const tasks = graph.nodes.filter((node) => node.kind === 'quest');
+  const tasks = graph.nodes.filter(isActionableQuest);
   return {
     summary: compose.nearbySummary(people.length, places.length, tasks.length, items.length),
     items: [
@@ -43,6 +44,10 @@ function isNearbyPlace(node: StoryGraphNode): boolean {
 
 function isNearbyItem(node: StoryGraphNode): boolean {
   return node.kind === 'item' && node.reachable;
+}
+
+function isActionableQuest(node: StoryGraphNode): boolean {
+  return node.kind === 'quest' && node.reachable && node.actions.length > 0;
 }
 
 function personItem(node: StoryGraphNode): NearbyItem {
@@ -102,15 +107,22 @@ function taskItem(node: StoryGraphNode): NearbyItem {
     id: node.id,
     kindLabel: ko.legend.quest,
     title: node.label,
-    body: node.kind === 'quest' ? node.summary : '',
-    action: node.kind === 'quest' && node.reachable
-      ? {
-          kind: 'text',
-          label: ko.panel.inspect,
-          text: compose.inspect(node.label),
-        }
-      : undefined,
+    body: node.kind === 'quest' ? joinQuestGoals(node.goals, node.summary) : '',
+    actions: node.kind === 'quest' && node.reachable ? questActions(node) : undefined,
   };
+}
+
+function joinQuestGoals(goals: string[], fallback: string): string {
+  return goals.length > 0 ? goals.join(' · ') : fallback;
+}
+
+function questActions(node: Extract<StoryGraphNode, { kind: 'quest' }>): PanelAction[] | undefined {
+  const actions = node.actions.map((kind): PanelAction => ({
+    kind: 'quest_action',
+    label: kind === 'accept' ? ko.quest.accept : ko.quest.abandon,
+    questAction: { kind, quest_id: node.id },
+  }));
+  return actions.length > 0 ? actions : undefined;
 }
 
 function preferredAction(node: StoryGraphNode): PanelAction | undefined {

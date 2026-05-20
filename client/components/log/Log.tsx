@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, FlatList, Animated, Easing, Keyboard } from 'react-native';
+import { View, FlatList, Animated, Easing } from 'react-native';
 import { colors, spacing } from '@/design/tokens';
 
 import { LogItem } from './LogItem';
@@ -45,14 +45,7 @@ function TypingDot({ delay }: { delay: number }) {
 
 function TypingDots() {
   return (
-    <View
-      style={{
-        borderLeftWidth: 2,
-        borderLeftColor: colors.accent.fg,
-        paddingLeft: spacing[3],
-        paddingVertical: spacing[2],
-      }}
-    >
+    <View style={{ paddingVertical: spacing[2] }}>
       <View
         className="flex-row items-center"
         style={{ gap: spacing[1.5], height: 12 }}
@@ -68,9 +61,11 @@ function TypingDots() {
 export function Log({
   log,
   typing,
+  bottomInset = 0,
 }: {
   log: LogEntry[];
   typing: boolean;
+  bottomInset?: number;
 }) {
   const ref = React.useRef<FlatList<LogEntry>>(null);
   const [viewportH, setViewportH] = React.useState(0);
@@ -94,13 +89,6 @@ export function Log({
     syncScrollPosition(h);
   };
 
-  React.useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', () => {
-      ref.current?.scrollToEnd({ animated: true });
-    });
-    return () => show.remove();
-  }, []);
-
   return (
     <FlatList
       ref={ref}
@@ -119,7 +107,7 @@ export function Log({
       contentContainerStyle={{
         paddingHorizontal: spacing[5],
         paddingTop: spacing[5],
-        paddingBottom: spacing[6],
+        paddingBottom: spacing[6] + bottomInset,
       }}
       showsVerticalScrollIndicator={false}
     />

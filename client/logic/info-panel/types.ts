@@ -37,7 +37,7 @@ export type Panel = {
 
 export type PanelSlot = {
   id: string;
-  chip: { short: string; dot?: boolean };
+  chip: { short: string };
   panel: Panel | null;
 };
 
