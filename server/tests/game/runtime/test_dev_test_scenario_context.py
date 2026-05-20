@@ -3,6 +3,7 @@ from pathlib import Path
 
 from src.game.domain.action import Action
 from src.game.runtime import GameRuntimeState
+from src.game.runtime.action.dispatch import dispatch_graph_action
 from src.game.runtime.narration.context import build_input_narration_payload
 from src.game.seed.graph_seed import build_seed_graph
 from src.game.seed.player import PlayerInput
@@ -19,7 +20,7 @@ def _records(name: str) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def test_dev_test_luka_has_public_route_clue_for_followup_questions():
+def _dev_runtime() -> GameRuntimeState:
     bundle = build_seed_graph(
         profile_name="dev_test",
         player=PlayerInput(name="테스터", race_id="human", gender="female"),
@@ -43,11 +44,15 @@ def test_dev_test_luka_has_public_route_clue_for_followup_questions():
         game_id="game-1",
         locale="ko",
     )
-    runtime = GameRuntimeState(
+    return GameRuntimeState(
         graph=bundle.graph,
         content=bundle.content,
         progress=bundle.progress,
     )
+
+
+def test_dev_test_luka_has_public_route_clue_for_followup_questions():
+    runtime = _dev_runtime()
 
     payload = build_input_narration_payload(
         runtime=runtime,
@@ -66,3 +71,25 @@ def test_dev_test_luka_has_public_route_clue_for_followup_questions():
             ),
         }
     ]
+
+
+def test_dev_test_first_aid_quest_completes_by_using_treatment_bandage():
+    runtime = _dev_runtime()
+
+    accepted = dispatch_graph_action(
+        runtime,
+        Action(verb="transfer", what="q_first_aid", how="accept"),
+    )
+    result = dispatch_graph_action(
+        accepted.runtime,
+        Action(verb="use", what="treatment_bandage", to="injured_tester_npc"),
+    )
+
+    graph = result.runtime.graph
+    assert result.kind == "use"
+    assert "hp" not in graph.nodes["injured_tester_npc"].properties
+    assert graph.nodes["q_first_aid"].properties["status"] == "completed"
+    assert graph.nodes["q_first_aid"].properties["triggers_met"] == [True]
+    assert "carries:player_01:treatment_bandage" not in graph.edges
+    assert "carries:player_01:first_aid_badge" in graph.edges
+    assert result.runtime.progress.active_quest_id is None

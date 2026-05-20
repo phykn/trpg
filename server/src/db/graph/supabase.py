@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
@@ -111,15 +112,17 @@ class SupabaseGraphRepo:
 
     async def load_graph(self, game_id: str) -> Graph:
         try:
-            node_data = await self._db.select(
-                "graph_nodes",
-                filters={"game_id": f"eq.{game_id}"},
-                select="game_id,node_id,node_type,properties",
-            )
-            edge_data = await self._db.select(
-                "graph_edges",
-                filters={"game_id": f"eq.{game_id}"},
-                select="game_id,edge_id,edge_type,from_node_id,to_node_id,properties",
+            node_data, edge_data = await asyncio.gather(
+                self._db.select(
+                    "graph_nodes",
+                    filters={"game_id": f"eq.{game_id}"},
+                    select="game_id,node_id,node_type,properties",
+                ),
+                self._db.select(
+                    "graph_edges",
+                    filters={"game_id": f"eq.{game_id}"},
+                    select="game_id,edge_id,edge_type,from_node_id,to_node_id,properties",
+                ),
             )
             if not node_data:
                 raise FileNotFoundError(game_id)

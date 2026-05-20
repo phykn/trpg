@@ -7,6 +7,7 @@ import { Log } from '@/logic/log';
 import { RollPanel } from '@/logic/roll';
 import { buildNearbyPanel, useStoryGraph } from '@/logic/story-graph';
 import type { Game } from '@/logic/game/useGame';
+import type { NarrationCue } from '@/logic/log/types';
 import { buildPanelSlots, type PanelAction, type PanelSlot } from '@/logic/info-panel';
 
 import { Composer, GameOverPanel, LevelUpPrompt } from '@/logic/composer';
@@ -17,6 +18,8 @@ import { ConfirmDialog } from '@/components/ui';
 import { ko } from '@/locale/ko';
 
 type Props = { game: Game };
+
+const EMPTY_CUES: NarrationCue[] = [];
 
 export function Playing({ game }: Props) {
   const { hero, subject, chapter, quest, questOffers, place, combat, storyGraph, log, pendingConfirmation, pendingRoll, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onCombatCommand, onConfirmPending, onRollPending, onStop, goToNewGame, hasUnseenLocation, markLocationSeen, hasUnseenQuest, markQuestSeen, hasUnseenSubject, markSubjectSeen, levelUpOpen, levelUpChoices, levelUpLoading, openLevelUp, cancelLevelUp, commitLevelUp } = game;
@@ -76,7 +79,7 @@ export function Playing({ game }: Props) {
   const { graph: miniMapGraph } = useStoryGraph(game.gameId, storyGraph);
   const nearby = React.useMemo(() => buildNearbyPanel(storyGraph), [storyGraph]);
   const lastLogEntry = log[log.length - 1];
-  const latestCues = lastLogEntry?.kind === 'gm' ? lastLogEntry.cues ?? [] : [];
+  const latestCues = lastLogEntry?.kind === 'gm' ? lastLogEntry.cues ?? EMPTY_CUES : EMPTY_CUES;
   const decisionStateItems = React.useMemo(
     () => buildDecisionState({
       place,
@@ -88,16 +91,31 @@ export function Playing({ game }: Props) {
     }),
     [combat, game.scenarioCompleted, hero?.status, latestCues, place, quest],
   );
+  const slots: PanelSlot[] = React.useMemo(
+    () => {
+      if (!hero) return [];
+      return [
+        { id: 'map', chip: { short: ko.table.map, dot: hasUnseenLocation }, panel: null },
+        ...buildPanelSlots(
+          { hero, subject, chapter, scenarioCompleted: game.scenarioCompleted, quest, questOffers },
+          { questDot: hasUnseenQuest, subjectDot: hasUnseenSubject },
+        ),
+      ];
+    },
+    [
+      chapter,
+      game.scenarioCompleted,
+      hasUnseenLocation,
+      hasUnseenQuest,
+      hasUnseenSubject,
+      hero,
+      quest,
+      questOffers,
+      subject,
+    ],
+  );
 
   if (!hero) return null;
-
-  const slots: PanelSlot[] = [
-    { id: 'map', chip: { short: ko.table.map, dot: hasUnseenLocation }, panel: null },
-    ...buildPanelSlots(
-      { hero, subject, chapter, scenarioCompleted: game.scenarioCompleted, quest, questOffers },
-      { questDot: hasUnseenQuest, subjectDot: hasUnseenSubject },
-    ),
-  ];
   const showRollPanel = pendingRoll !== null && !streaming;
   return (
     <View className="flex-1 bg-canvas-default py-2.5 gap-2.5">

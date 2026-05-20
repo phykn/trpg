@@ -1,8 +1,39 @@
+import asyncio
+
 from src.db.graph.supabase import SupabaseGraphRepo
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from tests._fakes import FakePostgREST
+
+
+class ConcurrentSelectFakePostgREST(FakePostgREST):
+    def __init__(self) -> None:
+        super().__init__()
+        self._graph_selects_started = 0
+        self._both_graph_selects_started = asyncio.Event()
+
+    async def select(
+        self,
+        table: str,
+        *,
+        filters: dict[str, str],
+        select: str = "*",
+        order: str | None = None,
+        limit: int | None = None,
+    ) -> list[dict]:
+        if table in {"graph_nodes", "graph_edges"}:
+            self._graph_selects_started += 1
+            if self._graph_selects_started == 2:
+                self._both_graph_selects_started.set()
+            await asyncio.wait_for(self._both_graph_selects_started.wait(), timeout=0.2)
+        return await super().select(
+            table,
+            filters=filters,
+            select=select,
+            order=order,
+            limit=limit,
+        )
 
 
 def _repo(
@@ -145,6 +176,14 @@ async def test_supabase_graph_repo_missing_rows_raise_filenotfound():
         assert str(e)
     else:
         raise AssertionError("expected FileNotFoundError")
+
+
+async def test_supabase_graph_repo_loads_nodes_and_edges_concurrently():
+    repo, _ = _repo(ConcurrentSelectFakePostgREST())
+    graph = _graph()
+    await repo.save_graph("game-1", graph)
+
+    assert await repo.load_graph("game-1") == graph
 
 
 async def test_supabase_graph_repo_loads_log_tails_in_chronological_order():

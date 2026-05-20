@@ -160,6 +160,19 @@
     "price": 0,
     "consumable": false
   },
+  "treatment_bandage": {
+    "id": "treatment_bandage",
+    "name": "처치 붕대",
+    "description": "부상 점검자에게 사용해 대상 지정 소모품 사용과 보상 지급 흐름을 확인하기 위한 붕대",
+    "traits": [
+      "깨끗하게 접혀 있습니다",
+      "대상 지정 아이템 사용 확인에 쓰입니다",
+      "사용하면 사라지는 일회용 처치 도구입니다"
+    ],
+    "price": 1,
+    "consumable": true,
+    "on_use": "부상 점검자에게 처치 붕대를 사용합니다"
+  },
   "shop_healing_herb": {
     "id": "shop_healing_herb",
     "name": "상점 회복 약초",
