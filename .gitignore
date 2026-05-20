@@ -23,5 +23,8 @@ reports/
 qa_test/
 
 # Local-only (not part of the repo)
+.notebooks/
+.codex/
 .superpowers/
 .worktrees/
+.loopy/

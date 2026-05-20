@@ -8,12 +8,11 @@ trpg/
   client/     Expo (React Native) single-screen client. → client/README.md
   agency/     Browser QA skill + local Story tools. → agency/README.md
   scenarios/  Local seed source (one dir per profile). Uploaded to release Storage via agency.story.tools.storage upload.
-  docs/       Target design contract and rebuild plan. Start at docs/plan.md.
 ```
 
-Stack: Python 3.12+ · Pydantic v2 · FastAPI · OpenAI-compatible LLM (local OpenAI-compatible server / Gemini hosted) · Supabase Postgres + Storage · Expo SDK 54 / RN 0.81 / React 19 · NativeWind v4. Runtime graph saves live in Supabase Postgres by default; dev can use local graph/scenario repos through env. Setup details in each sub-README; design intent starts at `docs/README.md`.
+Stack: Python 3.12+ · Pydantic v2 · FastAPI · OpenAI-compatible LLM (local OpenAI-compatible server / Gemini hosted) · Supabase Postgres + Storage · Expo SDK 54 / RN 0.81 / React 19 · NativeWind v4. Runtime graph saves live in Supabase Postgres by default; dev can use local graph/scenario repos through env. Setup details live in each sub-README.
 
-Env files mirror on both sides: server loads `server/.env.shared` then `server/.env.dev` or `server/.env.release`; client uses `client/.env.dev` or `client/.env.release`. The active file is picked by mode — `dev` for local work, `release` for prod.
+Env files mirror on both sides: server loads `server/.env.shared` then `server/.env.dev` or `server/.env.release`; client loads `client/.env.shared` then `client/.env.dev` or `client/.env.release`. The active file is picked by mode — `dev` for local work, `release` for prod.
 
 ## Local dev
 

@@ -7,12 +7,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-if (-not $env:RENDER_API_KEY) {
-    throw "RENDER_API_KEY is not set. Set it to your Render API key before running this script."
-}
-if (-not $env:RENDER_SERVICE_ID) {
-    throw "RENDER_SERVICE_ID is not set. Set it to your Render backend service id before running this script."
-}
+. (Join-Path $PSScriptRoot "_common.ps1")
+
+Assert-Env "RENDER_API_KEY" "RENDER_API_KEY is not set. Set it to your Render API key before running this script."
+Assert-Env "RENDER_SERVICE_ID" "RENDER_SERVICE_ID is not set. Set it to your Render backend service id before running this script."
 
 function Get-FileText {
     param([string]$Path)
@@ -23,11 +21,17 @@ function Get-FileText {
 }
 
 function Invoke-RenderApi {
-    param([string]$Method, [string]$Path, [object]$Body)
+    param(
+        [string]$ServiceId,
+        [hashtable]$Headers,
+        [string]$Method,
+        [string]$Path,
+        [object]$Body
+    )
     $request = @{
         Method = $Method
-        Uri = "https://api.render.com/v1/services/$serviceId/$Path"
-        Headers = $headers
+        Uri = "https://api.render.com/v1/services/$ServiceId/$Path"
+        Headers = $Headers
     }
     if ($null -ne $Body) {
         $request.Body = $Body | ConvertTo-Json -Compress
@@ -102,10 +106,10 @@ try {
     }
 
     foreach ($name in $envVars.Keys) {
-        Invoke-RenderApi -Method Put -Path "env-vars/$name" -Body @{ value = $envVars[$name] }
+        Invoke-RenderApi -ServiceId $serviceId -Headers $headers -Method Put -Path "env-vars/$name" -Body @{ value = $envVars[$name] }
     }
 
-    Invoke-RenderApi -Method Post -Path "deploys" -Body @{ deployMode = "deploy_only" }
+    Invoke-RenderApi -ServiceId $serviceId -Headers $headers -Method Post -Path "deploys" -Body @{ deployMode = "deploy_only" }
 
     Write-Host "Render LLM URL updated: $llmBaseUrl"
     Write-Host "Model route: local/$ModelId"

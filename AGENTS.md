@@ -1,14 +1,15 @@
 # trpg Agent Guide
 
-This repository is a Korean-language TRPG split into a FastAPI server, an Expo client, local QA/story tooling, scenario seeds, and design docs. General coding behavior lives in the global `C:\Users\KN\.codex\AGENTS.md`; this file covers repo-specific routing and verification.
+This repository is a Korean-language TRPG split into a FastAPI server, an Expo client, local QA/story tooling, and scenario seeds. General coding behavior lives in the global `C:\Users\KN\.codex\AGENTS.md`; this file covers repo-specific routing and verification.
 
 ## Read First
 
 - Root overview and dev/deploy commands: `README.md`.
-- Product and runtime contracts: `docs/README.md`, `docs/plan.md`.
 - Backend work: `server/AGENTS.md`.
 - Client work: `client/AGENTS.md`.
 - QA and scenario authoring: `agency/AGENTS.md`.
+- Browser QA workflow: `agency/qa/SKILL.md`.
+- Scenario build workflow: `agency/story/SKILL.md`.
 
 Use the deepest applicable `AGENTS.md` as the source of truth. If instructions conflict, prefer the file closest to the code being edited, then this file, then the global file.
 
@@ -18,7 +19,6 @@ Use the deepest applicable `AGENTS.md` as the source of truth. If instructions c
 - `client/` owns the Expo UI, client state, local storage pointer, and client-owned Korean labels.
 - `agency/` owns local QA runs and story/scenario build tooling.
 - `scenarios/` is seed content. Validate seed edits instead of treating JSON changes as harmless text edits.
-- `docs/` records design contracts. Update it only when behavior or public contracts change.
 
 Do not duplicate rules across layers. When a change crosses server/client/agency, verify each touched boundary with the narrowest useful command.
 
@@ -30,7 +30,8 @@ From the repo root:
 .venv/bin/python -m pytest -q
 .venv/bin/python -m pytest server/tests/path/to/test_file.py::test_name -q
 .venv/bin/ruff check server/ agency/
-.venv/bin/python agency/run_qa.py --agent socialite --turns 25
+bash server/scripts/check_relational_ssot.sh
+.venv/bin/python -m agency.story.tool sweep scenarios/<profile>
 ```
 
 From `server/`:
