@@ -20,7 +20,7 @@ export type CombatSupport = {
 
 export type CombatBadge = {
   round: number;
-  outcome: 'ongoing' | 'victory' | 'defeat' | 'fled' | 'escaped' | 'surrendered' | 'combat_stopped';
+  outcome: 'ongoing' | 'victory' | 'defeat' | 'escaped' | 'combat_stopped';
   turnLabel: string;
   playerHearts: CombatHeart;
   enemyHearts: CombatHeart;

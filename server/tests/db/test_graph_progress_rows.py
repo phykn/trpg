@@ -73,7 +73,7 @@ def test_progress_row_round_trips_graph_combat_state():
     assert progress_from_row(row).graph_combat_state == graph_combat_state
 
 
-def test_progress_from_row_backfills_legacy_graph_combat_state():
+def test_progress_from_row_accepts_current_graph_combat_state():
     row = GameProgressRow(
         game_id="game-1",
         progress={
@@ -81,6 +81,7 @@ def test_progress_from_row_backfills_legacy_graph_combat_state():
             "graph_combat_state": {
                 "location_id": "town",
                 "player_id": "player",
+                "active_enemy_id": "rat",
                 "enemy_ids": ["rat"],
                 "participant_ids": ["player", "rat"],
                 "sides": {"player": "player", "rat": "enemy"},

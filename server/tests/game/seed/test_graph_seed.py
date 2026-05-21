@@ -7,7 +7,7 @@ def _skill() -> dict:
     return {
         "id": "slash",
         "name": "베기",
-        "action": "attack",
+        "action": "precise",
         "bonus": 2,
     }
 
@@ -75,6 +75,7 @@ def test_build_seed_graph_creates_nodes_edges_and_progress():
     assert graph.nodes["player_01"].properties["hp"] == 5
     assert graph.nodes["player_01"].properties["max_mp"] == 5
     assert graph.nodes["player_01"].properties["mp"] == 5
+    assert "revive_coins" not in graph.nodes["player_01"].properties
     assert "default" not in graph.nodes
     assert graph.edges["located_at:player_01:town"].type == "located_at"
     assert graph.edges["belongs_to_race:player_01:human"].type == "belongs_to_race"
@@ -158,7 +159,7 @@ def test_build_seed_graph_keeps_static_content_out_of_seed_nodes():
                 "id": "slash",
                 "name": "베기",
                 "description": "검으로 벱니다.",
-                "action": "attack",
+                "action": "precise",
             }
         },
         npcs={
@@ -439,7 +440,7 @@ def test_build_seed_graph_links_effects_from_items():
             "practice_dagger": {
                 "id": "practice_dagger",
                 "name": "훈련 단검",
-                "action": "attack",
+                "action": "precise",
                 "effect": "dc_down",
             }
         },
@@ -447,7 +448,7 @@ def test_build_seed_graph_links_effects_from_items():
             "training_strike": {
                 "id": "training_strike",
                 "name": "훈련 일격",
-                "action": "attack",
+                "action": "precise",
                 "bonus": 2,
             }
         },
@@ -501,7 +502,7 @@ def test_build_seed_graph_keeps_status_records_without_legacy_item_links():
             "focus_bolt": {
                 "id": "focus_bolt",
                 "name": "집중 화살",
-                "action": "attack",
+                "action": "precise",
                 "bonus": 2,
             }
         },
@@ -599,12 +600,12 @@ def test_build_seed_graph_links_skills_to_actions():
             "spark": {
                 "id": "spark",
                 "name": "불꽃",
-                "action": "attack",
+                "action": "precise",
             }
         },
         actions={
-            "attack": {
-                "id": "attack",
+            "precise": {
+                "id": "precise",
                 "name": "공격",
             }
         },
@@ -622,9 +623,9 @@ def test_build_seed_graph_links_skills_to_actions():
     )
 
     graph = bundle.graph
-    assert graph.nodes["attack"].type == "action"
-    assert graph.edges["uses_action:spark:attack"].type == "uses_action"
-    assert bundle.content.actions["attack"]["name"] == "공격"
+    assert graph.nodes["precise"].type == "action"
+    assert graph.edges["uses_action:spark:precise"].type == "uses_action"
+    assert bundle.content.actions["precise"]["name"] == "공격"
 
 
 def test_build_seed_graph_links_items_to_slots():

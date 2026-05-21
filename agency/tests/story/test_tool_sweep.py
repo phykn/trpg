@@ -75,7 +75,7 @@ def test_sweep_loads_runtime_catalog_records(capsys, tmp_path):
                 "name": "흥정",
                 "description": "말로 상황을 풉니다.",
                 "level": 1,
-                "action": "social",
+                "action": "talk",
             },
             ensure_ascii=False,
         ),
@@ -187,7 +187,7 @@ def test_sweep_loads_runtime_catalog_records(capsys, tmp_path):
         encoding="utf-8",
     )
     (sd / "actions.json").write_text(
-        json.dumps({"social": {"id": "social", "name": "사회적 행동"}}, ensure_ascii=False),
+        json.dumps({"talk": {"id": "talk", "name": "대화"}}, ensure_ascii=False),
         encoding="utf-8",
     )
     (sd / "knowledge.json").write_text(

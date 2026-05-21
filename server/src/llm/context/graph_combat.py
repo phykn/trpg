@@ -45,9 +45,7 @@ class GraphCombatContext(BaseModel):
         "ongoing",
         "victory",
         "defeat",
-        "fled",
         "escaped",
-        "surrendered",
         "combat_stopped",
     ]
     participants: list[GraphCombatParticipantView]

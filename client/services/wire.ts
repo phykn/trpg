@@ -220,7 +220,7 @@ export type GraphCombatSupport = {
 
 export type GraphCombatState = {
   round: number;
-  outcome: 'ongoing' | 'victory' | 'defeat' | 'fled' | 'escaped' | 'surrendered' | 'combat_stopped';
+  outcome: 'ongoing' | 'victory' | 'defeat' | 'escaped' | 'combat_stopped';
   playerHearts: GraphHeart;
   enemyHearts: GraphHeart;
   activeEnemyId: string;
@@ -285,7 +285,7 @@ export type GraphLevelUpSkillSpec = {
   id: string;
   name: string;
   description: string;
-  action: 'attack' | 'defend' | 'flee' | 'social';
+  action: 'precise' | 'reckless' | 'defend' | 'guarded' | 'create_distance' | 'talk';
   bonus: number;
   mp_cost: number;
 };

@@ -25,7 +25,6 @@ const colors = {
   hp: { fg: '#df876d' },
   mp: { fg: '#78b879' },
   exp: { fg: '#e8a55a' },
-  revival: { fg: '#b39ac8' },
   gold: { fg: '#d4a85a' },
 };
 
@@ -83,7 +82,6 @@ const toneColor = {
   hp: colors.hp.fg,
   mp: colors.mp.fg,
   exp: colors.exp.fg,
-  revival: colors.revival.fg,
   gold: colors.gold.fg,
   accent: colors.accent.fg,
   good: colors.success.fg,

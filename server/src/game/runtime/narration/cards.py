@@ -152,12 +152,8 @@ def _combat_text(
     outcome = dispatch.outcome
     if outcome is None and after.progress.graph_combat_state is not None:
         outcome = after.progress.graph_combat_state.outcome
-    if outcome == "fled":
-        return render("runtime.combat.fled", after.progress.locale)
     if outcome == "escaped":
         return render("runtime.combat.escaped", after.progress.locale)
-    if outcome == "surrendered":
-        return render("runtime.combat.surrendered", after.progress.locale)
     if outcome == "combat_stopped":
         return render("runtime.combat.stopped", after.progress.locale)
     if outcome == "defeat":

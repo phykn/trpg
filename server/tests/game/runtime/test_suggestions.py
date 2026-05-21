@@ -365,7 +365,7 @@ def test_gm_log_entry_from_narration_omits_empty_ui_cues():
     }
 
 
-def test_parse_graph_narration_answer_normalizes_legacy_string_suggestions():
+def test_parse_graph_narration_answer_drops_string_suggestions():
     answer = "\n".join(
         [
             "상대가 당신의 말을 기다립니다.",
@@ -383,13 +383,8 @@ def test_parse_graph_narration_answer_normalizes_legacy_string_suggestions():
 
     result = parse_graph_narration_answer(answer)
 
+    assert len(result.suggestions) == 1
     assert result.suggestions[0].model_dump() == {
-        "label": "상인에게 다시 묻습니다",
-        "input_text": "상인에게 다시 묻습니다",
-        "intent": None,
-        "action": None,
-    }
-    assert result.suggestions[1].model_dump() == {
         "label": "대답 기다리기",
         "input_text": "상인의 대답을 기다립니다",
         "intent": None,
@@ -484,7 +479,7 @@ def test_parse_graph_narration_answer_uses_env_marker(monkeypatch):
         [
             "상대가 고개를 끄덕입니다.",
             "---META---",
-            '{"suggestions": ["다시 묻습니다"]}',
+            '{"suggestions": [{"label": "다시 묻기", "input_text": "다시 묻습니다"}]}',
         ]
     )
 
@@ -500,7 +495,10 @@ def test_parse_graph_narration_answer_uses_env_suggestion_limits(monkeypatch):
         [
             "상대가 길을 가리킵니다.",
             "---TRPG_META---",
-            '{"suggestions": ["북문으로 이동합니다", "광장으로 돌아갑니다"]}',
+            '{"suggestions": ['
+            '{"label": "북문", "input_text": "북문으로 이동합니다"}, '
+            '{"label": "광장", "input_text": "광장으로 돌아갑니다"}'
+            "]}",
         ]
     )
 

@@ -679,17 +679,17 @@ describe('graph API helpers', () => {
       ok: true,
       json: async () => ({
         choices: [{
-          id: 'learn_skill:skill_gen_attack_1',
+          id: 'learn_skill:skill_gen_precise_1',
           label: '그림자 찌르기 습득',
           description: '공격 DC를 낮춘다.',
           growth: {
             kind: 'learn_skill',
-            skill_id: 'skill_gen_attack_1',
+            skill_id: 'skill_gen_precise_1',
             skill: {
-              id: 'skill_gen_attack_1',
+              id: 'skill_gen_precise_1',
               name: '그림자 찌르기',
               description: '공격 DC를 낮춘다.',
-              action: 'attack',
+              action: 'precise',
               bonus: 2,
               mp_cost: 2,
             },

@@ -32,12 +32,10 @@ afterEach(() => {
 });
 
 describe('suggestion storage', () => {
-  test('loads legacy string suggestions as chips', () => {
+  test('drops stale non-chip suggestions', () => {
     storage.set('trpg.suggestions.game-1', JSON.stringify(['북문으로 이동합니다']));
 
-    expect(loadSuggestions('game-1')).toEqual([
-      { label: '북문으로 이동합니다', inputText: '북문으로 이동합니다' },
-    ]);
+    expect(loadSuggestions('game-1')).toEqual([]);
   });
 
   test('stores chip suggestions without degrading input text', () => {

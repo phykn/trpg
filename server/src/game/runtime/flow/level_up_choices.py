@@ -15,7 +15,7 @@ from src.llm.calls.runner import get_prompt, run_with_retries
 from src.llm.client import LLMClient
 
 
-SkillAction = Literal["attack", "defend", "flee", "social"]
+SkillAction = Literal["precise", "reckless", "defend", "guarded", "create_distance", "talk"]
 
 
 class LevelUpSkillCandidate(BaseModel):
@@ -222,17 +222,17 @@ def _candidate_templates(runtime: GameRuntimeState) -> list[LevelUpSkillCandidat
                     "runtime.level_choice.fallback.agile_attack.description",
                     locale,
                 ),
-                action="attack",
+                action="precise",
                 bonus=2,
                 mp_cost=2,
             ),
             LevelUpSkillCandidate(
-                name=render("runtime.level_choice.fallback.quick_flee.name", locale),
+                name=render("runtime.level_choice.fallback.quick_distance.name", locale),
                 description=render(
-                    "runtime.level_choice.fallback.quick_flee.description",
+                    "runtime.level_choice.fallback.quick_distance.description",
                     locale,
                 ),
-                action="flee",
+                action="create_distance",
                 bonus=3,
                 mp_cost=2,
             ),
@@ -244,7 +244,7 @@ def _candidate_templates(runtime: GameRuntimeState) -> list[LevelUpSkillCandidat
                 "runtime.level_choice.fallback.focus_attack.description",
                 locale,
             ),
-            action="attack",
+            action="precise",
             bonus=2,
             mp_cost=2,
         ),

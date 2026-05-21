@@ -17,8 +17,6 @@ const hero: Hero = {
   hpMax: 10,
   mp: 4,
   mpMax: 4,
-  reviveCoins: 0,
-  reviveCoinsMax: 0,
   gold: 0,
   stats: [],
   equipment: { weapon: null, armor: null, accessory: null },

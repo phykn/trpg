@@ -42,7 +42,7 @@ _RECOMMENDED_FIELDS = {
     "item": ("traits",),
     "character": ("mbti", "traits"),
 }
-_SUPPORT_ACTIONS = {"attack", "defend", "flee", "social"}
+_SUPPORT_ACTIONS = {"precise", "reckless", "defend", "guarded", "create_distance", "talk"}
 _EFFECT_TEMPLATES = {
     "dc_down",
     "extra_heart_damage",

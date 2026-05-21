@@ -128,7 +128,7 @@ def test_outcome_from_dispatch_maps_combat_and_move_results():
 
     assert outcome_from_dispatch(dispatch("combat", "victory")) == "success"
     assert outcome_from_dispatch(dispatch("combat", "defeat")) == "failure"
-    assert outcome_from_dispatch(dispatch("combat", "fled")) == "neutral"
+    assert outcome_from_dispatch(dispatch("combat", "escaped")) == "neutral"
     assert outcome_from_dispatch(dispatch("move")) == "neutral"
     assert outcome_from_dispatch(dispatch("quest_accept")) == "neutral"
 
@@ -139,6 +139,7 @@ def test_outcome_from_dispatch_maps_combat_and_move_results():
                     "graph_combat_state": GraphCombatState(
                         location_id="town",
                         player_id="player_01",
+                        active_enemy_id="goblin_01",
                         enemy_ids=["goblin_01"],
                         participant_ids=["player_01", "goblin_01"],
                         sides={"player_01": "player", "goblin_01": "enemy"},

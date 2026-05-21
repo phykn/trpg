@@ -56,7 +56,7 @@ def _enemy(character_id: str = "goblin_01", *, level: int = 1) -> GraphNode:
 def _skill(
     skill_id: str,
     *,
-    action: str = "attack",
+    action: str = "precise",
     mp_cost: int = 2,
     bonus: int = 2,
 ) -> GraphNode:
@@ -75,7 +75,7 @@ def _skill(
 def _item(
     item_id: str,
     *,
-    action: str = "attack",
+    action: str = "precise",
     bonus: int = 0,
     effect: str = "extra_heart_damage",
     consumable: bool = True,
@@ -220,7 +220,7 @@ def test_attack_success_reduces_enemy_heart_without_hp_loss():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="attack"),
+        GraphCombatAction(kind="precise"),
         dice=11,
     )
 
@@ -229,7 +229,7 @@ def test_attack_success_reduces_enemy_heart_without_hp_loss():
     assert result.state.player_hearts == 3
     assert result.state.round == 2
     assert result.state.outcome == "ongoing"
-    assert result.state.trace[-1].kind == "player_attack_success"
+    assert result.state.trace[-1].kind == "player_precise_success"
 
 
 def test_attack_failure_reduces_player_heart_and_ignores_stats():
@@ -245,14 +245,14 @@ def test_attack_failure_reduces_player_heart_and_ignores_stats():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="attack"),
+        GraphCombatAction(kind="precise"),
         dice=10,
     )
 
     assert result.state.enemy_hearts == 3
     assert result.state.player_hearts == 2
     assert result.state.round == 2
-    assert result.state.trace[-1].kind == "player_attack_failure"
+    assert result.state.trace[-1].kind == "player_precise_failure"
 
 
 def test_defend_success_recovers_a_player_heart():
@@ -299,14 +299,14 @@ def test_flee_success_ends_combat_without_graph_changes():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="flee"),
+        GraphCombatAction(kind="create_distance"),
         dice=11,
     )
 
     assert result.changes == []
-    assert result.state.outcome == "fled"
+    assert result.state.outcome == "escaped"
     assert result.state.player_hearts == 3
-    assert result.state.trace[-1].kind == "player_flee_success"
+    assert result.state.trace[-1].kind == "player_create_distance_success"
 
 
 def test_flee_failure_loses_one_heart():
@@ -317,14 +317,14 @@ def test_flee_failure_loses_one_heart():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="flee"),
+        GraphCombatAction(kind="create_distance"),
         dice=10,
     )
 
     assert result.state.outcome == "ongoing"
     assert result.state.player_hearts == 2
     assert result.state.round == 2
-    assert result.state.trace[-1].kind == "player_flee_failure"
+    assert result.state.trace[-1].kind == "player_create_distance_failure"
 
 
 def test_social_success_and_failure_use_hearts():
@@ -335,22 +335,22 @@ def test_social_success_and_failure_use_hearts():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="social"),
+        GraphCombatAction(kind="talk"),
         dice=11,
     )
     failure = plan_combat_exchange(
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="social"),
+        GraphCombatAction(kind="talk"),
         dice=10,
     )
 
-    assert success.state.enemy_hearts == 2
+    assert success.state.enemy_hearts == 3
     assert success.state.enemy_pressure == 1
-    assert success.state.trace[-1].kind == "player_social_success"
+    assert success.state.trace[-1].kind == "player_talk_success"
     assert failure.state.player_hearts == 2
-    assert failure.state.trace[-1].kind == "player_social_failure"
+    assert failure.state.trace[-1].kind == "player_talk_failure"
 
 
 def test_guarded_tactic_lowers_dc_and_prevents_failure_heart_loss():
@@ -436,7 +436,7 @@ def test_victory_marks_enemy_defeated_without_forced_round_limit():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="attack"),
+        GraphCombatAction(kind="precise"),
         dice=11,
     )
     changed = _apply_all(graph, result.changes)
@@ -460,7 +460,7 @@ def test_victory_marks_enemy_without_hp_resource_dead():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="attack"),
+        GraphCombatAction(kind="precise"),
         dice=11,
     )
     changed = _apply_all(graph, result.changes)
@@ -481,7 +481,7 @@ def test_defeat_deducts_hp_by_remaining_enemy_hearts():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="attack"),
+        GraphCombatAction(kind="precise"),
         dice=10,
     )
     changed = _apply_all(graph, result.changes)
@@ -507,7 +507,7 @@ def test_dc_uses_level_difference_skill_bonus_and_clamp():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="attack"),
+        GraphCombatAction(kind="precise"),
         dice=17,
     )
     success_with_support = plan_combat_exchange(
@@ -515,7 +515,7 @@ def test_dc_uses_level_difference_skill_bonus_and_clamp():
         state,
         "player_01",
         GraphCombatAction(
-            kind="attack",
+            kind="precise",
             support_id="focus",
             support_kind="skill",
         ),
@@ -541,7 +541,7 @@ def test_skill_support_requires_known_skill_and_mp():
             _started(no_skill_graph),
             "player_01",
             GraphCombatAction(
-                kind="attack",
+                kind="precise",
                 support_id="focus",
                 support_kind="skill",
             ),
@@ -558,7 +558,7 @@ def test_skill_support_requires_known_skill_and_mp():
             _started(low_mp_graph),
             "player_01",
             GraphCombatAction(
-                kind="attack",
+                kind="precise",
                 support_id="focus",
                 support_kind="skill",
             ),
@@ -575,7 +575,7 @@ def test_skill_support_requires_known_skill_and_mp():
             state,
             "player_01",
             GraphCombatAction(
-                kind="attack",
+                kind="precise",
                 support_id="focus",
                 support_kind="skill",
             ),
@@ -592,7 +592,7 @@ def test_item_support_can_consume_and_deal_extra_heart_damage():
         state,
         "player_01",
         GraphCombatAction(
-            kind="attack",
+            kind="precise",
             support_id="bomb",
             support_kind="item",
         ),
@@ -641,7 +641,7 @@ def test_exchange_changes_are_valid_graph_changes():
         _started(graph),
         "player_01",
         GraphCombatAction(
-            kind="attack",
+            kind="precise",
             support_id="focus",
             support_kind="skill",
         ),

@@ -14,8 +14,6 @@ const hero = {
   hpMax: 10,
   mp: 4,
   mpMax: 4,
-  reviveCoins: 0,
-  reviveCoinsMax: 0,
   gold: 0,
   stats: [],
   equipment: {
@@ -41,7 +39,6 @@ describe('buildHeroSlot', () => {
     expect(slot.panel?.actions).toBeUndefined();
     expect(slot.panel?.meta?.[0]?.text).toBe('Lv 1');
     expect(slot.panel?.sections?.find((section) => section.label === '경험')).toBeUndefined();
-    expect(slot.panel?.sections?.find((section) => section.label === '소생')).toBeUndefined();
     expect(slot.panel?.sections?.find((section) => section.label === '소지')?.text).toBe('금화(0) · 회복 물약 · 가죽 갑옷');
   });
 

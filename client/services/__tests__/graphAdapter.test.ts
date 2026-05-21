@@ -1,4 +1,4 @@
-import { adaptGraphState, deriveGraphSuggestions } from '../graphAdapter';
+import { adaptGraphState } from '../graphAdapter';
 
 describe('adaptGraphState', () => {
   test('maps graph state into the existing display state shape', () => {
@@ -209,72 +209,6 @@ describe('adaptGraphState', () => {
       'goblin_01',
       'wolf_01',
       'quest_01',
-    ]);
-  });
-
-  test('derives graph suggestions from visible targets and exits', () => {
-    const suggestions = deriveGraphSuggestions({
-      hero: {
-        id: 'player_01',
-        name: '테스터',
-        level: 1,
-        exp: 0,
-        expMax: 20,
-        canLevelUp: false,
-        gold: 0,
-        resources: {
-          hp: { current: 20, maximum: 20, state: 'healthy' },
-          mp: { current: 10, maximum: 10, state: 'ready' },
-        },
-        stats: {},
-        equipment: { weapon: null, armor: null, accessory: null },
-        inventory: [],
-        skills: [],
-        status: [],
-      },
-      place: {
-        id: 'town',
-        name: '광장',
-        description: '',
-        exits: [{ id: 'watch', name: '망루', description: '' }],
-        items: [],
-        targets: [
-          {
-            id: 'edrik_chief',
-            name: '에드릭',
-            kind: 'npc',
-            alive: true,
-            level: 1,
-            raceJob: '',
-            gender: '',
-            role: '',
-          },
-          {
-            id: 'wolf_01',
-            name: '늑대',
-            kind: 'npc',
-            alive: true,
-            level: 1,
-            raceJob: '',
-            gender: '',
-            role: '',
-          },
-        ],
-      },
-      chapter: null,
-      scenarioCompleted: false,
-      quest: null,
-      questOffers: [],
-      combat: null,
-      pendingConfirmation: null,
-      pendingRoll: null,
-      log: [{ id: 1, kind: 'gm', text: '당신은 광장에 있습니다.' }],
-    });
-
-    expect(suggestions).toEqual([
-      { label: '에드릭에게 말걸기', inputText: '에드릭에게 말을 겁니다' },
-      { label: '늑대에게 말걸기', inputText: '늑대에게 말을 겁니다' },
-      { label: '망루로 이동', inputText: '망루로 이동합니다' },
     ]);
   });
 });

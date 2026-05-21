@@ -167,13 +167,6 @@ def _normalize(value: str) -> str:
 
 
 def normalize_suggestion(value: object) -> GraphSuggestion | None:
-    if isinstance(value, str):
-        text = value.strip()
-        if not text or _looks_like_json_fragment(text):
-            return None
-        if _is_targetless_generic_suggestion(text, text):
-            return None
-        return GraphSuggestion(label=text, input_text=text)
     if isinstance(value, GraphSuggestion):
         label = value.label.strip()
         input_text = value.input_text.strip()

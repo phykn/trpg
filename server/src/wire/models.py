@@ -179,9 +179,7 @@ class GraphCombatPayload(_CamelModel):
         "ongoing",
         "victory",
         "defeat",
-        "fled",
         "escaped",
-        "surrendered",
         "combat_stopped",
     ]
     player_hearts: GraphHeartPayload

@@ -5,7 +5,7 @@ from src.locale.terms import (
     ABANDON_TERMS,
     ACCEPT_TERMS,
     ACTION_ATTACK_TERMS,
-    ACTION_FLEE_TERMS,
+    ACTION_CREATE_DISTANCE_TERMS,
     ACTION_PICKUP_TERMS,
     DECEPTIVE_TERMS,
     DIALOGUE_TERMS,
@@ -54,10 +54,10 @@ def classify_action_shortcut(
     locale: str = "ko",
 ) -> ActionOutput | None:
     if surroundings.get("in_combat") is True and _has_any(
-        player_input, ACTION_FLEE_TERMS
+        player_input, ACTION_CREATE_DISTANCE_TERMS
     ):
         return _action_output(
-            [Action(verb="move", how="hasty")],
+            [Action(verb="move", how="create_distance")],
             in_combat=True,
         )
 

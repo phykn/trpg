@@ -54,7 +54,7 @@ def test_query_cannot_be_chained():
 
 
 def test_in_combat_move_without_destination():
-    raw = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
+    raw = json.dumps({"actions": [{"verb": "move", "how": "create_distance"}]})
     out = validate_action_output_json(raw, in_combat=True)
     assert out.actions[0].verb == "move"
 
@@ -76,7 +76,7 @@ def test_out_of_combat_attack_rejects_tactic():
 
 
 def test_out_of_combat_move_without_destination_fails():
-    raw = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
+    raw = json.dumps({"actions": [{"verb": "move", "how": "create_distance"}]})
     with pytest.raises(ValidationError):
         validate_action_output_json(raw, in_combat=False)
 

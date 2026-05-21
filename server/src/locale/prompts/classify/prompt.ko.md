@@ -156,7 +156,7 @@ context에 없는 id는 출력하지 마십시오.
 - `inspect`: 둘러보기, 조사. 선택: `target`
 - `query`: 공개 정보 질문. 선택: `topic`
 - `rest`: 잠, 캠프, 휴식
-- `flee`: 전투 중 도주
+- `create_distance`: 전투 중 거리 벌리기
 - `accept_quest`: 퀘스트 수락. 필요: `quest_id`. 선택: `target`
 - `abandon_quest`: 퀘스트 포기. 필요: `quest_id`. 선택: `target`
 - `pass`: 무행동, 모호함, id 매칭 실패. 선택: `note`
@@ -177,7 +177,7 @@ context에 없는 id는 출력하지 마십시오.
 - `guarded`: 신중하게 공격
 - `reckless`: 무모하게 밀어붙임
 
-전투 중 도망 의도는 `tactic`이 아니라 `flee` intent입니다.
+전투 중 도망 의도는 `tactic`이 아니라 `create_distance` intent입니다.
 전투 중 대화 의도는 `tactic`이 아니라 `talk` intent입니다.
 
 허용 `topic`:
@@ -318,7 +318,7 @@ protected가 아니면 친근한 NPC라도 공격 의도는 `attack`입니다.
 - 검을 뽑기, 활 들기, 방패 착용은 `equip`.
 - 이미 장비 중인 무기로 공격하면 `equip` 없이 `attack`.
 - 기술이 불명확한 공격은 `attack`.
-- 전투 중 도망 의도는 `flee`.
+- 전투 중 도망 의도는 `create_distance`.
 - 전투 중 대화로 압박하려는 의도는 `talk`.
 - 전투 중 "신중하게", "방어하며", "거리를 재며" 공격하면 `attack` + `tactic:"guarded"`.
 - 전투 중 "무모하게", "전력으로", "위험을 감수하고" 공격하면 `attack` + `tactic:"reckless"`.

@@ -305,7 +305,7 @@ def test_build_action_output_supports_existing_intent_catalog():
             },
         ),
         (
-            {"intent": "flee"},
+            {"intent": "create_distance"},
             {"verb": "move", "how": "create_distance"},
             {"in_combat": True},
         ),

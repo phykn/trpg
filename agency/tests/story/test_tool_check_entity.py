@@ -1,7 +1,7 @@
 """check-entity subcommand — wraps spec.check_refs + entity invariants.
 
-Per-entity check uses the on-disk pool from scenario_dir. With no flags,
-behaves identically to the legacy `_validate_entity_response`.
+Per-entity check uses the on-disk pool from scenario_dir. With no flags, it
+runs the same validation path used by generated entity checks.
 """
 
 import json
@@ -39,7 +39,7 @@ def _scaffold_minimal_scenario(tmp_path: Path) -> Path:
                 "name": "흥정",
                 "description": "값을 깎는 능력.",
                 "level": 1,
-                "action": "social",
+                "action": "talk",
                 "bonus": 1,
                 "mp_cost": 0,
             },
@@ -60,7 +60,7 @@ def test_check_entity_skill_ok(capsys, tmp_path):
                 "name": "발걸기",
                 "description": "상대를 넘어뜨립니다.",
                 "level": 1,
-                "action": "attack",
+                "action": "precise",
                 "bonus": 1,
                 "mp_cost": 1,
             },
@@ -197,7 +197,7 @@ def _scaffold_for_character(tmp_path: Path) -> Path:
                 "name": "흥정",
                 "description": "값을 깎는 능력.",
                 "level": 1,
-                "action": "social",
+                "action": "talk",
                 "bonus": 1,
                 "mp_cost": 0,
             },

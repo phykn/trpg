@@ -240,7 +240,7 @@ def _combat_exchange_result(dispatch: GraphActionDispatchResult) -> str:
     state = dispatch.runtime.progress.graph_combat_state
     if state is not None and state.last_roll is not None and state.last_dc is not None:
         return "success" if state.last_roll >= state.last_dc else "failure"
-    if dispatch.outcome in {"victory", "escaped", "surrendered", "combat_stopped"}:
+    if dispatch.outcome in {"victory", "escaped", "combat_stopped"}:
         return "success"
     if dispatch.outcome == "defeat":
         return "failure"
@@ -257,9 +257,9 @@ def _combat_exchange_result(dispatch: GraphActionDispatchResult) -> str:
 
 def _combat_failure_fallback_key(dispatch: GraphActionDispatchResult) -> str:
     action = _latest_combat_action(dispatch)
-    if action in {"create_distance", "flee"}:
+    if action == "create_distance":
         return "runtime.narration.combat_failure.create_distance"
-    if action in {"talk", "social"}:
+    if action == "talk":
         return "runtime.narration.combat_failure.talk"
     if action in {"guarded", "defend"}:
         return "runtime.narration.combat_failure.guarded"
@@ -278,10 +278,7 @@ def _latest_combat_action(dispatch: GraphActionDispatchResult) -> str | None:
             "guarded",
             "precise",
             "talk",
-            "social",
-            "flee",
             "defend",
-            "attack",
         ):
             if action in kind:
                 return action

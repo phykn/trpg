@@ -201,7 +201,7 @@ def make_default_storage() -> FakeStorage:
         "id": "basic_strike",
         "name": "기본 타격",
         "description": "공격 판정을 안정시키는 테스트 기술.",
-        "action": "attack",
+        "action": "precise",
         "bonus": 2,
         "mp_cost": 0,
     }

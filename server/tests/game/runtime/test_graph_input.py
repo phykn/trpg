@@ -724,8 +724,8 @@ async def test_graph_input_reflects_speak_turn_into_memory_dialogue_and_suggesti
         turn_summary="고블린에게서 북문의 낯선 발자국 정보를 들었습니다.",
         importance=3,
         suggestions=[
-            "북문으로 이동합니다",
-            "발자국을 자세히 살펴봅니다",
+            {"label": "북문", "input_text": "북문으로 이동합니다"},
+            {"label": "발자국", "input_text": "발자국을 자세히 살펴봅니다"},
         ],
     )
 
@@ -735,13 +735,13 @@ async def test_graph_input_reflects_speak_turn_into_memory_dialogue_and_suggesti
 
     assert [suggestion.model_dump() for suggestion in result.suggestions] == [
         {
-            "label": "북문으로 이동합니다",
+            "label": "북문",
             "input_text": "북문으로 이동합니다",
             "intent": None,
             "action": None,
         },
         {
-            "label": "발자국을 자세히 살펴봅니다",
+            "label": "발자국",
             "input_text": "발자국을 자세히 살펴봅니다",
             "intent": None,
             "action": None,

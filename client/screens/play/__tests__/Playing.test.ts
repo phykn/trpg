@@ -46,7 +46,7 @@ describe('Playing overlay layering', () => {
     );
   });
 
-  test('builds nearby actions from the current server snapshot, not the merged map history', () => {
+  test('builds nearby actions from the current server snapshot', () => {
     expect(source).toContain('buildNearbyPanel(storyGraph)');
   });
 

@@ -11,8 +11,8 @@
   },
   "escape_boost": {
     "id": "escape_boost",
-    "name": "도주 보조",
-    "description": "도주 판정의 난이도를 낮춥니다",
+    "name": "거리 확보 보조",
+    "description": "거리 확보 판정의 난이도를 낮춥니다",
     "traits": [
       "위험에서 벗어나기 쉬운 상황을 만듭니다",
       "bonus 값을 난이도 감소량으로 사용합니다",

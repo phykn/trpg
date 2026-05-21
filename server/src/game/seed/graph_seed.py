@@ -5,7 +5,6 @@ from pydantic import BaseModel, ConfigDict
 from src.game.domain.graph import EdgeType, Graph, GraphEdge, GraphNode, NodeType
 from src.game.domain.progress import GameProgress
 from src.game.engines.growth import calc_max_hp, calc_max_mp
-from src.game.rules.config import RULES
 from src.game.domain.content import RuntimeContent, runtime_content_from_records
 from src.game.seed.player import PlayerInput
 
@@ -333,7 +332,6 @@ def _build_player(
         "inventory": _str_list(template.get("inventory")),
         "gold": _int_value(template.get("gold"), 0),
         "xp_pool": _int_value(template.get("xp_pool"), 0),
-        "revive_coins": RULES.death.revive_coins,
         "max_hp": max_hp,
         "max_mp": max_mp,
         "hp": max_hp,

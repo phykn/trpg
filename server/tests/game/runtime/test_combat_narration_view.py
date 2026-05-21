@@ -31,12 +31,13 @@ def test_combat_narration_view_marks_korean_training_dummy_nonlethal():
             graph_combat_state=GraphCombatState(
                 location_id="test_hub",
                 player_id="player_01",
+                active_enemy_id="training_dummy",
                 enemy_ids=["training_dummy"],
                 participant_ids=["player_01", "training_dummy"],
                 sides={"player_01": "player", "training_dummy": "enemy"},
                 trace=[
                     GraphCombatTraceEvent(
-                        kind="player_attacked",
+                        kind="player_precise_success",
                         actor_id="player_01",
                         target="training_dummy",
                         state="critical",
@@ -73,6 +74,7 @@ def test_combat_narration_view_exposes_latest_exchange_result():
             graph_combat_state=GraphCombatState(
                 location_id="test_hub",
                 player_id="player_01",
+                active_enemy_id="training_dummy",
                 enemy_ids=["training_dummy"],
                 participant_ids=["player_01", "training_dummy"],
                 sides={"player_01": "player", "training_dummy": "enemy"},
@@ -123,10 +125,11 @@ def test_combat_narration_view_uses_player_facing_action_labels():
             graph_combat_state=GraphCombatState(
                 location_id="test_hub",
                 player_id="player_01",
+                active_enemy_id="training_dummy",
                 enemy_ids=["training_dummy"],
                 participant_ids=["player_01", "training_dummy"],
                 sides={"player_01": "player", "training_dummy": "enemy"},
-                last_action="guarded",
+                last_action="defend",
                 trace=[
                     GraphCombatTraceEvent(
                         kind="player_guarded_failure",
@@ -187,6 +190,7 @@ def test_combat_narration_view_exposes_effect_context():
             graph_combat_state=GraphCombatState(
                 location_id="test_hub",
                 player_id="player_01",
+                active_enemy_id="training_dummy",
                 enemy_ids=["training_dummy"],
                 participant_ids=["player_01", "training_dummy"],
                 sides={"player_01": "player", "training_dummy": "enemy"},
@@ -194,7 +198,7 @@ def test_combat_narration_view_exposes_effect_context():
                 last_support_kind="skill",
                 trace=[
                     GraphCombatTraceEvent(
-                        kind="player_attacked",
+                        kind="player_precise_success",
                         actor_id="player_01",
                         target="training_dummy",
                         state="critical",
@@ -253,6 +257,7 @@ def test_combat_narration_view_exposes_status_context_from_last_support():
             graph_combat_state=GraphCombatState(
                 location_id="test_hub",
                 player_id="player_01",
+                active_enemy_id="training_dummy",
                 enemy_ids=["training_dummy"],
                 participant_ids=["player_01", "training_dummy"],
                 sides={"player_01": "player", "training_dummy": "enemy"},
@@ -260,7 +265,7 @@ def test_combat_narration_view_exposes_status_context_from_last_support():
                 last_support_kind="item",
                 trace=[
                     GraphCombatTraceEvent(
-                        kind="player_defended",
+                        kind="player_guarded_success",
                         actor_id="player_01",
                         target="training_dummy",
                         state="healthy",

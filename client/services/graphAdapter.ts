@@ -1,4 +1,4 @@
-import { compose, ko } from '@/locale/ko';
+import { ko } from '@/locale/ko';
 
 import type {
   FrontState,
@@ -8,7 +8,6 @@ import type {
   GraphPlaceTarget,
   GraphPlaceState,
 } from './wire';
-import type { SuggestionChip } from './suggestions';
 
 const STAT_ORDER = ['body', 'mind', 'agility', 'presence'] as const;
 
@@ -38,62 +37,6 @@ export function adaptGraphState(state: GraphFrontState): FrontState {
     pendingRoll: state.pendingRoll,
     storyGraph: buildStoryGraph(state, visibleQuests(state)),
   };
-}
-
-export function deriveGraphSuggestions(state: GraphFrontState): SuggestionChip[] {
-  if (state.pendingConfirmation !== null) return [];
-  if (state.pendingRoll !== null) return [];
-  if (state.combat !== null) return combatSuggestions(state.combat);
-
-  const suggestions: SuggestionChip[] = [];
-  const livingTargets = state.place?.targets.filter((target) => target.alive) ?? [];
-  for (const npc of livingTargets) {
-    suggestions.push(talkChip(npc.name));
-  }
-  for (const exit of state.place?.exits ?? []) {
-    suggestions.push(chip(moveLabel(exit.name), compose.moveTo(exit.name)));
-  }
-  suggestions.push(chip(ko.panel.inspect, compose.inspectSurroundings()));
-  return uniqueFirst(suggestions, 3);
-}
-
-function combatSuggestions(combat: GraphCombatState): SuggestionChip[] {
-  const enemy = combat.participants.find(
-    (participant) => participant.side === 'enemy' && participant.id === combat.activeEnemyId && combat.enemyHearts.current > 0,
-  );
-  const suggestions = enemy
-    ? [
-      chip(ko.combat.attack, compose.attack(enemy.name)),
-      chip(ko.combat.defend, compose.defend()),
-      chip(ko.combat.flee, compose.flee()),
-    ]
-    : [
-      chip(ko.combat.defend, compose.defend()),
-      chip(ko.combat.flee, compose.flee()),
-    ];
-  return uniqueFirst(suggestions, 3);
-}
-
-function chip(label: string, inputText: string): SuggestionChip {
-  return { label, inputText };
-}
-
-function talkChip(name: string): SuggestionChip {
-  return { label: compose.talkLabel(name), inputText: compose.talkTo(name) };
-}
-
-function moveLabel(name: string): string {
-  return compose.moveLabel(name);
-}
-
-function uniqueFirst(values: SuggestionChip[], limit: number): SuggestionChip[] {
-  const result: SuggestionChip[] = [];
-  for (const value of values) {
-    if (result.some((item) => item.inputText === value.inputText)) continue;
-    result.push(value);
-    if (result.length >= limit) break;
-  }
-  return result;
 }
 
 function selectSubjectTarget(targets: GraphPlaceTarget[]): GraphPlaceTarget | null {
@@ -128,8 +71,6 @@ function adaptHero(hero: GraphHeroState): FrontState['hero'] {
     hpMax: hp.maximum,
     mp: mp.current,
     mpMax: mp.maximum,
-    reviveCoins: 0,
-    reviveCoinsMax: 0,
     gold: hero.gold,
     stats: statEntries(hero.stats),
     equipment: hero.equipment ?? EMPTY_EQUIPMENT,

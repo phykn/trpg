@@ -4,7 +4,6 @@ from src.game.domain.action import Action
 from src.game.domain.combat import (
     GraphCombatAction,
     GraphCombatState,
-    supports_combat_action,
 )
 from src.game.domain.graph import Graph
 from src.game.domain.graph.query import known_skills_of
@@ -206,7 +205,7 @@ def _combat_action_from_action(
     if (
         in_combat
         and action.verb == "move"
-        and action.how in ("flee", "hasty", "create_distance")
+        and action.how in ("hasty", "create_distance")
     ):
         support_id = _single(action.with_)
         support_kind = _support_kind(graph, support_id)
@@ -243,9 +242,7 @@ def _support_kind(graph: Graph, node_id: str | None) -> str | None:
         raise GraphCombatDispatchError(f"missing combat support: {node_id}")
     if node.type == "skill":
         return "skill"
-    if node.type == "item" and (
-        "action" in node.properties or "action" in node.properties
-    ):
+    if node.type == "item" and "action" in node.properties:
         return "item"
     raise GraphCombatDispatchError(f"unsupported combat support: {node_id}")
 
@@ -277,7 +274,7 @@ def _attack_tactic(how: str | None) -> str:
 
 
 def _supports_action(supported_action: str | None, action_kind: str) -> bool:
-    return supports_combat_action(supported_action, action_kind)
+    return supported_action == action_kind
 
 
 def _target_for_start(action: Action) -> str:

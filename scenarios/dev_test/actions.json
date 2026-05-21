@@ -1,22 +1,32 @@
 {
-  "attack": {
-    "id": "attack",
-    "name": "공격",
-    "description": "대상을 직접 압박하거나 피해를 주기 위한 행동"
+  "precise": {
+    "id": "precise",
+    "name": "정밀 공격",
+    "description": "대상을 직접 압박하거나 피해를 주기 위한 신중한 공격 행동"
+  },
+  "reckless": {
+    "id": "reckless",
+    "name": "무모한 공격",
+    "description": "위험을 감수하고 더 강하게 몰아붙이는 공격 행동"
   },
   "defend": {
     "id": "defend",
     "name": "방어",
     "description": "피해를 줄이거나 다음 행동을 준비할 여유를 확보하는 행동"
   },
-  "flee": {
-    "id": "flee",
-    "name": "도주",
+  "guarded": {
+    "id": "guarded",
+    "name": "신중한 방어",
+    "description": "손실을 줄이는 데 집중하는 방어 행동"
+  },
+  "create_distance": {
+    "id": "create_distance",
+    "name": "거리 벌리기",
     "description": "위험한 상황이나 거리에서 벗어나 전투에서 이탈하려는 행동"
   },
-  "social": {
-    "id": "social",
-    "name": "사회적 행동",
+  "talk": {
+    "id": "talk",
+    "name": "대화",
     "description": "대화, 설득, 농담, 사적인 질문처럼 NPC의 반응이 중요한 행동"
   }
 }

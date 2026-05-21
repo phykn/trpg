@@ -1,5 +1,5 @@
 export type Tone =
-  | 'hp' | 'mp' | 'exp' | 'revival' | 'gold'
+  | 'hp' | 'mp' | 'exp' | 'gold'
   | 'accent' | 'good' | 'bad' | 'neutral';
 
 export type BarDef = {

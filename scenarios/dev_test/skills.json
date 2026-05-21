@@ -3,7 +3,7 @@
     "id": "focus_bolt",
     "name": "집중 화살",
     "description": "공격 전에 정신을 한곳에 모아 명중 가능성을 높입니다",
-    "action": "attack",
+    "action": "precise",
     "bonus": 2,
     "mp_cost": 3
   },
@@ -11,8 +11,24 @@
     "id": "human_adaptability",
     "name": "임기응변",
     "description": "뜻밖의 질문이나 어색한 대화 흐름에 말과 판단을 빠르게 맞추는 인간의 기본 대응력",
-    "action": "social",
+    "action": "talk",
     "bonus": 2,
+    "mp_cost": 2
+  },
+  "guarded_footwork": {
+    "id": "guarded_footwork",
+    "name": "신중한 발놀림",
+    "description": "상대의 움직임을 살피며 무리하지 않고 방어 자세를 유지합니다",
+    "action": "guarded",
+    "bonus": 1,
+    "mp_cost": 1
+  },
+  "reckless_charge": {
+    "id": "reckless_charge",
+    "name": "무모한 돌진",
+    "description": "위험을 감수하고 거칠게 밀고 들어가 전투의 흐름을 강하게 흔듭니다",
+    "action": "reckless",
+    "bonus": 3,
     "mp_cost": 2
   },
   "construct_bracing": {
@@ -35,7 +51,7 @@
     "id": "quick_scurry",
     "name": "재빠른 몸놀림",
     "description": "작은 몸집과 빠른 발을 이용해 위험한 거리에서 벗어나려는 작은 짐승의 본능적인 움직임",
-    "action": "flee",
+    "action": "create_distance",
     "bonus": 2,
     "mp_cost": 0
   }

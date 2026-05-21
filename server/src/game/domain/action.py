@@ -108,9 +108,7 @@ def _validate_classifier_action(action: Action, *, in_combat: bool) -> None:
         destination = _single(action.to) or _single(action.what)
         if destination is None and not in_combat:
             raise ValueError("action=move requires to or what outside combat")
-        move_how = (
-            {"hasty", "flee", "create_distance"} if in_combat else {"hasty", "flee"}
-        )
+        move_how = {"hasty", "create_distance"} if in_combat else {"hasty"}
         _require_enum(action.how, move_how, "move.how", optional=True)
         return
 

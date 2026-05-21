@@ -22,10 +22,6 @@ export function normalizeGraphSuggestion(value: GraphSuggestion): SuggestionChip
 }
 
 export function normalizeStoredSuggestion(value: unknown): SuggestionChip | null {
-  if (typeof value === 'string') {
-    const text = value.trim();
-    return text ? { label: text, inputText: text } : null;
-  }
   if (!value || typeof value !== 'object') return null;
   const item = value as {
     label?: unknown;

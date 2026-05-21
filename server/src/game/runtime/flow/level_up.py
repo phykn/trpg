@@ -192,7 +192,14 @@ def _generated_skill_change(
                 "action": _require_choice(
                     skill,
                     "action",
-                    {"attack", "defend", "flee", "social"},
+                    {
+                        "precise",
+                        "reckless",
+                        "defend",
+                        "guarded",
+                        "create_distance",
+                        "talk",
+                    },
                 ),
                 "mp_cost": _require_int(skill, "mp_cost", 1, 3),
                 "bonus": _require_int(skill, "bonus", 1, 3),

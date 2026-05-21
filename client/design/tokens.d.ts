@@ -8,7 +8,6 @@ export declare const colors: {
   hp: { fg: string };
   mp: { fg: string };
   exp: { fg: string };
-  revival: { fg: string };
   gold: { fg: string };
 };
 

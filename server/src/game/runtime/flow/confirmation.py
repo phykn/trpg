@@ -549,7 +549,7 @@ def _roll_allowed_from_check_hint(runtime: GameRuntimeState, action: Action) -> 
 
 
 def _is_risky_move(runtime: GameRuntimeState, action: Action) -> bool:
-    if action.how in {"hasty", "flee"}:
+    if action.how == "hasty":
         return True
     source_id = location_of(runtime.graph, runtime.progress.player_id)
     destination_id = _single(action.to) or _single(action.what)

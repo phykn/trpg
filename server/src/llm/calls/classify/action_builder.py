@@ -142,7 +142,7 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
             with_=skill_id,
             to=target,
         )
-    if name == "flee":
+    if name == "create_distance":
         return Action(verb="move", how="create_distance")
     if name == "talk":
         return Action(

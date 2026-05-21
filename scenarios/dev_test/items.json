@@ -127,7 +127,7 @@
       "장비 슬롯 확인에 쓰입니다"
     ],
     "price": 10,
-    "action": "attack",
+    "action": "precise",
     "effect": "dc_down",
     "consumable": false,
     "bonus": 1,
@@ -204,14 +204,14 @@
   "smoke_bomb": {
     "id": "smoke_bomb",
     "name": "연막탄",
-    "description": "도주 판정을 크게 돕는 일회용 도구",
+    "description": "거리 확보 판정을 크게 돕는 일회용 도구",
     "traits": [
       "작은 원통형 도구입니다",
-      "도주를 돕는 지원 아이템입니다",
+      "거리 확보를 돕는 지원 아이템입니다",
       "사용하면 사라지는 일회용 도구입니다"
     ],
     "price": 8,
-    "action": "flee",
+    "action": "create_distance",
     "effect": "escape_boost",
     "consumable": true,
     "bonus": 4
@@ -237,7 +237,7 @@
       "멀리 던지는 행동에 어울립니다"
     ],
     "price": 6,
-    "action": "attack",
+    "action": "precise",
     "effect": "dc_down",
     "consumable": true,
     "bonus": 3

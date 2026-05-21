@@ -183,7 +183,7 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "`combat_view.exchange_result`, `combat_view.player_action`, `combat_view.outcome`" in narrate_prompt
     assert "전투 결과를 일반 행동 성공/실패처럼 해석하지 않습니다" in narrate_prompt
     assert "전투에서 `defend`/`guarded`의 success는 공격 성공이 아니라 방어 성공입니다" in narrate_prompt
-    assert "전투에서 `flee`/`create_distance`의 success는 피해가 아니라 거리 확보나 이탈 성공입니다" in narrate_prompt
+    assert "전투에서 `create_distance`의 success는 피해가 아니라 거리 확보나 이탈 성공입니다" in narrate_prompt
     assert "전투에서 `talk`의 success는 설득 확정이 아니라 압박 완화나 흐름 흔들림입니다" in narrate_prompt
     assert "`ui_cues`와 `suggestions`의 기본값은 빈 배열입니다" in narrate_prompt
     assert "suggestions는 새 행동을 창작하는 기능이 아닙니다" in narrate_prompt
@@ -223,16 +223,16 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "failure:" in combat_prompt
     assert "neutral:" in combat_prompt
     assert "player_action별 초점" in combat_prompt
-    assert "attack, precise, reckless" in combat_prompt
+    assert "precise, reckless" in combat_prompt
     assert "defend, guarded" in combat_prompt
     assert "success는 공격 성공이 아니라 방어 성공입니다" in combat_prompt
-    assert "flee, create_distance" in combat_prompt
+    assert "create_distance" in combat_prompt
     assert "success는 피해를 주는 것이 아니라 거리를 벌리거나 전투 흐름에서 빠져나오는 것입니다" in combat_prompt
     assert "talk:" in combat_prompt
     assert "success는 설득 성공이 아니라 전투 압박을 늦추거나 흐름을 흔든 것입니다" in combat_prompt
     assert "전투를 더 이어가지 않고" in combat_prompt
     assert (
-        "victory, defeat, fled, escaped, surrendered, combat_stopped, ongoing"
+        "victory, defeat, escaped, combat_stopped, ongoing"
         in combat_prompt
     )
     assert "victory, defeat, flee, stop" not in combat_prompt
@@ -338,13 +338,17 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "`suggestions`는 항상 빈 배열입니다" in combat_prompt
     assert "다음 행동 제안은 만들지 않습니다" in combat_prompt
     assert '"label":"","input_text":"","intent":"combat","action":null' not in combat_prompt
-    assert "`tactic`이 아니라 `flee` intent" in classify_prompt
+    assert "`tactic`이 아니라 `create_distance` intent" in classify_prompt
     assert "`tactic`이 아니라 `talk` intent" in classify_prompt
     assert "`tactic`: 전투 중 공격 전술" in classify_prompt
     assert "공격 또는 이탈 전술" not in classify_prompt
-    assert "`create_distance`: 거리 벌리기" not in classify_prompt
+    assert "`create_distance`: 전투 중 거리 벌리기" in classify_prompt
     assert "후보는 같은 리듬으로 만듭니다" in recommend_prompt
     assert "최근에 실제로 반복한 행동" in recommend_prompt
+    assert "`create_distance` 후보" in recommend_prompt
+    assert "`talk` 후보" in recommend_prompt
+    assert "`flee` 후보" not in recommend_prompt
+    assert "`social` 후보" not in recommend_prompt
     assert "Candidate rhythm" in recommend_en_prompt
     assert "Do not add setting lore" in recommend_en_prompt
     assert "Skills support a roll/check" in recommend_en_prompt
@@ -496,6 +500,7 @@ async def test_graph_turn_narration_uses_packaged_prompt(monkeypatch, tmp_path):
                 "graph_combat_state": GraphCombatState(
                     location_id="town",
                     player_id="player_01",
+                    active_enemy_id="goblin_01",
                     enemy_ids=["goblin_01"],
                     participant_ids=["player_01", "goblin_01"],
                     sides={"player_01": "player", "goblin_01": "enemy"},

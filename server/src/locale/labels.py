@@ -32,7 +32,7 @@ def roll_dice_label(locale: str = "ko") -> str:
     return render("ui.roll.dice_label", locale)
 
 
-# ----- Story-graph edge labels (rendered on client map) -----
+# ----- Story-graph edge labels (rendered in client nearby context) -----
 
 STORY_EDGE_LABEL_CURRENT = render("ui.story.edge.current", "ko")
 STORY_EDGE_LABEL_OBSERVE = render("ui.story.edge.observe", "ko")

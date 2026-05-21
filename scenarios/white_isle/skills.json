@@ -4,7 +4,7 @@
     "name": "차분한 증언",
     "description": "당신은 불완전한 기억도 외면하지 않고 차분히 말합니다.",
     "level": 1,
-    "action": "social",
+    "action": "talk",
     "bonus": 1,
     "mp_cost": 0
   },

@@ -940,7 +940,7 @@ async def test_graph_turn_auto_skill_uses_known_skill_during_existing_combat(
 
 
 @pytest.mark.asyncio
-async def test_graph_turn_flee_success_ends_combat(tmp_path, monkeypatch):
+async def test_graph_turn_create_distance_success_ends_combat(tmp_path, monkeypatch):
     monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 20)
     app = _build_app(tmp_path)
 
@@ -957,7 +957,7 @@ async def test_graph_turn_flee_success_ends_combat(tmp_path, monkeypatch):
         )
         response = await client.post(
             f"/session/{game_id}/graph/turn",
-            json={"action": {"verb": "move", "how": "flee"}},
+            json={"action": {"verb": "move", "how": "create_distance"}},
         )
 
     assert response.status_code == 200, response.text
@@ -1205,7 +1205,10 @@ async def test_graph_input_returns_reflected_suggestions(tmp_path):
                     "intent": "move",
                     "action": None,
                 },
-                "에드릭에게 보상을 묻습니다",
+                {
+                    "label": "보상 묻기",
+                    "input_text": "에드릭에게 보상을 묻습니다",
+                },
             ],
         },
     )
@@ -1229,7 +1232,7 @@ async def test_graph_input_returns_reflected_suggestions(tmp_path):
             "action": None,
         },
         {
-            "label": "에드릭에게 보상을 묻습니다",
+            "label": "보상 묻기",
             "input_text": "에드릭에게 보상을 묻습니다",
             "intent": None,
             "action": None,

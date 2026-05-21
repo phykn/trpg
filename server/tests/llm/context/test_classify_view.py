@@ -107,7 +107,7 @@ def _runtime(
             properties={
                 "name": f"기술 {index}",
                 "description": "숨겨야 할 기술 설명",
-                "action": "attack",
+                "action": "precise",
             },
         )
         edges[f"knows_skill:player_01:{node_id}"] = GraphEdge(
@@ -208,7 +208,7 @@ def test_classify_context_to_grounding_view_preserves_grounding_ids():
         {
             "id": "skill_0",
             "name": "기술 0",
-            "action": "attack",
+            "action": "precise",
         }
     ]
 

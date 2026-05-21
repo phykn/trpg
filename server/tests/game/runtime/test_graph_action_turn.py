@@ -625,6 +625,7 @@ async def test_run_graph_action_turn_adds_short_gm_narration_for_combat_victory(
                 "graph_combat_state": GraphCombatState(
                     location_id="town",
                     player_id="player_01",
+                    active_enemy_id="goblin_01",
                     enemy_ids=["goblin_01"],
                     participant_ids=["player_01", "goblin_01"],
                     sides={"player_01": "player", "goblin_01": "enemy"},
@@ -667,6 +668,7 @@ async def test_run_graph_action_turn_escapes_combat_on_success(
                 "graph_combat_state": GraphCombatState(
                     location_id="town",
                     player_id="player_01",
+                    active_enemy_id="goblin_01",
                     enemy_ids=["goblin_01"],
                     participant_ids=["player_01", "goblin_01"],
                     sides={"player_01": "player", "goblin_01": "enemy"},
@@ -679,7 +681,7 @@ async def test_run_graph_action_turn_escapes_combat_on_success(
     result = await run_graph_action_turn(
         repo,
         "game-1",
-        Action(verb="move", how="flee"),
+        Action(verb="move", how="create_distance"),
         llm=llm,  # type: ignore[arg-type]
     )
     saved_logs = await repo.load_log_entries("game-1")
@@ -737,6 +739,7 @@ async def test_run_graph_action_turn_uses_llm_for_combat_failure_narration(
                 "graph_combat_state": GraphCombatState(
                     location_id="town",
                     player_id="player_01",
+                    active_enemy_id="goblin_01",
                     enemy_ids=["goblin_01"],
                     participant_ids=["player_01", "goblin_01"],
                     sides={"player_01": "player", "goblin_01": "enemy"},
@@ -808,6 +811,7 @@ async def test_run_graph_action_turn_stream_uses_llm_for_combat_failure_narratio
                 "graph_combat_state": GraphCombatState(
                     location_id="town",
                     player_id="player_01",
+                    active_enemy_id="goblin_01",
                     enemy_ids=["goblin_01"],
                     participant_ids=["player_01", "goblin_01"],
                     sides={"player_01": "player", "goblin_01": "enemy"},
@@ -863,7 +867,7 @@ async def test_run_graph_action_turn_sends_combat_trace_to_narration(tmp_path):
     assert payload["combat_view"]["events"]
     assert payload["scene_anchor"]["visible_names"]
     assert "combat_started" not in encoded
-    assert "player_attacked" not in encoded
+    assert "player_precise_success" not in encoded
 
 
 async def test_run_graph_action_turn_times_out_slow_narration_and_keeps_action(

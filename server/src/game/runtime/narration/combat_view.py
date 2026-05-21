@@ -12,9 +12,6 @@ from ..state import GameRuntimeState
 COMBAT_CONDITION_KEYS = {"healthy", "hurt", "critical"}
 COMBAT_MOTION_KEYS = {
     "combat_started",
-    "player_attacked",
-    "player_defended",
-    "player_fled",
     "player_precise_success",
     "player_precise_failure",
     "player_guarded_success",
@@ -32,9 +29,7 @@ COMBAT_MOTION_KEYS = {
     "combat_stopped",
 }
 COMBAT_ACTION_KEYS = {
-    "attack",
     "defend",
-    "flee",
     "precise",
     "guarded",
     "reckless",

@@ -158,7 +158,7 @@ async def test_korean_ambiguous_corpse_loot_does_not_choose_without_llm():
     assert output.actions[0].verb == "pass"
 
 
-async def test_korean_flee_in_combat_shortcuts_without_llm():
+async def test_korean_create_distance_in_combat_shortcuts_without_llm():
     output = await classify(
         _NoCallLLM(),
         ClassifyInput(player_input="도망친다", context=_context(mode="combat")),
@@ -168,4 +168,4 @@ async def test_korean_flee_in_combat_shortcuts_without_llm():
     assert output.actions is not None
     action = output.actions[0]
     assert action.verb == "move"
-    assert action.how == "hasty"
+    assert action.how == "create_distance"

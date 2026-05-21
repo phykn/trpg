@@ -140,10 +140,6 @@ en = "All stories are complete. You may remain in this world and continue if you
 ko = "공격할 수 있는 대상이 없습니다."
 en = "There are no targets you can attack."
 
-[log.flee_outside_combat]
-ko = "지금은 도망칠 전투가 없습니다."
-en = "There is no battle to flee from right now."
-
 [log.rest_blocked_in_combat]
 ko = "전투 중에는 잠들 수 없습니다."
 en = "You cannot sleep during battle."
@@ -344,18 +340,6 @@ en = "Hero"
 ko = "패배했습니다."
 en = "Defeated."
 
-[log."combat.fled"]
-ko = "전투에서 이탈했습니다."
-en = "Left the battle."
-
-[log."combat.enemies_fled"]
-ko = "{names}{이/가} 도망쳤습니다."
-en = "{names} fled."
-
-[log."combat.enemies_fled_anon"]
-ko = "적이 도망쳤습니다."
-en = "The enemy fled."
-
 [log."combat.enemies_defeated"]
 ko = "적을 처치했습니다."
 en = "Defeated the enemy."
@@ -372,14 +356,6 @@ en = "{name} took {damage} damage (HP {hp_after}/{hp_max})"
 ko = "{name} {damage} 피해 (HP {hp_after}/{hp_max})"
 en = "{name} took {damage} damage (HP {hp_after}/{hp_max})"
 
-[log."combat.revived_critical"]
-ko = "최후의 호흡 (소생 0/{coins_max}, HP 0→{hp_after})"
-en = "Final breath (revive 0/{coins_max}, HP 0->{hp_after})"
-
-[log."combat.revived_normal"]
-ko = "가까스로 일어남 (소생 {coins_after}/{coins_max}, HP 0→{hp_after})"
-en = "Barely stood back up (revive {coins_after}/{coins_max}, HP 0->{hp_after})"
-
 [log."combat.outcome_header"]
 ko = "전투 결과"
 en = "Battle result"
@@ -392,10 +368,6 @@ en = "Battle victory"
 ko = "전투 패배"
 en = "Battle defeat"
 
-[log."combat.outcome_fled"]
-ko = "전투 이탈"
-en = "Left battle"
-
 [log."combat.event_enemy_killed"]
 ko = "{actor}{이/가} {name}에게 {damage} 피해 — {name} 제압"
 en = "{actor} dealt {damage} damage to {name} - {name} defeated"
@@ -407,10 +379,6 @@ en = "{actor} dealt {damage} damage to {name} (enemy HP {hp_after}/{hp_max})"
 [log."combat.event_player_hit"]
 ko = "{name} {damage} 피해 입음 (HP {hp_after}/{hp_max})"
 en = "{name} took {damage} damage (HP {hp_after}/{hp_max})"
-
-[log."combat.event_revived"]
-ko = "가까스로 소생"
-en = "Barely revived"
 
 [log."use.head"]
 ko = "{actor} — 「{item}」 사용"

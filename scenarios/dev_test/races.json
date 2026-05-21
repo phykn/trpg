@@ -5,7 +5,9 @@
     "description": "다양한 환경에 적응해 살아가는 종족으로, 특별한 신체 능력보다는 판단력과 임기응변으로 상황을 풀어 갑니다",
     "playable": true,
     "racial_skills": [
-      "human_adaptability"
+      "human_adaptability",
+      "guarded_footwork",
+      "reckless_charge"
     ]
   },
   "training_construct": {

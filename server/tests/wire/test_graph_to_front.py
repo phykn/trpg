@@ -761,7 +761,7 @@ def test_graph_front_state_exposes_usable_combat_skill_supports():
     runtime.graph.nodes["basic_strike"].properties.update(
         {
             "name": "그림자 찌르기",
-            "action": "attack",
+            "action": "precise",
             "mp_cost": 2,
         }
     )
@@ -785,7 +785,7 @@ def test_graph_front_state_omits_unusable_combat_skill_supports():
     runtime.graph.nodes["basic_strike"].properties.update(
         {
             "name": "그림자 찌르기",
-            "action": "attack",
+            "action": "precise",
             "mp_cost": 3,
         }
     )

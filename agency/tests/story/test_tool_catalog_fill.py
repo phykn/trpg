@@ -14,7 +14,14 @@ def test_catalog_fill_creates_fixed_catalogs(capsys, tmp_path):
 
     assert rc == 0, capsys.readouterr().err
     assert capsys.readouterr().out.strip() == "OK"
-    assert set(_read_json(sd / "actions.json")) == {"attack", "defend", "flee", "social"}
+    assert set(_read_json(sd / "actions.json")) == {
+        "defend",
+        "precise",
+        "guarded",
+        "reckless",
+        "create_distance",
+        "talk",
+    }
     assert {"dc_down", "heal", "mp_restore"} <= set(_read_json(sd / "effects.json"))
     assert len(_read_json(sd / "mbti.json")) == 16
     assert set(_read_json(sd / "slots.json")) == {"weapon", "armor", "accessory"}

@@ -3,10 +3,6 @@ import type { PanelAction } from '@/logic/info-panel';
 import { compose, ko } from '@/locale/ko';
 import type { StoryGraphNode } from './types';
 
-export function actionForNode(node: StoryGraphNode): PanelAction | null {
-  return actionsForNode(node)[0] ?? null;
-}
-
 export function actionsForNode(node: StoryGraphNode): PanelAction[] {
   if (node.status === 'reachable_move') {
     return [{

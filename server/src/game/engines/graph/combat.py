@@ -8,7 +8,6 @@ from src.game.domain.combat import (
     GraphCombatAction,
     GraphCombatState,
     GraphCombatTraceEvent,
-    supports_combat_action,
 )
 from src.game.domain.graph import (
     Graph,
@@ -196,11 +195,7 @@ def _resolve_item_support(
     if placement_edge is None:
         raise GraphCombatError(f"{player.id} does not have item: {action.support_id}")
 
-    supported_action = _string_prop(
-        item,
-        "action",
-        fallback=_string_prop(item, "action"),
-    )
+    supported_action = _string_prop(item, "action")
     if not _supports_action(supported_action, action.kind):
         raise GraphCombatError(f"item does not support action: {action.support_id}")
 
@@ -262,13 +257,11 @@ def _apply_heart_result(
     support: _SupportPlan | None,
 ) -> None:
     if success:
-        if kind in {"attack", "social", "precise", "guarded", "reckless"}:
+        if kind in {"precise", "guarded", "reckless"}:
             damage = 2 if kind == "reckless" else 1
             if support is not None and support.effect == "extra_heart_damage":
                 damage += 1
             state.enemy_hearts = max(0, state.enemy_hearts - damage)
-            if kind == "social":
-                state.enemy_pressure += 1
             target = enemy_id
         elif kind == "defend":
             state.player_hearts = min(
@@ -295,9 +288,7 @@ def _apply_heart_result(
             state.escape_ready = True
             state.outcome = "escaped"
         else:
-            state.escape_ready = True
-            state.outcome = "fled"
-            target = actor_id
+            raise GraphCombatError(f"unsupported combat action: {kind}")
         state.trace.append(
             GraphCombatTraceEvent(
                 kind=f"player_{kind}_success",
@@ -316,7 +307,7 @@ def _apply_heart_result(
         GraphCombatTraceEvent(
             kind=f"player_{kind}_failure",
             actor_id=actor_id,
-            target=enemy_id if kind in {"attack", "social"} else actor_id,
+            target=enemy_id if kind in {"precise", "reckless", "talk"} else actor_id,
             state=_heart_state(state),
         )
     )
@@ -329,7 +320,7 @@ def _apply_terminal_result(
     player: GraphNode,
     enemy: GraphNode,
 ) -> None:
-    if state.outcome in {"fled", "escaped", "surrendered", "combat_stopped"}:
+    if state.outcome in {"escaped", "combat_stopped"}:
         return
     if state.enemy_hearts <= 0:
         _plan_defeat(
@@ -440,7 +431,7 @@ def _bounded_bonus(value: object) -> int:
 def _supports_action(
     supported_action: str | None, action_kind: CombatActionKind
 ) -> bool:
-    return supports_combat_action(supported_action, action_kind)
+    return supported_action == action_kind
 
 
 def _string_prop(

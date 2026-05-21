@@ -66,13 +66,13 @@ en = "Opening Thrust"
 ko = "공격 판정의 DC를 낮추는 날렵한 전투 보조 기술."
 en = "An agile combat support skill that lowers attack DC."
 
-[runtime."level_choice.fallback.quick_flee.name"]
+[runtime."level_choice.fallback.quick_distance.name"]
 ko = "빠른 이탈"
 en = "Quick Breakaway"
 
-[runtime."level_choice.fallback.quick_flee.description"]
-ko = "도주 판정의 DC를 낮추는 이동 보조 기술."
-en = "A movement support skill that lowers flee DC."
+[runtime."level_choice.fallback.quick_distance.description"]
+ko = "거리 확보 판정의 DC를 낮추는 이동 보조 기술."
+en = "A movement support skill that lowers create-distance DC."
 
 [runtime."level_choice.fallback.focus_attack.name"]
 ko = "집중 타격"
@@ -158,17 +158,9 @@ en = "You use {skill} against {target} (MP {mp_cost})."
 ko = "{skill}{이/가} 끝까지 밀고 들어가 {target}{을/를} 무너뜨립니다 (MP {mp_cost})."
 en = "You use {skill} and drop {target} (MP {mp_cost})."
 
-[runtime."combat.fled"]
-ko = "당신은 압박이 비는 순간을 잡아 교전권 밖으로 물러납니다."
-en = "You pull back from combat."
-
 [runtime."combat.escaped"]
 ko = "벌어진 찰나를 놓치지 않고, 당신은 전투선 밖으로 빠져나옵니다."
 en = "You create enough distance to escape combat."
-
-[runtime."combat.surrendered"]
-ko = "상대가 자세를 풀고 싸움을 멈춥니다."
-en = "The opponent stops fighting and backs down."
 
 [runtime."combat.stopped"]
 ko = "팽팽하던 대치가 끊기고 전투가 끝납니다."
@@ -205,18 +197,6 @@ en = "changed"
 [runtime."combat.motion.combat_started"]
 ko = "교전이 시작됨"
 en = "combat started"
-
-[runtime."combat.motion.player_attacked"]
-ko = "공격을 시도함"
-en = "attacked"
-
-[runtime."combat.motion.player_defended"]
-ko = "방어 자세를 취함"
-en = "defended"
-
-[runtime."combat.motion.player_fled"]
-ko = "거리를 벌림"
-en = "pulled away"
 
 [runtime."combat.motion.player_precise_success"]
 ko = "정확히 압박함"
@@ -294,17 +274,9 @@ en = "this exchange failed"
 ko = "이번 교환은 아직 결과가 없습니다"
 en = "this exchange has no result yet"
 
-[runtime."combat.action.attack"]
-ko = "공격"
-en = "attack"
-
 [runtime."combat.action.defend"]
 ko = "방어"
 en = "defend"
-
-[runtime."combat.action.flee"]
-ko = "이탈"
-en = "leave"
 
 [runtime."combat.action.precise"]
 ko = "공격"

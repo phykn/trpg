@@ -333,9 +333,7 @@ export function useGame() {
 
   const awaitingNarration = requestInFlight && !pendingConfirmation && !pendingRoll;
 
-  // Guarded by !requestInFlight because hp can transiently hit 0 before reviveCoins
-  // decrement during a graph action request; wait for the final state payload.
-  const gameOver = !!hero && !requestInFlight && hero.hp === 0 && hero.reviveCoins === 0;
+  const gameOver = !!hero && !requestInFlight && hero.hp === 0;
 
   return {
     status,

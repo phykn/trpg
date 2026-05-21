@@ -18,7 +18,7 @@ class FakeScenarioRepo:
             "slots": {"accessory": {"id": "accessory", "name": "장신구"}},
             "factions": {"guides": {"id": "guides", "name": "안내팀"}},
             "actions": {
-                "social": {"id": "social", "name": "사회"}
+                "talk": {"id": "talk", "name": "대화"}
             },
             "knowledge": {
                 "clue": {"id": "clue", "title": "단서", "visibility": "public"}
@@ -136,6 +136,7 @@ async def test_load_runtime_state_preserves_graph_combat_state(tmp_path):
     graph_combat_state = GraphCombatState(
         location_id="town",
         player_id="player",
+        active_enemy_id="rat",
         enemy_ids=["rat"],
         participant_ids=["player", "rat"],
         sides={"player": "player", "rat": "enemy"},
@@ -192,7 +193,7 @@ async def test_load_runtime_state_loads_scenario_content_when_profile_is_saved(
     assert runtime.content.statuses["focused"]["name"] == "집중"
     assert runtime.content.slots["accessory"]["name"] == "장신구"
     assert runtime.content.factions["guides"]["name"] == "안내팀"
-    assert runtime.content.actions["social"]["name"] == "사회"
+    assert runtime.content.actions["talk"]["name"] == "대화"
     assert runtime.content.knowledge["clue"]["title"] == "단서"
     assert runtime.content.dialogue_styles["procedural"]["speech_style"] == (
         "짧고 기록문 같은 말투"

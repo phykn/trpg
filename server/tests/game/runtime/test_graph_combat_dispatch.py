@@ -52,7 +52,7 @@ def _skill(skill_id: str = "fireball") -> GraphNode:
         type="skill",
         properties={
             "name": skill_id,
-            "action": "attack",
+            "action": "precise",
             "mp_cost": 2,
             "bonus": 2,
         },
@@ -65,7 +65,7 @@ def _item(item_id: str = "bomb") -> GraphNode:
         type="item",
         properties={
             "name": item_id,
-            "action": "attack",
+            "action": "precise",
             "effect": "extra_heart_damage",
             "consumable": True,
         },
@@ -364,7 +364,7 @@ def test_pass_with_skill_support_attaches_guarded_support():
         graph_combat_state=_ongoing_state(),
     )
     runtime.graph.nodes["fireball"].properties.update(
-        {"action": "defend", "bonus": 1}
+        {"action": "guarded", "bonus": 1}
     )
 
     result = dispatch_graph_combat_action(
@@ -386,7 +386,7 @@ def test_move_with_skill_support_attaches_create_distance_support():
         graph_combat_state=_ongoing_state(),
     )
     runtime.graph.nodes["fireball"].properties.update(
-        {"action": "flee", "bonus": 2}
+        {"action": "create_distance", "bonus": 2}
     )
 
     result = dispatch_graph_combat_action(
@@ -414,7 +414,7 @@ def test_missing_combat_support_raises_dispatch_error():
         )
 
 
-def test_attack_auto_skill_uses_precise_tactic_with_legacy_attack_skill():
+def test_attack_auto_skill_uses_precise_tactic_with_matching_skill():
     runtime = _runtime(
         include_skill=True,
         graph_combat_state=_ongoing_state(),
