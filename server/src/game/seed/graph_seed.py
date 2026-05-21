@@ -281,6 +281,7 @@ def build_seed_graph(
         locale=locale,
         active_subject_id=start.get("active_subject"),
         active_quest_id=start.get("active_quest"),
+        intro_text=_optional_str(start.get("intro_text")),
     )
     content = runtime_content_from_records(
         races=races,

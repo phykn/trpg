@@ -24,26 +24,6 @@ from .memory_context import (
 )
 
 
-def build_intro_narration_payload(runtime: GameRuntimeState) -> dict[str, Any]:
-    graph = runtime.graph_index
-    player_id = runtime.progress.player_id
-    place_id = location_of(graph, player_id)
-    place = graph.nodes.get(place_id or "")
-    player = graph.nodes.get(player_id)
-    return {
-        "player": _node_ref(runtime, player),
-        "place": _place_payload(runtime, place),
-        "visible_targets": _visible_character_payloads(
-            runtime,
-            place_id,
-            exclude_id=player_id,
-        ),
-        "visible_items": _visible_item_payloads(runtime, place_id),
-        "exits": _exit_payloads(runtime, place_id),
-        "inventory": _inventory_payloads(runtime, player_id),
-    }
-
-
 def build_action_narration_payload(
     *,
     before: GameRuntimeState,

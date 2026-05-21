@@ -15,7 +15,6 @@ from ..state import GameRuntimeState
 from ..narration.suggestions import GraphSuggestion
 from src.game.seed.init_graph import init_graph_game
 from src.game.seed.player import PlayerInput
-from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, set_diag_context
 from src.wire.graph.to_front import GraphFrontStatePayload, graph_to_front_state
 
@@ -83,7 +82,6 @@ async def load_graph_session_state(
 
 
 async def run_graph_intro_request(
-    llm: LLMClient,
     repo: GraphRepo,
     game_id: str,
     scenario_repo: ScenarioRepo | None = None,
@@ -93,13 +91,12 @@ async def run_graph_intro_request(
     runtime = await load_runtime_state(repo, game_id, scenario_repo)
     set_diag_context(game_id, runtime.progress.turn_count)
     engine_diag("intro:start")
-    runtime = await _run_intro_or_fallback(llm, repo, runtime)
+    runtime = await _run_intro_or_fallback(repo, runtime)
     engine_diag("intro:done", logs=len(runtime.log_entries))
     return GraphSessionIntroResult(front_state=graph_to_front_state(runtime))
 
 
 async def run_graph_intro_request_stream(
-    llm: LLMClient,
     repo: GraphRepo,
     game_id: str,
     scenario_repo: ScenarioRepo | None = None,
@@ -114,7 +111,7 @@ async def run_graph_intro_request_stream(
         "result": GraphSessionIntroResult(front_state=graph_to_front_state(runtime)),
     }
     try:
-        async for event in run_graph_initial_narration_stream(llm, repo, runtime):
+        async for event in run_graph_initial_narration_stream(repo, runtime):
             if event["type"] != "final":
                 yield event
                 continue
@@ -141,12 +138,11 @@ async def run_graph_intro_request_stream(
 
 
 async def _run_intro_or_fallback(
-    llm: LLMClient,
     repo: GraphRepo,
     runtime: GameRuntimeState,
 ) -> GameRuntimeState:
     try:
-        return await run_graph_initial_narration(llm, repo, runtime)
+        return await run_graph_initial_narration(repo, runtime)
     except (LLMUnavailable, OSError, TimeoutError) as exc:
         engine_diag("intro:fallback", err=type(exc).__name__)
         return await run_graph_initial_fallback_narration(repo, runtime)

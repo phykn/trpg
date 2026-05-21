@@ -316,6 +316,7 @@ def test_build_seed_graph_links_quests_to_chapters():
             "start_location": "town",
             "active_subject": "elder",
             "active_quest": "quest_01",
+            "intro_text": "고정 시작 문구입니다.",
         },
         template={"id": "player_01"},
         game_id="game-1",
@@ -328,6 +329,7 @@ def test_build_seed_graph_links_quests_to_chapters():
     )
     assert bundle.progress.active_subject_id == "elder"
     assert bundle.progress.active_quest_id == "quest_01"
+    assert bundle.progress.intro_text == "고정 시작 문구입니다."
 
 
 def test_build_seed_graph_links_missing_supplies_quest():

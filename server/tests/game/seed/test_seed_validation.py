@@ -53,6 +53,21 @@ def test_seed_validation_accepts_engine_quest_trigger_types():
     assert seed_violations(**records) == []
 
 
+def test_seed_validation_rejects_invalid_intro_text():
+    records = _records()
+    records["start"]["intro_text"] = ""
+
+    assert seed_violations(**records) == [
+        "intro_text must be a non-empty string when present"
+    ]
+
+    records["start"]["intro_text"] = 123
+
+    assert seed_violations(**records) == [
+        "intro_text must be a non-empty string when present"
+    ]
+
+
 def test_seed_validation_rejects_unknown_actions_and_item_effects():
     records = _records()
     records["items"] = {

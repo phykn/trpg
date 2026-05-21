@@ -127,6 +127,11 @@ def seed_violations(
     active_quest_id = start.get("active_quest")
     if active_quest_id is not None and active_quest_id not in quests:
         out.append("active_quest must reference an existing quest")
+    intro_text = start.get("intro_text")
+    if intro_text is not None and (
+        not isinstance(intro_text, str) or not intro_text.strip()
+    ):
+        out.append("intro_text must be a non-empty string when present")
 
     for location_id, location in locations.items():
         _check_knowledge_references(

@@ -16,6 +16,7 @@ class GameProgress(BaseModel):
     locale: str = "ko"
     active_subject_id: str | None = None
     active_quest_id: str | None = None
+    intro_text: str | None = None
     turn_count: int = 0
     pending_confirmation: dict[str, Any] | None = None
     pending_roll: dict[str, Any] | None = None

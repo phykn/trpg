@@ -11,7 +11,6 @@ from src.game.runtime.flow.input import run_graph_input_turn
 from src.game.runtime.flow.intro import run_graph_initial_narration
 from src.game.runtime.narration.context import (
     build_input_narration_payload,
-    build_intro_narration_payload,
 )
 from src.game.runtime.state import GameRuntimeState
 from src.game.runtime.flow.turn import run_graph_action_turn
@@ -144,7 +143,6 @@ async def _repo(tmp_path) -> LocalFsGraphRepo:
 
 
 def test_graph_narration_prompt_files_are_packaged():
-    assert get_prompt("graph_intro", "ko")
     assert get_prompt("graph_narrate", "ko")
     assert get_prompt("combat_narrate", "ko")
     assert get_prompt("classify", "ko")
@@ -153,21 +151,17 @@ def test_graph_narration_prompt_files_are_packaged():
 
 
 def test_graph_narration_prompts_encode_style_without_source_title():
-    intro_prompt = get_prompt("graph_intro", "ko")
     narrate_prompt = get_prompt("graph_narrate", "ko")
     combat_prompt = get_prompt("combat_narrate", "ko")
     classify_prompt = get_prompt("classify", "ko")
     recommend_prompt = get_prompt("recommend", "ko")
     recommend_en_prompt = get_prompt("recommend", "en")
-    combined = f"{intro_prompt}\n{narrate_prompt}\n{combat_prompt}"
+    combined = f"{narrate_prompt}\n{combat_prompt}"
 
-    assert "문체 목표" in intro_prompt
     assert "본문 문체" in narrate_prompt
     assert "감각" in combined
     assert "선택" in combined
     assert "장면을 쓰는 에이전트는 같은 기본 리듬을 따릅니다" in combined
-    assert "첫 장소 소개는 같은 리듬으로 씁니다" in intro_prompt
-    assert "가장 압력이 큰 대상이나 물건 하나" in intro_prompt
     assert "일반 행동은 같은 리듬으로 씁니다" in narrate_prompt
     assert "플레이어의 선택이나 시도가 보입니다" in narrate_prompt
     assert "확정된 결과가 보입니다" in narrate_prompt
@@ -241,11 +235,8 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "직전과 같은 직접 발화나 같은 감탄사를 반복하지 않습니다" in combat_prompt
     assert "허수아비" not in combat_prompt
     assert "결과 라벨 대신 맞음, 막힘, 빗나감" in combat_prompt
-    assert "선택하지 않은 행동" in intro_prompt
-    assert "금지 예" in intro_prompt
     assert "좋은 예" in combined
     assert "한자" in combined
-    assert "문장 수와 길이를 엄격히 고정하지 않지만" in intro_prompt
     assert "장황하게 설명하지 않습니다" in narrate_prompt
     assert "「」" in narrate_prompt
     assert "직접 발화" in narrate_prompt
@@ -323,10 +314,6 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "말할 내용이 떠오르지 않으면 `talk` 제안을 만들지 않습니다" in narrate_prompt
     assert "출력 형식이 틀려도 시스템이 고쳐 준다고 가정하지 말고" in narrate_prompt
     assert "visible_names에 이름만 있는 대상은 제안 후보가 될 수 있지만" in narrate_prompt
-    assert "STATE_PATCH" in intro_prompt
-    assert "제공된 성격" in intro_prompt
-    assert "훈련, 점검, 안내" not in intro_prompt
-    assert "추상적인 분위기만 쓰지 말고" in intro_prompt
     assert "출력은 플레이어가 읽는 나레이션" in combat_prompt
     assert "훈련 충격" in combat_prompt
     assert "recent_narration" in combat_prompt
@@ -358,7 +345,6 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "Skills support a combat roll" not in recommend_en_prompt
     assert "1~2문장" not in combined
     assert "2~3문장" not in combined
-    assert "한 문장" not in intro_prompt
     assert "Baldur" not in combined
     assert "발더" not in combined
     assert "발게" not in combined
@@ -397,26 +383,6 @@ def test_graph_narrate_prompt_encodes_theory_pressure_and_completion_limits():
     assert "새 갈고리 없이 닫습니다" in prompt
     assert "`payload.current_event.quest_trigger.type`이 `location_enter`이면 특히 조심합니다" in prompt
     assert "장소에 들어간 사실을 플레이어가 갈등을 해결한 것처럼 과장하지 않습니다" in prompt
-
-
-@pytest.mark.asyncio
-async def test_graph_intro_payload_exposes_scene_and_actor_traits(tmp_path):
-    repo = await _repo(tmp_path)
-    runtime = GameRuntimeState(
-        graph=await repo.load_graph("game-1"),
-        progress=await repo.load_progress("game-1"),
-    )
-
-    payload = build_intro_narration_payload(runtime)
-
-    assert payload["place"]["mood"] == "quiet but procedural"
-    assert payload["place"]["traits"] == ["safe", "orderly"]
-    assert "speech_style" not in payload["visible_targets"][0]
-    assert payload["visible_targets"][0]["dialogue_style"]["speech_style"] == (
-        "short report-like replies"
-    )
-    assert payload["visible_targets"][0]["personality"] == ["dry", "watchful"]
-    assert payload["visible_items"][0]["traits"] == ["flat", "interactive"]
 
 
 @pytest.mark.asyncio
@@ -460,44 +426,20 @@ def test_graph_narration_runtime_preserves_llm_text():
 
 
 @pytest.mark.asyncio
-async def test_graph_intro_uses_packaged_prompt(monkeypatch, tmp_path):
-    import src.game.runtime.flow.intro as intro_module
-
-    monkeypatch.setattr(
-        intro_module, "get_prompt", lambda agent, locale: f"{agent}:{locale}"
-    )
+async def test_graph_intro_uses_fixed_progress_text_without_llm(tmp_path):
     repo = await _repo(tmp_path)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(update={"intro_text": "고정된 첫 장면입니다."})
+    )
     runtime = GameRuntimeState(
         graph=await repo.load_graph("game-1"),
         progress=await repo.load_progress("game-1"),
     )
-    llm = _PromptCaptureLLM()
 
-    await run_graph_initial_narration(llm, repo, runtime)  # type: ignore[arg-type]
+    next_runtime = await run_graph_initial_narration(repo, runtime)
 
-    assert llm.calls[-1]["messages"][0]["content"] == "graph_intro:ko"
-
-
-@pytest.mark.asyncio
-async def test_graph_intro_sends_rich_first_scene_payload(tmp_path):
-    import json
-    import src.game.runtime.flow.intro as intro_module
-
-    repo = await _repo(tmp_path)
-    runtime = GameRuntimeState(
-        graph=await repo.load_graph("game-1"),
-        progress=await repo.load_progress("game-1"),
-    )
-    llm = _PromptCaptureLLM()
-
-    await intro_module.run_graph_initial_narration(llm, repo, runtime)  # type: ignore[arg-type]
-
-    payload = json.loads(llm.calls[-1]["messages"][1]["content"])
-    assert "player" in payload
-    assert "place" in payload
-    assert "visible_targets" in payload
-    assert "exits" in payload
-    assert "inventory" in payload
+    assert next_runtime.log_entries[-1].text == "고정된 첫 장면입니다."
 
 
 @pytest.mark.asyncio

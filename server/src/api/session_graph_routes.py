@@ -112,12 +112,11 @@ async def session_graph_init(
 @router.post("/session/{game_id}/graph/intro", response_model=GraphActionResponse)
 async def session_graph_intro(
     game_id: str,
-    llm: LLMClient = Depends(get_llm),
     graph_repo: GraphRepo = Depends(get_graph_repo),
     scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> GraphActionResponse:
     try:
-        result = await run_graph_intro_request(llm, graph_repo, game_id, scenario_repo)
+        result = await run_graph_intro_request(graph_repo, game_id, scenario_repo)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="game not found")
     return _graph_action_response(game_id, result)
@@ -126,13 +125,11 @@ async def session_graph_intro(
 @router.post("/session/{game_id}/graph/intro/stream")
 async def session_graph_intro_stream(
     game_id: str,
-    llm: LLMClient = Depends(get_llm),
     graph_repo: GraphRepo = Depends(get_graph_repo),
     scenario_repo: ScenarioRepo = Depends(get_scenario_repo),
 ) -> StreamingResponse:
     async def source():
         async for event in run_graph_intro_request_stream(
-            llm,
             graph_repo,
             game_id,
             scenario_repo,

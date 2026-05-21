@@ -10,7 +10,6 @@ from src.game.runtime.action.dispatch import GraphActionDispatchResult
 from src.game.runtime.narration.context import (
     build_action_narration_payload,
     build_input_narration_payload,
-    build_intro_narration_payload,
     build_roll_narration_payload,
 )
 
@@ -199,41 +198,6 @@ def _runtime() -> GameRuntimeState:
             )
         ],
     )
-
-
-def test_intro_payload_contains_grounded_first_scene_context():
-    payload = build_intro_narration_payload(_runtime())
-
-    assert payload["player"]["name"] == "당신"
-    assert payload["place"]["name"] == "광장"
-    assert payload["place"]["description"] == "차가운 돌바닥이 이어집니다."
-    assert payload["visible_targets"] == [
-        {
-            "id": "guard_01",
-            "name": "경비병",
-            "type": "npc",
-            "background": "경비병은 북문 앞에서 교대 기록을 관리합니다.",
-            "dialogue_style": {
-                "id": "procedural_style",
-                "name": "절차형 말투",
-                "speech_style": "짧고 기록문 같은 말투",
-                "humor_style": "농담을 보고서 항목처럼 분류함",
-                "traits": ["업무적", "간결함"],
-            },
-            "mbti": {
-                "id": "ENFP",
-                "attitude": "밝고 즉흥적으로 반응합니다.",
-                "speech_style": "말이 빠르고 감탄이 많습니다.",
-                "personality": "솔직하고 호기심이 많습니다.",
-                "boundary_style": "개인 질문에도 장난스럽게 받아칩니다.",
-                "humor_style": "어색함을 바로 짚어 웃음으로 바꿉니다.",
-                "roleplay_cues": ["상대 말에 바로 반응합니다"],
-                "avoid": ["차갑게 반복하지 않습니다"],
-            },
-        }
-    ]
-    assert payload["exits"] == [{"id": "north_gate", "name": "북문"}]
-    assert payload["inventory"] == [{"id": "sword_01", "name": "검", "kind": "weapon"}]
 
 
 def test_input_payload_includes_recent_context_and_keeps_player_input():

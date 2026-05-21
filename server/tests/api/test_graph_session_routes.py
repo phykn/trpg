@@ -117,11 +117,18 @@ def _build_app(
     *,
     llm_payload: dict | None = None,
     intro_answer: str = "당신은 광장에 처음 발을 들입니다.",
+    start_intro_text: str | None = None,
     intro_delay: float = 0.0,
     intro_error: Exception | None = None,
     narration_meta: dict | None = None,
 ):
     storage = make_default_storage()
+    if start_intro_text is not None:
+        start = json.loads(storage.objects["default/start.json"].decode("utf-8"))
+        start["intro_text"] = start_intro_text
+        storage.objects["default/start.json"] = json.dumps(
+            start, ensure_ascii=False
+        ).encode("utf-8")
     _extend_default_storage_for_movement(storage)
     scenario_repo, _ = make_scenario_repo(storage)
     return build_app(
@@ -200,7 +207,11 @@ async def test_graph_init_persists_graph_and_returns_front_state(tmp_path):
 async def test_graph_intro_adds_initial_narration_and_first_visit_move_narration(
     tmp_path,
 ):
-    app = _build_app(tmp_path, intro_answer="LLM 소개는 init 응답을 막지 않습니다.")
+    app = _build_app(
+        tmp_path,
+        intro_answer="LLM 소개는 쓰이지 않습니다.",
+        start_intro_text="데이터 소개는 init 응답을 막지 않습니다.",
+    )
 
     async with _client(app) as client:
         init_response = await client.post(
@@ -234,17 +245,17 @@ async def test_graph_intro_adds_initial_narration_and_first_visit_move_narration
 
     assert init_body["state"]["log"] == []
     assert intro_body["state"]["log"] == [
-        {"id": 1, "kind": "gm", "text": "LLM 소개는 init 응답을 막지 않습니다."}
+        {"id": 1, "kind": "gm", "text": "데이터 소개는 init 응답을 막지 않습니다."}
     ]
     assert intro_body["outcome"] == "neutral"
     assert move_body["outcome"] == "neutral"
     assert [entry.kind for entry in logs] == ["gm", "act", "gm"]
     assert [entry.id for entry in logs] == [1, 2, 3]
-    assert logs[0].text == "LLM 소개는 init 응답을 막지 않습니다."
+    assert logs[0].text == "데이터 소개는 init 응답을 막지 않습니다."
     assert logs[1].text == "당신은 숲길로 이동합니다."
     assert move_body["state"]["log"][-1]["kind"] == "gm"
     assert progress.next_log_id == 4
-    assert [call["agent"] for call in app.state.llm.calls].count("graph_intro") == 1
+    assert [call["agent"] for call in app.state.llm.calls].count("graph_intro") == 0
     assert [call["agent"] for call in app.state.llm.calls].count("graph_narrate") == 1
 
 
@@ -326,32 +337,12 @@ async def test_graph_init_does_not_block_on_slow_intro_narration(
 
 
 @pytest.mark.asyncio
-async def test_graph_intro_waits_for_llm_answer_instead_of_route_timeout(
-    tmp_path,
-):
+async def test_graph_intro_streams_result_before_initial_narration(tmp_path):
     app = _build_app(
         tmp_path,
-        intro_answer="느린 LLM 소개도 화면의 대기 표시 뒤에 도착합니다.",
-        intro_delay=0.03,
+        intro_answer="LLM 소개는 쓰이지 않습니다.",
+        start_intro_text="문이 열리고 광장이 드러납니다.",
     )
-
-    async with _client(app) as client:
-        game_id = await _init_graph_session(client)
-        response = await client.post(f"/session/{game_id}/graph/intro")
-
-    assert response.status_code == 200, response.text
-    assert response.json()["state"]["log"] == [
-        {
-            "id": 1,
-            "kind": "gm",
-            "text": "느린 LLM 소개도 화면의 대기 표시 뒤에 도착합니다.",
-        }
-    ]
-
-
-@pytest.mark.asyncio
-async def test_graph_intro_streams_result_before_initial_narration(tmp_path):
-    app = _build_app(tmp_path, intro_answer="문이 열리고 광장이 드러납니다.")
 
     async with _client(app) as client:
         game_id = await _init_graph_session(client)
@@ -363,18 +354,16 @@ async def test_graph_intro_streams_result_before_initial_narration(tmp_path):
     assert [line["type"] for line in lines] == [
         "result",
         "narration_delta",
-        "narration_delta",
         "final",
     ]
     assert lines[0]["payload"]["status"] == "executed"
     assert lines[0]["payload"]["outcome"] == "neutral"
     assert lines[0]["payload"]["state"]["log"] == []
-    assert (
-        "".join(line["text"] for line in lines[1:3]) == "문이 열리고 광장이 드러납니다."
-    )
+    assert lines[1]["text"] == "문이 열리고 광장이 드러납니다."
     assert lines[-1]["payload"]["state"]["log"] == [
         {"id": 1, "kind": "gm", "text": "문이 열리고 광장이 드러납니다."}
     ]
+    assert [call["agent"] for call in app.state.llm.calls].count("graph_intro") == 0
 
 
 @pytest.mark.asyncio
