@@ -56,15 +56,19 @@ def build_action_narration_payload(
     place = after.graph.nodes.get(place_id or "")
     target = _action_target(after, action)
     scene_anchor = _scene_anchor(after)
+    current_event = {
+        "kind": dispatch.kind,
+        "outcome": dispatch.outcome,
+        "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
+        "resolved_results": card_texts,
+    }
+    quest_trigger = _quest_trigger_payload(action, dispatch.kind)
+    if quest_trigger is not None:
+        current_event["quest_trigger"] = quest_trigger
     return {
         "player_input": None,
         "current_place": _node_ref(after, place),
-        "current_event": {
-            "kind": dispatch.kind,
-            "outcome": dispatch.outcome,
-            "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
-            "resolved_results": card_texts,
-        },
+        "current_event": current_event,
         "scene_anchor": scene_anchor,
         "target_view": _target_view(after, target),
         "result_cards": _result_cards(card_texts),
@@ -94,6 +98,7 @@ def build_roll_narration_payload(
     pending: dict[str, Any],
     roll_entry: RollLogEntry,
     outcome: str,
+    result_texts: list[str] | None = None,
 ) -> dict[str, Any]:
     target = _action_target(runtime, action)
     check_reason = pending.get("check_reason")
@@ -101,6 +106,9 @@ def build_roll_narration_payload(
         check_reason = pending.get("body")
     preroll_narration = pending.get("body")
     player_input = pending.get("player_input")
+    resolved_results = result_texts or [
+        _roll_result_card(roll_entry, outcome, runtime.progress.locale)
+    ]
     return {
         "player_input": player_input if isinstance(player_input, str) else None,
         "current_event": {
@@ -116,21 +124,24 @@ def build_roll_narration_payload(
                 "result": roll_entry.result,
                 "margin": roll_entry.margin,
             },
-            "resolved_results": [
-                _roll_result_card(roll_entry, outcome, runtime.progress.locale)
-            ],
+            "resolved_results": resolved_results,
         },
         "scene_anchor": _scene_anchor(runtime),
         "target_view": _target_view(runtime, target),
-        "result_cards": _result_cards(
-            [_roll_result_card(roll_entry, outcome, runtime.progress.locale)]
-        ),
+        "result_cards": _result_cards(resolved_results),
         "related_memory": related_memory_payload(
             runtime,
             action=action,
             target=target,
         ),
-        "recent_narration": _recent_narration_payload(runtime),
+        "recent_narration": _recent_narration_payload(
+            runtime,
+            exclude_texts=[
+                text
+                for text in (check_reason, preroll_narration)
+                if isinstance(text, str)
+            ],
+        ),
         "recent_dialogue": narrate_recent_dialogue_payload(
             runtime,
             target=target.id if target is not None else None,
@@ -539,6 +550,14 @@ def _input_current_event(
     }
 
 
+def _quest_trigger_payload(action: Action, kind: str) -> dict[str, str] | None:
+    if kind == "move":
+        target = _single(action.to) or _single(action.what)
+        if target is not None:
+            return {"type": "location_enter", "target": target}
+    return None
+
+
 def _result_cards(card_texts: list[str]) -> list[dict[str, str]]:
     return [{"text": text} for text in card_texts if text]
 
@@ -557,11 +576,15 @@ def _recent_narration_payload(
     *,
     limit: int = 4,
     max_chars: int = 220,
+    exclude_texts: list[str] | None = None,
 ) -> list[dict[str, Any]]:
+    excluded = {text.strip() for text in (exclude_texts or []) if text.strip()}
     entries = [
         entry
         for entry in runtime.log_entries
-        if entry.kind == "gm" and entry.text.strip()
+        if entry.kind == "gm"
+        and entry.text.strip()
+        and entry.text.strip() not in excluded
     ][-limit:]
     return [
         {

@@ -81,7 +81,15 @@ export function Playing({ game }: Props) {
     }
   }, [typing]);
 
+  React.useEffect(() => {
+    if (game.scenarioCompleted) {
+      setNearbyOpen(false);
+    }
+  }, [game.scenarioCompleted]);
+
   const nearby = React.useMemo(() => buildNearbyPanel(storyGraph), [storyGraph]);
+  const visibleNearby = game.scenarioCompleted ? null : nearby;
+  const visibleSuggestions = game.scenarioCompleted ? [] : suggestions;
   const lastLogEntry = log[log.length - 1];
   const latestCues = lastLogEntry?.kind === 'gm' ? lastLogEntry.cues ?? [] : [];
   const decisionStateItems = React.useMemo(
@@ -297,14 +305,14 @@ export function Playing({ game }: Props) {
             onSend={onSend}
             onStop={onStop}
             streaming={streaming}
-            suggestions={suggestions}
+            suggestions={visibleSuggestions}
             quickActions={hero.canLevelUp ? [{
               id: 'level-up',
               label: ko.level.title,
               onPress: openLevelUpFromComposer,
               disabled: streaming || pendingConfirmation !== null || pendingRoll !== null,
             }] : []}
-            nearby={nearby}
+            nearby={visibleNearby}
             nearbyOpen={nearbyOpen}
             onNearbyOpenChange={setNearbyOpenFromComposer}
             onNearbyAction={(action) => {

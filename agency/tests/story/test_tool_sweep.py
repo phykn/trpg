@@ -206,3 +206,115 @@ def test_sweep_loads_runtime_catalog_records(capsys, tmp_path):
 
     assert rc == 0, capsys.readouterr().err
     assert capsys.readouterr().out.strip() == "OK"
+
+
+def test_sweep_rejects_unassigned_quest(capsys, tmp_path):
+    sd = _scaffold_minimal_passable(tmp_path)
+    (sd / "start.json").write_text(
+        json.dumps({"start_location": "town", "active_quest": "look_around"}),
+        encoding="utf-8",
+    )
+    (sd / "races" / "human.json").write_text(
+        json.dumps({"id": "human", "name": "인간", "description": ""}),
+        encoding="utf-8",
+    )
+    (sd / "locations" / "town.json").write_text(
+        json.dumps({"id": "town", "name": "마을"}),
+        encoding="utf-8",
+    )
+    (sd / "quests" / "look_around.json").write_text(
+        json.dumps(
+            {
+                "id": "look_around",
+                "title": "둘러보기",
+                "giver": None,
+                "triggers": [],
+                "fail_triggers": [],
+                "prerequisites": [],
+                "status": "active",
+                "required": True,
+                "rewards": {"gold": 0, "exp": 0, "items": []},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (sd / "chapters" / "chapter_01.json").write_text(
+        json.dumps(
+            {
+                "id": "chapter_01",
+                "title": "시작",
+                "quests": [],
+                "prerequisites": [],
+                "status": "active",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool._main(["sweep", str(sd)])
+
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "look_around" in err
+    assert "not assigned to any chapter" in err
+
+
+def test_sweep_rejects_active_quest_in_locked_chapter(capsys, tmp_path):
+    sd = _scaffold_minimal_passable(tmp_path)
+    (sd / "start.json").write_text(
+        json.dumps({"start_location": "town", "active_quest": "look_around"}),
+        encoding="utf-8",
+    )
+    (sd / "races" / "human.json").write_text(
+        json.dumps({"id": "human", "name": "인간", "description": ""}),
+        encoding="utf-8",
+    )
+    (sd / "locations" / "town.json").write_text(
+        json.dumps({"id": "town", "name": "마을"}),
+        encoding="utf-8",
+    )
+    (sd / "quests" / "look_around.json").write_text(
+        json.dumps(
+            {
+                "id": "look_around",
+                "title": "둘러보기",
+                "giver": None,
+                "triggers": [],
+                "fail_triggers": [],
+                "prerequisites": [],
+                "status": "active",
+                "required": True,
+                "rewards": {"gold": 0, "exp": 0, "items": []},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (sd / "chapters" / "chapter_01.json").write_text(
+        json.dumps(
+            {
+                "id": "chapter_01",
+                "title": "시작",
+                "quests": ["look_around"],
+                "prerequisites": ["chapter_00"],
+                "status": "locked",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (sd / "chapters" / "chapter_00.json").write_text(
+        json.dumps(
+            {
+                "id": "chapter_00",
+                "title": "이전",
+                "quests": [],
+                "prerequisites": [],
+                "status": "completed",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool._main(["sweep", str(sd)])
+
+    assert rc == 1
+    assert "must belong to an active chapter" in capsys.readouterr().err

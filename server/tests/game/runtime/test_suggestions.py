@@ -129,6 +129,20 @@ def test_filter_grounded_suggestions_drops_combat_when_not_in_combat():
     assert [suggestion.input_text for suggestion in result] == ["주변을 살핍니다"]
 
 
+def test_filter_grounded_suggestions_drops_missing_intent():
+    runtime = _runtime_for_suggestions()
+
+    result = filter_grounded_suggestions(
+        runtime,
+        [
+            GraphSuggestion(label="대답 기다리기", input_text="상인의 대답을 기다립니다"),
+            GraphSuggestion(label="상인에게", input_text="상인에게 말을 겁니다", intent="talk"),
+        ],
+    )
+
+    assert [suggestion.input_text for suggestion in result] == ["상인에게 말을 겁니다"]
+
+
 def test_filter_grounded_suggestions_keeps_inspect_for_visible_scene_refs():
     runtime = _runtime_for_suggestions()
 

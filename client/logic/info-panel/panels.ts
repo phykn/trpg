@@ -51,15 +51,18 @@ function buildNotesPanel(state: GameSnapshot): Panel {
       text: state.chapter.title,
       clampLines: 1,
     });
+    if (state.chapter.summary) {
+      sections.push({ label: ko.panel.summary, text: state.chapter.summary, clampLines: 3 });
+    }
   }
-  if (activeQuest) {
+  if (!state.chapter && activeQuest?.summary) {
     sections.push({ label: ko.panel.summary, text: activeQuest.summary, clampLines: 3 });
-  } else if (firstOffer) {
+  } else if (!state.chapter && firstOffer) {
     sections.push(
       { label: ko.quest.offer, text: firstOffer.title, clampLines: 1 },
       { label: ko.panel.summary, text: firstOffer.summary, clampLines: 3 },
     );
-  } else if (state.scenarioCompleted) {
+  } else if (!state.chapter && state.scenarioCompleted) {
     sections.push({ label: ko.panel.summary, text: ko.gameOver.ending, clampLines: 2 });
   }
 

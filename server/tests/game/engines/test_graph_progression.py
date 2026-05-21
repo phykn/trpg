@@ -49,6 +49,11 @@ def _graph() -> Graph:
                     "prerequisites": ["q2"],
                 },
             ),
+            "forest": GraphNode(
+                id="forest",
+                type="location",
+                properties={"name": "숲"},
+            ),
         },
         edges={
             "part_of_chapter:q1:chapter_01": GraphEdge(
@@ -146,3 +151,24 @@ def test_progression_promotes_pending_required_quest_when_active_slot_opens():
 
     assert result.next_active_quest_id == "q2"
     assert changed.nodes["q2"].properties["status"] == "active"
+
+
+def test_progression_auto_completes_active_location_quest_already_visited():
+    graph = _graph()
+    graph.nodes["q2"].properties["triggers"] = [
+        {"type": "location_enter", "target": "forest"}
+    ]
+
+    result = plan_progression_after_quest_completion(
+        graph,
+        completed_quest_ids=["q1"],
+        active_quest_id="q1",
+        satisfied_location_ids={"forest"},
+    )
+    changed = _apply_all(graph, result.changes)
+
+    assert result.auto_completed_quest_ids == ["q2"]
+    assert result.next_active_quest_id == "q3"
+    assert changed.nodes["q2"].properties["status"] == "completed"
+    assert changed.nodes["q2"].properties["triggers_met"] == [True]
+    assert changed.nodes["q3"].properties["status"] == "active"

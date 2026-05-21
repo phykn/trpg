@@ -360,6 +360,78 @@ def test_roll_payload_keeps_check_reason_separate_from_preroll_narration():
     )
 
 
+def test_roll_payload_omits_preroll_body_from_recent_narration():
+    runtime = _runtime()
+    runtime.log_entries.append(
+        GMLogEntry(
+            id=2,
+            kind="gm",
+            text="경비병은 답하기 전에 주변의 시선을 먼저 살핍니다.",
+        )
+    )
+    pending = {
+        "check_reason": "경비병을 설득하려면 믿을 만한 말을 해야 합니다.",
+        "body": "경비병은 답하기 전에 주변의 시선을 먼저 살핍니다.",
+        "player_input": "경비병에게 북문 기록을 보여 달라고 설득합니다",
+    }
+
+    payload = build_roll_narration_payload(
+        runtime=runtime,
+        action=Action(verb="speak", to="guard_01", how="friendly"),
+        pending=pending,
+        roll_entry=RollLogEntry(
+            id=3,
+            kind="roll",
+            check="매력",
+            roll=18,
+            margin=5,
+            result="success",
+        ),
+        outcome="success",
+    )
+
+    assert payload["recent_narration"] == [
+        {
+            "text": "경비병이 북문을 지킵니다.",
+            "outcome": None,
+        }
+    ]
+
+
+def test_roll_payload_can_include_completed_quest_result_cards():
+    runtime = _runtime()
+    pending = {
+        "check_reason": "경비병에게 북문 규칙을 묻습니다.",
+        "body": "경비병은 답하기 전에 주변의 시선을 먼저 살핍니다.",
+        "player_input": "경비병에게 북문 규칙을 묻습니다",
+    }
+
+    payload = build_roll_narration_payload(
+        runtime=runtime,
+        action=Action(verb="speak", to="guard_01", how="friendly"),
+        pending=pending,
+        roll_entry=RollLogEntry(
+            id=3,
+            kind="roll",
+            check="매력",
+            roll=18,
+            margin=5,
+            result="success",
+        ),
+        outcome="success",
+        result_texts=["성공  매력", "북문은 밤마다 닫힙니다."],
+    )
+
+    assert payload["current_event"]["resolved_results"] == [
+        "성공  매력",
+        "북문은 밤마다 닫힙니다.",
+    ]
+    assert payload["result_cards"] == [
+        {"text": "성공  매력"},
+        {"text": "북문은 밤마다 닫힙니다."},
+    ]
+
+
 def test_input_payload_includes_target_public_knowledge_and_mentioned_inventory():
     runtime = _runtime()
     guard = runtime.graph.nodes["guard_01"].model_copy(
@@ -458,6 +530,31 @@ def test_action_payload_contains_safe_current_event_and_combat_view():
     assert "hurt" not in encoded
     assert "damage" not in encoded
     assert "hp" not in encoded.lower()
+
+
+def test_action_payload_marks_location_enter_quest_trigger():
+    runtime = _runtime()
+    dispatch = GraphActionDispatchResult(
+        runtime=runtime,
+        kind="move",
+        applied=1,
+        changed_node_ids=["player_01"],
+        changed_edge_ids=[],
+        removed_edge_ids=[],
+    )
+
+    payload = build_action_narration_payload(
+        before=runtime,
+        after=runtime,
+        action=Action(verb="move", to="north_gate"),
+        dispatch=dispatch,
+        card_texts=["북문으로 이동합니다.", "퀘스트가 완료됩니다."],
+    )
+
+    assert payload["current_event"]["quest_trigger"] == {
+        "type": "location_enter",
+        "target": "north_gate",
+    }
 
 
 def test_action_payload_keeps_terminal_combat_trace_after_state_clears():

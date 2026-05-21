@@ -50,7 +50,7 @@ const combat: CombatBadge = {
 };
 
 describe('buildDecisionState', () => {
-  test('shows compact place without duplicating quest goals', () => {
+  test('shows place without duplicating quest goals', () => {
     const items = buildDecisionState({
       place: { ...place, name: '칭호의 안개 숲' },
       quest: {
@@ -65,6 +65,20 @@ describe('buildDecisionState', () => {
     expect(items.map((item) => [item.label, item.text])).toEqual([
       ['', '칭호의 안개 숲'],
     ]);
+  });
+
+  test('keeps long chip text intact for the strip to ellipsize visually', () => {
+    const longPlaceName = '흰 천 조각들이 바람 없이 흔들리는 낡은 공터';
+
+    const items = buildDecisionState({
+      place: { ...place, name: longPlaceName },
+      quest: null,
+      combat: null,
+      heroStatus: [],
+      latestCues: [],
+    });
+
+    expect(items.find((item) => item.id === 'place')?.text).toBe(longPlaceName);
   });
 
   test('adds compact hero level, HP, and MP when vitals are available', () => {

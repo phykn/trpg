@@ -24,6 +24,7 @@ User-facing setup and the full directory map live in [README.md](./README.md). T
 .venv/bin/python -m agency.story.tool check-entity    <kind> <scenario_dir> <entity.json> [--decomp <dir>] [--skeleton]
 .venv/bin/python -m agency.story.tool equip-fill      <scenario_dir>
 .venv/bin/python -m agency.story.tool sweep           <scenario_dir>
+.venv/bin/python -m agency.story.tool runtime-smoke   <scenario_dir> [--race <race_id>]
 
 # Story release storage tools:
 APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload <scenario_dir>
@@ -36,7 +37,7 @@ Browser QA uses the already-running web client and server. Story tool (`tool.py`
 
 ### QA — browser skill only
 
-`agency/qa/SKILL.md` is for exploratory browser QA. Codex uses the visible web client, plays through the real UI, and writes improvement findings with turn-numbered evidence. Do not replace browser observations with direct API calls. Save reports under `qa_test/browser/<run-id>/report.md` when a persistent report is useful.
+`agency/qa/SKILL.md` is for exploratory browser QA. Codex uses the visible web client, plays through the real UI, and writes improvement findings with turn-numbered evidence. Do not replace browser observations with direct API calls. If the user explicitly asks to fix issues during QA, gather browser evidence first, make the narrow fix, and re-check the same browser flow. Save reports under `qa_test/browser/<run-id>/report.md` when a persistent report is useful.
 
 ### Story — SKILL.md driven scenario build
 

@@ -385,3 +385,9 @@ def test_story_skill_build_order_produces_sweepable_seed(capsys, tmp_path):
     _write_json(scenario / "mbti.json", {"ISTJ": {"id": "ISTJ", "name": "ISTJ"}})
 
     _run_ok(capsys, "sweep", str(scenario))
+    rc = tool._main(["runtime-smoke", str(scenario)])
+    out = capsys.readouterr()
+    assert rc == 0, out.err
+    assert out.out.startswith("OK game_")
+    assert "active_subject=guide" in out.out
+    assert "active_quest=read_sign" in out.out

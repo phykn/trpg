@@ -599,6 +599,48 @@ async def test_graph_input_speak_for_active_social_check_quest_creates_pending_r
     assert saved.pending_roll["stat"] == "presence"
 
 
+async def test_graph_input_generic_approach_does_not_complete_social_check_quest(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["quest_social"] = GraphNode(
+        id="quest_social",
+        type="quest",
+        properties={
+            "title": "섬의 규칙을 듣습니다",
+            "status": "active",
+            "triggers": [
+                {
+                    "id": "ask_goblin",
+                    "type": "social_check",
+                    "target": "goblin_01",
+                    "name": "고블린에게 섬의 규칙을 묻습니다",
+                }
+            ],
+            "triggers_met": [False],
+        },
+    )
+    await repo.save_graph("game-1", graph)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(update={"active_quest_id": "quest_social"})
+    )
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]}
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 접근합니다")
+    saved = await repo.load_progress("game-1")
+    saved_graph = await repo.load_graph("game-1")
+
+    assert result.status == "executed"
+    assert saved.pending_roll is None
+    assert saved.active_quest_id == "quest_social"
+    assert saved_graph.nodes["quest_social"].properties["status"] == "active"
+    assert saved_graph.nodes["quest_social"].properties["triggers_met"] == [False]
+
+
 async def test_graph_input_speak_for_visible_active_social_check_infers_target(tmp_path):
     repo = await _repo(tmp_path)
     graph = await repo.load_graph("game-1")
@@ -724,7 +766,8 @@ async def test_graph_input_reflects_speak_turn_into_memory_dialogue_and_suggesti
         turn_summary="고블린에게서 북문의 낯선 발자국 정보를 들었습니다.",
         importance=3,
         suggestions=[
-            {"label": "북문", "input_text": "북문으로 이동합니다"},
+            {"label": "광장", "input_text": "광장으로 이동합니다", "intent": "move"},
+            {"label": "goblin_01", "input_text": "goblin_01에게 말을 겁니다", "intent": "talk"},
             {"label": "발자국", "input_text": "발자국을 자세히 살펴봅니다"},
         ],
     )
@@ -735,15 +778,15 @@ async def test_graph_input_reflects_speak_turn_into_memory_dialogue_and_suggesti
 
     assert [suggestion.model_dump() for suggestion in result.suggestions] == [
         {
-            "label": "북문",
-            "input_text": "북문으로 이동합니다",
-            "intent": None,
+            "label": "광장",
+            "input_text": "광장으로 이동합니다",
+            "intent": "move",
             "action": None,
         },
         {
-            "label": "발자국",
-            "input_text": "발자국을 자세히 살펴봅니다",
-            "intent": None,
+            "label": "goblin_01",
+            "input_text": "goblin_01에게 말을 겁니다",
+            "intent": "talk",
             "action": None,
         },
     ]

@@ -79,6 +79,10 @@ describe('buildPanelSlots', () => {
       '챕터',
       '요약',
     ]);
+    expect(slots[1].panel?.sections?.map((section) => section.text)).toEqual([
+      '돌아갈 배는 없었다',
+      '흰섬의 첫 장입니다.',
+    ]);
     expect(slots[1].panel?.actions).toBeUndefined();
   });
 

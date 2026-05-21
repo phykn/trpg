@@ -50,6 +50,13 @@ describe('Playing overlay layering', () => {
     expect(source).toContain('buildNearbyPanel(storyGraph)');
   });
 
+  test('hides stale nearby and suggestion actions after scenario completion', () => {
+    expect(source).toContain('const visibleNearby = game.scenarioCompleted ? null : nearby;');
+    expect(source).toContain('const visibleSuggestions = game.scenarioCompleted ? [] : suggestions;');
+    expect(source).toContain('suggestions={visibleSuggestions}');
+    expect(source).toContain('nearby={visibleNearby}');
+  });
+
   test('keeps context panels and nearby panel mutually exclusive', () => {
     expect(source).toContain('const setNearbyOpenFromComposer = (open: boolean) => {');
     expect(source).toContain('if (open) setActiveId(null);');

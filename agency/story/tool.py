@@ -13,6 +13,7 @@ import argparse
 import asyncio
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -32,8 +33,11 @@ from agency.story.harness.decompose import (  # noqa: E402
 )
 from agency.story.harness._common import EntityWriterError  # noqa: E402
 from agency.story.harness.scenario import copy_fixed_catalogs, fill_equipment  # noqa: E402
+from src.db.graph.local_fs import LocalFsGraphRepo  # noqa: E402
 from src.db.scenario.local_fs import LocalFsScenarioRepo  # noqa: E402
 from src.env import load_server_env  # noqa: E402
+from src.game.seed.init_graph import init_graph_game  # noqa: E402
+from src.game.seed.player import PlayerInput  # noqa: E402
 from src.game.seed.validation import seed_violations  # noqa: E402
 from agency.story.harness.runner import (  # noqa: E402
     SPECS,
@@ -122,6 +126,22 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sp_sw.add_argument("scenario_dir", help="scenario directory")
     sp_sw.set_defaults(func=_cmd_sweep)
+    # runtime-smoke
+    sp_rt = sub.add_parser(
+        "runtime-smoke",
+        help="로컬 graph init 경로로 시나리오 시작 가능 여부 검사",
+    )
+    sp_rt.add_argument("scenario_dir", help="scenario directory")
+    sp_rt.add_argument("--name", default="테스터", help="test player name")
+    sp_rt.add_argument("--race", default=None, help="test player race id")
+    sp_rt.add_argument(
+        "--gender",
+        choices=["male", "female"],
+        default="female",
+        help="test player gender",
+    )
+    sp_rt.add_argument("--locale", default="ko", help="runtime locale")
+    sp_rt.set_defaults(func=_cmd_runtime_smoke)
     return parser
 
 
@@ -294,6 +314,7 @@ def _cmd_sweep(args: argparse.Namespace) -> int:
     try:
         scenario = asyncio.run(_load_scenario_async(sd.name, sd.parent))
         violations = seed_violations(**scenario)
+        violations.extend(_story_playability_violations(scenario))
     except Exception as e:
         return _fail("sweep", e)
     if violations:
@@ -303,6 +324,119 @@ def _cmd_sweep(args: argparse.Namespace) -> int:
         return 1
     print("OK")
     return 0
+
+
+def _story_playability_violations(scenario: dict) -> list[str]:
+    quests = scenario["quests"]
+    chapters = scenario["chapters"]
+    start = scenario["start"]
+    out: list[str] = []
+
+    quest_chapters: dict[str, list[str]] = {quest_id: [] for quest_id in quests}
+    for chapter_id, chapter in chapters.items():
+        if chapter.get("status") == "active" and _str_list(chapter.get("prerequisites")):
+            out.append(
+                f"chapter {chapter_id} is active but has prerequisites; "
+                "opening active chapters must have no prerequisites"
+            )
+        for quest_id in _str_list(chapter.get("quests")):
+            quest_chapters.setdefault(quest_id, []).append(chapter_id)
+
+    for quest_id in quests:
+        owners = quest_chapters.get(quest_id, [])
+        if not owners:
+            out.append(f"quest {quest_id} is not assigned to any chapter")
+        elif len(owners) > 1:
+            out.append(f"quest {quest_id} is assigned to multiple chapters: {owners}")
+
+    for quest_id, quest in quests.items():
+        if quest.get("status") == "active" and _str_list(quest.get("prerequisites")):
+            out.append(
+                f"quest {quest_id} is active but has prerequisites; "
+                "opening active quests must have no prerequisites"
+            )
+
+    active_quest_id = start.get("active_quest")
+    if isinstance(active_quest_id, str) and active_quest_id in quests:
+        active_quest = quests[active_quest_id]
+        if active_quest.get("status") != "active":
+            out.append(
+                f"active_quest {active_quest_id} must start with status='active'"
+            )
+        owners = quest_chapters.get(active_quest_id, [])
+        if not owners:
+            out.append(f"active_quest {active_quest_id} is not in any chapter")
+        elif not any(chapters[chapter_id].get("status") == "active" for chapter_id in owners):
+            out.append(
+                f"active_quest {active_quest_id} must belong to an active chapter"
+            )
+
+    return out
+
+
+def _str_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str)]
+
+
+def _cmd_runtime_smoke(args: argparse.Namespace) -> int:
+    sd = Path(args.scenario_dir).resolve()
+    if not sd.is_dir():
+        print(
+            f"runtime-smoke failed: scenario_dir not a directory: {sd}",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        bundle = asyncio.run(
+            _runtime_smoke_async(
+                sd,
+                name=args.name,
+                race_id=args.race,
+                gender=args.gender,
+                locale=args.locale,
+            )
+        )
+    except Exception as e:
+        return _fail("runtime-smoke", e)
+    print(
+        "OK "
+        f"{bundle.progress.game_id} "
+        f"active_subject={bundle.progress.active_subject_id or '-'} "
+        f"active_quest={bundle.progress.active_quest_id or '-'}"
+    )
+    return 0
+
+
+async def _runtime_smoke_async(
+    scenario_dir: Path,
+    *,
+    name: str,
+    race_id: str | None,
+    gender: str,
+    locale: str,
+):
+    profile = scenario_dir.name
+    scenario_repo = LocalFsScenarioRepo(str(scenario_dir.parent))
+    races = await scenario_repo.load_seed_records(profile, "races")
+    selected_race = race_id or _default_race_id(races)
+    with tempfile.TemporaryDirectory(prefix="story_smoke_") as saves_dir:
+        return await init_graph_game(
+            profile,
+            PlayerInput(name=name, race_id=selected_race, gender=gender),
+            LocalFsGraphRepo(saves_dir),
+            scenario_repo,
+            locale=locale,
+        )
+
+
+def _default_race_id(races: dict) -> str:
+    if "human" in races:
+        return "human"
+    if races:
+        return sorted(races)[0]
+    raise EntityWriterError("scenario has no races; cannot choose a smoke-test race.")
 
 
 async def _read_optional_start(repo: LocalFsScenarioRepo, profile: str) -> dict:

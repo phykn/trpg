@@ -122,7 +122,7 @@ export function PanelBody({ panel, onAction, actionDisabled = false }: {
   const showHeader = panel.title.length > 0 || !!panel.titleAction || !!(panel.meta && panel.meta.length > 0);
 
   return (
-    <View className="px-4 py-3 gap-2.5" style={{ minHeight: 160 }}>
+    <View className="px-4 py-3 gap-2.5">
       {showHeader && (
         <View className="flex-row items-center gap-2" style={{ minHeight: 22 }}>
           <HeaderTitleGroup panel={panel} />

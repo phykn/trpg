@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from src.db.graph.local_fs import LocalFsGraphRepo
@@ -13,7 +15,9 @@ from src.game.runtime.flow.confirmation import (
 )
 from src.game.runtime.flow.roll import (
     GraphRollExpected,
+    _ResolvedGraphRoll,
     build_pending_roll,
+    _strip_repeated_preroll_text,
     run_graph_preroll_stream,
     run_graph_roll,
     run_graph_roll_stream,
@@ -27,8 +31,14 @@ def _fixed_roll_dc(monkeypatch):
 
 
 class _RollStreamLLM:
-    def __init__(self, narration: str = "판정의 여파가 짧게 남습니다.") -> None:
+    def __init__(
+        self,
+        narration: str = "판정의 여파가 짧게 남습니다.",
+        *,
+        suggestions: list[object] | None = None,
+    ) -> None:
         self.narration = narration
+        self.suggestions = suggestions or []
         self.calls: list[dict] = []
 
     async def chat_stream(
@@ -44,7 +54,11 @@ class _RollStreamLLM:
         yield {"answer": self.narration}
         yield {
             "answer": (
-                '\n---TRPG_META---\n{"turn_summary":"","importance":1,"suggestions":[]}'
+                "\n---TRPG_META---\n"
+                + json.dumps(
+                    {"turn_summary": "", "importance": 1, "suggestions": self.suggestions},
+                    ensure_ascii=False,
+                )
             )
         }
 
@@ -61,7 +75,10 @@ class _RollStreamLLM:
         return {
             "answer": (
                 f"{self.narration}\n---TRPG_META---\n"
-                '{"turn_summary":"","importance":1,"suggestions":[]}'
+                + json.dumps(
+                    {"turn_summary": "", "importance": 1, "suggestions": self.suggestions},
+                    ensure_ascii=False,
+                )
             )
         }
 
@@ -442,6 +459,8 @@ async def test_run_graph_roll_success_completes_social_check_quest(tmp_path):
         id="quest_social",
         type="quest",
         properties={
+            "name": "섬의 규칙을 듣습니다",
+            "description": "흰섬은 두 번째 이름을 주지 않습니다.",
             "status": "active",
             "required": True,
             "triggers": [
@@ -478,6 +497,7 @@ async def test_run_graph_roll_success_completes_social_check_quest(tmp_path):
     ).pending_roll
 
     result = await run_graph_roll(repo, "game-1", pending["id"], dice=13)
+    logs = await repo.load_log_entries("game-1")
     saved_graph = await repo.load_graph("game-1")
     saved_progress = await repo.load_progress("game-1")
     player = saved_graph.nodes["player_01"].properties
@@ -490,6 +510,72 @@ async def test_run_graph_roll_success_completes_social_check_quest(tmp_path):
     assert player["xp_pool"] == 5
     assert saved_progress.active_quest_id == "quest_next"
     assert result.front_state.quest.id == "quest_next"
+    assert logs[-1].kind == "gm"
+    assert logs[-1].text == "흰섬은 두 번째 이름을 주지 않습니다."
+
+
+async def test_run_graph_roll_appends_completed_social_quest_text_when_llm_omits_it(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    await _add_guard_with_affinity(repo, 0)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["quest_social"] = GraphNode(
+        id="quest_social",
+        type="quest",
+        properties={
+            "description": "흰섬은 두 번째 이름을 주지 않습니다.",
+            "status": "active",
+            "required": True,
+            "triggers": [
+                {
+                    "id": "talk_guard",
+                    "type": "social_check",
+                    "target": "guard_01",
+                }
+            ],
+            "triggers_met": [False],
+        },
+    )
+    await repo.save_graph("game-1", graph)
+    pending = (
+        await start_graph_roll(
+            repo,
+            "game-1",
+            Action(verb="speak", to="guard_01", how="friendly"),
+        )
+    ).pending_roll
+    llm = _RollStreamLLM("그녀는 당신의 질문을 듣고 짧게 고개를 끄덕입니다.")
+
+    await run_graph_roll(repo, "game-1", pending["id"], dice=13, llm=llm)  # type: ignore[arg-type]
+    logs = await repo.load_log_entries("game-1")
+
+    assert logs[-1].kind == "gm"
+    assert logs[-1].text == (
+        "그녀는 당신의 질문을 듣고 짧게 고개를 끄덕입니다.\n\n"
+        "흰섬은 두 번째 이름을 주지 않습니다."
+    )
+
+
+async def test_run_graph_roll_removes_roll_meta_phrase_from_narration(tmp_path):
+    repo = await _repo(tmp_path)
+    await _add_guard_with_affinity(repo, 0)
+    pending = (
+        await start_graph_roll(
+            repo,
+            "game-1",
+            Action(verb="speak", to="guard_01", how="friendly"),
+        )
+    ).pending_roll
+    llm = _RollStreamLLM(
+        "경비병은 고개를 듭니다. 매력 판정의 성공으로, 긴장이 풀립니다."
+    )
+
+    await run_graph_roll(repo, "game-1", pending["id"], dice=13, llm=llm)  # type: ignore[arg-type]
+    logs = await repo.load_log_entries("game-1")
+
+    assert logs[-1].kind == "gm"
+    assert logs[-1].text == "경비병은 고개를 듭니다. 긴장이 풀립니다."
 
 
 async def test_run_graph_roll_success_grants_roll_xp_once_per_award_key(tmp_path):
@@ -715,6 +801,69 @@ async def test_run_graph_roll_resolves_failed_narrative_perceive_without_dispatc
     assert logs[1].text == "흔적은 보이지만, 서로 이어지는 방향을 끝내 잡아내지 못합니다."
     assert len(llm.calls) == 1
     assert llm.calls[0]["agent"] == "graph_narrate"
+
+
+async def test_run_graph_roll_filters_narrative_suggestions(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _RollStreamLLM(
+        "숲 쪽 길이 다시 눈에 들어옵니다.",
+        suggestions=[
+            {"label": "숲", "input_text": "Forest로 이동합니다", "intent": "move"},
+            {"label": "발자국", "input_text": "발자국을 자세히 살핍니다"},
+        ],
+    )
+    pending = (
+        await start_graph_roll(repo, "game-1", Action(verb="perceive", what="town"))
+    ).pending_roll
+
+    result = await run_graph_roll(repo, "game-1", pending["id"], dice=12, llm=llm)  # type: ignore[arg-type]
+
+    assert [suggestion.input_text for suggestion in result.suggestions] == [
+        "Forest로 이동합니다"
+    ]
+
+
+async def test_run_graph_roll_strips_repeated_preroll_sentences(tmp_path):
+    repo = await _repo(tmp_path)
+    reason = (
+        "흰 머리 여인의 주변을 천천히 둘러봅니다. "
+        "그녀가 입은 물고기 비늘이 붙은 앞치마와 흰 머리카락의 움직임을 놓치지 않으려 합니다."
+    )
+    llm = _RollStreamLLM(
+        reason
+        + " 옷감 아래로 오래 물에 닿은 흔적이 접힌 선마다 남아 있습니다."
+    )
+    pending = (
+        await start_graph_roll(
+            repo,
+            "game-1",
+            Action(verb="perceive", what="town"),
+            reason=reason,
+        )
+    ).pending_roll
+
+    result = await run_graph_roll(repo, "game-1", pending["id"], dice=12, llm=llm)  # type: ignore[arg-type]
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert logs[1].text == "옷감 아래로 오래 물에 닿은 흔적이 접힌 선마다 남아 있습니다."
+
+
+def test_strip_repeated_preroll_text_keeps_non_repeated_narration():
+    resolved = _ResolvedGraphRoll(
+        runtime=None,  # type: ignore[arg-type]
+        action=Action(verb="perceive", what="town"),
+        pending={"body": "문틀을 살피려 합니다."},
+        roll_entry=None,  # type: ignore[arg-type]
+        grade="success",
+        outcome="success",
+        completed_quest_ids=[],
+    )
+
+    assert (
+        _strip_repeated_preroll_text(resolved, "문 아래 긁힌 선이 한쪽으로만 이어집니다.")
+        == "문 아래 긁힌 선이 한쪽으로만 이어집니다."
+    )
 
 
 async def test_run_graph_roll_stream_uses_llm_for_failed_narrative_perceive(

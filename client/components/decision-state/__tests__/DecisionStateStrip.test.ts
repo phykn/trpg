@@ -6,13 +6,16 @@ describe('DecisionStateStrip layout', () => {
 
   test('keeps horizontal strip items at content height', () => {
     expect(source).toContain("alignItems: 'flex-start'");
-    expect(source).toContain('style={{ flexGrow: 0, flexShrink: 0 }}');
+    expect(source).toContain("flexWrap: 'wrap'");
+    expect(source).toContain('flexGrow: 0, flexShrink: 0');
   });
 
   test('renders labels only when present and keeps chips compact', () => {
     expect(source).not.toContain('numberOfLines={2}');
     expect(source).toContain('{item.label ? (');
-    expect(source).toContain('style={{ maxWidth: 180, flexShrink: 0 }}');
+    expect(source).toContain('style={{ maxWidth: 180, flexShrink: 1 }}');
     expect(source).toContain('numberOfLines={1}');
+    expect(source).toContain('ellipsizeMode="tail"');
+    expect(source).toContain('accessibilityLabel={accessibilityLabel}');
   });
 });

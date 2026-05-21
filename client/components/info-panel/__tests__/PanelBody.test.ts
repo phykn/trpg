@@ -21,4 +21,9 @@ describe('PanelBody header layout', () => {
       source.indexOf('<ExpandableMeta segments={panel.meta} />'),
     );
   });
+
+  test('does not reserve large empty space for short non-empty panels', () => {
+    expect(source).not.toContain('style={{ minHeight: 160 }}');
+    expect(source).toContain('className="px-4 py-3 gap-2.5"');
+  });
 });

@@ -41,6 +41,7 @@ from ..narration.result import (
     persist_graph_narration_result,
 )
 from ..narration.safety import guard_speak_narration_player_quote
+from ..narration.suggestions import filter_grounded_suggestions
 from ..request_result import GraphActionRequestResult, rejected_result
 from ..state import GameRuntimeState
 from ..env import env_float
@@ -284,7 +285,12 @@ async def _run_classified_action(
     *,
     scenario_repo: ScenarioRepo | None = None,
 ) -> GraphActionRequestResult:
-    if _should_start_check_roll(runtime, action, check_hint):
+    if _should_start_check_roll(
+        runtime,
+        action,
+        check_hint,
+        player_input=player_input,
+    ):
         from .roll import start_graph_roll
 
         return await start_graph_roll(
@@ -332,7 +338,12 @@ async def _run_classified_action_stream(
     *,
     scenario_repo: ScenarioRepo | None = None,
 ) -> AsyncIterator[dict[str, object]]:
-    if _should_start_check_roll(runtime, action, check_hint):
+    if _should_start_check_roll(
+        runtime,
+        action,
+        check_hint,
+        player_input=player_input,
+    ):
         async for event in run_graph_preroll_stream(
             client,
             repo,
@@ -395,11 +406,14 @@ def _should_start_check_roll(
     runtime: GameRuntimeState,
     action: Action,
     check_hint: ActionCheckHint | None,
+    *,
+    player_input: str | None = None,
 ) -> bool:
     return should_start_graph_roll(
         runtime,
         action,
         check_required=check_hint is not None and check_hint.required,
+        player_input=player_input,
     )
 
 
@@ -602,7 +616,10 @@ async def _persist_graph_rejected_input(
     return rejected_result(
         next_runtime,
         graph_to_front_state(next_runtime),
-        suggestions=narration_result.suggestions,
+        suggestions=filter_grounded_suggestions(
+            next_runtime,
+            narration_result.suggestions,
+        ),
     )
 
 
@@ -765,7 +782,10 @@ async def _finish_graph_narrative_input(
         runtime=next_runtime,
         status="executed",
         front_state=graph_to_front_state(next_runtime),
-        suggestions=narration_result.suggestions,
+        suggestions=filter_grounded_suggestions(
+            next_runtime,
+            narration_result.suggestions,
+        ),
     )
 
 

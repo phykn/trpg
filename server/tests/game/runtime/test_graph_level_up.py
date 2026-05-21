@@ -5,6 +5,7 @@ import pytest
 from src.game.domain.content import RuntimeContent
 from src.db.graph.local_fs import LocalFsGraphRepo
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
+from src.game.domain.memory import RollLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.engines.growth import xp_for_next_level
 from src.game.runtime.flow.level_up import GraphLevelUpError, run_graph_level_up
@@ -250,6 +251,30 @@ async def test_level_up_options_include_llm_skill_candidate(tmp_path):
     )
     assert "bonus" not in json.loads(llm.calls[0]["messages"][1]["content"])["skills"][0]
     assert llm.calls[0]["agent"] == "recommend"
+
+
+async def test_level_up_options_ignore_roll_entries_in_recent_log(tmp_path):
+    repo = await _repo(tmp_path)
+    await repo.append_log_entries(
+        "game-1",
+        [
+            RollLogEntry(
+                id=1,
+                kind="roll",
+                check="지력",
+                roll=15,
+                margin=5,
+                result="success",
+            )
+        ],
+    )
+    runtime = await load_runtime_state(repo, "game-1")
+    llm = _SkillCandidateLLM()
+
+    choices = await build_level_up_choices(runtime, llm=llm)
+
+    assert any(choice["id"].startswith("learn_skill:") for choice in choices)
+    assert json.loads(llm.calls[0]["messages"][1]["content"])["recent_log"] == []
 
 
 async def test_level_up_options_include_all_growth_choices(tmp_path):

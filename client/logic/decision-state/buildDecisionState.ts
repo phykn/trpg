@@ -27,7 +27,6 @@ type BuildDecisionStateInput = {
 };
 
 const MAX_ITEMS = 7;
-const COMPACT_TEXT_MAX_CHARS = 15;
 
 export function buildDecisionState(input: BuildDecisionStateInput): DecisionStateItem[] {
   const items: DecisionStateItem[] = [];
@@ -60,7 +59,7 @@ export function buildDecisionState(input: BuildDecisionStateInput): DecisionStat
     items.push({
       id: 'place',
       label: '',
-      text: compactText(input.place.name),
+      text: input.place.name,
       tone: 'neutral',
     });
   }
@@ -70,7 +69,7 @@ export function buildDecisionState(input: BuildDecisionStateInput): DecisionStat
     items.push({
       id: 'subject:faced',
       label: '',
-      text: compactText(facedName),
+      text: facedName,
       tone: 'accent',
     });
   }
@@ -79,7 +78,7 @@ export function buildDecisionState(input: BuildDecisionStateInput): DecisionStat
     items.push({
       id: 'scenario:completed',
       label: '',
-      text: compactText(ko.quest.completed),
+      text: ko.quest.completed,
       tone: 'accent',
     });
   }
@@ -117,12 +116,6 @@ export function buildDecisionState(input: BuildDecisionStateInput): DecisionStat
 
 function cueTone(cue: NarrationCue): DecisionStateTone {
   return cue.kind === 'warning' ? 'danger' : 'accent';
-}
-
-function compactText(value: string): string {
-  return value.length > COMPACT_TEXT_MAX_CHARS
-    ? `${value.slice(0, COMPACT_TEXT_MAX_CHARS)}...`
-    : value;
 }
 
 function progressRatio(value: number, max: number): number {

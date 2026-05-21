@@ -1,4 +1,4 @@
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import type { DecisionStateItem, DecisionStateTone } from '@/logic/decision-state/types';
 
@@ -24,21 +24,20 @@ export function DecisionStateStrip({ items }: { items: DecisionStateItem[] }) {
   if (items.length === 0) return null;
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
+    <View
       className="mx-5"
-      style={{ flexGrow: 0, flexShrink: 0 }}
-      contentContainerStyle={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingRight: 20 }}
+      style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: 6, flexGrow: 0, flexShrink: 0 }}
     >
       {items.map((item) => {
         const containerClasses = containerToneClass(item.tone);
         const textClasses = textToneClass(item.tone);
+        const accessibilityLabel = item.label ? `${item.label} ${item.text}` : item.text;
         return (
           <View
             key={item.id}
+            accessibilityLabel={accessibilityLabel}
             className={`flex-row items-baseline gap-x-1.5 overflow-hidden rounded-sm border px-2 py-1 ${containerClasses}`}
-            style={{ maxWidth: 180, flexShrink: 0 }}
+            style={{ maxWidth: 180, flexShrink: 1 }}
           >
             {item.progress !== undefined ? (
               <View
@@ -50,6 +49,7 @@ export function DecisionStateStrip({ items }: { items: DecisionStateItem[] }) {
               <Text
                 className={`font-sans-semibold text-caption ${textClasses}`}
                 numberOfLines={1}
+                ellipsizeMode="tail"
               >
                 {item.label}
               </Text>
@@ -57,6 +57,7 @@ export function DecisionStateStrip({ items }: { items: DecisionStateItem[] }) {
             <Text
               className={`font-sans-medium text-caption ${textClasses}`}
               numberOfLines={1}
+              ellipsizeMode="tail"
               style={{ flexShrink: 1, minWidth: 0 }}
             >
               {item.text}
@@ -64,6 +65,6 @@ export function DecisionStateStrip({ items }: { items: DecisionStateItem[] }) {
           </View>
         );
       })}
-    </ScrollView>
+    </View>
   );
 }

@@ -280,6 +280,8 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "payload.current_event.kind`가 `roll_prompt`" in narrate_prompt
     assert "발견해냈습니다" in narrate_prompt
     assert "포착해냅니다" in narrate_prompt
+    assert "판정 후 본문에는 `check_reason`이나 `preroll_narration`의 장면, 동작, 감각, 문장 구조를 다시 쓰지 않습니다" in narrate_prompt
+    assert "판정 전 문장에 나온 옷, 자세, 주변 관찰, 살피는 행동을 그대로 이어 쓰지 말고" in narrate_prompt
     assert "개인적인 내용을 캐면" in narrate_prompt
     assert "최근에 같은 NPC가 이미 말한 직접 발화를 그대로 다시 쓰지 않습니다" in narrate_prompt
     assert "자연스러운 한국어 구어" in narrate_prompt
@@ -305,6 +307,7 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "지원 효과 이름, 원리, 추가 효과를 지어내지 않습니다" in narrate_prompt
     assert "combat_view.statuses" in narrate_prompt
     assert "상태 효과 이름, 원리, 추가 효과를 지어내지 않습니다" in narrate_prompt
+    assert "소금기, 비린내, 쇠 냄새, 미네랄 향처럼 그럴듯한 감각도 payload에 직접 근거가 없으면 쓰지 않습니다" in narrate_prompt
     assert "`label`은 칩에 보이는 짧은 목적입니다" in narrate_prompt
     assert "`input_text`는 그대로 전송해도 자연스러운 플레이어 입력문입니다" in narrate_prompt
     assert "UI 라벨, 명사구, 시스템 명령이 아니라" in narrate_prompt
@@ -381,6 +384,19 @@ def test_graph_narrate_prompt_treats_rhythm_as_order_not_template():
     assert "같은 리듬은 고정 문장틀이 아닙니다" in prompt
     assert "문장 시작, 서술어, 닫는 초점을 바꿉니다" in prompt
     assert "이번 턴에서 가장 압력이 큰 대상 하나" in prompt
+
+
+def test_graph_narrate_prompt_encodes_theory_pressure_and_completion_limits():
+    prompt = (PROMPT_ROOT / "graph_narrate" / "prompt.ko.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "가장 강한 근거는 `payload.current_event`, `payload.result_cards`, `payload.target_view`, `payload.combat_view`입니다" in prompt
+    assert "UI 라벨, 추천 칩의 `label`, 주변에 함께 보이는 이름은 `payload.player_input`보다 강한 근거가 아닙니다" in prompt
+    assert "압력을 남기는 것은 필수가 아닙니다" in prompt
+    assert "새 갈고리 없이 닫습니다" in prompt
+    assert "`payload.current_event.quest_trigger.type`이 `location_enter`이면 특히 조심합니다" in prompt
+    assert "장소에 들어간 사실을 플레이어가 갈등을 해결한 것처럼 과장하지 않습니다" in prompt
 
 
 @pytest.mark.asyncio

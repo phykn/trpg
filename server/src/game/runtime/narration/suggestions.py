@@ -52,7 +52,7 @@ def _is_grounded_suggestion(
     suggestion: GraphSuggestion,
 ) -> bool:
     if suggestion.intent is None:
-        return True
+        return False
     intent = suggestion.intent.strip().lower()
     if intent == "move":
         return _mentions_any(suggestion, _visible_exit_refs(runtime))

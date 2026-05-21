@@ -103,7 +103,7 @@
   "hear_the_island_rule": {
     "id": "hear_the_island_rule",
     "title": "섬의 규칙을 듣습니다",
-    "description": "흰 머리 여인에게 흰섬이 새 이름을 주는 곳이 아니라, 붙잡고 있는 이름을 보여주는 곳이라는 말을 듣습니다.",
+    "description": "흰 머리 여인에게 흰섬은 두 번째 이름을 주지 않고, 붙잡고 있는 이름을 스스로 마주하게 하는 곳이라는 말을 듣습니다.",
     "giver": "nameless_woman",
     "triggers": [
       {

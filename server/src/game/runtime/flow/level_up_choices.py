@@ -188,7 +188,7 @@ def _candidate_payload(
         skill = runtime.graph.nodes.get(edge.to_node_id)
         if skill is not None:
             known.append(_skill_name(runtime, skill))
-    recent = [entry.text for entry in runtime.log_entries[-8:]]
+    recent = _recent_log_texts(runtime)
     return {
         "player": {
             "name": player.properties.get("name", "player"),
@@ -206,6 +206,15 @@ def _candidate_payload(
             for index, template in enumerate(templates)
         ],
     }
+
+
+def _recent_log_texts(runtime: GameRuntimeState) -> list[str]:
+    texts: list[str] = []
+    for entry in runtime.log_entries[-8:]:
+        text = getattr(entry, "text", None)
+        if isinstance(text, str) and text:
+            texts.append(text)
+    return texts
 
 
 def _candidate_templates(runtime: GameRuntimeState) -> list[LevelUpSkillCandidate]:

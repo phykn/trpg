@@ -90,6 +90,7 @@ def dispatch_graph_action(
             next_runtime.graph,
             completed_quest_ids=completed_quest_ids,
             active_quest_id=next_runtime.progress.active_quest_id,
+            satisfied_location_ids=_visited_location_ids(next_runtime),
         )
         if progression.changes:
             progression_apply = apply_runtime_graph_changes(
@@ -99,6 +100,18 @@ def dispatch_graph_action(
             next_runtime = progression_apply.runtime
             dirty.add_apply_result(progression_apply)
             applied_count += progression_apply.applied
+        for quest_id in progression.auto_completed_quest_ids:
+            reward = plan_quest_rewards(
+                next_runtime.graph,
+                quest_id,
+                next_runtime.progress.player_id,
+            )
+            if not reward.changes:
+                continue
+            reward_applied = apply_runtime_graph_changes(next_runtime, reward.changes)
+            next_runtime = reward_applied.runtime
+            dirty.add_apply_result(reward_applied)
+            applied_count += reward_applied.applied
         progress_update = {
             **progress_update,
             "active_quest_id": progression.next_active_quest_id,
@@ -309,6 +322,16 @@ def _require_player_can_move(runtime: GameRuntimeState) -> None:
     player = runtime.graph.nodes.get(runtime.progress.player_id)
     if player is None:
         raise GraphActionDispatchError("missing player")
+
+
+def _visited_location_ids(runtime: GameRuntimeState) -> set[str]:
+    player = runtime.graph.nodes.get(runtime.progress.player_id)
+    if player is None:
+        return set()
+    raw = player.properties.get("visited_location_ids", [])
+    if not isinstance(raw, list):
+        return set()
+    return {item for item in raw if isinstance(item, str)}
 
 
 def _single(value: object) -> str | None:

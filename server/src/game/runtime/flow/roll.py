@@ -1,7 +1,9 @@
 import asyncio
+import difflib
 import json
 import os
 import random
+import re
 import secrets
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
@@ -11,6 +13,7 @@ from openai import APIConnectionError, InternalServerError, RateLimitError
 
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
+from src.game.domain.content import node_text
 from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph import Graph
 from src.game.domain.memory import BonusItem, GMLogEntry, LogEntry, RollLogEntry
@@ -44,6 +47,7 @@ from ..narration.result import (
     persist_graph_narration_result,
 )
 from ..narration.safety import guard_speak_narration_player_quote
+from ..narration.suggestions import filter_grounded_suggestions
 from ..pending_action import build_pending_action_payload, load_pending_action
 from ..request_result import (
     GraphActionRequestResult,
@@ -79,6 +83,7 @@ class _ResolvedGraphRoll:
     roll_entry: RollLogEntry
     grade: str
     outcome: GraphResultOutcome
+    completed_quest_ids: list[str]
 
 
 def _default_roll_dc(default: int = 13) -> int:
@@ -346,10 +351,7 @@ async def run_graph_roll_stream(
     narration_result = parse_graph_narration_answer(stream.answer())
     if not narration_result.narration:
         narration_result = GraphNarrationResult(
-            narration=render(
-                _roll_resolution_key(resolved.action, resolved.outcome),
-                resolved.runtime.progress.locale,
-            )
+            narration=_roll_fallback_text(resolved)
         )
         yield {"type": "narration_delta", "text": narration_result.narration}
     final = await _commit_roll_narration(repo, game_id, resolved, narration_result)
@@ -448,6 +450,7 @@ async def _resolve_graph_roll(
             next_runtime.graph,
             completed_quest_ids=completed_quest_ids,
             active_quest_id=next_runtime.progress.active_quest_id,
+            satisfied_location_ids=_visited_location_ids(next_runtime),
         )
         if progression.changes:
             progression_apply = apply_runtime_graph_changes(
@@ -458,6 +461,19 @@ async def _resolve_graph_roll(
             changed_node_ids.extend(progression_apply.changed_node_ids)
             changed_edge_ids.extend(progression_apply.changed_edge_ids)
             removed_edge_ids.extend(progression_apply.removed_edge_ids)
+        for quest_id in progression.auto_completed_quest_ids:
+            reward = plan_quest_rewards(
+                next_runtime.graph,
+                quest_id,
+                next_runtime.progress.player_id,
+            )
+            if not reward.changes:
+                continue
+            reward_apply = apply_runtime_graph_changes(next_runtime, reward.changes)
+            next_runtime = reward_apply.runtime
+            changed_node_ids.extend(reward_apply.changed_node_ids)
+            changed_edge_ids.extend(reward_apply.changed_edge_ids)
+            removed_edge_ids.extend(reward_apply.removed_edge_ids)
         next_active_quest_id = progression.next_active_quest_id
 
     if changed_edge_ids or changed_node_ids or removed_edge_ids:
@@ -481,7 +497,18 @@ async def _resolve_graph_roll(
         roll_entry=entry,
         grade=grade,
         outcome=outcome,
+        completed_quest_ids=completed_quest_ids,
     )
+
+
+def _visited_location_ids(runtime: GameRuntimeState) -> set[str]:
+    player = runtime.graph.nodes.get(runtime.progress.player_id)
+    if player is None:
+        return set()
+    raw = player.properties.get("visited_location_ids", [])
+    if not isinstance(raw, list):
+        return set()
+    return {item for item in raw if isinstance(item, str)}
 
 
 async def _stream_roll_narration(
@@ -496,6 +523,7 @@ async def _stream_roll_narration(
         pending=resolved.pending,
         roll_entry=resolved.roll_entry,
         outcome=resolved.outcome,
+        result_texts=_roll_result_texts(resolved),
     )
     messages = [
         {
@@ -538,6 +566,7 @@ async def _build_roll_narration(
         pending=resolved.pending,
         roll_entry=resolved.roll_entry,
         outcome=resolved.outcome,
+        result_texts=_roll_result_texts(resolved),
     )
     messages = [
         {
@@ -580,6 +609,18 @@ async def _commit_roll_narration(
     runtime = resolved.runtime
     log_entries: list[LogEntry] = []
     if narration_result.narration:
+        narration_result = narration_result.model_copy(
+            update={
+                "narration": _append_missing_completed_quest_text(
+                    resolved,
+                    _strip_repeated_preroll_text(
+                        resolved,
+                        _clean_roll_meta_phrase(narration_result.narration),
+                    ),
+                )
+            }
+        )
+    if narration_result.narration:
         entry = gm_log_entry_from_narration(
             runtime.progress.next_log_id,
             narration_result,
@@ -607,7 +648,10 @@ async def _commit_roll_narration(
         runtime,
         graph_to_front_state(runtime),
         outcome=resolved.outcome,
-        suggestions=narration_result.suggestions,
+        suggestions=filter_grounded_suggestions(
+            runtime,
+            narration_result.suggestions,
+        ),
     )
 
 
@@ -722,10 +766,10 @@ async def _finish_narrative_roll(
     llm: LLMClient | None,
 ) -> GraphActionRequestResult:
     narration_result = await _build_roll_narration(llm, resolved)
-    text = narration_result.narration or render(
-        _roll_resolution_key(action, outcome),
-        runtime.progress.locale,
-    )
+    text = narration_result.narration or _roll_fallback_text(resolved)
+    text = _clean_roll_meta_phrase(text)
+    text = _strip_repeated_preroll_text(resolved, text)
+    text = _append_missing_completed_quest_text(resolved, text)
     narration_result = narration_result.model_copy(update={"narration": text})
     entry = gm_log_entry_from_narration(
         runtime.progress.next_log_id,
@@ -746,7 +790,14 @@ async def _finish_narrative_roll(
         graph_to_front_state(next_runtime),
         outcome=outcome,
     )
-    return final.model_copy(update={"suggestions": narration_result.suggestions})
+    return final.model_copy(
+        update={
+            "suggestions": filter_grounded_suggestions(
+                next_runtime,
+                narration_result.suggestions,
+            )
+        }
+    )
 
 
 def _is_narrative_roll_action(action: Action) -> bool:
@@ -759,6 +810,110 @@ def _roll_resolution_key(action: Action, outcome: GraphResultOutcome) -> str:
     if action.verb == "speak":
         return f"runtime.roll.resolve.speak.{outcome}"
     return f"runtime.roll.resolve.default.{outcome}"
+
+
+def _roll_result_texts(resolved: _ResolvedGraphRoll) -> list[str]:
+    result_texts = [
+        render(
+            "runtime.roll.result.success"
+            if resolved.outcome == "success"
+            else "runtime.roll.result.failure",
+            resolved.runtime.progress.locale,
+            check=resolved.roll_entry.check,
+        )
+    ]
+    result_texts.extend(_completed_quest_descriptions(resolved))
+    return result_texts
+
+
+def _roll_fallback_text(resolved: _ResolvedGraphRoll) -> str:
+    descriptions = _completed_quest_descriptions(resolved)
+    if descriptions and resolved.outcome == "success":
+        return descriptions[0]
+    return render(
+        _roll_resolution_key(resolved.action, resolved.outcome),
+        resolved.runtime.progress.locale,
+    )
+
+
+def _clean_roll_meta_phrase(text: str) -> str:
+    return re.sub(
+        (
+            r"(?:(?:몸력|민첩|지력|매력|체력|근력)\s*)?"
+            r"판정(?:의)?\s*(?:성공|실패)(?:으로)?[,，]?\s*"
+        ),
+        "",
+        text,
+    ).strip()
+
+
+def _strip_repeated_preroll_text(resolved: _ResolvedGraphRoll, text: str) -> str:
+    preroll = resolved.pending.get("body")
+    if not isinstance(preroll, str) or not preroll.strip() or not text.strip():
+        return text
+
+    body_sentences = _split_korean_sentences(preroll)
+    if not body_sentences:
+        return text
+    out = _split_korean_sentences(text)
+    removed = 0
+    while out and _looks_like_preroll_repeat(out[0], body_sentences):
+        out.pop(0)
+        removed += 1
+    if removed == 0 or not out:
+        return text
+    return " ".join(out).strip()
+
+
+def _looks_like_preroll_repeat(sentence: str, body_sentences: list[str]) -> bool:
+    normalized = _normalize_korean_sentence(sentence)
+    if not normalized:
+        return False
+    for body in body_sentences:
+        body_normalized = _normalize_korean_sentence(body)
+        if not body_normalized:
+            continue
+        if normalized in body_normalized or body_normalized in normalized:
+            return True
+        if difflib.SequenceMatcher(None, normalized, body_normalized).ratio() >= 0.72:
+            return True
+    return False
+
+
+def _split_korean_sentences(text: str) -> list[str]:
+    parts = re.findall(r"[^.!?。！？]+[.!?。！？]?", text)
+    return [part.strip() for part in parts if part.strip()]
+
+
+def _normalize_korean_sentence(text: str) -> str:
+    return re.sub(r"[^0-9A-Za-z가-힣]+", "", text).lower()
+
+
+def _append_missing_completed_quest_text(
+    resolved: _ResolvedGraphRoll,
+    text: str,
+) -> str:
+    descriptions = _completed_quest_descriptions(resolved)
+    if resolved.outcome != "success" or not descriptions:
+        return text
+    missing = [description for description in descriptions if description not in text]
+    if not missing:
+        return text
+    if not text.strip():
+        return "\n\n".join(missing)
+    return f"{text.rstrip()}\n\n{missing[0]}"
+
+
+def _completed_quest_descriptions(resolved: _ResolvedGraphRoll) -> list[str]:
+    out: list[str] = []
+    for quest_id in resolved.completed_quest_ids:
+        quest = resolved.runtime.graph.nodes.get(quest_id)
+        if quest is None or quest.type != "quest":
+            continue
+        description = node_text(resolved.runtime.content, quest, "description")
+        if description:
+            out.append(description)
+    return out
 
 
 def _roll_result(grade: str) -> str:
