@@ -240,6 +240,52 @@ def test_classify_context_to_grounding_view_preserves_active_quest_id():
     assert context["affordances"]["can_decide"] == ["record", "release"]
 
 
+def test_classify_context_exposes_visible_pending_quest_for_acceptance():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"] = GraphNode(
+        id="quest_01",
+        type="quest",
+        properties={
+            "name": "통행 의뢰",
+            "status": "pending",
+            "giver": "npc_0",
+        },
+    )
+
+    context = build_classify_context_view(runtime, "상인 0의 의뢰를 수락한다")
+    grounding = classify_context_to_grounding_view(context)
+
+    assert context["identity"]["available_quests"] == [
+        {
+            "id": "quest_01",
+            "name": "통행 의뢰",
+            "status": "pending",
+            "giver": "npc_0",
+            "giver_name": "상인 0",
+        }
+    ]
+    assert context["affordances"]["can_accept_or_abandon_quest"] == ["quest_01"]
+    assert grounding["quests"] == context["identity"]["available_quests"]
+
+
+def test_classify_context_hides_pending_quest_without_visible_giver():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"] = GraphNode(
+        id="quest_01",
+        type="quest",
+        properties={
+            "name": "통행 의뢰",
+            "status": "pending",
+            "giver": "missing_npc",
+        },
+    )
+
+    context = build_classify_context_view(runtime, "의뢰를 수락한다")
+
+    assert context["identity"]["available_quests"] == []
+    assert context["affordances"]["can_accept_or_abandon_quest"] == []
+
+
 def test_classify_context_hides_quest_choices_until_goals_are_met():
     runtime = _runtime(active_quest=True)
     runtime.graph.nodes["quest_01"].properties.update(

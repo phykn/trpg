@@ -41,6 +41,10 @@ class FakeScenarioRepo:
             "chapters": {},
         }
 
+    async def read_world_md(self, profile: str, *, missing_ok: bool = False) -> str:
+        assert profile == "default"
+        return ""
+
     async def load_seed_records(self, profile: str, kind: str) -> dict[str, dict]:
         assert profile == "default"
         return self.records[kind]

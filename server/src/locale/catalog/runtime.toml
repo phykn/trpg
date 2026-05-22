@@ -406,42 +406,6 @@ en = "You arrive at {place}."
 ko = "당신은 {place}에 도착합니다. {description}"
 en = "You arrive at {place}. {description}"
 
-[runtime."query.unknown_place"]
-ko = "알 수 없는 곳"
-en = "an unknown place"
-
-[runtime."query.current_location"]
-ko = "현재 위치는 {location}입니다."
-en = "Your current location is {location}."
-
-[runtime."query.nearby_entities"]
-ko = "주변에는 {names}{이/가} 있습니다."
-en = "Nearby: {names}."
-
-[runtime."query.no_nearby_entities"]
-ko = "주변에 눈에 띄는 대상은 없습니다."
-en = "There is nothing notable nearby."
-
-[runtime."query.exits"]
-ko = "이동할 수 있는 곳은 {names}입니다."
-en = "You can move to {names}."
-
-[runtime."query.no_exits"]
-ko = "지금 이동할 수 있는 곳은 없습니다."
-en = "There is nowhere you can move right now."
-
-[runtime."query.no_inventory"]
-ko = "소지품이 없습니다."
-en = "You have no items."
-
-[runtime."query.inventory"]
-ko = "소지품은 {names}입니다."
-en = "Your items are {names}."
-
-[runtime."query.status"]
-ko = "당신의 체력은 {hp} 상태이고 마나는 {mp} 상태입니다."
-en = "Your health is {hp}, and your mana is {mp}."
-
 [runtime."resource.healthy"]
 ko = "양호한"
 en = "healthy"

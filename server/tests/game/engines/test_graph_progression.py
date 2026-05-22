@@ -84,7 +84,7 @@ def _apply_all(graph: Graph, changes) -> Graph:
     return graph
 
 
-def test_progression_unlocks_next_required_quest_and_chapter():
+def test_progression_unlocks_next_required_quest_as_pending_and_chapter():
     graph = _graph()
 
     result = plan_progression_after_quest_completion(
@@ -94,9 +94,9 @@ def test_progression_unlocks_next_required_quest_and_chapter():
     )
     changed = _apply_all(graph, result.changes)
 
-    assert result.next_active_quest_id == "q2"
+    assert result.next_active_quest_id is None
     assert result.completed_chapter_ids == ["chapter_01"]
-    assert changed.nodes["q2"].properties["status"] == "active"
+    assert changed.nodes["q2"].properties["status"] == "pending"
     assert changed.nodes["chapter_01"].properties["status"] == "completed"
     assert changed.nodes["chapter_02"].properties["status"] == "active"
 
@@ -134,7 +134,7 @@ def test_progression_keeps_existing_active_quest_when_completed_quest_was_not_ac
     assert result.next_active_quest_id == "q2"
 
 
-def test_progression_promotes_pending_required_quest_when_active_slot_opens():
+def test_progression_keeps_pending_required_quest_when_active_slot_opens():
     graph = _graph()
     graph.nodes["chapter_01"].properties["status"] = "completed"
     graph.nodes["chapter_02"].properties["status"] = "active"
@@ -149,11 +149,11 @@ def test_progression_promotes_pending_required_quest_when_active_slot_opens():
     )
     changed = _apply_all(graph, result.changes)
 
-    assert result.next_active_quest_id == "q2"
-    assert changed.nodes["q2"].properties["status"] == "active"
+    assert result.next_active_quest_id is None
+    assert changed.nodes["q2"].properties["status"] == "pending"
 
 
-def test_progression_auto_completes_active_location_quest_already_visited():
+def test_progression_does_not_auto_complete_pending_location_quest_already_visited():
     graph = _graph()
     graph.nodes["q2"].properties["triggers"] = [
         {"type": "location_enter", "target": "forest"}
@@ -167,14 +167,14 @@ def test_progression_auto_completes_active_location_quest_already_visited():
     )
     changed = _apply_all(graph, result.changes)
 
-    assert result.auto_completed_quest_ids == ["q2"]
-    assert result.next_active_quest_id == "q3"
-    assert changed.nodes["q2"].properties["status"] == "completed"
-    assert changed.nodes["q2"].properties["triggers_met"] == [True]
-    assert changed.nodes["q3"].properties["status"] == "active"
+    assert result.auto_completed_quest_ids == []
+    assert result.next_active_quest_id is None
+    assert changed.nodes["q2"].properties["status"] == "pending"
+    assert changed.nodes["q2"].properties.get("triggers_met") is None
+    assert changed.nodes["q3"].properties["status"] == "locked"
 
 
-def test_progression_does_not_auto_complete_choice_location_quest():
+def test_progression_keeps_choice_location_quest_pending_until_accepted():
     graph = _graph()
     graph.nodes["q2"].properties["triggers"] = [
         {"type": "location_enter", "target": "forest"}
@@ -193,6 +193,6 @@ def test_progression_does_not_auto_complete_choice_location_quest():
     changed = _apply_all(graph, result.changes)
 
     assert result.auto_completed_quest_ids == []
-    assert result.next_active_quest_id == "q2"
-    assert changed.nodes["q2"].properties["status"] == "active"
-    assert changed.nodes["q2"].properties["triggers_met"] == [True]
+    assert result.next_active_quest_id is None
+    assert changed.nodes["q2"].properties["status"] == "pending"
+    assert changed.nodes["q2"].properties.get("triggers_met") is None

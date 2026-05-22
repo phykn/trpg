@@ -838,10 +838,7 @@ def _roll_fallback_text(resolved: _ResolvedGraphRoll) -> str:
 
 def _clean_roll_meta_phrase(text: str) -> str:
     return re.sub(
-        (
-            r"(?:(?:몸력|민첩|지력|매력|체력|근력)\s*)?"
-            r"판정(?:의)?\s*(?:성공|실패)(?:으로)?[,，]?\s*"
-        ),
+        _roll_meta_phrase_pattern(),
         "",
         text,
     ).strip()
@@ -886,7 +883,34 @@ def _split_korean_sentences(text: str) -> list[str]:
 
 
 def _normalize_korean_sentence(text: str) -> str:
-    return re.sub(r"[^0-9A-Za-z가-힣]+", "", text).lower()
+    return re.sub(_non_korean_sentence_chars_pattern(), "", text).lower()
+
+
+def _roll_meta_phrase_pattern() -> str:
+    stats = "|".join(
+        [
+            _codepoint_text(0xBAB8, 0xB825),
+            _codepoint_text(0xBBFC, 0xCCA9),
+            _codepoint_text(0xC9C0, 0xB825),
+            _codepoint_text(0xB9E4, 0xB825),
+            _codepoint_text(0xCCB4, 0xB825),
+            _codepoint_text(0xADFC, 0xB825),
+        ]
+    )
+    check = _codepoint_text(0xD310, 0xC815)
+    possessive = _codepoint_text(0xC758)
+    success = _codepoint_text(0xC131, 0xACF5)
+    failure = _codepoint_text(0xC2E4, 0xD328)
+    by = _codepoint_text(0xC73C, 0xB85C)
+    return rf"(?:(?:{stats})\s*)?{check}(?:{possessive})?\s*(?:{success}|{failure})(?:{by})?[,，]?\s*"
+
+
+def _non_korean_sentence_chars_pattern() -> str:
+    return f"[^0-9A-Za-z{chr(0xAC00)}-{chr(0xD7A3)}]+"
+
+
+def _codepoint_text(*values: int) -> str:
+    return "".join(chr(value) for value in values)
 
 
 def _append_missing_completed_quest_text(

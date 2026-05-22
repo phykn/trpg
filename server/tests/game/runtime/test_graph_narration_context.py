@@ -211,17 +211,16 @@ def test_input_payload_includes_recent_context_and_keeps_player_input():
     )
     encoded = json.dumps(payload, ensure_ascii=False)
 
-    assert payload["player_input"] == "경비병에게 북문을 묻습니다"
-    assert payload["current_event"]["kind"] == "dialogue"
-    assert payload["target_view"]["id"] == "guard_01"
+    assert payload["user_request"] == {"player_input": "경비병에게 북문을 묻습니다"}
+    assert payload["engine_event"]["kind"] == "dialogue"
+    assert payload["scene_state"]["target_view"]["id"] == "guard_01"
     assert "recent_log" not in payload
-    assert payload["recent_narration"] == [
+    assert payload["reference_context"]["recent_narration"] == [
         {
             "text": "경비병이 북문을 지킵니다.",
-            "outcome": None,
         }
     ]
-    assert payload["recent_dialogue"] == [
+    assert payload["reference_context"]["recent_dialogue"] == [
         {
             "turn": 1,
             "player": "북문에 대해 묻습니다.",
@@ -229,8 +228,12 @@ def test_input_payload_includes_recent_context_and_keeps_player_input():
             "target": "guard_01",
         }
     ]
+    assert payload["scene_state"]["scene_anchor"]["location"]["id"] == "square"
     assert "recent_log" not in encoded
     assert "숨은 단서가 있습니다." not in encoded
+    assert "player_input" not in payload
+    assert "current_event" not in payload
+    assert "recent_narration" not in payload
 
 
 def test_roll_payload_keeps_original_player_input_and_marks_preroll_text():
@@ -262,25 +265,28 @@ def test_roll_payload_keeps_original_player_input_and_marks_preroll_text():
         outcome="success",
     )
 
-    assert payload["player_input"] == "경비병에게 취미가 뭐냐고 묻습니다"
-    assert payload["current_event"]["check_reason"] == "경비병의 표정을 읽으려 합니다."
-    assert payload["current_event"]["preroll_narration"] == (
+    assert payload["user_request"]["player_input"] == (
+        "경비병에게 취미가 뭐냐고 묻습니다"
+    )
+    assert payload["engine_event"]["check_reason"] == "경비병의 표정을 읽으려 합니다."
+    assert payload["engine_event"]["preroll_narration"] == (
         "경비병의 표정을 읽으려 합니다."
     )
-    assert payload["target_view"]["id"] == "guard_01"
-    assert payload["target_view"]["faction"] == {
+    target_view = payload["scene_state"]["target_view"]
+    assert target_view["id"] == "guard_01"
+    assert target_view["faction"] == {
         "id": "city_watch",
         "name": "도시 경비대",
         "description": "북문을 지키는 경비 조직입니다.",
     }
-    assert payload["target_view"]["public_knowledge"] == [
+    assert target_view["public_knowledge"] == [
         {
             "id": "public_clue",
             "title": "북문 단서",
             "summary": "북문 교대 기록이 비어 있습니다.",
         }
     ]
-    assert payload["target_view"]["dialogue_style"] == {
+    assert target_view["dialogue_style"] == {
         "id": "procedural_style",
         "name": "절차형 말투",
         "speech_style": "짧고 기록문 같은 말투",
@@ -313,13 +319,16 @@ def test_roll_payload_keeps_check_reason_separate_from_preroll_narration():
         outcome="failure",
     )
 
-    assert payload["player_input"] == "경비병에게 북문 기록을 보여 달라고 설득합니다"
     assert (
-        payload["current_event"]["check_reason"]
+        payload["user_request"]["player_input"]
+        == "경비병에게 북문 기록을 보여 달라고 설득합니다"
+    )
+    assert (
+        payload["engine_event"]["check_reason"]
         == "경비병을 설득하려면 믿을 만한 말을 해야 합니다."
     )
     assert (
-        payload["current_event"]["preroll_narration"]
+        payload["engine_event"]["preroll_narration"]
         == "경비병은 답하기 전에 주변의 시선을 먼저 살핍니다."
     )
 
@@ -354,10 +363,9 @@ def test_roll_payload_omits_preroll_body_from_recent_narration():
         outcome="success",
     )
 
-    assert payload["recent_narration"] == [
+    assert payload["reference_context"]["recent_narration"] == [
         {
             "text": "경비병이 북문을 지킵니다.",
-            "outcome": None,
         }
     ]
 
@@ -386,7 +394,7 @@ def test_roll_payload_can_include_completed_quest_result_cards():
         result_texts=["성공  매력", "북문은 밤마다 닫힙니다."],
     )
 
-    assert payload["current_event"]["resolved_results"] == [
+    assert payload["engine_event"]["resolved_results"] == [
         "성공  매력",
         "북문은 밤마다 닫힙니다.",
     ]
@@ -415,15 +423,16 @@ def test_input_payload_includes_target_public_knowledge_and_mentioned_inventory(
         dialogue_target=runtime.graph.nodes["guard_01"],
     )
 
-    assert payload["target_view"]["tone_hint"] == "짧게 가격과 이용 조건만 말한다."
-    assert payload["target_view"]["public_knowledge"] == [
+    target_view = payload["scene_state"]["target_view"]
+    assert target_view["tone_hint"] == "짧게 가격과 이용 조건만 말한다."
+    assert target_view["public_knowledge"] == [
         {
             "id": "public_clue",
             "title": "북문 단서",
             "summary": "북문 교대 기록이 비어 있습니다.",
         }
     ]
-    assert payload["target_view"]["available_items"] == [
+    assert target_view["available_items"] == [
         {
             "id": "shop_herb",
             "name": "상점 회복 약초",
@@ -431,6 +440,25 @@ def test_input_payload_includes_target_public_knowledge_and_mentioned_inventory(
             "price": 3,
         }
     ]
+
+
+def test_input_payload_trims_world_guidance_for_narration_tokens():
+    runtime = _runtime().model_copy(
+        update={
+            "content": _runtime().content.model_copy(
+                update={"world_guidance": "가" * 1700}
+            )
+        }
+    )
+
+    payload = build_input_narration_payload(
+        runtime=runtime,
+        player_input="경비병에게 말을 겁니다",
+        action=Action(verb="speak", to="guard_01", how="friendly"),
+        dialogue_target=runtime.graph.nodes["guard_01"],
+    )
+
+    assert len(payload["reference_context"]["world_guidance"]) == 1600
 
 
 def test_action_payload_contains_safe_current_event_and_combat_view():
@@ -471,14 +499,13 @@ def test_action_payload_contains_safe_current_event_and_combat_view():
 
     encoded = json.dumps(payload, ensure_ascii=False)
 
-    assert payload["player_input"] is None
-    assert payload["current_event"]["kind"] == "combat"
-    assert payload["current_event"]["outcome"] == "ongoing"
+    assert "user_request" not in payload
+    assert payload["engine_event"]["kind"] == "combat"
+    assert payload["engine_event"]["outcome"] == "ongoing"
     assert payload["result_cards"] == [{"text": "전투가 이어집니다."}]
-    assert payload["recent_narration"] == [
+    assert payload["reference_context"]["recent_narration"] == [
         {
             "text": "경비병이 북문을 지킵니다.",
-            "outcome": None,
         },
         {
             "text": "당신의 공격이 허수아비에게 닿습니다. 교전은 이어집니다.",
@@ -515,7 +542,7 @@ def test_action_payload_marks_location_enter_quest_trigger():
         card_texts=["북문으로 이동합니다.", "퀘스트가 완료됩니다."],
     )
 
-    assert payload["current_event"]["quest_trigger"] == {
+    assert payload["engine_event"]["quest_trigger"] == {
         "type": "location_enter",
         "target": "north_gate",
     }

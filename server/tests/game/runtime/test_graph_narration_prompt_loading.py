@@ -169,10 +169,10 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "남은 거리, 물건 상태, NPC 반응, 다음 목표" in narrate_prompt
     assert "## 처리 라우터" in narrate_prompt
     assert "출력 전에 이번 턴의 주 처리 유형을 하나만 고릅니다" in narrate_prompt
-    assert "`payload.current_event.outcome`이 `action_rejected`이면 행동 거부" in narrate_prompt
-    assert "`payload.world_guidance`는 시나리오 전체의 톤" in narrate_prompt
+    assert "`payload.engine_event.outcome`이 `action_rejected`이면 행동 거부" in narrate_prompt
+    assert "`payload.reference_context.world_guidance`는 시나리오 전체의 톤" in narrate_prompt
     assert "`payload.combat_view`가 있으면 전투" in narrate_prompt
-    assert "`payload.current_event.kind`가 `roll_prompt`이면 판정 전" in narrate_prompt
+    assert "`payload.engine_event.kind`가 `roll_prompt`이면 판정 전" in narrate_prompt
     assert "선택한 처리 유형의 규칙을 가장 우선합니다" in narrate_prompt
     assert "다른 섹션의 규칙은 사실 범위, 문체, 반복 회피에만 참고합니다" in narrate_prompt
     assert "전투 모드에서는 대화, 조사, 퀘스트 규칙보다" in narrate_prompt
@@ -184,7 +184,9 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "`ui_cues`와 `suggestions`의 기본값은 빈 배열입니다" in narrate_prompt
     assert "suggestions는 새 행동을 창작하는 기능이 아닙니다" in narrate_prompt
     assert "payload에 이미 드러난 대상, 장소, 물건, 목표를 플레이어 입력문으로 바꾸는 기능입니다" in narrate_prompt
-    assert "payload.scene_anchor.visible_names에 명시된 대상과 장소는 제안할 수 있습니다" in narrate_prompt
+    assert "현재 턴 뒤에도 플레이어가 계속 행동해야 하고" in narrate_prompt
+    assert "현재 가능한 대상/장소/물건/목표가 명시되어 있으면 1개에서 3개까지 씁니다" in narrate_prompt
+    assert "payload.scene_state.scene_anchor.visible_names에 명시된 대상과 장소는 제안할 수 있습니다" in narrate_prompt
     assert "현재 목표가 바로 보이면 목표를 수행하는 입력문을 제안할 수 있습니다" in narrate_prompt
     assert "`대화 시도하기`, `상황 파악하기`처럼 대상이나 목적이 없는 label은 쓰지 않습니다" in narrate_prompt
     assert "손맛" in narrate_prompt
@@ -275,7 +277,7 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "대화 실패" in narrate_prompt
     assert "실패이면 LLM이 장면을 씁니다" in narrate_prompt
     assert "성공처럼 읽히는 단서 획득" in narrate_prompt
-    assert "payload.current_event.kind`가 `roll_prompt`" in narrate_prompt
+    assert "payload.engine_event.kind`가 `roll_prompt`" in narrate_prompt
     assert "발견해냈습니다" in narrate_prompt
     assert "포착해냅니다" in narrate_prompt
     assert "판정 후 본문에는 `check_reason`이나 `preroll_narration`의 장면, 동작, 감각, 문장 구조를 다시 쓰지 않습니다" in narrate_prompt
@@ -287,10 +289,10 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "플레이어 원문이 단순히 말을 건다는 뜻이면" in narrate_prompt
     assert "무슨 일이신가요" in narrate_prompt
     assert "현재 장소의 visible targets" in narrate_prompt
-    assert "`payload.target_view`는 현재 처리 대상의 세부 묘사" in narrate_prompt
-    assert "`payload.scene_anchor.visible_names`는 현재 배경을 고정하는 이름 목록" in narrate_prompt
+    assert "`payload.scene_state.target_view`는 현재 처리 대상의 세부 묘사" in narrate_prompt
+    assert "`payload.scene_state.scene_anchor.visible_names`는 현재 배경을 고정하는 이름 목록" in narrate_prompt
     assert "이름만 보고 세부 묘사, 답변, 단서, 행동 가능성을 만들지 않습니다" in narrate_prompt
-    assert "`target_view.public_knowledge`와 `target_view.available_items`" in narrate_prompt
+    assert "`payload.scene_state.target_view.public_knowledge`와 `payload.scene_state.target_view.available_items`" in narrate_prompt
     assert "장소 전체의 지식이나 모든 행동 가능성으로 넓히지 않습니다" in narrate_prompt
     assert "이전 기억에 있어도 현재 주변에 있다고 쓰지 않습니다" in narrate_prompt
     assert "현재 목표와 다음 행동" in narrate_prompt
@@ -383,11 +385,14 @@ def test_graph_narrate_prompt_encodes_theory_pressure_and_completion_limits():
         encoding="utf-8"
     )
 
-    assert "가장 강한 근거는 `payload.current_event`, `payload.result_cards`, `payload.target_view`, `payload.combat_view`입니다" in prompt
-    assert "UI 라벨, 추천 칩의 `label`, 주변에 함께 보이는 이름은 `payload.player_input`보다 강한 근거가 아닙니다" in prompt
+    assert "가장 강한 근거는 `payload.user_request`, `payload.engine_event`, `payload.result_cards`, `payload.scene_state.target_view`, `payload.combat_view`입니다" in prompt
+    assert "`payload.user_request.player_input`은 이번 턴에 플레이어가 실제로 말하거나 시도한 원문입니다" in prompt
+    assert "`payload.reference_context`는 이번 턴의 새 사실이 아니라 배경, 연속성, 반복 회피용 참고 정보입니다" in prompt
+    assert "`payload.reference_context`에 있는 이전 나레이션이나 이전 대화가 플레이어의 이번 발화보다 앞서면 안 됩니다" in prompt
+    assert "UI 라벨, 추천 칩의 `label`, 주변에 함께 보이는 이름은 `payload.user_request.player_input`보다 강한 근거가 아닙니다" in prompt
     assert "압력을 남기는 것은 필수가 아닙니다" in prompt
     assert "새 갈고리 없이 닫습니다" in prompt
-    assert "`payload.current_event.quest_trigger.type`이 `location_enter`이면 특히 조심합니다" in prompt
+    assert "`payload.engine_event.quest_trigger.type`이 `location_enter`이면 특히 조심합니다" in prompt
     assert "장소에 들어간 사실을 플레이어가 갈등을 해결한 것처럼 과장하지 않습니다" in prompt
 
 
@@ -408,22 +413,23 @@ async def test_graph_input_payload_exposes_target_traits(tmp_path):
         dialogue_target=target,
     )
 
-    assert payload["target_view"]["personality"] == ["dry", "watchful"]
-    assert "speech_style" not in payload["target_view"]
-    assert "humor_style" not in payload["target_view"]
-    assert payload["target_view"]["dialogue_style"]["speech_style"] == (
+    target_view = payload["scene_state"]["target_view"]
+    assert target_view["personality"] == ["dry", "watchful"]
+    assert "speech_style" not in target_view
+    assert "humor_style" not in target_view
+    assert target_view["dialogue_style"]["speech_style"] == (
         "short report-like replies"
     )
-    assert payload["target_view"]["dialogue_style"]["humor_style"] == (
+    assert target_view["dialogue_style"]["humor_style"] == (
         "treats jokes as report categories"
     )
-    assert payload["target_view"]["personal_boundary"] == (
+    assert target_view["personal_boundary"] == (
         "deflects personal questions politely"
     )
-    assert "secrets" not in payload["target_view"]
-    assert payload["target_view"]["traits"] == ["can speak", "does not rush"]
-    assert payload["world_guidance"] == "짧고 차분하게 씁니다."
-    assert payload["current_event"]["dialogue_expectation"] == {
+    assert "secrets" not in target_view
+    assert target_view["traits"] == ["can speak", "does not rush"]
+    assert payload["reference_context"]["world_guidance"] == "짧고 차분하게 씁니다."
+    assert payload["engine_event"]["dialogue_expectation"] == {
         "npc_reply": "expected",
         "direct_speech": "prefer_one_short_utterance",
     }

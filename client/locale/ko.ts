@@ -189,6 +189,7 @@ export const ko = {
     retry: '다시 시도',
     unknown: '알 수 없는 오류',
     invalidStat: '잘못된 능력치입니다.',
+    requestInterrupted: '요청이 끊겼습니다. 같은 행동을 다시 시도해 주세요.',
   },
   shell: {
     loading: [

@@ -56,6 +56,9 @@ def build_classify_context_view(
     location_items = all_location_items[: limits.location_items]
     corpses = all_corpses[: limits.corpses]
 
+    active_quest = _active_quest(runtime)
+    available_quests = _available_quests(runtime, visible_targets, active_quest)
+
     return {
         "player_input": player_input,
         "mode": (
@@ -72,7 +75,8 @@ def build_classify_context_view(
             "equipment": _equipment(runtime, player_id),
             "skills": skills,
             "location_items": location_items,
-            "active_quest": _active_quest(runtime),
+            "active_quest": active_quest,
+            "available_quests": available_quests,
             "merchants": _merchants(runtime, visible_targets, limits),
             "corpses": corpses,
         },
@@ -86,7 +90,7 @@ def build_classify_context_view(
             "can_move_to": [exit_["id"] for exit_ in exits],
             "can_use": [item["id"] for item in inventory],
             "can_pick_up": [item["id"] for item in location_items],
-            "can_accept_or_abandon_quest": _quest_ids(runtime),
+            "can_accept_or_abandon_quest": _quest_ids(runtime, available_quests),
             "can_decide": _quest_choice_ids(runtime),
         },
         "references": {
@@ -127,6 +131,7 @@ def classify_context_to_grounding_view(context: dict[str, Any]) -> dict[str, Any
         if isinstance(identity.get("active_quest"), dict)
         else None
     )
+    available_quests = _dicts(identity.get("available_quests"))
     visible_targets = _dicts(identity.get("visible_targets"))
     exits = _dicts(identity.get("exits"))
 
@@ -164,7 +169,10 @@ def classify_context_to_grounding_view(context: dict[str, Any]) -> dict[str, Any
         "location_items": _dicts(identity.get("location_items")),
         "merchants": _dicts(identity.get("merchants")),
         "corpses": _dicts(identity.get("corpses")),
-        "quests": [active_quest] if active_quest is not None else [],
+        "quests": [
+            *([active_quest] if active_quest is not None else []),
+            *available_quests,
+        ],
         "recent_npc": references.get("last_npc"),
     }
 
@@ -296,12 +304,49 @@ def _active_quest(runtime: GameRuntimeState) -> dict[str, Any] | None:
     return payload
 
 
+def _available_quests(
+    runtime: GameRuntimeState,
+    visible_targets: list[dict[str, Any]],
+    active_quest: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    if active_quest is not None:
+        return []
+    visible_by_id = {
+        target["id"]: target
+        for target in visible_targets
+        if isinstance(target.get("id"), str)
+        and isinstance(target.get("name"), str)
+        and target.get("type") in {"npc", "enemy"}
+    }
+    out: list[dict[str, Any]] = []
+    for node in runtime.graph.nodes.values():
+        if node.type != "quest":
+            continue
+        status = node.properties.get("status")
+        if status not in {"pending", "abandoned"}:
+            continue
+        giver_id = node.properties.get("giver")
+        if not isinstance(giver_id, str) or giver_id not in visible_by_id:
+            continue
+        giver = visible_by_id[giver_id]
+        out.append(
+            {
+                "id": node.id,
+                "name": node_label(runtime.content, node),
+                "status": status,
+                "giver": giver_id,
+                "giver_name": giver["name"],
+            }
+        )
+    return out
+
+
 def _quest_choices(node: GraphNode) -> list[dict[str, str]]:
     choices = node.properties.get("choices")
     if not isinstance(choices, dict):
         return []
     out: list[dict[str, str]] = []
-    for choice_id, choice in choices.items():
+    for choice_id, choice in choices.items():  # ssot-allow: quest choice attribute map
         if not isinstance(choice_id, str) or not choice_id:
             continue
         if not isinstance(choice, dict):
@@ -316,10 +361,17 @@ def _quest_choices(node: GraphNode) -> list[dict[str, str]]:
     return out
 
 
-def _quest_ids(runtime: GameRuntimeState) -> list[str]:
-    return (
-        [runtime.progress.active_quest_id] if runtime.progress.active_quest_id else []
+def _quest_ids(
+    runtime: GameRuntimeState,
+    available_quests: list[dict[str, Any]] | None = None,
+) -> list[str]:
+    ids = [runtime.progress.active_quest_id] if runtime.progress.active_quest_id else []
+    ids.extend(
+        quest["id"]
+        for quest in (available_quests or [])
+        if isinstance(quest.get("id"), str)
     )
+    return ids
 
 
 def _quest_choice_ids(runtime: GameRuntimeState) -> list[str]:

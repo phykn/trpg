@@ -35,8 +35,7 @@
         "target": "loc_fog_harbor"
       },
       {
-        "target": "loc_red_square",
-        "requires_quest": "q_fog_depart"
+        "target": "loc_red_square"
       }
     ],
     "items": []

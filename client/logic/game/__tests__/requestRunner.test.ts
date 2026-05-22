@@ -155,4 +155,43 @@ describe('runGraphActionRequestOnce', () => {
     expect(rt.setErrorMessage).toHaveBeenCalledWith(null);
     expect(rt.setRequestInFlight).toHaveBeenLastCalledWith(false);
   });
+
+  test('removes temporary streamed narration and shows a friendly retry message on network failure', async () => {
+    const rt = runtime('game-1');
+
+    await runGraphActionRequestOnce(
+      async (_signal, events) => {
+        events.onNarrationDelta('루카가 입을 엽니다.', 'neutral');
+        throw new Error('network error');
+      },
+      rt,
+      [{ kind: 'player', text: '루카에게 접근합니다' }],
+    );
+
+    expect(rt.setLog).toHaveBeenCalledTimes(3);
+    const appendPlayer = (rt.setLog as jest.Mock).mock.calls[0][0] as (
+      current: LogEntry[],
+    ) => LogEntry[];
+    const appendDelta = (rt.setLog as jest.Mock).mock.calls[1][0] as (
+      current: LogEntry[],
+    ) => LogEntry[];
+    const removeDelta = (rt.setLog as jest.Mock).mock.calls[2][0] as (
+      current: LogEntry[],
+    ) => LogEntry[];
+
+    const withPlayer = appendPlayer([]);
+    const withDelta = appendDelta(withPlayer);
+    const afterFailure = removeDelta(withDelta);
+
+    expect(withDelta).toEqual([
+      expect.objectContaining({ kind: 'player', text: '루카에게 접근합니다' }),
+      expect.objectContaining({ kind: 'gm', text: '루카가 입을 엽니다.' }),
+    ]);
+    expect(afterFailure).toEqual([
+      expect.objectContaining({ kind: 'player', text: '루카에게 접근합니다' }),
+    ]);
+    expect(rt.setErrorMessage).toHaveBeenLastCalledWith(
+      '요청이 끊겼습니다. 같은 행동을 다시 시도해 주세요.',
+    );
+  });
 });

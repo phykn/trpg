@@ -6,6 +6,7 @@ from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.game.runtime.narration.suggestions import (
     GraphSuggestion,
+    build_intro_suggestions,
     filter_grounded_suggestions,
 )
 from src.game.runtime.narration.result import (
@@ -53,6 +54,11 @@ def _runtime_for_suggestions(*, in_combat: bool = False) -> GameRuntimeState:
                     id="healing_herb",
                     type="item",
                     properties={"name": "회복 약초"},
+                ),
+                "quest_01": GraphNode(
+                    id="quest_01",
+                    type="quest",
+                    properties={"title": "숲으로", "status": "active"},
                 ),
             },
             edges={
@@ -112,6 +118,57 @@ def test_filter_grounded_suggestions_drops_unavailable_move_talk_and_use_targets
         "상인에게 말을 겁니다",
         "회복 약초를 사용합니다",
     ]
+
+
+def test_build_intro_suggestions_uses_visible_graph_state():
+    runtime = _runtime_for_suggestions()
+
+    result = build_intro_suggestions(runtime)
+
+    assert [suggestion.model_dump() for suggestion in result] == [
+        {
+            "label": "talk",
+            "input_text": "상인에게 말을 겁니다",
+            "intent": "talk",
+            "action": None,
+        },
+        {
+            "label": "move",
+            "input_text": "숲으로 이동합니다",
+            "intent": "move",
+            "action": None,
+        },
+        {
+            "label": "inspect",
+            "input_text": "주변을 살핍니다",
+            "intent": "inspect",
+            "action": None,
+        },
+    ]
+
+
+def test_build_intro_suggestions_hides_locked_exits():
+    runtime = _runtime_for_suggestions()
+    runtime.graph.edges["connects_to:town:forest"].properties["requires_quest"] = "quest_01"
+
+    result = build_intro_suggestions(runtime)
+
+    assert [suggestion.input_text for suggestion in result] == [
+        "상인에게 말을 겁니다",
+        "주변을 살핍니다",
+    ]
+
+
+def test_filter_grounded_suggestions_drops_locked_move_targets():
+    runtime = _runtime_for_suggestions()
+    runtime.graph.edges["connects_to:town:forest"].properties["requires_quest"] = "quest_01"
+
+    result = filter_grounded_suggestions(
+        runtime,
+        [GraphSuggestion(label="숲으로", input_text="숲으로 이동합니다", intent="move")],
+    )
+
+    assert result == []
 
 
 def test_filter_grounded_suggestions_drops_combat_when_not_in_combat():
@@ -485,6 +542,41 @@ def test_parse_graph_narration_answer_strips_trailing_ascii_quote_junk():
     result = parse_graph_narration_answer(answer)
 
     assert result.narration == "선장이 낮게 말합니다. 「돌아갈 배라... 조건이 까다롭지."
+
+
+def test_parse_graph_narration_answer_normalizes_ascii_direct_speech():
+    answer = "\n".join(
+        [
+            r'루카가 기침합니다. \"크흠.\" 그는 모자를 고쳐 씁니다. \"도와주시겠습니까?\"',
+            "---TRPG_META---",
+            '{"suggestions": []}',
+        ]
+    )
+
+    result = parse_graph_narration_answer(answer)
+
+    assert result.narration == (
+        "루카가 기침합니다. 「크흠.」 그는 모자를 고쳐 씁니다. 「도와주시겠습니까?」"
+    )
+
+
+def test_parse_graph_narration_answer_closes_unmatched_ascii_direct_speech():
+    answer = "\n".join(
+        [
+            '"아이고! 드디어 오셨네요! 뭘 도와드릴까요?',
+            "",
+            "당신에게 시선을 고정시킨 채 미소를 짓습니다.",
+            "---TRPG_META---",
+            '{"suggestions": []}',
+        ]
+    )
+
+    result = parse_graph_narration_answer(answer)
+
+    assert result.narration == (
+        "「아이고! 드디어 오셨네요! 뭘 도와드릴까요?」\n"
+        "당신에게 시선을 고정시킨 채 미소를 짓습니다."
+    )
 
 
 def test_parse_graph_narration_answer_uses_env_marker(monkeypatch):

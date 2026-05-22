@@ -156,8 +156,6 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
             to=_optional_str(intent, "target"),
             how=_optional_str(intent, "manner") or "friendly",
         )
-    if name == "query":
-        return Action(verb="query", what=_optional_str(intent, "topic"))
     if name == "inspect":
         return Action(verb="perceive", what=_optional_str(intent, "target"))
     if name == "pass":

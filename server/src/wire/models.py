@@ -63,7 +63,7 @@ class QuestPayload(_CamelModel):
     goals: list[str]
     progress_label: str
     rewards: QuestRewards
-    status: Literal["pending", "active", "completed", "failed"]
+    status: Literal["pending", "active", "completed", "failed", "abandoned"]
     actions: list[Literal["accept", "abandon"]]
     choices: list[QuestChoicePayload] = Field(default_factory=list)
 

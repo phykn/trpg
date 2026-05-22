@@ -98,7 +98,6 @@ export type GraphAction = {
     | 'attack'
     | 'speak'
     | 'perceive'
-    | 'query'
     | 'decide'
     | 'rest'
     | 'pass';

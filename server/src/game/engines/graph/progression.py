@@ -71,19 +71,6 @@ def plan_progression_after_quest_completion(
                 set_status(chapter_id, "active")
                 changed = True
 
-        if next_active_quest_id is None:
-            for quest_id in _quest_ids(graph):
-                if status(quest_id) != "pending":
-                    continue
-                if not _is_required_quest(graph, quest_id):
-                    continue
-                if not _prerequisites_met(graph, quest_id, status):
-                    continue
-                set_status(quest_id, "active")
-                next_active_quest_id = quest_id
-                changed = True
-                break
-
         for quest_id in _quest_ids(graph):
             if status(quest_id) != "locked":
                 continue
@@ -91,15 +78,7 @@ def plan_progression_after_quest_completion(
                 continue
             if not _prerequisites_met(graph, quest_id, status):
                 continue
-            if not _is_required_quest(graph, quest_id):
-                set_status(quest_id, "pending")
-                changed = True
-                continue
-            if next_active_quest_id is None:
-                set_status(quest_id, "active")
-                next_active_quest_id = quest_id
-            else:
-                set_status(quest_id, "pending")
+            set_status(quest_id, "pending")
             changed = True
 
         auto_completed = _auto_complete_active_location_quest(

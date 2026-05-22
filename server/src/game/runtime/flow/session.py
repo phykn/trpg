@@ -12,7 +12,7 @@ from .intro import (
 from ..load import load_runtime_state
 from ..request_result import GraphResultOutcome
 from ..state import GameRuntimeState
-from ..narration.suggestions import GraphSuggestion
+from ..narration.suggestions import GraphSuggestion, build_intro_suggestions
 from src.game.seed.init_graph import init_graph_game
 from src.game.seed.player import PlayerInput
 from src.llm.diag import engine_diag, set_diag_context
@@ -93,7 +93,10 @@ async def run_graph_intro_request(
     engine_diag("intro:start")
     runtime = await _run_intro_or_fallback(repo, runtime)
     engine_diag("intro:done", logs=len(runtime.log_entries))
-    return GraphSessionIntroResult(front_state=graph_to_front_state(runtime))
+    return GraphSessionIntroResult(
+        front_state=graph_to_front_state(runtime),
+        suggestions=build_intro_suggestions(runtime),
+    )
 
 
 async def run_graph_intro_request_stream(
@@ -122,7 +125,8 @@ async def run_graph_intro_request_stream(
             yield {
                 "type": "final",
                 "result": GraphSessionIntroResult(
-                    front_state=graph_to_front_state(next_runtime)
+                    front_state=graph_to_front_state(next_runtime),
+                    suggestions=build_intro_suggestions(next_runtime),
                 ),
             }
     except (LLMUnavailable, OSError, TimeoutError) as exc:
@@ -132,7 +136,8 @@ async def run_graph_intro_request_stream(
         yield {
             "type": "final",
             "result": GraphSessionIntroResult(
-                front_state=graph_to_front_state(runtime)
+                front_state=graph_to_front_state(runtime),
+                suggestions=build_intro_suggestions(runtime),
             ),
         }
 

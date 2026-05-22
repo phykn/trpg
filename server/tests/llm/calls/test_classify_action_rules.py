@@ -118,14 +118,9 @@ def test_decide_requires_quest_and_choice():
         _validate({"verb": "decide", "what": "quest_01"})
 
 
-def test_query_accepts_optional_topic():
-    _validate({"verb": "query"})
-    _validate({"verb": "query", "what": "exits"})
-
-
-def test_query_unknown_topic_rejected():
-    with pytest.raises(ValidationError, match="query.what"):
-        _validate({"verb": "query", "what": "rumors"})
+def test_query_action_rejected_by_literal():
+    with pytest.raises(ValidationError):
+        _validate({"verb": "query", "what": "exits"})
 
 
 def test_unknown_action_rejected_by_literal():

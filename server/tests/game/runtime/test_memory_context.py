@@ -219,4 +219,4 @@ def test_related_memory_default_limit_matches_plan():
         target=runtime.graph.nodes["npc_merchant"],
     )
 
-    assert len(payload) == 15
+    assert len(payload) == 6

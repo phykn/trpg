@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { ko } from '@/locale/ko';
 import type { LogEntry } from '@/logic/log';
 import type {
   FrontState,
@@ -74,7 +75,7 @@ function appendStreamingNarration(
   outcome: GraphResultOutcome,
 ): void {
   if (!text) return;
-  const id = -(generation * 1000 + optimisticEntryCount + 1);
+  const id = streamingNarrationId(generation, optimisticEntryCount);
   runtime.setLog((current) => {
     const existing = current.find((entry) => entry.id === id);
     return mergeEntry(current, {
@@ -86,8 +87,33 @@ function appendStreamingNarration(
   });
 }
 
+function streamingNarrationId(generation: number, optimisticEntryCount: number): number {
+  return -(generation * 1000 + optimisticEntryCount + 1);
+}
+
+function removeStreamingNarration(
+  runtime: GraphActionRequestRuntime,
+  generation: number,
+  optimisticEntryCount: number,
+): void {
+  const id = streamingNarrationId(generation, optimisticEntryCount);
+  runtime.setLog((current) => current.filter((entry) => entry.id !== id));
+}
+
 function isAbortError(err: unknown): boolean {
   return err instanceof Error && err.name === 'AbortError';
+}
+
+function errorMessageForDisplay(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err);
+  if (
+    message === 'network error'
+    || message.includes('stream ended without final payload')
+    || message.toLowerCase().includes('failed to fetch')
+  ) {
+    return ko.error.requestInterrupted;
+  }
+  return message;
 }
 
 export function abortGraphActionRequest(runtime: GraphActionRequestRuntime): void {
@@ -158,7 +184,8 @@ export async function runGraphActionRequestOnce(
     ) {
       return;
     }
-    runtime.setErrorMessage(err instanceof Error ? err.message : String(err));
+    removeStreamingNarration(runtime, generation, optimisticEntries.length);
+    runtime.setErrorMessage(errorMessageForDisplay(err));
   } finally {
     if (runtime.requestGenerationRef.current === generation) {
       runtime.abortControllerRef.current = null;

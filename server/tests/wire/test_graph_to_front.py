@@ -323,6 +323,29 @@ def test_graph_front_state_builds_place_from_visible_graph_edges():
     }
 
 
+def test_graph_front_state_hides_locked_place_exits():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"].properties["status"] = "active"
+    runtime.graph.edges["connects_to:town:forest"].properties["requires_quest"] = "quest_01"
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.place is not None
+    assert payload.place.id == "town"
+    assert payload.place.exits == []
+
+
+def test_graph_front_state_shows_place_exit_after_required_quest_completed():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"].properties["status"] = "completed"
+    runtime.graph.edges["connects_to:town:forest"].properties["requires_quest"] = "quest_01"
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.place is not None
+    assert [exit_.id for exit_ in payload.place.exits] == ["forest"]
+
+
 def test_graph_front_state_exposes_visible_place_items_and_hides_hidden_items():
     runtime = _runtime()
     runtime.graph.nodes["supply_token"] = GraphNode(
@@ -446,8 +469,7 @@ def test_graph_front_state_resolves_static_content_from_runtime_content():
     assert payload.place.targets[0].name == "떠돌이 적"
     assert payload.place.targets[0].role == "숲의 포식자"
     assert payload.place.targets[0].race_job == "숲의 포식자"
-    assert payload.quest_offers[0].title == "첫 의뢰"
-    assert payload.quest_offers[0].summary == "광장의 문제를 해결합니다."
+    assert payload.quest_offers == []
 
 
 def test_graph_front_state_hides_dead_place_targets():
@@ -474,8 +496,18 @@ def test_graph_front_state_exposes_non_player_target_without_resources():
     assert payload.place.targets[0].alive is True
 
 
-def test_graph_front_state_builds_visible_quest_offer():
+def test_graph_front_state_hides_pending_quest_offer():
     payload = graph_to_front_state(_runtime())
+
+    assert payload.quest is None
+    assert payload.quest_offers == []
+
+
+def test_graph_front_state_builds_abandoned_quest_offer():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"].properties["status"] = "abandoned"
+
+    payload = graph_to_front_state(runtime)
 
     assert payload.quest is None
     assert len(payload.quest_offers) == 1
@@ -486,9 +518,18 @@ def test_graph_front_state_builds_visible_quest_offer():
     assert offer.goals == ["늑대 쫓아내기"]
     assert offer.rewards.gold == 5
     assert offer.rewards.exp == 10
-    assert offer.status == "pending"
+    assert offer.status == "abandoned"
     assert offer.actions == ["accept"]
     assert offer.choices == []
+
+
+def test_graph_front_state_hides_locked_quest_offer():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"].properties["status"] = "locked"
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.quest_offers == []
 
 
 def test_graph_front_state_exposes_active_quest_choices():

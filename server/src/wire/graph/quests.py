@@ -56,7 +56,7 @@ def quest_offer_payloads(runtime: GameRuntimeState) -> list[QuestPayload]:
         quest = graph.nodes.get(edge.to_node_id)
         if quest is None or quest.type != "quest":
             continue
-        if quest_status(quest) in {"locked", "pending"}:
+        if quest_status(quest) == "abandoned":
             offers.append(build_quest_payload(graph, quest, runtime))
     return offers
 
@@ -68,10 +68,12 @@ def build_quest_payload(
 ) -> QuestPayload:
     status = quest_status(quest)
     display_status = (
-        status if status in {"pending", "active", "completed", "failed"} else "pending"
+        status
+        if status in {"pending", "active", "completed", "failed", "abandoned"}
+        else "pending"
     )
     actions: list[Literal["accept", "abandon"]] = []
-    if status in {"locked", "pending"}:
+    if status in {"pending", "abandoned"}:
         actions.append("accept")
     elif status == "active":
         actions.append("abandon")
@@ -276,7 +278,7 @@ def _quest_choices(quest: GraphNode) -> list[QuestChoicePayload]:
     if not isinstance(raw, dict):
         return []
     choices: list[QuestChoicePayload] = []
-    for choice_id, choice in raw.items():
+    for choice_id, choice in raw.items():  # ssot-allow: quest choice attribute map
         if not isinstance(choice_id, str) or not choice_id:
             continue
         label = choice.get("label") if isinstance(choice, dict) else None

@@ -59,9 +59,6 @@ def dispatch_graph_action(
     if runtime.progress.graph_combat_state is not None or action.verb == "attack":
         return _dispatch_combat(runtime, action)
 
-    if action.verb == "query":
-        raise GraphActionDispatchError("query is read-only and belongs to query flow")
-
     try:
         kind, changes, progress_update, completed_quest_ids = _plan_non_combat(
             runtime,
@@ -280,9 +277,6 @@ def _plan_non_combat(
 
     if action.verb in ("speak", "perceive"):
         raise GraphActionDispatchError(f"{action.verb} belongs to narrative flow")
-
-    if action.verb == "query":
-        raise GraphActionDispatchError("query is read-only and belongs to query flow")
 
     raise GraphActionDispatchError(f"unsupported graph action: {action.verb}")
 

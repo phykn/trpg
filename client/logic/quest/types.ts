@@ -12,7 +12,7 @@ export type Quest = {
   goals: string[];
   progressLabel: string;
   rewards: { gold: number; exp: number };
-  status: 'pending' | 'active' | 'completed' | 'failed';
+  status: 'pending' | 'active' | 'completed' | 'failed' | 'abandoned';
   actions: ('accept' | 'abandon')[];
   choices: { id: string; label: string }[];
 };

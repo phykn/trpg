@@ -13,7 +13,7 @@ from src.llm.diag import llm_diag
 
 from ..env import graph_narration_temperature
 from ..state import GameRuntimeState
-from .context import build_input_narration_payload
+from .context import build_input_narration_payload, update_compact_narration_event
 from .result import GraphNarrationResult, parse_graph_narration_answer
 
 
@@ -270,19 +270,20 @@ def _graph_preroll_narration_messages(
         action=action,
         dialogue_target=target,
     )
-    payload["player_input"] = player_input
     body = pending_roll.get("body")
     title = pending_roll.get("title")
-    payload["current_event"] = {
-        "kind": "roll_prompt",
-        "outcome": "pending_roll",
-        "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
-        "check_reason": body if isinstance(body, str) else "",
-        "resolved_results": [title, body],
-    }
-    payload["result_cards"] = [
-        {"text": body if isinstance(body, str) else ""},
-    ]
+    update_compact_narration_event(
+        payload,
+        {
+            "kind": "roll_prompt",
+            "outcome": "pending_roll",
+            "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
+            "check_reason": body if isinstance(body, str) else "",
+            "resolved_results": [title, body],
+        },
+        player_input=player_input,
+        result_cards=[{"text": body if isinstance(body, str) else ""}],
+    )
     return [
         {
             "role": "system",
@@ -308,14 +309,20 @@ def _graph_input_rejection_narration_messages(
         action=action,
         dialogue_target=target,
     )
-    payload["current_event"] = {
-        "kind": "action_rejected",
-        "outcome": "action_rejected",
-        "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
-        "target": payload["target_view"],
-        "resolved_results": [public_reason],
-    }
-    payload["result_cards"] = [{"text": public_reason}]
+    scene_state = payload.get("scene_state")
+    target_view = scene_state.get("target_view") if isinstance(scene_state, dict) else None
+    update_compact_narration_event(
+        payload,
+        {
+            "kind": "action_rejected",
+            "outcome": "action_rejected",
+            "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
+            "target": target_view,
+            "resolved_results": [public_reason],
+        },
+        player_input=player_input,
+        result_cards=[{"text": public_reason}],
+    )
     return [
         {
             "role": "system",

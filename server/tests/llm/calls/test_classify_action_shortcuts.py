@@ -104,6 +104,60 @@ async def test_korean_pickup_location_item_shortcuts_without_llm():
     assert action.how == "free"
 
 
+async def test_korean_visible_quest_accept_shortcuts_without_llm():
+    context = _context()
+    context["identity"]["available_quests"] = [
+        {
+            "id": "quest_01",
+            "name": "통행 의뢰",
+            "status": "pending",
+            "giver": "training_dummy",
+            "giver_name": "훈련용 허수아비",
+        }
+    ]
+
+    output = await classify(
+        _NoCallLLM(),
+        ClassifyInput(
+            player_input="훈련용 허수아비의 의뢰를 받는다",
+            context=context,
+        ),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    action = output.actions[0]
+    assert action.verb == "transfer"
+    assert action.what == "quest_01"
+    assert action.from_ == "training_dummy"
+    assert action.to == "player_01"
+    assert action.how == "accept"
+
+
+async def test_korean_quest_choice_label_shortcuts_to_decide_without_llm():
+    context = _context()
+    context["identity"]["active_quest"] = {
+        "id": "quest_01",
+        "name": "분노 환불 사건",
+        "choices": [
+            {"id": "record", "label": "책임을 기록으로 남깁니다"},
+            {"id": "release", "label": "분노를 흘려보냅니다"},
+        ],
+    }
+
+    output = await classify(
+        _NoCallLLM(),
+        ClassifyInput(player_input="분노를 흘려보냅니다", context=context),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    action = output.actions[0]
+    assert action.verb == "decide"
+    assert action.what == "quest_01"
+    assert action.how == "release"
+
+
 async def test_korean_corpse_inspect_loots_single_carried_item_without_llm():
     context = _context()
     context["identity"]["corpses"] = [

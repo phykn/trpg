@@ -466,9 +466,3 @@ def test_attack_with_skill_starts_combat_without_spending_first_exchange():
 def test_unsupported_action_raises_dispatch_error():
     with pytest.raises(GraphCombatDispatchError, match="cannot start"):
         dispatch_graph_combat_action(_runtime(), Action(verb="rest"))
-
-    with pytest.raises(GraphCombatDispatchError, match="unsupported"):
-        dispatch_graph_combat_action(
-            _runtime(graph_combat_state=_ongoing_state()),
-            Action(verb="query", what="status"),
-        )

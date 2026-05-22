@@ -16,6 +16,7 @@ from src.game.domain.graph.query import (
 from src.locale.render import render
 
 from ..action.dispatch import GraphActionDispatchResult
+from ..env import env_nonnegative_int
 from ..state import GameRuntimeState
 from .combat_view import combat_narration_view
 from .memory_context import (
@@ -45,7 +46,7 @@ def build_action_narration_payload(
     quest_trigger = _quest_trigger_payload(action, dispatch.kind)
     if quest_trigger is not None:
         current_event["quest_trigger"] = quest_trigger
-    return {
+    payload = {
         "world_guidance": _world_guidance(after),
         "player_input": None,
         "current_place": _node_ref(after, place),
@@ -70,6 +71,7 @@ def build_action_narration_payload(
         ),
         "budget": _narrate_budget(after),
     }
+    return compact_narration_payload(payload)
 
 
 def build_roll_narration_payload(
@@ -90,7 +92,7 @@ def build_roll_narration_payload(
     resolved_results = result_texts or [
         _roll_result_card(roll_entry, outcome, runtime.progress.locale)
     ]
-    return {
+    payload = {
         "world_guidance": _world_guidance(runtime),
         "player_input": player_input if isinstance(player_input, str) else None,
         "current_event": {
@@ -131,6 +133,7 @@ def build_roll_narration_payload(
         "combat_view": combat_narration_view(runtime),
         "budget": _narrate_budget(runtime),
     }
+    return compact_narration_payload(payload)
 
 
 def build_input_narration_payload(
@@ -140,7 +143,7 @@ def build_input_narration_payload(
     action: Action,
     dialogue_target: GraphNode | None,
 ) -> dict[str, Any]:
-    return {
+    payload = {
         "world_guidance": _world_guidance(runtime),
         "player_input": player_input,
         "current_event": _input_current_event(runtime, action, dialogue_target),
@@ -164,6 +167,64 @@ def build_input_narration_payload(
         "combat_view": combat_narration_view(runtime),
         "budget": _narrate_budget(runtime),
     }
+    return compact_narration_payload(payload)
+
+
+def compact_narration_payload(source: dict[str, Any]) -> dict[str, Any]:
+    """Build the compact LLM contract: request, event, scene, references."""
+    event = source.get("current_event")
+    scene_state = {
+        "current_place": source.get("current_place"),
+        "scene_anchor": source.get("scene_anchor"),
+        "target_view": source.get("target_view"),
+    }
+    payload = {
+        "user_request": {
+            "player_input": source.get("player_input"),
+        },
+        "engine_event": event,
+        "scene_state": scene_state,
+        "result_cards": source.get("result_cards"),
+        "combat_view": source.get("combat_view"),
+        "reference_context": {
+            "world_guidance": source.get("world_guidance"),
+            "related_memory": source.get("related_memory"),
+            "recent_dialogue": source.get("recent_dialogue"),
+            "recent_narration": source.get("recent_narration"),
+        },
+        "budget": source.get("budget"),
+    }
+    return _drop_empty_narration_values(payload)
+
+
+def update_compact_narration_event(
+    payload: dict[str, Any],
+    event: dict[str, Any],
+    *,
+    player_input: str | None = None,
+    result_cards: list[dict[str, Any]] | None = None,
+) -> None:
+    payload["engine_event"] = event
+    if player_input is not None:
+        payload["user_request"] = {"player_input": player_input}
+    elif "user_request" in payload:
+        payload.pop("user_request")
+    if result_cards is not None:
+        payload["result_cards"] = result_cards
+
+
+def _drop_empty_narration_values(value: Any) -> Any:
+    if isinstance(value, dict):
+        out = {}
+        for key, item in value.items():  # ssot-allow: recursive payload cleanup
+            cleaned = _drop_empty_narration_values(item)
+            if cleaned is None or cleaned == [] or cleaned == {}:
+                continue
+            out[key] = cleaned
+        return out
+    if isinstance(value, list):
+        return [_drop_empty_narration_values(item) for item in value]
+    return value
 
 
 def _place_payload(
@@ -185,7 +246,8 @@ def _world_guidance(runtime: GameRuntimeState) -> str | None:
     text = runtime.content.world_guidance.strip()
     if not text:
         return None
-    return text[:4000]
+    max_chars = env_nonnegative_int("GRAPH_NARRATION_WORLD_GUIDANCE_CHARS", 1600)
+    return text[:max_chars]
 
 
 def _visible_character_payloads(
@@ -570,8 +632,8 @@ def _roll_result_card(roll_entry: RollLogEntry, outcome: str, locale: str) -> st
 def _recent_narration_payload(
     runtime: GameRuntimeState,
     *,
-    limit: int = 4,
-    max_chars: int = 220,
+    limit: int = 3,
+    max_chars: int = 160,
     exclude_texts: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     excluded = {text.strip() for text in (exclude_texts or []) if text.strip()}

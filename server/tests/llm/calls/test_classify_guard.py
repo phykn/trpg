@@ -9,12 +9,10 @@ def test_guard_refuses_prompt_extraction():
     assert result.refuse.category == "meta_breaking"
 
 
-def test_guard_refuses_real_world_weather():
+def test_guard_allows_real_world_weather_to_fall_through():
     result = classify_guard("현실의 오늘 날씨가 어때?")
 
-    assert result is not None
-    assert result.refuse is not None
-    assert result.refuse.category == "out_of_game"
+    assert result is None
 
 
 def test_guard_allows_in_game_weather_like_scene_question():

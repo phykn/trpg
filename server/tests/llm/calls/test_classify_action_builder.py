@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from src.llm.calls.classify.action_builder import build_action_output
 from src.llm.calls.classify.schema import validate_action_output_json
 
@@ -170,28 +172,19 @@ def test_build_action_output_converts_uncertain_inspect_to_perceive_with_check_r
     assert output.action_checks[0].reason == "경비병의 말투에서 숨긴 뜻을 읽어야 합니다."
 
 
-def test_build_action_output_converts_public_info_request_to_query_without_check():
-    output = build_action_output(
-        {
-            "intents": [
-                {
-                    "intent": "query",
-                    "topic": "exits",
-                    "check_required": False,
-                }
-            ]
-        },
-        _surroundings(),
-    )
-
-    assert output.actions is not None
-    assert output.actions[0].model_dump(
-        mode="json", by_alias=True, exclude_none=True
-    ) == {
-        "verb": "query",
-        "what": "exits",
-    }
-    assert output.action_checks[0].required is False
+def test_build_action_output_rejects_query_intent():
+    with pytest.raises(ValueError, match="unsupported intent: query"):
+        build_action_output(
+            {
+                "intents": [
+                    {
+                        "intent": "query",
+                        "check_required": False,
+                    }
+                ]
+            },
+            _surroundings(),
+        )
 
 
 def test_validate_action_output_json_accepts_intent_json():

@@ -11,7 +11,6 @@ from src.game.domain.memory import GMLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime.load import load_runtime_state
 from src.game.runtime.flow.turn import (
-    GraphActionTurnError,
     run_graph_action_turn,
     run_graph_action_turn_from_runtime_stream,
 )
@@ -721,8 +720,8 @@ async def test_run_graph_action_turn_preserves_repeated_llm_narration(tmp_path):
     import json
 
     payload = json.loads(llm.calls[0]["messages"][1]["content"])
-    assert payload["recent_narration"] == [
-        {"text": repeated, "outcome": None},
+    assert payload["reference_context"]["recent_narration"] == [
+        {"text": repeated},
     ]
 
 
@@ -863,9 +862,9 @@ async def test_run_graph_action_turn_sends_combat_trace_to_narration(tmp_path):
     payload = json.loads(call["messages"][1]["content"])
     encoded = json.dumps(payload, ensure_ascii=False)
 
-    assert payload["current_event"]["action"]["verb"] == "attack"
+    assert payload["engine_event"]["action"]["verb"] == "attack"
     assert payload["combat_view"]["events"]
-    assert payload["scene_anchor"]["visible_names"]
+    assert payload["scene_state"]["scene_anchor"]["visible_names"]
     assert "combat_started" not in encoded
     assert "player_attack_success" not in encoded
 
@@ -891,15 +890,3 @@ async def test_run_graph_action_turn_times_out_slow_narration_and_keeps_action(
     assert [entry.kind for entry in saved_logs] == ["act", "gm"]
     assert saved_logs[-1].text == "당신의 행동은 조용히 이어집니다."
     assert result.front_state.combat is not None
-
-
-async def test_run_graph_action_turn_rejects_query_without_saving(tmp_path):
-    repo = await _repo(tmp_path)
-
-    with pytest.raises(GraphActionTurnError, match="read-only"):
-        await run_graph_action_turn(repo, "game-1", Action(verb="query", what="status"))
-
-    saved_graph = await repo.load_graph("game-1")
-    saved_progress = await repo.load_progress("game-1")
-    assert saved_graph == _graph()
-    assert saved_progress.turn_count == 0

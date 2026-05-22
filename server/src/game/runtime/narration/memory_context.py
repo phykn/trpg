@@ -93,7 +93,7 @@ def related_memory_payload(
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
     limit = (
-        env_nonnegative_int("MAX_NARRATE_RELATED_MEMORY", 15)
+        env_nonnegative_int("MAX_NARRATE_RELATED_MEMORY", 6)
         if limit is None
         else limit
     )

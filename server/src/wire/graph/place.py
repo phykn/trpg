@@ -5,7 +5,13 @@ from src.game.domain.graph.character import (
     graph_character_kind,
     is_visible_character,
 )
-from src.game.domain.graph.query import characters_at, edges_from, items_at, location_of
+from src.game.domain.graph.query import (
+    characters_at,
+    connection_is_unlocked,
+    edges_from,
+    items_at,
+    location_of,
+)
 from .character import (
     character_gender,
     character_race_job,
@@ -40,6 +46,8 @@ def place_payload(
 
     exits: list[GraphPlaceLinkPayload] = []
     for edge in edges_from(graph, location_id, "connects_to"):
+        if not connection_is_unlocked(graph, edge):
+            continue
         target = graph.nodes.get(edge.to_node_id)
         if target is None or target.type != "location":
             continue

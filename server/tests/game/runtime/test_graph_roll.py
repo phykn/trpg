@@ -505,11 +505,11 @@ async def test_run_graph_roll_success_completes_social_check_quest(tmp_path):
     assert result.outcome == "success"
     assert saved_graph.nodes["quest_social"].properties["status"] == "completed"
     assert saved_graph.nodes["quest_social"].properties["triggers_met"] == [True]
-    assert saved_graph.nodes["quest_next"].properties["status"] == "active"
+    assert saved_graph.nodes["quest_next"].properties["status"] == "pending"
     assert player["gold"] == 2
     assert player["xp_pool"] == 5
-    assert saved_progress.active_quest_id == "quest_next"
-    assert result.front_state.quest.id == "quest_next"
+    assert saved_progress.active_quest_id is None
+    assert result.front_state.quest is None
     assert logs[-1].kind == "gm"
     assert logs[-1].text == "흰섬은 두 번째 이름을 주지 않습니다."
 

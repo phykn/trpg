@@ -47,9 +47,9 @@ def test_unknown_verb_rejected():
         validate_action_output_json(raw, in_combat=False)
 
 
-def test_query_cannot_be_chained():
+def test_query_rejected():
     raw = json.dumps({"actions": [{"verb": "query"}, {"verb": "pass"}]})
-    with pytest.raises(ValidationError, match="query"):
+    with pytest.raises(ValidationError):
         validate_action_output_json(raw, in_combat=False)
 
 

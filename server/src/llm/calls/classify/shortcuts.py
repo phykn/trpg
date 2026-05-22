@@ -13,9 +13,9 @@ from src.locale.terms import (
     LOOT_TERMS,
     META_BREAKING_TERMS,
     PART_TERMS,
-    REAL_WORLD_TERMS,
+    QUEST_ACCEPT_TERMS,
+    QUEST_CONTEXT_TERMS,
     RECRUIT_TERMS,
-    WEATHER_TERM,
 )
 from src.locale.render import render
 
@@ -32,18 +32,6 @@ def classify_guard(player_input: str, *, locale: str = "ko") -> ActionOutput | N
                 ),
             )
         )
-    if WEATHER_TERM in player_input and any(
-        term.lower() in lowered for term in REAL_WORLD_TERMS
-    ):
-        return ActionOutput(
-            refuse=RefuseReason(
-                category="out_of_game",
-                message_hint=render(
-                    "runtime.classify.refuse_out_of_game",
-                    locale,
-                ),
-            )
-        )
     return None
 
 
@@ -53,6 +41,14 @@ def classify_action_shortcut(
     *,
     locale: str = "ko",
 ) -> ActionOutput | None:
+    quest = _quest_accept_action(player_input, surroundings)
+    if quest is not None:
+        return _action_output([quest])
+
+    decision = _quest_decide_action(player_input, surroundings)
+    if decision is not None:
+        return _action_output([decision])
+
     if surroundings.get("in_combat") is True and _has_any(
         player_input, ACTION_CREATE_DISTANCE_TERMS
     ):
@@ -85,6 +81,89 @@ def classify_action_shortcut(
             return _action_output([loot])
 
     return None
+
+
+def _quest_accept_action(
+    player_input: str,
+    surroundings: dict[str, Any],
+) -> Action | None:
+    if not _looks_like_quest_accept(player_input):
+        return None
+    quests = [
+        quest
+        for quest in _dicts(surroundings.get("quests"))
+        if quest.get("status") in {"pending", "abandoned"}
+        and isinstance(quest.get("id"), str)
+    ]
+    quest = _named_entry(player_input, quests)
+    if quest is None:
+        quest = _named_giver_quest(player_input, quests)
+    if quest is None and len(quests) == 1:
+        quest = _entry_ref(quests[0])
+    if quest is None:
+        return None
+    return Action(
+        verb="transfer",
+        what=quest["id"],
+        from_=_quest_giver_id(quest["id"], quests),
+        to=_player_id(surroundings),
+        how="accept",
+    )
+
+
+def _quest_decide_action(
+    player_input: str,
+    surroundings: dict[str, Any],
+) -> Action | None:
+    for quest in _dicts(surroundings.get("quests")):
+        quest_id = quest.get("id")
+        if not isinstance(quest_id, str):
+            continue
+        for choice in _dicts(quest.get("choices")):
+            choice_id = choice.get("id")
+            label = choice.get("label")
+            if (
+                isinstance(choice_id, str)
+                and isinstance(label, str)
+                and label
+                and label in player_input
+            ):
+                return Action(verb="decide", what=quest_id, how=choice_id)
+    return None
+
+
+def _looks_like_quest_accept(player_input: str) -> bool:
+    if not _has_any(player_input, QUEST_ACCEPT_TERMS):
+        return False
+    return _has_any(player_input, QUEST_CONTEXT_TERMS)
+
+
+def _named_giver_quest(
+    player_input: str,
+    quests: list[dict[str, Any]],
+) -> dict[str, str] | None:
+    for quest in quests:
+        quest_id = quest.get("id")
+        giver_name = quest.get("giver_name")
+        if (
+            isinstance(quest_id, str)
+            and isinstance(giver_name, str)
+            and giver_name in player_input
+        ):
+            return {"id": quest_id, "name": giver_name}
+    return None
+
+
+def _quest_giver_id(quest_id: str, quests: list[dict[str, Any]]) -> str | None:
+    for quest in quests:
+        if quest.get("id") == quest_id and isinstance(quest.get("giver"), str):
+            return quest["giver"]
+    return None
+
+
+def _player_id(surroundings: dict[str, Any]) -> str | None:
+    player = _player(surroundings)
+    return player["id"] if player is not None else None
 
 
 def _protected_attack_refusal(

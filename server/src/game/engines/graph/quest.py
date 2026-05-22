@@ -97,7 +97,7 @@ def plan_quest_accept(
             and quest_status(active) == "active"
         ):
             raise GraphQuestError("active quest already exists")
-    if status not in {"locked", "pending"}:
+    if status not in {"locked", "pending", "abandoned"}:
         raise GraphQuestError(f"quest cannot be accepted from {status}: {quest_id}")
     return _status_result(quest_id, "accept", status, "active")
 
@@ -300,7 +300,7 @@ def reject_terminal(status: str, quest_id: str) -> None:
 
 
 def _is_terminal_status(status: str) -> bool:
-    return status in {"completed", "failed", "abandoned"}
+    return status in {"completed", "failed"}
 
 
 def status_change(quest_id: str, status: QuestStatus) -> SetNodePropertyChange:

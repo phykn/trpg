@@ -7,8 +7,8 @@
     "triggers": [
       {
         "id": "tr_fog_depart",
-        "type": "social_check",
-        "target": "npc_eli",
+        "type": "location_enter",
+        "target": "loc_red_square",
         "name": "첫 출항"
       }
     ],

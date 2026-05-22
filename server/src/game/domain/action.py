@@ -10,7 +10,6 @@ ActionVerb = Literal[
     "attack",
     "speak",
     "perceive",
-    "query",
     "rest",
     "pass",
     "decide",
@@ -30,9 +29,6 @@ _SPEAK_HOW = {
     "accept",
     "abandon",
 }
-_QUERY_TOPICS = {"surroundings", "exits", "inventory", "quests", "status"}
-
-
 class RefuseReason(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -86,9 +82,6 @@ class ActionOutput(BaseModel):
             raise ValueError(
                 "actions, if set, must contain >=1 action (use 'pass' for no-op)"
             )
-        if actions_set and any(action.verb == "query" for action in self.actions):
-            if len(self.actions) != 1:
-                raise ValueError("query must be the only action")
         if not actions_set and self.action_checks:
             raise ValueError("action_checks requires actions")
         if (
@@ -142,12 +135,6 @@ def _validate_classifier_action(action: Action, *, in_combat: bool) -> None:
 
     if action.verb == "perceive":
         _require_targets(action.what, "perceive.what", required=False)
-        return
-
-    if action.verb == "query":
-        topic = _single(action.what)
-        if topic is not None:
-            _require_enum(topic, _QUERY_TOPICS, "query.what")
         return
 
     if action.verb == "decide":

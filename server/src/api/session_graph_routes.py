@@ -47,6 +47,7 @@ from src.game.runtime.flow.session import (
 from src.game.runtime.flow.turn import GraphActionTurnError
 from src.locale.render import render
 from src.llm.client import LLMClient, force_think
+from src.llm.diag import engine_diag
 
 from .deps import get_graph_repo, get_llm, get_scenario_repo
 from .schema import (
@@ -426,6 +427,9 @@ def _graph_action_streaming_response(game_id, source) -> StreamingResponse:
             GraphRollError,
         ) as e:
             yield _stream_error(422, _player_error_detail(e))
+        except Exception as e:
+            engine_diag("graph_stream:fail", err=type(e).__name__)
+            yield _stream_error(500, render("error.graph_stream_failed", "ko"))
 
     return StreamingResponse(event_lines(), media_type="application/x-ndjson")
 
@@ -435,6 +439,8 @@ def _player_error_detail(error: Exception) -> str:
     if message.startswith("missing location:"):
         return render("error.graph_location_unreachable", "ko")
     if "is not adjacent to current location" in message:
+        return render("error.graph_location_unreachable", "ko")
+    if "is locked from current location" in message:
         return render("error.graph_location_unreachable", "ko")
     for prefix, key in _PLAYER_ERROR_KEYS.items():
         if message.startswith(prefix):

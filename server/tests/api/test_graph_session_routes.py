@@ -363,6 +363,26 @@ async def test_graph_intro_streams_result_before_initial_narration(tmp_path):
     assert lines[-1]["payload"]["state"]["log"] == [
         {"id": 1, "kind": "gm", "text": "문이 열리고 광장이 드러납니다."}
     ]
+    assert lines[-1]["payload"]["suggestions"] == [
+        {
+            "label": "talk",
+            "input_text": "에드릭에게 말을 겁니다",
+            "intent": "talk",
+            "action": None,
+        },
+        {
+            "label": "move",
+            "input_text": "숲길로 이동합니다",
+            "intent": "move",
+            "action": None,
+        },
+        {
+            "label": "inspect",
+            "input_text": "주변을 살핍니다",
+            "intent": "inspect",
+            "action": None,
+        },
+    ]
     assert [call["agent"] for call in app.state.llm.calls].count("graph_intro") == 0
 
 
@@ -418,6 +438,26 @@ async def test_graph_turn_stream_returns_result_then_first_visit_move_narration(
     assert events[-1]["payload"]["outcome"] == "neutral"
     assert events[-1]["payload"]["state"]["log"][-1]["kind"] == "gm"
     assert events[-1]["payload"]["state"]["place"]["id"] == "loc_02"
+
+
+@pytest.mark.asyncio
+async def test_graph_stream_returns_error_event_on_unexpected_failure():
+    from src.api.session_graph_routes import _graph_action_streaming_response
+
+    async def source():
+        yield {"type": "narration_delta", "text": "루카가 입을 엽니다."}
+        raise RuntimeError("boom")
+
+    response = _graph_action_streaming_response("game-1", source)
+    chunks = [
+        chunk.decode("utf-8") if isinstance(chunk, bytes) else chunk
+        async for chunk in response.body_iterator
+    ]
+    events = [json.loads(line) for line in "".join(chunks).splitlines()]
+
+    assert [event["type"] for event in events] == ["narration_delta", "error"]
+    assert events[-1]["status"] == 500
+    assert events[-1]["message"] == "요청이 끊겼습니다. 같은 행동을 다시 시도해 주세요."
 
 
 @pytest.mark.asyncio
@@ -614,24 +654,24 @@ async def test_graph_turn_invalid_move_error_is_player_facing(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_graph_turn_rejects_query_without_advancing_turn(tmp_path):
+async def test_graph_turn_locked_move_error_is_player_facing(tmp_path):
     app = _build_app(tmp_path)
 
     async with _client(app) as client:
         game_id = await _init_graph_session(client)
+        graph = await app.state.graph_repo.load_graph(game_id)
+        graph.edges["connects_to:loc_01:loc_02"].properties["requires_quest"] = "quest_01"
+        await app.state.graph_repo.save_graph(game_id, graph)
+
         response = await client.post(
             f"/session/{game_id}/graph/turn",
-            json={"action": {"verb": "query", "what": "status"}},
+            json={"action": {"verb": "move", "to": "loc_02"}},
         )
 
-    assert response.status_code == 200, response.text
-    body = response.json()
-    progress = await app.state.graph_repo.load_progress(game_id)
-
-    assert body["status"] == "answered"
-    assert body["outcome"] == "neutral"
-    assert body["message"]
-    assert progress.turn_count == 0
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail == "지금은 그 장소로 이동할 수 없습니다. 화면에 보이는 이동 경로를 선택해야 합니다."
+    assert "locked from current location" not in detail
 
 
 @pytest.mark.asyncio
@@ -1080,30 +1120,6 @@ async def test_graph_input_classifies_text_and_returns_confirmation(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_graph_input_classifies_query_and_returns_message(tmp_path):
-    app = _build_app(
-        tmp_path,
-        llm_payload={"actions": [{"verb": "query", "what": "exits"}]},
-    )
-
-    async with _client(app) as client:
-        game_id = await _init_graph_session(client)
-        response = await client.post(
-            f"/session/{game_id}/graph/input",
-            json={"player_input": "어디로 갈 수 있습니까?"},
-        )
-
-    assert response.status_code == 200, response.text
-    body = response.json()
-    progress = await app.state.graph_repo.load_progress(game_id)
-
-    assert body["status"] == "answered"
-    assert body["outcome"] == "neutral"
-    assert "숲길" in body["message"]
-    assert progress.turn_count == 0
-
-
-@pytest.mark.asyncio
 async def test_graph_input_refuse_returns_in_game_rejection_not_http_error(tmp_path):
     app = _build_app(
         tmp_path,
@@ -1219,13 +1235,7 @@ async def test_graph_input_returns_reflected_suggestions(tmp_path):
             "input_text": "숲길로 이동합니다",
             "intent": "move",
             "action": None,
-        },
-        {
-            "label": "보상 묻기",
-            "input_text": "에드릭에게 보상을 묻습니다",
-            "intent": None,
-            "action": None,
-        },
+        }
     ]
     assert history[0].summary == "에드릭이 숲길의 의뢰를 암시했습니다."
     assert history[0].importance == 2

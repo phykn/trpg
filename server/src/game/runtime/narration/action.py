@@ -341,7 +341,8 @@ def _narration_user_prompt(
         dispatch=dispatch,
         card_texts=card_texts,
     )
-    if payload["current_place"] is None:
+    scene_state = payload.get("scene_state")
+    if not isinstance(scene_state, dict) or scene_state.get("current_place") is None:
         return ""
     return json.dumps(payload, ensure_ascii=False)
 

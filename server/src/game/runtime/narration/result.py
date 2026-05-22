@@ -125,15 +125,34 @@ def parse_graph_narration_answer(answer: str) -> GraphNarrationResult:
 
 def _clean_narration(text: str) -> str:
     lines = [
-        _strip_trailing_ascii_quote_junk(line)
+        _normalize_ascii_direct_speech(
+            _strip_trailing_ascii_quote_junk(line)
+        )
         for line in text.splitlines()
-        if not re.fullmatch(r'(?:「\s*」|"\s*")', line.strip())
+        if line.strip() and not re.fullmatch(r'(?:「\s*」|"\s*")', line.strip())
     ]
     return "\n".join(lines).strip()
 
 
 def _strip_trailing_ascii_quote_junk(line: str) -> str:
-    return re.sub(r'(?:\\?["`])+$', "", line.rstrip())
+    return re.sub(r'(?:\\?["`]){2,}$', "", line.rstrip())
+
+
+def _normalize_ascii_direct_speech(line: str) -> str:
+    line = line.replace(r"\"", '"')
+    if '"' not in line:
+        return line.rstrip()
+    out: list[str] = []
+    in_quote = False
+    for char in line:
+        if char != '"':
+            out.append(char)
+            continue
+        out.append("」" if in_quote else "「")
+        in_quote = not in_quote
+    if in_quote:
+        out.append("」")
+    return "".join(out).rstrip()
 
 
 def _first_marker_at(text: str, markers: tuple[str, ...]) -> int:

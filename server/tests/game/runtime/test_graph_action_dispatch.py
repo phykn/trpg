@@ -1,11 +1,8 @@
-import pytest
-
 from src.game.domain.action import Action
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.game.runtime.action.dispatch import (
-    GraphActionDispatchError,
     dispatch_graph_action,
 )
 from src.game.rules import RULES
@@ -225,6 +222,20 @@ def test_quest_accept_dispatch_updates_status():
     assert result.runtime.graph.nodes["quest_rat"].properties["status"] == "active"
 
 
+def test_quest_accept_dispatch_restarts_abandoned_quest():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_rat"].properties["status"] = "abandoned"
+
+    result = dispatch_graph_action(
+        runtime,
+        Action(verb="transfer", what="quest_rat", how="accept"),
+    )
+
+    assert result.kind == "quest_accept"
+    assert result.runtime.progress.active_quest_id == "quest_rat"
+    assert result.runtime.graph.nodes["quest_rat"].properties["status"] == "active"
+
+
 def test_quest_abandon_dispatch_clears_active_quest():
     runtime = _runtime()
     runtime.graph.nodes["quest_rat"].properties["status"] = "active"
@@ -287,7 +298,7 @@ def test_decide_dispatch_completes_choice_quest_and_applies_choice_rewards():
     assert result.runtime.progress.active_quest_id is None
 
 
-def test_move_dispatch_completes_quest_and_activates_next_required_quest():
+def test_move_dispatch_completes_quest_and_unlocks_next_required_quest():
     runtime = _runtime()
     runtime.graph.nodes["chapter_01"] = GraphNode(
         id="chapter_01",
@@ -351,10 +362,10 @@ def test_move_dispatch_completes_quest_and_activates_next_required_quest():
     result = dispatch_graph_action(runtime, Action(verb="move", to="forest"))
 
     assert result.runtime.graph.nodes["quest_forest"].properties["status"] == "completed"
-    assert result.runtime.graph.nodes["quest_next"].properties["status"] == "active"
+    assert result.runtime.graph.nodes["quest_next"].properties["status"] == "pending"
     assert result.runtime.graph.nodes["chapter_01"].properties["status"] == "completed"
     assert result.runtime.graph.nodes["chapter_02"].properties["status"] == "active"
-    assert result.runtime.progress.active_quest_id == "quest_next"
+    assert result.runtime.progress.active_quest_id is None
 
 
 def test_rest_dispatch_restores_resources_and_advances_one_turn():
@@ -404,8 +415,3 @@ def test_attack_dispatch_delegates_to_graph_combat_dispatch():
     assert result.outcome == "ongoing"
     assert result.runtime.progress.graph_combat_state is not None
     assert result.runtime.progress.turn_count == 6
-
-
-def test_query_dispatch_is_rejected():
-    with pytest.raises(GraphActionDispatchError, match="read-only"):
-        dispatch_graph_action(_runtime(), Action(verb="query", what="status"))

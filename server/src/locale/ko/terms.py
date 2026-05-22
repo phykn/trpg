@@ -42,6 +42,8 @@ PART_TERMS = (
     "그만",
 )
 ACCEPT_TERMS = ("수락", "받아들")
+QUEST_ACCEPT_TERMS = (*ACCEPT_TERMS, "받")
+QUEST_CONTEXT_TERMS = ("의뢰", "일거리", "부탁", "퀘스트")
 ABANDON_TERMS = ("포기", "거절", "취소")
 ACTION_ATTACK_TERMS = ("공격", "때리", "친다", "공세")
 ACTION_PICKUP_TERMS = ("획득", "줍", "주워", "가져", "챙")

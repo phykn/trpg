@@ -61,7 +61,7 @@ def test_dev_test_luka_has_public_route_clue_for_followup_questions():
         dialogue_target=runtime.graph.nodes["companion_probe_npc"],
     )
 
-    assert payload["target_view"]["public_knowledge"] == [
+    assert payload["scene_state"]["target_view"]["public_knowledge"] == [
         {
             "id": "movement_route_public_clue",
             "title": "동선 기록의 공개 단서",

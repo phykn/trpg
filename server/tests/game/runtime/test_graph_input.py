@@ -431,9 +431,10 @@ async def test_graph_input_protected_target_attack_is_clear_rejection(tmp_path):
     assert logs[0].text == "goblin_01을 공격한다"
     narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
     payload = json.loads(narrate_call["messages"][1]["content"])
-    assert payload["current_event"]["outcome"] == "action_rejected"
-    assert payload["current_event"]["target"]["id"] == "goblin_01"
-    assert payload["target_view"]["id"] == "goblin_01"
+    assert payload["engine_event"]["outcome"] == "action_rejected"
+    assert payload["user_request"]["player_input"] == "goblin_01을 공격한다"
+    assert payload["engine_event"]["target"]["id"] == "goblin_01"
+    assert payload["scene_state"]["target_view"]["id"] == "goblin_01"
 
 
 async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
@@ -597,6 +598,31 @@ async def test_graph_input_speak_for_active_social_check_quest_creates_pending_r
     assert result.status == "roll_required"
     assert saved.pending_roll["kind"] == "speak"
     assert saved.pending_roll["stat"] == "presence"
+
+
+async def test_graph_input_visible_pending_quest_accept_requires_confirmation(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["goblin_01"].properties["name"] = "고블린"
+    graph.nodes["quest_social"] = GraphNode(
+        id="quest_social",
+        type="quest",
+        properties={
+            "title": "섬의 규칙을 듣습니다",
+            "status": "pending",
+            "giver": "goblin_01",
+        },
+    )
+    await repo.save_graph("game-1", graph)
+    llm = _FakeLLM({"actions": [{"verb": "pass"}]})
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "고블린의 의뢰를 받는다")
+    saved = await repo.load_progress("game-1")
+
+    assert result.status == "confirmation_required"
+    assert saved.pending_confirmation["kind"] == "quest_accept"
+    assert saved.pending_confirmation["payload"]["action"]["what"] == "quest_social"
+    assert [call["agent"] for call in llm.calls] == []
 
 
 async def test_graph_input_generic_approach_does_not_complete_social_check_quest(
@@ -1179,24 +1205,6 @@ async def test_graph_input_rejects_low_affinity_trade_with_public_repair_path(
     assert "carries:goblin_01:potion" in graph.edges
 
 
-async def test_graph_input_query_answers_public_state_without_roll_or_narration(
-    tmp_path,
-):
-    repo = await _repo(tmp_path)
-    llm = _FakeLLM({"actions": [{"verb": "query", "what": "exits"}]})
-
-    result = await run_graph_input_turn(llm, repo, "game-1", "출구가 어디인지 알려줘")
-    progress = await repo.load_progress("game-1")
-    logs = await repo.load_log_entries("game-1")
-
-    assert result.status == "answered"
-    assert "광장" in result.message
-    assert progress.turn_count == 0
-    assert progress.pending_roll is None
-    assert [entry.kind for entry in logs] == ["player"]
-    assert [call["agent"] for call in llm.calls] == ["classify"]
-
-
 async def test_graph_input_uncertain_inspection_preserves_reason_and_original_input(
     tmp_path,
 ):
@@ -1304,9 +1312,9 @@ async def test_graph_input_targetless_speak_defaults_to_nearby_living_npc(tmp_pa
     user_prompt = json.loads(narrate_call["messages"][1]["content"])
 
     assert progress.active_subject_id == "goblin_01"
-    assert user_prompt["target_view"]["id"] == "goblin_01"
-    assert user_prompt["target_view"]["name"] == "goblin_01"
-    assert user_prompt["current_event"]["kind"] == "dialogue"
+    assert user_prompt["scene_state"]["target_view"]["id"] == "goblin_01"
+    assert user_prompt["scene_state"]["target_view"]["name"] == "goblin_01"
+    assert user_prompt["engine_event"]["kind"] == "dialogue"
     assert "NPC가 직접 반응" in narrate_call["messages"][0]["content"]
 
 
@@ -1333,8 +1341,8 @@ async def test_graph_input_targetless_repeated_speak_prefers_active_subject(tmp_
     user_prompt = json.loads(narrate_call["messages"][1]["content"])
 
     assert saved.active_subject_id == "merchant_01"
-    assert user_prompt["target_view"]["id"] == "merchant_01"
-    assert user_prompt["current_event"]["target"]["id"] == "merchant_01"
+    assert user_prompt["scene_state"]["target_view"]["id"] == "merchant_01"
+    assert user_prompt["engine_event"]["target"]["id"] == "merchant_01"
 
 
 async def test_graph_input_narration_payload_includes_recent_narration(tmp_path):
@@ -1355,11 +1363,11 @@ async def test_graph_input_narration_payload_includes_recent_narration(tmp_path)
     encoded = json.dumps(payload, ensure_ascii=False)
 
     assert "recent_log" not in payload
-    assert payload["recent_narration"] == [
-        {"text": "경비병이 북문을 지킵니다.", "outcome": None}
+    assert payload["reference_context"]["recent_narration"] == [
+        {"text": "경비병이 북문을 지킵니다."}
     ]
     assert "경비병이 북문을 지킵니다." in encoded
-    assert "recent_dialogue" in payload
+    assert "recent_dialogue" not in payload["reference_context"]
 
 
 async def test_graph_input_speak_times_out_slow_narration_and_uses_fallback(

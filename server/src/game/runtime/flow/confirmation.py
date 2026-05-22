@@ -16,7 +16,6 @@ from src.wire.graph.to_front import graph_to_front_state
 from ..load import load_runtime_state
 from ..request_result import (
     GraphActionRequestResult,
-    answered_result,
     cancelled_result,
     confirmation_required_result,
     executed_result,
@@ -75,16 +74,6 @@ async def run_graph_action_request(
         engine_diag("action:roll_required", action=action.verb)
         return await start_graph_roll(
             repo, game_id, action, scenario_repo=scenario_repo
-        )
-
-    if action.verb == "query":
-        from ..action.query import answer_graph_query
-
-        engine_diag("action:done", status="answered", action=action.verb)
-        return answered_result(
-            runtime,
-            graph_to_front_state(runtime),
-            answer_graph_query(runtime, action),
         )
 
     pending = build_graph_action_confirmation(runtime, action)
@@ -154,19 +143,6 @@ async def run_graph_action_request_stream(
             scenario_repo=scenario_repo,
         ):
             yield event
-        return
-
-    if action.verb == "query":
-        from ..action.query import answer_graph_query
-
-        engine_diag("action:done", status="answered", action=action.verb)
-        result = answered_result(
-            runtime,
-            graph_to_front_state(runtime),
-            answer_graph_query(runtime, action),
-        )
-        yield {"type": "result", "result": result}
-        yield {"type": "final", "result": result}
         return
 
     pending = build_graph_action_confirmation(runtime, action)
@@ -496,7 +472,7 @@ def should_start_graph_roll(
 
 
 def _roll_forbidden(runtime: GameRuntimeState, action: Action) -> bool:
-    if action.verb in {"query", "attack", "rest", "pass"}:
+    if action.verb in {"attack", "rest", "pass"}:
         return True
     if action.verb != "transfer":
         return False
@@ -611,12 +587,20 @@ def _match_tokens(text: str) -> list[str]:
     return [
         token
         for token in text.replace(",", " ").replace(".", " ").split()
-        if len(token) >= 2 and not token.endswith(("에게", "께"))
+        if len(token) >= 2 and not token.endswith((_ko_to_person(), _ko_honorific_to_person()))
     ]
 
 
 def _normalize_match_text(text: str) -> str:
     return "".join(ch for ch in text.lower() if ch.isalnum())
+
+
+def _ko_to_person() -> str:
+    return chr(0xC5D0) + chr(0xAC8C)
+
+
+def _ko_honorific_to_person() -> str:
+    return chr(0xAED8)
 
 
 def _roll_allowed_from_check_hint(runtime: GameRuntimeState, action: Action) -> bool:

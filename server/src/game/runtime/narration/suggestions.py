@@ -6,6 +6,7 @@ from src.game.domain.content import node_label
 from src.game.domain.graph.character import is_visible_character
 from src.game.domain.graph.query import (
     characters_at,
+    connection_is_unlocked,
     edges_from,
     inventory_of,
     items_at,
@@ -21,6 +22,20 @@ class GraphSuggestion(BaseModel):
     input_text: str
     intent: str | None = None
     action: dict[str, Any] | None = None
+
+
+def build_intro_suggestions(runtime: GameRuntimeState) -> list[GraphSuggestion]:
+    suggestions: list[GraphSuggestion] = []
+    suggestions.extend(_intro_talk_suggestions(runtime, limit=1))
+    suggestions.extend(_intro_move_suggestions(runtime, limit=1))
+    suggestions.append(
+        GraphSuggestion(
+            label="inspect",
+            input_text=f"{_ko_surroundings()}{_ko_object()} {_ko_inspect()}",
+            intent="inspect",
+        )
+    )
+    return suggestions[:3]
 
 
 def filter_grounded_suggestions(
@@ -114,10 +129,68 @@ def _visible_exit_refs(runtime: GameRuntimeState) -> set[str]:
         return set()
     refs: set[str] = set()
     for edge in edges_from(runtime.graph_index, place_id, "connects_to"):
+        if not connection_is_unlocked(runtime.graph_index, edge):
+            continue
         node = runtime.graph.nodes.get(edge.to_node_id)
         if node is not None and node.type == "location":
             refs.update(_node_refs(runtime, node.id))
     return refs
+
+
+def _intro_talk_suggestions(
+    runtime: GameRuntimeState,
+    *,
+    limit: int,
+) -> list[GraphSuggestion]:
+    place_id = location_of(runtime.graph_index, runtime.progress.player_id)
+    if place_id is None:
+        return []
+    out: list[GraphSuggestion] = []
+    for character_id in characters_at(runtime.graph_index, place_id):
+        if character_id == runtime.progress.player_id:
+            continue
+        node = runtime.graph.nodes.get(character_id)
+        if node is None or node.type != "character" or not is_visible_character(node):
+            continue
+        name = node_label(runtime.content, node)
+        out.append(
+            GraphSuggestion(
+                label="talk",
+                input_text=f"{name}{_ko_to_person()} {_ko_start_talk()}",
+                intent="talk",
+            )
+        )
+        if len(out) == limit:
+            break
+    return out
+
+
+def _intro_move_suggestions(
+    runtime: GameRuntimeState,
+    *,
+    limit: int,
+) -> list[GraphSuggestion]:
+    place_id = location_of(runtime.graph_index, runtime.progress.player_id)
+    if place_id is None:
+        return []
+    out: list[GraphSuggestion] = []
+    for edge in edges_from(runtime.graph_index, place_id, "connects_to"):
+        if not connection_is_unlocked(runtime.graph_index, edge):
+            continue
+        node = runtime.graph.nodes.get(edge.to_node_id)
+        if node is None or node.type != "location":
+            continue
+        name = node_label(runtime.content, node)
+        out.append(
+            GraphSuggestion(
+                label="move",
+                input_text=f"{name}{_ko_direction_particle(name)} {_ko_move()}",
+                intent="move",
+            )
+        )
+        if len(out) == limit:
+            break
+    return out
 
 
 def _visible_character_refs(runtime: GameRuntimeState) -> set[str]:
@@ -240,9 +313,47 @@ def _ko_abandon() -> str:
     return chr(0xD3EC) + chr(0xAE30)
 
 
+def _ko_object() -> str:
+    return chr(0xC744)
+
+
+def _ko_to_person() -> str:
+    return chr(0xC5D0) + chr(0xAC8C)
+
+
+def _ko_start_talk() -> str:
+    return _codepoint_text(0xB9D0, 0xC744, 0x20, 0xAC81, 0xB2C8, 0xB2E4)
+
+
+def _ko_inspect() -> str:
+    return _codepoint_text(0xC0B4, 0xD54D, 0xB2C8, 0xB2E4)
+
+
+def _ko_move() -> str:
+    return _codepoint_text(0xC774, 0xB3D9, 0xD569, 0xB2C8, 0xB2E4)
+
+
 def _ko_surroundings() -> str:
     return chr(0xC8FC) + chr(0xBCC0)
 
 
 def _ko_possessive() -> str:
     return chr(0xC758)
+
+
+def _ko_direction_particle(text: str) -> str:
+    if not text:
+        return _ko_direction_with_final()
+    code = ord(text[-1])
+    if not (0xAC00 <= code <= 0xD7A3):
+        return _ko_direction_with_final()
+    final = (code - 0xAC00) % 28
+    return _ko_direction_without_final() if final == 0 or final == 8 else _ko_direction_with_final()
+
+
+def _ko_direction_without_final() -> str:
+    return chr(0xB85C)
+
+
+def _ko_direction_with_final() -> str:
+    return chr(0xC73C) + chr(0xB85C)
