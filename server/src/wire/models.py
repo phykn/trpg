@@ -25,6 +25,7 @@ __all__ = [
     "GraphPlacePayload",
     "GraphPlaceTargetPayload",
     "GraphResourcePayload",
+    "QuestChoicePayload",
     "QuestPayload",
     "QuestRewards",
 ]
@@ -48,6 +49,11 @@ class QuestRewards(_CamelModel):
     exp: int
 
 
+class QuestChoicePayload(_CamelModel):
+    id: str
+    label: str
+
+
 class QuestPayload(_CamelModel):
     id: str
     title: str
@@ -59,6 +65,7 @@ class QuestPayload(_CamelModel):
     rewards: QuestRewards
     status: Literal["pending", "active", "completed", "failed"]
     actions: list[Literal["accept", "abandon"]]
+    choices: list[QuestChoicePayload] = Field(default_factory=list)
 
 
 class ChapterPayload(_CamelModel):
@@ -161,12 +168,10 @@ class GraphCombatSupportPayload(_CamelModel):
     id: str
     kind: Literal["skill"]
     name: str
-    tactic: Literal[
-        "precise",
+    action: Literal[
+        "attack",
         "defend",
-        "guarded",
-        "reckless",
-        "create_distance",
+        "flee",
         "talk",
     ]
     mp_cost: int

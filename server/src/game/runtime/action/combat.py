@@ -191,26 +191,22 @@ def _combat_action_from_action(
     in_combat: bool,
 ) -> GraphCombatAction:
     if action.verb == "attack":
-        tactic = _attack_tactic(action.how)
+        combat_action = _attack_action(action.how)
         support_id = _single(action.with_)
         if support_id is None and action.how == "auto":
-            support_id = _auto_skill_support_id(graph, player_id, tactic)
+            support_id = _auto_skill_support_id(graph, player_id, combat_action)
         support_kind = _support_kind(graph, support_id)
         return GraphCombatAction(
-            kind=tactic,
+            kind=combat_action,
             target=_single(action.what),
             support_id=support_id if support_kind else None,
             support_kind=support_kind,
         )
-    if (
-        in_combat
-        and action.verb == "move"
-        and action.how in ("hasty", "create_distance")
-    ):
+    if in_combat and action.verb == "move" and action.how in ("hasty", "flee"):
         support_id = _single(action.with_)
         support_kind = _support_kind(graph, support_id)
         return GraphCombatAction(
-            kind="create_distance",
+            kind="flee",
             support_id=support_id if support_kind else None,
             support_kind=support_kind,
         )
@@ -227,7 +223,7 @@ def _combat_action_from_action(
         support_id = _single(action.with_)
         support_kind = _support_kind(graph, support_id)
         return GraphCombatAction(
-            kind="defend" if action.how == "defend" else "guarded",
+            kind="defend",
             support_id=support_id if support_kind else None,
             support_kind=support_kind,
         )
@@ -265,12 +261,8 @@ def _auto_skill_support_id(
     return None
 
 
-def _attack_tactic(how: str | None) -> str:
-    if how == "reckless":
-        return "reckless"
-    if how == "guarded":
-        return "guarded"
-    return "precise"
+def _attack_action(how: str | None) -> str:
+    return "attack"
 
 
 def _supports_action(supported_action: str | None, action_kind: str) -> bool:

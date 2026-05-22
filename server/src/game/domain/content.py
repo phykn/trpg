@@ -30,6 +30,7 @@ _NODE_COLLECTIONS = {
 class RuntimeContent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    world_guidance: str = ""
     races: SeedRecords = Field(default_factory=dict)
     locations: SeedRecords = Field(default_factory=dict)
     items: SeedRecords = Field(default_factory=dict)
@@ -49,6 +50,7 @@ class RuntimeContent(BaseModel):
 
 def runtime_content_from_records(
     *,
+    world_guidance: str = "",
     races: SeedRecords,
     locations: SeedRecords,
     items: SeedRecords,
@@ -66,6 +68,7 @@ def runtime_content_from_records(
     mbti: SeedRecords | None = None,
 ) -> RuntimeContent:
     return RuntimeContent(
+        world_guidance=world_guidance,
         races=races,
         locations=locations,
         items=items,
@@ -86,6 +89,7 @@ def runtime_content_from_records(
 
 def merge_content(base: RuntimeContent, overlay: RuntimeContent) -> RuntimeContent:
     return RuntimeContent(
+        world_guidance=overlay.world_guidance or base.world_guidance,
         races={**base.races, **overlay.races},
         locations={**base.locations, **overlay.locations},
         items={**base.items, **overlay.items},

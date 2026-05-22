@@ -28,9 +28,9 @@ async def classify(
 ) -> ActionOutput:
     grounding_view = classify_context_to_grounding_view(input_.context)
     in_combat = input_.context.get("mode") == "combat"
-    guarded = classify_guard(input_.player_input, locale=locale)
-    if guarded is not None:
-        return guarded
+    guard_output = classify_guard(input_.player_input, locale=locale)
+    if guard_output is not None:
+        return guard_output
     action_shortcut = classify_action_shortcut(
         input_.player_input,
         grounding_view,

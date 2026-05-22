@@ -121,6 +121,7 @@ export type QuestNode = BaseNode & {
   goals: string[];
   summary: string;
   actions: ('accept' | 'abandon')[];
+  choices: { id: string; label: string }[];
 };
 
 export type StoryGraphNode =

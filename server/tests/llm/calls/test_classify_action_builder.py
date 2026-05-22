@@ -73,6 +73,32 @@ def test_build_action_output_converts_move_intent_to_move_action():
     assert output.actions[0].to == "north_gate"
 
 
+def test_build_action_output_converts_decide_intent_to_decide_action():
+    output = build_action_output(
+        {
+            "intents": [
+                {
+                    "intent": "decide",
+                    "quest_id": "quest_01",
+                    "choice_id": "record",
+                    "target": "guard_01",
+                }
+            ]
+        },
+        _surroundings(),
+    )
+
+    assert output.actions is not None
+    assert output.actions[0].model_dump(
+        mode="json", by_alias=True, exclude_none=True
+    ) == {
+        "verb": "decide",
+        "what": "quest_01",
+        "to": "guard_01",
+        "how": "record",
+    }
+
+
 def test_build_action_output_converts_non_combat_skill_use_intent():
     output = build_action_output(
         {
@@ -189,14 +215,13 @@ def test_validate_action_output_json_accepts_intent_json():
     assert out.actions[0].with_ == "slash_01"
 
 
-def test_build_action_output_keeps_combat_tactic_separate_from_intent():
+def test_build_action_output_ignores_legacy_combat_tactic():
     output = build_action_output(
         {
             "intents": [
                 {
                     "intent": "attack",
                     "target": "goblin_01",
-                    "tactic": "reckless",
                 }
             ]
         },
@@ -205,7 +230,7 @@ def test_build_action_output_keeps_combat_tactic_separate_from_intent():
 
     assert output.actions is not None
     assert output.actions[0].verb == "attack"
-    assert output.actions[0].how == "reckless"
+    assert output.actions[0].how is None
 
 
 def test_build_action_output_supports_existing_intent_catalog():
@@ -305,8 +330,8 @@ def test_build_action_output_supports_existing_intent_catalog():
             },
         ),
         (
-            {"intent": "create_distance"},
-            {"verb": "move", "how": "create_distance"},
+            {"intent": "flee"},
+            {"verb": "move", "how": "flee"},
             {"in_combat": True},
         ),
         ({"intent": "rest"}, {"verb": "rest"}),

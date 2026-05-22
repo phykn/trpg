@@ -257,12 +257,12 @@ def _combat_exchange_result(dispatch: GraphActionDispatchResult) -> str:
 
 def _combat_failure_fallback_key(dispatch: GraphActionDispatchResult) -> str:
     action = _latest_combat_action(dispatch)
-    if action == "create_distance":
-        return "runtime.narration.combat_failure.create_distance"
+    if action == "flee":
+        return "runtime.narration.combat_failure.flee"
     if action == "talk":
         return "runtime.narration.combat_failure.talk"
-    if action in {"guarded", "defend"}:
-        return "runtime.narration.combat_failure.guarded"
+    if action == "defend":
+        return "runtime.narration.combat_failure.defend"
     return "runtime.narration.combat_failure.attack"
 
 
@@ -272,14 +272,7 @@ def _latest_combat_action(dispatch: GraphActionDispatchResult) -> str | None:
         return state.last_action
     for event in reversed(dispatch.combat_trace):
         kind = event.kind
-        for action in (
-            "create_distance",
-            "reckless",
-            "guarded",
-            "precise",
-            "talk",
-            "defend",
-        ):
+        for action in ("attack", "flee", "talk", "defend"):
             if action in kind:
                 return action
     return None

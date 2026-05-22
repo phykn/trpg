@@ -42,12 +42,12 @@ _RECOMMENDED_FIELDS = {
     "item": ("traits",),
     "character": ("mbti", "traits"),
 }
-_SUPPORT_ACTIONS = {"precise", "reckless", "defend", "guarded", "create_distance", "talk"}
+_SUPPORT_ACTIONS = {"attack", "defend", "flee", "talk"}
 _EFFECT_TEMPLATES = {
+    "heal",
+    "mp_restore",
     "dc_down",
-    "extra_heart_damage",
-    "prevent_heart_loss",
-    "escape_boost",
+    "dc_up",
 }
 
 
@@ -145,6 +145,12 @@ def seed_violations(
             if target not in locations:
                 out.append(
                     f"location {location_id} connection target={target!r} not found"
+                )
+            required_quest_id = connection.get("requires_quest")
+            if required_quest_id is not None and required_quest_id not in quests:
+                out.append(
+                    f"location {location_id} connection requires_quest="
+                    f"{required_quest_id!r} not found"
                 )
 
     for item_id, item in items.items():
@@ -248,6 +254,16 @@ def seed_violations(
         for item_id in _str_list(_mapping(quest.get("rewards")).get("items")):
             if item_id not in items:
                 out.append(f"quest {quest_id} reward item={item_id!r} not found")
+        for choice_id, choice in _mapping(quest.get("choices")).items():
+            if not isinstance(choice, dict):
+                out.append(f"quest {quest_id} choice={choice_id!r} must be an object")
+                continue
+            for item_id in _str_list(_mapping(choice.get("rewards")).get("items")):
+                if item_id not in items:
+                    out.append(
+                        f"quest {quest_id} choice={choice_id!r} reward "
+                        f"item={item_id!r} not found"
+                    )
         for prereq_id in _str_list(quest.get("prerequisites")):
             if prereq_id not in quests:
                 out.append(f"quest {quest_id} prerequisite={prereq_id!r} not found")

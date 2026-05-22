@@ -221,6 +221,7 @@ function buildStoryGraph(
         goals: quest.goals,
         summary: quest.summary,
         actions: quest.actions,
+        choices: quest.choices ?? [],
       })),
     ],
     edges: [

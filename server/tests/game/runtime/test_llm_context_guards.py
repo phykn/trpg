@@ -13,9 +13,9 @@ from src.llm.context.classify_view import build_classify_context_view
 FORBIDDEN_CONTEXT_TOKENS = [
     "recent_log",
     "combat_started",
-    "player_precise_success",
-    "player_guarded_success",
-    "player_create_distance_success",
+    "player_attack_success",
+    "player_defend_success",
+    "player_flee_success",
     "enemy_pressed",
     "enemy_defeated",
     "forced_end",
@@ -125,7 +125,7 @@ def _runtime(
                     participant_ids=["player_01", "npc_0"],
                     sides={"player_01": "player", "npc_0": "enemy"},
                     round=2,
-                    last_action="precise",
+                    last_action="attack",
                     trace=[
                         GraphCombatTraceEvent(
                             kind="combat_started",
@@ -134,7 +134,7 @@ def _runtime(
                             state="healthy",
                         ),
                         GraphCombatTraceEvent(
-                            kind="player_precise_success",
+                            kind="player_attack_success",
                             actor_id="player_01",
                             target="npc_0",
                             state="hurt",

@@ -12,13 +12,13 @@ export function buildCombatActions(combat: CombatBadge): PanelAction[] {
   const target = activeTarget(combat);
   if (!target) return [];
 
-  const precise = supportAction(combat, 'precise', target)
-    ?? plainPrecise(target);
-  const guarded = supportAction(combat, 'defend', target)
-    ?? plainGuarded();
+  const attack = supportAction(combat, 'attack', target)
+    ?? plainAttack(target);
+  const defend = supportAction(combat, 'defend', target)
+    ?? plainDefend();
   const situation = situationAction(combat, target);
 
-  return [precise, guarded, situation].slice(0, 3);
+  return [attack, defend, situation].slice(0, 3);
 }
 
 function activeTarget(combat: CombatBadge): Target | null {
@@ -31,33 +31,30 @@ function activeTarget(combat: CombatBadge): Target | null {
 function situationAction(combat: CombatBadge, target: Target): PanelAction {
   if (combat.escapeReady) return plainCreateDistance(ko.combat.escape, compose.escape());
 
-  const escapeSupport = supportAction(combat, 'create_distance', target);
+  const escapeSupport = supportAction(combat, 'flee', target);
   if (escapeSupport) return escapeSupport;
 
   if (combat.enemyPressure > 0 || combat.enemyHearts.current <= 1) {
     return plainTalk(target);
   }
 
-  const recklessSupport = supportAction(combat, 'reckless', target);
-  if (recklessSupport) return recklessSupport;
-
-  return plainCreateDistance(ko.combat.createDistance, compose.createDistance());
+  return plainCreateDistance(ko.combat.flee, compose.flee());
 }
 
 function supportAction(
   combat: CombatBadge,
-  tactic: CombatSupport['tactic'],
+  action: CombatSupport['action'],
   target: Target,
 ): PanelAction | null {
   const support = combat.availableSupports.find(
-    (candidate) => candidate.usable && candidate.tactic === tactic,
+    (candidate) => candidate.usable && candidate.action === action,
   );
   if (!support) return null;
   return {
     kind: 'combat_command',
     label: support.name,
     combatCommand: {
-      ...commandForTactic(tactic, target),
+      ...commandForAction(action, target),
       support_id: support.id,
       support_kind: 'skill',
     },
@@ -65,33 +62,31 @@ function supportAction(
   };
 }
 
-function commandForTactic(
-  tactic: CombatSupport['tactic'],
+function commandForAction(
+  action: CombatSupport['action'],
   target: Target,
 ): Extract<PanelAction, { kind: 'combat_command' }>['combatCommand'] {
-  if (tactic === 'precise') return { command: 'precise', target: target.id };
-  if (tactic === 'reckless') return { command: 'reckless', target: target.id };
-  if (tactic === 'talk') return { command: 'talk', target: target.id };
-  if (tactic === 'defend') return { command: 'defend' };
-  if (tactic === 'guarded') return { command: 'guarded' };
-  return { command: 'create_distance' };
+  if (action === 'attack') return { command: 'attack', target: target.id };
+  if (action === 'talk') return { command: 'talk', target: target.id };
+  if (action === 'defend') return { command: 'defend' };
+  return { command: 'flee' };
 }
 
-function plainPrecise(target: Target): PanelAction {
+function plainAttack(target: Target): PanelAction {
   return {
     kind: 'combat_command',
-    label: ko.combat.precise,
-    combatCommand: { command: 'precise', target: target.id },
-    textFallback: compose.preciseAttack(target.name),
+    label: ko.combat.attack,
+    combatCommand: { command: 'attack', target: target.id },
+    textFallback: compose.attack(target.name),
   };
 }
 
-function plainGuarded(): PanelAction {
+function plainDefend(): PanelAction {
   return {
     kind: 'combat_command',
-    label: ko.combat.guarded,
+    label: ko.combat.defend,
     combatCommand: { command: 'defend' },
-    textFallback: compose.guarded(),
+    textFallback: compose.defend(),
   };
 }
 
@@ -99,7 +94,7 @@ function plainCreateDistance(label: string, textFallback: string): PanelAction {
   return {
     kind: 'combat_command',
     label,
-    combatCommand: { command: 'create_distance' },
+    combatCommand: { command: 'flee' },
     textFallback,
   };
 }

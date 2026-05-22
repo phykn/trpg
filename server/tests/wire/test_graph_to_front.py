@@ -488,6 +488,60 @@ def test_graph_front_state_builds_visible_quest_offer():
     assert offer.rewards.exp == 10
     assert offer.status == "pending"
     assert offer.actions == ["accept"]
+    assert offer.choices == []
+
+
+def test_graph_front_state_exposes_active_quest_choices():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"].properties["status"] = "active"
+    runtime.graph.nodes["quest_01"].properties["triggers_met"] = [True]
+    runtime.graph.nodes["quest_01"].properties["choices"] = {
+        "public_record": {"label": "기록으로 남깁니다"},
+        "quiet_release": {"label": "조용히 돌려보냅니다"},
+    }
+    runtime = runtime.model_copy(
+        update={
+            "progress": runtime.progress.model_copy(
+                update={"active_quest_id": "quest_01"}
+            )
+        }
+    )
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.quest is not None
+    assert payload.quest.actions == ["abandon"]
+    assert [choice.model_dump() for choice in payload.quest.choices] == [
+        {"id": "public_record", "label": "기록으로 남깁니다"},
+        {"id": "quiet_release", "label": "조용히 돌려보냅니다"},
+    ]
+
+
+def test_graph_front_state_hides_choice_buttons_until_goals_are_met():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"].properties.update(
+        {
+            "status": "active",
+            "choices": {"public_record": {"label": "기록으로 남깁니다"}},
+        }
+    )
+    runtime = runtime.model_copy(
+        update={
+            "progress": runtime.progress.model_copy(
+                update={"active_quest_id": "quest_01"}
+            )
+        }
+    )
+
+    payload = graph_to_front_state(runtime)
+    assert payload.quest is not None
+    assert payload.quest.choices == []
+
+    runtime.graph.nodes["quest_01"].properties["triggers_met"] = [True]
+
+    payload = graph_to_front_state(runtime)
+    assert payload.quest is not None
+    assert [choice.id for choice in payload.quest.choices] == ["public_record"]
 
 
 def test_graph_front_state_prefers_progress_active_quest():
@@ -761,7 +815,7 @@ def test_graph_front_state_exposes_usable_combat_skill_supports():
     runtime.graph.nodes["basic_strike"].properties.update(
         {
             "name": "그림자 찌르기",
-            "action": "precise",
+            "action": "attack",
             "mp_cost": 2,
         }
     )
@@ -773,7 +827,7 @@ def test_graph_front_state_exposes_usable_combat_skill_supports():
             "id": "basic_strike",
             "kind": "skill",
             "name": "그림자 찌르기",
-            "tactic": "precise",
+            "action": "attack",
             "mpCost": 2,
             "usable": True,
         }
@@ -785,7 +839,7 @@ def test_graph_front_state_omits_unusable_combat_skill_supports():
     runtime.graph.nodes["basic_strike"].properties.update(
         {
             "name": "그림자 찌르기",
-            "action": "precise",
+            "action": "attack",
             "mp_cost": 3,
         }
     )

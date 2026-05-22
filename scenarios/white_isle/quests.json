@@ -1,141 +1,15 @@
 {
-  "face_miel_tears": {
-    "id": "face_miel_tears",
-    "title": "웃지 않는 무대",
-    "description": "빈 객석의 극장에서 미엘이 사람들을 웃기는 대신 자신의 슬픔을 말합니다.",
-    "giver": "miel",
+  "q_fog_depart": {
+    "id": "q_fog_depart",
+    "title": "첫 출항",
+    "description": "엘리와 함께 붉은섬행 배에 오릅니다.",
+    "giver": "npc_olden",
     "triggers": [
       {
-        "id": "enter_theater",
-        "type": "location_enter",
-        "target": "hollow_theater",
-        "name": "빈 객석의 극장으로 향합니다"
-      }
-    ],
-    "fail_triggers": [],
-    "prerequisites": [
-      "hear_the_island_rule"
-    ],
-    "status": "locked",
-    "required": true,
-    "rewards": {
-      "gold": 0,
-      "exp": 0,
-      "items": []
-    }
-  },
-  "face_ort_names": {
-    "id": "face_ort_names",
-    "title": "죄목 뒤의 이름",
-    "description": "칭호의 묘지에서 오르트가 죄목 뒤에 있던 사람들의 이름을 새기기 시작합니다.",
-    "giver": "ort",
-    "triggers": [
-      {
-        "id": "enter_graveyard",
-        "type": "location_enter",
-        "target": "title_graveyard",
-        "name": "칭호의 묘지로 향합니다"
-      }
-    ],
-    "fail_triggers": [],
-    "prerequisites": [
-      "face_roan_order",
-      "face_var_price"
-    ],
-    "status": "locked",
-    "required": true,
-    "rewards": {
-      "gold": 0,
-      "exp": 0,
-      "items": []
-    }
-  },
-  "face_roan_order": {
-    "id": "face_roan_order",
-    "title": "늦은 퇴각 명령",
-    "description": "녹슨 검의 공터에서 기사 로안의 너무 늦은 퇴각 명령과 남겨진 이름들을 마주합니다.",
-    "giver": "roan",
-    "triggers": [
-      {
-        "id": "enter_sword_clearing",
-        "type": "location_enter",
-        "target": "sword_clearing",
-        "name": "녹슨 검의 공터로 향합니다"
-      }
-    ],
-    "fail_triggers": [],
-    "prerequisites": [
-      "hear_the_island_rule"
-    ],
-    "status": "locked",
-    "required": true,
-    "rewards": {
-      "gold": 0,
-      "exp": 0,
-      "items": []
-    }
-  },
-  "face_var_price": {
-    "id": "face_var_price",
-    "title": "값 없는 빵",
-    "description": "흰 모래 시장터에서 바르가 모든 것에 값을 붙이지 않아도 된다는 사실을 인정합니다.",
-    "giver": "var",
-    "triggers": [
-      {
-        "id": "enter_market",
-        "type": "location_enter",
-        "target": "white_market",
-        "name": "흰 모래 시장터로 향합니다"
-      }
-    ],
-    "fail_triggers": [],
-    "prerequisites": [
-      "face_miel_tears"
-    ],
-    "status": "locked",
-    "required": true,
-    "rewards": {
-      "gold": 0,
-      "exp": 0,
-      "items": []
-    }
-  },
-  "hear_the_island_rule": {
-    "id": "hear_the_island_rule",
-    "title": "섬의 규칙을 듣습니다",
-    "description": "흰 머리 여인에게 흰섬은 두 번째 이름을 주지 않고, 붙잡고 있는 이름을 스스로 마주하게 하는 곳이라는 말을 듣습니다.",
-    "giver": "nameless_woman",
-    "triggers": [
-      {
-        "id": "ask_woman",
+        "id": "tr_fog_depart",
         "type": "social_check",
-        "target": "nameless_woman",
-        "name": "흰 머리 여인에게 섬의 규칙을 묻습니다"
-      }
-    ],
-    "fail_triggers": [],
-    "prerequisites": [
-      "leave_the_pier"
-    ],
-    "status": "locked",
-    "required": true,
-    "rewards": {
-      "gold": 0,
-      "exp": 0,
-      "items": []
-    }
-  },
-  "leave_the_pier": {
-    "id": "leave_the_pier",
-    "title": "돌아갈 배는 없습니다",
-    "description": "선장이 말한 돌아갈 배의 조건을 뒤로하고, 안개 숲으로 들어갑니다.",
-    "giver": "boat_captain",
-    "triggers": [
-      {
-        "id": "enter_forest",
-        "type": "location_enter",
-        "target": "fog_forest",
-        "name": "안개 숲으로 들어갑니다"
+        "target": "npc_eli",
+        "name": "첫 출항"
       }
     ],
     "fail_triggers": [],
@@ -148,22 +22,22 @@
       "items": []
     }
   },
-  "light_the_lighthouse": {
-    "id": "light_the_lighthouse",
-    "title": "끝나지 않았다는 불",
-    "description": "흰 등대에 도착해 끝났다고 믿는 마음을 내려놓고 등불을 켭니다.",
-    "giver": "selin",
+  "q_red_refund": {
+    "id": "q_red_refund",
+    "title": "분노 환불 사건",
+    "description": "루카와 노아의 대리분노 환불 요구를 어떻게 남길지 정합니다.",
+    "giver": "npc_luka",
     "triggers": [
       {
-        "id": "enter_lighthouse",
-        "type": "location_enter",
-        "target": "white_lighthouse",
-        "name": "흰 등대에 도착합니다"
+        "id": "tr_red_judge",
+        "type": "social_check",
+        "target": "npc_noah",
+        "name": "분노 환불 사건"
       }
     ],
     "fail_triggers": [],
     "prerequisites": [
-      "face_ort_names"
+      "q_fog_depart"
     ],
     "status": "locked",
     "required": true,
@@ -171,30 +45,320 @@
       "gold": 0,
       "exp": 0,
       "items": []
+    },
+    "choices": {
+      "record": {
+        "label": "책임을 기록으로 남깁니다",
+        "rewards": {
+          "gold": 0,
+          "exp": 0,
+          "items": [
+            "itm_red_receipt"
+          ]
+        }
+      },
+      "release": {
+        "label": "분노를 흘려보냅니다",
+        "rewards": {
+          "gold": 0,
+          "exp": 0,
+          "items": []
+        }
+      }
     }
   },
-  "refuse_the_reclaimer": {
-    "id": "refuse_the_reclaimer",
-    "title": "회수대 거부",
-    "description": "왕국 법관의 회수 명령 앞에서 물러서지 않고, 칭호가 사람을 끝낼 수 없다는 사실을 말로 증명합니다.",
-    "giver": "yuna",
+  "q_blue_room": {
+    "id": "q_blue_room",
+    "title": "빈방 사건",
+    "description": "레아의 빈방을 계속 닫아 둘지, 산 사람의 자리로 다시 열지 정합니다.",
+    "giver": "npc_lea",
     "triggers": [
       {
-        "id": "refute_captain",
+        "id": "tr_blue_judge",
         "type": "social_check",
-        "target": "reclaimer_captain",
-        "name": "회수대의 명령에 맞섭니다"
+        "target": "npc_lea",
+        "name": "빈방 사건"
       }
     ],
     "fail_triggers": [],
     "prerequisites": [
-      "light_the_lighthouse"
+      "q_red_refund"
     ],
     "status": "locked",
     "required": true,
     "rewards": {
       "gold": 0,
-      "exp": 120,
+      "exp": 0,
+      "items": []
+    },
+    "choices": {
+      "preserve": {
+        "label": "빈방을 보존합니다",
+        "rewards": {
+          "gold": 0,
+          "exp": 0,
+          "items": [
+            "itm_blue_key"
+          ]
+        }
+      },
+      "open": {
+        "label": "방을 다시 엽니다",
+        "rewards": {
+          "gold": 0,
+          "exp": 0,
+          "items": []
+        }
+      }
+    }
+  },
+  "q_gold_stars": {
+    "id": "q_gold_stars",
+    "title": "별점 복구 사건",
+    "description": "이삭의 별점을 회복할지, 점수표의 압력에서 벗어나게 할지 정합니다.",
+    "giver": "npc_isaac",
+    "triggers": [
+      {
+        "id": "tr_gold_judge",
+        "type": "social_check",
+        "target": "npc_isaac",
+        "name": "별점 복구 사건"
+      }
+    ],
+    "fail_triggers": [],
+    "prerequisites": [
+      "q_blue_room"
+    ],
+    "status": "locked",
+    "required": true,
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    },
+    "choices": {
+      "restore": {
+        "label": "별점을 복구합니다",
+        "rewards": {
+          "gold": 0,
+          "exp": 0,
+          "items": [
+            "itm_gold_star"
+          ]
+        }
+      },
+      "remove": {
+        "label": "점수표를 떼어냅니다",
+        "rewards": {
+          "gold": 0,
+          "exp": 0,
+          "items": []
+        }
+      }
+    }
+  },
+  "q_green_permit": {
+    "id": "q_green_permit",
+    "title": "출항 허가서",
+    "description": "아벨에게 체류권을 남길지, 출항 허가서를 받아 떠나게 할지 정합니다.",
+    "giver": "npc_abel",
+    "triggers": [
+      {
+        "id": "tr_green_judge",
+        "type": "social_check",
+        "target": "npc_abel",
+        "name": "출항 허가서"
+      }
+    ],
+    "fail_triggers": [],
+    "prerequisites": [
+      "q_gold_stars"
+    ],
+    "status": "locked",
+    "required": true,
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    },
+    "choices": {
+      "extend": {
+        "label": "체류권을 남깁니다",
+        "rewards": {
+          "gold": 0,
+          "exp": 0,
+          "items": [
+            "itm_green_permit"
+          ]
+        }
+      },
+      "depart": {
+        "label": "출항 허가를 받습니다",
+        "rewards": {
+          "gold": 0,
+          "exp": 0,
+          "items": []
+        }
+      }
+    }
+  },
+  "q_purple_love": {
+    "id": "q_purple_love",
+    "title": "사랑 증명 비용 사건",
+    "description": "한나와 요셉의 결혼을 증명의 비용으로 남길지, 작은 시작으로 돌려놓을지 정합니다.",
+    "giver": "npc_hannah_p",
+    "triggers": [
+      {
+        "id": "tr_purple_judge",
+        "type": "social_check",
+        "target": "npc_hannah_p",
+        "name": "사랑 증명 비용 사건"
+      }
+    ],
+    "fail_triggers": [],
+    "prerequisites": [
+      "q_green_permit"
+    ],
+    "status": "locked",
+    "required": true,
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    },
+    "choices": {
+      "display": {
+        "label": "증명 비용을 남깁니다",
+        "rewards": {
+          "gold": 0,
+          "exp": 0,
+          "items": [
+            "itm_purple_invite"
+          ]
+        }
+      },
+      "simplify": {
+        "label": "작은 시작으로 줄입니다",
+        "rewards": {
+          "gold": 0,
+          "exp": 0,
+          "items": []
+        }
+      }
+    }
+  },
+  "q_silver_meal": {
+    "id": "q_silver_meal",
+    "title": "공동식권 심사 사건",
+    "description": "미카를 외지 식권에 남길지, 같은 식탁으로 들일지 정합니다.",
+    "giver": "npc_mika",
+    "triggers": [
+      {
+        "id": "tr_silver_judge",
+        "type": "social_check",
+        "target": "npc_mika",
+        "name": "공동식권 심사 사건"
+      }
+    ],
+    "fail_triggers": [],
+    "prerequisites": [
+      "q_purple_love"
+    ],
+    "status": "locked",
+    "required": true,
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    },
+    "choices": {
+      "separate": {
+        "label": "외지 식권을 유지합니다",
+        "rewards": {
+          "gold": 0,
+          "exp": 0,
+          "items": [
+            "itm_silver_pass"
+          ]
+        }
+      },
+      "share": {
+        "label": "같은 식탁에 앉게 합니다",
+        "rewards": {
+          "gold": 0,
+          "exp": 0,
+          "items": []
+        }
+      }
+    }
+  },
+  "q_orange_joy": {
+    "id": "q_orange_joy",
+    "title": "새출발 축하식 사건",
+    "description": "마리암의 축하식을 지금 진행할지, 아직 웃지 않아도 되게 할지 정합니다.",
+    "giver": "npc_mariam",
+    "triggers": [
+      {
+        "id": "tr_orange_judge",
+        "type": "social_check",
+        "target": "npc_mariam",
+        "name": "새출발 축하식 사건"
+      }
+    ],
+    "fail_triggers": [],
+    "prerequisites": [
+      "q_silver_meal"
+    ],
+    "status": "locked",
+    "required": true,
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    },
+    "choices": {
+      "celebrate": {
+        "label": "축하식을 진행합니다",
+        "rewards": {
+          "gold": 0,
+          "exp": 0,
+          "items": [
+            "itm_orange_ribbon"
+          ]
+        }
+      },
+      "wait": {
+        "label": "아직 웃지 않아도 되게 합니다",
+        "rewards": {
+          "gold": 0,
+          "exp": 0,
+          "items": []
+        }
+      }
+    }
+  },
+  "q_white_chair": {
+    "id": "q_white_chair",
+    "title": "빈 의자에 앉기",
+    "description": "흰섬 항구 끝 빈 의자에 앉아 항해를 마무리합니다.",
+    "giver": "npc_eli",
+    "triggers": [
+      {
+        "id": "tr_white_chair",
+        "type": "location_enter",
+        "target": "loc_white_chairs",
+        "name": "빈 의자에 앉기"
+      }
+    ],
+    "fail_triggers": [],
+    "prerequisites": [
+      "q_orange_joy"
+    ],
+    "status": "locked",
+    "required": true,
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
       "items": []
     }
   }

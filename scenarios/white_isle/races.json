@@ -2,10 +2,12 @@
   "human": {
     "id": "human",
     "name": "인간",
-    "description": "왕국의 칭호와 삶을 짊어진 사람입니다. 흰섬에서는 칭호 뒤에 남은 이름을 마주해야 합니다.",
+    "description": "감정과 사회적 관계 속에서 판단하며 살아가는 사람들입니다. 특별한 힘보다 말과 선택으로 상황을 바꿉니다.",
+    "playable": true,
     "is_humanoid": true,
     "racial_skills": [
-      "hold_name"
+      "human_adapt",
+      "steady_breath"
     ]
   }
 }

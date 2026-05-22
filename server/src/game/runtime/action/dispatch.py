@@ -12,6 +12,7 @@ from src.game.engines.graph.quest import (
     GraphQuestError,
     plan_quest_abandon,
     plan_quest_accept,
+    plan_quest_decide,
     plan_quest_progress_for_trigger,
     plan_quest_rewards,
 )
@@ -62,12 +63,26 @@ def dispatch_graph_action(
         raise GraphActionDispatchError("query is read-only and belongs to query flow")
 
     try:
-        kind, changes, progress_update = _plan_non_combat(runtime, action)
+        kind, changes, progress_update, completed_quest_ids = _plan_non_combat(
+            runtime,
+            action,
+        )
         applied = apply_runtime_graph_changes(runtime, changes)
         dirty = GraphRuntimeDirty.from_apply_result(applied)
         next_runtime = applied.runtime
         applied_count = applied.applied
-        completed_quest_ids: list[str] = []
+        for quest_id in completed_quest_ids:
+            reward = plan_quest_rewards(
+                next_runtime.graph,
+                quest_id,
+                next_runtime.progress.player_id,
+            )
+            if not reward.changes:
+                continue
+            reward_applied = apply_runtime_graph_changes(next_runtime, reward.changes)
+            next_runtime = reward_applied.runtime
+            dirty.add_apply_result(reward_applied)
+            applied_count += reward_applied.applied
         quest_apply = _apply_quest_progress_for_action(next_runtime, action, kind)
         if quest_apply is not None:
             next_runtime, quest_dirty, quest_applied, completed_quest_ids = quest_apply
@@ -156,7 +171,7 @@ def _dispatch_combat(
 def _plan_non_combat(
     runtime: GameRuntimeState,
     action: Action,
-) -> tuple[str, list[GraphChange], dict[str, Any]]:
+) -> tuple[str, list[GraphChange], dict[str, Any], list[str]]:
     player_id = runtime.progress.player_id
 
     if action.verb == "move":
@@ -170,7 +185,7 @@ def _plan_non_combat(
             destination_id,
             require_connection=True,
         )
-        return "move", result.changes, _advance_turn(runtime)
+        return "move", result.changes, _advance_turn(runtime), []
 
     if action.verb == "transfer":
         if action.how in ("accept", "abandon"):
@@ -190,6 +205,7 @@ def _plan_non_combat(
                         **_advance_turn(runtime),
                         "active_quest_id": quest_id,
                     },
+                    [],
                 )
             result = plan_quest_abandon(runtime.graph, quest_id)
             return (
@@ -199,6 +215,7 @@ def _plan_non_combat(
                     **_advance_turn(runtime),
                     "active_quest_id": None,
                 },
+                [],
             )
 
         item_id = _single(action.what) or _single(action.with_)
@@ -208,10 +225,10 @@ def _plan_non_combat(
         if mode == "equip":
             slot = _equip_slot(_single(action.to) or "weapon")
             result = plan_item_equip(runtime.graph, player_id, item_id, slot)
-            return "equip", result.changes, _advance_turn(runtime)
+            return "equip", result.changes, _advance_turn(runtime), []
         if mode == "unequip":
             result = plan_item_unequip(runtime.graph, player_id, item_id)
-            return "unequip", result.changes, _advance_turn(runtime)
+            return "unequip", result.changes, _advance_turn(runtime), []
         if mode == "trade":
             result = plan_item_trade(
                 runtime.graph,
@@ -220,14 +237,14 @@ def _plan_non_combat(
                 to_character_id=_single(action.to) or player_id,
                 player_id=player_id,
             )
-            return f"trade_{result.action}", result.changes, _advance_turn(runtime)
+            return f"trade_{result.action}", result.changes, _advance_turn(runtime), []
         result = plan_item_transfer(
             runtime.graph,
             item_id,
             to_character_id=_single(action.to) or player_id,
             from_node_id=_single(action.from_),
         )
-        return "transfer", result.changes, _advance_turn(runtime)
+        return "transfer", result.changes, _advance_turn(runtime), []
 
     if action.verb == "use":
         item_id = _single(action.what) or _single(action.with_)
@@ -239,15 +256,24 @@ def _plan_non_combat(
             item_id,
             target=_single(action.to),
         )
-        return "use", result.changes, _advance_turn(runtime)
+        return "use", result.changes, _advance_turn(runtime), []
 
     if action.verb == "rest":
         result = plan_rest(runtime, player_id)
         progress_update: dict[str, Any] = {"turn_count": result.next_turn_count}
         if result.kind == "encounter":
             progress_update["graph_combat_state"] = result.state
-            return "rest_encounter", result.changes, progress_update
-        return "rest", result.changes, progress_update
+            return "rest_encounter", result.changes, progress_update, []
+        return "rest", result.changes, progress_update, []
+
+    if action.verb == "decide":
+        quest_id = _single(action.what)
+        if quest_id is None:
+            raise GraphActionDispatchError("decide quest id is required")
+        if not action.how:
+            raise GraphActionDispatchError("decide choice id is required")
+        result = plan_quest_decide(runtime.graph, quest_id, action.how)
+        return "decide", result.changes, _advance_turn(runtime), [quest_id]
 
     if action.verb == "pass":
         raise GraphActionDispatchError("pass outside combat is a narrative no-op")

@@ -46,6 +46,7 @@ const quest: Quest = {
   rewards: { gold: 3, exp: 5 },
   status: 'active',
   actions: ['abandon'],
+  choices: [],
 };
 
 describe('buildPanelSlots', () => {

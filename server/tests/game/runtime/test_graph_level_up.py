@@ -77,7 +77,7 @@ async def _repo(
                 "fireball": GraphNode(
                     id="fireball",
                     type="skill",
-                    properties={"name": "화염구", "action": "precise"},
+                    properties={"name": "화염구", "action": "attack"},
                 ),
             },
             edges=edges,
@@ -183,7 +183,7 @@ async def test_level_up_upgrade_uses_runtime_content_skill_name(tmp_path):
                     properties={
                         "source": "scenario",
                         "source_id": "training_strike",
-                        "action": "precise",
+                        "action": "attack",
                     },
                 ),
             },
@@ -247,7 +247,7 @@ async def test_level_up_options_include_llm_skill_candidate(tmp_path):
         json.loads(llm.calls[0]["messages"][1]["content"])["skills"][0][
             "action"
         ]
-        == "precise"
+        == "attack"
     )
     assert "bonus" not in json.loads(llm.calls[0]["messages"][1]["content"])["skills"][0]
     assert llm.calls[0]["agent"] == "recommend"

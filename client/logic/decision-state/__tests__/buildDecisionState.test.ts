@@ -26,6 +26,7 @@ const quest: Quest = {
   rewards: { gold: 10, exp: 5 },
   status: 'active',
   actions: ['abandon'],
+  choices: [],
 };
 
 const subject: Subject = {

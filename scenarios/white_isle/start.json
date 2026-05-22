@@ -1,6 +1,6 @@
 {
-  "start_location": "old_pier",
-  "active_subject": "boat_captain",
-  "active_quest": "leave_the_pier",
-  "intro_text": "바닷물에 젖은 나무판이 발밑에서 낮게 삐걱거립니다. 하얗게 바랜 조개껍데기가 선착장 기둥마다 붙어 있고, 방금 당신을 내려놓은 배는 안개 속으로 이미 멀어졌습니다. 소금기 밴 외투를 입은 선장이 젖은 밧줄을 정리한 뒤 말없이 당신을 바라봅니다. 돌아갈 길은 보이지 않고, 손에 남은 빈자리는 당신이 이 섬에 무엇을 두고 왔는지부터 떠올리게 합니다."
+  "start_location": "loc_fog_harbor",
+  "active_subject": "npc_olden",
+  "active_quest": "q_fog_depart",
+  "intro_text": "안개 항구의 나무판이 발밑에서 낮게 젖은 소리를 냅니다. 붉은섬행 배는 묶여 있고, 등대 소리는 안개에 막혀 늦게 도착합니다. 항구장 올든은 혼자서는 이 바다를 건널 수 없다고 말합니다. 선착장 쪽에서 엘리가 손을 흔들지만, 그 표정도 안개 속에서는 확신보다 질문에 가깝습니다."
 }

@@ -48,7 +48,13 @@ def _surroundings() -> dict:
                 "inventory": [{"id": "ring_01", "name": "반지"}],
             }
         ],
-        "quests": [{"id": "quest_01", "name": "통행 의뢰"}],
+        "quests": [
+            {
+                "id": "quest_01",
+                "name": "통행 의뢰",
+                "choices": [{"id": "record", "label": "기록으로 남깁니다"}],
+            }
+        ],
     }
 
 
@@ -199,6 +205,38 @@ def test_transfer_accepts_active_quest_ids():
     )
 
     assert validate_grounded_output(output, _surroundings()) is output
+
+
+def test_decide_accepts_visible_quest_id_and_data_defined_choice_id():
+    output = ActionOutput(
+        actions=[
+            Action(verb="decide", what="quest_01", how="record"),
+        ]
+    )
+
+    assert validate_grounded_output(output, _surroundings()) is output
+
+
+def test_decide_rejects_unknown_quest_id():
+    output = ActionOutput(
+        actions=[
+            Action(verb="decide", what="missing_quest", how="record"),
+        ]
+    )
+
+    with pytest.raises(ActionGroundingError, match="what"):
+        validate_grounded_output(output, _surroundings())
+
+
+def test_decide_rejects_unknown_choice_id():
+    output = ActionOutput(
+        actions=[
+            Action(verb="decide", what="quest_01", how="missing_choice"),
+        ]
+    )
+
+    with pytest.raises(ActionGroundingError, match="how"):
+        validate_grounded_output(output, _surroundings())
 
 
 def test_transfer_accepts_current_location_item_pickup():

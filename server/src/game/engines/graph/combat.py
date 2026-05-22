@@ -237,14 +237,12 @@ def _combat_dc(
     support: _SupportPlan | None,
 ) -> int:
     raw_dc = RULES.combat.base_dc + _level(enemy) - _level(player)
-    if action == "guarded":
-        raw_dc -= 2
-    elif action == "reckless":
-        raw_dc += 2
     if support is not None and support.support_kind == "skill":
         raw_dc -= support.bonus
-    elif support is not None and support.effect in {"dc_down", "escape_boost"}:
+    elif support is not None and support.effect == "dc_down":
         raw_dc -= support.bonus
+    elif support is not None and support.effect == "dc_up":
+        raw_dc += support.bonus
     return min(RULES.combat.max_dc, max(RULES.combat.min_dc, raw_dc))
 
 
@@ -257,11 +255,8 @@ def _apply_heart_result(
     support: _SupportPlan | None,
 ) -> None:
     if success:
-        if kind in {"precise", "guarded", "reckless"}:
-            damage = 2 if kind == "reckless" else 1
-            if support is not None and support.effect == "extra_heart_damage":
-                damage += 1
-            state.enemy_hearts = max(0, state.enemy_hearts - damage)
+        if kind == "attack":
+            state.enemy_hearts = max(0, state.enemy_hearts - 1)
             target = enemy_id
         elif kind == "defend":
             state.player_hearts = min(
@@ -283,7 +278,7 @@ def _apply_heart_result(
                     )
                 )
                 return
-        elif kind == "create_distance":
+        elif kind == "flee":
             target = actor_id
             state.escape_ready = True
             state.outcome = "escaped"
@@ -299,15 +294,12 @@ def _apply_heart_result(
         )
         return
 
-    if kind != "guarded" and (
-        support is None or support.effect != "prevent_heart_loss"
-    ):
-        state.player_hearts = max(0, state.player_hearts - 1)
+    state.player_hearts = max(0, state.player_hearts - 1)
     state.trace.append(
         GraphCombatTraceEvent(
             kind=f"player_{kind}_failure",
             actor_id=actor_id,
-            target=enemy_id if kind in {"precise", "reckless", "talk"} else actor_id,
+            target=enemy_id if kind in {"attack", "talk"} else actor_id,
             state=_heart_state(state),
         )
     )

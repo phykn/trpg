@@ -127,6 +127,17 @@ def _check_quest_refs(quest: Record, refs: dict[str, set[str]]) -> None:
             raise EntityWriterError(
                 f"quest.rewards.items entry {item_id!r} not found in scenario items."
             )
+    for choice_id, choice in _mapping(quest.get("choices")).items():
+        if not isinstance(choice, dict):
+            raise EntityWriterError(
+                f"quest.choices entry {choice_id!r} must be an object."
+            )
+        for item_id in _str_list(_mapping(choice.get("rewards")).get("items")):
+            if item_id not in items:
+                raise EntityWriterError(
+                    f"quest.choices.{choice_id}.rewards.items entry {item_id!r} "
+                    "not found in scenario items."
+                )
 
 
 def _check_chapter_refs(chapter: Record, refs: dict[str, set[str]]) -> None:

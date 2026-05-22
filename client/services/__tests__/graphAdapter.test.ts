@@ -82,6 +82,7 @@ describe('adaptGraphState', () => {
           rewards: { gold: 5, exp: 10 },
           status: 'pending',
           actions: ['accept'],
+          choices: [],
         },
       ],
       combat: {
@@ -97,7 +98,7 @@ describe('adaptGraphState', () => {
             id: 'skill_shadow_thrust',
             kind: 'skill',
             name: '그림자 찌르기',
-            tactic: 'precise',
+            action: 'attack',
             mpCost: 2,
             usable: true,
           },
@@ -172,6 +173,7 @@ describe('adaptGraphState', () => {
     expect(state.scenarioCompleted).toBe(false);
     expect(state.questOffers[0]?.title).toBe('첫 의뢰');
     expect(state.questOffers[0]?.actions).toEqual(['accept']);
+    expect(state.questOffers[0]?.choices).toEqual([]);
     expect(state.combat?.round).toBe(2);
     expect(state.combat?.playerHearts.current).toBe(2);
     expect(state.combat?.enemyHearts.current).toBe(1);
@@ -184,7 +186,7 @@ describe('adaptGraphState', () => {
         id: 'skill_shadow_thrust',
         kind: 'skill',
         name: '그림자 찌르기',
-        tactic: 'precise',
+        action: 'attack',
         mpCost: 2,
         usable: true,
       },

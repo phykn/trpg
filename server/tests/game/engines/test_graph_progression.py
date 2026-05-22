@@ -172,3 +172,27 @@ def test_progression_auto_completes_active_location_quest_already_visited():
     assert changed.nodes["q2"].properties["status"] == "completed"
     assert changed.nodes["q2"].properties["triggers_met"] == [True]
     assert changed.nodes["q3"].properties["status"] == "active"
+
+
+def test_progression_does_not_auto_complete_choice_location_quest():
+    graph = _graph()
+    graph.nodes["q2"].properties["triggers"] = [
+        {"type": "location_enter", "target": "forest"}
+    ]
+    graph.nodes["q2"].properties["choices"] = {
+        "record": {"label": "기록으로 남깁니다"},
+        "release": {"label": "흘려보냅니다"},
+    }
+
+    result = plan_progression_after_quest_completion(
+        graph,
+        completed_quest_ids=["q1"],
+        active_quest_id="q1",
+        satisfied_location_ids={"forest"},
+    )
+    changed = _apply_all(graph, result.changes)
+
+    assert result.auto_completed_quest_ids == []
+    assert result.next_active_quest_id == "q2"
+    assert changed.nodes["q2"].properties["status"] == "active"
+    assert changed.nodes["q2"].properties["triggers_met"] == [True]

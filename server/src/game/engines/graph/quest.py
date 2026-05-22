@@ -21,6 +21,7 @@ __all__ = [
     "plan_quest_abandon",
     "plan_quest_accept",
     "plan_quest_complete",
+    "plan_quest_decide",
     "plan_quest_fail",
     "plan_quest_progress_for_character_death",
     "plan_quest_progress_for_trigger",
@@ -38,7 +39,7 @@ QuestStatus = Literal[
     "failed",
     "abandoned",
 ]
-QuestAction = Literal["accept", "abandon", "complete", "fail"]
+QuestAction = Literal["accept", "abandon", "complete", "decide", "fail"]
 
 
 class GraphQuestError(ValueError):
@@ -127,6 +128,33 @@ def plan_quest_complete(
     return _result(quest_id, "complete", status, "completed", changes)
 
 
+def plan_quest_decide(
+    graph: Graph,
+    quest_id: str,
+    choice_id: str,
+) -> GraphQuestResult:
+    quest = require_quest(graph, quest_id)
+    status = quest_status(quest)
+    reject_terminal(status, quest_id)
+    if status != "active":
+        raise GraphQuestError(f"quest cannot be decided from {status}: {quest_id}")
+    choices = _quest_choices(quest)
+    if choice_id not in choices:
+        raise GraphQuestError(f"quest choice not found: {quest_id}.{choice_id}")
+    if not _quest_ready_to_decide(quest):
+        raise GraphQuestError(f"quest decision requires completed triggers: {quest_id}")
+    return _result(
+        quest_id,
+        "decide",
+        status,
+        "completed",
+        [
+            property_change(quest_id, "selected_choice", choice_id),
+            status_change(quest_id, "completed"),
+        ],
+    )
+
+
 def plan_quest_fail(
     graph: Graph,
     quest_id: str,
@@ -179,7 +207,7 @@ def plan_quest_progress_for_trigger(
         if not changed:
             continue
         changes.append(property_change(quest.id, "triggers_met", triggers_met))
-        if triggers and all(triggers_met):
+        if triggers and all(triggers_met) and not _quest_choices(quest):
             changes.append(status_change(quest.id, "completed"))
             completed_quest_ids.append(quest.id)
     return GraphQuestProgressResult(
@@ -202,8 +230,7 @@ def plan_quest_rewards(
     if player.type != "character":
         raise GraphQuestError(f"node is not a character: {player_id}")
 
-    rewards = quest.properties.get("rewards", {})
-    reward_data = rewards if isinstance(rewards, dict) else {}
+    reward_data = _quest_reward_data(quest)
     gold = int_value(reward_data.get("gold"))
     exp = int_value(reward_data.get("exp"))
     item_ids = _reward_item_ids(graph, quest_id, reward_data)
@@ -222,9 +249,10 @@ def plan_quest_rewards(
             )
         )
     for item_id in item_ids:
-        for edge in edges_to(graph, quest_id, "reward_of"):
-            if edge.from_node_id == item_id:
-                changes.append(RemoveEdgeChange(type="remove_edge", edge_id=edge.id))
+        for edge in _item_placement_edges(graph, item_id):
+            if edge.type == "carries" and edge.from_node_id == player_id:
+                continue
+            changes.append(RemoveEdgeChange(type="remove_edge", edge_id=edge.id))
         if not _has_carry_edge(graph, player_id, item_id):
             changes.append(
                 AddEdgeChange(
@@ -334,6 +362,37 @@ def _quest_triggers(quest: GraphNode) -> list[dict[str, Any]]:
     return [trigger for trigger in triggers if isinstance(trigger, dict)]
 
 
+def _quest_choices(quest: GraphNode) -> dict[str, dict[str, Any]]:
+    choices = quest.properties.get("choices")
+    if not isinstance(choices, dict):
+        return {}
+    return {
+        key: value
+        for key, value in choices.items()
+        if isinstance(key, str) and key and isinstance(value, dict)
+    }
+
+
+def _quest_ready_to_decide(quest: GraphNode) -> bool:
+    triggers = _quest_triggers(quest)
+    if not triggers:
+        return True
+    return all(_quest_triggers_met(quest, len(triggers)))
+
+
+def _quest_reward_data(quest: GraphNode) -> dict[str, Any]:
+    selected_choice = quest.properties.get("selected_choice")
+    if isinstance(selected_choice, str):
+        choice = _quest_choices(quest).get(selected_choice)
+        if choice is not None:
+            rewards = choice.get("rewards")
+            if isinstance(rewards, dict):
+                return rewards
+            return {}
+    rewards = quest.properties.get("rewards", {})
+    return rewards if isinstance(rewards, dict) else {}
+
+
 def _quest_triggers_met(quest: GraphNode, total: int) -> list[bool]:
     raw = quest.properties.get("triggers_met", [])
     values = raw if isinstance(raw, list) else []
@@ -366,3 +425,16 @@ def _has_carry_edge(graph: Graph, player_id: str, item_id: str) -> bool:
     return any(
         edge.to_node_id == item_id for edge in edges_from(graph, player_id, "carries")
     )
+
+
+def _item_placement_edges(graph: Graph, item_id: str) -> list[GraphEdge]:
+    out: list[GraphEdge] = []
+    for edge in graph.edges.values():
+        if (
+            edge.type in {"located_at", "hidden_at", "reward_of"}
+            and edge.from_node_id == item_id
+        ):
+            out.append(edge)
+        elif edge.type in {"carries", "equips"} and edge.to_node_id == item_id:
+            out.append(edge)
+    return out

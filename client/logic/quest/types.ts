@@ -14,4 +14,5 @@ export type Quest = {
   rewards: { gold: number; exp: number };
   status: 'pending' | 'active' | 'completed' | 'failed';
   actions: ('accept' | 'abandon')[];
+  choices: { id: string; label: string }[];
 };

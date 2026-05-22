@@ -77,15 +77,31 @@ def _require_adjacent_destination(
         raise GraphMoveError(f"missing current location: {character_id}")
     if current_location_id == destination_id:
         return
-    reachable = sorted(
-        edge.to_node_id
-        for edge in edges_from(graph, current_location_id, "connects_to")
-    )
-    if destination_id not in reachable:
+    exits = list(edges_from(graph, current_location_id, "connects_to"))
+    reachable = sorted(edge.to_node_id for edge in exits)
+    matching = [edge for edge in exits if edge.to_node_id == destination_id]
+    if not matching:
         raise GraphMoveError(
             f"destination {destination_id!r} is not adjacent to current "
             f"location {current_location_id!r}. Reachable: {reachable}."
         )
+    if not any(_connection_is_unlocked(graph, edge) for edge in matching):
+        raise GraphMoveError(
+            f"destination {destination_id!r} is locked from current "
+            f"location {current_location_id!r}."
+        )
+
+
+def _connection_is_unlocked(graph: Graph, edge: GraphEdge) -> bool:
+    quest_id = edge.properties.get("requires_quest")
+    if quest_id is None:
+        return True
+    if not isinstance(quest_id, str) or not quest_id:
+        return False
+    quest = graph.nodes.get(quest_id)
+    if quest is None or quest.type != "quest":
+        return False
+    return quest.properties.get("status") == "completed"
 
 
 def _character_and_companions(graph: Graph, character_id: str) -> list[str]:

@@ -1,317 +1,717 @@
 {
-  "boat_captain": {
-    "id": "boat_captain",
-    "name": "말없는 선장",
+  "npc_olden": {
+    "id": "npc_olden",
     "race": "human",
     "gender": "male",
-    "mbti": "ISTP",
-    "faction": "white_isle",
-    "role": "흰섬으로 사람들을 데려오는 선장",
-    "background": "그는 배삯으로 받은 물건들을 나무 상자에 넣고, 돌아갈 사람이 생길 때에만 배가 온다고 말합니다.",
-    "appearance": "소금기 밴 외투를 입고 젖은 밧줄을 조용히 푸는 선장입니다.",
-    "traits": [
-      "질문을 들어도 바로 대답하지 않습니다.",
-      "돌아갈 배의 조건을 알고 있습니다."
-    ],
-    "knowledge": [
-      "island_rule"
-    ],
-    "level": 2,
-    "location": "old_pier",
-    "alive": true,
-    "inventory": [
-      "captain_salt_coat"
-    ],
-    "equipment": {},
-    "learned_skills": [],
-    "relations": {
-      "player_01": 0
-    },
-    "xp_reward": 0,
-    "protected": true,
-    "gold": 0,
-    "active_buffs": [],
-    "memories": []
-  },
-  "miel": {
-    "id": "miel",
-    "name": "미엘",
-    "race": "human",
-    "gender": "female",
-    "mbti": "ENFP",
-    "faction": "title_castaways",
-    "role": "웃는 가면을 두고 온 광대",
-    "background": "미엘은 슬픔을 삼키고 궁정을 웃기던 광대였고, 웃는 얼굴이 자신을 대신 살고 있다고 느껴 흰섬에 왔습니다.",
-    "appearance": "가면 없는 창백한 얼굴로 짧고 거친 웃음을 흘립니다.",
-    "traits": [
-      "농담으로 두려움을 밀어냅니다.",
-      "정말 슬픈 말 앞에서는 웃음을 멈춥니다."
-    ],
-    "knowledge": [
-      "miel_mask"
-    ],
-    "level": 1,
-    "location": "hollow_theater",
-    "alive": true,
-    "inventory": [
-      "miel_stage_coat"
-    ],
-    "equipment": {},
-    "learned_skills": [],
-    "relations": {
-      "player_01": 0
-    },
-    "xp_reward": 0,
-    "protected": true,
-    "gold": 0,
-    "active_buffs": [],
-    "memories": []
-  },
-  "nameless_woman": {
-    "id": "nameless_woman",
-    "name": "흰 머리 여인",
-    "race": "human",
-    "gender": "female",
-    "mbti": "INFJ",
-    "faction": "white_isle",
-    "role": "오래전 왕비였던 섬의 안내자",
-    "background": "그녀는 오래전 왕비라는 칭호가 자신을 모두 삼키기 전에 흰섬으로 도망쳤고, 너무 오래 비워진 이름으로 살았습니다.",
-    "appearance": "흰 머리를 뒤로 묶고 물고기 비늘이 붙은 낡은 앞치마를 입은 늙은 여인입니다.",
-    "traits": [
-      "질문에 바로 답하지 않고 빈 손과 빈 가슴을 먼저 봅니다.",
-      "섬이 이름을 주지 않는다는 사실을 압니다."
-    ],
-    "knowledge": [
-      "island_rule",
-      "lighthouse_fire"
-    ],
-    "level": 3,
-    "location": "fog_forest",
-    "alive": true,
-    "inventory": [
-      "woman_scale_apron"
-    ],
-    "equipment": {},
-    "learned_skills": [],
-    "relations": {
-      "player_01": 0
-    },
-    "xp_reward": 0,
-    "protected": true,
-    "gold": 0,
-    "active_buffs": [],
-    "memories": []
-  },
-  "ort": {
-    "id": "ort",
-    "name": "오르트",
-    "race": "human",
-    "gender": "male",
-    "mbti": "ISTP",
-    "faction": "title_castaways",
-    "role": "검은 장갑을 두고 온 처형인",
-    "background": "오르트는 법의 끝을 집행하며 살았지만, 죄목 뒤에 있던 이름들을 잊어버린 자신을 견디지 못해 섬에 왔습니다.",
-    "appearance": "굳은살과 흉터가 남은 손을 소매 안에 숨기려 합니다.",
-    "traits": [
-      "필요한 말만 낮게 합니다.",
-      "이름을 기억하지 못한다는 사실을 부끄러워합니다."
-    ],
-    "knowledge": [
-      "ort_names"
-    ],
-    "level": 2,
-    "location": "title_graveyard",
-    "alive": true,
-    "inventory": [
-      "ort_dark_coat"
-    ],
-    "equipment": {},
-    "learned_skills": [
-      "calm_testimony"
-    ],
-    "relations": {
-      "player_01": 0
-    },
-    "xp_reward": 0,
-    "protected": true,
-    "gold": 0,
-    "active_buffs": [],
-    "memories": []
-  },
-  "reclaimer_captain": {
-    "id": "reclaimer_captain",
-    "name": "회수대 지휘관",
-    "race": "human",
-    "gender": "male",
-    "mbti": "ESTJ",
-    "faction": "kingdom_reclaimers",
-    "role": "왕국의 칭호를 회수하러 온 법관",
-    "background": "그는 칭호 없이도 사람이 무너지지 않을 수 있다는 가능성을 두려워하며, 이탈자들을 왕국의 자리로 되돌리려 합니다.",
-    "appearance": "법관 칭호패와 흉갑을 단 채 사브르를 뽑아 든 지휘관입니다.",
-    "traits": [
-      "질서를 말하지만 눈에는 두려움이 많습니다.",
-      "검보다 왕국의 언어와 명령으로 사람을 묶으려 합니다."
-    ],
-    "knowledge": [
-      "reclaimer_order"
-    ],
-    "level": 3,
-    "location": "white_lighthouse",
-    "alive": true,
-    "inventory": [
-      "captain_breastplate",
-      "captain_sabre"
-    ],
-    "equipment": {},
-    "learned_skills": [],
-    "relations": {
-      "player_01": -1
-    },
-    "xp_reward": 0,
-    "protected": true,
-    "gold": 0,
-    "active_buffs": [],
-    "memories": []
-  },
-  "roan": {
-    "id": "roan",
-    "name": "로안",
-    "race": "human",
-    "gender": "male",
+    "name": "올든",
     "mbti": "ISTJ",
-    "faction": "title_castaways",
-    "role": "훈장을 두고 온 섬의 기사",
-    "background": "기사 로안은 왕의 명령을 따르다 부하들을 잃고, 살아남았다는 이유로 받은 훈장을 배삯으로 두고 왔습니다.",
-    "appearance": "허리춤에 없는 훈장을 자꾸 확인하는 굳은 얼굴의 기사 로안입니다.",
+    "role": "항구장",
+    "background": "안개 항구의 출항 절차를 맡고 있으며 규칙을 가볍게 넘기지 않습니다.",
+    "appearance": "올든은(는) 항구장답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
     "traits": [
-      "명령이라는 말에 몸이 먼저 굳습니다.",
-      "누군가 쓰러지면 먼저 손을 내밉니다."
+      "절차를 중시합니다",
+      "위험을 과장하지 않고 설명합니다"
     ],
     "knowledge": [
-      "roan_order"
-    ],
-    "level": 2,
-    "location": "sword_clearing",
-    "alive": true,
-    "inventory": [
-      "roan_weathered_mail"
-    ],
-    "equipment": {},
-    "learned_skills": [
-      "empty_hand_guard"
-    ],
-    "relations": {
-      "player_01": 0
-    },
-    "xp_reward": 0,
-    "protected": true,
-    "gold": 0,
-    "active_buffs": [],
-    "memories": []
-  },
-  "selin": {
-    "id": "selin",
-    "name": "셀린",
-    "race": "human",
-    "gender": "female",
-    "mbti": "INFJ",
-    "faction": "title_castaways",
-    "role": "금 간 성표를 두고 온 사제",
-    "background": "셀린은 기도하는 법을 잊었다고 믿었고, 의심하면 안 된다는 두려움에서 벗어나기 위해 흰섬에 왔습니다.",
-    "appearance": "성표가 사라진 가슴께를 습관처럼 누르는 조용한 사제입니다.",
-    "traits": [
-      "흔들리는 사람을 쉽게 꾸짖지 않습니다.",
-      "확신보다 의심을 인정하려 합니다."
-    ],
-    "knowledge": [
-      "lighthouse_fire"
+      "kn_fog_rule"
     ],
     "level": 1,
-    "location": "white_lighthouse",
     "alive": true,
-    "inventory": [
-      "selin_travel_cloak"
-    ],
+    "active_buffs": [],
+    "location": "loc_fog_harbor",
+    "inventory": [],
     "equipment": {},
+    "gold": 0,
     "learned_skills": [],
     "relations": {
-      "player_01": 0
+      "player_01": 10
     },
     "xp_reward": 0,
     "protected": true,
-    "gold": 0,
-    "active_buffs": [],
     "memories": []
   },
-  "var": {
-    "id": "var",
-    "name": "바르",
+  "npc_eli": {
+    "id": "npc_eli",
+    "race": "human",
+    "gender": "female",
+    "name": "엘리",
+    "mbti": "ENFP",
+    "role": "동행자",
+    "background": "정식 안내인은 아니지만 당신과 함께 안개 바다를 건너겠다고 나서는 동행자입니다.",
+    "appearance": "엘리은(는) 동행자답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "정답을 대신 말하지 않습니다",
+      "상황을 짧은 질문으로 정리합니다",
+      "긴장한 장면에서도 작은 농담을 놓지 않습니다"
+    ],
+    "knowledge": [
+      "kn_fog_two_people"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_fog_pier",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_luka": {
+    "id": "npc_luka",
     "race": "human",
     "gender": "male",
-    "mbti": "ESTJ",
-    "faction": "title_castaways",
-    "role": "첫 금화를 두고 온 상인",
-    "background": "바르는 평생 손해 보지 않는 법을 배웠지만, 어느 순간부터 사람도 손익으로 보기 시작했다는 사실을 두려워합니다.",
-    "appearance": "빈 주머니를 만지며 계산을 멈추지 못하는 상인입니다.",
+    "name": "루카",
+    "mbti": "ESFP",
+    "role": "분노 의뢰인",
+    "background": "자기 억울함이 충분히 표현되지 않았다고 느끼며 노아에게 환불을 요구합니다.",
+    "appearance": "루카은(는) 분노 의뢰인답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
     "traits": [
-      "모든 말에서 대가를 찾으려 합니다.",
-      "값이 없는 것을 잃을까 봐 두려워합니다."
+      "억울함을 크게 말합니다",
+      "군중의 반응에 쉽게 휘둘립니다"
     ],
     "knowledge": [
-      "var_price"
+      "kn_red_anger_trade"
     ],
     "level": 1,
-    "location": "white_market",
     "alive": true,
-    "inventory": [
-      "var_padded_vest"
-    ],
+    "active_buffs": [],
+    "location": "loc_red_square",
+    "inventory": [],
     "equipment": {},
+    "gold": 0,
     "learned_skills": [],
     "relations": {
-      "player_01": 0
+      "player_01": 10
     },
     "xp_reward": 0,
     "protected": true,
-    "gold": 0,
-    "active_buffs": [],
     "memories": []
   },
-  "yuna": {
-    "id": "yuna",
-    "name": "유나",
+  "npc_noah": {
+    "id": "npc_noah",
     "race": "human",
-    "gender": "female",
-    "mbti": "INTJ",
-    "faction": "title_castaways",
-    "role": "붉은 인장을 두고 온 기록관",
-    "background": "유나는 사실을 적었다고 믿은 기록 때문에 한 사람이 죽었고, 기록이 사람을 다 담지 못한다는 사실을 너무 늦게 알았습니다.",
-    "appearance": "수첩을 꺼냈다가 다시 덮는 버릇이 남아 있는 기록관입니다.",
+    "gender": "male",
+    "name": "노아",
+    "mbti": "ENTP",
+    "role": "대리분노인",
+    "background": "남을 대신해 분노를 태우던 사람이지만 지금은 군중의 분노를 직접 받고 있습니다.",
+    "appearance": "노아은(는) 대리분노인답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
     "traits": [
-      "사실과 전부 사이의 차이를 자주 생각합니다.",
-      "빈칸을 남기는 일을 두려워하지 않으려 합니다."
+      "말이 빠릅니다",
+      "책임을 인정하면서도 사건이 커지는 것을 두려워합니다"
     ],
     "knowledge": [
-      "wall_names",
-      "reclaimer_order"
+      "kn_red_anger_trade"
     ],
-    "level": 2,
-    "location": "white_lighthouse",
+    "level": 1,
     "alive": true,
-    "inventory": [
-      "yuna_archivist_coat"
-    ],
+    "active_buffs": [],
+    "location": "loc_red_square",
+    "inventory": [],
     "equipment": {},
-    "learned_skills": [
-      "calm_testimony"
-    ],
+    "gold": 0,
+    "learned_skills": [],
     "relations": {
-      "player_01": 0
+      "player_01": 10
     },
     "xp_reward": 0,
     "protected": true,
-    "gold": 0,
+    "memories": []
+  },
+  "npc_ezra": {
+    "id": "npc_ezra",
+    "race": "human",
+    "gender": "female",
+    "name": "에즈라",
+    "mbti": "ESTJ",
+    "role": "기록 주장자",
+    "background": "분노를 흘려보내지 말고 공개 기록으로 남겨야 한다고 믿습니다.",
+    "appearance": "에즈라은(는) 기록 주장자답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "책임 문구를 정확히 남기려 합니다",
+      "분노가 기록되지 않으면 반복된다고 봅니다"
+    ],
+    "knowledge": [
+      "kn_red_public_record"
+    ],
+    "level": 1,
+    "alive": true,
     "active_buffs": [],
+    "location": "loc_red_notice",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_lea": {
+    "id": "npc_lea",
+    "race": "human",
+    "gender": "female",
+    "name": "레아",
+    "mbti": "ISFJ",
+    "role": "빈방을 지키는 사람",
+    "background": "떠난 사람의 방을 그대로 지키며 기억이 사라질까 두려워합니다.",
+    "appearance": "레아은(는) 빈방을 지키는 사람답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "물건의 위치를 세심하게 기억합니다",
+      "방을 여는 말을 쉽게 하지 못합니다"
+    ],
+    "knowledge": [
+      "kn_blue_empty_room"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_blue_room",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_milo": {
+    "id": "npc_milo",
+    "race": "human",
+    "gender": "male",
+    "name": "밀로",
+    "mbti": "INFP",
+    "role": "방이 필요한 사람",
+    "background": "섬에 새로 머물 곳이 필요하지만 누군가의 애도를 밀어내는 일을 조심스러워합니다.",
+    "appearance": "밀로은(는) 방이 필요한 사람답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "부탁을 작게 말합니다",
+      "타인의 슬픔을 함부로 넘지 않습니다"
+    ],
+    "knowledge": [
+      "kn_blue_need_space"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_blue_street",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_ruth": {
+    "id": "npc_ruth",
+    "race": "human",
+    "gender": "female",
+    "name": "루스",
+    "mbti": "INFJ",
+    "role": "애도 조율자",
+    "background": "기억을 지키되 방을 다시 삶으로 열어야 한다고 말합니다.",
+    "appearance": "루스은(는) 애도 조율자답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "조용히 핵심을 묻습니다",
+      "상실과 생활을 함께 봅니다"
+    ],
+    "knowledge": [
+      "kn_blue_need_space"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_blue_street",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_isaac": {
+    "id": "npc_isaac",
+    "race": "human",
+    "gender": "male",
+    "name": "이삭",
+    "mbti": "ISTP",
+    "role": "낮은 별점의 장인",
+    "background": "낮은 별점 때문에 다시 일할 기회를 잃고 점수를 회복하고 싶어 합니다.",
+    "appearance": "이삭은(는) 낮은 별점의 장인답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "손으로 말하는 편입니다",
+      "평가 앞에서는 말수가 줄어듭니다"
+    ],
+    "knowledge": [
+      "kn_gold_score_labor"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_gold_shop",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_daniel": {
+    "id": "npc_daniel",
+    "race": "human",
+    "gender": "male",
+    "name": "다니엘",
+    "mbti": "ESTP",
+    "role": "별점 회복 주장자",
+    "background": "별점을 회복해야 생계와 신뢰가 돌아온다고 봅니다.",
+    "appearance": "다니엘은(는) 별점 회복 주장자답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "현실적인 손익을 먼저 말합니다",
+      "점수 없는 신뢰를 불안해합니다"
+    ],
+    "knowledge": [
+      "kn_gold_star_pressure"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_gold_board",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_sarah": {
+    "id": "npc_sarah",
+    "race": "human",
+    "gender": "female",
+    "name": "사라",
+    "mbti": "INTJ",
+    "role": "점수표 비판자",
+    "background": "별점표가 사람을 다시 시작하지 못하게 만든다고 봅니다.",
+    "appearance": "사라은(는) 점수표 비판자답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "구조의 문제를 먼저 봅니다",
+      "칭찬보다 기준을 의심합니다"
+    ],
+    "knowledge": [
+      "kn_gold_star_pressure"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_gold_board",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_abel": {
+    "id": "npc_abel",
+    "race": "human",
+    "gender": "male",
+    "name": "아벨",
+    "mbti": "ISFP",
+    "role": "출항을 미루는 사람",
+    "background": "연두섬의 편안함 안에서 출항 허가서를 계속 미루고 있습니다.",
+    "appearance": "아벨은(는) 출항을 미루는 사람답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "떠날 이유를 알지만 오늘은 아니라고 말합니다",
+      "편안함에 기대어 불안을 숨깁니다"
+    ],
+    "knowledge": [
+      "kn_green_comfort_delay"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_green_lodge",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_jonah": {
+    "id": "npc_jonah",
+    "race": "human",
+    "gender": "male",
+    "name": "요나",
+    "mbti": "ENFJ",
+    "role": "체류 옹호자",
+    "background": "머무름이 사람을 살릴 수 있다고 믿으며 아벨을 더 쉬게 하려 합니다.",
+    "appearance": "요나은(는) 체류 옹호자답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "따뜻하게 설득합니다",
+      "떠남을 성급함으로 볼 때가 있습니다"
+    ],
+    "knowledge": [
+      "kn_green_comfort_delay"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_green_lodge",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_deborah": {
+    "id": "npc_deborah",
+    "race": "human",
+    "gender": "female",
+    "name": "데보라",
+    "mbti": "ENTJ",
+    "role": "출항 권유자",
+    "background": "쉬는 시간이 떠남을 지우면 안 된다고 말합니다.",
+    "appearance": "데보라은(는) 출항 권유자답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "결정을 미루는 말에 민감합니다",
+      "다정함보다 방향을 중시합니다"
+    ],
+    "knowledge": [
+      "kn_green_departure"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_green_office",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_hannah_p": {
+    "id": "npc_hannah_p",
+    "race": "human",
+    "gender": "female",
+    "name": "한나",
+    "mbti": "INFP",
+    "role": "예식을 준비하는 사람",
+    "background": "결혼은 원하지만 사랑을 증명하는 비용이 관계를 압박하는 것을 두려워합니다.",
+    "appearance": "한나은(는) 예식을 준비하는 사람답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "작은 선택을 크게 망설입니다",
+      "관계보다 형식이 앞서는 순간에 숨이 막힙니다"
+    ],
+    "knowledge": [
+      "kn_purple_love_cost"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_purple_hall",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_joseph": {
+    "id": "npc_joseph",
+    "race": "human",
+    "gender": "male",
+    "name": "요셉",
+    "mbti": "ISFP",
+    "role": "한나의 파트너",
+    "background": "큰 결혼식보다 함께 살아갈 실제 시간을 중요하게 봅니다.",
+    "appearance": "요셉은(는) 한나의 파트너답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "말을 아끼지만 선택은 분명합니다",
+      "보여 주기보다 생활을 봅니다"
+    ],
+    "knowledge": [
+      "kn_purple_love_cost"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_purple_hall",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_rebecca": {
+    "id": "npc_rebecca",
+    "race": "human",
+    "gender": "female",
+    "name": "레베카",
+    "mbti": "ESFJ",
+    "role": "체면의 증인",
+    "background": "작은 결혼식 때문에 무시당한 경험이 있어 제대로 보여줘야 한다고 믿습니다.",
+    "appearance": "레베카은(는) 체면의 증인답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "체면을 보호 장치로 여깁니다",
+      "작은 시작을 쉽게 불안해합니다"
+    ],
+    "knowledge": [
+      "kn_purple_display"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_purple_gift",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_mika": {
+    "id": "npc_mika",
+    "race": "human",
+    "gender": "male",
+    "name": "미카",
+    "mbti": "ISFJ",
+    "role": "외지 노동자",
+    "background": "은빛섬을 깨끗하게 만들지만 같은 식탁에는 앉지 못하는 외지 노동자입니다.",
+    "appearance": "미카은(는) 외지 노동자답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "특별 대우보다 같은 자리를 원합니다",
+      "자기 노동을 과장하지 않습니다"
+    ],
+    "knowledge": [
+      "kn_silver_clean_work",
+      "kn_silver_same_table"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_silver_tunnel",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_hannah_s": {
+    "id": "npc_hannah_s",
+    "race": "human",
+    "gender": "female",
+    "name": "한나",
+    "mbti": "INFJ",
+    "role": "식당 주민",
+    "background": "미카에게 빚이 있지만 공동체의 시선을 거스르는 일을 오래 미뤄 왔습니다.",
+    "appearance": "한나은(는) 식당 주민답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "고마움을 기억합니다",
+      "해야 할 말을 미루는 습관이 있습니다"
+    ],
+    "knowledge": [
+      "kn_silver_same_table"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_silver_cafe",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_sila": {
+    "id": "npc_sila",
+    "race": "human",
+    "gender": "female",
+    "name": "실라",
+    "mbti": "ESTJ",
+    "role": "분리 옹호자",
+    "background": "외지 식권이 충돌을 줄이는 현실적 장치라고 봅니다.",
+    "appearance": "실라은(는) 분리 옹호자답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "관리의 언어로 말합니다",
+      "불편함을 안전이라고 부릅니다"
+    ],
+    "knowledge": [
+      "kn_silver_same_table"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_silver_cafe",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_mariam": {
+    "id": "npc_mariam",
+    "race": "human",
+    "gender": "female",
+    "name": "마리암",
+    "mbti": "INFP",
+    "role": "실패한 항해사 후보",
+    "background": "항해사 시험에 떨어졌고 아직 괜찮지 않지만 축하식의 주인공이 되었습니다.",
+    "appearance": "마리암은(는) 실패한 항해사 후보답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "축하를 미워하지 않지만 아직 웃지 못합니다",
+      "자기 실패를 자기 말로 말하고 싶어 합니다"
+    ],
+    "knowledge": [
+      "kn_orange_need_time"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_orange_back",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_naomi": {
+    "id": "npc_naomi",
+    "race": "human",
+    "gender": "female",
+    "name": "나오미",
+    "mbti": "INFJ",
+    "role": "기다림의 대변인",
+    "background": "과거 너무 빨리 웃어야 했던 경험 때문에 마리암에게 시간을 주려 합니다.",
+    "appearance": "나오미은(는) 기다림의 대변인답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "기다림을 중요하게 봅니다",
+      "가끔 타인의 선택을 대신 말하려 합니다"
+    ],
+    "knowledge": [
+      "kn_orange_need_time"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_orange_back",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
+    "memories": []
+  },
+  "npc_gabriel": {
+    "id": "npc_gabriel",
+    "race": "human",
+    "gender": "male",
+    "name": "가브리엘",
+    "mbti": "ENFJ",
+    "role": "축하식 스승",
+    "background": "새출발 축하식이 실패한 사람을 공동체로 데려온다고 믿습니다.",
+    "appearance": "가브리엘은(는) 축하식 스승답게 주변의 시선과 사건의 압력을 살피고 있습니다.",
+    "traits": [
+      "밝은 말로 사람을 일으키려 합니다",
+      "지금의 침묵을 견디기 어려워합니다"
+    ],
+    "knowledge": [
+      "kn_orange_forced_joy"
+    ],
+    "level": 1,
+    "alive": true,
+    "active_buffs": [],
+    "location": "loc_orange_square",
+    "inventory": [],
+    "equipment": {},
+    "gold": 0,
+    "learned_skills": [],
+    "relations": {
+      "player_01": 10
+    },
+    "xp_reward": 0,
+    "protected": true,
     "memories": []
   }
 }

@@ -352,10 +352,9 @@ def _check_cast(s: DecomSetup, c: DecomCast) -> None:
                 "Use exactly one (or leave both empty if for_player=true)."
             )
 
-    # Each humanoid character must own ≥1 armor item; combatants also a weapon.
-    # Collect ALL violations and raise once, so the LLM can fix every missing
-    # item in a single retry instead of grinding through them one-by-one (which
-    # exhausts the 5-shot budget on large manifests).
+    # Hostile characters still need a weapon-like owned item for combat support.
+    # Non-hostile NPCs do not need placeholder clothing/armor items; those create
+    # noisy inventory records while the runtime only supports player equipment.
     items_by_owner: dict[str, list[DecItem]] = {}
     for it in c.items:
         if it.owner_character:
@@ -364,28 +363,19 @@ def _check_cast(s: DecomSetup, c: DecomCast) -> None:
     # matching on `role` was too brittle (the LLM writes things like "포식자/
     # 생물/추적자" instead of the dictionary words "짐승/괴수" we'd match on).
     beast_races = {r.id for r in s.races if not r.is_humanoid}
-    missing_armor: list[str] = []
     missing_weapon: list[str] = []
     for ch in c.characters:
         if ch.race in beast_races:
             continue
         owned = items_by_owner.get(ch.id, [])
-        if not any(it.kind == "armor" for it in owned):
-            missing_armor.append(ch.id)
         if ch.is_enemy and not any(it.kind == "weapon" for it in owned):
             missing_weapon.append(ch.id)
-    if missing_armor or missing_weapon:
+    if missing_weapon:
         lines: list[str] = []
-        if missing_armor:
-            lines.append(
-                f"The following humanoid characters have no owned armor item: {missing_armor}. "
-                "Add one item with kind='armor' and owner_character set, for each, to the items roster."
-            )
-        if missing_weapon:
-            lines.append(
-                f"The following hostile characters have no owned weapon item: {missing_weapon}. "
-                "Add one item with kind='weapon' and owner_character set, for each, to the items roster."
-            )
+        lines.append(
+            f"The following hostile characters have no owned weapon item: {missing_weapon}. "
+            "Add one item with kind='weapon' and owner_character set, for each, to the items roster."
+        )
         raise EntityWriterError("\n".join(lines))
 
 

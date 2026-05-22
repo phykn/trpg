@@ -110,6 +110,14 @@ def test_perceive_optional_target():
     _validate({"verb": "perceive"})
 
 
+def test_decide_requires_quest_and_choice():
+    _validate({"verb": "decide", "what": "quest_01", "how": "record"})
+    with pytest.raises(ValidationError, match="decide.what"):
+        _validate({"verb": "decide", "how": "record"})
+    with pytest.raises(ValidationError, match="decide.how"):
+        _validate({"verb": "decide", "what": "quest_01"})
+
+
 def test_query_accepts_optional_topic():
     _validate({"verb": "query"})
     _validate({"verb": "query", "what": "exits"})

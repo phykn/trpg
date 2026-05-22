@@ -12,7 +12,12 @@ from src.game.domain.graph.query import (
 )
 from src.game.runtime.state import GameRuntimeState
 from src.locale import render
-from src.wire.models import DifficultyBadge, QuestPayload, QuestRewards
+from src.wire.models import (
+    DifficultyBadge,
+    QuestChoicePayload,
+    QuestPayload,
+    QuestRewards,
+)
 
 from .values import node_name, optional_str, static_value
 
@@ -86,6 +91,11 @@ def build_quest_payload(
         rewards=_quest_rewards(quest),
         status=display_status,
         actions=actions,
+        choices=(
+            _quest_choices(quest)
+            if status == "active" and _ready_to_decide(quest)
+            else []
+        ),
     )
 
 
@@ -236,6 +246,11 @@ def _quest_progress(quest: GraphNode) -> tuple[int, int]:
     return sum(1 for item in raw_met[:total] if item is True), total
 
 
+def _ready_to_decide(quest: GraphNode) -> bool:
+    done, total = _quest_progress(quest)
+    return total == 0 or done >= total
+
+
 def _progress_label(done: int, total: int) -> str:
     if total == 0:
         return ""
@@ -254,6 +269,24 @@ def _quest_rewards(quest: GraphNode) -> QuestRewards:
         gold=gold if isinstance(gold, int) else 0,
         exp=exp if isinstance(exp, int) else 0,
     )
+
+
+def _quest_choices(quest: GraphNode) -> list[QuestChoicePayload]:
+    raw = quest.properties.get("choices")
+    if not isinstance(raw, dict):
+        return []
+    choices: list[QuestChoicePayload] = []
+    for choice_id, choice in raw.items():
+        if not isinstance(choice_id, str) or not choice_id:
+            continue
+        label = choice.get("label") if isinstance(choice, dict) else None
+        choices.append(
+            QuestChoicePayload(
+                id=choice_id,
+                label=label if isinstance(label, str) and label else choice_id,
+            )
+        )
+    return choices
 
 
 def _quest_giver_name(graph: Graph, quest_id: str, runtime: GameRuntimeState) -> str:

@@ -198,35 +198,27 @@ en = "changed"
 ko = "교전이 시작됨"
 en = "combat started"
 
-[runtime."combat.motion.player_precise_success"]
-ko = "정확히 압박함"
-en = "pressed with precision"
+[runtime."combat.motion.player_attack_success"]
+ko = "공격함"
+en = "attacked"
 
-[runtime."combat.motion.player_precise_failure"]
+[runtime."combat.motion.player_attack_failure"]
 ko = "공격 흐름을 놓침"
 en = "lost the attack line"
 
-[runtime."combat.motion.player_guarded_success"]
-ko = "조심스럽게 압박함"
-en = "pressed carefully"
+[runtime."combat.motion.player_defend_success"]
+ko = "방어함"
+en = "defended"
 
-[runtime."combat.motion.player_guarded_failure"]
-ko = "방어하며 버팀"
-en = "held guard"
+[runtime."combat.motion.player_defend_failure"]
+ko = "방어가 흔들림"
+en = "guard faltered"
 
-[runtime."combat.motion.player_reckless_success"]
-ko = "거칠게 밀어붙임"
-en = "pressed recklessly"
+[runtime."combat.motion.player_flee_success"]
+ko = "도망침"
+en = "fled"
 
-[runtime."combat.motion.player_reckless_failure"]
-ko = "무리하다가 빈틈이 생김"
-en = "overextended"
-
-[runtime."combat.motion.player_create_distance_success"]
-ko = "거리를 벌림"
-en = "created distance"
-
-[runtime."combat.motion.player_create_distance_failure"]
+[runtime."combat.motion.player_flee_failure"]
 ko = "빠져나갈 틈을 놓침"
 en = "missed the opening"
 
@@ -278,21 +270,13 @@ en = "this exchange has no result yet"
 ko = "방어"
 en = "defend"
 
-[runtime."combat.action.precise"]
+[runtime."combat.action.attack"]
 ko = "공격"
-en = "precise"
+en = "attack"
 
-[runtime."combat.action.guarded"]
-ko = "방어"
-en = "guarded"
-
-[runtime."combat.action.reckless"]
-ko = "무모한 공격"
-en = "reckless"
-
-[runtime."combat.action.create_distance"]
+[runtime."combat.action.flee"]
 ko = "도망"
-en = "create distance"
+en = "flee"
 
 [runtime."combat.action.talk"]
 ko = "대화"
@@ -394,11 +378,11 @@ en = "The attack loses its line, and the opponent catches the opening."
 ko = "일격이 닿기 직전, 상대가 몸을 틀어 흐름을 끊습니다."
 en = "The attack loses its line, and the opponent catches the opening."
 
-[runtime."narration.combat_failure.guarded"]
+[runtime."narration.combat_failure.defend"]
 ko = "단단히 버티며 충격을 흘리지만, 반격으로 잇기에는 한 박자 모자랍니다."
 en = "The guard holds, but this move does not become pressure."
 
-[runtime."narration.combat_failure.create_distance"]
+[runtime."narration.combat_failure.flee"]
 ko = "발끝이 길을 찾는 순간, 상대가 먼저 붙어 거리를 지워 버립니다."
 en = "No opening appears, and the distance stays tight."
 

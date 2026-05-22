@@ -51,6 +51,7 @@ def build_seed_graph(
     template: dict[str, Any],
     game_id: str,
     locale: str = "ko",
+    world_guidance: str = "",
     effects: SeedRecords | None = None,
     statuses: SeedRecords | None = None,
     slots: SeedRecords | None = None,
@@ -284,6 +285,7 @@ def build_seed_graph(
         intro_text=_optional_str(start.get("intro_text")),
     )
     content = runtime_content_from_records(
+        world_guidance=world_guidance,
         races=races,
         locations=locations,
         items=items,

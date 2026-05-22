@@ -60,7 +60,7 @@ def test_check_entity_skill_ok(capsys, tmp_path):
                 "name": "발걸기",
                 "description": "상대를 넘어뜨립니다.",
                 "level": 1,
-                "action": "precise",
+                "action": "attack",
                 "bonus": 1,
                 "mp_cost": 1,
             },

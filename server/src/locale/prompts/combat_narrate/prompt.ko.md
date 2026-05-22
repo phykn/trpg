@@ -91,14 +91,14 @@ neutral:
 
 ## player_action별 초점
 
-precise, reckless:
+attack:
 공격이 어떻게 들어가거나 막히는지 보여줍니다.
 
-defend, guarded:
+defend:
 흘리기, 받아내기, 거리 조절, 다음 움직임 차단 중 하나를 보여줍니다.
 success는 공격 성공이 아니라 방어 성공입니다.
 
-create_distance:
+flee:
 전투를 더 이어가지 않고, 거리와 흐름에서 빠져나오는 장면을 씁니다.
 success는 피해를 주는 것이 아니라 거리를 벌리거나 전투 흐름에서 빠져나오는 것입니다.
 

@@ -6,8 +6,8 @@
     "playable": true,
     "racial_skills": [
       "human_adaptability",
-      "guarded_footwork",
-      "reckless_charge"
+      "defend_footwork",
+      "attack_charge"
     ]
   },
   "training_construct": {

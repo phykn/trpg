@@ -15,21 +15,24 @@ def test_catalog_fill_creates_fixed_catalogs(capsys, tmp_path):
     assert rc == 0, capsys.readouterr().err
     assert capsys.readouterr().out.strip() == "OK"
     assert set(_read_json(sd / "actions.json")) == {
+        "attack",
         "defend",
-        "precise",
-        "guarded",
-        "reckless",
-        "create_distance",
+        "flee",
         "talk",
     }
-    assert {"dc_down", "heal", "mp_restore"} <= set(_read_json(sd / "effects.json"))
+    assert set(_read_json(sd / "effects.json")) == {
+        "heal",
+        "mp_restore",
+        "dc_down",
+        "dc_up",
+    }
     assert len(_read_json(sd / "mbti.json")) == 16
     assert set(_read_json(sd / "slots.json")) == {"weapon", "armor", "accessory"}
     assert not (sd / "dialogue_styles.json").exists()
     assert not (sd / "statuses.json").exists()
 
 
-def test_catalog_fill_preserves_scenario_specific_records(capsys, tmp_path):
+def test_catalog_fill_replaces_effects_with_fixed_catalog(capsys, tmp_path):
     sd = tmp_path / "scen"
     sd.mkdir()
     (sd / "effects.json").write_text(
@@ -44,8 +47,8 @@ def test_catalog_fill_preserves_scenario_specific_records(capsys, tmp_path):
 
     assert rc == 0, capsys.readouterr().err
     effects = _read_json(sd / "effects.json")
-    assert "custom_fog" in effects
-    assert "dc_down" in effects
+    assert "custom_fog" not in effects
+    assert set(effects) == {"heal", "mp_restore", "dc_down", "dc_up"}
 
 
 def _read_json(path: Path) -> dict:

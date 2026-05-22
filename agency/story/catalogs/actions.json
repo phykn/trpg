@@ -1,32 +1,22 @@
 {
+  "attack": {
+    "id": "attack",
+    "name": "공격",
+    "description": "대상을 공격하거나 압박하는 행동"
+  },
   "defend": {
     "id": "defend",
     "name": "방어",
     "description": "피해를 줄이거나 다음 행동을 준비할 여유를 확보하는 행동"
   },
-  "precise": {
-    "id": "precise",
-    "name": "정밀 공격",
-    "description": "대상의 빈틈을 차분히 노리는 전투 행동"
-  },
-  "guarded": {
-    "id": "guarded",
-    "name": "신중한 공세",
-    "description": "방어 태세를 유지하며 대상을 압박하는 전투 행동"
-  },
-  "reckless": {
-    "id": "reckless",
-    "name": "무모한 공세",
-    "description": "위험을 감수하고 강하게 몰아붙이는 전투 행동"
-  },
-  "create_distance": {
-    "id": "create_distance",
-    "name": "거리 확보",
-    "description": "위험한 거리에서 벗어나 전투 흐름을 끊는 행동"
+  "flee": {
+    "id": "flee",
+    "name": "도망",
+    "description": "위험한 상황에서 벗어나거나 거리를 확보하는 행동"
   },
   "talk": {
     "id": "talk",
     "name": "대화",
-    "description": "전투 중 말로 압박을 늦추거나 흐름을 흔드는 행동"
+    "description": "말로 상대를 설득하거나 전투 흐름을 흔드는 행동"
   }
 }

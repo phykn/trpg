@@ -44,6 +44,11 @@ def copy_fixed_catalogs(scenario_dir: Path, catalog_dir: Path) -> None:
         src = catalog_dir / f"{name}.json"
         dst = scenario_dir / f"{name}.json"
         fixed = _records_from_json(json.loads(src.read_text(encoding="utf-8")))
+        if name in {"actions", "effects"}:
+            dst.write_text(
+                json.dumps(fixed, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            continue
         existing = {}
         if dst.is_file():
             existing = _records_from_json(json.loads(dst.read_text(encoding="utf-8")))

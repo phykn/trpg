@@ -7,6 +7,7 @@ from src.game.engines.graph.quest import (
     plan_quest_abandon,
     plan_quest_accept,
     plan_quest_complete,
+    plan_quest_decide,
     plan_quest_fail,
     plan_quest_progress_for_trigger,
     plan_quest_progress_for_character_death,
@@ -180,6 +181,81 @@ def test_location_enter_trigger_completes_active_quest():
     assert changed.nodes["quest_active"].properties["status"] == "completed"
 
 
+def test_trigger_progress_does_not_auto_complete_choice_quest():
+    graph = _graph()
+    graph.nodes["quest_active"].properties.update(
+        {
+            "triggers": [
+                {
+                    "id": "trigger_01",
+                    "name": "마을 도착",
+                    "type": "location_enter",
+                    "target": "town",
+                }
+            ],
+            "triggers_met": [False],
+            "choices": {
+                "record": {"label": "기록으로 남깁니다"},
+                "release": {"label": "흘려보냅니다"},
+            },
+        }
+    )
+
+    result = plan_quest_progress_for_trigger(graph, "location_enter", "town")
+    changed = _apply_all(graph, result.changes)
+
+    assert result.completed_quest_ids == []
+    assert changed.nodes["quest_active"].properties["triggers_met"] == [True]
+    assert changed.nodes["quest_active"].properties["status"] == "active"
+
+
+def test_decide_active_quest_sets_selected_choice_and_completes():
+    graph = _graph()
+    graph.nodes["quest_active"].properties["choices"] = {
+        "record": {"label": "기록으로 남깁니다"},
+        "release": {"label": "흘려보냅니다"},
+    }
+
+    result = plan_quest_decide(graph, "quest_active", "record")
+    changed = _apply_all(graph, result.changes)
+
+    assert result.action == "decide"
+    assert result.next_status == "completed"
+    assert changed.nodes["quest_active"].properties["selected_choice"] == "record"
+    assert changed.nodes["quest_active"].properties["status"] == "completed"
+
+
+def test_decide_rejects_before_required_triggers_are_met():
+    graph = _graph()
+    graph.nodes["quest_active"].properties.update(
+        {
+            "triggers": [
+                {
+                    "id": "trigger_01",
+                    "name": "마을 도착",
+                    "type": "location_enter",
+                    "target": "town",
+                }
+            ],
+            "triggers_met": [False],
+            "choices": {"record": {"label": "기록으로 남깁니다"}},
+        }
+    )
+
+    with pytest.raises(GraphQuestError, match="decision requires completed triggers"):
+        plan_quest_decide(graph, "quest_active", "record")
+
+
+def test_decide_rejects_unknown_choice():
+    graph = _graph()
+    graph.nodes["quest_active"].properties["choices"] = {
+        "record": {"label": "기록으로 남깁니다"},
+    }
+
+    with pytest.raises(GraphQuestError, match="choice not found"):
+        plan_quest_decide(graph, "quest_active", "missing")
+
+
 def test_completed_quest_rewards_move_to_player():
     graph = _graph()
     graph.nodes["quest_completed"].properties["rewards"] = {
@@ -201,6 +277,55 @@ def test_completed_quest_rewards_move_to_player():
     assert player["gold"] == 6
     assert player["xp_pool"] == 12
     assert "reward_of:reward_sword:quest_completed" not in changed.edges
+    assert "carries:player_01:reward_sword" in changed.edges
+
+
+def test_completed_quest_rewards_remove_existing_item_location():
+    graph = _graph()
+    graph.nodes["quest_completed"].properties["rewards"] = {
+        "gold": 0,
+        "exp": 0,
+        "items": ["reward_sword"],
+    }
+    graph.edges["located_at:reward_sword:town"] = GraphEdge(
+        id="located_at:reward_sword:town",
+        type="located_at",
+        from_node_id="reward_sword",
+        to_node_id="town",
+    )
+
+    result = plan_quest_rewards(graph, "quest_completed", "player_01")
+    changed = _apply_all(graph, result.changes)
+
+    assert "located_at:reward_sword:town" not in changed.edges
+    assert "carries:player_01:reward_sword" in changed.edges
+
+
+def test_completed_quest_rewards_use_selected_choice_rewards():
+    graph = _graph()
+    graph.nodes["quest_completed"].properties.update(
+        {
+            "selected_choice": "record",
+            "choices": {
+                "record": {
+                    "label": "기록으로 남깁니다",
+                    "rewards": {"gold": 2, "exp": 3, "items": ["reward_sword"]},
+                },
+                "release": {
+                    "label": "흘려보냅니다",
+                    "rewards": {"gold": 0, "exp": 0, "items": []},
+                },
+            },
+            "rewards": {"gold": 99, "exp": 99, "items": []},
+        }
+    )
+
+    result = plan_quest_rewards(graph, "quest_completed", "player_01")
+    changed = _apply_all(graph, result.changes)
+
+    player = changed.nodes["player_01"].properties
+    assert player["gold"] == 3
+    assert player["xp_pool"] == 5
     assert "carries:player_01:reward_sword" in changed.edges
 
 

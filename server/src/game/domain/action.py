@@ -13,6 +13,7 @@ ActionVerb = Literal[
     "query",
     "rest",
     "pass",
+    "decide",
 ]
 
 ActionValue = str | list[str]
@@ -108,7 +109,7 @@ def _validate_classifier_action(action: Action, *, in_combat: bool) -> None:
         destination = _single(action.to) or _single(action.what)
         if destination is None and not in_combat:
             raise ValueError("action=move requires to or what outside combat")
-        move_how = {"hasty", "create_distance"} if in_combat else {"hasty"}
+        move_how = {"hasty", "flee"} if in_combat else {"hasty"}
         _require_enum(action.how, move_how, "move.how", optional=True)
         return
 
@@ -132,12 +133,7 @@ def _validate_classifier_action(action: Action, *, in_combat: bool) -> None:
 
     if action.verb == "attack":
         _require_targets(action.what, "attack.what", required=True)
-        attack_how = (
-            {"precise", "guarded", "reckless", "surprise"}
-            if in_combat
-            else {"surprise"}
-        )
-        _require_enum(action.how, attack_how, "attack.how", optional=True)
+        _require_enum(action.how, {"surprise"}, "attack.how", optional=True)
         return
 
     if action.verb == "speak":
@@ -152,6 +148,11 @@ def _validate_classifier_action(action: Action, *, in_combat: bool) -> None:
         topic = _single(action.what)
         if topic is not None:
             _require_enum(topic, _QUERY_TOPICS, "query.what")
+        return
+
+    if action.verb == "decide":
+        _require_string(_single(action.what), "decide.what")
+        _require_string(action.how, "decide.how")
 
 
 def _single(value: object) -> str | None:

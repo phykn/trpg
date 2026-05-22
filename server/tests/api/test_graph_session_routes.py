@@ -745,7 +745,7 @@ async def test_graph_combat_rejects_when_not_in_combat(tmp_path):
         game_id = await _init_graph_session(client)
         response = await client.post(
             f"/session/{game_id}/graph/combat",
-            json={"command": "guarded"},
+            json={"command": "defend"},
         )
 
     assert response.status_code == 422
@@ -760,7 +760,7 @@ async def test_graph_combat_stream_rejects_when_not_in_combat(tmp_path):
         game_id = await _init_graph_session(client)
         response = await client.post(
             f"/session/{game_id}/graph/combat/stream",
-            json={"command": "guarded"},
+            json={"command": "defend"},
         )
 
     assert response.status_code == 200
@@ -929,7 +929,7 @@ async def test_graph_turn_auto_skill_uses_known_skill_during_existing_combat(
 
 
 @pytest.mark.asyncio
-async def test_graph_turn_create_distance_success_ends_combat(tmp_path, monkeypatch):
+async def test_graph_turn_flee_success_ends_combat(tmp_path, monkeypatch):
     monkeypatch.setattr("src.game.engines.graph.combat.randint", lambda _a, _b: 20)
     app = _build_app(tmp_path)
 
@@ -946,7 +946,7 @@ async def test_graph_turn_create_distance_success_ends_combat(tmp_path, monkeypa
         )
         response = await client.post(
             f"/session/{game_id}/graph/turn",
-            json={"action": {"verb": "move", "how": "create_distance"}},
+            json={"action": {"verb": "move", "how": "flee"}},
         )
 
     assert response.status_code == 200, response.text

@@ -32,6 +32,7 @@ class _ViewIds:
     corpse_inventory_item_ids: set[str] = field(default_factory=set)
     corpse_inventory_by_corpse: dict[str, set[str]] = field(default_factory=dict)
     quest_ids: set[str] = field(default_factory=set)
+    choice_ids: set[str] = field(default_factory=set)
     self_refs: set[str] = field(default_factory=set)
 
     @property
@@ -159,7 +160,9 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
         corpse_inventory_item_ids,
         corpse_inventory_by_corpse,
     ) = _corpse_ids(surroundings.get("corpses"))
-    quest_ids = _ids_from_list(surroundings.get("quests"))
+    quests = _dicts(surroundings.get("quests"))
+    quest_ids = _ids_from_list(quests)
+    choice_ids = _quest_choice_ids(quests)
     self_refs = _self_refs(player_ids)
 
     return _ViewIds(
@@ -182,6 +185,7 @@ def _collect_view_ids(surroundings: dict[str, Any]) -> _ViewIds:
         corpse_inventory_item_ids=corpse_inventory_item_ids,
         corpse_inventory_by_corpse=corpse_inventory_by_corpse,
         quest_ids=quest_ids,
+        choice_ids=choice_ids,
         self_refs=self_refs,
     )
 
@@ -228,6 +232,19 @@ def _validate_action(action: Action, view: _ViewIds) -> None:
             view.perceive_targets,
             action=action,
             field="what",
+        )
+    elif action.verb == "decide":
+        _require_id(
+            _single(action.what),
+            view.quest_ids,
+            action=action,
+            field="what",
+        )
+        _require_id(
+            action.how,
+            view.choice_ids,
+            action=action,
+            field="how",
         )
 
 
@@ -381,6 +398,13 @@ def _ids_from_list(value: object) -> set[str]:
         for entry_id in (_str(entry.get("id")) for entry in _dicts(value))
         if entry_id
     }
+
+
+def _quest_choice_ids(quests: list[dict[str, Any]]) -> set[str]:
+    choice_ids: set[str] = set()
+    for quest in quests:
+        choice_ids |= _ids_from_list(quest.get("choices"))
+    return choice_ids
 
 
 def _equipment_item_ids(value: object) -> set[str]:

@@ -246,6 +246,47 @@ def test_quest_abandon_dispatch_clears_active_quest():
     assert result.runtime.graph.nodes["quest_rat"].properties["status"] == "abandoned"
 
 
+def test_decide_dispatch_completes_choice_quest_and_applies_choice_rewards():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_receipt"] = _item("quest_receipt")
+    runtime.graph.nodes["quest_rat"].properties.update(
+        {
+            "status": "active",
+            "choices": {
+                "record": {
+                    "label": "기록으로 남깁니다",
+                    "rewards": {"gold": 2, "items": ["quest_receipt"]},
+                },
+                "release": {
+                    "label": "흘려보냅니다",
+                    "rewards": {"gold": 0, "items": []},
+                },
+            },
+        }
+    )
+    runtime = runtime.model_copy(
+        update={
+            "progress": runtime.progress.model_copy(
+                update={"active_quest_id": "quest_rat"}
+            )
+        }
+    )
+
+    result = dispatch_graph_action(
+        runtime,
+        Action(verb="decide", what="quest_rat", how="record"),
+    )
+
+    assert result.kind == "decide"
+    assert result.runtime.graph.nodes["quest_rat"].properties["status"] == "completed"
+    assert result.runtime.graph.nodes["quest_rat"].properties["selected_choice"] == (
+        "record"
+    )
+    assert result.runtime.graph.nodes["player_01"].properties["gold"] == 12
+    assert "carries:player_01:quest_receipt" in result.runtime.graph.edges
+    assert result.runtime.progress.active_quest_id is None
+
+
 def test_move_dispatch_completes_quest_and_activates_next_required_quest():
     runtime = _runtime()
     runtime.graph.nodes["chapter_01"] = GraphNode(

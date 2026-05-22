@@ -4,11 +4,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 CombatActionKind = Literal[
+    "attack",
     "defend",
-    "precise",
-    "guarded",
-    "reckless",
-    "create_distance",
+    "flee",
     "talk",
 ]
 CombatSupportKind = Literal["skill", "item"]

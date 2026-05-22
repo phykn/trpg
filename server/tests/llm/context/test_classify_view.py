@@ -57,7 +57,14 @@ def _runtime(
         nodes["quest_01"] = GraphNode(
             id="quest_01",
             type="quest",
-            properties={"name": "통행 의뢰", "description": "숨겨야 할 퀘스트 설명"},
+            properties={
+                "name": "통행 의뢰",
+                "description": "숨겨야 할 퀘스트 설명",
+                "choices": {
+                    "record": {"label": "기록으로 남깁니다"},
+                    "release": {"label": "흘려보냅니다"},
+                },
+            },
         )
     edges: dict[str, GraphEdge] = {
         "located_at:player_01:town": GraphEdge(
@@ -107,7 +114,7 @@ def _runtime(
             properties={
                 "name": f"기술 {index}",
                 "description": "숨겨야 할 기술 설명",
-                "action": "precise",
+                "action": "attack",
             },
         )
         edges[f"knows_skill:player_01:{node_id}"] = GraphEdge(
@@ -208,7 +215,7 @@ def test_classify_context_to_grounding_view_preserves_grounding_ids():
         {
             "id": "skill_0",
             "name": "기술 0",
-            "action": "precise",
+            "action": "attack",
         }
     ]
 
@@ -220,7 +227,44 @@ def test_classify_context_to_grounding_view_preserves_active_quest_id():
 
     grounding = classify_context_to_grounding_view(context)
 
+    assert grounding["quests"] == [
+        {
+            "id": "quest_01",
+            "name": "통행 의뢰",
+            "choices": [
+                {"id": "record", "label": "기록으로 남깁니다"},
+                {"id": "release", "label": "흘려보냅니다"},
+            ],
+        }
+    ]
+    assert context["affordances"]["can_decide"] == ["record", "release"]
+
+
+def test_classify_context_hides_quest_choices_until_goals_are_met():
+    runtime = _runtime(active_quest=True)
+    runtime.graph.nodes["quest_01"].properties.update(
+        {
+            "triggers": [
+                {
+                    "id": "convince_guard",
+                    "type": "social_check",
+                    "target": "npc_0",
+                }
+            ],
+            "triggers_met": [False],
+        }
+    )
+
+    context = build_classify_context_view(runtime, "기록으로 남깁니다")
+    grounding = classify_context_to_grounding_view(context)
+
     assert grounding["quests"] == [{"id": "quest_01", "name": "통행 의뢰"}]
+    assert context["affordances"]["can_decide"] == []
+
+    runtime.graph.nodes["quest_01"].properties["triggers_met"] = [True]
+
+    context = build_classify_context_view(runtime, "기록으로 남깁니다")
+    assert context["affordances"]["can_decide"] == ["record", "release"]
 
 
 def test_classify_context_to_grounding_view_preserves_optional_trade_candidates():

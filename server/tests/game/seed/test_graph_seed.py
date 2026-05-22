@@ -7,7 +7,7 @@ def _skill() -> dict:
     return {
         "id": "slash",
         "name": "베기",
-        "action": "precise",
+        "action": "attack",
         "bonus": 2,
     }
 
@@ -159,7 +159,7 @@ def test_build_seed_graph_keeps_static_content_out_of_seed_nodes():
                 "id": "slash",
                 "name": "베기",
                 "description": "검으로 벱니다.",
-                "action": "precise",
+                "action": "attack",
             }
         },
         npcs={
@@ -442,7 +442,7 @@ def test_build_seed_graph_links_effects_from_items():
             "practice_dagger": {
                 "id": "practice_dagger",
                 "name": "훈련 단검",
-                "action": "precise",
+                "action": "attack",
                 "effect": "dc_down",
             }
         },
@@ -450,7 +450,7 @@ def test_build_seed_graph_links_effects_from_items():
             "training_strike": {
                 "id": "training_strike",
                 "name": "훈련 일격",
-                "action": "precise",
+                "action": "attack",
                 "bonus": 2,
             }
         },
@@ -504,7 +504,7 @@ def test_build_seed_graph_keeps_status_records_without_legacy_item_links():
             "focus_bolt": {
                 "id": "focus_bolt",
                 "name": "집중 화살",
-                "action": "precise",
+                "action": "attack",
                 "bonus": 2,
             }
         },
@@ -602,12 +602,12 @@ def test_build_seed_graph_links_skills_to_actions():
             "spark": {
                 "id": "spark",
                 "name": "불꽃",
-                "action": "precise",
+                "action": "attack",
             }
         },
         actions={
-            "precise": {
-                "id": "precise",
+            "attack": {
+                "id": "attack",
                 "name": "공격",
             }
         },
@@ -625,9 +625,9 @@ def test_build_seed_graph_links_skills_to_actions():
     )
 
     graph = bundle.graph
-    assert graph.nodes["precise"].type == "action"
-    assert graph.edges["uses_action:spark:precise"].type == "uses_action"
-    assert bundle.content.actions["precise"]["name"] == "공격"
+    assert graph.nodes["attack"].type == "action"
+    assert graph.edges["uses_action:spark:attack"].type == "uses_action"
+    assert bundle.content.actions["attack"]["name"] == "공격"
 
 
 def test_build_seed_graph_links_items_to_slots():

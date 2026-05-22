@@ -81,6 +81,7 @@ const graph: StoryGraphModel = {
       goals: ['젖은 의뢰서가 한 장 남아 있습니다.'],
       summary: '젖은 의뢰서가 한 장 남아 있습니다.',
       actions: ['accept'],
+      choices: [],
     },
   ],
   edges: [],
@@ -143,5 +144,34 @@ describe('buildNearbyPanel', () => {
 
     expect(panel.summary).toBe('인물 2 · 장소 1 · 물품 1 · 할 일 0');
     expect(staleQuest).toBeUndefined();
+  });
+
+  test('turns active quest choices into decide graph actions', () => {
+    const panel = buildNearbyPanel({
+      ...graph,
+      nodes: graph.nodes.map((node) => node.kind === 'quest'
+        ? {
+            ...node,
+            actions: [],
+            choices: [
+              { id: 'public_record', label: '기록으로 남긴다' },
+              { id: 'quiet_release', label: '조용히 돌려준다' },
+            ],
+          }
+        : node),
+    });
+
+    expect(panel.items.find((item) => item.id === 'notice')?.actions).toEqual([
+      {
+        kind: 'graph_action',
+        label: '기록으로 남긴다',
+        graphAction: { verb: 'decide', what: 'notice', how: 'public_record' },
+      },
+      {
+        kind: 'graph_action',
+        label: '조용히 돌려준다',
+        graphAction: { verb: 'decide', what: 'notice', how: 'quiet_release' },
+      },
+    ]);
   });
 });

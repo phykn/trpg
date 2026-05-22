@@ -1,26 +1,17 @@
 {
-  "calm_testimony": {
-    "id": "calm_testimony",
-    "name": "차분한 증언",
-    "description": "당신은 불완전한 기억도 외면하지 않고 차분히 말합니다.",
+  "human_adapt": {
+    "id": "human_adapt",
+    "name": "임기응변",
+    "description": "뜻밖의 질문이나 어색한 대화 흐름에 말과 판단을 빠르게 맞춥니다.",
     "level": 1,
     "action": "talk",
-    "bonus": 1,
-    "mp_cost": 0
+    "bonus": 2,
+    "mp_cost": 1
   },
-  "empty_hand_guard": {
-    "id": "empty_hand_guard",
-    "name": "빈손의 수호",
-    "description": "당신은 무기보다 먼저 몸을 내밀어 쓰러지는 사람을 지킵니다.",
-    "level": 1,
-    "action": "defend",
-    "bonus": 1,
-    "mp_cost": 0
-  },
-  "hold_name": {
-    "id": "hold_name",
-    "name": "이름 붙잡기",
-    "description": "당신은 흔들리는 순간에도 칭호가 아닌 자신의 이름을 떠올립니다.",
+  "steady_breath": {
+    "id": "steady_breath",
+    "name": "고른 숨",
+    "description": "두려운 장면에서도 숨을 고르고 방어적으로 버팁니다.",
     "level": 1,
     "action": "defend",
     "bonus": 1,

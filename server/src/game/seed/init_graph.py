@@ -37,6 +37,7 @@ async def init_graph_game(
         chapters,
         start,
         template,
+        world_guidance,
     ) = await asyncio.gather(
         scenario_repo.load_seed_records(profile_name, "races"),
         scenario_repo.load_seed_records(profile_name, "locations"),
@@ -55,6 +56,7 @@ async def init_graph_game(
         scenario_repo.load_seed_records(profile_name, "chapters"),
         scenario_repo.read_start_json(profile_name),
         scenario_repo.read_player(profile_name),
+        scenario_repo.read_world_md(profile_name, missing_ok=True),
     )
 
     violations = seed_violations(
@@ -109,6 +111,7 @@ async def init_graph_game(
         template=template,
         game_id=game_id,
         locale=locale,
+        world_guidance=world_guidance,
     )
 
     await graph_repo.save_progress(bundle.progress)

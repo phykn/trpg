@@ -87,6 +87,7 @@ def build_classify_context_view(
             "can_use": [item["id"] for item in inventory],
             "can_pick_up": [item["id"] for item in location_items],
             "can_accept_or_abandon_quest": _quest_ids(runtime),
+            "can_decide": _quest_choice_ids(runtime),
         },
         "references": {
             "last_npc": _last_entity_ref(runtime, entity_types={"character"}),
@@ -280,17 +281,65 @@ def _location_items(
     return out
 
 
-def _active_quest(runtime: GameRuntimeState) -> dict[str, str] | None:
+def _active_quest(runtime: GameRuntimeState) -> dict[str, Any] | None:
     quest_id = runtime.progress.active_quest_id
     node = runtime.graph.nodes.get(quest_id or "")
     if node is None or node.type != "quest":
         return None
-    return _node_ref(runtime, node)
+    payload: dict[str, Any] = {
+        "id": node.id,
+        "name": node_label(runtime.content, node),
+    }
+    choices = _quest_choices(node) if _ready_to_decide(node) else []
+    if choices:
+        payload["choices"] = choices
+    return payload
+
+
+def _quest_choices(node: GraphNode) -> list[dict[str, str]]:
+    choices = node.properties.get("choices")
+    if not isinstance(choices, dict):
+        return []
+    out: list[dict[str, str]] = []
+    for choice_id, choice in choices.items():
+        if not isinstance(choice_id, str) or not choice_id:
+            continue
+        if not isinstance(choice, dict):
+            continue
+        label = choice.get("label")
+        out.append(
+            {
+                "id": choice_id,
+                "label": label if isinstance(label, str) and label else choice_id,
+            }
+        )
+    return out
 
 
 def _quest_ids(runtime: GameRuntimeState) -> list[str]:
     return (
         [runtime.progress.active_quest_id] if runtime.progress.active_quest_id else []
+    )
+
+
+def _quest_choice_ids(runtime: GameRuntimeState) -> list[str]:
+    quest_id = runtime.progress.active_quest_id
+    node = runtime.graph.nodes.get(quest_id or "")
+    if node is None or node.type != "quest":
+        return []
+    if not _ready_to_decide(node):
+        return []
+    return [choice["id"] for choice in _quest_choices(node)]
+
+
+def _ready_to_decide(node: GraphNode) -> bool:
+    triggers = node.properties.get("triggers", [])
+    if not isinstance(triggers, list) or not triggers:
+        return True
+    met = node.properties.get("triggers_met", [])
+    values = met if isinstance(met, list) else []
+    return len(values) >= len(triggers) and all(
+        item is True for item in values[: len(triggers)]
     )
 
 

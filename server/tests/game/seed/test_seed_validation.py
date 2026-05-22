@@ -96,7 +96,7 @@ def test_seed_validation_accepts_known_actions_and_item_effects():
     records["items"] = {
         "badge": {
             "id": "badge",
-            "action": "precise",
+            "action": "attack",
             "effect": "dc_down",
         }
     }
@@ -121,7 +121,7 @@ def test_seed_validation_uses_effect_records_when_present():
     records["items"] = {
         "badge": {
             "id": "badge",
-            "action": "precise",
+            "action": "attack",
             "effect": "mystery_boost",
         }
     }
@@ -142,7 +142,7 @@ def test_seed_validation_accepts_effect_record_references():
     records["items"] = {
         "badge": {
             "id": "badge",
-            "action": "precise",
+            "action": "attack",
             "effect": "dc_down",
         }
     }
@@ -300,12 +300,12 @@ def test_seed_validation_rejects_unknown_action_references():
     records["skills"] = {
         "spark": {
             "id": "spark",
-            "action": "precise",
+            "action": "attack",
         }
     }
-    records["actions"] = {"guarded": {"id": "guarded", "name": "Guarded"}}
+    records["actions"] = {"defend": {"id": "defend", "name": "Guarded"}}
 
-    assert seed_violations(**records) == ["skill spark action='precise' not found"]
+    assert seed_violations(**records) == ["skill spark action='attack' not found"]
 
 
 def test_seed_validation_accepts_action_references():
@@ -313,12 +313,12 @@ def test_seed_validation_accepts_action_references():
     records["skills"] = {
         "spark": {
             "id": "spark",
-            "action": "precise",
+            "action": "attack",
         }
     }
     records["actions"] = {
-        "precise": {
-            "id": "precise",
+        "attack": {
+            "id": "attack",
             "name": "Precise",
         }
     }

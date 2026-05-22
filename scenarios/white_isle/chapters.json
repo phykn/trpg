@@ -1,40 +1,107 @@
 {
-  "chapter_01": {
-    "id": "chapter_01",
-    "title": "돌아갈 배는 없었다",
-    "description": "당신은 선착장에 남겨지고, 안개 숲에서 흰섬의 규칙을 듣습니다.",
+  "ch_fog": {
+    "id": "ch_fog",
+    "title": "안개섬",
+    "description": "엘리와 동행을 시작하고 혼자서는 건널 수 없는 바다의 규칙을 배웁니다.",
     "quests": [
-      "leave_the_pier",
-      "hear_the_island_rule"
+      "q_fog_depart"
     ],
     "prerequisites": [],
     "status": "active"
   },
-  "chapter_02": {
-    "id": "chapter_02",
-    "title": "버린 이름들",
-    "description": "당신은 섬 안쪽의 장소들을 지나며 각자의 칭호 뒤에 숨은 마음을 마주하게 돕습니다.",
+  "ch_red": {
+    "id": "ch_red",
+    "title": "붉은섬",
+    "description": "분노가 상품이 된 섬에서 공개 기록과 흘려보내기 사이를 판단합니다.",
     "quests": [
-      "face_roan_order",
-      "face_miel_tears",
-      "face_var_price",
-      "face_ort_names"
+      "q_red_refund"
     ],
     "prerequisites": [
-      "chapter_01"
+      "ch_fog"
     ],
     "status": "locked"
   },
-  "chapter_03": {
-    "id": "chapter_03",
-    "title": "흰 등대",
-    "description": "당신은 등대에 불을 켜고, 왕국의 회수 명령 앞에서 칭호가 사람을 끝낼 수 없다고 맞섭니다.",
+  "ch_blue": {
+    "id": "ch_blue",
+    "title": "푸른섬",
+    "description": "애도와 산 사람의 자리 사이에서 빈방의 의미를 판단합니다.",
     "quests": [
-      "light_the_lighthouse",
-      "refuse_the_reclaimer"
+      "q_blue_room"
     ],
     "prerequisites": [
-      "chapter_02"
+      "ch_red"
+    ],
+    "status": "locked"
+  },
+  "ch_gold": {
+    "id": "ch_gold",
+    "title": "황금섬",
+    "description": "별점과 생계가 묶인 섬에서 사람을 점수로 남길지 판단합니다.",
+    "quests": [
+      "q_gold_stars"
+    ],
+    "prerequisites": [
+      "ch_blue"
+    ],
+    "status": "locked"
+  },
+  "ch_green": {
+    "id": "ch_green",
+    "title": "연두섬",
+    "description": "편안함이 회복인지 정체인지 출항 허가서를 두고 판단합니다.",
+    "quests": [
+      "q_green_permit"
+    ],
+    "prerequisites": [
+      "ch_gold"
+    ],
+    "status": "locked"
+  },
+  "ch_purple": {
+    "id": "ch_purple",
+    "title": "보라섬",
+    "description": "사랑을 증명하는 비용이 관계를 압박하는 순간을 판단합니다.",
+    "quests": [
+      "q_purple_love"
+    ],
+    "prerequisites": [
+      "ch_green"
+    ],
+    "status": "locked"
+  },
+  "ch_silver": {
+    "id": "ch_silver",
+    "title": "은빛섬",
+    "description": "깨끗한 공동체가 누구를 같은 식탁에 앉히는지 판단합니다.",
+    "quests": [
+      "q_silver_meal"
+    ],
+    "prerequisites": [
+      "ch_purple"
+    ],
+    "status": "locked"
+  },
+  "ch_orange": {
+    "id": "ch_orange",
+    "title": "주황섬",
+    "description": "기쁨이 위로인지 강요인지 새출발 축하식을 두고 판단합니다.",
+    "quests": [
+      "q_orange_joy"
+    ],
+    "prerequisites": [
+      "ch_silver"
+    ],
+    "status": "locked"
+  },
+  "ch_white": {
+    "id": "ch_white",
+    "title": "흰섬",
+    "description": "검은 물건의 무게와 동행의 의미를 안고 빈 의자에 앉습니다.",
+    "quests": [
+      "q_white_chair"
+    ],
+    "prerequisites": [
+      "ch_orange"
     ],
     "status": "locked"
   }

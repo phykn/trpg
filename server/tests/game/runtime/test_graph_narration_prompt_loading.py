@@ -5,6 +5,7 @@ import pytest
 from src.db.graph.local_fs import LocalFsGraphRepo
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatState
+from src.game.domain.content import RuntimeContent
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
 from src.game.runtime.flow.input import run_graph_input_turn
@@ -169,6 +170,7 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "## 처리 라우터" in narrate_prompt
     assert "출력 전에 이번 턴의 주 처리 유형을 하나만 고릅니다" in narrate_prompt
     assert "`payload.current_event.outcome`이 `action_rejected`이면 행동 거부" in narrate_prompt
+    assert "`payload.world_guidance`는 시나리오 전체의 톤" in narrate_prompt
     assert "`payload.combat_view`가 있으면 전투" in narrate_prompt
     assert "`payload.current_event.kind`가 `roll_prompt`이면 판정 전" in narrate_prompt
     assert "선택한 처리 유형의 규칙을 가장 우선합니다" in narrate_prompt
@@ -176,8 +178,8 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "전투 모드에서는 대화, 조사, 퀘스트 규칙보다" in narrate_prompt
     assert "`combat_view.exchange_result`, `combat_view.player_action`, `combat_view.outcome`" in narrate_prompt
     assert "전투 결과를 일반 행동 성공/실패처럼 해석하지 않습니다" in narrate_prompt
-    assert "전투에서 `defend`/`guarded`의 success는 공격 성공이 아니라 방어 성공입니다" in narrate_prompt
-    assert "전투에서 `create_distance`의 success는 피해가 아니라 거리 확보나 이탈 성공입니다" in narrate_prompt
+    assert "전투에서 `defend`의 success는 공격 성공이 아니라 방어 성공입니다" in narrate_prompt
+    assert "전투에서 `flee`의 success는 피해가 아니라 거리 확보나 이탈 성공입니다" in narrate_prompt
     assert "전투에서 `talk`의 success는 설득 확정이 아니라 압박 완화나 흐름 흔들림입니다" in narrate_prompt
     assert "`ui_cues`와 `suggestions`의 기본값은 빈 배열입니다" in narrate_prompt
     assert "suggestions는 새 행동을 창작하는 기능이 아닙니다" in narrate_prompt
@@ -217,10 +219,10 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "failure:" in combat_prompt
     assert "neutral:" in combat_prompt
     assert "player_action별 초점" in combat_prompt
-    assert "precise, reckless" in combat_prompt
-    assert "defend, guarded" in combat_prompt
+    assert "attack:" in combat_prompt
+    assert "defend:" in combat_prompt
     assert "success는 공격 성공이 아니라 방어 성공입니다" in combat_prompt
-    assert "create_distance" in combat_prompt
+    assert "flee" in combat_prompt
     assert "success는 피해를 주는 것이 아니라 거리를 벌리거나 전투 흐름에서 빠져나오는 것입니다" in combat_prompt
     assert "talk:" in combat_prompt
     assert "success는 설득 성공이 아니라 전투 압박을 늦추거나 흐름을 흔든 것입니다" in combat_prompt
@@ -241,6 +243,11 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "「」" in narrate_prompt
     assert "직접 발화" in narrate_prompt
     assert "NPC 직접 발화" in narrate_prompt
+    assert "NPC가 직접 반응하는 것을 기본값으로 씁니다" in narrate_prompt
+    assert "설명문만 쓰지 말고 직접 발화 한 문장을 반드시 넣습니다" in narrate_prompt
+    assert "기본 구조는 플레이어의 접근/질문 한 문장" in narrate_prompt
+    assert "플레이어가 단순히 말을 걸었고 구체 질문이 없으면" in narrate_prompt
+    assert "설명조 요약으로 NPC의 입장을 대신 말하지 않습니다" in narrate_prompt
     assert "짧은 반응으로만" not in narrate_prompt
     assert "짧은 말" not in narrate_prompt
     assert "당신의 새 대사" not in narrate_prompt
@@ -328,16 +335,15 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "`suggestions`는 항상 빈 배열입니다" in combat_prompt
     assert "다음 행동 제안은 만들지 않습니다" in combat_prompt
     assert '"label":"","input_text":"","intent":"combat","action":null' not in combat_prompt
-    assert "`tactic`이 아니라 `create_distance` intent" in classify_prompt
-    assert "`tactic`이 아니라 `talk` intent" in classify_prompt
-    assert "`tactic`: 전투 중 공격 전술" in classify_prompt
+    assert "전투 중 도망 의도는 `flee` intent" in classify_prompt
+    assert "전투 중 대화 의도는 `talk` intent" in classify_prompt
+    assert "`tactic`: 전투 중 공격 전술" not in classify_prompt
     assert "공격 또는 이탈 전술" not in classify_prompt
-    assert "`create_distance`: 전투 중 거리 벌리기" in classify_prompt
+    assert "`flee`: 전투 중 도망 또는 거리 확보" in classify_prompt
     assert "후보는 같은 리듬으로 만듭니다" in recommend_prompt
     assert "최근에 실제로 반복한 행동" in recommend_prompt
-    assert "`create_distance` 후보" in recommend_prompt
+    assert "`flee` 후보" in recommend_prompt
     assert "`talk` 후보" in recommend_prompt
-    assert "`flee` 후보" not in recommend_prompt
     assert "`social` 후보" not in recommend_prompt
     assert "Candidate rhythm" in recommend_en_prompt
     assert "Do not add setting lore" in recommend_en_prompt
@@ -391,6 +397,7 @@ async def test_graph_input_payload_exposes_target_traits(tmp_path):
     runtime = GameRuntimeState(
         graph=await repo.load_graph("game-1"),
         progress=await repo.load_progress("game-1"),
+        content=RuntimeContent(world_guidance="짧고 차분하게 씁니다."),
     )
     target = runtime.graph.nodes["goblin_01"]
 
@@ -415,6 +422,11 @@ async def test_graph_input_payload_exposes_target_traits(tmp_path):
     )
     assert "secrets" not in payload["target_view"]
     assert payload["target_view"]["traits"] == ["can speak", "does not rush"]
+    assert payload["world_guidance"] == "짧고 차분하게 씁니다."
+    assert payload["current_event"]["dialogue_expectation"] == {
+        "npc_reply": "expected",
+        "direct_speech": "prefer_one_short_utterance",
+    }
 
 
 def test_graph_narration_runtime_preserves_llm_text():

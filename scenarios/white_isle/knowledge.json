@@ -1,50 +1,122 @@
 {
-  "island_rule": {
-    "id": "island_rule",
-    "title": "흰섬의 규칙",
-    "summary": "흰섬은 두 번째 이름을 주지 않습니다. 버리는 것도, 줍는 것도 결국 자신이 해야 합니다.",
+  "kn_fog_rule": {
+    "id": "kn_fog_rule",
+    "title": "안개 바다의 규칙",
+    "summary": "안개 바다는 혼자 건널 수 없고, 키를 잡는 사람과 물살을 확인하는 사람이 함께 필요합니다.",
     "visibility": "public"
   },
-  "wall_names": {
-    "id": "wall_names",
-    "title": "벽에 새겨진 이름들",
-    "summary": "버려진 어촌의 벽에는 끝까지 적힌 이름과 중간에 긁혀 지워진 이름이 함께 남아 있습니다.",
+  "kn_fog_two_people": {
+    "id": "kn_fog_two_people",
+    "title": "두 사람 몫의 배",
+    "summary": "붉은섬행 배에는 두 사람 몫의 노와 자리만 준비되어 있습니다.",
     "visibility": "public"
   },
-  "roan_order": {
-    "id": "roan_order",
-    "title": "늦은 퇴각 명령",
-    "summary": "기사 로안은 왕의 명령 뒤에 숨었지만, 죽은 부하들의 이름 앞에서는 자신이 했어야 할 말을 압니다.",
+  "kn_red_anger_trade": {
+    "id": "kn_red_anger_trade",
+    "title": "분노의 거래",
+    "summary": "붉은섬에서 분노는 억울함을 드러내는 언어였지만 지금은 대리 의뢰와 환불 요구의 대상이 되었습니다.",
     "visibility": "public"
   },
-  "miel_mask": {
-    "id": "miel_mask",
-    "title": "웃지 않는 얼굴",
-    "summary": "미엘은 사람들을 웃기기 위해 슬픔을 삼켰고, 어느 순간 웃는 얼굴이 자신을 대신 살고 있다고 느꼈습니다.",
+  "kn_red_public_record": {
+    "id": "kn_red_public_record",
+    "title": "공개 기록의 무게",
+    "summary": "사과문과 책임 확인서는 책임을 남기지만 군중의 분노도 함께 보존합니다.",
     "visibility": "public"
   },
-  "var_price": {
-    "id": "var_price",
-    "title": "값 없는 것",
-    "summary": "바르는 값을 매기면 무서운 것이 줄어든다고 믿었지만, 값이 없는 것을 잃을까 봐 두려웠습니다.",
+  "kn_blue_empty_room": {
+    "id": "kn_blue_empty_room",
+    "title": "비워 둔 방",
+    "summary": "레아의 빈방은 애도의 장소이지만, 방 밖에는 지금 머물 곳이 필요한 사람이 있습니다.",
     "visibility": "public"
   },
-  "ort_names": {
-    "id": "ort_names",
-    "title": "죄목 뒤의 이름",
-    "summary": "오르트는 죄목과 날짜는 기억하지만, 죽은 사람들의 이름은 많이 잊었습니다.",
+  "kn_blue_need_space": {
+    "id": "kn_blue_need_space",
+    "title": "기억과 자리",
+    "summary": "떠난 사람을 기억하는 일과 산 사람에게 자리를 내어주는 일은 서로를 완전히 지우지 않습니다.",
     "visibility": "public"
   },
-  "lighthouse_fire": {
-    "id": "lighthouse_fire",
-    "title": "등대의 불",
-    "summary": "흰 등대의 불은 물건을 태워 켜지지 않습니다. 끝났다고 믿는 마음을 내려놓을 때 빛이 생깁니다.",
+  "kn_gold_score_labor": {
+    "id": "kn_gold_score_labor",
+    "title": "별점 노동",
+    "summary": "황금섬의 별점은 기술 평가를 넘어 사람의 쓸모와 생계를 결정합니다.",
     "visibility": "public"
   },
-  "reclaimer_order": {
-    "id": "reclaimer_order",
-    "title": "왕국의 회수 명령",
-    "summary": "왕국은 칭호 없이도 사람이 무너지지 않을 수 있다는 가능성을 두려워합니다.",
+  "kn_gold_star_pressure": {
+    "id": "kn_gold_star_pressure",
+    "title": "점수표의 압력",
+    "summary": "별점표는 실수를 고치는 도구였지만 이제는 다시 시작할 기회까지 막습니다.",
+    "visibility": "public"
+  },
+  "kn_green_comfort_delay": {
+    "id": "kn_green_comfort_delay",
+    "title": "편안함의 지연",
+    "summary": "연두섬의 쉼은 회복이 될 수 있지만, 떠날 힘을 빼앗는 핑계가 될 수도 있습니다.",
+    "visibility": "public"
+  },
+  "kn_green_departure": {
+    "id": "kn_green_departure",
+    "title": "출항 허가서",
+    "summary": "출항 허가서는 떠나도 된다는 허락이자, 계속 미룰 수 있다는 유혹입니다.",
+    "visibility": "public"
+  },
+  "kn_purple_love_cost": {
+    "id": "kn_purple_love_cost",
+    "title": "사랑 증명 비용",
+    "summary": "보라섬에서는 예식 규모와 선물 목록이 관계를 인정받는 증거처럼 쓰입니다.",
+    "visibility": "public"
+  },
+  "kn_purple_display": {
+    "id": "kn_purple_display",
+    "title": "보여 주기의 안전장치",
+    "summary": "레베카는 작은 결혼식 때문에 무시당한 기억 때문에 화려한 형식이 관계를 지킨다고 믿습니다.",
+    "visibility": "public"
+  },
+  "kn_silver_clean_work": {
+    "id": "kn_silver_clean_work",
+    "title": "깨끗함의 노동",
+    "summary": "은빛섬의 깨끗함은 외지 노동자의 보이지 않는 노동에 기대고 있습니다.",
+    "visibility": "public"
+  },
+  "kn_silver_same_table": {
+    "id": "kn_silver_same_table",
+    "title": "같은 식탁",
+    "summary": "미카는 특별 대우가 아니라 자신이 깨끗하게 만든 식당에 같은 사람으로 앉기를 원합니다.",
+    "visibility": "public"
+  },
+  "kn_silver_hidden_labor": {
+    "id": "kn_silver_hidden_labor",
+    "title": "숨은 폐수관",
+    "summary": "폐수관의 노동은 필수지만 노동자는 공동 식탁에서 분리되어 있습니다.",
+    "visibility": "public"
+  },
+  "kn_orange_forced_joy": {
+    "id": "kn_orange_forced_joy",
+    "title": "강요된 기쁨",
+    "summary": "새출발 축하식은 회복을 돕는 장치였지만 준비되지 않은 사람에게 웃음을 요구할 수 있습니다.",
+    "visibility": "public"
+  },
+  "kn_orange_need_time": {
+    "id": "kn_orange_need_time",
+    "title": "실패를 말할 시간",
+    "summary": "마리암은 축하받기 전에 자기 실패를 자기 말로 설명할 시간이 필요합니다.",
+    "visibility": "public"
+  },
+  "kn_white_black_weight": {
+    "id": "kn_white_black_weight",
+    "title": "검은 물건의 무게",
+    "summary": "흰섬은 검은 아이템을 심판하지 않지만 마지막 항해에서 그 무게가 드러납니다.",
+    "visibility": "public"
+  },
+  "kn_white_no_judge": {
+    "id": "kn_white_no_judge",
+    "title": "심판 없는 항구",
+    "summary": "흰섬에는 검사소도 보관소도 심판자도 없습니다.",
+    "visibility": "public"
+  },
+  "kn_white_empty_chair": {
+    "id": "kn_white_empty_chair",
+    "title": "빈 의자",
+    "summary": "마지막에는 해결이 아니라 앉는 일이 남습니다.",
     "visibility": "public"
   }
 }

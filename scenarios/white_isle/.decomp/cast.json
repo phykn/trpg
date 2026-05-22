@@ -1,187 +1,245 @@
 {
   "characters": [
     {
-      "id": "boat_captain",
-      "role": "돌아갈 배는 돌아갈 사람이 생길 때 온다고 말하는 선장",
+      "id": "npc_olden",
+      "role": "항구장",
       "is_enemy": false,
-      "location": "old_pier",
+      "location": "loc_fog_harbor",
       "race": "human",
       "learned_skills": []
     },
     {
-      "id": "roan",
-      "role": "훈장을 두고 온 기사",
+      "id": "npc_eli",
+      "role": "동행자",
       "is_enemy": false,
-      "location": "sword_clearing",
-      "race": "human",
-      "learned_skills": ["empty_hand_guard"]
-    },
-    {
-      "id": "miel",
-      "role": "웃는 가면을 두고 온 광대",
-      "is_enemy": false,
-      "location": "hollow_theater",
+      "location": "loc_fog_pier",
       "race": "human",
       "learned_skills": []
     },
     {
-      "id": "ort",
-      "role": "검은 장갑을 두고 온 처형인",
+      "id": "npc_luka",
+      "role": "분노 의뢰인",
       "is_enemy": false,
-      "location": "title_graveyard",
-      "race": "human",
-      "learned_skills": ["calm_testimony"]
-    },
-    {
-      "id": "selin",
-      "role": "금 간 성표를 두고 온 사제",
-      "is_enemy": false,
-      "location": "white_lighthouse",
+      "location": "loc_red_square",
       "race": "human",
       "learned_skills": []
     },
     {
-      "id": "var",
-      "role": "첫 금화를 두고 온 상인",
+      "id": "npc_noah",
+      "role": "대리분노인",
       "is_enemy": false,
-      "location": "white_market",
+      "location": "loc_red_square",
       "race": "human",
       "learned_skills": []
     },
     {
-      "id": "yuna",
-      "role": "붉은 인장을 두고 온 기록관",
+      "id": "npc_ezra",
+      "role": "기록 주장자",
       "is_enemy": false,
-      "location": "white_lighthouse",
-      "race": "human",
-      "learned_skills": ["calm_testimony"]
-    },
-    {
-      "id": "nameless_woman",
-      "role": "오래전 왕비였던 흰 머리 여인",
-      "is_enemy": false,
-      "location": "fog_forest",
+      "location": "loc_red_notice",
       "race": "human",
       "learned_skills": []
     },
     {
-      "id": "reclaimer_captain",
-      "role": "칭호를 회수하러 온 왕국 법관",
+      "id": "npc_lea",
+      "role": "빈방을 지키는 사람",
       "is_enemy": false,
-      "location": "white_lighthouse",
+      "location": "loc_blue_room",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_milo",
+      "role": "방이 필요한 사람",
+      "is_enemy": false,
+      "location": "loc_blue_street",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_ruth",
+      "role": "애도 조율자",
+      "is_enemy": false,
+      "location": "loc_blue_street",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_isaac",
+      "role": "낮은 별점의 장인",
+      "is_enemy": false,
+      "location": "loc_gold_shop",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_daniel",
+      "role": "별점 회복 주장자",
+      "is_enemy": false,
+      "location": "loc_gold_board",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_sarah",
+      "role": "점수표 비판자",
+      "is_enemy": false,
+      "location": "loc_gold_board",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_abel",
+      "role": "출항을 미루는 사람",
+      "is_enemy": false,
+      "location": "loc_green_lodge",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_jonah",
+      "role": "체류 옹호자",
+      "is_enemy": false,
+      "location": "loc_green_lodge",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_deborah",
+      "role": "출항 권유자",
+      "is_enemy": false,
+      "location": "loc_green_office",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_hannah_p",
+      "role": "예식을 준비하는 사람",
+      "is_enemy": false,
+      "location": "loc_purple_hall",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_joseph",
+      "role": "한나의 파트너",
+      "is_enemy": false,
+      "location": "loc_purple_hall",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_rebecca",
+      "role": "체면의 증인",
+      "is_enemy": false,
+      "location": "loc_purple_gift",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_mika",
+      "role": "외지 노동자",
+      "is_enemy": false,
+      "location": "loc_silver_tunnel",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_hannah_s",
+      "role": "식당 주민",
+      "is_enemy": false,
+      "location": "loc_silver_cafe",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_sila",
+      "role": "분리 옹호자",
+      "is_enemy": false,
+      "location": "loc_silver_cafe",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_mariam",
+      "role": "실패한 항해사 후보",
+      "is_enemy": false,
+      "location": "loc_orange_back",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_naomi",
+      "role": "기다림의 대변인",
+      "is_enemy": false,
+      "location": "loc_orange_back",
+      "race": "human",
+      "learned_skills": []
+    },
+    {
+      "id": "npc_gabriel",
+      "role": "축하식 스승",
+      "is_enemy": false,
+      "location": "loc_orange_square",
       "race": "human",
       "learned_skills": []
     }
   ],
   "items": [
     {
-      "id": "captain_salt_coat",
-      "kind": "armor",
-      "role": "선장이 바닷바람 속에서도 벗지 않는 소금기 밴 외투",
-      "owner_character": "boat_captain"
-    },
-    {
-      "id": "roan_weathered_mail",
-      "kind": "armor",
-      "role": "로안이 아직 버리지 못한 낡은 쇠사슬 갑옷",
-      "owner_character": "roan"
-    },
-    {
-      "id": "miel_stage_coat",
-      "kind": "armor",
-      "role": "미엘의 해진 무대 외투",
-      "owner_character": "miel"
-    },
-    {
-      "id": "ort_dark_coat",
-      "kind": "armor",
-      "role": "오르트가 손을 숨기던 검은 외투",
-      "owner_character": "ort"
-    },
-    {
-      "id": "selin_travel_cloak",
-      "kind": "armor",
-      "role": "셀린의 낡은 여행 망토",
-      "owner_character": "selin"
-    },
-    {
-      "id": "var_padded_vest",
-      "kind": "armor",
-      "role": "바르의 두꺼운 상인 조끼",
-      "owner_character": "var"
-    },
-    {
-      "id": "yuna_archivist_coat",
-      "kind": "armor",
-      "role": "유나의 잉크 묻은 기록관 외투",
-      "owner_character": "yuna"
-    },
-    {
-      "id": "woman_scale_apron",
-      "kind": "armor",
-      "role": "흰 머리 여인의 비늘 붙은 앞치마",
-      "owner_character": "nameless_woman"
-    },
-    {
-      "id": "captain_breastplate",
-      "kind": "armor",
-      "role": "회수대 지휘관의 법관 흉갑",
-      "owner_character": "reclaimer_captain"
-    },
-    {
-      "id": "captain_sabre",
+      "id": "itm_travel_oar",
       "kind": "weapon",
-      "role": "회수대 지휘관의 의전용 사브르",
-      "owner_character": "reclaimer_captain"
-    },
-    {
-      "id": "blank_notebook",
-      "kind": "key",
-      "role": "유나가 빈칸을 남기기 위해 챙긴 작은 수첩",
+      "role": "플레이어 기본 장비",
       "for_player": true
     },
     {
-      "id": "cracked_bell",
-      "kind": "key",
-      "role": "물에 잠겼던 듯 낮게 갈라진 종",
-      "owner_location": "fog_forest"
+      "id": "itm_travel_cloak",
+      "kind": "armor",
+      "role": "플레이어 기본 방어구",
+      "for_player": true
     },
     {
-      "id": "roan_medal",
+      "id": "itm_red_receipt",
       "kind": "key",
-      "role": "로안이 배삯으로 두고 온 훈장",
-      "owner_location": "white_lighthouse"
+      "role": "루카의 대리분노 의뢰와 환불 요구가 함께 적힌 영수증입니다. 책임 확인 문장이 붉은 잉크로 남아 있습니다.",
+      "owner_location": "loc_red_notice"
     },
     {
-      "id": "miel_smiling_mask",
+      "id": "itm_blue_key",
       "kind": "key",
-      "role": "미엘이 배삯으로 두고 온 웃는 가면",
-      "owner_location": "white_lighthouse"
+      "role": "레아의 빈방 문을 잠그던 작은 열쇠입니다. 오래 쥐고 있으면 손끝이 차갑게 젖어듭니다.",
+      "owner_location": "loc_blue_room"
     },
     {
-      "id": "ort_black_gloves",
+      "id": "itm_gold_star",
       "kind": "key",
-      "role": "오르트가 배삯으로 두고 온 검은 장갑",
-      "owner_location": "white_lighthouse"
+      "role": "이삭의 별점표에서 떨어져 나온 작은 금빛 별입니다. 점수는 올랐지만 손에 쥐면 이상하게 더 무겁습니다.",
+      "owner_location": "loc_gold_board"
     },
     {
-      "id": "selin_cracked_symbol",
+      "id": "itm_green_permit",
       "kind": "key",
-      "role": "셀린이 배삯으로 두고 온 금 간 성표",
-      "owner_location": "white_lighthouse"
+      "role": "연두섬에 더 머물 수 있게 해주는 작은 체류권입니다. 날짜가 적혀 있지만 끝나는 날은 흐릿합니다.",
+      "owner_location": "loc_green_office"
     },
     {
-      "id": "var_first_coin",
+      "id": "itm_purple_invite",
       "kind": "key",
-      "role": "바르가 배삯으로 두고 온 첫 금화",
-      "owner_location": "white_lighthouse"
+      "role": "화려한 금박이 찍힌 보라색 청첩장입니다. 두 사람의 이름보다 장소와 예식 순서가 더 크게 보입니다.",
+      "owner_location": "loc_purple_gift"
     },
     {
-      "id": "yuna_red_seal",
+      "id": "itm_silver_pass",
       "kind": "key",
-      "role": "유나가 배삯으로 두고 온 붉은 인장",
-      "owner_location": "white_lighthouse"
+      "role": "외지 노동자 전용 식당에서만 쓸 수 있는 식권입니다. 깨끗하게 코팅되어 있지만 어느 식탁에도 완전히 속하지 못한 느낌이 남아 있습니다.",
+      "owner_location": "loc_silver_cafe"
+    },
+    {
+      "id": "itm_orange_ribbon",
+      "kind": "key",
+      "role": "마리암의 새출발 축하식에 쓰였던 주황 리본입니다. 밝고 가벼워 보이지만 손에 감으면 이상하게 풀기 어렵습니다.",
+      "owner_location": "loc_orange_square"
     }
   ],
-  "start_subject": "boat_captain"
+  "start_subject": "npc_olden"
 }

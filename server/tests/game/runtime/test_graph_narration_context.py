@@ -453,7 +453,7 @@ def test_action_payload_contains_safe_current_event_and_combat_view():
         outcome="ongoing",
         combat_trace=[
             GraphCombatTraceEvent(
-                kind="player_precise_success",
+                kind="player_attack_success",
                 actor_id="player_01",
                 target="guard_01",
                 state="hurt",
@@ -490,7 +490,7 @@ def test_action_payload_contains_safe_current_event_and_combat_view():
     assert payload["combat_view"]["player_can_act"] is True
     assert payload["combat_view"]["exchange_result"] == "success"
     assert payload["combat_view"]["events"]
-    assert "player_precise_success" not in encoded
+    assert "player_attack_success" not in encoded
     assert "hurt" not in encoded
     assert "damage" not in encoded
     assert "hp" not in encoded.lower()

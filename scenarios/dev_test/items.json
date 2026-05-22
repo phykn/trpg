@@ -27,17 +27,17 @@
   "focus_charm": {
     "id": "focus_charm",
     "name": "집중 부적",
-    "description": "실패 시 하트 손실을 한 번 막아 주는 일회용 부적",
+    "description": "방어 판정을 조금 돕는 일회용 부적",
     "traits": [
       "손에 쥐면 차갑습니다",
-      "방어적인 지원 행동에 어울립니다",
+      "방어 판정의 난이도를 낮춥니다",
       "사용하면 사라지는 일회용 부적입니다"
     ],
     "price": 5,
     "action": "defend",
-    "effect": "prevent_heart_loss",
+    "effect": "dc_down",
     "consumable": true,
-    "bonus": 0
+    "bonus": 2
   },
   "guide_note": {
     "id": "guide_note",
@@ -127,7 +127,7 @@
       "장비 슬롯 확인에 쓰입니다"
     ],
     "price": 10,
-    "action": "precise",
+    "action": "attack",
     "effect": "dc_down",
     "consumable": false,
     "bonus": 1,
@@ -204,15 +204,15 @@
   "smoke_bomb": {
     "id": "smoke_bomb",
     "name": "연막탄",
-    "description": "거리 확보 판정을 크게 돕는 일회용 도구",
+    "description": "도망 판정을 크게 돕는 일회용 도구",
     "traits": [
       "작은 원통형 도구입니다",
-      "거리 확보를 돕는 지원 아이템입니다",
+      "도망 판정의 난이도를 낮춥니다",
       "사용하면 사라지는 일회용 도구입니다"
     ],
     "price": 8,
-    "action": "create_distance",
-    "effect": "escape_boost",
+    "action": "flee",
+    "effect": "dc_down",
     "consumable": true,
     "bonus": 4
   },
@@ -237,7 +237,7 @@
       "멀리 던지는 행동에 어울립니다"
     ],
     "price": 6,
-    "action": "precise",
+    "action": "attack",
     "effect": "dc_down",
     "consumable": true,
     "bonus": 3

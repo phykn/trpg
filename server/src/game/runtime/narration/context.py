@@ -46,6 +46,7 @@ def build_action_narration_payload(
     if quest_trigger is not None:
         current_event["quest_trigger"] = quest_trigger
     return {
+        "world_guidance": _world_guidance(after),
         "player_input": None,
         "current_place": _node_ref(after, place),
         "current_event": current_event,
@@ -90,6 +91,7 @@ def build_roll_narration_payload(
         _roll_result_card(roll_entry, outcome, runtime.progress.locale)
     ]
     return {
+        "world_guidance": _world_guidance(runtime),
         "player_input": player_input if isinstance(player_input, str) else None,
         "current_event": {
             "kind": "roll",
@@ -139,6 +141,7 @@ def build_input_narration_payload(
     dialogue_target: GraphNode | None,
 ) -> dict[str, Any]:
     return {
+        "world_guidance": _world_guidance(runtime),
         "player_input": player_input,
         "current_event": _input_current_event(runtime, action, dialogue_target),
         "scene_anchor": _scene_anchor(runtime),
@@ -176,6 +179,13 @@ def _place_payload(
     _add_text_field(runtime, node, payload, "mood")
     _add_list_field(runtime, node, payload, "traits")
     return payload
+
+
+def _world_guidance(runtime: GameRuntimeState) -> str | None:
+    text = runtime.content.world_guidance.strip()
+    if not text:
+        return None
+    return text[:4000]
 
 
 def _visible_character_payloads(
@@ -518,7 +528,7 @@ def _input_current_event(
     action: Action,
     dialogue_target: GraphNode | None,
 ) -> dict[str, Any]:
-    return {
+    event: dict[str, Any] = {
         "kind": "dialogue" if dialogue_target is not None else "input",
         "target": _target_view(runtime, dialogue_target),
         "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
@@ -528,6 +538,12 @@ def _input_current_event(
             else "player_action_pending_narration"
         ),
     }
+    if dialogue_target is not None:
+        event["dialogue_expectation"] = {
+            "npc_reply": "expected",
+            "direct_speech": "prefer_one_short_utterance",
+        }
+    return event
 
 
 def _quest_trigger_payload(action: Action, kind: str) -> dict[str, str] | None:

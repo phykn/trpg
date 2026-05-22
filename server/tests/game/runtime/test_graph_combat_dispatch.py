@@ -52,7 +52,7 @@ def _skill(skill_id: str = "fireball") -> GraphNode:
         type="skill",
         properties={
             "name": skill_id,
-            "action": "precise",
+            "action": "attack",
             "mp_cost": 2,
             "bonus": 2,
         },
@@ -65,8 +65,8 @@ def _item(item_id: str = "bomb") -> GraphNode:
         type="item",
         properties={
             "name": item_id,
-            "action": "precise",
-            "effect": "extra_heart_damage",
+            "action": "attack",
+            "effect": "dc_down",
             "consumable": True,
         },
     )
@@ -358,47 +358,47 @@ def test_pass_defend_failure_loses_player_heart(monkeypatch):
     assert result.runtime.progress.graph_combat_state.last_action == "defend"
 
 
-def test_pass_with_skill_support_attaches_guarded_support():
+def test_pass_with_skill_support_attaches_defend_support():
     runtime = _runtime(
         include_skill=True,
         graph_combat_state=_ongoing_state(),
     )
     runtime.graph.nodes["fireball"].properties.update(
-        {"action": "guarded", "bonus": 1}
+        {"action": "defend", "bonus": 1}
     )
 
     result = dispatch_graph_combat_action(
         runtime,
-        Action(verb="pass", how="guarded", with_="fireball"),
+        Action(verb="pass", how="defend", with_="fireball"),
     )
 
     state = result.runtime.progress.graph_combat_state
     assert state is not None
-    assert state.last_action == "guarded"
+    assert state.last_action == "defend"
     assert state.last_support_id == "fireball"
     assert state.last_support_kind == "skill"
     assert result.runtime.graph.nodes["player_01"].properties["mp"] == 3
 
 
-def test_move_with_skill_support_attaches_create_distance_support():
+def test_move_with_skill_support_attaches_flee_support():
     runtime = _runtime(
         include_skill=True,
         graph_combat_state=_ongoing_state(),
     )
     runtime.graph.nodes["fireball"].properties.update(
-        {"action": "create_distance", "bonus": 2}
+        {"action": "flee", "bonus": 2}
     )
 
     result = dispatch_graph_combat_action(
         runtime,
-        Action(verb="move", how="create_distance", with_="fireball"),
+        Action(verb="move", how="flee", with_="fireball"),
     )
 
     state = result.combat.state
     assert state is not None
     assert result.runtime.progress.graph_combat_state is None
     assert result.outcome == "escaped"
-    assert state.last_action == "create_distance"
+    assert state.last_action == "flee"
     assert state.last_support_id == "fireball"
     assert state.last_support_kind == "skill"
     assert result.runtime.graph.nodes["player_01"].properties["mp"] == 3
@@ -414,7 +414,7 @@ def test_missing_combat_support_raises_dispatch_error():
         )
 
 
-def test_attack_auto_skill_uses_precise_tactic_with_matching_skill():
+def test_attack_auto_skill_uses_attack_tactic_with_matching_skill():
     runtime = _runtime(
         include_skill=True,
         graph_combat_state=_ongoing_state(),
@@ -427,7 +427,7 @@ def test_attack_auto_skill_uses_precise_tactic_with_matching_skill():
 
     state = result.runtime.progress.graph_combat_state
     assert state is not None
-    assert state.last_action == "precise"
+    assert state.last_action == "attack"
     assert state.last_support_id == "fireball"
     assert state.last_dc == 9
     assert result.runtime.graph.nodes["player_01"].properties["mp"] == 3

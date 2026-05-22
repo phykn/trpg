@@ -208,7 +208,9 @@ def _auto_complete_active_location_quest(
             value=triggers_met,
         )
     )
-    return quest_id if all(triggers_met) else None
+    if all(triggers_met) and not _quest_choices(quest):
+        return quest_id
+    return None
 
 
 def _quest_triggers(quest) -> list[dict[str, Any]]:
@@ -223,3 +225,14 @@ def _quest_triggers_met(quest, total: int) -> list[bool]:
     values = raw if isinstance(raw, list) else []
     padded = [*values[:total], *([False] * max(0, total - len(values)))]
     return [item if isinstance(item, bool) else False for item in padded]
+
+
+def _quest_choices(quest) -> dict[str, dict[str, Any]]:
+    raw = quest.properties.get("choices")
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        key: value
+        for key, value in raw.items()
+        if isinstance(key, str) and key and isinstance(value, dict)
+    }

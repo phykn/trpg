@@ -11,7 +11,7 @@
 
 다음 중 정확히 하나만 출력합니다.
 
-{"intents":[{"intent":"...","target":"...","destination_id":"...","item_id":"...","merchant_id":"...","source_id":"...","recipient_id":"...","skill_id":"...","quest_id":"...","topic":"...","manner":"...","tactic":"...","slot":"...","note":"...","check_required":false,"check_reason":"..."}]}
+{"intents":[{"intent":"...","target":"...","destination_id":"...","item_id":"...","merchant_id":"...","source_id":"...","recipient_id":"...","skill_id":"...","quest_id":"...","choice_id":"...","topic":"...","manner":"...","slot":"...","note":"...","check_required":false,"check_reason":"..."}]}
 
 또는
 
@@ -45,9 +45,9 @@
 - `recipient_id`: 받는 대상 id
 - `skill_id`: 사용할 기술 id
 - `quest_id`: 퀘스트 id
+- `choice_id`: active_quest.choices에 있는 선택지 id
 - `topic`: 질문 주제
 - `manner`: 말투나 대화 의도
-- `tactic`: 전투 중 공격 전술
 - `slot`: 장비 칸
 - `note`: 짧은 입력 요약
 - `check_required`: 판정이 필요하면 `true`, 아니면 생략하거나 `false`
@@ -143,7 +143,7 @@ context에 없는 id는 출력하지 마십시오.
 
 - `move`: 출구로 이동. 필요: `destination_id`
 - `talk`: NPC와 말하기. 필요: `target`. 선택: `manner`, `note`
-- `attack`: 대상 공격. 필요: `target`. 선택: `skill_id`, `tactic`
+- `attack`: 대상 공격. 필요: `target`. 선택: `skill_id`
 - `buy`: 상점 아이템 구매. 필요: `merchant_id`, `item_id`
 - `sell`: 소지품 판매. 필요: `merchant_id`, `item_id`
 - `pickup`: 장소 아이템 줍기. 필요: `item_id`
@@ -156,9 +156,10 @@ context에 없는 id는 출력하지 마십시오.
 - `inspect`: 둘러보기, 조사. 선택: `target`
 - `query`: 공개 정보 질문. 선택: `topic`
 - `rest`: 잠, 캠프, 휴식
-- `create_distance`: 전투 중 거리 벌리기
+- `flee`: 전투 중 도망 또는 거리 확보
 - `accept_quest`: 퀘스트 수락. 필요: `quest_id`. 선택: `target`
 - `abandon_quest`: 퀘스트 포기. 필요: `quest_id`. 선택: `target`
+- `decide`: 퀘스트의 선택지 확정. 필요: `quest_id`, `choice_id`. 선택: `target`
 - `pass`: 무행동, 모호함, id 매칭 실패. 선택: `note`
 
 허용 `manner`:
@@ -171,14 +172,8 @@ context에 없는 id는 출력하지 마십시오.
 - `accept`
 - `abandon`
 
-허용 `tactic`:
-
-- `precise`: 정확히 공격
-- `guarded`: 신중하게 공격
-- `reckless`: 무모하게 밀어붙임
-
-전투 중 도망 의도는 `tactic`이 아니라 `create_distance` intent입니다.
-전투 중 대화 의도는 `tactic`이 아니라 `talk` intent입니다.
+전투 중 도망 의도는 `flee` intent입니다.
+전투 중 대화 의도는 `talk` intent입니다.
 
 허용 `topic`:
 
@@ -217,6 +212,7 @@ context에 없는 id는 출력하지 마십시오.
 - `use`: `item_id` 또는 `skill_id`
 - `accept_quest`: `quest_id`
 - `abandon_quest`: `quest_id`
+- `decide`: `quest_id`, `choice_id`
 
 다음 출력은 금지합니다.
 
@@ -318,11 +314,9 @@ protected가 아니면 친근한 NPC라도 공격 의도는 `attack`입니다.
 - 검을 뽑기, 활 들기, 방패 착용은 `equip`.
 - 이미 장비 중인 무기로 공격하면 `equip` 없이 `attack`.
 - 기술이 불명확한 공격은 `attack`.
-- 전투 중 도망 의도는 `create_distance`.
+- 전투 중 도망 의도는 `flee`.
 - 전투 중 대화로 압박하려는 의도는 `talk`.
-- 전투 중 "신중하게", "방어하며", "거리를 재며" 공격하면 `attack` + `tactic:"guarded"`.
-- 전투 중 "무모하게", "전력으로", "위험을 감수하고" 공격하면 `attack` + `tactic:"reckless"`.
-- 전투 중 공격 전술이 뚜렷하지 않으면 `tactic`을 생략합니다.
+- 전투 중 공격 의도는 `attack`입니다.
 - active_quest 수락은 `accept_quest`.
 - active_quest 포기는 `abandon_quest`.
 - 퀘스트 상태 질문은 `query` + `topic:"quests"`.

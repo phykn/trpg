@@ -57,7 +57,7 @@ def classify_action_shortcut(
         player_input, ACTION_CREATE_DISTANCE_TERMS
     ):
         return _action_output(
-            [Action(verb="move", how="create_distance")],
+            [Action(verb="move", how="flee")],
             in_combat=True,
         )
 

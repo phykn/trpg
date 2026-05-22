@@ -19,7 +19,7 @@ function combat(overrides: Partial<CombatBadge> = {}): CombatBadge {
 }
 
 describe('buildCombatActions', () => {
-  test('builds three tactic actions for the first live enemy', () => {
+  test('builds three combat actions for the first live enemy', () => {
     const actions = buildCombatActions(combat());
 
     expect(actions).toHaveLength(3);
@@ -27,20 +27,20 @@ describe('buildCombatActions', () => {
       expect.objectContaining({
         kind: 'combat_command',
         label: '공격',
-        combatCommand: { command: 'precise', target: 'enemy_01' },
-        textFallback: '늑대를 정밀하게 공격합니다',
+        combatCommand: { command: 'attack', target: 'enemy_01' },
+        textFallback: '늑대를 공격합니다',
       }),
       expect.objectContaining({
         kind: 'combat_command',
         label: '방어',
         combatCommand: { command: 'defend' },
-        textFallback: '상대의 움직임을 받아낼 준비를 합니다',
+        textFallback: '방어합니다',
       }),
       expect.objectContaining({
         kind: 'combat_command',
         label: '도망',
-        combatCommand: { command: 'create_distance' },
-        textFallback: '거리를 벌립니다',
+        combatCommand: { command: 'flee' },
+        textFallback: '도망칩니다',
       }),
     ]);
   });
@@ -52,7 +52,7 @@ describe('buildCombatActions', () => {
           id: 'skill_shadow',
           kind: 'skill',
           name: '그림자 찌르기',
-          tactic: 'precise',
+          action: 'attack',
           mpCost: 2,
           usable: true,
         },
@@ -60,7 +60,7 @@ describe('buildCombatActions', () => {
           id: 'skill_calm_guard',
           kind: 'skill',
           name: '침착한 방어',
-          tactic: 'defend',
+          action: 'defend',
           mpCost: 2,
           usable: true,
         },
@@ -70,7 +70,7 @@ describe('buildCombatActions', () => {
     expect(actions[0]).toMatchObject({
       label: '그림자 찌르기',
       combatCommand: {
-        command: 'precise',
+        command: 'attack',
         target: 'enemy_01',
         support_id: 'skill_shadow',
         support_kind: 'skill',
@@ -92,7 +92,7 @@ describe('buildCombatActions', () => {
     expect(actions).toHaveLength(3);
     expect(actions[2]).toMatchObject({
       label: '도망',
-      combatCommand: { command: 'create_distance' },
+      combatCommand: { command: 'flee' },
     });
   });
 

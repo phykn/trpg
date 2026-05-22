@@ -1,183 +1,117 @@
 {
-  "blank_notebook": {
-    "id": "blank_notebook",
-    "name": "빈칸이 많은 수첩",
-    "description": "당신이 흰섬까지 품고 온 빈칸이 많은 수첩입니다. 적히지 않은 사람이 있다는 사실을 기억하게 합니다.",
-    "price": 0,
+  "itm_travel_oar": {
+    "id": "itm_travel_oar",
+    "name": "여행자의 노",
+    "description": "안개 바다를 건너기 위해 배에 실린 짧은 노입니다.",
+    "traits": [
+      "젖은 손잡이가 미끄럽습니다",
+      "두 사람이 함께 저어야 균형이 맞습니다"
+    ],
+    "price": 2,
+    "consumable": false,
+    "slot": "weapon"
+  },
+  "itm_travel_cloak": {
+    "id": "itm_travel_cloak",
+    "name": "여행자 외투",
+    "description": "바닷바람과 비를 막아 주는 낡은 외투입니다.",
+    "traits": [
+      "소금기가 배어 있습니다",
+      "긴 항해에 어울립니다"
+    ],
+    "price": 2,
+    "consumable": false,
+    "slot": "armor"
+  },
+  "itm_red_receipt": {
+    "id": "itm_red_receipt",
+    "name": "붉은 영수증",
+    "description": "루카의 대리분노 의뢰와 환불 요구가 함께 적힌 영수증입니다. 책임 확인 문장이 붉은 잉크로 남아 있습니다.",
+    "traits": [
+      "분노가 거래된 흔적입니다"
+    ],
+    "price": 1,
     "consumable": false,
     "knowledge": [
-      "wall_names"
+      "kn_red_public_record"
     ]
   },
-  "captain_breastplate": {
-    "id": "captain_breastplate",
-    "name": "법관 흉갑",
-    "description": "회수대 지휘관의 칭호패가 단단히 박힌 흉갑입니다.",
-    "price": 16,
-    "consumable": false,
-    "slot": "armor",
-    "action": "defend",
-    "bonus": 2
-  },
-  "captain_sabre": {
-    "id": "captain_sabre",
-    "name": "회수대 사브르",
-    "description": "칭호를 버린 이들을 되돌리기 위해 뽑힌 의전용 사브르입니다.",
-    "price": 18,
-    "consumable": false,
-    "slot": "weapon",
-    "action": "precise",
-    "bonus": 2
-  },
-  "captain_salt_coat": {
-    "id": "captain_salt_coat",
-    "name": "소금기 밴 외투",
-    "description": "말없는 선장이 바닷바람 속에서도 벗지 않는 무거운 외투입니다.",
-    "price": 5,
-    "consumable": false,
-    "slot": "armor",
-    "action": "defend",
-    "bonus": 1
-  },
-  "cracked_bell": {
-    "id": "cracked_bell",
-    "name": "갈라진 종",
-    "description": "물에 잠겨 있다가 건져 올린 듯 낮고 갈라진 소리를 내는 종입니다.",
-    "price": 0,
+  "itm_blue_key": {
+    "id": "itm_blue_key",
+    "name": "푸른 열쇠",
+    "description": "레아의 빈방 문을 잠그던 작은 열쇠입니다. 오래 쥐고 있으면 손끝이 차갑게 젖어듭니다.",
+    "traits": [
+      "기억을 닫아 둔 물건입니다"
+    ],
+    "price": 1,
     "consumable": false,
     "knowledge": [
-      "island_rule"
+      "kn_blue_empty_room"
     ]
   },
-  "miel_smiling_mask": {
-    "id": "miel_smiling_mask",
-    "name": "미엘의 웃는 가면",
-    "description": "미엘이 궁정에서 오래 쓰던 웃는 가면입니다. 얼굴 대신 쓰였던 웃음과, 울고 난 뒤에도 남는 미소를 함께 떠올리게 합니다.",
-    "price": 0,
+  "itm_gold_star": {
+    "id": "itm_gold_star",
+    "name": "황금 별표",
+    "description": "이삭의 별점표에서 떨어져 나온 작은 금빛 별입니다. 점수는 올랐지만 손에 쥐면 이상하게 더 무겁습니다.",
+    "traits": [
+      "평가가 물건처럼 굳었습니다"
+    ],
+    "price": 1,
     "consumable": false,
     "knowledge": [
-      "miel_mask"
+      "kn_gold_star_pressure"
     ]
   },
-  "miel_stage_coat": {
-    "id": "miel_stage_coat",
-    "name": "해진 무대 외투",
-    "description": "미엘이 웃는 얼굴 뒤의 피로를 숨기던 화려하지만 해진 외투입니다.",
-    "price": 8,
-    "consumable": false,
-    "slot": "armor",
-    "action": "talk",
-    "bonus": 1
-  },
-  "ort_black_gloves": {
-    "id": "ort_black_gloves",
-    "name": "오르트의 검은 장갑",
-    "description": "오르트가 처형인의 손을 가리기 위해 끼던 검은 장갑입니다. 그는 장갑보다 이름들이 적힌 종이를 품으려 합니다.",
-    "price": 0,
+  "itm_green_permit": {
+    "id": "itm_green_permit",
+    "name": "연두 체류권",
+    "description": "연두섬에 더 머물 수 있게 해주는 작은 체류권입니다. 날짜가 적혀 있지만 끝나는 날은 흐릿합니다.",
+    "traits": [
+      "머무름을 허락합니다"
+    ],
+    "price": 1,
     "consumable": false,
     "knowledge": [
-      "ort_names"
+      "kn_green_departure"
     ]
   },
-  "ort_dark_coat": {
-    "id": "ort_dark_coat",
-    "name": "검은 외투",
-    "description": "오르트가 굳은살과 흉터가 남은 손을 숨기던 무거운 외투입니다.",
-    "price": 9,
-    "consumable": false,
-    "slot": "armor",
-    "action": "defend",
-    "bonus": 1
-  },
-  "roan_medal": {
-    "id": "roan_medal",
-    "name": "로안의 훈장",
-    "description": "기사 로안이 살아남았다는 이유로 받았고, 배삯으로 두고 온 훈장입니다. 버려야만 자유로운 것은 아니라는 질문을 남깁니다.",
-    "price": 0,
+  "itm_purple_invite": {
+    "id": "itm_purple_invite",
+    "name": "보라 청첩장",
+    "description": "화려한 금박이 찍힌 보라색 청첩장입니다. 두 사람의 이름보다 장소와 예식 순서가 더 크게 보입니다.",
+    "traits": [
+      "사랑보다 증명 비용이 먼저 보입니다"
+    ],
+    "price": 1,
     "consumable": false,
     "knowledge": [
-      "roan_order"
+      "kn_purple_love_cost"
     ]
   },
-  "roan_weathered_mail": {
-    "id": "roan_weathered_mail",
-    "name": "낡은 쇠사슬 갑옷",
-    "description": "기사 로안이 전장에서 살아남은 뒤에도 벗지 못한 낡은 갑옷입니다.",
-    "price": 12,
-    "consumable": false,
-    "slot": "armor",
-    "action": "defend",
-    "bonus": 1
-  },
-  "selin_cracked_symbol": {
-    "id": "selin_cracked_symbol",
-    "name": "셀린의 금 간 성표",
-    "description": "셀린이 배삯으로 내려놓았던 금 간 성표입니다. 금이 간 채로도 기도할 수 있다는 사실을 보여 줍니다.",
-    "price": 0,
+  "itm_silver_pass": {
+    "id": "itm_silver_pass",
+    "name": "은빛 식권",
+    "description": "외지 노동자 전용 식당에서만 쓸 수 있는 식권입니다. 깨끗하게 코팅되어 있지만 어느 식탁에도 완전히 속하지 못한 느낌이 남아 있습니다.",
+    "traits": [
+      "분리의 예의가 남아 있습니다"
+    ],
+    "price": 1,
     "consumable": false,
     "knowledge": [
-      "lighthouse_fire"
+      "kn_silver_same_table"
     ]
   },
-  "selin_travel_cloak": {
-    "id": "selin_travel_cloak",
-    "name": "낡은 여행 망토",
-    "description": "셀린이 금 간 성표 없이도 사람들 곁에 서기 위해 두른 망토입니다.",
-    "price": 7,
-    "consumable": false,
-    "slot": "armor",
-    "action": "defend",
-    "bonus": 1
-  },
-  "var_first_coin": {
-    "id": "var_first_coin",
-    "name": "바르의 첫 금화",
-    "description": "바르가 세상을 이길 수 있다고 믿게 만든 첫 금화입니다. 손때가 묻은 가장자리에 오래 쥔 흔적이 남아 있습니다.",
-    "price": 0,
+  "itm_orange_ribbon": {
+    "id": "itm_orange_ribbon",
+    "name": "주황 축하 리본",
+    "description": "마리암의 새출발 축하식에 쓰였던 주황 리본입니다. 밝고 가벼워 보이지만 손에 감으면 이상하게 풀기 어렵습니다.",
+    "traits": [
+      "기쁨의 압력이 남아 있습니다"
+    ],
+    "price": 1,
     "consumable": false,
     "knowledge": [
-      "var_price"
-    ]
-  },
-  "var_padded_vest": {
-    "id": "var_padded_vest",
-    "name": "두꺼운 상인 조끼",
-    "description": "바르가 빈 주머니를 가리듯 걸친 두꺼운 조끼입니다.",
-    "price": 10,
-    "consumable": false,
-    "slot": "armor",
-    "action": "talk",
-    "bonus": 1
-  },
-  "woman_scale_apron": {
-    "id": "woman_scale_apron",
-    "name": "비늘 붙은 앞치마",
-    "description": "흰 머리 여인이 오래 입어 낡았지만 질긴 비늘 앞치마입니다.",
-    "price": 6,
-    "consumable": false,
-    "slot": "armor",
-    "action": "defend",
-    "bonus": 1
-  },
-  "yuna_archivist_coat": {
-    "id": "yuna_archivist_coat",
-    "name": "기록관 외투",
-    "description": "잉크 자국이 남아 있고 안쪽 주머니가 많은 유나의 외투입니다.",
-    "price": 9,
-    "consumable": false,
-    "slot": "armor",
-    "action": "talk",
-    "bonus": 1
-  },
-  "yuna_red_seal": {
-    "id": "yuna_red_seal",
-    "name": "유나의 붉은 인장",
-    "description": "유나가 왕국의 공식 기록을 남기던 붉은 인장입니다. 마른 잉크 자국이 빈 종이를 향해 남아 있습니다.",
-    "price": 0,
-    "consumable": false,
-    "knowledge": [
-      "wall_names",
-      "reclaimer_order"
+      "kn_orange_forced_joy"
     ]
   }
 }

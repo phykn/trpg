@@ -7,6 +7,7 @@ async def load_runtime_content(
     profile_id: str,
 ) -> RuntimeContent:
     return runtime_content_from_records(
+        world_guidance=await scenario_repo.read_world_md(profile_id, missing_ok=True),
         races=await scenario_repo.load_seed_records(profile_id, "races"),
         locations=await scenario_repo.load_seed_records(profile_id, "locations"),
         items=await scenario_repo.load_seed_records(profile_id, "items"),

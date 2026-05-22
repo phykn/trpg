@@ -18,12 +18,10 @@ from src.wire.models import (
 )
 
 
-_TACTIC_BY_ACTION = {
+_SUPPORT_ACTIONS = {
+    "attack": "attack",
     "defend": "defend",
-    "precise": "precise",
-    "guarded": "guarded",
-    "reckless": "reckless",
-    "create_distance": "create_distance",
+    "flee": "flee",
     "talk": "talk",
 }
 
@@ -75,8 +73,8 @@ def _available_supports(runtime: GameRuntimeState) -> list[GraphCombatSupportPay
         skill = runtime.graph.nodes.get(edge.to_node_id)
         if skill is None or skill.type != "skill":
             continue
-        tactic = _support_tactic(skill, runtime)
-        if tactic is None:
+        action = _support_action(skill, runtime)
+        if action is None:
             continue
         mp_cost = int_prop_default(skill, "mp_cost", 0)
         if current_mp < mp_cost:
@@ -86,17 +84,16 @@ def _available_supports(runtime: GameRuntimeState) -> list[GraphCombatSupportPay
                 id=skill.id,
                 kind="skill",
                 name=node_name(skill, runtime.content),
-                tactic=tactic,
+                action=action,
                 mp_cost=mp_cost,
             )
         )
     return supports
 
 
-def _support_tactic(
+def _support_action(
     skill: GraphNode,
     runtime: GameRuntimeState,
 ) -> str | None:
     action = optional_str(static_value(skill, "action", runtime.content))
-    tactic = _TACTIC_BY_ACTION.get(action or "")
-    return tactic
+    return _SUPPORT_ACTIONS.get(action or "")

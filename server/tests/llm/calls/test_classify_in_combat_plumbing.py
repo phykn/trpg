@@ -79,20 +79,20 @@ class _RetryCaptureClient:
 @pytest.mark.asyncio
 async def test_in_combat_true_allows_move_without_destination():
     input_ = _input("뒤로 물러선다", {"in_combat": True, "entities": []})
-    fake_answer = json.dumps({"actions": [{"verb": "move", "how": "create_distance"}]})
+    fake_answer = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
     with patch(
         "src.llm.calls.classify.runner.run_with_retries",
         new=AsyncMock(side_effect=lambda *a, **kw: kw["parse"](fake_answer)),
     ):
         out = await classify(client=None, input_=input_, locale="ko", retries=1)
     assert out.actions[0].verb == "move"
-    assert out.actions[0].how == "create_distance"
+    assert out.actions[0].how == "flee"
 
 
 @pytest.mark.asyncio
 async def test_in_combat_false_rejects_move_without_destination():
     input_ = _input("도망친다", {"in_combat": False, "entities": []})
-    fake_answer = json.dumps({"actions": [{"verb": "move", "how": "create_distance"}]})
+    fake_answer = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
     with patch(
         "src.llm.calls.classify.runner.run_with_retries",
         new=AsyncMock(side_effect=lambda *a, **kw: kw["parse"](fake_answer)),
@@ -110,7 +110,7 @@ async def test_in_combat_false_rejects_move_without_destination():
 @pytest.mark.asyncio
 async def test_in_combat_default_false_when_key_missing():
     input_ = _input("도망친다", {"entities": []})
-    fake_answer = json.dumps({"actions": [{"verb": "move", "how": "create_distance"}]})
+    fake_answer = json.dumps({"actions": [{"verb": "move", "how": "flee"}]})
     with patch(
         "src.llm.calls.classify.runner.run_with_retries",
         new=AsyncMock(side_effect=lambda *a, **kw: kw["parse"](fake_answer)),

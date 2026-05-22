@@ -85,12 +85,10 @@ type CombatSupportCommandFields = {
 };
 
 export type CombatCommand =
-  | ({ command: 'precise'; target: string } & CombatSupportCommandFields)
-  | ({ command: 'reckless'; target: string } & CombatSupportCommandFields)
+  | ({ command: 'attack'; target: string } & CombatSupportCommandFields)
   | ({ command: 'talk'; target: string } & CombatSupportCommandFields)
   | ({ command: 'defend' } & CombatSupportCommandFields)
-  | ({ command: 'guarded' } & CombatSupportCommandFields)
-  | ({ command: 'create_distance' } & CombatSupportCommandFields);
+  | ({ command: 'flee' } & CombatSupportCommandFields);
 
 export type GraphAction = {
   verb:
@@ -101,6 +99,7 @@ export type GraphAction = {
     | 'speak'
     | 'perceive'
     | 'query'
+    | 'decide'
     | 'rest'
     | 'pass';
   what?: string | string[] | null;
@@ -213,7 +212,7 @@ export type GraphCombatSupport = {
   id: string;
   kind: 'skill';
   name: string;
-  tactic: 'precise' | 'defend' | 'guarded' | 'reckless' | 'create_distance' | 'talk';
+  action: 'attack' | 'defend' | 'flee' | 'talk';
   mpCost: number;
   usable: boolean;
 };
@@ -285,7 +284,7 @@ export type GraphLevelUpSkillSpec = {
   id: string;
   name: string;
   description: string;
-  action: 'precise' | 'reckless' | 'defend' | 'guarded' | 'create_distance' | 'talk';
+  action: 'attack' | 'defend' | 'flee' | 'talk';
   bonus: number;
   mp_cost: number;
 };

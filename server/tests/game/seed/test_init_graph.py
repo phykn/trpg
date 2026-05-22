@@ -57,6 +57,7 @@ async def test_init_graph_game_persists_graph_and_progress(tmp_path):
     assert loaded_graph == bundle.graph
     assert loaded_progress == bundle.progress
     assert loaded_graph.nodes["player_01"].properties["name"] == "테스터"
+    assert bundle.content.world_guidance == "world"
 
 
 async def test_init_graph_game_unknown_profile(tmp_path):

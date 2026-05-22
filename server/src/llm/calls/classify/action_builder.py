@@ -118,6 +118,13 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
             to=_first_str(intent, "target", "source_id"),
             how="abandon",
         )
+    if name == "decide":
+        return Action(
+            verb="decide",
+            what=_required_str(intent, "quest_id"),
+            to=_optional_str(intent, "target"),
+            how=_required_str(intent, "choice_id"),
+        )
     if name == "use":
         return Action(
             verb="use",
@@ -130,7 +137,6 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
             verb="attack",
             what=[_first_str(intent, "target", "enemy_id")],
             with_=_optional_str(intent, "skill_id"),
-            how=_optional_str(intent, "tactic"),
         )
     if name == "cast":
         skill_id = _required_str(intent, "skill_id")
@@ -142,8 +148,8 @@ def _build_action(intent: object, surroundings: dict[str, Any]) -> Action:
             with_=skill_id,
             to=target,
         )
-    if name == "create_distance":
-        return Action(verb="move", how="create_distance")
+    if name == "flee":
+        return Action(verb="move", how="flee")
     if name == "talk":
         return Action(
             verb="speak",

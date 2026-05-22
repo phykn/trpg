@@ -37,7 +37,7 @@ def test_combat_narration_view_marks_korean_training_dummy_nonlethal():
                 sides={"player_01": "player", "training_dummy": "enemy"},
                 trace=[
                     GraphCombatTraceEvent(
-                        kind="player_precise_success",
+                        kind="player_attack_success",
                         actor_id="player_01",
                         target="training_dummy",
                         state="critical",
@@ -85,7 +85,7 @@ def test_combat_narration_view_exposes_latest_exchange_result():
                         target="training_dummy",
                     ),
                     GraphCombatTraceEvent(
-                        kind="player_precise_failure",
+                        kind="player_attack_failure",
                         actor_id="player_01",
                         target="training_dummy",
                         state="healthy",
@@ -132,7 +132,7 @@ def test_combat_narration_view_uses_player_facing_action_labels():
                 last_action="defend",
                 trace=[
                     GraphCombatTraceEvent(
-                        kind="player_guarded_failure",
+                        kind="player_defend_failure",
                         actor_id="player_01",
                         target="player_01",
                         state="healthy",
@@ -198,7 +198,7 @@ def test_combat_narration_view_exposes_effect_context():
                 last_support_kind="skill",
                 trace=[
                     GraphCombatTraceEvent(
-                        kind="player_precise_success",
+                        kind="player_attack_success",
                         actor_id="player_01",
                         target="training_dummy",
                         state="critical",
@@ -265,7 +265,7 @@ def test_combat_narration_view_exposes_status_context_from_last_support():
                 last_support_kind="item",
                 trace=[
                     GraphCombatTraceEvent(
-                        kind="player_guarded_success",
+                        kind="player_defend_success",
                         actor_id="player_01",
                         target="training_dummy",
                         state="healthy",

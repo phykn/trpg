@@ -47,7 +47,7 @@ function isNearbyItem(node: StoryGraphNode): boolean {
 }
 
 function isActionableQuest(node: StoryGraphNode): boolean {
-  return node.kind === 'quest' && node.reachable && node.actions.length > 0;
+  return node.kind === 'quest' && node.reachable && (node.actions.length > 0 || node.choices.length > 0);
 }
 
 function personItem(node: StoryGraphNode): NearbyItem {
@@ -117,11 +117,18 @@ function joinQuestGoals(goals: string[], fallback: string): string {
 }
 
 function questActions(node: Extract<StoryGraphNode, { kind: 'quest' }>): PanelAction[] | undefined {
-  const actions = node.actions.map((kind): PanelAction => ({
+  const actions: PanelAction[] = node.actions.map((kind): PanelAction => ({
     kind: 'quest_action',
     label: kind === 'accept' ? ko.quest.accept : ko.quest.abandon,
     questAction: { kind, quest_id: node.id },
   }));
+  actions.push(
+    ...node.choices.map((choice): PanelAction => ({
+      kind: 'graph_action',
+      label: choice.label,
+      graphAction: { verb: 'decide', what: node.id, how: choice.id },
+    })),
+  );
   return actions.length > 0 ? actions : undefined;
 }
 

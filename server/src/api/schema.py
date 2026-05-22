@@ -63,11 +63,9 @@ class GraphCombatCommandRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     command: Literal[
-        "precise",
+        "attack",
         "defend",
-        "guarded",
-        "reckless",
-        "create_distance",
+        "flee",
         "talk",
     ]
     target: str | None = None

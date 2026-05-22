@@ -56,7 +56,7 @@ def _enemy(character_id: str = "goblin_01", *, level: int = 1) -> GraphNode:
 def _skill(
     skill_id: str,
     *,
-    action: str = "precise",
+    action: str = "attack",
     mp_cost: int = 2,
     bonus: int = 2,
 ) -> GraphNode:
@@ -75,9 +75,9 @@ def _skill(
 def _item(
     item_id: str,
     *,
-    action: str = "precise",
+    action: str = "attack",
     bonus: int = 0,
-    effect: str = "extra_heart_damage",
+    effect: str = "dc_down",
     consumable: bool = True,
 ) -> GraphNode:
     return GraphNode(
@@ -220,7 +220,7 @@ def test_attack_success_reduces_enemy_heart_without_hp_loss():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="precise"),
+        GraphCombatAction(kind="attack"),
         dice=11,
     )
 
@@ -229,7 +229,7 @@ def test_attack_success_reduces_enemy_heart_without_hp_loss():
     assert result.state.player_hearts == 3
     assert result.state.round == 2
     assert result.state.outcome == "ongoing"
-    assert result.state.trace[-1].kind == "player_precise_success"
+    assert result.state.trace[-1].kind == "player_attack_success"
 
 
 def test_attack_failure_reduces_player_heart_and_ignores_stats():
@@ -245,14 +245,14 @@ def test_attack_failure_reduces_player_heart_and_ignores_stats():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="precise"),
+        GraphCombatAction(kind="attack"),
         dice=10,
     )
 
     assert result.state.enemy_hearts == 3
     assert result.state.player_hearts == 2
     assert result.state.round == 2
-    assert result.state.trace[-1].kind == "player_precise_failure"
+    assert result.state.trace[-1].kind == "player_attack_failure"
 
 
 def test_defend_success_recovers_a_player_heart():
@@ -299,14 +299,14 @@ def test_flee_success_ends_combat_without_graph_changes():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="create_distance"),
+        GraphCombatAction(kind="flee"),
         dice=11,
     )
 
     assert result.changes == []
     assert result.state.outcome == "escaped"
     assert result.state.player_hearts == 3
-    assert result.state.trace[-1].kind == "player_create_distance_success"
+    assert result.state.trace[-1].kind == "player_flee_success"
 
 
 def test_flee_failure_loses_one_heart():
@@ -317,14 +317,14 @@ def test_flee_failure_loses_one_heart():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="create_distance"),
+        GraphCombatAction(kind="flee"),
         dice=10,
     )
 
     assert result.state.outcome == "ongoing"
     assert result.state.player_hearts == 2
     assert result.state.round == 2
-    assert result.state.trace[-1].kind == "player_create_distance_failure"
+    assert result.state.trace[-1].kind == "player_flee_failure"
 
 
 def test_social_success_and_failure_use_hearts():
@@ -353,7 +353,7 @@ def test_social_success_and_failure_use_hearts():
     assert failure.state.trace[-1].kind == "player_talk_failure"
 
 
-def test_guarded_tactic_lowers_dc_and_prevents_failure_heart_loss():
+def test_defend_uses_normal_dc_and_failure_loses_heart():
     graph = _graph()
     state = _started(graph)
 
@@ -361,24 +361,24 @@ def test_guarded_tactic_lowers_dc_and_prevents_failure_heart_loss():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="guarded"),
+        GraphCombatAction(kind="defend"),
         dice=9,
     )
     failure = plan_combat_exchange(
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="guarded"),
+        GraphCombatAction(kind="defend"),
         dice=8,
     )
 
-    assert success.state.last_dc == 9
-    assert success.state.enemy_hearts == 2
-    assert failure.state.player_hearts == 3
-    assert failure.state.trace[-1].kind == "player_guarded_failure"
+    assert success.state.last_dc == 11
+    assert success.state.enemy_hearts == 3
+    assert failure.state.player_hearts == 2
+    assert failure.state.trace[-1].kind == "player_defend_failure"
 
 
-def test_reckless_tactic_deals_two_hearts_on_success():
+def test_attack_deals_one_heart_on_success():
     graph = _graph()
     state = _started(graph)
 
@@ -386,16 +386,16 @@ def test_reckless_tactic_deals_two_hearts_on_success():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="reckless"),
+        GraphCombatAction(kind="attack"),
         dice=13,
     )
 
-    assert result.state.last_dc == 13
-    assert result.state.enemy_hearts == 1
-    assert result.state.trace[-1].kind == "player_reckless_success"
+    assert result.state.last_dc == 11
+    assert result.state.enemy_hearts == 2
+    assert result.state.trace[-1].kind == "player_attack_success"
 
 
-def test_create_distance_success_escapes_combat():
+def test_flee_success_escapes_combat():
     graph = _graph()
     state = _started(graph)
 
@@ -403,7 +403,7 @@ def test_create_distance_success_escapes_combat():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="create_distance"),
+        GraphCombatAction(kind="flee"),
         dice=11,
     )
 
@@ -436,7 +436,7 @@ def test_victory_marks_enemy_defeated_without_forced_round_limit():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="precise"),
+        GraphCombatAction(kind="attack"),
         dice=11,
     )
     changed = _apply_all(graph, result.changes)
@@ -460,7 +460,7 @@ def test_victory_marks_enemy_without_hp_resource_dead():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="precise"),
+        GraphCombatAction(kind="attack"),
         dice=11,
     )
     changed = _apply_all(graph, result.changes)
@@ -481,7 +481,7 @@ def test_defeat_deducts_hp_by_remaining_enemy_hearts():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="precise"),
+        GraphCombatAction(kind="attack"),
         dice=10,
     )
     changed = _apply_all(graph, result.changes)
@@ -507,7 +507,7 @@ def test_dc_uses_level_difference_skill_bonus_and_clamp():
         graph,
         state,
         "player_01",
-        GraphCombatAction(kind="precise"),
+        GraphCombatAction(kind="attack"),
         dice=17,
     )
     success_with_support = plan_combat_exchange(
@@ -515,7 +515,7 @@ def test_dc_uses_level_difference_skill_bonus_and_clamp():
         state,
         "player_01",
         GraphCombatAction(
-            kind="precise",
+            kind="attack",
             support_id="focus",
             support_kind="skill",
         ),
@@ -527,6 +527,29 @@ def test_dc_uses_level_difference_skill_bonus_and_clamp():
     assert success_with_support.state.enemy_hearts == 2
     assert success_with_support.state.last_dc == 18
     assert changed.nodes["player_01"].properties["mp"] == 3
+
+
+def test_item_support_can_raise_dc():
+    graph = _graph(
+        include_item=True,
+        item=_item("bomb", bonus=2, effect="dc_up", consumable=False),
+    )
+    state = _started(graph)
+
+    result = plan_combat_exchange(
+        graph,
+        state,
+        "player_01",
+        GraphCombatAction(
+            kind="attack",
+            support_id="bomb",
+            support_kind="item",
+        ),
+        dice=12,
+    )
+
+    assert result.state.last_dc == 13
+    assert result.state.player_hearts == 2
 
 
 def test_skill_support_requires_known_skill_and_mp():
@@ -541,7 +564,7 @@ def test_skill_support_requires_known_skill_and_mp():
             _started(no_skill_graph),
             "player_01",
             GraphCombatAction(
-                kind="precise",
+                kind="attack",
                 support_id="focus",
                 support_kind="skill",
             ),
@@ -558,7 +581,7 @@ def test_skill_support_requires_known_skill_and_mp():
             _started(low_mp_graph),
             "player_01",
             GraphCombatAction(
-                kind="precise",
+                kind="attack",
                 support_id="focus",
                 support_kind="skill",
             ),
@@ -575,7 +598,7 @@ def test_skill_support_requires_known_skill_and_mp():
             state,
             "player_01",
             GraphCombatAction(
-                kind="precise",
+                kind="attack",
                 support_id="focus",
                 support_kind="skill",
             ),
@@ -583,7 +606,7 @@ def test_skill_support_requires_known_skill_and_mp():
         )
 
 
-def test_item_support_can_consume_and_deal_extra_heart_damage():
+def test_item_support_can_consume_and_lower_dc():
     graph = _graph(include_item=True)
     state = _started(graph)
 
@@ -592,7 +615,7 @@ def test_item_support_can_consume_and_deal_extra_heart_damage():
         state,
         "player_01",
         GraphCombatAction(
-            kind="precise",
+            kind="attack",
             support_id="bomb",
             support_kind="item",
         ),
@@ -600,17 +623,17 @@ def test_item_support_can_consume_and_deal_extra_heart_damage():
     )
     changed = _apply_all(graph, result.changes)
 
-    assert result.state.enemy_hearts == 1
+    assert result.state.enemy_hearts == 2
     assert "carries:player_01:bomb" not in changed.edges
 
 
-def test_guard_item_can_prevent_failure_heart_loss():
+def test_guard_item_consumes_on_failure():
     graph = _graph(
         include_item=True,
         item=_item(
             "bomb",
             action="defend",
-            effect="prevent_heart_loss",
+            effect="dc_down",
             consumable=True,
         ),
     )
@@ -629,7 +652,7 @@ def test_guard_item_can_prevent_failure_heart_loss():
     )
     changed = _apply_all(graph, result.changes)
 
-    assert result.state.player_hearts == 3
+    assert result.state.player_hearts == 2
     assert result.state.trace[-1].kind == "player_defend_failure"
     assert "carries:player_01:bomb" not in changed.edges
 
@@ -641,7 +664,7 @@ def test_exchange_changes_are_valid_graph_changes():
         _started(graph),
         "player_01",
         GraphCombatAction(
-            kind="precise",
+            kind="attack",
             support_id="focus",
             support_kind="skill",
         ),

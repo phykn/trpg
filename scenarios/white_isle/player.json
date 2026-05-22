@@ -1,12 +1,17 @@
 {
   "id": "player_01",
-  "role": "흰섬에 함께 도착한 이름 없는 방문자",
-  "background": "당신은 칭호를 버린 여섯 사람과 같은 배를 타고 흰섬에 도착했습니다. 빈 수첩에 그들이 칭호 너머에서 되찾는 이야기를 남기려 합니다.",
-  "traits": ["이야기 사이의 빈칸을 봅니다.", "칭호보다 이름을 먼저 들으려 합니다."],
   "level": 1,
-  "equipment": {},
-  "inventory": ["blank_notebook"],
-  "companions": [],
+  "equipment": {
+    "weapon": "itm_travel_oar",
+    "armor": "itm_travel_cloak"
+  },
+  "inventory": [
+    "itm_travel_oar",
+    "itm_travel_cloak"
+  ],
+  "companions": [
+    "npc_eli"
+  ],
   "gold": 0,
   "xp_pool": 0
 }
