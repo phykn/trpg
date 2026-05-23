@@ -2,8 +2,18 @@
   "ch_fog": {
     "id": "ch_fog",
     "title": "안개섬",
-    "description": "엘리와 동행을 시작하고 혼자서는 건널 수 없는 바다의 규칙을 배웁니다.",
+    "description": "출항 규칙을 확인하고 엘리와 첫 출항을 준비한다.",
+    "guidance": [
+      "튜토리얼 장이다.",
+      "질문을 받으면 올든은 항구 규칙, 안개 바다, 붉은섬행 항로만 짧게 답한다.",
+      "동행자는 노 젓기와 안개 속 길 확인을 나누기 위해 필요하다.",
+      "엘리는 이미 동행하기로 한 사람이며 설득 대상이 아니다.",
+      "플레이어가 인간, 항구, 섬, 동행 이유, 엘리, 붉은섬을 물으면 공개 지식만 하나씩 짧게 답한다.",
+      "붉은섬의 갈등은 맡긴 분노와 책임이라는 소문까지만 드러낸다.",
+      "확인서, 허가, 시험, 비용을 새 조건으로 만들지 않는다."
+    ],
     "quests": [
+      "q_fog_ready",
       "q_fog_depart"
     ],
     "prerequisites": [],
@@ -12,7 +22,7 @@
   "ch_red": {
     "id": "ch_red",
     "title": "붉은섬",
-    "description": "분노가 상품이 된 섬에서 공개 기록과 흘려보내기 사이를 판단합니다.",
+    "description": "분노 거래와 환불 요구, 공개 기록을 다룬다.",
     "quests": [
       "q_red_refund"
     ],
@@ -24,7 +34,7 @@
   "ch_blue": {
     "id": "ch_blue",
     "title": "푸른섬",
-    "description": "애도와 산 사람의 자리 사이에서 빈방의 의미를 판단합니다.",
+    "description": "닫힌 방과 애도, 새로 필요한 자리를 다룬다.",
     "quests": [
       "q_blue_room"
     ],
@@ -36,7 +46,7 @@
   "ch_gold": {
     "id": "ch_gold",
     "title": "황금섬",
-    "description": "별점과 생계가 묶인 섬에서 사람을 점수로 남길지 판단합니다.",
+    "description": "별점표와 생계, 다시 일할 기회를 다룬다.",
     "quests": [
       "q_gold_stars"
     ],
@@ -48,7 +58,7 @@
   "ch_green": {
     "id": "ch_green",
     "title": "연두섬",
-    "description": "편안함이 회복인지 정체인지 출항 허가서를 두고 판단합니다.",
+    "description": "쉼과 지연, 출항 허가서를 다룬다.",
     "quests": [
       "q_green_permit"
     ],
@@ -60,7 +70,7 @@
   "ch_purple": {
     "id": "ch_purple",
     "title": "보라섬",
-    "description": "사랑을 증명하는 비용이 관계를 압박하는 순간을 판단합니다.",
+    "description": "사랑 증명 비용과 작은 예식을 다룬다.",
     "quests": [
       "q_purple_love"
     ],
@@ -72,7 +82,7 @@
   "ch_silver": {
     "id": "ch_silver",
     "title": "은빛섬",
-    "description": "깨끗한 공동체가 누구를 같은 식탁에 앉히는지 판단합니다.",
+    "description": "깨끗한 거리와 숨은 노동, 나뉜 식탁을 다룬다.",
     "quests": [
       "q_silver_meal"
     ],
@@ -84,7 +94,7 @@
   "ch_orange": {
     "id": "ch_orange",
     "title": "주황섬",
-    "description": "기쁨이 위로인지 강요인지 새출발 축하식을 두고 판단합니다.",
+    "description": "새 출발 축하식과 무대 뒤 침묵을 다룬다.",
     "quests": [
       "q_orange_joy"
     ],
@@ -96,7 +106,7 @@
   "ch_white": {
     "id": "ch_white",
     "title": "흰섬",
-    "description": "검은 물건의 무게와 동행의 의미를 안고 빈 의자에 앉습니다.",
+    "description": "마지막 바다와 손에 남은 무게, 빈 의자를 다룬다.",
     "quests": [
       "q_white_chair"
     ],

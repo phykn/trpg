@@ -32,6 +32,9 @@ def _character(node_id: str, *, name: str) -> GraphNode:
             "max_mp": 5,
             "alive": True,
             "background": "경비병은 북문 앞에서 교대 기록을 관리합니다.",
+            "desire": "북문 기록을 자기 손으로 정리하고 싶다.",
+            "fear": "기록이 비면 책임이 자신에게 돌아올까 두렵다.",
+            "contradiction": "규칙을 앞세우지만 빈 기록은 조용히 덮고 싶어 한다.",
             "secrets": ["숨은 단서가 있습니다."],
             "stats": {"body": 3, "agility": 2, "mind": 2, "presence": 2},
             "status": [],
@@ -225,6 +228,15 @@ def test_input_payload_includes_recent_context_and_keeps_player_input():
     assert payload["user_request"] == {"player_input": "경비병에게 북문을 묻습니다"}
     assert payload["engine_event"]["kind"] == "dialogue"
     assert payload["scene_state"]["target_view"]["id"] == "guard_01"
+    assert payload["scene_state"]["target_view"]["desire"] == (
+        "북문 기록을 자기 손으로 정리하고 싶다."
+    )
+    assert payload["scene_state"]["target_view"]["fear"] == (
+        "기록이 비면 책임이 자신에게 돌아올까 두렵다."
+    )
+    assert payload["scene_state"]["target_view"]["contradiction"] == (
+        "규칙을 앞세우지만 빈 기록은 조용히 덮고 싶어 한다."
+    )
     assert "recent_log" not in payload
     assert "recent_narration" not in payload["reference_context"]
     assert payload["reference_context"]["recent_exchanges"] == [
@@ -253,6 +265,7 @@ def test_input_payload_includes_current_story_context():
         properties={
             "title": "푸른섬",
             "description": "애도와 산 사람의 자리 사이에서 빈방의 의미를 판단합니다.",
+            "guidance": "빈방의 물건과 산 사람의 자리만 근거로 씁니다.",
             "status": "active",
         },
     )
@@ -282,6 +295,7 @@ def test_input_payload_includes_current_story_context():
             "name": "푸른섬",
             "status": "active",
             "description": "애도와 산 사람의 자리 사이에서 빈방의 의미를 판단합니다.",
+            "guidance": "빈방의 물건과 산 사람의 자리만 근거로 씁니다.",
         },
         "active_quest": {
             "id": "quest_01",
@@ -290,6 +304,37 @@ def test_input_payload_includes_current_story_context():
             "description": "레아의 빈방을 계속 닫아 둘지 정합니다.",
         },
     }
+
+
+def test_input_payload_keeps_chapter_guidance_list():
+    runtime = _runtime()
+    runtime.graph.nodes["chapter_01"] = GraphNode(
+        id="chapter_01",
+        type="chapter",
+        properties={
+            "title": "안개섬",
+            "description": "출항 규칙을 확인합니다.",
+            "guidance": [
+                "튜토리얼 장이다.",
+                "질문에는 항구 규칙과 안개 바다만 짧게 답한다.",
+                "확인서나 허가를 새 조건으로 만들지 않는다.",
+            ],
+            "status": "active",
+        },
+    )
+
+    payload = build_input_narration_payload(
+        runtime=runtime,
+        player_input="올든에게 왜 못 떠나는지 묻습니다",
+        action=Action(verb="speak", to="guard_01"),
+        dialogue_target=runtime.graph.nodes["guard_01"],
+    )
+
+    assert payload["reference_context"]["current_story"]["chapter"]["guidance"] == [
+        "튜토리얼 장이다.",
+        "질문에는 항구 규칙과 안개 바다만 짧게 답한다.",
+        "확인서나 허가를 새 조건으로 만들지 않는다.",
+    ]
 
 
 def test_recent_exchanges_include_visible_ui_cues():
@@ -854,7 +899,7 @@ def test_action_payload_omits_internal_action_ids_from_narration():
             how="accept",
         ),
         dispatch=dispatch,
-        card_texts=["분노 환불 사건 퀘스트를 시작합니다."],
+        card_texts=["의뢰 「분노 환불 사건」을 시작합니다."],
     )
     encoded = json.dumps(payload, ensure_ascii=False)
 
@@ -1045,7 +1090,7 @@ def test_action_payload_includes_story_transition_without_forcing_solution():
         after=after,
         action=Action(verb="decide", what="quest_done", how="release"),
         dispatch=dispatch,
-        card_texts=["당신은 분노 환불 사건에서 「분노를 흘려보냅니다」 쪽을 선택합니다."],
+        card_texts=["당신은 분노 환불 사건에서 「분노를 흘려보냅니다」를 선택합니다."],
     )
 
     assert payload["engine_event"]["story_transition"] == {

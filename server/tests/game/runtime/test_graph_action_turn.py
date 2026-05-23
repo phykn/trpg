@@ -187,7 +187,7 @@ async def test_run_graph_action_turn_logs_quest_choice_label(tmp_path):
     )
     logs = await repo.load_log_entries("game-1")
 
-    assert logs[0].text == "당신은 별점 복구 사건에서 「별점을 복구합니다」 쪽을 선택합니다."
+    assert logs[0].text == "당신은 별점 복구 사건에서 「별점을 복구합니다」를 선택합니다."
 
 
 class _DeltaTrackingRepo(LocalFsGraphRepo):
@@ -635,7 +635,7 @@ async def test_run_graph_action_turn_saves_attack_progress_and_front_combat(tmp_
     assert saved_progress.graph_combat_state.round == 1
     assert saved_progress.graph_combat_state.last_roll is None
     assert saved_logs[0].text == (
-        "goblin_01가 정면을 막아서고, 당신은 발을 낮게 깔아 싸움의 중심을 잡습니다."
+        "goblin_01가 정면을 막아서고, 당신은 자세를 낮춰 싸움의 중심을 잡습니다."
     )
     assert result.front_state.combat is not None
     assert result.front_state.combat.round == 1

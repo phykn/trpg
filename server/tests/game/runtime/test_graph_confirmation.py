@@ -264,7 +264,7 @@ async def test_confirm_attack_log_uses_korean_object_particle(tmp_path):
     saved_logs = await repo.load_log_entries("game-1")
 
     assert saved_logs[0].text == (
-        "고블린 약탈자가 정면을 막아서고, 당신은 발을 낮게 깔아 싸움의 중심을 잡습니다."
+        "고블린 약탈자가 정면을 막아서고, 당신은 자세를 낮춰 싸움의 중심을 잡습니다."
     )
 
 
@@ -355,6 +355,88 @@ async def test_confirm_quest_accept_filters_impossible_quest_suggestions(tmp_pat
     assert [suggestion.input_text for suggestion in result.suggestions] == [
         "첫 의뢰를 포기합니다"
     ]
+
+
+async def test_one_way_unlocked_move_requires_confirmation(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["town"].properties["name"] = "안개 부두"
+    graph.nodes["red_square"] = GraphNode(
+        id="red_square",
+        type="location",
+        properties={"name": "붉은 광장"},
+    )
+    graph.nodes["fog_depart"] = GraphNode(
+        id="fog_depart",
+        type="quest",
+        properties={"title": "첫 출항", "status": "completed"},
+    )
+    graph.edges["connects_to:town:red_square"] = GraphEdge(
+        id="connects_to:town:red_square",
+        type="connects_to",
+        from_node_id="town",
+        to_node_id="red_square",
+        properties={"requires_quest": "fog_depart"},
+    )
+    await repo.save_graph("game-1", graph)
+
+    result = await run_graph_action_request(
+        repo,
+        "game-1",
+        Action(verb="move", to="red_square"),
+    )
+    saved_graph = await repo.load_graph("game-1")
+    pending = (await repo.load_progress("game-1")).pending_confirmation
+
+    assert result.status == "confirmation_required"
+    assert pending["kind"] == "important_move"
+    assert result.front_state.pending_confirmation is not None
+    assert result.front_state.pending_confirmation.title == "이동을 확정하시겠습니까?"
+    assert (
+        result.front_state.pending_confirmation.body
+        == "붉은 광장으로 이동하면 안개 부두로 돌아올 수 없습니다."
+    )
+    assert result.front_state.pending_confirmation.confirm_label == "이동"
+    assert "located_at:player_01:town" in saved_graph.edges
+    assert "located_at:player_01:red_square" not in saved_graph.edges
+
+
+async def test_bidirectional_unlocked_move_does_not_require_confirmation(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["red_square"] = GraphNode(
+        id="red_square",
+        type="location",
+        properties={"name": "붉은 광장"},
+    )
+    graph.nodes["fog_depart"] = GraphNode(
+        id="fog_depart",
+        type="quest",
+        properties={"title": "첫 출항", "status": "completed"},
+    )
+    graph.edges["connects_to:town:red_square"] = GraphEdge(
+        id="connects_to:town:red_square",
+        type="connects_to",
+        from_node_id="town",
+        to_node_id="red_square",
+        properties={"requires_quest": "fog_depart"},
+    )
+    graph.edges["connects_to:red_square:town"] = GraphEdge(
+        id="connects_to:red_square:town",
+        type="connects_to",
+        from_node_id="red_square",
+        to_node_id="town",
+    )
+    await repo.save_graph("game-1", graph)
+
+    result = await run_graph_action_request(
+        repo,
+        "game-1",
+        Action(verb="move", to="red_square"),
+    )
+
+    assert result.status == "executed"
+    assert (await repo.load_progress("game-1")).pending_confirmation is None
 
 
 async def test_confirm_quest_abandon_filters_impossible_quest_suggestions(tmp_path):

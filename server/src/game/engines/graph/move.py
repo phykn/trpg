@@ -8,7 +8,7 @@ from src.game.domain.graph import (
     RemoveEdgeChange,
     SetNodePropertyChange,
 )
-from src.game.domain.graph.query import edges_from, location_of
+from src.game.domain.graph.query import connection_is_unlocked, edges_from, location_of
 
 
 class GraphMoveError(ValueError):
@@ -85,23 +85,11 @@ def _require_adjacent_destination(
             f"destination {destination_id!r} is not adjacent to current "
             f"location {current_location_id!r}. Reachable: {reachable}."
         )
-    if not any(_connection_is_unlocked(graph, edge) for edge in matching):
+    if not any(connection_is_unlocked(graph, edge) for edge in matching):
         raise GraphMoveError(
             f"destination {destination_id!r} is locked from current "
             f"location {current_location_id!r}."
         )
-
-
-def _connection_is_unlocked(graph: Graph, edge: GraphEdge) -> bool:
-    quest_id = edge.properties.get("requires_quest")
-    if quest_id is None:
-        return True
-    if not isinstance(quest_id, str) or not quest_id:
-        return False
-    quest = graph.nodes.get(quest_id)
-    if quest is None or quest.type != "quest":
-        return False
-    return quest.properties.get("status") == "completed"
 
 
 def _character_and_companions(graph: Graph, character_id: str) -> list[str]:

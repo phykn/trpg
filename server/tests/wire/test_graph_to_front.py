@@ -484,6 +484,26 @@ def test_graph_front_state_hides_dead_place_targets():
     assert payload.place.targets == []
 
 
+def test_graph_front_state_hides_exits_requiring_inactive_quest():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_01"].properties["status"] = "pending"
+    runtime.graph.edges["connects_to:town:forest"].properties[
+        "requires_active_quest"
+    ] = "quest_01"
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.place is not None
+    assert payload.place.exits == []
+
+    runtime.graph.nodes["quest_01"].properties["status"] = "active"
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.place is not None
+    assert [exit.id for exit in payload.place.exits] == ["forest"]
+
+
 def test_graph_front_state_exposes_non_player_target_without_resources():
     runtime = _runtime()
     target = runtime.graph.nodes["goblin_01"].properties

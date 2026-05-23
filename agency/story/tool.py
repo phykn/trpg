@@ -41,6 +41,7 @@ from agency.story.harness.records import (  # noqa: E402
     _check_entity_invariants,
     _check_id,
     _collect_refs,
+    skill_text_quality_violations,
 )
 
 # env loading mirrors server startup so SUPABASE_* / LLM_ROUTE_* provider keys
@@ -368,7 +369,44 @@ def _story_playability_violations(scenario: dict) -> list[str]:
                 f"active_quest {active_quest_id} must belong to an active chapter"
             )
 
+    out.extend(_story_text_quality_violations(scenario))
     return out
+
+
+_EXPOSITORY_INTRO_PATTERNS = (
+    "당신은 ",
+    "에 서 있습니다.",
+    "에 있습니다.",
+    "규칙을 설명합니다",
+    "상황을 설명합니다",
+)
+
+def _story_text_quality_violations(scenario: dict) -> list[str]:
+    out: list[str] = []
+    start = scenario.get("start")
+    if isinstance(start, dict):
+        intro_text = start.get("intro_text")
+        if isinstance(intro_text, str) and _looks_expository_intro(intro_text):
+            out.append(
+                "start.intro_text has an expository opening; start with a concrete "
+                "sensory hook, visible pressure, and unanswered image instead of "
+                "'당신은 ...에 서 있습니다' style setup."
+            )
+
+    for skill_id, skill in scenario.get("skills", {}).items():
+        if not isinstance(skill, dict):
+            continue
+        out.extend(skill_text_quality_violations(skill_id, skill))
+    return out
+
+
+def _looks_expository_intro(text: str) -> bool:
+    stripped = text.strip()
+    if stripped.startswith("당신은 ") and (
+        "에 서 있습니다." in stripped[:40] or "에 있습니다." in stripped[:40]
+    ):
+        return True
+    return any(pattern in stripped for pattern in _EXPOSITORY_INTRO_PATTERNS[3:])
 
 
 def _str_list(value: object) -> list[str]:

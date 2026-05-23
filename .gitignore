@@ -22,6 +22,7 @@ saves/
 logs/
 reports/
 qa_test/
+scenarios/*/.decomp/
 
 # Local-only (not part of the repo)
 notebooks/

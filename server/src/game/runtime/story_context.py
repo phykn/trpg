@@ -25,7 +25,7 @@ def _active_chapter(
     runtime: GameRuntimeState,
     *,
     include_status: bool,
-) -> dict[str, str] | None:
+) -> dict[str, Any] | None:
     for node in runtime.graph.nodes.values():
         if node.type == "chapter" and node.properties.get("status") == "active":
             return _story_node_payload(runtime, node, include_status=include_status)
@@ -36,7 +36,7 @@ def _active_quest(
     runtime: GameRuntimeState,
     *,
     include_status: bool,
-) -> dict[str, str] | None:
+) -> dict[str, Any] | None:
     quest_id = runtime.progress.active_quest_id
     node = runtime.graph.nodes.get(quest_id or "")
     if node is None or node.type != "quest":
@@ -49,7 +49,7 @@ def _story_node_payload(
     node: GraphNode,
     *,
     include_status: bool,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     payload = {"id": node.id, "name": node_label(runtime.content, node)}
     status = node.properties.get("status")
     if include_status and isinstance(status, str) and status:
@@ -61,4 +61,15 @@ def _story_node_payload(
     )
     if description:
         payload["description"] = description
+    guidance = node.properties.get("guidance")
+    if isinstance(guidance, str) and guidance.strip():
+        payload["guidance"] = guidance.strip()
+    elif isinstance(guidance, list):
+        items = [
+            item.strip()
+            for item in guidance
+            if isinstance(item, str) and item.strip()
+        ]
+        if items:
+            payload["guidance"] = items
     return payload

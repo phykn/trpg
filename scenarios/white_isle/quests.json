@@ -1,15 +1,21 @@
 {
-  "q_fog_depart": {
-    "id": "q_fog_depart",
-    "title": "첫 출항",
-    "description": "엘리와 함께 붉은섬행 배에 오릅니다.",
+  "q_fog_ready": {
+    "id": "q_fog_ready",
+    "title": "안개 바다 준비",
+    "description": "올든에게 출항 규칙을 확인하고 선착장에서 두 사람 몫의 배를 본다",
     "giver": "npc_olden",
     "triggers": [
       {
-        "id": "tr_fog_depart",
+        "id": "tr_fog_rule",
+        "type": "social_check",
+        "target": "npc_olden",
+        "name": "출항 규칙 확인"
+      },
+      {
+        "id": "tr_fog_ready",
         "type": "location_enter",
-        "target": "loc_red_square",
-        "name": "첫 출항"
+        "target": "loc_fog_pier",
+        "name": "두 사람 몫의 배 확인"
       }
     ],
     "fail_triggers": [],
@@ -22,10 +28,36 @@
       "items": []
     }
   },
+  "q_fog_depart": {
+    "id": "q_fog_depart",
+    "title": "첫 출항",
+    "description": "엘리와 노를 나누어 잡고 안개 바다를 건너 붉은섬으로 향한다",
+    "handoff": "엘리는 항구가 안개 뒤로 사라질 때까지 말없이 노를 맞춥니다. 붉은 물빛 너머로 환불을 외치는 목소리가 들립니다.",
+    "giver": "npc_eli",
+    "triggers": [
+      {
+        "id": "tr_fog_depart",
+        "type": "location_enter",
+        "target": "loc_red_square",
+        "name": "붉은섬 도착"
+      }
+    ],
+    "fail_triggers": [],
+    "prerequisites": [
+      "q_fog_ready"
+    ],
+    "status": "locked",
+    "required": true,
+    "rewards": {
+      "gold": 0,
+      "exp": 0,
+      "items": []
+    }
+  },
   "q_red_refund": {
     "id": "q_red_refund",
     "title": "분노 환불 사건",
-    "description": "루카와 노아의 대리분노 환불 요구를 어떻게 남길지 정합니다.",
+    "description": "붉은 영수증을 든 루카와 빈손의 노아 사이에서 맡겨진 분노의 의미를 확인한다",
     "handoff": "엘리는 붉은 종이가 접히자, 푸른 비 거리의 닫힌 방 이야기를 확인해 보자고 낮게 말합니다.",
     "giver": "npc_luka",
     "triggers": [
@@ -49,7 +81,7 @@
     },
     "choices": {
       "record": {
-        "label": "책임을 기록으로 남깁니다",
+        "label": "책임 기록",
         "rewards": {
           "gold": 0,
           "exp": 0,
@@ -59,7 +91,7 @@
         }
       },
       "release": {
-        "label": "분노를 흘려보냅니다",
+        "label": "분노 흘려보내기",
         "rewards": {
           "gold": 0,
           "exp": 0,
@@ -71,7 +103,7 @@
   "q_blue_room": {
     "id": "q_blue_room",
     "title": "빈방 사건",
-    "description": "레아의 빈방을 계속 닫아 둘지, 산 사람의 자리로 다시 열지 정합니다.",
+    "description": "레아가 지키는 빈방과 오늘 머물 곳이 필요한 사람 사이에서 방의 자리를 확인한다",
     "handoff": "엘리는 빈방 열쇠가 손에서 식기도 전에, 황금섬의 별점표가 누군가의 생계를 붙잡고 있다고 짚습니다.",
     "giver": "npc_lea",
     "triggers": [
@@ -95,7 +127,7 @@
     },
     "choices": {
       "preserve": {
-        "label": "빈방을 보존합니다",
+        "label": "빈방 보존",
         "rewards": {
           "gold": 0,
           "exp": 0,
@@ -105,7 +137,7 @@
         }
       },
       "open": {
-        "label": "방을 다시 엽니다",
+        "label": "방 다시 열기",
         "rewards": {
           "gold": 0,
           "exp": 0,
@@ -117,7 +149,7 @@
   "q_gold_stars": {
     "id": "q_gold_stars",
     "title": "별점 복구 사건",
-    "description": "이삭의 별점을 회복할지, 점수표의 압력에서 벗어나게 할지 정합니다.",
+    "description": "이삭의 작업대와 별점 게시판을 살피며 점수가 사람의 일을 어떻게 붙잡는지 확인한다",
     "handoff": "엘리는 금빛 별 조각을 보다가, 연두섬 사무소의 출항 허가서 이야기를 꺼냅니다.",
     "giver": "npc_isaac",
     "triggers": [
@@ -141,7 +173,7 @@
     },
     "choices": {
       "restore": {
-        "label": "별점을 복구합니다",
+        "label": "별점 복구",
         "rewards": {
           "gold": 0,
           "exp": 0,
@@ -151,7 +183,7 @@
         }
       },
       "remove": {
-        "label": "점수표를 떼어냅니다",
+        "label": "점수표 떼어내기",
         "rewards": {
           "gold": 0,
           "exp": 0,
@@ -163,7 +195,7 @@
   "q_green_permit": {
     "id": "q_green_permit",
     "title": "출항 허가서",
-    "description": "아벨에게 체류권을 남길지, 출항 허가서를 받아 떠나게 할지 정합니다.",
+    "description": "연두 여관과 출항 허가소 사이에서 쉬어 가는 시간과 떠날 때를 함께 확인한다",
     "handoff": "엘리는 허가서 가장자리를 접으며, 보라 예식장의 축하가 누구의 부담인지 확인해 보자고 말합니다.",
     "giver": "npc_abel",
     "triggers": [
@@ -187,7 +219,7 @@
     },
     "choices": {
       "extend": {
-        "label": "체류권을 남깁니다",
+        "label": "체류권 남기기",
         "rewards": {
           "gold": 0,
           "exp": 0,
@@ -197,7 +229,7 @@
         }
       },
       "depart": {
-        "label": "출항 허가를 받습니다",
+        "label": "출항 허가 받기",
         "rewards": {
           "gold": 0,
           "exp": 0,
@@ -209,7 +241,7 @@
   "q_purple_love": {
     "id": "q_purple_love",
     "title": "사랑 증명 비용 사건",
-    "description": "한나와 요셉의 결혼을 증명의 비용으로 남길지, 작은 시작으로 돌려놓을지 정합니다.",
+    "description": "한나와 요셉의 예식 준비를 살피며 사랑을 보여 주는 형식의 무게를 확인한다",
     "handoff": "엘리는 금박 청첩장을 내려놓고, 은빛섬의 식탁에는 누가 앉지 못하는지 보자고 합니다.",
     "giver": "npc_hannah_p",
     "triggers": [
@@ -233,7 +265,7 @@
     },
     "choices": {
       "display": {
-        "label": "증명 비용을 남깁니다",
+        "label": "증명 비용 남기기",
         "rewards": {
           "gold": 0,
           "exp": 0,
@@ -243,7 +275,7 @@
         }
       },
       "simplify": {
-        "label": "작은 시작으로 줄입니다",
+        "label": "작은 시작으로 줄이기",
         "rewards": {
           "gold": 0,
           "exp": 0,
@@ -255,7 +287,7 @@
   "q_silver_meal": {
     "id": "q_silver_meal",
     "title": "공동식권 심사 사건",
-    "description": "미카를 외지 식권에 남길지, 같은 식탁으로 들일지 정합니다.",
+    "description": "깨끗한 거리와 공동식당을 오가며 미카의 노동과 식탁의 자리를 확인한다",
     "handoff": "엘리는 식권의 접힌 자국을 펴 보며, 주황 광장의 축하식이 누구를 기다리지 않는지 묻습니다.",
     "giver": "npc_mika",
     "triggers": [
@@ -279,7 +311,7 @@
     },
     "choices": {
       "separate": {
-        "label": "외지 식권을 유지합니다",
+        "label": "외지 식권 유지",
         "rewards": {
           "gold": 0,
           "exp": 0,
@@ -289,7 +321,7 @@
         }
       },
       "share": {
-        "label": "같은 식탁에 앉게 합니다",
+        "label": "같은 식탁에 앉히기",
         "rewards": {
           "gold": 0,
           "exp": 0,
@@ -300,16 +332,16 @@
   },
   "q_orange_joy": {
     "id": "q_orange_joy",
-    "title": "새출발 축하식 사건",
-    "description": "마리암의 축하식을 지금 진행할지, 아직 웃지 않아도 되게 할지 정합니다.",
-    "handoff": "엘리는 축하 리본을 오래 보다가, 마지막 바다는 들고 온 것의 무게만 보여 줄 거라고 말합니다.",
+    "title": "새 출발 축하식 사건",
+    "description": "주황 광장과 무대 뒤를 살피며 축하가 필요한 순간과 기다림이 필요한 순간을 확인한다",
+    "handoff": "엘리는 축하 리본을 오래 보다가, 마지막 바다는 남은 것의 무게만 보여 줄 거라고 말합니다.",
     "giver": "npc_mariam",
     "triggers": [
       {
         "id": "tr_orange_judge",
         "type": "social_check",
         "target": "npc_mariam",
-        "name": "새출발 축하식 사건"
+        "name": "새 출발 축하식 사건"
       }
     ],
     "fail_triggers": [],
@@ -325,7 +357,7 @@
     },
     "choices": {
       "celebrate": {
-        "label": "축하식을 진행합니다",
+        "label": "축하식 진행",
         "rewards": {
           "gold": 0,
           "exp": 0,
@@ -335,7 +367,7 @@
         }
       },
       "wait": {
-        "label": "아직 웃지 않아도 되게 합니다",
+        "label": "아직 웃지 않아도 되게 하기",
         "rewards": {
           "gold": 0,
           "exp": 0,
@@ -347,7 +379,7 @@
   "q_white_chair": {
     "id": "q_white_chair",
     "title": "빈 의자에 앉기",
-    "description": "흰섬 항구 끝 빈 의자에 앉아 항해를 마무리합니다.",
+    "description": "흰섬 항구 끝 빈 의자에 앉아 항해를 마무리한다",
     "handoff": "엘리는 흰섬 항구 끝의 빈 의자를 가리키며, 이제 말보다 앉아 보는 쪽이 남았다고 말합니다.",
     "giver": "npc_eli",
     "triggers": [

@@ -28,14 +28,14 @@ def test_story_edge_labels_match_existing_text():
 
 def test_story_summary_constants():
     assert STORY_SUMMARY_HERO == "주인공"
-    assert STORY_SUMMARY_EMPTY == "스토리 데이터 없음"
+    assert STORY_SUMMARY_EMPTY == "스토리 데이터가 없습니다"
 
 
 def test_story_summary_helpers():
-    assert story_summary_quest("어둠의 의뢰") == "퀘스트 어둠의 의뢰"
-    assert story_summary_location("광장") == "현재 위치 광장"
-    assert story_summary_entities(3) == "등장인물 3"
-    assert story_summary_places(5) == "장소 5"
+    assert story_summary_quest("어둠의 의뢰") == "의뢰: 어둠의 의뢰"
+    assert story_summary_location("광장") == "현재 위치: 광장"
+    assert story_summary_entities(3) == "등장인물: 3"
+    assert story_summary_places(5) == "장소: 5"
 
 
 def test_roll_reason_default():

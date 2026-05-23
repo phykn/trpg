@@ -1131,7 +1131,7 @@ async def test_graph_input_rejects_unusable_item_intent_with_public_next_step(
                 "how": "trade",
             },
             "고블린에게 회복 물약을 산다",
-            "금화가 부족해 거래할 수 없습니다. 금화를 더 모으거나 다른 물건을 고르셔야 합니다.",
+            "금화가 부족해 거래할 수 없습니다. 금화를 더 모으거나 다른 물건을 골라야 합니다.",
         ),
         (
             {

@@ -906,7 +906,7 @@ async def test_run_graph_roll_resolves_narrative_perceive_without_dispatch(tmp_p
     assert logs[0].result == "success"
     assert logs[1].kind == "gm"
     assert logs[1].outcome == "success"
-    assert logs[1].text == "당신은 살핀 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다."
+    assert logs[1].text == "당신은 살펴본 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다."
 
 
 async def test_run_graph_roll_resolves_failed_narrative_perceive_without_dispatch(

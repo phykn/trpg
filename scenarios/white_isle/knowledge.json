@@ -2,121 +2,163 @@
   "kn_fog_rule": {
     "id": "kn_fog_rule",
     "title": "안개 바다의 규칙",
-    "summary": "항구장은 혼자 탄 배를 내보내지 않습니다. 한 사람은 키를 잡고, 다른 한 사람은 안개 속 물살을 읽어야 합니다.",
+    "summary": "혼자 탄 배는 내보내지 않는다.",
+    "visibility": "public"
+  },
+  "kn_fog_two_person_crossing": {
+    "id": "kn_fog_two_person_crossing",
+    "title": "둘이 건너는 이유",
+    "summary": "한 사람은 노를 잡고 한 사람은 안개와 종소리를 본다.",
+    "visibility": "public"
+  },
+  "kn_fog_lost_boat": {
+    "id": "kn_fog_lost_boat",
+    "title": "돌아오지 않은 배",
+    "summary": "혼자 떠난 배는 안개 속에서 사라진다.",
+    "visibility": "public"
+  },
+  "kn_fog_bell": {
+    "id": "kn_fog_bell",
+    "title": "늦게 닿는 종소리",
+    "summary": "등대 종소리는 안개 속에서 한 박자 늦게 닿는다.",
     "visibility": "public"
   },
   "kn_fog_two_people": {
     "id": "kn_fog_two_people",
     "title": "두 사람 몫의 배",
-    "summary": "붉은섬행 작은 배에는 노 두 개와 자리 두 칸만 있습니다. 선착장에는 동행자를 태우라는 표식이 붙어 있습니다.",
+    "summary": "붉은섬행 배는 두 자리와 노 두 개뿐이다.",
+    "visibility": "public"
+  },
+  "kn_fog_isles": {
+    "id": "kn_fog_isles",
+    "title": "안개 바다와 섬들",
+    "summary": "안개 바다 너머로 여러 섬이 이어진다.",
+    "visibility": "public"
+  },
+  "kn_fog_harbor_life": {
+    "id": "kn_fog_harbor_life",
+    "title": "안개 항구의 생활",
+    "summary": "떠나는 길을 강요하지 않는다.",
+    "visibility": "public"
+  },
+  "kn_eli_route": {
+    "id": "kn_eli_route",
+    "title": "엘리가 아는 항로",
+    "summary": "엘리는 붉은섬 첫 물길을 안다.",
+    "visibility": "public"
+  },
+  "kn_red_first_hint": {
+    "id": "kn_red_first_hint",
+    "title": "붉은섬의 첫 소문",
+    "summary": "붉은섬에서는 맡긴 분노와 책임을 두고 다툰다.",
     "visibility": "public"
   },
   "kn_red_anger_trade": {
     "id": "kn_red_anger_trade",
     "title": "분노의 거래",
-    "summary": "루카는 노아에게 대신 화를 내 달라고 맡겼고, 노아가 군중 앞에서 충분히 세게 말하지 않았다며 환불을 요구합니다.",
+    "summary": "루카가 노아에게 대리 분노를 맡겼다.",
     "visibility": "public"
   },
   "kn_red_public_record": {
     "id": "kn_red_public_record",
     "title": "공개 기록의 무게",
-    "summary": "에즈라는 노아의 책임을 게시판에 남기자고 합니다. 기록이 남으면 같은 의뢰가 반복되지 않지만, 군중의 분노도 오래 붙잡힙니다.",
+    "summary": "에즈라는 책임 기록을 요구한다.",
     "visibility": "public"
   },
   "kn_blue_empty_room": {
     "id": "kn_blue_empty_room",
     "title": "비워 둔 방",
-    "summary": "레아는 떠난 사람의 방을 그대로 잠가 두었습니다. 밀로는 오늘 밤 머물 방이 없어 그 방문 앞에서 기다립니다.",
+    "summary": "레아는 떠난 사람의 방을 잠가 두었다.",
     "visibility": "public"
   },
   "kn_blue_need_space": {
     "id": "kn_blue_need_space",
     "title": "기억과 자리",
-    "summary": "루스는 방 안의 물건 일부를 남기고 침대와 책상은 다시 쓰게 하자고 제안합니다. 기억과 거처를 함께 남기는 방법입니다.",
+    "summary": "루스는 기억과 거처의 공존을 제안한다.",
     "visibility": "public"
   },
   "kn_gold_score_labor": {
     "id": "kn_gold_score_labor",
     "title": "별점 노동",
-    "summary": "이삭은 낮은 별점 때문에 수리 일을 받지 못하고 있습니다. 손님들은 작업대를 보기도 전에 게시판 점수만 확인합니다.",
+    "summary": "낮은 별점 때문에 이삭의 일이 끊겼다.",
     "visibility": "public"
   },
   "kn_gold_star_pressure": {
     "id": "kn_gold_star_pressure",
     "title": "점수표의 압력",
-    "summary": "다니엘은 별점 복구가 필요하다고 말하고, 사라는 점수표를 떼어야 다시 일할 기회가 생긴다고 말합니다.",
+    "summary": "다니엘은 복구를 요구하고 사라는 점수표를 의심한다.",
     "visibility": "public"
   },
   "kn_green_comfort_delay": {
     "id": "kn_green_comfort_delay",
     "title": "편안함의 지연",
-    "summary": "아벨은 출항 허가서를 받아야 떠날 수 있지만 매일 하루만 더 쉬겠다고 미룹니다. 숙소 사람들은 그를 붙잡고 싶어 합니다.",
+    "summary": "아벨은 출항 허가서를 미룬다.",
     "visibility": "public"
   },
   "kn_green_departure": {
     "id": "kn_green_departure",
     "title": "출항 허가서",
-    "summary": "데보라는 아벨의 출항 허가서가 이미 준비됐다고 말합니다. 서명만 하면 오늘 배를 탈 수 있습니다.",
+    "summary": "아벨의 출항 허가서는 준비되어 있다.",
     "visibility": "public"
   },
   "kn_purple_love_cost": {
     "id": "kn_purple_love_cost",
     "title": "사랑 증명 비용",
-    "summary": "한나와 요셉은 작은 예식을 원하지만, 하객 명단과 선물 목록이 사랑을 증명하는 기준처럼 밀려옵니다.",
+    "summary": "한나와 요셉은 작은 예식을 원한다.",
     "visibility": "public"
   },
   "kn_purple_display": {
     "id": "kn_purple_display",
     "title": "보여 주기의 안전장치",
-    "summary": "레베카는 예전에 작은 결혼식 때문에 무시당했습니다. 그래서 큰 예식과 선물 목록이 한나를 지켜 줄 거라고 믿습니다.",
+    "summary": "레베카는 큰 예식을 보호 장치로 본다.",
     "visibility": "public"
   },
   "kn_silver_clean_work": {
     "id": "kn_silver_clean_work",
     "title": "깨끗함의 노동",
-    "summary": "미카는 폐수관을 청소해 식당가를 깨끗하게 만들지만, 식당 안 공동 식탁에는 앉지 못합니다.",
+    "summary": "미카는 청소하지만 공동 식탁에 앉지 못한다.",
     "visibility": "public"
   },
   "kn_silver_same_table": {
     "id": "kn_silver_same_table",
     "title": "같은 식탁",
-    "summary": "미카는 보상이나 특별석을 요구하지 않습니다. 자신이 청소한 식당에서 다른 주민과 같은 식탁에 앉고 싶어 합니다.",
+    "summary": "미카는 같은 식탁을 원한다.",
     "visibility": "public"
   },
   "kn_silver_hidden_labor": {
     "id": "kn_silver_hidden_labor",
     "title": "숨은 폐수관",
-    "summary": "은빛섬 식당들은 깨끗한 바닥을 자랑하지만, 그 바닥을 지키는 폐수관 노동자에게는 외지 식권만 줍니다.",
+    "summary": "폐수관 노동자는 외지 식권만 받는다.",
     "visibility": "public"
   },
   "kn_orange_forced_joy": {
     "id": "kn_orange_forced_joy",
     "title": "강요된 기쁨",
-    "summary": "가브리엘은 축하식이 마리암을 다시 공동체로 데려온다고 믿습니다. 마리암은 아직 웃을 준비가 되지 않았습니다.",
+    "summary": "가브리엘은 축하식이 회복이라고 믿는다.",
     "visibility": "public"
   },
   "kn_orange_need_time": {
     "id": "kn_orange_need_time",
     "title": "실패를 말할 시간",
-    "summary": "마리암은 항해사 시험에 떨어진 일을 먼저 자기 말로 설명하고 싶어 합니다. 지금은 박수보다 조용한 시간이 필요합니다.",
+    "summary": "마리암은 실패를 자기 말로 설명하려 한다.",
     "visibility": "public"
   },
   "kn_white_black_weight": {
     "id": "kn_white_black_weight",
-    "title": "검은 물건의 무게",
-    "summary": "검은 물건을 들고 마지막 바다를 건너면 배가 한쪽으로 기울어집니다. 흰섬은 이유를 묻지 않고 도착한 사람만 맞습니다.",
+    "title": "손에 남은 무게",
+    "summary": "사건의 증표는 마지막 바다에서 무거워진다.",
     "visibility": "public"
   },
   "kn_white_no_judge": {
     "id": "kn_white_no_judge",
     "title": "심판 없는 항구",
-    "summary": "흰섬 항구에는 검사소도 보관소도 없습니다. 들고 온 것은 누구도 빼앗지 않지만, 무게는 항해 중에 드러납니다.",
+    "summary": "흰섬 항구에는 검사소와 보관소가 없다.",
     "visibility": "public"
   },
   "kn_white_empty_chair": {
     "id": "kn_white_empty_chair",
     "title": "빈 의자",
-    "summary": "흰섬 항구 끝에는 빈 의자가 있습니다. 누가 옳았는지 말하는 자리보다, 도착한 사람이 잠시 앉는 자리입니다.",
+    "summary": "항구 끝에는 도착한 사람의 빈 의자가 있다.",
     "visibility": "public"
   }
 }

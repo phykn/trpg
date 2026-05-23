@@ -253,6 +253,7 @@ def _check_entity_invariants(
         effect = entity.get("effect")
         if effect is not None and not isinstance(effect, str):
             raise EntityWriterError("skill.effect must be an effect id string.")
+        _check_skill_text_quality(entity)
         return
     if kind == "character":
         _check_character_catalog_refs(entity, scenario_dir)
@@ -338,6 +339,34 @@ def _walk_forbidden_seed_shape(
     if isinstance(value, list):
         for index, child in enumerate(value):
             _walk_forbidden_seed_shape(child, f"{path}[{index}]", violations)
+
+
+_PLACEHOLDER_SKILL_NAMES = {
+    "기본 공격",
+    "기본 방어",
+    "방어 자세",
+    "임기응변",
+    "고른 숨",
+    "침착한 설득",
+    "밀어붙이기",
+    "버티는 자세",
+}
+
+
+def skill_text_quality_violations(skill_id: str, skill: Record) -> list[str]:
+    name = skill.get("name")
+    if isinstance(name, str) and name.strip() in _PLACEHOLDER_SKILL_NAMES:
+        return [
+            f"skill {skill_id} name={name!r} is a placeholder; write a concrete "
+            "scenario-grounded technique name tied to its owner and action."
+        ]
+    return []
+
+
+def _check_skill_text_quality(entity: Record) -> None:
+    violations = skill_text_quality_violations(_entity_id(entity), entity)
+    if violations:
+        raise EntityWriterError("\n".join(violations))
 
 
 def _check_item_catalog_refs(entity: Record, scenario_dir: Path) -> None:

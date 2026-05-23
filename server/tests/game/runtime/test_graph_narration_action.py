@@ -96,7 +96,7 @@ async def test_quest_accept_discards_extra_llm_narration_but_keeps_meta():
         after=after,
         action=Action(verb="transfer", what="quest_white_chair", how="accept"),
         dispatch=dispatch,
-        card_texts=["당신은 빈 의자에 앉기 퀘스트를 시작합니다."],
+        card_texts=["당신은 의뢰 「빈 의자에 앉기」를 시작합니다."],
         timeout_s=1,
     )
 

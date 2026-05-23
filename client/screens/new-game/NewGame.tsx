@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 
-import { CenterMessage, ErrorState, Glyph } from '@/components/ui';
+import { CenterMessage, ErrorState } from '@/components/ui';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import { getVersion, listProfiles } from '@/services';
@@ -109,14 +109,10 @@ export function NewGame({ onSubmit }: Props) {
       keyboardShouldPersistTaps="handled"
     >
       <View className="border border-border-strong bg-canvas-default px-4 py-4 gap-5">
-        <View className="gap-2 border-b border-border-default pb-4">
-          <View className="flex-row items-center gap-2.5">
-            <Text className="font-mono text-meta text-accent-fg uppercase">
-              CHARACTER · NEW
-            </Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: colors.border.default }} />
-            <Glyph kind="outline" tone="accent" size={10} />
-          </View>
+        <View className="gap-2 pb-4">
+          <Text className="font-mono text-meta text-accent-fg uppercase">
+            CHARACTER · NEW
+          </Text>
           <Text className="font-serif-medium text-narration text-fg-default">{ko.menu.newGame}</Text>
           <Text className="font-sans text-body text-fg-muted">
             {ko.newGame.hint}

@@ -152,6 +152,15 @@ def seed_violations(
                     f"location {location_id} connection requires_quest="
                     f"{required_quest_id!r} not found"
                 )
+            required_active_quest_id = connection.get("requires_active_quest")
+            if (
+                required_active_quest_id is not None
+                and required_active_quest_id not in quests
+            ):
+                out.append(
+                    f"location {location_id} connection requires_active_quest="
+                    f"{required_active_quest_id!r} not found"
+                )
 
     for item_id, item in items.items():
         _check_action(

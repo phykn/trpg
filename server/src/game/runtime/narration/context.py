@@ -478,7 +478,14 @@ def _add_character_style_fields(
 ) -> None:
     for key in ("personality", "traits"):
         _add_list_field(runtime, node, payload, key)
-    for key in ("background", "appearance", "personal_boundary"):
+    for key in (
+        "background",
+        "appearance",
+        "desire",
+        "fear",
+        "contradiction",
+        "personal_boundary",
+    ):
         _add_text_field(runtime, node, payload, key)
 
 

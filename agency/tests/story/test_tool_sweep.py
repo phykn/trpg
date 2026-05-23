@@ -31,6 +31,154 @@ def _scaffold_minimal_passable(tmp_path: Path) -> Path:
     return sd
 
 
+def _write_sweepable_story_seed(
+    sd: Path,
+    *,
+    intro_text: str = "등대 종이 안개 속에서 한 박자 늦게 울립니다. 젖은 명부 위에 안내자의 손이 놓이고, 선착장 끝 작은 배가 밧줄에 묶여 흔들립니다.",
+    skill_name: str = "행간 읽기",
+) -> None:
+    (sd / "start.json").write_text(
+        json.dumps(
+            {
+                "start_location": "town",
+                "active_subject": "guide",
+                "active_quest": "look_around",
+                "intro_text": intro_text,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (sd / "races" / "human.json").write_text(
+        json.dumps(
+            {
+                "id": "human",
+                "name": "인간",
+                "description": "낯선 곳에서도 상황을 읽고 선택을 이어가는 사람들.",
+                "is_humanoid": True,
+                "racial_skills": ["barter"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (sd / "skills" / "barter.json").write_text(
+        json.dumps(
+            {
+                "id": "barter",
+                "name": skill_name,
+                "description": "상대가 피하는 말과 표정의 틈을 짚어 대화의 실마리를 찾습니다.",
+                "level": 1,
+                "action": "talk",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (sd / "locations" / "town.json").write_text(
+        json.dumps(
+            {
+                "id": "town",
+                "name": "마을",
+                "description": "젖은 표지판이 길목을 막은 작은 마을.",
+                "mood": "조용한 불안이 낮게 깔립니다.",
+                "traits": ["표지판이 길의 단서를 품고 있습니다."],
+                "knowledge": ["town_clue"],
+                "items": [],
+                "connections": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (sd / "characters" / "guide.json").write_text(
+        json.dumps(
+            {
+                "id": "guide",
+                "race": "human",
+                "gender": "female",
+                "name": "안내자",
+                "mbti": "ISTJ",
+                "role": "막힌 길을 지키는 안내자",
+                "background": "오래된 길목을 지켜 왔습니다.",
+                "appearance": "젖은 장갑, 반듯한 어깨, 낮은 시선",
+                "traits": ["먼저 설명하지 않고 표지판을 살핍니다."],
+                "knowledge": ["town_clue"],
+                "level": 1,
+                "alive": True,
+                "active_buffs": [],
+                "location": "town",
+                "inventory": [],
+                "equipment": {},
+                "gold": 0,
+                "learned_skills": [],
+                "relations": {"player_01": 0},
+                "xp_reward": 0,
+                "protected": True,
+                "memories": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (sd / "quests" / "look_around.json").write_text(
+        json.dumps(
+            {
+                "id": "look_around",
+                "title": "둘러보기",
+                "description": "막힌 길목과 안내자의 태도를 확인합니다.",
+                "giver": "guide",
+                "triggers": [
+                    {"id": "enter_town", "type": "location_enter", "target": "town"}
+                ],
+                "fail_triggers": [],
+                "prerequisites": [],
+                "status": "active",
+                "required": True,
+                "rewards": {"gold": 0, "exp": 0, "items": []},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (sd / "chapters" / "chapter_01.json").write_text(
+        json.dumps(
+            {
+                "id": "chapter_01",
+                "title": "시작",
+                "description": "길목의 첫 압력을 확인합니다.",
+                "quests": ["look_around"],
+                "prerequisites": [],
+                "status": "active",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (sd / "actions.json").write_text(
+        json.dumps({"talk": {"id": "talk", "name": "대화"}}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (sd / "knowledge.json").write_text(
+        json.dumps(
+            {
+                "town_clue": {
+                    "id": "town_clue",
+                    "title": "막힌 길",
+                    "summary": "표지판은 북쪽 길이 막혔다고 알립니다.",
+                    "visibility": "public",
+                }
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (sd / "mbti.json").write_text(
+        json.dumps({"ISTJ": {"id": "ISTJ", "name": "ISTJ"}}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
 def test_sweep_passes_on_empty_scaffold_or_reports_missing(capsys, tmp_path):
     sd = _scaffold_minimal_passable(tmp_path)
     rc = tool._main(["sweep", str(sd)])
@@ -318,3 +466,30 @@ def test_sweep_rejects_active_quest_in_locked_chapter(capsys, tmp_path):
 
     assert rc == 1
     assert "must belong to an active chapter" in capsys.readouterr().err
+
+
+def test_sweep_rejects_expository_intro_text(capsys, tmp_path):
+    sd = _scaffold_minimal_passable(tmp_path)
+    _write_sweepable_story_seed(
+        sd,
+        intro_text="당신은 마을에 서 있습니다. 안내자는 출발 규칙을 설명합니다.",
+    )
+
+    rc = tool._main(["sweep", str(sd)])
+
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "start.intro_text" in err
+    assert "expository opening" in err
+
+
+def test_sweep_rejects_placeholder_skill_names(capsys, tmp_path):
+    sd = _scaffold_minimal_passable(tmp_path)
+    _write_sweepable_story_seed(sd, skill_name="임기응변")
+
+    rc = tool._main(["sweep", str(sd)])
+
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "skill barter name" in err
+    assert "placeholder" in err

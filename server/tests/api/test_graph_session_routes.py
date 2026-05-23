@@ -492,12 +492,12 @@ async def test_graph_roll_stream_returns_result_then_roll_narration(
     assert [entry["kind"] for entry in events[0]["payload"]["state"]["log"]] == ["roll"]
     assert (
         "".join(event["text"] for event in events[1:-1])
-        == "당신은 살핀 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다. 장면의 긴장이 짧게 가라앉습니다."
+        == "당신은 살펴본 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다. 장면의 긴장이 짧게 가라앉습니다."
     )
     assert events[-1]["payload"]["state"]["log"][-1] == {
         "id": 2,
         "kind": "gm",
-        "text": "당신은 살핀 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다. 장면의 긴장이 짧게 가라앉습니다.",
+        "text": "당신은 살펴본 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다. 장면의 긴장이 짧게 가라앉습니다.",
         "outcome": "success",
     }
 
@@ -732,7 +732,7 @@ async def test_graph_turn_pending_confirmation_error_is_player_facing(tmp_path):
 
     assert response.status_code == 409
     detail = response.json()["detail"]
-    assert detail == "먼저 현재 확인 선택지를 결정해야 합니다."
+    assert detail == "먼저 현재 확인을 완료해야 합니다."
     assert "pending_confirmation" not in detail
 
 
@@ -753,7 +753,7 @@ async def test_graph_input_pending_roll_error_is_player_facing(tmp_path):
 
     assert response.status_code == 409
     detail = response.json()["detail"]
-    assert detail == "먼저 현재 판정을 굴려야 합니다."
+    assert detail == "먼저 현재 판정을 진행해야 합니다."
     assert "pending_roll" not in detail
 
 
@@ -770,7 +770,7 @@ async def test_graph_confirm_missing_pending_error_is_player_facing(tmp_path):
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail == "현재 결정할 확인 선택지가 없습니다."
+    assert detail == "현재 확인할 선택지가 없습니다."
     assert "pending_confirmation" not in detail
 
 
@@ -791,7 +791,7 @@ async def test_graph_roll_mismatch_error_is_player_facing(tmp_path):
 
     assert response.status_code == 422
     detail = response.json()["detail"]
-    assert detail == "현재 판정 선택지가 바뀌었습니다. 화면의 판정을 다시 선택해야 합니다."
+    assert detail == "현재 판정이 바뀌었습니다. 화면의 판정을 다시 선택해야 합니다."
     assert "roll id mismatch" not in detail
 
 

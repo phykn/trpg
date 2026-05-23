@@ -37,7 +37,7 @@
 사용 가능한 필드:
 
 - `intent`: 행동 뜻
-- `target`: NPC, 적, 대상 캐릭터 id
+- `target`: NPC, 적, 조사/사용 대상 id
 - `destination_id`: 이동할 출구 id
 - `item_id`: 아이템 id
 - `merchant_id`: 거래 대상 id

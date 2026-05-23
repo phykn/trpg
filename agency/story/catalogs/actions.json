@@ -2,21 +2,21 @@
   "attack": {
     "id": "attack",
     "name": "공격",
-    "description": "대상을 공격하거나 압박하는 행동"
+    "description": "피해를 주거나 제압한다."
   },
   "defend": {
     "id": "defend",
     "name": "방어",
-    "description": "피해를 줄이거나 다음 행동을 준비할 여유를 확보하는 행동"
+    "description": "피해를 줄이고 버틴다."
   },
   "flee": {
     "id": "flee",
     "name": "도망",
-    "description": "위험한 상황에서 벗어나거나 거리를 확보하는 행동"
+    "description": "위험에서 벗어나 거리를 확보한다."
   },
   "talk": {
     "id": "talk",
     "name": "대화",
-    "description": "말로 상대를 설득하거나 전투 흐름을 흔드는 행동"
+    "description": "말로 설득하거나 교섭한다."
   }
 }

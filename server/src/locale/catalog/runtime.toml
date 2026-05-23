@@ -47,11 +47,11 @@ ko = "{skill} 강화"
 en = "Upgrade {skill}"
 
 [runtime."level_choice.max_hp"]
-ko = "실제 HP와 최대 HP가 함께 1 오릅니다."
+ko = "현재 HP와 최대 HP가 함께 1 오릅니다."
 en = "Current and maximum HP both increase by 1."
 
 [runtime."level_choice.max_mp"]
-ko = "기술 사용 여유가 1 오릅니다."
+ko = "최대 MP가 1 오릅니다."
 en = "Maximum MP increases by 1."
 
 [runtime."level_choice.stat"]
@@ -59,7 +59,7 @@ ko = "{stat} 능력치가 1 오릅니다."
 en = "{stat} increases by 1."
 
 [runtime."level_choice.upgrade_skill"]
-ko = "tier {tier}에서 tier {next_tier}로 올립니다."
+ko = "{tier}등급에서 {next_tier}등급으로 올립니다."
 en = "Raise from tier {tier} to tier {next_tier}."
 
 [runtime."level_choice.fallback.agile_attack.name"]
@@ -91,7 +91,7 @@ ko = "침착한 방어"
 en = "Calm Guard"
 
 [runtime."level_choice.fallback.calm_defend.description"]
-ko = "방어 실패 때 하트 손실을 막는 방어 보조 기술."
+ko = "방어에 실패했을 때 하트 손실을 막는 방어 보조 기술."
 en = "A defensive support skill that prevents heart loss on a failed defense."
 
 [runtime."card.move"]
@@ -99,15 +99,15 @@ ko = "당신은 {destination}{으로/로} 이동합니다."
 en = "You move to {destination}."
 
 [runtime."card.quest_accept"]
-ko = "당신은 {quest} 퀘스트를 시작합니다."
+ko = "당신은 의뢰 「{quest}」를 시작합니다."
 en = "You start the {quest} quest."
 
 [runtime."card.quest_abandon"]
-ko = "당신은 {quest} 퀘스트를 포기합니다."
+ko = "당신은 의뢰 「{quest}」를 포기합니다."
 en = "You abandon the {quest} quest."
 
 [runtime."card.quest_decide"]
-ko = "당신은 {quest}에서 「{choice}」 쪽을 선택합니다."
+ko = "당신은 {quest}에서 「{choice}」를 선택합니다."
 en = "You choose {choice} for the {quest} quest."
 
 [runtime."card.rest"]
@@ -151,7 +151,7 @@ ko = "당신의 행동이 처리됩니다."
 en = "Your action is handled."
 
 [runtime."combat.start"]
-ko = "{target}{이/가} 정면을 막아서고, 당신은 발을 낮게 깔아 싸움의 중심을 잡습니다."
+ko = "{target}{이/가} 정면을 막아서고, 당신은 자세를 낮춰 싸움의 중심을 잡습니다."
 en = "You face off against {target}."
 
 [runtime."combat.skill_start"]
@@ -159,15 +159,15 @@ ko = "{skill}{을/를} 끌어올리며 {target}의 거리 안으로 파고듭니
 en = "You ready {skill} and face off against {target} (MP {mp_cost})."
 
 [runtime."combat.skill_continue"]
-ko = "{skill}{으로/로} 흐름을 당겨 {target}의 빈틈을 겨냥합니다 (MP {mp_cost})."
+ko = "{skill}{으로/로} 흐름을 잡아 {target}의 빈틈을 겨냥합니다 (MP {mp_cost})."
 en = "You use {skill} against {target} (MP {mp_cost})."
 
 [runtime."combat.skill_victory"]
-ko = "{skill}{이/가} 끝까지 밀고 들어가 {target}{을/를} 무너뜨립니다 (MP {mp_cost})."
+ko = "당신은 {skill}{으로/로} 끝까지 밀고 들어가 {target}{을/를} 무너뜨립니다 (MP {mp_cost})."
 en = "You use {skill} and drop {target} (MP {mp_cost})."
 
 [runtime."combat.escaped"]
-ko = "벌어진 찰나를 놓치지 않고, 당신은 전투선 밖으로 빠져나옵니다."
+ko = "벌어진 틈을 놓치지 않고, 당신은 전투에서 빠져나옵니다."
 en = "You create enough distance to escape combat."
 
 [runtime."combat.stopped"]
@@ -271,7 +271,7 @@ ko = "이번 교환은 실패입니다"
 en = "this exchange failed"
 
 [runtime."combat.exchange_result.neutral"]
-ko = "이번 교환은 아직 결과가 없습니다"
+ko = "이번 교환은 아직 승부가 나지 않았습니다"
 en = "this exchange has no result yet"
 
 [runtime."combat.action.defend"]
@@ -327,11 +327,11 @@ ko = "시도"
 en = "Try"
 
 [runtime."confirmation.quest_accept.title"]
-ko = "퀘스트를 시작하시겠습니까?"
+ko = "의뢰를 시작하시겠습니까?"
 en = "Start the quest?"
 
 [runtime."confirmation.quest_accept.body"]
-ko = "{quest} 퀘스트를 시작합니다."
+ko = "의뢰 「{quest}」를 시작합니다."
 en = "Start the {quest} quest."
 
 [runtime."confirmation.quest_accept.confirm"]
@@ -339,16 +339,28 @@ ko = "시작"
 en = "Start"
 
 [runtime."confirmation.quest_abandon.title"]
-ko = "퀘스트를 포기하시겠습니까?"
+ko = "의뢰를 포기하시겠습니까?"
 en = "Abandon the quest?"
 
 [runtime."confirmation.quest_abandon.body"]
-ko = "{quest} 퀘스트를 포기합니다."
+ko = "의뢰 「{quest}」를 포기합니다."
 en = "Abandon the {quest} quest."
 
 [runtime."confirmation.quest_abandon.confirm"]
 ko = "포기"
 en = "Abandon"
+
+[runtime."confirmation.important_move.title"]
+ko = "이동을 확정하시겠습니까?"
+en = "Confirm this move?"
+
+[runtime."confirmation.important_move.body"]
+ko = "{destination}{으로/로} 이동하면 {source}{으로/로} 돌아올 수 없습니다."
+en = "If you move to {destination}, you cannot return to {source}."
+
+[runtime."confirmation.important_move.confirm"]
+ko = "이동"
+en = "Move"
 
 [runtime."confirmation.cancel"]
 ko = "취소"
@@ -375,11 +387,11 @@ ko = "대치가 이어지고, 서로의 다음 움직임이 아직 정해지지 
 en = "The standoff continues, and neither next move is settled yet."
 
 [runtime."narration.repeat.combat_success"]
-ko = "충돌의 맛이 남고, 상대는 무너진 균형을 가까스로 붙잡습니다."
+ko = "충돌의 여파가 남고, 상대는 무너진 균형을 가까스로 붙잡습니다."
 en = "The impact lingers, and the opponent tries to recover their stance."
 
 [runtime."narration.repeat.combat_failure"]
-ko = "기세가 맞물리기 직전, 상대의 움직임이 한 박자 먼저 틈을 꿰찹니다."
+ko = "기세가 맞물리기 직전, 상대의 움직임이 한 박자 먼저 틈을 파고듭니다."
 en = "The attack loses its line, and the opponent catches the opening."
 
 [runtime."narration.combat_failure.attack"]
@@ -451,7 +463,7 @@ ko = "{npc}{이/가} 경계심이 커집니다"
 en = "{npc} grows more wary"
 
 [runtime."roll.resolve.perceive.success"]
-ko = "당신은 살핀 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다."
+ko = "당신은 살펴본 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다."
 en = "You study the scene and catch a meaningful clue or sign of danger."
 
 [runtime."roll.resolve.perceive.failure"]
@@ -663,7 +675,7 @@ ko = "금지: 실패처럼 흐리는 반응, 확정되지 않은 보상, 새 퀘
 en = "Forbidden: failure-like ambiguity, unconfirmed rewards, invented quests"
 
 [runtime."narration.brief.roll_success_goal"]
-ko = "목표: 성공의 귀결을 분명히 쓰고, 근거에 있는 반응이나 다음 여지를 남깁니다."
+ko = "목표: 성공의 귀결을 분명히 쓰고, 근거에 맞는 반응이나 다음 여지를 남깁니다."
 en = "Goal: show the success consequence clearly and leave grounded reaction or next opening."
 
 [runtime."narration.brief.roll_failure_forbid"]

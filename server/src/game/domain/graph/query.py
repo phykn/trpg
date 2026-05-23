@@ -93,15 +93,26 @@ def edges_to(
 
 def connection_is_unlocked(graph: GraphLike, edge: GraphEdge) -> bool:
     quest_id = edge.properties.get("requires_quest")
-    if quest_id is None:
-        return True
+    if quest_id is not None and not _quest_has_status(graph, quest_id, "completed"):
+        return False
+    active_quest_id = edge.properties.get("requires_active_quest")
+    if active_quest_id is not None and not _quest_has_status(
+        graph,
+        active_quest_id,
+        "active",
+    ):
+        return False
+    return True
+
+
+def _quest_has_status(graph: GraphLike, quest_id: object, status: str) -> bool:
     if not isinstance(quest_id, str) or not quest_id:
         return False
     quest = graph.nodes.get(quest_id)
     return (
         quest is not None
         and quest.type == "quest"
-        and quest.properties.get("status") == "completed"
+        and quest.properties.get("status") == status
     )
 
 

@@ -4,6 +4,7 @@ from src.game.domain.graph import Graph, GraphEdge, GraphInvariantError, GraphNo
 from src.game.domain.graph.query import (
     GraphIndex,
     characters_at,
+    connection_is_unlocked,
     edges_from,
     edges_to,
     equipment_of,
@@ -192,3 +193,33 @@ def test_contract_semantic_queries_read_documented_edges():
     )
     assert characters_at(index, "town") == characters_at(graph, "town")
     assert inventory_of(index, "player") == inventory_of(graph, "player")
+
+
+def test_connection_requires_active_quest_status():
+    graph = Graph(
+        nodes={
+            "town": GraphNode(id="town", type="location"),
+            "pier": GraphNode(id="pier", type="location"),
+            "quest": GraphNode(
+                id="quest",
+                type="quest",
+                properties={"status": "pending"},
+            ),
+        },
+        edges={
+            "connects_to:town:pier": GraphEdge(
+                id="connects_to:town:pier",
+                type="connects_to",
+                from_node_id="town",
+                to_node_id="pier",
+                properties={"requires_active_quest": "quest"},
+            ),
+        },
+    )
+    edge = graph.edges["connects_to:town:pier"]
+
+    assert connection_is_unlocked(graph, edge) is False
+
+    graph.nodes["quest"].properties["status"] = "active"
+
+    assert connection_is_unlocked(graph, edge) is True

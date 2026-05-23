@@ -1,8 +1,8 @@
 {
   "human_adapt": {
     "id": "human_adapt",
-    "name": "임기응변",
-    "description": "뜻밖의 질문이나 어색한 대화 흐름에 말과 판단을 빠르게 맞춥니다.",
+    "name": "행간 읽기",
+    "description": "상대가 피하는 말과 표정의 틈을 짚어 대화의 실마리를 찾는다.",
     "level": 1,
     "action": "talk",
     "bonus": 2,
@@ -10,8 +10,8 @@
   },
   "steady_breath": {
     "id": "steady_breath",
-    "name": "고른 숨",
-    "description": "두려운 장면에서도 숨을 고르고 방어적으로 버팁니다.",
+    "name": "마음 가누기",
+    "description": "공포와 압박이 몰려올 때 호흡과 자세를 붙들어 무너지지 않는다.",
     "level": 1,
     "action": "defend",
     "bonus": 1,

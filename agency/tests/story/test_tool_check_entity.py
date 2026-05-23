@@ -73,6 +73,33 @@ def test_check_entity_skill_ok(capsys, tmp_path):
     assert capsys.readouterr().out.strip() == "OK"
 
 
+def test_check_entity_skill_rejects_placeholder_name(capsys, tmp_path):
+    sd = _scaffold_minimal_scenario(tmp_path)
+    skill_path = tmp_path / "new_skill.json"
+    skill_path.write_text(
+        json.dumps(
+            {
+                "id": "quick_fix",
+                "name": "임기응변",
+                "description": "상황에 맞춰 말합니다.",
+                "level": 1,
+                "action": "talk",
+                "bonus": 1,
+                "mp_cost": 0,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    rc = tool._main(["check-entity", "skill", str(sd), str(skill_path)])
+
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "skill quick_fix name" in err
+    assert "placeholder" in err
+
+
 def test_check_entity_race_unknown_skill(capsys, tmp_path):
     sd = _scaffold_minimal_scenario(tmp_path)
     race_path = tmp_path / "elf.json"

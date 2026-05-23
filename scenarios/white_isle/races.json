@@ -2,7 +2,7 @@
   "human": {
     "id": "human",
     "name": "인간",
-    "description": "감정과 사회적 관계 속에서 판단하며 살아가는 사람들입니다. 특별한 힘보다 말과 선택으로 상황을 바꿉니다.",
+    "description": "낯선 곳에서도 상황을 읽고 선택을 이어가는 사람들. 특별한 힘보다 말과 판단으로 길을 연다.",
     "playable": true,
     "is_humanoid": true,
     "racial_skills": [

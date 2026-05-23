@@ -45,11 +45,11 @@ Browser QA uses the already-running web client and server. Story tool (`tool.py`
 
 `tool.py`는 로컬 검증·자동채우기를 모은 단일 CLI. SKILL.md가 각 단계에서 호출한다. 종료 코드 0(OK)/1(검증 실패)/2(usage 오류) + 사람이 읽을 수 있는 stderr 메시지.
 
-빌드 흐름: decompose 3-phase → world.md → race(full) → location(full) → character(--skeleton) → skill → item → equip-fill → quest → chapter → meta → sweep. Release publish는 별도 `agency.story.tools.storage upload` 단계다.
+빌드 흐름: decompose 3-phase → world.md → race(full) → location(full) → character(--skeleton) → skill → item → equip-fill → quest → chapter → meta → sweep → runtime-smoke → `.decomp/` cleanup. Release publish는 별도 `agency.story.tools.storage upload` 단계다.
 
-시나리오 작성자(Codex)가 각 단계에서 `check-entity --decomp .decomp/` 로 자기 글을 검증. 풀-의존 검사(character의 inventory) 는 `--skeleton` 으로 sweep까지 미룸.
+시나리오 작성자(Codex)가 빌드 중 각 단계에서 `check-entity --decomp .decomp/` 로 자기 글을 검증. 풀-의존 검사(character의 inventory) 는 `--skeleton` 으로 sweep까지 미룸. `.decomp/`는 임시 작업물이며 최종 seed, 런타임, publish 대상이 아니다.
 
-검사 깨졌을 때: 같은 파일 2회까지만 자동 수정, 그 이상은 사용자에게 보고. 위쪽 단계 실수가 늦게 드러나면 `.decomp/` JSON부터 고치고 영향받는 파일 재검사 — 가짜 ID 같은 우회는 금지.
+검사 깨졌을 때: 같은 파일 2회까지만 자동 수정, 그 이상은 사용자에게 보고. 빌드 중 위쪽 단계 실수가 늦게 드러나면 `.decomp/` JSON부터 고치고 영향받는 파일 재검사 — 가짜 ID 같은 우회는 금지. 최종 검증 뒤 `.decomp/`가 삭제된 시나리오는 실제 seed 파일을 기준으로 수정한다.
 
 기존 LLM 호출 루프(`write_entity`, `_decompose_phase`, `run_critic`)와 LLM 전용 프롬프트 (`agents/*.md`)는 모두 제거됨. `harness/decompose.py` 의 Pydantic 모델 + `_check_*` 함수, `harness/records.py`의 cross-ref 검사 + SPECS, `harness/scenario.py`의 `fill_equipment` 만 남아 `tool.py`가 쓰는 헬퍼다.
 

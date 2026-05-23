@@ -33,6 +33,20 @@ description: 열린 브라우저에서 TRPG 웹 클라이언트를 직접 플레
 5. QA는 이 스킬로만 진행한다. 별도 자동 runner나 직접 API 호출로 대체하지 않는다.
 6. 새 시나리오나 수정된 시나리오를 QA하는 경우, 가능하면 브라우저 시작 전에 `agency.story.tool sweep`과 `runtime-smoke` 결과를 확인한다. 이 검사는 브라우저 QA를 대체하지 않는다.
 
+## 브라우저 입력 트러블슈팅
+
+`Browser Use virtual clipboard is not installed` 오류가 나면 앱 입력창 문제가 아니라 in-app browser 자동화 세션의 가상 클립보드 상태가 꼬인 것이다. `fill`/`type`은 한글 입력을 위해 페이지에 임시 `navigator.clipboard`를 심고 paste 이벤트로 입력하는데, 자동화 런타임의 설치 캐시와 실제 페이지 상태가 어긋나면 이 오류가 난다.
+
+복구 절차:
+
+1. 같은 locator를 반복 재시도하지 않는다.
+2. 브라우저 자동화 런타임을 리셋한다.
+3. in-app browser에 다시 연결하고 새 탭을 연다.
+4. `http://localhost:8081/`로 이동한다.
+5. 입력창에 짧은 한글 문장을 `fill`해서 성공 여부를 확인한 뒤 QA를 재개한다.
+
+Node REPL 도구를 쓰는 경우에는 `mcp__node_repl__js_reset` 도구를 호출한다. 리셋 후 브라우저 스킬의 첫 연결 셀을 다시 실행하고, 새 탭에서 `fill`을 검증한다. 이 오류만으로 서버나 클라이언트를 수정하지 않는다.
+
 ## 판정 기준
 
 플레이 중 아래 기준으로 개선사항을 찾는다.

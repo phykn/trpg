@@ -53,23 +53,23 @@ ko = "주인공"
 en = "Hero"
 
 [ui."story.summary.empty"]
-ko = "스토리 데이터 없음"
+ko = "스토리 데이터가 없습니다"
 en = "No story data"
 
 [ui."story.summary.quest"]
-ko = "퀘스트 {title}"
+ko = "의뢰: {title}"
 en = "Quest {title}"
 
 [ui."story.summary.location"]
-ko = "현재 위치 {name}"
+ko = "현재 위치: {name}"
 en = "Current location {name}"
 
 [ui."story.summary.entities"]
-ko = "등장인물 {count}"
+ko = "등장인물: {count}"
 en = "Characters {count}"
 
 [ui."story.summary.places"]
-ko = "장소 {count}"
+ko = "장소: {count}"
 en = "Places {count}"
 
 [ui."quest.goal_via"]

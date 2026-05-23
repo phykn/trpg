@@ -5,9 +5,9 @@ from typing import Any, Literal
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
 from src.game.domain.content import node_label, node_text
-from src.game.domain.graph import Graph, GraphNode
+from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.graph.character import can_character_fight
-from src.game.domain.graph.query import location_of
+from src.game.domain.graph.query import connection_is_unlocked, edges_from, location_of
 from src.game.domain.quest import quest_triggers
 from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, set_diag_context
@@ -332,6 +332,9 @@ def build_graph_action_confirmation(
     if action.verb == "transfer" and action.how in ("accept", "abandon"):
         return _build_quest_confirmation(runtime, action)
 
+    if action.verb == "move":
+        return _build_important_move_confirmation(runtime, action)
+
     return None
 
 
@@ -391,6 +394,50 @@ def _build_quest_confirmation(
         ),
         confirm_label=render("runtime.confirmation.quest_abandon.confirm", locale),
         target_label=quest_label,
+        action=action,
+        locale=locale,
+    )
+
+
+def _build_important_move_confirmation(
+    runtime: GameRuntimeState,
+    action: Action,
+) -> dict[str, Any] | None:
+    source_id = location_of(runtime.graph, runtime.progress.player_id)
+    destination_id = _single(action.to) or _single(action.what)
+    if source_id is None or destination_id is None or source_id == destination_id:
+        return None
+
+    edge = _move_edge(runtime.graph, source_id, destination_id)
+    if edge is None:
+        return None
+    if not _is_important_move_gate(runtime.graph, edge):
+        return None
+    if _has_reverse_connection(runtime.graph, destination_id, source_id):
+        return None
+
+    source = runtime.graph.nodes.get(source_id)
+    destination = runtime.graph.nodes.get(destination_id)
+    if source is None or destination is None:
+        return None
+
+    locale = runtime.progress.locale
+    source_label = node_label(runtime.content, source)
+    destination_label = node_label(runtime.content, destination)
+    return _pending(
+        kind="important_move",
+        title=render("runtime.confirmation.important_move.title", locale),
+        body=render(
+            "runtime.confirmation.important_move.body",
+            locale,
+            source=source_label,
+            destination=destination_label,
+        ),
+        confirm_label=render(
+            "runtime.confirmation.important_move.confirm",
+            locale,
+        ),
+        target_label=destination_label,
         action=action,
         locale=locale,
     )
@@ -647,6 +694,35 @@ def _item_owner(graph: Graph, item_id: str) -> str | None:
         if edge.type in {"carries", "equips"} and edge.to_node_id == item_id:
             return edge.from_node_id
     return None
+
+
+def _move_edge(graph: Graph, source_id: str, destination_id: str) -> GraphEdge | None:
+    for edge in edges_from(graph, source_id, "connects_to"):
+        if edge.to_node_id == destination_id:
+            return edge
+    return None
+
+
+def _is_important_move_gate(graph: Graph, edge: GraphEdge) -> bool:
+    quest_id = edge.properties.get("requires_quest")
+    active_quest_id = edge.properties.get("requires_active_quest")
+    return (
+        (
+            isinstance(quest_id, str)
+            and bool(quest_id)
+        )
+        or (
+            isinstance(active_quest_id, str)
+            and bool(active_quest_id)
+        )
+    ) and connection_is_unlocked(graph, edge)
+
+
+def _has_reverse_connection(graph: Graph, source_id: str, destination_id: str) -> bool:
+    for edge in edges_from(graph, source_id, "connects_to"):
+        if edge.to_node_id == destination_id:
+            return True
+    return False
 
 
 def _attack_target(

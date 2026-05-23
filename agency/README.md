@@ -45,7 +45,7 @@ In a Codex session, point at the skill:
 
 > "agency/story/SKILL.md 보고 path/to/prose.md 로 scenarios/foo 만들어줘"
 
-Codex reads SKILL.md, drafts `.decomp/{setup,cast,arc}.json`, validates each phase via `tool.py`, then writes entity JSONs in the order race → location → character → skill → item, runs `equip-fill`, writes quests/chapters/meta, and runs `sweep`.
+Codex reads SKILL.md, drafts temporary `.decomp/{setup,cast,arc}.json`, validates each phase via `tool.py`, then writes entity JSONs in the order race → location → character → skill → item, runs `equip-fill`, writes quests/chapters/meta, runs `sweep` and `runtime-smoke`, then deletes `.decomp/`.
 
 ### env
 

@@ -120,6 +120,31 @@ def test_quest_locked_connection_is_rejected_until_prerequisite_completed():
     assert result.destination_id == "forest"
 
 
+def test_active_quest_locked_connection_is_rejected_until_quest_is_active():
+    graph = _graph()
+    graph.nodes["quest_01"] = GraphNode(
+        id="quest_01",
+        type="quest",
+        properties={"status": "pending"},
+    )
+    graph.edges["connects_to:town:forest"].properties["requires_active_quest"] = (
+        "quest_01"
+    )
+
+    with pytest.raises(GraphMoveError, match="locked"):
+        plan_character_move(graph, "player_01", "forest", require_connection=True)
+
+    graph.nodes["quest_01"].properties["status"] = "active"
+    result = plan_character_move(
+        graph,
+        "player_01",
+        "forest",
+        require_connection=True,
+    )
+
+    assert result.destination_id == "forest"
+
+
 def test_npc_move_can_skip_adjacency_gate():
     graph = _graph()
     result = plan_character_move(graph, "companion_01", "tower")
