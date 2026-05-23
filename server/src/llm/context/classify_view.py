@@ -25,6 +25,7 @@ class ClassifyContextLimits:
     inventory: int = 10
     skills: int = 8
     location_items: int = 8
+    recent_scene: int = 3
     recent_dialogue: int = 5
     merchant_stock: int = 8
     corpses: int = 4
@@ -60,7 +61,6 @@ def build_classify_context_view(
     available_quests = _available_quests(runtime, visible_targets, active_quest)
 
     return {
-        "player_input": player_input,
         "mode": (
             "combat"
             if runtime.progress.graph_combat_state is not None
@@ -97,6 +97,7 @@ def build_classify_context_view(
             "last_npc": _last_entity_ref(runtime, entity_types={"character"}),
             "last_target": _last_entity_ref(runtime),
             "last_item": _last_entity_ref(runtime, entity_types={"item"}),
+            "recent_scene": _recent_scene(runtime, limits),
             "recent_dialogue": _recent_dialogue(runtime, limits),
         },
         "budget": {
@@ -481,6 +482,21 @@ def _recent_dialogue(
     return [
         {"turn": pair.turn, "player": pair.player, "summary": pair.narrator}
         for pair in runtime.recent_dialogue[-limits.recent_dialogue :]
+    ]
+
+
+def _recent_scene(
+    runtime: GameRuntimeState,
+    limits: ClassifyContextLimits,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "turn": entry.turn,
+            "summary": entry.summary,
+            **({"target": entry.target} if entry.target else {}),
+        }
+        for entry in runtime.turn_log[-limits.recent_scene :]
+        if entry.summary
     ]
 
 

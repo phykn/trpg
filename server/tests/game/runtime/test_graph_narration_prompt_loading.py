@@ -148,7 +148,6 @@ def test_graph_narration_prompt_files_are_packaged():
     assert get_prompt("combat_narrate", "ko")
     assert get_prompt("classify", "ko")
     assert get_prompt("recommend", "ko")
-    assert get_prompt("recommend", "en")
 
 
 def test_graph_narration_prompts_encode_style_without_source_title():
@@ -156,7 +155,6 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     combat_prompt = get_prompt("combat_narrate", "ko")
     classify_prompt = get_prompt("classify", "ko")
     recommend_prompt = get_prompt("recommend", "ko")
-    recommend_en_prompt = get_prompt("recommend", "en")
     combined = f"{narrate_prompt}\n{combat_prompt}"
 
     assert "본문 문체" in narrate_prompt
@@ -194,7 +192,9 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "플레이어의 팬인 GM" in combined
     assert "플레이어를 우습게 만들지" in combined
     assert "결과 라벨" in combat_prompt
-    assert "payload.combat_view.player_action" in combat_prompt
+    assert "사용자 메시지는 engine이 확정한 전투 결과 브리핑입니다" in combat_prompt
+    assert "전투 브리핑은 화면 로그와 최근 맥락을 먼저 읽고" in combat_prompt
+    assert "전투 JSON" not in combat_prompt
     assert "판정을 다시 해석하지 않고" in combat_prompt
     assert "조금 과장해서 씁니다" in combat_prompt
     assert "결과는 즉시 이해되고" in combat_prompt
@@ -323,6 +323,9 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "루카에게 「이상하다는 동선 기록이 어느 구간이었나요?」라고 묻습니다." in narrate_prompt
     assert "말할 내용이 떠오르지 않으면 `talk` 제안을 만들지 않습니다" in narrate_prompt
     assert "출력 형식이 틀려도 시스템이 고쳐 준다고 가정하지 말고" in narrate_prompt
+    assert "사용자 메시지는 엔진이 확정 사실을 짧은 평문으로 번역한 나레이션 브리핑입니다" in narrate_prompt
+    assert "브리핑의 각 줄을 먼저 따릅니다" in narrate_prompt
+    assert "사용자 메시지는 이미 확정된 사실을 담은 JSON입니다" not in narrate_prompt
     assert "visible_names에 이름만 있는 대상은 제안 후보가 될 수 있지만" in narrate_prompt
     assert "출력은 플레이어가 읽는 나레이션" in combat_prompt
     assert "훈련 충격" in combat_prompt
@@ -344,14 +347,11 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "공격 또는 이탈 전술" not in classify_prompt
     assert "`flee`: 전투 중 도망 또는 거리 확보" in classify_prompt
     assert "후보는 같은 리듬으로 만듭니다" in recommend_prompt
+    assert "입력 JSON은 플레이어와 최근 로그 문맥을 먼저 읽고" in recommend_prompt
     assert "최근에 실제로 반복한 행동" in recommend_prompt
     assert "`flee` 후보" in recommend_prompt
     assert "`talk` 후보" in recommend_prompt
     assert "`social` 후보" not in recommend_prompt
-    assert "Candidate rhythm" in recommend_en_prompt
-    assert "Do not add setting lore" in recommend_en_prompt
-    assert "Skills support a roll/check" in recommend_en_prompt
-    assert "Skills support a combat roll" not in recommend_en_prompt
     assert "1~2문장" not in combined
     assert "2~3문장" not in combined
     assert "Baldur" not in combined
@@ -387,8 +387,10 @@ def test_graph_narrate_prompt_encodes_theory_pressure_and_completion_limits():
     )
 
     assert "가장 강한 근거는 `payload.user_request`, `payload.engine_event`, `payload.result_cards`, `payload.scene_state.target_view`, `payload.combat_view`입니다" in prompt
+    assert "payload는 배경 문맥을 먼저 두고, 이번 턴의 `payload.user_request`를 마지막에 둡니다" in prompt
     assert "`payload.user_request.player_input`은 이번 턴에 플레이어가 실제로 말하거나 시도한 원문입니다" in prompt
     assert "`payload.reference_context`는 이번 턴의 새 사실이 아니라 배경, 연속성, 반복 회피용 참고 정보입니다" in prompt
+    assert "`payload.reference_context.screen_log`가 있으면 플레이어 화면에 보인 최근 로그로 읽고" in prompt
     assert "`payload.reference_context`에 있는 이전 나레이션이나 이전 대화가 플레이어의 이번 발화보다 앞서면 안 됩니다" in prompt
     assert "UI 라벨, 추천 칩의 `label`, 주변에 함께 보이는 이름은 `payload.user_request.player_input`보다 강한 근거가 아닙니다" in prompt
     assert "압력을 남기는 것은 필수가 아닙니다" in prompt

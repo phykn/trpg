@@ -44,7 +44,7 @@ from ..narration.safety import guard_speak_narration_player_quote
 from ..narration.suggestions import filter_grounded_suggestions
 from ..request_result import GraphActionRequestResult, rejected_result
 from ..state import GameRuntimeState
-from ..env import env_float
+from ..env import env_float, env_nonnegative_int
 from .turn import GraphActionTurnError
 
 
@@ -70,6 +70,7 @@ def _classify_context_limits() -> ClassifyContextLimits:
         inventory=_classify_limit("INVENTORY", 10),
         skills=_classify_limit("SKILLS", 8),
         location_items=_classify_limit("LOCATION_ITEMS", 8),
+        recent_scene=_classify_limit("RECENT_SCENE", 3),
         recent_dialogue=_classify_limit("RECENT_DIALOGUE", 5),
         merchant_stock=_classify_limit("MERCHANT_STOCK", 8),
         corpses=_classify_limit("CORPSES", 4),
@@ -78,7 +79,7 @@ def _classify_context_limits() -> ClassifyContextLimits:
 
 
 def _classify_limit(name: str, default: int) -> int:
-    return int(os.environ.get(f"LLM_CLASSIFY_LIMIT_{name}") or str(default))
+    return env_nonnegative_int(f"LLM_CLASSIFY_LIMIT_{name}", default)
 
 
 # Public flow

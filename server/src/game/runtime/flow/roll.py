@@ -1,6 +1,5 @@
 import asyncio
 import difflib
-import json
 import os
 import random
 import re
@@ -38,6 +37,7 @@ from src.wire.graph.to_front import graph_to_front_state
 
 from ..action.apply import GraphRuntimeDirty, apply_runtime_graph_changes
 from ..load import load_runtime_state
+from ..narration.brief import build_narration_brief
 from ..narration.context import build_roll_narration_payload
 from ..narration.input import stream_graph_preroll_narration
 from ..narration.result import (
@@ -543,7 +543,7 @@ async def _stream_roll_narration(
             "role": "system",
             "content": get_prompt("graph_narrate", resolved.runtime.progress.locale),
         },
-        {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+        {"role": "user", "content": build_narration_brief(payload)},
     ]
     try:
         async with asyncio.timeout(_roll_narration_timeout_s()):
@@ -586,7 +586,7 @@ async def _build_roll_narration(
             "role": "system",
             "content": get_prompt("graph_narrate", resolved.runtime.progress.locale),
         },
-        {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+        {"role": "user", "content": build_narration_brief(payload)},
     ]
     try:
         result = await asyncio.wait_for(

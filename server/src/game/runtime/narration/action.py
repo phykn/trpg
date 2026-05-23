@@ -1,5 +1,4 @@
 import asyncio
-import json
 from collections.abc import AsyncIterator
 
 from openai import APIConnectionError, InternalServerError, RateLimitError
@@ -14,6 +13,7 @@ from src.llm.diag import llm_diag
 from ..action.dispatch import GraphActionDispatchResult
 from ..env import graph_narration_temperature
 from ..state import GameRuntimeState
+from .brief import build_narration_brief
 from .context import build_action_narration_payload
 from .result import GraphNarrationResult, parse_graph_narration_answer
 
@@ -346,7 +346,7 @@ def _narration_user_prompt(
     scene_state = payload.get("scene_state")
     if not isinstance(scene_state, dict) or scene_state.get("current_place") is None:
         return ""
-    return json.dumps(payload, ensure_ascii=False)
+    return build_narration_brief(payload)
 
 
 def _single(value: object) -> str | None:

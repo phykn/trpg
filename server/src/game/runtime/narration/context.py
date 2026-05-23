@@ -5,7 +5,7 @@ from src.game.domain.action import Action
 from src.game.domain.content import node_label, node_text, node_value
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph.character import graph_character_kind, is_visible_character
-from src.game.domain.memory import RollLogEntry
+from src.game.domain.memory import LogEntry, RollLogEntry
 from src.game.domain.graph.query import (
     characters_at,
     edges_from,
@@ -67,6 +67,7 @@ def build_action_narration_payload(
             after,
             target=target.id if target is not None else None,
         ),
+        "screen_log": _screen_log_payload(before),
         "combat_view": combat_narration_view(
             after,
             trace=dispatch.combat_trace,
@@ -132,6 +133,7 @@ def build_roll_narration_payload(
             runtime,
             target=target.id if target is not None else None,
         ),
+        "screen_log": _screen_log_payload(runtime),
         "combat_view": combat_narration_view(runtime),
         "budget": _narrate_budget(runtime),
     }
@@ -166,6 +168,7 @@ def build_input_narration_payload(
             runtime,
             target=dialogue_target.id if dialogue_target is not None else None,
         ),
+        "screen_log": _screen_log_payload(runtime),
         "combat_view": combat_narration_view(runtime),
         "budget": _narrate_budget(runtime),
     }
@@ -181,20 +184,21 @@ def compact_narration_payload(source: dict[str, Any]) -> dict[str, Any]:
         "target_view": source.get("target_view"),
     }
     payload = {
-        "user_request": {
-            "player_input": source.get("player_input"),
-        },
-        "engine_event": event,
-        "scene_state": scene_state,
-        "result_cards": source.get("result_cards"),
-        "combat_view": source.get("combat_view"),
         "reference_context": {
             "world_guidance": source.get("world_guidance"),
             "related_memory": source.get("related_memory"),
             "recent_dialogue": source.get("recent_dialogue"),
             "recent_narration": source.get("recent_narration"),
+            "screen_log": source.get("screen_log"),
         },
+        "scene_state": scene_state,
+        "combat_view": source.get("combat_view"),
+        "engine_event": event,
+        "result_cards": source.get("result_cards"),
         "budget": source.get("budget"),
+        "user_request": {
+            "player_input": source.get("player_input"),
+        },
     }
     return _drop_empty_narration_values(payload)
 
@@ -705,10 +709,12 @@ def _roll_result_card(roll_entry: RollLogEntry, outcome: str, locale: str) -> st
 def _recent_narration_payload(
     runtime: GameRuntimeState,
     *,
-    limit: int = 3,
-    max_chars: int = 160,
+    limit: int | None = None,
+    max_chars: int | None = None,
     exclude_texts: list[str] | None = None,
 ) -> list[dict[str, Any]]:
+    limit = env_nonnegative_int("GRAPH_NARRATION_RECENT_LOG_ENTRIES", 3) if limit is None else limit
+    max_chars = env_nonnegative_int("GRAPH_NARRATION_RECENT_LOG_CHARS", 160) if max_chars is None else max_chars
     excluded = [text.strip() for text in (exclude_texts or []) if text.strip()]
     entries = [
         entry
@@ -724,6 +730,26 @@ def _recent_narration_payload(
         }
         for entry in entries
     ]
+
+
+def _screen_log_payload(runtime: GameRuntimeState, limit: int | None = None) -> list[dict[str, Any]]:
+    limit = env_nonnegative_int("GRAPH_NARRATION_SCREEN_LOG_ENTRIES", 8) if limit is None else limit
+    return [_screen_log_entry_payload(entry) for entry in runtime.log_entries[-limit:]]
+
+
+def _screen_log_entry_payload(entry: LogEntry) -> dict[str, Any]:
+    if entry.kind == "gm":
+        return {
+            "kind": entry.kind,
+            "text": entry.text,
+            "outcome": entry.outcome,
+        }
+    if entry.kind in {"player", "act"}:
+        return {
+            "kind": entry.kind,
+            "text": entry.text,
+        }
+    return entry.model_dump(mode="json")
 
 
 def _matches_excluded_narration(text: str, excluded: list[str]) -> bool:

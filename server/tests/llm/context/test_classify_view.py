@@ -1,7 +1,7 @@
 import json
 
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.memory import DialoguePair, GMLogEntry
+from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.llm.context.classify_view import (
@@ -136,6 +136,14 @@ def _runtime(
             DialoguePair(turn=turn, player=f"질문 {turn}", narrator=f"요약 {turn}")
             for turn in range(1, dialogue_count + 1)
         ],
+        turn_log=[
+            TurnLogEntry(
+                turn=1,
+                target="npc_0",
+                summary="상인이 숲 방향을 가리켰습니다.",
+                importance=1,
+            )
+        ],
     )
 
 
@@ -148,7 +156,23 @@ def test_classify_context_excludes_gm_narration_and_descriptions():
     assert "GM 원문이 여기 들어가면 실패합니다." not in payload
     assert "description" not in payload
     assert "장소 설명이 classify에 들어가면 실패합니다." not in payload
-    assert context["player_input"] == "상인에게 말을 겁니다"
+    assert "player_input" not in context
+
+
+def test_classify_context_includes_minimal_recent_scene_summary():
+    runtime = _runtime(gm_log_text="GM 원문 전체는 classify에 들어가면 안 됩니다.")
+
+    context = build_classify_context_view(runtime, "그쪽으로 갑니다")
+    payload = json.dumps(context, ensure_ascii=False)
+
+    assert context["references"]["recent_scene"] == [
+        {
+            "turn": 1,
+            "summary": "상인이 숲 방향을 가리켰습니다.",
+            "target": "npc_0",
+        }
+    ]
+    assert "GM 원문 전체" not in payload
 
 
 def test_classify_context_tracks_omitted_candidates():

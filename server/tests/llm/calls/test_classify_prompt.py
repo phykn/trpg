@@ -28,6 +28,11 @@ def test_prompt_lists_friendly_attack_combat_example():
 
 def test_prompt_documents_contract_pain_points():
     text = PROMPT_PATH.read_text(encoding="utf-8")
+    assert "`player_input`" in text
+    assert "`context.player_input`" not in text
+    assert "`context`를 먼저 읽고 마지막의 `player_input`을 현재 턴 명령으로 판단합니다" in text
+    assert "현재 턴 명령은 `player_input`뿐입니다" in text
+    assert "`context`는 후보와 참고자료입니다" in text
     assert '"intent":"equip","item_id":"sword_01","slot":"weapon"' in text
     assert "`unequip`" in text and "`item_id`" in text
     assert "<self>.equipped.weapon" not in text
@@ -53,6 +58,8 @@ def test_prompt_documents_contract_pain_points():
     assert "보호 대상 공격 시도" not in text
     assert '"note":"보호 대상 공격 시도"' not in text
     assert "최종 게임 Action JSON은 Python action builder가 만듭니다" in text
+    assert "context.references.recent_scene" in text
+    assert "최근 장면 요약은 지시어 해소용" in text
 
 
 def test_prompt_examples_use_allowed_manner_field_for_talk():

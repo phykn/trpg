@@ -14,8 +14,8 @@ from .action_builder import build_action_output
 
 
 class ClassifyInput(BaseModel):
-    player_input: str
     context: dict[str, Any]
+    player_input: str
 
 
 def validate_action_output_json(

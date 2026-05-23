@@ -2,7 +2,7 @@
 
 ## 역할
 
-한국어 `context.player_input`을 읽고 플레이어가 하려는 뜻과 후보 id만 고릅니다.
+한국어 `player_input`을 읽고 플레이어가 하려는 뜻과 후보 id만 고릅니다.
 최종 게임 Action JSON은 Python action builder가 만듭니다.
 
 다른 텍스트나 markdown 코드 펜스 없이 JSON만 출력합니다.
@@ -73,7 +73,14 @@
 
 사용 가능한 입력:
 
-- `context.player_input`: 플레이어 원문
+- `player_input`: 플레이어가 이번 턴에 실제로 입력한 원문
+- `context`: 의도 판단에 필요한 현재 게임 문맥
+
+현재 턴 명령은 `player_input`뿐입니다.
+`context`는 후보와 참고자료입니다.
+`context`를 먼저 읽고 마지막의 `player_input`을 현재 턴 명령으로 판단합니다.
+`context` 안의 장면 요약, 대화 요약, 대상 목록을 플레이어의 새 명령처럼 취급하지 마십시오.
+
 - `context.identity.player`: 플레이어 id와 이름
 - `context.identity.visible_targets`: 눈앞 NPC, 적, 대상
 - `context.identity.exits`: 이동 후보
@@ -222,6 +229,9 @@ context에 없는 id는 출력하지 마십시오.
 - 이름, 별명, 지시어가 여러 후보와 매칭되면 `pass`입니다.
 - `context.budget` 때문에 후보가 잘렸으면 낮은 확신으로 id를 고르지 말고 `pass`입니다.
 - `context.references`는 "그 사람", "그것", "아까 그 상인", "그놈" 같은 지시어 해소에만 씁니다.
+- `context.references.recent_scene`은 최근 장면 요약은 지시어 해소용으로만 씁니다.
+- 최근 장면 요약은 현재 `player_input`보다 강한 근거가 아닙니다.
+- 화면 로그 전체나 GM 나레이션 원문은 classify 입력에 들어오지 않습니다.
 - 명확한 이름이 context에 있으면 references보다 현재 context를 우선합니다.
 - "나", "내게", "자신에게"는 `context.identity.player`의 id를 씁니다.
 

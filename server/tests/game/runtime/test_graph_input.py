@@ -868,8 +868,9 @@ async def test_graph_input_passes_focused_context_to_classify(
     classify_call = [call for call in llm.calls if call["agent"] == "classify"][0]
     payload = json.loads(classify_call["messages"][1]["content"])
 
-    assert set(payload) == {"player_input", "context"}
-    assert payload["context"]["player_input"] == "그걸 따라간다"
+    assert list(payload) == ["context", "player_input"]
+    assert payload["player_input"] == "그걸 따라간다"
+    assert "player_input" not in payload["context"]
     assert "history" not in payload
     assert "recent_dialogue" not in payload
     assert payload["context"]["references"]["recent_dialogue"] == [
@@ -933,7 +934,12 @@ async def test_graph_input_classify_context_omits_global_importance_history(
     encoded = json.dumps(payload, ensure_ascii=False)
 
     assert "history" not in payload
-    assert "중요한 기억" not in encoded
+    assert "낮은 중요도 오래된 기억" not in encoded
+    assert payload["context"]["references"]["recent_scene"] == [
+        {"turn": 19, "summary": "중요한 기억 19"},
+        {"turn": 20, "summary": "중요한 기억 20"},
+        {"turn": 21, "summary": "중요한 기억 21"},
+    ]
     assert payload["context"]["budget"]["visible_targets_omitted"] == 0
 
 

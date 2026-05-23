@@ -81,6 +81,9 @@ def test_packaged_prompts_load_for_every_agent():
     """Every shipped agent under src/locale/prompts/ has a working ko build."""
     agents = [
         "classify",
+        "combat_narrate",
+        "graph_narrate",
+        "recommend",
     ]
     get_prompt.cache_clear()
     for agent in agents:
@@ -89,6 +92,12 @@ def test_packaged_prompts_load_for_every_agent():
         assert "당신" in text or "합니다체" in text, (
             f"{agent} ko build missing 합니다체 register marker"
         )
+
+
+def test_packaged_prompts_do_not_ship_english_variants():
+    prompt_root = runner._PROMPTS_ROOT
+
+    assert not list(prompt_root.glob("*/prompt.en.md"))
 
 
 def test_prompts_root_resolves_to_repo_path():

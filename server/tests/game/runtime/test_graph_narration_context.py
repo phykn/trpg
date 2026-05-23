@@ -215,6 +215,7 @@ def test_input_payload_includes_recent_context_and_keeps_player_input():
     )
     encoded = json.dumps(payload, ensure_ascii=False)
 
+    assert list(payload)[-1] == "user_request"
     assert payload["user_request"] == {"player_input": "경비병에게 북문을 묻습니다"}
     assert payload["engine_event"]["kind"] == "dialogue"
     assert payload["scene_state"]["target_view"]["id"] == "guard_01"
@@ -231,6 +232,9 @@ def test_input_payload_includes_recent_context_and_keeps_player_input():
             "narrator": "경비병은 북문 쪽을 봅니다.",
             "target": "guard_01",
         }
+    ]
+    assert payload["reference_context"]["screen_log"] == [
+        {"kind": "gm", "text": "경비병이 북문을 지킵니다."}
     ]
     assert payload["scene_state"]["scene_anchor"]["location"]["id"] == "square"
     assert "recent_log" not in encoded

@@ -748,12 +748,9 @@ async def test_run_graph_action_turn_preserves_repeated_llm_narration(tmp_path):
         "대치가 이어지고, 서로의 다음 움직임이 아직 정해지지 않습니다."
     )
     assert saved_logs[-1].outcome == "neutral"
-    import json
-
-    payload = json.loads(llm.calls[0]["messages"][1]["content"])
-    assert payload["reference_context"]["recent_narration"] == [
-        {"text": repeated},
-    ]
+    prompt = llm.calls[0]["messages"][1]["content"]
+    assert "화면 로그:" in prompt
+    assert f"- GM: {repeated}" in prompt
 
 
 async def test_run_graph_action_turn_uses_llm_for_combat_failure_narration(
@@ -878,6 +875,12 @@ async def test_run_graph_action_turn_stream_uses_llm_for_combat_failure_narratio
 
 async def test_run_graph_action_turn_sends_combat_trace_to_narration(tmp_path):
     repo = await _repo(tmp_path)
+    await repo.append_log_entries(
+        "game-1",
+        [GMLogEntry(id=1, kind="gm", text="고블린이 길목을 막아섭니다.")],
+    )
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(progress.model_copy(update={"next_log_id": 2}))
     llm = _NarrationLLM()
 
     await run_graph_action_turn(
@@ -888,16 +891,91 @@ async def test_run_graph_action_turn_sends_combat_trace_to_narration(tmp_path):
     )
 
     call = [call for call in llm.calls if call["agent"] == "combat_narrate"][0]
-    import json
+    prompt = call["messages"][1]["content"]
 
-    payload = json.loads(call["messages"][1]["content"])
-    encoded = json.dumps(payload, ensure_ascii=False)
+    assert prompt.startswith("화면 로그:")
+    assert prompt.find("화면 로그:") < prompt.find("장면 유형: 전투")
+    assert "행동: 공격" in prompt
+    assert "결과:" in prompt
+    assert "확정:" in prompt
+    assert "화면 로그:" in prompt
+    assert "- GM: 고블린이 길목을 막아섭니다." in prompt
+    assert '"combat_view"' not in prompt
+    assert "combat_started" not in prompt
+    assert "player_attack_success" not in prompt
 
-    assert payload["engine_event"]["action"]["verb"] == "attack"
-    assert payload["combat_view"]["events"]
-    assert payload["scene_state"]["scene_anchor"]["visible_names"]
-    assert "combat_started" not in encoded
-    assert "player_attack_success" not in encoded
+
+async def test_run_graph_action_turn_sends_story_transition_brief_text(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["chapter_01"] = GraphNode(
+        id="chapter_01",
+        type="chapter",
+        properties={"title": "붉은섬", "status": "active", "quests": ["quest_done"]},
+    )
+    graph.nodes["chapter_02"] = GraphNode(
+        id="chapter_02",
+        type="chapter",
+        properties={
+            "title": "푸른섬",
+            "status": "locked",
+            "quests": ["quest_next"],
+            "prerequisites": ["chapter_01"],
+        },
+    )
+    graph.nodes["quest_done"] = GraphNode(
+        id="quest_done",
+        type="quest",
+        properties={
+            "title": "분노 환불 사건",
+            "status": "active",
+            "required": True,
+            "choices": {"release": {"label": "분노를 흘려보냅니다"}},
+        },
+    )
+    graph.nodes["quest_next"] = GraphNode(
+        id="quest_next",
+        type="quest",
+        properties={
+            "title": "빈방 사건",
+            "status": "locked",
+            "required": True,
+            "prerequisites": ["quest_done"],
+            "handoff": "엘리는 푸른 비 거리의 닫힌 방 이야기를 확인해 보자고 말합니다.",
+        },
+    )
+    graph.edges["part_of_chapter:quest_done:chapter_01"] = GraphEdge(
+        id="part_of_chapter:quest_done:chapter_01",
+        type="part_of_chapter",
+        from_node_id="quest_done",
+        to_node_id="chapter_01",
+    )
+    graph.edges["part_of_chapter:quest_next:chapter_02"] = GraphEdge(
+        id="part_of_chapter:quest_next:chapter_02",
+        type="part_of_chapter",
+        from_node_id="quest_next",
+        to_node_id="chapter_02",
+    )
+    await repo.save_graph("game-1", graph)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(update={"active_quest_id": "quest_done"})
+    )
+    llm = _NarrationLLM("엘리가 푸른 비 거리의 닫힌 방을 말합니다.")
+
+    await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="decide", what="quest_done", how="release"),
+        llm=llm,  # type: ignore[arg-type]
+    )
+
+    content = llm.calls[0]["messages"][1]["content"]
+    assert not content.lstrip().startswith("{")
+    assert "장면 유형: 사건 전환" in content
+    assert "완료: 분노 환불 사건" in content
+    assert "다음: 푸른섬 / 빈방 사건" in content
+    assert "금지: 정답 지시, 선택 평가, 다음 사건 결론 공개" in content
 
 
 async def test_run_graph_action_turn_times_out_slow_narration_and_keeps_action(

@@ -1119,9 +1119,9 @@ async def test_run_graph_roll_stream_executes_success_action_before_result(tmp_p
     assert events[0]["result"].front_state.place.id == "forest"
     assert events[-1]["result"].outcome == "success"
     assert [entry.kind for entry in logs] == ["roll", "act", "gm"]
-    payload = json.loads(llm.calls[0]["messages"][1]["content"])
-    assert payload["engine_event"]["kind"] == "move"
-    assert payload["engine_event"]["resolved_results"] == ["당신은 Forest로 이동합니다."]
+    content = llm.calls[0]["messages"][1]["content"]
+    assert "장면 유형: move" in content
+    assert "확정: 당신은 Forest로 이동합니다." in content
 
 
 async def test_run_graph_roll_stream_includes_clear_success_resolution_for_narrative_roll(
@@ -1151,18 +1151,44 @@ async def test_run_graph_roll_stream_includes_clear_success_resolution_for_narra
 
     assert events[0]["type"] == "result"
     assert events[0]["result"].outcome == "success"
-    payload = json.loads(llm.calls[0]["messages"][1]["content"])
-    assert payload["engine_event"]["kind"] == "roll"
-    assert payload["engine_event"]["resolved_results"] == [
-        "매력 판정 성공",
-        "당신의 말은 이삭에게 닿고, 이삭은 더 분명한 반응을 보입니다.",
-    ]
+    content = llm.calls[0]["messages"][1]["content"]
+    assert "장면 유형: 판정 후" in content
+    assert "결과: 성공" in content
+    assert "확정: 매력 판정 성공 / 당신의 말은 이삭에게 닿고, 이삭은 더 분명한 반응을 보입니다." in content
     deltas = [event["text"] for event in events if event["type"] == "narration_delta"]
     logs = await repo.load_log_entries("game-1")
     assert deltas[0] == "당신의 말은 이삭에게 닿고, 이삭은 더 분명한 반응을 보입니다. "
     assert logs[-1].text.startswith(
         "당신의 말은 이삭에게 닿고, 이삭은 더 분명한 반응을 보입니다."
     )
+
+
+async def test_run_graph_roll_sends_brief_text_instead_of_raw_json(tmp_path):
+    repo = await _repo(tmp_path)
+    llm = _RollStreamLLM("상대는 아직 말을 받아들이지 않습니다.")
+    graph = await repo.load_graph("game-1")
+    graph.nodes["lea_01"] = _character("lea_01").model_copy(
+        update={"properties": {**_character("lea_01").properties, "name": "레아"}}
+    )
+    await repo.save_graph("game-1", graph)
+    pending = (
+        await start_graph_roll(
+            repo,
+            "game-1",
+            Action(verb="speak", to="lea_01"),
+            player_input="레아에게 빈방을 다시 열자고 말합니다",
+        )
+    ).pending_roll
+
+    await run_graph_roll(repo, "game-1", pending["id"], dice=13, llm=llm)  # type: ignore[arg-type]
+
+    content = llm.calls[0]["messages"][1]["content"]
+    assert not content.lstrip().startswith("{")
+    assert "장면 유형: 판정 후" in content
+    assert "플레이어 입력: 레아에게 빈방을 다시 열자고 말합니다" in content
+    assert "대상: 레아" in content
+    assert "결과: 성공" in content
+    assert "금지: 실패처럼 흐리는 반응, 확정되지 않은 보상, 새 퀘스트 창작" in content
 
 
 async def test_run_graph_roll_requires_matching_pending_id(tmp_path):
