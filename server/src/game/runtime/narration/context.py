@@ -20,7 +20,7 @@ from ..env import env_nonnegative_int
 from ..state import GameRuntimeState
 from .combat_view import combat_narration_view
 from .memory_context import (
-    narrate_recent_dialogue_payload,
+    narrate_recent_exchanges_payload,
     related_memory_payload,
 )
 
@@ -67,7 +67,7 @@ def build_action_narration_payload(
             target=target,
         ),
         "recent_narration": _recent_narration_payload(before),
-        "recent_dialogue": narrate_recent_dialogue_payload(
+        "recent_exchanges": narrate_recent_exchanges_payload(
             after,
             target=target.id if target is not None else None,
         ),
@@ -136,7 +136,7 @@ def build_roll_narration_payload(
                 if isinstance(text, str)
             ],
         ),
-        "recent_dialogue": narrate_recent_dialogue_payload(
+        "recent_exchanges": narrate_recent_exchanges_payload(
             runtime,
             target=target.id if target is not None else None,
         ),
@@ -171,7 +171,7 @@ def build_input_narration_payload(
             target=dialogue_target,
         ),
         "recent_narration": _recent_narration_payload(runtime),
-        "recent_dialogue": narrate_recent_dialogue_payload(
+        "recent_exchanges": narrate_recent_exchanges_payload(
             runtime,
             target=dialogue_target.id if dialogue_target is not None else None,
         ),
@@ -194,7 +194,7 @@ def compact_narration_payload(source: dict[str, Any]) -> dict[str, Any]:
         "reference_context": {
             "world_guidance": source.get("world_guidance"),
             "related_memory": source.get("related_memory"),
-            "recent_dialogue": source.get("recent_dialogue"),
+            "recent_exchanges": source.get("recent_exchanges"),
             "recent_narration": source.get("recent_narration"),
             "screen_log": source.get("screen_log"),
         },
@@ -895,7 +895,7 @@ def _narrate_budget(runtime: GameRuntimeState) -> dict[str, int]:
     return {
         "visible_names_omitted": max(0, visible_count - 5),
         "related_memory_omitted": 0,
-        "recent_dialogue_omitted": max(0, len(runtime.recent_dialogue) - 5),
+        "recent_exchanges_omitted": max(0, len(runtime.recent_exchanges) - 5),
         "result_cards_omitted": 0,
     }
 

@@ -1,7 +1,7 @@
 from src.db.graph.local_fs import LocalFsGraphRepo
 from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
+from src.game.domain.memory import ExchangePair, GMLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime import load_runtime_state
 
@@ -91,9 +91,9 @@ async def test_load_runtime_state_reads_graph_progress_and_tails(tmp_path):
         "game-1",
         [TurnLogEntry(turn=1, target="town", summary="마을 도착")],
     )
-    await repo.append_dialogue_entries(
+    await repo.append_exchange_entries(
         "game-1",
-        [DialoguePair(turn=1, player="간다", narrator="당신은 이동합니다.")],
+        [ExchangePair(turn=1, player="간다", narrator="당신은 이동합니다.")],
     )
 
     runtime = await load_runtime_state(repo, "game-1")
@@ -103,7 +103,7 @@ async def test_load_runtime_state_reads_graph_progress_and_tails(tmp_path):
     assert runtime.progress.next_log_id == 6
     assert runtime.log_entries[0].text == "도착했습니다."
     assert runtime.turn_log[0].summary == "마을 도착"
-    assert runtime.recent_dialogue[0].player == "간다"
+    assert runtime.recent_exchanges[0].player == "간다"
 
 
 async def test_load_runtime_state_preserves_graph_combat_state(tmp_path):

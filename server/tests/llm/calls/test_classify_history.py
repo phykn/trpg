@@ -21,7 +21,7 @@ def test_classify_input_round_trip_json():
         "mode": "combat",
         "identity": {"visible_targets": [{"id": "guard_01", "name": "경비병"}]},
         "affordances": {"can_attack": ["guard_01"]},
-        "references": {"recent_dialogue": []},
+        "references": {"recent_exchanges": []},
         "budget": {},
     }
     input_ = ClassifyInput(player_input="검을 휘두른다", context=context)

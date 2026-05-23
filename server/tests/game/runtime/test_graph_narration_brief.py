@@ -19,7 +19,7 @@ def test_narration_brief_includes_recent_log_context():
                     {"text": "레아는 닫힌 방문 앞에서 열쇠를 쥐고 있습니다."},
                     {"text": "비가 문패 위로 가늘게 흘러내립니다."},
                 ],
-                "recent_dialogue": [
+                "recent_exchanges": [
                     {
                         "player": "그 방은 누구의 자리였나요?",
                         "narrator": "레아는 방 안쪽을 보지 않고 대답합니다.",
@@ -235,7 +235,7 @@ def test_narration_brief_respects_recent_context_env_limit(monkeypatch):
                     {"text": "첫번째 최근 로그"},
                     {"text": "두번째 최근 로그"},
                 ],
-                "recent_dialogue": [
+                "recent_exchanges": [
                     {"player": "첫번째 질문", "narrator": "첫번째 답"},
                     {"player": "두번째 질문", "narrator": "두번째 답"},
                 ],

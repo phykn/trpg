@@ -2,7 +2,7 @@ import asyncio
 
 from src.db.graph.supabase import SupabaseGraphRepo
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
+from src.game.domain.memory import ExchangePair, GMLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from tests._fakes import FakePostgREST
 
@@ -203,18 +203,18 @@ async def test_supabase_graph_repo_loads_log_tails_in_chronological_order():
             TurnLogEntry(turn=2, summary="요약 2"),
         ],
     )
-    await repo.append_dialogue_entries(
+    await repo.append_exchange_entries(
         "game-1",
         [
-            DialoguePair(turn=1, player="p1", narrator="n1"),
-            DialoguePair(turn=2, player="p2", narrator="n2"),
+            ExchangePair(turn=1, player="p1", narrator="n1"),
+            ExchangePair(turn=2, player="p2", narrator="n2"),
         ],
     )
 
     log_entries = await repo.load_log_entries("game-1")
     history_entries = await repo.load_history_entries("game-1")
-    dialogue_entries = await repo.load_dialogue_entries("game-1")
+    exchange_entries = await repo.load_exchange_entries("game-1")
 
     assert [entry.id for entry in log_entries] == [1, 2]
     assert [entry.summary for entry in history_entries] == ["요약 1", "요약 2"]
-    assert [entry.player for entry in dialogue_entries] == ["p1", "p2"]
+    assert [entry.player for entry in exchange_entries] == ["p1", "p2"]

@@ -40,7 +40,7 @@ class Social(_F):
 class MemoryConfig(_F):
     cap: int = 20
     turn_log_size: int = 50
-    recent_dialogue_turns: int = 10
+    recent_exchange_turns: int = 10
 
 
 class LogConfig(_F):

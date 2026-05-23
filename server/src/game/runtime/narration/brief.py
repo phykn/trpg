@@ -259,7 +259,7 @@ def _recent_context_lines(payload: dict[str, Any]) -> list[str]:
     ]
     recent_entries = env_nonnegative_int("GRAPH_NARRATION_BRIEF_RECENT_ENTRIES", 2)
     narration = _dicts(context.get("recent_narration"))[-recent_entries:]
-    dialogue = _dicts(context.get("recent_dialogue"))[-recent_entries:]
+    exchanges = _dicts(context.get("recent_exchanges"))[-recent_entries:]
 
     visible_log = [_screen_log_line(item) for item in screen_log]
     visible_log = [line for line in visible_log if line]
@@ -277,17 +277,17 @@ def _recent_context_lines(payload: dict[str, Any]) -> list[str]:
         lines.append(_brief("recent_log"))
         lines.extend(f"- {text}" for text in recent_narration)
 
-    recent_dialogue = []
-    for item in dialogue:
+    recent_exchanges = []
+    for item in exchanges:
         player = item.get("player")
         narrator = item.get("narrator")
         player_text = player if isinstance(player, str) and player else ""
         narrator_text = narrator if isinstance(narrator, str) and narrator else ""
         if player_text or narrator_text:
-            recent_dialogue.append((player_text, narrator_text))
-    if recent_dialogue:
-        lines.append(_brief("recent_dialogue"))
-        for player, narrator in recent_dialogue:
+            recent_exchanges.append((player_text, narrator_text))
+    if recent_exchanges:
+        lines.append(_brief("recent_exchanges"))
+        for player, narrator in recent_exchanges:
             if player:
                 lines.append(f"- {_brief('player', value=_clip(player))}")
             if narrator:

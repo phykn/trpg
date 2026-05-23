@@ -1,6 +1,6 @@
 # trpg-server
 
-Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in graph Postgres tables keyed on `game_id` (`game_progress / graph_nodes / graph_edges / log_entries / history_entries / dialogue_entries`); scenario seeds live in a Supabase Storage bucket.
+Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in graph Postgres tables keyed on `game_id` (`game_progress / graph_nodes / graph_edges / log_entries / history_entries / exchange_entries`); scenario seeds live in a Supabase Storage bucket.
 
 Design notes start at `../docs/README.md`; the per-turn flow, interface, and ownership map are in `../docs/plan.md`. The server agent guide is [AGENTS.md](./AGENTS.md).
 
@@ -48,16 +48,8 @@ LLM_ROUTE_GRAPH_NARRATE=google/gemma-4-31b-it
 LLM_ROUTE_GRAPH_NARRATE_FALLBACK=google/gemma-4-26b-a4b-it
 LLM_CLASSIFY_TEMPERATURE=0.0              # optional; default 0.0
 LLM_GRAPH_NARRATE_TEMPERATURE=1.0         # optional; default 1.0
-LLM_CLASSIFY_LIMIT_VISIBLE_TARGETS=8      # optional classify context caps
-LLM_CLASSIFY_LIMIT_EXITS=6
-LLM_CLASSIFY_LIMIT_INVENTORY=10
-LLM_CLASSIFY_LIMIT_SKILLS=8
-LLM_CLASSIFY_LIMIT_LOCATION_ITEMS=8
-LLM_CLASSIFY_LIMIT_RECENT_SCENE=3
-LLM_CLASSIFY_LIMIT_RECENT_DIALOGUE=5
-LLM_CLASSIFY_LIMIT_MERCHANT_STOCK=8
-LLM_CLASSIFY_LIMIT_CORPSES=4
-LLM_CLASSIFY_LIMIT_CORPSE_ITEMS=6
+LLM_CLASSIFY_LIMIT_RECENT_SCENE=3         # optional recent context caps
+LLM_CLASSIFY_LIMIT_RECENT_EXCHANGES=3
 GRAPH_NARRATION_SCREEN_LOG_ENTRIES=8
 GRAPH_NARRATION_BRIEF_RECENT_ENTRIES=2
 GRAPH_NARRATION_BRIEF_LINE_CHARS=120
@@ -130,6 +122,6 @@ Runtime state lives in Supabase Postgres:
 | `graph_edges` | `(game_id, edge_id)` | one row per graph edge |
 | `log_entries` | `(game_id, log_id)` | `log_id = entry.id` (app-managed monotonic) |
 | `history_entries` | `(game_id, seq)` | `bigserial`, append-only turn summaries |
-| `dialogue_entries` | `(game_id, seq)` | `bigserial`, append-only dialogue |
+| `exchange_entries` | `(game_id, seq)` | `bigserial`, append-only player input + narrator response exchanges |
 
 Runtime child tables should FK → `game_progress(game_id) ON DELETE CASCADE`. RLS enabled with no policies — the server uses the service-role key, anon/auth keys see nothing.

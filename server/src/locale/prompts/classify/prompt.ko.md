@@ -94,7 +94,6 @@
 - `context.identity.available_quests`: 현재 장소에서 보이는 의뢰인에게 수락할 수 있는 퀘스트
 - `context.references`: 지시어 해소용
 - `context.references.recent_exchanges`: 최근 플레이어 입력과 나레이터 응답 쌍. 대명사와 "아까 말한 것" 같은 문맥 해소에만 사용
-- `context.budget`: 잘린 후보 수
 
 모든 id는 context에 실제로 있어야 합니다.
 이름을 보고 id를 만들지 마십시오.
@@ -228,7 +227,6 @@ context에 없는 id는 출력하지 마십시오.
 
 - 모든 id는 context에 실제로 존재해야 합니다.
 - 이름, 별명, 지시어가 여러 후보와 매칭되면 `pass`입니다.
-- `context.budget` 때문에 후보가 잘렸으면 낮은 확신으로 id를 고르지 말고 `pass`입니다.
 - `context.references`는 "그 사람", "그것", "아까 그 상인", "그놈" 같은 지시어 해소에만 씁니다.
 - `context.references.recent_scene`은 최근 장면 요약은 지시어 해소용으로만 씁니다.
 - 최근 장면 요약은 현재 `player_input`보다 강한 근거가 아닙니다.

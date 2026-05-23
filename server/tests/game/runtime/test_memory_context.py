@@ -1,12 +1,12 @@
 import json
 
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.memory import DialoguePair, TurnLogEntry
+from src.game.domain.memory import ExchangePair, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.game.runtime.narration.memory_context import (
-    classify_recent_dialogue_payload,
-    narrate_recent_dialogue_payload,
+    classify_recent_exchanges_payload,
+    narrate_recent_exchanges_payload,
     related_memory_payload,
 )
 
@@ -41,8 +41,8 @@ def _runtime(*, dialogue_count: int = 0) -> GameRuntimeState:
             },
         ),
         progress=GameProgress(game_id="game-1", player_id="player_01"),
-        recent_dialogue=[
-            DialoguePair(turn=turn, player=f"질문 {turn}", narrator=f"응답 {turn}")
+        recent_exchanges=[
+            ExchangePair(turn=turn, player=f"질문 {turn}", narrator=f"응답 {turn}")
             for turn in range(1, dialogue_count + 1)
         ],
     )
@@ -117,13 +117,13 @@ def test_related_memory_excludes_unrelated_high_importance_entries():
     ]
 
 
-def test_recent_dialogue_is_limited_and_does_not_pull_turn_log():
+def test_recent_exchanges_is_limited_and_does_not_pull_turn_log():
     runtime = _runtime(dialogue_count=7)
     runtime.turn_log.append(
         TurnLogEntry(turn=99, target="npc_merchant", summary="중요 기억", importance=3)
     )
 
-    payload = classify_recent_dialogue_payload(runtime)
+    payload = classify_recent_exchanges_payload(runtime)
 
     assert len(payload) == 5
     assert all(set(item) == {"turn", "player", "summary"} for item in payload)
@@ -131,20 +131,20 @@ def test_recent_dialogue_is_limited_and_does_not_pull_turn_log():
     assert "중요 기억" not in json.dumps(payload, ensure_ascii=False)
 
 
-def test_recent_dialogue_limit_can_come_from_env(monkeypatch):
-    monkeypatch.setenv("MAX_RECENT_DIALOGUE", "2")
+def test_recent_exchanges_limit_can_come_from_env(monkeypatch):
+    monkeypatch.setenv("MAX_RECENT_EXCHANGES", "2")
     runtime = _runtime(dialogue_count=7)
 
-    payload = classify_recent_dialogue_payload(runtime)
+    payload = classify_recent_exchanges_payload(runtime)
 
     assert [item["turn"] for item in payload] == [6, 7]
 
 
-def test_narrate_recent_dialogue_uses_narrator_original_text(monkeypatch):
-    monkeypatch.setenv("MAX_RECENT_DIALOGUE", "2")
+def test_narrate_recent_exchanges_uses_narrator_original_text(monkeypatch):
+    monkeypatch.setenv("MAX_RECENT_EXCHANGES", "2")
     runtime = _runtime(dialogue_count=3)
 
-    payload = narrate_recent_dialogue_payload(runtime)
+    payload = narrate_recent_exchanges_payload(runtime)
 
     assert payload == [
         {"turn": 2, "player": "질문 2", "narrator": "응답 2", "target": None},
@@ -152,25 +152,25 @@ def test_narrate_recent_dialogue_uses_narrator_original_text(monkeypatch):
     ]
 
 
-def test_narrate_recent_dialogue_prefers_same_target_then_fills_recent(monkeypatch):
-    monkeypatch.setenv("MAX_RECENT_DIALOGUE", "3")
+def test_narrate_recent_exchanges_prefers_same_target_then_fills_recent(monkeypatch):
+    monkeypatch.setenv("MAX_RECENT_EXCHANGES", "3")
     runtime = _runtime()
-    runtime.recent_dialogue = [
-        DialoguePair(
+    runtime.recent_exchanges = [
+        ExchangePair(
             turn=1, player="상인 질문", narrator="상인 답", target="npc_merchant"
         ),
-        DialoguePair(
+        ExchangePair(
             turn=2, player="다른 질문", narrator="다른 답", target="npc_other"
         ),
-        DialoguePair(
+        ExchangePair(
             turn=3, player="상인 재질문", narrator="상인 재답", target="npc_merchant"
         ),
-        DialoguePair(
+        ExchangePair(
             turn=4, player="마지막 질문", narrator="마지막 답", target=None
         ),
     ]
 
-    payload = narrate_recent_dialogue_payload(runtime, target="npc_merchant")
+    payload = narrate_recent_exchanges_payload(runtime, target="npc_merchant")
 
     assert [item["turn"] for item in payload] == [1, 3, 4]
     assert payload[1]["target"] == "npc_merchant"

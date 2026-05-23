@@ -26,7 +26,7 @@ def _classify_test_context(surroundings: dict) -> dict:
         "affordances": {},
         "references": {
             "last_npc": surroundings.get("recent_npc"),
-            "recent_dialogue": [],
+            "recent_exchanges": [],
         },
         "budget": {},
     }

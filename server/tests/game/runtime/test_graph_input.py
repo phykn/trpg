@@ -9,7 +9,7 @@ from src.db.graph.local_fs import LocalFsGraphRepo
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
+from src.game.domain.memory import ExchangePair, GMLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime.flow.confirmation import GraphConfirmationActive
 from src.game.runtime.flow.input import (
@@ -778,7 +778,7 @@ async def test_graph_input_uses_llm_default_graph_narrate_temperature(tmp_path):
     assert narrate_call["temperature"] is None
 
 
-async def test_graph_input_reflects_speak_turn_into_memory_dialogue_and_suggestions(
+async def test_graph_input_reflects_speak_turn_into_memory_exchanges_and_suggestions(
     tmp_path,
 ):
     repo = await _repo(tmp_path)
@@ -796,7 +796,7 @@ async def test_graph_input_reflects_speak_turn_into_memory_dialogue_and_suggesti
 
     result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 북문을 묻는다")
     history = await repo.load_history_entries("game-1")
-    dialogue = await repo.load_dialogue_entries("game-1")
+    exchanges = await repo.load_exchange_entries("game-1")
 
     assert [suggestion.model_dump() for suggestion in result.suggestions] == [
         {
@@ -820,8 +820,8 @@ async def test_graph_input_reflects_speak_turn_into_memory_dialogue_and_suggesti
             importance=3,
         )
     ]
-    assert dialogue == [
-        DialoguePair(
+    assert exchanges == [
+        ExchangePair(
             turn=1,
             player="고블린에게 북문을 묻는다",
             narrator="고블린은 북문에 낯선 발자국이 있다고 말합니다.",
@@ -848,10 +848,10 @@ async def test_graph_input_passes_focused_context_to_classify(
             ),
         ],
     )
-    await repo.append_dialogue_entries(
+    await repo.append_exchange_entries(
         "game-1",
         [
-            DialoguePair(
+            ExchangePair(
                 turn=2,
                 player="북문에 대해 묻는다",
                 narrator="고블린은 발자국을 보았다고 말합니다.",
@@ -868,7 +868,7 @@ async def test_graph_input_passes_focused_context_to_classify(
     assert payload["player_input"] == "그걸 따라간다"
     assert "player_input" not in payload["context"]
     assert "history" not in payload
-    assert "recent_dialogue" not in payload
+    assert "recent_exchanges" not in payload
     assert "recent_exchanges" not in payload
     assert payload["context"]["references"]["recent_exchanges"] == [
         {
@@ -889,10 +889,26 @@ async def test_graph_input_uses_llm_default_classify_temperature(tmp_path):
     assert classify_call["temperature"] is None
 
 
-async def test_graph_input_passes_env_classify_context_limits(tmp_path, monkeypatch):
-    monkeypatch.setenv("LLM_CLASSIFY_LIMIT_VISIBLE_TARGETS", "1")
-    monkeypatch.setenv("LLM_CLASSIFY_LIMIT_INVENTORY", "0")
+async def test_graph_input_passes_env_classify_recent_context_limits(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("LLM_CLASSIFY_LIMIT_RECENT_SCENE", "1")
+    monkeypatch.setenv("LLM_CLASSIFY_LIMIT_RECENT_EXCHANGES", "1")
     repo = await _repo(tmp_path)
+    await repo.append_history_entries(
+        "game-1",
+        [
+            TurnLogEntry(turn=1, summary="오래된 장면입니다."),
+            TurnLogEntry(turn=2, summary="최근 장면입니다."),
+        ],
+    )
+    await repo.append_exchange_entries(
+        "game-1",
+        [
+            ExchangePair(turn=1, player="오래된 질문", narrator="오래된 답변"),
+            ExchangePair(turn=2, player="최근 질문", narrator="최근 답변"),
+        ],
+    )
     llm = _FakeLLM({"actions": [{"verb": "pass"}]}, narration="당신은 잠시 생각합니다.")
 
     await run_graph_input_turn(llm, repo, "game-1", "잠시 기다린다")
@@ -900,9 +916,12 @@ async def test_graph_input_passes_env_classify_context_limits(tmp_path, monkeypa
     classify_call = [call for call in llm.calls if call["agent"] == "classify"][0]
     payload = json.loads(classify_call["messages"][1]["content"])
     context = payload["context"]
-    assert len(context["identity"]["visible_targets"]) == 1
-    assert context["identity"]["inventory"] == []
-    assert context["budget"]["inventory_omitted"] > 0
+    assert context["references"]["recent_scene"] == [
+        {"turn": 2, "summary": "최근 장면입니다."}
+    ]
+    assert context["references"]["recent_exchanges"] == [
+        {"turn": 2, "player": "최근 질문", "summary": "최근 답변"}
+    ]
 
 
 async def test_graph_input_classify_context_omits_global_importance_history(
@@ -936,7 +955,7 @@ async def test_graph_input_classify_context_omits_global_importance_history(
         {"turn": 20, "summary": "중요한 기억 20"},
         {"turn": 21, "summary": "중요한 기억 21"},
     ]
-    assert payload["context"]["budget"]["visible_targets_omitted"] == 0
+    assert "budget" not in payload["context"]
 
 
 async def test_graph_input_streams_result_before_speak_narration(tmp_path):
@@ -1369,7 +1388,7 @@ async def test_graph_input_narration_payload_includes_recent_narration(tmp_path)
         {"text": "경비병이 북문을 지킵니다."}
     ]
     assert "경비병이 북문을 지킵니다." in encoded
-    assert "recent_dialogue" not in payload["reference_context"]
+    assert "recent_exchanges" not in payload["reference_context"]
 
 
 async def test_graph_input_speak_times_out_slow_narration_and_uses_fallback(

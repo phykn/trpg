@@ -3,7 +3,7 @@ from typing import Any
 from src.game.domain.action import Action
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph.query import location_of
-from src.game.domain.memory import DialoguePair
+from src.game.domain.memory import ExchangePair
 
 from ..env import env_nonnegative_int
 from ..state import GameRuntimeState
@@ -23,34 +23,34 @@ def important_history_payload(
     return [entry.model_dump(mode="json") for _, entry in selected]
 
 
-def recent_dialogue_payload(
+def recent_exchanges_payload(
     runtime: GameRuntimeState,
     *,
     limit: int = 5,
 ) -> list[dict]:
-    return [entry.model_dump(mode="json") for entry in runtime.recent_dialogue[-limit:]]
+    return [entry.model_dump(mode="json") for entry in runtime.recent_exchanges[-limit:]]
 
 
-def classify_recent_dialogue_payload(
+def classify_recent_exchanges_payload(
     runtime: GameRuntimeState,
     *,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
-    limit = env_nonnegative_int("MAX_RECENT_DIALOGUE", 5) if limit is None else limit
+    limit = env_nonnegative_int("MAX_RECENT_EXCHANGES", 5) if limit is None else limit
     return [
         {"turn": entry.turn, "player": entry.player, "summary": entry.narrator}
-        for entry in runtime.recent_dialogue[-limit:]
+        for entry in runtime.recent_exchanges[-limit:]
     ]
 
 
-def narrate_recent_dialogue_payload(
+def narrate_recent_exchanges_payload(
     runtime: GameRuntimeState,
     *,
     target: str | None = None,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
-    limit = env_nonnegative_int("MAX_RECENT_DIALOGUE", 5) if limit is None else limit
-    entries = _target_first_dialogue(runtime, target, limit)
+    limit = env_nonnegative_int("MAX_RECENT_EXCHANGES", 5) if limit is None else limit
+    entries = _target_first_exchanges(runtime, target, limit)
     return [
         {
             "turn": entry.turn,
@@ -62,14 +62,14 @@ def narrate_recent_dialogue_payload(
     ]
 
 
-def _target_first_dialogue(
+def _target_first_exchanges(
     runtime: GameRuntimeState,
     target: str | None,
     limit: int,
-) -> list[DialoguePair]:
+) -> list[ExchangePair]:
     if target is None:
-        return runtime.recent_dialogue[-limit:]
-    recent = list(runtime.recent_dialogue)
+        return runtime.recent_exchanges[-limit:]
+    recent = list(runtime.recent_exchanges)
     targeted = [entry for entry in recent if entry.target == target]
     selected = targeted[-limit:]
     if len(selected) < limit:

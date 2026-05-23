@@ -57,16 +57,8 @@ def _input_narration_timeout_s(default: float = 30.0) -> float:
 
 def _classify_context_limits() -> ClassifyContextLimits:
     return ClassifyContextLimits(
-        visible_targets=_classify_limit("VISIBLE_TARGETS", 8),
-        exits=_classify_limit("EXITS", 6),
-        inventory=_classify_limit("INVENTORY", 10),
-        skills=_classify_limit("SKILLS", 8),
-        location_items=_classify_limit("LOCATION_ITEMS", 8),
         recent_scene=_classify_limit("RECENT_SCENE", 3),
         recent_exchanges=_classify_limit("RECENT_EXCHANGES", 5),
-        merchant_stock=_classify_limit("MERCHANT_STOCK", 8),
-        corpses=_classify_limit("CORPSES", 2),
-        corpse_items=_classify_limit("CORPSE_ITEMS", 4),
     )
 
 

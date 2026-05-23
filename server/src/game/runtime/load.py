@@ -18,12 +18,12 @@ async def load_runtime_state(
     game_id: str,
     scenario_repo: ScenarioRepo | None = None,
 ) -> GameRuntimeState:
-    graph, progress, log_entries, turn_log, recent_dialogue = await asyncio.gather(
+    graph, progress, log_entries, turn_log, recent_exchanges = await asyncio.gather(
         repo.load_graph(game_id),
         repo.load_progress(game_id),
         repo.load_log_entries(game_id),
         repo.load_history_entries(game_id),
-        repo.load_dialogue_entries(game_id),
+        repo.load_exchange_entries(game_id),
     )
     progress = progress.model_copy(
         update={"next_log_id": _resolve_next_log_id(progress.next_log_id, log_entries)}
@@ -40,5 +40,5 @@ async def load_runtime_state(
         content=content,
         log_entries=log_entries,
         turn_log=turn_log,
-        recent_dialogue=recent_dialogue,
+        recent_exchanges=recent_exchanges,
     )

@@ -7,7 +7,7 @@ from pydantic import TypeAdapter, ValidationError
 
 from src.game.domain.errors import PersistenceFailed
 from src.game.domain.memory import (
-    DialoguePair,
+    ExchangePair,
     LogEntry,
     TurnLogEntry,
 )
@@ -38,8 +38,8 @@ def _history_path(saves_dir: str, game_id: str) -> Path:
     return _game_dir(saves_dir, game_id) / "history.jsonl"
 
 
-def _dialogue_path(saves_dir: str, game_id: str) -> Path:
-    return _game_dir(saves_dir, game_id) / "dialogue.jsonl"
+def _exchange_path(saves_dir: str, game_id: str) -> Path:
+    return _game_dir(saves_dir, game_id) / "exchange.jsonl"
 
 
 def _atomic_write(path: Path, data: str) -> None:
@@ -89,10 +89,10 @@ async def append_history_entries(
     await _append_entries(game_id, _history_path(saves_dir, game_id), entries)
 
 
-async def append_dialogue_entries(
-    saves_dir: str, game_id: str, entries: list[DialoguePair]
+async def append_exchange_entries(
+    saves_dir: str, game_id: str, entries: list[ExchangePair]
 ) -> None:
-    await _append_entries(game_id, _dialogue_path(saves_dir, game_id), entries)
+    await _append_entries(game_id, _exchange_path(saves_dir, game_id), entries)
 
 
 def _load_jsonl_tail(

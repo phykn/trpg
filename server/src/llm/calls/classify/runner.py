@@ -38,9 +38,9 @@ async def classify(
     )
     if action_shortcut is not None:
         return validate_grounded_output(action_shortcut, grounding_view)
-    dialogue = classify_dialogue_shortcut(input_.player_input, grounding_view)
-    if dialogue is not None:
-        return validate_grounded_output(dialogue, grounding_view)
+    exchange = classify_dialogue_shortcut(input_.player_input, grounding_view)
+    if exchange is not None:
+        return validate_grounded_output(exchange, grounding_view)
 
     def parse(answer: str) -> ActionOutput:
         output = validate_action_output_json(

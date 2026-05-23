@@ -1,7 +1,7 @@
 import json
 
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.memory import DialoguePair, GMLogEntry, TurnLogEntry
+from src.game.domain.memory import ExchangePair, GMLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.llm.context.classify_view import (
@@ -132,8 +132,8 @@ def _runtime(
             active_quest_id="quest_01" if active_quest else None,
         ),
         log_entries=[GMLogEntry(id=1, kind="gm", text=gm_log_text)],
-        recent_dialogue=[
-            DialoguePair(turn=turn, player=f"질문 {turn}", narrator=f"요약 {turn}")
+        recent_exchanges=[
+            ExchangePair(turn=turn, player=f"질문 {turn}", narrator=f"요약 {turn}")
             for turn in range(1, dialogue_count + 1)
         ],
         turn_log=[
@@ -175,20 +175,18 @@ def test_classify_context_includes_minimal_recent_scene_summary():
     assert "GM 원문 전체" not in payload
 
 
-def test_classify_context_tracks_omitted_candidates():
+def test_classify_context_keeps_all_graph_related_candidates():
     runtime = _runtime(visible_character_count=10, inventory_count=12, skill_count=9)
 
     context = build_classify_context_view(runtime, "주변을 살핍니다")
 
-    assert len(context["identity"]["visible_targets"]) == 8
-    assert len(context["identity"]["inventory"]) == 10
-    assert len(context["identity"]["skills"]) == 8
-    assert context["budget"]["visible_targets_omitted"] == 2
-    assert context["budget"]["inventory_omitted"] == 2
-    assert context["budget"]["skills_omitted"] == 1
+    assert len(context["identity"]["visible_targets"]) == 10
+    assert len(context["identity"]["inventory"]) == 12
+    assert len(context["identity"]["skills"]) == 9
+    assert "budget" not in context
 
 
-def test_classify_context_accepts_view_limits_as_input():
+def test_classify_context_limits_only_recent_context():
     runtime = _runtime(
         visible_character_count=5,
         inventory_count=4,
@@ -200,23 +198,17 @@ def test_classify_context_accepts_view_limits_as_input():
         runtime,
         "주변을 살핍니다",
         limits=ClassifyContextLimits(
-            visible_targets=2,
-            inventory=2,
-            skills=1,
             recent_exchanges=2,
         ),
     )
 
-    assert len(context["identity"]["visible_targets"]) == 2
-    assert len(context["identity"]["inventory"]) == 2
-    assert len(context["identity"]["skills"]) == 1
+    assert len(context["identity"]["visible_targets"]) == 5
+    assert len(context["identity"]["inventory"]) == 4
+    assert len(context["identity"]["skills"]) == 3
     assert context["references"]["recent_exchanges"] == [
         {"turn": 3, "player": "질문 3", "summary": "요약 3"},
         {"turn": 4, "player": "질문 4", "summary": "요약 4"},
     ]
-    assert context["budget"]["visible_targets_omitted"] == 3
-    assert context["budget"]["inventory_omitted"] == 2
-    assert context["budget"]["skills_omitted"] == 2
 
 
 def test_classify_context_keeps_last_five_recent_exchanges_by_default():
@@ -525,3 +517,70 @@ def test_classify_context_exposes_transfer_and_protected_candidates():
     ]
     assert grounding["merchants"] == context["identity"]["merchants"]
     assert grounding["corpses"] == context["identity"]["corpses"]
+
+
+def test_classify_context_keeps_all_merchant_and_corpse_inventory():
+    nodes: dict[str, GraphNode] = {
+        "town": GraphNode(id="town", type="location", properties={"name": "마을"}),
+        "player_01": _character("player_01", name="당신"),
+        "merchant_01": _character("merchant_01", name="상인"),
+        "corpse_01": _character("corpse_01", name="쓰러진 산적"),
+    }
+    nodes["merchant_01"].properties["gold"] = 20
+    nodes["corpse_01"].properties["alive"] = False
+    nodes["corpse_01"].properties["hp"] = 0
+    edges: dict[str, GraphEdge] = {
+        "located_at:player_01:town": GraphEdge(
+            id="located_at:player_01:town",
+            type="located_at",
+            from_node_id="player_01",
+            to_node_id="town",
+        ),
+        "located_at:merchant_01:town": GraphEdge(
+            id="located_at:merchant_01:town",
+            type="located_at",
+            from_node_id="merchant_01",
+            to_node_id="town",
+        ),
+        "located_at:corpse_01:town": GraphEdge(
+            id="located_at:corpse_01:town",
+            type="located_at",
+            from_node_id="corpse_01",
+            to_node_id="town",
+        ),
+    }
+    for index in range(9):
+        item_id = f"stock_{index}"
+        nodes[item_id] = GraphNode(
+            id=item_id,
+            type="item",
+            properties={"name": f"상품 {index}"},
+        )
+        edges[f"carries:merchant_01:{item_id}"] = GraphEdge(
+            id=f"carries:merchant_01:{item_id}",
+            type="carries",
+            from_node_id="merchant_01",
+            to_node_id=item_id,
+        )
+    for index in range(5):
+        item_id = f"loot_{index}"
+        nodes[item_id] = GraphNode(
+            id=item_id,
+            type="item",
+            properties={"name": f"전리품 {index}"},
+        )
+        edges[f"carries:corpse_01:{item_id}"] = GraphEdge(
+            id=f"carries:corpse_01:{item_id}",
+            type="carries",
+            from_node_id="corpse_01",
+            to_node_id=item_id,
+        )
+    runtime = GameRuntimeState(
+        graph=Graph(nodes=nodes, edges=edges),
+        progress=GameProgress(game_id="game-1", player_id="player_01"),
+    )
+
+    context = build_classify_context_view(runtime, "상인과 시체를 확인한다")
+
+    assert len(context["identity"]["merchants"][0]["stock"]) == 9
+    assert len(context["identity"]["corpses"][0]["inventory"]) == 5

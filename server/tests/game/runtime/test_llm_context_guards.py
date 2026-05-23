@@ -3,7 +3,7 @@ import json
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatState, GraphCombatTraceEvent
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.memory import DialoguePair, GMLogEntry
+from src.game.domain.memory import ExchangePair, GMLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.game.runtime.narration.context import build_input_narration_payload
@@ -148,8 +148,8 @@ def _runtime(
         graph=Graph(nodes=nodes, edges=edges),
         progress=progress,
         log_entries=[GMLogEntry(id=1, kind="gm", text="GM 원문이 새면 실패합니다.")],
-        recent_dialogue=[
-            DialoguePair(turn=turn, player=f"질문 {turn}", narrator=f"요약 {turn}")
+        recent_exchanges=[
+            ExchangePair(turn=turn, player=f"질문 {turn}", narrator=f"요약 {turn}")
             for turn in range(1, dialogue_count + 1)
         ],
     )

@@ -51,7 +51,7 @@ Browser QA uses the already-running web client and server. Story tool (`tool.py`
 
 검사 깨졌을 때: 같은 파일 2회까지만 자동 수정, 그 이상은 사용자에게 보고. 위쪽 단계 실수가 늦게 드러나면 `.decomp/` JSON부터 고치고 영향받는 파일 재검사 — 가짜 ID 같은 우회는 금지.
 
-기존 LLM 호출 루프(`runner.write_entity`, `decompose._decompose_phase`, `critic.run_critic`)와 LLM 전용 프롬프트 (`agents/*.md`)는 모두 제거됨. `harness/decompose.py` 의 Pydantic 모델 + `_check_*` 함수, `harness/runner.py`의 cross-ref 검사 + SPECS, `harness/scenario.py`의 `fill_equipment` 만 남아 `tool.py`가 쓰는 헬퍼다.
+기존 LLM 호출 루프(`write_entity`, `_decompose_phase`, `run_critic`)와 LLM 전용 프롬프트 (`agents/*.md`)는 모두 제거됨. `harness/decompose.py` 의 Pydantic 모델 + `_check_*` 함수, `harness/records.py`의 cross-ref 검사 + SPECS, `harness/scenario.py`의 `fill_equipment` 만 남아 `tool.py`가 쓰는 헬퍼다.
 
 ### Boundary
 

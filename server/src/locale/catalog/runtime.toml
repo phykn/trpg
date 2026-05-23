@@ -574,7 +574,7 @@ en = "Screen log:"
 ko = "최근 로그:"
 en = "Recent log:"
 
-[runtime."narration.brief.recent_dialogue"]
+[runtime."narration.brief.recent_exchanges"]
 ko = "최근 대화:"
 en = "Recent dialogue:"
 

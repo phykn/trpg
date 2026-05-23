@@ -4,9 +4,6 @@ Each subcommand reads input, runs a check or transform, and exits with:
   0 + "OK" on stdout            -- pass
   1 + human-readable error      -- validation failed
   2 + usage on stderr           -- bad invocation
-
-Subcommands are added in subsequent tasks. This file currently has only the
-argparse skeleton + bootstrap.
 """
 
 import argparse
@@ -39,7 +36,7 @@ from src.env import load_server_env  # noqa: E402
 from src.game.seed.init_graph import init_graph_game  # noqa: E402
 from src.game.seed.player import PlayerInput  # noqa: E402
 from src.game.seed.validation import seed_violations  # noqa: E402
-from agency.story.harness.runner import (  # noqa: E402
+from agency.story.harness.records import (  # noqa: E402
     SPECS,
     _check_entity_invariants,
     _check_id,

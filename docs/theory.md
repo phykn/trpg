@@ -55,7 +55,7 @@
 
 - `visible_names`
 - `recent_narration`
-- `recent_dialogue`
+- `recent_exchanges`
 - `related_memory`
 
 약한 증거는 연속성을 유지하고 반복을 피하는 데 쓸 수 있습니다. 하지만

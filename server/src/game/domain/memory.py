@@ -17,7 +17,7 @@ class TurnLogEntry(BaseModel):
     importance: int = Field(default=1, ge=1, le=3)
 
 
-class DialoguePair(BaseModel):
+class ExchangePair(BaseModel):
     turn: int
     player: str
     narrator: str

@@ -35,7 +35,7 @@ agency/story/
   harness/
     _common.py        # ID pattern, trigger map, EntityWriterError
     decompose.py      # Pydantic models + _check_setup/_check_cast/_check_arc
-    runner.py         # Cross-ref check helpers + SPECS metadata
+    records.py        # Cross-ref check helpers + SPECS metadata
     scenario.py       # fill_equipment — equipment slot derivation
 ```
 

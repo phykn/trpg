@@ -101,9 +101,9 @@ class Decomposition(BaseModel):
 
 
 # --- phased decomposition models -------------------------------------------
-# The decomposer runs three sequential LLM calls (setup → cast → arc) and the
-# results compose into Decomposition above. Splitting reduces single-call
-# output size and makes each retry self-contained.
+# The story skill writes three sequential draft files (setup → cast → arc), and
+# the results compose into Decomposition above. Splitting keeps each validation
+# retry self-contained.
 
 
 class DecomSetup(BaseModel):
@@ -154,7 +154,7 @@ def _compose_decomposition(
     )
 
 
-# --- decomposer ------------------------------------------------------------
+# --- decomposition validation ---------------------------------------------
 
 
 def _check_no_cycle(*, nodes: set[str], edges: dict[str, list[str]], kind: str) -> None:
@@ -191,11 +191,12 @@ def _check_no_cycle(*, nodes: set[str], edges: dict[str, list[str]], kind: str) 
 
 
 def _normalize_decomp(d: Decomposition) -> None:
-    """Auto-correct deterministic data conflicts the LLM keeps producing.
+    """Auto-correct deterministic data conflicts common in draft decompositions.
 
-    Items with both owner_character and owner_location set: the LLM
-    sometimes redundantly fills the location of the NPC owner. NPC inventory
-    is the more specific signal, so drop owner_location."""
+    Items with both owner_character and owner_location set usually repeat the
+    NPC owner's location. NPC inventory is the more specific signal, so drop
+    owner_location.
+    """
     for it in d.items:
         if it.owner_character is not None and it.owner_location is not None:
             it.owner_location = None

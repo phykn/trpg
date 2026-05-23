@@ -71,7 +71,7 @@ Graph runtime tables are all keyed on `game_id`:
 - `graph_edges(game_id, edge_id, edge_type, from_node_id, to_node_id, properties jsonb)` PK `(game_id, edge_id)`.
 - `log_entries(game_id, log_id int, entry jsonb)` — `log_id = entry.id` (app-managed monotonic).
 - `history_entries(game_id, seq bigserial, entry jsonb)` — append-only turn summaries.
-- `dialogue_entries(game_id, seq bigserial, entry jsonb)` — append-only dialogue.
+- `exchange_entries(game_id, seq bigserial, entry jsonb)` — append-only player input + narrator response exchanges.
 
 Runtime child tables should FK to `game_progress(game_id) ON DELETE CASCADE`. RLS enabled with no policies (server uses service-role key, anon/auth keys see nothing).
 

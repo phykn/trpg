@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, ValidationError
 
 from src.db.repo import GraphRepo
-from src.game.domain.memory import DialoguePair, GMLogEntry, NarrationCue, TurnLogEntry
+from src.game.domain.memory import ExchangePair, GMLogEntry, NarrationCue, TurnLogEntry
 from src.locale.render import render
 from src.llm.diag import llm_diag
 
@@ -210,7 +210,7 @@ async def persist_graph_narration_result(
     player_input: str | None = None,
 ) -> GameRuntimeState:
     history_entries = _history_entries(runtime, result, target)
-    dialogue_entries = _dialogue_entries(
+    exchange_entries = _exchange_entries(
         runtime,
         result,
         player_input=player_input,
@@ -218,14 +218,14 @@ async def persist_graph_narration_result(
     )
     if history_entries:
         await repo.append_history_entries(runtime.progress.game_id, history_entries)
-    if dialogue_entries:
-        await repo.append_dialogue_entries(runtime.progress.game_id, dialogue_entries)
-    if not history_entries and not dialogue_entries:
+    if exchange_entries:
+        await repo.append_exchange_entries(runtime.progress.game_id, exchange_entries)
+    if not history_entries and not exchange_entries:
         return runtime
     return runtime.model_copy(
         update={
             "turn_log": [*runtime.turn_log, *history_entries],
-            "recent_dialogue": [*runtime.recent_dialogue, *dialogue_entries],
+            "recent_exchanges": [*runtime.recent_exchanges, *exchange_entries],
         }
     )
 
@@ -248,17 +248,17 @@ def _history_entries(
     ]
 
 
-def _dialogue_entries(
+def _exchange_entries(
     runtime: GameRuntimeState,
     result: GraphNarrationResult,
     *,
     player_input: str | None,
     target: str | None,
-) -> list[DialoguePair]:
+) -> list[ExchangePair]:
     if not player_input or not result.narration:
         return []
     return [
-        DialoguePair(
+        ExchangePair(
             turn=runtime.progress.turn_count,
             player=player_input,
             narrator=result.narration,

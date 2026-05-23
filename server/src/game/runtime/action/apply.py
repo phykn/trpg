@@ -95,7 +95,7 @@ def apply_runtime_graph_changes(
         content=runtime.content,
         log_entries=list(runtime.log_entries),
         turn_log=list(runtime.turn_log),
-        recent_dialogue=list(runtime.recent_dialogue),
+        recent_exchanges=list(runtime.recent_exchanges),
     )
     return GraphRuntimeApplyResult(
         runtime=next_runtime,

@@ -19,7 +19,7 @@ from src.db.graph.rows import (
 )
 from src.game.domain.errors import PersistenceFailed
 from src.game.domain.graph import Graph
-from src.game.domain.memory import DialoguePair, LogEntry, TurnLogEntry
+from src.game.domain.memory import ExchangePair, LogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.rules import RULES
 
@@ -182,10 +182,10 @@ class SupabaseGraphRepo:
     ) -> None:
         await self._append_seq_rows("history_entries", game_id, list(entries))
 
-    async def append_dialogue_entries(
-        self, game_id: str, entries: list[DialoguePair]
+    async def append_exchange_entries(
+        self, game_id: str, entries: list[ExchangePair]
     ) -> None:
-        await self._append_seq_rows("dialogue_entries", game_id, list(entries))
+        await self._append_seq_rows("exchange_entries", game_id, list(entries))
 
     async def load_log_entries(self, game_id: str) -> list[LogEntry]:
         rows = await self._db.select(
@@ -207,12 +207,12 @@ class SupabaseGraphRepo:
         )
         return [TurnLogEntry.model_validate(row["entry"]) for row in reversed(rows)]
 
-    async def load_dialogue_entries(self, game_id: str) -> list[DialoguePair]:
+    async def load_exchange_entries(self, game_id: str) -> list[ExchangePair]:
         rows = await self._db.select(
-            "dialogue_entries",
+            "exchange_entries",
             filters={"game_id": f"eq.{game_id}"},
             select="entry",
             order="seq.desc",
-            limit=RULES.memory.recent_dialogue_turns,
+            limit=RULES.memory.recent_exchange_turns,
         )
-        return [DialoguePair.model_validate(row["entry"]) for row in reversed(rows)]
+        return [ExchangePair.model_validate(row["entry"]) for row in reversed(rows)]

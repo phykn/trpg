@@ -3,7 +3,7 @@
 from typing import Protocol
 
 from src.game.domain.graph import Graph
-from src.game.domain.memory import DialoguePair, LogEntry, TurnLogEntry
+from src.game.domain.memory import ExchangePair, LogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 
 
@@ -36,15 +36,15 @@ class GraphRepo(Protocol):
         self, game_id: str, entries: list[TurnLogEntry]
     ) -> None: ...
 
-    async def append_dialogue_entries(
-        self, game_id: str, entries: list[DialoguePair]
+    async def append_exchange_entries(
+        self, game_id: str, entries: list[ExchangePair]
     ) -> None: ...
 
     async def load_log_entries(self, game_id: str) -> list[LogEntry]: ...
 
     async def load_history_entries(self, game_id: str) -> list[TurnLogEntry]: ...
 
-    async def load_dialogue_entries(self, game_id: str) -> list[DialoguePair]: ...
+    async def load_exchange_entries(self, game_id: str) -> list[ExchangePair]: ...
 
 
 class ScenarioRepo(Protocol):

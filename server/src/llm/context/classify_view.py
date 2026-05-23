@@ -20,17 +20,9 @@ from src.game.runtime.state import GameRuntimeState
 
 @dataclass(frozen=True)
 class ClassifyContextLimits:
-    visible_targets: int = 8
-    exits: int = 6
-    inventory: int = 10
-    skills: int = 8
-    location_items: int = 8
     recent_scene: int = 3
     # Recent player input + narrator reply pairs used for pronoun/context resolution.
     recent_exchanges: int = 5
-    merchant_stock: int = 8
-    corpses: int = 2
-    corpse_items: int = 4
 
 
 def build_classify_context_view(
@@ -44,19 +36,12 @@ def build_classify_context_view(
     player_id = runtime.progress.player_id
     location_id = location_of(graph, player_id)
     location = graph.nodes.get(location_id or "")
-    all_visible_targets = _visible_targets(runtime, location_id, limits)
-    all_exits = _exits(runtime, location_id)
-    all_inventory = _inventory(runtime, player_id)
-    all_skills = _skills(runtime, player_id)
-    all_location_items = _location_items(runtime, location_id)
-    all_corpses = _corpses(runtime, location_id, limits)
-
-    visible_targets = all_visible_targets[: limits.visible_targets]
-    exits = all_exits[: limits.exits]
-    inventory = all_inventory[: limits.inventory]  # ssot-allow: graph-query result slice
-    skills = all_skills[: limits.skills]
-    location_items = all_location_items[: limits.location_items]
-    corpses = all_corpses[: limits.corpses]
+    visible_targets = _visible_targets(runtime, location_id)
+    exits = _exits(runtime, location_id)
+    inventory = _inventory(runtime, player_id)
+    skills = _skills(runtime, player_id)
+    location_items = _location_items(runtime, location_id)
+    corpses = _corpses(runtime, location_id)
 
     active_quest = _active_quest(runtime)
     available_quests = _available_quests(runtime, visible_targets, active_quest)
@@ -78,7 +63,7 @@ def build_classify_context_view(
             "location_items": location_items,
             "active_quest": active_quest,
             "available_quests": available_quests,
-            "merchants": _merchants(runtime, visible_targets, limits),
+            "merchants": _merchants(runtime, visible_targets),
             "corpses": corpses,
         },
         "affordances": {
@@ -100,20 +85,6 @@ def build_classify_context_view(
             "last_item": _last_entity_ref(runtime, entity_types={"item"}),
             "recent_scene": _recent_scene(runtime, limits),
             "recent_exchanges": _recent_exchanges(runtime, limits),
-        },
-        "budget": {
-            "visible_targets_omitted": max(
-                0,
-                len(all_visible_targets) - limits.visible_targets,
-            ),
-            "exits_omitted": max(0, len(all_exits) - limits.exits),
-            "inventory_omitted": max(0, len(all_inventory) - limits.inventory),  # ssot-allow: graph-query result count
-            "skills_omitted": max(0, len(all_skills) - limits.skills),
-            "location_items_omitted": max(
-                0,
-                len(all_location_items) - limits.location_items,
-            ),
-            "corpses_omitted": max(0, len(all_corpses) - limits.corpses),
         },
     }
 
@@ -182,7 +153,6 @@ def classify_context_to_grounding_view(context: dict[str, Any]) -> dict[str, Any
 def _visible_targets(
     runtime: GameRuntimeState,
     location_id: str | None,
-    limits: ClassifyContextLimits,
 ) -> list[dict[str, Any]]:
     if location_id is None:
         return []
@@ -225,10 +195,9 @@ def _inventory(runtime: GameRuntimeState, player_id: str) -> list[dict[str, Any]
     return out
 
 
-def _limited_inventory(
+def _inventory_for_owner(
     runtime: GameRuntimeState,
     owner_id: str,
-    limit: int,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for item_id in inventory_of(runtime.graph_index, owner_id):
@@ -236,8 +205,6 @@ def _limited_inventory(
         if node is None or node.type != "item":
             continue
         out.append(_item_payload(runtime, node))
-        if len(out) == limit:
-            break
     return out
 
 
@@ -408,7 +375,6 @@ def _attackable_ids(visible_targets: list[dict[str, Any]]) -> list[str]:
 def _merchants(
     runtime: GameRuntimeState,
     visible_targets: list[dict[str, Any]],
-    limits: ClassifyContextLimits,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for target in visible_targets:
@@ -417,7 +383,7 @@ def _merchants(
             continue
         if not isinstance(node.properties.get("gold"), int):
             continue
-        stock = _limited_inventory(runtime, node.id, limits.merchant_stock)
+        stock = _inventory_for_owner(runtime, node.id)
         if not stock:
             continue
         out.append({"id": node.id, "name": target["name"], "stock": stock})
@@ -427,7 +393,6 @@ def _merchants(
 def _corpses(
     runtime: GameRuntimeState,
     location_id: str | None,
-    limits: ClassifyContextLimits,
 ) -> list[dict[str, Any]]:
     if location_id is None:
         return []
@@ -438,7 +403,7 @@ def _corpses(
         node = runtime.graph.nodes.get(character_id)
         if node is None or node.type != "character" or is_visible_character(node):
             continue
-        inventory = _limited_inventory(runtime, node.id, limits.corpse_items)
+        inventory = _inventory_for_owner(runtime, node.id)
         if inventory:
             out.append(
                 {
@@ -483,7 +448,7 @@ def _recent_exchanges(
     """Recent player input + narrator reply pairs, not free-form NPC memory."""
     return [
         {"turn": pair.turn, "player": pair.player, "summary": pair.narrator}
-        for pair in runtime.recent_dialogue[-limits.recent_exchanges :]
+        for pair in runtime.recent_exchanges[-limits.recent_exchanges :]
     ]
 
 

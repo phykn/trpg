@@ -3,7 +3,7 @@ import json
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatState, GraphCombatTraceEvent
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.memory import DialoguePair, GMLogEntry, RollLogEntry, TurnLogEntry
+from src.game.domain.memory import ExchangePair, GMLogEntry, RollLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.game.runtime.action.dispatch import GraphActionDispatchResult
@@ -193,8 +193,8 @@ def _runtime() -> GameRuntimeState:
                 importance=2,
             )
         ],
-        recent_dialogue=[
-            DialoguePair(
+        recent_exchanges=[
+            ExchangePair(
                 turn=1,
                 player="북문에 대해 묻습니다.",
                 narrator="경비병은 북문 쪽을 봅니다.",
@@ -225,7 +225,7 @@ def test_input_payload_includes_recent_context_and_keeps_player_input():
             "text": "경비병이 북문을 지킵니다.",
         }
     ]
-    assert payload["reference_context"]["recent_dialogue"] == [
+    assert payload["reference_context"]["recent_exchanges"] == [
         {
             "turn": 1,
             "player": "북문에 대해 묻습니다.",
