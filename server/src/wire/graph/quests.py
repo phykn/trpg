@@ -56,7 +56,7 @@ def quest_offer_payloads(runtime: GameRuntimeState) -> list[QuestPayload]:
         quest = graph.nodes.get(edge.to_node_id)
         if quest is None or quest.type != "quest":
             continue
-        if quest_status(quest) == "abandoned":
+        if quest_status(quest) in {"pending", "abandoned"}:
             offers.append(build_quest_payload(graph, quest, runtime))
     return offers
 

@@ -546,13 +546,8 @@ def _mbti_payload(
         for key in (
             "attitude",
             "speech_style",
-            "personality",
             "boundary_style",
             "humor_style",
-            "decision_style",
-            "stress_response",
-            "trust_response",
-            "conflict_style",
         ):
             _add_text_field(runtime, mbti, payload, key)
         for key in ("roleplay_cues", "avoid"):
@@ -636,13 +631,13 @@ def _recent_narration_payload(
     max_chars: int = 160,
     exclude_texts: list[str] | None = None,
 ) -> list[dict[str, Any]]:
-    excluded = {text.strip() for text in (exclude_texts or []) if text.strip()}
+    excluded = [text.strip() for text in (exclude_texts or []) if text.strip()]
     entries = [
         entry
         for entry in runtime.log_entries
         if entry.kind == "gm"
         and entry.text.strip()
-        and entry.text.strip() not in excluded
+        and not _matches_excluded_narration(entry.text, excluded)
     ][-limit:]
     return [
         {
@@ -651,6 +646,27 @@ def _recent_narration_payload(
         }
         for entry in entries
     ]
+
+
+def _matches_excluded_narration(text: str, excluded: list[str]) -> bool:
+    stripped = text.strip()
+    if stripped in excluded:
+        return True
+    normalized = _normalize_for_match(stripped)
+    if not normalized:
+        return False
+    for excluded_text in excluded:
+        excluded_normalized = _normalize_for_match(excluded_text)
+        if not excluded_normalized:
+            continue
+        if normalized == excluded_normalized:
+            return True
+        if len(excluded_normalized) >= 12 and (
+            normalized.startswith(excluded_normalized)
+            or excluded_normalized.startswith(normalized)
+        ):
+            return True
+    return False
 
 
 def _narrate_budget(runtime: GameRuntimeState) -> dict[str, int]:

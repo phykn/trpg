@@ -15,6 +15,7 @@ release/*.log
 .tmux-agent-bridge/
 .playwright-mcp/
 .codex-live/
+.codex-logs/
 
 # Runtime data
 saves/

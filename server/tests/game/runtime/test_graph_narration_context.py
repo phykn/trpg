@@ -97,6 +97,10 @@ def _runtime() -> GameRuntimeState:
                         "personality": "솔직하고 호기심이 많습니다.",
                         "boundary_style": "개인 질문에도 장난스럽게 받아칩니다.",
                         "humor_style": "어색함을 바로 짚어 웃음으로 바꿉니다.",
+                        "decision_style": "감정에 먼저 반응한 뒤 이유를 붙입니다.",
+                        "stress_response": "갑자기 말이 빨라집니다.",
+                        "trust_response": "신뢰하면 자기 이야기를 길게 합니다.",
+                        "conflict_style": "정면충돌 대신 농담으로 비켜갑니다.",
                         "roleplay_cues": ["상대 말에 바로 반응합니다"],
                         "avoid": ["차갑게 반복하지 않습니다"],
                     },
@@ -370,6 +374,46 @@ def test_roll_payload_omits_preroll_body_from_recent_narration():
     ]
 
 
+def test_roll_payload_omits_extended_preroll_body_from_recent_narration():
+    runtime = _runtime()
+    runtime.log_entries.append(
+        GMLogEntry(
+            id=2,
+            kind="gm",
+            text=(
+                "경비병은 답하기 전에 주변의 시선을 먼저 살핍니다. "
+                "손끝이 문서 위에서 멈춥니다."
+            ),
+        )
+    )
+    pending = {
+        "check_reason": "경비병을 설득하려면 믿을 만한 말을 해야 합니다.",
+        "body": "경비병은 답하기 전에 주변의 시선을 먼저 살핍니다.",
+        "player_input": "경비병에게 북문 기록을 보여 달라고 설득합니다",
+    }
+
+    payload = build_roll_narration_payload(
+        runtime=runtime,
+        action=Action(verb="speak", to="guard_01", how="friendly"),
+        pending=pending,
+        roll_entry=RollLogEntry(
+            id=3,
+            kind="roll",
+            check="매력",
+            roll=18,
+            margin=5,
+            result="success",
+        ),
+        outcome="success",
+    )
+
+    assert payload["reference_context"]["recent_narration"] == [
+        {
+            "text": "경비병이 북문을 지킵니다.",
+        }
+    ]
+
+
 def test_roll_payload_can_include_completed_quest_result_cards():
     runtime = _runtime()
     pending = {
@@ -402,6 +446,28 @@ def test_roll_payload_can_include_completed_quest_result_cards():
         {"text": "성공  매력"},
         {"text": "북문은 밤마다 닫힙니다."},
     ]
+
+
+def test_input_payload_compacts_target_mbti_for_narration_tokens():
+    runtime = _runtime()
+
+    payload = build_input_narration_payload(
+        runtime=runtime,
+        player_input="경비병에게 북문 기록을 보여 달라고 말합니다",
+        action=Action(verb="speak", to="guard_01", how="friendly"),
+        dialogue_target=runtime.graph.nodes["guard_01"],
+    )
+
+    mbti = payload["scene_state"]["target_view"]["mbti"]
+    assert mbti == {
+        "id": "ENFP",
+        "attitude": "밝고 즉흥적으로 반응합니다.",
+        "speech_style": "말이 빠르고 감탄이 많습니다.",
+        "boundary_style": "개인 질문에도 장난스럽게 받아칩니다.",
+        "humor_style": "어색함을 바로 짚어 웃음으로 바꿉니다.",
+        "roleplay_cues": ["상대 말에 바로 반응합니다"],
+        "avoid": ["차갑게 반복하지 않습니다"],
+    }
 
 
 def test_input_payload_includes_target_public_knowledge_and_mentioned_inventory():

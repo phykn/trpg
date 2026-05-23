@@ -469,7 +469,8 @@ def test_graph_front_state_resolves_static_content_from_runtime_content():
     assert payload.place.targets[0].name == "떠돌이 적"
     assert payload.place.targets[0].role == "숲의 포식자"
     assert payload.place.targets[0].race_job == "숲의 포식자"
-    assert payload.quest_offers == []
+    assert [offer.title for offer in payload.quest_offers] == ["첫 의뢰"]
+    assert payload.quest_offers[0].giver == "떠돌이 적"
 
 
 def test_graph_front_state_hides_dead_place_targets():
@@ -496,11 +497,19 @@ def test_graph_front_state_exposes_non_player_target_without_resources():
     assert payload.place.targets[0].alive is True
 
 
-def test_graph_front_state_hides_pending_quest_offer():
+def test_graph_front_state_builds_pending_quest_offer():
     payload = graph_to_front_state(_runtime())
 
     assert payload.quest is None
-    assert payload.quest_offers == []
+    assert len(payload.quest_offers) == 1
+    offer = payload.quest_offers[0]
+    assert offer.id == "quest_01"
+    assert offer.title == "첫 의뢰"
+    assert offer.giver == "goblin_01"
+    assert offer.goals == ["늑대 쫓아내기"]
+    assert offer.status == "pending"
+    assert offer.actions == ["accept"]
+    assert offer.choices == []
 
 
 def test_graph_front_state_builds_abandoned_quest_offer():
