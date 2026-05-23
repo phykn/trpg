@@ -294,6 +294,7 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "`payload.scene_state.scene_anchor.visible_names`는 현재 배경을 고정하는 이름 목록" in narrate_prompt
     assert "이름만 보고 세부 묘사, 답변, 단서, 행동 가능성을 만들지 않습니다" in narrate_prompt
     assert "`payload.scene_state.target_view.public_knowledge`와 `payload.scene_state.target_view.available_items`" in narrate_prompt
+    assert "대상 정보가 있으면 NPC가 그 사실을 직접 말하거나 인정하게 씁니다" in narrate_prompt
     assert "장소 전체의 지식이나 모든 행동 가능성으로 넓히지 않습니다" in narrate_prompt
     assert "이전 기억에 있어도 현재 주변에 있다고 쓰지 않습니다" in narrate_prompt
     assert "현재 목표와 다음 행동" in narrate_prompt
@@ -406,6 +407,8 @@ def test_graph_narrate_prompt_requires_clear_roll_consequences():
 
     assert "첫 문단에서 성공/실패의 귀결을 분명히 씁니다" in prompt
     assert "결과를 흐리는 되묻기나 분위기 묘사만으로 끝내지 않습니다" in prompt
+    assert "`공개된 사실`은 이번 성공 판정으로 드러난 확정 정보입니다" in prompt
+    assert "`대상 정보`는 성공 판정에서 드러낼 수 있는 선명한 사실 후보입니다" in prompt
     assert "원하는 답, 단서, 양보가 아직 나오지 않았음을 분명히 합니다" in prompt
 
 
@@ -415,7 +418,8 @@ def test_graph_narrate_prompt_uses_story_transition_as_lead_not_solution():
     )
 
     assert "`payload.engine_event.story_transition`" in prompt
-    assert "엘리나 동행자의 짧은 관찰" in prompt
+    assert "동행자의 짧은 관찰" in prompt
+    assert "엘리나 동행자" not in prompt
     assert "정답이나 명령처럼 쓰지 않습니다" in prompt
     assert "다음 사건의 쟁점은 한 문장으로 분명히 드러냅니다" in prompt
 
@@ -521,7 +525,7 @@ async def test_graph_turn_narration_uses_packaged_prompt(monkeypatch, tmp_path):
     call = [call for call in llm.calls if call["agent"] == "combat_narrate"][0]
 
     assert call["messages"][0]["content"] == "combat_narrate:ko"
-    assert call["temperature"] == 1.0
+    assert call["temperature"] is None
 
 
 @pytest.mark.asyncio
@@ -538,4 +542,4 @@ async def test_graph_input_narration_uses_packaged_prompt(monkeypatch, tmp_path)
 
     narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
     assert narrate_call["messages"][0]["content"] == "graph_narrate:ko"
-    assert narrate_call["temperature"] == 1.0
+    assert narrate_call["temperature"] is None

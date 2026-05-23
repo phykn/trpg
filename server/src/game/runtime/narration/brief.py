@@ -1,6 +1,15 @@
 from typing import Any
 
+from src.locale.render import render
+
 from ..env import env_nonnegative_int
+
+
+_LOCALE = "ko"
+
+
+def _brief(key: str, **vars: object) -> str:
+    return render(f"runtime.narration.brief.{key}", _LOCALE, **vars)
 
 
 def build_narration_brief(payload: dict[str, Any]) -> str:
@@ -20,25 +29,25 @@ def build_combat_narration_brief(payload: dict[str, Any]) -> str:
     lines = _recent_context_lines(payload)
     lines.extend(
         [
-            "장면 유형: 전투",
-            f"행동: {_combat_action(combat, event)}",
-            f"결과: {_combat_result(combat)}",
+            _brief("scene.combat"),
+            _brief("action", value=_combat_action(combat, event)),
+            _brief("result", value=_combat_result(combat)),
         ]
     )
     outcome = combat.get("outcome")
     if isinstance(outcome, str) and outcome:
-        lines.append(f"전투 상태: {outcome}")
+        lines.append(_brief("combat_state", value=outcome))
     target = _combat_target(combat) or _target_name(payload)
     if target:
-        lines.append(f"대상: {target}")
+        lines.append(_brief("target", value=target))
     facts = _combat_facts(event, combat, payload)
     if facts:
-        lines.append("확정:")
+        lines.append(_brief("confirmed"))
         lines.extend(f"- {fact}" for fact in facts)
     lines.extend(
         [
-            "금지: 피해량, HP 숫자, 새 상태 변화, 새 보상, 전투 종료 창작",
-            "목표: 확정된 전투 결과를 몸의 반응, 거리, 자세, 압박으로 장면화합니다.",
+            _brief("combat_forbid"),
+            _brief("combat_goal"),
         ]
     )
     return "\n".join(lines)
@@ -60,21 +69,21 @@ def _story_transition_brief(
     lines = _recent_context_lines(payload)
     lines.extend(
         [
-            "장면 유형: 사건 전환",
-            f"장소: {_place_name(payload)}",
+            _brief("scene.transition"),
+            _brief("place", value=_place_name(payload)),
         ]
     )
     if completed:
-        lines.append(f"완료: {completed}")
+        lines.append(_brief("completed", value=completed))
     if next_text:
-        lines.append(f"다음: {next_text}")
+        lines.append(_brief("next", value=next_text))
     handoff = transition.get("handoff")
     if isinstance(handoff, str) and handoff:
-        lines.append(f"전환 단서: {handoff}")
+        lines.append(_brief("handoff", value=handoff))
     lines.extend(
         [
-            "금지: 정답 지시, 선택 평가, 다음 사건 결론 공개",
-            "목표: 끝난 사건은 정리하고 다음 사건의 첫 단서만 자연스럽게 남깁니다.",
+            _brief("transition_forbid"),
+            _brief("transition_goal"),
         ]
     )
     return "\n".join(lines)
@@ -87,13 +96,17 @@ def _combat_action(combat: dict[str, Any], event: dict[str, Any]) -> str:
     action = _dict(event.get("action"))
     verb = action.get("verb")
     labels = {
-        "attack": "공격",
-        "defend": "방어",
-        "move": "이동",
-        "speak": "대화",
-        "pass": "대기",
+        "attack": _brief("combat_action.attack"),
+        "defend": _brief("combat_action.defend"),
+        "move": _brief("combat_action.move"),
+        "speak": _brief("combat_action.speak"),
+        "pass": _brief("combat_action.pass"),
     }
-    return labels.get(verb, "전투 행동") if isinstance(verb, str) else "전투 행동"
+    return (
+        labels.get(verb, _brief("combat_action.default"))
+        if isinstance(verb, str)
+        else _brief("combat_action.default")
+    )
 
 
 def _combat_result(combat: dict[str, Any]) -> str:
@@ -102,10 +115,10 @@ def _combat_result(combat: dict[str, Any]) -> str:
         return value
     result = combat.get("exchange_result")
     if result == "success":
-        return "성공"
+        return _brief("outcome.success")
     if result == "failure":
-        return "실패"
-    return "중립"
+        return _brief("outcome.failure")
+    return _brief("outcome.neutral")
 
 
 def _combat_target(combat: dict[str, Any]) -> str:
@@ -130,11 +143,11 @@ def _combat_facts(
     effect = _dict(combat.get("effect"))
     effect_name = effect.get("name")
     if isinstance(effect_name, str) and effect_name:
-        facts.append(f"효과: {effect_name}")
+        facts.append(_brief("effect", value=effect_name))
     for status in _dicts(combat.get("statuses"))[:3]:
         status_name = status.get("name")
         if isinstance(status_name, str) and status_name:
-            facts.append(f"상태: {status_name}")
+            facts.append(_brief("status", value=status_name))
     cards = [
         text
         for item in _dicts(payload.get("result_cards"))
@@ -159,26 +172,46 @@ def _combat_event_fact(event: dict[str, Any]) -> str:
 
 def _roll_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
     outcome = event.get("outcome")
-    result = "성공" if outcome == "success" else "실패"
+    result = (
+        _brief("outcome.success")
+        if outcome == "success"
+        else _brief("outcome.failure")
+    )
     lines = _recent_context_lines(payload)
     lines.extend(
         [
-            "장면 유형: 판정 후",
-            f"장소: {_place_name(payload)}",
-            f"대상: {_target_name(payload)}",
-            f"플레이어 입력: {_player_input(payload)}",
-            f"결과: {result}",
+            _brief("scene.roll"),
+            _brief("place", value=_place_name(payload)),
+            _brief("target", value=_target_name(payload)),
+        ]
+    )
+    revealed_facts = _event_fact_lines(event) if outcome == "success" else []
+    target_facts = (
+        _target_public_knowledge_lines(payload)
+        if outcome == "success" and not revealed_facts
+        else []
+    )
+    if revealed_facts:
+        lines.append(_brief("revealed_facts"))
+        lines.extend(f"- {fact}" for fact in revealed_facts)
+    elif target_facts:
+        lines.append(_brief("target_info"))
+        lines.extend(f"- {fact}" for fact in target_facts)
+    lines.extend(
+        [
+            _brief("player_input", value=_player_input(payload)),
+            _brief("result", value=result),
         ]
     )
     resolved = _strings(event.get("resolved_results"))
     if resolved:
-        lines.append(f"확정: {' / '.join(resolved)}")
+        lines.append(_brief("confirmed_inline", value=" / ".join(resolved)))
     if outcome == "success":
-        lines.append("금지: 실패처럼 흐리는 반응, 확정되지 않은 보상, 새 퀘스트 창작")
-        lines.append("목표: 성공의 귀결을 분명히 쓰고, 근거에 있는 반응이나 다음 여지를 남깁니다.")
+        lines.append(_brief("roll_success_forbid"))
+        lines.append(_brief("roll_success_goal"))
     else:
-        lines.append("금지: 성공처럼 읽히는 단서 획득, 설득 성공, 관계 변화 확정")
-        lines.append("목표: 실패가 분명히 보이되 대화나 재시도 여지는 남깁니다.")
+        lines.append(_brief("roll_failure_forbid"))
+        lines.append(_brief("roll_failure_goal"))
     return "\n".join(lines)
 
 
@@ -187,23 +220,32 @@ def _action_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
     lines = _recent_context_lines(payload)
     lines.extend(
         [
-            f"장면 유형: {kind if isinstance(kind, str) and kind else '일반 행동'}",
-            f"장소: {_place_name(payload)}",
+            _brief(
+                "scene.action",
+                kind=kind
+                if isinstance(kind, str) and kind
+                else _brief("scene.action_default"),
+            ),
+            _brief("place", value=_place_name(payload)),
         ]
     )
     target = _target_name(payload)
     if target:
-        lines.append(f"대상: {target}")
+        lines.append(_brief("target", value=target))
+    target_facts = _target_public_knowledge_lines(payload)
+    if target_facts:
+        lines.append(_brief("target_info"))
+        lines.extend(f"- {fact}" for fact in target_facts)
     player_input = _player_input(payload)
-    if player_input != "없음":
-        lines.append(f"플레이어 입력: {player_input}")
+    if player_input != _brief("none"):
+        lines.append(_brief("player_input", value=player_input))
     resolved = _strings(event.get("resolved_results"))
     if resolved:
-        lines.append(f"확정: {' / '.join(resolved)}")
+        lines.append(_brief("confirmed_inline", value=" / ".join(resolved)))
     lines.extend(
         [
-            "금지: payload에 없는 새 결과, 새 보상, 새 관계 변화",
-            "목표: 확정된 행동 결과를 짧고 구체적인 장면으로 바꿉니다.",
+            _brief("action_forbid"),
+            _brief("action_goal"),
         ]
     )
     return "\n".join(lines)
@@ -222,7 +264,7 @@ def _recent_context_lines(payload: dict[str, Any]) -> list[str]:
     visible_log = [_screen_log_line(item) for item in screen_log]
     visible_log = [line for line in visible_log if line]
     if visible_log:
-        lines.append("화면 로그:")
+        lines.append(_brief("screen_log"))
         lines.extend(f"- {line}" for line in visible_log)
         return lines
 
@@ -232,7 +274,7 @@ def _recent_context_lines(payload: dict[str, Any]) -> list[str]:
         if isinstance(text := item.get("text"), str) and text
     ]
     if recent_narration:
-        lines.append("최근 로그:")
+        lines.append(_brief("recent_log"))
         lines.extend(f"- {text}" for text in recent_narration)
 
     recent_dialogue = []
@@ -244,12 +286,12 @@ def _recent_context_lines(payload: dict[str, Any]) -> list[str]:
         if player_text or narrator_text:
             recent_dialogue.append((player_text, narrator_text))
     if recent_dialogue:
-        lines.append("최근 대화:")
+        lines.append(_brief("recent_dialogue"))
         for player, narrator in recent_dialogue:
             if player:
-                lines.append(f"- 플레이어: {_clip(player)}")
+                lines.append(f"- {_brief('player', value=_clip(player))}")
             if narrator:
-                lines.append(f"- GM: {_clip(narrator)}")
+                lines.append(f"- {_brief('gm', value=_clip(narrator))}")
     return lines
 
 
@@ -257,25 +299,35 @@ def _screen_log_line(entry: dict[str, Any]) -> str:
     kind = entry.get("kind")
     if kind == "gm":
         text = entry.get("text")
-        return f"GM: {_clip(text)}" if isinstance(text, str) and text else ""
+        return _brief("gm", value=_clip(text)) if isinstance(text, str) and text else ""
     if kind == "player":
         text = entry.get("text")
-        return f"플레이어: {_clip(text)}" if isinstance(text, str) and text else ""
+        return (
+            _brief("player", value=_clip(text)) if isinstance(text, str) and text else ""
+        )
     if kind == "act":
         text = entry.get("text")
-        return f"행동: {_clip(text)}" if isinstance(text, str) and text else ""
+        return (
+            _brief("log_action", value=_clip(text))
+            if isinstance(text, str) and text
+            else ""
+        )
     if kind == "roll":
         return _screen_roll_line(entry)
     return ""
 
 
 def _screen_roll_line(entry: dict[str, Any]) -> str:
-    result = "성공" if entry.get("result") == "success" else "실패"
+    result = (
+        _brief("outcome.success")
+        if entry.get("result") == "success"
+        else _brief("outcome.failure")
+    )
     check = entry.get("check")
     roll = entry.get("roll")
     if not isinstance(check, str) or not isinstance(roll, int):
         return ""
-    parts = ["판정:", result, check, f"d20 {roll}"]
+    parts = [_brief("roll_log"), result, check, f"d20 {roll}"]
     total_bonus = sum(
         item["value"]
         for item in _dicts(entry.get("bonus_breakdown"))[1:]
@@ -286,16 +338,16 @@ def _screen_roll_line(entry: dict[str, Any]) -> str:
     margin = entry.get("margin")
     if isinstance(margin, int) and roll not in {1, 20}:
         if margin > 0:
-            parts.append(f"+{margin} 초과")
+            parts.append(_brief("margin_success", margin=margin))
         elif margin < 0:
-            parts.append(f"{-margin} 부족")
+            parts.append(_brief("margin_failure", margin=-margin))
     return " ".join(parts)
 
 
 def _player_input(payload: dict[str, Any]) -> str:
     request = _dict(payload.get("user_request"))
     value = request.get("player_input")
-    return value if isinstance(value, str) and value else "없음"
+    return value if isinstance(value, str) and value else _brief("none")
 
 
 def _place_name(payload: dict[str, Any]) -> str:
@@ -305,7 +357,7 @@ def _place_name(payload: dict[str, Any]) -> str:
         anchor = _dict(scene.get("scene_anchor"))
         place = _dict(anchor.get("location"))
     value = place.get("name")
-    return value if isinstance(value, str) and value else "알 수 없음"
+    return value if isinstance(value, str) and value else _brief("unknown")
 
 
 def _target_name(payload: dict[str, Any]) -> str:
@@ -313,6 +365,36 @@ def _target_name(payload: dict[str, Any]) -> str:
     target = _dict(scene.get("target_view"))
     value = target.get("name")
     return value if isinstance(value, str) and value else ""
+
+
+def _target_public_knowledge_lines(payload: dict[str, Any]) -> list[str]:
+    scene = _dict(payload.get("scene_state"))
+    target = _dict(scene.get("target_view"))
+    out: list[str] = []
+    for item in _dicts(target.get("public_knowledge")):
+        title = item.get("title")
+        summary = item.get("summary")
+        if not isinstance(summary, str) or not summary:
+            continue
+        if isinstance(title, str) and title:
+            out.append(_clip(f"{title}: {summary}"))
+        else:
+            out.append(_clip(summary))
+    return _dedupe(out)
+
+
+def _event_fact_lines(event: dict[str, Any]) -> list[str]:
+    out: list[str] = []
+    for item in _dicts(event.get("revealed_facts")):
+        title = item.get("title")
+        summary = item.get("summary")
+        if not isinstance(summary, str) or not summary:
+            continue
+        if isinstance(title, str) and title:
+            out.append(_clip(f"{title}: {summary}"))
+        else:
+            out.append(_clip(summary))
+    return _dedupe(out)
 
 
 def _dict(value: object) -> dict[str, Any]:

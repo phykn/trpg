@@ -281,7 +281,6 @@ async def test_graph_intro_rate_limited_llm_uses_fallback_narration(tmp_path):
 
 @pytest.mark.asyncio
 async def test_graph_init_emits_flow_debug_timing_logs(tmp_path, monkeypatch, capsys):
-    monkeypatch.setenv("FLOW_DEBUG", "1")
     app = _build_app(tmp_path)
 
     async with _client(app) as client:
@@ -493,19 +492,18 @@ async def test_graph_roll_stream_returns_result_then_roll_narration(
     assert [entry["kind"] for entry in events[0]["payload"]["state"]["log"]] == ["roll"]
     assert (
         "".join(event["text"] for event in events[1:-1])
-        == "장면의 긴장이 짧게 가라앉습니다."
+        == "당신은 살핀 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다. 장면의 긴장이 짧게 가라앉습니다."
     )
     assert events[-1]["payload"]["state"]["log"][-1] == {
         "id": 2,
         "kind": "gm",
-        "text": "장면의 긴장이 짧게 가라앉습니다.",
+        "text": "당신은 살핀 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다. 장면의 긴장이 짧게 가라앉습니다.",
         "outcome": "success",
     }
 
 
 @pytest.mark.asyncio
 async def test_graph_turn_emits_flow_debug_timing_logs(tmp_path, monkeypatch, capsys):
-    monkeypatch.setenv("FLOW_DEBUG", "1")
     app = _build_app(tmp_path)
 
     async with _client(app) as client:

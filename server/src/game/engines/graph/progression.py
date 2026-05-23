@@ -204,16 +204,15 @@ def _auto_completable_location_quest_id(
     active_quest_id: str | None,
     satisfied_location_ids: set[str],
 ) -> str | None:
-    if active_quest_id is not None and status(active_quest_id) == "active":
+    if active_quest_id is None or status(active_quest_id) != "active":
+        return None
+    quest = graph.nodes.get(active_quest_id)
+    if quest is None or quest.type != "quest":
+        return None
+    if quest.properties.get("auto_complete_when_satisfied") is not True:
+        return None
+    if _location_triggers_satisfied(quest, satisfied_location_ids):
         return active_quest_id
-    for quest_id in _quest_ids(graph):
-        if status(quest_id) != "pending":
-            continue
-        quest = graph.nodes[quest_id]
-        if quest.properties.get("auto_complete_when_satisfied") is not True:
-            continue
-        if _location_triggers_satisfied(quest, satisfied_location_ids):
-            return quest_id
     return None
 
 

@@ -14,10 +14,6 @@ from src.env import load_server_env
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SERVER_DIR = Path(__file__).resolve().parent
 
-_TRUE_ENV_VALUES = {"1", "true", "yes", "on"}
-_FALSE_ENV_VALUES = {"", "0", "false", "no", "off"}
-
-
 def _load_env() -> None:
     """Load .env.shared then .env.<APP_ENV> if present (default 'dev'). Missing files are OK — OS env vars (e.g. Render dashboard) suffice; per-key fail-fast still happens at downstream os.environ[...] reads."""
     load_server_env(SERVER_DIR)
@@ -33,18 +29,6 @@ def _normalize_local_paths() -> None:
         if path.is_absolute():
             continue
         os.environ[key] = str((SERVER_DIR / path).resolve())
-
-
-def _env_flag(name: str) -> bool:
-    value = os.environ.get(name)
-    if value is None:
-        return False
-    normalized = value.strip().lower()
-    if normalized in _TRUE_ENV_VALUES:
-        return True
-    if normalized in _FALSE_ENV_VALUES:
-        return False
-    raise ValueError(f"{name} must be one of 1/0, true/false, yes/no, on/off")
 
 
 def build_app(
@@ -104,20 +88,7 @@ def main() -> None:
     _load_env()
     host = os.environ["HOST"]
     port = int(os.environ["PORT"])
-    reload = _env_flag("RELOAD")
-
-    if reload:
-        uvicorn.run(
-            "run_api:create_app",
-            host=host,
-            port=port,
-            factory=True,
-            reload=True,
-            reload_dirs=[str(SERVER_DIR)],
-            reload_includes=["*.py", "*.toml", "*.md"],
-        )
-    else:
-        uvicorn.run(create_app(), host=host, port=port)
+    uvicorn.run(create_app(), host=host, port=port)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,3 @@
-import os
 from collections.abc import AsyncIterator, Sequence
 
 from src.db.repo import GraphRepo, ScenarioRepo
@@ -52,13 +51,6 @@ class GraphInputError(ValueError):
     pass
 
 
-# Classification settings
-
-
-def _classify_temperature() -> float:
-    return float(os.environ.get("LLM_CLASSIFY_TEMPERATURE") or "0.0")
-
-
 def _input_narration_timeout_s(default: float = 30.0) -> float:
     return env_float("GRAPH_INPUT_NARRATION_TIMEOUT_S", default)
 
@@ -71,10 +63,10 @@ def _classify_context_limits() -> ClassifyContextLimits:
         skills=_classify_limit("SKILLS", 8),
         location_items=_classify_limit("LOCATION_ITEMS", 8),
         recent_scene=_classify_limit("RECENT_SCENE", 3),
-        recent_dialogue=_classify_limit("RECENT_DIALOGUE", 5),
+        recent_exchanges=_classify_limit("RECENT_EXCHANGES", 5),
         merchant_stock=_classify_limit("MERCHANT_STOCK", 8),
-        corpses=_classify_limit("CORPSES", 4),
-        corpse_items=_classify_limit("CORPSE_ITEMS", 6),
+        corpses=_classify_limit("CORPSES", 2),
+        corpse_items=_classify_limit("CORPSE_ITEMS", 4),
     )
 
 
@@ -108,7 +100,6 @@ async def run_graph_input_turn(
             ),
         ),
         locale=runtime.progress.locale,
-        temperature=_classify_temperature(),
     )
 
     if output.refuse is not None:
@@ -158,7 +149,6 @@ async def run_graph_input_turn_stream(
             ),
         ),
         locale=runtime.progress.locale,
-        temperature=_classify_temperature(),
     )
 
     if output.refuse is not None:

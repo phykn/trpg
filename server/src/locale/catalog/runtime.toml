@@ -467,12 +467,20 @@ ko = "당신은 살피지만, 눈앞의 흔적은 뚜렷한 답을 내주지 않
 en = "You study the scene, but the traces before you do not yield a clear answer."
 
 [runtime."roll.resolve.speak.success"]
-ko = "당신의 말은 상대에게 닿고, 상대는 더 분명한 반응을 보입니다."
-en = "Your words reach the other person, drawing a clearer response."
+ko = "당신의 말은 {target}에게 닿고, {target}{은/는} 더 분명한 반응을 보입니다."
+en = "Your words reach {target}, drawing a clearer response."
 
 [runtime."roll.resolve.speak.failure"]
-ko = "당신의 말은 닿지만, 상대는 쉽게 마음을 열지 않습니다."
-en = "Your words reach the other person, but they do not open up easily."
+ko = "당신의 말은 닿지만, {target}{은/는} 쉽게 마음을 열지 않습니다."
+en = "Your words reach {target}, but they do not open up easily."
+
+[runtime."roll.suggestion.retry_speak.label"]
+ko = "다시 말 걸기"
+en = "Talk again"
+
+[runtime."roll.suggestion.retry_speak.input"]
+ko = "{target}에게 다시 말을 겁니다"
+en = "Talk to {target} again"
 
 [runtime."roll.resolve.default.success"]
 ko = "당신의 시도는 의도한 성과로 이어집니다."
@@ -485,6 +493,222 @@ en = "Your attempt does not lead to the result you wanted."
 [runtime."social.missing_supplies.reason_known"]
 ko = "주민은 보급품이 사라진 이유를 조심스럽게 털어놓습니다."
 en = "The resident carefully explains why the supplies went missing."
+
+[runtime."narration.brief.scene.combat"]
+ko = "장면 유형: 전투"
+en = "Scene type: combat"
+
+[runtime."narration.brief.scene.transition"]
+ko = "장면 유형: 사건 전환"
+en = "Scene type: story transition"
+
+[runtime."narration.brief.scene.roll"]
+ko = "장면 유형: 판정 후"
+en = "Scene type: after roll"
+
+[runtime."narration.brief.scene.action"]
+ko = "장면 유형: {kind}"
+en = "Scene type: {kind}"
+
+[runtime."narration.brief.scene.action_default"]
+ko = "일반 행동"
+en = "general action"
+
+[runtime."narration.brief.action"]
+ko = "행동: {value}"
+en = "Action: {value}"
+
+[runtime."narration.brief.result"]
+ko = "결과: {value}"
+en = "Result: {value}"
+
+[runtime."narration.brief.combat_state"]
+ko = "전투 상태: {value}"
+en = "Combat state: {value}"
+
+[runtime."narration.brief.target"]
+ko = "대상: {value}"
+en = "Target: {value}"
+
+[runtime."narration.brief.confirmed"]
+ko = "확정:"
+en = "Confirmed:"
+
+[runtime."narration.brief.confirmed_inline"]
+ko = "확정: {value}"
+en = "Confirmed: {value}"
+
+[runtime."narration.brief.place"]
+ko = "장소: {value}"
+en = "Place: {value}"
+
+[runtime."narration.brief.completed"]
+ko = "완료: {value}"
+en = "Completed: {value}"
+
+[runtime."narration.brief.next"]
+ko = "다음: {value}"
+en = "Next: {value}"
+
+[runtime."narration.brief.handoff"]
+ko = "전환 단서: {value}"
+en = "Transition clue: {value}"
+
+[runtime."narration.brief.revealed_facts"]
+ko = "공개된 사실:"
+en = "Revealed facts:"
+
+[runtime."narration.brief.target_info"]
+ko = "대상 정보:"
+en = "Target info:"
+
+[runtime."narration.brief.player_input"]
+ko = "플레이어 입력: {value}"
+en = "Player input: {value}"
+
+[runtime."narration.brief.screen_log"]
+ko = "화면 로그:"
+en = "Screen log:"
+
+[runtime."narration.brief.recent_log"]
+ko = "최근 로그:"
+en = "Recent log:"
+
+[runtime."narration.brief.recent_dialogue"]
+ko = "최근 대화:"
+en = "Recent dialogue:"
+
+[runtime."narration.brief.player"]
+ko = "플레이어: {value}"
+en = "Player: {value}"
+
+[runtime."narration.brief.gm"]
+ko = "GM: {value}"
+en = "GM: {value}"
+
+[runtime."narration.brief.log_action"]
+ko = "행동: {value}"
+en = "Action: {value}"
+
+[runtime."narration.brief.roll_log"]
+ko = "판정:"
+en = "Roll:"
+
+[runtime."narration.brief.margin_success"]
+ko = "+{margin} 초과"
+en = "+{margin} over"
+
+[runtime."narration.brief.margin_failure"]
+ko = "{margin} 부족"
+en = "{margin} short"
+
+[runtime."narration.brief.none"]
+ko = "없음"
+en = "none"
+
+[runtime."narration.brief.unknown"]
+ko = "알 수 없음"
+en = "unknown"
+
+[runtime."narration.brief.outcome.success"]
+ko = "성공"
+en = "success"
+
+[runtime."narration.brief.outcome.failure"]
+ko = "실패"
+en = "failure"
+
+[runtime."narration.brief.outcome.neutral"]
+ko = "중립"
+en = "neutral"
+
+[runtime."narration.brief.combat_action.attack"]
+ko = "공격"
+en = "attack"
+
+[runtime."narration.brief.combat_action.defend"]
+ko = "방어"
+en = "defend"
+
+[runtime."narration.brief.combat_action.move"]
+ko = "이동"
+en = "move"
+
+[runtime."narration.brief.combat_action.speak"]
+ko = "대화"
+en = "talk"
+
+[runtime."narration.brief.combat_action.pass"]
+ko = "대기"
+en = "wait"
+
+[runtime."narration.brief.combat_action.default"]
+ko = "전투 행동"
+en = "combat action"
+
+[runtime."narration.brief.effect"]
+ko = "효과: {value}"
+en = "Effect: {value}"
+
+[runtime."narration.brief.status"]
+ko = "상태: {value}"
+en = "Status: {value}"
+
+[runtime."narration.brief.combat_forbid"]
+ko = "금지: 피해량, HP 숫자, 새 상태 변화, 새 보상, 전투 종료 창작"
+en = "Forbidden: damage numbers, HP numbers, new state changes, new rewards, invented combat end"
+
+[runtime."narration.brief.combat_goal"]
+ko = "목표: 확정된 전투 결과를 몸의 반응, 거리, 자세, 압박으로 장면화합니다."
+en = "Goal: turn confirmed combat results into posture, distance, reaction, and pressure."
+
+[runtime."narration.brief.transition_forbid"]
+ko = "금지: 정답 지시, 선택 평가, 다음 사건 결론 공개"
+en = "Forbidden: answer directives, choice judgment, revealing the next case conclusion"
+
+[runtime."narration.brief.transition_goal"]
+ko = "목표: 끝난 사건은 정리하고 다음 사건의 첫 단서만 자연스럽게 남깁니다."
+en = "Goal: close the completed case and leave only the first clue to the next case."
+
+[runtime."narration.brief.roll_success_forbid"]
+ko = "금지: 실패처럼 흐리는 반응, 확정되지 않은 보상, 새 퀘스트 창작"
+en = "Forbidden: failure-like ambiguity, unconfirmed rewards, invented quests"
+
+[runtime."narration.brief.roll_success_goal"]
+ko = "목표: 성공의 귀결을 분명히 쓰고, 근거에 있는 반응이나 다음 여지를 남깁니다."
+en = "Goal: show the success consequence clearly and leave grounded reaction or next opening."
+
+[runtime."narration.brief.roll_failure_forbid"]
+ko = "금지: 성공처럼 읽히는 단서 획득, 설득 성공, 관계 변화 확정"
+en = "Forbidden: clue gain, persuasion success, or relationship change that reads like success"
+
+[runtime."narration.brief.roll_failure_goal"]
+ko = "목표: 실패가 분명히 보이되 대화나 재시도 여지는 남깁니다."
+en = "Goal: make failure clear while leaving room for conversation or retry."
+
+[runtime."narration.brief.action_forbid"]
+ko = "금지: payload에 없는 새 결과, 새 보상, 새 관계 변화"
+en = "Forbidden: new results, rewards, or relationship changes not in payload"
+
+[runtime."narration.brief.action_goal"]
+ko = "목표: 확정된 행동 결과를 짧고 구체적인 장면으로 바꿉니다."
+en = "Goal: turn confirmed action results into a short concrete scene."
+
+[runtime."narration.clean.generic_action_full"]
+ko = "「당신의 행동이 처리됩니다.」라는 짧은 확인과 함께,"
+en = "\"Your action is handled,\" with a short confirmation,"
+
+[runtime."narration.clean.generic_action_short"]
+ko = "「당신의 행동이 처리됩니다.」라는 확인과 함께,"
+en = "\"Your action is handled,\" with a confirmation,"
+
+[runtime."narration.clean.generic_action_sentence"]
+ko = "당신의 행동이 처리됩니다."
+en = "Your action is handled."
+
+[runtime."narration.clean.choice_word"]
+ko = "선택"
+en = "choice"
 
 [runtime."social.missing_supplies.need_reason"]
 ko = "먼저 주민에게 사라진 보급품의 사정을 들어야 합니다."

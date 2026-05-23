@@ -322,7 +322,7 @@ async def test_json_decode_failures_retry_without_thinking_and_fall_back_to_pass
 
     assert out.actions[0].verb == "pass"
     assert client.thinks == [False, False, False]
-    assert client.temperatures == [0.0, 0.0, 0.0]
+    assert client.temperatures == [None, None, None]
     assert "trailing text" not in "\n".join(
         str(message["content"]) for message in client.messages_by_attempt[1]
     )

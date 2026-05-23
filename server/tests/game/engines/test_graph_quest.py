@@ -157,7 +157,7 @@ def test_character_defeat_trigger_alias_completes_active_quest():
     assert changed.nodes["quest_active"].properties["status"] == "completed"
 
 
-def test_location_enter_trigger_completes_active_quest():
+def test_location_enter_trigger_completes_accepted_pending_quest():
     graph = _graph()
     graph.nodes["quest_active"].properties.update(
         {
@@ -181,10 +181,35 @@ def test_location_enter_trigger_completes_active_quest():
     assert changed.nodes["quest_active"].properties["status"] == "completed"
 
 
-def test_location_enter_trigger_completes_opt_in_pending_quest():
+def test_location_enter_trigger_does_not_complete_pending_quest_before_acceptance():
     graph = _graph()
     graph.nodes["quest_pending"].properties.update(
         {
+            "triggers": [
+                {
+                    "id": "trigger_01",
+                    "name": "마을 도착",
+                    "type": "location_enter",
+                    "target": "town",
+                }
+            ],
+            "auto_complete_when_satisfied": True,
+        }
+    )
+
+    result = plan_quest_progress_for_trigger(graph, "location_enter", "town")
+    changed = _apply_all(graph, result.changes)
+
+    assert result.completed_quest_ids == []
+    assert changed.nodes["quest_pending"].properties.get("triggers_met") is None
+    assert changed.nodes["quest_pending"].properties["status"] == "pending"
+
+
+def test_location_enter_trigger_completes_active_quest():
+    graph = _graph()
+    graph.nodes["quest_pending"].properties.update(
+        {
+            "status": "active",
             "triggers": [
                 {
                     "id": "trigger_01",

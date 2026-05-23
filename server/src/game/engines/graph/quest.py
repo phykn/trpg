@@ -304,11 +304,7 @@ def _is_terminal_status(status: str) -> bool:
 
 
 def _can_progress_for_trigger(quest: GraphNode) -> bool:
-    status = quest_status(quest)
-    return status == "active" or (
-        status == "pending"
-        and quest.properties.get("auto_complete_when_satisfied") is True
-    )
+    return quest_status(quest) == "active"
 
 
 def status_change(quest_id: str, status: QuestStatus) -> SetNodePropertyChange:

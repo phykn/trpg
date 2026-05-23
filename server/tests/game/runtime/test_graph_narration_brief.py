@@ -85,6 +85,123 @@ def test_narration_brief_shows_player_visible_screen_log():
     assert brief.rfind("플레이어 입력:") > brief.find("화면 로그:")
 
 
+def test_roll_brief_includes_target_public_knowledge_as_scene_facts():
+    brief = build_narration_brief(
+        {
+            "user_request": {"player_input": "레아에게 방을 열어야 하는 이유를 묻습니다"},
+            "engine_event": {
+                "kind": "roll",
+                "outcome": "success",
+                "resolved_results": ["매력 판정 성공"],
+            },
+            "scene_state": {
+                "scene_anchor": {"location": {"name": "푸른 비 거리"}},
+                "target_view": {
+                    "name": "레아",
+                    "public_knowledge": [
+                        {
+                            "title": "비워 둔 방",
+                            "summary": "레아의 빈방은 애도의 장소이지만, 방 밖에는 지금 머물 곳이 필요한 사람이 있습니다.",
+                        }
+                    ],
+                },
+            },
+        }
+    )
+
+    assert "대상 정보:" in brief
+    assert "- 비워 둔 방: 레아의 빈방은 애도의 장소이지만, 방 밖에는 지금 머물 곳이 필요한 사람이 있습니다." in brief
+    assert brief.rfind("플레이어 입력:") > brief.find("대상 정보:")
+
+
+def test_roll_brief_uses_revealed_facts_before_target_public_knowledge():
+    brief = build_narration_brief(
+        {
+            "user_request": {"player_input": "장부의 빈 줄을 확인합니다"},
+            "engine_event": {
+                "kind": "roll",
+                "outcome": "success",
+                "revealed_facts": [
+                    {
+                        "title": "잠긴 장부",
+                        "summary": "장부의 빈 줄은 교대자가 일부러 지운 흔적입니다.",
+                    }
+                ],
+                "resolved_results": ["지력 판정 성공"],
+            },
+            "scene_state": {
+                "scene_anchor": {"location": {"name": "광장"}},
+                "target_view": {
+                    "name": "경비병",
+                    "public_knowledge": [
+                        {
+                            "title": "북문 단서",
+                            "summary": "북문 교대 기록이 비어 있습니다.",
+                        }
+                    ],
+                },
+            },
+        }
+    )
+
+    assert "공개된 사실:" in brief
+    assert "- 잠긴 장부: 장부의 빈 줄은 교대자가 일부러 지운 흔적입니다." in brief
+    assert "북문 교대 기록이 비어 있습니다." not in brief
+
+
+def test_failed_roll_brief_omits_target_public_knowledge():
+    brief = build_narration_brief(
+        {
+            "user_request": {"player_input": "레아의 표정을 살핍니다"},
+            "engine_event": {
+                "kind": "roll",
+                "outcome": "failure",
+                "resolved_results": ["지력 판정 실패"],
+            },
+            "scene_state": {
+                "scene_anchor": {"location": {"name": "푸른 비 거리"}},
+                "target_view": {
+                    "name": "레아",
+                    "public_knowledge": [
+                        {
+                            "title": "비워 둔 방",
+                            "summary": "방 밖에는 지금 머물 곳이 필요한 사람이 있습니다.",
+                        }
+                    ],
+                },
+            },
+        }
+    )
+
+    assert "대상 정보:" not in brief
+    assert "방 밖에는 지금 머물 곳이 필요한 사람이 있습니다." not in brief
+
+
+def test_dialogue_brief_includes_target_public_knowledge_before_player_input():
+    brief = build_narration_brief(
+        {
+            "user_request": {"player_input": "항구장에게 출항 규칙을 묻습니다"},
+            "engine_event": {"kind": "dialogue"},
+            "scene_state": {
+                "scene_anchor": {"location": {"name": "안개 항구"}},
+                "target_view": {
+                    "name": "항구장",
+                    "public_knowledge": [
+                        {
+                            "title": "안개 바다의 규칙",
+                            "summary": "안개 바다는 키를 잡는 사람과 물살을 확인하는 사람이 함께 필요합니다.",
+                        }
+                    ],
+                },
+            },
+        }
+    )
+
+    assert "대상 정보:" in brief
+    assert "- 안개 바다의 규칙: 안개 바다는 키를 잡는 사람과 물살을 확인하는 사람이 함께 필요합니다." in brief
+    assert brief.rfind("플레이어 입력:") > brief.find("대상 정보:")
+
+
 def test_narration_brief_respects_screen_log_env_limits(monkeypatch):
     monkeypatch.setenv("GRAPH_NARRATION_SCREEN_LOG_ENTRIES", "1")
     monkeypatch.setenv("GRAPH_NARRATION_BRIEF_LINE_CHARS", "12")

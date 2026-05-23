@@ -453,7 +453,7 @@ async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
     assert logs[1].text == "상대는 당신의 말을 듣고 잠시 생각에 잠깁니다."
     assert progress.turn_count == 1
     narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
-    assert narrate_call["temperature"] == 1.0
+    assert narrate_call["temperature"] is None
 
 
 async def test_graph_input_speak_does_not_store_invented_player_question(tmp_path):
@@ -766,11 +766,7 @@ async def test_graph_input_in_combat_speak_runs_social_exchange(tmp_path, monkey
     assert "combat_narrate" in [call["agent"] for call in llm.calls]
 
 
-async def test_graph_input_passes_env_graph_narrate_temperature(
-    tmp_path,
-    monkeypatch,
-):
-    monkeypatch.setenv("LLM_GRAPH_NARRATE_TEMPERATURE", "0.7")
+async def test_graph_input_uses_llm_default_graph_narrate_temperature(tmp_path):
     repo = await _repo(tmp_path)
     llm = _FakeLLM(
         {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]}
@@ -779,7 +775,7 @@ async def test_graph_input_passes_env_graph_narrate_temperature(
     await run_graph_input_turn(llm, repo, "game-1", "고블린에게 말을 건다")
     narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
 
-    assert narrate_call["temperature"] == 0.7
+    assert narrate_call["temperature"] is None
 
 
 async def test_graph_input_reflects_speak_turn_into_memory_dialogue_and_suggestions(
@@ -873,7 +869,8 @@ async def test_graph_input_passes_focused_context_to_classify(
     assert "player_input" not in payload["context"]
     assert "history" not in payload
     assert "recent_dialogue" not in payload
-    assert payload["context"]["references"]["recent_dialogue"] == [
+    assert "recent_exchanges" not in payload
+    assert payload["context"]["references"]["recent_exchanges"] == [
         {
             "turn": 2,
             "player": "북문에 대해 묻는다",
@@ -882,15 +879,14 @@ async def test_graph_input_passes_focused_context_to_classify(
     ]
 
 
-async def test_graph_input_passes_env_classify_temperature(tmp_path, monkeypatch):
-    monkeypatch.setenv("LLM_CLASSIFY_TEMPERATURE", "0.25")
+async def test_graph_input_uses_llm_default_classify_temperature(tmp_path):
     repo = await _repo(tmp_path)
     llm = _FakeLLM({"actions": [{"verb": "pass"}]}, narration="당신은 잠시 생각합니다.")
 
     await run_graph_input_turn(llm, repo, "game-1", "잠시 기다린다")
 
     classify_call = [call for call in llm.calls if call["agent"] == "classify"][0]
-    assert classify_call["temperature"] == 0.25
+    assert classify_call["temperature"] is None
 
 
 async def test_graph_input_passes_env_classify_context_limits(tmp_path, monkeypatch):

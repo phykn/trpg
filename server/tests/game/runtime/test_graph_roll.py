@@ -1170,6 +1170,21 @@ async def test_run_graph_roll_sends_brief_text_instead_of_raw_json(tmp_path):
     graph.nodes["lea_01"] = _character("lea_01").model_copy(
         update={"properties": {**_character("lea_01").properties, "name": "레아"}}
     )
+    graph.nodes["kn_blue_room"] = GraphNode(
+        id="kn_blue_room",
+        type="knowledge",
+        properties={
+            "title": "비워 둔 방",
+            "summary": "방 밖에는 지금 머물 곳이 필요한 사람이 있습니다.",
+            "visibility": "public",
+        },
+    )
+    graph.edges["has_knowledge:lea_01:kn_blue_room"] = GraphEdge(
+        id="has_knowledge:lea_01:kn_blue_room",
+        type="has_knowledge",
+        from_node_id="lea_01",
+        to_node_id="kn_blue_room",
+    )
     await repo.save_graph("game-1", graph)
     pending = (
         await start_graph_roll(
@@ -1187,6 +1202,8 @@ async def test_run_graph_roll_sends_brief_text_instead_of_raw_json(tmp_path):
     assert "장면 유형: 판정 후" in content
     assert "플레이어 입력: 레아에게 빈방을 다시 열자고 말합니다" in content
     assert "대상: 레아" in content
+    assert "공개된 사실:" in content
+    assert "- 비워 둔 방: 방 밖에는 지금 머물 곳이 필요한 사람이 있습니다." in content
     assert "결과: 성공" in content
     assert "금지: 실패처럼 흐리는 반응, 확정되지 않은 보상, 새 퀘스트 창작" in content
 

@@ -13,7 +13,3 @@ def env_nonnegative_int(name: str, default: int) -> int:
         return max(0, int(raw))
     except ValueError:
         return default
-
-
-def graph_narration_temperature(default: float = 1.0) -> float:
-    return env_float("LLM_GRAPH_NARRATE_TEMPERATURE", default)

@@ -41,7 +41,11 @@ def build_action_narration_payload(
         "kind": dispatch.kind,
         "outcome": dispatch.outcome,
         "action": narration_action_payload(action),
-        "resolved_results": card_texts,
+        "resolved_results": [
+            *card_texts,
+            *_travel_results(before, after),
+            *_arrival_branch_results(before, after),
+        ],
     }
     quest_trigger = _quest_trigger_payload(action, dispatch.kind)
     if quest_trigger is not None:
@@ -107,6 +111,9 @@ def build_roll_narration_payload(
         },
         "resolved_results": resolved_results,
     }
+    revealed_facts = _revealed_fact_payloads(runtime, target) if outcome == "success" else []
+    if revealed_facts:
+        current_event["revealed_facts"] = revealed_facts
     if check_reason:
         current_event["check_reason"] = check_reason
     payload = {
@@ -595,6 +602,37 @@ def _public_knowledge_payloads(
     return out
 
 
+def _revealed_fact_payloads(
+    runtime: GameRuntimeState,
+    node: GraphNode | None,
+) -> list[dict[str, str]]:
+    if node is None:
+        return []
+    out: list[dict[str, str]] = []
+    for edge in edges_from(runtime.graph_index, node.id, "has_knowledge"):
+        knowledge = runtime.graph.nodes.get(edge.to_node_id)
+        if knowledge is None or knowledge.type != "knowledge":
+            continue
+        visibility = node_value(runtime.content, knowledge, "visibility")
+        reveal_on_success = node_value(
+            runtime.content,
+            knowledge,
+            "reveal_on_success",
+        )
+        if visibility != "public" and reveal_on_success is not True:
+            continue
+        payload: dict[str, str] = {"id": knowledge.id}
+        title = node_value(runtime.content, knowledge, "title")
+        if isinstance(title, str) and title:
+            payload["title"] = title
+        summary = node_value(runtime.content, knowledge, "summary")
+        if isinstance(summary, str) and summary:
+            payload["summary"] = summary
+        if len(payload) > 1:
+            out.append(payload)
+    return out
+
+
 def _input_current_event(
     runtime: GameRuntimeState,
     action: Action,
@@ -691,6 +729,76 @@ def _transition_handoff(runtime: GameRuntimeState, quest_id: str) -> str | None:
     if quest is None or quest.type != "quest":
         return None
     return node_text(runtime.content, quest, "handoff")
+
+
+def _arrival_branch_results(
+    before: GameRuntimeState,
+    after: GameRuntimeState,
+) -> list[str]:
+    before_place_id = location_of(before.graph_index, before.progress.player_id)
+    after_place_id = location_of(after.graph_index, after.progress.player_id)
+    if before_place_id == after_place_id or after_place_id is None:
+        return []
+    place = after.graph.nodes.get(after_place_id)
+    if place is None or place.type != "location":
+        return []
+    return [
+        text
+        for branch in _dicts(place.properties.get("arrival_branches"))
+        if (text := _arrival_branch_text(after, branch))
+    ]
+
+
+def _travel_results(
+    before: GameRuntimeState,
+    after: GameRuntimeState,
+) -> list[str]:
+    before_place_id = location_of(before.graph_index, before.progress.player_id)
+    after_place_id = location_of(after.graph_index, after.progress.player_id)
+    if (
+        before_place_id is None
+        or after_place_id is None
+        or before_place_id == after_place_id
+    ):
+        return []
+    for edge in edges_from(after.graph_index, before_place_id, "connects_to"):
+        if edge.to_node_id != after_place_id:
+            continue
+        text = edge.properties.get("travel_text")
+        if isinstance(text, str) and text:
+            return [text]
+    return []
+
+
+def _arrival_branch_text(
+    runtime: GameRuntimeState,
+    branch: dict[str, Any],
+) -> str:
+    property_name = branch.get("inventory_item_property")
+    if not isinstance(property_name, str) or not property_name:
+        return ""
+    if _player_inventory_has_truthy_item_property(runtime, property_name):
+        text = branch.get("text")
+    else:
+        text = branch.get("else_text")
+    return text if isinstance(text, str) and text else ""
+
+
+def _player_inventory_has_truthy_item_property(
+    runtime: GameRuntimeState,
+    property_name: str,
+) -> bool:
+    for item_id in inventory_of(runtime.graph_index, runtime.progress.player_id):
+        item = runtime.graph.nodes.get(item_id)
+        if item is not None and item.properties.get(property_name) is True:
+            return True
+    return False
+
+
+def _dicts(value: object) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
 
 
 def _result_cards(card_texts: list[str]) -> list[dict[str, str]]:

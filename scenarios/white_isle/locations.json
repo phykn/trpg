@@ -35,7 +35,8 @@
         "target": "loc_fog_harbor"
       },
       {
-        "target": "loc_red_square"
+        "target": "loc_red_square",
+        "travel_text": "작은 배가 안개 항구를 떠나 붉은섬 쪽 물길로 들어섭니다."
       }
     ],
     "items": []
@@ -77,7 +78,8 @@
       },
       {
         "target": "loc_blue_street",
-        "requires_quest": "q_red_refund"
+        "requires_quest": "q_red_refund",
+        "travel_text": "배는 붉은섬의 소란을 뒤로 두고 푸른섬 비가 내리는 선착장에 닿습니다."
       }
     ],
     "items": [
@@ -121,7 +123,8 @@
       },
       {
         "target": "loc_gold_shop",
-        "requires_quest": "q_blue_room"
+        "requires_quest": "q_blue_room",
+        "travel_text": "배는 푸른섬의 비를 지나 황금섬 작업장 앞 물가로 건너갑니다."
       }
     ],
     "items": [
@@ -165,7 +168,8 @@
       },
       {
         "target": "loc_green_lodge",
-        "requires_quest": "q_gold_stars"
+        "requires_quest": "q_gold_stars",
+        "travel_text": "배는 황금섬의 빛을 뒤로하고 연두섬의 잔잔한 물가에 다가섭니다."
       }
     ],
     "items": [
@@ -209,7 +213,8 @@
       },
       {
         "target": "loc_purple_hall",
-        "requires_quest": "q_green_permit"
+        "requires_quest": "q_green_permit",
+        "travel_text": "배는 연두섬 여관의 불빛을 멀리 두고 보라섬 예식장 쪽으로 건너갑니다."
       }
     ],
     "items": [
@@ -253,7 +258,8 @@
       },
       {
         "target": "loc_silver_street",
-        "requires_quest": "q_purple_love"
+        "requires_quest": "q_purple_love",
+        "travel_text": "배는 보라섬의 장식과 음악을 지나 은빛섬의 깨끗한 거리 앞에 닿습니다."
       }
     ],
     "items": [
@@ -300,7 +306,8 @@
       },
       {
         "target": "loc_orange_square",
-        "requires_quest": "q_silver_meal"
+        "requires_quest": "q_silver_meal",
+        "travel_text": "배는 은빛섬의 밝은 물가를 떠나 주황섬 축하식 무대가 보이는 곳으로 들어섭니다."
       }
     ],
     "items": [
@@ -344,7 +351,8 @@
       },
       {
         "target": "loc_white_sea",
-        "requires_quest": "q_orange_joy"
+        "requires_quest": "q_orange_joy",
+        "travel_text": "배는 주황섬의 리본을 뒤로하고 흰섬을 향한 마지막 바다로 나아갑니다."
       }
     ],
     "items": [
@@ -384,7 +392,8 @@
     ],
     "connections": [
       {
-        "target": "loc_white_harbor"
+        "target": "loc_white_harbor",
+        "travel_text": "배는 흰섬 앞 바다를 가르고 흰섬 항구의 낮은 선착장에 닿습니다."
       }
     ],
     "items": []
@@ -394,6 +403,13 @@
     "name": "흰섬 항구",
     "description": "흰섬 항구에는 검사소도 보관소도 심판자도 없습니다. 항구 끝에는 바다를 향한 빈 의자들이 조용히 놓여 있습니다.",
     "mood": "도착했다는 사실 외에는 아무것도 요구하지 않는 고요함입니다.",
+    "arrival_branches": [
+      {
+        "inventory_item_property": "black_weight",
+        "text": "검은 물건의 무게가 배를 기울게 합니다. 엘리는 물에 빠지고, 당신은 혼자 흰섬 항구에 도착합니다.",
+        "else_text": "배는 끝까지 균형을 잃지 않습니다. 당신과 엘리는 함께 흰섬 항구에 도착합니다."
+      }
+    ],
     "traits": [
       "발자국은 모래에 오래 남지 않습니다.",
       "항구의 종은 울리지 않습니다."

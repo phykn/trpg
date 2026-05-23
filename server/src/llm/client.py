@@ -111,15 +111,16 @@ class LLMClient:
     ):
         if "default" not in profiles:
             raise ValueError("profiles must include a 'default' entry")
+        env_timeout = _env_float("LLM_TIMEOUT_S", 120.0)
         chat_t = (
             chat_timeout_s
             if chat_timeout_s is not None
-            else _env_float("LLM_CHAT_TIMEOUT_S", 60.0)
+            else env_timeout
         )
         stream_t = (
             stream_timeout_s
             if stream_timeout_s is not None
-            else _env_float("LLM_STREAM_TIMEOUT_S", 180.0)
+            else env_timeout
         )
         self._providers: dict[str, _Provider] = {
             name: _Provider(p, chat_t, stream_t) for name, p in profiles.items()

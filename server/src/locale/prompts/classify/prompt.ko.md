@@ -93,6 +93,7 @@
 - `context.identity.active_quest`: 현재 퀘스트
 - `context.identity.available_quests`: 현재 장소에서 보이는 의뢰인에게 수락할 수 있는 퀘스트
 - `context.references`: 지시어 해소용
+- `context.references.recent_exchanges`: 최근 플레이어 입력과 나레이터 응답 쌍. 대명사와 "아까 말한 것" 같은 문맥 해소에만 사용
 - `context.budget`: 잘린 후보 수
 
 모든 id는 context에 실제로 있어야 합니다.

@@ -25,13 +25,12 @@ def test_client_uses_env_timeouts(monkeypatch):
         def __init__(self, *, base_url, api_key, timeout):
             captured.append(timeout)
 
-    monkeypatch.setenv("LLM_CHAT_TIMEOUT_S", "12.5")
-    monkeypatch.setenv("LLM_STREAM_TIMEOUT_S", "45.5")
+    monkeypatch.setenv("LLM_TIMEOUT_S", "12.5")
     monkeypatch.setattr("src.llm.client.AsyncOpenAI", _FakeOpenAI)
 
     _client()
 
-    assert captured == [12.5, 45.5]
+    assert captured == [12.5, 12.5]
 
 
 def test_client_explicit_timeouts_override_env(monkeypatch):
@@ -41,8 +40,7 @@ def test_client_explicit_timeouts_override_env(monkeypatch):
         def __init__(self, *, base_url, api_key, timeout):
             captured.append(timeout)
 
-    monkeypatch.setenv("LLM_CHAT_TIMEOUT_S", "12.5")
-    monkeypatch.setenv("LLM_STREAM_TIMEOUT_S", "45.5")
+    monkeypatch.setenv("LLM_TIMEOUT_S", "12.5")
     monkeypatch.setattr("src.llm.client.AsyncOpenAI", _FakeOpenAI)
 
     profile = LLMProfile(
@@ -199,7 +197,6 @@ async def test_force_think_override_is_scoped(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_chat_diag_includes_provider_route(monkeypatch, capsys):
-    monkeypatch.setenv("FLOW_DEBUG", "1")
     client = _client()
 
     async def fake_create(**kwargs):

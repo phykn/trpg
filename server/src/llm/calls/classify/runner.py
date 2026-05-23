@@ -24,7 +24,7 @@ async def classify(
     retries: int = 5,
     *,
     strict: bool = False,
-    temperature: float = 0.0,
+    temperature: float | None = None,
 ) -> ActionOutput:
     grounding_view = classify_context_to_grounding_view(input_.context)
     in_combat = input_.context.get("mode") == "combat"

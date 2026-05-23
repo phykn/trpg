@@ -7,11 +7,15 @@ from pydantic import BaseModel, Field, ValidationError
 
 from src.db.repo import GraphRepo
 from src.game.domain.memory import DialoguePair, GMLogEntry, NarrationCue, TurnLogEntry
+from src.locale.render import render
 from src.llm.diag import llm_diag
 
 from ..env import env_nonnegative_int
 from ..state import GameRuntimeState
 from .suggestions import GraphSuggestion, normalize_suggestion
+
+
+_LOCALE = "ko"
 
 
 def _narration_meta_marker(default: str = "---TRPG_META---") -> str:
@@ -145,12 +149,13 @@ def _clean_narration(text: str) -> str:
 def _clean_visible_narration_text(text: str, *, strip: bool = True) -> str:
     cleaned = text.replace("،", ",")
     for phrase in (
-        "「당신의 행동이 처리됩니다.」라는 짧은 확인과 함께,",
-        "「당신의 행동이 처리됩니다.」라는 확인과 함께,",
-        "당신의 행동이 처리됩니다.",
+        render("runtime.narration.clean.generic_action_full", _LOCALE),
+        render("runtime.narration.clean.generic_action_short", _LOCALE),
+        render("runtime.narration.clean.generic_action_sentence", _LOCALE),
     ):
         cleaned = cleaned.replace(phrase, "")
-    cleaned = re.sub(r"선택\([^)]*\)", "선택", cleaned)
+    choice = render("runtime.narration.clean.choice_word", _LOCALE)
+    cleaned = re.sub(rf"{re.escape(choice)}\([^)]*\)", choice, cleaned)
     cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
     return cleaned.strip() if strip else cleaned
 

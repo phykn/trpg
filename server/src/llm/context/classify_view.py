@@ -26,10 +26,11 @@ class ClassifyContextLimits:
     skills: int = 8
     location_items: int = 8
     recent_scene: int = 3
-    recent_dialogue: int = 5
+    # Recent player input + narrator reply pairs used for pronoun/context resolution.
+    recent_exchanges: int = 5
     merchant_stock: int = 8
-    corpses: int = 4
-    corpse_items: int = 6
+    corpses: int = 2
+    corpse_items: int = 4
 
 
 def build_classify_context_view(
@@ -98,7 +99,7 @@ def build_classify_context_view(
             "last_target": _last_entity_ref(runtime),
             "last_item": _last_entity_ref(runtime, entity_types={"item"}),
             "recent_scene": _recent_scene(runtime, limits),
-            "recent_dialogue": _recent_dialogue(runtime, limits),
+            "recent_exchanges": _recent_exchanges(runtime, limits),
         },
         "budget": {
             "visible_targets_omitted": max(
@@ -475,13 +476,14 @@ def _last_entity_ref(
     return _node_ref(runtime, node)
 
 
-def _recent_dialogue(
+def _recent_exchanges(
     runtime: GameRuntimeState,
     limits: ClassifyContextLimits,
 ) -> list[dict[str, Any]]:
+    """Recent player input + narrator reply pairs, not free-form NPC memory."""
     return [
         {"turn": pair.turn, "player": pair.player, "summary": pair.narrator}
-        for pair in runtime.recent_dialogue[-limits.recent_dialogue :]
+        for pair in runtime.recent_dialogue[-limits.recent_exchanges :]
     ]
 
 

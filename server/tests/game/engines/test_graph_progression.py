@@ -153,7 +153,7 @@ def test_progression_keeps_pending_required_quest_when_active_slot_opens():
     assert changed.nodes["q2"].properties["status"] == "pending"
 
 
-def test_progression_auto_completes_opt_in_pending_location_quest_already_satisfied():
+def test_progression_does_not_auto_complete_pending_location_quest_before_acceptance():
     graph = _graph()
     graph.nodes["chapter_01"].properties["status"] = "completed"
     graph.nodes["chapter_02"].properties["status"] = "active"
@@ -169,6 +169,31 @@ def test_progression_auto_completes_opt_in_pending_location_quest_already_satisf
         graph,
         completed_quest_ids=["q1"],
         active_quest_id="q1",
+        satisfied_location_ids={"forest"},
+    )
+    changed = _apply_all(graph, result.changes)
+
+    assert result.auto_completed_quest_ids == []
+    assert changed.nodes["q2"].properties.get("triggers_met") is None
+    assert changed.nodes["q2"].properties["status"] == "pending"
+
+
+def test_progression_auto_completes_active_location_quest_already_satisfied():
+    graph = _graph()
+    graph.nodes["chapter_01"].properties["status"] = "completed"
+    graph.nodes["chapter_02"].properties["status"] = "active"
+    graph.nodes["q2"].properties.update(
+        {
+            "status": "active",
+            "triggers": [{"type": "location_enter", "target": "forest"}],
+            "auto_complete_when_satisfied": True,
+        }
+    )
+
+    result = plan_progression_after_quest_completion(
+        graph,
+        completed_quest_ids=["q1"],
+        active_quest_id="q2",
         satisfied_location_ids={"forest"},
     )
     changed = _apply_all(graph, result.changes)

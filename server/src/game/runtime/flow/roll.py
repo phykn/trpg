@@ -28,7 +28,6 @@ from src.game.engines.graph.quest import (
 )
 from src.game.rules.dc import compute_grade, pick_dc
 from src.locale.labels import roll_dice_label, stat_label
-from src.locale.ko.particles import eun_neun
 from src.locale.render import render
 from src.llm.calls.runner import get_prompt
 from src.llm.client import LLMClient
@@ -57,7 +56,7 @@ from ..request_result import (
     roll_required_result,
 )
 from ..state import GameRuntimeState
-from ..env import env_float, graph_narration_temperature
+from ..env import env_float
 from .turn import (
     run_graph_action_turn_from_runtime,
     run_graph_action_turn_from_runtime_stream,
@@ -99,10 +98,6 @@ def _default_roll_dc(default: int = 13) -> int:
 
 def _roll_narration_timeout_s(default: float = 30.0) -> float:
     return env_float("GRAPH_ROLL_NARRATION_TIMEOUT_S", default)
-
-
-def _narration_temperature(default: float = 1.0) -> float:
-    return graph_narration_temperature(default)
 
 
 async def start_graph_roll(
@@ -551,7 +546,6 @@ async def _stream_roll_narration(
                 messages,
                 think=False,
                 agent="graph_narrate",
-                temperature=_narration_temperature(),
             ):
                 answer = part.get("answer")
                 if isinstance(answer, str) and answer:
@@ -594,7 +588,6 @@ async def _build_roll_narration(
                 messages,
                 think=False,
                 agent="graph_narrate",
-                temperature=_narration_temperature(),
             ),
             timeout=_roll_narration_timeout_s(),
         )
@@ -836,12 +829,17 @@ def _roll_result_suggestions(
     if target is None:
         return suggestions
     target_name = node_label(runtime.content, target)
+    locale = runtime.progress.locale
     return filter_grounded_suggestions(
         runtime,
         [
             GraphSuggestion(
-                label="다시 말 걸기",
-                input_text=f"{target_name}에게 다시 말을 겁니다",
+                label=render("runtime.roll.suggestion.retry_speak.label", locale),
+                input_text=render(
+                    "runtime.roll.suggestion.retry_speak.input",
+                    locale,
+                    target=target_name,
+                ),
                 intent="talk",
             )
         ],
@@ -892,21 +890,16 @@ def _ensure_roll_resolution_text(resolved: _ResolvedGraphRoll, text: str) -> str
 
 
 def _roll_resolution_text(resolved: _ResolvedGraphRoll) -> str:
-    text = render(
-        _roll_resolution_key(resolved.action, resolved.outcome),
-        resolved.runtime.progress.locale,
-    )
+    locale = resolved.runtime.progress.locale
+    key = _roll_resolution_key(resolved.action, resolved.outcome)
     if resolved.action.verb != "speak":
-        return text
+        return render(key, locale)
     target_id = _action_target(resolved.action)
     target = resolved.runtime.graph.nodes.get(target_id) if target_id else None
     if target is None:
-        return text
+        return render("runtime.roll.resolve.default." + resolved.outcome, locale)
     target_name = node_label(resolved.runtime.content, target)
-    return text.replace("상대는", f"{target_name}{eun_neun(target_name)}").replace(
-        "상대에게",
-        f"{target_name}에게",
-    )
+    return render(key, locale, target=target_name)
 
 
 def _clean_roll_meta_phrase(text: str) -> str:

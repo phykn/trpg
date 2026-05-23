@@ -168,7 +168,6 @@ async def _skill_candidates(
             retry_on=(ValidationError, json.JSONDecodeError),
             retries=3,
             agent="recommend",
-            temperature=0.8,
         )
         candidates = _apply_flavors(templates, out.skills)
         engine_diag("levelup:choices_llm_ok", candidates=len(candidates))

@@ -203,20 +203,31 @@ def test_classify_context_accepts_view_limits_as_input():
             visible_targets=2,
             inventory=2,
             skills=1,
-            recent_dialogue=2,
+            recent_exchanges=2,
         ),
     )
 
     assert len(context["identity"]["visible_targets"]) == 2
     assert len(context["identity"]["inventory"]) == 2
     assert len(context["identity"]["skills"]) == 1
-    assert context["references"]["recent_dialogue"] == [
+    assert context["references"]["recent_exchanges"] == [
         {"turn": 3, "player": "질문 3", "summary": "요약 3"},
         {"turn": 4, "player": "질문 4", "summary": "요약 4"},
     ]
     assert context["budget"]["visible_targets_omitted"] == 3
     assert context["budget"]["inventory_omitted"] == 2
     assert context["budget"]["skills_omitted"] == 2
+
+
+def test_classify_context_keeps_last_five_recent_exchanges_by_default():
+    runtime = _runtime(dialogue_count=7)
+
+    context = build_classify_context_view(runtime, "그 말을 이어갑니다")
+
+    assert context["references"]["recent_exchanges"] == [
+        {"turn": turn, "player": f"질문 {turn}", "summary": f"요약 {turn}"}
+        for turn in range(3, 8)
+    ]
 
 
 def test_classify_context_to_grounding_view_preserves_grounding_ids():

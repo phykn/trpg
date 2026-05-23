@@ -1,6 +1,6 @@
 """Per-turn stderr diagnostic logger.
 
-On by default (set `FLOW_DEBUG=0` to mute). Emits one structured line per
+Always emits one structured line per
 key event so Render Logs is grep-friendly. Built for intermittent gemma
 stochastic failures where post-mortem needs to see which action classify
 produced and which dispatch path ran, and for spotting which step is
@@ -19,8 +19,6 @@ spending the wall-clock time.
   spent inside the engine or waiting on a model call.
 
 ## Entrypoints
-
-All three are safe no-ops when `FLOW_DEBUG=0`.
 
 - `diag(game_id, turn, tag, **kv)` — code with explicit game id and turn.
   Layer = engine.
@@ -56,7 +54,6 @@ LLM layer (via `llm_diag`, gid/turn from contextvars):
    the right LAYER prefix.
 """
 
-import os
 import sys
 import time
 from contextvars import ContextVar
@@ -66,10 +63,6 @@ from typing import Any
 _GID: ContextVar[str | None] = ContextVar("_diag_gid", default=None)
 _TURN: ContextVar[int | None] = ContextVar("_diag_turn", default=None)
 _LAST_T: ContextVar[float | None] = ContextVar("_diag_last_t", default=None)
-
-
-def _enabled() -> bool:
-    return os.getenv("FLOW_DEBUG", "1") != "0"
 
 
 def set_diag_context(game_id: str, turn: int) -> None:
@@ -104,22 +97,16 @@ def _emit(
 
 def diag(game_id: str, turn: int, tag: str, **kv: Any) -> None:
     """Engine-layer diag with explicit gid/turn."""
-    if not _enabled():
-        return
     _emit("engine", game_id, turn, tag, kv)
 
 
 def engine_diag(tag: str, **kv: Any) -> None:
     """Engine-layer diag using contextvars set by `set_diag_context`. For
     code that runs under a route but doesn't receive progress directly."""
-    if not _enabled():
-        return
     _emit("engine", _GID.get(), _TURN.get(), tag, kv)
 
 
 def llm_diag(tag: str, **kv: Any) -> None:
     """LLM-layer diag using contextvars set by `set_diag_context`. Lines fall
     back to `gid=------ turn=?` if context wasn't primed (test paths)."""
-    if not _enabled():
-        return
     _emit("llm", _GID.get(), _TURN.get(), tag, kv)

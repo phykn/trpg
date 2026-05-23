@@ -244,6 +244,161 @@ def test_input_payload_includes_recent_context_and_keeps_player_input():
     assert "recent_narration" not in payload
 
 
+def test_action_payload_adds_arrival_branch_when_inventory_property_matches():
+    before = _runtime()
+    after = _runtime()
+    after.graph.nodes["arrival_dock"] = GraphNode(
+        id="arrival_dock",
+        type="location",
+        properties={
+            "name": "도착 선착장",
+            "arrival_branches": [
+                {
+                    "inventory_item_property": "route_marker",
+                    "text": "표식이 있는 도착 결과가 적용됩니다.",
+                    "else_text": "표식이 없는 도착 결과가 적용됩니다.",
+                }
+            ],
+        },
+    )
+    after.graph.nodes["marked_item"] = GraphNode(
+        id="marked_item",
+        type="item",
+        properties={"name": "표식 물건", "route_marker": True},
+    )
+    after.graph.edges.pop("located_at:player_01:square")
+    after.graph.edges["located_at:player_01:arrival_dock"] = GraphEdge(
+        id="located_at:player_01:arrival_dock",
+        type="located_at",
+        from_node_id="player_01",
+        to_node_id="arrival_dock",
+    )
+    after.graph.edges["carries:player_01:marked_item"] = GraphEdge(
+        id="carries:player_01:marked_item",
+        type="carries",
+        from_node_id="player_01",
+        to_node_id="marked_item",
+    )
+
+    payload = build_action_narration_payload(
+        before=before,
+        after=after,
+        action=Action(verb="move", to="arrival_dock"),
+        dispatch=GraphActionDispatchResult(
+            runtime=after,
+            kind="move",
+            applied=1,
+            changed_node_ids=[],
+            changed_edge_ids=[],
+            removed_edge_ids=[],
+            outcome="moved",
+        ),
+        card_texts=["도착 선착장으로 이동합니다."],
+    )
+
+    assert (
+        "표식이 있는 도착 결과가 적용됩니다."
+        in payload["engine_event"]["resolved_results"]
+    )
+
+
+def test_action_payload_adds_connection_travel_text_on_location_change():
+    before = _runtime()
+    after = _runtime()
+    after.graph.nodes["arrival_dock"] = GraphNode(
+        id="arrival_dock",
+        type="location",
+        properties={"name": "도착 선착장"},
+    )
+    before.graph.edges["connects_to:square:arrival_dock"] = GraphEdge(
+        id="connects_to:square:arrival_dock",
+        type="connects_to",
+        from_node_id="square",
+        to_node_id="arrival_dock",
+        properties={
+            "travel_text": "배는 광장을 떠나 물길을 건너 도착 선착장에 닿습니다."
+        },
+    )
+    after.graph.edges["connects_to:square:arrival_dock"] = before.graph.edges[
+        "connects_to:square:arrival_dock"
+    ]
+    after.graph.edges.pop("located_at:player_01:square")
+    after.graph.edges["located_at:player_01:arrival_dock"] = GraphEdge(
+        id="located_at:player_01:arrival_dock",
+        type="located_at",
+        from_node_id="player_01",
+        to_node_id="arrival_dock",
+    )
+
+    payload = build_action_narration_payload(
+        before=before,
+        after=after,
+        action=Action(verb="move", to="arrival_dock"),
+        dispatch=GraphActionDispatchResult(
+            runtime=after,
+            kind="move",
+            applied=1,
+            changed_node_ids=[],
+            changed_edge_ids=[],
+            removed_edge_ids=[],
+            outcome="moved",
+        ),
+        card_texts=["도착 선착장으로 이동합니다."],
+    )
+
+    assert (
+        "배는 광장을 떠나 물길을 건너 도착 선착장에 닿습니다."
+        in payload["engine_event"]["resolved_results"]
+    )
+
+
+def test_action_payload_adds_arrival_branch_else_text_without_matching_item():
+    before = _runtime()
+    after = _runtime()
+    after.graph.nodes["arrival_dock"] = GraphNode(
+        id="arrival_dock",
+        type="location",
+        properties={
+            "name": "도착 선착장",
+            "arrival_branches": [
+                {
+                    "inventory_item_property": "route_marker",
+                    "text": "표식이 있는 도착 결과가 적용됩니다.",
+                    "else_text": "표식이 없는 도착 결과가 적용됩니다.",
+                }
+            ],
+        },
+    )
+    after.graph.edges.pop("located_at:player_01:square")
+    after.graph.edges["located_at:player_01:arrival_dock"] = GraphEdge(
+        id="located_at:player_01:arrival_dock",
+        type="located_at",
+        from_node_id="player_01",
+        to_node_id="arrival_dock",
+    )
+
+    payload = build_action_narration_payload(
+        before=before,
+        after=after,
+        action=Action(verb="move", to="arrival_dock"),
+        dispatch=GraphActionDispatchResult(
+            runtime=after,
+            kind="move",
+            applied=1,
+            changed_node_ids=[],
+            changed_edge_ids=[],
+            removed_edge_ids=[],
+            outcome="moved",
+        ),
+        card_texts=["도착 선착장으로 이동합니다."],
+    )
+
+    assert (
+        "표식이 없는 도착 결과가 적용됩니다."
+        in payload["engine_event"]["resolved_results"]
+    )
+
+
 def test_roll_payload_keeps_original_player_input_and_marks_preroll_text():
     runtime = _runtime()
     runtime.log_entries.append(
@@ -300,6 +455,96 @@ def test_roll_payload_keeps_original_player_input_and_marks_preroll_text():
         "traits": ["업무적", "간결함"],
     }
     assert "숨은 단서" not in json.dumps(payload, ensure_ascii=False)
+
+
+def test_success_roll_payload_exposes_reveal_on_success_private_knowledge():
+    runtime = _runtime()
+    runtime.graph.nodes["success_clue"] = GraphNode(
+        id="success_clue",
+        type="knowledge",
+        properties={
+            "title": "잠긴 장부",
+            "summary": "장부의 빈 줄은 교대자가 일부러 지운 흔적입니다.",
+            "visibility": "private",
+            "reveal_on_success": True,
+        },
+    )
+    runtime.graph.edges["has_knowledge:guard_01:success_clue"] = GraphEdge(
+        id="has_knowledge:guard_01:success_clue",
+        type="has_knowledge",
+        from_node_id="guard_01",
+        to_node_id="success_clue",
+    )
+    runtime = runtime.model_copy(update={"graph": runtime.graph})
+
+    payload = build_roll_narration_payload(
+        runtime=runtime,
+        action=Action(verb="perceive", what="guard_01"),
+        pending={"player_input": "경비병의 장부를 자세히 살핍니다"},
+        roll_entry=RollLogEntry(
+            id=3,
+            kind="roll",
+            check="지력",
+            roll=18,
+            margin=5,
+            result="success",
+        ),
+        outcome="success",
+    )
+
+    assert payload["engine_event"]["revealed_facts"] == [
+        {
+            "id": "public_clue",
+            "title": "북문 단서",
+            "summary": "북문 교대 기록이 비어 있습니다.",
+        },
+        {
+            "id": "success_clue",
+            "title": "잠긴 장부",
+            "summary": "장부의 빈 줄은 교대자가 일부러 지운 흔적입니다.",
+        },
+    ]
+    target_view = payload["scene_state"]["target_view"]
+    assert "success_clue" not in json.dumps(target_view, ensure_ascii=False)
+
+
+def test_failed_roll_payload_does_not_expose_reveal_on_success_private_knowledge():
+    runtime = _runtime()
+    runtime.graph.nodes["success_clue"] = GraphNode(
+        id="success_clue",
+        type="knowledge",
+        properties={
+            "title": "잠긴 장부",
+            "summary": "장부의 빈 줄은 교대자가 일부러 지운 흔적입니다.",
+            "visibility": "private",
+            "reveal_on_success": True,
+        },
+    )
+    runtime.graph.edges["has_knowledge:guard_01:success_clue"] = GraphEdge(
+        id="has_knowledge:guard_01:success_clue",
+        type="has_knowledge",
+        from_node_id="guard_01",
+        to_node_id="success_clue",
+    )
+    runtime = runtime.model_copy(update={"graph": runtime.graph})
+
+    payload = build_roll_narration_payload(
+        runtime=runtime,
+        action=Action(verb="perceive", what="guard_01"),
+        pending={"player_input": "경비병의 장부를 자세히 살핍니다"},
+        roll_entry=RollLogEntry(
+            id=3,
+            kind="roll",
+            check="지력",
+            roll=8,
+            margin=-5,
+            result="fail",
+        ),
+        outcome="failure",
+    )
+
+    assert "revealed_facts" not in payload["engine_event"]
+    assert "잠긴 장부" not in json.dumps(payload, ensure_ascii=False)
 
 
 def test_roll_payload_keeps_check_reason_without_preroll_narration():
