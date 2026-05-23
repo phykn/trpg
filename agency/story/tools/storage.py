@@ -39,7 +39,7 @@ def _content_type(path: Path) -> str:
     return "application/octet-stream"
 
 
-async def _upload_async(local: Path) -> None:
+async def _upload_async(local: Path, *, replace: bool = False) -> None:
     url = os.environ["SUPABASE_URL"]
     key = os.environ["SUPABASE_SERVICE_KEY"]
     bucket = os.environ["SUPABASE_SCENARIO_BUCKET"]
@@ -47,6 +47,9 @@ async def _upload_async(local: Path) -> None:
     profile = local.name
     print(f"uploading {local} -> {bucket}/{profile}/")
     try:
+        if replace:
+            deleted = await _delete_profile_objects(fs, profile)
+            print(f"  deleted existing {profile}/ objects: {deleted}")
         files = sorted(p for p in local.rglob("*") if p.is_file())
         if not files:
             print("  (no files)")
@@ -68,12 +71,44 @@ def _cmd_upload(args: argparse.Namespace) -> int:
         print(f"upload failed: not a directory: {local}", file=sys.stderr)
         return 1
     try:
-        asyncio.run(_upload_async(local))
+        asyncio.run(_upload_async(local, replace=args.replace))
     except KeyError as e:
         print(f"upload failed: missing env var: {e}", file=sys.stderr)
         return 1
     except Exception as e:
         return _fail("upload", e)
+    print("OK")
+    return 0
+
+
+async def _delete_profile_objects(fs: _Storage, profile: str) -> int:
+    keys = await _walk_storage(fs, profile)
+    for index in range(0, len(keys), 1000):
+        await fs.delete_paths(keys[index : index + 1000])
+    return len(keys)
+
+
+async def _delete_async(profile: str) -> None:
+    url = os.environ["SUPABASE_URL"]
+    key = os.environ["SUPABASE_SERVICE_KEY"]
+    bucket = os.environ["SUPABASE_SCENARIO_BUCKET"]
+    fs = _Storage(url, key, bucket)
+    print(f"deleting {bucket}/{profile}/")
+    try:
+        deleted = await _delete_profile_objects(fs, profile)
+        print(f"done - {deleted} files deleted")
+    finally:
+        await fs.aclose()
+
+
+def _cmd_delete(args: argparse.Namespace) -> int:
+    try:
+        asyncio.run(_delete_async(args.profile))
+    except KeyError as e:
+        print(f"delete failed: missing env var: {e}", file=sys.stderr)
+        return 1
+    except Exception as e:
+        return _fail("delete", e)
     print("OK")
     return 0
 
@@ -142,7 +177,16 @@ def _build_parser() -> argparse.ArgumentParser:
 
     sp_up = sub.add_parser("upload", help="upload a local scenario directory")
     sp_up.add_argument("scenario_dir", help="local scenario directory")
+    sp_up.add_argument(
+        "--replace",
+        action="store_true",
+        help="delete existing objects under this profile before upload",
+    )
     sp_up.set_defaults(func=_cmd_upload)
+
+    sp_del = sub.add_parser("delete", help="delete a scenario profile from storage")
+    sp_del.add_argument("profile", help="scenario profile")
+    sp_del.set_defaults(func=_cmd_delete)
 
     sp_dl = sub.add_parser("download", help="download a scenario directory")
     sp_dl.add_argument("profile", help="scenario profile")

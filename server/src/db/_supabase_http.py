@@ -133,6 +133,21 @@ class _Storage:
         if r.status_code >= 300:
             raise PersistenceFailed(f"storage put {path}: {r.status_code} {r.text}")
 
+    async def delete_paths(self, paths: list[str]) -> None:
+        """Delete one or more storage objects."""
+        if not paths:
+            return
+        url = f"{self._base}/object/{self._bucket}"
+        headers = {**self._headers, "Content-Type": "application/json"}
+        r = await self._client.request(
+            "DELETE",
+            url,
+            headers=headers,
+            content=json.dumps({"prefixes": paths}),
+        )
+        if r.status_code >= 300:
+            raise PersistenceFailed(f"storage delete: {r.status_code} {r.text}")
+
     async def _list_objects(self, prefix: str, *, label: str) -> list[dict[str, Any]]:
         url = f"{self._base}/object/list/{self._bucket}"
         body = {

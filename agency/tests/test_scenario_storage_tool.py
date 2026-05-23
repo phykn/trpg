@@ -38,3 +38,39 @@ def test_upload_uploads_every_file(capsys, tmp_path, fake_storage_env):
     keys = [call.args[0] for call in fake.put_bytes.await_args_list]
     assert "default/world.md" in keys
     assert "default/items/sword.json" in keys
+
+
+def test_upload_replace_deletes_existing_profile_first(capsys, tmp_path, fake_storage_env):
+    sd = tmp_path / "white_isle"
+    sd.mkdir()
+    (sd / "world.md").write_text("테스트", encoding="utf-8")
+
+    fake = AsyncMock()
+    fake.list_prefix = AsyncMock(side_effect=[["old.json"], ["old.json"]])
+    fake.list_dirs = AsyncMock(side_effect=[["items"], []])
+    fake.delete_paths = AsyncMock(return_value=None)
+    fake.put_bytes = AsyncMock(return_value=None)
+    fake.aclose = AsyncMock(return_value=None)
+
+    with patch("agency.story.tools.storage._Storage", return_value=fake):
+        rc = storage._main(["upload", "--replace", str(sd)])
+
+    assert rc == 0, capsys.readouterr().err
+    fake.delete_paths.assert_awaited_once_with(
+        ["white_isle/old.json", "white_isle/items/old.json"]
+    )
+    assert fake.put_bytes.await_args_list[0].args[0] == "white_isle/world.md"
+
+
+def test_delete_removes_profile_objects(capsys, fake_storage_env):
+    fake = AsyncMock()
+    fake.list_prefix = AsyncMock(return_value=["world.md"])
+    fake.list_dirs = AsyncMock(return_value=[])
+    fake.delete_paths = AsyncMock(return_value=None)
+    fake.aclose = AsyncMock(return_value=None)
+
+    with patch("agency.story.tools.storage._Storage", return_value=fake):
+        rc = storage._main(["delete", "white_isle"])
+
+    assert rc == 0, capsys.readouterr().err
+    fake.delete_paths.assert_awaited_once_with(["white_isle/world.md"])
