@@ -46,6 +46,9 @@ def build_action_narration_payload(
     quest_trigger = _quest_trigger_payload(action, dispatch.kind)
     if quest_trigger is not None:
         current_event["quest_trigger"] = quest_trigger
+    story_transition = _story_transition_payload(before, after)
+    if story_transition is not None:
+        current_event["story_transition"] = story_transition
     payload = {
         "world_guidance": _world_guidance(after),
         "player_input": None,
@@ -617,6 +620,73 @@ def _quest_trigger_payload(action: Action, kind: str) -> dict[str, str] | None:
         if target is not None:
             return {"type": "location_enter"}
     return None
+
+
+def _story_transition_payload(
+    before: GameRuntimeState,
+    after: GameRuntimeState,
+) -> dict[str, Any] | None:
+    completed_quests = _changed_nodes_by_status(
+        before,
+        after,
+        node_type="quest",
+        to_status="completed",
+    )
+    opened_chapters = _changed_nodes_by_status(
+        before,
+        after,
+        node_type="chapter",
+        to_status="active",
+    )
+    next_quests = _changed_nodes_by_status(
+        before,
+        after,
+        node_type="quest",
+        to_status="pending",
+    )
+    if not completed_quests and not opened_chapters and not next_quests:
+        return None
+    payload: dict[str, Any] = {"style": "lead_not_solution"}
+    if completed_quests:
+        payload["completed_quests"] = completed_quests
+    if opened_chapters:
+        payload["opened_chapter"] = opened_chapters[0]
+    if next_quests:
+        next_quest = next_quests[0]
+        payload["next_quest"] = next_quest
+        handoff = _transition_handoff(after, next_quest["id"])
+        if handoff:
+            payload["handoff"] = handoff
+    return payload
+
+
+def _changed_nodes_by_status(
+    before: GameRuntimeState,
+    after: GameRuntimeState,
+    *,
+    node_type: str,
+    to_status: str,
+) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    for node_id, after_node in after.graph.nodes.items():
+        if after_node.type != node_type:
+            continue
+        before_node = before.graph.nodes.get(node_id)
+        if before_node is None or before_node.type != node_type:
+            continue
+        if before_node.properties.get("status") == to_status:
+            continue
+        if after_node.properties.get("status") != to_status:
+            continue
+        out.append({"id": node_id, "name": node_label(after.content, after_node)})
+    return out
+
+
+def _transition_handoff(runtime: GameRuntimeState, quest_id: str) -> str | None:
+    quest = runtime.graph.nodes.get(quest_id)
+    if quest is None or quest.type != "quest":
+        return None
+    return node_text(runtime.content, quest, "handoff")
 
 
 def _result_cards(card_texts: list[str]) -> list[dict[str, str]]:

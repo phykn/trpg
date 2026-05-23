@@ -641,6 +641,63 @@ def test_action_payload_marks_location_enter_quest_trigger():
     assert payload["engine_event"]["quest_trigger"] == {"type": "location_enter"}
 
 
+def test_action_payload_includes_story_transition_without_forcing_solution():
+    before = _runtime()
+    before.graph.nodes["chapter_01"] = GraphNode(
+        id="chapter_01",
+        type="chapter",
+        properties={"title": "붉은섬", "status": "active"},
+    )
+    before.graph.nodes["chapter_02"] = GraphNode(
+        id="chapter_02",
+        type="chapter",
+        properties={"title": "푸른섬", "status": "locked"},
+    )
+    before.graph.nodes["quest_done"] = GraphNode(
+        id="quest_done",
+        type="quest",
+        properties={"title": "분노 환불 사건", "status": "active"},
+    )
+    before.graph.nodes["quest_next"] = GraphNode(
+        id="quest_next",
+        type="quest",
+        properties={
+            "title": "빈방 사건",
+            "status": "locked",
+            "handoff": "엘리는 빈방 이야기는 레아에게서 시작될 것 같다고 말합니다.",
+        },
+    )
+    after = before.model_copy(deep=True)
+    after.graph.nodes["chapter_01"].properties["status"] = "completed"
+    after.graph.nodes["chapter_02"].properties["status"] = "active"
+    after.graph.nodes["quest_done"].properties["status"] = "completed"
+    after.graph.nodes["quest_next"].properties["status"] = "pending"
+    dispatch = GraphActionDispatchResult(
+        runtime=after,
+        kind="decide",
+        applied=3,
+        changed_node_ids=["quest_done", "chapter_01", "chapter_02", "quest_next"],
+        changed_edge_ids=[],
+        removed_edge_ids=[],
+    )
+
+    payload = build_action_narration_payload(
+        before=before,
+        after=after,
+        action=Action(verb="decide", what="quest_done", how="release"),
+        dispatch=dispatch,
+        card_texts=["당신은 분노 환불 사건에서 「분노를 흘려보냅니다」 쪽을 선택합니다."],
+    )
+
+    assert payload["engine_event"]["story_transition"] == {
+        "completed_quests": [{"id": "quest_done", "name": "분노 환불 사건"}],
+        "opened_chapter": {"id": "chapter_02", "name": "푸른섬"},
+        "next_quest": {"id": "quest_next", "name": "빈방 사건"},
+        "handoff": "엘리는 빈방 이야기는 레아에게서 시작될 것 같다고 말합니다.",
+        "style": "lead_not_solution",
+    }
+
+
 def test_action_payload_keeps_terminal_combat_trace_after_state_clears():
     before = _runtime().model_copy(
         update={

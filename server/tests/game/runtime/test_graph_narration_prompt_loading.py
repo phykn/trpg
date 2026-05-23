@@ -407,6 +407,17 @@ def test_graph_narrate_prompt_requires_clear_roll_consequences():
     assert "원하는 답, 단서, 양보가 아직 나오지 않았음을 분명히 합니다" in prompt
 
 
+def test_graph_narrate_prompt_uses_story_transition_as_lead_not_solution():
+    prompt = (PROMPT_ROOT / "graph_narrate" / "prompt.ko.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "`payload.engine_event.story_transition`" in prompt
+    assert "엘리나 동행자의 짧은 관찰" in prompt
+    assert "정답이나 명령처럼 쓰지 않습니다" in prompt
+    assert "다음 사건의 쟁점은 한 문장으로 분명히 드러냅니다" in prompt
+
+
 @pytest.mark.asyncio
 async def test_graph_input_payload_exposes_target_traits(tmp_path):
     repo = await _repo(tmp_path)
