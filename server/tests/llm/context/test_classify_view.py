@@ -159,19 +159,42 @@ def test_classify_context_excludes_gm_narration_and_descriptions():
     assert "player_input" not in context
 
 
+def test_classify_context_orders_json_from_global_to_specific_context():
+    runtime = _runtime(active_quest=True)
+
+    context = build_classify_context_view(runtime, "상인에게 말을 겁니다")
+
+    assert list(context) == ["mode", "identity", "affordances", "references"]
+    assert list(context["identity"]) == [
+        "player",
+        "location",
+        "active_quest",
+        "available_quests",
+        "visible_targets",
+        "exits",
+        "inventory",
+        "equipment",
+        "skills",
+        "location_items",
+        "merchants",
+        "corpses",
+    ]
+    assert list(context["references"]) == [
+        "recent_scene",
+        "recent_exchanges",
+        "last_npc",
+        "last_target",
+        "last_item",
+    ]
+
+
 def test_classify_context_includes_minimal_recent_scene_summary():
     runtime = _runtime(gm_log_text="GM 원문 전체는 classify에 들어가면 안 됩니다.")
 
     context = build_classify_context_view(runtime, "그쪽으로 갑니다")
     payload = json.dumps(context, ensure_ascii=False)
 
-    assert context["references"]["recent_scene"] == [
-        {
-            "turn": 1,
-            "summary": "상인이 숲 방향을 가리켰습니다.",
-            "target": "npc_0",
-        }
-    ]
+    assert context["references"]["recent_scene"] == []
     assert "GM 원문 전체" not in payload
 
 
@@ -206,19 +229,43 @@ def test_classify_context_limits_only_recent_context():
     assert len(context["identity"]["inventory"]) == 4
     assert len(context["identity"]["skills"]) == 3
     assert context["references"]["recent_exchanges"] == [
-        {"turn": 3, "player": "질문 3", "summary": "요약 3"},
-        {"turn": 4, "player": "질문 4", "summary": "요약 4"},
+        {"turn": 3, "player": "질문 3", "narrator": "요약 3"},
+        {"turn": 4, "player": "질문 4", "narrator": "요약 4"},
     ]
 
 
-def test_classify_context_keeps_last_five_recent_exchanges_by_default():
+def test_classify_context_keeps_last_three_recent_exchanges_by_default():
     runtime = _runtime(dialogue_count=7)
 
     context = build_classify_context_view(runtime, "그 말을 이어갑니다")
 
     assert context["references"]["recent_exchanges"] == [
-        {"turn": turn, "player": f"질문 {turn}", "summary": f"요약 {turn}"}
-        for turn in range(3, 8)
+        {"turn": turn, "player": f"질문 {turn}", "narrator": f"요약 {turn}"}
+        for turn in range(5, 8)
+    ]
+
+
+def test_classify_context_uses_raw_recent_then_previous_scene_summaries():
+    runtime = _runtime(dialogue_count=6)
+    runtime.turn_log = [
+        TurnLogEntry(
+            turn=turn,
+            target=f"npc_{turn}",
+            summary=f"장면 요약 {turn}",
+            importance=1,
+        )
+        for turn in range(1, 7)
+    ]
+
+    context = build_classify_context_view(runtime, "그 다음 행동을 한다")
+
+    assert context["references"]["recent_exchanges"] == [
+        {"turn": turn, "player": f"질문 {turn}", "narrator": f"요약 {turn}"}
+        for turn in range(4, 7)
+    ]
+    assert context["references"]["recent_scene"] == [
+        {"turn": turn, "summary": f"장면 요약 {turn}", "target": f"npc_{turn}"}
+        for turn in range(1, 4)
     ]
 
 

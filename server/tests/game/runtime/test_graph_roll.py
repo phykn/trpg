@@ -451,6 +451,34 @@ async def test_run_graph_roll_friendly_success_raises_npc_affinity(tmp_path):
     )
 
 
+async def test_run_graph_roll_friendly_success_adds_affinity_change_cue(tmp_path):
+    repo = await _repo(tmp_path)
+    await _add_guard_with_affinity(repo, 0)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["guard_01"].properties["name"] = "나린"
+    await repo.save_graph("game-1", graph)
+    pending = (
+        await start_graph_roll(
+            repo,
+            "game-1",
+            Action(verb="speak", to="guard_01", how="friendly"),
+        )
+    ).pending_roll
+
+    await run_graph_roll(repo, "game-1", pending["id"], dice=13)
+    logs = await repo.load_log_entries("game-1")
+
+    assert logs[-1].kind == "gm"
+    assert [cue.model_dump() for cue in logs[-1].cues] == [
+        {
+            "kind": "change",
+            "label": "호감도",
+            "text": "나린이 당신을 조금 더 신뢰합니다",
+            "scope": "delta",
+        }
+    ]
+
+
 async def test_run_graph_roll_success_completes_social_check_quest(tmp_path):
     repo = await _repo(tmp_path)
     await _add_guard_with_affinity(repo, 0)
@@ -996,6 +1024,7 @@ def test_strip_repeated_preroll_text_keeps_non_repeated_narration():
         grade="success",
         outcome="success",
         completed_quest_ids=[],
+        affinity_cues=[],
     )
 
     assert (

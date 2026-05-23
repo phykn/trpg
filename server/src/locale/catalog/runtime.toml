@@ -566,13 +566,25 @@ en = "Target info:"
 ko = "플레이어 입력: {value}"
 en = "Player input: {value}"
 
-[runtime."narration.brief.screen_log"]
-ko = "화면 로그:"
-en = "Screen log:"
+[runtime."narration.brief.world_guidance"]
+ko = "세계 가이드:"
+en = "World guidance:"
 
-[runtime."narration.brief.recent_log"]
-ko = "최근 로그:"
-en = "Recent log:"
+[runtime."narration.brief.current_story"]
+ko = "현재 이야기:"
+en = "Current story:"
+
+[runtime."narration.brief.chapter"]
+ko = "챕터: {value}"
+en = "Chapter: {value}"
+
+[runtime."narration.brief.active_quest"]
+ko = "진행 중 퀘스트: {value}"
+en = "Active quest: {value}"
+
+[runtime."narration.brief.previous_scene"]
+ko = "이전 장면 요약:"
+en = "Previous scene summary:"
 
 [runtime."narration.brief.recent_exchanges"]
 ko = "최근 대화:"
@@ -586,21 +598,9 @@ en = "Player: {value}"
 ko = "GM: {value}"
 en = "GM: {value}"
 
-[runtime."narration.brief.log_action"]
-ko = "행동: {value}"
-en = "Action: {value}"
-
-[runtime."narration.brief.roll_log"]
-ko = "판정:"
-en = "Roll:"
-
-[runtime."narration.brief.margin_success"]
-ko = "+{margin} 초과"
-en = "+{margin} over"
-
-[runtime."narration.brief.margin_failure"]
-ko = "{margin} 부족"
-en = "{margin} short"
+[runtime."narration.brief.cue"]
+ko = "표시 정보: {value}"
+en = "Visible cue: {value}"
 
 [runtime."narration.brief.none"]
 ko = "없음"

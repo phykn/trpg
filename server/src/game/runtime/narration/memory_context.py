@@ -1,8 +1,5 @@
 from typing import Any
 
-from src.game.domain.action import Action
-from src.game.domain.graph import GraphNode
-from src.game.domain.graph.query import location_of
 from src.game.domain.memory import ExchangePair
 
 from ..env import env_nonnegative_int
@@ -36,7 +33,7 @@ def classify_recent_exchanges_payload(
     *,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
-    limit = env_nonnegative_int("MAX_RECENT_EXCHANGES", 5) if limit is None else limit
+    limit = env_nonnegative_int("MAX_RECENT_EXCHANGES", 3) if limit is None else limit
     return [
         {"turn": entry.turn, "player": entry.player, "summary": entry.narrator}
         for entry in runtime.recent_exchanges[-limit:]
@@ -49,17 +46,61 @@ def narrate_recent_exchanges_payload(
     target: str | None = None,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
-    limit = env_nonnegative_int("MAX_RECENT_EXCHANGES", 5) if limit is None else limit
+    limit = env_nonnegative_int("MAX_RECENT_EXCHANGES", 3) if limit is None else limit
     entries = _target_first_exchanges(runtime, target, limit)
     return [
-        {
-            "turn": entry.turn,
-            "player": entry.player,
-            "narrator": entry.narrator,
-            "target": entry.target,
-        }
+        _drop_none_and_empty(
+            {
+                "turn": entry.turn,
+                "player": entry.player,
+                "narrator": entry.narrator,
+                "target": entry.target,
+                "cues": [cue.model_dump(mode="json") for cue in entry.cues],
+            }
+        )
         for entry in entries
     ]
+
+
+def previous_scene_payload(
+    runtime: GameRuntimeState,
+    *,
+    limit: int | None = None,
+    recent_exchange_limit: int | None = None,
+) -> list[dict[str, Any]]:
+    limit = env_nonnegative_int("MAX_PREVIOUS_SCENE", 3) if limit is None else limit
+    recent_exchange_limit = (
+        env_nonnegative_int("MAX_RECENT_EXCHANGES", 3)
+        if recent_exchange_limit is None
+        else recent_exchange_limit
+    )
+    recent_turns = {
+        entry.turn for entry in runtime.recent_exchanges[-recent_exchange_limit:]
+    }
+    entries = [
+        entry
+        for entry in runtime.turn_log
+        if entry.summary and entry.turn not in recent_turns
+    ][-limit:]
+    return [
+        _drop_none_and_empty(
+            {
+                "turn": entry.turn,
+                "target": entry.target,
+                "summary": entry.summary,
+                "importance": entry.importance if entry.importance != 1 else None,
+            }
+        )
+        for entry in entries
+    ]
+
+
+def _drop_none_and_empty(value: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: item
+        for key, item in value.items()
+        if item is not None and item != [] and item != {}
+    }
 
 
 def _target_first_exchanges(
@@ -83,70 +124,4 @@ def _target_first_exchanges(
             if len(selected) == limit:
                 break
     return sorted(selected[-limit:], key=lambda entry: entry.turn)
-
-
-def related_memory_payload(
-    runtime: GameRuntimeState,
-    *,
-    action: Action | None,
-    target: GraphNode | None,
-    limit: int | None = None,
-) -> list[dict[str, Any]]:
-    limit = (
-        env_nonnegative_int("MAX_NARRATE_RELATED_MEMORY", 6)
-        if limit is None
-        else limit
-    )
-    related_ids = _related_ids(runtime, action=action, target=target)
-    ranked = sorted(
-        runtime.turn_log,
-        key=lambda entry: (
-            0 if entry.target in related_ids else 1,
-            -entry.importance,
-            -entry.turn,
-        ),
-    )
-    return [
-        {
-            "turn": entry.turn,
-            "target": entry.target,
-            "summary": entry.summary,
-            "importance": entry.importance,
-        }
-        for entry in ranked
-        if entry.target in related_ids
-    ][:limit]
-
-
-def _related_ids(
-    runtime: GameRuntimeState,
-    *,
-    action: Action | None,
-    target: GraphNode | None,
-) -> set[str | None]:
-    ids: set[str | None] = {
-        location_of(runtime.graph_index, runtime.progress.player_id),
-        runtime.progress.active_subject_id,
-        runtime.progress.active_quest_id,
-    }
-    if target is not None:
-        ids.add(target.id)
-    if action is not None:
-        for value in (
-            action.what,
-            action.from_,
-            action.to,
-            action.with_,
-        ):
-            if isinstance(value, str):
-                ids.add(value)
-            elif isinstance(value, list):
-                ids.update(item for item in value if isinstance(item, str))
-    combat = runtime.progress.graph_combat_state
-    if combat is not None:
-        ids.update(combat.participant_ids)
-        ids.update(combat.enemy_ids)
-        ids.add(combat.location_id)
-    return ids
-
 

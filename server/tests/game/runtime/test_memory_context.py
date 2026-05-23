@@ -7,7 +7,7 @@ from src.game.runtime import GameRuntimeState
 from src.game.runtime.narration.memory_context import (
     classify_recent_exchanges_payload,
     narrate_recent_exchanges_payload,
-    related_memory_payload,
+    previous_scene_payload,
 )
 
 
@@ -48,75 +48,6 @@ def _runtime(*, dialogue_count: int = 0) -> GameRuntimeState:
     )
 
 
-def test_related_memory_prefers_relevance_before_importance():
-    runtime = _runtime()
-    runtime.turn_log.append(
-        TurnLogEntry(
-            turn=1, target="unrelated", summary="중요하지만 무관합니다.", importance=3
-        )
-    )
-    runtime.turn_log.append(
-        TurnLogEntry(
-            turn=2,
-            target="npc_merchant",
-            summary="상인이 장부를 잃어버렸습니다.",
-            importance=2,
-        )
-    )
-
-    payload = related_memory_payload(
-        runtime,
-        action=None,
-        target=runtime.graph.nodes["npc_merchant"],
-        limit=1,
-    )
-
-    assert payload == [
-        {
-            "turn": 2,
-            "target": "npc_merchant",
-            "summary": "상인이 장부를 잃어버렸습니다.",
-            "importance": 2,
-        }
-    ]
-
-
-def test_related_memory_excludes_unrelated_high_importance_entries():
-    runtime = _runtime()
-    runtime.turn_log.extend(
-        [
-            TurnLogEntry(
-                turn=1,
-                target="unrelated",
-                summary="멀리 떨어진 사건입니다.",
-                importance=3,
-            ),
-            TurnLogEntry(
-                turn=2,
-                target="npc_merchant",
-                summary="상인이 장부를 잃어버렸습니다.",
-                importance=2,
-            ),
-        ]
-    )
-
-    payload = related_memory_payload(
-        runtime,
-        action=None,
-        target=runtime.graph.nodes["npc_merchant"],
-        limit=10,
-    )
-
-    assert payload == [
-        {
-            "turn": 2,
-            "target": "npc_merchant",
-            "summary": "상인이 장부를 잃어버렸습니다.",
-            "importance": 2,
-        }
-    ]
-
-
 def test_recent_exchanges_is_limited_and_does_not_pull_turn_log():
     runtime = _runtime(dialogue_count=7)
     runtime.turn_log.append(
@@ -125,9 +56,9 @@ def test_recent_exchanges_is_limited_and_does_not_pull_turn_log():
 
     payload = classify_recent_exchanges_payload(runtime)
 
-    assert len(payload) == 5
+    assert len(payload) == 3
     assert all(set(item) == {"turn", "player", "summary"} for item in payload)
-    assert payload[0]["turn"] == 3
+    assert payload[0]["turn"] == 5
     assert "중요 기억" not in json.dumps(payload, ensure_ascii=False)
 
 
@@ -147,9 +78,39 @@ def test_narrate_recent_exchanges_uses_narrator_original_text(monkeypatch):
     payload = narrate_recent_exchanges_payload(runtime)
 
     assert payload == [
-        {"turn": 2, "player": "질문 2", "narrator": "응답 2", "target": None},
-        {"turn": 3, "player": "질문 3", "narrator": "응답 3", "target": None},
+        {"turn": 2, "player": "질문 2", "narrator": "응답 2"},
+        {"turn": 3, "player": "질문 3", "narrator": "응답 3"},
     ]
+
+
+def test_previous_scene_uses_entries_before_recent_raw_exchanges(monkeypatch):
+    monkeypatch.setenv("MAX_RECENT_EXCHANGES", "2")
+    runtime = _runtime(dialogue_count=5)
+    runtime.turn_log = [
+        TurnLogEntry(turn=turn, target=f"npc_{turn}", summary=f"요약 {turn}")
+        for turn in range(1, 6)
+    ]
+
+    payload = previous_scene_payload(runtime, limit=2)
+
+    assert payload == [
+        {"turn": 2, "target": "npc_2", "summary": "요약 2"},
+        {"turn": 3, "target": "npc_3", "summary": "요약 3"},
+    ]
+
+
+def test_previous_scene_limit_can_come_from_env(monkeypatch):
+    monkeypatch.setenv("MAX_RECENT_EXCHANGES", "1")
+    monkeypatch.setenv("MAX_PREVIOUS_SCENE", "2")
+    runtime = _runtime(dialogue_count=5)
+    runtime.turn_log = [
+        TurnLogEntry(turn=turn, target=f"npc_{turn}", summary=f"요약 {turn}")
+        for turn in range(1, 6)
+    ]
+
+    payload = previous_scene_payload(runtime)
+
+    assert [item["turn"] for item in payload] == [3, 4]
 
 
 def test_narrate_recent_exchanges_prefers_same_target_then_fills_recent(monkeypatch):
@@ -174,49 +135,3 @@ def test_narrate_recent_exchanges_prefers_same_target_then_fills_recent(monkeypa
 
     assert [item["turn"] for item in payload] == [1, 3, 4]
     assert payload[1]["target"] == "npc_merchant"
-
-
-def test_related_memory_limit_can_come_from_env(monkeypatch):
-    monkeypatch.setenv("MAX_NARRATE_RELATED_MEMORY", "1")
-    runtime = _runtime()
-    runtime.turn_log.extend(
-        [
-            TurnLogEntry(
-                turn=1, target="npc_merchant", summary="첫 기억", importance=2
-            ),
-            TurnLogEntry(
-                turn=2, target="npc_merchant", summary="둘째 기억", importance=2
-            ),
-        ]
-    )
-
-    payload = related_memory_payload(
-        runtime,
-        action=None,
-        target=runtime.graph.nodes["npc_merchant"],
-    )
-
-    assert len(payload) == 1
-
-
-def test_related_memory_default_limit_matches_plan():
-    runtime = _runtime()
-    runtime.turn_log.extend(
-        [
-            TurnLogEntry(
-                turn=turn,
-                target="npc_merchant",
-                summary=f"기억 {turn}",
-                importance=2,
-            )
-            for turn in range(1, 18)
-        ]
-    )
-
-    payload = related_memory_payload(
-        runtime,
-        action=None,
-        target=runtime.graph.nodes["npc_merchant"],
-    )
-
-    assert len(payload) == 6

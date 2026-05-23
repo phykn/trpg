@@ -17,18 +17,19 @@ class TurnLogEntry(BaseModel):
     importance: int = Field(default=1, ge=1, le=3)
 
 
-class ExchangePair(BaseModel):
-    turn: int
-    player: str
-    narrator: str
-    target: str | None = None
-
-
 class NarrationCue(BaseModel):
     kind: Literal["change", "constraint", "opportunity", "warning"]
     label: str
     text: str
     scope: Literal["delta", "temporary"] = "delta"
+
+
+class ExchangePair(BaseModel):
+    turn: int
+    player: str
+    narrator: str
+    target: str | None = None
+    cues: list[NarrationCue] = []
 
 
 class GMLogEntry(BaseModel):

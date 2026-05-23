@@ -1,5 +1,4 @@
 import asyncio
-import json
 from collections.abc import AsyncIterator
 
 from openai import APIConnectionError, InternalServerError, RateLimitError
@@ -12,6 +11,7 @@ from src.llm.client import LLMClient
 from src.llm.diag import llm_diag
 
 from ..state import GameRuntimeState
+from .brief import build_narration_brief
 from .context import (
     build_input_narration_payload,
     narration_action_payload,
@@ -241,7 +241,7 @@ def _graph_input_narration_messages(
         },
         {
             "role": "user",
-            "content": json.dumps(payload, ensure_ascii=False),
+            "content": build_narration_brief(payload),
         },
     ]
 
@@ -280,7 +280,7 @@ def _graph_preroll_narration_messages(
         },
         {
             "role": "user",
-            "content": json.dumps(payload, ensure_ascii=False),
+            "content": build_narration_brief(payload),
         },
     ]
 
@@ -319,7 +319,7 @@ def _graph_input_rejection_narration_messages(
         },
         {
             "role": "user",
-            "content": json.dumps(payload, ensure_ascii=False),
+            "content": build_narration_brief(payload),
         },
     ]
 

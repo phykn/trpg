@@ -167,24 +167,24 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "남은 거리, 물건 상태, NPC 반응, 다음 목표" in narrate_prompt
     assert "## 처리 라우터" in narrate_prompt
     assert "출력 전에 이번 턴의 주 처리 유형을 하나만 고릅니다" in narrate_prompt
-    assert "`payload.engine_event.outcome`이 `action_rejected`이면 행동 거부" in narrate_prompt
-    assert "`payload.reference_context.world_guidance`는 시나리오 전체의 톤" in narrate_prompt
-    assert "`payload.combat_view`가 있으면 전투" in narrate_prompt
-    assert "`payload.engine_event.kind`가 `roll_prompt`이면 판정 전" in narrate_prompt
+    assert "`장면 유형`이나 결과가 `action_rejected`이면 행동 거부" in narrate_prompt
+    assert "`세계 가이드`: 시나리오 전체의 톤" in narrate_prompt
+    assert "전투 브리핑이면 전투" in narrate_prompt
+    assert "`장면 유형`이 `roll_prompt`이면 판정 전" in narrate_prompt
     assert "선택한 처리 유형의 규칙을 가장 우선합니다" in narrate_prompt
     assert "다른 섹션의 규칙은 사실 범위, 문체, 반복 회피에만 참고합니다" in narrate_prompt
     assert "전투 모드에서는 대화, 조사, 퀘스트 규칙보다" in narrate_prompt
-    assert "`combat_view.exchange_result`, `combat_view.player_action`, `combat_view.outcome`" in narrate_prompt
+    assert "전투의 `행동`, `결과`, `전투 상태`, `확정`" in narrate_prompt
     assert "전투 결과를 일반 행동 성공/실패처럼 해석하지 않습니다" in narrate_prompt
     assert "전투에서 `defend`의 success는 공격 성공이 아니라 방어 성공입니다" in narrate_prompt
     assert "전투에서 `flee`의 success는 피해가 아니라 거리 확보나 이탈 성공입니다" in narrate_prompt
     assert "전투에서 `talk`의 success는 설득 확정이 아니라 압박 완화나 흐름 흔들림입니다" in narrate_prompt
     assert "`ui_cues`와 `suggestions`의 기본값은 빈 배열입니다" in narrate_prompt
     assert "suggestions는 새 행동을 창작하는 기능이 아닙니다" in narrate_prompt
-    assert "payload에 이미 드러난 대상, 장소, 물건, 목표를 플레이어 입력문으로 바꾸는 기능입니다" in narrate_prompt
+    assert "브리핑에 이미 드러난 대상, 장소, 물건, 목표를 플레이어 입력문으로 바꾸는 기능입니다" in narrate_prompt
     assert "현재 턴 뒤에도 플레이어가 계속 행동해야 하고" in narrate_prompt
     assert "현재 가능한 대상/장소/물건/목표가 명시되어 있으면 1개에서 3개까지 씁니다" in narrate_prompt
-    assert "payload.scene_state.scene_anchor.visible_names에 명시된 대상과 장소는 제안할 수 있습니다" in narrate_prompt
+    assert "브리핑에 명시된 대상과 장소는 제안할 수 있습니다" in narrate_prompt
     assert "현재 목표가 바로 보이면 목표를 수행하는 입력문을 제안할 수 있습니다" in narrate_prompt
     assert "`대화 시도하기`, `상황 파악하기`처럼 대상이나 목적이 없는 label은 쓰지 않습니다" in narrate_prompt
     assert "손맛" in narrate_prompt
@@ -193,7 +193,7 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "플레이어를 우습게 만들지" in combined
     assert "결과 라벨" in combat_prompt
     assert "사용자 메시지는 engine이 확정한 전투 결과 브리핑입니다" in combat_prompt
-    assert "전투 브리핑은 화면 로그와 최근 맥락을 먼저 읽고" in combat_prompt
+    assert "전투 브리핑은 배경 맥락을 먼저 읽고" in combat_prompt
     assert "전투 JSON" not in combat_prompt
     assert "판정을 다시 해석하지 않고" in combat_prompt
     assert "조금 과장해서 씁니다" in combat_prompt
@@ -253,13 +253,13 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "짧은 반응으로만" not in narrate_prompt
     assert "짧은 말" not in narrate_prompt
     assert "당신의 새 대사" not in narrate_prompt
-    assert "payload.combat_view" in narrate_prompt
-    assert "tone.lethality" in narrate_prompt
+    assert "전투 브리핑이면 이번 턴은 전투 모드입니다" in narrate_prompt
+    assert "비살상 전투가 명시되면 비살상으로 씁니다" in narrate_prompt
     assert "STATE_PATCH" in narrate_prompt
     assert "GraphChange" in narrate_prompt
     assert "USER_STREAM" in narrate_prompt
     assert "판정 결과 장면화" in narrate_prompt
-    assert "payload에 없는 단서" in narrate_prompt
+    assert "브리핑에 없는 단서" in narrate_prompt
     assert "실패여도 장면은 멈추지 않습니다" in narrate_prompt
     assert "기척이 선명해집니다" in narrate_prompt
     assert "물건의 상태" in narrate_prompt
@@ -271,14 +271,14 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "판정 후 나레이션" in narrate_prompt
     assert "preroll_narration" not in narrate_prompt
     assert "판정 전 문장을 반복하지 않습니다" in narrate_prompt
-    assert "critical_success" in narrate_prompt
+    assert "critical success" in narrate_prompt
     assert "다음 행동 가능성" in narrate_prompt
     assert "본문을 두 번 쓰지 않습니다" in narrate_prompt
     assert "조사 실패" in narrate_prompt
     assert "대화 실패" in narrate_prompt
     assert "실패이면 LLM이 장면을 씁니다" in narrate_prompt
     assert "성공처럼 읽히는 단서 획득" in narrate_prompt
-    assert "payload.engine_event.kind`가 `roll_prompt`" in narrate_prompt
+    assert "`장면 유형`이 `roll_prompt`" in narrate_prompt
     assert "발견해냈습니다" in narrate_prompt
     assert "포착해냅니다" in narrate_prompt
     assert "판정 후 본문에는 직전에 이미 보여준 판정 전 장면의 동작, 감각, 문장 구조를 다시 쓰지 않습니다" in narrate_prompt
@@ -289,11 +289,11 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "빈 직접 발화" in narrate_prompt
     assert "플레이어 원문이 단순히 말을 건다는 뜻이면" in narrate_prompt
     assert "무슨 일이신가요" in narrate_prompt
-    assert "현재 장소의 visible targets" in narrate_prompt
-    assert "`payload.scene_state.target_view`는 현재 처리 대상의 세부 묘사" in narrate_prompt
-    assert "`payload.scene_state.scene_anchor.visible_names`는 현재 배경을 고정하는 이름 목록" in narrate_prompt
+    assert "현재 처리 대상은 `대상`에 드러난 대상뿐입니다" in narrate_prompt
+    assert "`대상 정보`는 현재 처리 대상의 공개 지식" in narrate_prompt
     assert "이름만 보고 세부 묘사, 답변, 단서, 행동 가능성을 만들지 않습니다" in narrate_prompt
-    assert "`payload.scene_state.target_view.public_knowledge`와 `payload.scene_state.target_view.available_items`" in narrate_prompt
+    assert "이름만 보고 세부 묘사, 답변, 단서, 행동 가능성을 만들지 않습니다" in narrate_prompt
+    assert "`대상 정보`는 그 대상과 이번 상호작용에 붙은 공개 정보입니다" in narrate_prompt
     assert "대상 정보가 있으면 NPC가 그 사실을 직접 말하거나 인정하게 씁니다" in narrate_prompt
     assert "장소 전체의 지식이나 모든 행동 가능성으로 넓히지 않습니다" in narrate_prompt
     assert "이전 기억에 있어도 현재 주변에 있다고 쓰지 않습니다" in narrate_prompt
@@ -305,11 +305,11 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "character-specific" not in narrate_prompt
     assert "게임 밖 요청" in narrate_prompt
     assert "그대로 출력하지 않습니다" in narrate_prompt
-    assert "combat_view.effect" in narrate_prompt
+    assert "지원 기술/아이템의 효과" in narrate_prompt
     assert "지원 효과 이름, 원리, 추가 효과를 지어내지 않습니다" in narrate_prompt
-    assert "combat_view.statuses" in narrate_prompt
+    assert "상태 효과" in narrate_prompt
     assert "상태 효과 이름, 원리, 추가 효과를 지어내지 않습니다" in narrate_prompt
-    assert "소금기, 비린내, 쇠 냄새, 미네랄 향처럼 그럴듯한 감각도 payload에 직접 근거가 없으면 쓰지 않습니다" in narrate_prompt
+    assert "소금기, 비린내, 쇠 냄새, 미네랄 향처럼 그럴듯한 감각도 브리핑에 직접 근거가 없으면 쓰지 않습니다" in narrate_prompt
     assert "`label`은 칩에 보이는 짧은 목적입니다" in narrate_prompt
     assert "`input_text`는 그대로 전송해도 자연스러운 플레이어 입력문입니다" in narrate_prompt
     assert "UI 라벨, 명사구, 시스템 명령이 아니라" in narrate_prompt
@@ -327,10 +327,9 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "사용자 메시지는 엔진이 확정 사실을 짧은 평문으로 번역한 나레이션 브리핑입니다" in narrate_prompt
     assert "브리핑의 각 줄을 먼저 따릅니다" in narrate_prompt
     assert "사용자 메시지는 이미 확정된 사실을 담은 JSON입니다" not in narrate_prompt
-    assert "visible_names에 이름만 있는 대상은 제안 후보가 될 수 있지만" in narrate_prompt
+    assert "이름만 있는 대상은 제안 후보가 될 수 있지만" in narrate_prompt
     assert "출력은 플레이어가 읽는 나레이션" in combat_prompt
     assert "훈련 충격" in combat_prompt
-    assert "recent_narration" in combat_prompt
     assert "행동 요약" in combat_prompt
     assert "새 문장으로 장면화합니다" in combat_prompt
     assert "전투가 끝났으면" in combat_prompt
@@ -348,7 +347,9 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "공격 또는 이탈 전술" not in classify_prompt
     assert "`flee`: 전투 중 도망 또는 거리 확보" in classify_prompt
     assert "후보는 같은 리듬으로 만듭니다" in recommend_prompt
-    assert "입력 JSON은 플레이어와 최근 로그 문맥을 먼저 읽고" in recommend_prompt
+    assert "입력 JSON은 큰 정보에서 세부 정보 순서로 읽습니다" in recommend_prompt
+    assert "`current_story`로 현재 챕터/퀘스트 맥락을 잡고" in recommend_prompt
+    assert "마지막 `recent_log`를 가장 중요한 최근 플레이 경향으로 판단합니다" in recommend_prompt
     assert "최근에 실제로 반복한 행동" in recommend_prompt
     assert "`flee` 후보" in recommend_prompt
     assert "`talk` 후보" in recommend_prompt
@@ -387,16 +388,17 @@ def test_graph_narrate_prompt_encodes_theory_pressure_and_completion_limits():
         encoding="utf-8"
     )
 
-    assert "가장 강한 근거는 `payload.user_request`, `payload.engine_event`, `payload.result_cards`, `payload.scene_state.target_view`, `payload.combat_view`입니다" in prompt
-    assert "payload는 배경 문맥을 먼저 두고, 이번 턴의 `payload.user_request`를 마지막에 둡니다" in prompt
-    assert "`payload.user_request.player_input`은 이번 턴에 플레이어가 실제로 말하거나 시도한 원문입니다" in prompt
-    assert "`payload.reference_context`는 이번 턴의 새 사실이 아니라 배경, 연속성, 반복 회피용 참고 정보입니다" in prompt
-    assert "`payload.reference_context.screen_log`가 있으면 플레이어 화면에 보인 최근 로그로 읽고" in prompt
-    assert "`payload.reference_context`에 있는 이전 나레이션이나 이전 대화가 플레이어의 이번 발화보다 앞서면 안 됩니다" in prompt
-    assert "UI 라벨, 추천 칩의 `label`, 주변에 함께 보이는 이름은 `payload.user_request.player_input`보다 강한 근거가 아닙니다" in prompt
+    assert "가장 강한 근거는 `플레이어 입력`, `장면 유형`, `결과`, `확정`, `대상`, `대상 정보`, `공개된 사실`입니다" in prompt
+    assert "브리핑은 배경 문맥을 먼저 두고, 이번 턴의 `플레이어 입력`을 마지막에 둡니다" in prompt
+    assert "`플레이어 입력`: 이번 턴에 플레이어가 실제로 말하거나 시도한 원문" in prompt
+    assert "`이전 장면 요약`과 `최근 대화`는 연속성과 반복 회피에만 씁니다" in prompt
+    assert "`최근 대화`: 최근 플레이어 입력 원문, GM 응답 원문" in prompt
+    assert "`이전 장면 요약`: 최근 원문 구간 이전의 장면 요약" in prompt
+    assert "`이전 장면 요약`이나 `최근 대화`가 플레이어의 이번 발화보다 앞서면 안 됩니다" in prompt
+    assert "UI 라벨, 추천 칩의 `label`, 주변에 함께 보이는 이름은 `플레이어 입력`보다 강한 근거가 아닙니다" in prompt
     assert "압력을 남기는 것은 필수가 아닙니다" in prompt
     assert "새 갈고리 없이 닫습니다" in prompt
-    assert "`payload.engine_event.quest_trigger.type`이 `location_enter`이면 특히 조심합니다" in prompt
+    assert "브리핑에 장소 진입 퀘스트 트리거가 있으면 특히 조심합니다" in prompt
     assert "장소에 들어간 사실을 플레이어가 갈등을 해결한 것처럼 과장하지 않습니다" in prompt
 
 
@@ -417,7 +419,7 @@ def test_graph_narrate_prompt_uses_story_transition_as_lead_not_solution():
         encoding="utf-8"
     )
 
-    assert "`payload.engine_event.story_transition`" in prompt
+    assert "브리핑에 사건 전환이 있으면" in prompt
     assert "동행자의 짧은 관찰" in prompt
     assert "엘리나 동행자" not in prompt
     assert "정답이나 명령처럼 쓰지 않습니다" in prompt

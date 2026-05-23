@@ -6,7 +6,8 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
 from src.game.domain.errors import LLMUnavailable
-from src.game.domain.content import node_label
+from src.game.domain.content import node_label, node_text
+from src.game.domain.graph import GraphNode
 from src.game.domain.graph.query import edges_from
 from ..state import GameRuntimeState
 from src.locale.render import render
@@ -189,13 +190,13 @@ def _candidate_payload(
             known.append(_skill_name(runtime, skill))
     recent = _recent_log_texts(runtime)
     return {
+        "current_story": _current_story_payload(runtime),
         "player": {
             "name": player.properties.get("name", "player"),
             "level": player.properties.get("level", 1),
             "stats": player.properties.get("stats", {}),
             "known_skills": known,
         },
-        "recent_log": recent,
         "skills": [
             {
                 "index": index,
@@ -204,7 +205,46 @@ def _candidate_payload(
             }
             for index, template in enumerate(templates)
         ],
+        "recent_log": recent,
     }
+
+
+def _current_story_payload(runtime: GameRuntimeState) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
+    chapter = _active_chapter(runtime)
+    if chapter is not None:
+        payload["chapter"] = chapter
+    quest = _active_quest(runtime)
+    if quest is not None:
+        payload["active_quest"] = quest
+    return payload
+
+
+def _active_chapter(runtime: GameRuntimeState) -> dict[str, str] | None:
+    for node in runtime.graph.nodes.values():
+        if node.type == "chapter" and node.properties.get("status") == "active":
+            return _story_node_payload(runtime, node)
+    return None
+
+
+def _active_quest(runtime: GameRuntimeState) -> dict[str, str] | None:
+    quest_id = runtime.progress.active_quest_id
+    node = runtime.graph.nodes.get(quest_id or "")
+    if node is None or node.type != "quest":
+        return None
+    return _story_node_payload(runtime, node)
+
+
+def _story_node_payload(runtime: GameRuntimeState, node: GraphNode) -> dict[str, str]:
+    payload = {"id": node.id, "name": node_label(runtime.content, node)}
+    description = node_text(runtime.content, node, "description") or node_text(
+        runtime.content,
+        node,
+        "summary",
+    )
+    if description:
+        payload["description"] = description
+    return payload
 
 
 def _recent_log_texts(runtime: GameRuntimeState) -> list[str]:

@@ -2,9 +2,6 @@ from typing import Any
 
 from src.locale.render import render
 
-from ..env import env_nonnegative_int
-
-
 _LOCALE = "ko"
 
 
@@ -27,9 +24,12 @@ def build_combat_narration_brief(payload: dict[str, Any]) -> str:
     event = _dict(payload.get("engine_event"))
     combat = _dict(payload.get("combat_view"))
     lines = _recent_context_lines(payload)
+    lines.extend([_brief("scene.combat"), _brief("place", value=_place_name(payload))])
+    target = _combat_target(combat) or _target_name(payload)
+    if target:
+        lines.append(_brief("target", value=target))
     lines.extend(
         [
-            _brief("scene.combat"),
             _brief("action", value=_combat_action(combat, event)),
             _brief("result", value=_combat_result(combat)),
         ]
@@ -37,9 +37,6 @@ def build_combat_narration_brief(payload: dict[str, Any]) -> str:
     outcome = combat.get("outcome")
     if isinstance(outcome, str) and outcome:
         lines.append(_brief("combat_state", value=outcome))
-    target = _combat_target(combat) or _target_name(payload)
-    if target:
-        lines.append(_brief("target", value=target))
     facts = _combat_facts(event, combat, payload)
     if facts:
         lines.append(_brief("confirmed"))
@@ -50,6 +47,7 @@ def build_combat_narration_brief(payload: dict[str, Any]) -> str:
             _brief("combat_goal"),
         ]
     )
+    _append_player_input(lines, payload)
     return "\n".join(lines)
 
 
@@ -86,6 +84,7 @@ def _story_transition_brief(
             _brief("transition_goal"),
         ]
     )
+    _append_player_input(lines, payload)
     return "\n".join(lines)
 
 
@@ -197,12 +196,7 @@ def _roll_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
     elif target_facts:
         lines.append(_brief("target_info"))
         lines.extend(f"- {fact}" for fact in target_facts)
-    lines.extend(
-        [
-            _brief("player_input", value=_player_input(payload)),
-            _brief("result", value=result),
-        ]
-    )
+    lines.append(_brief("result", value=result))
     resolved = _strings(event.get("resolved_results"))
     if resolved:
         lines.append(_brief("confirmed_inline", value=" / ".join(resolved)))
@@ -212,6 +206,7 @@ def _roll_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
     else:
         lines.append(_brief("roll_failure_forbid"))
         lines.append(_brief("roll_failure_goal"))
+    _append_player_input(lines, payload)
     return "\n".join(lines)
 
 
@@ -236,9 +231,6 @@ def _action_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
     if target_facts:
         lines.append(_brief("target_info"))
         lines.extend(f"- {fact}" for fact in target_facts)
-    player_input = _player_input(payload)
-    if player_input != _brief("none"):
-        lines.append(_brief("player_input", value=player_input))
     resolved = _strings(event.get("resolved_results"))
     if resolved:
         lines.append(_brief("confirmed_inline", value=" / ".join(resolved)))
@@ -248,34 +240,38 @@ def _action_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
             _brief("action_goal"),
         ]
     )
+    _append_player_input(lines, payload)
     return "\n".join(lines)
+
+
+def _append_player_input(lines: list[str], payload: dict[str, Any]) -> None:
+    player_input = _player_input(payload)
+    if player_input != _brief("none"):
+        lines.append(_brief("player_input", value=player_input))
 
 
 def _recent_context_lines(payload: dict[str, Any]) -> list[str]:
     lines: list[str] = []
     context = _dict(payload.get("reference_context"))
-    screen_log = _dicts(context.get("screen_log"))[
-        -env_nonnegative_int("GRAPH_NARRATION_SCREEN_LOG_ENTRIES", 8) :
-    ]
-    recent_entries = env_nonnegative_int("GRAPH_NARRATION_BRIEF_RECENT_ENTRIES", 2)
-    narration = _dicts(context.get("recent_narration"))[-recent_entries:]
-    exchanges = _dicts(context.get("recent_exchanges"))[-recent_entries:]
+    world_guidance = context.get("world_guidance")
+    if isinstance(world_guidance, str) and world_guidance:
+        lines.append(_brief("world_guidance"))
+        lines.append(f"- {_clip(world_guidance)}")
+    current_story = _current_story_lines(context)
+    if current_story:
+        lines.append(_brief("current_story"))
+        lines.extend(f"- {text}" for text in current_story)
+    previous = _dicts(context.get("previous_scene"))
+    exchanges = _dicts(context.get("recent_exchanges"))
 
-    visible_log = [_screen_log_line(item) for item in screen_log]
-    visible_log = [line for line in visible_log if line]
-    if visible_log:
-        lines.append(_brief("screen_log"))
-        lines.extend(f"- {line}" for line in visible_log)
-        return lines
-
-    recent_narration = [
-        _clip(text)
-        for item in narration
-        if isinstance(text := item.get("text"), str) and text
+    previous_scene = [
+        _clip(summary)
+        for item in previous
+        if isinstance(summary := item.get("summary"), str) and summary
     ]
-    if recent_narration:
-        lines.append(_brief("recent_log"))
-        lines.extend(f"- {text}" for text in recent_narration)
+    if previous_scene:
+        lines.append(_brief("previous_scene"))
+        lines.extend(f"- {text}" for text in previous_scene)
 
     recent_exchanges = []
     for item in exchanges:
@@ -283,65 +279,47 @@ def _recent_context_lines(payload: dict[str, Any]) -> list[str]:
         narrator = item.get("narrator")
         player_text = player if isinstance(player, str) and player else ""
         narrator_text = narrator if isinstance(narrator, str) and narrator else ""
-        if player_text or narrator_text:
-            recent_exchanges.append((player_text, narrator_text))
+        cues = [
+            text
+            for cue in _dicts(item.get("cues"))
+            if isinstance(text := cue.get("text"), str) and text
+        ]
+        if player_text or narrator_text or cues:
+            recent_exchanges.append((player_text, narrator_text, cues))
     if recent_exchanges:
         lines.append(_brief("recent_exchanges"))
-        for player, narrator in recent_exchanges:
+        for player, narrator, cues in recent_exchanges:
             if player:
                 lines.append(f"- {_brief('player', value=_clip(player))}")
             if narrator:
                 lines.append(f"- {_brief('gm', value=_clip(narrator))}")
+            for cue in cues:
+                lines.append(f"- {_brief('cue', value=_clip(cue))}")
     return lines
 
 
-def _screen_log_line(entry: dict[str, Any]) -> str:
-    kind = entry.get("kind")
-    if kind == "gm":
-        text = entry.get("text")
-        return _brief("gm", value=_clip(text)) if isinstance(text, str) and text else ""
-    if kind == "player":
-        text = entry.get("text")
-        return (
-            _brief("player", value=_clip(text)) if isinstance(text, str) and text else ""
-        )
-    if kind == "act":
-        text = entry.get("text")
-        return (
-            _brief("log_action", value=_clip(text))
-            if isinstance(text, str) and text
-            else ""
-        )
-    if kind == "roll":
-        return _screen_roll_line(entry)
-    return ""
+def _current_story_lines(context: dict[str, Any]) -> list[str]:
+    story = _dict(context.get("current_story"))
+    chapter = _dict(story.get("chapter"))
+    quest = _dict(story.get("active_quest"))
+    lines: list[str] = []
+    chapter_line = _story_item_line(chapter)
+    if chapter_line:
+        lines.append(_brief("chapter", value=chapter_line))
+    quest_line = _story_item_line(quest)
+    if quest_line:
+        lines.append(_brief("active_quest", value=quest_line))
+    return lines
 
 
-def _screen_roll_line(entry: dict[str, Any]) -> str:
-    result = (
-        _brief("outcome.success")
-        if entry.get("result") == "success"
-        else _brief("outcome.failure")
-    )
-    check = entry.get("check")
-    roll = entry.get("roll")
-    if not isinstance(check, str) or not isinstance(roll, int):
+def _story_item_line(item: dict[str, Any]) -> str:
+    name = item.get("name")
+    if not isinstance(name, str) or not name:
         return ""
-    parts = [_brief("roll_log"), result, check, f"d20 {roll}"]
-    total_bonus = sum(
-        item["value"]
-        for item in _dicts(entry.get("bonus_breakdown"))[1:]
-        if isinstance(item.get("value"), int)
-    )
-    if total_bonus != 0:
-        parts.append(f"({_signed(total_bonus)})")
-    margin = entry.get("margin")
-    if isinstance(margin, int) and roll not in {1, 20}:
-        if margin > 0:
-            parts.append(_brief("margin_success", margin=margin))
-        elif margin < 0:
-            parts.append(_brief("margin_failure", margin=-margin))
-    return " ".join(parts)
+    description = item.get("description")
+    if isinstance(description, str) and description:
+        return _clip(f"{name} - {description}")
+    return _clip(name)
 
 
 def _player_input(payload: dict[str, Any]) -> str:
@@ -424,15 +402,5 @@ def _dedupe(values: list[str]) -> list[str]:
     return out
 
 
-def _clip(value: str, limit: int | None = None) -> str:
-    limit = env_nonnegative_int("GRAPH_NARRATION_BRIEF_LINE_CHARS", 120) if limit is None else limit
-    text = " ".join(value.split())
-    if limit <= 0:
-        return ""
-    if len(text) <= limit:
-        return text
-    return f"{text[: limit - 1]}…"
-
-
-def _signed(value: int) -> str:
-    return f"+{value}" if value > 0 else str(value)
+def _clip(value: str) -> str:
+    return " ".join(value.split())

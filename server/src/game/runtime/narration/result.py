@@ -10,7 +10,6 @@ from src.game.domain.memory import ExchangePair, GMLogEntry, NarrationCue, TurnL
 from src.locale.render import render
 from src.llm.diag import llm_diag
 
-from ..env import env_nonnegative_int
 from ..state import GameRuntimeState
 from .suggestions import GraphSuggestion, normalize_suggestion
 
@@ -28,22 +27,6 @@ def _private_narration_markers() -> tuple[str, ...]:
 
 def _visible_stop_markers() -> tuple[str, ...]:
     return (_narration_meta_marker(), *_private_narration_markers())
-
-
-def _max_suggestions(default: int = 3) -> int:
-    return env_nonnegative_int("GRAPH_NARRATION_MAX_SUGGESTIONS", default)
-
-
-def _max_suggestion_chars(default: int = 80) -> int:
-    return env_nonnegative_int("GRAPH_NARRATION_MAX_SUGGESTION_CHARS", default)
-
-
-def _max_ui_cues(default: int = 3) -> int:
-    return env_nonnegative_int("GRAPH_NARRATION_MAX_UI_CUES", default)
-
-
-def _max_ui_cue_chars(default: int = 48) -> int:
-    return env_nonnegative_int("GRAPH_NARRATION_MAX_UI_CUE_CHARS", default)
 
 
 class GraphNarrationResult(BaseModel):
@@ -263,6 +246,7 @@ def _exchange_entries(
             player=player_input,
             narrator=result.narration,
             target=target,
+            cues=result.ui_cues,
         )
     ]
 
@@ -282,27 +266,12 @@ def _clean_suggestions(
         if key in seen:
             continue
         seen.add(key)
-        out.append(_truncate_suggestion(suggestion))
-        if len(out) == _max_suggestions():
-            break
+        out.append(suggestion)
     return out
-
-
-def _truncate_suggestion(value: GraphSuggestion) -> GraphSuggestion:
-    max_chars = _max_suggestion_chars()
-    return GraphSuggestion(
-        label=value.label[:32],
-        input_text=value.input_text[:max_chars],
-        intent=value.intent,
-        action=value.action,
-    )
 
 
 def _clean_ui_cues(values: object) -> list[NarrationCue]:
     if not isinstance(values, list):
-        return []
-    max_cues = _max_ui_cues()
-    if max_cues <= 0:
         return []
     out: list[NarrationCue] = []
     seen: set[tuple[str, str]] = set()
@@ -315,8 +284,6 @@ def _clean_ui_cues(values: object) -> list[NarrationCue]:
             continue
         seen.add(key)
         out.append(cue)
-        if len(out) == max_cues:
-            break
     return out
 
 
@@ -331,8 +298,8 @@ def _normalize_ui_cue(value: object) -> NarrationCue | None:
         return None
     if not isinstance(text, str) or not isinstance(scope, str):
         return None
-    label = label.strip()[:12]
-    text = text.strip()[: _max_ui_cue_chars()]
+    label = label.strip()
+    text = text.strip()
     if not label or not text:
         return None
     try:

@@ -3,7 +3,13 @@ import json
 from src.game.domain.action import Action
 from src.game.domain.combat import GraphCombatState, GraphCombatTraceEvent
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
-from src.game.domain.memory import ExchangePair, GMLogEntry, RollLogEntry, TurnLogEntry
+from src.game.domain.memory import (
+    ExchangePair,
+    GMLogEntry,
+    NarrationCue,
+    RollLogEntry,
+    TurnLogEntry,
+)
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.game.runtime.action.dispatch import GraphActionDispatchResult
@@ -220,11 +226,7 @@ def test_input_payload_includes_recent_context_and_keeps_player_input():
     assert payload["engine_event"]["kind"] == "dialogue"
     assert payload["scene_state"]["target_view"]["id"] == "guard_01"
     assert "recent_log" not in payload
-    assert payload["reference_context"]["recent_narration"] == [
-        {
-            "text": "경비병이 북문을 지킵니다.",
-        }
-    ]
+    assert "recent_narration" not in payload["reference_context"]
     assert payload["reference_context"]["recent_exchanges"] == [
         {
             "turn": 1,
@@ -233,15 +235,133 @@ def test_input_payload_includes_recent_context_and_keeps_player_input():
             "target": "guard_01",
         }
     ]
-    assert payload["reference_context"]["screen_log"] == [
-        {"kind": "gm", "text": "경비병이 북문을 지킵니다."}
-    ]
+    assert "screen_log" not in payload["reference_context"]
+    assert "previous_scene" not in payload["reference_context"]
     assert payload["scene_state"]["scene_anchor"]["location"]["id"] == "square"
     assert "recent_log" not in encoded
     assert "숨은 단서가 있습니다." not in encoded
     assert "player_input" not in payload
     assert "current_event" not in payload
     assert "recent_narration" not in payload
+
+
+def test_input_payload_includes_current_story_context():
+    runtime = _runtime()
+    runtime.graph.nodes["chapter_01"] = GraphNode(
+        id="chapter_01",
+        type="chapter",
+        properties={
+            "title": "푸른섬",
+            "description": "애도와 산 사람의 자리 사이에서 빈방의 의미를 판단합니다.",
+            "status": "active",
+        },
+    )
+    runtime.graph.nodes["quest_01"] = GraphNode(
+        id="quest_01",
+        type="quest",
+        properties={
+            "title": "빈방 사건",
+            "description": "레아의 빈방을 계속 닫아 둘지 정합니다.",
+            "status": "active",
+        },
+    )
+    runtime.progress = runtime.progress.model_copy(
+        update={"active_quest_id": "quest_01"}
+    )
+
+    payload = build_input_narration_payload(
+        runtime=runtime,
+        player_input="레아에게 말을 겁니다",
+        action=Action(verb="speak", to="guard_01"),
+        dialogue_target=runtime.graph.nodes["guard_01"],
+    )
+
+    assert payload["reference_context"]["current_story"] == {
+        "chapter": {
+            "id": "chapter_01",
+            "name": "푸른섬",
+            "status": "active",
+            "description": "애도와 산 사람의 자리 사이에서 빈방의 의미를 판단합니다.",
+        },
+        "active_quest": {
+            "id": "quest_01",
+            "name": "빈방 사건",
+            "status": "active",
+            "description": "레아의 빈방을 계속 닫아 둘지 정합니다.",
+        },
+    }
+
+
+def test_recent_exchanges_include_visible_ui_cues():
+    runtime = _runtime()
+    runtime.recent_exchanges[0] = ExchangePair(
+        turn=1,
+        player="북문에 대해 묻습니다.",
+        narrator="경비병은 북문 쪽을 봅니다.",
+        target="guard_01",
+        cues=[
+            NarrationCue(
+                kind="warning",
+                label="경계",
+                text="경비병의 의심이 커집니다.",
+            )
+        ],
+    )
+
+    payload = build_input_narration_payload(
+        runtime=runtime,
+        player_input="경비병에게 북문을 묻습니다",
+        action=Action(verb="speak", to="guard_01", how="friendly"),
+        dialogue_target=runtime.graph.nodes["guard_01"],
+    )
+
+    assert payload["reference_context"]["recent_exchanges"] == [
+        {
+            "turn": 1,
+            "player": "북문에 대해 묻습니다.",
+            "narrator": "경비병은 북문 쪽을 봅니다.",
+            "target": "guard_01",
+            "cues": [
+                {
+                    "kind": "warning",
+                    "label": "경계",
+                    "text": "경비병의 의심이 커집니다.",
+                    "scope": "delta",
+                }
+            ],
+        }
+    ]
+
+
+def test_narration_references_use_recent_raw_then_previous_summaries():
+    runtime = _runtime()
+    runtime.recent_exchanges = [
+        ExchangePair(turn=turn, player=f"질문 {turn}", narrator=f"응답 {turn}")
+        for turn in range(1, 7)
+    ]
+    runtime.turn_log = [
+        TurnLogEntry(turn=turn, summary=f"장면 요약 {turn}", target=f"npc_{turn}")
+        for turn in range(1, 7)
+    ]
+
+    payload = build_input_narration_payload(
+        runtime=runtime,
+        player_input="경비병에게 북문을 묻습니다",
+        action=Action(verb="speak", to="guard_01", how="friendly"),
+        dialogue_target=runtime.graph.nodes["guard_01"],
+    )
+
+    assert payload["reference_context"]["previous_scene"] == [
+        {"turn": turn, "target": f"npc_{turn}", "summary": f"장면 요약 {turn}"}
+        for turn in range(1, 4)
+    ]
+    assert payload["reference_context"]["recent_exchanges"] == [
+        {"turn": turn, "player": f"질문 {turn}", "narrator": f"응답 {turn}"}
+        for turn in range(4, 7)
+    ]
+    assert "related_memory" not in payload["reference_context"]
+    assert "recent_narration" not in payload["reference_context"]
+    assert "screen_log" not in payload["reference_context"]
 
 
 def test_action_payload_adds_arrival_branch_when_inventory_property_matches():
@@ -581,7 +701,7 @@ def test_roll_payload_keeps_check_reason_without_preroll_narration():
     assert "preroll_narration" not in payload["engine_event"]
 
 
-def test_roll_payload_omits_preroll_body_from_recent_narration():
+def test_roll_payload_does_not_use_recent_narration_context():
     runtime = _runtime()
     runtime.log_entries.append(
         GMLogEntry(
@@ -611,14 +731,13 @@ def test_roll_payload_omits_preroll_body_from_recent_narration():
         outcome="success",
     )
 
-    assert payload["reference_context"]["recent_narration"] == [
-        {
-            "text": "경비병이 북문을 지킵니다.",
-        }
-    ]
+    encoded = json.dumps(payload, ensure_ascii=False)
+
+    assert "recent_narration" not in payload["reference_context"]
+    assert "경비병은 답하기 전에 주변의 시선을 먼저 살핍니다." not in encoded
 
 
-def test_roll_payload_omits_extended_preroll_body_from_recent_narration():
+def test_roll_payload_does_not_use_extended_recent_narration_context():
     runtime = _runtime()
     runtime.log_entries.append(
         GMLogEntry(
@@ -651,11 +770,10 @@ def test_roll_payload_omits_extended_preroll_body_from_recent_narration():
         outcome="success",
     )
 
-    assert payload["reference_context"]["recent_narration"] == [
-        {
-            "text": "경비병이 북문을 지킵니다.",
-        }
-    ]
+    encoded = json.dumps(payload, ensure_ascii=False)
+
+    assert "recent_narration" not in payload["reference_context"]
+    assert "경비병은 답하기 전에 주변의 시선을 먼저 살핍니다." not in encoded
 
 
 def test_roll_payload_can_include_completed_quest_result_cards():
@@ -787,7 +905,7 @@ def test_input_payload_includes_target_public_knowledge_and_mentioned_inventory(
     ]
 
 
-def test_input_payload_trims_world_guidance_for_narration_tokens():
+def test_input_payload_keeps_full_world_guidance():
     runtime = _runtime().model_copy(
         update={
             "content": _runtime().content.model_copy(
@@ -803,7 +921,7 @@ def test_input_payload_trims_world_guidance_for_narration_tokens():
         dialogue_target=runtime.graph.nodes["guard_01"],
     )
 
-    assert len(payload["reference_context"]["world_guidance"]) == 1600
+    assert payload["reference_context"]["world_guidance"] == "가" * 1700
 
 
 def test_action_payload_contains_safe_current_event_and_combat_view():
@@ -848,15 +966,7 @@ def test_action_payload_contains_safe_current_event_and_combat_view():
     assert payload["engine_event"]["kind"] == "combat"
     assert payload["engine_event"]["outcome"] == "ongoing"
     assert payload["result_cards"] == [{"text": "전투가 이어집니다."}]
-    assert payload["reference_context"]["recent_narration"] == [
-        {
-            "text": "경비병이 북문을 지킵니다.",
-        },
-        {
-            "text": "당신의 공격이 허수아비에게 닿습니다. 교전은 이어집니다.",
-            "outcome": "success",
-        },
-    ]
+    assert "recent_narration" not in payload["reference_context"]
     assert "recent_log" not in payload
     assert payload["combat_view"]["kind"] == "combat_exchange"
     assert payload["combat_view"]["player_can_act"] is True

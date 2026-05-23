@@ -385,8 +385,7 @@ def test_parse_graph_narration_answer_ignores_invalid_ui_cues():
     ]
 
 
-def test_parse_graph_narration_answer_respects_zero_ui_cue_limit(monkeypatch):
-    monkeypatch.setenv("GRAPH_NARRATION_MAX_UI_CUES", "0")
+def test_parse_graph_narration_answer_keeps_all_valid_ui_cues_without_limit():
     answer = "\n".join(
         [
             "당신은 경비병의 움직임을 살핍니다.",
@@ -399,6 +398,12 @@ def test_parse_graph_narration_answer_respects_zero_ui_cue_limit(monkeypatch):
                   "label": "변화",
                   "text": "경비병이 문 앞에서 멈춤",
                   "scope": "delta"
+                },
+                {
+                  "kind": "warning",
+                  "label": "긴 경고 라벨",
+                  "text": "문장 중간에서 잘리면 안 되는 긴 표시 정보입니다.",
+                  "scope": "temporary"
                 }
               ]
             }
@@ -408,7 +413,20 @@ def test_parse_graph_narration_answer_respects_zero_ui_cue_limit(monkeypatch):
 
     result = parse_graph_narration_answer(answer)
 
-    assert result.ui_cues == []
+    assert [cue.model_dump() for cue in result.ui_cues] == [
+        {
+            "kind": "change",
+            "label": "변화",
+            "text": "경비병이 문 앞에서 멈춤",
+            "scope": "delta",
+        },
+        {
+            "kind": "warning",
+            "label": "긴 경고 라벨",
+            "text": "문장 중간에서 잘리면 안 되는 긴 표시 정보입니다.",
+            "scope": "temporary",
+        },
+    ]
 
 
 def test_gm_log_entry_from_narration_serializes_non_empty_ui_cues():
@@ -631,9 +649,7 @@ def test_parse_graph_narration_answer_uses_env_marker(monkeypatch):
     assert result.suggestions[0].input_text == "다시 묻습니다"
 
 
-def test_parse_graph_narration_answer_uses_env_suggestion_limits(monkeypatch):
-    monkeypatch.setenv("GRAPH_NARRATION_MAX_SUGGESTIONS", "1")
-    monkeypatch.setenv("GRAPH_NARRATION_MAX_SUGGESTION_CHARS", "4")
+def test_parse_graph_narration_answer_keeps_all_valid_suggestions_without_truncation():
     answer = "\n".join(
         [
             "상대가 길을 가리킵니다.",
@@ -647,8 +663,10 @@ def test_parse_graph_narration_answer_uses_env_suggestion_limits(monkeypatch):
 
     result = parse_graph_narration_answer(answer)
 
-    assert len(result.suggestions) == 1
-    assert result.suggestions[0].input_text == "북문으로"
+    assert [suggestion.input_text for suggestion in result.suggestions] == [
+        "북문으로 이동합니다",
+        "광장으로 돌아갑니다",
+    ]
 
 
 def test_parse_graph_narration_answer_logs_missing_meta_marker():

@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
-from src.game.domain.memory import LogEntry
+from src.game.domain.memory import LogEntry, NarrationCue
 from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, set_diag_context
 from src.wire.graph.to_front import GraphFrontStatePayload, graph_to_front_state
@@ -58,8 +58,8 @@ class _PreparedGraphActionTurn:
     cards: list[LogEntry]
 
 
-def _action_narration_timeout_s(default: float = 30.0) -> float:
-    return env_float("GRAPH_ACTION_NARRATION_TIMEOUT_S", default)
+def _action_narration_timeout_s(default: float = 120.0) -> float:
+    return env_float("LLM_TIMEOUT_S", default)
 
 
 # Public flow
@@ -92,6 +92,7 @@ async def run_graph_action_turn_from_runtime(
     *,
     llm: LLMClient | None = None,
     narration_outcome: GraphResultOutcome | None = None,
+    extra_ui_cues: list[NarrationCue] | None = None,
 ) -> GraphActionTurnResult:
     prepared = _prepare_graph_action_turn(game_id, runtime, action)
     result = await _commit_graph_action_result(repo, game_id, prepared)
@@ -111,6 +112,7 @@ async def run_graph_action_turn_from_runtime(
         result,
         narration_result,
         narration_outcome=narration_outcome,
+        extra_ui_cues=extra_ui_cues,
     )
 
 
@@ -123,6 +125,7 @@ async def run_graph_action_turn_from_runtime_stream(
     llm: LLMClient | None = None,
     result_outcome: GraphResultOutcome | None = None,
     narration_outcome: GraphResultOutcome | None = None,
+    extra_ui_cues: list[NarrationCue] | None = None,
 ) -> AsyncIterator[dict[str, object]]:
     prepared = _prepare_graph_action_turn(game_id, runtime, action)
     result = await _commit_graph_action_result(repo, game_id, prepared)
@@ -157,6 +160,7 @@ async def run_graph_action_turn_from_runtime_stream(
         result,
         narration_result,
         narration_outcome=narration_outcome or result_outcome,
+        extra_ui_cues=extra_ui_cues,
     )
     yield {
         "type": "final",
@@ -257,10 +261,20 @@ async def _commit_graph_action_narration(
     narration_result: GraphNarrationResult,
     *,
     narration_outcome: GraphResultOutcome | None = None,
+    extra_ui_cues: list[NarrationCue] | None = None,
 ) -> GraphActionTurnResult:
     next_runtime = result.runtime
     log_entries: list[LogEntry] = []
     if narration_result.narration:
+        if extra_ui_cues:
+            narration_result = narration_result.model_copy(
+                update={
+                    "ui_cues": [
+                        *extra_ui_cues,
+                        *narration_result.ui_cues,
+                    ][:3]
+                }
+            )
         entry = gm_log_entry_from_narration(
             next_runtime.progress.next_log_id,
             narration_result,

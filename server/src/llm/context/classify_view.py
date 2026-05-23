@@ -22,7 +22,7 @@ from src.game.runtime.state import GameRuntimeState
 class ClassifyContextLimits:
     recent_scene: int = 3
     # Recent player input + narrator reply pairs used for pronoun/context resolution.
-    recent_exchanges: int = 5
+    recent_exchanges: int = 3
 
 
 def build_classify_context_view(
@@ -55,14 +55,14 @@ def build_classify_context_view(
         "identity": {
             "player": _node_ref(runtime, runtime.graph.nodes.get(player_id)),
             "location": _node_ref(runtime, location),
+            "active_quest": active_quest,
+            "available_quests": available_quests,
             "visible_targets": visible_targets,
             "exits": exits,
             "inventory": inventory,
             "equipment": _equipment(runtime, player_id),
             "skills": skills,
             "location_items": location_items,
-            "active_quest": active_quest,
-            "available_quests": available_quests,
             "merchants": _merchants(runtime, visible_targets),
             "corpses": corpses,
         },
@@ -80,11 +80,11 @@ def build_classify_context_view(
             "can_decide": _quest_choice_ids(runtime),
         },
         "references": {
+            "recent_scene": _recent_scene(runtime, limits),
+            "recent_exchanges": _recent_exchanges(runtime, limits),
             "last_npc": _last_entity_ref(runtime, entity_types={"character"}),
             "last_target": _last_entity_ref(runtime),
             "last_item": _last_entity_ref(runtime, entity_types={"item"}),
-            "recent_scene": _recent_scene(runtime, limits),
-            "recent_exchanges": _recent_exchanges(runtime, limits),
         },
     }
 
@@ -445,9 +445,9 @@ def _recent_exchanges(
     runtime: GameRuntimeState,
     limits: ClassifyContextLimits,
 ) -> list[dict[str, Any]]:
-    """Recent player input + narrator reply pairs, not free-form NPC memory."""
+    """Recent raw player input + narrator reply pairs, not free-form NPC memory."""
     return [
-        {"turn": pair.turn, "player": pair.player, "summary": pair.narrator}
+        {"turn": pair.turn, "player": pair.player, "narrator": pair.narrator}
         for pair in runtime.recent_exchanges[-limits.recent_exchanges :]
     ]
 
@@ -456,13 +456,20 @@ def _recent_scene(
     runtime: GameRuntimeState,
     limits: ClassifyContextLimits,
 ) -> list[dict[str, Any]]:
+    recent_exchange_turns = {
+        pair.turn for pair in runtime.recent_exchanges[-limits.recent_exchanges :]
+    }
     return [
         {
             "turn": entry.turn,
             "summary": entry.summary,
             **({"target": entry.target} if entry.target else {}),
         }
-        for entry in runtime.turn_log[-limits.recent_scene :]
+        for entry in [
+            entry
+            for entry in runtime.turn_log
+            if entry.turn not in recent_exchange_turns
+        ][-limits.recent_scene :]
         if entry.summary
     ]
 

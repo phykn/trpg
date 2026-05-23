@@ -243,14 +243,63 @@ async def test_level_up_options_include_llm_skill_candidate(tmp_path):
     assert learn["growth"]["kind"] == "learn_skill"
     assert learn["growth"]["skill"]["bonus"] == 2
     assert learn["growth"]["skill"]["mp_cost"] == 2
+    payload = json.loads(llm.calls[0]["messages"][1]["content"])
+    assert list(payload) == ["current_story", "player", "skills", "recent_log"]
     assert (
-        json.loads(llm.calls[0]["messages"][1]["content"])["skills"][0][
-            "action"
-        ]
+        payload["skills"][0]["action"]
         == "attack"
     )
-    assert "bonus" not in json.loads(llm.calls[0]["messages"][1]["content"])["skills"][0]
+    assert "bonus" not in payload["skills"][0]
     assert llm.calls[0]["agent"] == "recommend"
+
+
+async def test_level_up_recommend_payload_orders_story_before_player_and_recent_log(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["chapter_01"] = GraphNode(
+        id="chapter_01",
+        type="chapter",
+        properties={
+            "title": "푸른섬",
+            "description": "애도와 산 사람의 자리 사이에서 빈방의 의미를 판단합니다.",
+            "status": "active",
+        },
+    )
+    graph.nodes["quest_01"] = GraphNode(
+        id="quest_01",
+        type="quest",
+        properties={
+            "title": "빈방 사건",
+            "description": "레아의 빈방을 계속 닫아 둘지 정합니다.",
+            "status": "active",
+        },
+    )
+    await repo.save_graph("game-1", graph)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(update={"active_quest_id": "quest_01"})
+    )
+    runtime = await load_runtime_state(repo, "game-1")
+    llm = _SkillCandidateLLM()
+
+    await build_level_up_choices(runtime, llm=llm)
+
+    payload = json.loads(llm.calls[0]["messages"][1]["content"])
+    assert list(payload) == ["current_story", "player", "skills", "recent_log"]
+    assert payload["current_story"] == {
+        "chapter": {
+            "id": "chapter_01",
+            "name": "푸른섬",
+            "description": "애도와 산 사람의 자리 사이에서 빈방의 의미를 판단합니다.",
+        },
+        "active_quest": {
+            "id": "quest_01",
+            "name": "빈방 사건",
+            "description": "레아의 빈방을 계속 닫아 둘지 정합니다.",
+        },
+    }
 
 
 async def test_level_up_options_ignore_roll_entries_in_recent_log(tmp_path):

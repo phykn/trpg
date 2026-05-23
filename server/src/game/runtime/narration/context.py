@@ -5,7 +5,7 @@ from src.game.domain.action import Action
 from src.game.domain.content import node_label, node_text, node_value
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph.character import graph_character_kind, is_visible_character
-from src.game.domain.memory import LogEntry, RollLogEntry
+from src.game.domain.memory import RollLogEntry
 from src.game.domain.graph.query import (
     characters_at,
     edges_from,
@@ -16,12 +16,11 @@ from src.game.domain.graph.query import (
 from src.locale.render import render
 
 from ..action.dispatch import GraphActionDispatchResult
-from ..env import env_nonnegative_int
 from ..state import GameRuntimeState
 from .combat_view import combat_narration_view
 from .memory_context import (
     narrate_recent_exchanges_payload,
-    related_memory_payload,
+    previous_scene_payload,
 )
 
 
@@ -55,29 +54,23 @@ def build_action_narration_payload(
         current_event["story_transition"] = story_transition
     payload = {
         "world_guidance": _world_guidance(after),
+        "current_story": _current_story_payload(after),
         "player_input": None,
         "current_place": _node_ref(after, place),
         "current_event": current_event,
         "scene_anchor": scene_anchor,
         "target_view": _target_view(after, target),
         "result_cards": _result_cards(card_texts),
-        "related_memory": related_memory_payload(
-            after,
-            action=action,
-            target=target,
-        ),
-        "recent_narration": _recent_narration_payload(before),
+        "previous_scene": previous_scene_payload(after),
         "recent_exchanges": narrate_recent_exchanges_payload(
             after,
             target=target.id if target is not None else None,
         ),
-        "screen_log": _screen_log_payload(before),
         "combat_view": combat_narration_view(
             after,
             trace=dispatch.combat_trace,
             outcome=dispatch.outcome,
         ),
-        "budget": _narrate_budget(after),
     }
     return compact_narration_payload(payload)
 
@@ -95,7 +88,6 @@ def build_roll_narration_payload(
     check_reason = pending.get("check_reason")
     if not isinstance(check_reason, str):
         check_reason = ""
-    preroll_narration = pending.get("body")
     player_input = pending.get("player_input")
     resolved_results = result_texts or [
         _roll_result_card(roll_entry, outcome, runtime.progress.locale)
@@ -118,31 +110,18 @@ def build_roll_narration_payload(
         current_event["check_reason"] = check_reason
     payload = {
         "world_guidance": _world_guidance(runtime),
+        "current_story": _current_story_payload(runtime),
         "player_input": player_input if isinstance(player_input, str) else None,
         "current_event": current_event,
         "scene_anchor": _scene_anchor(runtime),
         "target_view": _target_view(runtime, target),
         "result_cards": _result_cards(resolved_results),
-        "related_memory": related_memory_payload(
-            runtime,
-            action=action,
-            target=target,
-        ),
-        "recent_narration": _recent_narration_payload(
-            runtime,
-            exclude_texts=[
-                text
-                for text in (check_reason, preroll_narration)
-                if isinstance(text, str)
-            ],
-        ),
+        "previous_scene": previous_scene_payload(runtime),
         "recent_exchanges": narrate_recent_exchanges_payload(
             runtime,
             target=target.id if target is not None else None,
         ),
-        "screen_log": _screen_log_payload(runtime),
         "combat_view": combat_narration_view(runtime),
-        "budget": _narrate_budget(runtime),
     }
     return compact_narration_payload(payload)
 
@@ -156,6 +135,7 @@ def build_input_narration_payload(
 ) -> dict[str, Any]:
     payload = {
         "world_guidance": _world_guidance(runtime),
+        "current_story": _current_story_payload(runtime),
         "player_input": player_input,
         "current_event": _input_current_event(runtime, action, dialogue_target),
         "scene_anchor": _scene_anchor(runtime),
@@ -165,19 +145,12 @@ def build_input_narration_payload(
             player_input=player_input,
         ),
         "result_cards": [],
-        "related_memory": related_memory_payload(
-            runtime,
-            action=action,
-            target=dialogue_target,
-        ),
-        "recent_narration": _recent_narration_payload(runtime),
+        "previous_scene": previous_scene_payload(runtime),
         "recent_exchanges": narrate_recent_exchanges_payload(
             runtime,
             target=dialogue_target.id if dialogue_target is not None else None,
         ),
-        "screen_log": _screen_log_payload(runtime),
         "combat_view": combat_narration_view(runtime),
-        "budget": _narrate_budget(runtime),
     }
     return compact_narration_payload(payload)
 
@@ -193,16 +166,14 @@ def compact_narration_payload(source: dict[str, Any]) -> dict[str, Any]:
     payload = {
         "reference_context": {
             "world_guidance": source.get("world_guidance"),
-            "related_memory": source.get("related_memory"),
+            "current_story": source.get("current_story"),
+            "previous_scene": source.get("previous_scene"),
             "recent_exchanges": source.get("recent_exchanges"),
-            "recent_narration": source.get("recent_narration"),
-            "screen_log": source.get("screen_log"),
         },
         "scene_state": scene_state,
         "combat_view": source.get("combat_view"),
         "engine_event": event,
         "result_cards": source.get("result_cards"),
-        "budget": source.get("budget"),
         "user_request": {
             "player_input": source.get("player_input"),
         },
@@ -268,8 +239,48 @@ def _world_guidance(runtime: GameRuntimeState) -> str | None:
     text = runtime.content.world_guidance.strip()
     if not text:
         return None
-    max_chars = env_nonnegative_int("GRAPH_NARRATION_WORLD_GUIDANCE_CHARS", 1600)
-    return text[:max_chars]
+    return text
+
+
+def _current_story_payload(runtime: GameRuntimeState) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
+    chapter = _active_chapter(runtime)
+    if chapter is not None:
+        payload["chapter"] = chapter
+    quest = _active_quest(runtime)
+    if quest is not None:
+        payload["active_quest"] = quest
+    return payload
+
+
+def _active_chapter(runtime: GameRuntimeState) -> dict[str, str] | None:
+    for node in runtime.graph.nodes.values():
+        if node.type == "chapter" and node.properties.get("status") == "active":
+            return _story_node_payload(runtime, node)
+    return None
+
+
+def _active_quest(runtime: GameRuntimeState) -> dict[str, str] | None:
+    quest_id = runtime.progress.active_quest_id
+    node = runtime.graph.nodes.get(quest_id or "")
+    if node is None or node.type != "quest":
+        return None
+    return _story_node_payload(runtime, node)
+
+
+def _story_node_payload(runtime: GameRuntimeState, node: GraphNode) -> dict[str, str]:
+    payload = {"id": node.id, "name": node_label(runtime.content, node)}
+    status = node.properties.get("status")
+    if isinstance(status, str) and status:
+        payload["status"] = status
+    description = node_text(runtime.content, node, "description") or node_text(
+        runtime.content,
+        node,
+        "summary",
+    )
+    if description:
+        payload["description"] = description
+    return payload
 
 
 def _visible_character_payloads(
@@ -812,92 +823,6 @@ def _roll_result_card(roll_entry: RollLogEntry, outcome: str, locale: str) -> st
         else "runtime.roll.result.failure"
     )
     return render(key, locale, check=roll_entry.check)
-
-
-def _recent_narration_payload(
-    runtime: GameRuntimeState,
-    *,
-    limit: int | None = None,
-    max_chars: int | None = None,
-    exclude_texts: list[str] | None = None,
-) -> list[dict[str, Any]]:
-    limit = env_nonnegative_int("GRAPH_NARRATION_RECENT_LOG_ENTRIES", 3) if limit is None else limit
-    max_chars = env_nonnegative_int("GRAPH_NARRATION_RECENT_LOG_CHARS", 160) if max_chars is None else max_chars
-    excluded = [text.strip() for text in (exclude_texts or []) if text.strip()]
-    entries = [
-        entry
-        for entry in runtime.log_entries
-        if entry.kind == "gm"
-        and entry.text.strip()
-        and not _matches_excluded_narration(entry.text, excluded)
-    ][-limit:]
-    return [
-        {
-            "text": entry.text.strip()[:max_chars],
-            "outcome": entry.outcome,
-        }
-        for entry in entries
-    ]
-
-
-def _screen_log_payload(runtime: GameRuntimeState, limit: int | None = None) -> list[dict[str, Any]]:
-    limit = env_nonnegative_int("GRAPH_NARRATION_SCREEN_LOG_ENTRIES", 8) if limit is None else limit
-    return [_screen_log_entry_payload(entry) for entry in runtime.log_entries[-limit:]]
-
-
-def _screen_log_entry_payload(entry: LogEntry) -> dict[str, Any]:
-    if entry.kind == "gm":
-        return {
-            "kind": entry.kind,
-            "text": entry.text,
-            "outcome": entry.outcome,
-        }
-    if entry.kind in {"player", "act"}:
-        return {
-            "kind": entry.kind,
-            "text": entry.text,
-        }
-    return entry.model_dump(mode="json")
-
-
-def _matches_excluded_narration(text: str, excluded: list[str]) -> bool:
-    stripped = text.strip()
-    if stripped in excluded:
-        return True
-    normalized = _normalize_for_match(stripped)
-    if not normalized:
-        return False
-    for excluded_text in excluded:
-        excluded_normalized = _normalize_for_match(excluded_text)
-        if not excluded_normalized:
-            continue
-        if normalized == excluded_normalized:
-            return True
-        if len(excluded_normalized) >= 12 and (
-            normalized.startswith(excluded_normalized)
-            or excluded_normalized.startswith(normalized)
-        ):
-            return True
-    return False
-
-
-def _narrate_budget(runtime: GameRuntimeState) -> dict[str, int]:
-    place_id = location_of(runtime.graph_index, runtime.progress.player_id)
-    visible_count = (
-        len(
-            _visible_character_payloads(
-                runtime, place_id, exclude_id=runtime.progress.player_id
-            )
-        )
-        + len(_visible_item_payloads(runtime, place_id))
-        + len(_exit_payloads(runtime, place_id))
-    )
-    return {
-        "visible_names_omitted": max(0, visible_count - 5),
-        "related_memory_omitted": 0,
-        "recent_exchanges_omitted": max(0, len(runtime.recent_exchanges) - 5),
-        "result_cards_omitted": 0,
-    }
 
 
 def _action_target(runtime: GameRuntimeState, action: Action) -> GraphNode | None:

@@ -430,11 +430,11 @@ async def test_graph_input_protected_target_attack_is_clear_rejection(tmp_path):
     assert [entry.kind for entry in logs] == ["player", "gm"]
     assert logs[0].text == "goblin_01을 공격한다"
     narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
-    payload = json.loads(narrate_call["messages"][1]["content"])
-    assert payload["engine_event"]["outcome"] == "action_rejected"
-    assert payload["user_request"]["player_input"] == "goblin_01을 공격한다"
-    assert payload["engine_event"]["target"]["id"] == "goblin_01"
-    assert payload["scene_state"]["target_view"]["id"] == "goblin_01"
+    prompt = narrate_call["messages"][1]["content"]
+    assert prompt.startswith("장면 유형: action_rejected")
+    assert "플레이어 입력: goblin_01을 공격한다" in prompt
+    assert "대상: goblin_01" in prompt
+    assert "보호받는 대상이라 지금은 공격할 수 없습니다." in prompt
 
 
 async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
@@ -493,11 +493,13 @@ async def test_graph_input_persists_narration_ui_cues(tmp_path):
 
     result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 말을 건다")
     logs = await repo.load_log_entries("game-1")
+    exchanges = await repo.load_exchange_entries("game-1")
 
     assert result.status == "executed"
     assert [entry.kind for entry in logs] == ["player", "gm"]
     assert isinstance(logs[1], GMLogEntry)
     assert logs[1].cues[0].text == "문틈을 살필 수 있음"
+    assert exchanges[0].cues[0].text == "문틈을 살필 수 있음"
 
 
 async def test_graph_input_speak_check_hint_creates_pending_roll(tmp_path):
@@ -867,6 +869,14 @@ async def test_graph_input_passes_focused_context_to_classify(
     assert list(payload) == ["context", "player_input"]
     assert payload["player_input"] == "그걸 따라간다"
     assert "player_input" not in payload["context"]
+    assert list(payload["context"]) == ["mode", "identity", "affordances", "references"]
+    assert list(payload["context"]["references"]) == [
+        "recent_scene",
+        "recent_exchanges",
+        "last_npc",
+        "last_target",
+        "last_item",
+    ]
     assert "history" not in payload
     assert "recent_exchanges" not in payload
     assert "recent_exchanges" not in payload
@@ -874,7 +884,7 @@ async def test_graph_input_passes_focused_context_to_classify(
         {
             "turn": 2,
             "player": "북문에 대해 묻는다",
-            "summary": "고블린은 발자국을 보았다고 말합니다.",
+            "narrator": "고블린은 발자국을 보았다고 말합니다.",
         }
     ]
 
@@ -917,10 +927,10 @@ async def test_graph_input_passes_env_classify_recent_context_limits(
     payload = json.loads(classify_call["messages"][1]["content"])
     context = payload["context"]
     assert context["references"]["recent_scene"] == [
-        {"turn": 2, "summary": "최근 장면입니다."}
+        {"turn": 1, "summary": "오래된 장면입니다."}
     ]
     assert context["references"]["recent_exchanges"] == [
-        {"turn": 2, "player": "최근 질문", "summary": "최근 답변"}
+        {"turn": 2, "player": "최근 질문", "narrator": "최근 답변"}
     ]
 
 
@@ -1330,12 +1340,11 @@ async def test_graph_input_targetless_speak_defaults_to_nearby_living_npc(tmp_pa
     await run_graph_input_turn(llm, repo, "game-1", "근처 사람에게 말을 건다")
     progress = await repo.load_progress("game-1")
     narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
-    user_prompt = json.loads(narrate_call["messages"][1]["content"])
+    user_prompt = narrate_call["messages"][1]["content"]
 
     assert progress.active_subject_id == "goblin_01"
-    assert user_prompt["scene_state"]["target_view"]["id"] == "goblin_01"
-    assert user_prompt["scene_state"]["target_view"]["name"] == "goblin_01"
-    assert user_prompt["engine_event"]["kind"] == "dialogue"
+    assert "대상: goblin_01" in user_prompt
+    assert "장면 유형: dialogue" in user_prompt
     assert "NPC가 직접 반응" in narrate_call["messages"][0]["content"]
 
 
@@ -1359,14 +1368,14 @@ async def test_graph_input_targetless_repeated_speak_prefers_active_subject(tmp_
     await run_graph_input_turn(llm, repo, "game-1", "그에게 다시 묻는다")
     saved = await repo.load_progress("game-1")
     narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
-    user_prompt = json.loads(narrate_call["messages"][1]["content"])
+    user_prompt = narrate_call["messages"][1]["content"]
 
     assert saved.active_subject_id == "merchant_01"
-    assert user_prompt["scene_state"]["target_view"]["id"] == "merchant_01"
-    assert user_prompt["engine_event"]["target"]["id"] == "merchant_01"
+    assert "대상: merchant_01" in user_prompt
+    assert "장면 유형: dialogue" in user_prompt
 
 
-async def test_graph_input_narration_payload_includes_recent_narration(tmp_path):
+async def test_graph_input_narration_payload_omits_duplicate_recent_logs(tmp_path):
     repo = await _repo(tmp_path)
     await repo.append_log_entries(
         "game-1",
@@ -1380,22 +1389,18 @@ async def test_graph_input_narration_payload_includes_recent_narration(tmp_path)
 
     await run_graph_input_turn(llm, repo, "game-1", "경비병에게 인사한다")
     narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
-    payload = json.loads(narrate_call["messages"][1]["content"])
-    encoded = json.dumps(payload, ensure_ascii=False)
+    prompt = narrate_call["messages"][1]["content"]
 
-    assert "recent_log" not in payload
-    assert payload["reference_context"]["recent_narration"] == [
-        {"text": "경비병이 북문을 지킵니다."}
-    ]
-    assert "경비병이 북문을 지킵니다." in encoded
-    assert "recent_exchanges" not in payload["reference_context"]
+    assert "recent_log" not in prompt
+    assert "reference_context" not in prompt
+    assert "경비병이 북문을 지킵니다." not in prompt
 
 
 async def test_graph_input_speak_times_out_slow_narration_and_uses_fallback(
     tmp_path,
     monkeypatch,
 ):
-    monkeypatch.setenv("GRAPH_INPUT_NARRATION_TIMEOUT_S", "0.01")
+    monkeypatch.setenv("LLM_TIMEOUT_S", "0.01")
     repo = await _repo(tmp_path)
     llm = _SlowGraphNarrateLLM(
         {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]}

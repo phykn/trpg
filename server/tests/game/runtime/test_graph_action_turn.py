@@ -749,8 +749,9 @@ async def test_run_graph_action_turn_preserves_repeated_llm_narration(tmp_path):
     )
     assert saved_logs[-1].outcome == "neutral"
     prompt = llm.calls[0]["messages"][1]["content"]
-    assert "화면 로그:" in prompt
-    assert f"- GM: {repeated}" in prompt
+    assert "화면 로그:" not in prompt
+    assert prompt.startswith("장면 유형: 전투")
+    assert repeated not in prompt
 
 
 async def test_run_graph_action_turn_uses_llm_for_combat_failure_narration(
@@ -893,13 +894,12 @@ async def test_run_graph_action_turn_sends_combat_trace_to_narration(tmp_path):
     call = [call for call in llm.calls if call["agent"] == "combat_narrate"][0]
     prompt = call["messages"][1]["content"]
 
-    assert prompt.startswith("화면 로그:")
-    assert prompt.find("화면 로그:") < prompt.find("장면 유형: 전투")
+    assert prompt.startswith("장면 유형: 전투")
     assert "행동: 공격" in prompt
     assert "결과:" in prompt
     assert "확정:" in prompt
-    assert "화면 로그:" in prompt
-    assert "- GM: 고블린이 길목을 막아섭니다." in prompt
+    assert "화면 로그:" not in prompt
+    assert "고블린이 길목을 막아섭니다." not in prompt
     assert '"combat_view"' not in prompt
     assert "combat_started" not in prompt
     assert "player_attack_success" not in prompt
@@ -982,7 +982,7 @@ async def test_run_graph_action_turn_times_out_slow_narration_and_keeps_action(
     tmp_path,
     monkeypatch,
 ):
-    monkeypatch.setenv("GRAPH_ACTION_NARRATION_TIMEOUT_S", "0.01")
+    monkeypatch.setenv("LLM_TIMEOUT_S", "0.01")
     repo = await _repo(tmp_path)
 
     started = time.perf_counter()

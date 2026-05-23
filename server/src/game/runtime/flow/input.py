@@ -51,14 +51,14 @@ class GraphInputError(ValueError):
     pass
 
 
-def _input_narration_timeout_s(default: float = 30.0) -> float:
-    return env_float("GRAPH_INPUT_NARRATION_TIMEOUT_S", default)
+def _input_narration_timeout_s(default: float = 120.0) -> float:
+    return env_float("LLM_TIMEOUT_S", default)
 
 
 def _classify_context_limits() -> ClassifyContextLimits:
     return ClassifyContextLimits(
         recent_scene=_classify_limit("RECENT_SCENE", 3),
-        recent_exchanges=_classify_limit("RECENT_EXCHANGES", 5),
+        recent_exchanges=_classify_limit("RECENT_EXCHANGES", 3),
     )
 
 

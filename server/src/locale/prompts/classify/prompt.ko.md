@@ -80,8 +80,12 @@
 `context`는 후보와 참고자료입니다.
 `context`를 먼저 읽고 마지막의 `player_input`을 현재 턴 명령으로 판단합니다.
 `context` 안의 장면 요약, 대화 요약, 대상 목록을 플레이어의 새 명령처럼 취급하지 마십시오.
+`context` 내부도 큰 정보에서 세부 정보 순서입니다. `mode`, `identity`, `affordances`, `references` 순서로 읽고, `references` 안에서는 과거 장면 요약보다 최근 대화 원문을 더 강한 문맥으로 봅니다.
 
 - `context.identity.player`: 플레이어 id와 이름
+- `context.identity.location`: 현재 장소 id와 이름
+- `context.identity.active_quest`: 현재 퀘스트
+- `context.identity.available_quests`: 현재 장소에서 보이는 의뢰인에게 수락할 수 있는 퀘스트
 - `context.identity.visible_targets`: 눈앞 NPC, 적, 대상
 - `context.identity.exits`: 이동 후보
 - `context.identity.inventory`: 플레이어 소지품
@@ -90,10 +94,9 @@
 - `context.identity.location_items`: 현재 장소 아이템
 - `context.identity.merchants`: 거래 가능한 대상과 stock
 - `context.identity.corpses`: 약탈 가능한 시체와 inventory
-- `context.identity.active_quest`: 현재 퀘스트
-- `context.identity.available_quests`: 현재 장소에서 보이는 의뢰인에게 수락할 수 있는 퀘스트
 - `context.references`: 지시어 해소용
-- `context.references.recent_exchanges`: 최근 플레이어 입력과 나레이터 응답 쌍. 대명사와 "아까 말한 것" 같은 문맥 해소에만 사용
+- `context.references.recent_scene`: 최근 원문 구간보다 앞선 장면 요약
+- `context.references.recent_exchanges`: 최근 플레이어 입력 원문과 나레이터 응답 원문 쌍. 대명사와 "아까 말한 것" 같은 문맥 해소에만 사용
 
 모든 id는 context에 실제로 있어야 합니다.
 이름을 보고 id를 만들지 마십시오.
@@ -228,9 +231,10 @@ context에 없는 id는 출력하지 마십시오.
 - 모든 id는 context에 실제로 존재해야 합니다.
 - 이름, 별명, 지시어가 여러 후보와 매칭되면 `pass`입니다.
 - `context.references`는 "그 사람", "그것", "아까 그 상인", "그놈" 같은 지시어 해소에만 씁니다.
-- `context.references.recent_scene`은 최근 장면 요약은 지시어 해소용으로만 씁니다.
+- `context.references.recent_scene`은 최근 원문 구간 이전의 최근 장면 요약입니다.
+- 최근 장면 요약은 지시어 해소용으로만 씁니다.
 - 최근 장면 요약은 현재 `player_input`보다 강한 근거가 아닙니다.
-- 화면 로그 전체나 GM 나레이션 원문은 classify 입력에 들어오지 않습니다.
+- 화면 로그 전체나 별도 로그 원문 전체는 classify 입력에 들어오지 않습니다.
 - 명확한 이름이 context에 있으면 references보다 현재 context를 우선합니다.
 - "나", "내게", "자신에게"는 `context.identity.player`의 id를 씁니다.
 

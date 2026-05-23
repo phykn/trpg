@@ -14,6 +14,7 @@ def test_classify_input_carries_focused_context():
     assert input_.player_input == "상인에게 말을 겁니다"
     assert input_.context == context
     assert set(input_.model_dump()) == {"player_input", "context"}
+    assert list(input_.model_dump()) == ["context", "player_input"]
 
 
 def test_classify_input_round_trip_json():
