@@ -922,6 +922,45 @@ async def test_run_graph_roll_filters_narrative_suggestions(tmp_path):
     assert result.suggestions == []
 
 
+async def test_failed_speak_roll_offers_grounded_retry_suggestion(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["guard_01"] = _character("guard_01").model_copy(
+        update={
+            "properties": {
+                **_character("guard_01").properties,
+                "name": "경비병",
+            }
+        }
+    )
+    graph.edges["located_at:guard_01:town"] = GraphEdge(
+        id="located_at:guard_01:town",
+        type="located_at",
+        from_node_id="guard_01",
+        to_node_id="town",
+    )
+    await repo.save_graph("game-1", graph)
+    pending = (
+        await start_graph_roll(
+            repo,
+            "game-1",
+            Action(verb="speak", to="guard_01", how="friendly"),
+            player_input="경비병에게 규칙을 묻습니다",
+        )
+    ).pending_roll
+
+    result = await run_graph_roll(repo, "game-1", pending["id"], dice=1)
+
+    assert [suggestion.model_dump() for suggestion in result.suggestions] == [
+        {
+            "label": "다시 말 걸기",
+            "input_text": "경비병에게 다시 말을 겁니다",
+            "intent": "talk",
+            "action": None,
+        }
+    ]
+
+
 async def test_run_graph_roll_strips_repeated_preroll_sentences(tmp_path):
     repo = await _repo(tmp_path)
     reason = (

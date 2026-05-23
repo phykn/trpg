@@ -208,6 +208,8 @@ def ensure_graph_action_narration(
     deterministic = _deterministic_graph_action_narration(before, dispatch)
     if deterministic is not None and not llm_available:
         return deterministic
+    if dispatch.kind == "quest_accept":
+        return result.model_copy(update={"narration": ""})
     if result.narration:
         return _replace_repeated_graph_action_narration(before, dispatch, result)
     if not llm_available:

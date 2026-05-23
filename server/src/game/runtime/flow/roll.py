@@ -48,7 +48,7 @@ from ..narration.result import (
     persist_graph_narration_result,
 )
 from ..narration.safety import guard_speak_narration_player_quote
-from ..narration.suggestions import filter_grounded_suggestions
+from ..narration.suggestions import GraphSuggestion, filter_grounded_suggestions
 from ..pending_action import build_pending_action_payload, load_pending_action
 from ..request_result import (
     GraphActionRequestResult,
@@ -664,10 +664,7 @@ async def _commit_roll_narration(
         runtime,
         graph_to_front_state(runtime),
         outcome=resolved.outcome,
-        suggestions=filter_grounded_suggestions(
-            runtime,
-            narration_result.suggestions,
-        ),
+        suggestions=_roll_result_suggestions(runtime, resolved, narration_result),
     )
 
 
@@ -813,9 +810,10 @@ async def _finish_narrative_roll(
     )
     return final.model_copy(
         update={
-            "suggestions": filter_grounded_suggestions(
+            "suggestions": _roll_result_suggestions(
                 next_runtime,
-                narration_result.suggestions,
+                resolved,
+                narration_result,
             )
         }
     )
@@ -823,6 +821,31 @@ async def _finish_narrative_roll(
 
 def _is_narrative_roll_action(action: Action) -> bool:
     return action.verb in {"perceive", "speak"}
+
+
+def _roll_result_suggestions(
+    runtime: GameRuntimeState,
+    resolved: _ResolvedGraphRoll,
+    narration_result: GraphNarrationResult,
+) -> list[GraphSuggestion]:
+    suggestions = filter_grounded_suggestions(runtime, narration_result.suggestions)
+    if suggestions or resolved.outcome != "failure" or resolved.action.verb != "speak":
+        return suggestions
+    target_id = _action_target(resolved.action)
+    target = runtime.graph.nodes.get(target_id or "")
+    if target is None:
+        return suggestions
+    target_name = node_label(runtime.content, target)
+    return filter_grounded_suggestions(
+        runtime,
+        [
+            GraphSuggestion(
+                label="다시 말 걸기",
+                input_text=f"{target_name}에게 다시 말을 겁니다",
+                intent="talk",
+            )
+        ],
+    )
 
 
 def _roll_resolution_key(action: Action, outcome: GraphResultOutcome) -> str:
