@@ -90,6 +90,17 @@ def _card_text(
         )
         return render("runtime.card.quest_abandon", after.progress.locale, quest=quest)
 
+    if dispatch.kind == "decide":
+        quest_id = _single(action.what) or _single(action.to)
+        quest = _quest_title(after, quest_id)
+        choice = _quest_choice_label(after, quest_id, action.how)
+        return render(
+            "runtime.card.quest_decide",
+            after.progress.locale,
+            quest=quest,
+            choice=choice,
+        )
+
     if dispatch.kind == "rest":
         return render("runtime.card.rest", after.progress.locale)
 
@@ -232,6 +243,26 @@ def _quest_title(runtime: GameRuntimeState, quest_id: str | None) -> str:
     if node is None or node.type != "quest":
         return render("runtime.fallback.quest", runtime.progress.locale)
     return node_label(runtime.content, node)
+
+
+def _quest_choice_label(
+    runtime: GameRuntimeState,
+    quest_id: str | None,
+    choice_id: str | None,
+) -> str:
+    if quest_id is None or choice_id is None:
+        return render("runtime.fallback.choice", runtime.progress.locale)
+    quest = runtime.graph.nodes.get(quest_id)
+    if quest is None:
+        return choice_id
+    choices = quest.properties.get("choices")
+    if not isinstance(choices, dict):
+        return choice_id
+    choice = choices.get(choice_id)
+    if not isinstance(choice, dict):
+        return choice_id
+    label = choice.get("label")
+    return label if isinstance(label, str) and label else choice_id
 
 
 def _node_label(

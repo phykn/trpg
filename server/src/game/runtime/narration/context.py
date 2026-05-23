@@ -40,7 +40,7 @@ def build_action_narration_payload(
     current_event = {
         "kind": dispatch.kind,
         "outcome": dispatch.outcome,
-        "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
+        "action": narration_action_payload(action),
         "resolved_results": card_texts,
     }
     quest_trigger = _quest_trigger_payload(action, dispatch.kind)
@@ -86,30 +86,29 @@ def build_roll_narration_payload(
     target = _action_target(runtime, action)
     check_reason = pending.get("check_reason")
     if not isinstance(check_reason, str):
-        check_reason = pending.get("body")
+        check_reason = ""
     preroll_narration = pending.get("body")
     player_input = pending.get("player_input")
     resolved_results = result_texts or [
         _roll_result_card(roll_entry, outcome, runtime.progress.locale)
     ]
+    current_event = {
+        "kind": "roll",
+        "outcome": outcome,
+        "action": narration_action_payload(action),
+        "roll": {
+            "check": roll_entry.check,
+            "result": roll_entry.result,
+            "margin": roll_entry.margin,
+        },
+        "resolved_results": resolved_results,
+    }
+    if check_reason:
+        current_event["check_reason"] = check_reason
     payload = {
         "world_guidance": _world_guidance(runtime),
         "player_input": player_input if isinstance(player_input, str) else None,
-        "current_event": {
-            "kind": "roll",
-            "outcome": outcome,
-            "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
-            "check_reason": check_reason if isinstance(check_reason, str) else "",
-            "preroll_narration": (
-                preroll_narration if isinstance(preroll_narration, str) else ""
-            ),
-            "roll": {
-                "check": roll_entry.check,
-                "result": roll_entry.result,
-                "margin": roll_entry.margin,
-            },
-            "resolved_results": resolved_results,
-        },
+        "current_event": current_event,
         "scene_anchor": _scene_anchor(runtime),
         "target_view": _target_view(runtime, target),
         "result_cards": _result_cards(resolved_results),
@@ -211,6 +210,15 @@ def update_compact_narration_event(
         payload.pop("user_request")
     if result_cards is not None:
         payload["result_cards"] = result_cards
+
+
+def narration_action_payload(action: Action) -> dict[str, str]:
+    payload = {"verb": action.verb}
+    if action.how:
+        payload["how"] = action.how
+    if action.note:
+        payload["note"] = action.note
+    return payload
 
 
 def _drop_empty_narration_values(value: Any) -> Any:
@@ -542,7 +550,7 @@ def _mbti_payload(
         mbti = runtime.graph.nodes.get(edge.to_node_id)
         if mbti is None or mbti.type != "mbti":
             continue
-        payload: dict[str, Any] = {"id": mbti.id}
+        payload: dict[str, Any] = {}
         for key in (
             "attitude",
             "speech_style",
@@ -588,7 +596,7 @@ def _input_current_event(
     event: dict[str, Any] = {
         "kind": "dialogue" if dialogue_target is not None else "input",
         "target": _target_view(runtime, dialogue_target),
-        "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
+        "action": narration_action_payload(action),
         "outcome": (
             "player_addresses_target"
             if dialogue_target is not None
@@ -607,7 +615,7 @@ def _quest_trigger_payload(action: Action, kind: str) -> dict[str, str] | None:
     if kind == "move":
         target = _single(action.to) or _single(action.what)
         if target is not None:
-            return {"type": "location_enter", "target": target}
+            return {"type": "location_enter"}
     return None
 
 

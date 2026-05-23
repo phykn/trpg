@@ -290,7 +290,7 @@ export function Playing({ game }: Props) {
               locked={pendingConfirmation !== null || pendingRoll !== null}
             />
           </View>
-        ) : levelUpOpen ? (
+        ) : game.scenarioCompleted ? null : levelUpOpen ? (
           <LevelUpPrompt
             hero={hero}
             choices={levelUpChoices}
@@ -306,7 +306,7 @@ export function Playing({ game }: Props) {
             onStop={onStop}
             streaming={streaming}
             suggestions={visibleSuggestions}
-            quickActions={hero.canLevelUp ? [{
+            quickActions={hero.canLevelUp && !game.scenarioCompleted ? [{
               id: 'level-up',
               label: ko.level.title,
               onPress: openLevelUpFromComposer,

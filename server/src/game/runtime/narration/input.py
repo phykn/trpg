@@ -13,7 +13,11 @@ from src.llm.diag import llm_diag
 
 from ..env import graph_narration_temperature
 from ..state import GameRuntimeState
-from .context import build_input_narration_payload, update_compact_narration_event
+from .context import (
+    build_input_narration_payload,
+    narration_action_payload,
+    update_compact_narration_event,
+)
 from .result import GraphNarrationResult, parse_graph_narration_answer
 
 
@@ -277,7 +281,7 @@ def _graph_preroll_narration_messages(
         {
             "kind": "roll_prompt",
             "outcome": "pending_roll",
-            "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
+            "action": narration_action_payload(action),
             "check_reason": body if isinstance(body, str) else "",
             "resolved_results": [title, body],
         },
@@ -316,7 +320,7 @@ def _graph_input_rejection_narration_messages(
         {
             "kind": "action_rejected",
             "outcome": "action_rejected",
-            "action": action.model_dump(mode="json", by_alias=True, exclude_none=True),
+            "action": narration_action_payload(action),
             "target": target_view,
             "resolved_results": [public_reason],
         },

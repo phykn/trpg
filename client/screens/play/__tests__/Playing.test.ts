@@ -55,6 +55,8 @@ describe('Playing overlay layering', () => {
     expect(source).toContain('const visibleSuggestions = game.scenarioCompleted ? [] : suggestions;');
     expect(source).toContain('suggestions={visibleSuggestions}');
     expect(source).toContain('nearby={visibleNearby}');
+    expect(source).toContain('quickActions={hero.canLevelUp && !game.scenarioCompleted ? [{');
+    expect(source).toContain(') : game.scenarioCompleted ? null : levelUpOpen ? (');
   });
 
   test('keeps context panels and nearby panel mutually exclusive', () => {

@@ -511,7 +511,109 @@ async def test_run_graph_roll_success_completes_social_check_quest(tmp_path):
     assert saved_progress.active_quest_id is None
     assert result.front_state.quest is None
     assert logs[-1].kind == "gm"
-    assert logs[-1].text == "흰섬은 두 번째 이름을 주지 않습니다."
+    assert logs[-1].text.startswith("당신의 말은 guard_01에게 닿고")
+    assert logs[-1].text.endswith("흰섬은 두 번째 이름을 주지 않습니다.")
+
+
+async def test_run_graph_roll_success_exposes_ready_choice_quest_choices(tmp_path):
+    repo = await _repo(tmp_path)
+    await _add_guard_with_affinity(repo, 0)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["quest_social"] = GraphNode(
+        id="quest_social",
+        type="quest",
+        properties={
+            "name": "출항 허가서",
+            "description": "떠날지 머물지 정합니다.",
+            "status": "active",
+            "required": True,
+            "triggers": [
+                {
+                    "id": "talk_guard",
+                    "type": "social_check",
+                    "target": "guard_01",
+                }
+            ],
+            "triggers_met": [False],
+            "choices": {
+                "stay": {"label": "체류권을 남깁니다"},
+                "depart": {"label": "출항 허가를 받습니다"},
+            },
+        },
+    )
+    await repo.save_graph("game-1", graph)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(update={"active_quest_id": "quest_social"})
+    )
+    pending = (
+        await start_graph_roll(
+            repo,
+            "game-1",
+            Action(verb="speak", to="guard_01", how="friendly"),
+        )
+    ).pending_roll
+
+    result = await run_graph_roll(repo, "game-1", pending["id"], dice=13)
+    saved_graph = await repo.load_graph("game-1")
+
+    assert result.outcome == "success"
+    assert saved_graph.nodes["quest_social"].properties["status"] == "active"
+    assert saved_graph.nodes["quest_social"].properties["triggers_met"] == [True]
+    assert [choice.label for choice in result.front_state.quest.choices] == [
+        "체류권을 남깁니다",
+        "출항 허가를 받습니다",
+    ]
+
+
+async def test_run_graph_roll_infers_active_social_check_target_for_generic_speech(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    await _add_guard_with_affinity(repo, 0)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["quest_social"] = GraphNode(
+        id="quest_social",
+        type="quest",
+        properties={
+            "name": "출항 허가서",
+            "description": "떠날지 머물지 정합니다.",
+            "status": "active",
+            "required": True,
+            "triggers": [
+                {
+                    "id": "talk_guard",
+                    "type": "social_check",
+                    "target": "guard_01",
+                }
+            ],
+            "triggers_met": [False],
+            "choices": {
+                "depart": {"label": "출항 허가를 받습니다"},
+            },
+        },
+    )
+    await repo.save_graph("game-1", graph)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(update={"active_quest_id": "quest_social"})
+    )
+    pending = (
+        await start_graph_roll(
+            repo,
+            "game-1",
+            Action(verb="speak", what="출항 허가를 받습니다", how="friendly"),
+        )
+    ).pending_roll
+
+    result = await run_graph_roll(repo, "game-1", pending["id"], dice=13)
+    saved_graph = await repo.load_graph("game-1")
+
+    assert result.outcome == "success"
+    assert saved_graph.nodes["quest_social"].properties["triggers_met"] == [True]
+    assert [choice.label for choice in result.front_state.quest.choices] == [
+        "출항 허가를 받습니다",
+    ]
 
 
 async def test_run_graph_roll_appends_completed_social_quest_text_when_llm_omits_it(
@@ -551,10 +653,9 @@ async def test_run_graph_roll_appends_completed_social_quest_text_when_llm_omits
     logs = await repo.load_log_entries("game-1")
 
     assert logs[-1].kind == "gm"
-    assert logs[-1].text == (
-        "그녀는 당신의 질문을 듣고 짧게 고개를 끄덕입니다.\n\n"
-        "흰섬은 두 번째 이름을 주지 않습니다."
-    )
+    assert logs[-1].text.startswith("당신의 말은 guard_01에게 닿고")
+    assert "그녀는 당신의 질문을 듣고 짧게 고개를 끄덕입니다." in logs[-1].text
+    assert logs[-1].text.endswith("흰섬은 두 번째 이름을 주지 않습니다.")
 
 
 async def test_run_graph_roll_removes_roll_meta_phrase_from_narration(tmp_path):
@@ -575,7 +676,8 @@ async def test_run_graph_roll_removes_roll_meta_phrase_from_narration(tmp_path):
     logs = await repo.load_log_entries("game-1")
 
     assert logs[-1].kind == "gm"
-    assert logs[-1].text == "경비병은 고개를 듭니다. 긴장이 풀립니다."
+    assert logs[-1].text.startswith("당신의 말은 guard_01에게 닿고")
+    assert logs[-1].text.endswith("경비병은 고개를 듭니다. 긴장이 풀립니다.")
 
 
 async def test_run_graph_roll_success_grants_roll_xp_once_per_award_key(tmp_path):
@@ -798,9 +900,8 @@ async def test_run_graph_roll_resolves_failed_narrative_perceive_without_dispatc
     assert logs[0].result == "fail"
     assert logs[1].kind == "gm"
     assert logs[1].outcome == "failure"
-    assert logs[1].text == "흔적은 보이지만, 서로 이어지는 방향을 끝내 잡아내지 못합니다."
-    assert len(llm.calls) == 1
-    assert llm.calls[0]["agent"] == "graph_narrate"
+    assert logs[1].text == "당신은 살피지만, 눈앞의 흔적은 뚜렷한 답을 내주지 않습니다."
+    assert llm.calls == []
 
 
 async def test_run_graph_roll_filters_narrative_suggestions(tmp_path):
@@ -818,9 +919,7 @@ async def test_run_graph_roll_filters_narrative_suggestions(tmp_path):
 
     result = await run_graph_roll(repo, "game-1", pending["id"], dice=12, llm=llm)  # type: ignore[arg-type]
 
-    assert [suggestion.input_text for suggestion in result.suggestions] == [
-        "Forest로 이동합니다"
-    ]
+    assert result.suggestions == []
 
 
 async def test_run_graph_roll_strips_repeated_preroll_sentences(tmp_path):
@@ -846,7 +945,7 @@ async def test_run_graph_roll_strips_repeated_preroll_sentences(tmp_path):
     logs = await repo.load_log_entries("game-1")
 
     assert result.status == "executed"
-    assert logs[1].text == "옷감 아래로 오래 물에 닿은 흔적이 접힌 선마다 남아 있습니다."
+    assert logs[1].text == "당신은 살피지만, 눈앞의 흔적은 뚜렷한 답을 내주지 않습니다."
 
 
 def test_strip_repeated_preroll_text_keeps_non_repeated_narration():
@@ -866,7 +965,7 @@ def test_strip_repeated_preroll_text_keeps_non_repeated_narration():
     )
 
 
-async def test_run_graph_roll_stream_uses_llm_for_failed_narrative_perceive(
+async def test_run_graph_roll_stream_uses_clear_text_for_failed_narrative_perceive(
     tmp_path,
 ):
     repo = await _repo(tmp_path)
@@ -891,13 +990,12 @@ async def test_run_graph_roll_stream_uses_llm_for_failed_narrative_perceive(
     assert events[-1]["type"] == "final"
     assert events[0]["result"].outcome == "failure"
     assert "".join(event["text"] for event in events[1:-1]) == (
-        "바닥의 흠집은 보이지만, 방향을 가늠할 만큼 이어지지 않습니다."
+        "당신은 살피지만, 눈앞의 흔적은 뚜렷한 답을 내주지 않습니다. "
     )
     assert [entry.kind for entry in logs] == ["roll", "gm"]
     assert logs[-1].outcome == "failure"
-    assert logs[-1].text == "바닥의 흠집은 보이지만, 방향을 가늠할 만큼 이어지지 않습니다."
-    assert len(llm.calls) == 1
-    assert llm.calls[0]["agent"] == "graph_narrate"
+    assert logs[-1].text == "당신은 살피지만, 눈앞의 흔적은 뚜렷한 답을 내주지 않습니다."
+    assert llm.calls == []
 
 
 async def test_run_graph_roll_logs_one_short_roll_as_fail(tmp_path):
@@ -945,13 +1043,15 @@ async def test_run_graph_roll_stream_narrates_failed_roll_without_dispatch(tmp_p
     assert events[0]["result"].outcome == "failure"
     assert events[-1]["result"].outcome == "failure"
     assert "".join(event["text"] for event in events[1:-1]) == (
-        "발밑의 길이 선뜻 열리지 않습니다."
+        "당신의 시도는 원하는 성과로 이어지지 않습니다. "
     )
     assert "located_at:player_01:town" in graph.edges
     assert "located_at:player_01:forest" not in graph.edges
     assert [entry.kind for entry in logs] == ["roll", "gm"]
-    assert logs[-1].text == "발밑의 길이 선뜻 열리지 않습니다."
-    assert llm.calls[0]["agent"] == "graph_narrate"
+    assert logs[-1].text == (
+        "당신의 시도는 원하는 성과로 이어지지 않습니다."
+    )
+    assert llm.calls == []
 
 
 async def test_run_graph_roll_stream_executes_success_action_before_result(tmp_path):
@@ -980,6 +1080,50 @@ async def test_run_graph_roll_stream_executes_success_action_before_result(tmp_p
     assert events[0]["result"].front_state.place.id == "forest"
     assert events[-1]["result"].outcome == "success"
     assert [entry.kind for entry in logs] == ["roll", "act", "gm"]
+    payload = json.loads(llm.calls[0]["messages"][1]["content"])
+    assert payload["engine_event"]["kind"] == "move"
+    assert payload["engine_event"]["resolved_results"] == ["당신은 Forest로 이동합니다."]
+
+
+async def test_run_graph_roll_stream_includes_clear_success_resolution_for_narrative_roll(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    llm = _RollStreamLLM("당신의 말이 닿자 상대가 태도를 누그러뜨립니다.")
+    graph = await repo.load_graph("game-1")
+    graph.nodes["isak_01"] = _character("isak_01").model_copy(
+        update={"properties": {**_character("isak_01").properties, "name": "이삭"}}
+    )
+    await repo.save_graph("game-1", graph)
+    pending = (
+        await start_graph_roll(repo, "game-1", Action(verb="speak", to="isak_01"))
+    ).pending_roll
+
+    events = [
+        event
+        async for event in run_graph_roll_stream(
+            llm,
+            repo,
+            "game-1",
+            pending["id"],
+            dice=13,
+        )
+    ]
+
+    assert events[0]["type"] == "result"
+    assert events[0]["result"].outcome == "success"
+    payload = json.loads(llm.calls[0]["messages"][1]["content"])
+    assert payload["engine_event"]["kind"] == "roll"
+    assert payload["engine_event"]["resolved_results"] == [
+        "매력 판정 성공",
+        "당신의 말은 이삭에게 닿고, 이삭은 더 분명한 반응을 보입니다.",
+    ]
+    deltas = [event["text"] for event in events if event["type"] == "narration_delta"]
+    logs = await repo.load_log_entries("game-1")
+    assert deltas[0] == "당신의 말은 이삭에게 닿고, 이삭은 더 분명한 반응을 보입니다. "
+    assert logs[-1].text.startswith(
+        "당신의 말은 이삭에게 닿고, 이삭은 더 분명한 반응을 보입니다."
+    )
 
 
 async def test_run_graph_roll_requires_matching_pending_id(tmp_path):

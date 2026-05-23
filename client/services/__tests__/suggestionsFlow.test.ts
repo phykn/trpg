@@ -12,7 +12,7 @@ describe('suggestion chip wiring', () => {
     const playing = read('screens/play/Playing.tsx');
 
     expect(playing).toContain('suggestions');
-    expect(playing).toContain('suggestions={suggestions}');
+    expect(playing).toContain('suggestions={visibleSuggestions}');
   });
 
   test('Composer renders suggestions as pressable chips', () => {

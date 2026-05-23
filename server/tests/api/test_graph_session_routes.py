@@ -611,6 +611,26 @@ async def test_graph_state_route_restores_graph_session(tmp_path):
     assert body["state"]["hero"]["id"] == "player_01"
     assert body["state"]["place"]["id"] == "loc_01"
     assert body["state"]["log"] == []
+    assert body["suggestions"] == [
+        {
+            "label": "talk",
+            "input_text": "에드릭에게 말을 겁니다",
+            "intent": "talk",
+            "action": None,
+        },
+        {
+            "label": "move",
+            "input_text": "숲길로 이동합니다",
+            "intent": "move",
+            "action": None,
+        },
+        {
+            "label": "inspect",
+            "input_text": "주변을 살핍니다",
+            "intent": "inspect",
+            "action": None,
+        },
+    ]
 
 
 @pytest.mark.asyncio

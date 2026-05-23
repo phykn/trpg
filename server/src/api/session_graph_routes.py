@@ -107,6 +107,7 @@ async def session_graph_init(
     return InitResponse(
         game_id=result.game_id,
         state=result.front_state.model_dump(mode="json", by_alias=True),
+        suggestions=result.suggestions,
     )
 
 
@@ -153,6 +154,7 @@ async def get_graph_state_route(
     return InitResponse(
         game_id=result.game_id,
         state=result.front_state.model_dump(mode="json", by_alias=True),
+        suggestions=result.suggestions,
     )
 
 

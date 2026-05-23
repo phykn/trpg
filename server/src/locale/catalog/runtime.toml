@@ -14,6 +14,10 @@ en = "target"
 ko = "해당"
 en = "that"
 
+[runtime."fallback.choice"]
+ko = "선택"
+en = "choice"
+
 [runtime."card.quest_offer"]
 ko = "새 의뢰가 도착합니다: {quest}."
 en = "A new request arrives: {quest}."
@@ -101,6 +105,10 @@ en = "You start the {quest} quest."
 [runtime."card.quest_abandon"]
 ko = "당신은 {quest} 퀘스트를 포기합니다."
 en = "You abandon the {quest} quest."
+
+[runtime."card.quest_decide"]
+ko = "당신은 {quest}에서 「{choice}」 쪽을 선택합니다."
+en = "You choose {choice} for the {quest} quest."
 
 [runtime."card.rest"]
 ko = "당신은 휴식을 취합니다."

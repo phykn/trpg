@@ -272,10 +272,8 @@ def test_roll_payload_keeps_original_player_input_and_marks_preroll_text():
     assert payload["user_request"]["player_input"] == (
         "경비병에게 취미가 뭐냐고 묻습니다"
     )
-    assert payload["engine_event"]["check_reason"] == "경비병의 표정을 읽으려 합니다."
-    assert payload["engine_event"]["preroll_narration"] == (
-        "경비병의 표정을 읽으려 합니다."
-    )
+    assert "check_reason" not in payload["engine_event"]
+    assert "preroll_narration" not in payload["engine_event"]
     target_view = payload["scene_state"]["target_view"]
     assert target_view["id"] == "guard_01"
     assert target_view["faction"] == {
@@ -300,7 +298,7 @@ def test_roll_payload_keeps_original_player_input_and_marks_preroll_text():
     assert "숨은 단서" not in json.dumps(payload, ensure_ascii=False)
 
 
-def test_roll_payload_keeps_check_reason_separate_from_preroll_narration():
+def test_roll_payload_keeps_check_reason_without_preroll_narration():
     runtime = _runtime()
     pending = {
         "check_reason": "경비병을 설득하려면 믿을 만한 말을 해야 합니다.",
@@ -331,10 +329,7 @@ def test_roll_payload_keeps_check_reason_separate_from_preroll_narration():
         payload["engine_event"]["check_reason"]
         == "경비병을 설득하려면 믿을 만한 말을 해야 합니다."
     )
-    assert (
-        payload["engine_event"]["preroll_narration"]
-        == "경비병은 답하기 전에 주변의 시선을 먼저 살핍니다."
-    )
+    assert "preroll_narration" not in payload["engine_event"]
 
 
 def test_roll_payload_omits_preroll_body_from_recent_narration():
@@ -460,7 +455,6 @@ def test_input_payload_compacts_target_mbti_for_narration_tokens():
 
     mbti = payload["scene_state"]["target_view"]["mbti"]
     assert mbti == {
-        "id": "ENFP",
         "attitude": "밝고 즉흥적으로 반응합니다.",
         "speech_style": "말이 빠르고 감탄이 많습니다.",
         "boundary_style": "개인 질문에도 장난스럽게 받아칩니다.",
@@ -468,6 +462,42 @@ def test_input_payload_compacts_target_mbti_for_narration_tokens():
         "roleplay_cues": ["상대 말에 바로 반응합니다"],
         "avoid": ["차갑게 반복하지 않습니다"],
     }
+
+
+def test_action_payload_omits_internal_action_ids_from_narration():
+    runtime = _runtime()
+    dispatch = GraphActionDispatchResult(
+        runtime=runtime,
+        kind="quest",
+        applied=1,
+        changed_node_ids=[],
+        changed_edge_ids=[],
+        removed_edge_ids=[],
+        outcome="accepted",
+    )
+
+    payload = build_action_narration_payload(
+        before=runtime,
+        after=runtime,
+        action=Action(
+            verb="transfer",
+            what="q_red_refund",
+            from_="quest_giver_red",
+            to="player_01",
+            how="accept",
+        ),
+        dispatch=dispatch,
+        card_texts=["분노 환불 사건 퀘스트를 시작합니다."],
+    )
+    encoded = json.dumps(payload, ensure_ascii=False)
+
+    assert payload["engine_event"]["action"] == {
+        "verb": "transfer",
+        "how": "accept",
+    }
+    assert "q_red_refund" not in encoded
+    assert "quest_giver_red" not in encoded
+    assert "player_01" not in encoded
 
 
 def test_input_payload_includes_target_public_knowledge_and_mentioned_inventory():
@@ -608,10 +638,7 @@ def test_action_payload_marks_location_enter_quest_trigger():
         card_texts=["북문으로 이동합니다.", "퀘스트가 완료됩니다."],
     )
 
-    assert payload["engine_event"]["quest_trigger"] == {
-        "type": "location_enter",
-        "target": "north_gate",
-    }
+    assert payload["engine_event"]["quest_trigger"] == {"type": "location_enter"}
 
 
 def test_action_payload_keeps_terminal_combat_trace_after_state_clears():

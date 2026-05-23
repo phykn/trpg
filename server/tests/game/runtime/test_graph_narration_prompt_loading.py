@@ -266,9 +266,10 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "mbti" in narrate_prompt
     assert "boundary_style" in narrate_prompt
     assert "speech_style" in narrate_prompt
+    assert "MBTI 유형명이나 성격 코드 자체는 출력하지 않습니다" in narrate_prompt
     assert "traits" in narrate_prompt
     assert "판정 후 나레이션" in narrate_prompt
-    assert "preroll_narration" in narrate_prompt
+    assert "preroll_narration" not in narrate_prompt
     assert "판정 전 문장을 반복하지 않습니다" in narrate_prompt
     assert "critical_success" in narrate_prompt
     assert "다음 행동 가능성" in narrate_prompt
@@ -280,7 +281,7 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "payload.engine_event.kind`가 `roll_prompt`" in narrate_prompt
     assert "발견해냈습니다" in narrate_prompt
     assert "포착해냅니다" in narrate_prompt
-    assert "판정 후 본문에는 `check_reason`이나 `preroll_narration`의 장면, 동작, 감각, 문장 구조를 다시 쓰지 않습니다" in narrate_prompt
+    assert "판정 후 본문에는 직전에 이미 보여준 판정 전 장면의 동작, 감각, 문장 구조를 다시 쓰지 않습니다" in narrate_prompt
     assert "판정 전 문장에 나온 옷, 자세, 주변 관찰, 살피는 행동을 그대로 이어 쓰지 말고" in narrate_prompt
     assert "개인적인 내용을 캐면" in narrate_prompt
     assert "최근에 같은 NPC가 이미 말한 직접 발화를 그대로 다시 쓰지 않습니다" in narrate_prompt
@@ -394,6 +395,16 @@ def test_graph_narrate_prompt_encodes_theory_pressure_and_completion_limits():
     assert "새 갈고리 없이 닫습니다" in prompt
     assert "`payload.engine_event.quest_trigger.type`이 `location_enter`이면 특히 조심합니다" in prompt
     assert "장소에 들어간 사실을 플레이어가 갈등을 해결한 것처럼 과장하지 않습니다" in prompt
+
+
+def test_graph_narrate_prompt_requires_clear_roll_consequences():
+    prompt = (PROMPT_ROOT / "graph_narrate" / "prompt.ko.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "첫 문단에서 성공/실패의 귀결을 분명히 씁니다" in prompt
+    assert "결과를 흐리는 되묻기나 분위기 묘사만으로 끝내지 않습니다" in prompt
+    assert "원하는 답, 단서, 양보가 아직 나오지 않았음을 분명히 합니다" in prompt
 
 
 @pytest.mark.asyncio

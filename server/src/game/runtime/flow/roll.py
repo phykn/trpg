@@ -13,7 +13,7 @@ from openai import APIConnectionError, InternalServerError, RateLimitError
 
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
-from src.game.domain.content import node_text
+from src.game.domain.content import node_label, node_text
 from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph import Graph
 from src.game.domain.memory import BonusItem, GMLogEntry, LogEntry, RollLogEntry
@@ -29,6 +29,7 @@ from src.game.engines.graph.quest import (
 )
 from src.game.rules.dc import compute_grade, pick_dc
 from src.locale.labels import roll_dice_label, stat_label
+from src.locale.ko.particles import eun_neun
 from src.locale.render import render
 from src.llm.calls.runner import get_prompt
 from src.llm.client import LLMClient
@@ -343,6 +344,18 @@ async def run_graph_roll_stream(
     )
     yield {"type": "result", "result": result}
     stream = VisibleNarrationStream()
+    resolution_text = _roll_resolution_text(resolved)
+    if resolution_text:
+        yield {"type": "narration_delta", "text": f"{resolution_text} "}
+    if resolved.outcome == "failure":
+        final = await _commit_roll_narration(
+            repo,
+            game_id,
+            resolved,
+            GraphNarrationResult(narration=resolution_text),
+        )
+        yield {"type": "final", "result": final}
+        return
     async for chunk in _stream_roll_narration(llm, resolved):
         for visible in stream.push(chunk):
             yield {"type": "narration_delta", "text": visible}
@@ -611,11 +624,14 @@ async def _commit_roll_narration(
     if narration_result.narration:
         narration_result = narration_result.model_copy(
             update={
-                "narration": _append_missing_completed_quest_text(
+                "narration": _ensure_roll_resolution_text(
                     resolved,
-                    _strip_repeated_preroll_text(
+                    _append_missing_completed_quest_text(
                         resolved,
-                        _clean_roll_meta_phrase(narration_result.narration),
+                        _strip_repeated_preroll_text(
+                            resolved,
+                            _clean_roll_meta_phrase(narration_result.narration),
+                        ),
                     ),
                 )
             }
@@ -765,11 +781,16 @@ async def _finish_narrative_roll(
     resolved: _ResolvedGraphRoll,
     llm: LLMClient | None,
 ) -> GraphActionRequestResult:
-    narration_result = await _build_roll_narration(llm, resolved)
+    narration_result = (
+        GraphNarrationResult(narration=_roll_resolution_text(resolved))
+        if outcome == "failure"
+        else await _build_roll_narration(llm, resolved)
+    )
     text = narration_result.narration or _roll_fallback_text(resolved)
     text = _clean_roll_meta_phrase(text)
     text = _strip_repeated_preroll_text(resolved, text)
     text = _append_missing_completed_quest_text(resolved, text)
+    text = _ensure_roll_resolution_text(resolved, text)
     narration_result = narration_result.model_copy(update={"narration": text})
     entry = gm_log_entry_from_narration(
         runtime.progress.next_log_id,
@@ -822,6 +843,7 @@ def _roll_result_texts(resolved: _ResolvedGraphRoll) -> list[str]:
             check=resolved.roll_entry.check,
         )
     ]
+    result_texts.append(_roll_resolution_text(resolved))
     result_texts.extend(_completed_quest_descriptions(resolved))
     return result_texts
 
@@ -830,9 +852,37 @@ def _roll_fallback_text(resolved: _ResolvedGraphRoll) -> str:
     descriptions = _completed_quest_descriptions(resolved)
     if descriptions and resolved.outcome == "success":
         return descriptions[0]
-    return render(
+    return _roll_resolution_text(resolved)
+
+
+def _ensure_roll_resolution_text(resolved: _ResolvedGraphRoll, text: str) -> str:
+    resolution_text = _roll_resolution_text(resolved)
+    if not resolution_text:
+        return text
+    normalized_resolution = _normalize_korean_sentence(resolution_text)
+    normalized_text = _normalize_korean_sentence(text)
+    if normalized_resolution and normalized_resolution in normalized_text:
+        return text
+    if not text.strip():
+        return resolution_text
+    return f"{resolution_text} {text.strip()}"
+
+
+def _roll_resolution_text(resolved: _ResolvedGraphRoll) -> str:
+    text = render(
         _roll_resolution_key(resolved.action, resolved.outcome),
         resolved.runtime.progress.locale,
+    )
+    if resolved.action.verb != "speak":
+        return text
+    target_id = _action_target(resolved.action)
+    target = resolved.runtime.graph.nodes.get(target_id) if target_id else None
+    if target is None:
+        return text
+    target_name = node_label(resolved.runtime.content, target)
+    return text.replace("상대는", f"{target_name}{eun_neun(target_name)}").replace(
+        "상대에게",
+        f"{target_name}에게",
     )
 
 

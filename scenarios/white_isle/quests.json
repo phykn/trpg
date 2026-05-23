@@ -356,6 +356,7 @@
     ],
     "status": "locked",
     "required": true,
+    "auto_complete_when_satisfied": true,
     "rewards": {
       "gold": 0,
       "exp": 0,

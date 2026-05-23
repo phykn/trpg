@@ -181,6 +181,30 @@ def test_location_enter_trigger_completes_active_quest():
     assert changed.nodes["quest_active"].properties["status"] == "completed"
 
 
+def test_location_enter_trigger_completes_opt_in_pending_quest():
+    graph = _graph()
+    graph.nodes["quest_pending"].properties.update(
+        {
+            "triggers": [
+                {
+                    "id": "trigger_01",
+                    "name": "마을 도착",
+                    "type": "location_enter",
+                    "target": "town",
+                }
+            ],
+            "auto_complete_when_satisfied": True,
+        }
+    )
+
+    result = plan_quest_progress_for_trigger(graph, "location_enter", "town")
+    changed = _apply_all(graph, result.changes)
+
+    assert result.completed_quest_ids == ["quest_pending"]
+    assert changed.nodes["quest_pending"].properties["triggers_met"] == [True]
+    assert changed.nodes["quest_pending"].properties["status"] == "completed"
+
+
 def test_trigger_progress_does_not_auto_complete_choice_quest():
     graph = _graph()
     graph.nodes["quest_active"].properties.update(

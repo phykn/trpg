@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from src.game.domain.content import node_label
 from src.game.domain.graph.character import is_visible_character
+from src.game.domain.memory import PlayerLogEntry
 from src.game.domain.graph.query import (
     characters_at,
     connection_is_unlocked,
@@ -44,9 +45,12 @@ def filter_grounded_suggestions(
 ) -> list[GraphSuggestion]:
     can_accept_quest = _has_quest_status(runtime, {"locked", "pending"})
     can_abandon_quest = _has_quest_status(runtime, {"active"})
+    recent_inputs = _recent_player_inputs(runtime)
     out: list[GraphSuggestion] = []
     for suggestion in suggestions:
         if not _is_grounded_suggestion(runtime, suggestion):
+            continue
+        if _normalize(suggestion.input_text) in recent_inputs:
             continue
         if suggestion.intent != "quest":
             out.append(suggestion)
@@ -59,6 +63,18 @@ def filter_grounded_suggestions(
         if wants_abandon and not can_abandon_quest:
             continue
         out.append(suggestion)
+    return out
+
+
+def _recent_player_inputs(runtime: GameRuntimeState) -> set[str]:
+    out: set[str] = set()
+    for entry in reversed(runtime.log_entries):
+        if isinstance(entry, PlayerLogEntry):
+            text = _normalize(entry.text)
+            if text:
+                out.add(text)
+            if len(out) >= 5:
+                break
     return out
 
 

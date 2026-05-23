@@ -159,6 +159,37 @@ async def _repo(tmp_path) -> LocalFsGraphRepo:
     return repo
 
 
+async def test_run_graph_action_turn_logs_quest_choice_label(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["quest_01"] = GraphNode(
+        id="quest_01",
+        type="quest",
+        properties={
+            "title": "별점 복구 사건",
+            "status": "active",
+            "choices": {
+                "restore": {"label": "별점을 복구합니다"},
+                "remove": {"label": "점수표를 떼어냅니다"},
+            },
+        },
+    )
+    await repo.save_graph("game-1", graph)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(update={"active_quest_id": "quest_01"})
+    )
+
+    await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="decide", what="quest_01", how="restore"),
+    )
+    logs = await repo.load_log_entries("game-1")
+
+    assert logs[0].text == "당신은 별점 복구 사건에서 「별점을 복구합니다」 쪽을 선택합니다."
+
+
 class _DeltaTrackingRepo(LocalFsGraphRepo):
     def __init__(self, saves_dir: str) -> None:
         super().__init__(saves_dir)

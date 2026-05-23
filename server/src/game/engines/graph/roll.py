@@ -253,6 +253,8 @@ def _roll_npc_target(
         node = graph.nodes.get(candidate)
         if node is not None and node.type == "character" and candidate != player_id:
             return candidate
+    if action.verb == "speak":
+        return _unique_active_social_check_target(graph, player_id)
     return None
 
 
@@ -269,6 +271,47 @@ def _action_target(action: Action) -> str | None:
         strings = _strings(value)
         if strings:
             return strings[0]
+    return None
+
+
+def _unique_active_social_check_target(graph: Graph, player_id: str) -> str | None:
+    player_location = _location_of(graph, player_id)
+    if player_location is None:
+        return None
+    targets: set[str] = set()
+    for node in graph.nodes.values():
+        if node.type != "quest" or node.properties.get("status") != "active":
+            continue
+        triggers = node.properties.get("triggers", [])
+        triggers_met = node.properties.get("triggers_met", [])
+        if not isinstance(triggers, list):
+            continue
+        met = triggers_met if isinstance(triggers_met, list) else []
+        for index, trigger in enumerate(triggers):
+            if index < len(met) and met[index] is True:
+                continue
+            if not isinstance(trigger, dict):
+                continue
+            if trigger.get("type") != "social_check":
+                continue
+            target = trigger.get("target")
+            if not isinstance(target, str):
+                continue
+            target_node = graph.nodes.get(target)
+            if target_node is None or target_node.type != "character":
+                continue
+            if _location_of(graph, target) != player_location:
+                continue
+            targets.add(target)
+    if len(targets) != 1:
+        return None
+    return next(iter(targets))
+
+
+def _location_of(graph: Graph, node_id: str) -> str | None:
+    for edge in graph.edges.values():
+        if edge.type == "located_at" and edge.from_node_id == node_id:
+            return edge.to_node_id
     return None
 
 

@@ -23,6 +23,7 @@ from src.wire.graph.to_front import GraphFrontStatePayload, graph_to_front_state
 class GraphSessionSnapshot:
     game_id: str
     front_state: GraphFrontStatePayload
+    suggestions: list[GraphSuggestion] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -78,6 +79,7 @@ async def load_graph_session_state(
     return GraphSessionSnapshot(
         game_id=game_id,
         front_state=graph_to_front_state(runtime),
+        suggestions=build_intro_suggestions(runtime),
     )
 
 

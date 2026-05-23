@@ -190,7 +190,7 @@ def plan_quest_progress_for_trigger(
     changes: list[GraphChange] = []
     completed_quest_ids: list[str] = []
     for quest in graph.nodes.values():
-        if quest.type != "quest" or quest_status(quest) != "active":
+        if quest.type != "quest" or not _can_progress_for_trigger(quest):
             continue
         triggers = _quest_triggers(quest)
         triggers_met = _quest_triggers_met(quest, len(triggers))
@@ -301,6 +301,14 @@ def reject_terminal(status: str, quest_id: str) -> None:
 
 def _is_terminal_status(status: str) -> bool:
     return status in {"completed", "failed"}
+
+
+def _can_progress_for_trigger(quest: GraphNode) -> bool:
+    status = quest_status(quest)
+    return status == "active" or (
+        status == "pending"
+        and quest.properties.get("auto_complete_when_satisfied") is True
+    )
 
 
 def status_change(quest_id: str, status: QuestStatus) -> SetNodePropertyChange:

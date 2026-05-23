@@ -67,18 +67,24 @@ class VisibleNarrationStream:
         if marker_at >= 0:
             self._found_marker = True
             self._pending = ""
-            visible = combined[:marker_at].rstrip("\r\n")
+            visible = _clean_visible_narration_text(
+                combined[:marker_at].rstrip("\r\n"),
+                strip=False,
+            )
             return [visible] if visible else []
 
         keep = min(len(combined), self._keep_len)
-        visible = combined[:-keep] if keep else combined
+        visible = _clean_visible_narration_text(
+            combined[:-keep] if keep else combined,
+            strip=False,
+        )
         self._pending = combined[-keep:] if keep else ""
         return [visible] if visible else []
 
     def finish(self) -> list[str]:
         if self._found_marker or not self._pending:
             return []
-        visible = self._pending
+        visible = _clean_visible_narration_text(self._pending, strip=False)
         self._pending = ""
         return [visible]
 
@@ -125,13 +131,28 @@ def parse_graph_narration_answer(answer: str) -> GraphNarrationResult:
 
 def _clean_narration(text: str) -> str:
     lines = [
-        _normalize_ascii_direct_speech(
-            _strip_trailing_ascii_quote_junk(line)
+        _clean_visible_narration_text(
+            _normalize_ascii_direct_speech(
+                _strip_trailing_ascii_quote_junk(line)
+            )
         )
         for line in text.splitlines()
         if line.strip() and not re.fullmatch(r'(?:「\s*」|"\s*")', line.strip())
     ]
-    return "\n".join(lines).strip()
+    return "\n".join(line for line in lines if line).strip()
+
+
+def _clean_visible_narration_text(text: str, *, strip: bool = True) -> str:
+    cleaned = text.replace("،", ",")
+    for phrase in (
+        "「당신의 행동이 처리됩니다.」라는 짧은 확인과 함께,",
+        "「당신의 행동이 처리됩니다.」라는 확인과 함께,",
+        "당신의 행동이 처리됩니다.",
+    ):
+        cleaned = cleaned.replace(phrase, "")
+    cleaned = re.sub(r"선택\([^)]*\)", "선택", cleaned)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    return cleaned.strip() if strip else cleaned
 
 
 def _strip_trailing_ascii_quote_junk(line: str) -> str:

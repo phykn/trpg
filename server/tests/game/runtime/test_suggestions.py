@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 from src.game.domain.combat import GraphCombatState
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
+from src.game.domain.memory import PlayerLogEntry
 from src.game.domain.progress import GameProgress
 from src.game.runtime import GameRuntimeState
 from src.game.runtime.narration.suggestions import (
@@ -118,6 +119,23 @@ def test_filter_grounded_suggestions_drops_unavailable_move_talk_and_use_targets
         "상인에게 말을 겁니다",
         "회복 약초를 사용합니다",
     ]
+
+
+def test_filter_grounded_suggestions_drops_recent_repeated_player_input():
+    runtime = _runtime_for_suggestions()
+    runtime.log_entries.append(
+        PlayerLogEntry(id=1, kind="player", text="상인에게 말을 겁니다")
+    )
+
+    result = filter_grounded_suggestions(
+        runtime,
+        [
+            GraphSuggestion(label="대화", input_text="상인에게 말을 겁니다", intent="talk"),
+            GraphSuggestion(label="숲으로", input_text="숲으로 이동합니다", intent="move"),
+        ],
+    )
+
+    assert [suggestion.input_text for suggestion in result] == ["숲으로 이동합니다"]
 
 
 def test_build_intro_suggestions_uses_visible_graph_state():
@@ -557,6 +575,25 @@ def test_parse_graph_narration_answer_normalizes_ascii_direct_speech():
 
     assert result.narration == (
         "루카가 기침합니다. 「크흠.」 그는 모자를 고쳐 씁니다. 「도와주시겠습니까?」"
+    )
+
+
+def test_parse_graph_narration_answer_removes_runtime_status_text():
+    answer = "\n".join(
+        [
+            "당신의 행동이 처리됩니다.",
+            "방 안에 다시 숨이 돕니다. 「당신의 행동이 처리됩니다.」라는 짧은 확인과 함께, "
+            "당신의 선택(열기)이 자리를 잡습니다. 공기가 감돌며، 빛이 흔들립니다.",
+            "---TRPG_META---",
+            '{"suggestions": []}',
+        ]
+    )
+
+    result = parse_graph_narration_answer(answer)
+
+    assert result.narration == (
+        "방 안에 다시 숨이 돕니다. 당신의 선택이 자리를 잡습니다. "
+        "공기가 감돌며, 빛이 흔들립니다."
     )
 
 

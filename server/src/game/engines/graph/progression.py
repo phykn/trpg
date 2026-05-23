@@ -81,7 +81,7 @@ def plan_progression_after_quest_completion(
             set_status(quest_id, "pending")
             changed = True
 
-        auto_completed = _auto_complete_active_location_quest(
+        auto_completed = _auto_complete_satisfied_location_quest(
             graph,
             status,
             next_active_quest_id,
@@ -154,14 +154,20 @@ def _prerequisite_ids(graph: Graph, node_id: str) -> list[str]:
     return [item for item in raw if isinstance(item, str)] if isinstance(raw, list) else []
 
 
-def _auto_complete_active_location_quest(
+def _auto_complete_satisfied_location_quest(
     graph: Graph,
     status,
     quest_id: str | None,
     satisfied_location_ids: set[str],
     changes: list[SetNodePropertyChange],
 ) -> str | None:
-    if quest_id is None or status(quest_id) != "active":
+    quest_id = _auto_completable_location_quest_id(
+        graph,
+        status,
+        quest_id,
+        satisfied_location_ids,
+    )
+    if quest_id is None:
         return None
     quest = graph.nodes.get(quest_id)
     if quest is None or quest.type != "quest":
@@ -190,6 +196,36 @@ def _auto_complete_active_location_quest(
     if all(triggers_met) and not _quest_choices(quest):
         return quest_id
     return None
+
+
+def _auto_completable_location_quest_id(
+    graph: Graph,
+    status,
+    active_quest_id: str | None,
+    satisfied_location_ids: set[str],
+) -> str | None:
+    if active_quest_id is not None and status(active_quest_id) == "active":
+        return active_quest_id
+    for quest_id in _quest_ids(graph):
+        if status(quest_id) != "pending":
+            continue
+        quest = graph.nodes[quest_id]
+        if quest.properties.get("auto_complete_when_satisfied") is not True:
+            continue
+        if _location_triggers_satisfied(quest, satisfied_location_ids):
+            return quest_id
+    return None
+
+
+def _location_triggers_satisfied(quest, satisfied_location_ids: set[str]) -> bool:
+    triggers = _quest_triggers(quest)
+    if not triggers or _quest_choices(quest):
+        return False
+    return all(
+        trigger.get("type") == "location_enter"
+        and trigger.get("target") in satisfied_location_ids
+        for trigger in triggers
+    )
 
 
 def _quest_triggers(quest) -> list[dict[str, Any]]:
