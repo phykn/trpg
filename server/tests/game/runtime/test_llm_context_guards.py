@@ -180,7 +180,7 @@ def test_narrate_context_forbidden_tokens():
 
     for token in FORBIDDEN_CONTEXT_TOKENS:
         assert token not in payload
-    assert "GM 원문이 새면 실패합니다." in payload
+    assert "GM 원문이 새면 실패합니다." not in payload
 
 
 def test_context_payloads_stay_compact():

@@ -15,6 +15,7 @@ from src.game.domain.graph.query import (
     known_skills_of,
     location_of,
 )
+from src.game.domain.quest import quest_choices, quest_ready_to_decide
 from src.game.runtime.state import GameRuntimeState
 
 
@@ -267,7 +268,7 @@ def _active_quest(runtime: GameRuntimeState) -> dict[str, Any] | None:
         "id": node.id,
         "name": node_label(runtime.content, node),
     }
-    choices = _quest_choices(node) if _ready_to_decide(node) else []
+    choices = _quest_choices(node) if quest_ready_to_decide(node) else []
     if choices:
         payload["choices"] = choices
     return payload
@@ -311,15 +312,8 @@ def _available_quests(
 
 
 def _quest_choices(node: GraphNode) -> list[dict[str, str]]:
-    choices = node.properties.get("choices")
-    if not isinstance(choices, dict):
-        return []
     out: list[dict[str, str]] = []
-    for choice_id, choice in choices.items():  # ssot-allow: quest choice attribute map
-        if not isinstance(choice_id, str) or not choice_id:
-            continue
-        if not isinstance(choice, dict):
-            continue
+    for choice_id, choice in quest_choices(node).items():  # ssot-allow: quest choice attribute map
         label = choice.get("label")
         out.append(
             {
@@ -348,20 +342,9 @@ def _quest_choice_ids(runtime: GameRuntimeState) -> list[str]:
     node = runtime.graph.nodes.get(quest_id or "")
     if node is None or node.type != "quest":
         return []
-    if not _ready_to_decide(node):
+    if not quest_ready_to_decide(node):
         return []
     return [choice["id"] for choice in _quest_choices(node)]
-
-
-def _ready_to_decide(node: GraphNode) -> bool:
-    triggers = node.properties.get("triggers", [])
-    if not isinstance(triggers, list) or not triggers:
-        return True
-    met = node.properties.get("triggers_met", [])
-    values = met if isinstance(met, list) else []
-    return len(values) >= len(triggers) and all(
-        item is True for item in values[: len(triggers)]
-    )
 
 
 def _attackable_ids(visible_targets: list[dict[str, Any]]) -> list[str]:

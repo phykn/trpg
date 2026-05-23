@@ -15,7 +15,6 @@ from src.game.domain.action import Action
 from src.game.domain.content import node_label, node_text
 from src.game.domain.errors import LLMUnavailable
 from src.game.domain.graph import Graph
-from src.game.domain.graph import AddEdgeChange, GraphChange, SetEdgePropertyChange
 from src.game.domain.memory import (
     BonusItem,
     GMLogEntry,
@@ -35,7 +34,6 @@ from src.game.engines.graph.quest import (
 )
 from src.game.rules.dc import compute_grade, pick_dc
 from src.locale.labels import roll_dice_label, stat_label
-from src.locale.ko.particles import i_ga
 from src.locale.render import render
 from src.llm.calls.runner import get_prompt
 from src.llm.client import LLMClient
@@ -65,6 +63,7 @@ from ..request_result import (
 )
 from ..state import GameRuntimeState
 from ..env import env_float
+from .roll_affinity import affinity_change_cues
 from .turn import (
     run_graph_action_turn_from_runtime,
     run_graph_action_turn_from_runtime_stream,
@@ -445,7 +444,7 @@ async def _resolve_graph_roll(
         grade=grade,
         roll_outcome=outcome,
     )
-    affinity_cues = _affinity_change_cues(next_runtime, effect.changes)
+    affinity_cues = affinity_change_cues(next_runtime, effect.changes)
     if effect.changes:
         effect_apply = apply_runtime_graph_changes(next_runtime, effect.changes)
         next_runtime = effect_apply.runtime
@@ -724,84 +723,6 @@ def _with_system_roll_cues(
             ][:3]
         }
     )
-
-
-def _affinity_change_cues(
-    runtime: GameRuntimeState,
-    changes: list[GraphChange],
-) -> list[NarrationCue]:
-    cues: list[NarrationCue] = []
-    player_id = runtime.progress.player_id
-    for change in changes:
-        delta = _affinity_delta(runtime.graph, change)
-        if delta == 0:
-            continue
-        npc_id = _relation_npc_id(runtime.graph, change, player_id)
-        if npc_id is None:
-            continue
-        npc = runtime.graph.nodes.get(npc_id)
-        if npc is None:
-            continue
-        cues.append(
-            NarrationCue(
-                kind="change",
-                label="호감도",
-                text=_affinity_cue_text(node_label(runtime.content, npc), delta),
-                scope="delta",
-            )
-        )
-    return cues
-
-
-def _affinity_delta(graph: Graph, change: GraphChange) -> int:
-    if isinstance(change, AddEdgeChange):
-        if change.edge.type != "relation":
-            return 0
-        affinity = change.edge.properties.get("affinity")
-        return affinity if isinstance(affinity, int) else 0
-    if isinstance(change, SetEdgePropertyChange):
-        if change.path != "affinity":
-            return 0
-        edge = graph.edges.get(change.edge_id)
-        if edge is None or edge.type != "relation":
-            return 0
-        current = edge.properties.get("affinity")
-        old_value = current if isinstance(current, int) else 0
-        new_value = change.value if isinstance(change.value, int) else old_value
-        return new_value - old_value
-    return 0
-
-
-def _relation_npc_id(
-    graph: Graph,
-    change: GraphChange,
-    player_id: str,
-) -> str | None:
-    if isinstance(change, AddEdgeChange):
-        edge = change.edge
-    elif isinstance(change, SetEdgePropertyChange):
-        edge = graph.edges.get(change.edge_id)
-    else:
-        return None
-    if edge is None or edge.type != "relation":
-        return None
-    if edge.from_node_id == player_id:
-        return edge.to_node_id
-    if edge.to_node_id == player_id:
-        return edge.from_node_id
-    return None
-
-
-def _affinity_cue_text(npc_name: str, delta: int) -> str:
-    if delta >= 10:
-        phrase = "당신에게 뚜렷한 호의를 보입니다"
-    elif delta > 0:
-        phrase = "당신을 조금 더 신뢰합니다"
-    elif delta <= -10:
-        phrase = "당신을 노골적으로 경계합니다"
-    else:
-        phrase = "경계심이 커집니다"
-    return f"{npc_name}{i_ga(npc_name)} {phrase}"
 
 
 def _roll_body(action: Action, locale: str) -> str:

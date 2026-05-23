@@ -3,6 +3,7 @@ from src.game.domain.content import node_label
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph.query import location_of
 from src.game.domain.memory import ActLogEntry
+from src.game.domain.quest import quest_choices
 from src.locale.render import render
 
 from ..action.dispatch import GraphActionDispatchResult
@@ -255,10 +256,7 @@ def _quest_choice_label(
     quest = runtime.graph.nodes.get(quest_id)
     if quest is None:
         return choice_id
-    choices = quest.properties.get("choices")
-    if not isinstance(choices, dict):
-        return choice_id
-    choice = choices.get(choice_id)
+    choice = quest_choices(quest).get(choice_id)
     if not isinstance(choice, dict):
         return choice_id
     label = choice.get("label")

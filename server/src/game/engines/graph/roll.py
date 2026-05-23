@@ -11,6 +11,7 @@ from src.game.domain.graph import (
     SetEdgePropertyChange,
     SetNodePropertyChange,
 )
+from src.game.domain.quest import quest_triggers, quest_triggers_met
 from src.game.rules import RULES
 from src.game.rules.dc import compute_required_roll
 
@@ -282,15 +283,10 @@ def _unique_active_social_check_target(graph: Graph, player_id: str) -> str | No
     for node in graph.nodes.values():
         if node.type != "quest" or node.properties.get("status") != "active":
             continue
-        triggers = node.properties.get("triggers", [])
-        triggers_met = node.properties.get("triggers_met", [])
-        if not isinstance(triggers, list):
-            continue
-        met = triggers_met if isinstance(triggers_met, list) else []
+        triggers = quest_triggers(node)
+        met = quest_triggers_met(node, len(triggers))
         for index, trigger in enumerate(triggers):
-            if index < len(met) and met[index] is True:
-                continue
-            if not isinstance(trigger, dict):
+            if met[index] is True:
                 continue
             if trigger.get("type") != "social_check":
                 continue

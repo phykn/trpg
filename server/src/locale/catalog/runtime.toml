@@ -402,10 +402,6 @@ en = "The words do not change the flow, and the clash continues."
 ko = "게임 밖 지시에는 응답할 수 없습니다."
 en = "Out-of-game instructions cannot be handled."
 
-[runtime."classify.refuse_out_of_game"]
-ko = "지금 장면 안에서는 바로 이어가기 어려운 요청입니다."
-en = "That is hard to continue inside the current scene."
-
 [runtime."intro.arrive"]
 ko = "당신은 {place}에 도착합니다."
 en = "You arrive at {place}."
@@ -413,30 +409,6 @@ en = "You arrive at {place}."
 [runtime."intro.arrive_with_description"]
 ko = "당신은 {place}에 도착합니다. {description}"
 en = "You arrive at {place}. {description}"
-
-[runtime."resource.healthy"]
-ko = "양호한"
-en = "healthy"
-
-[runtime."resource.hurt"]
-ko = "다친"
-en = "hurt"
-
-[runtime."resource.critical"]
-ko = "위급한"
-en = "critical"
-
-[runtime."resource.ready"]
-ko = "충분한"
-en = "ready"
-
-[runtime."resource.strained"]
-ko = "부족한"
-en = "strained"
-
-[runtime."resource.drained"]
-ko = "고갈된"
-en = "drained"
 
 [runtime."roll.title"]
 ko = "{label} 판정이 필요합니다"
@@ -457,6 +429,26 @@ en = "You lower your body and cross dangerous ground. On success, you reach wher
 [runtime."roll.body.default"]
 ko = "당신은 결과가 갈릴 행동에 힘을 싣습니다. 성공하면 의도한 성과를 얻습니다."
 en = "You commit to an uncertain action. On success, you gain the intended result."
+
+[runtime."roll.affinity_label"]
+ko = "호감도"
+en = "Affinity"
+
+[runtime."roll.affinity_strong_positive"]
+ko = "{npc}{이/가} 당신에게 뚜렷한 호의를 보입니다"
+en = "{npc} shows clear goodwill toward you"
+
+[runtime."roll.affinity_positive"]
+ko = "{npc}{이/가} 당신을 조금 더 신뢰합니다"
+en = "{npc} trusts you a little more"
+
+[runtime."roll.affinity_strong_negative"]
+ko = "{npc}{이/가} 당신을 노골적으로 경계합니다"
+en = "{npc} openly distrusts you"
+
+[runtime."roll.affinity_negative"]
+ko = "{npc}{이/가} 경계심이 커집니다"
+en = "{npc} grows more wary"
 
 [runtime."roll.resolve.perceive.success"]
 ko = "당신은 살핀 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다."
@@ -489,10 +481,6 @@ en = "Your attempt leads to the intended result."
 [runtime."roll.resolve.default.failure"]
 ko = "당신의 시도는 원하는 성과로 이어지지 않습니다."
 en = "Your attempt does not lead to the result you wanted."
-
-[runtime."social.missing_supplies.reason_known"]
-ko = "주민은 보급품이 사라진 이유를 조심스럽게 털어놓습니다."
-en = "The resident carefully explains why the supplies went missing."
 
 [runtime."narration.brief.scene.combat"]
 ko = "장면 유형: 전투"
@@ -709,47 +697,3 @@ en = "Your action is handled."
 [runtime."narration.clean.choice_word"]
 ko = "선택"
 en = "choice"
-
-[runtime."social.missing_supplies.need_reason"]
-ko = "먼저 주민에게 사라진 보급품의 사정을 들어야 합니다."
-en = "You need to hear the resident's reason for the missing supplies first."
-
-[runtime."social.missing_supplies.report"]
-ko = "주민의 일을 보고하자 보급 담당자는 즉시 보급품 문제를 정리합니다."
-en = "After your report, the quartermaster quickly settles the missing supplies issue."
-
-[runtime."social.missing_supplies.mediate"]
-ko = "당신의 중재로 보급 담당자와 주민은 서로의 사정을 받아들입니다."
-en = "Your mediation helps the quartermaster and resident accept each other's situation."
-
-[runtime."social.missing_supplies.quiet_return"]
-ko = "보급품은 조용히 제자리로 돌아가고 주민은 안도합니다."
-en = "The supplies quietly return to their place, and the resident is relieved."
-
-[runtime."seed.giver.name"]
-ko = "마을 주민"
-en = "Villager"
-
-[runtime."seed.enemy.name"]
-ko = "떠돌이 적"
-en = "Wandering enemy"
-
-[runtime."seed.reward.name"]
-ko = "작은 보상"
-en = "Small reward"
-
-[runtime."seed.reward.description"]
-ko = "의뢰를 마치면 받을 수 있는 보상입니다."
-en = "A reward for completing the request."
-
-[runtime."seed.quest.title"]
-ko = "마을의 부탁"
-en = "A Village Request"
-
-[runtime."seed.quest.summary"]
-ko = "마을 주민은 주변을 위협하는 적을 처리해 달라고 부탁합니다."
-en = "A villager asks you to handle an enemy threatening the area."
-
-[runtime."seed.quest.trigger"]
-ko = "떠돌이 적 물리치기"
-en = "Defeat the wandering enemy"

@@ -17,6 +17,7 @@ from src.locale.render import render
 
 from ..action.dispatch import GraphActionDispatchResult
 from ..state import GameRuntimeState
+from ..story_context import current_story_payload
 from .combat_view import combat_narration_view
 from .memory_context import (
     narrate_recent_exchanges_payload,
@@ -54,7 +55,7 @@ def build_action_narration_payload(
         current_event["story_transition"] = story_transition
     payload = {
         "world_guidance": _world_guidance(after),
-        "current_story": _current_story_payload(after),
+        "current_story": current_story_payload(after),
         "player_input": None,
         "current_place": _node_ref(after, place),
         "current_event": current_event,
@@ -110,7 +111,7 @@ def build_roll_narration_payload(
         current_event["check_reason"] = check_reason
     payload = {
         "world_guidance": _world_guidance(runtime),
-        "current_story": _current_story_payload(runtime),
+        "current_story": current_story_payload(runtime),
         "player_input": player_input if isinstance(player_input, str) else None,
         "current_event": current_event,
         "scene_anchor": _scene_anchor(runtime),
@@ -135,7 +136,7 @@ def build_input_narration_payload(
 ) -> dict[str, Any]:
     payload = {
         "world_guidance": _world_guidance(runtime),
-        "current_story": _current_story_payload(runtime),
+        "current_story": current_story_payload(runtime),
         "player_input": player_input,
         "current_event": _input_current_event(runtime, action, dialogue_target),
         "scene_anchor": _scene_anchor(runtime),
@@ -240,47 +241,6 @@ def _world_guidance(runtime: GameRuntimeState) -> str | None:
     if not text:
         return None
     return text
-
-
-def _current_story_payload(runtime: GameRuntimeState) -> dict[str, Any]:
-    payload: dict[str, Any] = {}
-    chapter = _active_chapter(runtime)
-    if chapter is not None:
-        payload["chapter"] = chapter
-    quest = _active_quest(runtime)
-    if quest is not None:
-        payload["active_quest"] = quest
-    return payload
-
-
-def _active_chapter(runtime: GameRuntimeState) -> dict[str, str] | None:
-    for node in runtime.graph.nodes.values():
-        if node.type == "chapter" and node.properties.get("status") == "active":
-            return _story_node_payload(runtime, node)
-    return None
-
-
-def _active_quest(runtime: GameRuntimeState) -> dict[str, str] | None:
-    quest_id = runtime.progress.active_quest_id
-    node = runtime.graph.nodes.get(quest_id or "")
-    if node is None or node.type != "quest":
-        return None
-    return _story_node_payload(runtime, node)
-
-
-def _story_node_payload(runtime: GameRuntimeState, node: GraphNode) -> dict[str, str]:
-    payload = {"id": node.id, "name": node_label(runtime.content, node)}
-    status = node.properties.get("status")
-    if isinstance(status, str) and status:
-        payload["status"] = status
-    description = node_text(runtime.content, node, "description") or node_text(
-        runtime.content,
-        node,
-        "summary",
-    )
-    if description:
-        payload["description"] = description
-    return payload
 
 
 def _visible_character_payloads(
@@ -721,7 +681,7 @@ def _changed_nodes_by_status(
     to_status: str,
 ) -> list[dict[str, str]]:
     out: list[dict[str, str]] = []
-    for node_id, after_node in after.graph.nodes.items():
+    for node_id, after_node in after.graph.nodes.items():  # ssot-allow: attribute-only status diff
         if after_node.type != node_type:
             continue
         before_node = before.graph.nodes.get(node_id)

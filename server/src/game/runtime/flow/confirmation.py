@@ -8,6 +8,7 @@ from src.game.domain.content import node_label, node_text
 from src.game.domain.graph import Graph, GraphNode
 from src.game.domain.graph.character import can_character_fight
 from src.game.domain.graph.query import location_of
+from src.game.domain.quest import quest_triggers
 from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, set_diag_context
 from src.locale.render import render
@@ -515,12 +516,7 @@ def _matches_active_social_check(
     quest = runtime.graph.nodes.get(active_id)
     if quest is None or quest.type != "quest":
         return False
-    triggers = quest.properties.get("triggers", [])
-    if not isinstance(triggers, list):
-        return False
-    for trigger in triggers:
-        if not isinstance(trigger, dict):
-            continue
+    for trigger in quest_triggers(quest):
         if trigger.get("type") != "social_check" or trigger.get("target") != target:
             continue
         if not _social_check_input_matches(runtime, quest, trigger, player_input):

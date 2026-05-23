@@ -87,7 +87,3 @@ en = "Action check"
 [ui."roll.dice_label"]
 ko = "주사위"
 en = "Die"
-
-[ui."roll.affinity_label"]
-ko = "호감"
-en = "Affinity"

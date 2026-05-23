@@ -1,8 +1,7 @@
-from typing import Any
-
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.game.domain.graph import Graph, SetNodePropertyChange
+from src.game.domain.quest import quest_choices, quest_triggers, quest_triggers_met
 
 
 class GraphProgressionResult(BaseModel):
@@ -153,7 +152,6 @@ def _prerequisite_ids(graph: Graph, node_id: str) -> list[str]:
     raw = node.properties.get("prerequisites", [])
     return [item for item in raw if isinstance(item, str)] if isinstance(raw, list) else []
 
-
 def _auto_complete_satisfied_location_quest(
     graph: Graph,
     status,
@@ -172,10 +170,10 @@ def _auto_complete_satisfied_location_quest(
     quest = graph.nodes.get(quest_id)
     if quest is None or quest.type != "quest":
         return None
-    triggers = _quest_triggers(quest)
+    triggers = quest_triggers(quest)
     if not triggers:
         return None
-    triggers_met = _quest_triggers_met(quest, len(triggers))
+    triggers_met = quest_triggers_met(quest, len(triggers))
     changed = False
     for index, trigger in enumerate(triggers):
         if triggers_met[index]:
@@ -193,7 +191,7 @@ def _auto_complete_satisfied_location_quest(
             value=triggers_met,
         )
     )
-    if all(triggers_met) and not _quest_choices(quest):
+    if all(triggers_met) and not quest_choices(quest):
         return quest_id
     return None
 
@@ -217,36 +215,11 @@ def _auto_completable_location_quest_id(
 
 
 def _location_triggers_satisfied(quest, satisfied_location_ids: set[str]) -> bool:
-    triggers = _quest_triggers(quest)
-    if not triggers or _quest_choices(quest):
+    triggers = quest_triggers(quest)
+    if not triggers or quest_choices(quest):
         return False
     return all(
         trigger.get("type") == "location_enter"
         and trigger.get("target") in satisfied_location_ids
         for trigger in triggers
     )
-
-
-def _quest_triggers(quest) -> list[dict[str, Any]]:
-    triggers = quest.properties.get("triggers", [])
-    if not isinstance(triggers, list):
-        return []
-    return [trigger for trigger in triggers if isinstance(trigger, dict)]
-
-
-def _quest_triggers_met(quest, total: int) -> list[bool]:
-    raw = quest.properties.get("triggers_met", [])
-    values = raw if isinstance(raw, list) else []
-    padded = [*values[:total], *([False] * max(0, total - len(values)))]
-    return [item if isinstance(item, bool) else False for item in padded]
-
-
-def _quest_choices(quest) -> dict[str, dict[str, Any]]:
-    raw = quest.properties.get("choices")
-    if not isinstance(raw, dict):
-        return {}
-    return {
-        key: value
-        for key, value in raw.items()
-        if isinstance(key, str) and key and isinstance(value, dict)
-    }

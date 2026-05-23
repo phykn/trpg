@@ -98,7 +98,7 @@ def previous_scene_payload(
 def _drop_none_and_empty(value: dict[str, Any]) -> dict[str, Any]:
     return {
         key: item
-        for key, item in value.items()
+        for key, item in value.items()  # ssot-allow: compact payload cleanup
         if item is not None and item != [] and item != {}
     }
 

@@ -10,6 +10,13 @@ from src.game.domain.graph.query import (
     location_of,
     nodes_of_type,
 )
+from src.game.domain.quest import (
+    quest_choices,
+    quest_progress,
+    quest_ready_to_decide,
+    quest_triggers,
+    quest_triggers_met,
+)
 from src.game.runtime.state import GameRuntimeState
 from src.locale import render
 from src.wire.models import (
@@ -81,7 +88,7 @@ def build_quest_payload(
     content = runtime.content
     tier = optional_str(static_value(quest, "difficulty", content)) or "normal"
     goals = _quest_goals(quest, runtime)
-    done, total = _quest_progress(quest)
+    done, total = quest_progress(quest)
     return QuestPayload(
         id=quest.id,
         title=optional_str(static_value(quest, "title", content)) or quest.id,
@@ -95,7 +102,7 @@ def build_quest_payload(
         actions=actions,
         choices=(
             _quest_choices(quest)
-            if status == "active" and _ready_to_decide(quest)
+            if status == "active" and quest_ready_to_decide(quest)
             else []
         ),
     )
@@ -118,15 +125,10 @@ def _first_quest_with_status(graph: Graph, status: str) -> GraphNode | None:
 
 
 def _quest_goals(quest: GraphNode, runtime: GameRuntimeState) -> list[str]:
-    raw = quest.properties.get("triggers", [])
-    if not isinstance(raw, list):
-        return []
     content = runtime.content
     content_names = _trigger_names_by_id(content, quest)
     goals: list[str] = []
-    for trigger in raw:
-        if not isinstance(trigger, dict):
-            continue
+    for trigger in quest_triggers(quest):
         routed_goal = _route_goal_for_location_trigger(trigger, runtime)
         if routed_goal is not None:
             goals.append(routed_goal)
@@ -181,13 +183,11 @@ def _should_mark_social_goal_retry(
         return False
     if not _latest_roll_failed(runtime):
         return False
-    raw_triggers = quest.properties.get("triggers", [])
-    raw_met = quest.properties.get("triggers_met", [])
-    if not isinstance(raw_triggers, list) or not isinstance(raw_met, list):
-        return True
-    for index, candidate in enumerate(raw_triggers):
+    triggers = quest_triggers(quest)
+    met = quest_triggers_met(quest, len(triggers))
+    for index, candidate in enumerate(triggers):
         if candidate is trigger:
-            return index >= len(raw_met) or raw_met[index] is not True
+            return met[index] is not True
     return True
 
 
@@ -239,20 +239,6 @@ def _trigger_names_by_id(content: RuntimeContent, quest: GraphNode) -> dict[str,
     return names
 
 
-def _quest_progress(quest: GraphNode) -> tuple[int, int]:
-    raw_goals = quest.properties.get("triggers", [])
-    raw_met = quest.properties.get("triggers_met", [])
-    total = len(raw_goals) if isinstance(raw_goals, list) else 0
-    if not isinstance(raw_met, list):
-        return 0, total
-    return sum(1 for item in raw_met[:total] if item is True), total
-
-
-def _ready_to_decide(quest: GraphNode) -> bool:
-    done, total = _quest_progress(quest)
-    return total == 0 or done >= total
-
-
 def _progress_label(done: int, total: int) -> str:
     if total == 0:
         return ""
@@ -274,13 +260,8 @@ def _quest_rewards(quest: GraphNode) -> QuestRewards:
 
 
 def _quest_choices(quest: GraphNode) -> list[QuestChoicePayload]:
-    raw = quest.properties.get("choices")
-    if not isinstance(raw, dict):
-        return []
     choices: list[QuestChoicePayload] = []
-    for choice_id, choice in raw.items():  # ssot-allow: quest choice attribute map
-        if not isinstance(choice_id, str) or not choice_id:
-            continue
+    for choice_id, choice in quest_choices(quest).items():  # ssot-allow: quest choice attribute map
         label = choice.get("label") if isinstance(choice, dict) else None
         choices.append(
             QuestChoicePayload(

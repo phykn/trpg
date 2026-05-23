@@ -12,6 +12,12 @@ from src.game.domain.graph import (
     SetNodePropertyChange,
 )
 from src.game.domain.graph.query import edges_from, edges_to
+from src.game.domain.quest import (
+    quest_choices,
+    quest_ready_to_decide,
+    quest_triggers,
+    quest_triggers_met,
+)
 
 __all__ = [
     "GraphQuestError",
@@ -138,10 +144,10 @@ def plan_quest_decide(
     reject_terminal(status, quest_id)
     if status != "active":
         raise GraphQuestError(f"quest cannot be decided from {status}: {quest_id}")
-    choices = _quest_choices(quest)
+    choices = quest_choices(quest)
     if choice_id not in choices:
         raise GraphQuestError(f"quest choice not found: {quest_id}.{choice_id}")
-    if not _quest_ready_to_decide(quest):
+    if not quest_ready_to_decide(quest):
         raise GraphQuestError(f"quest decision requires completed triggers: {quest_id}")
     return _result(
         quest_id,
@@ -192,8 +198,8 @@ def plan_quest_progress_for_trigger(
     for quest in graph.nodes.values():
         if quest.type != "quest" or not _can_progress_for_trigger(quest):
             continue
-        triggers = _quest_triggers(quest)
-        triggers_met = _quest_triggers_met(quest, len(triggers))
+        triggers = quest_triggers(quest)
+        triggers_met = quest_triggers_met(quest, len(triggers))
         changed = False
         for index, trigger in enumerate(triggers):
             if triggers_met[index]:
@@ -207,7 +213,7 @@ def plan_quest_progress_for_trigger(
         if not changed:
             continue
         changes.append(property_change(quest.id, "triggers_met", triggers_met))
-        if triggers and all(triggers_met) and not _quest_choices(quest):
+        if triggers and all(triggers_met) and not quest_choices(quest):
             changes.append(status_change(quest.id, "completed"))
             completed_quest_ids.append(quest.id)
     return GraphQuestProgressResult(
@@ -359,35 +365,10 @@ def _result(
     )
 
 
-def _quest_triggers(quest: GraphNode) -> list[dict[str, Any]]:
-    triggers = quest.properties.get("triggers", [])
-    if not isinstance(triggers, list):
-        return []
-    return [trigger for trigger in triggers if isinstance(trigger, dict)]
-
-
-def _quest_choices(quest: GraphNode) -> dict[str, dict[str, Any]]:
-    choices = quest.properties.get("choices")
-    if not isinstance(choices, dict):
-        return {}
-    return {
-        key: value
-        for key, value in choices.items()
-        if isinstance(key, str) and key and isinstance(value, dict)
-    }
-
-
-def _quest_ready_to_decide(quest: GraphNode) -> bool:
-    triggers = _quest_triggers(quest)
-    if not triggers:
-        return True
-    return all(_quest_triggers_met(quest, len(triggers)))
-
-
 def _quest_reward_data(quest: GraphNode) -> dict[str, Any]:
     selected_choice = quest.properties.get("selected_choice")
     if isinstance(selected_choice, str):
-        choice = _quest_choices(quest).get(selected_choice)
+        choice = quest_choices(quest).get(selected_choice)
         if choice is not None:
             rewards = choice.get("rewards")
             if isinstance(rewards, dict):
@@ -395,13 +376,6 @@ def _quest_reward_data(quest: GraphNode) -> dict[str, Any]:
             return {}
     rewards = quest.properties.get("rewards", {})
     return rewards if isinstance(rewards, dict) else {}
-
-
-def _quest_triggers_met(quest: GraphNode, total: int) -> list[bool]:
-    raw = quest.properties.get("triggers_met", [])
-    values = raw if isinstance(raw, list) else []
-    padded = [*values[:total], *([False] * max(0, total - len(values)))]
-    return [item if isinstance(item, bool) else False for item in padded]
 
 
 def _trigger_type_aliases(trigger_type: str) -> set[str]:
