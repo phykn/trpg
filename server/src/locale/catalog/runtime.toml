@@ -151,35 +151,35 @@ ko = "당신의 행동이 처리됩니다."
 en = "Your action is handled."
 
 [runtime."combat.start"]
-ko = "{target}{이/가} 정면을 막아서고, 당신은 자세를 낮춰 싸움의 중심을 잡습니다."
+ko = "{target}{이/가} 앞을 막습니다. 당신은 자세를 낮춥니다."
 en = "You face off against {target}."
 
 [runtime."combat.skill_start"]
-ko = "{skill}{을/를} 끌어올리며 {target}의 거리 안으로 파고듭니다 (MP {mp_cost})."
+ko = "{skill}{을/를} 준비하고 {target}에게 다가섭니다 (MP {mp_cost})."
 en = "You ready {skill} and face off against {target} (MP {mp_cost})."
 
 [runtime."combat.skill_continue"]
-ko = "{skill}{으로/로} 흐름을 잡아 {target}의 빈틈을 겨냥합니다 (MP {mp_cost})."
+ko = "{skill}{으로/로} {target}의 빈틈을 노립니다 (MP {mp_cost})."
 en = "You use {skill} against {target} (MP {mp_cost})."
 
 [runtime."combat.skill_victory"]
-ko = "당신은 {skill}{으로/로} 끝까지 밀고 들어가 {target}{을/를} 무너뜨립니다 (MP {mp_cost})."
+ko = "{skill}{이/가} {target}{을/를} 밀어냅니다. 전투가 끝납니다 (MP {mp_cost})."
 en = "You use {skill} and drop {target} (MP {mp_cost})."
 
 [runtime."combat.escaped"]
-ko = "벌어진 틈을 놓치지 않고, 당신은 전투에서 빠져나옵니다."
+ko = "당신은 거리를 벌려 전투에서 빠져나옵니다."
 en = "You create enough distance to escape combat."
 
 [runtime."combat.stopped"]
-ko = "팽팽하던 대치가 끊기고 전투가 끝납니다."
+ko = "대치가 끊기고 전투가 끝납니다."
 en = "The standoff breaks, and combat ends."
 
 [runtime."combat.defeat"]
-ko = "버티던 자세가 무너지고, 당신은 전투에서 패배합니다."
+ko = "당신의 자세가 무너집니다. 전투에서 패배합니다."
 en = "You lose the battle."
 
 [runtime."combat.victory"]
-ko = "마지막 틈을 놓치지 않고, 당신은 전투를 끝냅니다."
+ko = "상대가 물러납니다. 전투가 끝납니다."
 en = "You win the battle."
 
 [runtime."combat.continue"]
@@ -211,7 +211,7 @@ ko = "공격함"
 en = "attacked"
 
 [runtime."combat.motion.player_attack_failure"]
-ko = "공격 흐름을 놓침"
+ko = "공격이 빗나감"
 en = "lost the attack line"
 
 [runtime."combat.motion.player_defend_success"]
@@ -235,7 +235,7 @@ ko = "말로 흔듦"
 en = "pressed with words"
 
 [runtime."combat.motion.player_talk_failure"]
-ko = "말이 닿지 않음"
+ko = "말이 막힘"
 en = "words failed to land"
 
 [runtime."combat.motion.enemy_pressed"]
@@ -371,16 +371,16 @@ ko = "당신의 행동은 조용히 이어집니다."
 en = "Your action continues quietly."
 
 [runtime."input.dialogue_quiet"]
-ko = "{target}{은/는} 당신의 말을 듣고 잠시 침묵합니다."
-en = "{target} listens to you and stays quiet for a moment."
+ko = "{target}{은/는} 바로 답하지 않습니다."
+en = "{target} does not answer right away."
 
 [runtime."input.speak_generic"]
 ko = "{target}에게 말을 겁니다."
 en = "You speak to {target}."
 
 [runtime."narration.repeat.neutral"]
-ko = "장면의 긴장은 그대로 남고, 다음 선택이 조용히 당신을 기다립니다."
-en = "The tension remains, and the next choice waits quietly."
+ko = "상황은 그대로입니다. 다음 행동을 정할 수 있습니다."
+en = "The situation is unchanged. You can choose the next action."
 
 [runtime."narration.move.arrived"]
 ko = "{place}에 도착합니다."
@@ -391,31 +391,31 @@ ko = "당신은 이동을 마칩니다."
 en = "You finish moving."
 
 [runtime."narration.repeat.combat_neutral"]
-ko = "대치가 이어지고, 서로의 다음 움직임이 아직 정해지지 않습니다."
+ko = "대치가 이어집니다. 다음 움직임은 아직 정해지지 않습니다."
 en = "The standoff continues, and neither next move is settled yet."
 
 [runtime."narration.repeat.combat_success"]
-ko = "충돌의 여파가 남고, 상대는 무너진 균형을 가까스로 붙잡습니다."
+ko = "상대가 밀립니다. 아직 자세를 다시 잡고 있습니다."
 en = "The impact lingers, and the opponent tries to recover their stance."
 
 [runtime."narration.repeat.combat_failure"]
-ko = "기세가 맞물리기 직전, 상대의 움직임이 한 박자 먼저 틈을 파고듭니다."
+ko = "상대가 먼저 움직입니다. 당신의 자세가 늦습니다."
 en = "The attack loses its line, and the opponent catches the opening."
 
 [runtime."narration.combat_failure.attack"]
-ko = "일격이 닿기 직전, 상대가 몸을 틀어 흐름을 끊습니다."
+ko = "공격이 닿기 직전, 상대가 몸을 틉니다."
 en = "The attack loses its line, and the opponent catches the opening."
 
 [runtime."narration.combat_failure.defend"]
-ko = "단단히 버티며 충격을 흘리지만, 반격으로 잇기에는 한 박자 모자랍니다."
+ko = "당신은 버팁니다. 반격으로 잇기에는 늦습니다."
 en = "The guard holds, but this move does not become pressure."
 
 [runtime."narration.combat_failure.flee"]
-ko = "발끝이 길을 찾는 순간, 상대가 먼저 붙어 거리를 지워 버립니다."
+ko = "당신이 물러나려는 순간, 상대가 먼저 붙습니다."
 en = "No opening appears, and the distance stays tight."
 
 [runtime."narration.combat_failure.talk"]
-ko = "말끝은 날카롭게 들어가지만, 상대는 아직 싸움의 기세를 내려놓지 않습니다."
+ko = "상대는 말을 받아치고 자세를 풀지 않습니다."
 en = "The words do not change the flow, and the clash continues."
 
 [runtime."classify.refuse_meta_breaking"]
@@ -435,12 +435,12 @@ ko = "{label} 판정이 필요합니다"
 en = "{label} check required"
 
 [runtime."roll.body.perceive"]
-ko = "당신은 눈앞의 흔적과 기척을 더 깊이 읽으려 합니다. 성공하면 숨은 단서나 위험을 알아차립니다."
-en = "You study the signs and sounds before you more closely. On success, you notice hidden clues or danger."
+ko = "당신은 눈앞의 사람, 물건, 장소를 더 자세히 봅니다. 성공하면 지금 보이는 것에서 의미 있는 단서를 확인합니다."
+en = "You study the people, objects, and place before you more closely. On success, you confirm a meaningful clue from what is visible now."
 
 [runtime."roll.body.speak"]
-ko = "당신은 상대의 마음이 흔들릴 틈을 찾아 말을 고릅니다. 성공하면 상대가 더 분명한 반응이나 양보를 보입니다."
-en = "You choose words that can move the other person. On success, they give a clearer reaction or concession."
+ko = "당신은 말을 골라 상대의 답을 끌어내려 합니다. 성공하면 더 분명한 답이나 양보를 얻습니다."
+en = "You choose words to draw out an answer. On success, you get a clearer answer or concession."
 
 [runtime."roll.body.move"]
 ko = "당신은 몸을 낮추고 위험한 길을 넘으려 합니다. 성공하면 원하는 곳까지 무사히 움직입니다."
@@ -471,20 +471,20 @@ ko = "{npc}{이/가} 경계심이 커집니다"
 en = "{npc} grows more wary"
 
 [runtime."roll.resolve.perceive.success"]
-ko = "당신은 살펴본 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다."
-en = "You study the scene and catch a meaningful clue or sign of danger."
+ko = "당신은 살펴본 끝에 지금 보이는 것들 사이의 의미 있는 단서를 확인합니다."
+en = "You study the scene and confirm a meaningful clue among what is visible now."
 
 [runtime."roll.resolve.perceive.failure"]
-ko = "당신은 살피지만, 눈앞의 흔적은 뚜렷한 답을 내주지 않습니다."
-en = "You study the scene, but the traces before you do not yield a clear answer."
+ko = "당신은 살피지만, 지금 보이는 것만으로는 뚜렷한 답을 얻지 못합니다."
+en = "You study the scene, but what is visible now does not yield a clear answer."
 
 [runtime."roll.resolve.speak.success"]
-ko = "{target}{은/는} 당신의 말을 듣고, 더 분명한 반응을 보입니다."
-en = "Your words reach {target}, drawing a clearer response."
+ko = "{target}{은/는} 답을 더 분명히 합니다."
+en = "{target} makes their answer clearer."
 
 [runtime."roll.resolve.speak.failure"]
-ko = "{target}{은/는} 당신의 말을 듣지만, 쉽게 마음을 열지 않습니다."
-en = "Your words reach {target}, but they do not open up easily."
+ko = "{target}{은/는} 답을 피하거나 짧게 막습니다."
+en = "{target} dodges the answer or cuts it short."
 
 [runtime."roll.suggestion.retry_speak.label"]
 ko = "다시 말 걸기"
@@ -539,8 +539,8 @@ ko = "대상: {value}"
 en = "Target: {value}"
 
 [runtime."narration.brief.dialogue_responder"]
-ko = "응답 대상: {value}. 질문을 반복하지 말고, 알면 답하고 모르면 모른다고 말합니다."
-en = "Responder: {value}. Do not repeat the question; answer if they know, or say they do not know."
+ko = "응답 대상: {value}"
+en = "Responder: {value}"
 
 [runtime."narration.brief.confirmed"]
 ko = "확정:"
@@ -669,62 +669,6 @@ en = "Effect: {value}"
 [runtime."narration.brief.status"]
 ko = "상태: {value}"
 en = "Status: {value}"
-
-[runtime."narration.brief.combat_forbid"]
-ko = "금지: 피해량, HP 숫자, 새 상태 변화, 새 보상, 전투 종료 창작"
-en = "Forbidden: damage numbers, HP numbers, new state changes, new rewards, invented combat end"
-
-[runtime."narration.brief.combat_goal"]
-ko = "목표: 확정된 전투 결과를 몸의 반응, 거리, 자세, 압박으로 장면화합니다."
-en = "Goal: turn confirmed combat results into posture, distance, reaction, and pressure."
-
-[runtime."narration.brief.transition_forbid"]
-ko = "금지: 정답 지시, 선택 평가, 다음 사건 결론 공개"
-en = "Forbidden: answer directives, choice judgment, revealing the next case conclusion"
-
-[runtime."narration.brief.transition_goal"]
-ko = "목표: 끝난 사건은 정리하고 다음 사건의 첫 단서만 자연스럽게 남깁니다."
-en = "Goal: close the completed case and leave only the first clue to the next case."
-
-[runtime."narration.brief.roll_success_forbid"]
-ko = "금지: 실패처럼 흐리는 반응, 확정되지 않은 보상, 새 퀘스트 창작"
-en = "Forbidden: failure-like ambiguity, unconfirmed rewards, invented quests"
-
-[runtime."narration.brief.roll_success_goal"]
-ko = "목표: 성공의 귀결을 분명히 쓰고, 근거에 맞는 반응이나 다음 여지를 남깁니다."
-en = "Goal: show the success consequence clearly and leave grounded reaction or next opening."
-
-[runtime."narration.brief.roll_failure_forbid"]
-ko = "금지: 성공처럼 읽히는 단서 획득, 설득 성공, 관계 변화 확정"
-en = "Forbidden: clue gain, persuasion success, or relationship change that reads like success"
-
-[runtime."narration.brief.roll_failure_goal"]
-ko = "목표: 실패가 분명히 보이되 대화나 재시도 여지는 남깁니다."
-en = "Goal: make failure clear while leaving room for conversation or retry."
-
-[runtime."narration.brief.action_forbid"]
-ko = "금지: payload에 없는 새 결과, 새 보상, 새 관계 변화"
-en = "Forbidden: new results, rewards, or relationship changes not in payload"
-
-[runtime."narration.brief.action_goal"]
-ko = "목표: 확정된 행동 결과를 짧고 구체적인 장면으로 바꿉니다."
-en = "Goal: turn confirmed action results into a short concrete scene."
-
-[runtime."narration.brief.dialogue_goal"]
-ko = "목표: 대상이 플레이어 질문에 직접 답합니다. 대상 정보에서 질문에 맞는 사실을 하나 이상 직접 발화에 넣습니다. 질문 문장을 NPC 대사로 복사하지 않습니다. 가능 여부를 물으면 가능/불가능과 조건을 함께 말합니다. 입술, 시선, 미소 같은 장식보다 답변 내용을 먼저 씁니다."
-en = "Goal: the target directly answers the player's question. Put at least one relevant target fact into direct speech. Do not copy the question into NPC dialogue. If asked whether something is possible, state whether it is possible and the condition. Write answer content before decorative gestures such as lips, gaze, or smiles."
-
-[runtime."narration.brief.dialogue_forbid"]
-ko = "금지: 현재 장소 밖의 이동 수단, 연결된 장소, 다음 목적지 행동을 이미 일어난 일처럼 쓰기"
-en = "Forbidden: treating transportation, connected places, or next-destination actions outside the current place as already happening"
-
-[runtime."narration.brief.move_forbid"]
-ko = "금지: 직전 대화 요약, 이전 장소 인물의 새 행동, 아직 도착하지 않은 장소 묘사"
-en = "Forbidden: summarizing prior dialogue, new actions by people from the previous place, describing a place not yet reached"
-
-[runtime."narration.brief.move_goal"]
-ko = "목표: 현재 이동 결과와 도착 장소에서 바로 보이는 상태만 짧게 씁니다."
-en = "Goal: write only the confirmed movement result and what is immediately visible at the arrival place."
 
 [runtime."narration.clean.generic_action_full"]
 ko = "「당신의 행동이 처리됩니다.」라는 짧은 확인과 함께,"

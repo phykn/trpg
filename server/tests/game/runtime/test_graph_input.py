@@ -1411,7 +1411,7 @@ async def test_graph_input_speak_times_out_slow_narration_and_uses_fallback(
 
     assert result.status == "executed"
     assert [entry.kind for entry in logs] == ["player", "gm"]
-    assert logs[1].text == "goblin_01는 당신의 말을 듣고 잠시 침묵합니다."
+    assert logs[1].text == "goblin_01는 바로 답하지 않습니다."
 
 
 async def test_graph_input_speak_rate_limited_narration_uses_fallback(tmp_path):
@@ -1425,7 +1425,7 @@ async def test_graph_input_speak_rate_limited_narration_uses_fallback(tmp_path):
 
     assert result.status == "executed"
     assert [entry.kind for entry in logs] == ["player", "gm"]
-    assert logs[1].text == "goblin_01는 당신의 말을 듣고 잠시 침묵합니다."
+    assert logs[1].text == "goblin_01는 바로 답하지 않습니다."
 
 
 async def test_graph_input_runs_multiple_actions_in_order(tmp_path):

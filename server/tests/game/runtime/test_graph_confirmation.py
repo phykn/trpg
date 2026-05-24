@@ -247,7 +247,7 @@ async def test_confirm_attack_executes_stored_action(tmp_path):
     assert saved_progress.turn_count == 1
     assert len(saved_logs) == 1
     assert saved_logs[0].kind == "act"
-    assert "싸움의 중심을 잡습니다" in saved_logs[0].text
+    assert "자세를 낮춥니다" in saved_logs[0].text
     assert result.front_state.log == saved_logs
 
 
@@ -263,9 +263,7 @@ async def test_confirm_attack_log_uses_korean_object_particle(tmp_path):
     await run_graph_confirm(repo, "game-1", pending["id"], "confirm")
     saved_logs = await repo.load_log_entries("game-1")
 
-    assert saved_logs[0].text == (
-        "고블린 약탈자가 정면을 막아서고, 당신은 자세를 낮춰 싸움의 중심을 잡습니다."
-    )
+    assert saved_logs[0].text == "고블린 약탈자가 앞을 막습니다. 당신은 자세를 낮춥니다."
 
 
 async def test_confirm_skill_attack_starts_combat_without_spending_mp(tmp_path, monkeypatch):
@@ -291,7 +289,7 @@ async def test_confirm_skill_attack_starts_combat_without_spending_mp(tmp_path, 
     assert saved_graph.nodes["goblin_01"].properties["status"] == []
     assert "훈련 일격" not in saved_logs[0].text
     assert "MP 2" not in saved_logs[0].text
-    assert "싸움의 중심을 잡습니다" in saved_logs[0].text
+    assert "자세를 낮춥니다" in saved_logs[0].text
 
 
 async def test_confirm_quest_accept_executes_stored_action(tmp_path):

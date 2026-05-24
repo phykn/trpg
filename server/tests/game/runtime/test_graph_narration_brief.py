@@ -141,7 +141,9 @@ def test_move_brief_omits_previous_dialogue_context():
     assert "현재 장소:" in brief
     assert "닫힌 문과 낡은 표식이 보입니다." in brief
     assert "문지기와 닫힌 문만 기다립니다." in brief
-    assert "직전 대화 요약" in brief
+    assert "직전 대화 요약" not in brief
+    assert "금지:" not in brief
+    assert "목표:" not in brief
     assert brief.splitlines()[-1] == "플레이어 입력: 서쪽 문 앞으로 이동합니다."
 
 
@@ -297,9 +299,10 @@ def test_dialogue_brief_includes_target_public_knowledge_before_player_input():
     )
 
     assert "대상 정보:" in brief
-    assert "응답 대상: 관리인. 질문을 반복하지 말고, 알면 답하고 모르면 모른다고 말합니다." in brief
-    assert "목표: 대상이 플레이어 질문에 직접 답합니다." in brief
-    assert "질문 문장을 NPC 대사로 복사하지 않습니다." in brief
+    assert "응답 대상: 관리인" in brief
+    assert "질문을 반복하지 말고" not in brief
+    assert "목표:" not in brief
+    assert "질문 문장을 NPC 대사로 복사하지 않습니다." not in brief
     assert "- 기록실 출입 규칙: 기록실은 담당자 확인과 방문 목적이 함께 필요합니다." in brief
     assert brief.rfind("플레이어 입력:") > brief.find("대상 정보:")
     assert brief.splitlines()[-1] == "플레이어 입력: 관리인에게 출입 규칙을 묻습니다"
@@ -317,7 +320,8 @@ def test_dialogue_brief_prioritizes_answer_over_decorative_gestures():
         }
     )
 
-    assert "입술, 시선, 미소 같은 장식보다 답변 내용을 먼저 씁니다." in brief
+    assert "입술, 시선, 미소 같은 장식보다 답변 내용을 먼저 씁니다." not in brief
+    assert "응답 대상: 관리인" in brief
 
 
 def test_dialogue_brief_requires_possibility_question_condition():
@@ -340,7 +344,8 @@ def test_dialogue_brief_requires_possibility_question_condition():
         }
     )
 
-    assert "가능 여부를 물으면 가능/불가능과 조건을 함께 말합니다." in brief
+    assert "가능 여부를 물으면 가능/불가능과 조건을 함께 말합니다." not in brief
+    assert "출입 조건: 담당자 확인을 받아야 문을 열 수 있습니다." in brief
 
 
 def test_dialogue_brief_includes_current_place_details_and_future_place_forbid():
@@ -364,7 +369,7 @@ def test_dialogue_brief_includes_current_place_details_and_future_place_forbid()
     assert "현재 장소:" in brief
     assert "문지기가 닫힌 문 앞을 지키는 복도" in brief
     assert "문 너머 기록실 불빛이 새어 나온다" in brief
-    assert "금지: 현재 장소 밖의 이동 수단, 연결된 장소, 다음 목적지 행동" in brief
+    assert "금지:" not in brief
     assert brief.splitlines()[-1] == "플레이어 입력: 문지기에게 여기가 어디인지 묻습니다"
 
 
@@ -380,8 +385,9 @@ def test_action_brief_includes_responder_for_dialogue_like_input():
         }
     )
 
-    assert "응답 대상: 관리인. 질문을 반복하지 말고, 알면 답하고 모르면 모른다고 말합니다." in brief
-    assert "목표: 대상이 플레이어 질문에 직접 답합니다." in brief
+    assert "응답 대상: 관리인" in brief
+    assert "질문을 반복하지 말고" not in brief
+    assert "목표:" not in brief
 
 
 def test_narration_brief_includes_all_payload_recent_context():

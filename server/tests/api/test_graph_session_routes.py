@@ -493,12 +493,12 @@ async def test_graph_roll_stream_returns_result_then_roll_narration(
     assert [entry["kind"] for entry in events[0]["payload"]["state"]["log"]] == ["roll"]
     assert (
         "".join(event["text"] for event in events[1:-1])
-        == "당신은 살펴본 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다. 장면의 긴장이 짧게 가라앉습니다."
+        == "당신은 살펴본 끝에 지금 보이는 것들 사이의 의미 있는 단서를 확인합니다. 장면의 긴장이 짧게 가라앉습니다."
     )
     assert events[-1]["payload"]["state"]["log"][-1] == {
         "id": 2,
         "kind": "gm",
-        "text": "당신은 살펴본 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다. 장면의 긴장이 짧게 가라앉습니다.",
+        "text": "당신은 살펴본 끝에 지금 보이는 것들 사이의 의미 있는 단서를 확인합니다. 장면의 긴장이 짧게 가라앉습니다.",
         "outcome": "success",
     }
 

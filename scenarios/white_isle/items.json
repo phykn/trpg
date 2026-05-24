@@ -43,7 +43,7 @@
     "name": "푸른 열쇠",
     "description": "레아의 빈방 문을 잠그던 작은 푸른 열쇠",
     "traits": [
-      "오래 쥐면 손끝이 차갑게 젖어든다."
+      "손끝에 남는 찬 물기"
     ],
     "price": 1,
     "consumable": false,
@@ -57,7 +57,7 @@
     "name": "황금 별표",
     "description": "이삭의 별점표에서 떨어져 나온 작은 금빛 별",
     "traits": [
-      "손에 쥐면 이상하게 더 무겁다."
+      "크기보다 무거운 금속 조각"
     ],
     "price": 1,
     "consumable": false,
@@ -71,7 +71,7 @@
     "name": "연두 체류권",
     "description": "연두섬에 더 머물 수 있게 해주는 작은 체류권",
     "traits": [
-      "끝나는 날은 흐릿하게 적혀 있다."
+      "흐릿한 종료 날짜"
     ],
     "price": 1,
     "consumable": false,
@@ -85,7 +85,7 @@
     "name": "보라 청첩장",
     "description": "화려한 금박이 찍힌 보라색 청첩장",
     "traits": [
-      "두 사람의 이름보다 예식 순서가 더 크게 보인다."
+      "두 사람의 이름보다 큰 예식 순서"
     ],
     "price": 1,
     "consumable": false,
@@ -99,7 +99,7 @@
     "name": "은빛 식권",
     "description": "외지 노동자 전용 식당에서만 쓸 수 있는 식권",
     "traits": [
-      "깨끗하게 코팅된 표면에 식탁 번호가 없다."
+      "식탁 번호 없는 깨끗한 코팅면"
     ],
     "price": 1,
     "consumable": false,
@@ -113,7 +113,7 @@
     "name": "주황 축하 리본",
     "description": "마리암의 새 출발 축하식에 쓰였던 주황 리본",
     "traits": [
-      "손에 감으면 이상하게 풀기 어렵다."
+      "매듭 자국이 남은 밝은 천"
     ],
     "price": 1,
     "consumable": false,

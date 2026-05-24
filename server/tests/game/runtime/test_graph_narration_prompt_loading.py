@@ -178,7 +178,7 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "전투 결과를 일반 행동 성공/실패처럼 해석하지 않습니다" in narrate_prompt
     assert "전투에서 `defend`의 success는 공격 성공이 아니라 방어 성공입니다" in narrate_prompt
     assert "전투에서 `flee`의 success는 피해가 아니라 거리 확보나 이탈 성공입니다" in narrate_prompt
-    assert "전투에서 `talk`의 success는 설득 확정이 아니라 압박 완화나 흐름 흔들림입니다" in narrate_prompt
+    assert "전투에서 `talk`의 success는 설득 확정이 아니라 상대의 거리, 자세, 공격 타이밍이 흔들린 것입니다" in narrate_prompt
     assert "`ui_cues`와 `suggestions`의 기본값은 빈 배열입니다" in narrate_prompt
     assert "suggestions는 새 행동을 창작하는 기능이 아닙니다" in narrate_prompt
     assert "브리핑에 이미 드러난 대상, 장소, 물건, 목표를 플레이어 입력문으로 바꾸는 기능입니다" in narrate_prompt
@@ -190,7 +190,7 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "담백한 플레이 로그체" in narrate_prompt
     assert "한 문장에는 하나의 동작만 넣습니다" in narrate_prompt
     assert "손끝에 먼지만 묻어납니다" in narrate_prompt
-    assert "플레이어의 팬인 GM" in combined
+    assert "플레이어의 행동을 분명하게 씁니다" in combined
     assert "플레이어를 우습게 만들지" in combined
     assert "결과 라벨" in combat_prompt
     assert "사용자 메시지는 engine이 확정한 전투 결과 브리핑입니다" in combat_prompt
@@ -234,9 +234,9 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "defend:" in combat_prompt
     assert "success는 공격 성공이 아니라 방어 성공입니다" in combat_prompt
     assert "flee" in combat_prompt
-    assert "success는 피해를 주는 것이 아니라 거리를 벌리거나 전투 흐름에서 빠져나오는 것입니다" in combat_prompt
+    assert "success는 피해를 주는 것이 아니라 거리를 벌리거나 전투에서 빠져나오는 것입니다" in combat_prompt
     assert "talk:" in combat_prompt
-    assert "success는 설득 성공이 아니라 전투 압박을 늦추거나 흐름을 흔든 것입니다" in combat_prompt
+    assert "success는 설득 성공이 아니라 상대의 거리, 자세, 공격 타이밍이 흔들린 것입니다" in combat_prompt
     assert "전투를 더 이어가지 않고" in combat_prompt
     assert (
         "victory, defeat, escaped, combat_stopped, ongoing"
@@ -270,7 +270,7 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "문체 목표는 담백한 플레이 로그체입니다" in narrate_prompt
     assert "나레이션은 시적으로 쓰지 않습니다" in narrate_prompt
     assert "멋 부리지 말고, 보이는 일만 짧게 씁니다" in narrate_prompt
-    assert "분위기를 설명하지 않고 장면을 보여줍니다" in narrate_prompt
+    assert "분위기나 의미를 설명하지 않고, 화면에 보이는 일만 씁니다" in narrate_prompt
     assert "한 문장에는 하나의 동작만 넣습니다" in narrate_prompt
     assert "목표 비율은 장면 70%, 상태 정보 30%입니다" in narrate_prompt
     assert "움직임 -> 충돌/반응 -> 현재 상태" in narrate_prompt
@@ -424,7 +424,7 @@ def test_graph_narrate_prompt_treats_rhythm_as_order_not_template():
 
     assert "같은 리듬은 고정 문장틀이 아닙니다" in prompt
     assert "문장 시작, 서술어, 닫는 초점을 바꿉니다" in prompt
-    assert "이번 턴에서 가장 압력이 큰 대상 하나" in prompt
+    assert "이번 턴에서 실제로 반응한 대상 하나" in prompt
 
 
 def test_graph_narrate_prompt_encodes_theory_pressure_and_completion_limits():
@@ -440,7 +440,7 @@ def test_graph_narrate_prompt_encodes_theory_pressure_and_completion_limits():
     assert "`이전 장면 요약`: 최근 원문 구간 이전의 장면 요약" in prompt
     assert "`이전 장면 요약`이나 `최근 대화`가 플레이어의 이번 발화보다 앞서면 안 됩니다" in prompt
     assert "UI 라벨, 추천 칩의 `label`, 주변에 함께 보이는 이름은 `플레이어 입력`보다 강한 근거가 아닙니다" in prompt
-    assert "압력을 남기는 것은 필수가 아닙니다" in prompt
+    assert "막힘을 남기는 것은 필수가 아닙니다" in prompt
     assert "새 갈고리 없이 닫습니다" in prompt
     assert "브리핑에 장소 진입 퀘스트 트리거가 있으면 특히 조심합니다" in prompt
     assert "장소에 들어간 사실을 플레이어가 갈등을 해결한 것처럼 과장하지 않습니다" in prompt

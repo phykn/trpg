@@ -211,8 +211,8 @@ async def test_start_graph_roll_stores_pending_roll_without_gm_narration(tmp_pat
     assert progress.pending_roll["kind"] == "perceive"
     assert progress.pending_roll["title"] == "지력 판정이 필요합니다"
     assert progress.pending_roll["body"] == (
-        "당신은 눈앞의 흔적과 기척을 더 깊이 읽으려 합니다. "
-        "성공하면 숨은 단서나 위험을 알아차립니다."
+        "당신은 눈앞의 사람, 물건, 장소를 더 자세히 봅니다. "
+        "성공하면 지금 보이는 것에서 의미 있는 단서를 확인합니다."
     )
     assert progress.pending_roll["required_roll"] == 13
     assert logs == []
@@ -539,7 +539,7 @@ async def test_run_graph_roll_success_completes_social_check_quest(tmp_path):
     assert saved_progress.active_quest_id is None
     assert result.front_state.quest is None
     assert logs[-1].kind == "gm"
-    assert logs[-1].text.startswith("guard_01는 당신의 말을 듣고")
+    assert logs[-1].text.startswith("guard_01는 답을 더 분명히 합니다")
     assert logs[-1].text.endswith("흰섬은 두 번째 이름을 주지 않습니다.")
 
 
@@ -681,7 +681,7 @@ async def test_run_graph_roll_appends_completed_social_quest_text_when_llm_omits
     logs = await repo.load_log_entries("game-1")
 
     assert logs[-1].kind == "gm"
-    assert logs[-1].text.startswith("guard_01는 당신의 말을 듣고")
+    assert logs[-1].text.startswith("guard_01는 답을 더 분명히 합니다")
     assert "그녀는 당신의 질문을 듣고 짧게 고개를 끄덕입니다." in logs[-1].text
     assert logs[-1].text.endswith("흰섬은 두 번째 이름을 주지 않습니다.")
 
@@ -704,7 +704,7 @@ async def test_run_graph_roll_removes_roll_meta_phrase_from_narration(tmp_path):
     logs = await repo.load_log_entries("game-1")
 
     assert logs[-1].kind == "gm"
-    assert logs[-1].text.startswith("guard_01는 당신의 말을 듣고")
+    assert logs[-1].text.startswith("guard_01는 답을 더 분명히 합니다")
     assert logs[-1].text.endswith("경비병은 고개를 듭니다. 긴장이 풀립니다.")
 
 
@@ -906,7 +906,7 @@ async def test_run_graph_roll_resolves_narrative_perceive_without_dispatch(tmp_p
     assert logs[0].result == "success"
     assert logs[1].kind == "gm"
     assert logs[1].outcome == "success"
-    assert logs[1].text == "당신은 살펴본 끝에 의미 있는 단서나 위험의 낌새를 잡아냅니다."
+    assert logs[1].text == "당신은 살펴본 끝에 지금 보이는 것들 사이의 의미 있는 단서를 확인합니다."
 
 
 async def test_run_graph_roll_resolves_failed_narrative_perceive_without_dispatch(
@@ -1180,12 +1180,12 @@ async def test_run_graph_roll_stream_includes_clear_success_resolution_for_narra
     content = llm.calls[0]["messages"][1]["content"]
     assert "장면 유형: 판정 후" in content
     assert "결과: 성공" in content
-    assert "확정: 매력 판정 성공 / 이삭은 당신의 말을 듣고, 더 분명한 반응을 보입니다." in content
+    assert "확정: 매력 판정 성공 / 이삭은 답을 더 분명히 합니다." in content
     deltas = [event["text"] for event in events if event["type"] == "narration_delta"]
     logs = await repo.load_log_entries("game-1")
-    assert deltas[0] == "이삭은 당신의 말을 듣고, 더 분명한 반응을 보입니다. "
+    assert deltas[0] == "이삭은 답을 더 분명히 합니다. "
     assert logs[-1].text.startswith(
-        "이삭은 당신의 말을 듣고, 더 분명한 반응을 보입니다."
+        "이삭은 답을 더 분명히 합니다."
     )
 
 
@@ -1223,6 +1223,7 @@ async def test_run_graph_roll_sends_brief_text_instead_of_raw_json(tmp_path):
 
     await run_graph_roll(repo, "game-1", pending["id"], dice=13, llm=llm)  # type: ignore[arg-type]
 
+    system_prompt = llm.calls[0]["messages"][0]["content"]
     content = llm.calls[0]["messages"][1]["content"]
     assert not content.lstrip().startswith("{")
     assert "장면 유형: 판정 후" in content
@@ -1231,7 +1232,8 @@ async def test_run_graph_roll_sends_brief_text_instead_of_raw_json(tmp_path):
     assert "공개된 사실:" in content
     assert "- 비워 둔 방: 방 밖에는 지금 머물 곳이 필요한 사람이 있습니다." in content
     assert "결과: 성공" in content
-    assert "금지: 실패처럼 흐리는 반응, 확정되지 않은 보상, 새 퀘스트 창작" in content
+    assert "금지:" not in content
+    assert "판정 성공은 실패처럼 흐리지 말고, 확정되지 않은 보상이나 새 퀘스트를 만들지 않습니다." in system_prompt
 
 
 async def test_run_graph_roll_requires_matching_pending_id(tmp_path):

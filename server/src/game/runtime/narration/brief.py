@@ -46,12 +46,6 @@ def build_combat_narration_brief(payload: dict[str, Any]) -> str:
     if facts:
         lines.append(_brief("confirmed"))
         lines.extend(f"- {fact}" for fact in facts)
-    lines.extend(
-        [
-            _brief("combat_forbid"),
-            _brief("combat_goal"),
-        ]
-    )
     _append_player_input(lines, payload)
     return "\n".join(lines)
 
@@ -83,12 +77,6 @@ def _story_transition_brief(
     handoff = transition.get("handoff")
     if isinstance(handoff, str) and handoff:
         lines.append(_brief("handoff", value=handoff))
-    lines.extend(
-        [
-            _brief("transition_forbid"),
-            _brief("transition_goal"),
-        ]
-    )
     _append_player_input(lines, payload)
     return "\n".join(lines)
 
@@ -205,12 +193,6 @@ def _roll_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
     resolved = _strings(event.get("resolved_results"))
     if resolved:
         lines.append(_brief("confirmed_inline", value=" / ".join(resolved)))
-    if outcome == "success":
-        lines.append(_brief("roll_success_forbid"))
-        lines.append(_brief("roll_success_goal"))
-    else:
-        lines.append(_brief("roll_failure_forbid"))
-        lines.append(_brief("roll_failure_goal"))
     _append_player_input(lines, payload)
     return "\n".join(lines)
 
@@ -247,27 +229,6 @@ def _action_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
     resolved = _strings(event.get("resolved_results"))
     if resolved:
         lines.append(_brief("confirmed_inline", value=" / ".join(resolved)))
-    if kind == "move":
-        lines.extend(
-            [
-                _brief("move_forbid"),
-                _brief("move_goal"),
-            ]
-        )
-    elif is_dialogue_like:
-        lines.extend(
-            [
-                _brief("dialogue_forbid"),
-                _brief("dialogue_goal"),
-            ]
-        )
-    else:
-        lines.extend(
-            [
-                _brief("action_forbid"),
-                _brief("action_goal"),
-            ]
-        )
     _append_player_input(lines, payload)
     return "\n".join(lines)
 

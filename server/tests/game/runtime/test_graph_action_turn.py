@@ -637,7 +637,7 @@ async def test_run_graph_action_turn_saves_attack_progress_and_front_combat(tmp_
     assert saved_progress.graph_combat_state.round == 1
     assert saved_progress.graph_combat_state.last_roll is None
     assert saved_logs[0].text == (
-        "goblin_01가 정면을 막아서고, 당신은 자세를 낮춰 싸움의 중심을 잡습니다."
+        "goblin_01가 앞을 막습니다. 당신은 자세를 낮춥니다."
     )
     assert result.front_state.combat is not None
     assert result.front_state.combat.round == 1
@@ -747,7 +747,7 @@ async def test_run_graph_action_turn_preserves_repeated_llm_narration(tmp_path):
 
     assert [entry.kind for entry in saved_logs] == ["gm", "act", "gm"]
     assert saved_logs[-1].text == (
-        "대치가 이어지고, 서로의 다음 움직임이 아직 정해지지 않습니다."
+        "대치가 이어집니다. 다음 움직임은 아직 정해지지 않습니다."
     )
     assert saved_logs[-1].outcome == "neutral"
     prompt = llm.calls[0]["messages"][1]["content"]
@@ -972,12 +972,14 @@ async def test_run_graph_action_turn_sends_story_transition_brief_text(tmp_path)
         llm=llm,  # type: ignore[arg-type]
     )
 
+    system_prompt = llm.calls[0]["messages"][0]["content"]
     content = llm.calls[0]["messages"][1]["content"]
     assert not content.lstrip().startswith("{")
     assert "장면 유형: 사건 전환" in content
     assert "완료: 분노 환불 사건" in content
     assert "다음: 푸른섬 / 빈방 사건" in content
-    assert "금지: 정답 지시, 선택 평가, 다음 사건 결론 공개" in content
+    assert "금지:" not in content
+    assert "사건 전환은 정답 지시, 선택 평가, 다음 사건 결론 공개를 하지 않습니다." in system_prompt
 
 
 async def test_run_graph_action_turn_times_out_slow_narration_and_keeps_action(
