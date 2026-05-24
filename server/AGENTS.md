@@ -2,7 +2,7 @@
 
 This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
-User-facing setup (env layout, routes, table schema) is in [README.md](./README.md). Design rationale and per-turn flow live in `../docs/README.md` and `../docs/plan.md`.
+User-facing setup (env layout, routes, table schema) is in [README.md](./README.md).
 
 ## Working tree layout
 
@@ -39,11 +39,11 @@ Upper depends on lower, never the reverse. Concretely:
 
 - `game/domain/` + `game/rules/` — pure data shapes and tunable knobs. No imports outside themselves.
 - `game/engines/` — pure game logic (combat math, graph changes, growth, inventory, skill, quest, recovery, invariants). No LLM, no I/O.
-- `llm/calls/` — structured LLM call modules under the `llm/` package. `classify` is the only module here right now; graph narration uses runtime prompts with agents `graph_intro` and `graph_narrate`. Structured prompts live under `src/locale/prompts/<agent>/prompt.<locale>.md`; `src/locale/prompts/_kernel.<locale>.md` holds universal rules (output language, register, ID hygiene, world vocabulary). `llm/calls/_runner.py:get_prompt(agent, locale)` joins kernel + agent prompt with `---`, cached per (agent, locale). `_runner.py` also owns the shared 5-attempt self-correction loop.
-- `game/domain/graph.py` + `game/domain/graph_query.py` — graph data and relation queries. **The graph is the runtime source of truth.**
+- `llm/calls/` — structured LLM call modules under the `llm/` package. `classify` is the only structured call module right now; graph narration, combat narration, and recommendations use runtime prompts with agents `graph_intro`, `graph_narrate`, `combat_narrate`, and `recommend`. Structured prompts live under `src/locale/prompts/<agent>/prompt.<locale>.md`; `src/locale/prompts/_kernel.<locale>.md` holds universal rules (output language, register, ID hygiene, world vocabulary). `llm/calls/runner.py:get_prompt(agent, locale)` joins kernel + agent prompt with `---`, cached per (agent, locale). `runner.py` also owns the shared 5-attempt self-correction loop.
+- `game/domain/graph/` — graph data, relation queries, apply helpers, and graph validation. **The graph is the runtime source of truth.**
 - `llm/context/` — prompt input builders under the `llm/` package (graph surroundings for classify and narration).
 - `db/` — `GraphRepo` / `ScenarioRepo` Protocols (all-async) + Supabase and LocalFs adapters. Holds persistence concerns.
-- `wire/` — server↔client interface. `wire/models/` Pydantic payloads and `wire/graph_to_front.py` carry the graph runtime state the client renders.
+- `wire/` — server↔client interface. `wire/models.py` Pydantic payloads and `wire/graph/to_front.py` carry the graph runtime state the client renders.
 - `game/runtime/` — graph-native session orchestration for init, input, explicit actions, confirmations, combat, level-up, and state loading.
 - `api/` — thin FastAPI adapter. Glue only, no business logic.
 
@@ -83,12 +83,12 @@ Runtime child tables should FK to `game_progress(game_id) ON DELETE CASCADE`. RL
 
 ### LLM routing and thinking modes
 
-- `LLM_ROUTE_<AGENT> = <provider>/<model>` resolves to an `LLMProfile` keyed by lowercased agent name. `LLM_ROUTE_DEFAULT` is required; graph runtime currently calls `graph_intro`, `classify`, and `graph_narrate`. Optional `LLM_ROUTE_<AGENT>_FALLBACK = <provider>/<model>` declares a secondary profile that engages once on `RateLimitError` (quota) and stays for the rest of that agent's retry loop.
+- `LLM_ROUTE_<AGENT> = <provider>/<model>` resolves to an `LLMProfile` keyed by lowercased agent name. `LLM_ROUTE_DEFAULT` is required; graph runtime currently calls `graph_intro`, `classify`, `graph_narrate`, `combat_narrate`, and `recommend`. Optional `LLM_ROUTE_<AGENT>_FALLBACK = <provider>/<model>` declares a secondary profile that engages once on `RateLimitError` (quota) and stays for the rest of that agent's retry loop.
 - Server env loads `server/.env.shared` first, then `server/.env.<APP_ENV>`; OS/Render dashboard env still has priority over both files. Put common server defaults and shared local LLM routing in `.env.shared`, and keep environment-specific repo/CORS details in `.env.dev` / `.env.release`.
-- Provider blocks (`LLM_<NAME>_*` keys) can live in either loaded server env file and declare each provider's `BASE_URL`, `API_KEYS` (comma-separated, rotated round-robin per call), and `_THINK_OFF / _THINK_OPT / _THINK_ON` model lists. The three lists must be disjoint and together name every model the provider serves. Listed names must appear in exactly one THINK_* list.
+- Provider blocks (`LLM_<NAME>_*` keys) can live in either loaded server env file and declare each provider's `BASE_URL`, `API_KEYS` (comma-separated, rotated round-robin per call), and `_THINK_OFF / _THINK_OPT / _THINK_OPT_ON / _THINK_ON` model lists. These lists must be disjoint and together name every model the provider serves. Listed names must appear in exactly one THINK_* list.
 - `LLM_<NAME>_NO_SYSTEM` lists models that reject `role: system` (Gemma via Gemini OpenAI-compat returns "Developer instruction is not enabled"); `LLMClient` folds the system prompt into the first user message for them.
 - Per-call thinking behavior is driven by the model's THINK_* category: `OFF` sends no `extra_body`; `OPT` honors caller's `think` flag (default off) via `extra_body.chat_template_kwargs.enable_thinking` (local OpenAI-compatible servers) or `extra_body.reasoning_effort=medium` (Gemini 3.x, detected from `googleapis.com` in `base_url`); `OPT_ON` is the inverse (default on, opt out via `extra_body.reasoning_effort=minimal` on Gemini — Gemma 4 via Gemini lives here because it accepts only `minimal` to disable); `ON` always thinks.
-- Provider-style logic lives in `src/llm/local.py` and `src/llm/gemini.py`; `client.py` only dispatches.
+- Provider-style logic lives in `src/llm/providers/local.py` and `src/llm/providers/gemini.py`; `client.py` only dispatches.
 - Inline `<thought>...</thought>` at the head of the answer (Gemma 4) is auto-routed to the think channel by `gemini.ThoughtSplitter` in both `chat` and `chat_stream` whenever the model is actively thinking.
 - Missing required env keys → `KeyError` at startup. No silent defaults.
 
@@ -118,7 +118,7 @@ Existing tags live where they fire. Read `src/llm/diag.py` before adding new hoo
 
 - Graph-facing stat keys are `body / agility / mind / presence`; do not introduce legacy six-stat payloads into graph code, seed data, tests, or client state.
 - Tiers and grades should stay internal unless a graph payload explicitly needs them.
-- All player-facing Korean built by graph runtime, LLM prompts, and `wire/graph_to_front.py` uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings.
+- All player-facing Korean built by graph runtime, LLM prompts, and `wire/graph/to_front.py` uses **2인칭 존댓말 합니다체**: `당신` for the player, `~합니다 / ~ㅂ니다 / ~입니다` endings.
 - Canonical user-facing term for skills is **기술**. The classify prompt accepts `스킬` as a synonym from player input, but every other prompt and engine string says `기술`. Code identifiers and the `skills/` entity directory keep the English `skill`.
 
 ## Error hierarchy

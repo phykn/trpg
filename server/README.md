@@ -2,7 +2,7 @@
 
 Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in graph Postgres tables keyed on `game_id` (`game_progress / graph_nodes / graph_edges / log_entries / history_entries / exchange_entries`); scenario seeds live in a Supabase Storage bucket.
 
-Design notes start at `../docs/README.md`; the per-turn flow, interface, and ownership map are in `../docs/plan.md`. The server agent guide is [AGENTS.md](./AGENTS.md).
+The server agent guide is [AGENTS.md](./AGENTS.md).
 
 ## Stack
 
@@ -23,7 +23,7 @@ python3.12 -m venv .venv
 Set up Supabase: apply the schema (table list under "Layout" below) via the dashboard SQL editor — schema isn't tracked in the repo — create a Storage bucket for scenarios, and upload a profile tree:
 
 ```bash
-APP_ENV=release .venv/bin/python -m agency.story.tool upload scenarios/<profile>
+APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload scenarios/<profile>
 ```
 
 Write `server/.env.shared` for common server defaults and `server/.env.dev` for local dev. `APP_ENV=release` switches the environment-specific file to `.env.release`; no fallbacks, missing keys raise `KeyError` at startup. OS/Render dashboard env values have priority over dotenv files.
@@ -104,7 +104,7 @@ server/
   .env.shared                      # shared server defaults, gitignored
   .env.dev                         # required for local dev (.env.release for prod), gitignored
   scripts/                         # seed checks and one-off LLM smoke tools
-  src/                             # code (ownership map in ../docs/plan.md)
+  src/                             # code
   tests/                           # pytest
 ../scenarios/<profile>/            # local seed source (world.md, start.json, player.json, races/, locations/, characters/, items/, quests/, chapters/, skills/). Authored locally, uploaded to Supabase Storage; the running server reads from the bucket.
 ```
