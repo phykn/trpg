@@ -19,11 +19,11 @@ from src.llm.diag import engine_diag, set_diag_context
 from src.locale.render import render
 from src.wire.graph.to_front import graph_to_front_state
 
+from ..action_refs import first_ref
 from .confirmation import (
     GraphConfirmationActive,
     run_graph_action_request,
     run_graph_action_request_stream,
-    should_start_graph_roll,
 )
 from .roll import run_graph_preroll_stream
 from ..load import load_runtime_state
@@ -43,6 +43,7 @@ from ..narration.result import (
 from ..narration.safety import guard_speak_narration_player_quote
 from ..narration.suggestions import filter_grounded_suggestions
 from ..request_result import GraphActionRequestResult, rejected_result
+from ..roll.gate import should_start_graph_roll
 from ..state import GameRuntimeState
 from ..env import env_float, env_nonnegative_int
 from .turn import GraphActionTurnError
@@ -781,7 +782,7 @@ async def _finish_graph_narrative_input(
 def _with_implicit_speak_target(runtime: GameRuntimeState, action: Action) -> Action:
     if action.verb != "speak":
         return action
-    if _single(action.what) is not None or _single(action.to) is not None:
+    if first_ref(action.what) is not None or first_ref(action.to) is not None:
         return action
     target = _unique_visible_active_social_check_target(runtime)
     if target is None:
@@ -792,7 +793,7 @@ def _with_implicit_speak_target(runtime: GameRuntimeState, action: Action) -> Ac
 
 
 def _resolve_narrative_subject(runtime, action) -> str | None:
-    target = _single(action.what) or _single(action.to)
+    target = first_ref(action.what) or first_ref(action.to)
     if isinstance(target, str) and _is_at_player_location(runtime, target):
         return target
     if action.verb != "speak":
@@ -907,7 +908,7 @@ def _public_action_rejection_reason(runtime: GameRuntimeState, reason: str) -> s
 
 
 def _action_target(action: Action) -> str | None:
-    return _single(action.what) or _single(action.to) or _single(action.with_)
+    return first_ref(action.what) or first_ref(action.to) or first_ref(action.with_)
 
 
 def _action_target_node(
@@ -918,11 +919,3 @@ def _action_target_node(
     if target is None:
         return None
     return runtime.graph.nodes.get(target)
-
-
-def _single(value: object) -> str | None:
-    if isinstance(value, str):
-        return value
-    if isinstance(value, list) and value and isinstance(value[0], str):
-        return value[0]
-    return None

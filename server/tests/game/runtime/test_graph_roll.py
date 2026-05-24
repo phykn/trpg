@@ -16,13 +16,13 @@ from src.game.runtime.flow.confirmation import (
 from src.game.runtime.flow.roll import (
     GraphRollExpected,
     _ResolvedGraphRoll,
-    build_pending_roll,
-    _strip_repeated_preroll_text,
     run_graph_preroll_stream,
     run_graph_roll,
     run_graph_roll_stream,
     start_graph_roll,
 )
+from src.game.runtime.roll.pending import build_pending_roll
+from src.game.runtime.roll.text import strip_repeated_preroll_text
 
 
 @pytest.fixture(autouse=True)
@@ -329,7 +329,7 @@ def test_build_pending_roll_stores_original_action_payload():
 
 def test_build_pending_roll_uses_normal_tier_base_dc_when_not_overridden(monkeypatch):
     monkeypatch.delenv("GRAPH_DEFAULT_ROLL_DC", raising=False)
-    monkeypatch.setattr("src.game.runtime.flow.roll.pick_dc", lambda tier: 9)
+    monkeypatch.setattr("src.game.runtime.roll.pending.pick_dc", lambda tier: 9)
 
     pending = build_pending_roll(
         _character("player_01").properties,
@@ -1028,7 +1028,7 @@ def test_strip_repeated_preroll_text_keeps_non_repeated_narration():
     )
 
     assert (
-        _strip_repeated_preroll_text(resolved, "문 아래 긁힌 선이 한쪽으로만 이어집니다.")
+        strip_repeated_preroll_text(resolved, "문 아래 긁힌 선이 한쪽으로만 이어집니다.")
         == "문 아래 긁힌 선이 한쪽으로만 이어집니다."
     )
 

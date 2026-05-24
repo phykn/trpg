@@ -20,6 +20,7 @@ from src.game.engines.graph.quest import (
 )
 from src.llm.diag import engine_diag
 
+from ..action_refs import first_ref
 from ..state import GameRuntimeState
 from .apply import (
     GraphRuntimeApplyError,
@@ -192,18 +193,18 @@ def _combat_action_from_action(
 ) -> GraphCombatAction:
     if action.verb == "attack":
         combat_action = _attack_action(action.how)
-        support_id = _single(action.with_)
+        support_id = first_ref(action.with_)
         if support_id is None and action.how == "auto":
             support_id = _auto_skill_support_id(graph, player_id, combat_action)
         support_kind = _support_kind(graph, support_id)
         return GraphCombatAction(
             kind=combat_action,
-            target=_single(action.what),
+            target=first_ref(action.what),
             support_id=support_id if support_kind else None,
             support_kind=support_kind,
         )
     if in_combat and action.verb == "move" and action.how in ("hasty", "flee"):
-        support_id = _single(action.with_)
+        support_id = first_ref(action.with_)
         support_kind = _support_kind(graph, support_id)
         return GraphCombatAction(
             kind="flee",
@@ -211,16 +212,16 @@ def _combat_action_from_action(
             support_kind=support_kind,
         )
     if in_combat and action.verb == "speak":
-        support_id = _single(action.with_)
+        support_id = first_ref(action.with_)
         support_kind = _support_kind(graph, support_id)
         return GraphCombatAction(
             kind="talk",
-            target=_single(action.to) or _single(action.what),
+            target=first_ref(action.to) or first_ref(action.what),
             support_id=support_id if support_kind else None,
             support_kind=support_kind,
         )
     if in_combat and action.verb == "pass":
-        support_id = _single(action.with_)
+        support_id = first_ref(action.with_)
         support_kind = _support_kind(graph, support_id)
         return GraphCombatAction(
             kind="defend",
@@ -271,7 +272,7 @@ def _supports_action(supported_action: str | None, action_kind: str) -> bool:
 
 def _target_for_start(action: Action) -> str:
     if action.verb == "attack":
-        target = _single(action.what)
+        target = first_ref(action.what)
     else:
         target = None
     if target is None:
@@ -279,12 +280,6 @@ def _target_for_start(action: Action) -> str:
     return target
 
 
-def _single(value: object) -> str | None:
-    if isinstance(value, str):
-        return value
-    if isinstance(value, list) and value and isinstance(value[0], str):
-        return value[0]
-    return None
 
 
 def _string_prop(node: object, key: str, *, fallback: str | None = None) -> str | None:

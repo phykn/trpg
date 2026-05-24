@@ -16,7 +16,8 @@ from src.game.runtime.flow.input import (
     run_graph_input_turn,
     run_graph_input_turn_stream,
 )
-from src.game.runtime.flow.roll import build_pending_roll, run_graph_preroll_stream
+from src.game.runtime.flow.roll import run_graph_preroll_stream
+from src.game.runtime.roll.pending import build_pending_roll
 
 
 @pytest.fixture(autouse=True)

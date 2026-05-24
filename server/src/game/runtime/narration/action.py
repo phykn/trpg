@@ -13,6 +13,7 @@ from src.llm.client import LLMClient
 from src.llm.diag import llm_diag
 
 from ..action.dispatch import GraphActionDispatchResult
+from ..action_refs import first_ref
 from ..state import GameRuntimeState
 from .brief import build_narration_brief
 from .context import build_action_narration_payload
@@ -346,7 +347,7 @@ def _repeat_fallback_key(dispatch: GraphActionDispatchResult) -> str:
 
 
 def _is_first_visit_move(runtime: GameRuntimeState, action: Action) -> bool:
-    destination_id = _single(action.to) or _single(action.what)
+    destination_id = first_ref(action.to) or first_ref(action.what)
     if destination_id is None:
         return False
     player = runtime.graph.nodes.get(runtime.progress.player_id)
@@ -376,11 +377,3 @@ def _narration_user_prompt(
     if not isinstance(scene_state, dict) or scene_state.get("current_place") is None:
         return ""
     return build_narration_brief(payload)
-
-
-def _single(value: object) -> str | None:
-    if isinstance(value, str):
-        return value
-    if isinstance(value, list) and value and isinstance(value[0], str):
-        return value[0]
-    return None

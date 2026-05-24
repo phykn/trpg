@@ -26,6 +26,7 @@ from src.game.engines.graph.transfer import (
     plan_item_unequip,
 )
 
+from ..action_refs import first_ref
 from ..state import GameRuntimeState
 from .apply import (
     GraphRuntimeApplyError,
@@ -173,7 +174,7 @@ def _plan_non_combat(
 
     if action.verb == "move":
         _require_player_can_move(runtime)
-        destination_id = _single(action.to) or _single(action.what)
+        destination_id = first_ref(action.to) or first_ref(action.what)
         if destination_id is None:
             raise GraphActionDispatchError("move destination is required")
         result = plan_character_move(
@@ -186,7 +187,7 @@ def _plan_non_combat(
 
     if action.verb == "transfer":
         if action.how in ("accept", "abandon"):
-            quest_id = _single(action.what) or _single(action.to)
+            quest_id = first_ref(action.what) or first_ref(action.to)
             if quest_id is None:
                 raise GraphActionDispatchError("quest id is required")
             if action.how == "accept":
@@ -215,12 +216,12 @@ def _plan_non_combat(
                 [],
             )
 
-        item_id = _single(action.what) or _single(action.with_)
+        item_id = first_ref(action.what) or first_ref(action.with_)
         if item_id is None:
             raise GraphActionDispatchError("transfer item is required")
         mode = action.how or "transfer"
         if mode == "equip":
-            slot = _equip_slot(_single(action.to) or "weapon")
+            slot = _equip_slot(first_ref(action.to) or "weapon")
             result = plan_item_equip(runtime.graph, player_id, item_id, slot)
             return "equip", result.changes, _advance_turn(runtime), []
         if mode == "unequip":
@@ -230,28 +231,28 @@ def _plan_non_combat(
             result = plan_item_trade(
                 runtime.graph,
                 item_id,
-                from_character_id=_single(action.from_) or player_id,
-                to_character_id=_single(action.to) or player_id,
+                from_character_id=first_ref(action.from_) or player_id,
+                to_character_id=first_ref(action.to) or player_id,
                 player_id=player_id,
             )
             return f"trade_{result.action}", result.changes, _advance_turn(runtime), []
         result = plan_item_transfer(
             runtime.graph,
             item_id,
-            to_character_id=_single(action.to) or player_id,
-            from_node_id=_single(action.from_),
+            to_character_id=first_ref(action.to) or player_id,
+            from_node_id=first_ref(action.from_),
         )
         return "transfer", result.changes, _advance_turn(runtime), []
 
     if action.verb == "use":
-        item_id = _single(action.what) or _single(action.with_)
+        item_id = first_ref(action.what) or first_ref(action.with_)
         if item_id is None:
             raise GraphActionDispatchError("use item is required")
         result = plan_item_use(
             runtime.graph,
             player_id,
             item_id,
-            target=_single(action.to),
+            target=first_ref(action.to),
         )
         return "use", result.changes, _advance_turn(runtime), []
 
@@ -264,7 +265,7 @@ def _plan_non_combat(
         return "rest", result.changes, progress_update, []
 
     if action.verb == "decide":
-        quest_id = _single(action.what)
+        quest_id = first_ref(action.what)
         if quest_id is None:
             raise GraphActionDispatchError("decide quest id is required")
         if not action.how:
@@ -323,16 +324,16 @@ def _quest_trigger_for_action(
     kind: str,
 ) -> tuple[str, str] | None:
     if kind == "move":
-        destination_id = _single(action.to) or _single(action.what)
+        destination_id = first_ref(action.to) or first_ref(action.what)
         if destination_id is not None:
             return "location_enter", destination_id
     if kind == "use":
-        item_id = _single(action.what) or _single(action.with_)
+        item_id = first_ref(action.what) or first_ref(action.with_)
         if item_id is not None:
             return "item_use", item_id
     if kind in {"transfer", "trade_buy"}:
-        item_id = _single(action.what) or _single(action.with_)
-        target = _single(action.to) or runtime.progress.player_id
+        item_id = first_ref(action.what) or first_ref(action.with_)
+        target = first_ref(action.to) or runtime.progress.player_id
         if item_id is not None and target == runtime.progress.player_id:
             return "item_obtained", item_id
     return None
@@ -352,14 +353,6 @@ def _visited_location_ids(runtime: GameRuntimeState) -> set[str]:
     if not isinstance(raw, list):
         return set()
     return {item for item in raw if isinstance(item, str)}
-
-
-def _single(value: object) -> str | None:
-    if isinstance(value, str):
-        return value
-    if isinstance(value, list) and value and isinstance(value[0], str):
-        return value[0]
-    return None
 
 
 def _equip_slot(value: str) -> EquipSlot:

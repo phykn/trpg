@@ -16,6 +16,7 @@ from src.game.domain.graph.query import (
 from src.locale.render import render
 
 from ..action.dispatch import GraphActionDispatchResult
+from ..action_refs import first_ref
 from ..state import GameRuntimeState
 from ..story_context import current_story_payload
 from .combat_view import combat_narration_view
@@ -644,7 +645,7 @@ def _input_current_event(
 
 def _quest_trigger_payload(action: Action, kind: str) -> dict[str, str] | None:
     if kind == "move":
-        target = _single(action.to) or _single(action.what)
+        target = first_ref(action.to) or first_ref(action.what)
         if target is not None:
             return {"type": "location_enter"}
     return None
@@ -814,13 +815,5 @@ def _roll_result_card(roll_entry: RollLogEntry, outcome: str, locale: str) -> st
 
 
 def _action_target(runtime: GameRuntimeState, action: Action) -> GraphNode | None:
-    target = _single(action.what) or _single(action.to)
+    target = first_ref(action.what) or first_ref(action.to)
     return runtime.graph.nodes.get(target or "")
-
-
-def _single(value: object) -> str | None:
-    if isinstance(value, str):
-        return value
-    if isinstance(value, list) and value and isinstance(value[0], str):
-        return value[0]
-    return None

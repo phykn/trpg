@@ -7,6 +7,7 @@ from src.game.domain.quest import quest_choices
 from src.locale.render import render
 
 from ..action.dispatch import GraphActionDispatchResult
+from ..action_refs import first_ref
 from ..state import GameRuntimeState
 
 
@@ -80,19 +81,19 @@ def _card_text(
     if dispatch.kind == "quest_accept":
         quest = _quest_title(
             after,
-            _single(action.what) or _single(action.to),
+            first_ref(action.what) or first_ref(action.to),
         )
         return render("runtime.card.quest_accept", after.progress.locale, quest=quest)
 
     if dispatch.kind == "quest_abandon":
         quest = _quest_title(
             after,
-            _single(action.what) or _single(action.to),
+            first_ref(action.what) or first_ref(action.to),
         )
         return render("runtime.card.quest_abandon", after.progress.locale, quest=quest)
 
     if dispatch.kind == "decide":
-        quest_id = _single(action.what) or _single(action.to)
+        quest_id = first_ref(action.what) or first_ref(action.to)
         quest = _quest_title(after, quest_id)
         choice = _quest_choice_label(after, quest_id, action.how)
         return render(
@@ -115,29 +116,29 @@ def _card_text(
         )
 
     if dispatch.kind == "equip":
-        item = _node_label(after, _single(action.what) or _single(action.with_))
+        item = _node_label(after, first_ref(action.what) or first_ref(action.with_))
         return render("runtime.card.equip", after.progress.locale, item=item)
 
     if dispatch.kind == "unequip":
-        item = _node_label(after, _single(action.what) or _single(action.with_))
+        item = _node_label(after, first_ref(action.what) or first_ref(action.with_))
         return render("runtime.card.unequip", after.progress.locale, item=item)
 
     if dispatch.kind == "use":
-        item = _node_label(after, _single(action.what) or _single(action.with_))
+        item = _node_label(after, first_ref(action.what) or first_ref(action.with_))
         return render("runtime.card.use", after.progress.locale, item=item)
 
     if dispatch.kind == "transfer":
-        item = _node_label(after, _single(action.what) or _single(action.with_))
+        item = _node_label(after, first_ref(action.what) or first_ref(action.with_))
         if _is_location_pickup(before, action):
             return render("runtime.card.pickup", after.progress.locale, item=item)
         return render("runtime.card.transfer", after.progress.locale, item=item)
 
     if dispatch.kind == "trade_buy":
-        item = _node_label(after, _single(action.what) or _single(action.with_))
+        item = _node_label(after, first_ref(action.what) or first_ref(action.with_))
         return render("runtime.card.trade_buy", after.progress.locale, item=item)
 
     if dispatch.kind == "trade_sell":
-        item = _node_label(after, _single(action.what) or _single(action.with_))
+        item = _node_label(after, first_ref(action.what) or first_ref(action.with_))
         return render("runtime.card.trade_sell", after.progress.locale, item=item)
 
     return render("runtime.card.generic", after.progress.locale)
@@ -150,7 +151,7 @@ def _combat_text(
     dispatch: GraphActionDispatchResult,
 ) -> str:
     if before.progress.graph_combat_state is None:
-        target = _single(action.what) or _single(action.to)
+        target = first_ref(action.what) or first_ref(action.to)
         target = _node_label(
             after,
             target,
@@ -182,7 +183,7 @@ def _skill_combat_text(
     dispatch: GraphActionDispatchResult,
     skill_id: str,
 ) -> str:
-    target = _single(action.what) if action.verb == "attack" else _single(action.to)
+    target = first_ref(action.what) if action.verb == "attack" else first_ref(action.to)
     target = _node_label(
         after,
         target,
@@ -217,7 +218,7 @@ def _skill_combat_text(
 
 def _combat_skill_id(action: Action) -> str | None:
     if action.verb == "attack":
-        return _single(action.with_)
+        return first_ref(action.with_)
     return None
 
 
@@ -230,8 +231,8 @@ def _skill_mp_cost(runtime: GameRuntimeState, skill_id: str) -> int:
 
 
 def _is_location_pickup(runtime: GameRuntimeState, action: Action) -> bool:
-    item_id = _single(action.what) or _single(action.with_)
-    source_id = _single(action.from_)
+    item_id = first_ref(action.what) or first_ref(action.with_)
+    source_id = first_ref(action.from_)
     if item_id is None:
         return False
     if source_id is None:
@@ -278,11 +279,3 @@ def _node_label(
 def _int_property(node: GraphNode, key: str) -> int:
     value = node.properties.get(key)
     return value if isinstance(value, int) else 0
-
-
-def _single(value: object) -> str | None:
-    if isinstance(value, str):
-        return value
-    if isinstance(value, list) and value and isinstance(value[0], str):
-        return value[0]
-    return None

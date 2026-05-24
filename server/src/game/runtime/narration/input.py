@@ -11,6 +11,7 @@ from src.llm.client import LLMClient
 from src.llm.diag import llm_diag
 
 from ..state import GameRuntimeState
+from ..action_refs import first_ref
 from .brief import build_narration_brief
 from .context import (
     build_input_narration_payload,
@@ -328,15 +329,7 @@ def _action_target_node(
     runtime: GameRuntimeState,
     action: Action,
 ) -> GraphNode | None:
-    target = _single(action.what) or _single(action.to) or _single(action.with_)
+    target = first_ref(action.what) or first_ref(action.to) or first_ref(action.with_)
     if target is None:
         return None
     return runtime.graph.nodes.get(target)
-
-
-def _single(value: object) -> str | None:
-    if isinstance(value, str):
-        return value
-    if isinstance(value, list) and value and isinstance(value[0], str):
-        return value[0]
-    return None
