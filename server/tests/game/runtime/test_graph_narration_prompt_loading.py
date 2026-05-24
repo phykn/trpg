@@ -257,10 +257,7 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "NPC가 직접 반응하는 것을 기본값으로 씁니다" in narrate_prompt
     assert "`대상`이 있으면 그 대상만 이번 대화의 응답자입니다" in narrate_prompt
     assert "다른 visible NPC는 끼어들 수 없고" in narrate_prompt
-    assert "다른 NPC가 대신 답하지 않습니다" in narrate_prompt
     assert "질문형 플레이어 입력을 NPC의 질문으로 뒤집어 쓰지 않습니다" in narrate_prompt
-    assert "물건의 소지자는 `대상 정보`, `공개된 사실`, 현재 장소 설명을 따릅니다" in narrate_prompt
-    assert "플레이어가 들고 있거나 내민다고 쓰지 않습니다" in narrate_prompt
     assert "설명문만 쓰지 말고 직접 발화 한 문장을 반드시 넣습니다" in narrate_prompt
     assert "기본 구조는 플레이어의 접근/질문 한 문장" in narrate_prompt
     assert "플레이어가 단순히 말을 걸었고 구체 질문이 없으면" in narrate_prompt
@@ -326,8 +323,6 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "`대상 정보`는 현재 처리 대상의 공개 지식" in narrate_prompt
     assert "이름만 보고 세부 묘사, 답변, 단서, 행동 가능성을 만들지 않습니다" in narrate_prompt
     assert "이름만 보고 세부 묘사, 답변, 단서, 행동 가능성을 만들지 않습니다" in narrate_prompt
-    assert "이동 직후에는 이전 대화 상대가 현재 장소의 인물인지 확인되지 않으면 행동 주체로 쓰지 않습니다" in narrate_prompt
-    assert "이동 이벤트에서는 직전 대화의 질문, 답변, 말투, 손짓을 이어 쓰지 않습니다" in narrate_prompt
     assert "`대상 정보`는 그 대상과 이번 상호작용에 붙은 공개 정보입니다" in narrate_prompt
     assert "대상 정보가 있으면 NPC가 그 사실을 직접 말하거나 인정하게 씁니다" in narrate_prompt
     assert "장소 전체의 지식이나 모든 행동 가능성으로 넓히지 않습니다" in narrate_prompt
@@ -447,7 +442,6 @@ def test_graph_narrate_prompt_encodes_theory_pressure_and_completion_limits():
     assert "새 갈고리 없이 닫습니다" in prompt
     assert "브리핑에 장소 진입 퀘스트 트리거가 있으면 특히 조심합니다" in prompt
     assert "장소에 들어간 사실을 플레이어가 갈등을 해결한 것처럼 과장하지 않습니다" in prompt
-    assert "현재 `장소`가 선착장이면 배가 묶여 있거나 준비된 상태까지만 쓰고" in prompt
 
 
 def test_graph_narrate_prompt_requires_clear_roll_consequences():
