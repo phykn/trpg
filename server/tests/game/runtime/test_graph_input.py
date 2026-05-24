@@ -1028,7 +1028,7 @@ async def test_graph_input_streams_single_result_for_multiple_actions(tmp_path):
     assert [event["type"] for event in events].count("result") == 1
     assert all(event["type"] == "narration_delta" for event in events[1:-1])
     assert "".join(event["text"] for event in events[1:-1]) == (
-        "상대는 고개를 끄덕입니다.상대는 고개를 끄덕입니다."
+        "상대는 고개를 끄덕입니다.광장에 도착합니다."
     )
     assert events[-1]["result"].front_state.place.id == "forest"
     assert [entry.kind for entry in logs] == ["player", "gm", "act", "gm"]

@@ -378,7 +378,7 @@ def test_recent_exchanges_include_visible_ui_cues():
     ]
 
 
-def test_narration_references_use_recent_raw_then_previous_summaries():
+def test_input_narration_references_do_not_backfill_unrelated_history():
     runtime = _runtime()
     runtime.recent_exchanges = [
         ExchangePair(turn=turn, player=f"질문 {turn}", narrator=f"응답 {turn}")
@@ -396,17 +396,8 @@ def test_narration_references_use_recent_raw_then_previous_summaries():
         dialogue_target=runtime.graph.nodes["guard_01"],
     )
 
-    assert payload["reference_context"]["previous_scene"] == [
-        {"turn": turn, "target": f"npc_{turn}", "summary": f"장면 요약 {turn}"}
-        for turn in range(1, 4)
-    ]
-    assert payload["reference_context"]["recent_exchanges"] == [
-        {"turn": turn, "player": f"질문 {turn}", "narrator": f"응답 {turn}"}
-        for turn in range(4, 7)
-    ]
-    assert "related_memory" not in payload["reference_context"]
-    assert "recent_narration" not in payload["reference_context"]
-    assert "screen_log" not in payload["reference_context"]
+    assert "reference_context" not in payload
+    assert payload["scene_state"]["current_place"]["id"] == "square"
 
 
 def test_action_payload_adds_arrival_branch_when_inventory_property_matches():

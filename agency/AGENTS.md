@@ -6,7 +6,7 @@ User-facing setup and the full directory map live in [README.md](./README.md). T
 
 ## Working tree
 
-`agency/` is a Python package that imports the server's `src.*` directly for story tooling. The venv, `pyproject.toml`, and `requirements.txt` live at the repo root — invoke Python via `.venv/bin/python` from the repo root. **Never create `agency/.venv`.**
+`agency/` is a Python package that imports the server's `src.*` directly for story tooling. The venv, `pyproject.toml`, and `requirements.txt` live at the repo root — invoke Python from the repo root. On Windows PowerShell use `.\.venv\Scripts\python.exe`; on Unix-like shells use `.venv/bin/python`. **Never create `agency/.venv`.**
 
 ## Commands
 
@@ -30,6 +30,8 @@ User-facing setup and the full directory map live in [README.md](./README.md). T
 APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload <scenario_dir>
 APP_ENV=release .venv/bin/python -m agency.story.tools.storage download <profile> [--out <dir>]
 ```
+
+In this Windows workspace, translate the examples to `.\.venv\Scripts\python.exe -m ...` when running commands directly.
 
 Browser QA uses the already-running web client and server. Story tool (`tool.py`) is local-only. Release storage publish/download lives in `agency.story.tools.storage` and needs `APP_ENV=release` + Supabase keys.
 

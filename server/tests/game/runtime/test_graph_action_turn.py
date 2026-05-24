@@ -299,10 +299,12 @@ async def test_run_graph_action_turn_saves_move_and_returns_front_state(tmp_path
     assert "located_at:player_01:forest" in saved_graph.edges
     assert "located_at:player_01:town" not in saved_graph.edges
     assert saved_progress.turn_count == 1
-    assert saved_progress.next_log_id == 2
-    assert len(saved_logs) == 1
+    assert saved_progress.next_log_id == 3
+    assert len(saved_logs) == 2
     assert saved_logs[0].kind == "act"
     assert saved_logs[0].text == "당신은 광장으로 이동합니다."
+    assert saved_logs[1].kind == "gm"
+    assert saved_logs[1].text == "광장에 도착합니다."
     assert result.front_state.log == saved_logs
     assert result.front_state.place.id == "forest"
     assert result.runtime.progress.turn_count == 1
@@ -333,9 +335,9 @@ async def test_run_graph_action_turn_adds_gm_narration_for_first_visit_move(tmp_
     )
     saved_logs = await repo.load_log_entries("game-1")
 
-    assert [call["agent"] for call in llm.calls] == ["graph_narrate"]
+    assert llm.calls == []
     assert [entry.kind for entry in saved_logs] == ["act", "gm"]
-    assert saved_logs[-1].text == "칼끝이 번뜩이고, 적이 비틀거리며 길 위에 쓰러집니다."
+    assert saved_logs[-1].text == "광장에 도착합니다."
     assert saved_logs[-1].outcome == "neutral"
     assert result.front_state.log == saved_logs
 
@@ -616,7 +618,7 @@ async def test_run_graph_action_turn_does_not_generate_offer_when_no_work_exists
     assert not any(node_id.startswith("auto_") for node_id in saved_graph.nodes)
     assert result.front_state.quest is None
     assert result.front_state.quest_offers == []
-    assert [entry.kind for entry in saved_logs] == ["act"]
+    assert [entry.kind for entry in saved_logs] == ["act", "gm"]
     assert result.front_state.log == saved_logs
 
 

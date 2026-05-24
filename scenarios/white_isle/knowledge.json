@@ -2,19 +2,19 @@
   "kn_fog_rule": {
     "id": "kn_fog_rule",
     "title": "안개 바다의 규칙",
-    "summary": "혼자 탄 배는 내보내지 않는다.",
+    "summary": "혼자 탄 배는 균형이 맞지 않아 내보내지 않는다.",
     "visibility": "public"
   },
   "kn_fog_two_person_crossing": {
     "id": "kn_fog_two_person_crossing",
-    "title": "둘이 건너는 이유",
-    "summary": "한 사람은 노를 잡고 한 사람은 안개와 종소리를 본다.",
+    "title": "동행 이유",
+    "summary": "두 사람이 양쪽 노를 맞춰 잡아야 배가 기울지 않는다.",
     "visibility": "public"
   },
   "kn_fog_lost_boat": {
     "id": "kn_fog_lost_boat",
     "title": "돌아오지 않은 배",
-    "summary": "혼자 떠난 배는 안개 속에서 사라진다.",
+    "summary": "혼자 떠난 배는 한쪽으로 기울어 안개 속에서 사라진다.",
     "visibility": "public"
   },
   "kn_fog_bell": {
@@ -25,20 +25,26 @@
   },
   "kn_fog_two_people": {
     "id": "kn_fog_two_people",
-    "title": "두 사람 몫의 배",
-    "summary": "붉은섬행 배는 두 자리와 노 두 개뿐이다.",
+    "title": "두 자리 배",
+    "summary": "붉은섬행 배는 마주 잡는 두 자리와 양쪽 노 두 개뿐이다.",
     "visibility": "public"
   },
   "kn_fog_isles": {
     "id": "kn_fog_isles",
-    "title": "안개 바다와 섬들",
-    "summary": "안개 바다 너머로 여러 섬이 이어진다.",
+    "title": "바다 너머 섬들",
+    "summary": "안개 항구 앞바다 너머로 여러 섬이 이어진다.",
     "visibility": "public"
   },
   "kn_fog_harbor_life": {
     "id": "kn_fog_harbor_life",
     "title": "안개 항구의 생활",
     "summary": "떠나는 길을 강요하지 않는다.",
+    "visibility": "public"
+  },
+  "kn_human_role": {
+    "id": "kn_human_role",
+    "title": "인간",
+    "summary": "낯선 규칙을 묻고 자기 선택으로 길을 정하는 존재다.",
     "visibility": "public"
   },
   "kn_eli_route": {
@@ -56,13 +62,49 @@
   "kn_red_anger_trade": {
     "id": "kn_red_anger_trade",
     "title": "분노의 거래",
-    "summary": "루카가 노아에게 대리 분노를 맡겼다.",
+    "summary": "루카는 노아에게 자기 대신 화를 내 달라고 돈을 냈다.",
+    "visibility": "public"
+  },
+  "kn_red_receipt_holder": {
+    "id": "kn_red_receipt_holder",
+    "title": "붉은 영수증",
+    "summary": "붉은 영수증은 루카가 쥐고 있으며, 플레이어에게 넘기지 않았다.",
+    "visibility": "public"
+  },
+  "kn_red_refund_claim": {
+    "id": "kn_red_refund_claim",
+    "title": "환불 요구",
+    "summary": "루카는 자신이 노아에게 낸 대리 분노값을 돌려받고 싶어 한다.",
+    "visibility": "public"
+  },
+  "kn_red_noah_empty_hands": {
+    "id": "kn_red_noah_empty_hands",
+    "title": "노아의 빈손",
+    "summary": "노아는 환불할 물건도 증명할 분노도 손에 들고 있지 않다.",
+    "visibility": "public"
+  },
+  "kn_red_noah_attempt": {
+    "id": "kn_red_noah_attempt",
+    "title": "노아가 한 일",
+    "summary": "노아는 루카 대신 목소리를 높이고 억울함을 말했다.",
+    "visibility": "public"
+  },
+  "kn_red_noah_limit": {
+    "id": "kn_red_noah_limit",
+    "title": "노아가 하지 않은 일",
+    "summary": "노아는 책임질 사람의 이름을 말하지 않았고, 군중이 박수칠 만큼 분노를 키우지도 않았다.",
+    "visibility": "public"
+  },
+  "kn_red_crowd_pressure": {
+    "id": "kn_red_crowd_pressure",
+    "title": "군중의 기대",
+    "summary": "군중은 사과보다 더 큰 분노와 더 선명한 책임 문장을 기다린다.",
     "visibility": "public"
   },
   "kn_red_public_record": {
     "id": "kn_red_public_record",
     "title": "공개 기록의 무게",
-    "summary": "에즈라는 책임 기록을 요구한다.",
+    "summary": "에즈라는 감정보다 누가 무엇을 했는지 남기는 문장을 요구한다.",
     "visibility": "public"
   },
   "kn_blue_empty_room": {

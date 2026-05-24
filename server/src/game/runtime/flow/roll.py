@@ -276,13 +276,6 @@ async def run_graph_roll(
         dice=dice,
         scenario_repo=scenario_repo,
     )
-    if resolved.outcome == "failure" and not _is_narrative_roll_action(resolved.action):
-        return executed_result(
-            resolved.runtime,
-            graph_to_front_state(resolved.runtime),
-            outcome="failure",
-        )
-
     if _is_narrative_roll_action(resolved.action):
         return await _finish_narrative_roll(
             repo,
@@ -292,6 +285,16 @@ async def run_graph_roll(
             outcome=resolved.outcome,
             resolved=resolved,
             llm=llm,
+        )
+
+    if resolved.outcome == "failure":
+        narration_result = await _build_roll_narration(llm, resolved)
+        if narration_result.narration:
+            return await _commit_roll_narration(repo, game_id, resolved, narration_result)
+        return executed_result(
+            resolved.runtime,
+            graph_to_front_state(resolved.runtime),
+            outcome="failure",
         )
 
     turn_result = await run_graph_action_turn_from_runtime(
@@ -350,17 +353,8 @@ async def run_graph_roll_stream(
     yield {"type": "result", "result": result}
     stream = VisibleNarrationStream()
     resolution_text = _roll_resolution_text(resolved)
-    if resolution_text:
+    if resolved.outcome == "success" and resolution_text:
         yield {"type": "narration_delta", "text": f"{resolution_text} "}
-    if resolved.outcome == "failure":
-        final = await _commit_roll_narration(
-            repo,
-            game_id,
-            resolved,
-            GraphNarrationResult(narration=resolution_text),
-        )
-        yield {"type": "final", "result": final}
-        return
     async for chunk in _stream_roll_narration(llm, resolved):
         for visible in stream.push(chunk):
             yield {"type": "narration_delta", "text": visible}
@@ -627,19 +621,17 @@ async def _commit_roll_narration(
     runtime = resolved.runtime
     log_entries: list[LogEntry] = []
     if narration_result.narration:
+        text = _append_missing_completed_quest_text(
+            resolved,
+            _strip_repeated_preroll_text(
+                resolved,
+                _clean_roll_meta_phrase(narration_result.narration),
+            ),
+        )
+        if resolved.outcome == "success":
+            text = _ensure_roll_resolution_text(resolved, text)
         narration_result = narration_result.model_copy(
-            update={
-                "narration": _ensure_roll_resolution_text(
-                    resolved,
-                    _append_missing_completed_quest_text(
-                        resolved,
-                        _strip_repeated_preroll_text(
-                            resolved,
-                            _clean_roll_meta_phrase(narration_result.narration),
-                        ),
-                    ),
-                )
-            }
+            update={"narration": text}
         )
     if narration_result.narration:
         narration_result = _with_system_roll_cues(resolved, narration_result)
@@ -800,16 +792,13 @@ async def _finish_narrative_roll(
     resolved: _ResolvedGraphRoll,
     llm: LLMClient | None,
 ) -> GraphActionRequestResult:
-    narration_result = (
-        GraphNarrationResult(narration=_roll_resolution_text(resolved))
-        if outcome == "failure"
-        else await _build_roll_narration(llm, resolved)
-    )
+    narration_result = await _build_roll_narration(llm, resolved)
     text = narration_result.narration or _roll_fallback_text(resolved)
     text = _clean_roll_meta_phrase(text)
     text = _strip_repeated_preroll_text(resolved, text)
     text = _append_missing_completed_quest_text(resolved, text)
-    text = _ensure_roll_resolution_text(resolved, text)
+    if outcome == "success":
+        text = _ensure_roll_resolution_text(resolved, text)
     narration_result = narration_result.model_copy(update={"narration": text})
     narration_result = _with_system_roll_cues(resolved, narration_result)
     entry = gm_log_entry_from_narration(
@@ -851,6 +840,8 @@ def _roll_result_suggestions(
     resolved: _ResolvedGraphRoll,
     narration_result: GraphNarrationResult,
 ) -> list[GraphSuggestion]:
+    if resolved.outcome == "failure" and resolved.action.verb != "speak":
+        return []
     suggestions = filter_grounded_suggestions(runtime, narration_result.suggestions)
     if suggestions or resolved.outcome != "failure" or resolved.action.verb != "speak":
         return suggestions

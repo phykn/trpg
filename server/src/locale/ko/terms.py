@@ -15,6 +15,9 @@ DIALOGUE_TERMS = (
     "뭔 줄 알아",
     "뭔줄 알아",
 )
+DIALOGUE_TARGET_PARTICLES = ("에게", "한테")
+DIALOGUE_REQUEST_TERMS = ("달라고",)
+TARGETED_DIALOGUE_CONFIRM_TERMS = ("확인",)
 HOSTILE_TERMS = (
     "협박",
     "위협",
@@ -44,6 +47,7 @@ PART_TERMS = (
 ACCEPT_TERMS = ("수락", "받아들")
 QUEST_ACCEPT_TERMS = (*ACCEPT_TERMS, "받", "출항", "떠나", "떠납", "건너")
 QUEST_CONTEXT_TERMS = ("의뢰", "일거리", "부탁", "퀘스트", "출항", "항해", "떠나", "떠납", "건너")
+QUEST_TRAVEL_TERMS = ("출항", "항해", "떠나", "떠납", "건너")
 ABANDON_TERMS = ("포기", "거절", "취소")
 ACTION_ATTACK_TERMS = ("공격", "때리", "친다", "공세")
 ACTION_PICKUP_TERMS = ("획득", "줍", "주워", "가져", "챙")

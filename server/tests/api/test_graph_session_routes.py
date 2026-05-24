@@ -254,9 +254,10 @@ async def test_graph_intro_adds_initial_narration_and_first_visit_move_narration
     assert logs[0].text == "데이터 소개는 init 응답을 막지 않습니다."
     assert logs[1].text == "당신은 숲길로 이동합니다."
     assert move_body["state"]["log"][-1]["kind"] == "gm"
+    assert move_body["state"]["log"][-1]["text"] == "테스트 숲길"
     assert progress.next_log_id == 4
     assert [call["agent"] for call in app.state.llm.calls].count("graph_intro") == 0
-    assert [call["agent"] for call in app.state.llm.calls].count("graph_narrate") == 1
+    assert [call["agent"] for call in app.state.llm.calls].count("graph_narrate") == 0
 
 
 @pytest.mark.asyncio
@@ -425,9 +426,9 @@ async def test_graph_turn_stream_returns_result_then_first_visit_move_narration(
     assert [event["type"] for event in events] == [
         "result",
         "narration_delta",
-        "narration_delta",
         "final",
     ]
+    assert events[1]["text"] == "테스트 숲길"
     assert events[0]["payload"]["status"] == "executed"
     assert events[0]["payload"]["outcome"] == "neutral"
     assert (

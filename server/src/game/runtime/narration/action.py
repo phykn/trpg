@@ -4,7 +4,9 @@ from collections.abc import AsyncIterator
 from openai import APIConnectionError, InternalServerError, RateLimitError
 
 from src.game.domain.action import Action
+from src.game.domain.content import node_label, node_text
 from src.game.domain.errors import LLMUnavailable
+from src.game.domain.graph.query import location_of
 from src.locale.render import render
 from src.llm.calls.runner import get_prompt
 from src.llm.client import LLMClient
@@ -27,8 +29,15 @@ async def build_graph_action_narration(
     card_texts: list[str],
     timeout_s: float,
 ) -> GraphNarrationResult:
+    deterministic = _deterministic_graph_action_narration(after, dispatch)
+    if (
+        deterministic is not None
+        and dispatch.kind == "move"
+        and _needs_graph_action_narration(before, after, action, dispatch, card_texts)
+    ):
+        return deterministic
     if llm is None:
-        deterministic = _deterministic_graph_action_narration(before, dispatch)
+        deterministic = _deterministic_graph_action_narration(after, dispatch)
         if deterministic is not None:
             return deterministic
     messages = _graph_action_narration_messages(
@@ -87,8 +96,16 @@ async def stream_graph_action_narration(
     card_texts: list[str],
     timeout_s: float,
 ) -> AsyncIterator[str]:
+    deterministic = _deterministic_graph_action_narration(after, dispatch)
+    if (
+        deterministic is not None
+        and dispatch.kind == "move"
+        and _needs_graph_action_narration(before, after, action, dispatch, card_texts)
+    ):
+        yield deterministic.narration
+        return
     if llm is None:
-        deterministic = _deterministic_graph_action_narration(before, dispatch)
+        deterministic = _deterministic_graph_action_narration(after, dispatch)
         if deterministic is not None:
             yield deterministic.narration
             return
@@ -196,7 +213,7 @@ def ensure_graph_action_narration(
     result: GraphNarrationResult,
     llm_available: bool,
 ) -> GraphNarrationResult:
-    deterministic = _deterministic_graph_action_narration(before, dispatch)
+    deterministic = _deterministic_graph_action_narration(after, dispatch)
     if deterministic is not None and not llm_available:
         return deterministic
     if dispatch.kind == "quest_accept":
@@ -220,12 +237,33 @@ def _deterministic_graph_action_narration(
     runtime: GameRuntimeState,
     dispatch: GraphActionDispatchResult,
 ) -> GraphNarrationResult | None:
+    if dispatch.kind == "move":
+        return _deterministic_move_narration(runtime)
     if dispatch.kind != "combat":
         return None
     if _combat_exchange_result(dispatch) != "failure":
         return None
     return GraphNarrationResult(
         narration=render(_combat_failure_fallback_key(dispatch), runtime.progress.locale)
+    )
+
+
+def _deterministic_move_narration(runtime: GameRuntimeState) -> GraphNarrationResult:
+    place_id = location_of(runtime.graph_index, runtime.progress.player_id)
+    place = runtime.graph.nodes.get(place_id or "")
+    if place is None:
+        return GraphNarrationResult(
+            narration=render("runtime.narration.move.quiet", runtime.progress.locale)
+        )
+    description = node_text(runtime.content, place, "description")
+    if description:
+        return GraphNarrationResult(narration=description)
+    return GraphNarrationResult(
+        narration=render(
+            "runtime.narration.move.arrived",
+            runtime.progress.locale,
+            place=node_label(runtime.content, place),
+        )
     )
 
 

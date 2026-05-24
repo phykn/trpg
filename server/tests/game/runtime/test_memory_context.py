@@ -113,7 +113,7 @@ def test_previous_scene_limit_can_come_from_env(monkeypatch):
     assert [item["turn"] for item in payload] == [3, 4]
 
 
-def test_narrate_recent_exchanges_prefers_same_target_then_fills_recent(monkeypatch):
+def test_narrate_recent_exchanges_keeps_only_same_target(monkeypatch):
     monkeypatch.setenv("MAX_RECENT_EXCHANGES", "3")
     runtime = _runtime()
     runtime.recent_exchanges = [
@@ -133,5 +133,5 @@ def test_narrate_recent_exchanges_prefers_same_target_then_fills_recent(monkeypa
 
     payload = narrate_recent_exchanges_payload(runtime, target="npc_merchant")
 
-    assert [item["turn"] for item in payload] == [1, 3, 4]
+    assert [item["turn"] for item in payload] == [1, 3]
     assert payload[1]["target"] == "npc_merchant"

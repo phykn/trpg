@@ -112,16 +112,5 @@ def _target_first_exchanges(
         return runtime.recent_exchanges[-limit:]
     recent = list(runtime.recent_exchanges)
     targeted = [entry for entry in recent if entry.target == target]
-    selected = targeted[-limit:]
-    if len(selected) < limit:
-        seen = {(entry.turn, entry.player, entry.narrator) for entry in selected}
-        for entry in reversed(recent):
-            key = (entry.turn, entry.player, entry.narrator)
-            if key in seen:
-                continue
-            selected.append(entry)
-            seen.add(key)
-            if len(selected) == limit:
-                break
-    return sorted(selected[-limit:], key=lambda entry: entry.turn)
+    return targeted[-limit:]
 

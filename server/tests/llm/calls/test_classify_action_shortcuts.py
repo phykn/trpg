@@ -194,6 +194,58 @@ async def test_korean_active_departure_quest_shortcuts_to_location_move_without_
     assert action.to == "loc_red_square"
 
 
+async def test_korean_departure_rule_question_stays_dialogue_without_llm():
+    context = _context()
+    context["identity"]["visible_targets"] = [
+        {"id": "npc_olden", "name": "올든", "type": "npc"}
+    ]
+    context["identity"]["active_quest"] = {
+        "id": "q_fog_ready",
+        "name": "안개 바다 준비",
+        "location_targets": ["loc_fog_pier"],
+    }
+    context["identity"]["exits"] = [
+        {"id": "loc_fog_pier", "name": "안개 항구 선착장"},
+    ]
+
+    output = await classify(
+        _NoCallLLM(),
+        ClassifyInput(
+            player_input="올든에게 출항 규칙과 혼자 탄 배가 왜 사라지는지 확인합니다",
+            context=context,
+        ),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    action = output.actions[0]
+    assert action.verb == "speak"
+    assert action.to == "npc_olden"
+
+
+async def test_korean_named_dialogue_target_overrides_recent_npc_without_llm():
+    context = _context()
+    context["identity"]["visible_targets"] = [
+        {"id": "npc_luka", "name": "루카", "type": "npc"},
+        {"id": "npc_noah", "name": "노아", "type": "npc"},
+    ]
+    context["references"]["recent_npc"] = {"id": "npc_luka", "name": "루카"}
+
+    output = await classify(
+        _NoCallLLM(),
+        ClassifyInput(
+            player_input="노아에게 루카 대신 무엇을 했고 무엇을 하지 않았는지 분명히 말해 달라고 합니다.",
+            context=context,
+        ),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    action = output.actions[0]
+    assert action.verb == "speak"
+    assert action.to == "npc_noah"
+
+
 async def test_korean_quest_choice_label_shortcuts_to_decide_without_llm():
     context = _context()
     context["identity"]["active_quest"] = {

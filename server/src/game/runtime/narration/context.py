@@ -57,7 +57,7 @@ def build_action_narration_payload(
         "world_guidance": _world_guidance(after),
         "current_story": current_story_payload(after),
         "player_input": None,
-        "current_place": _node_ref(after, place),
+        "current_place": _place_payload(after, place),
         "current_event": current_event,
         "scene_anchor": scene_anchor,
         "target_view": _target_view(after, target),
@@ -139,6 +139,12 @@ def build_input_narration_payload(
         "current_story": current_story_payload(runtime),
         "player_input": player_input,
         "current_event": _input_current_event(runtime, action, dialogue_target),
+        "current_place": _place_payload(
+            runtime,
+            runtime.graph.nodes.get(
+                location_of(runtime.graph_index, runtime.progress.player_id) or ""
+            ),
+        ),
         "scene_anchor": _scene_anchor(runtime),
         "target_view": _target_view(
             runtime,
@@ -146,11 +152,13 @@ def build_input_narration_payload(
             player_input=player_input,
         ),
         "result_cards": [],
-        "previous_scene": previous_scene_payload(runtime),
+        "previous_scene": [],
         "recent_exchanges": narrate_recent_exchanges_payload(
             runtime,
             target=dialogue_target.id if dialogue_target is not None else None,
-        ),
+        )
+        if dialogue_target is not None
+        else [],
         "combat_view": combat_narration_view(runtime),
     }
     return compact_narration_payload(payload)

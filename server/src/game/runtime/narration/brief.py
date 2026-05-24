@@ -1,6 +1,11 @@
 from typing import Any
 
 from src.locale.render import render
+from src.locale.terms import (
+    DIALOGUE_REQUEST_TERMS,
+    DIALOGUE_TARGET_PARTICLES,
+    DIALOGUE_TERMS,
+)
 
 _LOCALE = "ko"
 
@@ -212,7 +217,7 @@ def _roll_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
 
 def _action_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
     kind = event.get("kind")
-    lines = _recent_context_lines(payload)
+    lines = [] if kind == "move" else _recent_context_lines(payload)
     lines.extend(
         [
             _brief(
@@ -224,9 +229,16 @@ def _action_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
             _brief("place", value=_place_name(payload)),
         ]
     )
+    if kind == "move":
+        place_lines = _current_place_detail_lines(payload)
+        if place_lines:
+            lines.append(_brief("current_place"))
+            lines.extend(f"- {line}" for line in place_lines)
     target = _target_name(payload)
     if target:
         lines.append(_brief("target", value=target))
+        if kind == "dialogue" or _looks_like_dialogue_input(payload):
+            lines.append(_brief("dialogue_responder", value=target))
     target_facts = _target_public_knowledge_lines(payload)
     if target_facts:
         lines.append(_brief("target_info"))
@@ -234,12 +246,28 @@ def _action_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
     resolved = _strings(event.get("resolved_results"))
     if resolved:
         lines.append(_brief("confirmed_inline", value=" / ".join(resolved)))
-    lines.extend(
-        [
-            _brief("action_forbid"),
-            _brief("action_goal"),
-        ]
-    )
+    is_dialogue_like = kind == "dialogue" or _looks_like_dialogue_input(payload)
+    if kind == "move":
+        lines.extend(
+            [
+                _brief("move_forbid"),
+                _brief("move_goal"),
+            ]
+        )
+    elif is_dialogue_like:
+        lines.extend(
+            [
+                _brief("action_forbid"),
+                _brief("dialogue_goal"),
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                _brief("action_forbid"),
+                _brief("action_goal"),
+            ]
+        )
     _append_player_input(lines, payload)
     return "\n".join(lines)
 
@@ -312,6 +340,18 @@ def _current_story_lines(context: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _current_place_detail_lines(payload: dict[str, Any]) -> list[str]:
+    scene = _dict(payload.get("scene_state"))
+    place = _dict(scene.get("current_place"))
+    out: list[str] = []
+    description = place.get("description")
+    if isinstance(description, str) and description:
+        out.append(_clip(description))
+    for trait in _strings(place.get("traits"))[:3]:
+        out.append(_clip(trait))
+    return _dedupe(out)
+
+
 def _story_item_line(item: dict[str, Any]) -> str:
     name = item.get("name")
     if not isinstance(name, str) or not name:
@@ -326,6 +366,14 @@ def _player_input(payload: dict[str, Any]) -> str:
     request = _dict(payload.get("user_request"))
     value = request.get("player_input")
     return value if isinstance(value, str) and value else _brief("none")
+
+
+def _looks_like_dialogue_input(payload: dict[str, Any]) -> bool:
+    player_input = _player_input(payload)
+    return any(term in player_input for term in DIALOGUE_TARGET_PARTICLES) or any(
+        term in player_input
+        for term in (*DIALOGUE_TERMS, *DIALOGUE_REQUEST_TERMS)
+    )
 
 
 def _place_name(payload: dict[str, Any]) -> str:

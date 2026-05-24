@@ -187,7 +187,8 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "브리핑에 명시된 대상과 장소는 제안할 수 있습니다" in narrate_prompt
     assert "현재 목표가 바로 보이면 목표를 수행하는 입력문을 제안할 수 있습니다" in narrate_prompt
     assert "`대화 시도하기`, `상황 파악하기`처럼 대상이나 목적이 없는 label은 쓰지 않습니다" in narrate_prompt
-    assert "손맛" in narrate_prompt
+    assert "담백한 플레이 로그체" in narrate_prompt
+    assert "한 문장에는 하나의 동작만 넣습니다" in narrate_prompt
     assert "손끝에 먼지만 묻어납니다" in narrate_prompt
     assert "플레이어의 팬인 GM" in combined
     assert "플레이어를 우습게 만들지" in combined
@@ -196,14 +197,22 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "전투 브리핑은 배경 맥락을 먼저 읽고" in combat_prompt
     assert "전투 JSON" not in combat_prompt
     assert "판정을 다시 해석하지 않고" in combat_prompt
-    assert "조금 과장해서 씁니다" in combat_prompt
+    assert "조금 과장해서 씁니다" not in combat_prompt
+    assert "문체 목표는 담백한 플레이 로그체입니다" in combat_prompt
+    assert "멋 부리지 말고, 보이는 일만 짧게 씁니다" in combat_prompt
+    assert "한 문장에는 하나의 동작만 넣습니다" in combat_prompt
+    assert "화려한 비유, 장중한 표현, 감정 과잉을 피합니다" in combat_prompt
     assert "결과는 즉시 이해되고" in combat_prompt
     assert "모든 전투 행동은 같은 리듬으로 씁니다" in combat_prompt
     assert "선택한 행동이 보입니다" in combat_prompt
     assert "같은 의미의 물리적 장면으로 바꿔도 됩니다" in combat_prompt
     assert "성공이면 먹힘, 뚫림, 밀어냄" in combat_prompt
     assert "중립이면 대치, 거리, 자세" in combat_prompt
-    assert "사용할 수 있는 감각" in combat_prompt
+    assert "좋은 표현" in combat_prompt
+    assert "물러납니다" in combat_prompt
+    assert "피해야 할 표현" in combat_prompt
+    assert "칼날이 춤춥니다" in combat_prompt
+    assert "손맛" not in combat_prompt
     assert "## 대사" in combat_prompt
     assert "필요할 때만 짧은 직접 발화 하나를 섞습니다" in combat_prompt
     assert "직접 발화는 `「」`로 감쌉니다" in combat_prompt
@@ -246,6 +255,12 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "직접 발화" in narrate_prompt
     assert "NPC 직접 발화" in narrate_prompt
     assert "NPC가 직접 반응하는 것을 기본값으로 씁니다" in narrate_prompt
+    assert "`대상`이 있으면 그 대상만 이번 대화의 응답자입니다" in narrate_prompt
+    assert "다른 visible NPC는 끼어들 수 없고" in narrate_prompt
+    assert "다른 NPC가 대신 답하지 않습니다" in narrate_prompt
+    assert "질문형 플레이어 입력을 NPC의 질문으로 뒤집어 쓰지 않습니다" in narrate_prompt
+    assert "물건의 소지자는 `대상 정보`, `공개된 사실`, 현재 장소 설명을 따릅니다" in narrate_prompt
+    assert "플레이어가 들고 있거나 내민다고 쓰지 않습니다" in narrate_prompt
     assert "설명문만 쓰지 말고 직접 발화 한 문장을 반드시 넣습니다" in narrate_prompt
     assert "기본 구조는 플레이어의 접근/질문 한 문장" in narrate_prompt
     assert "플레이어가 단순히 말을 걸었고 구체 질문이 없으면" in narrate_prompt
@@ -253,6 +268,20 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "짧은 반응으로만" not in narrate_prompt
     assert "짧은 말" not in narrate_prompt
     assert "당신의 새 대사" not in narrate_prompt
+    assert "문체 목표는 담백한 플레이 로그체입니다" in narrate_prompt
+    assert "나레이션은 시적으로 쓰지 않습니다" in narrate_prompt
+    assert "멋 부리지 말고, 보이는 일만 짧게 씁니다" in narrate_prompt
+    assert "분위기를 설명하지 않고 장면을 보여줍니다" in narrate_prompt
+    assert "한 문장에는 하나의 동작만 넣습니다" in narrate_prompt
+    assert "목표 비율은 장면 70%, 상태 정보 30%입니다" in narrate_prompt
+    assert "움직임 -> 충돌/반응 -> 현재 상태" in narrate_prompt
+    assert "장면만 있고 상태 변화가 보이지 않으면 실패입니다" in narrate_prompt
+    assert "상태 보고만 있고 동작이 없으면 실패입니다" in narrate_prompt
+    assert "화려한 비유, 장중한 표현, 감정 과잉을 피합니다" in narrate_prompt
+    assert "숨을 죽입니다" in narrate_prompt
+    assert "물러납니다" in narrate_prompt
+    assert "수치나 판정어를 직접 말하지 않아도 되지만, 결과는 오해 없이 드러나야 합니다" in narrate_prompt
+    assert "모호한 표현을 썼다면 반드시 관찰 가능한 변화로 이어 씁니다" in narrate_prompt
     assert "전투 브리핑이면 이번 턴은 전투 모드입니다" in narrate_prompt
     assert "비살상 전투가 명시되면 비살상으로 씁니다" in narrate_prompt
     assert "STATE_PATCH" in narrate_prompt
@@ -271,6 +300,9 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "판정 후 나레이션" in narrate_prompt
     assert "preroll_narration" not in narrate_prompt
     assert "판정 전 문장을 반복하지 않습니다" in narrate_prompt
+    assert "플레이어가 로그만 읽어도 성공인지 실패인지 알아차릴 수 있어야 합니다" in narrate_prompt
+    assert "성공은 얻은 답, 열린 길, 태도 변화, 확인된 단서처럼 얻은 것을 씁니다" in narrate_prompt
+    assert "실패는 아직 얻지 못한 답, 막힌 길, 방어적 반응, 흐려진 단서처럼 막힌 것을 씁니다" in narrate_prompt
     assert "critical success" in narrate_prompt
     assert "다음 행동 가능성" in narrate_prompt
     assert "본문을 두 번 쓰지 않습니다" in narrate_prompt
@@ -290,9 +322,12 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "플레이어 원문이 단순히 말을 건다는 뜻이면" in narrate_prompt
     assert "무슨 일이신가요" in narrate_prompt
     assert "현재 처리 대상은 `대상`에 드러난 대상뿐입니다" in narrate_prompt
+    assert "플레이어가 여기가 어디인지 물으면 `장소`의 정확한 이름을 먼저 답합니다" in narrate_prompt
     assert "`대상 정보`는 현재 처리 대상의 공개 지식" in narrate_prompt
     assert "이름만 보고 세부 묘사, 답변, 단서, 행동 가능성을 만들지 않습니다" in narrate_prompt
     assert "이름만 보고 세부 묘사, 답변, 단서, 행동 가능성을 만들지 않습니다" in narrate_prompt
+    assert "이동 직후에는 이전 대화 상대가 현재 장소의 인물인지 확인되지 않으면 행동 주체로 쓰지 않습니다" in narrate_prompt
+    assert "이동 이벤트에서는 직전 대화의 질문, 답변, 말투, 손짓을 이어 쓰지 않습니다" in narrate_prompt
     assert "`대상 정보`는 그 대상과 이번 상호작용에 붙은 공개 정보입니다" in narrate_prompt
     assert "대상 정보가 있으면 NPC가 그 사실을 직접 말하거나 인정하게 씁니다" in narrate_prompt
     assert "장소 전체의 지식이나 모든 행동 가능성으로 넓히지 않습니다" in narrate_prompt
@@ -373,6 +408,18 @@ def test_graph_narrate_prompt_prefers_grounded_natural_prose_over_hype():
     assert "결과를 칭찬하지 말고 장면이 반응하게 합니다" in prompt
 
 
+def test_combat_narrate_prompt_prefers_plain_play_log_style():
+    prompt = (PROMPT_ROOT / "combat_narrate" / "prompt.ko.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "조금 과장해서 씁니다" not in prompt
+    assert "문체 목표는 담백한 플레이 로그체입니다" in prompt
+    assert "한 문장에는 하나의 동작만 넣습니다" in prompt
+    assert "비명을 삼킵니다" in prompt
+    assert "검이 대상의 어깨에 닿습니다" in prompt
+
+
 def test_graph_narrate_prompt_treats_rhythm_as_order_not_template():
     prompt = (PROMPT_ROOT / "graph_narrate" / "prompt.ko.md").read_text(
         encoding="utf-8"
@@ -400,6 +447,7 @@ def test_graph_narrate_prompt_encodes_theory_pressure_and_completion_limits():
     assert "새 갈고리 없이 닫습니다" in prompt
     assert "브리핑에 장소 진입 퀘스트 트리거가 있으면 특히 조심합니다" in prompt
     assert "장소에 들어간 사실을 플레이어가 갈등을 해결한 것처럼 과장하지 않습니다" in prompt
+    assert "현재 `장소`가 선착장이면 배가 묶여 있거나 준비된 상태까지만 쓰고" in prompt
 
 
 def test_graph_narrate_prompt_requires_clear_roll_consequences():
@@ -408,7 +456,7 @@ def test_graph_narrate_prompt_requires_clear_roll_consequences():
     )
 
     assert "첫 문단에서 성공/실패의 귀결을 분명히 씁니다" in prompt
-    assert "결과를 흐리는 되묻기나 분위기 묘사만으로 끝내지 않습니다" in prompt
+    assert "결과를 흐리는 되묻기나 추상 묘사만으로 끝내지 않습니다" in prompt
     assert "`공개된 사실`은 이번 성공 판정으로 드러난 확정 정보입니다" in prompt
     assert "`대상 정보`는 성공 판정에서 드러낼 수 있는 선명한 사실 후보입니다" in prompt
     assert "원하는 답, 단서, 양보가 아직 나오지 않았음을 분명히 합니다" in prompt

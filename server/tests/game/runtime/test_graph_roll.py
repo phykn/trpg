@@ -539,7 +539,7 @@ async def test_run_graph_roll_success_completes_social_check_quest(tmp_path):
     assert saved_progress.active_quest_id is None
     assert result.front_state.quest is None
     assert logs[-1].kind == "gm"
-    assert logs[-1].text.startswith("당신의 말은 guard_01에게 닿고")
+    assert logs[-1].text.startswith("guard_01는 당신의 말을 듣고")
     assert logs[-1].text.endswith("흰섬은 두 번째 이름을 주지 않습니다.")
 
 
@@ -681,7 +681,7 @@ async def test_run_graph_roll_appends_completed_social_quest_text_when_llm_omits
     logs = await repo.load_log_entries("game-1")
 
     assert logs[-1].kind == "gm"
-    assert logs[-1].text.startswith("당신의 말은 guard_01에게 닿고")
+    assert logs[-1].text.startswith("guard_01는 당신의 말을 듣고")
     assert "그녀는 당신의 질문을 듣고 짧게 고개를 끄덕입니다." in logs[-1].text
     assert logs[-1].text.endswith("흰섬은 두 번째 이름을 주지 않습니다.")
 
@@ -704,7 +704,7 @@ async def test_run_graph_roll_removes_roll_meta_phrase_from_narration(tmp_path):
     logs = await repo.load_log_entries("game-1")
 
     assert logs[-1].kind == "gm"
-    assert logs[-1].text.startswith("당신의 말은 guard_01에게 닿고")
+    assert logs[-1].text.startswith("guard_01는 당신의 말을 듣고")
     assert logs[-1].text.endswith("경비병은 고개를 듭니다. 긴장이 풀립니다.")
 
 
@@ -928,8 +928,8 @@ async def test_run_graph_roll_resolves_failed_narrative_perceive_without_dispatc
     assert logs[0].result == "fail"
     assert logs[1].kind == "gm"
     assert logs[1].outcome == "failure"
-    assert logs[1].text == "당신은 살피지만, 눈앞의 흔적은 뚜렷한 답을 내주지 않습니다."
-    assert llm.calls == []
+    assert logs[1].text == "흔적은 보이지만, 서로 이어지는 방향을 끝내 잡아내지 못합니다."
+    assert llm.calls[0]["agent"] == "graph_narrate"
 
 
 async def test_run_graph_roll_filters_narrative_suggestions(tmp_path):
@@ -1012,7 +1012,7 @@ async def test_run_graph_roll_strips_repeated_preroll_sentences(tmp_path):
     logs = await repo.load_log_entries("game-1")
 
     assert result.status == "executed"
-    assert logs[1].text == "당신은 살피지만, 눈앞의 흔적은 뚜렷한 답을 내주지 않습니다."
+    assert logs[1].text == "옷감 아래로 오래 물에 닿은 흔적이 접힌 선마다 남아 있습니다."
 
 
 def test_strip_repeated_preroll_text_keeps_non_repeated_narration():
@@ -1058,12 +1058,12 @@ async def test_run_graph_roll_stream_uses_clear_text_for_failed_narrative_percei
     assert events[-1]["type"] == "final"
     assert events[0]["result"].outcome == "failure"
     assert "".join(event["text"] for event in events[1:-1]) == (
-        "당신은 살피지만, 눈앞의 흔적은 뚜렷한 답을 내주지 않습니다. "
+        "바닥의 흠집은 보이지만, 방향을 가늠할 만큼 이어지지 않습니다."
     )
     assert [entry.kind for entry in logs] == ["roll", "gm"]
     assert logs[-1].outcome == "failure"
-    assert logs[-1].text == "당신은 살피지만, 눈앞의 흔적은 뚜렷한 답을 내주지 않습니다."
-    assert llm.calls == []
+    assert logs[-1].text == "바닥의 흠집은 보이지만, 방향을 가늠할 만큼 이어지지 않습니다."
+    assert llm.calls[0]["agent"] == "graph_narrate"
 
 
 async def test_run_graph_roll_logs_one_short_roll_as_fail(tmp_path):
@@ -1111,15 +1111,13 @@ async def test_run_graph_roll_stream_narrates_failed_roll_without_dispatch(tmp_p
     assert events[0]["result"].outcome == "failure"
     assert events[-1]["result"].outcome == "failure"
     assert "".join(event["text"] for event in events[1:-1]) == (
-        "당신의 시도는 원하는 성과로 이어지지 않습니다. "
+        "발밑의 길이 선뜻 열리지 않습니다."
     )
     assert "located_at:player_01:town" in graph.edges
     assert "located_at:player_01:forest" not in graph.edges
     assert [entry.kind for entry in logs] == ["roll", "gm"]
-    assert logs[-1].text == (
-        "당신의 시도는 원하는 성과로 이어지지 않습니다."
-    )
-    assert llm.calls == []
+    assert logs[-1].text == "발밑의 길이 선뜻 열리지 않습니다."
+    assert llm.calls[0]["agent"] == "graph_narrate"
 
 
 async def test_run_graph_roll_stream_executes_success_action_before_result(tmp_path):
@@ -1148,9 +1146,8 @@ async def test_run_graph_roll_stream_executes_success_action_before_result(tmp_p
     assert events[0]["result"].front_state.place.id == "forest"
     assert events[-1]["result"].outcome == "success"
     assert [entry.kind for entry in logs] == ["roll", "act", "gm"]
-    content = llm.calls[0]["messages"][1]["content"]
-    assert "장면 유형: move" in content
-    assert "확정: 당신은 Forest로 이동합니다." in content
+    assert llm.calls == []
+    assert "".join(event["text"] for event in events[1:-1]) == "Forest에 도착합니다."
 
 
 async def test_run_graph_roll_stream_includes_clear_success_resolution_for_narrative_roll(
@@ -1183,12 +1180,12 @@ async def test_run_graph_roll_stream_includes_clear_success_resolution_for_narra
     content = llm.calls[0]["messages"][1]["content"]
     assert "장면 유형: 판정 후" in content
     assert "결과: 성공" in content
-    assert "확정: 매력 판정 성공 / 당신의 말은 이삭에게 닿고, 이삭은 더 분명한 반응을 보입니다." in content
+    assert "확정: 매력 판정 성공 / 이삭은 당신의 말을 듣고, 더 분명한 반응을 보입니다." in content
     deltas = [event["text"] for event in events if event["type"] == "narration_delta"]
     logs = await repo.load_log_entries("game-1")
-    assert deltas[0] == "당신의 말은 이삭에게 닿고, 이삭은 더 분명한 반응을 보입니다. "
+    assert deltas[0] == "이삭은 당신의 말을 듣고, 더 분명한 반응을 보입니다. "
     assert logs[-1].text.startswith(
-        "당신의 말은 이삭에게 닿고, 이삭은 더 분명한 반응을 보입니다."
+        "이삭은 당신의 말을 듣고, 더 분명한 반응을 보입니다."
     )
 
 

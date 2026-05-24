@@ -8,6 +8,7 @@ from src.locale.terms import (
     ACTION_CREATE_DISTANCE_TERMS,
     ACTION_PICKUP_TERMS,
     DECEPTIVE_TERMS,
+    DIALOGUE_TARGET_PARTICLES,
     DIALOGUE_TERMS,
     HOSTILE_TERMS,
     LOOT_TERMS,
@@ -15,7 +16,9 @@ from src.locale.terms import (
     PART_TERMS,
     QUEST_ACCEPT_TERMS,
     QUEST_CONTEXT_TERMS,
+    QUEST_TRAVEL_TERMS,
     RECRUIT_TERMS,
+    TARGETED_DIALOGUE_CONFIRM_TERMS,
 )
 from src.locale.render import render
 
@@ -142,6 +145,11 @@ def _active_quest_location_move_action(
 ) -> Action | None:
     if not _looks_like_quest_travel(player_input):
         return None
+    if _looks_like_targeted_dialogue(player_input) and _find_dialogue_target(
+        player_input,
+        surroundings,
+    ) is not None:
+        return None
     exits = {
         entry["id"]
         for entry in _dicts(surroundings.get("entities"))
@@ -169,7 +177,7 @@ def _looks_like_quest_accept(player_input: str) -> bool:
 
 
 def _looks_like_quest_travel(player_input: str) -> bool:
-    return _has_any(player_input, ("출항", "항해", "떠나", "떠납", "건너"))
+    return _has_any(player_input, QUEST_TRAVEL_TERMS)
 
 
 def _named_giver_quest(
@@ -235,7 +243,7 @@ def classify_dialogue_shortcut(
     player_input: str,
     surroundings: dict[str, Any],
 ) -> ActionOutput | None:
-    if not _looks_like_dialogue(player_input):
+    if not _looks_like_targeted_dialogue(player_input):
         return None
     target = _find_dialogue_target(player_input, surroundings)
     if target is None:
@@ -363,6 +371,15 @@ def _looks_like_dialogue(player_input: str) -> bool:
     return any(term in player_input for term in DIALOGUE_TERMS)
 
 
+def _looks_like_targeted_dialogue(player_input: str) -> bool:
+    if _looks_like_dialogue(player_input):
+        return True
+    return _has_any(player_input, DIALOGUE_TARGET_PARTICLES) and _has_any(
+        player_input,
+        TARGETED_DIALOGUE_CONFIRM_TERMS,
+    )
+
+
 def _looks_like_loot(player_input: str) -> bool:
     return any(term in player_input for term in LOOT_TERMS)
 
@@ -378,6 +395,11 @@ def _find_dialogue_target(
         and isinstance(entry.get("id"), str)
         and isinstance(entry.get("name"), str)
     ]
+    for character in characters:
+        name = character["name"]
+        if any(f"{name}{particle}" in player_input for particle in DIALOGUE_TARGET_PARTICLES):
+            return character
+
     for character in characters:
         if character["name"] in player_input:
             return character

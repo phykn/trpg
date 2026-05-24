@@ -351,8 +351,8 @@ ko = "포기"
 en = "Abandon"
 
 [runtime."confirmation.important_move.title"]
-ko = "이동을 확정하시겠습니까?"
-en = "Confirm this move?"
+ko = "이동"
+en = "Move"
 
 [runtime."confirmation.important_move.body"]
 ko = "{destination}{으로/로} 이동하면 {source}{으로/로} 돌아올 수 없습니다."
@@ -381,6 +381,14 @@ en = "You speak to {target}."
 [runtime."narration.repeat.neutral"]
 ko = "장면의 긴장은 그대로 남고, 다음 선택이 조용히 당신을 기다립니다."
 en = "The tension remains, and the next choice waits quietly."
+
+[runtime."narration.move.arrived"]
+ko = "{place}에 도착합니다."
+en = "You arrive at {place}."
+
+[runtime."narration.move.quiet"]
+ko = "당신은 이동을 마칩니다."
+en = "You finish moving."
 
 [runtime."narration.repeat.combat_neutral"]
 ko = "대치가 이어지고, 서로의 다음 움직임이 아직 정해지지 않습니다."
@@ -530,6 +538,10 @@ en = "Combat state: {value}"
 ko = "대상: {value}"
 en = "Target: {value}"
 
+[runtime."narration.brief.dialogue_responder"]
+ko = "응답 대상: {value}. 직접 답하거나 답을 피합니다. 플레이어 질문으로 끝내지 않습니다."
+en = "Responder: {value} answers directly or avoids answering. Do not end with the player's question."
+
 [runtime."narration.brief.confirmed"]
 ko = "확정:"
 en = "Confirmed:"
@@ -573,6 +585,10 @@ en = "World guidance:"
 [runtime."narration.brief.current_story"]
 ko = "현재 이야기:"
 en = "Current story:"
+
+[runtime."narration.brief.current_place"]
+ko = "현재 장소:"
+en = "Current place:"
 
 [runtime."narration.brief.chapter"]
 ko = "챕터: {value}"
@@ -693,6 +709,18 @@ en = "Forbidden: new results, rewards, or relationship changes not in payload"
 [runtime."narration.brief.action_goal"]
 ko = "목표: 확정된 행동 결과를 짧고 구체적인 장면으로 바꿉니다."
 en = "Goal: turn confirmed action results into a short concrete scene."
+
+[runtime."narration.brief.dialogue_goal"]
+ko = "목표: 대상이 플레이어 질문에 직접 답합니다. 대상 정보에서 질문에 맞는 사실을 하나 이상 직접 발화에 넣습니다."
+en = "Goal: the target directly answers the player's question. Put at least one relevant target fact into direct speech."
+
+[runtime."narration.brief.move_forbid"]
+ko = "금지: 직전 대화 요약, 이전 장소 인물의 새 행동, 아직 도착하지 않은 장소 묘사"
+en = "Forbidden: summarizing prior dialogue, new actions by people from the previous place, describing a place not yet reached"
+
+[runtime."narration.brief.move_goal"]
+ko = "목표: 현재 이동 결과와 도착 장소에서 바로 보이는 상태만 짧게 씁니다."
+en = "Goal: write only the confirmed movement result and what is immediately visible at the arrival place."
 
 [runtime."narration.clean.generic_action_full"]
 ko = "「당신의 행동이 처리됩니다.」라는 짧은 확인과 함께,"

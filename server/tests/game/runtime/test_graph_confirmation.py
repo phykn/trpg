@@ -391,7 +391,7 @@ async def test_one_way_unlocked_move_requires_confirmation(tmp_path):
     assert result.status == "confirmation_required"
     assert pending["kind"] == "important_move"
     assert result.front_state.pending_confirmation is not None
-    assert result.front_state.pending_confirmation.title == "이동을 확정하시겠습니까?"
+    assert result.front_state.pending_confirmation.title == "이동"
     assert (
         result.front_state.pending_confirmation.body
         == "붉은 광장으로 이동하면 안개 부두로 돌아올 수 없습니다."
@@ -437,7 +437,7 @@ async def test_one_way_active_quest_move_requires_confirmation(tmp_path):
 
     assert result.status == "confirmation_required"
     assert result.front_state.pending_confirmation is not None
-    assert result.front_state.pending_confirmation.title == "이동을 확정하시겠습니까?"
+    assert result.front_state.pending_confirmation.title == "이동"
     assert (
         result.front_state.pending_confirmation.body
         == "붉은 광장으로 이동하면 안개 부두로 돌아올 수 없습니다."
