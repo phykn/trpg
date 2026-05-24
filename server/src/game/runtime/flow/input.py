@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator, Sequence
 
 from src.db.repo import GraphRepo, ScenarioRepo
-from src.game.domain.action import Action, ActionCheckHint
+from src.game.domain.action import Action, ActionCheckHint, ActionOutput
 from src.game.domain.content import node_label
 from src.game.domain.graph import GraphNode
 from src.game.domain.graph.character import is_visible_character
@@ -78,22 +78,12 @@ async def run_graph_input_turn(
     player_input: str,
     scenario_repo: ScenarioRepo | None = None,
 ) -> GraphActionRequestResult:
-    runtime = await load_runtime_state(repo, game_id, scenario_repo)
-    _raise_if_pending_input_blocked(runtime)
-    set_diag_context(game_id, runtime.progress.turn_count)
-    engine_diag("input:start", chars=len(player_input))
-    runtime = await _append_player_input_log(repo, runtime, player_input)
-    output = await classify(
+    runtime, output = await _classify_player_input(
         client,
-        ClassifyInput(
-            player_input=player_input,
-            context=build_classify_context_view(
-                runtime,
-                player_input,
-                limits=_classify_context_limits(),
-            ),
-        ),
-        locale=runtime.progress.locale,
+        repo,
+        game_id,
+        player_input,
+        scenario_repo,
     )
 
     if output.refuse is not None:
@@ -127,22 +117,12 @@ async def run_graph_input_turn_stream(
     player_input: str,
     scenario_repo: ScenarioRepo | None = None,
 ) -> AsyncIterator[dict[str, object]]:
-    runtime = await load_runtime_state(repo, game_id, scenario_repo)
-    _raise_if_pending_input_blocked(runtime)
-    set_diag_context(game_id, runtime.progress.turn_count)
-    engine_diag("input:start", chars=len(player_input))
-    runtime = await _append_player_input_log(repo, runtime, player_input)
-    output = await classify(
+    runtime, output = await _classify_player_input(
         client,
-        ClassifyInput(
-            player_input=player_input,
-            context=build_classify_context_view(
-                runtime,
-                player_input,
-                limits=_classify_context_limits(),
-            ),
-        ),
-        locale=runtime.progress.locale,
+        repo,
+        game_id,
+        player_input,
+        scenario_repo,
     )
 
     if output.refuse is not None:
@@ -170,6 +150,33 @@ async def run_graph_input_turn_stream(
         scenario_repo=scenario_repo,
     ):
         yield event
+
+
+async def _classify_player_input(
+    client: LLMClient,
+    repo: GraphRepo,
+    game_id: str,
+    player_input: str,
+    scenario_repo: ScenarioRepo | None,
+) -> tuple[GameRuntimeState, ActionOutput]:
+    runtime = await load_runtime_state(repo, game_id, scenario_repo)
+    _raise_if_pending_input_blocked(runtime)
+    set_diag_context(game_id, runtime.progress.turn_count)
+    engine_diag("input:start", chars=len(player_input))
+    runtime = await _append_player_input_log(repo, runtime, player_input)
+    output = await classify(
+        client,
+        ClassifyInput(
+            player_input=player_input,
+            context=build_classify_context_view(
+                runtime,
+                player_input,
+                limits=_classify_context_limits(),
+            ),
+        ),
+        locale=runtime.progress.locale,
+    )
+    return runtime, output
 
 
 # Classified action dispatch
@@ -651,11 +658,7 @@ async def _run_graph_narrative_input(
         subject_id,
         timeout_s=_input_narration_timeout_s(),
     )
-    text = narration_result.narration
-    if not text:
-        text = _fallback_input_narration(runtime, subject_id)
-        narration_result = GraphNarrationResult(narration=text)
-    narration_result = guard_speak_narration_player_quote(
+    narration_result = _finalize_input_narration(
         runtime,
         action,
         subject_id,
@@ -697,11 +700,7 @@ async def _run_graph_narrative_input_stream(
         yield {"type": "narration_delta", "text": visible}
 
     narration_result = parse_graph_narration_answer(stream.answer())
-    text = narration_result.narration
-    if not text:
-        text = _fallback_input_narration(runtime, subject_id)
-        narration_result = GraphNarrationResult(narration=text)
-    narration_result = guard_speak_narration_player_quote(
+    narration_result = _finalize_input_narration(
         runtime,
         action,
         subject_id,
@@ -718,6 +717,26 @@ async def _run_graph_narrative_input_stream(
         player_input=player_input,
     )
     yield {"type": "final", "result": result}
+
+
+def _finalize_input_narration(
+    runtime: GameRuntimeState,
+    action: Action,
+    subject_id: str | None,
+    narration_result: GraphNarrationResult,
+    player_input: str,
+) -> GraphNarrationResult:
+    if not narration_result.narration:
+        narration_result = GraphNarrationResult(
+            narration=_fallback_input_narration(runtime, subject_id)
+        )
+    return guard_speak_narration_player_quote(
+        runtime,
+        action,
+        subject_id,
+        narration_result,
+        player_input,
+    )
 
 
 def _neutral_stream_result(runtime: GameRuntimeState) -> GraphActionRequestResult:
