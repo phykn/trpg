@@ -26,7 +26,6 @@ scenarios/*/.decomp/
 
 # Local-only (not part of the repo)
 notebooks/
-release/
 .notebooks/
 .codex/
 .superpowers/

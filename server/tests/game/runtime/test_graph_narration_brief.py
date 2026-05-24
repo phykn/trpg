@@ -297,8 +297,9 @@ def test_dialogue_brief_includes_target_public_knowledge_before_player_input():
     )
 
     assert "대상 정보:" in brief
-    assert "응답 대상: 관리인. 직접 답하거나 답을 피합니다. 플레이어 질문으로 끝내지 않습니다." in brief
+    assert "응답 대상: 관리인. 질문을 반복하지 말고, 알면 답하고 모르면 모른다고 말합니다." in brief
     assert "목표: 대상이 플레이어 질문에 직접 답합니다." in brief
+    assert "질문 문장을 NPC 대사로 복사하지 않습니다." in brief
     assert "- 기록실 출입 규칙: 기록실은 담당자 확인과 방문 목적이 함께 필요합니다." in brief
     assert brief.rfind("플레이어 입력:") > brief.find("대상 정보:")
     assert brief.splitlines()[-1] == "플레이어 입력: 관리인에게 출입 규칙을 묻습니다"
@@ -379,7 +380,7 @@ def test_action_brief_includes_responder_for_dialogue_like_input():
         }
     )
 
-    assert "응답 대상: 관리인. 직접 답하거나 답을 피합니다. 플레이어 질문으로 끝내지 않습니다." in brief
+    assert "응답 대상: 관리인. 질문을 반복하지 말고, 알면 답하고 모르면 모른다고 말합니다." in brief
     assert "목표: 대상이 플레이어 질문에 직접 답합니다." in brief
 
 

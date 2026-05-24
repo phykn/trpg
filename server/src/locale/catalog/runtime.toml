@@ -539,8 +539,8 @@ ko = "대상: {value}"
 en = "Target: {value}"
 
 [runtime."narration.brief.dialogue_responder"]
-ko = "응답 대상: {value}. 직접 답하거나 답을 피합니다. 플레이어 질문으로 끝내지 않습니다."
-en = "Responder: {value} answers directly or avoids answering. Do not end with the player's question."
+ko = "응답 대상: {value}. 질문을 반복하지 말고, 알면 답하고 모르면 모른다고 말합니다."
+en = "Responder: {value}. Do not repeat the question; answer if they know, or say they do not know."
 
 [runtime."narration.brief.confirmed"]
 ko = "확정:"
@@ -711,8 +711,8 @@ ko = "목표: 확정된 행동 결과를 짧고 구체적인 장면으로 바꿉
 en = "Goal: turn confirmed action results into a short concrete scene."
 
 [runtime."narration.brief.dialogue_goal"]
-ko = "목표: 대상이 플레이어 질문에 직접 답합니다. 대상 정보에서 질문에 맞는 사실을 하나 이상 직접 발화에 넣습니다. 가능 여부를 물으면 가능/불가능과 조건을 함께 말합니다. 입술, 시선, 미소 같은 장식보다 답변 내용을 먼저 씁니다."
-en = "Goal: the target directly answers the player's question. Put at least one relevant target fact into direct speech. If asked whether something is possible, state whether it is possible and the condition. Write answer content before decorative gestures such as lips, gaze, or smiles."
+ko = "목표: 대상이 플레이어 질문에 직접 답합니다. 대상 정보에서 질문에 맞는 사실을 하나 이상 직접 발화에 넣습니다. 질문 문장을 NPC 대사로 복사하지 않습니다. 가능 여부를 물으면 가능/불가능과 조건을 함께 말합니다. 입술, 시선, 미소 같은 장식보다 답변 내용을 먼저 씁니다."
+en = "Goal: the target directly answers the player's question. Put at least one relevant target fact into direct speech. Do not copy the question into NPC dialogue. If asked whether something is possible, state whether it is possible and the condition. Write answer content before decorative gestures such as lips, gaze, or smiles."
 
 [runtime."narration.brief.dialogue_forbid"]
 ko = "금지: 현재 장소 밖의 이동 수단, 연결된 장소, 다음 목적지 행동을 이미 일어난 일처럼 쓰기"

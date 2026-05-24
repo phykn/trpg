@@ -323,6 +323,34 @@ def test_graph_front_state_builds_place_from_visible_graph_edges():
     }
 
 
+def test_graph_front_state_orders_active_subject_first_in_place_targets():
+    runtime = _runtime()
+    runtime.graph.nodes["merchant_01"] = _character(
+        "merchant_01",
+        hp=10,
+        max_hp=10,
+        mp=0,
+        max_mp=0,
+    )
+    runtime.graph.edges["located_at:merchant_01:town"] = GraphEdge(
+        id="located_at:merchant_01:town",
+        type="located_at",
+        from_node_id="merchant_01",
+        to_node_id="town",
+    )
+    runtime.progress = runtime.progress.model_copy(
+        update={"active_subject_id": "merchant_01"}
+    )
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.place is not None
+    assert [target.id for target in payload.place.targets] == [
+        "merchant_01",
+        "goblin_01",
+    ]
+
+
 def test_graph_front_state_hides_locked_place_exits():
     runtime = _runtime()
     runtime.graph.nodes["quest_01"].properties["status"] = "active"

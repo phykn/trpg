@@ -36,6 +36,7 @@ def place_payload(
     player_id: str,
     locale: str = "ko",
     content: RuntimeContent | None = None,
+    active_subject_id: str | None = None,
 ) -> GraphPlacePayload | None:
     location_id = location_of(graph, player_id)
     if location_id is None:
@@ -79,6 +80,8 @@ def place_payload(
                 role=optional_str(static_value(target, "role", content)) or "",
             )
         )
+    if active_subject_id is not None:
+        targets.sort(key=_target_key(active_subject_id))
 
     return GraphPlacePayload(
         id=location.id,
@@ -88,6 +91,13 @@ def place_payload(
         items=items,
         targets=targets,
     )
+
+
+def _target_key(active_subject_id: str):
+    def key(target: GraphPlaceTargetPayload) -> tuple[int, str]:
+        return (0 if target.id == active_subject_id else 1, target.id)
+
+    return key
 
 
 def _place_link(

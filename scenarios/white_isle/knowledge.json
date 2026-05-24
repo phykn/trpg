@@ -8,13 +8,19 @@
   "kn_fog_two_person_crossing": {
     "id": "kn_fog_two_person_crossing",
     "title": "동행 이유",
-    "summary": "붉은섬행 배는 두 사람이 마주 앉아 양쪽 노를 맞춰 잡아야 기울지 않는다.",
+    "summary": "붉은섬행 배는 한 사람이 노를 잡고, 다른 사람이 등대 소리와 물살 변화를 확인해야 한다.",
+    "visibility": "public"
+  },
+  "kn_fog_guide_absent": {
+    "id": "kn_fog_guide_absent",
+    "title": "오지 않는 안내인",
+    "summary": "정식 안내인은 안개에 막혀 오지 않는다. 선착장의 엘리가 임시 동행자로 기다린다.",
     "visibility": "public"
   },
   "kn_fog_lost_boat": {
     "id": "kn_fog_lost_boat",
     "title": "돌아오지 않은 배",
-    "summary": "혼자 떠난 배는 한쪽으로 기울어 안개 속에서 사라진다.",
+    "summary": "혼자 떠난 배는 균형을 잃고 항구로 밀려오거나 안개 속에서 사라진다.",
     "visibility": "public"
   },
   "kn_fog_bell": {
@@ -50,7 +56,13 @@
   "kn_eli_route": {
     "id": "kn_eli_route",
     "title": "엘리가 아는 항로",
-    "summary": "엘리는 붉은섬 첫 물길을 안다.",
+    "summary": "엘리는 붉은섬 첫 물길과 늦게 들리는 등대 종소리를 안다.",
+    "visibility": "public"
+  },
+  "kn_eli_imperfect": {
+    "id": "kn_eli_imperfect",
+    "title": "완벽하지 않은 동행자",
+    "summary": "엘리는 정식 안내인이 아니다. 말이 앞설 때가 있고, 길을 다시 확인한다.",
     "visibility": "public"
   },
   "kn_red_first_hint": {
@@ -65,6 +77,18 @@
     "summary": "루카는 노아에게 자기 대신 화를 내 달라고 돈을 냈다.",
     "visibility": "public"
   },
+  "kn_red_origin": {
+    "id": "kn_red_origin",
+    "title": "붉은섬의 분노",
+    "summary": "붉은섬의 분노는 원래 약한 사람이 혼자 참지 않게 돕는 공개 언어였다.",
+    "visibility": "public"
+  },
+  "kn_red_proxy_agent": {
+    "id": "kn_red_proxy_agent",
+    "title": "대리 분노인",
+    "summary": "돈을 받고 남의 분노를 대신 말하는 사람이 있다. 큰 분노일수록 더 잘 팔린다.",
+    "visibility": "public"
+  },
   "kn_red_receipt_holder": {
     "id": "kn_red_receipt_holder",
     "title": "붉은 영수증",
@@ -74,7 +98,7 @@
   "kn_red_refund_claim": {
     "id": "kn_red_refund_claim",
     "title": "환불 요구",
-    "summary": "루카는 자신이 노아에게 낸 대리 분노값을 돌려받고 싶어 한다.",
+    "summary": "루카는 노아의 분노가 자기 억울함보다 싱거웠다며 대리 분노값을 돌려받고 싶어 한다.",
     "visibility": "public"
   },
   "kn_red_noah_empty_hands": {
@@ -86,13 +110,13 @@
   "kn_red_noah_attempt": {
     "id": "kn_red_noah_attempt",
     "title": "노아가 한 일",
-    "summary": "노아는 루카 대신 목소리를 높이고 억울함을 말했다.",
+    "summary": "노아는 돈을 받고 광장에서 루카의 억울함을 큰 소리로 말했다. 군중은 처음에 그 말을 들었다.",
     "visibility": "public"
   },
   "kn_red_noah_limit": {
     "id": "kn_red_noah_limit",
     "title": "노아가 하지 않은 일",
-    "summary": "노아는 책임질 사람의 이름을 말하지 않았고, 군중이 박수칠 만큼 분노를 키우지도 않았다.",
+    "summary": "노아는 책임질 사람의 이름을 말하지 않았고 분노를 크게 키우지도 않았다.",
     "visibility": "public"
   },
   "kn_red_crowd_pressure": {
@@ -104,7 +128,13 @@
   "kn_red_public_record": {
     "id": "kn_red_public_record",
     "title": "공개 기록의 무게",
-    "summary": "에즈라는 감정보다 누가 무엇을 했는지 남기는 문장을 요구한다.",
+    "summary": "에즈라는 누가 돈을 냈고 누가 대신 화냈는지 공개 문장으로 남기자고 한다.",
+    "visibility": "public"
+  },
+  "kn_red_eli_question": {
+    "id": "kn_red_eli_question",
+    "title": "엘리의 질문",
+    "summary": "진짜 분노와 팔린 분노를 어디서 나눌 수 있나.",
     "visibility": "public"
   },
   "kn_blue_empty_room": {

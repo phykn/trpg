@@ -22,7 +22,6 @@ from .ko.terms import (
     QUEST_CONTEXT_TERMS,
     QUEST_TRAVEL_TERMS,
     RECRUIT_TERMS,
-    TARGETED_DIALOGUE_CONFIRM_TERMS,
     WEATHER_TERM,
 )
 
@@ -63,7 +62,6 @@ __all__ = [
     "QUEST_TRAVEL_TERMS",
     "REAL_WORLD_TERMS",
     "RECRUIT_TERMS",
-    "TARGETED_DIALOGUE_CONFIRM_TERMS",
     "WEATHER_TERM",
     "nonlethal_markers",
 ]

@@ -6,7 +6,7 @@
     "name": "올든",
     "mbti": "ISTJ",
     "role": "출항 규칙을 지키는 항구장",
-    "background": "안개 항구의 출항 절차를 맡고, 균형이 맞지 않는 혼자 탄 배는 내보내지 않는다. 붉은섬행 배의 빈자리는 선착장에 있는 엘리가 앉아야 할 자리라고 안다.",
+    "background": "안개 항구의 출항 절차를 맡는다. 정식 안내인이 오지 않는 날에는 혼자 탄 배를 내보내지 않고, 선착장의 엘리를 임시 동행자로 보낸다.",
     "desire": "안개 바다의 사고를 막고 싶다.",
     "fear": "혼자 탄 배가 기울어 돌아오지 못할까 두렵다.",
     "contradiction": "떠나는 사람을 막지만 무사히 떠나길 바란다.",
@@ -19,6 +19,7 @@
     "knowledge": [
       "kn_fog_rule",
       "kn_fog_two_person_crossing",
+      "kn_fog_guide_absent",
       "kn_fog_lost_boat",
       "kn_fog_bell",
       "kn_fog_isles",
@@ -47,8 +48,8 @@
     "gender": "female",
     "name": "엘리",
     "mbti": "ENFP",
-    "role": "끝까지 함께 항해를 맞추는 동행자",
-    "background": "정식 안내인은 아니지만 안개 바다와 첫 물길을 아는 사람이다. 플레이어와 함께 건너기로 이미 마음먹었고, 동행 여부는 설득이나 판정 대상이 아니다.",
+    "role": "첫 물길을 아는 임시 동행자",
+    "background": "정식 안내인을 기다리다 안개가 길을 막자 대신 선착장에 선 항구 보조원이다. 안개 바다를 완전히 알지는 못하지만, 첫 물길과 두 자리 배의 균형은 안다.",
     "desire": "플레이어가 자기 선택을 잃지 않은 채 마지막 섬까지 도착하길 원한다.",
     "fear": "곁에 있다는 이유로 플레이어의 판단을 대신하게 될까 두렵다.",
     "contradiction": "혼자 앞서가고 싶지 않지만, 배가 기우는 순간에는 가장 먼저 노를 잡는다.",
@@ -63,10 +64,13 @@
     "knowledge": [
       "kn_fog_two_person_crossing",
       "kn_fog_two_people",
+      "kn_fog_guide_absent",
       "kn_fog_bell",
       "kn_fog_isles",
       "kn_human_role",
       "kn_eli_route",
+      "kn_eli_imperfect",
+      "kn_red_eli_question",
       "kn_red_first_hint"
     ],
     "level": 1,
@@ -91,7 +95,7 @@
     "name": "루카",
     "mbti": "ESFP",
     "role": "붉은 영수증을 든 의뢰인",
-    "background": "노아에게 자기 대신 화를 내 달라고 돈을 냈지만, 군중 앞의 분노가 싱거웠다며 대리 분노값을 돌려 달라고 한다. 환불 요구자는 루카다.",
+    "background": "노아에게 자기 대신 화를 내 달라고 돈을 냈다. 노아의 분노가 자기 억울함보다 싱거웠다며 대리 분노값을 돌려 달라고 한다.",
     "desire": "자기가 노아에게 낸 대리 분노값과 억울함이 군중 앞에서 인정받길 원한다.",
     "fear": "자기 분노가 돈 주고 빌린 가짜 감정으로 보일까 두렵다.",
     "contradiction": "진심을 증명받고 싶지만 영수증과 환불 언어로만 말한다.",
@@ -104,6 +108,7 @@
     ],
     "knowledge": [
       "kn_red_anger_trade",
+      "kn_red_origin",
       "kn_red_receipt_holder",
       "kn_red_refund_claim",
       "kn_red_crowd_pressure"
@@ -129,9 +134,9 @@
     "gender": "male",
     "name": "노아",
     "mbti": "ENTP",
-    "role": "군중 앞에서 말을 고르는 대리인",
-    "background": "남을 대신해 분노를 말해 주던 사람이지만, 루카의 일을 군중 앞에서 충분히 뜨겁게 만들지 못했다.",
-    "desire": "루카의 억울함을 우스운 상품으로 만들지 않고 책임을 인정하고 싶다.",
+    "role": "돈을 받고 대신 화낸 사람",
+    "background": "처음에는 억울한 사람 대신 말해 주던 사람이었다. 지금은 돈을 받고 분노를 맡으며, 루카의 억울함을 광장에서 말했지만 사건을 더 키우지는 않았다.",
+    "desire": "루카의 억울함을 우스운 상품으로 만들지 않고, 이번 일은 더 커지기 전에 지나가게 하고 싶다.",
     "fear": "군중이 더 큰 분노를 요구해 자기 말이 폭력처럼 변할까 두렵다.",
     "contradiction": "분노를 대신 팔았지만 진짜 책임 앞에서는 목소리를 낮춘다.",
     "appearance": "긴 목, 얇은 입술, 자주 깜박이는 눈, 아무것도 쥐지 않은 두 손",
@@ -143,6 +148,8 @@
     ],
     "knowledge": [
       "kn_red_anger_trade",
+      "kn_red_origin",
+      "kn_red_proxy_agent",
       "kn_red_refund_claim",
       "kn_red_noah_empty_hands",
       "kn_red_noah_attempt",
@@ -171,7 +178,7 @@
     "name": "에즈라",
     "mbti": "ESTJ",
     "role": "게시판 기록을 요구하는 사람",
-    "background": "분노를 흘려보내지 말고 공개 기록으로 남겨야 한다고 믿는다.",
+    "background": "돈을 받고 분노를 맡긴 일과 대신 화낸 일을 공개 기록으로 남겨야 한다고 믿는다. 기록이 사람을 오래 묶을 수 있다는 위험에는 둔하다.",
     "desire": "책임을 문장으로 남겨 반복을 막고 싶다.",
     "fear": "기록되지 않은 책임이 다시 상품이 될까 두렵다.",
     "contradiction": "사람을 지키려 하지만 사람보다 문장을 먼저 고친다.",
@@ -182,7 +189,9 @@
       "기록 없는 분노는 반복된다고 봄"
     ],
     "knowledge": [
-      "kn_red_public_record"
+      "kn_red_public_record",
+      "kn_red_anger_trade",
+      "kn_red_proxy_agent"
     ],
     "level": 1,
     "alive": true,

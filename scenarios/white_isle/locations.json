@@ -2,15 +2,17 @@
   "loc_fog_harbor": {
     "id": "loc_fog_harbor",
     "name": "안개 항구",
-    "description": "짙은 안개가 배의 이름과 사람의 표정을 반쯤 지운다. 올든이 균형이 맞지 않는 혼자 탄 배를 막는 항구",
+    "description": "짙은 안개가 배의 이름과 사람의 표정을 반쯤 지운다. 정식 안내인이 오지 않고, 올든이 혼자 탄 배를 막는 항구",
     "mood": "떠나고 싶은 마음과 붙잡는 규칙이 젖은 나무 냄새 속에 함께 깔린다",
     "traits": [
       "등대 소리가 안개 속에서 한 박자 늦게 들린다",
+      "출항 명부의 안내인 칸은 비어 있다",
       "선착장 쪽 배에 빈자리 하나와 기다리는 사람의 그림자가 보인다"
     ],
     "knowledge": [
       "kn_fog_rule",
       "kn_fog_two_person_crossing",
+      "kn_fog_guide_absent",
       "kn_fog_lost_boat",
       "kn_fog_bell",
       "kn_fog_isles",
@@ -27,11 +29,12 @@
   "loc_fog_pier": {
     "id": "loc_fog_pier",
     "name": "안개 항구 선착장",
-    "description": "엘리가 밧줄 옆에 서 있는 선착장. 붉은섬행 작은 배에는 마주 앉는 두 자리와 짧은 노 두 개뿐이다",
+    "description": "엘리가 밧줄 옆에 서 있는 선착장. 붉은섬행 작은 배에는 마주 앉는 두 자리, 짧은 노 두 개, 물살을 보는 빈 시간이 있다",
     "mood": "혼자 떠나려던 마음이 빈자리 앞에서 둘의 항해로 바뀐다",
     "traits": [
       "젖은 밧줄 옆에 양쪽 균형을 맞출 짧은 노 두 개가 놓여 있다",
-      "엘리는 허락을 기다리는 사람이 아니라 출항의 첫 순간을 함께 확인할 동행자다",
+      "엘리는 허락을 기다리는 사람이 아니라 출항의 첫 순간을 함께 확인할 임시 동행자다",
+      "엘리는 등대 쪽을 보다가 물살을 다시 확인한다",
       "출항 명부는 안개 항구에 남아 있고, 이곳에는 엘리와 묶인 배만 기다린다"
     ],
     "knowledge": [
@@ -39,6 +42,7 @@
       "kn_fog_two_people",
       "kn_fog_bell",
       "kn_eli_route",
+      "kn_eli_imperfect",
       "kn_red_first_hint"
     ],
     "connections": [
@@ -48,7 +52,7 @@
       {
         "target": "loc_red_square",
         "requires_active_quest": "q_fog_depart",
-        "travel_text": "엘리가 노 하나를 들어 보이고, 당신이 다른 노를 잡자 배가 안개 항구의 밧줄을 벗어납니다. 등대 소리는 뒤에서 늦게 따라오고, 물빛은 점점 붉어집니다."
+        "travel_text": "엘리가 등대 소리를 세고, 당신이 노를 맞춥니다. 배는 한 번 기울었다가 바로잡히고, 안개 항구의 밧줄을 벗어납니다. 물빛은 점점 붉어집니다."
       }
     ],
     "items": []
@@ -57,15 +61,17 @@
     "id": "loc_red_square",
     "name": "붉은섬 광장",
     "description": "군중이 둘러선 붉은섬 광장. 루카의 젖은 붉은 영수증과 노아의 빈손이 서로를 향해 있다",
-    "mood": "환불이라는 말이 나올 때마다 박수와 야유가 동시에 터진다",
+    "mood": "환불이라는 말이 나올 때마다 군중의 웅성거림이 한 발 가까워진다",
     "traits": [
-      "군중의 목소리가 작은 불씨처럼 번진다",
+      "광장 벽에는 대신 화내 준다는 낡은 광고지가 붙어 있다",
       "루카의 손에 들린 붉은 종이는 환불 요구서이자 분노 의뢰의 영수증이다",
       "노아의 두 손은 비어 있고, 그는 종이를 든 루카와 군중 사이에서 말을 고른다",
       "광장 바닥에는 환불, 사과, 책임이라는 단어가 서로 다른 목소리로 튄다"
     ],
     "knowledge": [
       "kn_red_anger_trade",
+      "kn_red_origin",
+      "kn_red_proxy_agent",
       "kn_red_receipt_holder",
       "kn_red_refund_claim",
       "kn_red_noah_empty_hands",
@@ -86,10 +92,11 @@
     "traits": [
       "찢긴 사과문 아래로 오래된 사과문이 다시 드러난다",
       "게시판 앞에서는 속삭임도 고발처럼 들린다",
-      "에즈라는 감정을 키우기보다 주어와 행위를 고쳐 적으려 한다"
+      "에즈라는 누가 돈을 냈고 누가 대신 화냈는지 주어와 행위를 고쳐 적으려 한다"
     ],
     "knowledge": [
-      "kn_red_public_record"
+      "kn_red_public_record",
+      "kn_red_proxy_agent"
     ],
     "connections": [
       {

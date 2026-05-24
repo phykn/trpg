@@ -12,7 +12,6 @@ from .grounding import ActionGroundingError, validate_grounded_output
 from .schema import Action, ActionOutput, ClassifyInput, validate_action_output_json
 from .shortcuts import (
     classify_action_shortcut,
-    classify_dialogue_shortcut,
     classify_guard,
 )
 
@@ -38,9 +37,6 @@ async def classify(
     )
     if action_shortcut is not None:
         return validate_grounded_output(action_shortcut, grounding_view)
-    exchange = classify_dialogue_shortcut(input_.player_input, grounding_view)
-    if exchange is not None:
-        return validate_grounded_output(exchange, grounding_view)
 
     def parse(answer: str) -> ActionOutput:
         output = validate_action_output_json(

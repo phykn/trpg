@@ -32,18 +32,32 @@ def _classify_test_context(surroundings: dict) -> dict:
     }
 
 
-class _NoLLM:
+class _DialogueLLM:
+    def __init__(self, target: str = "guide_01") -> None:
+        self.target = target
+        self.calls = []
+
     def pick_fallback(self, agent):
         return None
 
     async def chat(self, messages, **kwargs):
-        raise AssertionError("dialogue shortcut should not call the LLM")
+        self.calls.append({"messages": messages, **kwargs})
+        return {
+            "answer": (
+                '{"intents":[{"intent":"talk",'
+                f'"target":"{self.target}","manner":"friendly"'
+                "}]} "
+            ),
+            "think": "",
+        }
 
 
 @pytest.mark.asyncio
-async def test_korean_question_to_visible_npc_shortcuts_to_speak():
+async def test_korean_question_to_visible_npc_uses_llm_classification():
+    llm = _DialogueLLM()
+
     result = await classify(
-        _NoLLM(),  # type: ignore[arg-type]
+        llm,  # type: ignore[arg-type]
         ClassifyInput(
             player_input="테스트 가이드에게 허수아비 훈련 방법을 물어봅니다.",
             context=_classify_test_context(
@@ -75,8 +89,10 @@ async def test_korean_question_to_visible_npc_shortcuts_to_speak():
     ],
 )
 async def test_joke_or_riddle_continues_recent_npc_dialogue(player_input):
+    llm = _DialogueLLM()
+
     result = await classify(
-        _NoLLM(),  # type: ignore[arg-type]
+        llm,  # type: ignore[arg-type]
         ClassifyInput(
             player_input=player_input,
             context=_classify_test_context(
@@ -97,3 +113,5 @@ async def test_joke_or_riddle_continues_recent_npc_dialogue(player_input):
     assert result.actions[0].verb == "speak"
     assert result.actions[0].to == "guide_01"
     assert result.actions[0].how == "friendly"
+    assert [call["agent"] for call in llm.calls] == ["classify"]
+    assert [call["agent"] for call in llm.calls] == ["classify"]

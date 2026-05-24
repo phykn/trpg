@@ -31,7 +31,7 @@ EXPO_PUBLIC_API_URL=<server URL>
 
 `<server URL>` is either a LAN address (`http://<windows-lan-ip>:8001`) or a Tailscale Funnel domain (`https://<machine>.<tailnet>.ts.net`), depending on the test mode below.
 
-`npm start`, `npm run web`, `npm run android`, and `npm run ios` load `client/.env.shared` then `client/.env.dev`. `npm run deploy` loads `client/.env.shared` then `client/.env.release`.
+`npm start`, `npm run web`, `npm run android`, and `npm run ios` load `client/.env.shared` then `client/.env.dev`. `npm run deploy` delegates to `../release/deploy.ps1 -ClientOnly`, which loads `client/.env.shared` then `client/.env.release`.
 
 ## Phone testing
 
@@ -67,7 +67,7 @@ Install **Expo Go** on the phone (Play Store / App Store).
 
 ## Public web deploy
 
-Static export to Cloudflare Workers (project: `trpg`). Anyone with the URL can open the app in a browser without running a dev server, provided the server on the host PC is reachable via Tailscale Funnel and the deploy URL is listed in server `CORS_ORIGINS`.
+Static export to Cloudflare Workers (project: `trpg`). Anyone with the URL can open the app in a browser without running a dev server, provided `EXPO_PUBLIC_API_URL` points to the release API and the deploy URL is listed in server `CORS_ORIGINS`.
 
 First time only:
 

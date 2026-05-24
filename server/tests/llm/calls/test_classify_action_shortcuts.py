@@ -9,6 +9,16 @@ class _NoCallLLM:
         raise AssertionError("shortcut should avoid the LLM")
 
 
+class _StaticLLM:
+    def __init__(self, answer: str) -> None:
+        self.answer = answer
+        self.calls = []
+
+    async def chat(self, messages, **kwargs):
+        self.calls.append({"messages": messages, **kwargs})
+        return {"answer": self.answer, "think": ""}
+
+
 def _context(*, mode: str = "exploration") -> dict:
     return {
         "mode": mode,
@@ -194,7 +204,7 @@ async def test_korean_active_departure_quest_shortcuts_to_location_move_without_
     assert action.to == "loc_red_square"
 
 
-async def test_korean_departure_rule_question_stays_dialogue_without_llm():
+async def test_korean_departure_rule_question_uses_llm_instead_of_move_shortcut():
     context = _context()
     context["identity"]["visible_targets"] = [
         {"id": "npc_olden", "name": "올든", "type": "npc"}
@@ -208,8 +218,12 @@ async def test_korean_departure_rule_question_stays_dialogue_without_llm():
         {"id": "loc_fog_pier", "name": "안개 항구 선착장"},
     ]
 
+    llm = _StaticLLM(
+        '{"intents":[{"intent":"talk","target":"npc_olden","manner":"friendly"}]}'
+    )
+
     output = await classify(
-        _NoCallLLM(),
+        llm,
         ClassifyInput(
             player_input="올든에게 출항 규칙과 혼자 탄 배가 왜 사라지는지 확인합니다",
             context=context,
@@ -221,29 +235,7 @@ async def test_korean_departure_rule_question_stays_dialogue_without_llm():
     action = output.actions[0]
     assert action.verb == "speak"
     assert action.to == "npc_olden"
-
-
-async def test_korean_named_dialogue_target_overrides_recent_npc_without_llm():
-    context = _context()
-    context["identity"]["visible_targets"] = [
-        {"id": "npc_luka", "name": "루카", "type": "npc"},
-        {"id": "npc_noah", "name": "노아", "type": "npc"},
-    ]
-    context["references"]["recent_npc"] = {"id": "npc_luka", "name": "루카"}
-
-    output = await classify(
-        _NoCallLLM(),
-        ClassifyInput(
-            player_input="노아에게 루카 대신 무엇을 했고 무엇을 하지 않았는지 분명히 말해 달라고 합니다.",
-            context=context,
-        ),
-        locale="ko",
-    )
-
-    assert output.actions is not None
-    action = output.actions[0]
-    assert action.verb == "speak"
-    assert action.to == "npc_noah"
+    assert [call["agent"] for call in llm.calls] == ["classify"]
 
 
 async def test_korean_quest_choice_label_shortcuts_to_decide_without_llm():

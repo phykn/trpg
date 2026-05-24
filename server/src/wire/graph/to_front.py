@@ -23,7 +23,13 @@ def graph_to_front_state(runtime: GameRuntimeState) -> GraphFrontStatePayload:
         scenario_completed=scenario_completed,
         quest=active_quest_payload(runtime),
         quest_offers=quest_offer_payloads(runtime),
-        place=place_payload(graph, player_id, runtime.progress.locale, runtime.content),
+        place=place_payload(
+            graph,
+            player_id,
+            runtime.progress.locale,
+            runtime.content,
+            runtime.progress.active_subject_id,
+        ),
         combat=combat_payload(runtime),
         pending_confirmation=_pending_confirmation_payload(
             runtime.progress.pending_confirmation
