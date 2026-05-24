@@ -304,6 +304,21 @@ def test_dialogue_brief_includes_target_public_knowledge_before_player_input():
     assert brief.splitlines()[-1] == "플레이어 입력: 항구장에게 출항 규칙을 묻습니다"
 
 
+def test_dialogue_brief_prioritizes_answer_over_decorative_gestures():
+    brief = build_narration_brief(
+        {
+            "user_request": {"player_input": "올든에게 여기가 어디인지 묻습니다"},
+            "engine_event": {"kind": "dialogue"},
+            "scene_state": {
+                "scene_anchor": {"location": {"name": "안개 항구"}},
+                "target_view": {"name": "올든"},
+            },
+        }
+    )
+
+    assert "입술, 시선, 미소 같은 장식보다 답변 내용을 먼저 씁니다." in brief
+
+
 def test_dialogue_brief_includes_current_place_details_and_future_place_forbid():
     brief = build_narration_brief(
         {
