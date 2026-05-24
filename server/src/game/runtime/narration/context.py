@@ -674,9 +674,11 @@ def _story_transition_payload(
     if next_quests:
         next_quest = next_quests[0]
         payload["next_quest"] = next_quest
-        handoff = _transition_handoff(after, next_quest["id"])
-        if handoff:
-            payload["handoff"] = handoff
+    handoff = _transition_handoff_for_completed(after, completed_quests)
+    if handoff is None and next_quests:
+        handoff = _transition_handoff(after, next_quests[0]["id"])
+    if handoff:
+        payload["handoff"] = handoff
     return payload
 
 
@@ -707,6 +709,17 @@ def _transition_handoff(runtime: GameRuntimeState, quest_id: str) -> str | None:
     if quest is None or quest.type != "quest":
         return None
     return node_text(runtime.content, quest, "handoff")
+
+
+def _transition_handoff_for_completed(
+    runtime: GameRuntimeState,
+    completed_quests: list[dict[str, str]],
+) -> str | None:
+    for quest in completed_quests:
+        handoff = _transition_handoff(runtime, quest["id"])
+        if handoff:
+            return handoff
+    return None
 
 
 def _arrival_branch_results(

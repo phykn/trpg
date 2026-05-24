@@ -210,6 +210,7 @@ def test_build_seed_graph_keeps_static_content_out_of_seed_nodes():
     assert bundle.content.locations["town"]["name"] == "마을"
     assert bundle.content.items["potion"]["description"] == "붉은 회복 물약입니다."
     assert bundle.content.quests["quest_01"]["title"] == "첫 의뢰"
+    assert bundle.graph.nodes["quest_01"].properties["giver"] == "elder"
 
 
 def test_build_seed_graph_keeps_reward_items_out_of_visible_placement():

@@ -49,6 +49,10 @@ def classify_action_shortcut(
     if decision is not None:
         return _action_output([decision])
 
+    quest_move = _active_quest_location_move_action(player_input, surroundings)
+    if quest_move is not None:
+        return _action_output([quest_move])
+
     if surroundings.get("in_combat") is True and _has_any(
         player_input, ACTION_CREATE_DISTANCE_TERMS
     ):
@@ -132,10 +136,40 @@ def _quest_decide_action(
     return None
 
 
+def _active_quest_location_move_action(
+    player_input: str,
+    surroundings: dict[str, Any],
+) -> Action | None:
+    if not _looks_like_quest_travel(player_input):
+        return None
+    exits = {
+        entry["id"]
+        for entry in _dicts(surroundings.get("entities"))
+        if entry.get("type") == "connection" and isinstance(entry.get("id"), str)
+    }
+    if not exits:
+        return None
+    targets: list[str] = []
+    for quest in _dicts(surroundings.get("quests")):
+        if not isinstance(quest.get("id"), str):
+            continue
+        for target in quest.get("location_targets", []):
+            if isinstance(target, str) and target in exits:
+                targets.append(target)
+    targets = list(dict.fromkeys(targets))
+    if len(targets) != 1:
+        return None
+    return Action(verb="move", to=targets[0])
+
+
 def _looks_like_quest_accept(player_input: str) -> bool:
     if not _has_any(player_input, QUEST_ACCEPT_TERMS):
         return False
     return _has_any(player_input, QUEST_CONTEXT_TERMS)
+
+
+def _looks_like_quest_travel(player_input: str) -> bool:
+    return _has_any(player_input, ("출항", "항해", "떠나", "떠납", "건너"))
 
 
 def _named_giver_quest(

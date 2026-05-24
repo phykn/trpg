@@ -314,6 +314,24 @@ def test_classify_context_to_grounding_view_preserves_active_quest_id():
     assert context["affordances"]["can_decide"] == ["record", "release"]
 
 
+def test_classify_context_exposes_active_quest_location_targets():
+    runtime = _runtime(active_quest=True)
+    runtime.graph.nodes["quest_01"].properties["triggers"] = [
+        {"type": "location_enter", "target": "forest"}
+    ]
+
+    context = build_classify_context_view(runtime, "숲으로 떠난다")
+    grounding = classify_context_to_grounding_view(context)
+
+    assert grounding["quests"] == [
+        {
+            "id": "quest_01",
+            "name": "통행 의뢰",
+            "location_targets": ["forest"],
+        }
+    ]
+
+
 def test_classify_context_exposes_visible_pending_quest_for_acceptance():
     runtime = _runtime()
     runtime.graph.nodes["quest_01"] = GraphNode(

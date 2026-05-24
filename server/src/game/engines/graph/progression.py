@@ -77,7 +77,11 @@ def plan_progression_after_quest_completion(
                 continue
             if not _prerequisites_met(graph, quest_id, status):
                 continue
-            set_status(quest_id, "pending")
+            if _auto_activate_when_unlocked(graph, quest_id) and next_active_quest_id is None:
+                set_status(quest_id, "active")
+                next_active_quest_id = quest_id
+            else:
+                set_status(quest_id, "pending")
             changed = True
 
         auto_completed = _auto_complete_satisfied_location_quest(
@@ -141,6 +145,15 @@ def _quest_ids_for_chapter(graph: Graph, chapter_id: str) -> list[str]:
 def _is_required_quest(graph: Graph, quest_id: str) -> bool:
     node = graph.nodes.get(quest_id)
     return node is not None and node.type == "quest" and node.properties.get("required") is not False
+
+
+def _auto_activate_when_unlocked(graph: Graph, quest_id: str) -> bool:
+    node = graph.nodes.get(quest_id)
+    return (
+        node is not None
+        and node.type == "quest"
+        and node.properties.get("auto_activate_when_unlocked") is True
+    )
 
 
 def _prerequisites_met(graph: Graph, node_id: str, status) -> bool:

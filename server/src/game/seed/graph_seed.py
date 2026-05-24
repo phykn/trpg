@@ -345,7 +345,7 @@ def _build_player(
 
 
 def _quest_graph_properties(quest: SeedRecord) -> dict[str, Any]:
-    properties = _node_properties(quest, exclude={"giver", "rewards", "triggers"})
+    properties = _node_properties(quest, exclude={"rewards", "triggers"})
     triggers = _trigger_graph_properties(quest.get("triggers"))
     if triggers:
         properties["triggers"] = triggers

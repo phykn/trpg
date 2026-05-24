@@ -48,6 +48,7 @@
     ],
     "status": "locked",
     "required": true,
+    "auto_activate_when_unlocked": true,
     "rewards": {
       "gold": 0,
       "exp": 0,

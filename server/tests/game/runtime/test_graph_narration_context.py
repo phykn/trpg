@@ -1060,16 +1060,16 @@ def test_action_payload_includes_story_transition_without_forcing_solution():
     before.graph.nodes["quest_done"] = GraphNode(
         id="quest_done",
         type="quest",
-        properties={"title": "분노 환불 사건", "status": "active"},
+        properties={
+            "title": "분노 환불 사건",
+            "status": "active",
+            "handoff": "엘리는 빈방 이야기는 레아에게서 시작될 것 같다고 말합니다.",
+        },
     )
     before.graph.nodes["quest_next"] = GraphNode(
         id="quest_next",
         type="quest",
-        properties={
-            "title": "빈방 사건",
-            "status": "locked",
-            "handoff": "엘리는 빈방 이야기는 레아에게서 시작될 것 같다고 말합니다.",
-        },
+        properties={"title": "빈방 사건", "status": "locked"},
     )
     after = before.model_copy(deep=True)
     after.graph.nodes["chapter_01"].properties["status"] = "completed"

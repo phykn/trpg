@@ -401,6 +401,51 @@ async def test_one_way_unlocked_move_requires_confirmation(tmp_path):
     assert "located_at:player_01:red_square" not in saved_graph.edges
 
 
+async def test_one_way_active_quest_move_requires_confirmation(tmp_path):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["town"].properties["name"] = "안개 부두"
+    graph.nodes["red_square"] = GraphNode(
+        id="red_square",
+        type="location",
+        properties={"name": "붉은 광장"},
+    )
+    graph.nodes["fog_depart"] = GraphNode(
+        id="fog_depart",
+        type="quest",
+        properties={"title": "첫 출항", "status": "active"},
+    )
+    graph.edges["connects_to:town:red_square"] = GraphEdge(
+        id="connects_to:town:red_square",
+        type="connects_to",
+        from_node_id="town",
+        to_node_id="red_square",
+        properties={"requires_active_quest": "fog_depart"},
+    )
+    await repo.save_graph("game-1", graph)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(update={"active_quest_id": "fog_depart"})
+    )
+
+    result = await run_graph_action_request(
+        repo,
+        "game-1",
+        Action(verb="move", to="red_square"),
+    )
+    saved_graph = await repo.load_graph("game-1")
+
+    assert result.status == "confirmation_required"
+    assert result.front_state.pending_confirmation is not None
+    assert result.front_state.pending_confirmation.title == "이동을 확정하시겠습니까?"
+    assert (
+        result.front_state.pending_confirmation.body
+        == "붉은 광장으로 이동하면 안개 부두로 돌아올 수 없습니다."
+    )
+    assert "located_at:player_01:town" in saved_graph.edges
+    assert "located_at:player_01:red_square" not in saved_graph.edges
+
+
 async def test_bidirectional_unlocked_move_does_not_require_confirmation(tmp_path):
     repo = await _repo(tmp_path)
     graph = await repo.load_graph("game-1")

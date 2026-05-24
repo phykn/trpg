@@ -471,11 +471,11 @@ ko = "당신은 살피지만, 눈앞의 흔적은 뚜렷한 답을 내주지 않
 en = "You study the scene, but the traces before you do not yield a clear answer."
 
 [runtime."roll.resolve.speak.success"]
-ko = "당신의 말은 {target}에게 닿고, {target}{은/는} 더 분명한 반응을 보입니다."
+ko = "{target}{은/는} 당신의 말을 듣고, 더 분명한 반응을 보입니다."
 en = "Your words reach {target}, drawing a clearer response."
 
 [runtime."roll.resolve.speak.failure"]
-ko = "당신의 말은 닿지만, {target}{은/는} 쉽게 마음을 열지 않습니다."
+ko = "{target}{은/는} 당신의 말을 듣지만, 쉽게 마음을 열지 않습니다."
 en = "Your words reach {target}, but they do not open up easily."
 
 [runtime."roll.suggestion.retry_speak.label"]

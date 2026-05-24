@@ -268,10 +268,29 @@ def _active_quest(runtime: GameRuntimeState) -> dict[str, Any] | None:
         "id": node.id,
         "name": node_label(runtime.content, node),
     }
+    location_targets = _quest_location_targets(node)
+    if location_targets:
+        payload["location_targets"] = location_targets
     choices = _quest_choices(node) if quest_ready_to_decide(node) else []
     if choices:
         payload["choices"] = choices
     return payload
+
+
+def _quest_location_targets(node: GraphNode) -> list[str]:
+    out: list[str] = []
+    raw = node.properties.get("triggers")
+    if not isinstance(raw, list):
+        return out
+    for trigger in raw:
+        if not isinstance(trigger, dict):
+            continue
+        if trigger.get("type") != "location_enter":
+            continue
+        target = trigger.get("target")
+        if isinstance(target, str):
+            out.append(target)
+    return list(dict.fromkeys(out))
 
 
 def _available_quests(

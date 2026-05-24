@@ -134,6 +134,66 @@ async def test_korean_visible_quest_accept_shortcuts_without_llm():
     assert action.how == "accept"
 
 
+async def test_korean_departure_accepts_single_visible_pending_quest_without_llm():
+    context = _context()
+    context["identity"]["visible_targets"] = [
+        {"id": "npc_eli", "name": "엘리", "type": "npc"}
+    ]
+    context["identity"]["available_quests"] = [
+        {
+            "id": "q_fog_depart",
+            "name": "첫 출항",
+            "status": "pending",
+            "giver": "npc_eli",
+            "giver_name": "엘리",
+        }
+    ]
+
+    output = await classify(
+        _NoCallLLM(),
+        ClassifyInput(
+            player_input="엘리와 함께 배에 올라 붉은섬으로 떠납니다",
+            context=context,
+        ),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    action = output.actions[0]
+    assert action.verb == "transfer"
+    assert action.what == "q_fog_depart"
+    assert action.from_ == "npc_eli"
+    assert action.to == "player_01"
+    assert action.how == "accept"
+
+
+async def test_korean_active_departure_quest_shortcuts_to_location_move_without_llm():
+    context = _context()
+    context["identity"]["active_quest"] = {
+        "id": "q_fog_depart",
+        "name": "첫 출항",
+        "location_targets": ["loc_red_square"],
+    }
+    context["identity"]["exits"] = [
+        {"id": "loc_fog_harbor", "name": "안개 항구"},
+        {"id": "loc_red_square", "name": "붉은 광장"},
+    ]
+
+    output = await classify(
+        _NoCallLLM(),
+        ClassifyInput(
+            player_input="엘리와 함께 배에 올라 붉은섬으로 떠납니다",
+            context=context,
+        ),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    action = output.actions[0]
+    assert action.verb == "move"
+    assert action.to == "loc_red_square"
+
+
 async def test_korean_quest_choice_label_shortcuts_to_decide_without_llm():
     context = _context()
     context["identity"]["active_quest"] = {

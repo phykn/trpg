@@ -101,6 +101,21 @@ def test_progression_unlocks_next_required_quest_as_pending_and_chapter():
     assert changed.nodes["chapter_02"].properties["status"] == "active"
 
 
+def test_progression_auto_activates_marked_unlocked_quest_when_slot_opens():
+    graph = _graph()
+    graph.nodes["q2"].properties["auto_activate_when_unlocked"] = True
+
+    result = plan_progression_after_quest_completion(
+        graph,
+        completed_quest_ids=["q1"],
+        active_quest_id="q1",
+    )
+    changed = _apply_all(graph, result.changes)
+
+    assert result.next_active_quest_id == "q2"
+    assert changed.nodes["q2"].properties["status"] == "active"
+
+
 def test_progression_marks_scenario_completed_when_no_required_quest_remains():
     graph = _graph()
     graph.nodes["chapter_01"].properties["status"] = "completed"
