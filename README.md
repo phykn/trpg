@@ -7,7 +7,7 @@ trpg/
   server/     FastAPI + Pydantic v2 + OpenAI-compatible LLM. Game engine. → server/README.md
   client/     Expo (React Native) single-screen client. → client/README.md
   agency/     Browser QA skill + local Story tools. → agency/README.md
-  scenarios/  Local seed source (one dir per profile). Uploaded to release Storage via agency.story.tools.storage upload.
+  scenarios/  Local seed source (one dir per profile). Release Storage sync via agency.story.tools.storage.
 ```
 
 Stack: Python 3.12+ · Pydantic v2 · FastAPI · OpenAI-compatible LLM (local OpenAI-compatible server / Gemini hosted) · Supabase Postgres + Storage · Expo SDK 54 / RN 0.81 / React 19 · NativeWind v4. Runtime graph saves live in Supabase Postgres by default; dev can use local graph/scenario repos through env. Setup details live in each sub-README.
@@ -37,4 +37,4 @@ git push origin main
 npm run deploy
 ```
 
-One-time setup: upload scenarios with `APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload scenarios/<profile>`; install + auth wrangler with `npm install -g wrangler && wrangler login`; add the deploy URL to server `CORS_ORIGINS`.
+One-time setup: sync scenarios with `APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload scenarios/<profile>` (also supports `download` and `delete`); install + auth wrangler with `npm install -g wrangler && wrangler login`; add the deploy URL to server `CORS_ORIGINS`.
