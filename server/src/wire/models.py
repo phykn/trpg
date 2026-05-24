@@ -136,6 +136,7 @@ class GraphPlaceTargetPayload(_CamelModel):
     name: str
     kind: Literal["npc"]
     alive: bool
+    can_attack: bool
     level: int
     race_job: str
     gender: str

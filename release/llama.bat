@@ -7,7 +7,7 @@ if not defined NAME set "NAME=%MODEL_ID%"
 if not defined PORT set "PORT=8000"
 if not defined LLAMA_CPP_CTX set "LLAMA_CPP_CTX=32768"
 if not defined LLAMA_CPP_IMAGE set "LLAMA_CPP_IMAGE=ghcr.io/ggml-org/llama.cpp:server-cuda"
-if not defined LLAMA_CPP_MODEL_PATH set "LLAMA_CPP_MODEL_PATH=/models/gemma-4-E4B-it-Q6_K.gguf"
+if not defined LLAMA_CPP_MODEL_PATH set "LLAMA_CPP_MODEL_PATH=/models/gemma-4-E4B-it-ultra-uncensored-heretic-Q6_K.gguf"
 if not defined LLAMA_CPP_MODEL_VOLUME set "LLAMA_CPP_MODEL_VOLUME=/home/kn/models:/models"
 
 if not defined LLAMA_CPP_SUDO_PASSWORD (

@@ -53,6 +53,8 @@ def plan_combat_start(
         raise GraphCombatError("combat requires different characters")
     _require_player_can_fight(player)
     _require_combatant_can_fight(enemy)
+    if enemy.properties.get("protected") is True:
+        raise GraphCombatError("protected target cannot be attacked")
 
     player_location = location_of(graph, player_id)
     enemy_location = location_of(graph, enemy_id)

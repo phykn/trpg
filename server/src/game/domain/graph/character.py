@@ -13,6 +13,10 @@ def can_character_fight(node: GraphNode) -> bool:
     return not (isinstance(status, list) and "dead" in status)
 
 
+def can_character_be_attacked(node: GraphNode) -> bool:
+    return can_character_fight(node) and node.properties.get("protected") is not True
+
+
 def is_visible_character(node: GraphNode) -> bool:
     return can_character_fight(node)
 

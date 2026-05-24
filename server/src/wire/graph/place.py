@@ -1,6 +1,7 @@
 from src.game.domain.content import RuntimeContent
 from src.game.domain.graph import Graph, GraphNode
 from src.game.domain.graph.character import (
+    can_character_be_attacked,
     can_character_fight,
     graph_character_kind,
     is_visible_character,
@@ -74,6 +75,7 @@ def place_payload(
                 name=node_name(target, content),
                 kind=graph_character_kind(target),
                 alive=can_character_fight(target),
+                can_attack=can_character_be_attacked(target),
                 level=int_prop_default(target, "level", 1),
                 race_job=character_race_job(target, content),
                 gender=character_gender(target, locale, content),

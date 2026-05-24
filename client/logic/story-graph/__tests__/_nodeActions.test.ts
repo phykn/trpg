@@ -51,6 +51,30 @@ describe('actionsForNode', () => {
     ]);
   });
 
+  test('does not offer attack for a non-attackable reachable target', () => {
+    const actions = actionsForNode({
+      id: 'child_01',
+      label: '아이',
+      kind: 'target',
+      status: 'reachable_meet',
+      reachable: true,
+      level: 1,
+      raceJob: '',
+      gender: '',
+      role: '',
+      alive: true,
+      canAttack: false,
+    } as TargetNode & { canAttack: false });
+
+    expect(actions).toEqual([
+      expect.objectContaining({
+        kind: 'text',
+        label: '접근',
+        text: '아이에게 접근합니다',
+      }),
+    ]);
+  });
+
   test('offers a pickup graph action for reachable items', () => {
     const actions = actionsForNode({
       id: 'supply_token',

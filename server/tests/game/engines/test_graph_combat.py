@@ -182,6 +182,14 @@ def test_combat_start_allows_enemy_without_hp_or_mp_resources():
     assert result.state.outcome == "ongoing"
 
 
+def test_combat_start_rejects_protected_target():
+    graph = _graph()
+    graph.nodes["goblin_01"].properties["protected"] = True
+
+    with pytest.raises(GraphCombatError, match="protected target cannot be attacked"):
+        plan_combat_start(graph, "player_01", "goblin_01")
+
+
 def test_combat_start_validates_target_and_location():
     with pytest.raises(GraphCombatError, match="missing character"):
         plan_combat_start(_graph(), "player_01", "ghost")
