@@ -1,5 +1,5 @@
 import React from 'react';
-import { Keyboard, Pressable, Text, View } from 'react-native';
+import { Keyboard, Platform, Pressable, Text, View, type KeyboardEvent } from 'react-native';
 
 import { CombatStrip } from '@/logic/combat';
 import { buildDecisionState, DecisionStateStrip } from '@/logic/decision-state';
@@ -17,6 +17,17 @@ import { ko } from '@/locale/ko';
 
 type Props = { game: Game };
 
+type NavigatorWithVirtualKeyboard = Navigator & {
+  virtualKeyboard?: EventTarget & { boundingRect: DOMRectReadOnly };
+};
+
+function isEditableElementFocused() {
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName.toLowerCase();
+  return tag === 'input' || tag === 'textarea' || el.getAttribute('contenteditable') === 'true';
+}
+
 export function Playing({ game }: Props) {
   const { hero, subject, chapter, quest, questOffers, place, combat, storyGraph, log, pendingConfirmation, pendingRoll, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onCombatCommand, onConfirmPending, onRollPending, onStop, goToNewGame, levelUpOpen, levelUpChoices, levelUpLoading, openLevelUp, cancelLevelUp, commitLevelUp } = game;
 
@@ -27,6 +38,8 @@ export function Playing({ game }: Props) {
   const [newGameConfirmOpen, setNewGameConfirmOpen] = React.useState(false);
   const [nearbyOpen, setNearbyOpen] = React.useState(false);
   const [bottomOverlayHeight, setBottomOverlayHeight] = React.useState(0);
+  const [keyboardOverlayHeight, setKeyboardOverlayHeight] = React.useState(0);
+  const [playSurfaceHeight, setPlaySurfaceHeight] = React.useState(0);
   const { bgmOn, toggle: toggleBgm } = useBgm();
 
   const runAction = (action: PanelAction) => {
@@ -67,8 +80,37 @@ export function Playing({ game }: Props) {
   };
 
   React.useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', () => setTyping(true));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setTyping(false));
+    if (Platform.OS === 'web') {
+      const updateWebKeyboardOverlayHeight = () => {
+        const webNavigator = navigator as NavigatorWithVirtualKeyboard;
+        const keyboardHeight = webNavigator.virtualKeyboard?.boundingRect.height ?? 0;
+        const visualViewportHeight = isEditableElementFocused() && window.visualViewport
+          ? Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop)
+          : 0;
+        const nextHeight = Math.max(keyboardHeight, visualViewportHeight);
+        setTyping(nextHeight > 0);
+        setKeyboardOverlayHeight(nextHeight);
+      };
+      const webNavigator = navigator as NavigatorWithVirtualKeyboard;
+      webNavigator.virtualKeyboard?.addEventListener('geometrychange', updateWebKeyboardOverlayHeight);
+      window.visualViewport?.addEventListener('resize', updateWebKeyboardOverlayHeight);
+      window.visualViewport?.addEventListener('scroll', updateWebKeyboardOverlayHeight);
+      updateWebKeyboardOverlayHeight();
+      return () => {
+        webNavigator.virtualKeyboard?.removeEventListener('geometrychange', updateWebKeyboardOverlayHeight);
+        window.visualViewport?.removeEventListener('resize', updateWebKeyboardOverlayHeight);
+        window.visualViewport?.removeEventListener('scroll', updateWebKeyboardOverlayHeight);
+      };
+    }
+
+    const show = Keyboard.addListener('keyboardDidShow', (ev: KeyboardEvent) => {
+      setTyping(true);
+      setKeyboardOverlayHeight(ev.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => {
+      setTyping(false);
+      setKeyboardOverlayHeight(0);
+    });
     return () => {
       show.remove();
       hide.remove();
@@ -78,6 +120,7 @@ export function Playing({ game }: Props) {
   React.useEffect(() => {
     if (typing) {
       setActiveId(null);
+      setNearbyOpen(false);
     }
   }, [typing]);
 
@@ -148,7 +191,16 @@ export function Playing({ game }: Props) {
   if (!hero) return null;
   const showRollPanel = pendingRoll !== null && !streaming;
   return (
-    <View className="flex-1 bg-canvas-default py-2.5 gap-2.5">
+    <View
+      className="flex-1 bg-canvas-default py-2.5 gap-2.5"
+      onLayout={(ev) => {
+        const nextHeight = ev.nativeEvent.layout.height;
+        setPlaySurfaceHeight((prev) => Math.max(prev, nextHeight));
+      }}
+      style={{
+        height: keyboardOverlayHeight > 0 && playSurfaceHeight > 0 ? playSurfaceHeight : undefined,
+      }}
+    >
       <ContextCard
         slots={slots}
         activeId={activeId}
@@ -240,6 +292,7 @@ export function Playing({ game }: Props) {
         log={log}
         typing={awaitingNarration}
         bottomInset={bottomOverlayHeight}
+        keyboardOverlayActive={keyboardOverlayHeight > 0}
       />
 
       {errorMessage ? (
@@ -256,7 +309,7 @@ export function Playing({ game }: Props) {
           position: 'absolute',
           left: 0,
           right: 0,
-          bottom: 0,
+          bottom: keyboardOverlayHeight,
           zIndex: activeId !== null || nearbyOpen ? 10 : 0,
         }}
       >

@@ -15,6 +15,26 @@ describe('Playing overlay layering', () => {
     expect(source).toContain('setBottomOverlayHeight(ev.nativeEvent.layout.height)');
   });
 
+  test('moves only the bottom controls when the keyboard opens', () => {
+    expect(source).toContain('Platform.OS === \'web\'');
+    expect(source).toContain('updateWebKeyboardOverlayHeight');
+    expect(source).toContain('window.visualViewport');
+    expect(source).toContain('webNavigator.virtualKeyboard?.boundingRect.height');
+    expect(source).toContain('isEditableElementFocused');
+    expect(source).toContain('const [keyboardOverlayHeight, setKeyboardOverlayHeight] = React.useState(0);');
+    expect(source).toContain('setKeyboardOverlayHeight(ev.endCoordinates.height)');
+    expect(source).toContain('setKeyboardOverlayHeight(0)');
+    expect(source).toContain('bottom: keyboardOverlayHeight');
+    expect(source).toContain('keyboardOverlayActive={keyboardOverlayHeight > 0}');
+    expect(source).not.toContain('bottomInset={bottomOverlayHeight + keyboardOverlayHeight}');
+  });
+
+  test('freezes the play surface height while the keyboard overlays the screen', () => {
+    expect(source).toContain('const [playSurfaceHeight, setPlaySurfaceHeight] = React.useState(0);');
+    expect(source).toContain('setPlaySurfaceHeight((prev) => Math.max(prev, nextHeight));');
+    expect(source).toContain('height: keyboardOverlayHeight > 0 && playSurfaceHeight > 0 ? playSurfaceHeight : undefined');
+  });
+
   test('uses shared panel slot builder so active quests and offers stay separate', () => {
     expect(source).toContain('buildPanelSlots');
     expect(source).not.toContain('quest ?? questOffers[0] ?? null');
@@ -64,6 +84,13 @@ describe('Playing overlay layering', () => {
     expect(source).toContain('if (open) setActiveId(null);');
     expect(source).toContain('onNearbyOpenChange={setNearbyOpenFromComposer}');
     expect(source).toContain('setNearbyOpen(false);');
+  });
+
+  test('closes floating panels when the keyboard opens', () => {
+    expect(source).toContain(`if (typing) {
+      setActiveId(null);
+      setNearbyOpen(false);
+    }`);
   });
 
   test('only uses cues from the last log entry when it is GM narration', () => {

@@ -62,10 +62,12 @@ export function Log({
   log,
   typing,
   bottomInset = 0,
+  keyboardOverlayActive = false,
 }: {
   log: LogEntry[];
   typing: boolean;
   bottomInset?: number;
+  keyboardOverlayActive?: boolean;
 }) {
   const ref = React.useRef<FlatList<LogEntry>>(null);
   const [viewportH, setViewportH] = React.useState(0);
@@ -101,7 +103,7 @@ export function Log({
       onLayout={(ev) => {
         const nextViewportH = ev.nativeEvent.layout.height;
         setViewportH(nextViewportH);
-        syncScrollPosition(contentH.current, nextViewportH);
+        if (!keyboardOverlayActive) syncScrollPosition(contentH.current, nextViewportH);
       }}
       onContentSizeChange={onContentSizeChange}
       contentContainerStyle={{

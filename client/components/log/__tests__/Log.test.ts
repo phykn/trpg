@@ -22,4 +22,10 @@ describe('Log scroll behavior', () => {
     expect(source).toContain('bottomInset = 0');
     expect(source).toContain('paddingBottom: spacing[6] + bottomInset');
   });
+
+  test('does not auto-scroll on viewport changes while the keyboard overlay is active', () => {
+    expect(source).toContain('keyboardOverlayActive = false');
+    expect(source).toContain('keyboardOverlayActive?: boolean');
+    expect(source).toContain('if (!keyboardOverlayActive) syncScrollPosition(contentH.current, nextViewportH);');
+  });
 });
