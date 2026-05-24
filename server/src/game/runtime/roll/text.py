@@ -5,6 +5,7 @@ from typing import Any
 from src.game.domain.action import Action
 from src.game.domain.content import node_label, node_text
 from src.locale.render import render
+from src.locale.terms import ROLL_MEANINGFUL_CLUE_TERMS, ROLL_NO_CLUE_MARKERS
 
 from .pending import roll_action_target
 
@@ -40,6 +41,7 @@ def prepare_roll_narration_text(
     text = _clean_roll_meta_phrase(text)
     text = strip_repeated_preroll_text(resolved, text)
     text = _append_missing_completed_quest_text(resolved, text)
+    text = _remove_success_contradiction(resolved, text)
     if ensure_resolution:
         text = _ensure_roll_resolution_text(resolved, text)
     return text
@@ -103,6 +105,31 @@ def _clean_roll_meta_phrase(text: str) -> str:
         "",
         text,
     ).strip()
+
+
+def _remove_success_contradiction(resolved: Any, text: str) -> str:
+    if resolved.outcome != "success":
+        return text
+    if resolved.action.verb != "perceive":
+        return text
+    sentences = _split_korean_sentences(text)
+    if not sentences:
+        return text
+    kept = [
+        sentence
+        for sentence in sentences
+        if not _looks_like_no_clue_contradiction(sentence)
+    ]
+    if len(kept) == len(sentences):
+        return text
+    return " ".join(kept).strip()
+
+
+def _looks_like_no_clue_contradiction(sentence: str) -> bool:
+    normalized = _normalize_korean_sentence(sentence)
+    if not any(term in normalized for term in ROLL_MEANINGFUL_CLUE_TERMS):
+        return False
+    return any(marker in normalized for marker in ROLL_NO_CLUE_MARKERS)
 
 
 def _looks_like_preroll_repeat(sentence: str, body_sentences: list[str]) -> bool:

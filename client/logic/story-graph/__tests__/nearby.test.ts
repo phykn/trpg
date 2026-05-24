@@ -121,6 +121,22 @@ describe('buildNearbyPanel', () => {
     );
   });
 
+  test('does not repeat the quest title as the task body', () => {
+    const panel = buildNearbyPanel({
+      ...graph,
+      nodes: graph.nodes.map((node) => node.kind === 'quest'
+        ? {
+            ...node,
+            label: '새 출발 축하식 사건',
+            goals: ['새 출발 축하식 사건'],
+            summary: '새 출발 축하식 사건',
+          }
+        : node),
+    });
+
+    expect(panel.items.find((item) => item.id === 'notice')?.body).toBe('');
+  });
+
   test('shows abandon as the only task action for accepted quests', () => {
     const panel = buildNearbyPanel({
       ...graph,

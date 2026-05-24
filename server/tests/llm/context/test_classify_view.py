@@ -328,6 +328,14 @@ def test_classify_context_exposes_active_quest_location_targets():
             "id": "quest_01",
             "name": "통행 의뢰",
             "location_targets": ["forest"],
+            "location_routes": [
+                {
+                    "target_id": "forest",
+                    "target_name": "숲",
+                    "next_exit_id": "forest",
+                    "next_exit_name": "숲",
+                }
+            ],
         }
     ]
 

@@ -16,6 +16,7 @@ DIALOGUE_TERMS = (
     "뭔줄 알아",
 )
 DIALOGUE_TARGET_PARTICLES = ("에게", "한테")
+DIALOGUE_GENERIC_TARGETS = ("그", "그 사람", "그들", "동료", "상대", "사람")
 DIALOGUE_REQUEST_TERMS = ("달라고",)
 HOSTILE_TERMS = (
     "협박",
@@ -47,11 +48,14 @@ ACCEPT_TERMS = ("수락", "받아들")
 QUEST_ACCEPT_TERMS = (*ACCEPT_TERMS, "받", "출항", "떠나", "떠납", "건너")
 QUEST_CONTEXT_TERMS = ("의뢰", "일거리", "부탁", "퀘스트", "출항", "항해", "떠나", "떠납", "건너")
 QUEST_TRAVEL_TERMS = ("출항", "항해", "떠나", "떠납", "건너", "이동")
+INSPECT_TERMS = ("살피", "살펴", "조사", "확인", "둘러보")
 ABANDON_TERMS = ("포기", "거절", "취소")
 ACTION_ATTACK_TERMS = ("공격", "때리", "친다", "공세")
 ACTION_PICKUP_TERMS = ("획득", "줍", "주워", "가져", "챙")
 ACTION_CREATE_DISTANCE_TERMS = ("도망", "도주", "달아")
 LOOT_TERMS = ("조사", "수색", "뒤져", "루팅")
+ROLL_MEANINGFUL_CLUE_TERMS = ("의미있는",)
+ROLL_NO_CLUE_MARKERS = ("없", "보이지않", "못찾")
 
 KO_NONLETHAL_MARKERS = frozenset({"훈련", "대련", "연습", "허수아비"})
 KO_META_BREAKING_TERMS = (

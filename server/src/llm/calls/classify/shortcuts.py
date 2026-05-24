@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from src.game.domain.action import Action, ActionOutput, RefuseReason
@@ -5,8 +6,10 @@ from src.locale.terms import (
     ACTION_ATTACK_TERMS,
     ACTION_CREATE_DISTANCE_TERMS,
     ACTION_PICKUP_TERMS,
+    DIALOGUE_GENERIC_TARGETS,
     DIALOGUE_TARGET_PARTICLES,
     DIALOGUE_TERMS,
+    INSPECT_TERMS,
     LOOT_TERMS,
     META_BREAKING_TERMS,
     QUEST_ACCEPT_TERMS,
@@ -80,6 +83,14 @@ def classify_action_shortcut(
         if loot is not None:
             return _action_output([loot])
 
+    missing_dialogue = _missing_dialogue_target_refusal(
+        player_input,
+        surroundings,
+        locale=locale,
+    )
+    if missing_dialogue is not None:
+        return missing_dialogue
+
     return None
 
 
@@ -140,6 +151,8 @@ def _active_quest_location_move_action(
         return None
     if _looks_like_dialogue(player_input):
         return None
+    if _looks_like_inspect(player_input):
+        return None
     exits = {
         entry["id"]
         for entry in _dicts(surroundings.get("entities"))
@@ -154,6 +167,13 @@ def _active_quest_location_move_action(
         for target in quest.get("location_targets", []):
             if isinstance(target, str) and target in exits:
                 targets.append(target)
+        for route in _dicts(quest.get("location_routes")):
+            target_name = route.get("target_name")
+            next_exit_id = route.get("next_exit_id")
+            if not isinstance(next_exit_id, str) or next_exit_id not in exits:
+                continue
+            if isinstance(target_name, str) and target_name and target_name in player_input:
+                targets.append(next_exit_id)
     targets = list(dict.fromkeys(targets))
     if len(targets) != 1:
         return None
@@ -227,6 +247,65 @@ def _protected_attack_refusal(
             target=target["id"],
         )
     )
+
+
+def _missing_dialogue_target_refusal(
+    player_input: str,
+    surroundings: dict[str, Any],
+    *,
+    locale: str,
+) -> ActionOutput | None:
+    if not _has_any(player_input, DIALOGUE_TERMS):
+        return None
+    targets = [
+        entry
+        for entry in _dicts(surroundings.get("entities"))
+        if entry.get("type") in {"npc", "enemy"}
+    ]
+    if not _has_localized_target_names(targets):
+        return None
+    if _named_entry(player_input, targets) is not None:
+        return None
+    recent = surroundings.get("recent_npc")
+    if isinstance(recent, dict) and isinstance(recent.get("name"), str):
+        if recent["name"] in player_input:
+            return None
+    for phrase in _dialogue_target_phrases(player_input):
+        if phrase not in DIALOGUE_GENERIC_TARGETS:
+            return ActionOutput(
+                refuse=RefuseReason(
+                    category="invalid_transition",
+                    message_hint=render(
+                        "runtime.classify.refuse_missing_target",
+                        locale,
+                    ),
+                )
+            )
+    return None
+
+
+def _has_localized_target_names(entries: list[dict[str, Any]]) -> bool:
+    return any(
+        isinstance(entry.get("name"), str) and _has_hangul(entry["name"])
+        for entry in entries
+    )
+
+
+def _has_hangul(text: str) -> bool:
+    return any(0xAC00 <= ord(char) <= 0xD7A3 for char in text)
+
+
+def _dialogue_target_phrases(player_input: str) -> list[str]:
+    particle = "|".join(re.escape(term) for term in DIALOGUE_TARGET_PARTICLES)
+    hangul_range = f"{chr(0xAC00)}-{chr(0xD7A3)}"
+    return [
+        match.group(1).strip()
+        for match in re.finditer(
+            rf"([0-9A-Za-z{hangul_range} ]{{1,32}})(?:{particle})",
+            player_input,
+        )
+        if match.group(1).strip()
+    ]
 
 
 def _action_output(
@@ -342,6 +421,10 @@ def _looks_like_dialogue(player_input: str) -> bool:
         player_input,
         DIALOGUE_TARGET_PARTICLES,
     )
+
+
+def _looks_like_inspect(player_input: str) -> bool:
+    return _has_any(player_input, INSPECT_TERMS)
 
 
 def _looks_like_loot(player_input: str) -> bool:

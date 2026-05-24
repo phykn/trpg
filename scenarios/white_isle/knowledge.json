@@ -2,19 +2,19 @@
   "kn_fog_rule": {
     "id": "kn_fog_rule",
     "title": "안개 바다의 규칙",
-    "summary": "혼자 탄 배는 균형이 맞지 않아 내보내지 않는다.",
+    "summary": "혼자 탄 배는 균형이 맞지 않아 출항할 수 없다.",
     "visibility": "public"
   },
   "kn_fog_two_person_crossing": {
     "id": "kn_fog_two_person_crossing",
-    "title": "동행 이유",
-    "summary": "붉은섬행 배는 한 사람이 노를 잡고, 다른 사람이 등대 소리와 물살 변화를 확인해야 한다.",
+    "title": "동행이 필요한 이유",
+    "summary": "붉은섬행 배는 한 사람이 노를 젓고, 다른 사람이 등대 소리와 물살 변화를 확인해야 한다.",
     "visibility": "public"
   },
   "kn_fog_guide_absent": {
     "id": "kn_fog_guide_absent",
     "title": "오지 않는 안내인",
-    "summary": "정식 안내인은 안개에 막혀 오지 않는다. 선착장의 엘리가 임시 동행자로 기다린다.",
+    "summary": "정식 안내인은 안개에 막혀 오지 못한다. 대신 선착장의 엘리가 임시 동행자로 기다린다.",
     "visibility": "public"
   },
   "kn_fog_lost_boat": {
@@ -26,25 +26,25 @@
   "kn_fog_bell": {
     "id": "kn_fog_bell",
     "title": "늦게 닿는 종소리",
-    "summary": "등대 종소리는 안개 속에서 한 박자 늦게 닿는다.",
+    "summary": "등대 종소리는 안개 속에서 한 박자 늦게 들린다.",
     "visibility": "public"
   },
   "kn_fog_two_people": {
     "id": "kn_fog_two_people",
     "title": "두 자리 배",
-    "summary": "붉은섬행 배에는 마주 앉는 두 자리와 짧은 노 두 개뿐이다. 빈자리는 동행자가 앉는 자리다.",
+    "summary": "붉은섬행 배에는 마주 보는 두 자리와 짧은 노 두 개뿐이다. 빈자리는 동행자의 자리다.",
     "visibility": "public"
   },
   "kn_fog_isles": {
     "id": "kn_fog_isles",
     "title": "바다 너머 섬들",
-    "summary": "안개 항구 앞바다 너머로 여러 섬이 이어진다.",
+    "summary": "안개 항구 앞바다 너머로 여러 섬이 이어져 있다.",
     "visibility": "public"
   },
   "kn_fog_harbor_life": {
     "id": "kn_fog_harbor_life",
     "title": "안개 항구의 생활",
-    "summary": "떠나는 길을 강요하지 않는다.",
+    "summary": "안개 항구에서는 누구에게도 출항을 강요하지 않는다.",
     "visibility": "public"
   },
   "kn_human_role": {
@@ -56,43 +56,49 @@
   "kn_eli_route": {
     "id": "kn_eli_route",
     "title": "엘리가 아는 항로",
-    "summary": "엘리는 붉은섬 첫 물길과 한쪽 노, 늦게 들리는 등대 종소리를 맡는다.",
+    "summary": "엘리는 붉은섬으로 가는 첫 물길과 한쪽 노 젓기, 늦게 들리는 등대 종소리 확인을 맡는다.",
     "visibility": "public"
   },
   "kn_eli_imperfect": {
     "id": "kn_eli_imperfect",
     "title": "완벽하지 않은 동행자",
-    "summary": "엘리는 정식 안내인이 아니다. 말이 앞설 때가 있고, 길을 다시 확인한다.",
+    "summary": "엘리는 정식 안내인이 아니다. 때로 말이 앞서고, 길도 다시 확인한다.",
     "visibility": "public"
   },
   "kn_red_first_hint": {
     "id": "kn_red_first_hint",
     "title": "붉은섬의 첫 소문",
-    "summary": "붉은섬에서는 맡긴 분노와 책임을 두고 다툰다.",
+    "summary": "붉은섬에서는 맡긴 분노와 책임을 두고 다툼이 벌어진다.",
     "visibility": "public"
   },
   "kn_red_anger_trade": {
     "id": "kn_red_anger_trade",
     "title": "분노의 거래",
-    "summary": "루카는 노아에게 자기 대신 화를 내 달라고 돈을 냈다.",
+    "summary": "루카는 자기 대신 화를 내 달라며 노아에게 돈을 냈다.",
+    "visibility": "public"
+  },
+  "kn_red_luka_grievance": {
+    "id": "kn_red_luka_grievance",
+    "title": "루카의 억울함",
+    "summary": "루카는 빌려준 손수레가 진흙투성이로 돌아왔는데도 아무도 제대로 사과하지 않았다고 억울해한다.",
     "visibility": "public"
   },
   "kn_red_origin": {
     "id": "kn_red_origin",
     "title": "붉은섬의 분노",
-    "summary": "붉은섬의 분노는 원래 약한 사람이 혼자 참지 않게 돕는 공개 언어였다.",
+    "summary": "붉은섬의 분노는 원래 약한 사람이 혼자 참지 않도록 돕는 공개 언어였다.",
     "visibility": "public"
   },
   "kn_red_proxy_agent": {
     "id": "kn_red_proxy_agent",
-    "title": "대리 분노인",
+    "title": "대리 분노 담당자",
     "summary": "돈을 받고 남의 분노를 대신 말하는 사람이 있다. 큰 분노일수록 더 잘 팔린다.",
     "visibility": "public"
   },
   "kn_red_receipt_holder": {
     "id": "kn_red_receipt_holder",
     "title": "붉은 영수증",
-    "summary": "붉은 영수증은 루카의 젖은 손끝에 접힌 채 보이고, 보여 달라는 말에는 루카가 자기 앞에서 펼쳐 보인다.",
+    "summary": "붉은 영수증은 루카의 젖은 손끝에 접힌 채 보인다. 보여 달라는 말을 들으면 루카는 가슴 앞에서 영수증을 펼쳐 보인다.",
     "visibility": "public"
   },
   "kn_red_refund_claim": {
@@ -104,19 +110,19 @@
   "kn_red_noah_empty_hands": {
     "id": "kn_red_noah_empty_hands",
     "title": "노아의 빈손",
-    "summary": "노아는 환불할 물건도 증명할 분노도 손에 들고 있지 않다.",
+    "summary": "노아는 환불할 물건도, 증명할 분노도 손에 들고 있지 않다.",
     "visibility": "public"
   },
   "kn_red_noah_attempt": {
     "id": "kn_red_noah_attempt",
     "title": "노아가 한 일",
-    "summary": "노아는 돈을 받고 광장에서 루카의 억울함을 큰 소리로 말했다. 군중은 처음에 그 말을 들었다.",
+    "summary": "노아는 돈을 받고 광장에서 루카의 억울함을 큰 소리로 말했다. 군중도 처음에는 그 말을 들었다.",
     "visibility": "public"
   },
   "kn_red_noah_limit": {
     "id": "kn_red_noah_limit",
     "title": "노아가 하지 않은 일",
-    "summary": "노아는 책임질 사람의 이름을 말하지 않았고 분노를 크게 키우지도 않았다.",
+    "summary": "노아는 책임질 사람의 이름을 말하지 않았고, 분노를 더 크게 키우지도 않았다.",
     "visibility": "public"
   },
   "kn_red_crowd_pressure": {
@@ -140,13 +146,13 @@
   "kn_red_eli_question": {
     "id": "kn_red_eli_question",
     "title": "엘리의 질문",
-    "summary": "진짜 분노와 팔린 분노를 어디서 나눌 수 있나.",
+    "summary": "진짜 분노와 팔린 분노는 어디서 나뉠까?",
     "visibility": "public"
   },
   "kn_blue_empty_room": {
     "id": "kn_blue_empty_room",
     "title": "비워 둔 방",
-    "summary": "푸른섬은 떠난 사람이 쓰던 방을 오래 비워 두는 풍습이 있다.",
+    "summary": "푸른섬에는 떠난 사람이 쓰던 방을 오래 비워 두는 풍습이 있다.",
     "visibility": "public"
   },
   "kn_blue_need_space": {
@@ -164,7 +170,7 @@
   "kn_blue_milo_need": {
     "id": "kn_blue_milo_need",
     "title": "오늘 밤 잘 곳",
-    "summary": "밀로는 비에 집을 잃었고 오늘 밤 안전하게 잘 방이 필요하다.",
+    "summary": "밀로는 비에 집을 잃었고, 오늘 밤 안전하게 잘 방이 필요하다.",
     "visibility": "public"
   },
   "kn_blue_daniel_lock": {
@@ -182,7 +188,7 @@
   "kn_gold_score_labor": {
     "id": "kn_gold_score_labor",
     "title": "별점 노동",
-    "summary": "황금섬의 별점은 처음에는 낯선 거래에서 성실한 사람을 알아보는 장치였다.",
+    "summary": "황금섬의 별점은 처음에는 성실한 거래 상대를 알아보기 위한 장치였다.",
     "visibility": "public"
   },
   "kn_gold_star_pressure": {
@@ -194,7 +200,7 @@
   "kn_gold_mateo_record": {
     "id": "kn_gold_mateo_record",
     "title": "마테오의 별점",
-    "summary": "마테오는 별점이 신뢰의 기록이므로 다시 평가해야 한다고 본다.",
+    "summary": "마테오는 별점이 신뢰의 기록이므로, 무너진 점수도 다시 평가를 받아 회복해야 한다고 본다.",
     "visibility": "public"
   },
   "kn_gold_sarah_workshop": {
@@ -212,25 +218,25 @@
   "kn_green_comfort_delay": {
     "id": "kn_green_comfort_delay",
     "title": "편안함의 지연",
-    "summary": "연두섬은 지친 사람이 잠깐 쉬는 곳이지만, 오래 머물면 돌아가기 더 어려워진다.",
+    "summary": "연두섬은 지친 사람이 잠깐 쉬는 곳이지만, 오래 머물수록 돌아가기는 더 어려워진다.",
     "visibility": "public"
   },
   "kn_green_departure": {
     "id": "kn_green_departure",
     "title": "출항 허가서",
-    "summary": "아벨의 서명이 있으면 다음 배는 안전 항로로 갈 수 있다.",
+    "summary": "아벨의 서명이 있으면 배는 임시 수리 대신 안전 항로로 갈 수 있다.",
     "visibility": "public"
   },
   "kn_green_abel_accident": {
     "id": "kn_green_abel_accident",
     "title": "아벨의 사고",
-    "summary": "아벨은 폭풍 속에서 사람을 살렸지만 그 과정에서 조수 루디아가 크게 다쳤다.",
+    "summary": "아벨은 폭풍 속에서 사람들을 살렸지만, 그 과정에서 조수 루디아가 크게 다쳤다.",
     "visibility": "public"
   },
   "kn_green_ludia_request": {
     "id": "kn_green_ludia_request",
     "title": "루디아의 부탁",
-    "summary": "루디아는 아벨을 원망하지 않고, 아벨이 서명 하나부터 다시 시작하길 바란다.",
+    "summary": "루디아는 아벨을 원망하지 않는다. 그가 서명 하나부터 다시 시작하길 바란다.",
     "visibility": "public"
   },
   "kn_green_martha_rest": {
@@ -254,13 +260,13 @@
   "kn_purple_display": {
     "id": "kn_purple_display",
     "title": "보여 주기의 안전장치",
-    "summary": "레베카는 큰 예식을 보호 장치로 본다.",
+    "summary": "레베카는 큰 예식이 두 사람을 지키는 보호 장치라고 본다.",
     "visibility": "public"
   },
   "kn_purple_hannah_fear": {
     "id": "kn_purple_hannah_fear",
     "title": "한나의 두려움",
-    "summary": "한나는 결혼을 원하지만 작은 예식이 작은 사랑처럼 보일까 두렵다.",
+    "summary": "한나는 결혼을 원하지만, 작은 예식이 작은 사랑처럼 보일까 두려워한다.",
     "visibility": "public"
   },
   "kn_purple_joseph_life": {
@@ -278,13 +284,13 @@
   "kn_silver_clean_work": {
     "id": "kn_silver_clean_work",
     "title": "깨끗함의 노동",
-    "summary": "은빛섬의 깨끗함은 폐수관과 외지 노동자의 작업 위에 있다.",
+    "summary": "은빛섬의 깨끗함은 폐수관과 외지 노동자의 작업 위에 세워져 있다.",
     "visibility": "public"
   },
   "kn_silver_same_table": {
     "id": "kn_silver_same_table",
     "title": "같은 식탁",
-    "summary": "미카는 자신이 청소한 식당에서 주민들과 같은 접시에 밥을 먹고 싶다.",
+    "summary": "미카는 자신이 청소한 식당에서 주민들과 같은 식탁에 앉아 밥을 먹고 싶어 한다.",
     "visibility": "public"
   },
   "kn_silver_hidden_labor": {
@@ -296,19 +302,19 @@
   "kn_silver_two_passes": {
     "id": "kn_silver_two_passes",
     "title": "두 종류의 식권",
-    "summary": "은빛섬에는 주민 식당을 쓰는 공동식권과 외지 노동자 식당만 쓰는 외지 식권이 있다.",
+    "summary": "은빛섬에는 주민 식당을 쓰는 공동식권과 외지 노동자 식당만 쓸 수 있는 외지 식권이 있다.",
     "visibility": "public"
   },
   "kn_silver_hannah_debt": {
     "id": "kn_silver_hannah_debt",
     "title": "한나의 빚",
-    "summary": "한나는 미카가 식당을 살린 일을 기억하지만 같은 자리 이야기를 오래 미뤘다.",
+    "summary": "한나는 미카가 식당을 살린 일을 기억하지만, 같은 자리 이야기를 오래 미뤘다.",
     "visibility": "public"
   },
   "kn_silver_sila_order": {
     "id": "kn_silver_sila_order",
     "title": "실라의 질서",
-    "summary": "실라는 분리된 식권이 위생 사고와 갈등을 줄이는 현실적 장치라고 본다.",
+    "summary": "실라는 분리 식권이 위생 사고와 갈등을 줄이는 현실적인 장치라고 본다.",
     "visibility": "public"
   },
   "kn_silver_choice": {
@@ -317,40 +323,40 @@
     "summary": "외지 식권을 유지하면 은빛 식권이 남고, 공동식권을 주면 공식 물건은 남지 않는다.",
     "visibility": "public"
   },
-  "kn_orange_forced_joy": {
-    "id": "kn_orange_forced_joy",
-    "title": "강요된 기쁨",
-    "summary": "주황섬의 새출발 축하식은 실패한 사람이 공동체 밖으로 숨지 않게 하려는 행사였다.",
+  "kn_orange_origin": {
+    "id": "kn_orange_origin",
+    "title": "새출발 축하식의 시작",
+    "summary": "주황섬의 새출발 축하식은 실패한 사람이 숨어버리지 않게 하려고 시작됐다.",
     "visibility": "public"
   },
-  "kn_orange_need_time": {
-    "id": "kn_orange_need_time",
-    "title": "실패를 말할 시간",
-    "summary": "마리암은 실패를 자기 말로 설명하려 한다.",
+  "kn_orange_exam_story": {
+    "id": "kn_orange_exam_story",
+    "title": "항해사 시험",
+    "summary": "마리암은 항해사 시험에서 떨어졌고, 섬의 기대도 함께 꺾였다.",
     "visibility": "public"
   },
-  "kn_orange_mariam_fail": {
-    "id": "kn_orange_mariam_fail",
-    "title": "마리암의 실패",
-    "summary": "마리암은 항해사 시험에 떨어졌고 아직 사람들 앞에서 웃을 준비가 되지 않았다.",
+  "kn_orange_naomi_past": {
+    "id": "kn_orange_naomi_past",
+    "title": "나오미의 지난 축하식",
+    "summary": "나오미도 과거 실패 직후 웃어야 했고, 사람들은 나오미가 괜찮아졌다고 믿었다.",
     "visibility": "public"
   },
-  "kn_orange_naomi_wait": {
-    "id": "kn_orange_naomi_wait",
-    "title": "나오미의 기다림",
-    "summary": "나오미는 실패를 느낄 시간을 주어야 한다고 본다.",
+  "kn_orange_backstage_signs": {
+    "id": "kn_orange_backstage_signs",
+    "title": "무대 뒤의 흔적",
+    "summary": "무대 뒤에는 입지 않은 의상, 마시지 못한 물컵, 구겨진 리본이 남아 있다.",
     "visibility": "public"
   },
-  "kn_orange_gabriel_belief": {
-    "id": "kn_orange_gabriel_belief",
-    "title": "가브리엘의 믿음",
-    "summary": "가브리엘은 축하식이 마리암을 다시 공동체 안으로 데려오는 안전줄이라고 본다.",
+  "kn_orange_gabriel_safety": {
+    "id": "kn_orange_gabriel_safety",
+    "title": "가브리엘의 안전줄",
+    "summary": "가브리엘은 축하식이 실패한 사람을 공동체 안에 붙잡는 안전줄이라고 믿는다.",
     "visibility": "public"
   },
-  "kn_orange_choice": {
-    "id": "kn_orange_choice",
-    "title": "축하의 선택",
-    "summary": "축하식을 진행하면 주황 축하 리본이 남고, 멈추면 공식 물건은 남지 않는다.",
+  "kn_orange_pressure": {
+    "id": "kn_orange_pressure",
+    "title": "웃어야 하는 자리",
+    "summary": "축하식이 시작되면 마리암은 아직 정리하지 못한 실패 앞에서 웃어야 한다.",
     "visibility": "public"
   },
   "kn_white_black_weight": {
@@ -362,19 +368,19 @@
   "kn_white_no_judge": {
     "id": "kn_white_no_judge",
     "title": "심판 없는 항구",
-    "summary": "흰섬 항구에는 검사소와 보관소가 없다.",
+    "summary": "흰섬 항구에는 검사소도 보관소도 없다.",
     "visibility": "public"
   },
   "kn_white_empty_chair": {
     "id": "kn_white_empty_chair",
     "title": "빈 의자",
-    "summary": "항구 끝에는 도착한 사람의 빈 의자가 있다.",
+    "summary": "항구 끝에는 도착한 사람을 위한 빈 의자가 있다.",
     "visibility": "public"
   },
   "kn_white_eli_lost": {
     "id": "kn_white_eli_lost",
     "title": "엘리 없는 도착",
-    "summary": "손에 남은 증표가 있으면 엘리는 마지막 바다에서 시야에서 사라지고 흰섬에는 함께 내리지 못한다.",
+    "summary": "손에 남은 증표가 있으면 엘리는 마지막 바다에서 시야 밖으로 사라지고, 흰섬에 함께 내리지 못한다.",
     "visibility": "public"
   },
   "kn_white_with_eli": {
@@ -386,7 +392,7 @@
   "kn_blue_origin": {
     "id": "kn_blue_origin",
     "title": "빈방 풍습의 시작",
-    "summary": "푸른섬의 빈방 풍습은 남은 사람이 억지로 괜찮은 척하지 않게 하려고 시작됐다.",
+    "summary": "푸른섬의 빈방 풍습은 남은 사람이 억지로 괜찮은 척하지 않아도 되게 하려고 시작됐다.",
     "visibility": "public"
   },
   "kn_blue_rain_damage": {
@@ -403,7 +409,7 @@
   },
   "kn_blue_ruth_fault": {
     "id": "kn_blue_ruth_fault",
-    "title": "루스가 하지 않은 일",
+    "title": "루스가 하지 못한 일",
     "summary": "루스는 밀로를 들였지만 레아에게 먼저 묻지 못했다.",
     "visibility": "public"
   },
@@ -452,13 +458,13 @@
   "kn_gold_sarah_mateo_split": {
     "id": "kn_gold_sarah_mateo_split",
     "title": "사라와 마테오의 갈림",
-    "summary": "사라와 마테오는 별점 제도를 함께 만들었지만 지금은 다른 해법을 본다.",
+    "summary": "사라와 마테오는 별점 제도를 함께 만들었지만, 지금은 서로 다른 해법을 본다.",
     "visibility": "public"
   },
   "kn_green_rest_origin": {
     "id": "kn_green_rest_origin",
     "title": "쉬는 섬의 시작",
-    "summary": "연두섬은 지친 사람이 이유를 묻히지 않고 잠깐 쉬게 하려고 생긴 곳이다.",
+    "summary": "연두섬은 지친 사람이 이유를 묻지 않고 잠깐 쉬게 하려고 생긴 곳이다.",
     "visibility": "public"
   },
   "kn_green_safe_route": {
@@ -518,7 +524,7 @@
   "kn_purple_gift_rules": {
     "id": "kn_purple_gift_rules",
     "title": "선물 거리의 규칙",
-    "summary": "선물 거리에서는 생략한 항목마다 관계를 가볍게 본다는 말이 붙는다.",
+    "summary": "선물 거리에서는 생략한 항목마다 관계를 가볍게 본다는 말이 따라붙는다.",
     "visibility": "public"
   },
   "kn_purple_hannah_joseph": {
@@ -530,7 +536,7 @@
   "kn_silver_origin": {
     "id": "kn_silver_origin",
     "title": "분리 식권의 시작",
-    "summary": "은빛섬의 분리 식권은 근무 시간과 위생 관리 명분으로 시작됐다.",
+    "summary": "은빛섬의 분리 식권은 근무 시간과 위생 관리라는 명분으로 시작됐다.",
     "visibility": "public"
   },
   "kn_silver_mika_rescue": {
@@ -548,7 +554,7 @@
   "kn_silver_work_clothes": {
     "id": "kn_silver_work_clothes",
     "title": "작업복의 얼룩",
-    "summary": "미카의 작업복 얼룩은 은빛섬 거리의 깨끗함을 대신 받은 흔적이다.",
+    "summary": "미카의 작업복 얼룩은 은빛섬 거리의 깨끗함을 대신 받아 낸 흔적이다.",
     "visibility": "public"
   },
   "kn_silver_hannah_silence": {
@@ -563,52 +569,16 @@
     "summary": "은빛 공동식당에는 빈자리가 있어도 미카가 앉을 자리는 정해져 있지 않다.",
     "visibility": "public"
   },
-  "kn_orange_origin": {
-    "id": "kn_orange_origin",
-    "title": "새출발 축하식의 시작",
-    "summary": "주황섬의 새출발 축하식은 실패한 사람이 숨어 버리지 않게 하려고 시작됐다.",
-    "visibility": "public"
-  },
-  "kn_orange_exam_story": {
-    "id": "kn_orange_exam_story",
-    "title": "항해사 시험",
-    "summary": "마리암은 항해사 시험에서 떨어졌고 섬의 기대도 함께 꺾였다.",
-    "visibility": "public"
-  },
-  "kn_orange_naomi_past": {
-    "id": "kn_orange_naomi_past",
-    "title": "나오미의 지난 축하식",
-    "summary": "나오미도 과거 실패 직후 웃어야 했고, 사람들은 그가 괜찮아졌다고 믿었다.",
-    "visibility": "public"
-  },
-  "kn_orange_backstage_signs": {
-    "id": "kn_orange_backstage_signs",
-    "title": "무대 뒤의 흔적",
-    "summary": "무대 뒤에는 입지 않은 의상, 마시지 못한 물컵, 구겨진 리본이 남아 있다.",
-    "visibility": "public"
-  },
-  "kn_orange_gabriel_safety": {
-    "id": "kn_orange_gabriel_safety",
-    "title": "가브리엘의 안전줄",
-    "summary": "가브리엘은 축하식이 실패한 사람을 공동체 안에 붙잡는 안전줄이라고 믿는다.",
-    "visibility": "public"
-  },
-  "kn_orange_pressure": {
-    "id": "kn_orange_pressure",
-    "title": "웃어야 하는 자리",
-    "summary": "축하식이 시작되면 마리암은 아직 정리하지 못한 실패 앞에서 웃어야 한다.",
-    "visibility": "public"
-  },
   "kn_white_last_item": {
     "id": "kn_white_last_item",
-    "title": "마지막에 떨어지는 물건",
+    "title": "마지막에 흔들리는 물건",
     "summary": "검은 보상 아이템이 있으면 가장 마지막에 얻은 물건이 마지막 바다에서 먼저 흔들린다.",
     "visibility": "public"
   },
   "kn_white_not_death": {
     "id": "kn_white_not_death",
     "title": "확정되지 않은 이별",
-    "summary": "엘리는 죽음으로 확정되지 않고 마지막 바다에서 시야 밖으로 사라진다.",
+    "summary": "엘리는 죽음으로 확정되지 않고, 마지막 바다에서 시야 밖으로 사라진다.",
     "visibility": "public"
   },
   "kn_white_two_chairs": {

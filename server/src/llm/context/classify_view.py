@@ -271,6 +271,9 @@ def _active_quest(runtime: GameRuntimeState) -> dict[str, Any] | None:
     location_targets = _quest_location_targets(node)
     if location_targets:
         payload["location_targets"] = location_targets
+    location_routes = _quest_location_routes(runtime, node, location_targets)
+    if location_routes:
+        payload["location_routes"] = location_routes
     choices = _quest_choices(node) if quest_ready_to_decide(node) else []
     if choices:
         payload["choices"] = choices
@@ -291,6 +294,64 @@ def _quest_location_targets(node: GraphNode) -> list[str]:
         if isinstance(target, str):
             out.append(target)
     return list(dict.fromkeys(out))
+
+
+def _quest_location_routes(
+    runtime: GameRuntimeState,
+    node: GraphNode,
+    location_targets: list[str],
+) -> list[dict[str, str]]:
+    graph = runtime.graph_index
+    current_id = location_of(graph, runtime.progress.player_id)
+    if current_id is None:
+        return []
+    out: list[dict[str, str]] = []
+    for target_id in location_targets:
+        target = graph.nodes.get(target_id)
+        if target is None or target.type != "location":
+            continue
+        next_exit_id = (
+            target_id
+            if any(
+                edge.to_node_id == target_id
+                for edge in edges_from(graph, current_id, "connects_to")
+            )
+            else _first_step_toward_location(graph, current_id, target_id)
+        )
+        if next_exit_id is None:
+            continue
+        next_exit = graph.nodes.get(next_exit_id)
+        if next_exit is None or next_exit.type != "location":
+            continue
+        out.append(
+            {
+                "target_id": target_id,
+                "target_name": node_label(runtime.content, target),
+                "next_exit_id": next_exit_id,
+                "next_exit_name": node_label(runtime.content, next_exit),
+            }
+        )
+    return out
+
+
+def _first_step_toward_location(
+    graph,
+    current_id: str,
+    target_id: str,
+) -> str | None:
+    queue: list[tuple[str, str | None]] = [(current_id, None)]
+    visited = {current_id}
+    while queue:
+        location_id, first_step = queue.pop(0)
+        for edge in edges_from(graph, location_id, "connects_to"):
+            if edge.to_node_id in visited:
+                continue
+            step = first_step or edge.to_node_id
+            if edge.to_node_id == target_id:
+                return step
+            visited.add(edge.to_node_id)
+            queue.append((edge.to_node_id, step))
+    return None
 
 
 def _available_quests(

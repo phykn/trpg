@@ -378,6 +378,10 @@ en = "{target} does not answer right away."
 ko = "{target}에게 말을 겁니다."
 en = "You speak to {target}."
 
+[runtime."classify.refuse_missing_target"]
+ko = "그 대상은 지금 눈앞에 보이지 않습니다. 화면에 보이는 인물에게 말을 걸어야 합니다."
+en = "That target is not visible right now. Speak to someone shown on screen."
+
 [runtime."narration.repeat.neutral"]
 ko = "상황은 그대로입니다. 다음 행동을 정할 수 있습니다."
 en = "The situation is unchanged. You can choose the next action."

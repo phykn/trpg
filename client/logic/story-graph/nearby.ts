@@ -107,13 +107,17 @@ function taskItem(node: StoryGraphNode): NearbyItem {
     id: node.id,
     kindLabel: ko.legend.quest,
     title: node.label,
-    body: node.kind === 'quest' ? joinQuestGoals(node.goals, node.summary) : '',
+    body: node.kind === 'quest' ? joinQuestGoals(node.goals, node.summary, node.label) : '',
     actions: node.kind === 'quest' && node.reachable ? questActions(node) : undefined,
   };
 }
 
-function joinQuestGoals(goals: string[], fallback: string): string {
-  return goals.length > 0 ? goals.join(' · ') : fallback;
+function joinQuestGoals(goals: string[], fallback: string, title: string): string {
+  const uniqueGoals = goals.filter((goal) => goal && goal !== title);
+  if (uniqueGoals.length > 0) {
+    return uniqueGoals.join(' · ');
+  }
+  return fallback !== title ? fallback : '';
 }
 
 function questActions(node: Extract<StoryGraphNode, { kind: 'quest' }>): PanelAction[] | undefined {

@@ -2,30 +2,30 @@
   "heal": {
     "id": "heal",
     "name": "HP 회복",
-    "description": "대상의 HP를 회복한다.",
+    "description": "대상의 HP를 회복시킨다.",
     "kind": "heal",
     "traits": [
-      "소모품 사용 효과다",
-      "최대 HP를 초과하지 않는다"
+      "소모품 사용 시 적용된다.",
+      "최대 HP를 넘을 수 없다."
     ]
   },
   "mp_restore": {
     "id": "mp_restore",
     "name": "MP 회복",
-    "description": "대상의 MP를 회복한다.",
+    "description": "대상의 MP를 회복시킨다.",
     "kind": "mp_restore",
     "traits": [
-      "소모품 사용 효과다",
-      "최대 MP를 초과하지 않는다"
+      "소모품 사용 시 적용된다.",
+      "최대 MP를 넘을 수 없다."
     ]
   },
   "dc_down": {
     "id": "dc_down",
     "name": "판정 난이도 감소",
-    "description": "지원 행동의 판정 난이도를 낮춘다.",
+    "description": "지원 행동 판정의 난이도를 낮춘다.",
     "traits": [
-      "성공 가능성을 높인다",
-      "bonus 값을 난이도 감소량으로 사용한다"
+      "성공 가능성을 높인다.",
+      "bonus 값을 난이도 감소량으로 적용한다."
     ]
   },
   "dc_up": {
@@ -33,8 +33,8 @@
     "name": "판정 난이도 증가",
     "description": "판정 난이도를 높인다.",
     "traits": [
-      "위험이나 부담을 표현한다",
-      "bonus 값을 난이도 증가량으로 사용할 수 있다"
+      "위험이나 부담을 표현한다.",
+      "필요하면 bonus 값을 난이도 증가량으로 적용한다."
     ]
   }
 }

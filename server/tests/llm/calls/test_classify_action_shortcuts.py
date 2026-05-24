@@ -231,6 +231,75 @@ async def test_korean_active_departure_move_word_shortcuts_to_location_move_with
     assert action.to == "loc_red_square"
 
 
+async def test_korean_active_quest_route_shortcuts_to_next_step_without_llm():
+    context = _context()
+    context["identity"]["active_quest"] = {
+        "id": "q_final_stage",
+        "name": "새 출발 축하식 사건",
+        "location_targets": ["loc_backstage"],
+        "location_routes": [
+            {
+                "target_id": "loc_backstage",
+                "target_name": "무대 뒤",
+                "next_exit_id": "loc_orange_square",
+                "next_exit_name": "주황 광장",
+            }
+        ],
+    }
+    context["identity"]["exits"] = [
+        {"id": "loc_silver_street", "name": "은빛 거리"},
+        {"id": "loc_orange_square", "name": "주황 광장"},
+    ]
+
+    output = await classify(
+        _NoCallLLM(),
+        ClassifyInput(
+            player_input="주황광장의 무대 뒤로 이동합니다",
+            context=context,
+        ),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    action = output.actions[0]
+    assert action.verb == "move"
+    assert action.to == "loc_orange_square"
+
+
+async def test_korean_inspect_word_does_not_route_active_quest_move_shortcut():
+    context = _context()
+    context["identity"]["active_quest"] = {
+        "id": "q_departure",
+        "name": "출항 허가 사건",
+        "location_targets": ["loc_permit_office"],
+        "location_routes": [
+            {
+                "target_id": "loc_permit_office",
+                "target_name": "출항 허가소",
+                "next_exit_id": "loc_permit_office",
+                "next_exit_name": "출항 허가소",
+            }
+        ],
+    }
+    context["identity"]["exits"] = [
+        {"id": "loc_permit_office", "name": "출항 허가소"},
+    ]
+
+    llm = _StaticLLM('{"intents":[{"intent":"inspect"}]}')
+    output = await classify(
+        llm,
+        ClassifyInput(
+            player_input="연두 여관의 닫히지 않은 여행 가방을 살펴봅니다",
+            context=context,
+        ),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    assert output.actions[0].verb == "perceive"
+    assert [call["agent"] for call in llm.calls] == ["classify"]
+
+
 async def test_korean_departure_rule_question_uses_llm_instead_of_move_shortcut():
     context = _context()
     context["identity"]["visible_targets"] = [
@@ -263,6 +332,21 @@ async def test_korean_departure_rule_question_uses_llm_instead_of_move_shortcut(
     assert action.verb == "speak"
     assert action.to == "npc_olden"
     assert [call["agent"] for call in llm.calls] == ["classify"]
+
+
+async def test_korean_missing_dialogue_target_refuses_without_llm():
+    output = await classify(
+        _NoCallLLM(),
+        ClassifyInput(
+            player_input="밀로에게 짐이 왜 젖었는지 묻습니다",
+            context=_context(),
+        ),
+        locale="ko",
+    )
+
+    assert output.refuse is not None
+    assert output.refuse.category == "invalid_transition"
+    assert "보이지 않습니다" in output.refuse.message_hint
 
 
 async def test_korean_quest_choice_label_shortcuts_to_decide_without_llm():
