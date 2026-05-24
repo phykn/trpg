@@ -56,7 +56,7 @@
   "kn_eli_route": {
     "id": "kn_eli_route",
     "title": "엘리가 아는 항로",
-    "summary": "엘리는 붉은섬 첫 물길과 늦게 들리는 등대 종소리를 안다.",
+    "summary": "엘리는 붉은섬 첫 물길과 한쪽 노, 늦게 들리는 등대 종소리를 맡는다.",
     "visibility": "public"
   },
   "kn_eli_imperfect": {
@@ -92,7 +92,7 @@
   "kn_red_receipt_holder": {
     "id": "kn_red_receipt_holder",
     "title": "붉은 영수증",
-    "summary": "붉은 영수증은 루카가 쥐고 있으며, 플레이어에게 넘기지 않았다.",
+    "summary": "붉은 영수증은 루카의 젖은 손끝에 접힌 채 보이고, 보여 달라는 말에는 루카가 자기 앞에서 펼쳐 보인다.",
     "visibility": "public"
   },
   "kn_red_refund_claim": {

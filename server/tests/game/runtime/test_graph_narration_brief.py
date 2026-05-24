@@ -103,6 +103,63 @@ def test_narration_brief_orders_global_story_before_recent_dialogue():
     assert brief.splitlines()[-1] == "플레이어 입력: 레아에게 말을 겁니다"
 
 
+def test_narration_brief_includes_chapter_guidance():
+    brief = build_narration_brief(
+        {
+            "user_request": {"player_input": "루카에게 영수증을 보여 달라고 묻습니다"},
+            "engine_event": {"kind": "dialogue"},
+            "scene_state": {"scene_anchor": {"location": {"name": "붉은섬 광장"}}},
+            "reference_context": {
+                "current_story": {
+                    "chapter": {
+                        "name": "붉은섬",
+                        "description": "분노 거래와 환불 요구를 다룹니다.",
+                        "guidance": [
+                            "루카의 붉은 영수증은 처음부터 끝까지 루카의 젖은 손끝에 접힌 채 보인다.",
+                            "보여 달라는 말을 들으면 루카가 손에 든 영수증을 들어 보인다.",
+                        ],
+                    },
+                },
+            },
+        }
+    )
+
+    assert "- 챕터 운영: 루카의 붉은 영수증은 처음부터 끝까지 루카의 젖은 손끝에 접힌 채 보인다." in brief
+    assert "- 챕터 운영: 보여 달라는 말을 들으면 루카가 손에 든 영수증을 들어 보인다." in brief
+
+
+def test_story_transition_brief_omits_recent_context():
+    brief = build_narration_brief(
+        {
+            "user_request": {"player_input": "출항 허가 받기"},
+            "engine_event": {
+                "kind": "action",
+                "story_transition": {
+                    "completed_quests": [{"id": "q_green", "name": "출항 허가서"}],
+                    "next_quest": {"id": "q_purple", "name": "사랑 증명 비용 사건"},
+                    "handoff": "보라섬 선착장 너머 예식장 견적서가 바람에 흔들립니다.",
+                },
+            },
+            "scene_state": {"scene_anchor": {"location": {"name": "출항 허가소"}}},
+            "reference_context": {
+                "previous_scene": [{"summary": "루카의 붉은 영수증이 비어 있습니다."}],
+                "recent_exchanges": [
+                    {
+                        "player": "영수증을 확인합니다.",
+                        "narrator": "엘리가 붉은 영수증을 봅니다.",
+                    }
+                ],
+            },
+        }
+    )
+
+    assert "장면 유형: 사건 전환" in brief
+    assert "전환 단서: 보라섬 선착장 너머 예식장 견적서가 바람에 흔들립니다." in brief
+    assert "이전 장면 요약:" not in brief
+    assert "최근 대화:" not in brief
+    assert "붉은 영수증" not in brief
+
+
 def test_move_brief_omits_previous_dialogue_context():
     brief = build_narration_brief(
         {

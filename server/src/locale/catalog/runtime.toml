@@ -594,6 +594,10 @@ en = "Current place:"
 ko = "챕터: {value}"
 en = "Chapter: {value}"
 
+[runtime."narration.brief.chapter_guidance"]
+ko = "챕터 운영: {value}"
+en = "Chapter guidance: {value}"
+
 [runtime."narration.brief.active_quest"]
 ko = "진행 중 퀘스트: {value}"
 en = "Active quest: {value}"

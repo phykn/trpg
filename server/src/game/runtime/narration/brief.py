@@ -63,7 +63,7 @@ def _story_transition_brief(
     next_text = " / ".join(
         value for value in (chapter, quest) if isinstance(value, str) and value
     )
-    lines = _recent_context_lines(payload)
+    lines = _recent_context_lines(payload, include_recent=False)
     lines.extend(
         [
             _brief("scene.transition"),
@@ -239,7 +239,11 @@ def _append_player_input(lines: list[str], payload: dict[str, Any]) -> None:
         lines.append(_brief("player_input", value=player_input))
 
 
-def _recent_context_lines(payload: dict[str, Any]) -> list[str]:
+def _recent_context_lines(
+    payload: dict[str, Any],
+    *,
+    include_recent: bool = True,
+) -> list[str]:
     lines: list[str] = []
     context = _dict(payload.get("reference_context"))
     world_guidance = context.get("world_guidance")
@@ -250,6 +254,8 @@ def _recent_context_lines(payload: dict[str, Any]) -> list[str]:
     if current_story:
         lines.append(_brief("current_story"))
         lines.extend(f"- {text}" for text in current_story)
+    if not include_recent:
+        return lines
     previous = _dicts(context.get("previous_scene"))
     exchanges = _dicts(context.get("recent_exchanges"))
 
@@ -295,6 +301,8 @@ def _current_story_lines(context: dict[str, Any]) -> list[str]:
     chapter_line = _story_item_line(chapter)
     if chapter_line:
         lines.append(_brief("chapter", value=chapter_line))
+    for guidance in _story_guidance_lines(chapter):
+        lines.append(_brief("chapter_guidance", value=guidance))
     quest_line = _story_item_line(quest)
     if quest_line:
         lines.append(_brief("active_quest", value=quest_line))
@@ -321,6 +329,19 @@ def _story_item_line(item: dict[str, Any]) -> str:
     if isinstance(description, str) and description:
         return _clip(f"{name} - {description}")
     return _clip(name)
+
+
+def _story_guidance_lines(item: dict[str, Any]) -> list[str]:
+    guidance = item.get("guidance")
+    if isinstance(guidance, str):
+        return [_clip(guidance)] if guidance.strip() else []
+    if isinstance(guidance, list):
+        return [
+            _clip(value)
+            for value in guidance[:12]
+            if isinstance(value, str) and value.strip()
+        ]
+    return []
 
 
 def _player_input(payload: dict[str, Any]) -> str:

@@ -66,3 +66,8 @@ def test_prompt_examples_use_allowed_manner_field_for_talk():
     text = PROMPT_PATH.read_text(encoding="utf-8")
     assert '"tone":"friendly"' not in text
     assert '"manner":"friendly"' in text
+
+
+def test_prompt_keeps_obvious_visible_checks_without_rolls():
+    text = PROMPT_PATH.read_text(encoding="utf-8")
+    assert "이미 보이는 사물이나 현재 장소 단서를 확인하는 행동에는 판정을 붙이지 않습니다" in text

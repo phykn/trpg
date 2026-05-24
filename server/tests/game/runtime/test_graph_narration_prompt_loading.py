@@ -441,9 +441,11 @@ def test_graph_narrate_prompt_encodes_theory_pressure_and_completion_limits():
     assert "`이전 장면 요약`이나 `최근 대화`가 플레이어의 이번 발화보다 앞서면 안 됩니다" in prompt
     assert "UI 라벨, 추천 칩의 `label`, 주변에 함께 보이는 이름은 `플레이어 입력`보다 강한 근거가 아닙니다" in prompt
     assert "막힘을 남기는 것은 필수가 아닙니다" in prompt
+    assert "대화 대상이 있으면 플레이어의 시선과 NPC 반응을 다른 인물로 바꾸지 않습니다" in prompt
     assert "새 갈고리 없이 닫습니다" in prompt
     assert "브리핑에 장소 진입 퀘스트 트리거가 있으면 특히 조심합니다" in prompt
     assert "장소에 들어간 사실을 플레이어가 갈등을 해결한 것처럼 과장하지 않습니다" in prompt
+    assert "소유자와 위치가 보이는 물건은 브리핑과 충돌하는 보관 동작을 만들지 않습니다" in prompt
 
 
 def test_graph_narrate_prompt_requires_clear_roll_consequences():
@@ -455,6 +457,7 @@ def test_graph_narrate_prompt_requires_clear_roll_consequences():
     assert "결과를 흐리는 되묻기나 추상 묘사만으로 끝내지 않습니다" in prompt
     assert "`공개된 사실`은 이번 성공 판정으로 드러난 확정 정보입니다" in prompt
     assert "`대상 정보`는 성공 판정에서 드러낼 수 있는 선명한 사실 후보입니다" in prompt
+    assert "대화 판정 성공에서 NPC가 질문을 되묻기만 하면 실패입니다" in prompt
     assert "원하는 답, 단서, 양보가 아직 나오지 않았음을 분명히 합니다" in prompt
 
 
@@ -468,6 +471,8 @@ def test_graph_narrate_prompt_uses_story_transition_as_lead_not_solution():
     assert "엘리나 동행자" not in prompt
     assert "정답이나 명령처럼 쓰지 않습니다" in prompt
     assert "다음 사건의 쟁점은 한 문장으로 분명히 드러냅니다" in prompt
+    assert "handoff에 없는 이전 퀘스트의 물건" in prompt
+    assert "플레이어 손에 올리거나 인벤토리에 들어간 것처럼 쓰지 않습니다" in prompt
 
 
 @pytest.mark.asyncio

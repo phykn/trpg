@@ -53,13 +53,13 @@
     "id": "q_red_refund",
     "title": "분노 환불 사건",
     "description": "루카의 붉은 영수증, 노아의 빈손, 에즈라의 기록 요구 사이에서 책임을 기록할지 군중을 흩어 보낼지 정한다",
-    "handoff": "엘리는 붉은 영수증의 빈칸을 보며 묻습니다. 진짜 분노와 팔린 분노는 어디서 나눠야 할까요. 배는 푸른 비 거리로 향합니다.",
+    "handoff": "엘리는 붉은 영수증의 빈칸을 봅니다. 사과문 게시판 너머 푸른 비 거리로 가는 길이 열려 있습니다.",
     "giver": "npc_luka",
     "triggers": [
       {
         "id": "tr_red_judge",
-        "type": "social_check",
-        "target": "npc_noah",
+        "type": "location_enter",
+        "target": "loc_red_notice",
         "name": "분노 환불 사건"
       }
     ],
@@ -100,13 +100,13 @@
     "id": "q_blue_room",
     "title": "빈방 사건",
     "description": "레아의 닫힌 방, 밀로의 오늘 밤 자리, 루스와 다니엘의 입장을 확인한다",
-    "handoff": "엘리는 닫힌 문과 열린 창문을 번갈아 봅니다. 다음 배 앞에는 황금 별점표가 걸린 작업장이 보입니다.",
+    "handoff": "레아의 방 문이 열리고, 열린 창문 너머로 다음 배가 보입니다. 배 앞 작업장에는 황금 별점표가 걸려 있습니다.",
     "giver": "npc_lea",
     "triggers": [
       {
         "id": "tr_blue_judge",
-        "type": "social_check",
-        "target": "npc_lea",
+        "type": "location_enter",
+        "target": "loc_blue_room",
         "name": "빈방 사건"
       }
     ],
@@ -116,6 +116,7 @@
     ],
     "status": "locked",
     "required": true,
+    "auto_activate_when_unlocked": true,
     "rewards": {
       "gold": 0,
       "exp": 0,
@@ -146,13 +147,13 @@
     "id": "q_gold_stars",
     "title": "별점 복구 사건",
     "description": "이삭의 작업대, 별점 게시판, 사라와 마테오의 입장을 확인한다",
-    "handoff": "엘리는 떨어진 별표를 손바닥에 올렸다가 내려놓습니다. 연두섬 쪽 배에는 빈 서명란이 보입니다.",
+    "handoff": "떨어진 별표는 게시판 아래에 그대로 남아 있습니다. 연두섬 쪽 배에는 빈 서명란이 보입니다.",
     "giver": "npc_isaac",
     "triggers": [
       {
         "id": "tr_gold_judge",
-        "type": "social_check",
-        "target": "npc_isaac",
+        "type": "location_enter",
+        "target": "loc_gold_board",
         "name": "별점 복구 사건"
       }
     ],
@@ -162,6 +163,7 @@
     ],
     "status": "locked",
     "required": true,
+    "auto_activate_when_unlocked": true,
     "rewards": {
       "gold": 0,
       "exp": 0,
@@ -192,13 +194,13 @@
     "id": "q_green_permit",
     "title": "출항 허가서",
     "description": "아벨의 사고, 루디아의 부탁, 마르다의 경계를 확인하고 출항 허가서를 정한다",
-    "handoff": "엘리는 빈 서명란을 한 번 더 봅니다. 보라섬 선착장 너머로 예식장 견적서가 바람에 펄럭입니다.",
+    "handoff": "엘리는 빈 서명란을 한 번 더 봅니다. 보라섬 선착장 너머 예식장 견적서가 바람에 흔들립니다.",
     "giver": "npc_jonah",
     "triggers": [
       {
         "id": "tr_green_judge",
-        "type": "social_check",
-        "target": "npc_abel",
+        "type": "location_enter",
+        "target": "loc_green_office",
         "name": "출항 허가서"
       }
     ],
@@ -208,6 +210,7 @@
     ],
     "status": "locked",
     "required": true,
+    "auto_activate_when_unlocked": true,
     "rewards": {
       "gold": 0,
       "exp": 0,
@@ -238,13 +241,13 @@
     "id": "q_purple_love",
     "title": "사랑 증명 비용 사건",
     "description": "한나와 요셉의 예식 준비를 살피며 사랑을 보여 주는 형식의 비용을 확인한다",
-    "handoff": "엘리는 금박 청첩장을 접어 둡니다. 은빛섬의 밝은 식당 창 안에는 빈자리가 남아 있습니다.",
+    "handoff": "엘리는 금박 청첩장을 접어 둡니다. 은빛섬 식당 창 안에는 빈자리가 남아 있습니다.",
     "giver": "npc_hannah_p",
     "triggers": [
       {
         "id": "tr_purple_judge",
-        "type": "social_check",
-        "target": "npc_hannah_p",
+        "type": "location_enter",
+        "target": "loc_purple_gift",
         "name": "사랑 증명 비용 사건"
       }
     ],
@@ -254,6 +257,7 @@
     ],
     "status": "locked",
     "required": true,
+    "auto_activate_when_unlocked": true,
     "rewards": {
       "gold": 0,
       "exp": 0,
@@ -284,13 +288,13 @@
     "id": "q_silver_meal",
     "title": "공동식권 심사 사건",
     "description": "깨끗한 거리와 공동식당을 오가며 미카의 노동과 식탁의 자리를 확인한다",
-    "handoff": "엘리는 접힌 식권을 펴 보다가 말없이 내려놓습니다. 주황섬 광장에서는 악단이 연주 신호를 기다립니다.",
+    "handoff": "식탁 위 접힌 식권이 펼쳐집니다. 주황섬 광장에서는 악단이 연주 신호를 기다립니다.",
     "giver": "npc_mika",
     "triggers": [
       {
         "id": "tr_silver_judge",
-        "type": "social_check",
-        "target": "npc_mika",
+        "type": "location_enter",
+        "target": "loc_silver_tunnel",
         "name": "공동식권 심사 사건"
       }
     ],
@@ -300,6 +304,7 @@
     ],
     "status": "locked",
     "required": true,
+    "auto_activate_when_unlocked": true,
     "rewards": {
       "gold": 0,
       "exp": 0,
@@ -330,13 +335,13 @@
     "id": "q_orange_joy",
     "title": "새 출발 축하식 사건",
     "description": "주황 광장과 무대 뒤를 살피며 축하가 필요한 순간과 기다림이 필요한 순간을 확인한다",
-    "handoff": "엘리는 풀리지 않는 리본 끝을 손가락으로 밀어 둡니다. 흰섬 앞 바다는 말없이 낮아집니다.",
+    "handoff": "엘리는 풀리지 않는 리본 끝을 손가락으로 밀어 둡니다. 흰섬 앞 바다의 낮은 물길이 보입니다.",
     "giver": "npc_mariam",
     "triggers": [
       {
         "id": "tr_orange_judge",
-        "type": "social_check",
-        "target": "npc_mariam",
+        "type": "location_enter",
+        "target": "loc_orange_back",
         "name": "새 출발 축하식 사건"
       }
     ],
@@ -346,6 +351,7 @@
     ],
     "status": "locked",
     "required": true,
+    "auto_activate_when_unlocked": true,
     "rewards": {
       "gold": 0,
       "exp": 0,
@@ -392,6 +398,7 @@
     ],
     "status": "locked",
     "required": true,
+    "auto_activate_when_unlocked": true,
     "auto_complete_when_satisfied": true,
     "rewards": {
       "gold": 0,

@@ -204,6 +204,33 @@ async def test_korean_active_departure_quest_shortcuts_to_location_move_without_
     assert action.to == "loc_red_square"
 
 
+async def test_korean_active_departure_move_word_shortcuts_to_location_move_without_llm():
+    context = _context()
+    context["identity"]["active_quest"] = {
+        "id": "q_fog_depart",
+        "name": "첫 출항",
+        "location_targets": ["loc_red_square"],
+    }
+    context["identity"]["exits"] = [
+        {"id": "loc_fog_harbor", "name": "안개 항구"},
+        {"id": "loc_red_square", "name": "붉은섬 광장"},
+    ]
+
+    output = await classify(
+        _NoCallLLM(),
+        ClassifyInput(
+            player_input="엘리와 함께 붉은섬으로 이동한다",
+            context=context,
+        ),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    action = output.actions[0]
+    assert action.verb == "move"
+    assert action.to == "loc_red_square"
+
+
 async def test_korean_departure_rule_question_uses_llm_instead_of_move_shortcut():
     context = _context()
     context["identity"]["visible_targets"] = [
