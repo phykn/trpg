@@ -316,11 +316,24 @@ def test_graph_front_state_builds_place_from_visible_graph_edges():
         "name": "goblin_01",
         "kind": "npc",
         "alive": True,
+        "canAttack": True,
         "level": 2,
         "raceJob": "숲의 포식자",
         "gender": "",
         "role": "숲의 포식자",
     }
+
+
+def test_graph_front_state_marks_protected_place_targets_not_attackable():
+    runtime = _runtime()
+    runtime.graph.nodes["goblin_01"].properties["protected"] = True
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.place is not None
+    assert payload.place.targets[0].id == "goblin_01"
+    assert payload.place.targets[0].alive is True
+    assert payload.place.targets[0].can_attack is False
 
 
 def test_graph_front_state_orders_active_subject_first_in_place_targets():

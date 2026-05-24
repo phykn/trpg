@@ -95,6 +95,7 @@ function adaptPlace(place: GraphPlaceState | null): FrontState['place'] {
       raceJob: '',
       gender: '',
       blurb: '',
+      canAttack: target.canAttack,
     })),
     risk: DEFAULT_RISK,
   };

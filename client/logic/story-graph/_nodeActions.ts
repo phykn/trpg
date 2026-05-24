@@ -13,15 +13,17 @@ export function actionsForNode(node: StoryGraphNode): PanelAction[] {
     }];
   }
   if (node.status === 'reachable_meet') {
-    return [
-      {
+    const actions: PanelAction[] = [];
+    if (node.canAttack) {
+      actions.push({
         kind: 'graph_action',
         label: ko.combat.attack,
         graphAction: { verb: 'attack', what: node.id },
         textFallback: compose.attack(node.label),
-      },
-      { kind: 'text', label: ko.panel.approach, text: compose.approachTo(node.label) },
-    ];
+      });
+    }
+    actions.push({ kind: 'text', label: ko.panel.approach, text: compose.approachTo(node.label) });
+    return actions;
   }
   if (node.status === 'reachable_item') {
     return [{

@@ -16,6 +16,7 @@ export type PlaceTarget = {
   raceJob: string;
   gender: string;
   blurb: string;
+  canAttack: boolean;
 };
 
 export type Place = {
@@ -83,6 +84,7 @@ export type TargetNode = BaseNode & CharacterFields & {
   kind: 'target';
   status: 'reachable_meet' | 'unreachable_meet';
   reachable: boolean;
+  canAttack: boolean;
 };
 
 export type PlaceNode = BaseNode & {

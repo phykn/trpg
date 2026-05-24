@@ -694,6 +694,27 @@ async def test_graph_turn_locked_move_error_is_player_facing(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_graph_turn_protected_attack_error_is_player_facing(tmp_path):
+    app = _build_app(tmp_path)
+
+    async with _client(app) as client:
+        game_id = await _init_graph_session(client)
+        graph = await app.state.graph_repo.load_graph(game_id)
+        graph.nodes["edrik_chief"].properties["protected"] = True
+        await app.state.graph_repo.save_graph(game_id, graph)
+
+        response = await client.post(
+            f"/session/{game_id}/graph/turn",
+            json={"action": {"verb": "attack", "what": "edrik_chief"}},
+        )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail == "보호받는 대상이라 지금은 공격할 수 없습니다. 대화하거나 주변을 살피면 다른 방법을 찾을 수 있습니다."
+    assert "protected target" not in detail
+
+
+@pytest.mark.asyncio
 async def test_graph_turn_attack_returns_confirmation_without_starting_combat(tmp_path):
     app = _build_app(tmp_path)
 

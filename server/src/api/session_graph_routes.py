@@ -81,6 +81,7 @@ _PLAYER_ERROR_KEYS = {
     "no pending_roll": "error.graph_no_pending_roll",
     "roll id mismatch": "error.graph_roll_id_mismatch",
     "not enough xp:": "error.graph_not_enough_xp",
+    "protected target cannot be attacked": "log.error.protected_target",
 }
 
 

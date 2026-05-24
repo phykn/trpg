@@ -184,6 +184,7 @@ export type GraphPlaceTarget = {
   name: string;
   kind: 'npc';
   alive: boolean;
+  canAttack: boolean;
   level?: number;
   raceJob: string;
   gender: string;

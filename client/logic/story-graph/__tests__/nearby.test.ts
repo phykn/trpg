@@ -50,6 +50,7 @@ const graph: StoryGraphModel = {
       gender: '',
       role: '수상한 손님',
       alive: true,
+      canAttack: true,
     },
     {
       id: 'backdoor',

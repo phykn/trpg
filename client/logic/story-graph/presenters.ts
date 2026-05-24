@@ -28,6 +28,7 @@ type StoryGraphSource = {
       gender: string;
       role: string;
       alive: boolean;
+      canAttack: boolean;
     }[];
   } | null;
   quest: Quest | null;
@@ -113,6 +114,7 @@ export function buildStoryGraph(state: StoryGraphSource): StoryGraphModel {
         gender: target.gender,
         role: target.role,
         alive: target.alive,
+        canAttack: target.canAttack,
       })),
       ...quests.map((quest) => ({
         id: quest.id,

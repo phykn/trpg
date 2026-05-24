@@ -6,7 +6,7 @@ from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
 from src.game.domain.content import node_label
 from src.game.domain.graph import Graph, GraphEdge
-from src.game.domain.graph.character import can_character_fight
+from src.game.domain.graph.character import can_character_be_attacked
 from src.game.domain.graph.query import connection_is_unlocked, edges_from, location_of
 from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, set_diag_context
@@ -564,7 +564,7 @@ def _can_target_start_combat(
         target is not None
         and target.type == "character"
         and target != player_id
-        and can_character_fight(target)
+        and can_character_be_attacked(target)
         and player_location is not None
         and target_location == player_location
     )

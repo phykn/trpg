@@ -34,6 +34,7 @@ describe('actionsForNode', () => {
       gender: '',
       role: '',
       alive: true,
+      canAttack: true,
     } satisfies TargetNode);
 
     expect(actions).toEqual([
@@ -64,7 +65,7 @@ describe('actionsForNode', () => {
       role: '',
       alive: true,
       canAttack: false,
-    } as TargetNode & { canAttack: false });
+    } satisfies TargetNode);
 
     expect(actions).toEqual([
       expect.objectContaining({
