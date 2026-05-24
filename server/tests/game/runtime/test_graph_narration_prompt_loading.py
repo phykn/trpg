@@ -347,11 +347,11 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "봉인 표식을 자세히 살펴봅니다." in narrate_prompt
     assert "낡은 열쇠로 잠긴 서랍을 열어 봅니다." in narrate_prompt
     assert "거리를 벌리며 방어 자세를 잡습니다." in narrate_prompt
-    assert "루카에게 기록 보관실 조사를 맡겠다고 말합니다." in narrate_prompt
+    assert "관리인에게 기록 보관실 조사를 맡겠다고 말합니다." in narrate_prompt
     assert "`intent`가 `talk`이면" in narrate_prompt
     assert "말의 목적을 짧게 씁니다" in narrate_prompt
     assert "보이는 대상 이름과 실제로 꺼낼 말을 함께 씁니다" in narrate_prompt
-    assert "루카에게 「이상하다는 동선 기록이 어느 구간이었나요?」라고 묻습니다." in narrate_prompt
+    assert "관리인에게 「이상하다는 동선 기록이 어느 구간이었나요?」라고 묻습니다." in narrate_prompt
     assert "말할 내용이 떠오르지 않으면 `talk` 제안을 만들지 않습니다" in narrate_prompt
     assert "출력 형식이 틀려도 시스템이 고쳐 준다고 가정하지 말고" in narrate_prompt
     assert "사용자 메시지는 엔진이 확정 사실을 짧은 평문으로 번역한 나레이션 브리핑입니다" in narrate_prompt

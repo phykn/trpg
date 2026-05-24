@@ -618,7 +618,7 @@ def test_parse_graph_narration_answer_removes_runtime_status_text():
 def test_parse_graph_narration_answer_normalizes_player_honorific():
     answer = "\n".join(
         [
-            "플레이어님이 먼저 말을 걸자, 올든이 대답합니다.",
+            "플레이어님이 먼저 말을 걸자, 상대가 대답합니다.",
             "---TRPG_META---",
             '{"suggestions": []}',
         ]
@@ -626,7 +626,7 @@ def test_parse_graph_narration_answer_normalizes_player_honorific():
 
     result = parse_graph_narration_answer(answer)
 
-    assert result.narration == "당신이 먼저 말을 걸자, 올든이 대답합니다."
+    assert result.narration == "당신이 먼저 말을 걸자, 상대가 대답합니다."
 
 
 def test_parse_graph_narration_answer_closes_unmatched_ascii_direct_speech():

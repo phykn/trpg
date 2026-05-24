@@ -137,6 +137,10 @@ def _clean_visible_narration_text(text: str, *, strip: bool = True) -> str:
         render("runtime.narration.clean.generic_action_sentence", _LOCALE),
     ):
         cleaned = cleaned.replace(phrase, "")
+    cleaned = cleaned.replace(
+        render("runtime.narration.clean.player_honorific", _LOCALE),
+        render("runtime.narration.clean.player_pronoun", _LOCALE),
+    )
     choice = render("runtime.narration.clean.choice_word", _LOCALE)
     cleaned = re.sub(rf"{re.escape(choice)}\([^)]*\)", choice, cleaned)
     cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)

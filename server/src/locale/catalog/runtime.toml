@@ -711,12 +711,12 @@ ko = "목표: 확정된 행동 결과를 짧고 구체적인 장면으로 바꿉
 en = "Goal: turn confirmed action results into a short concrete scene."
 
 [runtime."narration.brief.dialogue_goal"]
-ko = "목표: 대상이 플레이어 질문에 직접 답합니다. 대상 정보에서 질문에 맞는 사실을 하나 이상 직접 발화에 넣습니다."
-en = "Goal: the target directly answers the player's question. Put at least one relevant target fact into direct speech."
+ko = "목표: 대상이 플레이어 질문에 직접 답합니다. 대상 정보에서 질문에 맞는 사실을 하나 이상 직접 발화에 넣습니다. 입술, 시선, 미소 같은 장식보다 답변 내용을 먼저 씁니다."
+en = "Goal: the target directly answers the player's question. Put at least one relevant target fact into direct speech. Write answer content before decorative gestures such as lips, gaze, or smiles."
 
 [runtime."narration.brief.dialogue_forbid"]
-ko = "금지: 현재 장소 밖의 선착장, 배, 다음 섬, 연결된 장소의 행동을 이미 일어난 일처럼 쓰기"
-en = "Forbidden: treating a pier, boat, next island, or connected-place action outside the current place as already happening"
+ko = "금지: 현재 장소 밖의 이동 수단, 연결된 장소, 다음 목적지 행동을 이미 일어난 일처럼 쓰기"
+en = "Forbidden: treating transportation, connected places, or next-destination actions outside the current place as already happening"
 
 [runtime."narration.brief.move_forbid"]
 ko = "금지: 직전 대화 요약, 이전 장소 인물의 새 행동, 아직 도착하지 않은 장소 묘사"
@@ -741,3 +741,11 @@ en = "Your action is handled."
 [runtime."narration.clean.choice_word"]
 ko = "선택"
 en = "choice"
+
+[runtime."narration.clean.player_honorific"]
+ko = "플레이어님"
+en = "Player"
+
+[runtime."narration.clean.player_pronoun"]
+ko = "당신"
+en = "you"

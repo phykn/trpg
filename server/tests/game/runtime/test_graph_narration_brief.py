@@ -106,27 +106,27 @@ def test_narration_brief_orders_global_story_before_recent_dialogue():
 def test_move_brief_omits_previous_dialogue_context():
     brief = build_narration_brief(
         {
-            "user_request": {"player_input": "안개 항구 선착장으로 이동합니다."},
+            "user_request": {"player_input": "서쪽 문 앞으로 이동합니다."},
             "engine_event": {
                 "kind": "move",
-                "resolved_results": ["안개 항구 선착장으로 이동"],
+                "resolved_results": ["서쪽 문 앞으로 이동"],
             },
             "scene_state": {
                 "current_place": {
-                    "name": "안개 항구 선착장",
-                    "description": "밧줄에 묶인 배와 짧은 노 두 개가 보입니다.",
-                    "traits": ["엘리와 묶인 배만 기다립니다."],
+                    "name": "서쪽 문 앞",
+                    "description": "닫힌 문과 낡은 표식이 보입니다.",
+                    "traits": ["문지기와 닫힌 문만 기다립니다."],
                 },
-                "scene_anchor": {"location": {"name": "안개 항구 선착장"}},
+                "scene_anchor": {"location": {"name": "서쪽 문 앞"}},
             },
             "reference_context": {
                 "previous_scene": [
-                    {"summary": "올든은 출항 규칙을 설명했습니다."},
+                    {"summary": "안내인은 출입 규칙을 설명했습니다."},
                 ],
                 "recent_exchanges": [
                     {
-                        "player": "올든에게 묻습니다.",
-                        "narrator": "올든은 노를 잡습니다.",
+                        "player": "안내인에게 묻습니다.",
+                        "narrator": "안내인은 열쇠를 확인합니다.",
                     }
                 ],
             },
@@ -135,14 +135,14 @@ def test_move_brief_omits_previous_dialogue_context():
 
     assert "이전 장면 요약:" not in brief
     assert "최근 대화:" not in brief
-    assert "올든" not in brief
+    assert "안내인" not in brief
     assert "장면 유형: move" in brief
-    assert "장소: 안개 항구 선착장" in brief
+    assert "장소: 서쪽 문 앞" in brief
     assert "현재 장소:" in brief
-    assert "밧줄에 묶인 배와 짧은 노 두 개가 보입니다." in brief
-    assert "엘리와 묶인 배만 기다립니다." in brief
+    assert "닫힌 문과 낡은 표식이 보입니다." in brief
+    assert "문지기와 닫힌 문만 기다립니다." in brief
     assert "직전 대화 요약" in brief
-    assert brief.splitlines()[-1] == "플레이어 입력: 안개 항구 선착장으로 이동합니다."
+    assert brief.splitlines()[-1] == "플레이어 입력: 서쪽 문 앞으로 이동합니다."
 
 
 def test_narration_brief_includes_visible_cues_on_recent_exchanges():
@@ -279,16 +279,16 @@ def test_failed_roll_brief_omits_target_public_knowledge():
 def test_dialogue_brief_includes_target_public_knowledge_before_player_input():
     brief = build_narration_brief(
         {
-            "user_request": {"player_input": "항구장에게 출항 규칙을 묻습니다"},
+            "user_request": {"player_input": "관리인에게 출입 규칙을 묻습니다"},
             "engine_event": {"kind": "dialogue"},
             "scene_state": {
-                "scene_anchor": {"location": {"name": "안개 항구"}},
+                "scene_anchor": {"location": {"name": "기록실 입구"}},
                 "target_view": {
-                    "name": "항구장",
+                    "name": "관리인",
                     "public_knowledge": [
                         {
-                            "title": "안개 바다의 규칙",
-                            "summary": "안개 바다는 키를 잡는 사람과 물살을 확인하는 사람이 함께 필요합니다.",
+                            "title": "기록실 출입 규칙",
+                            "summary": "기록실은 담당자 확인과 방문 목적이 함께 필요합니다.",
                         }
                     ],
                 },
@@ -297,21 +297,21 @@ def test_dialogue_brief_includes_target_public_knowledge_before_player_input():
     )
 
     assert "대상 정보:" in brief
-    assert "응답 대상: 항구장. 직접 답하거나 답을 피합니다. 플레이어 질문으로 끝내지 않습니다." in brief
+    assert "응답 대상: 관리인. 직접 답하거나 답을 피합니다. 플레이어 질문으로 끝내지 않습니다." in brief
     assert "목표: 대상이 플레이어 질문에 직접 답합니다." in brief
-    assert "- 안개 바다의 규칙: 안개 바다는 키를 잡는 사람과 물살을 확인하는 사람이 함께 필요합니다." in brief
+    assert "- 기록실 출입 규칙: 기록실은 담당자 확인과 방문 목적이 함께 필요합니다." in brief
     assert brief.rfind("플레이어 입력:") > brief.find("대상 정보:")
-    assert brief.splitlines()[-1] == "플레이어 입력: 항구장에게 출항 규칙을 묻습니다"
+    assert brief.splitlines()[-1] == "플레이어 입력: 관리인에게 출입 규칙을 묻습니다"
 
 
 def test_dialogue_brief_prioritizes_answer_over_decorative_gestures():
     brief = build_narration_brief(
         {
-            "user_request": {"player_input": "올든에게 여기가 어디인지 묻습니다"},
+            "user_request": {"player_input": "관리인에게 여기가 어디인지 묻습니다"},
             "engine_event": {"kind": "dialogue"},
             "scene_state": {
-                "scene_anchor": {"location": {"name": "안개 항구"}},
-                "target_view": {"name": "올든"},
+                "scene_anchor": {"location": {"name": "기록실 입구"}},
+                "target_view": {"name": "관리인"},
             },
         }
     )
@@ -322,41 +322,41 @@ def test_dialogue_brief_prioritizes_answer_over_decorative_gestures():
 def test_dialogue_brief_includes_current_place_details_and_future_place_forbid():
     brief = build_narration_brief(
         {
-            "user_request": {"player_input": "올든에게 여기가 어디인지 묻습니다"},
+            "user_request": {"player_input": "문지기에게 여기가 어디인지 묻습니다"},
             "engine_event": {"kind": "dialogue"},
             "scene_state": {
                 "current_place": {
-                    "name": "안개 항구",
-                    "description": "올든이 혼자 탄 배를 막는 항구",
-                    "traits": ["선착장 쪽 배에 빈자리 하나가 보인다"],
+                    "name": "서쪽 문 앞",
+                    "description": "문지기가 닫힌 문 앞을 지키는 복도",
+                    "traits": ["문 너머 기록실 불빛이 새어 나온다"],
                 },
-                "scene_anchor": {"location": {"name": "안개 항구"}},
-                "target_view": {"name": "올든"},
+                "scene_anchor": {"location": {"name": "서쪽 문 앞"}},
+                "target_view": {"name": "문지기"},
             },
         }
     )
 
-    assert "장소: 안개 항구" in brief
+    assert "장소: 서쪽 문 앞" in brief
     assert "현재 장소:" in brief
-    assert "올든이 혼자 탄 배를 막는 항구" in brief
-    assert "선착장 쪽 배에 빈자리 하나가 보인다" in brief
-    assert "금지: 현재 장소 밖의 선착장, 배, 다음 섬, 연결된 장소의 행동" in brief
-    assert brief.splitlines()[-1] == "플레이어 입력: 올든에게 여기가 어디인지 묻습니다"
+    assert "문지기가 닫힌 문 앞을 지키는 복도" in brief
+    assert "문 너머 기록실 불빛이 새어 나온다" in brief
+    assert "금지: 현재 장소 밖의 이동 수단, 연결된 장소, 다음 목적지 행동" in brief
+    assert brief.splitlines()[-1] == "플레이어 입력: 문지기에게 여기가 어디인지 묻습니다"
 
 
 def test_action_brief_includes_responder_for_dialogue_like_input():
     brief = build_narration_brief(
         {
-            "user_request": {"player_input": "루카에게 영수증을 보여 달라고 말합니다"},
+            "user_request": {"player_input": "관리인에게 기록을 보여 달라고 말합니다"},
             "engine_event": {"kind": "action"},
             "scene_state": {
-                "scene_anchor": {"location": {"name": "붉은섬 광장"}},
-                "target_view": {"name": "루카"},
+                "scene_anchor": {"location": {"name": "기록실 입구"}},
+                "target_view": {"name": "관리인"},
             },
         }
     )
 
-    assert "응답 대상: 루카. 직접 답하거나 답을 피합니다. 플레이어 질문으로 끝내지 않습니다." in brief
+    assert "응답 대상: 관리인. 직접 답하거나 답을 피합니다. 플레이어 질문으로 끝내지 않습니다." in brief
     assert "목표: 대상이 플레이어 질문에 직접 답합니다." in brief
 
 
