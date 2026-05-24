@@ -218,6 +218,7 @@ def _roll_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
 def _action_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
     kind = event.get("kind")
     lines = [] if kind == "move" else _recent_context_lines(payload)
+    is_dialogue_like = kind == "dialogue" or _looks_like_dialogue_input(payload)
     lines.extend(
         [
             _brief(
@@ -229,7 +230,7 @@ def _action_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
             _brief("place", value=_place_name(payload)),
         ]
     )
-    if kind == "move":
+    if kind == "move" or is_dialogue_like:
         place_lines = _current_place_detail_lines(payload)
         if place_lines:
             lines.append(_brief("current_place"))
@@ -246,7 +247,6 @@ def _action_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
     resolved = _strings(event.get("resolved_results"))
     if resolved:
         lines.append(_brief("confirmed_inline", value=" / ".join(resolved)))
-    is_dialogue_like = kind == "dialogue" or _looks_like_dialogue_input(payload)
     if kind == "move":
         lines.extend(
             [
@@ -257,7 +257,7 @@ def _action_brief(payload: dict[str, Any], event: dict[str, Any]) -> str:
     elif is_dialogue_like:
         lines.extend(
             [
-                _brief("action_forbid"),
+                _brief("dialogue_forbid"),
                 _brief("dialogue_goal"),
             ]
         )

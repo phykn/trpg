@@ -304,6 +304,31 @@ def test_dialogue_brief_includes_target_public_knowledge_before_player_input():
     assert brief.splitlines()[-1] == "플레이어 입력: 항구장에게 출항 규칙을 묻습니다"
 
 
+def test_dialogue_brief_includes_current_place_details_and_future_place_forbid():
+    brief = build_narration_brief(
+        {
+            "user_request": {"player_input": "올든에게 여기가 어디인지 묻습니다"},
+            "engine_event": {"kind": "dialogue"},
+            "scene_state": {
+                "current_place": {
+                    "name": "안개 항구",
+                    "description": "올든이 혼자 탄 배를 막는 항구",
+                    "traits": ["선착장 쪽 배에 빈자리 하나가 보인다"],
+                },
+                "scene_anchor": {"location": {"name": "안개 항구"}},
+                "target_view": {"name": "올든"},
+            },
+        }
+    )
+
+    assert "장소: 안개 항구" in brief
+    assert "현재 장소:" in brief
+    assert "올든이 혼자 탄 배를 막는 항구" in brief
+    assert "선착장 쪽 배에 빈자리 하나가 보인다" in brief
+    assert "금지: 현재 장소 밖의 선착장, 배, 다음 섬, 연결된 장소의 행동" in brief
+    assert brief.splitlines()[-1] == "플레이어 입력: 올든에게 여기가 어디인지 묻습니다"
+
+
 def test_action_brief_includes_responder_for_dialogue_like_input():
     brief = build_narration_brief(
         {

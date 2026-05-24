@@ -714,6 +714,10 @@ en = "Goal: turn confirmed action results into a short concrete scene."
 ko = "목표: 대상이 플레이어 질문에 직접 답합니다. 대상 정보에서 질문에 맞는 사실을 하나 이상 직접 발화에 넣습니다."
 en = "Goal: the target directly answers the player's question. Put at least one relevant target fact into direct speech."
 
+[runtime."narration.brief.dialogue_forbid"]
+ko = "금지: 현재 장소 밖의 선착장, 배, 다음 섬, 연결된 장소의 행동을 이미 일어난 일처럼 쓰기"
+en = "Forbidden: treating a pier, boat, next island, or connected-place action outside the current place as already happening"
+
 [runtime."narration.brief.move_forbid"]
 ko = "금지: 직전 대화 요약, 이전 장소 인물의 새 행동, 아직 도착하지 않은 장소 묘사"
 en = "Forbidden: summarizing prior dialogue, new actions by people from the previous place, describing a place not yet reached"
