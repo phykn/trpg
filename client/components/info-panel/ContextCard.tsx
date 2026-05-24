@@ -3,8 +3,8 @@ import { ScrollView, View } from 'react-native';
 
 import { Chip, Surface } from '@/components/ui';
 
-import { PanelBody } from '@/components/info-panel/PanelBody';
 import type { PanelAction, PanelSlot } from '@/logic/info-panel/types';
+import { PanelBody } from './PanelBody';
 
 const CONTEXT_PANEL_MAX_HEIGHT = 260;
 

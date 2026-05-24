@@ -1,8 +1,8 @@
-"""NPC equipment normalization helper.
+"""Scenario assembly helpers.
 
 Build pipeline (build_scenario / write_entity / _patch_*) was removed —
 agency/story/SKILL.md + tool.py replace it. This file now contains the
-server-compatible normalization that runs at the equip-fill step.
+server-compatible transforms that run at equip-fill and catalog-fill.
 """
 
 import json

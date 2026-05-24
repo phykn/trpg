@@ -8,7 +8,7 @@
   "kn_fog_two_person_crossing": {
     "id": "kn_fog_two_person_crossing",
     "title": "동행 이유",
-    "summary": "두 사람이 양쪽 노를 맞춰 잡아야 배가 기울지 않는다.",
+    "summary": "붉은섬행 배는 두 사람이 마주 앉아 양쪽 노를 맞춰 잡아야 기울지 않는다.",
     "visibility": "public"
   },
   "kn_fog_lost_boat": {
@@ -26,7 +26,7 @@
   "kn_fog_two_people": {
     "id": "kn_fog_two_people",
     "title": "두 자리 배",
-    "summary": "붉은섬행 배는 마주 잡는 두 자리와 양쪽 노 두 개뿐이다.",
+    "summary": "붉은섬행 배에는 마주 앉는 두 자리와 짧은 노 두 개뿐이다. 빈자리는 동행자가 앉는 자리다.",
     "visibility": "public"
   },
   "kn_fog_isles": {

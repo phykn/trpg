@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "server"))
 sys.path.insert(0, str(ROOT))
 
-# sys.path must be set first; decompose.py transitively imports src.llm
+# sys.path must be set first; later imports use the server package namespace.
 from agency.story.harness.decompose import (  # noqa: E402
     DecomSetup,
     DecomCast,
@@ -28,7 +28,7 @@ from agency.story.harness.decompose import (  # noqa: E402
     _check_cast,
     _check_arc,
 )
-from agency.story.harness._common import EntityWriterError  # noqa: E402
+from agency.story.harness.contracts import EntityWriterError  # noqa: E402
 from agency.story.harness.scenario import copy_fixed_catalogs, fill_equipment  # noqa: E402
 from src.db.graph.local_fs import LocalFsGraphRepo  # noqa: E402
 from src.db.scenario.local_fs import LocalFsScenarioRepo  # noqa: E402

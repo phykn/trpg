@@ -1,4 +1,4 @@
-"""Upload/download local scenario directories to release Supabase Storage."""
+"""Upload/download/delete local scenario directories in release Supabase Storage."""
 
 import argparse
 import asyncio
@@ -171,7 +171,7 @@ def _cmd_download(args: argparse.Namespace) -> int:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="agency.story.tools.storage",
-        description="Upload/download scenario directories to Supabase Storage.",
+        description="Upload/download/delete scenario directories in Supabase Storage.",
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 

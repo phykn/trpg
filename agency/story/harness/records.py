@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ._common import (
+from .contracts import (
     ID_PATTERN,
     TRIGGER_TARGET_KIND,
     EntityWriterError,

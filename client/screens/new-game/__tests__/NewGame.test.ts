@@ -17,4 +17,9 @@ describe('NewGame layout', () => {
     expect(source).not.toContain("useState<'ko' | 'en'>");
     expect(source).not.toContain("setLocale('en')");
   });
+
+  test('uses the shared surface atom for the setup panel', () => {
+    expect(source).toContain('<Surface variant="floating"');
+    expect(source).not.toContain('border border-border-strong bg-canvas-default px-4 py-4 gap-5');
+  });
 });

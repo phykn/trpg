@@ -5,7 +5,7 @@ Local tools for testing and authoring the game. QA is a Codex browser skill. Sto
 ```
 agency/
   qa/SKILL.md   # Browser QA skill (Codex plays the visible web UI)
-  story/SKILL.md # Story-team Codex skill (no CLI — invoked from a session)
+  story/SKILL.md # Story-team Codex skill (session workflow)
   qa/           # Browser QA skill
   story/        # The Story team — authors scenario seeds (race / character / ...)
 ```
@@ -30,13 +30,15 @@ Single Codex skill (`agency/story/SKILL.md`) authors a complete scenario directo
 agency/story/
   SKILL.md            # The skill — Codex reads this and follows the workflow
   tool.py             # Single CLI. Subcommands: decompose-{setup,cast,arc},
-                      # check-entity, equip-fill, sweep
-  tools/storage.py    # Release Supabase Storage upload/download
+                      # check-entity, equip-fill, catalog-fill, sweep,
+                      # runtime-smoke
+  catalogs/           # Fixed support catalogs copied by catalog-fill
+  tools/storage.py    # Release Supabase Storage upload/download/delete
   harness/
-    _common.py        # ID pattern, trigger map, EntityWriterError
+    contracts.py      # ID pattern, trigger target map, EntityWriterError
     decompose.py      # Pydantic models + _check_setup/_check_cast/_check_arc
     records.py        # Cross-ref check helpers + SPECS metadata
-    scenario.py       # fill_equipment — equipment slot derivation
+    scenario.py       # fill_equipment + fixed catalog copy
 ```
 
 ### How to use
@@ -45,11 +47,11 @@ In a Codex session, point at the skill:
 
 > "agency/story/SKILL.md 보고 path/to/prose.md 로 scenarios/foo 만들어줘"
 
-Codex reads SKILL.md, drafts temporary `.decomp/{setup,cast,arc}.json`, validates each phase via `tool.py`, then writes entity JSONs in the order race → location → character → skill → item, runs `equip-fill`, writes quests/chapters/meta, runs `sweep` and `runtime-smoke`, then deletes `.decomp/`.
+Codex reads SKILL.md, drafts temporary `.decomp/{setup,cast,arc}.json`, validates each phase via `tool.py`, then writes entity JSONs in the order race → location → character → skill → item, runs `equip-fill` and `catalog-fill`, writes quests/chapters/meta, runs `sweep` and `runtime-smoke`, then deletes `.decomp/`.
 
 ### env
 
-`tool.py` loads `server/.env.shared` and `server/.env.<APP_ENV>` (default `dev`). Local story subcommands need no network. Release publish/download uses `APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload|download ...` and requires `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` / `SUPABASE_SCENARIO_BUCKET`.
+`tool.py` loads `server/.env.shared` and `server/.env.<APP_ENV>` (default `dev`). Local story subcommands need no network. Release publish/download/delete uses `APP_ENV=release .venv/bin/python -m agency.story.tools.storage upload|download|delete ...` and requires `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` / `SUPABASE_SCENARIO_BUCKET`.
 
 ### Limits
 

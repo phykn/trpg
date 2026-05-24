@@ -2,7 +2,7 @@
   "q_fog_ready": {
     "id": "q_fog_ready",
     "title": "두 자리 배 확인",
-    "description": "올든에게 출항 규칙을 물어볼 수 있고, 선착장에서 두 자리 배를 보면 출항 준비가 끝난다",
+    "description": "올든에게 출항 규칙을 물어볼 수 있고, 선착장에서 엘리와 두 자리 배를 보면 출항 준비가 끝난다",
     "giver": "npc_olden",
     "triggers": [
       {

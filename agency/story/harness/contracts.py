@@ -1,4 +1,4 @@
-"""Shared atoms for the story-team harness."""
+"""Validation contracts for the story-team harness."""
 
 import re
 

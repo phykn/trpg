@@ -1,4 +1,4 @@
-"""scenario_storage upload command maps local scenario files to bucket keys."""
+"""Scenario storage commands map local scenario files to bucket keys."""
 
 import json
 from unittest.mock import AsyncMock, patch

@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from ._common import (
+from .contracts import (
     ID_PATTERN,
     TRIGGER_TARGET_KIND,
     EntityWriterError,

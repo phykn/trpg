@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 
-import { CenterMessage, ErrorState } from '@/components/ui';
+import { CenterMessage, ErrorState, Surface } from '@/components/ui';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
 import { getVersion, listProfiles } from '@/services';
@@ -108,7 +108,7 @@ export function NewGame({ onSubmit }: Props) {
       contentContainerClassName="px-4 py-5"
       keyboardShouldPersistTaps="handled"
     >
-      <View className="border border-border-strong bg-canvas-default px-4 py-4 gap-5">
+      <Surface variant="floating" className="bg-canvas-default px-4 py-4 gap-5">
         <View className="gap-2 pb-4">
           <Text className="font-mono text-meta text-accent-fg uppercase">
             CHARACTER · NEW
@@ -210,7 +210,7 @@ export function NewGame({ onSubmit }: Props) {
             client: {CLIENT_SHA}  ·  server: {serverSha}
           </Text>
         </View>
-      </View>
+      </Surface>
     </ScrollView>
   );
 }

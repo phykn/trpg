@@ -258,6 +258,8 @@ def test_graph_narration_prompts_encode_style_without_source_title():
     assert "`대상`이 있으면 그 대상만 이번 대화의 응답자입니다" in narrate_prompt
     assert "다른 visible NPC는 끼어들 수 없고" in narrate_prompt
     assert "질문형 플레이어 입력을 NPC의 질문으로 뒤집어 쓰지 않습니다" in narrate_prompt
+    assert "`규칙을 알아야 한다`, `조건이 있다`처럼 조건의 존재만 말하고 끝내지 않습니다" in narrate_prompt
+    assert "해결 조건이나 다음에 확인할 대상을 같은 직접 발화 안에 덧붙입니다" in narrate_prompt
     assert "설명문만 쓰지 말고 직접 발화 한 문장을 반드시 넣습니다" in narrate_prompt
     assert "기본 구조는 플레이어의 접근/질문 한 문장" in narrate_prompt
     assert "플레이어가 단순히 말을 걸었고 구체 질문이 없으면" in narrate_prompt

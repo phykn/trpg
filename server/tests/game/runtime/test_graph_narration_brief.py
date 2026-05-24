@@ -319,6 +319,29 @@ def test_dialogue_brief_prioritizes_answer_over_decorative_gestures():
     assert "입술, 시선, 미소 같은 장식보다 답변 내용을 먼저 씁니다." in brief
 
 
+def test_dialogue_brief_requires_possibility_question_condition():
+    brief = build_narration_brief(
+        {
+            "user_request": {"player_input": "관리인에게 나갈 수 있는지 묻습니다"},
+            "engine_event": {"kind": "dialogue"},
+            "scene_state": {
+                "scene_anchor": {"location": {"name": "기록실 입구"}},
+                "target_view": {
+                    "name": "관리인",
+                    "public_knowledge": [
+                        {
+                            "title": "출입 조건",
+                            "summary": "담당자 확인을 받아야 문을 열 수 있습니다.",
+                        }
+                    ],
+                },
+            },
+        }
+    )
+
+    assert "가능 여부를 물으면 가능/불가능과 조건을 함께 말합니다." in brief
+
+
 def test_dialogue_brief_includes_current_place_details_and_future_place_forbid():
     brief = build_narration_brief(
         {
