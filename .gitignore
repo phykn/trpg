@@ -25,6 +25,11 @@ qa_test/
 scenarios/*/.decomp/
 
 # Local-only (not part of the repo)
+agency/
+docs/
+release/
+scenarios/
+tools/
 notebooks/
 .notebooks/
 .codex/
