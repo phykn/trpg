@@ -30,6 +30,7 @@ docs/
 release/
 scenarios/
 tools/
+theory.md
 notebooks/
 .notebooks/
 .codex/
