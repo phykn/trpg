@@ -4,6 +4,7 @@ from src.db.graph.supabase import SupabaseGraphRepo
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.memory import ExchangePair, GMLogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
+from src.game.domain.story_patch_ledger import StoryPatchLedgerEntry
 from tests._fakes import FakePostgREST
 
 
@@ -218,3 +219,38 @@ async def test_supabase_graph_repo_loads_log_tails_in_chronological_order():
     assert [entry.id for entry in log_entries] == [1, 2]
     assert [entry.summary for entry in history_entries] == ["요약 1", "요약 2"]
     assert [entry.player for entry in exchange_entries] == ["p1", "p2"]
+
+
+async def test_supabase_graph_repo_round_trips_story_patch_entries():
+    repo, db = _repo()
+
+    await repo.append_story_patch_entries(
+        "game-1",
+        [
+            StoryPatchLedgerEntry(
+                turn=1,
+                status="accepted",
+                intent_kind="clue_candidate",
+                reason="found",
+                patches=[
+                    {
+                        "op": "add_clue",
+                        "id": "clue_wet_ticket",
+                        "title": "젖은 표",
+                        "summary": "표가 젖어 있습니다.",
+                    }
+                ],
+                rejected_reasons=[],
+                changed_node_ids=["clue_wet_ticket"],
+                changed_edge_ids=["has_knowledge:loc:clue_wet_ticket"],
+            )
+        ],
+    )
+
+    entries = await repo.load_story_patch_entries("game-1")
+
+    assert [call[1] for call in db.calls if call[0] == "insert"] == [
+        "world_patch_entries"
+    ]
+    assert entries[0].status == "accepted"
+    assert entries[0].patches[0]["id"] == "clue_wet_ticket"

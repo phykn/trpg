@@ -1,5 +1,6 @@
 {
   "id": "white_isle_llm",
   "name": "흰섬 LLM",
-  "description": "플레이어 행동에 따라 기억과 단서가 생성되는 실험 시나리오입니다."
+  "description": "플레이어 행동에 따라 기억과 단서가 생성되는 실험 시나리오입니다.",
+  "mode": "generated"
 }

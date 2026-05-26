@@ -9,6 +9,7 @@ from src.game.runtime.flow import turn as turn_flow
 from src.game.runtime.flow.generated_input import (
     apply_generated_story_after_action,
     derive_story_write_intent,
+    story_write_intent_for_contract,
 )
 from src.game.runtime.flow.turn import run_graph_action_turn_from_runtime
 from src.game.runtime.narration.result import GraphNarrationResult
@@ -22,12 +23,16 @@ class FakeGraphRepo:
         self.saved = False
         self.progress = None
         self.logs = []
+        self.story_patch_entries = []
 
     async def save_graph_changes(self, *args, **kwargs) -> None:
         self.saved = True
 
     async def append_log_entries(self, game_id, entries) -> None:
         self.logs.extend(entries)
+
+    async def append_story_patch_entries(self, game_id, entries) -> None:
+        self.story_patch_entries.extend(entries)
 
     async def save_progress(self, progress) -> None:
         self.progress = progress
@@ -182,10 +187,171 @@ async def test_generated_story_applies_valid_clue_to_graph_and_front_state() -> 
     ]
 
 
+async def test_generated_story_records_accepted_patch_entry() -> None:
+    async def fake_writer(**kwargs) -> StoryWriteResponse:
+        return StoryWriteResponse.model_validate(
+            {
+                "reason": "found",
+                "patches": [
+                    {
+                        "op": "add_clue",
+                        "id": "clue_wet_ticket_001",
+                        "title": "젖은 승선표",
+                        "summary": "표가 젖어 있습니다.",
+                        "anchor_id": "loc_fog_harbor",
+                    }
+                ],
+            }
+        )
+
+    runtime = _runtime()
+    repo = FakeGraphRepo()
+    result = GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        front_state=graph_to_front_state(runtime),
+    )
+
+    await apply_generated_story_after_action(
+        client=object(),
+        repo=repo,
+        result=result,
+        contract=_story_contract(),
+        player_input="표를 봅니다.",
+        action=Action(verb="perceive", what="ticket"),
+        writer=fake_writer,
+    )
+
+    assert len(repo.story_patch_entries) == 1
+    entry = repo.story_patch_entries[0]
+    assert entry.status == "accepted"
+    assert entry.intent_kind == "clue_candidate"
+    assert entry.patches[0]["id"] == "clue_wet_ticket_001"
+    assert entry.changed_node_ids == ["clue_wet_ticket_001"]
+
+
+async def test_generated_story_records_rejected_patch_entry() -> None:
+    async def fake_writer(**kwargs) -> StoryWriteResponse:
+        return StoryWriteResponse.model_validate(
+            {
+                "reason": "duplicate",
+                "patches": [
+                    {
+                        "op": "add_clue",
+                        "id": "clue_existing",
+                        "title": "이미 본 단서",
+                        "summary": "이미 있습니다.",
+                        "anchor_id": "loc_fog_harbor",
+                    }
+                ],
+            }
+        )
+
+    runtime = _runtime()
+    runtime.graph.nodes["clue_existing"] = GraphNode(
+        id="clue_existing",
+        type="knowledge",
+        properties={"kind": "clue"},
+    )
+    repo = FakeGraphRepo()
+    result = GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        front_state=graph_to_front_state(runtime),
+    )
+
+    next_result = await apply_generated_story_after_action(
+        client=object(),
+        repo=repo,
+        result=result,
+        contract=_story_contract(),
+        player_input="표를 봅니다.",
+        action=Action(verb="perceive", what="ticket"),
+        writer=fake_writer,
+    )
+
+    assert next_result is result
+    assert repo.saved is False
+    assert len(repo.story_patch_entries) == 1
+    entry = repo.story_patch_entries[0]
+    assert entry.status == "rejected"
+    assert entry.patches[0]["id"] == "clue_existing"
+    assert entry.rejected_reasons
+
+
 def test_derive_story_write_intent_marks_perception_as_clue_candidate() -> None:
     intent = derive_story_write_intent(Action(verb="perceive", what="ticket"))
 
     assert intent.kind == "clue_candidate"
+
+
+def test_story_write_intent_for_contract_expands_when_world_ops_are_allowed() -> None:
+    contract = _story_contract().model_copy(
+        update={"allowed_ops": ["add_memory", "add_clue", "add_location"]}
+    )
+
+    intent = story_write_intent_for_contract(
+        Action(verb="perceive", what="창고 뒤"),
+        contract,
+    )
+
+    assert intent.kind == "both"
+    assert intent.reason == "world write allowed"
+
+
+def test_story_write_intent_keeps_base_when_recent_discovery_exists() -> None:
+    contract = _story_contract().model_copy(
+        update={"allowed_ops": ["add_memory", "add_clue", "add_location"]}
+    )
+    runtime = _runtime()
+    runtime.progress.turn_count = 5
+    runtime.graph.nodes["clue_recent"] = GraphNode(
+        id="clue_recent",
+        type="knowledge",
+        properties={
+            "kind": "clue",
+            "title": "최근 단서",
+            "summary": "최근에 발견했습니다.",
+            "stability": "scene",
+            "turn_id": 4,
+        },
+    )
+
+    intent = story_write_intent_for_contract(
+        Action(verb="move", to="loc_white_pier"),
+        contract,
+        runtime=runtime,
+    )
+
+    assert intent.kind == "memory_candidate"
+
+
+def test_story_write_intent_expands_when_recent_discoveries_are_stale() -> None:
+    contract = _story_contract().model_copy(
+        update={"allowed_ops": ["add_memory", "add_clue", "add_location"]}
+    )
+    runtime = _runtime()
+    runtime.progress.turn_count = 5
+    runtime.graph.nodes["clue_old"] = GraphNode(
+        id="clue_old",
+        type="knowledge",
+        properties={
+            "kind": "clue",
+            "title": "오래된 단서",
+            "summary": "한참 전에 발견했습니다.",
+            "stability": "scene",
+            "turn_id": 1,
+        },
+    )
+
+    intent = story_write_intent_for_contract(
+        Action(verb="move", to="loc_white_pier"),
+        contract,
+        runtime=runtime,
+    )
+
+    assert intent.kind == "both"
+    assert intent.reason == "no recent generated discoveries"
 
 
 async def test_action_turn_narrates_after_generated_story_is_applied(

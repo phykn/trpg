@@ -26,5 +26,5 @@ async def story_write(
         retry_on=(ValidationError, json.JSONDecodeError, ValueError),
         retries=retries,
         agent="story_write",
-        correction_hint="output only add_memory/add_clue JSON matching the schema",
+        correction_hint="output only allowed story patch JSON matching the schema",
     )

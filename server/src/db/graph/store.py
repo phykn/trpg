@@ -11,6 +11,7 @@ from src.game.domain.memory import (
     LogEntry,
     TurnLogEntry,
 )
+from src.game.domain.story_patch_ledger import StoryPatchLedgerEntry
 
 # Per-game write serialization. A single global lock would funnel unrelated
 # game writes through one queue and — worse — let two requests for the same
@@ -40,6 +41,10 @@ def _history_path(saves_dir: str, game_id: str) -> Path:
 
 def _exchange_path(saves_dir: str, game_id: str) -> Path:
     return _game_dir(saves_dir, game_id) / "exchange.jsonl"
+
+
+def _story_patch_path(saves_dir: str, game_id: str) -> Path:
+    return _game_dir(saves_dir, game_id) / "world_patch.jsonl"
 
 
 def _atomic_write(path: Path, data: str) -> None:
@@ -93,6 +98,12 @@ async def append_exchange_entries(
     saves_dir: str, game_id: str, entries: list[ExchangePair]
 ) -> None:
     await _append_entries(game_id, _exchange_path(saves_dir, game_id), entries)
+
+
+async def append_story_patch_entries(
+    saves_dir: str, game_id: str, entries: list[StoryPatchLedgerEntry]
+) -> None:
+    await _append_entries(game_id, _story_patch_path(saves_dir, game_id), entries)
 
 
 def _load_jsonl_tail(

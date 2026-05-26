@@ -4,6 +4,7 @@ import { colors } from '@/design/tokens';
 
 export const ICON_PATH = {
   menu: 'M5 7h14M5 12h14M5 17h14',
+  storyDev: 'M4 7h16M4 12h10M4 17h16 M18 10v4 M16 12h4',
   newGame: 'M12 5v14M5 12h14',
   volumeOn: 'M11 5L6 9H2v6h4l5 4V5z M15.54 8.46a5 5 0 0 1 0 7.07 M19.07 4.93a10 10 0 0 1 0 14.14',
   volumeOff: 'M11 5L6 9H2v6h4l5 4V5z M22 9l-6 6 M16 9l6 6',

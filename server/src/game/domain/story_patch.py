@@ -1,6 +1,6 @@
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .story_contract import StoryStability
 
@@ -42,7 +42,72 @@ class AddCluePatch(BaseModel):
     visibility: Literal["player", "private", "developer"] = "player"
 
 
-StoryPatch = Annotated[AddMemoryPatch | AddCluePatch, Field(discriminator="op")]
+class AddLocationPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    op: Literal["add_location"]
+    id: str = Field(pattern=r"^loc_[a-z0-9_]+$")
+    name: str = Field(min_length=1, max_length=80)
+    description: str = Field(min_length=1, max_length=240)
+    connect_from: str
+    stability: StoryStability = "scene"
+
+
+class AddCharacterPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    op: Literal["add_character"]
+    id: str = Field(pattern=r"^char_[a-z0-9_]+$")
+    name: str = Field(min_length=1, max_length=80)
+    role: Literal[
+        "witness",
+        "companion",
+        "opponent",
+        "merchant",
+        "bystander",
+        "quest_giver",
+    ]
+    location_id: str
+    stability: StoryStability = "scene"
+
+
+class AddItemPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    op: Literal["add_item"]
+    id: str = Field(pattern=r"^item_[a-z0-9_]+$")
+    name: str = Field(min_length=1, max_length=80)
+    description: str = Field(min_length=1, max_length=240)
+    location_id: str | None = None
+    owner_id: str | None = None
+    stability: StoryStability = "scene"
+
+    @model_validator(mode="after")
+    def _has_one_placement(self) -> "AddItemPatch":
+        if bool(self.location_id) == bool(self.owner_id):
+            raise ValueError("add_item requires exactly one of location_id or owner_id")
+        return self
+
+
+class AddQuestBeatPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    op: Literal["add_quest_beat"]
+    id: str = Field(pattern=r"^quest_[a-z0-9_]+$")
+    title: str = Field(min_length=1, max_length=80)
+    summary: str = Field(min_length=1, max_length=240)
+    stability: StoryStability = "chapter"
+
+
+StoryPatch = Annotated[
+    AddMemoryPatch
+    | AddCluePatch
+    | AddLocationPatch
+    | AddCharacterPatch
+    | AddItemPatch
+    | AddQuestBeatPatch,
+    Field(discriminator="op"),
+]
 
 
 class StoryWriteResponse(BaseModel):

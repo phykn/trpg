@@ -34,7 +34,7 @@ async def load_runtime_state(
         if scenario_repo is not None and progress.profile_id is not None
         else RuntimeContent()
     )
-    contract_json = (
+    contract_json = progress.story_contract_override or (
         await scenario_repo.read_contract_json(progress.profile_id, missing_ok=True)
         if scenario_repo is not None and progress.profile_id is not None
         else None

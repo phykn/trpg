@@ -43,7 +43,10 @@ class FakePostgREST:
         self.calls.append(("insert", table, rows))
         store_ = self.rows.setdefault(table, [])
         for offset, r in enumerate(rows, start=1):
-            if table in ("history_entries", "exchange_entries") and "seq" not in r:
+            if (
+                table in ("history_entries", "exchange_entries", "world_patch_entries")
+                and "seq" not in r
+            ):
                 r["seq"] = len(store_) + offset
         store_.extend(rows)
 

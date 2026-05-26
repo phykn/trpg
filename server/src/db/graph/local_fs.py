@@ -20,6 +20,7 @@ from src.game.domain.errors import PersistenceFailed
 from src.game.domain.graph import Graph
 from src.game.domain.memory import ExchangePair, LogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
+from src.game.domain.story_patch_ledger import StoryPatchLedgerEntry
 from src.game.rules import RULES
 
 
@@ -114,6 +115,11 @@ class LocalFsGraphRepo:
     ) -> None:
         await store.append_exchange_entries(self.saves_dir, game_id, entries)
 
+    async def append_story_patch_entries(
+        self, game_id: str, entries: list[StoryPatchLedgerEntry]
+    ) -> None:
+        await store.append_story_patch_entries(self.saves_dir, game_id, entries)
+
     async def load_log_entries(self, game_id: str) -> list[LogEntry]:
         return await asyncio.to_thread(
             store._load_jsonl_tail,
@@ -136,4 +142,14 @@ class LocalFsGraphRepo:
             store._exchange_path(self.saves_dir, game_id),
             RULES.memory.recent_exchange_turns,
             ExchangePair.model_validate_json,
+        )
+
+    async def load_story_patch_entries(
+        self, game_id: str
+    ) -> list[StoryPatchLedgerEntry]:
+        return await asyncio.to_thread(
+            store._load_jsonl_tail,
+            store._story_patch_path(self.saves_dir, game_id),
+            0,
+            StoryPatchLedgerEntry.model_validate_json,
         )

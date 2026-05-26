@@ -1,6 +1,6 @@
 # trpg-server
 
-Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in graph Postgres tables keyed on `game_id` (`game_progress / graph_nodes / graph_edges / log_entries / history_entries / exchange_entries`); scenario seeds live in a Supabase Storage bucket.
+Engine for a Korean-language TRPG. FastAPI + Pydantic v2 + an OpenAI-compatible LLM. One game lives in graph Postgres tables keyed on `game_id` (`game_progress / graph_nodes / graph_edges / log_entries / history_entries / exchange_entries / world_patch_entries`); scenario seeds live in a Supabase Storage bucket.
 
 The server agent guide is [AGENTS.md](./AGENTS.md).
 
@@ -85,6 +85,16 @@ dotenv loads `server/.env.shared` then `server/.env.<APP_ENV>` (default `dev`) a
 | POST | `/session/{game_id}/graph/turn` | Execute explicit graph action |
 | POST | `/session/{game_id}/graph/confirm` | Resolve pending graph confirmation |
 | POST | `/session/{game_id}/graph/level_up` | Apply graph level-up |
+| GET  | `/session/{game_id}/story/patches` | Dev-only generated story patch ledger |
+| GET  | `/session/{game_id}/story/timeline` | Dev-only alias for patch timeline review |
+| GET  | `/session/{game_id}/story/debt` | Dev-only generated clue/NPC/item/quest debt report |
+| GET  | `/session/{game_id}/story/dev/graph` | Dev-only raw graph inspector payload |
+| GET  | `/session/{game_id}/story/dev/contract` | Dev-only active generated story contract |
+| POST | `/session/{game_id}/story/dev/contract` | Dev-only apply a session-local generated story contract override |
+| POST | `/session/{game_id}/story/rollback` | Dev-only rollback of the latest accepted generated patch |
+| POST | `/session/{game_id}/story/dev/preview_contract` | Dev-only validate contract JSON without saving |
+| POST | `/session/{game_id}/story/dev/preview_patch` | Dev-only validate/preview generated patch without saving |
+| POST | `/session/{game_id}/story/dev/replay_prompt` | Dev-only rebuild story writer prompt payload without calling the LLM |
 | POST | `/debug/complete` | One-shot LLM call for debugging |
 
 ## Tests
@@ -119,5 +129,6 @@ Runtime state lives in Supabase Postgres:
 | `log_entries` | `(game_id, log_id)` | `log_id = entry.id` (app-managed monotonic) |
 | `history_entries` | `(game_id, seq)` | `bigserial`, append-only turn summaries |
 | `exchange_entries` | `(game_id, seq)` | `bigserial`, append-only player input + narrator response exchanges |
+| `world_patch_entries` | `(game_id, seq)` | `bigserial`, append-only accepted/rejected LLM story patch ledger |
 
 Runtime child tables should FK → `game_progress(game_id) ON DELETE CASCADE`. RLS enabled with no policies — the server uses the service-role key, anon/auth keys see nothing.

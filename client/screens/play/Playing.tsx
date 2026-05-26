@@ -3,6 +3,7 @@ import { Keyboard, Platform, Pressable, Text, View, type KeyboardEvent } from 'r
 
 import { CombatStrip } from '@/logic/combat';
 import { DiscoveriesPanel } from '@/components/discoveries/DiscoveriesPanel';
+import { StoryDevPanel } from '@/components/story-dev/StoryDevPanel';
 import { buildDecisionState, DecisionStateStrip } from '@/logic/decision-state';
 import { Log } from '@/logic/log';
 import { RollPanel } from '@/logic/roll';
@@ -37,11 +38,13 @@ export function Playing({ game }: Props) {
   const [input, setInput] = React.useState('');
   const [pendingAction, setPendingAction] = React.useState<PanelAction | null>(null);
   const [newGameConfirmOpen, setNewGameConfirmOpen] = React.useState(false);
+  const [storyDevOpen, setStoryDevOpen] = React.useState(false);
   const [nearbyOpen, setNearbyOpen] = React.useState(false);
   const [bottomOverlayHeight, setBottomOverlayHeight] = React.useState(0);
   const [keyboardOverlayHeight, setKeyboardOverlayHeight] = React.useState(0);
   const [playSurfaceHeight, setPlaySurfaceHeight] = React.useState(0);
   const { bgmOn, toggle: toggleBgm } = useBgm();
+  const showStoryDev = __DEV__ && game.gameId !== null;
 
   const runAction = (action: PanelAction) => {
     setActiveId(null);
@@ -59,10 +62,12 @@ export function Playing({ game }: Props) {
   const closePopups = () => {
     setActiveId(null);
     setNearbyOpen(false);
+    setStoryDevOpen(false);
   };
 
   const setNearbyOpenFromComposer = (open: boolean) => {
     if (open) setActiveId(null);
+    if (open) setStoryDevOpen(false);
     setNearbyOpen(open);
   };
 
@@ -122,6 +127,7 @@ export function Playing({ game }: Props) {
     if (typing) {
       setActiveId(null);
       setNearbyOpen(false);
+      setStoryDevOpen(false);
     }
   }, [typing]);
 
@@ -215,12 +221,26 @@ export function Playing({ game }: Props) {
           />
         )}
         trailing={(
-          <IconButton
-            d={bgmOn ? ICON_PATH.volumeOn : ICON_PATH.volumeOff}
-            label={bgmOn ? ko.menu.soundOff : ko.menu.soundOn}
-            active={bgmOn}
-            onPress={toggleBgm}
-          />
+          <View className="flex-row gap-1">
+            {showStoryDev ? (
+              <IconButton
+                d={ICON_PATH.storyDev}
+                label={ko.storyDev.open}
+                active={storyDevOpen}
+                onPress={() => {
+                  setActiveId(null);
+                  setNearbyOpen(false);
+                  setStoryDevOpen((prev) => !prev);
+                }}
+              />
+            ) : null}
+            <IconButton
+              d={bgmOn ? ICON_PATH.volumeOn : ICON_PATH.volumeOff}
+              label={bgmOn ? ko.menu.soundOff : ko.menu.soundOn}
+              active={bgmOn}
+              onPress={toggleBgm}
+            />
+          </View>
         )}
         onSelect={(id) => {
           setNearbyOpen(false);
@@ -235,7 +255,11 @@ export function Playing({ game }: Props) {
 
       <DiscoveriesPanel discoveries={discoveries} />
 
-      {activeId !== null && (
+      {showStoryDev && storyDevOpen ? (
+        <StoryDevPanel gameId={game.gameId ?? ''} onClose={() => setStoryDevOpen(false)} />
+      ) : null}
+
+      {(activeId !== null || storyDevOpen) && (
         <Pressable
           onPress={closePopups}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9 }}

@@ -82,6 +82,7 @@ describe('Playing overlay layering', () => {
   test('keeps context panels and nearby panel mutually exclusive', () => {
     expect(source).toContain('const setNearbyOpenFromComposer = (open: boolean) => {');
     expect(source).toContain('if (open) setActiveId(null);');
+    expect(source).toContain('if (open) setStoryDevOpen(false);');
     expect(source).toContain('onNearbyOpenChange={setNearbyOpenFromComposer}');
     expect(source).toContain('setNearbyOpen(false);');
   });
@@ -90,7 +91,14 @@ describe('Playing overlay layering', () => {
     expect(source).toContain(`if (typing) {
       setActiveId(null);
       setNearbyOpen(false);
+      setStoryDevOpen(false);
     }`);
+  });
+
+  test('exposes generated story dev diagnostics only in dev builds', () => {
+    expect(source).toContain('const showStoryDev = __DEV__ && game.gameId !== null;');
+    expect(source).toContain('<StoryDevPanel gameId={game.gameId ?? \'\'} onClose={() => setStoryDevOpen(false)} />');
+    expect(source).toContain('d={ICON_PATH.storyDev}');
   });
 
   test('only uses cues from the last log entry when it is GM narration', () => {

@@ -3,6 +3,11 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from src.game.domain.action import Action
+from src.game.domain.graph import Graph
+from src.game.domain.story_contract import StoryContract
+from src.game.domain.story_debt import StoryDebtReport
+from src.game.domain.story_patch import StoryWriteResponse
+from src.game.domain.story_patch_ledger import StoryPatchLedgerEntry
 from src.game.runtime.narration.suggestions import GraphSuggestion
 from src.game.seed.player import PlayerInput
 
@@ -39,6 +44,67 @@ class GraphActionResponse(BaseModel):
     outcome: Literal["success", "failure", "neutral"] = "neutral"
     message: str | None = None
     suggestions: list[GraphSuggestion] = Field(default_factory=list)
+
+
+class StoryPatchEntriesResponse(BaseModel):
+    game_id: str
+    entries: list[StoryPatchLedgerEntry]
+
+
+class StoryDebtResponse(BaseModel):
+    game_id: str
+    debt: StoryDebtReport
+
+
+class StoryGraphResponse(BaseModel):
+    game_id: str
+    graph: Graph
+
+
+class StoryContractResponse(BaseModel):
+    game_id: str
+    contract: StoryContract
+
+
+class StoryContractPreviewRequest(BaseModel):
+    contract: dict[str, Any]
+
+
+class StoryContractPreviewResponse(BaseModel):
+    game_id: str
+    ok: bool
+    reasons: list[str] = Field(default_factory=list)
+    contract: StoryContract | None = None
+
+
+class StoryRollbackResponse(BaseModel):
+    game_id: str
+    entry: StoryPatchLedgerEntry
+
+
+class StoryPatchPreviewRequest(BaseModel):
+    proposal: StoryWriteResponse
+
+
+class StoryPatchPreviewResponse(BaseModel):
+    game_id: str
+    ok: bool
+    reasons: list[str] = Field(default_factory=list)
+    changed_node_ids: list[str] = Field(default_factory=list)
+    changed_edge_ids: list[str] = Field(default_factory=list)
+
+
+class StoryPromptReplayRequest(BaseModel):
+    player_input: str
+    action: Action
+
+
+class StoryPromptReplayResponse(BaseModel):
+    game_id: str
+    agent: Literal["story_write"] = "story_write"
+    intent: dict[str, Any]
+    system_prompt: str
+    user_payload: dict[str, Any]
 
 
 class GraphLevelUpChoice(BaseModel):

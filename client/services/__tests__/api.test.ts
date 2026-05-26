@@ -12,14 +12,24 @@ const { fetch } = require('expo/fetch') as { fetch: jest.Mock };
 const {
   getGraphSessionById,
   getGraphLevelUpOptions,
+  getStoryDebt,
+  getStoryContract,
+  getStoryGraph,
+  getStoryPatchEntries,
+  getStoryPatchTimeline,
   initGraphSession,
   listProfiles,
+  previewStoryPatch,
+  previewStoryContract,
+  replayStoryPrompt,
   requestGraphIntro,
+  rollbackStoryPatch,
   rollGraphPending,
   sendGraphAction,
   sendGraphCombatCommand,
   sendGraphInput,
   sendGraphLevelUp,
+  updateStoryContract,
 } = require('../api') as typeof import('../api');
 
 const graphState = (): GraphFrontState => ({
@@ -707,6 +717,309 @@ describe('graph API helpers', () => {
       expect.objectContaining({ method: 'GET' }),
     );
     expect(result[0].growth.kind).toBe('learn_skill');
+  });
+
+  test('loads generated story patch entries from the dev ledger endpoint', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        entries: [
+          {
+            turn: 2,
+            status: 'accepted',
+            intent_kind: 'clue_candidate',
+            reason: 'found',
+            patches: [{ op: 'add_clue', id: 'clue_wet_ticket' }],
+            rejected_reasons: [],
+            changed_node_ids: ['clue_wet_ticket'],
+            changed_edge_ids: ['has_knowledge:loc_01:clue_wet_ticket'],
+          },
+        ],
+      }),
+    });
+
+    const result = await getStoryPatchEntries('game-1');
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/story/patches',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(result.entries[0].status).toBe('accepted');
+    expect(result.entries[0].changedNodeIds).toEqual(['clue_wet_ticket']);
+  });
+
+  test('loads generated story timeline from the dev timeline endpoint', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        entries: [],
+      }),
+    });
+
+    await getStoryPatchTimeline('game-1');
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/story/timeline',
+      expect.objectContaining({ method: 'GET' }),
+    );
+  });
+
+  test('loads generated story debt from the dev debt endpoint', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        debt: {
+          unresolved_clues: [
+            {
+              id: 'clue_wet_ticket',
+              title: '젖은 표',
+              turn: 2,
+              reason: 'generated clue is not marked resolved',
+            },
+          ],
+          orphan_characters: [],
+          orphan_items: [],
+          dangling_quest_beats: [],
+        },
+      }),
+    });
+
+    const result = await getStoryDebt('game-1');
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/story/debt',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(result.debt.unresolvedClues[0].id).toBe('clue_wet_ticket');
+  });
+
+  test('loads raw story graph from the dev graph endpoint', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        graph: {
+          nodes: {
+            loc_01: {
+              id: 'loc_01',
+              type: 'location',
+              properties: { name: '항구' },
+            },
+          },
+          edges: {},
+        },
+      }),
+    });
+
+    const result = await getStoryGraph('game-1');
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/story/dev/graph',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(result.graph.nodes.loc_01.type).toBe('location');
+  });
+
+  test('loads active story contract from the dev contract endpoint', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        contract: {
+          id: 'white_isle_llm',
+          world: { title: '흰섬으로 가는 안개 바다', locale: 'ko' },
+          fixed: [],
+          forbid: [],
+          tone: { register: '합니다체', person: 'second' },
+          budgets: { patches_per_turn: 1, new_terms_per_turn: 1 },
+          allowed_ops: ['add_clue'],
+          stability_defaults: { add_clue: 'scene' },
+        },
+      }),
+    });
+
+    const result = await getStoryContract('game-1');
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/story/dev/contract',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(result.contract.id).toBe('white_isle_llm');
+  });
+
+  test('previews a story contract edit through the dev endpoint', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        ok: true,
+        reasons: [],
+        contract: {
+          id: 'white_isle_llm',
+          world: { title: '흰섬으로 가는 안개 바다', locale: 'ko' },
+          fixed: [],
+          forbid: [],
+          tone: { register: '합니다체', person: 'second' },
+          budgets: { patches_per_turn: 1, new_terms_per_turn: 1 },
+          allowed_ops: ['add_clue'],
+          stability_defaults: { add_clue: 'scene' },
+        },
+      }),
+    });
+
+    const result = await previewStoryContract('game-1', {
+      id: 'white_isle_llm',
+      allowed_ops: ['add_clue'],
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/story/dev/preview_contract',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          contract: {
+            id: 'white_isle_llm',
+            allowed_ops: ['add_clue'],
+          },
+        }),
+      }),
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  test('updates the session story contract through the dev endpoint', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        contract: {
+          id: 'white_isle_llm_override',
+          world: { title: '흰섬으로 가는 안개 바다', locale: 'ko' },
+          fixed: [],
+          forbid: [],
+          tone: { register: '합니다체', person: 'second' },
+          budgets: { patches_per_turn: 1, new_terms_per_turn: 1 },
+          allowed_ops: ['add_clue'],
+          stability_defaults: { add_clue: 'scene' },
+        },
+      }),
+    });
+
+    const result = await updateStoryContract('game-1', {
+      id: 'white_isle_llm_override',
+      allowed_ops: ['add_clue'],
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/story/dev/contract',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          contract: {
+            id: 'white_isle_llm_override',
+            allowed_ops: ['add_clue'],
+          },
+        }),
+      }),
+    );
+    expect(result.contract.id).toBe('white_isle_llm_override');
+  });
+
+  test('rolls back the latest generated story patch through the dev endpoint', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        entry: {
+          turn: 3,
+          status: 'rolled_back',
+          intent_kind: 'clue_candidate',
+          reason: 'rolled back accepted story patch',
+          patches: [{ op: 'add_clue', id: 'clue_wet_ticket' }],
+          rejected_reasons: [],
+          changed_node_ids: ['clue_wet_ticket'],
+          changed_edge_ids: ['has_knowledge:loc_01:clue_wet_ticket'],
+        },
+      }),
+    });
+
+    const result = await rollbackStoryPatch('game-1');
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/story/rollback',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(result.entry.status).toBe('rolled_back');
+    expect(result.entry.changedNodeIds).toEqual(['clue_wet_ticket']);
+  });
+
+  test('previews a generated story patch through the dev endpoint', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        ok: true,
+        reasons: [],
+        changed_node_ids: ['clue_preview'],
+        changed_edge_ids: ['has_knowledge:loc_01:clue_preview'],
+      }),
+    });
+
+    const result = await previewStoryPatch('game-1', {
+      reason: 'preview',
+      patches: [{ op: 'add_clue', id: 'clue_preview' }],
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/story/dev/preview_patch',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          proposal: {
+            reason: 'preview',
+            patches: [{ op: 'add_clue', id: 'clue_preview' }],
+          },
+        }),
+      }),
+    );
+    expect(result.changedNodeIds).toEqual(['clue_preview']);
+  });
+
+  test('replays the story writer prompt through the dev endpoint', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        game_id: 'game-1',
+        agent: 'story_write',
+        intent: { kind: 'clue_candidate', reason: 'perception action' },
+        system_prompt: 'write only patches',
+        user_payload: {
+          player_input: '표를 살핍니다.',
+          action: { verb: 'perceive', what: 'ticket' },
+        },
+      }),
+    });
+
+    const result = await replayStoryPrompt('game-1', {
+      player_input: '표를 살핍니다.',
+      action: { verb: 'perceive', what: 'ticket' },
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.test/session/game-1/story/dev/replay_prompt',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          player_input: '표를 살핍니다.',
+          action: { verb: 'perceive', what: 'ticket' },
+        }),
+      }),
+    );
+    expect(result.agent).toBe('story_write');
+    expect(result.user_payload.player_input).toBe('표를 살핍니다.');
   });
 
   test('posts pending roll choices to the graph roll stream endpoint', async () => {

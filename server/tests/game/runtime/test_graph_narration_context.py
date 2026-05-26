@@ -257,6 +257,66 @@ def test_input_payload_includes_recent_context_and_keeps_player_input():
     assert "recent_narration" not in payload
 
 
+def test_input_payload_includes_player_visible_generated_discoveries():
+    runtime = _runtime()
+    runtime.graph.nodes["mem_tore_ticket_001"] = GraphNode(
+        id="mem_tore_ticket_001",
+        type="knowledge",
+        properties={
+            "kind": "memory",
+            "title": "찢어진 표",
+            "summary": "당신은 승선표를 찢어 반쪽을 들고 갔습니다.",
+            "visibility": "player",
+        },
+    )
+    runtime.graph.nodes["clue_wet_rope_001"] = GraphNode(
+        id="clue_wet_rope_001",
+        type="knowledge",
+        properties={
+            "kind": "clue",
+            "title": "젖은 밧줄",
+            "summary": "밧줄은 아직 물기를 머금고 있습니다.",
+            "visibility": "player",
+        },
+    )
+    runtime.graph.edges["has_knowledge:player_01:mem_tore_ticket_001"] = GraphEdge(
+        id="has_knowledge:player_01:mem_tore_ticket_001",
+        type="has_knowledge",
+        from_node_id="player_01",
+        to_node_id="mem_tore_ticket_001",
+    )
+    runtime.graph.edges["has_knowledge:square:clue_wet_rope_001"] = GraphEdge(
+        id="has_knowledge:square:clue_wet_rope_001",
+        type="has_knowledge",
+        from_node_id="square",
+        to_node_id="clue_wet_rope_001",
+    )
+
+    payload = build_input_narration_payload(
+        runtime=runtime,
+        player_input="주변을 둘러봅니다",
+        action=Action(verb="perceive", what="square"),
+        dialogue_target=None,
+    )
+
+    assert payload["reference_context"]["discoveries"] == {
+        "memories": [
+            {
+                "id": "mem_tore_ticket_001",
+                "title": "찢어진 표",
+                "summary": "당신은 승선표를 찢어 반쪽을 들고 갔습니다.",
+            }
+        ],
+        "clues": [
+            {
+                "id": "clue_wet_rope_001",
+                "title": "젖은 밧줄",
+                "summary": "밧줄은 아직 물기를 머금고 있습니다.",
+            }
+        ],
+    }
+
+
 def test_input_payload_includes_current_story_context():
     runtime = _runtime()
     runtime.graph.nodes["chapter_01"] = GraphNode(

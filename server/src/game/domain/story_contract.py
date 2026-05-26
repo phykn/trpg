@@ -3,7 +3,14 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
-StoryPatchOp = Literal["add_memory", "add_clue"]
+StoryPatchOp = Literal[
+    "add_memory",
+    "add_clue",
+    "add_location",
+    "add_character",
+    "add_item",
+    "add_quest_beat",
+]
 StoryStability = Literal["scene", "chapter", "campaign", "core"]
 
 
@@ -33,6 +40,10 @@ class StoryStabilityDefaults(BaseModel):
 
     add_memory: StoryStability = "campaign"
     add_clue: StoryStability = "scene"
+    add_location: StoryStability = "scene"
+    add_character: StoryStability = "scene"
+    add_item: StoryStability = "scene"
+    add_quest_beat: StoryStability = "chapter"
 
 
 class StoryContract(BaseModel):
@@ -48,9 +59,12 @@ class StoryContract(BaseModel):
     stability_defaults: StoryStabilityDefaults
 
     @model_validator(mode="after")
-    def _allowed_ops_are_mvp_only(self) -> "StoryContract":
+    def _allowed_ops_are_known(self) -> "StoryContract":
         if not self.allowed_ops:
             raise ValueError("allowed_ops must contain at least one operation")
-        if not set(self.allowed_ops).issubset({"add_memory", "add_clue"}):
-            raise ValueError("generated MVP allows only add_memory and add_clue")
+        if not set(self.allowed_ops).issubset(
+            {"add_memory", "add_clue", "add_location", "add_character", "add_item"}
+            | {"add_quest_beat"}
+        ):
+            raise ValueError("generated story contract includes an unknown operation")
         return self

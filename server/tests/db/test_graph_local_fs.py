@@ -7,6 +7,7 @@ from src.db.graph.local_fs import LocalFsGraphRepo
 from src.game.domain.errors import PersistenceFailed
 from src.game.domain.graph import Graph, GraphEdge, GraphNode
 from src.game.domain.progress import GameProgress
+from src.game.domain.story_patch_ledger import StoryPatchLedgerEntry
 
 
 def _graph() -> Graph:
@@ -92,3 +93,45 @@ async def test_local_fs_graph_repo_wraps_invalid_graph(tmp_path):
 
     with pytest.raises(PersistenceFailed, match="missing node"):
         await repo.load_graph("game-1")
+
+
+async def test_local_fs_graph_repo_round_trips_story_patch_entries(tmp_path):
+    repo = LocalFsGraphRepo(str(tmp_path))
+
+    await repo.append_story_patch_entries(
+        "game-1",
+        [
+            StoryPatchLedgerEntry(
+                turn=1,
+                status="rejected",
+                intent_kind="clue_candidate",
+                reason="found",
+                patches=[],
+                rejected_reasons=["duplicate patch id: clue_seen"],
+                changed_node_ids=[],
+                changed_edge_ids=[],
+            ),
+            StoryPatchLedgerEntry(
+                turn=2,
+                status="accepted",
+                intent_kind="memory_candidate",
+                reason="remembered",
+                patches=[
+                    {
+                        "op": "add_memory",
+                        "id": "mem_seen_ticket",
+                        "summary": "표를 봤습니다.",
+                    }
+                ],
+                rejected_reasons=[],
+                changed_node_ids=["mem_seen_ticket"],
+                changed_edge_ids=["has_knowledge:player:mem_seen_ticket"],
+            ),
+        ],
+    )
+
+    entries = await repo.load_story_patch_entries("game-1")
+
+    assert [entry.status for entry in entries] == ["rejected", "accepted"]
+    assert entries[0].rejected_reasons == ["duplicate patch id: clue_seen"]
+    assert entries[1].changed_node_ids == ["mem_seen_ticket"]

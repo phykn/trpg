@@ -13,6 +13,7 @@ class GameProgress(BaseModel):
     player_id: str
     profile_id: str | None = None
     runtime_content: RuntimeContent = Field(default_factory=RuntimeContent)
+    story_contract_override: dict[str, Any] | None = None
     locale: str = "ko"
     active_subject_id: str | None = None
     active_quest_id: str | None = None

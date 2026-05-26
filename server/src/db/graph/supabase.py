@@ -21,6 +21,7 @@ from src.game.domain.errors import PersistenceFailed
 from src.game.domain.graph import Graph
 from src.game.domain.memory import ExchangePair, LogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
+from src.game.domain.story_patch_ledger import StoryPatchLedgerEntry
 from src.game.rules import RULES
 
 
@@ -187,6 +188,11 @@ class SupabaseGraphRepo:
     ) -> None:
         await self._append_seq_rows("exchange_entries", game_id, list(entries))
 
+    async def append_story_patch_entries(
+        self, game_id: str, entries: list[StoryPatchLedgerEntry]
+    ) -> None:
+        await self._append_seq_rows("world_patch_entries", game_id, list(entries))
+
     async def load_log_entries(self, game_id: str) -> list[LogEntry]:
         rows = await self._db.select(
             "log_entries",
@@ -216,3 +222,17 @@ class SupabaseGraphRepo:
             limit=RULES.memory.recent_exchange_turns,
         )
         return [ExchangePair.model_validate(row["entry"]) for row in reversed(rows)]
+
+    async def load_story_patch_entries(
+        self, game_id: str
+    ) -> list[StoryPatchLedgerEntry]:
+        rows = await self._db.select(
+            "world_patch_entries",
+            filters={"game_id": f"eq.{game_id}"},
+            select="entry",
+            order="seq.desc",
+        )
+        return [
+            StoryPatchLedgerEntry.model_validate(row["entry"])
+            for row in reversed(rows)
+        ]

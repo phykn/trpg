@@ -72,6 +72,9 @@ Graph runtime tables are all keyed on `game_id`:
 - `log_entries(game_id, log_id int, entry jsonb)` — `log_id = entry.id` (app-managed monotonic).
 - `history_entries(game_id, seq bigserial, entry jsonb)` — append-only turn summaries.
 - `exchange_entries(game_id, seq bigserial, entry jsonb)` — append-only player input + narrator response exchanges.
+- `world_patch_entries(game_id, seq bigserial, entry jsonb)` — append-only accepted/rejected LLM story patch ledger.
+
+Generated story dev routes expose only diagnostics/ops: `/story/patches` and `/story/timeline` read the ledger, `/story/debt` derives unresolved generated clues, orphan generated characters/items, and open generated quest beats from the current graph, `/story/dev/graph` returns the raw graph inspector payload, `/story/dev/contract` returns or applies the session-local generated story contract override, `/story/rollback` removes the latest unrolled accepted generated patch, `/story/dev/preview_contract` / `/story/dev/preview_patch` validate proposed contract or patch JSON without saving it, and `/story/dev/replay_prompt` rebuilds the story writer prompt payload without calling the LLM. Player-facing play should continue through `/graph/*`.
 
 Runtime child tables should FK to `game_progress(game_id) ON DELETE CASCADE`. RLS enabled with no policies (server uses service-role key, anon/auth keys see nothing).
 

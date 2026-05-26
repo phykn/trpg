@@ -11,11 +11,15 @@ Return only JSON matching this shape:
 }
 ```
 
-Allowed patches are only `add_memory` and `add_clue`.
+Allowed patches are `add_memory`, `add_clue`, `add_location`, `add_character`, `add_item`, and `add_quest_beat` when the contract allows them.
 
 Rules:
 - Write only facts justified by the accepted action and visible context.
 - Do not reveal forbidden facts from the contract.
 - Use Korean 합니다체 in `summary` fields.
-- Keep IDs stable, lowercase ASCII, and prefixed with `mem_` or `clue_`.
-- Prefer zero patches when the action does not establish a durable memory or clue.
+- Keep IDs stable, lowercase ASCII, and prefixed with `mem_`, `clue_`, `loc_`, `char_`, `item_`, or `quest_`.
+- For `add_location`, connect only from an existing visible location with `connect_from`.
+- For `add_character`, place only at an existing visible location with `location_id`.
+- For `add_item`, set exactly one of `location_id` or `owner_id`.
+- For `add_quest_beat`, create only a small pending lead, not a forced solution.
+- Prefer zero patches when the action does not establish a useful world change.

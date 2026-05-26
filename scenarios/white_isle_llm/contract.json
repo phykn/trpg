@@ -13,6 +13,20 @@
   ],
   "tone": { "register": "합니다체", "person": "second" },
   "budgets": { "patches_per_turn": 1, "new_terms_per_turn": 1 },
-  "allowed_ops": ["add_memory", "add_clue"],
-  "stability_defaults": { "add_memory": "campaign", "add_clue": "scene" }
+  "allowed_ops": [
+    "add_memory",
+    "add_clue",
+    "add_location",
+    "add_character",
+    "add_item",
+    "add_quest_beat"
+  ],
+  "stability_defaults": {
+    "add_memory": "campaign",
+    "add_clue": "scene",
+    "add_location": "scene",
+    "add_character": "scene",
+    "add_item": "scene",
+    "add_quest_beat": "chapter"
+  }
 }

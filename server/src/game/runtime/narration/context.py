@@ -68,6 +68,7 @@ def build_action_narration_payload(
             after,
             target=target.id if target is not None else None,
         ),
+        "discoveries": _discoveries_payload(after),
         "combat_view": combat_narration_view(
             after,
             trace=dispatch.combat_trace,
@@ -123,6 +124,7 @@ def build_roll_narration_payload(
             runtime,
             target=target.id if target is not None else None,
         ),
+        "discoveries": _discoveries_payload(runtime),
         "combat_view": combat_narration_view(runtime),
     }
     return compact_narration_payload(payload)
@@ -160,6 +162,7 @@ def build_input_narration_payload(
         )
         if dialogue_target is not None
         else [],
+        "discoveries": _discoveries_payload(runtime),
         "combat_view": combat_narration_view(runtime),
     }
     return compact_narration_payload(payload)
@@ -179,6 +182,7 @@ def compact_narration_payload(source: dict[str, Any]) -> dict[str, Any]:
             "current_story": source.get("current_story"),
             "previous_scene": source.get("previous_scene"),
             "recent_exchanges": source.get("recent_exchanges"),
+            "discoveries": source.get("discoveries"),
         },
         "scene_state": scene_state,
         "combat_view": source.get("combat_view"),
@@ -340,6 +344,56 @@ def _item_payload(runtime: GameRuntimeState, item: GraphNode) -> dict[str, Any]:
         payload["description"] = description
     _add_list_field(runtime, item, payload, "traits")
     return payload
+
+
+def _discoveries_payload(runtime: GameRuntimeState) -> dict[str, list[dict[str, str]]]:
+    player_id = runtime.progress.player_id
+    place_id = location_of(runtime.graph_index, player_id)
+    anchors = {player_id}
+    if place_id:
+        anchors.add(place_id)
+    memories: list[dict[str, str]] = []
+    clues: list[dict[str, str]] = []
+    for anchor_id in anchors:
+        for entry in _knowledge_payloads_from_anchor(runtime, anchor_id):
+            kind = entry.pop("kind", "")
+            if kind == "memory":
+                memories.append(entry)
+            elif kind == "clue":
+                clues.append(entry)
+    payload: dict[str, list[dict[str, str]]] = {}
+    if memories:
+        payload["memories"] = memories[-5:]
+    if clues:
+        payload["clues"] = clues[-5:]
+    return payload
+
+
+def _knowledge_payloads_from_anchor(
+    runtime: GameRuntimeState,
+    anchor_id: str,
+) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    for edge in edges_from(runtime.graph_index, anchor_id, "has_knowledge"):
+        knowledge = runtime.graph.nodes.get(edge.to_node_id)
+        if knowledge is None or knowledge.type != "knowledge":
+            continue
+        visibility = node_value(runtime.content, knowledge, "visibility")
+        if visibility != "player":
+            continue
+        kind = node_value(runtime.content, knowledge, "kind")
+        if kind not in {"memory", "clue"}:
+            continue
+        payload: dict[str, str] = {"id": knowledge.id, "kind": kind}
+        title = node_value(runtime.content, knowledge, "title")
+        if isinstance(title, str) and title:
+            payload["title"] = title
+        summary = node_value(runtime.content, knowledge, "summary")
+        if isinstance(summary, str) and summary:
+            payload["summary"] = summary
+        if "summary" in payload or "title" in payload:
+            out.append(payload)
+    return out
 
 
 def _node_ref(runtime: GameRuntimeState, node: GraphNode | None) -> dict[str, str]:
