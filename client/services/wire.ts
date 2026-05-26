@@ -1,4 +1,5 @@
 import type { CombatBadge } from '@/logic/combat';
+import type { Discoveries } from '@/logic/discoveries';
 import type { Hero } from '@/logic/hero';
 import type { LogEntry } from '@/logic/log';
 import type { Quest } from '@/logic/quest';
@@ -28,6 +29,7 @@ export type FrontState = {
   questOffers: Quest[];
   place: Place | null;
   combat: CombatBadge | null;
+  discoveries: Discoveries;
   log: LogEntry[];
   pendingConfirmation?: PendingConfirmation | null;
   pendingRoll?: PendingRoll | null;
@@ -231,6 +233,19 @@ export type GraphCombatState = {
   lastDc?: number | null;
 };
 
+export type GraphDiscoveryEntry = {
+  id: string;
+  title: string;
+  summary: string;
+  stability: 'scene' | 'chapter' | 'campaign' | 'core';
+  turnId?: number | null;
+};
+
+export type GraphDiscoveries = {
+  memories: GraphDiscoveryEntry[];
+  clues: GraphDiscoveryEntry[];
+};
+
 export type GraphFrontState = {
   hero: GraphHeroState;
   chapter: Chapter | null;
@@ -239,6 +254,7 @@ export type GraphFrontState = {
   questOffers: Quest[];
   place: GraphPlaceState | null;
   combat: GraphCombatState | null;
+  discoveries?: GraphDiscoveries | null;
   pendingConfirmation: PendingConfirmation | null;
   pendingRoll: PendingRoll | null;
   log: LogEntry[];

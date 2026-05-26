@@ -33,6 +33,7 @@ from ..request_result import GraphResultOutcome, executed_result, outcome_from_d
 from ..state import GameRuntimeState
 from ..narration.suggestions import GraphSuggestion, filter_grounded_suggestions
 from ..env import env_float
+from .generated_input import apply_generated_story_after_action
 
 
 class GraphActionTurnError(ValueError):
@@ -72,6 +73,7 @@ async def run_graph_action_turn(
     *,
     llm: LLMClient | None = None,
     scenario_repo: ScenarioRepo | None = None,
+    player_input: str | None = None,
 ) -> GraphActionTurnResult:
     runtime = await load_runtime_state(repo, game_id, scenario_repo)
     set_diag_context(game_id, runtime.progress.turn_count)
@@ -81,6 +83,7 @@ async def run_graph_action_turn(
         runtime,
         action,
         llm=llm,
+        player_input=player_input,
     )
 
 
@@ -93,13 +96,22 @@ async def run_graph_action_turn_from_runtime(
     llm: LLMClient | None = None,
     narration_outcome: GraphResultOutcome | None = None,
     extra_ui_cues: list[NarrationCue] | None = None,
+    player_input: str | None = None,
 ) -> GraphActionTurnResult:
     prepared = _prepare_graph_action_turn(game_id, runtime, action)
     result = await _commit_graph_action_result(repo, game_id, prepared)
+    result = await apply_generated_story_after_action(
+        client=llm,
+        repo=repo,
+        result=result,
+        contract=_generated_contract(result.runtime),
+        player_input=player_input or "",
+        action=prepared.action,
+    )
     narration_result = await build_graph_action_narration(
         llm,
         before=prepared.before,
-        after=prepared.after,
+        after=result.runtime,
         action=prepared.action,
         dispatch=prepared.dispatch,
         card_texts=[card.text for card in prepared.cards],
@@ -126,9 +138,18 @@ async def run_graph_action_turn_from_runtime_stream(
     result_outcome: GraphResultOutcome | None = None,
     narration_outcome: GraphResultOutcome | None = None,
     extra_ui_cues: list[NarrationCue] | None = None,
+    player_input: str | None = None,
 ) -> AsyncIterator[dict[str, object]]:
     prepared = _prepare_graph_action_turn(game_id, runtime, action)
     result = await _commit_graph_action_result(repo, game_id, prepared)
+    result = await apply_generated_story_after_action(
+        client=llm,
+        repo=repo,
+        result=result,
+        contract=_generated_contract(result.runtime),
+        player_input=player_input or "",
+        action=prepared.action,
+    )
     outcome = result_outcome or outcome_from_dispatch(prepared.dispatch)
     yield {
         "type": "result",
@@ -142,7 +163,7 @@ async def run_graph_action_turn_from_runtime_stream(
     async for chunk in stream_graph_action_narration(
         llm,
         before=prepared.before,
-        after=prepared.after,
+        after=result.runtime,
         action=prepared.action,
         dispatch=prepared.dispatch,
         card_texts=[card.text for card in prepared.cards],
@@ -323,3 +344,7 @@ def _action_target(action: Action) -> str | None:
         if isinstance(value, list) and value and isinstance(value[0], str):
             return value[0]
     return None
+
+
+def _generated_contract(runtime: GameRuntimeState):
+    return runtime.story_contract

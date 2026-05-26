@@ -23,6 +23,7 @@ import {
   sendGraphLevelUp,
 } from '@/services';
 import type { CombatBadge } from '@/logic/combat';
+import type { Discoveries } from '@/logic/discoveries';
 import type { Hero } from '@/logic/hero';
 import type { LogEntry } from '@/logic/log';
 import type { Quest } from '@/logic/quest';
@@ -63,6 +64,7 @@ export function useGame() {
   const [pendingConfirmation, setPendingConfirmation] = React.useState<PendingConfirmation | null>(null);
   const [pendingRoll, setPendingRoll] = React.useState<PendingRoll | null>(null);
   const [combat, setCombat] = React.useState<CombatBadge | null>(null);
+  const [discoveries, setDiscoveries] = React.useState<Discoveries>({ memories: [], clues: [] });
   const [storyGraph, setStoryGraph] = React.useState<StoryGraphModel>(EMPTY_STORY_GRAPH);
   const [suggestions, setSuggestionsRaw] = React.useState<SuggestionChip[]>([]);
   const [levelUpOpen, setLevelUpOpen] = React.useState(false);
@@ -104,6 +106,7 @@ export function useGame() {
     setQuestOffers(s.questOffers ?? []);
     setPlace(s.place);
     setCombat(s.combat);
+    setDiscoveries(s.discoveries);
     setLog(s.log);
     setPendingConfirmation(s.pendingConfirmation ?? null);
     setPendingRoll(s.pendingRoll ?? null);
@@ -347,6 +350,7 @@ export function useGame() {
     questOffers,
     place,
     combat,
+    discoveries,
     storyGraph,
     log,
     pendingConfirmation,

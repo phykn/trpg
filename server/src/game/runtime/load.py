@@ -3,6 +3,7 @@ import asyncio
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.content import RuntimeContent, merge_content
 from src.game.domain.memory import LogEntry
+from src.game.domain.story_contract import StoryContract
 from src.game.runtime.content import load_runtime_content
 from src.game.runtime.state import GameRuntimeState
 
@@ -33,11 +34,22 @@ async def load_runtime_state(
         if scenario_repo is not None and progress.profile_id is not None
         else RuntimeContent()
     )
+    contract_json = (
+        await scenario_repo.read_contract_json(progress.profile_id, missing_ok=True)
+        if scenario_repo is not None and progress.profile_id is not None
+        else None
+    )
+    story_contract = (
+        StoryContract.model_validate(contract_json)
+        if contract_json is not None
+        else None
+    )
     content = merge_content(scenario_content, progress.runtime_content)
     return GameRuntimeState(
         graph=graph,
         progress=progress,
         content=content,
+        story_contract=story_contract,
         log_entries=log_entries,
         turn_log=turn_log,
         recent_exchanges=recent_exchanges,

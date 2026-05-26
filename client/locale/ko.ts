@@ -43,6 +43,10 @@ export const ko = {
     info: '정보',
     noNotes: '기록된 노트가 없습니다',
   },
+  discoveries: {
+    clues: '단서',
+    memories: '기억',
+  },
   legend: {
     place: '장소',
     character: '캐릭터',

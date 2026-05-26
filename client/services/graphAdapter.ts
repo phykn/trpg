@@ -18,6 +18,11 @@ const EMPTY_EQUIPMENT = {
   accessory: null,
 };
 
+const EMPTY_DISCOVERIES = {
+  memories: [],
+  clues: [],
+};
+
 export function adaptGraphState(state: GraphFrontState): FrontState {
   return {
     hero: adaptHero(state.hero),
@@ -28,6 +33,7 @@ export function adaptGraphState(state: GraphFrontState): FrontState {
     questOffers: state.questOffers,
     place: adaptPlace(state.place),
     combat: adaptCombat(state.combat),
+    discoveries: state.discoveries ?? EMPTY_DISCOVERIES,
     log: state.log,
     pendingConfirmation: state.pendingConfirmation,
     pendingRoll: state.pendingRoll,

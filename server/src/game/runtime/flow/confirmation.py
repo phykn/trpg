@@ -56,6 +56,7 @@ async def run_graph_action_request(
     action: Action,
     *,
     llm: LLMClient | None = None,
+    player_input: str | None = None,
     scenario_repo: ScenarioRepo | None = None,
 ) -> GraphActionRequestResult:
     runtime = await load_runtime_state(repo, game_id, scenario_repo)
@@ -85,6 +86,7 @@ async def run_graph_action_request(
             game_id,
             action,
             llm=llm,
+            player_input=player_input,
             scenario_repo=scenario_repo,
         )
         engine_diag("action:done", status="executed", action=action.verb)
@@ -119,6 +121,7 @@ async def run_graph_action_request_stream(
     action: Action,
     *,
     llm: LLMClient | None = None,
+    player_input: str | None = None,
     scenario_repo: ScenarioRepo | None = None,
 ) -> AsyncIterator[dict[str, object]]:
     runtime = await load_runtime_state(repo, game_id, scenario_repo)
@@ -155,6 +158,7 @@ async def run_graph_action_request_stream(
             runtime,
             action,
             llm=llm,
+            player_input=player_input,
         ):
             if event["type"] == "final":
                 engine_diag("action:done", status="executed", action=action.verb)

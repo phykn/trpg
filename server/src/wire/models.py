@@ -12,6 +12,8 @@ __all__ = [
     "GraphCombatParticipantPayload",
     "GraphCombatPayload",
     "GraphCombatSupportPayload",
+    "GraphDiscoveriesPayload",
+    "GraphDiscoveryEntryPayload",
     "GraphEquipmentPayload",
     "GraphFrontStatePayload",
     "GraphHeartPayload",
@@ -219,6 +221,19 @@ class GraphPendingRollPayload(_CamelModel):
     required_roll: int
 
 
+class GraphDiscoveryEntryPayload(_CamelModel):
+    id: str
+    title: str
+    summary: str
+    stability: Literal["scene", "chapter", "campaign", "core"]
+    turn_id: int | None = None
+
+
+class GraphDiscoveriesPayload(_CamelModel):
+    memories: list[GraphDiscoveryEntryPayload] = Field(default_factory=list)
+    clues: list[GraphDiscoveryEntryPayload] = Field(default_factory=list)
+
+
 class GraphFrontStatePayload(_CamelModel):
     hero: GraphHeroPayload
     chapter: ChapterPayload | None
@@ -229,4 +244,5 @@ class GraphFrontStatePayload(_CamelModel):
     combat: GraphCombatPayload | None
     pending_confirmation: GraphPendingConfirmationPayload | None
     pending_roll: GraphPendingRollPayload | None
+    discoveries: GraphDiscoveriesPayload = Field(default_factory=GraphDiscoveriesPayload)
     log: list[LogEntry]

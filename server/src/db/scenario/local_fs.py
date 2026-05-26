@@ -88,6 +88,14 @@ class LocalFsScenarioRepo:
             return ""
         return self._read_text_cached(p)
 
+    async def read_contract_json(
+        self, profile: str, *, missing_ok: bool = False
+    ) -> dict | None:
+        p = self._root(profile) / "contract.json"
+        if missing_ok and not p.exists():
+            return None
+        return self._read_json_cached(p)
+
     async def read_start_json(self, profile: str) -> dict:
         return self._read_json_cached(self._root(profile) / "start.json")
 

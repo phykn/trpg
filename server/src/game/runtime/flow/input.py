@@ -308,6 +308,7 @@ async def _run_classified_action(
             runtime.progress.game_id,
             action,
             llm=client,
+            player_input=player_input,
             scenario_repo=scenario_repo,
         )
     except GraphActionTurnError as exc:
@@ -365,6 +366,7 @@ async def _run_classified_action_stream(
             runtime.progress.game_id,
             action,
             llm=client,
+            player_input=player_input,
             scenario_repo=scenario_repo,
         ):
             yield event

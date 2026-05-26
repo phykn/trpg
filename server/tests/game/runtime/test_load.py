@@ -45,6 +45,15 @@ class FakeScenarioRepo:
         assert profile == "default"
         return ""
 
+    async def read_contract_json(
+        self,
+        profile: str,
+        *,
+        missing_ok: bool = False,
+    ) -> dict | None:
+        assert profile == "default"
+        return None
+
     async def load_seed_records(self, profile: str, kind: str) -> dict[str, dict]:
         assert profile == "default"
         return self.records[kind]
@@ -203,3 +212,38 @@ async def test_load_runtime_state_loads_scenario_content_when_profile_is_saved(
         "짧고 기록문 같은 말투"
     )
     assert runtime.content.mbti["ISTJ"]["speech_style"] == "짧고 정확하게 말합니다."
+
+
+async def test_load_runtime_state_reloads_story_contract_from_profile(tmp_path):
+    class ContractScenarioRepo(FakeScenarioRepo):
+        async def read_contract_json(
+            self,
+            profile: str,
+            *,
+            missing_ok: bool = False,
+        ) -> dict | None:
+            assert profile == "default"
+            return {
+                "id": "white_isle_llm",
+                "world": {"title": "흰섬", "locale": "ko"},
+                "fixed": [],
+                "forbid": [],
+                "tone": {"register": "합니다체", "person": "second"},
+                "budgets": {"patches_per_turn": 1, "new_terms_per_turn": 1},
+                "allowed_ops": ["add_memory", "add_clue"],
+                "stability_defaults": {
+                    "add_memory": "campaign",
+                    "add_clue": "scene",
+                },
+            }
+
+    repo = LocalFsGraphRepo(str(tmp_path))
+    await repo.save_graph("game-1", _graph())
+    await repo.save_progress(
+        GameProgress(game_id="game-1", player_id="player", profile_id="default")
+    )
+
+    runtime = await load_runtime_state(repo, "game-1", ContractScenarioRepo())
+
+    assert runtime.story_contract is not None
+    assert runtime.story_contract.id == "white_isle_llm"

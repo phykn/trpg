@@ -701,3 +701,27 @@ en = "Player"
 [runtime."narration.clean.player_pronoun"]
 ko = "당신"
 en = "you"
+
+[runtime."generated.loc_fog_harbor.name"]
+ko = "안개 항구"
+en = "Fog Harbor"
+
+[runtime."generated.player.name"]
+ko = "당신"
+en = "You"
+
+[runtime."generated.loc_fog_harbor.description"]
+ko = "흰섬으로 향하는 배가 드나드는 안개 낀 항구입니다."
+en = "A foggy harbor where boats depart for White Isle."
+
+[runtime."generated.npc_ellie.name"]
+ko = "엘리"
+en = "Ellie"
+
+[runtime."generated.npc_ellie.role"]
+ko = "동행자"
+en = "Companion"
+
+[runtime."generated.npc_ellie.race_job"]
+ko = "여행자"
+en = "Traveler"

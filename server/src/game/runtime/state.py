@@ -7,6 +7,7 @@ from src.game.domain.graph import Graph
 from src.game.domain.graph.query import GraphIndex
 from src.game.domain.memory import ExchangePair, LogEntry, TurnLogEntry
 from src.game.domain.progress import GameProgress
+from src.game.domain.story_contract import StoryContract
 
 
 class GameRuntimeState(BaseModel):
@@ -15,6 +16,7 @@ class GameRuntimeState(BaseModel):
     graph: Graph
     progress: GameProgress
     content: RuntimeContent = Field(default_factory=RuntimeContent)
+    story_contract: StoryContract | None = None
     log_entries: list[LogEntry] = Field(default_factory=list)
     turn_log: list[TurnLogEntry] = Field(default_factory=list)
     recent_exchanges: list[ExchangePair] = Field(default_factory=list)

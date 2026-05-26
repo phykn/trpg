@@ -2,6 +2,7 @@ import React from 'react';
 import { Keyboard, Platform, Pressable, Text, View, type KeyboardEvent } from 'react-native';
 
 import { CombatStrip } from '@/logic/combat';
+import { DiscoveriesPanel } from '@/components/discoveries/DiscoveriesPanel';
 import { buildDecisionState, DecisionStateStrip } from '@/logic/decision-state';
 import { Log } from '@/logic/log';
 import { RollPanel } from '@/logic/roll';
@@ -29,7 +30,7 @@ function isEditableElementFocused() {
 }
 
 export function Playing({ game }: Props) {
-  const { hero, subject, chapter, quest, questOffers, place, combat, storyGraph, log, pendingConfirmation, pendingRoll, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onCombatCommand, onConfirmPending, onRollPending, onStop, goToNewGame, levelUpOpen, levelUpChoices, levelUpLoading, openLevelUp, cancelLevelUp, commitLevelUp } = game;
+  const { hero, subject, chapter, quest, questOffers, place, combat, discoveries, storyGraph, log, pendingConfirmation, pendingRoll, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onCombatCommand, onConfirmPending, onRollPending, onStop, goToNewGame, levelUpOpen, levelUpChoices, levelUpLoading, openLevelUp, cancelLevelUp, commitLevelUp } = game;
 
   const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -231,6 +232,8 @@ export function Playing({ game }: Props) {
       />
 
       <DecisionStateStrip items={decisionStateItems} />
+
+      <DiscoveriesPanel discoveries={discoveries} />
 
       {activeId !== null && (
         <Pressable

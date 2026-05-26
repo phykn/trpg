@@ -98,3 +98,19 @@ async def test_local_json_content_cache_reloads_when_file_changes(tmp_path):
 
     assert first["start_location_id"] == "room_a"
     assert second["start_location_id"] == "room_b"
+
+
+async def test_local_fs_reads_contract_json_when_present(tmp_path):
+    _write_json(tmp_path / "white_isle_llm" / "contract.json", {"id": "white_isle_llm"})
+    repo = LocalFsScenarioRepo(str(tmp_path))
+
+    assert await repo.read_contract_json("white_isle_llm", missing_ok=True) == {
+        "id": "white_isle_llm"
+    }
+
+
+async def test_local_fs_contract_missing_ok_returns_none(tmp_path):
+    (tmp_path / "legacy").mkdir()
+    repo = LocalFsScenarioRepo(str(tmp_path))
+
+    assert await repo.read_contract_json("legacy", missing_ok=True) is None

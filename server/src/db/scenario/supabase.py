@@ -76,6 +76,17 @@ class SupabaseStorageScenarioRepo:
             raise
         return blob.decode("utf-8")
 
+    async def read_contract_json(
+        self, profile: str, *, missing_ok: bool = False
+    ) -> dict | None:
+        try:
+            blob = await self._get_bytes_cached(f"{profile}/contract.json")
+        except FileNotFoundError:
+            if missing_ok:
+                return None
+            raise
+        return json.loads(blob.decode("utf-8"))
+
     async def read_start_json(self, profile: str) -> dict:
         blob = await self._get_bytes_cached(f"{profile}/start.json")
         return json.loads(blob.decode("utf-8"))

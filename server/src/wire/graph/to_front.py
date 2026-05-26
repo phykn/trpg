@@ -6,6 +6,8 @@ from .place import place_payload
 from .quests import active_quest_payload, quest_offer_payloads  # ssot-allow: module import
 from .values import require_node
 from src.wire.models import (
+    GraphDiscoveriesPayload,
+    GraphDiscoveryEntryPayload,
     GraphFrontStatePayload,
     GraphPendingConfirmationPayload,
     GraphPendingRollPayload,
@@ -35,6 +37,7 @@ def graph_to_front_state(runtime: GameRuntimeState) -> GraphFrontStatePayload:
             runtime.progress.pending_confirmation
         ),
         pending_roll=_pending_roll_payload(runtime.progress.pending_roll),
+        discoveries=_discoveries_payload(runtime),
         log=list(runtime.log_entries),
     )
 
@@ -84,3 +87,49 @@ def _pending_roll_payload(
             "required_roll": pending.get("required_roll"),
         }
     )
+
+
+def _discoveries_payload(runtime: GameRuntimeState) -> GraphDiscoveriesPayload:
+    memories: list[GraphDiscoveryEntryPayload] = []
+    clues: list[GraphDiscoveryEntryPayload] = []
+    for node in runtime.graph.nodes.values():
+        if node.type != "knowledge":
+            continue
+        props = node.properties
+        if props.get("visibility", "player") != "player":
+            continue
+        entry = _discovery_entry(node.id, props)
+        if entry is None:
+            continue
+        if props.get("kind") == "memory":
+            memories.append(entry)
+        elif props.get("kind") == "clue":
+            clues.append(entry)
+    memories.sort(key=_discovery_sort_key)
+    clues.sort(key=_discovery_sort_key)
+    return GraphDiscoveriesPayload(memories=memories, clues=clues)
+
+
+def _discovery_entry(
+    node_id: str,
+    props: dict[str, object],
+) -> GraphDiscoveryEntryPayload | None:
+    title = props.get("title")
+    summary = props.get("summary")
+    stability = props.get("stability", "scene")
+    if not isinstance(title, str) or not isinstance(summary, str):
+        return None
+    if stability not in {"scene", "chapter", "campaign", "core"}:
+        stability = "scene"
+    turn_id = props.get("turn_id")
+    return GraphDiscoveryEntryPayload(
+        id=node_id,
+        title=title,
+        summary=summary,
+        stability=stability,
+        turn_id=turn_id if isinstance(turn_id, int) else None,
+    )
+
+
+def _discovery_sort_key(entry: GraphDiscoveryEntryPayload) -> tuple[int, str]:
+    return (entry.turn_id if entry.turn_id is not None else -1, entry.id)
