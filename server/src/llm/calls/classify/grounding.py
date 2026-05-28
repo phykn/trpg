@@ -195,6 +195,8 @@ def _validate_action(action: Action, view: _ViewIds) -> None:
         destination = _single(action.to) or _single(action.what)
         if view.in_combat and destination is None:
             return
+        if action.note == "generated_open_move" and destination is None:
+            return
         _require_id(
             destination,
             view.connection_ids,

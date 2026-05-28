@@ -513,6 +513,96 @@ async def test_generated_story_falls_back_after_empty_actionable_retry() -> None
     )
 
 
+async def test_generated_story_falls_back_to_location_from_open_move() -> None:
+    calls = 0
+
+    async def empty_writer(**kwargs) -> StoryWriteResponse:
+        nonlocal calls
+        calls += 1
+        return StoryWriteResponse.model_validate(
+            {"reason": "nothing durable changed", "patches": []}
+        )
+
+    contract = _story_contract().model_copy(
+        update={"allowed_ops": ["add_location"]}
+    )
+    runtime = _runtime().model_copy(update={"story_contract": contract})
+    result = GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        front_state=graph_to_front_state(runtime),
+    )
+    repo = FakeGraphRepo()
+
+    next_result = await apply_generated_story_after_action(
+        client=object(),
+        repo=repo,
+        result=result,
+        contract=contract,
+        player_input="표지판이 가리키는 북쪽 길목으로 이동합니다.",
+        action=Action(verb="move"),
+        accepted_narration="당신은 북쪽 길목을 향해 걸음을 옮깁니다.",
+        writer=empty_writer,
+    )
+
+    assert calls == 2
+    assert "loc_road" in next_result.runtime.graph.nodes
+    assert next_result.runtime.graph.nodes["loc_road"].properties["name"] == "북쪽 길목"
+    assert (
+        next_result.runtime.graph.nodes["loc_road"].properties["description"]
+        == "북쪽 길목은 더 살펴볼 수 있는 장소입니다."
+    )
+    assert "connects_to:loc_fog_harbor:loc_road" in next_result.runtime.graph.edges
+    assert [entry.status for entry in repo.story_patch_entries] == ["accepted"]
+
+
+async def test_generated_story_replaces_memory_only_move_patch_with_location() -> None:
+    calls = 0
+
+    async def memory_writer(**kwargs) -> StoryWriteResponse:
+        nonlocal calls
+        calls += 1
+        return StoryWriteResponse.model_validate(
+            {
+                "reason": "remembered the move",
+                "patches": [
+                    {
+                        "op": "add_memory",
+                        "id": "mem_north_path_taken",
+                        "summary": "당신은 북쪽 길목으로 진입했습니다.",
+                    }
+                ],
+            }
+        )
+
+    contract = _story_contract().model_copy(
+        update={"allowed_ops": ["add_memory", "add_location"]}
+    )
+    runtime = _runtime().model_copy(update={"story_contract": contract})
+    result = GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        front_state=graph_to_front_state(runtime),
+    )
+    repo = FakeGraphRepo()
+
+    next_result = await apply_generated_story_after_action(
+        client=object(),
+        repo=repo,
+        result=result,
+        contract=contract,
+        player_input="표지판이 가리키는 북쪽 길목으로 이동합니다.",
+        action=Action(verb="move"),
+        accepted_narration="당신은 북쪽 길목을 향해 걸음을 옮깁니다.",
+        writer=memory_writer,
+    )
+
+    assert calls == 2
+    assert "loc_road" in next_result.runtime.graph.nodes
+    assert "mem_north_path_taken" not in next_result.runtime.graph.nodes
+    assert [entry.status for entry in repo.story_patch_entries] == ["accepted"]
+
+
 async def test_generated_story_skips_writer_error_when_no_fallback_matches() -> None:
     async def broken_writer(**kwargs) -> StoryWriteResponse:
         raise ValueError("patches.0 needs op")

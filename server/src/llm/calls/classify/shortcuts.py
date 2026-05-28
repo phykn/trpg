@@ -2,6 +2,10 @@ import re
 from typing import Any
 
 from src.game.domain.action import Action, ActionOutput, RefuseReason
+from src.locale.generated_story import (
+    GENERATED_OPEN_MOVE_TARGET_TERMS,
+    GENERATED_OPEN_MOVE_TERMS,
+)
 from src.locale.terms import (
     ACTION_ATTACK_TERMS,
     ACTION_CREATE_DISTANCE_TERMS,
@@ -51,6 +55,10 @@ def classify_action_shortcut(
     quest_move = _active_quest_location_move_action(player_input, surroundings)
     if quest_move is not None:
         return _action_output([quest_move])
+
+    open_move = _open_generated_move_action(player_input)
+    if open_move is not None:
+        return _action_output([open_move])
 
     if surroundings.get("in_combat") is True and _has_any(
         player_input, ACTION_CREATE_DISTANCE_TERMS
@@ -188,6 +196,16 @@ def _looks_like_quest_accept(player_input: str) -> bool:
 
 def _looks_like_quest_travel(player_input: str) -> bool:
     return _has_any(player_input, QUEST_TRAVEL_TERMS)
+
+
+def _open_generated_move_action(player_input: str) -> Action | None:
+    if not _has_any(player_input, GENERATED_OPEN_MOVE_TERMS):
+        return None
+    if not _has_any(player_input, GENERATED_OPEN_MOVE_TARGET_TERMS):
+        return None
+    if _looks_like_dialogue(player_input) or _looks_like_inspect(player_input):
+        return None
+    return Action(verb="move", note="generated_open_move")
 
 
 def _named_giver_quest(

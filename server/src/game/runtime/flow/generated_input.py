@@ -86,7 +86,7 @@ async def apply_generated_story_after_action(
         return result
 
     patch_required = _requires_actionable_patch(
-        accepted_narration=accepted_narration,
+        text=" ".join(filter(None, [accepted_narration, player_input])),
         intent=intent,
         contract=contract,
     )
@@ -109,23 +109,41 @@ async def apply_generated_story_after_action(
         contract=contract,
     )
     if not validation.ok:
-        engine_diag(
-            "story_write:reject",
-            reasons=",".join(validation.reasons),
-        )
-        await repo.append_story_patch_entries(
-            result.runtime.progress.game_id,
-            [
-                _ledger_entry(
-                    result,
-                    response=response,
-                    intent=intent,
-                    status="rejected",
-                    rejected_reasons=validation.reasons,
+        if patch_required:
+            fallback = _fallback_actionable_response(
+                result.runtime,
+                text=" ".join(filter(None, [accepted_narration, player_input])),
+                contract=contract,
+                reason="story_write fallback after rejected actionable patch",
+            )
+            if fallback is not None:
+                fallback = _fit_response_to_contract_budget(fallback, contract)
+                fallback_validation = validate_story_write_response(
+                    fallback,
+                    graph=result.runtime.graph,
+                    contract=contract,
                 )
-            ],
-        )
-        return result
+                if fallback_validation.ok:
+                    response = fallback
+                    validation = fallback_validation
+        if not validation.ok:
+            engine_diag(
+                "story_write:reject",
+                reasons=",".join(validation.reasons),
+            )
+            await repo.append_story_patch_entries(
+                result.runtime.progress.game_id,
+                [
+                    _ledger_entry(
+                        result,
+                        response=response,
+                        intent=intent,
+                        status="rejected",
+                        rejected_reasons=validation.reasons,
+                    )
+                ],
+            )
+            return result
 
     changes = story_patches_to_graph_changes(
         response.patches,
@@ -133,7 +151,11 @@ async def apply_generated_story_after_action(
         player_id=result.runtime.progress.player_id,
         turn_id=result.runtime.progress.turn_count,
     )
-    if patch_required and not changes and not _is_writer_error_skip(response):
+    if (
+        patch_required
+        and not _has_actionable_world_change(changes)
+        and not _is_writer_error_skip(response)
+    ):
         response = await _call_writer_or_fallback(
             writer=writer,
             client=client,
@@ -181,7 +203,11 @@ async def apply_generated_story_after_action(
             player_id=result.runtime.progress.player_id,
             turn_id=result.runtime.progress.turn_count,
         )
-        if patch_required and not changes and not _is_writer_error_skip(response):
+        if (
+            patch_required
+            and not _has_actionable_world_change(changes)
+            and not _is_writer_error_skip(response)
+        ):
             fallback = _fallback_actionable_response(
                 result.runtime,
                 text=" ".join(filter(None, [accepted_narration, player_input])),
@@ -343,6 +369,16 @@ def _changed_node_ids(changes: list[GraphChange]) -> list[str]:
     ]
 
 
+def _has_actionable_world_change(changes: list[GraphChange]) -> bool:
+    for change in changes:
+        if getattr(change, "type", None) != "add_node":
+            continue
+        node_type = getattr(change.node, "type", None)
+        if node_type in {"location", "character", "item", "quest"}:
+            return True
+    return False
+
+
 def _has_recent_generated_world_node(runtime: GameRuntimeState) -> bool:
     threshold = max(0, runtime.progress.turn_count - 3)
     for node in runtime.graph.nodes.values():
@@ -450,17 +486,17 @@ def _unique_node_id(runtime: GameRuntimeState, base_id: str) -> str:
 
 def _requires_actionable_patch(
     *,
-    accepted_narration: str | None,
+    text: str,
     intent: StoryWriteIntent,
     contract: StoryContract,
 ) -> bool:
-    if intent.kind != "both" or not accepted_narration:
+    if intent.kind != "both" or not text:
         return False
     if not set(contract.allowed_ops).intersection(
         {"add_location", "add_character", "add_item", "add_quest_beat"}
     ):
         return False
-    text = accepted_narration.strip()
+    text = text.strip()
     if len(text) < 8:
         return False
     return looks_actionable_for_story_patch(text)

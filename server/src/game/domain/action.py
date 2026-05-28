@@ -100,7 +100,11 @@ class ActionOutput(BaseModel):
 def _validate_classifier_action(action: Action, *, in_combat: bool) -> None:
     if action.verb == "move":
         destination = _single(action.to) or _single(action.what)
-        if destination is None and not in_combat:
+        if (
+            destination is None
+            and not in_combat
+            and action.note != "generated_open_move"
+        ):
             raise ValueError("action=move requires to or what outside combat")
         move_how = {"hasty", "flee"} if in_combat else {"hasty"}
         _require_enum(action.how, move_how, "move.how", optional=True)

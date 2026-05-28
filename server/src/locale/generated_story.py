@@ -4,7 +4,7 @@ import re
 
 
 CHARACTER_ROLES = ("관리인", "담당자", "상인", "목격자")
-LOCATION_NOUNS = ("길드", "건물", "사무소", "시장", "창고")
+LOCATION_NOUNS = ("길목", "길드", "건물", "사무소", "시장", "창고")
 QUEST_BEAT_MARKERS = (
     "가려면",
     "가야",
@@ -30,6 +30,7 @@ ACTIONABLE_PATCH_MARKERS = (
     "말을",
     "관리인",
     "담당자",
+    "길목",
     "길드",
     "건물",
     "선착장",
@@ -45,12 +46,15 @@ ROMANIZED_TERMS = {
     "시장": "market",
     "창고": "warehouse",
     "단서": "clue",
+    "길목": "road",
 }
 QUEST_BEAT_FALLBACK = {
     "title": "다음 단서 확인",
     "summary": "방금 확인한 목표를 진행하기 위한 다음 단서를 찾습니다.",
 }
-LOCATION_DESCRIPTION_SUFFIX = "can be investigated further."
+LOCATION_DESCRIPTION_SUFFIX = "더 살펴볼 수 있는 장소입니다."
+GENERATED_OPEN_MOVE_TERMS = ("이동", "갑니다", "가요", "나아", "향해")
+GENERATED_OPEN_MOVE_TARGET_TERMS = ("가리키", "길목", "방향", "북쪽")
 
 
 def candidate_character_name(text: str) -> str | None:
@@ -88,7 +92,7 @@ def candidate_quest_beat(text: str) -> dict[str, str] | None:
 
 
 def location_description(location_name: str) -> str:
-    return f"{location_name} {LOCATION_DESCRIPTION_SUFFIX}"
+    return f"{location_name}은 {LOCATION_DESCRIPTION_SUFFIX}"
 
 
 def node_id_suffix(name: str) -> str:

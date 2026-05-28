@@ -231,6 +231,23 @@ async def test_korean_active_departure_move_word_shortcuts_to_location_move_with
     assert action.to == "loc_red_square"
 
 
+async def test_generated_open_move_shortcuts_without_llm():
+    output = await classify(
+        _NoCallLLM(),
+        ClassifyInput(
+            player_input="표지판이 가리키는 북쪽 길목으로 이동합니다.",
+            context=_context(),
+        ),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    action = output.actions[0]
+    assert action.verb == "move"
+    assert action.to is None
+    assert action.note == "generated_open_move"
+
+
 async def test_korean_active_quest_route_shortcuts_to_next_step_without_llm():
     context = _context()
     context["identity"]["active_quest"] = {

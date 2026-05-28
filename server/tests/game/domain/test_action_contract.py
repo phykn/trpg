@@ -75,6 +75,18 @@ def test_action_output_actions_max_length():
         ActionOutput(actions=[Action(verb="pass")] * 5)
 
 
+def test_action_output_rejects_open_move_without_generated_note():
+    with pytest.raises(ValidationError, match="move requires"):
+        ActionOutput(actions=[Action(verb="move")])
+
+
+def test_action_output_allows_generated_open_move():
+    out = ActionOutput(actions=[Action(verb="move", note="generated_open_move")])
+
+    assert out.actions[0].verb == "move"
+    assert out.actions[0].note == "generated_open_move"
+
+
 def test_action_check_hint_requires_reason_when_required():
     with pytest.raises(ValidationError):
         ActionCheckHint(required=True)

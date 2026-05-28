@@ -296,7 +296,7 @@ async def _run_classified_action(
             scenario_repo=scenario_repo,
         )
     if (
-        action.verb in {"speak", "pass", "perceive"}
+        (action.verb in {"speak", "pass", "perceive"} or _is_open_generated_move(action))
         and runtime.progress.graph_combat_state is None
     ):
         return await _run_graph_narrative_input(
@@ -355,7 +355,7 @@ async def _run_classified_action_stream(
             yield event
         return
     if (
-        action.verb in {"speak", "pass", "perceive"}
+        (action.verb in {"speak", "pass", "perceive"} or _is_open_generated_move(action))
         and runtime.progress.graph_combat_state is None
     ):
         async for event in _run_graph_narrative_input_stream(
@@ -799,7 +799,7 @@ async def _finish_graph_narrative_input(
         front_state=graph_to_front_state(next_runtime),
         suggestions=next_turn_suggestions(next_runtime, narration_result.suggestions),
     )
-    if action.verb not in {"speak", "perceive"}:
+    if action.verb not in {"speak", "perceive", "move"}:
         return result
     return await apply_generated_story_after_action(
         client=client,
@@ -810,6 +810,10 @@ async def _finish_graph_narrative_input(
         action=action,
         accepted_narration=narration_result.narration,
     )
+
+
+def _is_open_generated_move(action: Action) -> bool:
+    return action.verb == "move" and first_ref(action.to) is None
 
 
 # Target helpers

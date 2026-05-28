@@ -7,6 +7,10 @@ from ..runner import get_prompt, run_with_retries
 from ...client import LLMClient
 from ...diag import llm_diag
 from ...context.classify_view import classify_context_to_grounding_view
+from src.locale.generated_story import (
+    GENERATED_OPEN_MOVE_TARGET_TERMS,
+    GENERATED_OPEN_MOVE_TERMS,
+)
 from src.locale.render import render
 from .grounding import ActionGroundingError, validate_grounded_output
 from .schema import Action, ActionOutput, ClassifyInput, validate_action_output_json
@@ -80,8 +84,22 @@ async def classify(
                     "target": _grounding_rejection_target(str(e)),
                 }
             )
+        open_move = _open_move_fallback(input_.player_input)
+        if open_move is not None:
+            return open_move
         llm_diag("llm:classify_fallback", err=type(e).__name__, msg=str(e)[:120])
         return ActionOutput(actions=[Action(verb="pass")])
+
+
+def _open_move_fallback(player_input: str) -> ActionOutput | None:
+    text = player_input.strip()
+    if not text:
+        return None
+    if not any(marker in text for marker in GENERATED_OPEN_MOVE_TERMS):
+        return None
+    if not any(marker in text for marker in GENERATED_OPEN_MOVE_TARGET_TERMS):
+        return None
+    return ActionOutput(actions=[Action(verb="move", note="generated_open_move")])
 
 
 def _grounding_rejection_message(reason: str, locale: str) -> str:

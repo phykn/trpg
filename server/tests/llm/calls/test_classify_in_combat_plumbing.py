@@ -269,6 +269,19 @@ async def test_move_grounding_fallback_explains_visible_exit_repair_path():
 
 
 @pytest.mark.asyncio
+async def test_open_move_fallback_preserves_generated_destination_candidate():
+    input_ = _input("표지판이 가리키는 북쪽 길목으로 이동합니다.", {"entities": []})
+    fake_answer = json.dumps({"intents": [{"intent": "move", "destination_id": None}]})
+    client = _RetryCaptureClient([fake_answer])
+
+    out = await classify(client=client, input_=input_, locale="ko", retries=1)
+
+    assert out.actions[0].verb == "move"
+    assert out.actions[0].to is None
+    assert out.actions[0].note == "generated_open_move"
+
+
+@pytest.mark.asyncio
 async def test_classify_runner_accepts_intent_json_and_builds_actions():
     input_ = _input(
         "상인에게 회복약을 산다",
