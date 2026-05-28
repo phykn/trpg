@@ -41,7 +41,7 @@ from ..narration.result import (
     persist_graph_narration_result,
 )
 from ..narration.safety import guard_speak_narration_player_quote
-from ..narration.suggestions import filter_grounded_suggestions
+from ..narration.suggestions import next_turn_suggestions
 from ..request_result import GraphActionRequestResult, rejected_result
 from ..roll.gate import should_start_graph_roll
 from ..state import GameRuntimeState
@@ -619,10 +619,7 @@ async def _persist_graph_rejected_input(
     return rejected_result(
         next_runtime,
         graph_to_front_state(next_runtime),
-        suggestions=filter_grounded_suggestions(
-            next_runtime,
-            narration_result.suggestions,
-        ),
+        suggestions=next_turn_suggestions(next_runtime, narration_result.suggestions),
     )
 
 
@@ -800,10 +797,7 @@ async def _finish_graph_narrative_input(
         runtime=next_runtime,
         status="executed",
         front_state=graph_to_front_state(next_runtime),
-        suggestions=filter_grounded_suggestions(
-            next_runtime,
-            narration_result.suggestions,
-        ),
+        suggestions=next_turn_suggestions(next_runtime, narration_result.suggestions),
     )
     if action.verb not in {"speak", "perceive"}:
         return result

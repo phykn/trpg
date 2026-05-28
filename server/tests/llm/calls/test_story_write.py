@@ -107,3 +107,23 @@ async def test_story_write_gives_legacy_patch_missing_id_a_schema_id():
     assert client.attempts == 1
     assert response.patches[0].id == "mem_generated_1"
     assert response.patches[1].id == "clue_generated_2"
+
+
+@pytest.mark.asyncio
+async def test_story_write_normalizes_object_new_terms_without_retry():
+    client = _OneShotClient(
+        {
+            "reason": "terms",
+            "patches": [],
+            "new_terms": [
+                {"term": "녹슨 말뚝", "type": "clue"},
+                {"name": "낡은 선창가"},
+                1,
+            ],
+        }
+    )
+
+    response = await story_write(client, _input(), locale="ko")
+
+    assert client.attempts == 1
+    assert response.new_terms == ["녹슨 말뚝", "낡은 선창가"]

@@ -921,6 +921,23 @@ async def test_graph_input_reflects_speak_turn_into_memory_exchanges_and_suggest
     assert "graph_reflect" not in [call["agent"] for call in llm.calls]
 
 
+async def test_graph_input_falls_back_to_visible_suggestions_when_llm_sends_none(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]},
+        narration="고블린이 고개를 끄덕입니다.",
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "goblin_01에게 말을 겁니다")
+
+    assert [suggestion.input_text for suggestion in result.suggestions] == [
+        "광장으로 이동합니다",
+        "주변을 살핍니다",
+    ]
+
+
 async def test_graph_input_passes_focused_context_to_classify(
     tmp_path,
 ):

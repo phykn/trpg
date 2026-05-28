@@ -34,6 +34,7 @@ def _normalize_story_write_json(answer: str) -> dict:
     raw = json.loads(answer)
     if not isinstance(raw, dict):
         return raw
+    raw = {**raw, "new_terms": _normalize_new_terms(raw.get("new_terms"))}
     patches = raw.get("patches")
     if not isinstance(patches, list):
         return raw
@@ -43,6 +44,22 @@ def _normalize_story_write_json(answer: str) -> dict:
             _normalize_patch(patch, index=index) for index, patch in enumerate(patches)
         ],
     }
+
+
+def _normalize_new_terms(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    out: list[str] = []
+    for term in value:
+        if isinstance(term, str) and term:
+            out.append(term)
+        elif isinstance(term, dict):
+            for key in ("term", "name", "title", "value"):
+                candidate = term.get(key)
+                if isinstance(candidate, str) and candidate:
+                    out.append(candidate)
+                    break
+    return out[:4]
 
 
 def _normalize_patch(patch: object, *, index: int) -> object:

@@ -9,6 +9,7 @@ from src.game.runtime.narration.suggestions import (
     GraphSuggestion,
     build_intro_suggestions,
     filter_grounded_suggestions,
+    next_turn_suggestions,
 )
 from src.game.runtime.narration.result import (
     GraphNarrationResult,
@@ -136,6 +137,39 @@ def test_filter_grounded_suggestions_drops_recent_repeated_player_input():
     )
 
     assert [suggestion.input_text for suggestion in result] == ["숲으로 이동합니다"]
+
+
+def test_next_turn_suggestions_falls_back_to_visible_actions_without_repeating_recent():
+    runtime = _runtime_for_suggestions()
+    runtime.log_entries.append(
+        PlayerLogEntry(id=1, kind="player", text="상인에게 말을 겁니다")
+    )
+
+    result = next_turn_suggestions(runtime, [])
+
+    assert [suggestion.input_text for suggestion in result] == [
+        "숲으로 이동합니다",
+        "주변을 살핍니다",
+    ]
+
+
+def test_next_turn_suggestions_repeats_visible_actions_when_all_are_recent():
+    runtime = _runtime_for_suggestions()
+    runtime.log_entries.extend(
+        [
+            PlayerLogEntry(id=1, kind="player", text="상인에게 말을 겁니다"),
+            PlayerLogEntry(id=2, kind="player", text="숲으로 이동합니다"),
+            PlayerLogEntry(id=3, kind="player", text="주변을 살핍니다"),
+        ]
+    )
+
+    result = next_turn_suggestions(runtime, [])
+
+    assert [suggestion.input_text for suggestion in result] == [
+        "상인에게 말을 겁니다",
+        "숲으로 이동합니다",
+        "주변을 살핍니다",
+    ]
 
 
 def test_build_intro_suggestions_uses_visible_graph_state():

@@ -31,7 +31,7 @@ from ..narration.result import (
 )
 from ..request_result import GraphResultOutcome, executed_result, outcome_from_dispatch
 from ..state import GameRuntimeState
-from ..narration.suggestions import GraphSuggestion, filter_grounded_suggestions
+from ..narration.suggestions import GraphSuggestion, next_turn_suggestions
 from ..env import env_float
 from .generated_input import apply_generated_story_after_action
 
@@ -330,10 +330,7 @@ async def _commit_graph_action_narration(
         runtime=next_runtime,
         dispatch=prepared.dispatch,
         front_state=graph_to_front_state(next_runtime),
-        suggestions=filter_grounded_suggestions(
-            next_runtime,
-            narration_result.suggestions,
-        ),
+        suggestions=next_turn_suggestions(next_runtime, narration_result.suggestions),
     )
 
 

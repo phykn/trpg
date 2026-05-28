@@ -39,6 +39,18 @@ def build_intro_suggestions(runtime: GameRuntimeState) -> list[GraphSuggestion]:
     return suggestions[:3]
 
 
+def next_turn_suggestions(
+    runtime: GameRuntimeState,
+    narration_suggestions: list[GraphSuggestion],
+) -> list[GraphSuggestion]:
+    grounded = filter_grounded_suggestions(runtime, narration_suggestions)
+    if grounded:
+        return grounded
+    fallback = build_intro_suggestions(runtime)
+    filtered_fallback = filter_grounded_suggestions(runtime, fallback)
+    return filtered_fallback or fallback
+
+
 def filter_grounded_suggestions(
     runtime: GameRuntimeState,
     suggestions: list[GraphSuggestion],

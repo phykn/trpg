@@ -18,7 +18,11 @@ from .intro import (
 from ..load import load_runtime_state
 from ..request_result import GraphResultOutcome
 from ..state import GameRuntimeState
-from ..narration.suggestions import GraphSuggestion, build_intro_suggestions
+from ..narration.suggestions import (
+    GraphSuggestion,
+    build_intro_suggestions,
+    next_turn_suggestions,
+)
 from src.game.seed.init_graph import init_graph_game
 from src.game.seed.player import PlayerInput
 from src.locale.render import render
@@ -128,7 +132,7 @@ async def load_graph_session_state(
     return GraphSessionSnapshot(
         game_id=game_id,
         front_state=graph_to_front_state(runtime),
-        suggestions=build_intro_suggestions(runtime),
+        suggestions=next_turn_suggestions(runtime, []),
     )
 
 
