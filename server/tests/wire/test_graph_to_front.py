@@ -899,6 +899,12 @@ def test_graph_front_state_exposes_generated_pending_quest_beat_as_offer():
         "quest_generated",
     ]
     assert payload.quest_offers[1].title == "다음 단서 확인"
+    assert payload.quest_offers[1].summary == (
+        "방금 확인한 목표를 진행하기 위한 다음 단서를 찾습니다."
+    )
+    assert payload.quest_offers[1].goals == [
+        "방금 확인한 목표를 진행하기 위한 다음 단서를 찾습니다."
+    ]
     assert payload.quest_offers[1].actions == ["accept"]
 
 

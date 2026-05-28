@@ -94,12 +94,17 @@ def build_quest_payload(
 
     content = runtime.content
     tier = optional_str(static_value(quest, "difficulty", content)) or "normal"
+    summary = optional_str(static_value(quest, "summary", content)) or optional_str(
+        static_value(quest, "description", content)
+    ) or ""
     goals = _quest_goals(quest, runtime)
+    if not goals and _is_generated_quest_beat(quest) and summary:
+        goals = [summary]
     done, total = quest_progress(quest)
     return QuestPayload(
         id=quest.id,
         title=optional_str(static_value(quest, "title", content)) or quest.id,
-        summary=optional_str(static_value(quest, "summary", content)) or "",
+        summary=summary,
         giver=_quest_giver_name(graph, quest.id, runtime),
         difficulty=_difficulty_badge(tier),
         goals=goals,
