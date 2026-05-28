@@ -1,4 +1,3 @@
-import re
 from typing import Any, Awaitable, Callable
 
 from src.db.repo import GraphRepo
@@ -15,6 +14,15 @@ from src.game.domain.story_patch_ledger import (
 from src.game.engines.story_patch_apply import story_patches_to_graph_changes
 from src.game.engines.story_patch_validator import validate_story_write_response
 from src.game.runtime.state import GameRuntimeState
+from src.locale.generated_story import (
+    candidate_character_name,
+    candidate_character_role,
+    candidate_location_name,
+    candidate_quest_beat,
+    location_description,
+    looks_actionable_for_story_patch,
+    node_id_suffix,
+)
 from src.llm.calls.story_write import story_write
 from src.llm.context.story_write_context import build_story_write_input
 from src.llm.diag import engine_diag
@@ -124,7 +132,7 @@ async def apply_generated_story_after_action(
         player_id=result.runtime.progress.player_id,
         turn_id=result.runtime.progress.turn_count,
     )
-    if patch_required and not changes:
+    if patch_required and not changes and not _is_writer_error_skip(response):
         response = await _call_writer_or_fallback(
             writer=writer,
             client=client,
@@ -258,7 +266,17 @@ async def _call_writer_or_fallback(
         if fallback is not None and (patch_required or intent.kind == "both"):
             engine_diag("story_write:fallback", err=type(exc).__name__)
             return fallback
-        raise
+        engine_diag("story_write:skip_after_error", err=type(exc).__name__)
+        return StoryWriteResponse.model_validate(
+            {
+                "reason": f"story_write skipped after {type(exc).__name__}",
+                "patches": [],
+            }
+        )
+
+
+def _is_writer_error_skip(response: StoryWriteResponse) -> bool:
+    return response.reason.startswith("story_write skipped after ")
 
 
 def _changed_node_ids(changes: list[GraphChange]) -> list[str]:
@@ -295,7 +313,7 @@ def _fallback_actionable_response(
     location_id = location_of(runtime.graph, runtime.progress.player_id)
     if location_id is None:
         return None
-    character_name = _candidate_character_name(text)
+    character_name = candidate_character_name(text)
     if "add_character" in contract.allowed_ops and character_name is not None:
         if _has_display_name(runtime, character_name):
             return None
@@ -310,13 +328,13 @@ def _fallback_actionable_response(
                             _node_id("char", character_name),
                         ),
                         "name": character_name,
-                        "role": _candidate_character_role(character_name),
+                        "role": candidate_character_role(character_name),
                         "location_id": location_id,
                     }
                 ],
             }
         )
-    location_name = _candidate_location_name(text)
+    location_name = candidate_location_name(text)
     if "add_location" in contract.allowed_ops and location_name is not None:
         if _has_display_name(runtime, location_name):
             return None
@@ -328,13 +346,13 @@ def _fallback_actionable_response(
                         "op": "add_location",
                         "id": _unique_node_id(runtime, _node_id("loc", location_name)),
                         "name": location_name,
-                        "description": f"{location_name}에 대해 더 확인할 수 있습니다.",
+                        "description": location_description(location_name),
                         "connect_from": location_id,
                     }
                 ],
             }
         )
-    quest_beat = _candidate_quest_beat(text)
+    quest_beat = candidate_quest_beat(text)
     if "add_quest_beat" in contract.allowed_ops and quest_beat is not None:
         if _has_display_name(runtime, quest_beat["title"]):
             return None
@@ -357,63 +375,8 @@ def _fallback_actionable_response(
     return None
 
 
-def _candidate_character_name(text: str) -> str | None:
-    for role in ("관리인", "담당자", "상인", "목격자"):
-        match = re.search(rf"([가-힣]{{1,12}}\s+{role})", text)
-        if match:
-            return match.group(1)
-        if role in text:
-            return role
-    return None
-
-
-def _candidate_character_role(name: str) -> str:
-    if "상인" in name:
-        return "merchant"
-    if "목격자" in name:
-        return "witness"
-    if "관리인" in name or "담당자" in name:
-        return "quest_giver"
-    return "bystander"
-
-
-def _candidate_location_name(text: str) -> str | None:
-    for noun in ("길드", "건물", "사무소", "시장", "창고"):
-        match = re.search(rf"([가-힣]{{1,12}}\s+{noun})", text)
-        if match:
-            return match.group(1)
-    return None
-
-
-def _candidate_quest_beat(text: str) -> dict[str, str] | None:
-    if not any(marker in text for marker in ("가려면", "해야", "찾", "방법", "단서")):
-        return None
-    return {
-        "title": "다음 단서 확인",
-        "summary": "방금 확인한 목표를 진행하기 위한 다음 단서를 찾습니다.",
-    }
-
-
 def _node_id(prefix: str, name: str) -> str:
-    romanized = {
-        "관리인": "manager",
-        "담당자": "contact",
-        "상인": "merchant",
-        "목격자": "witness",
-        "길드": "guild",
-        "건물": "building",
-        "사무소": "office",
-        "시장": "market",
-        "창고": "warehouse",
-        "단서": "clue",
-    }
-    parts = [
-        romanized[word]
-        for word in romanized
-        if word in name
-    ]
-    suffix = "_".join(parts) if parts else "lead"
-    return f"{prefix}_{suffix}"
+    return f"{prefix}_{node_id_suffix(name)}"
 
 
 def _has_display_name(runtime: GameRuntimeState, name: str) -> bool:
@@ -447,21 +410,7 @@ def _requires_actionable_patch(
     text = accepted_narration.strip()
     if len(text) < 8:
         return False
-    markers = (
-        "가려면",
-        "먼저",
-        "해야",
-        "찾",
-        "가리",
-        "이야기",
-        "말을",
-        "관리인",
-        "담당자",
-        "길드",
-        "건물",
-        "선착장",
-    )
-    return any(marker in text for marker in markers)
+    return looks_actionable_for_story_patch(text)
 
 
 def _changed_edge_ids(changes: list[GraphChange]) -> list[str]:

@@ -394,6 +394,73 @@ async def test_generated_story_falls_back_to_quest_beat_from_player_goal() -> No
     assert repo.story_patch_entries[0].changed_node_ids == ["quest_clue"]
 
 
+async def test_generated_story_skips_writer_error_when_no_fallback_matches() -> None:
+    async def broken_writer(**kwargs) -> StoryWriteResponse:
+        raise ValueError("patches.0 needs op")
+
+    contract = _story_contract().model_copy(
+        update={"allowed_ops": ["add_memory", "add_clue"]}
+    )
+    runtime = _runtime().model_copy(update={"story_contract": contract})
+    result = GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        front_state=graph_to_front_state(runtime),
+    )
+    repo = FakeGraphRepo()
+
+    next_result = await apply_generated_story_after_action(
+        client=object(),
+        repo=repo,
+        result=result,
+        contract=contract,
+        player_input="엘리에게 접근합니다.",
+        action=Action(verb="speak", what="npc_ellie", how="approach"),
+        accepted_narration="엘리가 부둣가를 가리킵니다.",
+        writer=broken_writer,
+    )
+
+    assert next_result is result
+    assert repo.saved is False
+    assert [entry.status for entry in repo.story_patch_entries] == ["accepted"]
+    assert repo.story_patch_entries[0].reason == "story_write skipped after ValueError"
+    assert repo.story_patch_entries[0].patches == []
+
+
+async def test_generated_story_does_not_retry_after_writer_error_skip() -> None:
+    calls = 0
+
+    async def broken_writer(**kwargs) -> StoryWriteResponse:
+        nonlocal calls
+        calls += 1
+        raise ValueError("patches.0 needs op")
+
+    contract = _story_contract().model_copy(
+        update={"allowed_ops": ["add_location"]}
+    )
+    runtime = _runtime().model_copy(update={"story_contract": contract})
+    result = GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        front_state=graph_to_front_state(runtime),
+    )
+    repo = FakeGraphRepo()
+
+    await apply_generated_story_after_action(
+        client=object(),
+        repo=repo,
+        result=result,
+        contract=contract,
+        player_input="엘리에게 접근합니다.",
+        action=Action(verb="speak", what="npc_ellie", how="approach"),
+        accepted_narration="엘리가 부둣가를 가리킵니다.",
+        writer=broken_writer,
+    )
+
+    assert calls == 1
+    assert repo.story_patch_entries[0].reason == "story_write skipped after ValueError"
+
+
 async def test_generated_story_records_rejected_patch_entry() -> None:
     async def fake_writer(**kwargs) -> StoryWriteResponse:
         return StoryWriteResponse.model_validate(

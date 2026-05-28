@@ -36,3 +36,30 @@ test('renders memories and clues', async () => {
   expect(JSON.stringify(tree)).toContain('젖은 승선표');
   expect(JSON.stringify(tree)).toContain('당신은 표를 찢었습니다.');
 });
+
+test('does not repeat a discovery summary when it matches the title', async () => {
+  let root: unknown = null;
+  await act(async () => {
+    root = renderer.create(
+      <DiscoveriesPanel
+        discoveries={{
+          memories: [
+            {
+              id: 'mem_ellie_approach',
+              title: '엘리에게 친근하게 말을 건네기 위해 접근했습니다.',
+              summary: '엘리에게 친근하게 말을 건네기 위해 접근했습니다.',
+              stability: 'campaign',
+              turnId: 9,
+            },
+          ],
+          clues: [],
+        }}
+      />,
+    );
+  });
+
+  const tree = (root as { toJSON: () => unknown }).toJSON();
+  const text = JSON.stringify(tree);
+  const matches = text.match(/엘리에게 친근하게 말을 건네기 위해 접근했습니다\./g) ?? [];
+  expect(matches).toHaveLength(1);
+});

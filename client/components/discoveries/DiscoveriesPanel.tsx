@@ -33,9 +33,11 @@ function DiscoveryGroup({ title, entries }: { title: string; entries: DiscoveryE
           <Text className="font-sans-semibold text-caption text-fg-default" numberOfLines={1}>
             {entry.title}
           </Text>
-          <Text className="font-sans text-caption text-fg-muted" numberOfLines={2}>
-            {entry.summary}
-          </Text>
+          {entry.summary !== entry.title ? (
+            <Text className="font-sans text-caption text-fg-muted" numberOfLines={2}>
+              {entry.summary}
+            </Text>
+          ) : null}
         </View>
       ))}
     </View>
