@@ -19,6 +19,12 @@ def should_start_graph_roll(
         return False
     if runtime.progress.graph_combat_state is not None:
         return False
+    if (
+        runtime.story_contract is not None
+        and action.verb == "perceive"
+        and not check_required
+    ):
+        return False
     if _roll_required_by_server(runtime, action, player_input=player_input):
         return True
     if not check_required:

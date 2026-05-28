@@ -154,6 +154,36 @@ class _RateLimitedGraphNarrateLLM(_FakeLLM):
         )
 
 
+class _GeneratedStoryLLM(_FakeLLM):
+    def __init__(self, payload: dict, *, story_response: dict, **kwargs) -> None:
+        super().__init__(payload, **kwargs)
+        self.story_response = story_response
+
+    async def chat(
+        self,
+        messages,
+        think=False,
+        agent=None,
+        temperature=None,
+        use_fallback=False,
+    ):
+        if agent == "story_write":
+            self.calls.append(
+                {"messages": messages, "agent": agent, "temperature": temperature}
+            )
+            return {
+                "answer": json.dumps(self.story_response, ensure_ascii=False),
+                "think": "",
+            }
+        return await super().chat(
+            messages,
+            think=think,
+            agent=agent,
+            temperature=temperature,
+            use_fallback=use_fallback,
+        )
+
+
 class _TrackingGraphRepo(LocalFsGraphRepo):
     def __init__(self, saves_dir: str) -> None:
         super().__init__(saves_dir)
@@ -455,6 +485,62 @@ async def test_graph_input_speak_writes_gm_narration_instead_of_422(tmp_path):
     assert progress.turn_count == 1
     narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
     assert narrate_call["temperature"] is None
+
+
+async def test_generated_speak_can_promote_narrated_lead_to_graph_patch(tmp_path):
+    repo = await _repo(tmp_path)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(
+            update={
+                "profile_id": "white_isle_llm",
+                "story_contract_override": {
+                    "id": "white_isle_llm",
+                    "world": {"title": "흰섬", "locale": "ko"},
+                    "fixed": [],
+                    "forbid": [],
+                    "tone": {"register": "합니다체", "person": "second"},
+                    "budgets": {"patches_per_turn": 1, "new_terms_per_turn": 1},
+                    "allowed_ops": ["add_location"],
+                    "stability_defaults": {"add_location": "scene"},
+                },
+            }
+        )
+    )
+    llm = _GeneratedStoryLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]},
+        narration="고블린이 북쪽 문을 가리킵니다.",
+        story_response={
+            "reason": "new lead",
+            "patches": [
+                {
+                    "op": "add_location",
+                    "id": "loc_north_gate",
+                    "name": "북쪽 문",
+                    "description": "고블린이 알려 준 다음 목적지입니다.",
+                    "connect_from": "town",
+                }
+            ],
+        },
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "고블린에게 길을 묻는다")
+    graph = await repo.load_graph("game-1")
+    entries = await repo.load_story_patch_entries("game-1")
+    story_call = [call for call in llm.calls if call["agent"] == "story_write"][0]
+    story_payload = json.loads(story_call["messages"][1]["content"])
+
+    assert result.status == "executed"
+    assert "loc_north_gate" in graph.nodes
+    assert "connects_to:town:loc_north_gate" in graph.edges
+    assert [entry.status for entry in entries] == ["accepted"]
+    assert story_payload["visible_context"]["accepted_narration"] == (
+        "고블린이 북쪽 문을 가리킵니다."
+    )
+    assert [exit_.id for exit_ in result.front_state.place.exits] == [
+        "forest",
+        "loc_north_gate",
+    ]
 
 
 async def test_graph_input_speak_does_not_store_invented_player_question(tmp_path):
@@ -1276,6 +1362,46 @@ async def test_graph_input_perceive_creates_pending_roll(tmp_path):
     assert [entry.kind for entry in logs] == ["player"]
     assert logs[0].text == "주변을 자세히 살펴본다"
     assert result.front_state.pending_roll is not None
+
+
+async def test_generated_perceive_without_check_uses_narrative_flow(tmp_path):
+    repo = await _repo(tmp_path)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(
+            update={
+                "profile_id": "white_isle_llm",
+                "story_contract_override": {
+                    "id": "white_isle_llm",
+                    "world": {"title": "흰섬", "locale": "ko"},
+                    "fixed": [],
+                    "forbid": [],
+                    "tone": {"register": "합니다체", "person": "second"},
+                    "budgets": {"patches_per_turn": 1, "new_terms_per_turn": 1},
+                    "allowed_ops": ["add_clue"],
+                    "stability_defaults": {"add_clue": "scene"},
+                },
+            }
+        )
+    )
+    llm = _GeneratedStoryLLM(
+        {"actions": [{"verb": "perceive", "what": "town"}]},
+        narration="당신은 광장 주변을 확인합니다.",
+        story_response={"reason": "basic look", "patches": []},
+    )
+
+    result = await run_graph_input_turn(llm, repo, "game-1", "주변을 살펴본다")
+    progress = await repo.load_progress("game-1")
+    logs = await repo.load_log_entries("game-1")
+
+    assert result.status == "executed"
+    assert progress.pending_roll is None
+    assert [entry.kind for entry in logs] == ["player", "gm"]
+    assert [call["agent"] for call in llm.calls] == [
+        "classify",
+        "graph_narrate",
+        "story_write",
+    ]
 
 
 async def test_graph_input_stream_perceive_streams_preroll_before_roll(

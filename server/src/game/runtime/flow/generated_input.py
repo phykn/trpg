@@ -27,6 +27,8 @@ StoryWriter = Callable[..., Awaitable[StoryWriteResponse]]
 def derive_story_write_intent(action: Action) -> StoryWriteIntent:
     if action.verb == "perceive":
         return StoryWriteIntent(kind="clue_candidate", reason="perception action")
+    if action.verb == "speak":
+        return StoryWriteIntent(kind="memory_candidate", reason="accepted dialogue")
     if action.verb in {"transfer", "move", "use", "attack", "decide"}:
         return StoryWriteIntent(kind="memory_candidate", reason="accepted action")
     return StoryWriteIntent(kind="none")
@@ -59,6 +61,7 @@ async def apply_generated_story_after_action(
     contract: StoryContract | None,
     player_input: str,
     action: Action,
+    accepted_narration: str | None = None,
     writer: StoryWriter = story_write,
 ) -> GraphActionRequestResult:
     if contract is None or result.status != "executed":
@@ -80,6 +83,7 @@ async def apply_generated_story_after_action(
             intent=intent,
             player_input=player_input,
             action=action,
+            accepted_narration=accepted_narration,
         ),
         locale=result.runtime.progress.locale,
     )
@@ -153,6 +157,7 @@ async def apply_generated_story_after_action(
         ],
     )
     next_runtime = result.runtime.model_copy(update={"graph": next_graph})
+    next_runtime.__dict__.pop("graph_index", None)
     return result.model_copy(
         update={
             "runtime": next_runtime,

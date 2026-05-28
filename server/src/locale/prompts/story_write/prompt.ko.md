@@ -15,6 +15,9 @@ Allowed patches are `add_memory`, `add_clue`, `add_location`, `add_character`, `
 
 Rules:
 - Write only facts justified by the accepted action and visible context.
+- If `visible_context.accepted_narration` names a new actionable place, person,
+  item, or lead that the player can pursue next, prefer one matching patch over
+  leaving it only in prose.
 - Do not reveal forbidden facts from the contract.
 - Use Korean 합니다체 in `summary` fields.
 - Keep IDs stable, lowercase ASCII, and prefixed with `mem_`, `clue_`, `loc_`, `char_`, `item_`, or `quest_`.

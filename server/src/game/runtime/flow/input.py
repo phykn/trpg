@@ -46,6 +46,7 @@ from ..request_result import GraphActionRequestResult, rejected_result
 from ..roll.gate import should_start_graph_roll
 from ..state import GameRuntimeState
 from ..env import env_float, env_nonnegative_int
+from .generated_input import apply_generated_story_after_action
 from .turn import GraphActionTurnError
 
 
@@ -294,7 +295,10 @@ async def _run_classified_action(
             player_input=player_input,
             scenario_repo=scenario_repo,
         )
-    if action.verb in {"speak", "pass"} and runtime.progress.graph_combat_state is None:
+    if (
+        action.verb in {"speak", "pass", "perceive"}
+        and runtime.progress.graph_combat_state is None
+    ):
         return await _run_graph_narrative_input(
             client,
             repo,
@@ -350,7 +354,10 @@ async def _run_classified_action_stream(
         ):
             yield event
         return
-    if action.verb in {"speak", "pass"} and runtime.progress.graph_combat_state is None:
+    if (
+        action.verb in {"speak", "pass", "perceive"}
+        and runtime.progress.graph_combat_state is None
+    ):
         async for event in _run_graph_narrative_input_stream(
             client,
             repo,
@@ -669,6 +676,7 @@ async def _run_graph_narrative_input(
     )
 
     return await _finish_graph_narrative_input(
+        client,
         repo,
         runtime,
         action,
@@ -711,6 +719,7 @@ async def _run_graph_narrative_input_stream(
     )
 
     result = await _finish_graph_narrative_input(
+        client,
         repo,
         runtime,
         action,
@@ -751,6 +760,7 @@ def _neutral_stream_result(runtime: GameRuntimeState) -> GraphActionRequestResul
 
 
 async def _finish_graph_narrative_input(
+    client: LLMClient,
     repo: GraphRepo,
     runtime: GameRuntimeState,
     action: Action,
@@ -786,7 +796,7 @@ async def _finish_graph_narrative_input(
         target=subject_id,
     )
     engine_diag("input:done", status="executed", action=action.verb)
-    return GraphActionRequestResult(
+    result = GraphActionRequestResult(
         runtime=next_runtime,
         status="executed",
         front_state=graph_to_front_state(next_runtime),
@@ -794,6 +804,17 @@ async def _finish_graph_narrative_input(
             next_runtime,
             narration_result.suggestions,
         ),
+    )
+    if action.verb not in {"speak", "perceive"}:
+        return result
+    return await apply_generated_story_after_action(
+        client=client,
+        repo=repo,
+        result=result,
+        contract=next_runtime.story_contract,
+        player_input=player_input,
+        action=action,
+        accepted_narration=narration_result.narration,
     )
 
 

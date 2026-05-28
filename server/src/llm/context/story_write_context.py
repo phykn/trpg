@@ -25,25 +25,29 @@ def build_story_write_input(
     intent: StoryWriteIntent,
     player_input: str,
     action: Action,
+    accepted_narration: str | None = None,
 ) -> StoryWriteInput:
+    visible_context: dict[str, Any] = {
+        "player_id": runtime.progress.player_id,
+        "turn": runtime.progress.turn_count,
+        "nodes": [
+            {
+                "id": node.id,
+                "type": node.type,
+                "name": node.properties.get("name")
+                or node.properties.get("title")
+                or node.id,
+            }
+            for node in runtime.graph.nodes.values()
+            if node.type in {"character", "item", "location", "quest", "knowledge"}
+        ],
+    }
+    if accepted_narration:
+        visible_context["accepted_narration"] = accepted_narration
     return StoryWriteInput(
         contract=contract.model_dump(mode="json", by_alias=True),
         intent=intent.model_dump(mode="json"),
         player_input=player_input,
         action=action.model_dump(mode="json", by_alias=True, exclude_none=True),
-        visible_context={
-            "player_id": runtime.progress.player_id,
-            "turn": runtime.progress.turn_count,
-            "nodes": [
-                {
-                    "id": node.id,
-                    "type": node.type,
-                    "name": node.properties.get("name")
-                    or node.properties.get("title")
-                    or node.id,
-                }
-                for node in runtime.graph.nodes.values()
-                if node.type in {"character", "item", "location", "quest", "knowledge"}
-            ],
-        },
+        visible_context=visible_context,
     )
