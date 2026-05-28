@@ -320,7 +320,7 @@ export type GraphLevelUpRequest = {
   growth: GraphLevelUpGrowth;
 };
 
-export type StoryPatchLedgerStatus = 'accepted' | 'rejected' | 'rolled_back';
+export type StoryPatchLedgerStatus = 'accepted' | 'rejected' | 'skipped' | 'rolled_back';
 
 export type StoryPatchLedgerIntent = 'none' | 'memory_candidate' | 'clue_candidate' | 'both';
 

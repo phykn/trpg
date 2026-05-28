@@ -317,3 +317,43 @@ test('rolls back the latest patch and reloads the panel', async () => {
   expect(mockedGetStoryGraph).toHaveBeenCalledTimes(2);
   expect(mockedGetStoryContract).toHaveBeenCalledTimes(2);
 });
+
+test('does not enable rollback for skipped or empty accepted patches', async () => {
+  mockedGetStoryPatchTimeline.mockResolvedValue({
+    game_id: 'game-1',
+    entries: [
+      {
+        turn: 1,
+        status: 'skipped',
+        intentKind: 'both',
+        reason: 'nothing durable changed',
+        patches: [],
+        rejectedReasons: [],
+        changedNodeIds: [],
+        changedEdgeIds: [],
+      },
+      {
+        turn: 2,
+        status: 'accepted',
+        intentKind: 'both',
+        reason: 'legacy no-op entry',
+        patches: [],
+        rejectedReasons: [],
+        changedNodeIds: [],
+        changedEdgeIds: [],
+      },
+    ],
+  });
+  let root: renderer.ReactTestRenderer | null = null;
+  await act(async () => {
+    root = renderer.create(<StoryDevPanel gameId="game-1" onClose={jest.fn()} />);
+  });
+
+  await act(async () => {
+    root!.root.findByProps({ accessibilityLabel: ko.storyDev.timeline }).props.onPress();
+  });
+
+  const rollback = root!.root.findByProps({ accessibilityLabel: ko.storyDev.rollback });
+  expect(rollback.props.accessibilityState).toEqual({ disabled: true });
+  expect(rollback.props.onPress).toBeUndefined();
+});

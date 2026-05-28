@@ -189,7 +189,7 @@ async def apply_generated_story_after_action(
                     result,
                     response=response,
                     intent=intent,
-                    status="accepted",
+                    status="skipped",
                     changed_node_ids=changed_node_ids,
                     changed_edge_ids=changed_edge_ids,
                 )

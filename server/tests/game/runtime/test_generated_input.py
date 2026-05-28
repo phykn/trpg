@@ -230,6 +230,38 @@ async def test_generated_story_records_accepted_patch_entry() -> None:
     assert entry.changed_node_ids == ["clue_wet_ticket_001"]
 
 
+async def test_generated_story_records_empty_patch_as_skipped() -> None:
+    async def fake_writer(**kwargs) -> StoryWriteResponse:
+        return StoryWriteResponse.model_validate(
+            {"reason": "nothing durable changed", "patches": []}
+        )
+
+    runtime = _runtime()
+    repo = FakeGraphRepo()
+    result = GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        front_state=graph_to_front_state(runtime),
+    )
+
+    await apply_generated_story_after_action(
+        client=object(),
+        repo=repo,
+        result=result,
+        contract=_story_contract(),
+        player_input="표를 봅니다.",
+        action=Action(verb="perceive", what="ticket"),
+        writer=fake_writer,
+    )
+
+    assert len(repo.story_patch_entries) == 1
+    entry = repo.story_patch_entries[0]
+    assert entry.status == "skipped"
+    assert entry.reason == "nothing durable changed"
+    assert entry.changed_node_ids == []
+    assert entry.changed_edge_ids == []
+
+
 async def test_generated_story_retries_empty_patch_for_actionable_narration() -> None:
     calls = []
 
@@ -422,7 +454,7 @@ async def test_generated_story_skips_writer_error_when_no_fallback_matches() -> 
 
     assert next_result is result
     assert repo.saved is False
-    assert [entry.status for entry in repo.story_patch_entries] == ["accepted"]
+    assert [entry.status for entry in repo.story_patch_entries] == ["skipped"]
     assert repo.story_patch_entries[0].reason == "story_write skipped after ValueError"
     assert repo.story_patch_entries[0].patches == []
 
@@ -458,6 +490,7 @@ async def test_generated_story_does_not_retry_after_writer_error_skip() -> None:
     )
 
     assert calls == 1
+    assert repo.story_patch_entries[0].status == "skipped"
     assert repo.story_patch_entries[0].reason == "story_write skipped after ValueError"
 
 

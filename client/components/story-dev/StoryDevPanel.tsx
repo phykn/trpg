@@ -553,10 +553,17 @@ function Timeline({ entries, loading, onRollback }: {
           variant="action"
           label={ko.storyDev.rollback}
           onPress={onRollback}
-          disabled={loading || !entries.some((entry) => entry.status === 'accepted')}
+          disabled={loading || !entries.some(canRollbackEntry)}
         />
       </View>
     </View>
+  );
+}
+
+function canRollbackEntry(entry: StoryPatchLedgerEntry): boolean {
+  return (
+    entry.status === 'accepted'
+    && (entry.changedNodeIds.length > 0 || entry.changedEdgeIds.length > 0)
   );
 }
 

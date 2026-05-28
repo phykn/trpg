@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .story_patch import StoryWriteIntentKind
 
 
-StoryPatchLedgerStatus = Literal["accepted", "rejected", "rolled_back"]
+StoryPatchLedgerStatus = Literal["accepted", "rejected", "skipped", "rolled_back"]
 
 
 class StoryPatchLedgerEntry(BaseModel):
