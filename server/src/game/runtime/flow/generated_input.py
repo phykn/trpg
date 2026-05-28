@@ -57,7 +57,7 @@ def story_write_intent_for_contract(
     if set(contract.allowed_ops).intersection(world_ops):
         if runtime is None:
             return StoryWriteIntent(kind="both", reason="world write allowed")
-        if _has_recent_generated_discovery(runtime):
+        if _has_recent_generated_world_node(runtime):
             return intent
         return StoryWriteIntent(kind="both", reason="no recent generated discoveries")
     return intent
@@ -181,6 +181,44 @@ async def apply_generated_story_after_action(
             player_id=result.runtime.progress.player_id,
             turn_id=result.runtime.progress.turn_count,
         )
+        if patch_required and not changes and not _is_writer_error_skip(response):
+            fallback = _fallback_actionable_response(
+                result.runtime,
+                text=" ".join(filter(None, [accepted_narration, player_input])),
+                contract=contract,
+                reason="story_write fallback after empty actionable patch",
+            )
+            if fallback is not None:
+                response = _fit_response_to_contract_budget(fallback, contract)
+                validation = validate_story_write_response(
+                    response,
+                    graph=result.runtime.graph,
+                    contract=contract,
+                )
+                if not validation.ok:
+                    engine_diag(
+                        "story_write:reject",
+                        reasons=",".join(validation.reasons),
+                    )
+                    await repo.append_story_patch_entries(
+                        result.runtime.progress.game_id,
+                        [
+                            _ledger_entry(
+                                result,
+                                response=response,
+                                intent=intent,
+                                status="rejected",
+                                rejected_reasons=validation.reasons,
+                            )
+                        ],
+                    )
+                    return result
+                changes = story_patches_to_graph_changes(
+                    response.patches,
+                    graph=result.runtime.graph,
+                    player_id=result.runtime.progress.player_id,
+                    turn_id=result.runtime.progress.turn_count,
+                )
     changed_node_ids = _changed_node_ids(changes)
     changed_edge_ids = _changed_edge_ids(changes)
     if not changes:
@@ -305,15 +343,12 @@ def _changed_node_ids(changes: list[GraphChange]) -> list[str]:
     ]
 
 
-def _has_recent_generated_discovery(runtime: GameRuntimeState) -> bool:
+def _has_recent_generated_world_node(runtime: GameRuntimeState) -> bool:
     threshold = max(0, runtime.progress.turn_count - 3)
     for node in runtime.graph.nodes.values():
-        if node.type != "knowledge":
+        if node.type not in {"location", "character", "item", "quest"}:
             continue
-        props = node.properties
-        if props.get("kind") not in {"memory", "clue"}:
-            continue
-        turn_id = props.get("turn_id")
+        turn_id = node.properties.get("turn_id")
         if isinstance(turn_id, int) and turn_id >= threshold:
             return True
     return False

@@ -473,6 +473,46 @@ async def test_generated_story_falls_back_to_quest_beat_from_player_goal() -> No
     assert repo.story_patch_entries[0].changed_node_ids == ["quest_clue"]
 
 
+async def test_generated_story_falls_back_after_empty_actionable_retry() -> None:
+    calls = 0
+
+    async def empty_writer(**kwargs) -> StoryWriteResponse:
+        nonlocal calls
+        calls += 1
+        return StoryWriteResponse.model_validate(
+            {"reason": "nothing durable changed", "patches": []}
+        )
+
+    contract = _story_contract().model_copy(
+        update={"allowed_ops": ["add_quest_beat"]}
+    )
+    runtime = _runtime().model_copy(update={"story_contract": contract})
+    result = GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        front_state=graph_to_front_state(runtime),
+    )
+    repo = FakeGraphRepo()
+
+    next_result = await apply_generated_story_after_action(
+        client=object(),
+        repo=repo,
+        result=result,
+        contract=contract,
+        player_input="엘리에게 구체적으로 어디로 가야 하는지 묻습니다.",
+        action=Action(verb="speak", what="npc_ellie", how="friendly"),
+        accepted_narration="엘리가 북쪽 길목으로 가셔야 한다고 말합니다.",
+        writer=empty_writer,
+    )
+
+    assert calls == 2
+    assert "quest_clue" in next_result.runtime.graph.nodes
+    assert [entry.status for entry in repo.story_patch_entries] == ["accepted"]
+    assert repo.story_patch_entries[0].reason == (
+        "story_write fallback after empty actionable patch"
+    )
+
+
 async def test_generated_story_skips_writer_error_when_no_fallback_matches() -> None:
     async def broken_writer(**kwargs) -> StoryWriteResponse:
         raise ValueError("patches.0 needs op")
@@ -610,20 +650,45 @@ def test_story_write_intent_for_contract_expands_when_world_ops_are_allowed() ->
     assert intent.reason == "world write allowed"
 
 
-def test_story_write_intent_keeps_base_when_recent_discovery_exists() -> None:
+def test_story_write_intent_expands_when_recent_discovery_is_only_memory() -> None:
     contract = _story_contract().model_copy(
         update={"allowed_ops": ["add_memory", "add_clue", "add_location"]}
     )
     runtime = _runtime()
     runtime.progress.turn_count = 5
-    runtime.graph.nodes["clue_recent"] = GraphNode(
-        id="clue_recent",
+    runtime.graph.nodes["mem_recent"] = GraphNode(
+        id="mem_recent",
         type="knowledge",
         properties={
-            "kind": "clue",
-            "title": "최근 단서",
-            "summary": "최근에 발견했습니다.",
-            "stability": "scene",
+            "kind": "memory",
+            "title": "최근 기억",
+            "summary": "최근에 기억했습니다.",
+            "stability": "campaign",
+            "turn_id": 4,
+        },
+    )
+
+    intent = story_write_intent_for_contract(
+        Action(verb="move", to="loc_white_pier"),
+        contract,
+        runtime=runtime,
+    )
+
+    assert intent.kind == "both"
+
+
+def test_story_write_intent_keeps_base_when_recent_world_node_exists() -> None:
+    contract = _story_contract().model_copy(
+        update={"allowed_ops": ["add_memory", "add_clue", "add_location"]}
+    )
+    runtime = _runtime()
+    runtime.progress.turn_count = 5
+    runtime.graph.nodes["loc_recent"] = GraphNode(
+        id="loc_recent",
+        type="location",
+        properties={
+            "name": "최근 장소",
+            "description": "최근에 생성했습니다.",
             "turn_id": 4,
         },
     )
