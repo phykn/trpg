@@ -908,6 +908,25 @@ def test_graph_front_state_exposes_generated_pending_quest_beat_as_offer():
     assert payload.quest_offers[1].actions == ["accept"]
 
 
+def test_graph_front_state_hides_abandoned_generated_quest_beat():
+    runtime = _runtime()
+    runtime.graph.nodes["quest_generated"] = GraphNode(
+        id="quest_generated",
+        type="quest",
+        properties={
+            "title": "다음 단서 확인",
+            "description": "방금 확인한 목표를 진행하기 위한 다음 단서를 찾습니다.",
+            "status": "abandoned",
+            "stability": "chapter",
+            "turn_id": 2,
+        },
+    )
+
+    payload = graph_to_front_state(runtime)
+
+    assert [offer.id for offer in payload.quest_offers] == ["quest_01"]
+
+
 def test_graph_front_state_uses_chapter_description_as_summary_fallback():
     runtime = _runtime()
     runtime.graph.nodes["chapter_01"] = GraphNode(

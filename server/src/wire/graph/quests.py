@@ -126,7 +126,7 @@ def quest_status(quest: GraphNode) -> str:
 
 
 def _is_generated_quest_beat(quest: GraphNode) -> bool:
-    if quest_status(quest) not in {"pending", "abandoned"}:
+    if quest_status(quest) != "pending":
         return False
     return isinstance(quest.properties.get("turn_id"), int) and quest.properties.get(
         "stability"
