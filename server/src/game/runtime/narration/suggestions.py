@@ -14,6 +14,7 @@ from src.game.domain.graph.query import (
     known_skills_of,
     location_of,
 )
+from src.locale.ko.particles import eul_reul
 
 from ..state import GameRuntimeState
 
@@ -238,7 +239,7 @@ def _intro_discovery_inspect_suggestions(
         out.append(
             GraphSuggestion(
                 label=name,
-                input_text=f"{name}{_ko_object()} {_ko_inspect()}",
+                input_text=f"{name}{_ko_object_particle(name)} {_ko_inspect()}",
                 intent="inspect",
             )
         )
@@ -382,6 +383,10 @@ def _ko_abandon() -> str:
 
 def _ko_object() -> str:
     return chr(0xC744)
+
+
+def _ko_object_particle(text: str) -> str:
+    return eul_reul(text)
 
 
 def _ko_to_person() -> str:

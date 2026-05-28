@@ -272,6 +272,27 @@ def test_build_intro_suggestions_includes_visible_generated_clue():
     ]
 
 
+def test_build_intro_suggestions_uses_object_particle_for_vowel_ending_clue():
+    runtime = _runtime_for_suggestions()
+    runtime.graph.edges.pop("connects_to:town:forest")
+    runtime.graph.nodes["clue_fog"] = GraphNode(
+        id="clue_fog",
+        type="knowledge",
+        properties={
+            "kind": "clue",
+            "title": "짙은 안개",
+            "summary": "시야를 방해합니다.",
+            "visibility": "player",
+        },
+    )
+
+    result = build_intro_suggestions(runtime)
+
+    assert "짙은 안개를 살핍니다" in [
+        suggestion.input_text for suggestion in result
+    ]
+
+
 def test_filter_grounded_suggestions_drops_locked_move_targets():
     runtime = _runtime_for_suggestions()
     runtime.graph.edges["connects_to:town:forest"].properties["requires_quest"] = "quest_01"
