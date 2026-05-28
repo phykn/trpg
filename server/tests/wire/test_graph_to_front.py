@@ -324,6 +324,23 @@ def test_graph_front_state_builds_place_from_visible_graph_edges():
     }
 
 
+def test_graph_front_state_normalizes_legacy_generated_location_description():
+    runtime = _runtime()
+    runtime.graph.nodes["forest"].properties.update(
+        {
+            "name": "북쪽 길목",
+            "description": "북쪽 길목 can be investigated further.",
+        }
+    )
+
+    payload = graph_to_front_state(runtime)
+
+    assert payload.place is not None
+    assert payload.place.exits[0].description == (
+        "북쪽 길목은 더 살펴볼 수 있는 장소입니다."
+    )
+
+
 def test_graph_front_state_marks_protected_place_targets_not_attackable():
     runtime = _runtime()
     runtime.graph.nodes["goblin_01"].properties["protected"] = True

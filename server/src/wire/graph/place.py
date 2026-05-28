@@ -13,6 +13,7 @@ from src.game.domain.graph.query import (
     items_at,
     location_of,
 )
+from src.locale.generated_story import normalize_location_description
 from .character import (
     character_gender,
     character_race_job,
@@ -88,7 +89,7 @@ def place_payload(
     return GraphPlacePayload(
         id=location.id,
         name=node_name(location, content),
-        description=optional_str(static_value(location, "description", content)) or "",
+        description=_location_description(location, content),
         exits=exits,
         items=items,
         targets=targets,
@@ -109,7 +110,7 @@ def _place_link(
     return GraphPlaceLinkPayload(
         id=location.id,
         name=node_name(location, content),
-        description=optional_str(static_value(location, "description", content)) or "",
+        description=_location_description(location, content),
     )
 
 
@@ -122,3 +123,11 @@ def _place_item(
         name=node_name(item, content),
         description=optional_str(static_value(item, "description", content)) or "",
     )
+
+
+def _location_description(
+    location: GraphNode,
+    content: RuntimeContent | None = None,
+) -> str:
+    description = optional_str(static_value(location, "description", content)) or ""
+    return normalize_location_description(description)

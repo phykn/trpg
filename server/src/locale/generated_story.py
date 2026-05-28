@@ -53,6 +53,7 @@ QUEST_BEAT_FALLBACK = {
     "summary": "방금 확인한 목표를 진행하기 위한 다음 단서를 찾습니다.",
 }
 LOCATION_DESCRIPTION_SUFFIX = "더 살펴볼 수 있는 장소입니다."
+LEGACY_LOCATION_DESCRIPTION_SUFFIX = "can be investigated further."
 GENERATED_OPEN_MOVE_TERMS = ("이동", "갑니다", "가요", "나아", "향해")
 GENERATED_OPEN_MOVE_TARGET_TERMS = ("가리키", "길목", "방향", "북쪽")
 
@@ -93,6 +94,14 @@ def candidate_quest_beat(text: str) -> dict[str, str] | None:
 
 def location_description(location_name: str) -> str:
     return f"{location_name}은 {LOCATION_DESCRIPTION_SUFFIX}"
+
+
+def normalize_location_description(description: str) -> str:
+    if description.endswith(f" {LEGACY_LOCATION_DESCRIPTION_SUFFIX}"):
+        location_name = description[: -len(LEGACY_LOCATION_DESCRIPTION_SUFFIX)].strip()
+        if location_name:
+            return location_description(location_name)
+    return description
 
 
 def node_id_suffix(name: str) -> str:
