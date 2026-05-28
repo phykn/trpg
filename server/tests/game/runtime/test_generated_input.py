@@ -230,6 +230,170 @@ async def test_generated_story_records_accepted_patch_entry() -> None:
     assert entry.changed_node_ids == ["clue_wet_ticket_001"]
 
 
+async def test_generated_story_retries_empty_patch_for_actionable_narration() -> None:
+    calls = []
+
+    async def fake_writer(**kwargs) -> StoryWriteResponse:
+        calls.append(kwargs["input_"].model_dump(mode="json"))
+        if len(calls) == 1:
+            return StoryWriteResponse.model_validate(
+                {"reason": "prose only", "patches": []}
+            )
+        return StoryWriteResponse.model_validate(
+            {
+                "reason": "lead promoted",
+                "patches": [
+                    {
+                        "op": "add_character",
+                        "id": "char_harbor_manager",
+                        "name": "항구 관리인",
+                        "role": "quest_giver",
+                        "location_id": "loc_fog_harbor",
+                    }
+                ],
+            }
+        )
+
+    contract = _story_contract().model_copy(
+        update={"allowed_ops": ["add_character"]}
+    )
+    runtime = _runtime().model_copy(update={"story_contract": contract})
+    result = GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        front_state=graph_to_front_state(runtime),
+    )
+    repo = FakeGraphRepo()
+
+    next_result = await apply_generated_story_after_action(
+        client=object(),
+        repo=repo,
+        result=result,
+        contract=contract,
+        player_input="엘리에게 흰섬으로 가는 방법을 묻습니다.",
+        action=Action(verb="speak", what="npc_ellie", how="friendly"),
+        accepted_narration=(
+            "엘리가 말합니다. 「흰섬에 가려면 먼저 항구 관리인에게 "
+            "이야기를 꺼내야 해요.」"
+        ),
+        writer=fake_writer,
+    )
+
+    assert len(calls) == 2
+    assert calls[0]["visible_context"]["patch_requirement"]["required"] is True
+    assert calls[1]["intent"]["reason"] == (
+        "retry: accepted narration requires a graph patch"
+    )
+    assert "char_harbor_manager" in next_result.runtime.graph.nodes
+    assert [entry.status for entry in repo.story_patch_entries] == ["accepted"]
+    assert repo.story_patch_entries[0].changed_node_ids == ["char_harbor_manager"]
+
+
+async def test_generated_story_allows_empty_patch_for_atmosphere_narration() -> None:
+    calls = []
+
+    async def fake_writer(**kwargs) -> StoryWriteResponse:
+        calls.append(kwargs["input_"].model_dump(mode="json"))
+        return StoryWriteResponse.model_validate(
+            {"reason": "atmosphere only", "patches": []}
+        )
+
+    contract = _story_contract().model_copy(
+        update={"allowed_ops": ["add_location"]}
+    )
+    runtime = _runtime().model_copy(update={"story_contract": contract})
+    result = GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        front_state=graph_to_front_state(runtime),
+    )
+
+    await apply_generated_story_after_action(
+        client=object(),
+        repo=FakeGraphRepo(),
+        result=result,
+        contract=contract,
+        player_input="여기가 어디인지 둘러봅니다.",
+        action=Action(verb="perceive", what="loc_fog_harbor"),
+        accepted_narration="안개 낀 부두에 습기 찬 바닷바람이 붑니다.",
+        writer=fake_writer,
+    )
+
+    assert len(calls) == 1
+    assert "patch_requirement" not in calls[0]["visible_context"]
+
+
+async def test_generated_story_falls_back_when_writer_returns_invalid_schema() -> None:
+    async def broken_writer(**kwargs) -> StoryWriteResponse:
+        raise ValueError("patches.0 needs op")
+
+    contract = _story_contract().model_copy(
+        update={"allowed_ops": ["add_character"]}
+    )
+    runtime = _runtime().model_copy(update={"story_contract": contract})
+    result = GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        front_state=graph_to_front_state(runtime),
+    )
+    repo = FakeGraphRepo()
+
+    next_result = await apply_generated_story_after_action(
+        client=object(),
+        repo=repo,
+        result=result,
+        contract=contract,
+        player_input="엘리에게 흰섬으로 가는 방법을 묻습니다.",
+        action=Action(verb="speak", what="npc_ellie", how="friendly"),
+        accepted_narration=(
+            "엘리가 말합니다. 「흰섬에 가려면 먼저 항구 관리인에게 "
+            "이야기를 꺼내야 합니다.」"
+        ),
+        writer=broken_writer,
+    )
+
+    assert "char_manager" in next_result.runtime.graph.nodes
+    assert (
+        next_result.runtime.graph.nodes["char_manager"].properties["name"]
+        == "항구 관리인"
+    )
+    assert "located_at:char_manager:loc_fog_harbor" in next_result.runtime.graph.edges
+    assert [entry.status for entry in repo.story_patch_entries] == ["accepted"]
+    assert repo.story_patch_entries[0].changed_node_ids == ["char_manager"]
+
+
+async def test_generated_story_falls_back_to_quest_beat_from_player_goal() -> None:
+    async def broken_writer(**kwargs) -> StoryWriteResponse:
+        raise ValueError("patches.0 needs op")
+
+    contract = _story_contract().model_copy(
+        update={"allowed_ops": ["add_quest_beat"]}
+    )
+    runtime = _runtime().model_copy(update={"story_contract": contract})
+    result = GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        front_state=graph_to_front_state(runtime),
+    )
+    repo = FakeGraphRepo()
+
+    next_result = await apply_generated_story_after_action(
+        client=object(),
+        repo=repo,
+        result=result,
+        contract=contract,
+        player_input="흰섬으로 가려면 무엇을 해야 하는지 묻습니다.",
+        action=Action(verb="speak", what="npc_ellie", how="friendly"),
+        accepted_narration="엘리가 잠시 생각하다가 길을 알아봐야 한다고 말합니다.",
+        writer=broken_writer,
+    )
+
+    assert "quest_clue" in next_result.runtime.graph.nodes
+    assert next_result.runtime.graph.nodes["quest_clue"].properties["status"] == "pending"
+    assert [entry.status for entry in repo.story_patch_entries] == ["accepted"]
+    assert repo.story_patch_entries[0].changed_node_ids == ["quest_clue"]
+
+
 async def test_generated_story_records_rejected_patch_entry() -> None:
     async def fake_writer(**kwargs) -> StoryWriteResponse:
         return StoryWriteResponse.model_validate(

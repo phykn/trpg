@@ -65,6 +65,13 @@ def quest_offer_payloads(runtime: GameRuntimeState) -> list[QuestPayload]:
             continue
         if quest_status(quest) in {"pending", "abandoned"}:
             offers.append(build_quest_payload(graph, quest, runtime))
+    seen = {offer.id for offer in offers}
+    for quest in nodes_of_type(graph, "quest"):
+        if quest.id in seen:
+            continue
+        if not _is_generated_quest_beat(quest):
+            continue
+        offers.append(build_quest_payload(graph, quest, runtime))
     return offers
 
 
@@ -111,6 +118,14 @@ def build_quest_payload(
 def quest_status(quest: GraphNode) -> str:
     status = quest.properties.get("status")
     return status if isinstance(status, str) else "locked"
+
+
+def _is_generated_quest_beat(quest: GraphNode) -> bool:
+    if quest_status(quest) not in {"pending", "abandoned"}:
+        return False
+    return isinstance(quest.properties.get("turn_id"), int) and quest.properties.get(
+        "stability"
+    ) in {"scene", "chapter", "campaign"}
 
 
 def _difficulty_badge(tier: str) -> DifficultyBadge:

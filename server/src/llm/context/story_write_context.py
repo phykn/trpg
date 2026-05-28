@@ -26,6 +26,8 @@ def build_story_write_input(
     player_input: str,
     action: Action,
     accepted_narration: str | None = None,
+    patch_required: bool = False,
+    patch_reason: str | None = None,
 ) -> StoryWriteInput:
     visible_context: dict[str, Any] = {
         "player_id": runtime.progress.player_id,
@@ -44,6 +46,11 @@ def build_story_write_input(
     }
     if accepted_narration:
         visible_context["accepted_narration"] = accepted_narration
+    if patch_required:
+        visible_context["patch_requirement"] = {
+            "required": True,
+            "reason": patch_reason or "accepted narration contains an actionable lead",
+        }
     return StoryWriteInput(
         contract=contract.model_dump(mode="json", by_alias=True),
         intent=intent.model_dump(mode="json"),
