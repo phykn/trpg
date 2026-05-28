@@ -230,6 +230,53 @@ async def test_generated_story_records_accepted_patch_entry() -> None:
     assert entry.changed_node_ids == ["clue_wet_ticket_001"]
 
 
+async def test_generated_story_applies_first_patch_when_writer_exceeds_budget() -> None:
+    async def fake_writer(**kwargs) -> StoryWriteResponse:
+        return StoryWriteResponse.model_validate(
+            {
+                "reason": "too much but useful",
+                "patches": [
+                    {
+                        "op": "add_memory",
+                        "id": "mem_ellie_advice",
+                        "summary": "흰섬에 가려면 선장에게 이야기해야 합니다.",
+                    },
+                    {
+                        "op": "add_memory",
+                        "id": "mem_extra",
+                        "summary": "추가 정보입니다.",
+                    },
+                ],
+                "new_terms": ["선장", "추가"],
+            }
+        )
+
+    runtime = _runtime()
+    repo = FakeGraphRepo()
+    result = GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        front_state=graph_to_front_state(runtime),
+    )
+
+    next_result = await apply_generated_story_after_action(
+        client=object(),
+        repo=repo,
+        result=result,
+        contract=_story_contract(),
+        player_input="엘리에게 흰섬으로 가는 방법을 묻습니다.",
+        action=Action(verb="speak", what="npc_ellie", how="friendly"),
+        writer=fake_writer,
+    )
+
+    assert "mem_ellie_advice" in next_result.runtime.graph.nodes
+    assert "mem_extra" not in next_result.runtime.graph.nodes
+    entry = repo.story_patch_entries[0]
+    assert entry.status == "accepted"
+    assert [patch["id"] for patch in entry.patches] == ["mem_ellie_advice"]
+    assert entry.changed_node_ids == ["mem_ellie_advice"]
+
+
 async def test_generated_story_records_empty_patch_as_skipped() -> None:
     async def fake_writer(**kwargs) -> StoryWriteResponse:
         return StoryWriteResponse.model_validate(

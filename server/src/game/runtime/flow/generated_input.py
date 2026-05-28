@@ -102,6 +102,7 @@ async def apply_generated_story_after_action(
         patch_required=patch_required,
         patch_reason="accepted narration names a player-actionable lead",
     )
+    response = _fit_response_to_contract_budget(response, contract)
     validation = validate_story_write_response(
         response,
         graph=result.runtime.graph,
@@ -150,6 +151,7 @@ async def apply_generated_story_after_action(
                 "write one allowed patch"
             ),
         )
+        response = _fit_response_to_contract_budget(response, contract)
         validation = validate_story_write_response(
             response,
             graph=result.runtime.graph,
@@ -277,6 +279,22 @@ async def _call_writer_or_fallback(
 
 def _is_writer_error_skip(response: StoryWriteResponse) -> bool:
     return response.reason.startswith("story_write skipped after ")
+
+
+def _fit_response_to_contract_budget(
+    response: StoryWriteResponse,
+    contract: StoryContract,
+) -> StoryWriteResponse:
+    patch_limit = contract.budgets.patches_per_turn
+    term_limit = contract.budgets.new_terms_per_turn
+    if len(response.patches) <= patch_limit and len(response.new_terms) <= term_limit:
+        return response
+    return response.model_copy(
+        update={
+            "patches": response.patches[:patch_limit],
+            "new_terms": response.new_terms[:term_limit],
+        }
+    )
 
 
 def _changed_node_ids(changes: list[GraphChange]) -> list[str]:
