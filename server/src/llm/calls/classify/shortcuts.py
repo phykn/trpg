@@ -56,6 +56,10 @@ def classify_action_shortcut(
     if quest_move is not None:
         return _action_output([quest_move])
 
+    exit_move = _visible_exit_move_action(player_input, surroundings)
+    if exit_move is not None:
+        return _action_output([exit_move])
+
     open_move = _open_generated_move_action(player_input)
     if open_move is not None:
         return _action_output([open_move])
@@ -196,6 +200,28 @@ def _looks_like_quest_accept(player_input: str) -> bool:
 
 def _looks_like_quest_travel(player_input: str) -> bool:
     return _has_any(player_input, QUEST_TRAVEL_TERMS)
+
+
+def _visible_exit_move_action(
+    player_input: str,
+    surroundings: dict[str, Any],
+) -> Action | None:
+    if not _has_any(player_input, GENERATED_OPEN_MOVE_TERMS):
+        return None
+    if _looks_like_dialogue(player_input) or _looks_like_inspect(player_input):
+        return None
+    targets: list[str] = []
+    for entry in _dicts(surroundings.get("entities")):
+        if entry.get("type") != "connection":
+            continue
+        entry_id = entry.get("id")
+        name = entry.get("name")
+        if isinstance(entry_id, str) and isinstance(name, str) and name in player_input:
+            targets.append(entry_id)
+    targets = list(dict.fromkeys(targets))
+    if len(targets) != 1:
+        return None
+    return Action(verb="move", to=targets[0])
 
 
 def _open_generated_move_action(player_input: str) -> Action | None:

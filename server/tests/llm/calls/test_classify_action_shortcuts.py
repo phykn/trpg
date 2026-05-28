@@ -248,6 +248,28 @@ async def test_generated_open_move_shortcuts_without_llm():
     assert action.note == "generated_open_move"
 
 
+async def test_generated_exit_move_uses_visible_location_without_llm():
+    context = _context()
+    context["identity"]["exits"] = [
+        {"id": "loc_road", "name": "북쪽 길목"},
+    ]
+
+    output = await classify(
+        _NoCallLLM(),
+        ClassifyInput(
+            player_input="북쪽 길목으로 이동합니다",
+            context=context,
+        ),
+        locale="ko",
+    )
+
+    assert output.actions is not None
+    action = output.actions[0]
+    assert action.verb == "move"
+    assert action.to == "loc_road"
+    assert action.note is None
+
+
 async def test_korean_active_quest_route_shortcuts_to_next_step_without_llm():
     context = _context()
     context["identity"]["active_quest"] = {
