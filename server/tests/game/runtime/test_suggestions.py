@@ -172,6 +172,29 @@ def test_next_turn_suggestions_repeats_visible_actions_when_all_are_recent():
     ]
 
 
+def test_next_turn_suggestions_uses_visible_generated_clue_when_generic_inspect_is_recent():
+    runtime = _runtime_for_suggestions()
+    runtime.graph.nodes["clue_signpost"] = GraphNode(
+        id="clue_signpost",
+        type="knowledge",
+        properties={
+            "kind": "clue",
+            "title": "북쪽 길목의 표지판",
+            "summary": "북쪽을 가리킵니다.",
+            "visibility": "player",
+        },
+    )
+    runtime.log_entries.append(
+        PlayerLogEntry(id=1, kind="player", text="주변을 살핍니다")
+    )
+
+    result = next_turn_suggestions(runtime, [])
+
+    assert "북쪽 길목의 표지판을 살핍니다" in [
+        suggestion.input_text for suggestion in result
+    ]
+
+
 def test_build_intro_suggestions_uses_visible_graph_state():
     runtime = _runtime_for_suggestions()
 
@@ -208,6 +231,44 @@ def test_build_intro_suggestions_hides_locked_exits():
     assert [suggestion.input_text for suggestion in result] == [
         "상인에게 말을 겁니다",
         "주변을 살핍니다",
+    ]
+
+
+def test_build_intro_suggestions_includes_visible_generated_clue():
+    runtime = _runtime_for_suggestions()
+    runtime.graph.edges.pop("connects_to:town:forest")
+    runtime.graph.nodes["clue_signpost"] = GraphNode(
+        id="clue_signpost",
+        type="knowledge",
+        properties={
+            "kind": "clue",
+            "title": "북쪽 길목의 표지판",
+            "summary": "북쪽을 가리킵니다.",
+            "visibility": "player",
+        },
+    )
+
+    result = build_intro_suggestions(runtime)
+
+    assert [suggestion.model_dump() for suggestion in result] == [
+        {
+            "label": "talk",
+            "input_text": "상인에게 말을 겁니다",
+            "intent": "talk",
+            "action": None,
+        },
+        {
+            "label": "북쪽 길목의 표지판",
+            "input_text": "북쪽 길목의 표지판을 살핍니다",
+            "intent": "inspect",
+            "action": None,
+        },
+        {
+            "label": "inspect",
+            "input_text": "주변을 살핍니다",
+            "intent": "inspect",
+            "action": None,
+        },
     ]
 
 
@@ -271,6 +332,40 @@ def test_filter_grounded_suggestions_keeps_inspect_for_visible_scene_refs():
         "마을을 살핍니다",
         "상인을 살핍니다",
         "숲을 살핍니다",
+    ]
+
+
+def test_filter_grounded_suggestions_keeps_inspect_for_visible_generated_clue():
+    runtime = _runtime_for_suggestions()
+    runtime.graph.nodes["clue_signpost"] = GraphNode(
+        id="clue_signpost",
+        type="knowledge",
+        properties={
+            "kind": "clue",
+            "title": "북쪽 길목의 표지판",
+            "summary": "북쪽을 가리킵니다.",
+            "visibility": "player",
+        },
+    )
+
+    result = filter_grounded_suggestions(
+        runtime,
+        [
+            GraphSuggestion(
+                label="표지판 확인",
+                input_text="북쪽 길목의 표지판을 살핍니다",
+                intent="inspect",
+            ),
+            GraphSuggestion(
+                label="숨겨진 단서",
+                input_text="숨겨진 단서를 살핍니다",
+                intent="inspect",
+            ),
+        ],
+    )
+
+    assert [suggestion.input_text for suggestion in result] == [
+        "북쪽 길목의 표지판을 살핍니다"
     ]
 
 

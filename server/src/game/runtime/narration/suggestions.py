@@ -29,6 +29,7 @@ def build_intro_suggestions(runtime: GameRuntimeState) -> list[GraphSuggestion]:
     suggestions: list[GraphSuggestion] = []
     suggestions.extend(_intro_talk_suggestions(runtime, limit=1))
     suggestions.extend(_intro_move_suggestions(runtime, limit=1))
+    suggestions.extend(_intro_discovery_inspect_suggestions(runtime, limit=1))
     suggestions.append(
         GraphSuggestion(
             label="inspect",
@@ -134,6 +135,8 @@ def _inspect_target_refs(runtime: GameRuntimeState) -> set[str]:
     refs.update(_visible_character_refs(runtime))
     for item_id in items_at(runtime.graph_index, place_id):
         refs.update(_node_refs(runtime, item_id))
+    for clue_id in _visible_clue_ids(runtime):
+        refs.update(_node_refs(runtime, clue_id))
     return refs
 
 
@@ -218,6 +221,42 @@ def _intro_move_suggestions(
         )
         if len(out) == limit:
             break
+    return out
+
+
+def _intro_discovery_inspect_suggestions(
+    runtime: GameRuntimeState,
+    *,
+    limit: int,
+) -> list[GraphSuggestion]:
+    out: list[GraphSuggestion] = []
+    for clue_id in _visible_clue_ids(runtime):
+        node = runtime.graph.nodes.get(clue_id)
+        if node is None:
+            continue
+        name = node_label(runtime.content, node)
+        out.append(
+            GraphSuggestion(
+                label=name,
+                input_text=f"{name}{_ko_object()} {_ko_inspect()}",
+                intent="inspect",
+            )
+        )
+        if len(out) == limit:
+            break
+    return out
+
+
+def _visible_clue_ids(runtime: GameRuntimeState) -> list[str]:
+    out: list[str] = []
+    for node in runtime.graph.nodes.values():
+        if node.type != "knowledge":
+            continue
+        if node.properties.get("kind") != "clue":
+            continue
+        if node.properties.get("visibility", "player") != "player":
+            continue
+        out.append(node.id)
     return out
 
 
