@@ -3,6 +3,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from src.game.domain.content import node_label
+from src.game.domain.graph import GraphNode
 from src.game.domain.graph.character import is_visible_character
 from src.game.domain.memory import PlayerLogEntry
 from src.game.domain.graph.query import (
@@ -257,8 +258,43 @@ def _visible_clue_ids(runtime: GameRuntimeState) -> list[str]:
             continue
         if node.properties.get("visibility", "player") != "player":
             continue
+        if not _clue_is_inspectable_now(runtime, node):
+            continue
         out.append(node.id)
     return out
+
+
+def _clue_is_inspectable_now(
+    runtime: GameRuntimeState,
+    clue: GraphNode,
+) -> bool:
+    if clue.properties.get("stability", "scene") != "scene":
+        return True
+    anchor_id = clue.properties.get("anchor_id")
+    if not isinstance(anchor_id, str) or not anchor_id:
+        return True
+    place_id = location_of(runtime.graph_index, runtime.progress.player_id)
+    if place_id is None:
+        return False
+    if anchor_id in {place_id, runtime.progress.player_id}:
+        return True
+    anchor = runtime.graph.nodes.get(anchor_id)
+    if anchor is None:
+        return False
+    if anchor.type == "location":
+        return anchor_id == place_id
+    if anchor.type == "character":
+        return anchor_id == runtime.progress.player_id or location_of(
+            runtime.graph_index, anchor_id
+        ) == place_id
+    if anchor.type == "item":
+        return anchor_id in set(items_at(runtime.graph_index, place_id)) or anchor_id in set(
+            inventory_of(runtime.graph_index, runtime.progress.player_id)
+        )
+    if anchor.type == "quest":
+        status = anchor.properties.get("status")
+        return isinstance(status, str) and status in {"locked", "pending", "active"}
+    return False
 
 
 def _visible_character_refs(runtime: GameRuntimeState) -> set[str]:

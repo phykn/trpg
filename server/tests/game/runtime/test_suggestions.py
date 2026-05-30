@@ -390,6 +390,33 @@ def test_filter_grounded_suggestions_keeps_inspect_for_visible_generated_clue():
     ]
 
 
+def test_scene_clue_suggestion_stays_at_current_anchor():
+    runtime = _runtime_for_suggestions()
+    runtime.graph.nodes["harbor"] = GraphNode(
+        id="harbor",
+        type="location",
+        properties={"name": "안개 항구"},
+    )
+    runtime.graph.nodes["clue_fog"] = GraphNode(
+        id="clue_fog",
+        type="knowledge",
+        properties={
+            "kind": "clue",
+            "title": "짙은 안개",
+            "summary": "항구 주변에만 짙게 깔려 있습니다.",
+            "visibility": "player",
+            "stability": "scene",
+            "anchor_id": "harbor",
+        },
+    )
+
+    result = next_turn_suggestions(runtime, [])
+
+    assert "짙은 안개를 살핍니다" not in [
+        suggestion.input_text for suggestion in result
+    ]
+
+
 def test_filter_grounded_suggestions_keeps_combat_when_in_combat():
     runtime = _runtime_for_suggestions(in_combat=True)
 
