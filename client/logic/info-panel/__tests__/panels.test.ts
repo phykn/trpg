@@ -81,7 +81,7 @@ describe('buildPanelSlots', () => {
       questOffers: [],
     });
 
-    expect(slots.map((slot) => slot.chip.short)).toEqual(['테스터', '챕터', '단서']);
+    expect(slots.map((slot) => slot.chip.short)).toEqual(['테스터', '챕터']);
     expect(slots[0].id).toBe('hero');
     expect(slots[0].panel?.title).toBe('');
     expect(slots[0].panel?.meta).toBeUndefined();
@@ -107,8 +107,6 @@ describe('buildPanelSlots', () => {
       '흰섬의 첫 장입니다.',
     ]);
     expect(slots[1].panel?.actions).toBeUndefined();
-    expect(slots[2].id).toBe('discoveries');
-    expect(slots[2].panel?.empty).toBe(true);
   });
 
   test('shows scenario completion when no active quest remains', () => {
@@ -127,7 +125,7 @@ describe('buildPanelSlots', () => {
     ]);
   });
 
-  test('adds discoveries as a top context slot instead of an always-visible panel', () => {
+  test('adds discoveries inside the chapter panel instead of a separate clue tab', () => {
     const slots = buildPanelSlots({
       hero,
       subject,
@@ -135,16 +133,36 @@ describe('buildPanelSlots', () => {
       quest,
       questOffers: [],
       discoveries,
-      slotDots: { discoveries: true },
+      slotDots: { notes: true },
     });
 
-    expect(slots.map((slot) => slot.chip.short)).toEqual(['테스터', '챕터', '단서']);
-    expect(slots[2].id).toBe('discoveries');
-    expect(slots[2].chip.dot).toBe(true);
-    expect(slots[2].panel?.title).toBe('');
-    expect(slots[2].panel?.sections?.map((section) => [section.label, section.text])).toEqual([
-      ['젖은 붉은 영수증', '루카라는 이름과 오백이라는 금액이 보입니다.'],
-      ['혼자 탄 배는 출항할 수 없습니다.', '혼자 탄 배는 출항할 수 없습니다.'],
+    expect(slots.map((slot) => slot.chip.short)).toEqual(['테스터', '챕터']);
+    expect(slots[1].id).toBe('notes');
+    expect(slots[1].chip.dot).toBe(true);
+    expect(slots[1].panel?.title).toBe('');
+    expect(slots[1].panel?.sections?.map((section) => [section.label, section.text])).toEqual([
+      ['챕터', '붉은 종이'],
+      ['요약', '광장에 도착했습니다.'],
+      ['단서', '젖은 붉은 영수증\n루카라는 이름과 오백이라는 금액이 보입니다.'],
+      ['기억', '혼자 탄 배는 출항할 수 없습니다.'],
+    ]);
+  });
+
+  test('keeps discovery row labels short so clue text has room to read', () => {
+    const slots = buildPanelSlots({
+      hero,
+      subject,
+      chapter: { title: '붉은 종이', summary: '광장에 도착했습니다.' },
+      quest,
+      questOffers: [],
+      discoveries,
+    });
+
+    expect(slots[1].panel?.sections?.map((section) => [section.label, section.text])).toEqual([
+      ['챕터', '붉은 종이'],
+      ['요약', '광장에 도착했습니다.'],
+      ['단서', '젖은 붉은 영수증\n루카라는 이름과 오백이라는 금액이 보입니다.'],
+      ['기억', '혼자 탄 배는 출항할 수 없습니다.'],
     ]);
   });
 
@@ -177,8 +195,10 @@ describe('buildPanelSlots', () => {
       },
     });
 
-    expect(slots[2].panel?.sections?.map((section) => [section.label, section.text])).toEqual([
-      ['탁자 위의 빛바랜 사진들', '방 안 탁자 위에는 세워져 있는 몇 장의 빛바랜 사진이 있습니다.'],
+    expect(slots[1].panel?.sections?.map((section) => [section.label, section.text])).toEqual([
+      ['챕터', '푸른섬'],
+      ['요약', '닫힌 방을 확인합니다.'],
+      ['단서', '탁자 위의 빛바랜 사진들\n방 안 탁자 위에는 세워져 있는 몇 장의 빛바랜 사진이 있습니다.'],
     ]);
   });
 

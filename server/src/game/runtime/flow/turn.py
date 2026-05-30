@@ -8,6 +8,8 @@ from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
 from src.game.domain.graph.query import inventory_of
 from src.game.domain.memory import LogEntry, NarrationCue
+from src.locale.labels import no_reward_choice_fallback
+from src.locale.terms import UNEARNED_ITEM_CLAIM_TOKENS
 from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, set_diag_context
 from src.wire.graph.to_front import GraphFrontStatePayload, graph_to_front_state
@@ -25,6 +27,7 @@ from ..narration.action import (
 from ..narration.cards import build_graph_action_card
 from ..load import load_runtime_state
 from ..narration.context.events import story_transition_payload
+from ..narration.memory_context import with_target_memories
 from ..narration.result import (
     GraphNarrationResult,
     VisibleNarrationStream,
@@ -103,6 +106,15 @@ async def run_graph_action_turn_from_runtime(
 ) -> GraphActionTurnResult:
     prepared = _prepare_graph_action_turn(game_id, runtime, action)
     result = await _commit_graph_action_result(repo, game_id, prepared)
+    result = result.model_copy(
+        update={
+            "runtime": await with_target_memories(
+                repo,
+                result.runtime,
+                _action_target(prepared.action),
+            )
+        }
+    )
     result = await apply_generated_story_after_action(
         client=llm,
         repo=repo,
@@ -111,10 +123,11 @@ async def run_graph_action_turn_from_runtime(
         player_input=player_input or "",
         action=prepared.action,
     )
+    narration_runtime = result.runtime
     narration_result = await build_graph_action_narration(
         llm,
         before=prepared.before,
-        after=result.runtime,
+        after=narration_runtime,
         action=prepared.action,
         dispatch=prepared.dispatch,
         card_texts=[card.text for card in prepared.cards],
@@ -151,6 +164,15 @@ async def run_graph_action_turn_from_runtime_stream(
 ) -> AsyncIterator[dict[str, object]]:
     prepared = _prepare_graph_action_turn(game_id, runtime, action)
     result = await _commit_graph_action_result(repo, game_id, prepared)
+    result = result.model_copy(
+        update={
+            "runtime": await with_target_memories(
+                repo,
+                result.runtime,
+                _action_target(prepared.action),
+            )
+        }
+    )
     result = await apply_generated_story_after_action(
         client=llm,
         repo=repo,
@@ -159,6 +181,7 @@ async def run_graph_action_turn_from_runtime_stream(
         player_input=player_input or "",
         action=prepared.action,
     )
+    narration_runtime = result.runtime
     outcome = result_outcome or outcome_from_dispatch(prepared.dispatch)
     yield {
         "type": "result",
@@ -177,7 +200,7 @@ async def run_graph_action_turn_from_runtime_stream(
     async for chunk in stream_graph_action_narration(
         llm,
         before=prepared.before,
-        after=result.runtime,
+        after=narration_runtime,
         action=prepared.action,
         dispatch=prepared.dispatch,
         card_texts=[card.text for card in prepared.cards],
@@ -388,7 +411,7 @@ def _guard_no_reward_choice_narration(
     transition = _no_reward_choice_transition(before, after, action)
     if transition is None or not _claims_unearned_item(result):
         return result
-    fallback = _no_reward_choice_fallback(transition)
+    fallback = _no_reward_choice_fallback(transition, after.progress.locale)
     if not fallback:
         return result.model_copy(update={"ui_cues": [], "suggestions": []})
     return result.model_copy(
@@ -439,10 +462,10 @@ def _claims_unearned_item(result: GraphNarrationResult) -> bool:
         for part in (result.narration, result.turn_summary, cue_text)
         if part
     )
-    return any(token in text for token in _UNEARNED_ITEM_CLAIM_TOKENS)
+    return any(token in text for token in UNEARNED_ITEM_CLAIM_TOKENS)
 
 
-def _no_reward_choice_fallback(transition: dict[str, Any]) -> str:
+def _no_reward_choice_fallback(transition: dict[str, Any], locale: str) -> str:
     choice_result = transition.get("choice_result")
     if not isinstance(choice_result, dict):
         return ""
@@ -456,31 +479,8 @@ def _no_reward_choice_fallback(transition: dict[str, Any]) -> str:
         return ""
     if not isinstance(choice_label, str) or not choice_label:
         return ""
-    text = f"당신은 {quest_name}에서 「{choice_label}」를 선택합니다."
+    text = no_reward_choice_fallback(quest_name, choice_label, locale)
     handoff = transition.get("handoff")
     if isinstance(handoff, str) and handoff:
         text = f"{text} {handoff}"
     return text
-
-
-_UNEARNED_ITEM_CLAIM_TOKENS = (
-    "획득 아이템",
-    "아이템 획득",
-    "소지품",
-    "인벤토리",
-    "손에",
-    "손안",
-    "오른손",
-    "왼손",
-    "주머니",
-    "가방",
-    "챙깁",
-    "챙겼",
-    "쥡",
-    "쥐고",
-    "쥐었",
-    "받아 듭",
-    "받아들고",
-    "얻습",
-    "얻었",
-)

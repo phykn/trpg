@@ -26,4 +26,12 @@ describe('PanelBody header layout', () => {
     expect(source).not.toContain('style={{ minHeight: 160 }}');
     expect(source).toContain('className="px-4 py-3 gap-2.5"');
   });
+
+  test('does not use repeated row labels as React keys', () => {
+    expect(source).toContain('function sectionRenderKey');
+    expect(source).toContain('const rowKey = sectionRenderKey(section, index);');
+    expect(source).toContain('key={rowKey}');
+    expect(source).toContain('id={rowKey}');
+    expect(source).not.toContain('key={section.label}');
+  });
 });

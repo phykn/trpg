@@ -1,9 +1,36 @@
 from typing import Any
 
+from src.db.repo import GraphRepo
 from src.game.domain.memory import ExchangePair
 
 from ..env import env_nonnegative_int
 from ..state import GameRuntimeState
+
+
+async def with_target_memories(
+    repo: GraphRepo,
+    runtime: GameRuntimeState,
+    target: str | None,
+) -> GameRuntimeState:
+    if target is None:
+        return runtime
+    entries = await repo.load_memory_entries(runtime.progress.game_id, target=target)
+    if not entries:
+        return runtime
+    seen = {
+        (entry.turn, entry.target, entry.content)
+        for entry in runtime.memories
+    }
+    merged = list(runtime.memories)
+    for entry in entries:
+        key = (entry.turn, entry.target, entry.content)
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(entry)
+    if len(merged) == len(runtime.memories):
+        return runtime
+    return runtime.model_copy(update={"memories": merged})
 
 
 def important_history_payload(

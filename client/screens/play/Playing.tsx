@@ -92,7 +92,7 @@ export function Playing({ game }: Props) {
   }, [game.scenarioCompleted]);
 
   const nearby = React.useMemo(() => buildNearbyPanel(storyGraph), [storyGraph]);
-  const visibleNearby = game.scenarioCompleted ? null : nearby;
+  const visibleNearby = game.scenarioCompleted || nearby.items.length === 0 ? null : nearby;
   const visibleSuggestions = game.scenarioCompleted ? [] : suggestions;
   const lastLogEntry = log[log.length - 1];
   const latestCues = lastLogEntry?.kind === 'gm' ? lastLogEntry.cues ?? [] : [];

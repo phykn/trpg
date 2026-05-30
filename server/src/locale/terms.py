@@ -1,4 +1,4 @@
-"""Locale-aware lexical shortcuts used before LLM classification."""
+"""Locale-aware lexical shortcuts shared by runtime and LLM helpers."""
 
 from collections.abc import Iterable
 
@@ -27,6 +27,7 @@ from .ko.terms import (
     RECRUIT_TERMS,
     ROLL_MEANINGFUL_CLUE_TERMS,
     ROLL_NO_CLUE_MARKERS,
+    UNEARNED_ITEM_CLAIM_TOKENS,
     WEATHER_TERM,
 )
 
@@ -72,6 +73,7 @@ __all__ = [
     "RECRUIT_TERMS",
     "ROLL_MEANINGFUL_CLUE_TERMS",
     "ROLL_NO_CLUE_MARKERS",
+    "UNEARNED_ITEM_CLAIM_TOKENS",
     "WEATHER_TERM",
     "nonlethal_markers",
 ]

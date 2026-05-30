@@ -4,7 +4,7 @@ import type { Discoveries } from '@/logic/discoveries';
 import type { Hero } from '@/logic/hero';
 import type { Quest } from '@/logic/quest';
 
-export type TopPanelSlotId = 'hero' | 'notes' | 'discoveries';
+export type TopPanelSlotId = 'hero' | 'notes';
 export type PanelSlotContentKeys = Record<TopPanelSlotId, string>;
 export type PanelSlotDots = Record<TopPanelSlotId, boolean>;
 
@@ -23,11 +23,11 @@ export function buildPanelSlotContentKeys(source: PanelSlotTrackingSource): Pane
     hero: JSON.stringify(source.hero ?? null),
     notes: JSON.stringify({
       chapter: source.chapter,
+      discoveries: source.discoveries,
       scenarioCompleted: source.scenarioCompleted,
       quest: source.quest,
       questOffers: source.questOffers,
     }),
-    discoveries: JSON.stringify(source.discoveries),
   };
 }
 
@@ -39,12 +39,11 @@ export function buildPanelSlotDots(
   return {
     hero: activeId !== 'hero' && seenSlotKeys.hero !== currentSlotKeys.hero,
     notes: activeId !== 'notes' && seenSlotKeys.notes !== currentSlotKeys.notes,
-    discoveries: activeId !== 'discoveries' && seenSlotKeys.discoveries !== currentSlotKeys.discoveries,
   };
 }
 
 export function isTopPanelSlotId(id: string | null): id is TopPanelSlotId {
-  return id === 'hero' || id === 'notes' || id === 'discoveries';
+  return id === 'hero' || id === 'notes';
 }
 
 export function usePanelSlotTracking(source: PanelSlotTrackingSource, activeId: string | null) {

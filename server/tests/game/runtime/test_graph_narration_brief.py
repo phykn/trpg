@@ -39,6 +39,86 @@ def test_narration_brief_includes_ordered_recent_context():
     assert brief.splitlines()[-1] == "플레이어 입력: 레아에게 빈방을 다시 열자고 말합니다"
 
 
+def test_narration_brief_includes_subject_memories_and_discoveries():
+    brief = build_narration_brief(
+        {
+            "user_request": {"player_input": "레아에게 밧줄을 묻습니다"},
+            "engine_event": {"kind": "dialogue"},
+            "scene_state": {
+                "scene_anchor": {"location": {"name": "푸른 비 거리"}},
+                "target_view": {"name": "레아"},
+            },
+            "reference_context": {
+                "subject_memories": [
+                    {
+                        "content": "레아는 당신이 빈방 열쇠를 돌려준 일을 기억합니다.",
+                    }
+                ],
+                "discoveries": {
+                    "clues": [
+                        {
+                            "title": "젖은 밧줄",
+                            "summary": "밧줄은 아직 물기를 머금고 있습니다.",
+                        }
+                    ],
+                    "memories": [
+                        {
+                            "title": "찢어진 표",
+                            "summary": "당신은 표 반쪽을 남겼습니다.",
+                        }
+                    ],
+                },
+            },
+        }
+    )
+
+    assert "대상 기억:" in brief
+    assert "- 레아는 당신이 빈방 열쇠를 돌려준 일을 기억합니다." in brief
+    assert "저장된 단서와 기억:" in brief
+    assert "- 젖은 밧줄: 밧줄은 아직 물기를 머금고 있습니다." in brief
+    assert "- 찢어진 표: 당신은 표 반쪽을 남겼습니다." in brief
+    assert brief.find("대상 기억:") < brief.find("저장된 단서와 기억:")
+    assert brief.find("저장된 단서와 기억:") < brief.find("장면 유형:")
+
+
+def test_combat_brief_includes_subject_memories_and_discoveries():
+    brief = build_narration_brief(
+        {
+            "user_request": {"player_input": "허수아비를 공격합니다"},
+            "engine_event": {"kind": "combat", "action": {"verb": "attack"}},
+            "scene_state": {
+                "scene_anchor": {"location": {"name": "훈련장"}},
+                "target_view": {"name": "훈련용 허수아비"},
+            },
+            "combat_view": {
+                "exchange_result": "success",
+                "events": [
+                    {"target": {"name": "훈련용 허수아비"}, "result_label": "성공"}
+                ],
+            },
+            "reference_context": {
+                "subject_memories": [
+                    {"content": "허수아비의 왼쪽 받침대가 느슨합니다."}
+                ],
+                "discoveries": {
+                    "clues": [
+                        {
+                            "title": "금 간 받침대",
+                            "summary": "왼쪽 받침대가 흔들립니다.",
+                        }
+                    ]
+                },
+            },
+        }
+    )
+
+    assert "대상 기억:" in brief
+    assert "허수아비의 왼쪽 받침대가 느슨합니다." in brief
+    assert "저장된 단서와 기억:" in brief
+    assert "금 간 받침대: 왼쪽 받침대가 흔들립니다." in brief
+    assert "장면 유형: 전투" in brief
+
+
 def test_narration_brief_includes_world_guidance_first():
     brief = build_narration_brief(
         {

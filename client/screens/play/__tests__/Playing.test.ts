@@ -89,12 +89,16 @@ describe('Playing overlay layering', () => {
   });
 
   test('hides stale nearby and suggestion actions after scenario completion', () => {
-    expect(source).toContain('const visibleNearby = game.scenarioCompleted ? null : nearby;');
+    expect(source).toContain('const visibleNearby = game.scenarioCompleted || nearby.items.length === 0 ? null : nearby;');
     expect(source).toContain('const visibleSuggestions = game.scenarioCompleted ? [] : suggestions;');
     expect(source).toContain('suggestions={visibleSuggestions}');
     expect(source).toContain('nearby={visibleNearby}');
     expect(source).toContain('quickActions={hero.canLevelUp && !game.scenarioCompleted ? [{');
     expect(source).toContain(') : game.scenarioCompleted ? null : levelUpOpen ? (');
+  });
+
+  test('hides the nearby affordance when there are no actionable nearby rows', () => {
+    expect(source).toContain('const visibleNearby = game.scenarioCompleted || nearby.items.length === 0 ? null : nearby;');
   });
 
   test('keeps context panels and nearby panel mutually exclusive', () => {

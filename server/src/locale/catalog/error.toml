@@ -39,5 +39,5 @@ ko = "아직 레벨을 올릴 만큼 경험치가 충분하지 않습니다."
 en = "You do not have enough experience to level up yet."
 
 [error.graph_stream_failed]
-ko = "요청이 끊겼습니다. 같은 행동을 다시 시도해 주세요."
-en = "The request was interrupted. Try the same action again."
+ko = "요청이 끊겼습니다. 다시 시도해 주세요."
+en = "The request was interrupted. Please try again."

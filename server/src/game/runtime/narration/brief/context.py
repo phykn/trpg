@@ -36,7 +36,9 @@ def recent_context_lines(
     if not include_recent:
         return lines
     previous = as_dicts(context.get("previous_scene"))
+    memories = as_dicts(context.get("subject_memories"))
     exchanges = as_dicts(context.get("recent_exchanges"))
+    discoveries = as_dict(context.get("discoveries"))
 
     previous_scene = [
         clip(summary)
@@ -46,6 +48,20 @@ def recent_context_lines(
     if previous_scene:
         lines.append(brief("previous_scene"))
         lines.extend(f"- {text}" for text in previous_scene)
+
+    subject_memories = [
+        clip(content)
+        for item in memories
+        if isinstance(content := item.get("content"), str) and content
+    ]
+    if subject_memories:
+        lines.append(brief("subject_memories"))
+        lines.extend(f"- {text}" for text in subject_memories)
+
+    discovery_lines = _discovery_lines(discoveries)
+    if discovery_lines:
+        lines.append(brief("discoveries"))
+        lines.extend(f"- {text}" for text in discovery_lines)
 
     recent_exchanges = []
     for item in exchanges:
@@ -159,6 +175,21 @@ def _current_story_lines(context: dict[str, Any]) -> list[str]:
     if quest_line:
         lines.append(brief("active_quest", value=quest_line))
     return lines
+
+
+def _discovery_lines(discoveries: dict[str, Any]) -> list[str]:
+    lines: list[str] = []
+    for key in ("clues", "memories"):
+        for item in as_dicts(discoveries.get(key)):
+            title = item.get("title")
+            summary = item.get("summary")
+            if isinstance(title, str) and title and isinstance(summary, str) and summary:
+                lines.append(clip(f"{title}: {summary}"))
+            elif isinstance(summary, str) and summary:
+                lines.append(clip(summary))
+            elif isinstance(title, str) and title:
+                lines.append(clip(title))
+    return dedupe(lines)
 
 
 def _story_item_line(item: dict[str, Any]) -> str:

@@ -32,6 +32,10 @@ def roll_dice_label(locale: str = "ko") -> str:
     return render("ui.roll.dice_label", locale)
 
 
+def no_reward_choice_fallback(quest: str, choice: str, locale: str = "ko") -> str:
+    return render("runtime.card.quest_decide", locale, quest=quest, choice=choice)
+
+
 # ----- Story-graph edge labels (rendered in client nearby context) -----
 
 STORY_EDGE_LABEL_CURRENT = render("ui.story.edge.current", "ko")

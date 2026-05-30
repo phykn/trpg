@@ -14,6 +14,7 @@ from ...narration.input import (
     stream_graph_input_narration,
     stream_graph_input_rejection_narration,
 )
+from ...narration.memory_context import with_target_memories
 from ...narration.result import (
     GraphNarrationResult,
     VisibleNarrationStream,
@@ -86,6 +87,7 @@ async def run_graph_rejected_reason_input(
     action: Action,
     public_reason: str,
 ) -> GraphActionRequestResult:
+    runtime = await with_target_memories(repo, runtime, _action_target(action))
     narration_result = await generate_graph_input_rejection_narration(
         client,
         runtime,
@@ -156,6 +158,7 @@ async def run_graph_rejected_reason_input_stream(
     action: Action,
     public_reason: str,
 ) -> AsyncIterator[dict[str, object]]:
+    runtime = await with_target_memories(repo, runtime, _action_target(action))
     yield {"type": "result", "result": _neutral_stream_result(runtime)}
     stream = VisibleNarrationStream()
     async for chunk in stream_graph_input_rejection_narration(
@@ -232,6 +235,7 @@ async def run_graph_narrative_input(
     action: Action,
 ) -> GraphActionRequestResult:
     subject_id = _resolve_narrative_subject(runtime, action)
+    runtime = await with_target_memories(repo, runtime, subject_id)
     narration_result = await generate_graph_input_narration(
         client,
         runtime,
@@ -267,6 +271,7 @@ async def run_graph_narrative_input_stream(
     action: Action,
 ) -> AsyncIterator[dict[str, object]]:
     subject_id = _resolve_narrative_subject(runtime, action)
+    runtime = await with_target_memories(repo, runtime, subject_id)
     yield {"type": "result", "result": _neutral_stream_result(runtime)}
     stream = VisibleNarrationStream()
     async for chunk in stream_graph_input_narration(

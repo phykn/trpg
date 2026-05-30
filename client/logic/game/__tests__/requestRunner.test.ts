@@ -191,7 +191,7 @@ describe('runGraphActionRequestOnce', () => {
       expect.objectContaining({ kind: 'player', text: '루카에게 접근합니다' }),
     ]);
     expect(rt.setErrorMessage).toHaveBeenLastCalledWith(
-      '요청이 끊겼습니다. 같은 행동을 다시 시도해 주세요.',
+      '요청이 끊겼습니다. 다시 시도해 주세요.',
     );
   });
 });

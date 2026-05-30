@@ -1,4 +1,4 @@
-"""Korean lexical shortcuts used before LLM classification."""
+"""Korean lexical shortcuts shared by runtime and LLM helpers."""
 
 DIALOGUE_TERMS = (
     "말",
@@ -78,6 +78,27 @@ ACTION_CREATE_DISTANCE_TERMS = ("도망", "도주", "달아")
 LOOT_TERMS = ("조사", "수색", "뒤져", "루팅")
 ROLL_MEANINGFUL_CLUE_TERMS = ("의미있는",)
 ROLL_NO_CLUE_MARKERS = ("없", "보이지않", "못찾")
+UNEARNED_ITEM_CLAIM_TOKENS = (
+    "획득 아이템",
+    "아이템 획득",
+    "소지품",
+    "인벤토리",
+    "손에",
+    "손안",
+    "오른손",
+    "왼손",
+    "주머니",
+    "가방",
+    "챙깁",
+    "챙겼",
+    "쥡",
+    "쥐고",
+    "쥐었",
+    "받아 듭",
+    "받아들고",
+    "얻습",
+    "얻었",
+)
 
 KO_NONLETHAL_MARKERS = frozenset({"훈련", "대련", "연습", "허수아비"})
 KO_META_BREAKING_TERMS = (

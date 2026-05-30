@@ -296,7 +296,7 @@ async def test_graph_stream_returns_error_event_on_unexpected_failure():
 
     assert [event["type"] for event in events] == ["narration_delta", "error"]
     assert events[-1]["status"] == 500
-    assert events[-1]["message"] == "요청이 끊겼습니다. 같은 행동을 다시 시도해 주세요."
+    assert events[-1]["message"] == "요청이 끊겼습니다. 다시 시도해 주세요."
 
 
 @pytest.mark.asyncio

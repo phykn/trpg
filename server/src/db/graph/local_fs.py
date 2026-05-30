@@ -147,12 +147,12 @@ class LocalFsGraphRepo:
         entries = await asyncio.to_thread(
             store._load_jsonl_tail,
             store._memory_path(self.saves_dir, game_id),
-            RULES.memory.cap,
+            0 if target is not None else RULES.memory.cap,
             Memory.model_validate_json,
         )
         if target is None:
             return entries
-        return [entry for entry in entries if entry.target == target]
+        return [entry for entry in entries if entry.target == target][-RULES.memory.cap :]
 
     async def load_exchange_entries(self, game_id: str) -> list[ExchangePair]:
         return await asyncio.to_thread(

@@ -622,6 +622,14 @@ en = "Active quest: {value}"
 ko = "이전 장면 요약:"
 en = "Previous scene summary:"
 
+[runtime."narration.brief.subject_memories"]
+ko = "대상 기억:"
+en = "Target memories:"
+
+[runtime."narration.brief.discoveries"]
+ko = "저장된 단서와 기억:"
+en = "Saved clues and memories:"
+
 [runtime."narration.brief.recent_exchanges"]
 ko = "최근 대화:"
 en = "Recent dialogue:"

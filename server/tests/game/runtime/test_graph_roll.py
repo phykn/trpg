@@ -1015,6 +1015,47 @@ async def test_run_graph_roll_strips_repeated_preroll_sentences(tmp_path):
     assert logs[1].text == "옷감 아래로 오래 물에 닿은 흔적이 접힌 선마다 남아 있습니다."
 
 
+async def test_run_graph_roll_stream_strips_repeated_preroll_from_visible_delta(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    reason = (
+        "흰 머리 여인의 주변을 천천히 둘러봅니다. "
+        "그녀가 입은 물고기 비늘이 붙은 앞치마와 흰 머리카락의 움직임을 놓치지 않으려 합니다."
+    )
+    llm = _RollStreamLLM(
+        reason
+        + " 옷감 아래로 오래 물에 닿은 흔적이 접힌 선마다 남아 있습니다."
+    )
+    pending = (
+        await start_graph_roll(
+            repo,
+            "game-1",
+            Action(verb="perceive", what="town"),
+            reason=reason,
+        )
+    ).pending_roll
+
+    events = [
+        event
+        async for event in run_graph_roll_stream(
+            llm,
+            repo,
+            "game-1",
+            pending["id"],
+            dice=12,
+        )
+    ]
+    streamed_text = "".join(
+        event["text"] for event in events if event["type"] == "narration_delta"
+    )
+    logs = await repo.load_log_entries("game-1")
+
+    assert reason not in streamed_text
+    assert streamed_text == "옷감 아래로 오래 물에 닿은 흔적이 접힌 선마다 남아 있습니다."
+    assert logs[1].text == streamed_text
+
+
 def test_strip_repeated_preroll_text_keeps_non_repeated_narration():
     resolved = ResolvedGraphRoll(
         runtime=None,  # type: ignore[arg-type]
@@ -1183,10 +1224,51 @@ async def test_run_graph_roll_stream_includes_clear_success_resolution_for_narra
     assert "확정: 매력 판정 성공 / 이삭은 답을 더 분명히 합니다." in content
     deltas = [event["text"] for event in events if event["type"] == "narration_delta"]
     logs = await repo.load_log_entries("game-1")
-    assert deltas[0] == "이삭은 답을 더 분명히 합니다. "
+    assert deltas == [
+        "이삭은 답을 더 분명히 합니다. ",
+        "당신의 말이 닿자 상대가 태도를 누그러뜨립니다.",
+    ]
     assert logs[-1].text.startswith(
         "이삭은 답을 더 분명히 합니다."
     )
+
+
+async def test_run_graph_roll_stream_does_not_repeat_success_resolution_delta(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    llm = _RollStreamLLM(
+        "이삭은 답을 더 분명히 합니다. 당신의 말이 닿자 상대가 태도를 누그러뜨립니다."
+    )
+    graph = await repo.load_graph("game-1")
+    graph.nodes["isak_01"] = _character("isak_01").model_copy(
+        update={"properties": {**_character("isak_01").properties, "name": "이삭"}}
+    )
+    await repo.save_graph("game-1", graph)
+    pending = (
+        await start_graph_roll(repo, "game-1", Action(verb="speak", to="isak_01"))
+    ).pending_roll
+
+    events = [
+        event
+        async for event in run_graph_roll_stream(
+            llm,
+            repo,
+            "game-1",
+            pending["id"],
+            dice=13,
+        )
+    ]
+    streamed_text = "".join(
+        event["text"] for event in events if event["type"] == "narration_delta"
+    )
+    logs = await repo.load_log_entries("game-1")
+
+    assert streamed_text == (
+        "이삭은 답을 더 분명히 합니다. 당신의 말이 닿자 상대가 태도를 누그러뜨립니다."
+    )
+    assert streamed_text.count("이삭은 답을 더 분명히 합니다.") == 1
+    assert logs[-1].text == streamed_text
 
 
 async def test_run_graph_roll_sends_brief_text_instead_of_raw_json(tmp_path):

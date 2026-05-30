@@ -169,3 +169,39 @@ async def test_local_fs_graph_repo_round_trips_target_memory_entries(tmp_path):
             importance=2,
         )
     ]
+
+
+async def test_local_fs_graph_repo_filters_target_memory_before_tail_cap(tmp_path):
+    repo = LocalFsGraphRepo(str(tmp_path))
+
+    await repo.append_memory_entries(
+        "game-1",
+        [
+            Memory(
+                turn=1,
+                target="npc_olden",
+                content="올든은 첫 대화를 기억합니다.",
+                importance=2,
+            ),
+            *[
+                Memory(
+                    turn=turn,
+                    target=f"npc_other_{turn}",
+                    content=f"다른 인물의 기억 {turn}",
+                    importance=1,
+                )
+                for turn in range(2, 24)
+            ],
+        ],
+    )
+
+    entries = await repo.load_memory_entries("game-1", target="npc_olden")
+
+    assert entries == [
+        Memory(
+            turn=1,
+            target="npc_olden",
+            content="올든은 첫 대화를 기억합니다.",
+            importance=2,
+        )
+    ]

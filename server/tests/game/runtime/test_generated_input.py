@@ -34,6 +34,9 @@ class FakeGraphRepo:
     async def append_story_patch_entries(self, game_id, entries) -> None:
         self.story_patch_entries.extend(entries)
 
+    async def load_memory_entries(self, game_id, *, target=None):
+        return []
+
     async def save_progress(self, progress) -> None:
         self.progress = progress
 

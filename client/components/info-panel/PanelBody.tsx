@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, View, Text } from 'react-native';
 import { Chip, Expandable, Glyph, StatRow, InlineParts, InlineNodes, LabeledRow, Row, ExpandGroup, ExpandableTitle } from '@/components/ui';
 import { colors, toneColor } from '@/design/tokens';
-import type { MetaSegment, Panel, PanelAction, PanelActions } from '@/logic/info-panel/types';
+import type { MetaSegment, Panel, PanelAction, PanelActions, PanelSection } from '@/logic/info-panel/types';
 import { ko } from '@/locale/ko';
 
 const META_LINE_HEIGHT = 18;
@@ -99,6 +99,10 @@ function HeaderTitleGroup({ panel }: { panel: Panel }) {
   );
 }
 
+function sectionRenderKey(section: PanelSection, index: number): string {
+  return `${index}:${section.label}:${section.text ?? JSON.stringify(section.nodes ?? [])}`;
+}
+
 export function PanelBody({ panel, onAction, actionDisabled = false }: {
   panel: Panel;
   onAction?: (action: PanelAction) => void;
@@ -148,16 +152,20 @@ export function PanelBody({ panel, onAction, actionDisabled = false }: {
       )}
 
       <ExpandGroup>
-        {sections.map((section) => (
-          <LabeledRow
-            key={section.label}
-            label={section.label}
-            mono={section.mono || !!section.nodes}
-            clampLines={section.clampLines}
-          >
-            {section.nodes ? <InlineNodes entries={section.nodes} /> : section.text}
-          </LabeledRow>
-        ))}
+        {sections.map((section, index) => {
+          const rowKey = sectionRenderKey(section, index);
+          return (
+            <LabeledRow
+              key={rowKey}
+              id={rowKey}
+              label={section.label}
+              mono={section.mono || !!section.nodes}
+              clampLines={section.clampLines}
+            >
+              {section.nodes ? <InlineNodes entries={section.nodes} /> : section.text}
+            </LabeledRow>
+          );
+        })}
       </ExpandGroup>
 
       {(panel.actions || []).map((group) =>

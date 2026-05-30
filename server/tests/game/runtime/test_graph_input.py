@@ -930,6 +930,77 @@ async def test_graph_input_reflects_speak_turn_into_memory_exchanges_and_suggest
     assert "graph_reflect" not in [call["agent"] for call in llm.calls]
 
 
+async def test_graph_input_fetches_target_memory_outside_global_tail_for_narration(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    await repo.append_memory_entries(
+        "game-1",
+        [
+            Memory(
+                turn=1,
+                target="goblin_01",
+                content="고블린은 당신이 북문 약속을 기억한다고 압니다.",
+                importance=3,
+            ),
+            *[
+                Memory(
+                    turn=turn,
+                    target=f"npc_other_{turn}",
+                    content=f"다른 인물의 기억 {turn}",
+                    importance=1,
+                )
+                for turn in range(2, 24)
+            ],
+        ],
+    )
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]},
+        narration="고블린은 북문 약속을 다시 언급합니다.",
+    )
+
+    await run_graph_input_turn(llm, repo, "game-1", "고블린에게 북문 약속을 묻는다")
+    narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
+
+    assert (
+        "고블린은 당신이 북문 약속을 기억한다고 압니다."
+        in narrate_call["messages"][1]["content"]
+    )
+
+
+async def test_graph_input_passes_generated_discoveries_to_narration_brief(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["clue_wet_rope_001"] = GraphNode(
+        id="clue_wet_rope_001",
+        type="knowledge",
+        properties={
+            "kind": "clue",
+            "title": "젖은 밧줄",
+            "summary": "밧줄은 아직 물기를 머금고 있습니다.",
+            "visibility": "player",
+        },
+    )
+    graph.edges["has_knowledge:town:clue_wet_rope_001"] = GraphEdge(
+        id="has_knowledge:town:clue_wet_rope_001",
+        type="has_knowledge",
+        from_node_id="town",
+        to_node_id="clue_wet_rope_001",
+    )
+    await repo.save_graph("game-1", graph)
+    llm = _FakeLLM(
+        {"actions": [{"verb": "speak", "what": "goblin_01", "how": "friendly"}]},
+        narration="당신은 밧줄의 물기를 다시 확인합니다.",
+    )
+
+    await run_graph_input_turn(llm, repo, "game-1", "밧줄을 다시 살핀다")
+    narrate_call = [call for call in llm.calls if call["agent"] == "graph_narrate"][0]
+
+    assert "젖은 밧줄: 밧줄은 아직 물기를 머금고 있습니다." in narrate_call["messages"][1]["content"]
+
+
 async def test_graph_input_falls_back_to_visible_suggestions_when_llm_sends_none(
     tmp_path,
 ):

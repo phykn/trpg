@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from dataclasses import replace
 from typing import Any
 
 from src.db.repo import GraphRepo, ScenarioRepo
@@ -17,6 +18,7 @@ from src.wire.graph.to_front import graph_to_front_state
 
 from ...load import load_runtime_state
 from ...narration.input import stream_graph_preroll_narration
+from ...narration.memory_context import with_target_memories
 from ...narration.result import (
     GraphNarrationResult,
     VisibleNarrationStream,
@@ -34,6 +36,7 @@ from ...request_result import (
 from ...roll.effects import apply_roll_effects
 from ...roll.pending import build_pending_roll, roll_action_target
 from ...roll.text import (
+    prepare_roll_narration_text,
     roll_fallback_text,
     roll_resolution_text,
 )
@@ -135,6 +138,12 @@ async def run_graph_preroll_stream(
 
     stream = VisibleNarrationStream()
     defer_visible_narration = action.verb == "speak"
+    result_runtime = await with_target_memories(
+        repo,
+        result.runtime,
+        roll_action_target(action),
+    )
+    result = result.model_copy(update={"runtime": result_runtime})
     if result.pending_roll is not None and llm is not None:
         async for chunk in stream_graph_preroll_narration(
             llm,
@@ -224,6 +233,14 @@ async def run_graph_roll(
         dice=dice,
         scenario_repo=scenario_repo,
     )
+    resolved = replace(
+        resolved,
+        runtime=await with_target_memories(
+            repo,
+            resolved.runtime,
+            roll_action_target(resolved.action),
+        ),
+    )
     if _is_narrative_roll_action(resolved.action):
         return await finish_narrative_roll(
             repo,
@@ -281,6 +298,14 @@ async def run_graph_roll_stream(
         dice=dice,
         scenario_repo=scenario_repo,
     )
+    resolved = replace(
+        resolved,
+        runtime=await with_target_memories(
+            repo,
+            resolved.runtime,
+            roll_action_target(resolved.action),
+        ),
+    )
     if resolved.outcome == "success" and not _is_narrative_roll_action(resolved.action):
         async for event in run_graph_action_turn_from_runtime_stream(
             repo,
@@ -301,23 +326,59 @@ async def run_graph_roll_stream(
         outcome=resolved.outcome,
     )
     yield {"type": "result", "result": result}
+    visible_resolution = (
+        roll_resolution_text(resolved) if resolved.outcome == "success" else ""
+    )
+    if visible_resolution:
+        yield {"type": "narration_delta", "text": f"{visible_resolution} "}
     stream = VisibleNarrationStream()
-    resolution_text = roll_resolution_text(resolved)
-    if resolved.outcome == "success" and resolution_text:
-        yield {"type": "narration_delta", "text": f"{resolution_text} "}
     async for chunk in stream_roll_narration(llm, resolved):
-        for visible in stream.push(chunk):
-            yield {"type": "narration_delta", "text": visible}
-    for visible in stream.finish():
-        yield {"type": "narration_delta", "text": visible}
+        stream.push(chunk)
+    stream.finish()
     narration_result = parse_graph_narration_answer(stream.answer())
-    if not narration_result.narration:
-        narration_result = GraphNarrationResult(
-            narration=roll_fallback_text(resolved)
+    if narration_result.narration:
+        narration_result = narration_result.model_copy(
+            update={
+                "narration": prepare_roll_narration_text(
+                    resolved,
+                    narration_result.narration,
+                    ensure_resolution=False,
+                )
+            }
         )
+    if visible_resolution and narration_result.narration:
+        narration_result = narration_result.model_copy(
+            update={
+                "narration": _strip_visible_roll_prefix(
+                    visible_resolution,
+                    narration_result.narration,
+                )
+            }
+        )
+    if not narration_result.narration:
+        fallback_text = roll_fallback_text(resolved)
+        narration_result = GraphNarrationResult(
+            narration=fallback_text
+        )
+        visible_fallback = _strip_visible_roll_prefix(
+            visible_resolution,
+            fallback_text,
+        )
+        if visible_fallback:
+            yield {"type": "narration_delta", "text": visible_fallback}
+    elif narration_result.narration:
         yield {"type": "narration_delta", "text": narration_result.narration}
     final = await commit_roll_narration(repo, game_id, resolved, narration_result)
     yield {"type": "final", "result": final}
+
+
+def _strip_visible_roll_prefix(prefix: str, text: str) -> str:
+    if not prefix:
+        return text
+    stripped = text.lstrip()
+    if stripped.startswith(prefix):
+        return stripped[len(prefix) :].lstrip()
+    return text
 
 
 async def _resolve_graph_roll(

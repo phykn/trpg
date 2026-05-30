@@ -46,6 +46,7 @@ export function Expandable({
           <View
             className="absolute inset-x-0 opacity-0"
             style={{ pointerEvents: 'none' }}
+            aria-hidden
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
             onLayout={(e) => {

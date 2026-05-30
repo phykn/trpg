@@ -18,7 +18,12 @@ from .entities import (
     visible_targets,
 )
 from .grounding import classify_context_to_grounding_view
-from .quests import active_quest, available_quests, quest_choice_ids, quest_ids
+from .quests import (  # ssot-allow: module import name, not relation read
+    active_quest,
+    available_quests,
+    quest_choice_ids,
+    quest_ids,
+)
 from .references import last_entity_ref, recent_exchanges, recent_scene
 from .types import ClassifyContextLimits
 

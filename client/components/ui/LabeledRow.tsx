@@ -1,29 +1,25 @@
 import React from 'react';
-import { Text, View, Pressable } from 'react-native';
+import { Text, Pressable } from 'react-native';
 import { Row } from './Row';
 import { useExpandGroup } from './ExpandGroup';
 
-export function LabeledRow({ label, children, mono = false, clampLines = 3 }: {
+export function LabeledRow({ id, label, children, mono = false, clampLines = 3 }: {
+  id?: string;
   label: string;
   children: React.ReactNode;
   mono?: boolean;
   clampLines?: number;
 }) {
   const isText = typeof children === 'string' || typeof children === 'number';
-  const { expanded, toggle } = useExpandGroup(label);
-  const [overflow, setOverflow] = React.useState(false);
+  const { expanded, toggle } = useExpandGroup(id ?? label);
   const text = isText ? String(children) : '';
-
-  React.useEffect(() => {
-    setOverflow(false);
-  }, [text]);
 
   if (!isText) {
     return <Row label={label} variableHeight>{children}</Row>;
   }
 
   const fontClass = mono ? 'font-mono' : 'font-sans';
-  const canToggle = overflow || expanded;
+  const canToggle = expanded || canExpandText(text, clampLines);
   const multiLine = expanded || clampLines > 1;
 
   return (
@@ -36,21 +32,13 @@ export function LabeledRow({ label, children, mono = false, clampLines = 3 }: {
         >
           {text}
         </Text>
-        {!overflow && !expanded && (
-          <View
-            className="absolute inset-x-0 opacity-0"
-            style={{ pointerEvents: 'none' }}
-            onLayout={(e) => {
-              // onTextLayout doesn't fire on react-native-web, so measure the unclamped height (line-height = 18px).
-              if (e.nativeEvent.layout.height > 18 * clampLines + 1) setOverflow(true);
-            }}
-          >
-            <Text className={`${fontClass} text-panel text-fg-default`}>
-              {text}
-            </Text>
-          </View>
-        )}
       </Row>
     </Pressable>
   );
+}
+
+function canExpandText(text: string, clampLines: number): boolean {
+  const explicitLines = text.split('\n').length;
+  if (explicitLines > clampLines) return true;
+  return text.length > clampLines * 28;
 }

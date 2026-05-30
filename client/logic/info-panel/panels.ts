@@ -12,7 +12,7 @@ type GameSnapshot = {
   subject: Subject | null;
   chapter?: { title: string; summary: string } | null;
   discoveries?: Discoveries;
-  slotDots?: Partial<Record<'hero' | 'notes' | 'discoveries', boolean>>;
+  slotDots?: Partial<Record<'hero' | 'notes', boolean>>;
   scenarioCompleted?: boolean;
   quest: Quest | null;
   questOffers?: Quest[];
@@ -29,7 +29,6 @@ export function buildPanelSlots(
       panel: heroSlot.panel ? { ...heroSlot.panel, title: '', meta: undefined, barSplit: undefined } : null,
     },
     buildInfoSlot(state),
-    buildDiscoveriesSlot(state.discoveries, { unread: state.slotDots?.discoveries ?? false }),
   ];
 }
 
@@ -45,44 +44,38 @@ function withoutHeader(panel: Panel): Panel {
   return { ...panel, title: '', meta: undefined };
 }
 
-function buildDiscoveriesSlot(discoveries: Discoveries | undefined, opts: { unread: boolean }): PanelSlot {
-  return {
-    id: 'discoveries',
-    chip: { short: ko.discoveries.clues, dot: opts.unread },
-    panel: withoutHeader(buildDiscoveriesPanel(discoveries ?? { clues: [], memories: [] })),
-  };
-}
-
-function buildDiscoveriesPanel(discoveries: Discoveries): Panel {
+function buildDiscoverySections(discoveries: Discoveries | undefined): NonNullable<Panel['sections']> {
+  if (!discoveries) return [];
   const sections = dedupeSections([
-    ...discoverySections(discoveries.clues),
-    ...discoverySections(discoveries.memories),
+    ...discoverySections(ko.discoveries.clues, discoveries.clues),
+    ...discoverySections(ko.discoveries.memories, discoveries.memories),
   ]);
-  if (sections.length === 0) {
-    return { empty: true, title: ko.discoveries.clues };
-  }
-  return {
-    title: ko.discoveries.clues,
-    sections,
-  };
+  return sections;
 }
 
 function dedupeSections(sections: NonNullable<Panel['sections']>): NonNullable<Panel['sections']> {
   const seen = new Set<string>();
   return sections.filter((section) => {
-    const key = `${section.label}\n${section.text ?? ''}`;
+    const key = section.text ?? section.label;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 }
 
-function discoverySections(entries: DiscoveryEntry[]): NonNullable<Panel['sections']> {
+function discoverySections(kindLabel: string, entries: DiscoveryEntry[]): NonNullable<Panel['sections']> {
   return entries.map((entry) => ({
-    label: entry.title,
-    text: entry.summary,
-    clampLines: 2,
+    label: kindLabel,
+    text: discoveryText(entry),
+    clampLines: 3,
   }));
+}
+
+function discoveryText(entry: DiscoveryEntry): string {
+  if (entry.summary && entry.summary !== entry.title) {
+    return `${entry.title}\n${entry.summary}`;
+  }
+  return entry.title;
 }
 
 function buildNotesPanel(state: GameSnapshot): Panel {
@@ -110,6 +103,8 @@ function buildNotesPanel(state: GameSnapshot): Panel {
   } else if (!state.chapter && state.scenarioCompleted) {
     sections.push({ label: ko.panel.summary, text: ko.gameOver.ending, clampLines: 2 });
   }
+
+  sections.push(...buildDiscoverySections(state.discoveries));
 
   if (sections.length === 0) {
     return { empty: true, title: ko.table.info, sections: [{ label: ko.panel.summary, text: ko.table.noNotes }] };
