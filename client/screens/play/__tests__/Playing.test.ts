@@ -3,6 +3,10 @@ import * as path from 'path';
 
 describe('Playing overlay layering', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '..', 'Playing.tsx'), 'utf8');
+  const keyboardSource = fs.readFileSync(
+    path.resolve(__dirname, '..', 'useKeyboardOverlay.ts'),
+    'utf8',
+  );
 
   test('keeps the bottom composer above panel dismissal overlays', () => {
     expect(source).toContain('activeId !== null || nearbyOpen ? 10 : 0');
@@ -16,14 +20,15 @@ describe('Playing overlay layering', () => {
   });
 
   test('moves only the bottom controls when the keyboard opens', () => {
-    expect(source).toContain('Platform.OS === \'web\'');
-    expect(source).toContain('updateWebKeyboardOverlayHeight');
-    expect(source).toContain('window.visualViewport');
-    expect(source).toContain('webNavigator.virtualKeyboard?.boundingRect.height');
-    expect(source).toContain('isEditableElementFocused');
-    expect(source).toContain('const [keyboardOverlayHeight, setKeyboardOverlayHeight] = React.useState(0);');
-    expect(source).toContain('setKeyboardOverlayHeight(ev.endCoordinates.height)');
-    expect(source).toContain('setKeyboardOverlayHeight(0)');
+    expect(source).toContain('useKeyboardOverlay');
+    expect(keyboardSource).toContain('Platform.OS === \'web\'');
+    expect(keyboardSource).toContain('updateWebKeyboardOverlayHeight');
+    expect(keyboardSource).toContain('window.visualViewport');
+    expect(keyboardSource).toContain('webNavigator.virtualKeyboard?.boundingRect.height');
+    expect(keyboardSource).toContain('isEditableElementFocused');
+    expect(keyboardSource).toContain('const [keyboardOverlayHeight, setKeyboardOverlayHeight] = React.useState(0);');
+    expect(keyboardSource).toContain('setKeyboardOverlayHeight(ev.endCoordinates.height)');
+    expect(keyboardSource).toContain('setKeyboardOverlayHeight(0)');
     expect(source).toContain('bottom: keyboardOverlayHeight');
     expect(source).toContain('keyboardOverlayActive={keyboardOverlayHeight > 0}');
     expect(source).not.toContain('bottomInset={bottomOverlayHeight + keyboardOverlayHeight}');

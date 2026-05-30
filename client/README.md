@@ -8,7 +8,7 @@ Client for a locale-aware TRPG. Single-screen Expo (React Native) app. The serve
 - expo-router (file-based routing, `typedRoutes`)
 - NativeWind v4 (Tailwind for RN), with `design/tokens.js` as the single token source
 - TypeScript strict
-- Server calls: `expo/fetch` for graph REST (`services/api.ts`)
+- Server calls: `expo/fetch` for graph REST (`services/api/`)
 
 ## Setup
 
@@ -113,7 +113,7 @@ client/
   screens/     # screen composition: Shell, new-game/, play/
   components/  # domain views (hero, composer, log, combat, info-panel, story-graph) + ui/ primitives
   logic/       # domain calculation, state, hooks (game/useGame.ts is the state root)
-  services/    # server boundary — api.ts (graph REST), wire.ts (types), storage.ts (localStorage)
+  services/    # server boundary — api/ (REST), wire/ (types), storage.ts (localStorage)
   locale/      # client-owned locale labels (ko.ts today)
   design/      # design tokens (tokens.js) shared by Tailwind config and TS
   scripts/     # deploy helpers

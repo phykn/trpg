@@ -15,12 +15,12 @@ from src.game.runtime.flow.confirmation import (
 )
 from src.game.runtime.flow.roll import (
     GraphRollExpected,
-    _ResolvedGraphRoll,
     run_graph_preroll_stream,
     run_graph_roll,
     run_graph_roll_stream,
     start_graph_roll,
 )
+from src.game.runtime.flow.roll.types import ResolvedGraphRoll
 from src.game.runtime.roll.pending import build_pending_roll
 from src.game.runtime.roll.text import strip_repeated_preroll_text
 
@@ -1016,7 +1016,7 @@ async def test_run_graph_roll_strips_repeated_preroll_sentences(tmp_path):
 
 
 def test_strip_repeated_preroll_text_keeps_non_repeated_narration():
-    resolved = _ResolvedGraphRoll(
+    resolved = ResolvedGraphRoll(
         runtime=None,  # type: ignore[arg-type]
         action=Action(verb="perceive", what="town"),
         pending={"body": "문틀을 살피려 합니다."},

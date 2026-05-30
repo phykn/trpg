@@ -1,5 +1,5 @@
 import React from 'react';
-import { Keyboard, Platform, Pressable, Text, View, type KeyboardEvent } from 'react-native';
+import { Keyboard, Pressable, Text, View } from 'react-native';
 
 import { CombatStrip } from '@/logic/combat';
 import { StoryDevPanel } from '@/components/story-dev/StoryDevPanel';
@@ -15,24 +15,13 @@ import { ContextCard, IconButton, ICON_PATH } from '@/logic/info-panel';
 import { useBgm } from '@/logic/audio';
 import { ConfirmDialog } from '@/components/ui';
 import { ko } from '@/locale/ko';
+import { useKeyboardOverlay } from './useKeyboardOverlay';
 
 type Props = { game: Game };
-
-type NavigatorWithVirtualKeyboard = Navigator & {
-  virtualKeyboard?: EventTarget & { boundingRect: DOMRectReadOnly };
-};
-
-function isEditableElementFocused() {
-  const el = document.activeElement;
-  if (!el) return false;
-  const tag = el.tagName.toLowerCase();
-  return tag === 'input' || tag === 'textarea' || el.getAttribute('contenteditable') === 'true';
-}
 
 export function Playing({ game }: Props) {
   const { hero, subject, chapter, quest, questOffers, place, combat, discoveries, storyGraph, log, pendingConfirmation, pendingRoll, streaming, awaitingNarration, gameOver, suggestions, errorMessage, onSend, onQuestAction, onGraphAction, onCombatCommand, onConfirmPending, onRollPending, onStop, goToNewGame, levelUpOpen, levelUpChoices, levelUpLoading, openLevelUp, cancelLevelUp, commitLevelUp } = game;
 
-  const [typing, setTyping] = React.useState(false);
   const [activeId, setActiveId] = React.useState<string | null>(null);
   const [input, setInput] = React.useState('');
   const [pendingAction, setPendingAction] = React.useState<PanelAction | null>(null);
@@ -40,8 +29,8 @@ export function Playing({ game }: Props) {
   const [storyDevOpen, setStoryDevOpen] = React.useState(false);
   const [nearbyOpen, setNearbyOpen] = React.useState(false);
   const [bottomOverlayHeight, setBottomOverlayHeight] = React.useState(0);
-  const [keyboardOverlayHeight, setKeyboardOverlayHeight] = React.useState(0);
   const [playSurfaceHeight, setPlaySurfaceHeight] = React.useState(0);
+  const { typing, keyboardOverlayHeight } = useKeyboardOverlay();
   const { bgmOn, toggle: toggleBgm } = useBgm();
   const showStoryDev = __DEV__ && game.gameId !== null;
   const { slotDots, markSlotSeen } = usePanelSlotTracking(
@@ -87,44 +76,6 @@ export function Playing({ game }: Props) {
       runAction(action);
     }
   };
-
-  React.useEffect(() => {
-    if (Platform.OS === 'web') {
-      const updateWebKeyboardOverlayHeight = () => {
-        const webNavigator = navigator as NavigatorWithVirtualKeyboard;
-        const keyboardHeight = webNavigator.virtualKeyboard?.boundingRect.height ?? 0;
-        const visualViewportHeight = isEditableElementFocused() && window.visualViewport
-          ? Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop)
-          : 0;
-        const nextHeight = Math.max(keyboardHeight, visualViewportHeight);
-        setTyping(nextHeight > 0);
-        setKeyboardOverlayHeight(nextHeight);
-      };
-      const webNavigator = navigator as NavigatorWithVirtualKeyboard;
-      webNavigator.virtualKeyboard?.addEventListener('geometrychange', updateWebKeyboardOverlayHeight);
-      window.visualViewport?.addEventListener('resize', updateWebKeyboardOverlayHeight);
-      window.visualViewport?.addEventListener('scroll', updateWebKeyboardOverlayHeight);
-      updateWebKeyboardOverlayHeight();
-      return () => {
-        webNavigator.virtualKeyboard?.removeEventListener('geometrychange', updateWebKeyboardOverlayHeight);
-        window.visualViewport?.removeEventListener('resize', updateWebKeyboardOverlayHeight);
-        window.visualViewport?.removeEventListener('scroll', updateWebKeyboardOverlayHeight);
-      };
-    }
-
-    const show = Keyboard.addListener('keyboardDidShow', (ev: KeyboardEvent) => {
-      setTyping(true);
-      setKeyboardOverlayHeight(ev.endCoordinates.height);
-    });
-    const hide = Keyboard.addListener('keyboardDidHide', () => {
-      setTyping(false);
-      setKeyboardOverlayHeight(0);
-    });
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
 
   React.useEffect(() => {
     if (typing) {
