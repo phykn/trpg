@@ -41,6 +41,7 @@ import type {
   PendingConfirmation,
   SuggestionChip,
 } from '@/services/wire';
+import { errorMessageForDisplay } from './errors';
 import { useGraphActionRunner } from './requestRunner';
 
 export type GameStatus = 'loading' | 'no-game' | 'ready' | 'error';
@@ -143,7 +144,7 @@ export function useGame() {
       setSuggestionsRaw(payload.suggestions ?? loadSuggestions(payload.game_id));
       setStatus('ready');
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : String(err));
+      setErrorMessage(errorMessageForDisplay(err));
       setStatus('error');
     }
   }, [applyState, rememberGameId]);
@@ -172,7 +173,7 @@ export function useGame() {
           }),
         );
       } catch (err) {
-        setErrorMessage(err instanceof Error ? err.message : String(err));
+        setErrorMessage(errorMessageForDisplay(err));
         setStatus('error');
       }
     },
@@ -296,7 +297,7 @@ export function useGame() {
       }
     } catch (err) {
       if (gameIdRef.current === id) {
-        setErrorMessage(err instanceof Error ? err.message : String(err));
+        setErrorMessage(errorMessageForDisplay(err));
       }
     } finally {
       if (gameIdRef.current === id) {

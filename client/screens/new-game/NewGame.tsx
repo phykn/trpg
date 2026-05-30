@@ -11,6 +11,7 @@ import {
 import { CenterMessage, ErrorState, Surface } from '@/components/ui';
 import { colors } from '@/design/tokens';
 import { ko } from '@/locale/ko';
+import { errorMessageForDisplay } from '@/logic/game/errors';
 import { getVersion, listProfiles } from '@/services';
 import type { InitRequest, ProfileCard, RaceCard } from '@/services/wire';
 
@@ -53,7 +54,7 @@ export function NewGame({ onSubmit }: Props) {
         }
       })
       .catch((e: unknown) => {
-        setLoadError(e instanceof Error ? e.message : String(e));
+        setLoadError(errorMessageForDisplay(e));
       });
   }, []);
 

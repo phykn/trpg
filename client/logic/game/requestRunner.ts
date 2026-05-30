@@ -1,6 +1,5 @@
 import React from 'react';
 
-import { ko } from '@/locale/ko';
 import type { LogEntry } from '@/logic/log';
 import type {
   FrontState,
@@ -8,6 +7,7 @@ import type {
   GraphResultOutcome,
   SuggestionChip,
 } from '@/services/wire';
+import { errorMessageForDisplay } from './errors';
 
 type ApplyState = (state: FrontState, gameId?: string | null) => void;
 type SetSuggestions = (next: React.SetStateAction<SuggestionChip[]>) => void;
@@ -102,18 +102,6 @@ function removeStreamingNarration(
 
 function isAbortError(err: unknown): boolean {
   return err instanceof Error && err.name === 'AbortError';
-}
-
-function errorMessageForDisplay(err: unknown): string {
-  const message = err instanceof Error ? err.message : String(err);
-  if (
-    message === 'network error'
-    || message.includes('stream ended without final payload')
-    || message.toLowerCase().includes('failed to fetch')
-  ) {
-    return ko.error.requestInterrupted;
-  }
-  return message;
 }
 
 export function abortGraphActionRequest(runtime: GraphActionRequestRuntime): void {

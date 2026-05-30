@@ -13,6 +13,11 @@ def has_actionable_world_change(changes: list[GraphChange]) -> bool:
         node_type = getattr(change.node, "type", None)
         if node_type in {"location", "character", "item", "quest"}:
             return True
+        if (
+            node_type == "knowledge"
+            and getattr(change.node, "properties", {}).get("kind") == "clue"
+        ):
+            return True
     return False
 
 

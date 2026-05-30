@@ -154,3 +154,31 @@ async def test_story_write_accepts_valid_flat_response_without_retry():
 
     assert client.attempts == 1
     assert response.new_terms == ["녹슨 말뚝"]
+
+
+@pytest.mark.asyncio
+async def test_story_write_accepts_location_title_summary_aliases_without_retry():
+    client = _OneShotClient(
+        {
+            "reason": "new place",
+            "patches": [
+                {
+                    "op": "add_location",
+                    "id": "loc_purple_gift_stall",
+                    "title": "보라 선물 가판",
+                    "summary": "작은 장식과 빈 가격표가 놓인 가판입니다.",
+                    "connect_from": "loc_purple_street",
+                }
+            ],
+            "new_terms": [],
+            "narration_brief": None,
+        }
+    )
+
+    response = await story_write(client, _input(), locale="ko")
+
+    assert client.attempts == 1
+    patch = response.patches[0]
+    assert patch.op == "add_location"
+    assert patch.name == "보라 선물 가판"
+    assert patch.description == "작은 장식과 빈 가격표가 놓인 가판입니다."

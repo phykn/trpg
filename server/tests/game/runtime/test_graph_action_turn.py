@@ -190,6 +190,141 @@ async def test_run_graph_action_turn_logs_quest_choice_label(tmp_path):
     assert logs[0].text == "당신은 별점 복구 사건에서 「책임 기록」을 선택합니다."
 
 
+async def test_run_graph_action_turn_removes_item_claim_from_no_reward_choice(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["quest_gold"] = GraphNode(
+        id="quest_gold",
+        type="quest",
+        properties={
+            "title": "별점과 점수표 사건",
+            "status": "active",
+            "choices": {
+                "remove": {
+                    "label": "점수표 떼어내기",
+                    "rewards": {"gold": 0, "exp": 0, "items": []},
+                },
+            },
+            "handoff": (
+                "별점 게시판 아래에는 방금 손댄 자리의 자국이 남습니다. "
+                "다음 배에는 아직 적히지 않은 이름 칸이 보입니다."
+            ),
+        },
+    )
+    await repo.save_graph("game-1", graph)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(update={"active_quest_id": "quest_gold"})
+    )
+    llm = _NarrationLLM(
+        "\n".join(
+            [
+                "점수표가 분리되며 접힌 채로 당신의 오른손에 놓입니다.",
+                "",
+                "---TRPG_META---",
+                (
+                    '{"turn_summary":"점수표를 챙겼습니다.",'
+                    '"importance":2,'
+                    '"ui_cues":[{"kind":"change","label":"획득 아이템",'
+                    '"text":"접힌 점수표","scope":"delta"}],'
+                    '"suggestions":[]}'
+                ),
+            ]
+        )
+    )
+
+    await run_graph_action_turn(
+        repo,
+        "game-1",
+        Action(verb="decide", what="quest_gold", how="remove"),
+        llm=llm,  # type: ignore[arg-type]
+    )
+    logs = await repo.load_log_entries("game-1")
+    saved_graph = await repo.load_graph("game-1")
+
+    assert logs[-1].text == (
+        "당신은 별점과 점수표 사건에서 「점수표 떼어내기」를 선택합니다. "
+        "별점 게시판 아래에는 방금 손댄 자리의 자국이 남습니다. "
+        "다음 배에는 아직 적히지 않은 이름 칸이 보입니다."
+    )
+    assert "접힌 점수표" not in logs[-1].text
+    assert logs[-1].cues == []
+    assert "carries:player_01:itm_gold_star" not in saved_graph.edges
+
+
+async def test_run_graph_action_turn_stream_buffers_item_claim_for_no_reward_choice(
+    tmp_path,
+):
+    repo = await _repo(tmp_path)
+    graph = await repo.load_graph("game-1")
+    graph.nodes["quest_gold"] = GraphNode(
+        id="quest_gold",
+        type="quest",
+        properties={
+            "title": "별점과 점수표 사건",
+            "status": "active",
+            "choices": {
+                "remove": {
+                    "label": "점수표 떼어내기",
+                    "rewards": {"gold": 0, "exp": 0, "items": []},
+                },
+            },
+            "handoff": (
+                "별점 게시판 아래에는 방금 손댄 자리의 자국이 남습니다. "
+                "다음 배에는 아직 적히지 않은 이름 칸이 보입니다."
+            ),
+        },
+    )
+    await repo.save_graph("game-1", graph)
+    progress = await repo.load_progress("game-1")
+    await repo.save_progress(
+        progress.model_copy(update={"active_quest_id": "quest_gold"})
+    )
+    runtime = await load_runtime_state(repo, "game-1")
+    llm = _RepeatStreamNarrationLLM(
+        "\n".join(
+            [
+                "점수표가 분리되며 접힌 채로 당신의 오른손에 놓입니다.",
+                "",
+                "---TRPG_META---",
+                (
+                    '{"turn_summary":"점수표를 챙겼습니다.",'
+                    '"importance":2,'
+                    '"ui_cues":[{"kind":"change","label":"획득 아이템",'
+                    '"text":"접힌 점수표","scope":"delta"}],'
+                    '"suggestions":[]}'
+                ),
+            ]
+        )
+    )
+
+    events = [
+        event
+        async for event in run_graph_action_turn_from_runtime_stream(
+            repo,
+            "game-1",
+            runtime,
+            Action(verb="decide", what="quest_gold", how="remove"),
+            llm=llm,  # type: ignore[arg-type]
+        )
+    ]
+    streamed = "".join(
+        event["text"] for event in events if event["type"] == "narration_delta"
+    )
+    logs = await repo.load_log_entries("game-1")
+
+    assert streamed == (
+        "당신은 별점과 점수표 사건에서 「점수표 떼어내기」를 선택합니다. "
+        "별점 게시판 아래에는 방금 손댄 자리의 자국이 남습니다. "
+        "다음 배에는 아직 적히지 않은 이름 칸이 보입니다."
+    )
+    assert "접힌 점수표" not in streamed
+    assert logs[-1].text == streamed
+    assert logs[-1].cues == []
+
+
 class _DeltaTrackingRepo(LocalFsGraphRepo):
     def __init__(self, saves_dir: str) -> None:
         super().__init__(saves_dir)

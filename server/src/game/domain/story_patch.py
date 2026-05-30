@@ -1,4 +1,4 @@
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -51,6 +51,22 @@ class AddLocationPatch(BaseModel):
     description: str = Field(min_length=1, max_length=240)
     connect_from: str
     stability: StoryStability = "scene"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_title_summary_aliases(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        if "title" not in data and "summary" not in data:
+            return data
+        normalized = dict(data)
+        title = normalized.pop("title", None)
+        summary = normalized.pop("summary", None)
+        if "name" not in normalized and isinstance(title, str):
+            normalized["name"] = title
+        if "description" not in normalized and isinstance(summary, str):
+            normalized["description"] = summary
+        return normalized
 
 
 class AddCharacterPatch(BaseModel):

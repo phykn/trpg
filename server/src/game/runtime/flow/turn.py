@@ -1,10 +1,12 @@
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.db.repo import GraphRepo, ScenarioRepo
 from src.game.domain.action import Action
+from src.game.domain.graph.query import inventory_of
 from src.game.domain.memory import LogEntry, NarrationCue
 from src.llm.client import LLMClient
 from src.llm.diag import engine_diag, set_diag_context
@@ -22,6 +24,7 @@ from ..narration.action import (
 )
 from ..narration.cards import build_graph_action_card
 from ..load import load_runtime_state
+from ..narration.context.events import story_transition_payload
 from ..narration.result import (
     GraphNarrationResult,
     VisibleNarrationStream,
@@ -117,6 +120,12 @@ async def run_graph_action_turn_from_runtime(
         card_texts=[card.text for card in prepared.cards],
         timeout_s=_action_narration_timeout_s(),
     )
+    narration_result = _guard_no_reward_choice_narration(
+        prepared.before,
+        result.runtime,
+        prepared.action,
+        narration_result,
+    )
     return await _commit_graph_action_narration(
         repo,
         game_id,
@@ -159,6 +168,11 @@ async def run_graph_action_turn_from_runtime_stream(
             outcome=outcome,
         ).model_copy(update={"dispatch": prepared.dispatch}),
     }
+    buffer_visible_narration = _should_buffer_no_reward_choice_narration(
+        prepared.before,
+        result.runtime,
+        prepared.action,
+    )
     stream = VisibleNarrationStream()
     async for chunk in stream_graph_action_narration(
         llm,
@@ -170,10 +184,20 @@ async def run_graph_action_turn_from_runtime_stream(
         timeout_s=_action_narration_timeout_s(),
     ):
         for visible in stream.push(chunk):
-            yield {"type": "narration_delta", "text": visible}
+            if not buffer_visible_narration:
+                yield {"type": "narration_delta", "text": visible}
     for visible in stream.finish():
-        yield {"type": "narration_delta", "text": visible}
+        if not buffer_visible_narration:
+            yield {"type": "narration_delta", "text": visible}
     narration_result = parse_graph_narration_answer(stream.answer())
+    narration_result = _guard_no_reward_choice_narration(
+        prepared.before,
+        result.runtime,
+        prepared.action,
+        narration_result,
+    )
+    if buffer_visible_narration and narration_result.narration:
+        yield {"type": "narration_delta", "text": narration_result.narration}
     final = await _commit_graph_action_narration(
         repo,
         game_id,
@@ -345,3 +369,118 @@ def _action_target(action: Action) -> str | None:
 
 def _generated_contract(runtime: GameRuntimeState):
     return runtime.story_contract
+
+
+def _should_buffer_no_reward_choice_narration(
+    before: GameRuntimeState,
+    after: GameRuntimeState,
+    action: Action,
+) -> bool:
+    return _no_reward_choice_transition(before, after, action) is not None
+
+
+def _guard_no_reward_choice_narration(
+    before: GameRuntimeState,
+    after: GameRuntimeState,
+    action: Action,
+    result: GraphNarrationResult,
+) -> GraphNarrationResult:
+    transition = _no_reward_choice_transition(before, after, action)
+    if transition is None or not _claims_unearned_item(result):
+        return result
+    fallback = _no_reward_choice_fallback(transition)
+    if not fallback:
+        return result.model_copy(update={"ui_cues": [], "suggestions": []})
+    return result.model_copy(
+        update={
+            "narration": fallback,
+            "turn_summary": fallback,
+            "ui_cues": [],
+            "suggestions": [],
+        }
+    )
+
+
+def _no_reward_choice_transition(
+    before: GameRuntimeState,
+    after: GameRuntimeState,
+    action: Action,
+) -> dict[str, Any] | None:
+    if action.verb != "decide" or _gained_inventory_item_ids(before, after):
+        return None
+    transition = story_transition_payload(before, after, action)
+    if transition is None:
+        return None
+    choice_result = transition.get("choice_result")
+    if not isinstance(choice_result, dict) or choice_result.get("gained_items"):
+        return None
+    choice = choice_result.get("choice")
+    quest = choice_result.get("quest")
+    if not isinstance(choice, dict) or not isinstance(quest, dict):
+        return None
+    return transition
+
+
+def _gained_inventory_item_ids(
+    before: GameRuntimeState,
+    after: GameRuntimeState,
+) -> set[str]:
+    before_items = set(inventory_of(before.graph_index, before.progress.player_id))
+    after_items = set(inventory_of(after.graph_index, after.progress.player_id))
+    return after_items - before_items
+
+
+def _claims_unearned_item(result: GraphNarrationResult) -> bool:
+    cue_text = " ".join(
+        f"{cue.label} {cue.text}" for cue in result.ui_cues
+    )
+    text = " ".join(
+        part
+        for part in (result.narration, result.turn_summary, cue_text)
+        if part
+    )
+    return any(token in text for token in _UNEARNED_ITEM_CLAIM_TOKENS)
+
+
+def _no_reward_choice_fallback(transition: dict[str, Any]) -> str:
+    choice_result = transition.get("choice_result")
+    if not isinstance(choice_result, dict):
+        return ""
+    quest = choice_result.get("quest")
+    choice = choice_result.get("choice")
+    if not isinstance(quest, dict) or not isinstance(choice, dict):
+        return ""
+    quest_name = quest.get("name")
+    choice_label = choice.get("label")
+    if not isinstance(quest_name, str) or not quest_name:
+        return ""
+    if not isinstance(choice_label, str) or not choice_label:
+        return ""
+    text = f"당신은 {quest_name}에서 「{choice_label}」를 선택합니다."
+    handoff = transition.get("handoff")
+    if isinstance(handoff, str) and handoff:
+        text = f"{text} {handoff}"
+    return text
+
+
+_UNEARNED_ITEM_CLAIM_TOKENS = (
+    "획득 아이템",
+    "아이템 획득",
+    "소지품",
+    "인벤토리",
+    "손에",
+    "손안",
+    "오른손",
+    "왼손",
+    "주머니",
+    "가방",
+    "챙깁",
+    "챙겼",
+    "쥡",
+    "쥐고",
+    "쥐었",
+    "받아 듭",
+    "받아들고",
+    "얻습",
+    "얻었",
+)

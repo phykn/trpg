@@ -187,6 +187,67 @@ async def test_generated_story_applies_valid_clue_to_graph_and_front_state() -> 
     ]
 
 
+async def test_generated_story_accepts_clue_patch_for_actionable_advice_without_retry() -> None:
+    calls = 0
+
+    async def fake_writer(**kwargs) -> StoryWriteResponse:
+        nonlocal calls
+        calls += 1
+        return StoryWriteResponse.model_validate(
+            {
+                "reason": "advice becomes a clue",
+                "patches": [
+                    {
+                        "op": "add_clue",
+                        "id": "clue_fog_balance_check",
+                        "title": "배 균형 확인",
+                        "summary": "안개 항구에서는 혼자 탄 배의 균형을 먼저 확인해야 합니다.",
+                        "anchor_id": "loc_fog_harbor",
+                    }
+                ],
+            }
+        )
+
+    contract = _story_contract().model_copy(
+        update={
+            "allowed_ops": [
+                "add_memory",
+                "add_clue",
+                "add_location",
+                "add_character",
+                "add_item",
+                "add_quest_beat",
+            ]
+        }
+    )
+    runtime = _runtime().model_copy(update={"story_contract": contract})
+    result = GraphActionRequestResult(
+        runtime=runtime,
+        status="executed",
+        front_state=graph_to_front_state(runtime),
+    )
+    repo = FakeGraphRepo()
+
+    next_result = await apply_generated_story_after_action(
+        client=object(),
+        repo=repo,
+        result=result,
+        contract=contract,
+        player_input="올든에게 안개 항구에서 무엇을 먼저 확인해야 하는지 묻습니다.",
+        action=Action(verb="speak", what="npc_olden", how="ask"),
+        accepted_narration=(
+            "올든이 혼자 탄 배의 균형을 먼저 확인해야 한다며 "
+            "출항 명부를 가리킵니다."
+        ),
+        writer=fake_writer,
+    )
+
+    assert calls == 1
+    assert "clue_fog_balance_check" in next_result.runtime.graph.nodes
+    assert [entry.status for entry in repo.story_patch_entries] == ["accepted"]
+    assert repo.story_patch_entries[0].changed_node_ids == ["clue_fog_balance_check"]
+
+
 async def test_generated_story_records_accepted_patch_entry() -> None:
     async def fake_writer(**kwargs) -> StoryWriteResponse:
         return StoryWriteResponse.model_validate(

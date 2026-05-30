@@ -32,4 +32,8 @@ describe('Composer quick actions', () => {
     expect(source).toContain('className="flex-row items-center gap-2 rounded-sm bg-canvas-inset px-2 py-2"');
     expect(source).toContain('accessibilityLabel={`${item.title} ${action.label}`}');
   });
+
+  test('does not use the deprecated pointerEvents prop on web', () => {
+    expect(source).not.toContain('pointerEvents="');
+  });
 });

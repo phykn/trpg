@@ -119,8 +119,7 @@ export function Composer({ input, setInput, onSend, onStop, streaming, locked = 
     <View className="mt-1.5 gap-2 border-t border-border-default bg-canvas-default px-5 pt-2.5 pb-3" style={{ zIndex: isNearbyOpen ? 8 : 0 }}>
       {isNearbyOpen ? (
         <View
-          pointerEvents="box-none"
-          style={{ position: 'absolute', left: 20, right: 20, bottom: '100%', marginBottom: 8, zIndex: 20 }}
+          style={{ position: 'absolute', left: 20, right: 20, bottom: '100%', marginBottom: 8, zIndex: 20, pointerEvents: 'box-none' }}
         >
           {nearby && nearby.items.length > 0 ? (
             <Surface className="px-2.5 py-2">
