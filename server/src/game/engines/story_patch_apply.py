@@ -43,6 +43,22 @@ def story_patches_to_graph_changes(
     return changes
 
 
+def changed_node_ids(changes: list[GraphChange]) -> list[str]:
+    return [
+        change.node.id
+        for change in changes
+        if getattr(change, "type", None) == "add_node"
+    ]
+
+
+def changed_edge_ids(changes: list[GraphChange]) -> list[str]:
+    return [
+        change.edge.id
+        for change in changes
+        if getattr(change, "type", None) == "add_edge"
+    ]
+
+
 def _memory_changes(
     patch: AddMemoryPatch,
     *,

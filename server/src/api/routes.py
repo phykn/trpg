@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
-from . import base_routes, session_graph_routes
+from . import base_routes, session_graph_routes, story_dev_routes
 
 security = HTTPBasic()
 
@@ -34,5 +34,6 @@ router.include_router(base_routes.public_router)
 protected = APIRouter(dependencies=[Depends(require_basic_auth)])
 protected.include_router(base_routes.protected_router)
 protected.include_router(session_graph_routes.router)
+protected.include_router(story_dev_routes.router)
 
 router.include_router(protected)

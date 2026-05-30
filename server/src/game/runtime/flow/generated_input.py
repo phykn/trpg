@@ -10,7 +10,11 @@ from src.game.domain.story_patch_ledger import (
     StoryPatchLedgerEntry,
     StoryPatchLedgerStatus,
 )
-from src.game.engines.story_patch_apply import story_patches_to_graph_changes
+from src.game.engines.story_patch_apply import (
+    changed_edge_ids as _changed_edge_ids,
+    changed_node_ids as _changed_node_ids,
+    story_patches_to_graph_changes,
+)
 from src.game.engines.story_patch_validator import validate_story_write_response
 from src.game.runtime.state import GameRuntimeState
 from src.locale.generated_story import looks_actionable_for_story_patch
@@ -308,14 +312,6 @@ def _fit_response_to_contract_budget(
     )
 
 
-def _changed_node_ids(changes: list[GraphChange]) -> list[str]:
-    return [
-        change.node.id
-        for change in changes
-        if getattr(change, "type", None) == "add_node"
-    ]
-
-
 def _has_actionable_world_change(changes: list[GraphChange]) -> bool:
     for change in changes:
         if getattr(change, "type", None) != "add_node":
@@ -353,14 +349,6 @@ def _requires_actionable_patch(
     if len(text) < 8:
         return False
     return looks_actionable_for_story_patch(text)
-
-
-def _changed_edge_ids(changes: list[GraphChange]) -> list[str]:
-    return [
-        change.edge.id
-        for change in changes
-        if getattr(change, "type", None) == "add_edge"
-    ]
 
 
 def _ledger_entry(
