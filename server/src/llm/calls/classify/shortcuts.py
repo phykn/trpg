@@ -16,27 +16,11 @@ from src.locale.terms import (
     DIALOGUE_TERMS,
     INSPECT_TERMS,
     LOOT_TERMS,
-    META_BREAKING_TERMS,
     QUEST_ACCEPT_TERMS,
     QUEST_CONTEXT_TERMS,
     QUEST_TRAVEL_TERMS,
 )
 from src.locale.render import render
-
-
-def classify_guard(player_input: str, *, locale: str = "ko") -> ActionOutput | None:
-    lowered = player_input.lower()
-    if any(term.lower() in lowered for term in META_BREAKING_TERMS):
-        return ActionOutput(
-            refuse=RefuseReason(
-                category="meta_breaking",
-                message_hint=render(
-                    "runtime.classify.refuse_meta_breaking",
-                    locale,
-                ),
-            )
-        )
-    return None
 
 
 def classify_action_shortcut(

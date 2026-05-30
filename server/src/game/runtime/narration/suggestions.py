@@ -15,6 +15,33 @@ from src.game.domain.graph.query import (
     known_skills_of,
     location_of,
 )
+from src.locale.ko.suggestion_text import (
+    TARGETLESS_GENERIC_SUGGESTIONS,
+    TARGETLESS_TALK_LABELS,
+    TARGET_PARTICLES,
+    ko_abandon as _ko_abandon,
+    ko_accept as _ko_accept,
+    ko_as_ask as _ko_as_ask,
+    ko_ask_label as _ko_ask_label,
+    ko_at_topic as _ko_at_topic,
+    ko_close_quote as _ko_close_quote,
+    ko_current_situation as _ko_current_situation,
+    ko_direction_particle as _ko_direction_particle,
+    ko_here as _ko_here,
+    ko_inspect as _ko_inspect,
+    ko_inspect_label as _ko_inspect_label,
+    ko_meaning as _ko_meaning,
+    ko_move as _ko_move,
+    ko_object as _ko_object,
+    ko_open_quote as _ko_open_quote,
+    ko_possessive as _ko_possessive,
+    ko_room as _ko_room,
+    ko_room_question as _ko_room_question,
+    ko_situation as _ko_situation,
+    ko_surroundings as _ko_surroundings,
+    ko_to_person as _ko_to_person,
+    ko_what_to_check_question as _ko_what_to_check_question,
+)
 
 from ..state import GameRuntimeState
 
@@ -404,13 +431,7 @@ def _looks_like_json_fragment(text: str) -> bool:
 
 
 def _is_targetless_generic_suggestion(label: str, input_text: str) -> bool:
-    generic = {
-        _codepoint_text(0xB300, 0xD654, 0xC2DC, 0xC791, 0xD558, 0xAE30),
-        _codepoint_text(0xB300, 0xD654, 0xC2DC, 0xB3C4, 0xD558, 0xAE30),
-        _codepoint_text(0xB9D0, 0xAC78, 0xAE30),
-        _codepoint_text(0xB9D0, 0xC744, 0xAC74, 0xB2E4),
-        _codepoint_text(0xC0C1, 0xD669, 0xD30C, 0xC545, 0xD558, 0xAE30),
-    }
+    generic = set(TARGETLESS_GENERIC_SUGGESTIONS)
     normalized_label = _normalize(label)
     normalized_input = _normalize(input_text)
     targetless_talk = _targetless_talk_labels()
@@ -426,35 +447,19 @@ def _is_targetless_generic_suggestion(label: str, input_text: str) -> bool:
 
 
 def _targetless_talk_labels() -> set[str]:
-    return {
-        _normalize(_codepoint_text(0xB300, 0xD654, 0xC2DC, 0xC791, 0xD558, 0xAE30)),
-        _normalize(_codepoint_text(0xB300, 0xD654, 0xC2DC, 0xB3C4, 0xD558, 0xAE30)),
-        _normalize(_codepoint_text(0xB9D0, 0xAC78, 0xAE30)),
-        _normalize(_codepoint_text(0xB9D0, 0xC744, 0xAC78, 0xB2E4)),
-        _normalize(
-            _codepoint_text(0xACC4, 0xC18D, 0x20, 0xC9C8, 0xBB38, 0xD558, 0xAE30)
-        ),
-    }
+    return {_normalize(value) for value in TARGETLESS_TALK_LABELS}
 
 
 def _has_targeted_generic_talk_label(
     normalized_label: str,
     targetless_talk: set[str],
 ) -> bool:
-    target_particles = {
-        _normalize(_ko_to_person()),
-        _normalize(_codepoint_text(0xD55C, 0xD14C)),
-        _normalize(_codepoint_text(0xAED8)),
-    }
+    target_particles = {_normalize(value) for value in TARGET_PARTICLES}
     return any(
         f"{particle}{phrase}" in normalized_label
         for particle in target_particles
         for phrase in targetless_talk
     )
-
-
-def _codepoint_text(*values: int) -> str:
-    return "".join(chr(value) for value in values)
 
 
 def _has_quest_status(runtime: GameRuntimeState, statuses: set[str]) -> bool:
@@ -465,141 +470,3 @@ def _has_quest_status(runtime: GameRuntimeState, statuses: set[str]) -> bool:
         if isinstance(status, str) and status in statuses:
             return True
     return False
-
-
-def _ko_accept() -> str:
-    return chr(0xC218) + chr(0xB77D)
-
-
-def _ko_abandon() -> str:
-    return chr(0xD3EC) + chr(0xAE30)
-
-
-def _ko_object() -> str:
-    return chr(0xC744)
-
-
-def _ko_to_person() -> str:
-    return chr(0xC5D0) + chr(0xAC8C)
-
-
-def _ko_start_talk() -> str:
-    return _codepoint_text(0xB9D0, 0xC744, 0x20, 0xAC81, 0xB2C8, 0xB2E4)
-
-
-def _ko_start_talk_label() -> str:
-    return _codepoint_text(0xB9D0, 0x20, 0xAC78, 0xAE30)
-
-
-def _ko_ask_label() -> str:
-    return _codepoint_text(0xBB3B, 0xAE30)
-
-
-def _ko_open_quote() -> str:
-    return chr(0x300C)
-
-
-def _ko_close_quote() -> str:
-    return chr(0x300D)
-
-
-def _ko_as_ask() -> str:
-    return _codepoint_text(0xB77C, 0xACE0, 0x20, 0xBB3B, 0xC2B5, 0xB2C8, 0xB2E4)
-
-
-def _ko_room() -> str:
-    return chr(0xBC29)
-
-
-def _ko_meaning() -> str:
-    return _codepoint_text(0xC758, 0xBBF8)
-
-
-def _ko_situation() -> str:
-    return _codepoint_text(0xC0C1, 0xD669)
-
-
-def _ko_current_situation() -> str:
-    return _codepoint_text(0xD604, 0xC7AC, 0x20, 0xC0C1, 0xD669)
-
-
-def _ko_room_question() -> str:
-    return _codepoint_text(
-        0xC774,
-        0x20,
-        0xBC29,
-        0xC740,
-        0x20,
-        0xC5B4,
-        0xB5A4,
-        0x20,
-        0xACF3,
-        0xC778,
-        0xAC00,
-        0xC694,
-        0x3F,
-    )
-
-
-def _ko_at_topic() -> str:
-    return _codepoint_text(0xC5D0, 0xC11C, 0xB294)
-
-
-def _ko_what_to_check_question() -> str:
-    return _codepoint_text(
-        0xBB34,
-        0xC5C7,
-        0xC744,
-        0x20,
-        0xD655,
-        0xC778,
-        0xD574,
-        0xC57C,
-        0x20,
-        0xD558,
-        0xB098,
-        0xC694,
-        0x3F,
-    )
-
-
-def _ko_here() -> str:
-    return _codepoint_text(0xC5EC, 0xAE30)
-
-
-def _ko_inspect() -> str:
-    return _codepoint_text(0xC0B4, 0xD54D, 0xB2C8, 0xB2E4)
-
-
-def _ko_inspect_label() -> str:
-    return _codepoint_text(0xC0B4, 0xD53C, 0xAE30)
-
-
-def _ko_move() -> str:
-    return _codepoint_text(0xC774, 0xB3D9, 0xD569, 0xB2C8, 0xB2E4)
-
-
-def _ko_surroundings() -> str:
-    return chr(0xC8FC) + chr(0xBCC0)
-
-
-def _ko_possessive() -> str:
-    return chr(0xC758)
-
-
-def _ko_direction_particle(text: str) -> str:
-    if not text:
-        return _ko_direction_with_final()
-    code = ord(text[-1])
-    if not (0xAC00 <= code <= 0xD7A3):
-        return _ko_direction_with_final()
-    final = (code - 0xAC00) % 28
-    return _ko_direction_without_final() if final == 0 or final == 8 else _ko_direction_with_final()
-
-
-def _ko_direction_without_final() -> str:
-    return chr(0xB85C)
-
-
-def _ko_direction_with_final() -> str:
-    return chr(0xC73C) + chr(0xB85C)

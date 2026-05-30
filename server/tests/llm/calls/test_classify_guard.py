@@ -1,4 +1,4 @@
-from src.llm.calls.classify.shortcuts import classify_guard
+from src.llm.calls.classify.guard import classify_guard
 
 
 def test_guard_refuses_prompt_extraction():

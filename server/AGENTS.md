@@ -39,7 +39,7 @@ Upper depends on lower, never the reverse. Concretely:
 
 - `game/domain/` + `game/rules/` — pure data shapes and tunable knobs. No imports outside themselves.
 - `game/engines/` — pure game logic (combat math, graph changes, growth, inventory, skill, quest, recovery, invariants). No LLM, no I/O.
-- `llm/calls/` — structured LLM call modules under the `llm/` package. `classify` is the only structured call module right now; graph narration, combat narration, and recommendations use runtime prompts with agents `graph_intro`, `graph_narrate`, `combat_narrate`, and `recommend`. Structured prompts live under `src/locale/prompts/<agent>/prompt.<locale>.md`; `src/locale/prompts/_kernel.<locale>.md` holds universal rules (output language, register, ID hygiene, world vocabulary). `llm/calls/runner.py:get_prompt(agent, locale)` joins kernel + agent prompt with `---`, cached per (agent, locale). `runner.py` also owns the shared 5-attempt self-correction loop.
+- `llm/calls/` — structured LLM call modules under the `llm/` package. `classify` and generated-story `story_write` use `llm/calls/runner.py`'s structured self-correction loop; graph narration, combat narration, and recommendations use runtime prompts with agents `graph_narrate`, `combat_narrate`, and `recommend`. Structured prompts live under `src/locale/prompts/<agent>/prompt.<locale>.md`; `src/locale/prompts/_kernel.<locale>.md` holds universal rules (output language, register, ID hygiene, world vocabulary). `llm/calls/runner.py:get_prompt(agent, locale)` joins kernel + agent prompt with `---`, cached per (agent, locale). The graph intro route does not call an LLM; it appends `progress.intro_text` or a location fallback.
 - `game/domain/graph/` — graph data, relation queries, apply helpers, and graph validation. **The graph is the runtime source of truth.**
 - `llm/context/` — prompt input builders under the `llm/` package (graph surroundings for classify and narration).
 - `db/` — `GraphRepo` / `ScenarioRepo` Protocols (all-async) + Supabase and LocalFs adapters. Holds persistence concerns.
@@ -66,7 +66,7 @@ The repo Protocols (`GraphRepo`, `ScenarioRepo`) are all-async. Repos default to
 
 Graph runtime tables are all keyed on `game_id`:
 
-- `game_progress(game_id PK, progress jsonb)` — player id, locale, active quest, pending confirmation, combat state, and `next_log_id`.
+- `game_progress(game_id PK, progress jsonb)` — player/profile ids, runtime content, optional story contract override, locale, active subject/quest, intro text, turn count, pending confirmation, pending roll, combat state, and `next_log_id`.
 - `graph_nodes(game_id, node_id, node_type, properties jsonb)` PK `(game_id, node_id)`.
 - `graph_edges(game_id, edge_id, edge_type, from_node_id, to_node_id, properties jsonb)` PK `(game_id, edge_id)`.
 - `log_entries(game_id, log_id int, entry jsonb)` — `log_id = entry.id` (app-managed monotonic).
@@ -87,7 +87,7 @@ Runtime child tables should FK to `game_progress(game_id) ON DELETE CASCADE`. RL
 
 ### LLM routing and thinking modes
 
-- `LLM_ROUTE_<AGENT> = <provider>/<model>` resolves to an `LLMProfile` keyed by lowercased agent name. `LLM_ROUTE_DEFAULT` is required; graph runtime currently calls `graph_intro`, `classify`, `graph_narrate`, `combat_narrate`, and `recommend`. Optional `LLM_ROUTE_<AGENT>_FALLBACK = <provider>/<model>` declares a secondary profile that engages once on `RateLimitError` (quota) and stays for the rest of that agent's retry loop.
+- `LLM_ROUTE_<AGENT> = <provider>/<model>` resolves to an `LLMProfile` keyed by lowercased agent name. `LLM_ROUTE_DEFAULT` is required; graph runtime currently calls `classify`, `graph_narrate`, `combat_narrate`, `recommend`, and `story_write` when a generated-story contract is active. Optional `LLM_ROUTE_<AGENT>_FALLBACK = <provider>/<model>` declares a secondary profile that engages once on `RateLimitError` (quota) and stays for the rest of that agent's retry loop.
 - Server env loads `server/.env.shared` first, then `server/.env.<APP_ENV>`; OS/Render dashboard env still has priority over both files. Put common server defaults and shared local LLM routing in `.env.shared`, and keep environment-specific repo/CORS details in `.env.dev` / `.env.release`.
 - Provider blocks (`LLM_<NAME>_*` keys) can live in either loaded server env file and declare each provider's `BASE_URL`, `API_KEYS` (comma-separated, rotated round-robin per call), and `_THINK_OFF / _THINK_OPT / _THINK_OPT_ON / _THINK_ON` model lists. These lists must be disjoint and together name every model the provider serves. Listed names must appear in exactly one THINK_* list.
 - `LLM_<NAME>_NO_SYSTEM` lists models that reject `role: system` (Gemma via Gemini OpenAI-compat returns "Developer instruction is not enabled"); `LLMClient` folds the system prompt into the first user message for them.
@@ -129,7 +129,7 @@ Existing tags live where they fire. Read `src/llm/diag.py` before adding new hoo
 
 `DomainError` (in `game/domain/errors.py`) splits two ways:
 
-**Session lifecycle (HTTP error mapping):** graph route errors map to HTTP status codes in `api/routes/session_graph.py`. Missing games return 404; malformed profile/player input returns 422; pending-confirmation conflicts return 409 or 422.
+**Session lifecycle (HTTP error mapping):** graph route errors map to HTTP status codes in `api/session_graph_routes.py`. Missing games return 404; malformed profile/player input returns 422; pending-confirmation and pending-roll conflicts return 409 or 422.
 
 **Action validation:** graph action errors should either return a graph log entry with no state-changing `GraphChange`, or raise a route-level 422 when the request shape cannot be applied.
 

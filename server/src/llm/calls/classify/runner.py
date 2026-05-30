@@ -13,11 +13,9 @@ from src.locale.generated_story import (
 )
 from src.locale.render import render
 from .grounding import ActionGroundingError, validate_grounded_output
+from .guard import classify_guard
 from .schema import Action, ActionOutput, ClassifyInput, validate_action_output_json
-from .shortcuts import (
-    classify_action_shortcut,
-    classify_guard,
-)
+from .shortcuts import classify_action_shortcut
 
 
 async def classify(

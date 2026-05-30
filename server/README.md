@@ -41,7 +41,8 @@ SUPABASE_SERVICE_KEY=<service-role key>
 SUPABASE_SCENARIO_BUCKET=scenarios
 
 # LLM routing — DEFAULT required; LLM_ROUTE_<AGENT> overrides per agent
-# Active server agents: classify, graph_narrate, combat_narrate, recommend.
+# Active server agents: classify, graph_narrate, combat_narrate, recommend,
+# and story_write when a generated-story contract is active.
 # Optional LLM_ROUTE_<AGENT>_FALLBACK engages on quota.
 LLM_ROUTE_DEFAULT=google/gemma-4-26b-a4b-it
 LLM_ROUTE_GRAPH_NARRATE=google/gemma-4-31b-it
@@ -73,17 +74,33 @@ For a local OpenAI-compatible server, add an `LLM_LOCAL_*` block with the same s
 
 dotenv loads `server/.env.shared` then `server/.env.<APP_ENV>` (default `dev`) automatically and uvicorn binds to `HOST:PORT`.
 
-### Routes (Basic Auth required)
+### Routes
+
+`/health` and `/version` are public. All other routes require Basic Auth. The
+`*/stream` graph action routes return newline-delimited JSON events:
+`result`, zero or more `narration_delta`, then `final`; failures stream an
+`error` event.
 
 | Method | Path | Purpose |
 |---|---|---|
 | GET  | `/health` | Health check (no auth) |
+| GET  | `/version` | Git SHA / local build marker (no auth) |
 | GET  | `/profiles` | Scenario + race card list |
 | POST | `/session/graph/init` | Create a graph game |
+| POST | `/session/{game_id}/graph/intro` | Append the initial intro log if needed |
+| POST | `/session/{game_id}/graph/intro/stream` | Stream initial intro result/delta/final |
 | GET  | `/session/{game_id}/graph/state` | Load graph game state |
 | POST | `/session/{game_id}/graph/input` | Classify free text and execute graph action |
+| POST | `/session/{game_id}/graph/input/stream` | Streaming free-text graph action |
 | POST | `/session/{game_id}/graph/turn` | Execute explicit graph action |
+| POST | `/session/{game_id}/graph/turn/stream` | Streaming explicit graph action |
+| POST | `/session/{game_id}/graph/combat` | Execute combat command |
+| POST | `/session/{game_id}/graph/combat/stream` | Streaming combat command |
 | POST | `/session/{game_id}/graph/confirm` | Resolve pending graph confirmation |
+| POST | `/session/{game_id}/graph/confirm/stream` | Streaming pending confirmation resolution |
+| POST | `/session/{game_id}/graph/roll` | Resolve pending graph roll |
+| POST | `/session/{game_id}/graph/roll/stream` | Streaming pending roll resolution |
+| GET  | `/session/{game_id}/graph/level_up/options` | Build level-up choices |
 | POST | `/session/{game_id}/graph/level_up` | Apply graph level-up |
 | GET  | `/session/{game_id}/story/patches` | Dev-only generated story patch ledger |
 | GET  | `/session/{game_id}/story/timeline` | Dev-only alias for patch timeline review |
@@ -95,7 +112,6 @@ dotenv loads `server/.env.shared` then `server/.env.<APP_ENV>` (default `dev`) a
 | POST | `/session/{game_id}/story/dev/preview_contract` | Dev-only validate contract JSON without saving |
 | POST | `/session/{game_id}/story/dev/preview_patch` | Dev-only validate/preview generated patch without saving |
 | POST | `/session/{game_id}/story/dev/replay_prompt` | Dev-only rebuild story writer prompt payload without calling the LLM |
-| POST | `/debug/complete` | One-shot LLM call for debugging |
 
 ## Tests
 
@@ -123,7 +139,7 @@ Runtime state lives in Supabase Postgres:
 
 | Table | PK | Notes |
 |---|---|---|
-| `game_progress` | `(game_id)` | `progress jsonb` carries player id, locale, active quest, pending confirmation, combat state, and `next_log_id` |
+| `game_progress` | `(game_id)` | `progress jsonb` carries player/profile ids, runtime content, optional story contract override, locale, active subject/quest, intro text, turn count, pending confirmation, pending roll, combat state, and `next_log_id` |
 | `graph_nodes` | `(game_id, node_id)` | one row per graph node |
 | `graph_edges` | `(game_id, edge_id)` | one row per graph edge |
 | `log_entries` | `(game_id, log_id)` | `log_id = entry.id` (app-managed monotonic) |

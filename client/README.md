@@ -1,6 +1,6 @@
 # trpg-client
 
-Client for a locale-aware TRPG. Single-screen Expo (React Native) app. The server lives at `../server/`; the Claude Code guide is in [CLAUDE.md](./CLAUDE.md).
+Client for a locale-aware TRPG. Single-screen Expo (React Native) app. The server lives at `../server/`; the agent guide is in [AGENTS.md](./AGENTS.md).
 
 ## Stack
 
@@ -119,4 +119,4 @@ client/
   scripts/     # deploy helpers
 ```
 
-Architecture rules (bucket boundaries, import conventions, layer responsibilities) live in [CLAUDE.md](./CLAUDE.md).
+Architecture rules (bucket boundaries, import conventions, layer responsibilities) live in [AGENTS.md](./AGENTS.md).

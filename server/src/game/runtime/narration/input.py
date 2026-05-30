@@ -15,9 +15,8 @@ from ..action_refs import first_ref
 from .brief import build_narration_brief
 from .context import (
     build_input_narration_payload,
-    narration_action_payload,
-    update_compact_narration_event,
 )
+from .payload_contract import narration_action_payload, update_compact_narration_event
 from .result import GraphNarrationResult, parse_graph_narration_answer
 
 
